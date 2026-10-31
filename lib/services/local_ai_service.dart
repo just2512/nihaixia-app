@@ -47,6 +47,33 @@ class LocalAiService {
     return reply;
   }
 
+  Future<String> sendImage(String path) async {
+    return _sendAttachment('sendImage', path, '照片');
+  }
+
+  Future<String> sendAudio(String path) async {
+    return _sendAttachment('sendAudio', path, '录音');
+  }
+
+  Future<String> _sendAttachment(
+    String method,
+    String path,
+    String label,
+  ) async {
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      method,
+      {'path': path},
+    );
+    final reply = data?['reply'] as String?;
+    if (reply == null || reply.trim().isEmpty) {
+      throw PlatformException(
+        code: 'EMPTY_REPLY',
+        message: '模型没有返回有效的$label分析内容',
+      );
+    }
+    return reply;
+  }
+
   Future<LocalAiSymptomDraft> extractSymptoms() async {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'extractSymptoms',
