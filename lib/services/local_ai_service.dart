@@ -32,6 +32,17 @@ class LocalAiService {
     return LocalAiModelStatus.fromMap(data);
   }
 
+  Future<LocalAiModelStatus> importModel() async {
+    final data = await _channel.invokeMapMethod<String, dynamic>('importModel');
+    if (data == null) {
+      throw PlatformException(
+        code: 'EMPTY_STATUS',
+        message: '没有收到模型导入结果',
+      );
+    }
+    return LocalAiModelStatus.fromMap(data);
+  }
+
   Future<String> sendMessage(String text) async {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'sendMessage',
