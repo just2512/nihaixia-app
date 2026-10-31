@@ -24,6 +24,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _imagePath;
   String? _audioPath;
   bool _recording = false;
+  bool _recordingBusy = false;
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_InterviewMessage> _messages = [
@@ -158,11 +159,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _startRecording() async {
-    if (_sending || _imagePath != null || _recording) return;
+    if (_sending || _imagePath != null || _recording || _recordingBusy) return;
+    setState(() => _recordingBusy = true);
     try {
       if (!await _audioRecorder.hasPermission()) {
         if (!mounted) return;
-        setState(() => _error = '需要麦克风权限才能录制语音。');
+        setState(() {
+          _recordingBusy = false;
+          _error = '需要麦克风权限才能录制语音。';
+        });
         return;
       }
       final directory = await getTemporaryDirectory();
@@ -182,6 +187,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       setState(() {
         _recording = true;
+        _recordingBusy = false;
         _audioPath = null;
         _error = null;
       });
@@ -192,50 +198,60 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
     } on PlatformException catch (error) {
       if (!mounted) return;
-      setState(() => _error = error.message ?? '无法开始录音');
+      setState(() {
+        _recordingBusy = false;
+        _error = error.message ?? '无法开始录音';
+      });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _error = '录音启动失败：$error');
+      setState(() {
+        _recordingBusy = false;
+        _error = '录音启动失败：$error';
+      });
     }
   }
 
   Future<void> _stopRecording() async {
-    if (!_recording) return;
+    if (!_recording || _recordingBusy) return;
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    setState(() {
+      _recording = false;
+      _recordingBusy = true;
+    });
     try {
       final path = await _audioRecorder.stop();
       if (!mounted) return;
       final file = path == null ? null : File(path);
       if (file == null || !await file.exists() || await file.length() == 0) {
         setState(() {
-          _recording = false;
+          _recordingBusy = false;
           _error = '没有生成有效录音，请重试。';
         });
         return;
       }
       if (await file.length() > 15 * 1024 * 1024) {
         setState(() {
-          _recording = false;
+          _recordingBusy = false;
           _error = '录音文件超过 15 MB，请缩短语音后重录。';
         });
         return;
       }
       setState(() {
-        _recording = false;
+        _recordingBusy = false;
         _audioPath = path;
         _error = null;
       });
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
-        _recording = false;
+        _recordingBusy = false;
         _error = error.message ?? '录音结束失败';
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _recording = false;
+        _recordingBusy = false;
         _error = '录音文件处理失败：$error';
       });
     }
@@ -255,6 +271,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final audioPath = _audioPath;
     if (_sending ||
         _recording ||
+        _recordingBusy ||
         _status?.ready != true ||
         (text.isEmpty && imagePath == null && audioPath == null)) {
       return;
@@ -470,12 +487,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
-              onPressed: _sending || _extracting || _recording ? null : _resetConversation,
+              onPressed: _sending || _extracting || _recordingBusy || _recording ? null : _resetConversation,
               icon: const Icon(Icons.refresh),
             ),
             IconButton(
               tooltip: '释放模型内存',
-              onPressed: _sending || _extracting || _recording ? null : _releaseModel,
+              onPressed: _sending || _extracting || _recordingBusy || _recording ? null : _releaseModel,
               icon: const Icon(Icons.memory_outlined),
             ),
           ],
@@ -631,6 +648,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
+                                !_recordingBusy &&
                                 _confirmedDraft == null &&
                                 _audioPath == null
                             ? _pickTonguePhoto
@@ -642,6 +660,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                         onPressed: ready &&
                                 !_sending &&
                                 !_extracting &&
+                                !_recordingBusy &&
                                 _confirmedDraft == null &&
                                 _imagePath == null
                             ? (_recording ? _stopRecording : _startRecording)
@@ -657,6 +676,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                               !_sending &&
                               !_extracting &&
                               !_recording &&
+                              !_recordingBusy &&
                               _confirmedDraft == null,
                           onChanged: (_) => setState(() {}),
                           textInputAction: TextInputAction.newline,
@@ -682,6 +702,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
+                                !_recordingBusy &&
                                 _confirmedDraft == null &&
                                 (_inputController.text.trim().isNotEmpty ||
                                     _imagePath != null ||
