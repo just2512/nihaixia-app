@@ -9,6 +9,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
@@ -68,6 +69,22 @@ class MainActivity : FlutterActivity() {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
                     "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
+                    "sendImage" -> {
+                        val path = call.argument<String>("path")?.trim().orEmpty()
+                        if (path.isEmpty()) {
+                            result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
+                        } else {
+                            runAiTask(result) { sendLocalImage(path) }
+                        }
+                    }
+                    "sendAudio" -> {
+                        val path = call.argument<String>("path")?.trim().orEmpty()
+                        if (path.isEmpty()) {
+                            result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
+                        } else {
+                            runAiTask(result) { sendLocalAudio(path) }
+                        }
+                    }
                     "sendMessage" -> {
                         val text = call.argument<String>("text")?.trim().orEmpty()
                         if (text.isEmpty()) {
@@ -134,6 +151,8 @@ class MainActivity : FlutterActivity() {
                 EngineConfig(
                     modelPath = modelFile.absolutePath,
                     backend = Backend.GPU(),
+                    visionBackend = Backend.GPU(),
+                    audioBackend = Backend.CPU(),
                     cacheDir = cachePath
                 )
             )
@@ -149,6 +168,8 @@ class MainActivity : FlutterActivity() {
                 EngineConfig(
                     modelPath = modelFile.absolutePath,
                     backend = Backend.CPU(),
+                    visionBackend = Backend.CPU(),
+                    audioBackend = Backend.CPU(),
                     cacheDir = cachePath
                 )
             )
@@ -180,7 +201,53 @@ class MainActivity : FlutterActivity() {
     private fun sendLocalMessage(text: String): Map<String, Any> {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
-        val reply = conversation.sendMessage(text)
+        val reply = conversation.sendMessage(text).text
+        return mapOf("reply" to reply, "backend" to activeBackend)
+    }
+
+    private fun requireCachedInput(path: String, kind: String): File {
+        val file = File(path).canonicalFile
+        val cacheRoot = cacheDir.canonicalFile
+        val cachePrefix = cacheRoot.path + File.separator
+        if (!file.path.startsWith(cachePrefix) || !file.isFile || file.length() <= 0L) {
+            throw IllegalArgumentException("$kind 文件无效或不在应用缓存目录内")
+        }
+        if (file.length() > 15L * 1024L * 1024L) {
+            throw IllegalArgumentException("$kind 文件超过 15 MB，请重新选择")
+        }
+        return file
+    }
+
+    private fun sendLocalImage(path: String): Map<String, Any> {
+        val conversation = aiConversation
+            ?: throw IllegalStateException("本地模型尚未加载")
+        val image = requireCachedInput(path, "照片")
+        val reply = conversation.sendMessage(
+            Contents.of(
+                Content.ImageFile(image.absolutePath),
+                Content.Text(
+                    "请只描述照片中能够直接观察到的舌体形态、舌色和舌苔分布。" +
+                    "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
+                    "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。"
+                )
+            )
+        ).text
+        return mapOf("reply" to reply, "backend" to activeBackend)
+    }
+
+    private fun sendLocalAudio(path: String): Map<String, Any> {
+        val conversation = aiConversation
+            ?: throw IllegalStateException("本地模型尚未加载")
+        val audio = requireCachedInput(path, "录音")
+        val reply = conversation.sendMessage(
+            Contents.of(
+                Content.AudioFile(audio.absolutePath),
+                Content.Text(
+                    "请转写并整理这段用户语音。尽量保留原意；听不清的内容标记为“听不清”，" +
+                    "不要自行补全。只做语音转写和自述整理，不作诊断或辨证，不推荐药物或方剂。"
+                )
+            )
+        ).text
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
@@ -189,7 +256,8 @@ class MainActivity : FlutterActivity() {
             ?: throw IllegalStateException("本地模型尚未加载")
         val prompt = """
             请根据当前对话中用户明确提供的信息，整理一份“用户自述症状草稿”。
-            只记录用户说过的事实，不推断、不补全，不作任何现代医学诊断或中医辨证，不推荐方剂或药物。
+            只记录用户通过文字或语音明确表达的事实，不记录模型对照片的观察，不推断、不补全，
+            不作任何现代医学诊断或中医辨证，不推荐方剂或药物。
             未提及的字段必须填 null 或空数组。输出严格 JSON，不要 Markdown 代码围栏，不要附加解释。
             JSON 字段固定为：
             {
@@ -207,7 +275,7 @@ class MainActivity : FlutterActivity() {
             red_flags 只记录用户明确说出的急症相关表现，不要自行判定风险等级。
             unknowns 记录仍需向用户核实的信息。
         """.trimIndent()
-        return mapOf("draft" to conversation.sendMessage(prompt))
+        return mapOf("draft" to conversation.sendMessage(prompt).text)
     }
 
     private fun resetLocalConversation(): Map<String, Any> {
