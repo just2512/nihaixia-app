@@ -104,7 +104,7 @@ class LocalAiModelStatus {
 
   String get sizeLabel {
     if (sizeBytes <= 0) return '尚未安装';
-    final gb = sizeBytes / (1024 * 1024 * 1024);
+    final gb = sizeBytes / 1000000000;
     return '${gb.toStringAsFixed(2)} GB';
   }
 }
