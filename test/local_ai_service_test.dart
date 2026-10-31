@@ -13,6 +13,30 @@ void main() {
   });
 
   group('LocalAiService attachment channel contract', () {
+    test('importModel returns native model installation status', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'installed': true,
+          'fileExists': true,
+          'ready': false,
+          'modelPath': '/data/user/0/app/files/ai_models/gemma-4-E4B-it.litertlm',
+          'sizeBytes': 3659530240,
+          'expectedSizeBytes': 3659530240,
+          'backend': 'not_loaded',
+        };
+      });
+
+      final status = await LocalAiService().importModel();
+
+      expect(received?.method, 'importModel');
+      expect(status.installed, isTrue);
+      expect(status.fileExists, isTrue);
+      expect(status.ready, isFalse);
+      expect(status.sizeBytes, 3659530240);
+    });
+
     test('sendImage passes cached path and user prompt to native channel', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
