@@ -1,5 +1,12 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 
 class LocalAiInterviewScreen extends StatefulWidget {
@@ -11,6 +18,12 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   final LocalAiService _service = LocalAiService();
+  final ImagePicker _imagePicker = ImagePicker();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  Timer? _recordingTimer;
+  String? _imagePath;
+  String? _audioPath;
+  bool _recording = false;
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_InterviewMessage> _messages = [
@@ -32,6 +45,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   void initState() {
     super.initState();
     _refreshStatus();
+    _recoverLostImage();
   }
 
   Future<void> _refreshStatus() async {
@@ -82,24 +96,190 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _recoverLostImage() async {
+    try {
+      final response = await _imagePicker.retrieveLostData();
+      if (response.isEmpty || response.files == null || response.files!.isEmpty) {
+        return;
+      }
+      final path = response.files!.first.path;
+      if (!mounted || path.isEmpty) return;
+      setState(() {
+        _imagePath = path;
+        _audioPath = null;
+      });
+    } catch (_) {
+      // A missing camera result must not block the text interview.
+    }
+  }
+
+  Future<void> _pickTonguePhoto() async {
+    if (_sending || _recording || _audioPath != null) return;
+    try {
+      final photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 90,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        requestFullMetadata: false,
+      );
+      if (photo == null || !mounted) return;
+
+      final file = File(photo.path);
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty || bytes.length > 15 * 1024 * 1024) {
+        setState(() => _error = '照片文件无效或超过 15 MB，请重新拍摄。');
+        return;
+      }
+      final decoded = await ui.decodeImageFromList(bytes);
+      final shortestSide = math.min(decoded.width, decoded.height);
+      decoded.dispose();
+      if (shortestSide < 480) {
+        setState(() => _error = '照片分辨率不足。请靠近拍摄，确保舌体清晰且短边至少 480 像素。');
+        return;
+      }
+      setState(() {
+        _imagePath = photo.path;
+        _audioPath = null;
+        _error = null;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message ?? '无法打开相机');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = '照片检查失败：$error');
+    }
+  }
+
+  Future<void> _startRecording() async {
+    if (_sending || _imagePath != null || _recording) return;
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        if (!mounted) return;
+        setState(() => _error = '需要麦克风权限才能录制语音。');
+        return;
+      }
+      final directory = await getTemporaryDirectory();
+      final path =
+          '${directory.path}/local_ai_${DateTime.now().millisecondsSinceEpoch}.wav';
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: path,
+      );
+      if (!mounted) {
+        await _audioRecorder.stop();
+        return;
+      }
+      setState(() {
+        _recording = true;
+        _audioPath = null;
+        _error = null;
+      });
+      _recordingTimer?.cancel();
+      _recordingTimer = Timer(
+        const Duration(seconds: 30),
+        _stopRecording,
+      );
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message ?? '无法开始录音');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = '录音启动失败：$error');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (!_recording) return;
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+    try {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      final file = path == null ? null : File(path);
+      if (file == null || !await file.exists() || await file.length() == 0) {
+        setState(() {
+          _recording = false;
+          _error = '没有生成有效录音，请重试。';
+        });
+        return;
+      }
+      if (await file.length() > 15 * 1024 * 1024) {
+        setState(() {
+          _recording = false;
+          _error = '录音文件超过 15 MB，请缩短语音后重录。';
+        });
+        return;
+      }
+      setState(() {
+        _recording = false;
+        _audioPath = path;
+        _error = null;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _recording = false;
+        _error = error.message ?? '录音结束失败';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _recording = false;
+        _error = '录音文件处理失败：$error';
+      });
+    }
+  }
+
+  void _discardAttachment() {
+    setState(() {
+      _imagePath = null;
+      _audioPath = null;
+      _error = null;
+    });
+  }
+
   Future<void> _send() async {
     final text = _inputController.text.trim();
-    if (text.isEmpty || _sending || _status?.ready != true) return;
+    final imagePath = _imagePath;
+    final audioPath = _audioPath;
+    if (_sending ||
+        _recording ||
+        _status?.ready != true ||
+        (text.isEmpty && imagePath == null && audioPath == null)) {
+      return;
+    }
 
-    _inputController.clear();
+    final userLabel = text.isNotEmpty
+        ? text
+        : imagePath != null
+            ? '已附加一张舌象照片'
+            : '已录制一段语音';
     setState(() {
-      _messages.add(_InterviewMessage(text: text, isUser: true));
+      _messages.add(_InterviewMessage(text: userLabel, isUser: true));
       _sending = true;
       _error = null;
     });
     _scrollToBottom();
 
     try {
-      final reply = await _service.sendMessage(text);
+      final reply = audioPath != null
+          ? await _service.sendAudio(audioPath, prompt: text)
+          : imagePath != null
+              ? await _service.sendImage(imagePath, prompt: text)
+              : await _service.sendMessage(text);
       if (!mounted) return;
+      _inputController.clear();
       setState(() {
         _messages.add(_InterviewMessage(text: reply, isUser: false));
         _sending = false;
+        _imagePath = null;
+        _audioPath = null;
       });
       _scrollToBottom();
     } on PlatformException catch (error) {
@@ -107,6 +287,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       setState(() {
         _sending = false;
         _error = error.message ?? '本地推理失败';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = '处理失败：$error';
       });
     }
   }
@@ -212,6 +398,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             isUser: false,
           ));
         _confirmedDraft = null;
+        _imagePath = null;
+        _audioPath = null;
         _error = null;
       });
     } on PlatformException catch (error) {
@@ -255,6 +443,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   @override
   void dispose() {
+    _recordingTimer?.cancel();
+    if (_recording) _audioRecorder.stop();
+    _audioRecorder.dispose();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -272,12 +463,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
-              onPressed: _sending || _extracting ? null : _resetConversation,
+              onPressed: _sending || _extracting || _recording ? null : _resetConversation,
               icon: const Icon(Icons.refresh),
             ),
             IconButton(
               tooltip: '释放模型内存',
-              onPressed: _sending || _extracting ? null : _releaseModel,
+              onPressed: _sending || _extracting || _recording ? null : _releaseModel,
               icon: const Icon(Icons.memory_outlined),
             ),
           ],
