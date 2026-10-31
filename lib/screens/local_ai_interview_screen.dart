@@ -468,7 +468,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   @override
   void dispose() {
     _recordingTimer?.cancel();
-    if (_recording) unawaited(_audioRecorder.stop());
+    if (_recording) unawaited(_audioRecorder.stop().then<void>((_) {}));
     unawaited(_audioRecorder.dispose());
     _inputController.dispose();
     _scrollController.dispose();
