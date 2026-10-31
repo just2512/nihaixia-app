@@ -185,7 +185,9 @@ class MainActivity : FlutterActivity() {
 
     private fun resetLocalConversation(): Map<String, Any> {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
-        aiConversation?.close()
+        val previousConversation = aiConversation
+        aiConversation = null
+        previousConversation?.close()
         aiConversation = engine.createConversation(
             ConversationConfig(systemInstruction = Contents.of(systemInstruction))
         )
@@ -193,11 +195,17 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun releaseLocalModel(): Map<String, Any> {
-        aiConversation?.close()
+        val conversation = aiConversation
+        val engine = aiEngine
+        // Clear references before close: LiteRT-LM objects must be closed exactly once.
         aiConversation = null
-        aiEngine?.close()
         aiEngine = null
         activeBackend = "not_loaded"
+        try {
+            conversation?.close()
+        } finally {
+            engine?.close()
+        }
         return modelStatus()
     }
 
