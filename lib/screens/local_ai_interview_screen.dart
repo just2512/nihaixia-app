@@ -542,36 +542,148 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      minLines: 1,
-                      maxLines: 4,
-                      enabled: ready && !_sending && !_extracting && _confirmedDraft == null,
-                      textInputAction: TextInputAction.newline,
-                      decoration: InputDecoration(
-                        hintText: ready ? '描述你的情况…' : '请先安装并加载本地模型',
-                        filled: true,
-                        fillColor: scheme.surfaceContainerLow,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                  if (_imagePath != null)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(_imagePath!),
+                              width: 52,
+                              height: 52,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              '舌象照片已选。请确认光线自然、对焦清晰、无滤镜。',
+                              style: TextStyle(fontSize: 12, height: 1.4),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: '移除照片',
+                            onPressed: _sending ? null : _discardAttachment,
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    tooltip: '发送',
-                    onPressed: ready && !_sending && !_extracting && _confirmedDraft == null ? _send : null,
-                    icon: const Icon(Icons.arrow_upward),
+                  if (_audioPath != null)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.graphic_eq, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text('语音已录制（最长 30 秒），发送前可移除。', style: TextStyle(fontSize: 12)),
+                          ),
+                          IconButton(
+                            tooltip: '移除录音',
+                            onPressed: _sending ? null : _discardAttachment,
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_recording)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Icon(Icons.fiber_manual_record, color: Colors.red, size: 14),
+                          SizedBox(width: 6),
+                          Text('正在录音，最长 30 秒…', style: TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        tooltip: '拍摄舌象',
+                        onPressed: ready &&
+                                !_sending &&
+                                !_extracting &&
+                                !_recording &&
+                                _confirmedDraft == null &&
+                                _audioPath == null
+                            ? _pickTonguePhoto
+                            : null,
+                        icon: const Icon(Icons.camera_alt_outlined),
+                      ),
+                      IconButton(
+                        tooltip: _recording ? '停止录音' : '录制语音（最长 30 秒）',
+                        onPressed: ready &&
+                                !_sending &&
+                                !_extracting &&
+                                _confirmedDraft == null &&
+                                _imagePath == null
+                            ? (_recording ? _stopRecording : _startRecording)
+                            : null,
+                        icon: Icon(_recording ? Icons.stop_circle_outlined : Icons.mic_none),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _inputController,
+                          minLines: 1,
+                          maxLines: 4,
+                          enabled: ready &&
+                              !_sending &&
+                              !_extracting &&
+                              !_recording &&
+                              _confirmedDraft == null,
+                          onChanged: (_) => setState(() {}),
+                          textInputAction: TextInputAction.newline,
+                          decoration: InputDecoration(
+                            hintText: ready ? '描述你的情况…' : '请先安装并加载本地模型',
+                            filled: true,
+                            fillColor: scheme.surfaceContainerLow,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton.filled(
+                        tooltip: '发送',
+                        onPressed: ready &&
+                                !_sending &&
+                                !_extracting &&
+                                !_recording &&
+                                _confirmedDraft == null &&
+                                (_inputController.text.trim().isNotEmpty ||
+                                    _imagePath != null ||
+                                    _audioPath != null)
+                            ? _send
+                            : null,
+                        icon: const Icon(Icons.arrow_upward),
+                      ),
+                    ],
                   ),
                 ],
               ),
