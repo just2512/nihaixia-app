@@ -137,9 +137,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() => _error = '照片文件无效或超过 15 MB，请重新拍摄。');
         return;
       }
-      final decoded = await ui.decodeImageFromList(bytes);
-      final shortestSide = math.min(decoded.width, decoded.height);
-      decoded.dispose();
+      final codec = await ui.instantiateImageCodec(bytes);
+      late final int shortestSide;
+      try {
+        final frame = await codec.getNextFrame();
+        try {
+          shortestSide = math.min(frame.image.width, frame.image.height);
+        } finally {
+          frame.image.dispose();
+        }
+      } finally {
+        codec.dispose();
+      }
       if (shortestSide < 480) {
         setState(() => _error = '照片分辨率不足。请靠近拍摄，确保舌体清晰且短边至少 480 像素。');
         return;
