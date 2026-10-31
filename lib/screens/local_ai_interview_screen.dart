@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../theme/app_tokens.dart';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -10,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../theme/app_tokens.dart';
 
 class LocalAiInterviewScreen extends StatefulWidget {
   const LocalAiInterviewScreen({super.key});
