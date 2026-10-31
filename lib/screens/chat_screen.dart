@@ -943,7 +943,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('六经辨证'),
+        title: const Text('辨证问诊'),
         actions: [
           if (_canGoBack)
             IconButton(
@@ -1029,7 +1029,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 return _messages[index];
@@ -1037,8 +1037,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           if (_showOptions)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 200),
+            DecoratedBox(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 border: Border(
@@ -1047,73 +1046,70 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shrinkWrap: true,
-                itemCount: _currentOptions.length,
-                itemBuilder: (context, index) {
-                  final option = _currentOptions[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Material(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: option.onTap,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 208),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _currentOptions.map((option) {
+                      final scheme = Theme.of(context).colorScheme;
+                      return ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: MediaQuery.of(context).size.width > 420
+                              ? 164
+                              : 132,
+                          maxWidth: MediaQuery.of(context).size.width - 40,
+                        ),
+                        child: OutlinedButton(
+                          onPressed: option.onTap,
+                          style: OutlinedButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 11,
+                            ),
+                            side: BorderSide(color: scheme.outlineVariant),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            backgroundColor: scheme.surface,
+                            foregroundColor: scheme.onSurface,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (option.number != null) ...[
-                                Container(
-                                  width: 22,
-                                  height: 22,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    '${option.number}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                Text(
+                                  '${option.number}.',
+                                  style: TextStyle(
+                                    color: scheme.primary,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                              ],
-                              if (option.icon != null) ...[
-                                Icon(
-                                  option.icon,
-                                  size: 20,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 7),
+                              ] else if (option.icon != null) ...[
+                                Icon(option.icon, size: 17, color: scheme.primary),
+                                const SizedBox(width: 7),
                               ],
                               Flexible(
                                 child: Text(
                                   option.label,
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    fontSize: 14,
+                                  softWrap: true,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                },
+                      );
+                    }).toList(),
+                  ),
+                ),
               ),
             ),
         ],
@@ -1156,20 +1152,8 @@ class _ChatBubble extends StatelessWidget {
           crossAxisAlignment:
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isUser)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 4),
-                child: Text(
-                  '倪海厦',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
                 color: isWarning
                     ? Theme.of(context).colorScheme.errorContainer
@@ -1185,8 +1169,17 @@ class _ChatBubble extends StatelessWidget {
                 border: isWarning
                     ? Border.all(
                         color: Theme.of(context).colorScheme.error, width: 1.2)
-                    : null,
-                borderRadius: BorderRadius.circular(16),
+                    : isResult
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                          )
+                        : null,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(12),
+                  topRight: const Radius.circular(12),
+                  bottomLeft: Radius.circular(isUser ? 12 : 3),
+                  bottomRight: Radius.circular(isUser ? 3 : 12),
+                ),
               ),
               child: Text(
                 text,
