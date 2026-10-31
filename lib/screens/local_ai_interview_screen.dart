@@ -103,6 +103,26 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _releaseModel() async {
+    try {
+      final status = await _service.releaseModel();
+      if (!mounted) return;
+      setState(() {
+        _status = status;
+        _messages
+          ..clear()
+          ..add(const _InterviewMessage(
+            text: '模型已释放，设备内存已归还。再次使用时可重新加载。',
+            isUser: false,
+          ));
+        _error = null;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.message ?? '无法释放模型');
+    }
+  }
+
   Future<void> _resetConversation() async {
     try {
       final status = await _service.resetConversation();
@@ -151,12 +171,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       appBar: AppBar(
         title: const Text('本地 AI 问诊'),
         actions: [
-          if (ready)
+          if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
               onPressed: _sending ? null : _resetConversation,
               icon: const Icon(Icons.refresh),
             ),
+            IconButton(
+              tooltip: '释放模型内存',
+              onPressed: _sending ? null : _releaseModel,
+              icon: const Icon(Icons.memory_outlined),
+            ),
+          ],
         ],
       ),
       body: Column(
@@ -295,7 +321,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             Text(
               installed
                   ? '模型文件：${status!.sizeLabel}'
-                  : '模型文件不随 APK 下载或打包，需由用户放入应用私有目录。',
+                  : status?.fileExists == true
+                      ? '文件大小不符合当前 E4B 模型包要求（应为 3.66 GB），请重新复制完整文件。'
+                      : '模型文件不随 APK 下载或打包，需由用户放入应用私有目录。',
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 5),
