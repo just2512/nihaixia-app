@@ -47,6 +47,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _checking = false;
         _error = error.message ?? '当前平台尚未接入本地模型运行环境';
       });
+    } on MissingPluginException {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _error = '本地 E4B 推理目前仅接入 Android 版本。';
+      });
     }
   }
 
