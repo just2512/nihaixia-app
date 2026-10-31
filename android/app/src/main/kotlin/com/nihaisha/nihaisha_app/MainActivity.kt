@@ -231,7 +231,7 @@ class MainActivity : FlutterActivity() {
                     "请只描述照片中能够直接观察到的舌体形态、舌色和舌苔分布。" +
                     "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
                     "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。" +
-                    if (userPrompt.isBlank()) "" else "\\n用户补充问题：" + userPrompt.take(500)
+                    if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
                 )
             )
         ).text
@@ -248,7 +248,7 @@ class MainActivity : FlutterActivity() {
                 Content.Text(
                     "请转写并整理这段用户语音。尽量保留原意；听不清的内容标记为“听不清”，" +
                     "不要自行补全。只做语音转写和自述整理，不作诊断或辨证，不推荐药物或方剂。" +
-                    if (userPrompt.isBlank()) "" else "\\n用户补充问题：" + userPrompt.take(500)
+                    if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
                 )
             )
         ).text
