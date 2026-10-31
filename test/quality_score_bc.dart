@@ -95,14 +95,16 @@ ZiweiChart _makeBChart() {
 
 List<DateTime> _bSamples() {
   final list = <DateTime>[];
+  // 这些是「公历日期」样本，不是子时边界样本。统一取当地正午，
+  // 避免 DateTime(y, m, d) 默认 00:00 与独立 oracle 的 12:00 比较不同物理时刻。
   for (final y in [1965, 1985, 2000, 2010, 2026]) {
     for (int m = 1; m <= 12; m++) {
-      list.add(DateTime(y, m, 15));
+      list.add(DateTime(y, m, 15, 12));
     }
   }
-  list.add(DateTime(2024, 2, 29)); // 闰年边界
-  list.add(DateTime(2026, 1, 1));
-  list.add(DateTime(2026, 12, 31));
+  list.add(DateTime(2024, 2, 29, 12)); // 闰年边界
+  list.add(DateTime(2026, 1, 1, 12));
+  list.add(DateTime(2026, 12, 31, 12));
   return list;
 }
 
