@@ -1186,13 +1186,7 @@ class _ChatBubble extends StatelessWidget {
                     ? Theme.of(context).colorScheme.errorContainer
                     : isUser
                         ? Theme.of(context).colorScheme.primaryContainer
-                        : isResult
-                            ? Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                            : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
+                        : Theme.of(context).colorScheme.surfaceContainerLow,
                 border: isWarning
                     ? Border.all(
                         color: Theme.of(context).colorScheme.error, width: 1.2)
@@ -1201,12 +1195,7 @@ class _ChatBubble extends StatelessWidget {
                             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
                           )
                         : null,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(12),
-                  topRight: const Radius.circular(12),
-                  bottomLeft: Radius.circular(isUser ? 12 : 3),
-                  bottomRight: Radius.circular(isUser ? 3 : 12),
-                ),
+                borderRadius: BorderRadius.circular(13),
               ),
               child: Text(
                 text,
