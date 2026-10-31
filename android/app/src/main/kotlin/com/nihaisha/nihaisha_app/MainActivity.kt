@@ -33,6 +33,17 @@ class MainActivity : FlutterActivity() {
     private var aiConversation: Conversation? = null
     private var activeBackend = "not_loaded"
 
+    // Only explicit user text and pending audio transcripts enter symptom extraction.
+    // Image observations and assistant responses are intentionally excluded.
+    private val userReportedInputs = mutableListOf<String>()
+
+    private fun recordUserInput(source: String, value: String) {
+        val normalized = value.trim()
+        if (normalized.isEmpty()) return
+        if (userReportedInputs.size >= 100) userReportedInputs.removeAt(0)
+        userReportedInputs.add("$source：" + normalized.take(2000))
+    }
+
     private val systemInstruction = """
         你是一个离线健康信息整理助手。你的任务是倾听用户描述、提出必要的澄清问题，并用通俗中文解释一般健康信息。
         严格边界：
@@ -203,6 +214,7 @@ class MainActivity : FlutterActivity() {
     private fun sendLocalMessage(text: String): Map<String, Any> {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
+        recordUserInput("用户文字自述", text)
         val reply = conversation.sendMessage(text).toString()
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
@@ -224,6 +236,7 @@ class MainActivity : FlutterActivity() {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
         val image = requireCachedInput(path, "照片")
+        recordUserInput("用户随照片输入的文字", userPrompt)
         val reply = conversation.sendMessage(
             Contents.of(
                 Content.ImageFile(image.absolutePath),
@@ -242,22 +255,32 @@ class MainActivity : FlutterActivity() {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
         val audio = requireCachedInput(path, "录音")
+        recordUserInput("用户随录音输入的文字", userPrompt)
         val reply = conversation.sendMessage(
             Contents.of(
                 Content.AudioFile(audio.absolutePath),
                 Content.Text(
-                    "请转写并整理这段用户语音。尽量保留原意；听不清的内容标记为“听不清”，" +
-                    "不要自行补全。只做语音转写和自述整理，不作诊断或辨证，不推荐药物或方剂。" +
+                    "请逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”，" +
+                    "不要总结、推断、改写或自行补全。只做语音转写，不作诊断或辨证，不推荐药物或方剂。" +
                     if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
                 )
             )
         ).toString()
+        recordUserInput("语音识别草稿（模型生成，尚待用户核对）", reply)
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
     private fun extractSymptoms(): Map<String, Any> {
-        val conversation = aiConversation
+        val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
+        if (userReportedInputs.isEmpty()) {
+            return mapOf(
+                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[]}"""
+            )
+        }
+        val userInputContext = userReportedInputs.mapIndexed { index, input ->
+            (index + 1).toString() + ". " + input
+        }.joinToString("\n")
         val prompt = """
             请根据当前对话中用户明确提供的信息，整理一份“用户自述症状草稿”。
             只记录用户通过文字或语音明确表达的事实，不记录模型对照片的观察，不推断、不补全，
@@ -278,8 +301,25 @@ class MainActivity : FlutterActivity() {
             }
             red_flags 只记录用户明确说出的急症相关表现，不要自行判定风险等级。
             unknowns 记录仍需向用户核实的信息。
+            以下内容是应用单独保存的用户原始文字输入和待核对语音识别草稿。
+            不得使用照片、舌象观察或模型此前的回复；这些内容没有提供给你。
+            语音识别草稿尚未由用户核对，只能按其文字整理，不得补全。
+
+            用户输入记录：
+            $userInputContext
         """.trimIndent()
-        return mapOf("draft" to conversation.sendMessage(prompt).toString())
+        val extractionConversation = engine.createConversation(
+            ConversationConfig(
+                systemInstruction = Contents.of(
+                    "你只整理应用提供的用户输入记录。不要诊断、辨证、开方或提供剂量。"
+                )
+            )
+        )
+        return try {
+            mapOf("draft" to extractionConversation.sendMessage(prompt).toString())
+        } finally {
+            extractionConversation.close()
+        }
     }
 
     private fun resetLocalConversation(): Map<String, Any> {
@@ -287,6 +327,7 @@ class MainActivity : FlutterActivity() {
         val previousConversation = aiConversation
         aiConversation = null
         previousConversation?.close()
+        userReportedInputs.clear()
         aiConversation = engine.createConversation(
             ConversationConfig(systemInstruction = Contents.of(systemInstruction))
         )
@@ -299,6 +340,7 @@ class MainActivity : FlutterActivity() {
         // Clear references before close: LiteRT-LM objects must be closed exactly once.
         aiConversation = null
         aiEngine = null
+        userReportedInputs.clear()
         activeBackend = "not_loaded"
         try {
             conversation?.close()

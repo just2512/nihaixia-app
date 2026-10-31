@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
@@ -26,6 +27,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _recording = false;
   bool _recordingBusy = false;
   bool _recorderMayBeActive = false;
+  String? _activeRecordingPath;
   Future<void> _recorderOperation = Future<void>.value();
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -99,6 +101,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _deleteCachedAttachments(Iterable<String?> paths) async {
+    try {
+      final tempRoot = p.normalize((await getTemporaryDirectory()).absolute.path);
+      for (final rawPath in paths) {
+        if (rawPath == null || rawPath.isEmpty) continue;
+        final normalizedPath = p.normalize(File(rawPath).absolute.path);
+        if (!p.isWithin(tempRoot, normalizedPath)) continue;
+        try {
+          final file = File(normalizedPath);
+          if (await file.exists()) await file.delete();
+        } catch (_) {
+          // Cache cleanup is best-effort and must not mask the primary action.
+        }
+      }
+    } catch (_) {
+      // Temporary-directory lookup may fail during Activity teardown.
+    }
+  }
+
   Future<String?> _validateTonguePhoto(String path) async {
     final file = File(path);
     if (!await file.exists()) return '照片文件不存在，请重新拍摄。';
@@ -140,23 +161,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _recoverLostImage() async {
     try {
       final response = await _imagePicker.retrieveLostData();
-      if (!mounted || response.isEmpty || response.files == null ||
+      if (response.isEmpty || response.files == null ||
           response.files!.isEmpty) {
         return;
       }
       final path = response.files!.first.path;
       if (path.isEmpty) return;
+      if (!mounted) {
+        await _deleteCachedAttachments([path]);
+        return;
+      }
       final validationError = await _validateTonguePhoto(path);
-      if (!mounted) return;
+      if (!mounted) {
+        await _deleteCachedAttachments([path]);
+        return;
+      }
       if (validationError != null) {
+        await _deleteCachedAttachments([path]);
+        if (!mounted) return;
         setState(() => _error = validationError);
         return;
       }
+      final previousPath = _imagePath;
       setState(() {
         _imagePath = path;
         _audioPath = null;
         _error = null;
       });
+      if (previousPath != null && previousPath != path) {
+        unawaited(_deleteCachedAttachments([previousPath]));
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = '恢复照片失败：$error');
@@ -173,18 +207,31 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         maxHeight: 1600,
         requestFullMetadata: false,
       );
-      if (photo == null || !mounted) return;
+      if (photo == null) return;
+      if (!mounted) {
+        await _deleteCachedAttachments([photo.path]);
+        return;
+      }
       final validationError = await _validateTonguePhoto(photo.path);
-      if (!mounted) return;
+      if (!mounted) {
+        await _deleteCachedAttachments([photo.path]);
+        return;
+      }
       if (validationError != null) {
+        await _deleteCachedAttachments([photo.path]);
+        if (!mounted) return;
         setState(() => _error = validationError);
         return;
       }
+      final previousPath = _imagePath;
       setState(() {
         _imagePath = photo.path;
         _audioPath = null;
         _error = null;
       });
+      if (previousPath != null && previousPath != photo.path) {
+        unawaited(_deleteCachedAttachments([previousPath]));
+      }
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() => _error = error.message ?? '无法打开相机');
@@ -195,7 +242,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _startRecording() {
-    if (_sending || _imagePath != null || _recording || _recordingBusy) {
+    if (_sending || _imagePath != null || _audioPath != null || _recording || _recordingBusy || _recorderMayBeActive) {
       return Future<void>.value();
     }
     setState(() => _recordingBusy = true);
@@ -217,6 +264,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final directory = await getTemporaryDirectory();
       final path =
           '${directory.path}/local_ai_${DateTime.now().millisecondsSinceEpoch}.wav';
+      _activeRecordingPath = path;
       await _audioRecorder.start(
         const RecordConfig(
           encoder: AudioEncoder.wav,
@@ -227,8 +275,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       _recorderMayBeActive = true;
       if (!mounted) {
-        await _audioRecorder.stop();
+        final stoppedPath = await _audioRecorder.stop();
         _recorderMayBeActive = false;
+        _activeRecordingPath = null;
+        await _deleteCachedAttachments([stoppedPath, path]);
         return;
       }
       setState(() {
@@ -243,12 +293,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _stopRecording,
       );
     } on PlatformException catch (error) {
+      final failedPath = _activeRecordingPath;
+      _activeRecordingPath = null;
+      await _deleteCachedAttachments([failedPath]);
       if (!mounted) return;
       setState(() {
         _recordingBusy = false;
         _error = error.message ?? '无法开始录音';
       });
     } catch (error) {
+      final failedPath = _activeRecordingPath;
+      _activeRecordingPath = null;
+      await _deleteCachedAttachments([failedPath]);
       if (!mounted) return;
       setState(() {
         _recordingBusy = false;
@@ -272,11 +328,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _stopRecordingInternal() async {
     try {
+      final expectedPath = _activeRecordingPath;
       final path = await _audioRecorder.stop();
       _recorderMayBeActive = false;
-      if (!mounted) return;
+      _activeRecordingPath = null;
+      if (!mounted) {
+        await _deleteCachedAttachments([path, expectedPath]);
+        return;
+      }
       final file = path == null ? null : File(path);
       if (file == null || !await file.exists() || await file.length() == 0) {
+        await _deleteCachedAttachments([path, expectedPath]);
+        if (!mounted) return;
         setState(() {
           _recordingBusy = false;
           _error = '没有生成有效录音，请重试。';
@@ -284,6 +347,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       if (await file.length() > 15 * 1024 * 1024) {
+        await _deleteCachedAttachments([path]);
+        if (!mounted) return;
         setState(() {
           _recordingBusy = false;
           _error = '录音文件超过 15 MB，请缩短语音后重录。';
@@ -311,11 +376,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   void _discardAttachment() {
+    final paths = <String?>[_imagePath, _audioPath];
     setState(() {
       _imagePath = null;
       _audioPath = null;
       _error = null;
     });
+    unawaited(_deleteCachedAttachments(paths));
   }
 
   Future<void> _send() async {
@@ -348,6 +415,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : imagePath != null
               ? await _service.sendImage(imagePath, prompt: text)
               : await _service.sendMessage(text);
+      await _deleteCachedAttachments([imagePath, audioPath]);
       if (!mounted) return;
       _inputController.clear();
       setState(() {
@@ -358,13 +426,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       });
       _scrollToBottom();
     } on PlatformException catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        await _deleteCachedAttachments([imagePath, audioPath]);
+        return;
+      }
       setState(() {
         _sending = false;
         _error = error.message ?? '本地推理失败';
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        await _deleteCachedAttachments([imagePath, audioPath]);
+        return;
+      }
       setState(() {
         _sending = false;
         _error = '处理失败：$error';
@@ -399,7 +473,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '以下内容由模型从本次对话中提取。请逐项核对；未提及的信息不会自动补全。',
+                      '以下内容仅根据你提供的文字和待核对语音识别草稿整理，不包含舌象照片观察。请逐项核对；未提及的信息不会自动补全。',
                       style: TextStyle(fontSize: 13, height: 1.45),
                     ),
                     const SizedBox(height: 12),
@@ -462,7 +536,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _releaseModel() async {
     try {
+      final paths = <String?>[_imagePath, _audioPath];
       final status = await _service.releaseModel();
+      await _deleteCachedAttachments(paths);
       if (!mounted) return;
       setState(() {
         _status = status;
@@ -485,7 +561,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _resetConversation() async {
     try {
+      final paths = <String?>[_imagePath, _audioPath];
       final status = await _service.resetConversation();
+      await _deleteCachedAttachments(paths);
       if (!mounted) return;
       setState(() {
         _status = status;
@@ -518,7 +596,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
   }
 
-  Future<void> _disposeRecorder() async {
+  Future<void> _disposeRecorder(Iterable<String?> pendingAttachments) async {
+    final paths = <String?>[
+      ...pendingAttachments,
+      _activeRecordingPath,
+    ];
     try {
       await _recorderOperation;
     } catch (_) {
@@ -526,7 +608,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     if (_recording || _recorderMayBeActive) {
       try {
-        await _audioRecorder.stop();
+        paths.add(await _audioRecorder.stop());
         _recorderMayBeActive = false;
       } catch (_) {
         // Dispose still releases any remaining native recorder resources.
@@ -537,12 +619,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } catch (_) {
       // Do not leak an asynchronous exception during widget teardown.
     }
+    _activeRecordingPath = null;
+    await _deleteCachedAttachments(paths);
   }
 
   @override
   void dispose() {
     _recordingTimer?.cancel();
-    unawaited(_disposeRecorder());
+    final pendingAttachments = _sending
+        ? const <String?>[]
+        : <String?>[_imagePath, _audioPath];
+    unawaited(_disposeRecorder(pendingAttachments));
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -734,8 +821,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                                 !_sending &&
                                 !_extracting &&
                                 !_recordingBusy &&
+                                !_recorderMayBeActive &&
                                 _confirmedDraft == null &&
-                                _imagePath == null
+                                _imagePath == null &&
+                                _audioPath == null
                             ? (_recording ? _stopRecording : _startRecording)
                             : null,
                         icon: Icon(_recording ? Icons.stop_circle_outlined : Icons.mic_none),
