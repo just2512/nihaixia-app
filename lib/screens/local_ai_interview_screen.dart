@@ -126,8 +126,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (photo == null || !mounted) return;
 
       final file = File(photo.path);
+      final fileSize = await file.length();
+      if (fileSize <= 0 || fileSize > 15 * 1024 * 1024) {
+        setState(() => _error = '照片文件无效或超过 15 MB，请重新拍摄。');
+        return;
+      }
       final bytes = await file.readAsBytes();
-      if (bytes.isEmpty || bytes.length > 15 * 1024 * 1024) {
+      if (bytes.isEmpty) {
         setState(() => _error = '照片文件无效或超过 15 MB，请重新拍摄。');
         return;
       }
@@ -421,6 +426,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             isUser: false,
           ));
         _confirmedDraft = null;
+        _imagePath = null;
+        _audioPath = null;
         _error = null;
       });
     } on PlatformException catch (error) {
@@ -444,8 +451,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   @override
   void dispose() {
     _recordingTimer?.cancel();
-    if (_recording) _audioRecorder.stop();
-    _audioRecorder.dispose();
+    if (_recording) unawaited(_audioRecorder.stop());
+    unawaited(_audioRecorder.dispose());
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
