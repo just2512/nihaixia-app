@@ -1,5 +1,4 @@
 import 'dart:convert';
-import '../theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -18,6 +17,7 @@ import '../models/formula.dart';
 import '../widgets/oral_hint_card.dart';
 import 'settings_screen.dart';
 import 'local_ai_interview_screen.dart';
+import '../theme/app_tokens.dart';
 
 /// 高危禁忌关键词（用于结果卡红色强提示）
 const Set<String> _highRiskKeywords = {
