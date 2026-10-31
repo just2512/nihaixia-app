@@ -7,8 +7,9 @@ void main() {
       final status = LocalAiModelStatus.fromMap({
         'installed': true,
         'ready': true,
+        'fileExists': true,
         'modelPath': '/data/user/0/app/files/ai_models/gemma-4-E4B-it.litertlm',
-        'sizeBytes': 1610612736,
+        'sizeBytes': 1500000000,
         'backend': 'gpu',
       });
 
