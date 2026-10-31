@@ -13,6 +13,7 @@ void main() {
       });
 
       expect(status.installed, isTrue);
+      expect(status.fileExists, isTrue);
       expect(status.ready, isTrue);
       expect(status.backend, 'gpu');
       expect(status.sizeLabel, '1.50 GB');
@@ -23,9 +24,11 @@ void main() {
       final status = LocalAiModelStatus.fromMap(const {});
 
       expect(status.installed, isFalse);
+      expect(status.fileExists, isFalse);
       expect(status.ready, isFalse);
       expect(status.modelPath, isEmpty);
       expect(status.sizeBytes, 0);
+      expect(status.expectedSizeBytes, 3659530240);
       expect(status.backend, 'not_loaded');
       expect(status.sizeLabel, '尚未安装');
     });
