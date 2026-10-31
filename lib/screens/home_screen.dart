@@ -69,15 +69,19 @@ class _HomeScreenState extends State<HomeScreen> {
           children: _screens,
         ),
         bottomNavigationBar: NavigationBar(
+          height: 66,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          indicatorColor: Theme.of(context).colorScheme.primaryContainer,
           selectedIndex: _currentIndex,
           onDestinationSelected: (index) {
             setState(() => _currentIndex = index);
           },
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book),
-              label: '知识库',
+              icon: Icon(Icons.library_books_outlined),
+              selectedIcon: Icon(Icons.library_books),
+              label: '典籍',
             ),
             NavigationDestination(
               icon: Icon(Icons.build_outlined),
@@ -85,9 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
               label: '工具',
             ),
             NavigationDestination(
-              icon: Icon(Icons.chat_bubble_outline),
-              selectedIcon: Icon(Icons.chat_bubble),
-              label: '辨证',
+              icon: Icon(Icons.fact_check_outlined),
+              selectedIcon: Icon(Icons.fact_check),
+              label: '问诊',
             ),
             NavigationDestination(
               icon: Icon(Icons.bookmark_border),
