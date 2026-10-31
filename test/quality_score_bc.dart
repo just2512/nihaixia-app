@@ -162,7 +162,7 @@ QualityReport scoreFeatureB() {
         'managerDay=${engDay.day}/${engDay.index}/${engDay.ganzhi.gan.label}${engDay.ganzhi.zhi.label} '
         'dayGz=${dayGz.gan.label}${dayGz.zhi.label} '
         'flowMonth=${om.ganzhi.gan.label}${om.ganzhi.zhi.label}/${om.index} '
-        'managerFlowDay=${fd.ganzhi.gan.label}${fd.ganzhi.zhi.label}/${fd.index} '
+        'managerFlowDay=${fd.ganzhi}/${fd.mingIndex} '
         'oracleFlowDay=${od.ganzhi.gan.label}${od.ganzhi.zhi.label}/${od.index} '
         'okIdx=$okIdxD okGz=$okGzD',
       );
