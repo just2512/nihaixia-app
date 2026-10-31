@@ -13,18 +13,29 @@
 下载地址：
 https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm
 
-应用只接受该标准文件的精确大小；文件缺失或大小不一致时，不会调用推理引擎。
+应用检查模型文件大小。通过应用内导入时，还会在复制过程中校验 SHA-256；大小或哈希不一致时会拒绝替换正式模型文件，不调用推理引擎。
 
 ## 安装到 OPPO Find N2
 
-先安装本项目生成的 debug APK，并在电脑上准备好上面的模型文件。手机打开 USB 调试，确认：
+先安装本项目生成的 Debug APK，并将模型文件下载到手机可访问的位置（例如“下载”目录）。打开应用「问诊」页，点右上角本地 AI 入口：
+
+1. 点击「选择并导入模型文件」。
+2. 在 Android 系统文件选择器中找到 `gemma-4-E4B-it.litertlm`。
+3. 等待应用完成本地复制、文件大小和 SHA-256 校验。3.66GB 文件导入期间请保持应用在前台，并确保设备有足够剩余空间。
+4. 状态显示文件已安装后，点击「加载本地模型」。
+
+模型只从用户选取的本地 URI 读取，不联网下载、不上传文件，也不会将模型打包进 APK。导入使用临时文件；校验通过后才替换正式文件，导入失败会保留原文件。
+
+### 可选：通过 ADB 安装（开发者备用方式）
+
+如需使用 USB 调试，先在电脑核对文件 SHA-256：
 
 ```powershell
 Get-FileHash .\gemma-4-E4B-it.litertlm -Algorithm SHA256
 adb devices
 ```
 
-将模型放入应用私有目录（Windows PowerShell）：
+再复制到应用私有目录：
 
 ```powershell
 adb push .\gemma-4-E4B-it.litertlm /data/local/tmp/gemma-4-E4B-it.litertlm
@@ -33,7 +44,7 @@ adb shell run-as com.nihaisha.nihaisha_app cp /data/local/tmp/gemma-4-E4B-it.lit
 adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 ```
 
-返回应用「问诊」页，点右上角本地 AI 入口，确认文件状态为已安装，再点「加载本地模型」。运行时优先尝试 GPU，GPU 初始化失败会自动改用 CPU；界面会显示实际使用的后端。
+注意：ADB 方式不经过应用内 SHA-256 导入校验，需要自行核对上文哈希。运行时优先尝试 GPU，GPU 初始化失败会自动改用 CPU；界面会显示实际使用的后端。
 
 ## 当前实现范围
 
