@@ -20,6 +20,7 @@ https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/ge
 先安装本项目生成的 debug APK，并在电脑上准备好上面的模型文件。手机打开 USB 调试，确认：
 
 ```powershell
+Get-FileHash .\\gemma-4-E4B-it.litertlm -Algorithm SHA256
 adb devices
 ```
 
