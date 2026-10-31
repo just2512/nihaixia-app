@@ -46,8 +46,18 @@ jobs:
         run: flutter test --no-pub test/local_ai_service_test.dart
 
       - name: Run full regression suite
+        id: regression
         if: always() && steps.dependencies.outcome == 'success'
         run: flutter test --no-pub
+
+      - name: Upload Flutter test failure diffs
+        if: always() && steps.dependencies.outcome == 'success' && steps.regression.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-test-failure-diffs
+          path: test/failures/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Build Android debug APK
         id: apk

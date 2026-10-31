@@ -112,6 +112,7 @@ QualityReport scoreFeatureB() {
 
   int b1p = 0, b1t = 0; // 流月命宫 oracle 匹配
   int b2p = 0, b2t = 0; // 流日命宫 oracle 匹配
+  final List<String> b2Diffs = [];
   int b3p = 0, b3t = 0; // 命宫-疾厄宫关系一致
   int b4p = 0, b4t = 0; // 解读文案完整
   int b5p = 0, b5t = 0; // 确定性（幂等）
@@ -153,7 +154,19 @@ QualityReport scoreFeatureB() {
     final okIdxD = fd.mingIndex == od.index && fd.mingIndex == engDay.index;
     final okGzD =
         fd.ganzhi == '${dayGz.gan.label}${_branchNames[fd.mingIndex]}';
-    if (okIdxD && okGzD) b2p++;
+    if (okIdxD && okGzD) {
+      b2p++;
+    } else {
+      b2Diffs.add(
+        '${date.toIso8601String()} '
+        'managerDay=${engDay.day}/${engDay.index}/${engDay.ganzhi.gan.label}${engDay.ganzhi.zhi.label} '
+        'dayGz=${dayGz.gan.label}${dayGz.zhi.label} '
+        'flowMonth=${om.ganzhi.gan.label}${om.ganzhi.zhi.label}/${om.index} '
+        'managerFlowDay=${fd.ganzhi.gan.label}${fd.ganzhi.zhi.label}/${fd.index} '
+        'oracleFlowDay=${od.ganzhi.gan.label}${od.ganzhi.zhi.label}/${od.index} '
+        'okIdx=$okIdxD okGz=$okGzD',
+      );
+    }
 
     // B3：命宫 + 5 = 疾厄宫（mod 12）
     final okM = (fm.mingIndex + 5) % 12 == fm.illnessIndex;
@@ -186,6 +199,9 @@ QualityReport scoreFeatureB() {
       b5p++;
     }
   }
+
+  // ignore: avoid_print
+  print('B2 oracle mismatches (${b2Diffs.length}/$b2t):\\n${b2Diffs.take(20).join('\\n')}');
 
   return QualityReport('B', samples.length, [
     const QualityDimension('B1', '流月命宫与引擎 oracle 一致', 5, 0, 0, 'FlowMonth.create 交叉校验'),
