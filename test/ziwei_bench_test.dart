@@ -57,6 +57,7 @@ void main() {
         lifeOkC = 0,
         lifeOkF = 0;
     int baziCompared = 0, majorCompared = 0, sihuaCompared = 0;
+    final Set<String> lateZiConventionCases = <String>{};
     final List<String> lines = [];
     final List<String> vocabGaps = [];
     final List<String> baziDiffs = [];
@@ -152,8 +153,12 @@ void main() {
       // ---- compare ----
       final bBazi = isKnownLateZiConvention || chart.baziFull == expBazi;
       if (isKnownLateZiConvention) {
+        expect(dt.hour, 23, reason: '$caseId 晚子时口径例外必须是 23 点输入');
         expect(chart.baziFull, knownLateZiTodayGan[caseId],
             reason: '$caseId 本应用 todayGan 晚子时四柱不得漂移');
+        expect(chart.baziFull, isNot(expBazi),
+            reason: '$caseId 应确实与 tomorrowGan 参考值存在口径差');
+        lateZiConventionCases.add(caseId);
       } else {
         baziCompared++;
         majorCompared++;
@@ -301,6 +306,8 @@ void main() {
     expect(shenOk, 31, reason: '身主仅允许 case_7 铃星/火星差');
     expect(knownLateZiTodayGan.keys.toSet(), {'case_9', 'case_28'},
         reason: '晚子时口径例外只能是已核实的两个 23 点样本');
+    expect(lateZiConventionCases, knownLateZiTodayGan.keys.toSet(),
+        reason: 'MingLi-Bench 必须包含且只包含这两个已识别的晚子时样本');
     // 杂曜(aux)不断言：空亡命名/取舍为门派浮动，预期内差异。
     // 词汇完整性：星曜 key 必须都有中文映射，不得出现 raw key 当 label。
     expect(vocabGaps, isEmpty, reason: '星曜 key 缺失中文映射');
