@@ -423,7 +423,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () => Navigator.pop(context, draft.summaryLines.join('\\n')),
+              onPressed: () => Navigator.pop(context, draft.summaryLines.join('\n')),
               child: const Text('返回规则问诊'),
             ),
           ),
