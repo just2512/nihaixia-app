@@ -168,6 +168,13 @@ class MainActivity : FlutterActivity() {
 
         val tempFile = File(parent, modelFile.name + ".importing")
         val backupFile = File(parent, modelFile.name + ".previous")
+        // Recover the previous model if the process was interrupted between backup and replacement.
+        if (!modelFile.exists() && backupFile.exists() && !backupFile.renameTo(modelFile)) {
+            throw IllegalStateException("检测到旧模型备份，但无法恢复；请检查应用存储空间")
+        }
+        if (backupFile.exists() && !backupFile.delete()) {
+            throw IllegalStateException("无法清理旧模型备份文件")
+        }
         if (tempFile.exists() && !tempFile.delete()) {
             throw IllegalStateException("无法清理上一次未完成的导入文件")
         }
@@ -210,9 +217,6 @@ class MainActivity : FlutterActivity() {
                 )
             }
 
-            if (backupFile.exists() && !backupFile.delete()) {
-                throw IllegalStateException("无法清理旧模型备份文件")
-            }
             val hadPreviousModel = modelFile.exists()
             if (hadPreviousModel && !modelFile.renameTo(backupFile)) {
                 throw IllegalStateException("无法暂存旧模型文件，未覆盖原文件")
