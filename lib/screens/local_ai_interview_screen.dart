@@ -211,6 +211,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             text: '模型已释放，设备内存已归还。再次使用时可重新加载。',
             isUser: false,
           ));
+        _confirmedDraft = null;
         _error = null;
       });
     } on PlatformException catch (error) {
@@ -231,6 +232,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             text: '我们重新开始。先说说这次最想了解的身体情况。',
             isUser: false,
           ));
+        _confirmedDraft = null;
         _error = null;
       });
     } on PlatformException catch (error) {
