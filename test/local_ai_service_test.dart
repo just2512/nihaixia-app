@@ -35,6 +35,41 @@ void main() {
       expect(status.sizeLabel, '尚未安装');
     });
 
+    test('parses a user-reported symptom draft and ignores unsupported fields', () {
+      final draft = LocalAiSymptomDraft.fromModelText('''
+```json
+{
+  "main_complaint": "饭后腹胀",
+  "onset": "两周前",
+  "duration": "每天饭后约一小时",
+  "location": "上腹部",
+  "sensation": "胀满",
+  "aggravating_factors": ["吃得过饱"],
+  "relieving_factors": ["散步后稍缓解"],
+  "associated_symptoms": ["嗳气"],
+  "red_flags": [],
+  "unknowns": ["是否与某种食物有关"],
+  "diagnosis": "不应接受"
+}
+```
+''');
+
+      expect(draft.mainComplaint, '饭后腹胀');
+      expect(draft.onset, '两周前');
+      expect(draft.aggravatingFactors, ['吃得过饱']);
+      expect(draft.associatedSymptoms, ['嗳气']);
+      expect(draft.unknowns, ['是否与某种食物有关']);
+      expect(draft.summaryLines.join('、'), contains('饭后腹胀'));
+      expect(draft.summaryLines.join('、'), isNot(contains('不应接受')));
+    });
+
+    test('rejects malformed model symptom output', () {
+      expect(
+        () => LocalAiSymptomDraft.fromModelText('not json'),
+        throwsFormatException,
+      );
+    });
+
     test('does not report a model as installed for an empty file', () {
       final status = LocalAiModelStatus.fromMap({
         'installed': false,
