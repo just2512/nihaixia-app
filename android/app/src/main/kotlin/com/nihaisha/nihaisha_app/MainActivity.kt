@@ -71,18 +71,20 @@ class MainActivity : FlutterActivity() {
                     "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
                     "sendImage" -> {
                         val path = call.argument<String>("path")?.trim().orEmpty()
+                        val prompt = call.argument<String>("prompt")?.trim().orEmpty()
                         if (path.isEmpty()) {
                             result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
                         } else {
-                            runAiTask(result) { sendLocalImage(path) }
+                            runAiTask(result) { sendLocalImage(path, prompt) }
                         }
                     }
                     "sendAudio" -> {
                         val path = call.argument<String>("path")?.trim().orEmpty()
+                        val prompt = call.argument<String>("prompt")?.trim().orEmpty()
                         if (path.isEmpty()) {
                             result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
                         } else {
-                            runAiTask(result) { sendLocalAudio(path) }
+                            runAiTask(result) { sendLocalAudio(path, prompt) }
                         }
                     }
                     "sendMessage" -> {
@@ -218,7 +220,7 @@ class MainActivity : FlutterActivity() {
         return file
     }
 
-    private fun sendLocalImage(path: String): Map<String, Any> {
+    private fun sendLocalImage(path: String, userPrompt: String): Map<String, Any> {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
         val image = requireCachedInput(path, "照片")
@@ -228,14 +230,15 @@ class MainActivity : FlutterActivity() {
                 Content.Text(
                     "请只描述照片中能够直接观察到的舌体形态、舌色和舌苔分布。" +
                     "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
-                    "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。"
+                    "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。" +
+                    if (userPrompt.isBlank()) "" else "\\n用户补充问题：" + userPrompt.take(500)
                 )
             )
         ).text
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
-    private fun sendLocalAudio(path: String): Map<String, Any> {
+    private fun sendLocalAudio(path: String, userPrompt: String): Map<String, Any> {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
         val audio = requireCachedInput(path, "录音")
@@ -244,7 +247,8 @@ class MainActivity : FlutterActivity() {
                 Content.AudioFile(audio.absolutePath),
                 Content.Text(
                     "请转写并整理这段用户语音。尽量保留原意；听不清的内容标记为“听不清”，" +
-                    "不要自行补全。只做语音转写和自述整理，不作诊断或辨证，不推荐药物或方剂。"
+                    "不要自行补全。只做语音转写和自述整理，不作诊断或辨证，不推荐药物或方剂。" +
+                    if (userPrompt.isBlank()) "" else "\\n用户补充问题：" + userPrompt.take(500)
                 )
             )
         ).text
