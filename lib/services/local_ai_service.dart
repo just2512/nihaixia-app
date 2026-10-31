@@ -46,6 +46,17 @@ class LocalAiService {
     return reply;
   }
 
+  Future<LocalAiModelStatus> releaseModel() async {
+    final data = await _channel.invokeMapMethod<String, dynamic>('releaseModel');
+    if (data == null) {
+      throw const PlatformException(
+        code: 'EMPTY_STATUS',
+        message: '没有收到模型释放结果',
+      );
+    }
+    return LocalAiModelStatus.fromMap(data);
+  }
+
   Future<LocalAiModelStatus> resetConversation() async {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'resetConversation',
@@ -62,25 +73,31 @@ class LocalAiService {
 
 class LocalAiModelStatus {
   final bool installed;
+  final bool fileExists;
   final bool ready;
   final String modelPath;
   final int sizeBytes;
+  final int expectedSizeBytes;
   final String backend;
 
   const LocalAiModelStatus({
     required this.installed,
+    required this.fileExists,
     required this.ready,
     required this.modelPath,
     required this.sizeBytes,
+    required this.expectedSizeBytes,
     required this.backend,
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
     return LocalAiModelStatus(
       installed: map['installed'] == true,
+      fileExists: map['fileExists'] == true,
       ready: map['ready'] == true,
       modelPath: map['modelPath'] as String? ?? '',
       sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
+      expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
     );
   }
