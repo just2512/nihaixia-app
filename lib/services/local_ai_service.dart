@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/services.dart';
 
 /// Android 本地 Gemma 4 E4B 通道。
@@ -44,6 +45,17 @@ class LocalAiService {
       );
     }
     return reply;
+  }
+
+  Future<LocalAiSymptomDraft> extractSymptoms() async {
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'extractSymptoms',
+    );
+    final draft = data?['draft'] as String?;
+    if (draft == null || draft.trim().isEmpty) {
+      throw const FormatException('模型没有返回症状整理内容');
+    }
+    return LocalAiSymptomDraft.fromModelText(draft);
   }
 
   Future<LocalAiModelStatus> releaseModel() async {
@@ -106,5 +118,95 @@ class LocalAiModelStatus {
     if (sizeBytes <= 0) return '尚未安装';
     final gb = sizeBytes / 1000000000;
     return '${gb.toStringAsFixed(2)} GB';
+  }
+}
+
+
+/// 模型从对话中提取的用户自述草稿。只保留固定字段，不接受辨证或处方字段。
+class LocalAiSymptomDraft {
+  final String? mainComplaint;
+  final String? onset;
+  final String? duration;
+  final String? location;
+  final String? sensation;
+  final List<String> aggravatingFactors;
+  final List<String> relievingFactors;
+  final List<String> associatedSymptoms;
+  final List<String> redFlags;
+  final List<String> unknowns;
+
+  const LocalAiSymptomDraft({
+    this.mainComplaint,
+    this.onset,
+    this.duration,
+    this.location,
+    this.sensation,
+    this.aggravatingFactors = const [],
+    this.relievingFactors = const [],
+    this.associatedSymptoms = const [],
+    this.redFlags = const [],
+    this.unknowns = const [],
+  });
+
+  factory LocalAiSymptomDraft.fromModelText(String text) {
+    final normalized = text.trim();
+    final start = normalized.indexOf('{');
+    final end = normalized.lastIndexOf('}');
+    if (start < 0 || end <= start) {
+      throw const FormatException('模型返回内容不是有效 JSON');
+    }
+    final decoded = jsonDecode(normalized.substring(start, end + 1));
+    if (decoded is! Map) {
+      throw const FormatException('模型返回的症状草稿结构无效');
+    }
+    final map = Map<String, dynamic>.from(decoded);
+    String? stringValue(String key) {
+      final value = map[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+      return null;
+    }
+
+    List<String> stringList(String key) {
+      final value = map[key];
+      if (value is! List) return const [];
+      return value.whereType<String>().map((item) => item.trim())
+          .where((item) => item.isNotEmpty).toList(growable: false);
+    }
+
+    return LocalAiSymptomDraft(
+      mainComplaint: stringValue('main_complaint'),
+      onset: stringValue('onset'),
+      duration: stringValue('duration'),
+      location: stringValue('location'),
+      sensation: stringValue('sensation'),
+      aggravatingFactors: stringList('aggravating_factors'),
+      relievingFactors: stringList('relieving_factors'),
+      associatedSymptoms: stringList('associated_symptoms'),
+      redFlags: stringList('red_flags'),
+      unknowns: stringList('unknowns'),
+    );
+  }
+
+  List<String> get summaryLines {
+    final lines = <String>[];
+    void add(String label, String? value) {
+      if (value != null) lines.add('${label}：${value}');
+    }
+
+    void addList(String label, List<String> values) {
+      if (values.isNotEmpty) lines.add('${label}：${values.join('、')}');
+    }
+
+    add('主要不适', mainComplaint);
+    add('开始时间', onset);
+    add('持续时间', duration);
+    add('部位', location);
+    add('具体感受', sensation);
+    addList('加重因素', aggravatingFactors);
+    addList('缓解因素', relievingFactors);
+    addList('伴随表现', associatedSymptoms);
+    addList('需留意的自述表现', redFlags);
+    addList('仍需核实', unknowns);
+    return lines;
   }
 }
