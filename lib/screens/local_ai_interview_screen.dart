@@ -24,6 +24,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _checking = true;
   bool _loading = false;
   bool _sending = false;
+  bool _extracting = false;
+  LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
   @override
@@ -109,6 +111,94 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _extractSymptoms() async {
+    setState(() {
+      _extracting = true;
+      _error = null;
+    });
+    try {
+      final draft = await _service.extractSymptoms();
+      if (!mounted) return;
+      setState(() => _extracting = false);
+      if (draft.summaryLines.isEmpty) {
+        setState(() => _error = '目前没有提取到明确的自述信息，请补充描述后再整理。');
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          var checked = false;
+          return StatefulBuilder(
+            builder: (context, setDialogState) => AlertDialog(
+              title: const Text('核对症状整理'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '以下内容由模型从本次对话中提取。请逐项核对；未提及的信息不会自动补全。',
+                      style: TextStyle(fontSize: 13, height: 1.45),
+                    ),
+                    const SizedBox(height: 12),
+                    ...draft.summaryLines.map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(line, style: const TextStyle(fontSize: 13)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: checked,
+                      onChanged: (value) =>
+                          setDialogState(() => checked = value == true),
+                      title: const Text(
+                        '我已核对，内容符合我的实际描述',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('返回修改'),
+                ),
+                FilledButton(
+                  onPressed: checked
+                      ? () => Navigator.pop(dialogContext, true)
+                      : null,
+                  child: const Text('确认这份整理'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      if (!mounted || confirmed != true) return;
+      setState(() {
+        _confirmedDraft = draft;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _extracting = false;
+        _error = error.message ?? '症状整理失败';
+      });
+    } on FormatException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _extracting = false;
+        _error = error.message;
+      });
+    }
+  }
+
   Future<void> _releaseModel() async {
     try {
       final status = await _service.releaseModel();
@@ -180,7 +270,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
-              onPressed: _sending ? null : _resetConversation,
+              onPressed: _sending || _extracting ? null : _resetConversation,
               icon: const Icon(Icons.refresh),
             ),
             IconButton(
@@ -207,15 +297,38 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
             ),
           ),
+          if (ready && _confirmedDraft == null && _messages.any((m) => m.isUser))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _sending || _extracting ? null : _extractSymptoms,
+                  icon: _extracting
+                      ? const SizedBox(
+                          width: 15,
+                          height: 15,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.fact_check_outlined, size: 18),
+                  label: Text(_extracting ? '正在整理自述…' : '整理本次症状'),
+                ),
+              ),
+            ),
+          if (_confirmedDraft != null)
+            _buildConfirmedDraftPanel(context),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              itemCount: _messages.length + (_sending ? 1 : 0),
+              itemCount: _messages.length + (_sending || _extracting ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == _messages.length) {
-                  return const _InterviewMessageBubble(
-                    message: _InterviewMessage(text: '正在整理回复…', isUser: false),
+                  return _InterviewMessageBubble(
+                    message: _InterviewMessage(
+                      text: _extracting ? '正在整理本次对话…' : '正在生成回复…',
+                      isUser: false,
+                    ),
                   );
                 }
                 return _InterviewMessageBubble(message: _messages[index]);
@@ -244,7 +357,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       controller: _inputController,
                       minLines: 1,
                       maxLines: 4,
-                      enabled: ready && !_sending,
+                      enabled: ready && !_sending && !_extracting && _confirmedDraft == null,
                       textInputAction: TextInputAction.newline,
                       decoration: InputDecoration(
                         hintText: ready ? '描述你的情况…' : '请先安装并加载本地模型',
@@ -264,11 +377,54 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   const SizedBox(width: 8),
                   IconButton.filled(
                     tooltip: '发送',
-                    onPressed: ready && !_sending ? _send : null,
+                    onPressed: ready && !_sending && !_extracting && _confirmedDraft == null ? _send : null,
                     icon: const Icon(Icons.arrow_upward),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmedDraftPanel(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final draft = _confirmedDraft!;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '已核对的用户自述',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          ...draft.summaryLines.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(line, style: const TextStyle(fontSize: 12, height: 1.4)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '这份整理不会自动进入辨证引擎，也不会自动选择问诊选项。',
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context, draft.summaryLines.join('\\n')),
+              child: const Text('返回规则问诊'),
             ),
           ),
         ],
