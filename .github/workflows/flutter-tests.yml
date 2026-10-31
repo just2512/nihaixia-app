@@ -37,10 +37,17 @@ jobs:
           cache: true
 
       - name: Install dependencies
+        id: dependencies
         run: flutter pub get
 
-      - name: Run regression tests
+      - name: Run local AI contract tests
+        if: steps.dependencies.outcome == 'success'
+        run: flutter test --no-pub test/local_ai_service_test.dart
+
+      - name: Run full regression suite
+        if: always() && steps.dependencies.outcome == 'success'
         run: flutter test --no-pub
 
       - name: Build Android debug APK
+        if: always() && steps.dependencies.outcome == 'success'
         run: flutter build apk --debug --no-pub
