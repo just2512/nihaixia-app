@@ -275,7 +275,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
             IconButton(
               tooltip: '释放模型内存',
-              onPressed: _sending ? null : _releaseModel,
+              onPressed: _sending || _extracting ? null : _releaseModel,
               icon: const Icon(Icons.memory_outlined),
             ),
           ],
