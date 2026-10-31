@@ -45,17 +45,21 @@ class _KnowledgeScreenState extends State<KnowledgeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('知识库'),
+        title: const Text('中医知识'),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+          indicatorSize: TabBarIndicatorSize.label,
           tabs: const [
-            Tab(text: '六经', icon: Icon(Icons.public)),
-            Tab(text: '方剂', icon: Icon(Icons.medication)),
-            Tab(text: '本草', icon: Icon(Icons.eco)),
-            Tab(text: '针灸', icon: Icon(Icons.healing)),
-            Tab(text: '内经', icon: Icon(Icons.menu_book)),
-            Tab(text: '伤寒金匮', icon: Icon(Icons.auto_stories)),
-            Tab(text: '搜索', icon: Icon(Icons.search)),
+            Tab(text: '六经'),
+            Tab(text: '方剂'),
+            Tab(text: '本草'),
+            Tab(text: '针灸'),
+            Tab(text: '内经'),
+            Tab(text: '伤寒金匮'),
+            Tab(text: '搜索'),
           ],
         ),
       ),
