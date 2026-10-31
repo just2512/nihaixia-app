@@ -41,6 +41,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   LocalAiModelStatus? _status;
   bool _checking = true;
   bool _loading = false;
+  bool _importingModel = false;
   bool _sending = false;
   bool _extracting = false;
   LocalAiSymptomDraft? _confirmedDraft;
@@ -97,6 +98,34 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       setState(() {
         _loading = false;
         _error = error.message ?? '模型加载失败';
+      });
+    }
+  }
+
+  Future<void> _importModel() async {
+    if (_importingModel || _loading || _status?.ready == true) return;
+    setState(() {
+      _importingModel = true;
+      _error = null;
+    });
+    try {
+      final status = await _service.importModel();
+      if (!mounted) return;
+      setState(() {
+        _status = status;
+        _importingModel = false;
+      });
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _importingModel = false;
+        _error = error.message ?? '模型导入失败';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _importingModel = false;
+        _error = '模型导入失败：$error';
       });
     }
   }
@@ -977,10 +1006,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             const SizedBox(height: 7),
             Text(
               installed
-                  ? '模型文件：${status!.sizeLabel}'
+                  ? '模型文件大小符合要求：${status!.sizeLabel}。导入流程还会校验 SHA-256。'
                   : status?.fileExists == true
-                      ? '文件大小不符合当前 E4B 模型包要求（应为 3.66 GB），请重新复制完整文件。'
-                      : '模型文件不随 APK 下载或打包，需由用户放入应用私有目录。',
+                      ? '检测到模型文件，但大小不符合要求。请重新选择完整模型文件。'
+                      : '模型文件约 3.66 GB，不随 APK 打包，也不会自动联网下载；请从设备本地存储导入。',
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 5),
@@ -989,18 +1018,41 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonal(
-                onPressed: installed && !_loading ? _loadModel : null,
-                child: _loading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('加载本地模型'),
-              ),
+            Text(
+              _importingModel
+                  ? '正在导入并校验文件，请保持应用在前台并确保设备有足够可用空间。'
+                  : '导入时在本机流式复制并校验文件大小与 SHA-256；不会上传模型或请求模型服务。',
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonal(
+                  onPressed: installed && !_loading && !_importingModel
+                      ? _loadModel
+                      : null,
+                  child: _loading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('加载本地模型'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: !_loading && !_importingModel ? _importModel : null,
+                  icon: _importingModel
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.folder_open_outlined),
+                  label: Text(_importingModel ? '正在导入…' : '选择并导入模型文件'),
+                ),
+              ],
             ),
           ],
         ],
