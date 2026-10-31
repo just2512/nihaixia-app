@@ -41,3 +41,6 @@ jobs:
 
       - name: Run regression tests
         run: flutter test --no-pub
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug --no-pub
