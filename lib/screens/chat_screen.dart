@@ -947,27 +947,45 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           if (_canGoBack)
             IconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(Icons.undo),
               onPressed: _goBack,
               tooltip: '返回上一步',
             ),
           IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-            tooltip: '设置',
-          ),
-          IconButton(
             icon: Icon(_searchExpanded ? Icons.close : Icons.search),
             onPressed: _toggleSearch,
-            tooltip: '搜索',
+            tooltip: '搜索方剂',
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _resetDiagnosis,
-            tooltip: '重新辨证',
+          PopupMenuButton<String>(
+            tooltip: '更多操作',
+            onSelected: (value) {
+              if (value == 'reset') {
+                _resetDiagnosis();
+              } else if (value == 'settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'reset',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.restart_alt),
+                  title: Text('重新开始问诊'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'settings',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.tune),
+                  title: Text('设置'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
