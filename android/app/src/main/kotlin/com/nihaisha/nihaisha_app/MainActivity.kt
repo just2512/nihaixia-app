@@ -1,5 +1,6 @@
 package com.nihaisha.nihaisha_app
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Handler
@@ -16,10 +17,14 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
     private val expectedModelBytes = 3_659_530_240L
+    private val expectedModelSha256 = "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0"
+    private val modelImportRequestCode = 8427
+    private var pendingModelImportResult: MethodChannel.Result? = null
     private val installChannel = "com.nihaisha.app/install"
     private val localAiChannel = "com.nihaisha.app/local_ai"
     private val aiExecutor = Executors.newSingleThreadExecutor()
@@ -78,6 +83,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
+                    "importModel" -> beginModelImport(result)
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
                     "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
                     "sendImage" -> {
@@ -127,6 +133,99 @@ class MainActivity : FlutterActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private fun beginModelImport(result: MethodChannel.Result) {
+        if (pendingModelImportResult != null) {
+            result.error("MODEL_IMPORT_BUSY", "已有模型文件选择操作正在进行", null)
+            return
+        }
+        pendingModelImportResult = result
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivityForResult(intent, modelImportRequestCode)
+        } catch (error: Exception) {
+            pendingModelImportResult = null
+            result.error("MODEL_PICKER_UNAVAILABLE", error.message ?: "无法打开系统文件选择器", null)
+        }
+    }
+
+    private fun importModelFromUri(uri: Uri): Map<String, Any> {
+        if (aiEngine != null || aiConversation != null) {
+            throw IllegalStateException("请先释放本地模型，再导入新的模型文件")
+        }
+
+        val parent = modelFile.parentFile
+            ?: throw IllegalStateException("模型目录不可用")
+        if (!parent.exists() && !parent.mkdirs()) {
+            throw IllegalStateException("无法创建模型目录")
+        }
+
+        val tempFile = File(parent, modelFile.name + ".importing")
+        val backupFile = File(parent, modelFile.name + ".previous")
+        if (tempFile.exists() && !tempFile.delete()) {
+            throw IllegalStateException("无法清理上一次未完成的导入文件")
+        }
+
+        try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            var totalBytes = 0L
+            val input = contentResolver.openInputStream(uri)
+                ?: throw IllegalArgumentException("无法读取所选模型文件")
+
+            input.use { source ->
+                tempFile.outputStream().buffered().use { target ->
+                    val buffer = ByteArray(1024 * 1024)
+                    while (true) {
+                        val count = source.read(buffer)
+                        if (count < 0) break
+                        if (count == 0) continue
+                        totalBytes += count
+                        if (totalBytes > expectedModelBytes) {
+                            throw IllegalArgumentException("模型文件超过预期大小 3,659,530,240 bytes")
+                        }
+                        digest.update(buffer, 0, count)
+                        target.write(buffer, 0, count)
+                    }
+                }
+            }
+
+            if (totalBytes != expectedModelBytes || tempFile.length() != expectedModelBytes) {
+                throw IllegalArgumentException(
+                    "模型文件大小不正确：实际 $totalBytes bytes，要求 $expectedModelBytes bytes"
+                )
+            }
+
+            val actualSha256 = digest.digest().joinToString("") {
+                "%02x".format(it.toInt() and 0xff)
+            }
+            if (!actualSha256.equals(expectedModelSha256, ignoreCase = true)) {
+                throw IllegalArgumentException(
+                    "模型 SHA-256 校验失败：文件不是受支持的 Gemma 4 E4B IT 模型"
+                )
+            }
+
+            if (backupFile.exists() && !backupFile.delete()) {
+                throw IllegalStateException("无法清理旧模型备份文件")
+            }
+            val hadPreviousModel = modelFile.exists()
+            if (hadPreviousModel && !modelFile.renameTo(backupFile)) {
+                throw IllegalStateException("无法暂存旧模型文件，未覆盖原文件")
+            }
+            if (!tempFile.renameTo(modelFile)) {
+                if (hadPreviousModel) backupFile.renameTo(modelFile)
+                throw IllegalStateException("模型文件导入完成但无法替换目标文件，已尝试恢复旧文件")
+            }
+            if (backupFile.exists()) backupFile.delete()
+            return modelStatus()
+        } catch (error: Exception) {
+            if (tempFile.exists()) tempFile.delete()
+            throw error
         }
     }
 
@@ -366,7 +465,39 @@ class MainActivity : FlutterActivity() {
         startActivity(intent)
     }
 
+    @Deprecated("Deprecated in Android, retained for FlutterActivity file-picker result compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != modelImportRequestCode) return
+
+        val pending = pendingModelImportResult
+        pendingModelImportResult = null
+        if (pending == null) return
+
+        val uri = if (resultCode == Activity.RESULT_OK) data?.data else null
+        if (uri == null) {
+            pending.success(modelStatus())
+            return
+        }
+
+        aiExecutor.execute {
+            try {
+                val status = importModelFromUri(uri)
+                mainHandler.post { pending.success(status) }
+            } catch (error: Exception) {
+                mainHandler.post {
+                    pending.error(
+                        "MODEL_IMPORT_FAILED",
+                        error.message ?: error.javaClass.simpleName,
+                        null
+                    )
+                }
+            }
+        }
+    }
+
     override fun onDestroy() {
+        pendingModelImportResult = null
         aiExecutor.execute {
             try {
                 releaseLocalModel()
