@@ -47,22 +47,23 @@ class LocalAiService {
     return reply;
   }
 
-  Future<String> sendImage(String path) async {
-    return _sendAttachment('sendImage', path, '照片');
+  Future<String> sendImage(String path, {String prompt = ''}) async {
+    return _sendAttachment('sendImage', path, '照片', prompt: prompt);
   }
 
-  Future<String> sendAudio(String path) async {
-    return _sendAttachment('sendAudio', path, '录音');
+  Future<String> sendAudio(String path, {String prompt = ''}) async {
+    return _sendAttachment('sendAudio', path, '录音', prompt: prompt);
   }
 
   Future<String> _sendAttachment(
     String method,
     String path,
-    String label,
-  ) async {
+    String label, {
+    String prompt = '',
+  }) async {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       method,
-      {'path': path},
+      {'path': path, 'prompt': prompt},
     );
     final reply = data?['reply'] as String?;
     if (reply == null || reply.trim().isEmpty) {
