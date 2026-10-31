@@ -949,10 +949,20 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
             tooltip: '本地 AI 问诊',
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LocalAiInterviewScreen()),
-            ),
+            onPressed: () async {
+              final summary = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LocalAiInterviewScreen(),
+                ),
+              );
+              if (!mounted || summary == null) return;
+              _addBotMessage(
+                '已核对的用户自述信息（供回答规则问诊时参考）：\\n'
+                '$summary\\n\\n'
+                '这份整理不会自动选择辨证选项，请继续按规则问诊逐项确认。',
+              );
+            },
           ),
           if (_canGoBack)
             IconButton(
