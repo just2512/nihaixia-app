@@ -4,7 +4,8 @@ publish_to: 'none'
 version: 1.11.28+8037
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
@@ -47,17 +48,16 @@ flutter:
     - assets/data/acupoints.json
     - assets/data/ear_points.json
     - assets/data/changelog.json
-    - assets/data/prescriptions.json
     - assets/data/ziwei_rules.json
     - assets/data/china_cities.json
     - assets/data/world_cities.json
-    - assets/images/ear_ref/
-    - assets/images/meridians/
     - assets/data/chenggu_bone_weight.json
     - assets/data/wudou_shousheng_debt.json
     - assets/data/luku_shousheng_debt.json
     - assets/data/huangdi_siji_ge.json
     - assets/data/solar_term_knowledge.json
+    - assets/images/ear_ref/
+    - assets/images/meridians/
     - assets/images/huangdi_siji_diagram.jpg
     - assets/images/gua/
     - assets/ziwei/
