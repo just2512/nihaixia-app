@@ -13,7 +13,7 @@ class LocalAiService {
       'getModelStatus',
     );
     if (data == null) {
-      throw const PlatformException(
+      throw PlatformException(
         code: 'EMPTY_STATUS',
         message: '没有收到本地模型状态',
       );
@@ -24,7 +24,7 @@ class LocalAiService {
   Future<LocalAiModelStatus> loadModel() async {
     final data = await _channel.invokeMapMethod<String, dynamic>('loadModel');
     if (data == null) {
-      throw const PlatformException(
+      throw PlatformException(
         code: 'EMPTY_STATUS',
         message: '没有收到模型加载结果',
       );
@@ -39,7 +39,7 @@ class LocalAiService {
     );
     final reply = data?['reply'] as String?;
     if (reply == null || reply.trim().isEmpty) {
-      throw const PlatformException(
+      throw PlatformException(
         code: 'EMPTY_REPLY',
         message: '模型没有返回有效文本',
       );
@@ -61,7 +61,7 @@ class LocalAiService {
   Future<LocalAiModelStatus> releaseModel() async {
     final data = await _channel.invokeMapMethod<String, dynamic>('releaseModel');
     if (data == null) {
-      throw const PlatformException(
+      throw PlatformException(
         code: 'EMPTY_STATUS',
         message: '没有收到模型释放结果',
       );
@@ -74,7 +74,7 @@ class LocalAiService {
       'resetConversation',
     );
     if (data == null) {
-      throw const PlatformException(
+      throw PlatformException(
         code: 'EMPTY_STATUS',
         message: '没有收到会话重置结果',
       );
