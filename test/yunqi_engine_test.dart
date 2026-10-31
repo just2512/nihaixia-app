@@ -15,7 +15,13 @@ import 'package:nihaisha_app/services/yunqi_engine.dart';
 
 // ==================== 夹具加载 ====================
 
-const String kFixturePath = r'D:\tools\yunqi_ref.json';
+final String kFixturePath =
+    Platform.environment['YUNQI_REF_PATH']?.trim().isNotEmpty == true
+        ? Platform.environment['YUNQI_REF_PATH']!.trim()
+        : r'D:\tools\yunqi_ref.json';
+final String? _fixtureSkip = File(kFixturePath).existsSync()
+    ? null
+    : 'MISSING oracle fixture: $kFixturePath (set YUNQI_REF_PATH to the reference JSON)';
 
 Map<String, dynamic>? _fixtureCache;
 
@@ -23,7 +29,7 @@ Map<String, dynamic> loadFixture() {
   if (_fixtureCache != null) return _fixtureCache!;
   final File f = File(kFixturePath);
   if (!f.existsSync()) {
-    fail('夹具不存在: $kFixturePath');
+    fail('夹具不存在: $kFixturePath；可通过 YUNQI_REF_PATH 指定参考文件路径');
   }
   _fixtureCache = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
   return _fixtureCache!;
@@ -89,7 +95,7 @@ void main() {
         _assertWholeYear(y, ys['$y'] as Map<String, dynamic>);
       }
     });
-  });
+  }, skip: _fixtureSkip);
 
   group('A2 · 客气六步 372 采样点逐格对拍（双口径）', () {
     test('采样点总数 372 = 62 × 6', () {
@@ -148,7 +154,7 @@ void main() {
         expect(lamToTerm[s['lam'] as int], s['term']);
       }
     });
-  });
+  }, skip: _fixtureSkip);
 
   // ==================== B. 手工独立用例（防夹具共错） ====================
 
@@ -391,7 +397,7 @@ void main() {
         expect(diffMin.abs() <= 1, isTrue,
             reason: '${s['y']} ${s['term']}: got=$got ref=$ref diff=${diffMin}min');
       }
-    });
+    }, skip: _fixtureSkip);
 
     test('C2 立春当天前/中/后归年（运气年口径）', () {
       for (final int y in <int>[1900, 2000, 2024, 2026]) {
@@ -559,7 +565,7 @@ void main() {
         expect(YunQiEngine.currentQiStepOf(dt), s['step'],
             reason: '${s['y']} ${s['term']} 门面应为日历年口径 step=${s['step']}');
       }
-    });
+    }, skip: _fixtureSkip);
   });
 
   // ==================== 夹具内部自洽（防夹具共错） ====================
@@ -603,7 +609,7 @@ void main() {
         }
       });
     });
-  });
+  }, skip: _fixtureSkip);
 }
 
 /// 对某年做 24 字段整年深比对。
