@@ -23,10 +23,9 @@ String _diff<T>(Set<T> a, Set<T> b) {
 /// 120E/30N 强行修正，导致无地理位置输入的离线 app 时辰整体位移；已改为
 /// 平太阳时（useTrueSolarTime=false），与 iztro / 主流排盘一致。
 ///
-/// 已知流派/换日约定差（单独锁定，不当作引擎回归）：
-///   - case_9、case_28：23:00 子初换日(iztro) vs 00:00 子正换日(本引擎)，影响日柱、主星与四化。
-///   - case_31：年柱立春(本引擎) vs 春节(iztro)。
-///   - case_7 ：身主铃星(本引擎) vs 火星(iztro，火六局)。
+/// 已知流派约定差（非 bug，不计入失败）：
+///   - case_31：年柱 立春(本引擎) vs 春节(iztro)
+///   - case_7 ：身主 铃星(本引擎) vs 火星(iztro，火六局)
 ///   - 杂曜(aux)：空亡命名/取舍为门派浮动，预期内差异，不断言。
 void main() {
   test('MingLi-Bench cross-engine comparison (ziwei_core vs iztro)', () async {
@@ -263,23 +262,13 @@ void main() {
     expect(lifeOk, 32, reason: '命宫地支应 32/32');
     expect(bodyOk, 32, reason: '身宫地支应 32/32');
     expect(mingOk, 32, reason: '命主应 32/32');
-    // 两个 23 点子时样本按换日约定产生可预期的日柱、主星和四化差异。
-    expect(majorOk, 30, reason: '除 case_9/case_28 子初换日约定差外，主星应全部一致');
-    expect(majorDiffIds, {'case_9', 'case_28'}, reason: '主星差异只能来自两个 23 点子时样本');
-    expect(sihuaOk, 30, reason: '除 case_9/case_28 子初换日约定差外，四化应全部一致');
-    expect(sihuaDiffIds, {'case_9', 'case_28'}, reason: '四化差异只能来自两个 23 点子时样本');
+    expect(majorOk, 32, reason: '十四主星应 32/32');
     expect(sihuaOk, 32, reason: '生年四化应 32/32');
-    // 已知约定差（按 case id 精确锁定）：
-    //  - case_9/case_28：23 点换日规则不同，日柱差一天；
-    //  - case_31：年柱立春(本引擎) vs 春节(iztro)。
-    expect(baziOk, 29, reason: '八字仅允许两个 23 点子时样本和 case_31 的明确口径差');
-    expect(baziDiffIds, {'case_9', 'case_28', 'case_31'}, reason: '八字差异 case 必须精确匹配已知边界');
+    // 已知约定差（非 bug，文档化）：
+    //  - case_31：年柱 立春(本引擎) vs 春节(iztro) → 八字 31/32
+    //  - case_7 ：身主 铃星(本引擎) vs 火星(iztro，火六局) → 身主 31/32
+    expect(baziOk, 31, reason: '八字仅允许 case_31 年柱立春/春节差');
     expect(shenOk, 31, reason: '身主仅允许 case_7 铃星/火星差');
-    final ziHourCases = cases.where((c) {
-      final birth = c['birth_info'] as Map<String, dynamic>;
-      return birth['hour'] == 23;
-    }).map((c) => c['case_id'] as String).toSet();
-    expect(ziHourCases, {'case_9', 'case_28'}, reason: '23 点换日差异样本必须来自基准数据中的子时');
     // 杂曜(aux)不断言：空亡命名/取舍为门派浮动，预期内差异。
     // 词汇完整性：星曜 key 必须都有中文映射，不得出现 raw key 当 label。
     expect(vocabGaps, isEmpty, reason: '星曜 key 缺失中文映射');
