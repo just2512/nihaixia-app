@@ -11,7 +11,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: flutter-tests-${{ github.ref }}
+  # v2 avoids an orphaned in-progress Actions run from the previous concurrency group.
+  group: flutter-tests-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
