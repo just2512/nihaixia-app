@@ -94,6 +94,92 @@ void main() {
     });
   });
 
+  group('LocalAiService text conversation contract', () {
+    test('sendMessage forwards the exact user text and returns native reply', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '请继续描述不适出现的时间'};
+      });
+
+      final reply = await LocalAiService().sendMessage('饭后腹胀，持续两周');
+
+      expect(received?.method, 'sendMessage');
+      expect(received?.arguments, <String, Object?>{
+        'text': '饭后腹胀，持续两周',
+      });
+      expect(reply, '请继续描述不适出现的时间');
+    });
+
+    test('sendMessage rejects null and whitespace-only native replies', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{'reply': '   '},
+      );
+
+      await expectLater(
+        LocalAiService().sendMessage('继续问诊'),
+        throwsA(
+          isA<PlatformException>().having(
+            (error) => error.code,
+            'code',
+            'EMPTY_REPLY',
+          ),
+        ),
+      );
+    });
+
+    test('resetConversation invokes native reset and returns fresh status', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'installed': true,
+          'fileExists': true,
+          'ready': true,
+          'modelPath': '/app/files/ai_models/gemma-4-E4B-it.litertlm',
+          'sizeBytes': 3659530240,
+          'expectedSizeBytes': 3659530240,
+          'backend': 'cpu',
+        };
+      });
+
+      final status = await LocalAiService().resetConversation();
+
+      expect(received?.method, 'resetConversation');
+      expect(status.ready, isTrue);
+      expect(status.backend, 'cpu');
+    });
+
+    test('extractSymptoms invokes its isolated native operation and parses draft', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': '{"main_complaint":"饭后腹胀","unknowns":["开始时间待确认"]}',
+        };
+      });
+
+      final draft = await LocalAiService().extractSymptoms();
+
+      expect(received?.method, 'extractSymptoms');
+      expect(draft.mainComplaint, '饭后腹胀');
+      expect(draft.unknowns, ['开始时间待确认']);
+    });
+
+    test('extractSymptoms rejects missing draft payload', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{},
+      );
+
+      await expectLater(
+        LocalAiService().extractSymptoms(),
+        throwsFormatException,
+      );
+    });
+  });
+
   group('LocalAiModelStatus', () {
     test('reads installed model and active backend', () {
       final status = LocalAiModelStatus.fromMap({
