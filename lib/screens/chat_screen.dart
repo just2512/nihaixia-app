@@ -16,6 +16,7 @@ import 'meridian_detail_screen.dart';
 import '../models/formula.dart';
 import '../widgets/oral_hint_card.dart';
 import 'settings_screen.dart';
+import 'local_ai_interview_screen.dart';
 
 /// 高危禁忌关键词（用于结果卡红色强提示）
 const Set<String> _highRiskKeywords = {
@@ -945,6 +946,14 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: const Text('辨证问诊'),
         actions: [
+          IconButton(
+            tooltip: '本地 AI 问诊',
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LocalAiInterviewScreen()),
+            ),
+          ),
           if (_canGoBack)
             IconButton(
               icon: const Icon(Icons.undo),
