@@ -67,6 +67,7 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
+                    "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
                     "sendMessage" -> {
                         val text = call.argument<String>("text")?.trim().orEmpty()
                         if (text.isEmpty()) {
@@ -181,6 +182,32 @@ class MainActivity : FlutterActivity() {
             ?: throw IllegalStateException("本地模型尚未加载")
         val reply = conversation.sendMessage(text)
         return mapOf("reply" to reply, "backend" to activeBackend)
+    }
+
+    private fun extractSymptoms(): Map<String, Any> {
+        val conversation = aiConversation
+            ?: throw IllegalStateException("本地模型尚未加载")
+        val prompt = """
+            请根据当前对话中用户明确提供的信息，整理一份“用户自述症状草稿”。
+            只记录用户说过的事实，不推断、不补全，不作任何现代医学诊断或中医辨证，不推荐方剂或药物。
+            未提及的字段必须填 null 或空数组。输出严格 JSON，不要 Markdown 代码围栏，不要附加解释。
+            JSON 字段固定为：
+            {
+              "main_complaint": string|null,
+              "onset": string|null,
+              "duration": string|null,
+              "location": string|null,
+              "sensation": string|null,
+              "aggravating_factors": string[],
+              "relieving_factors": string[],
+              "associated_symptoms": string[],
+              "red_flags": string[],
+              "unknowns": string[]
+            }
+            red_flags 只记录用户明确说出的急症相关表现，不要自行判定风险等级。
+            unknowns 记录仍需向用户核实的信息。
+        """.trimIndent()
+        return mapOf("draft" to conversation.sendMessage(prompt))
     }
 
     private fun resetLocalConversation(): Map<String, Any> {
