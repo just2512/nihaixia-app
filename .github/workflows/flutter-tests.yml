@@ -11,7 +11,6 @@ permissions:
   contents: read
 
 concurrency:
-  # v2 avoids an orphaned in-progress Actions run from the previous concurrency group.
   group: flutter-tests-v2-${{ github.ref }}
   cancel-in-progress: true
 
@@ -19,7 +18,7 @@ jobs:
   test:
     name: Flutter regression tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,13 +58,37 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
+  build-apk:
+    name: Android debug APK
+    needs: test
+    # Preserve the build signal even when the regression job fails.
+    if: always() && needs.test.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Build Android debug APK
-        id: apk
-        if: always() && steps.dependencies.outcome == 'success'
         run: flutter build apk --debug --no-pub
 
       - name: Upload resolved dependency lockfile
-        if: always() && steps.dependencies.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: resolved-pubspec-lock
@@ -74,7 +97,6 @@ jobs:
           retention-days: 3
 
       - name: Upload Android debug APK
-        if: always() && steps.apk.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
