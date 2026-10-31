@@ -248,6 +248,9 @@ void main() {
       buf.writeln('--- BAZI DIFFS (China vs Foreign) ---');
       for (final d in baziDiffs) buf.writeln(d);
     }
+    buf.writeln('BAZI mismatch cases: ${baziDiffIds.join(', ')}');
+    buf.writeln('MAJOR mismatch cases: ${majorDiffIds.join(', ')}');
+    buf.writeln('SIHUA mismatch cases: ${sihuaDiffIds.join(', ')}');
     if (vocabGaps.isNotEmpty) {
       buf.writeln();
       buf.writeln('--- VOCAB GAPS (raw key used as label) ---');
