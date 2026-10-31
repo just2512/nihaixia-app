@@ -9,7 +9,8 @@ void main() {
         'ready': true,
         'fileExists': true,
         'modelPath': '/data/user/0/app/files/ai_models/gemma-4-E4B-it.litertlm',
-        'sizeBytes': 1500000000,
+        'sizeBytes': 3659530240,
+        'expectedSizeBytes': 3659530240,
         'backend': 'gpu',
       });
 
@@ -17,7 +18,7 @@ void main() {
       expect(status.fileExists, isTrue);
       expect(status.ready, isTrue);
       expect(status.backend, 'gpu');
-      expect(status.sizeLabel, '1.50 GB');
+      expect(status.sizeLabel, '3.66 GB');
       expect(status.modelPath, contains('gemma-4-E4B-it.litertlm'));
     });
 
