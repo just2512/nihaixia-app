@@ -25,6 +25,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _audioPath;
   bool _recording = false;
   bool _recordingBusy = false;
+  bool _recorderMayBeActive = false;
+  Future<void> _recorderOperation = Future<void>.value();
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_InterviewMessage> _messages = [
@@ -97,25 +99,72 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<String?> _validateTonguePhoto(String path) async {
+    final file = File(path);
+    if (!await file.exists()) return '照片文件不存在，请重新拍摄。';
+    final fileSize = await file.length();
+    if (fileSize <= 0 || fileSize > 15 * 1024 * 1024) {
+      return '照片文件无效或超过 15 MB，请重新拍摄。';
+    }
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty) return '照片文件无效，请重新拍摄。';
+
+    final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+    try {
+      final descriptor = await ui.ImageDescriptor.encoded(buffer);
+      try {
+        // Check the encoded source dimensions before decoding. A target decode
+        // may upscale small images, which must not let them pass the 480px gate.
+        if (math.min(descriptor.width, descriptor.height) < 480) {
+          return '照片分辨率不足。请靠近拍摄，确保舌体清晰且短边至少 480 像素。';
+        }
+        final codec = await descriptor.instantiateCodec(
+          targetWidth: math.min(descriptor.width, 1600),
+          targetHeight: math.min(descriptor.height, 1600),
+        );
+        try {
+          final frame = await codec.getNextFrame();
+          frame.image.dispose();
+        } finally {
+          codec.dispose();
+        }
+      } finally {
+        descriptor.dispose();
+      }
+    } finally {
+      buffer.dispose();
+    }
+    return null;
+  }
+
   Future<void> _recoverLostImage() async {
     try {
       final response = await _imagePicker.retrieveLostData();
-      if (response.isEmpty || response.files == null || response.files!.isEmpty) {
+      if (!mounted || response.isEmpty || response.files == null ||
+          response.files!.isEmpty) {
         return;
       }
       final path = response.files!.first.path;
-      if (!mounted || path.isEmpty) return;
+      if (path.isEmpty) return;
+      final validationError = await _validateTonguePhoto(path);
+      if (!mounted) return;
+      if (validationError != null) {
+        setState(() => _error = validationError);
+        return;
+      }
       setState(() {
         _imagePath = path;
         _audioPath = null;
+        _error = null;
       });
-    } catch (_) {
-      // A missing camera result must not block the text interview.
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = '恢复照片失败：$error');
     }
   }
 
   Future<void> _pickTonguePhoto() async {
-    if (_sending || _recording || _audioPath != null) return;
+    if (_sending || _recording || _recordingBusy || _audioPath != null) return;
     try {
       final photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -125,32 +174,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         requestFullMetadata: false,
       );
       if (photo == null || !mounted) return;
-
-      final file = File(photo.path);
-      final fileSize = await file.length();
-      if (fileSize <= 0 || fileSize > 15 * 1024 * 1024) {
-        setState(() => _error = '照片文件无效或超过 15 MB，请重新拍摄。');
-        return;
-      }
-      final bytes = await file.readAsBytes();
-      if (bytes.isEmpty) {
-        setState(() => _error = '照片文件无效或超过 15 MB，请重新拍摄。');
-        return;
-      }
-      final codec = await ui.instantiateImageCodec(bytes);
-      late final int shortestSide;
-      try {
-        final frame = await codec.getNextFrame();
-        try {
-          shortestSide = math.min(frame.image.width, frame.image.height);
-        } finally {
-          frame.image.dispose();
-        }
-      } finally {
-        codec.dispose();
-      }
-      if (shortestSide < 480) {
-        setState(() => _error = '照片分辨率不足。请靠近拍摄，确保舌体清晰且短边至少 480 像素。');
+      final validationError = await _validateTonguePhoto(photo.path);
+      if (!mounted) return;
+      if (validationError != null) {
+        setState(() => _error = validationError);
         return;
       }
       setState(() {
@@ -167,9 +194,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<void> _startRecording() async {
-    if (_sending || _imagePath != null || _recording || _recordingBusy) return;
+  Future<void> _startRecording() {
+    if (_sending || _imagePath != null || _recording || _recordingBusy) {
+      return Future<void>.value();
+    }
     setState(() => _recordingBusy = true);
+    final operation = _startRecordingInternal();
+    _recorderOperation = operation;
+    return operation;
+  }
+
+  Future<void> _startRecordingInternal() async {
     try {
       if (!await _audioRecorder.hasPermission()) {
         if (!mounted) return;
@@ -190,8 +225,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ),
         path: path,
       );
+      _recorderMayBeActive = true;
       if (!mounted) {
         await _audioRecorder.stop();
+        _recorderMayBeActive = false;
         return;
       }
       setState(() {
@@ -220,16 +257,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<void> _stopRecording() async {
-    if (!_recording || _recordingBusy) return;
+  Future<void> _stopRecording() {
+    if (!_recording || _recordingBusy) return Future<void>.value();
     _recordingTimer?.cancel();
     _recordingTimer = null;
     setState(() {
       _recording = false;
       _recordingBusy = true;
     });
+    final operation = _stopRecordingInternal();
+    _recorderOperation = operation;
+    return operation;
+  }
+
+  Future<void> _stopRecordingInternal() async {
     try {
       final path = await _audioRecorder.stop();
+      _recorderMayBeActive = false;
       if (!mounted) return;
       final file = path == null ? null : File(path);
       if (file == null || !await file.exists() || await file.length() == 0) {
@@ -474,11 +518,31 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
   }
 
+  Future<void> _disposeRecorder() async {
+    try {
+      await _recorderOperation;
+    } catch (_) {
+      // Continue teardown even if the pending start/stop failed.
+    }
+    if (_recording || _recorderMayBeActive) {
+      try {
+        await _audioRecorder.stop();
+        _recorderMayBeActive = false;
+      } catch (_) {
+        // Dispose still releases any remaining native recorder resources.
+      }
+    }
+    try {
+      await _audioRecorder.dispose();
+    } catch (_) {
+      // Do not leak an asynchronous exception during widget teardown.
+    }
+  }
+
   @override
   void dispose() {
     _recordingTimer?.cancel();
-    if (_recording) unawaited(_audioRecorder.stop().then<void>((_) {}));
-    unawaited(_audioRecorder.dispose());
+    unawaited(_disposeRecorder());
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();

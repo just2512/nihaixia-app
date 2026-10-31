@@ -1,7 +1,75 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const channel = MethodChannel('com.nihaisha.app/local_ai');
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+  tearDown(() {
+    messenger.setMockMethodCallHandler(channel, null);
+  });
+
+  group('LocalAiService attachment channel contract', () {
+    test('sendImage passes cached path and user prompt to native channel', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '舌体可见特征描述'};
+      });
+
+      final reply = await LocalAiService().sendImage(
+        '/app/cache/tongue.jpg',
+        prompt: '请说明照片是否清晰',
+      );
+
+      expect(reply, '舌体可见特征描述');
+      expect(received?.method, 'sendImage');
+      expect(received?.arguments, <String, Object?>{
+        'path': '/app/cache/tongue.jpg',
+        'prompt': '请说明照片是否清晰',
+      });
+    });
+
+    test('sendAudio passes cached path and user prompt to native channel', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '用户语音转写内容'};
+      });
+
+      final reply = await LocalAiService().sendAudio(
+        '/app/cache/interview.wav',
+        prompt: '请保留听不清的部分',
+      );
+
+      expect(reply, '用户语音转写内容');
+      expect(received?.method, 'sendAudio');
+      expect(received?.arguments, <String, Object?>{
+        'path': '/app/cache/interview.wav',
+        'prompt': '请保留听不清的部分',
+      });
+    });
+
+    test('attachment calls reject empty native replies', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{'reply': '  '},
+      );
+
+      await expectLater(
+        LocalAiService().sendImage('/app/cache/tongue.jpg'),
+        throwsA(isA<PlatformException>()),
+      );
+      await expectLater(
+        LocalAiService().sendAudio('/app/cache/interview.wav'),
+        throwsA(isA<PlatformException>()),
+      );
+    });
+  });
+
   group('LocalAiModelStatus', () {
     test('reads installed model and active backend', () {
       final status = LocalAiModelStatus.fromMap({

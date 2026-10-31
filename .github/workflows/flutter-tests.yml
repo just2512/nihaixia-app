@@ -49,5 +49,24 @@ jobs:
         run: flutter test --no-pub
 
       - name: Build Android debug APK
+        id: apk
         if: always() && steps.dependencies.outcome == 'success'
         run: flutter build apk --debug --no-pub
+
+      - name: Upload resolved dependency lockfile
+        if: always() && steps.dependencies.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-pubspec-lock
+          path: pubspec.lock
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload Android debug APK
+        if: steps.apk.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

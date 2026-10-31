@@ -203,7 +203,7 @@ class MainActivity : FlutterActivity() {
     private fun sendLocalMessage(text: String): Map<String, Any> {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
-        val reply = conversation.sendMessage(text).text
+        val reply = conversation.sendMessage(text).toString()
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
@@ -234,7 +234,7 @@ class MainActivity : FlutterActivity() {
                     if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
                 )
             )
-        ).text
+        ).toString()
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
@@ -251,7 +251,7 @@ class MainActivity : FlutterActivity() {
                     if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
                 )
             )
-        ).text
+        ).toString()
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
@@ -279,7 +279,7 @@ class MainActivity : FlutterActivity() {
             red_flags 只记录用户明确说出的急症相关表现，不要自行判定风险等级。
             unknowns 记录仍需向用户核实的信息。
         """.trimIndent()
-        return mapOf("draft" to conversation.sendMessage(prompt).text)
+        return mapOf("draft" to conversation.sendMessage(prompt).toString())
     }
 
     private fun resetLocalConversation(): Map<String, Any> {
