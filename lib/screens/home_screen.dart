@@ -69,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
           children: _screens,
         ),
         bottomNavigationBar: NavigationBar(
-          height: 66,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           backgroundColor: Theme.of(context).colorScheme.surface,
           indicatorColor: Theme.of(context).colorScheme.primaryContainer,
@@ -81,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
             NavigationDestination(
               icon: Icon(Icons.library_books_outlined),
               selectedIcon: Icon(Icons.library_books),
-              label: '典籍',
+              label: '知识',
             ),
             NavigationDestination(
               icon: Icon(Icons.build_outlined),
