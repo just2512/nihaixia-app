@@ -45,10 +45,6 @@ android {
         }
     }
 
-    dependencies {
-        implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
-    }
-
     buildTypes {
         release {
             // 如果key.properties存在则用release签名，否则fallback到debug签名
@@ -78,6 +74,10 @@ android {
             isUniversalApk = true
         }
     }
+}
+
+dependencies {
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
 }
 
 kotlin {
