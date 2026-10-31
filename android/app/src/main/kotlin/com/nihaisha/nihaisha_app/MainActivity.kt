@@ -18,6 +18,7 @@ import java.io.File
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
+    private val expectedModelBytes = 3_659_530_240L
     private val installChannel = "com.nihaisha.app/install"
     private val localAiChannel = "com.nihaisha.app/local_ai"
     private val aiExecutor = Executors.newSingleThreadExecutor()
@@ -100,18 +101,21 @@ class MainActivity : FlutterActivity() {
 
     private fun modelStatus(): Map<String, Any> {
         modelFile.parentFile?.mkdirs()
-        val exists = modelFile.isFile && modelFile.length() > 0L
+        val fileExists = modelFile.isFile && modelFile.length() > 0L
+        val exists = fileExists && modelFile.length() == expectedModelBytes
         return mapOf(
             "installed" to exists,
+            "fileExists" to fileExists,
             "modelPath" to modelFile.absolutePath,
-            "sizeBytes" to if (exists) modelFile.length() else 0L,
+            "sizeBytes" to if (fileExists) modelFile.length() else 0L,
+            "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
             "backend" to activeBackend
         )
     }
 
     private fun loadLocalModel(): Map<String, Any> {
-        if (!modelFile.isFile || modelFile.length() == 0L) {
+        if (!modelFile.isFile || modelFile.length() != expectedModelBytes) {
             return modelStatus()
         }
         if (aiEngine != null && aiConversation != null) return modelStatus()
