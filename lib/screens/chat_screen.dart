@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1012,7 +1013,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           if (_searchExpanded) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
@@ -1033,17 +1034,17 @@ class _ChatScreenState extends State<ChatScreen> {
             if (_searchResults.isNotEmpty)
               Container(
                 constraints: const BoxConstraints(maxHeight: 260),
-                margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                margin: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   border: Border.all(
                     color: Theme.of(context).colorScheme.outlineVariant,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: ListView.builder(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                   itemCount: _searchResults.length,
                   itemBuilder: (context, index) {
                     final f = _searchResults[index];
@@ -1066,7 +1067,7 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 14, AppSpacing.lg, 18),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 return _messages[index];
@@ -1086,7 +1087,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 208),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 10, AppSpacing.lg, 14),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -1104,12 +1105,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           style: OutlinedButton.styleFrom(
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
+                              horizontal: AppSpacing.md,
                               vertical: 11,
                             ),
                             side: BorderSide(color: scheme.outlineVariant),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             backgroundColor: scheme.surface,
                             foregroundColor: scheme.onSurface,
@@ -1135,7 +1136,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   option.label,
                                   softWrap: true,
                                   style: const TextStyle(
-                                    fontSize: 13,
+                                    fontSize: AppType.caption,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -1181,7 +1182,7 @@ class _ChatBubble extends StatelessWidget {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.85,
         ),
@@ -1205,12 +1206,12 @@ class _ChatBubble extends StatelessWidget {
                             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
                           )
                         : null,
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Text(
                 text,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppType.body,
                   height: 1.5,
                   color: isWarning
                       ? Theme.of(context).colorScheme.onErrorContainer
@@ -1226,13 +1227,13 @@ class _ChatBubble extends StatelessWidget {
             ],
             if (isResult && onBookmark != null)
               Padding(
-                padding: const EdgeInsets.only(top: 4, left: 4),
+                padding: const EdgeInsets.only(top: AppSpacing.xs, left: AppSpacing.xs),
                 child: TextButton.icon(
                   onPressed: onBookmark,
                   icon: const Icon(Icons.bookmark_add, size: 16),
                   label: const Text('收藏'),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
