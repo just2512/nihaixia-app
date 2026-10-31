@@ -156,7 +156,7 @@ class LocalAiSymptomDraft {
       throw const FormatException('模型返回内容不是有效 JSON');
     }
     final decoded = jsonDecode(normalized.substring(start, end + 1));
-    if (decoded is! Map) {
+    if (decoded is! Map || decoded.keys.any((key) => key is! String)) {
       throw const FormatException('模型返回的症状草稿结构无效');
     }
     final map = Map<String, dynamic>.from(decoded);
