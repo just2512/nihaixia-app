@@ -64,7 +64,7 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "getModelStatus" -> result.success(modelStatus())
+                    "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
                     "sendMessage" -> {
                         val text = call.argument<String>("text")?.trim().orEmpty()
@@ -99,6 +99,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun modelStatus(): Map<String, Any> {
+        modelFile.parentFile?.mkdirs()
         val exists = modelFile.isFile && modelFile.length() > 0L
         return mapOf(
             "installed" to exists,
