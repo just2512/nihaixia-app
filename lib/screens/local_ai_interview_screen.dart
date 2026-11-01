@@ -1501,6 +1501,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               children: [
                 FilledButton.tonal(
                   onPressed: installed &&
+                          !_attachmentBusy &&
                           !_modelControlBusy &&
                           !_loading &&
                           !_importingModel
@@ -1515,7 +1516,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       : const Text('加载本地模型'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: !_modelControlBusy && !_loading && !_importingModel
+                  onPressed: !_attachmentBusy &&
+                          !_modelControlBusy &&
+                          !_loading &&
+                          !_importingModel
                       ? _importModel
                       : null,
                   icon: _importingModel
