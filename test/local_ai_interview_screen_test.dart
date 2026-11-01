@@ -123,6 +123,35 @@ class _ModelControlFailureService extends _TextSendService {
   }
 }
 
+class _ModelControlTeardownFailureService extends _TextSendService {
+  var resetCalls = 0;
+  var releaseCalls = 0;
+  var _status = _readyStatus;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _status;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation() async {
+    resetCalls += 1;
+    _status = _releasedStatus;
+    throw PlatformException(
+      code: 'RESET_FAILED_AFTER_TEARDOWN',
+      message: '模拟会话重置失败',
+    );
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() async {
+    releaseCalls += 1;
+    _status = _releasedStatus;
+    throw PlatformException(
+      code: 'RELEASE_FAILED_AFTER_TEARDOWN',
+      message: '模拟模型释放失败',
+    );
+  }
+}
+
 class _ModelControlService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -563,6 +592,66 @@ void main() {
     },
   );
 
+  testWidgets(
+    'clears stale conversation when reset fails after native teardown',
+    (tester) async {
+      final service = _ModelControlTeardownFailureService();
+      const userText = '原生会话失效后不应继续显示的历史';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(userText), findsWidgets);
+
+      await tester.tap(find.byTooltip('重新开始对话'));
+      await tester.pumpAndSettle();
+
+      expect(service.resetCalls, 1);
+      expect(find.text('模拟会话重置失败'), findsOneWidget);
+      expect(find.textContaining(userText), findsNothing);
+      expect(
+        find.text('会话重置失败，原生会话已关闭。请重新加载模型后重新开始。'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('重新开始对话'), findsNothing);
+      expect(find.byTooltip('释放模型内存'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'clears stale conversation when release fails after native teardown',
+    (tester) async {
+      final service = _ModelControlTeardownFailureService();
+      const userText = '模型释放后不应继续显示的历史';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(userText), findsWidgets);
+
+      await tester.tap(find.byTooltip('释放模型内存'));
+      await tester.pumpAndSettle();
+
+      expect(service.releaseCalls, 1);
+      expect(find.text('模拟模型释放失败'), findsOneWidget);
+      expect(find.textContaining(userText), findsNothing);
+      expect(
+        find.text('释放操作发生错误，但原生模型运行态已清空。重新加载后可继续使用。'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('释放模型内存'), findsNothing);
+    },
+  );
   testWidgets(
     'returns symptom summary to rule interview only after explicit confirmation',
     (tester) async {

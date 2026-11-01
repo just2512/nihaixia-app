@@ -721,22 +721,42 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _error = null;
       });
     } on PlatformException catch (error) {
-      final refreshedStatus = await _readNativeStatus();
-      if (!mounted) return;
-      setState(() {
-        _status = refreshedStatus ?? _status;
-        _error = error.message ?? '无法释放模型';
-      });
+      await _handleModelControlFailure(
+        errorMessage: error.message ?? '无法释放模型',
+        unavailableMessage: '释放操作发生错误，但原生模型运行态已清空。重新加载后可继续使用。',
+      );
     } catch (error) {
-      final refreshedStatus = await _readNativeStatus();
-      if (!mounted) return;
-      setState(() {
-        _status = refreshedStatus ?? _status;
-        _error = '无法释放模型：$error';
-      });
+      await _handleModelControlFailure(
+        errorMessage: '无法释放模型：$error',
+        unavailableMessage: '释放操作发生错误，但原生模型运行态已清空。重新加载后可继续使用。',
+      );
     }
   }
 
+  Future<void> _handleModelControlFailure({
+    required String errorMessage,
+    required String unavailableMessage,
+  }) async {
+    final refreshedStatus = await _readNativeStatus();
+    final nativeRuntimeUnavailable =
+        refreshedStatus != null && !refreshedStatus.ready;
+    if (nativeRuntimeUnavailable) {
+      await _deleteCachedAttachments([_imagePath, _audioPath]);
+    }
+    if (!mounted) return;
+    setState(() {
+      _status = refreshedStatus ?? _status;
+      if (nativeRuntimeUnavailable) {
+        _messages
+          ..clear()
+          ..add(_InterviewMessage(text: unavailableMessage, isUser: false));
+        _confirmedDraft = null;
+        _imagePath = null;
+        _audioPath = null;
+      }
+      _error = errorMessage;
+    });
+  }
   Future<void> _resetConversation() async {
     try {
       final paths = <String?>[_imagePath, _audioPath];
@@ -757,19 +777,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _error = null;
       });
     } on PlatformException catch (error) {
-      final refreshedStatus = await _readNativeStatus();
-      if (!mounted) return;
-      setState(() {
-        _status = refreshedStatus ?? _status;
-        _error = error.message ?? '无法重置会话';
-      });
+      await _handleModelControlFailure(
+        errorMessage: error.message ?? '无法重置会话',
+        unavailableMessage: '会话重置失败，原生会话已关闭。请重新加载模型后重新开始。',
+      );
     } catch (error) {
-      final refreshedStatus = await _readNativeStatus();
-      if (!mounted) return;
-      setState(() {
-        _status = refreshedStatus ?? _status;
-        _error = '无法重置会话：$error';
-      });
+      await _handleModelControlFailure(
+        errorMessage: '无法重置会话：$error',
+        unavailableMessage: '会话重置失败，原生会话已关闭。请重新加载模型后重新开始。',
+      );
     }
   }
 
