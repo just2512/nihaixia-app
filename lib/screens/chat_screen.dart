@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../engine/diagnostic_engine.dart';
@@ -163,7 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _selectedTongueShape = null;
     _selectedPulse = null;
 
-    showDialog(
+    showFoldAwareDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
