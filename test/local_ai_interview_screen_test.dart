@@ -120,7 +120,12 @@ void main() {
 
       expect(service.sendAttempts, 1);
       expect(find.textContaining('首次本地推理失败'), findsOneWidget);
-      expect(find.text(userText), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsNothing,
+      );
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         userText,
@@ -131,7 +136,12 @@ void main() {
 
       expect(service.sendAttempts, 2);
       expect(find.text('重试成功：$userText'), findsOneWidget);
-      expect(find.text(userText), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsOneWidget,
+      );
       expect(find.textContaining('首次本地推理失败'), findsNothing);
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
