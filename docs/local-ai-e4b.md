@@ -186,4 +186,4 @@ GitHub CI 当前覆盖依赖锁文件校验、Dart/Flutter 静态分析、本地
 
 
 ## CI Debug APK 架构
-GitHub Actions 的 Find N2 验证构建固定使用 `arm64-v8a`：命令为 `flutter build apk --debug --no-pub --target-platform android-arm64`，上传工件名为 `app-arm64-v8a-debug.apk`。这是为了让 Flutter NDK `abiFilters` 与 Gradle ABI split 保持一致，并减少 CI runner 的无用架构构建。该限制只由 CI 环境属性 `ciArm64Only=true` 启用；本地构建和正式发行仍按 Gradle 默认配置生成 `armeabi-v7a`、`arm64-v8a`、`x86_64` 分包及通用 APK。
+GitHub Actions 的 Find N2 验证构建固定使用 `arm64-v8a`：命令为 `flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true`，上传工件名为 `app-arm64-v8a-debug.apk`。`--target-platform` 限定 Flutter 引擎目标架构，`-P disable-abi-filtering=true` 关闭 Flutter Gradle 插件默认注入的多 ABI NDK 过滤器，由项目的 arm64-only Gradle split 负责 APK 输出；这样两层 ABI 配置一致，也减少 CI runner 的无用架构构建。该限制只由 CI 环境属性 `ciArm64Only=true` 启用；本地构建和正式发行仍按 Gradle 默认配置生成 `armeabi-v7a`、`arm64-v8a`、`x86_64` 分包及通用 APK。

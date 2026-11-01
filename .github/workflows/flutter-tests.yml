@@ -134,7 +134,7 @@ jobs:
           df -h "$GITHUB_WORKSPACE"
 
       - name: Build Android debug APK
-        run: flutter build apk --debug --no-pub --target-platform android-arm64
+        run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
 
       - name: Run Android local unit tests
         run: cd android && ./gradlew :app:testDebugUnitTest
