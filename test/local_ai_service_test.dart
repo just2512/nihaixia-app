@@ -300,6 +300,46 @@ void main() {
       expect(draft.summaryLines.join('、'), isNot(contains('不应接受')));
     });
 
+    test('rejects oversized model symptom payload before parsing JSON', () {
+      final oversizedValue = List<String>.filled(16000, 'x').join();
+      final payload = '{"main_complaint":"$oversizedValue"}';
+
+      expect(
+        () => LocalAiSymptomDraft.fromModelText(payload),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects an oversized scalar symptom field', () {
+      final oversizedField = List<String>.filled(501, 'x').join();
+      final payload = '{"main_complaint":"$oversizedField"}';
+
+      expect(
+        () => LocalAiSymptomDraft.fromModelText(payload),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects symptom lists with too many entries', () {
+      final values = List<String>.filled(21, '症状').map((item) => '"$item"').join(',');
+      final payload = '{"unknowns":[$values]}';
+
+      expect(
+        () => LocalAiSymptomDraft.fromModelText(payload),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects an overlong symptom list item', () {
+      final item = List<String>.filled(301, 'x').join();
+      final payload = '{"unknowns":["$item"]}';
+
+      expect(
+        () => LocalAiSymptomDraft.fromModelText(payload),
+        throwsFormatException,
+      );
+    });
+
     test('rejects malformed model symptom output', () {
       expect(
         () => LocalAiSymptomDraft.fromModelText('not json'),

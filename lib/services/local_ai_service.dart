@@ -187,8 +187,18 @@ class LocalAiSymptomDraft {
     this.unknowns = const [],
   });
 
+  /// Limits model output before it reaches the symptom review dialog.
+  /// All character limits use UTF-16 code units.
+  static const int maxModelOutputCharacters = 16000;
+  static const int maxFieldCharacters = 500;
+  static const int maxListItems = 20;
+  static const int maxListItemCharacters = 300;
+
   factory LocalAiSymptomDraft.fromModelText(String text) {
     final normalized = text.trim();
+    if (normalized.length > maxModelOutputCharacters) {
+      throw const FormatException('模型返回的症状整理内容过长，请重新整理');
+    }
     final start = normalized.indexOf('{');
     final end = normalized.lastIndexOf('}');
     if (start < 0 || end <= start) {
@@ -201,15 +211,31 @@ class LocalAiSymptomDraft {
     final map = Map<String, dynamic>.from(decoded);
     String? stringValue(String key) {
       final value = map[key];
-      if (value is String && value.trim().isNotEmpty) return value.trim();
-      return null;
+      if (value is! String) return null;
+      final trimmed = value.trim();
+      if (trimmed.length > maxFieldCharacters) {
+        throw FormatException('模型返回字段 $key 超出长度限制');
+      }
+      return trimmed.isEmpty ? null : trimmed;
     }
 
     List<String> stringList(String key) {
       final value = map[key];
       if (value is! List) return const [];
-      return value.whereType<String>().map((item) => item.trim())
-          .where((item) => item.isNotEmpty).toList(growable: false);
+      if (value.length > maxListItems) {
+        throw FormatException('模型返回字段 $key 的条目过多');
+      }
+      final result = <String>[];
+      for (final item in value) {
+        if (item is! String) continue;
+        final trimmed = item.trim();
+        if (trimmed.isEmpty) continue;
+        if (trimmed.length > maxListItemCharacters) {
+          throw FormatException('模型返回字段 $key 含有过长条目');
+        }
+        result.add(trimmed);
+      }
+      return List<String>.unmodifiable(result);
     }
 
     return LocalAiSymptomDraft(
