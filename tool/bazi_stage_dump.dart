@@ -1,5 +1,4 @@
 // case A 十二神两口径 + 大运详情。
-import 'package:bazi_core/bazi_core.dart';
 import 'package:nihaisha_app/engine/bazi_twelve_stages.dart';
 import 'package:nihaisha_app/services/bazi_service.dart';
 
