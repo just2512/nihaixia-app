@@ -4,6 +4,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
+const _readyStatus = LocalAiModelStatus(
+  installed: true,
+  fileExists: true,
+  ready: true,
+  modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+  sizeBytes: 3659530240,
+  expectedSizeBytes: 3659530240,
+  backend: 'cpu',
+);
+
+class _TextSendService extends LocalAiService {
+  final sentTexts = <String>[];
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+
+  @override
+  Future<String> sendMessage(String text) async {
+    sentTexts.add(text);
+    return '已收到你的描述：$text';
+  }
+}
+
 class _UnexpectedStatusFailureService extends LocalAiService {
   @override
   Future<LocalAiModelStatus> getStatus() async {
