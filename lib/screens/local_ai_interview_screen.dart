@@ -658,6 +658,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             _messages.last.text == userLabel) {
           _messages.removeLast();
         }
+        final nativeRuntimeUnavailable =
+            refreshedStatus != null && !refreshedStatus.ready;
+        if (nativeRuntimeUnavailable) {
+          _messages
+            ..clear()
+            ..add(const _InterviewMessage(
+              text: '本地模型已变为未加载状态，旧会话已结束。编辑框中的内容和附件仍保留；重新加载后可重新发送。',
+              isUser: false,
+            ));
+          _confirmedDraft = null;
+        }
         _sending = false;
         _error = refreshedStatus == null
             ? '处理失败：$error；无法确认本地模型状态，请重新检查后继续。'
