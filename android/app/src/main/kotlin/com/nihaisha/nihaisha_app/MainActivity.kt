@@ -2,6 +2,7 @@ package com.nihaisha.nihaisha_app
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -450,6 +451,11 @@ class MainActivity : FlutterActivity() {
 
     private fun sendLocalImage(path: String, userPrompt: String): Map<String, Any> {
         val image = requireCachedInput(path, "照片")
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(image.absolutePath, bounds)
+        LocalAiImagePolicy.validationError(bounds.outWidth, bounds.outHeight)?.let { error ->
+            throw IllegalArgumentException(error)
+        }
         val prompt =
             "请只描述照片中能够直接观察到的舌体形态、舌色和舌苔分布。" +
             "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
