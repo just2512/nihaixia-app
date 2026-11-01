@@ -5,6 +5,7 @@ import '../engine/diagnostic_rules.dart';
 import '../models/formula.dart';
 import '../models/herb.dart';
 import '../widgets/keep_alive_tab.dart';
+import '../widgets/adaptive_master_detail.dart';
 import '../widgets/meridian_icons.dart';
 import '../widgets/solar_term_card.dart';
 import '../theme/app_colors.dart';
@@ -244,6 +245,7 @@ class _FormulaTabState extends State<_FormulaTab> {
   String _selectedCategory = '全部';
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
+  String? _selectedFormulaId;
 
   static const _meridians = [
     '全部', '太阳', '阳明', '少阳', '太阴', '少阴', '厥阴'
@@ -287,9 +289,121 @@ class _FormulaTabState extends State<_FormulaTab> {
     return list;
   }
 
+  Widget _buildFormulaPreviewPlaceholder(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.medication_outlined, size: 40, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text('选择一首方剂', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            '在左侧筛选并选择条目，右侧显示内容摘要',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormulaPreview(BuildContext context, Formula formula) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              Chip(label: Text(formula.meridian)),
+              Chip(label: Text(formula.category)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(formula.name, style: Theme.of(context).textTheme.titleLarge),
+          if (formula.alias.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(formula.alias, style: TextStyle(color: scheme.onSurfaceVariant)),
+          ],
+          const Divider(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('适应证', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 6),
+                  SelectableText(formula.indication, style: const TextStyle(height: 1.6)),
+                  const SizedBox(height: 18),
+                  Text('组成', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 6),
+                  ...formula.components.map(
+                    (component) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        [
+                          component.name,
+                          if (component.dosage.isNotEmpty) component.dosage,
+                          if (component.role.isNotEmpty) component.role,
+                        ].join(' · '),
+                      ),
+                    ),
+                  ),
+                  if (formula.dosage.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text('剂量资料', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 6),
+                    SelectableText(formula.dosage),
+                  ],
+                  if (formula.contraindication.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text('禁忌资料', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 6),
+                    SelectableText(formula.contraindication),
+                  ],
+                  if (formula.explanation.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text('说明', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 6),
+                    SelectableText(formula.explanation, style: const TextStyle(height: 1.6)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FormulaDetailScreen(formula: formula),
+                ),
+              ),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('打开完整详情'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final formulas = _getFormulas();
+    Formula? selectedFormula;
+    for (final formula in formulas) {
+      if (formula.id == _selectedFormulaId) {
+        selectedFormula = formula;
+        break;
+      }
+    }
 
     return Column(
       children: [
@@ -306,7 +420,10 @@ class _FormulaTabState extends State<_FormulaTab> {
                       icon: const Icon(Icons.clear, size: 18),
                       onPressed: () {
                         _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
+                        setState(() {
+                          _searchQuery = '';
+                          _selectedFormulaId = null;
+                        });
                       },
                     )
                   : null,
@@ -316,7 +433,10 @@ class _FormulaTabState extends State<_FormulaTab> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+            onChanged: (v) => setState(() {
+              _searchQuery = v.trim();
+              _selectedFormulaId = null;
+            }),
           ),
         ),
         // 六经筛选
@@ -334,7 +454,10 @@ class _FormulaTabState extends State<_FormulaTab> {
                 child: FilterChip(
                   label: Text(m, style: const TextStyle(fontSize: 12)),
                   selected: selected,
-                  onSelected: (_) => setState(() => _selectedMeridian = m),
+                  onSelected: (_) => setState(() {
+                    _selectedMeridian = m;
+                    _selectedFormulaId = null;
+                  }),
                   visualDensity: VisualDensity.compact,
                 ),
               );
@@ -356,7 +479,10 @@ class _FormulaTabState extends State<_FormulaTab> {
                 child: ChoiceChip(
                   label: Text(c, style: const TextStyle(fontSize: 12)),
                   selected: selected,
-                  onSelected: (_) => setState(() => _selectedCategory = c),
+                  onSelected: (_) => setState(() {
+                    _selectedCategory = c;
+                    _selectedFormulaId = null;
+                  }),
                   visualDensity: VisualDensity.compact,
                 ),
               );
@@ -377,33 +503,51 @@ class _FormulaTabState extends State<_FormulaTab> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: formulas.length,
-            itemBuilder: (context, index) {
-              final f = formulas[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                child: ListTile(
-                  title: Text(
-                    f.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    '${f.meridian} · ${f.category}\n${f.indication.length > 40 ? '${f.indication.substring(0, 40)}...' : f.indication}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  isThreeLine: true,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => FormulaDetailScreen(formula: f),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final useMasterDetail =
+                  constraints.maxWidth >= AdaptiveMasterDetail.compactBreakpoint;
+              return AdaptiveMasterDetail(
+                master: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: formulas.length,
+                  itemBuilder: (context, index) {
+                    final formula = formulas[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        selected: useMasterDetail &&
+                            formula.id == _selectedFormulaId,
+                        title: Text(
+                          formula.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '${formula.meridian} · ${formula.category}\n${formula.indication.length > 40 ? '${formula.indication.substring(0, 40)}...' : formula.indication}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        isThreeLine: true,
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          if (useMasterDetail) {
+                            setState(() => _selectedFormulaId = formula.id);
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FormulaDetailScreen(formula: formula),
+                              ),
+                            );
+                          }
+                        },
                       ),
                     );
                   },
                 ),
+                detail: selectedFormula == null
+                    ? _buildFormulaPreviewPlaceholder(context)
+                    : _buildFormulaPreview(context, selectedFormula),
+                masterWidthFactor: 0.4,
               );
             },
           ),
@@ -424,6 +568,7 @@ class _HerbTabState extends State<_HerbTab> {
   String _selectedMeridian = '全部';
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
+  String? _selectedHerbName;
 
   static const _meridians = [
     '全部', '肺', '心', '肝', '脾', '肾', '胃', '胆', '大肠', '小肠', '膀胱', '三焦'
@@ -459,9 +604,109 @@ class _HerbTabState extends State<_HerbTab> {
     return herbs;
   }
 
+  Widget _buildHerbPreviewPlaceholder(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.eco_outlined, size: 40, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text('选择一味本草', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            '在左侧筛选并选择条目，右侧显示内容摘要',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHerbPreview(BuildContext context, Herb herb) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget section(String title, String? value) {
+      if (value == null || value.trim().isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 6),
+            SelectableText(value, style: const TextStyle(height: 1.6)),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              Chip(label: Text(herb.category)),
+              Chip(label: Text('性类：${herb.natureCategory}')),
+              if (herb.flavor.isNotEmpty) Chip(label: Text('味：${herb.flavor}')),
+              if (herb.meridians.isNotEmpty)
+                Chip(label: Text('归经：${herb.meridians.join(" ")}')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(herb.name, style: Theme.of(context).textTheme.titleLarge),
+          const Divider(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  section('主治与功效', herb.action),
+                  section('性味', herb.nature),
+                  section('本经原文', herb.original),
+                  section('倪注', herb.niNote),
+                  section('容川注', herb.rongchuan),
+                  section('用量资料', herb.dosage),
+                  section('禁忌资料', herb.contraindication),
+                  section('临床资料', herb.clinicalNotes),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => HerbDetailScreen(herb: herb),
+                ),
+              ),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('打开完整详情'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final herbs = _getHerbs();
+    Herb? selectedHerb;
+    for (final herb in herbs) {
+      if (herb.name == _selectedHerbName) {
+        selectedHerb = herb;
+        break;
+      }
+    }
     final categories = HerbRepository.getCategories();
     final natures = HerbRepository.getNatureCategories();
 
@@ -480,7 +725,10 @@ class _HerbTabState extends State<_HerbTab> {
                       icon: const Icon(Icons.clear, size: 18),
                       onPressed: () {
                         _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
+                        setState(() {
+                          _searchQuery = '';
+                          _selectedHerbName = null;
+                        });
                       },
                     )
                   : null,
@@ -490,7 +738,10 @@ class _HerbTabState extends State<_HerbTab> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
+            onChanged: (v) => setState(() {
+              _searchQuery = v.trim();
+              _selectedHerbName = null;
+            }),
           ),
         ),
         // Category filter
@@ -508,7 +759,10 @@ class _HerbTabState extends State<_HerbTab> {
                 child: FilterChip(
                   label: Text(cat, style: const TextStyle(fontSize: 12)),
                   selected: selected,
-                  onSelected: (_) => setState(() => _selectedCategory = cat),
+                  onSelected: (_) => setState(() {
+                    _selectedCategory = cat;
+                    _selectedHerbName = null;
+                  }),
                   visualDensity: VisualDensity.compact,
                 ),
               );
@@ -534,6 +788,7 @@ class _HerbTabState extends State<_HerbTab> {
                     onSelected: (_) => setState(() {
                       _selectedNature = n;
                       _selectedMeridian = '全部';
+                      _selectedHerbName = null;
                     }),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -549,6 +804,7 @@ class _HerbTabState extends State<_HerbTab> {
                     onSelected: (_) => setState(() {
                       _selectedMeridian = m;
                       _selectedNature = '全部';
+                      _selectedHerbName = null;
                     }),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -571,58 +827,76 @@ class _HerbTabState extends State<_HerbTab> {
             ),
           ),
         ),
-        // Herb list
+        // 本草列表与详情摘要
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: herbs.length,
-            itemBuilder: (context, index) {
-              final h = herbs[index];
-              final action = h.action ?? '';
-              final actionShort =
-                  action.length > 40 ? '${action.substring(0, 40)}...' : action;
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 3),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    child: Text(
-                      h.name.substring(0, 1),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final useMasterDetail =
+                  constraints.maxWidth >= AdaptiveMasterDetail.compactBreakpoint;
+              return AdaptiveMasterDetail(
+                master: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: herbs.length,
+                  itemBuilder: (context, index) {
+                    final herb = herbs[index];
+                    final action = herb.action ?? '';
+                    final actionShort = action.length > 40
+                        ? '${action.substring(0, 40)}...'
+                        : action;
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      child: ListTile(
+                        selected: useMasterDetail &&
+                            herb.name == _selectedHerbName,
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
+                          child: Text(
+                            herb.name.substring(0, 1),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Row(
+                          children: [
+                            Text(
+                              herb.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(herb.natureIcon, size: 14),
+                          ],
+                        ),
+                        subtitle: Text(
+                          '${herb.flavor.isNotEmpty ? "味${herb.flavor} " : ""}'
+                          '${herb.meridians.isNotEmpty ? "归${herb.meridians.join(" ")} " : ""}'
+                          '${herb.category}\n$actionShort',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        isThreeLine: true,
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () {
+                          if (useMasterDetail) {
+                            setState(() => _selectedHerbName = herb.name);
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => HerbDetailScreen(herb: herb),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                    ),
-                  ),
-                  title: Row(
-                    children: [
-                      Text(
-                        h.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        h.natureIcon,
-                        size: 14,
-                      ),
-                    ],
-                  ),
-                  subtitle: Text(
-                    '${h.flavor.isNotEmpty ? "味${h.flavor} " : ""}'
-                    '${h.meridians.isNotEmpty ? "归${h.meridians.join(" ")} " : ""}'
-                    '${h.category}\n$actionShort',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  isThreeLine: true,
-                  trailing: const Icon(Icons.chevron_right, size: 20),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => HerbDetailScreen(herb: h),
-                    ),
-                  ),
+                    );
+                  },
                 ),
+                detail: selectedHerb == null
+                    ? _buildHerbPreviewPlaceholder(context)
+                    : _buildHerbPreview(context, selectedHerb),
+                masterWidthFactor: 0.4,
               );
             },
           ),
