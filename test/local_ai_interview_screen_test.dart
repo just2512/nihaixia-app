@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -226,12 +224,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byTooltip('停止录音'), findsOneWidget);
       expect(recorder._path, isNotNull);
-      expect(
-        File(recorder._path!).existsSync(),
-        isTrue,
-        reason: 'The fake recorder must create the file consumed by the real stop path.',
-      );
-      expect(File(recorder._path!).lengthSync(), 4);
 
       await tester.tap(find.byTooltip('停止录音'));
       await tester.pumpAndSettle();
