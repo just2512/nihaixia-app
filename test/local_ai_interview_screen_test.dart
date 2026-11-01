@@ -213,6 +213,40 @@ class _PostSendStatusFailureService extends _TextSendService {
   }
 }
 
+class _PostSendNotReadyStatusService extends _TextSendService {
+  _PostSendNotReadyStatusService({required this.failOnTrigger});
+
+  final bool failOnTrigger;
+  static const triggerText = '触发原生模型卸载的本轮输入';
+  var _notReady = false;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async =>
+      _notReady ? _releasedStatus : _readyStatus;
+
+  @override
+  Future<LocalAiModelStatus> loadModel() async {
+    _notReady = false;
+    return _readyStatus;
+  }
+
+  @override
+  Future<String> sendMessage(String text) async {
+    sentTexts.add(text);
+    if (text == triggerText) {
+      _notReady = true;
+      if (failOnTrigger) {
+        throw PlatformException(
+          code: 'INFERENCE_FAILED_AFTER_TEARDOWN',
+          message: '模拟模型卸载前推理失败',
+        );
+      }
+      return '模型卸载前生成的回复';
+    }
+    return '历史回复：$text';
+  }
+}
+
 class _ModelControlService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -848,6 +882,140 @@ void main() {
           tester.widget<TextField>(find.byType(TextField)).controller!.text,
           userText,
         );
+      },
+    );
+  });
+
+  group('post-send native model teardown', () {
+    testWidgets(
+      'keeps only the completed reply when status confirms model unloaded',
+      (tester) async {
+        final service = _PostSendNotReadyStatusService(failOnTrigger: false);
+        const oldText = '此前会话中的旧输入';
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), oldText);
+        await tester.pump();
+        await tester.tap(find.byTooltip('发送'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextField),
+          _PostSendNotReadyStatusService.triggerText,
+        );
+        await tester.pump();
+        await tester.tap(find.byTooltip('发送'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            '本轮回复已生成，但原生模型已变为未加载状态。旧会话已结束；以下回复仅供查看，重新加载后请开始新对话。',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('模型卸载前生成的回复'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SelectableText && widget.data == oldText,
+          ),
+          findsNothing,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+                widget.data == _PostSendNotReadyStatusService.triggerText,
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+          isFalse,
+        );
+
+        await tester.tap(find.text('加载本地模型'));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+          isTrue,
+        );
+        expect(find.text(oldText), findsNothing);
+        expect(find.text('模型卸载前生成的回复'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'clears old chat but preserves failed input when status confirms model unloaded',
+      (tester) async {
+        final service = _PostSendNotReadyStatusService(failOnTrigger: true);
+        const oldText = '失败前的历史会话';
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), oldText);
+        await tester.pump();
+        await tester.tap(find.byTooltip('发送'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextField),
+          _PostSendNotReadyStatusService.triggerText,
+        );
+        await tester.pump();
+        await tester.tap(find.byTooltip('发送'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('本地模型已放入设备，尚未加载'), findsOneWidget);
+        expect(
+          find.text(
+            '本地模型已变为未加载状态，旧会话已结束。编辑框中的内容和附件仍保留；重新加载后可重新发送。',
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('模拟模型卸载前推理失败'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SelectableText && widget.data == oldText,
+          ),
+          findsNothing,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is SelectableText &&
+                widget.data == _PostSendNotReadyStatusService.triggerText,
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          _PostSendNotReadyStatusService.triggerText,
+        );
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+          isFalse,
+        );
+
+        await tester.tap(find.text('加载本地模型'));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).enabled,
+          isTrue,
+        );
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          _PostSendNotReadyStatusService.triggerText,
+        );
+        expect(find.text(oldText), findsNothing);
       },
     );
   });
