@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import '../data/xiaoliuren_data.dart';
@@ -36,6 +37,7 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialDate: _date,
       firstDate: DateTime(1920),
       lastDate: DateTime.now().add(const Duration(days: 365)),
