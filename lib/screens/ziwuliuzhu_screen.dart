@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
 
 class ZiWuLiuZhuScreen extends StatefulWidget {
@@ -121,6 +122,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialTime: TimeOfDay.fromDateTime(_selectedDate),
     );
     if (picked != null) {
