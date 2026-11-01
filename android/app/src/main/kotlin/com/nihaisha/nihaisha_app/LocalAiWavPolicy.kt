@@ -50,7 +50,7 @@ internal object LocalAiWavPolicy {
 
                     when (chunkId) {
                         "fmt " -> {
-                            if (chunkSize < 16L) return INVALID_MESSAGE
+                            if (format != null || chunkSize < 16L) return INVALID_MESSAGE
                             format = Format(
                                 encoding = readUInt16LittleEndian(input),
                                 channels = readUInt16LittleEndian(input),
@@ -60,7 +60,10 @@ internal object LocalAiWavPolicy {
                                 bitsPerSample = readUInt16LittleEndian(input)
                             )
                         }
-                        "data" -> audioDataBytes = chunkSize
+                        "data" -> {
+                            if (audioDataBytes != null) return INVALID_MESSAGE
+                            audioDataBytes = chunkSize
+                        }
                     }
 
                     val nextOffset = chunkEnd + (chunkSize and 1L)

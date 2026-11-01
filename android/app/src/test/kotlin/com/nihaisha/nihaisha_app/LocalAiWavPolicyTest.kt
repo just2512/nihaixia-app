@@ -18,6 +18,22 @@ class LocalAiWavPolicyTest {
     }
 
     @Test
+    fun rejectsDuplicateFormatAndAudioDataChunks() {
+        assertEquals(
+            INVALID_MESSAGE,
+            LocalAiWavPolicy.validationError(
+                createWaveFile(duplicateFormatChunk = true)
+            )
+        )
+        assertEquals(
+            INVALID_MESSAGE,
+            LocalAiWavPolicy.validationError(
+                createWaveFile(duplicateDataChunk = true)
+            )
+        )
+    }
+
+    @Test
     fun rejectsIncompleteTrailingChunkHeader() {
         assertEquals(
             INVALID_MESSAGE,
@@ -81,12 +97,19 @@ class LocalAiWavPolicyTest {
         bitsPerSample: Int = 16,
         dataBytes: Int = 32_000,
         includeOddAncillaryChunk: Boolean = false,
-        trailingRiffBytes: ByteArray = byteArrayOf()
+        trailingRiffBytes: ByteArray = byteArrayOf(),
+        duplicateFormatChunk: Boolean = false,
+        duplicateDataChunk: Boolean = false
     ): File {
         val output = ByteArrayOutputStream()
         output.writeAscii("RIFF")
         val ancillaryChunkBytes = if (includeOddAncillaryChunk) 12L else 0L
-        output.writeUInt32LittleEndian(36L + dataBytes + ancillaryChunkBytes + trailingRiffBytes.size)
+        val duplicateFormatBytes = if (duplicateFormatChunk) 24L else 0L
+        val duplicateDataBytes = if (duplicateDataChunk) 10L else 0L
+        output.writeUInt32LittleEndian(
+            36L + dataBytes + ancillaryChunkBytes + duplicateFormatBytes +
+                duplicateDataBytes + trailingRiffBytes.size
+        )
         output.writeAscii("WAVE")
         if (includeOddAncillaryChunk) {
             output.writeAscii("JUNK")
@@ -102,9 +125,24 @@ class LocalAiWavPolicyTest {
         output.writeUInt32LittleEndian(byteRate)
         output.writeUInt16LittleEndian(blockAlign)
         output.writeUInt16LittleEndian(bitsPerSample)
+        if (duplicateFormatChunk) {
+            output.writeAscii("fmt ")
+            output.writeUInt32LittleEndian(16)
+            output.writeUInt16LittleEndian(encoding)
+            output.writeUInt16LittleEndian(channels)
+            output.writeUInt32LittleEndian(sampleRate)
+            output.writeUInt32LittleEndian(byteRate)
+            output.writeUInt16LittleEndian(blockAlign)
+            output.writeUInt16LittleEndian(bitsPerSample)
+        }
         output.writeAscii("data")
         output.writeUInt32LittleEndian(dataBytes.toLong())
         output.write(ByteArray(dataBytes))
+        if (duplicateDataChunk) {
+            output.writeAscii("data")
+            output.writeUInt32LittleEndian(2)
+            output.write(byteArrayOf(0, 0))
+        }
         output.write(trailingRiffBytes)
         return File.createTempFile("local-ai-audio-", ".wav").apply {
             writeBytes(output.toByteArray())
