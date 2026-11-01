@@ -39,10 +39,7 @@ class NiHaishaApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           themeMode: settings.themeMode,
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF8B4513),
-              brightness: Brightness.light,
-            ),
+            colorScheme: AppColors.colorSchemeFor(Brightness.light),
             useMaterial3: true,
             // ⛔ 关闭 Zoom 转场快照：快照机制会在设备动画缩放异常/手势取消时
             // 把进场页冻结在半透明帧（子午流注屏「打开模糊一大片」根因）。
@@ -57,10 +54,7 @@ class NiHaishaApp extends StatelessWidget {
             extensions: [AppColors.light],
           ),
           darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF8B4513),
-              brightness: Brightness.dark,
-            ),
+            colorScheme: AppColors.colorSchemeFor(Brightness.dark),
             useMaterial3: true,
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {

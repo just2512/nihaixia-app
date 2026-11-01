@@ -198,6 +198,35 @@ class AppColors extends ThemeExtension<AppColors> {
     metaphysicsZone: const Color(0xFFB39DDB),
   );
 
+  /// 由语义色 Token 生成 Material ColorScheme，避免 Theme.colorScheme 与
+  /// AppColors ThemeExtension 各自使用不同色值。
+  ///
+  /// Scaffold 背景采用 background；最低层 surface 保留纯 surface，
+  /// 卡片/输入区域则使用独立的 container token。
+  static ColorScheme colorSchemeFor(Brightness brightness) {
+    final tokens = brightness == Brightness.dark ? dark : light;
+    return ColorScheme.fromSeed(
+      seedColor: tokens.primary,
+      brightness: brightness,
+    ).copyWith(
+      primary: tokens.primary,
+      onPrimary: tokens.onPrimary,
+      primaryContainer: tokens.primaryContainer,
+      onPrimaryContainer: tokens.onPrimaryContainer,
+      surface: tokens.background,
+      surfaceContainerLowest: tokens.surface,
+      surfaceContainerLow: tokens.surfaceContainerLow,
+      surfaceContainerHighest: tokens.surfaceContainerHighest,
+      onSurface: tokens.onSurface,
+      onSurfaceVariant: tokens.onSurfaceVariant,
+      outline: tokens.outline,
+      outlineVariant: tokens.outlineVariant,
+      error: tokens.danger,
+      onError: tokens.onDanger,
+      errorContainer: tokens.dangerContainer,
+    );
+  }
+
   /// 六经名 → 主色（UI 层共用，替代散落的硬编码色）。
   Color meridianColor(String name) {
     switch (name) {
