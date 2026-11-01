@@ -18,6 +18,23 @@ abstract interface class LocalAiAudioRecorder {
   Future<void> dispose();
 }
 
+/// File-system boundary for validating a completed recording before it can
+/// be attached to a consultation message.
+abstract interface class LocalAiRecordingFileInspector {
+  /// Returns null when the path does not resolve to an existing file.
+  Future<int?> sizeBytes(String path);
+}
+
+class _IoLocalAiRecordingFileInspector
+    implements LocalAiRecordingFileInspector {
+  @override
+  Future<int?> sizeBytes(String path) async {
+    final file = File(path);
+    if (!await file.exists()) return null;
+    return file.length();
+  }
+}
+
 class _PluginLocalAiAudioRecorder implements LocalAiAudioRecorder {
   final AudioRecorder _recorder = AudioRecorder();
 
@@ -40,6 +57,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     super.key,
     this.service,
     this.audioRecorder,
+    this.recordingFileInspector,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -47,6 +65,9 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Optional recorder adapter for deterministic recording lifecycle tests.
   final LocalAiAudioRecorder? audioRecorder;
+
+  /// Optional file inspector to isolate recording lifecycle tests from disk IO.
+  final LocalAiRecordingFileInspector? recordingFileInspector;
 
   @override
   State<LocalAiInterviewScreen> createState() => _LocalAiInterviewScreenState();
@@ -56,6 +77,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
   final ImagePicker _imagePicker = ImagePicker();
   late final LocalAiAudioRecorder _audioRecorder;
+  late final LocalAiRecordingFileInspector _recordingFileInspector;
   Timer? _recordingTimer;
   String? _imagePath;
   String? _audioPath;
@@ -87,6 +109,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     super.initState();
     _service = widget.service ?? LocalAiService();
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
+    _recordingFileInspector = widget.recordingFileInspector ??
+        _IoLocalAiRecordingFileInspector();
     _refreshStatus();
     _recoverLostImage();
   }
@@ -419,8 +443,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         await _deleteCachedAttachments([path, expectedPath]);
         return;
       }
-      final file = path == null ? null : File(path);
-      if (file == null || !await file.exists() || await file.length() == 0) {
+      final fileSize = path == null
+          ? null
+          : await _recordingFileInspector.sizeBytes(path);
+      if (fileSize == null || fileSize <= 0) {
         await _deleteCachedAttachments([path, expectedPath]);
         if (!mounted) return;
         setState(() {
@@ -429,7 +455,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         });
         return;
       }
-      if (await file.length() > 15 * 1024 * 1024) {
+      if (fileSize > 15 * 1024 * 1024) {
         await _deleteCachedAttachments([path]);
         if (!mounted) return;
         setState(() {

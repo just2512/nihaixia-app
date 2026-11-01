@@ -27,9 +27,6 @@ class _FailOnceStopRecorder implements LocalAiAudioRecorder {
   @override
   Future<void> start(RecordConfig config, {required String path}) async {
     _path = path;
-    // Keep fixture creation synchronous inside WidgetTest's fake-async zone.
-    // The screen's production file validation remains the code under test.
-    File(path).writeAsBytesSync(const [1, 2, 3, 4]);
   }
 
   @override
@@ -46,6 +43,12 @@ class _FailOnceStopRecorder implements LocalAiAudioRecorder {
 
   @override
   Future<void> dispose() async {}
+}
+
+class _ValidRecordingFileInspector
+    implements LocalAiRecordingFileInspector {
+  @override
+  Future<int?> sizeBytes(String path) async => 4;
 }
 
 class _TextSendService extends LocalAiService {
@@ -207,36 +210,13 @@ void main() {
     (tester) async {
       final service = _TextSendService();
       final recorder = _FailOnceStopRecorder();
-      final tempDirectory = await tester.runAsync(
-        () => Directory.systemTemp.createTemp('local-ai-recorder-test-'),
-      );
-      if (tempDirectory == null) {
-        fail('Unable to create recorder test directory');
-      }
-      messenger.setMockMethodCallHandler(
-        const MethodChannel('plugins.flutter.io/path_provider'),
-        (call) async {
-          if (call.method == 'getTemporaryDirectory') return tempDirectory.path;
-          throw MissingPluginException('Unexpected path provider call: ${call.method}');
-        },
-      );
-      addTearDown(() async {
-        messenger.setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/path_provider'),
-          null,
-        );
-        await tester.runAsync(() async {
-          if (await tempDirectory.exists()) {
-            await tempDirectory.delete(recursive: true);
-          }
-        });
-      });
 
       await tester.pumpWidget(
         MaterialApp(
           home: LocalAiInterviewScreen(
             service: service,
             audioRecorder: recorder,
+            recordingFileInspector: _ValidRecordingFileInspector(),
           ),
         ),
       );
@@ -261,29 +241,10 @@ void main() {
       expect(find.byTooltip('停止录音'), findsOneWidget);
 
       await tester.tap(find.byTooltip('停止录音'));
-      await tester.pump();
-      // File.exists/length in the real stop path use dart:io. Let those
-      // filesystem futures complete outside WidgetTest's fake-async zone.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
-      );
       await tester.pumpAndSettle();
 
       expect(recorder.stopCalls, 2);
-      final renderedText = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((widget) => widget.data ?? widget.textSpan?.toPlainText() ?? '')
-          .where((value) => value.isNotEmpty)
-          .join(' | ');
-      final filePath = recorder._path!;
-      final fileExists = File(filePath).existsSync();
-      final fileLength = fileExists ? File(filePath).lengthSync() : -1;
-      expect(
-        find.text('语音已录制（最长 30 秒），发送前可移除。'),
-        findsOneWidget,
-        reason: 'Unexpected recorder UI state: $renderedText; '
-            'fileExists=$fileExists; fileLength=$fileLength; filePath=$filePath',
-      );
+      expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsOneWidget);
       expect(find.textContaining('录音停止失败'), findsNothing);
     },
   );
