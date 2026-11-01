@@ -152,6 +152,35 @@ class _ModelControlTeardownFailureService extends _TextSendService {
   }
 }
 
+class _UnknownStatusAfterResetService extends _TextSendService {
+  var resetCalls = 0;
+  var _statusUnavailable = false;
+  var _recoveredNotReady = false;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    if (_statusUnavailable) {
+      throw StateError('模拟原生状态接口暂不可用');
+    }
+    return _recoveredNotReady ? _releasedStatus : _readyStatus;
+  }
+
+  @override
+  Future<LocalAiModelStatus> resetConversation() async {
+    resetCalls += 1;
+    _statusUnavailable = true;
+    throw PlatformException(
+      code: 'RESET_FAILED_STATUS_UNKNOWN',
+      message: '模拟会话重置失败',
+    );
+  }
+
+  void recoverAsNotReady() {
+    _statusUnavailable = false;
+    _recoveredNotReady = true;
+  }
+}
+
 class _ModelControlService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -652,6 +681,50 @@ void main() {
       expect(find.byTooltip('释放模型内存'), findsNothing);
     },
   );
+  testWidgets(
+    'disables local AI actions when native status cannot be verified',
+    (tester) async {
+      final service = _UnknownStatusAfterResetService();
+      const userText = '状态未知时必须保留但不能继续使用的历史';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('重新开始对话'));
+      await tester.pumpAndSettle();
+
+      expect(service.resetCalls, 1);
+      expect(find.text('无法确认本地模型状态'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+      expect(find.text('选择并导入模型文件'), findsNothing);
+      expect(find.text('重新检查状态'), findsOneWidget);
+
+      service.recoverAsNotReady();
+      await tester.tap(find.text('重新检查状态'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('无法确认本地模型状态'), findsNothing);
+      expect(find.textContaining(userText), findsNothing);
+      expect(
+        find.text('已确认原生模型当前未就绪。此前会话已结束，重新加载模型后可开始新对话。'),
+        findsOneWidget,
+      );
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+    },
+  );
+
   testWidgets(
     'returns symptom summary to rule interview only after explicit confirmation',
     (tester) async {
