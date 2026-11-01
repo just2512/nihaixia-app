@@ -42,7 +42,7 @@ Widget _section() {
   );
 }
 
-void _setHinge(TestWidgetsFlutterBinding tester, Rect bounds) {
+void _setHinge(WidgetTester tester, Rect bounds) {
   tester.view.devicePixelRatio = 1;
   tester.view.displayFeatures = [
     DisplayFeature(
