@@ -874,7 +874,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       child: Row(
                         children: [
                           const Icon(Icons.graphic_eq, size: 20),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           const Expanded(
                             child: Text('语音已录制（最长 30 秒），发送前可移除。', style: TextStyle(fontSize: AppType.caption)),
                           ),
@@ -1053,7 +1053,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 size: 18,
                 color: ready ? scheme.primary : scheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   ready
