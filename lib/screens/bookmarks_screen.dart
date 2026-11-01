@@ -221,6 +221,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   void _showMoveToFolderDialog(Bookmark bookmark) {
     showModalBottomSheet(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
