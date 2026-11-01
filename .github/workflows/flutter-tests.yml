@@ -40,6 +40,10 @@ jobs:
         id: dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Run Dart and Flutter static analysis
+        if: steps.dependencies.outcome == 'success'
+        run: flutter analyze --no-pub
+
       - name: Run local AI contract tests
         if: steps.dependencies.outcome == 'success'
         run: flutter test --no-pub test/local_ai_service_test.dart
