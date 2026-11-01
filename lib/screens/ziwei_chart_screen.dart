@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/services/ziwei_engine.dart';
@@ -149,7 +150,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   /// 同步构建城市搜索弹窗（无 await gap，安全使用 context）。
   /// 国外数据懒加载：打开时只解析国内，切到「国外」才加载 world 列表。
   Future<CityLocation?> _buildCityDialog(List<CityLocation> domestic) {
-    return showDialog<CityLocation>(
+    return showFoldAwareDialog<CityLocation>(
       context: context,
       builder: (_) => _CitySearchDialog(domestic: domestic),
     );
@@ -241,7 +242,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final genderLabel = _isMale ? '男' : '女';
     final defaultName =
         '命盘 $_year-${_month.toString().padLeft(2, '0')}-${_day.toString().padLeft(2, '0')} $genderLabel';
-    final name = await showDialog<String>(
+    final name = await showFoldAwareDialog<String>(
       context: context,
       builder: (_) => _ZiweiSaveNameDialog(defaultName: defaultName),
     );
@@ -922,6 +923,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: context,
+                    anchorPoint: foldAwareRouteAnchorPoint(context),
                     initialDate: _flowDate ?? DateTime.now(),
                     firstDate: DateTime(1900),
                     lastDate: DateTime(2100),
@@ -1204,6 +1206,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final flowStarsHere = flow?.flowStars[p.index] ?? const <String>[];
     showModalBottomSheet<void>(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       showDragHandle: true,
       builder: (context) => SafeArea(
         child: Padding(
