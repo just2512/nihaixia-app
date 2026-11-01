@@ -96,6 +96,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   ];
 
   LocalAiModelStatus? _status;
+  bool _statusUnknown = false;
   bool _checking = true;
   bool _loading = false;
   bool _importingModel = false;
@@ -111,36 +112,64 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _recordingFileInspector = widget.recordingFileInspector ??
         _IoLocalAiRecordingFileInspector();
-    _refreshStatus();
-    _recoverLostImage();
-  }
-
-  Future<void> _refreshStatus() async {
+    _refreshStatus();  Future<void> _refreshStatus({bool showProgress = false}) async {
+    if (showProgress && mounted) {
+      setState(() {
+        _checking = true;
+        _error = null;
+      });
+    }
     try {
       final status = await _service.getStatus();
+      final shouldClearStaleConversation = _statusUnknown && !status.ready;
+      if (shouldClearStaleConversation) {
+        await _deleteCachedAttachments([_imagePath, _audioPath]);
+      }
       if (!mounted) return;
       setState(() {
         _status = status;
+        _statusUnknown = false;
         _checking = false;
+        if (shouldClearStaleConversation) {
+          _messages
+            ..clear()
+            ..add(const _InterviewMessage(
+              text: '已确认原生模型当前未就绪。此前会话已结束，重新加载模型后可开始新对话。',
+              isUser: false,
+            ));
+          _confirmedDraft = null;
+          _imagePath = null;
+          _audioPath = null;
+        }
         _error = null;
       });
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
+        _status = null;
+        _statusUnknown = true;
         _checking = false;
-        _error = error.message ?? '当前平台尚未接入本地模型运行环境';
+        _error = error.message ?? '无法确认本地模型状态，请重新检查后继续。';
       });
     } on MissingPluginException {
       if (!mounted) return;
       setState(() {
+        _status = null;
+        _statusUnknown = true;
         _checking = false;
-        _error = '本地 E4B 推理目前仅接入 Android 版本。';
+        _error = '本地 E4B 推理目前仅接入 Android 版本，无法确认模型状态。';
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
+        _status = null;
+        _statusUnknown = true;
         _checking = false;
-        _error = '读取本地模型状态失败：$error';
+        _error = '读取本地模型状态失败：$error。请重新检查后继续。';
+      });
+    }
+  }
+败：$error';
       });
     }
   }
@@ -738,14 +767,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required String unavailableMessage,
   }) async {
     final refreshedStatus = await _readNativeStatus();
-    final nativeRuntimeUnavailable =
-        refreshedStatus != null && !refreshedStatus.ready;
+    if (refreshedStatus == null) {
+      if (!mounted) return;
+      setState(() {
+        _status = null;
+        _statusUnknown = true;
+        _error = '$errorMessage；无法确认原生模型状态，请重新检查后再继续。';
+      });
+      return;
+    }
+    final nativeRuntimeUnavailable = !refreshedStatus.ready;
     if (nativeRuntimeUnavailable) {
       await _deleteCachedAttachments([_imagePath, _audioPath]);
     }
     if (!mounted) return;
     setState(() {
-      _status = refreshedStatus ?? _status;
+      _status = refreshedStatus;
+      _statusUnknown = false;
       if (nativeRuntimeUnavailable) {
         _messages
           ..clear()
@@ -1172,6 +1210,56 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final scheme = Theme.of(context).colorScheme;
     if (_checking) {
       return const LinearProgressIndicator(minHeight: 2);
+    }
+    if (_statusUnknown) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.help_outline, size: 18, color: scheme.error),
+                const SizedBox(width: AppSpacing.sm),
+                const Expanded(
+                  child: Text(
+                    '无法确认本地模型状态',
+                    style: TextStyle(
+                      fontSize: AppType.caption,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '为避免继续使用可能已失效的会话，问诊、模型加载和文件导入暂时停用。请重新检查原生模型状态。',
+              style: TextStyle(
+                fontSize: AppType.caption,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: () => _refreshStatus(showProgress: true),
+              icon: const Icon(Icons.refresh),
+              label: const Text('重新检查状态'),
+            ),
+          ],
+        ),
+      );
     }
 
     final status = _status;
