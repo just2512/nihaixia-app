@@ -177,16 +177,7 @@ class MainActivity : FlutterActivity() {
 
         val tempFile = File(parent, modelFile.name + ".importing")
         val backupFile = File(parent, modelFile.name + ".previous")
-        // Recover the previous model if the process was interrupted between backup and replacement.
-        if (!modelFile.exists() && backupFile.exists() && !backupFile.renameTo(modelFile)) {
-            throw IllegalStateException("检测到旧模型备份，但无法恢复；请检查应用存储空间")
-        }
-        if (backupFile.exists() && !backupFile.delete()) {
-            throw IllegalStateException("无法清理旧模型备份文件")
-        }
-        if (tempFile.exists() && !tempFile.delete()) {
-            throw IllegalStateException("无法清理上一次未完成的导入文件")
-        }
+        LocalAiModelImportRecovery.recover(modelFile)
 
         try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -244,6 +235,9 @@ class MainActivity : FlutterActivity() {
 
     private fun modelStatus(): Map<String, Any> {
         modelFile.parentFile?.mkdirs()
+        // Restore an interrupted import before reporting status; otherwise an
+        // app/process restart can leave the previous model stranded as .previous.
+        LocalAiModelImportRecovery.recover(modelFile)
         val fileExists = modelFile.isFile && modelFile.length() > 0L
         val exists = fileExists && modelFile.length() == expectedModelBytes
         return mapOf(
@@ -258,6 +252,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun loadLocalModel(): Map<String, Any> {
+        LocalAiModelImportRecovery.recover(modelFile)
         if (!modelFile.isFile || modelFile.length() != expectedModelBytes) {
             return modelStatus()
         }
