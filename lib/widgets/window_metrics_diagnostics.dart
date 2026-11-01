@@ -9,9 +9,13 @@ class WindowMetricsDiagnostics extends StatefulWidget {
   const WindowMetricsDiagnostics({
     super.key,
     required this.child,
+    this.onLog,
   });
 
   final Widget child;
+
+  /// Optional Debug log sink, primarily used by widget tests.
+  final ValueChanged<String>? onLog;
 
   @override
   State<WindowMetricsDiagnostics> createState() =>
@@ -43,7 +47,13 @@ class _WindowMetricsDiagnosticsState extends State<WindowMetricsDiagnostics> {
       if (pending == null || pending == _lastLoggedSnapshot) return;
 
       _lastLoggedSnapshot = pending;
-      debugPrint('[WINDOW_METRICS] $pending');
+      final line = '[WINDOW_METRICS] $pending';
+      final onLog = widget.onLog;
+      if (onLog != null) {
+        onLog(line);
+      } else {
+        debugPrint(line);
+      }
     });
   }
 

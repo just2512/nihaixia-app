@@ -1,6 +1,5 @@
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/widgets/window_metrics_diagnostics.dart';
@@ -8,12 +7,7 @@ import 'package:nihaisha_app/widgets/window_metrics_diagnostics.dart';
 void main() {
   testWidgets('logs half-opened hinge geometry and changed window metrics once',
       (tester) async {
-    final previousDebugPrint = debugPrint;
     final messages = <String>[];
-    debugPrint = (message, {wrapWidth}) {
-      if (message != null) messages.add(message);
-    };
-    addTearDown(() => debugPrint = previousDebugPrint);
 
     const hinge = DisplayFeature(
       bounds: Rect.fromLTWH(380, 0, 15, 828),
@@ -31,7 +25,10 @@ void main() {
 
     Widget host(MediaQueryData data) => MediaQuery(
           data: data,
-          child: const WindowMetricsDiagnostics(child: SizedBox.expand()),
+          child: WindowMetricsDiagnostics(
+            onLog: messages.add,
+            child: const SizedBox.expand(),
+          ),
         );
 
     await tester.pumpWidget(host(innerWindow));
