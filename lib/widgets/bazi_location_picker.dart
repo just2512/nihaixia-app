@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import 'package:nihaisha_app/services/city_location_service.dart';
 
@@ -27,7 +28,7 @@ class BaZiLocationRow extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: () async {
-        final city = await showDialog<CityLocation>(
+        final city = await showFoldAwareDialog<CityLocation>(
           context: context,
           builder: (_) => const _CitySearchDialog(),
         );
