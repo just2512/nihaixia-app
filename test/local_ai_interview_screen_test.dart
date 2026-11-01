@@ -27,7 +27,9 @@ class _FailOnceStopRecorder implements LocalAiAudioRecorder {
   @override
   Future<void> start(RecordConfig config, {required String path}) async {
     _path = path;
-    await File(path).writeAsBytes(const [1, 2, 3, 4]);
+    // Keep fixture creation synchronous inside WidgetTest's fake-async zone.
+    // The screen's production file validation remains the code under test.
+    File(path).writeAsBytesSync(const [1, 2, 3, 4]);
   }
 
   @override
@@ -205,9 +207,12 @@ void main() {
     (tester) async {
       final service = _TextSendService();
       final recorder = _FailOnceStopRecorder();
-      final tempDirectory = await Directory.systemTemp.createTemp(
-        'local-ai-recorder-test-',
+      final tempDirectory = await tester.runAsync(
+        () => Directory.systemTemp.createTemp('local-ai-recorder-test-'),
       );
+      if (tempDirectory == null) {
+        fail('Unable to create recorder test directory');
+      }
       messenger.setMockMethodCallHandler(
         const MethodChannel('plugins.flutter.io/path_provider'),
         (call) async {
@@ -220,9 +225,11 @@ void main() {
           const MethodChannel('plugins.flutter.io/path_provider'),
           null,
         );
-        if (await tempDirectory.exists()) {
-          await tempDirectory.delete(recursive: true);
-        }
+        await tester.runAsync(() async {
+          if (await tempDirectory.exists()) {
+            await tempDirectory.delete(recursive: true);
+          }
+        });
       });
 
       await tester.pumpWidget(
@@ -247,6 +254,12 @@ void main() {
       expect(find.byTooltip('停止录音'), findsOneWidget);
 
       await tester.tap(find.byTooltip('停止录音'));
+      await tester.pump();
+      // File.exists/length in the real stop path use dart:io. Let those
+      // filesystem futures complete outside WidgetTest's fake-async zone.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
       await tester.pumpAndSettle();
 
       expect(recorder.stopCalls, 2);
