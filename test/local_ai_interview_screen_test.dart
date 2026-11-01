@@ -27,6 +27,33 @@ class _TextSendService extends LocalAiService {
   }
 }
 
+const _releasedStatus = LocalAiModelStatus(
+  installed: true,
+  fileExists: true,
+  ready: false,
+  modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+  sizeBytes: 3659530240,
+  expectedSizeBytes: 3659530240,
+  backend: 'not_loaded',
+);
+
+class _ModelControlService extends _TextSendService {
+  var resetCalls = 0;
+  var releaseCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation() async {
+    resetCalls += 1;
+    return _readyStatus;
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() async {
+    releaseCalls += 1;
+    return _releasedStatus;
+  }
+}
+
 class _DraftTextService extends _TextSendService {
   var extractionCalls = 0;
 
@@ -158,6 +185,100 @@ void main() {
         isEmpty,
       );
       expect(find.byType(LinearProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'reset conversation clears prior turns and keeps the model loaded',
+    (tester) async {
+      final service = _ModelControlService();
+      const userText = '上一轮问诊内容';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              widget.data == '已收到你的描述：$userText',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('重新开始对话'));
+      await tester.pumpAndSettle();
+
+      expect(service.resetCalls, 1);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              widget.data == '已收到你的描述：$userText',
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              widget.data == '我们重新开始。先说说这次最想了解的身体情况。',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'release model clears prior turns and returns the UI to the unloaded state',
+    (tester) async {
+      final service = _ModelControlService();
+      const userText = '本轮不再保留的内容';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('释放模型内存'));
+      await tester.pumpAndSettle();
+
+      expect(service.releaseCalls, 1);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              widget.data == '模型已释放，设备内存已归还。再次使用时可重新加载。',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('模型已放入设备，尚未加载'), findsOneWidget);
+      expect(find.byTooltip('释放模型内存'), findsNothing);
     },
   );
 
