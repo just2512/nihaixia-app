@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
@@ -865,7 +866,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     icon: const Icon(Icons.map_outlined, size: 18),
-                    onPressed: () => showDialog(
+                    onPressed: () => showFoldAwareDialog(
                       context: context,
                       builder: (_) => Dialog(
                         child: SingleChildScrollView(
