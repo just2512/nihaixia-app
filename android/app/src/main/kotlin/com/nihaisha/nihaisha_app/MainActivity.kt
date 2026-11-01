@@ -37,6 +37,7 @@ class MainActivity : FlutterActivity() {
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
     private var activeBackend = "not_loaded"
+    private var conversationHasSuccessfulTurn = false
 
     // Only explicit user text and pending audio transcripts enter symptom extraction.
     // Image observations and assistant responses are intentionally excluded.
@@ -307,6 +308,7 @@ class MainActivity : FlutterActivity() {
             aiConversation = loadedEngine!!.createConversation(
                 ConversationConfig(systemInstruction = Contents.of(systemInstruction))
             )
+            conversationHasSuccessfulTurn = false
         } catch (error: Exception) {
             releaseLocalModel()
             throw error
@@ -315,11 +317,121 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendLocalMessage(text: String): Map<String, Any> {
+        val reply = sendWithFirstTurnGpuFallback { conversation ->
+            conversation.sendMessage(text).toString()
+        }
+        recordUserInput("用户文字自述", text)
+        return mapOf("reply" to reply, "backend" to activeBackend)
+    }
+
+    private fun <T> sendWithFirstTurnGpuFallback(send: (Conversation) -> T): T {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
-        recordUserInput("用户文字自述", text)
-        val reply = conversation.sendMessage(text).toString()
-        return mapOf("reply" to reply, "backend" to activeBackend)
+        return try {
+            val result = send(conversation)
+            conversationHasSuccessfulTurn = true
+            result
+        } catch (error: Exception) {
+            if (!FirstTurnGpuFallbackPolicy.shouldFallback(
+                    activeBackend,
+                    conversationHasSuccessfulTurn,
+                    error
+                )
+            ) {
+                throw error
+            }
+
+            recreateCpuEngineAfterFirstTurnOpenClFailure(error)
+            val cpuConversation = aiConversation
+                ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
+            try {
+                val result = send(cpuConversation)
+                conversationHasSuccessfulTurn = true
+                result
+            } catch (cpuError: Exception) {
+                throw IllegalStateException(
+                    "GPU 首轮推理报告 OpenCL 不可用；已切换 CPU，但重试仍失败：${cpuError.message}",
+                    cpuError
+                ).also { it.addSuppressed(error) }
+            }
+        }
+    }
+
+    private fun recreateCpuEngineAfterFirstTurnOpenClFailure(originalError: Exception) {
+        val previousConversation = aiConversation
+        val previousEngine = aiEngine
+
+        // Detach first so no failed object can be reused or closed twice.
+        aiConversation = null
+        aiEngine = null
+        activeBackend = "not_loaded"
+        conversationHasSuccessfulTurn = false
+
+        var releaseFailure: Exception? = null
+        try {
+            previousConversation?.close()
+        } catch (error: Exception) {
+            releaseFailure = error
+        }
+        try {
+            previousEngine?.close()
+        } catch (error: Exception) {
+            if (releaseFailure == null) {
+                releaseFailure = error
+            } else {
+                releaseFailure.addSuppressed(error)
+            }
+        }
+        if (releaseFailure != null) {
+            releaseFailure.addSuppressed(originalError)
+            throw IllegalStateException(
+                "GPU 首轮推理失败，旧 GPU 会话或引擎未能安全释放；已跳过 CPU 自动重试",
+                releaseFailure
+            )
+        }
+
+        val cachePath = File(cacheDir, "litertlm").apply { mkdirs() }.absolutePath
+        val cpuEngine = Engine(
+            EngineConfig(
+                modelPath = modelFile.absolutePath,
+                backend = Backend.CPU(),
+                visionBackend = Backend.CPU(),
+                audioBackend = Backend.CPU(),
+                cacheDir = cachePath
+            )
+        )
+
+        try {
+            cpuEngine.initialize()
+        } catch (error: Exception) {
+            // LiteRT-LM forbids closing an Engine whose initialize() failed.
+            error.addSuppressed(originalError)
+            throw IllegalStateException(
+                "GPU 首轮 OpenCL 错误后，CPU 引擎初始化也失败：${error.message}",
+                error
+            )
+        }
+
+        val cpuConversation = try {
+            cpuEngine.createConversation(
+                ConversationConfig(systemInstruction = Contents.of(systemInstruction))
+            )
+        } catch (error: Exception) {
+            try {
+                cpuEngine.close()
+            } catch (closeError: Exception) {
+                error.addSuppressed(closeError)
+            }
+            error.addSuppressed(originalError)
+            throw IllegalStateException(
+                "CPU 引擎已初始化，但无法创建问诊会话：${error.message}",
+                error
+            )
+        }
+
+        aiEngine = cpuEngine
+        aiConversation = cpuConversation
+        activeBackend = "cpu"
     }
 
     private fun requireCachedInput(path: String, kind: String): File {
@@ -336,39 +448,39 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendLocalImage(path: String, userPrompt: String): Map<String, Any> {
-        val conversation = aiConversation
-            ?: throw IllegalStateException("本地模型尚未加载")
         val image = requireCachedInput(path, "照片")
-        recordUserInput("用户随照片输入的文字", userPrompt)
-        val reply = conversation.sendMessage(
-            Contents.of(
-                Content.ImageFile(image.absolutePath),
-                Content.Text(
-                    "请只描述照片中能够直接观察到的舌体形态、舌色和舌苔分布。" +
-                    "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
-                    "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。" +
-                    if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
+        val prompt =
+            "请只描述照片中能够直接观察到的舌体形态、舌色和舌苔分布。" +
+            "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
+            "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。" +
+            if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
+        val reply = sendWithFirstTurnGpuFallback { conversation ->
+            conversation.sendMessage(
+                Contents.of(
+                    Content.ImageFile(image.absolutePath),
+                    Content.Text(prompt)
                 )
-            )
-        ).toString()
+            ).toString()
+        }
+        recordUserInput("用户随照片输入的文字", userPrompt)
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
     private fun sendLocalAudio(path: String, userPrompt: String): Map<String, Any> {
-        val conversation = aiConversation
-            ?: throw IllegalStateException("本地模型尚未加载")
         val audio = requireCachedInput(path, "录音")
-        recordUserInput("用户随录音输入的文字", userPrompt)
-        val reply = conversation.sendMessage(
-            Contents.of(
-                Content.AudioFile(audio.absolutePath),
-                Content.Text(
-                    "请逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”，" +
-                    "不要总结、推断、改写或自行补全。只做语音转写，不作诊断或辨证，不推荐药物或方剂。" +
-                    if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
+        val prompt =
+            "请逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”，" +
+            "不要总结、推断、改写或自行补全。只做语音转写，不作诊断或辨证，不推荐药物或方剂。" +
+            if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
+        val reply = sendWithFirstTurnGpuFallback { conversation ->
+            conversation.sendMessage(
+                Contents.of(
+                    Content.AudioFile(audio.absolutePath),
+                    Content.Text(prompt)
                 )
-            )
-        ).toString()
+            ).toString()
+        }
+        recordUserInput("用户随录音输入的文字", userPrompt)
         recordUserInput("语音识别草稿（模型生成，尚待用户核对）", reply)
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
@@ -434,6 +546,7 @@ class MainActivity : FlutterActivity() {
         aiConversation = engine.createConversation(
             ConversationConfig(systemInstruction = Contents.of(systemInstruction))
         )
+        conversationHasSuccessfulTurn = false
         return modelStatus()
     }
 
@@ -445,6 +558,7 @@ class MainActivity : FlutterActivity() {
         aiEngine = null
         userReportedInputs.clear()
         activeBackend = "not_loaded"
+        conversationHasSuccessfulTurn = false
         try {
             conversation?.close()
         } finally {

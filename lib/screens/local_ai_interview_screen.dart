@@ -415,6 +415,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     unawaited(_deleteCachedAttachments(paths));
   }
 
+  Future<LocalAiModelStatus?> _readNativeStatus() async {
+    try {
+      return await _service.getStatus();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _send() async {
     final text = _inputController.text.trim();
     final imagePath = _imagePath;
@@ -446,9 +454,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ? await _service.sendImage(imagePath, prompt: text)
               : await _service.sendMessage(text);
       await _deleteCachedAttachments([imagePath, audioPath]);
+      final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;
       _inputController.clear();
       setState(() {
+        _status = refreshedStatus ?? _status;
         _messages.add(_InterviewMessage(text: reply, isUser: false));
         _sending = false;
         _imagePath = null;
@@ -456,20 +466,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       });
       _scrollToBottom();
     } on PlatformException catch (error) {
+      final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
         return;
       }
       setState(() {
+        _status = refreshedStatus ?? _status;
         _sending = false;
         _error = error.message ?? '本地推理失败';
       });
     } catch (error) {
+      final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
         return;
       }
       setState(() {
+        _status = refreshedStatus ?? _status;
         _sending = false;
         _error = '处理失败：$error';
       });

@@ -44,7 +44,7 @@ adb shell run-as com.nihaisha.nihaisha_app cp /data/local/tmp/gemma-4-E4B-it.lit
 adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 ```
 
-注意：ADB 方式不经过应用内 SHA-256 导入校验，需要自行核对上文哈希。模型加载优先尝试 GPU；仅当 GPU Engine.initialize() 失败时才尝试 CPU 后端，界面会显示当前后端。GPU 初始化成功后的推理运行时故障目前不会自动切换 CPU，必须在实机中验证恢复流程。
+注意：ADB 方式不经过应用内 SHA-256 导入校验，需要自行核对上文哈希。模型加载优先尝试 GPU；GPU Engine.initialize() 失败时会在加载阶段尝试 CPU。若 GPU 初始化成功但首轮推理出现 LiteRT-LM 明确的 `Can not find OpenCL library on this device` 错误，应用会先关闭旧 Conversation 和 Engine，再重建 CPU Engine/Conversation，并只重试该首轮一次。其他运行时错误、CPU 重试失败及已有成功对话轮次后的 GPU 故障不会自动重放。界面显示实际后端，所有回退路径仍需 Find N2 实机验证。
 
 ## 当前实现范围
 
@@ -55,7 +55,7 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 - 将应用独立记录的用户文字输入和待核对语音识别草稿整理为固定字段；提取使用独立临时会话，不包含舌象图片或模型图像描述；用户核对确认后才返回规则问诊页面。
 - 模型加载、会话重置、释放模型内存。
 - 初始化和推理都运行在单线程后台执行器，不阻塞 Flutter UI。
-- GPU 初始化失败时会在模型加载阶段回退 CPU；推理运行时错误没有自动回退机制。
+- GPU 初始化失败时会在模型加载阶段回退 CPU；若 GPU 初始化成功但首轮推理命中明确的 `Can not find OpenCL library on this device` 错误，会关闭 GPU 会话/引擎、重建 CPU 会话并仅重试该首轮一次。其他推理错误、CPU 重试失败以及已有成功对话轮次后的 GPU 故障均不会自动重放。
 - 模型提示词限制其职责为健康信息澄清与自述整理，不允许六经辨证、开方或修改剂量。
 - AI 对话和结构化草稿不写入 DiagnosticEngine，不自动映射问诊选项，不改变既有规则辨证结果。
 
@@ -79,7 +79,7 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 
 - 冷启动后首次加载模型，记录加载耗时、实际后端和峰值内存。
 - 连续完成至少 10 轮不同问题；中间穿插重置会话，再完成 3 轮。
-- **PASS**：每轮均返回非空文本；重置后不复用旧会话上下文；前台 UI 可响应；无进程被系统杀死。
+- **PASS**：每轮均返回非空文本；重置后不复用旧会话上下文；前台 UI 可响应；无进程被系统杀死。若首轮 GPU 推理出现明确 OpenCL 库缺失错误，界面最终显示 CPU，首轮只重试一次并成功；若没有触发该错误，记录实际后端即可。
 - **FAIL**：会话串线、空回复、主线程长时间阻塞、崩溃或系统杀进程。
 
 ### 3. 音频输入
