@@ -27,6 +27,53 @@ class _TextSendService extends LocalAiService {
   }
 }
 
+class _DraftTextService extends _TextSendService {
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms() async =>
+      const LocalAiSymptomDraft(
+        mainComplaint: '饭后腹胀',
+        duration: '约两周',
+        unknowns: ['是否与某种食物有关'],
+      );
+}
+
+class _InterviewHandoffHost extends StatefulWidget {
+  const _InterviewHandoffHost({required this.service});
+
+  final LocalAiService service;
+
+  @override
+  State<_InterviewHandoffHost> createState() => _InterviewHandoffHostState();
+}
+
+class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
+  String? returnedSummary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          TextButton(
+            onPressed: () async {
+              final summary = await Navigator.of(context).push<String>(
+                MaterialPageRoute(
+                  builder: (_) => LocalAiInterviewScreen(service: widget.service),
+                ),
+              );
+              if (!mounted || summary == null) return;
+              setState(() => returnedSummary = summary);
+            },
+            child: const Text('打开本地问诊'),
+          ),
+          if (returnedSummary != null)
+            Text(returnedSummary!, key: const ValueKey('returned-summary')),
+        ],
+      ),
+    );
+  }
+}
+
 class _FailOnceTextSendService extends LocalAiService {
   var sendAttempts = 0;
 
@@ -97,6 +144,46 @@ void main() {
         isEmpty,
       );
       expect(find.byType(LinearProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'returns symptom summary to rule interview only after explicit confirmation',
+    (tester) async {
+      final service = _DraftTextService();
+
+      await tester.pumpWidget(
+        MaterialApp(home: _InterviewHandoffHost(service: service)),
+      );
+
+      await tester.tap(find.text('打开本地问诊'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '饭后腹胀，已经持续约两周。');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('整理本次症状'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('核对症状整理'), findsOneWidget);
+      expect(find.text('确认这份整理'), findsOneWidget);
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pump();
+      await tester.tap(find.text('确认这份整理'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已核对的用户自述'), findsOneWidget);
+      await tester.tap(find.text('返回规则问诊'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('returned-summary')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('主要不适：饭后腹胀'), findsOneWidget);
+      expect(find.textContaining('持续时间：约两周'), findsOneWidget);
     },
   );
 
