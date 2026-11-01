@@ -12,14 +12,17 @@ import '../services/local_ai_service.dart';
 import '../theme/app_tokens.dart';
 
 class LocalAiInterviewScreen extends StatefulWidget {
-  const LocalAiInterviewScreen({super.key});
+  const LocalAiInterviewScreen({super.key, this.service});
+
+  /// Injectable to verify initialization and error states without a native model.
+  final LocalAiService? service;
 
   @override
   State<LocalAiInterviewScreen> createState() => _LocalAiInterviewScreenState();
 }
 
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
-  final LocalAiService _service = LocalAiService();
+  late final LocalAiService _service;
   final ImagePicker _imagePicker = ImagePicker();
   final AudioRecorder _audioRecorder = AudioRecorder();
   Timer? _recordingTimer;
@@ -51,6 +54,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   @override
   void initState() {
     super.initState();
+    _service = widget.service ?? LocalAiService();
     _refreshStatus();
     _recoverLostImage();
   }
@@ -75,6 +79,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       setState(() {
         _checking = false;
         _error = '本地 E4B 推理目前仅接入 Android 版本。';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _error = '读取本地模型状态失败：$error';
       });
     }
   }
