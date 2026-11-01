@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import '../services/update_service.dart';
 
@@ -11,6 +12,7 @@ class UpdateDialog extends StatefulWidget {
   static Future<UpdateAction?> show(BuildContext context, UpdateInfo info) {
     return showModalBottomSheet<UpdateAction>(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       isScrollControlled: true,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
