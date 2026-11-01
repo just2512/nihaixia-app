@@ -18,9 +18,10 @@ Offset? foldAwareRouteAnchorPoint(BuildContext context) {
 
 /// Shows a dialog in the physical panel containing the invoking widget.
 ///
-/// DialogRoute constrains the route to the sub-screen selected by the
-/// invoking widget's anchor. Keep that route-local MediaQuery intact so the
-/// dialog remains inside the chosen physical panel.
+/// DialogRoute uses the anchor for physical sub-screen selection. The
+/// original window MediaQuery is also retained so AdaptiveSinglePane can
+/// manually constrain routes when a zero-width fold is not split by the
+/// platform route implementation.
 Future<T?> showFoldAwareDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -35,6 +36,7 @@ Future<T?> showFoldAwareDialog<T>({
   bool? requestFocus,
   AnimationStyle? animationStyle,
 }) {
+  final originalMediaQuery = MediaQuery.of(context);
   final anchorPoint = foldAwareRouteAnchorPoint(context);
 
   return showDialog<T>(
@@ -50,12 +52,12 @@ Future<T?> showFoldAwareDialog<T>({
     fullscreenDialog: fullscreenDialog,
     requestFocus: requestFocus,
     animationStyle: animationStyle,
-    // Keep DialogRoute's sub-screen MediaQuery intact. Replacing it with
-    // the original full-window data recenters zero-width-fold dialogs over
-    // both panels and defeats anchorPoint's sub-screen selection.
-    builder: (dialogContext) => AdaptiveSinglePane(
-      preferredAnchorPoint: anchorPoint,
-      child: builder(dialogContext),
+    builder: (dialogContext) => MediaQuery(
+      data: originalMediaQuery,
+      child: AdaptiveSinglePane(
+        preferredAnchorPoint: anchorPoint,
+        child: builder(dialogContext),
+      ),
     ),
   );
 }
