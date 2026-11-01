@@ -37,6 +37,75 @@ class ZoneSection extends StatelessWidget {
     }
   }
 
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _color(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.22)),
+          ),
+          padding: const EdgeInsets.all(8),
+          child: _FoldAwareZoneCards(children: children),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+}
+
+
+double _safeLayoutOriginX(BuildContext context) {
+  final renderObject = context.findRenderObject();
+  if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
+  try {
+    return renderObject.localToGlobal(Offset.zero).dx;
+  } on FlutterError {
+    return 0.0;
+  } on AssertionError {
+    return 0.0;
+  }
+}
+
+
+/// Builds tool cards after the layout tree has completed its first frame so
+/// the fold's window-space bounds can be converted to this nested viewport.
+class _FoldAwareZoneCards extends StatefulWidget {
+  const _FoldAwareZoneCards({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  State<_FoldAwareZoneCards> createState() => _FoldAwareZoneCardsState();
+}
+
+class _FoldAwareZoneCardsState extends State<_FoldAwareZoneCards> {
+  final GlobalKey _layoutKey = GlobalKey();
+  double _localOriginX = 0.0;
+  bool _originMeasurementQueued = false;
+
   bool _isVerticalSeparator(Widget child) =>
       child is SizedBox && child.height != null && child.width == null;
 
@@ -65,6 +134,29 @@ class ZoneSection extends StatelessWidget {
     return nearestFeature;
   }
 
+  void _scheduleOriginMeasurement() {
+    if (_originMeasurementQueued) return;
+    _originMeasurementQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _originMeasurementQueued = false;
+      if (!mounted) return;
+      final renderObject = _layoutKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) return;
+      try {
+        final measuredOriginX = renderObject.localToGlobal(Offset.zero).dx;
+        if (!measuredOriginX.isFinite ||
+            (measuredOriginX - _localOriginX).abs() < 0.5) {
+          return;
+        }
+        setState(() => _localOriginX = measuredOriginX);
+      } on FlutterError {
+        // Keep the first-frame fallback; a later layout can retry measurement.
+      } on AssertionError {
+        // An ancestor can still be in a transient layout phase.
+      }
+    });
+  }
+
   Widget _buildCardColumn(List<Widget> cards, double width) {
     return SizedBox(
       width: width,
@@ -84,34 +176,29 @@ class ZoneSection extends StatelessWidget {
   }
 
   Widget _buildCards(BuildContext context, BoxConstraints constraints) {
-    final cards = children
+    final cards = widget.children
         .where((child) => !_isVerticalSeparator(child))
         .toList(growable: false);
     final feature = _findVerticalFoldingFeature(context);
 
-    // No transform is needed without a fold. A LayoutBuilder can run
-    // before route/sliver ancestors have completed layout, so guard the
-    // window-coordinate conversion and use the root-origin fallback then.
-    final localOriginX = feature == null
-        ? 0.0
-        : _safeLayoutOriginX(context);
+    if (feature != null) {
+      _scheduleOriginMeasurement();
+    }
     final featureLeft =
-        feature == null ? null : feature.bounds.left - localOriginX;
+        feature == null ? null : feature.bounds.left - _localOriginX;
     final featureRight =
-        feature == null ? null : feature.bounds.right - localOriginX;
+        feature == null ? null : feature.bounds.right - _localOriginX;
     final featureIntersectsLayout = featureLeft != null &&
         featureRight != null &&
         featureRight > 0 &&
         featureLeft < constraints.maxWidth;
 
     if (feature != null && featureIntersectsLayout) {
-      // DisplayFeature.bounds are window coordinates; convert them to this
-      // LayoutBuilder's actual render-box origin before splitting card columns.
       final creaseInset = feature.bounds.width > 0 ? 0.0 : 12.0;
-      final leftWidth = ((featureLeft) - creaseInset)
+      final leftWidth = (featureLeft - creaseInset)
           .clamp(0.0, constraints.maxWidth)
           .toDouble();
-      final rightStart = ((featureRight) + creaseInset)
+      final rightStart = (featureRight + creaseInset)
           .clamp(0.0, constraints.maxWidth)
           .toDouble();
       final rightWidth = (constraints.maxWidth - rightStart)
@@ -148,7 +235,7 @@ class ZoneSection extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final child in children)
+          for (final child in widget.children)
             if (_isVerticalSeparator(child))
               child
             else
@@ -170,53 +257,9 @@ class ZoneSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _color(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 10, 4, 6),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.22)),
-          ),
-          padding: const EdgeInsets.all(8),
-          child: LayoutBuilder(
-            builder: _buildCards,
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
+    return LayoutBuilder(
+      key: _layoutKey,
+      builder: _buildCards,
     );
-  }
-}
-
-
-double _safeLayoutOriginX(BuildContext context) {
-  final renderObject = context.findRenderObject();
-  if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
-  try {
-    return renderObject.localToGlobal(Offset.zero).dx;
-  } on FlutterError {
-    return 0.0;
-  } on AssertionError {
-    return 0.0;
   }
 }
