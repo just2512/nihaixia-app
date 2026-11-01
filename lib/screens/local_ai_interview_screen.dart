@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -783,7 +784,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
 
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showFoldAwareDialog<bool>(
         context: context,
         builder: (dialogContext) {
           var checked = false;
