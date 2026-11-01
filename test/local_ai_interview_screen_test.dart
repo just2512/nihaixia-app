@@ -1374,6 +1374,131 @@ void main() {
 
   group('local AI model setup serialization', () {
     testWidgets(
+      'keeps model setup controls disabled during lost-photo recovery',
+      (tester) async {
+        final service = _DeferredModelSetupService();
+        final picker = _DeferredLocalAiImagePicker();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: LocalAiInterviewScreen(
+              service: service,
+              imagePicker: picker,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
+
+        expect(picker.retrieveCalls, 1);
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
+          ).onPressed,
+          isNull,
+        );
+        expect(
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNull,
+        );
+
+        picker.retrieveResult.complete(null);
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
+          ).onPressed,
+          isNotNull,
+        );
+        expect(
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
+      'releases model setup lock after a load failure',
+      (tester) async {
+        final service = _DeferredModelSetupService();
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        final load = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, '加载本地模型'),
+        ).onPressed!;
+        load();
+        await tester.pump();
+        expect(service.loadCalls, 1);
+
+        service.loadResult.completeError(
+          PlatformException(code: 'LOAD_FAILED', message: '模拟模型加载失败'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('模拟模型加载失败'), findsOneWidget);
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
+          ).onPressed,
+          isNotNull,
+        );
+        expect(
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
+      'releases model setup lock after an import failure',
+      (tester) async {
+        final service = _DeferredModelSetupService();
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        final import = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+        ).onPressed!;
+        import();
+        await tester.pump();
+        expect(service.importCalls, 1);
+
+        service.importResult.completeError(
+          PlatformException(code: 'IMPORT_FAILED', message: '模拟模型导入失败'),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('模拟模型导入失败'), findsOneWidget);
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
+          ).onPressed,
+          isNotNull,
+        );
+        expect(
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
       'makes model loading exclusive and blocks import and session actions',
       (tester) async {
         final service = _DeferredModelSetupService();
