@@ -546,14 +546,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       '以下内容仅根据你提供的文字和待核对语音识别草稿整理，不包含舌象照片观察。请逐项核对；未提及的信息不会自动补全。',
                       style: TextStyle(fontSize: AppType.caption, height: 1.45),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     ...draft.summaryLines.map(
                       (line) => Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(line, style: const TextStyle(fontSize: AppType.caption)),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: checked,
@@ -761,7 +761,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _buildModelPanel(context),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 10),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
             color: scheme.surfaceContainerLow,
             child: Text(
               'AI 只负责交流和整理自述信息；六经辨证仍由原有规则问诊流程完成，不会由模型开方或调整剂量。',
@@ -795,7 +795,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 14, AppSpacing.lg, AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
               itemCount: _messages.length + (_sending || _extracting ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == _messages.length) {
@@ -813,7 +813,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (_error != null)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               color: scheme.errorContainer,
               child: Text(
                 _error!,
@@ -823,7 +823,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 10),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -847,7 +847,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                               fit: BoxFit.cover,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: AppSpacing.sm),
                           const Expanded(
                             child: Text(
                               '舌象照片已选。请确认光线自然、对焦清晰、无滤镜。',
@@ -866,7 +866,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     Container(
                       width: double.infinity,
                       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                       decoration: BoxDecoration(
                         color: scheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -888,11 +888,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     ),
                   if (_recording)
                     const Padding(
-                      padding: EdgeInsets.only(bottom: 6),
+                      padding: EdgeInsets.only(bottom: AppSpacing.xs),
                       child: Row(
                         children: [
                           Icon(Icons.fiber_manual_record, color: Colors.red, size: 14),
-                          SizedBox(width: 6),
+                          SizedBox(width: AppSpacing.xs),
                           Text('正在录音，最长 30 秒…', style: TextStyle(fontSize: AppType.caption)),
                         ],
                       ),
@@ -955,7 +955,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: AppSpacing.xs),
                       IconButton.filled(
                         tooltip: '发送',
                         onPressed: ready &&
@@ -1001,14 +1001,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '已核对的用户自述',
             style: TextStyle(fontSize: AppType.caption, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           ...draft.summaryLines.map(
             (line) => Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Text(line, style: const TextStyle(fontSize: AppType.caption, height: 1.4)),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             '这份整理不会自动进入辨证引擎，也不会自动选择问诊选项。',
             style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
@@ -1072,7 +1072,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ],
           ),
           if (!ready) ...[
-            const SizedBox(height: 7),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               installed
                   ? '模型文件大小符合要求：${status!.sizeLabel}。导入流程还会校验 SHA-256。'
@@ -1081,19 +1081,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       : '模型文件约 3.66 GB，不随 APK 打包，也不会自动联网下载；请从设备本地存储导入。',
               style: TextStyle(fontSize: AppType.caption, color: scheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: AppSpacing.xs),
             SelectableText(
               status?.modelPath ?? 'Android 应用私有目录 /files/ai_models/gemma-4-E4B-it.litertlm',
               style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               _importingModel
                   ? '正在导入并校验文件，请保持应用在前台并确保设备有足够可用空间。'
                   : '导入时在本机流式复制并校验文件大小与 SHA-256；不会上传模型或请求模型服务。',
               style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1151,8 +1151,8 @@ class _InterviewMessageBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.84,
         ),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         decoration: BoxDecoration(
           color: message.isUser
               ? scheme.primaryContainer
