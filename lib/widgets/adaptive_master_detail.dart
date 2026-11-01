@@ -188,13 +188,30 @@ class AdaptiveSinglePane extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // DialogRoute already uses anchorPoint to constrain the route to the
+        // invoking physical sub-screen. Do not re-split that route or attempt
+        // to read a LayoutBuilder RenderBox before layout has completed.
+        if (preferredAnchorPoint != null) {
+          return Center(
+            child: ConstrainedBox(
+              key: contentKey,
+              constraints: BoxConstraints(
+                maxWidth: maxWidth < constraints.maxWidth
+                    ? maxWidth
+                    : constraints.maxWidth,
+              ),
+              child: child,
+            ),
+          );
+        }
+
         final feature = _findVerticalFoldingFeature(
           MediaQuery.displayFeaturesOf(context),
           MediaQuery.sizeOf(context),
         );
 
         final renderObject = context.findRenderObject();
-        final localOriginX = renderObject is RenderBox
+        final localOriginX = renderObject is RenderBox && renderObject.hasSize
             ? renderObject.localToGlobal(Offset.zero).dx
             : 0.0;
         final featureLeft =
@@ -218,17 +235,17 @@ class AdaptiveSinglePane extends StatelessWidget {
 
         final creaseInset =
             feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-        final leftWidth = (featureLeft! - creaseInset)
+        final leftWidth = (featureLeft - creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
-        final rightStart = (featureRight! + creaseInset)
+        final rightStart = (featureRight + creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
         final rightWidth = (constraints.maxWidth - rightStart)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
         final useLeftPanel = preferredAnchorPoint != null
-            ? preferredAnchorPoint!.dx < feature.bounds.center.dx
+            ? preferredAnchorPoint.dx < feature.bounds.center.dx
             : leftWidth > rightWidth;
         final availablePanelWidth = useLeftPanel ? leftWidth : rightWidth;
         final contentMaxWidth = maxWidth < availablePanelWidth
