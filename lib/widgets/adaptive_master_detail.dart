@@ -37,10 +37,12 @@ class AdaptiveMasterDetail extends StatelessWidget {
           screenSize,
         );
 
-        final renderObject = context.findRenderObject();
-        final localOriginX = renderObject is RenderBox
-            ? renderObject.localToGlobal(Offset.zero).dx
-            : 0.0;
+        // Coordinate transforms are only needed when a fold feature exists.
+        // During a LayoutBuilder callback, an ancestor route/sliver may still
+        // be in layout; localToGlobal can assert before that ancestor has size.
+        final localOriginX = foldingFeature == null
+            ? 0.0
+            : _safeLayoutOriginX(context);
         final featureLeft = foldingFeature == null
             ? null
             : foldingFeature.bounds.left - localOriginX;
@@ -264,5 +266,18 @@ class AdaptiveSinglePane extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+
+double _safeLayoutOriginX(BuildContext context) {
+  final renderObject = context.findRenderObject();
+  if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
+  try {
+    return renderObject.localToGlobal(Offset.zero).dx;
+  } on FlutterError {
+    return 0.0;
+  } on AssertionError {
+    return 0.0;
   }
 }
