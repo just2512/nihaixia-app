@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/screens/knowledge_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   setUpAll(() async {
@@ -18,7 +19,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(const MaterialApp(home: KnowledgeScreen()));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: [AppColors.light]),
+          home: const KnowledgeScreen(),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('方剂'));
       await tester.pumpAndSettle();
@@ -43,7 +49,12 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(const MaterialApp(home: KnowledgeScreen()));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: [AppColors.light]),
+          home: const KnowledgeScreen(),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('本草'));
       await tester.pumpAndSettle();

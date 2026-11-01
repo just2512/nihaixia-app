@@ -624,7 +624,6 @@ class _HerbTabState extends State<_HerbTab> {
   }
 
   Widget _buildHerbPreview(BuildContext context, Herb herb) {
-    final scheme = Theme.of(context).colorScheme;
     Widget section(String title, String? value) {
       if (value == null || value.trim().isEmpty) {
         return const SizedBox.shrink();

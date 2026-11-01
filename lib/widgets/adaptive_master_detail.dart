@@ -30,10 +30,7 @@ class AdaptiveMasterDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < compactBreakpoint) {
-          return SizedBox.expand(child: master);
-        }
-
+        final isCompact = constraints.maxWidth < compactBreakpoint;
         final screenSize = MediaQuery.sizeOf(context);
         final foldingFeature = _findVerticalFoldingFeature(
           MediaQuery.displayFeaturesOf(context),
@@ -90,6 +87,10 @@ class AdaptiveMasterDetail extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: SizedBox(width: rightRegionWidth, child: master),
           );
+        }
+
+        if (isCompact) {
+          return SizedBox.expand(child: master);
         }
 
         final preferredWidth = constraints.maxWidth * masterWidthFactor;
