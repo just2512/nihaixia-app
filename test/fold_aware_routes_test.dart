@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/utils/fold_aware_routes.dart';
 
-Widget _foldableApp({
-  required DisplayFeature feature,
-}) {
+Widget _foldableApp() {
   return MaterialApp(
     home: Scaffold(
       body: Row(
@@ -54,13 +52,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      _foldableApp(
-        feature: const DisplayFeature(
-          bounds: Rect.fromLTWH(388, 0, 24, 900),
-          type: DisplayFeatureType.hinge,
-          state: DisplayFeatureState.postureHalfOpened,
-        ),
-      ),
+      _foldableApp(),
     );
     await tester.tap(find.byKey(const ValueKey('open-dialog')));
     await tester.pumpAndSettle();
@@ -85,13 +77,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      _foldableApp(
-        feature: const DisplayFeature(
-          bounds: Rect.fromLTWH(400, 0, 0, 900),
-          type: DisplayFeatureType.fold,
-          state: DisplayFeatureState.postureFlat,
-        ),
-      ),
+      _foldableApp(),
     );
     await tester.tap(find.byKey(const ValueKey('open-dialog')));
     await tester.pumpAndSettle();
