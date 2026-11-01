@@ -148,10 +148,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _deleteCachedAttachments(Iterable<String?> paths) async {
+    final candidates = paths
+        .whereType<String>()
+        .where((path) => path.isNotEmpty)
+        .toList(growable: false);
+    if (candidates.isEmpty) return;
+
     try {
       final tempRoot = p.normalize((await getTemporaryDirectory()).absolute.path);
-      for (final rawPath in paths) {
-        if (rawPath == null || rawPath.isEmpty) continue;
+      for (final rawPath in candidates) {
         final normalizedPath = p.normalize(File(rawPath).absolute.path);
         if (!p.isWithin(tempRoot, normalizedPath)) continue;
         try {
