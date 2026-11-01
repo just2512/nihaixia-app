@@ -77,19 +77,6 @@ class ZoneSection extends StatelessWidget {
 }
 
 
-double _safeLayoutOriginX(BuildContext context) {
-  final renderObject = context.findRenderObject();
-  if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
-  try {
-    return renderObject.localToGlobal(Offset.zero).dx;
-  } on FlutterError {
-    return 0.0;
-  } on AssertionError {
-    return 0.0;
-  }
-}
-
-
 /// Builds tool cards after the layout tree has completed its first frame so
 /// the fold's window-space bounds can be converted to this nested viewport.
 class _FoldAwareZoneCards extends StatefulWidget {
