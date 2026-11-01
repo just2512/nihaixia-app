@@ -181,6 +181,38 @@ class _UnknownStatusAfterResetService extends _TextSendService {
   }
 }
 
+class _PostSendStatusFailureService extends _TextSendService {
+  _PostSendStatusFailureService({this.failSend = false});
+
+  final bool failSend;
+  var _statusUnavailable = false;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    if (_statusUnavailable) {
+      throw StateError('模拟推理后原生状态接口暂不可用');
+    }
+    return _readyStatus;
+  }
+
+  @override
+  Future<String> sendMessage(String text) async {
+    sentTexts.add(text);
+    _statusUnavailable = true;
+    if (failSend) {
+      throw PlatformException(
+        code: 'INFERENCE_FAILED',
+        message: '模拟本地推理失败',
+      );
+    }
+    return '本轮回复：$text';
+  }
+
+  void recoverAsReady() {
+    _statusUnavailable = false;
+  }
+}
+
 class _ModelControlService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -724,6 +756,96 @@ void main() {
       expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
     },
   );
+
+  group('post-send native status readback', () {
+    testWidgets(
+      'blocks follow-up messages when status readback fails after a successful reply',
+      (tester) async {
+        final service = _PostSendStatusFailureService();
+        const userText = '推理成功后状态回读失败时应保留的输入';
+        const replyText = '本轮回复：$userText';
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), userText);
+        await tester.pump();
+        await tester.tap(find.byTooltip('发送'));
+        await tester.pumpAndSettle();
+
+        expect(service.sentTexts, [userText]);
+        expect(find.text('无法确认本地模型状态'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SelectableText && widget.data == userText,
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SelectableText && widget.data == replyText,
+          ),
+          findsOneWidget,
+        );
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(find.text('选择并导入模型文件'), findsNothing);
+
+        service.recoverAsReady();
+        await tester.tap(find.text('重新检查状态'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('无法确认本地模型状态'), findsNothing);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SelectableText && widget.data == replyText,
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'keeps failed input editable after status readback fails',
+      (tester) async {
+        final service = _PostSendStatusFailureService(failSend: true);
+        const userText = '推理失败后需要保留供重试的输入';
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), userText);
+        await tester.pump();
+        await tester.tap(find.byTooltip('发送'));
+        await tester.pumpAndSettle();
+
+        expect(service.sentTexts, [userText]);
+        expect(find.text('无法确认本地模型状态'), findsOneWidget);
+        expect(find.text('模拟本地推理失败'), findsOneWidget);
+        expect(find.textContaining(userText), findsNothing);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          userText,
+        );
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+
+        service.recoverAsReady();
+        await tester.tap(find.text('重新检查状态'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('无法确认本地模型状态'), findsNothing);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          userText,
+        );
+      },
+    );
+  });
 
   testWidgets(
     'returns symptom summary to rule interview only after explicit confirmation',
