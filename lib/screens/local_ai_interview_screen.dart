@@ -631,6 +631,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       '以下内容仅根据你提供的文字和待核对语音识别草稿整理，不包含舌象照片观察。请逐项核对；未提及的信息不会自动补全。',
                       style: TextStyle(fontSize: AppType.caption, height: 1.45),
                     ),
+                    if (draft.sourceTruncated) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _buildSourceTruncationWarning(context),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     ...draft.summaryLines.map(
                       (line) => Padding(
@@ -1067,6 +1071,38 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  Widget _buildSourceTruncationWarning(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: scheme.onTertiaryContainer,
+            size: 18,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              '记录范围不完整：较早或超长的输入可能未包含在本次整理中。请补充遗漏内容并逐项核对，不要把未显示的信息理解为你没有相关症状。',
+              style: TextStyle(
+                color: scheme.onTertiaryContainer,
+                fontSize: AppType.caption,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildConfirmedDraftPanel(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final draft = _confirmedDraft!;
@@ -1093,6 +1129,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               child: Text(line, style: const TextStyle(fontSize: AppType.caption, height: 1.4)),
             ),
           ),
+          if (draft.sourceTruncated) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _buildSourceTruncationWarning(context),
+          ],
           const SizedBox(height: AppSpacing.xs),
           Text(
             '这份整理不会自动进入辨证引擎，也不会自动选择问诊选项。',

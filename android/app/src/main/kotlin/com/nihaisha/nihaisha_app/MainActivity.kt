@@ -502,7 +502,8 @@ class MainActivity : FlutterActivity() {
             ?: throw IllegalStateException("本地模型尚未加载")
         if (userReportedInputs.isEmpty()) {
             return mapOf(
-                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[]}"""
+                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[]}""",
+                "sourceTruncated" to userReportedInputsTruncated
             )
         }
         val userInputContext = buildString {
@@ -554,7 +555,10 @@ class MainActivity : FlutterActivity() {
             )
         )
         return try {
-            mapOf("draft" to extractionConversation.sendMessage(prompt).toString())
+            mapOf(
+                "draft" to extractionConversation.sendMessage(prompt).toString(),
+                "sourceTruncated" to userReportedInputsTruncated
+            )
         } finally {
             extractionConversation.close()
         }

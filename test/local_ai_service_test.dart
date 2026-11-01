@@ -204,6 +204,7 @@ void main() {
         received = call;
         return <String, Object?>{
           'draft': '{"main_complaint":"饭后腹胀","unknowns":["开始时间待确认"]}',
+          'sourceTruncated': true,
         };
       });
 
@@ -212,8 +213,37 @@ void main() {
       expect(received?.method, 'extractSymptoms');
       expect(draft.mainComplaint, '饭后腹胀');
       expect(draft.unknowns, ['开始时间待确认']);
+      expect(draft.sourceTruncated, isTrue);
     });
 
+    test('extractSymptoms rejects missing source truncation metadata', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{
+          'draft': '{"main_complaint":"头痛"}',
+        },
+      );
+
+      await expectLater(
+        LocalAiService().extractSymptoms(),
+        throwsFormatException,
+      );
+    });
+
+    test('extractSymptoms rejects non-boolean source truncation metadata', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{
+          'draft': '{"main_complaint":"头痛"}',
+          'sourceTruncated': 'true',
+        },
+      );
+
+      await expectLater(
+        LocalAiService().extractSymptoms(),
+        throwsFormatException,
+      );
+    });
     test('extractSymptoms rejects missing draft payload', () async {
       messenger.setMockMethodCallHandler(
         channel,
@@ -340,6 +370,44 @@ void main() {
       );
     });
 
+    test('rejects oversized model symptom payload before parsing JSON', () {
+      final oversizedValue = List<String>.filled(16000, 'x').join();
+      final payload = '{"main_complaint":"$oversizedValue"}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
+
+    test('rejects an oversized scalar symptom field', () {
+      final oversizedField = List<String>.filled(501, 'x').join();
+      final payload = '{"main_complaint":"$oversizedField"}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
+
+    test('rejects symptom lists with too many entries', () {
+      final values = List<String>.filled(21, '症状').map((item) => '"$item"').join(',');
+      final payload = '{"unknowns":[$values]}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
+
+    test('rejects an overlong symptom list item', () {
+      final item = List<String>.filled(301, 'x').join();
+      final payload = '{"unknowns":["$item"]}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
+
+    test('rejects a non-text scalar symptom field instead of dropping it', () {
+      const payload = '{"main_complaint":123}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
+
+    test('rejects a non-list value for a symptom list field', () {
+      const payload = '{"unknowns":"需要再次确认"}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
+
+    test('rejects non-text entries in symptom lists instead of dropping them', () {
+      const payload = '{"unknowns":["需要再次确认",false]}';
+      expect(() => LocalAiSymptomDraft.fromModelText(payload), throwsFormatException);
+    });
     test('rejects malformed model symptom output', () {
       expect(
         () => LocalAiSymptomDraft.fromModelText('not json'),

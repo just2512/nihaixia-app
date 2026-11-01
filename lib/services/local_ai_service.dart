@@ -94,7 +94,14 @@ class LocalAiService {
     if (draft is! String || draft.trim().isEmpty) {
       throw const FormatException('模型没有返回症状整理内容');
     }
-    return LocalAiSymptomDraft.fromModelText(draft);
+    final sourceTruncated = data?['sourceTruncated'];
+    if (sourceTruncated is! bool) {
+      throw const FormatException('本地问诊没有返回完整性标记，请重新整理');
+    }
+    return LocalAiSymptomDraft.fromModelText(
+      draft,
+      sourceTruncated: sourceTruncated,
+    );
   }
 
   Future<LocalAiModelStatus> releaseModel() async {
@@ -173,6 +180,7 @@ class LocalAiSymptomDraft {
   final List<String> associatedSymptoms;
   final List<String> redFlags;
   final List<String> unknowns;
+  final bool sourceTruncated;
 
   const LocalAiSymptomDraft({
     this.mainComplaint,
@@ -185,6 +193,7 @@ class LocalAiSymptomDraft {
     this.associatedSymptoms = const [],
     this.redFlags = const [],
     this.unknowns = const [],
+    this.sourceTruncated = false,
   });
 
   /// Limits model output before it reaches the symptom review dialog.
@@ -194,7 +203,10 @@ class LocalAiSymptomDraft {
   static const int maxListItems = 20;
   static const int maxListItemCharacters = 300;
 
-  factory LocalAiSymptomDraft.fromModelText(String text) {
+  factory LocalAiSymptomDraft.fromModelText(
+    String text, {
+    bool sourceTruncated = false,
+  }) {
     final normalized = text.trim();
     if (normalized.length > maxModelOutputCharacters) {
       throw const FormatException('模型返回的症状整理内容过长，请重新整理');
@@ -211,7 +223,10 @@ class LocalAiSymptomDraft {
     final map = Map<String, dynamic>.from(decoded);
     String? stringValue(String key) {
       final value = map[key];
-      if (value is! String) return null;
+      if (value == null) return null;
+      if (value is! String) {
+        throw FormatException('模型返回字段 $key 的类型无效');
+      }
       final trimmed = value.trim();
       if (trimmed.length > maxFieldCharacters) {
         throw FormatException('模型返回字段 $key 超出长度限制');
@@ -221,13 +236,18 @@ class LocalAiSymptomDraft {
 
     List<String> stringList(String key) {
       final value = map[key];
-      if (value is! List) return const [];
+      if (value == null) return const [];
+      if (value is! List) {
+        throw FormatException('模型返回字段 $key 的类型无效');
+      }
       if (value.length > maxListItems) {
         throw FormatException('模型返回字段 $key 的条目过多');
       }
       final result = <String>[];
       for (final item in value) {
-        if (item is! String) continue;
+        if (item is! String) {
+          throw FormatException('模型返回字段 $key 含有非文本条目');
+        }
         final trimmed = item.trim();
         if (trimmed.isEmpty) continue;
         if (trimmed.length > maxListItemCharacters) {
@@ -249,6 +269,7 @@ class LocalAiSymptomDraft {
       associatedSymptoms: stringList('associated_symptoms'),
       redFlags: stringList('red_flags'),
       unknowns: stringList('unknowns'),
+      sourceTruncated: sourceTruncated,
     );
   }
 

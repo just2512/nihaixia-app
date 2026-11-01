@@ -60,6 +60,16 @@ class _ValidRecordingFileInspector
   Future<int?> sizeBytes(String path) async => 4;
 }
 
+class _SourceTruncatedSymptomsService extends _TextSendService {
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms() async {
+    return const LocalAiSymptomDraft(
+      mainComplaint: '间断头痛',
+      sourceTruncated: true,
+    );
+  }
+}
+
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
 
@@ -340,6 +350,33 @@ void main() {
     },
   );
 
+  testWidgets(
+    'warns the user when symptom source history was truncated',
+    (tester) async {
+      final service = _SourceTruncatedSymptomsService();
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '较早的头痛描述');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('整理本次症状'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('记录范围不完整：较早或超长的输入可能未包含在本次整理中。请补充遗漏内容并逐项核对，不要把未显示的信息理解为你没有相关症状。'), findsOneWidget);
+      expect(find.text('确认这份整理'), findsOneWidget);
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('确认这份整理'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已核对的用户自述'), findsOneWidget);
+      expect(find.text('记录范围不完整：较早或超长的输入可能未包含在本次整理中。请补充遗漏内容并逐项核对，不要把未显示的信息理解为你没有相关症状。'), findsOneWidget);
+    },
+  );
   testWidgets(
     'reset conversation clears prior turns and keeps the model loaded',
     (tester) async {
