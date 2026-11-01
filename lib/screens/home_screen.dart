@@ -6,6 +6,7 @@ import 'tools_screen.dart';
 import '../services/update_service.dart';
 import '../services/whats_new_service.dart';
 import '../widgets/update_dialog.dart';
+import '../widgets/adaptive_home_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   final double textScaleFactor;
@@ -62,43 +63,34 @@ class _HomeScreenState extends State<HomeScreen> {
       data: MediaQuery.of(
         context,
       ).copyWith(textScaler: TextScaler.linear(widget.textScaleFactor)),
-      child: Scaffold(
-        // IndexedStack 常驻各 Tab，切换后保留问诊/搜索等页面 State（如聊天进度、滚动位置）
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
-        ),
-        bottomNavigationBar: NavigationBar(
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          indicatorColor: Theme.of(context).colorScheme.primaryContainer,
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            setState(() => _currentIndex = index);
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.library_books_outlined),
-              selectedIcon: Icon(Icons.library_books),
-              label: '知识',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.build_outlined),
-              selectedIcon: Icon(Icons.build),
-              label: '工具',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.fact_check_outlined),
-              selectedIcon: Icon(Icons.fact_check),
-              label: '问诊',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.bookmark_border),
-              selectedIcon: Icon(Icons.bookmark),
-              label: '收藏',
-            ),
-          ],
-        ),
+      child: AdaptiveHomeNavigation(
+        currentIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+        },
+        screens: _screens,
+        destinations: const [
+          AppNavigationDestination(
+            icon: Icon(Icons.library_books_outlined),
+            selectedIcon: Icon(Icons.library_books),
+            label: '知识',
+          ),
+          AppNavigationDestination(
+            icon: Icon(Icons.build_outlined),
+            selectedIcon: Icon(Icons.build),
+            label: '工具',
+          ),
+          AppNavigationDestination(
+            icon: Icon(Icons.fact_check_outlined),
+            selectedIcon: Icon(Icons.fact_check),
+            label: '问诊',
+          ),
+          AppNavigationDestination(
+            icon: Icon(Icons.bookmark_border),
+            selectedIcon: Icon(Icons.bookmark),
+            label: '收藏',
+          ),
+        ],
       ),
     );
   }

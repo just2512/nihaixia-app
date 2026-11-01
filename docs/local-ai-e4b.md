@@ -15,6 +15,41 @@ https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/ge
 
 应用检查模型文件大小。通过应用内导入时，还会在复制过程中校验 SHA-256；大小或哈希不一致时会拒绝替换正式模型文件，不调用推理引擎。
 
+## 模型下载与固定运行配置
+
+本项目固定使用 LiteRT Community 发布的标准 Android 模型文件，不要误选仓库中的 `-web` 文件或面向其他芯片的专用构建。
+
+| 配置项 | 当前项目固定值 |
+|---|---|
+| 模型仓库 | [litert-community/gemma-4-E4B-it-litert-lm](https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm) |
+| 下载文件 | `gemma-4-E4B-it.litertlm` |
+| 直链 | [下载 Gemma 4 E4B IT（3.66 GB）](https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm) |
+| 文件长度 | `3,659,530,240` bytes |
+| SHA-256 | `0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0` |
+| Android 运行库 | `com.google.ai.edge.litertlm:litertlm-android:0.18.0` |
+| 应用私有目录 | `files/ai_models/gemma-4-E4B-it.litertlm` |
+| 模型许可 | Apache-2.0（以模型仓库当前许可证文件为准） |
+
+### 下载与导入
+
+1. 使用上方 Hugging Face 直链，将模型下载到电脑或手机本地存储；浏览器下载中断时，先确认文件完整再导入。
+2. 电脑端可用 PowerShell 校验：`Get-FileHash .\\gemma-4-E4B-it.litertlm -Algorithm SHA256`；必须与上表完全一致。
+3. 安装本项目 APK，进入「问诊」→ 右上角本地 AI →「选择并导入模型文件」，从系统文件选择器选择下载文件。
+4. 应用会将文件复制到私有目录，先校验字节数和 SHA-256，再替换正式模型；导入失败不会把未校验文件交给推理引擎。
+5. 显示“模型文件已安装”后点击「加载本地模型」。模型不会打包进 APK，也不会由应用自动联网下载。
+
+导入阶段会先写入同目录临时文件，校验通过才替换正式文件。请至少预留 4 GB 可用空间；如果已有旧模型且准备重新导入，建议预留更多空间。ADB 方式属于开发备用流程，不经过应用内哈希校验，必须自行核对 SHA-256。
+
+### 运行时配置
+
+- Android Gradle 依赖固定为 `litertlm-android:0.18.0`；无需用户填写 API Key、服务地址或云端账号。
+- 原生代码先尝试 GPU 文本/视觉后端，音频后端使用 CPU；GPU 引擎初始化失败时回退 CPU。
+- 如果 GPU 初始化成功但首轮推理明确报出 OpenCL 库不可用，应用关闭旧会话和引擎后重建 CPU 会话，首轮只重试一次；其他错误不自动重放。
+- 模型文件、对话上下文和推理均保留在设备本地。下载模型时需要联网，但导入完成后的问答不依赖模型服务器。
+- 当前项目没有实现应用内模型下载器。请不要把“模型下载直链”理解成 App 会在后台自动下载。
+
+官方运行文档：[Google AI Edge - Gemma 4 / LiteRT-LM](https://developers.google.com/edge/litert-lm/models/gemma-4)。Google 的公开性能数据来自其标注设备（例如 Galaxy S26 Ultra），不能直接推算 Find N2 的加载耗时或内存；Find N2 的 GPU/CPU 后端、温度和稳定性仍必须实机记录。
+
 ## 安装到 OPPO Find N2
 
 先安装本项目生成的 Debug APK，并将模型文件下载到手机可访问的位置（例如“下载”目录）。打开应用「问诊」页，点右上角本地 AI 入口：
@@ -81,7 +116,20 @@ CI 的 Kotlin 单元测试覆盖缓存目录内嵌套文件、恰好达到 15 Mi
 
 ## Find N2 实机验收步骤与通过条件
 
-必须使用 OPPO Find N2（PUG110，16 GB）进行以下验收；CI APK 编译通过不能替代本节。
+必须使用 OPPO Find N2（PGU110，16 GB）进行以下验收；CI APK 编译通过不能替代本节。
+
+### 0. 内外屏全屏适配
+
+Find N2 外屏和内屏必须分别测试，不能只在外屏完成 AI 模型验收：
+
+- 外屏约 403 dp 窗口宽度：应显示底部导航，页面单列、输入框和主要按钮不被手势区遮挡。
+- 展开内屏约 775 dp 窗口宽度：应显示左侧 NavigationRail；检查知识、工具、问诊、收藏四个主入口的内容列宽和滚动。
+- 折叠/展开过程中确认当前 Tab、滚动位置、问诊文本草稿没有被清空或重置。
+- 字号测试覆盖 100%、150%、200%；键盘弹出、相机、文件选择器和模型导入分别在内外屏操作。
+- 记录运行时实际 dp 宽高和 `MediaQuery.displayFeatures`。窗口模拟测试只能证明布局断点，折痕/半折叠和系统窗口行为必须真机验收。
+- **PASS**：关键页面全屏占用当前应用窗口，无横向溢出、关键控件跨越遮挡铰链、输入区不可见或内容被裁剪。
+- **FAIL**：仅内屏出现黑边/ letterbox、布局仍使用外屏比例、键盘挡住输入区或折叠切换丢失当前操作。
+- **MISSING**：没有在 Find N2 真机执行并留存截图与窗口尺寸。
 
 ### 1. 安装与离线条件
 
@@ -125,7 +173,7 @@ CI 的 Kotlin 单元测试覆盖缓存目录内嵌套文件、恰好达到 15 Mi
 
 ## 实机验收记录
 
-在 Find N2（PUG110，16 GB）上需要记录：
+在 Find N2（PGU110，16 GB）上需要记录：
 
 1. 模型完整加载时间和实际后端。
 2. 首轮回复时间、连续多轮回复时间。
