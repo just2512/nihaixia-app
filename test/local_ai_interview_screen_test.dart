@@ -201,6 +201,10 @@ void main() {
 
   tearDown(() {
     messenger.setMockMethodCallHandler(imagePickerChannel, null);
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      null,
+    );
   });
 
   testWidgets(
@@ -208,6 +212,13 @@ void main() {
     (tester) async {
       final service = _TextSendService();
       final recorder = _FailOnceStopRecorder();
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (call) async {
+          if (call.method == 'getTemporaryDirectory') return '/tmp';
+          throw MissingPluginException('Unexpected path provider call: ${call.method}');
+        },
+      );
 
       await tester.pumpWidget(
         MaterialApp(
