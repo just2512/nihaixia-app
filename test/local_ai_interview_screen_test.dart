@@ -28,7 +28,6 @@ class _TextSendService extends LocalAiService {
 }
 
 class _DraftTextService extends _TextSendService {
-  @override
   var extractionCalls = 0;
 
   @override
