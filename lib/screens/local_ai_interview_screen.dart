@@ -100,6 +100,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _loading = false;
         _error = error.message ?? '模型加载失败';
       });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = '模型加载失败：$error';
+      });
     }
   }
 
@@ -575,6 +581,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _extracting = false;
         _error = error.message;
       });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _extracting = false;
+        _error = '症状整理失败：$error';
+      });
     }
   }
 
@@ -598,8 +610,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _error = null;
       });
     } on PlatformException catch (error) {
+      final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;
-      setState(() => _error = error.message ?? '无法释放模型');
+      setState(() {
+        _status = refreshedStatus ?? _status;
+        _error = error.message ?? '无法释放模型';
+      });
+    } catch (error) {
+      final refreshedStatus = await _readNativeStatus();
+      if (!mounted) return;
+      setState(() {
+        _status = refreshedStatus ?? _status;
+        _error = '无法释放模型：$error';
+      });
     }
   }
 
@@ -623,8 +646,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _error = null;
       });
     } on PlatformException catch (error) {
+      final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;
-      setState(() => _error = error.message ?? '无法重置会话');
+      setState(() {
+        _status = refreshedStatus ?? _status;
+        _error = error.message ?? '无法重置会话';
+      });
+    } catch (error) {
+      final refreshedStatus = await _readNativeStatus();
+      if (!mounted) return;
+      setState(() {
+        _status = refreshedStatus ?? _status;
+        _error = '无法重置会话：$error';
+      });
     }
   }
 

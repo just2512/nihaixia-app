@@ -541,13 +541,31 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
-        previousConversation?.close()
-        userReportedInputs.clear()
-        aiConversation = engine.createConversation(
-            ConversationConfig(systemInstruction = Contents.of(systemInstruction))
-        )
-        conversationHasSuccessfulTurn = false
-        return modelStatus()
+
+        return try {
+            val nextConversation = ConversationResetPolicy.recreateConversation(
+                closePrevious = { previousConversation?.close() },
+                createNext = {
+                    engine.createConversation(
+                        ConversationConfig(systemInstruction = Contents.of(systemInstruction))
+                    )
+                },
+                closeEngine = { engine.close() }
+            )
+            aiConversation = nextConversation
+            userReportedInputs.clear()
+            conversationHasSuccessfulTurn = false
+            modelStatus()
+        } catch (error: Exception) {
+            // Never retain an Engine without a usable Conversation. A later load
+            // must start from a clean state rather than overwrite a live engine.
+            aiEngine = null
+            aiConversation = null
+            userReportedInputs.clear()
+            activeBackend = "not_loaded"
+            conversationHasSuccessfulTurn = false
+            throw error
+        }
     }
 
     private fun releaseLocalModel(): Map<String, Any> {
