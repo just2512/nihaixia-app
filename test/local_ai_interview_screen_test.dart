@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -13,6 +16,35 @@ const _readyStatus = LocalAiModelStatus(
   expectedSizeBytes: 3659530240,
   backend: 'cpu',
 );
+
+class _FailOnceStopRecorder implements LocalAiAudioRecorder {
+  int stopCalls = 0;
+  String? _path;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {
+    _path = path;
+    await File(path).writeAsBytes(const [1, 2, 3, 4]);
+  }
+
+  @override
+  Future<String?> stop() async {
+    stopCalls += 1;
+    if (stopCalls == 1) {
+      throw PlatformException(
+        code: 'STOP_FAILED',
+        message: '模拟录音停止失败',
+      );
+    }
+    return _path;
+  }
+
+  @override
+  Future<void> dispose() async {}
+}
 
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
@@ -167,6 +199,61 @@ void main() {
   tearDown(() {
     messenger.setMockMethodCallHandler(imagePickerChannel, null);
   });
+
+  testWidgets(
+    're-enables stop after a recorder stop failure and accepts a successful retry',
+    (tester) async {
+      final service = _TextSendService();
+      final recorder = _FailOnceStopRecorder();
+      final tempDirectory = await Directory.systemTemp.createTemp(
+        'local-ai-recorder-test-',
+      );
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (call) async {
+          if (call.method == 'getTemporaryDirectory') return tempDirectory.path;
+          throw MissingPluginException('Unexpected path provider call: ${call.method}');
+        },
+      );
+      addTearDown(() async {
+        messenger.setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
+        if (await tempDirectory.exists()) {
+          await tempDirectory.delete(recursive: true);
+        }
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            service: service,
+            audioRecorder: recorder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('录制语音（最长 30 秒）'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('停止录音'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('停止录音'));
+      await tester.pumpAndSettle();
+
+      expect(recorder.stopCalls, 1);
+      expect(find.textContaining('录音停止失败，录音可能仍在继续'), findsOneWidget);
+      expect(find.byTooltip('停止录音'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('停止录音'));
+      await tester.pumpAndSettle();
+
+      expect(recorder.stopCalls, 2);
+      expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsOneWidget);
+      expect(find.textContaining('录音停止失败'), findsNothing);
+    },
+  );
 
   testWidgets(
     'sends a text interview turn and renders the local reply',

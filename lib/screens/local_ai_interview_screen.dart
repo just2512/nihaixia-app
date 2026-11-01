@@ -11,11 +11,42 @@ import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../theme/app_tokens.dart';
 
+abstract interface class LocalAiAudioRecorder {
+  Future<bool> hasPermission();
+  Future<void> start(RecordConfig config, {required String path});
+  Future<String?> stop();
+  Future<void> dispose();
+}
+
+class _PluginLocalAiAudioRecorder implements LocalAiAudioRecorder {
+  final AudioRecorder _recorder = AudioRecorder();
+
+  @override
+  Future<bool> hasPermission() => _recorder.hasPermission();
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) =>
+      _recorder.start(config, path: path);
+
+  @override
+  Future<String?> stop() => _recorder.stop();
+
+  @override
+  Future<void> dispose() => _recorder.dispose();
+}
+
 class LocalAiInterviewScreen extends StatefulWidget {
-  const LocalAiInterviewScreen({super.key, this.service});
+  const LocalAiInterviewScreen({
+    super.key,
+    this.service,
+    this.audioRecorder,
+  });
 
   /// Injectable to verify initialization and error states without a native model.
   final LocalAiService? service;
+
+  /// Optional recorder adapter for deterministic recording lifecycle tests.
+  final LocalAiAudioRecorder? audioRecorder;
 
   @override
   State<LocalAiInterviewScreen> createState() => _LocalAiInterviewScreenState();
@@ -24,7 +55,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
   final ImagePicker _imagePicker = ImagePicker();
-  final AudioRecorder _audioRecorder = AudioRecorder();
+  late final LocalAiAudioRecorder _audioRecorder;
   Timer? _recordingTimer;
   String? _imagePath;
   String? _audioPath;
@@ -55,6 +86,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? LocalAiService();
+    _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _refreshStatus();
     _recoverLostImage();
   }
@@ -414,14 +446,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
+        // stop() failed, so the native recorder may still be active. Restore
+        // the stop control rather than leaving the user with a disabled mic.
+        _recording = _recorderMayBeActive;
         _recordingBusy = false;
-        _error = error.message ?? '录音结束失败';
+        _error =
+            '录音停止失败，录音可能仍在继续。请再次点击“停止录音”重试。'
+            '${error.message == null ? '' : '（${error.message}）'}';
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
+        _recording = _recorderMayBeActive;
         _recordingBusy = false;
-        _error = '录音文件处理失败：$error';
+        _error = '录音停止失败，录音可能仍在继续。请再次点击“停止录音”重试。（$error）';
       });
     }
   }
@@ -924,7 +962,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                                 !_sending &&
                                 !_extracting &&
                                 !_recordingBusy &&
-                                !_recorderMayBeActive &&
+                                (!_recorderMayBeActive || _recording) &&
                                 _confirmedDraft == null &&
                                 _imagePath == null &&
                                 _audioPath == null
