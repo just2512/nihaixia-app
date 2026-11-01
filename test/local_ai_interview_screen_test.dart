@@ -1182,6 +1182,10 @@ void main() {
       (tester) async {
         final service = _TextSendService();
         final picker = _DeferredLocalAiImagePicker();
+        IconButton iconButton(String tooltip) =>
+            tester.widgetList<IconButton>(find.byType(IconButton)).firstWhere(
+              (button) => button.tooltip == tooltip,
+            );
 
         await tester.pumpWidget(
           MaterialApp(
@@ -1198,13 +1202,13 @@ void main() {
         expect(picker.retrieveCalls, 1);
         expect(find.byTooltip('释放模型内存'), findsOneWidget);
         expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
-        expect(tester.widget<IconButton>(find.byTooltip('拍摄舌象')).onPressed, isNull);
+        expect(iconButton('拍摄舌象').onPressed, isNull);
         expect(
-          tester.widget<IconButton>(find.byTooltip('录制语音（最长 30 秒）')).onPressed,
+          iconButton('录制语音（最长 30 秒）').onPressed,
           isNull,
         );
-        expect(tester.widget<IconButton>(find.byTooltip('重新开始对话')).onPressed, isNull);
-        expect(tester.widget<IconButton>(find.byTooltip('释放模型内存')).onPressed, isNull);
+        expect(iconButton('重新开始对话').onPressed, isNull);
+        expect(iconButton('释放模型内存').onPressed, isNull);
 
         picker.retrieveResult.complete(null);
         await tester.pumpAndSettle();
@@ -1217,13 +1221,13 @@ void main() {
 
         expect(picker.pickCalls, 1);
         expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
-        expect(tester.widget<IconButton>(find.byTooltip('重新开始对话')).onPressed, isNull);
-        expect(tester.widget<IconButton>(find.byTooltip('释放模型内存')).onPressed, isNull);
+        expect(iconButton('重新开始对话').onPressed, isNull);
+        expect(iconButton('释放模型内存').onPressed, isNull);
         expect(
-          tester.widget<IconButton>(find.byTooltip('录制语音（最长 30 秒）')).onPressed,
+          iconButton('录制语音（最长 30 秒）').onPressed,
           isNull,
         );
-        expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNull);
+        expect(iconButton('发送').onPressed, isNull);
 
         // Repeated taps cannot launch a second platform picker operation.
         await tester.tap(find.byTooltip('拍摄舌象'), warnIfMissed: false);
@@ -1238,9 +1242,9 @@ void main() {
           tester.widget<TextField>(find.byType(TextField)).controller!.text,
           '等待拍照期间必须保留的文字',
         );
-        expect(tester.widget<IconButton>(find.byTooltip('重新开始对话')).onPressed, isNotNull);
-        expect(tester.widget<IconButton>(find.byTooltip('释放模型内存')).onPressed, isNotNull);
-        expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNotNull);
+        expect(iconButton('重新开始对话').onPressed, isNotNull);
+        expect(iconButton('释放模型内存').onPressed, isNotNull);
+        expect(iconButton('发送').onPressed, isNotNull);
         expect(service.sentTexts, isEmpty);
       },
     );
