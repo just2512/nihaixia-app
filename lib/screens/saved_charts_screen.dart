@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
@@ -69,6 +70,7 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
     }
     final choice = await showModalBottomSheet<String>(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
