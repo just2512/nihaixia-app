@@ -195,10 +195,10 @@ void main() {
       ),
     );
 
-    final rootScaffold = tester.getRect(find.byType(AdaptiveHomeNavigation));
     final content = tester.getRect(find.byType(IndexedStack));
-    expect(rootScaffold.width, 270);
+    expect(content.left, 0);
     expect(content.right, lessThanOrEqualTo(270));
+    expect(content.width, 270);
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('内容页 2'), findsOneWidget);
