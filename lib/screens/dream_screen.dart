@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/database_helper.dart';
 import '../models/bookmark.dart';
@@ -50,6 +51,7 @@ class _DreamScreenState extends State<DreamScreen> {
     final bodyC = TextEditingController();
     showModalBottomSheet(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       isScrollControlled: true,
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
