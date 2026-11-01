@@ -190,19 +190,76 @@ class AdaptiveSinglePane extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // DialogRoute already uses anchorPoint to constrain the route to the
-        // invoking physical sub-screen. Do not re-split that route or attempt
-        // to read a LayoutBuilder RenderBox before layout has completed.
         if (preferredAnchorPoint != null) {
-          return Center(
-            child: ConstrainedBox(
-              key: contentKey,
-              constraints: BoxConstraints(
-                maxWidth: maxWidth < constraints.maxWidth
-                    ? maxWidth
-                    : constraints.maxWidth,
+          final screenSize = MediaQuery.sizeOf(context);
+          final feature = _findVerticalFoldingFeature(
+            MediaQuery.displayFeaturesOf(context),
+            screenSize,
+          );
+          if (feature == null) {
+            return Center(
+              child: ConstrainedBox(
+                key: contentKey,
+                constraints: BoxConstraints(
+                  maxWidth: maxWidth < constraints.maxWidth
+                      ? maxWidth
+                      : constraints.maxWidth,
+                ),
+                child: child,
               ),
-              child: child,
+            );
+          }
+
+          final creaseInset =
+              feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
+          final leftPanelWidth = (feature.bounds.left - creaseInset)
+              .clamp(0.0, screenSize.width)
+              .toDouble();
+          final rightPanelStart = (feature.bounds.right + creaseInset)
+              .clamp(0.0, screenSize.width)
+              .toDouble();
+          final rightPanelWidth = (screenSize.width - rightPanelStart)
+              .clamp(0.0, screenSize.width)
+              .toDouble();
+          final largestPanelWidth = leftPanelWidth > rightPanelWidth
+              ? leftPanelWidth
+              : rightPanelWidth;
+
+          // A physical hinge may already have caused DialogRoute to constrain
+          // this route to one sub-screen. A zero-width fold may not produce a
+          // separate route constraint, so split the full-width route here.
+          if (constraints.maxWidth <= largestPanelWidth + 1) {
+            return Center(
+              child: ConstrainedBox(
+                key: contentKey,
+                constraints: BoxConstraints(
+                  maxWidth: maxWidth < constraints.maxWidth
+                      ? maxWidth
+                      : constraints.maxWidth,
+                ),
+                child: child,
+              ),
+            );
+          }
+
+          final useLeftPanel =
+              preferredAnchorPoint!.dx < feature.bounds.center.dx;
+          final panelWidth = useLeftPanel
+              ? leftPanelWidth
+              : rightPanelWidth;
+          final panelMaxWidth = maxWidth < panelWidth ? maxWidth : panelWidth;
+          return Align(
+            alignment:
+                useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
+            child: SizedBox(
+              width: panelWidth,
+              child: Center(
+                child: ConstrainedBox(
+                  key: contentKey,
+                  constraints: BoxConstraints(maxWidth: panelMaxWidth),
+                  child: child,
+                ),
+              ),
             ),
           );
         }
