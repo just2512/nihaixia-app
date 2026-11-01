@@ -1,3 +1,5 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
@@ -99,5 +101,106 @@ void main() {
 
     final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
     expect(rail.extended, isTrue);
+  });
+
+  testWidgets('vertical hinge puts the navigation rail and active tab on separate panels', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 1,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: _screens(),
+        ),
+      ),
+    );
+
+    final rail = tester.getRect(find.byType(NavigationRail));
+    final content = tester.getRect(find.byType(IndexedStack));
+    expect(rail.left, 0);
+    expect(rail.right, lessThanOrEqualTo(388));
+    expect(content.left, greaterThanOrEqualTo(412));
+    expect(content.right, 800);
+    expect(tester.widget<NavigationRail>(find.byType(NavigationRail)).extended, isTrue);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.text('内容页 1'), findsOneWidget);
+  });
+
+  testWidgets('zero-width fold keeps root navigation and content off the crease', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: _screens(),
+        ),
+      ),
+    );
+
+    final rail = tester.getRect(find.byType(NavigationRail));
+    final content = tester.getRect(find.byType(IndexedStack));
+    expect(rail.right, lessThanOrEqualTo(388));
+    expect(content.left, greaterThanOrEqualTo(412));
+  });
+
+  testWidgets('narrow physical panels fall back to one safe panel with bottom navigation', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(560, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(270, 0, 20, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 2,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: _screens(),
+        ),
+      ),
+    );
+
+    final rootScaffold = tester.getRect(find.byType(AdaptiveHomeNavigation));
+    final content = tester.getRect(find.byType(IndexedStack));
+    expect(rootScaffold.width, 270);
+    expect(content.right, lessThanOrEqualTo(270));
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('内容页 2'), findsOneWidget);
   });
 }

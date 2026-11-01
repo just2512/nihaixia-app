@@ -1,4 +1,7 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureType;
+
 import 'package:flutter/material.dart';
+import 'adaptive_master_detail.dart';
 
 /// Top-level navigation that changes with the app window, not the device model.
 ///
@@ -34,59 +37,141 @@ class AdaptiveHomeNavigation extends StatelessWidget {
   final List<Widget> screens;
   final List<AppNavigationDestination> destinations;
 
+  NavigationRail _buildRail({required bool extended}) {
+    return NavigationRail(
+      selectedIndex: currentIndex,
+      onDestinationSelected: onDestinationSelected,
+      labelType:
+          extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+      extended: extended,
+      destinations: [
+        for (final destination in destinations)
+          NavigationRailDestination(
+            icon: destination.icon,
+            selectedIcon: destination.selectedIcon,
+            label: Text(destination.label),
+          ),
+      ],
+    );
+  }
+
+  NavigationBar _buildBottomNavigationBar(BuildContext context) {
+    return NavigationBar(
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      indicatorColor: Theme.of(context).colorScheme.primaryContainer,
+      selectedIndex: currentIndex,
+      onDestinationSelected: onDestinationSelected,
+      destinations: [
+        for (final destination in destinations)
+          NavigationDestination(
+            icon: destination.icon,
+            selectedIcon: destination.selectedIcon,
+            label: destination.label,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildScreens() => IndexedStack(
+        index: currentIndex,
+        children: screens,
+      );
+
+  DisplayFeature? _findVerticalFoldingFeature(
+    BuildContext context,
+    Size screenSize,
+  ) {
+    DisplayFeature? nearestFeature;
+    var nearestDistance = double.infinity;
+
+    for (final feature in MediaQuery.displayFeaturesOf(context)) {
+      if (feature.type != DisplayFeatureType.hinge &&
+          feature.type != DisplayFeatureType.fold) {
+        continue;
+      }
+      final bounds = feature.bounds;
+      if (bounds.height < screenSize.height - 1 ||
+          bounds.left <= 0 ||
+          bounds.right >= screenSize.width) {
+        continue;
+      }
+      final distance = (bounds.center.dx - screenSize.width / 2).abs();
+      if (distance < nearestDistance) {
+        nearestFeature = feature;
+        nearestDistance = distance;
+      }
+    }
+    return nearestFeature;
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final screenSize = MediaQuery.sizeOf(context);
+        final feature = _findVerticalFoldingFeature(context, screenSize);
+
+        if (feature != null) {
+          final creaseInset =
+              feature.bounds.width > 0 ? 0.0 : 12.0;
+          final leftPanelWidth = (feature.bounds.left - creaseInset)
+              .clamp(0.0, constraints.maxWidth)
+              .toDouble();
+          final rightPanelStart = (feature.bounds.right + creaseInset)
+              .clamp(0.0, constraints.maxWidth)
+              .toDouble();
+          final rightPanelWidth = (constraints.maxWidth - rightPanelStart)
+              .clamp(0.0, constraints.maxWidth)
+              .toDouble();
+          final hingeGapWidth = rightPanelStart - leftPanelWidth;
+
+          if (leftPanelWidth >= 260 && rightPanelWidth >= 300) {
+            return Scaffold(
+              body: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: leftPanelWidth,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildRail(extended: true),
+                    ),
+                  ),
+                  SizedBox(width: hingeGapWidth),
+                  SizedBox(
+                    width: rightPanelWidth,
+                    child: _buildScreens(),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // When neither physical panel can host both a rail and useful page
+          // content, keep navigation and the selected page together on the
+          // wider panel rather than allowing the page to cross the hinge.
+          return AdaptiveSinglePane(
+            child: Scaffold(
+              body: _buildScreens(),
+              bottomNavigationBar: _buildBottomNavigationBar(context),
+            ),
+          );
+        }
+
         final useNavigationRail = constraints.maxWidth >= compactBreakpoint;
         final useExtendedRail = constraints.maxWidth >= expandedBreakpoint;
 
         return Scaffold(
           body: Row(
             children: [
-              if (useNavigationRail)
-                NavigationRail(
-                  selectedIndex: currentIndex,
-                  onDestinationSelected: onDestinationSelected,
-                  labelType: useExtendedRail
-                      ? NavigationRailLabelType.none
-                      : NavigationRailLabelType.all,
-                  extended: useExtendedRail,
-                  destinations: [
-                    for (final destination in destinations)
-                      NavigationRailDestination(
-                        icon: destination.icon,
-                        selectedIcon: destination.selectedIcon,
-                        label: Text(destination.label),
-                      ),
-                  ],
-                ),
-              Expanded(
-                child: IndexedStack(
-                  index: currentIndex,
-                  children: screens,
-                ),
-              ),
+              if (useNavigationRail) _buildRail(extended: useExtendedRail),
+              Expanded(child: _buildScreens()),
             ],
           ),
           bottomNavigationBar: useNavigationRail
               ? null
-              : NavigationBar(
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  indicatorColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  selectedIndex: currentIndex,
-                  onDestinationSelected: onDestinationSelected,
-                  destinations: [
-                    for (final destination in destinations)
-                      NavigationDestination(
-                        icon: destination.icon,
-                        selectedIcon: destination.selectedIcon,
-                        label: destination.label,
-                      ),
-                  ],
-                ),
+              : _buildBottomNavigationBar(context),
         );
       },
     );

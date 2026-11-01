@@ -1,6 +1,12 @@
 # Find N2 折痕与铰链感知布局
 
-本文记录 AdaptiveMasterDetail 与 AdaptiveSinglePane 的折叠屏落地范围。前者把列表/详情分置于两块物理面板；后者把必须保持单列的完整页面（含 AppBar）放入较宽的安全面板。
+本文记录根导航、AdaptiveMasterDetail 与 AdaptiveSinglePane 的折叠屏落地范围：根导航把 NavigationRail 放左面板、当前业务页放右面板；主从布局把列表/详情分置；单列页面（含 AppBar）放入较宽的安全面板。
+
+## 根导航双面板
+
+- `AdaptiveHomeNavigation` 在识别到纵向 hinge/fold 时，左物理面板承载扩展 NavigationRail，右物理面板承载 IndexedStack 当前 Tab；两面板之间按实际 hinge bounds 留空，零宽 fold 两侧各留 12 dp。
+- 左面板不足 260 dp 或右面板不足 300 dp 时，退化为较宽单侧面板内的底部 NavigationBar + 页面，不让 Tab 内容横跨铰链。
+- 没有上报 displayFeatures 时，保留既有 600/840 dp 宽度断点与普通 NavigationRail/NavigationBar 行为。
 
 ## 本次实现
 
@@ -16,6 +22,8 @@
 - 本地 AI 问诊的 Scaffold（包括顶部操作栏、模型信息、消息流、附件预览和输入区）统一放在安全面板，避免 640 dp 居中内容跨过中央折痕。
 - 零宽度折痕两侧各预留 12 dp；实际遮挡型 hinge 则按其物理 bounds 完整留空。
 
+自动化回归：`test/adaptive_home_navigation_test.dart` 覆盖纵向 hinge 双面板、零宽 fold 留白和窄面板单侧回退，同时保留外屏/内屏窗口尺寸变化后的 Tab 状态测试。
+
 ## 自动化回归
 
 test/adaptive_master_detail_test.dart 覆盖：
@@ -27,7 +35,7 @@ test/adaptive_master_detail_test.dart 覆盖：
 
 ## 当前边界
 
-AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 已按真实 hinge/fold bounds 将卡片拆到左右物理面板；尚未自动获得折痕专项布局的区域包括收藏顶部筛选条，以及普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
+AdaptiveHomeNavigation 已接入根导航双面板；AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 已按真实 hinge/fold bounds 将卡片拆到左右物理面板；尚未自动获得折痕专项布局的区域包括收藏顶部筛选条，以及普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
 
 test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与零宽 fold 下不跨面板；test/zone_section_responsive_test.dart 覆盖工具卡片双物理面板分栏与折痕留白。
 

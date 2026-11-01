@@ -1,6 +1,6 @@
 # OPPO Find N2 内外屏自适应布局与品牌视觉方案
 
-> 当前状态：已落地首页导航窗口宽度自适应、工具分区单/双列、收藏页列表/预览双栏、本地 AI 问诊内容列宽限制；收藏主从布局已加入纵向折痕/铰链避让；Android 自适应图标与矢量兼容资源已加入。Find N2 真机验收仍为 MISSING。本文区分代码已落地、设计约定和实机待验收项。
+> 当前状态：已落地首页导航宽度自适应及纵向折痕双面板分栏、工具分区单/双列及铰链分栏、收藏/知识库主从双栏避让、本地 AI 单列页面安全面板约束；Android 自适应图标与矢量兼容资源已加入。Find N2 真机验收仍为 MISSING。本文区分代码已落地、设计约定和实机待验收项。
 
 ## 1. 设备基准与当前问题
 
@@ -34,7 +34,7 @@ OPPO 官方规格页列出 Find N2（入网型号 **PGU110**）的显示参数�
 | 600–839 dp | 左侧 NavigationRail，图标和文字同时显示 | 释放垂直空间，适用于 Find N2 展开内屏的预估宽度 |
 | 840 dp 及以上 | 扩展 NavigationRail | 平板、桌面和更宽的分屏窗口 |
 
-导航仍使用 IndexedStack，切换内外屏、旋转或改变窗口大小时，不主动重建当前 Tab 的业务状态。断言和自动化测试覆盖 402 dp 外屏预估窗口与 775 dp 内屏预估窗口，以及切换后选中 Tab 保持。工具页 ZoneSection 在内容区宽度达到 600 dp 时切换两列，测试分别验证 402 dp 单列和 700 dp 双列；收藏页在 600 dp 以上进入列表/预览双栏；本地 AI 问诊内容最大宽度为 640 dp。
+导航仍使用 IndexedStack；折叠姿态下 NavigationRail 在左物理面板、当前 Tab 在右物理面板，普通外屏/宽屏按窗口宽度切换；切换内外屏、旋转或改变窗口大小时，不主动重建当前 Tab 的业务状态。断言和自动化测试覆盖 402 dp 外屏预估窗口与 775 dp 内屏预估窗口，以及切换后选中 Tab 保持。工具页 ZoneSection 在内容区宽度达到 600 dp 时切换两列，测试分别验证 402 dp 单列和 700 dp 双列；收藏页在 600 dp 以上进入列表/预览双栏；本地 AI 问诊内容最大宽度为 640 dp。
 
 ## 3. 全页面适配规范
 
@@ -68,7 +68,7 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 
 全屏双栏页面应直接读取 `MediaQuery.displayFeatures` 和每个 feature 的逻辑坐标，按实际 hinge/fold bounds 分配左右内容区域：物理 hinge 必须留空，零宽 fold 是视觉折痕而不是不可绘制区域，应以列间距/留白把重要交互与文字列避开折痕，但不要无故损失整条屏幕宽度。对于没有上报 display feature 的设备，回退到普通 LayoutBuilder 宽度策略。
 
-`DisplayFeatureSubScreen` 与按 feature bounds 分栏是两种不同布局策略：前者选一个子屏幕，后者才是双栏全屏。第一批需要按页面结构实现折痕感知的页面仍是本地 AI 问诊、知识库检索/详情、方剂与本草列表/详情。折痕正好穿过按钮、输入光标、图片主体或文本阅读列时，必须调整锚点、列宽或分栏位置。
+`DisplayFeatureSubScreen` 与按 feature bounds 分栏是两种不同布局策略：前者选一个子屏幕，后者才是双栏全屏。本地 AI 问诊、工具区卡片、知识库方剂/本草主从页及根导航双面板均已接入纵向折痕感知；收藏顶部筛选条、弹窗和系统文件/相机选择器仍需逐项评估。折痕正好穿过按钮、输入光标、图片主体或文本阅读列时，必须调整锚点、列宽或分栏位置。
 
 参考：[Flutter 折叠屏与大屏指南](https://docs.flutter.dev/ui/adaptive-responsive/large-screens)、[Flutter DisplayFeature API](https://api.flutter.dev/flutter/widgets/MediaQueryData/displayFeatures.html)。
 
@@ -101,7 +101,7 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 - 窗口宽度 775 dp：NavigationRail 显示，底部 NavigationBar 隐藏。
 - 窗口宽度 840 dp 以上：扩展 NavigationRail 生效。
 - 窗口变化后当前 Tab、输入内容和滚动状态不被导航壳主动清空。
-- `test/adaptive_master_detail_test.dart` 已用模拟 `displayFeatures` 覆盖纵向 hinge、零宽 fold、窄面板退化；该测试只验证组件布局，不能替代 Find N2 真机验收。
+- `test/adaptive_master_detail_test.dart`、`test/adaptive_home_navigation_test.dart`、`test/local_ai_adaptive_content_test.dart`、`test/zone_section_responsive_test.dart` 已用模拟 `displayFeatures` 覆盖纵向 hinge、零宽 fold、窄面板退化；这些测试只验证 Flutter 布局逻辑，不能替代 Find N2 真机验收。
 
 ### Find N2 真机必须逐项记录
 
