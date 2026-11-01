@@ -1,3 +1,5 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/widgets/zone_section.dart';
@@ -5,8 +7,10 @@ import 'package:nihaisha_app/widgets/zone_section.dart';
 Widget _section() {
   return MaterialApp(
     home: Scaffold(
-      body: SingleChildScrollView(
-        child: ZoneSection(
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SingleChildScrollView(
+          child: ZoneSection(
           zone: Zone.general,
           title: '工具分区',
           icon: Icons.widgets_outlined,
@@ -21,6 +25,7 @@ Widget _section() {
               child: const SizedBox(height: 88, child: Center(child: Text('工具二'))),
             ),
           ],
+          ),
         ),
       ),
     ),
@@ -57,5 +62,51 @@ void main() {
     expect(second.width, first.width);
     expect(second.left, greaterThan(first.right));
     expect((first.top - second.top).abs(), lessThan(1));
+  });
+
+  testWidgets('foldable tool cards stay in separate physical panel columns', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 830);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 830),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_section());
+
+    final first = tester.getRect(find.byKey(const ValueKey('tool-one')));
+    final second = tester.getRect(find.byKey(const ValueKey('tool-two')));
+    expect(first.right, lessThanOrEqualTo(388));
+    expect(second.left, greaterThanOrEqualTo(412));
+    expect((first.top - second.top).abs(), lessThan(1));
+    expect(first.width, second.width);
+  });
+
+  testWidgets('foldable tool cards keep a gutter at a zero-width crease', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 830);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 830),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_section());
+
+    final first = tester.getRect(find.byKey(const ValueKey('tool-one')));
+    final second = tester.getRect(find.byKey(const ValueKey('tool-two')));
+    expect(first.right, lessThanOrEqualTo(388));
+    expect(second.left, greaterThanOrEqualTo(412));
   });
 }

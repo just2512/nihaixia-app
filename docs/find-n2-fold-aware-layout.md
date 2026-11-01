@@ -27,11 +27,13 @@ test/adaptive_master_detail_test.dart 覆盖：
 
 ## 当前边界
 
-AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。尚未自动获得折痕专项布局的区域包括工具首页分区卡片、收藏顶部筛选条，以及普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
+AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 已按真实 hinge/fold bounds 将卡片拆到左右物理面板；尚未自动获得折痕专项布局的区域包括收藏顶部筛选条，以及普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
+
+test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与零宽 fold 下不跨面板；test/zone_section_responsive_test.dart 覆盖工具卡片双物理面板分栏与折痕留白。
 
 ## 当前 UI 边界
 
-本地 AI 问诊的 Scaffold 会整体落在单侧面板，因此 AppBar 操作按钮与正文保持同一侧；这意味着另一面板暂时留空，不是双面板会话设计。工具首页的两列卡片目前仍由宽度断点决定，并未按中央 hinge bounds 对齐列间距。
+本地 AI 问诊的 Scaffold 会整体落在单侧面板，因此 AppBar 操作按钮与正文保持同一侧；这意味着另一面板暂时留空，不是双面板会话设计。工具首页的 ZoneSection 已按物理面板拆分为左右单列；当任一侧不足 240 dp 时退化为较宽一侧的单列，避免卡片跨越 hinge。
 
 ## Find N2 真机验收仍为 MISSING
 

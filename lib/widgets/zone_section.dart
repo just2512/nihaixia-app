@@ -1,3 +1,5 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureType;
+
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -38,7 +40,98 @@ class ZoneSection extends StatelessWidget {
   bool _isVerticalSeparator(Widget child) =>
       child is SizedBox && child.height != null && child.width == null;
 
+  DisplayFeature? _findVerticalFoldingFeature(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+    DisplayFeature? nearestFeature;
+    var nearestDistance = double.infinity;
+
+    for (final feature in MediaQuery.displayFeaturesOf(context)) {
+      if (feature.type != DisplayFeatureType.hinge &&
+          feature.type != DisplayFeatureType.fold) {
+        continue;
+      }
+      final bounds = feature.bounds;
+      if (bounds.height < screenSize.height - 1 ||
+          bounds.left <= 0 ||
+          bounds.right >= screenSize.width) {
+        continue;
+      }
+      final distance = (bounds.center.dx - screenSize.width / 2).abs();
+      if (distance < nearestDistance) {
+        nearestFeature = feature;
+        nearestDistance = distance;
+      }
+    }
+    return nearestFeature;
+  }
+
+  Widget _buildCardColumn(List<Widget> cards, double width) {
+    return SizedBox(
+      width: width,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var index = 0; index < cards.length; index++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: index == cards.length - 1 ? 0 : 12,
+              ),
+              child: SizedBox(width: width, child: cards[index]),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCards(BuildContext context, BoxConstraints constraints) {
+    final cards = children
+        .where((child) => !_isVerticalSeparator(child))
+        .toList(growable: false);
+    final feature = _findVerticalFoldingFeature(context);
+
+    if (feature != null) {
+      // ZoneSection is used inside symmetrically padded page content. Translate
+      // the window-space fold bounds into this LayoutBuilder's local origin.
+      final screenWidth = MediaQuery.sizeOf(context).width;
+      final localOriginX = (screenWidth - constraints.maxWidth) / 2;
+      final creaseInset =
+          feature.bounds.width > 0 ? 0.0 : 12.0;
+      final leftWidth = (feature.bounds.left - localOriginX - creaseInset)
+          .clamp(0.0, constraints.maxWidth)
+          .toDouble();
+      final rightStart =
+          (feature.bounds.right + creaseInset - localOriginX)
+              .clamp(0.0, constraints.maxWidth)
+              .toDouble();
+      final rightWidth = (constraints.maxWidth - rightStart)
+          .clamp(0.0, constraints.maxWidth)
+          .toDouble();
+      final hingeGapWidth = rightStart - leftWidth;
+
+      if (leftWidth >= 240 && rightWidth >= 240) {
+        final leftCards = <Widget>[];
+        final rightCards = <Widget>[];
+        for (var index = 0; index < cards.length; index++) {
+          (index.isEven ? leftCards : rightCards).add(cards[index]);
+        }
+        return Row(
+          children: [
+            _buildCardColumn(leftCards, leftWidth),
+            SizedBox(width: hingeGapWidth),
+            _buildCardColumn(rightCards, rightWidth),
+          ],
+        );
+      }
+
+      final useLeftPanel = leftWidth >= rightWidth;
+      final panelWidth = useLeftPanel ? leftWidth : rightWidth;
+      return Align(
+        alignment:
+            useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
+        child: _buildCardColumn(cards, panelWidth),
+      );
+    }
+
     final useTwoColumns = constraints.maxWidth >= 600;
     if (!useTwoColumns) {
       return Column(
@@ -53,7 +146,6 @@ class ZoneSection extends StatelessWidget {
       );
     }
 
-    final cards = children.where((child) => !_isVerticalSeparator(child));
     final cardWidth = (constraints.maxWidth - 12) / 2;
     return Wrap(
       spacing: 12,
