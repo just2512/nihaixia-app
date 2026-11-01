@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +60,25 @@ class _ValidRecordingFileInspector
     implements LocalAiRecordingFileInspector {
   @override
   Future<int?> sizeBytes(String path) async => 4;
+}
+
+class _DeferredLocalAiImagePicker implements LocalAiImagePicker {
+  final retrieveResult = Completer<String?>();
+  final pickResult = Completer<String?>();
+  var retrieveCalls = 0;
+  var pickCalls = 0;
+
+  @override
+  Future<String?> retrieveLostImagePath() {
+    retrieveCalls += 1;
+    return retrieveResult.future;
+  }
+
+  @override
+  Future<String?> pickCameraImagePath() {
+    pickCalls += 1;
+    return pickResult.future;
+  }
 }
 
 class _SourceTruncatedEmptySymptomsService extends _TextSendService {
@@ -1154,4 +1175,74 @@ void main() {
       expect(find.textContaining('status response was malformed'), findsOneWidget);
     },
   );
+
+  group('local AI photo picker lifecycle', () {
+    testWidgets(
+      'locks attachment-sensitive actions during lost-result recovery and camera selection',
+      (tester) async {
+        final service = _TextSendService();
+        final picker = _DeferredLocalAiImagePicker();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: LocalAiInterviewScreen(
+              service: service,
+              imagePicker: picker,
+            ),
+          ),
+        );
+        // Let native status finish while lost-result recovery remains pending.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
+
+        expect(picker.retrieveCalls, 1);
+        expect(find.byTooltip('释放模型内存'), findsOneWidget);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(tester.widget<IconButton>(find.byTooltip('拍摄舌象')).onPressed, isNull);
+        expect(
+          tester.widget<IconButton>(find.byTooltip('录制语音（最长 30 秒）')).onPressed,
+          isNull,
+        );
+        expect(tester.widget<IconButton>(find.byTooltip('重新开始对话')).onPressed, isNull);
+        expect(tester.widget<IconButton>(find.byTooltip('释放模型内存')).onPressed, isNull);
+
+        picker.retrieveResult.complete(null);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+        await tester.enterText(find.byType(TextField), '等待拍照期间必须保留的文字');
+        await tester.pump();
+        await tester.tap(find.byTooltip('拍摄舌象'));
+        await tester.pump();
+
+        expect(picker.pickCalls, 1);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(tester.widget<IconButton>(find.byTooltip('重新开始对话')).onPressed, isNull);
+        expect(tester.widget<IconButton>(find.byTooltip('释放模型内存')).onPressed, isNull);
+        expect(
+          tester.widget<IconButton>(find.byTooltip('录制语音（最长 30 秒）')).onPressed,
+          isNull,
+        );
+        expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNull);
+
+        // Repeated taps cannot launch a second platform picker operation.
+        await tester.tap(find.byTooltip('拍摄舌象'), warnIfMissed: false);
+        await tester.pump();
+        expect(picker.pickCalls, 1);
+
+        picker.pickResult.complete(null);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          '等待拍照期间必须保留的文字',
+        );
+        expect(tester.widget<IconButton>(find.byTooltip('重新开始对话')).onPressed, isNotNull);
+        expect(tester.widget<IconButton>(find.byTooltip('释放模型内存')).onPressed, isNotNull);
+        expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNotNull);
+        expect(service.sentTexts, isEmpty);
+      },
+    );
+  });
 }
