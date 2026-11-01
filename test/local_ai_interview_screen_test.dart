@@ -37,6 +37,29 @@ const _releasedStatus = LocalAiModelStatus(
   backend: 'not_loaded',
 );
 
+class _ModelControlFailureService extends _TextSendService {
+  var resetCalls = 0;
+  var releaseCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation() async {
+    resetCalls += 1;
+    throw PlatformException(
+      code: 'RESET_FAILED',
+      message: '模拟会话重置失败',
+    );
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() async {
+    releaseCalls += 1;
+    throw PlatformException(
+      code: 'RELEASE_FAILED',
+      message: '模拟模型释放失败',
+    );
+  }
+}
+
 class _ModelControlService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -279,6 +302,68 @@ void main() {
       );
       expect(find.text('模型已放入设备，尚未加载'), findsOneWidget);
       expect(find.byTooltip('释放模型内存'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'keeps the active conversation when reset fails and reports the error',
+    (tester) async {
+      final service = _ModelControlFailureService();
+      const userText = '重置失败时应保留的对话';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('重新开始对话'));
+      await tester.pumpAndSettle();
+
+      expect(service.resetCalls, 1);
+      expect(find.text('模拟会话重置失败'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('重新开始对话'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'keeps the active model state when release fails and reports the error',
+    (tester) async {
+      final service = _ModelControlFailureService();
+      const userText = '释放失败时应保留的对话';
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('释放模型内存'));
+      await tester.pumpAndSettle();
+
+      expect(service.releaseCalls, 1);
+      expect(find.text('模拟模型释放失败'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.data == userText,
+        ),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
     },
   );
 
