@@ -49,6 +49,39 @@ void main() {
   });
 
   testWidgets(
+    'sends a text interview turn and renders the local reply',
+    (tester) async {
+      final service = _TextSendService();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(service: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        '最近三天偶尔头痛，睡眠后会缓解。',
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(service.sentTexts, ['最近三天偶尔头痛，睡眠后会缓解。']);
+      expect(
+        find.text('已收到你的描述：最近三天偶尔头痛，睡眠后会缓解。'),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
     'clears the initial status check and reports unexpected status errors',
     (tester) async {
       await tester.pumpWidget(
