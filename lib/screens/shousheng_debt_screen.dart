@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/data/shousheng_data.dart';
@@ -42,6 +43,7 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialDate: _birthDate,
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
