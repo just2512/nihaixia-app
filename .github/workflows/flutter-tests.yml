@@ -58,9 +58,13 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "disables local AI actions when native status cannot be verified"
 
+      - name: Run post-send native status readback regression
+        id: post_send_status
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native status readback"
       - name: Run full regression suite
         id: regression
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' }}
         run: flutter test --no-pub
 
       - name: Upload Flutter test failure diffs
