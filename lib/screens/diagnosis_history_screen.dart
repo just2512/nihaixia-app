@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import '../data/database_helper.dart';
 import '../widgets/meridian_icons.dart';
@@ -257,7 +258,7 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
   }
 
   void _confirmClear() {
-    showDialog(
+    showFoldAwareDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('清空诊断历史'),
