@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:nihaisha_app/services/lunar_almanac_service.dart';
 import '../widgets/almanac_cards.dart';
@@ -78,6 +80,7 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialDate: _date,
       firstDate: DateTime(1900, 1, 1),
       lastDate: DateTime(2100, 12, 31),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../utils/fold_aware_routes.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import 'package:nihaisha_app/data/chenggu_data.dart';
@@ -46,6 +48,7 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialDate: _birthDate,
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),

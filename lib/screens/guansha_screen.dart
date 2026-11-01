@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../utils/fold_aware_routes.dart';
 import 'package:ziwei_core/ziwei_core.dart' show Location;
 
 import 'package:nihaisha_app/services/bazi_service.dart'
@@ -83,6 +85,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialDate: _birthDate,
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
@@ -639,6 +642,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
     final accent = _severityColor(e.severity);
     showModalBottomSheet(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
