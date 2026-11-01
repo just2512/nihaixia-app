@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="120" src="docs/images/logo.webp" alt="汉唐中医 Logo">
+<img width="120" src="docs/images/logo.svg" alt="汉唐中医书册图标">
 
 # 汉唐中医 · 倪海厦六经辨证中医诊断助手
 

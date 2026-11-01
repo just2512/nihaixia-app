@@ -134,7 +134,7 @@ jobs:
           df -h "$GITHUB_WORKSPACE"
 
       - name: Build Android debug APK
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug --no-pub --target-platform android-arm64
 
       - name: Run Android local unit tests
         run: cd android && ./gradlew :app:testDebugUnitTest

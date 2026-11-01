@@ -183,3 +183,7 @@ Find N2 外屏和内屏必须分别测试，不能只在外屏完成 AI 模型�
 6. 释放模型后内存是否回落。
 
 GitHub CI 当前覆盖依赖锁文件校验、Dart/Flutter 静态分析、本地 AI MethodChannel 契约测试、录音停止重试/模型状态未知/推理后状态回读/模型卸载/相机选图生命周期/模型重置与释放互斥/模型加载与导入互斥专项回归、全量 Flutter 回归、Android 原生 Kotlin 单元测试和 Debug APK 编译；这些检查只能证明代码与构建链路符合自动化条件，不能替代真实设备上的模型加载、文字/音频/图像推理和热稳定性验收。Gemma 4 E4B 的图像与音频输入由 LiteRT-LM 多模态后端提供；语音输入限制为 30 秒，必须在飞行模式下实测。
+
+
+## CI Debug APK 架构
+GitHub Actions 的 Find N2 验证构建固定使用 `arm64-v8a`：命令为 `flutter build apk --debug --no-pub --target-platform android-arm64`，上传工件名为 `app-arm64-v8a-debug.apk`。这是为了让 Flutter NDK `abiFilters` 与 Gradle ABI split 保持一致，并减少 CI runner 的无用架构构建。该限制只由 CI 环境属性 `ciArm64Only=true` 启用；本地构建和正式发行仍按 Gradle 默认配置生成 `armeabi-v7a`、`arm64-v8a`、`x86_64` 分包及通用 APK。
