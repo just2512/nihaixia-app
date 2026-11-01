@@ -68,6 +68,10 @@ internal object LocalAiWavPolicy {
                     offset = nextOffset
                 }
 
+                // Every byte declared inside the RIFF container must belong to a complete chunk.
+                // A dangling 1-7 byte tail is a truncated chunk header, not harmless padding.
+                if (offset != riffEnd) return INVALID_MESSAGE
+
                 val parsedFormat = format ?: return INVALID_MESSAGE
                 val dataBytes = audioDataBytes ?: return INVALID_MESSAGE
                 if (

@@ -13,6 +13,21 @@ class LocalAiWavPolicyTest {
     }
 
     @Test
+    fun acceptsOddSizedAncillaryChunkWithRequiredPadding() {
+        assertNull(LocalAiWavPolicy.validationError(createWaveFile(includeOddAncillaryChunk = true)))
+    }
+
+    @Test
+    fun rejectsIncompleteTrailingChunkHeader() {
+        assertEquals(
+            INVALID_MESSAGE,
+            LocalAiWavPolicy.validationError(
+                createWaveFile(trailingRiffBytes = byteArrayOf(1, 2, 3, 4))
+            )
+        )
+    }
+
+    @Test
     fun rejectsWaveLongerThanThirtySeconds() {
         assertEquals(INVALID_MESSAGE, LocalAiWavPolicy.validationError(createWaveFile(dataBytes = 960_002)))
     }
@@ -64,12 +79,21 @@ class LocalAiWavPolicyTest {
         byteRate: Long = 32_000,
         blockAlign: Int = 2,
         bitsPerSample: Int = 16,
-        dataBytes: Int = 32_000
+        dataBytes: Int = 32_000,
+        includeOddAncillaryChunk: Boolean = false,
+        trailingRiffBytes: ByteArray = byteArrayOf()
     ): File {
         val output = ByteArrayOutputStream()
         output.writeAscii("RIFF")
-        output.writeUInt32LittleEndian(36L + dataBytes)
+        val ancillaryChunkBytes = if (includeOddAncillaryChunk) 12L else 0L
+        output.writeUInt32LittleEndian(36L + dataBytes + ancillaryChunkBytes + trailingRiffBytes.size)
         output.writeAscii("WAVE")
+        if (includeOddAncillaryChunk) {
+            output.writeAscii("JUNK")
+            output.writeUInt32LittleEndian(3)
+            output.write(byteArrayOf(1, 2, 3))
+            output.write(0) // RIFF chunks with odd payloads carry one padding byte.
+        }
         output.writeAscii("fmt ")
         output.writeUInt32LittleEndian(16)
         output.writeUInt16LittleEndian(encoding)
@@ -81,6 +105,7 @@ class LocalAiWavPolicyTest {
         output.writeAscii("data")
         output.writeUInt32LittleEndian(dataBytes.toLong())
         output.write(ByteArray(dataBytes))
+        output.write(trailingRiffBytes)
         return File.createTempFile("local-ai-audio-", ".wav").apply {
             writeBytes(output.toByteArray())
             deleteOnExit()
