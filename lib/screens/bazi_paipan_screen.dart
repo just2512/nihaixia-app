@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:share_plus/share_plus.dart';
 import '../utils/chart_export.dart';
@@ -236,7 +237,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     final genderLabel = _isMale ? '男' : '女';
     final defaultName =
         '命盘 $_year-${_month.toString().padLeft(2, '0')}-${_day.toString().padLeft(2, '0')} $genderLabel';
-    final name = await showDialog<String>(
+    final name = await showFoldAwareDialog<String>(
       context: context,
       builder: (_) => _SaveNameDialog(defaultName: defaultName),
     );
