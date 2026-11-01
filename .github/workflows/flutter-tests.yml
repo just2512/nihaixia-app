@@ -136,6 +136,39 @@ jobs:
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
 
+      - name: Verify Android APK ABI and calculate SHA-256
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          apk = Path("build/app/outputs/flutter-apk/app-debug.apk")
+          if not apk.is_file() or apk.stat().st_size == 0:
+              raise SystemExit(f"APK missing or empty: {apk}")
+
+          with ZipFile(apk) as archive:
+              names = set(archive.namelist())
+          required = "lib/arm64-v8a/libflutter.so"
+          if required not in names:
+              raise SystemExit(f"Required arm64 Flutter library missing: {required}")
+
+          native_abis = {
+              name.split("/")[1]
+              for name in names
+              if name.startswith("lib/") and name.endswith(".so")
+              and len(name.split("/")) >= 3
+          }
+          if native_abis != {"arm64-v8a"}:
+              raise SystemExit(f"Unexpected native ABI set: {sorted(native_abis)}")
+
+          print(f"APK size: {apk.stat().st_size} bytes")
+          print(f"Native ABIs: {', '.join(sorted(native_abis))}")
+          print("Required arm64 Flutter/JNI libraries are present.")
+          PY
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk | tee build/app/outputs/flutter-apk/app-debug.apk.sha256
+          cat build/app/outputs/flutter-apk/app-debug.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run Android local unit tests
         run: cd android && ./gradlew :app:testDebugUnitTest
 
@@ -151,6 +184,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk.sha256
           if-no-files-found: error
           retention-days: 7

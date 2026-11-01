@@ -51,3 +51,18 @@ test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与�
 - https://api.flutter.dev/flutter/widgets/MediaQueryData/displayFeatures.html
 - https://api.flutter.dev/flutter/widgets/DisplayFeatureSubScreen-class.html
 - https://docs.flutter.dev/ui/adaptive-responsive/large-screens
+
+
+## Debug 实机窗口诊断日志
+
+Debug 构建会在 Flutter 窗口指标变化后输出一条 `[WINDOW_METRICS]` 日志，字段包括逻辑窗口尺寸（dp）、按 DPR 推算的物理像素尺寸、DPR、折痕/铰链类型与姿态、窗口坐标 bounds、键盘 `viewInsets`、系统 `viewPadding` 和文字缩放比例。日志不包含页面文字、问诊内容或模型输入；Release 构建不会输出该诊断。
+
+在 Find N2 上采集步骤：
+
+1. 安装本轮 Debug APK，打开应用后保持 USB 调试连接。
+2. 在 PowerShell 执行 `adb logcat -c` 清空旧日志。
+3. 执行 `adb logcat -v time -s flutter:I` 开始实时采集；切换外屏、展开内屏、半折叠，并分别弹出键盘、打开附件选择器。
+4. 按 Ctrl+C 结束采集，将终端日志保存为 `find-n2-window-metrics.log`。
+5. 每种姿态至少留一张系统截图，并将日志中的 `sizeDp`、`dpr`、`displayFeatures`、`viewInsets` 与截图对应记录。
+
+**验收规则：** 日志只能证明 Flutter 在该时刻接收到的窗口参数；仍需结合实机截图检查导航栏、当前 Tab、弹窗、键盘和系统文件选择器的位置。没有设备日志和截图时，内外屏及半折叠实机项目继续标记为 MISSING。

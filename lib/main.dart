@@ -10,6 +10,7 @@ import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_colors.dart';
+import 'widgets/window_metrics_diagnostics.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,7 +75,7 @@ class NiHaishaApp extends StatelessWidget {
             data: MediaQuery.of(context).copyWith(
               textScaler: TextScaler.linear(settings.textScaleFactor),
             ),
-            child: child!,
+            child: WindowMetricsDiagnostics(child: child!),
           ),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
