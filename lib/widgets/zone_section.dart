@@ -106,10 +106,10 @@ class ZoneSection extends StatelessWidget {
       // DisplayFeature.bounds are window coordinates; convert them to this
       // LayoutBuilder's actual render-box origin before splitting card columns.
       final creaseInset = feature.bounds.width > 0 ? 0.0 : 12.0;
-      final leftWidth = ((featureLeft ?? 0.0) - creaseInset)
+      final leftWidth = ((featureLeft) - creaseInset)
           .clamp(0.0, constraints.maxWidth)
           .toDouble();
-      final rightStart = ((featureRight ?? 0.0) + creaseInset)
+      final rightStart = ((featureRight) + creaseInset)
           .clamp(0.0, constraints.maxWidth)
           .toDouble();
       final rightWidth = (constraints.maxWidth - rightStart)
