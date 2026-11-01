@@ -97,6 +97,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(_section());
+    await tester.pump();
 
     final first = tester.getRect(find.byKey(const ValueKey('tool-one')));
     final second = tester.getRect(find.byKey(const ValueKey('tool-two')));
@@ -114,6 +115,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(_section());
+    await tester.pump();
 
     final first = tester.getRect(find.byKey(const ValueKey('tool-one')));
     final second = tester.getRect(find.byKey(const ValueKey('tool-two')));
