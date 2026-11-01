@@ -29,12 +29,17 @@ class _TextSendService extends LocalAiService {
 
 class _DraftTextService extends _TextSendService {
   @override
-  Future<LocalAiSymptomDraft> extractSymptoms() async =>
-      const LocalAiSymptomDraft(
-        mainComplaint: '饭后腹胀',
-        duration: '约两周',
-        unknowns: ['是否与某种食物有关'],
-      );
+  var extractionCalls = 0;
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms() async {
+    extractionCalls += 1;
+    return const LocalAiSymptomDraft(
+      mainComplaint: '饭后腹胀',
+      duration: '约两周',
+      unknowns: ['是否与某种食物有关'],
+    );
+  }
 }
 
 class _InterviewHandoffHost extends StatefulWidget {
@@ -136,7 +141,11 @@ void main() {
 
       expect(service.sentTexts, ['最近三天偶尔头痛，睡眠后会缓解。']);
       expect(
-        find.text('已收到你的描述：最近三天偶尔头痛，睡眠后会缓解。'),
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              widget.data == '已收到你的描述：最近三天偶尔头痛，睡眠后会缓解。',
+        ),
         findsOneWidget,
       );
       expect(
@@ -167,6 +176,15 @@ void main() {
       await tester.tap(find.text('整理本次症状'));
       await tester.pumpAndSettle();
 
+      expect(service.extractionCalls, 1);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data == '目前没有提取到明确的自述信息，请补充描述后再整理。',
+        ),
+        findsNothing,
+      );
       expect(find.text('核对症状整理'), findsOneWidget);
       expect(find.text('确认这份整理'), findsOneWidget);
       await tester.tap(find.byType(CheckboxListTile));
@@ -222,7 +240,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 2);
-      expect(find.text('重试成功：$userText'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText && widget.data == '重试成功：$userText',
+        ),
+        findsOneWidget,
+      );
       expect(
         find.byWidgetPredicate(
           (widget) => widget is SelectableText && widget.data == userText,
