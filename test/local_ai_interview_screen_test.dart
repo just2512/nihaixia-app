@@ -245,6 +245,13 @@ void main() {
       await tester.tap(find.byTooltip('录制语音（最长 30 秒）'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('停止录音'), findsOneWidget);
+      expect(recorder._path, isNotNull);
+      expect(
+        File(recorder._path!).existsSync(),
+        isTrue,
+        reason: 'The fake recorder must create the file consumed by the real stop path.',
+      );
+      expect(File(recorder._path!).lengthSync(), 4);
 
       await tester.tap(find.byTooltip('停止录音'));
       await tester.pumpAndSettle();
@@ -263,7 +270,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(recorder.stopCalls, 2);
-      expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsOneWidget);
+      final renderedText = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((widget) => widget.data ?? widget.textSpan?.toPlainText() ?? '')
+          .where((value) => value.isNotEmpty)
+          .join(' | ');
+      expect(
+        find.text('语音已录制（最长 30 秒），发送前可移除。'),
+        findsOneWidget,
+        reason: 'Unexpected recorder UI state: $renderedText',
+      );
       expect(find.textContaining('录音停止失败'), findsNothing);
     },
   );
