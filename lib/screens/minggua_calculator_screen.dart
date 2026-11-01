@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/data/yijing_data.dart';
 import 'package:nihaisha_app/engine/minggua_engine.dart';
@@ -407,6 +408,7 @@ class _MingGuaCalculatorScreenState extends State<MingGuaCalculatorScreen> {
     final asset = mingGuaLectureAsset(hex.seq);
     showModalBottomSheet<void>(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       showDragHandle: true,
       builder: (context) => SafeArea(
         child: Padding(
