@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../data/database_helper.dart';
 import '../data/changelog_repository.dart';
 import '../theme/app_colors.dart';
+import '../utils/fold_aware_routes.dart';
 
 /// App 更新后弹窗「本次更新了什么」。
 ///
@@ -28,7 +31,7 @@ class WhatsNewService {
       if (!context.mounted) return;
       final entry = ChangelogRepository.getForVersion(current) ??
           ChangelogRepository.latest;
-      _showDialog(context, current, entry);
+      unawaited(_showDialog(context, current, entry));
 
       // 无论用户是否关闭弹窗，都更新为已查看，避免重复弹出
       await DatabaseHelper.instance.setSetting(_lastSeenKey, current);
@@ -37,9 +40,9 @@ class WhatsNewService {
     }
   }
 
-  static void _showDialog(
-      BuildContext context, String version, ChangelogEntry? entry) {
-    showDialog(
+  static Future<void> _showDialog(
+      BuildContext context, String version, ChangelogEntry? entry) async {
+    await showFoldAwareDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Row(

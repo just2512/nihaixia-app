@@ -24,6 +24,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // The CI artifact is a single arm64 APK, not an ABI-split APK.
+        // Flutter's default ABI injection is disabled by the CI Gradle property.
+        if (ciArm64Only) {
+            ndk {
+                abiFilters.clear()
+                abiFilters.add("arm64-v8a")
+            }
+        }
     }
 
     signingConfigs {
@@ -72,14 +81,14 @@ android {
     // 单架构 APK 体积约减半（原 52MB 通用包），便于 GitHub 直发与 Play 上架。
     splits {
         abi {
-            isEnable = true
-            reset()
-            if (ciArm64Only) {
-                include("arm64-v8a")
-            } else {
+            // CI uses one ordinary arm64 APK so Flutter can discover app-debug.apk.
+            // Local and release builds retain the three ABI splits plus universal APK.
+            isEnable = !ciArm64Only
+            if (!ciArm64Only) {
+                reset()
                 include("armeabi-v7a", "arm64-v8a", "x86_64")
+                isUniversalApk = true
             }
-            isUniversalApk = !ciArm64Only
         }
     }
 }

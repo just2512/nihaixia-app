@@ -151,6 +151,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
-          path: build/app/outputs/flutter-apk/app-arm64-v8a-debug.apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 7
