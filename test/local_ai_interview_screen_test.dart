@@ -140,6 +140,12 @@ void main() {
 
       expect(service.sentTexts, ['最近三天偶尔头痛，睡眠后会缓解。']);
       expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -800));
+      await tester.pumpAndSettle();
+      expect(
         find.byWidgetPredicate(
           (widget) =>
               widget is SelectableText &&
@@ -172,6 +178,12 @@ void main() {
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
+      expect(service.sentTexts, ['饭后腹胀，已经持续约两周。']);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      expect(find.text('整理本次症状'), findsOneWidget);
       await tester.tap(find.text('整理本次症状'));
       await tester.pumpAndSettle();
 
@@ -239,6 +251,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 2);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -800));
+      await tester.pumpAndSettle();
       expect(
         find.byWidgetPredicate(
           (widget) =>
