@@ -56,10 +56,10 @@ class AdaptiveMasterDetail extends StatelessWidget {
           final hasPhysicalGap = foldingFeature.bounds.width > 0;
           final creaseInset =
               hasPhysicalGap ? 0.0 : foldedCreaseClearance / 2;
-          final leftRegionWidth = ((featureLeft ?? 0.0) - creaseInset)
+          final leftRegionWidth = ((featureLeft) - creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
-          final rightRegionStart = ((featureRight ?? 0.0) + creaseInset)
+          final rightRegionStart = ((featureRight) + creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
           final rightRegionWidth =
@@ -235,10 +235,10 @@ class AdaptiveSinglePane extends StatelessWidget {
 
         final creaseInset =
             feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-        final leftWidth = ((featureLeft ?? 0.0) - creaseInset)
+        final leftWidth = ((featureLeft) - creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
-        final rightStart = ((featureRight ?? 0.0) + creaseInset)
+        final rightStart = ((featureRight) + creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
         final rightWidth = (constraints.maxWidth - rightStart)
@@ -247,7 +247,7 @@ class AdaptiveSinglePane extends StatelessWidget {
         final anchorPoint = preferredAnchorPoint;
         final useLeftPanel = anchorPoint != null
             ? anchorPoint.dx < feature.bounds.center.dx
-            : leftWidth > rightWidth;
+            : leftWidth >= rightWidth;
         final availablePanelWidth = useLeftPanel ? leftWidth : rightWidth;
         final contentMaxWidth = maxWidth < availablePanelWidth
             ? maxWidth
