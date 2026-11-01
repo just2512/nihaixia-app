@@ -577,11 +577,10 @@ class MainActivity : FlutterActivity() {
         userReportedInputs.clear()
         activeBackend = "not_loaded"
         conversationHasSuccessfulTurn = false
-        try {
-            conversation?.close()
-        } finally {
-            engine?.close()
-        }
+        ConversationResourceReleasePolicy.closeBoth(
+            closeConversation = { conversation?.close() },
+            closeEngine = { engine?.close() }
+        )
         return modelStatus()
     }
 
