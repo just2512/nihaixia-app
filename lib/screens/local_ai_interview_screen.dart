@@ -1063,236 +1063,249 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
         ],
       ),
-      body: Column(
-        children: [
-          _buildModelPanel(context),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
-            color: scheme.surfaceContainerLow,
-            child: Text(
-              'AI 只负责交流和整理自述信息；六经辨证仍由原有规则问诊流程完成，不会由模型开方或调整剂量。',
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontSize: AppType.caption,
-                height: 1.45,
-              ),
-            ),
-          ),
-          if (ready && _confirmedDraft == null && _messages.any((m) => m.isUser))
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting ? null : _extractSymptoms,
-                  icon: _extracting
-                      ? const SizedBox(
-                          width: 15,
-                          height: 15,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.fact_check_outlined, size: 18),
-                  label: Text(_extracting ? '正在整理自述…' : '整理本次症状'),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Center(
+            child: ConstrainedBox(
+              key: const ValueKey('local-ai-content-width'),
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SizedBox(
+                height: constraints.maxHeight,
+  Column(
+          children: [
+            _buildModelPanel(context),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+              color: scheme.surfaceContainerLow,
+              child: Text(
+                'AI 只负责交流和整理自述信息；六经辨证仍由原有规则问诊流程完成，不会由模型开方或调整剂量。',
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: AppType.caption,
+                  height: 1.45,
                 ),
               ),
             ),
-          if (_confirmedDraft != null)
-            _buildConfirmedDraftPanel(context),
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
-              itemCount: _messages.length + (_sending || _extracting ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  return _InterviewMessageBubble(
-                    message: _InterviewMessage(
-                      text: _extracting ? '正在整理本次对话…' : '正在生成回复…',
-                      isUser: false,
-                    ),
-                  );
-                }
-                return _InterviewMessageBubble(message: _messages[index]);
-              },
-            ),
-          ),
-          if (_error != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              color: scheme.errorContainer,
-              child: Text(
-                _error!,
-                style: TextStyle(color: scheme.onErrorContainer, fontSize: AppType.caption),
+            if (ready && _confirmedDraft == null && _messages.any((m) => m.isUser))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting ? null : _extractSymptoms,
+                    icon: _extracting
+                        ? const SizedBox(
+                            width: 15,
+                            height: 15,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.fact_check_outlined, size: 18),
+                    label: Text(_extracting ? '正在整理自述…' : '整理本次症状'),
+                  ),
+                ),
+              ),
+            if (_confirmedDraft != null)
+              _buildConfirmedDraftPanel(context),
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
+                itemCount: _messages.length + (_sending || _extracting ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _messages.length) {
+                    return _InterviewMessageBubble(
+                      message: _InterviewMessage(
+                        text: _extracting ? '正在整理本次对话…' : '正在生成回复…',
+                        isUser: false,
+                      ),
+                    );
+                  }
+                  return _InterviewMessageBubble(message: _messages[index]);
+                },
               ),
             ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_imagePath != null)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            child: Image.file(
-                              File(_imagePath!),
-                              width: 52,
-                              height: 52,
-                              fit: BoxFit.cover,
+            if (_error != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+                color: scheme.errorContainer,
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: scheme.onErrorContainer, fontSize: AppType.caption),
+                ),
+              ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_imagePath != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              child: Image.file(
+                                File(_imagePath!),
+                                width: 52,
+                                height: 52,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          const Expanded(
-                            child: Text(
-                              '舌象照片已选。请确认光线自然、对焦清晰、无滤镜。',
-                              style: TextStyle(fontSize: AppType.caption, height: 1.4),
+                            const SizedBox(width: AppSpacing.sm),
+                            const Expanded(
+                              child: Text(
+                                '舌象照片已选。请确认光线自然、对焦清晰、无滤镜。',
+                                style: TextStyle(fontSize: AppType.caption, height: 1.4),
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            tooltip: '移除照片',
-                            onPressed: _attachmentBusy || _modelControlBusy || _sending ? null : _discardAttachment,
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
+                            IconButton(
+                              tooltip: '移除照片',
+                              onPressed: _attachmentBusy || _modelControlBusy || _sending ? null : _discardAttachment,
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  if (_audioPath != null)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                    if (_audioPath != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.graphic_eq, size: 20),
+                            const SizedBox(width: AppSpacing.sm),
+                            const Expanded(
+                              child: Text('语音已录制（最长 30 秒），发送前可移除。', style: TextStyle(fontSize: AppType.caption)),
+                            ),
+                            IconButton(
+                              tooltip: '移除录音',
+                              onPressed: _attachmentBusy || _modelControlBusy || _sending ? null : _discardAttachment,
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.graphic_eq, size: 20),
-                          const SizedBox(width: AppSpacing.sm),
-                          const Expanded(
-                            child: Text('语音已录制（最长 30 秒），发送前可移除。', style: TextStyle(fontSize: AppType.caption)),
-                          ),
-                          IconButton(
-                            tooltip: '移除录音',
-                            onPressed: _attachmentBusy || _modelControlBusy || _sending ? null : _discardAttachment,
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
+                    if (_recording)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.xs),
+                        child: Row(
+                          children: [
+                            Icon(Icons.fiber_manual_record, color: Colors.red, size: 14),
+                            SizedBox(width: AppSpacing.xs),
+                            Text('正在录音，最长 30 秒…', style: TextStyle(fontSize: AppType.caption)),
+                          ],
+                        ),
                       ),
-                    ),
-                  if (_recording)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: AppSpacing.xs),
-                      child: Row(
-                        children: [
-                          Icon(Icons.fiber_manual_record, color: Colors.red, size: 14),
-                          SizedBox(width: AppSpacing.xs),
-                          Text('正在录音，最长 30 秒…', style: TextStyle(fontSize: AppType.caption)),
-                        ],
-                      ),
-                    ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        tooltip: '拍摄舌象',
-                        onPressed: ready &&
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          tooltip: '拍摄舌象',
+                          onPressed: ready &&
+                                  !_attachmentBusy &&
+                                  !_modelControlBusy &&
+                                  !_sending &&
+                                  !_extracting &&
+                                  !_recording &&
+                                  !_recordingBusy &&
+                                  _confirmedDraft == null &&
+                                  _audioPath == null
+                              ? _pickTonguePhoto
+                              : null,
+                          icon: const Icon(Icons.camera_alt_outlined),
+                        ),
+                        IconButton(
+                          tooltip: _recording ? '停止录音' : '录制语音（最长 30 秒）',
+                          onPressed: ready &&
+                                  !_attachmentBusy &&
+                                  !_modelControlBusy &&
+                                  !_sending &&
+                                  !_extracting &&
+                                  !_recordingBusy &&
+                                  (!_recorderMayBeActive || _recording) &&
+                                  _confirmedDraft == null &&
+                                  _imagePath == null &&
+                                  _audioPath == null
+                              ? (_recording ? _stopRecording : _startRecording)
+                              : null,
+                          icon: Icon(_recording ? Icons.stop_circle_outlined : Icons.mic_none),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _inputController,
+                            minLines: 1,
+                            maxLines: 4,
+                            enabled: ready &&
                                 !_attachmentBusy &&
                                 !_modelControlBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
                                 !_recordingBusy &&
-                                _confirmedDraft == null &&
-                                _audioPath == null
-                            ? _pickTonguePhoto
-                            : null,
-                        icon: const Icon(Icons.camera_alt_outlined),
-                      ),
-                      IconButton(
-                        tooltip: _recording ? '停止录音' : '录制语音（最长 30 秒）',
-                        onPressed: ready &&
-                                !_attachmentBusy &&
-                                !_modelControlBusy &&
-                                !_sending &&
-                                !_extracting &&
-                                !_recordingBusy &&
-                                (!_recorderMayBeActive || _recording) &&
-                                _confirmedDraft == null &&
-                                _imagePath == null &&
-                                _audioPath == null
-                            ? (_recording ? _stopRecording : _startRecording)
-                            : null,
-                        icon: Icon(_recording ? Icons.stop_circle_outlined : Icons.mic_none),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: _inputController,
-                          minLines: 1,
-                          maxLines: 4,
-                          enabled: ready &&
-                              !_attachmentBusy &&
-                              !_modelControlBusy &&
-                              !_sending &&
-                              !_extracting &&
-                              !_recording &&
-                              !_recordingBusy &&
-                              _confirmedDraft == null,
-                          onChanged: (_) => setState(() {}),
-                          textInputAction: TextInputAction.newline,
-                          decoration: InputDecoration(
-                            hintText: ready ? '描述你的情况…' : '请先安装并加载本地模型',
-                            filled: true,
-                            fillColor: scheme.surfaceContainerLow,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.lg),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md,
+                                _confirmedDraft == null,
+                            onChanged: (_) => setState(() {}),
+                            textInputAction: TextInputAction.newline,
+                            decoration: InputDecoration(
+                              hintText: ready ? '描述你的情况…' : '请先安装并加载本地模型',
+                              filled: true,
+                              fillColor: scheme.surfaceContainerLow,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.lg),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.lg,
+                                vertical: AppSpacing.md,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      IconButton.filled(
-                        tooltip: '发送',
-                        onPressed: ready &&
-                                !_attachmentBusy &&
-                                !_modelControlBusy &&
-                                !_sending &&
-                                !_extracting &&
-                                !_recording &&
-                                !_recordingBusy &&
-                                _confirmedDraft == null &&
-                                (_inputController.text.trim().isNotEmpty ||
-                                    _imagePath != null ||
-                                    _audioPath != null)
-                            ? _send
-                            : null,
-                        icon: const Icon(Icons.arrow_upward),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: AppSpacing.xs),
+                        IconButton.filled(
+                          tooltip: '发送',
+                          onPressed: ready &&
+                                  !_attachmentBusy &&
+                                  !_modelControlBusy &&
+                                  !_sending &&
+                                  !_extracting &&
+                                  !_recording &&
+                                  !_recordingBusy &&
+                                  _confirmedDraft == null &&
+                                  (_inputController.text.trim().isNotEmpty ||
+                                      _imagePath != null ||
+                                      _audioPath != null)
+                              ? _send
+                              : null,
+                          icon: const Icon(Icons.arrow_upward),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        )
+              ),
+            ),
+          );
+        },
       ),
     );
   }

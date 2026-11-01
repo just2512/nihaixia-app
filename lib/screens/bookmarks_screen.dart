@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/adaptive_master_detail.dart';
 import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
 import '../models/bookmark.dart';
@@ -90,6 +91,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   List<Map<String, dynamic>> _folders = [];
   String? _selectedCategory;
   int? _selectedFolderId;
+  int? _selectedBookmarkId;
 
   @override
   void initState() {
@@ -127,6 +129,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     setState(() {
       _folders = folders;
       _bookmarks = bookmarks;
+      if (_selectedBookmarkId != null &&
+          !bookmarks.any((bookmark) => bookmark.id == _selectedBookmarkId)) {
+        _selectedBookmarkId = null;
+      }
     });
   }
 
@@ -263,6 +269,97 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     }
   }
 
+  Widget _buildBookmarkPreviewPlaceholder(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bookmark_outline, size: 40, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text(
+            '选择一条收藏',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '在左侧列表选择条目，在这里预览内容',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookmarkPreview(BuildContext context, Bookmark bookmark) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Chip(
+                avatar: Icon(
+                  bookmark.category == '方剂'
+                      ? Icons.medication
+                      : bookmark.category == '本草'
+                          ? Icons.eco
+                          : Icons.bookmark,
+                  size: 16,
+                ),
+                label: Text(bookmark.category),
+                visualDensity: VisualDensity.compact,
+              ),
+              const Spacer(),
+              Text(
+                MaterialLocalizations.of(context).formatShortDate(
+                  bookmark.createdAt,
+                ),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            bookmark.title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            bookmark.source.isEmpty ? '未记录来源' : '来源：${bookmark.source}',
+            style: TextStyle(
+              fontSize: 12,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const Divider(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              child: SelectableText(
+                bookmark.content,
+                style: const TextStyle(height: 1.65),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: () => _openBookmark(bookmark),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('打开完整详情'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ==================== UI ====================
 
   @override
@@ -378,10 +475,18 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     hint: '在辨证结果或方剂详情中点击收藏',
                     icon: Icons.bookmark_border,
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _bookmarks.length,
-                    itemBuilder: (context, index) {
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final useMasterDetail =
+                          constraints.maxWidth >= AdaptiveMasterDetail.compactBreakpoint;
+                      final selectedBookmark = _bookmarks
+                          .where((bookmark) => bookmark.id == _selectedBookmarkId)
+                          .firstOrNull;
+                      return AdaptiveMasterDetail(
+                        master: ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _bookmarks.length,
+                          itemBuilder: (context, index) {
                       final b = _bookmarks[index];
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
@@ -461,8 +566,24 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                               ),
                             ],
                           ),
-                          onTap: () => _openBookmark(b),
+                          selected: useMasterDetail && b.id == _selectedBookmarkId,
+                          onTap: () {
+                            if (useMasterDetail) {
+                              setState(() => _selectedBookmarkId = b.id);
+                            } else {
+                              _openBookmark(b);
+                            }
+                          },
                         ),
+                      );
+                          },
+                        ),
+                        detail: selectedBookmark == null
+                            ? _buildBookmarkPreviewPlaceholder(context)
+                            : _buildBookmarkPreview(context, selectedBookmark),
+                        minMasterWidth: 248,
+                        maxMasterWidth: 320,
+                        masterWidthFactor: 0.4,
                       );
                     },
                   ),
