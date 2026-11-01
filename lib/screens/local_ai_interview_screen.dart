@@ -110,9 +110,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     super.initState();
     _service = widget.service ?? LocalAiService();
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
-    _recordingFileInspector = widget.recordingFileInspector ??
-        _IoLocalAiRecordingFileInspector();
-    _refreshStatus();  Future<void> _refreshStatus({bool showProgress = false}) async {
+    _recordingFileInspector =
+        widget.recordingFileInspector ?? _IoLocalAiRecordingFileInspector();
+    _refreshStatus();
+    _recoverLostImage();
+  }
+
+  Future<void> _refreshStatus({bool showProgress = false}) async {
     if (showProgress && mounted) {
       setState(() {
         _checking = true;
@@ -166,10 +170,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _statusUnknown = true;
         _checking = false;
         _error = '读取本地模型状态失败：$error。请重新检查后继续。';
-      });
-    }
-  }
-败：$error';
       });
     }
   }
