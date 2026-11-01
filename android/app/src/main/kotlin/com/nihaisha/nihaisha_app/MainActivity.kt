@@ -437,13 +437,14 @@ class MainActivity : FlutterActivity() {
     private fun requireCachedInput(path: String, kind: String): File {
         val file = File(path).canonicalFile
         val cacheRoot = cacheDir.canonicalFile
-        val cachePrefix = cacheRoot.path + File.separator
-        if (!file.path.startsWith(cachePrefix) || !file.isFile || file.length() <= 0L) {
-            throw IllegalArgumentException("$kind 文件无效或不在应用缓存目录内")
-        }
-        if (file.length() > 15L * 1024L * 1024L) {
-            throw IllegalArgumentException("$kind 文件超过 15 MB，请重新选择")
-        }
+        val error = LocalAiAttachmentPolicy.validationError(
+            filePath = file.path,
+            cacheRootPath = cacheRoot.path,
+            isFile = file.isFile,
+            sizeBytes = file.length(),
+            kind = kind
+        )
+        if (error != null) throw IllegalArgumentException(error)
         return file
     }
 
