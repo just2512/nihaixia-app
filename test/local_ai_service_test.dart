@@ -77,20 +77,42 @@ void main() {
       });
     });
 
-    test('attachment calls reject empty native replies', () async {
-      messenger.setMockMethodCallHandler(
-        channel,
-        (_) async => <String, Object?>{'reply': '  '},
-      );
+    test('attachment calls reject null, blank, and non-string native replies', () async {
+      final invalidResponses = <Object?>[
+        null,
+        <String, Object?>{},
+        <String, Object?>{'reply': null},
+        <String, Object?>{'reply': '  '},
+        <String, Object?>{'reply': 42},
+      ];
 
-      await expectLater(
-        LocalAiService().sendImage('/app/cache/tongue.jpg'),
-        throwsA(isA<PlatformException>()),
-      );
-      await expectLater(
-        LocalAiService().sendAudio('/app/cache/interview.wav'),
-        throwsA(isA<PlatformException>()),
-      );
+      for (final response in invalidResponses) {
+        messenger.setMockMethodCallHandler(
+          channel,
+          (_) async => response,
+        );
+
+        await expectLater(
+          LocalAiService().sendImage('/app/cache/tongue.jpg'),
+          throwsA(
+            isA<PlatformException>().having(
+              (error) => error.code,
+              'code',
+              'EMPTY_REPLY',
+            ),
+          ),
+        );
+        await expectLater(
+          LocalAiService().sendAudio('/app/cache/interview.wav'),
+          throwsA(
+            isA<PlatformException>().having(
+              (error) => error.code,
+              'code',
+              'EMPTY_REPLY',
+            ),
+          ),
+        );
+      }
     });
   });
 
@@ -111,10 +133,35 @@ void main() {
       expect(reply, '请继续描述不适出现的时间');
     });
 
-    test('sendMessage rejects null and whitespace-only native replies', () async {
+    test('sendMessage rejects missing, null, and whitespace-only native replies', () async {
+      final invalidResponses = <Object?>[
+        <String, Object?>{},
+        <String, Object?>{'reply': null},
+        <String, Object?>{'reply': '   '},
+      ];
+
+      for (final response in invalidResponses) {
+        messenger.setMockMethodCallHandler(
+          channel,
+          (_) async => response,
+        );
+        await expectLater(
+          LocalAiService().sendMessage('继续问诊'),
+          throwsA(
+            isA<PlatformException>().having(
+              (error) => error.code,
+              'code',
+              'EMPTY_REPLY',
+            ),
+          ),
+        );
+      }
+    });
+
+    test('sendMessage rejects non-string native replies with a contract error', () async {
       messenger.setMockMethodCallHandler(
         channel,
-        (_) async => <String, Object?>{'reply': '   '},
+        (_) async => <String, Object?>{'reply': 42},
       );
 
       await expectLater(
@@ -171,6 +218,18 @@ void main() {
       messenger.setMockMethodCallHandler(
         channel,
         (_) async => <String, Object?>{},
+      );
+
+      await expectLater(
+        LocalAiService().extractSymptoms(),
+        throwsFormatException,
+      );
+    });
+
+    test('extractSymptoms rejects non-string draft payload', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{'draft': 42},
       );
 
       await expectLater(

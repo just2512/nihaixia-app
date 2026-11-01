@@ -44,7 +44,7 @@ adb shell run-as com.nihaisha.nihaisha_app cp /data/local/tmp/gemma-4-E4B-it.lit
 adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 ```
 
-注意：ADB 方式不经过应用内 SHA-256 导入校验，需要自行核对上文哈希。运行时优先尝试 GPU，GPU 初始化失败会自动改用 CPU；界面会显示实际使用的后端。
+注意：ADB 方式不经过应用内 SHA-256 导入校验，需要自行核对上文哈希。模型加载优先尝试 GPU；仅当 GPU Engine.initialize() 失败时才尝试 CPU 后端，界面会显示当前后端。GPU 初始化成功后的推理运行时故障目前不会自动切换 CPU，必须在实机中验证恢复流程。
 
 ## 当前实现范围
 
@@ -55,7 +55,7 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 - 将应用独立记录的用户文字输入和待核对语音识别草稿整理为固定字段；提取使用独立临时会话，不包含舌象图片或模型图像描述；用户核对确认后才返回规则问诊页面。
 - 模型加载、会话重置、释放模型内存。
 - 初始化和推理都运行在单线程后台执行器，不阻塞 Flutter UI。
-- GPU 不可用时回退 CPU。
+- GPU 初始化失败时会在模型加载阶段回退 CPU；推理运行时错误没有自动回退机制。
 - 模型提示词限制其职责为健康信息澄清与自述整理，不允许六经辨证、开方或修改剂量。
 - AI 对话和结构化草稿不写入 DiagnosticEngine，不自动映射问诊选项，不改变既有规则辨证结果。
 
@@ -104,7 +104,7 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 
 ### 6. 记录模板
 
-每次测试填写：APK commit SHA、设备型号/系统版本、模型 SHA-256、飞行模式状态、加载耗时、后端、首轮/多轮耗时、任务结果、峰值内存、温度/降频现象、失败日志。未测试项目标记 `MISSING`，不得写成 PASS。
+每次测试填写：APK commit SHA、设备型号/系统版本、模型 SHA-256、飞行模式状态、加载耗时、后端、失败阶段（Engine 初始化/Conversation 创建/文字/音频/图像推理）、首轮/多轮耗时、任务结果、峰值内存、温度/降频现象、失败日志。未测试项目标记 `MISSING`，不得写成 PASS。
 
 ## 实机验收记录
 

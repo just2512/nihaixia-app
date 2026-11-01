@@ -48,8 +48,8 @@ class LocalAiService {
       'sendMessage',
       {'text': text},
     );
-    final reply = data?['reply'] as String?;
-    if (reply == null || reply.trim().isEmpty) {
+    final reply = data?['reply'];
+    if (reply is! String || reply.trim().isEmpty) {
       throw PlatformException(
         code: 'EMPTY_REPLY',
         message: '模型没有返回有效文本',
@@ -76,8 +76,8 @@ class LocalAiService {
       method,
       {'path': path, 'prompt': prompt},
     );
-    final reply = data?['reply'] as String?;
-    if (reply == null || reply.trim().isEmpty) {
+    final reply = data?['reply'];
+    if (reply is! String || reply.trim().isEmpty) {
       throw PlatformException(
         code: 'EMPTY_REPLY',
         message: '模型没有返回有效的$label分析内容',
@@ -90,8 +90,8 @@ class LocalAiService {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'extractSymptoms',
     );
-    final draft = data?['draft'] as String?;
-    if (draft == null || draft.trim().isEmpty) {
+    final draft = data?['draft'];
+    if (draft is! String || draft.trim().isEmpty) {
       throw const FormatException('模型没有返回症状整理内容');
     }
     return LocalAiSymptomDraft.fromModelText(draft);
