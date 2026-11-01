@@ -1,3 +1,5 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/widgets/adaptive_master_detail.dart';
@@ -50,5 +52,74 @@ void main() {
     expect(detail.width, greaterThan(300));
     expect(detail.left, greaterThan(master.right));
     expect((master.top - detail.top).abs(), lessThan(1));
+  });
+
+  testWidgets('vertical hinge keeps both panes inside their physical panels', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_testPage());
+
+    final master = tester.getRect(find.byKey(const ValueKey('master-pane')));
+    final detail = tester.getRect(find.byKey(const ValueKey('detail-pane')));
+    expect(find.byType(VerticalDivider), findsNothing);
+    expect(master.left, 0);
+    expect(master.right, lessThanOrEqualTo(388));
+    expect(detail.left, greaterThanOrEqualTo(412));
+    expect(detail.right, 800);
+  });
+
+  testWidgets('zero-width fold crease reserves a safe gutter', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_testPage());
+
+    final master = tester.getRect(find.byKey(const ValueKey('master-pane')));
+    final detail = tester.getRect(find.byKey(const ValueKey('detail-pane')));
+    expect(master.right, lessThanOrEqualTo(388));
+    expect(detail.left, greaterThanOrEqualTo(412));
+  });
+
+  testWidgets('narrow hinge panels fall back to one pane without crossing hinge', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(560, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(270, 0, 20, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_testPage());
+
+    final master = tester.getRect(find.byKey(const ValueKey('master-pane')));
+    expect(find.byKey(const ValueKey('detail-pane')), findsNothing);
+    expect(master.left, 0);
+    expect(master.right, lessThanOrEqualTo(270));
   });
 }
