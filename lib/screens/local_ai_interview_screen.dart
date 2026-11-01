@@ -1071,7 +1071,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               constraints: const BoxConstraints(maxWidth: 640),
               child: SizedBox(
                 height: constraints.maxHeight,
-  Column(
+                child: Column(
           children: [
             _buildModelPanel(context),
             Container(

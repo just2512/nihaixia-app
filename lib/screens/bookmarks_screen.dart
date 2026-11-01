@@ -479,9 +479,13 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     builder: (context, constraints) {
                       final useMasterDetail =
                           constraints.maxWidth >= AdaptiveMasterDetail.compactBreakpoint;
-                      final selectedBookmark = _bookmarks
-                          .where((bookmark) => bookmark.id == _selectedBookmarkId)
-                          .firstOrNull;
+                      Bookmark? selectedBookmark;
+                      for (final bookmark in _bookmarks) {
+                        if (bookmark.id == _selectedBookmarkId) {
+                          selectedBookmark = bookmark;
+                          break;
+                        }
+                      }
                       return AdaptiveMasterDetail(
                         master: ListView.builder(
                           padding: const EdgeInsets.all(12),

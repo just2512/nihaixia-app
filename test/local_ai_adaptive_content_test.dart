@@ -26,7 +26,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
       ),
     );
@@ -45,7 +45,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
       ),
     );
