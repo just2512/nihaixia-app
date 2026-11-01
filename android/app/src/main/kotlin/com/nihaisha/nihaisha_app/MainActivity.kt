@@ -469,6 +469,9 @@ class MainActivity : FlutterActivity() {
 
     private fun sendLocalAudio(path: String, userPrompt: String): Map<String, Any> {
         val audio = requireCachedInput(path, "录音")
+        LocalAiWavPolicy.validationError(audio)?.let { error ->
+            throw IllegalArgumentException(error)
+        }
         val prompt =
             "请逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”，" +
             "不要总结、推断、改写或自行补全。只做语音转写，不作诊断或辨证，不推荐药物或方剂。" +
