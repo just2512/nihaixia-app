@@ -27,6 +27,25 @@ class _TextSendService extends LocalAiService {
   }
 }
 
+class _FailOnceTextSendService extends LocalAiService {
+  var sendAttempts = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+
+  @override
+  Future<String> sendMessage(String text) async {
+    sendAttempts += 1;
+    if (sendAttempts == 1) {
+      throw PlatformException(
+        code: 'NATIVE_ERROR',
+        message: '首次本地推理失败',
+      );
+    }
+    return '重试成功：$text';
+  }
+}
+
 class _UnexpectedStatusFailureService extends LocalAiService {
   @override
   Future<LocalAiModelStatus> getStatus() async {
@@ -78,6 +97,46 @@ void main() {
         isEmpty,
       );
       expect(find.byType(LinearProgressIndicator), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'keeps failed text editable and retries without duplicate chat bubbles',
+    (tester) async {
+      final service = _FailOnceTextSendService();
+      const userText = '昨晚开始咽喉不适，喝温水后稍有缓解。';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(service: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(service.sendAttempts, 1);
+      expect(find.textContaining('首次本地推理失败'), findsOneWidget);
+      expect(find.text(userText), findsNothing);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        userText,
+      );
+
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(service.sendAttempts, 2);
+      expect(find.text('重试成功：$userText'), findsOneWidget);
+      expect(find.text(userText), findsOneWidget);
+      expect(find.textContaining('首次本地推理失败'), findsNothing);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
     },
   );
 
