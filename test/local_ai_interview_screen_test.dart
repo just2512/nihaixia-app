@@ -140,6 +140,29 @@ const _releasedStatus = LocalAiModelStatus(
   backend: 'not_loaded',
 );
 
+class _DeferredModelSetupService extends LocalAiService {
+  final loadResult = Completer<LocalAiModelStatus>();
+  final importResult = Completer<LocalAiModelStatus>();
+  var loadCalls = 0;
+  var importCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _releasedStatus;
+
+  @override
+  Future<LocalAiModelStatus> loadModel() {
+    loadCalls += 1;
+    return loadResult.future;
+  }
+
+  @override
+  Future<LocalAiModelStatus> importModel() {
+    importCalls += 1;
+    return importResult.future;
+  }
+}
+
+
 class _ModelControlFailureService extends _TextSendService {
   var resetCalls = 0;
   var releaseCalls = 0;
@@ -1344,6 +1367,103 @@ void main() {
 
         expect(find.byTooltip('重新开始对话'), findsNothing);
         expect(find.byTooltip('释放模型内存'), findsNothing);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+      },
+    );
+  });
+
+  group('local AI model setup serialization', () {
+    testWidgets(
+      'makes model loading exclusive and blocks import and session actions',
+      (tester) async {
+        final service = _DeferredModelSetupService();
+        IconButton iconButton(String tooltip) =>
+            tester.widgetList<IconButton>(find.byType(IconButton)).firstWhere(
+              (button) => button.tooltip == tooltip,
+            );
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        final loadButton = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, '加载本地模型'),
+        );
+        final load = loadButton.onPressed!;
+        load();
+        load();
+        await tester.pump();
+
+        expect(service.loadCalls, 1);
+        expect(service.importCalls, 0);
+        expect(
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNull,
+        );
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(iconButton('拍摄舌象').onPressed, isNull);
+        expect(iconButton('录制语音（最长 30 秒）').onPressed, isNull);
+
+        service.loadResult.complete(_readyStatus);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+        expect(find.text('Gemma 4 E4B · CPU'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'makes model import exclusive and blocks load and session actions',
+      (tester) async {
+        final service = _DeferredModelSetupService();
+        IconButton iconButton(String tooltip) =>
+            tester.widgetList<IconButton>(find.byType(IconButton)).firstWhere(
+              (button) => button.tooltip == tooltip,
+            );
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        final importButton = tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+        );
+        final import = importButton.onPressed!;
+        import();
+        import();
+        await tester.pump();
+
+        expect(service.importCalls, 1);
+        expect(service.loadCalls, 0);
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
+          ).onPressed,
+          isNull,
+        );
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(iconButton('拍摄舌象').onPressed, isNull);
+        expect(iconButton('录制语音（最长 30 秒）').onPressed, isNull);
+
+        service.importResult.complete(_releasedStatus);
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
+          ).onPressed,
+          isNotNull,
+        );
+        expect(
+          tester.widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNotNull,
+        );
         expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
       },
     );
