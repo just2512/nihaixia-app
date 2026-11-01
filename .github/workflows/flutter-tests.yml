@@ -53,9 +53,14 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "re-enables stop after a recorder stop failure and accepts a successful retry"
 
+      - name: Run native status-unknown widget regression
+        id: model_status_unknown
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "disables local AI actions when native status cannot be verified"
+
       - name: Run full regression suite
         id: regression
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
         run: flutter test --no-pub
 
       - name: Upload Flutter test failure diffs
