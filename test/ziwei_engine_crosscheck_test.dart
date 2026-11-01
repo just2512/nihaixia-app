@@ -120,7 +120,7 @@ void main() {
       final refSihua = <String, String>{
         for (final s in ref['sihua'] as List<dynamic>)
           (s as Map<String, dynamic>)['star'] as String:
-              (s as Map<String, dynamic>)['mutagen'] as String,
+              s['mutagen'] as String,
       };
       final ourSihua = <String, String>{
         for (final s in chart.sihua) s.starLabelName: s.typeLabel,
