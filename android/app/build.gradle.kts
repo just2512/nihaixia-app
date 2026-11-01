@@ -4,6 +4,10 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// CI builds only the arm64 artifact used by the Find N2 acceptance target.
+// Local and release builds keep all configured ABI splits.
+val ciArm64Only = providers.gradleProperty("ciArm64Only").orNull == "true"
+
 android {
     namespace = "com.nihaisha.nihaisha_app"
     compileSdk = flutter.compileSdkVersion
@@ -70,8 +74,12 @@ android {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86_64")
-            isUniversalApk = true
+            if (ciArm64Only) {
+                include("arm64-v8a")
+            } else {
+                include("armeabi-v7a", "arm64-v8a", "x86_64")
+            }
+            isUniversalApk = !ciArm64Only
         }
     }
 }
