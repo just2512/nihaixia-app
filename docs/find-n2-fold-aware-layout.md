@@ -1,6 +1,6 @@
 # Find N2 折痕与铰链感知布局
 
-本文记录根导航、AdaptiveMasterDetail 与 AdaptiveSinglePane 的折叠屏落地范围：根导航把 NavigationRail 放左面板、当前业务页放右面板；主从布局把列表/详情分置；单列页面（含 AppBar）放入较宽的安全面板。
+本文记录根导航、AdaptiveMasterDetail 与 AdaptiveSinglePane 的折叠屏落地范围：根导航把 NavigationRail 放左面板、当前业务页放右面板；主从布局把列表/详情分置；单列页面（含 AppBar）放入较宽的安全面板。所有复用组件将窗口坐标的 displayFeature.bounds 减去自身 RenderBox 的窗口起点，避免嵌套在单侧面板时误判铰链。
 
 ## 根导航双面板
 
@@ -35,9 +35,9 @@ test/adaptive_master_detail_test.dart 覆盖：
 
 ## 当前边界
 
-AdaptiveHomeNavigation 已接入根导航双面板；AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 已按真实 hinge/fold bounds 将卡片拆到左右物理面板；尚未自动获得折痕专项布局的区域包括收藏顶部筛选条，以及普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
+AdaptiveHomeNavigation 已接入根导航双面板；AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 已按真实 hinge/fold bounds 将卡片拆到左右物理面板；嵌套在已分配面板中的 ZoneSection / AdaptiveMasterDetail 会识别铰链是否真的与自身局部区域相交，避免把另一侧铰链误当成内部折痕。尚未自动获得折痕专项布局的区域包括普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
 
-test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与零宽 fold 下不跨面板；test/zone_section_responsive_test.dart 覆盖工具卡片双物理面板分栏与折痕留白。
+test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与零宽 fold 下不跨面板；test/zone_section_responsive_test.dart 覆盖工具卡片双物理面板分栏、折痕留白及嵌套右面板坐标；test/adaptive_master_detail_test.dart 覆盖主从布局嵌套右面板时不误识别边界外的铰链。
 
 ## 当前 UI 边界
 

@@ -89,20 +89,29 @@ class ZoneSection extends StatelessWidget {
         .toList(growable: false);
     final feature = _findVerticalFoldingFeature(context);
 
-    if (feature != null) {
-      // ZoneSection is used inside symmetrically padded page content. Translate
-      // the window-space fold bounds into this LayoutBuilder's local origin.
-      final screenWidth = MediaQuery.sizeOf(context).width;
-      final localOriginX = (screenWidth - constraints.maxWidth) / 2;
-      final creaseInset =
-          feature.bounds.width > 0 ? 0.0 : 12.0;
-      final leftWidth = (feature.bounds.left - localOriginX - creaseInset)
+    final renderObject = context.findRenderObject();
+    final localOriginX = renderObject is RenderBox
+        ? renderObject.localToGlobal(Offset.zero).dx
+        : 0.0;
+    final featureLeft =
+        feature == null ? null : feature.bounds.left - localOriginX;
+    final featureRight =
+        feature == null ? null : feature.bounds.right - localOriginX;
+    final featureIntersectsLayout = featureLeft != null &&
+        featureRight != null &&
+        featureRight > 0 &&
+        featureLeft < constraints.maxWidth;
+
+    if (feature != null && featureIntersectsLayout) {
+      // DisplayFeature.bounds are window coordinates; convert them to this
+      // LayoutBuilder's actual render-box origin before splitting card columns.
+      final creaseInset = feature.bounds.width > 0 ? 0.0 : 12.0;
+      final leftWidth = (featureLeft! - creaseInset)
           .clamp(0.0, constraints.maxWidth)
           .toDouble();
-      final rightStart =
-          (feature.bounds.right + creaseInset - localOriginX)
-              .clamp(0.0, constraints.maxWidth)
-              .toDouble();
+      final rightStart = (featureRight! + creaseInset)
+          .clamp(0.0, constraints.maxWidth)
+          .toDouble();
       final rightWidth = (constraints.maxWidth - rightStart)
           .clamp(0.0, constraints.maxWidth)
           .toDouble();

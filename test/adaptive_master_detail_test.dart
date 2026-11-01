@@ -122,4 +122,51 @@ void main() {
     expect(master.left, 0);
     expect(master.right, lessThanOrEqualTo(270));
   });
+
+  testWidgets('master detail nested in right panel ignores hinge outside local bounds', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              const SizedBox(width: 412),
+              const SizedBox(
+                width: 388,
+                child: AdaptiveMasterDetail(
+                  master: ColoredBox(
+                    key: ValueKey('master-pane'),
+                    color: Colors.blue,
+                    child: Text('收藏列表'),
+                  ),
+                  detail: ColoredBox(
+                    key: ValueKey('detail-pane'),
+                    color: Colors.orange,
+                    child: Text('收藏预览'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final master = tester.getRect(find.byKey(const ValueKey('master-pane')));
+    expect(master.left, 412);
+    expect(master.right, 800);
+    expect(find.byKey(const ValueKey('detail-pane')), findsNothing);
+  });
 }

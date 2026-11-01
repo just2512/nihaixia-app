@@ -37,14 +37,29 @@ class AdaptiveMasterDetail extends StatelessWidget {
           screenSize,
         );
 
-        if (foldingFeature != null) {
+        final renderObject = context.findRenderObject();
+        final localOriginX = renderObject is RenderBox
+            ? renderObject.localToGlobal(Offset.zero).dx
+            : 0.0;
+        final featureLeft = foldingFeature == null
+            ? null
+            : foldingFeature.bounds.left - localOriginX;
+        final featureRight = foldingFeature == null
+            ? null
+            : foldingFeature.bounds.right - localOriginX;
+        final featureIntersectsLayout = featureLeft != null &&
+            featureRight != null &&
+            featureRight > 0 &&
+            featureLeft < constraints.maxWidth;
+
+        if (foldingFeature != null && featureIntersectsLayout) {
           final hasPhysicalGap = foldingFeature.bounds.width > 0;
           final creaseInset =
               hasPhysicalGap ? 0.0 : foldedCreaseClearance / 2;
-          final leftRegionWidth = (foldingFeature.bounds.left - creaseInset)
+          final leftRegionWidth = (featureLeft! - creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
-          final rightRegionStart = (foldingFeature.bounds.right + creaseInset)
+          final rightRegionStart = (featureRight! + creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
           final rightRegionWidth =
@@ -176,7 +191,20 @@ class AdaptiveSinglePane extends StatelessWidget {
           MediaQuery.sizeOf(context),
         );
 
-        if (feature == null) {
+        final renderObject = context.findRenderObject();
+        final localOriginX = renderObject is RenderBox
+            ? renderObject.localToGlobal(Offset.zero).dx
+            : 0.0;
+        final featureLeft =
+            feature == null ? null : feature.bounds.left - localOriginX;
+        final featureRight =
+            feature == null ? null : feature.bounds.right - localOriginX;
+        final featureIntersectsLayout = featureLeft != null &&
+            featureRight != null &&
+            featureRight > 0 &&
+            featureLeft < constraints.maxWidth;
+
+        if (feature == null || !featureIntersectsLayout) {
           return Center(
             child: ConstrainedBox(
               key: contentKey,
@@ -188,10 +216,10 @@ class AdaptiveSinglePane extends StatelessWidget {
 
         final creaseInset =
             feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-        final leftWidth = (feature.bounds.left - creaseInset)
+        final leftWidth = (featureLeft! - creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
-        final rightStart = (feature.bounds.right + creaseInset)
+        final rightStart = (featureRight! + creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
         final rightWidth = (constraints.maxWidth - rightStart)
