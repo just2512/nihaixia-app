@@ -35,13 +35,13 @@ test/adaptive_master_detail_test.dart 覆盖：
 
 ## 当前边界
 
-AdaptiveHomeNavigation 已接入根导航双面板；AdaptiveMasterDetail 已用于收藏与知识库方剂/本草的列表/预览页面；AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 已按真实 hinge/fold bounds 将卡片拆到左右物理面板；嵌套在已分配面板中的 ZoneSection / AdaptiveMasterDetail 会识别铰链是否真的与自身局部区域相交，避免把另一侧铰链误当成内部折痕。尚未自动获得折痕专项布局的区域包括普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
+AdaptiveHomeNavigation 已接入根导航双面板：左物理屏承载导航栏，当前 Tab 完整显示在右物理屏。AdaptiveMasterDetail 已用于收藏与知识库方剂/本草列表/预览；但在当前 Find N2 根导航结构中，Tab 视口约为右屏宽度，低于 600 dp，因此这些页面按紧凑单栏列表交互，点击条目进入详情，不会在两块物理屏间显示列表/预览。只有宿主视口本身横跨折痕且宽度足够时，AdaptiveMasterDetail 才会把列表与详情分置左右屏。AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 在当前右屏视口内使用单列；只有当宿主视口本身横跨折痕时才按 bounds 分成左右卡片列。嵌套在已分配面板中的 ZoneSection / AdaptiveMasterDetail 会识别铰链是否与自身局部区域相交，避免把另一侧铰链误当成内部折痕。尚未自动获得折痕专项布局的区域包括普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
 
 test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与零宽 fold 下不跨面板；test/zone_section_responsive_test.dart 覆盖工具卡片双物理面板分栏、折痕留白及嵌套右面板坐标；test/adaptive_master_detail_test.dart 覆盖主从布局嵌套右面板时不误识别边界外的铰链。
 
 ## 当前 UI 边界
 
-本地 AI 问诊的 Scaffold 会整体落在单侧面板，因此 AppBar 操作按钮与正文保持同一侧；这意味着另一面板暂时留空，不是双面板会话设计。工具首页的 ZoneSection 已按物理面板拆分为左右单列；当任一侧不足 240 dp 时退化为较宽一侧的单列，避免卡片跨越 hinge。
+当前根导航采用左侧 NavigationRail + 右侧当前 Tab 的双面板模式。当前 Tab 内的本地 AI 问诊页面继续在右侧单屏内布局；工具卡片在右侧单屏内采用单列。ZoneSection 的跨折痕双列能力保留给宿主视口横跨两屏的场景，不会穿过根导航占用的左屏。
 
 ## Find N2 真机验收仍为 MISSING
 
