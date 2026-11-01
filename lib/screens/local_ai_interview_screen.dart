@@ -216,7 +216,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _loadModel() async {
+    if (_attachmentBusy ||
+        _modelControlBusy ||
+        _loading ||
+        _importingModel ||
+        _statusUnknown ||
+        _checking ||
+        _status?.installed != true ||
+        _status?.ready != false) {
+      return;
+    }
     setState(() {
+      _modelControlBusy = true;
       _loading = true;
       _error = null;
     });
@@ -242,12 +253,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _loading = false;
         _error = '模型加载失败：$error';
       });
+    } finally {
+      if (mounted) setState(() => _modelControlBusy = false);
     }
   }
 
   Future<void> _importModel() async {
-    if (_importingModel || _loading || _status?.ready == true) return;
+    if (_attachmentBusy ||
+        _modelControlBusy ||
+        _importingModel ||
+        _loading ||
+        _statusUnknown ||
+        _checking ||
+        _status == null ||
+        _status?.ready == true) {
+      return;
+    }
     setState(() {
+      _modelControlBusy = true;
       _importingModel = true;
       _error = null;
     });
@@ -270,6 +293,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _importingModel = false;
         _error = '模型导入失败：$error';
       });
+    } finally {
+      if (mounted) setState(() => _modelControlBusy = false);
     }
   }
 
@@ -1475,7 +1500,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               runSpacing: 8,
               children: [
                 FilledButton.tonal(
-                  onPressed: installed && !_loading && !_importingModel
+                  onPressed: installed &&
+                          !_modelControlBusy &&
+                          !_loading &&
+                          !_importingModel
                       ? _loadModel
                       : null,
                   child: _loading
@@ -1487,7 +1515,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       : const Text('加载本地模型'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: !_loading && !_importingModel ? _importModel : null,
+                  onPressed: !_modelControlBusy && !_loading && !_importingModel
+                      ? _importModel
+                      : null,
                   icon: _importingModel
                       ? const SizedBox(
                           width: 16,
