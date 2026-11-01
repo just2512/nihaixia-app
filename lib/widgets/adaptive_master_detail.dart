@@ -115,33 +115,104 @@ class AdaptiveMasterDetail extends StatelessWidget {
     );
   }
 
-  DisplayFeature? _findVerticalFoldingFeature(
-    List<DisplayFeature> features,
-    Size screenSize,
-  ) {
-    DisplayFeature? nearestFeature;
-    var nearestDistance = double.infinity;
+}
 
-    for (final feature in features) {
-      if (feature.type != DisplayFeatureType.hinge &&
-          feature.type != DisplayFeatureType.fold) {
-        continue;
-      }
+DisplayFeature? _findVerticalFoldingFeature(
+  List<DisplayFeature> features,
+  Size screenSize,
+) {
+  DisplayFeature? nearestFeature;
+  var nearestDistance = double.infinity;
 
-      final bounds = feature.bounds;
-      final spansScreenHeight = bounds.height >= screenSize.height - 1;
-      final separatesTwoPanels =
-          bounds.left > 0 && bounds.right < screenSize.width;
-      if (!spansScreenHeight || !separatesTwoPanels) continue;
-
-      final distanceFromCenter =
-          (bounds.center.dx - screenSize.width / 2).abs();
-      if (distanceFromCenter < nearestDistance) {
-        nearestFeature = feature;
-        nearestDistance = distanceFromCenter;
-      }
+  for (final feature in features) {
+    if (feature.type != DisplayFeatureType.hinge &&
+        feature.type != DisplayFeatureType.fold) {
+      continue;
     }
 
-    return nearestFeature;
+    final bounds = feature.bounds;
+    final spansScreenHeight = bounds.height >= screenSize.height - 1;
+    final separatesTwoPanels =
+        bounds.left > 0 && bounds.right < screenSize.width;
+    if (!spansScreenHeight || !separatesTwoPanels) continue;
+
+    final distanceFromCenter =
+        (bounds.center.dx - screenSize.width / 2).abs();
+    if (distanceFromCenter < nearestDistance) {
+      nearestFeature = feature;
+      nearestDistance = distanceFromCenter;
+    }
+  }
+
+  return nearestFeature;
+}
+
+/// A single, full-page experience that must remain on one physical panel.
+///
+/// On ordinary windows the child uses the available width. On a foldable with
+/// a vertical hinge/crease, the whole child (including its app bar) is placed
+/// in the wider physical panel so controls do not cross the fold.
+class AdaptiveSinglePane extends StatelessWidget {
+  const AdaptiveSinglePane({
+    super.key,
+    required this.child,
+    this.maxWidth = double.infinity,
+    this.contentKey,
+    this.foldedCreaseClearance = 24,
+  })  : assert(maxWidth > 0),
+        assert(foldedCreaseClearance >= 0);
+
+  final Widget child;
+  final double maxWidth;
+  final Key? contentKey;
+  final double foldedCreaseClearance;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final feature = _findVerticalFoldingFeature(
+          MediaQuery.displayFeaturesOf(context),
+          MediaQuery.sizeOf(context),
+        );
+
+        if (feature == null) {
+          return Center(
+            child: ConstrainedBox(
+              key: contentKey,
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: child,
+            ),
+          );
+        }
+
+        final creaseInset =
+            feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
+        final leftWidth = (feature.bounds.left - creaseInset)
+            .clamp(0.0, constraints.maxWidth)
+            .toDouble();
+        final rightStart = (feature.bounds.right + creaseInset)
+            .clamp(0.0, constraints.maxWidth)
+            .toDouble();
+        final rightWidth = (constraints.maxWidth - rightStart)
+            .clamp(0.0, constraints.maxWidth)
+            .toDouble();
+        final useLeftPanel = leftWidth >= rightWidth;
+        final availablePanelWidth = useLeftPanel ? leftWidth : rightWidth;
+        final contentMaxWidth = maxWidth < availablePanelWidth
+            ? maxWidth
+            : availablePanelWidth;
+
+        return Align(
+          alignment:
+              useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
+          child: ConstrainedBox(
+            key: contentKey,
+            constraints: BoxConstraints(maxWidth: contentMaxWidth),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }

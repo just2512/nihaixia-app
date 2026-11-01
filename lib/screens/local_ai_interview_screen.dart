@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/adaptive_master_detail.dart';
 
 abstract interface class LocalAiAudioRecorder {
   Future<bool> hasPermission();
@@ -1045,7 +1046,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final scheme = Theme.of(context).colorScheme;
     final ready = _status?.ready == true;
 
-    return Scaffold(
+    return AdaptiveSinglePane(
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('本地 AI 问诊'),
         actions: [
@@ -1306,6 +1308,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }
