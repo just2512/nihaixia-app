@@ -81,6 +81,25 @@ class _DeferredLocalAiImagePicker implements LocalAiImagePicker {
   }
 }
 
+class _DeferredModelControlService extends _TextSendService {
+  final resetResult = Completer<LocalAiModelStatus>();
+  final releaseResult = Completer<LocalAiModelStatus>();
+  var resetCalls = 0;
+  var releaseCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation() {
+    resetCalls += 1;
+    return resetResult.future;
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() {
+    releaseCalls += 1;
+    return releaseResult.future;
+  }
+}
+
 class _SourceTruncatedEmptySymptomsService extends _TextSendService {
   @override
   Future<LocalAiSymptomDraft> extractSymptoms() async {
@@ -1246,6 +1265,86 @@ void main() {
         expect(iconButton('释放模型内存').onPressed, isNotNull);
         expect(iconButton('发送').onPressed, isNotNull);
         expect(service.sentTexts, isEmpty);
+      },
+    );
+  });
+
+  group('local AI model control serialization', () {
+    testWidgets(
+      'makes reset exclusive and blocks session actions until it completes',
+      (tester) async {
+        final service = _DeferredModelControlService();
+        IconButton button(String tooltip) =>
+            tester.widgetList<IconButton>(find.byType(IconButton)).firstWhere(
+              (item) => item.tooltip == tooltip,
+            );
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        final reset = button('重新开始对话').onPressed!;
+        final release = button('释放模型内存').onPressed!;
+        reset();
+        reset();
+        release();
+        await tester.pump();
+
+        expect(service.resetCalls, 1);
+        expect(service.releaseCalls, 0);
+        expect(button('重新开始对话').onPressed, isNull);
+        expect(button('释放模型内存').onPressed, isNull);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(button('拍摄舌象').onPressed, isNull);
+        expect(button('录制语音（最长 30 秒）').onPressed, isNull);
+        expect(button('发送').onPressed, isNull);
+
+        service.resetResult.complete(_readyStatus);
+        await tester.pumpAndSettle();
+
+        expect(button('重新开始对话').onPressed, isNotNull);
+        expect(button('释放模型内存').onPressed, isNotNull);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+      },
+    );
+
+    testWidgets(
+      'makes model release exclusive and blocks session actions until it completes',
+      (tester) async {
+        final service = _DeferredModelControlService();
+        IconButton button(String tooltip) =>
+            tester.widgetList<IconButton>(find.byType(IconButton)).firstWhere(
+              (item) => item.tooltip == tooltip,
+            );
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        final release = button('释放模型内存').onPressed!;
+        final reset = button('重新开始对话').onPressed!;
+        release();
+        release();
+        reset();
+        await tester.pump();
+
+        expect(service.releaseCalls, 1);
+        expect(service.resetCalls, 0);
+        expect(button('重新开始对话').onPressed, isNull);
+        expect(button('释放模型内存').onPressed, isNull);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+        expect(button('拍摄舌象').onPressed, isNull);
+        expect(button('录制语音（最长 30 秒）').onPressed, isNull);
+        expect(button('发送').onPressed, isNull);
+
+        service.releaseResult.complete(_releasedStatus);
+        await tester.pumpAndSettle();
+
+        expect(button('重新开始对话').onPressed, isNull);
+        expect(button('释放模型内存').onPressed, isNull);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
       },
     );
   });
