@@ -8,6 +8,7 @@ enum Zone { general, tcm, metaphysics }
 ///
 /// 每个分区带一个彩色标题（图标 + 文案）与一层轻微着色背景，
 /// 使「通用区 / 中医区 / 玄学区」在视觉上彼此独立、层次清晰。
+/// 在紧凑窗口使用单列；可用宽度足够时将同一分区卡片排成两列。
 class ZoneSection extends StatelessWidget {
   final Zone zone;
   final String title;
@@ -32,6 +33,36 @@ class ZoneSection extends StatelessWidget {
       case Zone.metaphysics:
         return context.colors.metaphysicsZone;
     }
+  }
+
+  bool _isVerticalSeparator(Widget child) =>
+      child is SizedBox && child.height != null && child.width == null;
+
+  Widget _buildCards(BuildContext context, BoxConstraints constraints) {
+    final useTwoColumns = constraints.maxWidth >= 600;
+    if (!useTwoColumns) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final child in children)
+            if (_isVerticalSeparator(child))
+              child
+            else
+              SizedBox(width: constraints.maxWidth, child: child),
+        ],
+      );
+    }
+
+    final cards = children.where((child) => !_isVerticalSeparator(child));
+    final cardWidth = (constraints.maxWidth - 12) / 2;
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (final card in cards)
+          SizedBox(width: cardWidth, child: card),
+      ],
+    );
   }
 
   @override
@@ -64,7 +95,9 @@ class ZoneSection extends StatelessWidget {
             border: Border.all(color: color.withValues(alpha: 0.22)),
           ),
           padding: const EdgeInsets.all(8),
-          child: Column(children: children),
+          child: LayoutBuilder(
+            builder: _buildCards,
+          ),
         ),
         const SizedBox(height: 12),
       ],
