@@ -973,7 +973,7 @@ void main() {
         await tester.tap(find.byTooltip('发送'));
         await tester.pumpAndSettle();
 
-        expect(find.text('本地模型已放入设备，尚未加载'), findsOneWidget);
+        expect(find.text('模型已放入设备，尚未加载'), findsOneWidget);
         expect(
           find.text(
             '本地模型已变为未加载状态，旧会话已结束。编辑框中的内容和附件仍保留；重新加载后可重新发送。',
