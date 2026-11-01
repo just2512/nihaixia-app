@@ -56,10 +56,10 @@ class AdaptiveMasterDetail extends StatelessWidget {
           final hasPhysicalGap = foldingFeature.bounds.width > 0;
           final creaseInset =
               hasPhysicalGap ? 0.0 : foldedCreaseClearance / 2;
-          final leftRegionWidth = (featureLeft! - creaseInset)
+          final leftRegionWidth = ((featureLeft ?? 0.0) - creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
-          final rightRegionStart = (featureRight! + creaseInset)
+          final rightRegionStart = ((featureRight ?? 0.0) + creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
           final rightRegionWidth =
