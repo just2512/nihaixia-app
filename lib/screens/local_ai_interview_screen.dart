@@ -373,6 +373,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _pickTonguePhoto() async {
     if (_attachmentBusy ||
+        _modelControlBusy ||
         _sending ||
         _extracting ||
         _recording ||
