@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/fold_aware_routes.dart';
+
 import '../data/settings_repository.dart';
 import '../services/update_service.dart';
 import '../widgets/text_scale_slider.dart';
@@ -246,7 +248,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// 开启第三方镜像前的风险告知；用户点「我已知晓并开启」才返回 true。
   Future<bool> _confirmMirrorRisk() async {
-    final ok = await showDialog<bool>(
+    final ok = await showFoldAwareDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (c) => AlertDialog(

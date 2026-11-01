@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+
+import '../utils/fold_aware_routes.dart';
 import '../widgets/adaptive_master_detail.dart';
 import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
@@ -164,7 +166,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         return;
       }
     }
-    showDialog(
+    showFoldAwareDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(b.title),
@@ -182,14 +184,14 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   // ==================== 文件夹管理 ====================
 
   Future<void> _showCreateFolderDialog() async {
-    await showDialog(
+    await showFoldAwareDialog(
       context: context,
       builder: (_) => _CreateFolderDialog(onCreated: _loadData),
     );
   }
 
   void _showDeleteFolderDialog(int folderId, String name) {
-    showDialog(
+    showFoldAwareDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除文件夹'),
@@ -524,7 +526,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           trailing: PopupMenuButton<String>(
                             onSelected: (value) {
                               if (value == 'delete') {
-                                showDialog(
+                                showFoldAwareDialog(
                                   context: context,
                                   builder: (ctx) => AlertDialog(
                                     title: const Text('删除收藏'),

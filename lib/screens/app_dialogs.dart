@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../utils/fold_aware_routes.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
@@ -20,7 +22,7 @@ void showSettingsDialog(
   required VoidCallback onExportBookmarks,
 }) {
   final settings = SettingsRepository.instance;
-  showDialog(
+  showFoldAwareDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('设置'),
@@ -177,7 +179,7 @@ void showSettingsDialog(
 // ==================== 数据管理（可复用：设置页 / 对话页共用） ====================
 
 void confirmClearHistory(BuildContext context) {
-  showDialog(
+  showFoldAwareDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('清除诊断历史'),
@@ -258,7 +260,7 @@ Future<void> showAboutPage(BuildContext context) async {
 
   final entries = ChangelogRepository.getAll();
 
-  showDialog(
+  showFoldAwareDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('关于'),
@@ -383,7 +385,7 @@ Widget _buildChangelogEntry(BuildContext context, ChangelogEntry e) {
 // ==================== 检测更新 ====================
 
 Future<void> checkForUpdate(BuildContext context) async {
-  showDialog(
+  showFoldAwareDialog(
     context: context,
     barrierDismissible: false,
     builder: (c) => const AlertDialog(
@@ -413,7 +415,7 @@ Future<void> checkForUpdate(BuildContext context) async {
 }
 
 void showUpdateDialog(BuildContext context, UpdateInfo info) {
-  showDialog(
+  showFoldAwareDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: Text('发现新版本 v${info.version}'),
@@ -455,7 +457,7 @@ void showUpdateDialog(BuildContext context, UpdateInfo info) {
 
 Future<void> downloadAndInstall(BuildContext context, UpdateInfo info) async {
   double progress = 0;
-  showDialog(
+  showFoldAwareDialog(
     context: context,
     barrierDismissible: false,
     builder: (c) => StatefulBuilder(
