@@ -1,6 +1,5 @@
 // 输出项目引擎的排盘基准（用于与网络排盘网站对账）。
 // 运行：/d/flutter/bin/dart run tool/bazi_dump.dart
-import 'package:bazi_core/bazi_core.dart';
 
 import 'package:nihaisha_app/services/bazi_service.dart';
 
