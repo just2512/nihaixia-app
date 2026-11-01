@@ -275,10 +275,14 @@ void main() {
           .map((widget) => widget.data ?? widget.textSpan?.toPlainText() ?? '')
           .where((value) => value.isNotEmpty)
           .join(' | ');
+      final filePath = recorder._path!;
+      final fileExists = File(filePath).existsSync();
+      final fileLength = fileExists ? File(filePath).lengthSync() : -1;
       expect(
         find.text('语音已录制（最长 30 秒），发送前可移除。'),
         findsOneWidget,
-        reason: 'Unexpected recorder UI state: $renderedText',
+        reason: 'Unexpected recorder UI state: $renderedText; '
+            'fileExists=$fileExists; fileLength=$fileLength; filePath=$filePath',
       );
       expect(find.textContaining('录音停止失败'), findsNothing);
     },
