@@ -25,6 +25,12 @@ abstract interface class LocalAiRecordingFileInspector {
   Future<int?> sizeBytes(String path);
 }
 
+/// Path-based adapter for deterministic camera and Android lost-result tests.
+abstract interface class LocalAiImagePicker {
+  Future<String?> pickCameraImagePath();
+  Future<String?> retrieveLostImagePath();
+}
+
 class _IoLocalAiRecordingFileInspector
     implements LocalAiRecordingFileInspector {
   @override
@@ -52,12 +58,39 @@ class _PluginLocalAiAudioRecorder implements LocalAiAudioRecorder {
   Future<void> dispose() => _recorder.dispose();
 }
 
+class _PluginLocalAiImagePicker implements LocalAiImagePicker {
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  Future<String?> pickCameraImagePath() async {
+    final photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 90,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      requestFullMetadata: false,
+    );
+    return photo?.path;
+  }
+
+  @override
+  Future<String?> retrieveLostImagePath() async {
+    final response = await _picker.retrieveLostData();
+    if (response.isEmpty || response.files == null ||
+        response.files!.isEmpty) {
+      return null;
+    }
+    return response.files!.first.path;
+  }
+}
+
 class LocalAiInterviewScreen extends StatefulWidget {
   const LocalAiInterviewScreen({
     super.key,
     this.service,
     this.audioRecorder,
     this.recordingFileInspector,
+    this.imagePicker,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -69,13 +102,16 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Optional file inspector to isolate recording lifecycle tests from disk IO.
   final LocalAiRecordingFileInspector? recordingFileInspector;
 
+  /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
+  final LocalAiImagePicker? imagePicker;
+
   @override
   State<LocalAiInterviewScreen> createState() => _LocalAiInterviewScreenState();
 }
 
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
-  final ImagePicker _imagePicker = ImagePicker();
+  late final LocalAiImagePicker _imagePicker;
   late final LocalAiAudioRecorder _audioRecorder;
   late final LocalAiRecordingFileInspector _recordingFileInspector;
   Timer? _recordingTimer;
@@ -83,6 +119,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _audioPath;
   bool _recording = false;
   bool _recordingBusy = false;
+  // Lost-camera-result recovery runs during initialization. Keep all
+  // attachment-sensitive actions locked until it has completed.
+  bool _attachmentBusy = true;
   bool _recorderMayBeActive = false;
   String? _activeRecordingPath;
   Future<void> _recorderOperation = Future<void>.value();
@@ -109,6 +148,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? LocalAiService();
+    _imagePicker = widget.imagePicker ?? _PluginLocalAiImagePicker();
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _recordingFileInspector =
         widget.recordingFileInspector ?? _IoLocalAiRecordingFileInspector();
@@ -296,13 +336,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _recoverLostImage() async {
     try {
-      final response = await _imagePicker.retrieveLostData();
-      if (response.isEmpty || response.files == null ||
-          response.files!.isEmpty) {
-        return;
-      }
-      final path = response.files!.first.path;
-      if (path.isEmpty) return;
+      final path = await _imagePicker.retrieveLostImagePath();
+      if (path == null || path.isEmpty) return;
       if (!mounted) {
         await _deleteCachedAttachments([path]);
         return;
@@ -330,53 +365,69 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = '恢复照片失败：$error');
+    } finally {
+      if (mounted) setState(() => _attachmentBusy = false);
     }
   }
 
   Future<void> _pickTonguePhoto() async {
-    if (_sending || _recording || _recordingBusy || _audioPath != null) return;
+    if (_attachmentBusy ||
+        _sending ||
+        _extracting ||
+        _recording ||
+        _recordingBusy ||
+        _audioPath != null) {
+      return;
+    }
+    setState(() {
+      _attachmentBusy = true;
+      _error = null;
+    });
+
+    String? photoPath;
     try {
-      final photo = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 90,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        requestFullMetadata: false,
-      );
-      if (photo == null) return;
+      photoPath = await _imagePicker.pickCameraImagePath();
+      if (photoPath == null || photoPath.isEmpty) return;
       if (!mounted) {
-        await _deleteCachedAttachments([photo.path]);
+        await _deleteCachedAttachments([photoPath]);
         return;
       }
-      final validationError = await _validateTonguePhoto(photo.path);
+      final validationError = await _validateTonguePhoto(photoPath);
       if (!mounted) {
-        await _deleteCachedAttachments([photo.path]);
+        await _deleteCachedAttachments([photoPath]);
         return;
       }
       if (validationError != null) {
-        await _deleteCachedAttachments([photo.path]);
+        await _deleteCachedAttachments([photoPath]);
         if (!mounted) return;
         setState(() => _error = validationError);
         return;
       }
       final previousPath = _imagePath;
       setState(() {
-        _imagePath = photo.path;
+        _imagePath = photoPath;
         _audioPath = null;
         _error = null;
       });
-      if (previousPath != null && previousPath != photo.path) {
+      if (previousPath != null && previousPath != photoPath) {
         unawaited(_deleteCachedAttachments([previousPath]));
       }
     } on PlatformException catch (error) {
+      if (photoPath != null) {
+        await _deleteCachedAttachments([photoPath]);
+      }
       if (!mounted) return;
       setState(() => _error = error.message ?? '无法打开相机');
     } catch (error) {
+      if (photoPath != null) {
+        await _deleteCachedAttachments([photoPath]);
+      }
       if (!mounted) return;
       setState(() => _error = '照片检查失败：$error');
+    } finally {
+      if (mounted) setState(() => _attachmentBusy = false);
     }
   }
-
   Future<void> _startRecording() {
     if (_sending || _imagePath != null || _audioPath != null || _recording || _recordingBusy || _recorderMayBeActive) {
       return Future<void>.value();
@@ -536,6 +587,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
   }
   void _discardAttachment() {
+    if (_attachmentBusy || _sending) return;
     final paths = <String?>[_imagePath, _audioPath];
     setState(() {
       _imagePath = null;
@@ -678,6 +730,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _extractSymptoms() async {
+    if (_attachmentBusy || _sending || _extracting) return;
     setState(() {
       _extracting = true;
       _error = null;
@@ -778,6 +831,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _releaseModel() async {
+    if (_attachmentBusy ||
+        _sending ||
+        _extracting ||
+        _recordingBusy ||
+        _recording) {
+      return;
+    }
     try {
       final paths = <String?>[_imagePath, _audioPath];
       final status = await _service.releaseModel();
@@ -843,6 +903,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
   }
   Future<void> _resetConversation() async {
+    if (_attachmentBusy ||
+        _sending ||
+        _extracting ||
+        _recordingBusy ||
+        _recording) {
+      return;
+    }
     try {
       final paths = <String?>[_imagePath, _audioPath];
       final status = await _service.resetConversation();
@@ -937,12 +1004,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
-              onPressed: _sending || _extracting || _recordingBusy || _recording ? null : _resetConversation,
+              onPressed: _attachmentBusy || _sending || _extracting || _recordingBusy || _recording ? null : _resetConversation,
               icon: const Icon(Icons.refresh),
             ),
             IconButton(
               tooltip: '释放模型内存',
-              onPressed: _sending || _extracting || _recordingBusy || _recording ? null : _releaseModel,
+              onPressed: _attachmentBusy || _sending || _extracting || _recordingBusy || _recording ? null : _releaseModel,
               icon: const Icon(Icons.memory_outlined),
             ),
           ],
@@ -970,7 +1037,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
-                  onPressed: _sending || _extracting ? null : _extractSymptoms,
+                  onPressed: _attachmentBusy || _sending || _extracting ? null : _extractSymptoms,
                   icon: _extracting
                       ? const SizedBox(
                           width: 15,
@@ -1048,7 +1115,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           ),
                           IconButton(
                             tooltip: '移除照片',
-                            onPressed: _sending ? null : _discardAttachment,
+                            onPressed: _attachmentBusy || _sending ? null : _discardAttachment,
                             icon: const Icon(Icons.close),
                           ),
                         ],
@@ -1072,7 +1139,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           ),
                           IconButton(
                             tooltip: '移除录音',
-                            onPressed: _sending ? null : _discardAttachment,
+                            onPressed: _attachmentBusy || _sending ? null : _discardAttachment,
                             icon: const Icon(Icons.close),
                           ),
                         ],
@@ -1095,6 +1162,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       IconButton(
                         tooltip: '拍摄舌象',
                         onPressed: ready &&
+                                !_attachmentBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
@@ -1108,6 +1176,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       IconButton(
                         tooltip: _recording ? '停止录音' : '录制语音（最长 30 秒）',
                         onPressed: ready &&
+                                !_attachmentBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recordingBusy &&
@@ -1125,6 +1194,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           minLines: 1,
                           maxLines: 4,
                           enabled: ready &&
+                              !_attachmentBusy &&
                               !_sending &&
                               !_extracting &&
                               !_recording &&
@@ -1151,6 +1221,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       IconButton.filled(
                         tooltip: '发送',
                         onPressed: ready &&
+                                !_attachmentBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
