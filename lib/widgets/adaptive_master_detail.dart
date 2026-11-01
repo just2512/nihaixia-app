@@ -235,17 +235,18 @@ class AdaptiveSinglePane extends StatelessWidget {
 
         final creaseInset =
             feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-        final leftWidth = (featureLeft - creaseInset)
+        final leftWidth = ((featureLeft ?? 0.0) - creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
-        final rightStart = (featureRight + creaseInset)
+        final rightStart = ((featureRight ?? 0.0) + creaseInset)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
         final rightWidth = (constraints.maxWidth - rightStart)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
-        final useLeftPanel = preferredAnchorPoint != null
-            ? preferredAnchorPoint.dx < feature.bounds.center.dx
+        final anchorPoint = preferredAnchorPoint;
+        final useLeftPanel = anchorPoint != null
+            ? anchorPoint.dx < feature.bounds.center.dx
             : leftWidth > rightWidth;
         final availablePanelWidth = useLeftPanel ? leftWidth : rightWidth;
         final contentMaxWidth = maxWidth < availablePanelWidth
