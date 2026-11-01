@@ -60,6 +60,13 @@ class _ValidRecordingFileInspector
   Future<int?> sizeBytes(String path) async => 4;
 }
 
+class _SourceTruncatedEmptySymptomsService extends _TextSendService {
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms() async {
+    return const LocalAiSymptomDraft(sourceTruncated: true);
+  }
+}
+
 class _SourceTruncatedSymptomsService extends _TextSendService {
   @override
   Future<LocalAiSymptomDraft> extractSymptoms() async {
@@ -375,6 +382,29 @@ void main() {
 
       expect(find.text('已核对的用户自述'), findsOneWidget);
       expect(find.text('记录范围不完整：较早或超长的输入可能未包含在本次整理中。请补充遗漏内容并逐项核对，不要把未显示的信息理解为你没有相关症状。'), findsOneWidget);
+    },
+  );
+  testWidgets(
+    'explains missing draft when the source history was truncated',
+    (tester) async {
+      final service = _SourceTruncatedEmptySymptomsService();
+
+      await tester.pumpWidget(
+        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '此前描述过的症状');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('整理本次症状'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('原始输入记录曾被裁剪，但本次未提取到可核对内容。请补充遗漏描述后重新整理。'),
+        findsOneWidget,
+      );
+      expect(find.text('核对症状整理'), findsNothing);
     },
   );
   testWidgets(

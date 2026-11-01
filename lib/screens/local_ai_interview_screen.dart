@@ -611,7 +611,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (!mounted) return;
       setState(() => _extracting = false);
       if (draft.summaryLines.isEmpty) {
-        setState(() => _error = '目前没有提取到明确的自述信息，请补充描述后再整理。');
+        setState(() => _error = draft.sourceTruncated
+            ? '原始输入记录曾被裁剪，但本次未提取到可核对内容。请补充遗漏描述后重新整理。'
+            : '目前没有提取到明确的自述信息，请补充描述后再整理。');
         return;
       }
 
