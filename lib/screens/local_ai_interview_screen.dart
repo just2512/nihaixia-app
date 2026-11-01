@@ -434,20 +434,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _stopRecordingInternal() async {
+    String? expectedPath;
+    String? stoppedPath;
     try {
-      final expectedPath = _activeRecordingPath;
-      final path = await _audioRecorder.stop();
+      expectedPath = _activeRecordingPath;
+      stoppedPath = await _audioRecorder.stop();
       _recorderMayBeActive = false;
       _activeRecordingPath = null;
       if (!mounted) {
-        await _deleteCachedAttachments([path, expectedPath]);
+        await _deleteCachedAttachments([stoppedPath, expectedPath]);
         return;
       }
-      final fileSize = path == null
+      final fileSize = stoppedPath == null
           ? null
-          : await _recordingFileInspector.sizeBytes(path);
+          : await _recordingFileInspector.sizeBytes(stoppedPath);
       if (fileSize == null || fileSize <= 0) {
-        await _deleteCachedAttachments([path, expectedPath]);
+        await _deleteCachedAttachments([stoppedPath, expectedPath]);
         if (!mounted) return;
         setState(() {
           _recordingBusy = false;
@@ -456,7 +458,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       if (fileSize > 15 * 1024 * 1024) {
-        await _deleteCachedAttachments([path]);
+        await _deleteCachedAttachments([stoppedPath]);
         if (!mounted) return;
         setState(() {
           _recordingBusy = false;
@@ -466,30 +468,44 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       setState(() {
         _recordingBusy = false;
-        _audioPath = path;
+        _audioPath = stoppedPath;
         _error = null;
       });
     } on PlatformException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        // stop() failed, so the native recorder may still be active. Restore
-        // the stop control rather than leaving the user with a disabled mic.
-        _recording = _recorderMayBeActive;
-        _recordingBusy = false;
-        _error =
-            '录音停止失败，录音可能仍在继续。请再次点击“停止录音”重试。'
-            '${error.message == null ? '' : '（${error.message}）'}';
-      });
+      _handleRecordingStopError(
+        error.message ?? error.code,
+        expectedPath: expectedPath,
+        stoppedPath: stoppedPath,
+      );
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _recording = _recorderMayBeActive;
-        _recordingBusy = false;
-        _error = '录音停止失败，录音可能仍在继续。请再次点击“停止录音”重试。（$error）';
-      });
+      _handleRecordingStopError(
+        error.toString(),
+        expectedPath: expectedPath,
+        stoppedPath: stoppedPath,
+      );
     }
   }
 
+  void _handleRecordingStopError(
+    String details, {
+    required String? expectedPath,
+    required String? stoppedPath,
+  }) {
+    final recorderStillActive = _recorderMayBeActive;
+    if (!recorderStillActive) {
+      // Recorder.stop() already succeeded; this is a post-stop file error.
+      // Do not show a stop-retry control for a recorder that is no longer active.
+      unawaited(_deleteCachedAttachments([stoppedPath, expectedPath]));
+    }
+    if (!mounted) return;
+    setState(() {
+      _recording = recorderStillActive;
+      _recordingBusy = false;
+      _error = recorderStillActive
+          ? '录音停止失败，录音可能仍在继续。请再次点击“停止录音”重试。（$details）'
+          : '录音已停止，但读取录音文件失败，未添加为附件。请重新录制。（$details）';
+    });
+  }
   void _discardAttachment() {
     final paths = <String?>[_imagePath, _audioPath];
     setState(() {

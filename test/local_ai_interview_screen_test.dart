@@ -16,6 +16,9 @@ const _readyStatus = LocalAiModelStatus(
 );
 
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
+  _FailOnceStopRecorder({this.failFirstStop = true});
+
+  final bool failFirstStop;
   int stopCalls = 0;
   String? _path;
 
@@ -30,7 +33,7 @@ class _FailOnceStopRecorder implements LocalAiAudioRecorder {
   @override
   Future<String?> stop() async {
     stopCalls += 1;
-    if (stopCalls == 1) {
+    if (failFirstStop && stopCalls == 1) {
       throw PlatformException(
         code: 'STOP_FAILED',
         message: '模拟录音停止失败',
@@ -41,6 +44,14 @@ class _FailOnceStopRecorder implements LocalAiAudioRecorder {
 
   @override
   Future<void> dispose() async {}
+}
+
+class _ThrowingRecordingFileInspector
+    implements LocalAiRecordingFileInspector {
+  @override
+  Future<int?> sizeBytes(String path) async {
+    throw StateError('模拟停止后文件读取失败');
+  }
 }
 
 class _ValidRecordingFileInspector
@@ -252,6 +263,40 @@ void main() {
     },
   );
 
+  testWidgets(
+    'reports a stopped recorder when post-stop file inspection fails',
+    (tester) async {
+      final recorder = _FailOnceStopRecorder(failFirstStop: false);
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        (call) async {
+          if (call.method == 'getTemporaryDirectory') return '/tmp';
+          throw MissingPluginException('Unexpected path provider call: ${call.method}');
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            service: _TextSendService(),
+            audioRecorder: recorder,
+            recordingFileInspector: _ThrowingRecordingFileInspector(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('录制语音（最长 30 秒）'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('停止录音'));
+      await tester.pumpAndSettle();
+
+      expect(recorder.stopCalls, 1);
+      expect(find.textContaining('录音已停止，但读取录音文件失败'), findsOneWidget);
+      expect(find.byTooltip('录制语音（最长 30 秒）'), findsOneWidget);
+      expect(find.byTooltip('停止录音'), findsNothing);
+      expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsNothing);
+    },
+  );
   testWidgets(
     'sends a text interview turn and renders the local reply',
     (tester) async {
