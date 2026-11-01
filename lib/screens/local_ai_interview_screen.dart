@@ -588,10 +588,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;
       _inputController.clear();
+      final nativeRuntimeUnavailable =
+          refreshedStatus != null && !refreshedStatus.ready;
       setState(() {
         _status = refreshedStatus;
         _statusUnknown = refreshedStatus == null;
-        _messages.add(_InterviewMessage(text: reply, isUser: false));
+        if (nativeRuntimeUnavailable) {
+          _messages
+            ..clear()
+            ..add(const _InterviewMessage(
+              text: '本轮回复已生成，但原生模型已变为未加载状态。旧会话已结束；以下回复仅供查看，重新加载后请开始新对话。',
+              isUser: false,
+            ))
+            ..add(_InterviewMessage(text: reply, isUser: false));
+          _confirmedDraft = null;
+        } else {
+          _messages.add(_InterviewMessage(text: reply, isUser: false));
+        }
         _sending = false;
         _imagePath = null;
         _audioPath = null;
@@ -613,6 +626,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             _messages.last.isUser &&
             _messages.last.text == userLabel) {
           _messages.removeLast();
+        }
+        final nativeRuntimeUnavailable =
+            refreshedStatus != null && !refreshedStatus.ready;
+        if (nativeRuntimeUnavailable) {
+          _messages
+            ..clear()
+            ..add(const _InterviewMessage(
+              text: '本地模型已变为未加载状态，旧会话已结束。编辑框中的内容和附件仍保留；重新加载后可重新发送。',
+              isUser: false,
+            ));
+          _confirmedDraft = null;
         }
         _sending = false;
         final message = error.message ?? '本地推理失败';
