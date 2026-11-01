@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
 
@@ -250,7 +251,7 @@ class _SignRow extends StatelessWidget {
         subtitle: Text(sign.luck.label,
             style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
         trailing: const Icon(Icons.chevron_right, size: 18),
-        onTap: () => showDialog<void>(
+        onTap: () => showFoldAwareDialog<void>(
           context: context,
           builder: (_) => AlertDialog(
             content: SingleChildScrollView(
