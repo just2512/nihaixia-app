@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 /// 十四经循行穴位图（十二正经 + 任脉 + 督脉）。
 ///
@@ -57,7 +58,7 @@ Future<void> showMeridianMapDialog(
   BuildContext context, {
   String? initial,
 }) {
-  return showDialog<void>(
+  return showFoldAwareDialog<void>(
     context: context,
     builder: (_) => _MeridianMapDialog(initial: initial),
   );
