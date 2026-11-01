@@ -560,6 +560,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (_sending ||
         _recording ||
         _recordingBusy ||
+        _statusUnknown ||
         _status?.ready != true ||
         (text.isEmpty && imagePath == null && audioPath == null)) {
       return;
@@ -588,11 +589,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (!mounted) return;
       _inputController.clear();
       setState(() {
-        _status = refreshedStatus ?? _status;
+        _status = refreshedStatus;
+        _statusUnknown = refreshedStatus == null;
         _messages.add(_InterviewMessage(text: reply, isUser: false));
         _sending = false;
         _imagePath = null;
         _audioPath = null;
+        _error = refreshedStatus == null
+            ? '本轮回复已生成，但无法确认本地模型状态。请重新检查后继续。'
+            : null;
       });
       _scrollToBottom();
     } on PlatformException catch (error) {
@@ -602,14 +607,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       setState(() {
-        _status = refreshedStatus ?? _status;
+        _status = refreshedStatus;
+        _statusUnknown = refreshedStatus == null;
         if (_messages.isNotEmpty &&
             _messages.last.isUser &&
             _messages.last.text == userLabel) {
           _messages.removeLast();
         }
         _sending = false;
-        _error = error.message ?? '本地推理失败';
+        final message = error.message ?? '本地推理失败';
+        _error = refreshedStatus == null
+            ? '$message；无法确认本地模型状态，请重新检查后继续。'
+            : message;
       });
     } catch (error) {
       final refreshedStatus = await _readNativeStatus();
@@ -618,14 +627,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       setState(() {
-        _status = refreshedStatus ?? _status;
+        _status = refreshedStatus;
+        _statusUnknown = refreshedStatus == null;
         if (_messages.isNotEmpty &&
             _messages.last.isUser &&
             _messages.last.text == userLabel) {
           _messages.removeLast();
         }
         _sending = false;
-        _error = '处理失败：$error';
+        _error = refreshedStatus == null
+            ? '处理失败：$error；无法确认本地模型状态，请重新检查后继续。'
+            : '处理失败：$error';
       });
     }
   }
