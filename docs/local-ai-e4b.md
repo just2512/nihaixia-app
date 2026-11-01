@@ -117,4 +117,4 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 5. 飞行模式下能否完成加载和多轮问答。
 6. 释放模型后内存是否回落。
 
-GitHub CI 只能验证 Flutter 测试和 Android 编译；不能替代真实设备上的模型加载、文字/音频/图像推理和热稳定性验收。Gemma 4 E4B 的图像与音频输入由 LiteRT-LM 多模态后端提供；语音输入限制为 30 秒，必须在飞行模式下实测。
+GitHub CI 当前覆盖依赖锁文件校验、Dart/Flutter 静态分析、本地 AI MethodChannel 契约测试、全量 Flutter 回归、Android 原生 Kotlin 单元测试和 Debug APK 编译；这些检查只能证明代码与构建链路符合自动化条件，不能替代真实设备上的模型加载、文字/音频/图像推理和热稳定性验收。Gemma 4 E4B 的图像与音频输入由 LiteRT-LM 多模态后端提供；语音输入限制为 30 秒，必须在飞行模式下实测。
