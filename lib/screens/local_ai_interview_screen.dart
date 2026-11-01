@@ -141,6 +141,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _importingModel = false;
   bool _sending = false;
   bool _extracting = false;
+  bool _modelControlBusy = false;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -429,7 +430,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
   Future<void> _startRecording() {
-    if (_sending || _imagePath != null || _audioPath != null || _recording || _recordingBusy || _recorderMayBeActive) {
+    if (_attachmentBusy ||
+        _modelControlBusy ||
+        _extracting ||
+        _sending ||
+        _imagePath != null ||
+        _audioPath != null ||
+        _recording ||
+        _recordingBusy ||
+        _recorderMayBeActive) {
       return Future<void>.value();
     }
     setState(() => _recordingBusy = true);
@@ -587,7 +596,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
   }
   void _discardAttachment() {
-    if (_attachmentBusy || _sending) return;
+    if (_attachmentBusy || _modelControlBusy || _sending) return;
     final paths = <String?>[_imagePath, _audioPath];
     setState(() {
       _imagePath = null;
@@ -606,6 +615,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _send() async {
+    if (_modelControlBusy) return;
     final text = _inputController.text.trim();
     final imagePath = _imagePath;
     final audioPath = _audioPath;
@@ -730,7 +740,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _extractSymptoms() async {
-    if (_attachmentBusy || _sending || _extracting) return;
+    if (_attachmentBusy || _modelControlBusy || _sending || _extracting) return;
     setState(() {
       _extracting = true;
       _error = null;
@@ -832,12 +842,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _releaseModel() async {
     if (_attachmentBusy ||
+        _modelControlBusy ||
         _sending ||
         _extracting ||
         _recordingBusy ||
-        _recording) {
+        _recording ||
+        _statusUnknown ||
+        _status?.ready != true) {
       return;
     }
+    setState(() => _modelControlBusy = true);
     try {
       final paths = <String?>[_imagePath, _audioPath];
       final status = await _service.releaseModel();
@@ -866,6 +880,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         errorMessage: '无法释放模型：$error',
         unavailableMessage: '释放操作发生错误，但原生模型运行态已清空。重新加载后可继续使用。',
       );
+    } finally {
+      if (mounted) setState(() => _modelControlBusy = false);
     }
   }
 
@@ -904,12 +920,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
   Future<void> _resetConversation() async {
     if (_attachmentBusy ||
+        _modelControlBusy ||
         _sending ||
         _extracting ||
         _recordingBusy ||
-        _recording) {
+        _recording ||
+        _statusUnknown ||
+        _status?.ready != true) {
       return;
     }
+    setState(() => _modelControlBusy = true);
     try {
       final paths = <String?>[_imagePath, _audioPath];
       final status = await _service.resetConversation();
@@ -938,6 +958,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         errorMessage: '无法重置会话：$error',
         unavailableMessage: '会话重置失败，原生会话已关闭。请重新加载模型后重新开始。',
       );
+    } finally {
+      if (mounted) setState(() => _modelControlBusy = false);
     }
   }
 
@@ -1004,12 +1026,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
-              onPressed: _attachmentBusy || _sending || _extracting || _recordingBusy || _recording ? null : _resetConversation,
+              onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting || _recordingBusy || _recording ? null : _resetConversation,
               icon: const Icon(Icons.refresh),
             ),
             IconButton(
               tooltip: '释放模型内存',
-              onPressed: _attachmentBusy || _sending || _extracting || _recordingBusy || _recording ? null : _releaseModel,
+              onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting || _recordingBusy || _recording ? null : _releaseModel,
               icon: const Icon(Icons.memory_outlined),
             ),
           ],
@@ -1037,7 +1059,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
-                  onPressed: _attachmentBusy || _sending || _extracting ? null : _extractSymptoms,
+                  onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting ? null : _extractSymptoms,
                   icon: _extracting
                       ? const SizedBox(
                           width: 15,
@@ -1115,7 +1137,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           ),
                           IconButton(
                             tooltip: '移除照片',
-                            onPressed: _attachmentBusy || _sending ? null : _discardAttachment,
+                            onPressed: _attachmentBusy || _modelControlBusy || _sending ? null : _discardAttachment,
                             icon: const Icon(Icons.close),
                           ),
                         ],
@@ -1139,7 +1161,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           ),
                           IconButton(
                             tooltip: '移除录音',
-                            onPressed: _attachmentBusy || _sending ? null : _discardAttachment,
+                            onPressed: _attachmentBusy || _modelControlBusy || _sending ? null : _discardAttachment,
                             icon: const Icon(Icons.close),
                           ),
                         ],
@@ -1163,6 +1185,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                         tooltip: '拍摄舌象',
                         onPressed: ready &&
                                 !_attachmentBusy &&
+                                !_modelControlBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
@@ -1177,6 +1200,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                         tooltip: _recording ? '停止录音' : '录制语音（最长 30 秒）',
                         onPressed: ready &&
                                 !_attachmentBusy &&
+                                !_modelControlBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recordingBusy &&
@@ -1195,6 +1219,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           maxLines: 4,
                           enabled: ready &&
                               !_attachmentBusy &&
+                              !_modelControlBusy &&
                               !_sending &&
                               !_extracting &&
                               !_recording &&
@@ -1222,6 +1247,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                         tooltip: '发送',
                         onPressed: ready &&
                                 !_attachmentBusy &&
+                                !_modelControlBusy &&
                                 !_sending &&
                                 !_extracting &&
                                 !_recording &&
