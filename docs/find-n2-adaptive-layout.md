@@ -64,7 +64,11 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 - 不根据设备型号、屏幕像素常量或简单的 portrait/landscape 判断折叠状态。以实际窗口尺寸、`displayFeatures` 和布局约束决策。
 - 系统未上报折痕时必须正常工作；不能因没有折痕事件而退化为黑屏或固定空白区。
 
-后续逐步接入 Flutter `DisplayFeatureSubScreen` 和针对性双栏布局。第一批页面建议是本地 AI 问诊、知识库检索/详情、方剂与本草列表/详情。折痕正好穿过按钮、输入光标、图片主体或文本阅读列时，必须主动调整锚点或列宽。
+折痕处理不能简单地在整个 `MaterialApp` 外包一层 `DisplayFeatureSubScreen`：该组件会根据 `anchorPoint` 选择一个子屏幕并把内容放入该区域，它适合单屏弹窗或明确只在一侧显示的单栏页面；若全局使用，会把整套应用限制在一个子屏幕，反而浪费展开屏另一侧空间。
+
+全屏双栏页面应直接读取 `MediaQuery.displayFeatures` 和每个 feature 的逻辑坐标，按实际 hinge/fold bounds 分配左右内容区域：物理 hinge 必须留空，零宽 fold 是视觉折痕而不是不可绘制区域，应以列间距/留白把重要交互与文字列避开折痕，但不要无故损失整条屏幕宽度。对于没有上报 display feature 的设备，回退到普通 LayoutBuilder 宽度策略。
+
+`DisplayFeatureSubScreen` 与按 feature bounds 分栏是两种不同布局策略：前者选一个子屏幕，后者才是双栏全屏。第一批需要按页面结构实现折痕感知的页面仍是本地 AI 问诊、知识库检索/详情、方剂与本草列表/详情。折痕正好穿过按钮、输入光标、图片主体或文本阅读列时，必须调整锚点、列宽或分栏位置。
 
 参考：[Flutter 折叠屏与大屏指南](https://docs.flutter.dev/ui/adaptive-responsive/large-screens)、[Flutter DisplayFeature API](https://api.flutter.dev/flutter/widgets/MediaQueryData/displayFeatures.html)。
 
