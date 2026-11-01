@@ -45,7 +45,7 @@ jobs:
         run: flutter analyze --no-pub
 
       - name: Run local AI contract tests
-        if: steps.dependencies.outcome == 'success'
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_service_test.dart
 
       - name: Run full regression suite
