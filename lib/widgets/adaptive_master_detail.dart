@@ -174,6 +174,7 @@ class AdaptiveSinglePane extends StatelessWidget {
     this.maxWidth = double.infinity,
     this.contentKey,
     this.foldedCreaseClearance = 24,
+    this.preferredAnchorPoint,
   })  : assert(maxWidth > 0),
         assert(foldedCreaseClearance >= 0);
 
@@ -181,6 +182,7 @@ class AdaptiveSinglePane extends StatelessWidget {
   final double maxWidth;
   final Key? contentKey;
   final double foldedCreaseClearance;
+  final Offset? preferredAnchorPoint;
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +227,9 @@ class AdaptiveSinglePane extends StatelessWidget {
         final rightWidth = (constraints.maxWidth - rightStart)
             .clamp(0.0, constraints.maxWidth)
             .toDouble();
-        final useLeftPanel = leftWidth >= rightWidth;
+        final useLeftPanel = preferredAnchorPoint != null
+            ? preferredAnchorPoint!.dx < feature.bounds.center.dx
+            : leftWidth > rightWidth;
         final availablePanelWidth = useLeftPanel ? leftWidth : rightWidth;
         final contentMaxWidth = maxWidth < availablePanelWidth
             ? maxWidth
