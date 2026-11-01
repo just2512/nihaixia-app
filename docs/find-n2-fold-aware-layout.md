@@ -35,7 +35,7 @@ test/adaptive_master_detail_test.dart 覆盖：
 
 ## 当前边界
 
-AdaptiveHomeNavigation 已接入根导航双面板：左物理屏承载导航栏，当前 Tab 完整显示在右物理屏。AdaptiveMasterDetail 已用于收藏与知识库方剂/本草列表/预览；但在当前 Find N2 根导航结构中，Tab 视口约为右屏宽度，低于 600 dp，因此这些页面按紧凑单栏列表交互，点击条目进入详情，不会在两块物理屏间显示列表/预览。只有宿主视口本身横跨折痕且宽度足够时，AdaptiveMasterDetail 才会把列表与详情分置左右屏。AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 在当前右屏视口内使用单列；只有当宿主视口本身横跨折痕时才按 bounds 分成左右卡片列。嵌套在已分配面板中的 ZoneSection / AdaptiveMasterDetail 会识别铰链是否与自身局部区域相交，避免把另一侧铰链误当成内部折痕。尚未自动获得折痕专项布局的区域包括普通页面中的弹窗、相机和文件选择器。未接入这些组件的其它页面仍需逐页评估。
+AdaptiveHomeNavigation 已接入根导航双面板：左物理屏承载导航栏，当前 Tab 完整显示在右物理屏。AdaptiveMasterDetail 已用于收藏与知识库方剂/本草列表/预览；但在当前 Find N2 根导航结构中，Tab 视口约为右屏宽度，低于 600 dp，因此这些页面按紧凑单栏列表交互，点击条目进入详情，不会在两块物理屏间显示列表/预览。只有宿主视口本身横跨折痕且宽度足够时，AdaptiveMasterDetail 才会把列表与详情分置左右屏。AdaptiveSinglePane 已用于本地 AI 问诊完整页面。工具首页 ZoneSection 在当前右屏视口内使用单列；只有当宿主视口本身横跨折痕时才按 bounds 分成左右卡片列。嵌套在已分配面板中的 ZoneSection / AdaptiveMasterDetail 会识别铰链是否与自身局部区域相交，避免把另一侧铰链误当成内部折痕。普通页面路由弹窗已统一迁移到 `showFoldAwareDialog`：通过调用方 BuildContext 对应 RenderBox 的窗口坐标中心设置 `DialogRoute.anchorPoint`，并将原始 MediaQuery 传入弹窗内的 `AdaptiveSinglePane`；日期/时间选择器和模态底部弹层均设置 `foldAwareRouteAnchorPoint(context)`。当前对 `lib/screens/` 与 `lib/widgets/` 的 78 个 Dart 文件完成静态调用扫描，未发现残留直接 `showDialog`，扫描到的日期/时间选择器和模态底部弹层均已提供锚点参数。相机拍摄与 Android 系统文件选择器属于平台 UI，Flutter 页面锚点不能决定其系统窗口位置；仍需在 Find N2 真机分别验证内屏、外屏与半折叠状态下的系统返回、结果回传和窗口呈现。
 
 test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与零宽 fold 下不跨面板；test/zone_section_responsive_test.dart 覆盖工具卡片双物理面板分栏、折痕留白及嵌套右面板坐标；test/adaptive_master_detail_test.dart 覆盖主从布局嵌套右面板时不误识别边界外的铰链。
 
