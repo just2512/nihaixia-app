@@ -1342,8 +1342,8 @@ void main() {
         service.releaseResult.complete(_releasedStatus);
         await tester.pumpAndSettle();
 
-        expect(button('重新开始对话').onPressed, isNull);
-        expect(button('释放模型内存').onPressed, isNull);
+        expect(find.byTooltip('重新开始对话'), findsNothing);
+        expect(find.byTooltip('释放模型内存'), findsNothing);
         expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
       },
     );
