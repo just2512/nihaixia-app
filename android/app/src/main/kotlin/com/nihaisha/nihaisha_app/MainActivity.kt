@@ -43,12 +43,19 @@ class MainActivity : FlutterActivity() {
     // Only explicit user text and pending audio transcripts enter symptom extraction.
     // Image observations and assistant responses are intentionally excluded.
     private val userReportedInputs = mutableListOf<String>()
+    private var userReportedInputsTruncated = false
 
     private fun recordUserInput(source: String, value: String) {
         val normalized = value.trim()
         if (normalized.isEmpty()) return
-        if (userReportedInputs.size >= 100) userReportedInputs.removeAt(0)
-        userReportedInputs.add("$source：" + normalized.take(2000))
+        val result = UserReportedInputPolicy.append(
+            currentEntries = userReportedInputs,
+            newEntry = "$source：$normalized",
+            wasTruncated = userReportedInputsTruncated
+        )
+        userReportedInputs.clear()
+        userReportedInputs.addAll(result.entries)
+        userReportedInputsTruncated = result.truncated
     }
 
     private val systemInstruction = """
@@ -503,9 +510,20 @@ class MainActivity : FlutterActivity() {
                 "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[]}"""
             )
         }
-        val userInputContext = userReportedInputs.mapIndexed { index, input ->
-            (index + 1).toString() + ". " + input
-        }.joinToString("\n")
+        val userInputContext = buildString {
+            if (userReportedInputsTruncated) {
+                appendLine(
+                    "记录范围提示：应用为控制本地上下文大小，已省略较早或超长的用户输入。" +
+                        "被省略内容可能曾由用户提及，不得据此断言用户没有相关症状；" +
+                        "无法从保留记录确认的信息必须列入 unknowns，交由用户再次核实。"
+                )
+            }
+            append(
+                userReportedInputs.mapIndexed { index, input ->
+                    (index + 1).toString() + ". " + input
+                }.joinToString("\n")
+            )
+        }
         val prompt = """
             请根据当前对话中用户明确提供的信息，整理一份“用户自述症状草稿”。
             只记录用户通过文字或语音明确表达的事实，不记录模型对照片的观察，不推断、不补全，
@@ -564,6 +582,7 @@ class MainActivity : FlutterActivity() {
             )
             aiConversation = nextConversation
             userReportedInputs.clear()
+            userReportedInputsTruncated = false
             conversationHasSuccessfulTurn = false
             modelStatus()
         } catch (error: Exception) {
@@ -572,6 +591,7 @@ class MainActivity : FlutterActivity() {
             aiEngine = null
             aiConversation = null
             userReportedInputs.clear()
+            userReportedInputsTruncated = false
             activeBackend = "not_loaded"
             conversationHasSuccessfulTurn = false
             throw error
@@ -585,6 +605,7 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         userReportedInputs.clear()
+        userReportedInputsTruncated = false
         activeBackend = "not_loaded"
         conversationHasSuccessfulTurn = false
         ConversationResourceReleasePolicy.closeBoth(
