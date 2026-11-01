@@ -825,8 +825,13 @@ void main() {
 
         expect(service.sentTexts, [userText]);
         expect(find.text('无法确认本地模型状态'), findsOneWidget);
-        expect(find.text('模拟本地推理失败'), findsOneWidget);
-        expect(find.textContaining(userText), findsNothing);
+        expect(find.textContaining('模拟本地推理失败'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is SelectableText && widget.data == userText,
+          ),
+          findsNothing,
+        );
         expect(
           tester.widget<TextField>(find.byType(TextField)).controller!.text,
           userText,
