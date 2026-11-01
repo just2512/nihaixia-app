@@ -89,10 +89,12 @@ class ZoneSection extends StatelessWidget {
         .toList(growable: false);
     final feature = _findVerticalFoldingFeature(context);
 
-    final renderObject = context.findRenderObject();
-    final localOriginX = renderObject is RenderBox
-        ? renderObject.localToGlobal(Offset.zero).dx
-        : 0.0;
+    // No transform is needed without a fold. A LayoutBuilder can run
+    // before route/sliver ancestors have completed layout, so guard the
+    // window-coordinate conversion and use the root-origin fallback then.
+    final localOriginX = feature == null
+        ? 0.0
+        : _safeLayoutOriginX(context);
     final featureLeft =
         feature == null ? null : feature.bounds.left - localOriginX;
     final featureRight =
@@ -203,5 +205,18 @@ class ZoneSection extends StatelessWidget {
         const SizedBox(height: 12),
       ],
     );
+  }
+}
+
+
+double _safeLayoutOriginX(BuildContext context) {
+  final renderObject = context.findRenderObject();
+  if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
+  try {
+    return renderObject.localToGlobal(Offset.zero).dx;
+  } on FlutterError {
+    return 0.0;
+  } on AssertionError {
+    return 0.0;
   }
 }
