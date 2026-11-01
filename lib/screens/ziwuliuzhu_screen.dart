@@ -112,6 +112,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      anchorPoint: foldAwareRouteAnchorPoint(context),
       initialDate: _selectedDate,
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
