@@ -27,7 +27,7 @@ class AdaptiveMasterDetail extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < compactBreakpoint) {
-          return master;
+          return SizedBox.expand(child: master);
         }
 
         final preferredWidth =
