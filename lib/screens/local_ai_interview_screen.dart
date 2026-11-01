@@ -489,6 +489,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       setState(() {
         _status = refreshedStatus ?? _status;
+        if (_messages.isNotEmpty &&
+            _messages.last.isUser &&
+            _messages.last.text == userLabel) {
+          _messages.removeLast();
+        }
         _sending = false;
         _error = error.message ?? '本地推理失败';
       });
@@ -500,6 +505,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       setState(() {
         _status = refreshedStatus ?? _status;
+        if (_messages.isNotEmpty &&
+            _messages.last.isUser &&
+            _messages.last.text == userLabel) {
+          _messages.removeLast();
+        }
         _sending = false;
         _error = '处理失败：$error';
       });
