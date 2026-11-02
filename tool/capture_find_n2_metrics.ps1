@@ -63,13 +63,13 @@ $metadata = [ordered]@{
     capturedAt = (Get-Date).ToString("o")
     serial = $Serial
     packageName = $packageName
-    model = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.product.model")
-    manufacturer = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.product.manufacturer")
-    androidRelease = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.build.version.release")
-    androidSdk = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.build.version.sdk")
-    screenSize = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "wm", "size")
-    screenDensity = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "wm", "density")
-    fontScale = Invoke-AdbText -Arguments @("-s", $Serial, "shell", "settings", "get", "system", "font_scale")
+    model = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.product.model"))
+    manufacturer = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.product.manufacturer"))
+    androidRelease = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.build.version.release"))
+    androidSdk = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.build.version.sdk"))
+    screenSize = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "wm", "size"))
+    screenDensity = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "wm", "density"))
+    fontScale = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "settings", "get", "system", "font_scale"))
     flutterMetricsFilter = "[WINDOW_METRICS]"
 }
 $metadata | ConvertTo-Json -Depth 4 | Set-Content -Path $metadataPath -Encoding UTF8
