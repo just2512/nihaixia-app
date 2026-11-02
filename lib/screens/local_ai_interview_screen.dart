@@ -1513,9 +1513,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              _importingModel
-                  ? '正在导入并校验文件，请保持应用在前台并确保设备有足够可用空间。'
-                  : '导入时在本机流式复制并校验文件大小与 SHA-256；不会上传模型或请求模型服务。',
+              _loading
+                  ? '首次加载前正在核对约 3.66 GB 模型文件的 SHA-256。请保持应用在前台；当前文件版本验证通过后，同一进程内重新加载不会重复扫描。'
+                  : _importingModel
+                      ? '正在导入并校验文件，请保持应用在前台并确保设备有足够可用空间。'
+                      : '导入时在本机流式复制并校验文件大小与 SHA-256；首次加载前也会核验文件完整性。不会上传模型或请求模型服务。',
               style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.sm),
