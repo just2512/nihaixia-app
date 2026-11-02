@@ -247,7 +247,6 @@ class DiagnosticRules {
       isExplicitCombined: true,
     ),
     CombinedPattern(
-    CombinedPattern(
       meridians: ['厥阴', '少阳'],
       condition: CombinedPatternCondition.jueyinShaoyang,
       formula: '乌梅丸',
@@ -270,7 +269,6 @@ class DiagnosticRules {
       isExplicitCombined: true,
     ),
     // ---- 补充2种合病（测试发现缺失）----
-    CombinedPattern(
     CombinedPattern(
       meridians: ['太阳', '少阴'],
       condition: CombinedPatternCondition.sunShaoyinTwoCold,
