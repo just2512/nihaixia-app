@@ -110,7 +110,7 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
             icon: const Icon(Icons.festival_outlined),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const FestivalLookupScreen()),
+              FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const FestivalLookupScreen()),
             ),
           ),
           IconButton(

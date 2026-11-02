@@ -280,7 +280,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                     if (detail != null) {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        FoldAwareMaterialPageRoute(sourceContext: context, 
                           builder: (_) => AcupointDetailScreen(acupoint: detail),
                         ),
                       );
@@ -391,7 +391,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                         if (detail != null) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            FoldAwareMaterialPageRoute(sourceContext: context, 
                               builder: (_) => AcupointDetailScreen(acupoint: detail),
                             ),
                           );
@@ -641,7 +641,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
             ? () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => AcupointDetailScreen(acupoint: acupoint),
                   ),
                 );

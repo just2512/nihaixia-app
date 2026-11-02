@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/critical_illness_data.dart';
 import '../data/formula_repository.dart';
@@ -29,7 +30,7 @@ class CriticalIllnessListScreen extends StatelessWidget {
             child: InkWell(
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => MarkdownDocScreen(
                     title: item.title,
                     asset: item.asset,
@@ -105,7 +106,7 @@ class CriticalIllnessListScreen extends StatelessWidget {
                                   if (herb != null) {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(
+                                      FoldAwareMaterialPageRoute(sourceContext: context, 
                                         builder: (_) =>
                                             HerbDetailScreen(herb: herb),
                                       ),
@@ -117,7 +118,7 @@ class CriticalIllnessListScreen extends StatelessWidget {
                                   if (formula != null) {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(
+                                      FoldAwareMaterialPageRoute(sourceContext: context, 
                                         builder: (_) => FormulaDetailScreen(
                                             formula: formula),
                                       ),

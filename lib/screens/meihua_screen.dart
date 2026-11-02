@@ -157,7 +157,7 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
         '${_date.day.toString().padLeft(2, '0')}';
     Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(sourceContext: context, 
         builder: (_) => ChartExportPage(
           title: '梅花易数',
           filename: 'meihua_$stamp.png',

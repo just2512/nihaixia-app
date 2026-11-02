@@ -429,7 +429,7 @@ class _MingGuaCalculatorScreenState extends State<MingGuaCalculatorScreen> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    FoldAwareMaterialPageRoute(sourceContext: context, 
                       builder: (_) => YiJingHexagramDetailScreen(hex: hex),
                     ),
                   );
@@ -445,7 +445,7 @@ class _MingGuaCalculatorScreenState extends State<MingGuaCalculatorScreen> {
                         Navigator.pop(context);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          FoldAwareMaterialPageRoute(sourceContext: context, 
                             builder: (_) => MarkdownDocScreen(
                               title: '四柱命卦·${hex.name}',
                               asset: asset,

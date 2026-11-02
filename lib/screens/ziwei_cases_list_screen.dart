@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../data/ziwei_case_data.dart';
 import 'ziwei_doc_screen.dart';
 
@@ -84,7 +85,7 @@ class ZiweiCasesListScreen extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right, size: 18),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ZiweiDocScreen(entry: e)),
+          FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => ZiweiDocScreen(entry: e)),
         ),
       ),
     );

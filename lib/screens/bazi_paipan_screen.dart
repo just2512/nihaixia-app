@@ -155,7 +155,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
         '${_day.toString().padLeft(2, '0')}';
     Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(sourceContext: context, 
         builder: (_) => ChartExportPage(
           title: '八字排盘',
           filename: 'bazi_$stamp.png',

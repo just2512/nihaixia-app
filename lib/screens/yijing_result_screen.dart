@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../engine/yijing_engine.dart';
 import 'yijing_detail_screen.dart';
 
@@ -31,7 +32,7 @@ class YiJingResultScreen extends StatelessWidget {
             body: '「${cast.primary.judgement}」',
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
+              FoldAwareMaterialPageRoute(sourceContext: context, 
                 builder: (_) => YiJingHexagramDetailScreen(
                     hex: cast.primary, highlightLine: cast.moving),
               ),
@@ -88,7 +89,7 @@ class YiJingResultScreen extends StatelessWidget {
               body: '「${cast.changed!.judgement}」',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => YiJingHexagramDetailScreen(hex: cast.changed!),
                 ),
               ),
@@ -103,7 +104,7 @@ class YiJingResultScreen extends StatelessWidget {
               body: '「${cast.nuclear!.judgement}」',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => YiJingHexagramDetailScreen(hex: cast.nuclear!),
                 ),
               ),

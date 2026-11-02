@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -132,7 +133,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                         if (context.mounted) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            FoldAwareMaterialPageRoute(sourceContext: context, 
                               builder: (_) => FormulaDetailScreen(formula: f),
                             ),
                           );
@@ -142,7 +143,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                         if (context.mounted) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            FoldAwareMaterialPageRoute(sourceContext: context, 
                               builder: (_) => HerbDetailScreen(herb: h),
                             ),
                           );
@@ -156,7 +157,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                             if (context.mounted) {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                FoldAwareMaterialPageRoute(sourceContext: context, 
                                   builder: (_) =>
                                       AcupointDetailScreen(acupoint: a),
                                 ),
@@ -170,7 +171,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                             if (context.mounted) {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                FoldAwareMaterialPageRoute(sourceContext: context, 
                                   builder: (_) =>
                                       FormulaDetailScreen(formula: f),
                                 ),
@@ -181,7 +182,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                             if (context.mounted) {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                FoldAwareMaterialPageRoute(sourceContext: context, 
                                   builder: (_) => HerbDetailScreen(herb: h),
                                 ),
                               );
@@ -270,7 +271,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
+              FoldAwareMaterialPageRoute(sourceContext: context, 
                 builder: (_) => MedicalCaseDetailScreen(
                   c: other,
                   allCases: widget.allCases,

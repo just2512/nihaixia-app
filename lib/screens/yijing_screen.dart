@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../data/yijing_data.dart';
 import '../engine/yijing_engine.dart';
 import 'yijing_detail_screen.dart';
@@ -164,7 +165,7 @@ class _YiJingScreenState extends State<YiJingScreen> {
   void _openResult(CastResult cast) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => YiJingResultScreen(cast: cast)),
+      FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => YiJingResultScreen(cast: cast)),
     );
   }
 
@@ -401,7 +402,7 @@ class _YiJingScreenState extends State<YiJingScreen> {
           child: InkWell(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
+              FoldAwareMaterialPageRoute(sourceContext: context, 
                 builder: (_) => YiJingHexagramDetailScreen(hex: h),
               ),
             ),
@@ -454,7 +455,7 @@ Widget _buildMingGuaTab(BuildContext context) {
           child: FilledButton.icon(
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(
+              FoldAwareMaterialPageRoute(sourceContext: context, 
                 builder: (_) => const MingGuaCalculatorScreen(),
               ),
             ),
@@ -474,7 +475,7 @@ Widget _buildMingGuaTab(BuildContext context) {
           child: OutlinedButton.icon(
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MingGuaLibraryScreen()),
+              FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const MingGuaLibraryScreen()),
             ),
             icon: const Icon(Icons.menu_book_outlined),
             label: const Text('浏览讲义'),

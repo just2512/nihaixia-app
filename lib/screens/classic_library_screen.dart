@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/classic_lecture_data.dart';
 import 'markdown_doc_screen.dart';
@@ -160,7 +161,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          FoldAwareMaterialPageRoute(sourceContext: context, 
                             builder: (_) => MarkdownDocScreen(
                               title: l.name,
                               asset: l.asset,

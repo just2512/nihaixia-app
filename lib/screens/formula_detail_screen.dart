@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import '../models/formula.dart';
 import '../theme/app_colors.dart';
@@ -182,7 +183,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
         trailing: const Icon(Icons.chevron_right, size: 18),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
+          FoldAwareMaterialPageRoute(sourceContext: context, 
             builder: (_) => MarkdownDocScreen(
               title: lec.name,
               asset: lec.asset,
@@ -281,7 +282,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                   onTap: herb != null
                       ? () => Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            FoldAwareMaterialPageRoute(sourceContext: context, 
                               builder: (_) => HerbDetailScreen(herb: herb),
                             ),
                           )

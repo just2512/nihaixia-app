@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../models/herb.dart';
 import '../theme/app_colors.dart';
 import '../models/bookmark.dart';
@@ -375,7 +376,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                     count: _casesReady ? _relatedCases.length : null,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
                         builder: (_) => HerbRelatedCasesScreen(herb: herb),
                       ),
                     ),
@@ -388,7 +389,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                     count: _relatedCritical.length,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
                         builder: (_) => HerbRelatedCriticalScreen(herb: herb),
                       ),
                     ),
@@ -401,7 +402,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                     count: relatedFormulas.length,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
                         builder: (_) => HerbRelatedFormulasScreen(herb: herb),
                       ),
                     ),

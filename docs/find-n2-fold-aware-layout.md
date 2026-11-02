@@ -83,4 +83,4 @@ Navigator.of(context).push(
 
 路由在构建页面内容时读取来源控件的窗口坐标，并通过 `AdaptiveSinglePane` 将整个页面（包含 AppBar、滚动区和底部操作区）限制在来源控件所在的物理面板。没有上报铰链/折痕时保持普通全宽页面行为。弹窗仍使用 `showFoldAwareDialog`，不应改成页面路由。
 
-当前已迁移：知识页经络/方剂/本草详情、工具首页各工具入口、收藏详情、规则问诊中的方剂/经络详情及设置、医案库统计和医案详情。后续新增全屏页面跳转必须使用该路由，避免直接使用裸 `MaterialPageRoute`。
+当前已将 `lib/screens/` 中盘点到的普通全屏页面跳转统一迁移到该路由，包括知识/工具/收藏、规则问诊、医案、经方本草、针灸、内经、易经、紫微排盘和文档互链。规则问诊的本地 AI 专用子路由保留独立锚点参数（`preferredAnchorPoint`），同样会被约束到来源物理屏。继续新增页面时，必须使用 `FoldAwareMaterialPageRoute`，不要直接使用裸 `MaterialPageRoute`。

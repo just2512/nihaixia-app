@@ -293,7 +293,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             icon: const Icon(Icons.menu_book_outlined),
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ZiweiReferenceScreen()),
+              FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ZiweiReferenceScreen()),
             ),
           ),
         ],
@@ -382,7 +382,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final stamp = DateTime.now().toString().substring(0, 10).replaceAll('-', '');
     Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(sourceContext: context, 
         builder: (_) => ChartExportPage(
           title: '紫微斗数排盘',
           filename: 'ziwei_$stamp.png',
@@ -817,7 +817,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ZiweiDocScreen(entry: e)),
+                    FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => ZiweiDocScreen(entry: e)),
                   ),
                 ),
               ),
@@ -826,7 +826,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               child: TextButton.icon(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const ZiweiCasesListScreen(),
                   ),
                 ),

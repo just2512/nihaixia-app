@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'ziwei_cases_list_screen.dart';
 import '../theme/app_colors.dart';
 
@@ -71,7 +72,7 @@ class ZiweiReferenceScreen extends StatelessWidget {
             child: InkWell(
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ZiweiCasesListScreen()),
+                FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ZiweiCasesListScreen()),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),

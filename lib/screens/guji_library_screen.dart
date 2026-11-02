@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/guji_data.dart';
 import 'markdown_doc_screen.dart';
@@ -64,7 +65,7 @@ class GujiLibraryScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right, size: 20),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => GujiBookScreen(book: book),
                   ),
                 ),
@@ -194,7 +195,7 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
                             const Icon(Icons.chevron_right, size: 18),
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          FoldAwareMaterialPageRoute(sourceContext: context, 
                             builder: (_) => GujiChapterScreen(
                               book: widget.book,
                               chapter: c,

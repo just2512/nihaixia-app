@@ -56,7 +56,7 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
       if (!mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(
+        FoldAwareMaterialPageRoute(sourceContext: context, 
           builder: (_) => ZiweiChartScreen(
             initialSolar: null,
             initialGender: c.isMale,
@@ -125,7 +125,7 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
     if (choice == 'bazi') {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        FoldAwareMaterialPageRoute(sourceContext: context, 
           builder: (_) => BaZiPaipanScreen(
             initialSolar: solar,
             initialIsMale: c.isMale,
@@ -138,7 +138,7 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(
+        FoldAwareMaterialPageRoute(sourceContext: context, 
           builder: (_) => ZiweiChartScreen(
             initialSolar: solar,
             initialGender: c.isMale,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import 'package:nihaisha_app/data/critical_illness_data.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
@@ -68,7 +69,7 @@ class _HerbRelatedCasesScreenState extends State<HerbRelatedCasesScreen> {
                       trailing: const Icon(Icons.chevron_right, size: 20),
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        FoldAwareMaterialPageRoute(sourceContext: context, 
                           builder: (_) => MedicalCaseDetailScreen(c: c),
                         ),
                       ),
@@ -102,7 +103,7 @@ class HerbRelatedCriticalScreen extends StatelessWidget {
                     trailing: const Icon(Icons.chevron_right, size: 20),
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
                         builder: (_) => MarkdownDocScreen(
                           title: it.title,
                           asset: it.asset,
@@ -141,7 +142,7 @@ class HerbRelatedFormulasScreen extends StatelessWidget {
                     trailing: const Icon(Icons.chevron_right, size: 20),
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      FoldAwareMaterialPageRoute(sourceContext: context, 
                         builder: (_) => FormulaDetailScreen(formula: f),
                       ),
                     ),

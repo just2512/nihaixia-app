@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import '../engine/diagnostic_rules.dart';
 import '../data/formula_repository.dart';
@@ -36,7 +37,7 @@ class MeridianDetailScreen extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ChatScreen()),
+                FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ChatScreen()),
               );
             },
             tooltip: '六经辨证',
@@ -220,7 +221,7 @@ class MeridianDetailScreen extends StatelessWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          FoldAwareMaterialPageRoute(sourceContext: context, 
                             builder: (_) => FormulaDetailScreen(formula: f),
                           ),
                         );

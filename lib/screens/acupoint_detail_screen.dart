@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../models/acupoint_detail.dart';
 import '../data/acupoint_repository.dart';
 import '../data/acupuncture_repository.dart';
@@ -421,7 +422,7 @@ class AcupointDetailScreen extends StatelessWidget {
           ? null
           : () {
               Navigator.of(context).push(
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => AcupointDetailScreen(acupoint: detail),
                 ),
               );

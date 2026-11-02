@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../data/yijing_data.dart';
 import '../data/yijing_lecture_data.dart';
 import '../data/minggua_data.dart';
@@ -135,7 +136,7 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => MarkdownDocScreen(
                       title: '第${hex.seq}卦 · ${hex.name} · 倪师《人间道》',
                       asset: asset,
@@ -163,7 +164,7 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => MarkdownDocScreen(
                       title: '四柱命卦·${hex.name}',
                       asset: mgAsset,

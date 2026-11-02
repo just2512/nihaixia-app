@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/neijing_data.dart';
 import '../widgets/keep_alive_tab.dart';
@@ -28,7 +29,7 @@ class NeijingKnowledgeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const NeijingEntriesScreen(),
                   ),
                 );
@@ -40,7 +41,7 @@ class NeijingKnowledgeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const NeijingLibraryScreen(),
                   ),
                 );
@@ -52,7 +53,7 @@ class NeijingKnowledgeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const NeijingSearchScreen(),
                   ),
                 );
@@ -64,7 +65,7 @@ class NeijingKnowledgeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const GujiLibraryScreen(),
                   ),
                 );

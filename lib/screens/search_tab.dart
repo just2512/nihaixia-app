@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
@@ -179,7 +180,7 @@ class _SearchTabState extends State<SearchTab> {
       if (index < 0 || index >= chapters.length) return;
       await Navigator.push(
         context,
-        MaterialPageRoute(
+        FoldAwareMaterialPageRoute(sourceContext: context, 
           builder: (_) => GujiChapterScreen(book: book, chapter: chapters[index]),
         ),
       );
@@ -189,7 +190,7 @@ class _SearchTabState extends State<SearchTab> {
     if (asset == null || !mounted) return;
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(sourceContext: context, 
         builder: (_) => MarkdownDocScreen(
           title: hit.title,
           asset: asset,
@@ -657,7 +658,7 @@ class _SearchTabState extends State<SearchTab> {
             ),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => FormulaDetailScreen(formula: f))),
+              FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => FormulaDetailScreen(formula: f))),
           ),
         )),
         if (!isExpanded && items.length > 15)
@@ -706,7 +707,7 @@ class _SearchTabState extends State<SearchTab> {
             ),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => HerbDetailScreen(herb: h))),
+                FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => HerbDetailScreen(herb: h))),
           ),
         )),
         if (!isExpanded && items.length > 15)
@@ -780,7 +781,7 @@ class _SearchTabState extends State<SearchTab> {
                       onTap: () {
                         final detail = AcupointRepository.findByName(a.name);
                         if (detail != null) {
-                          Navigator.push(context, MaterialPageRoute(
+                          Navigator.push(context, FoldAwareMaterialPageRoute(sourceContext: context, 
                             builder: (_) => AcupointDetailScreen(acupoint: detail)));
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -929,7 +930,7 @@ class _SearchTabState extends State<SearchTab> {
             ),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => AcupointDetailScreen(acupoint: a))),
+              FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => AcupointDetailScreen(acupoint: a))),
           ),
         )),
         if (!isExpanded && items.length > 15)

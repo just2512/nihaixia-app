@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 
 import '../data/classic_lecture_data.dart';
 import 'classic_library_screen.dart';
@@ -76,7 +77,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
   }
 
   void _open(BuildContext context, Widget page) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    Navigator.push(context, FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => page));
   }
 }
 

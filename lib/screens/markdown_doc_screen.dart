@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -201,7 +202,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       if (formula != null && mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          FoldAwareMaterialPageRoute(sourceContext: context, 
               builder: (_) => FormulaDetailScreen(formula: formula)),
         );
       }
@@ -212,7 +213,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       if (herb != null && mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => HerbDetailScreen(herb: herb)),
+          FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => HerbDetailScreen(herb: herb)),
         );
       }
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 
 import '../data/medical_case_data.dart';
@@ -113,7 +114,7 @@ class _MedicalCaseInsightsScreenState extends State<MedicalCaseInsightsScreen> {
                         if (formula != null) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
+                            FoldAwareMaterialPageRoute(sourceContext: context, 
                               builder: (_) =>
                                   FormulaDetailScreen(formula: formula),
                             ),

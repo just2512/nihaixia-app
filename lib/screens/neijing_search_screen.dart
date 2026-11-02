@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
 
@@ -229,7 +230,7 @@ class _NeijingSearchScreenState extends State<NeijingSearchScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          FoldAwareMaterialPageRoute(sourceContext: context, 
                             builder: (_) => MarkdownDocScreen(
                               title: r.doc.name,
                               asset: r.doc.asset,

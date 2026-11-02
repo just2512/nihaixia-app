@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../data/minggua_data.dart';
 import 'markdown_doc_screen.dart';
 
@@ -61,7 +62,7 @@ class MingGuaLibraryScreen extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right, size: 18),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
+          FoldAwareMaterialPageRoute(sourceContext: context, 
             builder: (_) => MarkdownDocScreen(
               title: e.seq == 0 ? '八字的排列方法' : '四柱命卦·${e.title}',
               asset: e.asset,
