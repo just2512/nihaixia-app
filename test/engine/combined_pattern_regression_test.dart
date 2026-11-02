@@ -154,4 +154,76 @@ void main() {
           CombinedPatternCondition.threeYangSleep);
     });
   });
+
+  group('合病检测器可达性矩阵', () {
+    final cases = <({String name, String primary, Map<String, dynamic> answers, String expected})>[
+      (name: '太阳少阳基础型', primary: '太阳', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.sunShaoyangBase),
+      (name: '太阴少阴基础型', primary: '太阴', answers: {'drowsy': true}, expected: CombinedPatternCondition.taiyinShaoyinBase),
+      (name: '太阳阳明呕吐型', primary: '太阳', answers: {'constipated': true, 'vomiting': true}, expected: CombinedPatternCondition.sunYangmingVomit),
+      (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
+      (name: '太阳少阳下利型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunShaoyangDiarrhea),
+      (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
+      (name: '少阳阳明潮热型', primary: '少阳', answers: {'constipated': true, 'tidal_fever': true}, expected: CombinedPatternCondition.shaoyangYangmingTidalFever),
+      (name: '阳明少阴急下型', primary: '阳明', answers: {'drowsy': true}, expected: CombinedPatternCondition.yangmingShaoyinUrgent),
+      (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
+      (name: '太阳阳明未解型', primary: '太阳', answers: {'thirsty': true, 'hot_palms_soles': true, 'has_sweat': true}, expected: CombinedPatternCondition.sunYangmingUnresolved),
+      (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
+      (name: '太阳阳明里热型', primary: '太阳', answers: {'constipated': true, 'irritable': true, 'has_sweat': false}, expected: CombinedPatternCondition.sunYangmingInteriorHeat),
+      (name: '太阳少阴两感型', primary: '太阳', answers: {'drowsy': true}, expected: CombinedPatternCondition.sunShaoyinTwoCold),
+      (name: '少阳太阴型', primary: '少阳', answers: {'diarrhea': true, 'abdominal_pain': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
+      (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true}, expected: CombinedPatternCondition.sunTaiyin),
+      (name: '太阳阳明下利热型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunYangmingDiarrheaHeat),
+    ];
+
+    for (final scenario in cases) {
+      test('${scenario.name} 能生成精确条件键', () {
+        final engine = DiagnosticEngine();
+        engine.restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: scenario.primary,
+          answers: scenario.answers,
+          tenQuestionIndex: 0,
+        ));
+
+        engine.diagnose();
+        expect(engine.combinedPatternCondition, scenario.expected);
+      });
+    }
+
+    test('规则表中的三条基础键没有检测器赋值路径，不得被误报为可达', () {
+      final unreachable = <String>{
+        CombinedPatternCondition.sunYangmingBase,
+        CombinedPatternCondition.shaoyangYangmingBase,
+        CombinedPatternCondition.threeYangBase,
+      };
+      expect(cases.map((scenario) => scenario.expected).toSet().intersection(unreachable), isEmpty);
+    });
+  });
+
+  group('合病条件遇到证据闸时安全拒绝', () {
+    test('检测器产生合病条件但有效证据不足时，不输出合病方剂', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'has_sweat': false,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition, CombinedPatternCondition.sunShaoyangBase);
+      expect(result, isNotNull);
+      expect(result!.pattern, '辨证依据不足');
+      expect(result.formula, isEmpty);
+      expect(result.prescription, isNull);
+      expect(result.combinedMeridian, isNull);
+      expect(result.recommendConsult, isTrue);
+    });
+  });
+
 }
