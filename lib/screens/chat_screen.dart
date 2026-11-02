@@ -71,6 +71,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _selectedTongueCoating;
   String? _selectedTongueShape;
   String? _selectedPulse;
+  String? _selectedPulseSecondary;
 
   @override
   void initState() {
@@ -163,6 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _selectedTongueCoating = null;
     _selectedTongueShape = null;
     _selectedPulse = null;
+    _selectedPulseSecondary = null;
 
     showFoldAwareDialog(
       context: context,
@@ -212,7 +214,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 12),
-                const Text('脉象', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('主脉象', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 6,
@@ -225,6 +227,26 @@ class _ChatScreenState extends State<ChatScreen> {
                       onSelected: (s) {
                         setDialogState(() {
                           _selectedPulse = s ? opt : null;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                const Text('兼脉（选填；只有同时填写两项才识别组合脉）',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _engine.getPulseOptions().map((opt) {
+                    final selected = _selectedPulseSecondary == opt;
+                    return FilterChip(
+                      label: Text(opt),
+                      selected: selected,
+                      onSelected: (s) {
+                        setDialogState(() {
+                          _selectedPulseSecondary = s ? opt : null;
                         });
                       },
                     );
@@ -246,9 +268,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (_selectedTongueCoating != null) label += '苔${_selectedTongueCoating!} ';
                 if (_selectedTongueShape != null) label += '形${_selectedTongueShape!} ';
                 if (_selectedPulse != null) label += '脉${_selectedPulse!}';
+                if (_selectedPulseSecondary != null) label += '兼脉${_selectedPulseSecondary!}';
                 if (_selectedTongueCoating == null &&
                     _selectedTongueShape == null &&
-                    _selectedPulse == null) {
+                    _selectedPulse == null &&
+                    _selectedPulseSecondary == null) {
                   label = '舌诊脉诊：未选择';
                 }
                 _addUserMessage(label);
@@ -256,6 +280,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   tongueCoating: _selectedTongueCoating,
                   tongueShape: _selectedTongueShape,
                   pulseType: _selectedPulse,
+                  pulseTypeSecondary: _selectedPulseSecondary,
                 );
                 _showTenQuestion(0);
               },
@@ -377,6 +402,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// 寒热真假选填结束后，进入正式诊断（原 _afterTenQuestions 的 diagnose 逻辑）。
   void _proceedAfterZhenJia() {
+    final pulseQuestions = _engine.getPulseTongueFollowUpQuestions();
+    if (pulseQuestions.isNotEmpty) {
+      _addBotMessage('脉象、舌象与问诊信息存在待核对项，先补充必要信息：');
+      _showFollowUpQuestion(pulseQuestions, 0);
+      return;
+    }
     final result = _engine.diagnose();
     if (result != null) {
       _addBotMessage('好，十问已经完成了。让我根据你的情况来分析...\n\n'
@@ -505,6 +536,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (result.tongueCoating != null) resultText += '苔${result.tongueCoating} ';
       if (result.tongueShape != null) resultText += '形${result.tongueShape} ';
       if (result.pulseType != null) resultText += '脉${result.pulseType}';
+      if (result.pulseTypeSecondary != null) resultText += '兼脉${result.pulseTypeSecondary}';
       resultText += '\n';
     }
 
@@ -584,7 +616,21 @@ class _ChatScreenState extends State<ChatScreen> {
     if (isDetailed) {
     // P0-2: 脉舌矛盾警告
     if (result.pulseTongueContradiction != null) {
-      _addBotMessage('脉舌矛盾\n${result.pulseTongueContradiction}', isResult: false);
+      _addBotMessage('脉舌交叉核验\n${result.pulseTongueContradiction}', isResult: false);
+    }
+    final crossCheck = result.pulseTongueAssessment;
+    if (crossCheck != null) {
+      final lines = <String>['状态：${crossCheck.status}'];
+      if (crossCheck.supportingEvidence.isNotEmpty) {
+        lines.add('支持线索：${crossCheck.supportingEvidence.join('、')}');
+      }
+      if (crossCheck.contradictingEvidence.isNotEmpty) {
+        lines.add('反证线索：${crossCheck.contradictingEvidence.join('、')}');
+      }
+      if (crossCheck.missingEvidence.isNotEmpty) {
+        lines.add('缺失线索：${crossCheck.missingEvidence.join('、')}');
+      }
+      _addBotMessage(lines.join('\n'), isResult: false);
     }
 
     // P0-1: 真寒假热/真热假寒
@@ -869,6 +915,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (result.tongueCoating != null) text += '苔${result.tongueCoating} ';
       if (result.tongueShape != null) text += '形${result.tongueShape} ';
       if (result.pulseType != null) text += '脉${result.pulseType}';
+      if (result.pulseTypeSecondary != null) text += '兼脉${result.pulseTypeSecondary}';
       text += '\n';
     }
     text += '\n${result.patternDetail}\n\n';

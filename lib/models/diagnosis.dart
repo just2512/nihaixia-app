@@ -88,6 +88,7 @@ class DiagnosisResult {
   final String? tongueCoating;
   final String? tongueShape;
   final String? pulseType;
+  final String? pulseTypeSecondary;
   final Map<String, List<String>>? careAdvice;
   final DifferentialDiagnosisResult? differential;
   final FormulaPrescription? prescription;
@@ -113,6 +114,7 @@ class DiagnosisResult {
   final String? transmissionWarning;
   // 脉舌矛盾警告
   final String? pulseTongueContradiction;
+  final PulseTongueAssessment? pulseTongueAssessment;
   // 证据不足，建议面诊（P0-2）
   final bool recommendConsult;
 
@@ -130,6 +132,7 @@ class DiagnosisResult {
     this.tongueCoating,
     this.tongueShape,
     this.pulseType,
+    this.pulseTypeSecondary,
     this.careAdvice,
     this.differential,
     this.prescription,
@@ -144,6 +147,7 @@ class DiagnosisResult {
     this.transmission,
     this.transmissionWarning,
     this.pulseTongueContradiction,
+    this.pulseTongueAssessment,
     this.recommendConsult = false,
   });
 
@@ -276,6 +280,25 @@ class MeridianTransmission {
 }
 
 // ==================== P1-4: 组合脉象 ====================
+
+/// Structured, non-diagnostic cross-check of pulse, tongue and interview evidence.
+class PulseTongueAssessment {
+  final String status;
+  final List<String> supportingEvidence;
+  final List<String> contradictingEvidence;
+  final List<String> missingEvidence;
+  final List<String> followUpQuestionKeys;
+  final List<String> followUpQuestions;
+
+  const PulseTongueAssessment({
+    required this.status,
+    this.supportingEvidence = const [],
+    this.contradictingEvidence = const [],
+    this.missingEvidence = const [],
+    this.followUpQuestionKeys = const [],
+    this.followUpQuestions = const [],
+  });
+}
 
 class PulseCombination {
   final String pulse1;

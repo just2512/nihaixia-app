@@ -18,6 +18,7 @@ class EngineSnapshot {
   final String? tongueCoating;
   final String? tongueShape;
   final String? pulseType;
+  final String? pulseTypeSecondary;
   final String? gender;
   final Map<String, int> qAnswers;
   final Set<String> extSymptoms;
@@ -34,6 +35,7 @@ class EngineSnapshot {
     this.tongueCoating,
     this.tongueShape,
     this.pulseType,
+    this.pulseTypeSecondary,
     this.gender,
     this.qAnswers = const {},
     this.extSymptoms = const {},
@@ -52,6 +54,7 @@ class DiagnosticEngine {
   String? _tongueCoating;
   String? _tongueShape;
   String? _pulseType;
+  String? _pulseTypeSecondary;
   String? _gender; // 'male' or 'female'
 
   // —— 扁平 Q1–Q12 规则引擎接入 ——
@@ -63,6 +66,7 @@ class DiagnosticEngine {
   DiagnosticStage get stage => _stage;
   List<String> get selectedSymptoms => List.unmodifiable(_selectedSymptoms);
   int get tenQuestionIndex => _tenQuestionIndex;
+  String? get pulseTypeSecondary => _pulseTypeSecondary;
   String? get combinedPatternCondition => _combinedPatternCondition;
 
   /// 症状匹配（子串语义）：UI 选项文本为「触发词+证候描述（→方剂）」复合串，
@@ -82,6 +86,7 @@ class DiagnosticEngine {
     _tongueCoating = null;
     _tongueShape = null;
     _pulseType = null;
+    _pulseTypeSecondary = null;
     _gender = null;
     _qAnswers = {};
     _extSymptoms = {};
@@ -102,6 +107,7 @@ class DiagnosticEngine {
       tongueCoating: _tongueCoating,
       tongueShape: _tongueShape,
       pulseType: _pulseType,
+      pulseTypeSecondary: _pulseTypeSecondary,
       gender: _gender,
       qAnswers: Map.from(_qAnswers),
       extSymptoms: Set.from(_extSymptoms),
@@ -120,6 +126,7 @@ class DiagnosticEngine {
     _tongueCoating = snapshot.tongueCoating;
     _tongueShape = snapshot.tongueShape;
     _pulseType = snapshot.pulseType;
+    _pulseTypeSecondary = snapshot.pulseTypeSecondary;
     _gender = snapshot.gender;
     _qAnswers = Map.from(snapshot.qAnswers);
     _extSymptoms = Set.from(snapshot.extSymptoms);
@@ -288,15 +295,27 @@ class DiagnosticEngine {
     String? tongueCoating,
     String? tongueShape,
     String? pulseType,
+    String? pulseTypeSecondary,
   }) {
     _tongueCoating = tongueCoating;
     _tongueShape = tongueShape;
-    _pulseType = pulseType;
+    _pulseType = DiagnosticRules.canonicalPulse(pulseType);
+    _pulseTypeSecondary = DiagnosticRules.canonicalPulse(pulseTypeSecondary);
 
-    // 将舌脉数据纳入答案并调整经络方向
-    if (tongueCoating != null) {
+    // Rebuild derived tongue flags so re-entry cannot retain stale evidence.
+    for (final key in [
+      'tongue_red_coated_yellow',
+      'tongue_pale_coated_white',
+      'tongue_purple',
+      'tongue_swollen',
+    ]) {
+      _answers.remove(key);
+    }
+
+    if (tongueCoating == null) {
+      _answers.remove('tongue_coating');
+    } else {
       _answers['tongue_coating'] = tongueCoating;
-      // 设置布尔标志供 _decideMeridianDirection 使用
       if (tongueCoating == '黄厚' || tongueCoating == '黄薄') {
         _answers['tongue_red_coated_yellow'] = true;
       }
@@ -305,9 +324,11 @@ class DiagnosticEngine {
       }
       _adjustMeridianByTongue('tongue_coating', tongueCoating);
     }
-    if (tongueShape != null) {
+
+    if (tongueShape == null) {
+      _answers.remove('tongue_shape');
+    } else {
       _answers['tongue_shape'] = tongueShape;
-      // 设置布尔标志供 _decideMeridianDirection 使用
       if (tongueShape == '淡白') {
         _answers['tongue_pale_coated_white'] = true;
       }
@@ -322,9 +343,17 @@ class DiagnosticEngine {
       }
       _adjustMeridianByTongue('tongue_shape', tongueShape);
     }
-    if (pulseType != null) {
-      _answers['pulse_type'] = pulseType;
-      _adjustMeridianByPulse(pulseType);
+
+    if (_pulseType == null) {
+      _answers.remove('pulse_type');
+    } else {
+      _answers['pulse_type'] = _pulseType;
+      _adjustMeridianByPulse(_pulseType!);
+    }
+    if (_pulseTypeSecondary == null) {
+      _answers.remove('pulse_type_secondary');
+    } else {
+      _answers['pulse_type_secondary'] = _pulseTypeSecondary;
     }
 
     _stage = DiagnosticStage.tenQuestions;
@@ -355,39 +384,31 @@ class DiagnosticEngine {
   }
 
   void _adjustMeridianByPulse(String pulse) {
+    final pulseKey = DiagnosticRules.pulseWeightValue(pulse);
     final weights = DiagnosticRules.tonguePulseWeights['pulse'];
     if (weights == null) return;
-    final weight = weights[pulse] ?? 0.0;
+    final weight = weights[pulseKey] ?? 0.0;
     if (weight <= 0.3) return;
 
-    if (pulse == '浮' || pulse == '紧') {
-      // 浮脉/紧脉 → 太阳，但仅当温度模式为 fever_chills（表证）时
-      // chills_no_fever + 浮脉 可见于太阴风水（里虚寒+表虚），不应直接设为太阳
-      if (_meridianDirection == '太阴/少阴' && _answers['temperature'] == 'fever_chills') {
+    if (pulseKey == '浮' || pulseKey == '紧') {
+      if (_meridianDirection == '太阴/少阴' &&
+          _answers['temperature'] == 'fever_chills') {
         _meridianDirection = '太阳';
       }
-    } else if (pulse == '洪') {
-      // 洪脉 → 阳明
+    } else if (pulseKey == '洪') {
       if (_meridianDirection == '太阴/少阴') {
         _meridianDirection = '阳明';
       }
-    } else if (pulse == '弦') {
-      // 弦脉 → 少阳
+    } else if (pulseKey == '弦') {
       if (_meridianDirection == '太阴/少阴') {
         _meridianDirection = '少阳';
       }
-    } else if (pulse == '微' || pulse == '细') {
-      // 微脉/细脉 → 少阴
+    } else if (pulseKey == '微' || pulseKey == '细') {
       if (_meridianDirection == '太阴/少阴') {
         _meridianDirection = '少阴';
       }
-    } else if (pulse == '沉') {
-      // FIX-P0-4: 沉脉不再把已定向的太阳改写为'太阴/少阴'。
-      // 原逻辑在 answerTonguePulse（十问后设脉时）执行会把方向改成'太阴/少阴'，
-      // 而 diagnose() 的 switch 无该 case → 返回 null（新加汤证"发汗后身痛脉沉"直接无结果）。
-      // 表寒+沉脉的少阴兼表判断已由 _decideMeridianDirection L422（fever_chills+脉沉）负责。
-      // 保留：仅当方向仍为'太阴/少阴'（未定）时，沉脉不做改写。
     }
+    // 沉/沉紧只作为里证线索，不反向覆盖已经确定的六经方向。
   }
 
   void answerTenQuestion(String questionKey, String answer) {
@@ -488,14 +509,7 @@ class DiagnosticEngine {
       // 选项含白话描述（如「浮（表证）·轻按就摸到」），提取核心脉名供
       // 定经/分经的精确匹配（_pulseType == '细' 等）。选「没摸过/不清楚」
       // 时保持 null（视为未提供脉象）；若舌脉步骤已填过脉则保留原值。
-      const pulseNames = ['浮', '沉', '迟', '数', '滑', '涩', '弦', '紧', '细', '微', '弱', '缓', '结', '代'];
-      String? norm;
-      for (final n in pulseNames) {
-        if (answer.startsWith(n)) {
-          norm = n;
-          break;
-        }
-      }
+      final norm = DiagnosticRules.canonicalPulse(answer);
       if (norm != null) {
         _pulseType = norm;
         _answers['pulse_type'] = norm;
@@ -1000,6 +1014,46 @@ class DiagnosticEngine {
       _answers['alternating_hot_cold'] = answer.contains('时冷时热');
       _answers['hand_foot_cold_pulse_fine'] = answer.contains('脉细欲绝');
     }
+    if (questionKey == 'pulse_cross_drink') {
+      _answers['no_thirst'] = answer == '不渴';
+      _answers['thirsty'] = answer.contains('口渴');
+      _answers['hot_drink'] = answer.contains('热饮');
+      _answers['cold_drink'] = answer.contains('冷饮');
+      _answers['thirst_strong'] = answer.contains('口渴') && answer.contains('冷饮');
+      _answers['thirst_no_drink'] = answer.contains('不想喝');
+    }
+    if (questionKey == 'pulse_cross_urine') {
+      _answers['urine_clear'] = answer.contains('清长');
+      _answers['urine_short'] = answer.contains('短赤');
+      _answers['urine_difficult'] = answer.contains('不利');
+    }
+    if (questionKey == 'pulse_cross_limbs') {
+      _answers['cold_limbs'] = answer.contains('偏冷');
+      _answers['warm_limbs'] = answer.contains('温热');
+      _answers['hot_palms_soles'] = answer.contains('温热');
+    }
+    if (questionKey == 'pulse_cross_surface') {
+      _answers['chills'] = answer.contains('发热恶寒');
+      _answers['headache'] = answer.contains('头痛');
+      _answers['neck_stiff'] = answer.contains('项背强');
+      _answers['no_chills'] = answer == '都没有';
+    }
+    if (questionKey == 'pulse_cross_interior') {
+      _answers['constipated'] = answer.contains('便秘');
+      _answers['diarrhea'] = answer.contains('下利');
+      _answers['abdomen_pain_relief'] = answer.contains('腹痛');
+    }
+    if (questionKey == 'pulse_cross_shaoyang') {
+      _answers['bitter_mouth'] = answer.contains('口苦');
+      _answers['dry_throat'] = answer.contains('咽干');
+      _answers['alternating_chills'] = answer.contains('往来寒热');
+    }
+    if (questionKey == 'pulse_cross_taiyin') {
+      _answers['diarrhea'] = answer.contains('下利');
+      _answers['abdomen_pain_relief'] = answer.contains('腹痛');
+      _answers['no_thirst'] = answer.contains('不渴');
+      _answers['poor_appetite'] = answer.contains('食欲差');
+    }
   }
 
   // ==================== 症状权重计算 ====================
@@ -1153,62 +1207,207 @@ class DiagnosticEngine {
 
   // ==================== P0-2: 脉舌矛盾检测（以舌为准原则） ====================
 
+  PulseTongueAssessment? _buildPulseTongueAssessment() {
+    final pulse = _pulseType;
+    if (pulse == null || (_tongueCoating == null && _tongueShape == null)) {
+      return null;
+    }
+
+    String? conflictKey;
+    if (pulse == '数' && (_tongueShape == '淡白' || _tongueShape == '淡红')) {
+      conflictKey = 'fast_pulse_pale_tongue';
+    } else if (pulse == '迟' &&
+        (_tongueShape == '红' || _tongueShape == '绛紫')) {
+      conflictKey = 'slow_pulse_red_tongue';
+    } else if (pulse == '浮' &&
+        (_tongueCoating == '白厚' || _tongueCoating == '黄厚')) {
+      conflictKey = 'floating_pulse_thick_coat';
+    } else if ((pulse == '沉' || pulse == '沉紧') && _tongueCoating == '薄白') {
+      conflictKey = 'sunken_pulse_thin_white_coat';
+    } else if (pulse == '弦' &&
+        (_tongueShape == '淡白' || _tongueShape == '淡红') &&
+        _tongueCoating == '白厚') {
+      conflictKey = 'wiry_pulse_pale_thick_tongue';
+    }
+    if (conflictKey == null) return null;
+
+    final supporting = <String>[];
+    final contradicting = <String>[];
+    final missing = <String>[];
+    final questionKeys = <String>[];
+
+    void addIf(List<String> target, String key, String label) {
+      if (_answers[key] == true) target.add(label);
+    }
+
+    bool hasAnyAnswer(List<String> keys) =>
+        keys.any((key) => _answers.containsKey(key));
+
+    void askIfMissing(List<String> evidenceKeys, String questionKey, String label) {
+      if (!hasAnyAnswer(evidenceKeys)) {
+        missing.add(label);
+        questionKeys.add(questionKey);
+      }
+    }
+
+    switch (conflictKey) {
+      case 'fast_pulse_pale_tongue':
+        addIf(supporting, 'cold_limbs', '四肢偏冷');
+        addIf(supporting, 'urine_clear', '小便清长');
+        addIf(supporting, 'hot_drink', '喜热饮');
+        addIf(supporting, 'thirst_no_drink', '口渴但不欲饮');
+        addIf(contradicting, 'thirst_strong', '明显口渴喜冷饮');
+        addIf(contradicting, 'cold_drink', '喜冷饮');
+        addIf(contradicting, 'hot_palms_soles', '手足心热');
+        askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink', '饮水偏好');
+        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short'], 'pulse_cross_urine', '小便情况');
+        askIfMissing(['cold_limbs', 'warm_limbs'], 'pulse_cross_limbs', '四肢温度');
+        break;
+      case 'slow_pulse_red_tongue':
+        addIf(supporting, 'thirst_strong', '明显口渴');
+        addIf(supporting, 'cold_drink', '喜冷饮');
+        addIf(supporting, 'hot_palms_soles', '手足心热');
+        addIf(supporting, 'urine_short', '小便短赤');
+        addIf(contradicting, 'cold_limbs', '四肢偏冷');
+        addIf(contradicting, 'urine_clear', '小便清长');
+        addIf(contradicting, 'hot_drink', '喜热饮');
+        askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink', '饮水偏好');
+        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short'], 'pulse_cross_urine', '小便情况');
+        askIfMissing(['cold_limbs', 'warm_limbs'], 'pulse_cross_limbs', '四肢温度');
+        break;
+      case 'floating_pulse_thick_coat':
+        addIf(supporting, 'chills', '有恶寒');
+        addIf(supporting, 'headache', '有头痛');
+        addIf(supporting, 'neck_stiff', '有项背强');
+        if (_answers['temperature'] == 'fever_chills') supporting.add('发热恶寒');
+        addIf(contradicting, 'constipated', '便秘');
+        addIf(contradicting, 'diarrhea', '下利');
+        addIf(contradicting, 'thirst_strong', '明显口渴');
+        addIf(contradicting, 'hot_palms_soles', '手足心热');
+        askIfMissing(['chills', 'headache', 'neck_stiff', 'temperature'], 'pulse_cross_surface', '表证线索');
+        askIfMissing(['constipated', 'diarrhea', 'abdomen_pain_press', 'abdomen_pain_relief'], 'pulse_cross_interior', '腹部与大便情况');
+        break;
+      case 'sunken_pulse_thin_white_coat':
+        addIf(supporting, 'cold_limbs', '四肢偏冷');
+        addIf(supporting, 'diarrhea', '下利');
+        addIf(supporting, 'urine_clear', '小便清长');
+        addIf(supporting, 'abdomen_pain_relief', '腹痛喜按');
+        if (_answers['temperature'] == 'fever_chills') contradicting.add('发热恶寒');
+        addIf(contradicting, 'headache', '头痛');
+        addIf(contradicting, 'neck_stiff', '项背强');
+        askIfMissing(['cold_limbs', 'diarrhea', 'urine_clear', 'abdomen_pain_relief'], 'pulse_cross_interior', '里证线索');
+        askIfMissing(['temperature', 'chills', 'headache', 'neck_stiff'], 'pulse_cross_surface', '表证线索');
+        break;
+      case 'wiry_pulse_pale_thick_tongue':
+        addIf(supporting, 'bitter_mouth', '口苦');
+        addIf(supporting, 'dry_throat', '咽干');
+        addIf(supporting, 'alternating_chills', '往来寒热');
+        addIf(contradicting, 'diarrhea', '下利');
+        addIf(contradicting, 'abdomen_pain_relief', '腹痛喜按');
+        addIf(contradicting, 'no_thirst', '不渴');
+        askIfMissing(['bitter_mouth', 'dry_throat', 'alternating_chills'], 'pulse_cross_shaoyang', '少阳问诊线索');
+        askIfMissing(['diarrhea', 'abdomen_pain_relief', 'no_thirst', 'poor_appetite'], 'pulse_cross_taiyin', '太阴问诊线索');
+        break;
+    }
+
+    final status = questionKeys.isNotEmpty
+        ? '待补充问诊'
+        : supporting.isNotEmpty && contradicting.isNotEmpty
+            ? '证据混合'
+            : '脉舌冲突未解决';
+
+    const questionText = <String, String>{
+      'pulse_cross_drink': '口渴与饮水偏好如何？',
+      'pulse_cross_urine': '小便颜色和排尿情况如何？',
+      'pulse_cross_limbs': '手足温度如何？',
+      'pulse_cross_surface': '是否有发热恶寒、头痛或项背强等表证线索？',
+      'pulse_cross_interior': '腹部与大便情况如何？',
+      'pulse_cross_shaoyang': '是否有口苦、咽干或往来寒热？',
+      'pulse_cross_taiyin': '是否有下利、腹痛喜按或食欲差？',
+    };
+
+    return PulseTongueAssessment(
+      status: status,
+      supportingEvidence: supporting,
+      contradictingEvidence: contradicting,
+      missingEvidence: missing,
+      followUpQuestionKeys: questionKeys,
+      followUpQuestions: questionKeys.map((key) => questionText[key]!).toList(),
+    );
+  }
+
   String? _detectPulseTongueContradiction() {
-    if (_pulseType == null || _tongueCoating == null && _tongueShape == null) return null;
+    final assessment = _buildPulseTongueAssessment();
+    if (assessment == null) return null;
+    final supports = assessment.supportingEvidence.isEmpty
+        ? '暂未发现支持证据'
+        : '支持线索：${assessment.supportingEvidence.join('、')}';
+    final contradicts = assessment.contradictingEvidence.isEmpty
+        ? '暂未发现反证'
+        : '反证线索：${assessment.contradictingEvidence.join('、')}';
+    return '脉舌信息不一致（${assessment.status}）。$supports；$contradicts。当前不自动以脉或舌单方优先。';
+  }
 
-    // 核心原则：脉舌矛盾时以舌为准——舌象反映脏腑本质，脉象受干扰因素多
-    String? warning;
-    String? suggestion;
-
-    // 数脉+淡白舌 → 真寒假热（以舌为准→寒）
-    if (_pulseType == '数' && (_tongueShape == '淡白' || _tongueShape == '淡红')) {
-      warning = '脉数（热象）但舌淡白（虚寒），脉舌矛盾';
-      suggestion = '以舌为准→真寒假热可能。查：渴喜热饮？小便清长？四肢厥冷？按之脉无力？';
+  List<FollowUpQuestion> getPulseTongueFollowUpQuestions() {
+    final assessment = _buildPulseTongueAssessment();
+    if (assessment == null || assessment.followUpQuestionKeys.isEmpty) {
+      return const [];
     }
-    // 迟脉+红舌 → 真热假寒（以舌为准→热）
-    else if (_pulseType == '迟' && (_tongueShape == '红' || _tongueShape == '绛紫')) {
-      warning = '脉迟（寒象）但舌红（热象），脉舌矛盾';
-      suggestion = '以舌为准→真热假寒可能。查：胸腹热？渴喜冷饮？小便黄赤？';
-    }
-    // 浮脉+厚腻苔 → 里证为主（以舌为准→里）
-    else if ((_pulseType == '浮') && (_tongueCoating == '白厚' || _tongueCoating == '黄厚')) {
-      warning = '脉浮（表证）但苔厚腻（里证），脉舌矛盾';
-      suggestion = '以舌为准→里证为主，脉浮为假象。可能为真寒假热。';
-    }
-    // 沉脉+薄白苔 → 可能表证未解
-    else if (_pulseType == '沉' && _tongueCoating == '薄白') {
-      warning = '脉沉（里证）但苔薄白（正常/表证），脉舌不一致';
-      suggestion = '可能为里证初起或表证已解，需结合问诊判断。';
-    }
-    // 弦脉+淡白苔 → 少阳兼太阴
-    else if (_pulseType == '弦' && (_tongueShape == '淡白' || _tongueShape == '淡红') && _tongueCoating == '白厚') {
-      warning = '脉弦（少阳）但舌淡苔白（太阴虚寒），寒热矛盾';
-      suggestion = '以舌为准→少阳兼太阴虚。柴胡桂枝干姜汤证可能。';
-    }
-
-    if (warning != null) {
-      return '$warning\n$suggestion';
-    }
-
-    // 检查预设的矛盾组合
-    final key = '$_pulseType脉+$_tongueCoating苔';
-    final contradiction = DiagnosticRules.pulseTongueContradictions[key];
-    if (contradiction != null) {
-      return '${contradiction['warning']}\n${contradiction['suggestion']}';
-    }
-
-    return null;
+    const questions = <String, FollowUpQuestion>{
+      'pulse_cross_drink': FollowUpQuestion(
+        key: 'pulse_cross_drink',
+        question: '口渴与饮水偏好如何？',
+        options: ['不渴', '口渴，喜热饮', '口渴，喜冷饮', '口干但不想喝', '不确定'],
+      ),
+      'pulse_cross_urine': FollowUpQuestion(
+        key: 'pulse_cross_urine',
+        question: '小便颜色和排尿情况如何？',
+        options: ['清长色淡', '短赤色深', '排尿不利', '正常', '不清楚'],
+      ),
+      'pulse_cross_limbs': FollowUpQuestion(
+        key: 'pulse_cross_limbs',
+        question: '手足温度如何？',
+        options: ['温热', '偏冷', '冷热不均', '不清楚'],
+      ),
+      'pulse_cross_surface': FollowUpQuestion(
+        key: 'pulse_cross_surface',
+        question: '是否有发热恶寒、头痛或项背强等表证线索？',
+        options: ['有发热恶寒', '有头痛或项背强', '都没有', '不清楚'],
+      ),
+      'pulse_cross_interior': FollowUpQuestion(
+        key: 'pulse_cross_interior',
+        question: '腹部与大便情况如何？',
+        options: ['腹满或便秘', '腹痛或下利', '没有明显异常', '不清楚'],
+      ),
+      'pulse_cross_shaoyang': FollowUpQuestion(
+        key: 'pulse_cross_shaoyang',
+        question: '是否有少阳相关问诊线索？',
+        options: ['口苦咽干', '往来寒热', '两者都有', '都没有', '不清楚'],
+      ),
+      'pulse_cross_taiyin': FollowUpQuestion(
+        key: 'pulse_cross_taiyin',
+        question: '是否有太阴相关问诊线索？',
+        options: ['下利或腹痛喜按', '食欲差或不渴', '两类都有', '都没有', '不清楚'],
+      ),
+    };
+    return assessment.followUpQuestionKeys
+        .map((key) => questions[key])
+        .whereType<FollowUpQuestion>()
+        .toList();
   }
 
   // ==================== P1-4: 组合脉象检测 ====================
 
   PulseCombination? _detectPulseCombination() {
-    if (_pulseType == null) return null;
-    for (final pc in DiagnosticRules.pulseCombinations) {
-      if (_pulseType == pc.pulse1 || _pulseType == pc.pulse2) {
-        // 如果脉象匹配组合中的任一脉，返回该组合
-        if (_pulseType == pc.pulse1) return pc;
-      }
+    final primary = _pulseType;
+    final secondary = _pulseTypeSecondary;
+    if (primary == null || secondary == null) return null;
+    for (final combination in DiagnosticRules.pulseCombinations) {
+      final matchesForward =
+          primary == combination.pulse1 && secondary == combination.pulse2;
+      final matchesReverse =
+          primary == combination.pulse2 && secondary == combination.pulse1;
+      if (matchesForward || matchesReverse) return combination;
     }
     return null;
   }
@@ -1372,6 +1571,7 @@ class DiagnosticEngine {
       final resolvedPattern = combinedPattern?.description ?? ruleResult.pattern;
       final differential = _matchDifferential(ruleResult.meridian, resolvedPattern);
       // P0/P1 安全护栏（与兜底路径一致，避免主引擎路径丢失告警）
+      final pulseTongueAssessment = _buildPulseTongueAssessment();
       final contradiction = _detectPulseTongueContradiction();
       final trueFalseHC = _detectTrueFalseHeatCold();
       final medRules = _detectMedicationRules();
@@ -1407,7 +1607,10 @@ class DiagnosticEngine {
         recommendConsult: ruleResult.recommendConsult,
         answers: Map.from(_answers),
         combinedMeridian: combinedPattern == null ? null : _combinedMeridian,
+        pulseTypeSecondary: _pulseTypeSecondary,
+        followUpQuestions: pulseTongueAssessment?.followUpQuestions ?? const [],
         pulseTongueContradiction: contradiction,
+        pulseTongueAssessment: pulseTongueAssessment,
         trueFalseHeatCold: trueFalseHC,
         medicationRules: medRules,
         sweatingContraindications: sweatContra,
@@ -1564,6 +1767,7 @@ class DiagnosticEngine {
     final careAdvice = _getCareAdvice(meridian);
 
     // P0-2: 脉舌矛盾检测
+    final pulseTongueAssessment = _buildPulseTongueAssessment();
     final contradiction = _detectPulseTongueContradiction();
     // P0-1: 真寒假热/真热假寒
     final trueFalseHC = _detectTrueFalseHeatCold();
@@ -1606,6 +1810,9 @@ class DiagnosticEngine {
       confidence: finalConfidence,
       matchedSymptoms: result.matchedSymptoms,
       combinedMeridian: _matchedCombinedPattern() == null ? null : combinedMeridian,
+      pulseTypeSecondary: _pulseTypeSecondary,
+      followUpQuestions: pulseTongueAssessment?.followUpQuestions ?? const [],
+      pulseTongueAssessment: pulseTongueAssessment,
       tongueCoating: _tongueCoating,
       tongueShape: _tongueShape,
       pulseType: _pulseType,

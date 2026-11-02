@@ -847,10 +847,32 @@ class DiagnosticRules {
   // ==================== 脉诊选项 ====================
   static const List<String> pulseOptions = [
     '浮', '沉', '迟', '数', '滑', '涩', '弦', '紧', '缓', '弱',
-    '微', '细', '洪', '实', '虚',
+    '微', '细', '洪', '大', '实', '虚',
     // P2-E: 金匮/伤寒补充脉象（促=热利葛根芩连/大承气；结代=炙甘草汤；芤=失血；革=失精；微弱=桂枝二越婢一；沉紧=寒疝大乌头煎）
     '促', '结', '代', '芤', '革', '微弱', '沉紧',
   ];
+
+  /// Normalize user-facing pulse labels to a single canonical value.
+  /// Longest-prefix matching prevents compound values such as 微弱/沉紧
+  /// from being truncated to 微/沉.
+  static String? canonicalPulse(String? raw) {
+    if (raw == null) return null;
+    final value = raw.trim();
+    final candidates = List<String>.from(pulseOptions)
+      ..sort((a, b) => b.length.compareTo(a.length));
+    for (final candidate in candidates) {
+      if (value == candidate || value.startsWith(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  /// Base pulse used only for broad meridian-direction weighting.
+  /// Keep the entered canonical pulse unchanged for display and pair matching.
+  static String pulseWeightValue(String pulse) {
+    if (pulse == '微弱') return '微';
+    if (pulse == '沉紧') return '沉';
+    return pulse;
+  }
 
   // ==================== 调护建议 ====================
   static final Map<String, CareAdvice> careAdvice = {
