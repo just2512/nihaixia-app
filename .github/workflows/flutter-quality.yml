@@ -69,3 +69,8 @@ jobs:
         run: |
           cd android
           ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - name: Build Find N2 arm64 debug APK
+        env:
+          ORG_GRADLE_PROJECT_ciArm64Only: "true"
+        run: flutter build apk --debug --target-platform android-arm64
