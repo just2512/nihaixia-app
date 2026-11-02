@@ -7,23 +7,25 @@
 - 仓库：litert-community/gemma-4-E4B-it-litert-lm
 - 文件：gemma-4-E4B-it.litertlm
 - 文件大小：3,659,530,240 bytes（约 3.66 GB）
-- SHA-256：0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0
+- 文件修订：`28299f3`（固定下载版本，避免 `main` 分支变动）。
+- SHA-256：`0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0`
 - 模型文件不打包进 APK，也不由应用自动联网下载。
 
 下载地址：
-https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm
+https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/28299f3/gemma-4-E4B-it.litertlm
 
 应用检查模型文件大小。通过应用内导入时，还会在复制过程中校验 SHA-256；大小或哈希不一致时会拒绝替换正式模型文件，不调用推理引擎。
 
 ## 模型下载与固定运行配置
 
-本项目固定使用 LiteRT Community 发布的标准 Android 模型文件，不要误选仓库中的 `-web` 文件或面向其他芯片的专用构建。
+本项目固定使用 LiteRT Community 发布的标准 Android 模型文件，并将下载链接固定到文件修订 `28299f3`。仓库还列出 `-gpu`、`-web`、`-web.task` 等不同文件；它们不是本项目目标文件，应用内的文件长度与 SHA-256 双重校验会拒绝这些变体。
 
 | 配置项 | 当前项目固定值 |
 |---|---|
 | 模型仓库 | [litert-community/gemma-4-E4B-it-litert-lm](https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm) |
 | 下载文件 | `gemma-4-E4B-it.litertlm` |
-| 直链 | [下载 Gemma 4 E4B IT（3.66 GB）](https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm) |
+| 直链 | [下载 Gemma 4 E4B IT（3.66 GB）](https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/28299f3/gemma-4-E4B-it.litertlm) |
+| 文件修订 | `28299f3` |
 | 文件长度 | `3,659,530,240` bytes |
 | SHA-256 | `0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0` |
 | Android 运行库 | `com.google.ai.edge.litertlm:litertlm-android:0.18.0` |

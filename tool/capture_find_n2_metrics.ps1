@@ -83,7 +83,7 @@ Write-Host "现在切换外屏、内屏、半折叠姿态，并操作键盘、�
 Write-Host "只保存 [WINDOW_METRICS] 行；按 Ctrl+C 结束采集。"
 
 $script:metricsLineCount = 0
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 try {
     & $adb -s $Serial logcat -v time -s flutter:I 2>&1 |
         ForEach-Object {
