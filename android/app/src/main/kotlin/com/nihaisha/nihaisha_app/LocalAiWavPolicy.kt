@@ -8,6 +8,12 @@ internal object LocalAiWavPolicy {
     private const val MAX_DURATION_SECONDS = 30L
     private const val EXPECTED_SAMPLE_RATE = 16_000L
     private const val EXPECTED_BYTE_RATE = 32_000L
+    // The UI-side 30-second timer fires before the async recorder stop
+    // finishes; the native writer appends a few trailing samples while the
+    // stop propagates through the channel. Tolerate one second of overrun so
+    // a compliant "record to the limit" attempt is not rejected by stop
+    // latency rather than a genuine over-duration recording.
+    private const val STOP_LATENCY_TOLERANCE_BYTES = EXPECTED_BYTE_RATE
     private const val EXPECTED_BLOCK_ALIGN = 2
     private const val EXPECTED_BITS_PER_SAMPLE = 16
     private const val INVALID_MESSAGE =
@@ -86,7 +92,8 @@ internal object LocalAiWavPolicy {
                     parsedFormat.bitsPerSample != EXPECTED_BITS_PER_SAMPLE ||
                     dataBytes <= 0L ||
                     dataBytes % EXPECTED_BLOCK_ALIGN != 0L ||
-                    dataBytes > EXPECTED_BYTE_RATE * MAX_DURATION_SECONDS
+                    dataBytes > EXPECTED_BYTE_RATE * MAX_DURATION_SECONDS +
+                        STOP_LATENCY_TOLERANCE_BYTES
                 ) {
                     return INVALID_MESSAGE
                 }

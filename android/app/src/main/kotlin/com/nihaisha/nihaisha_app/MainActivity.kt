@@ -141,6 +141,16 @@ class MainActivity : FlutterActivity() {
                         null
                     )
                 }
+            } catch (error: Throwable) {
+                // Errors must not strand the Dart side on a never-resolving
+                // Future; report them through the channel like Exceptions.
+                mainHandler.post {
+                    result.error(
+                        "LOCAL_AI_FATAL",
+                        error.message ?: error.javaClass.simpleName,
+                        null
+                    )
+                }
             }
         }
     }
@@ -251,12 +261,35 @@ class MainActivity : FlutterActivity() {
         val actualSha256 = LocalAiModelIntegrityPolicy.sha256(modelFile)
         if (!LocalAiModelIntegrityPolicy.matches(actualSha256, expectedModelSha256)) {
             verifiedModelFileFingerprint = null
-            activeBackend = "not_loaded"
+            // Never keep a live runtime behind a file that no longer matches
+            // the verified digest; status must not report ready on a bad model.
+            releaseLoadedRuntimeQuietly()
             throw IllegalArgumentException(
                 "模型 SHA-256 校验失败：文件内容与受支持的 Gemma 4 E4B IT 不一致，请重新导入"
             )
         }
         verifiedModelFileFingerprint = fingerprint
+    }
+
+    // Best-effort teardown used on the integrity-failure path. The digest
+    // mismatch is the primary error the caller must see, so close failures
+    // are intentionally swallowed here; explicit releaseModel() keeps its
+    // own strict error propagation.
+    private fun releaseLoadedRuntimeQuietly() {
+        val conversation = aiConversation
+        val engine = aiEngine
+        aiConversation = null
+        aiEngine = null
+        activeBackend = "not_loaded"
+        conversationHasSuccessfulTurn = false
+        try {
+            ConversationResourceReleasePolicy.closeBoth(
+                closeConversation = { conversation?.close() },
+                closeEngine = { engine?.close() }
+            )
+        } catch (_: Exception) {
+            // Best-effort: primary integrity error takes precedence.
+        }
     }
 
     private fun modelStatus(): Map<String, Any> {
@@ -392,6 +425,9 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun recreateCpuEngineAfterFirstTurnOpenClFailure(originalError: Exception) {
+        // The first-turn failure may have fired long after the last hash
+        // verification; re-verify before any new Engine can open the file.
+        ensureModelFileIntegrity()
         val previousConversation = aiConversation
         val previousEngine = aiEngine
 

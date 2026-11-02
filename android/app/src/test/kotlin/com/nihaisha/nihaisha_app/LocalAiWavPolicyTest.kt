@@ -13,6 +13,15 @@ class LocalAiWavPolicyTest {
     }
 
     @Test
+    fun acceptsAtStopLatencyTolerance() {
+        // The recorder stop is async; the native writer appends trailing
+        // samples while the stop propagates. One second of overrun (32_000
+        // bytes) must be accepted so a compliant max-duration recording is
+        // not rejected by stop latency.
+        assertNull(LocalAiWavPolicy.validationError(createWaveFile(dataBytes = 992_000)))
+    }
+
+    @Test
     fun acceptsOddSizedAncillaryChunkWithRequiredPadding() {
         assertNull(LocalAiWavPolicy.validationError(createWaveFile(includeOddAncillaryChunk = true)))
     }
@@ -45,7 +54,9 @@ class LocalAiWavPolicyTest {
 
     @Test
     fun rejectsWaveLongerThanThirtySeconds() {
-        assertEquals(INVALID_MESSAGE, LocalAiWavPolicy.validationError(createWaveFile(dataBytes = 960_002)))
+        // Beyond the 30s limit plus the one-second stop-latency tolerance
+        // (992_000 bytes) the file is genuinely over-duration.
+        assertEquals(INVALID_MESSAGE, LocalAiWavPolicy.validationError(createWaveFile(dataBytes = 992_002)))
     }
 
     @Test

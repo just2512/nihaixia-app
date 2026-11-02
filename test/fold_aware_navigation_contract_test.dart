@@ -13,6 +13,9 @@ void main() {
     final violations = <String>[];
 
     for (final source in sources) {
+      // fold_aware_routes.dart defines showFoldAwareDialog/FoldAwareMaterialPageRoute;
+      // it legitimately calls showDialog and extends MaterialPageRoute.
+      if (source.key == 'lib/utils/fold_aware_routes.dart') continue;
       for (final match in directDialogCall.allMatches(source.value)) {
         violations.add(
           '${source.key}:${_lineNumber(source.value, match.start)}',
@@ -42,6 +45,7 @@ void main() {
     final violations = <String>[];
 
     for (final source in sources) {
+      if (source.key == 'lib/utils/fold_aware_routes.dart') continue;
       final routeMatches = barePageRoute.allMatches(source.value).toList();
       for (final match in routeMatches) {
         final documentedLocalAiException =
@@ -75,7 +79,7 @@ void main() {
 Future<List<MapEntry<String, String>>> _loadProductionSources() async {
   final sources = <MapEntry<String, String>>[];
 
-  for (final rootPath in ['lib/screens', 'lib/widgets']) {
+  for (final rootPath in ['lib/screens', 'lib/widgets', 'lib/utils']) {
     final root = Directory(rootPath);
     if (!await root.exists()) {
       fail('Required production source directory is missing: $rootPath');
