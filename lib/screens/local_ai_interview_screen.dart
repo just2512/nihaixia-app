@@ -1471,6 +1471,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final status = _status;
     final ready = status?.ready == true;
     final installed = status?.installed == true;
+    final backendLabel = status?.backend.toUpperCase() ?? '';
+    final modelSizeLabel = status?.sizeLabel ?? '';
+    final hashVerified = status?.hashVerified ?? false;
 
     return Container(
       width: double.infinity,
@@ -1494,7 +1497,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               Expanded(
                 child: Text(
                   ready
-                      ? 'Gemma 4 E4B · ${status!.backend.toUpperCase()}'
+                      ? 'Gemma 4 E4B · ${backendLabel}'
                       : installed
                           ? '模型已放入设备，尚未加载'
                           : '等待安装 Gemma 4 E4B 模型',
@@ -1503,7 +1506,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
               if (ready)
                 Text(
-                  status.sizeLabel,
+                  modelSizeLabel,
                   style: TextStyle(fontSize: AppType.caption, color: scheme.onSurfaceVariant),
                 ),
             ],
@@ -1512,9 +1515,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               installed
-                  ? status.hashVerified
-                      ? '模型文件大小与 SHA-256 均已通过校验：${status!.sizeLabel}。'
-                      : '模型文件大小符合要求：${status!.sizeLabel}。首次加载前仍会校验 SHA-256。'
+                  ? hashVerified
+                      ? '模型文件大小与 SHA-256 均已通过校验：${modelSizeLabel}。'
+                      : '模型文件大小符合要求：${modelSizeLabel}。首次加载前仍会校验 SHA-256。'
                   : status?.fileExists == true
                       ? '检测到模型文件，但大小不符合要求。请重新选择完整模型文件。'
                       : '模型文件约 3.66 GB，不随 APK 打包，也不会自动联网下载；请从设备本地存储导入。',
