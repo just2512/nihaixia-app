@@ -308,7 +308,7 @@ class DiagnosticRules {
     CombinedPattern(
       meridians: ['太阳', '阳明'],
       condition: CombinedPatternCondition.sunYangmingDiarrheaHeat,
-      formula: '葛根芩连汤',
+      formula: '葛根黄芩黄连汤',
       description: '太阳阳明合病，表证轻里热重，下利臭秽',
       source: '伤寒论第34条',
     ),
