@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('production dialogs use the fold-aware dialog helper', () async {
     final sources = await _loadProductionSources();
-    final directDialogCall = RegExp(r'\\bshowDialog(?:<[^>]+>)?\\s*\\(');
+    final directDialogCall = RegExp(r'\bshowDialog(?:<[^>]+>)?\s*\(');
     final violations = <String>[];
 
     for (final source in sources) {
@@ -33,7 +33,7 @@ void main() {
   test('production full-page routes are fold-aware or explicitly anchored',
       () async {
     final sources = await _loadProductionSources();
-    final barePageRoute = RegExp(r'\\bMaterialPageRoute(?:<[^>]+>)?\\s*\\(');
+    final barePageRoute = RegExp(r'\bMaterialPageRoute(?:<[^>]+>)?\s*\(');
     const sourceAnchor = 'final routeAnchorPoint = '
         'foldAwareRouteAnchorPoint(context);';
     const preferredAnchor = 'preferredAnchorPoint: routeAnchorPoint';
@@ -80,7 +80,10 @@ Future<List<MapEntry<String, String>>> _loadProductionSources() async {
 
     await for (final entity in root.list(recursive: true, followLinks: false)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
-      final relativePath = entity.path.replaceAll('\\\\', '/');
+      final relativePath = entity.path.replaceAll(
+        Platform.pathSeparator,
+        '/',
+      );
       sources.add(
         MapEntry(relativePath, await entity.readAsString()),
       );
@@ -92,5 +95,5 @@ Future<List<MapEntry<String, String>>> _loadProductionSources() async {
 }
 
 int _lineNumber(String source, int offset) {
-  return '\\n'.allMatches(source.substring(0, offset)).length + 1;
+  return '\n'.allMatches(source.substring(0, offset)).length + 1;
 }
