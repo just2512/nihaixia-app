@@ -87,3 +87,5 @@ __pycache__/
 # Gitee 同步（本机）：release2gitee 缓存与令牌
 tool/.bin/
 tool/.gitee.env
+hook/user_defines.json
+apk-output/
