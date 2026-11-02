@@ -2,6 +2,30 @@ import '../models/diagnosis.dart';
 
 // ==================== 数据类 ====================
 
+/// Combined-pattern condition identifiers shared by the detector and rule table.
+/// Keep identifiers centralized; adding a key does not make its clinical rule valid.
+class CombinedPatternCondition {
+  static const sunYangmingBase = 'sun_symptoms + yangming_symptoms';
+  static const sunShaoyangBase = 'sun+shaoyang_combined';
+  static const shaoyangYangmingBase = 'shao_yang_symptoms + yangming_symptoms';
+  static const threeYangBase = 'three_yang_symptoms';
+  static const taiyinShaoyinBase = 'taiyin_symptoms + shaoyin_symptoms';
+  static const sunYangmingVomit = 'sun+yangming_vomit';
+  static const sunYangmingChestFull = 'sun+yangming_chest_full';
+  static const sunShaoyangDiarrhea = 'sun+shaoyang_diarrhea';
+  static const sunShaoyangVomit = 'sun+shaoyang_vomit';
+  static const shaoyangYangmingTidalFever = 'shaoyang+yangming_tidal_fever';
+  static const yangmingShaoyinUrgent = 'yangming+shaoyin_urgent';
+  static const jueyinShaoyang = 'jueyin+shaoyang';
+  static const sunYangmingUnresolved = 'sun+yangming_unresolved';
+  static const threeYangSleep = 'three_yang_sleep';
+  static const sunYangmingInteriorHeat = 'sun+yangming_interior_heat';
+  static const sunShaoyinTwoCold = 'sun+shaoyin_two_cold';
+  static const shaoyangTaiyin = 'shaoyang+taiyin';
+  static const sunTaiyin = 'sun+taiyin';
+  static const sunYangmingDiarrheaHeat = 'sun+yangming_diarrhea_heat';
+}
+
 class SymptomOption {
   final String key;
   final String label;
@@ -154,35 +178,35 @@ class DiagnosticRules {
   static const List<CombinedPattern> combinedPatterns = [
     CombinedPattern(
       meridians: ['太阳', '阳明'],
-      condition: 'sun_symptoms + yangming_symptoms',
+      condition: CombinedPatternCondition.sunYangmingBase,
       formula: '葛根汤',
       description: '太阳与阳明合病，必自下利',
       source: '伤寒论第32条',
     ),
     CombinedPattern(
       meridians: ['太阳', '少阳'],
-      condition: 'sun+shaoyang_combined',
+      condition: CombinedPatternCondition.sunShaoyangBase,
       formula: '柴胡桂枝汤',
       description: '太阳少阳合病，发热微恶寒，支节烦痛，微呕，心下支结',
       source: '伤寒论第146条',
     ),
     CombinedPattern(
       meridians: ['少阳', '阳明'],
-      condition: 'shao_yang_symptoms + yangming_symptoms',
+      condition: CombinedPatternCondition.shaoyangYangmingBase,
       formula: '大柴胡汤',
       description: '少阳阳明合病，呕不止，心下急',
       source: '伤寒论第103条/第165条',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明', '少阳'],
-      condition: 'three_yang_symptoms',
+      condition: CombinedPatternCondition.threeYangBase,
       formula: '小柴胡汤',
       description: '三阳并病，必须合解少阳',
       source: '伤寒论第99条',
     ),
     CombinedPattern(
       meridians: ['太阴', '少阴'],
-      condition: 'taiyin_symptoms + shaoyin_symptoms',
+      condition: CombinedPatternCondition.taiyinShaoyinBase,
       formula: '四逆汤',
       description: '太阴少阴合病，脾肾阳虚',
       source: '临床经验',
@@ -190,63 +214,63 @@ class DiagnosticRules {
     // ---- 以下为新增7种合病 ----
     CombinedPattern(
       meridians: ['太阳', '阳明'],
-      condition: 'sun+yangming_vomit',
+      condition: CombinedPatternCondition.sunYangmingVomit,
       formula: '葛根加半夏汤',
       description: '太阳阳明合病，不下利但呕者',
       source: '伤寒论第33条',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明'],
-      condition: 'sun+yangming_chest_full',
+      condition: CombinedPatternCondition.sunYangmingChestFull,
       formula: '麻黄汤',
       description: '太阳阳明合病，喘而胸满',
       source: '伤寒论第36条',
     ),
     CombinedPattern(
       meridians: ['太阳', '少阳'],
-      condition: 'sun+shaoyang_diarrhea',
+      condition: CombinedPatternCondition.sunShaoyangDiarrhea,
       formula: '黄芩汤',
       description: '太阳少阳合病，自下利',
       source: '伤寒论第172条',
     ),
     CombinedPattern(
       meridians: ['太阳', '少阳'],
-      condition: 'sun+shaoyang_vomit',
+      condition: CombinedPatternCondition.sunShaoyangVomit,
       formula: '黄芩加半夏生姜汤',
       description: '太阳少阳合病，呕者',
       source: '伤寒论第172条',
     ),
     CombinedPattern(
       meridians: ['少阳', '阳明'],
-      condition: 'shaoyang+yangming_tidal_fever',
+      condition: CombinedPatternCondition.shaoyangYangmingTidalFever,
       formula: '柴胡加芒硝汤',
       description: '少阳阳明合病，潮热',
       source: '伤寒论第104条',
     ),
     CombinedPattern(
       meridians: ['阳明', '少阴'],
-      condition: 'yangming+shaoyin_urgent',
+      condition: CombinedPatternCondition.yangmingShaoyinUrgent,
       formula: '大承气汤',
       description: '少阴病得之二三日，口燥咽干者，急下之',
       source: '伤寒论第320条',
     ),
     CombinedPattern(
       meridians: ['厥阴', '少阳'],
-      condition: 'jueyin+shaoyang',
+      condition: CombinedPatternCondition.jueyinShaoyang,
       formula: '乌梅丸',
       description: '厥阴少阳合病，寒热错杂',
       source: '临床经验',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明'],
-      condition: 'sun+yangming_unresolved',
+      condition: CombinedPatternCondition.sunYangmingUnresolved,
       formula: '桂枝汤',
       description: '二阳并病，太阳证未罢，面色缘缘正赤，当小发汗',
       source: '伤寒论第53条',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明', '少阳'],
-      condition: 'three_yang_sleep',
+      condition: CombinedPatternCondition.threeYangSleep,
       formula: '小柴胡汤',
       description: '三阳合病，脉浮大上关上，但欲眠睡，目合则汗',
       source: '伤寒论第268条',
@@ -254,14 +278,14 @@ class DiagnosticRules {
     // ---- 补充2种合病（测试发现缺失）----
     CombinedPattern(
       meridians: ['太阳', '阳明'],
-      condition: 'sun+yangming_interior_heat',
+      condition: CombinedPatternCondition.sunYangmingInteriorHeat,
       formula: '大青龙汤',
       description: '太阳阳明合病，表寒里热俱实，无汗恶寒身痛+口渴烦躁',
       source: '伤寒论第38条',
     ),
     CombinedPattern(
       meridians: ['太阳', '少阴'],
-      condition: 'sun+shaoyin_two_cold',
+      condition: CombinedPatternCondition.sunShaoyinTwoCold,
       formula: '麻黄附子细辛汤',
       description: '太阳少阴两感，始得之，发热恶寒脉沉',
       source: '伤寒论第301条',
@@ -269,21 +293,21 @@ class DiagnosticRules {
     // ---- 新增合病（来自六经辨证公式）----
     CombinedPattern(
       meridians: ['少阳', '太阴'],
-      condition: 'shaoyang+taiyin',
+      condition: CombinedPatternCondition.shaoyangTaiyin,
       formula: '柴胡桂枝干姜汤',
       description: '少阳太阴合病，往来寒热+腹满便溏食不下',
       source: '伤寒论第147条',
     ),
     CombinedPattern(
       meridians: ['太阳', '太阴'],
-      condition: 'sun+taiyin',
+      condition: CombinedPatternCondition.sunTaiyin,
       formula: '桂枝人参汤',
       description: '太阳太阴并病，里虚寒+表证未罢',
       source: '伤寒论第163条',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明'],
-      condition: 'sun+yangming_diarrhea_heat',
+      condition: CombinedPatternCondition.sunYangmingDiarrheaHeat,
       formula: '葛根芩连汤',
       description: '太阳阳明合病，表证轻里热重，下利臭秽',
       source: '伤寒论第34条',
