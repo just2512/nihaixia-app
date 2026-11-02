@@ -86,4 +86,105 @@ void main() {
     expect(dialog.left, greaterThanOrEqualTo(412));
     expect(dialog.right, lessThanOrEqualTo(800));
   });
+
+
+  testWidgets('full-page route stays on the right physical panel of its source control', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              const SizedBox(width: 412),
+              Expanded(
+                child: Builder(
+                  builder: (sourceContext) => Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(sourceContext).push<void>(
+                          FoldAwareMaterialPageRoute<void>(
+                            sourceContext: sourceContext,
+                            builder: (_) => Scaffold(
+                              body: SizedBox.expand(
+                                key: const ValueKey('fold-aware-route-content'),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('打开右侧页面'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开右侧页面'));
+    await tester.pumpAndSettle();
+
+    final page = tester.getRect(find.byKey(const ValueKey('fold-aware-route-content')));
+    expect(page.left, greaterThanOrEqualTo(412));
+    expect(page.right, 800);
+    expect(page.width, 388);
+  });
+
+  testWidgets('full-page route uses the full available width when no fold is reported', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 790);
+    tester.view.displayFeatures = [];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (sourceContext) => Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(sourceContext).push<void>(
+                    FoldAwareMaterialPageRoute<void>(
+                      sourceContext: sourceContext,
+                      builder: (_) => Scaffold(
+                        body: SizedBox.expand(
+                          key: const ValueKey('ordinary-route-content'),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('打开普通页面'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开普通页面'));
+    await tester.pumpAndSettle();
+
+    final page = tester.getRect(find.byKey(const ValueKey('ordinary-route-content')));
+    expect(page.left, 0);
+    expect(page.right, 402);
+    expect(page.width, 402);
+  });
+
 }

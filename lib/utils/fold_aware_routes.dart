@@ -16,6 +16,39 @@ Offset? foldAwareRouteAnchorPoint(BuildContext context) {
   );
 }
 
+/// Material page route that keeps its content on the physical panel
+/// containing the control that opened it.
+///
+/// Use this instead of a bare [MaterialPageRoute] for full-page navigation.
+/// Dialogs should continue to use [showFoldAwareDialog].
+class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
+  FoldAwareMaterialPageRoute({
+    required BuildContext sourceContext,
+    required WidgetBuilder builder,
+    RouteSettings? settings,
+    bool maintainState = true,
+    bool fullscreenDialog = false,
+    bool allowSnapshotting = true,
+  })  : _anchorPoint = foldAwareRouteAnchorPoint(sourceContext),
+        super(
+          builder: builder,
+          settings: settings,
+          maintainState: maintainState,
+          fullscreenDialog: fullscreenDialog,
+          allowSnapshotting: allowSnapshotting,
+        );
+
+  final Offset? _anchorPoint;
+
+  @override
+  Widget buildContent(BuildContext context) {
+    return AdaptiveSinglePane(
+      preferredAnchorPoint: _anchorPoint,
+      child: super.buildContent(context),
+    );
+  }
+}
+
 /// Shows a dialog in the physical panel containing the invoking widget.
 ///
 /// DialogRoute uses the anchor for physical sub-screen selection. The

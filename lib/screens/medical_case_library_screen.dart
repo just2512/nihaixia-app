@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
 
@@ -208,7 +209,7 @@ class _MedicalCaseLibraryScreenState extends State<MedicalCaseLibraryScreen> {
     if (_all.isEmpty) return;
     final diagnosis = await Navigator.push<String>(
       context,
-      MaterialPageRoute(builder: (_) => MedicalCaseInsightsScreen(all: _all)),
+      FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => MedicalCaseInsightsScreen(all: _all)),
     );
     if (diagnosis == null || diagnosis.isEmpty || !mounted) return;
     // 回填搜索，并清空筛选避免回填后意外 0 结果
@@ -231,7 +232,7 @@ class _MedicalCaseLibraryScreenState extends State<MedicalCaseLibraryScreen> {
   Future<void> _openDetail(MedicalCase c) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(sourceContext: context, 
         builder: (_) => MedicalCaseDetailScreen(c: c, allCases: _all),
       ),
     );

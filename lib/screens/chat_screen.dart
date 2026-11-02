@@ -781,7 +781,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _openFormulaDetail(Formula formula) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
         builder: (_) => FormulaDetailScreen(formula: formula),
       ),
     );
@@ -790,7 +791,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _openMeridianDetail(String meridian) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
         builder: (_) => MeridianDetailScreen(meridian: meridian),
       ),
     );
@@ -988,7 +990,7 @@ class _ChatScreenState extends State<ChatScreen> {
               } else if (value == 'settings') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SettingsScreen()),
                 );
               }
             },

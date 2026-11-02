@@ -152,7 +152,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       if (formula != null) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => FormulaDetailScreen(formula: formula)),
+          FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => FormulaDetailScreen(formula: formula)),
         );
         return;
       }
@@ -161,7 +161,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       if (herb != null) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => HerbDetailScreen(herb: herb)),
+          FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => HerbDetailScreen(herb: herb)),
         );
         return;
       }

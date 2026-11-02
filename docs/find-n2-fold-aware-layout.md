@@ -66,3 +66,21 @@ Debug 构建会在 Flutter 窗口指标变化后输出一条 `[WINDOW_METRICS]` 
 5. 每种姿态至少留一张系统截图，并将日志中的 `sizeDp`、`dpr`、`displayFeatures`、`viewInsets` 与截图对应记录。
 
 **验收规则：** 日志只能证明 Flutter 在该时刻接收到的窗口参数；仍需结合实机截图检查导航栏、当前 Tab、弹窗、键盘和系统文件选择器的位置。没有设备日志和截图时，内外屏及半折叠实机项目继续标记为 MISSING。
+
+
+## 普通全屏页面路由的来源面板约束
+
+普通的 `MaterialPageRoute` 不会根据来源控件自动选择折叠屏物理面板。全屏详情页、工具页、设置页和列表详情跳转统一使用 `FoldAwareMaterialPageRoute`，并传入创建跳转的当前 `BuildContext`：
+
+```dart
+Navigator.of(context).push(
+  FoldAwareMaterialPageRoute(
+    sourceContext: context,
+    builder: (_) => const SomeDetailScreen(),
+  ),
+);
+```
+
+路由在构建页面内容时读取来源控件的窗口坐标，并通过 `AdaptiveSinglePane` 将整个页面（包含 AppBar、滚动区和底部操作区）限制在来源控件所在的物理面板。没有上报铰链/折痕时保持普通全宽页面行为。弹窗仍使用 `showFoldAwareDialog`，不应改成页面路由。
+
+当前已迁移：知识页经络/方剂/本草详情、工具首页各工具入口、收藏详情、规则问诊中的方剂/经络详情及设置、医案库统计和医案详情。后续新增全屏页面跳转必须使用该路由，避免直接使用裸 `MaterialPageRoute`。

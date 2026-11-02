@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../engine/diagnostic_rules.dart';
@@ -111,7 +112,7 @@ class _MeridianTab extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => MeridianDetailScreen(meridian: name),
                 ),
               );
@@ -196,7 +197,7 @@ class _MeridianTab extends StatelessWidget {
                                       if (formula != null) {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(
+                                          FoldAwareMaterialPageRoute(sourceContext: context, 
                                             builder: (_) => FormulaDetailScreen(formula: formula),
                                           ),
                                         );
@@ -213,7 +214,7 @@ class _MeridianTab extends StatelessWidget {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                FoldAwareMaterialPageRoute(sourceContext: context, 
                                   builder: (_) => MeridianDetailScreen(meridian: name),
                                 ),
                               );
@@ -381,7 +382,7 @@ class _FormulaTabState extends State<_FormulaTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => FormulaDetailScreen(formula: formula),
                 ),
               ),
@@ -534,7 +535,7 @@ class _FormulaTabState extends State<_FormulaTab> {
                           } else {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              FoldAwareMaterialPageRoute(sourceContext: context, 
                                 builder: (_) => FormulaDetailScreen(formula: formula),
                               ),
                             );
@@ -683,7 +684,7 @@ class _HerbTabState extends State<_HerbTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => HerbDetailScreen(herb: herb),
                 ),
               ),
@@ -882,7 +883,7 @@ class _HerbTabState extends State<_HerbTab> {
                           } else {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              FoldAwareMaterialPageRoute(sourceContext: context, 
                                 builder: (_) => HerbDetailScreen(herb: herb),
                               ),
                             );

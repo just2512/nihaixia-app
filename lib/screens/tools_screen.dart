@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'dosage_converter_screen.dart';
 import 'ziwuliuzhu_screen.dart';
 import 'yunqi_screen.dart';
@@ -49,7 +50,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.primary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const DosageConverterScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DosageConverterScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -60,7 +61,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.error,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const DiagnosisHistoryScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DiagnosisHistoryScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -71,7 +72,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ZiWuLiuZhuScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ZiWuLiuZhuScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -82,7 +83,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.secondary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const YunQiScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const YunQiScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -93,7 +94,7 @@ class ToolsScreen extends StatelessWidget {
                 color: context.colors.danger,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const CriticalIllnessListScreen(),
                   ),
                 ),
@@ -106,7 +107,7 @@ class ToolsScreen extends StatelessWidget {
                 color: context.colors.info,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context, 
                     builder: (_) => const MedicalCaseLibraryScreen(),
                   ),
                 ),
@@ -119,7 +120,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.secondary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const GujiLibraryScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const GujiLibraryScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -130,7 +131,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SolarTermSectionScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SolarTermSectionScreen()),
                 ),
               ),
             ],
@@ -147,7 +148,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.secondary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ZiweiChartScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ZiweiChartScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -158,7 +159,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const BaZiPaipanScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const BaZiPaipanScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -169,7 +170,7 @@ class ToolsScreen extends StatelessWidget {
                 color: context.colors.meridianJueyin,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const YiJingScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const YiJingScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -180,7 +181,7 @@ class ToolsScreen extends StatelessWidget {
                 color: context.colors.success,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const DailyAlmanacScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DailyAlmanacScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -191,7 +192,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const YuxiajiOmenScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const YuxiajiOmenScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -202,7 +203,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const DreamScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DreamScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -213,7 +214,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const GuanshaScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const GuanshaScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -224,7 +225,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SanshanLingqianScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SanshanLingqianScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -235,7 +236,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const XiaoliurenScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const XiaoliurenScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -246,7 +247,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const MeihuaScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const MeihuaScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -257,7 +258,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ChengguBoneScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ChengguBoneScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -268,7 +269,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ShoushengDebtScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ShoushengDebtScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -279,7 +280,7 @@ class ToolsScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const HuangdiSijiScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const HuangdiSijiScreen()),
                 ),
               ),
               const SizedBox(height: 12),
@@ -290,7 +291,7 @@ class ToolsScreen extends StatelessWidget {
                 color: context.colors.info,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SavedChartsScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SavedChartsScreen()),
                 ),
               ),
             ],
@@ -307,7 +308,7 @@ class ToolsScreen extends StatelessWidget {
                 color: colorScheme.primary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SettingsScreen()),
                 ),
               ),
             ],
