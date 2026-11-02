@@ -4,9 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Keeps fold-aware routing as an enforceable production-code contract.
 ///
-/// The only direct MaterialPageRoute call in screens/widgets is the local-AI
-/// interview hand-off in ChatScreen. That route explicitly computes an anchor
-/// from its invoking BuildContext and passes it to AdaptiveSinglePane.
+/// ChatScreen has one narrow exception: its local-AI hand-off computes an
+/// anchor from the invoking BuildContext and passes it to AdaptiveSinglePane.
 void main() {
   test('production dialogs use the fold-aware dialog helper', () async {
     final sources = await _loadProductionSources();
@@ -34,21 +33,25 @@ void main() {
       () async {
     final sources = await _loadProductionSources();
     final barePageRoute = RegExp(r'\bMaterialPageRoute(?:<[^>]+>)?\s*\(');
-    const sourceAnchor = 'final routeAnchorPoint = '
-        'foldAwareRouteAnchorPoint(context);';
-    const preferredAnchor = 'preferredAnchorPoint: routeAnchorPoint';
+    final anchoredLocalAiRoute = RegExp(
+      r'final routeAnchorPoint = foldAwareRouteAnchorPoint\(context\);\s*'
+      r'final summary = await Navigator\.push<String>\(\s*context,\s*'
+      r'MaterialPageRoute\(\s*builder:\s*\(_\)\s*=>\s*'
+      r'LocalAiInterviewScreen\(\s*preferredAnchorPoint:\s*routeAnchorPoint',
+    );
     final violations = <String>[];
 
     for (final source in sources) {
-      for (final match in barePageRoute.allMatches(source.value)) {
-        final anchorIsComputedBeforeRoute =
-            source.value.lastIndexOf(sourceAnchor, match.start) >= 0;
-        final anchorIsPassedToDestination =
-            source.value.indexOf(preferredAnchor, match.end) > match.end;
+      final routeMatches = barePageRoute.allMatches(source.value).toList();
+      for (final match in routeMatches) {
         final documentedLocalAiException =
             source.key == 'lib/screens/chat_screen.dart' &&
-                anchorIsComputedBeforeRoute &&
-                anchorIsPassedToDestination;
+                routeMatches.length == 1 &&
+                anchoredLocalAiRoute.allMatches(source.value).any(
+                      (exception) =>
+                          exception.start <= match.start &&
+                          exception.end >= match.end,
+                    );
 
         if (!documentedLocalAiException) {
           violations.add(
@@ -62,8 +65,8 @@ void main() {
       violations,
       isEmpty,
       reason: 'Use FoldAwareMaterialPageRoute for full-page navigation. '
-          'A direct MaterialPageRoute is allowed only when the destination '
-          'receives a source-derived preferredAnchorPoint.\n'
+          'The only direct route exception is ChatScreen local-AI hand-off, '
+          'which must pass a source-derived preferredAnchorPoint.\n'
           '${violations.join('\n')}',
     );
   });
