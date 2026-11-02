@@ -113,3 +113,44 @@
 4. 将 `_combinedPatternCondition` 纳入快照或保证恢复时重算。
 5. 所有回归测试通过后，再进入脉象、舌象与问诊交叉验证阶段。
 
+
+
+---
+
+## 8. 第二阶段修复记录（2026-11-02）
+
+修复基线：`master` 后续提交 `74e6cf3`、`b0d9aac`、`134792b`、`d9dbe83`、`dc3348b`、`fcc3d52`、`6c119e6`。以下为修复后的代码状态，不改变前文作为历史审计基线的含义。
+
+### 8.1 条件键与生成分支
+
+- 19 个表项条件已集中到 `CombinedPatternCondition` 常量，规则表和引擎不再各自维护字符串字面量。
+- 当前有生成路径的条件为 16 个，均可与规则表精确匹配。
+- 仍保留 3 个“只有表项、没有生成规则”的历史条件：`sun_symptoms + yangming_symptoms`、`shao_yang_symptoms + yangming_symptoms`、`three_yang_symptoms`。本轮没有为它们补造触发条件；需在经典条文证据核验后再决定是否启用。
+- `taiyin_symptoms + shaoyin_symptoms` 已在太阴主经且少阴证据达到现有阈值时生成。
+- `three_yang_sleep` 提升到两经子型判断之前，要求太阳主经、阳明与少阳分数均达既有阈值，且但欲寐、汗出信号同时存在。
+- `sun+yangming_diarrhea_heat` 已前移到一般太阳阳明子型之前，避免被同一主经/阳明阈值分支遮蔽。
+
+### 8.2 最终结果路径
+
+- RuleEngine 命中时，若精确合病条件命中表项，则合病表方剂应用于最终 `formula`、`recommendedFormulas` 和 `prescription`；`pattern`、`patternDetail`、`explanation` 同步使用对应表项描述，`combinedMeridian` 保留合病经。
+- 旧六经兜底路径继续按精确键查表；最终方剂的加减规则现在按实际选中的 `formulaOverride` 查询，不再错误地沿用原始兜底方剂的加减规则。
+- 三阳合病的 `combinedMeridian` 不再被压缩成单独“阳明”，保留“阳明少阳”组合信息。
+- `_combinedPatternCondition` 已纳入 `EngineSnapshot` 的创建和恢复；每次重新检测先清空旧合病状态，避免上一轮条件残留。
+
+### 8.3 回归测试覆盖范围
+
+新增 `test/engine/combined_pattern_regression_test.dart`，覆盖：
+
+1. 19 个规则表键均来自集中常量且没有重复；
+2. 合病条件快照保存与恢复；
+3. RuleEngine 命中时应用合病表方剂，并同步推荐方、合病经和处方；
+4. 旧六经兜底路径中太阳阳明下利热分支的最终方剂覆盖；
+5. 三阳“但欲眠睡、目合则汗”分支优先级。
+
+**覆盖边界：** 这组测试验证关键主路径、兜底路径和遮蔽分支，不代表 16 个可生成条件都已拥有独立的端到端病例测试。其余条件仍需在下一轮补齐逐条件测试，并逐条核验医学适用条件；不得把“代码可达”解释成“临床规则已验证”。
+
+### 8.4 CI 追踪
+
+- `Flutter tests` 在提交 `88245b2` 上完整通过，包含 Flutter 静态分析、回归用例和 Android debug APK/ABI 验证。
+- 第二阶段代码提交后的最新回归运行仍需以最新 `master` SHA 对应的 Actions 结果为准。
+- `Flutter Quality Gate` 曾在全项目静态分析阶段失败，日志显示 80 条既有 info 级诊断，没有 `diagnostic_engine.dart`、`diagnostic_rules.dart` 或新增合病测试文件的 error/warning。该门禁未通过；本轮没有通过关闭静态分析或降低门禁等级来规避。
