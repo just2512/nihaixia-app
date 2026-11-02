@@ -59,10 +59,10 @@ Debug 构建会在 Flutter 窗口指标变化后输出一条 `[WINDOW_METRICS]` 
 
 在 Find N2 上采集步骤：
 
-1. 安装本轮 Debug APK，打开应用后保持 USB 调试连接。
-2. 在 PowerShell 执行 `adb logcat -c` 清空旧日志。
-3. 执行 `adb logcat -v time -s flutter:I` 开始实时采集；切换外屏、展开内屏、半折叠，并分别弹出键盘、打开附件选择器。
-4. 按 Ctrl+C 结束采集，将终端日志保存为 `find-n2-window-metrics.log`。
+1. 安装本轮 Debug APK，打开应用并保持 USB 调试连接。
+2. 在仓库根目录用 PowerShell 执行 `./tool/capture_find_n2_metrics.ps1`。脚本会检查已连接设备与应用包名，保存设备型号、Android 版本、屏幕尺寸/密度和系统字号。
+3. 脚本只将包含 `[WINDOW_METRICS]` 的 Flutter 日志行写入 `output/find-n2/<时间戳>/window-metrics.log`，不会把其他 Flutter 日志、问诊内容或模型输出保存到文件。
+4. 保持采集运行，依次切换外屏、展开内屏、半折叠，并分别弹出键盘、打开附件选择器；按 Ctrl+C 结束。
 5. 每种姿态至少留一张系统截图，并将日志中的 `sizeDp`、`dpr`、`displayFeatures`、`viewInsets` 与截图对应记录。
 
 **验收规则：** 日志只能证明 Flutter 在该时刻接收到的窗口参数；仍需结合实机截图检查导航栏、当前 Tab、弹窗、键盘和系统文件选择器的位置。没有设备日志和截图时，内外屏及半折叠实机项目继续标记为 MISSING。
