@@ -6,6 +6,8 @@ on:
     paths:
       - "lib/**"
       - "test/**"
+      - "integration_test/**"
+      - "assets/**"
       - "android/**"
       - "pubspec.yaml"
       - "pubspec.lock"
@@ -58,5 +60,10 @@ jobs:
       - name: Static analysis
         run: flutter analyze --no-pub
 
-      - name: Run test suite
+      - name: Run Dart test suite
         run: flutter test --no-pub --reporter expanded
+
+      - name: Run Android native unit tests
+        run: |
+          cd android
+          ./gradlew :app:testDebugUnitTest --no-daemon
