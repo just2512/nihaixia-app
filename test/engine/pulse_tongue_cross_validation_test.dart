@@ -40,6 +40,8 @@ void main() {
       final result = engine.diagnose();
       expect(result, isNotNull);
       expect(result!.pulseCombination, isNull);
+      expect(result.pulseType, '浮');
+      expect(result.pulseTypeSecondary, isNull);
     });
 
     test('主脉+兼脉同时匹配时才返回组合脉', () {
@@ -61,6 +63,7 @@ void main() {
       expect(result!.pulseCombination, isNotNull);
       expect(result.pulseCombination!.pulse1, '浮');
       expect(result.pulseCombination!.pulse2, '紧');
+      expect(result.pulseType, '浮');
       expect(result.pulseTypeSecondary, '紧');
     });
 

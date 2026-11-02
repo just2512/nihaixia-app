@@ -486,6 +486,7 @@ class DiagnosticEngine {
     }
     if (questionKey == 'urine') {
       _answers['urine_clear'] = answer.contains('清长');
+      _answers['urine_short'] = answer.contains('短赤');
       _answers['urine_difficult'] = answer.contains('不利');
       _answers['urine_nocturia'] = answer.contains('夜尿');
     }
@@ -1030,7 +1031,7 @@ class DiagnosticEngine {
     if (questionKey == 'pulse_cross_limbs') {
       _answers['cold_limbs'] = answer.contains('偏冷');
       _answers['warm_limbs'] = answer.contains('温热');
-      _answers['hot_palms_soles'] = answer.contains('温热');
+      // 手足温热与手心脚心热是不同观察项，不互相代替。
     }
     if (questionKey == 'pulse_cross_surface') {
       _answers['chills'] = answer.contains('发热恶寒');
@@ -1041,7 +1042,8 @@ class DiagnosticEngine {
     if (questionKey == 'pulse_cross_interior') {
       _answers['constipated'] = answer.contains('便秘');
       _answers['diarrhea'] = answer.contains('下利');
-      _answers['abdomen_pain_relief'] = answer.contains('腹痛');
+      _answers['abdomen_pain_relief'] = answer.contains('喜按');
+      _answers['abdomen_pain_press'] = answer.contains('拒按');
     }
     if (questionKey == 'pulse_cross_shaoyang') {
       _answers['bitter_mouth'] = answer.contains('口苦');
@@ -1377,7 +1379,7 @@ class DiagnosticEngine {
       'pulse_cross_interior': FollowUpQuestion(
         key: 'pulse_cross_interior',
         question: '腹部与大便情况如何？',
-        options: ['腹满或便秘', '腹痛或下利', '没有明显异常', '不清楚'],
+        options: ['腹满或便秘', '腹痛喜按或便溏下利', '腹痛拒按', '没有明显异常', '不清楚'],
       ),
       'pulse_cross_shaoyang': FollowUpQuestion(
         key: 'pulse_cross_shaoyang',
@@ -1607,6 +1609,9 @@ class DiagnosticEngine {
         recommendConsult: ruleResult.recommendConsult,
         answers: Map.from(_answers),
         combinedMeridian: combinedPattern == null ? null : _combinedMeridian,
+        tongueCoating: _tongueCoating,
+        tongueShape: _tongueShape,
+        pulseType: _pulseType,
         pulseTypeSecondary: _pulseTypeSecondary,
         followUpQuestions: pulseTongueAssessment?.followUpQuestions ?? const [],
         pulseTongueContradiction: contradiction,
@@ -1629,17 +1634,42 @@ class DiagnosticEngine {
     result = _diagnoseMiscellaneous(_answers);
     if (result != null) {
       final weightedConfidence = _calculateConfidence(result.meridian);
+      final resolvedFormula = combinedPattern?.formula ?? result.formula;
+      final resolvedPattern = combinedPattern?.description ?? result.pattern;
+      final pulseTongueAssessment = _buildPulseTongueAssessment();
+      final prescription = combinedPattern == null
+          ? result.prescription
+          : FormulaRepository.buildPrescription(resolvedFormula);
       return DiagnosisResult(
         meridian: result.meridian,
-        pattern: result.pattern,
-        patternDetail: result.patternDetail,
-        formula: result.formula,
-        explanation: _matchedCombinedPattern()?.description ?? result.explanation,
+        pattern: resolvedPattern,
+        patternDetail: combinedPattern?.description ?? result.patternDetail,
+        formula: resolvedFormula,
+        recommendedFormulas: combinedPattern == null
+            ? result.recommendedFormulas
+            : [resolvedFormula],
+        explanation: combinedPattern?.description ?? result.explanation,
         confidence: weightedConfidence,
         matchedSymptoms: result.matchedSymptoms,
-        prescription: result.prescription,
+        prescription: prescription,
+        combinedMeridian: combinedPattern == null ? result.combinedMeridian : _combinedMeridian,
+        tongueCoating: _tongueCoating,
+        tongueShape: _tongueShape,
+        pulseType: _pulseType,
+        pulseTypeSecondary: _pulseTypeSecondary,
+        followUpQuestions: pulseTongueAssessment?.followUpQuestions ?? const [],
+        pulseTongueContradiction: _detectPulseTongueContradiction(),
+        pulseTongueAssessment: pulseTongueAssessment,
+        trueFalseHeatCold: _detectTrueFalseHeatCold(),
+        medicationRules: _detectMedicationRules(),
+        sweatingContraindications: _detectSweatingContraindications(),
+        bloodStasisSigns: _detectBloodStasis(),
+        pulseCombination: _detectPulseCombination(),
         transmission: result.transmission,
         transmissionWarning: result.transmissionWarning,
+        answers: Map.from(_answers),
+        careAdvice: _getCareAdvice(result.meridian),
+        differential: _matchDifferential(result.meridian, resolvedPattern),
       );
     }
 
@@ -1810,6 +1840,9 @@ class DiagnosticEngine {
       confidence: finalConfidence,
       matchedSymptoms: result.matchedSymptoms,
       combinedMeridian: _matchedCombinedPattern() == null ? null : combinedMeridian,
+      tongueCoating: _tongueCoating,
+      tongueShape: _tongueShape,
+      pulseType: _pulseType,
       pulseTypeSecondary: _pulseTypeSecondary,
       followUpQuestions: pulseTongueAssessment?.followUpQuestions ?? const [],
       pulseTongueAssessment: pulseTongueAssessment,
