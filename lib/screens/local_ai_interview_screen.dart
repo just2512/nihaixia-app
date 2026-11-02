@@ -248,19 +248,33 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() => _error = '模型文件尚未安装，请先将 Gemma 4 E4B 模型放入应用目录。');
       }
     } on PlatformException catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = error.message ?? '模型加载失败';
-      });
+      await _refreshStatusAfterLoadFailure(error.message ?? '模型加载失败');
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = '模型加载失败：$error';
-      });
+      await _refreshStatusAfterLoadFailure('模型加载失败：$error');
     } finally {
       if (mounted) setState(() => _modelControlBusy = false);
+    }
+  }
+
+  Future<void> _refreshStatusAfterLoadFailure(String message) async {
+    try {
+      final status = await _service.getStatus();
+      if (!mounted) return;
+      setState(() {
+        _status = status;
+        _statusUnknown = false;
+        _loading = false;
+        _error = message;
+      });
+    } catch (statusError) {
+      if (!mounted) return;
+      setState(() {
+        _status = null;
+        _statusUnknown = true;
+        _checking = false;
+        _loading = false;
+        _error = '$message；重新读取本地模型状态失败：$statusError。请重新检查后继续。';
+      });
     }
   }
 

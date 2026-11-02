@@ -140,6 +140,37 @@ const _releasedStatus = LocalAiModelStatus(
   backend: 'not_loaded',
 );
 
+class _HashVerificationFailureService extends LocalAiService {
+  var _hashVerified = true;
+  var loadCalls = 0;
+  var statusCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    statusCalls += 1;
+    return LocalAiModelStatus(
+      installed: true,
+      fileExists: true,
+      hashVerified: _hashVerified,
+      ready: false,
+      modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+      sizeBytes: 3659530240,
+      expectedSizeBytes: 3659530240,
+      backend: 'not_loaded',
+    );
+  }
+
+  @override
+  Future<LocalAiModelStatus> loadModel() async {
+    loadCalls += 1;
+    _hashVerified = false;
+    throw PlatformException(
+      code: 'MODEL_HASH_MISMATCH',
+      message: '模型 SHA-256 校验失败，请重新导入',
+    );
+  }
+}
+
 class _DeferredModelSetupService extends LocalAiService {
   final loadResult = Completer<LocalAiModelStatus>();
   final importResult = Completer<LocalAiModelStatus>();
@@ -1416,6 +1447,42 @@ void main() {
         expect(
           tester.widget<OutlinedButton>(
             find.widgetWithText(OutlinedButton, '选择并导入模型文件'),
+          ).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets(
+      'refreshes model hash status after a load-time integrity failure',
+      (tester) async {
+        final service = _HashVerificationFailureService();
+
+        await tester.pumpWidget(
+          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('模型文件大小与 SHA-256 均已通过校验：3.66 GB。'),
+          findsOneWidget,
+        );
+        final load = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, '加载本地模型'),
+        ).onPressed!;
+        load();
+        await tester.pumpAndSettle();
+
+        expect(service.loadCalls, 1);
+        expect(service.statusCalls, 2);
+        expect(find.text('模型 SHA-256 校验失败，请重新导入'), findsOneWidget);
+        expect(
+          find.textContaining('首次加载前仍会校验 SHA-256'),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<FilledButton>(
+            find.widgetWithText(FilledButton, '加载本地模型'),
           ).onPressed,
           isNotNull,
         );
