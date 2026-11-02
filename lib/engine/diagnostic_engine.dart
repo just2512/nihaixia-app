@@ -1024,14 +1024,16 @@ class DiagnosticEngine {
       _answers['thirst_no_drink'] = answer.contains('不想喝');
     }
     if (questionKey == 'pulse_cross_urine') {
+      _answers['pulse_cross_urine_answered'] = true;
       _answers['urine_clear'] = answer.contains('清长');
       _answers['urine_short'] = answer.contains('短赤');
       _answers['urine_difficult'] = answer.contains('不利');
     }
     if (questionKey == 'pulse_cross_limbs') {
+      _answers['pulse_cross_limbs_answered'] = true;
       _answers['cold_limbs'] = answer.contains('偏冷');
       _answers['warm_limbs'] = answer.contains('温热');
-      // 手足温热与手心脚心热是不同观察项，不互相代替。
+      // “冷热不均/不清楚”是有效回答，但不推导成寒或热证据。
     }
     if (questionKey == 'pulse_cross_surface') {
       _answers['chills'] = answer.contains('发热恶寒');
@@ -1262,8 +1264,8 @@ class DiagnosticEngine {
         addIf(contradicting, 'cold_drink', '喜冷饮');
         addIf(contradicting, 'hot_palms_soles', '手足心热');
         askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink', '饮水偏好');
-        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short'], 'pulse_cross_urine', '小便情况');
-        askIfMissing(['cold_limbs', 'warm_limbs'], 'pulse_cross_limbs', '四肢温度');
+        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short', 'pulse_cross_urine_answered'], 'pulse_cross_urine', '小便情况');
+        askIfMissing(['cold_limbs', 'warm_limbs', 'pulse_cross_limbs_answered'], 'pulse_cross_limbs', '四肢温度');
         break;
       case 'slow_pulse_red_tongue':
         addIf(supporting, 'thirst_strong', '明显口渴');
