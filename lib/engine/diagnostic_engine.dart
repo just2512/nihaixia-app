@@ -12,6 +12,7 @@ class EngineSnapshot {
   final List<String> selectedSymptoms;
   final String? meridianDirection;
   final String? combinedMeridian;
+  final String? combinedPatternCondition;
   final Map<String, dynamic> answers;
   final int tenQuestionIndex;
   final String? tongueCoating;
@@ -27,6 +28,7 @@ class EngineSnapshot {
     required this.selectedSymptoms,
     this.meridianDirection,
     this.combinedMeridian,
+    this.combinedPatternCondition,
     required this.answers,
     required this.tenQuestionIndex,
     this.tongueCoating,
@@ -93,6 +95,7 @@ class DiagnosticEngine {
       selectedSymptoms: List.from(_selectedSymptoms),
       meridianDirection: _meridianDirection,
       combinedMeridian: _combinedMeridian,
+      combinedPatternCondition: _combinedPatternCondition,
       answers: Map.from(_answers),
       tenQuestionIndex: _tenQuestionIndex,
       tongueCoating: _tongueCoating,
@@ -110,6 +113,7 @@ class DiagnosticEngine {
     _selectedSymptoms = List.from(snapshot.selectedSymptoms);
     _meridianDirection = snapshot.meridianDirection;
     _combinedMeridian = snapshot.combinedMeridian;
+    _combinedPatternCondition = snapshot.combinedPatternCondition;
     _answers = Map.from(snapshot.answers);
     _tenQuestionIndex = snapshot.tenQuestionIndex;
     _tongueCoating = snapshot.tongueCoating;
@@ -750,7 +754,19 @@ class DiagnosticEngine {
 
   // ==================== 合病检测增强 ====================
 
+  CombinedPattern? _matchedCombinedPattern() {
+    final condition = _combinedPatternCondition;
+    if (condition == null) return null;
+    for (final pattern in DiagnosticRules.combinedPatterns) {
+      if (pattern.condition == condition) return pattern;
+    }
+    return null;
+  }
+
   void _detectCombinedPattern() {
+    // Recompute from the current complete answer set; never retain a stale prior match.
+    _combinedMeridian = null;
+    _combinedPatternCondition = null;
     final primary = _meridianDirection;
     if (primary == null) return;
 
@@ -796,75 +812,70 @@ class DiagnosticEngine {
     if (_answers['thirst_no_drink'] == true) jueyinScore += 2;
     if (_answers['hunger_no_eat'] == true) jueyinScore += 2;
 
-    // 规则匹配：精确合病条件
-    if (primary == '太阳' && yangmingScore >= 3) {
+    // 三阳并病优先于任意两经子型；只有“但欲眠睡、目合则汗”证据齐备才命中专属表项。
+    if (primary == '太阳' && yangmingScore >= 2 && shaoyangScore >= 2 &&
+        _answers['drowsy'] == true && _answers['has_sweat'] == true) {
+      _combinedMeridian = '阳明少阳';
+      _combinedPatternCondition = CombinedPatternCondition.threeYangSleep;
+      return;
+    }
+
+    // 规则匹配：精确合病条件。太阳阳明下利热子型必须先于一般太阳阳明分支。
+    if (primary == '太阳' && yangmingScore >= 3 &&
+        _answers['diarrhea'] == true) {
       _combinedMeridian = '阳明';
-      // 区分太阳+阳明的不同场景
+      _combinedPatternCondition = CombinedPatternCondition.sunYangmingDiarrheaHeat;
+    } else if (primary == '太阳' && yangmingScore >= 3) {
+      _combinedMeridian = '阳明';
       if (_answers['irritable'] == true && _answers['has_sweat'] == false) {
-        _combinedPatternCondition = 'sun+yangming_interior_heat'; // 大青龙汤（表寒里热）
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingInteriorHeat;
       } else if (_answers['nausea'] == true || _answers['vomiting'] == true) {
-        _combinedPatternCondition = 'sun+yangming_vomit'; // 葛根加半夏汤
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingVomit;
       } else if (_answers['breathing'] == '喘' || _answers['chest_fullness'] == true) {
-        _combinedPatternCondition = 'sun+yangming_chest_full'; // 麻黄汤
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingChestFull;
       } else if (_answers['has_sweat'] == true && yangmingScore < 5) {
-        _combinedPatternCondition = 'sun+yangming_unresolved'; // 二阳并病，表证未罢，小发汗
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingUnresolved;
       }
     } else if (primary == '太阳' && shaoyinScore >= 3) {
-      // 太阳少阴两感：发热恶寒+脉沉+但欲寐
       _combinedMeridian = '少阴';
-      _combinedPatternCondition = 'sun+shaoyin_two_cold'; // 麻黄附子细辛汤
-      // 默认: sun_symptoms + yangming_symptoms → 葛根汤
+      _combinedPatternCondition = CombinedPatternCondition.sunShaoyinTwoCold;
     } else if (primary == '太阳' && shaoyangScore >= 2) {
       _combinedMeridian = '少阳';
-      // 区分太阳+少阳的不同场景
       if (_answers['diarrhea'] == true) {
-        _combinedPatternCondition = 'sun+shaoyang_diarrhea'; // 黄芩汤
+        _combinedPatternCondition = CombinedPatternCondition.sunShaoyangDiarrhea;
       } else if (_answers['nausea'] == true || _answers['vomiting'] == true) {
-        _combinedPatternCondition = 'sun+shaoyang_vomit'; // 黄芩加半夏生姜汤
+        _combinedPatternCondition = CombinedPatternCondition.sunShaoyangVomit;
       } else {
-        // 太阳少阳合病基础方：发热微恶寒、支节烦疼、微呕、心下支结
-        _combinedPatternCondition = 'sun+shaoyang_combined'; // 柴胡桂枝汤
+        _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
       }
     } else if (primary == '少阳' && yangmingScore >= 3) {
       _combinedMeridian = '阳明';
       if (_answers['tidal_fever'] == true) {
-        _combinedPatternCondition = 'shaoyang+yangming_tidal_fever'; // 柴胡加芒硝汤
+        _combinedPatternCondition = CombinedPatternCondition.shaoyangYangmingTidalFever;
       }
     } else if (primary == '太阴' && shaoyinScore >= 3) {
       _combinedMeridian = '少阴';
-    } else if (primary == '太阳' && yangmingScore >= 2 && shaoyangScore >= 2) {
-      _combinedMeridian = '阳明少阳'; // 三阳并病
-      if (_answers['drowsy'] == true && _answers['has_sweat'] == true) {
-        _combinedPatternCondition = 'three_yang_sleep'; // 三阳合病，目合则汗
-      }
+      _combinedPatternCondition = CombinedPatternCondition.taiyinShaoyinBase;
     } else if (primary == '阳明' && shaoyinScore >= 3) {
       _combinedMeridian = '少阴';
-      _combinedPatternCondition = 'yangming+shaoyin_urgent'; // 大承气汤急下
+      _combinedPatternCondition = CombinedPatternCondition.yangmingShaoyinUrgent;
     } else if (primary == '厥阴' && shaoyangScore >= 2) {
       _combinedMeridian = '少阳';
-      _combinedPatternCondition = 'jueyin+shaoyang'; // 乌梅丸
+      _combinedPatternCondition = CombinedPatternCondition.jueyinShaoyang;
     } else if (primary == '少阳' && jueyinScore >= 2) {
       _combinedMeridian = '厥阴';
-      _combinedPatternCondition = 'jueyin+shaoyang';
+      _combinedPatternCondition = CombinedPatternCondition.jueyinShaoyang;
     } else if (primary == '少阳' && taiyinScore >= 3) {
-      // 少阳太阴合病：往来寒热+腹满便溏食不下
       _combinedMeridian = '太阴';
-      _combinedPatternCondition = 'shaoyang+taiyin'; // 柴胡桂枝干姜汤
+      _combinedPatternCondition = CombinedPatternCondition.shaoyangTaiyin;
     } else if (primary == '少阳' && sunScore >= 3) {
-      // 太阳少阳合病（柴胡桂枝汤）：重算后主经归少阳，但太阳表证（发热恶寒）仍在。
-      // 原先 primary=='太阳' 分支因口苦咽干被重判为少阳而失效，此处按合病补回。
-      _combinedMeridian = '少阳';
-      _combinedPatternCondition = 'sun+shaoyang_combined'; // 柴胡桂枝汤
+      _combinedMeridian = '太阳';
+      _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
     } else if ((primary == '太阳' || primary == '太阴') &&
                sunScore >= 3 &&
                _answers['diarrhea'] == true && taiyinScore >= 2) {
-      // 太阳太阴并病：太阳表证未罢 + 太阴虚寒下利（协热利）→ 桂枝人参汤
       _combinedMeridian = '太阴';
-      _combinedPatternCondition = 'sun+taiyin'; // 桂枝人参汤
-    } else if (primary == '太阳' && yangmingScore >= 3 && _answers['diarrhea'] == true) {
-      // 太阳阳明合病下利热：下利臭秽+高热
-      _combinedMeridian = '阳明';
-      _combinedPatternCondition = 'sun+yangming_diarrhea_heat'; // 葛根芩连汤
+      _combinedPatternCondition = CombinedPatternCondition.sunTaiyin;
     }
   }
 
@@ -1351,9 +1362,11 @@ class DiagnosticEngine {
 
     // ===== 主引擎：v3.2 公式文件（用户指定以所发文件为主） =====
     final ruleResult = diagnoseByRules();
+    final combinedPattern = _matchedCombinedPattern();
     if (ruleResult.formula.isNotEmpty) {
+      final resolvedFormula = combinedPattern?.formula ?? ruleResult.formula;
       // 以 v3.2 公式为权威出方；补充处方/调护/鉴别/安全护栏等字段（非风险性增强）。
-      final prescription = FormulaRepository.buildPrescription(ruleResult.formula);
+      final prescription = FormulaRepository.buildPrescription(resolvedFormula);
       final careAdvice = _getCareAdvice(ruleResult.meridian);
       final differential = _matchDifferential(ruleResult.meridian, ruleResult.pattern);
       // P0/P1 安全护栏（与兜底路径一致，避免主引擎路径丢失告警）
@@ -1377,8 +1390,11 @@ class DiagnosticEngine {
       }
       return DiagnosisResult(
         meridian: ruleResult.meridian,
-        pattern: ruleResult.pattern,
-        formula: ruleResult.formula,
+        pattern: combinedPattern?.description ?? ruleResult.pattern,
+        formula: resolvedFormula,
+        recommendedFormulas: combinedPattern == null
+            ? ruleResult.recommendedFormulas
+            : [resolvedFormula],
         explanation: ruleResult.explanation,
         confidence: ruleResult.confidence,
         matchedSymptoms: ruleResult.matchedSymptoms,
@@ -1387,6 +1403,7 @@ class DiagnosticEngine {
         differential: differential,
         recommendConsult: ruleResult.recommendConsult,
         answers: Map.from(_answers),
+        combinedMeridian: combinedPattern == null ? null : _combinedMeridian,
         pulseTongueContradiction: contradiction,
         trueFalseHeatCold: trueFalseHC,
         medicationRules: medRules,
@@ -1464,19 +1481,12 @@ class DiagnosticEngine {
     String formulaOverride = result.formula;
     double finalConfidence = weightedConfidence;
     if (combinedMeridian != null) {
-      if (combinedMeridian.contains('阳明') && combinedMeridian.contains('少阳')) {
-        combinedMeridian = '阳明';
-      }
       finalConfidence = weightedConfidence * 0.9;
 
       // 从 combinedPatterns 中查找精确匹配的合病方剂
-      if (_combinedPatternCondition != null) {
-        for (final cp in DiagnosticRules.combinedPatterns) {
-          if (cp.condition == _combinedPatternCondition) {
-            formulaOverride = cp.formula;
-            break;
-          }
-        }
+      final combinedPattern = _matchedCombinedPattern();
+      if (combinedPattern != null) {
+        formulaOverride = combinedPattern.formula;
       }
     }
 
@@ -1585,13 +1595,14 @@ class DiagnosticEngine {
 
     return DiagnosisResult(
       meridian: result.meridian,
-      pattern: result.pattern,
+      pattern: _matchedCombinedPattern()?.description ?? result.pattern,
       patternDetail: result.patternDetail,
       formula: formulaOverride,
+      recommendedFormulas: [formulaOverride],
       explanation: result.explanation,
       confidence: finalConfidence,
       matchedSymptoms: result.matchedSymptoms,
-      combinedMeridian: combinedMeridian,
+      combinedMeridian: _matchedCombinedPattern() == null ? null : combinedMeridian,
       tongueCoating: _tongueCoating,
       tongueShape: _tongueShape,
       pulseType: _pulseType,
