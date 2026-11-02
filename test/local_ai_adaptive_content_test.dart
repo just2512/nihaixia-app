@@ -120,4 +120,39 @@ void main() {
     expect(scaffold.right, lessThanOrEqualTo(388));
     expect(content.right, lessThanOrEqualTo(388));
   });
+
+  testWidgets('AI interview route stays on the originating right panel beside a vertical hinge', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          preferredAnchorPoint: const Offset(600, 450),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffold = tester.getRect(find.byType(Scaffold));
+    final content = tester.getRect(
+      find.byKey(const ValueKey('local-ai-content-width')),
+    );
+    expect(scaffold.left, greaterThanOrEqualTo(412));
+    expect(scaffold.right, 800);
+    expect(content.left, greaterThanOrEqualTo(412));
+    expect(content.right, 800);
+    expect(content.width, 388);
+  });
 }
