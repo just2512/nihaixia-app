@@ -98,6 +98,43 @@ void main() {
     });
   });
 
+  group('合病结果优先级', () {
+    test('旧六经补虚方优先逻辑不得覆盖已命中的精确合病表方', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'has_sweat': true,
+          'bitter_mouth': true,
+          'dry_throat': true,
+          'palpitation': true,
+        },
+        tenQuestionIndex: 0,
+        qAnswers: const {
+          kQ1: 1,
+          kQ4: 2,
+          kQ2: 12,
+          kQ3: 1,
+          kQ5: 1,
+          kQ10: 2,
+        },
+        pulseType: '结',
+      ));
+
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunShaoyangBase);
+      expect(result, isNotNull);
+      expect(result!.formula, '柴胡桂枝汤');
+      expect(result.recommendedFormulas, ['柴胡桂枝汤']);
+      expect(result.combinedMeridian, '少阳');
+      expect(result.prescription?.formulaName, '柴胡桂枝汤');
+    });
+  });
+
   group('分支优先级', () {
     test('太阳阳明下利热分支优先于一般太阳阳明子型', () {
       final engine = DiagnosticEngine();
