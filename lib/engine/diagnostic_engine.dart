@@ -1602,7 +1602,7 @@ class DiagnosticEngine {
       patternDetail: _matchedCombinedPattern()?.description ?? result.patternDetail,
       formula: formulaOverride,
       recommendedFormulas: [formulaOverride],
-      explanation: result.explanation,
+      explanation: _matchedCombinedPattern()?.description ?? result.explanation,
       confidence: finalConfidence,
       matchedSymptoms: result.matchedSymptoms,
       combinedMeridian: _matchedCombinedPattern() == null ? null : combinedMeridian,
