@@ -41,5 +41,5 @@ class ZangFuEvidenceAssessment {
       record.state != ZangFuEvidenceAnswerState.invalid) ||
       unclassifiedAdditionalEvidence.isNotEmpty;
 
-  bool get hasVerifiedOrganMapping => false;
+  bool get hasVerifiedOrganMapping => organMappingStatus == 'VERIFIED';
 }
