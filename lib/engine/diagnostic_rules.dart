@@ -861,7 +861,14 @@ class DiagnosticRules {
     final candidates = List<String>.from(pulseOptions)
       ..sort((a, b) => b.length.compareTo(a.length));
     for (final candidate in candidates) {
-      if (value == candidate || value.startsWith(candidate)) return candidate;
+      // Only accept an exact option or an explicit explanatory annotation.
+      // A concatenated value such as "浮数" is not a single pulse and must
+      // not silently collapse to the shorter prefix "浮".
+      if (value == candidate ||
+          value.startsWith('${candidate}（') ||
+          value.startsWith('${candidate}(')) {
+        return candidate;
+      }
     }
     return null;
   }
