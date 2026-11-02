@@ -52,6 +52,7 @@ app.*.map.json
 *_names_list*.txt
 
 # Local temp / scratch / backup artifacts (do not commit)
+/output/find-n2/
 _writetest.txt
 *.bak
 *.new

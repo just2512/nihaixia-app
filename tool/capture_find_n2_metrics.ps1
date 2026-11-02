@@ -61,7 +61,6 @@ $logPath = Join-Path $runDirectory "window-metrics.log"
 
 $metadata = [ordered]@{
     capturedAt = (Get-Date).ToString("o")
-    serial = $Serial
     packageName = $packageName
     model = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.product.model"))
     manufacturer = (Invoke-AdbText -Arguments @("-s", $Serial, "shell", "getprop", "ro.product.manufacturer"))
@@ -73,8 +72,6 @@ $metadata = [ordered]@{
     flutterMetricsFilter = "[WINDOW_METRICS]"
 }
 $metadata | ConvertTo-Json -Depth 4 | Set-Content -Path $metadataPath -Encoding UTF8
-
-Invoke-AdbText -Arguments @("-s", $Serial, "logcat", "-c") | Out-Null
 
 Write-Host "设备：$($metadata.manufacturer) $($metadata.model) / Android $($metadata.androidRelease)"
 Write-Host "系统尺寸：$($metadata.screenSize)，密度：$($metadata.screenDensity)，字号：$($metadata.fontScale)"
@@ -102,7 +99,6 @@ try {
 finally {
     $summary = [ordered]@{
         finishedAt = (Get-Date).ToString("o")
-        deviceSerial = $Serial
         metricsLineCount = $script:metricsLineCount
         metricsLog = $logPath
         metadata = $metadataPath
