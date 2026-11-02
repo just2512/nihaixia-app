@@ -221,10 +221,26 @@ void main() {
           meridianDirection: scenario.primary,
           answers: scenario.answers,
           tenQuestionIndex: 0,
+          qAnswers: const {
+            kQ1: 1,
+            kQ4: 2,
+            kQ2: 12,
+            kQ3: 1,
+            kQ5: 1,
+            kQ10: 2,
+          },
         ));
 
-        engine.diagnose();
+        final result = engine.diagnose();
         expect(engine.combinedPatternCondition, scenario.expected);
+        final rule = DiagnosticRules.combinedPatterns
+            .firstWhere((pattern) => pattern.condition == scenario.expected);
+        expect(result, isNotNull, reason: scenario.name);
+        expect(result!.formula, rule.formula, reason: scenario.name);
+        expect(result.recommendedFormulas, [rule.formula], reason: scenario.name);
+        expect(result.pattern, rule.description, reason: scenario.name);
+        expect(result.prescription?.formulaName, rule.formula, reason: scenario.name);
+        expect(result.combinedMeridian, isNotNull, reason: scenario.name);
       });
     }
 
@@ -235,6 +251,34 @@ void main() {
         CombinedPatternCondition.threeYangBase,
       };
       expect(cases.map((scenario) => scenario.expected).toSet().intersection(unreachable), isEmpty);
+    });
+  });
+
+  group('旧六经兜底结果传播', () {
+    test('未命中结构化规则时仍将精确合病方同步到最终处方', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'has_sweat': true,
+          'bitter_mouth': true,
+          'dry_throat': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunShaoyangBase);
+      expect(result, isNotNull);
+      expect(result!.formula, '柴胡桂枝汤');
+      expect(result.recommendedFormulas, ['柴胡桂枝汤']);
+      expect(result.pattern, contains('太阳少阳合病'));
+      expect(result.combinedMeridian, '少阳');
+      expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
   });
 
