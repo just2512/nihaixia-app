@@ -187,4 +187,119 @@ void main() {
     expect(page.width, 402);
   });
 
+
+  testWidgets('full-page route stays on the right panel around a zero-width flat fold', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              const SizedBox(width: 412),
+              Expanded(
+                child: Builder(
+                  builder: (sourceContext) => Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(sourceContext).push<void>(
+                          FoldAwareMaterialPageRoute<void>(
+                            sourceContext: sourceContext,
+                            builder: (_) => Scaffold(
+                              body: SizedBox.expand(
+                                key: const ValueKey('flat-fold-route-content'),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('打开折痕右侧页面'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开折痕右侧页面'));
+    await tester.pumpAndSettle();
+
+    final page = tester.getRect(find.byKey(const ValueKey('flat-fold-route-content')));
+    expect(page.left, greaterThanOrEqualTo(412));
+    expect(page.right, 800);
+    expect(page.width, 388);
+  });
+
+  testWidgets('full-page route stays on the left physical panel when opened there', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Row(
+            children: [
+              SizedBox(
+                width: 388,
+                child: Builder(
+                  builder: (sourceContext) => Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(sourceContext).push<void>(
+                          FoldAwareMaterialPageRoute<void>(
+                            sourceContext: sourceContext,
+                            builder: (_) => Scaffold(
+                              body: SizedBox.expand(
+                                key: const ValueKey('left-route-content'),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('打开左侧页面'),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              const Expanded(child: SizedBox.shrink()),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开左侧页面'));
+    await tester.pumpAndSettle();
+
+    final page = tester.getRect(find.byKey(const ValueKey('left-route-content')));
+    expect(page.left, 0);
+    expect(page.right, 388);
+    expect(page.width, 388);
+  });
+
 }
