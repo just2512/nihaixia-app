@@ -27,11 +27,9 @@ void main() {
         CombinedPatternCondition.sunYangmingChestFull,
         CombinedPatternCondition.sunShaoyangDiarrhea,
         CombinedPatternCondition.sunShaoyangVomit,
-        CombinedPatternCondition.yangmingShaoyinUrgent,
         CombinedPatternCondition.jueyinShaoyang,
         CombinedPatternCondition.sunYangmingUnresolved,
         CombinedPatternCondition.threeYangSleep,
-        CombinedPatternCondition.sunYangmingInteriorHeat,
         CombinedPatternCondition.sunShaoyinTwoCold,
         CombinedPatternCondition.shaoyangTaiyin,
         CombinedPatternCondition.sunTaiyin,
@@ -90,8 +88,8 @@ void main() {
       expect(result, isNotNull);
       expect(result!.formula, '柴胡桂枝汤');
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
-      expect(result.combinedMeridian, '少阳');
-      expect(result.pattern, contains('太阳少阳合病'));
+      expect(result.combinedMeridian, isNull);
+      expect(result.pattern, contains('兼见少阳证'));
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
   });
@@ -248,11 +246,9 @@ void main() {
       (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
       (name: '太阳少阳下利型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunShaoyangDiarrhea),
       (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
-      (name: '阳明少阴急下型', primary: '阳明', answers: {'drowsy': true}, expected: CombinedPatternCondition.yangmingShaoyinUrgent),
       (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
       (name: '太阳阳明未解型', primary: '太阳', answers: {'thirsty': true, 'hot_palms_soles': true, 'has_sweat': true}, expected: CombinedPatternCondition.sunYangmingUnresolved),
       (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
-      (name: '太阳阳明里热型', primary: '太阳', answers: {'constipated': true, 'irritable': true, 'has_sweat': false}, expected: CombinedPatternCondition.sunYangmingInteriorHeat),
       (name: '太阳少阴两感型', primary: '太阳', answers: {'drowsy': true}, expected: CombinedPatternCondition.sunShaoyinTwoCold),
       (name: '少阳太阴型', primary: '少阳', answers: {'diarrhea': true, 'abdominal_pain': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
       (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true}, expected: CombinedPatternCondition.sunTaiyin),
@@ -294,7 +290,11 @@ void main() {
         expect(result.recommendedFormulas, [rule.formula], reason: scenario.name);
         expect(result.pattern, rule.description, reason: scenario.name);
         expect(result.prescription?.formulaName, rule.formula, reason: scenario.name);
-        expect(result.combinedMeridian, isNotNull, reason: scenario.name);
+        expect(
+        result.combinedMeridian,
+        rule.isExplicitCombined ? isNotNull : isNull,
+        reason: scenario.name,
+      );
       });
     }
 
