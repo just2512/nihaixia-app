@@ -5,6 +5,7 @@ import 'formula_matcher.dart';
 import 'formula_rules.dart';
 import 'formula_rules.dart' as fr;
 import 'rule_engine.dart';
+import 'zangfu_evidence_builder.dart';
 
 /// 引擎快照，用于返回上一步
 class EngineSnapshot {
@@ -68,6 +69,12 @@ class DiagnosticEngine {
   int get tenQuestionIndex => _tenQuestionIndex;
   String? get pulseTypeSecondary => _pulseTypeSecondary;
   String? get combinedPatternCondition => _combinedPatternCondition;
+
+  /// 独立只读证据层：返回 App 原始问答，不参与六经、合病或方剂计算。
+  buildZangFuEvidence() => ZangFuEvidenceBuilder.build(
+        qAnswers: Map.unmodifiable(_qAnswers),
+        extSymptoms: Set.unmodifiable(_extSymptoms),
+      );
 
   /// 症状匹配（子串语义）：UI 选项文本为「触发词+证候描述（→方剂）」复合串，
   /// 若用 List.contains 精确相等则永不等（根因 A）。改为对列表内任一元素做
