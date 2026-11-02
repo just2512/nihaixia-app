@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nihaisha_app/screens/solar_term_section_screen.dart';
 import 'package:nihaisha_app/services/solar_term_service.dart';
+import 'package:nihaisha_app/utils/fold_aware_routes.dart';
 
 /// 知识库页顶部「节气养生」入口卡。
 ///
@@ -19,7 +20,10 @@ class SolarTermCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const SolarTermSectionScreen()),
+          FoldAwareMaterialPageRoute(
+            sourceContext: context,
+            builder: (_) => const SolarTermSectionScreen(),
+          ),
         ),
         child: Container(
           decoration: BoxDecoration(

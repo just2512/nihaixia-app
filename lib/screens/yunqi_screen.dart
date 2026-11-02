@@ -59,7 +59,8 @@ class _YunQiScreenState extends State<YunQiScreen> {
         '${_selectedDate.day.toString().padLeft(2, '0')}';
     Navigator.push(
       context,
-      MaterialPageRoute(
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
         builder: (_) => ChartExportPage(
           title: '五运六气推算',
           filename: 'yunqi_$stamp.png',
