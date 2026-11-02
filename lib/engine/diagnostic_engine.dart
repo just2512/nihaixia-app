@@ -63,6 +63,7 @@ class DiagnosticEngine {
   DiagnosticStage get stage => _stage;
   List<String> get selectedSymptoms => List.unmodifiable(_selectedSymptoms);
   int get tenQuestionIndex => _tenQuestionIndex;
+  String? get combinedPatternCondition => _combinedPatternCondition;
 
   /// 症状匹配（子串语义）：UI 选项文本为「触发词+证候描述（→方剂）」复合串，
   /// 若用 List.contains 精确相等则永不等（根因 A）。改为对列表内任一元素做
@@ -1536,7 +1537,7 @@ class DiagnosticEngine {
 
     // 处方生成 — 匹配方剂并检查加减法
     List<FormulaModification>? matchedMods;
-    final mods = DiagnosticRules.formulaModifications[result.formula];
+    final mods = DiagnosticRules.formulaModifications[formulaOverride];
     if (mods != null) {
       matchedMods = [];
       for (final mod in mods) {
