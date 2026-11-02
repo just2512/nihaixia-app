@@ -125,9 +125,10 @@ void main() {
       expect(engine.combinedPatternCondition,
           CombinedPatternCondition.sunYangmingDiarrheaHeat);
       expect(result, isNotNull);
-      expect(result!.formula, '葛根芩连汤');
-      expect(result.recommendedFormulas, ['葛根芩连汤']);
+      expect(result!.formula, '葛根黄芩黄连汤');
+      expect(result.recommendedFormulas, ['葛根黄芩黄连汤']);
       expect(result.combinedMeridian, '阳明');
+      expect(result.prescription?.formulaName, '葛根黄芩黄连汤');
     });
 
     test('三阳并病的目合则汗条件先于两经子型分支', () {
