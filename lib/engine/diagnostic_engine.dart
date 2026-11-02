@@ -1731,7 +1731,9 @@ class DiagnosticEngine {
     // 经方两大补虚方优先规则（来自六经辨证公式）
     // 遇到桂枝汤证/麻黄汤证时，若兼表阳虚，先用小建中汤
     // 遇到脉结代，先用炙甘草汤补足里阴，再治其他
-    if (meridian == '太阳' && result.formula == '桂枝汤') {
+    if (combinedPattern == null &&
+        meridian == '太阳' &&
+        result.formula == '桂枝汤') {
       if (_answers['weak_speech'] == true || _answers['palpitation'] == true) {
         formulaOverride = '小建中汤';
         result = DiagnosisResult(
@@ -1745,7 +1747,8 @@ class DiagnosticEngine {
         );
       }
     }
-    if (result.formula == '炙甘草汤' || (_pulseType == '结' || _pulseType == '代')) {
+    if (combinedPattern == null &&
+        (result.formula == '炙甘草汤' || _pulseType == '结' || _pulseType == '代')) {
       if (_answers['palpitation'] == true) {
         formulaOverride = '炙甘草汤';
         result = DiagnosisResult(
