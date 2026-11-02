@@ -284,18 +284,26 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('六经辨证诊断助手', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('中医经典与本地健康信息工具',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('基于倪海厦老师《伤寒论》六经辨证体系，'
-                '通过七步问诊提供中医辨证建议。', style: TextStyle(color: context.colors.onSurfaceVariant)),
+            Text(
+              '提供六经规则问诊、经典知识检索、经方资料和传统文化工具。'
+              '规则问诊输出仅作传统医学知识参考，不能替代医疗机构的诊断和治疗。',
+              style: TextStyle(color: context.colors.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
             const Text('功能特色', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('• 六经辨证智能诊断\n'
-                '• 舌诊脉诊参考\n'
-                '• 经方方剂库\n'
-                '• 医案收藏与分享\n'
-                '• 辅助诊断公式验证'),
+            Text(
+              '• 六经规则问诊与证候信息整理\\n'
+              '• 舌象、脉象等问诊参考信息\\n'
+              '• 经方、本草、穴位与经典资料库\\n'
+              '• 医案收藏、分享与离线检索\\n'
+              '• 本地 E4B 健康信息澄清与自述整理（不提供疾病诊断或处方）\\n'
+              '• 易经、八字、紫微等传统文化工具（非医疗用途）',
+            ),
+            const SizedBox(height: 16),
             const SizedBox(height: 16),
             const Text('更新日志', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
