@@ -142,12 +142,12 @@ class LocalAiModelStatus {
   const LocalAiModelStatus({
     required this.installed,
     required this.fileExists,
-    this.hashVerified = false,
     required this.ready,
     required this.modelPath,
     required this.sizeBytes,
     required this.expectedSizeBytes,
     required this.backend,
+    this.hashVerified = false,
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
