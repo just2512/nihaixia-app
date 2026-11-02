@@ -952,10 +952,13 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: '本地 AI 问诊',
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () async {
+              final routeAnchorPoint = foldAwareRouteAnchorPoint(context);
               final summary = await Navigator.push<String>(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const LocalAiInterviewScreen(),
+                  builder: (_) => LocalAiInterviewScreen(
+                    preferredAnchorPoint: routeAnchorPoint,
+                  ),
                 ),
               );
               if (!mounted || summary == null) return;
