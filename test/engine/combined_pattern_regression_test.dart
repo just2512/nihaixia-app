@@ -27,7 +27,6 @@ void main() {
         CombinedPatternCondition.sunYangmingChestFull,
         CombinedPatternCondition.sunShaoyangDiarrhea,
         CombinedPatternCondition.sunShaoyangVomit,
-        CombinedPatternCondition.shaoyangYangmingTidalFever,
         CombinedPatternCondition.yangmingShaoyinUrgent,
         CombinedPatternCondition.jueyinShaoyang,
         CombinedPatternCondition.sunYangmingUnresolved,
@@ -36,7 +35,6 @@ void main() {
         CombinedPatternCondition.sunShaoyinTwoCold,
         CombinedPatternCondition.shaoyangTaiyin,
         CombinedPatternCondition.sunTaiyin,
-        CombinedPatternCondition.sunYangmingDiarrheaHeat,
       ]));
     });
   });
@@ -135,8 +133,8 @@ void main() {
     });
   });
 
-  group('分支优先级', () {
-    test('太阳阳明下利热分支优先于一般太阳阳明子型', () {
+  group('合病条件与条文前提', () {
+    test('太阳阳明下利且明确无误下史时命中第32条葛根汤', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(
         stage: DiagnosticStage.meridianLocation,
@@ -147,25 +145,54 @@ void main() {
           'has_sweat': false,
           'cold_limbs': false,
           'thirsty': true,
-          'thirst_strong': true,
           'hot_palms_soles': true,
-          'headache': true,
-          'irritable': true,
           'diarrhea': true,
+          'history_mistreatment': false,
         },
         tenQuestionIndex: 0,
+        qAnswers: const {
+          kQ1: 1,
+          kQ4: 2,
+          kQ2: 12,
+          kQ3: 1,
+          kQ5: 1,
+          kQ10: 2,
+        },
       ));
 
-      // 无扁平规则答案时进入旧六经路径；无论旧路径是否有足够结果，
-      // 合病条件必须由新分支确定为下利热，而不能被一般太阳阳明分支截获。
       final result = engine.diagnose();
       expect(engine.combinedPatternCondition,
-          CombinedPatternCondition.sunYangmingDiarrheaHeat);
+          CombinedPatternCondition.sunYangmingBase);
       expect(result, isNotNull);
-      expect(result!.formula, '葛根黄芩黄连汤');
-      expect(result.recommendedFormulas, ['葛根黄芩黄连汤']);
+      expect(result!.formula, '葛根汤');
+      expect(result.recommendedFormulas, ['葛根汤']);
       expect(result.combinedMeridian, '阳明');
-      expect(result.prescription?.formulaName, '葛根黄芩黄连汤');
+      expect(result.prescription?.formulaName, '葛根汤');
+    });
+
+    test('误下史存在时不再误触发合病葛根汤或第34条葛根芩连汤', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'has_sweat': true,
+          'thirsty': true,
+          'hot_palms_soles': true,
+          'diarrhea': true,
+          'history_mistreatment': true,
+          'asthma': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '促',
+      ));
+
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+      expect(result, isNotNull);
+      expect(result!.combinedMeridian, isNull);
     });
 
     test('三阳并病的目合则汗条件先于两经子型分支', () {
@@ -209,7 +236,8 @@ void main() {
       (name: '太阳少阴两感型', primary: '太阳', answers: {'drowsy': true}, expected: CombinedPatternCondition.sunShaoyinTwoCold),
       (name: '少阳太阴型', primary: '少阳', answers: {'diarrhea': true, 'abdominal_pain': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
       (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true}, expected: CombinedPatternCondition.sunTaiyin),
-      (name: '太阳阳明下利热型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunYangmingDiarrheaHeat),
+      (name: '太阳阳明下利基础型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false}, expected: CombinedPatternCondition.sunYangmingBase),
+      (name: '少阳阳明下利滑数型', primary: '少阳', answers: {'constipated': true, 'diarrhea': true}, expected: CombinedPatternCondition.shaoyangYangmingBase),
     ];
 
     for (final scenario in cases) {
@@ -221,6 +249,12 @@ void main() {
           meridianDirection: scenario.primary,
           answers: scenario.answers,
           tenQuestionIndex: 0,
+          pulseType: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
+              ? '滑'
+              : null,
+          pulseTypeSecondary: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
+              ? '数'
+              : null,
           qAnswers: const {
             kQ1: 1,
             kQ4: 2,
@@ -246,8 +280,6 @@ void main() {
 
     test('规则表中的三条基础键没有检测器赋值路径，不得被误报为可达', () {
       final unreachable = <String>{
-        CombinedPatternCondition.sunYangmingBase,
-        CombinedPatternCondition.shaoyangYangmingBase,
         CombinedPatternCondition.threeYangBase,
       };
       expect(cases.map((scenario) => scenario.expected).toSet().intersection(unreachable), isEmpty);
