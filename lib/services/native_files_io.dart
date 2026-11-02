@@ -65,6 +65,7 @@ Future<String?> downloadAndVerifyApk({
     final firstByteCompleter = Completer<void>();
     late StreamSubscription<List<int>> subscription;
     Timer? firstByteTimer;
+    Timer? stallTimer;
     var firstByteArrived = false;
 
     firstByteTimer = Timer(const Duration(seconds: 15), () {
@@ -74,20 +75,41 @@ Future<String?> downloadAndVerifyApk({
       }
     });
 
+    // Once data starts flowing, guard against a mid-body stall. A TCP hang
+    // with no FIN neither triggers onDone nor onError, so without this
+    // watchdog the await below (and the non-dismissible progress dialog)
+    // would freeze forever. The timer resets on every received chunk.
+    void resetStallTimer() {
+      stallTimer?.cancel();
+      stallTimer = Timer(const Duration(seconds: 30), () {
+        if (!firstByteCompleter.isCompleted) {
+          debugPrintSafe('下载中途停滞（30s 无数据），切换: $url');
+          firstByteCompleter.completeError(Exception('download_stalled'));
+        }
+      });
+    }
+
     subscription = response.stream.listen(
       (chunk) {
         if (!firstByteArrived) {
           firstByteArrived = true;
           firstByteTimer?.cancel();
         }
+        resetStallTimer();
         sink.add(chunk);
         receivedBytes += chunk.length;
         if (totalBytes > 0) {
           onProgress(receivedBytes / totalBytes);
         }
       },
-      onError: (e, _) => firstByteCompleter.completeError(e),
-      onDone: () => firstByteCompleter.complete(),
+      onError: (e, _) {
+        stallTimer?.cancel();
+        firstByteCompleter.completeError(e);
+      },
+      onDone: () {
+        stallTimer?.cancel();
+        firstByteCompleter.complete();
+      },
       cancelOnError: true,
     );
 
@@ -95,6 +117,7 @@ Future<String?> downloadAndVerifyApk({
       await firstByteCompleter.future;
     } catch (e) {
       firstByteTimer.cancel();
+      stallTimer?.cancel();
       await subscription.cancel();
       await sink.close();
       return null;

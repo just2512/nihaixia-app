@@ -19,6 +19,27 @@ class LocalAiModelIntegrityPolicyTest {
     }
 
     @Test
+    fun hashesLargeFilesAcrossMultipleBufferReads() {
+        // Spanning several 1 MiB reads exercises the streaming loop; a buffer
+        // off-by-one (digest.update(buffer, 0, count ± 1)) would corrupt the
+        // digest on real multi-chunk files while this tiny-file suite stays green.
+        val pattern = "0123456789abcdef".toByteArray(Charsets.US_ASCII)
+        val totalBytes = 1024 * 1024 * 2 + 1234567 // > 2 buffers, non-aligned tail
+        val expectedSha256 = "ef65925a4f90d5e2ab153b1d7c584ce0d759edcf3ecb2c314e118bbf80865b4d"
+        withTempBinaryFile(totalBytes) { file ->
+            java.io.RandomAccessFile(file, "rw").use { out ->
+                var written = 0L
+                out.setLength(totalBytes.toLong())
+                while (written < totalBytes) {
+                    out.write(pattern, 0, minOf(pattern.size, (totalBytes - written).toInt()))
+                    written = out.filePointer
+                }
+            }
+            assertEquals(expectedSha256, LocalAiModelIntegrityPolicy.sha256(file))
+        }
+    }
+
+    @Test
     fun acceptsTheExpectedDigestCaseInsensitively() {
         val expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         assertTrue(LocalAiModelIntegrityPolicy.matches(expected.uppercase(), expected))
