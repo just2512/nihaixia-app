@@ -34,6 +34,35 @@ List<Widget> _screens() => List.generate(
       ),
     );
 
+class _CounterScreen extends StatefulWidget {
+  const _CounterScreen();
+
+  @override
+  State<_CounterScreen> createState() => _CounterScreenState();
+}
+
+class _CounterScreenState extends State<_CounterScreen> {
+  int _count = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('计数：$_count'),
+            ElevatedButton(
+              onPressed: () => setState(() => _count++),
+              child: const Text('增加'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 void main() {
   testWidgets(
     'Find N2 outer and inner window widths switch navigation without losing tab state',
@@ -202,5 +231,50 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('内容页 2'), findsOneWidget);
+  });
+
+  testWidgets('preserves a tab state across outer-inner-outer layout changes', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 790);
+    tester.view.displayFeatures = [];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: [
+            const _CounterScreen(),
+            ..._screens().skip(1),
+          ],
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('增加'));
+    await tester.pumpAndSettle();
+    expect(find.text('计数：1'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.text('计数：1'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(402, 790);
+    tester.view.displayFeatures = [];
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('计数：1'), findsOneWidget);
   });
 }
