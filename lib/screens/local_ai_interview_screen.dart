@@ -1503,7 +1503,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
               if (ready)
                 Text(
-                  status!.sizeLabel,
+                  status.sizeLabel,
                   style: TextStyle(fontSize: AppType.caption, color: scheme.onSurfaceVariant),
                 ),
             ],
@@ -1512,7 +1512,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               installed
-                  ? status!.hashVerified
+                  ? status.hashVerified
                       ? '模型文件大小与 SHA-256 均已通过校验：${status!.sizeLabel}。'
                       : '模型文件大小符合要求：${status!.sizeLabel}。首次加载前仍会校验 SHA-256。'
                   : status?.fileExists == true
