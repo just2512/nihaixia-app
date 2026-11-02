@@ -219,6 +219,27 @@ void main() {
     });
   });
 
+  group('非合病潮热路径', () {
+    test('潮热不能单独命中第256条阳明少阳合病', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'constipated': true,
+          'tidal_fever': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+      expect(result, isNotNull);
+      expect(result!.combinedMeridian, isNull);
+    });
+  });
+
   group('合病检测器可达性矩阵', () {
     final cases = <({String name, String primary, Map<String, dynamic> answers, String expected})>[
       (name: '太阳少阳基础型', primary: '太阳', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.sunShaoyangBase),
@@ -227,7 +248,6 @@ void main() {
       (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
       (name: '太阳少阳下利型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunShaoyangDiarrhea),
       (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
-      (name: '少阳阳明潮热型', primary: '少阳', answers: {'constipated': true, 'tidal_fever': true}, expected: CombinedPatternCondition.shaoyangYangmingTidalFever),
       (name: '阳明少阴急下型', primary: '阳明', answers: {'drowsy': true}, expected: CombinedPatternCondition.yangmingShaoyinUrgent),
       (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
       (name: '太阳阳明未解型', primary: '太阳', answers: {'thirsty': true, 'hot_palms_soles': true, 'has_sweat': true}, expected: CombinedPatternCondition.sunYangmingUnresolved),
