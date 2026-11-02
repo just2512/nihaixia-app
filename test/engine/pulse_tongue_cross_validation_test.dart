@@ -20,6 +20,8 @@ void main() {
       expect(DiagnosticRules.canonicalPulse('沉紧（里寒）'), '沉紧');
       expect(DiagnosticRules.canonicalPulse('洪'), '洪');
       expect(DiagnosticRules.canonicalPulse('不清楚'), isNull);
+      expect(DiagnosticRules.canonicalPulse('浮数'), isNull);
+      expect(DiagnosticRules.canonicalPulse('浮紧'), isNull);
     });
   });
 
@@ -113,6 +115,29 @@ void main() {
       expect(result.pulseTongueAssessment!.supportingEvidence,
           containsAll(['喜热饮', '小便清长', '四肢偏冷']));
       expect(result.pulseTongueContradiction, contains('不自动以脉或舌单方优先'));
+    });
+
+    test('正常或不确定的小便与冷热不均回答不会被重复追问', () {
+      final engine = DiagnosticEngine();
+      engine.answerTemperaturePattern('fever_chills');
+      engine.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '淡白',
+        pulseType: '数',
+      );
+      final initial = engine.getPulseTongueFollowUpQuestions();
+      expect(initial.map((q) => q.key),
+          containsAll(['pulse_cross_urine', 'pulse_cross_limbs']));
+
+      engine.answerFollowUp('pulse_cross_urine', '正常');
+      engine.answerFollowUp('pulse_cross_limbs', '冷热不均');
+      final remaining = engine.getPulseTongueFollowUpQuestions();
+      expect(remaining.map((q) => q.key),
+          isNot(contains('pulse_cross_urine')));
+      expect(remaining.map((q) => q.key),
+          isNot(contains('pulse_cross_limbs')));
+      expect(engine.createSnapshot().answers['urine_clear'], isFalse);
+      expect(engine.createSnapshot().answers['cold_limbs'], isFalse);
     });
   });
 }
