@@ -845,11 +845,14 @@ class DiagnosticEngine {
       return;
     }
 
-    // 规则匹配：精确合病条件。太阳阳明下利热子型必须先于一般太阳阳明分支。
+    // 太阳阳明第32条：下利且已明确排除医误下史时，才进入葛根汤合病规则。
+    // 第34条葛根黄芩黄连汤属于桂枝证误下后的协热利，不是合病；关键前提未齐时拒绝套用。
     if (primary == '太阳' && yangmingScore >= 3 &&
         _answers['diarrhea'] == true) {
       _combinedMeridian = '阳明';
-      _combinedPatternCondition = CombinedPatternCondition.sunYangmingDiarrheaHeat;
+      if (_answers['history_mistreatment'] == false) {
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingBase;
+      }
     } else if (primary == '太阳' && yangmingScore >= 3) {
       _combinedMeridian = '阳明';
       if (_answers['irritable'] == true && _answers['has_sweat'] == false) {
@@ -875,8 +878,12 @@ class DiagnosticEngine {
       }
     } else if (primary == '少阳' && yangmingScore >= 3) {
       _combinedMeridian = '阳明';
-      if (_answers['tidal_fever'] == true) {
-        _combinedPatternCondition = CombinedPatternCondition.shaoyangYangmingTidalFever;
+      final slipperyRapidPulse =
+          (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
+          (_pulseType == '数' && _pulseTypeSecondary == '滑');
+      // 《伤寒论》第256条：阳明少阳合病下利，脉滑而数，有宿食，当下之。
+      if (_answers['diarrhea'] == true && slipperyRapidPulse) {
+        _combinedPatternCondition = CombinedPatternCondition.shaoyangYangmingBase;
       }
     } else if (primary == '太阴' && shaoyinScore >= 3) {
       _combinedMeridian = '少阴';
