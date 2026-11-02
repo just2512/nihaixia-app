@@ -14,11 +14,9 @@ class CombinedPatternCondition {
   static const sunYangmingChestFull = 'sun+yangming_chest_full';
   static const sunShaoyangDiarrhea = 'sun+shaoyang_diarrhea';
   static const sunShaoyangVomit = 'sun+shaoyang_vomit';
-  static const yangmingShaoyinUrgent = 'yangming+shaoyin_urgent';
   static const jueyinShaoyang = 'jueyin+shaoyang';
   static const sunYangmingUnresolved = 'sun+yangming_unresolved';
   static const threeYangSleep = 'three_yang_sleep';
-  static const sunYangmingInteriorHeat = 'sun+yangming_interior_heat';
   static const sunShaoyinTwoCold = 'sun+shaoyin_two_cold';
   static const shaoyangTaiyin = 'shaoyang+taiyin';
   static const sunTaiyin = 'sun+taiyin';
@@ -71,12 +69,16 @@ class CombinedPattern {
   final String description;
   final String source;
 
+  /// 仅当原文明确称为“合病”时为 true；并病、兼证、单经证及来源待核验项均为 false。
+  final bool isExplicitCombined;
+
   const CombinedPattern({
     required this.meridians,
     required this.condition,
     required this.formula,
     required this.description,
     required this.source,
+    this.isExplicitCombined = false,
   });
 }
 
@@ -180,12 +182,13 @@ class DiagnosticRules {
       formula: '葛根汤',
       description: '太阳与阳明合病，必自下利',
       source: '伤寒论第32条',
+      isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阳', '少阳'],
       condition: CombinedPatternCondition.sunShaoyangBase,
       formula: '柴胡桂枝汤',
-      description: '太阳少阳合病，发热微恶寒，支节烦痛，微呕，心下支结',
+      description: '太阳表证未解，兼见少阳证：发热微恶寒、支节烦痛、微呕、心下支结',
       source: '伤寒论第146条',
     ),
     CombinedPattern(
@@ -194,19 +197,20 @@ class DiagnosticRules {
       formula: '大承气汤',
       description: '阳明少阳合病，下利，脉滑而数，有宿食',
       source: '伤寒论第256条',
+      isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明', '少阳'],
       condition: CombinedPatternCondition.threeYangBase,
       formula: '小柴胡汤',
-      description: '三阳并病，必须合解少阳',
+      description: '伤寒四五日，身热恶风、颈项强、胁下满、手足温而渴（倪师解读为三阳并病）',
       source: '伤寒论第99条',
     ),
     CombinedPattern(
       meridians: ['太阴', '少阴'],
       condition: CombinedPatternCondition.taiyinShaoyinBase,
       formula: '四逆汤',
-      description: '太阴少阴合病，脾肾阳虚',
+      description: '太阴、少阴相关线索并见（临床经验，来源 MISSING）',
       source: '临床经验',
     ),
     // ---- 以下为新增7种合病 ----
@@ -216,6 +220,7 @@ class DiagnosticRules {
       formula: '葛根加半夏汤',
       description: '太阳阳明合病，不下利但呕者',
       source: '伤寒论第33条',
+      isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明'],
@@ -223,6 +228,7 @@ class DiagnosticRules {
       formula: '麻黄汤',
       description: '太阳阳明合病，喘而胸满',
       source: '伤寒论第36条',
+      isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阳', '少阳'],
@@ -230,6 +236,7 @@ class DiagnosticRules {
       formula: '黄芩汤',
       description: '太阳少阳合病，自下利',
       source: '伤寒论第172条',
+      isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阳', '少阳'],
@@ -237,19 +244,14 @@ class DiagnosticRules {
       formula: '黄芩加半夏生姜汤',
       description: '太阳少阳合病，呕者',
       source: '伤寒论第172条',
+      isExplicitCombined: true,
     ),
     CombinedPattern(
-      meridians: ['阳明', '少阴'],
-      condition: CombinedPatternCondition.yangmingShaoyinUrgent,
-      formula: '大承气汤',
-      description: '少阴病得之二三日，口燥咽干者，急下之',
-      source: '伤寒论第320条',
-    ),
     CombinedPattern(
       meridians: ['厥阴', '少阳'],
       condition: CombinedPatternCondition.jueyinShaoyang,
       formula: '乌梅丸',
-      description: '厥阴少阳合病，寒热错杂',
+      description: '厥阴与少阳相关线索并见（来源 MISSING）',
       source: '临床经验',
     ),
     CombinedPattern(
@@ -263,22 +265,17 @@ class DiagnosticRules {
       meridians: ['太阳', '阳明', '少阳'],
       condition: CombinedPatternCondition.threeYangSleep,
       formula: '小柴胡汤',
-      description: '三阳合病，脉浮大上关上，但欲眠睡，目合则汗',
+      description: '三阳合病，脉浮大上关上，但欲眠睡，目合则汗（原文未载方剂）',
       source: '伤寒论第268条',
+      isExplicitCombined: true,
     ),
     // ---- 补充2种合病（测试发现缺失）----
     CombinedPattern(
-      meridians: ['太阳', '阳明'],
-      condition: CombinedPatternCondition.sunYangmingInteriorHeat,
-      formula: '大青龙汤',
-      description: '太阳阳明合病，表寒里热俱实，无汗恶寒身痛+口渴烦躁',
-      source: '伤寒论第38条',
-    ),
     CombinedPattern(
       meridians: ['太阳', '少阴'],
       condition: CombinedPatternCondition.sunShaoyinTwoCold,
       formula: '麻黄附子细辛汤',
-      description: '太阳少阴两感，始得之，发热恶寒脉沉',
+      description: '少阴病始得之，反发热，脉沉（少阴兼表）',
       source: '伤寒论第301条',
     ),
     // ---- 新增合病（来自六经辨证公式）----
@@ -286,14 +283,14 @@ class DiagnosticRules {
       meridians: ['少阳', '太阴'],
       condition: CombinedPatternCondition.shaoyangTaiyin,
       formula: '柴胡桂枝干姜汤',
-      description: '少阳太阴合病，往来寒热+腹满便溏食不下',
+      description: '伤寒五六日已发汗而复下之，胸胁满微结等（原文未明言太阴合病）',
       source: '伤寒论第147条',
     ),
     CombinedPattern(
       meridians: ['太阳', '太阴'],
       condition: CombinedPatternCondition.sunTaiyin,
       formula: '桂枝人参汤',
-      description: '太阳太阴并病，里虚寒+表证未罢',
+      description: '太阳病误下后协热利，表里不解（桂枝人参汤证）',
       source: '伤寒论第163条',
     ),
   ];
