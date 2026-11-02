@@ -1369,7 +1369,8 @@ class DiagnosticEngine {
       // 以 v3.2 公式为权威出方；补充处方/调护/鉴别/安全护栏等字段（非风险性增强）。
       final prescription = FormulaRepository.buildPrescription(resolvedFormula);
       final careAdvice = _getCareAdvice(ruleResult.meridian);
-      final differential = _matchDifferential(ruleResult.meridian, ruleResult.pattern);
+      final resolvedPattern = combinedPattern?.description ?? ruleResult.pattern;
+      final differential = _matchDifferential(ruleResult.meridian, resolvedPattern);
       // P0/P1 安全护栏（与兜底路径一致，避免主引擎路径丢失告警）
       final contradiction = _detectPulseTongueContradiction();
       final trueFalseHC = _detectTrueFalseHeatCold();
@@ -1391,12 +1392,13 @@ class DiagnosticEngine {
       }
       return DiagnosisResult(
         meridian: ruleResult.meridian,
-        pattern: combinedPattern?.description ?? ruleResult.pattern,
+        pattern: resolvedPattern,
+        patternDetail: combinedPattern?.description ?? '',
         formula: resolvedFormula,
         recommendedFormulas: combinedPattern == null
             ? ruleResult.recommendedFormulas
             : [resolvedFormula],
-        explanation: ruleResult.explanation,
+        explanation: combinedPattern?.description ?? ruleResult.explanation,
         confidence: ruleResult.confidence,
         matchedSymptoms: ruleResult.matchedSymptoms,
         prescription: prescription,
@@ -1429,7 +1431,7 @@ class DiagnosticEngine {
         pattern: result.pattern,
         patternDetail: result.patternDetail,
         formula: result.formula,
-        explanation: result.explanation,
+        explanation: _matchedCombinedPattern()?.description ?? result.explanation,
         confidence: weightedConfidence,
         matchedSymptoms: result.matchedSymptoms,
         prescription: result.prescription,
@@ -1597,7 +1599,7 @@ class DiagnosticEngine {
     return DiagnosisResult(
       meridian: result.meridian,
       pattern: _matchedCombinedPattern()?.description ?? result.pattern,
-      patternDetail: result.patternDetail,
+      patternDetail: _matchedCombinedPattern()?.description ?? result.patternDetail,
       formula: formulaOverride,
       recommendedFormulas: [formulaOverride],
       explanation: result.explanation,
