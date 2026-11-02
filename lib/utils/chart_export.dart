@@ -71,7 +71,9 @@ class ChartExport {
 ///
 /// 用法：
 /// ```dart
-/// Navigator.push(context, MaterialPageRoute(builder: (_) => ChartExportPage(
+/// Navigator.push(context, FoldAwareMaterialPageRoute(
+///   sourceContext: context,
+///   builder: (_) => ChartExportPage(
 ///   title: '八字排盘',
 ///   filename: 'bazi_20261018.png',
 ///   content: _buildExportContent(),
