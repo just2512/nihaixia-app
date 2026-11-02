@@ -52,3 +52,41 @@
 - 对结构化主路径与旧兜底路径分别选取代表用例，断言最终 `formula`、`recommendedFormulas`、`prescription.formulaName`、`combinedMeridian` 一致。
 - 对三条死键补充明确的 `UNREACHABLE` 测试/注释，直到规则语义得到确认；禁止擅自新增触发条件。
 - 对提前返回路径增加门槛测试，确保不出现“检测器命中但最终结果丢失”的静默情况。
+
+## 复核补充：死键并非同一种问题
+
+2026-11-02 对 `_detectCombinedPattern()` 与 `DiagnosticRules.combinedPatterns` 再次逐分支比对，发现三条未赋值基础键的规则意图与当前可达子型并不完全相同：
+
+| 规则键 | 规则表描述/来源 | 检测器当前对应行为 | 结论 |
+|---|---|---|---|
+| `sunYangmingBase` | 葛根汤；描述“太阳与阳明合病，必自下利”；来源标为《伤寒论》第32条 | 太阳主证且阳明分数达阈值、下利时赋值 `sunYangmingDiarrheaHeat`，不是 Base；无下利时仅在烦躁无汗、呕吐、喘/胸满、有汗未解等子型命中时赋其他键 | Base 键不可达；且基础条目与下利子型存在语义重叠，需文献核对后决定是否保留独立键 |
+| `shaoyangYangmingBase` | 大柴胡汤；描述“少阳阳明合病，呕不止，心下急”；来源标为《伤寒论》第103/165条 | 少阳主证且阳明分数达阈值时，只有 `tidal_fever` 为真才赋值 `shaoyangYangmingTidalFever`；没有潮热时只设置 `_combinedMeridian='阳明'`，条件键仍为空 | Base 键不可达；当前代码并未实现表项文字中的“呕不止、心下急”触发条件 |
+| `threeYangBase` | 小柴胡汤；描述“三阳并病，必须合解少阳”；来源标为《伤寒论》第99条 | 仅在太阳主证、阳明和少阳分数达阈值，并且但欲寐与有汗同时成立时赋值 `threeYangSleep` | Base 键不可达；现有实现只覆盖三阳合病的但欲眠睡子型，不能推断一般三阳并病 |
+
+### 新发现：检测器设置合并经络但不设置条件键
+
+当前 `_detectCombinedPattern()` 在以下场景会设置 `_combinedMeridian`，但不设置 `_combinedPatternCondition`：
+
+- `primary == '少阳' && yangmingScore >= 3`，但 `tidal_fever != true`；
+- `primary == '太阳' && yangmingScore >= 3`，但没有命中下利热、烦躁无汗、呕吐、喘/胸满、有汗未解子型（此分支保留 `_combinedMeridian='阳明'`）；
+- `primary == '太阳' && shaoyangScore >= 2` 分支本身总会给基础或子型条件；其它两经分支亦需逐条检查。
+
+这会产生“合并经络已标记、规则表却没有命中”的中间状态。当前最终结果通过 `_matchedCombinedPattern()` 决定是否覆盖方剂与合病描述，因此这类场景不会应用合病表项。此状态不应自动等同于 bug：可能是仅有传变线索而证据不足，也可能是遗漏了应有规则。必须依据条文和产品规则意图决定；在第五阶段文献核验之前，不应自动给它补方剂。
+
+### 结果传播复核边界
+
+`diagnose()` 先重算合病条件，再调用 `diagnoseByRules()`。若规则引擎有方，主路径使用 `_matchedCombinedPattern()` 覆盖方剂与合病描述；若没有方，则进入杂病或六经旧兜底路径。旧兜底路径中：
+- 杂病分支单独组装并返回，使用合病表覆盖方剂、pattern 和处方；
+- 六经分支在基础证型结果之后应用合病方剂覆盖，但还会运行后续补虚方优先逻辑，需特别测试是否可能覆盖合病方；
+- 证据不足提前返回会跳过最终合病结果组装。
+
+因此，“检测器级条件键可达”与“最终结果确实应用规则表”是两种不同验收。必须对每个可达键检查最终路径，尤其检查后续优先规则、证据不足提前返回、处方对象是否与 formula 同步。
+
+### 本轮追加验收项
+
+- [ ] 为少阳主证 + 阳明分数达标 + 无潮热建立测试，明确预期是“传变线索但无合病表命中”还是应补规则；不得无依据补方。
+- [ ] 为太阳主证 + 阳明分数达标但未命中子型建立测试，检查 `combinedMeridian` 与 `combinedPatternCondition` 的差异是否在 UI 被误呈现为确诊合病。
+- [ ] 对 `sunYangmingDiarrheaHeat` 验证规则表命中和最终处方同步；同时确认它与 `sunYangmingBase` 的条文描述没有重复覆盖。
+- [ ] 为主路径、杂病兜底、旧六经兜底各建立最终结果断言；至少断言 `formula`、`recommendedFormulas`、`prescription.formulaName`、`pattern`、`combinedMeridian`。
+- [ ] 检查六经兜底中补虚方优先逻辑是否会覆盖已命中的合病方；如会，先确定明确的优先级规则再改代码。
+
