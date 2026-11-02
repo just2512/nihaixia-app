@@ -6,6 +6,7 @@ import 'formula_rules.dart';
 import 'formula_rules.dart' as fr;
 import 'rule_engine.dart';
 import 'zangfu_evidence_builder.dart';
+import '../models/zangfu_evidence.dart';
 
 /// 引擎快照，用于返回上一步
 class EngineSnapshot {
@@ -71,7 +72,8 @@ class DiagnosticEngine {
   String? get combinedPatternCondition => _combinedPatternCondition;
 
   /// 独立只读证据层：返回 App 原始问答，不参与六经、合病或方剂计算。
-  buildZangFuEvidence() => ZangFuEvidenceBuilder.build(
+  ZangFuEvidenceAssessment buildZangFuEvidence() =>
+      ZangFuEvidenceBuilder.build(
         qAnswers: Map.unmodifiable(_qAnswers),
         extSymptoms: Set.unmodifiable(_extSymptoms),
       );
