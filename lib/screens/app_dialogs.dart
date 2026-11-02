@@ -272,7 +272,7 @@ Future<void> showAboutPage(BuildContext context) async {
             Center(
               child: Column(
                 children: [
-                  Icon(Icons.local_hospital, size: 64,
+                  Icon(Icons.menu_book_rounded, size: 64,
                       color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 8),
                   const Text('汉唐中医', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
