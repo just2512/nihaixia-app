@@ -19,7 +19,7 @@ class AppNavigationDestination {
   final String label;
 }
 
-class AdaptiveHomeNavigation extends StatelessWidget {
+class AdaptiveHomeNavigation extends StatefulWidget {
   const AdaptiveHomeNavigation({
     super.key,
     required this.currentIndex,
@@ -37,15 +37,25 @@ class AdaptiveHomeNavigation extends StatelessWidget {
   final List<Widget> screens;
   final List<AppNavigationDestination> destinations;
 
+  @override
+  State<AdaptiveHomeNavigation> createState() => _AdaptiveHomeNavigationState();
+}
+
+class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
+  // The same keyed screen subtree moves between the compact, expanded and
+  // hinge-aware layouts. Reparenting it preserves each tab's State, including
+  // scroll positions, filters and in-progress input, when the device unfolds.
+  final GlobalKey _screensKey = GlobalKey();
+
   NavigationRail _buildRail({required bool extended}) {
     return NavigationRail(
-      selectedIndex: currentIndex,
-      onDestinationSelected: onDestinationSelected,
+      selectedIndex: widget.currentIndex,
+      onDestinationSelected: widget.onDestinationSelected,
       labelType:
           extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
       extended: extended,
       destinations: [
-        for (final destination in destinations)
+        for (final destination in widget.destinations)
           NavigationRailDestination(
             icon: destination.icon,
             selectedIcon: destination.selectedIcon,
@@ -60,10 +70,10 @@ class AdaptiveHomeNavigation extends StatelessWidget {
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       backgroundColor: Theme.of(context).colorScheme.surface,
       indicatorColor: Theme.of(context).colorScheme.primaryContainer,
-      selectedIndex: currentIndex,
-      onDestinationSelected: onDestinationSelected,
+      selectedIndex: widget.currentIndex,
+      onDestinationSelected: widget.onDestinationSelected,
       destinations: [
-        for (final destination in destinations)
+        for (final destination in widget.destinations)
           NavigationDestination(
             icon: destination.icon,
             selectedIcon: destination.selectedIcon,
@@ -74,8 +84,9 @@ class AdaptiveHomeNavigation extends StatelessWidget {
   }
 
   Widget _buildScreens() => IndexedStack(
-        index: currentIndex,
-        children: screens,
+        key: _screensKey,
+        index: widget.currentIndex,
+        children: widget.screens,
       );
 
   DisplayFeature? _findVerticalFoldingFeature(
@@ -113,8 +124,7 @@ class AdaptiveHomeNavigation extends StatelessWidget {
         final feature = _findVerticalFoldingFeature(context, screenSize);
 
         if (feature != null) {
-          final creaseInset =
-              feature.bounds.width > 0 ? 0.0 : 12.0;
+          final creaseInset = feature.bounds.width > 0 ? 0.0 : 12.0;
           final leftPanelWidth = (feature.bounds.left - creaseInset)
               .clamp(0.0, constraints.maxWidth)
               .toDouble();
@@ -159,8 +169,10 @@ class AdaptiveHomeNavigation extends StatelessWidget {
           );
         }
 
-        final useNavigationRail = constraints.maxWidth >= compactBreakpoint;
-        final useExtendedRail = constraints.maxWidth >= expandedBreakpoint;
+        final useNavigationRail =
+            constraints.maxWidth >= AdaptiveHomeNavigation.compactBreakpoint;
+        final useExtendedRail =
+            constraints.maxWidth >= AdaptiveHomeNavigation.expandedBreakpoint;
 
         return Scaffold(
           body: Row(
