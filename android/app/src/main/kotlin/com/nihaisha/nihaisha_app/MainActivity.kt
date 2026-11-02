@@ -226,11 +226,37 @@ class MainActivity : FlutterActivity() {
                 throw IllegalStateException("模型文件导入完成但无法替换目标文件，已尝试恢复旧文件")
             }
             if (backupFile.exists()) backupFile.delete()
+            verifiedModelFileFingerprint = currentModelFileFingerprint()
             return modelStatus()
         } catch (error: Exception) {
             if (tempFile.exists()) tempFile.delete()
             throw error
         }
+    }
+
+    // Cache the verified file revision within this Activity process. A new
+    // process starts with no cached fingerprint and verifies before Engine load.
+    private var verifiedModelFileFingerprint: String? = null
+
+    private fun currentModelFileFingerprint(): String? {
+        if (!modelFile.isFile) return null
+        return "${modelFile.length()}:${modelFile.lastModified()}"
+    }
+
+    private fun ensureModelFileIntegrity() {
+        val fingerprint = currentModelFileFingerprint()
+            ?: throw IllegalArgumentException("模型文件不存在或不是普通文件，请重新导入")
+        if (fingerprint == verifiedModelFileFingerprint) return
+
+        val actualSha256 = LocalAiModelIntegrityPolicy.sha256(modelFile)
+        if (!LocalAiModelIntegrityPolicy.matches(actualSha256, expectedModelSha256)) {
+            verifiedModelFileFingerprint = null
+            activeBackend = "not_loaded"
+            throw IllegalArgumentException(
+                "模型 SHA-256 校验失败：文件内容与受支持的 Gemma 4 E4B IT 不一致，请重新导入"
+            )
+        }
+        verifiedModelFileFingerprint = fingerprint
     }
 
     private fun modelStatus(): Map<String, Any> {
@@ -243,6 +269,8 @@ class MainActivity : FlutterActivity() {
         return mapOf(
             "installed" to exists,
             "fileExists" to fileExists,
+            "hashVerified" to (exists &&
+                verifiedModelFileFingerprint == currentModelFileFingerprint()),
             "modelPath" to modelFile.absolutePath,
             "sizeBytes" to if (fileExists) modelFile.length() else 0L,
             "expectedSizeBytes" to expectedModelBytes,
@@ -256,6 +284,9 @@ class MainActivity : FlutterActivity() {
         if (!modelFile.isFile || modelFile.length() != expectedModelBytes) {
             return modelStatus()
         }
+        // Import has already verified copied files. Manually copied or changed
+        // files are hashed here before any native engine can read them.
+        ensureModelFileIntegrity()
         if (aiEngine != null && aiConversation != null) return modelStatus()
 
         modelFile.parentFile?.mkdirs()

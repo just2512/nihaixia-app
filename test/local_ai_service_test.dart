@@ -20,6 +20,7 @@ void main() {
         return <String, Object?>{
           'installed': true,
           'fileExists': true,
+          'hashVerified': true,
           'ready': false,
           'modelPath': '/data/user/0/app/files/ai_models/gemma-4-E4B-it.litertlm',
           'sizeBytes': 3659530240,
@@ -33,6 +34,7 @@ void main() {
       expect(received?.method, 'importModel');
       expect(status.installed, isTrue);
       expect(status.fileExists, isTrue);
+      expect(status.hashVerified, isTrue);
       expect(status.ready, isFalse);
       expect(status.sizeBytes, 3659530240);
     });
@@ -294,6 +296,7 @@ void main() {
 
       expect(status.installed, isFalse);
       expect(status.fileExists, isFalse);
+      expect(status.hashVerified, isFalse);
       expect(status.ready, isFalse);
       expect(status.modelPath, isEmpty);
       expect(status.sizeBytes, 0);

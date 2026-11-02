@@ -46,6 +46,7 @@ https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/28299f3
 
 - Android Gradle 依赖固定为 `litertlm-android:0.18.0`；无需用户填写 API Key、服务地址或云端账号。
 - 原生代码先尝试 GPU 文本/视觉后端，音频后端使用 CPU；GPU 引擎初始化失败时回退 CPU。
+- 首次加载前，原生层对应用私有目录中的模型文件流式校验 SHA-256；导入流程已经校验过的同一文件修订会在当前进程内按文件长度与修改时间缓存验证结果，避免每次重载重复读取 3.66 GB。
 - 如果 GPU 初始化成功但首轮推理明确报出 OpenCL 库不可用，应用关闭旧会话和引擎后重建 CPU 会话，首轮只重试一次；其他错误不自动重放。
 - 模型文件、对话上下文和推理均保留在设备本地。下载模型时需要联网，但导入完成后的问答不依赖模型服务器。
 - 当前项目没有实现应用内模型下载器。请不要把“模型下载直链”理解成 App 会在后台自动下载。
@@ -81,7 +82,7 @@ adb shell run-as com.nihaisha.nihaisha_app cp /data/local/tmp/gemma-4-E4B-it.lit
 adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 ```
 
-注意：ADB 方式不经过应用内 SHA-256 导入校验，需要自行核对上文哈希。模型加载优先尝试 GPU；GPU Engine.initialize() 失败时会在加载阶段尝试 CPU。若 GPU 初始化成功但首轮推理出现 LiteRT-LM 明确的 `Can not find OpenCL library on this device` 错误，应用会先关闭旧 Conversation 和 Engine，再重建 CPU Engine/Conversation，并只重试该首轮一次。其他运行时错误、CPU 重试失败及已有成功对话轮次后的 GPU 故障不会自动重放。界面显示实际后端，所有回退路径仍需 Find N2 实机验证。
+注意：ADB 方式不经过应用内导入流程的校验，但 App 会在首次加载前再次流式计算 SHA-256，匹配后才创建 LiteRT-LM Engine；哈希不匹配时拒绝加载。电脑端手动核对仍建议保留，作为导入前检查。模型加载优先尝试 GPU；GPU Engine.initialize() 失败时会在加载阶段尝试 CPU。若 GPU 初始化成功但首轮推理出现 LiteRT-LM 明确的 `Can not find OpenCL library on this device` 错误，应用会先关闭旧 Conversation 和 Engine，再重建 CPU Engine/Conversation，并只重试该首轮一次。其他运行时错误、CPU 重试失败及已有成功对话轮次后的 GPU 故障不会自动重放。界面显示实际后端，所有回退路径仍需 Find N2 实机验证。
 
 ## 当前实现范围
 

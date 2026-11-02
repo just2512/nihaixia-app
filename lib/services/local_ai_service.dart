@@ -132,6 +132,7 @@ class LocalAiService {
 class LocalAiModelStatus {
   final bool installed;
   final bool fileExists;
+  final bool hashVerified;
   final bool ready;
   final String modelPath;
   final int sizeBytes;
@@ -141,6 +142,7 @@ class LocalAiModelStatus {
   const LocalAiModelStatus({
     required this.installed,
     required this.fileExists,
+    this.hashVerified = false,
     required this.ready,
     required this.modelPath,
     required this.sizeBytes,
@@ -152,6 +154,7 @@ class LocalAiModelStatus {
     return LocalAiModelStatus(
       installed: map['installed'] == true,
       fileExists: map['fileExists'] == true,
+      hashVerified: map['hashVerified'] == true,
       ready: map['ready'] == true,
       modelPath: map['modelPath'] as String? ?? '',
       sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
