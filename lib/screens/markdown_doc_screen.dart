@@ -229,7 +229,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       if (acupoint != null && mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(
+          FoldAwareMaterialPageRoute(sourceContext: context,
               builder: (_) => AcupointDetailScreen(acupoint: acupoint)),
         );
       }

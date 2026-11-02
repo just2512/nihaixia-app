@@ -92,7 +92,7 @@ void main() {
         final hit = entries.first;
         final body =
             await rootBundle.loadString(kZhenJiuLectures[hit['s'] as int].asset);
-        expect(body.contains(name as String), isTrue,
+        expect(body.contains(name), isTrue,
             reason: '$name 命中篇 ${hit['s']} 正文里应有该穴名');
       }
     });

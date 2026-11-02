@@ -579,7 +579,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 label: const Text('讲稿', style: TextStyle(fontSize: 12)),
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  FoldAwareMaterialPageRoute(sourceContext: context,
                       builder: (_) => const ZhenjiuLibraryScreen()),
                 ),
               ),

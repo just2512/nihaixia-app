@@ -228,7 +228,7 @@ class AcupointDetailScreen extends StatelessWidget {
                   Navigator.pop(sheetCtx);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    FoldAwareMaterialPageRoute(sourceContext: context,
                       builder: (_) => MarkdownDocScreen(
                         title: ZhenJiuLectureIndex.nameOf(h.seq),
                         asset: ZhenJiuLectureIndex.assetOf(h.seq),
