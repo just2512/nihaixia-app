@@ -496,8 +496,8 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       if (evidenceLines.isNotEmpty) {
         _addBotMessage(
-          '脏腑证据层（原始问答）\\n'
-          '${evidenceLines.join('\\n')}\\n\\n'
+          '脏腑证据层（原始问答）\n'
+          '${evidenceLines.join('\n')}\n\n'
           '脏腑归属：MISSING（尚无逐条核验的问项—脏腑来源映射）。'
           '这里只保留原始问答，不作脏腑诊断、排序或方剂推断。',
           isResult: false,
