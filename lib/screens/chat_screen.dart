@@ -10,6 +10,7 @@ import '../data/formula_repository.dart';
 import '../data/formula_oral_hint_repository.dart';
 import '../data/settings_repository.dart';
 import '../models/diagnosis.dart';
+import '../models/zangfu_evidence.dart';
 import '../models/bookmark.dart';
 import '../data/database_helper.dart';
 import 'formula_detail_screen.dart';
@@ -457,6 +458,52 @@ class _ChatScreenState extends State<ChatScreen> {
     if (result == null) return;
 
     setState(() => _showOptions = false);
+
+    // 脏腑证据层当前只展示 App 原始问答；未经经典来源核验的脏腑归属保持 MISSING。
+    final zangFuEvidence = _engine.buildZangFuEvidence();
+    if (zangFuEvidence.hasAnsweredEvidence) {
+      const questionLabels = <String, String>{
+        'temperature': '寒热',
+        'pulse': '脉象',
+        'thirst': '渴饮',
+        'sweating': '汗出',
+        'pain': '疼痛',
+        'stool': '大便',
+        'urine': '小便',
+        'appetite': '胃口',
+        'sleep': '睡眠',
+        'energy': '精神',
+        'menstrual': '月经/性功能',
+        'vomit_type': '呕吐类型',
+      };
+      final evidenceLines = <String>[];
+      for (final record in zangFuEvidence.records) {
+        if (record.answerText == null) continue;
+        final label = questionLabels[record.questionKey] ?? record.questionKey;
+        final stateLabel = switch (record.state) {
+          ZangFuEvidenceAnswerState.explicitNormal => '（明确正常项）',
+          ZangFuEvidenceAnswerState.unknown => '（未知/不确定）',
+          ZangFuEvidenceAnswerState.answered => '',
+          ZangFuEvidenceAnswerState.unanswered => '（未作答）',
+          ZangFuEvidenceAnswerState.invalid => '（选项无效）',
+        };
+        evidenceLines.add('$label：${record.answerText}$stateLabel');
+      }
+      if (zangFuEvidence.unclassifiedAdditionalEvidence.isNotEmpty) {
+        evidenceLines.add(
+          '其他自述：${zangFuEvidence.unclassifiedAdditionalEvidence.join('、')}',
+        );
+      }
+      if (evidenceLines.isNotEmpty) {
+        _addBotMessage(
+          '脏腑证据层（原始问答）\\n'
+          '${evidenceLines.join('\\n')}\\n\\n'
+          '脏腑归属：MISSING（尚无逐条核验的问项—脏腑来源映射）。'
+          '这里只保留原始问答，不作脏腑诊断、排序或方剂推断。',
+          isResult: false,
+        );
+      }
+    }
 
     // P0-2: 证据不足，建议面诊（不强行给方，避免误治）
     if (result.recommendConsult || result.formula.isEmpty) {
