@@ -47,6 +47,13 @@
 | 🆓 **完全免费** | Apache 2.0 开源协议，无广告、无内购、无追踪 |
 | 🧪 **测试守护** | 关键辨证路径与筛选逻辑均有回归测试，修复即写测试，防止复发 |
 
+
+### 本地 AI 与 OPPO Find N2 说明
+
+- [Gemma 4 E4B 下载、SHA-256 校验、运行配置与实机验收](docs/local-ai-e4b.md)：模型文件约 3.66 GB，不打包进 APK；必须从文档中的固定版本链接单独下载并导入。
+- [Find N2 内外屏适配与品牌视觉方案](docs/find-n2-adaptive-layout.md)：包含外屏/内屏导航策略、图标资源与真机验收要求。
+- [折痕/铰链布局与窗口指标采集](docs/find-n2-fold-aware-layout.md)：Debug APK 使用 `[WINDOW_METRICS]` 诊断；Windows PowerShell 可运行 `tool/capture_find_n2_metrics.ps1`，仅导出窗口指标，不清空设备 logcat 缓冲。
+
 <img width="100%" src="docs/images/readme_features.svg" alt="核心能力：六经辨证、经方 322、本草 465、穴位 408、经典 1327 条、医案 1257 例">
 
 ---
@@ -183,7 +190,7 @@
 ## 📱 下载安装
 
 > **汉唐中医 nihaixia‑app**
-> 完全离线｜无需联网｜无需注册｜Android 7.0+
+> 核心知识库可离线｜本地 AI 模型需单独下载｜无需注册｜Android 7.0+
 > 通用版 APK 约 77MB，分架构版 31–35MB
 > 自 V1.11.9 起由 GitHub Actions 自动构建发布，推送 `v*` tag 即出包
 > **最后更新：2026-10-30（v1.11.28）**
@@ -281,11 +288,11 @@ flutter build apk --release --target-platform android-x64        # x86_64
 
 | 依赖 | 版本要求 | 说明 |
 |:---|:---|:---|
-| Flutter SDK | ≥ 3.12.0 | 项目 `pubspec.yaml` 指定 |
-| Dart SDK | ≥ 3.12.0 | 随 Flutter 一同安装 |
-| Android SDK | API 21+（Android 6.0） | 最低运行版本；编译用最新 `compileSdk` |
+| Flutter SDK | ≥ 3.47.0 | 与当前 `pubspec.yaml` 约束一致 |
+| Dart SDK | ≥ 3.13.0 | 与当前 `pubspec.yaml` 约束一致，随 Flutter 一同安装 |
+| Android 最低版本 | API 24（Android 7.0） | `minSdk = maxOf(flutter.minSdkVersion, 24)` |
 | 操作系统 | Windows / macOS / Linux | 用于开发构建 |
-| 设备/模拟器 | Android 6.0+ | 真机或模拟器运行 |
+| 设备/模拟器 | Android 7.0+ | 真机或模拟器运行 |
 
 ### 安装步骤
 
@@ -343,9 +350,9 @@ flutter analyze
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
 | `lib/theme/app_colors.dart` | 39 个语义色 Token（品牌棕/暖调中性/状态色/六经六色），全站硬编码颜色清零 |
 
-**版本号规则**：对外展示采用 `1.11.9` 格式，每次发布自增第三位（patch）；内部 `build` 号 `+N` 单调递增作为 `versionCode`。
+**版本号规则**：`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一来源；发布时按实际变更递增版本号和 build 号，`+N` 对应 Android `versionCode`。当前仓库版本为 `1.11.28+8037`。
 
-**发版方式**：推送 tag 即自动出包——`git tag v1.11.10 && git push origin v1.11.10`，GitHub Actions 约 6–12 分钟产出通用版 + 三个分架构 APK 并发布到同名 Release。
+**发版方式**：推送与 `pubspec.yaml` 版本一致的 `v*` tag，`.github/workflows/build-apk.yml` 自动构建通用版与三个 ABI 分架构 APK，并发布到同名 GitHub Release。
 
 ---
 
@@ -491,7 +498,8 @@ flowchart LR
 - [x] 健康人基线判定 + 寒热真假八维法 + 六经公式分型（V1.11.8）
 - [x] 患者口语语料接入：170 首方「患者会怎么说」+ 现代症状词召回（V1.11.9）
 - [x] APK 交由 GitHub Actions 自动构建发布（V1.11.9）
-- [ ] 舌诊 AI 辅助（TFLite 本地模型）
+- [x] Gemma 4 E4B 本地多模态输入接入（文字 / 音频 / 图像；Find N2 实机验收仍待完成）
+- [ ] 舌象清晰度、曝光与色温质量检查（需在 Find N2 真机校准后实施）
 - [ ] 脉诊辅助（脉象分类）
 - [ ] 方剂对比功能
 - [ ] 导出 PDF 诊断报告
