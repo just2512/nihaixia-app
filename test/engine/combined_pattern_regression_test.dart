@@ -118,9 +118,36 @@ void main() {
 
       // 无扁平规则答案时进入旧六经路径；无论旧路径是否有足够结果，
       // 合病条件必须由新分支确定为下利热，而不能被一般太阳阳明分支截获。
-      engine.diagnose();
+      final result = engine.diagnose();
       expect(engine.combinedPatternCondition,
           CombinedPatternCondition.sunYangmingDiarrheaHeat);
+      expect(result, isNotNull);
+      expect(result!.formula, '葛根芩连汤');
+      expect(result.recommendedFormulas, ['葛根芩连汤']);
+      expect(result.combinedMeridian, '阳明');
+    });
+
+    test('三阳并病的目合则汗条件先于两经子型分支', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'has_sweat': true,
+          'cold_limbs': false,
+          'thirsty': true,
+          'constipated': true,
+          'bitter_mouth': true,
+          'drowsy': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.threeYangSleep);
     });
   });
 }
