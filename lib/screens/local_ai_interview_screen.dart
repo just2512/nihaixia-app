@@ -93,6 +93,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.audioRecorder,
     this.recordingFileInspector,
     this.imagePicker,
+    this.preferredAnchorPoint,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -106,6 +107,9 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
+
+  /// Physical-panel anchor inherited from the control that opened this route.
+  final Offset? preferredAnchorPoint;
 
   @override
   State<LocalAiInterviewScreen> createState() => _LocalAiInterviewScreenState();
@@ -1048,6 +1052,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final ready = _status?.ready == true;
 
     return AdaptiveSinglePane(
+      preferredAnchorPoint: widget.preferredAnchorPoint,
       child: Scaffold(
       appBar: AppBar(
         title: const Text('本地 AI 问诊'),
