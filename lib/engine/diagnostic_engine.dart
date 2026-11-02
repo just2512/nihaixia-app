@@ -855,9 +855,7 @@ class DiagnosticEngine {
       }
     } else if (primary == '太阳' && yangmingScore >= 3) {
       _combinedMeridian = '阳明';
-      if (_answers['irritable'] == true && _answers['has_sweat'] == false) {
-        _combinedPatternCondition = CombinedPatternCondition.sunYangmingInteriorHeat;
-      } else if (_answers['nausea'] == true || _answers['vomiting'] == true) {
+      if (_answers['nausea'] == true || _answers['vomiting'] == true) {
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingVomit;
       } else if (_answers['breathing'] == '喘' || _answers['chest_fullness'] == true) {
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingChestFull;
@@ -888,9 +886,6 @@ class DiagnosticEngine {
     } else if (primary == '太阴' && shaoyinScore >= 3) {
       _combinedMeridian = '少阴';
       _combinedPatternCondition = CombinedPatternCondition.taiyinShaoyinBase;
-    } else if (primary == '阳明' && shaoyinScore >= 3) {
-      _combinedMeridian = '少阴';
-      _combinedPatternCondition = CombinedPatternCondition.yangmingShaoyinUrgent;
     } else if (primary == '厥阴' && shaoyangScore >= 2) {
       _combinedMeridian = '少阳';
       _combinedPatternCondition = CombinedPatternCondition.jueyinShaoyang;
@@ -1626,7 +1621,7 @@ class DiagnosticEngine {
         differential: differential,
         recommendConsult: ruleResult.recommendConsult,
         answers: Map.from(_answers),
-        combinedMeridian: combinedPattern == null ? null : _combinedMeridian,
+        combinedMeridian: combinedPattern?.isExplicitCombined == true ? _combinedMeridian : null,
         tongueCoating: _tongueCoating,
         tongueShape: _tongueShape,
         pulseType: _pulseType,
@@ -1670,7 +1665,7 @@ class DiagnosticEngine {
         confidence: weightedConfidence,
         matchedSymptoms: result.matchedSymptoms,
         prescription: prescription,
-        combinedMeridian: combinedPattern == null ? result.combinedMeridian : _combinedMeridian,
+        combinedMeridian: combinedPattern?.isExplicitCombined == true ? _combinedMeridian : result.combinedMeridian,
         tongueCoating: _tongueCoating,
         tongueShape: _tongueShape,
         pulseType: _pulseType,
@@ -1860,7 +1855,7 @@ class DiagnosticEngine {
       explanation: _matchedCombinedPattern()?.description ?? result.explanation,
       confidence: finalConfidence,
       matchedSymptoms: result.matchedSymptoms,
-      combinedMeridian: _matchedCombinedPattern() == null ? null : combinedMeridian,
+      combinedMeridian: _matchedCombinedPattern()?.isExplicitCombined == true ? combinedMeridian : null,
       tongueCoating: _tongueCoating,
       tongueShape: _tongueShape,
       pulseType: _pulseType,
