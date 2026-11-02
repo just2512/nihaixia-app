@@ -17,7 +17,6 @@ on:
     paths:
       - "lib/**"
       - "test/**"
-      - "integration_test/**"
       - "assets/**"
       - "android/**"
       - "pubspec.yaml"
