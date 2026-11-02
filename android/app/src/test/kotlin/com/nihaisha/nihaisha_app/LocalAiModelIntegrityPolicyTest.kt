@@ -87,4 +87,13 @@ class LocalAiModelIntegrityPolicyTest {
             file.delete()
         }
     }
+
+    private fun withTempBinaryFile(expectedSize: Int, block: (File) -> Unit) {
+        val file = Files.createTempFile("model-integrity-binary-", ".litertlm").toFile()
+        try {
+            block(file)
+        } finally {
+            file.delete()
+        }
+    }
 }
