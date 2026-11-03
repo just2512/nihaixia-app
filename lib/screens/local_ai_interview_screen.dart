@@ -141,7 +141,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<_InterviewMessage> _messages = [
     const _InterviewMessage(
-      text: '可以先说说目前最困扰你的情况。比如从什么时候开始、具体有什么感觉、什么情况下会加重或缓解。一次说一两件事就可以。',
+      text: '你可以直接描述身体情况、询问中医知识，或提出工具任务。助手会先识别任务类型；意图不清时会先向你确认。',
       isUser: false,
     ),
   ];
