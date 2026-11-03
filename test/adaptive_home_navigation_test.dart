@@ -173,7 +173,7 @@ void main() {
     expect(find.text('内容页 1'), findsOneWidget);
   });
 
-  testWidgets('zero-width fold keeps root navigation and content off the crease', (tester) async {
+  testWidgets('flat unfolded inner display uses the full width instead of splitting at the crease', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -200,8 +200,43 @@ void main() {
 
     final rail = tester.getRect(find.byType(NavigationRail));
     final content = tester.getRect(find.byType(IndexedStack));
+    expect(rail.left, 0);
+    expect(content.left, rail.right);
+    expect(content.right, 800);
+    expect(content.width, greaterThan(700));
+    expect(find.byType(NavigationBar), findsNothing);
+  });
+
+  testWidgets('half-open zero-width fold keeps content off the crease', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: _screens(),
+        ),
+      ),
+    );
+
+    final rail = tester.getRect(find.byType(NavigationRail));
+    final content = tester.getRect(find.byType(IndexedStack));
     expect(rail.right, lessThanOrEqualTo(388));
     expect(content.left, greaterThanOrEqualTo(412));
+    expect(content.right, 800);
   });
 
   testWidgets('narrow physical panels fall back to one safe panel with bottom navigation', (tester) async {

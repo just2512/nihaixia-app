@@ -1,4 +1,4 @@
-import 'dart:ui' show DisplayFeature, DisplayFeatureType;
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'adaptive_master_detail.dart';
@@ -99,6 +99,13 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
     for (final feature in MediaQuery.displayFeaturesOf(context)) {
       if (feature.type != DisplayFeatureType.hinge &&
           feature.type != DisplayFeatureType.fold) {
+        continue;
+      }
+      // A flat fold is a continuous unfolded canvas, not two independent
+      // panes. Splitting it leaves half of an inner display unused; only a
+      // physical hinge or a non-flat fold posture requires pane isolation.
+      if (feature.type == DisplayFeatureType.fold &&
+          feature.state == DisplayFeatureState.postureFlat) {
         continue;
       }
       final bounds = feature.bounds;
