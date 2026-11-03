@@ -1,6 +1,7 @@
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
+import 'adaptive_master_detail.dart';
 
 /// Top-level navigation that changes with the app window, not the device model.
 ///
@@ -128,6 +129,19 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
       builder: (context, constraints) {
         final screenSize = MediaQuery.sizeOf(context);
         final feature = _findVerticalFoldingFeature(context, screenSize);
+
+        if (feature != null &&
+            feature.state == DisplayFeatureState.postureHalfOpened) {
+          // In tabletop/book posture the two physical panels are angled.
+          // Keep the whole tab on one safe panel rather than drawing text or
+          // touch targets across the hinge.
+          return AdaptiveSinglePane(
+            child: Scaffold(
+              body: _buildScreens(),
+              bottomNavigationBar: _buildBottomNavigationBar(context),
+            ),
+          );
+        }
 
         if (feature != null) {
           // The root tab content uses the complete unfolded window. Splitting
