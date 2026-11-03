@@ -54,7 +54,7 @@ void main() {
   });
 
   test('内经条目查询区分原文、出处和倪师解读', () {
-    final context = AssistantKnowledgeContextBuilder.build('心者君主之官');
+    final context = AssistantKnowledgeContextBuilder.build('十二官相使');
     expect(context, contains('App内经结构化条目'));
     expect(context, contains('原文摘录：'));
     expect(context, contains('条目所载出处：'));
