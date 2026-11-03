@@ -137,7 +137,7 @@ void main() {
     expect(rail.extended, isTrue);
   });
 
-  testWidgets('vertical hinge keeps the selected tab across the full unfolded window', (tester) async {
+  testWidgets('half-open physical hinge keeps content on one safe panel', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -162,18 +162,11 @@ void main() {
       ),
     );
 
-    final navigation = tester.getRect(find.byType(NavigationRail));
     final content = tester.getRect(find.byType(IndexedStack));
-    final contentMedia = tester.widget<MediaQuery>(
-      find.byKey(const ValueKey('full-window-content-media-query')),
-    );
-    expect(navigation.left, 0);
-    expect(navigation.width, lessThan(100));
-    expect(content.left, navigation.right);
-    expect(content.right, 800);
-    expect(content.width, greaterThan(700));
-    expect(contentMedia.data.displayFeatures, isEmpty);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(content.width, 388);
+    expect(content.right, lessThanOrEqualTo(388));
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('内容页 1'), findsOneWidget);
   });
 
@@ -211,7 +204,7 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
   });
 
-  testWidgets('half-open zero-width fold does not constrain tab content to one panel', (tester) async {
+  testWidgets('half-open zero-width fold keeps content on one safe panel', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -236,20 +229,14 @@ void main() {
       ),
     );
 
-    final rail = tester.getRect(find.byType(NavigationRail));
     final content = tester.getRect(find.byType(IndexedStack));
-    expect(content.left, rail.right);
-    expect(content.right, 800);
-    expect(content.width, greaterThan(700));
-    expect(
-      tester.widget<MediaQuery>(
-        find.byKey(const ValueKey('full-window-content-media-query')),
-      ).data.displayFeatures,
-      isEmpty,
-    );
+    expect(content.width, 400);
+    expect(content.right, lessThanOrEqualTo(400));
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
   });
 
-  testWidgets('narrow half-open windows still use all available width', (tester) async {
+  testWidgets('narrow half-open windows keep the active page within one panel', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(560, 900);
     tester.view.displayFeatures = [
@@ -274,12 +261,11 @@ void main() {
       ),
     );
 
-    final rail = tester.getRect(find.byType(NavigationRail));
     final content = tester.getRect(find.byType(IndexedStack));
-    expect(content.left, rail.right);
-    expect(content.right, 560);
-    expect(content.width, greaterThan(450));
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(content.width, 270);
+    expect(content.right, lessThanOrEqualTo(270));
+    expect(find.byType(NavigationRail), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('内容页 2'), findsOneWidget);
   });
 
