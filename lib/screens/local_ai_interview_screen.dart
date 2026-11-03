@@ -1738,3 +1738,49 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ),
     );
   }
+}
+
+class _InterviewMessage {
+  final String text;
+  final bool isUser;
+
+  const _InterviewMessage({required this.text, required this.isUser});
+}
+
+class _InterviewMessageBubble extends StatelessWidget {
+  final _InterviewMessage message;
+
+  const _InterviewMessageBubble({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Align(
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.84,
+        ),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: message.isUser
+              ? scheme.primaryContainer
+              : scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: SelectableText(
+          message.text,
+          style: TextStyle(
+            color: message.isUser ? scheme.onPrimaryContainer : scheme.onSurface,
+            fontSize: AppType.body,
+            height: 1.55,
+          ),
+        ),
+      ),
+    );
+  }
+}
