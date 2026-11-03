@@ -342,6 +342,34 @@ void main() {
       });
     }
 
+    test('旧杂病兜底先命中五苓散时仍应用精确合病表方', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const ['水入即吐'],
+        meridianDirection: '太阳',
+        answers: const {
+          'thirsty': true,
+          'urine_difficult': true,
+          'hot_palms_soles': true,
+          'diarrhea': true,
+          'history_mistreatment': false,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      // 该快照同时满足旧杂病兜底的五苓散入口和第32条合病条件；
+      // 这里只验证结果组装优先级，不表示该组症状在临床上应被视为同一方证。
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunYangmingBase);
+      expect(result, isNotNull);
+      expect(result!.formula, '葛根汤');
+      expect(result.recommendedFormulas, ['葛根汤']);
+      expect(result.combinedMeridian, '阳明');
+      expect(result.prescription?.formulaName, '葛根汤');
+    });
+
     test('规则表中唯一没有检测器赋值路径的基础键不得被误报为可达', () {
       expect(DiagnosticRules.combinedPatterns, hasLength(15));
       final unreachable = <String>{CombinedPatternCondition.threeYangBase};
