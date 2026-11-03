@@ -117,8 +117,9 @@ void main() {
       find.byKey(const ValueKey('local-ai-content-width')),
     );
     expect(scaffold.left, 0);
-    expect(scaffold.right, lessThanOrEqualTo(388));
-    expect(content.right, lessThanOrEqualTo(388));
+    expect(scaffold.right, 800);
+    expect(content.width, 640);
+    expect(content.right, lessThanOrEqualTo(800));
   });
 
   testWidgets('AI interview route stays on the originating right panel beside a vertical hinge', (tester) async {
