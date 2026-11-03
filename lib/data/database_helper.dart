@@ -373,10 +373,20 @@ class DatabaseHelper {
     int limit = 100,
   }) async {
     final db = await database;
-    return db.query(
-      'assistant_conversations',
-      orderBy: 'updated_at DESC, id DESC',
-      limit: limit,
+    return db.rawQuery(
+      '''
+      SELECT conversation.*,
+             (SELECT COUNT(*) FROM assistant_messages message
+              WHERE message.conversation_id = conversation.id) AS message_count
+      FROM assistant_conversations conversation
+      WHERE EXISTS (
+        SELECT 1 FROM assistant_messages message
+        WHERE message.conversation_id = conversation.id
+      )
+      ORDER BY conversation.updated_at DESC, conversation.id DESC
+      LIMIT ?
+      ''',
+      [limit],
     );
   }
 
