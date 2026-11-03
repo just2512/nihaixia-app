@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../engine/diagnostic_engine.dart';
@@ -460,7 +461,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final summary = _messages
         .map((message) => message.text)
         .where((text) => text.trim().isNotEmpty)
-        .join('\\n\\n');
+        .join('\n\n');
     Navigator.pop(context, summary);
   }
 

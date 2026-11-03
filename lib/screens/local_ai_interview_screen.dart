@@ -685,15 +685,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final knowledge = AssistantKnowledgeContextBuilder.build(text);
         final context = knowledge.isEmpty
             ? '当前角色：学习助手。App 本地知识库未检索到可引用条目，状态 MISSING。请明确说明缺少资料，不得编造原文或出处。'
-            : '当前角色：学习助手。\\n${AssistantMode.learning.promptHint}\\n$knowledge';
+            : '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n$knowledge';
         return _service.sendMessageWithContext(text, context: context);
       case AssistantMode.tools:
-        final context = '当前角色：工具助手。\\n${AssistantMode.tools.promptHint}\\n'
+        final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '可调用工具：五运六气推算、紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、经方剂量换算、时辰开穴、古籍原文、医案库、每日黄历。'
             '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
         return _service.sendMessageWithContext(text, context: context);
       case AssistantMode.metaphysics:
-        final context = '当前角色：玄学助手。\\n${AssistantMode.metaphysics.promptHint}\\n'
+        final context = '当前角色：玄学助手。\n${AssistantMode.metaphysics.promptHint}\n'
             '可用工具：紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、每日黄历。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
         return _service.sendMessageWithContext(text, context: context);
@@ -713,7 +713,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return id;
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 无法创建会话：$error\\n$stack');
+      debugPrint('[AssistantHistory] 无法创建会话：$error\n$stack');
       return null;
     }
   }
@@ -755,7 +755,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         metadata: 'mode=${activeMode.name}',
       );
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+      debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
     }
   }
 
@@ -793,7 +793,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
     if (!mounted) return;
     final response = result != null && result.trim().isNotEmpty
-        ? '【${tool.title}返回内容】\\n${result.trim()}'
+        ? '【${tool.title}返回内容】\n${result.trim()}'
         : '已打开「${tool.title}」。完成计算后回到本对话，把工具页面的结果发给我，我会基于结果继续解释。';
     setState(() {
       _messages.add(_InterviewMessage(text: response, isUser: false));
