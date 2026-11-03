@@ -126,7 +126,8 @@ void main() {
       expect(result, isNotNull);
       expect(result!.formula, '柴胡桂枝汤');
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
-      expect(result.combinedMeridian, '少阳');
+      // 第146条是太阳表证兼少阳证，不是原文明确的合病；不应输出合病经标签。
+      expect(result.combinedMeridian, isNull);
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
   });
@@ -328,8 +329,10 @@ void main() {
       expect(result, isNotNull);
       expect(result!.formula, '柴胡桂枝汤');
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
-      expect(result.pattern, contains('太阳少阳合病'));
-      expect(result.combinedMeridian, '少阳');
+      // 旧六经兜底只验证方证结果传播；第146条不标记为明确合病。
+      expect(result.pattern,
+          '太阳表证未解，兼见少阳证：发热微恶寒、支节烦痛、微呕、心下支结');
+      expect(result.combinedMeridian, isNull);
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
   });
