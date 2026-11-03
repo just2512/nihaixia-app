@@ -370,10 +370,18 @@ void main() {
       expect(result.prescription?.formulaName, '葛根汤');
     });
 
-    test('规则表中唯一没有检测器赋值路径的基础键不得被误报为可达', () {
+    test('规则表与检测器可达矩阵数量一致，唯一死键不得被误报为可达', () {
+      final ruleConditions = DiagnosticRules.combinedPatterns
+          .map((pattern) => pattern.condition)
+          .toSet();
+      final reachableConditions =
+          cases.map((scenario) => scenario.expected).toSet();
+      final unreachable = ruleConditions.difference(reachableConditions);
+
       expect(DiagnosticRules.combinedPatterns, hasLength(15));
-      final unreachable = <String>{CombinedPatternCondition.threeYangBase};
-      expect(cases.map((scenario) => scenario.expected).toSet().intersection(unreachable), isEmpty);
+      expect(ruleConditions, hasLength(15));
+      expect(reachableConditions, hasLength(14));
+      expect(unreachable, {CombinedPatternCondition.threeYangBase});
     });
   });
 

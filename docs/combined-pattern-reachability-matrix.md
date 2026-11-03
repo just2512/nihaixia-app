@@ -17,11 +17,9 @@
 | `sunYangmingChestFull` | 麻黄汤 | 太阳主证、阳明分数达阈值、喘/胸满 | 可达；对应第36条 |
 | `sunShaoyangDiarrhea` | 黄芩汤 | 太阳主证、少阳分数达阈值、下利 | 可达；对应第172条 |
 | `sunShaoyangVomit` | 黄芩加半夏生姜汤 | 太阳主证、少阳分数达阈值、恶心/呕吐且无下利 | 可达；对应第172条 |
-| `yangmingShaoyinUrgent` | 大承气汤 | 阳明主证、少阴分数达阈值 | 可达；原文第320条是少阴病急下，不是明确合病 |
 | `jueyinShaoyang` | 乌梅丸 | 厥阴主证兼少阳分数，或少阳主证兼厥阴分数 | 可达；来源 MISSING |
 | `sunYangmingUnresolved` | 桂枝汤 | 太阳主证、阳明分数达阈值、有汗且阳明分数低于子型上限 | 可达；来源描述为“二阳并病”，不是“合病” |
 | `threeYangSleep` | 小柴胡汤 | 太阳主证、阳明和少阳分数达阈值、但欲寐、有汗 | 可达；第268条有三阳合病原文，但原文未指定小柴胡汤 |
-| `sunYangmingInteriorHeat` | 大青龙汤 | 太阳主证、阳明分数达阈值、烦躁、无汗 | 可达；第38条原文是太阳中风证，不是太阳阳明合病 |
 | `sunShaoyinTwoCold` | 麻黄附子细辛汤 | 太阳主证、少阴分数达阈值 | 可达；第301条是少阴兼表，不是明确合病 |
 | `shaoyangTaiyin` | 柴胡桂枝干姜汤 | 少阳主证、太阴分数达阈值 | 可达；第147条原文未明确少阳太阴合病 |
 | `sunTaiyin` | 桂枝人参汤 | 太阳或太阴主证、太阳分数达阈值、下利、太阴分数达阈值 | 可达；第163条是太阳误下协热利，不是明确合病 |
@@ -29,6 +27,8 @@
 以下两项已从合病规则表和检测器移除，避免将不同条文混成合病：
 - `shaoyangYangmingTidalFever`：潮热与柴胡加芒硝汤有条文关联，但该段并非原文明确的少阳阳明合病。
 - `sunYangmingDiarrheaHeat`：第34条葛根黄芩黄连汤是桂枝证误下后的协热利，不是太阳阳明合病；当前问诊尚缺完整的误下史、脉促、喘汗出条件，不得宽泛自动触发。
+
+当前 `DiagnosticRules.combinedPatterns` 共 15 条：14 条有检测器条件路径，`threeYangBase` 仍为 `UNREACHABLE`。旧版审计表中曾列出的 `yangmingShaoyinUrgent`、`sunYangmingInteriorHeat` 不在当前有效规则表中，不能计入可达项，也不能仅凭旧 enum/文档描述声称可触发。
 
 ## 条文核验后修复
 
@@ -49,8 +49,8 @@
 
 | 路径 | 规则命中和覆盖方式 | 回归覆盖状态 |
 |---|---|---|
-| 结构化 RuleEngine 主路径 | `diagnose()` 重算条件后由 `_matchedCombinedPattern()` 命中；规则表方覆盖主方，并同步 pattern、recommendedFormulas、combinedMeridian、prescription | 17 条当前可达键有最终字段断言；新增第32条和第256条专属条件 |
-| 旧六经兜底 | 旧六经基础结果生成后应用合病方覆盖；后续补虚方逻辑不得覆盖已命中的精确合病方 | 已有太阳少阳代表场景和补虚覆盖优先级测试；仍需扩充更多旧六经分支 |
+| 结构化 RuleEngine 主路径 | `diagnose()` 重算条件后由 `_matchedCombinedPattern()` 命中；规则表方覆盖主方，并同步 pattern、recommendedFormulas、combinedMeridian、prescription | 14 条当前可达键有最终字段断言；新增第32条和第256条专属条件 |
+| 旧六经兜底 | 旧六经基础结果生成后应用合病方覆盖；后续补虚方逻辑不得覆盖已命中的精确合病方 | 已有太阳少阳代表场景和补虚覆盖优先级测试；14 条当前可达键已逐条验证最终字段同步 |
 | 旧杂病兜底 | 杂病分支单独组装结果后应用合病表覆盖 | 仍缺明确证明进入该分支的端到端用例 |
 | 证据不足提前返回 | 在最终合病组装前返回，不应用合病方 | 已有证据闸回归测试 |
 
