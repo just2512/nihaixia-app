@@ -134,8 +134,22 @@ class DiagnosticEngine {
     _tenQuestionIndex = snapshot.tenQuestionIndex;
     _tongueCoating = snapshot.tongueCoating;
     _tongueShape = snapshot.tongueShape;
-    _pulseType = snapshot.pulseType;
-    _pulseTypeSecondary = snapshot.pulseTypeSecondary;
+    _pulseType = DiagnosticRules.canonicalPulse(snapshot.pulseType);
+    final restoredSecondary =
+        DiagnosticRules.canonicalPulse(snapshot.pulseTypeSecondary);
+    _pulseTypeSecondary = _pulseType != null && restoredSecondary != _pulseType
+        ? restoredSecondary
+        : null;
+    if (_pulseType == null) {
+      _answers.remove('pulse_type');
+    } else {
+      _answers['pulse_type'] = _pulseType;
+    }
+    if (_pulseTypeSecondary == null) {
+      _answers.remove('pulse_type_secondary');
+    } else {
+      _answers['pulse_type_secondary'] = _pulseTypeSecondary;
+    }
     _gender = snapshot.gender;
     _qAnswers = Map.from(snapshot.qAnswers);
     _extSymptoms = Set.from(snapshot.extSymptoms);
@@ -309,7 +323,9 @@ class DiagnosticEngine {
     _tongueCoating = tongueCoating;
     _tongueShape = tongueShape;
     _pulseType = DiagnosticRules.canonicalPulse(pulseType);
-    _pulseTypeSecondary = DiagnosticRules.canonicalPulse(pulseTypeSecondary);
+    final secondary = DiagnosticRules.canonicalPulse(pulseTypeSecondary);
+    _pulseTypeSecondary =
+        _pulseType != null && secondary != _pulseType ? secondary : null;
 
     // Rebuild derived tongue flags so re-entry cannot retain stale evidence.
     for (final key in [
