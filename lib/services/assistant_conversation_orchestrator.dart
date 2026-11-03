@@ -113,6 +113,25 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: effectiveMode, tool: tool);
     }
 
+    if (text.contains('排盘') || text.contains('命盘')) {
+      return const AssistantDispatchDecision(
+        mode: AssistantMode.metaphysics,
+        clarification: '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？',
+      );
+    }
+    if (text.contains('起卦') || text.contains('起课')) {
+      return const AssistantDispatchDecision(
+        mode: AssistantMode.metaphysics,
+        clarification: '你想使用哪一种起卦工具：易经、小六壬，还是梅花易数？',
+      );
+    }
+    if (text.contains('开穴') || text.contains('剂量换算')) {
+      return const AssistantDispatchDecision(
+        mode: AssistantMode.tools,
+        clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
+      );
+    }
+
     final hasSymptoms = _symptomCues.any(text.contains);
     final hasPersonalContext = _personalContextCues.any(text.contains);
     if (hasSymptoms && hasPersonalContext) {
