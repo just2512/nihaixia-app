@@ -1157,7 +1157,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('已核对的用户自述'), findsOneWidget);
-      await tester.tap(find.text('返回规则问诊'));
+      await tester.tap(find.text('继续规则辨证'));
+      await tester.pumpAndSettle();
+
+      // 当前产品流程将已确认自述带入结构化辨证页面；自由文本只作上下文，
+      // 不自动转换为辨证选项。
+      expect(find.text('结构化辨证问诊'), findsOneWidget);
+      expect(
+        find.textContaining('主要不适：饭后腹胀'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('不自动映射为辨证选项'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('结构化辨证问诊')))
+          .pop('主要不适：饭后腹胀\n持续时间：约两周');
       await tester.pumpAndSettle();
 
       expect(
@@ -1165,7 +1178,6 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('主要不适：饭后腹胀'), findsOneWidget);
-      expect(find.textContaining('持续时间：约两周'), findsOneWidget);
     },
   );
 
