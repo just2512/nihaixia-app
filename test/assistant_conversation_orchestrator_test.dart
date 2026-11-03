@@ -51,6 +51,35 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('问诊中的简短追问沿用问诊角色', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '三天',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.consultation,
+      );
+      expect(decision.mode, AssistantMode.consultation);
+      expect(decision.needsClarification, isFalse);
+    });
+
+    test('学习中的追问沿用学习角色', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '为什么',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.learning,
+      );
+      expect(decision.mode, AssistantMode.learning);
+      expect(decision.needsClarification, isFalse);
+    });
+
+    test('明确的知识问题可以从问诊角色切换到学习角色', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '口苦是什么',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.consultation,
+      );
+      expect(decision.mode, AssistantMode.learning);
+    });
+
     test('用户明确选择角色时尊重手动模式，不擅自改派', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '介绍一下五运六气',
