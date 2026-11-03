@@ -761,9 +761,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     if (restoredMessages.isEmpty) return;
 
-    final fullTranscript = transcriptLines.join('\\n');
+    final fullTranscript = transcriptLines.join('\n');
     final transcript = fullTranscript.length > 10000
-        ? '【较早历史已省略，以下为最近内容】\\n'
+        ? '【较早历史已省略，以下为最近内容】\n'
             '${fullTranscript.substring(fullTranscript.length - 10000)}'
         : fullTranscript;
     setState(() {

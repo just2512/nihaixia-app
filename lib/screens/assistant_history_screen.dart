@@ -49,7 +49,7 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('删除所选对话？'),
-        content: Text('将同时删除 \${_selected.length} 个会话及其消息。此操作不可撤销。'),
+        content: Text('将同时删除 ${_selected.length} 个会话及其消息。此操作不可撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -90,7 +90,7 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectionMode ? '已选 \${_selected.length} 个对话' : '历史对话'),
+        title: Text(_selectionMode ? '已选 ${_selected.length} 个对话' : '历史对话'),
         actions: [
           if (_selectionMode)
             IconButton(
