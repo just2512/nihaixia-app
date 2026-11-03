@@ -63,7 +63,7 @@ void main() {
   test('异步检索可访问古籍原文库并保留书目来源', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('灵枢');
     expect(context, contains('App古籍库'));
-    expect(context, contains('黄帝内经·灵枢'));
+    expect(context, contains('App古籍库 · 灵枢'));
     expect(context, contains('assets/guji/lingshu.txt'));
   });
 
