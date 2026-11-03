@@ -36,7 +36,8 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(home: AssistantHistoryScreen()),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
 
     expect(find.text('问诊记录甲'), findsOneWidget);
     expect(find.text('学习记录乙'), findsOneWidget);
@@ -52,7 +53,8 @@ void main() {
     await tester.tap(find.byTooltip('删除所选'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '删除'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
 
     expect(find.text('暂无历史对话'), findsOneWidget);
   });
