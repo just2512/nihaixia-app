@@ -3,6 +3,7 @@ import '../data/acupoint_repository.dart';
 import '../data/formula_repository.dart';
 import '../data/guji_data.dart';
 import '../data/medical_case_data.dart';
+import 'classic_search_service.dart';
 import '../data/herb_repository.dart';
 import '../data/neijing_entries.dart';
 import '../models/formula.dart';
@@ -50,6 +51,78 @@ class AssistantKnowledgeContextBuilder {
     }
     for (final point in AcupointRepository.getAll()) {
       if (normalized.contains(point.name)) terms.add(point.name);
+    }
+
+    final classicQueries = <String>{normalized};
+    for (final formula in FormulaRepository.getAll()) {
+      if (normalized.contains(formula.name)) classicQueries.add(formula.name);
+    }
+    for (final herb in HerbRepository.getAll()) {
+      if (normalized.contains(herb.name)) classicQueries.add(herb.name);
+    }
+    for (final point in AcupointRepository.getAll()) {
+      if (normalized.contains(point.name)) classicQueries.add(point.name);
+    }
+    for (final phrase in const [
+      '太阳与阳明合病',
+      '太阳与少阳合病',
+      '阳明与少阳合病',
+      '三阳合病',
+      '二阳并病',
+      '少阴病',
+      '灵枢',
+      '针灸大成',
+      '伤寒论',
+      '金匮要略',
+    ]) {
+      if (normalized.contains(phrase)) classicQueries.add(phrase);
+    }
+    for (final match in RegExp(r'(?:第|条文)\\s*(\\d+)\\s*条?').allMatches(normalized)) {
+      final number = match.group(1);
+      if (number != null) {
+        classicQueries
+          ..add('第${number}条')
+          ..add('条文$number');
+      }
+    }
+
+    final classicHits = <ClassicHit>[];
+    try {
+      for (final searchQuery in classicQueries) {
+        if (searchQuery.trim().length < 2) continue;
+        final result = await ClassicSearchService.search(searchQuery);
+        for (final hit in result.hits) {
+          final identity = '${hit.source}|${hit.asset ?? hit.bookId}|${hit.chapterIndex}|${hit.title}';
+          if (classicHits.any((item) =>
+              '${item.source}|${item.asset ?? item.bookId}|${item.chapterIndex}|${item.title}' ==
+              identity)) {
+            continue;
+          }
+          classicHits.add(hit);
+          if (classicHits.length >= 4) break;
+        }
+        if (classicHits.length >= 4) break;
+      }
+    } catch (_) {
+      buffer.writeln('[App经典全文索引] 索引读取失败，状态 MISSING。');
+    }
+
+    for (final hit in classicHits) {
+      final isLecture = hit.asset != null;
+      final articleNumber = RegExp(r'(?:条文|第)\\s*(\\d+)').firstMatch(hit.title)?.group(1);
+      buffer
+        ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
+        ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义' : '古籍原文文本资产'}')
+        ..writeln('本地来源：${hit.asset ?? 'assets/guji/${hit.bookId ?? 'unknown'}.txt'}')
+        ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
+        ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
+        ..writeln('版本/底本/卷页：MISSING（需对照纸本影印本核验）')
+        ..writeln('检索摘要：${hit.snippet}')
+        ..writeln(
+          isLecture
+              ? '使用限制：这是讲稿或整理讲义，不得当作仲景原文、版本校勘或独立医案证据。'
+              : '使用限制：这是本地古籍文本资产；在版本、卷页和异文核验完成前，不得声称已完成校勘。',
+        );
     }
 
     final requestedGujiBooks = kGujiBooks.where((book) {
