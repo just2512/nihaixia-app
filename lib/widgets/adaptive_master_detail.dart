@@ -1,4 +1,4 @@
-import 'dart:ui' show DisplayFeature, DisplayFeatureType;
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 
@@ -192,7 +192,7 @@ class AdaptiveSinglePane extends StatelessWidget {
       builder: (context, constraints) {
         if (preferredAnchorPoint != null) {
           final screenSize = MediaQuery.sizeOf(context);
-          final feature = _findVerticalFoldingFeature(
+          final feature = _findSinglePaneBlockingFeature(
             MediaQuery.displayFeaturesOf(context),
             screenSize,
           );
@@ -264,7 +264,7 @@ class AdaptiveSinglePane extends StatelessWidget {
           );
         }
 
-        final feature = _findVerticalFoldingFeature(
+        final feature = _findSinglePaneBlockingFeature(
           MediaQuery.displayFeaturesOf(context),
           MediaQuery.sizeOf(context),
         );
@@ -326,6 +326,21 @@ class AdaptiveSinglePane extends StatelessWidget {
   }
 }
 
+
+DisplayFeature? _findSinglePaneBlockingFeature(
+  List<DisplayFeature> features,
+  Size screenSize,
+) {
+  final feature = _findVerticalFoldingFeature(features, screenSize);
+  // A postureFlat fold is a crease on one continuous inner display. A
+  // single-pane route must use the whole unfolded canvas; only a physical
+  // hinge or a non-flat posture should constrain it to one panel.
+  if (feature?.type == DisplayFeatureType.fold &&
+      feature?.state == DisplayFeatureState.postureFlat) {
+    return null;
+  }
+  return feature;
+}
 
 double _safeLayoutOriginX(BuildContext context) {
   final renderObject = context.findRenderObject();

@@ -79,6 +79,42 @@ void main() {
     expect(detail.right, 800);
   });
 
+
+  testWidgets('flat unfolded foldable keeps single-pane routes on the full inner display', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdaptiveSinglePane(
+            preferredAnchorPoint: const Offset(620, 420),
+            child: ColoredBox(
+              key: const ValueKey('single-pane-content'),
+              color: Colors.blue,
+              child: const Text('完整对话窗口'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final content = tester.getRect(find.byKey(const ValueKey('single-pane-content')));
+    expect(content.left, 0);
+    expect(content.right, 800);
+    expect(content.width, 800);
+  });
+
   testWidgets('zero-width fold crease reserves a safe gutter', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
