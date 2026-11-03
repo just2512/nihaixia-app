@@ -13,10 +13,11 @@ import 'yijing_screen.dart';
 import 'yunqi_screen.dart';
 import 'ziwuliuzhu_screen.dart';
 
-enum AssistantMode { consultation, learning, tools, metaphysics }
+enum AssistantMode { automatic, consultation, learning, tools, metaphysics }
 
 extension AssistantModePresentation on AssistantMode {
   String get label => switch (this) {
+        AssistantMode.automatic => '自动调度',
         AssistantMode.consultation => '问诊助手',
         AssistantMode.learning => '学习助手',
         AssistantMode.tools => '工具助手',
@@ -24,6 +25,7 @@ extension AssistantModePresentation on AssistantMode {
       };
 
   String get promptHint => switch (this) {
+        AssistantMode.automatic => '先识别任务领域；明确工具动作交给 App 工具，个人症状进入问诊，知识问题进入学习。意图不清时先澄清，不猜测。',
         AssistantMode.consultation => '围绕用户自述澄清症状，不替代规则辨证，不自动诊断或开方。',
         AssistantMode.learning => '围绕中医知识学习；优先引用 App 检索到的本地条目，缺少来源时明确标记 MISSING。',
         AssistantMode.tools => '只说明 App 已实现的工具能力；实际计算必须打开对应工具执行，不得猜算结果。',
@@ -190,13 +192,13 @@ class AssistantToolRouter {
   ];
 
   static List<AssistantToolDefinition> quickActions(AssistantMode mode) =>
-      _all.where((tool) => tool.modes.contains(mode)).toList(growable: false);
+      _all.where((tool) => mode == AssistantMode.automatic || tool.modes.contains(mode)).toList(growable: false);
 
   static AssistantToolDefinition? match(String query, AssistantMode mode) {
     final normalized = query.trim();
     if (normalized.isEmpty) return null;
     for (final tool in _all) {
-      if (!tool.modes.contains(mode)) continue;
+      if (mode != AssistantMode.automatic && !tool.modes.contains(mode)) continue;
       if (!tool.aliases.any(normalized.contains)) continue;
       if (!tool.actionWords.any(normalized.contains)) continue;
       return tool;
