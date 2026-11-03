@@ -91,7 +91,7 @@ Future<T?> showFoldAwareDialog<T>({
   // selection. This prevents the dialog's internal Center from painting into
   // the left pane when its source control is on the right. A flat zero-width
   // crease is one continuous display, so retain the full-width raw route.
-  if (blockingFeature != null) {
+  if (blockingFeature) {
     return showDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
