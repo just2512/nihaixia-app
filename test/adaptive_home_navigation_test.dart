@@ -6,6 +6,11 @@ import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
 
 const _destinations = [
   AppNavigationDestination(
+    icon: Icon(Icons.fact_check_outlined),
+    selectedIcon: Icon(Icons.fact_check),
+    label: '问诊',
+  ),
+  AppNavigationDestination(
     icon: Icon(Icons.library_books_outlined),
     selectedIcon: Icon(Icons.library_books),
     label: '知识',
@@ -16,14 +21,14 @@ const _destinations = [
     label: '工具',
   ),
   AppNavigationDestination(
-    icon: Icon(Icons.fact_check_outlined),
-    selectedIcon: Icon(Icons.fact_check),
-    label: '问诊',
-  ),
-  AppNavigationDestination(
     icon: Icon(Icons.bookmark_border),
     selectedIcon: Icon(Icons.bookmark),
     label: '收藏',
+  ),
+  AppNavigationDestination(
+    icon: Icon(Icons.settings_outlined),
+    selectedIcon: Icon(Icons.settings),
+    label: '设置',
   ),
 ];
 
@@ -93,8 +98,8 @@ void main() {
 
       await tester.tap(find.text('工具'));
       await tester.pumpAndSettle();
-      expect(selectedIndex, 1);
-      expect(find.text('内容页 1'), findsOneWidget);
+      expect(selectedIndex, 2);
+      expect(find.text('内容页 2'), findsOneWidget);
 
       // Approximate logical window dimensions derived from OPPO's published
       // panel PPI/resolution. Runtime layout always uses actual window width.
@@ -105,9 +110,9 @@ void main() {
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(
         tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
-        1,
+        2,
       );
-      expect(find.text('内容页 1'), findsOneWidget);
+      expect(find.text('内容页 2'), findsOneWidget);
     },
   );
 

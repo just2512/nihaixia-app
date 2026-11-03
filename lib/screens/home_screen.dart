@@ -3,6 +3,7 @@ import 'chat_screen.dart';
 import 'knowledge_screen.dart';
 import 'bookmarks_screen.dart';
 import 'tools_screen.dart';
+import 'settings_screen.dart';
 import '../services/update_service.dart';
 import '../services/whats_new_service.dart';
 import '../widgets/update_dialog.dart';
@@ -51,10 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   final List<Widget> _screens = [
+    const ChatScreen(),
     const KnowledgeScreen(),
     const ToolsScreen(),
-    const ChatScreen(),
     const BookmarksScreen(),
+    const SettingsScreen(),
   ];
 
   @override
@@ -71,6 +73,11 @@ class _HomeScreenState extends State<HomeScreen> {
         screens: _screens,
         destinations: const [
           AppNavigationDestination(
+            icon: Icon(Icons.fact_check_outlined),
+            selectedIcon: Icon(Icons.fact_check),
+            label: '问诊',
+          ),
+          AppNavigationDestination(
             icon: Icon(Icons.library_books_outlined),
             selectedIcon: Icon(Icons.library_books),
             label: '知识',
@@ -81,14 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
             label: '工具',
           ),
           AppNavigationDestination(
-            icon: Icon(Icons.fact_check_outlined),
-            selectedIcon: Icon(Icons.fact_check),
-            label: '问诊',
-          ),
-          AppNavigationDestination(
             icon: Icon(Icons.bookmark_border),
             selectedIcon: Icon(Icons.bookmark),
             label: '收藏',
+          ),
+          AppNavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: '设置',
           ),
         ],
       ),
