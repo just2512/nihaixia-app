@@ -110,6 +110,7 @@ class AssistantKnowledgeContextBuilder {
     for (final hit in classicHits) {
       final isLecture = hit.asset != null;
       final articleNumber = RegExp(r'(?:条文|第)\s*(\d+)').firstMatch(hit.title)?.group(1);
+      final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义' : '古籍原文文本资产'}')
