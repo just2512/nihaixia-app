@@ -188,3 +188,79 @@ void main() {
     expect(content.width, 388);
   });
 }
+
+
+  testWidgets('AI interview keeps controls usable at 200% text scale on outer screen', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 790);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(2.0),
+          ),
+          child: child!,
+        ),
+        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final content = tester.getRect(
+      find.byKey(const ValueKey('local-ai-content-width')),
+    );
+    final input = tester.getRect(find.byType(TextField));
+    expect(content.width, 402);
+    expect(input.width, greaterThan(80));
+    expect(input.left, greaterThanOrEqualTo(content.left));
+    expect(input.right, lessThanOrEqualTo(content.right));
+    expect(find.byTooltip('发送'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('AI interview keeps controls inside the active inner panel at 200% text scale', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(2.0),
+          ),
+          child: child!,
+        ),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          preferredAnchorPoint: const Offset(600, 450),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final content = tester.getRect(
+      find.byKey(const ValueKey('local-ai-content-width')),
+    );
+    final input = tester.getRect(find.byType(TextField));
+    expect(content.left, greaterThanOrEqualTo(412));
+    expect(content.right, 800);
+    expect(content.width, 388);
+    expect(input.width, greaterThan(80));
+    expect(input.left, greaterThanOrEqualTo(content.left));
+    expect(input.right, lessThanOrEqualTo(content.right));
+    expect(find.byTooltip('发送'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
