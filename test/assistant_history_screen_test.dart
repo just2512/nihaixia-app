@@ -36,7 +36,9 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(home: AssistantHistoryScreen()),
     );
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
     await tester.pump();
 
     expect(find.text('问诊记录甲'), findsOneWidget);
@@ -44,7 +46,7 @@ void main() {
     expect(find.text('桂枝汤的原文出处'), findsOneWidget);
 
     await tester.tap(find.byTooltip('批量选择'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('问诊记录甲'));
     await tester.tap(find.text('学习记录乙'));
     await tester.pumpAndSettle();
@@ -57,5 +59,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('暂无历史对话'), findsOneWidget);
+    expect(await store.getAssistantConversations(), isEmpty);
   });
 }
