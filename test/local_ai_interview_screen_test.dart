@@ -876,7 +876,11 @@ void main() {
       expect(find.byTooltip('释放模型内存'), findsOneWidget);
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNotNull);
+      final sendButton = find.ancestor(
+        of: find.byTooltip('发送'),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
       // 等待本轮推理、持久化和发送后的原生状态回读完成，避免在异步窗口内
