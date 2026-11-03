@@ -14,7 +14,7 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  testWidgets('问诊是默认一级入口，设置可从根导航直接进入', (tester) async {
+  testWidgets('统一 AI 助手是默认一级入口，设置可从根导航直接进入', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -30,7 +30,7 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.text('辨证问诊'), findsOneWidget);
+    expect(find.text('汉唐 AI 助手'), findsOneWidget);
     final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(navigation.selectedIndex, 0);
     expect(find.text('设置'), findsOneWidget);
@@ -41,7 +41,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Find N2 内屏铰链布局下默认问诊页不发生布局异常', (tester) async {
+  testWidgets('Find N2 内屏铰链布局下默认 AI 助手不发生布局异常', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -66,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationRail), findsOneWidget);
-    expect(find.text('辨证问诊'), findsOneWidget);
+    expect(find.text('汉唐 AI 助手'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

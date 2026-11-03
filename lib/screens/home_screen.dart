@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'chat_screen.dart';
+import 'local_ai_interview_screen.dart';
 import 'knowledge_screen.dart';
 import 'bookmarks_screen.dart';
 import 'tools_screen.dart';
@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   final List<Widget> _screens = [
-    const ChatScreen(),
+    const LocalAiInterviewScreen(),
     const KnowledgeScreen(),
     const ToolsScreen(),
     const BookmarksScreen(),
@@ -79,9 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
         screens: _screens,
         destinations: const [
           AppNavigationDestination(
-            icon: Icon(Icons.fact_check_outlined),
-            selectedIcon: Icon(Icons.fact_check),
-            label: '问诊',
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat),
+            label: 'AI助手',
           ),
           AppNavigationDestination(
             icon: Icon(Icons.library_books_outlined),
