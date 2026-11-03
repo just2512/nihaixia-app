@@ -87,15 +87,33 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startDiagnosis() {
+    // initState 阶段直接构造首屏状态，避免调用 _addBotMessage /
+    // _showTemperatureOptions 中的 setState 导致首帧状态更新异常。
     final initialContext = widget.initialUserContext?.trim();
     if (initialContext != null && initialContext.isNotEmpty) {
-      _addBotMessage(
-        '已从 AI 助手带入本次用户自述（仅作核对上下文，不自动映射为辨证选项）：\n'
-        '$initialContext',
+      _messages.add(
+        _ChatBubble(
+          text: '已从 AI 助手带入本次用户自述（仅作核对上下文，不自动映射为辨证选项）：\n'
+              '$initialContext',
+          isUser: false,
+        ),
       );
     }
-    _addBotMessage(_engine.getInitialGreeting());
-    _showTemperatureOptions();
+    _messages.add(
+      _ChatBubble(text: _engine.getInitialGreeting(), isUser: false),
+    );
+    const question =
+        '你整体的寒热感觉是怎样的？（平时怕冷还是怕热，或者身体某处发凉、发热都可以告诉我）';
+    _messages.add(_ChatBubble(text: question, isUser: false));
+    _currentOptions = _engine
+        .getTemperatureQuestions()
+        .map((option) => _ChatOption(
+              label: option.label,
+              description: option.description,
+              onTap: () => _selectTemperature(option.key, option.label),
+            ))
+        .toList();
+    _showOptions = true;
   }
 
   // ==================== 快照管理 ====================
