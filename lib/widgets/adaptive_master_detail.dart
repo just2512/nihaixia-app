@@ -146,8 +146,11 @@ DisplayFeature? _findVerticalFoldingFeature(
         feature.type != DisplayFeatureType.fold) {
       continue;
     }
+    // Unknown posture is not enough evidence to isolate a single panel.
+    // A flat fold remains useful as a master/detail divider, while
+    // AdaptiveSinglePane separately treats it as one continuous canvas.
     if (feature.type == DisplayFeatureType.fold &&
-        feature.state != DisplayFeatureState.postureHalfOpened) {
+        feature.state == DisplayFeatureState.unknown) {
       continue;
     }
 
