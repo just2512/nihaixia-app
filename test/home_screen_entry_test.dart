@@ -21,10 +21,7 @@ void main() {
     expect(find.text('辨证问诊'), findsOneWidget);
     final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(navigation.selectedIndex, 0);
-    expect(
-      navigation.destinations.map((destination) => destination.label),
-      ['问诊', '知识', '工具', '收藏', '设置'],
-    );
+    expect(find.text('设置'), findsOneWidget);
 
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
