@@ -693,7 +693,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               '先澄清症状与时间线，不把模型整理内容当成已确认事实；规则辨证必须由 App 的 DiagnosticEngine 执行。',
         );
       case AssistantMode.learning:
-        final knowledge = AssistantKnowledgeContextBuilder.build(text);
+        final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(text);
         final context = knowledge.isEmpty
             ? '当前角色：学习助手。App 本地知识库未检索到可引用条目，状态 MISSING。请明确说明缺少资料，不得编造原文或出处。'
             : '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n$knowledge';
