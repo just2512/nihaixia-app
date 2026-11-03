@@ -2,14 +2,12 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('问诊是默认一级入口，设置可从根导航直接进入', (tester) async {
-    SharedPreferences.setMockInitialValues({});
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -30,7 +28,6 @@ void main() {
   });
 
   testWidgets('Find N2 内屏铰链布局下默认问诊页不发生布局异常', (tester) async {
-    SharedPreferences.setMockInitialValues({});
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
