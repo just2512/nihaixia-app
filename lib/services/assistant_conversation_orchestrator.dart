@@ -53,6 +53,8 @@ class AssistantConversationOrchestrator {
     '出处',
     '条文',
     '学习',
+    '想了解',
+    '了解一下',
     '概念',
     '理论',
     '组成',
@@ -92,6 +94,7 @@ class AssistantConversationOrchestrator {
   static AssistantDispatchDecision resolve({
     required String query,
     required AssistantMode selectedMode,
+    AssistantMode? currentMode,
   }) {
     final text = query.trim();
     if (text.isEmpty) {
@@ -147,12 +150,22 @@ class AssistantConversationOrchestrator {
     }
 
     if (hasSymptoms) {
+      if (currentMode == AssistantMode.consultation) {
+        return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+      }
+      if (currentMode == AssistantMode.learning) {
+        return const AssistantDispatchDecision(mode: AssistantMode.learning);
+      }
       return const AssistantDispatchDecision(
         mode: AssistantMode.consultation,
         clarification: '你提到了具体症状。请确认：这是你本人目前的情况，还是想学习该症状的中医理论？',
       );
     }
 
-    return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    // No new explicit intent: continue the active domain for short answers and
+    // follow-up questions instead of silently switching roles every turn.
+    return AssistantDispatchDecision(
+      mode: currentMode ?? AssistantMode.learning,
+    );
   }
 }
