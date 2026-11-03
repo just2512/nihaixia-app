@@ -65,6 +65,110 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
     );
   }
 
+  Widget _buildFoldNavigationPanel(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      key: const ValueKey('fold-navigation-panel'),
+      color: scheme.surfaceContainerLow,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 20, 18),
+              child: Row(
+                children: [
+                  Icon(Icons.spa_outlined, color: scheme.primary, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '汉唐中医',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: scheme.outlineVariant),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
+                itemCount: widget.destinations.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, index) {
+                  final destination = widget.destinations[index];
+                  final selected = index == widget.currentIndex;
+                  return Material(
+                    color: selected
+                        ? scheme.secondaryContainer
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => widget.onDestinationSelected(index),
+                      child: SizedBox(
+                        height: 58,
+                        width: double.infinity,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              selected
+                                  ? destination.selectedIcon
+                                  : destination.icon,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  destination.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: selected
+                                        ? scheme.onSecondaryContainer
+                                        : scheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              if (selected)
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: scheme.onSecondaryContainer,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Divider(height: 1, color: scheme.outlineVariant),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+              child: Text(
+                '当前工作区：${widget.destinations[widget.currentIndex].label}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   NavigationBar _buildBottomNavigationBar(BuildContext context) {
     return NavigationBar(
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -150,10 +254,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
                 children: [
                   SizedBox(
                     width: leftPanelWidth,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _buildRail(extended: true),
-                    ),
+                    child: _buildFoldNavigationPanel(context),
                   ),
                   SizedBox(width: hingeGapWidth),
                   SizedBox(
