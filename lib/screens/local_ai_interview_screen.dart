@@ -753,9 +753,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       restoredMessages.add(_InterviewMessage(text: content, isUser: isUser));
       transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
       if (isUser && !metadata.contains('replayable=false')) {
+        final attachmentNote = content.indexOf('（另附');
         replayableUserMessages.add(
-          content.replaceFirst(
-            RegExp(r'（另附(?:录音|照片)；原始附件未持久化）
+          attachmentNote > 0 ? content.substring(0, attachmentNote) : content,
+        );
+      }
     }
     if (restoredMessages.isEmpty) return;
 
@@ -1055,7 +1057,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _messages
           ..clear()
           ..add(const _InterviewMessage(
-            text: '模型已释放，设备内存已归还。再次使用时可重新加载。'
+            text: '模型已释放，设备内存已归还。再次使用时可重新加载。',
             isUser: false,
           ));
         _confirmedDraft = null;

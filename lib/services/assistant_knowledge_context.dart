@@ -1,5 +1,6 @@
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
+import '../models/formula.dart';
 
 /// Bounded keyword retrieval from the app's bundled TCM knowledge data.
 /// Returns source-labelled excerpts, never a diagnosis or prescription.
@@ -32,7 +33,7 @@ class AssistantKnowledgeContextBuilder {
         formula.components.any(
           (component) => normalized.contains(component.name),
         ));
-    final formulas = <dynamic>[];
+    final formulas = <Formula>[];
     for (final formula in [
       ...exactFormulaMatches,
       ...keywordFormulaMatches,
