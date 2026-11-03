@@ -208,7 +208,7 @@ class AssistantToolRouter {
 
   static Widget _buildStructuredDiagnosis() =>
       const ChatScreen(returnResultOnComplete: true);
-  static Widget _buildYunqi() => const YunQiScreen();
+  static Widget _buildYunqi() => const YunQiScreen(returnResultOnComplete: true);
   static Widget _buildZiwei() => const ZiweiChartScreen();
   static Widget _buildBazi() => const BaZiPaipanScreen();
   static Widget _buildYijing() => const YiJingScreen();
