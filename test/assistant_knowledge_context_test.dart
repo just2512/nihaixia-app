@@ -73,7 +73,6 @@ void main() {
     expect(context, contains('内部序号'));
     expect(context, contains('来源定位：MISSING'));
   });
-}
 
   test('异步检索伤寒金匮全文索引时明确区分倪师讲稿与仲景原文', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
@@ -83,4 +82,5 @@ void main() {
     expect(context, contains('版本/底本/卷页：MISSING'));
     expect(context, contains('不得当作仲景原文'));
   });
+}
 }
