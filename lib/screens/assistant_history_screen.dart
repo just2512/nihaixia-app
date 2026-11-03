@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/database_helper.dart';
+import '../utils/fold_aware_routes.dart';
 
 /// Persistent assistant sessions. Long-press or enter selection mode to
 /// delete several conversations; tapping a row resumes that conversation.
@@ -57,7 +58,7 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
 
   Future<void> _deleteSelected() async {
     if (_selected.isEmpty || _deleting) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showFoldAwareDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('删除所选对话？'),
