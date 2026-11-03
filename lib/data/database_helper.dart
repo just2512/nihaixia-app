@@ -331,7 +331,7 @@ class DatabaseHelper {
     }
     final db = await database;
     final now = DateTime.now().toIso8601String();
-    final preview = content.replaceAll(RegExp(r'\\s+'), ' ').trim();
+    final preview = content.replaceAll(RegExp(r'\s+'), ' ').trim();
     return db.transaction((txn) async {
       final exists = await txn.query(
         'assistant_conversations',
