@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../services/assistant_knowledge_context.dart';
+import 'assistant_tool_router.dart';
 import '../data/database_helper.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
@@ -154,6 +155,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late Future<int?> _conversationIdFuture;
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
+  AssistantMode _assistantMode = AssistantMode.consultation;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -676,16 +678,33 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
 
   Future<String> _sendTextWithKnowledgeContext(String text) async {
-    final context = AssistantKnowledgeContextBuilder.build(text);
-    if (context.isEmpty) return _service.sendMessage(text);
-    return _service.sendMessageWithContext(text, context: context);
+    switch (_assistantMode) {
+      case AssistantMode.consultation:
+        return _service.sendMessage(text);
+      case AssistantMode.learning:
+        final knowledge = AssistantKnowledgeContextBuilder.build(text);
+        final context = knowledge.isEmpty
+            ? '当前角色：学习助手。App 本地知识库未检索到可引用条目，状态 MISSING。请明确说明缺少资料，不得编造原文或出处。'
+            : '当前角色：学习助手。\\n${AssistantMode.learning.promptHint}\\n$knowledge';
+        return _service.sendMessageWithContext(text, context: context);
+      case AssistantMode.tools:
+        final context = '当前角色：工具助手。\\n${AssistantMode.tools.promptHint}\\n'
+            '可调用工具：五运六气推算、紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、经方剂量换算、时辰开穴、古籍原文、医案库、每日黄历。'
+            '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
+        return _service.sendMessageWithContext(text, context: context);
+      case AssistantMode.metaphysics:
+        final context = '当前角色：玄学助手。\\n${AssistantMode.metaphysics.promptHint}\\n'
+            '可用工具：紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、每日黄历。'
+            '排盘结果必须由 App 工具生成，不得凭空推算。';
+        return _service.sendMessageWithContext(text, context: context);
+    }
   }
 
 
   Future<int?> _createNewConversation() async {
     try {
       final id = await DatabaseHelper.instance.createAssistantConversation(
-        mode: 'consultation',
+        mode: 'unified',
       );
       await DatabaseHelper.instance.saveAssistantMessage(
         conversationId: id,
@@ -702,15 +721,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _persistSuccessfulTurn({
     required String userText,
     required String assistantText,
+    AssistantMode? mode,
     String? attachmentType,
   }) async {
     try {
       final id = await _conversationIdFuture;
       if (id == null) return;
+      final activeMode = mode ?? _assistantMode;
       final replayable = userText.trim().isNotEmpty;
-      final metadata = attachmentType == null
-          ? 'replayable=true'
-          : 'attachment=$attachmentType;replayable=$replayable';
+      final metadataParts = <String>[
+        'mode=${activeMode.name}',
+        'replayable=$replayable',
+        if (attachmentType != null) 'attachment=$attachmentType',
+      ];
+      final metadata = metadataParts.join(';');
       final storedUserText = attachmentType == null
           ? userText
           : replayable
@@ -728,11 +752,115 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         conversationId: id,
         role: 'assistant',
         content: assistantText,
+        metadata: 'mode=${activeMode.name}',
       );
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
     }
   }
+
+  Future<void> _requestTool(String userText, AssistantToolDefinition tool) async {
+    final instruction =
+        '已识别到你要使用「${tool.title}」。${tool.description}'
+        '实际计算由 App 内置工具执行，不由模型猜测结果。点击下方按钮打开；完成后返回本对话，我会继续解释结果。';
+    setState(() {
+      _messages
+        ..add(_InterviewMessage(text: userText, isUser: true))
+        ..add(_InterviewMessage(
+          text: instruction,
+          isUser: false,
+          actionLabel: '打开${tool.title}',
+          onAction: () => _openTool(tool),
+        ));
+      _error = null;
+    });
+    _inputController.clear();
+    await _persistSuccessfulTurn(
+      userText: userText,
+      assistantText: instruction,
+      mode: _assistantMode,
+    );
+    _scrollToBottom();
+  }
+
+  Future<void> _openTool(AssistantToolDefinition tool) async {
+    final result = await Navigator.push<String>(
+      context,
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
+        builder: (_) => tool.builder(),
+      ),
+    );
+    if (!mounted) return;
+    final response = result != null && result.trim().isNotEmpty
+        ? '【${tool.title}返回内容】\\n${result.trim()}'
+        : '已打开「${tool.title}」。完成计算后回到本对话，把工具页面的结果发给我，我会基于结果继续解释。';
+    setState(() {
+      _messages.add(_InterviewMessage(text: response, isUser: false));
+    });
+    try {
+      final id = await _conversationIdFuture;
+      if (id != null) {
+        await DatabaseHelper.instance.saveAssistantMessage(
+          conversationId: id,
+          role: 'assistant',
+          content: response,
+          metadata: 'mode=${_assistantMode.name};tool=${tool.id}',
+        );
+      }
+    } catch (error) {
+      debugPrint('[AssistantHistory] 保存工具结果失败：$error');
+    }
+    _scrollToBottom();
+  }
+
+  Widget _buildModeSelector(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: AssistantMode.values.map((mode) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: ChoiceChip(
+                    label: Text(mode.label),
+                    selected: _assistantMode == mode,
+                    onSelected: _sending || _modelControlBusy
+                        ? null
+                        : (_) => setState(() => _assistantMode = mode),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          if (AssistantToolRouter.quickActions(_assistantMode).isNotEmpty)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: AssistantToolRouter.quickActions(_assistantMode).map((tool) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.xs),
+                    child: ActionChip(
+                      avatar: const Icon(Icons.open_in_new, size: 15),
+                      label: Text(tool.title),
+                      onPressed: _sending || _modelControlBusy
+                          ? null
+                          : () => _requestTool('打开${tool.title}', tool),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+
 
   Future<void> _openHistory() async {
     final selectedId = await Navigator.push<int>(
@@ -750,11 +878,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final transcriptLines = <String>[];
     final replayableUserMessages = <String>[];
     final restoredMessages = <_InterviewMessage>[];
+    var restoredMode = _assistantMode;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
       final metadata = row['metadata'] as String? ?? '';
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
+      final modeValue =
+          RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
+      if (modeValue != null) {
+        for (final mode in AssistantMode.values) {
+          if (mode.name == modeValue) restoredMode = mode;
+        }
+      }
       final isUser = role == 'user';
       restoredMessages.add(_InterviewMessage(text: content, isUser: isUser));
       transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
@@ -774,6 +910,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         : fullTranscript;
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
+      _assistantMode = restoredMode;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -819,8 +956,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _recording ||
         _recordingBusy ||
         _statusUnknown ||
-        _status?.ready != true ||
         (text.isEmpty && imagePath == null && audioPath == null)) {
+      return;
+    }
+
+    if (text.isNotEmpty && imagePath == null && audioPath == null) {
+      final tool = AssistantToolRouter.match(text, _assistantMode);
+      if (tool != null) {
+        await _requestTool(text, tool);
+        return;
+      }
+    }
+    if (_status?.ready != true) {
+      setState(() => _error = '本地模型尚未加载。可以先使用上方 App 内置工具；AI 对话请先加载 Gemma 4 E4B。');
       return;
     }
 
@@ -845,6 +993,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
+        mode: _assistantMode,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
@@ -1227,7 +1376,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       preferredAnchorPoint: widget.preferredAnchorPoint,
       child: Scaffold(
       appBar: AppBar(
-        title: const Text('本地 AI 问诊'),
+        title: const Text('汉唐 AI 助手'),
         actions: [
           IconButton(
             tooltip: '历史对话',
@@ -1259,12 +1408,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 child: Column(
           children: [
             _buildModelPanel(context),
+            _buildModeSelector(context),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
               color: scheme.surfaceContainerLow,
               child: Text(
-                'AI 只负责交流和整理自述信息；六经辨证仍由原有规则问诊流程完成，不会由模型开方或调整剂量。',
+                '当前角色：${_assistantMode.label}。模型负责对话与整理；辨证规则、知识检索和工具计算分别由 App 对应模块执行。',
                 style: TextStyle(
                   color: scheme.onSurfaceVariant,
                   fontSize: AppType.caption,
@@ -1749,8 +1899,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 class _InterviewMessage {
   final String text;
   final bool isUser;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
-  const _InterviewMessage({required this.text, required this.isUser});
+  const _InterviewMessage({
+    required this.text,
+    required this.isUser,
+    this.actionLabel,
+    this.onAction,
+  });
 }
 
 class _InterviewMessageBubble extends StatelessWidget {
@@ -1778,13 +1935,27 @@ class _InterviewMessageBubble extends StatelessWidget {
               : scheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        child: SelectableText(
-          message.text,
-          style: TextStyle(
-            color: message.isUser ? scheme.onPrimaryContainer : scheme.onSurface,
-            fontSize: AppType.body,
-            height: 1.55,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SelectableText(
+              message.text,
+              style: TextStyle(
+                color: message.isUser ? scheme.onPrimaryContainer : scheme.onSurface,
+                fontSize: AppType.body,
+                height: 1.55,
+              ),
+            ),
+            if (message.actionLabel != null && message.onAction != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: message.onAction,
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: Text(message.actionLabel!),
+              ),
+            ],
+          ],
         ),
       ),
     );
