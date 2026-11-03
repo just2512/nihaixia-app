@@ -86,8 +86,8 @@ void main() {
       find.byKey(const ValueKey('local-ai-content-width')),
     );
     expect(scaffold.left, 0);
-    expect(scaffold.right, 800);
-    expect(content.right, lessThanOrEqualTo(800));
+    expect(scaffold.right, lessThanOrEqualTo(388));
+    expect(content.right, lessThanOrEqualTo(388));
     expect(content.width, 388);
   });
 
