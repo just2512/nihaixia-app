@@ -137,6 +137,27 @@ class LocalAiService {
     return LocalAiModelStatus.fromMap(data);
   }
 
+
+  Future<void> restoreConversation({
+    required String transcript,
+    required List<String> userMessages,
+  }) async {
+    final normalized = transcript.trim();
+    if (normalized.isEmpty) {
+      throw const FormatException('历史对话为空，无法恢复');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'restoreConversation',
+      {'transcript': normalized, 'userMessages': userMessages},
+    );
+    if (data?['restored'] != true) {
+      throw PlatformException(
+        code: 'RESTORE_FAILED',
+        message: '本地模型没有确认历史上下文恢复完成',
+      );
+    }
+  }
+
   Future<LocalAiModelStatus> resetConversation() async {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'resetConversation',

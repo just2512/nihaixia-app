@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../data/database_helper.dart';
+import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
 
@@ -149,6 +151,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _sending = false;
   bool _extracting = false;
   bool _modelControlBusy = false;
+  late Future<int> _conversationIdFuture;
+  String? _pendingHistoryTranscript;
+  List<String> _pendingHistoryUserMessages = const [];
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -160,6 +165,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _recordingFileInspector =
         widget.recordingFileInspector ?? _IoLocalAiRecordingFileInspector();
+    _conversationIdFuture = _createNewConversation();
     _refreshStatus();
     _recoverLostImage();
   }
@@ -247,6 +253,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       });
       if (!status.ready) {
         setState(() => _error = '模型文件尚未安装，请先将 Gemma 4 E4B 模型放入应用目录。');
+      } else {
+        await _restorePendingHistory();
       }
     } on PlatformException catch (error) {
       await _refreshStatusAfterLoadFailure(error.message ?? '模型加载失败');
@@ -668,6 +676,126 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _service.sendMessageWithContext(text, context: context);
   }
 
+
+  Future<int> _createNewConversation() async {
+    final id = await DatabaseHelper.instance.createAssistantConversation(
+      mode: 'consultation',
+    );
+    await DatabaseHelper.instance.saveAssistantMessage(
+      conversationId: id,
+      role: 'assistant',
+      content: '可以先说说目前最困扰你的情况。比如从什么时候开始、具体有什么感觉、什么情况下会加重或缓解。一次说一两件事就可以。',
+    );
+    return id;
+  }
+
+  Future<void> _persistSuccessfulTurn({
+    required String userText,
+    required String assistantText,
+    String? attachmentType,
+  }) async {
+    try {
+      final id = await _conversationIdFuture;
+      final replayable = userText.trim().isNotEmpty;
+      final metadata = attachmentType == null
+          ? 'replayable=true'
+          : 'attachment=$attachmentType;replayable=$replayable';
+      final storedUserText = attachmentType == null
+          ? userText
+          : replayable
+              ? '$userText（另附$attachmentType；原始附件未持久化）'
+              : '已附加$attachmentType（原始附件未持久化）';
+      if (storedUserText.trim().isNotEmpty) {
+        await DatabaseHelper.instance.saveAssistantMessage(
+          conversationId: id,
+          role: 'user',
+          content: storedUserText,
+          metadata: metadata,
+        );
+      }
+      await DatabaseHelper.instance.saveAssistantMessage(
+        conversationId: id,
+        role: 'assistant',
+        content: assistantText,
+      );
+    } catch (error, stack) {
+      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+    }
+  }
+
+  Future<void> _openHistory() async {
+    final selectedId = await Navigator.push<int>(
+      context,
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
+        builder: (_) => const AssistantHistoryScreen(),
+      ),
+    );
+    if (!mounted || selectedId == null) return;
+
+    final rows = await DatabaseHelper.instance.getAssistantMessages(
+      conversationId: selectedId,
+    );
+    final transcriptLines = <String>[];
+    final replayableUserMessages = <String>[];
+    final restoredMessages = <_InterviewMessage>[];
+    for (final row in rows) {
+      final role = row['role'] as String? ?? '';
+      final content = row['content'] as String? ?? '';
+      final metadata = row['metadata'] as String? ?? '';
+      if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
+      final isUser = role == 'user';
+      restoredMessages.add(_InterviewMessage(text: content, isUser: isUser));
+      transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
+      if (isUser && !metadata.contains('replayable=false')) {
+        replayableUserMessages.add(content);
+      }
+    }
+    if (restoredMessages.isEmpty) return;
+
+    final fullTranscript = transcriptLines.join('\\n');
+    final transcript = fullTranscript.length > 10000
+        ? '【较早历史已省略，以下为最近内容】\\n'
+            '${fullTranscript.substring(fullTranscript.length - 10000)}'
+        : fullTranscript;
+    setState(() {
+      _conversationIdFuture = Future<int>.value(selectedId);
+      _messages
+        ..clear()
+        ..addAll(restoredMessages);
+      _confirmedDraft = null;
+      _pendingHistoryTranscript = transcript;
+      _pendingHistoryUserMessages = replayableUserMessages;
+      _error = _status?.ready == true
+          ? null
+          : '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。';
+    });
+    if (_status?.ready == true) {
+      await _restorePendingHistory();
+    }
+    _scrollToBottom();
+  }
+
+  Future<void> _restorePendingHistory() async {
+    final transcript = _pendingHistoryTranscript;
+    if (transcript == null || _status?.ready != true) return;
+    try {
+      await _service.restoreConversation(
+        transcript: transcript,
+        userMessages: _pendingHistoryUserMessages,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pendingHistoryTranscript = null;
+        _pendingHistoryUserMessages = const [];
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
+    }
+  }
+
   Future<void> _send() async {
     if (_modelControlBusy) return;
     final text = _inputController.text.trim();
@@ -700,6 +828,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : imagePath != null
               ? await _service.sendImage(imagePath, prompt: text)
               : await _sendTextWithKnowledgeContext(text);
+      await _persistSuccessfulTurn(
+        userText: text,
+        assistantText: reply,
+        attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
+      );
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;
@@ -911,6 +1044,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final status = await _service.releaseModel();
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
+      _conversationIdFuture = _createNewConversation();
+      _pendingHistoryTranscript = null;
+      _pendingHistoryUserMessages = const [];
       setState(() {
         _status = status;
         _messages
@@ -1079,6 +1215,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       appBar: AppBar(
         title: const Text('本地 AI 问诊'),
         actions: [
+          IconButton(
+            tooltip: '历史对话',
+            onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting || _recordingBusy || _recording ? null : _openHistory,
+            icon: const Icon(Icons.history),
+          ),
           if (ready) ...[
             IconButton(
               tooltip: '重新开始对话',
