@@ -1,6 +1,8 @@
 import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
 import '../data/formula_repository.dart';
+import '../data/guji_data.dart';
+import '../data/medical_case_data.dart';
 import '../data/herb_repository.dart';
 import '../data/neijing_entries.dart';
 import '../models/formula.dart';
@@ -16,6 +18,103 @@ class AssistantKnowledgeContextBuilder {
   static const int maxAcupunctureEntries = 3;
   static const int maxAcupointEntries = 3;
   static const int maxNeijingEntries = 3;
+
+  /// Extends the fast in-memory retrieval with the bundled classical-text and
+  /// medical-case libraries. Case excerpts carry an explicit provenance warning:
+  /// the local table sequence is not a primary-source locator.
+  static Future<String> buildAsync(String query) async {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return '';
+    final base = build(normalized);
+    final buffer = StringBuffer();
+    if (base.isNotEmpty) {
+      buffer.writeln(base.length > 3500 ? base.substring(0, 3500) : base);
+    }
+
+    final terms = <String>{normalized};
+    for (final term in normalized
+        .split(RegExp(r'[，。！？、；：,.!?;\\s]+'))
+        .map((value) => value.trim())
+        .where((value) => value.length >= 2)) {
+      terms.add(term);
+    }
+    for (final formula in FormulaRepository.getAll()) {
+      if (normalized.contains(formula.name)) terms.add(formula.name);
+      for (final alias in formula.alias.split(',')) {
+        final value = alias.trim();
+        if (value.length >= 2 && normalized.contains(value)) terms.add(value);
+      }
+    }
+    for (final herb in HerbRepository.getAll()) {
+      if (normalized.contains(herb.name)) terms.add(herb.name);
+    }
+    for (final point in AcupointRepository.getAll()) {
+      if (normalized.contains(point.name)) terms.add(point.name);
+    }
+
+    final requestedGujiBooks = kGujiBooks.where((book) {
+      if (normalized.contains(book.title)) return true;
+      if (book.id == 'lingshu' && normalized.contains('灵枢')) return true;
+      if (book.id == 'zhenjiudacheng' &&
+          (normalized.contains('针灸大成') || normalized.contains('针灸古籍'))) {
+        return true;
+      }
+      return false;
+    }).toList(growable: false);
+
+    for (final book in requestedGujiBooks) {
+      try {
+        final chapters = await GujiRepository.chaptersOf(book);
+        final hits = chapters.where((chapter) {
+          return terms.any((term) =>
+              chapter.title.contains(term) || chapter.body.contains(term));
+        }).take(2).toList(growable: false);
+        buffer
+          ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
+          ..writeln('书籍简介：${book.intro}');
+        if (hits.isEmpty) {
+          buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
+        }
+        for (final chapter in hits) {
+          final excerpt = chapter.body.length > 1400
+              ? chapter.body.substring(0, 1400)
+              : chapter.body;
+          buffer
+            ..writeln('章节：${chapter.title}')
+            ..writeln('原文摘录（本地公版文本资产，版本/页码仍需另行校核）：$excerpt');
+        }
+      } catch (_) {
+        buffer.writeln('[App古籍库 · ${book.title}] 读取失败，状态 MISSING。');
+      }
+    }
+
+    try {
+      final cases = await getAllMedicalCases();
+      final hits = cases
+          .where((medicalCase) => terms.any(medicalCase.matches))
+          .take(2)
+          .toList(growable: false);
+      for (final medicalCase in hits) {
+        buffer
+          ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
+          ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
+          ..writeln('诊断字段：${medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis}')
+          ..writeln('病机字段：${medicalCase.mechanism.isEmpty ? 'MISSING' : medicalCase.mechanism}')
+          ..writeln('方剂字段：${medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula}')
+          ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
+          ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
+          ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
+          ..writeln('来源定位：MISSING（内部序号不是原始病例页码或稳定来源 ID）')
+          ..writeln('使用限制：仅作为本地整理记录检索，不代表已核验病例原文或疗效证据。');
+      }
+    } catch (_) {
+      buffer.writeln('[App医案库] 读取失败，状态 MISSING。');
+    }
+
+    final result = buffer.toString().trim();
+    if (result.length <= maxContextCharacters) return result;
+    return result.substring(0, maxContextCharacters);
+  }
 
   static String build(String query) {
     final normalized = query.trim();
