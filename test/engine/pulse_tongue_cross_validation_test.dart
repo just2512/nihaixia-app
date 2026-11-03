@@ -69,6 +69,51 @@ void main() {
       expect(result.pulseTypeSecondary, '紧');
     });
 
+    test('没有主脉或主兼脉重复时不保留无效兼脉', () {
+      final engine = DiagnosticEngine();
+      engine.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '淡白',
+        pulseType: '浮',
+        pulseTypeSecondary: '浮',
+      );
+      expect(engine.createSnapshot().pulseType, '浮');
+      expect(engine.createSnapshot().pulseTypeSecondary, isNull);
+      expect(engine.createSnapshot().answers.containsKey('pulse_type_secondary'), isFalse);
+
+      engine.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '淡白',
+        pulseType: '浮数',
+        pulseTypeSecondary: '紧',
+      );
+      expect(engine.createSnapshot().pulseType, isNull);
+      expect(engine.createSnapshot().pulseTypeSecondary, isNull);
+      expect(engine.createSnapshot().answers.containsKey('pulse_type'), isFalse);
+      expect(engine.createSnapshot().answers.containsKey('pulse_type_secondary'), isFalse);
+    });
+
+    test('恢复旧快照时重新规范化脉值并清除无效兼脉', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'pulse_type': '浮数',
+          'pulse_type_secondary': '浮',
+        },
+        tenQuestionIndex: 0,
+        pulseType: '浮数',
+        pulseTypeSecondary: '浮',
+      ));
+      final snapshot = engine.createSnapshot();
+      expect(snapshot.pulseType, isNull);
+      expect(snapshot.pulseTypeSecondary, isNull);
+      expect(snapshot.answers.containsKey('pulse_type'), isFalse);
+      expect(snapshot.answers.containsKey('pulse_type_secondary'), isFalse);
+    });
+
     test('兼脉状态纳入快照', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(
