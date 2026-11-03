@@ -2,11 +2,17 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
 
   testWidgets('问诊是默认一级入口，设置可从根导航直接进入', (tester) async {
     tester.view.devicePixelRatio = 1;
