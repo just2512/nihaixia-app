@@ -18,7 +18,10 @@ import '../utils/chart_export.dart';
 /// 配色一律取 `Theme.of(context).colorScheme` 的 token，**不硬编码颜色**，
 /// 以保证深色模式下对比度正常。
 class YunQiScreen extends StatefulWidget {
-  const YunQiScreen({super.key});
+  const YunQiScreen({super.key, this.returnResultOnComplete = false});
+
+  /// When opened from the unified assistant, expose a return-to-chat action.
+  final bool returnResultOnComplete;
 
   @override
   State<YunQiScreen> createState() => _YunQiScreenState();
@@ -47,6 +50,24 @@ class _YunQiScreenState extends State<YunQiScreen> {
 
   void _resetToday() {
     setState(() => _selectedDate = DateTime.now());
+  }
+
+  void _returnResultToAssistant(YunQiYearData data) {
+    final date =
+        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-'
+        '${_selectedDate.day.toString().padLeft(2, '0')}';
+    final lines = <String>[
+      '推算日期：$date',
+      '运气年：${data.ganZhi}年（${data.shengXiao}）',
+      '岁运：${data.yun}运${data.taiGuo ? '太过' : '不及'}',
+      '司天：${data.siTian}',
+      '在泉：${data.zaiQuan}',
+      '岁运病候：${data.yunBingText.isEmpty ? 'MISSING' : data.yunBingText}',
+      '司天病候：${data.siTianBingText.isEmpty ? 'MISSING' : data.siTianBingText}',
+      '《内经》大论原文：${(data.jz60['SAME'] ?? '').isEmpty ? 'MISSING' : data.jz60['SAME']}',
+      '口径：按本页当前运气推算算法生成；仅供理论学习，不构成医疗建议。',
+    ];
+    Navigator.of(context).pop(lines.join('\\n'));
   }
 
   /// 存图 / 分享长图：年运总览 + 三图 + 关键病候卡。
@@ -278,6 +299,17 @@ class _YunQiScreenState extends State<YunQiScreen> {
           _JiaLinCard(data: data, color: cs, highlightIndex: isCurrentYear ? currentStep : null),
           const SizedBox(height: 12),
           const _DisclaimerCard(),
+          if (widget.returnResultOnComplete) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _returnResultToAssistant(data),
+                icon: const Icon(Icons.chat_outlined),
+                label: const Text('将本次推算结果带回助手对话'),
+              ),
+            ),
+          ],
         ],
       ),
     );
