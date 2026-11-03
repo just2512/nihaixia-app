@@ -871,16 +871,29 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), userText);
-      await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
-      await tester.pumpAndSettle();
-      // 等待本轮消息持久化和发送后的原生状态回读完成，避免在异步保存窗口内
-      // 点击被忙碌锁禁用的重置按钮。
-      for (var attempt = 0; attempt < 50 && service.statusCalls < 2; attempt++) {
+      // 首次模型状态查询是异步的；必须等到 ready UI 出现后再发送，
+      // 否则测试可能只触发“模型未加载”的提示，根本没有执行 sendMessage。
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
         await tester.pump(const Duration(milliseconds: 20));
       }
-      expect(service.statusCalls, 2);
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), userText);
+      await tester.pump();
+      expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNotNull);
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      // 等待本轮推理、持久化和发送后的原生状态回读完成，避免在异步窗口内
+      // 点击被忙碌锁禁用的重置按钮。
+      for (var attempt = 0;
+          attempt < 50 &&
+              (!service.sentTexts.contains(userText) || service.statusCalls < 2);
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(service.sentTexts, contains(userText));
+      expect(service.statusCalls, greaterThanOrEqualTo(2));
 
       await tester.tap(find.byTooltip('重新开始对话'));
       await tester.pumpAndSettle();
