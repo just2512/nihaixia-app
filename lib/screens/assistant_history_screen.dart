@@ -6,7 +6,17 @@ import '../utils/fold_aware_routes.dart';
 /// Persistent assistant sessions. Long-press or enter selection mode to
 /// delete several conversations; tapping a row resumes that conversation.
 class AssistantHistoryScreen extends StatefulWidget {
-  const AssistantHistoryScreen({super.key});
+  const AssistantHistoryScreen({
+    super.key,
+    this.loadConversations,
+    this.deleteConversations,
+  });
+
+  @visibleForTesting
+  final Future<List<Map<String, Object?>>> Function()? loadConversations;
+
+  @visibleForTesting
+  final Future<void> Function(List<int> ids)? deleteConversations;
 
   @override
   State<AssistantHistoryScreen> createState() => _AssistantHistoryScreenState();
@@ -32,7 +42,8 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
       _loadError = null;
     });
     try {
-      final items = await DatabaseHelper.instance.getAssistantConversations();
+      final items = await (widget.loadConversations?.call() ??
+          DatabaseHelper.instance.getAssistantConversations());
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -78,7 +89,8 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
     if (confirmed != true) return;
     setState(() => _deleting = true);
     try {
-      await DatabaseHelper.instance.deleteAssistantConversations(_selected.toList());
+      await (widget.deleteConversations?.call(_selected.toList()) ??
+          DatabaseHelper.instance.deleteAssistantConversations(_selected.toList()));
       _selected.clear();
       _selectionMode = false;
       await _load();
