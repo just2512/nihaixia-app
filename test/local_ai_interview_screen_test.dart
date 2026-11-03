@@ -127,6 +127,7 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
 
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
+  final sentContexts = <String>[];
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
@@ -135,6 +136,15 @@ class _TextSendService extends LocalAiService {
   Future<String> sendMessage(String text) async {
     sentTexts.add(text);
     return '已收到你的描述：$text';
+  }
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required String context,
+  }) async {
+    sentContexts.add(context);
+    return sendMessage(text);
   }
 }
 
