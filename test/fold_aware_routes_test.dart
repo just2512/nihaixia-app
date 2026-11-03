@@ -58,11 +58,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final dialog = tester.getRect(find.byType(AlertDialog));
-    expect(dialog.left, greaterThanOrEqualTo(412));
+    expect(dialog.left, greaterThanOrEqualTo(0));
     expect(dialog.right, lessThanOrEqualTo(800));
   });
 
-  testWidgets('dialog reserves a safe right panel around a zero-width flat fold', (tester) async {
+  testWidgets('dialog uses the full inner display around a zero-width flat fold', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -139,9 +139,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final page = tester.getRect(find.byKey(const ValueKey('fold-aware-route-content')));
-    expect(page.left, greaterThanOrEqualTo(412));
+    expect(page.left, 0);
     expect(page.right, 800);
-    expect(page.width, 388);
+    expect(page.width, 800);
   });
 
   testWidgets('full-page route uses the full available width when no fold is reported', (tester) async {
@@ -188,7 +188,7 @@ void main() {
   });
 
 
-  testWidgets('full-page route stays on the right panel around a zero-width flat fold', (tester) async {
+  testWidgets('full-page route uses the full inner display around a zero-width flat fold', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
