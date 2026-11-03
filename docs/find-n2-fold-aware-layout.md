@@ -4,7 +4,7 @@
 
 ## 根导航双面板
 
-- `AdaptiveHomeNavigation` 在识别到纵向 hinge/fold 时，左物理面板承载扩展 NavigationRail，右物理面板承载 IndexedStack 当前 Tab；两面板之间按实际 hinge bounds 留空，零宽 fold 两侧各留 12 dp。
+- `AdaptiveHomeNavigation` 在识别到纵向 hinge/fold 时，左物理面板承载铺满面板宽度的应用导航面板（品牌区、全宽导航项、当前工作区标识），右物理面板承载 IndexedStack 当前 Tab；两面板之间按实际 hinge bounds 留空，零宽 fold 两侧各留 12 dp。导航不再只绘制窄 NavigationRail 后留下大块黑色空白。
 - 左面板不足 260 dp 或右面板不足 300 dp 时，退化为较宽单侧面板内的底部 NavigationBar + 页面，不让 Tab 内容横跨铰链。
 - 没有上报 displayFeatures 时，保留既有 600/840 dp 宽度断点与普通 NavigationRail/NavigationBar 行为。
 
@@ -41,7 +41,7 @@ test/local_ai_adaptive_content_test.dart 覆盖单列页面在 24 dp hinge 与�
 
 ## 当前 UI 边界
 
-当前根导航采用左侧 NavigationRail + 右侧当前 Tab 的双面板模式。当前 Tab 内的本地 AI 问诊页面继续在右侧单屏内布局；工具卡片在右侧单屏内采用单列。ZoneSection 的跨折痕双列能力保留给宿主视口横跨两屏的场景，不会穿过根导航占用的左屏。
+当前根导航采用左侧全宽导航面板 + 右侧当前 Tab 的双面板模式。当前 Tab 内的本地 AI 问诊页面继续在右侧单屏内布局；工具卡片在右侧单屏内采用单列。ZoneSection 的跨折痕双列能力保留给宿主视口横跨两屏的场景，不会穿过根导航占用的左屏。
 
 ## Find N2 真机验收仍为 MISSING
 
