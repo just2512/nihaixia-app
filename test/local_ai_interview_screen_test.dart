@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:record/record.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -437,6 +438,10 @@ class _UnexpectedStatusFailureService extends LocalAiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
   const imagePickerChannel = MethodChannel('plugins.flutter.io/image_picker');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -1173,8 +1178,9 @@ void main() {
           .pop('主要不适：饭后腹胀\n持续时间：约两周');
       await tester.pumpAndSettle();
 
+      // 规则问诊结果回到统一 AI 会话时间线，不关闭会话或丢失历史。
       expect(
-        find.byKey(const ValueKey('returned-summary')),
+        find.textContaining('【结构化辨证问诊记录】'),
         findsOneWidget,
       );
       expect(find.textContaining('主要不适：饭后腹胀'), findsOneWidget);
