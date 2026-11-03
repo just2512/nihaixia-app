@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
+import 'package:nihaisha_app/data/acupuncture_repository.dart';
+import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 
 void main() {
@@ -9,6 +11,8 @@ void main() {
   setUpAll(() async {
     await FormulaRepository.load();
     await HerbRepository.load();
+    await AcupunctureRepository.load();
+    await AcupointRepository.load();
   });
 
   test('精确药名查询返回带来源的本草条目', () {
@@ -36,3 +40,23 @@ void main() {
     );
   });
 }
+
+
+  test('穴位查询返回定位和操作字段并保留数据来源', () {
+    final context = AssistantKnowledgeContextBuilder.build('足三里穴位定位');
+    expect(context, contains('App穴位库 assets/data/acupoints.json'));
+    expect(context, contains('穴名：足三里'));
+  });
+
+  test('针灸主诉查询返回针灸库的穴位处方记录', () {
+    final context = AssistantKnowledgeContextBuilder.build('失眠的针灸治疗');
+    expect(context, contains('App针灸处方库 assets/data/acupuncture.json'));
+  });
+
+  test('内经条目查询区分原文、出处和倪师解读', () {
+    final context = AssistantKnowledgeContextBuilder.build('心者君主之官');
+    expect(context, contains('App内经结构化条目'));
+    expect(context, contains('原文摘录：'));
+    expect(context, contains('条目所载出处：'));
+    expect(context, contains('倪师解读：'));
+  });
