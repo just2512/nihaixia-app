@@ -69,7 +69,7 @@ Future<T?> showFoldAwareDialog<T>({
 }) {
   final originalMediaQuery = MediaQuery.of(context);
   final anchorPoint = foldAwareRouteAnchorPoint(context);
-  final blockingFeature = _findSinglePaneBlockingFeature(
+  final blockingFeature = _hasPhysicalPanelFeature(
     originalMediaQuery.displayFeatures,
     originalMediaQuery.size,
   );
@@ -121,4 +121,25 @@ Future<T?> showFoldAwareDialog<T>({
     transitionBuilder: (context, animation, secondaryAnimation, child) =>
         FadeTransition(opacity: animation, child: child),
   );
+}
+
+
+bool _hasPhysicalPanelFeature(
+  List<DisplayFeature> features,
+  Size screenSize,
+) {
+  return features.any((feature) {
+    if (feature.type != DisplayFeatureType.hinge &&
+        feature.type != DisplayFeatureType.fold) {
+      return false;
+    }
+    if (feature.type == DisplayFeatureType.fold &&
+        feature.state == DisplayFeatureState.postureFlat) {
+      return false;
+    }
+    final bounds = feature.bounds;
+    return bounds.height >= screenSize.height - 1 &&
+        bounds.left > 0 &&
+        bounds.right < screenSize.width;
+  });
 }
