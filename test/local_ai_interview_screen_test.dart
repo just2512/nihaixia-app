@@ -1714,7 +1714,7 @@ void main() {
 
   testWidgets('unified assistant starts in automatic dispatch mode', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: LocalAiInterviewScreen(service: _ReadyLocalAiService())),
+      MaterialApp(home: LocalAiInterviewScreen(service: _TextSendService())),
     );
     await tester.pumpAndSettle();
 
