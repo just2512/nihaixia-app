@@ -55,10 +55,14 @@ void main() {
     await tester.tap(find.byTooltip('删除所选'));
     await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.widgetWithText(FilledButton, '删除'));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 250)),
+    );
     await tester.pump();
 
     expect(find.text('暂无历史对话'), findsOneWidget);
-    expect(await store.getAssistantConversations(), isEmpty);
+    final remaining = await tester.runAsync(store.getAssistantConversations);
+    expect(remaining, isEmpty);
   });
 }
