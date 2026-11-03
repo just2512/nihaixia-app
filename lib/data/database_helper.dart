@@ -23,7 +23,7 @@ class DatabaseHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -107,6 +107,32 @@ class DatabaseHelper {
         viewed_at TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE assistant_conversations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        mode TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_message_preview TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE assistant_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        metadata TEXT,
+        FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
+    );
 
     // 自定义命盘库（首次安装即建表；旧库由 onUpgrade 的 <5 分支补齐）
     await db.execute('''
@@ -194,6 +220,33 @@ class DatabaseHelper {
     }
   }
 
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE assistant_conversations(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          mode TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          last_message_preview TEXT NOT NULL DEFAULT ''
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE assistant_messages(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          metadata TEXT,
+          FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
+      );
+    }
+
   Future<int> insertBookmark(Bookmark bookmark) async {
     final db = await database;
     final id = await db.insert('bookmarks', bookmark.toJson()..remove('id'));
@@ -247,6 +300,129 @@ class DatabaseHelper {
   Future<void> clearChatHistory() async {
     final db = await database;
     await db.delete('chat_history');
+  }
+
+
+  // === 统一 AI 助手会话历史 ===
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    return db.insert('assistant_conversations', {
+      'title': title.trim().isEmpty ? '新对话' : title.trim(),
+      'mode': mode,
+      'created_at': now,
+      'updated_at': now,
+      'last_message_preview': '',
+    });
+  }
+
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) async {
+    final normalizedRole = role.trim().toLowerCase();
+    if (!const {'user', 'assistant', 'system', 'tool'}.contains(normalizedRole)) {
+      throw ArgumentError.value(role, 'role', 'Unsupported assistant message role');
+    }
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    final preview = content.replaceAll(RegExp(r'\\s+'), ' ').trim();
+    return db.transaction((txn) async {
+      final exists = await txn.query(
+        'assistant_conversations',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [conversationId],
+        limit: 1,
+      );
+      if (exists.isEmpty) {
+        throw StateError('Assistant conversation $conversationId does not exist');
+      }
+      final id = await txn.insert('assistant_messages', {
+        'conversation_id': conversationId,
+        'role': normalizedRole,
+        'content': content,
+        'created_at': now,
+        'metadata': metadata,
+      });
+      await txn.rawUpdate(
+        '''
+        UPDATE assistant_conversations
+        SET updated_at = ?,
+            last_message_preview = ?,
+            title = CASE
+              WHEN title = '新对话' AND ? = 'user' THEN substr(?, 1, 48)
+              ELSE title
+            END
+        WHERE id = ?
+        ''',
+        [now, preview.length > 120 ? preview.substring(0, 120) : preview,
+          normalizedRole, preview, conversationId],
+      );
+      return id;
+    });
+  }
+
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int limit = 100,
+  }) async {
+    final db = await database;
+    return db.query(
+      'assistant_conversations',
+      orderBy: 'updated_at DESC, id DESC',
+      limit: limit,
+    );
+  }
+
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async {
+    final db = await database;
+    return db.query(
+      'assistant_messages',
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+      orderBy: 'id ASC',
+    );
+  }
+
+  Future<int> renameAssistantConversation({
+    required int conversationId,
+    required String title,
+  }) async {
+    final normalized = title.trim();
+    if (normalized.isEmpty) throw ArgumentError.value(title, 'title');
+    final db = await database;
+    return db.update(
+      'assistant_conversations',
+      {'title': normalized, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [conversationId],
+    );
+  }
+
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
+    final ids = conversationIds.toSet().toList();
+    if (ids.isEmpty) return;
+    final db = await database;
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.transaction((txn) async {
+      await txn.delete(
+        'assistant_messages',
+        where: 'conversation_id IN ($placeholders)',
+        whereArgs: ids,
+      );
+      await txn.delete(
+        'assistant_conversations',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    });
   }
 
   // === 收藏文件夹 ===
