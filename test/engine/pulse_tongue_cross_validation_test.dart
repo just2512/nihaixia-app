@@ -117,6 +117,48 @@ void main() {
       expect(result.pulseTongueContradiction, contains('不自动以脉或舌单方优先'));
     });
 
+    test('迟脉红舌冲突的中性小便与冷热不均回答也会完成追问', () {
+      final engine = DiagnosticEngine();
+      engine.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '红',
+        pulseType: '迟',
+      );
+      final initial = engine.getPulseTongueFollowUpQuestions();
+      expect(initial.map((q) => q.key),
+          containsAll(['pulse_cross_drink', 'pulse_cross_urine', 'pulse_cross_limbs']));
+
+      engine.answerFollowUp('pulse_cross_urine', '正常');
+      engine.answerFollowUp('pulse_cross_limbs', '冷热不均');
+      final remaining = engine.getPulseTongueFollowUpQuestions();
+      expect(remaining.map((q) => q.key),
+          isNot(contains('pulse_cross_urine')));
+      expect(remaining.map((q) => q.key),
+          isNot(contains('pulse_cross_limbs')));
+      expect(engine.createSnapshot().answers['pulse_cross_urine_answered'], isTrue);
+      expect(engine.createSnapshot().answers['pulse_cross_limbs_answered'], isTrue);
+    });
+
+    test('弦脉白厚苔冲突的少阳与太阴问诊回答后不重复追问', () {
+      final engine = DiagnosticEngine();
+      engine.answerTonguePulse(
+        tongueCoating: '白厚',
+        tongueShape: '淡白',
+        pulseType: '弦',
+      );
+      final initial = engine.getPulseTongueFollowUpQuestions();
+      expect(initial.map((q) => q.key),
+          containsAll(['pulse_cross_shaoyang', 'pulse_cross_taiyin']));
+
+      engine.answerFollowUp('pulse_cross_shaoyang', '都没有');
+      engine.answerFollowUp('pulse_cross_taiyin', '都没有');
+      final remaining = engine.getPulseTongueFollowUpQuestions();
+      expect(remaining.map((q) => q.key),
+          isNot(contains('pulse_cross_shaoyang')));
+      expect(remaining.map((q) => q.key),
+          isNot(contains('pulse_cross_taiyin')));
+    });
+
     test('正常或不确定的小便与冷热不均回答不会被重复追问', () {
       final engine = DiagnosticEngine();
       engine.answerTemperaturePattern('fever_chills');
