@@ -299,10 +299,52 @@ void main() {
       });
     }
 
-    test('规则表中的三条基础键没有检测器赋值路径，不得被误报为可达', () {
-      final unreachable = <String>{
-        CombinedPatternCondition.threeYangBase,
-      };
+    for (final scenario in cases) {
+      test('${scenario.name} 旧六经兜底路径同步应用精确合病方', () {
+        final engine = DiagnosticEngine();
+        engine.restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: scenario.primary,
+          // 两个与合病检测无关的已记录线索，确保旧路径越过“证据不足”闸；
+          // 不参与条件键生成，避免测试把证据闸误当成路径不可达。
+          answers: {
+            'insomnia': true,
+            'edema': true,
+            ...scenario.answers,
+          },
+          tenQuestionIndex: 0,
+          pulseType: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
+              ? '滑'
+              : null,
+          pulseTypeSecondary: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
+              ? '数'
+              : null,
+        ));
+
+        final result = engine.diagnose();
+        final rule = DiagnosticRules.combinedPatterns
+            .firstWhere((pattern) => pattern.condition == scenario.expected);
+        expect(engine.combinedPatternCondition, scenario.expected,
+            reason: scenario.name);
+        expect(result, isNotNull, reason: scenario.name);
+        expect(result!.formula, rule.formula, reason: scenario.name);
+        expect(result.recommendedFormulas, [rule.formula],
+            reason: scenario.name);
+        expect(result.pattern, rule.description, reason: scenario.name);
+        expect(result.prescription?.formulaName, rule.formula,
+            reason: scenario.name);
+        expect(
+          result.combinedMeridian,
+          rule.isExplicitCombined ? isNotNull : isNull,
+          reason: scenario.name,
+        );
+      });
+    }
+
+    test('规则表中唯一没有检测器赋值路径的基础键不得被误报为可达', () {
+      expect(DiagnosticRules.combinedPatterns, hasLength(15));
+      final unreachable = <String>{CombinedPatternCondition.threeYangBase};
       expect(cases.map((scenario) => scenario.expected).toSet().intersection(unreachable), isEmpty);
     });
   });
