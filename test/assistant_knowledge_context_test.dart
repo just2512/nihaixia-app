@@ -39,8 +39,6 @@ void main() {
       lessThanOrEqualTo(AssistantKnowledgeContextBuilder.maxContextCharacters),
     );
   });
-}
-
 
   test('穴位查询返回定位和操作字段并保留数据来源', () {
     final context = AssistantKnowledgeContextBuilder.build('足三里穴位定位');
