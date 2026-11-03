@@ -49,11 +49,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('问诊记录甲'));
     await tester.tap(find.text('学习记录乙'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     expect(find.text('已选 2 个对话'), findsOneWidget);
 
     await tester.tap(find.byTooltip('删除所选'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.widgetWithText(FilledButton, '删除'));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();
