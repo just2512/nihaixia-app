@@ -136,7 +136,7 @@ bool _hasPhysicalPanelFeature(
       return false;
     }
     if (feature.type == DisplayFeatureType.fold &&
-        feature.state == DisplayFeatureState.postureFlat) {
+        feature.state != DisplayFeatureState.postureHalfOpened) {
       return false;
     }
     final bounds = feature.bounds;

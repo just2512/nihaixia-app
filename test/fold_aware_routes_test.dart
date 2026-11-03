@@ -244,6 +244,29 @@ void main() {
     expect(page.width, 800);
   });
 
+  testWidgets('unknown fold posture does not split a full-width dialog', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.unknown,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_foldableApp());
+    await tester.tap(find.byKey(const ValueKey('open-dialog')));
+    await tester.pumpAndSettle();
+
+    final dialog = tester.getRect(find.byType(AlertDialog));
+    expect(dialog.left, lessThan(400));
+    expect(dialog.right, lessThanOrEqualTo(800));
+  });
+
   testWidgets('full-page route stays on the left physical panel when opened there', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);

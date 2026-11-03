@@ -146,6 +146,10 @@ DisplayFeature? _findVerticalFoldingFeature(
         feature.type != DisplayFeatureType.fold) {
       continue;
     }
+    if (feature.type == DisplayFeatureType.fold &&
+        feature.state != DisplayFeatureState.postureHalfOpened) {
+      continue;
+    }
 
     final bounds = feature.bounds;
     final spansScreenHeight = bounds.height >= screenSize.height - 1;

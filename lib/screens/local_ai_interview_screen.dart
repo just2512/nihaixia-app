@@ -12,6 +12,7 @@ import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../services/assistant_knowledge_context.dart';
 import 'assistant_tool_router.dart';
+import 'chat_screen.dart';
 import '../data/database_helper.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
@@ -152,6 +153,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _sending = false;
   bool _extracting = false;
   bool _modelControlBusy = false;
+  bool _structuredDiagnosisBusy = false;
   late Future<int?> _conversationIdFuture;
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
@@ -815,46 +817,80 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Widget _buildModeSelector(BuildContext context) {
+    final tools = AssistantToolRouter.quickActions(_assistantMode);
+    final busy = _sending || _modelControlBusy || _structuredDiagnosisBusy;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0),
+      child: Row(
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: AssistantMode.values.map((mode) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
-                  child: ChoiceChip(
-                    label: Text(mode.label),
-                    selected: _assistantMode == mode,
-                    onSelected: _sending || _modelControlBusy
-                        ? null
-                        : (_) => setState(() => _assistantMode = mode),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          if (AssistantToolRouter.quickActions(_assistantMode).isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: AssistantToolRouter.quickActions(_assistantMode).map((tool) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.xs),
-                    child: ActionChip(
-                      avatar: const Icon(Icons.open_in_new, size: 15),
-                      label: Text(tool.title),
-                      onPressed: _sending || _modelControlBusy
-                          ? null
-                          : () => _requestTool('打开${tool.title}', tool),
+          PopupMenuButton<AssistantMode>(
+            tooltip: '切换助手角色',
+            enabled: !busy,
+            onSelected: (mode) => setState(() => _assistantMode = mode),
+            itemBuilder: (context) => [
+              for (final mode in AssistantMode.values)
+                PopupMenuItem<AssistantMode>(
+                  value: mode,
+                  child: Text(mode.label),
+                ),
+            ],
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 16),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      _assistantMode.label,
+                      style: const TextStyle(
+                        fontSize: AppType.caption,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  );
-                }).toList(),
+                    const SizedBox(width: AppSpacing.xs),
+                    const Icon(Icons.expand_more, size: 17),
+                  ],
+                ),
               ),
             ),
+          ),
+          const Spacer(),
+          PopupMenuButton<AssistantToolDefinition>(
+            tooltip: '调用 App 工具',
+            enabled: !busy && tools.isNotEmpty,
+            onSelected: (tool) => _requestTool('打开${tool.title}', tool),
+            itemBuilder: (context) => [
+              for (final tool in tools)
+                PopupMenuItem<AssistantToolDefinition>(
+                  value: tool,
+                  child: Text(tool.title),
+                ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.apps_outlined, size: 18),
+                  SizedBox(width: AppSpacing.xs),
+                  Text('工具', style: TextStyle(fontSize: AppType.caption)),
+                  Icon(Icons.expand_more, size: 17),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1402,7 +1438,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           return Center(
             child: ConstrainedBox(
               key: const ValueKey('local-ai-content-width'),
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: 900),
               child: SizedBox(
                 height: constraints.maxHeight,
                 child: Column(
@@ -1710,19 +1746,66 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '这份整理不会自动进入辨证引擎，也不会自动选择问诊选项。',
+            '可将已核对自述带入规则问诊；自由文本不会被自动转换成辨证选项。',
             style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
           ),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context, draft.summaryLines.join('\n')),
-              child: const Text('返回规则问诊'),
+            child: FilledButton.tonalIcon(
+              onPressed: _structuredDiagnosisBusy
+                  ? null
+                  : _continueWithStructuredDiagnosis,
+              icon: _structuredDiagnosisBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.fact_check_outlined),
+              label: Text(
+                _structuredDiagnosisBusy ? '正在打开…' : '继续规则辨证',
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _continueWithStructuredDiagnosis() async {
+    final draft = _confirmedDraft;
+    if (draft == null || _structuredDiagnosisBusy) return;
+
+    setState(() => _structuredDiagnosisBusy = true);
+    String? result;
+    try {
+      result = await Navigator.push<String>(
+        context,
+        FoldAwareMaterialPageRoute(
+          sourceContext: context,
+          builder: (_) => ChatScreen(
+            returnResultOnComplete: true,
+            initialUserContext: draft.summaryLines.join('\n'),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _structuredDiagnosisBusy = false);
+    }
+
+    if (!mounted || result == null || result.trim().isEmpty) return;
+    final transcript = '【结构化辨证问诊记录】\n${result.trim()}';
+    setState(() {
+      _messages.add(_InterviewMessage(text: transcript, isUser: false));
+      _confirmedDraft = null;
+      _error = null;
+    });
+    await _persistSuccessfulTurn(
+      userText: '',
+      assistantText: transcript,
+      mode: AssistantMode.consultation,
+    );
+    _scrollToBottom();
   }
 
   Widget _buildModelPanel(BuildContext context) {

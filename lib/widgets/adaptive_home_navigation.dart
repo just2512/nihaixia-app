@@ -105,7 +105,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
       // panes. Splitting it leaves half of an inner display unused; only a
       // physical hinge or a non-flat fold posture requires pane isolation.
       if (feature.type == DisplayFeatureType.fold &&
-          feature.state == DisplayFeatureState.postureFlat) {
+          feature.state != DisplayFeatureState.postureHalfOpened) {
         continue;
       }
       final bounds = feature.bounds;

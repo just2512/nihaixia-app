@@ -40,7 +40,7 @@ void main() {
     expect(content.width, 402);
   });
 
-  testWidgets('AI interview content is capped and centered on expanded windows', (tester) async {
+  testWidgets('AI interview uses expanded window width up to the content cap', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(840, 900);
     addTearDown(tester.view.resetPhysicalSize);
@@ -56,7 +56,7 @@ void main() {
     final contentFinder = find.byKey(const ValueKey('local-ai-content-width'));
     final content = tester.getSize(contentFinder);
     final rect = tester.getRect(contentFinder);
-    expect(content.width, 640);
+    expect(content.width, 840);
     expect(rect.center.dx, closeTo(420, 1));
   });
 
@@ -118,8 +118,39 @@ void main() {
     );
     expect(scaffold.left, 0);
     expect(scaffold.right, 800);
-    expect(content.width, 640);
-    expect(content.right, lessThanOrEqualTo(800));
+    expect(content.width, 800);
+    expect(content.right, 800);
+  });
+
+  testWidgets('AI interview keeps full width when fold posture is unknown', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.unknown,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffold = tester.getRect(find.byType(Scaffold));
+    final content = tester.getRect(
+      find.byKey(const ValueKey('local-ai-content-width')),
+    );
+    expect(scaffold.right, 800);
+    expect(content.left, 0);
+    expect(content.right, 800);
+    expect(content.width, 800);
   });
 
   testWidgets('AI interview route stays on the originating right panel beside a vertical hinge', (tester) async {

@@ -46,10 +46,12 @@ class _StepSnapshot {
 
 class ChatScreen extends StatefulWidget {
   final bool returnResultOnComplete;
+  final String? initialUserContext;
 
   const ChatScreen({
     super.key,
     this.returnResultOnComplete = false,
+    this.initialUserContext,
   });
 
   @override
@@ -85,6 +87,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _startDiagnosis() {
+    final initialContext = widget.initialUserContext?.trim();
+    if (initialContext != null && initialContext.isNotEmpty) {
+      _addBotMessage(
+        '已从 AI 助手带入本次用户自述（仅作核对上下文，不自动映射为辨证选项）：\n'
+        '$initialContext',
+      );
+    }
     _addBotMessage(_engine.getInitialGreeting());
     _showTemperatureOptions();
   }

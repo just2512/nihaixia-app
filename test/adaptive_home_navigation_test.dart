@@ -273,6 +273,40 @@ void main() {
     expect(find.text('内容页 2'), findsOneWidget);
   });
 
+  testWidgets('unknown fold posture keeps the unfolded inner display available', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.unknown,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: _screens(),
+        ),
+      ),
+    );
+
+    final rail = tester.getRect(find.byType(NavigationRail));
+    final content = tester.getRect(find.byType(IndexedStack));
+    expect(rail.left, 0);
+    expect(content.left, rail.right);
+    expect(content.right, 800);
+    expect(content.width, greaterThan(700));
+    expect(find.text('内容页 0'), findsOneWidget);
+  });
+
   testWidgets('preserves a tab state across outer-inner-outer layout changes', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
