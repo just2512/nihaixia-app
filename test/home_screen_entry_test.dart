@@ -65,7 +65,8 @@ void main() {
     ));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byKey(const ValueKey('fold-navigation-panel')), findsOneWidget);
+    expect(find.text('汉唐中医'), findsOneWidget);
     expect(find.text('汉唐 AI 助手'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
