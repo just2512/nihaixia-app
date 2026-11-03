@@ -69,12 +69,42 @@ Future<T?> showFoldAwareDialog<T>({
 }) {
   final originalMediaQuery = MediaQuery.of(context);
   final anchorPoint = foldAwareRouteAnchorPoint(context);
+  final blockingFeature = _findSinglePaneBlockingFeature(
+    originalMediaQuery.displayFeatures,
+    originalMediaQuery.size,
+  );
 
-  // DialogRoute internally wraps content in DisplayFeatureSubScreen and
-  // splits even a postureFlat zero-width fold into two half-width sub-screens.
-  // RawDialogRoute (used by showGeneralDialog) lets AdaptiveSinglePane decide:
-  // a flat inner-display crease uses the whole canvas; a physical hinge keeps
-  // the dialog on the panel containing the source control.
+  Widget buildAnchoredDialog(BuildContext dialogContext) {
+    final dialog = builder(dialogContext);
+    return MediaQuery(
+      data: originalMediaQuery,
+      child: AdaptiveSinglePane(
+        preferredAnchorPoint: anchorPoint,
+        child: useSafeArea ? SafeArea(child: dialog) : dialog,
+      ),
+    );
+  }
+
+  // For a physical hinge, use DialogRoute's native anchor-point sub-screen
+  // selection. This prevents the dialog's internal Center from painting into
+  // the left pane when its source control is on the right. A flat zero-width
+  // crease is one continuous display, so retain the full-width raw route.
+  if (blockingFeature != null) {
+    return showDialog<T>(
+      context: context,
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor,
+      barrierLabel: barrierLabel,
+      useSafeArea: useSafeArea,
+      useRootNavigator: useRootNavigator,
+      routeSettings: routeSettings,
+      anchorPoint: anchorPoint,
+      requestFocus: requestFocus,
+      animationStyle: animationStyle,
+      builder: buildAnchoredDialog,
+    );
+  }
+
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
@@ -86,16 +116,8 @@ Future<T?> showFoldAwareDialog<T>({
     requestFocus: requestFocus,
     transitionDuration: animationStyle?.duration ??
         const Duration(milliseconds: 200),
-    pageBuilder: (dialogContext, animation, secondaryAnimation) {
-      final dialog = builder(dialogContext);
-      return MediaQuery(
-        data: originalMediaQuery,
-        child: AdaptiveSinglePane(
-          preferredAnchorPoint: anchorPoint,
-          child: useSafeArea ? SafeArea(child: dialog) : dialog,
-        ),
-      );
-    },
+    pageBuilder: (dialogContext, animation, secondaryAnimation) =>
+        buildAnchoredDialog(dialogContext),
     transitionBuilder: (context, animation, secondaryAnimation, child) =>
         FadeTransition(opacity: animation, child: child),
   );
