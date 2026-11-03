@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../services/assistant_conversation_orchestrator.dart';
 import 'assistant_tool_router.dart';
 import 'chat_screen.dart';
 import '../data/database_helper.dart';
@@ -157,7 +158,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late Future<int?> _conversationIdFuture;
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
-  AssistantMode _assistantMode = AssistantMode.consultation;
+  AssistantMode _assistantMode = AssistantMode.automatic;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -679,10 +680,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
 
-  Future<String> _sendTextWithKnowledgeContext(String text) async {
-    switch (_assistantMode) {
+  Future<String> _sendTextWithKnowledgeContext(
+    String text, {
+    required AssistantMode mode,
+  }) async {
+    switch (mode) {
+      case AssistantMode.automatic:
       case AssistantMode.consultation:
-        return _service.sendMessage(text);
+        return _service.sendMessageWithContext(
+          text,
+          context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
+              '先澄清症状与时间线，不把模型整理内容当成已确认事实；规则辨证必须由 App 的 DiagnosticEngine 执行。',
+        );
       case AssistantMode.learning:
         final knowledge = AssistantKnowledgeContextBuilder.build(text);
         final context = knowledge.isEmpty
@@ -733,6 +742,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final replayable = userText.trim().isNotEmpty;
       final metadataParts = <String>[
         'mode=${activeMode.name}',
+        'selectedMode=${_assistantMode.name}',
         'replayable=$replayable',
         if (attachmentType != null) 'attachment=$attachmentType',
       ];
@@ -761,7 +771,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<void> _requestTool(String userText, AssistantToolDefinition tool) async {
+  Future<void> _requestTool(
+    String userText,
+    AssistantToolDefinition tool, {
+    AssistantMode? mode,
+  }) async {
+    final activeMode = mode ??
+        (tool.modes.contains(AssistantMode.metaphysics)
+            ? AssistantMode.metaphysics
+            : tool.modes.contains(AssistantMode.tools)
+                ? AssistantMode.tools
+                : AssistantMode.consultation);
     final instruction =
         '已识别到你要使用「${tool.title}」。${tool.description}'
         '实际计算由 App 内置工具执行，不由模型猜测结果。点击下方按钮打开；完成后返回本对话，我会继续解释结果。';
@@ -772,7 +792,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           text: instruction,
           isUser: false,
           actionLabel: '打开${tool.title}',
-          onAction: () => _openTool(tool),
+          onAction: () => _openTool(tool, mode: activeMode),
         ));
       _error = null;
     });
@@ -780,12 +800,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     await _persistSuccessfulTurn(
       userText: userText,
       assistantText: instruction,
-      mode: _assistantMode,
+      mode: activeMode,
     );
     _scrollToBottom();
   }
 
-  Future<void> _openTool(AssistantToolDefinition tool) async {
+  Future<void> _openTool(AssistantToolDefinition tool, {required AssistantMode mode}) async {
     final result = await Navigator.push<String>(
       context,
       FoldAwareMaterialPageRoute(
@@ -807,7 +827,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           conversationId: id,
           role: 'assistant',
           content: response,
-          metadata: 'mode=${_assistantMode.name};tool=${tool.id}',
+          metadata: 'mode=${mode.name};selectedMode=${_assistantMode.name};tool=${tool.id}',
         );
       }
     } catch (error) {
@@ -921,7 +941,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final metadata = row['metadata'] as String? ?? '';
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
       final modeValue =
-          RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
+          RegExp(r'(?:^|;)selectedMode=([a-z_]+)').firstMatch(metadata)?.group(1) ??
+              RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
       if (modeValue != null) {
         for (final mode in AssistantMode.values) {
           if (mode.name == modeValue) restoredMode = mode;
@@ -996,12 +1017,37 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
-      final tool = AssistantToolRouter.match(text, _assistantMode);
-      if (tool != null) {
-        await _requestTool(text, tool);
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: text,
+        selectedMode: _assistantMode,
+      );
+      effectiveMode = decision.mode;
+      if (decision.needsClarification) {
+        final clarification = decision.clarification!;
+        setState(() {
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: clarification,
+          mode: effectiveMode,
+        );
+        _scrollToBottom();
         return;
       }
+      if (decision.tool != null) {
+        await _requestTool(text, decision.tool!, mode: effectiveMode);
+        return;
+      }
+    } else if (_assistantMode == AssistantMode.automatic) {
+      // 照片/语音附件默认进入问诊域；不凭附件类型猜测排盘或学习任务。
+      effectiveMode = AssistantMode.consultation;
     }
     if (_status?.ready != true) {
       setState(() => _error = '本地模型尚未加载。可以先使用上方 App 内置工具；AI 对话请先加载 Gemma 4 E4B。');
@@ -1025,11 +1071,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ? await _service.sendAudio(audioPath, prompt: text)
           : imagePath != null
               ? await _service.sendImage(imagePath, prompt: text)
-              : await _sendTextWithKnowledgeContext(text);
+              : await _sendTextWithKnowledgeContext(text, mode: effectiveMode);
       await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
-        mode: _assistantMode,
+        mode: effectiveMode,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
