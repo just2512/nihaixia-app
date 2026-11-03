@@ -1711,8 +1711,6 @@ void main() {
       },
     );
   });
-}
-
 
   testWidgets('unified assistant starts in automatic dispatch mode', (tester) async {
     await tester.pumpWidget(
