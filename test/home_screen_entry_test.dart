@@ -49,7 +49,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        colorScheme: AppColors.colorSchemeFor(Brightness.light),
+        useMaterial3: true,
+        extensions: [AppColors.light],
+      ),
+      home: const HomeScreen(runStartupTasks: false),
+    ));
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationRail), findsOneWidget);
