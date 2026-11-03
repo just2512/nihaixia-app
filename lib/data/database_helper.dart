@@ -218,8 +218,6 @@ class DatabaseHelper {
         )
       ''');
     }
-  }
-
     if (oldVersion < 6) {
       await db.execute('''
         CREATE TABLE assistant_conversations(
@@ -246,6 +244,9 @@ class DatabaseHelper {
         'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
       );
     }
+  }
+
+
 
   Future<int> insertBookmark(Bookmark bookmark) async {
     final db = await database;
