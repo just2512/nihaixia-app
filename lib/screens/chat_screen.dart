@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../engine/diagnostic_engine.dart';
@@ -18,7 +17,6 @@ import 'meridian_detail_screen.dart';
 import '../models/formula.dart';
 import '../widgets/oral_hint_card.dart';
 import 'settings_screen.dart';
-import 'local_ai_interview_screen.dart';
 import '../theme/app_tokens.dart';
 
 /// 高危禁忌关键词（用于结果卡红色强提示）
@@ -1065,28 +1063,6 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: Text(widget.returnResultOnComplete ? '结构化辨证问诊' : '辨证问诊'),
         actions: [
-          if (!widget.returnResultOnComplete)
-            IconButton(
-            tooltip: '本地 AI 问诊',
-            icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () async {
-              final routeAnchorPoint = foldAwareRouteAnchorPoint(context);
-              final summary = await Navigator.push<String>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => LocalAiInterviewScreen(
-                    preferredAnchorPoint: routeAnchorPoint,
-                  ),
-                ),
-              );
-              if (!mounted || summary == null) return;
-              _addBotMessage(
-                '已核对的用户自述信息（供回答规则问诊时参考）：\n'
-                '$summary\n\n'
-                '这份整理不会自动选择辨证选项，请继续按规则问诊逐项确认。',
-              );
-            },
-          ),
           if (_canGoBack)
             IconButton(
               icon: const Icon(Icons.undo),
