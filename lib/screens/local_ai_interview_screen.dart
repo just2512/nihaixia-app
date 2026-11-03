@@ -764,7 +764,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         conversationId: id,
         role: 'assistant',
         content: assistantText,
-        metadata: 'mode=${activeMode.name}',
+        metadata: 'mode=${activeMode.name};selectedMode=${_assistantMode.name}',
       );
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
