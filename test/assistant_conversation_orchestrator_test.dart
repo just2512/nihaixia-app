@@ -60,6 +60,27 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('没有指定类型的排盘请求先询问工具类型', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我排个盘',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.needsClarification, isTrue);
+      expect(decision.clarification, contains('紫微斗数'));
+      expect(decision.clarification, contains('八字四柱'));
+    });
+
+    test('没有指定体系的起卦请求先询问工具类型', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.needsClarification, isTrue);
+      expect(decision.clarification, contains('易经'));
+      expect(decision.clarification, contains('小六壬'));
+      expect(decision.clarification, contains('梅花易数'));
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
