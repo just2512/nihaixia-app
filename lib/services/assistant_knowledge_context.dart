@@ -33,7 +33,7 @@ class AssistantKnowledgeContextBuilder {
 
     final terms = <String>{normalized};
     for (final term in normalized
-        .split(RegExp(r'[，。！？、；：,.!?;\\s]+'))
+        .split(RegExp(r'[，。！？、；：,.!?;\s]+'))
         .map((value) => value.trim())
         .where((value) => value.length >= 2)) {
       terms.add(term);
@@ -121,7 +121,7 @@ class AssistantKnowledgeContextBuilder {
     if (normalized.isEmpty) return '';
 
     final terms = normalized
-        .split(RegExp(r'[，。！？、；：,.!?;\\s]+'))
+        .split(RegExp(r'[，。！？、；：,.!?;\s]+'))
         .map((term) => term.trim())
         .where((term) => term.length >= 2)
         .toSet();
