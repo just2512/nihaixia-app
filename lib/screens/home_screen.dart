@@ -11,7 +11,12 @@ import '../widgets/adaptive_home_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   final double textScaleFactor;
-  const HomeScreen({super.key, this.textScaleFactor = 1.0});
+  final bool runStartupTasks;
+  const HomeScreen({
+    super.key,
+    this.textScaleFactor = 1.0,
+    this.runStartupTasks = true,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -23,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    if (!widget.runStartupTasks) return;
     // 启动后弹出「本次更新了什么」（若有版本更新）
     Future.delayed(
       const Duration(milliseconds: 800),

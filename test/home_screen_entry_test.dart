@@ -2,6 +2,7 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 
 void main() {
@@ -13,7 +14,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        colorScheme: AppColors.colorSchemeFor(Brightness.light),
+        useMaterial3: true,
+        extensions: [AppColors.light],
+      ),
+      home: const HomeScreen(runStartupTasks: false),
+    ));
     await tester.pump();
 
     expect(find.text('辨证问诊'), findsOneWidget);
