@@ -72,25 +72,34 @@ Future<T?> showFoldAwareDialog<T>({
   final originalMediaQuery = MediaQuery.of(context);
   final anchorPoint = foldAwareRouteAnchorPoint(context);
 
-  return showDialog<T>(
+  // DialogRoute internally wraps content in DisplayFeatureSubScreen and
+  // splits even a postureFlat zero-width fold into two half-width sub-screens.
+  // RawDialogRoute (used by showGeneralDialog) lets AdaptiveSinglePane decide:
+  // a flat inner-display crease uses the whole canvas; a physical hinge keeps
+  // the dialog on the panel containing the source control.
+  return showGeneralDialog<T>(
     context: context,
-    anchorPoint: anchorPoint,
     barrierDismissible: barrierDismissible,
-    barrierColor: barrierColor,
-    barrierLabel: barrierLabel,
-    useSafeArea: useSafeArea,
+    barrierColor: barrierColor ?? Colors.black54,
+    barrierLabel: barrierLabel ??
+        MaterialLocalizations.of(context).modalBarrierDismissLabel,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
-    traversalEdgeBehavior: traversalEdgeBehavior,
-    fullscreenDialog: fullscreenDialog,
     requestFocus: requestFocus,
-    animationStyle: animationStyle,
-    builder: (dialogContext) => MediaQuery(
-      data: originalMediaQuery,
-      child: AdaptiveSinglePane(
-        preferredAnchorPoint: anchorPoint,
-        child: builder(dialogContext),
-      ),
-    ),
+    traversalEdgeBehavior: traversalEdgeBehavior,
+    transitionDuration: animationStyle?.duration ??
+        const Duration(milliseconds: 200),
+    pageBuilder: (dialogContext, animation, secondaryAnimation) {
+      final dialog = builder(dialogContext);
+      return MediaQuery(
+        data: originalMediaQuery,
+        child: AdaptiveSinglePane(
+          preferredAnchorPoint: anchorPoint,
+          child: useSafeArea ? SafeArea(child: dialog) : dialog,
+        ),
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) =>
+        FadeTransition(opacity: animation, child: child),
   );
 }
