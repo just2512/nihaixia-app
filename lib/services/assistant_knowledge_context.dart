@@ -77,7 +77,7 @@ class AssistantKnowledgeContextBuilder {
     ]) {
       if (normalized.contains(phrase)) classicQueries.add(phrase);
     }
-    for (final match in RegExp(r'(?:第|条文)\\s*(\\d+)\\s*条?').allMatches(normalized)) {
+    for (final match in RegExp(r'(?:第|条文)\s*(\d+)\s*条?').allMatches(normalized)) {
       final number = match.group(1);
       if (number != null) {
         classicQueries
@@ -109,11 +109,11 @@ class AssistantKnowledgeContextBuilder {
 
     for (final hit in classicHits) {
       final isLecture = hit.asset != null;
-      final articleNumber = RegExp(r'(?:条文|第)\\s*(\\d+)').firstMatch(hit.title)?.group(1);
+      final articleNumber = RegExp(r'(?:条文|第)\s*(\d+)').firstMatch(hit.title)?.group(1);
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义' : '古籍原文文本资产'}')
-        ..writeln('本地来源：${hit.asset ?? 'assets/guji/${hit.bookId ?? 'unknown'}.txt'}')
+        ..writeln('本地来源：$sourcePath')
         ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
         ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
         ..writeln('版本/底本/卷页：MISSING（需对照纸本影印本核验）')
