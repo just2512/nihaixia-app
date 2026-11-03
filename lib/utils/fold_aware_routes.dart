@@ -64,8 +64,6 @@ Future<T?> showFoldAwareDialog<T>({
   bool useSafeArea = true,
   bool useRootNavigator = true,
   RouteSettings? routeSettings,
-  TraversalEdgeBehavior? traversalEdgeBehavior,
-  bool fullscreenDialog = false,
   bool? requestFocus,
   AnimationStyle? animationStyle,
 }) {
@@ -86,7 +84,6 @@ Future<T?> showFoldAwareDialog<T>({
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
     requestFocus: requestFocus,
-    traversalEdgeBehavior: traversalEdgeBehavior,
     transitionDuration: animationStyle?.duration ??
         const Duration(milliseconds: 200),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
