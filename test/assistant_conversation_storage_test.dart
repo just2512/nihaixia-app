@@ -109,4 +109,23 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('历史列表不显示尚未产生消息的空会话', () async {
+    final store = DatabaseHelper.instance;
+    final empty = await store.createAssistantConversation(title: '空会话');
+    final active = await store.createAssistantConversation(title: '有内容');
+
+    await store.saveAssistantMessage(
+      conversationId: active,
+      role: 'user',
+      content: '请解释少阳病',
+    );
+
+    final conversations = await store.getAssistantConversations();
+    final ids = conversations.map((row) => row['id']).toSet();
+    expect(ids, contains(active));
+    expect(ids, isNot(contains(empty)));
+    expect(conversations.single['message_count'], 1);
+  });
+
 }
