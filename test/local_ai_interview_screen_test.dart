@@ -257,11 +257,13 @@ class _ModelControlTeardownFailureService extends _TextSendService {
 
 class _UnknownStatusAfterResetService extends _TextSendService {
   var resetCalls = 0;
+  var statusCalls = 0;
   var _statusUnavailable = false;
   var _recoveredNotReady = false;
 
   @override
   Future<LocalAiModelStatus> getStatus() async {
+    statusCalls += 1;
     if (_statusUnavailable) {
       throw StateError('模拟原生状态接口暂不可用');
     }
@@ -873,6 +875,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
+      // 等待本轮消息持久化和发送后的原生状态回读完成，避免在异步保存窗口内
+      // 点击被忙碌锁禁用的重置按钮。
+      for (var attempt = 0; attempt < 50 && service.statusCalls < 2; attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(service.statusCalls, 2);
 
       await tester.tap(find.byTooltip('重新开始对话'));
       await tester.pumpAndSettle();
