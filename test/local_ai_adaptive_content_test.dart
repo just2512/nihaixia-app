@@ -86,12 +86,12 @@ void main() {
       find.byKey(const ValueKey('local-ai-content-width')),
     );
     expect(scaffold.left, 0);
-    expect(scaffold.right, lessThanOrEqualTo(388));
-    expect(content.right, lessThanOrEqualTo(388));
+    expect(scaffold.right, 800);
+    expect(content.right, lessThanOrEqualTo(800));
     expect(content.width, 388);
   });
 
-  testWidgets('AI interview scaffold reserves a safe gutter at a zero-width fold', (tester) async {
+  testWidgets('AI interview uses the full inner display at a zero-width flat fold', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
