@@ -36,7 +36,7 @@ void main() {
     expect(find.text('设置'), findsOneWidget);
 
     await tester.tap(find.text('设置'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('暗黑模式'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -63,7 +63,7 @@ void main() {
       ),
       home: const HomeScreen(runStartupTasks: false),
     ));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.text('汉唐 AI 助手'), findsOneWidget);
