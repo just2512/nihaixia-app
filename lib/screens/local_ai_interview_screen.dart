@@ -159,6 +159,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
   AssistantMode _assistantMode = AssistantMode.automatic;
+  AssistantMode? _lastEffectiveMode;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -191,6 +192,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (!mounted) return;
       if (shouldClearStaleConversation) {
         _conversationIdFuture = _createNewConversation();
+        _lastEffectiveMode = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -786,6 +788,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         '已识别到你要使用「${tool.title}」。${tool.description}'
         '实际计算由 App 内置工具执行，不由模型猜测结果。点击下方按钮打开；完成后返回本对话，我会继续解释结果。';
     setState(() {
+      _lastEffectiveMode = activeMode;
       _messages
         ..add(_InterviewMessage(text: userText, isUser: true))
         ..add(_InterviewMessage(
@@ -846,7 +849,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           PopupMenuButton<AssistantMode>(
             tooltip: '切换助手角色',
             enabled: !busy,
-            onSelected: (mode) => setState(() => _assistantMode = mode),
+            onSelected: (mode) => setState(() {
+              _assistantMode = mode;
+              if (mode != AssistantMode.automatic) {
+                _lastEffectiveMode = mode;
+              }
+            }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
                 PopupMenuItem<AssistantMode>(
@@ -935,17 +943,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final replayableUserMessages = <String>[];
     final restoredMessages = <_InterviewMessage>[];
     var restoredMode = _assistantMode;
+    var restoredEffectiveMode = _lastEffectiveMode;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
       final metadata = row['metadata'] as String? ?? '';
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
-      final modeValue =
-          RegExp(r'(?:^|;)selectedMode=([a-z_]+)').firstMatch(metadata)?.group(1) ??
-              RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
-      if (modeValue != null) {
-        for (final mode in AssistantMode.values) {
-          if (mode.name == modeValue) restoredMode = mode;
+      final selectedModeValue =
+          RegExp(r'(?:^|;)selectedMode=([a-z_]+)').firstMatch(metadata)?.group(1);
+      final effectiveModeValue =
+          RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
+      final legacyModeValue = selectedModeValue == null ? effectiveModeValue : null;
+      for (final mode in AssistantMode.values) {
+        if (mode.name == selectedModeValue || mode.name == legacyModeValue) {
+          restoredMode = mode;
+        }
+        if (mode.name == effectiveModeValue &&
+            mode != AssistantMode.automatic) {
+          restoredEffectiveMode = mode;
         }
       }
       final isUser = role == 'user';
@@ -968,6 +983,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
+      _lastEffectiveMode = restoredEffectiveMode;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -1022,11 +1038,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final decision = AssistantConversationOrchestrator.resolve(
         query: text,
         selectedMode: _assistantMode,
+        currentMode: _lastEffectiveMode,
       );
       effectiveMode = decision.mode;
       if (decision.needsClarification) {
         final clarification = decision.clarification!;
         setState(() {
+          _lastEffectiveMode = effectiveMode;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(_InterviewMessage(text: clarification, isUser: false));
@@ -1060,6 +1078,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ? '已附加一张舌象照片'
             : '已录制一段语音';
     setState(() {
+      _lastEffectiveMode = effectiveMode;
       _messages.add(_InterviewMessage(text: userLabel, isUser: true));
       _sending = true;
       _error = null;
@@ -1368,6 +1387,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
       _conversationIdFuture = _createNewConversation();
+      _lastEffectiveMode = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
