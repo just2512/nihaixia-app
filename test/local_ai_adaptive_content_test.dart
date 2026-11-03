@@ -187,8 +187,6 @@ void main() {
     expect(content.right, 800);
     expect(content.width, 388);
   });
-}
-
 
   testWidgets('AI interview keeps controls usable at 200% text scale on outer screen', (tester) async {
     tester.view.devicePixelRatio = 1;
