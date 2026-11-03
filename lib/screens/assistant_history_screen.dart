@@ -17,6 +17,7 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
   bool _loading = true;
   bool _selectionMode = false;
   bool _deleting = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -25,15 +26,26 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    final items = await DatabaseHelper.instance.getAssistantConversations();
-    if (!mounted) return;
     setState(() {
-      _items = items;
-      _loading = false;
-      _selected.removeWhere((id) => !_items.any((item) => item['id'] == id));
-      if (_selected.isEmpty) _selectionMode = false;
+      _loading = true;
+      _loadError = null;
     });
+    try {
+      final items = await DatabaseHelper.instance.getAssistantConversations();
+      if (!mounted) return;
+      setState(() {
+        _items = items;
+        _loading = false;
+      _selected.removeWhere((id) => !_items.any((item) => item['id'] == id));
+        if (_selected.isEmpty) _selectionMode = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = '无法读取历史对话：$error';
+      });
+    }
   }
 
   void _toggleSelection(int id) {
@@ -112,6 +124,11 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+              ? Center(child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(_loadError!, textAlign: TextAlign.center),
+                ))
           : _items.isEmpty
               ? const Center(child: Text('暂无历史对话'))
               : RefreshIndicator(

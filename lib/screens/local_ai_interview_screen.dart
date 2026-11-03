@@ -151,7 +151,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _sending = false;
   bool _extracting = false;
   bool _modelControlBusy = false;
-  late Future<int> _conversationIdFuture;
+  late Future<int?> _conversationIdFuture;
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
   LocalAiSymptomDraft? _confirmedDraft;
@@ -682,16 +682,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
 
-  Future<int> _createNewConversation() async {
-    final id = await DatabaseHelper.instance.createAssistantConversation(
-      mode: 'consultation',
-    );
-    await DatabaseHelper.instance.saveAssistantMessage(
-      conversationId: id,
-      role: 'assistant',
-      content: '可以先说说目前最困扰你的情况。比如从什么时候开始、具体有什么感觉、什么情况下会加重或缓解。一次说一两件事就可以。',
-    );
-    return id;
+  Future<int?> _createNewConversation() async {
+    try {
+      final id = await DatabaseHelper.instance.createAssistantConversation(
+        mode: 'consultation',
+      );
+      await DatabaseHelper.instance.saveAssistantMessage(
+        conversationId: id,
+        role: 'assistant',
+        content: '可以先说说目前最困扰你的情况。比如从什么时候开始、具体有什么感觉、什么情况下会加重或缓解。一次说一两件事就可以。',
+      );
+      return id;
+    } catch (error, stack) {
+      debugPrint('[AssistantHistory] 无法创建会话：$error\\n$stack');
+      return null;
+    }
   }
 
   Future<void> _persistSuccessfulTurn({
@@ -701,6 +706,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     try {
       final id = await _conversationIdFuture;
+      if (id == null) return;
       final replayable = userText.trim().isNotEmpty;
       final metadata = attachmentType == null
           ? 'replayable=true'
@@ -767,7 +773,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '${fullTranscript.substring(fullTranscript.length - 10000)}'
         : fullTranscript;
     setState(() {
-      _conversationIdFuture = Future<int>.value(selectedId);
+      _conversationIdFuture = Future<int?>.value(selectedId);
       _messages
         ..clear()
         ..addAll(restoredMessages);
