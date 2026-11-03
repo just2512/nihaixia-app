@@ -1,7 +1,6 @@
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
-import 'adaptive_master_detail.dart';
 
 /// Top-level navigation that changes with the app window, not the device model.
 ///
