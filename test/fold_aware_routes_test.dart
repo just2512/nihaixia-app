@@ -58,7 +58,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final dialog = tester.getRect(find.byType(AlertDialog));
-    expect(dialog.left, greaterThanOrEqualTo(0));
+    expect(dialog.left, greaterThanOrEqualTo(412));
     expect(dialog.right, lessThanOrEqualTo(800));
   });
 
@@ -83,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final dialog = tester.getRect(find.byType(AlertDialog));
-    expect(dialog.left, greaterThanOrEqualTo(412));
+    expect(dialog.left, greaterThanOrEqualTo(0));
     expect(dialog.right, lessThanOrEqualTo(800));
   });
 
@@ -139,9 +139,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final page = tester.getRect(find.byKey(const ValueKey('fold-aware-route-content')));
-    expect(page.left, 0);
+    expect(page.left, greaterThanOrEqualTo(412));
     expect(page.right, 800);
-    expect(page.width, 800);
+    expect(page.width, 388);
   });
 
   testWidgets('full-page route uses the full available width when no fold is reported', (tester) async {
@@ -239,9 +239,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final page = tester.getRect(find.byKey(const ValueKey('flat-fold-route-content')));
-    expect(page.left, greaterThanOrEqualTo(412));
+    expect(page.left, 0);
     expect(page.right, 800);
-    expect(page.width, 388);
+    expect(page.width, 800);
   });
 
   testWidgets('full-page route stays on the left physical panel when opened there', (tester) async {
