@@ -73,3 +73,4 @@ void main() {
     expect(context, contains('内部序号'));
     expect(context, contains('来源定位：MISSING'));
   });
+}
