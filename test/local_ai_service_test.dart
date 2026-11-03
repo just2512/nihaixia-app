@@ -135,6 +135,27 @@ void main() {
       expect(reply, '请继续描述不适出现的时间');
     });
 
+
+    test('sendMessageWithContext separates user text from retrieved knowledge context', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '依据本地资料整理的回答'};
+      });
+
+      final reply = await LocalAiService().sendMessageWithContext(
+        '柴胡的传统功用是什么？',
+        context: '[App本草库] 柴胡：原始条目内容',
+      );
+
+      expect(reply, '依据本地资料整理的回答');
+      expect(received?.method, 'sendMessage');
+      expect(received?.arguments, <String, Object?>{
+        'text': '柴胡的传统功用是什么？',
+        'context': '[App本草库] 柴胡：原始条目内容',
+      });
+    });
+
     test('sendMessage rejects missing, null, and whitespace-only native replies', () async {
       final invalidResponses = <Object?>[
         <String, Object?>{},

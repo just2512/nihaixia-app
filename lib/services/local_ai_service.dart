@@ -58,6 +58,28 @@ class LocalAiService {
     return reply;
   }
 
+
+  /// Sends user text with bounded app-retrieved reference context.
+  /// The native bridge records only [text] for symptom extraction.
+  Future<String> sendMessageWithContext(
+    String text, {
+    required String context,
+  }) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty) {
+      throw PlatformException(code: 'EMPTY_MESSAGE', message: '请输入内容后再发送');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'sendMessage',
+      {'text': normalized, 'context': context.trim()},
+    );
+    final reply = data?['reply'];
+    if (reply is! String || reply.trim().isEmpty) {
+      throw PlatformException(code: 'EMPTY_REPLY', message: '模型没有返回有效文本');
+    }
+    return reply;
+  }
+
   Future<String> sendImage(String path, {String prompt = ''}) async {
     return _sendAttachment('sendImage', path, '照片', prompt: prompt);
   }

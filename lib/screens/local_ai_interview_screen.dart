@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/assistant_knowledge_context.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
 
@@ -660,6 +661,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+
+  Future<String> _sendTextWithKnowledgeContext(String text) async {
+    final context = AssistantKnowledgeContextBuilder.build(text);
+    if (context.isEmpty) return _service.sendMessage(text);
+    return _service.sendMessageWithContext(text, context: context);
+  }
+
   Future<void> _send() async {
     if (_modelControlBusy) return;
     final text = _inputController.text.trim();
@@ -691,7 +699,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ? await _service.sendAudio(audioPath, prompt: text)
           : imagePath != null
               ? await _service.sendImage(imagePath, prompt: text)
-              : await _service.sendMessage(text);
+              : await _sendTextWithKnowledgeContext(text);
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;

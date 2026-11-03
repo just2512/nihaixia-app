@@ -115,10 +115,11 @@ class MainActivity : FlutterActivity() {
                     }
                     "sendMessage" -> {
                         val text = call.argument<String>("text")?.trim().orEmpty()
+                        val context = call.argument<String>("context")?.trim().orEmpty()
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
-                            runAiTask(result) { sendLocalMessage(text) }
+                            runAiTask(result) { sendLocalMessage(text, context) }
                         }
                     }
                     "resetConversation" -> runAiTask(result) { resetLocalConversation() }
@@ -383,10 +384,18 @@ class MainActivity : FlutterActivity() {
         return modelStatus()
     }
 
-    private fun sendLocalMessage(text: String): Map<String, Any> {
-        val reply = sendWithFirstTurnGpuFallback { conversation ->
-            conversation.sendMessage(text).toString()
+    private fun sendLocalMessage(text: String, context: String = ""): Map<String, Any> {
+        val modelInput = if (context.isBlank()) text else buildString {
+            appendLine("【应用本地知识库检索资料】")
+            appendLine(context.take(7000))
+            appendLine("【用户问题】")
+            appendLine(text)
+            append("请区分资料原文与解释；资料未提供的内容明确说明未知，不得编造出处。")
         }
+        val reply = sendWithFirstTurnGpuFallback { conversation ->
+            conversation.sendMessage(modelInput).toString()
+        }
+        // Only literal user text is eligible for symptom extraction.
         recordUserInput("用户文字自述", text)
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
