@@ -199,6 +199,26 @@ void main() {
       );
     });
 
+
+    test('restoreConversation forwards bounded history and user-only turns', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'restored': true, 'backend': 'cpu'};
+      });
+
+      await LocalAiService().restoreConversation(
+        transcript: '用户：饭后腹胀\\n助手：请说明持续时间',
+        userMessages: ['饭后腹胀'],
+      );
+
+      expect(received?.method, 'restoreConversation');
+      expect(received?.arguments, <String, Object?>{
+        'transcript': '用户：饭后腹胀\\n助手：请说明持续时间',
+        'userMessages': ['饭后腹胀'],
+      });
+    });
+
     test('resetConversation invokes native reset and returns fresh status', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {

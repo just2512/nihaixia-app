@@ -18,19 +18,31 @@ class AssistantKnowledgeContextBuilder {
         .where((term) => term.length >= 2)
         .toSet();
 
-    final formulas = FormulaRepository.getAll().where((formula) {
+    final allFormulas = FormulaRepository.getAll();
+    final exactFormulaMatches = allFormulas.where((formula) {
       final names = [
         formula.name,
         ...formula.alias.split(',').map((value) => value.trim()),
       ].where((value) => value.isNotEmpty);
-      if (names.any((name) => normalized.contains(name))) return true;
-      if (formula.keywords.any((keyword) => normalized.contains(keyword))) {
-        return true;
+      return names.any((name) => normalized.contains(name));
+    });
+    final keywordFormulaMatches = allFormulas.where((formula) =>
+        formula.keywords.any((keyword) => normalized.contains(keyword)));
+    final componentFormulaMatches = allFormulas.where((formula) =>
+        formula.components.any(
+          (component) => normalized.contains(component.name),
+        ));
+    final formulas = <dynamic>[];
+    for (final formula in [
+      ...exactFormulaMatches,
+      ...keywordFormulaMatches,
+      ...componentFormulaMatches,
+    ]) {
+      if (!formulas.any((item) => item.id == formula.id)) {
+        formulas.add(formula);
       }
-      return formula.components.any(
-        (component) => normalized.contains(component.name),
-      );
-    }).take(maxFormulaEntries).toList(growable: false);
+      if (formulas.length >= maxFormulaEntries) break;
+    }
 
     final herbs = HerbRepository.getAll().where((herb) {
       if (normalized.contains(herb.name)) return true;
