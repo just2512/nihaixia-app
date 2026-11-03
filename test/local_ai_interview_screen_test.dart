@@ -63,6 +63,14 @@ class _ValidRecordingFileInspector
   Future<int?> sizeBytes(String path) async => 4;
 }
 
+class _EmptyLocalAiImagePicker implements LocalAiImagePicker {
+  @override
+  Future<String?> retrieveLostImagePath() async => null;
+
+  @override
+  Future<String?> pickCameraImagePath() async => null;
+}
+
 class _DeferredLocalAiImagePicker implements LocalAiImagePicker {
   final retrieveResult = Completer<String?>();
   final pickResult = Completer<String?>();
@@ -853,7 +861,12 @@ void main() {
       const userText = '状态未知时必须保留但不能继续使用的历史';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
