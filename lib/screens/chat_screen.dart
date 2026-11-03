@@ -46,7 +46,12 @@ class _StepSnapshot {
 }
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final bool returnResultOnComplete;
+
+  const ChatScreen({
+    super.key,
+    this.returnResultOnComplete = false,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -453,6 +458,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // ==================== 诊断结果展示 ====================
 
+  void _returnDiagnosisToAssistant() {
+    final summary = _messages
+        .map((message) => message.text)
+        .where((text) => text.trim().isNotEmpty)
+        .join('\\n\\n');
+    Navigator.pop(context, summary);
+  }
+
   void _showResult() {
     final result = _engine.diagnose();
     if (result == null) return;
@@ -536,6 +549,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _currentOptions = [
           _ChatOption(label: '重新辨证', icon: Icons.refresh, onTap: _resetDiagnosis),
           _ChatOption(label: '分享', icon: Icons.share, onTap: () => _shareResult(result)),
+          if (widget.returnResultOnComplete)
+            _ChatOption(label: '返回 AI 助手', icon: Icons.reply, onTap: _returnDiagnosisToAssistant),
         ];
         _showOptions = true;
       });
@@ -842,6 +857,12 @@ class _ChatScreenState extends State<ChatScreen> {
               if (alt != null) _openFormulaDetail(alt);
             },
           ),
+        if (widget.returnResultOnComplete)
+          _ChatOption(
+            label: '返回 AI 助手',
+            icon: Icons.reply,
+            onTap: _returnDiagnosisToAssistant,
+          ),
         _ChatOption(
           label: '分享辨证结果',
           icon: Icons.share,
@@ -1042,9 +1063,10 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('辨证问诊'),
+        title: Text(widget.returnResultOnComplete ? '结构化辨证问诊' : '辨证问诊'),
         actions: [
-          IconButton(
+          if (!widget.returnResultOnComplete)
+            IconButton(
             tooltip: '本地 AI 问诊',
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () async {
