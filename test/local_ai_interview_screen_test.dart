@@ -1712,3 +1712,18 @@ void main() {
     );
   });
 }
+
+
+  testWidgets('unified assistant starts in automatic dispatch mode', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: LocalAiInterviewScreen(service: _ReadyLocalAiService())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('自动调度'), findsOneWidget);
+    expect(
+      find.textContaining('身体情况、询问中医知识'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
