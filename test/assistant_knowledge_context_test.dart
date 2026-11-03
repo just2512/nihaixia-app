@@ -60,3 +60,18 @@ void main() {
     expect(context, contains('条目所载出处：'));
     expect(context, contains('倪师解读：'));
   });
+
+
+  test('异步检索可访问古籍原文库并保留书目来源', () async {
+    final context = await AssistantKnowledgeContextBuilder.buildAsync('灵枢');
+    expect(context, contains('App古籍库'));
+    expect(context, contains('黄帝内经·灵枢'));
+    expect(context, contains('assets/guji/lingshu.txt'));
+  });
+
+  test('异步检索医案时标注内部序号与原始出处缺失', () async {
+    final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
+    expect(context, contains('App医案库'));
+    expect(context, contains('内部序号'));
+    expect(context, contains('来源定位：MISSING'));
+  });
