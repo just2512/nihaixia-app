@@ -197,15 +197,17 @@ class AdaptiveSinglePane extends StatelessWidget {
             screenSize,
           );
           if (feature == null) {
+            final contentWidth = maxWidth < constraints.maxWidth
+                ? maxWidth
+                : constraints.maxWidth;
             return Center(
-              child: ConstrainedBox(
-                key: contentKey,
-                constraints: BoxConstraints(
-                  maxWidth: maxWidth < constraints.maxWidth
-                      ? maxWidth
-                      : constraints.maxWidth,
+              child: SizedBox(
+                width: contentWidth,
+                child: ConstrainedBox(
+                  key: contentKey,
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: child,
                 ),
-                child: child,
               ),
             );
           }
@@ -229,15 +231,17 @@ class AdaptiveSinglePane extends StatelessWidget {
           // this route to one sub-screen. A zero-width fold may not produce a
           // separate route constraint, so split the full-width route here.
           if (constraints.maxWidth <= largestPanelWidth + 1) {
+            final contentWidth = maxWidth < constraints.maxWidth
+                ? maxWidth
+                : constraints.maxWidth;
             return Center(
-              child: ConstrainedBox(
-                key: contentKey,
-                constraints: BoxConstraints(
-                  maxWidth: maxWidth < constraints.maxWidth
-                      ? maxWidth
-                      : constraints.maxWidth,
+              child: SizedBox(
+                width: contentWidth,
+                child: ConstrainedBox(
+                  key: contentKey,
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: child,
                 ),
-                child: child,
               ),
             );
           }
@@ -283,11 +287,17 @@ class AdaptiveSinglePane extends StatelessWidget {
             featureLeft < constraints.maxWidth;
 
         if (feature == null || !featureIntersectsLayout) {
+          final contentWidth = maxWidth < constraints.maxWidth
+              ? maxWidth
+              : constraints.maxWidth;
           return Center(
-            child: ConstrainedBox(
-              key: contentKey,
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: child,
+            child: SizedBox(
+              width: contentWidth,
+              child: ConstrainedBox(
+                key: contentKey,
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: child,
+              ),
             ),
           );
         }
@@ -315,10 +325,18 @@ class AdaptiveSinglePane extends StatelessWidget {
         return Align(
           alignment:
               useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
-          child: ConstrainedBox(
-            key: contentKey,
-            constraints: BoxConstraints(maxWidth: contentMaxWidth),
-            child: child,
+          child: SizedBox(
+            width: availablePanelWidth,
+            child: Center(
+              child: SizedBox(
+                width: contentMaxWidth,
+                child: ConstrainedBox(
+                  key: contentKey,
+                  constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                  child: child,
+                ),
+              ),
+            ),
           ),
         );
       },
