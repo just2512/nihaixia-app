@@ -137,7 +137,7 @@ void main() {
     expect(rail.extended, isTrue);
   });
 
-  testWidgets('vertical hinge puts the navigation rail and active tab on separate panels', (tester) async {
+  testWidgets('vertical hinge fills the left panel with navigation and keeps the active tab on the right', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -162,14 +162,18 @@ void main() {
       ),
     );
 
-    final rail = tester.getRect(find.byType(NavigationRail));
+    final navigation = tester.getRect(
+      find.byKey(const ValueKey('fold-navigation-panel')),
+    );
     final content = tester.getRect(find.byType(IndexedStack));
-    expect(rail.left, 0);
-    expect(rail.right, lessThanOrEqualTo(388));
+    expect(navigation.left, 0);
+    expect(navigation.right, 388);
+    expect(navigation.width, 388);
     expect(content.left, greaterThanOrEqualTo(412));
     expect(content.right, 800);
-    expect(tester.widget<NavigationRail>(find.byType(NavigationRail)).extended, isTrue);
+    expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NavigationBar), findsNothing);
+    expect(find.text('汉唐中医'), findsOneWidget);
     expect(find.text('内容页 1'), findsOneWidget);
   });
 
@@ -232,9 +236,11 @@ void main() {
       ),
     );
 
-    final rail = tester.getRect(find.byType(NavigationRail));
+    final navigation = tester.getRect(
+      find.byKey(const ValueKey('fold-navigation-panel')),
+    );
     final content = tester.getRect(find.byType(IndexedStack));
-    expect(rail.right, lessThanOrEqualTo(388));
+    expect(navigation.right, 388);
     expect(content.left, greaterThanOrEqualTo(412));
     expect(content.right, 800);
   });
@@ -342,7 +348,7 @@ void main() {
       ),
     ];
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byKey(const ValueKey('fold-navigation-panel')), findsOneWidget);
     expect(find.text('计数：1'), findsOneWidget);
 
     tester.view.physicalSize = const Size(402, 790);
