@@ -262,3 +262,4 @@ void main() {
     expect(find.byTooltip('发送'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
