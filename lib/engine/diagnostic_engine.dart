@@ -1220,7 +1220,7 @@ class DiagnosticEngine {
     };
   }
 
-  // ==================== P0-2: 脉舌矛盾检测（以舌为准原则） ====================
+  // ==================== 脉舌冲突检测（不预设脉/舌优先级） ====================
 
   PulseTongueAssessment? _buildPulseTongueAssessment() {
     final pulse = _pulseType;
@@ -1287,8 +1287,8 @@ class DiagnosticEngine {
         addIf(contradicting, 'urine_clear', '小便清长');
         addIf(contradicting, 'hot_drink', '喜热饮');
         askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink', '饮水偏好');
-        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short'], 'pulse_cross_urine', '小便情况');
-        askIfMissing(['cold_limbs', 'warm_limbs'], 'pulse_cross_limbs', '四肢温度');
+        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short', 'pulse_cross_urine_answered'], 'pulse_cross_urine', '小便情况');
+        askIfMissing(['cold_limbs', 'warm_limbs', 'pulse_cross_limbs_answered'], 'pulse_cross_limbs', '四肢温度');
         break;
       case 'floating_pulse_thick_coat':
         addIf(supporting, 'chills', '有恶寒');
