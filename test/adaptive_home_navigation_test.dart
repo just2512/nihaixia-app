@@ -338,8 +338,8 @@ void main() {
       ),
     ];
     await tester.pumpAndSettle();
-    expect(find.byType(NavigationRail), findsOneWidget);
-    expect(find.byKey(const ValueKey('full-window-content-media-query')), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
     expect(find.text('计数：1'), findsOneWidget);
 
     tester.view.physicalSize = const Size(402, 790);
