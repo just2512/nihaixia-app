@@ -24,8 +24,6 @@ void main() {
     expect(find.textContaining('不自动映射为辨证选项'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-}
-
 
   testWidgets('舌脉 UI 只提交 canonical 选项并区分主脉与兼脉', (tester) async {
     tester.view.devicePixelRatio = 1;
@@ -58,3 +56,4 @@ void main() {
     expect(find.textContaining('兼脉浮'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
