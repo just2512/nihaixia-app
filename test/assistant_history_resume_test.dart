@@ -185,12 +185,17 @@ void main() {
     );
     await _pumpFrames(tester);
 
+    final orderedConversations = await store.getAssistantConversations();
+    expect(orderedConversations, hasLength(2));
+    expect(orderedConversations.first['id'], 2);
+
     await tester.tap(find.byTooltip('历史对话'));
     await tester.pumpAndSettle();
     await _pumpFrames(tester, frames: 24);
     expect(find.text('历史对话'), findsOneWidget);
-    expect(find.text('待执行工具会话'), findsOneWidget);
-    await tester.tap(find.text('待执行工具会话'));
+    expect(find.byType(ListTile), findsNWidgets(2));
+    // The newest session (id 2) is the first row by updated_at ordering.
+    await tester.tap(find.byType(ListTile).first);
     await _pumpFrames(tester);
 
     expect(find.text('打开五运六气推算'), findsOneWidget);
