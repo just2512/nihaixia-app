@@ -332,6 +332,14 @@ class AssistantToolRouter {
   static List<AssistantToolDefinition> quickActions(AssistantMode mode) =>
       _all.where((tool) => mode == AssistantMode.automatic || tool.modes.contains(mode)).toList(growable: false);
 
+  /// Resolve a persisted tool action when a conversation is reopened.
+  static AssistantToolDefinition? byId(String id) {
+    for (final tool in _all) {
+      if (tool.id == id) return tool;
+    }
+    return null;
+  }
+
   static AssistantToolDefinition? match(String query, AssistantMode mode) {
     final normalized = query.trim();
     if (normalized.isEmpty) return null;
