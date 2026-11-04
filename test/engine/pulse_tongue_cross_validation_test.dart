@@ -257,5 +257,56 @@ void main() {
       expect(engine.createSnapshot().answers['urine_clear'], isFalse);
       expect(engine.createSnapshot().answers['cold_limbs'], isFalse);
     });
+
+    test('不确定答案保留为缺失证据，不写入阴性标志且不重复追问', () {
+      final cases = <String, List<String>>{
+        'pulse_cross_drink': [
+          'no_thirst', 'thirsty', 'hot_drink', 'cold_drink',
+          'thirst_strong', 'thirst_no_drink',
+        ],
+        'pulse_cross_urine': ['urine_clear', 'urine_short', 'urine_difficult'],
+        'pulse_cross_limbs': ['cold_limbs', 'warm_limbs'],
+        'pulse_cross_surface': ['chills', 'headache', 'neck_stiff', 'no_chills'],
+        'pulse_cross_interior': [
+          'constipated', 'diarrhea', 'abdomen_pain_relief', 'abdomen_pain_press',
+        ],
+        'pulse_cross_shaoyang': [
+          'bitter_mouth', 'dry_throat', 'alternating_chills',
+        ],
+        'pulse_cross_taiyin': [
+          'diarrhea', 'abdomen_pain_relief', 'no_thirst', 'poor_appetite',
+        ],
+      };
+      for (final entry in cases.entries) {
+        final engine = DiagnosticEngine();
+        engine.answerFollowUp(entry.key, '不确定');
+        final answers = engine.createSnapshot().answers;
+        expect(answers['${entry.key}_answered'], isTrue, reason: entry.key);
+        for (final evidenceKey in entry.value) {
+          expect(answers.containsKey(evidenceKey), isFalse,
+              reason: '${entry.key} must not infer ${evidenceKey}');
+        }
+      }
+
+      final engine = DiagnosticEngine();
+      engine.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '淡白',
+        pulseType: '数',
+      );
+      engine.answerFollowUp('pulse_cross_drink', '不确定');
+      engine.answerFollowUp('pulse_cross_urine', '不清楚');
+      engine.answerFollowUp('pulse_cross_limbs', '不清楚');
+      final assessment = engine.createSnapshot();
+      final result = engine.diagnose();
+      expect(result, isNotNull);
+      expect(result!.pulseTongueAssessment!.status, '待补充问诊');
+      expect(result.pulseTongueAssessment!.missingEvidence,
+          containsAll(['饮水偏好', '小便情况', '四肢温度']));
+      expect(engine.getPulseTongueFollowUpQuestions(), isEmpty);
+      expect(assessment.answers['thirsty'], isNull);
+      expect(assessment.answers['urine_clear'], isNull);
+      expect(assessment.answers['cold_limbs'], isNull);
+    });
   });
 }
