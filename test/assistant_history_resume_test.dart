@@ -59,6 +59,14 @@ class _MemoryConversationStore implements AssistantConversationStore {
       'updated_at': '2026-11-04T08:10:00.000',
       'last_message_preview': '口苦持续多久？夜间是否容易醒？',
     },
+    2: {
+      'id': 2,
+      'title': '待执行工具会话',
+      'mode': 'metaphysics',
+      'created_at': '2026-11-04T08:05:00.000',
+      'updated_at': '2026-11-04T08:15:00.000',
+      'last_message_preview': '已识别到你要使用五运六气推算。',
+    },
   };
 
   final Map<int, List<Map<String, Object?>>> messages = {
@@ -75,7 +83,23 @@ class _MemoryConversationStore implements AssistantConversationStore {
         'conversation_id': 1,
         'role': 'assistant',
         'content': '口苦持续多久？夜间是否容易醒？',
-        'metadata': 'selectedMode=consultation;mode=consultation;tool=yunqi',
+        'metadata': 'selectedMode=consultation;mode=consultation',
+      },
+    ],
+    2: [
+      {
+        'id': 3,
+        'conversation_id': 2,
+        'role': 'user',
+        'content': '帮我推算五运六气',
+        'metadata': 'selectedMode=automatic;mode=metaphysics;replayable=true',
+      },
+      {
+        'id': 4,
+        'conversation_id': 2,
+        'role': 'assistant',
+        'content': '已识别到你要使用「五运六气推算」。实际计算由 App 内置工具执行。',
+        'metadata': 'mode=metaphysics;selectedMode=automatic;tool=yunqi',
       },
     ],
   };
@@ -163,7 +187,7 @@ void main() {
 
     await tester.tap(find.byTooltip('历史对话'));
     await _pumpFrames(tester);
-    await tester.tap(find.text('可继续的历史会话'));
+    await tester.tap(find.text('待执行工具会话'));
     await _pumpFrames(tester);
 
     expect(find.text('打开五运六气推算'), findsOneWidget);
