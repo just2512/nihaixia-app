@@ -404,7 +404,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       '命主：${chart.mingZhuLabel ?? 'MISSING'}；身主：${chart.shenZhuLabel ?? 'MISSING'}',
       '生年四化：${sihua.isEmpty ? 'MISSING' : sihua}',
       '说明：民俗文化参考，不是科学预测，不用于医疗、法律或投资决策。',
-    ].join('\\n');
+    ].join('\n');
     Navigator.pop(context, summary);
   }
 
