@@ -517,7 +517,6 @@ class _ChatScreenState extends State<ChatScreen> {
       };
       final evidenceLines = <String>[];
       for (final record in zangFuEvidence.records) {
-        if (record.answerText == null) continue;
         final label = questionLabels[record.questionKey] ?? record.questionKey;
         final stateLabel = switch (record.state) {
           ZangFuEvidenceAnswerState.explicitNormal => '（明确正常项）',
@@ -526,7 +525,15 @@ class _ChatScreenState extends State<ChatScreen> {
           ZangFuEvidenceAnswerState.unanswered => '（未作答）',
           ZangFuEvidenceAnswerState.invalid => '（选项无效）',
         };
-        evidenceLines.add('$label：${record.answerText}$stateLabel');
+        final answer = record.answerText;
+        if (answer == null) {
+          if (record.state == ZangFuEvidenceAnswerState.unanswered ||
+              record.state == ZangFuEvidenceAnswerState.invalid) {
+            evidenceLines.add('$label：$stateLabel');
+          }
+          continue;
+        }
+        evidenceLines.add('$label：$answer$stateLabel');
       }
       if (zangFuEvidence.unclassifiedAdditionalEvidence.isNotEmpty) {
         evidenceLines.add(
