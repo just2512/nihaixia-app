@@ -16,7 +16,6 @@ import 'dream_screen.dart';
 import 'guansha_screen.dart';
 import 'saved_charts_screen.dart';
 import 'solar_term_section_screen.dart';
-import 'settings_screen.dart';
 import 'chenggu_bone_screen.dart';
 import 'shousheng_debt_screen.dart';
 import 'huangdi_siji_screen.dart';
@@ -292,23 +291,6 @@ class ToolsScreen extends StatelessWidget {
                 onTap: () => Navigator.push(
                   context,
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SavedChartsScreen()),
-                ),
-              ),
-            ],
-          ),
-          ZoneSection(
-            zone: Zone.general,
-            title: '通用区',
-            icon: Icons.settings,
-            children: [
-              _ToolCard(
-                icon: Icons.settings,
-                title: '设置',
-                subtitle: '外观/诊断/排盘口径（晚子时·长生十二神）· 数据管理',
-                color: colorScheme.primary,
-                onTap: () => Navigator.push(
-                  context,
-                  FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SettingsScreen()),
                 ),
               ),
             ],
