@@ -963,7 +963,7 @@ class DiagnosticEngine {
     if (_answers['thirst_no_drink'] == true) jueyinScore += 2;
     if (_answers['hunger_no_eat'] == true) jueyinScore += 2;
 
-    // 三阳并病优先于任意两经子型；只有“但欲眠睡、目合则汗”证据齐备才命中专属表项。
+    // 三阳并病优先于任意两经子型；只有关键证据齐备才占用分支。
     if (primary == '太阳' && yangmingScore >= 2 && shaoyangScore >= 2 &&
         _answers['drowsy'] == true && _answers['has_sweat'] == true) {
       _combinedMeridian = '阳明少阳';
@@ -971,27 +971,41 @@ class DiagnosticEngine {
       return;
     }
 
-    // 太阳阳明第32条：下利且已明确排除医误下史时，才进入葛根汤合病规则。
-    // 第34条葛根黄芩黄连汤属于桂枝证误下后的协热利，不是合病；关键前提未齐时拒绝套用。
+    // 第32条必须明确排除误下史；未知/存在误下史不能遮蔽其他候选。
     if (primary == '太阳' && yangmingScore >= 3 &&
-        _answers['diarrhea'] == true) {
+        _answers['diarrhea'] == true &&
+        _answers['history_mistreatment'] == false) {
       _combinedMeridian = '阳明';
-      if (_answers['history_mistreatment'] == false) {
-        _combinedPatternCondition = CombinedPatternCondition.sunYangmingBase;
-      }
-    } else if (primary == '太阳' && yangmingScore >= 3) {
-      _combinedMeridian = '阳明';
+      _combinedPatternCondition = CombinedPatternCondition.sunYangmingBase;
+      return;
+    }
+
+    if (primary == '太阳' && yangmingScore >= 3 &&
+        _answers['diarrhea'] != true) {
       if (_answers['nausea'] == true || _answers['vomiting'] == true) {
+        _combinedMeridian = '阳明';
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingVomit;
-      } else if (_answers['breathing'] == '喘' || _answers['chest_fullness'] == true) {
-        _combinedPatternCondition = CombinedPatternCondition.sunYangmingChestFull;
-      } else if (_answers['has_sweat'] == true && yangmingScore < 5) {
-        _combinedPatternCondition = CombinedPatternCondition.sunYangmingUnresolved;
+        return;
       }
-    } else if (primary == '太阳' && shaoyinScore >= 3) {
+      if (_answers['breathing'] == '喘' || _answers['chest_fullness'] == true) {
+        _combinedMeridian = '阳明';
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingChestFull;
+        return;
+      }
+      if (_answers['has_sweat'] == true && yangmingScore < 5) {
+        _combinedMeridian = '阳明';
+        _combinedPatternCondition = CombinedPatternCondition.sunYangmingUnresolved;
+        return;
+      }
+    }
+
+    if (primary == '太阳' && shaoyinScore >= 3) {
       _combinedMeridian = '少阴';
       _combinedPatternCondition = CombinedPatternCondition.sunShaoyinTwoCold;
-    } else if (primary == '太阳' && shaoyangScore >= 2) {
+      return;
+    }
+
+    if (primary == '太阳' && shaoyangScore >= 2) {
       _combinedMeridian = '少阳';
       if (_answers['diarrhea'] == true) {
         _combinedPatternCondition = CombinedPatternCondition.sunShaoyangDiarrhea;
@@ -1000,46 +1014,64 @@ class DiagnosticEngine {
       } else {
         _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
       }
-    } else if (primary == '少阳' && yangmingScore >= 3) {
-      _combinedMeridian = '阳明';
+      return;
+    }
+
+    if (primary == '少阳' && yangmingScore >= 3) {
       final slipperyRapidPulse =
           (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
           (_pulseType == '数' && _pulseTypeSecondary == '滑');
-      // 《伤寒论》第256条：阳明少阳合病下利，脉滑而数，有宿食，当下之。
       if (_answers['diarrhea'] == true &&
           _answers['food_stagnation'] == true &&
           slipperyRapidPulse) {
+        _combinedMeridian = '阳明';
         _combinedPatternCondition = CombinedPatternCondition.shaoyangYangmingBase;
+        return;
       }
-    } else if (primary == '太阴' && shaoyinScore >= 3) {
+      // 第256条证据不足时继续检查少阳-太阴、少阳-太阳等候选。
+    }
+
+    if (primary == '太阴' && shaoyinScore >= 3) {
       _combinedMeridian = '少阴';
       _combinedPatternCondition = CombinedPatternCondition.taiyinShaoyinBase;
-    } else if (primary == '厥阴' && shaoyangScore >= 2) {
+      return;
+    }
+    if (primary == '厥阴' && shaoyangScore >= 2) {
       _combinedMeridian = '少阳';
       _combinedPatternCondition = CombinedPatternCondition.jueyinShaoyang;
-    } else if (primary == '少阳' && jueyinScore >= 2) {
+      return;
+    }
+    if (primary == '少阳' && jueyinScore >= 2) {
       _combinedMeridian = '厥阴';
       _combinedPatternCondition = CombinedPatternCondition.jueyinShaoyang;
-    } else if (primary == '少阳' && taiyinScore >= 3) {
+      return;
+    }
+    if (primary == '少阳' && taiyinScore >= 3) {
       _combinedMeridian = '太阴';
       _combinedPatternCondition = CombinedPatternCondition.shaoyangTaiyin;
-    } else if (primary == '少阳' && sunScore >= 3) {
+      return;
+    }
+    if (primary == '少阳' && sunScore >= 3) {
       _combinedMeridian = '太阳';
       _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
-    } else if ((primary == '太阳' || primary == '太阴') &&
-               sunScore >= 3 &&
-               _answers['diarrhea'] == true &&
-               taiyinScore >= 2 &&
-               _answers['history_mistreatment'] == true &&
-               _answers['sun_taiyin_repeated_purgation'] == true &&
-               _answers['epigastric_hard'] == true &&
-               !(_answers['temperature'] == 'fever_chills' &&
-                 _answers['fever'] == true &&
-                 _answers['has_sweat'] == true &&
-                 _answers['asthma'] == true &&
-                 _pulseType == '促')) {
+      return;
+    }
+
+    if ((primary == '太阳' || primary == '太阴') &&
+        sunScore >= 3 &&
+        _answers['diarrhea'] == true &&
+        taiyinScore >= 2 &&
+        _answers['history_mistreatment'] == true &&
+        _answers['sun_taiyin_repeated_purgation'] == true &&
+        _answers['epigastric_hard'] == true &&
+        !(_answers['temperature'] == 'fever_chills' &&
+          _answers['fever'] == true &&
+          _answers['has_sweat'] == true &&
+          _answers['asthma'] == true &&
+          _pulseType == '促')) {
       _combinedMeridian = '太阴';
       _combinedPatternCondition = CombinedPatternCondition.sunTaiyin;
+      return;
     }
   }
 
