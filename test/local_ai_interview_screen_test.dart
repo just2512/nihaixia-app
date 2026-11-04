@@ -609,6 +609,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '我最近三天口苦，胸闷');
+    await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
