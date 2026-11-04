@@ -70,7 +70,8 @@ void main() {
           'bitter_mouth': true,
           'dry_throat': true,
           'joint_pain': true,
-          'nausea': true,
+          'clause146_mild_nausea': true,
+          'illness_duration_6_7': true,
           'epigastric_fullness': true,
         },
         tenQuestionIndex: 0,
@@ -107,7 +108,8 @@ void main() {
           'bitter_mouth': true,
           'dry_throat': true,
           'joint_pain': true,
-          'nausea': true,
+          'clause146_mild_nausea': true,
+          'illness_duration_6_7': true,
           'epigastric_fullness': true,
           'palpitation': true,
         },
@@ -519,7 +521,7 @@ void main() {
 
   group('合病检测器可达性矩阵', () {
     final cases = <({String name, String primary, Map<String, dynamic> answers, String expected})>[
-      (name: '太阳少阳基础型', primary: '太阳', answers: {'temperature': 'fever_chills', 'joint_pain': true, 'nausea': true, 'epigastric_fullness': true}, expected: CombinedPatternCondition.sunShaoyangBase),
+      (name: '太阳少阳基础型', primary: '太阳', answers: {'temperature': 'fever_chills', 'joint_pain': true, 'clause146_mild_nausea': true, 'illness_duration_6_7': true, 'epigastric_fullness': true}, expected: CombinedPatternCondition.sunShaoyangBase),
       (name: '太阴少阴基础型', primary: '太阴', answers: {'drowsy': true}, expected: CombinedPatternCondition.taiyinShaoyinBase),
       (name: '太阳阳明呕吐型', primary: '太阳', answers: {'constipated': true, 'vomiting': true}, expected: CombinedPatternCondition.sunYangmingVomit),
       (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
@@ -527,7 +529,7 @@ void main() {
       (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
       (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
       (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
-      (name: '第147条少阳方证', primary: '少阳', answers: {'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
+      (name: '第147条少阳方证', primary: '少阳', answers: {'illness_duration_5_6': true, 'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'vomiting': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
       (name: '第163条太阳误下后协热利', primary: '太阳', answers: {'temperature': 'fever_chills', 'diarrhea': true, 'history_mistreatment': true, 'sun_taiyin_repeated_purgation': true, 'epigastric_hard': true}, expected: CombinedPatternCondition.sunTaiyin),
       (name: '太阳阳明下利基础型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false}, expected: CombinedPatternCondition.sunYangmingBase),
       (name: '少阳阳明下利滑数且有食积型', primary: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, expected: CombinedPatternCondition.shaoyangYangmingBase),
@@ -794,7 +796,8 @@ void main() {
           'bitter_mouth': true,
           'dry_throat': true,
           'joint_pain': true,
-          'nausea': true,
+          'clause146_mild_nausea': true,
+          'illness_duration_6_7': true,
           'epigastric_fullness': true,
         },
         tenQuestionIndex: 0,
@@ -840,11 +843,13 @@ void main() {
     test('第146条追问答案正确生成支节烦疼、微呕、心下支结证据', () {
       final engine = DiagnosticEngine();
       engine.answerFollowUp('body_pain', '支节烦疼（第146条线索）');
-      engine.answerFollowUp('nausea', '微呕');
+      engine.answerFollowUp('clause146_mild_nausea', '有微呕/恶心（第146条线索）');
+      engine.answerFollowUp('illness_duration', '约6—7天（第146条）');
       engine.answerFollowUp('chest', '心下支结（第146条线索）');
       final answers = engine.createSnapshot().answers;
       expect(answers['joint_pain'], isTrue);
-      expect(answers['nausea'], isTrue);
+      expect(answers['clause146_mild_nausea'], isTrue);
+      expect(answers['illness_duration_6_7'], isTrue);
       expect(answers['epigastric_fullness'], isTrue);
     });
 
@@ -854,15 +859,78 @@ void main() {
       engine.answerFollowUp('chest', '胸胁满+微结（→柴胡桂枝干姜汤）');
       engine.answerFollowUp('sweating', '但头汗出');
       engine.answerFollowUp('nausea', '不想吐');
+      engine.answerFollowUp('illness_duration', '约5—6天（第147条）');
       final answers = engine.createSnapshot().answers;
       expect(answers['shaoyang147_prior_sweat_then_purge'], isTrue);
       expect(answers['chest_minor_knot'], isTrue);
       expect(answers['head_sweat'], isTrue);
       expect(answers['has_sweat'], isTrue);
       expect(answers['nausea'], isFalse);
+      expect(answers['illness_duration_5_6'], isTrue);
     });
 
   group('原文条件与单经证分类', () {
+
+    test('第146条候选按顺序追问微呕和病程天数', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'joint_pain': true,
+          'epigastric_fullness': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+          'clause146_mild_nausea');
+      engine.answerFollowUp(
+          'clause146_mild_nausea', '有微呕/恶心（第146条线索）');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+          'illness_duration');
+      engine.answerFollowUp('illness_duration', '约6—7天（第146条）');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions(), isEmpty);
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunShaoyangBase);
+    });
+
+    test('第147条候选按顺序追问不呕、误汗复下和病程天数', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'chest_minor_knot': true,
+          'urine_difficult': true,
+          'thirsty': true,
+          'head_sweat': true,
+          'alternating_chills': true,
+          'irritable': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+          'nausea');
+      engine.answerFollowUp('nausea', '不想吐');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+          'shaoyang147_treatment_sequence');
+      engine.answerFollowUp(
+          'shaoyang147_treatment_sequence', '先发汗后又误下');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+          'illness_duration');
+      engine.answerFollowUp('illness_duration', '约5—6天（第147条）');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions(), isEmpty);
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.shaoyangTaiyin);
+      expect(result, isNotNull);
+      expect(result!.formula, '柴胡桂枝干姜汤');
+    });
+
     test('第146条缺少支节烦疼、微呕、心下支结时不触发柴胡桂枝汤', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(
@@ -888,6 +956,7 @@ void main() {
         selectedSymptoms: const [],
         meridianDirection: '少阳',
         answers: const {
+          'illness_duration_5_6': true,
           'shaoyang147_prior_sweat_then_purge': true,
           'chest_minor_knot': true,
           'urine_difficult': true,

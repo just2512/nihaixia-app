@@ -185,11 +185,12 @@ class DiagnosticRules {
       isExplicitCombined: true,
     ),
     CombinedPattern(
-      meridians: ['太阳', '少阳'],
+      meridians: ['太阳'],
       condition: CombinedPatternCondition.sunShaoyangBase,
       formula: '柴胡桂枝汤',
-      description: '太阳表证未解，兼见少阳证：发热微恶寒、支节烦痛、微呕、心下支结',
-      source: '伤寒论第146条',
+      description: '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去（第146条；非明文合病）',
+      source: '《新辑宋本伤寒论》（1955年398条编号）第146条',
+      isExplicitCombined: false,
     ),
     CombinedPattern(
       meridians: ['少阳', '阳明'],
@@ -260,15 +261,17 @@ class DiagnosticRules {
       meridians: ['少阳'],
       condition: CombinedPatternCondition.shaoyangTaiyin,
       formula: '柴胡桂枝干姜汤',
-      description: '少阳病误汗后又误下：胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦（第147条；非明文少阳太阴合病）',
-      source: '伤寒论第147条',
+      description: '伤寒五六日，已发汗而复下之：胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦（第147条；少阳单经方证）',
+      source: '《新辑宋本伤寒论》（1955年398条编号）第147条',
+      isExplicitCombined: false,
     ),
     CombinedPattern(
       meridians: ['太阳'],
       condition: CombinedPatternCondition.sunTaiyin,
       formula: '桂枝人参汤',
-      description: '太阳病外证未除，数下后协热而利、利下不止、心下痞硬、表里不解（第163条；非明文太阳太阴合病）',
-      source: '伤寒论第163条',
+      description: '太阳病外证未除，数下后协热而利、利下不止、心下痞硬（第163条；太阳单经误下方证）',
+      source: '《新辑宋本伤寒论》（1955年398条编号）第163条',
+      isExplicitCombined: false,
     ),
   ];
 
@@ -1136,16 +1139,6 @@ class DiagnosticRules {
         key: 'chest',
         question: '【辨胸胁苦满】胸口两侧胀吗？',
         options: ['胸胁苦满（胀痛→小柴胡汤）', '不胀', '只有胸闷', '胸胁满+微结（→柴胡桂枝干姜汤）'],
-      ),
-      FollowUpQuestion(
-        key: 'shaoyang147_treatment_sequence',
-        question: '【核对第147条前提】此前是否先发汗后又误用攻下法？',
-        options: ['先发汗后又误下', '只发汗', '只误下', '没有', '不确定'],
-      ),
-      FollowUpQuestion(
-        key: 'sweating',
-        question: '【核对第147条前提】出汗部位怎样？',
-        options: ['但头汗出', '全身汗出', '无汗', '不确定'],
       ),
       FollowUpQuestion(
         key: 'nausea',

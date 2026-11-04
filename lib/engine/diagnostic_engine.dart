@@ -379,6 +379,75 @@ class DiagnosticEngine {
         ),
       ];
     }
+    final clause146Candidate =
+        primary == '太阳' &&
+        _answers['temperature'] == 'fever_chills' &&
+        _answers['joint_pain'] == true &&
+        _answers['epigastric_fullness'] == true;
+    if (clause146Candidate) {
+      if (_answers['clause146_mild_nausea_answered'] != true) {
+        return [
+          FollowUpQuestion(
+            key: 'clause146_mild_nausea',
+            question: '【核对第146条】是否有微呕或恶心？',
+            options: ['有微呕/恶心（第146条线索）', '没有', '不确定'],
+          ),
+        ];
+      }
+      if (_answers['clause146_mild_nausea'] == true &&
+          _answers['illness_duration_answered'] != true) {
+        return [
+          FollowUpQuestion(
+            key: 'illness_duration',
+            question: '【核对第146条】本次伤寒发病约几天？',
+            options: ['约6—7天（第146条）', '约5—6天（第147条）', '不足5天', '超过7天', '不确定'],
+          ),
+        ];
+      }
+    }
+
+    final clause147CandidateBase =
+        primary == '少阳' &&
+        _answers['chest_minor_knot'] == true &&
+        _answers['urine_difficult'] == true &&
+        _answers['thirsty'] == true &&
+        _answers['head_sweat'] == true &&
+        _answers['alternating_chills'] == true &&
+        _answers['irritable'] == true;
+    if (clause147CandidateBase) {
+      if (_answers['nausea_answered'] != true) {
+        return [
+          FollowUpQuestion(
+            key: 'nausea',
+            question: '【核对第147条】是否“渴而不呕”？',
+            options: ['不想吐', '有微呕/恶心', '呕吐明显', '不确定'],
+          ),
+        ];
+      }
+      if (_answers['nausea'] == false &&
+          _answers['vomiting'] != true) {
+        if (_answers['shaoyang147_treatment_sequence_answered'] != true) {
+          return [
+            FollowUpQuestion(
+              key: 'shaoyang147_treatment_sequence',
+              question: '【核对第147条】此前是否先发汗后又误用攻下法？',
+              options: ['先发汗后又误下', '只发汗', '只误下', '没有', '不确定'],
+            ),
+          ];
+        }
+        if (_answers['shaoyang147_prior_sweat_then_purge'] == true &&
+            _answers['illness_duration_answered'] != true) {
+          return [
+            FollowUpQuestion(
+              key: 'illness_duration',
+              question: '【核对第147条】本次伤寒发病约几天？',
+              options: ['约5—6天（第147条）', '约6—7天（第146条）', '不足5天', '超过7天', '不确定'],
+          ),
+          ];
+        }
+      }
+    }
+
     return const [];
   }
 
@@ -964,6 +1033,54 @@ class DiagnosticEngine {
     if (_answers['thirst_no_drink'] == true) jueyinScore += 2;
     if (_answers['hunger_no_eat'] == true) jueyinScore += 2;
 
+    // 原文条件更具体的第146、147、163条优先于宽泛症状组合，避免分支遮蔽。
+    final hasClause146Evidence =
+        primary == '太阳' &&
+        _answers['temperature'] == 'fever_chills' &&
+        _answers['joint_pain'] == true &&
+        _answers['clause146_mild_nausea'] == true &&
+        _answers['epigastric_fullness'] == true &&
+        _answers['illness_duration_6_7'] == true;
+    if (hasClause146Evidence) {
+      _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
+      return;
+    }
+
+    final hasClause147Evidence =
+        primary == '少阳' &&
+        _answers['illness_duration_5_6'] == true &&
+        _answers['shaoyang147_prior_sweat_then_purge'] == true &&
+        _answers['chest_minor_knot'] == true &&
+        _answers['urine_difficult'] == true &&
+        _answers['thirsty'] == true &&
+        _answers['nausea'] == false &&
+        _answers['vomiting'] != true &&
+        _answers['head_sweat'] == true &&
+        _answers['alternating_chills'] == true &&
+        _answers['irritable'] == true;
+    if (hasClause147Evidence) {
+      _combinedPatternCondition = CombinedPatternCondition.shaoyangTaiyin;
+      return;
+    }
+
+    final hasClause163Evidence =
+        primary == '太阳' &&
+        _answers['temperature'] == 'fever_chills' &&
+        sunScore >= 3 &&
+        _answers['diarrhea'] == true &&
+        taiyinScore >= 2 &&
+        _answers['history_mistreatment'] == true &&
+        _answers['sun_taiyin_repeated_purgation'] == true &&
+        _answers['epigastric_hard'] == true &&
+        !(_answers['fever'] == true &&
+          _answers['has_sweat'] == true &&
+          _answers['asthma'] == true &&
+          _pulseType == '促');
+    if (hasClause163Evidence) {
+      _combinedPatternCondition = CombinedPatternCondition.sunTaiyin;
+      return;
+    }
+
     // 三阳并病优先于任意两经子型；只有关键证据齐备才占用分支。
     if (primary == '太阳' && yangmingScore >= 2 && shaoyangScore >= 2 &&
         _answers['drowsy'] == true && _answers['has_sweat'] == true) {
@@ -1002,20 +1119,6 @@ class DiagnosticEngine {
       return;
     }
 
-    // 第146条柴胡桂枝汤：发热微恶寒、支节烦疼、微呕、心下支结四项必须齐备。
-    // 单独口苦/咽干不能触发该方。
-    final hasClause146Evidence =
-        primary == '太阳' &&
-        _answers['temperature'] == 'fever_chills' &&
-        _answers['joint_pain'] == true &&
-        _answers['nausea'] == true &&
-        _answers['epigastric_fullness'] == true;
-    if (hasClause146Evidence) {
-      _combinedMeridian = '少阳';
-      _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
-      return;
-    }
-
     if (primary == '太阳' && shaoyangScore >= 2 &&
         (_answers['nausea'] == true || _answers['vomiting'] == true)) {
       _combinedMeridian = '少阳';
@@ -1050,39 +1153,6 @@ class DiagnosticEngine {
     if (primary == '少阳' && jueyinScore >= 2) {
       _combinedMeridian = '厥阴';
       _combinedPatternCondition = CombinedPatternCondition.jueyinShaoyang;
-      return;
-    }
-    // 第147条柴胡桂枝干姜汤：逐项核对误汗后复下、胸胁微结、小便不利、
-    // 渴而不呕、但头汗出、往来寒热、心烦；不能用“太阴分数”替代。
-    if (primary == '少阳' &&
-        _answers['shaoyang147_prior_sweat_then_purge'] == true &&
-        _answers['chest_minor_knot'] == true &&
-        _answers['urine_difficult'] == true &&
-        _answers['thirsty'] == true &&
-        _answers['nausea'] == false &&
-        _answers['head_sweat'] == true &&
-        _answers['alternating_chills'] == true &&
-        _answers['irritable'] == true) {
-      _combinedMeridian = '少阳';
-      _combinedPatternCondition = CombinedPatternCondition.shaoyangTaiyin;
-      return;
-    }
-
-    if (primary == '太阳' &&
-        _answers['temperature'] == 'fever_chills' &&
-        sunScore >= 3 &&
-        _answers['diarrhea'] == true &&
-        taiyinScore >= 2 &&
-        _answers['history_mistreatment'] == true &&
-        _answers['sun_taiyin_repeated_purgation'] == true &&
-        _answers['epigastric_hard'] == true &&
-        !(_answers['temperature'] == 'fever_chills' &&
-          _answers['fever'] == true &&
-          _answers['has_sweat'] == true &&
-          _answers['asthma'] == true &&
-          _pulseType == '促')) {
-      _combinedMeridian = '太阴';
-      _combinedPatternCondition = CombinedPatternCondition.sunTaiyin;
       return;
     }
   }
@@ -1244,6 +1314,21 @@ class DiagnosticEngine {
       _answers['shaoyang147_treatment_sequence_answered'] = true;
       _answers['shaoyang147_prior_sweat_then_purge'] =
           answer == '先发汗后又误下';
+    }
+    if (questionKey == 'clause146_mild_nausea') {
+      _answers['clause146_mild_nausea_answered'] = true;
+      if (answer.contains('微呕') || answer.contains('恶心')) {
+        _answers['clause146_mild_nausea'] = true;
+      } else if (answer.contains('没有')) {
+        _answers['clause146_mild_nausea'] = false;
+      } else {
+        _answers.remove('clause146_mild_nausea');
+      }
+    }
+    if (questionKey == 'illness_duration') {
+      _answers['illness_duration_answered'] = true;
+      _answers['illness_duration_5_6'] = answer.contains('5—6天');
+      _answers['illness_duration_6_7'] = answer.contains('6—7天');
     }
     // 太阳跟进：辨喘证
     if (questionKey == 'breathing') {
