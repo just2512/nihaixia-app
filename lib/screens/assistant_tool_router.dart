@@ -256,7 +256,7 @@ class AssistantToolRouter {
     description: '打开传统签谱与求签页面；仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['三山国王', '三山灵签', '灵签'],
-    actionWords: ['求签', '抽签', '查看', '查签', '打开'],
+    actionWords: ['求签', '抽签', '抽', '查看', '查签', '打开'],
     builder: _buildSanshan,
   );
 
