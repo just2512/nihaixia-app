@@ -70,7 +70,7 @@ class AssistantToolRouter {
     id: 'yunqi',
     title: '五运六气推算',
     description: '打开本地五运六气计算器。',
-    modes: {AssistantMode.tools},
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['五运六气', '运气推算', '岁运司天在泉'],
     actionWords: ['推算', '计算', '算一下', '起算', '帮我算'],
     builder: _buildYunqi,
