@@ -40,6 +40,36 @@ void main() {
       expect(restored.createSnapshot().pulseTypeSecondary, '滑');
     });
 
+    test('舌脉边界拒绝未知值和把组合脉误写成单脉', () {
+      final adapter = TcmInterviewAdapter();
+      expect(
+        () => adapter.answerTonguePulse(tongueCoating: '不存在的舌苔'),
+        throwsArgumentError,
+      );
+      expect(
+        () => adapter.answerTonguePulse(primaryPulse: '浮数'),
+        throwsArgumentError,
+      );
+      expect(
+        () => adapter.answerTonguePulse(
+          primaryPulse: '弦',
+          secondaryPulse: '不存在的兼脉',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('舌脉解释性标签在边界处归一为 canonical 值', () {
+      final adapter = TcmInterviewAdapter();
+      adapter.answerTonguePulse(
+        tongueCoating: '白厚（舌苔）',
+        primaryPulse: '微弱（脉象）',
+      );
+      final snapshot = adapter.createSnapshot();
+      expect(snapshot.tongueCoating, '白厚');
+      expect(snapshot.pulseType, '微弱');
+    });
+
     test('十问答案必须与引擎规范选项完全一致', () {
       final adapter = TcmInterviewAdapter();
       final first = adapter.tenQuestionPrompts.first;
