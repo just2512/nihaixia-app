@@ -884,6 +884,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0),
       child: Wrap(
+        key: const ValueKey('assistant-mode-selector'),
         alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: AppSpacing.sm,
