@@ -12,6 +12,7 @@ import '../data/settings_repository.dart';
 import '../models/diagnosis.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/bookmark.dart';
+import '../services/tcm_interview_adapter.dart';
 import '../data/database_helper.dart';
 import 'formula_detail_screen.dart';
 import 'meridian_detail_screen.dart';
@@ -60,6 +61,8 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final DiagnosticEngine _engine = DiagnosticEngine();
+  late final TcmInterviewAdapter _interview =
+      TcmInterviewAdapter(engine: _engine);
   final List<_ChatBubble> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _showOptions = false;
@@ -121,7 +124,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _saveSnapshot() {
     _stepHistory.add(_StepSnapshot(
       messages: List.from(_messages),
-      engineSnapshot: _engine.createSnapshot(),
+      engineSnapshot: _interview.createSnapshot(),
       options: List.of(_currentOptions),
     ));
     _canGoBack = true;
@@ -133,7 +136,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.clear();
       _messages.addAll(snapshot.messages);
-      _engine.restoreSnapshot(snapshot.engineSnapshot);
+      _interview.restoreSnapshot(snapshot.engineSnapshot);
       _currentOptions = snapshot.options;
       _showOptions = true;
       _canGoBack = _stepHistory.isNotEmpty;
@@ -163,7 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _selectTemperature(String key, String label) {
     _saveSnapshot();
     _addUserMessage(label);
-    _engine.answerTemperaturePattern(key);
+    _interview.answerTemperature(key);
     _showTonguePulseInput();
   }
 
@@ -183,7 +186,7 @@ class _ChatScreenState extends State<ChatScreen> {
           icon: Icons.skip_next,
           onTap: () {
             _addUserMessage('跳过舌诊脉诊');
-            _engine.answerTonguePulse();
+            _interview.answerTonguePulse();
             _showTenQuestion(0);
           },
         ),
@@ -308,11 +311,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   label = '舌诊脉诊：未选择';
                 }
                 _addUserMessage(label);
-                _engine.answerTonguePulse(
+                _interview.answerTonguePulse(
                   tongueCoating: _selectedTongueCoating,
                   tongueShape: _selectedTongueShape,
-                  pulseType: _selectedPulse,
-                  pulseTypeSecondary: _selectedPulseSecondary,
+                  primaryPulse: _selectedPulse,
+                  secondaryPulse: _selectedPulseSecondary,
                 );
                 _showTenQuestion(0);
               },
@@ -344,7 +347,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 onTap: () {
                   _saveSnapshot();
                   _addUserMessage(o);
-                  _engine.answerTenQuestion(q.key, o);
+                  _interview.answerTenQuestion(q.key, o);
                   _showTenQuestion(index + 1);
                 },
               ))
@@ -454,7 +457,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    final result = _engine.diagnose();
+    final result = _interview.diagnose();
     if (result != null) {
       _addBotMessage('好，十问已经完成了。让我根据你的情况来分析...\n\n'
           '你的情况：${_engine.selectedSymptoms.join("、")}\n\n'
@@ -495,7 +498,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 onTap: () {
                   _saveSnapshot();
                   _addUserMessage(o);
-                  _engine.answerFollowUp(q.key, o);
+                  _interview.answerFollowUp(q.key, o);
                   _showFollowUpQuestion(
                     questions,
                     index + 1,
@@ -519,13 +522,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showResult() {
-    final result = _engine.diagnose();
+    final result = _interview.diagnose();
     if (result == null) return;
 
     setState(() => _showOptions = false);
 
     // 脏腑证据层当前只展示 App 原始问答；未经经典来源核验的脏腑归属保持 MISSING。
-    final zangFuEvidence = _engine.buildZangFuEvidence();
+    final zangFuEvidence = _interview.buildZangFuEvidence();
     if (zangFuEvidence.hasAnsweredEvidence) {
       const questionLabels = <String, String>{
         'temperature': '寒热',
