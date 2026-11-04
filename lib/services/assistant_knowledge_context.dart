@@ -38,7 +38,11 @@ class AssistantKnowledgeContextBuilder {
     final normalized = query.trim();
     if (normalized.isEmpty) return '';
     final base = build(normalized);
-    if (!_knowledgeQueryCues.any(normalized.contains)) {
+    final matchesBundledEntry =
+        FormulaRepository.getAll().any((item) => normalized.contains(item.name)) ||
+        HerbRepository.getAll().any((item) => normalized.contains(item.name)) ||
+        AcupointRepository.getAll().any((item) => normalized.contains(item.name));
+    if (!_knowledgeQueryCues.any(normalized.contains) && !matchesBundledEntry) {
       return base;
     }
     final buffer = StringBuffer();
