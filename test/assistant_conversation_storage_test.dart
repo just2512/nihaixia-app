@@ -128,4 +128,24 @@ void main() {
     expect(conversations.single['message_count'], 1);
   });
 
+
+  test('默认历史列表不截断超过 100 条的会话', () async {
+    final store = DatabaseHelper.instance;
+    for (var index = 0; index < 105; index++) {
+      final id = await store.createAssistantConversation(title: '会话 $index');
+      await store.saveAssistantMessage(
+        conversationId: id,
+        role: 'user',
+        content: '第 $index 条会话内容',
+      );
+    }
+
+    final all = await store.getAssistantConversations();
+    expect(all, hasLength(105));
+    expect(all.first['title'], '会话 104');
+    expect(all.last['title'], '会话 0');
+    expect(await store.getAssistantConversations(limit: 20), hasLength(20));
+  });
+
+
 }
