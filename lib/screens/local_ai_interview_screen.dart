@@ -732,11 +732,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final id = await DatabaseHelper.instance.createAssistantConversation(
         mode: 'unified',
       );
-      await DatabaseHelper.instance.saveAssistantMessage(
-        conversationId: id,
-        role: 'assistant',
-        content: _assistantWelcomeMessage,
-      );
       return id;
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 无法创建会话：$error\n$stack');
