@@ -1195,6 +1195,8 @@ class DiagnosticEngine {
       'combined_treatment_history',
       'sun_taiyin_repeated_purgation',
       'food_stagnation',
+      'shaoyang147_treatment_sequence',
+      'illness_duration',
     };
     const nonSymptomAnswers = {
       '没有此症状',
@@ -1205,6 +1207,9 @@ class DiagnosticEngine {
       '不知道',
       '都没有',
       '正常',
+      '不想吐',
+      '没有呕吐',
+      '不恶心',
     };
     if (!evidenceOnlyKeys.contains(questionKey) &&
         !nonSymptomAnswers.contains(answer.trim())) {

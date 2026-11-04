@@ -46,7 +46,7 @@
 ## 调用链
 
 - 结构化主路径：`diagnose()` → `_detectCombinedPattern()` → `diagnoseByRules()` → `_matchedCombinedPattern()` → 覆盖最终方剂与结果字段。
-- 分支优先级：第146、147、163条逐项满足原文的特异证据先于宽泛太阳阳明、太阳少阳、少阳阳明组合；不允许分数分支遮蔽已满足的原文方证。
+- 分支优先级：第146、147、163条逐项满足原文的特异证据先于宽泛太阳阳明、太阳少阳、少阳阳明组合；三项重叠输入均有回归测试，不允许分数分支遮蔽已满足的原文方证。
 - 旧兜底路径：结构化规则无命中 → `_diagnoseMiscellaneous()` 或六经硬编码分支 → 使用同一 `_matchedCombinedPattern()` 结果覆盖最终字段。
 - 对 `formula == ''` 的条目：最终 `formula` 为空、`recommendedFormulas` 为空、`prescription` 为空，并设置 `recommendConsult`；不得退回结构化规则或旧兜底方剂。
 - 第301条少阴兼表：必须在少阴问诊中明确回答“反发热+脉沉”，且脉象 canonical 值为“沉”，才允许推荐麻黄附子细辛汤；不写入合病经。

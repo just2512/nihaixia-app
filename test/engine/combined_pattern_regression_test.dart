@@ -811,7 +811,7 @@ void main() {
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
       // 旧六经兜底只验证方证结果传播；第146条不标记为明确合病。
       expect(result.pattern,
-          '太阳表证未解，兼见少阳证：发热微恶寒、支节烦痛、微呕、心下支结');
+          '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去（第146条；非明文合病）');
       expect(result.combinedMeridian, isNull);
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
@@ -999,6 +999,82 @@ void main() {
       expect(result, isNotNull);
       expect(result!.formula, '麻黄附子细辛汤');
       expect(result.combinedMeridian, isNull);
+    });
+  });
+
+  group('特异方证优先级与分支遮蔽', () {
+    test('第146条完整证据优先于太阳阳明呕吐宽泛分支', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'joint_pain': true,
+          'clause146_mild_nausea': true,
+          'illness_duration_6_7': true,
+          'epigastric_fullness': true,
+          'constipated': true,
+          'nausea': true,
+          'bitter_mouth': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunShaoyangBase);
+    });
+
+    test('第147条完整证据优先于少阳阳明下利滑数脉分支', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'illness_duration_5_6': true,
+          'shaoyang147_prior_sweat_then_purge': true,
+          'chest_minor_knot': true,
+          'urine_difficult': true,
+          'thirsty': true,
+          'nausea': false,
+          'vomiting': false,
+          'head_sweat': true,
+          'alternating_chills': true,
+          'irritable': true,
+          'constipated': true,
+          'diarrhea': true,
+          'food_stagnation': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '滑',
+        pulseTypeSecondary: '数',
+      ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.shaoyangTaiyin);
+    });
+
+    test('第163条完整证据优先于太阳少阳下利宽泛分支', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'diarrhea': true,
+          'history_mistreatment': true,
+          'sun_taiyin_repeated_purgation': true,
+          'epigastric_hard': true,
+          'bitter_mouth': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunTaiyin);
     });
   });
 
