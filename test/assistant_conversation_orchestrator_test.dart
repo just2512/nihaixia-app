@@ -32,6 +32,15 @@ void main() {
       expect(decision.tool?.id, 'yunqi');
     });
 
+    test('玄学助手模式下也能直接调度五运六气计算器', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '推算五运六气',
+        selectedMode: AssistantMode.metaphysics,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool?.id, 'yunqi');
+    });
+
     test('明确排盘动作自动进入玄学工具域', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '帮我排八字',
