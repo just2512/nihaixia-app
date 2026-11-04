@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart' show Timeout;
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -61,7 +62,10 @@ void main() {
     await db.delete('assistant_conversations');
   });
 
-  testWidgets('打开历史会话后继续发送，消息仍写入原会话', (tester) async {
+  testWidgets(
+    '打开历史会话后继续发送，消息仍写入原会话',
+    (tester) async {
+      print('history-resume: begin');
     final store = DatabaseHelper.instance;
     final conversationId = await store.createAssistantConversation(
       title: '可继续的历史会话',
@@ -90,13 +94,16 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    print('history-resume: initial screen settled');
 
     await tester.tap(find.byTooltip('历史对话'));
     await tester.pumpAndSettle();
+    print('history-resume: history list settled');
     expect(find.text('可继续的历史会话'), findsOneWidget);
 
     await tester.tap(find.text('可继续的历史会话'));
     await tester.pumpAndSettle();
+    print('history-resume: selected history restored');
 
     expect(service.restoredTranscript, contains('我最近口苦，睡眠也不好'));
     expect(service.restoredTranscript, contains('口苦持续多久？'));
@@ -108,11 +115,14 @@ void main() {
     await tester.enterText(find.byType(TextField), '继续补充：舌苔薄白');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
+    print('history-resume: send tapped');
     await tester.pumpAndSettle();
+    print('history-resume: send settled');
 
     final messages = await store.getAssistantMessages(
       conversationId: conversationId,
     );
+    print('history-resume: messages fetched');
     expect(messages, hasLength(4));
     expect(messages[2]['role'], 'user');
     expect(messages[2]['content'], '继续补充：舌苔薄白');
@@ -123,5 +133,7 @@ void main() {
     expect(conversations, hasLength(1));
     expect(conversations.single['id'], conversationId);
     expect(tester.takeException(), isNull);
-  });
+    },
+    timeout: const Timeout(Duration(seconds: 45)),
+  );
 }
