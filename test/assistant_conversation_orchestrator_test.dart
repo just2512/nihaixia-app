@@ -150,6 +150,15 @@ void main() {
       ]));
     });
 
+    test('玄学工具路由保持民俗工具边界，不混入医学问诊', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我测算小儿关煞',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool?.id, 'guansha');
+    });
+
     test('工具角色能路由到此前未接入 AI 的实用工具', () {
       final cases = <({String query, String id})>[
         (query: '打开诊断历史趋势', id: 'diagnosis_history'),
