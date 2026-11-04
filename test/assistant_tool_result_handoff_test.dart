@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/yijing_engine.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
+import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -179,6 +180,45 @@ void main() {
     expect(returnedResult, contains('易经起卦结果'));
     expect(returnedResult, contains(cast.primary.name));
     expect(returnedResult, contains('民俗文化参考'));
+  });
+
+
+  testWidgets('易经结果页返回时会继续退出工具页并回到统一助手', (tester) async {
+    String? returnedResult;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                returnedResult = await Navigator.push<String>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const YiJingScreen(returnResultOnComplete: true),
+                  ),
+                );
+              },
+              child: const Text('打开易经工具'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开易经工具'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '起卦').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
+    await tester.tap(find.byTooltip('返回 AI 助手'));
+    await tester.pumpAndSettle();
+
+    expect(returnedResult, isNotNull);
+    expect(returnedResult, contains('易经起卦结果'));
+    expect(tester.takeException(), isNull);
   });
 
 }
