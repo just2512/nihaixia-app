@@ -19,7 +19,7 @@ import 'disease_repository.dart';
 import 'formula_repository.dart';
 import 'herb_repository.dart';
 
-/// 全局提取缓存：按方剂字段原文 memo，同文本不重算（全量 1113 例提取约 3.4s，
+/// 全局提取缓存：按方剂字段原文 memo，同文本不重算（全量医案提取约数秒，
 /// memo 后重复打开详情/洞察/相关医案命中缓存，避免反复卡顿）。
 final Map<String, List<String>> _formulaNameCache = {};
 final Map<String, List<String>> _herbNameCache = {};
