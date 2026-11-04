@@ -672,27 +672,6 @@ class DiagnosticEngine {
       _answers['fatigue'] = answer.contains('容易疲倦') || answer.contains('疲倦');
       _answers['qi_rushing'] = answer.contains('气上撞心') || answer.contains('气往上冲');
     }
-    if (questionKey == 'nausea') {
-      final explicitlyNegative =
-          answer.contains('不想吐') || answer == '没有' || answer == '不恶心';
-      _answers['nausea'] = !explicitlyNegative &&
-          (answer.contains('呕') || answer.contains('吐') || answer.contains('恶心'));
-    }
-    if (questionKey == 'chest') {
-      _answers['chest_minor_knot'] = answer.contains('微结');
-      _answers['epigastric_fullness'] =
-          answer.contains('心下') || answer.contains('支结');
-      _answers['chest_fullness'] =
-          answer.contains('胸胁') || answer.contains('胸满');
-    }
-    if (questionKey == 'body_pain') {
-      _answers['joint_pain'] = answer.contains('支节') ||
-          answer.contains('骨节') || answer.contains('关节');
-    }
-    if (questionKey == 'shaoyang147_treatment_sequence') {
-      _answers['shaoyang147_prior_sweat_then_purge'] =
-          answer == '先发汗后又误下';
-    }
     // 注意：舌诊数据已统一由 Step 3 (answerTonguePulse) 处理，不再在此重复
     if (questionKey == 'pain') {
       _answers['headache_front'] = answer.contains('前额');
@@ -1232,6 +1211,39 @@ class DiagnosticEngine {
       _answers['hand_foot_sweat'] = answer.contains('手足汗');
       _answers['profuse_sweat'] =
           answer.contains('大汗') || answer.contains('汗出不止');
+    }
+    if (questionKey == 'nausea') {
+      _answers['nausea_answered'] = true;
+      final explicitlyNegative = answer.contains('不想吐') ||
+          answer.contains('没有呕吐') || answer == '没有' ||
+          answer == '不恶心';
+      final explicitlyPositive = answer.contains('呕') ||
+          answer.contains('吐') || answer.contains('恶心');
+      if (explicitlyNegative) {
+        _answers['nausea'] = false;
+        _answers['vomiting'] = false;
+      } else if (explicitlyPositive) {
+        _answers['nausea'] = true;
+      } else {
+        _answers.remove('nausea');
+      }
+    }
+    if (questionKey == 'chest') {
+      _answers['chest_minor_knot'] = answer.contains('微结');
+      _answers['epigastric_fullness'] =
+          answer.contains('心下') || answer.contains('支结');
+      _answers['chest_fullness'] =
+          answer.contains('胸胁') || answer.contains('胸满');
+    }
+    if (questionKey == 'body_pain') {
+      _answers['body_pain_answered'] = true;
+      _answers['joint_pain'] = answer.contains('支节') ||
+          answer.contains('骨节') || answer.contains('关节');
+    }
+    if (questionKey == 'shaoyang147_treatment_sequence') {
+      _answers['shaoyang147_treatment_sequence_answered'] = true;
+      _answers['shaoyang147_prior_sweat_then_purge'] =
+          answer == '先发汗后又误下';
     }
     // 太阳跟进：辨喘证
     if (questionKey == 'breathing') {
