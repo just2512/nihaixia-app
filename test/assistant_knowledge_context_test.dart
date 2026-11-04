@@ -67,6 +67,15 @@ void main() {
     expect(context, contains('assets/guji/lingshu.txt'));
   });
 
+  test('问诊检索可调用经典全文索引但排除未核验医案库', () async {
+    final context = await AssistantKnowledgeContextBuilder.buildAsync(
+      '葛根加半夏汤',
+      includeMedicalCases: false,
+    );
+    expect(context, contains('App经典全文索引'));
+    expect(context, isNot(contains('[App医案库')));
+  });
+
   test('异步检索医案时标注内部序号与原始出处缺失', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库'));

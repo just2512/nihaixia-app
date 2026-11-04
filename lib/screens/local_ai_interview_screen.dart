@@ -692,10 +692,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     switch (mode) {
       case AssistantMode.automatic:
       case AssistantMode.consultation:
-        // Consultation can reference the app's in-memory TCM catalog, but
-        // never imports the medical-case corpus or turns a reference into
-        // an individual diagnosis/prescription.
-        final knowledge = AssistantKnowledgeContextBuilder.build(text);
+        // Consultation uses the same bundled classical-text and TCM retrieval
+        // as learning, but excludes unverified case records to avoid case-based
+        // diagnostic anchoring. Retrieved text remains reference-only.
+        final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(
+          text,
+          includeMedicalCases: false,
+        );
         final knowledgeContext = knowledge.isEmpty
             ? 'App 本地知识库本轮未命中可引用条目（MISSING）。'
             : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n$knowledge';
@@ -719,7 +722,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
         return _service.sendMessageWithContext(text, context: context);
       case AssistantMode.metaphysics:
-        final context = '当前角色：玄学助手。\n${AssistantMode.metaphysics.promptHint}\n'
+        final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
             '可用工具：五运六气推算、紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、每日黄历。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
         return _service.sendMessageWithContext(text, context: context);

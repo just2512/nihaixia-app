@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 
 void main() {
   test('问诊模式只把明确结构化辨证请求交给规则问诊', () {
@@ -41,6 +42,18 @@ void main() {
       AssistantToolRouter.match('帮我用易经起卦', AssistantMode.metaphysics)?.id,
       'yijing',
     );
+  });
+
+  test('玄学角色名称和子午流注工具回传配置一致', () {
+    expect(AssistantMode.metaphysics.label, '玄学大师');
+    final tool = AssistantToolRouter.match(
+      '帮我做子午流注开穴',
+      AssistantMode.tools,
+    );
+    expect(tool?.id, 'ziwu_liuzhu');
+    final screen = tool!.builder();
+    expect(screen, isA<ZiWuLiuZhuScreen>());
+    expect((screen as ZiWuLiuZhuScreen).returnResultOnComplete, isTrue);
   });
 
   test('学习模式不会因为提到工具名称而自动跳转', () {

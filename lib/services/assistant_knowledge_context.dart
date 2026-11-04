@@ -34,7 +34,10 @@ class AssistantKnowledgeContextBuilder {
   /// Extends the fast in-memory retrieval with the bundled classical-text and
   /// medical-case libraries. Case excerpts carry an explicit provenance warning:
   /// the local table sequence is not a primary-source locator.
-  static Future<String> buildAsync(String query) async {
+  static Future<String> buildAsync(
+    String query, {
+    bool includeMedicalCases = true,
+  }) async {
     final normalized = query.trim();
     if (normalized.isEmpty) return '';
     final base = build(normalized);
@@ -180,27 +183,29 @@ class AssistantKnowledgeContextBuilder {
       }
     }
 
-    try {
-      final cases = await getAllMedicalCases();
-      final hits = cases
-          .where((medicalCase) => terms.any(medicalCase.matches))
-          .take(2)
-          .toList(growable: false);
-      for (final medicalCase in hits) {
-        buffer
-          ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
-          ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
-          ..writeln('诊断字段：${medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis}')
-          ..writeln('病机字段：${medicalCase.mechanism.isEmpty ? 'MISSING' : medicalCase.mechanism}')
-          ..writeln('方剂字段：${medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula}')
-          ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
-          ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
-          ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
-          ..writeln('来源定位：MISSING（内部序号不是原始病例页码或稳定来源 ID）')
-          ..writeln('使用限制：仅作为本地整理记录检索，不代表已核验病例原文或疗效证据。');
+    if (includeMedicalCases) {
+      try {
+        final cases = await getAllMedicalCases();
+        final hits = cases
+            .where((medicalCase) => terms.any(medicalCase.matches))
+            .take(2)
+            .toList(growable: false);
+        for (final medicalCase in hits) {
+          buffer
+            ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
+            ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
+            ..writeln('诊断字段：${medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis}')
+            ..writeln('病机字段：${medicalCase.mechanism.isEmpty ? 'MISSING' : medicalCase.mechanism}')
+            ..writeln('方剂字段：${medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula}')
+            ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
+            ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
+            ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
+            ..writeln('来源定位：MISSING（内部序号不是原始病例页码或稳定来源 ID）')
+            ..writeln('使用限制：仅作为本地整理记录检索，不代表已核验病例原文或疗效证据。');
+        }
+      } catch (_) {
+        buffer.writeln('[App医案库] 读取失败，状态 MISSING。');
       }
-    } catch (_) {
-      buffer.writeln('[App医案库] 读取失败，状态 MISSING。');
     }
 
     final result = buffer.toString().trim();
