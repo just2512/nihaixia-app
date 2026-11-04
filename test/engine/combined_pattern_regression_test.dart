@@ -243,7 +243,7 @@ void main() {
       final result = engine.diagnose();
       expect(result, isNotNull);
       expect(result!.formula, '葛根黄芩黄连汤');
-      expect(result.pattern, contains('第34条'));
+      expect(result.pattern, contains('葛根黄芩黄连汤证'));
     });
 
     test('第34条缺少喘或汗出证据时不得触发葛根黄芩黄连汤', () {
@@ -527,7 +527,7 @@ void main() {
       (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
       (name: '太阳少阴两感型', primary: '太阳', answers: {'drowsy': true}, expected: CombinedPatternCondition.sunShaoyinTwoCold),
       (name: '少阳太阴型', primary: '少阳', answers: {'diarrhea': true, 'abdominal_pain': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
-      (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true}, expected: CombinedPatternCondition.sunTaiyin),
+      (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true, 'history_mistreatment': true, 'sun_taiyin_repeated_purgation': true, 'epigastric_hard': true}, expected: CombinedPatternCondition.sunTaiyin),
       (name: '太阳阳明下利基础型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false}, expected: CombinedPatternCondition.sunYangmingBase),
       (name: '少阳阳明下利滑数且有食积型', primary: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, expected: CombinedPatternCondition.shaoyangYangmingBase),
     ];
