@@ -771,6 +771,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required String assistantText,
     AssistantMode? mode,
     String? attachmentType,
+    String? toolId,
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -801,7 +802,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         conversationId: id,
         role: 'assistant',
         content: assistantText,
-        metadata: 'mode=${activeMode.name};selectedMode=${_assistantMode.name}',
+        metadata: [
+          'mode=${activeMode.name}',
+          'selectedMode=${_assistantMode.name}',
+          if (toolId != null) 'tool=$toolId',
+        ].join(';'),
       );
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
@@ -839,6 +844,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       userText: userText,
       assistantText: instruction,
       mode: activeMode,
+      toolId: tool.id,
     );
     _scrollToBottom();
   }
@@ -1037,7 +1043,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
       }
       final isUser = role == 'user';
-      restoredMessages.add(_InterviewMessage(text: content, isUser: isUser));
+      final pendingToolId = isUser
+          ? null
+          : RegExp(r'(?:^|;)tool=([a-z0-9_]+)').firstMatch(metadata)?.group(1);
+      final pendingTool = pendingToolId == null
+          ? null
+          : AssistantToolRouter.byId(pendingToolId);
+      restoredMessages.add(_InterviewMessage(
+        text: content,
+        isUser: isUser,
+        actionLabel: pendingTool == null ? null : '打开${pendingTool.title}',
+        onAction: pendingTool == null
+            ? null
+            : () => _openTool(pendingTool, mode: restoredEffectiveMode ??
+                (pendingTool.modes.contains(AssistantMode.metaphysics)
+                    ? AssistantMode.metaphysics
+                    : pendingTool.modes.contains(AssistantMode.tools)
+                        ? AssistantMode.tools
+                        : AssistantMode.consultation)),
+      ));
       transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
       if (isUser && !metadata.contains('replayable=false')) {
         final attachmentNote = content.indexOf('（另附');
