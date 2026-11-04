@@ -121,6 +121,9 @@ class LocalAiInterviewScreen extends StatefulWidget {
   State<LocalAiInterviewScreen> createState() => _LocalAiInterviewScreenState();
 }
 
+const _assistantWelcomeMessage =
+    '你可以直接描述身体情况、询问中医知识，或提出工具任务。助手会先识别任务类型；意图不清时会先向你确认。';
+
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
   late final LocalAiImagePicker _imagePicker;
@@ -141,7 +144,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<_InterviewMessage> _messages = [
     const _InterviewMessage(
-      text: '你可以直接描述身体情况、询问中医知识，或提出工具任务。助手会先识别任务类型；意图不清时会先向你确认。',
+      text: _assistantWelcomeMessage,
       isUser: false,
     ),
   ];
@@ -732,7 +735,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await DatabaseHelper.instance.saveAssistantMessage(
         conversationId: id,
         role: 'assistant',
-        content: '可以先说说目前最困扰你的情况。比如从什么时候开始、具体有什么感觉、什么情况下会加重或缓解。一次说一两件事就可以。',
+        content: _assistantWelcomeMessage,
       );
       return id;
     } catch (error, stack) {
