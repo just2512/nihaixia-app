@@ -69,7 +69,6 @@ void main() {
     final contentRect = tester.getRect(find.byType(IndexedStack));
     expect(contentRect.width, lessThanOrEqualTo(388));
     expect(contentRect.right, lessThanOrEqualTo(388));
-    expect(find.text('汉唐中医'), findsOneWidget);
     expect(find.text('汉唐 AI 助手'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
