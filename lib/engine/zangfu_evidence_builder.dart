@@ -7,6 +7,10 @@ class ZangFuEvidenceBuilder {
   static ZangFuEvidenceAssessment build({
     required Map<String, int> qAnswers,
     required Set<String> extSymptoms,
+    String? tongueCoating,
+    String? tongueShape,
+    String? pulseType,
+    String? pulseTypeSecondary,
   }) {
     final questions = [
       ...DiagnosticRules.tenQuestions,
@@ -56,6 +60,27 @@ class ZangFuEvidenceBuilder {
         sourceId: 'app_question:${question.key}',
       ));
     }
+
+
+    void addRawEvidence(String key, String label, String? value) {
+      final normalized = value?.trim();
+      if (normalized == null || normalized.isEmpty) return;
+      records.add(ZangFuEvidenceRecord(
+        questionKey: key,
+        questionLabel: label,
+        optionIndex: null,
+        answerText: normalized,
+        state: _isUnknown(normalized)
+            ? ZangFuEvidenceAnswerState.unknown
+            : ZangFuEvidenceAnswerState.answered,
+        sourceId: 'tongue_pulse:$key',
+      ));
+    }
+
+    addRawEvidence('tongue_coating', '舌苔', tongueCoating);
+    addRawEvidence('tongue_shape', '舌形', tongueShape);
+    addRawEvidence('pulse_type', '主脉', pulseType);
+    addRawEvidence('pulse_type_secondary', '兼脉', pulseTypeSecondary);
 
     return ZangFuEvidenceAssessment(
       records: List.unmodifiable(records),
