@@ -219,9 +219,11 @@ class AssistantToolRouter {
       const XiaoliurenScreen(returnResultOnComplete: true);
   static Widget _buildMeihua() =>
       const MeihuaScreen(returnResultOnComplete: true);
-  static Widget _buildDosage() => const DosageConverterScreen();
+  static Widget _buildDosage() =>
+      const DosageConverterScreen(returnResultOnComplete: true);
   static Widget _buildZiwu() => const ZiWuLiuZhuScreen();
   static Widget _buildGuji() => const GujiLibraryScreen();
   static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
-  static Widget _buildAlmanac() => const DailyAlmanacScreen();
+  static Widget _buildAlmanac() =>
+      const DailyAlmanacScreen(returnResultOnComplete: true);
 }
