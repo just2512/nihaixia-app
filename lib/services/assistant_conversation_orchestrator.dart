@@ -116,7 +116,7 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: effectiveMode, tool: tool);
     }
 
-    if (text.contains('排盘') || text.contains('命盘')) {
+    if (text.contains('排盘') || text.contains('排个盘') || text.contains('命盘')) {
       return const AssistantDispatchDecision(
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？',
