@@ -1222,10 +1222,16 @@ class DiagnosticEngine {
       _answers['bloody_stool'] = answer.contains('脓血');
     }
     // 太阳跟进：辨桂枝/麻黄/葛根汤
-    if (questionKey == 'sweating' && _answers['meridian'] == '太阳') {
-      _answers['has_sweat'] = answer.contains('有汗');
-      _answers['no_sweat'] = answer.contains('没汗');
-      _answers['profuse_sweat'] = answer.contains('汗出不止');
+    if (questionKey == 'sweating') {
+      _answers['no_sweat'] = answer.contains('没汗') ||
+          answer.contains('无汗') || answer.contains('不容易出汗');
+      _answers['has_sweat'] =
+          _answers['no_sweat'] != true && answer.contains('汗');
+      _answers['head_sweat'] = answer.contains('头汗');
+      _answers['night_sweat'] = answer.contains('盗汗');
+      _answers['hand_foot_sweat'] = answer.contains('手足汗');
+      _answers['profuse_sweat'] =
+          answer.contains('大汗') || answer.contains('汗出不止');
     }
     // 太阳跟进：辨喘证
     if (questionKey == 'breathing') {

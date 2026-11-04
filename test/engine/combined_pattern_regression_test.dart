@@ -704,7 +704,7 @@ void main() {
       });
     }
 
-    test('第256条关键证据不足时不遮蔽少阳太阴候选', () {
+    test('第256条证据不足时不误触发第147条少阳方证', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(
         stage: DiagnosticStage.meridianLocation,
@@ -835,6 +835,32 @@ void main() {
       expect(result.combinedMeridian, isNull);
     });
   });
+
+
+    test('第146条追问答案正确生成支节烦疼、微呕、心下支结证据', () {
+      final engine = DiagnosticEngine();
+      engine.answerFollowUp('body_pain', '支节烦疼（第146条线索）');
+      engine.answerFollowUp('nausea', '微呕');
+      engine.answerFollowUp('chest', '心下支结（第146条线索）');
+      final answers = engine.createSnapshot().answers;
+      expect(answers['joint_pain'], isTrue);
+      expect(answers['nausea'], isTrue);
+      expect(answers['epigastric_fullness'], isTrue);
+    });
+
+    test('第147条追问答案正确生成误汗复下、头汗及不呕证据', () {
+      final engine = DiagnosticEngine();
+      engine.answerFollowUp('shaoyang147_treatment_sequence', '先发汗后又误下');
+      engine.answerFollowUp('chest', '胸胁满+微结（→柴胡桂枝干姜汤）');
+      engine.answerFollowUp('sweating', '但头汗出');
+      engine.answerFollowUp('nausea', '不想吐');
+      final answers = engine.createSnapshot().answers;
+      expect(answers['shaoyang147_prior_sweat_then_purge'], isTrue);
+      expect(answers['chest_minor_knot'], isTrue);
+      expect(answers['head_sweat'], isTrue);
+      expect(answers['has_sweat'], isTrue);
+      expect(answers['nausea'], isFalse);
+    });
 
   group('原文条件与单经证分类', () {
     test('第146条缺少支节烦疼、微呕、心下支结时不触发柴胡桂枝汤', () {
