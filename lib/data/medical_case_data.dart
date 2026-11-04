@@ -341,7 +341,8 @@ class MedicalCase {
 
 /// 解析 markdown 表格文本为病例列表。
 /// 跳过表头（首格「序号」）与分隔行（含 `---`），仅收录首格为数字的行。
-/// 质量门禁：方剂为空 / 含「未公开」/ 占位「未提及」的医案直接剔除（无可用方剂）。
+/// 不按方剂字段过滤医案：方剂缺失本身是需要保留的病例信息，展示/检索时标记 MISSING，
+/// 不得因方剂缺失而从知识库删除整条病例。
 List<MedicalCase> parseMedicalCaseTable(String md) {
   final lines = md.split('\n');
   final cases = <MedicalCase>[];
@@ -378,12 +379,7 @@ List<MedicalCase> parseMedicalCaseTable(String md) {
       if (padded[i] == '---') padded[i] = '';
     }
 
-    // 质量门禁：无可用方剂的医案剔除（空 / 未公开 / 未提及）
-    final formula = padded[6];
-    if (formula.trim().isEmpty) continue;
-    if (formula.contains('未公开')) continue;
-    if (formula.trim() == '未提及') continue;
-
+    // 保留全部原始病例行；空方剂字段由详情/AI 检索明确标记 MISSING。
     cases.add(MedicalCase(
       seq: seq,
       date: padded[1],
