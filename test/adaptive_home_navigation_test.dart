@@ -383,4 +383,38 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('计数：1'), findsOneWidget);
   });
+  testWidgets(
+    'compact inner navigation avoids vertical labels at 200% text scale',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(775, 829);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(2),
+            ),
+            child: child!,
+          ),
+          home: AdaptiveHomeNavigation(
+            currentIndex: 0,
+            onDestinationSelected: (_) {},
+            destinations: _destinations,
+            screens: _screens(),
+          ),
+        ),
+      );
+
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.labelType, NavigationRailLabelType.none);
+      final content = tester.getRect(find.byType(IndexedStack));
+      expect(content.width, greaterThan(650));
+      expect(content.right, 775);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
 }

@@ -51,8 +51,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
     return NavigationRail(
       selectedIndex: widget.currentIndex,
       onDestinationSelected: widget.onDestinationSelected,
-      labelType:
-          extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+      labelType: NavigationRailLabelType.none,
       extended: extended,
       destinations: [
         for (final destination in widget.destinations)
