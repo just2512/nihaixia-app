@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
 
 import 'chat_screen.dart';
+import 'chenggu_bone_screen.dart';
+import 'critical_illness_list_screen.dart';
 import 'daily_almanac_screen.dart';
+import 'diagnosis_history_screen.dart';
 import 'dosage_converter_screen.dart';
+import 'dream_screen.dart';
+import 'guansha_screen.dart';
 import 'guji_library_screen.dart';
+import 'huangdi_siji_screen.dart';
 import 'medical_case_library_screen.dart';
 import 'meihua_screen.dart';
+import 'sanshan_lingqian_screen.dart';
+import 'saved_charts_screen.dart';
+import 'shousheng_debt_screen.dart';
+import 'solar_term_section_screen.dart';
 import 'ziwei_chart_screen.dart';
 import 'bazi_paipan_screen.dart';
 import 'xiaoliuren_screen.dart';
 import 'yijing_screen.dart';
 import 'yunqi_screen.dart';
+import 'yuxiaji_omen_screen.dart';
 import 'ziwuliuzhu_screen.dart';
 
 enum AssistantMode { automatic, consultation, learning, tools, metaphysics }
@@ -176,6 +187,119 @@ class AssistantToolRouter {
     builder: _buildAlmanac,
   );
 
+  // Existing ToolsScreen destinations must be addressable from the unified
+  // assistant as well. These screens remain the deterministic execution
+  // surface; the model only routes and explains, never fabricates results.
+  static const diagnosisHistory = AssistantToolDefinition(
+    id: 'diagnosis_history',
+    title: '诊断历史趋势',
+    description: '查看既有结构化辨证记录与六经变化趋势。',
+    modes: {AssistantMode.tools, AssistantMode.consultation},
+    aliases: ['诊断历史', '问诊历史', '辨证历史', '历史趋势'],
+    actionWords: ['查看', '打开', '回看', '趋势'],
+    builder: _buildDiagnosisHistory,
+  );
+
+  static const criticalIllness = AssistantToolDefinition(
+    id: 'critical_illness',
+    title: '闭门课重症资料',
+    description: '查阅 App 内置重症课程资料；不是个体治疗方案。',
+    modes: {AssistantMode.tools, AssistantMode.learning},
+    aliases: ['闭门课', '重症临床', '重症资料', '重症课程'],
+    actionWords: ['查阅', '查看', '学习', '打开', '介绍'],
+    builder: _buildCriticalIllness,
+  );
+
+  static const solarTerms = AssistantToolDefinition(
+    id: 'solar_terms',
+    title: '节气养生',
+    description: '查看二十四节气知识、起居与食养资料。',
+    modes: {AssistantMode.tools, AssistantMode.learning},
+    aliases: ['节气养生', '二十四节气', '节气知识'],
+    actionWords: ['查看', '学习', '查阅', '打开', '介绍'],
+    builder: _buildSolarTerms,
+  );
+
+  static const yuxiaji = AssistantToolDefinition(
+    id: 'yuxiaji_omen',
+    title: '玉匣灵兆',
+    description: '打开传统民俗身体兆占查询；仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['玉匣灵兆', '玉匣记', '面热占', '眼跳占', '耳鸣占', '心惊占'],
+    actionWords: ['查询', '查看', '起占', '打开', '推算'],
+    builder: _buildYuxiaji,
+  );
+
+  static const dream = AssistantToolDefinition(
+    id: 'dream',
+    title: '周公解梦',
+    description: '检索传统梦境释义；不作现实吉凶判断。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['周公解梦', '解梦', '梦境释义'],
+    actionWords: ['查询', '查看', '解释', '检索', '打开'],
+    builder: _buildDream,
+  );
+
+  static const guansha = AssistantToolDefinition(
+    id: 'guansha',
+    title: '小儿关煞',
+    description: '打开传统民俗关煞资料和排算页面；非医学结论。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['小儿关煞', '关煞', '小孩关煞'],
+    actionWords: ['查询', '查看', '测算', '排算', '打开'],
+    builder: _buildGuansha,
+  );
+
+  static const sanshan = AssistantToolDefinition(
+    id: 'sanshan_lingqian',
+    title: '三山国王灵签',
+    description: '打开传统签谱与求签页面；仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['三山国王', '三山灵签', '灵签'],
+    actionWords: ['求签', '抽签', '查看', '查签', '打开'],
+    builder: _buildSanshan,
+  );
+
+  static const chenggu = AssistantToolDefinition(
+    id: 'chenggu',
+    title: '袁天罡称骨',
+    description: '打开传统称骨计算；仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['称骨', '袁天罡', '称骨算命'],
+    actionWords: ['计算', '测算', '查询', '打开'],
+    builder: _buildChenggu,
+  );
+
+  static const shoushengDebt = AssistantToolDefinition(
+    id: 'shousheng_debt',
+    title: '受生债查询',
+    description: '查阅传统道教文献与民俗计算；不构成宗教或财务建议。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['受生债', '禄库受生经', '五斗金章'],
+    actionWords: ['查询', '计算', '测算', '打开'],
+    builder: _buildShoushengDebt,
+  );
+
+  static const huangdiSiji = AssistantToolDefinition(
+    id: 'huangdi_siji',
+    title: '轩辕黄帝四季歌',
+    description: '打开传统四季歌查询；仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['黄帝四季歌', '轩辕黄帝四季歌', '四季歌'],
+    actionWords: ['查询', '查看', '测算', '打开'],
+    builder: _buildHuangdiSiji,
+  );
+
+  static const savedCharts = AssistantToolDefinition(
+    id: 'saved_charts',
+    title: '我的命盘库',
+    description: '查看已保存的生辰资料与命盘。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['我的命盘库', '保存的命盘', '已保存命盘'],
+    actionWords: ['查看', '打开', '管理', '回看'],
+    builder: _buildSavedCharts,
+  );
+
   static const List<AssistantToolDefinition> _all = [
     structuredDiagnosis,
     yunqi,
@@ -189,7 +313,21 @@ class AssistantToolRouter {
     guji,
     medicalCases,
     almanac,
+    diagnosisHistory,
+    criticalIllness,
+    solarTerms,
+    yuxiaji,
+    dream,
+    guansha,
+    sanshan,
+    chenggu,
+    shoushengDebt,
+    huangdiSiji,
+    savedCharts,
   ];
+
+  static List<AssistantToolDefinition> get all =>
+      List.unmodifiable(_all);
 
   static List<AssistantToolDefinition> quickActions(AssistantMode mode) =>
       _all.where((tool) => mode == AssistantMode.automatic || tool.modes.contains(mode)).toList(growable: false);
@@ -226,4 +364,15 @@ class AssistantToolRouter {
   static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
   static Widget _buildAlmanac() =>
       const DailyAlmanacScreen(returnResultOnComplete: true);
+  static Widget _buildDiagnosisHistory() => const DiagnosisHistoryScreen();
+  static Widget _buildCriticalIllness() => const CriticalIllnessListScreen();
+  static Widget _buildSolarTerms() => const SolarTermSectionScreen();
+  static Widget _buildYuxiaji() => const YuxiajiOmenScreen();
+  static Widget _buildDream() => const DreamScreen();
+  static Widget _buildGuansha() => const GuanshaScreen();
+  static Widget _buildSanshan() => const SanshanLingqianScreen();
+  static Widget _buildChenggu() => const ChengguBoneScreen();
+  static Widget _buildShoushengDebt() => const ShoushengDebtScreen();
+  static Widget _buildHuangdiSiji() => const HuangdiSijiScreen();
+  static Widget _buildSavedCharts() => const SavedChartsScreen();
 }
