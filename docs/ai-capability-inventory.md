@@ -50,10 +50,10 @@ HomeScreen（默认 AI 一级入口）
 
 最新提交 `fa586d52ddaa8bb7046b3ad1e0236b0c6ccd6fea` 对应：
 
-- [Flutter Quality Gate #243](https://github.com/just2512/nihaixia-app/actions/runs/41794913787)：静态分析 PASS；历史续聊回归 PASS；Dart 全量测试 PASS；Android native unit tests 当时仍在运行；Find N2 arm64 Debug APK 构建尚未开始。
-- [Flutter tests](https://github.com/just2512/nihaixia-app/actions/runs/41794913815)：当时仍在运行，尚无最终结论。
+- [Flutter tests](https://github.com/just2512/nihaixia-app/actions/runs/41794913815)：**SUCCESS**。Dart/Flutter 静态分析、local AI contract、录音/照片生命周期、模型状态与串行控制、历史续聊、全量回归均通过；独立 Android debug APK 构建、ABI/SHA-256 校验、Android local unit tests 和 APK 上传均通过。
+- [Flutter Quality Gate #243](https://github.com/just2512/nihaixia-app/actions/runs/41794913787)：静态分析 PASS；历史续聊回归 PASS；Dart 全量测试 PASS；Android native unit tests 步骤仍显示 `in_progress`，该 run 的更新时间停留在 2026-11-04 07:50:24Z；Find N2 arm64 Debug APK 步骤尚未开始。
 
-因此当前只能确认静态分析和 Dart 测试步骤已通过；不能把整个 CI、Android APK 或真机验收标记为 PASS。
+因此，独立 Flutter tests 工作流已完整通过，且独立 Android APK 与 native tests 已通过；Quality Gate #243 仍未给出最终结论。以上均为 CI 自动化结果，不等于 OPPO Find N2 真机验收。
 
 ## 4. 下一步执行顺序与硬门槛
 
