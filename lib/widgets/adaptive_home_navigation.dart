@@ -66,7 +66,9 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
 
   NavigationBar _buildBottomNavigationBar(BuildContext context) {
     return NavigationBar(
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      // Compact windows show only the active label; five always-visible labels
+      // consume too much vertical space at large system font scales.
+      labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
       backgroundColor: Theme.of(context).colorScheme.surface,
       indicatorColor: Theme.of(context).colorScheme.primaryContainer,
       selectedIndex: widget.currentIndex,

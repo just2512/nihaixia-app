@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           AppNavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat),
-            label: 'AI助手',
+            label: 'AI',
           ),
           AppNavigationDestination(
             icon: Icon(Icons.library_books_outlined),

@@ -2020,7 +2020,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ],
           ),
           if (!ready) ...[
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               installed
                   ? hashVerified
@@ -2028,22 +2028,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       : '模型文件大小符合要求：${modelSizeLabel}。首次加载前仍会校验 SHA-256。'
                   : status?.fileExists == true
                       ? '检测到模型文件，但大小不符合要求。请重新选择完整模型文件。'
-                      : '模型文件约 3.66 GB，不随 APK 打包，也不会自动联网下载；请从设备本地存储导入。',
+                      : '模型约 3.66 GB，需从设备本地导入；不会随 APK 打包或自动联网下载。',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: AppType.caption, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SelectableText(
-              status?.modelPath ?? 'Android 应用私有目录 /files/ai_models/gemma-4-E4B-it.litertlm',
-              style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _loading
-                  ? '首次加载前正在核对约 3.66 GB 模型文件的 SHA-256。请保持应用在前台；当前文件版本验证通过后，同一进程内重新加载不会重复扫描。'
-                  : _importingModel
-                      ? '正在导入并校验文件，请保持应用在前台并确保设备有足够可用空间。'
-                      : '导入时在本机流式复制并校验文件大小与 SHA-256；首次加载前也会核验文件完整性。不会上传模型或请求模型服务。',
-              style: TextStyle(fontSize: AppType.micro, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -2084,6 +2072,43 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 ),
               ],
             ),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              dense: true,
+              title: const Text(
+                '模型文件位置与校验说明',
+                style: TextStyle(fontSize: AppType.caption),
+              ),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SelectableText(
+                    status?.modelPath ??
+                        'Android 应用私有目录 /files/ai_models/gemma-4-E4B-it.litertlm',
+                    style: TextStyle(
+                      fontSize: AppType.micro,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _loading
+                        ? '首次加载前正在核对约 3.66 GB 模型文件的 SHA-256。请保持应用在前台；当前文件版本验证通过后，同一进程内重新加载不会重复扫描。'
+                        : _importingModel
+                            ? '正在导入并校验文件，请保持应用在前台并确保设备有足够可用空间。'
+                            : '导入时在本机流式复制并校验文件大小与 SHA-256；首次加载前也会核验文件完整性。不会上传模型或请求模型服务。',
+                    style: TextStyle(
+                      fontSize: AppType.micro,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -2113,46 +2138,52 @@ class _InterviewMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.84,
-        ),
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          color: message.isUser
-              ? scheme.primaryContainer
-              : scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SelectableText(
-              message.text,
-              style: TextStyle(
-                color: message.isUser ? scheme.onPrimaryContainer : scheme.onSurface,
-                fontSize: AppType.body,
-                height: 1.55,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final bubbleMaxWidth = availableWidth.isFinite
+            ? availableWidth * 0.94
+            : MediaQuery.sizeOf(context).width * 0.94;
+        return Align(
+          alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
             ),
-            if (message.actionLabel != null && message.onAction != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: message.onAction,
-                icon: const Icon(Icons.open_in_new, size: 16),
-                label: Text(message.actionLabel!),
-              ),
-            ],
-          ],
-        ),
-      ),
+            decoration: BoxDecoration(
+              color: message.isUser
+                  ? scheme.primaryContainer
+                  : scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SelectableText(
+                  message.text,
+                  style: TextStyle(
+                    color: message.isUser ? scheme.onPrimaryContainer : scheme.onSurface,
+                    fontSize: AppType.body,
+                    height: 1.55,
+                  ),
+                ),
+                if (message.actionLabel != null && message.onAction != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: message.onAction,
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: Text(message.actionLabel!),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
