@@ -57,8 +57,8 @@ void main() {
     });
   });
 
-  group('合病应用到结构化主路径', () {
-    test('RuleEngine 命中时精确合病表覆盖主方并同步推荐方和合病经', () {
+  group('第146条单经方证进入结构化主路径', () {
+    test('RuleEngine 命中第146条方证时使用柴胡桂枝汤且不标记为明文合病', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(
         stage: DiagnosticStage.meridianLocation,
@@ -89,8 +89,10 @@ void main() {
       expect(result, isNotNull);
       expect(result!.formula, '柴胡桂枝汤');
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
+      // 第146条是太阳表证兼少阳证，不能因使用柴胡桂枝汤而标记为明文合病。
       expect(result.combinedMeridian, isNull);
-      expect(result.pattern, contains('兼见少阳证'));
+      expect(result.pattern, contains('第146条'));
+      expect(result.pattern, contains('非明文合病'));
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
   });
