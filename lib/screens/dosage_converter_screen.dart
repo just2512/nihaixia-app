@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class DosageConverterScreen extends StatefulWidget {
-  const DosageConverterScreen({super.key});
+  const DosageConverterScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<DosageConverterScreen> createState() => _DosageConverterScreenState();
@@ -97,7 +99,26 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
     final result = _convert();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('经方剂量换算器')),
+      appBar: AppBar(
+        title: const Text('经方剂量换算器'),
+        actions: [
+          if (widget.returnResultOnComplete)
+            IconButton(
+              tooltip: '返回 AI 助手',
+              icon: const Icon(Icons.reply),
+              onPressed: () => Navigator.pop(
+                context,
+                [
+                  '经方度量衡换算结果',
+                  '标准：${_standards[_standard]}',
+                  '输入：${_inputController.text} $_unit',
+                  '换算：${_convert()}',
+                  '说明：这是单位换算，不构成临床剂量或用药建议。',
+                ].join('\\n'),
+              ),
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
