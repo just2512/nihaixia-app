@@ -167,7 +167,7 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
       '主断：${chart.verdict}',
       '推算过程：${chart.trace.join('；')}',
       '说明：民俗文化参考，非吉凶指令。',
-    ].join('\\n');
+    ].join('\n');
     Navigator.pop(context, summary);
   }
 
