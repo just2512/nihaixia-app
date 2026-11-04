@@ -645,6 +645,47 @@ void main() {
       expect(result.prescription?.formulaName, '葛根汤');
     });
 
+    for (final scenario in cases) {
+      test('${scenario.name} 旧杂病兜底路径同步应用精确合病方', () {
+        final engine = DiagnosticEngine();
+        engine.restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const ['少腹硬满', '发狂'],
+          meridianDirection: scenario.primary,
+          // 以确定命中旧杂病兜底的蓄血分支为路径标记；这些症状不参与合病条件生成。
+          answers: {
+            ...scenario.answers,
+          },
+          tenQuestionIndex: 0,
+          pulseType: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
+              ? '滑'
+              : null,
+          pulseTypeSecondary: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
+              ? '数'
+              : null,
+        ));
+
+        final result = engine.diagnose();
+        final rule = DiagnosticRules.combinedPatterns
+            .firstWhere((pattern) => pattern.condition == scenario.expected);
+        expect(engine.combinedPatternCondition, scenario.expected,
+            reason: scenario.name);
+        expect(result, isNotNull, reason: scenario.name);
+        // 若旧杂病分支没有先被命中，基础六经分支的输出/处方链可能掩盖路径缺口。
+        expect(result!.formula, rule.formula, reason: scenario.name);
+        expect(result.recommendedFormulas, [rule.formula],
+            reason: scenario.name);
+        expect(result.pattern, rule.description, reason: scenario.name);
+        expect(result.prescription?.formulaName, rule.formula,
+            reason: scenario.name);
+        expect(
+          result.combinedMeridian,
+          rule.isExplicitCombined ? isNotNull : isNull,
+          reason: scenario.name,
+        );
+      });
+    }
+
     test('规则表与检测器可达矩阵数量一致，唯一死键不得被误报为可达', () {
       final ruleConditions = DiagnosticRules.combinedPatterns
           .map((pattern) => pattern.condition)
