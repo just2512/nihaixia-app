@@ -27,6 +27,8 @@ void main() {
 
     await tester.tap(find.text('打开五运六气'));
     await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -2400));
+    await tester.pumpAndSettle();
     expect(find.text('将本次推算结果带回助手对话'), findsOneWidget);
 
     await tester.tap(find.text('将本次推算结果带回助手对话'));
