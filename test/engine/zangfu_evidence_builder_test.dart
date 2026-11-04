@@ -86,6 +86,33 @@ void main() {
       expect(assessment.hasAnsweredEvidence, isFalse);
     });
 
+    test('脉舌交叉验证追问完整保留原始答案与来源', () {
+      const answers = {
+        'pulse_cross_drink': '口渴，喜热饮',
+        'pulse_cross_urine': '清长色淡',
+        'pulse_cross_limbs': '偏冷',
+        'pulse_cross_surface': '有发热恶寒',
+        'pulse_cross_interior': '腹满或便秘',
+        'pulse_cross_shaoyang': '口苦咽干',
+        'pulse_cross_taiyin': '食欲差或不渴',
+      };
+      final assessment = ZangFuEvidenceBuilder.build(
+        qAnswers: const {},
+        extSymptoms: const {},
+        answers: answers,
+      );
+      final byKey = {
+        for (final record in assessment.records) record.questionKey: record,
+      };
+      for (final item in answers.entries) {
+        expect(byKey[item.key]?.answerText, item.value, reason: item.key);
+        expect(byKey[item.key]?.sourceId, 'follow_up:' + item.key);
+        expect(byKey[item.key]?.state, ZangFuEvidenceAnswerState.answered);
+      }
+      expect(assessment.organMappingStatus, 'MISSING');
+      expect(assessment.hasVerifiedOrganMapping, isFalse);
+    });
+
     test('扩展症状只保留原文，不映射到脏腑', () {
       final assessment = ZangFuEvidenceBuilder.build(
         qAnswers: const {},
