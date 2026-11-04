@@ -135,11 +135,11 @@ bool _hasPhysicalPanelFeature(
         feature.type != DisplayFeatureType.fold) {
       return false;
     }
-    if (feature.type == DisplayFeatureType.fold &&
-        feature.state != DisplayFeatureState.postureHalfOpened) {
-      return false;
-    }
     final bounds = feature.bounds;
+    final hasPhysicalGap = bounds.width > 0;
+    final isHalfOpened =
+        feature.state == DisplayFeatureState.postureHalfOpened;
+    if (!hasPhysicalGap && !isHalfOpened) return false;
     return bounds.height >= screenSize.height - 1 &&
         bounds.left > 0 &&
         bounds.right < screenSize.width;
