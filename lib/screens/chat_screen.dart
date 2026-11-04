@@ -437,7 +437,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final pulseQuestions = _engine.getPulseTongueFollowUpQuestions();
     if (pulseQuestions.isNotEmpty) {
       _addBotMessage('脉象、舌象与问诊信息存在待核对项，先补充必要信息：');
-      _showFollowUpQuestion(pulseQuestions, 0);
+      _showFollowUpQuestion(pulseQuestions, 0, onComplete: _proceedAfterZhenJia);
       return;
     }
 
@@ -450,15 +450,15 @@ class _ChatScreenState extends State<ChatScreen> {
           .toList(growable: false);
       if (foodStagnationQuestion.isNotEmpty) {
         _addBotMessage('第256条候选条件还缺少宿食线索，先核对这一项：');
-        _showFollowUpQuestion(foodStagnationQuestion, 0);
+        _showFollowUpQuestion(foodStagnationQuestion, 0, onComplete: _proceedAfterZhenJia);
         return;
       }
     }
 
     final result = _engine.diagnose();
     if (result != null) {
-      _addBotMessage('好，十问已经完成了。让我根据你的情况来分析...\\n\\n'
-          '你的情况：${_engine.selectedSymptoms.join("、")}\\n\\n'
+      _addBotMessage('好，十问已经完成了。让我根据你的情况来分析...\n\n'
+          '你的情况：${_engine.selectedSymptoms.join("、")}\n\n'
           '下面给出辨证结果：');
       _showResult();
     } else {
@@ -473,9 +473,17 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _showFollowUpQuestion(List<FollowUpQuestion> questions, int index) {
+  void _showFollowUpQuestion(
+    List<FollowUpQuestion> questions,
+    int index, {
+    VoidCallback? onComplete,
+  }) {
     if (index >= questions.length) {
-      _showResult();
+      if (onComplete != null) {
+        onComplete();
+      } else {
+        _showResult();
+      }
       return;
     }
 
@@ -489,7 +497,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   _saveSnapshot();
                   _addUserMessage(o);
                   _engine.answerFollowUp(q.key, o);
-                  _showFollowUpQuestion(questions, index + 1);
+                  _showFollowUpQuestion(
+                    questions,
+                    index + 1,
+                    onComplete: onComplete,
+                  );
                 },
               ))
           .toList();
