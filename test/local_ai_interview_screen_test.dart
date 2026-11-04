@@ -601,6 +601,25 @@ void main() {
     },
   );
 
+  testWidgets('问诊助手把本地中医知识作为参考上下文传给模型', (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(home: LocalAiInterviewScreen(service: service)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '我最近三天口苦，胸闷');
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, ['我最近三天口苦，胸闷']);
+    expect(service.sentContexts, hasLength(1));
+    expect(service.sentContexts.single, contains('当前角色：问诊助手'));
+    expect(service.sentContexts.single, contains('App 本地知识库'));
+    expect(service.sentContexts.single, contains('不自动诊断'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'warns the user when symptom source history was truncated',
     (tester) async {
