@@ -689,10 +689,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     switch (mode) {
       case AssistantMode.automatic:
       case AssistantMode.consultation:
+        // Consultation can reference the app's in-memory TCM catalog, but
+        // never imports the medical-case corpus or turns a reference into
+        // an individual diagnosis/prescription.
+        final knowledge = AssistantKnowledgeContextBuilder.build(text);
+        final knowledgeContext = knowledge.isEmpty
+            ? 'App 本地知识库本轮未命中可引用条目（MISSING）。'
+            : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\\n$knowledge';
         return _service.sendMessageWithContext(
           text,
-          context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
-              '先澄清症状与时间线，不把模型整理内容当成已确认事实；规则辨证必须由 App 的 DiagnosticEngine 执行。',
+          context: '当前角色：问诊助手。\\n${AssistantMode.consultation.promptHint}\\n'
+              '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
+              '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊；'
+              '普通对话不自动诊断、不推荐方剂或剂量。\\n'
+              '$knowledgeContext',
         );
       case AssistantMode.learning:
         final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(text);
@@ -808,6 +818,26 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _scrollToBottom();
   }
 
+  Future<void> _restoreVisibleConversationToModel() async {
+    if (_status?.ready != true) return;
+    final transcriptLines = _messages
+        .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
+        .toList(growable: false);
+    final fullTranscript = transcriptLines.join('\\n');
+    final transcript = fullTranscript.length > 10000
+        ? '【较早历史已省略，以下为最近内容】\\n'
+            '${fullTranscript.substring(fullTranscript.length - 10000)}'
+        : fullTranscript;
+    final userMessages = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text)
+        .toList(growable: false);
+    await _service.restoreConversation(
+      transcript: transcript,
+      userMessages: userMessages,
+    );
+  }
+
   Future<void> _openTool(AssistantToolDefinition tool, {required AssistantMode mode}) async {
     final result = await Navigator.push<String>(
       context,
@@ -835,6 +865,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     } catch (error) {
       debugPrint('[AssistantHistory] 保存工具结果失败：$error');
+    }
+    try {
+      // Returning a tool result to the visible timeline is not enough: rebuild
+      // the native model context so the next user turn can actually discuss it.
+      await _restoreVisibleConversationToModel();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = '工具结果已加入对话记录，但同步到本地模型上下文失败：$error';
+        });
+      }
     }
     _scrollToBottom();
   }
