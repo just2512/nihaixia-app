@@ -30,7 +30,9 @@ SwipeDir? resolveSwipe(double dx, double dy) {
 /// 交互：左滑切前一天、右滑切后一天（仅认横向拖拽，[resolveSwipe] 判定），
 /// 纵向手势完全归列表滚动长内容，互不干扰。
 class DailyAlmanacScreen extends StatefulWidget {
-  const DailyAlmanacScreen({super.key});
+  const DailyAlmanacScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<DailyAlmanacScreen> createState() => _DailyAlmanacScreenState();
@@ -105,6 +107,12 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
       appBar: AppBar(
         title: const Text('每日黄历'),
         actions: [
+          if (widget.returnResultOnComplete && _almanac != null)
+            IconButton(
+              tooltip: '返回 AI 助手',
+              icon: const Icon(Icons.reply),
+              onPressed: _returnAssistantResult,
+            ),
           IconButton(
             tooltip: '查农历节日 / 神诞',
             icon: const Icon(Icons.festival_outlined),
@@ -149,6 +157,26 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
         ),
       ),
     );
+  }
+
+
+  void _returnAssistantResult() {
+    final a = _almanac;
+    if (a == null) return;
+    final summary = [
+      '每日黄历（民俗文化参考）',
+      '公历：${a.solar.year}-${a.solar.month}-${a.solar.day} ${a.weekdayName}',
+      '农历：${a.lunarText}',
+      '干支：${a.ganzhiYear}年 ${a.ganzhiMonth}月 ${a.ganzhiDay}日',
+      '建除：${a.jianChu}；冲煞：${a.chong}，${a.sha}',
+      '宜：${a.yi.join('、')}',
+      '忌：${a.ji.join('、')}',
+      '吉时：${a.jiShi.join('、')}',
+      '方位：财神${a.caiShen}；喜神${a.xiShen}；福神${a.fuShen}',
+      if (a.solarTerm != null) '节气：${a.solarTerm}',
+      '说明：传统通胜民俗信息，不是事实预测或行为指令。',
+    ].join('\\n');
+    Navigator.pop(context, summary);
   }
 
   List<Widget> _buildContent(AlmanacDay a) {
