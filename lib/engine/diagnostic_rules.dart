@@ -813,6 +813,27 @@ class DiagnosticRules {
     '促', '结', '代', '芤', '革', '微弱', '沉紧',
   ];
 
+  /// Normalize tongue inputs against the UI's canonical option lists.
+  /// Explanatory annotations are accepted only when they follow a full option.
+  static String? _canonicalTongueValue(String? raw, List<String> options) {
+    if (raw == null) return null;
+    final value = raw.trim();
+    for (final option in options) {
+      if (value == option ||
+          value.startsWith('${option}（') ||
+          value.startsWith('${option}(')) {
+        return option;
+      }
+    }
+    return null;
+  }
+
+  static String? canonicalTongueCoating(String? raw) =>
+      _canonicalTongueValue(raw, tongueCoatingOptions);
+
+  static String? canonicalTongueShape(String? raw) =>
+      _canonicalTongueValue(raw, tongueShapeOptions);
+
   /// Normalize user-facing pulse labels to a single canonical value.
   /// Longest-prefix matching prevents compound values such as 微弱/沉紧
   /// from being truncated to 微/沉.
