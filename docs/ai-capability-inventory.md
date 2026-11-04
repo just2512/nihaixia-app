@@ -14,10 +14,10 @@
 | 5 | 经典条文、医案关联 | PARTIAL | `docs/classic-and-medical-case-source-audit.md`、`ClassicSearchService`、`AssistantKnowledgeContextBuilder` | 已对部分条文做在线交叉核验和分类纠错；李心机2022译注本逐页书影、赵开美具体馆藏/刻次、卷页、异文与本地 manifest 未完成。医案逐案原始定位缺失；1257 与来源统计 1337 的差异未核清，医案—经典自动关联保持 MISSING。 |
 | 6 | Find N2 内外屏适配 | PARTIAL | `docs/find-n2-adaptive-layout.md`、`docs/find-n2-fold-aware-layout.md`；`adaptive_home_navigation_test.dart`、`adaptive_master_detail_test.dart`、`local_ai_adaptive_content_test.dart`、`fold_aware_routes_test.dart` | 已有窗口断点、导航双面板、折痕/铰链安全区和窄屏换行回归。Find N2（PGU110）外屏、内屏、半折叠、键盘、相机、文件选择器、模型导入的实机截图与窗口指标仍为 MISSING。 |
 | 7 | 本地 AI 与辨证问诊统一 | PARTIAL | 首页默认入口为 `LocalAiInterviewScreen`；`AssistantConversationOrchestrator` 将个人症状导向问诊；`structured_diagnosis` 工具打开 `ChatScreen(returnResultOnComplete: true)` | 用户入口和会话编排已统一，但规则问诊仍是独立页面/独立问答 UI，通过工具路由进入并把结果带回助手；尚非同一消息流中的原生交互卡片。附件与规则问诊的确认/回传边界需继续验证。 |
-| 8 | 本地 AI 调用知识库和工具 | PARTIAL | `services/assistant_knowledge_context.dart`；`services/assistant_conversation_orchestrator.dart`；`screens/assistant_tool_router.dart` | 学习与问诊文本均可检索 App 内方剂、本草、针灸、穴位、内经、古籍及（学习域）医案；结果带来源和 MISSING 标记。现有工具路由由本地关键词/动作词确定性匹配，工具实际执行仍打开原有页面，不是模型任意调用 Dart 函数。工具目录当前为显式注册表，新增功能必须登记并加测试。 |
+| 8 | 本地 AI 调用知识库和工具 | PARTIAL（工具目录已补齐） | `services/assistant_knowledge_context.dart`；`services/assistant_conversation_orchestrator.dart`；`screens/assistant_tool_router.dart`；`test/assistant_conversation_orchestrator_test.dart` | 学习与问诊文本可检索 App 内方剂、本草、针灸、穴位、内经、古籍及（学习域）医案；结果带来源和 MISSING 标记。2026-11-04 新增注册 ToolsScreen 中此前未接入的诊断历史、闭门课重症、节气养生、玉匣灵兆、解梦、关煞、灵签、称骨、受生债、黄帝四季歌、命盘库；统一助手工具注册表现有 23 个入口，工具/玄学提示词从注册表动态生成。仍由本地关键词/动作词确定性路由，工具实际执行打开既有页面，不是模型任意调用 Dart 函数；部分页面没有结构化结果回传，只能返回“已打开”说明。 |
 | 9 | 设置入口 | EXISTS | `HomeScreen` 根导航含独立“设置”目的地；`home_screen_entry_test.dart` 断言设置可从根导航进入 | 当前已不依赖问诊页面内部入口；后续可继续优化设置分类与可发现性，不应把设置重新塞回聊天页。 |
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
-| 11 | 单一主入口与统一调度 | PARTIAL | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`assistant_conversation_orchestrator_test.dart` | 已支持自动识别、手动角色、澄清、工具匹配和上下文角色延续。当前调度主要是规则关键词，不具备完整语义工具调用、实体解析、跨轮任务状态与复杂多工具计划；不能把它描述成已完成的通用 Agent。 |
+| 11 | 单一主入口与统一调度 | PARTIAL（目录覆盖扩展） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 统一助手已覆盖 ToolsScreen 的 22 个页面/工具目的地，并包含独立结构化辨证入口，共 23 个注册工具；工具角色上下文动态读取注册表。路由仍是关键词/动作词确定性匹配，工具操作以卡片按钮启动既有页面，部分工具不回传机器可读结果；未具备语义参数抽取、表单缺参追问、跨轮工具任务状态和多工具计划，不能称为完整通用 Agent。 |
 | 12 | 对话历史持久化、续聊、批量删除 | EXISTS（文本会话） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`、`assistant_history_screen_test.dart` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。原始图片/录音附件不持久化，只保留附件说明；历史模型上下文受长度上限约束。 |
 
 ## 2. 当前统一助手的数据流
@@ -45,6 +45,24 @@ HomeScreen（默认 AI 一级入口）
 3. 知识库检索结果是引用上下文，不是个体诊断证据。每条内容应携带来源类型、内部定位和版本状态；缺失字段明确显示 MISSING。
 4. 术数工具只由 App 内置确定性计算页面执行。模型不得编造排盘结果，也不得将民俗推算包装为科学预测。
 5. 未确认的用户信息、模型推断、未知回答不能转成阳性/阴性证据；写入诊断输入必须经过用户确认。
+
+## 2A. 统一助手与实用工具目录核对（2026-11-04）
+
+ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表，且 `quickActions(mode)` 与工具/玄学角色提示词均读取同一注册表，避免提示词列出的工具和可执行路由出现两份手工清单。
+
+| 工具域 | 已注册目的地 |
+|---|---|
+| 问诊/记录 | 结构化辨证问诊、诊断历史趋势 |
+| 中医知识 | 五运六气、经方剂量换算、时辰开穴、古籍原文、医案库、闭门课重症资料、节气养生 |
+| 术数/民俗 | 紫微斗数、八字、易经、小六壬、梅花易数、每日黄历、玉匣灵兆、周公解梦、小儿关煞、三山国王灵签、称骨、受生债、黄帝四季歌 |
+| 资料管理 | 我的命盘库 |
+
+测试新增：
+- 注册工具 ID 唯一性与完整目录覆盖。
+- 11 个此前未接入助手的工具意图路由。
+- 玄学工具与医学问诊角色边界。
+
+限制：工具目录覆盖不等于工具计算已经嵌入对话气泡。当前通过统一助手卡片打开既有页面；能返回字符串的工具回传结果，其他页面回到对话时只能记录页面已打开。下一阶段需给可计算工具定义统一输入 schema、结果 schema 和取消/失败状态，并逐个接入结构化回传。
 
 ## 3. 当前 CI 验收状态
 
