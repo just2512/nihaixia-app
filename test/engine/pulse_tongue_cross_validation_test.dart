@@ -112,6 +112,9 @@ void main() {
         answers: const {
           'tongue_coating': '黄厚偏白',
           'tongue_shape': '淡白',
+          'tongue_red_coated_yellow': true,
+          'tongue_purple': true,
+          'tongue_swollen': true,
         },
         tenQuestionIndex: 0,
         tongueCoating: '黄厚偏白',
@@ -122,6 +125,10 @@ void main() {
       expect(snapshot.tongueShape, '淡白');
       expect(snapshot.answers.containsKey('tongue_coating'), isFalse);
       expect(snapshot.answers['tongue_shape'], '淡白');
+      expect(snapshot.answers['tongue_red_coated_yellow'], isNull);
+      expect(snapshot.answers['tongue_pale_coated_white'], isTrue);
+      expect(snapshot.answers.containsKey('tongue_purple'), isFalse);
+      expect(snapshot.answers.containsKey('tongue_swollen'), isFalse);
     });
 
     test('恢复旧快照时重新规范化脉值并清除无效兼脉', () {
