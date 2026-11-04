@@ -20,6 +20,17 @@ class AssistantKnowledgeContextBuilder {
   static const int maxAcupointEntries = 3;
   static const int maxNeijingEntries = 3;
 
+  // Do not scan the full classic/case corpus for generic chat turns. The
+  // conversation model already has prior-turn context; retrieval is only
+  // needed when the current turn contains a TCM domain cue.
+  static const Set<String> _knowledgeQueryCues = {
+    '中医', '伤寒', '金匮', '黄帝内经', '素问', '灵枢', '脏腑', '经络',
+    '穴位', '方剂', '中药', '药材', '医案', '古籍', '经典', '条文',
+    '五运六气', '脉象', '舌象', '太阳', '阳明', '少阳', '太阴', '少阴',
+    '厥阴', '咳嗽', '头痛', '头晕', '腹痛', '腹胀', '失眠', '发热',
+    '恶寒', '口苦', '胸闷', '尿频', '便秘', '腹泻', '心悸', '呕吐',
+  };
+
   /// Extends the fast in-memory retrieval with the bundled classical-text and
   /// medical-case libraries. Case excerpts carry an explicit provenance warning:
   /// the local table sequence is not a primary-source locator.
@@ -27,6 +38,9 @@ class AssistantKnowledgeContextBuilder {
     final normalized = query.trim();
     if (normalized.isEmpty) return '';
     final base = build(normalized);
+    if (!_knowledgeQueryCues.any(normalized.contains)) {
+      return base;
+    }
     final buffer = StringBuffer();
     if (base.isNotEmpty) {
       buffer.writeln(base.length > 3500 ? base.substring(0, 3500) : base);
