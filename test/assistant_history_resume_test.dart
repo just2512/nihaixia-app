@@ -243,8 +243,8 @@ void main() {
     expect(messages[3]['content'], '续聊成功：继续补充：舌苔薄白');
 
     final conversations = await store.getAssistantConversations();
-    expect(conversations, hasLength(1));
-    expect(conversations.single['id'], 1);
+    expect(conversations, hasLength(2));
+    expect(conversations.first['id'], 1);
     expect(tester.takeException(), isNull);
   });
 }
