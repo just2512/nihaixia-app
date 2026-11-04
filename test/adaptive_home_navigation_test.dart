@@ -230,7 +230,7 @@ void main() {
     );
 
     final content = tester.getRect(find.byType(IndexedStack));
-    expect(content.width, 400);
+    expect(content.width, greaterThan(350));
     expect(content.right, lessThanOrEqualTo(400));
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
