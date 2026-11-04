@@ -70,6 +70,47 @@ void main() {
       expect(snapshot.pulseType, '微弱');
     });
 
+    test('脉舌冲突追问经适配层生成、校验并随快照恢复', () {
+      final adapter = TcmInterviewAdapter();
+      adapter.answerTemperature('fever_chills');
+      adapter.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '淡白',
+        primaryPulse: '数',
+      );
+
+      final initial = adapter.pulseTongueCrossChecks;
+      expect(
+        initial.map((prompt) => prompt.id),
+        containsAll([
+          'pulse_cross_drink',
+          'pulse_cross_urine',
+          'pulse_cross_limbs',
+        ]),
+      );
+      final drink = initial.firstWhere((prompt) => prompt.id == 'pulse_cross_drink');
+      expect(
+        () => adapter.answerFollowUp(drink.id, '不在选项内的答案'),
+        throwsArgumentError,
+      );
+      adapter.answerFollowUp(drink.id, '口渴，喜热饮');
+      adapter.answerFollowUp('pulse_cross_urine', '清长色淡');
+      adapter.answerFollowUp('pulse_cross_limbs', '偏冷');
+
+      final restored = TcmInterviewAdapter(snapshot: adapter.createSnapshot());
+      expect(restored.pulseTongueCrossChecks, isEmpty);
+      final result = restored.diagnose();
+      expect(result, isNotNull);
+      expect(
+        result!.pulseTongueAssessment!.supportingEvidence,
+        containsAll(['喜热饮', '小便清长', '四肢偏冷']),
+      );
+      expect(
+        result.pulseTongueContradiction,
+        contains('不自动以脉或舌单方优先'),
+      );
+    });
+
     test('十问答案必须与引擎规范选项完全一致', () {
       final adapter = TcmInterviewAdapter();
       final first = adapter.tenQuestionPrompts.first;
