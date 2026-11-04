@@ -332,6 +332,10 @@ void main() {
       engine.answerFollowUp('food_stagnation', '不确定');
       engine.diagnose();
       expect(engine.combinedPatternCondition, isNull);
+      expect(
+        engine.getFollowUpQuestions('少阳').any((q) => q.key == 'food_stagnation'),
+        isFalse,
+      );
     });
   });
 

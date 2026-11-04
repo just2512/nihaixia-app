@@ -282,7 +282,7 @@ class DiagnosticEngine {
     if (meridian == '少阳' &&
         _answers['diarrhea'] == true &&
         slipperyRapidPulse &&
-        _answers['food_stagnation'] == null) {
+        _answers['food_stagnation_answered'] != true) {
       questions.add(const FollowUpQuestion(
         key: 'food_stagnation',
         question: '是否有明确食积表现？（如嗳腐吞酸、腹胀拒按、明显厌食）',
@@ -995,6 +995,7 @@ class DiagnosticEngine {
       _answers['history_mistreatment'] = answer.contains('误下') || answer.contains('被误下');
     }
     if (questionKey == 'food_stagnation') {
+      _answers['food_stagnation_answered'] = true;
       if (answer == '有明确食积表现') {
         _answers['food_stagnation'] = true;
       } else if (answer == '没有') {
