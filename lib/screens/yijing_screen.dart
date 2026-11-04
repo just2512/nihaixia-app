@@ -11,7 +11,9 @@ import 'minggua_library_screen.dart';
 
 /// 易经六十四卦工具主页（起卦 / 六十四卦总览）
 class YiJingScreen extends StatefulWidget {
-  const YiJingScreen({super.key});
+  const YiJingScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<YiJingScreen> createState() => _YiJingScreenState();
@@ -165,7 +167,13 @@ class _YiJingScreenState extends State<YiJingScreen> {
   void _openResult(CastResult cast) {
     Navigator.push(
       context,
-      FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => YiJingResultScreen(cast: cast)),
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
+        builder: (_) => YiJingResultScreen(
+          cast: cast,
+          returnResultOnComplete: widget.returnResultOnComplete,
+        ),
+      ),
     );
   }
 
