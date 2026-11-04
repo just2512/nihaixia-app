@@ -114,7 +114,7 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
                   '输入：${_inputController.text} $_unit',
                   '换算：${_convert()}',
                   '说明：这是单位换算，不构成临床剂量或用药建议。',
-                ].join('\\n'),
+                ].join('\n'),
               ),
             ),
         ],
