@@ -75,7 +75,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
         'conversation_id': 1,
         'role': 'assistant',
         'content': '口苦持续多久？夜间是否容易醒？',
-        'metadata': 'selectedMode=consultation;mode=consultation',
+        'metadata': 'selectedMode=consultation;mode=consultation;tool=yunqi',
       },
     ],
   };
@@ -147,6 +147,29 @@ class _MemoryConversationStore implements AssistantConversationStore {
 }
 
 void main() {
+  testWidgets('恢复历史会话时保留尚未执行的工具操作入口', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _HistoryResumeService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.text('可继续的历史会话'));
+    await _pumpFrames(tester);
+
+    expect(find.text('打开五运六气推算'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('打开历史会话后继续发送，消息仍写入原会话', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
