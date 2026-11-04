@@ -262,4 +262,35 @@ void main() {
     expect(find.byTooltip('发送'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('assistant role and tool controls wrap instead of overflowing on narrow outer windows', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(2.0),
+          ),
+          child: child!,
+        ),
+        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final selector = find.byKey(const ValueKey('assistant-mode-selector'));
+    expect(selector, findsOneWidget);
+    final selectorRect = tester.getRect(selector);
+    expect(selectorRect.left, greaterThanOrEqualTo(0));
+    expect(selectorRect.right, lessThanOrEqualTo(360));
+    expect(find.byTooltip('切换助手角色'), findsOneWidget);
+    expect(find.byTooltip('调用 App 工具'), findsOneWidget);
+    expect(find.byTooltip('发送'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
