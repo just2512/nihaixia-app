@@ -695,13 +695,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final knowledge = AssistantKnowledgeContextBuilder.build(text);
         final knowledgeContext = knowledge.isEmpty
             ? 'App 本地知识库本轮未命中可引用条目（MISSING）。'
-            : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\\n$knowledge';
+            : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n$knowledge';
         return _service.sendMessageWithContext(
           text,
-          context: '当前角色：问诊助手。\\n${AssistantMode.consultation.promptHint}\\n'
+          context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
               '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊；'
-              '普通对话不自动诊断、不推荐方剂或剂量。\\n'
+              '普通对话不自动诊断、不推荐方剂或剂量。\n'
               '$knowledgeContext',
         );
       case AssistantMode.learning:
@@ -823,9 +823,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final transcriptLines = _messages
         .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
         .toList(growable: false);
-    final fullTranscript = transcriptLines.join('\\n');
+    final fullTranscript = transcriptLines.join('\n');
     final transcript = fullTranscript.length > 10000
-        ? '【较早历史已省略，以下为最近内容】\\n'
+        ? '【较早历史已省略，以下为最近内容】\n'
             '${fullTranscript.substring(fullTranscript.length - 10000)}'
         : fullTranscript;
     final userMessages = _messages
