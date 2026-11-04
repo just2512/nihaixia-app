@@ -1745,9 +1745,9 @@ class DiagnosticEngine {
         addIf(contradicting, 'cold_limbs', '四肢偏冷');
         addIf(contradicting, 'urine_clear', '小便清长');
         addIf(contradicting, 'hot_drink', '喜热饮');
-        askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink', '饮水偏好');
-        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short', 'pulse_cross_urine_answered'], 'pulse_cross_urine', '小便情况');
-        askIfMissing(['cold_limbs', 'warm_limbs', 'pulse_cross_limbs_answered'], 'pulse_cross_limbs', '四肢温度');
+        askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink_answered', 'pulse_cross_drink', '饮水偏好');
+        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short'], 'pulse_cross_urine_answered', 'pulse_cross_urine', '小便情况');
+        askIfMissing(['cold_limbs', 'warm_limbs'], 'pulse_cross_limbs_answered', 'pulse_cross_limbs', '四肢温度');
         break;
       case 'floating_pulse_thick_coat':
         addIf(supporting, 'chills', '有恶寒');
@@ -1769,8 +1769,8 @@ class DiagnosticEngine {
         if (_answers['temperature'] == 'fever_chills') contradicting.add('发热恶寒');
         addIf(contradicting, 'headache', '头痛');
         addIf(contradicting, 'neck_stiff', '项背强');
-        askIfMissing(['cold_limbs', 'diarrhea', 'urine_clear', 'abdomen_pain_relief'], 'pulse_cross_interior', '里证线索');
-        askIfMissing(['temperature', 'chills', 'headache', 'neck_stiff'], 'pulse_cross_surface', '表证线索');
+        askIfMissing(['cold_limbs', 'diarrhea', 'urine_clear', 'abdomen_pain_relief'], 'pulse_cross_interior_answered', 'pulse_cross_interior', '里证线索');
+        askIfMissing(['temperature', 'chills', 'headache', 'neck_stiff'], 'pulse_cross_surface_answered', 'pulse_cross_surface', '表证线索');
         break;
       case 'wiry_pulse_pale_thick_tongue':
         addIf(supporting, 'bitter_mouth', '口苦');
