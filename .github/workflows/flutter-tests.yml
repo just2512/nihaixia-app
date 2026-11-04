@@ -82,9 +82,14 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_control.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model setup serialization"
 
+      - name: Run assistant history resume regression
+        id: history_resume
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_setup.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_history_resume_test.dart
+
       - name: Run full regression suite
         id: regression
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' }}
         run: flutter test --no-pub
 
       - name: Upload Flutter test failure diffs

@@ -76,6 +76,9 @@ jobs:
       - name: Static analysis
         run: flutter analyze --no-pub --no-fatal-infos
 
+      - name: Run assistant history resume regression
+        run: flutter test --no-pub test/assistant_history_resume_test.dart --reporter expanded
+
       - name: Run Dart test suite
         run: flutter test --no-pub --reporter expanded
 
