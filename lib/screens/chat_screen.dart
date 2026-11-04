@@ -514,6 +514,10 @@ class _ChatScreenState extends State<ChatScreen> {
         'energy': '精神',
         'menstrual': '月经/性功能',
         'vomit_type': '呕吐类型',
+        'tongue_coating': '舌苔',
+        'tongue_shape': '舌形',
+        'pulse_type': '主脉',
+        'pulse_type_secondary': '兼脉',
       };
       final evidenceLines = <String>[];
       for (final record in zangFuEvidence.records) {
