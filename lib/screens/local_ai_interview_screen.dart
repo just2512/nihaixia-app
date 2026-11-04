@@ -883,7 +883,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final busy = _sending || _modelControlBusy || _structuredDiagnosisBusy;
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0),
-      child: Row(
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
         children: [
           PopupMenuButton<AssistantMode>(
             tooltip: '切换助手角色',
@@ -930,7 +934,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
             ),
           ),
-          const Spacer(),
           PopupMenuButton<AssistantToolDefinition>(
             tooltip: '调用 App 工具',
             enabled: !busy && tools.isNotEmpty,
