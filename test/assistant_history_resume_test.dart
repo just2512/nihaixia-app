@@ -89,14 +89,14 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
 
     await tester.tap(find.byTooltip('历史对话'));
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
     expect(find.text('可继续的历史会话'), findsOneWidget);
 
     await tester.tap(find.text('可继续的历史会话'));
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
 
     expect(service.restoredTranscript, contains('我最近口苦，睡眠也不好'));
     expect(service.restoredTranscript, contains('口苦持续多久？'));
@@ -108,7 +108,7 @@ void main() {
     await tester.enterText(find.byType(TextField), '继续补充：舌苔薄白');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
 
     final messages = await store.getAssistantMessages(
       conversationId: conversationId,
@@ -124,4 +124,13 @@ void main() {
     expect(conversations.single['id'], conversationId);
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
+  // The history route contains a loading indicator while SQLite is queried.
+  // pumpAndSettle waits forever on that repeating animation; use a bounded
+  // frame pump so asynchronous DB completion can be observed without hanging CI.
+  for (var frame = 0; frame < frames; frame++) {
+    await tester.pump(const Duration(milliseconds: 80));
+  }
 }
