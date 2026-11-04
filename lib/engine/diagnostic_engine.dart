@@ -162,6 +162,29 @@ class DiagnosticEngine {
     } else {
       _answers['tongue_shape'] = _tongueShape;
     }
+    // Legacy snapshots may contain derived tongue flags that no longer match
+    // their raw tongue values. Rebuild only these tongue-owned flags from the
+    // canonical values instead of trusting stale persisted booleans.
+    for (final key in [
+      'tongue_red_coated_yellow',
+      'tongue_pale_coated_white',
+      'tongue_purple',
+      'tongue_swollen',
+    ]) {
+      _answers.remove(key);
+    }
+    if (_tongueCoating == '黄厚' || _tongueCoating == '黄薄' ||
+        _tongueShape == '红') {
+      _answers['tongue_red_coated_yellow'] = true;
+    }
+    if (_tongueCoating == '白厚' || _tongueCoating == '薄白' ||
+        _tongueShape == '淡白') {
+      _answers['tongue_pale_coated_white'] = true;
+    }
+    if (_tongueShape == '绛紫') _answers['tongue_purple'] = true;
+    if (_tongueShape == '胖大' || _tongueShape == '齿痕') {
+      _answers['tongue_swollen'] = true;
+    }
     _pulseType = DiagnosticRules.canonicalPulse(snapshot.pulseType);
     final restoredSecondary =
         DiagnosticRules.canonicalPulse(snapshot.pulseTypeSecondary);
