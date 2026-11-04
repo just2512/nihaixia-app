@@ -28,7 +28,7 @@ void main() {
         query: '帮我推算五运六气',
         selectedMode: AssistantMode.automatic,
       );
-      expect(decision.mode, AssistantMode.tools);
+      expect(decision.mode, AssistantMode.metaphysics);
       expect(decision.tool?.id, 'yunqi');
     });
 
