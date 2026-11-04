@@ -209,9 +209,12 @@ class AssistantToolRouter {
   static Widget _buildStructuredDiagnosis() =>
       const ChatScreen(returnResultOnComplete: true);
   static Widget _buildYunqi() => const YunQiScreen(returnResultOnComplete: true);
-  static Widget _buildZiwei() => const ZiweiChartScreen();
-  static Widget _buildBazi() => const BaZiPaipanScreen();
-  static Widget _buildYijing() => const YiJingScreen();
+  static Widget _buildZiwei() =>
+      const ZiweiChartScreen(returnResultOnComplete: true);
+  static Widget _buildBazi() =>
+      const BaZiPaipanScreen(returnResultOnComplete: true);
+  static Widget _buildYijing() =>
+      const YiJingScreen(returnResultOnComplete: true);
   static Widget _buildXiaoliuren() => const XiaoliurenScreen();
   static Widget _buildMeihua() => const MeihuaScreen();
   static Widget _buildDosage() => const DosageConverterScreen();
