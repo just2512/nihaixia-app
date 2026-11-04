@@ -186,7 +186,9 @@ void main() {
     await _pumpFrames(tester);
 
     await tester.tap(find.byTooltip('历史对话'));
-    await _pumpFrames(tester);
+    await tester.pumpAndSettle();
+    await _pumpFrames(tester, frames: 24);
+    expect(find.text('历史对话'), findsOneWidget);
     expect(find.text('待执行工具会话'), findsOneWidget);
     await tester.tap(find.text('待执行工具会话'));
     await _pumpFrames(tester);
