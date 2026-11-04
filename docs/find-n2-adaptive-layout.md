@@ -122,3 +122,19 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 - [Flutter Large screens and foldables](https://docs.flutter.dev/ui/adaptive-responsive/large-screens)
 - [Flutter DisplayFeature](https://api.flutter.dev/flutter/widgets/MediaQueryData/displayFeatures.html)
 - [Android Adaptive app quality](https://developer.android.com/develop/adaptive-apps/quality-guidelines/adaptive-app-quality)
+
+
+## 2026-11-04 对话区窄屏换行与展开屏全宽校正
+
+本轮补充了两个具体布局修正：
+
+- 本地 AI 顶部“助手角色”和“调用工具”两个操作原先放在同一固定 Row 中；在外屏窄窗口、系统字号放大时可能挤压文字和输入区域。现在改为可换行的 Wrap，空间不足时分行排列，不再强行压缩对话内容。
+- 根导航在完全展开的内屏上将已处理的 fold/hinge 特征从 Tab 子树隐藏，避免嵌套页面再次选择单侧面板；当前 Tab 使用导航栏以外的完整窗口宽度。半折叠姿态仍按安全物理面板显示。
+
+新增/补充自动化覆盖：
+- 本地 AI 在 360 dp 窄窗口、200% 字号下检查角色/工具控制边界和 Render overflow。
+- 完全展开的零宽 fold 与物理 hinge 均检查当前 Tab 从导航栏右侧延伸到窗口最右侧。
+- 半折叠姿态仍验证页面只落在安全物理面板。
+- 上述测试是 Flutter Widget 布局测试，不是 Find N2 真机截图验收。
+
+**当前状态：** 窄屏换行和展开屏全宽策略已有代码与自动化回归；Find N2 外屏、完全展开内屏、半折叠、键盘、相机/文件选择器的真实窗口参数和截图仍为 `MISSING`。如真机仍出现半边黑屏，必须结合 `[WINDOW_METRICS]` 的实际 `sizeDp` 和 `displayFeatures` 判断是系统未给全窗口、窗口分区策略还是页面自身约束，不得只通过扩大 Widget 宽度掩盖根因。

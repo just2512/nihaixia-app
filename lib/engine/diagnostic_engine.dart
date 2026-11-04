@@ -77,6 +77,8 @@ class DiagnosticEngine {
       ZangFuEvidenceBuilder.build(
         qAnswers: Map.unmodifiable(_qAnswers),
         extSymptoms: Set.unmodifiable(_extSymptoms),
+        answers: Map.unmodifiable(_answers),
+        selectedSymptoms: List.unmodifiable(_selectedSymptoms),
         tongueCoating: _tongueCoating,
         tongueShape: _tongueShape,
         pulseType: _pulseType,
@@ -297,24 +299,66 @@ class DiagnosticEngine {
 
   /// 返回最终辨证前必须补齐的合病条文前提。未知不按阴性证据处理。
   List<FollowUpQuestion> getRequiredCombinedPatternFollowUpQuestions() {
-    final questions = <FollowUpQuestion>[];
     final primary = _meridianDirection;
+    final diarrhea = _answers['diarrhea'] == true;
     final yangmingScore =
         (_answers['thirsty'] == true ? 2 : 0) +
         (_answers['constipated'] == true ? 3 : 0) +
         (_answers['hot_palms_soles'] == true ? 2 : 0) +
         (_answers['temperature'] == 'fever_thirst_no_cold' ? 3 : 0);
+    final sunScore =
+        (_answers['temperature'] == 'fever_chills' ? 3 : 0) +
+        (_answers['has_sweat'] == false ? 2 : 0) +
+        (_answers['cold_limbs'] != true ? 1 : 0) +
+        (_answers['headache'] == true ? 1 : 0) +
+        (_answers['neck_stiff'] == true ? 1 : 0);
+    final taiyinScore =
+        (_answers['diarrhea'] == true ? 2 : 0) +
+        (_answers['tongue_pale_coated_white'] == true ? 2 : 0) +
+        (_answers['abdominal_pain'] == true ? 2 : 0);
 
     if (primary == '太阳' &&
-        yangmingScore >= 3 &&
-        _answers['diarrhea'] == true &&
+        diarrhea &&
         _answers['history_mistreatment'] == null &&
         _answers['history_mistreatment_answered'] != true) {
-      questions.add(const FollowUpQuestion(
-        key: 'combined_treatment_history',
-        question: '此前是否曾被误用泻下药或攻下法？',
-        options: ['明确没有', '曾经被误用泻下法', '不确定'],
-      ));
+      return const [
+        FollowUpQuestion(
+          key: 'combined_treatment_history',
+          question: '本次下利之前，是否曾被误用泻下药或攻下法？',
+          options: ['明确没有', '曾经被误用泻下法', '不确定'],
+        ),
+      ];
+    }
+
+    final sunTaiyinCandidate =
+        (primary == '太阳' || primary == '太阴') &&
+        sunScore >= 3 &&
+        diarrhea &&
+        taiyinScore >= 2;
+    if (sunTaiyinCandidate &&
+        _answers['history_mistreatment'] == true &&
+        _answers['sun_taiyin_repeated_purgation'] == null &&
+        _answers['sun_taiyin_repeated_purgation_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'sun_taiyin_repeated_purgation',
+          question: '此前是否曾多次使用泻下药或攻下法？',
+          options: ['曾多次使用', '没有', '不确定'],
+        ),
+      ];
+    }
+    if (sunTaiyinCandidate &&
+        _answers['history_mistreatment'] == true &&
+        _answers['sun_taiyin_repeated_purgation'] == true &&
+        _answers['epigastric_hard'] == null &&
+        _answers['sun_taiyin_epigastric_hard_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'sun_taiyin_epigastric_hard',
+          question: '是否明确有心下痞硬？',
+          options: ['有心下痞硬', '没有', '不确定'],
+        ),
+      ];
     }
 
     final slipperyRapidPulse =
@@ -322,17 +366,19 @@ class DiagnosticEngine {
         (_pulseType == '数' && _pulseTypeSecondary == '滑');
     if (primary == '少阳' &&
         yangmingScore >= 3 &&
-        _answers['diarrhea'] == true &&
+        diarrhea &&
         slipperyRapidPulse &&
         _answers['food_stagnation'] == null &&
         _answers['food_stagnation_answered'] != true) {
-      questions.add(const FollowUpQuestion(
-        key: 'food_stagnation',
-        question: '是否有明确食积表现？（如嗳腐吞酸、腹胀拒按、明显厌食）',
-        options: ['有明确食积表现', '没有', '不确定'],
-      ));
+      return const [
+        FollowUpQuestion(
+          key: 'food_stagnation',
+          question: '是否有明确食积表现？（如嗳腐吞酸、腹胀拒按、明显厌食）',
+          options: ['有明确食积表现', '没有', '不确定'],
+        ),
+      ];
     }
-    return questions;
+    return const [];
   }
 
   List<FollowUpQuestion> getTenQuestions({String? defaultGender}) {
@@ -982,7 +1028,16 @@ class DiagnosticEngine {
       _combinedPatternCondition = CombinedPatternCondition.sunShaoyangBase;
     } else if ((primary == '太阳' || primary == '太阴') &&
                sunScore >= 3 &&
-               _answers['diarrhea'] == true && taiyinScore >= 2) {
+               _answers['diarrhea'] == true &&
+               taiyinScore >= 2 &&
+               _answers['history_mistreatment'] == true &&
+               _answers['sun_taiyin_repeated_purgation'] == true &&
+               _answers['epigastric_hard'] == true &&
+               !(_answers['temperature'] == 'fever_chills' &&
+                 _answers['fever'] == true &&
+                 _answers['has_sweat'] == true &&
+                 _answers['asthma'] == true &&
+                 _pulseType == '促')) {
       _combinedMeridian = '太阴';
       _combinedPatternCondition = CombinedPatternCondition.sunTaiyin;
     }
@@ -1020,8 +1075,25 @@ class DiagnosticEngine {
 
   void answerFollowUp(String questionKey, String answer) {
     _answers[questionKey] = answer;
-    // "没有此症状"不写入 _selectedSymptoms，避免干扰诊断
-    if (answer != '没有此症状') {
+    // 仅把真实症状文本送入症状匹配；历史、否定和未知回答只保留在 _answers。
+    const evidenceOnlyKeys = {
+      'treatment_history',
+      'combined_treatment_history',
+      'sun_taiyin_repeated_purgation',
+      'food_stagnation',
+    };
+    const nonSymptomAnswers = {
+      '没有此症状',
+      '没有',
+      '明确没有',
+      '不确定',
+      '不清楚',
+      '不知道',
+      '都没有',
+      '正常',
+    };
+    if (!evidenceOnlyKeys.contains(questionKey) &&
+        !nonSymptomAnswers.contains(answer.trim())) {
       _selectedSymptoms.add(answer);
     }
     // 跟进问诊派生布尔标志（六经辨证公式优化版）
@@ -1044,6 +1116,21 @@ class DiagnosticEngine {
         _answers.remove('history_mistreatment');
       }
     }
+    if (questionKey == 'sun_taiyin_repeated_purgation') {
+      _answers['sun_taiyin_repeated_purgation_answer'] = answer;
+      _answers['sun_taiyin_repeated_purgation_answered'] = true;
+      if (answer == '曾多次使用') {
+        _answers['sun_taiyin_repeated_purgation'] = true;
+      } else if (answer == '没有') {
+        _answers['sun_taiyin_repeated_purgation'] = false;
+      } else {
+        _answers.remove('sun_taiyin_repeated_purgation');
+      }
+    }
+    if (questionKey == 'sun_taiyin_epigastric_hard') {
+      _answers['sun_taiyin_epigastric_hard_answered'] = true;
+      _answers['epigastric_hard'] = answer == '有心下痞硬';
+    }
     if (questionKey == 'combined_treatment_history') {
       _answers['history_mistreatment_answered'] = true;
       if (answer == '明确没有') {
@@ -1055,6 +1142,7 @@ class DiagnosticEngine {
       }
     }
     if (questionKey == 'food_stagnation') {
+      _answers['food_stagnation_answer'] = answer;
       _answers['food_stagnation_answered'] = true;
       if (answer == '有明确食积表现') {
         _answers['food_stagnation'] = true;

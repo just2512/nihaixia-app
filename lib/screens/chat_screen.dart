@@ -544,10 +544,15 @@ class _ChatScreenState extends State<ChatScreen> {
         'tongue_shape': '舌形',
         'pulse_type': '主脉',
         'pulse_type_secondary': '兼脉',
+        'treatment_history': '既往误治',
+        'combined_treatment_history': '既往误用泻下法',
+        'sun_taiyin_repeated_purgation': '反复泻下史',
+        'sun_taiyin_epigastric_hard': '心下痞硬',
+        'food_stagnation': '食积线索',
       };
       final evidenceLines = <String>[];
       for (final record in zangFuEvidence.records) {
-        final label = questionLabels[record.questionKey] ?? record.questionKey;
+        final label = questionLabels[record.questionKey] ?? record.questionLabel;
         final stateLabel = switch (record.state) {
           ZangFuEvidenceAnswerState.explicitNormal => '（明确正常项）',
           ZangFuEvidenceAnswerState.unknown => '（未知/不确定）',

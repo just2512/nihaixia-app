@@ -447,6 +447,46 @@ void main() {
       );
     });
 
+    test('太阳转太阴第163条必须核对反复误下与心下痞硬', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'has_sweat': true,
+          'diarrhea': true,
+          'abdominal_pain': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      expect(
+        engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+        'combined_treatment_history',
+      );
+      engine.answerFollowUp('combined_treatment_history', '曾经被误用泻下法');
+      expect(engine.selectedSymptoms, isEmpty);
+      expect(
+        engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+        'sun_taiyin_repeated_purgation',
+      );
+      engine.answerFollowUp('sun_taiyin_repeated_purgation', '曾多次使用');
+      expect(engine.selectedSymptoms, isEmpty);
+      expect(
+        engine.getRequiredCombinedPatternFollowUpQuestions().single.key,
+        'sun_taiyin_epigastric_hard',
+      );
+      engine.answerFollowUp('sun_taiyin_epigastric_hard', '有心下痞硬');
+
+      engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.sunTaiyin,
+      );
+    });
+
     test('第256条候选在最终结果前进入宿食追问', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(

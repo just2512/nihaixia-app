@@ -5,6 +5,57 @@ import 'package:nihaisha_app/screens/assistant_history_screen.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+
+  testWidgets('点击历史会话将会话 ID 返回给主对话以继续会话', (tester) async {
+    final rows = [
+      {
+        'id': 27,
+        'title': '可继续的问诊',
+        'mode': 'consultation',
+        'created_at': '2026-11-03T08:00:00.000',
+        'updated_at': '2026-11-03T08:10:00.000',
+        'last_message_preview': '继续追问脉象',
+      },
+    ];
+    int? resumedId;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Column(
+              children: [
+                Text('恢复会话 ID：${resumedId ?? '无'}'),
+                ElevatedButton(
+                  onPressed: () async {
+                    final id = await Navigator.of(context).push<int>(
+                      MaterialPageRoute(
+                        builder: (_) => AssistantHistoryScreen(
+                          loadConversations: () async =>
+                              List<Map<String, Object?>>.from(rows),
+                          deleteConversations: (_) async {},
+                        ),
+                      ),
+                    );
+                    resumedId = id;
+                  },
+                  child: const Text('打开历史'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开历史'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('可继续的问诊'));
+    await tester.pumpAndSettle();
+
+    expect(resumedId, 27);
+  });
+
   testWidgets('历史会话可查看，并支持多选删除', (tester) async {
     final rows = <Map<String, Object?>>[
       {

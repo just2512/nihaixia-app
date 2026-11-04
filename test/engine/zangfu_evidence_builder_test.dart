@@ -5,6 +5,37 @@ import 'package:nihaisha_app/models/zangfu_evidence.dart';
 
 void main() {
   group('脏腑独立证据层', () {
+
+    test('保留跟进问答与用户选择症状的来源，不做脏腑归属', () {
+      final assessment = ZangFuEvidenceBuilder.build(
+        qAnswers: const {},
+        extSymptoms: const {'cough_wheeze'},
+        answers: const {
+          'treatment_history': '被误下过',
+          'combined_treatment_history': '不确定',
+          'food_stagnation_answer': '有明确食积表现',
+          'sun_taiyin_repeated_purgation_answer': '曾多次使用',
+          'sun_taiyin_epigastric_hard': '有心下痞硬',
+        },
+        selectedSymptoms: const ['头痛', '项背强'],
+      );
+
+      final byKey = {
+        for (final record in assessment.records) record.questionKey: record,
+      };
+      expect(byKey['treatment_history']?.answerText, '被误下过');
+      expect(byKey['combined_treatment_history']?.state,
+          ZangFuEvidenceAnswerState.unknown);
+      expect(byKey['food_stagnation']?.answerText, '有明确食积表现');
+      expect(byKey['sun_taiyin_repeated_purgation']?.answerText, '曾多次使用');
+      expect(byKey['sun_taiyin_epigastric_hard']?.answerText, '有心下痞硬');
+      expect(byKey['selected_symptom_1']?.answerText, '头痛');
+      expect(byKey['selected_symptom_2']?.answerText, '项背强');
+      expect(byKey['selected_symptom_1']?.sourceId, 'selected_symptom:1');
+      expect(assessment.unclassifiedAdditionalEvidence, ['cough_wheeze']);
+      expect(assessment.organMappingStatus, 'MISSING');
+    });
+
     test('使用 App 稳定问项 key 还原原始选项，不创建脏腑归属', () {
       final assessment = ZangFuEvidenceBuilder.build(
         qAnswers: const {
