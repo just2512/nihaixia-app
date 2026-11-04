@@ -46,7 +46,10 @@ void main() {
     await tester.tap(find.widgetWithText(FilterChip, '黄厚'));
     await tester.tap(find.widgetWithText(FilterChip, '淡白'));
     await tester.tap(find.widgetWithText(FilterChip, '数').first);
-    await tester.tap(find.widgetWithText(FilterChip, '浮').last);
+    final secondaryPulse = find.widgetWithText(FilterChip, '浮').last;
+    await tester.ensureVisible(secondaryPulse);
+    await tester.pumpAndSettle();
+    await tester.tap(secondaryPulse);
     await tester.tap(find.text('确认'));
     await tester.pumpAndSettle();
 

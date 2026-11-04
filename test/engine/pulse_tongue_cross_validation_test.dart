@@ -265,6 +265,31 @@ void main() {
       expect(engine.createSnapshot().answers['cold_limbs'], isFalse);
     });
 
+    test('不确定追问不会删除其他问项已经取得的阳性证据', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阴',
+        answers: const {
+          'diarrhea': true,
+          'abdomen_pain_relief': true,
+          'no_thirst': true,
+        },
+        tenQuestionIndex: 0,
+        tongueCoating: '白厚',
+        tongueShape: '淡白',
+        pulseType: '弦',
+      ));
+
+      engine.answerFollowUp('pulse_cross_taiyin', '不确定');
+      final answers = engine.createSnapshot().answers;
+      expect(answers['diarrhea'], isTrue);
+      expect(answers['abdomen_pain_relief'], isTrue);
+      expect(answers['no_thirst'], isTrue);
+      expect(answers['pulse_cross_taiyin_answered'], isTrue);
+    });
+
     test('不确定答案保留为缺失证据，不写入阴性标志且不重复追问', () {
       final cases = <String, List<String>>{
         'pulse_cross_drink': [
@@ -305,10 +330,10 @@ void main() {
       engine.answerFollowUp('pulse_cross_urine', '不清楚');
       engine.answerFollowUp('pulse_cross_limbs', '不清楚');
       final assessment = engine.createSnapshot();
-      final result = engine.diagnose();
-      expect(result, isNotNull);
-      expect(result!.pulseTongueAssessment!.status, '待补充问诊');
-      expect(result.pulseTongueAssessment!.missingEvidence,
+      final pulseTongueAssessment = engine.getPulseTongueAssessment();
+      expect(pulseTongueAssessment, isNotNull);
+      expect(pulseTongueAssessment!.status, '待补充问诊');
+      expect(pulseTongueAssessment.missingEvidence,
           containsAll(['饮水偏好', '小便情况', '四肢温度']));
       expect(engine.getPulseTongueFollowUpQuestions(), isEmpty);
       expect(assessment.answers['thirsty'], isNull);

@@ -8,6 +8,11 @@ void main() {
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    DatabaseHelper.configureTestDatabase('assistant_conversation_storage_test.db');
+  });
+
+  tearDownAll(() async {
+    await DatabaseHelper.closeTestDatabase();
   });
 
   setUp(() async {

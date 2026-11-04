@@ -7,6 +7,7 @@ import 'assistant_conversation_store.dart';
 class DatabaseHelper implements AssistantConversationStore {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  static String? _testDatabaseFileName;
 
   /// 收藏变更版本号：每次增删收藏自增，供收藏页实时刷新（解决「退出应用才更新」问题）。
   static final ValueNotifier<int> bookmarkVersion = ValueNotifier<int>(0);
@@ -15,7 +16,7 @@ class DatabaseHelper implements AssistantConversationStore {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('nihaisha.db');
+    _database = await _initDB(_testDatabaseFileName ?? 'nihaisha.db');
     return _database!;
   }
 
@@ -34,6 +35,23 @@ class DatabaseHelper implements AssistantConversationStore {
   @visibleForTesting
   static void resetForTest() {
     _database = null;
+  }
+
+  @visibleForTesting
+  static void configureTestDatabase(String fileName) {
+    if (fileName.trim().isEmpty) {
+      throw ArgumentError.value(fileName, 'fileName');
+    }
+    _testDatabaseFileName = fileName;
+    _database = null;
+  }
+
+  @visibleForTesting
+  static Future<void> closeTestDatabase() async {
+    final opened = _database;
+    _database = null;
+    _testDatabaseFileName = null;
+    if (opened != null && opened.isOpen) await opened.close();
   }
 
   Future<void> _createDB(Database db, int version) async {
