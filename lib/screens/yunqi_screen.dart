@@ -67,7 +67,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
       '《内经》大论原文：${(data.jz60['SAME'] ?? '').isEmpty ? 'MISSING' : data.jz60['SAME']}',
       '口径：按本页当前运气推算算法生成；仅供理论学习，不构成医疗建议。',
     ];
-    Navigator.of(context).pop(lines.join('\\n'));
+    Navigator.of(context).pop(lines.join('\n'));
   }
 
   /// 存图 / 分享长图：年运总览 + 三图 + 关键病候卡。
