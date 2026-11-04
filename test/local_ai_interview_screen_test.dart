@@ -566,7 +566,7 @@ void main() {
 
       await tester.enterText(
         find.byType(TextField),
-        '最近三天偶尔头痛，睡眠后会缓解。',
+        '我最近三天偶尔头痛，睡眠后会缓解。',
       );
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
@@ -604,7 +604,7 @@ void main() {
         MaterialApp(home: LocalAiInterviewScreen(service: service)),
       );
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '较早的头痛描述');
+      await tester.enterText(find.byType(TextField), '我较早的头痛描述');
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
@@ -1174,7 +1174,7 @@ void main() {
       await tester.tap(find.text('打开本地问诊'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), '饭后腹胀，已经持续约两周。');
+      await tester.enterText(find.byType(TextField), '我饭后腹胀，已经持续约两周。');
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
