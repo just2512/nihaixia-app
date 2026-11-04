@@ -169,6 +169,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
+  AssistantConversationStore get _conversationStore =>
+      widget.conversationStore ?? DatabaseHelper.instance;
+
   @override
   void initState() {
     super.initState();
