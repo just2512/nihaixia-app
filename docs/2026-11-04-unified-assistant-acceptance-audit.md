@@ -82,3 +82,35 @@
 - 不把上游标签、模型推断或无出处医案当成经典证据。
 - 不把 Widget 测试当作 Find N2 真机验收。
 - 不在未核验条文前恢复历史合病方剂映射。
+
+## 2026-11-04 第二轮实施回写：舌脉 canonical 边界与统一适配层追问回归
+
+本节记录第一轮审计后新增的实际代码，不覆盖上文尚未完成的产品级验收结论。
+
+### 已提交实现
+
+- `lib/services/tcm_interview_adapter.dart`：作为统一对话层与 `DiagnosticEngine` 之间的确定性边界；引擎仍是辨证规则唯一所有者。
+- `ChatScreen` 的温度辨经、舌脉输入、十问、追问、快照、诊断及脏腑证据读取已通过该适配层。
+- 舌苔、舌形、主脉、兼脉在适配层入口统一 canonical 化；非空未知值拒绝，不静默降级为空值。
+- 单脉和兼脉仍使用独立字段；组合文本（例如“浮数”）不能冒充单一 canonical 脉象。
+- 新增适配层测试，覆盖未知值拒绝、注释标签归一、单脉/兼脉边界，以及脉舌冲突追问、非法答案拒绝、快照恢复后追问证据和冲突说明保留。
+
+### 提交与 CI 证据
+
+- `53adc297742662f7789018ed9c7b3f0ab9660024`：适配层舌脉输入 canonical 校验。
+- `51ae5410da2d95c22f65af18ebbb1aa0eac8c0f6`：canonical 边界回归测试。
+- `f4c0e3bbbf54e5ad82ea6f96e3543c4f5f9ba7fd`：通过统一适配层覆盖脉舌冲突追问及快照恢复。
+
+最终提交 `f4c0e3b` 的 Flutter Quality Gate run `41847572014` 与 Flutter tests run `41847571924` 均为 SUCCESS；其中 Quality Gate 与 Android debug APK 构建通过。
+
+### 验收边界仍为 PARTIAL
+
+这轮只证明 canonical 输入边界及引擎追问状态在适配层可测，不代表完整问诊已进入统一主对话时间线。当前 `LocalAiInterviewScreen._continueWithStructuredDiagnosis()` 仍通过 Navigator 打开独立 `ChatScreen`；完成后才把文本摘要写回 AI 消息列表。尚未完成的内容：
+
+1. 把规则问诊每一轮问题、选项、追问、答案、证据和诊断结果作为同一会话中的结构化消息持久化。
+2. 从历史会话恢复时重建规则问诊快照、当前步骤、待回答问题和选项，而不是只恢复文本 transcript。
+3. 让用户在同一输入框中自然语言回答或选择规则选项，并由确定性引擎校验；本地模型不得代替用户填写诊断选项。
+4. 覆盖完整 UI → Adapter → Engine → Snapshot → SQLite → 重启恢复路径。
+
+因此第 3 项的 canonical/冲突追问适配层测试可记为代码层 PASS；第 7 项统一问诊体验仍为 PARTIAL，不得将独立页面路由包装称为融合完成。
+
