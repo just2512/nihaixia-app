@@ -164,8 +164,8 @@ class _YiJingScreenState extends State<YiJingScreen> {
     );
   }
 
-  void _openResult(CastResult cast) {
-    Navigator.push(
+  Future<void> _openResult(CastResult cast) async {
+    final result = await Navigator.push<String>(
       context,
       FoldAwareMaterialPageRoute(
         sourceContext: context,
@@ -175,6 +175,9 @@ class _YiJingScreenState extends State<YiJingScreen> {
         ),
       ),
     );
+    if (!mounted || !widget.returnResultOnComplete || result == null) return;
+    // 易经结果页位于工具主页之上；先收结果页，再把结果从工具页继续交回统一助手。
+    Navigator.pop(context, result);
   }
 
   void _castNumbers() {
