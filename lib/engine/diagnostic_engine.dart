@@ -1761,7 +1761,7 @@ class DiagnosticEngine {
         break;
     }
 
-    final status = questionKeys.isNotEmpty
+    final status = missing.isNotEmpty
         ? '待补充问诊'
         : supporting.isNotEmpty && contradicting.isNotEmpty
             ? '证据混合'
