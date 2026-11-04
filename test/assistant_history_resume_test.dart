@@ -47,8 +47,8 @@ class _HistoryResumeService extends LocalAiService {
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
-  int _nextId = 2;
-  int _nextMessageId = 3;
+  int _nextId = 3;
+  int _nextMessageId = 5;
 
   final Map<int, Map<String, Object?>> conversations = {
     1: {
