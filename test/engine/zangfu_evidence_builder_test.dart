@@ -64,5 +64,30 @@ void main() {
       expect(assessment.unclassifiedAdditionalEvidence, ['口苦', '胁肋不适']);
       expect(assessment.hasVerifiedOrganMapping, isFalse);
     });
+
+    test('舌象、主脉与兼脉作为原始证据独立保留，不生成脏腑归属', () {
+      final assessment = ZangFuEvidenceBuilder.build(
+        qAnswers: const {},
+        extSymptoms: const {},
+        tongueCoating: '薄白',
+        tongueShape: '淡红',
+        pulseType: '浮',
+        pulseTypeSecondary: '紧',
+      );
+
+      expect(
+        assessment.records.map((record) => record.questionKey),
+        containsAll([
+          'tongue_coating',
+          'tongue_shape',
+          'pulse_type',
+          'pulse_type_secondary',
+        ]),
+      );
+      expect(assessment.records.map((record) => record.answerText),
+          containsAll(['薄白', '淡红', '浮', '紧']));
+      expect(assessment.organMappingStatus, 'MISSING');
+      expect(assessment.hasVerifiedOrganMapping, isFalse);
+    });
   });
 }
