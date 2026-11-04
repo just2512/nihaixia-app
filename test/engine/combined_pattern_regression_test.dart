@@ -686,6 +686,66 @@ void main() {
       });
     }
 
+    test('第256条关键证据不足时不遮蔽少阳太阴候选', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+          'abdominal_pain': true,
+          // 故意缺少宿食证据；也未提供滑数组合脉。
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.shaoyangTaiyin);
+      expect(engine.combinedMeridian, '太阴');
+    });
+
+    test('太阳阳明下利误下史为真时不遮蔽太阳少阳候选', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+          'history_mistreatment': true,
+          'bitter_mouth': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunShaoyangDiarrhea);
+      expect(engine.combinedMeridian, '少阳');
+    });
+
+    test('误下史未知时不得误命中第32条葛根汤合病', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          isNot(CombinedPatternCondition.sunYangmingBase));
+    });
+
     test('规则表与检测器可达矩阵数量一致，唯一死键不得被误报为可达', () {
       final ruleConditions = DiagnosticRules.combinedPatterns
           .map((pattern) => pattern.condition)
