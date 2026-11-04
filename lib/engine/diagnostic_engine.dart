@@ -283,6 +283,7 @@ class DiagnosticEngine {
     if (meridian == '少阳' &&
         _answers['diarrhea'] == true &&
         slipperyRapidPulse &&
+        _answers['food_stagnation'] == null &&
         _answers['food_stagnation_answered'] != true) {
       questions.add(const FollowUpQuestion(
         key: 'food_stagnation',
@@ -307,6 +308,7 @@ class DiagnosticEngine {
     if (primary == '太阳' &&
         yangmingScore >= 3 &&
         _answers['diarrhea'] == true &&
+        _answers['history_mistreatment'] == null &&
         _answers['history_mistreatment_answered'] != true) {
       questions.add(const FollowUpQuestion(
         key: 'combined_treatment_history',
@@ -322,6 +324,7 @@ class DiagnosticEngine {
         yangmingScore >= 3 &&
         _answers['diarrhea'] == true &&
         slipperyRapidPulse &&
+        _answers['food_stagnation'] == null &&
         _answers['food_stagnation_answered'] != true) {
       questions.add(const FollowUpQuestion(
         key: 'food_stagnation',
@@ -3157,6 +3160,30 @@ class DiagnosticEngine {
 
   // ==================== 杂病/跨经方剂 ====================
   DiagnosisResult? _diagnoseMiscellaneous(Map<String, dynamic> answers) {
+
+    // 第34条证据齐备时优先于较宽泛的第178条桂枝人参汤匹配，防止特异证据被先行分支遮蔽。
+    // 《伤寒论》第34条：太阳病桂枝证误下后的协热利，不是太阳阳明合病。
+    // 必须同时具备：太阳表证（发热恶寒）+汗出、明确误下史、下利、脉促、喘。
+    // 任一关键证据缺失均不以本条方剂覆盖；不可将普通发热下利泛化为葛根芩连汤证。
+    if (_meridianDirection == '太阳' &&
+        answers['temperature'] == 'fever_chills' &&
+        answers['fever'] == true &&
+        answers['has_sweat'] == true &&
+        answers['history_mistreatment'] == true &&
+        answers['diarrhea'] == true &&
+        answers['asthma'] == true &&
+        _pulseType == '促') {
+      return DiagnosisResult(
+        meridian: '太阳',
+        pattern: '太阳病误下协热利（葛根黄芩黄连汤证）',
+        patternDetail: '太阳病，桂枝证，医反下之，利遂不止，脉促者，表未解也；喘而汗出者。',
+        formula: '葛根黄芩黄连汤',
+        explanation: '此为太阳桂枝证误下后的协热利方证，不是一般热泻，也不作为太阳阳明合病标签。葛根升津止利，黄芩黄连清里热，甘草和中。',
+        confidence: 0.85,
+        matchedSymptoms: _selectedSymptoms,
+      );
+    }
+
     final hasUrinationProblem = answers['urine_difficult'] == true ||
         _symSelected('小便不利');
     final thirsty = answers['thirsty'] == true;
@@ -3448,28 +3475,6 @@ class DiagnosticEngine {
         patternDetail: '太阳阳明合病，不下利但呕者。',
         formula: '葛根加半夏汤',
         explanation: '葛根汤解表，半夏降逆止呕。太阳阳明合病呕者。',
-        confidence: 0.85,
-        matchedSymptoms: _selectedSymptoms,
-      );
-    }
-
-    // 《伤寒论》第34条：太阳病桂枝证误下后的协热利，不是太阳阳明合病。
-    // 必须同时具备：太阳表证（发热恶寒）+汗出、明确误下史、下利、脉促、喘。
-    // 任一关键证据缺失均不以本条方剂覆盖；不可将普通发热下利泛化为葛根芩连汤证。
-    if (_meridianDirection == '太阳' &&
-        answers['temperature'] == 'fever_chills' &&
-        answers['fever'] == true &&
-        answers['has_sweat'] == true &&
-        answers['history_mistreatment'] == true &&
-        answers['diarrhea'] == true &&
-        answers['asthma'] == true &&
-        _pulseType == '促') {
-      return DiagnosisResult(
-        meridian: '太阳',
-        pattern: '太阳病误下协热利（葛根黄芩黄连汤证）',
-        patternDetail: '太阳病，桂枝证，医反下之，利遂不止，脉促者，表未解也；喘而汗出者。',
-        formula: '葛根黄芩黄连汤',
-        explanation: '此为太阳桂枝证误下后的协热利方证，不是一般热泻，也不作为太阳阳明合病标签。葛根升津止利，黄芩黄连清里热，甘草和中。',
         confidence: 0.85,
         matchedSymptoms: _selectedSymptoms,
       );

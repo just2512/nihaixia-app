@@ -222,6 +222,30 @@ void main() {
       expect(result.combinedMeridian, isNull);
     });
 
+    test('第34条特异证据优先于第178条协热下利心下痞硬', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const ['协热下利', '心下痞硬'],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'fever': true,
+          'has_sweat': true,
+          'history_mistreatment': true,
+          'diarrhea': true,
+          'asthma': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '促',
+      ));
+
+      final result = engine.diagnose();
+      expect(result, isNotNull);
+      expect(result!.formula, '葛根黄芩黄连汤');
+      expect(result.pattern, contains('第34条'));
+    });
+
     test('第34条缺少喘或汗出证据时不得触发葛根黄芩黄连汤', () {
       final engine = DiagnosticEngine();
       engine.restoreSnapshot(EngineSnapshot(
