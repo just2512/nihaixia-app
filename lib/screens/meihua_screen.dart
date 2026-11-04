@@ -24,9 +24,12 @@ int _shiChenIndexOfHour(int hour) => ((hour.clamp(0, 23) + 1) ~/ 2) % 12;
 class MeihuaScreen extends StatefulWidget {
   const MeihuaScreen({
     super.key,
+    this.returnResultOnComplete = false,
     Stream<AccelerometerEvent> Function({Duration samplingPeriod})?
         accelSource,
   }) : _accelSource = accelSource ?? accelerometerEventStream;
+
+  final bool returnResultOnComplete;
 
   /// 加速度流来源。测试注入假流即可驱动「摇一摇」，不必真的摇手机。
   final Stream<AccelerometerEvent> Function({Duration samplingPeriod})
@@ -149,6 +152,25 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
     );
   }
 
+
+  void _returnAssistantResult() {
+    final chart = _chart;
+    if (chart == null) return;
+    final summary = [
+      '梅花易数起卦结果（${chart.methodLabel}）',
+      '主卦：第${chart.main.seq}卦 ${chart.main.name}；卦辞：${chart.main.judgement}',
+      '互卦：第${chart.mutual.seq}卦 ${chart.mutual.name}',
+      '变卦：第${chart.changed.seq}卦 ${chart.changed.name}',
+      '动爻：第${chart.movingYao}爻；爻辞：${chart.movingYaoCi}',
+      '体卦五行：${chart.tiWuxing}；用卦五行：${chart.yongWuxing}',
+      '体用关系：${chart.mainRelation}；月令：${chart.monthBranch}；体卦旺衰：${chart.tiWangShuai}',
+      '主断：${chart.verdict}',
+      '推算过程：${chart.trace.join('；')}',
+      '说明：民俗文化参考，非吉凶指令。',
+    ].join('\\n');
+    Navigator.pop(context, summary);
+  }
+
   /// 存图 / 分享长图：内容与结果区同源。
   void _exportImage() {
     final c = _chart;
@@ -204,6 +226,12 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
       appBar: AppBar(
         title: const Text('梅花易数'),
         actions: [
+          if (widget.returnResultOnComplete && _chart != null)
+            IconButton(
+              icon: const Icon(Icons.reply),
+              tooltip: '返回 AI 助手',
+              onPressed: _returnAssistantResult,
+            ),
           if (_chart != null)
             IconButton(
               icon: const Icon(Icons.image_outlined),
