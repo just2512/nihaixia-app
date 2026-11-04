@@ -86,7 +86,7 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
                   '日宫：${c.day.palace.name}',
                   '正时主断：${c.hour.palace.name}（${c.hour.palace.deity}主事）',
                   '说明：民俗文化参考，非吉凶指令。',
-                ].join('\\n'),
+                ].join('\n'),
               ),
             ),
         ],
