@@ -16,7 +16,9 @@ const _kShiChenNames = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', 
 /// 属民俗文化参考，非吉凶指令。术内对「月初一落宫」本有口径分歧，
 /// 页面双口径并列由使用者自选。
 class XiaoliurenScreen extends StatefulWidget {
-  const XiaoliurenScreen({super.key});
+  const XiaoliurenScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<XiaoliurenScreen> createState() => _XiaoliurenScreenState();
@@ -67,7 +69,28 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
     final cs = Theme.of(context).colorScheme;
     final c = _chart;
     return Scaffold(
-      appBar: AppBar(title: const Text('小六壬')),
+      appBar: AppBar(
+        title: const Text('小六壬'),
+        actions: [
+          if (widget.returnResultOnComplete && c != null)
+            IconButton(
+              tooltip: '返回 AI 助手',
+              icon: const Icon(Icons.reply),
+              onPressed: () => Navigator.pop(
+                context,
+                [
+                  '小六壬起课结果（${_rule.source}）',
+                  '日期：${_date.year}-${_date.month}-${_date.day}；农历：${c.lunarMonth}月${c.lunarDay}日',
+                  '时辰：${_kShiChenNames[c.hourNumber - 1]}时',
+                  '月宫：${c.month.palace.name}',
+                  '日宫：${c.day.palace.name}',
+                  '正时主断：${c.hour.palace.name}（${c.hour.palace.deity}主事）',
+                  '说明：民俗文化参考，非吉凶指令。',
+                ].join('\\n'),
+              ),
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
