@@ -15,6 +15,14 @@ const _readyStatus = LocalAiModelStatus(
   backend: 'litert',
 );
 
+class _NoLostImagePicker implements LocalAiImagePicker {
+  @override
+  Future<String?> pickCameraImagePath() async => null;
+
+  @override
+  Future<String?> retrieveLostImagePath() async => null;
+}
+
 class _RecordingAssistantService extends LocalAiService {
   String? restoredTranscript;
   List<String> restoredUserMessages = const [];
@@ -89,7 +97,12 @@ void main() {
   testWidgets('五运六气结果回到统一时间线并同步进本地模型上下文', (tester) async {
     final service = _RecordingAssistantService();
     await tester.pumpWidget(
-      MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
