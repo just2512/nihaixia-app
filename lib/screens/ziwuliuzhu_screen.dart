@@ -3,7 +3,14 @@ import '../utils/fold_aware_routes.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
 
 class ZiWuLiuZhuScreen extends StatefulWidget {
-  const ZiWuLiuZhuScreen({super.key});
+  const ZiWuLiuZhuScreen({
+    super.key,
+    this.returnResultOnComplete = false,
+    this.initialDate,
+  });
+
+  final bool returnResultOnComplete;
+  final DateTime? initialDate;
 
   @override
   State<ZiWuLiuZhuScreen> createState() => _ZiWuLiuZhuScreenState();
@@ -75,7 +82,62 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.initialDate ?? DateTime.now();
     _tabController = TabController(length: 4, vsync: this);
+  }
+
+  String _buildAssistantSummary() {
+    final gz = eng.calcDayGanZhi(_selectedDate);
+    final hour = eng.calcHourGanZhi(
+      gz.dayGan,
+      _selectedDate.hour,
+      _selectedDate.minute,
+    );
+    final dayGan = eng.ganName(gz.dayGan);
+    final dayZhi = eng.zhiName(gz.dayZhi);
+    final hourGan = eng.ganName(hour.hourGan);
+    final hourZhi = eng.zhiName(hour.hourZhi);
+
+    final shichen = _diZhi[_getShichenIndex(_selectedDate)];
+    final (meridian, timeRange) = _zhiToMeridian[shichen]!;
+    final naZi = '时辰 $shichen（$timeRange），对应$meridian，本穴 ${_getBenXue(meridian)}；'
+        '日干 $dayGan 对应${_ganToOrgan[dayGan]}，${_getWuMenInfo(dayGan)}。';
+
+    final najia = eng.najiaOpen(gz.dayGan, hour.hourGan, hour.hourZhi) ??
+        eng.najiaHeRi(gz.dayGan, hour.hourGan, hour.hourZhi);
+    final najiaText = najia == null
+        ? '当前时间无正开穴，也无合日互用取穴。'
+        : '${najia['point'] ?? 'MISSING'}，${najia['meridian'] ?? 'MISSING'}，'
+            '${najia['type'] ?? 'MISSING'}'
+            '${najia['yuan'] == null ? '' : '；返本还原取原穴 ${najia['yuan']}'}。';
+
+    final linggui = eng.lingguiOpen(
+      gz.dayGan,
+      gz.dayZhi,
+      hour.hourGan,
+      hour.hourZhi,
+    );
+    final gua = linggui['gua'] as List<String>;
+    final lingguiText = '${gua[0]}卦，主穴 ${gua[1]}（${gua[2]}），'
+        '配穴 ${linggui['peidui']}（${linggui['peiduiMai']}）；'
+        '${linggui['note'] == null || (linggui['note'] as String).isEmpty ? '无特殊处理' : linggui['note']}。';
+
+    final feiteng = eng.feitengOpen(hour.hourGan);
+    final feitengText = feiteng == null
+        ? '当前时干无对应飞腾八法取穴。'
+        : '${feiteng[0]}卦，开穴 ${feiteng[1]}。';
+
+    return [
+      '中医时辰开穴计算结果',
+      '计算时间：${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')} '
+          '${_selectedDate.hour.toString().padLeft(2, '0')}:${_selectedDate.minute.toString().padLeft(2, '0')}（设备本地时间）',
+      '日干支：$dayGan$dayZhi；时干支：$hourGan$hourZhi。',
+      '纳子法：$naZi',
+      '纳甲法：$najiaText',
+      '灵龟八法：$lingguiText',
+      '飞腾八法：$feitengText',
+      '计算口径：使用 App 内置子午流注计算引擎；日干支默认经纬度 120E/30N，子时按 23:00 换日。结果为计算输出，不代表个体诊疗建议。',
+    ].join('\n');
   }
 
   @override
@@ -141,6 +203,14 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('中医时辰开穴综合计算器'),
+        actions: [
+          if (widget.returnResultOnComplete)
+            IconButton(
+              tooltip: '返回 AI 助手',
+              icon: const Icon(Icons.reply),
+              onPressed: () => Navigator.pop(context, _buildAssistantSummary()),
+            ),
+        ],
         // controller 必须显式传入：否则 TabBar 自建内部 controller，与
         // TabBarView 的 _tabController 脱钩——点 Tab 不切页、滑页 Tab 不动。
         bottom: TabBar(

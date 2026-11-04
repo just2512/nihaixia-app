@@ -106,6 +106,12 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: selectedMode, tool: tool);
     }
 
+    // 明确的学习/解释请求优先于工具名和动作词，避免“学习五运六气推算原理”
+    // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
+    if (_learningCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    }
+
     final tool = AssistantToolRouter.match(text, AssistantMode.automatic);
     if (tool != null) {
       final effectiveMode = tool.modes.contains(AssistantMode.metaphysics)

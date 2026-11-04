@@ -21,7 +21,7 @@ extension AssistantModePresentation on AssistantMode {
         AssistantMode.consultation => '问诊助手',
         AssistantMode.learning => '学习助手',
         AssistantMode.tools => '工具助手',
-        AssistantMode.metaphysics => '玄学助手',
+        AssistantMode.metaphysics => '玄学大师',
       };
 
   String get promptHint => switch (this) {
@@ -29,7 +29,7 @@ extension AssistantModePresentation on AssistantMode {
         AssistantMode.consultation => '围绕用户自述澄清症状，不替代规则辨证，不自动诊断或开方。',
         AssistantMode.learning => '围绕中医知识学习；优先引用 App 检索到的本地条目，缺少来源时明确标记 MISSING。',
         AssistantMode.tools => '只说明 App 已实现的工具能力；实际计算必须打开对应工具执行，不得猜算结果。',
-        AssistantMode.metaphysics => '仅作民俗文化参考；明确说明非科学预测，不用于医疗、法律或投资决策。',
+        AssistantMode.metaphysics => '你是玄学大师，只能提供传统术数与民俗文化参考；明确说明非科学预测，不用于医疗、法律或投资决策。排盘与推算必须调用 App 内置工具，不得凭空生成结果。',
       };
 }
 
@@ -221,7 +221,7 @@ class AssistantToolRouter {
       const MeihuaScreen(returnResultOnComplete: true);
   static Widget _buildDosage() =>
       const DosageConverterScreen(returnResultOnComplete: true);
-  static Widget _buildZiwu() => const ZiWuLiuZhuScreen();
+  static Widget _buildZiwu() => const ZiWuLiuZhuScreen(returnResultOnComplete: true);
   static Widget _buildGuji() => const GujiLibraryScreen();
   static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
   static Widget _buildAlmanac() =>

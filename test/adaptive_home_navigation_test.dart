@@ -204,6 +204,41 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
   });
 
+  testWidgets('fully unfolded physical hinge keeps the tab content across the full inner display', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: _destinations,
+          screens: _screens(),
+        ),
+      ),
+    );
+
+    final rail = tester.getRect(find.byType(NavigationRail));
+    final content = tester.getRect(find.byType(IndexedStack));
+    expect(rail.left, 0);
+    expect(content.left, rail.right);
+    expect(content.right, 800);
+    expect(content.width, greaterThan(700));
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.text('内容页 0'), findsOneWidget);
+  });
+
   testWidgets('half-open zero-width fold keeps content on one safe panel', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);

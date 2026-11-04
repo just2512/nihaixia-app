@@ -23,6 +23,24 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('学习五运六气推算原理进入学习助手，不启动计算器', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '学习五运六气推算原理',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.learning);
+      expect(decision.tool, isNull);
+    });
+
+    test('介绍医案检索方式进入学习助手，不直接打开资料页', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '介绍一下医案检索的方式',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.learning);
+      expect(decision.tool, isNull);
+    });
+
     test('明确工具动作自动路由五运六气', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '帮我推算五运六气',

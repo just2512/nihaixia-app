@@ -84,3 +84,15 @@ Navigator.of(context).push(
 路由在构建页面内容时读取来源控件的窗口坐标，并通过 `AdaptiveSinglePane` 将整个页面（包含 AppBar、滚动区和底部操作区）限制在来源控件所在的物理面板。没有上报铰链/折痕时保持普通全宽页面行为。弹窗仍使用 `showFoldAwareDialog`，不应改成页面路由。
 
 当前已将 `lib/screens/` 中盘点到的普通全屏页面跳转统一迁移到该路由，包括知识/工具/收藏、规则问诊、医案、经方本草、针灸、内经、易经、紫微排盘和文档互链。规则问诊的本地 AI 专用子路由保留独立锚点参数（`preferredAnchorPoint`），同样会被约束到来源物理屏。继续新增页面时，必须使用 `FoldAwareMaterialPageRoute`，不要直接使用裸 `MaterialPageRoute`。
+
+
+## 2026-11-04 当前实现校正：完全展开的物理铰链
+
+本节是当前代码与测试的权威说明，覆盖本文早期将根导航描述为“左物理屏导航、右物理屏内容”的旧设计：
+
+- Find N2 完全展开时，无论系统上报的是零宽度 fold 还是有宽度的物理 hinge，只要姿态不是 half-opened，根导航使用左侧窄 NavigationRail，当前 Tab 使用剩余的**整个可用窗口宽度**，不再把对话强制限制在右半屏。
+- 根导航在这一状态下会向 Tab 子树屏蔽已经由根布局处理的 displayFeatures，防止嵌套 AdaptiveSinglePane 再次选取单侧面板、导致另一半黑屏。
+- 半折叠/桌面姿态仍只在安全物理面板显示内容，并使用底部导航；这是为了避免内容穿过实际铰链，不等同于完全展开状态。
+- 新增物理 hinge + postureFlat 的根导航回归测试，断言 IndexedStack 从 NavigationRail 右侧延伸至窗口最右边，宽度超过 700 dp。
+
+**边界：** Widget 测试证明 Flutter 布局约束，不证明 Find N2 真机系统实际报告的 DisplayFeature 类型/姿态。Find N2 外屏、完全展开内屏、半折叠、键盘和弹窗仍需实机日志与截图验收，当前状态继续为 MISSING。

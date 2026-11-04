@@ -720,7 +720,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _service.sendMessageWithContext(text, context: context);
       case AssistantMode.metaphysics:
         final context = '当前角色：玄学助手。\n${AssistantMode.metaphysics.promptHint}\n'
-            '可用工具：紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、每日黄历。'
+            '可用工具：五运六气推算、紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、每日黄历。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
         return _service.sendMessageWithContext(text, context: context);
     }
