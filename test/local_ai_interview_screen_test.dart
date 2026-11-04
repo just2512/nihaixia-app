@@ -589,7 +589,7 @@ void main() {
         find.byWidgetPredicate(
           (widget) =>
               widget is SelectableText &&
-              widget.data == '已收到你的描述：最近三天偶尔头痛，睡眠后会缓解。',
+              widget.data == '已收到你的描述：我最近三天偶尔头痛，睡眠后会缓解。',
         ),
         findsOneWidget,
       );
