@@ -595,21 +595,30 @@ class _ChatScreenState extends State<ChatScreen> {
         isWarning: true,
       );
 
-      // P2: 数据驱动兜底——证据不足时仍按症状给出"参考性"方剂提示（非处方）
-      final tableSuggestion = _engine.suggestByTable();
-      final ranking = _engine.getSimilarityRanking(topK: 3);
-      final refNames = <String>{};
-      if (tableSuggestion != null) refNames.add(tableSuggestion);
-      for (final (name, _) in ranking) {
-        refNames.add(name);
-      }
-      if (refNames.isNotEmpty) {
+      if (_engine.suppressReferenceFormulaSuggestions) {
         _addBotMessage(
-          '相似症状参考方（非处方，仅供参考）\n\n'
-          '${refNames.take(3).join('、')}\n\n'
-          '以上仅依据症状关键词匹配，未经正式辨证，切勿自行用药；'
-          '请线下就诊由执业中医师四诊合参后处方。',
+          '该条文未直接载明可自动推荐的方剂，或当前方剂关联来源待核。'
+          '为避免用相似度检索绕过来源闸门，本次不显示参考方剂。',
+          isWarning: true,
         );
+      } else {
+        // 普通证据不足场景仍可显示明确标记的关键词参考；来源待核的
+        // 空方剂规则必须 fail-closed，不能由相似度候选重新引入方剂。
+        final tableSuggestion = _engine.suggestByTable();
+        final ranking = _engine.getSimilarityRanking(topK: 3);
+        final refNames = <String>{};
+        if (tableSuggestion != null) refNames.add(tableSuggestion);
+        for (final (name, _) in ranking) {
+          refNames.add(name);
+        }
+        if (refNames.isNotEmpty) {
+          _addBotMessage(
+            '相似症状参考方（非处方，仅供参考）\n\n'
+            '${refNames.take(3).join('、')}\n\n'
+            '以上仅依据症状关键词匹配，未经正式辨证，切勿自行用药；'
+            '请线下就诊由执业中医师四诊合参后处方。',
+          );
+        }
       }
 
       _addBotMessage('想重新辨证吗？');

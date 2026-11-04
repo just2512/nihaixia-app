@@ -72,6 +72,16 @@ class DiagnosticEngine {
   String? get combinedPatternCondition => _combinedPatternCondition;
   String? get meridianDirection => _meridianDirection;
 
+  /// An empty-formula source pattern is an explicit safety stop. The UI must
+  /// not bypass it with similarity/table suggestions from unrelated formulas.
+  bool get suppressReferenceFormulaSuggestions {
+    final condition = _combinedPatternCondition;
+    if (condition == null) return false;
+    return DiagnosticRules.combinedPatterns.any(
+      (pattern) => pattern.condition == condition && pattern.formula.isEmpty,
+    );
+  }
+
   /// 独立只读证据层：返回 App 原始问答，不参与六经、合病或方剂计算。
   ZangFuEvidenceAssessment buildZangFuEvidence() =>
       ZangFuEvidenceBuilder.build(

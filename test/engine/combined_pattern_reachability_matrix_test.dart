@@ -103,11 +103,38 @@ void main() {
       expect(keys, isNot(contains(CombinedPatternCondition.sunShaoyinTwoCold)));
     });
 
-    test('原文未载方剂或来源待核的项目不得自动出方', () {
-      for (final key in [CombinedPatternCondition.taiyinShaoyinBase, CombinedPatternCondition.jueyinShaoyang, CombinedPatternCondition.threeYangSleep]) {
+    test('原文未载方剂或来源待核的项目关闭相似度方剂兜底', () {
+      for (final key in [
+        CombinedPatternCondition.taiyinShaoyinBase,
+        CombinedPatternCondition.jueyinShaoyang,
+        CombinedPatternCondition.threeYangSleep,
+      ]) {
         final pattern = DiagnosticRules.combinedPatterns.singleWhere((p) => p.condition == key);
         expect(pattern.formula, isEmpty, reason: key);
+        final engine = DiagnosticEngine()
+          ..restoreSnapshot(EngineSnapshot(
+            stage: DiagnosticStage.meridianLocation,
+            selectedSymptoms: const [],
+            meridianDirection: pattern.meridians.first,
+            answers: const {},
+            tenQuestionIndex: 0,
+            combinedPatternCondition: key,
+          ));
+        expect(engine.suppressReferenceFormulaSuggestions, isTrue, reason: key);
       }
+    });
+
+    test('有原文方剂依据的合病规则不误关闭一般参考提示', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {},
+          tenQuestionIndex: 0,
+          combinedPatternCondition: CombinedPatternCondition.sunYangmingBase,
+        ));
+      expect(engine.suppressReferenceFormulaSuggestions, isFalse);
     });
   });
 }
