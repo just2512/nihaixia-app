@@ -88,7 +88,9 @@ class TcmInterviewAdapter {
   }
 
   List<TcmInterviewPrompt> get tenQuestionPrompts {
-    final questions = _engine.getTenQuestions(defaultGender: defaultGender);
+    final before = _engine.createSnapshot();
+    final effectiveGender = defaultGender ?? before.gender;
+    final questions = _engine.getTenQuestions(defaultGender: effectiveGender);
     final snapshot = _engine.createSnapshot();
     final visible = snapshot.gender == 'male'
         ? questions.where((question) => question.key != 'menstrual')
