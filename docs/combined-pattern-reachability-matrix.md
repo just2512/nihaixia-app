@@ -1,52 +1,55 @@
-# 合病规则可达性矩阵
+# 合病规则可达性矩阵与原文复核
 
-审计基线：`master`（2026-11-04）。本文件核对代码调用链，不代表经典条文的医学适用性已获验证。
+审计基线：`master`（2026-11-04）。本矩阵核验代码条件、规则表与原文关联，不构成临床有效性验证。
+
+## 版本与编号口径
+
+本轮原文交叉核验使用三芦书屋《宋版伤寒论》在线转录。网页版本说明：以1991年人民卫生出版社、刘渡舟主编《伤寒论校注》为底本，对照恽铁樵1923年影赵刻宋版及1955年重庆人民出版社、重庆市中医学会《新辑宋本伤寒论》；条文编号沿用1955年398条编号。该网页是二次数字转录，不等同于已逐页核对纸本影印件。
+
+- 太阳病脉证并治中（第31—127条）：https://books.sanlu.org/main/read/ebook/4H%2BQ3V1a7IzIoQ==
+- 太阳病脉证并治下（第128—178条）：https://books.sanlu.org/main/read/ebook/4H%2BR3V1a7IzIoQ==
+- 阳明病脉证并治（第179—260条）：https://books.sanlu.org/main/read/ebook/4H%2BW3V1a7IzIoQ==
+- 少阳病脉证并治（第263—272条）：https://books.sanlu.org/main/read/ebook/4H%2BX3V1a7IzIoQ==
+- 少阴病脉证并治（第281—325条）：https://books.sanlu.org/main/read/ebook/4H%2BV3V1a7IzIoQ==
 
 ## 判定口径
 
-每条规则分别检查四个环节：
+逐条检查：条件是否由问诊输入产生；条件键是否命中唯一规则表项；结构化规则主路径是否正确覆盖最终方剂、推荐方、说明和处方；结构化规则无命中时旧兜底路径是否应用相同结果；原文是否确实载明该方、适用前提是否已被问诊采集。
 
-1. **条件产生**：`DiagnosticEngine._detectCombinedPattern()` 是否能把输入证据转换成该条件键。
-2. **规则表命中**：`_matchedCombinedPattern()` 是否能按完全相同的 key 命中 `DiagnosticRules.combinedPatterns`。
-3. **结构化主路径**：`diagnoseByRules()` 返回有效方剂后，`diagnose()` 是否用合病表方覆盖规则方，并同步推荐方、说明和处方。
-4. **旧兜底路径**：结构化规则无命中时，杂病兜底或六经硬编码分支是否仍应用同一合病表方，并同步最终结果。
+`REACHABLE` 只表示代码可达，不代表临床有效。原文未载方剂或来源待核的条目必须保持无自动方剂推荐。
 
-状态定义：`REACHABLE` = 代码存在完整条件产生与结果映射；`UNREACHABLE` = 没有任何生产代码写入该条件键；`PARTIAL` = 只有部分路径/必要证据存在缺口；`MISSING` = 证据或源码核验不足。这里的 REACHABLE 只表示代码可达，不表示临床规则成立。
+## 当前保留的规则表（12项）
 
-## 条件可达性
-
-| 条件键 | 产生条件（摘要） | 规则表 | 主路径 | 旧兜底路径 | 状态 |
+| 条件键 | 原文及适用条件 | 表内处理 | 主路径 | 旧兜底路径 | 状态 |
 |---|---|---|---|---|---|
-| `sun_symptoms + yangming_symptoms` | 主经太阳；阳明信号≥3；下利；明确无误下史 | 第32条葛根汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `sun+shaoyang_combined` | 主经太阳；少阳信号≥2；未命中更具体的下利/呕吐子型 | 第146条柴胡桂枝汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `shao_yang_symptoms + yangming_symptoms` | 主经少阳；阳明信号≥3；下利；明确食积；滑数组合脉 | 第256条大承气汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `three_yang_symptoms` | **无生产代码赋值点**；目前只有规则表条目 | 第99条小柴胡汤 | 不可进入 | 不可进入 | UNREACHABLE |
-| `taiyin_symptoms + shaoyin_symptoms` | 主经太阴；少阴信号≥3 | 来源标记为临床经验/MISSING | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE（来源待核） |
-| `sun+yangming_vomit` | 主经太阳；阳明信号≥3；无下利；恶心或呕吐 | 第33条葛根加半夏汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `sun+yangming_chest_full` | 主经太阳；阳明信号≥3；无下利；喘或胸满 | 第36条麻黄汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `sun+shaoyang_diarrhea` | 主经太阳；少阳信号≥2；下利 | 第172条黄芩汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `sun+shaoyang_vomit` | 主经太阳；少阳信号≥2；无下利；恶心或呕吐 | 第172条黄芩加半夏生姜汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `jueyin+shaoyang` | 主经厥阴且少阳信号≥2，或主经少阳且厥阴信号≥2 | 来源标记为临床经验/MISSING | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE（来源待核） |
-| `sun+yangming_unresolved` | 主经太阳；阳明信号≥3；无下利/呕吐/喘胸满；有汗且阳明信号<5 | 第53条桂枝汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `three_yang_sleep` | 主经太阳；阳明与少阳信号各达门槛；但欲寐且有汗 | 第268条；原文未载方剂，表中方剂需独立核验 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE（方剂出处待核） |
-| `sun+shaoyin_two_cold` | 主经太阳；少阴信号≥3 | 第301条麻黄附子细辛汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE |
-| `shaoyang+taiyin` | 主经少阳；太阴信号≥3 | 第147条；原文未明言太阴合病 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE（分类待核） |
-| `sun+taiyin` | 主经太阳或太阴；太阳信号≥3；下利、太阴信号≥2；误下、多次攻下、心下痞硬证据齐备；排除第34条特异路径 | 第163条桂枝人参汤 | 同一合病表覆盖 | 同一合病表覆盖 | REACHABLE（分类/前提待核） |
+| `sun_symptoms + yangming_symptoms` | 第32条：太阳与阳明合病，必自下利；误下史必须明确排除 | 葛根汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `sun+yangming_vomit` | 第33条：太阳与阳明合病，不下利但呕 | 葛根加半夏汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `sun+yangming_chest_full` | 第36条：太阳与阳明合病，喘而胸满 | 麻黄汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `sun+shaoyang_diarrhea` | 第172条：太阳与少阳合病，自下利 | 黄芩汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `sun+shaoyang_vomit` | 第172条：太阳与少阳合病，呕 | 黄芩加半夏生姜汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `shao_yang_symptoms + yangming_symptoms` | 第256条：阳明少阳合病、下利、滑数脉、有宿食；食积必须明确追问 | 大承气汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `sun+shaoyang_combined` | 第146条：发热微恶寒、支节烦疼、微呕、心下支结、外证未去；不是原文明确“合病” | 柴胡桂枝汤；增加四项核心证据门槛 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `shaoyang+taiyin`（历史键） | 第147条实际是少阳病误汗后复下方证，需胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦；原文没有“少阳太阴合病” | 柴胡桂枝干姜汤；改为少阳单经方证，增加完整追问门槛 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `sun+taiyin`（历史键） | 第163条实际是太阳病外证未除、数下后协热而利、利下不止、心下痞硬；原文没有“太阳太阴合病” | 桂枝人参汤；限定太阳病、发热恶寒、误下史、多次攻下、下利、心下痞硬 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `three_yang_sleep` | 第268条明确“三阳合病”，但原文没有指定方剂 | 只显示原文证据，不自动推荐方剂 | 统一覆盖 | 统一覆盖 | REACHABLE（无方剂） |
+| `taiyin_symptoms + shaoyin_symptoms` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐四逆汤 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
+| `jueyin+shaoyang` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐乌梅丸 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
 
-## 调用链核验
+## 本轮撤销的错误关联
 
-- 结构化主路径：`diagnose()` → `_detectCombinedPattern()` → `diagnoseByRules()` → `_matchedCombinedPattern()` → `combinedPattern.formula` 覆盖 `ruleResult.formula`。结果同步 `recommendedFormulas`、`pattern`、`explanation`、`prescription` 和仅对 `isExplicitCombined` 项输出的 `combinedMeridian`。
-- 旧兜底路径：结构化规则无有效方剂时，先走 `_diagnoseMiscellaneous()`，再走六经硬编码分支；后续统一读取 `_matchedCombinedPattern()` 覆盖方剂，并在最终 `DiagnosisResult` 同步说明、推荐方、处方和显式合病经。
-- 关键边界：表中存在不等于条件可达。当前 `three_yang_symptoms` 只有数据定义，没有条件赋值点，必须保持 UNREACHABLE，不能为追求覆盖率而凭空补一个宽松阈值。
-- 证据前置追问：第32/163条误下史、第163条重复攻下及心下痞硬、第256条食积与滑数脉均由 `getRequiredCombinedPatternFollowUpQuestions()` 处理；未知答案不按阴性证据处理。
+| 原关联 | 原文核验 | 处理 |
+|---|---|---|
+| `three_yang_symptoms` → 第99条小柴胡汤 | 第99条是“伤寒四五日……小柴胡汤主之”，并非三阳合病；明确三阳合病见第268条 | 从合病表删除，不再自动触发 |
+| `sun+yangming_unresolved` → 第53条桂枝汤 | 1955年398条编号下“二阳并病，太阳证未罢”是第48条；原文只说“可小发汗”，没有指定桂枝汤 | 从自动规则表删除，不再推荐桂枝汤 |
+| `sun+shaoyin_two_cold` → 第301条麻黄附子细辛汤 | 第301条是少阴病始得、反发热、脉沉，属于少阴兼表，不是太阳少阴合病 | 从合病表删除；改由少阴“兼表”追问路径处理 |
 
-## 后续处置
+## 调用链
 
-1. 已为所有生产代码可达条件建立正向测试，并分别走结构化规则输入和旧兜底输入，检查最终方剂是否来自对应合病表项。
-2. `three_yang_symptoms` 暂不增加触发逻辑。先核对第99条原文、倪师解释及适用条件，再决定是否应删除该表项、改为非合病提示，或补充有来源的精确条件。
-3. 表中标记“来源待核”的项目不得作为已完成的经典关联；继续按原文、版本、出处、适用条件逐条复核。
-4. 本矩阵不验证处方剂量、安全性或临床有效性；不得将代码可达性宣传为医疗验证。
+- 结构化主路径：`diagnose()` → `_detectCombinedPattern()` → `diagnoseByRules()` → `_matchedCombinedPattern()` → 覆盖最终方剂与结果字段。
+- 旧兜底路径：结构化规则无命中 → `_diagnoseMiscellaneous()` 或六经硬编码分支 → 使用同一 `_matchedCombinedPattern()` 结果覆盖最终字段。
+- 对 `formula == ''` 的条目：最终 `formula` 为空、`recommendedFormulas` 为空、`prescription` 为空，并设置 `recommendConsult`；不得退回结构化规则或旧兜底方剂。
+- 第301条少阴兼表：必须在少阴问诊中明确回答“反发热+脉沉”，且脉象 canonical 值为“沉”，才允许推荐麻黄附子细辛汤；不写入合病经。
 
-## 本轮变更
+## 回归测试
 
-- 增加 `test/engine/combined_pattern_reachability_matrix_test.dart`：覆盖全部 14 个有生产赋值点的条件键，分别验证结构化规则输入与旧兜底输入；同时锁定 `three_yang_symptoms` 当前无生产赋值点，避免误将表项存在当成可达。
+`test/engine/combined_pattern_reachability_matrix_test.dart` 对12个保留条件分别执行结构化规则路径和旧兜底路径，检查最终方剂、推荐方、处方、无方剂安全状态及显式合病经。另有负向测试锁定第99、48、301条错误关联不再进入合病表，并验证第146、147、163条的原文证据门槛。

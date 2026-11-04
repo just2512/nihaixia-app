@@ -21,16 +21,13 @@ void main() {
         CombinedPatternCondition.sunYangmingBase,
         CombinedPatternCondition.sunShaoyangBase,
         CombinedPatternCondition.shaoyangYangmingBase,
-        CombinedPatternCondition.threeYangBase,
         CombinedPatternCondition.taiyinShaoyinBase,
         CombinedPatternCondition.sunYangmingVomit,
         CombinedPatternCondition.sunYangmingChestFull,
         CombinedPatternCondition.sunShaoyangDiarrhea,
         CombinedPatternCondition.sunShaoyangVomit,
         CombinedPatternCondition.jueyinShaoyang,
-        CombinedPatternCondition.sunYangmingUnresolved,
         CombinedPatternCondition.threeYangSleep,
-        CombinedPatternCondition.sunShaoyinTwoCold,
         CombinedPatternCondition.shaoyangTaiyin,
         CombinedPatternCondition.sunTaiyin,
       ]));
@@ -72,6 +69,9 @@ void main() {
           'has_sweat': true,
           'bitter_mouth': true,
           'dry_throat': true,
+          'joint_pain': true,
+          'nausea': true,
+          'epigastric_fullness': true,
         },
         tenQuestionIndex: 0,
         qAnswers: const {
@@ -106,6 +106,9 @@ void main() {
           'has_sweat': true,
           'bitter_mouth': true,
           'dry_throat': true,
+          'joint_pain': true,
+          'nausea': true,
+          'epigastric_fullness': true,
           'palpitation': true,
         },
         tenQuestionIndex: 0,
@@ -516,18 +519,16 @@ void main() {
 
   group('合病检测器可达性矩阵', () {
     final cases = <({String name, String primary, Map<String, dynamic> answers, String expected})>[
-      (name: '太阳少阳基础型', primary: '太阳', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.sunShaoyangBase),
+      (name: '太阳少阳基础型', primary: '太阳', answers: {'temperature': 'fever_chills', 'joint_pain': true, 'nausea': true, 'epigastric_fullness': true}, expected: CombinedPatternCondition.sunShaoyangBase),
       (name: '太阴少阴基础型', primary: '太阴', answers: {'drowsy': true}, expected: CombinedPatternCondition.taiyinShaoyinBase),
       (name: '太阳阳明呕吐型', primary: '太阳', answers: {'constipated': true, 'vomiting': true}, expected: CombinedPatternCondition.sunYangmingVomit),
       (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
       (name: '太阳少阳下利型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunShaoyangDiarrhea),
       (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
       (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
-      (name: '太阳阳明未解型', primary: '太阳', answers: {'thirsty': true, 'hot_palms_soles': true, 'has_sweat': true}, expected: CombinedPatternCondition.sunYangmingUnresolved),
       (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
-      (name: '太阳少阴两感型', primary: '太阳', answers: {'drowsy': true}, expected: CombinedPatternCondition.sunShaoyinTwoCold),
-      (name: '少阳太阴型', primary: '少阳', answers: {'diarrhea': true, 'abdominal_pain': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
-      (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true, 'history_mistreatment': true, 'sun_taiyin_repeated_purgation': true, 'epigastric_hard': true}, expected: CombinedPatternCondition.sunTaiyin),
+      (name: '第147条少阳方证', primary: '少阳', answers: {'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
+      (name: '第163条太阳误下后协热利', primary: '太阳', answers: {'temperature': 'fever_chills', 'diarrhea': true, 'history_mistreatment': true, 'sun_taiyin_repeated_purgation': true, 'epigastric_hard': true}, expected: CombinedPatternCondition.sunTaiyin),
       (name: '太阳阳明下利基础型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false}, expected: CombinedPatternCondition.sunYangmingBase),
       (name: '少阳阳明下利滑数且有食积型', primary: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, expected: CombinedPatternCondition.shaoyangYangmingBase),
     ];
@@ -562,10 +563,17 @@ void main() {
         final rule = DiagnosticRules.combinedPatterns
             .firstWhere((pattern) => pattern.condition == scenario.expected);
         expect(result, isNotNull, reason: scenario.name);
-        expect(result!.formula, rule.formula, reason: scenario.name);
-        expect(result.recommendedFormulas, [rule.formula], reason: scenario.name);
-        expect(result.pattern, rule.description, reason: scenario.name);
-        expect(result.prescription?.formulaName, rule.formula, reason: scenario.name);
+        final diagnosis = result!;
+        expect(diagnosis.formula, rule.formula, reason: scenario.name);
+        expect(diagnosis.pattern, rule.description, reason: scenario.name);
+        if (rule.formula.isEmpty) {
+          expect(diagnosis.recommendedFormulas, isEmpty, reason: scenario.name);
+          expect(diagnosis.prescription, isNull, reason: scenario.name);
+          expect(diagnosis.recommendConsult, isTrue, reason: scenario.name);
+        } else {
+          expect(diagnosis.recommendedFormulas, [rule.formula], reason: scenario.name);
+          expect(diagnosis.prescription?.formulaName, rule.formula, reason: scenario.name);
+        }
         expect(
         result.combinedMeridian,
         rule.isExplicitCombined ? isNotNull : isNull,
@@ -603,12 +611,17 @@ void main() {
         expect(engine.combinedPatternCondition, scenario.expected,
             reason: scenario.name);
         expect(result, isNotNull, reason: scenario.name);
-        expect(result!.formula, rule.formula, reason: scenario.name);
-        expect(result.recommendedFormulas, [rule.formula],
-            reason: scenario.name);
-        expect(result.pattern, rule.description, reason: scenario.name);
-        expect(result.prescription?.formulaName, rule.formula,
-            reason: scenario.name);
+        final diagnosis = result!;
+        expect(diagnosis.formula, rule.formula, reason: scenario.name);
+        expect(diagnosis.pattern, rule.description, reason: scenario.name);
+        if (rule.formula.isEmpty) {
+          expect(diagnosis.recommendedFormulas, isEmpty, reason: scenario.name);
+          expect(diagnosis.prescription, isNull, reason: scenario.name);
+          expect(diagnosis.recommendConsult, isTrue, reason: scenario.name);
+        } else {
+          expect(diagnosis.recommendedFormulas, [rule.formula], reason: scenario.name);
+          expect(diagnosis.prescription?.formulaName, rule.formula, reason: scenario.name);
+        }
         expect(
           result.combinedMeridian,
           rule.isExplicitCombined ? isNotNull : isNull,
@@ -672,12 +685,17 @@ void main() {
             reason: scenario.name);
         expect(result, isNotNull, reason: scenario.name);
         // 若旧杂病分支没有先被命中，基础六经分支的输出/处方链可能掩盖路径缺口。
-        expect(result!.formula, rule.formula, reason: scenario.name);
-        expect(result.recommendedFormulas, [rule.formula],
-            reason: scenario.name);
-        expect(result.pattern, rule.description, reason: scenario.name);
-        expect(result.prescription?.formulaName, rule.formula,
-            reason: scenario.name);
+        final diagnosis = result!;
+        expect(diagnosis.formula, rule.formula, reason: scenario.name);
+        expect(diagnosis.pattern, rule.description, reason: scenario.name);
+        if (rule.formula.isEmpty) {
+          expect(diagnosis.recommendedFormulas, isEmpty, reason: scenario.name);
+          expect(diagnosis.prescription, isNull, reason: scenario.name);
+          expect(diagnosis.recommendConsult, isTrue, reason: scenario.name);
+        } else {
+          expect(diagnosis.recommendedFormulas, [rule.formula], reason: scenario.name);
+          expect(diagnosis.prescription?.formulaName, rule.formula, reason: scenario.name);
+        }
         expect(
           result.combinedMeridian,
           rule.isExplicitCombined ? isNotNull : isNull,
@@ -702,9 +720,8 @@ void main() {
       ));
 
       engine.diagnose();
-      expect(engine.combinedPatternCondition,
-          CombinedPatternCondition.shaoyangTaiyin);
-      expect(engine.createSnapshot().combinedMeridian, '太阴');
+      expect(engine.combinedPatternCondition, isNull);
+      expect(engine.createSnapshot().combinedMeridian, isNull);
     });
 
     test('太阳阳明下利误下史为真时不遮蔽太阳少阳候选', () {
@@ -754,10 +771,13 @@ void main() {
           cases.map((scenario) => scenario.expected).toSet();
       final unreachable = ruleConditions.difference(reachableConditions);
 
-      expect(DiagnosticRules.combinedPatterns, hasLength(15));
-      expect(ruleConditions, hasLength(15));
-      expect(reachableConditions, hasLength(14));
-      expect(unreachable, {CombinedPatternCondition.threeYangBase});
+      expect(DiagnosticRules.combinedPatterns, hasLength(12));
+      expect(ruleConditions, hasLength(12));
+      expect(reachableConditions, hasLength(12));
+      expect(unreachable, isEmpty);
+      expect(ruleConditions, isNot(contains(CombinedPatternCondition.threeYangBase)));
+      expect(ruleConditions, isNot(contains(CombinedPatternCondition.sunYangmingUnresolved)));
+      expect(ruleConditions, isNot(contains(CombinedPatternCondition.sunShaoyinTwoCold)));
     });
   });
 
@@ -773,6 +793,9 @@ void main() {
           'has_sweat': true,
           'bitter_mouth': true,
           'dry_throat': true,
+          'joint_pain': true,
+          'nausea': true,
+          'epigastric_fullness': true,
         },
         tenQuestionIndex: 0,
       ));
@@ -806,13 +829,81 @@ void main() {
       ));
 
       final result = engine.diagnose();
-      expect(engine.combinedPatternCondition, CombinedPatternCondition.sunShaoyangBase);
+      expect(engine.combinedPatternCondition, isNull);
       expect(result, isNotNull);
-      expect(result!.pattern, '辨证依据不足');
-      expect(result.formula, isEmpty);
-      expect(result.prescription, isNull);
+      expect(result!.formula, isNot('柴胡桂枝汤'));
       expect(result.combinedMeridian, isNull);
-      expect(result.recommendConsult, isTrue);
+    });
+  });
+
+  group('原文条件与单经证分类', () {
+    test('第146条缺少支节烦疼、微呕、心下支结时不触发柴胡桂枝汤', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'bitter_mouth': true,
+          'dry_throat': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          isNot(CombinedPatternCondition.sunShaoyangBase));
+    });
+
+    test('第147条必须逐项满足原文前提才可触发柴胡桂枝干姜汤', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'shaoyang147_prior_sweat_then_purge': true,
+          'chest_minor_knot': true,
+          'urine_difficult': true,
+          'thirsty': true,
+          'nausea': false,
+          'head_sweat': true,
+          'alternating_chills': true,
+          'irritable': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.shaoyangTaiyin);
+      expect(result, isNotNull);
+      expect(result!.formula, '柴胡桂枝干姜汤');
+      expect(result.combinedMeridian, isNull);
+    });
+
+    test('第301条从少阴兼表路径出方，不进入合病表', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阴',
+        answers: const {'shaoyin_with_table': true},
+        tenQuestionIndex: 0,
+        pulseType: '沉',
+        qAnswers: const {
+          kQ1: 1,
+          kQ4: 2,
+          kQ2: 12,
+          kQ3: 1,
+          kQ5: 1,
+          kQ10: 2,
+        },
+      ));
+      final result = engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+      expect(result, isNotNull);
+      expect(result!.formula, '麻黄附子细辛汤');
+      expect(result.combinedMeridian, isNull);
     });
   });
 

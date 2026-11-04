@@ -200,18 +200,11 @@ class DiagnosticRules {
       isExplicitCombined: true,
     ),
     CombinedPattern(
-      meridians: ['太阳', '阳明', '少阳'],
-      condition: CombinedPatternCondition.threeYangBase,
-      formula: '小柴胡汤',
-      description: '伤寒四五日，身热恶风、颈项强、胁下满、手足温而渴（倪师解读为三阳并病）',
-      source: '伤寒论第99条',
-    ),
-    CombinedPattern(
       meridians: ['太阴', '少阴'],
       condition: CombinedPatternCondition.taiyinShaoyinBase,
-      formula: '四逆汤',
-      description: '太阴、少阴相关线索并见（临床经验，来源 MISSING）',
-      source: '临床经验',
+      formula: '',
+      description: '太阴、少阴相关线索并见（来源待核；暂不自动推荐方剂）',
+      source: '临床经验/MISSING',
     ),
     // ---- 以下为新增7种合病 ----
     CombinedPattern(
@@ -249,46 +242,32 @@ class DiagnosticRules {
     CombinedPattern(
       meridians: ['厥阴', '少阳'],
       condition: CombinedPatternCondition.jueyinShaoyang,
-      formula: '乌梅丸',
-      description: '厥阴与少阳相关线索并见（来源 MISSING）',
-      source: '临床经验',
-    ),
-    CombinedPattern(
-      meridians: ['太阳', '阳明'],
-      condition: CombinedPatternCondition.sunYangmingUnresolved,
-      formula: '桂枝汤',
-      description: '二阳并病，太阳证未罢，面色缘缘正赤，当小发汗',
-      source: '伤寒论第53条',
+      formula: '',
+      description: '厥阴与少阳相关线索并见（来源待核；暂不自动推荐方剂）',
+      source: '临床经验/MISSING',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明', '少阳'],
       condition: CombinedPatternCondition.threeYangSleep,
-      formula: '小柴胡汤',
-      description: '三阳合病，脉浮大上关上，但欲眠睡，目合则汗（原文未载方剂）',
+      formula: '',
+      description: '三阳合病，脉浮大上关上，但欲眠睡，目合则汗（第268条原文未载方剂；不自动推荐方剂）',
       source: '伤寒论第268条',
       isExplicitCombined: true,
     ),
     // ---- 补充2种合病（测试发现缺失）----
-    CombinedPattern(
-      meridians: ['太阳', '少阴'],
-      condition: CombinedPatternCondition.sunShaoyinTwoCold,
-      formula: '麻黄附子细辛汤',
-      description: '少阴病始得之，反发热，脉沉（少阴兼表）',
-      source: '伤寒论第301条',
-    ),
     // ---- 新增合病（来自六经辨证公式）----
     CombinedPattern(
-      meridians: ['少阳', '太阴'],
+      meridians: ['少阳'],
       condition: CombinedPatternCondition.shaoyangTaiyin,
       formula: '柴胡桂枝干姜汤',
-      description: '伤寒五六日已发汗而复下之，胸胁满微结等（原文未明言太阴合病）',
+      description: '少阳病误汗后又误下：胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦（第147条；非明文少阳太阴合病）',
       source: '伤寒论第147条',
     ),
     CombinedPattern(
-      meridians: ['太阳', '太阴'],
+      meridians: ['太阳'],
       condition: CombinedPatternCondition.sunTaiyin,
       formula: '桂枝人参汤',
-      description: '太阳病误下后协热利，表里不解（桂枝人参汤证）',
+      description: '太阳病外证未除，数下后协热而利、利下不止、心下痞硬、表里不解（第163条；非明文太阳太阴合病）',
       source: '伤寒论第163条',
     ),
   ];
@@ -1092,7 +1071,7 @@ class DiagnosticRules {
       FollowUpQuestion(
         key: 'body_pain',
         question: '【辨身痛类型】全身骨节酸痛吗？',
-        options: ['全身酸痛（伤寒）', '只有头痛', '只有腰痛', '不痛', '身体疼烦不能转侧（→白术附子汤）', '身痒（→桂枝麻黄各半汤）'],
+        options: ['全身酸痛（伤寒）', '支节烦疼（第146条线索）', '只有头痛', '只有腰痛', '不痛', '身体疼烦不能转侧（→白术附子汤）', '身痒（→桂枝麻黄各半汤）'],
       ),
       FollowUpQuestion(
         key: 'breathing',
@@ -1102,7 +1081,7 @@ class DiagnosticRules {
       FollowUpQuestion(
         key: 'chest',
         question: '【辨心下证】胸口或心下有没有不舒服？',
-        options: ['没有', '心下满微痛（→桂枝去桂加茯苓白术汤）', '心下悸（→半夏麻黄丸）', '气上冲胸（→苓桂术甘汤）'],
+        options: ['没有', '心下支结（第146条线索）', '心下满微痛（→桂枝去桂加茯苓白术汤）', '心下悸（→半夏麻黄丸）', '气上冲胸（→苓桂术甘汤）'],
       ),
       FollowUpQuestion(
         key: 'treatment_history',
@@ -1157,6 +1136,16 @@ class DiagnosticRules {
         key: 'chest',
         question: '【辨胸胁苦满】胸口两侧胀吗？',
         options: ['胸胁苦满（胀痛→小柴胡汤）', '不胀', '只有胸闷', '胸胁满+微结（→柴胡桂枝干姜汤）'],
+      ),
+      FollowUpQuestion(
+        key: 'shaoyang147_treatment_sequence',
+        question: '【核对第147条前提】此前是否先发汗后又误用攻下法？',
+        options: ['先发汗后又误下', '只发汗', '只误下', '没有', '不确定'],
+      ),
+      FollowUpQuestion(
+        key: 'sweating',
+        question: '【核对第147条前提】出汗部位怎样？',
+        options: ['但头汗出', '全身汗出', '无汗', '不确定'],
       ),
       FollowUpQuestion(
         key: 'nausea',
