@@ -149,8 +149,19 @@ class DiagnosticEngine {
     _combinedPatternCondition = snapshot.combinedPatternCondition;
     _answers = Map.from(snapshot.answers);
     _tenQuestionIndex = snapshot.tenQuestionIndex;
-    _tongueCoating = snapshot.tongueCoating;
-    _tongueShape = snapshot.tongueShape;
+    _tongueCoating =
+        DiagnosticRules.canonicalTongueCoating(snapshot.tongueCoating);
+    _tongueShape = DiagnosticRules.canonicalTongueShape(snapshot.tongueShape);
+    if (_tongueCoating == null) {
+      _answers.remove('tongue_coating');
+    } else {
+      _answers['tongue_coating'] = _tongueCoating;
+    }
+    if (_tongueShape == null) {
+      _answers.remove('tongue_shape');
+    } else {
+      _answers['tongue_shape'] = _tongueShape;
+    }
     _pulseType = DiagnosticRules.canonicalPulse(snapshot.pulseType);
     final restoredSecondary =
         DiagnosticRules.canonicalPulse(snapshot.pulseTypeSecondary);
@@ -510,8 +521,10 @@ class DiagnosticEngine {
     String? pulseType,
     String? pulseTypeSecondary,
   }) {
-    _tongueCoating = tongueCoating;
-    _tongueShape = tongueShape;
+    _tongueCoating = DiagnosticRules.canonicalTongueCoating(tongueCoating);
+    _tongueShape = DiagnosticRules.canonicalTongueShape(tongueShape);
+    tongueCoating = _tongueCoating;
+    tongueShape = _tongueShape;
     _pulseType = DiagnosticRules.canonicalPulse(pulseType);
     final secondary = DiagnosticRules.canonicalPulse(pulseTypeSecondary);
     _pulseTypeSecondary =
