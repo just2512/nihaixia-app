@@ -704,7 +704,7 @@ void main() {
       engine.diagnose();
       expect(engine.combinedPatternCondition,
           CombinedPatternCondition.shaoyangTaiyin);
-      expect(engine.combinedMeridian, '太阴');
+      expect(engine.createSnapshot().combinedMeridian, '太阴');
     });
 
     test('太阳阳明下利误下史为真时不遮蔽太阳少阳候选', () {
@@ -725,7 +725,7 @@ void main() {
       engine.diagnose();
       expect(engine.combinedPatternCondition,
           CombinedPatternCondition.sunShaoyangDiarrhea);
-      expect(engine.combinedMeridian, '少阳');
+      expect(engine.createSnapshot().combinedMeridian, '少阳');
     });
 
     test('误下史未知时不得误命中第32条葛根汤合病', () {
