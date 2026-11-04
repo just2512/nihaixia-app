@@ -370,9 +370,14 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, Object?>>> getAssistantConversations({
-    int limit = 100,
+    int? limit,
   }) async {
+    if (limit != null && limit <= 0) {
+      throw ArgumentError.value(limit, 'limit', 'Must be positive or null');
+    }
     final db = await database;
+    final limitClause = limit == null ? '' : 'LIMIT ?';
+    final arguments = limit == null ? <Object?>[] : <Object?>[limit];
     return db.rawQuery(
       '''
       SELECT conversation.*,
@@ -384,9 +389,9 @@ class DatabaseHelper {
         WHERE message.conversation_id = conversation.id
       )
       ORDER BY conversation.updated_at DESC, conversation.id DESC
-      LIMIT ?
+      $limitClause
       ''',
-      [limit],
+      arguments,
     );
   }
 
