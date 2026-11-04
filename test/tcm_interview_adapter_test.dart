@@ -7,7 +7,7 @@ void main() {
     test('温病/寒热问题只暴露诊断引擎已有的规范 key', () {
       final adapter = TcmInterviewAdapter();
       expect(
-        adapter.temperaturePrompts.map((prompt) => prompt.id).toList(),
+        adapter.temperatureOptions.map((option) => option.key).toList(),
         DiagnosticRules.temperaturePatterns.map((option) => option.key).toList(),
       );
     });
