@@ -15,6 +15,7 @@ import '../services/assistant_conversation_orchestrator.dart';
 import 'assistant_tool_router.dart';
 import 'chat_screen.dart';
 import '../data/database_helper.dart';
+import '../data/assistant_conversation_store.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -99,6 +100,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.audioRecorder,
     this.recordingFileInspector,
     this.imagePicker,
+    this.conversationStore,
     this.preferredAnchorPoint,
   });
 
@@ -113,6 +115,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
+  final AssistantConversationStore? conversationStore;
 
   /// Physical-panel anchor inherited from the control that opened this route.
   final Offset? preferredAnchorPoint;
@@ -732,7 +735,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<int?> _createNewConversation() async {
     try {
-      final id = await DatabaseHelper.instance.createAssistantConversation(
+      final id = await _conversationStore.createAssistantConversation(
         mode: 'unified',
       );
       return id;
@@ -766,14 +769,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ? '$userText（另附$attachmentType；原始附件未持久化）'
               : '已附加$attachmentType（原始附件未持久化）';
       if (storedUserText.trim().isNotEmpty) {
-        await DatabaseHelper.instance.saveAssistantMessage(
+        await _conversationStore.saveAssistantMessage(
           conversationId: id,
           role: 'user',
           content: storedUserText,
           metadata: metadata,
         );
       }
-      await DatabaseHelper.instance.saveAssistantMessage(
+      await _conversationStore.saveAssistantMessage(
         conversationId: id,
         role: 'assistant',
         content: assistantText,
@@ -857,7 +860,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       final id = await _conversationIdFuture;
       if (id != null) {
-        await DatabaseHelper.instance.saveAssistantMessage(
+        await _conversationStore.saveAssistantMessage(
           conversationId: id,
           role: 'assistant',
           content: response,
@@ -977,12 +980,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       context,
       FoldAwareMaterialPageRoute(
         sourceContext: context,
-        builder: (_) => const AssistantHistoryScreen(),
+        builder: (_) => AssistantHistoryScreen(
+          loadConversations: _conversationStore.getAssistantConversations,
+          deleteConversations: _conversationStore.deleteAssistantConversations,
+        ),
       ),
     );
     if (!mounted || selectedId == null) return;
 
-    final rows = await DatabaseHelper.instance.getAssistantMessages(
+    final rows = await _conversationStore.getAssistantMessages(
       conversationId: selectedId,
     );
     final transcriptLines = <String>[];

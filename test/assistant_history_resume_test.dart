@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -47,45 +46,116 @@ class _HistoryResumeService extends LocalAiService {
       '续聊成功：$text';
 }
 
+class _MemoryConversationStore implements AssistantConversationStore {
+  int _nextId = 2;
+  int _nextMessageId = 3;
+
+  final Map<int, Map<String, Object?>> conversations = {
+    1: {
+      'id': 1,
+      'title': '可继续的历史会话',
+      'mode': 'consultation',
+      'created_at': '2026-11-04T08:00:00.000',
+      'updated_at': '2026-11-04T08:10:00.000',
+      'last_message_preview': '口苦持续多久？夜间是否容易醒？',
+    },
+  };
+
+  final Map<int, List<Map<String, Object?>>> messages = {
+    1: [
+      {
+        'id': 1,
+        'conversation_id': 1,
+        'role': 'user',
+        'content': '我最近口苦，睡眠也不好',
+        'metadata': 'selectedMode=consultation;mode=consultation',
+      },
+      {
+        'id': 2,
+        'conversation_id': 1,
+        'role': 'assistant',
+        'content': '口苦持续多久？夜间是否容易醒？',
+        'metadata': 'selectedMode=consultation;mode=consultation',
+      },
+    ],
+  };
+
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async {
+    final id = _nextId++;
+    conversations[id] = {
+      'id': id,
+      'title': title,
+      'mode': mode,
+      'created_at': '2026-11-04T08:20:00.000',
+      'updated_at': '2026-11-04T08:20:00.000',
+      'last_message_preview': '',
+    };
+    messages[id] = [];
+    return id;
+  }
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) async {
+    final row = <String, Object?>{
+      'id': _nextMessageId++,
+      'conversation_id': conversationId,
+      'role': role,
+      'content': content,
+      'metadata': metadata,
+    };
+    messages.putIfAbsent(conversationId, () => []).add(row);
+    final conversation = conversations[conversationId]!;
+    conversation['updated_at'] = '2026-11-04T08:30:00.000';
+    conversation['last_message_preview'] = content;
+    return row['id']! as int;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async {
+    final rows = conversations.values
+        .where((row) => (messages[row['id']] ?? const []).isNotEmpty)
+        .toList()
+      ..sort((a, b) => (b['updated_at'] as String)
+          .compareTo(a['updated_at'] as String));
+    return limit == null ? rows : rows.take(limit).toList();
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async =>
+      List<Map<String, Object?>>.from(messages[conversationId] ?? const []);
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
+    for (final id in conversationIds) {
+      conversations.remove(id);
+      messages.remove(id);
+    }
+  }
+}
+
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  setUp(() async {
-    final db = await DatabaseHelper.instance.database;
-    await db.delete('assistant_messages');
-    await db.delete('assistant_conversations');
-  });
-
   testWidgets('打开历史会话后继续发送，消息仍写入原会话', (tester) async {
-    final store = DatabaseHelper.instance;
-    final conversationId = await store.createAssistantConversation(
-      title: '可继续的历史会话',
-      mode: 'consultation',
-    );
-    await store.saveAssistantMessage(
-      conversationId: conversationId,
-      role: 'user',
-      content: '我最近口苦，睡眠也不好',
-      metadata: 'selectedMode=consultation;mode=consultation',
-    );
-    await store.saveAssistantMessage(
-      conversationId: conversationId,
-      role: 'assistant',
-      content: '口苦持续多久？夜间是否容易醒？',
-      metadata: 'selectedMode=consultation;mode=consultation',
-    );
-
+    final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
           imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
         ),
       ),
     );
@@ -110,9 +180,7 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await _pumpFrames(tester);
 
-    final messages = await store.getAssistantMessages(
-      conversationId: conversationId,
-    );
+    final messages = await store.getAssistantMessages(conversationId: 1);
     expect(messages, hasLength(4));
     expect(messages[2]['role'], 'user');
     expect(messages[2]['content'], '继续补充：舌苔薄白');
@@ -121,15 +189,12 @@ void main() {
 
     final conversations = await store.getAssistantConversations();
     expect(conversations, hasLength(1));
-    expect(conversations.single['id'], conversationId);
+    expect(conversations.single['id'], 1);
     expect(tester.takeException(), isNull);
   });
 }
 
 Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
-  // The history route contains a loading indicator while SQLite is queried.
-  // pumpAndSettle waits forever on that repeating animation; use a bounded
-  // frame pump so asynchronous DB completion can be observed without hanging CI.
   for (var frame = 0; frame < frames; frame++) {
     await tester.pump(const Duration(milliseconds: 80));
   }
