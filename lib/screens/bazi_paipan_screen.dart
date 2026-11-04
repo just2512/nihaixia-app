@@ -25,12 +25,16 @@ import 'package:nihaisha_app/widgets/bazi_paipan_widgets.dart';
 class BaZiPaipanScreen extends StatefulWidget {
   const BaZiPaipanScreen({
     super.key,
+    this.returnResultOnComplete = false,
     this.initialSolar,
     this.initialIsMale,
     this.initialCityName,
     this.initialLng,
     this.initialLat,
   });
+
+  /// 从统一助手打开时，允许把已生成的四柱结果返回对话。
+  final bool returnResultOnComplete;
 
   /// 命盘库回看：已存生辰（解析后公历，晚子时可能已归次日）。
   final DateTime? initialSolar;
@@ -290,6 +294,12 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('八字排盘'), actions: [
+    if (widget.returnResultOnComplete && _result != null)
+      IconButton(
+        icon: const Icon(Icons.reply),
+        tooltip: '返回 AI 助手',
+        onPressed: () => Navigator.pop(context, _buildShareText()),
+      ),
     if (_result != null) ...[
       IconButton(
         icon: const Icon(Icons.image_outlined),
