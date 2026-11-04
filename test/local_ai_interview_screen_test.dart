@@ -446,6 +446,12 @@ class _FailOnceTextSendService extends LocalAiService {
     }
     return '重试成功：$text';
   }
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required String context,
+  }) => sendMessage(text);
 }
 
 class _UnexpectedStatusFailureService extends LocalAiService {
@@ -572,7 +578,7 @@ void main() {
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(service.sentTexts, ['最近三天偶尔头痛，睡眠后会缓解。']);
+      expect(service.sentTexts, ['我最近三天偶尔头痛，睡眠后会缓解。']);
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         isEmpty,
@@ -1179,7 +1185,7 @@ void main() {
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(service.sentTexts, ['饭后腹胀，已经持续约两周。']);
+      expect(service.sentTexts, ['我饭后腹胀，已经持续约两周。']);
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         isEmpty,
