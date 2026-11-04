@@ -1505,51 +1505,6 @@ class DiagnosticEngine {
             break;
         }
       }
-    }else {
-        switch (questionKey) {
-          case 'pulse_cross_drink':
-            _answers['no_thirst'] = answer == '不渴';
-            _answers['thirsty'] = answer.contains('口渴');
-            _answers['hot_drink'] = answer.contains('热饮');
-            _answers['cold_drink'] = answer.contains('冷饮');
-            _answers['thirst_strong'] =
-                answer.contains('口渴') && answer.contains('冷饮');
-            _answers['thirst_no_drink'] = answer.contains('不想喝');
-            break;
-          case 'pulse_cross_urine':
-            _answers['urine_clear'] = answer.contains('清长');
-            _answers['urine_short'] = answer.contains('短赤');
-            _answers['urine_difficult'] = answer.contains('不利');
-            break;
-          case 'pulse_cross_limbs':
-            _answers['cold_limbs'] = answer.contains('偏冷');
-            _answers['warm_limbs'] = answer.contains('温热');
-            break;
-          case 'pulse_cross_surface':
-            _answers['chills'] = answer.contains('发热恶寒');
-            _answers['headache'] = answer.contains('头痛');
-            _answers['neck_stiff'] = answer.contains('项背强');
-            _answers['no_chills'] = answer == '都没有';
-            break;
-          case 'pulse_cross_interior':
-            _answers['constipated'] = answer.contains('便秘');
-            _answers['diarrhea'] = answer.contains('下利');
-            _answers['abdomen_pain_relief'] = answer.contains('喜按');
-            _answers['abdomen_pain_press'] = answer.contains('拒按');
-            break;
-          case 'pulse_cross_shaoyang':
-            _answers['bitter_mouth'] = answer.contains('口苦');
-            _answers['dry_throat'] = answer.contains('咽干');
-            _answers['alternating_chills'] = answer.contains('往来寒热');
-            break;
-          case 'pulse_cross_taiyin':
-            _answers['diarrhea'] = answer.contains('下利');
-            _answers['abdomen_pain_relief'] = answer.contains('腹痛');
-            _answers['no_thirst'] = answer.contains('不渴');
-            _answers['poor_appetite'] = answer.contains('食欲差');
-            break;
-        }
-      }
     }
   }
 
