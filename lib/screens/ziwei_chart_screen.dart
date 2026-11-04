@@ -22,6 +22,9 @@ import '../theme/app_colors.dart';
 /// [initialSolar] 等参数为可选回填（命盘库回看时传入）：命盘库保存的是生辰与
 /// 地点，进入本页后自动重排，不持久化整盘，确保数据准确且可随引擎升级而刷新。
 class ZiweiChartScreen extends StatefulWidget {
+  /// 从统一助手打开时，允许把命盘摘要返回对话。
+  final bool returnResultOnComplete;
+
   final DateTime? initialSolar;
   final bool? initialGender;
   final String? initialCityName;
@@ -30,6 +33,7 @@ class ZiweiChartScreen extends StatefulWidget {
 
   const ZiweiChartScreen({
     super.key,
+    this.returnResultOnComplete = false,
     this.initialSolar,
     this.initialGender,
     this.initialCityName,
@@ -282,6 +286,12 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       appBar: AppBar(
         title: const Text('紫微斗数排盘'),
         actions: [
+          if (widget.returnResultOnComplete && _chart != null && !_calculating)
+            IconButton(
+              tooltip: '返回 AI 助手',
+              icon: const Icon(Icons.reply),
+              onPressed: _returnAssistantResult,
+            ),
           if (_chart != null && !_calculating)
             IconButton(
               tooltip: '存图 / 分享长图',
@@ -372,6 +382,30 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         ],
       ),
     );
+  }
+
+
+  void _returnAssistantResult() {
+    final chart = _chart;
+    if (chart == null) return;
+    final life = chart.palaces.firstWhere((palace) => palace.isLife);
+    final body = chart.palaces.firstWhere((palace) => palace.isBody);
+    final sihua = chart.sihua
+        .map((item) => '${item.typeLabel}：${item.starLabelName}')
+        .join('；');
+    final summary = [
+      '紫微斗数排盘结果（民俗文化参考）',
+      '出生四柱：${chart.baziFull}',
+      '出生农历：${chart.lunarText}',
+      '性别：${chart.genderLabel}',
+      '五行局：${chart.elementBureauLabel}',
+      '命宫：${life.roleLabel}（${life.branchLabel}）',
+      '身宫：${body.roleLabel}（${body.branchLabel}）',
+      '命主：${chart.mingZhuLabel ?? 'MISSING'}；身主：${chart.shenZhuLabel ?? 'MISSING'}',
+      '生年四化：${sihua.isEmpty ? 'MISSING' : sihua}',
+      '说明：民俗文化参考，不是科学预测，不用于医疗、法律或投资决策。',
+    ].join('\\n');
+    Navigator.pop(context, summary);
   }
 
   /// 存图 / 分享长图：命盘 + 概览 + 大限表。
