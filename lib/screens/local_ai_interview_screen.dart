@@ -1033,6 +1033,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final effectiveModeValue =
           RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
       final legacyModeValue = selectedModeValue == null ? effectiveModeValue : null;
+      AssistantMode? messageEffectiveMode;
       for (final mode in AssistantMode.values) {
         if (mode.name == selectedModeValue || mode.name == legacyModeValue) {
           restoredMode = mode;
@@ -1040,6 +1041,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         if (mode.name == effectiveModeValue &&
             mode != AssistantMode.automatic) {
           restoredEffectiveMode = mode;
+          messageEffectiveMode = mode;
         }
       }
       final isUser = role == 'user';
@@ -1049,13 +1051,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final pendingTool = pendingToolId == null
           ? null
           : AssistantToolRouter.byId(pendingToolId);
+      final actionMode = messageEffectiveMode ?? restoredEffectiveMode;
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
         actionLabel: pendingTool == null ? null : '打开${pendingTool.title}',
         onAction: pendingTool == null
             ? null
-            : () => _openTool(pendingTool, mode: restoredEffectiveMode ??
+            : () => _openTool(pendingTool, mode: actionMode ??
                 (pendingTool.modes.contains(AssistantMode.metaphysics)
                     ? AssistantMode.metaphysics
                     : pendingTool.modes.contains(AssistantMode.tools)
