@@ -723,13 +723,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n$knowledge';
         return _service.sendMessageWithContext(text, context: context);
       case AssistantMode.tools:
+        final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
+            .map((tool) => tool.title)
+            .join('、');
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
-            '可调用工具：五运六气推算、紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、经方剂量换算、时辰开穴、古籍原文、医案库、每日黄历。'
+            '当前 App 已注册工具：$availableTools。'
             '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
         return _service.sendMessageWithContext(text, context: context);
       case AssistantMode.metaphysics:
+        final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
+            .map((tool) => tool.title)
+            .join('、');
         final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
-            '可用工具：五运六气推算、紫微斗数排盘、八字排盘、易经起卦、小六壬、梅花易数、每日黄历。'
+            '当前 App 已注册工具：$availableTools。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
         return _service.sendMessageWithContext(text, context: context);
     }
