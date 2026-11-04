@@ -13,6 +13,16 @@ void main() {
   });
 
   group('脉象 canonical 输入', () {
+    test('舌苔和舌形只接受 canonical 选项或明确注释', () {
+      expect(DiagnosticRules.canonicalTongueCoating('薄白'), '薄白');
+      expect(DiagnosticRules.canonicalTongueCoating('黄厚（燥苔）'), '黄厚');
+      expect(DiagnosticRules.canonicalTongueCoating('黄厚偏白'), isNull);
+      expect(DiagnosticRules.canonicalTongueCoating('不清楚'), isNull);
+      expect(DiagnosticRules.canonicalTongueShape('绛紫'), '绛紫');
+      expect(DiagnosticRules.canonicalTongueShape('淡白(气血不足)'), '淡白');
+      expect(DiagnosticRules.canonicalTongueShape('暗红'), isNull);
+    });
+
     test('复合脉先匹配最长值，不截断为单字脉', () {
       expect(DiagnosticRules.canonicalPulse('微弱'), '微弱');
       expect(DiagnosticRules.canonicalPulse('微弱（按之无力）'), '微弱');
@@ -91,6 +101,27 @@ void main() {
       expect(engine.createSnapshot().pulseTypeSecondary, isNull);
       expect(engine.createSnapshot().answers.containsKey('pulse_type'), isFalse);
       expect(engine.createSnapshot().answers.containsKey('pulse_type_secondary'), isFalse);
+    });
+
+    test('恢复旧快照时重新规范化舌苔舌形并清除无效值', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'tongue_coating': '黄厚偏白',
+          'tongue_shape': '淡白',
+        },
+        tenQuestionIndex: 0,
+        tongueCoating: '黄厚偏白',
+        tongueShape: '淡白',
+      ));
+      final snapshot = engine.createSnapshot();
+      expect(snapshot.tongueCoating, isNull);
+      expect(snapshot.tongueShape, '淡白');
+      expect(snapshot.answers.containsKey('tongue_coating'), isFalse);
+      expect(snapshot.answers['tongue_shape'], '淡白');
     });
 
     test('恢复旧快照时重新规范化脉值并清除无效兼脉', () {
