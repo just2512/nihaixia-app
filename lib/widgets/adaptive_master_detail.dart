@@ -360,8 +360,12 @@ DisplayFeature? _findSinglePaneBlockingFeature(
   // A postureFlat fold is a crease on one continuous inner display. A
   // single-pane route must use the whole unfolded canvas; only a physical
   // hinge or a non-flat posture should constrain it to one panel.
-  if (feature?.type == DisplayFeatureType.fold &&
-      feature?.state == DisplayFeatureState.postureFlat) {
+  // A zero-width crease on a flat/unknown posture is a continuous canvas,
+  // regardless of whether Android reports it as fold or hinge. Only a
+  // half-open posture (or a measurable physical gap) should isolate a panel.
+  if (feature != null &&
+      feature.bounds.width <= 0 &&
+      feature.state != DisplayFeatureState.postureHalfOpened) {
     return null;
   }
   return feature;
