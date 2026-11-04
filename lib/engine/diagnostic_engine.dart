@@ -1419,48 +1419,85 @@ class DiagnosticEngine {
       _answers['alternating_hot_cold'] = answer.contains('时冷时热');
       _answers['hand_foot_cold_pulse_fine'] = answer.contains('脉细欲绝');
     }
-    if (questionKey == 'pulse_cross_drink') {
-      _answers['no_thirst'] = answer == '不渴';
-      _answers['thirsty'] = answer.contains('口渴');
-      _answers['hot_drink'] = answer.contains('热饮');
-      _answers['cold_drink'] = answer.contains('冷饮');
-      _answers['thirst_strong'] = answer.contains('口渴') && answer.contains('冷饮');
-      _answers['thirst_no_drink'] = answer.contains('不想喝');
-    }
-    if (questionKey == 'pulse_cross_urine') {
-      _answers['pulse_cross_urine_answered'] = true;
-      _answers['urine_clear'] = answer.contains('清长');
-      _answers['urine_short'] = answer.contains('短赤');
-      _answers['urine_difficult'] = answer.contains('不利');
-    }
-    if (questionKey == 'pulse_cross_limbs') {
-      _answers['pulse_cross_limbs_answered'] = true;
-      _answers['cold_limbs'] = answer.contains('偏冷');
-      _answers['warm_limbs'] = answer.contains('温热');
-      // “冷热不均/不清楚”是有效回答，但不推导成寒或热证据。
-    }
-    if (questionKey == 'pulse_cross_surface') {
-      _answers['chills'] = answer.contains('发热恶寒');
-      _answers['headache'] = answer.contains('头痛');
-      _answers['neck_stiff'] = answer.contains('项背强');
-      _answers['no_chills'] = answer == '都没有';
-    }
-    if (questionKey == 'pulse_cross_interior') {
-      _answers['constipated'] = answer.contains('便秘');
-      _answers['diarrhea'] = answer.contains('下利');
-      _answers['abdomen_pain_relief'] = answer.contains('喜按');
-      _answers['abdomen_pain_press'] = answer.contains('拒按');
-    }
-    if (questionKey == 'pulse_cross_shaoyang') {
-      _answers['bitter_mouth'] = answer.contains('口苦');
-      _answers['dry_throat'] = answer.contains('咽干');
-      _answers['alternating_chills'] = answer.contains('往来寒热');
-    }
-    if (questionKey == 'pulse_cross_taiyin') {
-      _answers['diarrhea'] = answer.contains('下利');
-      _answers['abdomen_pain_relief'] = answer.contains('腹痛');
-      _answers['no_thirst'] = answer.contains('不渴');
-      _answers['poor_appetite'] = answer.contains('食欲差');
+    const crossQuestionEvidenceKeys = {
+      'pulse_cross_drink': [
+        'no_thirst', 'thirsty', 'hot_drink', 'cold_drink',
+        'thirst_strong', 'thirst_no_drink',
+      ],
+      'pulse_cross_urine': ['urine_clear', 'urine_short', 'urine_difficult'],
+      'pulse_cross_limbs': ['cold_limbs', 'warm_limbs'],
+      'pulse_cross_surface': ['chills', 'headache', 'neck_stiff', 'no_chills'],
+      'pulse_cross_interior': [
+        'constipated', 'diarrhea', 'abdomen_pain_relief', 'abdomen_pain_press',
+      ],
+      'pulse_cross_shaoyang': [
+        'bitter_mouth', 'dry_throat', 'alternating_chills',
+      ],
+      'pulse_cross_taiyin': [
+        'diarrhea', 'abdomen_pain_relief', 'no_thirst', 'poor_appetite',
+      ],
+    };
+    const crossQuestionAnsweredKeys = {
+      'pulse_cross_drink': 'pulse_cross_drink_answered',
+      'pulse_cross_urine': 'pulse_cross_urine_answered',
+      'pulse_cross_limbs': 'pulse_cross_limbs_answered',
+      'pulse_cross_surface': 'pulse_cross_surface_answered',
+      'pulse_cross_interior': 'pulse_cross_interior_answered',
+      'pulse_cross_shaoyang': 'pulse_cross_shaoyang_answered',
+      'pulse_cross_taiyin': 'pulse_cross_taiyin_answered',
+    };
+    if (crossQuestionEvidenceKeys.containsKey(questionKey)) {
+      _answers[crossQuestionAnsweredKeys[questionKey]!] = true;
+      final evidenceKeys = crossQuestionEvidenceKeys[questionKey]!;
+      if (answer == '不确定' || answer == '不清楚') {
+        for (final key in evidenceKeys) {
+          _answers.remove(key);
+        }
+      } else {
+        switch (questionKey) {
+          case 'pulse_cross_drink':
+            _answers['no_thirst'] = answer == '不渴';
+            _answers['thirsty'] = answer.contains('口渴');
+            _answers['hot_drink'] = answer.contains('热饮');
+            _answers['cold_drink'] = answer.contains('冷饮');
+            _answers['thirst_strong'] =
+                answer.contains('口渴') && answer.contains('冷饮');
+            _answers['thirst_no_drink'] = answer.contains('不想喝');
+            break;
+          case 'pulse_cross_urine':
+            _answers['urine_clear'] = answer.contains('清长');
+            _answers['urine_short'] = answer.contains('短赤');
+            _answers['urine_difficult'] = answer.contains('不利');
+            break;
+          case 'pulse_cross_limbs':
+            _answers['cold_limbs'] = answer.contains('偏冷');
+            _answers['warm_limbs'] = answer.contains('温热');
+            break;
+          case 'pulse_cross_surface':
+            _answers['chills'] = answer.contains('发热恶寒');
+            _answers['headache'] = answer.contains('头痛');
+            _answers['neck_stiff'] = answer.contains('项背强');
+            _answers['no_chills'] = answer == '都没有';
+            break;
+          case 'pulse_cross_interior':
+            _answers['constipated'] = answer.contains('便秘');
+            _answers['diarrhea'] = answer.contains('下利');
+            _answers['abdomen_pain_relief'] = answer.contains('喜按');
+            _answers['abdomen_pain_press'] = answer.contains('拒按');
+            break;
+          case 'pulse_cross_shaoyang':
+            _answers['bitter_mouth'] = answer.contains('口苦');
+            _answers['dry_throat'] = answer.contains('咽干');
+            _answers['alternating_chills'] = answer.contains('往来寒热');
+            break;
+          case 'pulse_cross_taiyin':
+            _answers['diarrhea'] = answer.contains('下利');
+            _answers['abdomen_pain_relief'] = answer.contains('腹痛');
+            _answers['no_thirst'] = answer.contains('不渴');
+            _answers['poor_appetite'] = answer.contains('食欲差');
+            break;
+        }
+      }
     }
   }
 
@@ -1651,11 +1688,17 @@ class DiagnosticEngine {
     bool hasAnyAnswer(List<String> keys) =>
         keys.any((key) => _answers.containsKey(key));
 
-    void askIfMissing(List<String> evidenceKeys, String questionKey, String label) {
-      if (!hasAnyAnswer(evidenceKeys)) {
-        missing.add(label);
-        questionKeys.add(questionKey);
-      }
+    void askIfMissing(
+      List<String> evidenceKeys,
+      String answeredKey,
+      String questionKey,
+      String label,
+    ) {
+      if (hasAnyAnswer(evidenceKeys)) return;
+      missing.add(label);
+      // An explicit "unknown" answer closes the prompt but remains missing
+      // evidence; it must never be converted into a negative clinical sign.
+      if (_answers[answeredKey] != true) questionKeys.add(questionKey);
     }
 
     switch (conflictKey) {
@@ -1667,9 +1710,9 @@ class DiagnosticEngine {
         addIf(contradicting, 'thirst_strong', '明显口渴喜冷饮');
         addIf(contradicting, 'cold_drink', '喜冷饮');
         addIf(contradicting, 'hot_palms_soles', '手足心热');
-        askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink', '饮水偏好');
-        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short', 'pulse_cross_urine_answered'], 'pulse_cross_urine', '小便情况');
-        askIfMissing(['cold_limbs', 'warm_limbs', 'pulse_cross_limbs_answered'], 'pulse_cross_limbs', '四肢温度');
+        askIfMissing(['thirsty', 'no_thirst', 'thirst_no_drink'], 'pulse_cross_drink_answered', 'pulse_cross_drink', '饮水偏好');
+        askIfMissing(['urine_clear', 'urine_difficult', 'urine_short'], 'pulse_cross_urine_answered', 'pulse_cross_urine', '小便情况');
+        askIfMissing(['cold_limbs', 'warm_limbs'], 'pulse_cross_limbs_answered', 'pulse_cross_limbs', '四肢温度');
         break;
       case 'slow_pulse_red_tongue':
         addIf(supporting, 'thirst_strong', '明显口渴');
@@ -1692,8 +1735,8 @@ class DiagnosticEngine {
         addIf(contradicting, 'diarrhea', '下利');
         addIf(contradicting, 'thirst_strong', '明显口渴');
         addIf(contradicting, 'hot_palms_soles', '手足心热');
-        askIfMissing(['chills', 'headache', 'neck_stiff', 'temperature'], 'pulse_cross_surface', '表证线索');
-        askIfMissing(['constipated', 'diarrhea', 'abdomen_pain_press', 'abdomen_pain_relief'], 'pulse_cross_interior', '腹部与大便情况');
+        askIfMissing(['chills', 'headache', 'neck_stiff', 'temperature'], 'pulse_cross_surface_answered', 'pulse_cross_surface', '表证线索');
+        askIfMissing(['constipated', 'diarrhea', 'abdomen_pain_press', 'abdomen_pain_relief'], 'pulse_cross_interior_answered', 'pulse_cross_interior', '腹部与大便情况');
         break;
       case 'sunken_pulse_thin_white_coat':
         addIf(supporting, 'cold_limbs', '四肢偏冷');
@@ -1713,8 +1756,8 @@ class DiagnosticEngine {
         addIf(contradicting, 'diarrhea', '下利');
         addIf(contradicting, 'abdomen_pain_relief', '腹痛喜按');
         addIf(contradicting, 'no_thirst', '不渴');
-        askIfMissing(['bitter_mouth', 'dry_throat', 'alternating_chills'], 'pulse_cross_shaoyang', '少阳问诊线索');
-        askIfMissing(['diarrhea', 'abdomen_pain_relief', 'no_thirst', 'poor_appetite'], 'pulse_cross_taiyin', '太阴问诊线索');
+        askIfMissing(['bitter_mouth', 'dry_throat', 'alternating_chills'], 'pulse_cross_shaoyang_answered', 'pulse_cross_shaoyang', '少阳问诊线索');
+        askIfMissing(['diarrhea', 'abdomen_pain_relief', 'no_thirst', 'poor_appetite'], 'pulse_cross_taiyin_answered', 'pulse_cross_taiyin', '太阴问诊线索');
         break;
     }
 
