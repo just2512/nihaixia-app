@@ -187,6 +187,14 @@ void main() {
 
     await tester.tap(find.byTooltip('历史对话'));
     await _pumpFrames(tester);
+    await tester.scrollUntilVisible(
+      find.text('待执行工具会话'),
+      240,
+      scrollable: find.descendant(
+        of: find.byType(AssistantHistoryScreen),
+        matching: find.byType(Scrollable),
+      ).first,
+    );
     await tester.tap(find.text('待执行工具会话'));
     await _pumpFrames(tester);
 
