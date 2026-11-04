@@ -440,15 +440,30 @@ class _ChatScreenState extends State<ChatScreen> {
       _showFollowUpQuestion(pulseQuestions, 0);
       return;
     }
+
+    // 第256条候选合病在最终诊断前必须核对“宿食”证据，不能等到诊断后才补问。
+    final currentMeridian = _engine.meridianDirection;
+    if (currentMeridian != null) {
+      final foodStagnationQuestion = _engine
+          .getFollowUpQuestions(currentMeridian)
+          .where((question) => question.key == 'food_stagnation')
+          .toList(growable: false);
+      if (foodStagnationQuestion.isNotEmpty) {
+        _addBotMessage('第256条候选条件还缺少宿食线索，先核对这一项：');
+        _showFollowUpQuestion(foodStagnationQuestion, 0);
+        return;
+      }
+    }
+
     final result = _engine.diagnose();
     if (result != null) {
-      _addBotMessage('好，十问已经完成了。让我根据你的情况来分析...\n\n'
-          '你的情况：${_engine.selectedSymptoms.join("、")}\n\n'
+      _addBotMessage('好，十问已经完成了。让我根据你的情况来分析...\\n\\n'
+          '你的情况：${_engine.selectedSymptoms.join("、")}\\n\\n'
           '下面给出辨证结果：');
       _showResult();
     } else {
       _addBotMessage('好的，让我进一步确认一些症状...');
-      final meridian = _engine.diagnose()?.meridian ?? '少阴';
+      final meridian = _engine.meridianDirection ?? '少阴';
       final questions = _engine.getFollowUpQuestions(meridian);
       if (questions.isNotEmpty) {
         _showFollowUpQuestion(questions, 0);

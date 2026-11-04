@@ -285,7 +285,8 @@ void main() {
         pulseTypeSecondary: '数',
       ));
 
-      final questions = engine.getFollowUpQuestions('少阳');
+      expect(engine.meridianDirection, '少阳');
+      final questions = engine.getFollowUpQuestions(engine.meridianDirection!);
       expect(questions.any((q) => q.key == 'food_stagnation'), isTrue);
       engine.diagnose();
       expect(engine.combinedPatternCondition, isNull);

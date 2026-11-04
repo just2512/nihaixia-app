@@ -70,6 +70,7 @@ class DiagnosticEngine {
   int get tenQuestionIndex => _tenQuestionIndex;
   String? get pulseTypeSecondary => _pulseTypeSecondary;
   String? get combinedPatternCondition => _combinedPatternCondition;
+  String? get meridianDirection => _meridianDirection;
 
   /// 独立只读证据层：返回 App 原始问答，不参与六经、合病或方剂计算。
   ZangFuEvidenceAssessment buildZangFuEvidence() =>
