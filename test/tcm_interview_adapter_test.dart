@@ -52,6 +52,15 @@ void main() {
       );
     });
 
+    test('历史恢复后不重新询问已经配置的性别', () {
+      final engine = DiagnosticEngine();
+      engine.getTenQuestions(defaultGender: 'male');
+      final adapter = TcmInterviewAdapter(snapshot: engine.createSnapshot());
+      final ids = adapter.tenQuestionPrompts.map((prompt) => prompt.id);
+      expect(ids, isNot(contains('gender')));
+      expect(ids, isNot(contains('menstrual')));
+    });
+
     test('历史快照恢复后继续使用原来的引擎状态', () {
       final original = TcmInterviewAdapter();
       final first = original.tenQuestionPrompts.first;
