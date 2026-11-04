@@ -215,8 +215,10 @@ class AssistantToolRouter {
       const BaZiPaipanScreen(returnResultOnComplete: true);
   static Widget _buildYijing() =>
       const YiJingScreen(returnResultOnComplete: true);
-  static Widget _buildXiaoliuren() => const XiaoliurenScreen();
-  static Widget _buildMeihua() => const MeihuaScreen();
+  static Widget _buildXiaoliuren() =>
+      const XiaoliurenScreen(returnResultOnComplete: true);
+  static Widget _buildMeihua() =>
+      const MeihuaScreen(returnResultOnComplete: true);
   static Widget _buildDosage() => const DosageConverterScreen();
   static Widget _buildZiwu() => const ZiWuLiuZhuScreen();
   static Widget _buildGuji() => const GujiLibraryScreen();
