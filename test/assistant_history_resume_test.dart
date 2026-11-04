@@ -190,10 +190,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('待执行工具会话'),
       240,
-      scrollable: find.descendant(
-        of: find.byType(AssistantHistoryScreen),
-        matching: find.byType(Scrollable),
-      ).first,
+      scrollable: find.byType(Scrollable).last,
     );
     await tester.tap(find.text('待执行工具会话'));
     await _pumpFrames(tester);
