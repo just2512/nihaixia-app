@@ -236,7 +236,7 @@ class AssistantToolRouter {
     description: '检索传统梦境释义；不作现实吉凶判断。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['周公解梦', '解梦', '梦境释义'],
-    actionWords: ['查询', '查看', '解释', '检索', '打开'],
+    actionWords: ['查询', '查看', '解释', '检索', '搜索', '打开'],
     builder: _buildDream,
   );
 
