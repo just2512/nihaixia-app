@@ -269,6 +269,72 @@ void main() {
     });
   });
 
+  group('第256条宿食证据门槛', () {
+    test('少阳阳明候选合病且滑数脉时追问食积，不直接命中大承气汤', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '滑',
+        pulseTypeSecondary: '数',
+      ));
+
+      final questions = engine.getFollowUpQuestions('少阳');
+      expect(questions.any((q) => q.key == 'food_stagnation'), isTrue);
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+    });
+
+    test('明确食积证据回答后才允许第256条条件命中', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '滑',
+        pulseTypeSecondary: '数',
+      ));
+
+      engine.answerFollowUp('food_stagnation', '有明确食积表现');
+      engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.shaoyangYangmingBase,
+      );
+    });
+
+    test('食积回答为不确定时仍保持拒绝状态', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '滑',
+        pulseTypeSecondary: '数',
+      ));
+
+      engine.answerFollowUp('food_stagnation', '不确定');
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+    });
+  });
+
   group('非合病潮热路径', () {
     test('潮热不能单独命中第256条阳明少阳合病', () {
       final engine = DiagnosticEngine();
@@ -305,7 +371,7 @@ void main() {
       (name: '少阳太阴型', primary: '少阳', answers: {'diarrhea': true, 'abdominal_pain': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
       (name: '太阳太阴并病型', primary: '太阴', answers: {'temperature': 'fever_chills', 'diarrhea': true}, expected: CombinedPatternCondition.sunTaiyin),
       (name: '太阳阳明下利基础型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false}, expected: CombinedPatternCondition.sunYangmingBase),
-      (name: '少阳阳明下利滑数型', primary: '少阳', answers: {'constipated': true, 'diarrhea': true}, expected: CombinedPatternCondition.shaoyangYangmingBase),
+      (name: '少阳阳明下利滑数且有食积型', primary: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, expected: CombinedPatternCondition.shaoyangYangmingBase),
     ];
 
     for (final scenario in cases) {

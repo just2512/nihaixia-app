@@ -272,7 +272,24 @@ class DiagnosticEngine {
     final meridianQs = DiagnosticRules.followUpQuestions[meridian] ?? const <FollowUpQuestion>[];
     final supplementQs =
         DiagnosticRules.meridianSupplementFollowUps[meridian] ?? const <FollowUpQuestion>[];
-    return [...meridianQs, ...supplementQs];
+    final questions = [...meridianQs, ...supplementQs];
+
+    // 第256条大承气汤条件含“有宿食”，不能仅凭阳明线索、下利和滑数脉推定。
+    // 候选合病且脉滑数时，单独追问食积表现；不确定/未回答均 fail-closed。
+    final slipperyRapidPulse =
+        (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
+        (_pulseType == '数' && _pulseTypeSecondary == '滑');
+    if (meridian == '少阳' &&
+        _answers['diarrhea'] == true &&
+        slipperyRapidPulse &&
+        _answers['food_stagnation'] == null) {
+      questions.add(const FollowUpQuestion(
+        key: 'food_stagnation',
+        question: '是否有明确食积表现？（如嗳腐吞酸、腹胀拒按、明显厌食）',
+        options: ['有明确食积表现', '没有', '不确定'],
+      ));
+    }
+    return questions;
   }
 
   List<FollowUpQuestion> getTenQuestions({String? defaultGender}) {
@@ -900,7 +917,9 @@ class DiagnosticEngine {
           (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
           (_pulseType == '数' && _pulseTypeSecondary == '滑');
       // 《伤寒论》第256条：阳明少阳合病下利，脉滑而数，有宿食，当下之。
-      if (_answers['diarrhea'] == true && slipperyRapidPulse) {
+      if (_answers['diarrhea'] == true &&
+          _answers['food_stagnation'] == true &&
+          slipperyRapidPulse) {
         _combinedPatternCondition = CombinedPatternCondition.shaoyangYangmingBase;
       }
     } else if (primary == '太阴' && shaoyinScore >= 3) {
@@ -974,6 +993,15 @@ class DiagnosticEngine {
     }
     if (questionKey == 'treatment_history') {
       _answers['history_mistreatment'] = answer.contains('误下') || answer.contains('被误下');
+    }
+    if (questionKey == 'food_stagnation') {
+      if (answer == '有明确食积表现') {
+        _answers['food_stagnation'] = true;
+      } else if (answer == '没有') {
+        _answers['food_stagnation'] = false;
+      } else {
+        _answers.remove('food_stagnation');
+      }
     }
     if (questionKey == 'diarrhea') {
       _answers['severe_diarrhea'] = answer.contains('清谷') || answer.contains('完谷不化');
