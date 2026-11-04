@@ -6,15 +6,47 @@ import 'yijing_detail_screen.dart';
 /// 解卦结果页：本卦 / 动爻 / 变卦 / 互卦
 class YiJingResultScreen extends StatelessWidget {
   final CastResult cast;
+  final bool returnResultOnComplete;
 
-  const YiJingResultScreen({super.key, required this.cast});
+  const YiJingResultScreen({
+    super.key,
+    required this.cast,
+    this.returnResultOnComplete = false,
+  });
+
+  String _assistantSummary() {
+    final buffer = StringBuffer()
+      ..writeln('易经起卦结果（${cast.method}）')
+      ..writeln('本卦：第${cast.primary.seq}卦 ${cast.primary.name}')
+      ..writeln('卦辞：${cast.primary.judgement}')
+      ..writeln('动爻：${cast.movingTitles.isEmpty ? '无' : cast.movingTitles.join('、')}')
+      ..writeln('爻辞：${cast.movingLines.isEmpty ? cast.movingText : cast.movingTexts.join('；')}');
+    if (cast.changed != null) {
+      buffer.writeln('变卦：第${cast.changed!.seq}卦 ${cast.changed!.name}；${cast.changed!.judgement}');
+    }
+    if (cast.nuclear != null) {
+      buffer.writeln('互卦：第${cast.nuclear!.seq}卦 ${cast.nuclear!.name}；${cast.nuclear!.judgement}');
+    }
+    buffer.writeln('说明：民俗文化参考，不是科学预测或确定性结论。');
+    return buffer.toString().trim();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('解卦结果')),
+      appBar: AppBar(
+        title: const Text('解卦结果'),
+        actions: [
+          if (returnResultOnComplete)
+            IconButton(
+              tooltip: '返回 AI 助手',
+              icon: const Icon(Icons.reply),
+              onPressed: () => Navigator.pop(context, _assistantSummary()),
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
