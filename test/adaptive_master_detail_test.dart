@@ -115,6 +115,43 @@ void main() {
     expect(content.width, 800);
   });
 
+
+  testWidgets('zero-width flat hinge crease keeps a single-pane route full width', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(400, 0, 0, 900),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdaptiveSinglePane(
+            preferredAnchorPoint: const Offset(620, 420),
+            child: ColoredBox(
+              key: const ValueKey('flat-hinge-single-pane'),
+              color: Colors.blue,
+              child: const Text('完整对话窗口'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final content = tester.getRect(find.byKey(const ValueKey('flat-hinge-single-pane')));
+    expect(content.left, 0);
+    expect(content.right, 800);
+    expect(content.width, 800);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('zero-width fold crease reserves a safe gutter', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
