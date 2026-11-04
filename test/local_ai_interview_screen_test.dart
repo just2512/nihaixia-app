@@ -604,7 +604,12 @@ void main() {
   testWidgets('问诊助手把本地中医知识作为参考上下文传给模型', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(
-      MaterialApp(home: LocalAiInterviewScreen(service: service)),
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
