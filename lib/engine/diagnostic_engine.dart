@@ -3367,15 +3367,23 @@ class DiagnosticEngine {
       );
     }
 
-    // 葛根黄芩黄连汤：热利不止（下利+发热+脉促）
-    if (answers['diarrhea'] == true && _answers['fever'] == true &&
+    // 《伤寒论》第34条：太阳病桂枝证误下后的协热利，不是太阳阳明合病。
+    // 必须同时具备：太阳表证（发热恶寒）+汗出、明确误下史、下利、脉促、喘。
+    // 任一关键证据缺失均不以本条方剂覆盖；不可将普通发热下利泛化为葛根芩连汤证。
+    if (_meridianDirection == '太阳' &&
+        answers['temperature'] == 'fever_chills' &&
+        answers['fever'] == true &&
+        answers['has_sweat'] == true &&
+        answers['history_mistreatment'] == true &&
+        answers['diarrhea'] == true &&
+        answers['asthma'] == true &&
         _pulseType == '促') {
       return DiagnosisResult(
-        meridian: '阳明',
-        pattern: '热利不止（葛根黄芩黄连汤证）',
-        patternDetail: '太阳病，桂枝证，医反下之，利遂不止，脉促者。',
+        meridian: '太阳',
+        pattern: '太阳病误下协热利（葛根黄芩黄连汤证）',
+        patternDetail: '太阳病，桂枝证，医反下之，利遂不止，脉促者，表未解也；喘而汗出者。',
         formula: '葛根黄芩黄连汤',
-        explanation: '葛根升津止利，黄芩黄连清热燥湿，甘草调和。表里双解之热利方。',
+        explanation: '此为太阳桂枝证误下后的协热利方证，不是一般热泻，也不作为太阳阳明合病标签。葛根升津止利，黄芩黄连清里热，甘草和中。',
         confidence: 0.85,
         matchedSymptoms: _selectedSymptoms,
       );

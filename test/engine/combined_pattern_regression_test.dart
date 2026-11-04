@@ -192,6 +192,57 @@ void main() {
       expect(engine.combinedPatternCondition, isNull);
       expect(result, isNotNull);
       expect(result!.combinedMeridian, isNull);
+      expect(result.formula, isNot('葛根黄芩黄连汤'));
+    });
+
+    test('第34条误下协热利必须同时满足原文关键证据', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'fever': true,
+          'has_sweat': true,
+          'history_mistreatment': true,
+          'diarrhea': true,
+          'asthma': true,
+          'breathing': '喘',
+        },
+        tenQuestionIndex: 0,
+        pulseType: '促',
+      ));
+
+      final result = engine.diagnose();
+      expect(result, isNotNull);
+      expect(result!.formula, '葛根黄芩黄连汤');
+      expect(result.pattern, contains('太阳病误下协热利'));
+      expect(result.meridian, '太阳');
+      expect(result.combinedMeridian, isNull);
+    });
+
+    test('第34条缺少喘或汗出证据时不得触发葛根黄芩黄连汤', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'temperature': 'fever_chills',
+          'fever': true,
+          'has_sweat': false,
+          'history_mistreatment': true,
+          'diarrhea': true,
+          'asthma': false,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '促',
+      ));
+
+      final result = engine.diagnose();
+      expect(result, isNotNull);
+      expect(result!.formula, isNot('葛根黄芩黄连汤'));
     });
 
     test('三阳并病的目合则汗条件先于两经子型分支', () {
