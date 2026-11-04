@@ -4,6 +4,18 @@ import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 
 void main() {
   group('统一助手自动调度', () {
+    test('普通寒暄和一般聊天保持自动/通用助手，不强行归类为学习', () {
+      for (final query in ['你好', '你能做什么？', '今天有什么值得聊的？']) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.automatic, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+    });
+
     test('个人症状叙述进入问诊助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '我最近三天口苦，睡眠不好，半夜容易醒',

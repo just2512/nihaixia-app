@@ -171,7 +171,9 @@ class AssistantConversationOrchestrator {
     // No new explicit intent: continue the active domain for short answers and
     // follow-up questions instead of silently switching roles every turn.
     return AssistantDispatchDecision(
-      mode: currentMode ?? AssistantMode.learning,
+      // A new, unclassified conversation remains in automatic/general mode.
+      // Do not silently label ordinary chat as TCM learning.
+      mode: currentMode ?? AssistantMode.automatic,
     );
   }
 }

@@ -697,6 +697,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     switch (mode) {
       case AssistantMode.automatic:
+        final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(text);
+        final context = StringBuffer(
+          '当前角色：通用助手。\n${AssistantMode.automatic.promptHint}\n'
+          '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
+          '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\n',
+        );
+        if (knowledge.isNotEmpty) {
+          context
+            ..writeln('App 本地知识库相关检索结果（仅作有来源的参考）：')
+            ..write(knowledge);
+        }
+        return _service.sendMessageWithContext(text, context: context.toString());
       case AssistantMode.consultation:
         // Consultation uses the same bundled classical-text and TCM retrieval
         // as learning, but excludes unverified case records to avoid case-based
