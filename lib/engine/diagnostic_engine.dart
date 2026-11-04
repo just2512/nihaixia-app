@@ -76,6 +76,10 @@ class DiagnosticEngine {
       ZangFuEvidenceBuilder.build(
         qAnswers: Map.unmodifiable(_qAnswers),
         extSymptoms: Set.unmodifiable(_extSymptoms),
+        tongueCoating: _tongueCoating,
+        tongueShape: _tongueShape,
+        pulseType: _pulseType,
+        pulseTypeSecondary: _pulseTypeSecondary,
       );
 
   /// 症状匹配（子串语义）：UI 选项文本为「触发词+证候描述（→方剂）」复合串，
