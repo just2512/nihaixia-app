@@ -79,12 +79,45 @@ class TcmInterviewAdapter {
     String? primaryPulse,
     String? secondaryPulse,
   }) {
-    _engine.answerTonguePulse(
-      tongueCoating: tongueCoating,
-      tongueShape: tongueShape,
-      pulseType: primaryPulse,
-      pulseTypeSecondary: secondaryPulse,
+    final canonicalCoating =
+        DiagnosticRules.canonicalTongueCoating(tongueCoating);
+    final canonicalShape = DiagnosticRules.canonicalTongueShape(tongueShape);
+    final canonicalPrimary = DiagnosticRules.canonicalPulse(primaryPulse);
+    final canonicalSecondary = DiagnosticRules.canonicalPulse(secondaryPulse);
+
+    _rejectUnknownCanonicalValue(
+      tongueCoating,
+      canonicalCoating,
+      'tongueCoating',
     );
+    _rejectUnknownCanonicalValue(tongueShape, canonicalShape, 'tongueShape');
+    _rejectUnknownCanonicalValue(primaryPulse, canonicalPrimary, 'primaryPulse');
+    _rejectUnknownCanonicalValue(
+      secondaryPulse,
+      canonicalSecondary,
+      'secondaryPulse',
+    );
+
+    _engine.answerTonguePulse(
+      tongueCoating: canonicalCoating,
+      tongueShape: canonicalShape,
+      pulseType: canonicalPrimary,
+      pulseTypeSecondary: canonicalSecondary,
+    );
+  }
+
+  void _rejectUnknownCanonicalValue(
+    String? raw,
+    String? canonical,
+    String argumentName,
+  ) {
+    if (raw != null && canonical == null) {
+      throw ArgumentError.value(
+        raw,
+        argumentName,
+        '不是诊断引擎提供的规范舌脉选项',
+      );
+    }
   }
 
   List<TcmInterviewPrompt> get tenQuestionPrompts {
