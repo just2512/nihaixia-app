@@ -47,15 +47,8 @@ class TcmInterviewAdapter {
   void restoreSnapshot(EngineSnapshot snapshot) =>
       _engine.restoreSnapshot(snapshot);
 
-  List<TcmInterviewPrompt> get temperaturePrompts =>
-      _engine.getTemperatureQuestions().map((option) {
-        return TcmInterviewPrompt(
-          id: option.key,
-          question: option.description,
-          options: [option.label],
-          source: 'diagnostic.temperature_patterns',
-        );
-      }).toList(growable: false);
+  List<TemperatureOption> get temperatureOptions =>
+      List.unmodifiable(_engine.getTemperatureQuestions());
 
   void answerTemperature(String canonicalKey) {
     final allowed = _engine
@@ -95,8 +88,8 @@ class TcmInterviewAdapter {
   }
 
   List<TcmInterviewPrompt> get tenQuestionPrompts {
-    final snapshot = _engine.createSnapshot();
     final questions = _engine.getTenQuestions(defaultGender: defaultGender);
+    final snapshot = _engine.createSnapshot();
     final visible = snapshot.gender == 'male'
         ? questions.where((question) => question.key != 'menstrual')
         : questions;
