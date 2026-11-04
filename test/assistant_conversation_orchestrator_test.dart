@@ -137,6 +137,42 @@ void main() {
       expect(decision.clarification, contains('梅花易数'));
     });
 
+    test('统一助手工具注册表覆盖 ToolsScreen 的全部可调用业务页面', () {
+      final ids = AssistantToolRouter.all.map((tool) => tool.id).toSet();
+      expect(ids.length, AssistantToolRouter.all.length);
+      expect(ids, containsAll(<String>[
+        'structured_diagnosis', 'yunqi', 'ziwei', 'bazi', 'yijing',
+        'xiaoliuren', 'meihua', 'dosage', 'ziwu_liuzhu', 'guji_library',
+        'medical_cases', 'almanac', 'diagnosis_history', 'critical_illness',
+        'solar_terms', 'yuxiaji_omen', 'dream', 'guansha',
+        'sanshan_lingqian', 'chenggu', 'shousheng_debt', 'huangdi_siji',
+        'saved_charts',
+      ]));
+    });
+
+    test('工具角色能路由到此前未接入 AI 的实用工具', () {
+      final cases = <({String query, String id})>[
+        (query: '打开诊断历史趋势', id: 'diagnosis_history'),
+        (query: '查阅闭门课重症临床', id: 'critical_illness'),
+        (query: '打开节气养生', id: 'solar_terms'),
+        (query: '查询玉匣灵兆', id: 'yuxiaji_omen'),
+        (query: '搜索周公解梦', id: 'dream'),
+        (query: '测算小儿关煞', id: 'guansha'),
+        (query: '帮我抽三山灵签', id: 'sanshan_lingqian'),
+        (query: '计算袁天罡称骨', id: 'chenggu'),
+        (query: '查询受生债', id: 'shousheng_debt'),
+        (query: '查看黄帝四季歌', id: 'huangdi_siji'),
+        (query: '打开我的命盘库', id: 'saved_charts'),
+      ];
+      for (final item in cases) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: item.query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.tool?.id, item.id, reason: item.query);
+      }
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
