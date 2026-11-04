@@ -175,7 +175,7 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
       '方位：财神${a.caiShen}；喜神${a.xiShen}；福神${a.fuShen}',
       if (a.solarTerm != null) '节气：${a.solarTerm}',
       '说明：传统通胜民俗信息，不是事实预测或行为指令。',
-    ].join('\\n');
+    ].join('\n');
     Navigator.pop(context, summary);
   }
 
