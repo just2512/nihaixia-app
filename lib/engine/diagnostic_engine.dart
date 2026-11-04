@@ -293,6 +293,45 @@ class DiagnosticEngine {
     return questions;
   }
 
+
+  /// 返回最终辨证前必须补齐的合病条文前提。未知不按阴性证据处理。
+  List<FollowUpQuestion> getRequiredCombinedPatternFollowUpQuestions() {
+    final questions = <FollowUpQuestion>[];
+    final primary = _meridianDirection;
+    final yangmingScore =
+        (_answers['thirsty'] == true ? 2 : 0) +
+        (_answers['constipated'] == true ? 3 : 0) +
+        (_answers['hot_palms_soles'] == true ? 2 : 0) +
+        (_answers['temperature'] == 'fever_thirst_no_cold' ? 3 : 0);
+
+    if (primary == '太阳' &&
+        yangmingScore >= 3 &&
+        _answers['diarrhea'] == true &&
+        _answers['history_mistreatment_answered'] != true) {
+      questions.add(const FollowUpQuestion(
+        key: 'combined_treatment_history',
+        question: '此前是否曾被误用泻下药或攻下法？',
+        options: ['明确没有', '曾经被误用泻下法', '不确定'],
+      ));
+    }
+
+    final slipperyRapidPulse =
+        (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
+        (_pulseType == '数' && _pulseTypeSecondary == '滑');
+    if (primary == '少阳' &&
+        yangmingScore >= 3 &&
+        _answers['diarrhea'] == true &&
+        slipperyRapidPulse &&
+        _answers['food_stagnation_answered'] != true) {
+      questions.add(const FollowUpQuestion(
+        key: 'food_stagnation',
+        question: '是否有明确食积表现？（如嗳腐吞酸、腹胀拒按、明显厌食）',
+        options: ['有明确食积表现', '没有', '不确定'],
+      ));
+    }
+    return questions;
+  }
+
   List<FollowUpQuestion> getTenQuestions({String? defaultGender}) {
     final questions = List<FollowUpQuestion>.from(DiagnosticRules.tenQuestions);
     // 如果已设置默认性别，跳过性别问题并自动设置（「性别移出十问」，减少一题）
@@ -993,7 +1032,24 @@ class DiagnosticEngine {
       _answers['bloody_sputum'] = answer.contains('脓血');
     }
     if (questionKey == 'treatment_history') {
-      _answers['history_mistreatment'] = answer.contains('误下') || answer.contains('被误下');
+      _answers['history_mistreatment_answered'] = true;
+      if (answer == '没有') {
+        _answers['history_mistreatment'] = false;
+      } else if (answer.contains('误下') || answer.contains('被误下')) {
+        _answers['history_mistreatment'] = true;
+      } else {
+        _answers.remove('history_mistreatment');
+      }
+    }
+    if (questionKey == 'combined_treatment_history') {
+      _answers['history_mistreatment_answered'] = true;
+      if (answer == '明确没有') {
+        _answers['history_mistreatment'] = false;
+      } else if (answer == '曾经被误用泻下法') {
+        _answers['history_mistreatment'] = true;
+      } else {
+        _answers.remove('history_mistreatment');
+      }
     }
     if (questionKey == 'food_stagnation') {
       _answers['food_stagnation_answered'] = true;

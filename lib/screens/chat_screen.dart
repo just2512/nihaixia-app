@@ -441,18 +441,17 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    // 第256条候选合病在最终诊断前必须核对“宿食”证据，不能等到诊断后才补问。
-    final currentMeridian = _engine.meridianDirection;
-    if (currentMeridian != null) {
-      final foodStagnationQuestion = _engine
-          .getFollowUpQuestions(currentMeridian)
-          .where((question) => question.key == 'food_stagnation')
-          .toList(growable: false);
-      if (foodStagnationQuestion.isNotEmpty) {
-        _addBotMessage('第256条候选条件还缺少宿食线索，先核对这一项：');
-        _showFollowUpQuestion(foodStagnationQuestion, 0, onComplete: _proceedAfterZhenJia);
-        return;
-      }
+    // 合病规则需要的条文前提必须在最终结果前逐项核对；未知不按阴性处理。
+    final requiredCombinedQuestions =
+        _engine.getRequiredCombinedPatternFollowUpQuestions();
+    if (requiredCombinedQuestions.isNotEmpty) {
+      _addBotMessage('合病候选条件还缺少必要证据，先核对：');
+      _showFollowUpQuestion(
+        requiredCombinedQuestions,
+        0,
+        onComplete: _proceedAfterZhenJia,
+      );
+      return;
     }
 
     final result = _engine.diagnose();

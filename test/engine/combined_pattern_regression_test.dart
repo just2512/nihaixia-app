@@ -361,6 +361,95 @@ void main() {
     });
   });
 
+
+  group('合病条文前提的问诊可达性', () {
+    test('太阳阳明下利候选必须在结果前追问误下史', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      final questions = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(questions.map((question) => question.key),
+          contains('combined_treatment_history'));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+    });
+
+    test('误下史回答不确定时不触发第32条，也不重复追问', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      engine.answerFollowUp('combined_treatment_history', '不确定');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions(), isEmpty);
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+    });
+
+    test('明确无误下史回答后才允许第32条条件命中', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '太阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+      ));
+
+      engine.answerFollowUp('combined_treatment_history', '明确没有');
+      engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.sunYangmingBase,
+      );
+    });
+
+    test('第256条候选在最终结果前进入宿食追问', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {
+          'constipated': true,
+          'diarrhea': true,
+        },
+        tenQuestionIndex: 0,
+        pulseType: '滑',
+        pulseTypeSecondary: '数',
+      ));
+
+      expect(
+        engine.getRequiredCombinedPatternFollowUpQuestions()
+            .map((question) => question.key),
+        contains('food_stagnation'),
+      );
+      engine.answerFollowUp('food_stagnation', '不确定');
+      expect(engine.getRequiredCombinedPatternFollowUpQuestions(), isEmpty);
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, isNull);
+    });
+  });
+
   group('合病检测器可达性矩阵', () {
     final cases = <({String name, String primary, Map<String, dynamic> answers, String expected})>[
       (name: '太阳少阳基础型', primary: '太阳', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.sunShaoyangBase),
