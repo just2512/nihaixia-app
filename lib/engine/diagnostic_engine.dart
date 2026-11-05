@@ -347,30 +347,40 @@ class DiagnosticEngine {
       _buildPulseTongueAssessment();
 
   /// 返回最终辨证前必须补齐的合病条文前提。未知不按阴性证据处理。
+  // Keep follow-up eligibility and final pattern detection on the same evidence
+  // calculation. Duplicated inline scoring previously caused the prompt path to
+  // reference a missing or divergent score while the detector used another one.
+  int get _sunEvidenceScore =>
+      (_answers['temperature'] == 'fever_chills' ? 3 : 0) +
+      (_answers['has_sweat'] == false ? 2 : 0) +
+      (_answers['cold_limbs'] != true ? 1 : 0) +
+      (_answers['headache'] == true ? 1 : 0) +
+      (_answers['neck_stiff'] == true ? 1 : 0);
+
+  int get _yangmingEvidenceScore =>
+      (_answers['thirsty'] == true ? 2 : 0) +
+      (_answers['constipated'] == true ? 3 : 0) +
+      (_answers['hot_palms_soles'] == true ? 2 : 0) +
+      (_answers['temperature'] == 'fever_thirst_no_cold' ? 3 : 0);
+
+  int get _shaoyangEvidenceScore =>
+      (_answers['bitter_mouth'] == true ? 3 : 0) +
+      (_answers['dry_throat'] == true ? 2 : 0) +
+      (_answers['temperature'] == 'alternating_chills_fever' ? 3 : 0) +
+      (_answers['nausea'] == true ? 1 : 0);
+
+  int get _taiyinEvidenceScore =>
+      (_answers['diarrhea'] == true ? 2 : 0) +
+      (_answers['tongue_pale_coated_white'] == true ? 2 : 0) +
+      (_answers['abdominal_pain'] == true ? 2 : 0);
+
   List<FollowUpQuestion> getRequiredCombinedPatternFollowUpQuestions() {
     final primary = _meridianDirection;
     final diarrhea = _answers['diarrhea'] == true;
-    final yangmingScore =
-        (_answers['thirsty'] == true ? 2 : 0) +
-        (_answers['constipated'] == true ? 3 : 0) +
-        (_answers['hot_palms_soles'] == true ? 2 : 0) +
-        (_answers['temperature'] == 'fever_thirst_no_cold' ? 3 : 0);
-    // 与 _detectCombinedPattern() 使用同一组少阳证据，避免追问路径引用未定义或口径不同的分值。
-    final shaoyangScore =
-        (_answers['bitter_mouth'] == true ? 3 : 0) +
-        (_answers['dry_throat'] == true ? 2 : 0) +
-        (_answers['temperature'] == 'alternating_chills_fever' ? 3 : 0) +
-        (_answers['nausea'] == true ? 1 : 0);
-    final sunScore =
-        (_answers['temperature'] == 'fever_chills' ? 3 : 0) +
-        (_answers['has_sweat'] == false ? 2 : 0) +
-        (_answers['cold_limbs'] != true ? 1 : 0) +
-        (_answers['headache'] == true ? 1 : 0) +
-        (_answers['neck_stiff'] == true ? 1 : 0);
-    final taiyinScore =
-        (_answers['diarrhea'] == true ? 2 : 0) +
-        (_answers['tongue_pale_coated_white'] == true ? 2 : 0) +
-        (_answers['abdominal_pain'] == true ? 2 : 0);
+    final yangmingScore = _yangmingEvidenceScore;
+    final shaoyangScore = _shaoyangEvidenceScore;
+    final sunScore = _sunEvidenceScore;
+    final taiyinScore = _taiyinEvidenceScore;
 
     final sunYangmingChestCandidate =
         primary == '太阳' &&
@@ -1110,36 +1120,12 @@ class DiagnosticEngine {
     final primary = _meridianDirection;
     if (primary == null) return;
 
-    int sunScore = 0;
-    int yangmingScore = 0;
-    int shaoyangScore = 0;
-    int taiyinScore = 0;
+    final sunScore = _sunEvidenceScore;
+    final yangmingScore = _yangmingEvidenceScore;
+    final shaoyangScore = _shaoyangEvidenceScore;
+    final taiyinScore = _taiyinEvidenceScore;
     int shaoyinScore = 0;
     int jueyinScore = 0;
-
-    // 太阳症状评分
-    if (_answers['temperature'] == 'fever_chills') sunScore += 3;
-    if (_answers['has_sweat'] == false) sunScore += 2;
-    if (_answers['cold_limbs'] != true) sunScore += 1;
-    if (_answers['headache'] == true) sunScore += 1;
-    if (_answers['neck_stiff'] == true) sunScore += 1;
-
-    // 阳明症状评分
-    if (_answers['thirsty'] == true) yangmingScore += 2;
-    if (_answers['constipated'] == true) yangmingScore += 3;
-    if (_answers['hot_palms_soles'] == true) yangmingScore += 2;
-    if (_answers['temperature'] == 'fever_thirst_no_cold') yangmingScore += 3;
-
-    // 少阳症状评分
-    if (_answers['bitter_mouth'] == true) shaoyangScore += 3;
-    if (_answers['dry_throat'] == true) shaoyangScore += 2;
-    if (_answers['temperature'] == 'alternating_chills_fever') shaoyangScore += 3;
-    if (_answers['nausea'] == true) shaoyangScore += 1;
-
-    // 太阴症状评分
-    if (_answers['diarrhea'] == true) taiyinScore += 2;
-    if (_answers['tongue_pale_coated_white'] == true) taiyinScore += 2;
-    if (_answers['abdominal_pain'] == true) taiyinScore += 2;
 
     // 少阴症状评分
     if (_answers['drowsy'] == true) shaoyinScore += 3;
