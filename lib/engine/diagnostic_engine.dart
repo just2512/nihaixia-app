@@ -369,8 +369,20 @@ class DiagnosticEngine {
     final sunYangmingChestCandidate =
         primary == '太阳' &&
         yangmingScore >= 3 &&
-        _answers['breathing'] == '喘';
+        (_answers['asthma'] == true || _answers['chest_fullness'] == true);
     if (sunYangmingChestCandidate &&
+        _answers['asthma'] == null &&
+        _answers['combined_clause36_dyspnea_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'combined_clause36_dyspnea',
+          question: '【核对第36条】是否明确有气喘？',
+          options: ['明确气喘（第36条）', '没有气喘', '不确定'],
+        ),
+      ];
+    }
+    if (sunYangmingChestCandidate &&
+        _answers['asthma'] == true &&
         _answers['chest_fullness'] == null &&
         _answers['combined_clause36_chest_fullness_answered'] != true) {
       return const [
@@ -1189,7 +1201,7 @@ class DiagnosticEngine {
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingVomit;
         return;
       }
-      if (_answers['breathing'] == '喘' &&
+      if (_answers['asthma'] == true &&
           _answers['chest_fullness'] == true) {
         _combinedMeridian = '阳明';
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingChestFull;
@@ -1333,6 +1345,16 @@ class DiagnosticEngine {
     if (questionKey == 'sun_taiyin_epigastric_hard') {
       _answers['sun_taiyin_epigastric_hard_answered'] = true;
       _answers['epigastric_hard'] = answer == '有心下痞硬';
+    }
+    if (questionKey == 'combined_clause36_dyspnea') {
+      _answers['combined_clause36_dyspnea_answered'] = true;
+      if (answer == '明确气喘（第36条）') {
+        _answers['asthma'] = true;
+      } else if (answer == '没有气喘') {
+        _answers['asthma'] = false;
+      } else {
+        _answers.remove('asthma');
+      }
     }
     if (questionKey == 'combined_clause36_chest_fullness') {
       _answers['combined_clause36_chest_fullness_answered'] = true;
