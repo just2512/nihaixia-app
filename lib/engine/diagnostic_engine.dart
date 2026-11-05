@@ -366,6 +366,22 @@ class DiagnosticEngine {
         (_answers['tongue_pale_coated_white'] == true ? 2 : 0) +
         (_answers['abdominal_pain'] == true ? 2 : 0);
 
+    final sunYangmingVomitingCandidate =
+        primary == '太阳' &&
+        yangmingScore >= 3 &&
+        (_answers['nausea'] == true || _answers['vomiting'] == true);
+    if (sunYangmingVomitingCandidate &&
+        _answers['diarrhea'] == null &&
+        _answers['combined_diarrhea_status_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'combined_diarrhea_status',
+          question: '【核对第33条】本次是否明确没有下利？',
+          options: ['明确没有下利（第33条）', '有下利', '不确定'],
+        ),
+      ];
+    }
+
     if (primary == '太阳' &&
         diarrhea &&
         _answers['history_mistreatment'] == null &&
@@ -1151,7 +1167,8 @@ class DiagnosticEngine {
 
     if (primary == '太阳' && yangmingScore >= 3 &&
         _answers['diarrhea'] != true) {
-      if (_answers['nausea'] == true || _answers['vomiting'] == true) {
+      if (_answers['diarrhea'] == false &&
+          (_answers['nausea'] == true || _answers['vomiting'] == true)) {
         _combinedMeridian = '阳明';
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingVomit;
         return;
@@ -1300,6 +1317,16 @@ class DiagnosticEngine {
     if (questionKey == 'sun_taiyin_epigastric_hard') {
       _answers['sun_taiyin_epigastric_hard_answered'] = true;
       _answers['epigastric_hard'] = answer == '有心下痞硬';
+    }
+    if (questionKey == 'combined_diarrhea_status') {
+      _answers['combined_diarrhea_status_answered'] = true;
+      if (answer == '明确没有下利（第33条）') {
+        _answers['diarrhea'] = false;
+      } else if (answer == '有下利') {
+        _answers['diarrhea'] = true;
+      } else {
+        _answers.remove('diarrhea');
+      }
     }
     if (questionKey == 'combined_treatment_history') {
       _answers['history_mistreatment_answered'] = true;
