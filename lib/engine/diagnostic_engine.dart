@@ -146,7 +146,8 @@ class DiagnosticEngine {
     _selectedSymptoms = List.from(snapshot.selectedSymptoms);
     _meridianDirection = snapshot.meridianDirection;
     _combinedMeridian = snapshot.combinedMeridian;
-    _combinedPatternCondition = snapshot.combinedPatternCondition;
+    _combinedPatternCondition =
+        CombinedPatternCondition.canonicalize(snapshot.combinedPatternCondition);
     _answers = Map.from(snapshot.answers);
     _tenQuestionIndex = snapshot.tenQuestionIndex;
     _tongueCoating =
