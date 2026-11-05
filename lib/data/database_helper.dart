@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/bookmark.dart';
+import '../models/tcm_interview_task_state.dart';
 import 'assistant_conversation_store.dart';
 
 class DatabaseHelper implements AssistantConversationStore {
