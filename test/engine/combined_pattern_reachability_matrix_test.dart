@@ -94,6 +94,54 @@ void main() {
       });
     }
 
+    test('第32条必须明确排除误下史；未知或有误下史均不得命中', () {
+      for (final history in <bool?>[null, true]) {
+        final answers = <String, dynamic>{
+          'constipated': true,
+          'diarrhea': true,
+          'headache': true,
+          if (history != null) 'history_mistreatment': history,
+        };
+        final engine = DiagnosticEngine()
+          ..restoreSnapshot(EngineSnapshot(
+            stage: DiagnosticStage.meridianLocation,
+            selectedSymptoms: const [],
+            meridianDirection: '太阳',
+            answers: answers,
+            tenQuestionIndex: 0,
+          ));
+
+        engine.diagnose();
+
+        expect(
+          engine.combinedPatternCondition,
+          isNot(CombinedPatternCondition.sunYangmingBase),
+          reason: 'history_mistreatment=$history must fail closed',
+        );
+      }
+    });
+
+    test('第32条仅在明确无误下史时命中', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'diarrhea': true,
+            'history_mistreatment': false,
+          },
+          tenQuestionIndex: 0,
+        ));
+
+      final diagnosis = engine.diagnose();
+
+      expect(engine.combinedPatternCondition, CombinedPatternCondition.sunYangmingBase);
+      expect(diagnosis?.formula, '葛根汤');
+      expect(diagnosis?.recommendedFormulas, ['葛根汤']);
+    });
+
     test('规则表唯一且只保留12条已审计关联', () {
       final keys = DiagnosticRules.combinedPatterns.map((p) => p.condition).toList();
       expect(keys.toSet(), hasLength(keys.length));
