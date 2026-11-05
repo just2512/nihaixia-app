@@ -142,6 +142,77 @@ void main() {
       expect(diagnosis?.recommendedFormulas, ['葛根汤']);
     });
 
+    test('第146条具体证据优先于宽泛太阳阳明组合，避免分支遮蔽', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'temperature': 'fever_chills',
+            'joint_pain': true,
+            'clause146_mild_nausea': true,
+            'illness_duration_6_7': true,
+            'epigastric_fullness': true,
+            'constipated': true,
+            'diarrhea': true,
+            'history_mistreatment': false,
+          },
+          tenQuestionIndex: 0,
+        ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, CombinedPatternCondition.sunShaoyangBase);
+    });
+
+    test('第147条完整条文证据优先于少阳宽泛兼夹候选', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '少阳',
+          answers: const {
+            'illness_duration_5_6': true,
+            'shaoyang147_prior_sweat_then_purge': true,
+            'chest_minor_knot': true,
+            'urine_difficult': true,
+            'thirsty': true,
+            'nausea': false,
+            'vomiting': false,
+            'head_sweat': true,
+            'alternating_chills': true,
+            'irritable': true,
+            'constipated': true,
+            'diarrhea': true,
+            'food_stagnation': true,
+          },
+          pulseType: '滑',
+          pulseTypeSecondary: '数',
+          tenQuestionIndex: 0,
+        ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, CombinedPatternCondition.shaoyangTaiyin);
+    });
+
+    test('第163条完整条文证据优先于太阳阳明一般候选', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'temperature': 'fever_chills',
+            'diarrhea': true,
+            'history_mistreatment': true,
+            'sun_taiyin_repeated_purgation': true,
+            'epigastric_hard': true,
+            'constipated': true,
+          },
+          tenQuestionIndex: 0,
+        ));
+      engine.diagnose();
+      expect(engine.combinedPatternCondition, CombinedPatternCondition.sunTaiyin);
+    });
+
     test('规则表唯一且只保留12条已审计关联', () {
       final keys = DiagnosticRules.combinedPatterns.map((p) => p.condition).toList();
       expect(keys.toSet(), hasLength(keys.length));
