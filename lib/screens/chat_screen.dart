@@ -262,13 +262,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       onSelected: (s) {
                         setDialogState(() {
                           _selectedPulse = s ? opt : null;
+                          // A secondary pulse is meaningful only alongside a
+                          // distinct primary pulse. Clear stale secondary input
+                          // if the primary is removed or changed to the same value.
+                          if (_selectedPulse == null ||
+                              _selectedPulseSecondary == _selectedPulse) {
+                            _selectedPulseSecondary = null;
+                          }
                         });
                       },
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 12),
-                const Text('兼脉（选填；只有同时填写两项才识别组合脉）',
+                const Text('兼脉（选填；须与主脉不同，且只有两项同时填写才识别组合脉）',
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Wrap(
@@ -279,11 +286,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     return FilterChip(
                       label: Text(opt),
                       selected: selected,
-                      onSelected: (s) {
-                        setDialogState(() {
-                          _selectedPulseSecondary = s ? opt : null;
-                        });
-                      },
+                      onSelected: _selectedPulse == null ||
+                              _selectedPulse == opt
+                          ? null
+                          : (s) {
+                              setDialogState(() {
+                                _selectedPulseSecondary = s ? opt : null;
+                              });
+                            },
                     );
                   }).toList(),
                 ),
