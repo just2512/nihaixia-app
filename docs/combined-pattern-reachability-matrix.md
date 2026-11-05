@@ -12,6 +12,8 @@
 - 少阳病脉证并治（第263—272条）：https://books.sanlu.org/main/read/ebook/4H%2BX3V1a7IzIoQ==
 - 少阴病脉证并治（第281—325条）：https://books.sanlu.org/main/read/ebook/4H%2BV3V1a7IzIoQ==
 
+> 运行时条件键统一采用 `combined.*` canonical ID。旧版本快照中的历史键由 `CombinedPatternCondition.canonicalize()` 兼容转换；文档及外部持久化数据不得再写入旧键。
+
 ## 判定口径
 
 逐条检查：条件是否由问诊输入产生；条件键是否命中唯一规则表项；结构化规则主路径是否正确覆盖最终方剂、推荐方、说明和处方；结构化规则无命中时旧兜底路径是否应用相同结果；原文是否确实载明该方、适用前提是否已被问诊采集。
@@ -22,26 +24,26 @@
 
 | 条件键 | 原文及适用条件 | 表内处理 | 主路径 | 旧兜底路径 | 状态 |
 |---|---|---|---|---|---|
-| `sun_symptoms + yangming_symptoms` | 第32条：太阳与阳明合病，必自下利；误下史必须明确排除 | 葛根汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `sun+yangming_vomit` | 第33条：太阳与阳明合病，不下利但呕 | 葛根加半夏汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `sun+yangming_chest_full` | 第36条：太阳与阳明合病，喘而胸满 | 麻黄汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `sun+shaoyang_diarrhea` | 第172条：太阳与少阳合病，自下利 | 黄芩汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `sun+shaoyang_vomit` | 第172条：太阳与少阳合病，呕 | 黄芩加半夏生姜汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `shao_yang_symptoms + yangming_symptoms` | 第256条：阳明少阳合病、下利、滑数脉、有宿食；食积必须明确追问 | 大承气汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `sun+shaoyang_combined` | 第146条：伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去；不是原文明确“合病” | 柴胡桂枝汤；逐项追问微呕和病程6—7天 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `shaoyang+taiyin`（历史键） | 第147条：伤寒五六日，已发汗而复下之；胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦；原文没有“少阳太阴合病” | 柴胡桂枝干姜汤；先核对不呕，再核对误汗复下及病程5—6天 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `sun+taiyin`（历史键） | 第163条实际是太阳病外证未除、数下后协热而利、利下不止、心下痞硬；原文没有“太阳太阴合病” | 桂枝人参汤；限定太阳病、发热恶寒、误下史、多次攻下、下利、心下痞硬 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `three_yang_sleep` | 第268条明确“三阳合病”，但原文没有指定方剂 | 只显示原文证据，不自动推荐方剂 | 统一覆盖 | 统一覆盖 | REACHABLE（无方剂） |
-| `taiyin_symptoms + shaoyin_symptoms` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐四逆汤 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
-| `jueyin+shaoyang` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐乌梅丸 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
+| `combined.sun_yangming.base` | 第32条：太阳与阳明合病，必自下利；误下史必须明确排除 | 葛根汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun_yangming.clause33_vomit` | 第33条：太阳与阳明合病，不下利但呕 | 葛根加半夏汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun_yangming.clause36_chest_full` | 第36条：太阳与阳明合病，喘而胸满 | 麻黄汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun_shaoyang.clause172_diarrhea` | 第172条：太阳与少阳合病，自下利 | 黄芩汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun_shaoyang.clause172_vomit` | 第172条：太阳与少阳合病，呕 | 黄芩加半夏生姜汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.shaoyang_yangming.clause256` | 第256条：阳明少阳合病、下利、滑数脉、有宿食；食积必须明确追问 | 大承气汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun_shaoyang.clause146` | 第146条：伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去；不是原文明确“合病” | 柴胡桂枝汤；逐项追问微呕和病程6—7天 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.shaoyang.clause147` | 第147条：伤寒五六日，已发汗而复下之；胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦；原文没有“少阳太阴合病” | 柴胡桂枝干姜汤；先核对不呕，再核对误汗复下及病程5—6天 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun.clause163` | 第163条实际是太阳病外证未除、数下后协热而利、利下不止、心下痞硬；原文没有“太阳太阴合病” | 桂枝人参汤；限定太阳病、发热恶寒、误下史、多次攻下、下利、心下痞硬 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.three_yang.clause268_sleep` | 第268条明确“三阳合病”，但原文没有指定方剂 | 只显示原文证据，不自动推荐方剂 | 统一覆盖 | 统一覆盖 | REACHABLE（无方剂） |
+| `combined.taiyin_shaoyin.unverified` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐四逆汤 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
+| `combined.jueyin_shaoyang.unverified` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐乌梅丸 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
 
 ## 本轮撤销的错误关联
 
 | 原关联 | 原文核验 | 处理 |
 |---|---|---|
-| `three_yang_symptoms` → 第99条小柴胡汤 | 第99条是“伤寒四五日……小柴胡汤主之”，并非三阳合病；明确三阳合病见第268条 | 从合病表删除，不再自动触发 |
-| `sun+yangming_unresolved` → 第53条桂枝汤 | 1955年398条编号下“二阳并病，太阳证未罢”是第48条；原文只说“可小发汗”，没有指定桂枝汤 | 从自动规则表删除，不再推荐桂枝汤 |
-| `sun+shaoyin_two_cold` → 第301条麻黄附子细辛汤 | 第301条是少阴病始得、反发热、脉沉，属于少阴兼表，不是太阳少阴合病 | 从合病表删除；改由少阴“兼表”追问路径处理 |
+| `combined.three_yang.base` → 第99条小柴胡汤 | 第99条是“伤寒四五日……小柴胡汤主之”，并非三阳合病；明确三阳合病见第268条 | 从合病表删除，不再自动触发 |
+| `combined.sun_yangming.unresolved` → 第53条桂枝汤 | 1955年398条编号下“二阳并病，太阳证未罢”是第48条；原文只说“可小发汗”，没有指定桂枝汤 | 从自动规则表删除，不再推荐桂枝汤 |
+| `combined.sun_shaoyin.two_cold` → 第301条麻黄附子细辛汤 | 第301条是少阴病始得、反发热、脉沉，属于少阴兼表，不是太阳少阴合病 | 从合病表删除；改由少阴“兼表”追问路径处理 |
 
 ## 调用链
 
