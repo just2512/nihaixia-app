@@ -346,7 +346,6 @@ class DiagnosticEngine {
   PulseTongueAssessment? getPulseTongueAssessment() =>
       _buildPulseTongueAssessment();
 
-  /// 返回最终辨证前必须补齐的合病条文前提。未知不按阴性证据处理。
   // Keep follow-up eligibility and final pattern detection on the same evidence
   // calculation. Duplicated inline scoring previously caused the prompt path to
   // reference a missing or divergent score while the detector used another one.
@@ -374,6 +373,7 @@ class DiagnosticEngine {
       (_answers['tongue_pale_coated_white'] == true ? 2 : 0) +
       (_answers['abdominal_pain'] == true ? 2 : 0);
 
+  /// 返回最终辨证前必须补齐的合病条文前提。未知不按阴性证据处理。
   List<FollowUpQuestion> getRequiredCombinedPatternFollowUpQuestions() {
     final primary = _meridianDirection;
     final diarrhea = _answers['diarrhea'] == true;
