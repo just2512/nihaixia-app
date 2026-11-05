@@ -525,10 +525,10 @@ void main() {
     final cases = <({String name, String primary, Map<String, dynamic> answers, String expected})>[
       (name: '太阳少阳基础型', primary: '太阳', answers: {'temperature': 'fever_chills', 'joint_pain': true, 'clause146_mild_nausea': true, 'illness_duration_6_7': true, 'epigastric_fullness': true}, expected: CombinedPatternCondition.sunShaoyangBase),
       (name: '太阴少阴基础型', primary: '太阴', answers: {'drowsy': true}, expected: CombinedPatternCondition.taiyinShaoyinBase),
-      (name: '太阳阳明呕吐型', primary: '太阳', answers: {'constipated': true, 'vomiting': true}, expected: CombinedPatternCondition.sunYangmingVomit),
-      (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
+      (name: '太阳阳明呕吐型', primary: '太阳', answers: {'constipated': true, 'diarrhea': false, 'vomiting': true}, expected: CombinedPatternCondition.sunYangmingVomit),
+      (name: '太阳阳明胸满型', primary: '太阳', answers: {'constipated': true, 'asthma': true, 'chest_fullness': true}, expected: CombinedPatternCondition.sunYangmingChestFull),
       (name: '太阳少阳下利型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunShaoyangDiarrhea),
-      (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
+      (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
       (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
       (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
       (name: '第147条少阳方证', primary: '少阳', answers: {'illness_duration_5_6': true, 'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'vomiting': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
