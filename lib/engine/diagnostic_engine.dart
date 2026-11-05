@@ -412,6 +412,22 @@ class DiagnosticEngine {
       ];
     }
 
+    final sunShaoyangVomitingCandidate =
+        primary == '太阳' &&
+        shaoyangScore >= 2 &&
+        (_answers['nausea'] == true || _answers['vomiting'] == true);
+    if (sunShaoyangVomitingCandidate &&
+        _answers['diarrhea'] == null &&
+        _answers['combined_clause172_diarrhea_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'combined_clause172_diarrhea',
+          question: '【核对第172条】本次是否明确有自下利？',
+          options: ['明确有自下利（第172条）', '没有下利', '不确定'],
+        ),
+      ];
+    }
+
     if (primary == '太阳' &&
         diarrhea &&
         _answers['history_mistreatment'] == null &&
@@ -1347,6 +1363,16 @@ class DiagnosticEngine {
     if (questionKey == 'sun_taiyin_epigastric_hard') {
       _answers['sun_taiyin_epigastric_hard_answered'] = true;
       _answers['epigastric_hard'] = answer == '有心下痞硬';
+    }
+    if (questionKey == 'combined_clause172_diarrhea') {
+      _answers['combined_clause172_diarrhea_answered'] = true;
+      if (answer == '明确有自下利（第172条）') {
+        _answers['diarrhea'] = true;
+      } else if (answer == '没有下利') {
+        _answers['diarrhea'] = false;
+      } else {
+        _answers.remove('diarrhea');
+      }
     }
     if (questionKey == 'combined_clause36_dyspnea') {
       _answers['combined_clause36_dyspnea_answered'] = true;
