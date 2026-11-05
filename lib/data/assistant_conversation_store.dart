@@ -1,3 +1,5 @@
+import '../models/tcm_interview_task_state.dart';
+
 /// Persistence boundary for the unified assistant's conversation history.
 abstract interface class AssistantConversationStore {
   Future<int> createAssistantConversation({
@@ -17,6 +19,15 @@ abstract interface class AssistantConversationStore {
   });
 
   Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  });
+
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  });
+
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
     required int conversationId,
   });
 
