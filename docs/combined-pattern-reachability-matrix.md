@@ -58,4 +58,10 @@
 
 ## 回归测试
 
+- `test/engine/combined_pattern_reachability_matrix_test.dart`：12项有效条件分别覆盖结构化规则主路径和旧兜底路径，核验最终 `pattern`、`formula`、`recommendedFormulas`、`prescription` 与显式合病经。
+- `test/engine/combined_pattern_negative_reachability_test.dart`：12项条件逐项构造关键门槛被否定与未知（`null`）的输入，并分别经过结构化主路径和旧兜底路径；不允许在缺失或相反证据下命中对应条件。
+- `test/engine/combined_pattern_followup_score_test.dart`：覆盖第172条少阳分值的正向门槛、单独恶心不足阈值，以及明确无下利/未知不得命中呕吐方。
+- `test/tcm_interview_adapter_test.dart`：验证第172条缺少自下利证据时，统一问诊适配层先追问并在明确确认后才命中。
+- 上述测试覆盖的是代码条件与结果传播，不代表临床有效性或经典版本校勘已完成。旧杂病兜底的穷举仍需单独补齐。
+
 `test/engine/combined_pattern_reachability_matrix_test.dart` 对12个保留条件分别执行结构化规则路径和旧兜底路径，检查最终方剂、推荐方、处方、无方剂安全状态及显式合病经。另有负向测试锁定第99、48、301条错误关联不再进入合病表；正向测试验证第146条6—7天、微呕及四项证据，第147条5—6天、误汗复下和不呕条件，以及三条特异方证对宽泛分支的优先级。
