@@ -156,6 +156,32 @@ void main() {
       expect(diagnosis?.formula, '麻黄汤');
     });
 
+    test('太阳阳明候选会主动核对第36条喘与胸满，不依赖预先写入内部字段', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'diarrhea': false,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ));
+
+      final prompts = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(prompts, hasLength(1));
+      expect(prompts.single.key, 'combined_clause36_dyspnea');
+      engine.answerFollowUp(
+        'combined_clause36_dyspnea',
+        '明确气喘（第36条）',
+      );
+      final chestPrompts = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(chestPrompts, hasLength(1));
+      expect(chestPrompts.single.key, 'combined_clause36_chest_fullness');
+    });
+
     test('第36条通过实际问诊字段归一喘证，并追问缺失胸满', () {
       final engine = DiagnosticEngine()
         ..restoreSnapshot(EngineSnapshot(
