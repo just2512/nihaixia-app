@@ -23,7 +23,7 @@ void main() {
     (key: CombinedPatternCondition.sunShaoyangBase, meridian: '太阳', answers: {'temperature': 'fever_chills', 'joint_pain': true, 'clause146_mild_nausea': true, 'illness_duration_6_7': true, 'epigastric_fullness': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.shaoyangYangmingBase, meridian: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, pulse: '滑', secondary: '数'),
     (key: CombinedPatternCondition.taiyinShaoyinBase, meridian: '太阴', answers: {'drowsy': true}, pulse: null, secondary: null),
-    (key: CombinedPatternCondition.sunYangmingVomit, meridian: '太阳', answers: {'constipated': true, 'nausea': true}, pulse: null, secondary: null),
+    (key: CombinedPatternCondition.sunYangmingVomit, meridian: '太阳', answers: {'constipated': true, 'diarrhea': false, 'nausea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunYangmingChestFull, meridian: '太阳', answers: {'constipated': true, 'breathing': '喘'}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangDiarrhea, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangVomit, meridian: '太阳', answers: {'bitter_mouth': true, 'nausea': true}, pulse: null, secondary: null),
@@ -119,6 +119,42 @@ void main() {
           reason: 'history_mistreatment=$history must fail closed',
         );
       }
+    });
+
+    test('第33条必须明确回答无下利；未知不能被当作阴性', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'nausea': true,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ));
+
+      final prompts = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(prompts, hasLength(1));
+      expect(prompts.single.key, 'combined_diarrhea_status');
+      engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        isNot(CombinedPatternCondition.sunYangmingVomit),
+      );
+
+      engine.answerFollowUp(
+        'combined_diarrhea_status',
+        '明确没有下利（第33条）',
+      );
+      final diagnosis = engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.sunYangmingVomit,
+      );
+      expect(diagnosis?.formula, '葛根加半夏汤');
+      expect(diagnosis?.recommendedFormulas, ['葛根加半夏汤']);
     });
 
     test('第32条仅在明确无误下史时命中', () {
