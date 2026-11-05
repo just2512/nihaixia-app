@@ -355,6 +355,12 @@ class DiagnosticEngine {
         (_answers['constipated'] == true ? 3 : 0) +
         (_answers['hot_palms_soles'] == true ? 2 : 0) +
         (_answers['temperature'] == 'fever_thirst_no_cold' ? 3 : 0);
+    // 与 _detectCombinedPattern() 使用同一组少阳证据，避免追问路径引用未定义或口径不同的分值。
+    final shaoyangScore =
+        (_answers['bitter_mouth'] == true ? 3 : 0) +
+        (_answers['dry_throat'] == true ? 2 : 0) +
+        (_answers['temperature'] == 'alternating_chills_fever' ? 3 : 0) +
+        (_answers['nausea'] == true ? 1 : 0);
     final sunScore =
         (_answers['temperature'] == 'fever_chills' ? 3 : 0) +
         (_answers['has_sweat'] == false ? 2 : 0) +
