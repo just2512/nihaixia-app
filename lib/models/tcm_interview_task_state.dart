@@ -67,7 +67,7 @@ class TcmInterviewTaskState {
       snapshot: _snapshotFromJson(Map<String, Object?>.from(rawSnapshot)),
       pendingPromptId: promptId as String?,
       pendingOptions: List<String>.unmodifiable(rawOptions.cast<String>()),
-      updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt).toUtc(),
+      updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt as String).toUtc(),
     );
   }
 
