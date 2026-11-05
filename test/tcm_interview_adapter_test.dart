@@ -71,6 +71,36 @@ void main() {
       expect(snapshot.pulseType, '微弱');
     });
 
+    test('第172条呕吐候选缺少自下利证据时由适配层追问', () {
+      final adapter = TcmInterviewAdapter(
+        snapshot: EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'bitter_mouth': true,
+            'nausea': true,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ),
+      );
+
+      final prompts = adapter.requiredCombinedPatternChecks;
+      expect(prompts, hasLength(1));
+      expect(prompts.single.id, 'combined_clause172_diarrhea');
+      expect(prompts.single.options, contains('明确有自下利（第172条）'));
+      adapter.answerFollowUp(
+        prompts.single.id,
+        '明确有自下利（第172条）',
+      );
+      expect(
+        adapter.combinedPatternCondition,
+        CombinedPatternCondition.sunShaoyangVomit,
+      );
+      expect(adapter.diagnose()?.formula, '黄芩加半夏生姜汤');
+    });
+
     test('第33条无下利前提通过统一问诊适配层显式确认', () {
       final adapter = TcmInterviewAdapter(
         snapshot: EngineSnapshot(
