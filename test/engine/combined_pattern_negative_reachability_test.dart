@@ -18,6 +18,8 @@ void main() {
       meridian: '太阳',
       answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false},
       gateKey: 'history_mistreatment',
+      pulse: null,
+      secondary: null,
       rejectedValue: true,
     ),
     (
@@ -31,6 +33,8 @@ void main() {
         'epigastric_fullness': true,
       },
       gateKey: 'illness_duration_6_7',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -47,6 +51,8 @@ void main() {
       meridian: '太阴',
       answers: {'drowsy': true},
       gateKey: 'drowsy',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -54,6 +60,8 @@ void main() {
       meridian: '太阳',
       answers: {'constipated': true, 'diarrhea': false, 'nausea': true},
       gateKey: 'diarrhea',
+      pulse: null,
+      secondary: null,
       rejectedValue: true,
     ),
     (
@@ -61,6 +69,8 @@ void main() {
       meridian: '太阳',
       answers: {'constipated': true, 'asthma': true, 'chest_fullness': true},
       gateKey: 'chest_fullness',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -68,6 +78,8 @@ void main() {
       meridian: '太阳',
       answers: {'bitter_mouth': true, 'diarrhea': true},
       gateKey: 'diarrhea',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -75,6 +87,8 @@ void main() {
       meridian: '太阳',
       answers: {'bitter_mouth': true, 'diarrhea': true, 'nausea': true},
       gateKey: 'diarrhea',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -82,6 +96,8 @@ void main() {
       meridian: '厥阴',
       answers: {'bitter_mouth': true},
       gateKey: 'bitter_mouth',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -94,6 +110,8 @@ void main() {
         'has_sweat': true,
       },
       gateKey: 'drowsy',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -112,6 +130,8 @@ void main() {
         'irritable': true,
       },
       gateKey: 'illness_duration_5_6',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
     (
@@ -127,6 +147,8 @@ void main() {
         'epigastric_hard': true,
       },
       gateKey: 'epigastric_hard',
+      pulse: null,
+      secondary: null,
       rejectedValue: false,
     ),
   ];
