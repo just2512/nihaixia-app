@@ -25,7 +25,7 @@ class DatabaseHelper implements AssistantConversationStore {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -153,6 +153,17 @@ class DatabaseHelper implements AssistantConversationStore {
       'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
     );
 
+    await db.execute('''
+      CREATE TABLE tcm_interview_tasks(
+        conversation_id INTEGER PRIMARY KEY,
+        task_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+      )
+    ''');
+
     // 自定义命盘库（首次安装即建表；旧库由 onUpgrade 的 <5 分支补齐）
     await db.execute('''
       CREATE TABLE user_charts(
@@ -262,6 +273,18 @@ class DatabaseHelper implements AssistantConversationStore {
       await db.execute(
         'CREATE INDEX assistant_messages_conversation_idx ON assistant_messages(conversation_id, id)',
       );
+    }
+    if (oldVersion < 7) {
+      await db.execute('''
+      CREATE TABLE tcm_interview_tasks(
+        conversation_id INTEGER PRIMARY KEY,
+        task_id TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        state_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(conversation_id) REFERENCES assistant_conversations(id)
+      )
+      ''');
     }
   }
 
@@ -424,6 +447,58 @@ class DatabaseHelper implements AssistantConversationStore {
       whereArgs: [conversationId],
       orderBy: 'id ASC',
     );
+  }
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {
+    final db = await database;
+    final updatedAt = (state.updatedAt ?? DateTime.now()).toUtc().toIso8601String();
+    await db.transaction((txn) async {
+      final conversations = await txn.query(
+        'assistant_conversations',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [conversationId],
+        limit: 1,
+      );
+      if (conversations.isEmpty) {
+        throw StateError('Assistant conversation $conversationId does not exist');
+      }
+      await txn.insert(
+        'tcm_interview_tasks',
+        {
+          'conversation_id': conversationId,
+          'task_id': state.taskId,
+          'status': state.status,
+          'state_json': state.encode(),
+          'updated_at': updatedAt,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+  }
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      'tcm_interview_tasks',
+      columns: ['state_json'],
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final encoded = rows.single['state_json'];
+    if (encoded is! String) {
+      throw const FormatException('Stored TCM interview state is not text');
+    }
+    return TcmInterviewTaskState.decode(encoded);
   }
 
   Future<int> renameAssistantConversation({
