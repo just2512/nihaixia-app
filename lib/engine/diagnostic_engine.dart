@@ -369,7 +369,9 @@ class DiagnosticEngine {
     final sunYangmingChestCandidate =
         primary == '太阳' &&
         yangmingScore >= 3 &&
-        (_answers['asthma'] == true || _answers['chest_fullness'] == true);
+        _answers['diarrhea'] != true &&
+        _answers['nausea'] != true &&
+        _answers['vomiting'] != true;
     if (sunYangmingChestCandidate &&
         _answers['asthma'] == null &&
         _answers['combined_clause36_dyspnea_answered'] != true) {
