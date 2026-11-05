@@ -31,7 +31,7 @@
   - `422e182d`：新增 `test/engine/combined_pattern_negative_reachability_test.dart`，12项有效条件分别在结构化主路径与旧兜底路径覆盖相反证据和未知证据。
   - `a42fdff3`、`ee9ca969`：修正测试用例记录字段完整性，并将追问门槛注释放回对应方法。
 - 变更范围：诊断引擎共享证据计算、两组新增合病回归测试及审计文档；未改数据库、依赖、Android 配置或诊断规则表。
-- CI：`.github/workflows/flutter-tests.yml` 配置了 `push` 到 `master` 自动执行。此前可核验的 2026-11-04 两条工作流（run `41794913815`、`41794913787`）均已完成且成功，但它们对应旧审计基线 `fa586d52`，不能替代本次三个新提交的 CI 结果。本次新提交的全量 Flutter/Android CI 状态暂记 `PENDING_VERIFICATION`，不提前标记通过。
+- CI：`.github/workflows/flutter-tests.yml` 配置了 `push` 到 `master` 自动执行。此前可核验的 2026-11-04 两条工作流（run `41794913815`、`41794913787`）均已完成且成功，但它们对应旧审计基线 `fa586d52`，不能替代本次增量提交的 CI 结果。本次新提交的全量 Flutter/Android CI 状态暂记 `PENDING_VERIFICATION`，不提前标记通过。
 - 其余 3—12 项仍沿用本文件所列状态；特别是统一助手仍通过独立页面启动结构化辨证/部分工具，附件原件仍未持久化，Find N2 真机验收仍缺少外屏/内屏/半折叠实测记录。
 
 ## 2. 当前统一助手的数据流
