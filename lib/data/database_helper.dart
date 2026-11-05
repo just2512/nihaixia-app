@@ -528,6 +528,13 @@ class DatabaseHelper implements AssistantConversationStore {
         where: 'conversation_id IN ($placeholders)',
         whereArgs: ids,
       );
+      // Interview task snapshots belong to the conversation and must not
+      // outlive it; remove them before deleting the parent rows.
+      await txn.delete(
+        'tcm_interview_tasks',
+        where: 'conversation_id IN ($placeholders)',
+        whereArgs: ids,
+      );
       await txn.delete(
         'assistant_conversations',
         where: 'id IN ($placeholders)',
