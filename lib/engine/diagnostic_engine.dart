@@ -366,6 +366,22 @@ class DiagnosticEngine {
         (_answers['tongue_pale_coated_white'] == true ? 2 : 0) +
         (_answers['abdominal_pain'] == true ? 2 : 0);
 
+    final sunYangmingChestCandidate =
+        primary == '太阳' &&
+        yangmingScore >= 3 &&
+        _answers['breathing'] == '喘';
+    if (sunYangmingChestCandidate &&
+        _answers['chest_fullness'] == null &&
+        _answers['combined_clause36_chest_fullness_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'combined_clause36_chest_fullness',
+          question: '【核对第36条】喘的同时是否明确有胸满？',
+          options: ['有胸满（第36条）', '没有胸满', '不确定'],
+        ),
+      ];
+    }
+
     final sunYangmingVomitingCandidate =
         primary == '太阳' &&
         yangmingScore >= 3 &&
@@ -1173,7 +1189,8 @@ class DiagnosticEngine {
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingVomit;
         return;
       }
-      if (_answers['breathing'] == '喘' || _answers['chest_fullness'] == true) {
+      if (_answers['breathing'] == '喘' &&
+          _answers['chest_fullness'] == true) {
         _combinedMeridian = '阳明';
         _combinedPatternCondition = CombinedPatternCondition.sunYangmingChestFull;
         return;
@@ -1316,6 +1333,16 @@ class DiagnosticEngine {
     if (questionKey == 'sun_taiyin_epigastric_hard') {
       _answers['sun_taiyin_epigastric_hard_answered'] = true;
       _answers['epigastric_hard'] = answer == '有心下痞硬';
+    }
+    if (questionKey == 'combined_clause36_chest_fullness') {
+      _answers['combined_clause36_chest_fullness_answered'] = true;
+      if (answer == '有胸满（第36条）') {
+        _answers['chest_fullness'] = true;
+      } else if (answer == '没有胸满') {
+        _answers['chest_fullness'] = false;
+      } else {
+        _answers.remove('chest_fullness');
+      }
     }
     if (questionKey == 'combined_diarrhea_status') {
       _answers['combined_diarrhea_status_answered'] = true;
