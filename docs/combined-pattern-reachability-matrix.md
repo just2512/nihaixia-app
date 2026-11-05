@@ -61,6 +61,7 @@
 - `test/engine/combined_pattern_reachability_matrix_test.dart`：12项有效条件分别覆盖结构化规则主路径和旧兜底路径，核验最终 `pattern`、`formula`、`recommendedFormulas`、`prescription` 与显式合病经。
 - `test/engine/combined_pattern_negative_reachability_test.dart`：12项条件逐项构造关键门槛被否定与未知（`null`）的输入，并分别经过结构化主路径和旧兜底路径；不允许在缺失或相反证据下命中对应条件。
 - `test/engine/combined_pattern_followup_score_test.dart`：覆盖第172条少阳分值的正向门槛、单独恶心不足阈值，以及明确无下利/未知不得命中呕吐方。
+- `test/engine/combined_pattern_negative_reachability_test.dart` 另覆盖第256条：仅滑脉、仅数脉、重复同一脉象、脉象未知均不得命中；滑数/数滑两种主脉与兼脉顺序均可通过组合脉门槛。
 - `test/tcm_interview_adapter_test.dart`：验证第172条缺少自下利证据时，统一问诊适配层先追问并在明确确认后才命中。
 - 上述测试覆盖的是代码条件与结果传播，不代表临床有效性或经典版本校勘已完成。旧杂病兜底的穷举仍需单独补齐。
 
