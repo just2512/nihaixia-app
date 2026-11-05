@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -133,6 +135,46 @@ void main() {
     expect(conversations.single['message_count'], 1);
   });
 
+
+  test('TCM task state survives database connection restart and is deleted with conversation', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation(
+      mode: 'consultation',
+    );
+    final adapter = TcmInterviewAdapter();
+    adapter.answerTemperature('fever_chills');
+    final state = TcmInterviewTaskState(
+      taskId: 'task-restart-1',
+      snapshot: adapter.createSnapshot(),
+      status: 'awaiting_tongue_pulse',
+      pendingPromptId: 'tongue_pulse',
+      pendingOptions: const ['舌淡红', '舌红'],
+      updatedAt: DateTime.utc(2026, 11, 5),
+    );
+    await store.saveTcmInterviewTaskState(
+      conversationId: conversationId,
+      state: state,
+    );
+
+    final opened = await DatabaseHelper.instance.database;
+    await opened.close();
+    DatabaseHelper.resetForTest();
+
+    final restored = await DatabaseHelper.instance.getTcmInterviewTaskState(
+      conversationId: conversationId,
+    );
+    expect(restored?.taskId, state.taskId);
+    expect(restored?.status, state.status);
+    expect(restored?.pendingPromptId, 'tongue_pulse');
+    expect(restored?.pendingOptions, state.pendingOptions);
+    expect(restored?.snapshot.answers['temperature'], 'fever_chills');
+
+    await store.deleteAssistantConversations([conversationId]);
+    expect(
+      await store.getTcmInterviewTaskState(conversationId: conversationId),
+      isNull,
+    );
+  });
 
   test('默认历史列表不截断超过 100 条的会话', () async {
     final store = DatabaseHelper.instance;
