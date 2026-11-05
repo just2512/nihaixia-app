@@ -26,7 +26,7 @@ void main() {
     (key: CombinedPatternCondition.sunYangmingVomit, meridian: '太阳', answers: {'constipated': true, 'diarrhea': false, 'nausea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunYangmingChestFull, meridian: '太阳', answers: {'constipated': true, 'breathing': '喘'}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangDiarrhea, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, pulse: null, secondary: null),
-    (key: CombinedPatternCondition.sunShaoyangVomit, meridian: '太阳', answers: {'bitter_mouth': true, 'nausea': true}, pulse: null, secondary: null),
+    (key: CombinedPatternCondition.sunShaoyangVomit, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true, 'nausea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.jueyinShaoyang, meridian: '厥阴', answers: {'bitter_mouth': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.threeYangSleep, meridian: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.shaoyangTaiyin, meridian: '少阳', answers: {'illness_duration_5_6': true, 'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'vomiting': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, pulse: null, secondary: null),
@@ -119,6 +119,28 @@ void main() {
           reason: 'history_mistreatment=$history must fail closed',
         );
       }
+    });
+
+    test('第172条呕吐方必须满足共同的自下利前提', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'bitter_mouth': true,
+            'nausea': true,
+            'diarrhea': false,
+          },
+          tenQuestionIndex: 0,
+        ));
+
+      final diagnosis = engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        isNot(CombinedPatternCondition.sunShaoyangVomit),
+      );
+      expect(diagnosis?.formula, isNot('黄芩加半夏生姜汤'));
     });
 
     test('第33条必须明确回答无下利；未知不能被当作阴性', () {
