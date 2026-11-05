@@ -7,8 +7,8 @@
 
 | # | 事项 | 状态 | 源码/测试证据 | 未关闭项 |
 |---:|---|---|---|---|
-| 1 | 合病规则可达性矩阵 | PARTIAL | `docs/combined-pattern-reachability-matrix.md`、`test/engine/combined_pattern_regression_test.dart` | 当前有效表 15 项，14 项有检测器路径；`threeYangBase` 仍为 UNREACHABLE。主规则、旧六经兜底、旧杂病兜底虽有回归，但旧杂病入口仍非穷举。还要区分代码可达与医学适用性。 |
-| 2 | 合病调用链修复 | PARTIAL | `CombinedPatternCondition` 集中条件键；`DiagnosticEngine` 在最终结果传播合病字段；`ChatScreen` 在最终 diagnose 前调用 `getRequiredCombinedPatternFollowUpQuestions()` | 第32、34、163、256条关键门槛已收紧；需继续覆盖全部旧兜底组合，并复核 `formula`、`recommendedFormulas`、`pattern`、`prescription` 一致性和所有入口。 |
+| 1 | 合病规则可达性矩阵 | PARTIAL | `docs/combined-pattern-reachability-matrix.md`、`test/engine/combined_pattern_reachability_matrix_test.dart` | 当前有效表 12 项；参数化矩阵对12项分别覆盖结构化主路径和旧兜底路径，`threeYangBase` 保持 UNREACHABLE。仍需逐条补齐未满足/满足/未知/冲突四态与旧杂病入口穷举，并区分代码可达与医学适用性。 |
+| 2 | 合病调用链修复 | PARTIAL | `CombinedPatternCondition` 集中 canonical 条件键；`DiagnosticEngine` 统一最终结果传播；`ChatScreen` 与 `TcmInterviewAdapter` 调用 `getRequiredCombinedPatternFollowUpQuestions()` | 第32、33、36、146、147、163、172、256条关键前提已有门槛或回归覆盖；2026-11-05 将追问与最终检测共用少阳/太阳/阳明/太阴证据计算，并新增第172条正向、阴性及未知回归。仍需补齐全部旧兜底组合及所有入口的一致性验证。 |
 | 3 | 脉舌交叉验证 | EXISTS（自动化范围内） | `DiagnosticRules.canonicalPulse()`；`pulse_tongue_cross_validation_test.dart` | 已区分复合脉 canonical 值、单脉与主脉+兼脉；矛盾时追加饮水、小便、四肢等追问。仍需验证真实问诊界面完整路径、用户无法判断脉象时的输入和设备体验。 |
 | 4 | 脏腑独立证据层 | EXISTS（证据层） | `models/zangfu_evidence.dart`、`engine/zangfu_evidence_builder.dart`、`zangfu_evidence_builder_test.dart` | 当前只保存原始问答、舌脉与来源，不生成脏腑映射、证型或方剂；`organMappingStatus=MISSING` 是预期安全边界。若要展示，应只展示证据和未知项。 |
 | 5 | 经典条文、医案关联 | PARTIAL | `docs/classic-and-medical-case-source-audit.md`、`ClassicSearchService`、`AssistantKnowledgeContextBuilder` | 已对部分条文做在线交叉核验和分类纠错；李心机2022译注本逐页书影、赵开美具体馆藏/刻次、卷页、异文与本地 manifest 未完成。医案逐案原始定位缺失；1257 与来源统计 1337 的差异未核清，医案—经典自动关联保持 MISSING。 |
@@ -19,6 +19,18 @@
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
 | 11 | 单一主入口与统一调度 | PARTIAL（目录覆盖扩展） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 统一助手已覆盖 ToolsScreen 的 22 个页面/工具目的地，并包含独立结构化辨证入口，共 23 个注册工具；工具角色上下文动态读取注册表。路由仍是关键词/动作词确定性匹配，工具操作以卡片按钮启动既有页面，部分工具不回传机器可读结果；未具备语义参数抽取、表单缺参追问、跨轮工具任务状态和多工具计划，不能称为完整通用 Agent。 |
 | 12 | 对话历史持久化、续聊、批量删除 | EXISTS（文本会话） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`、`assistant_history_screen_test.dart` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。原始图片/录音附件不持久化，只保留附件说明；历史模型上下文受长度上限约束。 |
+
+## 1A. 2026-11-05 增量复核与代码落地
+
+本节记录 2026-11-04 审计基线之后的增量，不将尚未通过最新 CI 的改动标为 PASS。
+
+- `master` 新增提交：
+  - `2a1a00e6`：补齐第172条追问路径使用的少阳证据分值。
+  - `d52923bf`：将太阳、阳明、少阳、太阴四组证据分值抽为 `DiagnosticEngine` 共享 getter，追问资格判断与最终合病检测复用同一计算，消除重复实现漂移。
+  - `1e0ea459`：新增 `test/engine/combined_pattern_followup_score_test.dart`，覆盖口苦/咽干/往来寒热达到门槛、仅恶心不足门槛，以及明确无下利/不确定不得命中第172条呕吐方。
+- 变更范围：仅 `lib/engine/diagnostic_engine.dart` 与新增回归测试；未改数据库、依赖、Android 配置或诊断规则表。
+- CI：`.github/workflows/flutter-tests.yml` 配置了 `push` 到 `master` 自动执行。此前可核验的 2026-11-04 两条工作流（run `41794913815`、`41794913787`）均已完成且成功，但它们对应旧审计基线 `fa586d52`，不能替代本次三个新提交的 CI 结果。本次新提交的全量 Flutter/Android CI 状态暂记 `PENDING_VERIFICATION`，不提前标记通过。
+- 其余 3—12 项仍沿用本文件所列状态；特别是统一助手仍通过独立页面启动结构化辨证/部分工具，附件原件仍未持久化，Find N2 真机验收仍缺少外屏/内屏/半折叠实测记录。
 
 ## 2. 当前统一助手的数据流
 
