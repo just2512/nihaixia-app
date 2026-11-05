@@ -24,7 +24,7 @@ void main() {
     (key: CombinedPatternCondition.shaoyangYangmingBase, meridian: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, pulse: '滑', secondary: '数'),
     (key: CombinedPatternCondition.taiyinShaoyinBase, meridian: '太阴', answers: {'drowsy': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunYangmingVomit, meridian: '太阳', answers: {'constipated': true, 'diarrhea': false, 'nausea': true}, pulse: null, secondary: null),
-    (key: CombinedPatternCondition.sunYangmingChestFull, meridian: '太阳', answers: {'constipated': true, 'breathing': '喘'}, pulse: null, secondary: null),
+    (key: CombinedPatternCondition.sunYangmingChestFull, meridian: '太阳', answers: {'constipated': true, 'breathing': '喘', 'chest_fullness': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangDiarrhea, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangVomit, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true, 'nausea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.jueyinShaoyang, meridian: '厥阴', answers: {'bitter_mouth': true}, pulse: null, secondary: null),
@@ -119,6 +119,41 @@ void main() {
           reason: 'history_mistreatment=$history must fail closed',
         );
       }
+    });
+
+    test('第36条必须同时具备喘与胸满；缺一项先追问', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'breathing': '喘',
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ));
+
+      final prompts = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(prompts, hasLength(1));
+      expect(prompts.single.key, 'combined_clause36_chest_fullness');
+      engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        isNot(CombinedPatternCondition.sunYangmingChestFull),
+      );
+
+      engine.answerFollowUp(
+        'combined_clause36_chest_fullness',
+        '有胸满（第36条）',
+      );
+      final diagnosis = engine.diagnose();
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.sunYangmingChestFull,
+      );
+      expect(diagnosis?.formula, '麻黄汤');
     });
 
     test('第172条呕吐方必须满足共同的自下利前提', () {
