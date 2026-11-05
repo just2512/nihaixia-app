@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
@@ -68,6 +69,8 @@ class _MemoryConversationStore implements AssistantConversationStore {
       'last_message_preview': '已识别到你要使用五运六气推算。',
     },
   };
+
+  final Map<int, TcmInterviewTaskState> taskStates = {};
 
   final Map<int, List<Map<String, Object?>>> messages = {
     1: [
@@ -162,10 +165,25 @@ class _MemoryConversationStore implements AssistantConversationStore {
       List<Map<String, Object?>>.from(messages[conversationId] ?? const []);
 
   @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {
+    taskStates[conversationId] = state;
+  }
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async =>
+      taskStates[conversationId];
+
+  @override
   Future<void> deleteAssistantConversations(List<int> conversationIds) async {
     for (final id in conversationIds) {
       conversations.remove(id);
       messages.remove(id);
+      taskStates.remove(id);
     }
   }
 }
