@@ -12,13 +12,13 @@
 | 3 | 脉舌交叉验证 | EXISTS（自动化范围内） | `DiagnosticRules.canonicalPulse()`；`test/engine/pulse_tongue_cross_validation_test.dart`；`test/engine/combined_pattern_negative_reachability_test.dart`、`ChatScreen._showTonguePulseDialog()` | 已区分复合脉 canonical 值、单脉与主脉+兼脉；矛盾时追加饮水、小便、四肢等追问。第256条新增单脉拒绝、滑数/数滑双顺序回归；界面禁止无主脉或与主脉重复的兼脉选择，切换/清空主脉时清理失效兼脉。仍需验证真实问诊界面完整路径、用户无法判断脉象时的输入和设备体验。 |
 | 4 | 脏腑独立证据层 | EXISTS（证据采集与展示） | `models/zangfu_evidence.dart`、`engine/zangfu_evidence_builder.dart`、`ChatScreen._showResult()`、`zangfu_evidence_builder_test.dart` | 结果页已展示原始问答、舌脉、来源及未知/未作答状态；不生成脏腑映射、证型或方剂。`organMappingStatus=MISSING` 是预期安全边界；后续只补可追溯证据，不自动诊断。 |
 | 5 | 经典条文、医案关联 | PARTIAL | `docs/classic-and-medical-case-source-audit.md`、`ClassicSearchService`、`AssistantKnowledgeContextBuilder` | 已对部分条文做在线交叉核验和分类纠错；李心机2022译注本逐页书影、赵开美具体馆藏/刻次、卷页、异文与本地 manifest 未完成。医案逐案原始定位缺失；1257 与来源统计 1337 的差异未核清，医案—经典自动关联保持 MISSING。 |
-| 6 | Find N2 内外屏适配 | PARTIAL | `docs/find-n2-adaptive-layout.md`、`docs/find-n2-fold-aware-layout.md`；`adaptive_home_navigation_test.dart`、`adaptive_master_detail_test.dart`、`local_ai_adaptive_content_test.dart`、`fold_aware_routes_test.dart` | 已有窗口断点、导航双面板、折痕/铰链安全区和窄屏换行回归。Find N2（PGU110）外屏、内屏、半折叠、键盘、相机、文件选择器、模型导入的实机截图与窗口指标仍为 MISSING。 |
+| 6 | Find N2 内外屏适配 | PARTIAL | `docs/find-n2-adaptive-layout.md`、`docs/find-n2-fold-aware-layout.md`；`adaptive_home_navigation_test.dart`、`adaptive_master_detail_test.dart`、`local_ai_adaptive_content_test.dart`、`fold_aware_routes_test.dart` | 已有窗口断点、导航双面板、折痕/铰链安全区和窄屏换行回归。Find N2（PUG110）外屏、内屏、半折叠、键盘、相机、文件选择器、模型导入的实机截图与窗口指标仍为 MISSING。 |
 | 7 | 本地 AI 与辨证问诊统一 | PARTIAL | 首页默认入口为 `LocalAiInterviewScreen`；`AssistantConversationOrchestrator` 将个人症状导向问诊；`structured_diagnosis` 工具打开 `ChatScreen(returnResultOnComplete: true)` | 用户入口和会话编排已统一，但规则问诊仍是独立页面/独立问答 UI，通过工具路由进入并把结果带回助手；尚非同一消息流中的原生交互卡片。附件与规则问诊的确认/回传边界需继续验证。 |
 | 8 | 本地 AI 调用知识库和工具 | PARTIAL（工具目录已补齐） | `services/assistant_knowledge_context.dart`；`services/assistant_conversation_orchestrator.dart`；`screens/assistant_tool_router.dart`；`test/assistant_conversation_orchestrator_test.dart` | 学习与问诊文本可检索 App 内方剂、本草、针灸、穴位、内经、古籍及（学习域）医案；结果带来源和 MISSING 标记。2026-11-04 新增注册 ToolsScreen 中此前未接入的诊断历史、闭门课重症、节气养生、玉匣灵兆、解梦、关煞、灵签、称骨、受生债、黄帝四季歌、命盘库；统一助手工具注册表现有 23 个入口，工具/玄学提示词从注册表动态生成。仍由本地关键词/动作词确定性路由，工具实际执行打开既有页面，不是模型任意调用 Dart 函数；部分页面没有结构化结果回传，只能返回“已打开”说明。 |
 | 9 | 设置入口 | EXISTS | `HomeScreen` 根导航含独立“设置”目的地；`home_screen_entry_test.dart` 断言设置可从根导航进入 | 当前已不依赖问诊页面内部入口；后续可继续优化设置分类与可发现性，不应把设置重新塞回聊天页。 |
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
 | 11 | 单一主入口与统一调度 | PARTIAL（目录覆盖扩展） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 统一助手已覆盖 ToolsScreen 的 22 个页面/工具目的地，并包含独立结构化辨证入口，共 23 个注册工具；工具角色上下文动态读取注册表。路由仍是关键词/动作词确定性匹配，工具操作以卡片按钮启动既有页面，部分工具不回传机器可读结果；未具备语义参数抽取、表单缺参追问、跨轮工具任务状态和多工具计划，不能称为完整通用 Agent。 |
-| 12 | 对话历史持久化、续聊、批量删除 | PARTIAL（文本会话已实现） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。原始图片/录音附件不持久化，只保留附件说明；`TcmInterviewTaskState` 模型与数据库接口已存在，但尚未接入 `ChatScreen` 的逐步保存/恢复，未完成的结构化辨证任务不能据此认定可续接；历史模型上下文受长度上限约束。 |
+| 12 | 对话历史持久化、续聊、批量删除 | PARTIAL（文本会话已实现） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`；`test/models/tcm_interview_task_state_test.dart` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。原始图片/录音附件不持久化，只保留附件说明；`TcmInterviewTaskState` 模型与 SQLite 保存/读取接口已存在。2026-11-05 新增完整快照序列化/反序列化回归，覆盖问诊阶段、答案、舌脉、组合经、追问 ID/选项、时间戳和 schema 拒绝；但尚未接入 `ChatScreen` 的逐步保存/恢复，未完成的结构化辨证任务仍不能认定可续接；历史模型上下文受长度上限约束。 |
 
 ## 1A. 2026-11-05 增量复核与代码落地
 
@@ -31,6 +31,7 @@
   - `422e182d`：新增 `test/engine/combined_pattern_negative_reachability_test.dart`，12项有效条件分别在结构化主路径与旧兜底路径覆盖相反证据和未知证据。
   - `2eab5d97`：补充第256条滑数脉边界，单滑、单数、重复同脉和未知脉象均拒绝命中；滑数/数滑两种录入顺序均覆盖。
   - `08da70cd`：问诊舌脉选择 UI 禁止无主脉、重复主兼脉，并在主脉变化时清理失效兼脉。
+  - `e90cdaac` / `9c7758a5`：新增 `test/models/tcm_interview_task_state_test.dart`，覆盖结构化问诊快照的完整序列化往返、待回答问题与选项恢复字段、schema 版本拒绝及损坏数据拒绝。该测试只验证持久化模型契约，不代表 `ChatScreen` 已接入自动保存/恢复。
   - `a42fdff3`、`ee9ca969`：修正测试用例记录字段完整性，并将追问门槛注释放回对应方法。
 - 变更范围：诊断引擎共享证据计算、两组新增合病回归测试及审计文档；未改数据库、依赖、Android 配置或诊断规则表。
 - CI：`.github/workflows/flutter-tests.yml` 配置了 `push` 到 `master` 自动执行。此前可核验的 2026-11-04 两条工作流（run `41794913815`、`41794913787`）均已完成且成功，但它们对应旧审计基线 `fa586d52`，不能替代本次增量提交的 CI 结果。本次新提交的全量 Flutter/Android CI 状态暂记 `PENDING_VERIFICATION`，不提前标记通过。
