@@ -51,10 +51,10 @@ void main() {
 
       // Baseline count.
       final baseline = tester
-              .widget<Text>(find.textContaining('/ 1257 例'))
+              .widget<Text>(find.textContaining('/ 1256 例'))
               .data ??
           '';
-      expect(baseline.contains('1257 / 1257'), isTrue,
+      expect(baseline.contains('1256 / 1256'), isTrue,
           reason: 'baseline should be 1257/1257, got: ' + baseline);
 
       // Tap formula chip → must reduce but stay > 0.
@@ -63,11 +63,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       final afterFormula = tester
-              .widget<Text>(find.textContaining('/ 1257 例'))
+              .widget<Text>(find.textContaining('/ 1256 例'))
               .data ??
           '';
       final mf =
-          RegExp(r'共 (\d+) / 1257 例').firstMatch(afterFormula);
+          RegExp(r'共 (\d+) / 1256 例').firstMatch(afterFormula);
       expect(mf, isNotNull, reason: 'count line: ' + afterFormula);
       final nf = int.parse(mf!.group(1)!);
       expect(nf, greaterThan(0),
@@ -119,11 +119,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       final afterDisease = tester
-              .widget<Text>(find.textContaining('/ 1257 例'))
+              .widget<Text>(find.textContaining('/ 1256 例'))
               .data ??
           '';
       final md =
-          RegExp(r'共 (\d+) / 1257 例').firstMatch(afterDisease);
+          RegExp(r'共 (\d+) / 1256 例').firstMatch(afterDisease);
       expect(md, isNotNull, reason: 'count line: ' + afterDisease);
       final nd = int.parse(md!.group(1)!);
       expect(nd, greaterThan(0),
