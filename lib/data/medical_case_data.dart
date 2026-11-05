@@ -379,6 +379,10 @@ List<MedicalCase> parseMedicalCaseTable(String md) {
       if (padded[i] == '---') padded[i] = '';
     }
 
+    // The source table contains a numbered all-placeholder row (sequence 1).
+    // It is a template row, not a clinical case; do not expose it as a case.
+    if (padded.skip(1).every((value) => value.isEmpty)) continue;
+
     // 保留全部原始病例行；空方剂字段由详情/AI 检索明确标记 MISSING。
     cases.add(MedicalCase(
       seq: seq,
