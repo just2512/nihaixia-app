@@ -153,6 +153,58 @@ void main() {
     ),
   ];
 
+  group('第256条脉象必须是滑数组合，单脉不能代替', () {
+    DiagnosticEngine engineFor(String? primary, String? secondary) {
+      return DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '少阳',
+          answers: const {
+            'constipated': true,
+            'diarrhea': true,
+            'food_stagnation': true,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+          pulseType: primary,
+          pulseTypeSecondary: secondary,
+        ));
+    }
+
+    test('仅滑脉、仅数脉、同一脉重复及脉象未知均不得命中第256条', () {
+      for (final pulses in <(String?, String?)>[
+        ('滑', null),
+        ('数', null),
+        ('滑', '滑'),
+        ('数', '数'),
+        (null, null),
+      ]) {
+        final engine = engineFor(pulses.$1, pulses.$2);
+        engine.diagnose();
+        expect(
+          engine.combinedPatternCondition,
+          isNot(CombinedPatternCondition.shaoyangYangmingBase),
+          reason: 'primary=${pulses.$1}, secondary=${pulses.$2}',
+        );
+      }
+    });
+
+    test('滑数与数滑两种录入顺序均可命中第256条', () {
+      for (final pulses in <(String, String)>[
+        ('滑', '数'),
+        ('数', '滑'),
+      ]) {
+        final engine = engineFor(pulses.$1, pulses.$2);
+        engine.diagnose();
+        expect(
+          engine.combinedPatternCondition,
+          CombinedPatternCondition.shaoyangYangmingBase,
+        );
+      }
+    });
+  });
+
   group('合病矩阵负向可达性：缺失与冲突证据必须关闭规则', () {
     for (final item in cases) {
       for (final structured in [true, false]) {
