@@ -5,23 +5,46 @@ import '../models/diagnosis.dart';
 /// Combined-pattern condition identifiers shared by the detector and rule table.
 /// Keep identifiers centralized; adding a key does not make its clinical rule valid.
 class CombinedPatternCondition {
-  static const sunYangmingBase = 'sun_symptoms + yangming_symptoms';
-  static const sunShaoyangBase = 'sun+shaoyang_combined';
-  static const shaoyangYangmingBase = 'shao_yang_symptoms + yangming_symptoms';
-  static const threeYangBase = 'three_yang_symptoms';
-  static const taiyinShaoyinBase = 'taiyin_symptoms + shaoyin_symptoms';
-  static const sunYangmingVomit = 'sun+yangming_vomit';
-  static const sunYangmingChestFull = 'sun+yangming_chest_full';
-  static const sunShaoyangDiarrhea = 'sun+shaoyang_diarrhea';
-  static const sunShaoyangVomit = 'sun+shaoyang_vomit';
-  static const jueyinShaoyang = 'jueyin+shaoyang';
-  static const sunYangmingUnresolved = 'sun+yangming_unresolved';
-  static const threeYangSleep = 'three_yang_sleep';
-  static const sunShaoyinTwoCold = 'sun+shaoyin_two_cold';
-  static const shaoyangTaiyin = 'shaoyang+taiyin';
-  static const sunTaiyin = 'sun+taiyin';
-}
+  static const sunYangmingBase = 'combined.sun_yangming.base';
+  static const sunShaoyangBase = 'combined.sun_shaoyang.clause146';
+  static const shaoyangYangmingBase = 'combined.shaoyang_yangming.clause256';
+  static const threeYangBase = 'combined.three_yang.base';
+  static const taiyinShaoyinBase = 'combined.taiyin_shaoyin.unverified';
+  static const sunYangmingVomit = 'combined.sun_yangming.clause33_vomit';
+  static const sunYangmingChestFull = 'combined.sun_yangming.clause36_chest_full';
+  static const sunShaoyangDiarrhea = 'combined.sun_shaoyang.clause172_diarrhea';
+  static const sunShaoyangVomit = 'combined.sun_shaoyang.clause172_vomit';
+  static const jueyinShaoyang = 'combined.jueyin_shaoyang.unverified';
+  static const sunYangmingUnresolved = 'combined.sun_yangming.unresolved';
+  static const threeYangSleep = 'combined.three_yang.clause268_sleep';
+  static const sunShaoyinTwoCold = 'combined.sun_shaoyin.two_cold';
+  static const shaoyangTaiyin = 'combined.shaoyang.clause147';
+  static const sunTaiyin = 'combined.sun.clause163';
 
+  /// Read compatibility for snapshots persisted before canonical IDs were introduced.
+  static const Map<String, String> legacyAliases = {
+    'sun_symptoms + yangming_symptoms': sunYangmingBase,
+    'sun+shaoyang_combined': sunShaoyangBase,
+    'shao_yang_symptoms + yangming_symptoms': shaoyangYangmingBase,
+    'three_yang_symptoms': threeYangBase,
+    'taiyin_symptoms + shaoyin_symptoms': taiyinShaoyinBase,
+    'sun+yangming_vomit': sunYangmingVomit,
+    'sun+yangming_chest_full': sunYangmingChestFull,
+    'sun+shaoyang_diarrhea': sunShaoyangDiarrhea,
+    'sun+shaoyang_vomit': sunShaoyangVomit,
+    'jueyin+shaoyang': jueyinShaoyang,
+    'sun+yangming_unresolved': sunYangmingUnresolved,
+    'three_yang_sleep': threeYangSleep,
+    'sun+shaoyin_two_cold': sunShaoyinTwoCold,
+    'shaoyang+taiyin': shaoyangTaiyin,
+    'sun+taiyin': sunTaiyin,
+  };
+
+  static String? canonicalize(String? value) {
+    if (value == null) return null;
+    return legacyAliases[value] ?? value;
+  }
+}
 class SymptomOption {
   final String key;
   final String label;
