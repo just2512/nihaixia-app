@@ -151,6 +151,36 @@ void main() {
       expect(keys, isNot(contains(CombinedPatternCondition.sunShaoyinTwoCold)));
     });
 
+    test('合病条件键统一使用稳定 canonical ID', () {
+      for (final pattern in DiagnosticRules.combinedPatterns) {
+        expect(pattern.condition, startsWith('combined.'));
+      }
+      for (final entry in CombinedPatternCondition.legacyAliases.entries) {
+        expect(
+          CombinedPatternCondition.canonicalize(entry.key),
+          entry.value,
+          reason: 'legacy key: ${entry.key}',
+        );
+      }
+    });
+
+    test('恢复旧快照时将历史合病键规范化', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {},
+          tenQuestionIndex: 0,
+          combinedPatternCondition: 'sun_symptoms + yangming_symptoms',
+        ));
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.sunYangmingBase,
+      );
+      expect(engine.suppressReferenceFormulaSuggestions, isFalse);
+    });
+
     test('原文未载方剂或来源待核的项目关闭相似度方剂兜底', () {
       for (final key in [
         CombinedPatternCondition.taiyinShaoyinBase,
