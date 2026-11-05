@@ -70,6 +70,43 @@ void main() {
       expect(snapshot.pulseType, '微弱');
     });
 
+    test('第33条无下利前提通过统一问诊适配层显式确认', () {
+      final adapter = TcmInterviewAdapter(
+        snapshot: EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'nausea': true,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ),
+      );
+
+      final prompts = adapter.requiredCombinedPatternChecks;
+      expect(prompts, hasLength(1));
+      expect(prompts.single.id, 'combined_diarrhea_status');
+      expect(prompts.single.options, contains('明确没有下利（第33条）'));
+      expect(
+        () => adapter.answerFollowUp(
+          prompts.single.id,
+          '随便回答',
+        ),
+        throwsArgumentError,
+      );
+
+      adapter.answerFollowUp(
+        prompts.single.id,
+        '明确没有下利（第33条）',
+      );
+      final result = adapter.diagnose();
+      expect(adapter.combinedPatternCondition,
+          CombinedPatternCondition.sunYangmingVomit);
+      expect(result?.formula, '葛根加半夏汤');
+    });
+
     test('脉舌冲突追问经适配层生成、校验并随快照恢复', () {
       final adapter = TcmInterviewAdapter();
       adapter.answerTemperature('fever_chills');
