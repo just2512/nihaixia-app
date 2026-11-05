@@ -1182,15 +1182,14 @@ class DiagnosticEngine {
 
     if (primary == '太阳' && shaoyangScore >= 2 &&
         _answers['diarrhea'] == true) {
-      _combinedMeridian = '少阳';
-      _combinedPatternCondition = CombinedPatternCondition.sunShaoyangDiarrhea;
-      return;
-    }
-
-    if (primary == '太阳' && shaoyangScore >= 2 &&
-        (_answers['nausea'] == true || _answers['vomiting'] == true)) {
-      _combinedMeridian = '少阳';
-      _combinedPatternCondition = CombinedPatternCondition.sunShaoyangVomit;
+      // 第172条先确立“自下利”的共同前提；同见呕吐时采用加半夏生姜汤。
+      if (_answers['nausea'] == true || _answers['vomiting'] == true) {
+        _combinedMeridian = '少阳';
+        _combinedPatternCondition = CombinedPatternCondition.sunShaoyangVomit;
+      } else {
+        _combinedMeridian = '少阳';
+        _combinedPatternCondition = CombinedPatternCondition.sunShaoyangDiarrhea;
+      }
       return;
     }
 
