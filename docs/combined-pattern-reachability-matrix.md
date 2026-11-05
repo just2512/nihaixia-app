@@ -25,7 +25,7 @@
 | 条件键 | 原文及适用条件 | 表内处理 | 主路径 | 旧兜底路径 | 状态 |
 |---|---|---|---|---|---|
 | `combined.sun_yangming.base` | 第32条：太阳与阳明合病，必自下利；误下史必须明确排除 | 葛根汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `combined.sun_yangming.clause33_vomit` | 第33条：太阳与阳明合病，不下利但呕 | 葛根加半夏汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
+| `combined.sun_yangming.clause33_vomit` | 第33条：太阳与阳明合病，不下利但呕；必须明确回答“没有下利”，未知不能视为阴性 | 葛根加半夏汤；缺少下利状态时先追问，明确无下利后才允许命中 | 统一覆盖 | 统一覆盖 | REACHABLE（含显式阴性门槛） |
 | `combined.sun_yangming.clause36_chest_full` | 第36条：太阳与阳明合病，喘而胸满 | 麻黄汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
 | `combined.sun_shaoyang.clause172_diarrhea` | 第172条：太阳与少阳合病，自下利 | 黄芩汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
 | `combined.sun_shaoyang.clause172_vomit` | 第172条：太阳与少阳合病，呕 | 黄芩加半夏生姜汤 | 统一覆盖 | 统一覆盖 | REACHABLE |
@@ -49,6 +49,7 @@
 
 - 结构化主路径：`diagnose()` → `_detectCombinedPattern()` → `diagnoseByRules()` → `_matchedCombinedPattern()` → 覆盖最终方剂与结果字段。
 - 分支优先级：第146、147、163条逐项满足原文的特异证据先于宽泛太阳阳明、太阳少阳、少阳阳明组合；三项重叠输入均有回归测试，不允许分数分支遮蔽已满足的原文方证。
+- 第33条“不下利但呕”中的“不下利”是必要阴性证据：当太阳主经、阳明候选及呕吐证据成立但下利状态缺失时，先询问 `combined_diarrhea_status`；只有明确回答“明确没有下利（第33条）”才命中葛根加半夏汤。回答“有下利”转入第32条相关证据核对；“不确定”不写入阴性值。
 - 旧兜底路径：结构化规则无命中 → `_diagnoseMiscellaneous()` 或六经硬编码分支 → 使用同一 `_matchedCombinedPattern()` 结果覆盖最终字段。
 - 对 `formula == ''` 的条目：最终 `formula` 为空、`recommendedFormulas` 为空、`prescription` 为空，并设置 `recommendConsult`；不得退回结构化规则或旧兜底方剂。
 - 第301条少阴兼表：必须在少阴问诊中明确回答“反发热+脉沉”，且脉象 canonical 值为“沉”，才允许推荐麻黄附子细辛汤；不写入合病经。
