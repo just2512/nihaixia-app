@@ -20,6 +20,7 @@ void main() {
   setUp(() async {
     final db = await DatabaseHelper.instance.database;
     await db.delete('assistant_messages');
+    await db.delete('tcm_interview_tasks');
     await db.delete('assistant_conversations');
   });
 
@@ -62,6 +63,24 @@ void main() {
     final second = await store.createAssistantConversation(title: '学习');
     final third = await store.createAssistantConversation(title: '工具');
 
+    final taskSnapshot = TcmInterviewAdapter().createSnapshot();
+    await store.saveTcmInterviewTaskState(
+      conversationId: first,
+      state: TcmInterviewTaskState(
+        taskId: 'delete-task-$first',
+        snapshot: taskSnapshot,
+        status: 'active',
+      ),
+    );
+    await store.saveTcmInterviewTaskState(
+      conversationId: third,
+      state: TcmInterviewTaskState(
+        taskId: 'delete-task-$third',
+        snapshot: taskSnapshot,
+        status: 'active',
+      ),
+    );
+
     await store.saveAssistantMessage(
       conversationId: first,
       role: 'user',
@@ -93,6 +112,14 @@ void main() {
     expect(
       (await store.getAssistantMessages(conversationId: second)),
       hasLength(1),
+    );
+    expect(
+      await store.getTcmInterviewTaskState(conversationId: first),
+      isNull,
+    );
+    expect(
+      await store.getTcmInterviewTaskState(conversationId: third),
+      isNull,
     );
   });
 
