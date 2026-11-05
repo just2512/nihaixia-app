@@ -24,7 +24,7 @@ void main() {
     (key: CombinedPatternCondition.shaoyangYangmingBase, meridian: '少阳', answers: {'constipated': true, 'diarrhea': true, 'food_stagnation': true}, pulse: '滑', secondary: '数'),
     (key: CombinedPatternCondition.taiyinShaoyinBase, meridian: '太阴', answers: {'drowsy': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunYangmingVomit, meridian: '太阳', answers: {'constipated': true, 'diarrhea': false, 'nausea': true}, pulse: null, secondary: null),
-    (key: CombinedPatternCondition.sunYangmingChestFull, meridian: '太阳', answers: {'constipated': true, 'breathing': '喘', 'chest_fullness': true}, pulse: null, secondary: null),
+    (key: CombinedPatternCondition.sunYangmingChestFull, meridian: '太阳', answers: {'constipated': true, 'asthma': true, 'chest_fullness': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangDiarrhea, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangVomit, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true, 'nausea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.jueyinShaoyang, meridian: '厥阴', answers: {'bitter_mouth': true}, pulse: null, secondary: null),
@@ -129,7 +129,7 @@ void main() {
           meridianDirection: '太阳',
           answers: const {
             'constipated': true,
-            'breathing': '喘',
+            'asthma': true,
             'headache': true,
           },
           tenQuestionIndex: 0,
@@ -154,6 +154,59 @@ void main() {
         CombinedPatternCondition.sunYangmingChestFull,
       );
       expect(diagnosis?.formula, '麻黄汤');
+    });
+
+    test('第36条通过实际问诊字段归一喘证，并追问缺失胸满', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'asthma': true,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ));
+
+      final prompts = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(prompts, hasLength(1));
+      expect(prompts.single.key, 'combined_clause36_chest_fullness');
+      engine.answerFollowUp(
+        'combined_clause36_chest_fullness',
+        '有胸满（第36条）',
+      );
+      final diagnosis = engine.diagnose();
+      expect(engine.combinedPatternCondition,
+          CombinedPatternCondition.sunYangmingChestFull);
+      expect(diagnosis?.formula, '麻黄汤');
+    });
+
+    test('第36条只有胸满而喘证缺失时，必须先核对喘证', () {
+      final engine = DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'constipated': true,
+            'chest_fullness': true,
+            'headache': true,
+          },
+          tenQuestionIndex: 0,
+        ));
+      final prompts = engine.getRequiredCombinedPatternFollowUpQuestions();
+      expect(prompts, hasLength(1));
+      expect(prompts.single.key, 'combined_clause36_dyspnea');
+      engine.answerFollowUp(
+        'combined_clause36_dyspnea',
+        '明确气喘（第36条）',
+      );
+      expect(
+        engine.diagnose()?.formula,
+        '麻黄汤',
+      );
     });
 
     test('第172条呕吐方必须满足共同的自下利前提', () {
