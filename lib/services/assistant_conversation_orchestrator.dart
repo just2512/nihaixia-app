@@ -57,6 +57,7 @@ class AssistantConversationOrchestrator {
     '了解一下',
     '概念',
     '理论',
+    '原理',
     '组成',
     '功效',
     '归经',
