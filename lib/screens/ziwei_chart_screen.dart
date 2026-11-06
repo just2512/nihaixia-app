@@ -1038,26 +1038,26 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: GridView.count(
-          crossAxisCount: 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-          childAspectRatio: 0.72,
-          children: [
-            for (int slot = 0; slot < 16; slot++)
-              slotToBranch[slot] == -1
-                  ? _buildCoreCell(cs, chart, slot)
-                  : _buildPalaceCell(
-                      cs,
-                      chart,
-                      chart.palaces[slotToBranch[slot]],
-                      flow,
-                      flowMonthMingIndex: flowMonthMingIndex,
-                      flowDayMingIndex: flowDayMingIndex,
-                    ),
-            ],
-          ),
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+              childAspectRatio: 0.72,
+              children: [
+                for (int slot = 0; slot < 16; slot++)
+                  slotToBranch[slot] == -1
+                      ? _buildCoreCell(cs, chart, slot)
+                      : _buildPalaceCell(
+                          cs,
+                          chart,
+                          chart.palaces[slotToBranch[slot]],
+                          flow,
+                          flowMonthMingIndex: flowMonthMingIndex,
+                          flowDayMingIndex: flowDayMingIndex,
+                        ),
+              ],
+            ),
         ),
       ),
     );
