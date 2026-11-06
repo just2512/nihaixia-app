@@ -3,9 +3,42 @@ import 'dart:convert';
 import '../engine/diagnostic_engine.dart';
 import '../models/diagnosis.dart';
 
+/// One visible message from the structured interview transcript.
+class TcmInterviewTaskMessage {
+  const TcmInterviewTaskMessage({
+    required this.text,
+    required this.isUser,
+    this.isResult = false,
+  });
+
+  final String text;
+  final bool isUser;
+  final bool isResult;
+
+  Map<String, Object?> toJson() => {
+        'text': text,
+        'isUser': isUser,
+        'isResult': isResult,
+      };
+
+  factory TcmInterviewTaskMessage.fromJson(Map<String, Object?> json) {
+    final text = json['text'];
+    final isUser = json['isUser'];
+    final isResult = json['isResult'] ?? false;
+    if (text is! String || isUser is! bool || isResult is! bool) {
+      throw const FormatException('Invalid TCM interview transcript message');
+    }
+    return TcmInterviewTaskMessage(
+      text: text,
+      isUser: isUser,
+      isResult: isResult,
+    );
+  }
+}
+
 /// Durable state for resuming a deterministic TCM interview from conversation
-/// history. This stores engine input state and the outstanding prompt; it does
-/// not store or synthesize a diagnosis.
+/// history. This stores engine input state, the visible transcript and the
+/// outstanding prompt; it does not store or synthesize a diagnosis.
 class TcmInterviewTaskState {
   const TcmInterviewTaskState({
     required this.taskId,
@@ -14,6 +47,7 @@ class TcmInterviewTaskState {
     this.pendingPromptId,
     this.pendingPromptText,
     this.pendingOptions = const [],
+    this.transcript = const [],
     this.updatedAt,
   });
 
@@ -24,6 +58,7 @@ class TcmInterviewTaskState {
   /// Exact visible wording retained across app-version changes.
   final String? pendingPromptText;
   final List<String> pendingOptions;
+  final List<TcmInterviewTaskMessage> transcript;
   final DateTime? updatedAt;
 
   Map<String, Object?> toJson() => {
@@ -34,6 +69,7 @@ class TcmInterviewTaskState {
         if (pendingPromptId != null) 'pendingPromptId': pendingPromptId,
         if (pendingPromptText != null) 'pendingPromptText': pendingPromptText,
         'pendingOptions': List<String>.unmodifiable(pendingOptions),
+        'transcript': transcript.map((message) => message.toJson()).toList(growable: false),
         if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
       };
 
@@ -52,6 +88,7 @@ class TcmInterviewTaskState {
     final status = json['status'];
     final rawSnapshot = json['snapshot'];
     final rawOptions = json['pendingOptions'];
+    final rawTranscript = json['transcript'] ?? const [];
     final promptId = json['pendingPromptId'];
     final promptText = json['pendingPromptText'];
     final updatedAt = json['updatedAt'];
@@ -62,6 +99,8 @@ class TcmInterviewTaskState {
         rawSnapshot is! Map ||
         rawOptions is! List ||
         rawOptions.any((item) => item is! String) ||
+        rawTranscript is! List ||
+        rawTranscript.any((item) => item is! Map) ||
         (promptId != null && promptId is! String) ||
         (promptText != null && promptText is! String) ||
         (updatedAt != null && updatedAt is! String)) {
@@ -74,6 +113,11 @@ class TcmInterviewTaskState {
       pendingPromptId: promptId as String?,
       pendingPromptText: promptText as String?,
       pendingOptions: List<String>.unmodifiable(rawOptions.cast<String>()),
+      transcript: List<TcmInterviewTaskMessage>.unmodifiable(
+        rawTranscript.map((item) => TcmInterviewTaskMessage.fromJson(
+          Map<String, Object?>.from(item as Map),
+        )),
+      ),
       updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt as String).toUtc(),
     );
   }
