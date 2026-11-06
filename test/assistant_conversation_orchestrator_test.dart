@@ -35,6 +35,16 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('玄学工具澄清后的原理问题仍进入学习，不启动计算器', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '五运六气推算原理',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+      );
+      expect(decision.mode, AssistantMode.learning);
+      expect(decision.tool, isNull);
+    });
+
     test('学习五运六气推算原理进入学习助手，不启动计算器', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习五运六气推算原理',
