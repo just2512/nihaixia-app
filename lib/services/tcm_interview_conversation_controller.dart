@@ -100,13 +100,13 @@ class TcmInterviewConversationController {
     if (_messages.isNotEmpty || _pendingPromptId != null) {
       throw StateError('问诊任务已经启动');
     }
-    _appendAssistant(_adapter.initialGreeting);
     if (initialUserMessage != null && initialUserMessage.trim().isNotEmpty) {
       _appendUser(initialUserMessage.trim());
     }
     if (userContext != null && userContext.trim().isNotEmpty) {
       _appendUser('已确认的症状自述（仅作上下文，未自动转换为规则答案）：\n${userContext.trim()}');
     }
+    _appendAssistant(_adapter.initialGreeting);
     _askTemperature();
   }
 
@@ -319,8 +319,8 @@ class TcmInterviewConversationController {
         _completeWithDiagnosis(result);
       } else {
         _completeWithText(
-          '当前问诊信息仍不足以形成可复核的辨证结果。\\n'
-          '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\\n\\n'
+          '当前问诊信息仍不足以形成可复核的辨证结果。\n'
+          '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\n\n'
           '建议补充四诊信息，并由执业中医师面诊核实。',
         );
       }
