@@ -290,8 +290,12 @@ void main() {
           'constipated': true,
           'bitter_mouth': true,
           'drowsy': true,
+          'three_yang_pulse_position_answered': true,
+          'three_yang_pulse_position_confirmed': true,
         },
         tenQuestionIndex: 0,
+        pulseType: '浮',
+        pulseTypeSecondary: '大',
       ));
 
       engine.diagnose();
@@ -530,7 +534,7 @@ void main() {
       (name: '太阳少阳下利型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, expected: CombinedPatternCondition.sunShaoyangDiarrhea),
       (name: '太阳少阳呕吐型', primary: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true, 'vomiting': true}, expected: CombinedPatternCondition.sunShaoyangVomit),
       (name: '厥阴少阳型', primary: '厥阴', answers: {'bitter_mouth': true}, expected: CombinedPatternCondition.jueyinShaoyang),
-      (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, expected: CombinedPatternCondition.threeYangSleep),
+      (name: '三阳但欲寐型', primary: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true, 'three_yang_pulse_position_answered': true, 'three_yang_pulse_position_confirmed': true}, expected: CombinedPatternCondition.threeYangSleep),
       (name: '第147条少阳方证', primary: '少阳', answers: {'illness_duration_5_6': true, 'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'vomiting': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, expected: CombinedPatternCondition.shaoyangTaiyin),
       (name: '第163条太阳误下后协热利', primary: '太阳', answers: {'temperature': 'fever_chills', 'diarrhea': true, 'history_mistreatment': true, 'sun_taiyin_repeated_purgation': true, 'epigastric_hard': true}, expected: CombinedPatternCondition.sunTaiyin),
       (name: '太阳阳明下利基础型', primary: '太阳', answers: {'constipated': true, 'diarrhea': true, 'history_mistreatment': false}, expected: CombinedPatternCondition.sunYangmingBase),
@@ -548,10 +552,14 @@ void main() {
           tenQuestionIndex: 0,
           pulseType: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
               ? '滑'
-              : null,
+              : scenario.expected == CombinedPatternCondition.threeYangSleep
+                  ? '浮'
+                  : null,
           pulseTypeSecondary: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
               ? '数'
-              : null,
+              : scenario.expected == CombinedPatternCondition.threeYangSleep
+                  ? '大'
+                  : null,
           qAnswers: const {
             kQ1: 1,
             kQ4: 2,
@@ -603,10 +611,14 @@ void main() {
           tenQuestionIndex: 0,
           pulseType: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
               ? '滑'
-              : null,
+              : scenario.expected == CombinedPatternCondition.threeYangSleep
+                  ? '浮'
+                  : null,
           pulseTypeSecondary: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
               ? '数'
-              : null,
+              : scenario.expected == CombinedPatternCondition.threeYangSleep
+                  ? '大'
+                  : null,
         ));
 
         final result = engine.diagnose();
@@ -676,10 +688,14 @@ void main() {
           tenQuestionIndex: 0,
           pulseType: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
               ? '滑'
-              : null,
+              : scenario.expected == CombinedPatternCondition.threeYangSleep
+                  ? '浮'
+                  : null,
           pulseTypeSecondary: scenario.expected == CombinedPatternCondition.shaoyangYangmingBase
               ? '数'
-              : null,
+              : scenario.expected == CombinedPatternCondition.threeYangSleep
+                  ? '大'
+                  : null,
         ));
 
         final result = engine.diagnose();
