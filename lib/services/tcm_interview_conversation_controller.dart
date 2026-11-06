@@ -358,7 +358,7 @@ class TcmInterviewConversationController {
   void _completeWithDiagnosis(DiagnosisResult result) {
     final lines = <String>[
       '辨证结果',
-      '【六经】${result.displayMeridian}病',
+      '【六经】${result.displayMeridian}',
       if (result.isCombined) '【合病】${result.meridian}与${result.combinedMeridian}同病',
       '【证型】${result.pattern}',
       if (result.formula.isNotEmpty) '【方剂】${result.formula}',
