@@ -7,18 +7,15 @@
 ## 当前分歧基线
 
 - 共同祖先：`c0f14e77a7fb721fc332576d21fef5f100392d0b`
-- 本 Fork 当前 HEAD：`da4edbf169bff350392afca999ac0065914f3513`
-- 上游当前 HEAD：`741afaa685c4307afb78dd116eefcab067a1d711`
-- 当前分支关系：Fork ahead 779 / behind 28
-- 本 Fork 相对共同祖先修改文件：201 个
-- 上游相对共同祖先修改文件：1360 个
-- 双方都修改过的路径：16 个
+- 本 Fork 当前 HEAD：`c83993b17749f3380b7164882a88b86175a63fca`
+- 上游当前 HEAD：`e29610fd9be0494d51ffb27e61d3ea0b32b24002`
+- 当前分支关系：Fork ahead 781 / behind 29（2026-11-06 GitHub compare 快照）
+- 本 Fork 相对共同祖先修改文件：201 个（compare 文件清单）
+- 上游相对共同祖先修改文件：至少 300 个；GitHub compare 文件清单达到接口返回上限，不能据此宣称已穷举
+- 本次 compare 返回清单中可确认的共同修改路径：`.github/workflows/gitee-sync.yml`、`.gitignore`、`README.md`
+- 先前快照记录的 16 条重叠路径属于旧上游快照，不应继续当作当前完整冲突清单
 
-双方共同修改的路径（属于冲突候选，不等于 Git 已确认的文本冲突）：
-
-`.github/workflows/gitee-sync.yml`、`.gitignore`、`README.md`、`lib/data/medical_case_data.dart`、`lib/engine/diagnostic_engine.dart`、`lib/screens/classic_library_screen.dart`、`lib/screens/formula_detail_screen.dart`、`lib/screens/herb_detail_screen.dart`、`lib/screens/knowledge_screen.dart`、`lib/screens/markdown_doc_screen.dart`、`lib/screens/medical_case_library_screen.dart`、`lib/screens/shanghan_jingui_screen.dart`、`lib/services/native_files_io.dart`、`pubspec.lock`、`pubspec.yaml`、`test/medical_case_filter_bar_test.dart`。
-
-其中诊断引擎、医案数据、知识库界面、原生文件处理和依赖清单均存在双方同时修改，禁止直接合并上游分支。
+**冲突结论：** 当前已确认 Fork 与上游分歧；仅凭 compare 文件列表不能证明所有潜在冲突路径已经穷举，也不能把同路径修改等同于 Git 已确认的文本冲突。`diagnostic_engine.dart`、`medical_case_data.dart`、`pubspec.yaml` 等核心文件仍须在任何候选移植前做逐文件三方差异检查。当前没有执行合并模拟，也没有合并上游。
 
 ## 强制维护规则
 
