@@ -24,7 +24,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsOneWidget);
     final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    // The chart is below the input and summary sections in a lazy ListView.
+    // Scroll it into the build/cache region before asserting its constraints.
+    await tester.scrollUntilVisible(
+      plate,
+      320,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(plate, findsOneWidget);
     expect(tester.getSize(plate).width, 640);
     expect(tester.getRect(plate).center.dx, closeTo(380, 1));
@@ -47,7 +56,15 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsNothing);
     final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    // The chart is lazily built only after scrolling past the form and summary.
+    await tester.scrollUntilVisible(
+      plate,
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(plate, findsOneWidget);
     expect(tester.getSize(plate).width, lessThanOrEqualTo(370));
     expect(tester.takeException(), isNull);
