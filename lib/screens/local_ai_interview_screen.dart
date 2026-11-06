@@ -868,6 +868,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         initialUserMessage: initialUserMessage,
         userContext: userContext,
       );
+      _inputController.clear();
       await _appendTcmInterviewMessages(before);
       if (mounted) {
         setState(() {
@@ -922,7 +923,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             metadata: 'mode=consultation;selectedMode=${_assistantMode.name};tcm_task=${controller.taskId}',
           );
         } catch (error, stack) {
-          debugPrint('[TcmInterviewTask] 问诊消息保存失败：$error\\n$stack');
+          debugPrint('[TcmInterviewTask] 问诊消息保存失败：$error\n$stack');
         }
       }
     }
