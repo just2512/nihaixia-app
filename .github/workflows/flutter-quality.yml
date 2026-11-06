@@ -1,28 +1,7 @@
 name: Flutter Quality Gate
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "assets/**"
-      - "android/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "analysis_options.yaml"
-      - ".github/workflows/flutter-quality.yml"
-  pull_request:
-    branches: [master]
-    paths:
-      - "lib/**"
-      - "test/**"
-      - "assets/**"
-      - "android/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "analysis_options.yaml"
-      - ".github/workflows/flutter-quality.yml"
+  # Full extended quality suite is manual; flutter-tests.yml owns push/PR gates.
   workflow_dispatch:
 
 permissions:
