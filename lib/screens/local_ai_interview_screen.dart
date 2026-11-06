@@ -1168,20 +1168,31 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
     _pendingToolSelection = false;
-    final result = await Navigator.push<Object?>(
-      context,
-      FoldAwareMaterialPageRoute(
-        sourceContext: context,
-        builder: (_) => arguments != null && tool.builderWithArguments != null
-            ? tool.builderWithArguments!(arguments)
-            : tool.builder(),
-      ),
-    );
+    Object? result;
+    try {
+      result = await Navigator.push<Object?>(
+        context,
+        FoldAwareMaterialPageRoute(
+          sourceContext: context,
+          builder: (_) => arguments != null && tool.builderWithArguments != null
+              ? tool.builderWithArguments!(arguments)
+              : tool.builder(),
+        ),
+      );
+    } catch (error) {
+      result = AssistantToolResult(
+        toolId: tool.id,
+        title: tool.title,
+        status: AssistantToolExecutionStatus.failed,
+        values: const {'错误': 'MISSING'},
+        disclaimer: '工具页面执行异常：' + error.toString(),
+      );
+    }
     if (!mounted) return;
     if (result is AssistantToolResult) {
       final errors = result.validateFor(tool.id);
       if (errors.isNotEmpty) {
-        setState(() => _error = '工具返回结果未通过契约校验：${errors.join('；')}');
+        setState(() => _error = '工具返回结果未通过契约校验：' + errors.join('；'));
         return;
       }
     }
@@ -1192,12 +1203,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           title: tool.title,
           values: {'结果': legacy.trim()},
         ),
-      _ => null,
+      _ => AssistantToolResult(
+          toolId: tool.id,
+          title: tool.title,
+          status: AssistantToolExecutionStatus.noResult,
+          values: const {'返回内容': 'MISSING'},
+          disclaimer: '工具页面退出时未返回结构化结果；无法区分用户取消与旧页面未实现回传。',
+        ),
     };
-    final resultText = normalizedResult?.toConversationText() ?? '';
-    final response = resultText.isNotEmpty
-        ? '【${tool.title}返回内容】\\n$resultText'
-        : '已打开「${tool.title}」。完成计算后回到本对话，把工具页面的结果发给我，我会基于结果继续解释。';
+    final resultText = normalizedResult.toConversationText();
+    final response = '【' + tool.title + '执行结果】\n' + resultText;
     setState(() {
       _messages.add(_InterviewMessage(text: response, isUser: false));
     });
