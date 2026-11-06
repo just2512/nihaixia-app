@@ -1479,6 +1479,40 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final activeTcmTask = _tcmInterviewController;
+    if (activeTcmTask?.canAnswer == true) {
+      if (imagePath != null || audioPath != null) {
+        setState(() {
+          _error = '请先完成当前结构化问诊步骤，再发送照片或录音；附件不会被转换成规则答案。';
+        });
+        return;
+      }
+      if (text.isNotEmpty) {
+        if (activeTcmTask!.pendingOptions.contains(text)) {
+          _inputController.clear();
+          await _handleTcmInterviewOption(text);
+          return;
+        }
+        const clarification =
+            '当前步骤需要使用下方结构化选项。你输入的文字会保留在对话中，但不会自动映射为辨证条件；请从问题下方选择最符合的一项。';
+        setState(() {
+          _lastEffectiveMode = AssistantMode.consultation;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: clarification,
+          mode: AssistantMode.consultation,
+        );
+        _scrollToBottom();
+        return;
+      }
+    }
+
     var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
       final decision = AssistantConversationOrchestrator.resolve(
@@ -2292,72 +2326,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _continueWithStructuredDiagnosis() async {
     final draft = _confirmedDraft;
     if (draft == null || _structuredDiagnosisBusy) return;
-
-    setState(() => _structuredDiagnosisBusy = true);
-    String? result;
-    try {
-      result = await Navigator.push<String>(
-        context,
-        FoldAwareMaterialPageRoute(
-          sourceContext: context,
-          builder: (_) => ChatScreen(
-            returnResultOnComplete: true,
-            initialUserContext: draft.summaryLines.join('\n'),
-            onTaskStateChanged: _persistTcmInterviewTaskState,
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _structuredDiagnosisBusy = false);
-    }
-
-    if (!mounted || result == null || result.trim().isEmpty) return;
-    final transcript = '【结构化辨证问诊记录】\n${result.trim()}';
-    setState(() {
-      _messages.add(_InterviewMessage(text: transcript, isUser: false));
-      _confirmedDraft = null;
-      _error = null;
-    });
-    await _persistSuccessfulTurn(
-      userText: '',
-      assistantText: transcript,
-      mode: AssistantMode.consultation,
+    await _startInlineTcmInterview(
+      initialUserMessage: '继续规则辨证',
+      userContext: draft.summaryLines.join('\\n'),
     );
-    _scrollToBottom();
-  }
-
-  Future<void> _resumeStructuredDiagnosis(TcmInterviewTaskState taskState) async {
-    if (_structuredDiagnosisBusy) return;
-    _pendingToolSelection = false;
-    setState(() => _structuredDiagnosisBusy = true);
-    String? result;
-    try {
-      result = await Navigator.push<String>(
-        context,
-        FoldAwareMaterialPageRoute(
-          sourceContext: context,
-          builder: (_) => ChatScreen(
-            returnResultOnComplete: true,
-            initialTaskState: taskState,
-            onTaskStateChanged: _persistTcmInterviewTaskState,
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _structuredDiagnosisBusy = false);
-    }
-    if (!mounted || result == null || result.trim().isEmpty) return;
-    final transcript = '【结构化辨证问诊记录】\n${result.trim()}';
-    setState(() {
-      _messages.add(_InterviewMessage(text: transcript, isUser: false));
-      _error = null;
-    });
-    await _persistSuccessfulTurn(
-      userText: '',
-      assistantText: transcript,
-      mode: AssistantMode.consultation,
-    );
-    _scrollToBottom();
   }
 
   Widget _buildModelPanel(BuildContext context) {
