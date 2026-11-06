@@ -6,12 +6,14 @@ class AssistantDispatchDecision {
   const AssistantDispatchDecision({
     required this.mode,
     this.tool,
+    this.toolArguments,
     this.clarification,
     this.expectsToolSelection = false,
   });
 
   final AssistantMode mode;
   final AssistantToolDefinition? tool;
+  final AssistantToolArguments? toolArguments;
   final String? clarification;
   final bool expectsToolSelection;
 
@@ -97,6 +99,25 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
+  static AssistantToolArguments _argumentsFor(
+    AssistantToolDefinition tool,
+    String query,
+  ) {
+    final values = <String, String>{};
+    if (tool.id == 'yunqi') {
+      final match = RegExp(r'\\b\\d{4}-\\d{1,2}-\\d{1,2}\\b').firstMatch(query);
+      if (match != null) {
+        final parsed = DateTime.tryParse(match.group(0)!);
+        if (parsed != null) {
+          values['date'] = '${parsed.year.toString().padLeft(4, '0')}-'
+              '${parsed.month.toString().padLeft(2, '0')}-'
+              '${parsed.day.toString().padLeft(2, '0')}';
+        }
+      }
+    }
+    return AssistantToolArguments(toolId: tool.id, values: values);
+  }
+
   static AssistantDispatchDecision resolve({
     required String query,
     required AssistantMode selectedMode,
@@ -114,6 +135,7 @@ class AssistantConversationOrchestrator {
         return AssistantDispatchDecision(
           mode: selectedMode,
           tool: explicitMatches.single,
+          toolArguments: _argumentsFor(explicitMatches.single, text),
         );
       }
       if (explicitMatches.length > 1) {
@@ -130,7 +152,11 @@ class AssistantConversationOrchestrator {
               selectedMode == AssistantMode.metaphysics)) {
         final matches = AssistantToolRouter.matchAliases(text, selectedMode);
         if (matches.length == 1) {
-          return AssistantDispatchDecision(mode: selectedMode, tool: matches.single);
+          return AssistantDispatchDecision(
+            mode: selectedMode,
+            tool: matches.single,
+            toolArguments: _argumentsFor(matches.single, text),
+          );
         }
         if (matches.length > 1) {
           return AssistantDispatchDecision(
@@ -238,7 +264,11 @@ class AssistantConversationOrchestrator {
           : tool.modes.contains(AssistantMode.tools)
               ? AssistantMode.tools
               : AssistantMode.consultation;
-      return AssistantDispatchDecision(mode: effectiveMode, tool: tool);
+      return AssistantDispatchDecision(
+        mode: effectiveMode,
+        tool: tool,
+        toolArguments: _argumentsFor(tool, text),
+      );
     }
 
     if (text.contains('排盘') || text.contains('排个盘') || text.contains('命盘')) {
