@@ -19,6 +19,15 @@ void main() {
       expect(card, findsOneWidget);
       final cardWidth = tester.getSize(card).width;
       expect(cardWidth, lessThanOrEqualTo(720));
+      final yearTop = tester.getTopLeft(find.byKey(const ValueKey('bazi-year-field'))).dy;
+      final monthTop = tester.getTopLeft(find.byKey(const ValueKey('bazi-month-field'))).dy;
+      final dayTop = tester.getTopLeft(find.byKey(const ValueKey('bazi-day-field'))).dy;
+      expect(yearTop, monthTop);
+      if (width < 600) {
+        expect(dayTop, greaterThan(yearTop));
+      } else {
+        expect(dayTop, yearTop);
+      }
       if (width > 720) {
         expect(cardWidth, closeTo(720, 1));
       }
