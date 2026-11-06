@@ -40,6 +40,7 @@ void main() {
         query: '五运六气推算原理',
         selectedMode: AssistantMode.automatic,
         currentMode: AssistantMode.metaphysics,
+        pendingToolSelection: true,
       );
       expect(decision.mode, AssistantMode.learning);
       expect(decision.tool, isNull);
@@ -166,6 +167,7 @@ void main() {
         selectedMode: AssistantMode.automatic,
       );
       expect(first.needsClarification, isTrue);
+      expect(first.expectsToolSelection, isTrue);
 
       final answer = AssistantConversationOrchestrator.resolve(
         query: '紫微斗数',
@@ -229,6 +231,26 @@ void main() {
         pendingToolSelection: true,
       );
       expect(pendingChoice.tool?.id, 'ziwei');
+    });
+
+    test('待选工具状态可被明确取消，或由本人症状请求接管', () {
+      final cancelled = AssistantConversationOrchestrator.resolve(
+        query: '算了，先不排了',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+        pendingToolSelection: true,
+      );
+      expect(cancelled.expectsToolSelection, isFalse);
+      expect(cancelled.tool, isNull);
+
+      final symptom = AssistantConversationOrchestrator.resolve(
+        query: '我最近头痛',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+        pendingToolSelection: true,
+      );
+      expect(symptom.mode, AssistantMode.consultation);
+      expect(symptom.expectsToolSelection, isFalse);
     });
 
     test('手动玄学模式的泛化排盘请求也会先澄清', () {
