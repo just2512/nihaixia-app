@@ -53,6 +53,7 @@
 - 第172条黄芩加半夏生姜汤沿用同条“太阳与少阳合病自下利”的共同前提；必须同时有下利与呕吐，呕吐分支优先于黄芩汤。太阳少阳呕吐候选缺少下利状态时，通过 `combined_clause172_diarrhea` 追问；只有明确有自下利才命中第172条呕吐方。没有下利或不确定均不得命中。
 - 第36条“喘而胸满”按合取条件实现：必须同时确认喘与胸满。太阳阳明候选且未命中下利/呕吐分支时，主动核对喘证；喘证以问诊归一字段 `asthma == true` 判断，不直接比较展示文案。只确认一项时追问另一项（`combined_clause36_dyspnea` / `combined_clause36_chest_fullness`），“没有”或“不确定”均不得命中麻黄汤规则。
 - 旧兜底路径：结构化规则无命中 → `_diagnoseMiscellaneous()` 或六经硬编码分支 → 使用同一 `_matchedCombinedPattern()` 结果覆盖最终字段。
+- 旧杂病兜底另发现一处布尔优先级错误：小陷胸汤原条件 `hasChestPain && pulse == 浮 || pulse == 滑` 会让单独滑脉越过胸痛门槛；已改为 `hasChestPain && (pulse == 浮 || pulse == 滑)`，新增 `test/engine/diagnostic_engine_test.dart` 正反向回归。该修复是旧兜底安全修正，不改变合病规则表。
 - 对 `formula == ''` 的条目：最终 `formula` 为空、`recommendedFormulas` 为空、`prescription` 为空，并设置 `recommendConsult`；不得退回结构化规则或旧兜底方剂。
 - 第301条少阴兼表：必须在少阴问诊中明确回答“反发热+脉沉”，且脉象 canonical 值为“沉”，才允许推荐麻黄附子细辛汤；不写入合病经。
 
