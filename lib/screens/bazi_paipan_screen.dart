@@ -739,6 +739,7 @@ class _Dropdown extends StatelessWidget {
   final ValueChanged<int?> onChanged;
 
   const _Dropdown({
+    super.key,
     required this.label,
     required this.value,
     required this.items,
