@@ -43,6 +43,38 @@ extension AssistantModePresentation on AssistantMode {
       };
 }
 
+class AssistantToolParameter {
+  const AssistantToolParameter({
+    required this.key,
+    required this.label,
+    required this.type,
+    this.isRequired = false,
+    this.description,
+    this.choices = const [],
+  });
+
+  final String key;
+  final String label;
+  final AssistantToolParameterType type;
+  final bool isRequired;
+  final String? description;
+  final List<String> choices;
+}
+
+enum AssistantToolParameterType { text, date, integer, choice }
+
+class AssistantToolArguments {
+  const AssistantToolArguments({
+    required this.toolId,
+    this.values = const {},
+  });
+
+  final String toolId;
+  final Map<String, String> values;
+
+  String? operator [](String key) => values[key];
+}
+
 class AssistantToolDefinition {
   final String id;
   final String title;
