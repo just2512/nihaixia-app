@@ -843,6 +843,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolDefinition tool, {
     AssistantMode? mode,
   }) async {
+    _pendingToolSelection = false;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
@@ -1218,6 +1219,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     } else if (_assistantMode == AssistantMode.automatic) {
       // 照片/语音附件默认进入问诊域；不凭附件类型猜测排盘或学习任务。
+      _pendingToolSelection = false;
       effectiveMode = AssistantMode.consultation;
     }
     if (_status?.ready != true) {
