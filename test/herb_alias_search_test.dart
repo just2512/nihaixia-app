@@ -54,6 +54,11 @@ void main() {
         '生甘草': '甘草',
         '牡桂': '肉桂',
         '牡丹皮': '牡丹',
+        '菥蓂子': '析蓂子',
+        '庵闾子': '奄闾子',
+        '高山蓍': '蓍实',
+        '山羊角': '羖羊角',
+        '巨胜苗': '胡麻',
       };
       for (final e in cases.entries) {
         final hit = HerbRepository.search(e.key).map((h) => h.name).toList();
@@ -64,6 +69,11 @@ void main() {
   });
 
   group('全量覆盖（防回归核心）', () {
+    test('失传药名和无对应条目的古名不错误归并', () {
+      expect(HerbRepository.search('雀瓮'), isEmpty);
+      expect(HerbRepository.search('姑活'), isEmpty);
+    });
+
     test('全部异名均可通过 matchesQuery 命中至少一条', () {
       final herbs = HerbRepository.getAll();
       final failed = <String>[];
