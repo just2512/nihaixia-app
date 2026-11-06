@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaixia_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 
 void main() {
   test('typed tool result preserves fields and marks missing values explicitly', () {
