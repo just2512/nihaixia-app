@@ -105,7 +105,7 @@ class AssistantConversationOrchestrator {
   ) {
     final values = <String, String>{};
     if (tool.id == 'yunqi') {
-      final match = RegExp(r'\\b\\d{4}-\\d{1,2}-\\d{1,2}\\b').firstMatch(query);
+      final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
       if (match != null) {
         final parsed = DateTime.tryParse(match.group(0)!);
         if (parsed != null) {
