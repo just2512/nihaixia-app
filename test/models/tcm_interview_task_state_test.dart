@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/engine/diagnostic_rules.dart';
@@ -82,21 +84,21 @@ void main() {
     });
 
     test('old schema-1 records without transcript remain readable', () {
-      final legacy = TcmInterviewTaskState.decode(
-        TcmInterviewTaskState(
-          taskId: 'legacy-task',
-          status: 'in_progress',
-          snapshot: EngineSnapshot(
-            stage: DiagnosticStage.temperaturePattern,
-            selectedSymptoms: const [],
-            answers: const {},
-            tenQuestionIndex: 0,
-            qAnswers: const {},
-            extSymptoms: const {},
-            flatIndex: 0,
-          ),
-        ).encode(),
-      );
+      final legacyJson = TcmInterviewTaskState(
+        taskId: 'legacy-task',
+        status: 'in_progress',
+        snapshot: EngineSnapshot(
+          stage: DiagnosticStage.temperaturePattern,
+          selectedSymptoms: const [],
+          answers: const {},
+          tenQuestionIndex: 0,
+          qAnswers: const {},
+          extSymptoms: const {},
+          flatIndex: 0,
+        ),
+      ).toJson()
+        ..remove('transcript');
+      final legacy = TcmInterviewTaskState.decode(jsonEncode(legacyJson));
       expect(legacy.transcript, isEmpty);
     });
 
