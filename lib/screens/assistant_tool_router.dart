@@ -340,6 +340,19 @@ class AssistantToolRouter {
     return null;
   }
 
+  /// Match a short answer to a prior tool-type clarification. Unlike [match],
+  /// this does not require an action verb, but it only returns unique matches.
+  static List<AssistantToolDefinition> matchAliases(
+    String query,
+    AssistantMode mode,
+  ) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return const [];
+    return _all.where((tool) =>
+      tool.modes.contains(mode) && tool.aliases.any(normalized.contains)
+    ).toList(growable: false);
+  }
+
   static AssistantToolDefinition? match(String query, AssistantMode mode) {
     final normalized = query.trim();
     if (normalized.isEmpty) return null;
