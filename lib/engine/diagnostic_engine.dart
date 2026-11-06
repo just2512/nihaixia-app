@@ -1789,28 +1789,37 @@ class DiagnosticEngine {
   // ==================== 脉舌冲突检测（不预设脉/舌优先级） ====================
 
   PulseTongueAssessment? _buildPulseTongueAssessment() {
-    final pulse = _pulseType;
-    if (pulse == null || (_tongueCoating == null && _tongueShape == null)) {
+    final pulseTypes = <String>{
+      if (_pulseType != null) _pulseType!,
+      if (_pulseTypeSecondary != null) _pulseTypeSecondary!,
+    };
+    if (pulseTypes.isEmpty || (_tongueCoating == null && _tongueShape == null)) {
       return null;
     }
 
-    String? conflictKey;
-    if (pulse == '数' && (_tongueShape == '淡白' || _tongueShape == '淡红')) {
-      conflictKey = 'fast_pulse_pale_tongue';
-    } else if (pulse == '迟' &&
-        (_tongueShape == '红' || _tongueShape == '绛紫')) {
-      conflictKey = 'slow_pulse_red_tongue';
-    } else if (pulse == '浮' &&
-        (_tongueCoating == '白厚' || _tongueCoating == '黄厚')) {
-      conflictKey = 'floating_pulse_thick_coat';
-    } else if ((pulse == '沉' || pulse == '沉紧') && _tongueCoating == '薄白') {
-      conflictKey = 'sunken_pulse_thin_white_coat';
-    } else if (pulse == '弦' &&
-        (_tongueShape == '淡白' || _tongueShape == '淡红') &&
-        _tongueCoating == '白厚') {
-      conflictKey = 'wiry_pulse_pale_thick_tongue';
+    // 主脉与兼脉都是用户明确提供的独立证据；不能只检查主脉，
+    // 否则组合脉中的第二项可能与舌象冲突却完全不触发交叉核验。
+    final conflictKeys = <String>[];
+    for (final pulse in pulseTypes) {
+      String? conflictKey;
+      if (pulse == '数' && (_tongueShape == '淡白' || _tongueShape == '淡红')) {
+        conflictKey = 'fast_pulse_pale_tongue';
+      } else if (pulse == '迟' &&
+          (_tongueShape == '红' || _tongueShape == '绛紫')) {
+        conflictKey = 'slow_pulse_red_tongue';
+      } else if (pulse == '浮' &&
+          (_tongueCoating == '白厚' || _tongueCoating == '黄厚')) {
+        conflictKey = 'floating_pulse_thick_coat';
+      } else if ((pulse == '沉' || pulse == '沉紧') && _tongueCoating == '薄白') {
+        conflictKey = 'sunken_pulse_thin_white_coat';
+      } else if (pulse == '弦' &&
+          (_tongueShape == '淡白' || _tongueShape == '淡红') &&
+          _tongueCoating == '白厚') {
+        conflictKey = 'wiry_pulse_pale_thick_tongue';
+      }
+      if (conflictKey != null) conflictKeys.add(conflictKey);
     }
-    if (conflictKey == null) return null;
+    if (conflictKeys.isEmpty) return null;
 
     final supporting = <String>[];
     final contradicting = <String>[];
@@ -1837,7 +1846,8 @@ class DiagnosticEngine {
       if (_answers[answeredKey] != true) questionKeys.add(questionKey);
     }
 
-    switch (conflictKey) {
+    for (final conflictKey in conflictKeys) {
+      switch (conflictKey) {
       case 'fast_pulse_pale_tongue':
         addIf(supporting, 'cold_limbs', '四肢偏冷');
         addIf(supporting, 'urine_clear', '小便清长');
@@ -1895,11 +1905,16 @@ class DiagnosticEngine {
         askIfMissing(['bitter_mouth', 'dry_throat', 'alternating_chills'], 'pulse_cross_shaoyang_answered', 'pulse_cross_shaoyang', '少阳问诊线索');
         askIfMissing(['diarrhea', 'abdomen_pain_relief', 'no_thirst', 'poor_appetite'], 'pulse_cross_taiyin_answered', 'pulse_cross_taiyin', '太阴问诊线索');
         break;
+      }
     }
 
-    final status = missing.isNotEmpty
+    final uniqueSupporting = supporting.toSet().toList(growable: false);
+    final uniqueContradicting = contradicting.toSet().toList(growable: false);
+    final uniqueMissing = missing.toSet().toList(growable: false);
+    final uniqueQuestionKeys = questionKeys.toSet().toList(growable: false);
+    final status = uniqueMissing.isNotEmpty
         ? '待补充问诊'
-        : supporting.isNotEmpty && contradicting.isNotEmpty
+        : uniqueSupporting.isNotEmpty && uniqueContradicting.isNotEmpty
             ? '证据混合'
             : '脉舌冲突未解决';
 
@@ -1915,11 +1930,11 @@ class DiagnosticEngine {
 
     return PulseTongueAssessment(
       status: status,
-      supportingEvidence: supporting,
-      contradictingEvidence: contradicting,
-      missingEvidence: missing,
-      followUpQuestionKeys: questionKeys,
-      followUpQuestions: questionKeys.map((key) => questionText[key]!).toList(),
+      supportingEvidence: uniqueSupporting,
+      contradictingEvidence: uniqueContradicting,
+      missingEvidence: uniqueMissing,
+      followUpQuestionKeys: uniqueQuestionKeys,
+      followUpQuestions: uniqueQuestionKeys.map((key) => questionText[key]!).toList(),
     );
   }
 
