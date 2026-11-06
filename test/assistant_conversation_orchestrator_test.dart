@@ -319,6 +319,28 @@ void main() {
       }
     });
 
+    test('同一请求明确调用两个工具时必须澄清，不得静默只执行第一个', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我推算五运六气，再排一个八字',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isTrue);
+      expect(decision.expectsToolSelection, isTrue);
+      expect(decision.clarification, contains('五运六气'));
+      expect(decision.clarification, contains('八字'));
+    });
+
+    test('手动工具模式下同时指定多个工具也必须先澄清', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '推算五运六气并计算经方剂量换算',
+        selectedMode: AssistantMode.tools,
+      );
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isTrue);
+      expect(decision.expectsToolSelection, isTrue);
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
