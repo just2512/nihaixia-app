@@ -5,18 +5,36 @@ class AssistantToolResult {
     required this.title,
     required this.values,
     this.disclaimer,
+    this.sourceIds = const [],
   });
 
   final String toolId;
   final String title;
   final Map<String, String> values;
   final String? disclaimer;
+  /// Stable local/source references used to trace the execution result.
+  /// Empty means the tool did not provide a source identifier (MISSING).
+  final List<String> sourceIds;
+
+  List<String> validateFor(String expectedToolId) {
+    final errors = <String>[];
+    if (toolId != expectedToolId) {
+      errors.add('工具结果标识不匹配：$toolId != $expectedToolId');
+    }
+    if (title.trim().isEmpty) errors.add('工具结果缺少标题');
+    if (values.isEmpty) errors.add('工具结果缺少结构化输出字段');
+    if (sourceIds.any((id) => id.trim().isEmpty)) {
+      errors.add('工具结果包含空来源标识');
+    }
+    return List.unmodifiable(errors);
+  }
 
   String toConversationText() {
     final lines = <String>[
       '工具：$title',
       for (final entry in values.entries)
         '${entry.key}：${entry.value.isEmpty ? 'MISSING' : entry.value}',
+      '来源标识：${sourceIds.isEmpty ? 'MISSING' : sourceIds.join('、')}',
       if (disclaimer != null && disclaimer!.trim().isNotEmpty)
         '说明：${disclaimer!.trim()}',
     ];

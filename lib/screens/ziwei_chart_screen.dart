@@ -1038,38 +1038,48 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       3, -1, -1, 10, // 卯 [核][核] 戌
       2, 1, 0, 11, // 寅 丑 子 亥
     ];
-    return Center(
-      child: ConstrainedBox(
-        key: const ValueKey('ziwei-chart-plate-width'),
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              childAspectRatio: 0.72,
-              children: [
-                for (int slot = 0; slot < 16; slot++)
-                  slotToBranch[slot] == -1
-                      ? _buildCoreCell(cs, chart, slot)
-                      : _buildPalaceCell(
-                          cs,
-                          chart,
-                          chart.palaces[slotToBranch[slot]],
-                          flow,
-                          flowMonthMingIndex: flowMonthMingIndex,
-                          flowDayMingIndex: flowDayMingIndex,
-                        ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Find N2 外屏内容区约 370dp，内屏展开后可用宽度超过 700dp。
+        // 盘面在窄屏占满内容区，在展开屏限制为 640dp 并居中，避免宫格被横向拉伸。
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final plateWidth = availableWidth >= 700 ? 640.0 : availableWidth;
+        return Center(
+          child: SizedBox(
+            key: const ValueKey('ziwei-chart-plate-width'),
+            width: plateWidth,
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: GridView.count(
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                  childAspectRatio: 0.72,
+                  children: [
+                    for (int slot = 0; slot < 16; slot++)
+                      slotToBranch[slot] == -1
+                          ? _buildCoreCell(cs, chart, slot)
+                          : _buildPalaceCell(
+                              cs,
+                              chart,
+                              chart.palaces[slotToBranch[slot]],
+                              flow,
+                              flowMonthMingIndex: flowMonthMingIndex,
+                              flowDayMingIndex: flowDayMingIndex,
+                            ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

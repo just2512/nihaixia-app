@@ -18,6 +18,20 @@ void main() {
     expect(text, contains('工具：五运六气推算'));
     expect(text, contains('推算日期：2026-11-06'));
     expect(text, contains('岁运病候：MISSING'));
+    expect(text, contains('来源标识：MISSING'));
     expect(text, contains('说明：仅供理论学习。'));
+    expect(result.validateFor('yunqi'), isEmpty);
+    expect(result.validateFor('ziwei'), isNotEmpty);
   });
+  test('typed tool result carries source identifiers into the conversation', () {
+    const result = AssistantToolResult(
+      toolId: 'ziwei',
+      title: '紫微斗数排盘',
+      values: {'命宫': '寅宫'},
+      sourceIds: ['ziwei-engine:local-rules:v1'],
+    );
+    expect(result.validateFor('ziwei'), isEmpty);
+    expect(result.toConversationText(), contains('来源标识：ziwei-engine:local-rules:v1'));
+  });
+
 }

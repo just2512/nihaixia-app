@@ -106,6 +106,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
       ('疗程结果', c.result),
       ('生活医嘱', c.advice),
       ('倪师观点', c.view),
+      ('原始来源账本', c.sourceLedger.toDisplayText()),
     ];
 
     final children = <Widget>[];

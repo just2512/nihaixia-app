@@ -34,6 +34,9 @@ void main() {
     final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(navigation.selectedIndex, 0);
     expect(find.text('设置'), findsOneWidget);
+    expect(find.text('收藏'), findsOneWidget);
+    expect(find.text('知识'), findsNothing);
+    expect(find.text('工具'), findsNothing);
 
     await tester.tap(find.text('设置'));
     await tester.pump(const Duration(milliseconds: 400));
