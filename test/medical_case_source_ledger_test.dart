@@ -6,6 +6,7 @@ void main() {
   test('未提供原始出处时所有定位字段明确为 MISSING', () {
     const ledger = MedicalCaseSourceLedger.missing;
     expect(ledger.status, 'MISSING');
+    expect(ledger.toDisplayText().split('\n'), hasLength(9));
     expect(ledger.hasCompleteLocator, isFalse);
     expect(ledger.isVerified, isFalse);
     expect(ledger.missingFields, containsAll([
