@@ -103,13 +103,47 @@ class AssistantConversationOrchestrator {
 
     if (selectedMode != AssistantMode.automatic) {
       final tool = AssistantToolRouter.match(text, selectedMode);
-      return AssistantDispatchDecision(mode: selectedMode, tool: tool);
+      if (tool != null) {
+        return AssistantDispatchDecision(mode: selectedMode, tool: tool);
+      }
+      if (currentMode == selectedMode &&
+          (selectedMode == AssistantMode.tools ||
+              selectedMode == AssistantMode.metaphysics)) {
+        final matches = AssistantToolRouter.matchAliases(text, selectedMode);
+        if (matches.length == 1) {
+          return AssistantDispatchDecision(mode: selectedMode, tool: matches.single);
+        }
+        if (matches.length > 1) {
+          return AssistantDispatchDecision(
+            mode: selectedMode,
+            clarification: '你提到了多个工具（${matches.map((tool) => tool.title).join('、')}），请只选择其中一个。',
+          );
+        }
+      }
+      return AssistantDispatchDecision(mode: selectedMode);
     }
 
     // 明确的学习/解释请求优先于工具名和动作词，避免“学习五运六气推算原理”
     // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
     if (_learningCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    }
+
+    // A one-word answer such as “紫微” is meaningful only immediately after
+    // the dispatcher has asked which tool the user wants. Keep the alias-only
+    // path context-gated so ordinary mentions do not launch a calculator.
+    if (currentMode == AssistantMode.tools ||
+        currentMode == AssistantMode.metaphysics) {
+      final matches = AssistantToolRouter.matchAliases(text, currentMode!);
+      if (matches.length == 1) {
+        return AssistantDispatchDecision(mode: currentMode, tool: matches.single);
+      }
+      if (matches.length > 1) {
+        return AssistantDispatchDecision(
+          mode: currentMode,
+          clarification: '你提到了多个工具（${matches.map((tool) => tool.title).join('、')}），请只选择其中一个。',
+        );
+      }
     }
 
     final tool = AssistantToolRouter.match(text, AssistantMode.automatic);
