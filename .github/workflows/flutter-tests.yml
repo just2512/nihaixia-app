@@ -2,9 +2,9 @@ name: Flutter tests
 
 on:
   push:
-    branches: [master]
+    branches: [master, integration, 'work/**']
   pull_request:
-    branches: [master]
+    branches: [master, integration]
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,255 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  branch-validation:
+    name: Branch validation (analyze + changed tests)
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/work/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout with history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Static analysis
+        run: flutter analyze --no-pub --no-fatal-infos
+
+      - name: Run changed tests and enforce test pairing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master --depth=1
+          mapfile -t changed < <(git diff --name-only origin/master...HEAD)
+          mapfile -t code_files < <(printf '%s\\n' "${changed[@]}" | grep -E '^(lib/|android/|pubspec\\.(yaml|lock)$)' || true)
+          mapfile -t test_files < <(printf '%s\\n' "${changed[@]}" | grep -E '^test/.*_test\\.dart    name: Flutter regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        id: dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Run Dart and Flutter static analysis
+        if: steps.dependencies.outcome == 'success'
+        run: flutter analyze --no-pub --no-fatal-infos
+
+      - name: Run local AI contract tests
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_service_test.dart
+
+      - name: Run recorder retry widget regression
+        id: recorder_retry
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "re-enables stop after a recorder stop failure and accepts a successful retry"
+
+      - name: Run native status-unknown widget regression
+        id: model_status_unknown
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "disables local AI actions when native status cannot be verified"
+
+      - name: Run post-send native status readback regression
+        id: post_send_status
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native status readback"
+      - name: Run post-send native model teardown regression
+        id: post_send_teardown
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.post_send_status.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native model teardown"
+
+      - name: Run local AI photo picker lifecycle regression
+        id: photo_picker
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.post_send_teardown.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI photo picker lifecycle"
+
+      - name: Run local AI model control serialization regression
+        id: model_control
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.photo_picker.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model control serialization"
+
+      - name: Run local AI model setup serialization regression
+        id: model_setup
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_control.outcome == 'success' }}
+        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model setup serialization"
+
+      - name: Run assistant history resume regression
+        id: history_resume
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_setup.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_history_resume_test.dart
+
+      - name: Run TCM interview task snapshot contract regression
+        id: tcm_task_snapshot
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.history_resume.outcome == 'success' }}
+        run: flutter test --no-pub test/models/tcm_interview_task_state_test.dart
+
+      - name: Run structured TCM interview resume widget regression
+        id: tcm_task_resume
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' }}
+        run: flutter test --no-pub test/chat_screen_task_resume_test.dart
+
+      - name: Run clause 268 pulse gate and legacy fallback regressions
+        id: tcm_rule_gates
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: flutter test --no-pub test/engine/three_yang_clause268_gate_test.dart test/engine/diagnostic_engine_test.dart
+
+      - name: Run unified assistant dispatch regression
+        id: assistant_dispatch
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_conversation_orchestrator_test.dart test/assistant_tool_router_test.dart
+
+      - name: Run full regression suite
+        id: regression
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' && steps.tcm_task_resume.outcome == 'success' && steps.tcm_rule_gates.outcome == 'success' && steps.assistant_dispatch.outcome == 'success' }}
+        run: flutter test --no-pub
+
+      - name: Upload Flutter test failure diffs
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.regression.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-test-failure-diffs
+          path: test/failures/
+          if-no-files-found: ignore
+          retention-days: 3
+
+  build-apk:
+    name: Android debug APK
+    needs: test
+    # Preserve the build signal even when the regression job fails.
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request') && always() && needs.test.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # The Find N2 target is arm64-v8a. Avoid building unused ABI APKs on
+      # the hosted runner, while leaving local/release Gradle defaults intact.
+      ORG_GRADLE_PROJECT_ciArm64Only: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Report available disk space
+        run: |
+          df -h /
+          df -h "$GITHUB_WORKSPACE"
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
+
+      - name: Verify Android APK ABI and calculate SHA-256
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          apk = Path("build/app/outputs/flutter-apk/app-debug.apk")
+          if not apk.is_file() or apk.stat().st_size == 0:
+              raise SystemExit(f"APK missing or empty: {apk}")
+
+          with ZipFile(apk) as archive:
+              names = set(archive.namelist())
+          required = "lib/arm64-v8a/libflutter.so"
+          if required not in names:
+              raise SystemExit(f"Required arm64 Flutter library missing: {required}")
+
+          native_abis = {
+              name.split("/")[1]
+              for name in names
+              if name.startswith("lib/") and name.endswith(".so")
+              and len(name.split("/")) >= 3
+          }
+          if native_abis != {"arm64-v8a"}:
+              raise SystemExit(f"Unexpected native ABI set: {sorted(native_abis)}")
+
+          print(f"APK size: {apk.stat().st_size} bytes")
+          print(f"Native ABIs: {', '.join(sorted(native_abis))}")
+          print("Required arm64 Flutter/JNI libraries are present.")
+          PY
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk | tee build/app/outputs/flutter-apk/app-debug.apk.sha256
+          cat build/app/outputs/flutter-apk/app-debug.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run Android local unit tests
+        run: cd android && ./gradlew :app:testDebugUnitTest
+
+      - name: Upload resolved dependency lockfile
+        uses: actions/upload-artifact@v7
+        with:
+          name: resolved-pubspec-lock
+          path: pubspec.lock
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-debug-apk
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
+ || true)
+          if (('${#code_files[@]}' > 0 && '${#test_files[@]}' == 0)); then
+            printf 'Production changes require at least one changed regression test.\\n' >&2
+            printf '%s\\n' "${code_files[@]}" >&2
+            exit 1
+          fi
+          if (('${#test_files[@]}' > 0)); then
+            flutter test --no-pub "${test_files[@]}"
+          else
+            echo 'Documentation/workflow-only change: no Dart regression test required.'
+          fi
+
   test:
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request'
     name: Flutter regression tests
     runs-on: ubuntu-latest
     timeout-minutes: 35
