@@ -771,10 +771,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _persistTcmInterviewTaskState(
     TcmInterviewTaskState state,
   ) {
+    // Capture the conversation future at callback time. History navigation may
+    // switch the active conversation while an earlier SQLite write is queued.
+    final targetConversation = _conversationIdFuture;
     _taskStateWrite = _taskStateWrite.catchError((Object error) {
       debugPrint('[TcmInterviewTask] 上一次状态保存失败，继续后续写入：$error');
     }).then((_) async {
-      final id = await _conversationIdFuture;
+      final id = await targetConversation;
       if (id == null) return;
       await _conversationStore.saveTcmInterviewTaskState(
         conversationId: id,
