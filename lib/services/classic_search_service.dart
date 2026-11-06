@@ -41,6 +41,28 @@ class ClassicHit {
     this.bookId,
     this.chapterIndex,
   });
+
+  /// Stable retrieval identity. This is an app-local backlink key, not a
+  /// claim that the underlying historical text has a verified edition/page.
+  String get sourceId => [
+        source,
+        asset ?? bookId ?? 'MISSING',
+        chapterIndex?.toString() ?? 'MISSING',
+        title,
+      ].join(':');
+
+  /// PARTIAL means the app can reopen an internal asset/chapter but does not
+  /// have a verified printed page locator. Lecture markdown remains MISSING.
+  String get locatorStatus =>
+      asset == null && bookId != null && chapterIndex != null
+          ? 'PARTIAL'
+          : 'MISSING';
+
+  String get localBacklink => asset != null
+      ? asset!
+      : bookId != null
+          ? 'guji:$bookId#chapter:${chapterIndex ?? 'MISSING'}'
+          : 'MISSING';
 }
 
 class ClassicSearchResult {
