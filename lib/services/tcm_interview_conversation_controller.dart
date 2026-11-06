@@ -13,9 +13,9 @@ class TcmInterviewConversationController {
         taskId = taskId ?? 'tcm-${DateTime.now().microsecondsSinceEpoch}';
 
   TcmInterviewConversationController._restored({
-    required TcmInterviewAdapter adapter,
+    required this._adapter,
     required this.taskId,
-  }) : _adapter = adapter;
+  });
 
   static const _temperatureQuestion =
       '你整体的寒热感觉是怎样的？（平时怕冷还是怕热，或者身体某处发凉、发热都可以告诉我）';
