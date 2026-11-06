@@ -60,6 +60,30 @@ void main() {
       );
     });
 
+    test('主脉与兼脉都参与脉舌冲突交叉核验', () {
+      final adapter = TcmInterviewAdapter();
+      adapter.answerTonguePulse(
+        tongueCoating: '白厚',
+        tongueShape: '淡白',
+        primaryPulse: '弦',
+        secondaryPulse: '数',
+      );
+
+      final questionIds = adapter.pulseTongueCrossChecks
+          .map((prompt) => prompt.id)
+          .toSet();
+      expect(
+        questionIds,
+        containsAll([
+          'pulse_cross_drink',
+          'pulse_cross_urine',
+          'pulse_cross_limbs',
+          'pulse_cross_shaoyang',
+          'pulse_cross_taiyin',
+        ]),
+      );
+    });
+
     test('舌脉解释性标签在边界处归一为 canonical 值', () {
       final adapter = TcmInterviewAdapter();
       adapter.answerTonguePulse(
