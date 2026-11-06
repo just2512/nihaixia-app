@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:record/record.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -415,7 +415,7 @@ class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
             onPressed: () async {
               final summary = await Navigator.of(context).push<String>(
                 MaterialPageRoute(
-                  builder: (_) => LocalAiInterviewScreen(service: widget.service),
+                  builder: (_) => LocalAiInterviewScreen(conversationStore: _store, service: widget.service),
                 ),
               );
               if (!mounted || summary == null) return;
@@ -465,19 +465,8 @@ class _UnexpectedStatusFailureService extends LocalAiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-    DatabaseHelper.configureTestDatabase('local_ai_interview_screen_test.db');
-  });
-  tearDownAll(() async {
-    await DatabaseHelper.closeTestDatabase();
-  });
-  setUp(() async {
-    final db = await DatabaseHelper.instance.database;
-    await db.delete('assistant_messages');
-    await db.delete('tcm_interview_tasks');
-    await db.delete('assistant_conversations');
+  setUp(() {
+    _store = _MemoryConversationStore();
   });
   const imagePickerChannel = MethodChannel('plugins.flutter.io/image_picker');
   final messenger =
@@ -510,7 +499,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: service,
             audioRecorder: recorder,
             recordingFileInspector: _ValidRecordingFileInspector(),
@@ -554,7 +543,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: _TextSendService(),
             audioRecorder: recorder,
             recordingFileInspector: _ThrowingRecordingFileInspector(),
@@ -581,7 +570,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(service: service),
+          home: LocalAiInterviewScreen(conversationStore: _store, service: service),
         ),
       );
       await tester.pumpAndSettle();
@@ -621,7 +610,7 @@ void main() {
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(
+        home: LocalAiInterviewScreen(conversationStore: _store, 
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
         ),
@@ -648,7 +637,7 @@ void main() {
       final service = _SourceTruncatedSymptomsService();
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '我较早的头痛描述');
@@ -675,7 +664,7 @@ void main() {
       final service = _SourceTruncatedEmptySymptomsService();
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '此前描述过的症状');
@@ -699,7 +688,7 @@ void main() {
       const userText = '上一轮问诊内容';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -754,7 +743,7 @@ void main() {
       const userText = '本轮不再保留的内容';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -793,7 +782,7 @@ void main() {
       const userText = '重置失败时应保留的对话';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -824,7 +813,7 @@ void main() {
       const userText = '释放失败时应保留的对话';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
 
@@ -855,7 +844,7 @@ void main() {
       const userText = '原生会话失效后不应继续显示的历史';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
@@ -886,7 +875,7 @@ void main() {
       const userText = '模型释放后不应继续显示的历史';
 
       await tester.pumpWidget(
-        MaterialApp(home: LocalAiInterviewScreen(service: service)),
+        MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
       );
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
@@ -916,7 +905,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
           ),
@@ -989,7 +978,7 @@ void main() {
         const replyText = '本轮回复：$userText';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1037,7 +1026,7 @@ void main() {
         const userText = '推理失败后需要保留供重试的输入';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1083,7 +1072,7 @@ void main() {
         const oldText = '此前会话中的旧输入';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1145,7 +1134,7 @@ void main() {
         const oldText = '失败前的历史会话';
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1285,7 +1274,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(service: service),
+          home: LocalAiInterviewScreen(conversationStore: _store, service: service),
         ),
       );
       await tester.pumpAndSettle();
@@ -1344,7 +1333,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(
+          home: LocalAiInterviewScreen(conversationStore: _store, 
             service: _UnexpectedStatusFailureService(),
           ),
         ),
@@ -1370,7 +1359,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: LocalAiInterviewScreen(
+            home: LocalAiInterviewScreen(conversationStore: _store, 
               service: service,
               imagePicker: picker,
             ),
@@ -1442,7 +1431,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1481,7 +1470,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1520,7 +1509,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: LocalAiInterviewScreen(
+            home: LocalAiInterviewScreen(conversationStore: _store, 
               service: service,
               imagePicker: picker,
             ),
@@ -1567,7 +1556,7 @@ void main() {
         final service = _HashVerificationFailureService();
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1603,7 +1592,7 @@ void main() {
         final service = _DeferredModelSetupService();
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1641,7 +1630,7 @@ void main() {
         final service = _DeferredModelSetupService();
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1683,7 +1672,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1725,7 +1714,7 @@ void main() {
             );
 
         await tester.pumpWidget(
-          MaterialApp(home: LocalAiInterviewScreen(service: service)),
+          MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: service)),
         );
         await tester.pumpAndSettle();
 
@@ -1771,7 +1760,7 @@ void main() {
 
   testWidgets('unified assistant starts in automatic dispatch mode', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: LocalAiInterviewScreen(service: _TextSendService())),
+      MaterialApp(home: LocalAiInterviewScreen(conversationStore: _store, service: _TextSendService())),
     );
     await tester.pumpAndSettle();
 
