@@ -699,6 +699,46 @@ void main() {
     },
   );
 
+  testWidgets('规则辨证问题和答案留在统一助手时间线并持久化', (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('你整体的寒热感觉'), findsOneWidget);
+    expect(service.sentTexts, isEmpty);
+    var state = await _store.getTcmInterviewTaskState(conversationId: 1);
+    expect(state, isNotNull);
+    expect(state!.status, 'in_progress');
+    expect(state.pendingPromptId, 'temperature');
+
+    await tester.tap(find.text(state.pendingOptions.first).last);
+    await tester.pumpAndSettle();
+
+    state = await _store.getTcmInterviewTaskState(conversationId: 1);
+    expect(state!.pendingPromptId, 'tongue_pulse');
+    expect(find.text('接下来请告诉我你的舌象和脉象（可跳过）：'), findsOneWidget);
+
+    await tester.tap(find.text('跳过，直接问诊').last);
+    await tester.pumpAndSettle();
+
+    state = await _store.getTcmInterviewTaskState(conversationId: 1);
+    expect(state!.pendingPromptId, startsWith('ten:'));
+    expect(service.sentTexts, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('问诊助手把本地中医知识作为参考上下文传给模型', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(
