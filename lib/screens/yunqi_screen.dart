@@ -19,10 +19,15 @@ import '../utils/chart_export.dart';
 /// 配色一律取 `Theme.of(context).colorScheme` 的 token，**不硬编码颜色**，
 /// 以保证深色模式下对比度正常。
 class YunQiScreen extends StatefulWidget {
-  const YunQiScreen({super.key, this.returnResultOnComplete = false});
+  const YunQiScreen({
+    super.key,
+    this.returnResultOnComplete = false,
+    this.initialDate,
+  });
 
   /// When opened from the unified assistant, expose a return-to-chat action.
   final bool returnResultOnComplete;
+  final DateTime? initialDate;
 
   @override
   State<YunQiScreen> createState() => _YunQiScreenState();
@@ -30,10 +35,17 @@ class YunQiScreen extends StatefulWidget {
 
 class _YunQiScreenState extends State<YunQiScreen> {
   /// 用户所选日期，默认今天。取日期部分即可（运气以日为单位）。
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
 
   /// 显示「当前处于第几之气」时需要精确到时刻，故用完整 now。
   final DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialDate ?? DateTime.now();
+    _selectedDate = DateTime(initial.year, initial.month, initial.day);
+  }
 
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
