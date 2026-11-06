@@ -149,6 +149,54 @@ void main() {
       expect(decision.clarification, contains('梅花易数'));
     });
 
+
+    test('排盘澄清后仅回答工具名称即可进入对应排盘工具', () {
+      final first = AssistantConversationOrchestrator.resolve(
+        query: '帮我排个盘',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(first.needsClarification, isTrue);
+
+      final answer = AssistantConversationOrchestrator.resolve(
+        query: '紫微斗数',
+        selectedMode: AssistantMode.automatic,
+        currentMode: first.mode,
+      );
+      expect(answer.mode, AssistantMode.metaphysics);
+      expect(answer.tool?.id, 'ziwei');
+      expect(answer.needsClarification, isFalse);
+    });
+
+    test('起卦澄清后可识别短答案，多个工具答案继续澄清', () {
+      final first = AssistantConversationOrchestrator.resolve(
+        query: '帮我起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+      final answer = AssistantConversationOrchestrator.resolve(
+        query: '小六壬',
+        selectedMode: AssistantMode.automatic,
+        currentMode: first.mode,
+      );
+      expect(answer.tool?.id, 'xiaoliuren');
+
+      final ambiguous = AssistantConversationOrchestrator.resolve(
+        query: '易经和梅花易数',
+        selectedMode: AssistantMode.automatic,
+        currentMode: first.mode,
+      );
+      expect(ambiguous.needsClarification, isTrue);
+      expect(ambiguous.clarification, contains('只选择其中一个'));
+    });
+
+    test('工具手动模式中的澄清答案不要求重复动作词', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '经方剂量换算',
+        selectedMode: AssistantMode.tools,
+        currentMode: AssistantMode.tools,
+      );
+      expect(decision.tool?.id, 'dosage');
+    });
+
     test('统一助手工具注册表覆盖 ToolsScreen 的全部可调用业务页面', () {
       final ids = AssistantToolRouter.all.map((tool) => tool.id).toSet();
       expect(ids.length, AssistantToolRouter.all.length);
