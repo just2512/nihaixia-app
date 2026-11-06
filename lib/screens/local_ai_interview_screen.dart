@@ -1185,11 +1185,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
     }
-    final resultText = switch (result) {
-      AssistantToolResult typed => typed.toConversationText(),
-      String legacy when legacy.trim().isNotEmpty => legacy.trim(),
-      _ => '',
+    final normalizedResult = switch (result) {
+      AssistantToolResult typed => typed,
+      String legacy when legacy.trim().isNotEmpty => AssistantToolResult(
+          toolId: tool.id,
+          title: tool.title,
+          values: {'结果': legacy.trim()},
+        ),
+      _ => null,
     };
+    final resultText = normalizedResult?.toConversationText() ?? '';
     final response = resultText.isNotEmpty
         ? '【${tool.title}返回内容】\\n$resultText'
         : '已打开「${tool.title}」。完成计算后回到本对话，把工具页面的结果发给我，我会基于结果继续解释。';
