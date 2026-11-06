@@ -12,10 +12,11 @@ import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
+import '../services/tcm_interview_conversation_controller.dart';
 import 'assistant_tool_router.dart';
-import 'chat_screen.dart';
 import '../data/database_helper.dart';
 import '../data/assistant_conversation_store.dart';
+import '../data/settings_repository.dart';
 import '../models/tcm_interview_task_state.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
@@ -162,6 +163,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _extracting = false;
   bool _modelControlBusy = false;
   bool _structuredDiagnosisBusy = false;
+  TcmInterviewConversationController? _tcmInterviewController;
   late Future<int?> _conversationIdFuture;
   Future<void> _taskStateWrite = Future<void>.value();
   String? _pendingHistoryTranscript;
@@ -835,6 +837,247 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
+    }
+  }
+
+  Future<void> _startInlineTcmInterview({
+    required String initialUserMessage,
+    String? userContext,
+  }) async {
+    if (_structuredDiagnosisBusy) return;
+    if (_tcmInterviewController?.canAnswer == true) {
+      setState(() {
+        _error = '当前对话已有一项未完成的规则问诊。请先回答下方问题，或从历史记录恢复该任务。';
+      });
+      return;
+    }
+
+    final controller = TcmInterviewConversationController(
+      defaultGender: SettingsRepository.instance.defaultGender,
+    );
+    _tcmInterviewController = controller;
+    setState(() {
+      _structuredDiagnosisBusy = true;
+      _lastEffectiveMode = AssistantMode.consultation;
+      _pendingToolSelection = false;
+      _error = null;
+    });
+    final before = controller.messages.length;
+    try {
+      controller.start(
+        initialUserMessage: initialUserMessage,
+        userContext: userContext,
+      );
+      await _appendTcmInterviewMessages(before);
+      if (mounted) {
+        setState(() {
+          _confirmedDraft = null;
+          _structuredDiagnosisBusy = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _structuredDiagnosisBusy = false;
+          _error = '无法启动规则问诊：$error';
+        });
+      }
+    }
+  }
+
+  Future<void> _appendTcmInterviewMessages(int startIndex) async {
+    final controller = _tcmInterviewController;
+    if (controller == null) return;
+    final added = controller.messages.skip(startIndex).toList(growable: false);
+    if (added.isEmpty) {
+      await _persistTcmInterviewTaskState(controller.createTaskState());
+      return;
+    }
+
+    final taskState = controller.createTaskState();
+    setState(() {
+      for (final entry in added) {
+        final isPendingPrompt = !entry.isUser &&
+            controller.canAnswer &&
+            entry.text == controller.pendingPromptText;
+        _messages.add(_InterviewMessage(
+          text: entry.text,
+          isUser: entry.isUser,
+          options: isPendingPrompt ? controller.pendingOptions : const [],
+          onOptionSelected:
+              isPendingPrompt ? _handleTcmInterviewOption : null,
+        ));
+      }
+      _error = null;
+    });
+
+    final conversationId = await _conversationIdFuture;
+    if (conversationId != null) {
+      for (final entry in added) {
+        try {
+          await _conversationStore.saveAssistantMessage(
+            conversationId: conversationId,
+            role: entry.isUser ? 'user' : 'assistant',
+            content: entry.text,
+            metadata: 'mode=consultation;selectedMode=${_assistantMode.name};tcm_task=${controller.taskId}',
+          );
+        } catch (error, stack) {
+          debugPrint('[TcmInterviewTask] 问诊消息保存失败：$error\\n$stack');
+        }
+      }
+    }
+    await _persistTcmInterviewTaskState(taskState);
+
+    if (controller.isCompleted) {
+      try {
+        await _restoreVisibleConversationToModel();
+      } catch (error) {
+        if (mounted) {
+          setState(() {
+            _error = '规则辨证结果已保存，但同步到本地模型上下文失败：$error';
+          });
+        }
+      }
+    }
+    _scrollToBottom();
+  }
+
+  Future<void> _handleTcmInterviewOption(String option) async {
+    final controller = _tcmInterviewController;
+    if (controller == null || !controller.canAnswer) return;
+    if (controller.pendingPromptId == 'tongue_pulse' &&
+        option == '选择舌诊脉诊') {
+      await _showUnifiedTonguePulseDialog();
+      return;
+    }
+    final before = controller.messages.length;
+    try {
+      controller.answerOption(option);
+      await _appendTcmInterviewMessages(before);
+    } catch (error) {
+      if (mounted) setState(() => _error = '问诊选项未能提交：$error');
+    }
+  }
+
+  Future<void> _showUnifiedTonguePulseDialog() async {
+    final controller = _tcmInterviewController;
+    if (controller == null || controller.pendingPromptId != 'tongue_pulse') {
+      return;
+    }
+    String? tongueCoating;
+    String? tongueShape;
+    String? primaryPulse;
+    String? secondaryPulse;
+    final confirmed = await showFoldAwareDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('舌诊脉诊'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('舌苔', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: controller.tongueCoatingOptions.map((option) =>
+                    FilterChip(
+                      label: Text(option),
+                      selected: tongueCoating == option,
+                      onSelected: (selected) => setDialogState(
+                        () => tongueCoating = selected ? option : null,
+                      ),
+                    ),
+                  ).toList(),
+                ),
+                const SizedBox(height: 12),
+                const Text('舌形', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: controller.tongueShapeOptions.map((option) =>
+                    FilterChip(
+                      label: Text(option),
+                      selected: tongueShape == option,
+                      onSelected: (selected) => setDialogState(
+                        () => tongueShape = selected ? option : null,
+                      ),
+                    ),
+                  ).toList(),
+                ),
+                const SizedBox(height: 12),
+                const Text('主脉象', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: controller.pulseOptions.map((option) =>
+                    FilterChip(
+                      label: Text(option),
+                      selected: primaryPulse == option,
+                      onSelected: (selected) => setDialogState(() {
+                        primaryPulse = selected ? option : null;
+                        if (primaryPulse == null ||
+                            secondaryPulse == primaryPulse) {
+                          secondaryPulse = null;
+                        }
+                      }),
+                    ),
+                  ).toList(),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '兼脉（选填；必须与主脉不同，两项同时填写才识别组合脉）',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: controller.pulseOptions.map((option) =>
+                    FilterChip(
+                      label: Text(option),
+                      selected: secondaryPulse == option,
+                      onSelected: primaryPulse == null || primaryPulse == option
+                          ? null
+                          : (selected) => setDialogState(
+                                () => secondaryPulse = selected ? option : null,
+                              ),
+                    ),
+                  ).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('确认'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    final before = controller.messages.length;
+    try {
+      controller.answerTonguePulse(
+        tongueCoating: tongueCoating,
+        tongueShape: tongueShape,
+        primaryPulse: primaryPulse,
+        secondaryPulse: secondaryPulse,
+      );
+      await _appendTcmInterviewMessages(before);
+    } catch (error) {
+      if (mounted) setState(() => _error = '舌诊脉诊输入未能提交：$error');
     }
   }
 
