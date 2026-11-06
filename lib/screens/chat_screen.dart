@@ -153,6 +153,11 @@ class _ChatScreenState extends State<ChatScreen> {
       pendingOptions: status == 'in_progress'
           ? _currentOptions.map((option) => option.label).toList(growable: false)
           : const [],
+      transcript: _messages.map((message) => TcmInterviewTaskMessage(
+        text: message.text,
+        isUser: message.isUser,
+        isResult: message.isResult,
+      )).toList(growable: false),
       updatedAt: DateTime.now().toUtc(),
     );
     unawaited(() async {
@@ -168,6 +173,11 @@ class _ChatScreenState extends State<ChatScreen> {
     _interview.restoreSnapshot(state.snapshot);
     _pendingPromptId = state.pendingPromptId;
     _pendingPromptText = state.pendingPromptText;
+    _messages.addAll(state.transcript.map((message) => _ChatBubble(
+      text: message.text,
+      isUser: message.isUser,
+      isResult: message.isResult,
+    )));
     final promptText = state.pendingPromptText;
     if (promptText == null || promptText.isEmpty || state.pendingPromptId == null) {
       _messages.add(const _ChatBubble(
@@ -176,7 +186,11 @@ class _ChatScreenState extends State<ChatScreen> {
       ));
       return;
     }
-    _messages.add(_ChatBubble(text: promptText, isUser: false));
+    if (_messages.isEmpty ||
+        _messages.last.isUser ||
+        _messages.last.text != promptText) {
+      _messages.add(_ChatBubble(text: promptText, isUser: false));
+    }
     final id = state.pendingPromptId!;
     final savedOptions = state.pendingOptions;
     if (id == 'temperature') {
