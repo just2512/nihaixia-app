@@ -30,7 +30,7 @@
 ## 本次清理
 
 - 删除 App 内上游 Release 检测、更新提示、APK 下载与安装入口。
-- 删除原项目 Release 下载和 Gitee 同步工作流。
+- 删除原项目 Release 下载和 Gitee 同步工作流、脚本及手动同步工具。
 - 删除 Android 专用 APK 安装 MethodChannel 与 `REQUEST_INSTALL_PACKAGES` 权限。
 - 删除 APK 下载和校验专用原生文件代码；保留临时缓存清理。
 - 删除启动时的版本更新公告弹窗；保留关于页本地更新日志。

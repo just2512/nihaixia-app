@@ -189,7 +189,7 @@
 > **汉唐中医 nihaixia‑app**
 > 核心知识库可离线｜本地 AI 模型需单独下载｜无需注册｜Android 7.0+
 > 通用版 APK 约 77MB，分架构版 31–35MB
-> 自 V1.11.9 起由 GitHub Actions 自动构建发布，推送 `v*` tag 即出包
+> Fork 独立 APK 由本仓库 GitHub Actions 构建；当前尚未发布独立 APK Release
 > **最后维护：2026-11-06（Fork 独立维护；尚未发布独立 Release）**
 
 > 当前 Fork 尚未发布独立 APK Release。请勿将原项目 `jangviktor-web/nihaixia-app` 的安装包当作本 Fork 的发行版。后续安装包只从[本仓库 Releases](https://github.com/just2512/nihaixia-app/releases)获取；发布独立版本后再补充对应架构下载项。
@@ -309,7 +309,7 @@ flutter analyze
 | `pubspec.yaml` | 依赖与资源清单，版本号 `X.Y.Z+N` 的单一来源（`+N` 即 Android `versionCode`） |
 | `android/gradle.properties` | Gradle 堆内存等构建参数（Windows 上已设为 `-Xmx1024M` + `org.gradle.daemon=false` 以规避本机 OOM；CI 内由 workflow 临时覆盖为 `-Xmx4g` + G1GC，不影响本地） |
 | `android/settings.gradle.kts` | 仓库源配置，已做 CI 感知：CI 直连 `google()`/`mavenCentral()`，本地保持阿里云镜像优先 |
-| `.github/workflows/build-apk.yml` | 自动构建发布：推送 `v*` tag 即编译并发布四个 APK 到 Release（约 6 分钟） |
+| `.github/workflows/build-apk.yml` | Fork 独立构建：推送本仓库 `v*` tag 后构建并发布四个 APK 到本仓库 Release |
 | `android/key.properties` | 发布签名配置（不入库，参考 template） |
 | `assets/data/changelog.json` | 结构化更新日志，驱动「关于」页与更新弹窗 |
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
@@ -462,7 +462,7 @@ flowchart LR
 - [x] 七步问诊十问模块 v3.1（脉象/疼痛/呕吐类型追问）
 - [x] 健康人基线判定 + 寒热真假八维法 + 六经公式分型（V1.11.8）
 - [x] 患者口语语料接入：170 首方「患者会怎么说」+ 现代症状词召回（V1.11.9）
-- [x] APK 交由 GitHub Actions 自动构建发布（V1.11.9）
+- [x] Fork 独立 APK 构建发布工作流（本仓库 tag 触发）
 - [x] Gemma 4 E4B 本地多模态输入接入（文字 / 音频 / 图像；Find N2 实机验收仍待完成）
 - [ ] 舌象清晰度、曝光与色温质量检查（需在 Find N2 真机校准后实施）
 - [ ] 脉诊辅助（脉象分类）

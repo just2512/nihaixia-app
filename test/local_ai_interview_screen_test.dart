@@ -139,7 +139,6 @@ Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
               : pendingId == expectedPendingPromptId);
       if (latest != null && matchesExpected) return latest;
     }
-    final pendingId = latest?.pendingPromptId;
     await tester.pump(const Duration(milliseconds: 10));
   }
   return latest;
@@ -746,6 +745,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
