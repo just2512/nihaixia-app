@@ -19,6 +19,8 @@ void main() {
           'bitter_mouth': true,
           'drowsy': true,
           'has_sweat': true,
+          'asthma': true,
+          'chest_fullness': true,
           'headache': true,
           'palpitation': true,
           ...extraAnswers,
