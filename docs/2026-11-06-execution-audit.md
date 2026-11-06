@@ -17,7 +17,7 @@
 
 ## 二、Fork App 自动更新隔离
 
-状态：**源码清理已完成；本次增加回归防线，CI 待本次提交确认。**
+状态：**PASS（源码隔离与回归防线均已验证）。**
 
 compare 显示以下上游更新功能文件已从 Fork 删除：
 
@@ -33,7 +33,7 @@ compare 显示以下上游更新功能文件已从 Fork 删除：
 
 **保留项：** `ChangelogRepository` 只读取打包在 APK 内的 `assets/data/changelog.json`，在“关于”页展示本 Fork 自己的本地更新日志。它不是联网检查、上游更新提示或自动安装功能。
 
-新增 `test/fork_update_isolation_policy_test.dart`，防止后续提交重新引入上游更新服务、更新后弹窗、Gitee 同步和 APK 安装权限。该测试必须随当前提交通过后，才将回归防线标为 PASS。
+新增 `test/fork_update_isolation_policy_test.dart`，防止后续提交重新引入上游更新服务、更新后弹窗、Gitee 同步和 APK 安装权限。该测试对应 SHA `3e4242633de86c76b1d274c6544ed8f860b918a6` 的 Flutter Quality Gate run `42190262766` 与 Flutter tests run `42190262760` 均 SUCCESS。
 
 Fork 自身仍可通过本仓库 tag / GitHub Actions 构建 Release；这与 App 启动时自动更新原项目完全分离。
 
