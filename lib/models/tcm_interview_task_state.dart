@@ -12,6 +12,7 @@ class TcmInterviewTaskState {
     required this.snapshot,
     required this.status,
     this.pendingPromptId,
+    this.pendingPromptText,
     this.pendingOptions = const [],
     this.updatedAt,
   });
@@ -20,6 +21,8 @@ class TcmInterviewTaskState {
   final EngineSnapshot snapshot;
   final String status;
   final String? pendingPromptId;
+  /// Exact visible wording retained across app-version changes.
+  final String? pendingPromptText;
   final List<String> pendingOptions;
   final DateTime? updatedAt;
 
@@ -29,6 +32,7 @@ class TcmInterviewTaskState {
         'status': status,
         'snapshot': _snapshotToJson(snapshot),
         if (pendingPromptId != null) 'pendingPromptId': pendingPromptId,
+        if (pendingPromptText != null) 'pendingPromptText': pendingPromptText,
         'pendingOptions': List<String>.unmodifiable(pendingOptions),
         if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
       };
@@ -49,6 +53,7 @@ class TcmInterviewTaskState {
     final rawSnapshot = json['snapshot'];
     final rawOptions = json['pendingOptions'];
     final promptId = json['pendingPromptId'];
+    final promptText = json['pendingPromptText'];
     final updatedAt = json['updatedAt'];
     if (taskId is! String ||
         taskId.trim().isEmpty ||
@@ -58,6 +63,7 @@ class TcmInterviewTaskState {
         rawOptions is! List ||
         rawOptions.any((item) => item is! String) ||
         (promptId != null && promptId is! String) ||
+        (promptText != null && promptText is! String) ||
         (updatedAt != null && updatedAt is! String)) {
       throw const FormatException('Invalid TCM interview task state');
     }
@@ -66,6 +72,7 @@ class TcmInterviewTaskState {
       status: status,
       snapshot: _snapshotFromJson(Map<String, Object?>.from(rawSnapshot)),
       pendingPromptId: promptId as String?,
+      pendingPromptText: promptText as String?,
       pendingOptions: List<String>.unmodifiable(rawOptions.cast<String>()),
       updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt as String).toUtc(),
     );
