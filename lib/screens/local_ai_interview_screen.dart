@@ -168,6 +168,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   List<String> _pendingHistoryUserMessages = const [];
   AssistantMode _assistantMode = AssistantMode.automatic;
   AssistantMode? _lastEffectiveMode;
+  bool _pendingToolSelection = false;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -204,6 +205,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (shouldClearStaleConversation) {
         _conversationIdFuture = _createNewConversation();
         _lastEffectiveMode = null;
+        _pendingToolSelection = false;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -793,6 +795,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantMode? mode,
     String? attachmentType,
     String? toolId,
+    bool expectsToolSelection = false,
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -827,6 +830,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           'mode=${activeMode.name}',
           'selectedMode=${_assistantMode.name}',
           if (toolId != null) 'tool=$toolId',
+          if (expectsToolSelection) 'tool_choice=true',
         ].join(';'),
       );
     } catch (error, stack) {
@@ -952,6 +956,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               if (mode != AssistantMode.automatic) {
                 _lastEffectiveMode = mode;
               }
+              _pendingToolSelection = false;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
@@ -1052,6 +1057,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final restoredMessages = <_InterviewMessage>[];
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
+    var restoredPendingToolSelection = false;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -1074,6 +1080,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
       }
       final isUser = role == 'user';
+      if (isUser) {
+        restoredPendingToolSelection = false;
+      } else {
+        restoredPendingToolSelection = metadata.contains('tool_choice=true');
+      }
       final pendingToolId = isUser
           ? null
           : RegExp(r'(?:^|;)tool=([a-z0-9_]+)').firstMatch(metadata)?.group(1);
@@ -1122,6 +1133,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
       _lastEffectiveMode = restoredEffectiveMode;
+      _pendingToolSelection = restoredPendingToolSelection;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -1177,8 +1189,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         query: text,
         selectedMode: _assistantMode,
         currentMode: _lastEffectiveMode,
+        pendingToolSelection: _pendingToolSelection,
       );
       effectiveMode = decision.mode;
+      _pendingToolSelection = decision.expectsToolSelection;
       if (decision.needsClarification) {
         final clarification = decision.clarification!;
         setState(() {
@@ -1193,6 +1207,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           userText: text,
           assistantText: clarification,
           mode: effectiveMode,
+          expectsToolSelection: decision.expectsToolSelection,
         );
         _scrollToBottom();
         return;
