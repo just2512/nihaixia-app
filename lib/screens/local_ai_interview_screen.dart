@@ -1087,6 +1087,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String userText,
     AssistantToolDefinition tool, {
     AssistantMode? mode,
+    AssistantToolArguments? arguments,
   }) async {
     if (tool.id == 'structured_diagnosis') {
       await _startInlineTcmInterview(initialUserMessage: userText);
@@ -1110,7 +1111,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           text: instruction,
           isUser: false,
           actionLabel: '打开${tool.title}',
-          onAction: () => _openTool(tool, mode: activeMode),
+          onAction: () => _openTool(
+            tool,
+            mode: activeMode,
+            arguments: arguments,
+          ),
         ));
       _error = null;
     });
@@ -1144,7 +1149,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
-  Future<void> _openTool(AssistantToolDefinition tool, {required AssistantMode mode}) async {
+  Future<void> _openTool(
+    AssistantToolDefinition tool, {
+    required AssistantMode mode,
+    AssistantToolArguments? arguments,
+  }) async {
     if (tool.id == 'structured_diagnosis') {
       await _startInlineTcmInterview(initialUserMessage: '继续规则辨证');
       return;
@@ -1154,7 +1163,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       context,
       FoldAwareMaterialPageRoute(
         sourceContext: context,
-        builder: (_) => tool.builder(),
+        builder: (_) => arguments != null && tool.builderWithArguments != null
+            ? tool.builderWithArguments!(arguments)
+            : tool.builder(),
       ),
     );
     if (!mounted) return;
@@ -1550,7 +1561,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       if (decision.tool != null) {
-        await _requestTool(text, decision.tool!, mode: effectiveMode);
+        await _requestTool(
+          text,
+          decision.tool!,
+          mode: effectiveMode,
+          arguments: decision.toolArguments,
+        );
         return;
       }
     } else if (_assistantMode == AssistantMode.automatic) {
