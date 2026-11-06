@@ -18,6 +18,7 @@ import 'chinese_convert.dart';
 import 'disease_repository.dart';
 import 'formula_repository.dart';
 import 'herb_repository.dart';
+import '../models/medical_case_source_ledger.dart';
 
 /// 全局提取缓存：按方剂字段原文 memo，同文本不重算（全量医案提取约数秒，
 /// memo 后重复打开详情/洞察/相关医案命中缓存，避免反复卡顿）。
@@ -254,6 +255,8 @@ class MedicalCase {
   final String result; // 疗程/结果
   final String advice; // 生活医嘱
   final String view; // 倪海厦核心观点/评论
+  /// 原始出处账本；未完成纸本定位核验时保持 MISSING。
+  final MedicalCaseSourceLedger sourceLedger;
 
   MedicalCase({
     required this.seq,
@@ -268,6 +271,7 @@ class MedicalCase {
     this.result = '',
     this.advice = '',
     this.view = '',
+    this.sourceLedger = MedicalCaseSourceLedger.missing,
   });
 
   /// 归一后的全文检索索引（简繁归一 + 小写），懒计算一次，供 [matches] 复用。
@@ -333,6 +337,7 @@ class MedicalCase {
     section('治法', method);
     section('结果', result);
     section('观点', view);
+    section('原始来源账本', sourceLedger.toDisplayText());
     buf.writeln('\n─────────────────');
     buf.write('汉唐中医 · 倪海厦六经辨证（传统文化参考，非医疗建议）');
     return buf.toString();
