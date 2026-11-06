@@ -1,8 +1,12 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/models/medical_case_source_ledger.dart';
 import 'package:nihaisha_app/data/medical_case_data.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   test('未提供原始出处时所有定位字段明确为 MISSING', () {
     const ledger = MedicalCaseSourceLedger.missing;
     expect(ledger.status, 'MISSING');
@@ -85,6 +89,32 @@ void main() {
     expect(cases.first.sourceLedger.status, 'VERIFIED');
     expect(cases.last.sourceLedger.status, 'MISSING');
     expect(cases.last.toShareText(), contains('原始来源账本'));
+  });
+
+  test('来源账本覆盖医案资产中的每一条有效记录', () async {
+    final table = await rootBundle.loadString(
+      'assets/medical_cases/cases_table.md',
+    );
+    final ledgerText = await rootBundle.loadString(
+      'assets/medical_cases/source_ledger.json',
+    );
+    final decoded = jsonDecode(ledgerText) as Map<String, dynamic>;
+    final records = decoded['records'] as Map<String, dynamic>;
+    final cases = parseMedicalCaseTable(table);
+    expect(cases, isNotEmpty);
+    expect(
+      cases.every((medicalCase) => records.containsKey(medicalCase.seq.toString())),
+      isTrue,
+    );
+    final ledgers = {
+      for (final entry in records.entries)
+        int.parse(entry.key): MedicalCaseSourceLedger.fromJson(
+          entry.value as Map<String, dynamic>,
+        ),
+    };
+    final linked = parseMedicalCaseTable(table, sourceLedgers: ledgers);
+    expect(linked, hasLength(cases.length));
+    expect(linked.every((medicalCase) => medicalCase.sourceLedger.status == 'MISSING'), isTrue);
   });
 
 }
