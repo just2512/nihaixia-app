@@ -51,6 +51,8 @@ class AssistantToolDefinition {
   final List<String> aliases;
   final List<String> actionWords;
   final Widget Function() builder;
+  final Widget Function(AssistantToolArguments arguments)? builderWithArguments;
+  final List<AssistantToolParameter> parameters;
 
   const AssistantToolDefinition({
     required this.id,
@@ -60,6 +62,8 @@ class AssistantToolDefinition {
     required this.aliases,
     required this.actionWords,
     required this.builder,
+    this.builderWithArguments,
+    this.parameters = const [],
   });
 }
 
@@ -83,7 +87,16 @@ class AssistantToolRouter {
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['五运六气', '运气推算', '岁运司天在泉'],
     actionWords: ['推算', '计算', '算一下', '起算', '帮我算'],
+    parameters: [
+      AssistantToolParameter(
+        key: 'date',
+        label: '推算日期',
+        type: AssistantToolParameterType.date,
+        description: 'YYYY-MM-DD；未提供时使用当前日期。',
+      ),
+    ],
     builder: _buildYunqi,
+    builderWithArguments: _buildYunqiWithArguments,
   );
 
   static const ziwei = AssistantToolDefinition(
@@ -380,6 +393,14 @@ class AssistantToolRouter {
         'the legacy ChatScreen entry is disabled.',
       );
   static Widget _buildYunqi() => const YunQiScreen(returnResultOnComplete: true);
+  static Widget _buildYunqiWithArguments(AssistantToolArguments arguments) {
+    final rawDate = arguments['date'];
+    final date = rawDate == null ? null : DateTime.tryParse(rawDate);
+    return YunQiScreen(
+      returnResultOnComplete: true,
+      initialDate: date,
+    );
+  }
   static Widget _buildZiwei() =>
       const ZiweiChartScreen(returnResultOnComplete: true);
   static Widget _buildBazi() =>
