@@ -17,11 +17,13 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      MaterialApp(theme: _testTheme, home: const ZiweiChartScreen()),
+      MaterialApp(
+        theme: _testTheme,
+        home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
+      ),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('开始排盘'));
     await tester.pumpAndSettle();
 
     final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
