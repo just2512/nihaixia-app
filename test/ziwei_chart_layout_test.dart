@@ -24,6 +24,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsOneWidget);
     final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
     // The chart is below the input and summary sections in a lazy ListView.
     // Scroll it into the build/cache region before asserting its constraints.
@@ -55,6 +56,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsNothing);
     final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
     // The chart is lazily built only after scrolling past the form and summary.
     await tester.scrollUntilVisible(
