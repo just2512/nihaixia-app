@@ -98,4 +98,4 @@ void main() {
     expect(candidates.map((tool) => tool.id), containsAll(['ziwei', 'bazi']));
     expect(candidates.length, 2);
   });
-
+}
