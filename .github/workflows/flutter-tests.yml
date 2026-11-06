@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: flutter-tests-v3-${{ github.ref }}
-  cancel-in-progress: true
+  group: flutter-tests-v3-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   test:

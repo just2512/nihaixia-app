@@ -29,8 +29,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: flutter-quality-v2-${{ github.ref }}
-  cancel-in-progress: true
+  group: flutter-quality-v2-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   analyze-and-test:
