@@ -94,11 +94,12 @@ void main() {
         prompts.single.id,
         '明确有自下利（第172条）',
       );
+      final diagnosis = adapter.diagnose();
       expect(
         adapter.combinedPatternCondition,
         CombinedPatternCondition.sunShaoyangVomit,
       );
-      expect(adapter.diagnose()?.formula, '黄芩加半夏生姜汤');
+      expect(diagnosis?.formula, '黄芩加半夏生姜汤');
     });
 
     test('第33条无下利前提通过统一问诊适配层显式确认', () {
