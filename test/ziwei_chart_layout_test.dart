@@ -38,7 +38,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(home: ZiweiChartScreen()),
+      MaterialApp(theme: _testTheme, home: const ZiweiChartScreen()),
     );
     await tester.pumpAndSettle();
 
