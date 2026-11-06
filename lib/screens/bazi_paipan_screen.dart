@@ -321,10 +321,10 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _disclaimer(cs),
+          _narrowContent(_disclaimer(cs)),
           const SizedBox(height: 12),
-          _buildInputCard(cs),
-          BaZiLocationRow(
+          _narrowContent(_buildInputCard(cs)),
+          _narrowContent(BaZiLocationRow(
             cityName: _locName,
             lng: _locLng,
             lat: _locLat,
@@ -338,7 +338,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
                   .setLastLocation(city.label, city.lng, city.lat);
               if (_result != null) _compute(); // 地点变更后重排
             },
-          ),
+          )),
           if (_result != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -378,6 +378,17 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     );
   }
 
+  /// Foldable layout: keep the birth form readable on the wide inner display,
+  /// while allowing the outer display to use its full available width.
+  Widget _narrowContent(Widget child) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: child,
+      ),
+    );
+  }
+
   Widget _disclaimer(ColorScheme cs) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -404,6 +415,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
   Widget _buildInputCard(ColorScheme cs) {
     final shiChenIndex = _shiChenIndexOfHour(_birthHour);
     return Card(
+      key: const ValueKey('bazi-input-card'),
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
