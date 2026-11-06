@@ -28,7 +28,7 @@ void main() {
     (key: CombinedPatternCondition.sunShaoyangDiarrhea, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunShaoyangVomit, meridian: '太阳', answers: {'bitter_mouth': true, 'diarrhea': true, 'nausea': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.jueyinShaoyang, meridian: '厥阴', answers: {'bitter_mouth': true}, pulse: null, secondary: null),
-    (key: CombinedPatternCondition.threeYangSleep, meridian: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true}, pulse: null, secondary: null),
+    (key: CombinedPatternCondition.threeYangSleep, meridian: '太阳', answers: {'thirsty': true, 'bitter_mouth': true, 'drowsy': true, 'has_sweat': true, 'three_yang_pulse_position_answered': true, 'three_yang_pulse_position_confirmed': true}, pulse: '浮', secondary: '大'),
     (key: CombinedPatternCondition.shaoyangTaiyin, meridian: '少阳', answers: {'illness_duration_5_6': true, 'shaoyang147_prior_sweat_then_purge': true, 'chest_minor_knot': true, 'urine_difficult': true, 'thirsty': true, 'nausea': false, 'vomiting': false, 'head_sweat': true, 'alternating_chills': true, 'irritable': true}, pulse: null, secondary: null),
     (key: CombinedPatternCondition.sunTaiyin, meridian: '太阳', answers: {'temperature': 'fever_chills', 'fever': true, 'has_sweat': false, 'diarrhea': true, 'history_mistreatment': true, 'sun_taiyin_repeated_purgation': true, 'epigastric_hard': true}, pulse: null, secondary: null),
   ];
