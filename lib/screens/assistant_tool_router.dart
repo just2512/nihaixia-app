@@ -341,7 +341,7 @@ class AssistantToolRouter {
   }
 
   /// Match a short answer to a prior tool-type clarification. Unlike [match],
-  /// this does not require an action verb, but it only returns unique matches.
+  /// this does not require an action verb; callers must require exactly one match.
   static List<AssistantToolDefinition> matchAliases(
     String query,
     AssistantMode mode,
