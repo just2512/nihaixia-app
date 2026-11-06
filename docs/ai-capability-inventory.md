@@ -34,10 +34,10 @@
   - `e90cdaac` / `9c7758a5`：新增 `test/models/tcm_interview_task_state_test.dart`，覆盖结构化问诊快照的完整序列化往返、待回答问题与选项恢复字段、schema 版本拒绝及损坏数据拒绝。该测试只验证持久化模型契约，不代表 `ChatScreen` 已接入自动保存/恢复。
   - `a42fdff3`、`ee9ca969`：修正测试用例记录字段完整性，并将追问门槛注释放回对应方法。
 - 变更范围：诊断引擎共享证据计算、两组新增合病回归测试及审计文档；未改数据库、依赖、Android 配置或诊断规则表。
-- CI：`.github/workflows/flutter-tests.yml` 配置了 `push` 到 `master` 自动执行。此前可核验的 2026-11-04 两条工作流（run `41794913815`、`41794913787`）均已完成且成功，但它们对应旧审计基线 `fa586d52`，不能替代本次增量提交的 CI 结果。本次新提交的全量 Flutter/Android CI 状态暂记 `PENDING_VERIFICATION`，不提前标记通过。
-
-- 当前 `master` 最新提交为 `3102db63`，包含第256条单脉拒绝与组合脉顺序测试，以及对应审计文档更新。GitHub App 当前可用的提交状态接口未返回 Actions run/check 数据；因此本轮新增测试尚未取得远端执行证据。不能用 2026-11-04 的历史成功结果替代本轮 CI。
-- 其余 3—12 项仍沿用本文件所列状态；特别是统一助手仍通过独立页面启动结构化辨证/部分工具，附件原件仍未持久化，Find N2 真机验收仍缺少外屏/内屏/半折叠实测记录。
+- CI：当前 `master` HEAD 为 `c83993b17749f3380b7164882a88b86175a63fca`。2026-11-06 对应的 Flutter tests run `42153999654` 与 Flutter Quality Gate run `42153999821` 均已完成并为 `success`。Flutter regression tests、Android debug APK、Dart 静态分析、完整 Dart suite、Android native unit tests 和 arm64 Debug APK 构建均通过。CI 结果仅证明该 SHA 的自动化检查通过，不等于 OPPO Find N2 真机验收。
+- 当前 `master` 分支 HEAD 与最新两条工作流的 `head_sha` 一致；旧 SHA 的取消/失败运行不覆盖当前 SHA 的成功结果。
+- Fork 与上游分支关系已更新为 781 ahead / 29 behind；未执行 Sync fork 或合并。完整潜在冲突清单仍需基于完整三方 diff 穷举，不能把 compare API 的截断文件列表当作最终结果。
+- 其余未完成事项仍保持 `PARTIAL` / `MISSING`：经典与医案逐条来源校勘、Find N2 真机验收、工具统一参数/执行协议、问诊完全内联到同一聊天消息流、全 App 逐页功能盘点及附件原件持久化。
 
 ## 2. 当前统一助手的数据流
 
