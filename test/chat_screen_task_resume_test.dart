@@ -50,6 +50,18 @@ void main() {
       savedStates.last.snapshot.answers['temperature'],
       temperatureOptions.first.key,
     );
+    expect(savedStates.last.transcript.map((message) => message.text), contains(savedPrompt));
+    expect(savedStates.last.transcript.map((message) => message.text), contains(temperatureOptions.first.label));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChatScreen(initialTaskState: savedStates.last),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(temperatureOptions.first.label), findsOneWidget);
+    expect(find.text('接下来请告诉我你的舌象和脉象（可跳过）：'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
