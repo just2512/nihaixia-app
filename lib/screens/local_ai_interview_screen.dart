@@ -1086,6 +1086,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolDefinition tool, {
     AssistantMode? mode,
   }) async {
+    if (tool.id == 'structured_diagnosis') {
+      await _startInlineTcmInterview(initialUserMessage: userText);
+      return;
+    }
     _pendingToolSelection = false;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
@@ -1139,6 +1143,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _openTool(AssistantToolDefinition tool, {required AssistantMode mode}) async {
+    if (tool.id == 'structured_diagnosis') {
+      await _startInlineTcmInterview(initialUserMessage: '继续规则辨证');
+      return;
+    }
     _pendingToolSelection = false;
     final result = await Navigator.push<String>(
       context,
@@ -1359,15 +1367,56 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
     final resumableTask = taskState;
-    if (resumableTask != null &&
-        resumableTask.status == 'in_progress' &&
-        resumableTask.pendingPromptId != null) {
-      restoredMessages.add(_InterviewMessage(
-        text: '这段对话中有一项尚未完成的结构化辨证问诊。可以从上次的问题继续，不需要重新回答已完成的项目。',
-        isUser: false,
-        actionLabel: '继续结构化问诊',
-        onAction: () => _resumeStructuredDiagnosis(resumableTask),
-      ));
+    _tcmInterviewController = null;
+    if (resumableTask != null && resumableTask.transcript.isNotEmpty) {
+      final lastTaskMessage = resumableTask.transcript.last;
+      final taskTranscriptAlreadyVisible = restoredMessages.any(
+        (message) =>
+            message.isUser == lastTaskMessage.isUser &&
+            message.text == lastTaskMessage.text,
+      );
+      if (!taskTranscriptAlreadyVisible) {
+        for (final taskMessage in resumableTask.transcript) {
+          restoredMessages.add(_InterviewMessage(
+            text: taskMessage.text,
+            isUser: taskMessage.isUser,
+          ));
+          transcriptLines.add(
+            '${taskMessage.isUser ? '用户' : '助手'}：${taskMessage.text}',
+          );
+          if (taskMessage.isUser) replayableUserMessages.add(taskMessage.text);
+        }
+      }
+      if (resumableTask.status == 'in_progress' &&
+          resumableTask.pendingPromptId != null &&
+          resumableTask.pendingPromptText != null &&
+          resumableTask.pendingOptions.isNotEmpty) {
+        _tcmInterviewController = TcmInterviewConversationController.restore(
+          resumableTask,
+          defaultGender: SettingsRepository.instance.defaultGender,
+        );
+        var promptIndex = -1;
+        for (var index = restoredMessages.length - 1; index >= 0; index--) {
+          final message = restoredMessages[index];
+          if (!message.isUser &&
+              message.text == resumableTask.pendingPromptText) {
+            promptIndex = index;
+            break;
+          }
+        }
+        final prompt = _InterviewMessage(
+          text: resumableTask.pendingPromptText!,
+          isUser: false,
+          options: resumableTask.pendingOptions,
+          onOptionSelected: _handleTcmInterviewOption,
+        );
+        if (promptIndex >= 0) {
+          restoredMessages[promptIndex] = prompt;
+        } else {
+          restoredMessages.add(prompt);
+          transcriptLines.add('助手：${resumableTask.pendingPromptText}');
+        }
+      }
     }
     if (restoredMessages.isEmpty) return;
 
