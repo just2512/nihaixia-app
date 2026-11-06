@@ -1158,6 +1158,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _startInlineTcmInterview(initialUserMessage: '继续规则辨证');
       return;
     }
+    if (arguments != null) {
+      final errors = arguments.validateAgainst(tool);
+      if (errors.isNotEmpty) {
+        if (mounted) {
+          setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
+        }
+        return;
+      }
+    }
     _pendingToolSelection = false;
     final result = await Navigator.push<Object?>(
       context,
@@ -1169,11 +1178,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ),
     );
     if (!mounted) return;
-    final resultText = switch (result) {
-      AssistantToolResult typed => typed.toConversationText(),
-      String legacy when legacy.trim().isNotEmpty => legacy.trim(),
-      _ => '',
+    if (result is AssistantToolResult) {
+      final errors = result.validateFor(tool.id);
+      if (errors.isNotEmpty) {
+        setState(() => _error = '工具返回结果未通过契约校验：${errors.join('；')}');
+        return;
+      }
+    }
+    final normalizedResult = switch (result) {
+      AssistantToolResult typed => typed,
+      String legacy when legacy.trim().isNotEmpty => AssistantToolResult(
+          toolId: tool.id,
+          title: tool.title,
+          values: {'结果': legacy.trim()},
+        ),
+      _ => null,
     };
+    final resultText = normalizedResult?.toConversationText() ?? '';
     final response = resultText.isNotEmpty
         ? '【${tool.title}返回内容】\\n$resultText'
         : '已打开「${tool.title}」。完成计算后回到本对话，把工具页面的结果发给我，我会基于结果继续解释。';
@@ -1266,7 +1287,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
           ),
           PopupMenuButton<AssistantToolDefinition>(
-            tooltip: '调用 App 工具',
+            tooltip: '打开当前角色可用的功能入口',
             enabled: !busy && tools.isNotEmpty,
             onSelected: (tool) => _requestTool('打开${tool.title}', tool),
             itemBuilder: (context) => [
@@ -1286,7 +1307,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 children: const [
                   Icon(Icons.apps_outlined, size: 18),
                   SizedBox(width: AppSpacing.xs),
-                  Text('工具', style: TextStyle(fontSize: AppType.caption)),
+                  Text('入口', style: TextStyle(fontSize: AppType.caption)),
                   Icon(Icons.expand_more, size: 17),
                 ],
               ),
