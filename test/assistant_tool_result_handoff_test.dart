@@ -172,7 +172,7 @@ void main() {
     await tester.tap(find.text('将本次推算结果带回助手对话'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('【五运六气推算返回内容】'), findsOneWidget);
+    expect(find.textContaining('【五运六气推算执行结果】'), findsOneWidget);
     expect(service.restoredTranscript, contains('司天：'));
     expect(service.restoredTranscript, contains('在泉：'));
     expect(service.restoredUserMessages, contains('帮我推算五运六气'));
