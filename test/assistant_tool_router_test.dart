@@ -14,6 +14,12 @@ void main() {
     );
   });
 
+  test('旧结构化辨证页面入口必须 fail closed，问诊只能在统一对话内继续', () {
+    final tool = AssistantToolRouter.byId('structured_diagnosis');
+    expect(tool, isNotNull);
+    expect(() => tool!.builder(), throwsA(isA<StateError>()));
+  });
+
   test('工具模式按明确动作路由五运六气和剂量换算', () {
     expect(
       AssistantToolRouter.match('帮我推算五运六气', AssistantMode.tools)?.id,
