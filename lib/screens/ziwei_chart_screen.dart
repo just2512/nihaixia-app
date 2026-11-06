@@ -309,7 +309,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           ),
         ],
       ),
-      body: ListView(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isExpanded = constraints.maxWidth >= 700;
+          return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // 民俗参考声明
@@ -340,7 +343,18 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildInputCard(cs),
+          if (isExpanded && _chart != null && !_calculating)
+            Row(
+              key: const ValueKey('ziwei-expanded-input-summary'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildInputCard(cs)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildSummaryCard(cs, _chart!)),
+              ],
+            )
+          else
+            _buildInputCard(cs),
           const SizedBox(height: 12),
           if (_calculating)
             const Center(
@@ -355,7 +369,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               child: Text(_error!, style: TextStyle(color: cs.error)),
             ),
           if (_chart != null && !_calculating) ...[
-            _buildSummaryCard(cs, _chart!),
+            if (!isExpanded) _buildSummaryCard(cs, _chart!),
             const SizedBox(height: 12),
             // 添加到命盘库（Material 图标，无 emoji）
             SizedBox(
@@ -381,6 +395,8 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             _buildInterpretationSection(cs, _chart!),
           ],
         ],
+      );
+        },
       ),
     );
   }
