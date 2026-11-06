@@ -716,7 +716,14 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('你整体的寒热感觉'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            (widget.data ?? '').contains('你整体的寒热感觉'),
+      ),
+      findsOneWidget,
+    );
     expect(service.sentTexts, isEmpty);
     var state = await _store.getTcmInterviewTaskState(conversationId: 1);
     expect(state, isNotNull);
@@ -1377,25 +1384,41 @@ void main() {
       await tester.tap(find.text('继续规则辨证'));
       await tester.pumpAndSettle();
 
-      // 当前产品流程将已确认自述带入结构化辨证页面；自由文本只作上下文，
-      // 不自动转换为辨证选项。
-      expect(find.text('结构化辨证问诊'), findsOneWidget);
+      // 已确认自述直接进入当前消息时间线；自由文本只作上下文，
+      // 不会被模型或控制器自动转换为规则答案。
+      expect(find.byType(LocalAiInterviewScreen), findsOneWidget);
       expect(
-        find.textContaining('主要不适：饭后腹胀'),
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              (widget.data ?? '').contains('主要不适：饭后腹胀'),
+        ),
         findsOneWidget,
       );
-      expect(find.textContaining('不自动映射为辨证选项'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              (widget.data ?? '').contains('未自动转换为规则答案'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SelectableText &&
+              (widget.data ?? '').contains('你整体的寒热感觉'),
+        ),
+        findsOneWidget,
+      );
 
-      Navigator.of(tester.element(find.text('结构化辨证问诊')))
-          .pop('主要不适：饭后腹胀\n持续时间：约两周');
+      var taskState = await _store.getTcmInterviewTaskState(conversationId: 1);
+      expect(taskState, isNotNull);
+      expect(taskState!.pendingPromptId, 'temperature');
+      await tester.tap(find.text(taskState.pendingOptions.first).last);
       await tester.pumpAndSettle();
-
-      // 规则问诊结果回到统一 AI 会话时间线，不关闭会话或丢失历史。
-      expect(
-        find.textContaining('【结构化辨证问诊记录】'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('主要不适：饭后腹胀'), findsOneWidget);
+      taskState = await _store.getTcmInterviewTaskState(conversationId: 1);
+      expect(taskState!.pendingPromptId, 'tongue_pulse');
     },
   );
 
