@@ -4,7 +4,7 @@
 
 - Fork：`just2512/nihaixia-app:master`
 - Upstream：`jangviktor-web/nihaixia-app:master`
-- Compare：Fork ahead **824** commits，behind **29** commits，状态 `diverged`。
+- Compare：Fork ahead **835** commits，behind **29** commits，状态 `diverged`。
 - merge-base：`c0f14e77a7fb721fc332576d21fef5f100392d0b`。
 - 当前 compare 返回 207 个差异文件；路径重叠不等于文本冲突，也不代表可以直接合并。
 - 本记录基于 2026-11-06 读取的 upstream 29 commits；后续 upstream 新提交需重新审计。
@@ -111,4 +111,4 @@ upstream commit `1ac79321` 新增/修改的是 `assets/shanghan/clause_380.md`�
 
 Fork 新增 `AssistantToolParameter`、`AssistantToolArguments` 和工具定义参数 schema。五运六气支持从用户消息中抽取 ISO 日期（YYYY-MM-DD），经调度决策、工具请求和页面构造一路传入 `YunQiScreen.initialDate`；未提供日期时仍使用当前日期。新增调度参数测试和统一对话到五运六气页面的 widget 回归测试。
 
-该实现只覆盖五运六气日期参数，不代表 23 个工具已经具备统一参数协议。当前 CI 仍在运行，最终验证以最新 HEAD 的 Flutter Quality Gate 与 Flutter tests 为准。
+该实现只覆盖五运六气日期参数，不代表 23 个工具已经具备统一参数协议。当前代码提交已进入 CI；截至本次审计最新 HEAD 为 `d7753e0d7b2b05c5da0b2748cb75ffd89ac9ca62`，后续 Find N2 与来源 manifest 测试还在继续推进，最终验证以更晚 HEAD 的 Flutter Quality Gate 与 Flutter tests 为准。
