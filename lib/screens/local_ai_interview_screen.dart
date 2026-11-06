@@ -896,6 +896,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _openTool(AssistantToolDefinition tool, {required AssistantMode mode}) async {
+    _pendingToolSelection = false;
     final result = await Navigator.push<String>(
       context,
       FoldAwareMaterialPageRoute(
@@ -2033,6 +2034,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _resumeStructuredDiagnosis(TcmInterviewTaskState taskState) async {
     if (_structuredDiagnosisBusy) return;
+    _pendingToolSelection = false;
     setState(() => _structuredDiagnosisBusy = true);
     String? result;
     try {
