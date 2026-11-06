@@ -2314,7 +2314,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     )
                   : const Icon(Icons.fact_check_outlined),
               label: Text(
-                _structuredDiagnosisBusy ? '正在打开…' : '继续规则辨证',
+                _structuredDiagnosisBusy ? '正在准备问诊…' : '在当前对话继续规则辨证',
               ),
             ),
           ),
@@ -2533,12 +2533,16 @@ class _InterviewMessage {
   final bool isUser;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final List<String> options;
+  final ValueChanged<String>? onOptionSelected;
 
   const _InterviewMessage({
     required this.text,
     required this.isUser,
     this.actionLabel,
     this.onAction,
+    this.options = const [],
+    this.onOptionSelected,
   });
 }
 
@@ -2583,6 +2587,19 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
+                if (message.options.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: message.options.map((option) => ActionChip(
+                      label: Text(option),
+                      onPressed: message.onOptionSelected == null
+                          ? null
+                          : () => message.onOptionSelected!(option),
+                    )).toList(),
+                  ),
+                ],
                 if (message.actionLabel != null && message.onAction != null) ...[
                   const SizedBox(height: AppSpacing.sm),
                   OutlinedButton.icon(
