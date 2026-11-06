@@ -112,6 +112,23 @@ class _MemoryConversationStore implements AssistantConversationStore {
 
 _MemoryConversationStore _store = _MemoryConversationStore();
 
+Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
+  WidgetTester tester, {
+  int conversationId = 1,
+}) async {
+  // WidgetTester.pumpAndSettle only waits for scheduled frames; the screen's
+  // SQLite persistence future may still be completing after the last frame.
+  // Advance bounded frames and poll the store rather than racing that write.
+  for (var attempt = 0; attempt < 20; attempt++) {
+    final state = await _store.getTcmInterviewTaskState(
+      conversationId: conversationId,
+    );
+    if (state != null) return state;
+    await tester.pump(const Duration(milliseconds: 10));
+  }
+  return _store.getTcmInterviewTaskState(conversationId: conversationId);
+}
+
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
   _FailOnceStopRecorder({this.failFirstStop = true});
 
@@ -716,8 +733,9 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    final state = (await _store.getTcmInterviewTaskState(conversationId: 1))!;
-    expect(state.status, 'in_progress');
+    final state = await _waitForTcmInterviewTaskState(tester);
+    expect(state, isNotNull, reason: '规则问诊启动后必须持久化任务快照');
+    expect(state!.status, 'in_progress');
     expect(state.pendingPromptId, 'temperature');
     expect(state.pendingPromptText, contains('寒热感觉'));
     expect(
@@ -731,9 +749,9 @@ void main() {
     await tester.tap(find.text(state.pendingOptions.first).last);
     await tester.pumpAndSettle();
 
-    final afterTemperature =
-        (await _store.getTcmInterviewTaskState(conversationId: 1))!;
-    expect(afterTemperature.pendingPromptId, 'tongue_pulse');
+    final afterTemperature = await _waitForTcmInterviewTaskState(tester);
+    expect(afterTemperature, isNotNull, reason: '寒热答案提交后必须持久化任务快照');
+    expect(afterTemperature!.pendingPromptId, 'tongue_pulse');
     expect(afterTemperature.pendingPromptText, contains('舌象和脉象'));
 
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
@@ -741,9 +759,9 @@ void main() {
     await tester.tap(find.text('跳过，直接问诊').last);
     await tester.pumpAndSettle();
 
-    final afterSkip =
-        (await _store.getTcmInterviewTaskState(conversationId: 1))!;
-    expect(afterSkip.pendingPromptId, startsWith('ten:'));
+    final afterSkip = await _waitForTcmInterviewTaskState(tester);
+    expect(afterSkip, isNotNull, reason: '跳过舌脉后必须持久化问诊进度');
+    expect(afterSkip!.pendingPromptId, startsWith('ten:'));
     expect(service.sentTexts, isEmpty);
     expect(tester.takeException(), isNull);
   });
@@ -1389,9 +1407,9 @@ void main() {
       // 已确认自述直接进入当前消息时间线；自由文本只作上下文，
       // 不会被模型或控制器自动转换为规则答案。
       expect(find.byType(LocalAiInterviewScreen), findsOneWidget);
-      final taskState =
-          (await _store.getTcmInterviewTaskState(conversationId: 1))!;
-      expect(taskState.pendingPromptId, 'temperature');
+      final taskState = await _waitForTcmInterviewTaskState(tester);
+      expect(taskState, isNotNull, reason: '确认症状后启动规则问诊必须持久化任务');
+      expect(taskState!.pendingPromptId, 'temperature');
       expect(taskState.pendingPromptText, contains('寒热感觉'));
       expect(
         taskState.transcript.any(
