@@ -431,50 +431,66 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _Dropdown(
-                    label: '年',
-                    value: _year,
-                    items: [
-                      for (int y = 1920; y <= DateTime.now().year; y++)
-                        DropdownMenuItem(value: y, child: Text('$y')),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final yearField = _Dropdown(
+                  key: const ValueKey('bazi-year-field'),
+                  label: '年',
+                  value: _year,
+                  items: [
+                    for (int y = 1920; y <= DateTime.now().year; y++)
+                      DropdownMenuItem(value: y, child: Text('$y')),
+                  ],
+                  onChanged: (v) => setState(() {
+                    _year = v!;
+                    _clampDay();
+                  }),
+                );
+                final monthField = _Dropdown(
+                  key: const ValueKey('bazi-month-field'),
+                  label: '月',
+                  value: _month,
+                  items: [
+                    for (int m = 1; m <= 12; m++)
+                      DropdownMenuItem(value: m, child: Text('$m')),
+                  ],
+                  onChanged: (v) => setState(() {
+                    _month = v!;
+                    _clampDay();
+                  }),
+                );
+                final dayField = _Dropdown(
+                  key: const ValueKey('bazi-day-field'),
+                  label: '日',
+                  value: _day,
+                  items: [
+                    for (int d = 1; d <= _daysInMonth(_year, _month); d++)
+                      DropdownMenuItem(value: d, child: Text('$d')),
+                  ],
+                  onChanged: (v) => setState(() => _day = v!),
+                );
+                if (constraints.maxWidth < 420) {
+                  final fieldWidth = (constraints.maxWidth - 8) / 2;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      SizedBox(width: fieldWidth, child: yearField),
+                      SizedBox(width: fieldWidth, child: monthField),
+                      SizedBox(width: fieldWidth, child: dayField),
                     ],
-                    onChanged: (v) => setState(() {
-                      _year = v!;
-                      _clampDay();
-                    }),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _Dropdown(
-                    label: '月',
-                    value: _month,
-                    items: [
-                      for (int m = 1; m <= 12; m++)
-                        DropdownMenuItem(value: m, child: Text('$m')),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _month = v!;
-                      _clampDay();
-                    }),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _Dropdown(
-                    label: '日',
-                    value: _day,
-                    items: [
-                      for (int d = 1; d <= _daysInMonth(_year, _month); d++)
-                        DropdownMenuItem(value: d, child: Text('$d')),
-                    ],
-                    onChanged: (v) => setState(() => _day = v!),
-                  ),
-                ),
-              ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: yearField),
+                    const SizedBox(width: 8),
+                    Expanded(child: monthField),
+                    const SizedBox(width: 8),
+                    Expanded(child: dayField),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             Row(
