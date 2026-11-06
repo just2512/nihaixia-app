@@ -214,7 +214,7 @@ void main() {
 
     test('单独滑脉或浮脉不得触发小陷胸汤', () {
       for (final pulse in ['滑', '浮']) {
-        final result = engineFor(symptoms: const [], pulse: pulse).diagnose();
+        final result = engineFor(symptoms: const ['头痛'], pulse: pulse).diagnose();
         expect(result?.formula, isNot('小陷胸汤'), reason: '仅有$pulse脉而无胸痛证据');
       }
     });
