@@ -2,6 +2,7 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
@@ -21,6 +22,12 @@ class _ReadyLocalAiService extends LocalAiService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
   testWidgets('AI interview content is full-width on compact windows', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
