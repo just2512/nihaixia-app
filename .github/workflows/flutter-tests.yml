@@ -11,8 +11,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: flutter-tests-v3-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: flutter-tests-v4-${{ github.ref }}
+  # A newer commit on the same branch supersedes an older in-flight CI run.
+  cancel-in-progress: true
 
 jobs:
   branch-validation:
