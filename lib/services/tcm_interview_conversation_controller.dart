@@ -83,11 +83,14 @@ class TcmInterviewConversationController {
 
   /// Starts the deterministic question flow. Free-text context is preserved
   /// as a user message only; it is never silently converted into engine keys.
-  void start({String? userContext}) {
+  void start({String? initialUserMessage, String? userContext}) {
     if (_messages.isNotEmpty || _pendingPromptId != null) {
       throw StateError('问诊任务已经启动');
     }
     _appendAssistant(_adapter.initialGreeting);
+    if (initialUserMessage != null && initialUserMessage.trim().isNotEmpty) {
+      _appendUser(initialUserMessage.trim());
+    }
     if (userContext != null && userContext.trim().isNotEmpty) {
       _appendUser('已确认的症状自述（仅作上下文，未自动转换为规则答案）：\n${userContext.trim()}');
     }
