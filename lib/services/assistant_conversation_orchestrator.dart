@@ -60,8 +60,8 @@ class AssistantConversationOrchestrator {
     '概念',
     '理论',
     '原理',
-    '历史',
-    '背景',
+    '历史背景',
+    '发展史',
     '沿革',
     '组成',
     '功效',
@@ -138,7 +138,7 @@ class AssistantConversationOrchestrator {
       }
       if (!_learningCues.any(text.contains)) {
         if (selectedMode == AssistantMode.metaphysics &&
-            (text.contains('排盘') || text.contains('起卦') || text.contains('起课'))) {
+            (text.contains('排盘') || text.contains('排个盘') || text.contains('排一个盘') || text.contains('起卦') || text.contains('起课'))) {
           return AssistantDispatchDecision(
             mode: selectedMode,
             clarification: text.contains('排盘')
