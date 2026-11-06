@@ -35,6 +35,17 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('工具澄清后补充的日期仍进入五运六气 typed arguments', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '五运六气 2026-11-06',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+        pendingToolSelection: true,
+      );
+      expect(decision.tool?.id, 'yunqi');
+      expect(decision.toolArguments?['date'], '2026-11-06');
+    });
+
     test('玄学工具澄清后的原理问题仍进入学习，不启动计算器', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '五运六气推算原理',
