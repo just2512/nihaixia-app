@@ -21,6 +21,12 @@ class AssistantToolResult {
   /// Empty means the tool did not provide a source identifier (MISSING).
   final List<String> sourceIds;
 
+  String get statusLabel => switch (status) {
+        AssistantToolExecutionStatus.succeeded => 'SUCCEEDED',
+        AssistantToolExecutionStatus.noResult => 'NO_RESULT',
+        AssistantToolExecutionStatus.failed => 'FAILED',
+      };
+
   List<String> validateFor(String expectedToolId) {
     final errors = <String>[];
     if (toolId != expectedToolId) {
@@ -39,7 +45,7 @@ class AssistantToolResult {
   String toConversationText() {
     final lines = <String>[
       '工具：$title',
-      '执行状态：' + status.name.toUpperCase(),
+      '执行状态：' + statusLabel,
       for (final entry in values.entries)
         '${entry.key}：${entry.value.isEmpty ? 'MISSING' : entry.value}',
       '来源标识：${sourceIds.isEmpty ? 'MISSING' : sourceIds.join('、')}',
