@@ -321,7 +321,7 @@ void main() {
 
     test('同一请求明确调用两个工具时必须澄清，不得静默只执行第一个', () {
       final decision = AssistantConversationOrchestrator.resolve(
-        query: '帮我推算五运六气，再排一个八字',
+        query: '帮我推算五运六气，再帮我排八字',
         selectedMode: AssistantMode.automatic,
       );
       expect(decision.tool, isNull);
