@@ -99,3 +99,20 @@ void main() {
   });
 
 }
+
+  test('经典检索不得把本地讲稿或未校勘文本伪装成已核验原文', () async {
+    final lecture = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
+    expect(lecture, contains('资料类型：倪师讲稿/整理讲义'));
+    expect(lecture, contains('版本/底本/卷页：MISSING'));
+    expect(lecture, contains('不得当作仲景原文'));
+    expect(lecture, isNot(contains('已完成校勘')));
+  });
+
+  test('医案关联上下文不得把内部序号升级为原始出处', () async {
+    final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
+    expect(cases, contains('内部序号'));
+    expect(cases, contains('来源定位：MISSING'));
+    expect(cases, contains('内部序号不是原始病例页码或稳定来源 ID'));
+    expect(cases, contains('不代表已核验病例原文或疗效证据'));
+  });
+
