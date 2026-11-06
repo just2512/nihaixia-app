@@ -7,13 +7,14 @@
 ## 当前分歧基线
 
 - 共同祖先：`c0f14e77a7fb721fc332576d21fef5f100392d0b`
-- 本 Fork 当前 HEAD：`c83993b17749f3380b7164882a88b86175a63fca`
+- 本 Fork 当前 HEAD：`789` commits ahead 的快照对应提交待以 GitHub 当前 HEAD 实时读取；本次审计提交为 `ea85c812de2f94778aaba64431abb2493aed78fe`
 - 上游当前 HEAD：`e29610fd9be0494d51ffb27e61d3ea0b32b24002`
-- 当前分支关系：Fork ahead 781 / behind 29（2026-11-06 GitHub compare 快照）
-- 本 Fork 相对共同祖先修改文件：201 个（compare 文件清单）
-- 上游相对共同祖先修改文件：至少 300 个；GitHub compare 文件清单达到接口返回上限，不能据此宣称已穷举
-- 本次 compare 返回清单中可确认的共同修改路径：`.github/workflows/gitee-sync.yml`、`.gitignore`、`README.md`
-- 先前快照记录的 16 条重叠路径属于旧上游快照，不应继续当作当前完整冲突清单
+- 当前分支关系：Fork ahead 789 / behind 29（本轮 GitHub compare）
+- 本 Fork 相对共同祖先修改文件：201 个（compare 返回完整 201 项）
+- 上游落后于 Fork 的 29 个提交已逐个读取提交元数据；部分大提交的 GitHub commit 文件清单返回 300 项上限，不能宣称上游所有变更路径已穷举
+- 已确认的同路径改动至少包括：`.github/workflows/gitee-sync.yml`、`.gitignore`、`README.md`、`pubspec.yaml`、`pubspec.lock`、`lib/data/herb_repository.dart`、`lib/engine/diagnostic_engine.dart`、`lib/screens/shanghan_jingui_screen.dart`、`lib/screens/formula_detail_screen.dart`、`lib/screens/herb_detail_screen.dart`、`lib/screens/markdown_doc_screen.dart`、`lib/screens/settings_screen.dart`、`lib/screens/classic_library_screen.dart`、`lib/services/native_files_io.dart`
+- 上述路径是**同路径两侧均有改动**的确认清单，不等于每一项都已发生 Git 文本冲突；尤其 `diagnostic_engine.dart`、知识/经典页面、依赖配置需逐项三方审查
+- 上游 29 个提交涉及本草讲稿库、金匮讲稿与撤回、方剂经典索引、伤寒条文内容/编号/排版、繁简转换、Release/README、Gitee 工作流等。它们不是可以整批合入的单纯修复提交
 
 **冲突结论：** 当前已确认 Fork 与上游分歧；仅凭 compare 文件列表不能证明所有潜在冲突路径已经穷举，也不能把同路径修改等同于 Git 已确认的文本冲突。`diagnostic_engine.dart`、`medical_case_data.dart`、`pubspec.yaml` 等核心文件仍须在任何候选移植前做逐文件三方差异检查。当前没有执行合并模拟，也没有合并上游。
 
