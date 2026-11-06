@@ -381,6 +381,26 @@ class DiagnosticEngine {
     final shaoyangScore = _shaoyangEvidenceScore;
     final sunScore = _sunEvidenceScore;
     final taiyinScore = _taiyinEvidenceScore;
+    final floatingLargePulse =
+        (_pulseType == '浮' && _pulseTypeSecondary == '大') ||
+        (_pulseType == '大' && _pulseTypeSecondary == '浮');
+    final threeYangSleepCandidate =
+        primary == '太阳' &&
+        yangmingScore >= 2 &&
+        shaoyangScore >= 2 &&
+        _answers['drowsy'] == true &&
+        _answers['has_sweat'] == true;
+    if (threeYangSleepCandidate &&
+        floatingLargePulse &&
+        _answers['three_yang_pulse_position_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'three_yang_pulse_position',
+          question: '【核对第268条】是否已由专业人员确认脉浮大、上关上？',
+          options: ['已由专业人员确认', '未确认', '不清楚'],
+        ),
+      ];
+    }
 
     final sunYangmingChestCandidate =
         primary == '太阳' &&
@@ -492,26 +512,6 @@ class DiagnosticEngine {
     final slipperyRapidPulse =
         (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
         (_pulseType == '数' && _pulseTypeSecondary == '滑');
-    final floatingLargePulse =
-        (_pulseType == '浮' && _pulseTypeSecondary == '大') ||
-        (_pulseType == '大' && _pulseTypeSecondary == '浮');
-    final threeYangSleepCandidate =
-        primary == '太阳' &&
-        yangmingScore >= 2 &&
-        shaoyangScore >= 2 &&
-        _answers['drowsy'] == true &&
-        _answers['has_sweat'] == true;
-    if (threeYangSleepCandidate &&
-        floatingLargePulse &&
-        _answers['three_yang_pulse_position_answered'] != true) {
-      return const [
-        FollowUpQuestion(
-          key: 'three_yang_pulse_position',
-          question: '【核对第268条】是否已由专业人员确认脉浮大、上关上？',
-          options: ['已由专业人员确认', '未确认', '不清楚'],
-        ),
-      ];
-    }
     if (primary == '少阳' &&
         yangmingScore >= 3 &&
         diarrhea &&
