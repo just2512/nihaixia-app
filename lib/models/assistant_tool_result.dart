@@ -20,6 +20,6 @@ class AssistantToolResult {
       if (disclaimer != null && disclaimer!.trim().isNotEmpty)
         '说明：${disclaimer!.trim()}',
     ];
-    return lines.join('\\n');
+    return lines.join('\n');
   }
 }
