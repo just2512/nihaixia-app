@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 
@@ -69,3 +70,15 @@ void main() {
     );
   });
 }
+
+  test('注册表中的所有可独立打开工具都能构造真实页面组件', () {
+    for (final tool in AssistantToolRouter.all) {
+      if (tool.id == 'structured_diagnosis') {
+        // 规则问诊必须由统一会话控制器托管，禁止退回独立旧页面。
+        expect(() => tool.builder(), throwsA(isA<StateError>()), reason: tool.id);
+        continue;
+      }
+      expect(tool.builder(), isA<Widget>(), reason: tool.id);
+    }
+  });
+
