@@ -196,18 +196,6 @@ void main() {
       expect(r.recommendedFormulas, ['蛇床子散']);
     });
   });
-}
-
-/// 按 1-based 选项号扁平作答（与 chat_screen 的十问→规则桥接同源）。
-DiagnosticEngine _cast(Map<String, int> q, {Set<String> ext = const {}}) {
-  final engine = DiagnosticEngine();
-  q.forEach((key, opt) {
-    engine.answerFlatQuestion(key, opt - 1, qOptions[key]![opt - 1]);
-  });
-  for (final s in ext) {
-    engine.toggleExtSymptom(s, true);
-  }
-  return engine;
   group('旧杂病兜底的胸痹脉象门槛', () {
     DiagnosticEngine engineFor({
       required List<String> symptoms,
@@ -241,5 +229,18 @@ DiagnosticEngine _cast(Map<String, int> q, {Set<String> ext = const {}}) {
       }
     });
   });
+}
+
+/// 按 1-based 选项号扁平作答（与 chat_screen 的十问→规则桥接同源）。
+DiagnosticEngine _cast(Map<String, int> q, {Set<String> ext = const {}}) {
+  final engine = DiagnosticEngine();
+  q.forEach((key, opt) {
+    engine.answerFlatQuestion(key, opt - 1, qOptions[key]![opt - 1]);
+  });
+  for (final s in ext) {
+    engine.toggleExtSymptom(s, true);
+  }
+  return engine;
+
 
 }
