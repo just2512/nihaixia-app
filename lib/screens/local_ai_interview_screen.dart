@@ -16,6 +16,7 @@ import 'assistant_tool_router.dart';
 import 'chat_screen.dart';
 import '../data/database_helper.dart';
 import '../data/assistant_conversation_store.dart';
+import '../models/tcm_interview_task_state.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -162,6 +163,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _modelControlBusy = false;
   bool _structuredDiagnosisBusy = false;
   late Future<int?> _conversationIdFuture;
+  Future<void> _taskStateWrite = Future<void>.value();
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
   AssistantMode _assistantMode = AssistantMode.automatic;
@@ -766,6 +768,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _persistTcmInterviewTaskState(
+    TcmInterviewTaskState state,
+  ) {
+    _taskStateWrite = _taskStateWrite.catchError((Object error) {
+      debugPrint('[TcmInterviewTask] 上一次状态保存失败，继续后续写入：$error');
+    }).then((_) async {
+      final id = await _conversationIdFuture;
+      if (id == null) return;
+      await _conversationStore.saveTcmInterviewTaskState(
+        conversationId: id,
+        state: state,
+      );
+    });
+    return _taskStateWrite;
+  }
+
   Future<void> _persistSuccessfulTurn({
     required String userText,
     required String assistantText,
@@ -1018,6 +1036,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final rows = await _conversationStore.getAssistantMessages(
       conversationId: selectedId,
     );
+    TcmInterviewTaskState? taskState;
+    try {
+      taskState = await _conversationStore.getTcmInterviewTaskState(
+        conversationId: selectedId,
+      );
+    } catch (error, stack) {
+      debugPrint('[AssistantHistory] 结构化问诊状态读取失败：$error\n$stack');
+    }
     final transcriptLines = <String>[];
     final replayableUserMessages = <String>[];
     final restoredMessages = <_InterviewMessage>[];
@@ -1072,6 +1098,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           attachmentNote > 0 ? content.substring(0, attachmentNote) : content,
         );
       }
+    }
+    if (taskState?.status == 'active' && taskState?.pendingPromptId != null) {
+      final resumableTask = taskState!;
+      restoredMessages.add(_InterviewMessage(
+        text: '这段对话中有一项尚未完成的结构化辨证问诊。可以从上次的问题继续，不需要重新回答已完成的项目。',
+        isUser: false,
+        actionLabel: '继续结构化问诊',
+        onAction: () => _resumeStructuredDiagnosis(resumableTask),
+      ));
     }
     if (restoredMessages.isEmpty) return;
 
@@ -1952,6 +1987,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           builder: (_) => ChatScreen(
             returnResultOnComplete: true,
             initialUserContext: draft.summaryLines.join('\n'),
+            onTaskStateChanged: _persistTcmInterviewTaskState,
           ),
         ),
       );
@@ -1964,6 +2000,39 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     setState(() {
       _messages.add(_InterviewMessage(text: transcript, isUser: false));
       _confirmedDraft = null;
+      _error = null;
+    });
+    await _persistSuccessfulTurn(
+      userText: '',
+      assistantText: transcript,
+      mode: AssistantMode.consultation,
+    );
+    _scrollToBottom();
+  }
+
+  Future<void> _resumeStructuredDiagnosis(TcmInterviewTaskState taskState) async {
+    if (_structuredDiagnosisBusy) return;
+    setState(() => _structuredDiagnosisBusy = true);
+    String? result;
+    try {
+      result = await Navigator.push<String>(
+        context,
+        FoldAwareMaterialPageRoute(
+          sourceContext: context,
+          builder: (_) => ChatScreen(
+            returnResultOnComplete: true,
+            initialTaskState: taskState,
+            onTaskStateChanged: _persistTcmInterviewTaskState,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _structuredDiagnosisBusy = false);
+    }
+    if (!mounted || result == null || result.trim().isEmpty) return;
+    final transcript = '【结构化辨证问诊记录】\n${result.trim()}';
+    setState(() {
+      _messages.add(_InterviewMessage(text: transcript, isUser: false));
       _error = null;
     });
     await _persistSuccessfulTurn(
