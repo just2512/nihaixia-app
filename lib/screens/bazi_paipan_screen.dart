@@ -381,10 +381,14 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
   /// Foldable layout: keep the birth form readable on the wide inner display,
   /// while allowing the outer display to use its full available width.
   Widget _narrowContent(Widget child) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: SizedBox(width: double.infinity, child: child),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: compact ? 2 : 0),
+          child: SizedBox(width: double.infinity, child: child),
+        ),
       ),
     );
   }
