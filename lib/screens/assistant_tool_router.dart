@@ -79,24 +79,50 @@ class AssistantToolArguments {
   List<String> validateAgainst(AssistantToolDefinition tool) {
     final errors = <String>[];
     if (toolId != tool.id) {
-      errors.add('工具标识不匹配：$toolId != ${tool.id}');
+      errors.add('工具标识不匹配：' + toolId + ' != ' + tool.id);
       return List.unmodifiable(errors);
     }
     final declared = {for (final parameter in tool.parameters) parameter.key};
     for (final key in values.keys) {
-      if (!declared.contains(key)) errors.add('未声明的参数：$key');
+      if (!declared.contains(key)) errors.add('未声明的参数：' + key);
     }
     for (final parameter in tool.parameters) {
       final raw = values[parameter.key]?.trim();
       if (raw == null || raw.isEmpty) {
-        if (parameter.isRequired) errors.add('缺少必填参数：${parameter.label}');
+        if (parameter.isRequired) {
+          errors.add('缺少必填参数：' + parameter.label);
+        }
         continue;
       }
       switch (parameter.type) {
         case AssistantToolParameterType.date:
           final parsed = DateTime.tryParse(raw);
-          if (parsed == null ||
-              !RegExp(r'^\d{4}-\d{2}-\d{2}
+          final normalized = parsed == null
+              ? ''
+              : parsed.year.toString().padLeft(4, '0') + '-' +
+                  parsed.month.toString().padLeft(2, '0') + '-' +
+                  parsed.day.toString().padLeft(2, '0');
+          if (normalized != raw) {
+            errors.add('参数「' + parameter.label + '」必须是有效日期 YYYY-MM-DD');
+          }
+          break;
+        case AssistantToolParameterType.integer:
+          if (int.tryParse(raw) == null) {
+            errors.add('参数「' + parameter.label + '」必须是整数');
+          }
+          break;
+        case AssistantToolParameterType.choice:
+          if (!parameter.choices.contains(raw)) {
+            errors.add('参数「' + parameter.label + '」不在允许选项内');
+          }
+          break;
+        case AssistantToolParameterType.text:
+          break;
+      }
+    }
+    return List.unmodifiable(errors);
+  }
+}
 
 class AssistantToolDefinition {
   final String id;
