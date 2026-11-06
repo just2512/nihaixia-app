@@ -746,18 +746,19 @@ void main() {
       expectedPendingPromptId: 'temperature',
     );
     expect(state, isNotNull, reason: '规则问诊启动后必须持久化任务快照');
-    expect(state!.status, 'in_progress');
-    expect(state.pendingPromptId, 'temperature');
-    expect(state.pendingPromptText, contains('寒热感觉'));
+    final savedState = state!;
+    expect(savedState.status, 'in_progress');
+    expect(savedState.pendingPromptId, 'temperature');
+    expect(savedState.pendingPromptText, contains('寒热感觉'));
     expect(
-      state.transcript.any((message) => message.text.contains('开始规则问诊')),
+      savedState.transcript.any((message) => message.text.contains('开始规则问诊')),
       isTrue,
     );
     expect(service.sentTexts, isEmpty);
 
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(state.pendingOptions.first).last);
+    await tester.tap(find.text(savedState.pendingOptions.first).last);
     await tester.pumpAndSettle();
 
     final afterTemperature = await _waitForTcmInterviewTaskState(
@@ -765,8 +766,9 @@ void main() {
       expectedPendingPromptId: 'tongue_pulse',
     );
     expect(afterTemperature, isNotNull, reason: '寒热答案提交后必须持久化任务快照');
-    expect(afterTemperature!.pendingPromptId, 'tongue_pulse');
-    expect(afterTemperature.pendingPromptText, contains('舌象和脉象'));
+    final savedAfterTemperature = afterTemperature!;
+    expect(savedAfterTemperature.pendingPromptId, 'tongue_pulse');
+    expect(savedAfterTemperature.pendingPromptText, contains('舌象和脉象'));
 
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
@@ -779,7 +781,8 @@ void main() {
       expectedPromptIdStartsWith: true,
     );
     expect(afterSkip, isNotNull, reason: '跳过舌脉后必须持久化问诊进度');
-    expect(afterSkip!.pendingPromptId, startsWith('ten:'));
+    final savedAfterSkip = afterSkip!;
+    expect(savedAfterSkip.pendingPromptId, startsWith('ten:'));
     expect(service.sentTexts, isEmpty);
     expect(tester.takeException(), isNull);
   });
@@ -1430,16 +1433,17 @@ void main() {
         expectedPendingPromptId: 'temperature',
       );
       expect(taskState, isNotNull, reason: '确认症状后启动规则问诊必须持久化任务');
-      expect(taskState!.pendingPromptId, 'temperature');
-      expect(taskState.pendingPromptText, contains('寒热感觉'));
+      final savedTaskState = taskState!;
+      expect(savedTaskState.pendingPromptId, 'temperature');
+      expect(savedTaskState.pendingPromptText, contains('寒热感觉'));
       expect(
-        taskState.transcript.any(
+        savedTaskState.transcript.any(
           (message) => message.text.contains('主要不适：饭后腹胀'),
         ),
         isTrue,
       );
       expect(
-        taskState.transcript.any(
+        savedTaskState.transcript.any(
           (message) => message.text.contains('未自动转换为规则答案'),
         ),
         isTrue,
