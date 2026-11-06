@@ -716,32 +716,34 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
+    final state = (await _store.getTcmInterviewTaskState(conversationId: 1))!;
+    expect(state.status, 'in_progress');
+    expect(state.pendingPromptId, 'temperature');
+    expect(state.pendingPromptText, contains('寒热感觉'));
     expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is SelectableText &&
-            (widget.data ?? '').contains('你整体的寒热感觉'),
-      ),
-      findsOneWidget,
+      state.transcript.any((message) => message.text.contains('开始规则问诊')),
+      isTrue,
     );
     expect(service.sentTexts, isEmpty);
-    var state = await _store.getTcmInterviewTaskState(conversationId: 1);
-    expect(state, isNotNull);
-    expect(state!.status, 'in_progress');
-    expect(state.pendingPromptId, 'temperature');
 
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(state.pendingOptions.first).last);
     await tester.pumpAndSettle();
 
-    state = await _store.getTcmInterviewTaskState(conversationId: 1);
-    expect(state!.pendingPromptId, 'tongue_pulse');
-    expect(find.text('接下来请告诉我你的舌象和脉象（可跳过）：'), findsOneWidget);
+    final afterTemperature =
+        (await _store.getTcmInterviewTaskState(conversationId: 1))!;
+    expect(afterTemperature.pendingPromptId, 'tongue_pulse');
+    expect(afterTemperature.pendingPromptText, contains('舌象和脉象'));
 
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('跳过，直接问诊').last);
     await tester.pumpAndSettle();
 
-    state = await _store.getTcmInterviewTaskState(conversationId: 1);
-    expect(state!.pendingPromptId, startsWith('ten:'));
+    final afterSkip =
+        (await _store.getTcmInterviewTaskState(conversationId: 1))!;
+    expect(afterSkip.pendingPromptId, startsWith('ten:'));
     expect(service.sentTexts, isEmpty);
     expect(tester.takeException(), isNull);
   });
@@ -1387,38 +1389,22 @@ void main() {
       // 已确认自述直接进入当前消息时间线；自由文本只作上下文，
       // 不会被模型或控制器自动转换为规则答案。
       expect(find.byType(LocalAiInterviewScreen), findsOneWidget);
+      final taskState =
+          (await _store.getTcmInterviewTaskState(conversationId: 1))!;
+      expect(taskState.pendingPromptId, 'temperature');
+      expect(taskState.pendingPromptText, contains('寒热感觉'));
       expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText &&
-              (widget.data ?? '').contains('主要不适：饭后腹胀'),
+        taskState.transcript.any(
+          (message) => message.text.contains('主要不适：饭后腹胀'),
         ),
-        findsOneWidget,
+        isTrue,
       );
       expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText &&
-              (widget.data ?? '').contains('未自动转换为规则答案'),
+        taskState.transcript.any(
+          (message) => message.text.contains('未自动转换为规则答案'),
         ),
-        findsOneWidget,
+        isTrue,
       );
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SelectableText &&
-              (widget.data ?? '').contains('你整体的寒热感觉'),
-        ),
-        findsOneWidget,
-      );
-
-      var taskState = await _store.getTcmInterviewTaskState(conversationId: 1);
-      expect(taskState, isNotNull);
-      expect(taskState!.pendingPromptId, 'temperature');
-      await tester.tap(find.text(taskState.pendingOptions.first).last);
-      await tester.pumpAndSettle();
-      taskState = await _store.getTcmInterviewTaskState(conversationId: 1);
-      expect(taskState!.pendingPromptId, 'tongue_pulse');
     },
   );
 
