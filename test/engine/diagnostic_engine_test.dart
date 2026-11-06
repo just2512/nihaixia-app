@@ -208,4 +208,38 @@ DiagnosticEngine _cast(Map<String, int> q, {Set<String> ext = const {}}) {
     engine.toggleExtSymptom(s, true);
   }
   return engine;
+  group('旧杂病兜底的胸痹脉象门槛', () {
+    DiagnosticEngine engineFor({
+      required List<String> symptoms,
+      required String pulse,
+    }) {
+      return DiagnosticEngine()
+        ..restoreSnapshot(EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: symptoms,
+          meridianDirection: '太阳',
+          answers: const {},
+          tenQuestionIndex: 0,
+          pulseType: pulse,
+        ));
+    }
+
+    test('单独滑脉或浮脉不得触发小陷胸汤', () {
+      for (final pulse in ['滑', '浮']) {
+        final result = engineFor(symptoms: const [], pulse: pulse).diagnose();
+        expect(result?.formula, isNot('小陷胸汤'), reason: '仅有$pulse脉而无胸痛证据');
+      }
+    });
+
+    test('胸痛证据与浮脉或滑脉同时存在才可进入小陷胸汤分支', () {
+      for (final pulse in ['滑', '浮']) {
+        final result = engineFor(
+          symptoms: const ['心下按之痛'],
+          pulse: pulse,
+        ).diagnose();
+        expect(result?.formula, '小陷胸汤');
+      }
+    });
+  });
+
 }
