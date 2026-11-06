@@ -1102,7 +1102,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       }
     }
-    if (taskState?.status == 'active' && taskState?.pendingPromptId != null) {
+    if (taskState?.status == 'in_progress' && taskState?.pendingPromptId != null) {
       final resumableTask = taskState!;
       restoredMessages.add(_InterviewMessage(
         text: '这段对话中有一项尚未完成的结构化辨证问诊。可以从上次的问题继续，不需要重新回答已完成的项目。',
