@@ -11,6 +11,7 @@ void main() {
         taskId: 'interview-2026-11-05-001',
         status: 'in_progress',
         pendingPromptId: 'combined_clause172_diarrhea',
+        pendingPromptText: '第172条所述自下利情况是否存在？',
         pendingOptions: const ['明确有自下利', '明确没有下利', '不确定'],
         updatedAt: DateTime.utc(2026, 11, 5, 12, 30),
         snapshot: EngineSnapshot(
@@ -42,6 +43,7 @@ void main() {
       expect(restored.taskId, original.taskId);
       expect(restored.status, 'in_progress');
       expect(restored.pendingPromptId, original.pendingPromptId);
+      expect(restored.pendingPromptText, original.pendingPromptText);
       expect(restored.pendingOptions, original.pendingOptions);
       expect(restored.updatedAt, original.updatedAt);
       expect(restored.snapshot.stage, DiagnosticStage.meridianLocation);
@@ -79,6 +81,13 @@ void main() {
         () => TcmInterviewTaskState.decode(
           '{"schemaVersion":1,"taskId":" ","status":"in_progress",'
           '"snapshot":{},"pendingOptions":[]}',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => TcmInterviewTaskState.decode(
+          '{"schemaVersion":1,"taskId":"task-1","status":"in_progress",'
+          '"pendingPromptText":42,"snapshot":{},"pendingOptions":[]}',
         ),
         throwsFormatException,
       );
