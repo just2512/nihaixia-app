@@ -115,18 +115,26 @@ _MemoryConversationStore _store = _MemoryConversationStore();
 Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
   WidgetTester tester, {
   int conversationId = 1,
+  String? expectedPendingPromptId,
+  bool expectedPromptIdStartsWith = false,
 }) async {
   // WidgetTester.pumpAndSettle only waits for scheduled frames; the screen's
-  // SQLite persistence future may still be completing after the last frame.
-  // Advance bounded frames and poll the store rather than racing that write.
-  for (var attempt = 0; attempt < 20; attempt++) {
-    final state = await _store.getTcmInterviewTaskState(
+  // persistence future may still be completing after the last frame. Poll for
+  // the expected state, not merely a non-null snapshot that may be stale.
+  TcmInterviewTaskState? latest;
+  for (var attempt = 0; attempt < 30; attempt++) {
+    latest = await _store.getTcmInterviewTaskState(
       conversationId: conversationId,
     );
-    if (state != null) return state;
+    final pendingId = latest?.pendingPromptId;
+    final matchesExpected = expectedPendingPromptId == null ||
+        (expectedPromptIdStartsWith
+            ? pendingId?.startsWith(expectedPendingPromptId) == true
+            : pendingId == expectedPendingPromptId);
+    if (latest != null && matchesExpected) return latest;
     await tester.pump(const Duration(milliseconds: 10));
   }
-  return _store.getTcmInterviewTaskState(conversationId: conversationId);
+  return latest;
 }
 
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
@@ -733,7 +741,10 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    final state = await _waitForTcmInterviewTaskState(tester);
+    final state = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'temperature',
+    );
     expect(state, isNotNull, reason: '规则问诊启动后必须持久化任务快照');
     expect(state!.status, 'in_progress');
     expect(state.pendingPromptId, 'temperature');
@@ -749,7 +760,10 @@ void main() {
     await tester.tap(find.text(state.pendingOptions.first).last);
     await tester.pumpAndSettle();
 
-    final afterTemperature = await _waitForTcmInterviewTaskState(tester);
+    final afterTemperature = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'tongue_pulse',
+    );
     expect(afterTemperature, isNotNull, reason: '寒热答案提交后必须持久化任务快照');
     expect(afterTemperature!.pendingPromptId, 'tongue_pulse');
     expect(afterTemperature.pendingPromptText, contains('舌象和脉象'));
@@ -759,7 +773,11 @@ void main() {
     await tester.tap(find.text('跳过，直接问诊').last);
     await tester.pumpAndSettle();
 
-    final afterSkip = await _waitForTcmInterviewTaskState(tester);
+    final afterSkip = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'ten:',
+      expectedPromptIdStartsWith: true,
+    );
     expect(afterSkip, isNotNull, reason: '跳过舌脉后必须持久化问诊进度');
     expect(afterSkip!.pendingPromptId, startsWith('ten:'));
     expect(service.sentTexts, isEmpty);
@@ -1407,7 +1425,10 @@ void main() {
       // 已确认自述直接进入当前消息时间线；自由文本只作上下文，
       // 不会被模型或控制器自动转换为规则答案。
       expect(find.byType(LocalAiInterviewScreen), findsOneWidget);
-      final taskState = await _waitForTcmInterviewTaskState(tester);
+      final taskState = await _waitForTcmInterviewTaskState(
+        tester,
+        expectedPendingPromptId: 'temperature',
+      );
       expect(taskState, isNotNull, reason: '确认症状后启动规则问诊必须持久化任务');
       expect(taskState!.pendingPromptId, 'temperature');
       expect(taskState.pendingPromptText, contains('寒热感觉'));
