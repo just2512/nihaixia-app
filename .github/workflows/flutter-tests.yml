@@ -61,12 +61,12 @@ jobs:
               test/*_test.dart) test_files+=("$file") ;;
             esac
           done <<< "$changed_files"
-          if [[ "$code_changed" == "1" && "\${#test_files[@]}" -eq 0 ]]; then
+          if [[ "$code_changed" == "1" && "${#test_files[@]}" -eq 0 ]]; then
             echo "Production changes require at least one changed regression test." >&2
             exit 1
           fi
-          if [[ "\${#test_files[@]}" -gt 0 ]]; then
-            flutter test --no-pub "\${test_files[@]}"
+          if [[ "${#test_files[@]}" -gt 0 ]]; then
+            flutter test --no-pub "${test_files[@]}"
           else
             echo "Documentation/workflow-only change: no Dart regression test required."
           fi
@@ -182,7 +182,7 @@ jobs:
     name: Android debug APK
     needs: test
     # Preserve the build signal even when the regression job fails.
-    if: always() && needs.test.result != 'cancelled'
+    if: always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request') && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
