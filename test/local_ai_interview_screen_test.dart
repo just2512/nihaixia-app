@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:record/record.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -463,6 +465,20 @@ class _UnexpectedStatusFailureService extends LocalAiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    DatabaseHelper.configureTestDatabase('local_ai_interview_screen_test.db');
+  });
+  tearDownAll(() async {
+    await DatabaseHelper.closeTestDatabase();
+  });
+  setUp(() async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete('assistant_messages');
+    await db.delete('tcm_interview_tasks');
+    await db.delete('assistant_conversations');
+  });
   const imagePickerChannel = MethodChannel('plugins.flutter.io/image_picker');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
