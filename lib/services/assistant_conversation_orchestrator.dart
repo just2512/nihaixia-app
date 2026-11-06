@@ -161,6 +161,17 @@ class AssistantConversationOrchestrator {
     if (_learningCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
+    if (pendingToolSelection &&
+        _personalContextCues.any(text.contains) &&
+        _symptomCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+    }
+    if (pendingToolSelection &&
+        ['取消', '算了', '先不排', '不用了'].any(text.contains)) {
+      return AssistantDispatchDecision(
+        mode: currentMode ?? AssistantMode.automatic,
+      );
+    }
 
     // A one-word answer such as “紫微” is meaningful only immediately after
     // the dispatcher has asked which tool the user wants. Keep the alias-only
