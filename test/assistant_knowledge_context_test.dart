@@ -101,6 +101,8 @@ void main() {
     expect(context, contains('核验状态：MISSING'));
     expect(context, contains('版本/底本：MISSING'));
     expect(context, contains('页码：MISSING'));
+    expect(context, contains('原文片段：MISSING'));
+    expect(context, contains('适用条件：MISSING'));
     expect(context, contains('缺失字段：'));
     expect(context, contains('不代表已核验病例原文或疗效证据'));
   });
