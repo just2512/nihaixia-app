@@ -113,6 +113,20 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 本文件是审计基线，不是对未完成事项的豁免。任何状态变更都必须附对应代码路径、测试名称/结果或设备验收记录。
 
 
+## 6A. 统一问诊消息流源码复核（2026-11-06）
+
+本节按当前 `master` 源码纠正第 7、12 项的过时描述，不能继续把结构化问诊说成仍完全独立于助手对话：
+
+- `LocalAiInterviewScreen._requestTool()` 对 `structured_diagnosis` 有专门分支，直接调用 `_startInlineTcmInterview()`；`_openTool()` 也有同样拦截。因此主入口不是通过注册表 builder 跳转到 `ChatScreen`。
+- `_appendTcmInterviewMessages()` 把问诊中的用户回答、助手题目、选项和结果追加到与本地 AI 共用的 `_messages` 时间线；待答选项由同一消息气泡的交互选项承载。
+- 每次追加的问诊消息会写入 SQLite `assistant_messages`；同时另存 `TcmInterviewTaskState`，保存 DiagnosticEngine 快照、待答题目、选项和 transcript，以便恢复确定性问诊状态。
+- `AssistantToolRouter` 中仍保留 `structured_diagnosis` 的旧 `ChatScreen` builder，但主入口分支会先拦截它。它是兼容残留，不代表当前主流程；后续应删除或明确隔离，防止未来调用绕过统一消息流。
+- 因此，第 7 项已完成“同一入口、同一消息时间线、同一确定性辨证引擎”的主路径，整体仍标记 PARTIAL：任务恢复一致性、完成态回看、附件原件生命周期和旧入口清理尚未闭合。
+- 第 12 项的旧描述“结构化 transcript 目前存于任务快照而非 assistant_messages”不准确：当前逐条问诊消息也已写入 `assistant_messages`。仍需验证消息表与任务快照跨重启的一致性；图片/录音附件原件尚未持久化。
+- 第 8、11 项仍为 PARTIAL：知识库以检索上下文方式注入，不等同于结构化证据；工具注册表虽有 23 个目的地，但尚无统一 typed args/result schema、参数抽取与缺参追问、可取消执行器及统一错误协议。关键词匹配不能称为完整 Agent。
+
+当前 HEAD `83e4cfdcbee2aca3fcced3787e8086dabfaf4bc7` 对应的 Flutter regression tests + Android debug APK（run `42166190983`）和 Flutter Quality Gate（run `42166197546`）均已 SUCCESS。自动化通过不替代 Find N2 真机折叠屏验收，也不替代古籍版本及医案逐案来源校勘。
+
 ## 6. 结构化问诊快照接入（2026-11-06）
 
 本轮将此前仅存在于模型/数据库层的任务快照接入 ChatScreen 与统一助手历史：
