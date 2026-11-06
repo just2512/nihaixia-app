@@ -107,6 +107,7 @@ class AssistantConversationOrchestrator {
         return AssistantDispatchDecision(mode: selectedMode, tool: tool);
       }
       if (currentMode == selectedMode &&
+          !_learningCues.any(text.contains) &&
           (selectedMode == AssistantMode.tools ||
               selectedMode == AssistantMode.metaphysics)) {
         final matches = AssistantToolRouter.matchAliases(text, selectedMode);
