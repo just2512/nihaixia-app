@@ -107,22 +107,21 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       if (widget.initialLng != null) {
         _longitudeCtrl.text = widget.initialLng!.toStringAsFixed(2);
       }
+      // 命盘回看不应被城市名称索引加载阻塞。先按保存的生辰与经度
+      // 生成盘面；城市索引加载完成后若能恢复精确坐标，再重算一次。
+      _calculate();
       CityLocationService.load().then((cities) {
-        if (!mounted) return;
-        CityLocation? match;
-        if (widget.initialCityName != null) {
-          match = cities
-              .where((c) =>
-                  c.name == widget.initialCityName ||
-                  c.displayName == widget.initialCityName)
-              .firstOrNull;
-        }
-        if (match != null) {
-          setState(() {
-            _selectedCity = match;
-            _longitudeCtrl.clear(); // 城市优先于手动经度
-          });
-        }
+        if (!mounted || widget.initialCityName == null) return;
+        final match = cities
+            .where((city) =>
+                city.name == widget.initialCityName ||
+                city.displayName == widget.initialCityName)
+            .firstOrNull;
+        if (match == null) return;
+        setState(() {
+          _selectedCity = match;
+          _longitudeCtrl.clear(); // 城市优先于手动经度
+        });
         _calculate();
       });
     }
@@ -568,6 +567,14 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
                     segments: const [
                       ButtonSegment(value: true, label: Text('男')),
                       ButtonSegment(value: false, label: Text('女')),
