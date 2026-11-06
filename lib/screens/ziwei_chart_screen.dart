@@ -213,9 +213,11 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           solar: solar,
           gender: _isMale ? Gender.male : Gender.female,
           // 优先用选中城市（真太阳时：含精确纬度）；否则退回手动经度（纬度未知，沿用默认 30 仅作历史兼容）
+          // 输入框提示“留空按东经120°”，真太阳时路径必须兑现该默认值；
+          // 否则 location=null 会让默认排盘路径与 UI 声明不一致。
           location: _selectedCity != null
               ? Location(_selectedCity!.lng, _selectedCity!.lat)
-              : (lng != null ? Location(lng, 30) : null),
+              : Location(lng ?? 120, 30),
           useTrueSolarTime: _useTrueSolarTime,
           ratHourMode: _distinguishZiShi,
         );
