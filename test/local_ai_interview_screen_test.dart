@@ -830,8 +830,12 @@ void main() {
 
     await tester.tap(find.text('白厚').last);
     await tester.tap(find.text('淡白').last);
-    await tester.tap(find.text('弦').first);
-    await tester.tap(find.text('数').last);
+    await tester.tap(find.widgetWithText(FilterChip, '弦').first);
+    await tester.pumpAndSettle();
+    final secondaryPulseChip = find.widgetWithText(FilterChip, '数').last;
+    await tester.tap(secondaryPulseChip);
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilterChip>(secondaryPulseChip).selected, isTrue);
     await tester.tap(find.text('确认').last);
     await tester.pumpAndSettle();
 

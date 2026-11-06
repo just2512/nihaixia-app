@@ -7,8 +7,10 @@
 ## 当前分歧基线
 
 - 共同祖先：`c0f14e77a7fb721fc332576d21fef5f100392d0b`
-- 本 Fork 当前基线提交：`35e2b14f877de8fbc2a439908aca9341126bbf83`
-- 本 Fork 相对共同祖先修改文件：196 个
+- 本 Fork 当前 HEAD：`da4edbf169bff350392afca999ac0065914f3513`
+- 上游当前 HEAD：`741afaa685c4307afb78dd116eefcab067a1d711`
+- 当前分支关系：Fork ahead 779 / behind 28
+- 本 Fork 相对共同祖先修改文件：201 个
 - 上游相对共同祖先修改文件：1360 个
 - 双方都修改过的路径：16 个
 
