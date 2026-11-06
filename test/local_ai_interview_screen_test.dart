@@ -723,7 +723,7 @@ void main() {
     expect(state!.status, 'in_progress');
     expect(state.pendingPromptId, 'temperature');
 
-    await tester.tap(find.text(state.pendingOptions.first).last);
+    await tester.tap(find.text(state!.pendingOptions.first).last);
     await tester.pumpAndSettle();
 
     state = await _store.getTcmInterviewTaskState(conversationId: 1);
