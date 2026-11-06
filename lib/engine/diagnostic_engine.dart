@@ -3764,7 +3764,7 @@ class DiagnosticEngine {
     }
 
     // 小陷胸汤：痰热结胸（心下按之痛+脉浮滑）
-    if (hasChestPain && _pulseType == '浮' || _pulseType == '滑') {
+    if (hasChestPain && (_pulseType == '浮' || _pulseType == '滑')) {
       return DiagnosisResult(
         meridian: '太阳',
         pattern: '痰热结胸（小陷胸汤证）',
