@@ -1,5 +1,5 @@
 /// Execution state of a tool invocation. NO_RESULT is distinct from success.
-enum AssistantToolExecutionStatus { succeeded, noResult, failed }
+enum AssistantToolExecutionStatus { succeeded, noResult, failed, cancelled }
 
 /// Typed result returned by an in-app tool to the unified assistant timeline.
 class AssistantToolResult {
@@ -25,6 +25,7 @@ class AssistantToolResult {
         AssistantToolExecutionStatus.succeeded => 'SUCCEEDED',
         AssistantToolExecutionStatus.noResult => 'NO_RESULT',
         AssistantToolExecutionStatus.failed => 'FAILED',
+        AssistantToolExecutionStatus.cancelled => 'CANCELLED',
       };
 
   List<String> validateFor(String expectedToolId) {
