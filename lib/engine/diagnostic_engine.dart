@@ -492,6 +492,26 @@ class DiagnosticEngine {
     final slipperyRapidPulse =
         (_pulseType == '滑' && _pulseTypeSecondary == '数') ||
         (_pulseType == '数' && _pulseTypeSecondary == '滑');
+    final floatingLargePulse =
+        (_pulseType == '浮' && _pulseTypeSecondary == '大') ||
+        (_pulseType == '大' && _pulseTypeSecondary == '浮');
+    final threeYangSleepCandidate =
+        primary == '太阳' &&
+        yangmingScore >= 2 &&
+        shaoyangScore >= 2 &&
+        _answers['drowsy'] == true &&
+        _answers['has_sweat'] == true;
+    if (threeYangSleepCandidate &&
+        floatingLargePulse &&
+        _answers['three_yang_pulse_position_answered'] != true) {
+      return const [
+        FollowUpQuestion(
+          key: 'three_yang_pulse_position',
+          question: '【核对第268条】是否已由专业人员确认脉浮大、上关上？',
+          options: ['已由专业人员确认', '未确认', '不清楚'],
+        ),
+      ];
+    }
     if (primary == '少阳' &&
         yangmingScore >= 3 &&
         diarrhea &&
@@ -1186,9 +1206,16 @@ class DiagnosticEngine {
       return;
     }
 
-    // 三阳并病优先于任意两经子型；只有关键证据齐备才占用分支。
+    // 第268条必须同时满足原文脉象“浮大、上关上”。
+    // App 先核验浮+大组合，再要求专业人员确认“上关上”；缺失/未知均不标记三阳合病。
+    final floatingLargePulse =
+        (_pulseType == '浮' && _pulseTypeSecondary == '大') ||
+        (_pulseType == '大' && _pulseTypeSecondary == '浮');
     if (primary == '太阳' && yangmingScore >= 2 && shaoyangScore >= 2 &&
-        _answers['drowsy'] == true && _answers['has_sweat'] == true) {
+        _answers['drowsy'] == true &&
+        _answers['has_sweat'] == true &&
+        floatingLargePulse &&
+        _answers['three_yang_pulse_position_confirmed'] == true) {
       _combinedMeridian = '阳明少阳';
       _combinedPatternCondition = CombinedPatternCondition.threeYangSleep;
       return;
@@ -1297,6 +1324,7 @@ class DiagnosticEngine {
     _answers[questionKey] = answer;
     // 仅把真实症状文本送入症状匹配；历史、否定和未知回答只保留在 _answers。
     const evidenceOnlyKeys = {
+      'three_yang_pulse_position',
       'treatment_history',
       'combined_treatment_history',
       'sun_taiyin_repeated_purgation',
@@ -1330,6 +1358,11 @@ class DiagnosticEngine {
     }
     if (questionKey == 'sputum') {
       _answers['bloody_sputum'] = answer.contains('脓血');
+    }
+    if (questionKey == 'three_yang_pulse_position') {
+      _answers['three_yang_pulse_position_answered'] = true;
+      _answers['three_yang_pulse_position_confirmed'] =
+          answer == '已由专业人员确认';
     }
     if (questionKey == 'treatment_history') {
       _answers['history_mistreatment_answered'] = true;
