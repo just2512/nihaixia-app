@@ -2315,7 +2315,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     )
                   : const Icon(Icons.fact_check_outlined),
               label: Text(
-                _structuredDiagnosisBusy ? '正在准备问诊…' : '在当前对话继续规则辨证',
+                _structuredDiagnosisBusy ? '正在准备问诊…' : '继续规则辨证',
               ),
             ),
           ),
