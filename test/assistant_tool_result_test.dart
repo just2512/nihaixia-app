@@ -35,6 +35,18 @@ void main() {
     expect(result.toConversationText(), contains('来源标识：ziwei-engine:local-rules:v1'));
   });
 
+  test('显式取消与无返回值必须使用不同的终态', () {
+    const cancelled = AssistantToolResult(
+      toolId: 'ziwei',
+      title: '紫微斗数排盘',
+      status: AssistantToolExecutionStatus.cancelled,
+      values: const {},
+    );
+    expect(cancelled.statusLabel, 'CANCELLED');
+    expect(cancelled.toConversationText(), contains('执行状态：CANCELLED'));
+    expect(cancelled.validateFor('ziwei'), isEmpty);
+  });
+
   test('无返回值的工具调用必须标记 NO_RESULT 而不是成功', () {
     const result = AssistantToolResult(
       toolId: 'ziwei',
