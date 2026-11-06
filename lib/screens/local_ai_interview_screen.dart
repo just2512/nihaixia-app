@@ -1266,7 +1266,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
           ),
           PopupMenuButton<AssistantToolDefinition>(
-            tooltip: '调用 App 工具',
+            tooltip: '打开当前角色可用的功能入口',
             enabled: !busy && tools.isNotEmpty,
             onSelected: (tool) => _requestTool('打开${tool.title}', tool),
             itemBuilder: (context) => [
@@ -1286,7 +1286,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 children: const [
                   Icon(Icons.apps_outlined, size: 18),
                   SizedBox(width: AppSpacing.xs),
-                  Text('工具', style: TextStyle(fontSize: AppType.caption)),
+                  Text('入口', style: TextStyle(fontSize: AppType.caption)),
                   Icon(Icons.expand_more, size: 17),
                 ],
               ),
