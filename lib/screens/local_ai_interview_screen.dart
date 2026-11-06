@@ -1158,6 +1158,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _startInlineTcmInterview(initialUserMessage: '继续规则辨证');
       return;
     }
+    if (arguments != null) {
+      final errors = arguments.validateAgainst(tool);
+      if (errors.isNotEmpty) {
+        if (mounted) {
+          setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
+        }
+        return;
+      }
+    }
     _pendingToolSelection = false;
     final result = await Navigator.push<Object?>(
       context,
