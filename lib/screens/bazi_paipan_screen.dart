@@ -386,7 +386,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: compact ? 2 : 0),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 0),
           child: SizedBox(width: double.infinity, child: child),
         ),
       ),
