@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/yijing_engine.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
@@ -25,6 +27,46 @@ class _NoLostImagePicker implements LocalAiImagePicker {
 
   @override
   Future<String?> retrieveLostImagePath() async => null;
+}
+
+class _NoopAssistantConversationStore implements AssistantConversationStore {
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async => 1;
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) async => 1;
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async => const [];
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async => const [];
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {}
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async => null;
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {}
 }
 
 class _RecordingAssistantService extends LocalAiService {
@@ -107,6 +149,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          conversationStore: _NoopAssistantConversationStore(),
           imagePicker: _NoLostImagePicker(),
         ),
       ),
