@@ -109,9 +109,9 @@ void main() {
         'drowsy': true,
         'has_sweat': true,
       },
-      gateKey: 'drowsy',
-      pulse: null,
-      secondary: null,
+      gateKey: 'three_yang_pulse_position_confirmed',
+      pulse: '浮',
+      secondary: '大',
       rejectedValue: false,
     ),
     (
