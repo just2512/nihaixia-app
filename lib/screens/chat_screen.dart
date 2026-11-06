@@ -101,7 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     final initialTask = widget.initialTaskState;
-    if (initialTask != null && initialTask.status == 'active') {
+    if (initialTask != null && initialTask.status == 'in_progress') {
       _restorePendingTaskState(initialTask);
     } else {
       _startDiagnosis();
@@ -141,16 +141,16 @@ class _ChatScreenState extends State<ChatScreen> {
     _emitTaskState();
   }
 
-  void _emitTaskState({String status = 'active'}) {
+  void _emitTaskState({String status = 'in_progress'}) {
     final callback = widget.onTaskStateChanged;
     if (callback == null) return;
     final state = TcmInterviewTaskState(
       taskId: _taskId,
       snapshot: _interview.createSnapshot(),
       status: status,
-      pendingPromptId: status == 'active' ? _pendingPromptId : null,
-      pendingPromptText: status == 'active' ? _pendingPromptText : null,
-      pendingOptions: status == 'active'
+      pendingPromptId: status == 'in_progress' ? _pendingPromptId : null,
+      pendingPromptText: status == 'in_progress' ? _pendingPromptText : null,
+      pendingOptions: status == 'in_progress'
           ? _currentOptions.map((option) => option.label).toList(growable: false)
           : const [],
       updatedAt: DateTime.now().toUtc(),
