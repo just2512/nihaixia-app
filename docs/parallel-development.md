@@ -38,3 +38,15 @@
 ## 当前边界
 
 GitHub Actions 负责远程 CI；多代理进程和多个 worktree 应在开发机本地运行。GitHub 分支本身不会自动启动多个 Claude Code/Opencode 代理。
+
+## Windows 本地 worktree 启动
+
+在仓库根目录执行：
+
+```powershell
+.\\scripts\\worktrees\\Start-ParallelWorktrees.ps1
+```
+
+脚本会在仓库同级目录创建五个独立工作目录，分别跟踪五条 `work/*` 分支。每个 Claude Code / Opencode 任务应绑定一个目录，不要在同一目录切换分支或让两个代理同时写同一文件。脚本只创建工作目录，不会自动启动代理，也不会自动合并代码。
+
+新工作分支应从 `integration` 创建，以继承统一 CI 配置；现有五条分支保留为当前工作流，不强制改写其历史。
