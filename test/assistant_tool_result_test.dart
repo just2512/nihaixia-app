@@ -16,6 +16,7 @@ void main() {
 
     final text = result.toConversationText();
     expect(text, contains('工具：五运六气推算'));
+    expect(text, contains('执行状态：SUCCEEDED'));
     expect(text, contains('推算日期：2026-11-06'));
     expect(text, contains('岁运病候：MISSING'));
     expect(text, contains('来源标识：MISSING'));
@@ -32,6 +33,18 @@ void main() {
     );
     expect(result.validateFor('ziwei'), isEmpty);
     expect(result.toConversationText(), contains('来源标识：ziwei-engine:local-rules:v1'));
+  });
+
+  test('无返回值的工具调用必须标记 NO_RESULT 而不是成功', () {
+    const result = AssistantToolResult(
+      toolId: 'ziwei',
+      title: '紫微斗数排盘',
+      status: AssistantToolExecutionStatus.noResult,
+      values: {'返回内容': 'MISSING'},
+      disclaimer: '无法区分取消与旧页面未回传。',
+    );
+    expect(result.validateFor('ziwei'), isEmpty);
+    expect(result.toConversationText(), contains('执行状态：NO_RESULT'));
   });
 
 }
