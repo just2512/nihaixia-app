@@ -98,4 +98,44 @@ void main() {
     expect(candidates.map((tool) => tool.id), containsAll(['ziwei', 'bazi']));
     expect(candidates.length, 2);
   });
+  test('工具参数契约拒绝非法日期、未声明字段和错误工具标识', () {
+    final tool = AssistantToolRouter.yunqi;
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-02-30'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-06', 'rawPrompt': 'run arbitrary'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'bazi').validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-06'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
+  test('知识库浏览只能从统一助手学习模式入口进入', () {
+    final tool = AssistantToolRouter.byId('knowledge_hub');
+    expect(tool, isNotNull);
+    expect(tool!.modes, contains(AssistantMode.learning));
+    expect(
+      AssistantToolRouter.quickActions(AssistantMode.learning)
+          .map((item) => item.id),
+      contains('knowledge_hub'),
+    );
+  });
+
 }
