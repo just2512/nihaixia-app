@@ -109,9 +109,20 @@ class AssistantConversationOrchestrator {
     }
 
     if (selectedMode != AssistantMode.automatic) {
-      final tool = AssistantToolRouter.match(text, selectedMode);
-      if (tool != null) {
-        return AssistantDispatchDecision(mode: selectedMode, tool: tool);
+      final explicitMatches = AssistantToolRouter.matchAll(text, selectedMode);
+      if (explicitMatches.length == 1) {
+        return AssistantDispatchDecision(
+          mode: selectedMode,
+          tool: explicitMatches.single,
+        );
+      }
+      if (explicitMatches.length > 1) {
+        return AssistantDispatchDecision(
+          mode: selectedMode,
+          clarification:
+              '你同时提出了多个工具（${explicitMatches.map((tool) => tool.title).join('、')}），请先选择一个执行。',
+          expectsToolSelection: true,
+        );
       }
       if (pendingToolSelection &&
           !_learningCues.any(text.contains) &&
@@ -205,8 +216,23 @@ class AssistantConversationOrchestrator {
       );
     }
 
-    final tool = AssistantToolRouter.match(text, AssistantMode.automatic);
-    if (tool != null) {
+    final explicitMatches =
+        AssistantToolRouter.matchAll(text, AssistantMode.automatic);
+    if (explicitMatches.length > 1) {
+      final titles = explicitMatches.map((tool) => tool.title).join('、');
+      final mode = explicitMatches.any(
+        (tool) => tool.modes.contains(AssistantMode.metaphysics),
+      )
+          ? AssistantMode.metaphysics
+          : AssistantMode.tools;
+      return AssistantDispatchDecision(
+        mode: mode,
+        clarification: '你同时提出了多个工具（$titles），请先选择一个执行，避免只运行其中一项。',
+        expectsToolSelection: true,
+      );
+    }
+    if (explicitMatches.length == 1) {
+      final tool = explicitMatches.single;
       final effectiveMode = tool.modes.contains(AssistantMode.metaphysics)
           ? AssistantMode.metaphysics
           : tool.modes.contains(AssistantMode.tools)
