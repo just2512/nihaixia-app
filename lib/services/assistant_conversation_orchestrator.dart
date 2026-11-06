@@ -224,7 +224,11 @@ class AssistantConversationOrchestrator {
           : AssistantMode.metaphysics;
       final matches = AssistantToolRouter.matchAliases(text, mode);
       if (matches.length == 1) {
-        return AssistantDispatchDecision(mode: mode, tool: matches.single);
+        return AssistantDispatchDecision(
+          mode: mode,
+          tool: matches.single,
+          toolArguments: _argumentsFor(matches.single, text),
+        );
       }
       if (matches.length > 1) {
         return AssistantDispatchDecision(
