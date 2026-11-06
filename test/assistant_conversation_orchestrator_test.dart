@@ -171,6 +171,7 @@ void main() {
         query: '紫微斗数',
         selectedMode: AssistantMode.automatic,
         currentMode: first.mode,
+        pendingToolSelection: first.expectsToolSelection,
       );
       expect(answer.mode, AssistantMode.metaphysics);
       expect(answer.tool?.id, 'ziwei');
@@ -182,10 +183,12 @@ void main() {
         query: '帮我起卦',
         selectedMode: AssistantMode.automatic,
       );
+      expect(first.expectsToolSelection, isTrue);
       final answer = AssistantConversationOrchestrator.resolve(
         query: '小六壬',
         selectedMode: AssistantMode.automatic,
         currentMode: first.mode,
+        pendingToolSelection: first.expectsToolSelection,
       );
       expect(answer.tool?.id, 'xiaoliuren');
 
@@ -193,6 +196,7 @@ void main() {
         query: '易经和梅花易数',
         selectedMode: AssistantMode.automatic,
         currentMode: first.mode,
+        pendingToolSelection: first.expectsToolSelection,
       );
       expect(ambiguous.needsClarification, isTrue);
       expect(ambiguous.clarification, contains('只选择其中一个'));
@@ -203,8 +207,37 @@ void main() {
         query: '经方剂量换算',
         selectedMode: AssistantMode.tools,
         currentMode: AssistantMode.tools,
+        pendingToolSelection: true,
       );
       expect(decision.tool?.id, 'dosage');
+    });
+
+
+    test('只有存在待选工具澄清状态时，短工具别名才允许启动页面', () {
+      final ordinaryMention = AssistantConversationOrchestrator.resolve(
+        query: '紫微斗数',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+      );
+      expect(ordinaryMention.tool, isNull);
+      expect(ordinaryMention.expectsToolSelection, isFalse);
+
+      final pendingChoice = AssistantConversationOrchestrator.resolve(
+        query: '紫微斗数',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+        pendingToolSelection: true,
+      );
+      expect(pendingChoice.tool?.id, 'ziwei');
+    });
+
+    test('手动玄学模式的泛化排盘请求也会先澄清', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我排个盘',
+        selectedMode: AssistantMode.metaphysics,
+      );
+      expect(decision.needsClarification, isTrue);
+      expect(decision.expectsToolSelection, isTrue);
     });
 
     test('统一助手工具注册表覆盖 ToolsScreen 的全部可调用业务页面', () {
