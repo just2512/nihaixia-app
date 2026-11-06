@@ -234,7 +234,7 @@ DiagnosticEngine _cast(Map<String, int> q, {Set<String> ext = const {}}) {
     test('胸痛证据与浮脉或滑脉同时存在才可进入小陷胸汤分支', () {
       for (final pulse in ['滑', '浮']) {
         final result = engineFor(
-          symptoms: const ['心下按之痛'],
+          symptoms: const ['心下满痛'],
           pulse: pulse,
         ).diagnose();
         expect(result?.formula, '小陷胸汤');
