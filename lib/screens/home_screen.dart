@@ -4,16 +4,13 @@ import 'knowledge_screen.dart';
 import 'bookmarks_screen.dart';
 import 'tools_screen.dart';
 import 'settings_screen.dart';
-import '../services/whats_new_service.dart';
 import '../widgets/adaptive_home_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   final double textScaleFactor;
-  final bool runStartupTasks;
   const HomeScreen({
     super.key,
     this.textScaleFactor = 1.0,
-    this.runStartupTasks = true,
   });
 
   @override
@@ -22,19 +19,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!widget.runStartupTasks) return;
-    // 启动后弹出「本次更新了什么」（若有版本更新）
-    Future.delayed(
-      const Duration(milliseconds: 800),
-      () {
-        if (mounted) WhatsNewService.checkAndShow(context);
-      },
-    );
-  }
 
   final List<Widget> _screens = [
     const LocalAiInterviewScreen(),

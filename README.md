@@ -8,15 +8,13 @@
 
 离线可用 · 数据全本地 · 无需注册 · 开箱即用
 
-<a href="https://trendshift.io/repositories/108262?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-108262" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/108262/daily?language=HTML" alt="jangviktor-web%2Fnihaixia | Trendshift" width="250" height="55"/></a>
-<a href="https://trendshift.io/repositories/108262?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-108262" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/108262/weekly?language=HTML" alt="jangviktor-web%2Fnihaixia | Trendshift" width="250" height="55"/></a>
 
-[![Release](https://img.shields.io/github/v/release/jangviktor-web/nihaixia-app?style=for-the-badge&color=green&label=📥%20Download)](https://github.com/jangviktor-web/nihaixia-app/releases/latest)
+[![Release](https://img.shields.io/github/v/release/just2512/nihaixia-app?style=for-the-badge&color=green&label=📥%20Download)](https://github.com/just2512/nihaixia-app/releases/latest)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/jangviktor-web/nihaixia-app?style=for-the-badge&color=yellow)](https://github.com/jangviktor-web/nihaixia-app/stargazers)
+[![Stars](https://img.shields.io/github/stars/just2512/nihaixia-app?style=for-the-badge&color=yellow)](https://github.com/just2512/nihaixia-app/stargazers)
 
 <br/>
 
@@ -179,7 +177,6 @@
 | 🍂 **节气养生板块** | 独立 24 节气板块，每条附健康养生要点 + 倪师节气解析（非原文标注【推断】），与本草库解耦 | 24 节气 |
 | 👆 **每日黄历手势** | 黄历支持上/下滑切日、左/右滑切月，单手翻看更顺手，保留日期选择器兜底 | — |
 | 🔁 **大运对宫解析** | 大限空宫时自动附对宫主星/煞星提示，紫微「借星安宫」惯例可视化 | — |
-| 🔔 **应用内更新** | 设置中一键检测 GitHub 新版本，支持下载安装 | — |
 | ⚙️ **诊断设置** | 默认性别/诊断详细度/自动复制处方，个性化问诊体验 | 3 项 |
 | 💾 **数据管理** | 清除历史/导出收藏/清理缓存，本地数据完全掌控 | — |
 
@@ -193,41 +190,9 @@
 > 核心知识库可离线｜本地 AI 模型需单独下载｜无需注册｜Android 7.0+
 > 通用版 APK 约 77MB，分架构版 31–35MB
 > 自 V1.11.9 起由 GitHub Actions 自动构建发布，推送 `v*` tag 即出包
-> **最后更新：2026-10-30（v1.11.28）**
+> **最后维护：2026-11-06（Fork 独立维护；尚未发布独立 Release）**
 
-### 📥 方式一：下载预编译 APK（V1.11.28）
-
-> ### ⚠️ 升级须知：签名密钥已统一，通常可直接覆盖安装
->
-> **自 V1.11.9 起，APK 改由 GitHub Actions 云端构建；但我们已经把发布签名密钥（`release-key.jks`，别名 `nihaisha`）配置为 GitHub Secrets，因此云端构建与您本机的 V1.11.8 及更早版本使用同一套签名。升级时可直接覆盖安装，一般无需卸载旧版本。**
->
-> | 版本范围 | 构建环境 | 签名来源 |
-> |:---|:---|:---|
-> | V1.11.8 及更早 | 开发者本地机器 | 本地正式签名（`release-key.jks`，别名 `nihaisha`） |
-> | V1.11.9 及以后 | GitHub Actions 云端 | 同一套正式签名（已作为 GitHub Secrets 配置，与本地完全一致） |
->
-> **唯一例外**：如果您在签名密钥配置完成**之前**就下载过 V1.11.9 的早期版本（那批用的是云端临时调试签名），由于与当前正式签名不同，覆盖安装会被系统拒绝并提示「应用未安装」。解决办法：先卸载该早期版本，再安装当前最新版即可。
->
-> **建议**：无论采用哪种方式，升级前都可在 App「设置」中导出收藏与诊断历史，以防万一。
-
-<div align="left">
-
-[![📦 通用版 APK](https://img.shields.io/badge/📦%20通用版-安卓安装包‑3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://ghproxy.net/https://github.com/jangviktor-web/nihaixia-app/releases/download/v1.11.28/app-release.apk)
-&nbsp;&nbsp;
-[![📦 arm64‑v8a APK](https://img.shields.io/badge/📦%20arm64‑v8a-安卓安装包‑0284CC?style=for-the-badge&logo=android&logoColor=white)](https://ghproxy.net/https://github.com/jangviktor-web/nihaixia-app/releases/download/v1.11.28/app-arm64-v8a-release.apk)
-&nbsp;&nbsp;
-[![📦 armeabi‑v7a APK](https://img.shields.io/badge/📦%20armeabi‑v7a-安卓安装包‑9C27B0?style=for-the-badge&logo=android&logoColor=white)](https://ghproxy.net/https://github.com/jangviktor-web/nihaixia-app/releases/download/v1.11.28/app-armeabi-v7a-release.apk)
-&nbsp;&nbsp;
-[![📦 x86_64(虚拟机)](https://img.shields.io/badge/📦%20x86_64(虚拟机)-安卓安装包‑1565C0?style=for-the-badge&logo=android&logoColor=white)](https://ghproxy.net/https://github.com/jangviktor-web/nihaixia-app/releases/download/v1.11.28/app-x86_64-release.apk)
-
-</div>
-
-| 安装包 | 大小 | 适用说明 |
-|---|---|---|
-| 通用版 `app-release.apk` | 77.4MB | 全CPU架构，绝大多数安卓设备直接选这个 |
-| arm64‑v8a `app‑arm64‑v8a‑release.apk` | 33.3MB | 新款64位安卓手机，体积更小 |
-| armeabi‑v7a `app‑armeabi‑v7a‑release.apk` | 31.5MB | 老旧32位安卓设备 |
-| x86_64 `app‑x86_64‑release.apk` | 34.8MB | 安卓虚拟机、模拟器使用 |
+> 当前 Fork 尚未发布独立 APK Release。请勿将原项目 `jangviktor-web/nihaixia-app` 的安装包当作本 Fork 的发行版。后续安装包只从[本仓库 Releases](https://github.com/just2512/nihaixia-app/releases)获取；发布独立版本后再补充对应架构下载项。
 
 > **V1.11.28 字号 200% · 古籍原文（灵枢/针灸大成）· 经典全文搜索 · 流畅度优化**：字号上限由 150% 提到 200%，并修复「只有首页跟随字号」——详情页、设置页与弹窗现在都跟随；新增「古籍原文」书库：《灵枢》82 章 + 明·杨继洲《针灸大成》339 章，章节目录可读可搜，正文方剂/药名可点跳详情；全局搜索新增「经典」分组，贯通伤寒/金匮/内经讲稿与古书原文共 1327 条，点击直达篇章；修掉浅色模式下搜索结果标题几乎看不清的对比度问题；知识库切 tab 与长列表滚动做了保活与过滤缓存优化。详见 [Release Notes](release_notes/v1.11.28.md)。
 > 
@@ -258,7 +223,7 @@
 > **V1.11.9 让条文说人话**：为 170 首经方补齐「患者会怎么说」口语画像（大白话 + 辨证指针 + 治法 + 原文条文），辨证结果页新增口语卡片可逐句自核；同时让引擎听懂"怕冷""怕风"等现代症状词——原先这些词字面打不中古文条文、关联不到方剂的老毛病，已由口语语料兜底召回，并以「增强分上限 < 1」的非劣化不变式确保原有正确排序不被打乱。
 > 
 > **含 V1.11.8 健康人基线判定**、寒热真假八维法、六经公式分型速查等全部历史修复。
-> 历史版本：V1.11.8（GitHub Release）https://github.com/jangviktor-web/nihaixia-app/releases/tag/V1.11.8
+> 历史版本：V1.11.8 属于原项目历史发行版，不属于本 Fork 的独立发行版。
 </details>
    
 ### 🔨 方式二：本地从源码构建
@@ -266,7 +231,7 @@
 需预先配置好 Flutter 开发环境（见[快速上手](#-快速上手)）。
 
 ```bash
-git clone https://github.com/jangviktor-web/nihaixia-app.git
+git clone https://github.com/just2512/nihaixia-app.git
 cd nihaixia-app
 flutter pub get
 flutter build apk --release
@@ -299,7 +264,7 @@ flutter build apk --release --target-platform android-x64        # x86_64
 1. **安装 Flutter**：参考 [Flutter 官方安装指南](https://docs.flutter.dev/get-started/install)，并运行 `flutter doctor` 确认环境就绪。
 2. **克隆仓库**：
    ```bash
-   git clone https://github.com/jangviktor-web/nihaixia-app.git
+   git clone https://github.com/just2512/nihaixia-app.git
    cd nihaixia-app
    ```
 3. **安装依赖**：
@@ -490,7 +455,7 @@ flowchart LR
 - [x] 方剂/药物/穴位速查增强（搜索+筛选）
 - [x] 子午流注取穴计算器
 - [x] 经方剂量换算器
-- [x] 应用内更新检测（GitHub Releases）
+- [x] Fork 与原项目独立维护，不自动同步上游更新或安装包
 - [x] 黄帝内经模块（脏象/望诊/脉诊 + 73 篇阅读库 + 全文搜索）
 - [x] 附子生炮拆分（生附子/炮附子独立条目，组成引用零死链）
 - [x] 倪师医案库 1257 例检索 + 闭门课重症临床模块
@@ -582,7 +547,7 @@ flowchart LR
 - 许可证全文见 [LICENSE](LICENSE)；
 - 你可以自由使用、修改、分发本软件，包括商业用途，但须保留版权声明与许可声明，并遵循 Apache 2.0 的条款（含变更说明、通告文件等要求）。
 
-© 2026 jangviktor-web
+© 2026 just2512
 
 ---
 
@@ -610,7 +575,7 @@ flowchart LR
 
 ## 🌟 Star History
 
-[![RepoStars](https://repostars.dev/api/embed?repo=jangviktor-web%2Fnihaixia-app&theme=grape)](https://repostars.dev/?repos=jangviktor-web%2Fnihaixia-app&theme=grape)
+[![RepoStars](https://repostars.dev/api/embed?repo=just2512%2Fnihaixia-app&theme=grape)](https://repostars.dev/?repos=just2512%2Fnihaixia-app&theme=grape)
 
 ---
 

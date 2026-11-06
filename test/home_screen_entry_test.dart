@@ -26,7 +26,7 @@ void main() {
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      home: const HomeScreen(runStartupTasks: false),
+      home: const HomeScreen(),
     ));
     await tester.pump();
 
@@ -61,7 +61,7 @@ void main() {
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      home: const HomeScreen(runStartupTasks: false),
+      home: const HomeScreen(),
     ));
     await tester.pump(const Duration(milliseconds: 400));
 

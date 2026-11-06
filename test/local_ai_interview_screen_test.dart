@@ -22,6 +22,8 @@ const _readyStatus = LocalAiModelStatus(
 class _MemoryConversationStore implements AssistantConversationStore {
   int _nextConversationId = 1;
   int _nextMessageId = 1;
+  int createConversationCalls = 0;
+  int taskStateSaveCalls = 0;
   final Map<int, Map<String, Object?>> _conversations = {};
   final Map<int, List<Map<String, Object?>>> _messages = {};
   final Map<int, TcmInterviewTaskState> _taskStates = {};
@@ -31,6 +33,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
     String title = '新对话',
     String mode = 'general',
   }) async {
+    createConversationCalls += 1;
     final id = _nextConversationId++;
     final now = DateTime.now().toIso8601String();
     _conversations[id] = {
@@ -91,6 +94,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
     required int conversationId,
     required TcmInterviewTaskState state,
   }) async {
+    taskStateSaveCalls += 1;
     _taskStates[conversationId] = state;
   }
 
@@ -114,7 +118,7 @@ _MemoryConversationStore _store = _MemoryConversationStore();
 
 Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
   WidgetTester tester, {
-  int conversationId = 1,
+  int? conversationId,
   String? expectedPendingPromptId,
   bool expectedPromptIdStartsWith = false,
 }) async {
@@ -123,15 +127,19 @@ Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
   // the expected state, not merely a non-null snapshot that may be stale.
   TcmInterviewTaskState? latest;
   for (var attempt = 0; attempt < 30; attempt++) {
-    latest = await _store.getTcmInterviewTaskState(
-      conversationId: conversationId,
-    );
+    final candidateIds = conversationId == null
+        ? _store._conversations.keys.toList(growable: false).reversed
+        : [conversationId];
+    for (final id in candidateIds) {
+      latest = await _store.getTcmInterviewTaskState(conversationId: id);
+      final pendingId = latest?.pendingPromptId;
+      final matchesExpected = expectedPendingPromptId == null ||
+          (expectedPromptIdStartsWith
+              ? pendingId?.startsWith(expectedPendingPromptId) == true
+              : pendingId == expectedPendingPromptId);
+      if (latest != null && matchesExpected) return latest;
+    }
     final pendingId = latest?.pendingPromptId;
-    final matchesExpected = expectedPendingPromptId == null ||
-        (expectedPromptIdStartsWith
-            ? pendingId?.startsWith(expectedPendingPromptId) == true
-            : pendingId == expectedPendingPromptId);
-    if (latest != null && matchesExpected) return latest;
     await tester.pump(const Duration(milliseconds: 10));
   }
   return latest;
@@ -745,7 +753,7 @@ void main() {
       tester,
       expectedPendingPromptId: 'temperature',
     );
-    expect(state, isNotNull, reason: '规则问诊启动后必须持久化任务快照');
+    expect(state, isNotNull, reason: '规则问诊启动后必须持久化任务快照；created=${_store._conversations.keys.toList()}，createCalls=${_store.createConversationCalls}，taskWrites=${_store.taskStateSaveCalls}，stateIds=${_store._taskStates.keys.toList()}');
     final savedState = state!;
     expect(savedState.status, 'in_progress');
     expect(savedState.pendingPromptId, 'temperature');
@@ -808,7 +816,7 @@ void main() {
       tester,
       expectedPendingPromptId: 'temperature',
     );
-    expect(initialState, isNotNull);
+    expect(initialState, isNotNull, reason: '舌脉 UI 测试未找到初始快照；created=${_store._conversations.keys.toList()}，createCalls=${_store.createConversationCalls}，taskWrites=${_store.taskStateSaveCalls}，stateIds=${_store._taskStates.keys.toList()}');
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
     await tester.tap(find.text(initialState!.pendingOptions.first).last);

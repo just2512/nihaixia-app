@@ -5,7 +5,7 @@
 #   2. 在 Actions 页面手动触发（workflow_dispatch）
 #
 # 产物：通用版 app-release.apk + 按 ABI 拆分的三架构包（arm64-v8a / armeabi-v7a / x86_64），
-#       共 4 个安装包一同发布到与 tag 同名的 GitHub Release（README 下载区四链均有效）。
+#       共 4 个安装包发布到当前 Fork 自己的 GitHub Release。
 #
 # 可选：配置仓库 Secrets 后可产出正式签名 APK（否则回退 debug 签名）：
 #   KEYSTORE_BASE64      : base64 后的 .jks 签名文件
@@ -14,8 +14,7 @@
 #   KEY_PASSWORD         : 密钥密码
 #   生成示例：base64 -w0 your.keystore.jks
 #
-# Gitee 同步不在 CI 里：runner 到 Gitee 的附件上传会挂死（API 读写正常）。
-# 发版后在本机 Git Bash 跑 `bash tool/sync_gitee.sh`，用 release2gitee 传 4 个 APK。
+# 不再从上游项目同步 APK 或 Gitee Release；Fork 发布仅以本仓库 Release 为准。
 
 name: Build APK & Release
 
@@ -120,15 +119,14 @@ jobs:
       - name: Build APK (universal + per-ABI splits)
         run: flutter build apk --release
 
-      # 把 4 个包的 SHA-256 追加进 Release 正文。App 内更新按「资产名 → 哈希」校验
-      # 下载到的包，这是走第三方镜像 / 代理时唯一的密码学防线。格式：每行 `<hex>  <文件名>`。
+      # 把 4 个包的 SHA-256 追加进 Release 正文，供用户下载后手动核验。格式：每行 `<hex>  <文件名>`。
       - name: Append APK SHA-256 to release body
         run: |
           SRC="release_notes/${{ github.ref_name }}.md"
           OUT="release_notes/${{ github.ref_name }}.body.md"
           cp "$SRC" "$OUT"
           {
-            printf '\n---\n\n## 安装包 SHA-256（供 App 内更新校验）\n\n```\n'
+            printf '\n---\n\n## 安装包 SHA-256（手动完整性核验）\n\n```\n'
             for f in build/app/outputs/flutter-apk/*.apk; do
               printf '%s  %s\n' "$(sha256sum "$f" | cut -d' ' -f1)" "$(basename "$f")"
             done
