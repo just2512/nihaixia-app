@@ -98,7 +98,6 @@ void main() {
     expect(context, contains('不代表已核验病例原文或疗效证据'));
   });
 
-}
 
   test('经典检索不得把本地讲稿或未校勘文本伪装成已核验原文', () async {
     final lecture = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
