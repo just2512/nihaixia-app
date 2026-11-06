@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/assistant_tool_result.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../services/yunqi_engine.dart';
@@ -56,18 +57,23 @@ class _YunQiScreenState extends State<YunQiScreen> {
     final date =
         '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-'
         '${_selectedDate.day.toString().padLeft(2, '0')}';
-    final lines = <String>[
-      '推算日期：$date',
-      '运气年：${data.ganZhi}年（${data.shengXiao}）',
-      '岁运：${data.yun}运${data.taiGuo ? '太过' : '不及'}',
-      '司天：${data.siTian}',
-      '在泉：${data.zaiQuan}',
-      '岁运病候：${data.yunBingText.isEmpty ? 'MISSING' : data.yunBingText}',
-      '司天病候：${data.siTianBingText.isEmpty ? 'MISSING' : data.siTianBingText}',
-      '《内经》大论原文：${(data.jz60['SAME'] ?? '').isEmpty ? 'MISSING' : data.jz60['SAME']}',
-      '口径：按本页当前运气推算算法生成；仅供理论学习，不构成医疗建议。',
-    ];
-    Navigator.of(context).pop(lines.join('\n'));
+    Navigator.of(context).pop(
+      AssistantToolResult(
+        toolId: 'yunqi',
+        title: '五运六气推算',
+        values: {
+          '推算日期': date,
+          '运气年': '${data.ganZhi}年（${data.shengXiao}）',
+          '岁运': '${data.yun}运${data.taiGuo ? '太过' : '不及'}',
+          '司天': data.siTian,
+          '在泉': data.zaiQuan,
+          '岁运病候': data.yunBingText,
+          '司天病候': data.siTianBingText,
+          '《内经》大论原文': data.jz60['SAME'] ?? '',
+        },
+        disclaimer: '按本页当前运气推算算法生成；仅供理论学习，不构成医疗建议。',
+      ),
+    );
   }
 
   /// 存图 / 分享长图：年运总览 + 三图 + 关键病候卡。
