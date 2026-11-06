@@ -18,7 +18,7 @@
 | 9 | 设置入口 | EXISTS | `HomeScreen` 根导航含独立“设置”目的地；`home_screen_entry_test.dart` 断言设置可从根导航进入 | 当前已不依赖问诊页面内部入口；后续可继续优化设置分类与可发现性，不应把设置重新塞回聊天页。 |
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
 | 11 | 单一主入口与统一调度 | PARTIAL（澄清状态可持久化） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 统一助手覆盖 ToolsScreen 的 22 个页面/工具目的地，并包含独立结构化辨证入口，共 23 个注册工具；工具角色上下文动态读取注册表。已补排盘/起卦澄清后的短答案路由，并显式保存 `tool_choice=true` 状态，只有处于待选工具澄清时才允许别名启动工具；该状态随历史消息恢复，取消、学习问题和个人症状可结束待选状态；多个工具名同时出现时继续澄清。路由仍是关键词/别名/动作词确定性匹配，未具备模型语义参数抽取、表单缺参追问、跨轮工具任务状态和多工具计划，不能称为完整通用 Agent。 |
-| 12 | 对话历史持久化、续聊、批量删除 | PARTIAL（文本续聊完成；结构化任务快照已接入） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages/tcm_interview_tasks`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`；`test/models/tcm_interview_task_state_test.dart`；`test/chat_screen_task_resume_test.dart`；`.github/workflows/flutter-tests.yml` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。结构化问诊现可逐题保存引擎快照、题面与选项，并从历史入口恢复当前题；新增恢复/下一题保存 widget 回归，并加入 CI 独立门禁。仍未把每条结构化问答气泡逐条写入助手消息表，未实现单一对话气泡内的结构化任务卡；原始图片/录音附件不持久化；最新 CI 尚未取得可核验结果。 |
+| 12 | 对话历史持久化、续聊、批量删除 | PARTIAL（文本续聊完成；结构化任务与可读问答记录已接入） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages/tcm_interview_tasks`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`；`test/models/tcm_interview_task_state_test.dart`；`test/chat_screen_task_resume_test.dart`；`.github/workflows/flutter-tests.yml` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。结构化问诊逐题保存引擎快照、题面、选项及完整可读问答 transcript；历史入口可恢复当前题和此前回答，新增恢复/下一题保存 widget 回归及独立 CI 门禁。结构化 transcript 目前存于任务快照而非 `assistant_messages`；尚未成为同一聊天流中的原生交互卡片；原始图片/录音附件不持久化；最新 CI 尚未取得可核验结果。 |
 
 ## 1A. 2026-11-05 增量复核与代码落地
 
@@ -126,5 +126,5 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 本轮实现边界：
 - 这仍是从统一对话历史中打开的结构化问诊任务页，并非结构化问诊已完全变成同一聊天气泡内的交互卡片。
-- 结构化问诊每题的原始消息气泡尚未逐条写入助手消息表；引擎答案本身保存在快照中，恢复时从待回答问题继续。
+- 结构化问诊的角色、文本和结果标记现随任务快照保存为 transcript，恢复后可查看此前问答；该 transcript 仍独立于 assistant_messages，不是同一聊天流内的原生消息卡。
 - 自动化测试和远端 CI 尚待本次提交触发后确认；在此之前标记为实现已提交、验证待完成，不标记为 PASS。
