@@ -73,6 +73,16 @@ void main() {
       expect(decision.tool?.id, 'yunqi');
     });
 
+    test('五运六气请求中的日期进入 typed tool arguments', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我推算五运六气，日期 2026-11-06',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'yunqi');
+      expect(decision.toolArguments?.toolId, 'yunqi');
+      expect(decision.toolArguments?['date'], '2026-11-06');
+    });
+
     test('玄学助手模式下也能直接调度五运六气计算器', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '推算五运六气',
