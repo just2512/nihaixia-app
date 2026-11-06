@@ -12,7 +12,7 @@
 - 当前分支关系：Fork ahead 790 / behind 29（本轮 GitHub compare，2026-11-06）
 - 本 Fork 相对共同祖先修改文件：201 个（compare 返回完整 201 项）
 - 上游落后于 Fork 的 29 个提交已逐个读取提交元数据；部分大提交的 GitHub commit 文件清单返回 300 项上限，不能宣称上游所有变更路径已穷举
-- 已确认的同路径改动至少包括：`.github/workflows/gitee-sync.yml`、`.gitignore`、`README.md`、`pubspec.yaml`、`pubspec.lock`、`lib/data/herb_repository.dart`、`lib/engine/diagnostic_engine.dart`、`lib/screens/shanghan_jingui_screen.dart`、`lib/screens/formula_detail_screen.dart`、`lib/screens/herb_detail_screen.dart`、`lib/screens/markdown_doc_screen.dart`、`lib/screens/settings_screen.dart`、`lib/screens/classic_library_screen.dart`、`lib/services/native_files_io.dart`
+- 已确认的同路径改动至少包括：`.github/workflows/gitee-sync.yml`、`.gitignore`、`README.md`、`pubspec.yaml`、`pubspec.lock`、`lib/engine/diagnostic_engine.dart`、`lib/screens/shanghan_jingui_screen.dart`、`lib/screens/formula_detail_screen.dart`、`lib/screens/herb_detail_screen.dart`、`lib/screens/markdown_doc_screen.dart`、`lib/screens/settings_screen.dart`、`lib/screens/classic_library_screen.dart`、`lib/services/native_files_io.dart`
 - 上述路径是**同路径两侧均有改动**的确认清单，不等于每一项都已发生 Git 文本冲突；尤其 `diagnostic_engine.dart`、知识/经典页面、依赖配置需逐项三方审查
 - 上游 29 个提交涉及本草讲稿库、金匮讲稿与撤回、方剂经典索引、伤寒条文内容/编号/排版、繁简转换、Release/README、Gitee 工作流等。它们不是可以整批合入的单纯修复提交
 
