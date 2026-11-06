@@ -14,7 +14,7 @@ void main() {
 
     final task = TcmInterviewTaskState(
       taskId: 'resume-test-1',
-      status: 'active',
+      status: 'in_progress',
       snapshot: engine.createSnapshot(),
       pendingPromptId: 'temperature',
       pendingPromptText: savedPrompt,
@@ -44,7 +44,7 @@ void main() {
       findsOneWidget,
     );
     expect(savedStates, isNotEmpty);
-    expect(savedStates.last.status, 'active');
+    expect(savedStates.last.status, 'in_progress');
     expect(savedStates.last.pendingPromptId, 'tongue_pulse');
     expect(
       savedStates.last.snapshot.answers['temperature'],
