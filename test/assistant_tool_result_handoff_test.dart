@@ -185,6 +185,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          conversationStore: _NoopAssistantConversationStore(),
           imagePicker: _NoLostImagePicker(),
         ),
       ),
