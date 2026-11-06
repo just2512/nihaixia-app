@@ -135,6 +135,9 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义' : '古籍原文文本资产'}')
+        ..writeln('来源标识：${hit.sourceId}')
+        ..writeln('本地回链：${hit.localBacklink}')
+        ..writeln('来源定位状态：${hit.locatorStatus}')
         ..writeln('本地来源：$sourcePath')
         ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
         ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
@@ -200,7 +203,8 @@ class AssistantKnowledgeContextBuilder {
             ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
             ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
             ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
-            ..writeln('来源定位：MISSING（内部序号不是原始病例页码或稳定来源 ID）')
+            ..writeln('来源定位：${medicalCase.sourceLedger.status}（内部序号不是原始病例页码或稳定来源 ID）')
+            ..write(medicalCase.sourceLedger.toDisplayText())
             ..writeln('使用限制：仅作为本地整理记录检索，不代表已核验病例原文或疗效证据。');
         }
       } catch (_) {
