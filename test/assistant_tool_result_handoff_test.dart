@@ -136,6 +136,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('统一助手把用户指定日期传入五运六气工具', (tester) async {
+    final service = _RecordingAssistantService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我推算五运六气，日期 2026-11-06',
+    );
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开五运六气推算'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-11-06'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('从普通工具入口打开时不显示助手专用返回操作', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: YunQiScreen()),
