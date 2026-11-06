@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/models/medical_case_source_ledger.dart';
+import 'package:nihaisha_app/data/medical_case_data.dart';
 
 void main() {
   test('未提供原始出处时所有定位字段明确为 MISSING', () {
@@ -55,4 +56,29 @@ void main() {
     expect(restored.toJson(), original.toJson());
     expect(restored.status, 'PENDING');
   });
+  test('医案解析按内部主键关联账本，未匹配记录仍保持 MISSING', () {
+    const md = '''
+| 序号 | 日期 | 患者 | 诊断 | 病机 | 西医背景 | 方剂 | 针灸 | 治法 | 结果 | 医嘱 | 观点 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 42 | 1988 | 女 | 太阳病 | 表证 | --- | 桂枝汤 | --- | 解表 | 好转 | --- | 记录 |
+| 43 | 1989 | 男 | 少阳病 | 枢机不利 | --- | --- | --- | 和解 | --- | --- | --- |
+''';
+    const verified = MedicalCaseSourceLedger(
+      sourceTitle: '伤寒论',
+      edition: '宋本',
+      volume: '卷三',
+      page: '第 42 页',
+      passage: '辨太阳病脉证并治上',
+      verificationStatus: 'VERIFIED',
+    );
+    final cases = parseMedicalCaseTable(
+      md,
+      sourceLedgers: const {42: verified},
+    );
+    expect(cases, hasLength(2));
+    expect(cases.first.sourceLedger.status, 'VERIFIED');
+    expect(cases.last.sourceLedger.status, 'MISSING');
+    expect(cases.last.toShareText(), contains('原始来源账本'));
+  });
+
 }
