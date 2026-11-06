@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin master --depth=1
+          git fetch origin master
           changed_files="$(git diff --name-only origin/master...HEAD)"
           code_changed=0
           test_files=()
