@@ -305,6 +305,7 @@ void main() {
         ),
         home: LocalAiInterviewScreen(
           service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
           preferredAnchorPoint: const Offset(600, 450),
         ),
       ),
