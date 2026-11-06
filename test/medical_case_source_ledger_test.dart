@@ -6,7 +6,7 @@ void main() {
   test('未提供原始出处时所有定位字段明确为 MISSING', () {
     const ledger = MedicalCaseSourceLedger.missing;
     expect(ledger.status, 'MISSING');
-    expect(ledger.toDisplayText().split('\n'), hasLength(9));
+    expect(ledger.toDisplayText().split('\n'), hasLength(11));
     expect(ledger.hasCompleteLocator, isFalse);
     expect(ledger.isVerified, isFalse);
     expect(ledger.missingFields, containsAll([
@@ -36,6 +36,8 @@ void main() {
       volume: '卷三',
       page: '影印本第 42 页',
       passage: '辨太阳病脉证并治上第五',
+      originalExcerpt: '太阳之为病，脉浮，头项强痛而恶寒。',
+      applicability: '历史文本来源核验；不得直接作为个体诊疗建议。',
       variant: 'MISSING',
       verificationStatus: 'VERIFIED',
     );
@@ -51,6 +53,8 @@ void main() {
       volume: 'MISSING',
       page: 'MISSING',
       passage: '痰饮咳嗽病脉证并治',
+      originalExcerpt: 'MISSING',
+      applicability: '仅供古籍目录定位，原文待核验。',
       verificationStatus: 'PENDING',
     );
     final restored = MedicalCaseSourceLedger.fromJson(original.toJson());
@@ -70,6 +74,7 @@ void main() {
       volume: '卷三',
       page: '第 42 页',
       passage: '辨太阳病脉证并治上',
+      originalExcerpt: '太阳之为病，脉浮，头项强痛而恶寒。',
       verificationStatus: 'VERIFIED',
     );
     final cases = parseMedicalCaseTable(
