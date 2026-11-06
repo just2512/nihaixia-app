@@ -11,6 +11,8 @@
 /// - [extractKnownNames]：箭头分段 + 噪声清洗 + 长度降序非重叠匹配 + 去重。
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 
@@ -348,7 +350,10 @@ class MedicalCase {
 /// 跳过表头（首格「序号」）与分隔行（含 `---`），仅收录首格为数字的行。
 /// 不按方剂字段过滤医案：方剂缺失本身是需要保留的病例信息，展示/检索时标记 MISSING，
 /// 不得因方剂缺失而从知识库删除整条病例。
-List<MedicalCase> parseMedicalCaseTable(String md) {
+List<MedicalCase> parseMedicalCaseTable(
+  String md, {
+  Map<int, MedicalCaseSourceLedger> sourceLedgers = const {},
+}) {
   final lines = md.split('\n');
   final cases = <MedicalCase>[];
 
@@ -402,6 +407,7 @@ List<MedicalCase> parseMedicalCaseTable(String md) {
       result: padded[9],
       advice: padded[10],
       view: padded[11],
+      sourceLedger: sourceLedgers[seq] ?? MedicalCaseSourceLedger.missing,
     ));
   }
 
@@ -417,7 +423,30 @@ Future<List<MedicalCase>> getAllMedicalCases() async {
   try {
     final md =
         await rootBundle.loadString('assets/medical_cases/cases_table.md');
-    _allCasesCache = parseMedicalCaseTable(md);
+    var sourceLedgers = <int, MedicalCaseSourceLedger>{};
+    try {
+      final ledgerText = await rootBundle.loadString(
+        'assets/medical_cases/source_ledger.json',
+      );
+      final decoded = jsonDecode(ledgerText) as Map<String, dynamic>;
+      final records = decoded['records'] as Map<String, dynamic>? ?? const {};
+      sourceLedgers = {
+        for (final entry in records.entries)
+          if (int.tryParse(entry.key) != null &&
+              entry.value is Map<String, dynamic>)
+            int.parse(entry.key): MedicalCaseSourceLedger.fromJson(
+              entry.value as Map<String, dynamic>,
+            ),
+      };
+    } catch (e) {
+      // Ledger failure must not hide the underlying case corpus. Every
+      // unlinked record remains explicitly MISSING through the model default.
+      debugPrint('[MedicalCase] 来源账本读取失败，记录来源状态降级为 MISSING：$e');
+    }
+    _allCasesCache = parseMedicalCaseTable(
+      md,
+      sourceLedgers: sourceLedgers,
+    );
   } catch (e, st) {
     debugPrint('[MedicalCase] 加载 cases_table.md 失败，降级为空：$e\n$st');
     _allCasesCache = const [];
