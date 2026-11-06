@@ -787,6 +787,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('统一对话舌脉输入将主脉与兼脉写入引擎快照', (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    final initialState = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'temperature',
+    );
+    expect(initialState, isNotNull);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(initialState!.pendingOptions.first).last);
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('选择舌诊脉诊').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('白厚').last);
+    await tester.tap(find.text('淡白').last);
+    await tester.tap(find.text('弦').first);
+    await tester.tap(find.text('数').last);
+    await tester.tap(find.text('确认').last);
+    await tester.pumpAndSettle();
+
+    final savedState = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'ten:',
+      expectedPromptIdStartsWith: true,
+    );
+    expect(savedState, isNotNull);
+    expect(savedState!.snapshot.tongueCoating, '白厚');
+    expect(savedState.snapshot.tongueShape, '淡白');
+    expect(savedState.snapshot.pulseType, '弦');
+    expect(savedState.snapshot.pulseTypeSecondary, '数');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('问诊助手把本地中医知识作为参考上下文传给模型', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(
