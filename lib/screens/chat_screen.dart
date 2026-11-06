@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
@@ -10,6 +11,7 @@ import '../data/formula_repository.dart';
 import '../data/formula_oral_hint_repository.dart';
 import '../data/settings_repository.dart';
 import '../models/diagnosis.dart';
+import '../models/tcm_interview_task_state.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/bookmark.dart';
 import '../services/tcm_interview_adapter.dart';
@@ -37,22 +39,30 @@ class _StepSnapshot {
   final List<_ChatBubble> messages;
   final EngineSnapshot engineSnapshot;
   final List<_ChatOption> options;
+  final String? pendingPromptId;
+  final String? pendingPromptText;
 
   _StepSnapshot({
     required this.messages,
     required this.engineSnapshot,
     required this.options,
+    this.pendingPromptId,
+    this.pendingPromptText,
   });
 }
 
 class ChatScreen extends StatefulWidget {
   final bool returnResultOnComplete;
   final String? initialUserContext;
+  final TcmInterviewTaskState? initialTaskState;
+  final Future<void> Function(TcmInterviewTaskState state)? onTaskStateChanged;
 
   const ChatScreen({
     super.key,
     this.returnResultOnComplete = false,
     this.initialUserContext,
+    this.initialTaskState,
+    this.onTaskStateChanged,
   });
 
   @override
@@ -76,6 +86,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // 诊断步骤历史栈（用于返回上一步）
   final List<_StepSnapshot> _stepHistory = [];
+  String? _pendingPromptId;
+  String? _pendingPromptText;
+  late final String _taskId = widget.initialTaskState?.taskId ??
+      'tcm-${DateTime.now().microsecondsSinceEpoch}';
 
   // 舌诊脉诊选择状态
   String? _selectedTongueCoating;
@@ -86,7 +100,12 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _startDiagnosis();
+    final initialTask = widget.initialTaskState;
+    if (initialTask != null && initialTask.status == 'active') {
+      _restorePendingTaskState(initialTask);
+    } else {
+      _startDiagnosis();
+    }
   }
 
   void _startDiagnosis() {
@@ -117,6 +136,126 @@ class _ChatScreenState extends State<ChatScreen> {
             ))
         .toList();
     _showOptions = true;
+    _pendingPromptId = 'temperature';
+    _pendingPromptText = question;
+    _emitTaskState();
+  }
+
+  void _emitTaskState({String status = 'active'}) {
+    final callback = widget.onTaskStateChanged;
+    if (callback == null) return;
+    final state = TcmInterviewTaskState(
+      taskId: _taskId,
+      snapshot: _interview.createSnapshot(),
+      status: status,
+      pendingPromptId: status == 'active' ? _pendingPromptId : null,
+      pendingPromptText: status == 'active' ? _pendingPromptText : null,
+      pendingOptions: status == 'active'
+          ? _currentOptions.map((option) => option.label).toList(growable: false)
+          : const [],
+      updatedAt: DateTime.now().toUtc(),
+    );
+    unawaited(() async {
+      try {
+        await callback(state);
+      } catch (error) {
+        debugPrint('[TcmInterviewTask] 保存问诊状态失败：$error');
+      }
+    }());
+  }
+
+  void _restorePendingTaskState(TcmInterviewTaskState state) {
+    _interview.restoreSnapshot(state.snapshot);
+    _pendingPromptId = state.pendingPromptId;
+    _pendingPromptText = state.pendingPromptText;
+    final promptText = state.pendingPromptText;
+    if (promptText == null || promptText.isEmpty || state.pendingPromptId == null) {
+      _messages.add(const _ChatBubble(
+        text: '已恢复问诊数据，但当前记录缺少待回答问题，无法安全继续。原有问诊状态保持不变，请勿覆盖；可重新开始一项问诊。',
+        isUser: false,
+      ));
+      return;
+    }
+    _messages.add(_ChatBubble(text: promptText, isUser: false));
+    final id = state.pendingPromptId!;
+    final savedOptions = state.pendingOptions;
+    if (id == 'temperature') {
+      _currentOptions = _engine.getTemperatureQuestions()
+          .where((option) => savedOptions.contains(option.label))
+          .map((option) => _ChatOption(
+                label: option.label,
+                description: option.description,
+                onTap: () => _selectTemperature(option.key, option.label),
+              )).toList();
+    } else if (id == 'tongue_pulse') {
+      _currentOptions = [
+        _ChatOption(label: '选择舌诊脉诊', icon: Icons.edit_note, onTap: _showTonguePulseDialog),
+        _ChatOption(label: '跳过，直接问诊', icon: Icons.skip_next, onTap: () {
+          _addUserMessage('跳过舌诊脉诊');
+          _interview.answerTonguePulse();
+          _showTenQuestion(0);
+        }),
+      ];
+    } else if (id.startsWith('ten:')) {
+      final key = id.substring(4);
+      final questions = _engine.getTenQuestions(
+        defaultGender: SettingsRepository.instance.defaultGender,
+      );
+      final index = questions.indexWhere((question) => question.key == key);
+      if (index >= 0) {
+        final question = questions[index];
+        _currentOptions = question.options.where(savedOptions.contains).map((answer) =>
+          _ChatOption(label: answer, number: index + 1, onTap: () {
+            _addUserMessage(answer);
+            _interview.answerTenQuestion(question.key, answer);
+            _showTenQuestion(_engine.tenQuestionIndex);
+          }),
+        ).toList();
+      }
+    } else if (id == 'zhenjia') {
+      for (final entry in _zhenJiaClueKeys.entries) {
+        if (_engine.createSnapshot().answers['zhenjia_${entry.value}'] == true &&
+            !_zhenJiaSelected.contains(entry.key)) {
+          _zhenJiaSelected.add(entry.key);
+        }
+      }
+      _currentOptions = [
+        for (final entry in _zhenJiaClueKeys.entries)
+          if (!_zhenJiaSelected.contains(entry.key) && savedOptions.contains(entry.key))
+            _ChatOption(label: entry.key, onTap: () => _selectZhenJia(entry.key, entry.value)),
+        _ChatOption(
+          label: savedOptions.lastWhere((option) => option.startsWith('没有/跳过') || option.startsWith('完成鉴别'), orElse: () => '没有/跳过'),
+          icon: Icons.check,
+          onTap: _finishZhenJia,
+        ),
+      ];
+    } else if (id.startsWith('followup:')) {
+      final key = id.substring(9);
+      final candidates = <FollowUpQuestion>[
+        ..._engine.getPulseTongueFollowUpQuestions(),
+        ..._engine.getRequiredCombinedPatternFollowUpQuestions(),
+        if (_engine.meridianDirection != null)
+          ..._engine.getFollowUpQuestions(_engine.meridianDirection!),
+      ];
+      final matching = candidates.where((question) => question.key == key);
+      if (matching.isNotEmpty) {
+        final question = matching.first;
+        _currentOptions = question.options.where(savedOptions.contains).map((answer) =>
+          _ChatOption(label: answer, onTap: () {
+            _addUserMessage(answer);
+            _interview.answerFollowUp(question.key, answer);
+            _proceedAfterZhenJia();
+          }),
+        ).toList();
+      }
+    }
+    _showOptions = _currentOptions.isNotEmpty;
+    if (!_showOptions) {
+      _messages.add(const _ChatBubble(
+        text: '当前版本无法重建这道问诊题的选项。原始问诊数据已保留，没有自动改写或丢弃。',
+        isUser: false,
+      ));
+    }
   }
 
   // ==================== 快照管理 ====================
@@ -126,6 +265,8 @@ class _ChatScreenState extends State<ChatScreen> {
       messages: List.from(_messages),
       engineSnapshot: _interview.createSnapshot(),
       options: List.of(_currentOptions),
+      pendingPromptId: _pendingPromptId,
+      pendingPromptText: _pendingPromptText,
     ));
     _canGoBack = true;
   }
@@ -138,9 +279,12 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.addAll(snapshot.messages);
       _interview.restoreSnapshot(snapshot.engineSnapshot);
       _currentOptions = snapshot.options;
+      _pendingPromptId = snapshot.pendingPromptId;
+      _pendingPromptText = snapshot.pendingPromptText;
       _showOptions = true;
       _canGoBack = _stepHistory.isNotEmpty;
     });
+    _emitTaskState();
     _scrollToBottom();
   }
 
@@ -151,6 +295,8 @@ class _ChatScreenState extends State<ChatScreen> {
         '你整体的寒热感觉是怎样的？（平时怕冷还是怕热，或者身体某处发凉、发热都可以告诉我）';
     _addBotMessage(question);
     final options = _engine.getTemperatureQuestions();
+    _pendingPromptId = 'temperature';
+    _pendingPromptText = question;
     setState(() {
       _currentOptions = options
           .map((o) => _ChatOption(
@@ -161,6 +307,7 @@ class _ChatScreenState extends State<ChatScreen> {
           .toList();
       _showOptions = true;
     });
+    _emitTaskState();
   }
 
   void _selectTemperature(String key, String label) {
@@ -173,7 +320,10 @@ class _ChatScreenState extends State<ChatScreen> {
   // ==================== 舌诊脉诊 ====================
 
   void _showTonguePulseInput() {
-    _addBotMessage('接下来请告诉我你的舌象和脉象（可跳过）：');
+    const prompt = '接下来请告诉我你的舌象和脉象（可跳过）：';
+    _pendingPromptId = 'tongue_pulse';
+    _pendingPromptText = prompt;
+    _addBotMessage(prompt);
     setState(() {
       _currentOptions = [
         _ChatOption(
@@ -193,6 +343,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ];
       _showOptions = true;
     });
+    _emitTaskState();
   }
 
   void _showTonguePulseDialog() {
@@ -348,6 +499,8 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final q = questions[index];
+    _pendingPromptId = 'ten:${q.key}';
+    _pendingPromptText = q.question;
     _addBotMessage(q.question);
     setState(() {
       _currentOptions = q.options
@@ -364,6 +517,7 @@ class _ChatScreenState extends State<ChatScreen> {
           .toList();
       _showOptions = true;
     });
+    _emitTaskState();
   }
 
   // ==================== 九问后处理 ====================
@@ -389,6 +543,8 @@ class _ChatScreenState extends State<ChatScreen> {
         '• 有胃口，食之有味\n'
         '• 早起床精神好\n\n'
         '继续保持：不熬夜、忌生冷、七分饱、顺应时辰。';
+    _pendingPromptId = null;
+    _pendingPromptText = null;
     _addBotMessage(baselineText, isResult: true);
     setState(() {
       _currentOptions = [
@@ -396,6 +552,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ];
       _showOptions = true;
     });
+    _emitTaskState(status: 'completed');
   }
 
   // ==================== v1.11.8 ③ 寒热真假八维法（选填） ====================
@@ -414,8 +571,11 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<String> _zhenJiaSelected = [];
 
   void _showZhenJiaOptions() {
-    _addBotMessage('进阶鉴别（选填）：请逐条勾选符合你的「寒热真假」线索（可多选），'
-        '选完点「完成」；没有特殊线索直接点「跳过」。');
+    const prompt = '进阶鉴别（选填）：请逐条勾选符合你的「寒热真假」线索（可多选），'
+        '选完点「完成」；没有特殊线索直接点「跳过」。';
+    _pendingPromptId = 'zhenjia';
+    _pendingPromptText = prompt;
+    _addBotMessage(prompt);
     setState(() {
       _currentOptions = [
         for (final e in _zhenJiaClueKeys.entries)
@@ -429,6 +589,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ];
       _showOptions = true;
     });
+    _emitTaskState();
   }
 
   void _selectZhenJia(String label, String key) {
@@ -500,6 +661,8 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final q = questions[index];
+    _pendingPromptId = 'followup:${q.key}';
+    _pendingPromptText = q.question;
     _addBotMessage(q.question);
     setState(() {
       _currentOptions = q.options
@@ -519,11 +682,13 @@ class _ChatScreenState extends State<ChatScreen> {
           .toList();
       _showOptions = true;
     });
+    _emitTaskState();
   }
 
   // ==================== 诊断结果展示 ====================
 
   void _returnDiagnosisToAssistant() {
+    _emitTaskState(status: 'completed');
     final summary = _messages
         .map((message) => message.text)
         .where((text) => text.trim().isNotEmpty)
@@ -535,6 +700,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final result = _interview.diagnose();
     if (result == null) return;
 
+    _pendingPromptId = null;
+    _pendingPromptText = null;
+    _emitTaskState(status: 'completed');
     setState(() => _showOptions = false);
 
     // 脏腑证据层当前只展示 App 原始问答；未经经典来源核验的脏腑归属保持 MISSING。
