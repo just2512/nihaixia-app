@@ -19,6 +19,99 @@ const _readyStatus = LocalAiModelStatus(
   backend: 'cpu',
 );
 
+class _MemoryConversationStore implements AssistantConversationStore {
+  int _nextConversationId = 1;
+  int _nextMessageId = 1;
+  final Map<int, Map<String, Object?>> _conversations = {};
+  final Map<int, List<Map<String, Object?>>> _messages = {};
+  final Map<int, TcmInterviewTaskState> _taskStates = {};
+
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async {
+    final id = _nextConversationId++;
+    final now = DateTime.now().toIso8601String();
+    _conversations[id] = {
+      'id': id,
+      'title': title,
+      'mode': mode,
+      'created_at': now,
+      'updated_at': now,
+      'last_message_preview': '',
+    };
+    _messages[id] = [];
+    return id;
+  }
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) async {
+    final id = _nextMessageId++;
+    _messages.putIfAbsent(conversationId, () => []).add({
+      'id': id,
+      'conversation_id': conversationId,
+      'role': role,
+      'content': content,
+      'metadata': metadata,
+    });
+    final conversation = _conversations[conversationId];
+    if (conversation != null) {
+      conversation['updated_at'] = DateTime.now().toIso8601String();
+      conversation['last_message_preview'] = content;
+    }
+    return id;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async {
+    final rows = _conversations.values
+        .where((row) => (_messages[row['id']] ?? const []).isNotEmpty)
+        .toList()
+      ..sort((a, b) =>
+          (b['updated_at'] as String).compareTo(a['updated_at'] as String));
+    return limit == null ? rows : rows.take(limit).toList();
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async =>
+      List<Map<String, Object?>>.from(_messages[conversationId] ?? const []);
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {
+    _taskStates[conversationId] = state;
+  }
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async =>
+      _taskStates[conversationId];
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
+    for (final id in conversationIds) {
+      _conversations.remove(id);
+      _messages.remove(id);
+      _taskStates.remove(id);
+    }
+  }
+}
+
+_MemoryConversationStore _store = _MemoryConversationStore();
+
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
   _FailOnceStopRecorder({this.failFirstStop = true});
 
