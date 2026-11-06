@@ -69,3 +69,34 @@ void main() {
     );
   });
 }
+
+  test('自动调度遇到多个明确工具动作时必须返回歧义而不是抢先执行', () {
+    const request = '先帮我排紫微斗数，再推算五运六气';
+    final matches = AssistantToolRouter.matchAll(
+      request,
+      AssistantMode.automatic,
+    );
+    expect(matches.map((tool) => tool.id), containsAll(['ziwei', 'yunqi']));
+    expect(AssistantToolRouter.match(request, AssistantMode.automatic), isNull);
+  });
+
+  test('自动调度可识别单一工具动作，学习提问不因工具名误触发', () {
+    expect(
+      AssistantToolRouter.match('请帮我排一个紫微斗数命盘', AssistantMode.automatic)?.id,
+      'ziwei',
+    );
+    expect(
+      AssistantToolRouter.match('请解释紫微斗数的历史来源', AssistantMode.automatic),
+      isNull,
+    );
+  });
+
+  test('工具澄清短答必须由调用方验证唯一候选', () {
+    final candidates = AssistantToolRouter.matchAliases(
+      '紫微斗数和八字',
+      AssistantMode.metaphysics,
+    );
+    expect(candidates.map((tool) => tool.id), containsAll(['ziwei', 'bazi']));
+    expect(candidates.length, 2);
+  });
+
