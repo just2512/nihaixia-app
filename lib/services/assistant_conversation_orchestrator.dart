@@ -7,11 +7,13 @@ class AssistantDispatchDecision {
     required this.mode,
     this.tool,
     this.clarification,
+    this.expectsToolSelection = false,
   });
 
   final AssistantMode mode;
   final AssistantToolDefinition? tool;
   final String? clarification;
+  final bool expectsToolSelection;
 
   bool get needsClarification => clarification != null;
   bool get launchesTool => tool != null;
@@ -96,6 +98,7 @@ class AssistantConversationOrchestrator {
     required String query,
     required AssistantMode selectedMode,
     AssistantMode? currentMode,
+    bool pendingToolSelection = false,
   }) {
     final text = query.trim();
     if (text.isEmpty) {
@@ -107,7 +110,7 @@ class AssistantConversationOrchestrator {
       if (tool != null) {
         return AssistantDispatchDecision(mode: selectedMode, tool: tool);
       }
-      if (currentMode == selectedMode &&
+      if (pendingToolSelection &&
           !_learningCues.any(text.contains) &&
           (selectedMode == AssistantMode.tools ||
               selectedMode == AssistantMode.metaphysics)) {
@@ -119,6 +122,34 @@ class AssistantConversationOrchestrator {
           return AssistantDispatchDecision(
             mode: selectedMode,
             clarification: '你提到了多个工具（${matches.map((tool) => tool.title).join('、')}），请只选择其中一个。',
+            expectsToolSelection: true,
+          );
+        }
+        return AssistantDispatchDecision(
+          mode: selectedMode,
+          clarification: selectedMode == AssistantMode.metaphysics
+              ? '请明确选择工具：五运六气、紫微斗数、八字、易经、小六壬或梅花易数。'
+              : '请明确说出要使用的 App 工具名称。',
+          expectsToolSelection: true,
+        );
+      }
+      if (!_learningCues.any(text.contains)) {
+        if (selectedMode == AssistantMode.metaphysics &&
+            (text.contains('排盘') || text.contains('起卦') || text.contains('起课'))) {
+          return AssistantDispatchDecision(
+            mode: selectedMode,
+            clarification: text.contains('排盘')
+                ? '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？'
+                : '你想使用哪一种起卦工具：易经、小六壬，还是梅花易数？',
+            expectsToolSelection: true,
+          );
+        }
+        if (selectedMode == AssistantMode.tools &&
+            (text.contains('开穴') || text.contains('剂量换算'))) {
+          return const AssistantDispatchDecision(
+            mode: AssistantMode.tools,
+            clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
+            expectsToolSelection: true,
           );
         }
       }
@@ -134,18 +165,28 @@ class AssistantConversationOrchestrator {
     // A one-word answer such as “紫微” is meaningful only immediately after
     // the dispatcher has asked which tool the user wants. Keep the alias-only
     // path context-gated so ordinary mentions do not launch a calculator.
-    if (currentMode == AssistantMode.tools ||
-        currentMode == AssistantMode.metaphysics) {
-      final matches = AssistantToolRouter.matchAliases(text, currentMode!);
+    if (pendingToolSelection &&
+        (currentMode == AssistantMode.tools ||
+            currentMode == AssistantMode.metaphysics)) {
+      final mode = currentMode!;
+      final matches = AssistantToolRouter.matchAliases(text, mode);
       if (matches.length == 1) {
-        return AssistantDispatchDecision(mode: currentMode, tool: matches.single);
+        return AssistantDispatchDecision(mode: mode, tool: matches.single);
       }
       if (matches.length > 1) {
         return AssistantDispatchDecision(
-          mode: currentMode,
+          mode: mode,
           clarification: '你提到了多个工具（${matches.map((tool) => tool.title).join('、')}），请只选择其中一个。',
+          expectsToolSelection: true,
         );
       }
+      return AssistantDispatchDecision(
+        mode: mode,
+        clarification: mode == AssistantMode.metaphysics
+            ? '请明确选择工具：五运六气、紫微斗数、八字、易经、小六壬或梅花易数。'
+            : '请明确说出要使用的 App 工具名称。',
+        expectsToolSelection: true,
+      );
     }
 
     final tool = AssistantToolRouter.match(text, AssistantMode.automatic);
@@ -162,18 +203,21 @@ class AssistantConversationOrchestrator {
       return const AssistantDispatchDecision(
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？',
+        expectsToolSelection: true,
       );
     }
     if (text.contains('起卦') || text.contains('起课')) {
       return const AssistantDispatchDecision(
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种起卦工具：易经、小六壬，还是梅花易数？',
+        expectsToolSelection: true,
       );
     }
     if (text.contains('开穴') || text.contains('剂量换算')) {
       return const AssistantDispatchDecision(
         mode: AssistantMode.tools,
         clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
+        expectsToolSelection: true,
       );
     }
 
