@@ -179,7 +179,8 @@ class _ChatScreenState extends State<ChatScreen> {
       isResult: message.isResult,
     )));
     final promptText = state.pendingPromptText;
-    if (promptText == null || promptText.isEmpty || state.pendingPromptId == null) {
+    final pendingPromptId = state.pendingPromptId;
+    if (promptText == null || promptText.isEmpty || pendingPromptId == null) {
       _messages.add(const _ChatBubble(
         text: '已恢复问诊数据，但当前记录缺少待回答问题，无法安全继续。原有问诊状态保持不变，请勿覆盖；可重新开始一项问诊。',
         isUser: false,
@@ -191,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.last.text != promptText) {
       _messages.add(_ChatBubble(text: promptText, isUser: false));
     }
-    final id = state.pendingPromptId!;
+    final id = pendingPromptId;
     final savedOptions = state.pendingOptions;
     if (id == 'temperature') {
       _currentOptions = _engine.getTemperatureQuestions()
