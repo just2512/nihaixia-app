@@ -14,12 +14,11 @@ void main() {
       expect(controller.pendingPromptId, 'temperature');
       expect(controller.pendingPromptText, contains('寒热感觉'));
       expect(controller.pendingOptions, isNotEmpty);
+      final transcript = controller.messages.map((message) => message.text);
+      expect(transcript, contains('开始规则辨证'));
       expect(
-        controller.messages.map((message) => message.text),
-        containsAll([
-          '开始规则辨证',
-          contains('最近头痛，睡眠后缓解'),
-        ]),
+        transcript.any((text) => text.contains('最近头痛，睡眠后缓解')),
+        isTrue,
       );
       expect(controller.messages.last.text, controller.pendingPromptText);
     });
