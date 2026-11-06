@@ -33,7 +33,7 @@
 | `combined.sun_shaoyang.clause146` | 第146条：伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去；不是原文明确“合病” | 柴胡桂枝汤；逐项追问微呕和病程6—7天 | 统一覆盖 | 统一覆盖 | REACHABLE |
 | `combined.shaoyang.clause147` | 第147条：伤寒五六日，已发汗而复下之；胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦；原文没有“少阳太阴合病” | 柴胡桂枝干姜汤；先核对不呕，再核对误汗复下及病程5—6天 | 统一覆盖 | 统一覆盖 | REACHABLE |
 | `combined.sun.clause163` | 第163条实际是太阳病外证未除、数下后协热而利、利下不止、心下痞硬；原文没有“太阳太阴合病” | 桂枝人参汤；限定太阳病、发热恶寒、误下史、多次攻下、下利、心下痞硬 | 统一覆盖 | 统一覆盖 | REACHABLE |
-| `combined.three_yang.clause268_sleep` | 第268条明确“三阳合病”，但原文没有指定方剂 | 只显示原文证据，不自动推荐方剂 | 统一覆盖 | 统一覆盖 | REACHABLE（无方剂） |
+| `combined.three_yang.clause268_sleep` | 第268条明确“三阳合病”，原文同时要求脉浮大、上关上、但欲眠睡、目合则汗；原文没有指定方剂 | 仅当浮+大组合脉成立且由专业人员确认“上关上”后显示原文证据；未确认/不清楚/缺脉象均不命中，不自动推荐方剂 | 统一覆盖 | 统一覆盖 | REACHABLE（严格脉象门槛、无方剂） |
 | `combined.taiyin_shaoyin.unverified` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐四逆汤 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
 | `combined.jueyin_shaoyang.unverified` | 当前仅有临床经验关联，缺少可核验经典出处 | 暂不自动推荐乌梅丸 | 统一覆盖 | 统一覆盖 | REACHABLE（来源待核） |
 
@@ -63,6 +63,7 @@
 - `test/engine/combined_pattern_negative_reachability_test.dart`：12项条件逐项构造关键门槛被否定与未知（`null`）的输入，并分别经过结构化主路径和旧兜底路径；不允许在缺失或相反证据下命中对应条件。
 - `test/engine/combined_pattern_followup_score_test.dart`：覆盖第172条少阳分值的正向门槛、单独恶心不足阈值，以及明确无下利/未知不得命中呕吐方。
 - `test/engine/combined_pattern_negative_reachability_test.dart` 另覆盖第256条：仅滑脉、仅数脉、重复同一脉象、脉象未知均不得命中；滑数/数滑两种主脉与兼脉顺序均可通过组合脉门槛。
+- `test/engine/three_yang_clause268_gate_test.dart`：第268条必须先有浮+大组合脉，再确认专业人员记录的“上关上”；未确认、不清楚或缺少浮大组合均不得标记三阳合病。
 - `test/tcm_interview_adapter_test.dart`：验证第172条缺少自下利证据时，统一问诊适配层先追问并在明确确认后才命中。
 - 上述测试覆盖的是代码条件与结果传播，不代表临床有效性或经典版本校勘已完成。旧杂病兜底的穷举仍需单独补齐。
 
