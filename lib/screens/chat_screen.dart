@@ -511,7 +511,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   _saveSnapshot();
                   _addUserMessage(o);
                   _interview.answerTenQuestion(q.key, o);
-                  _showTenQuestion(index + 1);
+                  // The engine may skip gender-specific questions; follow its
+                  // canonical index instead of incrementing the UI index.
+                  _showTenQuestion(_engine.tenQuestionIndex);
                 },
               ))
           .toList();
@@ -1139,6 +1141,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _resetDiagnosis() {
     _engine.reset();
+    _zhenJiaSelected.clear();
+    _pendingPromptId = null;
+    _pendingPromptText = null;
     _stepHistory.clear();
     _canGoBack = false;
     setState(() {
