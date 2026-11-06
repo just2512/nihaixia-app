@@ -18,6 +18,7 @@ import '../data/database_helper.dart';
 import '../data/assistant_conversation_store.dart';
 import '../data/settings_repository.dart';
 import '../models/tcm_interview_task_state.dart';
+import '../models/assistant_tool_result.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -1149,7 +1150,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     _pendingToolSelection = false;
-    final result = await Navigator.push<String>(
+    final result = await Navigator.push<Object?>(
       context,
       FoldAwareMaterialPageRoute(
         sourceContext: context,
@@ -1157,8 +1158,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ),
     );
     if (!mounted) return;
-    final response = result != null && result.trim().isNotEmpty
-        ? '【${tool.title}返回内容】\n${result.trim()}'
+    final resultText = switch (result) {
+      AssistantToolResult typed => typed.toConversationText(),
+      String legacy when legacy.trim().isNotEmpty => legacy.trim(),
+      _ => '',
+    };
+    final response = resultText.isNotEmpty
+        ? '【${tool.title}返回内容】\\n$resultText'
         : '已打开「${tool.title}」。完成计算后回到本对话，把工具页面的结果发给我，我会基于结果继续解释。';
     setState(() {
       _messages.add(_InterviewMessage(text: response, isUser: false));
