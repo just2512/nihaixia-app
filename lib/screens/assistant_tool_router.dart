@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'chat_screen.dart';
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
 import 'daily_almanac_screen.dart';
@@ -376,7 +375,10 @@ class AssistantToolRouter {
   }
 
   static Widget _buildStructuredDiagnosis() =>
-      const ChatScreen(returnResultOnComplete: true);
+      throw StateError(
+        'Structured diagnosis must run inside LocalAiInterviewScreen; '
+        'the legacy ChatScreen entry is disabled.',
+      );
   static Widget _buildYunqi() => const YunQiScreen(returnResultOnComplete: true);
   static Widget _buildZiwei() =>
       const ZiweiChartScreen(returnResultOnComplete: true);
