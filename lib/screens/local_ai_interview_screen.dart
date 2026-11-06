@@ -1212,7 +1212,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ),
     };
     final resultText = normalizedResult.toConversationText();
-    final response = '【' + tool.title + '执行结果】\\n' + resultText;
+    final response = '【' + tool.title + '执行结果】\n' + resultText;
     setState(() {
       _messages.add(_InterviewMessage(text: response, isUser: false));
     });
