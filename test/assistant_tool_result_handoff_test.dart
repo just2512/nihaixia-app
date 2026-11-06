@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/yijing_engine.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
@@ -51,14 +52,14 @@ class _RecordingAssistantService extends LocalAiService {
 
 void main() {
   testWidgets('五运六气工具可把实际推算结果返回统一助手', (tester) async {
-    String? returned;
+    Object? returned;
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () async {
-                returned = await Navigator.push<String>(
+                returned = await Navigator.push<Object?>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const YunQiScreen(returnResultOnComplete: true),
@@ -85,14 +86,17 @@ void main() {
     await tester.tap(find.text('将本次推算结果带回助手对话'));
     await tester.pumpAndSettle();
 
-    expect(returned, isNotNull);
-    expect(returned, contains('推算日期：'));
-    expect(returned, contains('岁运：'));
-    expect(returned, contains('司天：'));
-    expect(returned, contains('在泉：'));
-    expect(returned, contains('口径：'));
-    expect(returned!.split('\n').length, greaterThan(2));
-    expect(returned, isNot(contains(r'\n')));
+    expect(returned, isA<AssistantToolResult>());
+    final result = returned! as AssistantToolResult;
+    expect(result.toolId, 'yunqi');
+    expect(result.title, '五运六气推算');
+    expect(result.values['推算日期'], isNotEmpty);
+    expect(result.values['岁运'], isNotEmpty);
+    expect(result.values['司天'], isNotEmpty);
+    expect(result.values['在泉'], isNotEmpty);
+    expect(result.disclaimer, contains('仅供理论学习'));
+    expect(result.toConversationText().split('\n').length, greaterThan(2));
+    expect(result.toConversationText(), isNot(contains(r'\n')));
     expect(tester.takeException(), isNull);
   });
 
