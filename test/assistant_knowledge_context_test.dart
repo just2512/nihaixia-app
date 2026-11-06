@@ -89,6 +89,9 @@ void main() {
     expect(context, contains('伤寒论讲稿'));
     expect(context, contains('倪师讲稿/整理讲义'));
     expect(context, contains('版本/底本/卷页：MISSING'));
+    expect(context, contains('来源标识：shanghan:assets/'));
+    expect(context, contains('本地回链：assets/'));
+    expect(context, contains('来源定位状态：MISSING'));
     expect(context, contains('不得当作仲景原文'));
   });
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
