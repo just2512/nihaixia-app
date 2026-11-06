@@ -74,7 +74,8 @@
 ### 1. AI 统一助手
 
 - AssistantToolArguments.validateAgainst 在页面执行前校验 tool_id、未声明参数、必填项、日期、整数和枚举值；参数不合规时拒绝执行。
-- AssistantToolResult 增加结果身份校验与 sourceIds；来源标识缺失时输出 MISSING。
+- AssistantToolResult 增加结果身份校验、sourceIds 和 SUCCEEDED / NO_RESULT / FAILED 状态；来源标识缺失时输出 MISSING。
+- 消息元数据改为带 schemaVersion 的 JSON 契约，覆盖模式、工具标识、待澄清状态、附件、问诊任务、工具状态和来源标识；历史记录解码兼容旧分号格式。
 - 旧页面返回的字符串结果统一包装为 typed result，避免新旧返回格式直接混入同一消息时间线。
 - 当前仍需逐工具补齐参数定义、执行状态、取消/失败恢复；尚未把所有工具页面迁移到结构化结果。
 
@@ -94,7 +95,7 @@
 ### 4. 经典医案来源账本
 
 - 新增 assets/medical_cases/source_ledger.json，按医案内部序号建立逐条记录；当前账本覆盖来源表中解析出的记录。
-- 默认字段全部为 MISSING。只有原始书名/病例来源、版本/底本、卷次、页码、篇章/病例标题齐全且显式标记 VERIFIED，状态才会显示为 VERIFIED。
+- 默认字段全部为 MISSING，包含原始书名/病例来源、版本/底本、卷次、页码、篇章/病例标题、原文片段、适用条件和异文。只有原始书名/病例来源、版本/底本、卷次、页码、篇章/病例标题、原文片段齐全且显式标记 VERIFIED，状态才会显示为 VERIFIED。
 - 目前没有凭摘要或内部序号补造任何原始出处；后续只录入可核对的来源。
 
 ### 5. App 整合
