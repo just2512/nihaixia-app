@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../utils/fold_aware_routes.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import '../data/settings_repository.dart';
 import '../data/database_helper.dart';
 import '../data/changelog_repository.dart';
-import '../services/update_service.dart';
 import '../services/native_files_stub.dart'
     if (dart.library.io) '../services/native_files_io.dart';
 import '../theme/app_colors.dart';
@@ -151,17 +149,6 @@ void showSettingsDialog(
               ),
               const Divider(height: 24),
 
-              // === 更新 ===
-              ListTile(
-                leading: const Icon(Icons.system_update),
-                title: const Text('检测更新'),
-                subtitle: const Text('检查是否有新版本'),
-                contentPadding: EdgeInsets.zero,
-                onTap: () {
-                  Navigator.pop(context);
-                  checkForUpdate(context);
-                },
-              ),
             ],
           ),
         ),
@@ -390,135 +377,3 @@ Widget _buildChangelogEntry(BuildContext context, ChangelogEntry e) {
   );
 }
 
-// ==================== 检测更新 ====================
-
-Future<void> checkForUpdate(BuildContext context) async {
-  showFoldAwareDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (c) => const AlertDialog(
-      content: Row(
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 16),
-          Text('正在检查更新...'),
-        ],
-      ),
-    ),
-  );
-
-  final updateInfo = await UpdateService.checkForUpdate();
-  if (!context.mounted) return;
-  Navigator.pop(context);
-
-  if (updateInfo == null) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('已是最新版本')),
-    );
-    return;
-  }
-
-  showUpdateDialog(context, updateInfo);
-}
-
-void showUpdateDialog(BuildContext context, UpdateInfo info) {
-  showFoldAwareDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('发现新版本 v${info.version}'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('更新说明：', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(info.body),
-            const SizedBox(height: 12),
-            Text(
-              '大小：${(info.apkSize / 1024 / 1024).toStringAsFixed(1)} MB',
-              style: TextStyle(color: context.colors.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () async {
-            await UpdateService.ignoreVersion(info.version);
-            if (context.mounted) Navigator.pop(context);
-          },
-          child: const Text('忽略此版本'),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(context);
-            downloadAndInstall(context, info);
-          },
-          child: const Text('下载更新'),
-        ),
-      ],
-    ),
-  );
-}
-
-Future<void> downloadAndInstall(BuildContext context, UpdateInfo info) async {
-  double progress = 0;
-  showFoldAwareDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (c) => StatefulBuilder(
-      builder: (context, setDialogState) {
-        UpdateService.downloadApk(info.apkDownloadUrl, (p) {
-          setDialogState(() => progress = p);
-        },
-                expectedSize: info.apkSize,
-                expectedSha256: info.apkSha256,
-                extraApkUrls: info.extraApkUrls)
-            .then((file) {
-          if (!context.mounted) return;
-          Navigator.pop(context);
-          if (file != null) {
-            installApk(file, context);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('下载失败，请稍后重试')),
-            );
-          }
-        });
-        return AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('正在下载更新...'),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(value: progress > 0 ? progress : null),
-              const SizedBox(height: 8),
-              Text('${(progress * 100).toStringAsFixed(0)}%'),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
-
-Future<void> installApk(dynamic file, BuildContext context) async {
-  try {
-    // 用 open_filex 触发系统安装器（自带 Android FileProvider，APK 位于缓存目录可被授权访问）
-    // file 为 downloadApk 返回的**路径字符串**。
-    final result = await OpenFilex.open(file as String);
-    if (result.type != ResultType.done) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法自动打开安装器，请在文件管理器中找到 APK 后手动安装')),
-      );
-    }
-  } catch (e) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('安装失败：$e')),
-    );
-  }
-}
