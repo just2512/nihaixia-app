@@ -37,6 +37,13 @@ class TcmInterviewAdapter {
   final DiagnosticEngine _engine;
   final String? defaultGender;
 
+  String get initialGreeting => _engine.getInitialGreeting();
+
+  bool get healthyBaselineOk => _engine.healthyBaselineOk;
+
+  void answerZhenJia(String key, String label) =>
+      _engine.answerZhenJia(key, label);
+
   DiagnosticStage get stage => _engine.stage;
   int get questionIndex => _engine.tenQuestionIndex;
   String? get meridianDirection => _engine.meridianDirection;
