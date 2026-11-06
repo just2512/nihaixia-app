@@ -1178,6 +1178,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ),
     );
     if (!mounted) return;
+    if (result is AssistantToolResult) {
+      final errors = result.validateFor(tool.id);
+      if (errors.isNotEmpty) {
+        setState(() => _error = '工具返回结果未通过契约校验：${errors.join('；')}');
+        return;
+      }
+    }
     final resultText = switch (result) {
       AssistantToolResult typed => typed.toConversationText(),
       String legacy when legacy.trim().isNotEmpty => legacy.trim(),
