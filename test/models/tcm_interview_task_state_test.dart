@@ -13,6 +13,11 @@ void main() {
         pendingPromptId: 'combined_clause172_diarrhea',
         pendingPromptText: '第172条所述自下利情况是否存在？',
         pendingOptions: const ['明确有自下利', '明确没有下利', '不确定'],
+        transcript: const [
+          TcmInterviewTaskMessage(text: '你目前有什么不适？', isUser: false),
+          TcmInterviewTaskMessage(text: '恶心、口苦', isUser: true),
+          TcmInterviewTaskMessage(text: '已记录舌脉信息', isUser: false),
+        ],
         updatedAt: DateTime.utc(2026, 11, 5, 12, 30),
         snapshot: EngineSnapshot(
           stage: DiagnosticStage.meridianLocation,
@@ -45,6 +50,16 @@ void main() {
       expect(restored.pendingPromptId, original.pendingPromptId);
       expect(restored.pendingPromptText, original.pendingPromptText);
       expect(restored.pendingOptions, original.pendingOptions);
+      expect(restored.transcript.map((message) => message.text).toList(), [
+        '你目前有什么不适？',
+        '恶心、口苦',
+        '已记录舌脉信息',
+      ]);
+      expect(restored.transcript.map((message) => message.isUser).toList(), [
+        false,
+        true,
+        false,
+      ]);
       expect(restored.updatedAt, original.updatedAt);
       expect(restored.snapshot.stage, DiagnosticStage.meridianLocation);
       expect(restored.snapshot.selectedSymptoms, ['恶心', '口苦']);
@@ -64,6 +79,25 @@ void main() {
       expect(restored.snapshot.qAnswers, original.snapshot.qAnswers);
       expect(restored.snapshot.extSymptoms, {'夜间口渴', '心烦'});
       expect(restored.snapshot.flatIndex, 3);
+    });
+
+    test('old schema-1 records without transcript remain readable', () {
+      final legacy = TcmInterviewTaskState.decode(
+        TcmInterviewTaskState(
+          taskId: 'legacy-task',
+          status: 'in_progress',
+          snapshot: EngineSnapshot(
+            stage: DiagnosticStage.temperaturePattern,
+            selectedSymptoms: const [],
+            answers: const {},
+            tenQuestionIndex: 0,
+            qAnswers: const {},
+            extSymptoms: const {},
+            flatIndex: 0,
+          ),
+        ).encode(),
+      );
+      expect(legacy.transcript, isEmpty);
     });
 
     test('rejects unsupported schema versions instead of silently restoring', () {
@@ -88,6 +122,14 @@ void main() {
         () => TcmInterviewTaskState.decode(
           '{"schemaVersion":1,"taskId":"task-1","status":"in_progress",'
           '"pendingPromptText":42,"snapshot":{},"pendingOptions":[]}',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => TcmInterviewTaskState.decode(
+          '{"schemaVersion":1,"taskId":"task-1","status":"in_progress",'
+          '"transcript":[{"text":"bad","isUser":"yes"}],'
+          '"snapshot":{},"pendingOptions":[]}',
         ),
         throwsFormatException,
       );
