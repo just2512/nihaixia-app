@@ -182,7 +182,9 @@ class AssistantConversationOrchestrator {
     if (pendingToolSelection &&
         (currentMode == AssistantMode.tools ||
             currentMode == AssistantMode.metaphysics)) {
-      final mode = currentMode!;
+      final mode = currentMode == AssistantMode.tools
+          ? AssistantMode.tools
+          : AssistantMode.metaphysics;
       final matches = AssistantToolRouter.matchAliases(text, mode);
       if (matches.length == 1) {
         return AssistantDispatchDecision(mode: mode, tool: matches.single);
