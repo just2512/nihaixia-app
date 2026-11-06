@@ -1058,6 +1058,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                         ),
               ],
             ),
+          ),
         ),
       ),
     );
