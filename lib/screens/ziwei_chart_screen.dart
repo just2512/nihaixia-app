@@ -1029,11 +1029,15 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       3, -1, -1, 10, // 卯 [核][核] 戌
       2, 1, 0, 11, // 寅 丑 子 亥
     ];
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: GridView.count(
+    return Center(
+      child: ConstrainedBox(
+        key: const ValueKey('ziwei-chart-plate-width'),
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Card(
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: GridView.count(
           crossAxisCount: 4,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1052,7 +1056,8 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                       flowMonthMingIndex: flowMonthMingIndex,
                       flowDayMingIndex: flowDayMingIndex,
                     ),
-          ],
+            ],
+          ),
         ),
       ),
     );
