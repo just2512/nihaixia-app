@@ -1543,6 +1543,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (!mounted) return;
       _conversationIdFuture = _createNewConversation();
       _lastEffectiveMode = null;
+      _pendingToolSelection = false;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
