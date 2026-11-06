@@ -19,6 +19,7 @@ import '../data/assistant_conversation_store.dart';
 import '../data/settings_repository.dart';
 import '../models/tcm_interview_task_state.dart';
 import '../models/assistant_tool_result.dart';
+import '../models/assistant_message_metadata.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -805,13 +806,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (id == null) return;
       final activeMode = mode ?? _assistantMode;
       final replayable = userText.trim().isNotEmpty;
-      final metadataParts = <String>[
-        'mode=${activeMode.name}',
-        'selectedMode=${_assistantMode.name}',
-        'replayable=$replayable',
-        if (attachmentType != null) 'attachment=$attachmentType',
-      ];
-      final metadata = metadataParts.join(';');
+      final metadata = AssistantMessageMetadata(
+        mode: activeMode.name,
+        selectedMode: _assistantMode.name,
+        replayable: replayable,
+        attachmentType: attachmentType,
+      ).encode();
       final storedUserText = attachmentType == null
           ? userText
           : replayable
@@ -829,12 +829,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         conversationId: id,
         role: 'assistant',
         content: assistantText,
-        metadata: [
-          'mode=${activeMode.name}',
-          'selectedMode=${_assistantMode.name}',
-          if (toolId != null) 'tool=$toolId',
-          if (expectsToolSelection) 'tool_choice=true',
-        ].join(';'),
+        metadata: AssistantMessageMetadata(
+          mode: activeMode.name,
+          selectedMode: _assistantMode.name,
+          toolId: toolId,
+          toolChoicePending: expectsToolSelection,
+        ).encode(),
       );
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
@@ -921,7 +921,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             conversationId: conversationId,
             role: entry.isUser ? 'user' : 'assistant',
             content: entry.text,
-            metadata: 'mode=consultation;selectedMode=${_assistantMode.name};tcm_task=${controller.taskId}',
+            metadata: AssistantMessageMetadata(
+              mode: 'consultation',
+              selectedMode: _assistantMode.name,
+              tcmTaskId: controller.taskId,
+              replayable: entry.isUser,
+            ).encode(),
           );
         } catch (error, stack) {
           debugPrint('[TcmInterviewTask] 问诊消息保存失败：$error\n$stack');
@@ -1223,7 +1228,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           conversationId: id,
           role: 'assistant',
           content: response,
-          metadata: 'mode=${mode.name};selectedMode=${_assistantMode.name};tool=${tool.id}',
+          metadata: AssistantMessageMetadata(
+            mode: mode.name,
+            selectedMode: _assistantMode.name,
+            toolId: tool.id,
+            toolStatus: normalizedResult.statusLabel,
+            sourceIds: normalizedResult.sourceIds,
+          ).encode(),
         );
       }
     } catch (error) {
@@ -1370,18 +1381,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final content = row['content'] as String? ?? '';
       final metadata = row['metadata'] as String? ?? '';
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
-      final selectedModeValue =
-          RegExp(r'(?:^|;)selectedMode=([a-z_]+)').firstMatch(metadata)?.group(1);
-      final effectiveModeValue =
-          RegExp(r'(?:^|;)mode=([a-z_]+)').firstMatch(metadata)?.group(1);
+      final messageMetadata = AssistantMessageMetadata.decode(metadata);
+      final selectedModeValue = messageMetadata.selectedMode;
+      final effectiveModeValue = messageMetadata.mode;
       final legacyModeValue = selectedModeValue == null ? effectiveModeValue : null;
       AssistantMode? messageEffectiveMode;
       for (final mode in AssistantMode.values) {
         if (mode.name == selectedModeValue || mode.name == legacyModeValue) {
           restoredMode = mode;
         }
-        if (mode.name == effectiveModeValue &&
-            mode != AssistantMode.automatic) {
+        if (mode.name == effectiveModeValue && mode != AssistantMode.automatic) {
           restoredEffectiveMode = mode;
           messageEffectiveMode = mode;
         }
@@ -1390,11 +1399,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (isUser) {
         restoredPendingToolSelection = false;
       } else {
-        restoredPendingToolSelection = metadata.contains('tool_choice=true');
+        restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
-      final pendingToolId = isUser
-          ? null
-          : RegExp(r'(?:^|;)tool=([a-z0-9_]+)').firstMatch(metadata)?.group(1);
+      final pendingToolId = isUser ? null : messageMetadata.toolId;
       final pendingTool = pendingToolId == null
           ? null
           : AssistantToolRouter.byId(pendingToolId);
@@ -1413,7 +1420,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                         : AssistantMode.consultation)),
       ));
       transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
-      if (isUser && !metadata.contains('replayable=false')) {
+      if (isUser && messageMetadata.replayable) {
         final attachmentNote = content.indexOf('（另附');
         replayableUserMessages.add(
           attachmentNote > 0 ? content.substring(0, attachmentNote) : content,
