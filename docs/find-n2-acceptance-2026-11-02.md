@@ -88,3 +88,12 @@
 | `03_photo_inference_reply.png` | E4B 图像推理回复 |
 | `04_half_fold.png` | 半折叠姿态 |
 | `05_after_release_reload.png` | 释放重载后 |
+
+
+## 2026-11-06 visual acceptance reopened
+
+The 2026-11-02 device test record is historical evidence only. The user has since reported that both inner- and outer-screen layouts remain poor; this feedback overrides the earlier visual PASS for product acceptance.
+
+The local AI conversation previously used a 900dp content cap, while the adaptive-layout design calls for a readable 640dp conversation column. The current refinement caps wide-window chat content at 640dp, keeps compact outer windows full-width, and preserves the active 388dp pane beside a physical hinge. Widget tests cover the 760dp inner-window case, flat-fold posture and unknown-fold posture.
+
+This is an automated layout constraint improvement, not a claim of final real-device visual acceptance. The inner/outer screen requirement remains open until the revised build is exercised on the Find N2 with screenshots and interaction checks.

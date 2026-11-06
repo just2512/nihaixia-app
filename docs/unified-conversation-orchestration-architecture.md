@@ -158,3 +158,22 @@ I. 真机验收 Find N2 外屏、内屏、横屏、键盘弹起、窗口尺寸�
 - 脏腑证据构建器现在也保留脉舌冲突追问（饮水、小便、四肢温度、表里证据、少阳/太阴线索）的原始答案和 `follow_up:<key>` 来源标识；这些回答此前只参与交叉验证计算，没有进入独立证据记录。
 - 对明确“无方剂”或来源待核的合病关联，诊断结果为空方剂时，UI 不再用相似度/表格候选重新显示方剂；仅显示缺少可核验方剂来源的说明。一般证据不足场景仍保留带警示的参考提示。
 - 上述修改均需以最新 SHA 的 Flutter tests 与 Flutter Quality Gate 结果验收；历史绿色 CI 不自动覆盖新提交。
+
+
+## 2026-11-06 implementation status
+
+### Already present in the current code path
+
+- `LocalAiInterviewScreen` is the unified assistant entry used by the home experience. The orchestrator classifies consultation, learning, tools and metaphysics intents.
+- Structured TCM interview is now an inline conversation task in this screen, backed by `TcmInterviewConversationController`; task snapshots are stored through `AssistantConversationStore.saveTcmInterviewTaskState`.
+- Selecting a history record restores both the message transcript and any pending structured-interview prompt/options. Continuing the interview writes subsequent messages and the updated task snapshot back to the selected conversation.
+- History supports multi-selection and deletion; normal conversation resume and pending tool-action restoration have widget tests.
+- Local knowledge retrieval is assembled into the context passed to the local model. This is retrieval/context injection, not unrestricted database access.
+
+### Still incomplete
+
+- `AssistantToolRouter` currently dispatches many calculators through their existing screen builders. Results can return to the conversation, but the calculation form itself is not yet an inline tool card in the same chat timeline.
+- Five-movement/six-qi, Ziwei and Bazi need calculation-service adapters with explicit input schemas, missing-parameter prompts, result payloads and provenance. The chat should orchestrate these adapters rather than navigate to independent tool pages.
+- Knowledge retrieval and tool execution are not yet one registry. A single capability registry is still required to declare searchable knowledge sources, executable tools, required parameters, safety constraints and result renderers.
+
+Do not mark the unified tool-dialog requirement complete until the calculator inputs and outputs are exercised without leaving the main conversation.

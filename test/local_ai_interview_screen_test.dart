@@ -809,6 +809,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 

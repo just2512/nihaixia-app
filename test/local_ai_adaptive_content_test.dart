@@ -40,9 +40,9 @@ void main() {
     expect(content.width, 402);
   });
 
-  testWidgets('AI interview uses expanded window width up to the content cap', (tester) async {
+  testWidgets('AI interview caps and centers content on the inner display', (tester) async {
     tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(840, 900);
+    tester.view.physicalSize = const Size(760, 900);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
@@ -56,8 +56,8 @@ void main() {
     final contentFinder = find.byKey(const ValueKey('local-ai-content-width'));
     final content = tester.getSize(contentFinder);
     final rect = tester.getRect(contentFinder);
-    expect(content.width, 840);
-    expect(rect.center.dx, closeTo(420, 1));
+    expect(content.width, 640);
+    expect(rect.center.dx, closeTo(380, 1));
   });
 
   testWidgets('AI interview scaffold stays inside one panel beside a vertical hinge', (tester) async {
@@ -91,7 +91,7 @@ void main() {
     expect(content.width, 388);
   });
 
-  testWidgets('AI interview uses the full inner display at a zero-width flat fold', (tester) async {
+  testWidgets('AI interview centers readable content on a flat inner display', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -118,11 +118,12 @@ void main() {
     );
     expect(scaffold.left, 0);
     expect(scaffold.right, 800);
-    expect(content.width, 800);
-    expect(content.right, 800);
+    expect(content.width, 640);
+    expect(content.left, 80);
+    expect(content.right, 720);
   });
 
-  testWidgets('AI interview keeps full width when fold posture is unknown', (tester) async {
+  testWidgets('AI interview keeps the content cap when fold posture is unknown', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -148,9 +149,9 @@ void main() {
       find.byKey(const ValueKey('local-ai-content-width')),
     );
     expect(scaffold.right, 800);
-    expect(content.left, 0);
-    expect(content.right, 800);
-    expect(content.width, 800);
+    expect(content.left, 80);
+    expect(content.right, 720);
+    expect(content.width, 640);
   });
 
   testWidgets('AI interview route stays on the originating right panel beside a vertical hinge', (tester) async {

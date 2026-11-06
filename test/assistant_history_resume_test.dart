@@ -4,6 +4,7 @@ import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -265,6 +266,71 @@ void main() {
     expect(conversations.first['id'], 1);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('恢复历史结构化问诊后可以继续当前问题并写回原会话', (tester) async {
+    final store = _MemoryConversationStore();
+    final controller = TcmInterviewConversationController(
+      defaultGender: '男',
+    );
+    controller.start(initialUserMessage: '开始规则问诊');
+    final taskState = controller.createTaskState();
+    final pendingPrompt = taskState.pendingPromptText!;
+
+    store.taskStates[1] = taskState;
+    store.messages[1] = [
+      {
+        'id': 1,
+        'conversation_id': 1,
+        'role': 'user',
+        'content': '开始规则问诊',
+        'metadata': 'selectedMode=automatic;mode=consultation',
+      },
+      {
+        'id': 2,
+        'conversation_id': 1,
+        'role': 'assistant',
+        'content': pendingPrompt,
+        'metadata': 'mode=consultation',
+      },
+    ];
+
+    final service = _HistoryResumeService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.text('可继续的历史会话'));
+    await _pumpFrames(tester);
+
+    expect(find.text(pendingPrompt), findsOneWidget);
+    expect(find.widgetWithText(ActionChip, taskState.pendingOptions.first),
+        findsOneWidget);
+
+    final selectedOption = taskState.pendingOptions.first;
+    await tester.tap(find.widgetWithText(ActionChip, selectedOption));
+    await _pumpFrames(tester);
+
+    final resumedState = store.taskStates[1]!;
+    expect(resumedState.pendingPromptId, 'tongue_pulse');
+    final messages = await store.getAssistantMessages(conversationId: 1);
+    expect(messages, hasLength(4));
+    expect(messages[2]['role'], 'user');
+    expect(messages[2]['content'], selectedOption);
+    expect(messages[3]['role'], 'assistant');
+    expect(messages[3]['content'], resumedState.pendingPromptText);
+    expect(service.restoredTranscript, contains('开始规则问诊'));
+    expect(tester.takeException(), isNull);
+  });
+
 }
 
 Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {

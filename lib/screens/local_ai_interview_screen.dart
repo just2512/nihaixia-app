@@ -1990,7 +1990,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           return Center(
             child: ConstrainedBox(
               key: const ValueKey('local-ai-content-width'),
-              constraints: const BoxConstraints(maxWidth: 900),
+              constraints: const BoxConstraints(maxWidth: 640),
               child: SizedBox(
                 height: constraints.maxHeight,
                 child: Column(

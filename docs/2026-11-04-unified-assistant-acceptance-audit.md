@@ -114,3 +114,12 @@
 
 因此第 3 项的 canonical/冲突追问适配层测试可记为代码层 PASS；第 7 项统一问诊体验仍为 PARTIAL，不得将独立页面路由包装称为融合完成。
 
+
+
+## 2026-11-06 re-audit addendum
+
+- The unified home assistant and mode orchestrator are present.
+- Structured rule-based TCM interview now has an inline controller and persisted task snapshot; history restoration rehydrates the pending prompt and selectable options.
+- History record continuation and multi-select deletion are implemented. The latest regression work adds explicit coverage for resuming an unfinished TCM task, subject to the current CI run.
+- Local knowledge retrieval is passed into local-model context; tool pages still use screen navigation and are not yet unified inline.
+- Therefore items 6 and 12 are substantially implemented but remain under end-to-end acceptance; items 7, 8 and 11 remain partial until tools are callable as inline capabilities from the same conversation.
