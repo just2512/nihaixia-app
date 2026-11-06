@@ -493,84 +493,92 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
               },
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final timeFields = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _Dropdown(
+                            label: '时',
+                            value: _birthHour,
+                            items: [
+                              for (int h = 0; h <= 23; h++)
+                                DropdownMenuItem(
+                                  value: h,
+                                  child: Text(
+                                    h == 23
+                                        ? (_distinguishZiShi
+                                            ? '23(晚子时)'
+                                            : '23(子时)')
+                                        : '$h',
+                                  ),
+                                ),
+                            ],
+                            onChanged: (v) => setState(() => _birthHour = v!),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _Dropdown(
+                            label: '分',
+                            value: _birthMinute,
+                            items: [
+                              for (int m = 0; m <= 59; m++)
+                                DropdownMenuItem(
+                                  value: m,
+                                  child: Text(m.toString().padLeft(2, '0')),
+                                ),
+                            ],
+                            onChanged: (v) => setState(() => _birthMinute = v!),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _chip(
+                          '时辰',
+                          '${_shiChen[shiChenIndex].$1} '
+                          '(${_shiChen[shiChenIndex].$3})',
+                          cs.primary,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+                final genderField = SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('男')),
+                    ButtonSegment(value: false, label: Text('女')),
+                  ],
+                  selected: {_isMale},
+                  onSelectionChanged: (s) =>
+                      setState(() => _isMale = s.first),
+                );
+                if (constraints.maxWidth < 420) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _Dropdown(
-                              label: '时',
-                              value: _birthHour,
-                              items: [
-                                for (int h = 0; h <= 23; h++)
-                                  DropdownMenuItem(
-                                    value: h,
-                                    child: Text(
-                                      h == 23
-                                          ? (_distinguishZiShi
-                                              ? '23(晚子时)'
-                                              : '23(子时)')
-                                          : '$h',
-                                    ),
-                                  ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _birthHour = v!),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: _Dropdown(
-                              label: '分',
-                              value: _birthMinute,
-                              items: [
-                                for (int m = 0; m <= 59; m++)
-                                  DropdownMenuItem(
-                                    value: m,
-                                    child:
-                                        Text(m.toString().padLeft(2, '0')),
-                                  ),
-                              ],
-                              onChanged: (v) =>
-                                  setState(() => _birthMinute = v!),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          _chip(
-                            '时辰',
-                            '${_shiChen[shiChenIndex].$1} '
-                            '(${_shiChen[shiChenIndex].$3})',
-                            cs.primary,
-                          ),
-                        ],
-                      ),
+                      timeFields,
+                      const SizedBox(height: 8),
+                      SizedBox(width: double.infinity, child: genderField),
                     ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: true, label: Text('男')),
-                      ButtonSegment(value: false, label: Text('女')),
-                    ],
-                    selected: {_isMale},
-                    onSelectionChanged: (s) =>
-                        setState(() => _isMale = s.first),
-                  ),
-                ),
-              ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(flex: 2, child: timeFields),
+                    const SizedBox(width: 8),
+                    Expanded(child: genderField),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             SegmentedButton<bool>(
