@@ -18,7 +18,7 @@
 | 9 | 设置入口 | EXISTS | `HomeScreen` 根导航含独立“设置”目的地；`home_screen_entry_test.dart` 断言设置可从根导航进入 | 当前已不依赖问诊页面内部入口；后续可继续优化设置分类与可发现性，不应把设置重新塞回聊天页。 |
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
 | 11 | 单一主入口与统一调度 | PARTIAL（目录覆盖扩展） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 统一助手已覆盖 ToolsScreen 的 22 个页面/工具目的地，并包含独立结构化辨证入口，共 23 个注册工具；工具角色上下文动态读取注册表。路由仍是关键词/动作词确定性匹配，工具操作以卡片按钮启动既有页面，部分工具不回传机器可读结果；未具备语义参数抽取、表单缺参追问、跨轮工具任务状态和多工具计划，不能称为完整通用 Agent。 |
-| 12 | 对话历史持久化、续聊、批量删除 | PARTIAL（文本会话已实现） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`；`test/models/tcm_interview_task_state_test.dart` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。原始图片/录音附件不持久化，只保留附件说明；`TcmInterviewTaskState` 模型与 SQLite 保存/读取接口已存在。2026-11-05 新增完整快照序列化/反序列化回归，覆盖问诊阶段、答案、舌脉、组合经、追问 ID/选项、时间戳和 schema 拒绝；但尚未接入 `ChatScreen` 的逐步保存/恢复，未完成的结构化辨证任务仍不能认定可续接；历史模型上下文受长度上限约束。 |
+| 12 | 对话历史持久化、续聊、批量删除 | PARTIAL（文本会话已实现） | `AssistantConversationStore`、SQLite `assistant_conversations/assistant_messages`；`assistant_history_screen.dart`；`assistant_history_resume_test.dart`；`test/models/tcm_interview_task_state_test.dart` | 文本消息可持久化、选择历史继续并在原会话追加、批量删除。原始图片/录音附件不持久化，只保留附件说明；`TcmInterviewTaskState` 模型与 SQLite 保存/读取接口已存在。2026-11-06 新增完整快照序列化/反序列化回归，覆盖问诊阶段、答案、舌脉、组合经、追问 ID/原始题面/选项、时间戳和 schema 拒绝；CI 增加独立快照契约步骤并将其设为全量回归前置条件。但尚未接入 `ChatScreen` 的逐步保存/恢复，未完成的结构化辨证任务仍不能认定可续接；历史模型上下文受长度上限约束。 |
 
 ## 1A. 2026-11-05 增量复核与代码落地
 
