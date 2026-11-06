@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
+
+final _testTheme = ThemeData(
+  colorScheme: AppColors.colorSchemeFor(Brightness.light),
+  useMaterial3: true,
+  extensions: [AppColors.light],
+);
 
 void main() {
   testWidgets('紫微命盘在展开内屏限制盘面宽度并居中', (tester) async {
@@ -10,7 +17,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(home: ZiweiChartScreen()),
+      MaterialApp(theme: _testTheme, home: const ZiweiChartScreen()),
     );
     await tester.pumpAndSettle();
 
