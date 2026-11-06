@@ -384,7 +384,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: child,
+        child: SizedBox(width: double.infinity, child: child),
       ),
     );
   }
