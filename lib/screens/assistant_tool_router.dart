@@ -353,16 +353,26 @@ class AssistantToolRouter {
     ).toList(growable: false);
   }
 
-  static AssistantToolDefinition? match(String query, AssistantMode mode) {
+  /// Return every explicit action match. Callers must clarify when more than
+  /// one tool is named; silently selecting the first registry entry is unsafe.
+  static List<AssistantToolDefinition> matchAll(
+    String query,
+    AssistantMode mode,
+  ) {
     final normalized = query.trim();
-    if (normalized.isEmpty) return null;
-    for (final tool in _all) {
-      if (mode != AssistantMode.automatic && !tool.modes.contains(mode)) continue;
-      if (!tool.aliases.any(normalized.contains)) continue;
-      if (!tool.actionWords.any(normalized.contains)) continue;
-      return tool;
-    }
-    return null;
+    if (normalized.isEmpty) return const [];
+    return _all.where((tool) {
+      if (mode != AssistantMode.automatic && !tool.modes.contains(mode)) {
+        return false;
+      }
+      return tool.aliases.any(normalized.contains) &&
+          tool.actionWords.any(normalized.contains);
+    }).toList(growable: false);
+  }
+
+  static AssistantToolDefinition? match(String query, AssistantMode mode) {
+    final matches = matchAll(query, mode);
+    return matches.length == 1 ? matches.single : null;
   }
 
   static Widget _buildStructuredDiagnosis() =>
