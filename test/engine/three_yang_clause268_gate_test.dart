@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
+import 'package:nihaisha_app/engine/diagnostic_rules.dart';
 import 'package:nihaisha_app/engine/formula_rules.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 
