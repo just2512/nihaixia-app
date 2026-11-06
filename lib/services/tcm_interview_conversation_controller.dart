@@ -42,6 +42,7 @@ class TcmInterviewConversationController {
   String? _pendingPromptId;
   String? _pendingPromptText;
   List<String> _pendingOptions = const [];
+  bool _meridianFollowupActive = false;
 
   List<TcmInterviewTaskMessage> get messages =>
       List.unmodifiable(_messages);
@@ -77,6 +78,18 @@ class TcmInterviewConversationController {
       if (state.snapshot.answers['zhenjia_${entry.value}'] == true) {
         controller._zhenJiaSelected.add(entry.key);
       }
+    }
+    final pendingId = state.pendingPromptId;
+    if (pendingId != null && pendingId.startsWith('followup:')) {
+      final key = pendingId.substring('followup:'.length);
+      final isPulseOrCombined = controller._adapter.pulseTongueCrossChecks
+              .any((prompt) => prompt.id == key) ||
+          controller._adapter.requiredCombinedPatternChecks
+              .any((prompt) => prompt.id == key);
+      final meridian = controller._adapter.meridianDirection ?? '少阴';
+      controller._meridianFollowupActive = !isPulseOrCombined &&
+          controller._adapter.followUpPrompts(meridian)
+              .any((prompt) => prompt.id == key);
     }
     return controller;
   }
@@ -289,27 +302,47 @@ class TcmInterviewConversationController {
       return;
     }
 
+    final meridian = _adapter.meridianDirection ?? '少阴';
+    final unresolvedMeridianQuestions = _adapter
+        .followUpPrompts(meridian)
+        .where((prompt) =>
+            !_adapter.createSnapshot().answers.containsKey(prompt.id))
+        .toList(growable: false);
+    if (_meridianFollowupActive) {
+      if (unresolvedMeridianQuestions.isNotEmpty) {
+        _askFollowUp(unresolvedMeridianQuestions.first);
+        return;
+      }
+      _meridianFollowupActive = false;
+      final result = _adapter.diagnose();
+      if (result != null) {
+        _completeWithDiagnosis(result);
+      } else {
+        _completeWithText(
+          '当前问诊信息仍不足以形成可复核的辨证结果。\\n'
+          '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\\n\\n'
+          '建议补充四诊信息，并由执业中医师面诊核实。',
+        );
+      }
+      return;
+    }
+
     final result = _adapter.diagnose();
     if (result != null) {
       _completeWithDiagnosis(result);
       return;
     }
 
-    final meridian = _adapter.meridianDirection ?? '少阴';
-    final unresolved = _adapter
-        .followUpPrompts(meridian)
-        .where((prompt) =>
-            !_adapter.createSnapshot().answers.containsKey(prompt.id))
-        .toList(growable: false);
-    if (unresolved.isNotEmpty) {
+    if (unresolvedMeridianQuestions.isNotEmpty) {
+      _meridianFollowupActive = true;
       _appendAssistant('还需要补充少量信息，才能完成规则核对：');
-      _askFollowUp(unresolved.first);
+      _askFollowUp(unresolvedMeridianQuestions.first);
       return;
     }
 
     _completeWithText(
-      '当前问诊信息仍不足以形成可复核的辨证结果。\n'
-      '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\n\n'
+      '当前问诊信息仍不足以形成可复核的辨证结果。\\n'
+      '缺失证据不会按阴性处理，也不会据此自动推荐方剂。\\n\\n'
       '建议补充四诊信息，并由执业中医师面诊核实。',
     );
   }
