@@ -72,7 +72,7 @@ class MedicalCaseSourceLedger {
         '核验状态：$status',
         if (missingFields.isNotEmpty) '缺失字段：${missingFields.join('、')}',
         '说明：内部医案序号不等于原始来源定位。',
-      ].join('\\n');
+      ].join('\n');
 
   Map<String, String> toJson() => {
         'sourceTitle': sourceTitle,
