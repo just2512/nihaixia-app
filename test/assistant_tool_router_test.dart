@@ -98,4 +98,33 @@ void main() {
     expect(candidates.map((tool) => tool.id), containsAll(['ziwei', 'bazi']));
     expect(candidates.length, 2);
   });
+  test('工具参数契约拒绝非法日期、未声明字段和错误工具标识', () {
+    final tool = AssistantToolRouter.yunqi;
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-02-30'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-06', 'rawPrompt': 'run arbitrary'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'bazi').validateAgainst(tool),
+      isNotEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-06'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
