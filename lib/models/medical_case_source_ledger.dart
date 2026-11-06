@@ -8,6 +8,8 @@ class MedicalCaseSourceLedger {
     this.volume = 'MISSING',
     this.page = 'MISSING',
     this.passage = 'MISSING',
+    this.originalExcerpt = 'MISSING',
+    this.applicability = 'MISSING',
     this.variant = 'MISSING',
     this.verificationStatus = 'MISSING',
   });
@@ -17,6 +19,8 @@ class MedicalCaseSourceLedger {
   final String volume;
   final String page;
   final String passage;
+  final String originalExcerpt;
+  final String applicability;
   final String variant;
 
   /// 仅允许 MISSING / PENDING / VERIFIED；VERIFIED 仍须满足完整定位字段。
@@ -30,6 +34,7 @@ class MedicalCaseSourceLedger {
     'volume',
     'page',
     'passage',
+    'originalExcerpt',
   ];
 
   bool get hasCompleteLocator =>
@@ -44,6 +49,8 @@ class MedicalCaseSourceLedger {
         'volume' => volume,
         'page' => page,
         'passage' => passage,
+        'originalExcerpt' => originalExcerpt,
+        'applicability' => applicability,
         'variant' => variant,
         _ => 'MISSING',
       };
@@ -54,6 +61,8 @@ class MedicalCaseSourceLedger {
         if (volume == 'MISSING') '卷次',
         if (page == 'MISSING') '页码',
         if (passage == 'MISSING') '篇章/病例标题',
+        if (originalExcerpt == 'MISSING') '原文片段',
+        if (applicability == 'MISSING') '适用条件',
       ];
 
   String get status => isVerified
@@ -68,6 +77,8 @@ class MedicalCaseSourceLedger {
         '卷次：$volume',
         '页码：$page',
         '篇章/病例标题：$passage',
+        '原文片段：$originalExcerpt',
+        '适用条件：$applicability',
         '异文记录：$variant',
         '核验状态：$status',
         if (missingFields.isNotEmpty) '缺失字段：${missingFields.join('、')}',
@@ -80,6 +91,8 @@ class MedicalCaseSourceLedger {
         'volume': volume,
         'page': page,
         'passage': passage,
+        'originalExcerpt': originalExcerpt,
+        'applicability': applicability,
         'variant': variant,
         'verificationStatus': status,
       };
@@ -97,6 +110,8 @@ class MedicalCaseSourceLedger {
       volume: read('volume'),
       page: read('page'),
       passage: read('passage'),
+      originalExcerpt: read('originalExcerpt'),
+      applicability: read('applicability'),
       variant: read('variant'),
       verificationStatus: requestedStatus == 'VERIFIED' ||
               requestedStatus == 'PENDING'
