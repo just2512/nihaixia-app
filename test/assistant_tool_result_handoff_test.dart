@@ -196,6 +196,7 @@ void main() {
       find.byType(TextField),
       '帮我推算五运六气，日期 2026-11-06',
     );
+    await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('打开五运六气推算'));
