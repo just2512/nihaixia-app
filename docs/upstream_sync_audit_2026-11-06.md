@@ -89,6 +89,15 @@ Fork 的 `docs/classic-rule-source-manifest.json` 则声明：
 
 因此，上游生成的 398 条映射不能直接写入 Fork manifest，也不能将算法相似度标签当作原典校勘结论。它最多是待核对的候选对照表；在来源统一前不用于运行时诊断、方剂关联或条号替换。
 
+### 条文 381 编号修正：路径和编号语义不兼容
+
+upstream commit `1ac79321` 新增/修改的是 `assets/shanghan/clause_380.md`，内容为桂枝去芍药汤及其标准条号说明。Fork 当前没有同路径文件：
+- Fork `assets/shanghan/clause_024.md` 是“条文25：桂枝二麻黄一汤”；
+- Fork `assets/jingui/clause_380.md` 是肠痈/大黄牡丹汤，不能被 upstream 的同名文件覆盖；
+- Fork 的条文卡目录和编号已独立演进，文件名数字不能直接当标准条号。
+
+因此该 commit 不是简单的同文件修补。当前不复制 upstream 的 `clause_380.md`，也不把它写入 Fork 的条文 manifest；后续应先对《人纪》讲稿序号、Fork clause ID、1955 年条号体系建立三方映射，再决定是否补一张独立条文卡。
+
 ## 下一轮同步审查顺序
 
 1. 先完成当前 Fork 新提交 CI，确保古名映射修正和 AI 工具结果协议通过。
