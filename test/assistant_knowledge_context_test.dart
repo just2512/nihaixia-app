@@ -92,7 +92,7 @@ void main() {
     expect(context, contains('不得当作仲景原文'));
   });
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
-    final context = await AssistantKnowledgeContextBuilder.buildAsync('自闭症');
+    final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
     expect(context, contains('来源定位：MISSING'));
     expect(context, contains('不代表已核验病例原文或疗效证据'));
