@@ -106,6 +106,11 @@ void main() {
       cases.every((medicalCase) => records.containsKey(medicalCase.seq.toString())),
       isTrue,
     );
+    expect(
+      records.keys.toSet(),
+      cases.map((medicalCase) => medicalCase.seq.toString()).toSet(),
+      reason: '来源账本不能残留已从医案表删除的孤立主键',
+    );
     final ledgers = {
       for (final entry in records.entries)
         int.parse(entry.key): MedicalCaseSourceLedger.fromJson(
