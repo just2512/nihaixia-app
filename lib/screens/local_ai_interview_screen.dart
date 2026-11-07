@@ -1241,7 +1241,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
     }
-    final normalizedResult = switch (result) {
+    final normalizedResult = (switch (result) {
       AssistantToolResult typed => typed,
       String legacy when legacy.trim().isNotEmpty => AssistantToolResult(
           toolId: tool.id,
@@ -1255,7 +1255,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: const {'返回内容': 'MISSING'},
           disclaimer: '工具页面退出时未返回结构化结果；无法区分用户取消与旧页面未实现回传。',
         ),
-    };
+    }).withArguments(toolArguments.values);
     final resultText = normalizedResult.toConversationText();
     final response = '【' + tool.title + '执行结果】\n' + resultText;
     setState(() {
@@ -1274,6 +1274,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             toolId: tool.id,
             toolStatus: normalizedResult.statusLabel,
             sourceIds: normalizedResult.sourceIds,
+            toolArguments: normalizedResult.arguments,
           ).encode(),
         );
       }
