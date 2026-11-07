@@ -26,7 +26,9 @@ void main() {
       }
 
       final source = await entity.readAsString();
-      if (legacyReference.hasMatch(source)) references.add(relativePath);
+      if (legacyReference.hasMatch(source) || legacyImport.hasMatch(source)) {
+        references.add(relativePath);
+      }
     }
 
     references.sort();
