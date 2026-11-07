@@ -737,7 +737,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
           '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\n',
         );
-        context.writeln('本轮知识检索状态：${knowledge.status.name}。');
+        context.writeln('本轮知识检索状态：${knowledge.statusLabel}。');
         if (knowledge.failureMessage != null) {
           context.writeln('知识检索失败：${knowledge.failureMessage}');
         }
@@ -753,7 +753,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.status.name,
+          knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.consultation:
         // Consultation uses the same bundled classical-text and TCM retrieval
@@ -781,13 +781,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.status.name,
+          knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.learning:
         final knowledge =
             await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
         final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
-            '本轮知识检索状态：${knowledge.status.name}。\n'
+            '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
             '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
         final reply = await _service.sendMessageWithContext(
@@ -797,7 +797,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.status.name,
+          knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.tools:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
@@ -1524,9 +1524,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         text: content,
         isUser: isUser,
         actionLabel: retryFailedTool
-            ? '重试${pendingTool?.title ?? ''}'
+            ? '重试${pendingTool.title ?? ''}'
             : openPendingTool
-                ? '打开${pendingTool?.title ?? ''}'
+                ? '打开${pendingTool.title ?? ''}'
                 : null,
         onAction: pendingTool == null
             ? null
