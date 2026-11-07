@@ -23,6 +23,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // Initial chart calculation is scheduled in a microtask from initState.
+    // Pump once more so the completed chart and its expanded summary are built.
+    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsOneWidget);
     final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
