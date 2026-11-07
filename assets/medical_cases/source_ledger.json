@@ -1004,15 +1004,15 @@
       "applicability": "MISSING"
     },
     "92": {
-      "sourceTitle": "MISSING",
-      "edition": "MISSING",
-      "volume": "MISSING",
-      "page": "MISSING",
-      "passage": "MISSING",
-      "variant": "MISSING",
-      "verificationStatus": "MISSING",
-      "originalExcerpt": "MISSING",
-      "applicability": "MISSING"
+      "sourceTitle": "汉唐中医网《故事篇專講案例給大家聽》",
+      "edition": "汉唐中医网网页原文（网页版本）",
+      "volume": "不适用（网页文章，无卷次）",
+      "page": "https://www.hantang.com/chinese/ch_Articles/5-24-05.htm",
+      "passage": "2005-05-24 约旦籍男性（1955年生）脑瘤与淋巴癌病例",
+      "originalExcerpt": "05/24/2005,晴,約旦人,1955年生,腦瘤跟淋巴癌",
+      "applicability": "内部医案主键92的日期、患者性别/地区/出生年份及脑瘤合并淋巴癌描述与汉唐中医网原文对应；仅证明整理记录的网页文本来源，不证明病例真实性、诊疗判断或疗效主张。",
+      "variant": "已逐字核对汉唐中医网网页原文；纸本版本、合订本卷次和页码仍未核验。",
+      "verificationStatus": "VERIFIED"
     },
     "93": {
       "sourceTitle": "MISSING",
