@@ -63,6 +63,19 @@ class ClassicHit {
       : bookId != null
           ? 'guji:$bookId#chapter:${chapterIndex ?? 'MISSING'}'
           : 'MISSING';
+
+  /// Whether the app has enough local coordinates to reopen this hit.
+  /// This is deliberately independent from bibliographic verification:
+  /// a clickable local asset is not proof of edition, volume, or page.
+  bool get canReopenLocally =>
+      (asset != null && asset!.trim().isNotEmpty) ||
+      (bookId != null &&
+          bookId!.trim().isNotEmpty &&
+          chapterIndex != null &&
+          chapterIndex! >= 0);
+
+  /// No current index record proves a printed edition/page locator.
+  bool get hasVerifiedBibliographicLocator => false;
 }
 
 class ClassicSearchResult {
