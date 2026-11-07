@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "description": "逐条医案原始出处账本。内部序号仅为 App 数据主键；未经纸本/影印本核验的字段保持 MISSING。",
   "records": {
+    "1": {
+      "sourceTitle": "MISSING",
+      "edition": "MISSING",
+      "volume": "MISSING",
+      "page": "MISSING",
+      "passage": "MISSING",
+      "variant": "MISSING",
+      "verificationStatus": "MISSING",
+      "originalExcerpt": "MISSING",
+      "applicability": "MISSING"
+    },
     "2": {
       "sourceTitle": "汉唐中医网《母子情與母女情》",
       "edition": "汉唐中医网网页原文（网页版本）",
