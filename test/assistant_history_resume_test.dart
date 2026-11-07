@@ -335,6 +335,8 @@ void main() {
     expect(metadata.toolId, 'yunqi');
     expect(metadata.toolStatus, 'CANCELLED');
     expect(metadata.replayable, isTrue);
+    // The returned result must also be injected into the next model turn's context.
+    expect(service.restoredTranscript, contains('执行状态：CANCELLED'));
     expect(tester.takeException(), isNull);
   });
 
