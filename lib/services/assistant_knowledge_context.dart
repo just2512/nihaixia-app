@@ -135,6 +135,11 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义' : '古籍原文文本资产'}')
+        ..writeln('来源标识：${hit.sourceId}')
+        ..writeln('本地回链：${hit.localBacklink}')
+        ..writeln('本地回链标识可用：${hit.hasLocalBacklink ? 'YES' : 'NO'}')
+        ..writeln('纸本版本/卷页已核验：${hit.hasVerifiedBibliographicLocator ? 'YES' : 'NO'}')
+        ..writeln('来源定位状态：${hit.locatorStatus}')
         ..writeln('本地来源：$sourcePath')
         ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
         ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
