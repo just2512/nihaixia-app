@@ -61,13 +61,13 @@ class MedicalCaseSourceLedger {
       };
 
   List<String> get missingFields => [
-        if (sourceTitle == 'MISSING') '原始书名/病例来源',
-        if (edition == 'MISSING') '版本/底本',
-        if (volume == 'MISSING') '卷次',
-        if (page == 'MISSING') '页码',
-        if (passage == 'MISSING') '篇章/病例标题',
-        if (originalExcerpt == 'MISSING') '原文片段',
-        if (applicability == 'MISSING') '适用条件',
+        if (!_hasValue(sourceTitle)) '原始书名/病例来源',
+        if (!_hasValue(edition)) '版本/底本',
+        if (!_hasValue(volume)) '卷次',
+        if (!_hasValue(page)) '页码',
+        if (!_hasValue(passage)) '篇章/病例标题',
+        if (!_hasValue(originalExcerpt)) '原文片段',
+        if (!_hasValue(applicability)) '适用条件',
       ];
 
   String get status => isVerified
