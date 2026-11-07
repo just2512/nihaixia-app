@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -56,6 +57,26 @@ Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
   }
 }
 
+
+Future<T> _withStageTimeout<T>(String stage, Future<T> operation) async {
+  stderr.writeln('[history-retry-stage] START $stage');
+  try {
+    final result = await operation.timeout(
+      const Duration(seconds: 45),
+      onTimeout: () => throw TimeoutException(
+        'SQLite persistence stage timed out: $stage',
+        const Duration(seconds: 45),
+      ),
+    );
+    stderr.writeln('[history-retry-stage] PASS $stage');
+    return result;
+  } catch (error, stackTrace) {
+    stderr.writeln('[history-retry-stage] FAIL $stage: $error');
+    stderr.writeln(stackTrace);
+    rethrow;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -78,6 +99,30 @@ void main() {
     }
   });
 
+
+  test('sqflite FFI opens, writes, reads, and closes an explicit file', () async {
+    final file = '${databaseDirectory.path}/ffi-smoke.db';
+    final db = await _withStageTimeout(
+      'direct FFI openDatabase',
+      databaseFactoryFfi.openDatabase(file),
+    );
+    try {
+      await _withStageTimeout(
+        'direct FFI create table',
+        db.execute('CREATE TABLE smoke (id INTEGER PRIMARY KEY, value TEXT NOT NULL)'),
+      );
+      await _withStageTimeout(
+        'direct FFI insert',
+        db.insert('smoke', {'value': 'persisted'}),
+      );
+      final rows = await _withStageTimeout('direct FFI read', db.query('smoke'));
+      expect(rows, hasLength(1));
+      expect(rows.single['value'], 'persisted');
+    } finally {
+      await _withStageTimeout('direct FFI close', db.close());
+    }
+  });
+
   testWidgets('reopened SQLite restores FAILED tool and persists its retry result',
       (tester) async {
     tester.view.devicePixelRatio = 1;
@@ -97,10 +142,12 @@ void main() {
     );
     final store = DatabaseHelper.instance;
 
-    print('[history-retry-stage] before create conversation');
-    final conversationId = await store.createAssistantConversation(
-      title: '持久化失败重试',
-      mode: 'metaphysics',
+    final conversationId = await _withStageTimeout(
+      'DatabaseHelper.createAssistantConversation (open + onCreate + insert)',
+      store.createAssistantConversation(
+        title: '持久化失败重试',
+        mode: 'metaphysics',
+      ),
     );
     await store.saveAssistantMessage(
       conversationId: conversationId,
@@ -138,8 +185,9 @@ void main() {
     );
     print('[history-retry-stage] database closed and configured for reopen');
 
-    final persistedMessages = await store.getAssistantMessages(
-      conversationId: conversationId,
+    final persistedMessages = await _withStageTimeout(
+      'reopen SQLite and read persisted messages',
+      store.getAssistantMessages(conversationId: conversationId),
     );
     expect(persistedMessages, hasLength(2));
     final persistedMetadata = AssistantMessageMetadata.decode(
@@ -199,8 +247,9 @@ void main() {
     await _pumpFrames(tester, frames: 40);
 
     print('[history-retry-stage] retry result returned; reading persisted result');
-    final retriedMessages = await store.getAssistantMessages(
-      conversationId: conversationId,
+    final retriedMessages = await _withStageTimeout(
+      'read persisted retry result',
+      store.getAssistantMessages(conversationId: conversationId),
     );
     expect(retriedMessages.last['content'], contains('执行状态：SUCCEEDED'));
     expect(retriedMessages.last['content'], contains('执行参数：date=2026-11-07'));
