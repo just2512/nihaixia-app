@@ -224,9 +224,13 @@ void main() {
 
 
   testWidgets('恢复 FAILED 工具结果时显示重试入口并保留原始参数', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 850);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final store = _MemoryConversationStore();
     // Remove the fixture's earlier pending tool action so this test isolates
-    // the CANCELLED result rather than asserting against another message.
+    // the FAILED result rather than asserting against another message.
     store.messages[2]![1]['metadata'] = AssistantMessageMetadata(
       mode: 'metaphysics',
       selectedMode: 'automatic',
@@ -268,11 +272,8 @@ void main() {
     expect(find.text('五运六气推算'), findsWidgets);
     expect(find.text('2026-11-07'), findsWidgets);
     final returnResult = find.text('将本次推算结果带回助手对话');
-    await tester.scrollUntilVisible(
-      returnResult,
-      280,
-      scrollable: find.byType(Scrollable).last,
-    );
+    await tester.ensureVisible(returnResult);
+    await tester.pumpAndSettle();
     await tester.tap(returnResult);
     await _pumpFrames(tester);
 
@@ -480,6 +481,12 @@ void main() {
 
   testWidgets('恢复 CANCELLED 工具结果时保留终态且不显示重试入口', (tester) async {
     final store = _MemoryConversationStore();
+    // The base fixture also contains a separate unfinished tool request.
+    // Remove that action so this test checks only the CANCELLED terminal row.
+    store.messages[2]![1]['metadata'] = AssistantMessageMetadata(
+      mode: 'metaphysics',
+      selectedMode: 'automatic',
+    ).encode();
     store.messages[2]!.add({
       'id': 5,
       'conversation_id': 2,
