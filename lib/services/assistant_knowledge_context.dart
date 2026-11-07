@@ -109,6 +109,84 @@ class AssistantKnowledgeContextBuilder {
     final sources = <AssistantKnowledgeSourceReference>[];
     for (final sourceId in sourceIds) {
       try {
+        if (sourceId.startsWith('formula:')) {
+          final id = sourceId.substring('formula:'.length);
+          final matches = FormulaRepository.getAll().where((item) => item.id == id);
+          if (matches.isNotEmpty) {
+            final formula = matches.first;
+            sources.add(AssistantKnowledgeSourceReference(
+              sourceId: sourceId,
+              sourceLabel: 'App 方剂库',
+              title: formula.name,
+              localBacklink: 'assets/data/formulas.json#id=$id',
+              locatorStatus: 'MISSING',
+              sourceKind: 'formula',
+            ));
+          }
+          continue;
+        }
+        if (sourceId.startsWith('herb:')) {
+          final name = sourceId.substring('herb:'.length);
+          final matches = HerbRepository.getAll().where((item) => item.name == name);
+          if (matches.isNotEmpty) {
+            sources.add(AssistantKnowledgeSourceReference(
+              sourceId: sourceId,
+              sourceLabel: 'App 本草库',
+              title: matches.first.name,
+              localBacklink: 'assets/data/herbs.json#name=$name',
+              locatorStatus: 'MISSING',
+              sourceKind: 'herb',
+            ));
+          }
+          continue;
+        }
+        if (sourceId.startsWith('acupuncture:')) {
+          final id = int.tryParse(sourceId.substring('acupuncture:'.length));
+          if (id == null) continue;
+          final matches = AcupunctureRepository.getAll().where((item) => item.id == id);
+          if (matches.isNotEmpty) {
+            sources.add(AssistantKnowledgeSourceReference(
+              sourceId: sourceId,
+              sourceLabel: 'App 针灸处方库',
+              title: matches.first.symptom,
+              localBacklink: 'assets/data/acupuncture.json#id=$id',
+              locatorStatus: 'MISSING',
+              sourceKind: 'acupuncture',
+            ));
+          }
+          continue;
+        }
+        if (sourceId.startsWith('acupoint:')) {
+          final name = sourceId.substring('acupoint:'.length);
+          final matches = AcupointRepository.getAll().where((item) => item.name == name);
+          if (matches.isNotEmpty) {
+            sources.add(AssistantKnowledgeSourceReference(
+              sourceId: sourceId,
+              sourceLabel: 'App 穴位库',
+              title: matches.first.name,
+              localBacklink: 'assets/data/acupoints.json#name=$name',
+              locatorStatus: 'MISSING',
+              sourceKind: 'acupoint',
+            ));
+          }
+          continue;
+        }
+        if (sourceId.startsWith('neijing:')) {
+          final id = sourceId.substring('neijing:'.length);
+          final matches = kNeijingEntries.where((item) => item.id == id);
+          if (matches.isNotEmpty) {
+            final entry = matches.first;
+            sources.add(AssistantKnowledgeSourceReference(
+              sourceId: sourceId,
+              sourceLabel: 'App 内经结构化条目',
+              title: entry.title,
+              localBacklink: 'lib/data/neijing_entries.dart#id=$id',
+              locatorStatus: 'MISSING',
+              sourceKind: 'neijing',
+            ));
+          }
+          continue;
+        }
         if (sourceId.startsWith('medical_case:')) {
           final sequence = int.tryParse(
             sourceId.substring('medical_case:'.length),
@@ -459,6 +537,9 @@ class AssistantKnowledgeContextBuilder {
     for (final formula in formulas) {
       buffer
         ..writeln('[App方剂库 assets/data/formulas.json · ${formula.id}]')
+        ..writeln('来源标识：formula:${formula.id}')
+        ..writeln('本地回链：assets/data/formulas.json#id=${formula.id}')
+        ..writeln('来源定位状态：MISSING（数据资产路径不等同于古籍版本/卷页核验）')
         ..writeln('方名：${formula.name}')
         ..writeln('别名：${formula.alias}')
         ..writeln('归经/分类：${formula.meridian} / ${formula.category}')
@@ -473,6 +554,9 @@ class AssistantKnowledgeContextBuilder {
     for (final herb in herbs) {
       buffer
         ..writeln('[App本草库 assets/data/herbs.json · ${herb.name}]')
+        ..writeln('来源标识：herb:${herb.name}')
+        ..writeln('本地回链：assets/data/herbs.json#name=${herb.name}')
+        ..writeln('来源定位状态：MISSING（数据资产路径不等同于古籍版本/卷页核验）')
         ..writeln('药名：${herb.name}')
         ..writeln('性味：${herb.nature ?? 'MISSING'}；${herb.flavor}')
         ..writeln('归经字段：${herb.meridians.join('、')}')
@@ -488,6 +572,9 @@ class AssistantKnowledgeContextBuilder {
     for (final entry in acupuncture) {
       buffer
         ..writeln('[App针灸处方库 assets/data/acupuncture.json · entry:${entry.id}]')
+        ..writeln('来源标识：acupuncture:${entry.id}')
+        ..writeln('本地回链：assets/data/acupuncture.json#id=${entry.id}')
+        ..writeln('来源定位状态：MISSING（条目 ID 不等同于原始文献定位）')
         ..writeln('主诉/病症：${entry.symptom}')
         ..writeln('别名：${entry.aliases.join('、')}')
         ..writeln('穴位与操作：${entry.acupointsText}')
@@ -499,6 +586,9 @@ class AssistantKnowledgeContextBuilder {
     for (final point in acupoints) {
       buffer
         ..writeln('[App穴位库 assets/data/acupoints.json · ${point.name}]')
+        ..writeln('来源标识：acupoint:${point.name}')
+        ..writeln('本地回链：assets/data/acupoints.json#name=${point.name}')
+        ..writeln('来源定位状态：MISSING（数据资产路径不等同于古籍版本/卷页核验）')
         ..writeln('穴名：${point.name}；经络：${point.meridian}；特定穴属性：${point.attribute}')
         ..writeln('定位：${point.location.isEmpty ? 'MISSING' : point.location}')
         ..writeln('针刺：${point.needling.isEmpty ? 'MISSING' : point.needling}')
@@ -510,6 +600,9 @@ class AssistantKnowledgeContextBuilder {
     for (final entry in neijing) {
       buffer
         ..writeln('[App内经结构化条目 lib/data/neijing_entries.dart · ${entry.id}]')
+        ..writeln('来源标识：neijing:${entry.id}')
+        ..writeln('本地回链：lib/data/neijing_entries.dart#id=${entry.id}')
+        ..writeln('来源定位状态：MISSING（条目所载篇章仍需对照指定版本核验）')
         ..writeln('维度：${entry.dimension}；标题：${entry.title}')
         ..writeln('原文摘录：${entry.original}')
         ..writeln('条目所载出处：${entry.source}')
