@@ -7,7 +7,8 @@ void main() {
     final root = Directory.current.path;
     final legacyScreen = 'lib/screens/chat_screen.dart';
     final thisAudit = 'test/chat_screen_retirement_audit_test.dart';
-    final legacyReference = RegExp(r'\bChatScreen\b|chat_screen\.dart');
+    final legacyReference = RegExp(r'\bChatScreen\b');
+    final legacyImport = RegExp(r'''(?:import|export|part)\s+['"][^'"]*chat_screen\.dart''');
     final references = <String>[];
 
     await for (final entity in Directory.current.list(
