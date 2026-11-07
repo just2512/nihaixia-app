@@ -63,6 +63,10 @@ void main() {
 
   testWidgets('reopened SQLite restores FAILED tool and persists its retry result',
       (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 1800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
       await DatabaseHelper.closeTestDatabase();
@@ -137,12 +141,11 @@ void main() {
     expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
 
     await tester.tap(find.text('重试五运六气推算'));
-    await _pumpFrames(tester);
+    await _pumpFrames(tester, frames: 40);
     final returnResult = find.text('将本次推算结果带回助手对话');
-    await tester.ensureVisible(returnResult);
-    await tester.pumpAndSettle();
+    expect(returnResult, findsOneWidget);
     await tester.tap(returnResult);
-    await _pumpFrames(tester);
+    await _pumpFrames(tester, frames: 40);
 
     final retriedMessages = await store.getAssistantMessages(
       conversationId: conversationId,
