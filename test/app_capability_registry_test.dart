@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/knowledge_screen.dart';
 import 'package:nihaisha_app/screens/tools_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   group('App capability registry', () {
@@ -41,7 +42,14 @@ void main() {
 
   testWidgets('工具页医案数量显示与有效病例记录数一致', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: ToolsScreen()),
+      MaterialApp(
+        theme: ThemeData(
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          useMaterial3: true,
+          extensions: [AppColors.light],
+        ),
+        home: const ToolsScreen(),
+      ),
     );
     expect(find.textContaining('1256'), findsOneWidget);
     expect(find.textContaining('1113'), findsNothing);
