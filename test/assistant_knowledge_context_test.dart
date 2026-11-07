@@ -122,6 +122,29 @@ void main() {
   });
 
 
+  test('医案来源标识可反查账本记录并进入结构化引用，不把内部序号冒充出处', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '桂枝汤',
+    );
+    expect(result.text, contains('来源标识：medical_case:'));
+    expect(result.text, contains('本地回链：medical_case:internal-seq:'));
+
+    final caseSources = result.sources
+        .where((source) => source.sourceKind == 'medical_case')
+        .toList(growable: false);
+    expect(caseSources, isNotEmpty);
+    for (final source in caseSources) {
+      expect(source.sourceId, startsWith('medical_case:'));
+      expect(source.localBacklink, startsWith('medical_case:internal-seq:'));
+      expect(source.locatorStatus, 'MISSING');
+      expect(source.bibliographicLocatorVerified, isFalse);
+    }
+    expect(result.citationFooter, contains('来源类型：medical_case'));
+    expect(result.citationFooter, contains('书目定位状态：MISSING'));
+  });
+
+
+
   test('经典命中区分可回链与纸本出处核验状态', () {
     const lecture = ClassicHit(
       source: 'shanghan',
