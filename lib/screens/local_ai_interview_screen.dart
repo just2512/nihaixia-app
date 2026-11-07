@@ -1272,8 +1272,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           }
           break;
         case 'acupuncture':
+          if (parts.length < 3) break;
           await AcupunctureRepository.load();
-          destination = const AcupunctureScreen();
+          final categoryId = parts[1];
+          final entryId = int.tryParse(parts.sublist(2).join(':'));
+          if (entryId == null) break;
+          final categories = AcupunctureRepository.getAll();
+          final categoryMatches =
+              categories.where((category) => category.id == categoryId);
+          if (categoryMatches.isEmpty) break;
+          final entryMatches = categoryMatches.first.entries
+              .where((entry) => entry.id == entryId);
+          if (entryMatches.isEmpty) break;
+          destination = Scaffold(
+            appBar: AppBar(title: Text('针灸来源：${entryMatches.first.symptom}')),
+            body: AcupunctureScreen(
+              initialCategoryId: categoryId,
+              initialEntryId: entryId,
+            ),
+          );
           break;
         case 'medical_case':
           if (parts.length < 2) break;
