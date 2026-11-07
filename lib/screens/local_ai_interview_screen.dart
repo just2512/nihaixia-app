@@ -1163,14 +1163,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _startInlineTcmInterview(initialUserMessage: '继续规则辨证');
       return;
     }
-    if (arguments != null) {
-      final errors = arguments.validateAgainst(tool);
-      if (errors.isNotEmpty) {
-        if (mounted) {
-          setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
-        }
-        return;
+    // Every execution path (including quick actions with no extracted args)
+    // must pass the same contract. Otherwise required parameters can be
+    // bypassed simply by opening a tool from a shortcut.
+    final toolArguments =
+        arguments ?? AssistantToolArguments(toolId: tool.id);
+    final errors = toolArguments.validateAgainst(tool);
+    if (errors.isNotEmpty) {
+      if (mounted) {
+        setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
       }
+      return;
     }
     _pendingToolSelection = false;
     Object? result;
@@ -1179,8 +1182,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         context,
         FoldAwareMaterialPageRoute(
           sourceContext: context,
-          builder: (_) => arguments != null && tool.builderWithArguments != null
-              ? tool.builderWithArguments!(arguments)
+          builder: (_) => tool.builderWithArguments != null
+              ? tool.builderWithArguments!(toolArguments)
               : tool.builder(),
         ),
       );
