@@ -136,4 +136,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('紫微命盘横屏展开布局不越界且盘面保持限宽', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsOneWidget);
+    final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    await tester.scrollUntilVisible(
+      plate,
+      320,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(plate, findsOneWidget);
+    expect(tester.getSize(plate).width, 640);
+    expect(tester.getRect(plate).center.dx, closeTo(500, 1));
+    expect(tester.takeException(), isNull);
+  });
+
 }
