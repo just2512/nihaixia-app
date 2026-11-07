@@ -127,4 +127,37 @@ void main() {
     );
   });
 
+
+  test('必填参数在没有传参时也会被拒绝', () {
+    final tool = AssistantToolDefinition(
+      id: 'test_required',
+      title: '测试工具',
+      description: '测试必填参数。',
+      modes: const {AssistantMode.tools},
+      aliases: const ['测试工具'],
+      actionWords: const ['执行'],
+      builder: () => const SizedBox.shrink(),
+      parameters: const [
+        AssistantToolParameter(
+          key: 'count',
+          label: '数量',
+          type: AssistantToolParameterType.integer,
+          isRequired: true,
+        ),
+      ],
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'test_required')
+          .validateAgainst(tool),
+      contains('缺少必填参数：数量'),
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'test_required',
+        values: {'count': '3'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
