@@ -7,7 +7,7 @@ void main() {
     final root = Directory.current.path;
     final legacyScreen = 'lib/screens/chat_screen.dart';
     final thisAudit = 'test/chat_screen_retirement_audit_test.dart';
-    final legacyReference = RegExp(r'\\bChatScreen\\b|chat_screen\\.dart');
+    final legacyReference = RegExp(r'\bChatScreen\b|chat_screen\.dart');
     final references = <String>[];
 
     await for (final entity in Directory.current.list(
@@ -17,7 +17,7 @@ void main() {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final relativePath = entity.path
           .replaceFirst('$root${Platform.pathSeparator}', '')
-          .replaceAll('\\\\', '/');
+          .replaceAll('\\', '/');
       if (relativePath == legacyScreen || relativePath == thisAudit) continue;
       if (relativePath.startsWith('.dart_tool/') ||
           relativePath.startsWith('build/') ||
