@@ -47,6 +47,12 @@ class _PersistentHistoryService extends LocalAiService {
       '续聊成功：$text';
 }
 
+Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
+  for (var index = 0; index < frames; index++) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -55,7 +61,7 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  testWidgets('SQLite close/reopen restores FAILED tool arguments and retry entry',
+  testWidgets('reopened SQLite restores FAILED tool and persists its retry result',
       (tester) async {
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
@@ -119,24 +125,24 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
 
     await tester.tap(find.byTooltip('历史对话'));
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
     await tester.tap(find.text('持久化失败重试'));
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
 
     expect(find.text('重试五运六气推算'), findsOneWidget);
     expect(find.textContaining('执行状态：FAILED'), findsOneWidget);
     expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
 
     await tester.tap(find.text('重试五运六气推算'));
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
     final returnResult = find.text('将本次推算结果带回助手对话');
     await tester.ensureVisible(returnResult);
     await tester.pumpAndSettle();
     await tester.tap(returnResult);
-    await tester.pumpAndSettle();
+    await _pumpFrames(tester);
 
     final retriedMessages = await store.getAssistantMessages(
       conversationId: conversationId,
