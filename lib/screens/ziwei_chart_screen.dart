@@ -13,6 +13,7 @@ import '../data/ziwei_case_data.dart';
 import '../data/saved_chart_repository.dart';
 import '../data/settings_repository.dart';
 import '../theme/app_colors.dart';
+import '../utils/ziwei_plate_layout.dart';
 
 /// 紫微斗数排盘界面。
 ///
@@ -309,7 +310,12 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           ),
         ],
       ),
-      body: ListView(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // 双栏断点按内容区宽度计算。700dp 在 Find N2 展开屏经过系统
+          // 安全区/外层留白后可能无法触发；640dp 仍能为两张卡片各留约 300dp。
+          final isExpanded = constraints.maxWidth >= 640;
+          return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // 民俗参考声明
@@ -340,7 +346,18 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildInputCard(cs),
+          if (isExpanded && _chart != null && !_calculating)
+            Row(
+              key: const ValueKey('ziwei-expanded-input-summary'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _buildInputCard(cs)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildSummaryCard(cs, _chart!)),
+              ],
+            )
+          else
+            _buildInputCard(cs),
           const SizedBox(height: 12),
           if (_calculating)
             const Center(
@@ -355,7 +372,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               child: Text(_error!, style: TextStyle(color: cs.error)),
             ),
           if (_chart != null && !_calculating) ...[
-            _buildSummaryCard(cs, _chart!),
+            if (!isExpanded) _buildSummaryCard(cs, _chart!),
             const SizedBox(height: 12),
             // 添加到命盘库（Material 图标，无 emoji）
             SizedBox(
@@ -381,6 +398,8 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             _buildInterpretationSection(cs, _chart!),
           ],
         ],
+      );
+        },
       ),
     );
   }
@@ -1038,38 +1057,49 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       3, -1, -1, 10, // 卯 [核][核] 戌
       2, 1, 0, 11, // 寅 丑 子 亥
     ];
-    return Center(
-      child: ConstrainedBox(
-        key: const ValueKey('ziwei-chart-plate-width'),
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-              childAspectRatio: 0.72,
-              children: [
-                for (int slot = 0; slot < 16; slot++)
-                  slotToBranch[slot] == -1
-                      ? _buildCoreCell(cs, chart, slot)
-                      : _buildPalaceCell(
-                          cs,
-                          chart,
-                          chart.palaces[slotToBranch[slot]],
-                          flow,
-                          flowMonthMingIndex: flowMonthMingIndex,
-                          flowDayMingIndex: flowDayMingIndex,
-                        ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Find N2 外屏约 370dp、展开内屏常见 700dp 以上。
+        // 盘面在所有窗口宽度下统一限制为 640dp：避免 640–699dp
+        // 过渡区突然比展开屏更宽，也避免宽屏宫格被横向拉伸。
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final plateWidth = ziweiPlateWidthFor(availableWidth);
+        return Center(
+          child: SizedBox(
+            key: const ValueKey('ziwei-chart-plate-width'),
+            width: plateWidth,
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: GridView.count(
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                  childAspectRatio: 0.72,
+                  children: [
+                    for (int slot = 0; slot < 16; slot++)
+                      slotToBranch[slot] == -1
+                          ? _buildCoreCell(cs, chart, slot)
+                          : _buildPalaceCell(
+                              cs,
+                              chart,
+                              chart.palaces[slotToBranch[slot]],
+                              flow,
+                              flowMonthMingIndex: flowMonthMingIndex,
+                              flowDayMingIndex: flowDayMingIndex,
+                            ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

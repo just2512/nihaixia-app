@@ -83,7 +83,8 @@ class _YunQiScreenState extends State<YunQiScreen> {
           '司天病候': data.siTianBingText,
           '《内经》大论原文': data.jz60['SAME'] ?? '',
         },
-        disclaimer: '按本页当前运气推算算法生成；仅供理论学习，不构成医疗建议。',
+        sourceIds: const ['local-engine:yunqi'],
+        disclaimer: '按 App 本地五运六气引擎生成；仅供理论学习，不构成医疗建议。',
       ),
     );
   }
