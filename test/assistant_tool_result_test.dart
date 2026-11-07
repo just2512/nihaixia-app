@@ -26,6 +26,41 @@ void main() {
     expect(result.validateFor('yunqi'), isEmpty);
     expect(result.validateFor('ziwei'), isNotEmpty);
   });
+  test('工具结果参数必须与实际执行参数一致', () {
+    const matching = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'推算日期': '2026-11-07'},
+      arguments: {'date': '2026-11-07'},
+    );
+    expect(
+      matching.validateArgumentsMatch(const {'date': '2026-11-07'}),
+      isEmpty,
+    );
+    expect(
+      matching.validateArgumentsMatch(const {'date': '2026-11-06'}),
+      isNotEmpty,
+    );
+    expect(
+      matching.validateArgumentsMatch(const {
+        'date': '2026-11-07',
+        'timezone': 'Asia/Shanghai',
+      }),
+      isNotEmpty,
+    );
+
+    const legacy = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'结果': '旧页面返回'},
+    );
+    expect(legacy.validateArgumentsMatch(const {'date': '2026-11-07'}), isEmpty);
+    expect(
+      legacy.withArguments(const {'date': '2026-11-07'}).arguments,
+      const {'date': '2026-11-07'},
+    );
+  });
+
   test('typed tool result carries source identifiers into the conversation', () {
     const result = AssistantToolResult(
       toolId: 'ziwei',
