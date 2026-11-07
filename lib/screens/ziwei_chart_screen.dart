@@ -13,6 +13,7 @@ import '../data/ziwei_case_data.dart';
 import '../data/saved_chart_repository.dart';
 import '../data/settings_repository.dart';
 import '../theme/app_colors.dart';
+import '../utils/ziwei_plate_layout.dart';
 
 /// 紫微斗数排盘界面。
 ///
@@ -1062,8 +1063,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
-        final plateWidth =
-            availableWidth > 640.0 ? 640.0 : availableWidth;
+        final plateWidth = ziweiPlateWidthFor(availableWidth);
         return Center(
           child: SizedBox(
             key: const ValueKey('ziwei-chart-plate-width'),
