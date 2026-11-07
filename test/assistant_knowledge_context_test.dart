@@ -33,6 +33,16 @@ void main() {
     expect(AssistantKnowledgeContextBuilder.build('今天的天气怎么样'), isEmpty);
   });
 
+  test('异步检索明确区分无命中与成功命中', () async {
+    final empty = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync('今天的天气怎么样');
+    expect(empty.status, AssistantKnowledgeRetrievalStatus.noResults);
+    expect(empty.sources, isEmpty);
+
+    final found = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync('柴胡');
+    expect(found.status, AssistantKnowledgeRetrievalStatus.retrieved);
+    expect(found.sources, isNotEmpty);
+  });
+
   test('上下文长度有硬上限', () {
     final context = AssistantKnowledgeContextBuilder.build('柴胡 桂枝汤');
     expect(
@@ -102,6 +112,7 @@ void main() {
       '葛根加半夏汤',
       includeMedicalCases: false,
     );
+    expect(result.status, AssistantKnowledgeRetrievalStatus.retrieved);
     expect(result.text, contains('来源标识：shanghan:assets/'));
     expect(result.sources, isNotEmpty);
     expect(result.sourceIds, isNotEmpty);
