@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 
 void main() {
   test('工具注册表 ID 唯一且每个 ID 都能精确恢复同一工具定义', () {
@@ -175,4 +176,38 @@ void main() {
     );
   });
 
+  test('助手消息元数据往返保留知识状态、来源引用和工具重试参数', () {
+    const metadata = AssistantMessageMetadata(
+      mode: 'tools',
+      selectedMode: 'automatic',
+      toolId: 'yunqi',
+      toolStatus: 'FAILED',
+      sourceIds: ['neijing:chapter-1', 'medical_case:internal-seq:42'],
+      toolArguments: {'date': '2026-11-07', 'location': 'Shanghai'},
+      knowledgeStatus: 'PARTIAL',
+      replayable: false,
+    );
+
+    final restored = AssistantMessageMetadata.decode(metadata.encode());
+    expect(restored.mode, 'tools');
+    expect(restored.selectedMode, 'automatic');
+    expect(restored.toolId, 'yunqi');
+    expect(restored.toolStatus, 'FAILED');
+    expect(restored.sourceIds, metadata.sourceIds);
+    expect(restored.toolArguments, metadata.toolArguments);
+    expect(restored.knowledgeStatus, 'PARTIAL');
+    expect(restored.replayable, isFalse);
+  });
+
+  test('旧版分号元数据仍可恢复模式与工具标识', () {
+    final restored = AssistantMessageMetadata.decode(
+      'mode=tools;selectedMode=automatic;tool=yunqi;tool_choice=false;replayable=false',
+    );
+    expect(restored.mode, 'tools');
+    expect(restored.selectedMode, 'automatic');
+    expect(restored.toolId, 'yunqi');
+    expect(restored.replayable, isFalse);
+    expect(restored.sourceIds, isEmpty);
+    expect(restored.knowledgeStatus, isNull);
+  });
 }
