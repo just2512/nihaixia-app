@@ -9,6 +9,7 @@ class DatabaseHelper implements AssistantConversationStore {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
   static String? _testDatabaseFileName;
+  static DatabaseFactory? _testDatabaseFactory;
 
   /// 收藏变更版本号：每次增删收藏自增，供收藏页实时刷新（解决「退出应用才更新」问题）。
   static final ValueNotifier<int> bookmarkVersion = ValueNotifier<int>(0);
@@ -22,13 +23,19 @@ class DatabaseHelper implements AssistantConversationStore {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
+    // Keep the path lookup and open operation on the same factory. Tests use
+    // an explicitly injected FFI factory instead of relying on package-global
+    // sqflite state shared across imports.
+    final factory = _testDatabaseFactory ?? databaseFactory;
+    final dbPath = await factory.getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(
+    return factory.openDatabase(
       path,
-      version: 7,
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
+      options: OpenDatabaseOptions(
+        version: 7,
+        onCreate: _createDB,
+        onUpgrade: _upgradeDB,
+      ),
     );
   }
 
@@ -39,11 +46,15 @@ class DatabaseHelper implements AssistantConversationStore {
   }
 
   @visibleForTesting
-  static void configureTestDatabase(String fileName) {
+  static void configureTestDatabase(
+    String fileName, {
+    DatabaseFactory? factory,
+  }) {
     if (fileName.trim().isEmpty) {
       throw ArgumentError.value(fileName, 'fileName');
     }
     _testDatabaseFileName = fileName;
+    _testDatabaseFactory = factory;
     _database = null;
   }
 
@@ -52,6 +63,7 @@ class DatabaseHelper implements AssistantConversationStore {
     final opened = _database;
     _database = null;
     _testDatabaseFileName = null;
+    _testDatabaseFactory = null;
     if (opened != null && opened.isOpen) await opened.close();
   }
 

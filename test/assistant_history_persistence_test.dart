@@ -91,7 +91,10 @@ void main() {
     });
     final databaseName =
         'assistant_history_recovery_${DateTime.now().microsecondsSinceEpoch}.db';
-    DatabaseHelper.configureTestDatabase(databaseName);
+    DatabaseHelper.configureTestDatabase(
+      databaseName,
+      factory: databaseFactoryFfi,
+    );
     final store = DatabaseHelper.instance;
 
     print('[history-retry-stage] before create conversation');
@@ -128,7 +131,10 @@ void main() {
     // not claim to simulate Android process death.
     print('[history-retry-stage] failed tool message persisted; closing database');
     await DatabaseHelper.closeTestDatabase();
-    DatabaseHelper.configureTestDatabase(databaseName);
+    DatabaseHelper.configureTestDatabase(
+      databaseName,
+      factory: databaseFactoryFfi,
+    );
     print('[history-retry-stage] database closed and configured for reopen');
 
     final persistedMessages = await store.getAssistantMessages(
