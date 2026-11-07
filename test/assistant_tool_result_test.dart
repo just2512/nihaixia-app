@@ -54,10 +54,30 @@ void main() {
       title: '五运六气推算',
       values: {'结果': '旧页面返回'},
     );
-    expect(legacy.validateArgumentsMatch(const {'date': '2026-11-07'}), isEmpty);
+    expect(legacy.validateArgumentsMatch(const {'date': '2026-11-07'}), isNotEmpty);
+    final normalizedLegacy =
+        legacy.withArguments(const {'date': '2026-11-07'});
+    expect(normalizedLegacy.arguments, const {'date': '2026-11-07'});
     expect(
-      legacy.withArguments(const {'date': '2026-11-07'}).arguments,
-      const {'date': '2026-11-07'},
+      normalizedLegacy.validateArgumentsMatch(const {'date': '2026-11-07'}),
+      isEmpty,
+    );
+
+    const partial = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'推算日期': '2026-11-07'},
+      arguments: {'date': '2026-11-07'},
+    );
+    expect(
+      partial.withArguments(const {
+        'date': '2026-11-07',
+        'timezone': 'Asia/Shanghai',
+      }).validateArgumentsMatch(const {
+        'date': '2026-11-07',
+        'timezone': 'Asia/Shanghai',
+      }),
+      isNotEmpty,
     );
   });
 
