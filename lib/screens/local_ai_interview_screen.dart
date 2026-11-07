@@ -1308,8 +1308,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }).withArguments(toolArguments.values);
     final resultText = normalizedResult.toConversationText();
     final response = '【' + tool.title + '执行结果】\n' + resultText;
+    final canRetry = normalizedResult.status ==
+        AssistantToolExecutionStatus.failed;
     setState(() {
-      _messages.add(_InterviewMessage(text: response, isUser: false));
+      _messages.add(_InterviewMessage(
+        text: response,
+        isUser: false,
+        actionLabel: canRetry ? '重试${tool.title}' : null,
+        onAction: canRetry
+            ? () => unawaited(_openTool(
+                  tool,
+                  mode: mode,
+                  arguments: toolArguments,
+                ))
+            : null,
+      ));
     });
     try {
       final id = await _conversationIdFuture;
@@ -1500,18 +1513,43 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ? null
           : AssistantToolRouter.byId(pendingToolId);
       final actionMode = messageEffectiveMode ?? restoredEffectiveMode;
+      final completedToolStatus = messageMetadata.toolStatus;
+      final retryFailedTool = pendingTool != null &&
+          completedToolStatus == AssistantToolExecutionStatus.failed.name.toUpperCase();
+      final openPendingTool = pendingTool != null && completedToolStatus == null;
+      final restoredToolArguments = pendingTool == null
+          ? null
+          : AssistantToolArguments(
+              toolId: pendingTool.id,
+              values: messageMetadata.toolArguments,
+            );
+      final resolvedActionMode = actionMode ??
+          (pendingTool?.modes.contains(AssistantMode.metaphysics) == true
+              ? AssistantMode.metaphysics
+              : pendingTool?.modes.contains(AssistantMode.tools) == true
+                  ? AssistantMode.tools
+                  : AssistantMode.consultation);
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
-        actionLabel: pendingTool == null ? null : '打开${pendingTool.title}',
-        onAction: pendingTool == null
-            ? null
-            : () => _openTool(pendingTool, mode: actionMode ??
-                (pendingTool.modes.contains(AssistantMode.metaphysics)
-                    ? AssistantMode.metaphysics
-                    : pendingTool.modes.contains(AssistantMode.tools)
-                        ? AssistantMode.tools
-                        : AssistantMode.consultation)),
+        actionLabel: retryFailedTool
+            ? '重试${pendingTool.title}'
+            : openPendingTool
+                ? '打开${pendingTool.title}'
+                : null,
+        onAction: retryFailedTool
+            ? () => _openTool(
+                  pendingTool,
+                  mode: resolvedActionMode,
+                  arguments: restoredToolArguments,
+                )
+            : openPendingTool
+                ? () => _openTool(
+                      pendingTool,
+                      mode: resolvedActionMode,
+                      arguments: restoredToolArguments,
+                    )
+                : null,
       ));
       transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
       if (isUser && messageMetadata.replayable) {
