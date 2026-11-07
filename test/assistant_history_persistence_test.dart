@@ -77,6 +77,7 @@ void main() {
     DatabaseHelper.configureTestDatabase(databaseName);
     final store = DatabaseHelper.instance;
 
+    print('[history-retry-stage] before create conversation');
     final conversationId = await store.createAssistantConversation(
       title: '持久化失败重试',
       mode: 'metaphysics',
@@ -91,6 +92,7 @@ void main() {
         replayable: true,
       ).encode(),
     );
+    print('[history-retry-stage] user message persisted');
     await store.saveAssistantMessage(
       conversationId: conversationId,
       role: 'assistant',
@@ -107,8 +109,10 @@ void main() {
     // Close the SQLite handle and reopen the same on-disk database. This
     // verifies disk persistence across a database-connection restart; it does
     // not claim to simulate Android process death.
+    print('[history-retry-stage] failed tool message persisted; closing database');
     await DatabaseHelper.closeTestDatabase();
     DatabaseHelper.configureTestDatabase(databaseName);
+    print('[history-retry-stage] database closed and configured for reopen');
 
     final persistedMessages = await store.getAssistantMessages(
       conversationId: conversationId,
@@ -119,6 +123,7 @@ void main() {
     );
     expect(persistedMetadata.toolStatus, 'FAILED');
     expect(persistedMetadata.toolArguments, const {'date': '2026-11-07'});
+    print('[history-retry-stage] sqlite reopen verified');
 
     final service = _PersistentHistoryService();
     await tester.pumpWidget(
@@ -149,22 +154,27 @@ void main() {
       ),
     );
     await _pumpFrames(tester);
+    print('[history-retry-stage] assistant screen mounted');
 
     await tester.tap(find.byTooltip('历史对话'));
     await _pumpFrames(tester);
+    print('[history-retry-stage] history list opened');
     await tester.tap(find.text('持久化失败重试'));
     await _pumpFrames(tester);
 
     expect(find.text('重试五运六气推算'), findsOneWidget);
     expect(find.textContaining('执行状态：FAILED'), findsOneWidget);
     expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
+    print('[history-retry-stage] failed tool history restored');
 
     await tester.tap(find.text('重试五运六气推算'));
     await _pumpFrames(tester, frames: 12);
     expect(find.text('模拟工具执行成功'), findsOneWidget);
+    print('[history-retry-stage] retry tool route opened');
     await tester.tap(find.text('模拟工具执行成功'));
     await _pumpFrames(tester, frames: 40);
 
+    print('[history-retry-stage] retry result returned; reading persisted result');
     final retriedMessages = await store.getAssistantMessages(
       conversationId: conversationId,
     );
@@ -177,5 +187,6 @@ void main() {
     expect(retriedMetadata.toolArguments, const {'date': '2026-11-07'});
     expect(service.restoredTranscript, contains('执行状态：SUCCEEDED'));
     expect(tester.takeException(), isNull);
+    print('[history-retry-stage] end-to-end retry completed');
   });
 }
