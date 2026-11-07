@@ -92,6 +92,19 @@ void main() {
     expect(result.toConversationText(), contains('来源标识：ziwei-engine:local-rules:v1'));
   });
 
+  test('来源标识和参数名称不得为空白', () {
+    const invalid = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'推算日期': '2026-11-07'},
+      sourceIds: [''],
+      arguments: {' ': '2026-11-07'},
+    );
+    final errors = invalid.validateFor('yunqi');
+    expect(errors, contains('工具结果包含空来源标识'));
+    expect(errors, contains('工具结果包含空参数名称'));
+  });
+
   test('显式取消与无返回值必须使用不同的终态', () {
     const cancelled = AssistantToolResult(
       toolId: 'ziwei',
