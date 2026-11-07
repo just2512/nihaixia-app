@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Keeps fold-aware routing as an enforceable production-code contract.
 ///
-/// ChatScreen has one narrow exception: its local-AI hand-off computes an
-/// anchor from the invoking BuildContext and passes it to AdaptiveSinglePane.
+/// The legacy assistant screen has one narrow exception: its local-AI hand-off
+/// computes an anchor from the invoking BuildContext and passes it to AdaptiveSinglePane.
 void main() {
   test('production dialogs use the fold-aware dialog helper', () async {
     final sources = await _loadProductionSources();
