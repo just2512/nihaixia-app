@@ -141,18 +141,27 @@ class AssistantKnowledgeContextBuilder {
           continue;
         }
         if (sourceId.startsWith('acupuncture:')) {
-          final id = int.tryParse(sourceId.substring('acupuncture:'.length));
+          final parts = sourceId.split(':');
+          if (parts.length != 3) continue;
+          final categoryId = parts[1];
+          final id = int.tryParse(parts[2]);
           if (id == null) continue;
-          final matches = AcupunctureRepository.getEntries().where((item) => item.id == id);
-          if (matches.isNotEmpty) {
-            sources.add(AssistantKnowledgeSourceReference(
-              sourceId: sourceId,
-              sourceLabel: 'App 针灸处方库',
-              title: matches.first.symptom,
-              localBacklink: 'assets/data/acupuncture.json#id=$id',
-              locatorStatus: 'MISSING',
-              sourceKind: 'acupuncture',
-            ));
+          final categories = AcupunctureRepository.getAll()
+              .where((category) => category.id == categoryId);
+          if (categories.isNotEmpty) {
+            final entries = categories.first.entries.where((item) => item.id == id);
+            if (entries.isNotEmpty) {
+              final entry = entries.first;
+              sources.add(AssistantKnowledgeSourceReference(
+                sourceId: sourceId,
+                sourceLabel: 'App 针灸处方库 · ${entry.sourceLabel}',
+                title: entry.symptom,
+                localBacklink:
+                    'assets/data/acupuncture.json#category=$categoryId&id=$id',
+                locatorStatus: 'MISSING',
+                sourceKind: 'acupuncture',
+              ));
+            }
           }
           continue;
         }
@@ -483,15 +492,21 @@ class AssistantKnowledgeContextBuilder {
       return terms.any((term) => HerbRepository.matchesQuery(herb, term));
     }).take(maxHerbEntries).toList(growable: false);
 
-    final acupuncture = <AcupointEntry>[];
-    for (final entry in AcupunctureRepository.getEntries()) {
-      final matches = normalized.contains(entry.symptom) ||
-          entry.aliases.any(normalized.contains) ||
-          terms.any((term) =>
-              entry.symptom.contains(term) ||
-              entry.aliases.any((alias) => alias.contains(term)));
-      if (matches && !acupuncture.any((item) => item.id == entry.id)) {
-        acupuncture.add(entry);
+    final acupuncture =
+        <({String categoryId, AcupointEntry entry})>[];
+    for (final category in AcupunctureRepository.getAll()) {
+      for (final entry in category.entries) {
+        final matches = normalized.contains(entry.symptom) ||
+            entry.aliases.any(normalized.contains) ||
+            terms.any((term) =>
+                entry.symptom.contains(term) ||
+                entry.aliases.any((alias) => alias.contains(term)));
+        if (matches &&
+            !acupuncture.any((item) =>
+                item.categoryId == category.id && item.entry.id == entry.id)) {
+          acupuncture.add((categoryId: category.id, entry: entry));
+        }
+        if (acupuncture.length >= maxAcupunctureEntries) break;
       }
       if (acupuncture.length >= maxAcupunctureEntries) break;
     }
@@ -569,12 +584,14 @@ class AssistantKnowledgeContextBuilder {
       }
     }
 
-    for (final entry in acupuncture) {
+    for (final hit in acupuncture) {
+      final entry = hit.entry;
+      final sourceId = 'acupuncture:${hit.categoryId}:${entry.id}';
       buffer
-        ..writeln('[App针灸处方库 assets/data/acupuncture.json · entry:${entry.id}]')
-        ..writeln('来源标识：acupuncture:${entry.id}')
-        ..writeln('本地回链：assets/data/acupuncture.json#id=${entry.id}')
-        ..writeln('来源定位状态：MISSING（条目 ID 不等同于原始文献定位）')
+        ..writeln('[App针灸处方库 assets/data/acupuncture.json · ${hit.categoryId}/entry:${entry.id}]')
+        ..writeln('来源标识：$sourceId')
+        ..writeln('本地回链：assets/data/acupuncture.json#category=${hit.categoryId}&id=${entry.id}')
+        ..writeln('来源定位状态：MISSING（本地分类/条目 ID 不等同于原始文献定位）')
         ..writeln('主诉/病症：${entry.symptom}')
         ..writeln('别名：${entry.aliases.join('、')}')
         ..writeln('穴位与操作：${entry.acupointsText}')
