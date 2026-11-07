@@ -556,6 +556,20 @@ class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
   }
 }
 
+
+
+class _DelayedHistoryConversationStore extends _MemoryConversationStore {
+  final Completer<void> firstReadGate = Completer<void>();
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async {
+    if (conversationId == 1) await firstReadGate.future;
+    return super.getAssistantMessages(conversationId: conversationId);
+  }
+}
+
 class _FailOnceTextSendService extends LocalAiService {
   var sendAttempts = 0;
 
@@ -1515,6 +1529,41 @@ void main() {
       );
     },
   );
+
+
+
+  testWidgets('快速切换历史会话时较早的异步读取不能覆盖较新的选择', (tester) async {
+    final store = _DelayedHistoryConversationStore();
+    final firstId = await store.createAssistantConversation(title: '较早会话');
+    final secondId = await store.createAssistantConversation(title: '较新会话');
+    await store.saveAssistantMessage(conversationId: firstId, role: 'user', content: 'FIRST_HISTORY_MARKER');
+    await store.saveAssistantMessage(conversationId: secondId, role: 'user', content: 'SECOND_HISTORY_MARKER');
+
+    await tester.pumpWidget(MaterialApp(
+      home: LocalAiInterviewScreen(
+        conversationStore: store,
+        service: _TextSendService(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('较早会话'));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('较新会话'));
+    await tester.pumpAndSettle();
+    expect(find.text('SECOND_HISTORY_MARKER'), findsOneWidget);
+
+    store.firstReadGate.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('SECOND_HISTORY_MARKER'), findsOneWidget);
+    expect(find.text('FIRST_HISTORY_MARKER'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'keeps failed text editable and retries without duplicate chat bubbles',
