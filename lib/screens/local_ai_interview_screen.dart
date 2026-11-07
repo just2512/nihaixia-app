@@ -1524,17 +1524,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         text: content,
         isUser: isUser,
         actionLabel: retryFailedTool
-            ? '重试${pendingTool.title}'
+            ? '重试${pendingTool?.title ?? ''}'
             : openPendingTool
-                ? '打开${pendingTool.title}'
+                ? '打开${pendingTool?.title ?? ''}'
                 : null,
-        onAction: retryFailedTool
-            ? () => _openTool(
-                  pendingTool,
-                  mode: resolvedActionMode,
-                  arguments: restoredToolArguments,
-                )
-            : openPendingTool
+        onAction: pendingTool == null
+            ? null
+            : retryFailedTool || openPendingTool
                 ? () => _openTool(
                       pendingTool,
                       mode: resolvedActionMode,
