@@ -140,10 +140,12 @@ class _AssistantTurnResponse {
   const _AssistantTurnResponse({
     required this.text,
     this.sourceIds = const [],
+    this.knowledgeStatus,
   });
 
   final String text;
   final List<String> sourceIds;
+  final String? knowledgeStatus;
 }
 
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
@@ -734,6 +736,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
           '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\n',
         );
+        context.writeln('本轮知识检索状态：${knowledge.status.name}。');
+        if (knowledge.failureMessage != null) {
+          context.writeln('知识检索失败：${knowledge.failureMessage}');
+        }
         if (knowledge.text.isNotEmpty) {
           context
             ..writeln('App 本地知识库相关检索结果（仅作有来源的参考）：')
@@ -746,6 +752,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
+          knowledgeStatus: knowledge.status.name,
         );
       case AssistantMode.consultation:
         // Consultation uses the same bundled classical-text and TCM retrieval
@@ -756,9 +763,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           text,
           includeMedicalCases: false,
         );
-        final knowledgeContext = knowledge.text.isEmpty
-            ? 'App 本地知识库本轮未命中可引用条目（MISSING）。'
-            : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n${knowledge.text}';
+        final knowledgeContext = switch (knowledge.status) {
+          AssistantKnowledgeRetrievalStatus.noResults => 'App 本地知识库本轮未命中可引用条目（NO_RESULTS）。',
+          AssistantKnowledgeRetrievalStatus.failed => 'App 本地知识库检索失败（FAILED）：${knowledge.failureMessage ?? 'MISSING'}。不得将失败说成无命中。',
+          AssistantKnowledgeRetrievalStatus.partial => 'App 本地知识库部分命中；仅引用已反查成功的来源（PARTIAL）：\n${knowledge.text}',
+          AssistantKnowledgeRetrievalStatus.retrieved => 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n${knowledge.text}',
+        };
         final reply = await _service.sendMessageWithContext(
           text,
           context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
@@ -770,13 +780,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
+          knowledgeStatus: knowledge.status.name,
         );
       case AssistantMode.learning:
         final knowledge =
             await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
-        final context = knowledge.text.isEmpty
-            ? '当前角色：学习助手。App 本地知识库未检索到可引用条目，状态 MISSING。请明确说明缺少资料，不得编造原文或出处。'
-            : '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n${knowledge.text}';
+        final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
+            '本轮知识检索状态：${knowledge.status.name}。\n'
+            '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
+            '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
         final reply = await _service.sendMessageWithContext(
           text,
           context: context,
@@ -784,6 +796,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
+          knowledgeStatus: knowledge.status.name,
         );
       case AssistantMode.tools:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
@@ -849,6 +862,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool expectsToolSelection = false,
     List<String> sourceIds = const [],
     Map<String, String> toolArguments = const {},
+    String? knowledgeStatus,
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -886,6 +900,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolChoicePending: expectsToolSelection,
           sourceIds: sourceIds,
           toolArguments: toolArguments,
+          knowledgeStatus: knowledgeStatus,
         ).encode(),
       );
     } catch (error, stack) {
@@ -1709,6 +1724,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: effectiveMode,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
         sourceIds: turnResponse.sourceIds,
+        knowledgeStatus: turnResponse.knowledgeStatus,
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
