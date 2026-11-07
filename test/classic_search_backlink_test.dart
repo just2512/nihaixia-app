@@ -26,4 +26,12 @@ void main() {
       isNull,
     );
   });
+
+  test('同一索引条目重复检索生成稳定来源 ID', () async {
+    final first = await ClassicSearchService.search('太阳');
+    final second = await ClassicSearchService.search('太阳');
+    expect(first.hits, isNotEmpty);
+    expect(second.hits, isNotEmpty);
+    expect(second.hits.first.sourceId, first.hits.first.sourceId);
+  });
 }
