@@ -2,6 +2,8 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
@@ -20,6 +22,46 @@ class _ReadyLocalAiService extends LocalAiService {
   Future<LocalAiModelStatus> getStatus() async => status;
 }
 
+class _NoopAssistantConversationStore implements AssistantConversationStore {
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async => 1;
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) async => 1;
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async => const [];
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async => const [];
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {}
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async => null;
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {}
+}
+
 void main() {
   testWidgets('AI interview content is full-width on compact windows', (tester) async {
     tester.view.devicePixelRatio = 1;
@@ -29,7 +71,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -48,7 +93,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -76,7 +124,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -107,7 +158,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -139,7 +193,10 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -172,6 +229,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
           preferredAnchorPoint: const Offset(600, 450),
         ),
       ),
@@ -203,7 +261,10 @@ void main() {
           ),
           child: child!,
         ),
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -244,6 +305,7 @@ void main() {
         ),
         home: LocalAiInterviewScreen(
           service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
           preferredAnchorPoint: const Offset(600, 450),
         ),
       ),
@@ -278,7 +340,10 @@ void main() {
           ),
           child: child!,
         ),
-        home: LocalAiInterviewScreen(service: _ReadyLocalAiService()),
+        home: LocalAiInterviewScreen(
+          service: _ReadyLocalAiService(),
+          conversationStore: _NoopAssistantConversationStore(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
