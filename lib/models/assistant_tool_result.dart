@@ -9,6 +9,7 @@ class AssistantToolResult {
     required this.values,
     this.disclaimer,
     this.sourceIds = const [],
+    this.arguments = const {},
     this.status = AssistantToolExecutionStatus.succeeded,
   });
 
@@ -20,6 +21,20 @@ class AssistantToolResult {
   /// Stable local/source references used to trace the execution result.
   /// Empty means the tool did not provide a source identifier (MISSING).
   final List<String> sourceIds;
+  /// Exact, validated arguments used to execute this tool invocation.
+  final Map<String, String> arguments;
+
+  AssistantToolResult withArguments(Map<String, String> fallback) {
+    return AssistantToolResult(
+      toolId: toolId,
+      title: title,
+      values: values,
+      disclaimer: disclaimer,
+      sourceIds: sourceIds,
+      arguments: arguments.isEmpty ? Map.unmodifiable(fallback) : arguments,
+      status: status,
+    );
+  }
 
   String get statusLabel => switch (status) {
         AssistantToolExecutionStatus.succeeded => 'SUCCEEDED',
@@ -40,6 +55,9 @@ class AssistantToolResult {
     if (sourceIds.any((id) => id.trim().isEmpty)) {
       errors.add('工具结果包含空来源标识');
     }
+    if (arguments.keys.any((key) => key.trim().isEmpty)) {
+      errors.add('工具结果包含空参数名称');
+    }
     return List.unmodifiable(errors);
   }
 
@@ -47,6 +65,9 @@ class AssistantToolResult {
     final lines = <String>[
       '工具：$title',
       '执行状态：' + statusLabel,
+      '执行参数：' + (arguments.isEmpty
+          ? 'MISSING'
+          : arguments.entries.map((entry) => '${entry.key}=${entry.value}').join('；')),
       for (final entry in values.entries)
         '${entry.key}：${entry.value.isEmpty ? 'MISSING' : entry.value}',
       '来源标识：${sourceIds.isEmpty ? 'MISSING' : sourceIds.join('、')}',
