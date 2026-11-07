@@ -28,9 +28,6 @@ import '../data/herb_repository.dart';
 import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
 import '../data/medical_case_data.dart';
-import '../models/formula.dart';
-import '../models/herb.dart';
-import '../models/acupoint_detail.dart';
 import '../services/classic_search_service.dart';
 import 'formula_detail_screen.dart';
 import 'herb_detail_screen.dart';
@@ -196,6 +193,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _loading = false;
   bool _importingModel = false;
   bool _sending = false;
+  // Prevent two rapid taps from pushing duplicate tool routes concurrently.
+  bool _toolRouteActive = false;
   bool _extracting = false;
   bool _modelControlBusy = false;
   bool _structuredDiagnosisBusy = false;
@@ -1287,7 +1286,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           }
           break;
         case 'neijing':
-          destination = const NeijingKnowledgeScreen();
+          final hit = await ClassicSearchService.findBySourceId(sourceId);
+          if (hit?.asset != null) {
+            destination = MarkdownDocScreen(title: hit!.title, asset: hit.asset!);
+          } else if (hit?.bookId != null && hit?.chapterIndex != null) {
+            destination = const GujiLibraryScreen();
+            unavailableMessage = '已打开对应古籍书库；该来源的章节级深链尚未接入。';
+          } else {
+            // Structured Neijing IDs resolve through the local entry catalog;
+            // classic lecture IDs resolve through ClassicSearchService above.
+            destination = const NeijingKnowledgeScreen();
+          }
           break;
         case 'shanghan':
         case 'jingui':
@@ -1349,10 +1358,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       return;
     }
+    if (_toolRouteActive) return;
+    _toolRouteActive = true;
     _pendingToolSelection = false;
     Object? result;
     try {
       result = await Navigator.push<Object?>(
+
         context,
         FoldAwareMaterialPageRoute(
           sourceContext: context,
@@ -1378,6 +1390,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         values: const {'错误': 'MISSING'},
         disclaimer: '工具页面执行异常：' + error.toString(),
       );
+    } finally {
+      _toolRouteActive = false;
     }
     if (!mounted) return;
     if (result is AssistantToolResult) {
@@ -2860,6 +2874,22 @@ class _InterviewMessage {
   });
 }
 
+bool _isNavigableKnowledgeSourceId(String sourceId) {
+  final kind = sourceId.split(':').first;
+  return const {
+    'formula',
+    'herb',
+    'acupoint',
+    'acupuncture',
+    'medical_case',
+    'neijing',
+    'shanghan',
+    'jingui',
+    'guji',
+    'zhenjiu',
+  }.contains(kind);
+}
+
 String _knowledgeSourceLabel(String sourceId) {
   final parts = sourceId.split(':');
   final kind = parts.isEmpty ? '' : parts.first;
@@ -2920,16 +2950,20 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
-                if (message.sourceIds.isNotEmpty && message.onSourceTap != null) ...[
+                if (message.sourceIds.any(_isNavigableKnowledgeSourceId) &&
+                    message.onSourceTap != null) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
                     spacing: AppSpacing.xs,
                     runSpacing: AppSpacing.xs,
-                    children: message.sourceIds.map((sourceId) => ActionChip(
-                      avatar: const Icon(Icons.link, size: 14),
-                      label: Text(_knowledgeSourceLabel(sourceId)),
-                      onPressed: () => message.onSourceTap!(sourceId),
-                    )).toList(),
+                    children: message.sourceIds
+                        .where(_isNavigableKnowledgeSourceId)
+                        .map((sourceId) => ActionChip(
+                              avatar: const Icon(Icons.link, size: 14),
+                              label: Text(_knowledgeSourceLabel(sourceId)),
+                              onPressed: () => message.onSourceTap!(sourceId),
+                            ))
+                        .toList(),
                   ),
                 ],
                 if (message.options.isNotEmpty) ...[
