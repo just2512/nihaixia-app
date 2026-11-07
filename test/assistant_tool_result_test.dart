@@ -12,11 +12,13 @@ void main() {
         '岁运病候': '',
       },
       disclaimer: '仅供理论学习。',
+      arguments: {'date': '2026-11-06'},
     );
 
     final text = result.toConversationText();
     expect(text, contains('工具：五运六气推算'));
     expect(text, contains('执行状态：SUCCEEDED'));
+    expect(text, contains('执行参数：date=2026-11-06'));
     expect(text, contains('推算日期：2026-11-06'));
     expect(text, contains('岁运病候：MISSING'));
     expect(text, contains('来源标识：MISSING'));
