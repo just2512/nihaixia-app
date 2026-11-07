@@ -240,7 +240,7 @@ void main() {
     );
     expect(result.sources, isNotEmpty);
     expect(result.citationFooter, contains('\n  来源类型：'));
-    expect(result.citationFooter, isNot(contains(r'\\n  来源类型：')));
+    expect(result.citationFooter, isNot(contains(r'\n  来源类型：')));
   });
 
 }
