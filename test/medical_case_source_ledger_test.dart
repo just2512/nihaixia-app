@@ -120,18 +120,29 @@ void main() {
     };
     final linked = parseMedicalCaseTable(table, sourceLedgers: ledgers);
     expect(linked, hasLength(cases.length));
-    expect(linked.every((medicalCase) => medicalCase.sourceLedger.status == 'MISSING'), isTrue);
+    final pendingSequences = linked
+        .where((medicalCase) => medicalCase.sourceLedger.status == 'PENDING')
+        .map((medicalCase) => medicalCase.seq)
+        .toSet();
+    expect(pendingSequences, {2, 3, 4, 5, 6, 7, 8});
+    expect(
+      linked.where((medicalCase) => medicalCase.sourceLedger.status == 'VERIFIED'),
+      isEmpty,
+      reason: '网页来源线索不能冒充纸本版本、卷次和页码已核验',
+    );
     expect(
       linked.every((medicalCase) =>
-          medicalCase.sourceLedger.verificationStatus == 'MISSING'),
+          medicalCase.sourceLedger.verificationStatus ==
+              (pendingSequences.contains(medicalCase.seq) ? 'PENDING' : 'MISSING')),
       isTrue,
-      reason: '原始账本缺少纸本定位时，底层状态也必须是 MISSING，不能只在展示层降级',
+      reason: '已找到网页原文的记录标记 PENDING，其余未核验记录保持 MISSING',
     );
     expect(
       records.values.every((raw) {
         final record = raw as Map<String, dynamic>;
-        return record['verificationStatus'] == 'MISSING' &&
-            MedicalCaseSourceLedger.fromJson(record).status == 'MISSING';
+        final status = record['verificationStatus'];
+        return (status == 'MISSING' || status == 'PENDING') &&
+            MedicalCaseSourceLedger.fromJson(record).status == status;
       }),
       isTrue,
     );
