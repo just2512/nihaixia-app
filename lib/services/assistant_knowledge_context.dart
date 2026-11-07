@@ -21,6 +21,7 @@ class AssistantKnowledgeSourceReference {
     required this.localBacklink,
     required this.locatorStatus,
     this.sourceKind = 'classic_text',
+    this.sourceVerificationStatus = 'UNKNOWN',
     this.bibliographicLocatorVerified = false,
   });
 
@@ -30,15 +31,17 @@ class AssistantKnowledgeSourceReference {
   final String localBacklink;
   final String locatorStatus;
   final String sourceKind;
+  final String sourceVerificationStatus;
   final bool bibliographicLocatorVerified;
 
-  String toCitationText() => '- $sourceLabel｜$title\n'
-      '  来源类型：$sourceKind\n'
-      '  本地回链：$localBacklink\n'
+  String toCitationText() => '- $sourceLabel｜$title\\n'
+      '  来源类型：$sourceKind\\n'
+      '  原文来源核验状态：$sourceVerificationStatus\\n'
+      '  本地回链：$localBacklink\\n'
       '  本地回链状态：${localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE'}；'
       '书目定位状态：$locatorStatus；纸本版本/卷页：'
       '${bibliographicLocatorVerified ? 'VERIFIED' : 'MISSING'}'
-      '${bibliographicLocatorVerified ? '' : '（尚未完成影印本核验）'}\n'
+      '${bibliographicLocatorVerified ? '' : '（尚未完成纸本/影印本核验）'}\\n'
       '  来源标识：$sourceId';
 }
 
@@ -244,6 +247,7 @@ class AssistantKnowledgeContextBuilder {
             localBacklink: 'medical_case:internal-seq:$sequence',
             locatorStatus: ledger.status,
             sourceKind: 'medical_case',
+            sourceVerificationStatus: ledger.sourceStatus,
             bibliographicLocatorVerified: ledger.isVerified,
           ));
           continue;
@@ -448,7 +452,7 @@ class AssistantKnowledgeContextBuilder {
                   ledger.page,
                   ledger.passage,
                 ].join(' · ')
-              : 'MISSING（内部序号不是原始病例页码或稳定来源 ID）';
+              : 'MISSING（原文来源核验状态：${ledger.sourceStatus}；网页 URL 不等于纸本版本、卷次和页码；内部序号不是原始来源定位）';
           buffer
             ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
             ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
@@ -460,11 +464,12 @@ class AssistantKnowledgeContextBuilder {
             ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
             ..writeln('来源标识：medical_case:${medicalCase.seq}')
             ..writeln('本地回链：medical_case:internal-seq:${medicalCase.seq}')
-            ..writeln('来源核验状态：${ledger.status}')
+            ..writeln('原文来源核验状态：${ledger.sourceStatus}')
+            ..writeln('纸本定位核验状态：${ledger.status}')
             ..writeln('来源定位：$verifiedLocator')
             ..writeln('来源账本：')
             ..writeln(ledger.toDisplayText())
-            ..writeln('使用限制：仅作为本地整理记录检索；只有账本状态为 VERIFIED 且定位字段完整时，才允许将账本定位作为已核验出处；病例内容本身不构成疗效证据。');
+            ..writeln('使用限制：仅作为本地整理记录检索；只有纸本定位状态为 VERIFIED 且纸本定位字段完整时，才允许将账本定位作为已核验出处；网页原文核验不代表纸本版本、卷次或页码已核验；病例内容本身不构成疗效证据。');
         }
       } catch (_) {
         buffer.writeln('[App医案库] 读取失败，状态 MISSING。');

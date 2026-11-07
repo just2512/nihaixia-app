@@ -15,9 +15,9 @@ void main() {
     expect(ledger.isVerified, isFalse);
     expect(ledger.missingFields, containsAll([
       '原始书名/病例来源',
-      '版本/底本',
-      '卷次',
-      '页码',
+      '纸本版本/底本',
+      '纸本卷次',
+      '纸本页码',
       '篇章/病例标题',
     ]));
   });
@@ -34,7 +34,28 @@ void main() {
     expect(ledger.valueOf('page'), 'MISSING');
   });
 
-  test('完整定位字段和显式核验状态才允许 VERIFIED', () {
+  test('网页原文核验与纸本版本卷页核验相互独立', () {
+    final ledger = MedicalCaseSourceLedger.fromJson({
+      'sourceTitle': '网页病例原文',
+      'edition': '网页原文（网页版本）',
+      'volume': '不适用（网页文章，无卷次）',
+      'page': 'https://example.org/case',
+      'passage': '病例原文段落',
+      'originalExcerpt': '原文摘录',
+      'verificationStatus': 'VERIFIED',
+    });
+    expect(ledger.isSourceVerified, isTrue);
+    expect(ledger.sourceStatus, 'VERIFIED');
+    expect(ledger.isVerified, isFalse);
+    expect(ledger.status, 'MISSING');
+    expect(ledger.missingFields, containsAll([
+      '纸本版本/底本',
+      '纸本卷次',
+      '纸本页码',
+    ]));
+  });
+
+  test('完整纸本定位字段和双重显式核验状态才允许 VERIFIED', () {
     const ledger = MedicalCaseSourceLedger(
       sourceTitle: '伤寒论',
       edition: '宋本',
@@ -45,6 +66,7 @@ void main() {
       applicability: '历史文本来源核验；不得直接作为个体诊疗建议。',
       variant: 'MISSING',
       verificationStatus: 'VERIFIED',
+      bibliographicLocatorStatus: 'VERIFIED',
     );
     expect(ledger.status, 'VERIFIED');
     expect(ledger.hasCompleteLocator, isTrue);
@@ -61,6 +83,7 @@ void main() {
       originalExcerpt: 'MISSING',
       applicability: '仅供古籍目录定位，原文待核验。',
       verificationStatus: 'PENDING',
+      bibliographicLocatorStatus: 'MISSING',
     );
     final restored = MedicalCaseSourceLedger.fromJson(original.toJson());
     expect(restored.toJson(), original.toJson());
@@ -81,6 +104,7 @@ void main() {
       passage: '辨太阳病脉证并治上',
       originalExcerpt: '太阳之为病，脉浮，头项强痛而恶寒。',
       verificationStatus: 'VERIFIED',
+      bibliographicLocatorStatus: 'VERIFIED',
     );
     final cases = parseMedicalCaseTable(
       md,
@@ -120,29 +144,32 @@ void main() {
     };
     final linked = parseMedicalCaseTable(table, sourceLedgers: ledgers);
     expect(linked, hasLength(cases.length));
-    final pendingSequences = linked
-        .where((medicalCase) => medicalCase.sourceLedger.status == 'PENDING')
+    final sourceVerifiedSequences = linked
+        .where((medicalCase) => medicalCase.sourceLedger.isSourceVerified)
         .map((medicalCase) => medicalCase.seq)
         .toSet();
-    expect(pendingSequences, {2, 3, 4, 5, 6, 7, 8});
+    expect(sourceVerifiedSequences, {2, 3, 4, 5, 6, 7, 8, 9, 10, 92});
     expect(
-      linked.where((medicalCase) => medicalCase.sourceLedger.status == 'VERIFIED'),
+      linked.where((medicalCase) => medicalCase.sourceLedger.isVerified),
       isEmpty,
-      reason: '网页来源线索不能冒充纸本版本、卷次和页码已核验',
+      reason: '网页原文核验不能冒充纸本版本、卷次和页码已核验',
     );
     expect(
-      linked.every((medicalCase) =>
-          medicalCase.sourceLedger.verificationStatus ==
-              (pendingSequences.contains(medicalCase.seq) ? 'PENDING' : 'MISSING')),
+      linked.every((medicalCase) => medicalCase.sourceLedger.status == 'MISSING'),
       isTrue,
-      reason: '已找到网页原文的记录标记 PENDING，其余未核验记录保持 MISSING',
+      reason: '当前账本尚无任何记录完成纸本/影印本版本、卷次和页码核验',
     );
     expect(
       records.values.every((raw) {
         final record = raw as Map<String, dynamic>;
-        final status = record['verificationStatus'];
-        return (status == 'MISSING' || status == 'PENDING') &&
-            MedicalCaseSourceLedger.fromJson(record).status == status;
+        final sourceStatus = record['verificationStatus'];
+        final restored = MedicalCaseSourceLedger.fromJson(record);
+        return (sourceStatus == 'MISSING' ||
+                sourceStatus == 'PENDING' ||
+                sourceStatus == 'VERIFIED') &&
+            restored.sourceStatus == sourceStatus &&
+            restored.bibliographicLocatorStatus == 'MISSING' &&
+            !restored.isVerified;
       }),
       isTrue,
     );

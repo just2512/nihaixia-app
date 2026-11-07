@@ -1,6 +1,7 @@
-/// 医案原始来源账本。内部序号只用于 App 数据定位，不得充当原始文献页码或病例编号。
+/// 医案来源账本。内部序号只用于 App 数据定位，不得充当原始文献页码或病例编号。
 ///
-/// 未经纸本/影印本核对的字段统一为 MISSING；不能从病例摘要、讲稿或文件行号推断出处。
+/// verificationStatus 表示网页/原文内容核验；bibliographicLocatorStatus
+/// 单独表示纸本/影印本版本、卷次、页码核验。两者不得互相推导。
 class MedicalCaseSourceLedger {
   const MedicalCaseSourceLedger({
     this.sourceTitle = 'MISSING',
@@ -12,6 +13,7 @@ class MedicalCaseSourceLedger {
     this.applicability = 'MISSING',
     this.variant = 'MISSING',
     this.verificationStatus = 'MISSING',
+    this.bibliographicLocatorStatus = 'MISSING',
   });
 
   final String sourceTitle;
@@ -23,12 +25,15 @@ class MedicalCaseSourceLedger {
   final String applicability;
   final String variant;
 
-  /// 仅允许 MISSING / PENDING / VERIFIED；VERIFIED 仍须满足完整定位字段。
+  /// 网页/原文内容核验状态：MISSING / PENDING / VERIFIED。
   final String verificationStatus;
+
+  /// 纸本/影印本版本、卷次、页码核验状态：MISSING / PENDING / VERIFIED。
+  final String bibliographicLocatorStatus;
 
   static const missing = MedicalCaseSourceLedger();
 
-  static const requiredLocatorFields = <String>[
+  static const requiredSourceFields = <String>[
     'sourceTitle',
     'edition',
     'volume',
@@ -42,11 +47,32 @@ class MedicalCaseSourceLedger {
     return normalized.isNotEmpty && normalized != 'MISSING';
   }
 
-  bool get hasCompleteLocator =>
-      requiredLocatorFields.every((field) => _hasValue(valueOf(field)));
+  bool get hasCompleteSourceLocator =>
+      requiredSourceFields.every((field) => _hasValue(valueOf(field)));
 
-  bool get isVerified =>
-      verificationStatus == 'VERIFIED' && hasCompleteLocator;
+  /// 兼容旧调用方：旧字段完整性只代表来源记录字段齐全，不代表纸本定位已核验。
+  bool get hasCompleteLocator => hasCompleteSourceLocator;
+
+  bool get isSourceVerified =>
+      verificationStatus == 'VERIFIED' && hasCompleteSourceLocator;
+
+  bool get hasCompleteBibliographicLocator =>
+      _hasValue(sourceTitle) &&
+      _hasValue(edition) &&
+      !edition.contains('网页') &&
+      _hasValue(volume) &&
+      !volume.contains('不适用') &&
+      _hasValue(page) &&
+      !RegExp(r'^https?://', caseSensitive: false).hasMatch(page.trim()) &&
+      _hasValue(passage) &&
+      _hasValue(originalExcerpt);
+
+  bool get isBibliographicLocatorVerified =>
+      bibliographicLocatorStatus == 'VERIFIED' &&
+      hasCompleteBibliographicLocator;
+
+  /// 安全兼容旧调用方：isVerified 始终表示纸本/影印本定位已核验。
+  bool get isVerified => isBibliographicLocatorVerified;
 
   String valueOf(String field) => switch (field) {
         'sourceTitle' => sourceTitle,
@@ -62,15 +88,25 @@ class MedicalCaseSourceLedger {
 
   List<String> get missingFields => [
         if (!_hasValue(sourceTitle)) '原始书名/病例来源',
-        if (!_hasValue(edition)) '版本/底本',
-        if (!_hasValue(volume)) '卷次',
-        if (!_hasValue(page)) '页码',
+        if (!_hasValue(edition) || edition.contains('网页')) '纸本版本/底本',
+        if (!_hasValue(volume) || volume.contains('不适用')) '纸本卷次',
+        if (!_hasValue(page) ||
+            RegExp(r'^https?://', caseSensitive: false).hasMatch(page.trim()))
+          '纸本页码',
         if (!_hasValue(passage)) '篇章/病例标题',
         if (!_hasValue(originalExcerpt)) '原文片段',
         if (!_hasValue(applicability)) '适用条件',
       ];
 
+  /// 纸本定位状态；网页原文 VERIFIED 不会自动升级为纸本 VERIFIED。
   String get status => isVerified
+      ? 'VERIFIED'
+      : bibliographicLocatorStatus == 'PENDING'
+          ? 'PENDING'
+          : 'MISSING';
+
+  /// 网页/原文内容核验状态，经过必要字段完整性校验。
+  String get sourceStatus => isSourceVerified
       ? 'VERIFIED'
       : verificationStatus == 'PENDING'
           ? 'PENDING'
@@ -85,7 +121,7 @@ class MedicalCaseSourceLedger {
         '原文片段：$originalExcerpt',
         '适用条件：$applicability',
         '异文记录：$variant',
-        '核验状态：$status',
+        '核验状态：原文 $sourceStatus；纸本版本/卷页 $status',
         if (missingFields.isNotEmpty) '缺失字段：${missingFields.join('、')}',
         '说明：内部医案序号不等于原始来源定位。',
       ].join('\n');
@@ -99,7 +135,8 @@ class MedicalCaseSourceLedger {
         'originalExcerpt': originalExcerpt,
         'applicability': applicability,
         'variant': variant,
-        'verificationStatus': status,
+        'verificationStatus': sourceStatus,
+        'bibliographicLocatorStatus': status,
       };
 
   factory MedicalCaseSourceLedger.fromJson(Map<String, dynamic> json) {
@@ -116,8 +153,10 @@ class MedicalCaseSourceLedger {
     final originalExcerpt = read('originalExcerpt');
     final applicability = read('applicability');
     final variant = read('variant');
-    final requestedStatus = read('verificationStatus');
-    final candidate = MedicalCaseSourceLedger(
+    final requestedSourceStatus = read('verificationStatus');
+    final requestedLocatorStatus = read('bibliographicLocatorStatus');
+
+    final provisional = MedicalCaseSourceLedger(
       sourceTitle: sourceTitle,
       edition: edition,
       volume: volume,
@@ -126,27 +165,36 @@ class MedicalCaseSourceLedger {
       originalExcerpt: originalExcerpt,
       applicability: applicability,
       variant: variant,
-      verificationStatus: requestedStatus == 'VERIFIED' ||
-              requestedStatus == 'PENDING'
-          ? requestedStatus
-          : 'MISSING',
+      verificationStatus: requestedSourceStatus,
+      bibliographicLocatorStatus: requestedLocatorStatus,
     );
-    // Never retain a VERIFIED state in the model when the required locator is
-    // incomplete. The display getter is defensive too, but normalizing here
-    // prevents downstream consumers from reading a contradictory raw status.
-    if (requestedStatus == 'VERIFIED' && !candidate.hasCompleteLocator) {
-      return MedicalCaseSourceLedger(
-        sourceTitle: sourceTitle,
-        edition: edition,
-        volume: volume,
-        page: page,
-        passage: passage,
-        originalExcerpt: originalExcerpt,
-        applicability: applicability,
-        variant: variant,
-        verificationStatus: 'MISSING',
-      );
-    }
-    return candidate;
+
+    final sourceStatus = requestedSourceStatus == 'VERIFIED' &&
+            !provisional.hasCompleteSourceLocator
+        ? 'MISSING'
+        : requestedSourceStatus == 'VERIFIED' ||
+                requestedSourceStatus == 'PENDING'
+            ? requestedSourceStatus
+            : 'MISSING';
+    final locatorStatus = requestedLocatorStatus == 'VERIFIED' &&
+            !provisional.hasCompleteBibliographicLocator
+        ? 'MISSING'
+        : requestedLocatorStatus == 'VERIFIED' ||
+                requestedLocatorStatus == 'PENDING'
+            ? requestedLocatorStatus
+            : 'MISSING';
+
+    return MedicalCaseSourceLedger(
+      sourceTitle: sourceTitle,
+      edition: edition,
+      volume: volume,
+      page: page,
+      passage: passage,
+      originalExcerpt: originalExcerpt,
+      applicability: applicability,
+      variant: variant,
+      verificationStatus: sourceStatus,
+      bibliographicLocatorStatus: locatorStatus,
+    );
   }
 }

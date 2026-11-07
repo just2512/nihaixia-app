@@ -22,7 +22,8 @@
       "originalExcerpt": "她於05/09/2006來診",
       "applicability": "内部医案的初诊日期、患者年龄和自闭症描述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "3": {
       "sourceTitle": "汉唐中医网《今天真多癌症病人》",
@@ -33,7 +34,8 @@
       "originalExcerpt": "今天有一位肝癌病人",
       "applicability": "内部医案日期、病种及患者来自加州的描述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "4": {
       "sourceTitle": "汉唐中医网《今天真多癌症病人》",
@@ -44,7 +46,8 @@
       "originalExcerpt": "他的腹水全數退盡",
       "applicability": "内部医案日期、肝硬化病种及腹水描述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "5": {
       "sourceTitle": "汉唐中医网《今天真多癌症病人》",
@@ -55,7 +58,8 @@
       "originalExcerpt": "因卵巢癌來診",
       "applicability": "内部医案日期、患者年龄/地区和卵巢癌描述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "6": {
       "sourceTitle": "汉唐中医网《今天真多癌症病人》",
@@ -66,7 +70,8 @@
       "originalExcerpt": "傷口已經開始結痂",
       "applicability": "内部医案日期、乳癌已破口特征及伤口描述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "7": {
       "sourceTitle": "汉唐中医网《今天真多癌症病人》",
@@ -77,7 +82,8 @@
       "originalExcerpt": "乳房尚未破口",
       "applicability": "内部医案日期、乳癌未破口特征及双病例分治描述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "8": {
       "sourceTitle": "汉唐中医网《今天真多癌症病人》",
@@ -88,7 +94,8 @@
       "originalExcerpt": "大腸癌病人恢復的很好",
       "applicability": "内部医案日期、大肠癌病种和病例叙述可与网页原文对应；仅证明文本来源，不证明疗效或医学主张。",
       "variant": "汉唐中医网原始文章已逐字核对 originalExcerpt；纸本版本、卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "9": {
       "sourceTitle": "汉唐中医网《糖尿病與肝癌(只給人紀班同學做參考，外人請勿觀看)》",
@@ -99,7 +106,8 @@
       "originalExcerpt": "01/29/2007，週一，男，62歲，白人，初診",
       "applicability": "内部医案主键9的日期、性别、年龄、患者背景及肝癌/肝硬化/C型肝炎/糖尿病组合与汉唐中医网原文对应；仅证明整理文本的网页出处，不证明病例真实性、诊疗判断或疗效主张。",
       "variant": "已逐字核对汉唐中医网原始网页；纸本版本、合订本卷次和页码未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "10": {
       "sourceTitle": "汉唐中医网《糖尿病與肝癌(只給人紀班同學做參考，外人請勿觀看)之後續發展》",
@@ -110,7 +118,8 @@
       "originalExcerpt": "上週一就是01/29/2007，那位糖尿病兼得到肝癌的病人昨天02/05/2007服藥一週後回診",
       "applicability": "内部医案主键10的日期、同一患者延续关系及复诊信息与汉唐中医网原文对应；仅证明整理文本的网页出处，不证明病例真实性、诊疗判断或疗效主张。",
       "variant": "已逐字核对汉唐中医网原始网页；纸本版本、合订本卷次和页码未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "11": {
       "sourceTitle": "MISSING",
@@ -1012,7 +1021,8 @@
       "originalExcerpt": "05/24/2005,晴,約旦人,1955年生,腦瘤跟淋巴癌",
       "applicability": "内部医案主键92的日期、患者性别/地区/出生年份及脑瘤合并淋巴癌描述与汉唐中医网原文对应；仅证明整理记录的网页文本来源，不证明病例真实性、诊疗判断或疗效主张。",
       "variant": "已逐字核对汉唐中医网网页原文；纸本版本、合订本卷次和页码仍未核验。",
-      "verificationStatus": "VERIFIED"
+      "verificationStatus": "VERIFIED",
+      "bibliographicLocatorStatus": "MISSING"
     },
     "93": {
       "sourceTitle": "MISSING",

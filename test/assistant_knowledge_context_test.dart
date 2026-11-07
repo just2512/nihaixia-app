@@ -157,10 +157,11 @@ void main() {
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
-    expect(context, contains('来源核验状态：MISSING'));
+    expect(context, contains('原文来源核验状态：MISSING'));
+    expect(context, contains('纸本定位核验状态：MISSING'));
     expect(context, contains('来源定位：MISSING'));
     expect(context, contains('来源账本：'));
-    expect(context, contains('核验状态：MISSING'));
+    expect(context, contains('核验状态：原文 MISSING；纸本版本/卷页 MISSING'));
     expect(context, contains('病例内容本身不构成疗效证据'));
   });
 
@@ -195,6 +196,26 @@ void main() {
         expect(source.locatorStatus, 'MISSING');
       }
     }
+  });
+
+  test('网页医案原文已核验时仍明确标记纸本版本卷页 MISSING', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '医案 肝癌',
+    );
+    final caseSources = result.sources
+        .where((source) => source.sourceKind == 'medical_case')
+        .toList(growable: false);
+    expect(caseSources, isNotEmpty);
+    expect(caseSources.any((source) =>
+        source.sourceVerificationStatus == 'VERIFIED'), isTrue);
+    expect(
+      caseSources.every((source) =>
+          source.locatorStatus == 'MISSING' &&
+          !source.bibliographicLocatorVerified),
+      isTrue,
+    );
+    expect(result.citationFooter, contains('原文来源核验状态：VERIFIED'));
+    expect(result.citationFooter, contains('书目定位状态：MISSING'));
   });
 
   test('医案来源标识可反查账本记录并进入结构化引用，不把内部序号冒充出处', () async {
