@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
@@ -126,6 +127,22 @@ void main() {
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
+          testToolRouteBuilder: (tool, arguments) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(
+                  tester.element(find.byType(LocalAiInterviewScreen)),
+                  AssistantToolResult(
+                    toolId: tool.id,
+                    title: tool.title,
+                    values: const {'结果': '测试执行成功'},
+                    arguments: arguments.values,
+                  ),
+                ),
+                child: const Text('模拟工具执行成功'),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -141,10 +158,9 @@ void main() {
     expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
 
     await tester.tap(find.text('重试五运六气推算'));
-    await _pumpFrames(tester, frames: 40);
-    final returnResult = find.text('将本次推算结果带回助手对话');
-    expect(returnResult, findsOneWidget);
-    await tester.tap(returnResult);
+    await _pumpFrames(tester, frames: 12);
+    expect(find.text('模拟工具执行成功'), findsOneWidget);
+    await tester.tap(find.text('模拟工具执行成功'));
     await _pumpFrames(tester, frames: 40);
 
     final retriedMessages = await store.getAssistantMessages(
