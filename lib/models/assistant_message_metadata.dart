@@ -14,6 +14,7 @@ class AssistantMessageMetadata {
     this.toolStatus,
     this.sourceIds = const [],
     this.toolArguments = const {},
+    this.knowledgeStatus,
   });
 
   final String? mode;
@@ -26,6 +27,7 @@ class AssistantMessageMetadata {
   final String? toolStatus;
   final List<String> sourceIds;
   final Map<String, String> toolArguments;
+  final String? knowledgeStatus;
 
   Map<String, dynamic> toJson() => {
         'schemaVersion': 1,
@@ -39,6 +41,7 @@ class AssistantMessageMetadata {
         if (toolStatus != null) 'toolStatus': toolStatus,
         if (sourceIds.isNotEmpty) 'sourceIds': sourceIds,
         if (toolArguments.isNotEmpty) 'toolArguments': toolArguments,
+        if (knowledgeStatus != null) 'knowledgeStatus': knowledgeStatus,
       };
 
   String encode() => jsonEncode(toJson());
@@ -61,6 +64,7 @@ class AssistantMessageMetadata {
           sourceIds: decoded['sourceIds'] is List
               ? (decoded['sourceIds'] as List).whereType<String>().toList()
               : const [],
+          knowledgeStatus: readString('knowledgeStatus'),
           toolArguments: decoded['toolArguments'] is Map
               ? Map<String, String>.fromEntries(
                   (decoded['toolArguments'] as Map).entries.where(
