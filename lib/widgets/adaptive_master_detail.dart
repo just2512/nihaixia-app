@@ -174,8 +174,8 @@ DisplayFeature? _findVerticalFoldingFeature(
 /// A single, full-page experience that must remain on one physical panel.
 ///
 /// On ordinary windows the child uses the available width. On a foldable with
-/// a vertical hinge/crease, the whole child (including its app bar) is placed
-/// in the wider physical panel so controls do not cross the fold.
+/// a vertical or horizontal hinge, the whole child (including its app bar) is
+/// placed in the selected physical panel so controls do not cross the fold.
 class AdaptiveSinglePane extends StatelessWidget {
   const AdaptiveSinglePane({
     super.key,
