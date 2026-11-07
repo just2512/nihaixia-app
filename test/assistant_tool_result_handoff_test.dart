@@ -174,7 +174,9 @@ void main() {
 
     final returnedToolResult = find.byWidgetPredicate(
       (widget) => widget is SelectableText &&
-          (widget.data ?? '').contains('【五运六气推算执行结果】'),
+          (widget.data ?? '').contains('五运六气推算') &&
+          (widget.data ?? '').contains('司天：') &&
+          (widget.data ?? '').contains('在泉：'),
     );
     expect(returnedToolResult, findsOneWidget);
     expect(service.restoredTranscript, contains('司天：'));
