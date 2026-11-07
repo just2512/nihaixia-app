@@ -98,8 +98,11 @@ void main() {
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
+    expect(context, contains('来源核验状态：MISSING'));
     expect(context, contains('来源定位：MISSING'));
-    expect(context, contains('不代表已核验病例原文或疗效证据'));
+    expect(context, contains('来源账本：'));
+    expect(context, contains('核验状态：MISSING'));
+    expect(context, contains('病例内容本身不构成疗效证据'));
   });
 
 
@@ -156,7 +159,7 @@ void main() {
     expect(cases, contains('内部序号'));
     expect(cases, contains('来源定位：MISSING'));
     expect(cases, contains('内部序号不是原始病例页码或稳定来源 ID'));
-    expect(cases, contains('不代表已核验病例原文或疗效证据'));
+    expect(cases, contains('病例内容本身不构成疗效证据'));
   });
 
 }
