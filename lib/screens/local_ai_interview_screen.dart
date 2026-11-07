@@ -23,6 +23,23 @@ import '../models/assistant_message_metadata.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/adaptive_master_detail.dart';
+import '../data/formula_repository.dart';
+import '../data/herb_repository.dart';
+import '../data/acupuncture_repository.dart';
+import '../data/acupoint_repository.dart';
+import '../data/medical_case_data.dart';
+import '../models/formula.dart';
+import '../models/herb.dart';
+import '../models/acupoint_detail.dart';
+import '../services/classic_search_service.dart';
+import 'formula_detail_screen.dart';
+import 'herb_detail_screen.dart';
+import 'acupoint_detail_screen.dart';
+import 'acupuncture_screen.dart';
+import 'medical_case_detail_screen.dart';
+import 'neijing_knowledge_screen.dart';
+import 'markdown_doc_screen.dart';
+import 'guji_library_screen.dart';
 
 abstract interface class LocalAiAudioRecorder {
   Future<bool> hasPermission();
@@ -1223,6 +1240,94 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  Future<void> _openKnowledgeSource(String sourceId) async {
+    final parts = sourceId.split(':');
+    if (parts.isEmpty || !mounted) return;
+    Widget? destination;
+    String? unavailableMessage;
+    try {
+      switch (parts.first) {
+        case 'formula':
+          if (parts.length < 2) break;
+          await FormulaRepository.load();
+          final matches = FormulaRepository.getAll()
+              .where((item) => item.id == parts.sublist(1).join(':'));
+          if (matches.isNotEmpty) {
+            destination = FormulaDetailScreen(formula: matches.first);
+          }
+          break;
+        case 'herb':
+          if (parts.length < 2) break;
+          await HerbRepository.load();
+          final name = parts.sublist(1).join(':');
+          final matches = HerbRepository.getAll().where((item) => item.name == name);
+          if (matches.isNotEmpty) destination = HerbDetailScreen(herb: matches.first);
+          break;
+        case 'acupoint':
+          if (parts.length < 2) break;
+          await AcupointRepository.load();
+          final name = parts.sublist(1).join(':');
+          final matches = AcupointRepository.getAll().where((item) => item.name == name);
+          if (matches.isNotEmpty) {
+            destination = AcupointDetailScreen(acupoint: matches.first);
+          }
+          break;
+        case 'acupuncture':
+          await AcupunctureRepository.load();
+          destination = const AcupunctureScreen();
+          break;
+        case 'medical_case':
+          if (parts.length < 2) break;
+          final sequence = int.tryParse(parts.sublist(1).join(':'));
+          if (sequence == null) break;
+          final cases = await getAllMedicalCases();
+          final matches = cases.where((item) => item.seq == sequence);
+          if (matches.isNotEmpty) {
+            destination = MedicalCaseDetailScreen(c: matches.first, allCases: cases);
+          }
+          break;
+        case 'neijing':
+          destination = const NeijingKnowledgeScreen();
+          break;
+        case 'shanghan':
+        case 'jingui':
+        case 'guji':
+        case 'zhenjiu':
+          final hit = await ClassicSearchService.findBySourceId(sourceId);
+          if (hit == null) break;
+          if (hit.asset != null) {
+            destination = MarkdownDocScreen(title: hit.title, asset: hit.asset!);
+          } else if (hit.bookId != null && hit.chapterIndex != null) {
+            destination = const GujiLibraryScreen();
+            unavailableMessage = '已打开对应古籍书库；该来源的章节级深链尚未接入。';
+          }
+          break;
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = '来源打开失败：$error');
+      }
+      return;
+    }
+    if (!mounted) return;
+    if (destination == null) {
+      setState(() => _error = '该来源仍有可追溯标识，但没有可用的页面定位：$sourceId');
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      FoldAwareMaterialPageRoute(
+        sourceContext: context,
+        builder: (_) => destination!,
+      ),
+    );
+    if (mounted && unavailableMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(unavailableMessage)),
+      );
+    }
+  }
+
   Future<void> _openTool(
     AssistantToolDefinition tool, {
     required AssistantMode mode,
@@ -1523,6 +1628,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
+        sourceIds: isUser ? const [] : messageMetadata.sourceIds,
+        onSourceTap: _openKnowledgeSource,
         actionLabel: retryFailedTool
             ? '重试${pendingTool.title}'
             : openPendingTool
@@ -1790,10 +1897,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               text: '本轮回复已生成，但原生模型已变为未加载状态。旧会话已结束；以下回复仅供查看，重新加载后请开始新对话。',
               isUser: false,
             ))
-            ..add(_InterviewMessage(text: reply, isUser: false));
+            ..add(_InterviewMessage(
+              text: reply,
+              isUser: false,
+              sourceIds: turnResponse.sourceIds,
+              onSourceTap: _openKnowledgeSource,
+            ));
           _confirmedDraft = null;
         } else {
-          _messages.add(_InterviewMessage(text: reply, isUser: false));
+          _messages.add(_InterviewMessage(
+            text: reply,
+            isUser: false,
+            sourceIds: turnResponse.sourceIds,
+            onSourceTap: _openKnowledgeSource,
+          ));
         }
         _sending = false;
         _imagePath = null;
@@ -2728,6 +2845,8 @@ class _InterviewMessage {
   final VoidCallback? onAction;
   final List<String> options;
   final ValueChanged<String>? onOptionSelected;
+  final List<String> sourceIds;
+  final ValueChanged<String>? onSourceTap;
 
   const _InterviewMessage({
     required this.text,
@@ -2736,7 +2855,28 @@ class _InterviewMessage {
     this.onAction,
     this.options = const [],
     this.onOptionSelected,
+    this.sourceIds = const [],
+    this.onSourceTap,
   });
+}
+
+String _knowledgeSourceLabel(String sourceId) {
+  final parts = sourceId.split(':');
+  final kind = parts.isEmpty ? '' : parts.first;
+  final value = parts.length > 1 ? parts.sublist(1).join(':') : '';
+  return switch (kind) {
+    'formula' => '方剂：$value',
+    'herb' => '本草：$value',
+    'acupoint' => '穴位：$value',
+    'acupuncture' => '针灸来源：$value',
+    'medical_case' => '医案 #$value',
+    'neijing' => '内经条目',
+    'shanghan' => '伤寒论：$value',
+    'jingui' => '金匮要略：$value',
+    'guji' => '古籍原文：$value',
+    'zhenjiu' => '针灸讲稿：$value',
+    _ => '来源：$sourceId',
+  };
 }
 
 class _InterviewMessageBubble extends StatelessWidget {
@@ -2780,6 +2920,18 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
+                if (message.sourceIds.isNotEmpty && message.onSourceTap != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: message.sourceIds.map((sourceId) => ActionChip(
+                      avatar: const Icon(Icons.link, size: 14),
+                      label: Text(_knowledgeSourceLabel(sourceId)),
+                      onPressed: () => message.onSourceTap!(sourceId),
+                    )).toList(),
+                  ),
+                ],
                 if (message.options.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Wrap(
