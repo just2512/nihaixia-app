@@ -8,13 +8,13 @@ void main() {
         .listSync(recursive: true)
         .whereType<File>()
         .where((file) => file.path.endsWith('.dart'))
-        .where((file) => file.path.replaceAll('\\\\', '/')
+        .where((file) => file.path.replaceAll('\\', '/')
             != 'lib/screens/chat_screen.dart');
     final importDirective = RegExp(
-      r'''^\\s*(?:import|export|part)\\s+['"][^'"]*chat_screen\\.dart['"]''',
+      r'''^\s*(?:import|export|part)\s+['"][^'"]*chat_screen\.dart['"]''',
       multiLine: true,
     );
-    final constructorCall = RegExp(r'\\bChatScreen\\s*\\(');
+    final constructorCall = RegExp(r'\bChatScreen\s*\(');
     final violations = <String>[];
 
     for (final file in productionFiles) {
