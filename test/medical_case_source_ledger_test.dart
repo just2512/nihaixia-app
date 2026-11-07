@@ -122,4 +122,21 @@ void main() {
     expect(linked.every((medicalCase) => medicalCase.sourceLedger.status == 'MISSING'), isTrue);
   });
 
+
+  test('空白字符串不能冒充完整来源定位字段', () {
+    const ledger = MedicalCaseSourceLedger(
+      sourceTitle: '伤寒论',
+      edition: '宋本',
+      volume: '卷三',
+      page: '   ',
+      passage: '辨太阳病脉证并治上',
+      originalExcerpt: '太阳之为病，脉浮，头项强痛而恶寒。',
+      verificationStatus: 'VERIFIED',
+    );
+    expect(ledger.hasCompleteLocator, isFalse);
+    expect(ledger.isVerified, isFalse);
+    expect(ledger.status, 'MISSING');
+    expect(ledger.missingFields, contains('页码'));
+  });
+
 }
