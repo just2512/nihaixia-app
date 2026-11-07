@@ -8,6 +8,7 @@ import 'dosage_converter_screen.dart';
 import 'dream_screen.dart';
 import 'guansha_screen.dart';
 import 'guji_library_screen.dart';
+import 'knowledge_screen.dart';
 import 'huangdi_siji_screen.dart';
 import 'medical_case_library_screen.dart';
 import 'meihua_screen.dart';
@@ -260,6 +261,16 @@ class AssistantToolRouter {
     builder: _buildGuji,
   );
 
+  static const knowledgeHub = AssistantToolDefinition(
+    id: 'knowledge_hub',
+    title: '中医知识库浏览',
+    description: '打开 App 知识库浏览页；具体知识问答仍在当前统一会话中进行。',
+    modes: {AssistantMode.learning},
+    aliases: ['知识库', '中医知识库', '知识页面'],
+    actionWords: ['打开', '浏览', '查看'],
+    builder: _buildKnowledgeHub,
+  );
+
   static const medicalCases = AssistantToolDefinition(
     id: 'medical_cases',
     title: '医案库检索',
@@ -404,6 +415,7 @@ class AssistantToolRouter {
     dosage,
     ziwu,
     guji,
+    knowledgeHub,
     medicalCases,
     almanac,
     diagnosisHistory,
@@ -496,6 +508,7 @@ class AssistantToolRouter {
       const DosageConverterScreen(returnResultOnComplete: true);
   static Widget _buildZiwu() => const ZiWuLiuZhuScreen(returnResultOnComplete: true);
   static Widget _buildGuji() => const GujiLibraryScreen();
+  static Widget _buildKnowledgeHub() => const KnowledgeScreen();
   static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
   static Widget _buildAlmanac() =>
       const DailyAlmanacScreen(returnResultOnComplete: true);
