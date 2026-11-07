@@ -122,6 +122,38 @@ void main() {
   });
 
 
+  test('方剂、本草、针灸、穴位和内经条目均生成可反查的来源引用', () async {
+    const scenarios = [
+      ('桂枝汤', 'formula'),
+      ('柴胡', 'herb'),
+      ('失眠', 'acupuncture'),
+      ('足三里', 'acupoint'),
+      ('十二官相使', 'neijing'),
+    ];
+
+    for (final scenario in scenarios) {
+      final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+        scenario.$1,
+        includeMedicalCases: false,
+      );
+      final matches = result.sources
+          .where((source) => source.sourceKind == scenario.$2)
+          .toList(growable: false);
+      expect(
+        matches,
+        isNotEmpty,
+        reason: '${scenario.$1} 应返回 ${scenario.$2} 类型的可反查来源',
+      );
+      for (final source in matches) {
+        expect(source.sourceId, isNotEmpty);
+        expect(source.localBacklink, isNotEmpty);
+        expect(source.localBacklink, isNot('MISSING'));
+        expect(source.bibliographicLocatorVerified, isFalse);
+        expect(source.locatorStatus, 'MISSING');
+      }
+    }
+  });
+
   test('医案来源标识可反查账本记录并进入结构化引用，不把内部序号冒充出处', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '桂枝汤',
