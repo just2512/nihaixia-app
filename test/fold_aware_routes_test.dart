@@ -244,6 +244,60 @@ void main() {
     expect(page.width, 800);
   });
 
+  testWidgets('dialog opened above or below a horizontal hinge stays in its source panel', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(0, 368, 1000, 24),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final scenario in [
+      (Alignment.topCenter, true),
+      (Alignment.bottomCenter, false),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: scenario.$1,
+              child: Builder(
+                builder: (sourceContext) => TextButton(
+                  onPressed: () => showFoldAwareDialog<void>(
+                    context: sourceContext,
+                    builder: (_) => const AlertDialog(
+                      title: Text('水平铰链弹窗'),
+                      content: Text('弹窗必须留在触发入口所在屏区'),
+                    ),
+                  ),
+                  child: const Text('打开水平铰链弹窗'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('打开水平铰链弹窗'));
+      await tester.pumpAndSettle();
+
+      final dialog = tester.getRect(find.byType(AlertDialog));
+      if (scenario.$2) {
+        expect(dialog.top, greaterThanOrEqualTo(0));
+        expect(dialog.bottom, lessThanOrEqualTo(368));
+      } else {
+        expect(dialog.top, greaterThanOrEqualTo(392));
+        expect(dialog.bottom, lessThanOrEqualTo(760));
+      }
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   testWidgets('unknown fold posture does not split a full-width dialog', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
