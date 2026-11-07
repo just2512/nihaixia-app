@@ -14,7 +14,7 @@ void main() {
       toolStatus: 'SUCCEEDED',
       sourceIds: ['local-engine:yunqi'],
       toolArguments: {'date': '2026-11-06'},
-      knowledgeStatus: 'retrieved',
+      knowledgeStatus: 'RETRIEVED',
     );
     final restored = AssistantMessageMetadata.decode(original.encode());
     expect(restored.mode, 'tools');
@@ -27,7 +27,7 @@ void main() {
     expect(restored.toolStatus, 'SUCCEEDED');
     expect(restored.sourceIds, ['local-engine:yunqi']);
     expect(restored.toolArguments, {'date': '2026-11-06'});
-    expect(restored.knowledgeStatus, 'retrieved');
+    expect(restored.knowledgeStatus, 'RETRIEVED');
   });
 
   test('legacy semicolon metadata remains readable', () {
