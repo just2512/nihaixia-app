@@ -196,6 +196,16 @@ class AssistantKnowledgeContextBuilder {
             .take(2)
             .toList(growable: false);
         for (final medicalCase in hits) {
+          final ledger = medicalCase.sourceLedger;
+          final verifiedLocator = ledger.isVerified
+              ? [
+                  ledger.sourceTitle,
+                  ledger.edition,
+                  ledger.volume,
+                  ledger.page,
+                  ledger.passage,
+                ].join(' · ')
+              : 'MISSING（内部序号不是原始病例页码或稳定来源 ID）';
           buffer
             ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
             ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
@@ -205,8 +215,11 @@ class AssistantKnowledgeContextBuilder {
             ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
             ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
             ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
-            ..writeln('来源定位：MISSING（内部序号不是原始病例页码或稳定来源 ID）')
-            ..writeln('使用限制：仅作为本地整理记录检索，不代表已核验病例原文或疗效证据。');
+            ..writeln('来源核验状态：${ledger.status}')
+            ..writeln('来源定位：$verifiedLocator')
+            ..writeln('来源账本：')
+            ..writeln(ledger.toDisplayText())
+            ..writeln('使用限制：仅作为本地整理记录检索；只有账本状态为 VERIFIED 且定位字段完整时，才允许将账本定位作为已核验出处；病例内容本身不构成疗效证据。');
         }
       } catch (_) {
         buffer.writeln('[App医案库] 读取失败，状态 MISSING。');
