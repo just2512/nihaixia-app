@@ -20,6 +20,8 @@ class AssistantKnowledgeSourceReference {
     required this.title,
     required this.localBacklink,
     required this.locatorStatus,
+    this.sourceKind = 'classic_text',
+    this.bibliographicLocatorVerified = false,
   });
 
   final String sourceId;
@@ -27,11 +29,16 @@ class AssistantKnowledgeSourceReference {
   final String title;
   final String localBacklink;
   final String locatorStatus;
+  final String sourceKind;
+  final bool bibliographicLocatorVerified;
 
-  String toCitationText() => '- $sourceLabel｜$title\n'
-      '  本地回链：$localBacklink\n'
+  String toCitationText() => '- $sourceLabel｜$title\\n'
+      '  来源类型：$sourceKind\\n'
+      '  本地回链：$localBacklink\\n'
       '  本地回链状态：${localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE'}；'
-      '书目定位状态：$locatorStatus；纸本版本/卷页：MISSING（尚未完成影印本核验）\n'
+      '书目定位状态：$locatorStatus；纸本版本/卷页：'
+      '${bibliographicLocatorVerified ? 'VERIFIED' : 'MISSING'}'
+      '${bibliographicLocatorVerified ? '' : '（尚未完成影印本核验）'}\\n'
       '  来源标识：$sourceId';
 }
 
@@ -102,6 +109,32 @@ class AssistantKnowledgeContextBuilder {
     final sources = <AssistantKnowledgeSourceReference>[];
     for (final sourceId in sourceIds) {
       try {
+        if (sourceId.startsWith('medical_case:')) {
+          final sequence = int.tryParse(
+            sourceId.substring('medical_case:'.length),
+          );
+          if (sequence == null) continue;
+          final cases = await getAllMedicalCases();
+          MedicalCase? matchedCase;
+          for (final medicalCase in cases) {
+            if (medicalCase.seq == sequence) {
+              matchedCase = medicalCase;
+              break;
+            }
+          }
+          if (matchedCase == null) continue;
+          final ledger = matchedCase.sourceLedger;
+          sources.add(AssistantKnowledgeSourceReference(
+            sourceId: sourceId,
+            sourceLabel: 'App 医案库',
+            title: matchedCase.displayName,
+            localBacklink: 'medical_case:internal-seq:$sequence',
+            locatorStatus: ledger.status,
+            sourceKind: 'medical_case',
+            bibliographicLocatorVerified: ledger.isVerified,
+          ));
+          continue;
+        }
         final hit = await ClassicSearchService.findBySourceId(sourceId);
         if (hit == null) continue;
         sources.add(AssistantKnowledgeSourceReference(
@@ -110,6 +143,8 @@ class AssistantKnowledgeContextBuilder {
           title: hit.title,
           localBacklink: hit.localBacklink,
           locatorStatus: hit.locatorStatus,
+          sourceKind: hit.asset != null ? 'lecture' : 'classic_text',
+          bibliographicLocatorVerified: hit.hasVerifiedBibliographicLocator,
         ));
       } catch (_) {
         // A failed reverse lookup is not a citation. Keep the retrieval text,
@@ -306,6 +341,8 @@ class AssistantKnowledgeContextBuilder {
             ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
             ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
             ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
+            ..writeln('来源标识：medical_case:${medicalCase.seq}')
+            ..writeln('本地回链：medical_case:internal-seq:${medicalCase.seq}')
             ..writeln('来源核验状态：${ledger.status}')
             ..writeln('来源定位：$verifiedLocator')
             ..writeln('来源账本：')
