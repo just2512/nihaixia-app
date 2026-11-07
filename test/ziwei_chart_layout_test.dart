@@ -1,3 +1,5 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
@@ -100,6 +102,38 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('紫微排盘在物理铰链设备上完整约束到单侧面板', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 1000),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final page = tester.getRect(find.byType(Scaffold).first);
+    expect(page.width, lessThanOrEqualTo(388));
+    expect(page.right, lessThanOrEqualTo(388));
+    expect(
+      find.byKey(const ValueKey('ziwei-expanded-input-summary')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
   });
 
 }
