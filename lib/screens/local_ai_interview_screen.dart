@@ -1251,23 +1251,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         context,
         FoldAwareMaterialPageRoute(
           sourceContext: context,
-          builder: (_) => PopScope<Object?>(
-            // A system/app-bar back action is an explicit cancellation. Keep
-            // null returns from legacy pages as NO_RESULT; do not conflate the
-            // two terminal states in the unified conversation.
-            canPop: false,
-            onPopInvokedWithResult: (didPop, result) {
-              if (didPop) return;
-              Navigator.of(context).pop(
-                AssistantToolResult(
-                  toolId: tool.id,
-                  title: tool.title,
-                  values: const {},
-                  status: AssistantToolExecutionStatus.cancelled,
-                  disclaimer: '用户退出工具页面，未提交执行结果。',
-                ),
-              );
-            },
+          builder: (_) => _AssistantToolRouteGuard(
+            cancellationResult: AssistantToolResult(
+              toolId: tool.id,
+              title: tool.title,
+              values: const {},
+              status: AssistantToolExecutionStatus.cancelled,
+              disclaimer: '用户退出工具页面，未提交执行结果。',
+            ),
             child: tool.builderWithArguments != null
                 ? tool.builderWithArguments!(toolArguments)
                 : tool.builder(),
@@ -2822,3 +2813,47 @@ class _InterviewMessageBubble extends StatelessWidget {
     );
   }
 }
+
+/// Blocks the first route-pop attempt long enough to translate a null/back
+/// exit into a typed cancellation, while preserving non-null results returned
+/// by legacy tool pages. A second pop is issued only after PopScope rebuilds
+/// with canPop=true; calling Navigator.pop from inside a blocked callback would
+/// otherwise be blocked by the same PopScope again.
+class _AssistantToolRouteGuard extends StatefulWidget {
+  const _AssistantToolRouteGuard({
+    required this.child,
+    required this.cancellationResult,
+  });
+
+  final Widget child;
+  final AssistantToolResult cancellationResult;
+
+  @override
+  State<_AssistantToolRouteGuard> createState() =>
+      _AssistantToolRouteGuardState();
+}
+
+class _AssistantToolRouteGuardState extends State<_AssistantToolRouteGuard> {
+  bool _allowPop = false;
+  bool _popScheduled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope<Object?>(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop || _popScheduled) return;
+        _popScheduled = true;
+        setState(() => _allowPop = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Navigator.of(context).pop(
+            result ?? widget.cancellationResult,
+          );
+        });
+      },
+      child: widget.child,
+    );
+  }
+}
+
