@@ -55,7 +55,7 @@ void main() {
     ]));
   });
 
-  test('完整纸本定位字段和双重显式核验状态才允许 VERIFIED', () {
+  test('完整纸本定位字段和显式纸本核验状态才允许 VERIFIED', () {
     const ledger = MedicalCaseSourceLedger(
       sourceTitle: '伤寒论',
       edition: '宋本',

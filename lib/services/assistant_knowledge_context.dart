@@ -34,14 +34,14 @@ class AssistantKnowledgeSourceReference {
   final String sourceVerificationStatus;
   final bool bibliographicLocatorVerified;
 
-  String toCitationText() => '- $sourceLabel｜$title\\n'
-      '  来源类型：$sourceKind\\n'
-      '  原文来源核验状态：$sourceVerificationStatus\\n'
-      '  本地回链：$localBacklink\\n'
+  String toCitationText() => '- $sourceLabel｜$title\n'
+      '  来源类型：$sourceKind\n'
+      '  原文来源核验状态：$sourceVerificationStatus\n'
+      '  本地回链：$localBacklink\n'
       '  本地回链状态：${localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE'}；'
       '书目定位状态：$locatorStatus；纸本版本/卷页：'
       '${bibliographicLocatorVerified ? 'VERIFIED' : 'MISSING'}'
-      '${bibliographicLocatorVerified ? '' : '（尚未完成纸本/影印本核验）'}\\n'
+      '${bibliographicLocatorVerified ? '' : '（尚未完成纸本/影印本核验）'}\n'
       '  来源标识：$sourceId';
 }
 
