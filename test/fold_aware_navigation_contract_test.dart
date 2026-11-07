@@ -69,7 +69,7 @@ void main() {
       violations,
       isEmpty,
       reason: 'Use FoldAwareMaterialPageRoute for full-page navigation. '
-          'The only direct route exception is ChatScreen local-AI hand-off, '
+          'The only direct route exception is the legacy local-AI hand-off, '
           'which must pass a source-derived preferredAnchorPoint.\n'
           '${violations.join('\n')}',
     );
