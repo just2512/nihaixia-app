@@ -1056,12 +1056,14 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Find N2 外屏内容区约 370dp，内屏展开后可用宽度超过 700dp。
-        // 盘面在窄屏占满内容区，在展开屏限制为 640dp 并居中，避免宫格被横向拉伸。
+        // Find N2 外屏约 370dp、展开内屏常见 700dp 以上。
+        // 盘面在所有窗口宽度下统一限制为 640dp：避免 640–699dp
+        // 过渡区突然比展开屏更宽，也避免宽屏宫格被横向拉伸。
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
-        final plateWidth = availableWidth >= 700 ? 640.0 : availableWidth;
+        final plateWidth =
+            availableWidth > 640.0 ? 640.0 : availableWidth;
         return Center(
           child: SizedBox(
             key: const ValueKey('ziwei-chart-plate-width'),
