@@ -140,8 +140,12 @@ bool _hasPhysicalPanelFeature(
     final isHalfOpened =
         feature.state == DisplayFeatureState.postureHalfOpened;
     if (!hasPhysicalGap && !isHalfOpened) return false;
-    return bounds.height >= screenSize.height - 1 &&
-        bounds.left > 0 &&
-        bounds.right < screenSize.width;
+    final spansScreenHeight = bounds.height >= screenSize.height - 1;
+    final spansScreenWidth = bounds.width >= screenSize.width - 1;
+    final dividesVerticalPanels =
+        spansScreenHeight && bounds.left > 0 && bounds.right < screenSize.width;
+    final dividesHorizontalPanels =
+        spansScreenWidth && bounds.top > 0 && bounds.bottom < screenSize.height;
+    return dividesVerticalPanels || dividesHorizontalPanels;
   });
 }
