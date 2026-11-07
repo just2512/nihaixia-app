@@ -447,8 +447,11 @@ DisplayFeature? _findSinglePaneBlockingFeature(
   final feature = candidates.first;
   // A flat/unknown zero-gap crease is one continuous display. Only a physical
   // gap or an explicitly half-open posture separates single-pane routes.
-  final hasPhysicalGap =
-      feature.bounds.width > 0 || feature.bounds.height > 0;
+  final isVertical =
+      feature.bounds.height >= screenSize.height - 1;
+  final hasPhysicalGap = isVertical
+      ? feature.bounds.width > 0
+      : feature.bounds.height > 0;
   if (!hasPhysicalGap &&
       feature.state != DisplayFeatureState.postureHalfOpened) {
     return null;
@@ -493,6 +496,18 @@ double _safeLayoutOriginX(BuildContext context) {
   if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
   try {
     return renderObject.localToGlobal(Offset.zero).dx;
+  } on FlutterError {
+    return 0.0;
+  } on AssertionError {
+    return 0.0;
+  }
+}
+
+double _safeLayoutOriginY(BuildContext context) {
+  final renderObject = context.findRenderObject();
+  if (renderObject is! RenderBox || !renderObject.hasSize) return 0.0;
+  try {
+    return renderObject.localToGlobal(Offset.zero).dy;
   } on FlutterError {
     return 0.0;
   } on AssertionError {
