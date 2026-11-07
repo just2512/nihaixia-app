@@ -265,6 +265,42 @@ void main() {
   });
 
 
+  testWidgets('恢复知识检索状态和来源引用后仍可在历史消息中查看', (tester) async {
+    final store = _MemoryConversationStore();
+    store.messages[1]!.add({
+      'id': 5,
+      'conversation_id': 1,
+      'role': 'assistant',
+      'content': '检索到方剂条目。',
+      'metadata': AssistantMessageMetadata(
+        mode: 'learning',
+        selectedMode: 'automatic',
+        sourceIds: const ['formula:gui-zhi-tang'],
+        knowledgeStatus: 'PARTIAL',
+      ).encode(),
+    });
+    final service = _HistoryResumeService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.text('可继续的历史会话'));
+    await _pumpFrames(tester);
+
+    expect(find.text('知识检索：部分结果'), findsOneWidget);
+    expect(find.text('方剂：gui-zhi-tang'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('退出工具页会以 CANCELLED 状态写回统一会话', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
