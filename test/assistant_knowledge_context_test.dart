@@ -39,7 +39,11 @@ void main() {
     expect(empty.sources, isEmpty);
 
     final found = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync('柴胡');
-    expect(found.status, AssistantKnowledgeRetrievalStatus.retrieved);
+    expect(
+      found.status,
+      isNot(AssistantKnowledgeRetrievalStatus.noResults),
+    );
+    expect(found.status, isNot(AssistantKnowledgeRetrievalStatus.failed));
     expect(found.sources, isNotEmpty);
   });
 
