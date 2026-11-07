@@ -143,7 +143,7 @@ class AssistantKnowledgeContextBuilder {
         if (sourceId.startsWith('acupuncture:')) {
           final id = int.tryParse(sourceId.substring('acupuncture:'.length));
           if (id == null) continue;
-          final matches = AcupunctureRepository.getAll().where((item) => item.id == id);
+          final matches = AcupunctureRepository.getEntries().where((item) => item.id == id);
           if (matches.isNotEmpty) {
             sources.add(AssistantKnowledgeSourceReference(
               sourceId: sourceId,
