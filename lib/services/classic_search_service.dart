@@ -41,6 +41,41 @@ class ClassicHit {
     this.bookId,
     this.chapterIndex,
   });
+
+  /// Stable retrieval identity. This is an app-local backlink key, not a
+  /// claim that the underlying historical text has a verified edition/page.
+  String get sourceId => [
+        source,
+        asset ?? bookId ?? 'MISSING',
+        chapterIndex?.toString() ?? 'MISSING',
+        title,
+      ].join(':');
+
+  /// PARTIAL means the app can reopen an internal asset/chapter but does not
+  /// have a verified printed page locator. Lecture markdown remains MISSING.
+  String get locatorStatus =>
+      asset == null && bookId != null && chapterIndex != null
+          ? 'PARTIAL'
+          : 'MISSING';
+
+  String get localBacklink => asset != null
+      ? asset!
+      : bookId != null
+          ? 'guji:$bookId#chapter:${chapterIndex ?? 'MISSING'}'
+          : 'MISSING';
+
+  /// Whether the app has enough local coordinates to reopen this hit.
+  /// This is deliberately independent from bibliographic verification:
+  /// a clickable local asset is not proof of edition, volume, or page.
+  bool get hasLocalBacklink =>
+      (asset != null && asset!.trim().isNotEmpty) ||
+      (bookId != null &&
+          bookId!.trim().isNotEmpty &&
+          chapterIndex != null &&
+          chapterIndex! >= 0);
+
+  /// No current index record proves a printed edition/page locator.
+  bool get hasVerifiedBibliographicLocator => false;
 }
 
 class ClassicSearchResult {
@@ -124,6 +159,28 @@ class ClassicSearchService {
           text: (e['x'] as String?) ?? '',
         ),
     ];
+  }
+
+  /// Resolve a previously emitted local source ID back to the indexed hit.
+  /// This is the reverse side of the retrieval backlink; unknown or MISSING
+  /// identifiers return null instead of falling back to a fuzzy search.
+  static Future<ClassicHit?> findBySourceId(String sourceId) async {
+    final normalized = sourceId.trim();
+    if (normalized.isEmpty || normalized == 'MISSING') return null;
+    await ensureLoaded();
+    for (final entry in _entries!) {
+      final hit = ClassicHit(
+        source: entry.source,
+        sourceLabel: _labelOf(entry.source, entry.bookId),
+        title: entry.title,
+        asset: entry.asset,
+        bookId: entry.bookId,
+        chapterIndex: entry.chapterIndex,
+        snippet: _snippet(entry.text, -1, 0),
+      );
+      if (hit.sourceId == normalized) return hit;
+    }
+    return null;
   }
 
   /// 检索：标题命中优先，其次正文命中；正文命中给出关键词上下文摘要。
