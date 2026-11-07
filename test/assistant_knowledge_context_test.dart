@@ -124,7 +124,7 @@ void main() {
       chapterIndex: 5,
       snippet: '原文摘要',
     );
-    expect(classic.canReopenLocally, isTrue);
+    expect(classic.hasLocalBacklink, isTrue);
     expect(classic.localBacklink, 'guji:lingshu#chapter:5');
     expect(classic.hasVerifiedBibliographicLocator, isFalse);
     expect(classic.locatorStatus, 'PARTIAL');
@@ -137,7 +137,7 @@ void main() {
       title: 'MISSING',
       snippet: 'MISSING',
     );
-    expect(missing.canReopenLocally, isFalse);
+    expect(missing.hasLocalBacklink, isFalse);
     expect(missing.localBacklink, 'MISSING');
     expect(missing.hasVerifiedBibliographicLocator, isFalse);
   });
