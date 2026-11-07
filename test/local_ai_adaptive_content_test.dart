@@ -354,7 +354,7 @@ void main() {
     expect(selectorRect.left, greaterThanOrEqualTo(0));
     expect(selectorRect.right, lessThanOrEqualTo(360));
     expect(find.byTooltip('切换助手角色'), findsOneWidget);
-    expect(find.byTooltip('打开当前角色可用的功能入口'), findsOneWidget);
+    expect(find.byTooltip('调用 App 工具'), findsOneWidget);
     expect(find.byTooltip('发送'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
