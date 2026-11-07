@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -201,6 +202,61 @@ void main() {
       await store.getTcmInterviewTaskState(conversationId: conversationId),
       isNull,
     );
+  });
+
+  test('工具终态、来源与原始参数在 SQLite 连接重启后保持一致', () async {
+    final conversationId =
+        await DatabaseHelper.instance.createAssistantConversation(
+      mode: 'metaphysics',
+    );
+    await DatabaseHelper.instance.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '五运六气推算执行失败',
+      metadata: AssistantMessageMetadata(
+        mode: 'metaphysics',
+        selectedMode: 'automatic',
+        toolId: 'yunqi',
+        toolStatus: 'FAILED',
+        sourceIds: const ['local-tool:yunqi:v1'],
+        toolArguments: const {'date': '2026-11-07'},
+      ).encode(),
+    );
+    await DatabaseHelper.instance.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '用户已取消紫微排盘',
+      metadata: AssistantMessageMetadata(
+        mode: 'metaphysics',
+        selectedMode: 'automatic',
+        toolId: 'ziwei',
+        toolStatus: 'CANCELLED',
+        toolArguments: const {'date': '2000-08-16'},
+      ).encode(),
+    );
+
+    final opened = await DatabaseHelper.instance.database;
+    await opened.close();
+    DatabaseHelper.resetForTest();
+
+    final restored = await DatabaseHelper.instance.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(restored, hasLength(2));
+    final failed = AssistantMessageMetadata.decode(
+      restored[0]['metadata'] as String,
+    );
+    expect(failed.toolId, 'yunqi');
+    expect(failed.toolStatus, 'FAILED');
+    expect(failed.toolArguments, const {'date': '2026-11-07'});
+    expect(failed.sourceIds, const ['local-tool:yunqi:v1']);
+
+    final cancelled = AssistantMessageMetadata.decode(
+      restored[1]['metadata'] as String,
+    );
+    expect(cancelled.toolId, 'ziwei');
+    expect(cancelled.toolStatus, 'CANCELLED');
+    expect(cancelled.toolArguments, const {'date': '2000-08-16'});
   });
 
   test('默认历史列表不截断超过 100 条的会话', () async {
