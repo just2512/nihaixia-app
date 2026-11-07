@@ -1336,7 +1336,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 children: const [
                   Icon(Icons.apps_outlined, size: 18),
                   SizedBox(width: AppSpacing.xs),
-                  Text('工具', style: TextStyle(fontSize: AppType.caption)),
+                  Text('入口', style: TextStyle(fontSize: AppType.caption)),
                   Icon(Icons.expand_more, size: 17),
                 ],
               ),
