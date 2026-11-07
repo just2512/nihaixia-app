@@ -111,6 +111,15 @@ void main() {
     expect(result.sources.every((source) => source.locatorStatus != 'VERIFIED'), isTrue);
   });
 
+  test('知识引用尾注使用真实换行而不是字面量转义', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '葛根加半夏汤',
+      includeMedicalCases: false,
+    );
+    expect(result.citationFooter, contains('\n  来源类型：'));
+    expect(result.citationFooter, isNot(contains(r'\n  来源类型：')));
+  });
+
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
