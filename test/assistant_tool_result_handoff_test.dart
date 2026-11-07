@@ -323,4 +323,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+
+  testWidgets('退出统一助手工具页回传 CANCELLED，不与 NO_RESULT 混淆', (tester) async {
+    final service = _RecordingAssistantService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _NoopAssistantConversationStore(),
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开五运六气推算'));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    final cancelledResult = find.byWidgetPredicate(
+      (widget) => widget is SelectableText &&
+          (widget.data ?? '').contains('执行状态：CANCELLED'),
+    );
+    expect(cancelledResult, findsOneWidget);
+    expect(service.restoredTranscript, contains('执行状态：CANCELLED'));
+    expect(service.restoredTranscript, isNot(contains('执行状态：NO_RESULT')));
+    expect(tester.takeException(), isNull);
+  });
+
 }
