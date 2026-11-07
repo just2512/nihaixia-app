@@ -121,6 +121,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.conversationStore,
     this.preferredAnchorPoint,
     this.initialPrompt,
+    this.testToolRouteBuilder,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -135,6 +136,12 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
   final AssistantConversationStore? conversationStore;
+
+  /// Deterministic route seam for persistence/retry widget tests. Production
+  /// callers leave this null and use the registered in-app tool page.
+  @visibleForTesting
+  final Widget Function(AssistantToolDefinition tool, AssistantToolArguments arguments)?
+      testToolRouteBuilder;
 
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
   /// never sent automatically; the user remains responsible for submission.
@@ -1393,9 +1400,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               status: AssistantToolExecutionStatus.cancelled,
               disclaimer: '用户退出工具页面，未提交执行结果。',
             ),
-            child: tool.builderWithArguments != null
-                ? tool.builderWithArguments!(toolArguments)
-                : tool.builder(),
+            child: widget.testToolRouteBuilder?.call(tool, toolArguments) ??
+                (tool.builderWithArguments != null
+                    ? tool.builderWithArguments!(toolArguments)
+                    : tool.builder()),
           ),
         ),
       );
