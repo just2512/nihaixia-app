@@ -1433,6 +1433,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           disclaimer: '工具页面退出时未返回结构化结果；无法区分用户取消与旧页面未实现回传。',
         ),
     }).withArguments(toolArguments.values);
+    final argumentErrors =
+        normalizedResult.validateArgumentsMatch(toolArguments.values);
+    if (argumentErrors.isNotEmpty) {
+      setState(() => _error = '工具返回参数未通过契约校验：' + argumentErrors.join('；'));
+      return;
+    }
     final resultText = normalizedResult.toConversationText();
     final response = '【' + tool.title + '执行结果】\n' + resultText;
     final canRetry = normalizedResult.status ==
