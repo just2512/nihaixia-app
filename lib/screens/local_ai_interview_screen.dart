@@ -1266,7 +1266,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
           ),
           PopupMenuButton<AssistantToolDefinition>(
-            tooltip: '打开当前角色可用的功能入口',
+            tooltip: '调用 App 工具',
             enabled: !busy && tools.isNotEmpty,
             onSelected: (tool) => _requestTool('打开${tool.title}', tool),
             itemBuilder: (context) => [
