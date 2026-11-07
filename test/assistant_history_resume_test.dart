@@ -225,6 +225,12 @@ void main() {
 
   testWidgets('恢复 FAILED 工具结果时显示重试入口并保留原始参数', (tester) async {
     final store = _MemoryConversationStore();
+    // Remove the fixture's earlier pending tool action so this test isolates
+    // the CANCELLED result rather than asserting against another message.
+    store.messages[2]![1]['metadata'] = AssistantMessageMetadata(
+      mode: 'metaphysics',
+      selectedMode: 'automatic',
+    ).encode();
     store.messages[2]!.add({
       'id': 5,
       'conversation_id': 2,
