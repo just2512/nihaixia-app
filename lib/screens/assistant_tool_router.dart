@@ -483,7 +483,7 @@ class AssistantToolRouter {
   static Widget _buildStructuredDiagnosis() =>
       throw StateError(
         'Structured diagnosis must run inside LocalAiInterviewScreen; '
-        'the legacy ChatScreen entry is disabled.',
+        'the legacy diagnosis entry is disabled.',
       );
   static Widget _buildYunqi() => const YunQiScreen(returnResultOnComplete: true);
   static Widget _buildYunqiWithArguments(AssistantToolArguments arguments) {
