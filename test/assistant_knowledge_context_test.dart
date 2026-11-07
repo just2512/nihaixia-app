@@ -233,4 +233,14 @@ void main() {
     expect(cases, contains('病例内容本身不构成疗效证据'));
   });
 
+  test('结构化来源引用使用真实换行而非反斜杠文本', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '葛根加半夏汤',
+      includeMedicalCases: false,
+    );
+    expect(result.sources, isNotEmpty);
+    expect(result.citationFooter, contains('\n  来源类型：'));
+    expect(result.citationFooter, isNot(contains(r'\\n  来源类型：')));
+  });
+
 }
