@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
+import '../widgets/adaptive_master_detail.dart';
 import '../widgets/state_view.dart';
 import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/services/ziwei_engine.dart';
@@ -284,7 +285,8 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Scaffold(
+    return AdaptiveSinglePane(
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('紫微斗数排盘'),
         actions: [
@@ -400,6 +402,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         ],
       );
         },
+      ),
       ),
     );
   }
