@@ -106,6 +106,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.imagePicker,
     this.conversationStore,
     this.preferredAnchorPoint,
+    this.initialPrompt,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -120,6 +121,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
   final AssistantConversationStore? conversationStore;
+
+  /// Optional draft supplied by a knowledge/detail page. It is prefilled but
+  /// never sent automatically; the user remains responsible for submission.
+  final String? initialPrompt;
 
   /// Physical-panel anchor inherited from the control that opened this route.
   final Offset? preferredAnchorPoint;
@@ -197,6 +202,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _recordingFileInspector =
         widget.recordingFileInspector ?? _IoLocalAiRecordingFileInspector();
+    final initialPrompt = widget.initialPrompt?.trim();
+    if (initialPrompt != null && initialPrompt.isNotEmpty) {
+      _inputController.text = initialPrompt;
+      _inputController.selection = TextSelection.collapsed(
+        offset: initialPrompt.length,
+      );
+    }
     _conversationIdFuture = _createNewConversation();
     _refreshStatus();
     _recoverLostImage();
