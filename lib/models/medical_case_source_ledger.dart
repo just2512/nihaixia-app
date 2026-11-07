@@ -37,8 +37,13 @@ class MedicalCaseSourceLedger {
     'originalExcerpt',
   ];
 
+  bool _hasValue(String value) {
+    final normalized = value.trim();
+    return normalized.isNotEmpty && normalized != 'MISSING';
+  }
+
   bool get hasCompleteLocator =>
-      requiredLocatorFields.every((field) => valueOf(field) != 'MISSING');
+      requiredLocatorFields.every((field) => _hasValue(valueOf(field)));
 
   bool get isVerified =>
       verificationStatus == 'VERIFIED' && hasCompleteLocator;
