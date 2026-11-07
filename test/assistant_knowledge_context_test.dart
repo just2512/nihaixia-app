@@ -111,7 +111,7 @@ void main() {
       asset: 'assets/shanghan/lecture.md',
       snippet: '讲稿摘要',
     );
-    expect(lecture.canReopenLocally, isTrue);
+    expect(lecture.hasLocalBacklink, isTrue);
     expect(lecture.localBacklink, 'assets/shanghan/lecture.md');
     expect(lecture.hasVerifiedBibliographicLocator, isFalse);
     expect(lecture.locatorStatus, 'MISSING');
