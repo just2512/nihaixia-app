@@ -168,7 +168,12 @@ jobs:
       - name: Run assistant tool argument and SQLite retry contract regressions
         id: assistant_tool_contracts
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
-        run: flutter test --no-pub test/assistant_tool_result_test.dart test/assistant_history_persistence_test.dart
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Bound a native SQLite/FFI stall so downstream knowledge, legacy
+          # audit, and APK jobs still produce independent evidence.
+          timeout --signal=TERM --kill-after=10s 180s flutter test --no-pub test/assistant_tool_result_test.dart test/assistant_history_persistence_test.dart
 
       - name: Run assistant knowledge citation contract regression
         id: assistant_knowledge_citations
