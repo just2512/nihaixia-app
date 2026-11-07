@@ -836,6 +836,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? toolId,
     bool expectsToolSelection = false,
     List<String> sourceIds = const [],
+    Map<String, String> toolArguments = const {},
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -847,6 +848,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         selectedMode: _assistantMode.name,
         replayable: replayable,
         attachmentType: attachmentType,
+        toolArguments: toolArguments,
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
@@ -871,6 +873,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolId: toolId,
           toolChoicePending: expectsToolSelection,
           sourceIds: sourceIds,
+          toolArguments: toolArguments,
         ).encode(),
       );
     } catch (error, stack) {
@@ -1167,6 +1170,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       assistantText: instruction,
       mode: activeMode,
       toolId: tool.id,
+      toolArguments: arguments?.values ?? const {},
     );
     _scrollToBottom();
   }
