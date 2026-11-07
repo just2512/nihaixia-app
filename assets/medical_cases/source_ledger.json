@@ -91,26 +91,26 @@
       "verificationStatus": "VERIFIED"
     },
     "9": {
-      "sourceTitle": "MISSING",
-      "edition": "MISSING",
-      "volume": "MISSING",
-      "page": "MISSING",
-      "passage": "MISSING",
-      "variant": "MISSING",
-      "verificationStatus": "MISSING",
-      "originalExcerpt": "MISSING",
-      "applicability": "MISSING"
+      "sourceTitle": "汉唐中医网《糖尿病與肝癌(只給人紀班同學做參考，外人請勿觀看)》",
+      "edition": "汉唐中医网网页原文（网页版本）",
+      "volume": "不适用（网页文章，无卷次）",
+      "page": "https://www.hantang.com/chinese/ch_Articles/01-29-07.htm",
+      "passage": "2007-01-29 男性62岁白人，肝癌、肝硬化、C型肝炎、糖尿病及右脚底长期伤口病例",
+      "originalExcerpt": "01/29/2007，週一，男，62歲，白人，初診",
+      "applicability": "内部医案主键9的日期、性别、年龄、患者背景及肝癌/肝硬化/C型肝炎/糖尿病组合与汉唐中医网原文对应；仅证明整理文本的网页出处，不证明病例真实性、诊疗判断或疗效主张。",
+      "variant": "已逐字核对汉唐中医网原始网页；纸本版本、合订本卷次和页码未核验。",
+      "verificationStatus": "VERIFIED"
     },
     "10": {
-      "sourceTitle": "MISSING",
-      "edition": "MISSING",
-      "volume": "MISSING",
-      "page": "MISSING",
-      "passage": "MISSING",
-      "variant": "MISSING",
-      "verificationStatus": "MISSING",
-      "originalExcerpt": "MISSING",
-      "applicability": "MISSING"
+      "sourceTitle": "汉唐中医网《糖尿病與肝癌(只給人紀班同學做參考，外人請勿觀看)之後續發展》",
+      "edition": "汉唐中医网网页原文（网页版本）",
+      "volume": "不适用（网页文章，无卷次）",
+      "page": "https://www.hantang.com/chinese/ch_Articles/02-06-07.htm",
+      "passage": "2007-02-05 复诊：2007-01-29 肝癌病例服药一周后的后续记录",
+      "originalExcerpt": "上週一就是01/29/2007，那位糖尿病兼得到肝癌的病人昨天02/05/2007服藥一週後回診",
+      "applicability": "内部医案主键10的日期、同一患者延续关系及复诊信息与汉唐中医网原文对应；仅证明整理文本的网页出处，不证明病例真实性、诊疗判断或疗效主张。",
+      "variant": "已逐字核对汉唐中医网原始网页；纸本版本、合订本卷次和页码未核验。",
+      "verificationStatus": "VERIFIED"
     },
     "11": {
       "sourceTitle": "MISSING",
