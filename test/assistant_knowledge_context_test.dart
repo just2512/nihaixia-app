@@ -4,6 +4,7 @@ import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
+import 'package:nihaisha_app/services/classic_search_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -89,13 +90,76 @@ void main() {
     expect(context, contains('伤寒论讲稿'));
     expect(context, contains('倪师讲稿/整理讲义'));
     expect(context, contains('版本/底本/卷页：MISSING'));
+    expect(context, contains('来源标识：shanghan:assets/'));
+    expect(context, contains('本地回链：assets/'));
+    expect(context, contains('来源定位状态：MISSING'));
     expect(context, contains('不得当作仲景原文'));
   });
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
+    expect(context, contains('来源核验状态：MISSING'));
     expect(context, contains('来源定位：MISSING'));
-    expect(context, contains('不代表已核验病例原文或疗效证据'));
+    expect(context, contains('来源账本：'));
+    expect(context, contains('核验状态：MISSING'));
+    expect(context, contains('病例内容本身不构成疗效证据'));
+  });
+
+
+  test('经典命中区分可回链与纸本出处核验状态', () {
+    const lecture = ClassicHit(
+      source: 'shanghan',
+      sourceLabel: '伤寒论讲稿',
+      title: '葛根加半夏汤',
+      asset: 'assets/shanghan/lecture.md',
+      snippet: '讲稿摘要',
+    );
+    expect(lecture.hasLocalBacklink, isTrue);
+    expect(lecture.localBacklink, 'assets/shanghan/lecture.md');
+    expect(lecture.hasVerifiedBibliographicLocator, isFalse);
+    expect(lecture.locatorStatus, 'MISSING');
+
+    const classic = ClassicHit(
+      source: 'guji',
+      sourceLabel: '灵枢',
+      title: '本神',
+      bookId: 'lingshu',
+      chapterIndex: 5,
+      snippet: '原文摘要',
+    );
+    expect(classic.hasLocalBacklink, isTrue);
+    expect(classic.localBacklink, 'guji:lingshu#chapter:5');
+    expect(classic.hasVerifiedBibliographicLocator, isFalse);
+    expect(classic.locatorStatus, 'PARTIAL');
+  });
+
+  test('缺少可定位字段的经典命中不得伪造本地回链', () {
+    const missing = ClassicHit(
+      source: 'unknown',
+      sourceLabel: '未知来源',
+      title: 'MISSING',
+      snippet: 'MISSING',
+    );
+    expect(missing.hasLocalBacklink, isFalse);
+    expect(missing.localBacklink, 'MISSING');
+    expect(missing.hasVerifiedBibliographicLocator, isFalse);
+  });
+
+
+  test('经典检索不得把本地讲稿或未校勘文本伪装成已核验原文', () async {
+    final lecture = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
+    expect(lecture, contains('资料类型：倪师讲稿/整理讲义'));
+    expect(lecture, contains('版本/底本/卷页：MISSING'));
+    expect(lecture, contains('不得当作仲景原文'));
+    expect(lecture, isNot(contains('已完成校勘')));
+  });
+
+  test('医案关联上下文不得把内部序号升级为原始出处', () async {
+    final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
+    expect(cases, contains('内部序号'));
+    expect(cases, contains('来源定位：MISSING'));
+    expect(cases, contains('内部序号不是原始病例页码或稳定来源 ID'));
+    expect(cases, contains('病例内容本身不构成疗效证据'));
   });
 
 }
