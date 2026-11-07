@@ -108,20 +108,45 @@ class MedicalCaseSourceLedger {
       return value == null || value.isEmpty ? 'MISSING' : value;
     }
 
+    final sourceTitle = read('sourceTitle');
+    final edition = read('edition');
+    final volume = read('volume');
+    final page = read('page');
+    final passage = read('passage');
+    final originalExcerpt = read('originalExcerpt');
+    final applicability = read('applicability');
+    final variant = read('variant');
     final requestedStatus = read('verificationStatus');
-    return MedicalCaseSourceLedger(
-      sourceTitle: read('sourceTitle'),
-      edition: read('edition'),
-      volume: read('volume'),
-      page: read('page'),
-      passage: read('passage'),
-      originalExcerpt: read('originalExcerpt'),
-      applicability: read('applicability'),
-      variant: read('variant'),
+    final candidate = MedicalCaseSourceLedger(
+      sourceTitle: sourceTitle,
+      edition: edition,
+      volume: volume,
+      page: page,
+      passage: passage,
+      originalExcerpt: originalExcerpt,
+      applicability: applicability,
+      variant: variant,
       verificationStatus: requestedStatus == 'VERIFIED' ||
               requestedStatus == 'PENDING'
           ? requestedStatus
           : 'MISSING',
     );
+    // Never retain a VERIFIED state in the model when the required locator is
+    // incomplete. The display getter is defensive too, but normalizing here
+    // prevents downstream consumers from reading a contradictory raw status.
+    if (requestedStatus == 'VERIFIED' && !candidate.hasCompleteLocator) {
+      return MedicalCaseSourceLedger(
+        sourceTitle: sourceTitle,
+        edition: edition,
+        volume: volume,
+        page: page,
+        passage: passage,
+        originalExcerpt: originalExcerpt,
+        applicability: applicability,
+        variant: variant,
+        verificationStatus: 'MISSING',
+      );
+    }
+    return candidate;
   }
 }
