@@ -8,9 +8,9 @@ import 'dosage_converter_screen.dart';
 import 'dream_screen.dart';
 import 'guansha_screen.dart';
 import 'guji_library_screen.dart';
+import 'knowledge_screen.dart';
 import 'huangdi_siji_screen.dart';
 import 'medical_case_library_screen.dart';
-import 'knowledge_screen.dart';
 import 'meihua_screen.dart';
 import 'sanshan_lingqian_screen.dart';
 import 'saved_charts_screen.dart';
@@ -74,6 +74,55 @@ class AssistantToolArguments {
   final Map<String, String> values;
 
   String? operator [](String key) => values[key];
+
+  /// Validate a tool call at the execution boundary. Intent matching alone is
+  /// not permission to pass malformed or undeclared arguments to a screen.
+  List<String> validateAgainst(AssistantToolDefinition tool) {
+    final errors = <String>[];
+    if (toolId != tool.id) {
+      errors.add('工具标识不匹配：' + toolId + ' != ' + tool.id);
+      return List.unmodifiable(errors);
+    }
+    final declared = {for (final parameter in tool.parameters) parameter.key};
+    for (final key in values.keys) {
+      if (!declared.contains(key)) errors.add('未声明的参数：' + key);
+    }
+    for (final parameter in tool.parameters) {
+      final raw = values[parameter.key]?.trim();
+      if (raw == null || raw.isEmpty) {
+        if (parameter.isRequired) {
+          errors.add('缺少必填参数：' + parameter.label);
+        }
+        continue;
+      }
+      switch (parameter.type) {
+        case AssistantToolParameterType.date:
+          final parsed = DateTime.tryParse(raw);
+          final normalized = parsed == null
+              ? ''
+              : parsed.year.toString().padLeft(4, '0') + '-' +
+                  parsed.month.toString().padLeft(2, '0') + '-' +
+                  parsed.day.toString().padLeft(2, '0');
+          if (normalized != raw) {
+            errors.add('参数「' + parameter.label + '」必须是有效日期 YYYY-MM-DD');
+          }
+          break;
+        case AssistantToolParameterType.integer:
+          if (int.tryParse(raw) == null) {
+            errors.add('参数「' + parameter.label + '」必须是整数');
+          }
+          break;
+        case AssistantToolParameterType.choice:
+          if (!parameter.choices.contains(raw)) {
+            errors.add('参数「' + parameter.label + '」不在允许选项内');
+          }
+          break;
+        case AssistantToolParameterType.text:
+          break;
+      }
+    }
+    return List.unmodifiable(errors);
+  }
 }
 
 class AssistantToolDefinition {
@@ -459,8 +508,8 @@ class AssistantToolRouter {
       const DosageConverterScreen(returnResultOnComplete: true);
   static Widget _buildZiwu() => const ZiWuLiuZhuScreen(returnResultOnComplete: true);
   static Widget _buildGuji() => const GujiLibraryScreen();
-  static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
   static Widget _buildKnowledgeHub() => const KnowledgeScreen();
+  static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
   static Widget _buildAlmanac() =>
       const DailyAlmanacScreen(returnResultOnComplete: true);
   static Widget _buildDiagnosisHistory() => const DiagnosisHistoryScreen();
