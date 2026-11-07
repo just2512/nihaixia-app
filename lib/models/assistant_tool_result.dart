@@ -44,9 +44,7 @@ class AssistantToolResult {
       };
 
   List<String> validateArgumentsMatch(Map<String, String> expectedArguments) {
-    if (arguments.isEmpty || _sameArguments(arguments, expectedArguments)) {
-      return const [];
-    }
+    if (_sameArguments(arguments, expectedArguments)) return const [];
     return const ['工具结果参数与实际调用参数不一致'];
   }
 
