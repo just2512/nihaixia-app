@@ -129,17 +129,19 @@ void main() {
           conversationStore: store,
           testToolRouteBuilder: (tool, arguments) => Scaffold(
             body: Center(
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(
-                  tester.element(find.byType(LocalAiInterviewScreen)),
-                  AssistantToolResult(
-                    toolId: tool.id,
-                    title: tool.title,
-                    values: const {'结果': '测试执行成功'},
-                    arguments: arguments.values,
+              child: Builder(
+                builder: (routeContext) => ElevatedButton(
+                  onPressed: () => Navigator.pop(
+                    routeContext,
+                    AssistantToolResult(
+                      toolId: tool.id,
+                      title: tool.title,
+                      values: const {'结果': '测试执行成功'},
+                      arguments: arguments.values,
+                    ),
                   ),
+                  child: const Text('模拟工具执行成功'),
                 ),
-                child: const Text('模拟工具执行成功'),
               ),
             ),
           ),
