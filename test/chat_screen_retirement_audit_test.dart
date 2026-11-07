@@ -48,7 +48,10 @@ void main() {
     );
     expect(
       testReferences,
-      ['test/chat_screen_task_resume_test.dart'],
+      [
+        'test/chat_screen_initial_context_test.dart',
+        'test/chat_screen_task_resume_test.dart',
+      ],
       reason: 'The remaining legacy test dependency must be migrated before deletion.',
     );
     expect(
