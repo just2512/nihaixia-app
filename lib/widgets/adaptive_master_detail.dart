@@ -197,16 +197,90 @@ class AdaptiveSinglePane extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (preferredAnchorPoint != null) {
-          final screenSize = MediaQuery.sizeOf(context);
-          final feature = _findSinglePaneBlockingFeature(
-            MediaQuery.displayFeaturesOf(context),
-            screenSize,
+        final screenSize = MediaQuery.sizeOf(context);
+        final feature = _findSinglePaneBlockingFeature(
+          MediaQuery.displayFeaturesOf(context),
+          screenSize,
+        );
+        final contentWidth = maxWidth < constraints.maxWidth
+            ? maxWidth
+            : constraints.maxWidth;
+
+        if (feature == null) {
+          return Center(
+            child: SizedBox(
+              width: contentWidth,
+              child: ConstrainedBox(
+                key: contentKey,
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: child,
+              ),
+            ),
           );
-          if (feature == null) {
-            final contentWidth = maxWidth < constraints.maxWidth
-                ? maxWidth
-                : constraints.maxWidth;
+        }
+
+        final isVertical =
+            feature.bounds.height >= screenSize.height - 1;
+        if (isVertical) {
+          if (preferredAnchorPoint != null) {
+            final creaseInset =
+                feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
+            final leftPanelWidth = (feature.bounds.left - creaseInset)
+                .clamp(0.0, screenSize.width)
+                .toDouble();
+            final rightPanelStart = (feature.bounds.right + creaseInset)
+                .clamp(0.0, screenSize.width)
+                .toDouble();
+            final rightPanelWidth = (screenSize.width - rightPanelStart)
+                .clamp(0.0, screenSize.width)
+                .toDouble();
+            final largestPanelWidth = leftPanelWidth > rightPanelWidth
+                ? leftPanelWidth
+                : rightPanelWidth;
+
+            // A platform route may already be constrained to one sub-screen.
+            if (constraints.maxWidth <= largestPanelWidth + 1) {
+              return Center(
+                child: SizedBox(
+                  width: contentWidth,
+                  child: ConstrainedBox(
+                    key: contentKey,
+                    constraints: BoxConstraints(maxWidth: contentWidth),
+                    child: child,
+                  ),
+                ),
+              );
+            }
+
+            final useLeftPanel =
+                preferredAnchorPoint!.dx < feature.bounds.center.dx;
+            final panelWidth = useLeftPanel
+                ? leftPanelWidth
+                : rightPanelWidth;
+            final panelMaxWidth =
+                maxWidth < panelWidth ? maxWidth : panelWidth;
+            return Align(
+              alignment:
+                  useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
+              child: SizedBox(
+                width: panelWidth,
+                child: Center(
+                  child: ConstrainedBox(
+                    key: contentKey,
+                    constraints: BoxConstraints(maxWidth: panelMaxWidth),
+                    child: child,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final localOriginX = _safeLayoutOriginX(context);
+          final featureLeft = feature.bounds.left - localOriginX;
+          final featureRight = feature.bounds.right - localOriginX;
+          final intersects = featureRight > 0 &&
+              featureLeft < constraints.maxWidth;
+          if (!intersects) {
             return Center(
               child: SizedBox(
                 width: contentWidth,
@@ -221,44 +295,19 @@ class AdaptiveSinglePane extends StatelessWidget {
 
           final creaseInset =
               feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-          final leftPanelWidth = (feature.bounds.left - creaseInset)
-              .clamp(0.0, screenSize.width)
+          final leftWidth = (featureLeft - creaseInset)
+              .clamp(0.0, constraints.maxWidth)
               .toDouble();
-          final rightPanelStart = (feature.bounds.right + creaseInset)
-              .clamp(0.0, screenSize.width)
+          final rightStart = (featureRight + creaseInset)
+              .clamp(0.0, constraints.maxWidth)
               .toDouble();
-          final rightPanelWidth = (screenSize.width - rightPanelStart)
-              .clamp(0.0, screenSize.width)
+          final rightWidth = (constraints.maxWidth - rightStart)
+              .clamp(0.0, constraints.maxWidth)
               .toDouble();
-          final largestPanelWidth = leftPanelWidth > rightPanelWidth
-              ? leftPanelWidth
-              : rightPanelWidth;
-
-          // A physical hinge may already have caused DialogRoute to constrain
-          // this route to one sub-screen. A zero-width fold may not produce a
-          // separate route constraint, so split the full-width route here.
-          if (constraints.maxWidth <= largestPanelWidth + 1) {
-            final contentWidth = maxWidth < constraints.maxWidth
-                ? maxWidth
-                : constraints.maxWidth;
-            return Center(
-              child: SizedBox(
-                width: contentWidth,
-                child: ConstrainedBox(
-                  key: contentKey,
-                  constraints: BoxConstraints(maxWidth: contentWidth),
-                  child: child,
-                ),
-              ),
-            );
-          }
-
-          final useLeftPanel =
-              preferredAnchorPoint!.dx < feature.bounds.center.dx;
-          final panelWidth = useLeftPanel
-              ? leftPanelWidth
-              : rightPanelWidth;
-          final panelMaxWidth = maxWidth < panelWidth ? maxWidth : panelWidth;
+          final useLeftPanel = leftWidth >= rightWidth;
+          final panelWidth = useLeftPanel ? leftWidth : rightWidth;
+          final panelMaxWidth =
+              maxWidth < panelWidth ? maxWidth : panelWidth;
           return Align(
             alignment:
                 useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
@@ -275,28 +324,63 @@ class AdaptiveSinglePane extends StatelessWidget {
           );
         }
 
-        final feature = _findSinglePaneBlockingFeature(
-          MediaQuery.displayFeaturesOf(context),
-          MediaQuery.sizeOf(context),
-        );
+        // A landscape foldable may expose a horizontal hinge. Keep the entire
+        // page (including its app bar) above or below that physical gap.
+        final creaseInset =
+            feature.bounds.height > 0 ? 0.0 : foldedCreaseClearance / 2;
+        final topPanelHeight = (feature.bounds.top - creaseInset)
+            .clamp(0.0, screenSize.height)
+            .toDouble();
+        final bottomPanelStart = (feature.bounds.bottom + creaseInset)
+            .clamp(0.0, screenSize.height)
+            .toDouble();
+        final bottomPanelHeight = (screenSize.height - bottomPanelStart)
+            .clamp(0.0, screenSize.height)
+            .toDouble();
+        final largestPanelHeight = topPanelHeight > bottomPanelHeight
+            ? topPanelHeight
+            : bottomPanelHeight;
 
-        final renderObject = context.findRenderObject();
-        final localOriginX = renderObject is RenderBox && renderObject.hasSize
-            ? renderObject.localToGlobal(Offset.zero).dx
-            : 0.0;
-        final featureLeft =
-            feature == null ? null : feature.bounds.left - localOriginX;
-        final featureRight =
-            feature == null ? null : feature.bounds.right - localOriginX;
-        final featureIntersectsLayout = featureLeft != null &&
-            featureRight != null &&
-            featureRight > 0 &&
-            featureLeft < constraints.maxWidth;
+        if (preferredAnchorPoint != null) {
+          if (constraints.maxHeight <= largestPanelHeight + 1) {
+            return Center(
+              child: SizedBox(
+                width: contentWidth,
+                child: ConstrainedBox(
+                  key: contentKey,
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: child,
+                ),
+              ),
+            );
+          }
+          final useTopPanel =
+              preferredAnchorPoint!.dy < feature.bounds.center.dy;
+          final panelHeight =
+              useTopPanel ? topPanelHeight : bottomPanelHeight;
+          return Align(
+            alignment:
+                useTopPanel ? Alignment.topCenter : Alignment.bottomCenter,
+            child: SizedBox(
+              width: constraints.maxWidth,
+              height: panelHeight,
+              child: Center(
+                child: ConstrainedBox(
+                  key: contentKey,
+                  constraints: BoxConstraints(maxWidth: contentWidth),
+                  child: child,
+                ),
+              ),
+            ),
+          );
+        }
 
-        if (feature == null || !featureIntersectsLayout) {
-          final contentWidth = maxWidth < constraints.maxWidth
-              ? maxWidth
-              : constraints.maxWidth;
+        final localOriginY = _safeLayoutOriginY(context);
+        final featureTop = feature.bounds.top - localOriginY;
+        final featureBottom = feature.bounds.bottom - localOriginY;
+        final intersects = featureBottom > 0 &&
+            featureTop < constraints.maxHeight;
+        if (!intersects) {
           return Center(
             child: SizedBox(
               width: contentWidth,
@@ -309,39 +393,30 @@ class AdaptiveSinglePane extends StatelessWidget {
           );
         }
 
-        final creaseInset =
-            feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-        final leftWidth = ((featureLeft) - creaseInset)
-            .clamp(0.0, constraints.maxWidth)
+        final localTopHeight = (featureTop - creaseInset)
+            .clamp(0.0, constraints.maxHeight)
             .toDouble();
-        final rightStart = ((featureRight) + creaseInset)
-            .clamp(0.0, constraints.maxWidth)
+        final localBottomStart = (featureBottom + creaseInset)
+            .clamp(0.0, constraints.maxHeight)
             .toDouble();
-        final rightWidth = (constraints.maxWidth - rightStart)
-            .clamp(0.0, constraints.maxWidth)
-            .toDouble();
-        final anchorPoint = preferredAnchorPoint;
-        final useLeftPanel = anchorPoint != null
-            ? anchorPoint.dx < feature.bounds.center.dx
-            : leftWidth >= rightWidth;
-        final availablePanelWidth = useLeftPanel ? leftWidth : rightWidth;
-        final contentMaxWidth = maxWidth < availablePanelWidth
-            ? maxWidth
-            : availablePanelWidth;
-
+        final localBottomHeight =
+            (constraints.maxHeight - localBottomStart)
+                .clamp(0.0, constraints.maxHeight)
+                .toDouble();
+        final useTopPanel = localTopHeight >= localBottomHeight;
+        final panelHeight =
+            useTopPanel ? localTopHeight : localBottomHeight;
         return Align(
           alignment:
-              useLeftPanel ? Alignment.centerLeft : Alignment.centerRight,
+              useTopPanel ? Alignment.topCenter : Alignment.bottomCenter,
           child: SizedBox(
-            width: availablePanelWidth,
+            width: constraints.maxWidth,
+            height: panelHeight,
             child: Center(
-              child: SizedBox(
-                width: contentMaxWidth,
-                child: ConstrainedBox(
-                  key: contentKey,
-                  constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                  child: child,
-                ),
+              child: ConstrainedBox(
+                key: contentKey,
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: child,
               ),
             ),
           ),
@@ -356,20 +431,62 @@ DisplayFeature? _findSinglePaneBlockingFeature(
   List<DisplayFeature> features,
   Size screenSize,
 ) {
-  final feature = _findVerticalFoldingFeature(features, screenSize);
-  // A postureFlat fold is a crease on one continuous inner display. A
-  // single-pane route must use the whole unfolded canvas; only a physical
-  // hinge or a non-flat posture should constrain it to one panel.
-  // A zero-width crease on a flat/unknown posture is a continuous canvas,
-  // regardless of whether Android reports it as fold or hinge. Only a
-  // half-open posture (or a measurable physical gap) should isolate a panel.
-  if (feature != null &&
-      feature.bounds.width <= 0 &&
+  final vertical = _findVerticalFoldingFeature(features, screenSize);
+  final horizontal = _findHorizontalFoldingFeature(features, screenSize);
+  final candidates = [if (vertical != null) vertical, if (horizontal != null) horizontal];
+  if (candidates.isEmpty) return null;
+  candidates.sort((a, b) {
+    final aDistance = a.bounds.height >= screenSize.height - 1
+        ? (a.bounds.center.dx - screenSize.width / 2).abs()
+        : (a.bounds.center.dy - screenSize.height / 2).abs();
+    final bDistance = b.bounds.height >= screenSize.height - 1
+        ? (b.bounds.center.dx - screenSize.width / 2).abs()
+        : (b.bounds.center.dy - screenSize.height / 2).abs();
+    return aDistance.compareTo(bDistance);
+  });
+  final feature = candidates.first;
+  // A flat/unknown zero-gap crease is one continuous display. Only a physical
+  // gap or an explicitly half-open posture separates single-pane routes.
+  final hasPhysicalGap =
+      feature.bounds.width > 0 || feature.bounds.height > 0;
+  if (!hasPhysicalGap &&
       feature.state != DisplayFeatureState.postureHalfOpened) {
     return null;
   }
   return feature;
 }
+
+
+DisplayFeature? _findHorizontalFoldingFeature(
+  List<DisplayFeature> features,
+  Size screenSize,
+) {
+  DisplayFeature? nearestFeature;
+  var nearestDistance = double.infinity;
+  for (final feature in features) {
+    if (feature.type != DisplayFeatureType.hinge &&
+        feature.type != DisplayFeatureType.fold) {
+      continue;
+    }
+    if (feature.type == DisplayFeatureType.fold &&
+        feature.state == DisplayFeatureState.unknown) {
+      continue;
+    }
+    final bounds = feature.bounds;
+    final spansScreenWidth = bounds.width >= screenSize.width - 1;
+    final separatesTwoPanels =
+        bounds.top > 0 && bounds.bottom < screenSize.height;
+    if (!spansScreenWidth || !separatesTwoPanels) continue;
+    final distanceFromCenter =
+        (bounds.center.dy - screenSize.height / 2).abs();
+    if (distanceFromCenter < nearestDistance) {
+      nearestFeature = feature;
+      nearestDistance = distanceFromCenter;
+    }
+  }
+  return nearestFeature;
+}
+
 
 double _safeLayoutOriginX(BuildContext context) {
   final renderObject = context.findRenderObject();
