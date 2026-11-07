@@ -14,7 +14,7 @@
 | 4 | 脏腑独立证据层 | PASS（只读证据边界） | `ZangFuEvidenceBuilder` 与独立模型保留问项、扩展症状、舌脉、追问及来源；`organMappingStatus=MISSING`，不做自动脏腑映射；测试覆盖未知、未答、非法值 | 在可靠来源和字段映射核验完成前继续禁止自动脏腑诊断 |
 | 5 | 经典条文和医案关联 | PARTIAL | `docs/combined-pattern-reachability-matrix.md` 与 `docs/classic-and-medical-case-source-audit.md` 已区分原文、版本、讲授材料、工程映射；合病规则删除无依据的错误关联 | 本地条文文件编号与真实条文号需建立显式 manifest；医案 1257/1337 统计差异、逐案原始出处、版本/页码仍未闭合；二次转录不能冒充纸本影印校勘 |
 | 6 | Find N2 内外屏布局重构 | PARTIAL | 自适应根导航、窄屏/宽屏布局、折痕/铰链避让、字体缩放及多组 Widget 测试；`docs/find-n2-fold-aware-layout.md` | 实机日志、外屏/展开内屏/半折叠截图、键盘与弹窗实机检查均为 MISSING；不能以模拟窗口测试代替真机验收 |
-| 7 | 本地 AI 与规则问诊合并为一套 | PARTIAL | 主入口可识别问诊任务；规则问诊由确定性 `DiagnosticEngine` 执行；问诊摘要可回传主对话 | `ChatScreen` 仍作为独立页面执行多轮规则问诊，未迁移为统一时间线中的逐轮问答卡；用户需要离开主对话再返回 |
+| 7 | 本地 AI 与规则问诊合并为一套 | PARTIAL | `LocalAiInterviewScreen` 内由 `TcmInterviewConversationController` 驱动逐轮问题、选项、舌脉结构化输入、追问和结果；问诊任务快照写入会话并可恢复待答提示 | 仍需覆盖自然语言/选项输入边界、UI→Adapter→Engine→SQLite→重启的完整 E2E；不得把模型抽取内容未经用户确认写入规则答案 |
 | 8 | 本地 AI 调用中医知识库和实用工具 | PARTIAL | `AssistantKnowledgeContextBuilder` 已连接方剂、本草、穴位、经典检索及医案检索；`AssistantToolRouter` 有五运六气、紫微、八字、易经、子午流注等工具入口 | 知识结果尚未统一为可追溯引用对象；医案逐案来源不足；多数工具仍是页面跳转，不是同一对话内的参数收集、确认、执行和结构化结果回传 |
 | 9 | 设置从问诊中独立出来 | PASS | `HomeScreen` 一级导航含独立设置入口；`SettingsScreen` 集中外观、诊断、排盘、数据、更新设置 | 后续只需保持所有新增全局设置进入此处，不在问诊页面重复藏入口 |
 | 10 | 全 App 功能盘点及 AI 融合 | PARTIAL | `docs/ai-capability-inventory.md`、工具注册表和架构文档已有盘点基础 | 需要形成逐功能映射表：原入口、对话意图、参数 schema、执行 adapter、结果 schema、来源、确认规则、失败退路；未登记工具不能宣称已打通 |
@@ -105,7 +105,7 @@
 
 ### 验收边界仍为 PARTIAL
 
-这轮只证明 canonical 输入边界及引擎追问状态在适配层可测，不代表完整问诊已进入统一主对话时间线。当前 `LocalAiInterviewScreen._continueWithStructuredDiagnosis()` 仍通过 Navigator 打开独立 `ChatScreen`；完成后才把文本摘要写回 AI 消息列表。尚未完成的内容：
+后续代码已将 `_continueWithStructuredDiagnosis()` 改为调用 `_startInlineTcmInterview()`，规则问诊由 `TcmInterviewConversationController` 托管在统一助手消息时间线中，不再通过 Navigator 打开独立 `ChatScreen`。旧 `ChatScreen` 文件及其测试仍保留作兼容/回归资产；删除前还需完成全仓生产调用点和历史路由核查。当前剩余验收不再是“迁移到统一时间线”，而是完整验证 UI→Adapter→Engine→SQLite→重启恢复，以及任务取消/异常中断。
 
 1. 把规则问诊每一轮问题、选项、追问、答案、证据和诊断结果作为同一会话中的结构化消息持久化。
 2. 从历史会话恢复时重建规则问诊快照、当前步骤、待回答问题和选项，而不是只恢复文本 transcript。
