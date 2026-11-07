@@ -1251,9 +1251,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         context,
         FoldAwareMaterialPageRoute(
           sourceContext: context,
-          builder: (_) => tool.builderWithArguments != null
-              ? tool.builderWithArguments!(toolArguments)
-              : tool.builder(),
+          builder: (_) => PopScope<Object?>(
+            // A system/app-bar back action is an explicit cancellation. Keep
+            // null returns from legacy pages as NO_RESULT; do not conflate the
+            // two terminal states in the unified conversation.
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop) return;
+              Navigator.of(context).pop(
+                AssistantToolResult(
+                  toolId: tool.id,
+                  title: tool.title,
+                  values: const {},
+                  status: AssistantToolExecutionStatus.cancelled,
+                  disclaimer: '用户退出工具页面，未提交执行结果。',
+                ),
+              );
+            },
+            child: tool.builderWithArguments != null
+                ? tool.builderWithArguments!(toolArguments)
+                : tool.builder(),
+          ),
         ),
       );
     } catch (error) {
