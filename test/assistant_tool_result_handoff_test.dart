@@ -4,6 +4,7 @@ import 'package:nihaisha_app/engine/yijing_engine.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
@@ -30,6 +31,8 @@ class _NoLostImagePicker implements LocalAiImagePicker {
 }
 
 class _NoopAssistantConversationStore implements AssistantConversationStore {
+  final savedMessages = <Map<String, Object?>>[];
+
   @override
   Future<int> createAssistantConversation({
     String title = '新对话',
@@ -42,7 +45,15 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
     required String role,
     required String content,
     String? metadata,
-  }) async => 1;
+  }) async {
+    savedMessages.add({
+      'conversationId': conversationId,
+      'role': role,
+      'content': content,
+      'metadata': metadata,
+    });
+    return savedMessages.length;
+  }
 
   @override
   Future<List<Map<String, Object?>>> getAssistantConversations({
@@ -185,13 +196,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('统一助手把用户指定日期传入五运六气工具', (tester) async {
+  testWidgets('统一助手把用户指定日期传入五运六气工具并持久化已校验参数', (tester) async {
     final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
-          conversationStore: _NoopAssistantConversationStore(),
+          conversationStore: store,
           imagePicker: _NoLostImagePicker(),
         ),
       ),
@@ -205,6 +217,16 @@ void main() {
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
+    final requestMessages = store.savedMessages.where((message) =>
+        message['role'] == 'assistant' &&
+        (message['content'] as String).contains('已识别到你要使用'));
+    expect(requestMessages, isNotEmpty);
+    final requestMetadata = AssistantMessageMetadata.decode(
+      requestMessages.last['metadata'] as String,
+    );
+    expect(requestMetadata.toolId, 'yunqi');
+    expect(requestMetadata.toolArguments, {'date': '2026-11-06'});
+
     await tester.tap(find.text('打开五运六气推算'));
     await tester.pumpAndSettle();
 
