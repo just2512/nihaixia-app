@@ -43,6 +43,21 @@ class AssistantToolResult {
         AssistantToolExecutionStatus.cancelled => 'CANCELLED',
       };
 
+  List<String> validateArgumentsMatch(Map<String, String> expectedArguments) {
+    if (arguments.isEmpty || _sameArguments(arguments, expectedArguments)) {
+      return const [];
+    }
+    return const ['工具结果参数与实际调用参数不一致'];
+  }
+
+  bool _sameArguments(
+    Map<String, String> actual,
+    Map<String, String> expected,
+  ) {
+    if (actual.length != expected.length) return false;
+    return expected.entries.every((entry) => actual[entry.key] == entry.value);
+  }
+
   List<String> validateFor(String expectedToolId) {
     final errors = <String>[];
     if (toolId != expectedToolId) {
