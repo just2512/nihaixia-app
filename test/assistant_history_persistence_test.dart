@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -57,9 +59,24 @@ Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() {
+  late Directory databaseDirectory;
+
+  setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    databaseDirectory = await Directory.systemTemp.createTemp(
+      'nihaisha-assistant-history-',
+    );
+    // Give the FFI factory an explicit writable location. Relying on its
+    // implicit .dart_tool path can leave the first database open pending in
+    // Flutter test runners where the working directory is not stable.
+    await databaseFactoryFfi.setDatabasesPath(databaseDirectory.path);
+  });
+
+  tearDownAll(() async {
+    if (await databaseDirectory.exists()) {
+      await databaseDirectory.delete(recursive: true);
+    }
   });
 
   testWidgets('reopened SQLite restores FAILED tool and persists its retry result',
