@@ -450,6 +450,45 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('恢复 CANCELLED 工具结果时保留终态且不显示重试入口', (tester) async {
+    final store = _MemoryConversationStore();
+    store.messages[2]!.add({
+      'id': 5,
+      'conversation_id': 2,
+      'role': 'assistant',
+      'content': '【五运六气推算执行结果】\\n执行状态：CANCELLED',
+      'metadata': AssistantMessageMetadata(
+        mode: 'metaphysics',
+        selectedMode: 'automatic',
+        toolId: 'yunqi',
+        toolStatus: 'CANCELLED',
+        toolArguments: const {'date': '2026-11-07'},
+        replayable: true,
+      ).encode(),
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: _HistoryResumeService(),
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.byType(ListTile).first);
+    await _pumpFrames(tester);
+
+    expect(find.text('重试五运六气推算'), findsNothing);
+    expect(find.text('打开五运六气推算'), findsNothing);
+    expect(find.textContaining('执行状态：CANCELLED'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
 }
 
 Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
