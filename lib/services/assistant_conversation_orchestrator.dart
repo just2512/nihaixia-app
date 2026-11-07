@@ -130,6 +130,13 @@ class AssistantConversationOrchestrator {
     }
 
     if (selectedMode != AssistantMode.automatic) {
+      // The explicitly selected learning role is explanatory, not an execution
+      // surface. A query such as “介绍医案检索方式” must not open the case page
+      // merely because it contains a tool alias and an action word.
+      if (selectedMode == AssistantMode.learning &&
+          _learningCues.any(text.contains)) {
+        return const AssistantDispatchDecision(mode: AssistantMode.learning);
+      }
       final explicitMatches = AssistantToolRouter.matchAll(text, selectedMode);
       if (explicitMatches.length == 1) {
         return AssistantDispatchDecision(
