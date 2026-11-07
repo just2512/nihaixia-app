@@ -5,6 +5,7 @@ import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -220,6 +221,49 @@ void main() {
     expect(find.text('打开五运六气推算'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+
+  testWidgets('恢复 FAILED 工具结果时显示重试入口并保留原始参数', (tester) async {
+    final store = _MemoryConversationStore();
+    store.messages[2]!.add({
+      'id': 5,
+      'conversation_id': 2,
+      'role': 'assistant',
+      'content': '【五运六气推算执行结果】\\n执行状态：FAILED\\n执行参数：date=2026-11-07',
+      'metadata': AssistantMessageMetadata(
+        mode: 'metaphysics',
+        selectedMode: 'automatic',
+        toolId: 'yunqi',
+        toolStatus: 'FAILED',
+        toolArguments: const {'date': '2026-11-07'},
+      ).encode(),
+    });
+    final service = _HistoryResumeService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.byType(ListTile).first);
+    await _pumpFrames(tester);
+
+    expect(find.text('重试五运六气推算'), findsOneWidget);
+    await tester.tap(find.text('重试五运六气推算'));
+    await _pumpFrames(tester);
+
+    expect(find.text('五运六气推算'), findsWidgets);
+    expect(find.text('2026-11-07'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
 
   testWidgets('打开历史会话后继续发送，消息仍写入原会话', (tester) async {
     final store = _MemoryConversationStore();
