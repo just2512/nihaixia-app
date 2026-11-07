@@ -58,6 +58,14 @@ class AssistantKnowledgeContextResult {
   final AssistantKnowledgeRetrievalStatus status;
   final String? failureMessage;
 
+  /// Stable wire/UI value shared with tool execution status metadata.
+  String get statusLabel => switch (status) {
+        AssistantKnowledgeRetrievalStatus.noResults => 'NO_RESULTS',
+        AssistantKnowledgeRetrievalStatus.retrieved => 'RETRIEVED',
+        AssistantKnowledgeRetrievalStatus.partial => 'PARTIAL',
+        AssistantKnowledgeRetrievalStatus.failed => 'FAILED',
+      };
+
   List<String> get sourceIds =>
       List.unmodifiable(sources.map((source) => source.sourceId));
 
