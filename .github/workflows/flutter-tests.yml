@@ -165,9 +165,19 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: flutter test --no-pub test/assistant_conversation_orchestrator_test.dart test/assistant_tool_router_test.dart
 
+      - name: Run assistant tool argument and SQLite retry contract regressions
+        id: assistant_tool_contracts
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_tool_result_test.dart test/assistant_history_persistence_test.dart
+
+      - name: Run assistant knowledge citation contract regression
+        id: assistant_knowledge_citations
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: flutter test --no-pub test/assistant_knowledge_context_test.dart
+
       - name: Run full regression suite
         id: regression
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' && steps.tcm_task_resume.outcome == 'success' && steps.tcm_rule_gates.outcome == 'success' && steps.assistant_dispatch.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' && steps.tcm_task_resume.outcome == 'success' && steps.tcm_rule_gates.outcome == 'success' && steps.assistant_dispatch.outcome == 'success' && steps.assistant_tool_contracts.outcome == 'success' && steps.assistant_knowledge_citations.outcome == 'success' }}
         run: flutter test --no-pub
 
       - name: Upload Flutter test failure diffs
