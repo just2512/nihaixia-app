@@ -13,6 +13,7 @@ class AssistantMessageMetadata {
     this.tcmTaskId,
     this.toolStatus,
     this.sourceIds = const [],
+    this.toolArguments = const {},
   });
 
   final String? mode;
@@ -24,6 +25,7 @@ class AssistantMessageMetadata {
   final String? tcmTaskId;
   final String? toolStatus;
   final List<String> sourceIds;
+  final Map<String, String> toolArguments;
 
   Map<String, dynamic> toJson() => {
         'schemaVersion': 1,
@@ -36,6 +38,7 @@ class AssistantMessageMetadata {
         if (tcmTaskId != null) 'tcmTaskId': tcmTaskId,
         if (toolStatus != null) 'toolStatus': toolStatus,
         if (sourceIds.isNotEmpty) 'sourceIds': sourceIds,
+        if (toolArguments.isNotEmpty) 'toolArguments': toolArguments,
       };
 
   String encode() => jsonEncode(toJson());
@@ -58,6 +61,16 @@ class AssistantMessageMetadata {
           sourceIds: decoded['sourceIds'] is List
               ? (decoded['sourceIds'] as List).whereType<String>().toList()
               : const [],
+          toolArguments: decoded['toolArguments'] is Map
+              ? Map<String, String>.fromEntries(
+                  (decoded['toolArguments'] as Map).entries.where(
+                    (entry) => entry.key is String && entry.value is String,
+                  ).map((entry) => MapEntry(
+                        entry.key as String,
+                        entry.value as String,
+                      )),
+                )
+              : const {},
         );
       }
     } catch (_) {
