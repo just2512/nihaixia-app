@@ -312,7 +312,9 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isExpanded = constraints.maxWidth >= 700;
+          // 双栏断点按内容区宽度计算。700dp 在 Find N2 展开屏经过系统
+          // 安全区/外层留白后可能无法触发；640dp 仍能为两张卡片各留约 300dp。
+          final isExpanded = constraints.maxWidth >= 640;
           return ListView(
         padding: const EdgeInsets.all(16),
         children: [
