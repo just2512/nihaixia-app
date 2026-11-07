@@ -21,7 +21,15 @@ class _NoteSection {
 }
 
 class AcupunctureScreen extends StatefulWidget {
-  const AcupunctureScreen({super.key});
+  const AcupunctureScreen({
+    super.key,
+    this.initialCategoryId,
+    this.initialEntryId,
+  });
+
+  /// Stable category/entry IDs used by assistant knowledge-source deep links.
+  final String? initialCategoryId;
+  final int? initialEntryId;
 
   @override
   State<AcupunctureScreen> createState() => _AcupunctureScreenState();
@@ -32,6 +40,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
   late TabController _tabController;
   String _selectedCategory = '全部';
   String _searchQuery = '';
+  late final TextEditingController _entrySearchCtrl;
   String _penetrationSearch = '';
   String _selectedMeridian = '全部';
   String _acupointSearch = '';
@@ -50,6 +59,21 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _entrySearchCtrl = TextEditingController();
+    final categoryId = widget.initialCategoryId;
+    final entryId = widget.initialEntryId;
+    if (categoryId != null && entryId != null) {
+      for (final category in AcupunctureRepository.getAll()) {
+        if (category.id != categoryId) continue;
+        final matches = category.entries.where((entry) => entry.id == entryId);
+        if (matches.isNotEmpty) {
+          _selectedCategory = category.name;
+          _searchQuery = matches.first.symptom;
+          _entrySearchCtrl.text = _searchQuery;
+        }
+        break;
+      }
+    }
     _earSearchCtrl = TextEditingController();
     _earFuture = _loadEarPoints();
   }
@@ -57,6 +81,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _entrySearchCtrl.dispose();
     _earSearchCtrl.dispose();
     super.dispose();
   }
@@ -135,6 +160,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: TextField(
+            controller: _entrySearchCtrl,
             decoration: InputDecoration(
               hintText: '搜索症状或穴位...',
               prefixIcon: const Icon(Icons.search),
@@ -203,6 +229,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
+        initiallyExpanded: widget.initialEntryId == entry.id,
         title: Row(
           children: [
             Expanded(
