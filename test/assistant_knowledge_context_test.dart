@@ -126,8 +126,8 @@ void main() {
     const scenarios = [
       ('桂枝汤', 'formula'),
       ('柴胡', 'herb'),
-      ('失眠', 'acupuncture'),
-      ('足三里', 'acupoint'),
+      ('失眠的针灸治疗', 'acupuncture'),
+      ('足三里穴位定位', 'acupoint'),
       ('十二官相使', 'neijing'),
     ];
 
