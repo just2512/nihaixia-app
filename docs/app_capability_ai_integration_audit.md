@@ -122,3 +122,11 @@
 - 既有 CI run `42328542248` 的 Flutter regression tests 为 `success`，Android debug APK 的构建及 ABI/SHA-256 校验步骤成功；该 run 的 Android local unit tests 后续已完成，整条 run 最终为 `success`。
 - 上述 CI 结果对应当时触发的提交，不自动覆盖本节新增的后续提交。新提交的 CI 必须单独检查；不得把旧 run 的通过状态外推到新代码。
 - OPPO Find N2 真机验收仍是独立门禁，不能由 402dp/760dp 模拟窗口测试替代。
+
+## 2026-11-07 统一知识引用尾注格式修复
+
+- 复核发现 `AssistantKnowledgeSourceReference.toCitationText()` 原先使用双重转义的换行符，引用尾注会输出字面量 `\\n`，而不是实际分行。
+- 已修复为真实换行符，避免来源类型、本地回链、书目定位状态和来源 ID 粘连。
+- 新增回归测试：`知识引用尾注使用真实换行而不是字面量转义`。
+- 代码提交：`b4ef2b5c5d29cba8b114b45c2ac5d58efcbe2947`；测试提交：`c88aad1187d42ef3a9cc77d0cd19f7ca7dbb80a6`。
+- 当前验收：已核对 master 上的代码和测试内容；本轮没有可读取的当前 SHA Actions 运行结果，测试执行状态与 CI 状态保持 `UNKNOWN`，不得据此标记 PASS。
