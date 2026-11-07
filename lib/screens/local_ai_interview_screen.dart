@@ -1515,9 +1515,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               values: messageMetadata.toolArguments,
             );
       final resolvedActionMode = actionMode ??
-          (pendingTool.modes.contains(AssistantMode.metaphysics)
+          (pendingTool?.modes.contains(AssistantMode.metaphysics) == true
               ? AssistantMode.metaphysics
-              : pendingTool.modes.contains(AssistantMode.tools)
+              : pendingTool?.modes.contains(AssistantMode.tools) == true
                   ? AssistantMode.tools
                   : AssistantMode.consultation);
       restoredMessages.add(_InterviewMessage(
