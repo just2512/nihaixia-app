@@ -57,6 +57,10 @@ void main() {
 
   testWidgets('SQLite close/reopen restores FAILED tool arguments and retry entry',
       (tester) async {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await DatabaseHelper.closeTestDatabase();
+    });
     final databaseName =
         'assistant_history_recovery_${DateTime.now().microsecondsSinceEpoch}.db';
     DatabaseHelper.configureTestDatabase(databaseName);
@@ -89,8 +93,9 @@ void main() {
       ).encode(),
     );
 
-    // Close the SQLite handle and reopen the same on-disk database. This is a
-    // process-restart boundary, unlike the in-memory conversation-store tests.
+    // Close the SQLite handle and reopen the same on-disk database. This
+    // verifies disk persistence across a database-connection restart; it does
+    // not claim to simulate Android process death.
     await DatabaseHelper.closeTestDatabase();
     DatabaseHelper.configureTestDatabase(databaseName);
 
@@ -124,9 +129,26 @@ void main() {
     expect(find.text('重试五运六气推算'), findsOneWidget);
     expect(find.textContaining('执行状态：FAILED'), findsOneWidget);
     expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
-    expect(tester.takeException(), isNull);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await DatabaseHelper.closeTestDatabase();
+    await tester.tap(find.text('重试五运六气推算'));
+    await tester.pumpAndSettle();
+    final returnResult = find.text('将本次推算结果带回助手对话');
+    await tester.ensureVisible(returnResult);
+    await tester.pumpAndSettle();
+    await tester.tap(returnResult);
+    await tester.pumpAndSettle();
+
+    final retriedMessages = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(retriedMessages.last['content'], contains('执行状态：SUCCEEDED'));
+    expect(retriedMessages.last['content'], contains('执行参数：date=2026-11-07'));
+    final retriedMetadata = AssistantMessageMetadata.decode(
+      retriedMessages.last['metadata']! as String,
+    );
+    expect(retriedMetadata.toolStatus, 'SUCCEEDED');
+    expect(retriedMetadata.toolArguments, const {'date': '2026-11-07'});
+    expect(service.restoredTranscript, contains('执行状态：SUCCEEDED'));
+    expect(tester.takeException(), isNull);
   });
 }
