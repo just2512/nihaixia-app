@@ -1644,6 +1644,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         isUser: isUser,
         sourceIds: isUser ? const [] : messageMetadata.sourceIds,
         onSourceTap: _openKnowledgeSource,
+        knowledgeStatus: isUser ? null : messageMetadata.knowledgeStatus,
         actionLabel: retryFailedTool
             ? '重试${pendingTool.title}'
             : openPendingTool
@@ -1916,6 +1917,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               isUser: false,
               sourceIds: turnResponse.sourceIds,
               onSourceTap: _openKnowledgeSource,
+              knowledgeStatus: turnResponse.knowledgeStatus,
             ));
           _confirmedDraft = null;
         } else {
@@ -1924,6 +1926,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             isUser: false,
             sourceIds: turnResponse.sourceIds,
             onSourceTap: _openKnowledgeSource,
+            knowledgeStatus: turnResponse.knowledgeStatus,
           ));
         }
         _sending = false;
@@ -2861,6 +2864,7 @@ class _InterviewMessage {
   final ValueChanged<String>? onOptionSelected;
   final List<String> sourceIds;
   final ValueChanged<String>? onSourceTap;
+  final String? knowledgeStatus;
 
   const _InterviewMessage({
     required this.text,
@@ -2871,6 +2875,7 @@ class _InterviewMessage {
     this.onOptionSelected,
     this.sourceIds = const [],
     this.onSourceTap,
+    this.knowledgeStatus,
   });
 }
 
@@ -2907,6 +2912,37 @@ String _knowledgeSourceLabel(String sourceId) {
     'zhenjiu' => '针灸讲稿：$value',
     _ => '来源：$sourceId',
   };
+}
+
+
+class _KnowledgeStatusLabel extends StatelessWidget {
+  const _KnowledgeStatusLabel({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (status) {
+      'RETRIEVED' => '知识检索：已检索到来源',
+      'PARTIAL' => '知识检索：部分结果',
+      'NO_RESULTS' => '知识检索：无匹配结果',
+      'FAILED' => '知识检索：执行失败',
+      _ => '知识检索：状态未知（$status）',
+    };
+    final color = switch (status) {
+      'RETRIEVED' => Theme.of(context).colorScheme.primary,
+      'PARTIAL' => Theme.of(context).colorScheme.tertiary,
+      'FAILED' => Theme.of(context).colorScheme.error,
+      _ => Theme.of(context).colorScheme.onSurfaceVariant,
+    };
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        label,
+        style: TextStyle(fontSize: AppType.micro, color: color),
+      ),
+    );
+  }
 }
 
 class _InterviewMessageBubble extends StatelessWidget {
@@ -2950,6 +2986,10 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
+                if (message.knowledgeStatus != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  _KnowledgeStatusLabel(status: message.knowledgeStatus!),
+                ],
                 if (message.sourceIds.any(_isNavigableKnowledgeSourceId) &&
                     message.onSourceTap != null) ...[
                   const SizedBox(height: AppSpacing.sm),
