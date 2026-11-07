@@ -29,6 +29,7 @@ void main() {
       'verificationStatus': 'VERIFIED',
     });
     expect(ledger.status, 'MISSING');
+    expect(ledger.verificationStatus, 'MISSING');
     expect(ledger.isVerified, isFalse);
     expect(ledger.valueOf('page'), 'MISSING');
   });
@@ -120,6 +121,20 @@ void main() {
     final linked = parseMedicalCaseTable(table, sourceLedgers: ledgers);
     expect(linked, hasLength(cases.length));
     expect(linked.every((medicalCase) => medicalCase.sourceLedger.status == 'MISSING'), isTrue);
+    expect(
+      linked.every((medicalCase) =>
+          medicalCase.sourceLedger.verificationStatus == 'MISSING'),
+      isTrue,
+      reason: '原始账本缺少纸本定位时，底层状态也必须是 MISSING，不能只在展示层降级',
+    );
+    expect(
+      records.values.every((raw) {
+        final record = raw as Map<String, dynamic>;
+        return record['verificationStatus'] == 'MISSING' &&
+            MedicalCaseSourceLedger.fromJson(record).status == 'MISSING';
+      }),
+      isTrue,
+    );
   });
 
 
