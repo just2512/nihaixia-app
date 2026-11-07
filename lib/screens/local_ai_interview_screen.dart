@@ -1515,18 +1515,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               values: messageMetadata.toolArguments,
             );
       final resolvedActionMode = actionMode ??
-          (pendingTool?.modes.contains(AssistantMode.metaphysics) == true
+          (pendingTool.modes.contains(AssistantMode.metaphysics)
               ? AssistantMode.metaphysics
-              : pendingTool?.modes.contains(AssistantMode.tools) == true
+              : pendingTool.modes.contains(AssistantMode.tools)
                   ? AssistantMode.tools
                   : AssistantMode.consultation);
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
         actionLabel: retryFailedTool
-            ? '重试${pendingTool.title ?? ''}'
+            ? '重试${pendingTool.title}'
             : openPendingTool
-                ? '打开${pendingTool.title ?? ''}'
+                ? '打开${pendingTool.title}'
                 : null,
         onAction: pendingTool == null
             ? null
