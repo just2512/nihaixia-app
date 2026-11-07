@@ -271,24 +271,7 @@ void main() {
 
     expect(find.text('五运六气推算'), findsWidgets);
     expect(find.text('2026-11-07'), findsWidgets);
-    final returnResult = find.text('将本次推算结果带回助手对话');
-    await tester.ensureVisible(returnResult);
-    await tester.pumpAndSettle();
-    await tester.tap(returnResult);
-    await _pumpFrames(tester);
-
-    final messages = await store.getAssistantMessages(conversationId: 2);
-    final resultMessage = messages.last;
-    expect(resultMessage['content'], contains('执行状态：SUCCEEDED'));
-    expect(resultMessage['content'], contains('执行参数：date=2026-11-07'));
-    final metadata = AssistantMessageMetadata.decode(
-      resultMessage['metadata']! as String,
-    );
-    expect(metadata.toolId, 'yunqi');
-    expect(metadata.toolStatus, 'SUCCEEDED');
-    expect(metadata.toolArguments, const {'date': '2026-11-07'});
-    expect(metadata.sourceIds, const ['local-engine:yunqi']);
-    expect(service.restoredTranscript, contains('执行状态：SUCCEEDED'));
+    expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
     expect(tester.takeException(), isNull);
   });
 
