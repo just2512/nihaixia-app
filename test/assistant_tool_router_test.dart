@@ -4,6 +4,20 @@ import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 
 void main() {
+  test('工具注册表 ID 唯一且每个 ID 都能精确恢复同一工具定义', () {
+    final tools = AssistantToolRouter.all;
+    final ids = tools.map((tool) => tool.id).toList(growable: false);
+    expect(ids, isNotEmpty);
+    expect(ids.toSet(), hasLength(ids.length));
+    for (final tool in tools) {
+      expect(AssistantToolRouter.byId(tool.id), same(tool));
+      expect(tool.id.trim(), isNotEmpty);
+      expect(tool.title.trim(), isNotEmpty);
+      expect(tool.aliases, isNotEmpty);
+      expect(tool.actionWords, isNotEmpty);
+    }
+  });
+
   test('问诊模式只把明确结构化辨证请求交给规则问诊', () {
     expect(
       AssistantToolRouter.match('请开始结构化辨证问诊', AssistantMode.consultation)?.id,
