@@ -70,8 +70,7 @@ void main() {
     // Give the FFI factory an explicit writable location. Relying on its
     // implicit .dart_tool path can leave the first database open pending in
     // Flutter test runners where the working directory is not stable.
-    await databaseFactoryFfi.setDatabasesPath(databaseDirectory.path);
-  });
+    });
 
   tearDownAll(() async {
     if (await databaseDirectory.exists()) {
@@ -94,6 +93,7 @@ void main() {
     DatabaseHelper.configureTestDatabase(
       databaseName,
       factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
     );
     final store = DatabaseHelper.instance;
 
@@ -134,6 +134,7 @@ void main() {
     DatabaseHelper.configureTestDatabase(
       databaseName,
       factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
     );
     print('[history-retry-stage] database closed and configured for reopen');
 
