@@ -67,7 +67,7 @@ class ClassicHit {
   /// Whether the app has enough local coordinates to reopen this hit.
   /// This is deliberately independent from bibliographic verification:
   /// a clickable local asset is not proof of edition, volume, or page.
-  bool get canReopenLocally =>
+  bool get hasLocalBacklink =>
       (asset != null && asset!.trim().isNotEmpty) ||
       (bookId != null &&
           bookId!.trim().isNotEmpty &&
