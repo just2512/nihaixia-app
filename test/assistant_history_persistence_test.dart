@@ -149,28 +149,34 @@ void main() {
         mode: 'metaphysics',
       ),
     );
-    await store.saveAssistantMessage(
-      conversationId: conversationId,
-      role: 'user',
-      content: '帮我推算五运六气',
-      metadata: AssistantMessageMetadata(
-        mode: 'metaphysics',
-        selectedMode: 'automatic',
-        replayable: true,
-      ).encode(),
+    await _withStageTimeout(
+      'persist user message (transaction query + insert + conversation update)',
+      store.saveAssistantMessage(
+        conversationId: conversationId,
+        role: 'user',
+        content: '帮我推算五运六气',
+        metadata: AssistantMessageMetadata(
+          mode: 'metaphysics',
+          selectedMode: 'automatic',
+          replayable: true,
+        ).encode(),
+      ),
     );
     print('[history-retry-stage] user message persisted');
-    await store.saveAssistantMessage(
-      conversationId: conversationId,
-      role: 'assistant',
-      content: '【五运六气推算执行结果】\\n执行状态：FAILED\\n执行参数：date=2026-11-07',
-      metadata: AssistantMessageMetadata(
-        mode: 'metaphysics',
-        selectedMode: 'automatic',
-        toolId: 'yunqi',
-        toolStatus: 'FAILED',
-        toolArguments: const {'date': '2026-11-07'},
-      ).encode(),
+    await _withStageTimeout(
+      'persist FAILED tool message transaction',
+      store.saveAssistantMessage(
+        conversationId: conversationId,
+        role: 'assistant',
+        content: '【五运六气推算执行结果】\\n执行状态：FAILED\\n执行参数：date=2026-11-07',
+        metadata: AssistantMessageMetadata(
+          mode: 'metaphysics',
+          selectedMode: 'automatic',
+          toolId: 'yunqi',
+          toolStatus: 'FAILED',
+          toolArguments: const {'date': '2026-11-07'},
+        ).encode(),
+      ),
     );
 
     // Close the SQLite handle and reopen the same on-disk database. This
