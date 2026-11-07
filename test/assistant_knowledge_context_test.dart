@@ -33,6 +33,25 @@ void main() {
     expect(AssistantKnowledgeContextBuilder.build('今天的天气怎么样'), isEmpty);
   });
 
+
+  test('检索状态具有稳定的大写契约标签', () {
+    const expected = {
+      AssistantKnowledgeRetrievalStatus.noResults: 'NO_RESULTS',
+      AssistantKnowledgeRetrievalStatus.retrieved: 'RETRIEVED',
+      AssistantKnowledgeRetrievalStatus.partial: 'PARTIAL',
+      AssistantKnowledgeRetrievalStatus.failed: 'FAILED',
+    };
+    for (final entry in expected.entries) {
+      expect(
+        AssistantKnowledgeContextResult(
+          text: '',
+          status: entry.key,
+        ).statusLabel,
+        entry.value,
+      );
+    }
+  });
+
   test('异步检索明确区分无命中与成功命中', () async {
     final empty = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync('今天的天气怎么样');
     expect(empty.status, AssistantKnowledgeRetrievalStatus.noResults);
