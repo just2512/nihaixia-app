@@ -95,6 +95,22 @@ void main() {
     expect(context, contains('来源定位状态：MISSING'));
     expect(context, contains('不得当作仲景原文'));
   });
+
+  test('异步检索引用只暴露可反查的来源标识，纸本版本仍保持 MISSING', () async {
+    final result =
+        await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '葛根加半夏汤',
+      includeMedicalCases: false,
+    );
+    expect(result.text, contains('来源标识：shanghan:assets/'));
+    expect(result.sources, isNotEmpty);
+    expect(result.sourceIds, isNotEmpty);
+    expect(result.sourceIds.every((id) => id.isNotEmpty), isTrue);
+    expect(result.citationFooter, contains('纸本版本/卷页：MISSING'));
+    expect(result.citationFooter, contains('来源标识：'));
+    expect(result.sources.every((source) => source.locatorStatus != 'VERIFIED'), isTrue);
+  });
+
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));

@@ -10,6 +10,50 @@ import '../models/formula.dart';
 import '../models/acupuncture.dart';
 import '../models/acupoint_detail.dart';
 
+
+/// A source that was actually resolved from the bundled classic-text index.
+/// A local backlink is not a verified printed-edition/page citation.
+class AssistantKnowledgeSourceReference {
+  const AssistantKnowledgeSourceReference({
+    required this.sourceId,
+    required this.sourceLabel,
+    required this.title,
+    required this.localBacklink,
+    required this.locatorStatus,
+  });
+
+  final String sourceId;
+  final String sourceLabel;
+  final String title;
+  final String localBacklink;
+  final String locatorStatus;
+
+  String toCitationText() => '- $sourceLabel｜$title\n'
+      '  本地回链：$localBacklink\n'
+      '  本地回链状态：${localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE'}；'
+      '书目定位状态：$locatorStatus；纸本版本/卷页：MISSING（尚未完成影印本核验）\n'
+      '  来源标识：$sourceId';
+}
+
+/// Retrieval text plus the exact, resolvable source IDs used for this turn.
+class AssistantKnowledgeContextResult {
+  const AssistantKnowledgeContextResult({
+    required this.text,
+    this.sources = const [],
+  });
+
+  final String text;
+  final List<AssistantKnowledgeSourceReference> sources;
+
+  List<String> get sourceIds =>
+      List.unmodifiable(sources.map((source) => source.sourceId));
+
+  String get citationFooter => sources.isEmpty
+      ? ''
+      : '\n\n参考来源（App 本地检索；不代表纸本版本校勘完成）：\n' +
+          sources.map((source) => source.toCitationText()).join('\n');
+}
+
 /// Bounded keyword retrieval from the app's bundled TCM knowledge data.
 /// Returns source-labelled excerpts, never a diagnosis or prescription.
 class AssistantKnowledgeContextBuilder {
@@ -30,6 +74,53 @@ class AssistantKnowledgeContextBuilder {
     '厥阴', '咳嗽', '头痛', '头晕', '腹痛', '腹胀', '失眠', '发热',
     '恶寒', '口苦', '胸闷', '尿频', '便秘', '腹泻', '心悸', '呕吐',
   };
+
+  /// Builds bounded retrieval context and resolves every emitted classic
+  /// source ID back to the bundled index before exposing it as a citation.
+  /// Unknown IDs are omitted rather than presented as valid references.
+  static Future<AssistantKnowledgeContextResult> buildWithSourcesAsync(
+    String query, {
+    bool includeMedicalCases = true,
+  }) async {
+    final text = await buildAsync(
+      query,
+      includeMedicalCases: includeMedicalCases,
+    );
+    if (text.isEmpty) {
+      return const AssistantKnowledgeContextResult(text: '');
+    }
+    final sourceIds = <String>{};
+    for (final line in text.split('\n')) {
+      const marker = '来源标识：';
+      final markerIndex = line.indexOf(marker);
+      if (markerIndex < 0) continue;
+      final sourceId = line.substring(markerIndex + marker.length).trim();
+      if (sourceId.isNotEmpty && sourceId != 'MISSING') {
+        sourceIds.add(sourceId);
+      }
+    }
+    final sources = <AssistantKnowledgeSourceReference>[];
+    for (final sourceId in sourceIds) {
+      try {
+        final hit = await ClassicSearchService.findBySourceId(sourceId);
+        if (hit == null) continue;
+        sources.add(AssistantKnowledgeSourceReference(
+          sourceId: hit.sourceId,
+          sourceLabel: hit.sourceLabel,
+          title: hit.title,
+          localBacklink: hit.localBacklink,
+          locatorStatus: hit.locatorStatus,
+        ));
+      } catch (_) {
+        // A failed reverse lookup is not a citation. Keep the retrieval text,
+        // but do not persist an unresolvable source identifier.
+      }
+    }
+    return AssistantKnowledgeContextResult(
+      text: text,
+      sources: List.unmodifiable(sources),
+    );
+  }
 
   /// Extends the fast in-memory retrieval with the bundled classical-text and
   /// medical-case libraries. Case excerpts carry an explicit provenance warning:

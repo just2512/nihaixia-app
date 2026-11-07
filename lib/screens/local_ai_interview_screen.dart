@@ -131,6 +131,16 @@ class LocalAiInterviewScreen extends StatefulWidget {
 const _assistantWelcomeMessage =
     '你可以直接描述身体情况、询问中医知识，或提出工具任务。助手会先识别任务类型；意图不清时会先向你确认。';
 
+class _AssistantTurnResponse {
+  const _AssistantTurnResponse({
+    required this.text,
+    this.sourceIds = const [],
+  });
+
+  final String text;
+  final List<String> sourceIds;
+}
+
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
   late final LocalAiImagePicker _imagePicker;
@@ -699,36 +709,45 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
 
-  Future<String> _sendTextWithKnowledgeContext(
+  Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
     required AssistantMode mode,
   }) async {
     switch (mode) {
       case AssistantMode.automatic:
-        final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(text);
+        final knowledge =
+            await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
         final context = StringBuffer(
           '当前角色：通用助手。\n${AssistantMode.automatic.promptHint}\n'
           '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
           '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\n',
         );
-        if (knowledge.isNotEmpty) {
+        if (knowledge.text.isNotEmpty) {
           context
             ..writeln('App 本地知识库相关检索结果（仅作有来源的参考）：')
-            ..write(knowledge);
+            ..write(knowledge.text);
         }
-        return _service.sendMessageWithContext(text, context: context.toString());
+        final reply = await _service.sendMessageWithContext(
+          text,
+          context: context.toString(),
+        );
+        return _AssistantTurnResponse(
+          text: reply + knowledge.citationFooter,
+          sourceIds: knowledge.sourceIds,
+        );
       case AssistantMode.consultation:
         // Consultation uses the same bundled classical-text and TCM retrieval
         // as learning, but excludes unverified case records to avoid case-based
         // diagnostic anchoring. Retrieved text remains reference-only.
-        final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(
+        final knowledge =
+            await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
           text,
           includeMedicalCases: false,
         );
-        final knowledgeContext = knowledge.isEmpty
+        final knowledgeContext = knowledge.text.isEmpty
             ? 'App 本地知识库本轮未命中可引用条目（MISSING）。'
-            : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n$knowledge';
-        return _service.sendMessageWithContext(
+            : 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n${knowledge.text}';
+        final reply = await _service.sendMessageWithContext(
           text,
           context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
@@ -736,12 +755,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               '普通对话不自动诊断、不推荐方剂或剂量。\n'
               '$knowledgeContext',
         );
+        return _AssistantTurnResponse(
+          text: reply + knowledge.citationFooter,
+          sourceIds: knowledge.sourceIds,
+        );
       case AssistantMode.learning:
-        final knowledge = await AssistantKnowledgeContextBuilder.buildAsync(text);
-        final context = knowledge.isEmpty
+        final knowledge =
+            await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
+        final context = knowledge.text.isEmpty
             ? '当前角色：学习助手。App 本地知识库未检索到可引用条目，状态 MISSING。请明确说明缺少资料，不得编造原文或出处。'
-            : '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n$knowledge';
-        return _service.sendMessageWithContext(text, context: context);
+            : '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n${knowledge.text}';
+        final reply = await _service.sendMessageWithContext(
+          text,
+          context: context,
+        );
+        return _AssistantTurnResponse(
+          text: reply + knowledge.citationFooter,
+          sourceIds: knowledge.sourceIds,
+        );
       case AssistantMode.tools:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
             .map((tool) => tool.title)
@@ -749,7 +780,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
             '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
-        return _service.sendMessageWithContext(text, context: context);
+        return _AssistantTurnResponse(
+          text: await _service.sendMessageWithContext(text, context: context),
+        );
       case AssistantMode.metaphysics:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
             .map((tool) => tool.title)
@@ -757,7 +790,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
-        return _service.sendMessageWithContext(text, context: context);
+        return _AssistantTurnResponse(
+          text: await _service.sendMessageWithContext(text, context: context),
+        );
     }
   }
 
@@ -800,6 +835,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? attachmentType,
     String? toolId,
     bool expectsToolSelection = false,
+    List<String> sourceIds = const [],
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -834,6 +870,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           selectedMode: _assistantMode.name,
           toolId: toolId,
           toolChoicePending: expectsToolSelection,
+          sourceIds: sourceIds,
         ).encode(),
       );
     } catch (error, stack) {
@@ -1639,16 +1676,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _scrollToBottom();
 
     try {
-      final reply = audioPath != null
-          ? await _service.sendAudio(audioPath, prompt: text)
+      final turnResponse = audioPath != null
+          ? _AssistantTurnResponse(
+              text: await _service.sendAudio(audioPath, prompt: text),
+            )
           : imagePath != null
-              ? await _service.sendImage(imagePath, prompt: text)
+              ? _AssistantTurnResponse(
+                  text: await _service.sendImage(imagePath, prompt: text),
+                )
               : await _sendTextWithKnowledgeContext(text, mode: effectiveMode);
+      final reply = turnResponse.text;
       await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
         mode: effectiveMode,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
+        sourceIds: turnResponse.sourceIds,
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();

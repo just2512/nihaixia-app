@@ -6,11 +6,11 @@
 
 | 子系统 | 源码位置 | 已有能力 | 当前状态 |
 |---|---|---|---|
-| 统一对话主界面 | `lib/screens/home_screen.dart`、`lib/screens/local_ai_interview_screen.dart` | 首页首个主导航入口为 `LocalAiInterviewScreen`；欢迎语明确支持症状、知识问题和工具任务；支持本地模型、会话存储、历史记录 | PARTIAL：主入口存在，但知识库和工具仍保留独立主导航页 |
+| 统一对话主界面 | `lib/screens/home_screen.dart`、`lib/screens/local_ai_interview_screen.dart` | 首页一级入口为 `LocalAiInterviewScreen`；一级导航收敛为 AI、收藏、设置；知识库问答留在统一会话，知识浏览由助手注册表打开 | PARTIAL：主入口和导航已收敛，仍需完整跨功能 E2E 验收 |
 | 自动意图调度 | `lib/services/assistant_conversation_orchestrator.dart` | 自动/问诊/学习/工具/玄学角色；症状、知识、明确工具动作识别；多工具冲突澄清；排盘/起卦缺类型时追问 | PARTIAL：基于规则线索，不是模型意图识别；复杂混合表达仍需扩展测试 |
 | 工具注册与执行 | `lib/screens/assistant_tool_router.dart` | 注册表覆盖五运六气、紫微、八字、易经、子午流注、剂量换算、古籍、医案及其他工具；通过 App 页面执行，不让模型伪造计算结果 | PARTIAL：已接入注册表的页面不等于所有工具参数、回传、异常恢复都验收完成 |
 | 规则问诊 | `lib/services/tcm_interview_conversation_controller.dart`、`lib/screens/local_ai_interview_screen.dart` | 结构化问诊控制器托管在统一助手消息时间线；可恢复任务状态；舌脉结构化录入；合病补充问项；证据不足不自动推荐方剂 | PARTIAL：仍需核验与旧 `ChatScreen` 的所有入口关系及完整用户路径 |
-| 本地知识库注入 | `lib/services/assistant_knowledge_context.dart`、`lib/services/local_ai_service.dart` | 药材、方剂、针灸、穴位、内经条目、古籍全文索引和医案可构建有来源上下文；上下文有 6500 字硬上限；问诊排除未核验医案 | PARTIAL：当前以关键词/索引检索为主，不是完整语义检索；知识资产的出处质量不一 |
+| 本地知识库注入 | `lib/services/assistant_knowledge_context.dart`、`lib/services/local_ai_service.dart`、`lib/screens/local_ai_interview_screen.dart` | 药材、方剂、针灸、穴位、内经、古籍和医案构建有来源上下文；经典索引 sourceId 反查后追加到对话引用尾注，并持久化到 assistant 消息元数据；上下文有 6500 字硬上限；问诊排除未核验医案 | PARTIAL：经典本地回链不等于纸本版本核验；非经典数据源仍需统一稳定 ID；当前以关键词/索引检索为主 |
 | 经典检索 | `lib/services/classic_search_service.dart` | 索引覆盖伤寒、金匮、内经讲稿及灵枢、针灸大成古籍章节 | PARTIAL：讲稿与古籍文本已区分，但版本、底本、卷页尚未建立逐条核验记录 |
 | 医案库 | `lib/data/medical_case_data.dart`、`assets/medical_cases/cases_table.md` | 结构化医案、方剂/药材/疾病提取和相关医案关联 | PARTIAL：内部序号不是原始出处；原始病例页码、版本和来源定位仍缺失 |
 | 折叠屏布局 | `lib/screens/ziwei_chart_screen.dart`、`test/ziwei_chart_layout_test.dart` | 紫微盘面已有最大宽度约束；测试覆盖 760px 内屏与 402px 外屏 | PARTIAL：此前测试在懒加载 ListView 尚未构建盘面时直接查找 Key，已在独立分支修正测试滚动；整套内外屏布局仍未重构验收 |
@@ -70,6 +70,7 @@
 ## 2026-11-07 集成基线
 
 ### 已进入 master 的能力
+- 经典检索命中现在通过 `ClassicSearchService.findBySourceId()` 反查；助手回复展示来源标题、本地回链和明确的纸本版本/卷页 `MISSING`，对应 sourceId 写入 assistant 消息元数据。未反查成功的 ID 不作为引用；这仍不代表纸本校勘完成。
 - AI 统一助手已采用 typed tool arguments/results；所有工具启动路径统一执行必填参数和类型校验。
 - 工具执行结果与消息元数据分离保存，支持来源 ID、工具 ID 和历史恢复。
 - Find N2 紫微布局使用 640dp 双栏断点与 640dp 盘面上限，避免窄屏拉伸及展开屏摘要区域缺失。
