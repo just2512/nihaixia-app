@@ -13,6 +13,7 @@ void main() {
       tcmTaskId: 'task-42',
       toolStatus: 'SUCCEEDED',
       sourceIds: ['local-engine:yunqi'],
+      toolArguments: {'date': '2026-11-06'},
     );
     final restored = AssistantMessageMetadata.decode(original.encode());
     expect(restored.mode, 'tools');
@@ -24,6 +25,7 @@ void main() {
     expect(restored.tcmTaskId, 'task-42');
     expect(restored.toolStatus, 'SUCCEEDED');
     expect(restored.sourceIds, ['local-engine:yunqi']);
+    expect(restored.toolArguments, {'date': '2026-11-06'});
   });
 
   test('legacy semicolon metadata remains readable', () {
