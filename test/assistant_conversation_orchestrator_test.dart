@@ -151,6 +151,16 @@ void main() {
       expect(decision.mode, AssistantMode.learning);
     });
 
+    test('手动学习模式中的工具相关解释请求不启动工具页面', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '介绍一下医案检索的方式',
+        selectedMode: AssistantMode.learning,
+      );
+      expect(decision.mode, AssistantMode.learning);
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isFalse);
+    });
+
     test('用户明确选择角色时尊重手动模式，不擅自改派', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '介绍一下五运六气',
