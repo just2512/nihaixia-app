@@ -265,6 +265,43 @@ void main() {
   });
 
 
+  testWidgets('退出工具页会以 CANCELLED 状态写回统一会话', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _HistoryResumeService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.byType(ListTile).first);
+    await _pumpFrames(tester);
+
+    await tester.tap(find.text('打开五运六气推算'));
+    await _pumpFrames(tester);
+    await tester.binding.handlePopRoute();
+    await _pumpFrames(tester);
+
+    final messages = await store.getAssistantMessages(conversationId: 2);
+    final resultMessage = messages.last;
+    expect(resultMessage['role'], 'assistant');
+    expect(resultMessage['content'], contains('执行状态：CANCELLED'));
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata']! as String,
+    );
+    expect(metadata.toolId, 'yunqi');
+    expect(metadata.toolStatus, 'CANCELLED');
+    expect(metadata.replayable, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('打开历史会话后继续发送，消息仍写入原会话', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
