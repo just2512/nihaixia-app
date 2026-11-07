@@ -80,6 +80,94 @@ void main() {
   });
 
 
+  testWidgets('horizontal hinge keeps anchored single-pane routes within the selected panel', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(0, 368, 1000, 24),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final scenario in [
+      (const Offset(500, 160), true),
+      (const Offset(500, 600), false),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdaptiveSinglePane(
+              preferredAnchorPoint: scenario.$1,
+              child: SizedBox.expand(
+                child: ColoredBox(
+                  key: const ValueKey('horizontal-hinge-content'),
+                  color: Colors.blue,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final content = tester.getRect(
+        find.byKey(const ValueKey('horizontal-hinge-content')),
+      );
+      if (scenario.$2) {
+        expect(content.top, greaterThanOrEqualTo(0));
+        expect(content.bottom, lessThanOrEqualTo(368));
+      } else {
+        expect(content.top, greaterThanOrEqualTo(392));
+        expect(content.bottom, lessThanOrEqualTo(760));
+      }
+      expect(content.width, 1000);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('flat horizontal fold crease remains one continuous canvas', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(0, 380, 1000, 0),
+        type: DisplayFeatureType.fold,
+        state: DisplayFeatureState.postureFlat,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdaptiveSinglePane(
+            preferredAnchorPoint: const Offset(500, 600),
+            child: SizedBox.expand(
+              child: ColoredBox(
+                key: const ValueKey('flat-horizontal-fold-content'),
+                color: Colors.blue,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final content = tester.getRect(
+      find.byKey(const ValueKey('flat-horizontal-fold-content')),
+    );
+    expect(content.top, 0);
+    expect(content.bottom, 760);
+    expect(content.width, 1000);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('flat unfolded foldable keeps single-pane routes on the full inner display', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
