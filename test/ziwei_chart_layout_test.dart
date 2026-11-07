@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/utils/fold_aware_routes.dart';
 
 final _testTheme = ThemeData(
   colorScheme: AppColors.colorSchemeFor(Brightness.light),
@@ -165,6 +166,63 @@ void main() {
     expect(tester.getSize(plate).width, 640);
     expect(tester.getRect(plate).center.dx, closeTo(500, 1));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('紫微排盘横屏遇到水平铰链时完整留在触发入口所在屏区', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(0, 368, 1000, 24),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final scenario in [
+      (Alignment.topCenter, true),
+      (Alignment.bottomCenter, false),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: _testTheme,
+          home: Scaffold(
+            body: Align(
+              alignment: scenario.$1,
+              child: Builder(
+                builder: (sourceContext) => TextButton(
+                  onPressed: () => Navigator.of(sourceContext).push(
+                    FoldAwareMaterialPageRoute<void>(
+                      sourceContext: sourceContext,
+                      builder: (_) => ZiweiChartScreen(
+                        initialSolar: DateTime(2000, 8, 16, 10),
+                      ),
+                    ),
+                  ),
+                  child: const Text('打开紫微排盘'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('打开紫微排盘'));
+      await tester.pumpAndSettle();
+
+      final page = tester.getRect(find.byType(Scaffold).last);
+      if (scenario.$2) {
+        expect(page.top, greaterThanOrEqualTo(0));
+        expect(page.bottom, lessThanOrEqualTo(368));
+      } else {
+        expect(page.top, greaterThanOrEqualTo(392));
+        expect(page.bottom, lessThanOrEqualTo(760));
+      }
+      expect(page.width, 1000);
+      expect(tester.takeException(), isNull);
+    }
   });
 
 }
