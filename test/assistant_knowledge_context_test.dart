@@ -4,6 +4,7 @@ import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
+import 'package:nihaisha_app/services/classic_search_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -99,6 +100,46 @@ void main() {
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
     expect(context, contains('来源定位：MISSING'));
     expect(context, contains('不代表已核验病例原文或疗效证据'));
+  });
+
+
+  test('经典命中区分可回链与纸本出处核验状态', () {
+    const lecture = ClassicHit(
+      source: 'shanghan',
+      sourceLabel: '伤寒论讲稿',
+      title: '葛根加半夏汤',
+      asset: 'assets/shanghan/lecture.md',
+      snippet: '讲稿摘要',
+    );
+    expect(lecture.canReopenLocally, isTrue);
+    expect(lecture.localBacklink, 'assets/shanghan/lecture.md');
+    expect(lecture.hasVerifiedBibliographicLocator, isFalse);
+    expect(lecture.locatorStatus, 'MISSING');
+
+    const classic = ClassicHit(
+      source: 'guji',
+      sourceLabel: '灵枢',
+      title: '本神',
+      bookId: 'lingshu',
+      chapterIndex: 5,
+      snippet: '原文摘要',
+    );
+    expect(classic.canReopenLocally, isTrue);
+    expect(classic.localBacklink, 'guji:lingshu#chapter:5');
+    expect(classic.hasVerifiedBibliographicLocator, isFalse);
+    expect(classic.locatorStatus, 'PARTIAL');
+  });
+
+  test('缺少可定位字段的经典命中不得伪造本地回链', () {
+    const missing = ClassicHit(
+      source: 'unknown',
+      sourceLabel: '未知来源',
+      title: 'MISSING',
+      snippet: 'MISSING',
+    );
+    expect(missing.canReopenLocally, isFalse);
+    expect(missing.localBacklink, 'MISSING');
+    expect(missing.hasVerifiedBibliographicLocator, isFalse);
   });
 
 }
