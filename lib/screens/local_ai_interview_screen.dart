@@ -187,6 +187,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _taskStateWrite = Future<void>.value();
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
+  int _historyRestoreGeneration = 0;
   AssistantMode _assistantMode = AssistantMode.automatic;
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
@@ -1419,6 +1420,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
 
   Future<void> _openHistory() async {
+    final generation = ++_historyRestoreGeneration;
     final selectedId = await Navigator.push<int>(
       context,
       FoldAwareMaterialPageRoute(
@@ -1429,11 +1431,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ),
       ),
     );
-    if (!mounted || selectedId == null) return;
+    if (!mounted || generation != _historyRestoreGeneration || selectedId == null) return;
 
     final rows = await _conversationStore.getAssistantMessages(
       conversationId: selectedId,
     );
+    if (!mounted || generation != _historyRestoreGeneration) return;
     TcmInterviewTaskState? taskState;
     try {
       taskState = await _conversationStore.getTcmInterviewTaskState(
@@ -1442,6 +1445,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 结构化问诊状态读取失败：$error\n$stack');
     }
+    if (!mounted || generation != _historyRestoreGeneration) return;
     final transcriptLines = <String>[];
     final replayableUserMessages = <String>[];
     final restoredMessages = <_InterviewMessage>[];
@@ -1580,6 +1584,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _restorePendingHistory() async {
+    final generation = _historyRestoreGeneration;
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
     try {
@@ -1587,14 +1592,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         transcript: transcript,
         userMessages: _pendingHistoryUserMessages,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() {
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
         _error = null;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
     }
   }
