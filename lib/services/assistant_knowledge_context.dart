@@ -42,15 +42,21 @@ class AssistantKnowledgeSourceReference {
       '  来源标识：$sourceId';
 }
 
-/// Retrieval text plus the exact, resolvable source IDs used for this turn.
+enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
+
+/// Retrieval text plus status and the exact, resolvable source IDs used for this turn.
 class AssistantKnowledgeContextResult {
   const AssistantKnowledgeContextResult({
     required this.text,
     this.sources = const [],
+    this.status = AssistantKnowledgeRetrievalStatus.noResults,
+    this.failureMessage,
   });
 
   final String text;
   final List<AssistantKnowledgeSourceReference> sources;
+  final AssistantKnowledgeRetrievalStatus status;
+  final String? failureMessage;
 
   List<String> get sourceIds =>
       List.unmodifiable(sources.map((source) => source.sourceId));
@@ -89,12 +95,24 @@ class AssistantKnowledgeContextBuilder {
     String query, {
     bool includeMedicalCases = true,
   }) async {
-    final text = await buildAsync(
-      query,
-      includeMedicalCases: includeMedicalCases,
-    );
+    late final String text;
+    try {
+      text = await buildAsync(
+        query,
+        includeMedicalCases: includeMedicalCases,
+      );
+    } catch (error) {
+      return AssistantKnowledgeContextResult(
+        text: '',
+        status: AssistantKnowledgeRetrievalStatus.failed,
+        failureMessage: error.toString(),
+      );
+    }
     if (text.isEmpty) {
-      return const AssistantKnowledgeContextResult(text: '');
+      return const AssistantKnowledgeContextResult(
+        text: '',
+        status: AssistantKnowledgeRetrievalStatus.noResults,
+      );
     }
     final sourceIds = <String>{};
     for (final line in text.split('\n')) {
@@ -238,9 +256,13 @@ class AssistantKnowledgeContextBuilder {
         // but do not persist an unresolvable source identifier.
       }
     }
+    final status = sources.isEmpty || sources.length < sourceIds.length
+        ? AssistantKnowledgeRetrievalStatus.partial
+        : AssistantKnowledgeRetrievalStatus.retrieved;
     return AssistantKnowledgeContextResult(
       text: text,
       sources: List.unmodifiable(sources),
+      status: status,
     );
   }
 
