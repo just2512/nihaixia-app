@@ -2021,4 +2021,26 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+  testWidgets('知识详情传入的初始问题预填统一助手但不会自动发送', (tester) async {
+    const prompt = '请介绍太阳病的核心脉证，并标记缺失出处。';
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          initialPrompt: prompt,
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final input = tester.widget<TextField>(find.byType(TextField));
+    expect(input.controller?.text, prompt);
+    expect(service.sentTexts, isEmpty);
+    expect(_store.createConversationCalls, 1);
+  });
+
 }

@@ -73,4 +73,33 @@ void main() {
     expect(tester.getSize(plate).width, lessThanOrEqualTo(370));
     expect(tester.takeException(), isNull);
   });
+  testWidgets('紫微摘要双栏断点在 640dp 精确切换且边界无溢出', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final scenario in [
+      (639.0, false),
+      (640.0, true),
+    ]) {
+      tester.view.physicalSize = Size(scenario.$1, 1000);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: _testTheme,
+          home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('ziwei-expanded-input-summary')),
+        scenario.$2 ? findsOneWidget : findsNothing,
+        reason: '窗口宽度 ${scenario.$1}dp 的双栏状态不符合 640dp 断点',
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
 }

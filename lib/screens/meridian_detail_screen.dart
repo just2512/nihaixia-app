@@ -6,7 +6,7 @@ import '../data/formula_repository.dart';
 import '../widgets/meridian_icons.dart';
 import '../theme/app_colors.dart';
 import 'formula_detail_screen.dart';
-import 'chat_screen.dart';
+import 'local_ai_interview_screen.dart';
 
 class MeridianDetailScreen extends StatelessWidget {
   final String meridian;
@@ -33,14 +33,20 @@ class MeridianDetailScreen extends StatelessWidget {
         title: Text('$meridian病'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.chat_outlined),
             onPressed: () {
               Navigator.push(
                 context,
-                FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ChatScreen()),
+                FoldAwareMaterialPageRoute(
+                  sourceContext: context,
+                  builder: (_) => LocalAiInterviewScreen(
+                    initialPrompt:
+                        '请介绍一下$meridian病的核心脉证、传变规律与经典条文；区分 App 整理内容和已核验原文，缺少版本、卷页或原文出处时明确标记 MISSING。',
+                  ),
+                ),
               );
             },
-            tooltip: '六经辨证',
+            tooltip: '在统一助手中继续',
           ),
         ],
       ),
