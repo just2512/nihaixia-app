@@ -9,6 +9,7 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/models/bookmark.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -565,12 +566,39 @@ void main() {
       },
     ];
 
+    String? copiedText;
+    String? sharedText;
+    Bookmark? savedBookmark;
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copiedText = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+    messenger.setMockMethodCallHandler(shareChannel, (call) async {
+      if (call.method == 'share') {
+        sharedText = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      messenger.setMockMethodCallHandler(shareChannel, null);
+    });
+
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: _HistoryResumeService(),
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
+          bookmarkWriter: (bookmark) async {
+            savedBookmark = bookmark;
+            return 1;
+          },
         ),
       ),
     );
@@ -585,18 +613,21 @@ void main() {
     expect(find.text('分享辨证结果'), findsOneWidget);
     expect(find.text('复制处方'), findsOneWidget);
 
-    String? copiedText;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') {
-        copiedText = (call.arguments as Map)['text'] as String?;
-      }
-      return null;
-    });
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
+    await tester.tap(find.text('收藏辨证结果'));
+    await _pumpFrames(tester);
+    expect(savedBookmark, isNotNull);
+    expect(savedBookmark!.title, contains('少阳证'));
+    expect(savedBookmark!.category, '辨证结果');
+    expect(savedBookmark!.source, 'chat_diagnosis');
+    expect(savedBookmark!.content, contains('小柴胡汤'));
+    expect(find.text('已添加到收藏'), findsOneWidget);
+
+    await tester.tap(find.text('分享辨证结果'));
+    await _pumpFrames(tester);
+    expect(sharedText, contains('【汉唐中医辨证结果】'));
+    expect(sharedText, contains('少阳证'));
+    expect(sharedText, contains('小柴胡汤'));
+
     await tester.tap(find.text('复制处方'));
     await _pumpFrames(tester);
     expect(copiedText, contains('小柴胡汤'));

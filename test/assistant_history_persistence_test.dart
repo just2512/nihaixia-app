@@ -8,6 +8,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/models/bookmark.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/diagnosis_result_codec.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
@@ -46,6 +47,37 @@ void main() {
     if (await databaseDirectory.exists()) {
       await databaseDirectory.delete(recursive: true);
     }
+  });
+
+  test('SQLite reopen preserves assistant diagnosis bookmark metadata and content', () async {
+    await DatabaseHelper.instance.insertBookmark(
+      Bookmark(
+        title: '少阳病 - 少阳证',
+        content: '六经：少阳病\\n证型：少阳证\\n方剂：小柴胡汤',
+        category: '辨证结果',
+        source: 'chat_diagnosis',
+      ),
+    );
+
+    await _withStageTimeout(
+      'close database before bookmark reopen',
+      DatabaseHelper.closeTestDatabase(),
+    );
+    DatabaseHelper.configureTestDatabase(
+      'assistant_history_recovery.db',
+      factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
+    );
+
+    final bookmarks = await _withStageTimeout(
+      'read diagnosis bookmark after SQLite reopen',
+      DatabaseHelper.instance.getAllBookmarks(),
+    );
+    expect(bookmarks, hasLength(1));
+    expect(bookmarks.single.title, '少阳病 - 少阳证');
+    expect(bookmarks.single.category, '辨证结果');
+    expect(bookmarks.single.source, 'chat_diagnosis');
+    expect(bookmarks.single.content, contains('小柴胡汤'));
   });
 
   test('sqflite FFI opens, writes, reads, and closes an explicit file', () async {
