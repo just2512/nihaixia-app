@@ -13,6 +13,9 @@ class DatabaseHelper implements AssistantConversationStore {
   static DatabaseFactory? _testDatabaseFactory;
 
   /// 收藏变更版本号：每次增删收藏自增，供收藏页实时刷新（解决「退出应用才更新」问题）。
+  @visibleForTesting
+  static void Function(String stage)? assistantMessagePersistenceStageForTest;
+
   static final ValueNotifier<int> bookmarkVersion = ValueNotifier<int>(0);
 
   DatabaseHelper._init();
@@ -395,7 +398,10 @@ class DatabaseHelper implements AssistantConversationStore {
     final db = await database;
     final now = DateTime.now().toIso8601String();
     final preview = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return db.transaction((txn) async {
+    assistantMessagePersistenceStageForTest?.call('before_transaction');
+    final messageId = await db.transaction((txn) async {
+      assistantMessagePersistenceStageForTest?.call('transaction_callback_entered');
+      assistantMessagePersistenceStageForTest?.call('conversation_query_started');
       final exists = await txn.query(
         'assistant_conversations',
         columns: ['id'],
@@ -403,9 +409,11 @@ class DatabaseHelper implements AssistantConversationStore {
         whereArgs: [conversationId],
         limit: 1,
       );
+      assistantMessagePersistenceStageForTest?.call('conversation_query_completed');
       if (exists.isEmpty) {
         throw StateError('Assistant conversation $conversationId does not exist');
       }
+      assistantMessagePersistenceStageForTest?.call('message_insert_started');
       final id = await txn.insert('assistant_messages', {
         'conversation_id': conversationId,
         'role': normalizedRole,
@@ -413,6 +421,8 @@ class DatabaseHelper implements AssistantConversationStore {
         'created_at': now,
         'metadata': metadata,
       });
+      assistantMessagePersistenceStageForTest?.call('message_insert_completed');
+      assistantMessagePersistenceStageForTest?.call('conversation_update_started');
       await txn.rawUpdate(
         '''
         UPDATE assistant_conversations
@@ -427,8 +437,11 @@ class DatabaseHelper implements AssistantConversationStore {
         [now, preview.length > 120 ? preview.substring(0, 120) : preview,
           normalizedRole, preview, conversationId],
       );
+      assistantMessagePersistenceStageForTest?.call('conversation_update_completed');
       return id;
     });
+    assistantMessagePersistenceStageForTest?.call('transaction_completed');
+    return messageId;
   }
 
   Future<List<Map<String, Object?>>> getAssistantConversations({

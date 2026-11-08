@@ -141,6 +141,12 @@ void main() {
       directoryPath: databaseDirectory.path,
     );
     final store = DatabaseHelper.instance;
+    DatabaseHelper.assistantMessagePersistenceStageForTest = (stage) {
+      stderr.writeln('[assistant-message-stage] $stage');
+    };
+    addTearDown(() {
+      DatabaseHelper.assistantMessagePersistenceStageForTest = null;
+    });
 
     final conversationId = await _withStageTimeout(
       'DatabaseHelper.createAssistantConversation (open + onCreate + insert)',
