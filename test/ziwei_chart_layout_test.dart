@@ -230,4 +230,78 @@ void main() {
     }
   });
 
+
+  testWidgets('紫微命盘从右侧物理屏区打开宫位详情时底部面板留在右屏', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 1000),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: Scaffold(
+          body: Row(
+            children: [
+              const SizedBox(width: 412),
+              Expanded(
+                child: Builder(
+                  builder: (sourceContext) => Center(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(sourceContext).push(
+                        FoldAwareMaterialPageRoute<void>(
+                          sourceContext: sourceContext,
+                          builder: (_) => ZiweiChartScreen(
+                            initialSolar: DateTime(2000, 8, 16, 10),
+                          ),
+                        ),
+                      ),
+                      child: const Text('从右屏打开紫微排盘'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('从右屏打开紫微排盘'));
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    await tester.scrollUntilVisible(
+      plate,
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(plate, findsOneWidget);
+    expect(tester.getRect(plate).left, greaterThanOrEqualTo(412));
+
+    final palaceCell = find.descendant(
+      of: plate,
+      matching: find.byType(GestureDetector),
+    ).first;
+    await tester.tap(palaceCell);
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(BottomSheet);
+    expect(sheet, findsOneWidget);
+    final sheetRect = tester.getRect(sheet);
+    expect(sheetRect.left, greaterThanOrEqualTo(412));
+    expect(sheetRect.right, lessThanOrEqualTo(800));
+    expect(tester.takeException(), isNull);
+  });
+
 }
