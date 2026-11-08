@@ -287,7 +287,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(plate, findsOneWidget);
-    expect(tester.getRect(plate).left, greaterThanOrEqualTo(412));
+    final plateRect = tester.getRect(plate);
+    expect(plateRect.left, greaterThanOrEqualTo(412));
+    expect(plateRect.right, lessThanOrEqualTo(800));
+
+    // The scroll viewport itself must stay inside the right physical panel;
+    // checking only the chart's left edge would miss cross-hinge overflow.
+    final chartViewport = tester.getRect(find.byType(Scrollable).first);
+    expect(chartViewport.left, greaterThanOrEqualTo(412));
+    expect(chartViewport.right, lessThanOrEqualTo(800));
 
     final palaceCell = find.descendant(
       of: plate,
