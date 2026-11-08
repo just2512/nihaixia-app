@@ -24,10 +24,10 @@
 | Android | 系统版本、SDK、ColorOS 版本（设置页截图或设备信息） |
 | 系统显示 | 屏幕分辨率、密度、系统字号、显示大小 |
 | 应用 | 包名 `com.nihaisha.nihaisha_app`、Git commit、APK SHA-256 |
-| 构建 | 本轮 master CI 的 arm64 Debug APK；不得用旧 APK 混测 |
+| 构建 | 本轮 master CI 的 arm64 Release APK；必须使用仓库正式签名密钥，不得用 Debug 签名包混测 |
 | 连接 | USB 调试已授权；电脑有 Android platform-tools（adb）和 PowerShell |
 
-安装本轮 APK 后先确认：
+在安装前先完成旧包签名核对；签名与版本条件满足后，使用覆盖安装，不得先卸载。安装本轮 APK 后再确认：
 
 ```powershell
 adb devices
@@ -323,96 +323,102 @@ output/find-n2/<run-id>/
 - OPPO Find N2 外屏、内屏 flat、半折叠、键盘、系统弹窗/选择器：**MISSING，等待实机材料**。
 - 本文不预先宣称任何真机项目通过。
 
-## 9. 新版 APK 安装、旧版卸载与数据清理验收
+## 9. 新版 APK 原位覆盖升级与数据保留验收
 
 ### 9.1 当前构建身份（每轮 CI 重新核对）
 
-- Android applicationId：com.nihaisha.nihaisha_app
-- 当前 pubspec 配置：version 1.11.29+8038，即 versionName 1.11.29、versionCode 8038。
-- CI 目标：单一 arm64-v8a APK。
-- 以上仅为当前仓库配置快照，不证明手机旧 APK 的包名、签名或版本；旧 APK 元数据必须实测。
+- Android applicationId：`com.nihaisha.nihaisha_app`
+- 本轮仓库版本：`1.11.30+8039`，即 versionName `1.11.30`、versionCode `8039`。
+- CI 目标：单一 `arm64-v8a` Release APK。
+- CI 必须从仓库 Actions Secrets 读取正式发布签名密钥；缺少密钥时构建必须失败，不允许回退到临时 Debug 签名。
+- 以上是构建配置，不代表手机旧 APK 的签名和版本已知。必须先从设备提取旧 APK 并比对证书。
 
-每轮交付必须记录 Git commit、workflow run、artifact 名称、SHA-256、applicationId、versionName、versionCode、ABI 列表和签名证书 SHA-256。缺少任一项，APK 安装验收标记 BLOCKED。
+每轮交付必须记录 Git commit、workflow run、artifact 名称、SHA-256、applicationId、versionName、versionCode、ABI 列表和签名证书 SHA-256。缺少任一项，安装标记 BLOCKED。
 
-### 9.2 本轮执行干净安装，不宣称原位覆盖升级
+### 9.2 安装前检查旧 APK（不卸载、不清数据）
 
-用户已明确要求先卸载手机旧版并删除原有使用数据，再安装新版。因此本轮路径为：卸载旧包 → 确认旧包数据已删除 → 安装新包。这不验证数据迁移，也不等同于 Android 原位覆盖升级（adb install -r）。
-
-同包名不保证能够覆盖安装。原位升级还要求签名证书兼容，且新版 versionCode 不低于已安装版本。证书不一致可能出现 INSTALL_FAILED_UPDATE_INCOMPATIBLE；versionCode 回退可能出现 INSTALL_FAILED_VERSION_DOWNGRADE。不得通过改包名、降低门槛或伪造签名绕过。
-
-先确认设备和包名：
+先确认设备和旧包路径：
 
 ```powershell
 adb devices
 adb shell pm path com.nihaisha.nihaisha_app
-adb shell dumpsys package com.nihaisha.nihaisha_app
 ```
 
-确认用户需要保留的资料已另行备份后，卸载旧版（卸载会删除应用沙盒数据）：
+从设备拉取当前安装包（只读操作，不会卸载应用或清除数据）：
 
 ```powershell
-adb uninstall com.nihaisha.nihaisha_app
-adb shell pm path com.nihaisha.nihaisha_app
+$remoteApk = (adb shell pm path com.nihaisha.nihaisha_app | Select-Object -First 1) -replace '^package:', ''
+adb pull $remoteApk .\installed-old.apk
+apksigner verify --print-certs .\installed-old.apk
+apkanalyzer manifest application-id .\installed-old.apk
+apkanalyzer manifest version-code .\installed-old.apk
+apkanalyzer manifest version-name .\installed-old.apk
 ```
 
-第二条命令应不再返回 APK 路径；若仍返回，先核对设备、Android 用户 profile 和包名，不得假定卸载成功。
+记录旧包的 applicationId、versionCode 和 signer certificate SHA-256。与新 APK 的对应信息逐项比较：
 
-安装本轮 CI 下载的 APK：
+- applicationId 必须完全相同。
+- 新版 versionCode 必须严格大于旧版。
+- 新旧 APK 的签名证书必须相同；若使用签名轮换，则必须由 Android 平台认可的 signing lineage 明确证明兼容，不能仅凭别名或密钥文件名判断。
+- ABI 必须包含设备所需的 `arm64-v8a`。
 
-```powershell
-adb install .\app-arm64-v8a.apk
-adb shell pm path com.nihaisha.nihaisha_app
-adb shell dumpsys package com.nihaisha.nihaisha_app
-```
+任何一项不满足或无法核验，都标记 BLOCKED，**不得尝试覆盖安装，更不得建议卸载旧版**。因为卸载会删除应用沙盒数据，且与本轮要求冲突。
 
-必须返回 Success；包路径存在；实测 applicationId、versionName、versionCode 与本轮 CI 产物元数据一致；启动后无安装器报错、闪退或初始化异常。
+### 9.3 新 APK 离线核验
 
-如果设备上存在工作资料/多用户副本，逐一确认安装用户；不得误删其他用户的数据。不得在未确认备份需求前执行共享存储或整机数据清理。
-
-### 9.3 APK 离线核验
-
-在电脑安装 Android SDK Build Tools 后，对本轮下载的确切 APK 执行：
+从本轮 CI artifact `android-arm64-release-apk` 解压出 `app-release.apk` 和对应 SHA 文件，执行：
 
 ```powershell
-Get-FileHash .\app-arm64-v8a.apk -Algorithm SHA256
-apkanalyzer manifest application-id .\app-arm64-v8a.apk
-apkanalyzer manifest version-code .\app-arm64-v8a.apk
-apkanalyzer manifest version-name .\app-arm64-v8a.apk
-apkanalyzer files list .\app-arm64-v8a.apk
-apksigner verify --print-certs .\app-arm64-v8a.apk
+Get-FileHash .\app-release.apk -Algorithm SHA256
+apkanalyzer manifest application-id .\app-release.apk
+apkanalyzer manifest version-code .\app-release.apk
+apkanalyzer manifest version-name .\app-release.apk
+apkanalyzer files list .\app-release.apk
+apksigner verify --verbose --print-certs .\app-release.apk
 ```
 
 通过条件：
-- SHA-256 与交付记录一致。
-- applicationId 精确为 com.nihaisha.nihaisha_app。
-- versionName/versionCode 与本轮构建配置及 CI 记录一致；versionCode 不得意外回退。
-- 原生库 ABI 清单只包含 arm64-v8a，不得把 universal 或其他 ABI APK 当成本轮 arm64 产物。
-- APK 签名验证成功，并记录 signer certificate SHA-256。Debug 签名仅用于本轮测试，不得冒充正式发布签名。
 
-### 9.4 干净安装后的应用冒烟测试
+- SHA-256 与 CI artifact 内的校验文件一致。
+- applicationId 精确为 `com.nihaisha.nihaisha_app`。
+- versionName/versionCode 与本轮 CI 记录一致；versionCode 必须高于旧包。
+- APK 原生库 ABI 集合只包含 `arm64-v8a`。
+- APK 签名验证成功，证书 SHA-256 与设备当前安装包一致。
+- APK 是 Release 构建，不能用 Debug 签名包替代。
+
+### 9.4 原位覆盖安装（保留原数据）
+
+只有 9.2 和 9.3 的全部条件均通过后，才执行：
+
+```powershell
+adb install -r .\app-release.apk
+```
+
+不得执行 `adb uninstall`、`pm clear`、清除存储空间或删除应用数据库。安装成功后核对：
+
+```powershell
+adb shell dumpsys package com.nihaisha.nihaisha_app
+adb shell pm path com.nihaisha.nihaisha_app
+```
+
+必须返回 `Success`；包路径存在；实测 versionName/versionCode 与本轮构建一致。首次启动后，逐项检查旧版已有的收藏、诊断历史、历史会话、设置和其他本地数据。旧数据必须仍可读取；如数据库迁移失败、内容丢失或应用闪退，判 FAIL，保留设备日志和数据库迁移日志，不得通过清数据绕过。
+
+### 9.5 覆盖升级后的冒烟测试
 
 安装后依次执行并记录：
 
-1. 首次启动、数据库初始化、首页加载、退出后再次启动。
-2. 统一助手：新建会话、发送一条非敏感测试消息、返回会话列表、重新打开并确认消息恢复。
-3. 知识检索：执行一项本地知识查询，确认来源引用可展开/回链；无结果时应如实提示，不得显示伪造来源。
-4. 工具调用：触发一项可用工具，检查参数、执行状态、结果和错误路径。
-5. 收藏、分享、复制处方、诊断历史入口：逐项验证可操作；系统分享面板能正常拉起并返回；复制内容可粘贴核对；收藏和历史在重启后仍符合设计。
-6. 紫微：打开排盘、进入宫位详情、滚动长内容、返回；随后按第 4 节折叠屏矩阵执行。
-7. Android 权限与系统文件选择器/相机：按 H 项执行；拒绝权限后应可恢复。
-8. 强制停止后重启、切后台再返回、卸载后重新安装的行为分别记录。重新安装后旧沙盒数据不应残留；不得将此结果误写成数据迁移成功。
+1. 首次启动、数据库初始化、首页加载；退出后再次启动。
+2. 检查升级前已存在的收藏、诊断历史、历史对话和设置，确认数据未清空。
+3. 统一助手：新建会话、发送一条非敏感测试消息、返回会话列表、重新打开并确认新旧消息恢复。
+4. 知识检索：执行一项本地知识查询，确认来源引用可展开/回链；无结果时应如实提示，不得显示伪造来源。
+5. 工具调用：触发一项可用工具，检查参数、执行状态、结果和错误路径。
+6. 收藏、分享、复制处方、诊断历史入口：逐项验证真实系统交互；复制内容可粘贴核对；收藏和历史在重启后仍可读取。
+7. 紫微：打开排盘、进入宫位详情、滚动长内容、返回；随后按第 4 节折叠屏矩阵执行。
+8. Android 权限、系统文件选择器/相机：按 H 项执行；拒绝权限后应可恢复。
+9. 强制停止后重启、切后台再返回，确认升级前后的本地数据仍然存在。
 
-通过条件：每项均有真实设备操作记录和证据；启动、数据库初始化、路由和系统交互无崩溃、ANR、卡死。失败项保留为 FAIL，不以 Widget 测试替代真机结果。
+通过条件：每项均有真实设备操作记录和证据；启动、数据库迁移、路由和系统交互无崩溃、ANR、卡死或数据丢失。失败项保留为 FAIL，不以 Widget 测试替代真机结果。
 
-### 9.5 将来如需真正的原位覆盖升级
+### 9.6 签名不匹配时的处理边界
 
-这属于独立验收，不包含在本轮卸载清数据路径内。必须另外使用旧版 APK 与新版 APK 验证：
-
-- 两者 applicationId 完全相同。
-- 新版 versionCode 大于旧版。
-- 新版签名证书与旧版兼容（通常要求同一签名证书）。
-- adb install -r new.apk 安装成功。
-- 旧版已有数据库、收藏、会话、设置等数据按迁移设计保留且可读取。
-- 数据库 schema migration、失败回滚和重复升级测试通过。
-
-任一条件不满足，不能宣称可覆盖升级。若旧 APK 使用不同签名且无法取得相同发布密钥，只能卸载后干净安装，用户数据将丢失；这与当前指定的验收路径一致。
+若旧 APK 与本轮 APK 的签名证书不同，Android 不允许常规覆盖安装。不得通过卸载、清数据或更改 applicationId 让本轮任务“通过”。应停止交付，查明旧包来源并恢复正确的原签名密钥；如果原签名密钥确实无法取得，则“无卸载、保留数据升级”这一要求无法实现，必须明确报告，不得伪称已满足。
