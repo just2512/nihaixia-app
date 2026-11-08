@@ -294,9 +294,16 @@ jobs:
           print(f"Native ABIs: {', '.join(sorted(native_abis))}")
           print("Required arm64 Flutter/JNI libraries are present.")
           PY
-          apksigner verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          apksigner verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk | tee build/app/outputs/flutter-apk/app-release.apk.certs.txt
           sha256sum build/app/outputs/flutter-apk/app-release.apk | tee build/app/outputs/flutter-apk/app-release.apk.sha256
+          {
+            printf 'applicationId=%s\n' 'com.nihaisha.nihaisha_app'
+            printf 'version=%s\n' "$(sed -n 's/^version: //p' pubspec.yaml)"
+            printf 'abi=%s\n' 'arm64-v8a'
+            cat build/app/outputs/flutter-apk/app-release.apk.sha256
+          } > build/app/outputs/flutter-apk/app-release.apk.metadata.txt
           cat build/app/outputs/flutter-apk/app-release.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
+          cat build/app/outputs/flutter-apk/app-release.apk.certs.txt >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run Android local unit tests
         # Keep the Flutter Gradle task on the same arm64 target as the APK build.
@@ -320,5 +327,7 @@ jobs:
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/flutter-apk/app-release.apk.sha256
+            build/app/outputs/flutter-apk/app-release.apk.certs.txt
+            build/app/outputs/flutter-apk/app-release.apk.metadata.txt
           if-no-files-found: error
           retention-days: 7
