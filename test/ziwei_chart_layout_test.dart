@@ -400,4 +400,108 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+
+  testWidgets('紫微入口位于右侧物理屏区时，锚定对话框完整留在右屏', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 1000),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: Scaffold(
+          body: Row(
+            children: [
+              const SizedBox(width: 412),
+              Expanded(
+                child: Builder(
+                  builder: (sourceContext) => Center(
+                    child: ElevatedButton(
+                      onPressed: () => showFoldAwareDialog<void>(
+                        context: sourceContext,
+                        builder: (_) => const AlertDialog(
+                          key: ValueKey('ziwei-right-panel-dialog'),
+                          title: Text('右屏对话框'),
+                        ),
+                      ),
+                      child: const Text('打开右屏对话框'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开右屏对话框'));
+    await tester.pumpAndSettle();
+
+    final dialog = tester.getRect(find.byKey(
+      const ValueKey('ziwei-right-panel-dialog'),
+    ));
+    expect(dialog.left, greaterThanOrEqualTo(412));
+    expect(dialog.right, lessThanOrEqualTo(800));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('紫微入口位于横向折叠屏下侧时，对话框完整留在下屏', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(0, 368, 1000, 24),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: Builder(
+              builder: (sourceContext) => ElevatedButton(
+                onPressed: () => showFoldAwareDialog<void>(
+                  context: sourceContext,
+                  builder: (_) => const AlertDialog(
+                    key: ValueKey('ziwei-bottom-panel-dialog'),
+                    title: Text('下屏对话框'),
+                  ),
+                ),
+                child: const Text('打开下屏对话框'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开下屏对话框'));
+    await tester.pumpAndSettle();
+
+    final dialog = tester.getRect(find.byKey(
+      const ValueKey('ziwei-bottom-panel-dialog'),
+    ));
+    expect(dialog.top, greaterThanOrEqualTo(392));
+    expect(dialog.bottom, lessThanOrEqualTo(760));
+    expect(tester.takeException(), isNull);
+  });
+
 }
