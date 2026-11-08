@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../data/ziwei_case_data.dart';
 import 'ziwei_doc_screen.dart';
+import '../widgets/adaptive_content_width.dart';
 
 /// 倪师《天纪》紫微斗数案例库 / 十二宫详解 浏览页。
 class ZiweiCasesListScreen extends StatelessWidget {
@@ -12,7 +13,7 @@ class ZiweiCasesListScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('倪师紫微案例与十二宫')),
-      body: ListView(
+      body: AdaptiveContentWidth(maxWidth: 680, child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _SectionHeader('十二宫总论'),
@@ -46,7 +47,7 @@ class ZiweiCasesListScreen extends StatelessWidget {
             style: TextStyle(fontSize: 10, color: cs.outline, height: 1.6),
           ),
         ],
-      ),
+      )),
     );
   }
 
