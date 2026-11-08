@@ -358,8 +358,13 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    // The chart plate is taller than the lower panel in tabletop posture;
+    // it must remain scrollable inside that panel rather than be clipped by
+    // the physical hinge or forced to shrink its chart cells.
     expect(tester.getRect(plate).top, greaterThanOrEqualTo(392));
-    expect(tester.getRect(plate).bottom, lessThanOrEqualTo(760));
+    final viewport = tester.getRect(find.byType(Scrollable).first);
+    expect(viewport.top, greaterThanOrEqualTo(392));
+    expect(viewport.bottom, lessThanOrEqualTo(760));
 
     final palaceCell = find.descendant(
       of: plate,
