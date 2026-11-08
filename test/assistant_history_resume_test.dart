@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
@@ -611,5 +615,122 @@ Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
   }
 
 
+
+
+  testWidgets('收藏和分享结构化辨证结果执行持久化与平台调用', (tester) async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final directory = await Directory.systemTemp.createTemp(
+      'nihaisha-assistant-result-actions-',
+    );
+    DatabaseHelper.configureTestDatabase(
+      'assistant-result-actions.db',
+      factory: databaseFactoryFfi,
+      directoryPath: directory.path,
+    );
+    addTearDown(() async {
+      await DatabaseHelper.closeTestDatabase();
+      if (await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+    });
+
+    final store = _MemoryConversationStore();
+    const resultText = '辨证结果\\n【六经】少阳病\\n【证型】少阳证\\n【方剂】小柴胡汤';
+    final diagnosis = DiagnosisResult(
+      meridian: '少阳',
+      pattern: '少阳证',
+      patternDetail: '往来寒热，胸胁苦满。',
+      formula: '小柴胡汤',
+      recommendedFormulas: const ['小柴胡汤'],
+      explanation: '结构化历史快照。',
+      confidence: 0.8,
+      matchedSymptoms: const ['口苦'],
+      followUpQuestions: const [],
+      answers: const {'bitter_mouth': true},
+      prescription: const FormulaPrescription(
+        formulaName: '小柴胡汤',
+        components: [
+          PrescriptionComponent(name: '柴胡', dosage: '24g', role: '君药'),
+        ],
+        dosage: '水煎服',
+        preparation: '先煮柴胡',
+        contraindication: '须由执业中医师核实',
+      ),
+    );
+    store.taskStates[1] = TcmInterviewTaskState(
+      taskId: 'completed-diagnosis-actions',
+      status: 'completed',
+      snapshot: DiagnosticEngine().createSnapshot(),
+      transcript: const [
+        TcmInterviewTaskMessage(
+          text: resultText,
+          isUser: false,
+          isResult: true,
+        ),
+      ],
+      completedDiagnosis: diagnosis,
+    );
+    store.messages[1] = [
+      {
+        'id': 1,
+        'conversation_id': 1,
+        'role': 'user',
+        'content': '开始规则问诊',
+        'metadata': 'selectedMode=automatic;mode=consultation',
+      },
+      {
+        'id': 2,
+        'conversation_id': 1,
+        'role': 'assistant',
+        'content': resultText,
+        'metadata': 'mode=consultation;selectedMode=automatic',
+      },
+    ];
+
+    final shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+    String? sharedText;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(shareChannel, (call) async {
+      if (call.method == 'share') {
+        sharedText = (call.arguments as Map)['text'] as String?;
+      }
+      return {'status': 'success'};
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(shareChannel, null);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: _HistoryResumeService(),
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.text('可继续的历史会话'));
+    await _pumpFrames(tester);
+
+    await tester.tap(find.text('收藏辨证结果'));
+    await _pumpFrames(tester);
+    final bookmarks = await DatabaseHelper.instance.getAllBookmarks();
+    expect(bookmarks, hasLength(1));
+    expect(bookmarks.single.title, contains('少阳证'));
+    expect(bookmarks.single.category, '辨证结果');
+    expect(bookmarks.single.content, contains('小柴胡汤'));
+    expect(bookmarks.single.content, contains('往来寒热'));
+
+    await tester.tap(find.text('分享辨证结果'));
+    await _pumpFrames(tester);
+    expect(sharedText, contains('少阳证'));
+    expect(sharedText, contains('小柴胡汤'));
+    expect(tester.takeException(), isNull);
+  });
 
 }
