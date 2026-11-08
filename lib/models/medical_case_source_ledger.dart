@@ -40,6 +40,7 @@ class MedicalCaseSourceLedger {
     'page',
     'passage',
     'originalExcerpt',
+    'applicability',
   ];
 
   bool _hasValue(String value) {
@@ -65,7 +66,8 @@ class MedicalCaseSourceLedger {
       _hasValue(page) &&
       !RegExp(r'^https?://', caseSensitive: false).hasMatch(page.trim()) &&
       _hasValue(passage) &&
-      _hasValue(originalExcerpt);
+      _hasValue(originalExcerpt) &&
+      _hasValue(applicability);
 
   bool get isBibliographicLocatorVerified =>
       bibliographicLocatorStatus == 'VERIFIED' &&
@@ -169,20 +171,16 @@ class MedicalCaseSourceLedger {
       bibliographicLocatorStatus: requestedLocatorStatus,
     );
 
-    final sourceStatus = requestedSourceStatus == 'VERIFIED' &&
-            !provisional.hasCompleteSourceLocator
-        ? 'MISSING'
-        : requestedSourceStatus == 'VERIFIED' ||
-                requestedSourceStatus == 'PENDING'
-            ? requestedSourceStatus
-            : 'MISSING';
-    final locatorStatus = requestedLocatorStatus == 'VERIFIED' &&
-            !provisional.hasCompleteBibliographicLocator
-        ? 'MISSING'
-        : requestedLocatorStatus == 'VERIFIED' ||
-                requestedLocatorStatus == 'PENDING'
-            ? requestedLocatorStatus
-            : 'MISSING';
+    final sourceStatus = provisional.hasCompleteSourceLocator &&
+            (requestedSourceStatus == 'VERIFIED' ||
+                requestedSourceStatus == 'PENDING')
+        ? requestedSourceStatus
+        : 'MISSING';
+    final locatorStatus = provisional.hasCompleteBibliographicLocator &&
+            (requestedLocatorStatus == 'VERIFIED' ||
+                requestedLocatorStatus == 'PENDING')
+        ? requestedLocatorStatus
+        : 'MISSING';
 
     return MedicalCaseSourceLedger(
       sourceTitle: sourceTitle,
