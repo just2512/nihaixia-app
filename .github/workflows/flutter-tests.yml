@@ -56,10 +56,12 @@ jobs:
           fi
           url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
           expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380065"
           tmp="$(mktemp)"
           download_verified() {
             local candidate actual
             local -a urls=(
+              "$api_url"
               "$url"
               "https://ghfast.top/$url"
               "https://gh-proxy.com/$url"
@@ -67,7 +69,7 @@ jobs:
             )
             for candidate in "${urls[@]}"; do
               echo "Trying public SQLite asset source: $candidate"
-              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
                 echo "Download failed; trying the next source." >&2
                 rm -f "$tmp"
                 continue
@@ -161,10 +163,12 @@ jobs:
           fi
           url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.x64.linux.so"
           expected="b17729184e5a2818055ecbddd5ed6642521bfe6e56aafa472330e483c0e2e0d2"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380082"
           tmp="$(mktemp)"
           download_verified() {
             local candidate actual
             local -a urls=(
+              "$api_url"
               "$url"
               "https://ghfast.top/$url"
               "https://gh-proxy.com/$url"
@@ -172,7 +176,7 @@ jobs:
             )
             for candidate in "${urls[@]}"; do
               echo "Trying public SQLite asset source: $candidate"
-              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
                 echo "Download failed; trying the next source." >&2
                 rm -f "$tmp"
                 continue
@@ -347,6 +351,7 @@ jobs:
           download_verified() {
             local candidate actual
             local -a urls=(
+              "$api_url"
               "$url"
               "https://ghfast.top/$url"
               "https://gh-proxy.com/$url"
@@ -354,7 +359,7 @@ jobs:
             )
             for candidate in "${urls[@]}"; do
               echo "Trying public SQLite Android arm64 asset source: $candidate"
-              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
                 echo "Download failed; trying the next source." >&2
                 rm -f "$tmp"
                 continue
@@ -419,6 +424,30 @@ jobs:
         id: android_unit_tests
         run: cd android && ./gradlew :app:testDebugUnitTest -Ptarget-platform=android-arm64
 
+      - name: Verify Android unit test result XML
+        id: verify_android_unit_tests
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          reports = sorted(Path("build/app/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+          if not reports:
+              raise SystemExit("No Android unit-test XML reports found; Gradle task success alone is not accepted as test execution.")
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for report in reports:
+              root = ET.parse(report).getroot()
+              for key in totals:
+                  totals[key] += int(root.attrib.get(key, "0"))
+          print("Android unit-test totals:", totals)
+          if totals["tests"] <= 0:
+              raise SystemExit("Android unit-test suite discovered zero tests.")
+          if totals["failures"] or totals["errors"]:
+              raise SystemExit("Android unit-test failures/errors detected.")
+          PY
+
       - name: Upload Android CI APK ABI evidence
         if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success'
         uses: actions/upload-artifact@v7
@@ -437,7 +466,7 @@ jobs:
         with:
           name: android-unit-test-reports
           path: |
-            android/app/build/test-results/testDebugUnitTest/
-            android/app/build/reports/tests/testDebugUnitTest/
+            build/app/test-results/testDebugUnitTest/
+            build/app/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
           retention-days: 7
