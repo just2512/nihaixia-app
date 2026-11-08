@@ -93,6 +93,14 @@ void main() {
   });
 
   test('来源字段或适用条件缺失时，PENDING 不得掩盖 MISSING', () {
+    const incomplete = MedicalCaseSourceLedger(
+      sourceTitle: '金匮要略',
+      verificationStatus: 'PENDING',
+      bibliographicLocatorStatus: 'PENDING',
+    );
+    expect(incomplete.sourceStatus, 'MISSING');
+    expect(incomplete.status, 'MISSING');
+
     final raw = <String, dynamic>{
       'sourceTitle': '金匮要略',
       'edition': 'MISSING',
