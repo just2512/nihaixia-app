@@ -380,9 +380,35 @@ jobs:
           df -h /
           df -h "$GITHUB_WORKSPACE"
 
-      - name: Build Android debug APK
+      - name: Decode required release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required repository Actions secret: $name. Refusing to publish an APK that cannot be guaranteed to upgrade the installed release." >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
+          test -s android/keystore.jks
+          keytool -list -keystore android/keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+          cat > android/key.properties <<EOF
+          storeFile=../keystore.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+          echo "Release signing key decoded and alias verified; secret values were not printed."
+
+      - name: Build Android arm64 release APK
         id: build_apk
-        run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
+        run: flutter build apk --release --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
 
       - name: Verify Android APK ABI and calculate SHA-256
         id: verify_apk
@@ -392,7 +418,7 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
 
-          apk = Path("build/app/outputs/flutter-apk/app-debug.apk")
+          apk = Path("build/app/outputs/flutter-apk/app-release.apk")
           if not apk.is_file() or apk.stat().st_size == 0:
               raise SystemExit(f"APK missing or empty: {apk}")
 
@@ -415,8 +441,9 @@ jobs:
           print(f"Native ABIs: {', '.join(sorted(native_abis))}")
           print("Required arm64 Flutter/JNI libraries are present.")
           PY
-          sha256sum build/app/outputs/flutter-apk/app-debug.apk | tee build/app/outputs/flutter-apk/app-debug.apk.sha256
-          cat build/app/outputs/flutter-apk/app-debug.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
+          apksigner verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk
+          sha256sum build/app/outputs/flutter-apk/app-release.apk | tee build/app/outputs/flutter-apk/app-release.apk.sha256
+          cat build/app/outputs/flutter-apk/app-release.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run Android local unit tests
         # Keep the Flutter Gradle task on the same arm64 target as the APK build.
@@ -432,13 +459,13 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-      - name: Upload Android debug APK
+      - name: Upload Android release APK
         if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: android-debug-apk
+          name: android-arm64-release-apk
           path: |
-            build/app/outputs/flutter-apk/app-debug.apk
-            build/app/outputs/flutter-apk/app-debug.apk.sha256
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-release.apk.sha256
           if-no-files-found: error
           retention-days: 7
