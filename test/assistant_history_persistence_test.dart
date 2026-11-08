@@ -53,7 +53,7 @@ void main() {
     await DatabaseHelper.instance.insertBookmark(
       Bookmark(
         title: '少阳病 - 少阳证',
-        content: '六经：少阳病\\n证型：少阳证\\n方剂：小柴胡汤',
+        content: '六经：少阳病\n证型：少阳证\n方剂：小柴胡汤',
         category: '辨证结果',
         source: 'chat_diagnosis',
       ),
