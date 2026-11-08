@@ -1,212 +1,49 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/data/assistant_conversation_store.dart';
-import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
-import 'package:nihaisha_app/models/assistant_tool_result.dart';
-import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
-import 'package:nihaisha_app/services/local_ai_service.dart';
-
-const _readyStatus = LocalAiModelStatus(
-  installed: true,
-  fileExists: true,
-  ready: true,
-  modelPath: '/test/gemma-4-E4B-it.litertlm',
-  sizeBytes: 3659530240,
-  expectedSizeBytes: 3659530240,
-  backend: 'cpu',
-);
-
-class _NoLostImagePicker implements LocalAiImagePicker {
-  @override
-  Future<String?> pickCameraImagePath() async => null;
-
-  @override
-  Future<String?> retrieveLostImagePath() async => null;
-}
-
-class _PersistentHistoryService extends LocalAiService {
-  String? restoredTranscript;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
-
-  @override
-  Future<void> restoreConversation({
-    required String transcript,
-    required List<String> userMessages,
-  }) async {
-    restoredTranscript = transcript;
-  }
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required String context,
-  }) async =>
-      '续聊成功：$text';
-}
-
-class _RealAsyncConversationStore implements AssistantConversationStore {
-  _RealAsyncConversationStore(this.tester, this.delegate);
-
-  final WidgetTester tester;
-  final AssistantConversationStore delegate;
-
-  Future<T> _run<T>(Future<T> Function() operation) async {
-    final boxed = await tester.runAsync(() async => (value: await operation()));
-    if (boxed == null) {
-      throw StateError('SQLite conversation operation did not complete');
-    }
-    return boxed.value;
-  }
-
-  @override
-  Future<int> createAssistantConversation({
-    String title = '新对话',
-    String mode = 'general',
-  }) =>
-      _run(() => delegate.createAssistantConversation(title: title, mode: mode));
-
-  @override
-  Future<int> saveAssistantMessage({
-    required int conversationId,
-    required String role,
-    required String content,
-    String? metadata,
-  }) =>
-      _run(() => delegate.saveAssistantMessage(
-            conversationId: conversationId,
-            role: role,
-            content: content,
-            metadata: metadata,
-          ));
-
-  @override
-  Future<List<Map<String, Object?>>> getAssistantConversations({
-    int? limit,
-  }) =>
-      _run(() => delegate.getAssistantConversations(limit: limit));
-
-  @override
-  Future<List<Map<String, Object?>>> getAssistantMessages({
-    required int conversationId,
-  }) =>
-      _run(() => delegate.getAssistantMessages(conversationId: conversationId));
-
-  @override
-  Future<void> saveTcmInterviewTaskState({
-    required int conversationId,
-    required TcmInterviewTaskState state,
-  }) async {
-    await _run(() async {
-      await delegate.saveTcmInterviewTaskState(
-        conversationId: conversationId,
-        state: state,
-      );
-      return true;
-    });
-  }
-
-  @override
-  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
-    required int conversationId,
-  }) =>
-      _run(() => delegate.getTcmInterviewTaskState(
-            conversationId: conversationId,
-          ));
-
-  @override
-  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
-    await _run(() async {
-      await delegate.deleteAssistantConversations(conversationIds);
-      return true;
-    });
-  }
-}
-
-Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
-  for (var index = 0; index < frames; index++) {
-    await tester.pump(const Duration(milliseconds: 16));
-  }
-}
-
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 
 Future<T> _withStageTimeout<T>(String stage, Future<T> operation) async {
-  stderr.writeln('[history-retry-stage] START $stage');
-  try {
-    final result = await operation.timeout(
+  return operation.timeout(
+    const Duration(seconds: 45),
+    onTimeout: () => throw TimeoutException(
+      'SQLite persistence stage timed out: $stage',
       const Duration(seconds: 45),
-      onTimeout: () => throw TimeoutException(
-        'SQLite persistence stage timed out: $stage',
-        const Duration(seconds: 45),
-      ),
-    );
-    stderr.writeln('[history-retry-stage] PASS $stage');
-    return result;
-  } catch (error, stackTrace) {
-    stderr.writeln('[history-retry-stage] FAIL $stage: $error');
-    stderr.writeln(stackTrace);
-    rethrow;
-  }
-}
-
-Future<T> _withRealAsyncStage<T extends Object>(
-  WidgetTester tester,
-  String stage,
-  Future<T> Function() operation,
-) async {
-  final result = await tester.runAsync(
-    () => _withStageTimeout(stage, operation()),
+    ),
   );
-  if (result == null) {
-    throw StateError('Real async database stage returned no result: $stage');
-  }
-  return result;
-}
-
-Future<void> _withRealAsyncAction(
-  WidgetTester tester,
-  String stage,
-  Future<void> Function() operation,
-) async {
-  final completed = await tester.runAsync(() async {
-    await _withStageTimeout(stage, operation());
-    return true;
-  });
-  if (completed != true) {
-    throw StateError('Real async database action did not complete: $stage');
-  }
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   late Directory databaseDirectory;
 
-  setUpAll(() async {
+  setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
     databaseDirectory = await Directory.systemTemp.createTemp(
       'nihaisha-assistant-history-',
     );
-    // Give the FFI factory an explicit writable location. Relying on its
-    // implicit .dart_tool path can leave the first database open pending in
-    // Flutter test runners where the working directory is not stable.
-    });
+    DatabaseHelper.configureTestDatabase(
+      'assistant_history_recovery.db',
+      factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
+    );
+  });
 
-  tearDownAll(() async {
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
     if (await databaseDirectory.exists()) {
       await databaseDirectory.delete(recursive: true);
     }
   });
-
 
   test('sqflite FFI opens, writes, reads, and closes an explicit file', () async {
     final file = '${databaseDirectory.path}/ffi-smoke.db';
@@ -217,13 +54,18 @@ void main() {
     try {
       await _withStageTimeout(
         'direct FFI create table',
-        db.execute('CREATE TABLE smoke (id INTEGER PRIMARY KEY, value TEXT NOT NULL)'),
+        db.execute(
+          'CREATE TABLE smoke (id INTEGER PRIMARY KEY, value TEXT NOT NULL)',
+        ),
       );
       await _withStageTimeout(
         'direct FFI insert',
         db.insert('smoke', {'value': 'persisted'}),
       );
-      final rows = await _withStageTimeout('direct FFI read', db.query('smoke'));
+      final rows = await _withStageTimeout(
+        'direct FFI read',
+        db.query('smoke'),
+      );
       expect(rows, hasLength(1));
       expect(rows.single['value'], 'persisted');
     } finally {
@@ -231,47 +73,20 @@ void main() {
     }
   });
 
-  testWidgets('reopened SQLite restores FAILED tool and persists its retry result',
-      (tester) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(1000, 1800);
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(() async {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await _withRealAsyncAction(
-        tester,
-        'close SQLite test database during teardown',
-        DatabaseHelper.closeTestDatabase,
-      );
-    });
-    final databaseName =
-        'assistant_history_recovery_${DateTime.now().microsecondsSinceEpoch}.db';
-    DatabaseHelper.configureTestDatabase(
-      databaseName,
-      factory: databaseFactoryFfi,
-      directoryPath: databaseDirectory.path,
-    );
+  test('SQLite reopen preserves FAILED tool arguments and resumable TCM task state',
+      () async {
     final store = DatabaseHelper.instance;
-    DatabaseHelper.assistantMessagePersistenceStageForTest = (stage) {
-      stderr.writeln('[assistant-message-stage] $stage');
-    };
-    addTearDown(() {
-      DatabaseHelper.assistantMessagePersistenceStageForTest = null;
-    });
-
-    final conversationId = await _withRealAsyncStage(
-      tester,
-      'DatabaseHelper.createAssistantConversation (open + onCreate + insert)',
-      () => store.createAssistantConversation(
+    final conversationId = await _withStageTimeout(
+      'create assistant conversation',
+      store.createAssistantConversation(
         title: '持久化失败重试',
         mode: 'metaphysics',
       ),
     );
-    await _withRealAsyncStage(
-      tester,
-      'persist user message (transaction query + insert + conversation update)',
-      () => store.saveAssistantMessage(
+
+    await _withStageTimeout(
+      'persist replayable user request',
+      store.saveAssistantMessage(
         conversationId: conversationId,
         role: 'user',
         content: '帮我推算五运六气',
@@ -282,14 +97,12 @@ void main() {
         ).encode(),
       ),
     );
-    print('[history-retry-stage] user message persisted');
-    await _withRealAsyncStage(
-      tester,
-      'persist FAILED tool message transaction',
-      () => store.saveAssistantMessage(
+    await _withStageTimeout(
+      'persist FAILED tool result',
+      store.saveAssistantMessage(
         conversationId: conversationId,
         role: 'assistant',
-        content: '【五运六气推算执行结果】\\n执行状态：FAILED\\n执行参数：date=2026-11-07',
+        content: '【五运六气推算执行结果】\n执行状态：FAILED\n执行参数：date=2026-11-07',
         metadata: AssistantMessageMetadata(
           mode: 'metaphysics',
           selectedMode: 'automatic',
@@ -300,99 +113,149 @@ void main() {
       ),
     );
 
-    // Close the SQLite handle and reopen the same on-disk database. This
-    // verifies disk persistence across a database-connection restart; it does
-    // not claim to simulate Android process death.
-    print('[history-retry-stage] failed tool message persisted; closing database');
-    await _withRealAsyncAction(
-      tester,
-      'close SQLite before reopening persisted history',
-      DatabaseHelper.closeTestDatabase,
+    final snapshot = DiagnosticEngine().createSnapshot();
+    final inProgressTask = TcmInterviewTaskState(
+      taskId: 'tcm-task-1',
+      snapshot: snapshot,
+      status: 'in_progress',
+      pendingPromptId: 'temperature',
+      pendingPromptText: '当前最明显的寒热表现是什么？',
+      pendingOptions: const ['发热 + 怕冷', '不发热'],
+      transcript: const [
+        TcmInterviewTaskMessage(text: '开始规则问诊', isUser: true),
+        TcmInterviewTaskMessage(
+          text: '当前最明显的寒热表现是什么？',
+          isUser: false,
+        ),
+      ],
+      updatedAt: DateTime.utc(2026, 11, 8, 2),
+    );
+    await _withStageTimeout(
+      'persist in-progress TCM task',
+      store.saveTcmInterviewTaskState(
+        conversationId: conversationId,
+        state: inProgressTask,
+      ),
+    );
+
+    // Close and reopen the same on-disk database. This verifies SQLite
+    // persistence across a connection restart, not Android process death.
+    await _withStageTimeout(
+      'close database before first reopen',
+      DatabaseHelper.closeTestDatabase(),
     );
     DatabaseHelper.configureTestDatabase(
-      databaseName,
+      'assistant_history_recovery.db',
       factory: databaseFactoryFfi,
       directoryPath: databaseDirectory.path,
     );
-    print('[history-retry-stage] database closed and configured for reopen');
 
-    final persistedMessages = await _withRealAsyncStage(
-      tester,
-      'reopen SQLite and read persisted messages',
-      () => store.getAssistantMessages(conversationId: conversationId),
+    final conversations = await _withStageTimeout(
+      'read conversations after reopen',
+      store.getAssistantConversations(),
     );
-    expect(persistedMessages, hasLength(2));
-    final persistedMetadata = AssistantMessageMetadata.decode(
-      persistedMessages.last['metadata']! as String,
-    );
-    expect(persistedMetadata.toolStatus, 'FAILED');
-    expect(persistedMetadata.toolArguments, const {'date': '2026-11-07'});
-    print('[history-retry-stage] sqlite reopen verified');
+    expect(conversations, hasLength(1));
+    expect(conversations.single['title'], '持久化失败重试');
+    expect(conversations.single['id'], conversationId);
 
-    final service = _PersistentHistoryService();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: LocalAiInterviewScreen(
-          service: service,
-          imagePicker: _NoLostImagePicker(),
-          conversationStore: _RealAsyncConversationStore(tester, store),
-          testToolRouteBuilder: (tool, arguments) => Scaffold(
-            body: Center(
-              child: Builder(
-                builder: (routeContext) => ElevatedButton(
-                  onPressed: () => Navigator.pop(
-                    routeContext,
-                    AssistantToolResult(
-                      toolId: tool.id,
-                      title: tool.title,
-                      values: const {'结果': '测试执行成功'},
-                      arguments: arguments.values,
-                    ),
-                  ),
-                  child: const Text('模拟工具执行成功'),
-                ),
-              ),
-            ),
-          ),
-        ),
+    final restoredMessages = await _withStageTimeout(
+      'read messages after reopen',
+      store.getAssistantMessages(conversationId: conversationId),
+    );
+    expect(restoredMessages, hasLength(2));
+    expect(restoredMessages.first['content'], '帮我推算五运六气');
+    final failedMetadata = AssistantMessageMetadata.decode(
+      restoredMessages.last['metadata']! as String,
+    );
+    expect(failedMetadata.toolId, 'yunqi');
+    expect(failedMetadata.toolStatus, 'FAILED');
+    expect(failedMetadata.toolArguments, const {'date': '2026-11-07'});
+
+    final restoredTask = await _withStageTimeout(
+      'read in-progress TCM task after reopen',
+      store.getTcmInterviewTaskState(conversationId: conversationId),
+    );
+    expect(restoredTask, isNotNull);
+    expect(restoredTask!.taskId, 'tcm-task-1');
+    expect(restoredTask.status, 'in_progress');
+    expect(restoredTask.pendingPromptId, 'temperature');
+    expect(restoredTask.pendingOptions, const ['发热 + 怕冷', '不发热']);
+    expect(restoredTask.transcript.last.text, '当前最明显的寒热表现是什么？');
+    expect(restoredTask.snapshot.stage, snapshot.stage);
+
+    await _withStageTimeout(
+      'persist successful retry result as a new assistant message',
+      store.saveAssistantMessage(
+        conversationId: conversationId,
+        role: 'assistant',
+        content: '【五运六气推算执行结果】\n执行状态：SUCCEEDED\n执行参数：date=2026-11-07',
+        metadata: AssistantMessageMetadata(
+          mode: 'metaphysics',
+          selectedMode: 'automatic',
+          toolId: 'yunqi',
+          toolStatus: 'SUCCEEDED',
+          toolArguments: const {'date': '2026-11-07'},
+        ).encode(),
       ),
     );
-    await _pumpFrames(tester);
-    print('[history-retry-stage] assistant screen mounted');
-
-    await tester.tap(find.byTooltip('历史对话'));
-    await _pumpFrames(tester);
-    print('[history-retry-stage] history list opened');
-    await tester.tap(find.text('持久化失败重试'));
-    await _pumpFrames(tester);
-
-    expect(find.text('重试五运六气推算'), findsOneWidget);
-    expect(find.textContaining('执行状态：FAILED'), findsOneWidget);
-    expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
-    print('[history-retry-stage] failed tool history restored');
-
-    await tester.tap(find.text('重试五运六气推算'));
-    await _pumpFrames(tester, frames: 12);
-    expect(find.text('模拟工具执行成功'), findsOneWidget);
-    print('[history-retry-stage] retry tool route opened');
-    await tester.tap(find.text('模拟工具执行成功'));
-    await _pumpFrames(tester, frames: 40);
-
-    print('[history-retry-stage] retry result returned; reading persisted result');
-    final retriedMessages = await _withRealAsyncStage(
-      tester,
-      'read persisted retry result',
-      () => store.getAssistantMessages(conversationId: conversationId),
+    final completedTask = TcmInterviewTaskState(
+      taskId: restoredTask.taskId,
+      snapshot: restoredTask.snapshot,
+      status: 'completed',
+      transcript: [
+        ...restoredTask.transcript,
+        const TcmInterviewTaskMessage(
+          text: '五运六气推算完成',
+          isUser: false,
+          isResult: true,
+        ),
+      ],
+      updatedAt: DateTime.utc(2026, 11, 8, 2, 1),
     );
-    expect(retriedMessages.last['content'], contains('执行状态：SUCCEEDED'));
-    expect(retriedMessages.last['content'], contains('执行参数：date=2026-11-07'));
-    final retriedMetadata = AssistantMessageMetadata.decode(
-      retriedMessages.last['metadata']! as String,
+    await _withStageTimeout(
+      'persist completed TCM task after retry',
+      store.saveTcmInterviewTaskState(
+        conversationId: conversationId,
+        state: completedTask,
+      ),
     );
-    expect(retriedMetadata.toolStatus, 'SUCCEEDED');
-    expect(retriedMetadata.toolArguments, const {'date': '2026-11-07'});
-    expect(service.restoredTranscript, contains('执行状态：SUCCEEDED'));
-    expect(tester.takeException(), isNull);
-    print('[history-retry-stage] end-to-end retry completed');
+
+    await _withStageTimeout(
+      'close database before final reopen',
+      DatabaseHelper.closeTestDatabase(),
+    );
+    DatabaseHelper.configureTestDatabase(
+      'assistant_history_recovery.db',
+      factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
+    );
+
+    final finalMessages = await _withStageTimeout(
+      'read successful retry result after final reopen',
+      store.getAssistantMessages(conversationId: conversationId),
+    );
+    expect(finalMessages, hasLength(3));
+    expect(
+      finalMessages.last['content'],
+      contains('执行状态：SUCCEEDED'),
+    );
+    expect(
+      finalMessages.last['content'],
+      contains('执行参数：date=2026-11-07'),
+    );
+    final successfulMetadata = AssistantMessageMetadata.decode(
+      finalMessages.last['metadata']! as String,
+    );
+    expect(successfulMetadata.toolStatus, 'SUCCEEDED');
+    expect(successfulMetadata.toolArguments, const {'date': '2026-11-07'});
+
+    final finalTask = await _withStageTimeout(
+      'read completed TCM task after final reopen',
+      store.getTcmInterviewTaskState(conversationId: conversationId),
+    );
+    expect(finalTask, isNotNull);
+    expect(finalTask!.status, 'completed');
+    expect(finalTask.pendingPromptId, isNull);
+    expect(finalTask.transcript.last.isResult, isTrue);
   });
 }

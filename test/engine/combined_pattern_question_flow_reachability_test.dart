@@ -7,6 +7,8 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() async {
     await FormulaRepository.load();
   });
