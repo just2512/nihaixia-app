@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 
 Future<T> _withStageTimeout<T>(String stage, Future<T> operation) async {
@@ -198,10 +199,32 @@ void main() {
         ).encode(),
       ),
     );
+    final completedDiagnosis = DiagnosisResult(
+      meridian: '少阳',
+      pattern: '少阳证',
+      patternDetail: '往来寒热，胸胁苦满。',
+      formula: '小柴胡汤',
+      recommendedFormulas: const ['小柴胡汤'],
+      explanation: 'SQLite 结构化结果快照',
+      confidence: 0.75,
+      matchedSymptoms: const ['口苦'],
+      followUpQuestions: const [],
+      answers: const {'bitter_mouth': true},
+      prescription: const FormulaPrescription(
+        formulaName: '小柴胡汤',
+        components: [
+          PrescriptionComponent(name: '柴胡', dosage: '24g', role: '君药'),
+        ],
+        dosage: '水煎服',
+        preparation: '先煮柴胡',
+        contraindication: '须由执业中医师核实',
+      ),
+    );
     final completedTask = TcmInterviewTaskState(
       taskId: restoredTask.taskId,
       snapshot: restoredTask.snapshot,
       status: 'completed',
+      completedDiagnosis: completedDiagnosis,
       transcript: [
         ...restoredTask.transcript,
         const TcmInterviewTaskMessage(
@@ -257,5 +280,12 @@ void main() {
     expect(finalTask!.status, 'completed');
     expect(finalTask.pendingPromptId, isNull);
     expect(finalTask.transcript.last.isResult, isTrue);
+    expect(finalTask.completedDiagnosis, isNotNull);
+    expect(finalTask.completedDiagnosis!.pattern, '少阳证');
+    expect(finalTask.completedDiagnosis!.answers, const {'bitter_mouth': true});
+    expect(
+      finalTask.completedDiagnosis!.prescription!.components.single.dosage,
+      '24g',
+    );
   });
 }
