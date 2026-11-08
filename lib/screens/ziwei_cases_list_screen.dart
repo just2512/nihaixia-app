@@ -60,38 +60,42 @@ class ZiweiCasesListScreen extends StatelessWidget {
   }
 
   Widget _entryTile(BuildContext context, ZiweiCaseEntry e) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      child: ListTile(
-        dense: true,
-        leading: Text(
-          e.kind == 'case'
-              ? '案${e.id}'
-              : e.kind == 'palace'
-              ? '章${e.id}'
-              : '总',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
+    return Builder(
+      builder: (tileContext) => Card(
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        child: ListTile(
+          dense: true,
+          leading: Text(
+            e.kind == 'case'
+                ? '案${e.id}'
+                : e.kind == 'palace'
+                    ? '章${e.id}'
+                    : '总',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(tileContext).colorScheme.primary,
+            ),
           ),
-        ),
-        title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-          e.asset.split('/').last,
-          style: TextStyle(
-            fontSize: 10,
-            color: Theme.of(context).colorScheme.outline,
+          title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(
+            e.asset.split('/').last,
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(tileContext).colorScheme.outline,
+            ),
           ),
-        ),
-        trailing: const Icon(Icons.chevron_right, size: 18),
-        onTap: () => Navigator.push(
-          context,
-          FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => ZiweiDocScreen(entry: e)),
+          trailing: const Icon(Icons.chevron_right, size: 18),
+          onTap: () => Navigator.push(
+            tileContext,
+            FoldAwareMaterialPageRoute(
+              sourceContext: tileContext,
+              builder: (_) => ZiweiDocScreen(entry: e),
+            ),
+          ),
         ),
       ),
     );
-  }
-}
+  }}
 
 class _SectionHeader extends StatelessWidget {
   final String title;
