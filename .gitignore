@@ -89,3 +89,10 @@ tool/.bin/
 tool/.gitee.env
 hook/user_defines.json
 apk-output/
+
+# Android release signing material (never commit local secrets)
+/android/key.properties
+/android/*.jks
+/android/*.keystore
+/android/*.p12
+/android/*.pfx

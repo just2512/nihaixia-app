@@ -413,7 +413,7 @@ jobs:
           print("Required arm64 Flutter/JNI libraries are present.")
           PY
           sha256sum build/app/outputs/flutter-apk/app-debug.apk | tee build/app/outputs/flutter-apk/app-debug.apk.sha256
-          printf '%s\n' 'CI Debug APK: ABI verification only; do not install over the user's existing Release APK.' > build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
+          printf '%s\n' "CI Debug APK: ABI verification only; do not install over the installed Release APK." > build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
 
       - name: Run Android local unit tests
         id: android_unit_tests
