@@ -124,18 +124,54 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
     return nearestFeature;
   }
 
+  DisplayFeature? _findHorizontalBlockingFeature(
+    BuildContext context,
+    Size screenSize,
+  ) {
+    DisplayFeature? nearestFeature;
+    var nearestDistance = double.infinity;
+
+    for (final feature in MediaQuery.displayFeaturesOf(context)) {
+      if (feature.type != DisplayFeatureType.hinge &&
+          feature.type != DisplayFeatureType.fold) {
+        continue;
+      }
+      final bounds = feature.bounds;
+      if (bounds.width < screenSize.width - 1 ||
+          bounds.top <= 0 ||
+          bounds.bottom >= screenSize.height) {
+        continue;
+      }
+      // A physical gap blocks content in every posture. A zero-width crease
+      // splits the root only when the device reports a half-open posture.
+      final hasPhysicalGap = bounds.height > 0;
+      if (!hasPhysicalGap &&
+          feature.state != DisplayFeatureState.postureHalfOpened) {
+        continue;
+      }
+      final distance = (bounds.center.dy - screenSize.height / 2).abs();
+      if (distance < nearestDistance) {
+        nearestFeature = feature;
+        nearestDistance = distance;
+      }
+    }
+    return nearestFeature;
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenSize = MediaQuery.sizeOf(context);
         final feature = _findVerticalFoldingFeature(context, screenSize);
+        final horizontalFeature =
+            _findHorizontalBlockingFeature(context, screenSize);
 
-        if (feature != null &&
-            feature.state == DisplayFeatureState.postureHalfOpened) {
-          // In tabletop/book posture the two physical panels are angled.
-          // Keep the whole tab on one safe panel rather than drawing text or
-          // touch targets across the hinge.
+        if ((feature != null &&
+                feature.state == DisplayFeatureState.postureHalfOpened) ||
+            horizontalFeature != null) {
+          // In tabletop/book posture, including a landscape horizontal hinge,
+          // keep navigation and the active tab together on one safe panel.
           return AdaptiveSinglePane(
             child: Scaffold(
               body: _buildScreens(),
