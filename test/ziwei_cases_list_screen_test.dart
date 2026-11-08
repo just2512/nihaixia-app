@@ -3,6 +3,7 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/ziwei_cases_list_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/utils/fold_aware_routes.dart';
 import 'package:nihaisha_app/widgets/adaptive_content_width.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -62,7 +63,9 @@ void main() {
     String frameworkErrorText() => frameworkErrors
         .map((details) => '${details.exception}\\n${details.stack}')
         .join('\\n');
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Row(children: [
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(useMaterial3: true, extensions: [AppColors.light]),
+      home: Scaffold(body: Row(children: [
       const SizedBox(width: 412),
       Expanded(child: Builder(builder: (source) => Center(child: ElevatedButton(
         onPressed: () => Navigator.of(source).push(FoldAwareMaterialPageRoute<void>(
@@ -70,7 +73,8 @@ void main() {
         )),
         child: const Text('打开紫微案例库'),
       )))),
-    ]))));
+    ]))),
+    ));
     await tester.tap(find.text('打开紫微案例库'));
     await tester.pumpAndSettle();
     final listPageError = tester.takeException();
