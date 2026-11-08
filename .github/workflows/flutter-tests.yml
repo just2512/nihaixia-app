@@ -41,7 +41,55 @@ jobs:
           cache: true
 
       - name: Install dependencies
+        id: dependencies
         run: flutter pub get --enforce-lockfile
+
+      - name: Prewarm verified SQLite Android arm64 asset
+        id: sqlite_android_asset
+        if: steps.dependencies.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite Android arm64 asset hash for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
+          expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite Android arm64 asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite Android arm64 asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite Android arm64 asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-0c2d3bfc/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
 
       # The Android target uses a separate immutable arm64 native asset.
       # Verify it against sqlite3 3.5.2's published digest before the Flutter hook.
@@ -344,7 +392,7 @@ jobs:
           retention-days: 3
 
   build-apk:
-    name: Android debug APK
+    name: Android arm64 release APK
     needs: test
     # Preserve the build signal even when the regression job fails.
     if: always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request') && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
