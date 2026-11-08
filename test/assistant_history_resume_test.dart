@@ -607,15 +607,6 @@ void main() {
     expect(copiedText, contains('柴胡'));
     expect(tester.takeException(), isNull);
   });
-}
-
-Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
-  for (var frame = 0; frame < frames; frame++) {
-    await tester.pump(const Duration(milliseconds: 80));
-  }
-
-
-
 
   testWidgets('收藏和分享结构化辨证结果执行持久化与平台调用', (tester) async {
     sqfliteFfiInit();
@@ -732,5 +723,16 @@ Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
     expect(sharedText, contains('小柴胡汤'));
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
+  for (var frame = 0; frame < frames; frame++) {
+    await tester.pump(const Duration(milliseconds: 80));
+  }
+
+
+
+
+
 
 }
