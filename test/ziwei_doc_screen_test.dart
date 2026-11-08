@@ -28,12 +28,14 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
       theme: ThemeData(useMaterial3: true, extensions: [AppColors.light]),
-      home: ZiweiDocScreen(entry: kZiweiOverview),
+      home: ZiweiDocScreen(
+        entry: kZiweiOverview,
+        loadDocument: (_) async => '## 展开屏原文宽度测试\\n\\n用于验证阅读列宽度。',
+      ),
     ));
     // Markdown keeps its own scrollable active; pump deterministically instead
     // of waiting for every scroll/scrollbar animation to become idle.
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();
     final markdown = tester.getRect(find.byType(Markdown));
     expect(markdown.width, 760);
