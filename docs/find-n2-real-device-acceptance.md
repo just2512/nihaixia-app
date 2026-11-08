@@ -372,7 +372,7 @@ apkanalyzer manifest version-name .\installed-old.apk
 
 ### 9.3 新 APK 离线核验
 
-从本轮 CI artifact `android-arm64-release-apk` 解压出 `app-release.apk` 和对应 SHA 文件，执行：
+从本轮 CI artifact `android-arm64-release-apk` 解压出 `app-release.apk`、SHA 文件、`app-release.apk.certs.txt` 和 `app-release.apk.metadata.txt`，执行：
 
 ```powershell
 Get-FileHash .\app-release.apk -Algorithm SHA256
@@ -389,7 +389,7 @@ apksigner verify --verbose --print-certs .\app-release.apk
 - applicationId 精确为 `com.nihaisha.nihaisha_app`。
 - versionName/versionCode 与本轮 CI 记录一致；versionCode 必须高于旧包。
 - APK 原生库 ABI 集合只包含 `arm64-v8a`。
-- APK 签名验证成功，证书 SHA-256 与设备当前安装包一致。
+- APK 签名验证成功，证书 SHA-256 与设备当前安装包一致；artifact 中的 `.certs.txt` 可用于核对签名指纹。
 - APK 是 Release 构建，不能用 Debug 签名包替代。
 
 ### 9.4 原位覆盖安装（保留原数据）
