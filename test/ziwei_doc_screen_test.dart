@@ -30,7 +30,11 @@ void main() {
       theme: ThemeData(useMaterial3: true, extensions: [AppColors.light]),
       home: ZiweiDocScreen(entry: kZiweiOverview),
     ));
-    await tester.pumpAndSettle();
+    // Markdown keeps its own scrollable active; pump deterministically instead
+    // of waiting for every scroll/scrollbar animation to become idle.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
     final markdown = tester.getRect(find.byType(Markdown));
     expect(markdown.width, 760);
     expect(markdown.center.dx, closeTo(500, 1));
