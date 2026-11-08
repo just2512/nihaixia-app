@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/ziwei_case_data.dart';
 import 'package:nihaisha_app/screens/ziwei_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
-import 'package:nihaisha_app/widgets/adaptive_content_width.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 void main() {
