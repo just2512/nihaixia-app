@@ -295,6 +295,8 @@ void main() {
         expect(dialog.bottom, lessThanOrEqualTo(760));
       }
       expect(tester.takeException(), isNull);
+      Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+      await tester.pumpAndSettle();
     }
   });
 

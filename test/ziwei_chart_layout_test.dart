@@ -102,6 +102,8 @@ void main() {
         reason: '窗口宽度 ${scenario.$1}dp 的双栏状态不符合 640dp 断点',
       );
       expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
     }
   });
 

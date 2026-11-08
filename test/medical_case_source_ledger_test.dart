@@ -87,7 +87,7 @@ void main() {
     );
     final restored = MedicalCaseSourceLedger.fromJson(original.toJson());
     expect(restored.toJson(), original.toJson());
-    expect(restored.status, 'PENDING');
+    expect(restored.sourceStatus, 'PENDING');
   });
   test('医案解析按内部主键关联账本，未匹配记录仍保持 MISSING', () {
     const md = '''
@@ -189,7 +189,7 @@ void main() {
     expect(ledger.hasCompleteLocator, isFalse);
     expect(ledger.isVerified, isFalse);
     expect(ledger.status, 'MISSING');
-    expect(ledger.missingFields, contains('页码'));
+    expect(ledger.missingFields, contains('纸本页码'));
   });
 
 }

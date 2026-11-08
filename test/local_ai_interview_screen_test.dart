@@ -972,7 +972,7 @@ void main() {
       isTrue,
     );
 
-    await tapOption('不确定');
+    await tapOption('不清楚');
     TcmInterviewTaskState? completed;
     for (var attempt = 0; attempt < 40; attempt++) {
       for (final id in _store._conversations.keys.toList(growable: false)) {
