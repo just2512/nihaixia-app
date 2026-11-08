@@ -73,21 +73,41 @@ void main() {
     expect(ledger.isVerified, isTrue);
   });
 
-  test('来源账本 JSON 往返保留定位字段和核验状态', () {
+  test('来源账本 JSON 往返保留完整来源的待核状态', () {
     const original = MedicalCaseSourceLedger(
       sourceTitle: '金匮要略',
-      edition: 'MISSING',
-      volume: 'MISSING',
-      page: 'MISSING',
+      edition: '宋本影印本',
+      volume: '卷三',
+      page: '第42页',
       passage: '痰饮咳嗽病脉证并治',
-      originalExcerpt: 'MISSING',
-      applicability: '仅供古籍目录定位，原文待核验。',
+      originalExcerpt: '原文待进一步校勘的完整摘录占位文本。',
+      applicability: '对应痰饮咳嗽病脉证并治篇的具体条文。',
+      variant: '异文待核',
       verificationStatus: 'PENDING',
-      bibliographicLocatorStatus: 'MISSING',
+      bibliographicLocatorStatus: 'PENDING',
     );
     final restored = MedicalCaseSourceLedger.fromJson(original.toJson());
     expect(restored.toJson(), original.toJson());
     expect(restored.sourceStatus, 'PENDING');
+    expect(restored.status, 'PENDING');
+  });
+
+  test('来源字段或适用条件缺失时，PENDING 不得掩盖 MISSING', () {
+    final raw = <String, dynamic>{
+      'sourceTitle': '金匮要略',
+      'edition': 'MISSING',
+      'volume': 'MISSING',
+      'page': 'MISSING',
+      'passage': '痰饮咳嗽病脉证并治',
+      'originalExcerpt': 'MISSING',
+      'applicability': 'MISSING',
+      'verificationStatus': 'PENDING',
+      'bibliographicLocatorStatus': 'PENDING',
+    };
+    final restored = MedicalCaseSourceLedger.fromJson(raw);
+    expect(restored.sourceStatus, 'MISSING');
+    expect(restored.status, 'MISSING');
+    expect(restored.toDisplayText(), contains('适用条件：MISSING'));
   });
   test('医案解析按内部主键关联账本，未匹配记录仍保持 MISSING', () {
     const md = '''
