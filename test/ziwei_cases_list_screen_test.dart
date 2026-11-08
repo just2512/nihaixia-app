@@ -63,14 +63,18 @@ void main() {
     ]))));
     await tester.tap(find.text('打开紫微案例库'));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: '进入案例列表页时发生异常');
     final list = tester.getRect(find.byType(ListView).first);
     expect(list.left, greaterThanOrEqualTo(412));
     expect(list.right, lessThanOrEqualTo(800));
     await tester.tap(find.text('紫微十二宫详解·前言'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
     final markdown = tester.getRect(find.byType(Markdown));
+    final detailError = tester.takeException();
+    expect(detailError, isNull, reason: '从案例列表进入原文详情时发生异常：$detailError');
     expect(markdown.left, greaterThanOrEqualTo(412));
     expect(markdown.right, lessThanOrEqualTo(800));
-    expect(tester.takeException(), isNull);
   });
 }
