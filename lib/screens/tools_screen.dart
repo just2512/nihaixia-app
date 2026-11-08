@@ -23,6 +23,7 @@ import 'sanshan_lingqian_screen.dart';
 import 'xiaoliuren_screen.dart';
 import 'meihua_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/zone_section.dart';
 
 class ToolsScreen extends StatelessWidget {
@@ -35,7 +36,12 @@ class ToolsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('实用工具')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.xl,
+        ),
         children: [
           ZoneSection(
             zone: Zone.tcm,
@@ -52,7 +58,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DosageConverterScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.trending_up,
                 title: '诊断历史趋势',
@@ -63,7 +69,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DiagnosisHistoryScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.access_time,
                 title: '中医时辰开穴综合计算器',
@@ -74,7 +80,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ZiWuLiuZhuScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.grain,
                 title: '五运六气推算',
@@ -85,7 +91,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const YunQiScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.medical_information,
                 title: '闭门课 · 重症临床',
@@ -98,7 +104,7 @@ class ToolsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.history_edu,
                 title: '倪师医案库（1256 例）',
@@ -111,7 +117,7 @@ class ToolsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.auto_stories_outlined,
                 title: '古籍原文',
@@ -122,7 +128,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const GujiLibraryScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.spa_outlined,
                 title: '节气养生',
@@ -150,7 +156,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ZiweiChartScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.view_column_outlined,
                 title: '八字排盘',
@@ -161,7 +167,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const BaZiPaipanScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.change_history,
                 title: '易经六十四卦',
@@ -172,7 +178,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const YiJingScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.calendar_month_outlined,
                 title: '每日黄历',
@@ -183,7 +189,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DailyAlmanacScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.auto_awesome,
                 title: '玉匣灵兆',
@@ -194,7 +200,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const YuxiajiOmenScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.nightlight_round,
                 title: '周公解梦',
@@ -205,7 +211,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const DreamScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.child_care,
                 title: '小儿关煞',
@@ -216,7 +222,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const GuanshaScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.auto_awesome_mosaic,
                 title: '三山国王灵签',
@@ -227,7 +233,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const SanshanLingqianScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.timelapse,
                 title: '小六壬',
@@ -238,7 +244,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const XiaoliurenScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.filter_vintage,
                 title: '梅花易数',
@@ -249,7 +255,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const MeihuaScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.scale_outlined,
                 title: '袁天罡称骨算命',
@@ -260,7 +266,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ChengguBoneScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.account_balance_outlined,
                 title: '受生债查询',
@@ -271,7 +277,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const ShoushengDebtScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.accessibility_new,
                 title: '轩辕黄帝四季歌',
@@ -282,7 +288,7 @@ class ToolsScreen extends StatelessWidget {
                   FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => const HuangdiSijiScreen()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               _ToolCard(
                 icon: Icons.bookmark_add_outlined,
                 title: '我的命盘库',
@@ -319,46 +325,63 @@ class _ToolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // 图标底衬色：同色系 14% 浅底，让卡片在分区背景上层次分明。
+    final iconBackground = Color.alphaBlend(
+      color.withValues(alpha: 0.14),
+      scheme.surface,
+    );
     return Material(
       color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              SizedBox(
-                width: 42,
-                height: 42,
-                child: Center(child: Icon(icon, size: 23, color: color)),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(icon, size: 22, color: color),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 15,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: AppType.title,
                         fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppType.caption,
                         height: 1.35,
                         color: scheme.onSurfaceVariant,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Icon(Icons.chevron_right, size: 20, color: scheme.outline),
             ],
           ),

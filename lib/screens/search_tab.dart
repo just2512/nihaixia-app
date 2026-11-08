@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import '../data/acupuncture_repository.dart';
@@ -350,7 +351,7 @@ class _SearchTabState extends State<SearchTab> {
                   '${_results.penetrationEntries.isNotEmpty ? " · 透穴 ${_results.penetrationEntries.length}" : ""}'
                   '${_results.acupointDetails.isNotEmpty ? " · 穴位 ${_results.acupointDetails.length}" : ""}'
                   '${_classicResults.total > 0 ? " · 经典 ${_classicResults.total}" : ""}',
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              style: TextStyle(fontSize: AppType.caption, color: cs.onSurfaceVariant),
             ),
           ),
 
@@ -389,13 +390,13 @@ class _SearchTabState extends State<SearchTab> {
           Row(
             children: [
               ChoiceChip(
-                label: const Text('本草筛选', style: TextStyle(fontSize: 12)),
+                label: const Text('本草筛选', style: TextStyle(fontSize: AppType.caption)),
                 selected: _filterSection == 'herb',
                 onSelected: (v) => setState(() => _filterSection = 'herb'),
               ),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('方剂筛选', style: TextStyle(fontSize: 12)),
+                label: const Text('方剂筛选', style: TextStyle(fontSize: AppType.caption)),
                 selected: _filterSection == 'formula',
                 onSelected: (v) => setState(() => _filterSection = 'formula'),
               ),
@@ -470,7 +471,7 @@ class _SearchTabState extends State<SearchTab> {
       height: 36,
       child: Row(
         children: [
-          Text('$label:', style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant)),
+          Text('$label:', style: TextStyle(fontSize: AppType.caption, color: context.colors.onSurfaceVariant)),
           const SizedBox(width: 4),
           Expanded(
             child: ListView.builder(
@@ -508,7 +509,7 @@ class _SearchTabState extends State<SearchTab> {
           return Padding(
             padding: const EdgeInsets.only(right: 6),
             child: ActionChip(
-              label: Text(s, style: const TextStyle(fontSize: 12)),
+              label: Text(s, style: const TextStyle(fontSize: AppType.caption)),
               onPressed: () {
                 _searchController.text = s;
                 _searchController.selection = TextSelection.fromPosition(
@@ -623,7 +624,7 @@ class _SearchTabState extends State<SearchTab> {
           Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 6),
           Text(title, style: TextStyle(
-            fontSize: 14,
+            fontSize: AppType.body,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.primary,
           )),
@@ -654,7 +655,7 @@ class _SearchTabState extends State<SearchTab> {
               '${f.meridian} · ${f.indication}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: AppType.caption),
             ),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => Navigator.push(context,
@@ -703,7 +704,7 @@ class _SearchTabState extends State<SearchTab> {
               '${h.flavor.isNotEmpty ? "味${h.flavor} " : ""}'
               '${h.meridians.isNotEmpty ? "归${h.meridians.join(" ")} " : ""}'
               '${h.category}',
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: AppType.caption),
             ),
             trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: () => Navigator.push(context,
@@ -758,7 +759,7 @@ class _SearchTabState extends State<SearchTab> {
               ],
             ),
             subtitle: Text(e.acupointsText,
-              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: AppType.caption)),
             trailing: e.hasCase
                 ? Icon(Icons.article, color: Theme.of(context).colorScheme.tertiary)
                 : null,
@@ -793,7 +794,7 @@ class _SearchTabState extends State<SearchTab> {
                         backgroundColor: a.method != null
                             ? context.colors.warningContainer
                             : context.colors.infoContainer,
-                        labelStyle: const TextStyle(fontSize: 12),
+                        labelStyle: const TextStyle(fontSize: AppType.caption),
                         visualDensity: VisualDensity.compact,
                       ),
                     );
@@ -804,7 +805,7 @@ class _SearchTabState extends State<SearchTab> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Text('备注: ${e.notes}',
-                    style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
+                    style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: AppType.caption)),
                 ),
               if (e.hasCase)
                 Padding(
@@ -816,7 +817,7 @@ class _SearchTabState extends State<SearchTab> {
                       color: context.colors.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(e.medicalCase, style: const TextStyle(fontSize: 12)),
+                    child: Text(e.medicalCase, style: const TextStyle(fontSize: AppType.caption)),
                   ),
                 ),
             ],
@@ -924,7 +925,7 @@ class _SearchTabState extends State<SearchTab> {
             subtitle: Text(
               '${a.meridian.isNotEmpty ? "${a.meridian} · " : ""}'
               '${a.description.isNotEmpty ? a.description : a.clinicalNotes}',
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: AppType.caption),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -964,7 +965,7 @@ class _SearchTabState extends State<SearchTab> {
             title: HighlightedText(
               text: h.title,
               query: _currentQuery,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: AppType.body),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -972,7 +973,7 @@ class _SearchTabState extends State<SearchTab> {
                 const SizedBox(height: 2),
                 Text(
                   h.sourceLabel,
-                  style: TextStyle(fontSize: 11, color: cs.primary),
+                  style: TextStyle(fontSize: AppType.micro, color: cs.primary),
                 ),
                 if (h.snippet.isNotEmpty)
                   Padding(
@@ -980,7 +981,7 @@ class _SearchTabState extends State<SearchTab> {
                     child: HighlightedText(
                       text: h.snippet,
                       query: _currentQuery,
-                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                      style: TextStyle(fontSize: AppType.caption, color: cs.onSurfaceVariant),
                     ),
                   ),
               ],

@@ -2,6 +2,7 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 
 /// 工具页分区枚举：通用 / 中医 / 玄学。
 enum Zone { general, tcm, metaphysics }
@@ -53,8 +54,9 @@ class ZoneSection extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+                  fontFamily: AppFonts.display,
+                  fontSize: AppType.subhead,
+                  fontWeight: FontWeight.w700,
                   color: color,
                 ),
               ),

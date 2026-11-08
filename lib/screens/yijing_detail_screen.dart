@@ -37,6 +37,7 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                   YiJingEngine.symbol(hex.seq),
                   style: const TextStyle(fontSize: 48),
                   maxLines: 1,
+                  overflow: TextOverflow.fade,
                 ),
                 const SizedBox(height: 8),
                 Text(

@@ -264,9 +264,10 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
         );
       }
     } catch (e) {
+      debugPrint('[BaZiPaipan] 存入命盘库失败：$e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('存入失败：$e')),
+          const SnackBar(content: Text('存入失败，请重试')),
         );
       }
     }

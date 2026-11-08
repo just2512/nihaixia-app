@@ -40,6 +40,12 @@ class AppType {
   static const double micro = 11;
 }
 
+/// 字体族约定：标题统一宋体（Android 系统衬线），正文仍用系统默认。
+class AppFonts {
+  /// 标题宋体。Android 上映射到系统 Noto Serif；如需全平台统一，可内嵌思源宋体。
+  static const String display = 'serif';
+}
+
 /// 全局字号缩放档位（设置页 / 快捷外观弹窗 / 持久化校验的唯一来源）。
 ///
 /// 上限 [max] = 200%：对应 issue #4「设置中字体大小调节调大至百分之二百以上」。

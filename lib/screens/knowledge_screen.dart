@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
@@ -133,7 +134,7 @@ class _MeridianTab extends StatelessWidget {
                 title: Text(
                   '$name病',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: AppType.title,
                     fontWeight: FontWeight.bold,
                     color: color,
                   ),
@@ -144,12 +145,12 @@ class _MeridianTab extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${details['nature']} · ${details['organ']}',
-                      style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant),
+                      style: TextStyle(fontSize: AppType.caption, color: context.colors.onSurfaceVariant),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '核心脉证：${details['keyPulse']}',
-                      style: const TextStyle(fontSize: 12),
+                      style: const TextStyle(fontSize: AppType.caption),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -179,7 +180,7 @@ class _MeridianTab extends StatelessWidget {
                           runSpacing: 4,
                           children: (details['coreSymptoms'] as List<String>)
                               .map((s) => Chip(
-                                    label: Text(s, style: const TextStyle(fontSize: 12)),
+                                    label: Text(s, style: const TextStyle(fontSize: AppType.caption)),
                                     backgroundColor: context.colors.meridianContainer(name),
                                     side: BorderSide(color: context.colors.outlineVariant),
                                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -191,14 +192,14 @@ class _MeridianTab extends StatelessWidget {
                         // 常用方剂
                         Text('常用方剂 (${formulas.length})',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14, color: color)),
+                                fontWeight: FontWeight.bold, fontSize: AppType.body, color: color)),
                         const SizedBox(height: 6),
                         Wrap(
                           spacing: 8,
                           runSpacing: 4,
                           children: formulas
                               .map((f) => ActionChip(
-                                    label: Text(f, style: const TextStyle(fontSize: 12)),
+                                    label: Text(f, style: const TextStyle(fontSize: AppType.caption)),
                                     onPressed: () {
                                       final formula = FormulaRepository.getByName(f);
                                       if (formula != null) {
@@ -227,7 +228,7 @@ class _MeridianTab extends StatelessWidget {
                               );
                             },
                             icon: const Icon(Icons.arrow_forward, size: 16),
-                            label: const Text('查看详情', style: TextStyle(fontSize: 12)),
+                            label: const Text('查看详情', style: TextStyle(fontSize: AppType.caption)),
                           ),
                         ),
                       ],
@@ -460,7 +461,7 @@ class _FormulaTabState extends State<_FormulaTab> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: FilterChip(
-                  label: Text(m, style: const TextStyle(fontSize: 12)),
+                  label: Text(m, style: const TextStyle(fontSize: AppType.caption)),
                   selected: selected,
                   onSelected: (_) => setState(() {
                     _selectedMeridian = m;
@@ -485,7 +486,7 @@ class _FormulaTabState extends State<_FormulaTab> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: ChoiceChip(
-                  label: Text(c, style: const TextStyle(fontSize: 12)),
+                  label: Text(c, style: const TextStyle(fontSize: AppType.caption)),
                   selected: selected,
                   onSelected: (_) => setState(() {
                     _selectedCategory = c;
@@ -504,7 +505,7 @@ class _FormulaTabState extends State<_FormulaTab> {
             child: Text(
               '共 ${formulas.length} 首方剂',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: AppType.caption,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
@@ -532,7 +533,7 @@ class _FormulaTabState extends State<_FormulaTab> {
                         ),
                         subtitle: Text(
                           '${formula.meridian} · ${formula.category}\n${formula.indication.length > 40 ? '${formula.indication.substring(0, 40)}...' : formula.indication}',
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: AppType.caption),
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right),
@@ -764,7 +765,7 @@ class _HerbTabState extends State<_HerbTab> {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: FilterChip(
-                  label: Text(cat, style: const TextStyle(fontSize: 12)),
+                  label: Text(cat, style: const TextStyle(fontSize: AppType.caption)),
                   selected: selected,
                   onSelected: (_) => setState(() {
                     _selectedCategory = cat;
@@ -790,7 +791,7 @@ class _HerbTabState extends State<_HerbTab> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
-                    label: Text(n, style: const TextStyle(fontSize: 12)),
+                    label: Text(n, style: const TextStyle(fontSize: AppType.caption)),
                     selected: selected,
                     onSelected: (_) => setState(() {
                       _selectedNature = n;
@@ -806,7 +807,7 @@ class _HerbTabState extends State<_HerbTab> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
-                    label: Text(m, style: const TextStyle(fontSize: 12)),
+                    label: Text(m, style: const TextStyle(fontSize: AppType.caption)),
                     selected: selected,
                     onSelected: (_) => setState(() {
                       _selectedMeridian = m;
@@ -828,7 +829,7 @@ class _HerbTabState extends State<_HerbTab> {
             child: Text(
               '共 ${herbs.length} 味药',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: AppType.caption,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
@@ -880,7 +881,7 @@ class _HerbTabState extends State<_HerbTab> {
                           '${herb.flavor.isNotEmpty ? "味${herb.flavor} " : ""}'
                           '${herb.meridians.isNotEmpty ? "归${herb.meridians.join(" ")} " : ""}'
                           '${herb.category}\n$actionShort',
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: AppType.caption),
                         ),
                         isThreeLine: true,
                         trailing: const Icon(Icons.chevron_right, size: 20),

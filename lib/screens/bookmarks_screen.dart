@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 
 import '../utils/fold_aware_routes.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -321,7 +322,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                   bookmark.createdAt,
                 ),
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppType.caption,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -336,7 +337,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
           Text(
             bookmark.source.isEmpty ? '未记录来源' : '来源：${bookmark.source}',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: AppType.caption,
               color: scheme.onSurfaceVariant,
             ),
           ),
@@ -514,13 +515,13 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           title: Text(
                             b.title,
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14),
+                                fontWeight: FontWeight.bold, fontSize: AppType.body),
                           ),
                           subtitle: Text(
                             b.content.length > 80
                                 ? '${b.content.substring(0, 80)}...'
                                 : b.content,
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: AppType.caption),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),

@@ -230,9 +230,10 @@ Future<void> clearAppCache(BuildContext context) async {
       );
     }
   } catch (e) {
+    debugPrint('[AppDialogs] 清理缓存失败：$e');
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('清理缓存失败：$e')),
+        const SnackBar(content: Text('清理缓存失败，请重试')),
       );
     }
   }
