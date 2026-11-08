@@ -170,6 +170,69 @@ void main() {
     expect(find.text('内容页 1'), findsOneWidget);
   });
 
+  testWidgets(
+    'horizontal half-open hinge keeps root navigation and active tab within one panel',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 760);
+      addTearDown(tester.view.resetDisplayFeatures);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final scenarios = [
+        (
+          DisplayFeatureType.hinge,
+          const Rect.fromLTWH(0, 368, 1000, 24),
+        ),
+        (
+          DisplayFeatureType.fold,
+          const Rect.fromLTWH(0, 380, 1000, 0),
+        ),
+      ];
+
+      for (final scenario in scenarios) {
+        tester.view.displayFeatures = [
+          DisplayFeature(
+            bounds: scenario.$2,
+            type: scenario.$1,
+            state: DisplayFeatureState.postureHalfOpened,
+          ),
+        ];
+        await tester.pumpWidget(
+          MaterialApp(
+            key: ValueKey(
+              'horizontal-root-${scenario.$1.name}-${scenario.$2.height}',
+            ),
+            home: AdaptiveHomeNavigation(
+              currentIndex: 1,
+              onDestinationSelected: (_) {},
+              destinations: _destinations,
+              screens: _screens(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NavigationBar), findsOneWidget);
+        expect(find.byType(NavigationRail), findsNothing);
+        final content = tester.getRect(find.byType(IndexedStack));
+        final navigation = tester.getRect(find.byType(NavigationBar));
+        final topPanel = content.bottom <= scenario.$2.top &&
+            navigation.bottom <= scenario.$2.top;
+        final bottomPanel = content.top >= scenario.$2.bottom &&
+            navigation.top >= scenario.$2.bottom;
+        expect(
+          topPanel || bottomPanel,
+          isTrue,
+          reason:
+              'root content and navigation must stay in one panel for ${scenario.$1}',
+        );
+        expect(find.text('内容页 1'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
   testWidgets('flat unfolded inner display uses the full width instead of splitting at the crease', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
