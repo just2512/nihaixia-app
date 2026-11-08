@@ -88,6 +88,7 @@ void main() {
       tester.view.physicalSize = Size(scenario.$1, 1000);
       await tester.pumpWidget(
         MaterialApp(
+          key: ValueKey('ziwei-summary-${scenario.$1}'),
           theme: _testTheme,
           home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
         ),
@@ -102,8 +103,6 @@ void main() {
         reason: '窗口宽度 ${scenario.$1}dp 的双栏状态不符合 640dp 断点',
       );
       expect(tester.takeException(), isNull);
-      Navigator.of(tester.element(find.byType(ZiweiChartScreen))).pop();
-      await tester.pumpAndSettle();
     }
   });
 
@@ -190,6 +189,7 @@ void main() {
     ]) {
       await tester.pumpWidget(
         MaterialApp(
+          key: ValueKey('ziwei-hinge-${scenario.$1}'),
           theme: _testTheme,
           home: Scaffold(
             body: Align(
