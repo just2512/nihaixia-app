@@ -42,6 +42,7 @@ void main() {
       'page': 'https://example.org/case',
       'passage': '病例原文段落',
       'originalExcerpt': '原文摘录',
+      'applicability': '对应网页病例原文的具体适用范围。',
       'verificationStatus': 'VERIFIED',
     });
     expect(ledger.isSourceVerified, isTrue);
@@ -131,7 +132,7 @@ void main() {
       page: '第 42 页',
       passage: '辨太阳病脉证并治上',
       originalExcerpt: '太阳之为病，脉浮，头项强痛而恶寒。',
-      applicability: '对应辨太阳病脉证并治上篇的该条原文。',
+      applicability: '用于病例来源定位核验，不作为个体诊疗建议。',
       verificationStatus: 'VERIFIED',
       bibliographicLocatorStatus: 'VERIFIED',
     );

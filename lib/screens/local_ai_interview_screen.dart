@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -18,6 +20,9 @@ import '../data/database_helper.dart';
 import '../data/assistant_conversation_store.dart';
 import '../data/settings_repository.dart';
 import '../models/tcm_interview_task_state.dart';
+import '../models/diagnosis.dart';
+import '../models/bookmark.dart';
+import '../models/diagnosis_result_codec.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
 import 'assistant_history_screen.dart';
@@ -208,6 +213,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   TcmInterviewConversationController? _tcmInterviewController;
   late Future<int?> _conversationIdFuture;
   Future<void> _taskStateWrite = Future<void>.value();
+  final Set<String> _persistedDiagnosisTaskIds = <String>{};
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
   int _historyRestoreGeneration = 0;
@@ -978,6 +984,128 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+
+  _InterviewMessage _diagnosisActionMessage(
+    String text,
+    DiagnosisResult result,
+  ) {
+    return _InterviewMessage(
+      text: text,
+      isUser: false,
+      diagnosisResult: result,
+      onBookmark: () => _bookmarkDiagnosisResult(result),
+      onShare: () => _shareDiagnosisResult(result),
+      onCopyPrescription: result.prescription == null
+          ? null
+          : () => _copyDiagnosisPrescription(result.prescription!),
+    );
+  }
+
+  Future<void> _bookmarkDiagnosisResult(DiagnosisResult result) async {
+    final formula = FormulaRepository.getByName(result.formula);
+    final content = [
+      '六经：${result.displayMeridian}病',
+      if (result.isCombined)
+        '合病：${result.meridian}与${result.combinedMeridian}同病',
+      '证型：${result.pattern}',
+      if (result.formula.isNotEmpty) '方剂：${result.formula}',
+      if (formula != null && formula.components.isNotEmpty)
+        '组成：${formula.componentsText}',
+      result.patternDetail,
+      result.explanation,
+      if (result.pulseTongueContradiction != null)
+        '脉舌交叉核验：${result.pulseTongueContradiction}',
+      if (result.recommendConsult || result.formula.isEmpty)
+        '状态：证据不足，不自动推荐方剂；请由执业中医师面诊核实。',
+    ].where((line) => line.trim().isNotEmpty).join('\n');
+    try {
+      await DatabaseHelper.instance.insertBookmark(Bookmark(
+        title: '${result.displayMeridian}病 - ${result.pattern}',
+        content: content,
+        category: '辨证结果',
+        source: 'chat_diagnosis',
+      ));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已添加到收藏')),
+        );
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = '收藏辨证结果失败：$error');
+    }
+  }
+
+  void _shareDiagnosisResult(DiagnosisResult result) {
+    final formula = FormulaRepository.getByName(result.formula);
+    final lines = <String>[
+      '【汉唐中医辨证结果】',
+      '六经：${result.displayMeridian}病',
+      if (result.isCombined)
+        '合病：${result.meridian}与${result.combinedMeridian}同病',
+      '证型：${result.pattern}',
+      if (result.formula.isNotEmpty) '方剂：${result.formula}',
+      if (formula != null && formula.components.isNotEmpty)
+        '组成：${formula.componentsText}',
+      if (result.tongueCoating != null ||
+          result.tongueShape != null ||
+          result.pulseType != null)
+        '舌脉：${[
+          if (result.tongueCoating != null) '苔${result.tongueCoating}',
+          if (result.tongueShape != null) '形${result.tongueShape}',
+          if (result.pulseType != null) '脉${result.pulseType}',
+          if (result.pulseTypeSecondary != null) '兼脉${result.pulseTypeSecondary}',
+        ].join(' ')}',
+      result.patternDetail,
+      result.explanation,
+      if (result.careAdvice != null) ...[
+        '调护建议：',
+        for (final entry in result.careAdvice!.entries)
+          '【${entry.key}】${entry.value.join('、')}',
+      ],
+      if (result.prescription != null) result.prescription!.toCopyText(),
+      if (result.recommendConsult || result.formula.isEmpty)
+        '证据不足，不自动推荐方剂；请由执业中医师结合四诊面诊核实。',
+      '—— 来自「汉唐中医」App',
+    ];
+    Share.share(lines.where((line) => line.trim().isNotEmpty).join('\n\n'));
+  }
+
+  Future<void> _copyDiagnosisPrescription(FormulaPrescription prescription) async {
+    await Clipboard.setData(ClipboardData(text: prescription.toCopyText()));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('处方已复制到剪贴板')),
+      );
+    }
+  }
+
+  Future<void> _persistDiagnosisHistoryOnce(
+    TcmInterviewConversationController controller,
+  ) async {
+    final result = controller.completedDiagnosis;
+    if (result == null ||
+        widget.conversationStore != null ||
+        !_persistedDiagnosisTaskIds.add(controller.taskId)) {
+      return;
+    }
+    try {
+      await DatabaseHelper.instance.saveDiagnosisHistory(
+        result.displayMeridian,
+        result.pattern,
+        result.formula,
+        result.confidence,
+        jsonEncode(DiagnosisResultCodec.toJson(result)),
+      );
+    } catch (error) {
+      debugPrint('[TcmInterviewTask] 结构化诊断历史索引写入失败：$error');
+      if (mounted) {
+        setState(() {
+          _error = '结构化诊断结果已保存在助手会话中，但旧版诊断历史索引写入失败：$error';
+        });
+      }
+    }
+  }
+
   Future<void> _appendTcmInterviewMessages(int startIndex) async {
     final controller = _tcmInterviewController;
     if (controller == null) return;
@@ -993,13 +1121,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final isPendingPrompt = !entry.isUser &&
             controller.canAnswer &&
             entry.text == controller.pendingPromptText;
-        _messages.add(_InterviewMessage(
-          text: entry.text,
-          isUser: entry.isUser,
-          options: isPendingPrompt ? controller.pendingOptions : const [],
-          onOptionSelected:
-              isPendingPrompt ? _handleTcmInterviewOption : null,
-        ));
+        if (entry.isResult && controller.completedDiagnosis != null) {
+          _messages.add(
+            _diagnosisActionMessage(entry.text, controller.completedDiagnosis!),
+          );
+        } else {
+          _messages.add(_InterviewMessage(
+            text: entry.text,
+            isUser: entry.isUser,
+            options: isPendingPrompt ? controller.pendingOptions : const [],
+            onOptionSelected:
+                isPendingPrompt ? _handleTcmInterviewOption : null,
+          ));
+        }
       }
       _error = null;
     });
@@ -1025,6 +1159,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
     await _persistTcmInterviewTaskState(taskState);
+    await _persistDiagnosisHistoryOnce(controller);
+    final completedDiagnosis = controller.completedDiagnosis;
+    if (completedDiagnosis?.prescription != null &&
+        SettingsRepository.instance.autoCopyPrescription) {
+      await _copyDiagnosisPrescription(completedDiagnosis!.prescription!);
+    }
 
     if (controller.isCompleted) {
       try {
@@ -1748,6 +1888,35 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         } else {
           restoredMessages.add(prompt);
           transcriptLines.add('助手：${resumableTask.pendingPromptText}');
+        }
+      } else if (resumableTask.status == 'completed' &&
+          resumableTask.completedDiagnosis != null) {
+        _tcmInterviewController = TcmInterviewConversationController.restore(
+          resumableTask,
+          defaultGender: SettingsRepository.instance.defaultGender,
+        );
+        _persistedDiagnosisTaskIds.add(resumableTask.taskId);
+        TcmInterviewTaskMessage? resultEntry;
+        for (final entry in resumableTask.transcript.reversed) {
+          if (entry.isResult) {
+            resultEntry = entry;
+            break;
+          }
+        }
+        if (resultEntry != null) {
+          final resultIndex = restoredMessages.lastIndexWhere(
+            (message) => !message.isUser && message.text == resultEntry!.text,
+          );
+          final resultMessage = _diagnosisActionMessage(
+            resultEntry.text,
+            resumableTask.completedDiagnosis!,
+          );
+          if (resultIndex >= 0) {
+            restoredMessages[resultIndex] = resultMessage;
+          } else {
+            restoredMessages.add(resultMessage);
+            transcriptLines.add('助手：${resultEntry.text}');
+          }
         }
       }
     }
@@ -2896,6 +3065,10 @@ class _InterviewMessage {
   final List<String> sourceIds;
   final ValueChanged<String>? onSourceTap;
   final String? knowledgeStatus;
+  final DiagnosisResult? diagnosisResult;
+  final VoidCallback? onBookmark;
+  final VoidCallback? onShare;
+  final VoidCallback? onCopyPrescription;
 
   const _InterviewMessage({
     required this.text,
@@ -2907,6 +3080,10 @@ class _InterviewMessage {
     this.sourceIds = const [],
     this.onSourceTap,
     this.knowledgeStatus,
+    this.diagnosisResult,
+    this.onBookmark,
+    this.onShare,
+    this.onCopyPrescription,
   });
 }
 
@@ -3048,6 +3225,31 @@ class _InterviewMessageBubble extends StatelessWidget {
                           ? null
                           : () => message.onOptionSelected!(option),
                     )).toList(),
+                  ),
+                ],
+                if (message.diagnosisResult != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.bookmark_add_outlined, size: 16),
+                        label: const Text('收藏辨证结果'),
+                        onPressed: message.onBookmark,
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.share_outlined, size: 16),
+                        label: const Text('分享辨证结果'),
+                        onPressed: message.onShare,
+                      ),
+                      if (message.diagnosisResult!.prescription != null)
+                        ActionChip(
+                          avatar: const Icon(Icons.content_copy, size: 16),
+                          label: const Text('复制处方'),
+                          onPressed: message.onCopyPrescription,
+                        ),
+                    ],
                   ),
                 ],
                 if (message.actionLabel != null && message.onAction != null) ...[

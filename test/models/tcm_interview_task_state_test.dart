@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/engine/formula_rules.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
+import 'package:nihaisha_app/models/diagnosis_result_codec.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 
 void main() {
@@ -83,6 +84,141 @@ void main() {
       expect(restored.snapshot.flatIndex, 3);
     });
 
+
+    test('round-trips the completed structured diagnosis without recalculation', () {
+      final diagnosis = DiagnosisResult(
+        meridian: '少阳',
+        pattern: '少阳证',
+        patternDetail: '往来寒热，胸胁苦满。',
+        formula: '小柴胡汤',
+        recommendedFormulas: const ['小柴胡汤', '柴胡桂枝汤'],
+        explanation: '规则引擎结果快照',
+        confidence: 0.75,
+        matchedSymptoms: const ['口苦', '往来寒热'],
+        followUpQuestions: const ['是否口苦？'],
+        combinedMeridian: '太阳',
+        tongueCoating: '薄白',
+        tongueShape: '淡红',
+        pulseType: '弦',
+        pulseTypeSecondary: '数',
+        careAdvice: const {'饮食': ['清淡饮食'], '起居': ['规律作息']},
+        differential: DifferentialDiagnosisResult(
+          name1: '少阳证',
+          formula1: '小柴胡汤',
+          name2: '太阳少阳合病',
+          formula2: '柴胡桂枝汤',
+          keyDifference: '表证是否仍在',
+          details: const {'表证': '待核'},
+        ),
+        prescription: const FormulaPrescription(
+          formulaName: '小柴胡汤',
+          components: [
+            PrescriptionComponent(name: '柴胡', dosage: '24g', role: '君药'),
+            PrescriptionComponent(name: '黄芩', dosage: '9g', role: '臣药'),
+          ],
+          dosage: '水煎服',
+          preparation: '先煮柴胡',
+          contraindication: '需医师辨证核实',
+          modifications: [
+            FormulaModification(
+              condition: '胸胁苦满',
+              symptom: '胸胁满',
+              type: ModificationType.add,
+              herbName: '枳壳',
+              resultFormula: '加减方',
+              description: '结构化加减记录',
+            ),
+          ],
+        ),
+        answers: const {'bitter_mouth': true, 'temperature': 'alternating'},
+        trueFalseHeatCold: const TrueFalseHeatCold(
+          type: '真寒假热',
+          description: '真假寒热鉴别快照',
+          dimensions: {'口渴': '不渴'},
+        ),
+        medicationRules: const [
+          MedicationRule(
+            category: '禁忌',
+            condition: '适用条件',
+            prohibition: '禁忌内容',
+            reason: '原因',
+            emergencyTreatment: '误治急救',
+          ),
+        ],
+        sweatingContraindications: const [
+          SweatingContraindication(
+            condition: '禁汗条件',
+            reason: '原因',
+            consequence: '后果',
+          ),
+        ],
+        bloodStasisSigns: const [
+          BloodStasisSign(
+            method: '望诊',
+            description: '舌绛紫',
+            clinicalSignificance: '提示线索',
+          ),
+        ],
+        pulseCombination: const PulseCombination(
+          pulse1: '弦',
+          pulse2: '数',
+          meridian: '少阳',
+          formula: '小柴胡汤',
+          description: '组合脉象',
+        ),
+        facialComplexion: const FacialComplexion(
+          color: '面红',
+          meridian: '少阳',
+          formula: '小柴胡汤',
+          description: '面色记录',
+        ),
+        patternDifferential: const PatternDifferential(
+          pattern1: '少阳证',
+          pattern2: '太阳证',
+          classicText: '原文片段',
+          keyPoint: '鉴别点',
+          niNote: '讲解注记',
+        ),
+        transmission: const MeridianTransmission(
+          from: '太阳',
+          to: '少阳',
+          sign: '传经线索',
+          treatment: '和解少阳',
+        ),
+        transmissionWarning: '传经预警',
+        pulseTongueContradiction: '脉舌信息不一致',
+        pulseTongueAssessment: const PulseTongueAssessment(
+          status: 'REVIEW_REQUIRED',
+          supportingEvidence: ['口苦'],
+          contradictingEvidence: ['脉象待核'],
+          missingEvidence: ['原始脉诊记录'],
+          followUpQuestionKeys: ['pulse_cross_shaoyang'],
+          followUpQuestions: ['是否有少阳相关线索？'],
+        ),
+        recommendConsult: true,
+      );
+      final state = TcmInterviewTaskState(
+        taskId: 'completed-task',
+        status: 'completed',
+        snapshot: DiagnosticEngine().createSnapshot(),
+        transcript: const [
+          TcmInterviewTaskMessage(text: '辨证结果', isUser: false, isResult: true),
+        ],
+        completedDiagnosis: diagnosis,
+      );
+
+      final restored = TcmInterviewTaskState.decode(state.encode());
+      expect(restored.status, 'completed');
+      expect(restored.completedDiagnosis, isNotNull);
+      expect(
+        DiagnosisResultCodec.toJson(restored.completedDiagnosis!),
+        DiagnosisResultCodec.toJson(diagnosis),
+      );
+      expect(restored.completedDiagnosis!.prescription!.components.first.dosage, '24g');
+      expect(restored.completedDiagnosis!.pulseTongueAssessment!.missingEvidence,
+          ['原始脉诊记录']);
+    });
+
     test('old schema-1 records without transcript remain readable', () {
       final legacyJson = TcmInterviewTaskState(
         taskId: 'legacy-task',
@@ -97,6 +233,7 @@ void main() {
           flatIndex: 0,
         ),
       ).toJson()
+        ..['schemaVersion'] = 1
         ..remove('transcript');
       final legacy = TcmInterviewTaskState.decode(jsonEncode(legacyJson));
       expect(legacy.transcript, isEmpty);
@@ -105,7 +242,7 @@ void main() {
     test('rejects unsupported schema versions instead of silently restoring', () {
       expect(
         () => TcmInterviewTaskState.decode(
-          '{"schemaVersion":2,"taskId":"task-1","status":"in_progress",'
+          '{"schemaVersion":3,"taskId":"task-1","status":"in_progress",'
           '"snapshot":{},"pendingOptions":[]}',
         ),
         throwsFormatException,

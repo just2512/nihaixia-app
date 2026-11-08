@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/engine/diagnostic_engine.dart';
+import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -506,10 +509,96 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('恢复已完成的结构化辨证历史并提供收藏分享和复制处方操作', (tester) async {
+    final store = _MemoryConversationStore();
+    const resultText = '辨证结果\n【六经】少阳病\n【证型】少阳证\n【方剂】小柴胡汤';
+    final diagnosis = DiagnosisResult(
+      meridian: '少阳',
+      pattern: '少阳证',
+      patternDetail: '往来寒热，胸胁苦满。',
+      formula: '小柴胡汤',
+      recommendedFormulas: const ['小柴胡汤'],
+      explanation: '结构化历史快照。',
+      confidence: 0.8,
+      matchedSymptoms: const ['口苦'],
+      followUpQuestions: const [],
+      answers: const {'bitter_mouth': true},
+      prescription: const FormulaPrescription(
+        formulaName: '小柴胡汤',
+        components: [
+          PrescriptionComponent(name: '柴胡', dosage: '24g', role: '君药'),
+          PrescriptionComponent(name: '黄芩', dosage: '9g', role: '臣药'),
+        ],
+        dosage: '水煎服',
+        preparation: '先煮柴胡',
+        contraindication: '须由执业中医师核实',
+      ),
+    );
+    store.taskStates[1] = TcmInterviewTaskState(
+      taskId: 'completed-diagnosis-history',
+      status: 'completed',
+      snapshot: DiagnosticEngine().createSnapshot(),
+      transcript: const [
+        TcmInterviewTaskMessage(
+          text: resultText,
+          isUser: false,
+          isResult: true,
+        ),
+      ],
+      completedDiagnosis: diagnosis,
+    );
+    store.messages[1] = [
+      {
+        'id': 1,
+        'conversation_id': 1,
+        'role': 'user',
+        'content': '开始规则问诊',
+        'metadata': 'selectedMode=automatic;mode=consultation',
+      },
+      {
+        'id': 2,
+        'conversation_id': 1,
+        'role': 'assistant',
+        'content': resultText,
+        'metadata': 'mode=consultation;selectedMode=automatic',
+      },
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: _HistoryResumeService(),
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.text('可继续的历史会话'));
+    await _pumpFrames(tester);
+
+    expect(find.text(resultText), findsOneWidget);
+    expect(find.text('收藏辨证结果'), findsOneWidget);
+    expect(find.text('分享辨证结果'), findsOneWidget);
+    expect(find.text('复制处方'), findsOneWidget);
+
+    await tester.tap(find.text('复制处方'));
+    await _pumpFrames(tester);
+    final clipboard = await Clipboard.getData('text/plain');
+    expect(clipboard?.text, contains('小柴胡汤'));
+    expect(clipboard?.text, contains('柴胡'));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
   for (var frame = 0; frame < frames; frame++) {
     await tester.pump(const Duration(milliseconds: 80));
   }
+
+
+
 }

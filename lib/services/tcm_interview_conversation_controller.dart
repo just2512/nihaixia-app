@@ -43,6 +43,7 @@ class TcmInterviewConversationController {
   String? _pendingPromptText;
   List<String> _pendingOptions = const [];
   bool _meridianFollowupActive = false;
+  DiagnosisResult? _completedDiagnosis;
 
   List<TcmInterviewTaskMessage> get messages =>
       List.unmodifiable(_messages);
@@ -50,6 +51,7 @@ class TcmInterviewConversationController {
   String? get pendingPromptText => _pendingPromptText;
   List<String> get pendingOptions => List.unmodifiable(_pendingOptions);
   bool get isCompleted => _status == 'completed';
+  DiagnosisResult? get completedDiagnosis => _completedDiagnosis;
   bool get canAnswer => !isCompleted &&
       _pendingPromptId != null &&
       _pendingOptions.isNotEmpty;
@@ -70,6 +72,7 @@ class TcmInterviewConversationController {
       taskId: state.taskId,
     );
     controller._status = state.status;
+    controller._completedDiagnosis = state.completedDiagnosis;
     controller._pendingPromptId = state.pendingPromptId;
     controller._pendingPromptText = state.pendingPromptText;
     controller._pendingOptions = List<String>.unmodifiable(state.pendingOptions);
@@ -223,6 +226,7 @@ class TcmInterviewConversationController {
             _status == 'in_progress' ? _pendingOptions : const [],
         transcript: List.unmodifiable(_messages),
         updatedAt: DateTime.now().toUtc(),
+        completedDiagnosis: _completedDiagnosis,
       );
 
   void _askTemperature() {
@@ -356,6 +360,7 @@ class TcmInterviewConversationController {
   }
 
   void _completeWithDiagnosis(DiagnosisResult result) {
+    _completedDiagnosis = result;
     final lines = <String>[
       '辨证结果',
       '【六经】${result.displayMeridian}',

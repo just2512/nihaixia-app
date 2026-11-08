@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../engine/diagnostic_engine.dart';
 import '../models/diagnosis.dart';
+import '../models/diagnosis_result_codec.dart';
 
 /// One visible message from the structured interview transcript.
 class TcmInterviewTaskMessage {
@@ -37,8 +38,8 @@ class TcmInterviewTaskMessage {
 }
 
 /// Durable state for resuming a deterministic TCM interview from conversation
-/// history. This stores engine input state, the visible transcript and the
-/// outstanding prompt; it does not store or synthesize a diagnosis.
+/// history. It stores engine input state, the visible transcript, the
+/// outstanding prompt and an immutable structured result when diagnosis completes.
 class TcmInterviewTaskState {
   const TcmInterviewTaskState({
     required this.taskId,
@@ -49,6 +50,7 @@ class TcmInterviewTaskState {
     this.pendingOptions = const [],
     this.transcript = const [],
     this.updatedAt,
+    this.completedDiagnosis,
   });
 
   final String taskId;
@@ -60,9 +62,11 @@ class TcmInterviewTaskState {
   final List<String> pendingOptions;
   final List<TcmInterviewTaskMessage> transcript;
   final DateTime? updatedAt;
+  /// Immutable structured result captured at completion; never recalculated on restore.
+  final DiagnosisResult? completedDiagnosis;
 
   Map<String, Object?> toJson() => {
-        'schemaVersion': 1,
+        'schemaVersion': 2,
         'taskId': taskId,
         'status': status,
         'snapshot': _snapshotToJson(snapshot),
@@ -71,6 +75,8 @@ class TcmInterviewTaskState {
         'pendingOptions': List<String>.unmodifiable(pendingOptions),
         'transcript': transcript.map((message) => message.toJson()).toList(growable: false),
         if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
+        if (completedDiagnosis != null)
+          'completedDiagnosis': DiagnosisResultCodec.toJson(completedDiagnosis!),
       };
 
   String encode() => jsonEncode(toJson());
@@ -81,8 +87,9 @@ class TcmInterviewTaskState {
       throw const FormatException('TCM interview task state must be an object');
     }
     final json = Map<String, Object?>.from(decoded);
-    if (json['schemaVersion'] != 1) {
-      throw FormatException('Unsupported TCM task schema: ${json['schemaVersion']}');
+    final schemaVersion = json['schemaVersion'];
+    if (schemaVersion != 1 && schemaVersion != 2) {
+      throw FormatException('Unsupported TCM task schema: $schemaVersion');
     }
     final taskId = json['taskId'];
     final status = json['status'];
@@ -92,6 +99,7 @@ class TcmInterviewTaskState {
     final promptId = json['pendingPromptId'];
     final promptText = json['pendingPromptText'];
     final updatedAt = json['updatedAt'];
+    final rawCompletedDiagnosis = json['completedDiagnosis'];
     if (taskId is! String ||
         taskId.trim().isEmpty ||
         status is! String ||
@@ -103,7 +111,9 @@ class TcmInterviewTaskState {
         rawTranscript.any((item) => item is! Map) ||
         (promptId != null && promptId is! String) ||
         (promptText != null && promptText is! String) ||
-        (updatedAt != null && updatedAt is! String)) {
+        (updatedAt != null && updatedAt is! String) ||
+        (rawCompletedDiagnosis != null && rawCompletedDiagnosis is! Map) ||
+        (rawCompletedDiagnosis != null && status != 'completed')) {
       throw const FormatException('Invalid TCM interview task state');
     }
     return TcmInterviewTaskState(
@@ -119,6 +129,11 @@ class TcmInterviewTaskState {
         )),
       ),
       updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt as String).toUtc(),
+      completedDiagnosis: rawCompletedDiagnosis == null
+          ? null
+          : DiagnosisResultCodec.fromJson(
+              Map<String, dynamic>.from(rawCompletedDiagnosis as Map),
+            ),
     );
   }
 
