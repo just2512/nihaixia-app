@@ -452,7 +452,7 @@ class AssistantKnowledgeContextBuilder {
                   ledger.page,
                   ledger.passage,
                 ].join(' · ')
-              : 'MISSING（原文来源核验状态：${ledger.sourceStatus}；网页 URL 不等于纸本版本、卷次和页码；内部序号不是原始来源定位）';
+              : 'MISSING（原文来源核验状态：${ledger.sourceStatus}；网页 URL 不等于纸本版本、卷次和页码；内部序号不是原始病例页码或稳定来源 ID，也不是原始来源定位）';
           buffer
             ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
             ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
