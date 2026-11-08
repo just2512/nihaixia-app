@@ -57,20 +57,38 @@ jobs:
           url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
           expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
           tmp="$(mktemp)"
-          headers="$(mktemp)"
-          curl --fail --location --show-error --retry 3 --retry-all-errors --connect-timeout 20 --max-time 120 -D "$headers" "$url" -o "$tmp"
-          if [[ "$(sha256sum "$tmp" | cut -d' ' -f1)" != "$expected" ]]; then
-            echo "SQLite Android arm64 asset SHA-256 mismatch; refusing to seed hook cache." >&2
-            grep -iE '^(HTTP/|content-type:|content-length:|location:)' "$headers" || true
-            file "$tmp" || true
-            sha256sum "$tmp"
-            head -c 128 "$tmp" | od -An -tx1
-            exit 1
-          fi
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
           destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-0c2d3bfc/libsqlite3.so"
           mkdir -p "$(dirname "$destination")"
           install -m 0644 "$tmp" "$destination"
           sha256sum "$destination"
+          rm -f "$tmp"
 
       - name: Static analysis
         run: flutter analyze --no-pub --no-fatal-infos
@@ -131,6 +149,7 @@ jobs:
       # Seed the hook cache with the official release bytes after checking the
       # package-pinned SHA-256. The sqlite3 hook performs its own hash check too.
       - name: Prewarm verified SQLite Linux host asset
+        id: sqlite_asset
         if: steps.dependencies.outcome == 'success'
         shell: bash
         run: |
@@ -143,27 +162,45 @@ jobs:
           url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.x64.linux.so"
           expected="b17729184e5a2818055ecbddd5ed6642521bfe6e56aafa472330e483c0e2e0d2"
           tmp="$(mktemp)"
-          headers="$(mktemp)"
-          curl --fail --location --show-error --retry 3 --retry-all-errors --connect-timeout 20 --max-time 120 -D "$headers" "$url" -o "$tmp"
-          if [[ "$(sha256sum "$tmp" | cut -d' ' -f1)" != "$expected" ]]; then
-            echo "SQLite Linux asset SHA-256 mismatch; refusing to seed hook cache." >&2
-            grep -iE '^(HTTP/|content-type:|content-length:|location:)' "$headers" || true
-            file "$tmp" || true
-            sha256sum "$tmp"
-            head -c 128 "$tmp" | od -An -tx1
-            exit 1
-          fi
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
           destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-b1772918/libsqlite3.so"
           mkdir -p "$(dirname "$destination")"
           install -m 0644 "$tmp" "$destination"
           sha256sum "$destination"
+          rm -f "$tmp"
 
       - name: Run Dart and Flutter static analysis
-        if: steps.dependencies.outcome == 'success'
+        if: steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
         run: flutter analyze --no-pub --no-fatal-infos
 
       - name: Run local AI contract tests
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_service_test.dart
 
       - name: Run recorder retry widget regression
