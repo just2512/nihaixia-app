@@ -198,6 +198,11 @@ class _MemoryConversationStore implements AssistantConversationStore {
 }
 
 void main() {
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
   testWidgets('恢复历史会话时保留尚未执行的工具操作入口', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
@@ -569,8 +574,6 @@ void main() {
       },
     ];
 
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
     final databaseDirectory = await Directory.systemTemp.createTemp(
       'assistant-diagnosis-actions-',
     );
