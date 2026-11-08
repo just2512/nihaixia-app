@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import 'ziwei_cases_list_screen.dart';
 import '../theme/app_colors.dart';
+import '../widgets/adaptive_content_width.dart';
 
 /// 紫微斗数参考：倪师《天纪·天机道》十四主星 / 十二宫位 / 论命理。
 /// 内容逐字摘自 nihaixia skill 知识库 modules/09_zhenjiu_bencao.md「天纪·天机道」，
@@ -62,7 +63,7 @@ class ZiweiReferenceScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('紫微斗数参考')),
-      body: ListView(
+      body: AdaptiveContentWidth(maxWidth: 720, child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // 案例库入口
@@ -228,7 +229,7 @@ class ZiweiReferenceScreen extends StatelessWidget {
             style: TextStyle(fontSize: 10, color: cs.outline),
           ),
         ],
-      ),
+      )),
     );
   }
 
