@@ -125,6 +125,8 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.imagePicker,
     this.conversationStore,
     this.bookmarkWriter,
+    this.shareDiagnosisText,
+    this.copyPrescriptionText,
     this.preferredAnchorPoint,
     this.initialPrompt,
     this.testToolRouteBuilder,
@@ -146,6 +148,14 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Test seam for verifying the assistant's diagnosis bookmark action.
   @visibleForTesting
   final Future<int> Function(Bookmark bookmark)? bookmarkWriter;
+
+  /// Test seam for verifying the unified assistant's diagnosis share action.
+  @visibleForTesting
+  final void Function(String text)? shareDiagnosisText;
+
+  /// Test seam for verifying the exact prescription text sent to the clipboard.
+  @visibleForTesting
+  final Future<void> Function(String text)? copyPrescriptionText;
 
   /// Deterministic route seam for persistence/retry widget tests. Production
   /// callers leave this null and use the registered in-app tool page.
@@ -1072,11 +1082,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         '证据不足，不自动推荐方剂；请由执业中医师结合四诊面诊核实。',
       '—— 来自「汉唐中医」App',
     ];
-    Share.share(lines.where((line) => line.trim().isNotEmpty).join('\n\n'));
+    final text = lines.where((line) => line.trim().isNotEmpty).join('\n\n');
+    final testShare = widget.shareDiagnosisText;
+    if (testShare != null) {
+      testShare(text);
+    } else {
+      Share.share(text);
+    }
   }
 
   Future<void> _copyDiagnosisPrescription(FormulaPrescription prescription) async {
-    await Clipboard.setData(ClipboardData(text: prescription.toCopyText()));
+    final text = prescription.toCopyText();
+    await (widget.copyPrescriptionText?.call(text) ??
+        Clipboard.setData(ClipboardData(text: text)));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('处方已复制到剪贴板')),
