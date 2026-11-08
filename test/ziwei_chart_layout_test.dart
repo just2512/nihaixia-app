@@ -504,4 +504,83 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('紫微排盘在外屏、展开内屏与半折叠切换时保留已计算命盘', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 850);
+    tester.view.displayFeatures = [];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    // Expand to a flat inner display without recreating the route/state.
+    tester.view.physicalSize = const Size(760, 1100);
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsOneWidget);
+
+    final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    await tester.scrollUntilVisible(
+      plate,
+      320,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(plate).width, 640);
+
+    // Enter tabletop posture. The existing chart remains, but its page
+    // viewport and plate must be constrained to the safe physical panel.
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(388, 0, 24, 1000),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final halfFoldPage = tester.getRect(find.byType(Scaffold).first);
+    expect(halfFoldPage.width, lessThanOrEqualTo(388));
+    expect(halfFoldPage.right, lessThanOrEqualTo(388));
+    await tester.scrollUntilVisible(
+      plate,
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(plate).width, lessThanOrEqualTo(388));
+    expect(tester.takeException(), isNull);
+
+    // Return to flat inner display and ensure the chart is still calculated
+    // and the wide layout is restored.
+    tester.view.physicalSize = const Size(760, 1100);
+    tester.view.displayFeatures = [];
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ziwei-expanded-input-summary')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      plate,
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getSize(plate).width, 640);
+    expect(tester.takeException(), isNull);
+  });
+
 }
