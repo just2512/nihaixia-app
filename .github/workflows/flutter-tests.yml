@@ -297,9 +297,11 @@ jobs:
           df -h "$GITHUB_WORKSPACE"
 
       - name: Build Android debug APK
+        id: build_apk
         run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
 
       - name: Verify Android APK ABI and calculate SHA-256
+        id: verify_apk
         shell: bash
         run: |
           python3 - <<'PY'
@@ -333,7 +335,10 @@ jobs:
           cat build/app/outputs/flutter-apk/app-debug.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run Android local unit tests
-        run: cd android && ./gradlew :app:testDebugUnitTest
+        # Keep the Flutter Gradle task on the same arm64 target as the APK build.
+        # Otherwise testDebugUnitTest re-enters compileFlutterBuildDebug with Flutter's
+        # default multi-ABI target and downloads an unrelated 32-bit SQLite asset.
+        run: cd android && ./gradlew :app:testDebugUnitTest -Ptarget-platform=android-arm64
 
       - name: Upload resolved dependency lockfile
         uses: actions/upload-artifact@v7
@@ -344,6 +349,7 @@ jobs:
           retention-days: 3
 
       - name: Upload Android debug APK
+        if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
