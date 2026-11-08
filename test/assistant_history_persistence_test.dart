@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
+import 'package:nihaisha_app/models/diagnosis_result_codec.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 
 Future<T> _withStageTimeout<T>(String stage, Future<T> operation) async {
@@ -220,6 +222,16 @@ void main() {
         contraindication: '须由执业中医师核实',
       ),
     );
+    await _withStageTimeout(
+      'persist structured diagnosis history snapshot',
+      DatabaseHelper.instance.saveDiagnosisHistory(
+        completedDiagnosis.meridian,
+        completedDiagnosis.pattern,
+        completedDiagnosis.formula,
+        completedDiagnosis.confidence,
+        jsonEncode(DiagnosisResultCodec.toJson(completedDiagnosis)),
+      ),
+    );
     final completedTask = TcmInterviewTaskState(
       taskId: restoredTask.taskId,
       snapshot: restoredTask.snapshot,
@@ -286,6 +298,21 @@ void main() {
     expect(
       finalTask.completedDiagnosis!.prescription!.components.single.dosage,
       '24g',
+    );
+
+    final diagnosisHistory = await _withStageTimeout(
+      'read structured diagnosis history after final reopen',
+      DatabaseHelper.instance.getDiagnosisHistory(),
+    );
+    expect(diagnosisHistory, hasLength(1));
+    final storedDiagnosis = jsonDecode(
+      diagnosisHistory.single['answers']! as String,
+    ) as Map<String, dynamic>;
+    expect(storedDiagnosis['schemaVersion'], DiagnosisResultCodec.schemaVersion);
+    expect(storedDiagnosis['pattern'], '少阳证');
+    expect(
+      (storedDiagnosis['prescription'] as Map<String, dynamic>)['formulaName'],
+      '小柴胡汤',
     );
   });
 }
