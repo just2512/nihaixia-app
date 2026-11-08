@@ -95,7 +95,8 @@ class ZiweiCasesListScreen extends StatelessWidget {
         ),
       ),
     );
-  }}
+  }
+}
 
 class _SectionHeader extends StatelessWidget {
   final String title;
