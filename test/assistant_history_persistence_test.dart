@@ -347,4 +347,57 @@ void main() {
       '小柴胡汤',
     );
   });
+
+  test('SQLite reopen preserves unified assistant structured diagnosis history', () async {
+    final diagnosis = DiagnosisResult(
+      meridian: '少阳',
+      pattern: '少阳证',
+      formula: '小柴胡汤',
+      confidence: 0.75,
+      prescription: const FormulaPrescription(
+        formulaName: '小柴胡汤',
+        components: [
+          PrescriptionComponent(name: '柴胡', dosage: '24g'),
+          PrescriptionComponent(name: '黄芩', dosage: '9g'),
+        ],
+      ),
+    );
+    await _withStageTimeout(
+      'write unified assistant diagnosis history',
+      DatabaseHelper.instance.saveDiagnosisHistory(
+        diagnosis.displayMeridian,
+        diagnosis.pattern,
+        diagnosis.formula,
+        diagnosis.confidence,
+        jsonEncode(DiagnosisResultCodec.toJson(diagnosis)),
+      ),
+    );
+
+    await _withStageTimeout(
+      'close database before diagnosis history reopen',
+      DatabaseHelper.closeTestDatabase(),
+    );
+    DatabaseHelper.configureTestDatabase(
+      'assistant_history_recovery.db',
+      factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
+    );
+
+    final rows = await _withStageTimeout(
+      'read unified assistant diagnosis history after SQLite reopen',
+      DatabaseHelper.instance.getDiagnosisHistory(limit: 10),
+    );
+    expect(rows, hasLength(1));
+    expect(rows.single['meridian'], '少阳');
+    expect(rows.single['pattern'], '少阳证');
+    expect(rows.single['formula'], '小柴胡汤');
+    final restored = DiagnosisResultCodec.fromJson(
+      jsonDecode(rows.single['answers']! as String) as Map<String, dynamic>,
+    );
+    expect(restored.displayMeridian, diagnosis.displayMeridian);
+    expect(restored.pattern, diagnosis.pattern);
+    expect(restored.prescription?.toCopyText(), contains('柴胡24g'));
+  });
+
+
 }
