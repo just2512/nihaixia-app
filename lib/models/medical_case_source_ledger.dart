@@ -101,18 +101,22 @@ class MedicalCaseSourceLedger {
       ];
 
   /// 纸本定位状态；网页原文 VERIFIED 不会自动升级为纸本 VERIFIED。
-  String get status => isVerified
-      ? 'VERIFIED'
-      : bibliographicLocatorStatus == 'PENDING'
-          ? 'PENDING'
-          : 'MISSING';
+  String get status => !hasCompleteBibliographicLocator
+      ? 'MISSING'
+      : isVerified
+          ? 'VERIFIED'
+          : bibliographicLocatorStatus == 'PENDING'
+              ? 'PENDING'
+              : 'MISSING';
 
-  /// 网页/原文内容核验状态，经过必要字段完整性校验。
-  String get sourceStatus => isSourceVerified
-      ? 'VERIFIED'
-      : verificationStatus == 'PENDING'
-          ? 'PENDING'
-          : 'MISSING';
+  /// 网页/原文内容核验状态；来源字段或适用条件缺失时必须保持 MISSING。
+  String get sourceStatus => !hasCompleteSourceLocator
+      ? 'MISSING'
+      : isSourceVerified
+          ? 'VERIFIED'
+          : verificationStatus == 'PENDING'
+              ? 'PENDING'
+              : 'MISSING';
 
   String toDisplayText() => [
         '原始书名/病例来源：$sourceTitle',
