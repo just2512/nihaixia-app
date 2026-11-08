@@ -102,7 +102,7 @@ void main() {
         reason: '窗口宽度 ${scenario.$1}dp 的双栏状态不符合 640dp 断点',
       );
       expect(tester.takeException(), isNull);
-      await tester.pageBack();
+      Navigator.of(tester.element(find.byType(ZiweiChartScreen))).pop();
       await tester.pumpAndSettle();
     }
   });
@@ -211,6 +211,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('打开紫微排盘'));
       await tester.pumpAndSettle();
 
@@ -224,6 +225,8 @@ void main() {
       }
       expect(page.width, 1000);
       expect(tester.takeException(), isNull);
+      Navigator.of(tester.element(find.byType(ZiweiChartScreen))).pop();
+      await tester.pumpAndSettle();
     }
   });
 
