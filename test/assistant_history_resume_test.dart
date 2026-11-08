@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
-import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
@@ -198,11 +194,6 @@ class _MemoryConversationStore implements AssistantConversationStore {
 }
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
   testWidgets('恢复历史会话时保留尚未执行的工具操作入口', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
@@ -574,23 +565,9 @@ void main() {
       },
     ];
 
-    final databaseDirectory = await Directory.systemTemp.createTemp(
-      'assistant-diagnosis-actions-',
-    );
-    DatabaseHelper.configureTestDatabase(
-      'assistant_diagnosis_actions.db',
-      factory: databaseFactoryFfi,
-      directoryPath: databaseDirectory.path,
-    );
-    addTearDown(() async {
-      await DatabaseHelper.closeTestDatabase();
-      if (await databaseDirectory.exists()) {
-        await databaseDirectory.delete(recursive: true);
-      }
-    });
-
     String? copiedText;
     String? sharedText;
+    Bookmark? savedBookmark;
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
@@ -617,6 +594,10 @@ void main() {
           service: _HistoryResumeService(),
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
+          bookmarkWriter: (bookmark) async {
+            savedBookmark = bookmark;
+            return 1;
+          },
         ),
       ),
     );
@@ -633,12 +614,11 @@ void main() {
 
     await tester.tap(find.text('收藏辨证结果'));
     await _pumpFrames(tester);
-    final bookmarks = await DatabaseHelper.instance.getAllBookmarks();
-    expect(bookmarks, hasLength(1));
-    expect(bookmarks.single.title, contains('少阳证'));
-    expect(bookmarks.single.category, '辨证结果');
-    expect(bookmarks.single.source, 'chat_diagnosis');
-    expect(bookmarks.single.content, contains('小柴胡汤'));
+    expect(savedBookmark, isNotNull);
+    expect(savedBookmark!.title, contains('少阳证'));
+    expect(savedBookmark!.category, '辨证结果');
+    expect(savedBookmark!.source, 'chat_diagnosis');
+    expect(savedBookmark!.content, contains('小柴胡汤'));
     expect(find.text('已添加到收藏'), findsOneWidget);
 
     await tester.tap(find.text('分享辨证结果'));
