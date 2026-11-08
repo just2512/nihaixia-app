@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/engine/diagnostic_engine.dart';
+import 'package:nihaisha_app/models/bookmark.dart';
+import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -2221,5 +2224,106 @@ void main() {
     expect(service.sentTexts, isEmpty);
     expect(_store.createConversationCalls, 1);
   });
+
+
+  testWidgets('统一助手恢复结构化诊断结果后保留收藏、分享和复制处方操作', (tester) async {
+    final store = _MemoryConversationStore();
+    const resultText = '辨证结果\n【六经】少阳\n【证型】少阳证\n【方剂】小柴胡汤';
+    final diagnosis = DiagnosisResult(
+      meridian: '少阳',
+      pattern: '少阳证',
+      formula: '小柴胡汤',
+      prescription: const FormulaPrescription(
+        formulaName: '小柴胡汤',
+        components: [
+          PrescriptionComponent(name: '柴胡', dosage: '24g'),
+          PrescriptionComponent(name: '黄芩', dosage: '9g'),
+        ],
+      ),
+    );
+    final conversationId = await store.createAssistantConversation(
+      title: '已完成的结构化辨证',
+      mode: 'unified',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: resultText,
+    );
+    await store.saveTcmInterviewTaskState(
+      conversationId: conversationId,
+      state: TcmInterviewTaskState(
+        taskId: 'completed-diagnosis-actions',
+        snapshot: DiagnosticEngine().createSnapshot(),
+        status: 'completed',
+        transcript: const [
+          TcmInterviewTaskMessage(
+            text: resultText,
+            isUser: false,
+            isResult: true,
+          ),
+        ],
+        updatedAt: DateTime.now().toUtc(),
+        completedDiagnosis: diagnosis,
+      ),
+    );
+
+    final bookmarks = <Bookmark>[];
+    final sharedTexts = <String>[];
+    final copiedTexts = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: _TextSendService(),
+          conversationStore: store,
+          imagePicker: _EmptyLocalAiImagePicker(),
+          bookmarkWriter: (bookmark) async {
+            bookmarks.add(bookmark);
+            return 1;
+          },
+          shareDiagnosisText: sharedTexts.add,
+          copyPrescriptionText: (text) async {
+            copiedTexts.add(text);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await tester.pumpAndSettle();
+    expect(find.text('已完成的结构化辨证'), findsOneWidget);
+    await tester.tap(find.text('已完成的结构化辨证'));
+    await tester.pumpAndSettle();
+
+    Future<void> tapAction(String label) async {
+      final target = find.text(label).last;
+      await tester.ensureVisible(target);
+      await tester.tap(target);
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('收藏辨证结果'), findsOneWidget);
+    expect(find.text('分享辨证结果'), findsOneWidget);
+    expect(find.text('复制处方'), findsOneWidget);
+
+    await tapAction('收藏辨证结果');
+    expect(bookmarks, hasLength(1));
+    expect(bookmarks.single.category, '辨证结果');
+    expect(bookmarks.single.source, 'chat_diagnosis');
+    expect(bookmarks.single.content, contains('小柴胡汤'));
+
+    await tapAction('分享辨证结果');
+    expect(sharedTexts, hasLength(1));
+    expect(sharedTexts.single, contains('少阳证'));
+    expect(sharedTexts.single, contains('柴胡'));
+
+    await tapAction('复制处方');
+    expect(copiedTexts, hasLength(1));
+    expect(copiedTexts.single, contains('处方: 小柴胡汤'));
+    expect(copiedTexts.single, contains('柴胡24g'));
+    expect(tester.takeException(), isNull);
+  });
+
 
 }
