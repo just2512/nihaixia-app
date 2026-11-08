@@ -41,8 +41,159 @@ jobs:
           cache: true
 
       - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      # The Android target uses a separate immutable arm64 native asset.
+      # Verify it against sqlite3 3.5.2's published digest before the Flutter hook.
+      - name: Prewarm verified SQLite Android arm64 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite asset prewarm hashes for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
+          expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-0c2d3bfc/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
+
+      - name: Static analysis
+        run: flutter analyze --no-pub --no-fatal-infos
+
+      - name: Run changed tests and enforce test pairing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin master
+          changed_files="$(git diff --name-only origin/master...HEAD)"
+          code_changed=0
+          test_files=()
+          while IFS= read -r file; do
+            case "$file" in
+              lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
+            esac
+            case "$file" in
+              test/*_test.dart) test_files+=("$file") ;;
+            esac
+          done <<< "$changed_files"
+          if [[ "$code_changed" == "1" && "${#test_files[@]}" -eq 0 ]]; then
+            echo "Production changes require at least one changed regression test." >&2
+            exit 1
+          fi
+          if [[ "${#test_files[@]}" -gt 0 ]]; then
+            flutter test --no-pub "${test_files[@]}"
+          else
+            echo "Documentation/workflow-only change: no Dart regression test required."
+          fi
+
+  test:
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request'
+    name: Flutter regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
         id: dependencies
         run: flutter pub get --enforce-lockfile
+
+      # sqlite3 3.5.2 downloads immutable native assets from GitHub Releases.
+      # Seed the hook cache with the official release bytes after checking the
+      # package-pinned SHA-256. The sqlite3 hook performs its own hash check too.
+      - name: Prewarm verified SQLite Linux host asset
+        id: sqlite_asset
+        if: steps.dependencies.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite asset prewarm hashes for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.x64.linux.so"
+          expected="b17729184e5a2818055ecbddd5ed6642521bfe6e56aafa472330e483c0e2e0d2"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-b1772918/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
 
       - name: Run Dart and Flutter static analysis
         if: steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
@@ -149,15 +300,13 @@ jobs:
           retention-days: 3
 
   build-apk:
-    name: Android arm64 release APK
+    name: Android arm64 CI verification APK + unit tests
     needs: test
-    # Preserve the build signal even when the regression job fails.
+    # Keep Android diagnostics independent of Flutter regression failures, but never run after cancellation.
     if: always() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request') && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # The Find N2 target is arm64-v8a. Avoid building unused ABI APKs on
-      # the hosted runner, while leaving local/release Gradle defaults intact.
       ORG_GRADLE_PROJECT_ciArm64Only: 'true'
     steps:
       - name: Checkout
@@ -233,101 +382,62 @@ jobs:
           df -h /
           df -h "$GITHUB_WORKSPACE"
 
-      - name: Decode required release signing key
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "Missing required repository Actions secret: $name. Refusing to publish an APK that cannot be guaranteed to upgrade the installed release." >&2
-              exit 1
-            fi
-          done
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
-          test -s android/keystore.jks
-          keytool -list -keystore android/keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
-          cat > android/key.properties <<EOF
-          storeFile=../keystore.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
-          echo "Release signing key decoded and alias verified; secret values were not printed."
-
-      - name: Build Android arm64 release APK
+      - name: Build Android arm64 CI Debug APK (ABI verification only)
         id: build_apk
-        run: flutter build apk --release --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
+        run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
 
       - name: Verify Android APK ABI and calculate SHA-256
         id: verify_apk
         shell: bash
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
-
-          apk = Path("build/app/outputs/flutter-apk/app-release.apk")
+          apk = Path("build/app/outputs/flutter-apk/app-debug.apk")
           if not apk.is_file() or apk.stat().st_size == 0:
               raise SystemExit(f"APK missing or empty: {apk}")
-
           with ZipFile(apk) as archive:
               names = set(archive.namelist())
           required = "lib/arm64-v8a/libflutter.so"
           if required not in names:
               raise SystemExit(f"Required arm64 Flutter library missing: {required}")
-
           native_abis = {
-              name.split("/")[1]
-              for name in names
-              if name.startswith("lib/") and name.endswith(".so")
-              and len(name.split("/")) >= 3
+              name.split("/")[1] for name in names
+              if name.startswith("lib/") and name.endswith(".so") and len(name.split("/")) >= 3
           }
           if native_abis != {"arm64-v8a"}:
               raise SystemExit(f"Unexpected native ABI set: {sorted(native_abis)}")
-
           print(f"APK size: {apk.stat().st_size} bytes")
           print(f"Native ABIs: {', '.join(sorted(native_abis))}")
           print("Required arm64 Flutter/JNI libraries are present.")
           PY
-          apksigner verify --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk | tee build/app/outputs/flutter-apk/app-release.apk.certs.txt
-          sha256sum build/app/outputs/flutter-apk/app-release.apk | tee build/app/outputs/flutter-apk/app-release.apk.sha256
-          {
-            printf 'applicationId=%s\n' 'com.nihaisha.nihaisha_app'
-            printf 'version=%s\n' "$(sed -n 's/^version: //p' pubspec.yaml)"
-            printf 'abi=%s\n' 'arm64-v8a'
-            cat build/app/outputs/flutter-apk/app-release.apk.sha256
-          } > build/app/outputs/flutter-apk/app-release.apk.metadata.txt
-          cat build/app/outputs/flutter-apk/app-release.apk.sha256 >> "$GITHUB_STEP_SUMMARY"
-          cat build/app/outputs/flutter-apk/app-release.apk.certs.txt >> "$GITHUB_STEP_SUMMARY"
+          sha256sum build/app/outputs/flutter-apk/app-debug.apk | tee build/app/outputs/flutter-apk/app-debug.apk.sha256
+          printf '%s\n' 'CI Debug APK: ABI verification only; do not install over the user's existing Release APK.' > build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
 
       - name: Run Android local unit tests
-        # Keep the Flutter Gradle task on the same arm64 target as the APK build.
-        # Otherwise testDebugUnitTest re-enters compileFlutterBuildDebug with Flutter's
-        # default multi-ABI target and downloads an unrelated 32-bit SQLite asset.
+        id: android_unit_tests
         run: cd android && ./gradlew :app:testDebugUnitTest -Ptarget-platform=android-arm64
 
-      - name: Upload resolved dependency lockfile
-        uses: actions/upload-artifact@v7
-        with:
-          name: resolved-pubspec-lock
-          path: pubspec.lock
-          if-no-files-found: error
-          retention-days: 3
-
-      - name: Upload Android release APK
+      - name: Upload Android CI APK ABI evidence
         if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: android-arm64-release-apk
+          name: android-arm64-ci-debug-abi-evidence
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-release.apk.sha256
-            build/app/outputs/flutter-apk/app-release.apk.certs.txt
-            build/app/outputs/flutter-apk/app-release.apk.metadata.txt
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-debug.apk.sha256
+            build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Android unit test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-unit-test-reports
+          path: |
+            android/app/build/test-results/testDebugUnitTest/
+            android/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
           retention-days: 7
