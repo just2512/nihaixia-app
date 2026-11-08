@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/models/bookmark.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
@@ -565,6 +570,45 @@ void main() {
       },
     ];
 
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final databaseDirectory = await Directory.systemTemp.createTemp(
+      'assistant-diagnosis-actions-',
+    );
+    DatabaseHelper.configureTestDatabase(
+      'assistant_diagnosis_actions.db',
+      factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
+    );
+    addTearDown(() async {
+      await DatabaseHelper.closeTestDatabase();
+      if (await databaseDirectory.exists()) {
+        await databaseDirectory.delete(recursive: true);
+      }
+    });
+
+    String? copiedText;
+    String? sharedText;
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copiedText = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+    messenger.setMockMethodCallHandler(shareChannel, (call) async {
+      if (call.method == 'share') {
+        sharedText = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      messenger.setMockMethodCallHandler(shareChannel, null);
+    });
+
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -585,18 +629,22 @@ void main() {
     expect(find.text('分享辨证结果'), findsOneWidget);
     expect(find.text('复制处方'), findsOneWidget);
 
-    String? copiedText;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') {
-        copiedText = (call.arguments as Map)['text'] as String?;
-      }
-      return null;
-    });
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null);
-    });
+    await tester.tap(find.text('收藏辨证结果'));
+    await _pumpFrames(tester);
+    final bookmarks = await DatabaseHelper.instance.getAllBookmarks();
+    expect(bookmarks, hasLength(1));
+    expect(bookmarks.single.title, contains('少阳证'));
+    expect(bookmarks.single.category, '辨证结果');
+    expect(bookmarks.single.source, 'chat_diagnosis');
+    expect(bookmarks.single.content, contains('小柴胡汤'));
+    expect(find.text('已添加到收藏'), findsOneWidget);
+
+    await tester.tap(find.text('分享辨证结果'));
+    await _pumpFrames(tester);
+    expect(sharedText, contains('【汉唐中医辨证结果】'));
+    expect(sharedText, contains('少阳证'));
+    expect(sharedText, contains('小柴胡汤'));
+
     await tester.tap(find.text('复制处方'));
     await _pumpFrames(tester);
     expect(copiedText, contains('小柴胡汤'));
