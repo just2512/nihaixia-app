@@ -378,6 +378,17 @@ void main() {
     final sheetRect = tester.getRect(sheet);
     expect(sheetRect.top, greaterThanOrEqualTo(392));
     expect(sheetRect.bottom, lessThanOrEqualTo(760));
+
+    final sheetScrollView = find.descendant(
+      of: sheet,
+      matching: find.byType(Scrollable),
+    ).first;
+    await tester.scrollUntilVisible(
+      find.text('宫位主管出自倪师《天纪·天机道》· 民俗文化参考'),
+      80,
+      scrollable: sheetScrollView,
+    );
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
