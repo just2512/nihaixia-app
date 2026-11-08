@@ -196,7 +196,7 @@ jobs:
           rm -f "$tmp"
 
       - name: Run Dart and Flutter static analysis
-        if: steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
+        if: steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
         run: flutter analyze --no-pub --no-fatal-infos
 
       - name: Run local AI contract tests
@@ -205,66 +205,66 @@ jobs:
 
       - name: Run recorder retry widget regression
         id: recorder_retry
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "re-enables stop after a recorder stop failure and accepts a successful retry"
 
       - name: Run native status-unknown widget regression
         id: model_status_unknown
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.recorder_retry.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "disables local AI actions when native status cannot be verified"
 
       - name: Run post-send native status readback regression
         id: post_send_status
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.model_status_unknown.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native status readback"
       - name: Run post-send native model teardown regression
         id: post_send_teardown
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.post_send_status.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.post_send_status.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "post-send native model teardown"
 
       - name: Run local AI photo picker lifecycle regression
         id: photo_picker
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.post_send_teardown.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.post_send_teardown.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI photo picker lifecycle"
 
       - name: Run local AI model control serialization regression
         id: model_control
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.photo_picker.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.photo_picker.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model control serialization"
 
       - name: Run local AI model setup serialization regression
         id: model_setup
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_control.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.model_control.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "local AI model setup serialization"
 
       - name: Run assistant history resume regression
         id: history_resume
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.model_setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.model_setup.outcome == 'success' }}
         run: flutter test --no-pub test/assistant_history_resume_test.dart
 
       - name: Run TCM interview task snapshot contract regression
         id: tcm_task_snapshot
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.history_resume.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.history_resume.outcome == 'success' }}
         run: flutter test --no-pub test/models/tcm_interview_task_state_test.dart
 
       - name: Run structured TCM interview resume widget regression
         id: tcm_task_resume
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' }}
         run: flutter test --no-pub test/chat_screen_task_resume_test.dart
 
       - name: Run clause 268 pulse gate and legacy fallback regressions
         id: tcm_rule_gates
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/engine/three_yang_clause268_gate_test.dart test/engine/diagnostic_engine_test.dart
 
       - name: Run unified assistant dispatch regression
         id: assistant_dispatch
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/assistant_conversation_orchestrator_test.dart test/assistant_tool_router_test.dart
 
       - name: Run assistant tool argument and SQLite retry contract regressions
         id: assistant_tool_contracts
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -274,17 +274,17 @@ jobs:
 
       - name: Run assistant knowledge citation contract regression
         id: assistant_knowledge_citations
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/assistant_knowledge_context_test.dart
 
       - name: Run full Dart repository legacy ChatScreen audit
         id: chat_screen_retirement_audit
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/chat_screen_retirement_audit_test.dart
 
       - name: Run full regression suite
         id: regression
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' && steps.tcm_task_resume.outcome == 'success' && steps.tcm_rule_gates.outcome == 'success' && steps.assistant_dispatch.outcome == 'success' && steps.assistant_tool_contracts.outcome == 'success' && steps.assistant_knowledge_citations.outcome == 'success' && steps.chat_screen_retirement_audit.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' && steps.recorder_retry.outcome == 'success' && steps.model_status_unknown.outcome == 'success' && steps.post_send_status.outcome == 'success' && steps.post_send_teardown.outcome == 'success' && steps.photo_picker.outcome == 'success' && steps.model_control.outcome == 'success' && steps.model_setup.outcome == 'success' && steps.history_resume.outcome == 'success' && steps.tcm_task_snapshot.outcome == 'success' && steps.tcm_task_resume.outcome == 'success' && steps.tcm_rule_gates.outcome == 'success' && steps.assistant_dispatch.outcome == 'success' && steps.assistant_tool_contracts.outcome == 'success' && steps.assistant_knowledge_citations.outcome == 'success' && steps.chat_screen_retirement_audit.outcome == 'success' }}
         run: flutter test --no-pub
 
       - name: Upload Flutter test failure diffs
