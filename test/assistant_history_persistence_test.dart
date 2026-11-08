@@ -77,6 +77,34 @@ Future<T> _withStageTimeout<T>(String stage, Future<T> operation) async {
   }
 }
 
+Future<T> _withRealAsyncStage<T extends Object>(
+  WidgetTester tester,
+  String stage,
+  Future<T> Function() operation,
+) async {
+  final result = await tester.runAsync(
+    () => _withStageTimeout(stage, operation()),
+  );
+  if (result == null) {
+    throw StateError('Real async database stage returned no result: $stage');
+  }
+  return result;
+}
+
+Future<void> _withRealAsyncAction(
+  WidgetTester tester,
+  String stage,
+  Future<void> Function() operation,
+) async {
+  final completed = await tester.runAsync(() async {
+    await _withStageTimeout(stage, operation());
+    return true;
+  });
+  if (completed != true) {
+    throw StateError('Real async database action did not complete: $stage');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -131,7 +159,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
-      await DatabaseHelper.closeTestDatabase();
+      await _withRealAsyncAction(
+        tester,
+        'close SQLite test database during teardown',
+        DatabaseHelper.closeTestDatabase,
+      );
     });
     final databaseName =
         'assistant_history_recovery_${DateTime.now().microsecondsSinceEpoch}.db';
@@ -148,16 +180,18 @@ void main() {
       DatabaseHelper.assistantMessagePersistenceStageForTest = null;
     });
 
-    final conversationId = await _withStageTimeout(
+    final conversationId = await _withRealAsyncStage(
+      tester,
       'DatabaseHelper.createAssistantConversation (open + onCreate + insert)',
-      store.createAssistantConversation(
+      () => store.createAssistantConversation(
         title: '持久化失败重试',
         mode: 'metaphysics',
       ),
     );
-    await _withStageTimeout(
+    await _withRealAsyncStage(
+      tester,
       'persist user message (transaction query + insert + conversation update)',
-      store.saveAssistantMessage(
+      () => store.saveAssistantMessage(
         conversationId: conversationId,
         role: 'user',
         content: '帮我推算五运六气',
@@ -169,9 +203,10 @@ void main() {
       ),
     );
     print('[history-retry-stage] user message persisted');
-    await _withStageTimeout(
+    await _withRealAsyncStage(
+      tester,
       'persist FAILED tool message transaction',
-      store.saveAssistantMessage(
+      () => store.saveAssistantMessage(
         conversationId: conversationId,
         role: 'assistant',
         content: '【五运六气推算执行结果】\\n执行状态：FAILED\\n执行参数：date=2026-11-07',
@@ -189,7 +224,11 @@ void main() {
     // verifies disk persistence across a database-connection restart; it does
     // not claim to simulate Android process death.
     print('[history-retry-stage] failed tool message persisted; closing database');
-    await DatabaseHelper.closeTestDatabase();
+    await _withRealAsyncAction(
+      tester,
+      'close SQLite before reopening persisted history',
+      DatabaseHelper.closeTestDatabase,
+    );
     DatabaseHelper.configureTestDatabase(
       databaseName,
       factory: databaseFactoryFfi,
@@ -197,9 +236,10 @@ void main() {
     );
     print('[history-retry-stage] database closed and configured for reopen');
 
-    final persistedMessages = await _withStageTimeout(
+    final persistedMessages = await _withRealAsyncStage(
+      tester,
       'reopen SQLite and read persisted messages',
-      store.getAssistantMessages(conversationId: conversationId),
+      () => store.getAssistantMessages(conversationId: conversationId),
     );
     expect(persistedMessages, hasLength(2));
     final persistedMetadata = AssistantMessageMetadata.decode(
@@ -259,9 +299,10 @@ void main() {
     await _pumpFrames(tester, frames: 40);
 
     print('[history-retry-stage] retry result returned; reading persisted result');
-    final retriedMessages = await _withStageTimeout(
+    final retriedMessages = await _withRealAsyncStage(
+      tester,
       'read persisted retry result',
-      store.getAssistantMessages(conversationId: conversationId),
+      () => store.getAssistantMessages(conversationId: conversationId),
     );
     expect(retriedMessages.last['content'], contains('执行状态：SUCCEEDED'));
     expect(retriedMessages.last['content'], contains('执行参数：date=2026-11-07'));
