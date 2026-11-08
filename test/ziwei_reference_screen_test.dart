@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/ziwei_reference_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/widgets/adaptive_content_width.dart';
 
 void main() {
   testWidgets('紫微斗数参考页渲染十四主星/十二宫/倪师论命理', (tester) async {
@@ -30,5 +31,20 @@ void main() {
     await tester.scrollUntilVisible(find.text('父母宫'), 300);
     expect(find.text('主管：父母关系'), findsOneWidget);
     expect(find.text('破军'), findsOneWidget);
+  });
+  testWidgets('展开窗口的紫微参考内容限制宽度并居中', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 1100);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(useMaterial3: true, extensions: [AppColors.light]),
+      home: const ZiweiReferenceScreen(),
+    ));
+    final list = find.byType(ListView).first;
+    expect(tester.getSize(find.byType(AdaptiveContentWidth)).width, 1000);
+    expect(tester.getSize(list).width, 720);
+    expect(tester.getRect(list).center.dx, closeTo(500, 1));
+    expect(tester.takeException(), isNull);
   });
 }
