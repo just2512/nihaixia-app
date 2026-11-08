@@ -73,7 +73,7 @@ void main() {
         )),
         child: const Text('打开紫微案例库'),
       )))),
-    ]))),
+    ])),
     ));
     await tester.tap(find.text('打开紫微案例库'));
     await tester.pumpAndSettle();
