@@ -3,6 +3,7 @@ import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../data/ziwei_case_data.dart';
+import '../widgets/adaptive_content_width.dart';
 
 /// 倪师《天纪》紫微斗数原文阅读页（Markdown 渲染）。
 /// 内容为倪师口述讲解，作为排盘结果补充，属民俗文化参考。
@@ -37,7 +38,7 @@ class _ZiweiDocScreenState extends State<ZiweiDocScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text(widget.entry.title)),
-      body: FutureBuilder<String>(
+      body: AdaptiveContentWidth(maxWidth: 760, child: FutureBuilder<String>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
@@ -75,7 +76,7 @@ class _ZiweiDocScreenState extends State<ZiweiDocScreen> {
             ],
           );
         },
-      ),
+      )),
     );
   }
 }
