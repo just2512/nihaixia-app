@@ -304,4 +304,92 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('紫微命盘从横向折叠屏下侧面板打开宫位详情时底部面板留在下屏', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1000, 760);
+    tester.view.displayFeatures = [
+      DisplayFeature(
+        bounds: const Rect.fromLTWH(0, 368, 1000, 24),
+        type: DisplayFeatureType.hinge,
+        state: DisplayFeatureState.postureHalfOpened,
+      ),
+    ];
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: Builder(
+              builder: (sourceContext) => ElevatedButton(
+                onPressed: () => Navigator.of(sourceContext).push(
+                  FoldAwareMaterialPageRoute<void>(
+                    sourceContext: sourceContext,
+                    builder: (_) => ZiweiChartScreen(
+                      initialSolar: DateTime(2000, 8, 16, 10),
+                    ),
+                  ),
+                ),
+                child: const Text('从下屏打开紫微排盘'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('从下屏打开紫微排盘'));
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final page = tester.getRect(find.byType(Scaffold).last);
+    expect(page.top, greaterThanOrEqualTo(392));
+    expect(page.bottom, lessThanOrEqualTo(760));
+
+    final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    await tester.scrollUntilVisible(
+      plate,
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    // The chart plate is taller than the lower panel in tabletop posture;
+    // it must remain scrollable inside that panel rather than be clipped by
+    // the physical hinge or forced to shrink its chart cells.
+    expect(tester.getRect(plate).top, greaterThanOrEqualTo(392));
+    final viewport = tester.getRect(find.byType(Scrollable).first);
+    expect(viewport.top, greaterThanOrEqualTo(392));
+    expect(viewport.bottom, lessThanOrEqualTo(760));
+
+    final palaceCell = find.descendant(
+      of: plate,
+      matching: find.byType(GestureDetector),
+    ).first;
+    await tester.tap(palaceCell);
+    await tester.pumpAndSettle();
+
+    final sheet = find.byType(BottomSheet);
+    expect(sheet, findsOneWidget);
+    final sheetRect = tester.getRect(sheet);
+    expect(sheetRect.top, greaterThanOrEqualTo(392));
+    expect(sheetRect.bottom, lessThanOrEqualTo(760));
+
+    final sheetScrollView = find.descendant(
+      of: sheet,
+      matching: find.byType(Scrollable),
+    ).first;
+    await tester.scrollUntilVisible(
+      find.text('宫位主管出自倪师《天纪·天机道》· 民俗文化参考'),
+      80,
+      scrollable: sheetScrollView,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
 }

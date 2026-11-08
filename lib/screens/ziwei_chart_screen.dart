@@ -1289,10 +1289,12 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     showModalBottomSheet<void>(
       context: context,
       anchorPoint: foldAwareRouteAnchorPoint(context),
+      isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1393,6 +1395,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                 style: TextStyle(fontSize: 10, color: cs.outline),
               ),
             ],
+          ),
           ),
         ),
       ),
