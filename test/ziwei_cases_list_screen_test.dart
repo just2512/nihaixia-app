@@ -59,6 +59,9 @@ void main() {
       previousErrorHandler?.call(details);
     };
     addTearDown(() => FlutterError.onError = previousErrorHandler);
+    String frameworkErrorText() => frameworkErrors
+        .map((details) => '${details.exception}\\n${details.stack}')
+        .join('\\n');
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Row(children: [
       const SizedBox(width: 412),
       Expanded(child: Builder(builder: (source) => Center(child: ElevatedButton(
@@ -71,7 +74,7 @@ void main() {
     await tester.tap(find.text('打开紫微案例库'));
     await tester.pumpAndSettle();
     final listPageError = tester.takeException();
-    expect(listPageError, isNull, reason: '进入案例列表页时发生异常：${frameworkErrors.map((e) => '${e.exception}\\n${e.stack}').join('\\n')}');
+    expect(listPageError, isNull, reason: '进入案例列表页时发生异常：${frameworkErrorText()}');
     final list = tester.getRect(find.byType(ListView).first);
     expect(list.left, greaterThanOrEqualTo(412));
     expect(list.right, lessThanOrEqualTo(800));
@@ -84,7 +87,7 @@ void main() {
     expect(
       detailError,
       isNull,
-      reason: '从案例列表进入原文详情时发生异常：$detailError\\n${frameworkErrors.map((e) => '${e.exception}\\n${e.stack}').join('\\n')}',
+      reason: '从案例列表进入原文详情时发生异常：$detailError\\n${frameworkErrorText()}',
     );
     expect(markdown.left, greaterThanOrEqualTo(412));
     expect(markdown.right, lessThanOrEqualTo(800));
