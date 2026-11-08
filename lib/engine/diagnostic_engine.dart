@@ -1830,8 +1830,15 @@ class DiagnosticEngine {
       if (_answers[key] == true) target.add(label);
     }
 
-    bool hasAnyAnswer(List<String> keys) =>
-        keys.any((key) => _answers.containsKey(key));
+    bool hasPositiveEvidence(List<String> keys) =>
+        keys.any((key) {
+          final value = _answers[key];
+          return value == true ||
+              (key == 'temperature' && value == 'fever_chills');
+        });
+
+    bool hasAllAnswers(List<String> keys) =>
+        keys.every(_answers.containsKey);
 
     void askIfMissing(
       List<String> evidenceKeys,
@@ -1839,7 +1846,12 @@ class DiagnosticEngine {
       String questionKey,
       String label,
     ) {
-      if (hasAnyAnswer(evidenceKeys)) return;
+      // A single false flag from an adjacent question does not answer an entire
+      // cross-check group. Skip only when relevant evidence is already present
+      // or every alternative in the group has an explicit answer.
+      if (hasPositiveEvidence(evidenceKeys) || hasAllAnswers(evidenceKeys)) {
+        return;
+      }
       missing.add(label);
       // An explicit "unknown" answer closes the prompt but remains missing
       // evidence; it must never be converted into a negative clinical sign.

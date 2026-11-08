@@ -60,6 +60,7 @@
 ## 回归测试
 
 - `test/engine/combined_pattern_reachability_matrix_test.dart`：12项有效条件分别覆盖结构化规则主路径和旧兜底路径，核验最终 `pattern`、`formula`、`recommendedFormulas`、`prescription` 与显式合病经。
+- `test/engine/combined_pattern_question_flow_reachability_test.dart`：12项条件从缺少必要前提的快照开始，经适配层实际生成提示、校验答案并逐项推进，最终核验 canonical 条件键、规则表命中和完整诊断结果；不以直接注入最终条件键代替问诊流程。
 - `test/engine/combined_pattern_negative_reachability_test.dart`：12项条件逐项构造关键门槛被否定与未知（`null`）的输入，并分别经过结构化主路径和旧兜底路径；不允许在缺失或相反证据下命中对应条件。
 - `test/engine/combined_pattern_followup_score_test.dart`：覆盖第172条少阳分值的正向门槛、单独恶心不足阈值，以及明确无下利/未知不得命中呕吐方。
 - `test/engine/combined_pattern_negative_reachability_test.dart` 另覆盖第256条：仅滑脉、仅数脉、重复同一脉象、脉象未知均不得命中；滑数/数滑两种主脉与兼脉顺序均可通过组合脉门槛。

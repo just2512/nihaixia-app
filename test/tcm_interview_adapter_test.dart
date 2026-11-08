@@ -84,6 +84,57 @@ void main() {
       );
     });
 
+    test('部分少阳线索为阴性不代表咽干已回答，仍须追问', () {
+      final adapter = TcmInterviewAdapter(
+        snapshot: EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'bitter_mouth': false,
+            'alternating_chills': false,
+          },
+          tenQuestionIndex: 0,
+          tongueCoating: '白厚',
+          tongueShape: '淡白',
+          pulseType: '弦',
+        ),
+      );
+
+      expect(
+        adapter.pulseTongueCrossChecks.map((prompt) => prompt.id),
+        contains('pulse_cross_shaoyang'),
+      );
+      expect(
+        adapter.createSnapshot().answers.containsKey('dry_throat'),
+        isFalse,
+      );
+    });
+
+    test('少阳相关三项线索全部明确回答阴性后不重复追问', () {
+      final adapter = TcmInterviewAdapter(
+        snapshot: EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {
+            'bitter_mouth': false,
+            'dry_throat': false,
+            'alternating_chills': false,
+          },
+          tenQuestionIndex: 0,
+          tongueCoating: '白厚',
+          tongueShape: '淡白',
+          pulseType: '弦',
+        ),
+      );
+
+      expect(
+        adapter.pulseTongueCrossChecks.map((prompt) => prompt.id),
+        isNot(contains('pulse_cross_shaoyang')),
+      );
+    });
+
     test('舌脉解释性标签在边界处归一为 canonical 值', () {
       final adapter = TcmInterviewAdapter();
       adapter.answerTonguePulse(

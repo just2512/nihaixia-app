@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
@@ -49,6 +51,84 @@ class _PersistentHistoryService extends LocalAiService {
     required String context,
   }) async =>
       '续聊成功：$text';
+}
+
+class _RealAsyncConversationStore implements AssistantConversationStore {
+  _RealAsyncConversationStore(this.tester, this.delegate);
+
+  final WidgetTester tester;
+  final AssistantConversationStore delegate;
+
+  Future<T> _run<T>(Future<T> Function() operation) async {
+    final boxed = await tester.runAsync(() async => (value: await operation()));
+    if (boxed == null) {
+      throw StateError('SQLite conversation operation did not complete');
+    }
+    return boxed.value;
+  }
+
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) =>
+      _run(() => delegate.createAssistantConversation(title: title, mode: mode));
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) =>
+      _run(() => delegate.saveAssistantMessage(
+            conversationId: conversationId,
+            role: role,
+            content: content,
+            metadata: metadata,
+          ));
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) =>
+      _run(() => delegate.getAssistantConversations(limit: limit));
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) =>
+      _run(() => delegate.getAssistantMessages(conversationId: conversationId));
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {
+    await _run(() async {
+      await delegate.saveTcmInterviewTaskState(
+        conversationId: conversationId,
+        state: state,
+      );
+      return true;
+    });
+  }
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) =>
+      _run(() => delegate.getTcmInterviewTaskState(
+            conversationId: conversationId,
+          ));
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
+    await _run(() async {
+      await delegate.deleteAssistantConversations(conversationIds);
+      return true;
+    });
+  }
 }
 
 Future<void> _pumpFrames(WidgetTester tester, {int frames = 12}) async {
@@ -255,7 +335,7 @@ void main() {
         home: LocalAiInterviewScreen(
           service: service,
           imagePicker: _NoLostImagePicker(),
-          conversationStore: store,
+          conversationStore: _RealAsyncConversationStore(tester, store),
           testToolRouteBuilder: (tool, arguments) => Scaffold(
             body: Center(
               child: Builder(

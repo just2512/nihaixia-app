@@ -866,6 +866,136 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('统一问诊完成十问后仍会追问尚未核实的脉舌少阳冲突', (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> tapOption(String option) async {
+      final lists = find.byType(ListView);
+      if (lists.evaluate().isNotEmpty) {
+        await tester.drag(lists.last, const Offset(0, -700));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text(option).last);
+      await tester.pumpAndSettle();
+    }
+
+    Future<TcmInterviewTaskState?> waitForPromptChange(
+      String previousPromptId,
+    ) async {
+      for (var attempt = 0; attempt < 40; attempt++) {
+        final ids = _store._conversations.keys.toList(growable: false).reversed;
+        for (final id in ids) {
+          final candidate =
+              await _store.getTcmInterviewTaskState(conversationId: id);
+          if (candidate != null &&
+              candidate.pendingPromptId != previousPromptId) {
+            return candidate;
+          }
+        }
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      return null;
+    }
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    final initial = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'temperature',
+    );
+    expect(initial, isNotNull);
+    await tapOption('发热 + 怕冷');
+
+    final tonguePrompt = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'tongue_pulse',
+    );
+    expect(tonguePrompt, isNotNull);
+    await tapOption('选择舌诊脉诊');
+    await tester.tap(find.text('白厚').last);
+    await tester.tap(find.text('淡白').last);
+    await tester.tap(find.widgetWithText(FilterChip, '弦').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认').last);
+    await tester.pumpAndSettle();
+
+    var state = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'ten:',
+      expectedPromptIdStartsWith: true,
+    );
+    expect(state, isNotNull);
+    var answeredTenQuestions = 0;
+    while (state!.pendingPromptId?.startsWith('ten:') == true) {
+      final promptId = state.pendingPromptId!;
+      final questionId = promptId.substring('ten:'.length);
+      final option = switch (questionId) {
+        'gender' => '男',
+        'temperature' => '手脚冰冷（阴·阳虚）',
+        'pulse' => '没摸过/不清楚',
+        _ => state.pendingOptions.first,
+      };
+      expect(state.pendingOptions, contains(option), reason: promptId);
+      await tapOption(option);
+      final next = await waitForPromptChange(promptId);
+      expect(next, isNotNull, reason: '问诊没有离开 $promptId');
+      state = next;
+      answeredTenQuestions += 1;
+      expect(answeredTenQuestions, lessThanOrEqualTo(12));
+    }
+
+    expect(state.pendingPromptId, 'zhenjia');
+    await tapOption('没有/跳过');
+
+    final conflictPrompt = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'followup:pulse_cross_shaoyang',
+    );
+    expect(conflictPrompt, isNotNull);
+    expect(
+      conflictPrompt!.transcript.any(
+        (message) => message.text.contains('少阳相关问诊线索'),
+      ),
+      isTrue,
+    );
+
+    await tapOption('不确定');
+    TcmInterviewTaskState? completed;
+    for (var attempt = 0; attempt < 40; attempt++) {
+      for (final id in _store._conversations.keys.toList(growable: false)) {
+        final candidate =
+            await _store.getTcmInterviewTaskState(conversationId: id);
+        if (candidate?.status == 'completed') {
+          completed = candidate;
+          break;
+        }
+      }
+      if (completed != null) break;
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+    expect(completed, isNotNull);
+    expect(
+      completed!.snapshot.answers['pulse_cross_shaoyang_answered'],
+      isTrue,
+    );
+    expect(completed.snapshot.answers['dry_throat'], isNull);
+    expect(service.sentTexts, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('问诊助手把本地中医知识作为参考上下文传给模型', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(

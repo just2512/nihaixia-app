@@ -424,6 +424,26 @@ void main() {
       expect(engine.suppressReferenceFormulaSuggestions, isFalse);
     });
 
+    test('所有历史合病条件键在恢复快照时统一归一', () {
+      for (final entry in CombinedPatternCondition.legacyAliases.entries) {
+        final engine = DiagnosticEngine()
+          ..restoreSnapshot(EngineSnapshot(
+            stage: DiagnosticStage.meridianLocation,
+            selectedSymptoms: const [],
+            meridianDirection: '太阳',
+            answers: const {},
+            tenQuestionIndex: 0,
+            combinedPatternCondition: entry.key,
+          ));
+
+        expect(
+          engine.combinedPatternCondition,
+          entry.value,
+          reason: 'legacy condition key: ${entry.key}',
+        );
+      }
+    });
+
     test('原文未载方剂或来源待核的项目关闭相似度方剂兜底', () {
       for (final key in [
         CombinedPatternCondition.taiyinShaoyinBase,
