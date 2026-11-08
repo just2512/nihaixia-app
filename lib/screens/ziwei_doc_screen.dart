@@ -9,8 +9,10 @@ import '../widgets/adaptive_content_width.dart';
 /// 内容为倪师口述讲解，作为排盘结果补充，属民俗文化参考。
 class ZiweiDocScreen extends StatefulWidget {
   final ZiweiCaseEntry entry;
+  @visibleForTesting
+  final Future<String> Function(String asset)? loadDocument;
 
-  const ZiweiDocScreen({super.key, required this.entry});
+  const ZiweiDocScreen({super.key, required this.entry, this.loadDocument});
 
   @override
   State<ZiweiDocScreen> createState() => _ZiweiDocScreenState();
@@ -27,7 +29,8 @@ class _ZiweiDocScreenState extends State<ZiweiDocScreen> {
 
   Future<String> _load() async {
     try {
-      return await rootBundle.loadString(widget.entry.asset);
+      return await (widget.loadDocument?.call(widget.entry.asset) ??
+          rootBundle.loadString(widget.entry.asset));
     } catch (e) {
       return '（原文加载失败：$e）';
     }
