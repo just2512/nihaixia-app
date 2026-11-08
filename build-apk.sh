@@ -18,6 +18,9 @@ git fetch origin master 2>/dev/null
 git checkout master 2>/dev/null
 git pull origin master 2>/dev/null || true
 
+echo "=== 1.5/6 设计 token 回归检查（拒绝裸 Color/fontSize）==="
+wsl -e bash -lc 'export PATH="/home/actions/flutter/bin:$PATH"; cd /mnt/d/app && dart run tool/check_design_tokens.dart'
+
 echo "=== 2/6 首次创建签名钥匙（已存在则跳过）==="
 wsl -e bash -lc "test -f $KEYSTORE || keytool -genkeypair -v \
   -keystore $KEYSTORE -storetype PKCS12 -keyalg RSA -keysize 2048 \
@@ -46,6 +49,9 @@ mkdir -p $WSL_REPO/hook
 cat > $WSL_REPO/hook/user_defines.json << 'EOF'
 {\"sqlite3\":{\"source\":\"system\",\"name_linux\":\"/usr/lib/x86_64-linux-gnu/libsqlite3.so.0\"}}
 EOF
+# 修复 ic_launcher.png（RGB 无 alpha 会让本机 AAPT2 9.0.1 崩溃；CI 不受影响）
+python3 $WSL_REPO/tool/fix_launcher_png.py $WSL_REPO/android/app/src/main/res
+echo "PNG fix OK"
 # 堆从 1GB 提到 4GB（R8 提速 10-30 倍）
 sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+UseG1GC|' $WSL_REPO/android/gradle.properties
 echo 'Config done'
@@ -59,7 +65,7 @@ export ANDROID_HOME="/home/actions/android-sdk"
 export ANDROID_SDK_ROOT="/home/actions/android-sdk"
 cd '"$WSL_REPO"'
 flutter pub get --enforce-lockfile 2>&1 | tail -2
-flutter build apk --release 2>&1 | tail -10
+flutter build apk --release -PciArm64Only=true 2>&1 | tail -10
 '
 
 echo "=== 6/6 复制 APK 到 Windows ==="
