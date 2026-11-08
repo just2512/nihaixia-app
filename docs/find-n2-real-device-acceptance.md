@@ -24,7 +24,7 @@
 | Android | 系统版本、SDK、ColorOS 版本（设置页截图或设备信息） |
 | 系统显示 | 屏幕分辨率、密度、系统字号、显示大小 |
 | 应用 | 包名 `com.nihaisha.nihaisha_app`、Git commit、APK SHA-256 |
-| 构建 | 本轮 master CI 的 arm64 Release APK；必须使用仓库正式签名密钥，不得用 Debug 签名包混测 |
+| 构建 | CI 只产出 arm64 Debug ABI 证据包；实际安装包由本地使用既有 Release 签名密钥构建 |
 | 连接 | USB 调试已授权；电脑有 Android platform-tools（adb）和 PowerShell |
 
 在安装前先完成旧包签名核对；签名与版本条件满足后，使用覆盖安装，不得先卸载。安装本轮 APK 后再确认：
@@ -223,7 +223,7 @@ output/find-n2/<run-id>/
 
 ### K. 原位覆盖升级与数据保留
 
-本项严格禁止卸载旧版、清除应用数据或删除 SQLite 文件。先按第 9.2 节只读提取手机当前 APK，并核对 applicationId、versionCode 和签名证书；再按第 9.3 节核验本轮 Release APK。只有包名一致、签名兼容且新版 versionCode 严格更高时，才允许执行 `adb install -r`。
+本项严格禁止卸载旧版、清除应用数据或删除 SQLite 文件。先按第 9.2 节只读提取手机当前 APK，并核对 applicationId、versionCode 和签名证书；再按第 9.3 节在本地使用既有签名密钥构建并核验 Release APK。只有包名一致、签名兼容且新版 versionCode 严格更高时，才允许执行 `adb install -r`。
 
 升级前记录已有数据基线：收藏数量与代表性条目、诊断历史数量与代表性记录、历史会话数量与最近会话、应用设置。不得记录真实患者隐私；使用专门测试资料。
 
@@ -331,15 +331,15 @@ output/find-n2/<run-id>/
 
 ## 9. 新版 APK 原位覆盖升级与数据保留验收
 
-### 9.1 当前构建身份（每轮 CI 重新核对）
+### 9.1 当前构建身份
 
 - Android applicationId：`com.nihaisha.nihaisha_app`
 - 本轮仓库版本：`1.11.30+8039`，即 versionName `1.11.30`、versionCode `8039`。
-- CI 目标：单一 `arm64-v8a` Release APK。
-- CI 必须从仓库 Actions Secrets 读取正式发布签名密钥；缺少密钥时构建必须失败，不允许回退到临时 Debug 签名。
-- 以上是构建配置，不代表手机旧 APK 的签名和版本已知。必须先从设备提取旧 APK 并比对证书。
+- CI 只构建单一 `arm64-v8a` Debug APK，用于 ABI 构建验证和 SHA-256 工件留存；**该 Debug APK 禁止安装到保留旧数据的手机上**。
+- 实际安装包由本地构建 Release APK，使用现有 `android/key.properties` 和原签名 keystore。禁止生成新的 keystore 来替代原密钥。
+- CI Debug APK 与本地 Release APK 是两种不同用途的工件，不能混淆。
 
-每轮交付必须记录 Git commit、workflow run、artifact 名称、SHA-256、applicationId、versionName、versionCode、ABI 列表和签名证书 SHA-256。缺少任一项，安装标记 BLOCKED。
+每轮交付记录 Git commit、workflow run、CI artifact 名称、CI APK SHA-256、Android 单测报告，以及本地 Release APK SHA-256、applicationId、versionName、versionCode、ABI 列表和签名证书 SHA-256。
 
 ### 9.2 安装前检查旧 APK（不卸载、不清数据）
 
@@ -361,36 +361,62 @@ apkanalyzer manifest version-code .\installed-old.apk
 apkanalyzer manifest version-name .\installed-old.apk
 ```
 
-记录旧包的 applicationId、versionCode 和 signer certificate SHA-256。与新 APK 的对应信息逐项比较：
+记录旧包的 applicationId、versionCode 和 signer certificate SHA-256。与本地 Release APK 的对应信息逐项比较：
 
 - applicationId 必须完全相同。
 - 新版 versionCode 必须严格大于旧版。
-- 新旧 APK 的签名证书必须相同；若使用签名轮换，则必须由 Android 平台认可的 signing lineage 明确证明兼容，不能仅凭别名或密钥文件名判断。
+- 新旧 APK 的签名证书必须相同；若使用签名轮换，则必须由 Android 平台认可的 signing lineage 明确证明兼容。
 - ABI 必须包含设备所需的 `arm64-v8a`。
 
-任何一项不满足或无法核验，都标记 BLOCKED，**不得尝试覆盖安装，更不得建议卸载旧版**。因为卸载会删除应用沙盒数据，且与本轮要求冲突。
+任何一项不满足或无法核验，都标记 BLOCKED，**不得尝试覆盖安装，更不得建议卸载旧版**。
 
-### 9.3 新 APK 离线核验
+### 9.3 本地构建并核验 Release APK
 
-从本轮 CI artifact `android-arm64-release-apk` 解压出 `app-release.apk`、SHA 文件、`app-release.apk.certs.txt` 和 `app-release.apk.metadata.txt`，执行：
+先确认本地原签名配置存在。仓库中的模板仅供字段参考，不可用新生成的密钥覆盖原密钥：
+
+- `android/key.properties` 必须存在，且包含原 keystore 对应的 `storeFile`、`storePassword`、`keyAlias`、`keyPassword`。
+- `android/app/build.gradle.kts` 的 Release signing config 从 `android/key.properties` 读取配置；如果文件不存在会 fallback 到 Debug 签名，因此必须先检查文件，不能盲目构建。
+- 若 keystore 放在 `android/` 目录，`storeFile` 路径应按 Gradle app module 的相对路径正确指向它，例如 `../nihaisha.jks`；以实际 keystore 文件位置为准。
+
+在仓库根目录 PowerShell 执行：
 
 ```powershell
-Get-FileHash .\app-release.apk -Algorithm SHA256
-apkanalyzer manifest application-id .\app-release.apk
-apkanalyzer manifest version-code .\app-release.apk
-apkanalyzer manifest version-name .\app-release.apk
-apkanalyzer files list .\app-release.apk
-apksigner verify --verbose --print-certs .\app-release.apk
+if (-not (Test-Path .\android\key.properties)) {
+  throw "android/key.properties missing; refusing to create a Debug-signed upgrade APK."
+}
+
+flutter pub get --enforce-lockfile
+
+$env:ORG_GRADLE_PROJECT_ciArm64Only = 'true'
+try {
+  flutter build apk --release --no-pub --target-platform android-arm64
+  if ($LASTEXITCODE -ne 0) { throw "Release APK build failed." }
+}
+finally {
+  Remove-Item Env:ORG_GRADLE_PROJECT_ciArm64Only -ErrorAction SilentlyContinue
+}
+
+$apk = ".\build\app\outputs\flutter-apk\app-release.apk"
+if (-not (Test-Path $apk)) { throw "Expected arm64 Release APK not found: $apk" }
+
+apksigner verify --verbose --print-certs $apk
+Get-FileHash $apk -Algorithm SHA256
+apkanalyzer manifest application-id $apk
+apkanalyzer manifest version-code $apk
+apkanalyzer manifest version-name $apk
+apkanalyzer files list $apk
 ```
 
-通过条件：
+本地通过条件：
 
-- SHA-256 与 CI artifact 内的校验文件一致。
+- APK 为 Release 构建，签名验证成功。
+- SHA-256 已记录。
 - applicationId 精确为 `com.nihaisha.nihaisha_app`。
-- versionName/versionCode 与本轮 CI 记录一致；versionCode 必须高于旧包。
+- versionName/versionCode 与本轮版本一致；versionCode 高于旧包。
 - APK 原生库 ABI 集合只包含 `arm64-v8a`。
-- APK 签名验证成功，证书 SHA-256 与设备当前安装包一致；artifact 中的 `.certs.txt` 可用于核对签名指纹。
-- APK 是 Release 构建，不能用 Debug 签名包替代。
+- 签名证书 SHA-256 与设备当前安装包一致。
+
+如果本地 Release APK 的签名证书与旧 APK 不一致，必须停止。不得通过卸载旧版、清除数据或改 applicationId 规避。
 
 ### 9.4 原位覆盖安装（保留原数据）
 
