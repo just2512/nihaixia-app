@@ -585,11 +585,22 @@ void main() {
     expect(find.text('分享辨证结果'), findsOneWidget);
     expect(find.text('复制处方'), findsOneWidget);
 
+    String? copiedText;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copiedText = (call.arguments as Map)['text'] as String?;
+      }
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
     await tester.tap(find.text('复制处方'));
     await _pumpFrames(tester);
-    final clipboard = await Clipboard.getData('text/plain');
-    expect(clipboard?.text, contains('小柴胡汤'));
-    expect(clipboard?.text, contains('柴胡'));
+    expect(copiedText, contains('小柴胡汤'));
+    expect(copiedText, contains('柴胡'));
     expect(tester.takeException(), isNull);
   });
 }
