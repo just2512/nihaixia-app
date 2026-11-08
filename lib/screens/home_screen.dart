@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'local_ai_interview_screen.dart';
+import 'tools_screen.dart';
+import 'knowledge_screen.dart';
 import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
-import 'tools_screen.dart';
 import '../widgets/adaptive_home_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const LocalAiInterviewScreen(),
     const ToolsScreen(),
+    const KnowledgeScreen(),
     const BookmarksScreen(),
     const SettingsScreen(),
   ];
@@ -48,6 +50,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.grid_view_outlined),
             selectedIcon: Icon(Icons.grid_view_rounded),
             label: '工具',
+          ),
+          AppNavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: '知识',
           ),
           AppNavigationDestination(
             icon: Icon(Icons.bookmark_border),

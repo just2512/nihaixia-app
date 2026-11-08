@@ -96,3 +96,8 @@ apk-output/
 /android/*.keystore
 /android/*.p12
 /android/*.pfx
+
+# 本地大模型文件（数 GB，绝不提交）
+*.litertlm
+*.gguf
+/gemma-*.litertlm

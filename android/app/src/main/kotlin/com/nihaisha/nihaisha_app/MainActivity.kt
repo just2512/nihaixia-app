@@ -128,28 +128,40 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun runAiTask(result: MethodChannel.Result, task: () -> Any?) {
-        aiExecutor.execute {
-            try {
-                val value = task()
-                mainHandler.post { result.success(value) }
-            } catch (error: Exception) {
-                mainHandler.post {
-                    result.error(
-                        "LOCAL_AI_ERROR",
-                        error.message ?: error.javaClass.simpleName,
-                        null
-                    )
+        try {
+            aiExecutor.execute {
+                try {
+                    val value = task()
+                    mainHandler.post { result.success(value) }
+                } catch (error: Exception) {
+                    mainHandler.post {
+                        result.error(
+                            "LOCAL_AI_ERROR",
+                            error.message ?: error.javaClass.simpleName,
+                            null
+                        )
+                    }
+                } catch (error: Throwable) {
+                    // Errors must not strand the Dart side on a never-resolving
+                    // Future; report them through the channel like Exceptions.
+                    mainHandler.post {
+                        result.error(
+                            "LOCAL_AI_FATAL",
+                            error.message ?: error.javaClass.simpleName,
+                            null
+                        )
+                    }
                 }
-            } catch (error: Throwable) {
-                // Errors must not strand the Dart side on a never-resolving
-                // Future; report them through the channel like Exceptions.
-                mainHandler.post {
-                    result.error(
-                        "LOCAL_AI_FATAL",
-                        error.message ?: error.javaClass.simpleName,
-                        null
-                    )
-                }
+            }
+        } catch (error: Throwable) {
+            // Executor already shut down (Activity is tearing down). A queued
+            // task from Dart would otherwise leave its Future pending forever.
+            mainHandler.post {
+                result.error(
+                    "LOCAL_AI_SHUTDOWN",
+                    error.message ?: error.javaClass.simpleName,
+                    null
+                )
             }
         }
     }
@@ -286,8 +298,9 @@ class MainActivity : FlutterActivity() {
                 closeConversation = { conversation?.close() },
                 closeEngine = { engine?.close() }
             )
-        } catch (_: Exception) {
-            // Best-effort: primary integrity error takes precedence.
+        } catch (_: Throwable) {
+            // Best-effort: primary integrity error takes precedence, even if
+            // native close throws an Error (e.g. UnsatisfiedLinkError).
         }
     }
 
@@ -727,18 +740,28 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        aiExecutor.execute {
-            try {
-                val status = importModelFromUri(uri)
-                mainHandler.post { pending.success(status) }
-            } catch (error: Exception) {
-                mainHandler.post {
-                    pending.error(
-                        "MODEL_IMPORT_FAILED",
-                        error.message ?: error.javaClass.simpleName,
-                        null
-                    )
+        try {
+            aiExecutor.execute {
+                try {
+                    val status = importModelFromUri(uri)
+                    mainHandler.post { pending.success(status) }
+                } catch (error: Exception) {
+                    mainHandler.post {
+                        pending.error(
+                            "MODEL_IMPORT_FAILED",
+                            error.message ?: error.javaClass.simpleName,
+                            null
+                        )
+                    }
                 }
+            }
+        } catch (error: Throwable) {
+            mainHandler.post {
+                pending.error(
+                    "MODEL_IMPORT_FAILED",
+                    error.message ?: error.javaClass.simpleName,
+                    null
+                )
             }
         }
     }

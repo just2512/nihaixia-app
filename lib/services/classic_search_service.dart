@@ -140,7 +140,14 @@ class ClassicSearchService {
   static Future<void> ensureLoaded() async {
     if (_entries != null) return;
     _loading ??= _load();
-    await _loading;
+    try {
+      await _loading;
+    } catch (_) {
+      // 只在仍然指向本次失败的 future 时清除，允许下一次 ensureLoaded 重试，
+      // 避免加载失败后索引永久不可用。
+      _loading = null;
+      rethrow;
+    }
   }
 
   static Future<void> _load() async {
