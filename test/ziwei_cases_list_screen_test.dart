@@ -52,6 +52,13 @@ void main() {
     addTearDown(tester.view.resetDisplayFeatures);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final frameworkErrors = <FlutterErrorDetails>[];
+    final previousErrorHandler = FlutterError.onError;
+    FlutterError.onError = (details) {
+      frameworkErrors.add(details);
+      previousErrorHandler?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = previousErrorHandler);
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Row(children: [
       const SizedBox(width: 412),
       Expanded(child: Builder(builder: (source) => Center(child: ElevatedButton(
@@ -63,7 +70,8 @@ void main() {
     ]))));
     await tester.tap(find.text('打开紫微案例库'));
     await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull, reason: '进入案例列表页时发生异常');
+    final listPageError = tester.takeException();
+    expect(listPageError, isNull, reason: '进入案例列表页时发生异常：${frameworkErrors.map((e) => '${e.exception}\\n${e.stack}').join('\\n')}');
     final list = tester.getRect(find.byType(ListView).first);
     expect(list.left, greaterThanOrEqualTo(412));
     expect(list.right, lessThanOrEqualTo(800));
@@ -73,7 +81,11 @@ void main() {
     await tester.pump();
     final markdown = tester.getRect(find.byType(Markdown));
     final detailError = tester.takeException();
-    expect(detailError, isNull, reason: '从案例列表进入原文详情时发生异常：$detailError');
+    expect(
+      detailError,
+      isNull,
+      reason: '从案例列表进入原文详情时发生异常：$detailError\\n${frameworkErrors.map((e) => '${e.exception}\\n${e.stack}').join('\\n')}',
+    );
     expect(markdown.left, greaterThanOrEqualTo(412));
     expect(markdown.right, lessThanOrEqualTo(800));
   });
