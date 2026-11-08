@@ -347,6 +347,7 @@ jobs:
           fi
           url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.arm64.android.so"
           expected="0c2d3bfc8c87abceb21ed72a4bb49964121c5fe1a8ef3848d83ba907d01b6161"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380065"
           tmp="$(mktemp)"
           download_verified() {
             local candidate actual
