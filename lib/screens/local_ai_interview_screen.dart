@@ -124,6 +124,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.recordingFileInspector,
     this.imagePicker,
     this.conversationStore,
+    this.bookmarkWriter,
     this.preferredAnchorPoint,
     this.initialPrompt,
     this.testToolRouteBuilder,
@@ -141,6 +142,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
   final AssistantConversationStore? conversationStore;
+
+  /// Test seam for verifying the assistant's diagnosis bookmark action.
+  @visibleForTesting
+  final Future<int> Function(Bookmark bookmark)? bookmarkWriter;
 
   /// Deterministic route seam for persistence/retry widget tests. Production
   /// callers leave this null and use the registered in-app tool page.
@@ -1019,7 +1024,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         '状态：证据不足，不自动推荐方剂；请由执业中医师面诊核实。',
     ].where((line) => line.trim().isNotEmpty).join('\n');
     try {
-      await DatabaseHelper.instance.insertBookmark(Bookmark(
+      await (widget.bookmarkWriter ?? DatabaseHelper.instance.insertBookmark)(Bookmark(
         title: '${result.displayMeridian}病 - ${result.pattern}',
         content: content,
         category: '辨证结果',
