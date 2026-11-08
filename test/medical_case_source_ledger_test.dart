@@ -131,6 +131,7 @@ void main() {
       page: '第 42 页',
       passage: '辨太阳病脉证并治上',
       originalExcerpt: '太阳之为病，脉浮，头项强痛而恶寒。',
+      applicability: '对应辨太阳病脉证并治上篇的该条原文。',
       verificationStatus: 'VERIFIED',
       bibliographicLocatorStatus: 'VERIFIED',
     );
