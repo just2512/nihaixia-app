@@ -1,6 +1,9 @@
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
+
+import '../data/settings_repository.dart';
+import '../theme/app_tokens.dart';
 import 'adaptive_master_detail.dart';
 
 /// Top-level navigation that changes with the app window, not the device model.
@@ -47,20 +50,122 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
   // scroll positions, filters and in-progress input, when the device unfolds.
   final GlobalKey _screensKey = GlobalKey();
 
-  NavigationRail _buildRail({required bool extended}) {
-    return NavigationRail(
-      selectedIndex: widget.currentIndex,
-      onDestinationSelected: widget.onDestinationSelected,
-      labelType: NavigationRailLabelType.none,
-      extended: extended,
-      destinations: [
-        for (final destination in widget.destinations)
-          NavigationRailDestination(
-            icon: destination.icon,
-            selectedIcon: destination.selectedIcon,
-            label: Text(destination.label),
+  // 内屏展开态下，用户可点击顶部 logo 收起整个左侧菜单栏，让内容区全屏。
+  bool _railCollapsed = false;
+
+  /// 顶部 app logo：与右侧页面标题同高，点击收起整个左侧菜单栏。
+  Widget _buildLogo() {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: '收起菜单栏',
+      child: InkWell(
+        onTap: () => setState(() => _railCollapsed = true),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-      ],
+          child: Icon(Icons.spa_outlined, color: scheme.onPrimary, size: 22),
+        ),
+      ),
+    );
+  }
+
+  /// 底部深浅模式循环切换按钮（浅色 <-> 深色）。
+  Widget _buildThemeToggle() {
+    final settings = SettingsRepository.instance;
+    final isDark = settings.themeMode == ThemeMode.dark;
+    return Tooltip(
+      message: isDark ? '切换浅色模式' : '切换深色模式',
+      child: IconButton(
+        onPressed: () {
+          settings.setThemeMode(
+            isDark ? ThemeMode.light : ThemeMode.dark,
+          );
+        },
+        icon: Icon(
+          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+        ),
+      ),
+    );
+  }
+
+  /// 收起态下的微小展开按钮：贴左侧边框、位于屏高约 1/3 处。
+  Widget _buildExpandButton() {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: '展开菜单栏',
+      child: InkWell(
+        onTap: () => setState(() => _railCollapsed = false),
+        child: Container(
+          width: 18,
+          height: 48,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(9),
+              bottomRight: Radius.circular(9),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 6,
+                offset: const Offset(2, 0),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.chevron_right,
+            size: 16,
+            color: scheme.onPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 展开态左侧菜单栏：顶部 logo、中间图标、底部主题按钮，主题按钮沉底。
+  Widget _buildRail({required bool extended}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      color: scheme.surface,
+      child: Column(
+        children: [
+          Expanded(
+            child: NavigationRail(
+              leading: Padding(
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.md,
+                  bottom: AppSpacing.sm,
+                ),
+                child: _buildLogo(),
+              ),
+              selectedIndex: widget.currentIndex,
+              onDestinationSelected: widget.onDestinationSelected,
+              labelType: NavigationRailLabelType.none,
+              extended: extended,
+              destinations: [
+                for (final destination in widget.destinations)
+                  NavigationRailDestination(
+                    icon: destination.icon,
+                    selectedIcon: destination.selectedIcon,
+                    label: Text(destination.label),
+                  ),
+              ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _buildThemeToggle(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -89,6 +194,17 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
         index: widget.currentIndex,
         children: widget.screens,
       );
+
+  /// Tab subtree with a clean window MediaQuery. A flat/zero-width fold is a
+  /// continuous canvas and must not leak into nested pages, otherwise the tool
+  /// card grid (and other single-pane children) re-split the content and leave
+  /// a half-empty panel. This mirrors the physical-hinge branch below.
+  Widget _buildFullWindowScreens() {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(displayFeatures: const []),
+      child: _buildScreens(),
+    );
+  }
 
   DisplayFeature? _findVerticalFoldingFeature(
     BuildContext context,
@@ -180,28 +296,29 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
           );
         }
 
-        if (feature != null) {
-          // The root tab content uses the complete unfolded window. Splitting
-          // the app into two half-width panes made the chat composer and message
-          // column too narrow, and nested AdaptiveSinglePane widgets could
-          // select a different half and leave the other display black.
-          // Keep navigation compact; hide the hinge from the tab subtree so
-          // nested pages inherit the full window constraints consistently.
-          final fullWindowMedia = MediaQuery.of(context).copyWith(
-            displayFeatures: const [],
+        // 收起态：菜单栏彻底消失，内容全屏；仅左边缘 1/3 处留微小展开按钮。
+        if (_railCollapsed) {
+          return Stack(
+            children: [
+              Positioned.fill(child: _buildFullWindowScreens()),
+              Positioned(
+                left: 0,
+                top: screenSize.height * 0.33,
+                child: _buildExpandButton(),
+              ),
+            ],
           );
+        }
+
+        if (feature != null) {
+          // Physical hinge: keep navigation compact and hide the hinge from
+          // the tab subtree so nested pages inherit the full window width.
           return Scaffold(
             body: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildRail(extended: false),
-                Expanded(
-                  child: MediaQuery(
-                    key: const ValueKey('full-window-content-media-query'),
-                    data: fullWindowMedia,
-                    child: _buildScreens(),
-                  ),
-                ),
+                Expanded(child: _buildFullWindowScreens()),
               ],
             ),
           );
@@ -214,9 +331,10 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
 
         return Scaffold(
           body: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (useNavigationRail) _buildRail(extended: useExtendedRail),
-              Expanded(child: _buildScreens()),
+              Expanded(child: _buildFullWindowScreens()),
             ],
           ),
           bottomNavigationBar: useNavigationRail

@@ -30,7 +30,9 @@ class _WindowMetricsDiagnosticsState extends State<WindowMetricsDiagnostics> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!kDebugMode) return;
+    if (!kDebugMode && !const bool.fromEnvironment('WINDOW_METRICS_RELEASE')) {
+      return;
+    }
 
     final snapshot = _snapshot(MediaQuery.of(context));
     if (snapshot == _pendingSnapshot) return;
@@ -41,7 +43,11 @@ class _WindowMetricsDiagnosticsState extends State<WindowMetricsDiagnostics> {
     _logScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logScheduled = false;
-      if (!mounted || !kDebugMode) return;
+      if (!mounted ||
+          (!kDebugMode &&
+              !const bool.fromEnvironment('WINDOW_METRICS_RELEASE'))) {
+        return;
+      }
 
       final pending = _pendingSnapshot;
       if (pending == null || pending == _lastLoggedSnapshot) return;
