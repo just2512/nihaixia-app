@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/engine/diagnostic_rules.dart';
 
 void main() {
   group('经典条文来源 manifest 完整性', () {
@@ -28,6 +29,21 @@ void main() {
         expect(record['applicability'], isA<String>());
         expect(record['status'], isA<String>());
       }
+    });
+
+    test('manifest 条件键必须与当前规则表 canonical IDs 一一对应', () {
+      final manifestKeys = records
+          .map((record) => record['conditionKey'] as String)
+          .toSet();
+      final activeRuleKeys = DiagnosticRules.combinedPatterns
+          .map((rule) => rule.condition)
+          .toSet();
+
+      expect(
+        manifestKeys.every((key) => key.startsWith('combined.')),
+        isTrue,
+      );
+      expect(manifestKeys, activeRuleKeys);
     });
 
     test('在线转录核对不得冒充纸本版本、页码或影像核验', () {

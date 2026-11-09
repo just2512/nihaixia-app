@@ -26,7 +26,7 @@
   "policy": "不得以 clause_<number>.md 文件名推定真实条文号；未核验的本地资产路径、底本、页码保持 MISSING。",
   "records": [
     {
-      "conditionKey": "sun_symptoms + yangming_symptoms",
+      "conditionKey": "combined.sun_yangming.base",
       "classification": "EXPLICIT_COMBINED",
       "articleNumber": 32,
       "chapter": "太阳病脉证并治中",
@@ -45,7 +45,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "sun+shaoyang_combined",
+      "conditionKey": "combined.sun_shaoyang.clause146",
       "classification": "SINGLE_MERIDIAN_FORMULA_NOT_EXPLICIT_COMBINED",
       "articleNumber": 146,
       "chapter": "太阳病脉证并治下",
@@ -64,7 +64,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "shao_yang_symptoms + yangming_symptoms",
+      "conditionKey": "combined.shaoyang_yangming.clause256",
       "classification": "EXPLICIT_COMBINED",
       "articleNumber": 256,
       "chapter": "阳明病脉证并治",
@@ -83,7 +83,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "taiyin_symptoms + shaoyin_symptoms",
+      "conditionKey": "combined.taiyin_shaoyin.unverified",
       "classification": "UNVERIFIED_CLINICAL_ASSOCIATION",
       "articleNumber": null,
       "chapter": null,
@@ -102,7 +102,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "sun+yangming_vomit",
+      "conditionKey": "combined.sun_yangming.clause33_vomit",
       "classification": "EXPLICIT_COMBINED",
       "articleNumber": 33,
       "chapter": "太阳病脉证并治中",
@@ -121,7 +121,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "sun+yangming_chest_full",
+      "conditionKey": "combined.sun_yangming.clause36_chest_full",
       "classification": "EXPLICIT_COMBINED",
       "articleNumber": 36,
       "chapter": "太阳病脉证并治中",
@@ -140,7 +140,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "sun+shaoyang_diarrhea",
+      "conditionKey": "combined.sun_shaoyang.clause172_diarrhea",
       "classification": "EXPLICIT_COMBINED",
       "articleNumber": 172,
       "chapter": "太阳病脉证并治下",
@@ -159,7 +159,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "sun+shaoyang_vomit",
+      "conditionKey": "combined.sun_shaoyang.clause172_vomit",
       "classification": "EXPLICIT_COMBINED",
       "articleNumber": 172,
       "chapter": "太阳病脉证并治下",
@@ -178,7 +178,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "jueyin+shaoyang",
+      "conditionKey": "combined.jueyin_shaoyang.unverified",
       "classification": "UNVERIFIED_CLINICAL_ASSOCIATION",
       "articleNumber": null,
       "chapter": null,
@@ -197,7 +197,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "three_yang_sleep",
+      "conditionKey": "combined.three_yang.clause268_sleep",
       "classification": "EXPLICIT_COMBINED_NO_FORMULA_IN_CLAUSE",
       "articleNumber": 268,
       "chapter": "少阳病脉证并治",
@@ -216,7 +216,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "shaoyang+taiyin",
+      "conditionKey": "combined.shaoyang.clause147",
       "classification": "SINGLE_MERIDIAN_FORMULA_NOT_EXPLICIT_COMBINED",
       "articleNumber": 147,
       "chapter": "太阳病脉证并治下",
@@ -235,7 +235,7 @@
       "primaryImageVerification": "MISSING"
     },
     {
-      "conditionKey": "sun+taiyin",
+      "conditionKey": "combined.sun.clause163",
       "classification": "SINGLE_MERIDIAN_MISTREATMENT_FORMULA_NOT_EXPLICIT_COMBINED",
       "articleNumber": 163,
       "chapter": "太阳病脉证并治下",
