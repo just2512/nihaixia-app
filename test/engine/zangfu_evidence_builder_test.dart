@@ -195,5 +195,56 @@ void main() {
       expect(assessment.hasVerifiedOrganMapping, isFalse);
     });
 
+    test('明确否定与未确认答案保持不同证据状态', () {
+      final assessment = ZangFuEvidenceBuilder.build(
+        qAnswers: const {},
+        extSymptoms: const {},
+        answers: const {
+          'combined_treatment_history': '明确没有',
+          'combined_clause36_dyspnea': '没有气喘',
+          'combined_clause36_chest_fullness': '没有胸满',
+          'combined_diarrhea_status': '明确没有下利（第33条）',
+          'combined_clause172_diarrhea': '没有下利',
+          'food_stagnation': '没有',
+          'nausea': '不想吐',
+          'three_yang_pulse_position': '未确认',
+          'treatment_history': '不知道',
+          'pulse_cross_drink': '不确定',
+        },
+      );
+      final byKey = {
+        for (final record in assessment.records) record.questionKey: record,
+      };
+
+      for (final key in const [
+        'combined_treatment_history',
+        'combined_clause36_dyspnea',
+        'combined_clause36_chest_fullness',
+        'combined_diarrhea_status',
+        'combined_clause172_diarrhea',
+        'food_stagnation',
+        'nausea',
+      ]) {
+        expect(
+          byKey[key]?.state,
+          ZangFuEvidenceAnswerState.explicitNormal,
+          reason: key,
+        );
+      }
+      for (final key in const [
+        'three_yang_pulse_position',
+        'treatment_history',
+        'pulse_cross_drink',
+      ]) {
+        expect(
+          byKey[key]?.state,
+          ZangFuEvidenceAnswerState.unknown,
+          reason: key,
+        );
+      }
+      expect(assessment.organMappingStatus, 'MISSING');
+      expect(assessment.hasVerifiedOrganMapping, isFalse);
+    });
+
   });
 }

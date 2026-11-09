@@ -276,15 +276,27 @@ class ZangFuEvidenceBuilder {
   static bool _isUnknown(String value) =>
       value.contains('不清楚') ||
       value.contains('没摸过') ||
-      value.contains('不确定');
+      value.contains('不确定') ||
+      value.contains('不知道') ||
+      value == '未确认' ||
+      value.contains('未核实');
 
   static bool _isExplicitNormal(String value) =>
       value.contains('正常') ||
-      value == '不痛' ||
-      value == '不渴' ||
-      value == '不想吐' ||
-      value == '不恶心' ||
-      value == '没有呕吐' ||
-      value == '都没有' ||
-      value == '没有此症状';
+      const {
+        '明确没有',
+        '没有',
+        '没有气喘',
+        '没有胸满',
+        '没有下利',
+        '明确没有下利（第33条）',
+        '没有明显异常',
+        '不痛',
+        '不渴',
+        '不想吐',
+        '不恶心',
+        '没有呕吐',
+        '都没有',
+        '没有此症状',
+      }.contains(value);
 }
