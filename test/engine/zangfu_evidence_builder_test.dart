@@ -107,7 +107,7 @@ void main() {
       };
       for (final item in answers.entries) {
         expect(byKey[item.key]?.answerText, item.value, reason: item.key);
-        expect(byKey[item.key]?.sourceId, 'follow_up:' + item.key);
+        expect(byKey[item.key]?.sourceId, 'follow_up:${item.key}');
         expect(byKey[item.key]?.state, ZangFuEvidenceAnswerState.answered);
       }
       expect(assessment.organMappingStatus, 'MISSING');
@@ -205,7 +205,7 @@ void main() {
           'combined_clause36_chest_fullness': '没有胸满',
           'combined_diarrhea_status': '明确没有下利（第33条）',
           'combined_clause172_diarrhea': '没有下利',
-          'food_stagnation': '没有',
+          'food_stagnation_answer': '没有',
           'nausea': '不想吐',
           'three_yang_pulse_position': '未确认',
           'treatment_history': '不知道',
