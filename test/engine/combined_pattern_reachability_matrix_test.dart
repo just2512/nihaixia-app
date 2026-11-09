@@ -50,6 +50,31 @@ void main() {
   }
 
   group('合病规则可达性矩阵', () {
+    test('当前规则表必须与主路径/旧兜底矩阵一一对应', () {
+      final ruleConditions = DiagnosticRules.combinedPatterns
+          .map((pattern) => pattern.condition)
+          .toList(growable: false);
+      final matrixConditions = cases
+          .map((item) => item.key)
+          .toList(growable: false);
+
+      expect(
+        ruleConditions.toSet(),
+        hasLength(ruleConditions.length),
+        reason: '规则表 condition 必须唯一，不能让 singleWhere 隐藏重复键',
+      );
+      expect(
+        matrixConditions.toSet(),
+        hasLength(matrixConditions.length),
+        reason: '矩阵用例 condition 必须唯一',
+      );
+      expect(
+        matrixConditions.toSet(),
+        ruleConditions.toSet(),
+        reason: '每条规则都必须同时进入结构化主路径与旧兜底最终结果验证',
+      );
+    });
+
     for (final item in cases) {
       test('${item.key}：结构化主路径最终采用对应规则表结果', () {
         final engine = DiagnosticEngine()..restoreSnapshot(snapshotFor(item, structured: true));
