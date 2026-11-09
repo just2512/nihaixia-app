@@ -222,7 +222,7 @@ class ZangFuEvidenceBuilder {
         continue;
       }
       final preservedRawAnswer = answers['raw_followup:${question.key}'];
-      final rawAnswer = preservedRawAnswer ?? switch (question.key) {
+      final legacyAnswer = switch (question.key) {
         'food_stagnation' => answers['food_stagnation_answer'],
         'sun_taiyin_repeated_purgation' =>
           answers['sun_taiyin_repeated_purgation_answer'],
@@ -231,8 +231,14 @@ class ZangFuEvidenceBuilder {
         'tidal_fever' => answers['tidal_fever_answer'],
         'clause146_mild_nausea' =>
           answers['clause146_mild_nausea_answer'],
-        _ => answers[question.key],
+        _ => null,
       };
+      // 新版问诊快照使用 question.key；旧版快照可能使用 *_answer 别名。
+      // 只有旧别名确实存在时才优先，否则必须回退到 canonical key，
+      // 避免显式否定答案（如 nausea: 不想吐）被静默丢弃。
+      final rawAnswer = preservedRawAnswer ??
+          legacyAnswer ??
+          answers[question.key];
       if (rawAnswer is! String || rawAnswer.trim().isEmpty) continue;
       final normalized = rawAnswer.trim();
       final optionIndex = question.options.indexOf(normalized);
