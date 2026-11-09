@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/formula_rules.dart';
+import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/engine/zangfu_evidence_builder.dart';
 import 'package:nihaisha_app/models/zangfu_evidence.dart';
 
@@ -147,5 +148,52 @@ void main() {
       expect(assessment.organMappingStatus, 'MISSING');
       expect(assessment.hasVerifiedOrganMapping, isFalse);
     });
+
+    test('寒热选择与动态追问保留原始回答、未知状态和来源', () {
+      final engine = DiagnosticEngine();
+      engine.answerTemperaturePattern('fever_chills');
+      const answers = {
+        'three_yang_pulse_position': '不清楚',
+        'combined_clause36_dyspnea': '没有气喘',
+        'combined_clause36_chest_fullness': '不确定',
+        'combined_diarrhea_status': '有下利',
+        'combined_clause172_diarrhea': '明确有自下利（第172条）',
+        'clause146_mild_nausea': '有微呕/恶心（第146条线索）',
+        'illness_duration': '约6—7天（第146条）',
+        'shaoyang147_treatment_sequence': '先发汗后又误下',
+        'nausea': '不想吐',
+        'bitter_mouth': '口苦',
+        'tidal_fever': '有潮热',
+        'food_stagnation': '有明确食积表现',
+        'sun_taiyin_repeated_purgation': '曾多次使用',
+        'sun_taiyin_epigastric_hard': '有心下痞硬',
+        'combined_treatment_history': '明确没有',
+      };
+      for (final entry in answers.entries) {
+        engine.answerFollowUp(entry.key, entry.value);
+      }
+
+      final assessment = engine.buildZangFuEvidence();
+      final byKey = {
+        for (final record in assessment.records) record.questionKey: record,
+      };
+
+      expect(byKey['temperature_pattern']?.answerText, '发热 + 怕冷');
+      expect(byKey['temperature_pattern']?.sourceId,
+          'app_question:temperature_pattern');
+      for (final entry in answers.entries) {
+        expect(byKey[entry.key]?.answerText, entry.value, reason: entry.key);
+        expect(byKey[entry.key]?.sourceId, 'follow_up:${entry.key}');
+      }
+      expect(byKey['three_yang_pulse_position']?.state,
+          ZangFuEvidenceAnswerState.unknown);
+      expect(byKey['combined_clause36_chest_fullness']?.state,
+          ZangFuEvidenceAnswerState.unknown);
+      expect(byKey['nausea']?.state,
+          ZangFuEvidenceAnswerState.explicitNormal);
+      expect(assessment.organMappingStatus, 'MISSING');
+      expect(assessment.hasVerifiedOrganMapping, isFalse);
+    });
+
   });
 }

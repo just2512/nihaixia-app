@@ -1,7 +1,9 @@
 name: Flutter Quality Gate
 
 on:
-  # Full extended quality suite is manual; flutter-tests.yml owns push/PR gates.
+  # Run the extended gate for each master change; manual dispatch remains available.
+  push:
+    branches: [master]
   workflow_dispatch:
 
 permissions:

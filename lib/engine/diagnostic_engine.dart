@@ -1322,6 +1322,9 @@ class DiagnosticEngine {
 
   void answerFollowUp(String questionKey, String answer) {
     _answers[questionKey] = answer;
+    // Keep the exact user-selected text separately: some clinical keys below
+    // are intentionally replaced by derived booleans for rule evaluation.
+    _answers['raw_followup:$questionKey'] = answer;
     // 仅把真实症状文本送入症状匹配；历史、否定和未知回答只保留在 _answers。
     const evidenceOnlyKeys = {
       'three_yang_pulse_position',

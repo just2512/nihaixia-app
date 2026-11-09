@@ -1,5 +1,6 @@
 import '../models/diagnosis.dart';
 import '../models/tcm_interview_task_state.dart';
+import '../models/zangfu_evidence.dart';
 import 'tcm_interview_adapter.dart';
 
 /// Deterministic TCM interview state machine hosted by the unified assistant
@@ -52,6 +53,8 @@ class TcmInterviewConversationController {
   List<String> get pendingOptions => List.unmodifiable(_pendingOptions);
   bool get isCompleted => _status == 'completed';
   DiagnosisResult? get completedDiagnosis => _completedDiagnosis;
+  ZangFuEvidenceAssessment get currentZangFuEvidence =>
+      _adapter.buildZangFuEvidence();
   bool get canAnswer => !isCompleted &&
       _pendingPromptId != null &&
       _pendingOptions.isNotEmpty;

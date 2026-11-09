@@ -812,6 +812,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('问诊进行中可独立查看只读脏腑证据，不等待辨证结果', (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    final initialState = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'temperature',
+    );
+    expect(initialState, isNotNull);
+    await tester.tap(find.text('发热 + 怕冷').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('问诊证据'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('脏腑证据（只读）'), findsOneWidget);
+    expect(find.text('寒热辨经'), findsOneWidget);
+    expect(find.text('发热 + 怕冷'), findsWidgets);
+    expect(find.textContaining('脏腑归属：MISSING'), findsOneWidget);
+    expect(
+      find.textContaining('不进行脏腑归属、诊断或方剂计算'),
+      findsOneWidget,
+    );
+    expect(find.text('辨证结果'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('统一对话舌脉输入将主脉与兼脉写入引擎快照', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(

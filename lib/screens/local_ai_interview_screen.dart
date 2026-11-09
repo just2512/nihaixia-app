@@ -23,6 +23,7 @@ import '../models/tcm_interview_task_state.dart';
 import '../models/diagnosis.dart';
 import '../models/bookmark.dart';
 import '../models/diagnosis_result_codec.dart';
+import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
 import 'assistant_history_screen.dart';
@@ -1218,6 +1219,95 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } catch (error) {
       if (mounted) setState(() => _error = '问诊选项未能提交：$error');
     }
+  }
+
+  String _zangFuEvidenceStateLabel(ZangFuEvidenceAnswerState state) =>
+      switch (state) {
+        ZangFuEvidenceAnswerState.answered => '已回答',
+        ZangFuEvidenceAnswerState.explicitNormal => '明确正常/否定',
+        ZangFuEvidenceAnswerState.unknown => '未知',
+        ZangFuEvidenceAnswerState.unanswered => '未作答',
+        ZangFuEvidenceAnswerState.invalid => '无效选项',
+      };
+
+  Future<void> _showZangFuEvidenceDialog() async {
+    final controller = _tcmInterviewController;
+    if (controller == null) return;
+
+    final assessment = controller.currentZangFuEvidence;
+    final visibleRecords = assessment.records
+        .where((record) =>
+            record.state != ZangFuEvidenceAnswerState.unanswered)
+        .toList(growable: false);
+    final unansweredCount = assessment.records
+        .where((record) =>
+            record.state == ZangFuEvidenceAnswerState.unanswered)
+        .length;
+
+    await showFoldAwareDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('脏腑证据（只读）'),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 560,
+            maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.65,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '仅展示本次问诊原始回答与来源；不进行脏腑归属、诊断或方剂计算。',
+                ),
+                const SizedBox(height: 12),
+                if (visibleRecords.isEmpty)
+                  const Text('尚无已记录的问诊证据。'),
+                for (final record in visibleRecords) ...[
+                  Text(
+                    record.questionLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    record.answerText ??
+                        _zangFuEvidenceStateLabel(record.state),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '状态：${_zangFuEvidenceStateLabel(record.state)} · 来源：${record.sourceId}',
+                    style: Theme.of(dialogContext).textTheme.bodySmall,
+                  ),
+                  const Divider(height: 16),
+                ],
+                if (assessment.unclassifiedAdditionalEvidence.isNotEmpty)
+                  Text(
+                    '未分类扩展线索：${assessment.unclassifiedAdditionalEvidence.join('、')}',
+                  ),
+                if (unansweredCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text('尚未回答问项：$unansweredCount 项'),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    '脏腑归属：${assessment.organMappingStatus}。当前没有经过逐条核验的问项—脏腑映射，不输出脏腑诊断。',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showUnifiedTonguePulseDialog() async {
@@ -2515,6 +2605,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       appBar: AppBar(
         title: const Text('汉唐 AI 助手'),
         actions: [
+          if (_tcmInterviewController != null)
+            IconButton(
+              tooltip: '问诊证据',
+              onPressed: _sending ? null : _showZangFuEvidenceDialog,
+              icon: const Icon(Icons.fact_check_outlined),
+            ),
           IconButton(
             tooltip: '历史对话',
             onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting || _recordingBusy || _recording ? null : _openHistory,
