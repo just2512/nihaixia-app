@@ -32,6 +32,8 @@ class CombinedPatternCondition {
     'sun+yangming_chest_full': sunYangmingChestFull,
     'sun+shaoyang_diarrhea': sunShaoyangDiarrhea,
     'sun+shaoyang_vomit': sunShaoyangVomit,
+    // Intermediate canonical spelling persisted by an earlier task-state schema.
+    'combined.sun_shaoyang.vomit': sunShaoyangVomit,
     'jueyin+shaoyang': jueyinShaoyang,
     'sun+yangming_unresolved': sunYangmingUnresolved,
     'three_yang_sleep': threeYangSleep,

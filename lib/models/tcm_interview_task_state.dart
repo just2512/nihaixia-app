@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../engine/diagnostic_engine.dart';
+import '../engine/diagnostic_rules.dart';
 import '../models/diagnosis.dart';
 import '../models/diagnosis_result_codec.dart';
 
@@ -142,7 +143,9 @@ class TcmInterviewTaskState {
         'selectedSymptoms': snapshot.selectedSymptoms,
         'meridianDirection': snapshot.meridianDirection,
         'combinedMeridian': snapshot.combinedMeridian,
-        'combinedPatternCondition': snapshot.combinedPatternCondition,
+        'combinedPatternCondition': CombinedPatternCondition.canonicalize(
+          snapshot.combinedPatternCondition,
+        ),
         'answers': snapshot.answers,
         'tenQuestionIndex': snapshot.tenQuestionIndex,
         'tongueCoating': snapshot.tongueCoating,
@@ -189,7 +192,9 @@ class TcmInterviewTaskState {
       selectedSymptoms: List<String>.unmodifiable(selectedSymptoms.cast<String>()),
       meridianDirection: optionalString('meridianDirection'),
       combinedMeridian: optionalString('combinedMeridian'),
-      combinedPatternCondition: optionalString('combinedPatternCondition'),
+      combinedPatternCondition: CombinedPatternCondition.canonicalize(
+        optionalString('combinedPatternCondition'),
+      ),
       answers: Map<String, dynamic>.from(answers),
       tenQuestionIndex: tenQuestionIndex,
       tongueCoating: optionalString('tongueCoating'),

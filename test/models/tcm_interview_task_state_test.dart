@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
+import 'package:nihaisha_app/engine/diagnostic_rules.dart';
 import 'package:nihaisha_app/engine/formula_rules.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/diagnosis_result_codec.dart';
@@ -70,7 +71,7 @@ void main() {
       expect(restored.snapshot.combinedMeridian, '太阳少阳');
       expect(
         restored.snapshot.combinedPatternCondition,
-        'combined.sun_shaoyang.vomit',
+        CombinedPatternCondition.sunShaoyangVomit,
       );
       expect(restored.snapshot.answers, original.snapshot.answers);
       expect(restored.snapshot.tenQuestionIndex, 7);
@@ -84,6 +85,45 @@ void main() {
       expect(restored.snapshot.flatIndex, 3);
     });
 
+
+    test('canonicalizes historical combined condition keys on task-state read and write', () {
+      final state = TcmInterviewTaskState(
+        taskId: 'legacy-combined-key',
+        status: 'in_progress',
+        snapshot: EngineSnapshot(
+          stage: DiagnosticStage.meridianLocation,
+          selectedSymptoms: const [],
+          meridianDirection: '太阳',
+          answers: const {},
+          tenQuestionIndex: 0,
+          combinedPatternCondition: 'sun+shaoyang_vomit',
+        ),
+      );
+
+      final encoded = state.toJson();
+      final encodedSnapshot =
+          Map<String, Object?>.from(encoded['snapshot']! as Map);
+      expect(
+        encodedSnapshot['combinedPatternCondition'],
+        CombinedPatternCondition.sunShaoyangVomit,
+      );
+
+      // Simulate a pre-canonical SQLite row written by an older app version.
+      encodedSnapshot['combinedPatternCondition'] = 'sun+shaoyang_vomit';
+      encoded['snapshot'] = encodedSnapshot;
+      final restored = TcmInterviewTaskState.decode(jsonEncode(encoded));
+      expect(
+        restored.snapshot.combinedPatternCondition,
+        CombinedPatternCondition.sunShaoyangVomit,
+      );
+
+      final rewritten = jsonDecode(restored.encode()) as Map<String, dynamic>;
+      final rewrittenSnapshot = rewritten['snapshot'] as Map<String, dynamic>;
+      expect(
+        rewrittenSnapshot['combinedPatternCondition'],
+        CombinedPatternCondition.sunShaoyangVomit,
+      );
+    });
 
     test('round-trips the completed structured diagnosis without recalculation', () {
       final diagnosis = DiagnosisResult(
