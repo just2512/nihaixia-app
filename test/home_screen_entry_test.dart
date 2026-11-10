@@ -82,28 +82,28 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final inheritedMediaQuery = MediaQueryData.fromView(
+      tester.view,
+    ).copyWith(textScaler: const TextScaler.linear(1.75));
     await tester.pumpWidget(MaterialApp(
       theme: ThemeData(
         colorScheme: AppColors.colorSchemeFor(Brightness.light),
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      home: Builder(
-        builder: (context) {
-          final mediaQuery = MediaQuery.of(context);
-          return MediaQuery(
-            data: mediaQuery.copyWith(
-              textScaler: const TextScaler.linear(1.75),
-            ),
-            child: const HomeScreen(),
-          );
-        },
+      // Home is a Navigator route. Put the inherited value on the route child
+      // itself so the test does not depend on MaterialApp.builder placement.
+      home: MediaQuery(
+        data: inheritedMediaQuery,
+        child: const HomeScreen(),
       ),
     ));
     await tester.pump();
 
-    final context = tester.element(find.text('汉唐 AI 助手'));
-    expect(MediaQuery.textScalerOf(context).scale(10), 17.5);
+    final homeContext = tester.element(find.byType(HomeScreen));
+    final titleContext = tester.element(find.text('汉唐 AI 助手'));
+    expect(MediaQuery.textScalerOf(homeContext).scale(10), 17.5);
+    expect(MediaQuery.textScalerOf(titleContext).scale(10), 17.5);
     expect(tester.takeException(), isNull);
   });
 }
