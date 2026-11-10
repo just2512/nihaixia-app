@@ -37,9 +37,10 @@ class MainActivity : FlutterActivity() {
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
     private var activeBackend = "not_loaded"
-    private var conversationHasSuccessfulTurn = false
     // Keep only completed turns. A failed/blank current turn is never appended.
-    private val conversationHistoryMessages = mutableListOf<Message>()
+    private val conversationHistoryTurns = mutableListOf<LocalAiCompletedTurn>()
+    private val conversationHasSuccessfulTurn: Boolean
+        get() = conversationHistoryTurns.isNotEmpty()
 
     // Only explicit user text and pending audio transcripts enter symptom extraction.
     // Image observations and assistant responses are intentionally excluded.
@@ -295,7 +296,6 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         activeBackend = "not_loaded"
-        conversationHasSuccessfulTurn = false
         try {
             ConversationResourceReleasePolicy.closeBoth(
                 closeConversation = { conversation?.close() },
@@ -406,7 +406,7 @@ class MainActivity : FlutterActivity() {
             appendLine("【用户原文】")
             append(text)
         }
-        val reply = sendWithFirstTurnGpuFallback(Message.user(modelInput)) { conversation ->
+        val reply = sendWithFirstTurnGpuFallback(modelInput) { conversation ->
             conversation.sendMessage(modelInput).toString()
         }
         // Only literal user text is eligible for symptom extraction.
@@ -415,7 +415,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendWithFirstTurnGpuFallback(
-        userMessage: Message,
+        userMessageText: String,
         send: (Conversation) -> String
     ): String {
         val conversation = aiConversation
@@ -424,11 +424,10 @@ class MainActivity : FlutterActivity() {
         fun commitSuccessfulTurn(reply: String): String {
             if (reply.isBlank()) throw IllegalStateException("模型没有返回有效文本")
             LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
-                conversationHistoryMessages,
-                userMessage,
+                conversationHistoryTurns,
+                userMessageText,
                 reply
             )
-            conversationHasSuccessfulTurn = true
             return reply
         }
 
@@ -477,17 +476,20 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun createConversationWithHistory(engine: Engine): Conversation {
-        val initialMessages = LocalAiConversationHistoryPolicy.snapshot(
-            conversationHistoryMessages
-        )
-        val conversation = engine.createConversation(
+        val initialMessages = LocalAiConversationHistoryPolicy.initialMessages(
+            conversationHistoryTurns
+        ).map { transcriptMessage ->
+            when (transcriptMessage.role) {
+                LocalAiTranscriptRole.USER -> Message.user(transcriptMessage.text)
+                LocalAiTranscriptRole.MODEL -> Message.model(transcriptMessage.text)
+            }
+        }
+        return engine.createConversation(
             ConversationConfig(
                 systemInstruction = Contents.of(systemInstruction),
                 initialMessages = initialMessages
             )
         )
-        conversationHasSuccessfulTurn = initialMessages.isNotEmpty()
-        return conversation
     }
 
     /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
@@ -502,7 +504,6 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         activeBackend = "not_loaded"
-        conversationHasSuccessfulTurn = false
 
         var releaseFailure: Exception? = null
         try {
@@ -602,7 +603,7 @@ class MainActivity : FlutterActivity() {
         // Keep a textual attachment marker in replay history. The temporary
         // image file may be deleted by Flutter after this call; the live request
         // still receives the actual image bytes through ImageFile.
-        val historyMessage = Message.user("【此前发送过照片附件】\n$prompt")
+        val historyMessage = "【此前发送过照片附件】\n$prompt"
         val reply = sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
             conversation.sendMessage(imageContents).toString()
         }
@@ -625,7 +626,7 @@ class MainActivity : FlutterActivity() {
         )
         // The temporary recording is deleted after the turn. Preserve the
         // prompt and transcription in replay history, not a stale file path.
-        val historyMessage = Message.user("【此前发送过语音附件】\n$prompt")
+        val historyMessage = "【此前发送过语音附件】\n$prompt"
         val reply = sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
             conversation.sendMessage(audioContents).toString()
         }
@@ -714,7 +715,7 @@ class MainActivity : FlutterActivity() {
             appendLine("不要重新回答历史问题，只需确认上下文已载入。")
             append(transcript.take(10000))
         }
-        sendWithFirstTurnGpuFallback(Message.user(prompt)) { conversation ->
+        sendWithFirstTurnGpuFallback(prompt) { conversation ->
             conversation.sendMessage(prompt).toString()
         }
         // Restore only explicit text turns; assistant responses and attachment
@@ -729,8 +730,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
-        conversationHistoryMessages.clear()
-        conversationHasSuccessfulTurn = false
+        conversationHistoryTurns.clear()
 
         return try {
             val nextConversation = ConversationResetPolicy.recreateConversation(
@@ -745,9 +745,8 @@ class MainActivity : FlutterActivity() {
             aiConversation = nextConversation
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-            conversationHistoryMessages.clear()
-            conversationHasSuccessfulTurn = false
-            modelStatus()
+            conversationHistoryTurns.clear()
+                modelStatus()
         } catch (error: Exception) {
             // Never retain an Engine without a usable Conversation. A later load
             // must start from a clean state rather than overwrite a live engine.
@@ -755,10 +754,9 @@ class MainActivity : FlutterActivity() {
             aiConversation = null
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-            conversationHistoryMessages.clear()
+            conversationHistoryTurns.clear()
             activeBackend = "not_loaded"
-            conversationHasSuccessfulTurn = false
-            throw error
+                throw error
         }
     }
 
@@ -770,9 +768,8 @@ class MainActivity : FlutterActivity() {
         aiEngine = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false
-        conversationHistoryMessages.clear()
+        conversationHistoryTurns.clear()
         activeBackend = "not_loaded"
-        conversationHasSuccessfulTurn = false
         ConversationResourceReleasePolicy.closeBoth(
             closeConversation = { conversation?.close() },
             closeEngine = { engine?.close() }
