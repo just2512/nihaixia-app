@@ -2598,10 +2598,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _deleteCachedAttachments(paths);
       final managedAttachments = await _attachmentStorage.clear();
       final legacyRecordings = await _attachmentStorage.clearLegacyRecordings();
-      final status = await _service.clearAiData();
+      // Clear durable conversation records even if the Native cache operation
+      // later fails; the UI reports partial completion and allows safe retry.
       final counts = widget.aiConversationDataClearer != null
           ? await widget.aiConversationDataClearer!()
           : await DatabaseHelper.instance.clearAiConversationData();
+      final status = await _service.clearAiData();
 
       if (!mounted) return;
       _historyRestoreGeneration++;
