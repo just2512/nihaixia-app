@@ -181,5 +181,3 @@ void main() {
     expect(find.textContaining('AI 数据已清除'), findsOneWidget);
   });
 }
-
-}
