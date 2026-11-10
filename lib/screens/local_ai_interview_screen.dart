@@ -126,6 +126,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.imagePicker,
     this.attachmentStorage,
     this.conversationStore,
+    this.aiConversationDataClearer,
     this.bookmarkWriter,
     this.shareDiagnosisText,
     this.copyPrescriptionText,
@@ -147,6 +148,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   final LocalAiImagePicker? imagePicker;
   final LocalAiAttachmentStorage? attachmentStorage;
   final AssistantConversationStore? conversationStore;
+
+  /// Test seam for the UI flow; database deletion itself is covered separately.
+  @visibleForTesting
+  final Future<Map<String, int>> Function()? aiConversationDataClearer;
 
   /// Test seam for verifying the assistant's diagnosis bookmark action.
   @visibleForTesting
@@ -2594,7 +2599,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final managedAttachments = await _attachmentStorage.clear();
       final legacyRecordings = await _attachmentStorage.clearLegacyRecordings();
       final status = await _service.clearAiData();
-      final counts = await DatabaseHelper.instance.clearAiConversationData();
+      final counts = widget.aiConversationDataClearer != null
+          ? await widget.aiConversationDataClearer!()
+          : await DatabaseHelper.instance.clearAiConversationData();
 
       if (!mounted) return;
       _historyRestoreGeneration++;
