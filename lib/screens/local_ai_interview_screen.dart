@@ -516,6 +516,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         path,
         kind: 'image',
       );
+      if (!mounted) {
+        await _deleteCachedAttachments([managedPath]);
+        return;
+      }
       final previousPath = _imagePath;
       setState(() {
         _imagePath = managedPath;
@@ -572,6 +576,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         kind: 'image',
       );
       photoPath = managedPath;
+      if (!mounted) {
+        await _deleteCachedAttachments([managedPath]);
+        return;
+      }
       final previousPath = _imagePath;
       setState(() {
         _imagePath = managedPath;
