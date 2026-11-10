@@ -16,6 +16,7 @@ import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.Executors
@@ -37,6 +38,8 @@ class MainActivity : FlutterActivity() {
     private var aiConversation: Conversation? = null
     private var activeBackend = "not_loaded"
     private var conversationHasSuccessfulTurn = false
+    // Keep only completed turns. A failed/blank current turn is never appended.
+    private val conversationHistoryMessages = mutableListOf<Message>()
 
     // Only explicit user text and pending audio transcripts enter symptom extraction.
     // Image observations and assistant responses are intentionally excluded.
@@ -384,10 +387,7 @@ class MainActivity : FlutterActivity() {
 
         aiEngine = loadedEngine
         try {
-            aiConversation = loadedEngine!!.createConversation(
-                ConversationConfig(systemInstruction = Contents.of(systemInstruction))
-            )
-            conversationHasSuccessfulTurn = false
+            aiConversation = createConversationWithHistory(loadedEngine!!)
         } catch (error: Exception) {
             releaseLocalModel()
             throw error
@@ -406,34 +406,36 @@ class MainActivity : FlutterActivity() {
             appendLine("【用户原文】")
             append(text)
         }
-        var reply = sendWithFirstTurnGpuFallback { conversation ->
+        val reply = sendWithFirstTurnGpuFallback(Message.user(modelInput)) { conversation ->
             conversation.sendMessage(modelInput).toString()
-        }
-        // Gemma 偶尔返回空串（多轮后更易出现，GPU 多轮不稳也会这样）；切 CPU 引擎重建会话重试。
-        if (reply.isBlank()) {
-            try {
-                recreateCpuEngineAfterFirstTurnOpenClFailure(IllegalStateException("模型返回空回复"))
-            } catch (_: Exception) {
-                recreateConversationOnly()
-            }
-            reply = sendWithFirstTurnGpuFallback { conversation ->
-                conversation.sendMessage(modelInput).toString()
-            }
         }
         // Only literal user text is eligible for symptom extraction.
         recordUserInput("用户文字自述", text)
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
-    private fun <T> sendWithFirstTurnGpuFallback(send: (Conversation) -> T): T {
+    private fun sendWithFirstTurnGpuFallback(
+        userMessage: Message,
+        send: (Conversation) -> String
+    ): String {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
-        try {
-            val result = send(conversation)
+
+        fun commitSuccessfulTurn(reply: String): String {
+            if (reply.isBlank()) throw IllegalStateException("模型没有返回有效文本")
+            LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
+                conversationHistoryMessages,
+                userMessage,
+                reply
+            )
             conversationHasSuccessfulTurn = true
-            return result
+            return reply
+        }
+
+        try {
+            return commitSuccessfulTurn(send(conversation))
         } catch (error: Exception) {
-            // 首轮 OpenCL 不可用 → 切 CPU 引擎重试（既有策略）
+            // 首轮 OpenCL 不可用：首轮前没有历史，保留既有 CPU fallback。
             if (FirstTurnGpuFallbackPolicy.shouldFallback(
                     activeBackend,
                     conversationHasSuccessfulTurn,
@@ -444,9 +446,7 @@ class MainActivity : FlutterActivity() {
                 val cpuConversation = aiConversation
                     ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
                 try {
-                    val result = send(cpuConversation)
-                    conversationHasSuccessfulTurn = true
-                    return result
+                    return commitSuccessfulTurn(send(cpuConversation))
                 } catch (cpuError: Exception) {
                     throw IllegalStateException(
                         "GPU 首轮推理报告 OpenCL 不可用；已切换 CPU，但重试仍失败：${cpuError.message}",
@@ -454,25 +454,50 @@ class MainActivity : FlutterActivity() {
                     ).also { it.addSuppressed(error) }
                 }
             }
-            // 其他失败（多轮 state:7 等 GPU 多轮不稳）→ 切 CPU 引擎重建会话重试。
-            // 本机 GPU 多轮推理非确定失败（state:7 或空回复），同引擎重建无效；切 CPU 换可靠性。
-            // 牺牲多轮历史与速度：CPU 会话只剩 systemInstruction + 本轮消息。
+
+            // 多轮失败时，先在新 Engine/Conversation 中恢复所有已成功轮次，
+            // 再重试当前纯模型请求；未成功的当前轮次不会进入历史。
+            var cpuRecoveryError: Exception? = null
             try {
                 recreateCpuEngineAfterFirstTurnOpenClFailure(error)
             } catch (recreateError: Exception) {
-                // CPU 引擎重建失败（如旧 GPU 资源未释放），退回同引擎重建会话
-                recreateConversationOnly()
+                cpuRecoveryError = recreateError
+                try {
+                    recreateConversationOnly()
+                } catch (conversationError: Exception) {
+                    conversationError.addSuppressed(recreateError)
+                    conversationError.addSuppressed(error)
+                    throw conversationError
+                }
             }
-            val recoveryConversation = aiConversation ?: throw error
+
+            val recoveryConversation = aiConversation
+                ?: throw IllegalStateException("恢复后没有可用会话", error)
             try {
-                val result = send(recoveryConversation)
-                conversationHasSuccessfulTurn = true
-                return result
+                return commitSuccessfulTurn(send(recoveryConversation))
             } catch (retryError: Exception) {
-                // CPU 重试仍失败，抛原始错误（保留 state:7 信息供排查）
-                throw error
+                cpuRecoveryError?.let(retryError::addSuppressed)
+                retryError.addSuppressed(error)
+                throw IllegalStateException(
+                    "本地模型恢复历史后重试仍失败：${retryError.message}",
+                    retryError
+                )
             }
         }
+    }
+
+    private fun createConversationWithHistory(engine: Engine): Conversation {
+        val initialMessages = LocalAiConversationHistoryPolicy.snapshot(
+            conversationHistoryMessages
+        )
+        val conversation = engine.createConversation(
+            ConversationConfig(
+                systemInstruction = Contents.of(systemInstruction),
+                initialMessages = initialMessages
+            )
+        )
+        conversationHasSuccessfulTurn = initialMessages.isNotEmpty()
+        return conversation
     }
 
     /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
@@ -484,10 +509,7 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             // 旧会话可能已失效，忽略关闭异常
         }
-        aiConversation = engine.createConversation(
-            ConversationConfig(systemInstruction = Contents.of(systemInstruction))
-        )
-        conversationHasSuccessfulTurn = false
+        aiConversation = createConversationWithHistory(engine)
     }
 
     private fun recreateCpuEngineAfterFirstTurnOpenClFailure(originalError: Exception) {
@@ -549,9 +571,7 @@ class MainActivity : FlutterActivity() {
         }
 
         val cpuConversation = try {
-            cpuEngine.createConversation(
-                ConversationConfig(systemInstruction = Contents.of(systemInstruction))
-            )
+            createConversationWithHistory(cpuEngine)
         } catch (error: Exception) {
             try {
                 cpuEngine.close()
@@ -596,13 +616,12 @@ class MainActivity : FlutterActivity() {
             "不要作现代医学诊断或中医证型辨证，不推荐方剂、药物或剂量。" +
             "若照片存在模糊、遮挡、光线或曝光问题，请明确说明；无法确认的特征请说无法判断。" +
             if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
-        val reply = sendWithFirstTurnGpuFallback { conversation ->
-            conversation.sendMessage(
-                Contents.of(
-                    Content.ImageFile(image.absolutePath),
-                    Content.Text(prompt)
-                )
-            ).toString()
+        val imageContents = Contents.of(
+            Content.ImageFile(image.absolutePath),
+            Content.Text(prompt)
+        )
+        val reply = sendWithFirstTurnGpuFallback(Message.user(imageContents)) { conversation ->
+            conversation.sendMessage(imageContents).toString()
         }
         recordUserInput("用户随照片输入的文字", userPrompt)
         return mapOf("reply" to reply, "backend" to activeBackend)
@@ -617,13 +636,12 @@ class MainActivity : FlutterActivity() {
             "请逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”，" +
             "不要总结、推断、改写或自行补全。只做语音转写，不作诊断或辨证，不推荐药物或方剂。" +
             if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
-        val reply = sendWithFirstTurnGpuFallback { conversation ->
-            conversation.sendMessage(
-                Contents.of(
-                    Content.AudioFile(audio.absolutePath),
-                    Content.Text(prompt)
-                )
-            ).toString()
+        val audioContents = Contents.of(
+            Content.AudioFile(audio.absolutePath),
+            Content.Text(prompt)
+        )
+        val reply = sendWithFirstTurnGpuFallback(Message.user(audioContents)) { conversation ->
+            conversation.sendMessage(audioContents).toString()
         }
         recordUserInput("用户随录音输入的文字", userPrompt)
         recordUserInput("语音识别草稿（模型生成，尚待用户核对）", reply)
@@ -710,7 +728,7 @@ class MainActivity : FlutterActivity() {
             appendLine("不要重新回答历史问题，只需确认上下文已载入。")
             append(transcript.take(10000))
         }
-        sendWithFirstTurnGpuFallback { conversation ->
+        sendWithFirstTurnGpuFallback(Message.user(prompt)) { conversation ->
             conversation.sendMessage(prompt).toString()
         }
         // Restore only explicit text turns; assistant responses and attachment
@@ -725,6 +743,8 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
+        conversationHistoryMessages.clear()
+        conversationHasSuccessfulTurn = false
 
         return try {
             val nextConversation = ConversationResetPolicy.recreateConversation(
@@ -739,6 +759,7 @@ class MainActivity : FlutterActivity() {
             aiConversation = nextConversation
             userReportedInputs.clear()
             userReportedInputsTruncated = false
+            conversationHistoryMessages.clear()
             conversationHasSuccessfulTurn = false
             modelStatus()
         } catch (error: Exception) {
@@ -748,6 +769,7 @@ class MainActivity : FlutterActivity() {
             aiConversation = null
             userReportedInputs.clear()
             userReportedInputsTruncated = false
+            conversationHistoryMessages.clear()
             activeBackend = "not_loaded"
             conversationHasSuccessfulTurn = false
             throw error
@@ -762,6 +784,7 @@ class MainActivity : FlutterActivity() {
         aiEngine = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false
+        conversationHistoryMessages.clear()
         activeBackend = "not_loaded"
         conversationHasSuccessfulTurn = false
         ConversationResourceReleasePolicy.closeBoth(
