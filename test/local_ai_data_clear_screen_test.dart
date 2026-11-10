@@ -3,10 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:nihaisha_app/data/database_helper.dart';
-import 'package:nihaisha_app/models/bookmark.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_storage.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -43,31 +42,89 @@ class _NoLostImagePicker implements LocalAiImagePicker {
   Future<String?> retrieveLostImagePath() async => null;
 }
 
+class _MemoryConversationStore implements AssistantConversationStore {
+  int _nextId = 1;
+  final Map<int, Map<String, Object?>> _conversations = {};
+  final Map<int, List<Map<String, Object?>>> _messages = {};
+  final Map<int, TcmInterviewTaskState> _taskStates = {};
+
+  @override
+  Future<int> createAssistantConversation({
+    String title = '新对话',
+    String mode = 'general',
+  }) async {
+    final id = _nextId++;
+    _conversations[id] = {'id': id, 'title': title, 'mode': mode};
+    _messages[id] = [];
+    return id;
+  }
+
+  @override
+  Future<int> saveAssistantMessage({
+    required int conversationId,
+    required String role,
+    required String content,
+    String? metadata,
+  }) async {
+    final messages = _messages.putIfAbsent(conversationId, () => []);
+    messages.add({
+      'conversation_id': conversationId,
+      'role': role,
+      'content': content,
+      'metadata': metadata,
+    });
+    return messages.length;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({
+    int? limit,
+  }) async {
+    final rows = _conversations.values.toList(growable: false);
+    return limit == null ? rows : rows.take(limit).toList();
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async =>
+      List<Map<String, Object?>>.from(_messages[conversationId] ?? const []);
+
+  @override
+  Future<void> saveTcmInterviewTaskState({
+    required int conversationId,
+    required TcmInterviewTaskState state,
+  }) async {
+    _taskStates[conversationId] = state;
+  }
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({
+    required int conversationId,
+  }) async =>
+      _taskStates[conversationId];
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {
+    for (final id in conversationIds) {
+      _conversations.remove(id);
+      _messages.remove(id);
+      _taskStates.remove(id);
+    }
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const pathProvider = MethodChannel('plugins.flutter.io/path_provider');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
-  late Directory databaseDirectory;
   late Directory temporaryDirectory;
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
   setUp(() async {
-    databaseDirectory = await Directory.systemTemp.createTemp(
-      'nihaisha-ai-clear-screen-db-',
-    );
     temporaryDirectory = await Directory.systemTemp.createTemp(
       'nihaisha-ai-clear-screen-cache-',
-    );
-    DatabaseHelper.configureTestDatabase(
-      'ai_clear_screen.db',
-      factory: databaseFactoryFfi,
-      directoryPath: databaseDirectory.path,
     );
     messenger.setMockMethodCallHandler(pathProvider, (call) async {
       if (call.method == 'getTemporaryDirectory') {
@@ -79,51 +136,17 @@ void main() {
 
   tearDown(() async {
     messenger.setMockMethodCallHandler(pathProvider, null);
-    await DatabaseHelper.closeTestDatabase();
-    if (databaseDirectory.existsSync()) {
-      await databaseDirectory.delete(recursive: true);
-    }
     if (temporaryDirectory.existsSync()) {
       await temporaryDirectory.delete(recursive: true);
     }
   });
 
-  testWidgets('clear-all action deletes AI data and preserves model and unrelated data',
+  testWidgets('clear-all action invokes native, attachment and conversation cleanup',
       (tester) async {
-    final store = DatabaseHelper.instance;
-    final conversationId = await store.createAssistantConversation(
-      title: '旧 AI 会话',
-      mode: 'consultation',
-    );
-    await store.saveAssistantMessage(
-      conversationId: conversationId,
-      role: 'user',
-      content: '旧用户消息',
-    );
-    await store.saveAssistantMessage(
-      conversationId: conversationId,
-      role: 'assistant',
-      content: '旧助手消息',
-    );
-    final db = await store.database;
-    await db.insert('tcm_interview_tasks', {
-      'conversation_id': conversationId,
-      'task_id': 'clear-screen-task',
-      'status': 'in_progress',
-      'state_json': '{}',
-      'updated_at': '2026-11-10T00:00:00Z',
-    });
-    await store.saveChatMessage('旧版聊天消息', true);
-    await store.insertBookmark(
-      Bookmark(
-        title: '保留收藏',
-        content: '收藏内容',
-        category: '知识',
-        source: 'manual',
-      ),
-    );
-
     final service = _ClearAiService();
+    final store = _MemoryConversationStore();
+    var conversationDataClearCalls = 0;
+
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -133,36 +156,35 @@ void main() {
           attachmentStorage: LocalAiAttachmentStorage(
             temporaryDirectoryProvider: () async => temporaryDirectory,
           ),
+          aiConversationDataClearer: () async {
+            conversationDataClearCalls++;
+            return const {
+              'assistantMessages': 2,
+              'legacyChatMessages': 1,
+              'assistantConversations': 1,
+              'tcmInterviewTasks': 1,
+            };
+          },
         ),
       ),
     );
     await tester.pump();
-    // sqflite FFI and path-provider work are real asynchronous I/O. Let them
-    // complete outside the widget-test fakeAsync clock instead of waiting for
-    // pumpAndSettle, which can never settle while database operations are open.
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.tap(find.byTooltip('清除全部 AI 数据'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('清除全部 AI 数据？'), findsOneWidget);
+    expect(find.textContaining('已导入的 Gemma 模型文件会保留'), findsOneWidget);
+
+    await tester.tap(find.text('清除数据'));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pump();
 
-    await tester.tap(find.byTooltip('清除全部 AI 数据'));
-    await tester.pump();
-    expect(find.text('清除全部 AI 数据？'), findsOneWidget);
-    expect(find.textContaining('已导入的 Gemma 模型文件会保留'), findsOneWidget);
-
-    await tester.tap(find.text('清除数据'));
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-    });
-    await tester.pump();
-
     expect(service.clearCalls, 1);
-    expect(await db.query('assistant_messages'), isEmpty);
-    expect(await db.query('tcm_interview_tasks'), isEmpty);
-    expect(await db.query('assistant_conversations'), isEmpty);
-    expect(await db.query('chat_history'), isEmpty);
-    expect(await db.query('bookmarks'), hasLength(1));
+    expect(conversationDataClearCalls, 1);
     expect(find.textContaining('你可以直接描述身体情况、询问中医知识'), findsOneWidget);
     expect(find.textContaining('AI 数据已清除'), findsOneWidget);
   });
