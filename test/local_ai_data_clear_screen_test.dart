@@ -136,15 +136,26 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    // sqflite FFI and path-provider work are real asynchronous I/O. Let them
+    // complete outside the widget-test fakeAsync clock instead of waiting for
+    // pumpAndSettle, which can never settle while database operations are open.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump();
 
     await tester.tap(find.byTooltip('清除全部 AI 数据'));
-    await tester.pumpAndSettle();
+    await tester.pump();
     expect(find.text('清除全部 AI 数据？'), findsOneWidget);
     expect(find.textContaining('已导入的 Gemma 模型文件会保留'), findsOneWidget);
 
     await tester.tap(find.text('清除数据'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pump();
 
     expect(service.clearCalls, 1);
     expect(await db.query('assistant_messages'), isEmpty);
