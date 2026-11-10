@@ -604,7 +604,11 @@ class MainActivity : FlutterActivity() {
             Content.ImageFile(image.absolutePath),
             Content.Text(prompt)
         )
-        val reply = sendWithFirstTurnGpuFallback(Message.user(imageContents)) { conversation ->
+        // Keep a textual attachment marker in replay history. The temporary
+        // image file may be deleted by Flutter after this call; the live request
+        // still receives the actual image bytes through ImageFile.
+        val historyMessage = Message.user("【此前发送过照片附件】\n$prompt")
+        val reply = sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
             conversation.sendMessage(imageContents).toString()
         }
         recordUserInput("用户随照片输入的文字", userPrompt)
@@ -624,7 +628,10 @@ class MainActivity : FlutterActivity() {
             Content.AudioFile(audio.absolutePath),
             Content.Text(prompt)
         )
-        val reply = sendWithFirstTurnGpuFallback(Message.user(audioContents)) { conversation ->
+        // The temporary recording is deleted after the turn. Preserve the
+        // prompt and transcription in replay history, not a stale file path.
+        val historyMessage = Message.user("【此前发送过语音附件】\n$prompt")
+        val reply = sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
             conversation.sendMessage(audioContents).toString()
         }
         recordUserInput("用户随录音输入的文字", userPrompt)
