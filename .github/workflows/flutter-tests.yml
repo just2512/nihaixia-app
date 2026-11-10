@@ -102,23 +102,29 @@ jobs:
           git fetch origin master
           changed_files="$(git diff --name-only origin/master...HEAD)"
           code_changed=0
-          test_files=()
+          dart_test_files=()
+          kotlin_test_files=()
           while IFS= read -r file; do
             case "$file" in
               lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
             esac
             case "$file" in
-              test/*_test.dart) test_files+=("$file") ;;
+              test/*_test.dart) dart_test_files+=("$file") ;;
+              android/app/src/test/**/*.kt|android/app/src/test/*.kt) kotlin_test_files+=("$file") ;;
             esac
           done <<< "$changed_files"
-          if [[ "$code_changed" == "1" && "${#test_files[@]}" -eq 0 ]]; then
-            echo "Production changes require at least one changed regression test." >&2
+          if [[ "$code_changed" == "1" && "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
+            echo "Production changes require at least one changed Dart or Android Kotlin regression test." >&2
             exit 1
           fi
-          if [[ "${#test_files[@]}" -gt 0 ]]; then
-            flutter test --no-pub "${test_files[@]}"
-          else
-            echo "Documentation/workflow-only change: no Dart regression test required."
+          if [[ "${#dart_test_files[@]}" -gt 0 ]]; then
+            flutter test --no-pub "${dart_test_files[@]}"
+          fi
+          if [[ "${#kotlin_test_files[@]}" -gt 0 ]]; then
+            (cd android && ./gradlew :app:testDebugUnitTest --no-daemon)
+          fi
+          if [[ "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
+            echo "Documentation/workflow-only change: no language regression test required."
           fi
 
   test:
