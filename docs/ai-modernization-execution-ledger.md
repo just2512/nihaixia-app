@@ -194,10 +194,10 @@
 
 ### 9.1 主线基线
 
-- 当前 master：`3a6d98b0fc1efa4d593510deeeb21119e2a51c1d`。
+- 当前 master：`32da9187ed1ad021408b85f462ab8c680daaa7d0`。
 - PR #22 已于 2026-11-10 合并；其折叠屏布局修复进入主线。
-- master Flutter regression：run `42852721205` PASS（Flutter full regression + Android arm64 APK/unit tests）。
-- master Quality Gate：run `42852721157` FAIL；失败测试为 `HomeScreen passes the inherited system text scaler to tab scaffolds`，退出时仍有 sqflite FFI 的 10 秒 `txnSynchronized` timer。
+- master 最新 SHA `1dbe0b66` 的 Flutter regression `42920932125` 与 Quality Gate `42920932160` 当时仍在执行；PR #24 对应 full Flutter `42919508990` PASS、Android arm64 APK/unit tests `130192845225` PASS。PR #25 的 full Flutter `42919976936` PASS、Android arm64 APK/unit tests PASS。
+- master Quality Gate 旧 run `42852721157` FAIL；失败测试为 `HomeScreen passes the inherited system text scaler to tab scaffolds`，退出时仍有 sqflite FFI 的 10 秒 `txnSynchronized` timer。PR #24 已通过完整 Flutter regression 与 Android CI；合并后最新 master Quality Gate 仍需以 run `42921529249` 结果确认。
 - 该失败并非产品布局断言失败；它是测试隔离/异步 I/O 生命周期问题。不能因为另一条 full regression 通过就忽略 Quality Gate。
 
 ### 9.2 当前 PR / 活动分支
