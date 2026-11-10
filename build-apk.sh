@@ -33,6 +33,8 @@ wsl -e bash -lc "rsync -a --delete \
   --exclude='.git' --exclude='build' --exclude='.gradle' \
   --exclude='.dart_tool' --exclude='apk-output' \
   /mnt/d/app/ $WSL_REPO/" 2>&1 | tail -1
+# 强制更新源码 mtime：DrvFs 时间戳会让 gradle/flutter 增量编译误判"未改动"跳过重编译
+wsl -e bash -lc "find $WSL_REPO/lib $WSL_REPO/android/app/src/main/kotlin -type f \( -name '*.dart' -o -name '*.kt' \) -exec touch {} + 2>/dev/null"
 echo "Sync done"
 
 echo "=== 4/6 配置签名 + SQLite + 提速堆 ==="
