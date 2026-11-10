@@ -27,7 +27,7 @@
 - 主线曾有 8 个 `test/local_ai_adaptive_content_test.dart` 折叠屏布局失败，根因是 `local-ai-content-width` 约束缺失。
 - PR #22 恢复 `AdaptiveSinglePane` 与 Scaffold.body 内的 640dp 内容约束，并保持 Scaffold 全宽和键盘 inset 策略。
 - 旧 head `7d726b943168004e6f30da3497efe97150fe9fa0` 的全量 Flutter regression run `42850952540` 已 PASS；该 PR 级 Android arm64 job 仍在执行。
-- PR #22 当前 head 的完整 Flutter regression run `42851126046` 仍在执行；必须以该 head 的最终结果作为合并依据。
+- PR #22 当前 head `b907e66362a58b577afd124e5fdee524d497ca73` 的完整 Flutter regression run `42851126046` 已 PASS；同一 run 的 Android arm64 APK/unit-test job仍在执行，Android 未通过前不合并。
 
 ### 数据保护
 
