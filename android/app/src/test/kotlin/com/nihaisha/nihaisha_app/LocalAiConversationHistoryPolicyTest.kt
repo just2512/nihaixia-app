@@ -1,7 +1,5 @@
 package com.nihaisha.nihaisha_app
 
-import com.google.ai.edge.litertlm.Message
-import com.google.ai.edge.litertlm.Role
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -10,59 +8,81 @@ import org.junit.Test
 class LocalAiConversationHistoryPolicyTest {
     @Test
     fun appendsUserAndModelMessagesInTurnOrder() {
-        val history = mutableListOf<Message>()
+        val history = mutableListOf<LocalAiCompletedTurn>()
 
         LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
             history,
-            Message.user("first question"),
+            "first question",
             "first answer"
         )
         LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
             history,
-            Message.user("second question"),
+            "second question",
             "second answer"
         )
 
         assertEquals(
-            listOf(Role.USER, Role.MODEL, Role.USER, Role.MODEL),
-            history.map { it.role }
+            listOf(
+                LocalAiCompletedTurn("first question", "first answer"),
+                LocalAiCompletedTurn("second question", "second answer")
+            ),
+            history
         )
         assertEquals(
-            listOf("first question", "first answer", "second question", "second answer"),
-            history.map { it.contents.toString() }
+            listOf(
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.USER, "first question"),
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.MODEL, "first answer"),
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.USER, "second question"),
+                LocalAiTranscriptMessage(LocalAiTranscriptRole.MODEL, "second answer")
+            ),
+            LocalAiConversationHistoryPolicy.initialMessages(history)
         )
     }
 
     @Test
     fun snapshotPreservesOrderAndDoesNotTrackLaterMutations() {
-        val history = mutableListOf<Message>()
+        val history = mutableListOf<LocalAiCompletedTurn>()
         LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
             history,
-            Message.user("first question"),
+            "first question",
             "first answer"
         )
 
         val snapshot = LocalAiConversationHistoryPolicy.snapshot(history)
         LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
             history,
-            Message.user("second question"),
+            "second question",
             "second answer"
         )
 
-        assertEquals(2, snapshot.size)
-        assertEquals("first question", snapshot.first().contents.toString())
-        assertEquals(4, history.size)
+        assertEquals(1, snapshot.size)
+        assertEquals("first question", snapshot.first().userText)
+        assertEquals(2, history.size)
     }
 
     @Test
     fun blankResponseIsNotPersistedAsSuccessfulTurn() {
-        val history = mutableListOf<Message>()
+        val history = mutableListOf<LocalAiCompletedTurn>()
 
         assertThrows(IllegalArgumentException::class.java) {
             LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
                 history,
-                Message.user("question"),
+                "question",
                 "  "
+            )
+        }
+        assertTrue(history.isEmpty())
+    }
+
+    @Test
+    fun blankUserInputIsRejected() {
+        val history = mutableListOf<LocalAiCompletedTurn>()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
+                history,
+                " ",
+                "answer"
             )
         }
         assertTrue(history.isEmpty())
