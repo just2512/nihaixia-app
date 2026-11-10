@@ -238,6 +238,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final scaffoldWidget = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(
+      scaffoldWidget.resizeToAvoidBottomInset,
+      isFalse,
+      reason: '键盘 inset 由外层导航 Scaffold 统一处理，避免双重 resize',
+    );
     final scaffold = tester.getRect(find.byType(Scaffold));
     final content = tester.getRect(
       find.byKey(const ValueKey('local-ai-content-width')),
