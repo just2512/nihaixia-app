@@ -102,6 +102,25 @@ Native `loadLocalModel()` 使用 `File(cacheDir, "litertlm")` 作为 `EngineConf
 - 重启验收：进程重启后 SQLite 无会话/消息/问诊任务，附件目录为空，Native runtime cache 不存在；重新导入模型不是清除会话的必要条件。
 - 真机：Find N2 实测模型已加载时执行清除，验证 Engine 释放、cache 删除、UI 重置和重启后不可恢复。
 
+## 当前实现进度（2026-11-10）
+
+已在独立分支加入以下实现，但尚未集成、不得标记为完整 PASS：
+
+- `DatabaseHelper.clearAiConversationData()`：单个 SQLite transaction 清理四张 AI 会话表；保留其他业务表。
+- `LocalAiAttachmentStorage`：将 picker 图片复制到 `local_ai_attachments/`，录音直接创建在该目录；提供专属目录清理和旧版 `local_ai_<timestamp>.wav` 兼容清理。
+- `LocalAiService.clearAiData()`：Dart MethodChannel 调用契约已添加。
+- `LocalAiInterviewScreen`：新增二次确认入口；清理后重置当前消息、会话 ID、问诊控制器和附件状态；下一次成功写入时延迟创建新会话，避免清除后留下空会话行。
+- `LocalAiDataCleanup.kt`：提供仅删除 AI 专属目录/旧版录音的 Native 文件清理 helper，包含目录越界和符号链接防护。
+- 新增 Dart 数据库/附件/服务/UI 测试和 Kotlin 文件清理测试。
+
+**尚未完成的硬阻断：** Native MethodChannel 的 `clearAiData` handler 需要调用 `releaseLocalModel()`、`LocalAiDataCleanup` 并返回状态。该 handler 必须在 A 工作流完成对 `MainActivity.kt` 的所有权修改后再接入，避免 A/E 同时修改同一文件。当前 Dart UI 调用会因 Native handler 尚不存在而失败，因此本分支仍是进行中的实现，不得合并。
+
+验收仍需：
+- C 分支的 CI 改进合并后重新跑本分支 changed tests（包括 Linux SQLite host asset prewarm）；
+- Native handler 与 Android unit tests；
+- PR 全量 Flutter regression + Android arm64 build/unit tests；
+- Find N2 真机清除前已加载 Engine、附件缓存、重启不可恢复验收。
+
 ## 7. 明确不在本切片内
 
 - 不删除 `filesDir/ai_models/gemma-4-E4B-it.litertlm`。
