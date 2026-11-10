@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
+import '../widgets/adaptive_master_detail.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
@@ -2614,7 +2615,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // 现代 API，键盘可见时 bottom>0 可靠。
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
-    return Scaffold(
+    return AdaptiveSinglePane(
+      preferredAnchorPoint: widget.preferredAnchorPoint,
+      maxWidth: 640,
+      contentKey: const ValueKey('local-ai-content-width'),
+      child: Scaffold(
       // 交由外层 AdaptiveHomeNavigation 的 Scaffold 统一处理键盘 inset；
       // 这里再 resize 会与外层叠加（ColorOS 下双重应用把 body 压到 ~0，
       // 输入框被挤到顶部、对话区变空白）。
@@ -3274,6 +3279,7 @@ class _KnowledgeStatusLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(fontSize: AppType.micro, color: color),
+      ),
       ),
     );
   }
