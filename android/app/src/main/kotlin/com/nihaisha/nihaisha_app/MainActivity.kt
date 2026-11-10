@@ -455,29 +455,24 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
-            // 多轮失败时，先在新 Engine/Conversation 中恢复所有已成功轮次，
-            // 再重试当前纯模型请求；未成功的当前轮次不会进入历史。
+            // Multi-turn execution state is unknown after a Native failure. Restore
+            // only the previously completed transcript; never replay the in-flight
+            // request automatically. Dart keeps the user's input/attachment so the
+            // user can explicitly retry after seeing the recovery error.
             try {
                 recreateCpuEngineForRecovery(error)
             } catch (recoveryError: Exception) {
                 recoveryError.addSuppressed(error)
                 throw IllegalStateException(
-                    "多轮推理失败，CPU 引擎/历史恢复未完成；当前请求未自动重放：${recoveryError.message}",
+                    "多轮推理失败，CPU 引擎/历史恢复未完成；当前请求执行状态未知：${recoveryError.message}",
                     recoveryError
                 )
             }
 
-            val recoveryConversation = aiConversation
-                ?: throw IllegalStateException("恢复后没有可用会话", error)
-            try {
-                return commitSuccessfulTurn(send(recoveryConversation))
-            } catch (retryError: Exception) {
-                retryError.addSuppressed(error)
-                throw IllegalStateException(
-                    "本地模型已恢复历史，但当前轮重试仍失败：${retryError.message}",
-                    retryError
-                )
-            }
+            throw IllegalStateException(
+                "此前成功对话已恢复；当前请求执行状态未知，未自动重放。请确认后重新发送。",
+                error
+            )
         }
     }
 
