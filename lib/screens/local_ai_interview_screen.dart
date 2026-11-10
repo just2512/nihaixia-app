@@ -2888,6 +2888,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
         ],
       ),
+      ),
     );
   }
 
@@ -3279,7 +3280,6 @@ class _KnowledgeStatusLabel extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(fontSize: AppType.micro, color: color),
-      ),
       ),
     );
   }
