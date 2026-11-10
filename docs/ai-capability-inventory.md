@@ -246,3 +246,34 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 **已确认的核心病因：** 当前系统有多模式 prompt、确定性 L0 路由、知识检索、规则问诊和页面工具；缺少统一的语义任务规划、跨模式任务帧、Headless 能力注册/执行器和跨结果综合闭环。这是五种模式普遍表现为“有入口但不够聪明”的架构原因。
 
 **下一步不应立即创建 ActiveTaskFrame 或批量抽取 24 个工具。** 先完成每个工具页面与底层服务的逐项可调用性审计；同时优先修复 MainActivity 多轮恢复上下文丢失，并建立一条跨两项只读能力的最小复合任务端到端测试。所有未知项继续标记 UNKNOWN，不能提前写成 READY。
+
+
+## 6B. Page / Executed / Headless 增量审计（2026-11-10）
+
+本节纠正旧版目录中“23 个注册目的地”的历史统计，按当前审计基线重新核对：
+
+- 审计基线：`master` @ `3d982e8129a2659547df1cd21143a825c8c5f8fb`。
+- `AssistantToolRouter`：24 个唯一 `toolId`。
+- `ToolsScreen`：22 个 `_ToolCard` 页面入口；`structured_diagnosis` 是会话内联流程，`knowledge_hub` 由独立知识入口承载。
+- Page + Executed：1 个内联结构化问诊 + 9 个有页面结果回传设计的工具。
+- Page only：14 个。
+- Headless Capability：0 个。注册表执行载体仍是 Widget builder，没有无 UI 的 typed executor。
+
+**重要区分：** `returnResultOnComplete: true` 只是页面结果回传设计，不等于每条执行路径已经产生可验证结果。页面被打开不算 Executed；模型在 prompt 中提到工具名不算 Executed；只有业务函数实际执行、参数验证、结果校验、来源 ID 和结果回流证据完整，才可记为 Executed。
+
+Orchestrator 当前只负责决策；`LocalAiInterviewScreen._openTool()` 负责导航与结果规范化；业务计算仍发生在具体页面内部。旧版字符串结果兼容路径仍可能把结构化字段降级为单一“结果”文本。
+
+详细逐项分类、参数/结果契约和下一步：[ai-capability-inventory-audit.md](ai-capability-inventory-audit.md)。
+
+## 6C. 统一 TRACE 与隐私审计状态（2026-11-10）
+
+端到端 TRACE 当前仍为 MISSING：未发现贯穿输入、preflight、orchestrator、检索、MethodChannel、Native 推理、工具、结果回流和 SQLite 持久化的 `trace_id`。`AssistantToolResult.sourceIds` 是来源引用，不是请求执行 trace ID；conversationId/messageId 也不能替代 trace ID。
+
+详细证据与建议契约：[ai-trace-privacy-audit.md](ai-trace-privacy-audit.md)。
+
+## 6D. 文档版本一致性（2026-11-10）
+
+- `pubspec.yaml` 是唯一版本来源，当前为 `1.11.30+8039`。
+- README 当前版本行已同步为 `1.11.30+8039`。
+- 新增 `test/readme_version_consistency_test.dart`，防止 README 与 pubspec 再次漂移。
+- 当前分支的测试与 CI 结果尚待回归；未通过前保持 IN_PROGRESS。
