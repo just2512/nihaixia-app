@@ -457,18 +457,14 @@ class MainActivity : FlutterActivity() {
 
             // 多轮失败时，先在新 Engine/Conversation 中恢复所有已成功轮次，
             // 再重试当前纯模型请求；未成功的当前轮次不会进入历史。
-            var cpuRecoveryError: Exception? = null
             try {
                 recreateCpuEngineAfterFirstTurnOpenClFailure(error)
-            } catch (recreateError: Exception) {
-                cpuRecoveryError = recreateError
-                try {
-                    recreateConversationOnly()
-                } catch (conversationError: Exception) {
-                    conversationError.addSuppressed(recreateError)
-                    conversationError.addSuppressed(error)
-                    throw conversationError
-                }
+            } catch (recoveryError: Exception) {
+                recoveryError.addSuppressed(error)
+                throw IllegalStateException(
+                    "多轮推理失败，CPU 引擎/历史恢复未完成；当前请求未自动重放：${recoveryError.message}",
+                    recoveryError
+                )
             }
 
             val recoveryConversation = aiConversation
@@ -476,10 +472,9 @@ class MainActivity : FlutterActivity() {
             try {
                 return commitSuccessfulTurn(send(recoveryConversation))
             } catch (retryError: Exception) {
-                cpuRecoveryError?.let(retryError::addSuppressed)
                 retryError.addSuppressed(error)
                 throw IllegalStateException(
-                    "本地模型恢复历史后重试仍失败：${retryError.message}",
+                    "本地模型已恢复历史，但当前轮重试仍失败：${retryError.message}",
                     retryError
                 )
             }
@@ -501,17 +496,6 @@ class MainActivity : FlutterActivity() {
     }
 
     /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
-    private fun recreateConversationOnly() {
-        val engine = aiEngine
-            ?: throw IllegalStateException("引擎未加载，无法重建会话")
-        try {
-            aiConversation?.close()
-        } catch (_: Exception) {
-            // 旧会话可能已失效，忽略关闭异常
-        }
-        aiConversation = createConversationWithHistory(engine)
-    }
-
     private fun recreateCpuEngineAfterFirstTurnOpenClFailure(originalError: Exception) {
         // The first-turn failure may have fired long after the last hash
         // verification; re-verify before any new Engine can open the file.
