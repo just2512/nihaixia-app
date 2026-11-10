@@ -1094,6 +1094,25 @@ void main() {
       expect(engine.combinedPatternCondition,
           CombinedPatternCondition.sunTaiyin);
     });
+
+    test('少阳为主经且厥阴证据成立时也产生同一 canonical 合病键', () {
+      final engine = DiagnosticEngine();
+      engine.restoreSnapshot(EngineSnapshot(
+        stage: DiagnosticStage.meridianLocation,
+        selectedSymptoms: const [],
+        meridianDirection: '少阳',
+        answers: const {'upper_heat_lower_cold': true},
+        tenQuestionIndex: 0,
+      ));
+
+      engine.diagnose();
+
+      expect(
+        engine.combinedPatternCondition,
+        CombinedPatternCondition.jueyinShaoyang,
+      );
+      expect(engine.createSnapshot().combinedMeridian, '厥阴');
+    });
   });
 
 }

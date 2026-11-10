@@ -10,7 +10,7 @@ class AppPreferenceTextScaler extends TextScaler {
   const AppPreferenceTextScaler({
     required this.platformScaler,
     required this.preferenceScale,
-  }) : assert(preferenceScale >= 0 && preferenceScale.isFinite);
+  }) : assert(preferenceScale >= 0 && preferenceScale <= 2.0);
 
   final TextScaler platformScaler;
   final double preferenceScale;

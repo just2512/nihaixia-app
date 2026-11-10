@@ -886,9 +886,11 @@ void main() {
     await tester.tap(find.text('选择舌诊脉诊').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('白厚').last);
+    // 主脉浮不与薄白/淡白舌象触发该冲突；由兼脉数单独触发，
+    // 用于验证 UI → SQLite 快照 → DiagnosticEngine 的真实输入链。
+    await tester.tap(find.text('薄白').last);
     await tester.tap(find.text('淡白').last);
-    await tester.tap(find.widgetWithText(FilterChip, '弦').first);
+    await tester.tap(find.widgetWithText(FilterChip, '浮').first);
     await tester.pumpAndSettle();
     final secondaryPulseChip = find.widgetWithText(FilterChip, '数').last;
     await tester.tap(secondaryPulseChip);
@@ -903,10 +905,22 @@ void main() {
       expectedPromptIdStartsWith: true,
     );
     expect(savedState, isNotNull);
-    expect(savedState!.snapshot.tongueCoating, '白厚');
+    expect(savedState!.snapshot.tongueCoating, '薄白');
     expect(savedState.snapshot.tongueShape, '淡白');
-    expect(savedState.snapshot.pulseType, '弦');
+    expect(savedState.snapshot.pulseType, '浮');
     expect(savedState.snapshot.pulseTypeSecondary, '数');
+
+    final restoredEngine = DiagnosticEngine()
+      ..restoreSnapshot(savedState.snapshot);
+    final engineFollowUpKeys = restoredEngine
+        .getPulseTongueFollowUpQuestions()
+        .map((question) => question.key)
+        .toSet();
+    expect(
+      engineFollowUpKeys,
+      containsAll(['pulse_cross_drink', 'pulse_cross_urine', 'pulse_cross_limbs']),
+      reason: '兼脉数应从统一对话 UI 经持久化快照进入引擎交叉核验',
+    );
     expect(tester.takeException(), isNull);
   });
 

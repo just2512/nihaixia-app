@@ -168,6 +168,23 @@ void main() {
   });
 
   group('脉舌问诊交叉核验', () {
+    test('只有兼脉与舌象冲突时也必须触发交叉核验', () {
+      final engine = DiagnosticEngine();
+      engine.answerTemperaturePattern('fever_chills');
+      engine.answerTonguePulse(
+        tongueCoating: '薄白',
+        tongueShape: '淡白',
+        pulseType: '浮',
+        pulseTypeSecondary: '数',
+      );
+
+      final questions = engine.getPulseTongueFollowUpQuestions();
+      expect(
+        questions.map((question) => question.key),
+        containsAll(['pulse_cross_drink', 'pulse_cross_urine', 'pulse_cross_limbs']),
+      );
+    });
+
     test('脉舌冲突不再自动指定脉或舌优先，并要求补充问诊', () {
       final engine = DiagnosticEngine();
       engine.answerTemperaturePattern('fever_chills');
