@@ -23,8 +23,10 @@ This verifies that the API shape used by the implementation exists in the pinned
 - Text turns preserve the actual model input (including the context wrapper).
 - Image/audio turns preserve a textual attachment marker plus prompt and model response. The temporary cache file path is deliberately not stored in replay history because Flutter may delete it after the request; replaying a stale attachment path would make later recovery fail. The live request still receives the original `ImageFile`/`AudioFile` content.
 - After recovery, `conversationHasSuccessfulTurn` is derived from whether the replay transcript is non-empty, so a restored multi-turn session cannot be misclassified as a first-turn GPU fallback.
-- Current failed/blank request is appended only after its retry succeeds.
-- CPU recovery failure and retry failure preserve the original error as a suppressed exception; failed history recovery does not silently fall back to a blank conversation.
+- Current failed/blank request is never appended to the completed transcript.
+- After a multi-turn failure, Native restores only the prior successful transcript and returns an explicit error; it does not automatically replay the in-flight request because its execution state is unknown. Dart retains the user's text/attachment so the user can explicitly retry.
+- The narrowly classified first-turn OpenCL fallback remains eligible for automatic retry under the existing `FirstTurnGpuFallbackPolicy`; it is distinct from unknown multi-turn execution state.
+- CPU recovery failure preserves the original error as a suppressed exception; failed history recovery does not silently fall back to a blank conversation.
 
 ## Tests
 
