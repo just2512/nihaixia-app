@@ -188,3 +188,48 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 9. 2026-11-11 复核检查点（以最新远端证据为准）
+
+### 9.1 主线基线
+
+- 当前 master：`3a6d98b0fc1efa4d593510deeeb21119e2a51c1d`。
+- PR #22 已于 2026-11-10 合并；其折叠屏布局修复进入主线。
+- master Flutter regression：run `42852721205` PASS（Flutter full regression + Android arm64 APK/unit tests）。
+- master Quality Gate：run `42852721157` FAIL；失败测试为 `HomeScreen passes the inherited system text scaler to tab scaffolds`，退出时仍有 sqflite FFI 的 10 秒 `txnSynchronized` timer。
+- 该失败并非产品布局断言失败；它是测试隔离/异步 I/O 生命周期问题。不能因为另一条 full regression 通过就忽略 Quality Gate。
+
+### 9.2 当前 PR / 活动分支
+
+| 工作流 | 分支 / PR | 最新证据 | 状态 | 下一动作 |
+|---|---|---|---|---|
+| CI 测试配对规则 | PR #23 `work/ci-kotlin-test-pairing` | branch validation `42918552544` PASS；PR full Flutter run `42918880155` FAIL（复现 master 的 HomeScreen timer 泄漏）；Android arm64 job在执行 | BLOCKED_BY_BASELINE | 等 PR #24 修复主线测试隔离，再更新本 PR 并重跑 full Flutter + Android |
+| HomeScreen 测试隔离 | PR #24 `work/ci-home-screen-db-prewarm` | branch validation `42919236594` PASS；PR full Flutter run `42919508990` IN_PROGRESS | IN_PROGRESS | 等 full Flutter 与 Quality Gate 相关检查完成；若失败读取准确测试和栈，不跳过 |
+| A 多轮 Native transcript | PR #21 `work/ai-p0-transcript-rehydration` | head `9deebb4772877bbb33a754d1b46e21bb710f7955`；branch validation `42851799278` 因 Kotlin-only 改动未被 Dart-only pairing 规则识别而 FAIL；早期 Android run `42849947422` APK build PASS、Kotlin 单测因 JDK17 加载 Java21 LiteRT Message FAIL | BLOCKED | PR #23 集成后，从最新 master 新建干净分支，只移植 4 个文件；运行 Kotlin unit tests、Android APK、Flutter full regression；设备 TRACE 仍 UNKNOWN |
+| B 红旗 preflight | `work/ai-redflag-policy-v2` | 静态分析 PASS；run `42919610457` changed tests 执行中；纯策略没有 detector、未接生产路由 | PARTIAL | 测试通过后开 PR；保持 `REVIEW_REQUIRED`，不接入生产放行，等待医学审核和真实 detector |
+| C 检索黄金快照 | `work/ai-retrieval-golden-snapshot` | branch validation `42848410995` PASS；测试会生成 `build/ai-retrieval-golden/current.json` 并由 CI artifact 保存，但旧分支 workflow 与 PR #23 同时改动，暂不集成 | IN_PROGRESS | PR #23 合入后，从最新 master 移植黄金测试，并将 artifact step 叠加到最新 workflow；审阅真实 JSON 后才固定 expected snapshot |
+| D Capability 盘点 | `work/ai-capability-inventory` | branch validation `42851493100` PASS；Router 24 toolId、22 个 ToolsScreen 卡片、9 个页面结果回传设计、Headless 0 | AUDIT PASS / IMPLEMENTATION PARTIAL | 逐能力补 typed args/result、sourceIds、取消/失败语义；对应行为基线前不抽 adapter |
+| E AI 数据清除 | `work/ai-data-clear-audit` | 旧 run `42850952252` FAIL：`local_ai_data_clear_screen_test.dart` 超时 10 分钟；已把无界 `pumpAndSettle` 改为 bounded pump + `tester.runAsync`；新 run `42919172774` 静态分析 PASS、changed tests 执行中 | IN_PROGRESS | 等新测试结果；失败继续定位；Native `clearAiData` MethodChannel handler 仍待 A 释放 MainActivity 文件所有权后接入 |
+| F TRACE / 隐私 | `work/ai-trace-audit` | branch validation `42851304632` PASS；审计发现端到端 trace_id/审计开关/状态链仍缺失 | AUDIT PASS / IMPLEMENTATION NOT STARTED | 先定义脱敏事件契约与关闭时行为等价测试，再分层接入 |
+| G 版本文档 | `work/ai-version-doc-consistency` | branch validation `42851411393` PASS；README/pubspec 一致性测试通过，旧版 `1.11.30+8039` | IN_PROGRESS | 从最新 master 单独集成 README 与一致性测试；不与规范文档变更捆绑 |
+| E 备份策略 | PR #19 `work/ai-data-protection` | head 基于旧 master `60011c4`；全应用 `allowBackup=false` 影响收藏/设置等非 AI 数据 | BLOCKED / PRODUCT IMPACT | 不合并；重新设计 AI-only 数据备份/迁移边界，先核对最终 merged manifest |
+
+### 9.3 本轮根因与纠偏记录
+
+1. Kotlin test pairing 的失败是 workflow 契约错误：旧脚本只把 `test/*_test.dart` 识别为配对测试。PR #23 已修改为同时识别 `android/app/src/test/**/*Test.kt`，并在 Kotlin test 有变化时执行 `./gradlew :app:testDebugUnitTest --no-daemon`。分支级 validation PASS，PR 全量检查仍受 HomeScreen 基线测试阻断。
+2. HomeScreen 测试第一次尝试在 `setUpAll` 预热数据库，反而导致三个测试均出现 timer 泄漏；已撤销。当前 PR #24 保留两个真实 HomeScreen 导航测试，只把纯 textScaler 继承测试改为直接测试 `AdaptiveHomeNavigation`，避免无关 DB 初始化副作用。
+3. E 数据清除测试之前用 `pumpAndSettle` 等待真实 sqflite FFI 操作，导致 10 分钟 timeout；改为显式 pump 与 `tester.runAsync` 等待异步 I/O。新 run 结果待确认。
+4. 所有历史分支仍基于旧 master；只允许挑选文件/提交后在新 master 上重验，不得整体合并。
+
+### 9.4 下一批自动执行顺序
+
+1. PR #24：通过 full Flutter regression 与质量门禁后小批量合并；合并后确认 master Quality Gate PASS。
+2. PR #23：更新到新 master，确认 Kotlin-only test pairing 正确执行，并等待 Android arm64 APK/unit tests PASS 后合并。
+3. A：在最新 master 创建干净分支移植 transcript rehydration；确认 Kotlin unit test 真正运行，不能再出现 SKIPPED；通过 CI 后才安排 Find N2 GPU/CPU 真实设备场景。
+4. E：确认 AI 清除测试不再超时；审计所有表/附件/缓存；A 合并后实现 Native `clearAiData` handler，随后验证 Native Engine 释放顺序和重启后不可恢复。
+5. B：完成纯 Dart preflight 单测；规则保持 REVIEW_REQUIRED，等待医学审核记录与 detector，不得仅凭策略单测标记医疗门禁完成。
+6. C：生成并审阅黄金 JSON artifact；在 snapshot 之前不抽检索 adapter、不换算法、不引入 FTS5。
+7. D/F/G：分别按能力目录、TRACE、版本一致性拆成小 PR；不把审计完成等同实现完成。
+8. E 备份：PR #19 保持阻断，直到 AI-only 与非 AI 数据迁移影响得到清晰方案。
+
