@@ -2617,8 +2617,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     return AdaptiveSinglePane(
       preferredAnchorPoint: widget.preferredAnchorPoint,
-      maxWidth: 640,
-      contentKey: const ValueKey('local-ai-content-width'),
       child: Scaffold(
       // 交由外层 AdaptiveHomeNavigation 的 Scaffold 统一处理键盘 inset；
       // 这里再 resize 会与外层叠加（ColorOS 下双重应用把 body 压到 ~0，
@@ -2652,7 +2650,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
         ],
       ),
-      body: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Center(
+            child: ConstrainedBox(
+              key: const ValueKey('local-ai-content-width'),
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Column(
         children: [
           Expanded(
             child: ListView(
@@ -2887,6 +2893,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
             ),
         ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
       ),
     );
