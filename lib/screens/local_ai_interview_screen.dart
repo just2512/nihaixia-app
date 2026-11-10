@@ -2624,12 +2624,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final deletedMessages =
           (counts['assistantMessages'] ?? 0) +
           (counts['legacyChatMessages'] ?? 0);
+      final deletedTasks = counts['tcmInterviewTasks'] ?? 0;
+      final deletedAttachments = managedAttachments + legacyRecordings;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'AI 数据已清除：消息 $deletedMessages 条，'
-            '问诊快照 ${counts['tcmInterviewTasks'] ?? 0} 项，'
-            '附件 ${managedAttachments + legacyRecordings} 个。',
+            '问诊快照 $deletedTasks 项，附件 $deletedAttachments 个。',
           ),
         ),
       );
