@@ -2585,14 +2585,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
     try {
-      // Finish queued task-state writes before deleting the owning rows.
+      // Wait for any initial conversation creation and queued task writes;
+      // otherwise a late insert could recreate an empty session after clearing.
+      await _conversationIdFuture;
       await _taskStateWrite;
       final paths = <String?>[_imagePath, _audioPath];
-      final status = await _service.clearAiData();
-      final counts = await DatabaseHelper.instance.clearAiConversationData();
       await _deleteCachedAttachments(paths);
       final managedAttachments = await _attachmentStorage.clear();
       final legacyRecordings = await _attachmentStorage.clearLegacyRecordings();
+      final status = await _service.clearAiData();
+      final counts = await DatabaseHelper.instance.clearAiConversationData();
 
       if (!mounted) return;
       _historyRestoreGeneration++;
