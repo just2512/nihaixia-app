@@ -4,27 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
-import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
+import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() async {
+  setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    // HomeScreen eagerly mounts all tabs. Pre-open the shared FFI database
-    // outside widget-test fakeAsync so first-frame tab initialization does
-    // not leave sqflite's 10-second transaction synchronization timers pending.
-    DatabaseHelper.configureTestDatabase(
-      'home_screen_entry_test.db',
-      factory: databaseFactoryFfi,
-    );
-    await DatabaseHelper.instance.database;
-  });
-
-  tearDownAll(() async {
-    await DatabaseHelper.closeTestDatabase();
   });
 
   testWidgets('统一 AI 助手是默认一级入口，设置可从根导航直接进入', (tester) async {
@@ -89,7 +77,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('HomeScreen passes the inherited system text scaler to tab scaffolds', (tester) async {
+  testWidgets('AdaptiveHomeNavigation passes the inherited system text scaler to tab scaffolds', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -108,7 +96,44 @@ void main() {
       // itself so the test does not depend on MaterialApp.builder placement.
       home: MediaQuery(
         data: inheritedMediaQuery,
-        child: const HomeScreen(),
+        child: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          screens: const [
+            Scaffold(body: Text('AI tab')),
+            Scaffold(body: Text('Tools tab')),
+            Scaffold(body: Text('Knowledge tab')),
+            Scaffold(body: Text('Bookmarks tab')),
+            Scaffold(body: Text('Settings tab')),
+          ],
+          destinations: const [
+            AppNavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat),
+              label: 'AI',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: '工具',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.menu_book_outlined),
+              selectedIcon: Icon(Icons.menu_book),
+              label: '知识',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.bookmark_border),
+              selectedIcon: Icon(Icons.bookmark),
+              label: '收藏',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: '设置',
+            ),
+          ],
+        ),
       ),
     ));
     await tester.pump();
