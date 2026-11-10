@@ -28,11 +28,12 @@ void main() {
       expect(result.mayContinueOrdinaryFlow, isFalse);
     });
 
-    test('does not classify another person as the user emergency', () {
+    test('blocks another person current emergency without mislabeling subject', () {
       final result = preflight.evaluate(
         assessment(subject: RedFlagSubject.other),
       );
-      expect(result.status, RedFlagPreflightStatus.clear);
+      expect(result.status, RedFlagPreflightStatus.blockUrgent);
+      expect(result.reason, 'CURRENT_OTHER_PERSON_AFFIRMED_MATCH');
     });
 
     test('does not classify knowledge discussion as a current emergency', () {
