@@ -4,14 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() {
+  setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    // HomeScreen eagerly mounts all tabs. Pre-open the shared FFI database
+    // outside widget-test fakeAsync so first-frame tab initialization does
+    // not leave sqflite's 10-second transaction synchronization timers pending.
+    DatabaseHelper.configureTestDatabase(
+      'home_screen_entry_test.db',
+      factory: databaseFactoryFfi,
+    );
+    await DatabaseHelper.instance.database;
+  });
+
+  tearDownAll(() async {
+    await DatabaseHelper.closeTestDatabase();
   });
 
   testWidgets('统一 AI 助手是默认一级入口，设置可从根导航直接进入', (tester) async {
