@@ -102,7 +102,7 @@
 
 ## 4. ToolsScreen 与 AssistantToolRouter 的重复维护
 
-`lib/screens/tools_screen.dart` 仍独立维护工具页面入口和标题/副标题/导航代码；`AssistantToolRouter` 又维护 24 项别名、动作词、模式和 builder。两处存在能力清单与导航元数据漂移风险。
+`lib/screens/tools_screen.dart` 仍独立维护 22 个 `_ToolCard` 页面入口、标题/副标题和导航代码；`AssistantToolRouter` 维护 24 项别名、动作词、模式和 builder。两者不是简单的一一对应：`structured_diagnosis` 是会话内联流程，`knowledge_hub` 由知识入口承载，不在 ToolsScreen 卡片列表中；其余页面工具有不同展示标题。当前没有发现这两项差异本身构成漏入口，但两处仍有重复维护风险。
 
 不能直接让 ToolsScreen 完全依赖 AssistantToolRouter：部分工具是资料浏览、部分工具需要参数/返回结果，且两处当前有不同展示语义。应先建立单一元数据 manifest，再由两个 UI 消费。
 
