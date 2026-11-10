@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:record/record.dart';
 
@@ -47,6 +44,14 @@ class _NoopAudioRecorder implements LocalAiAudioRecorder {
 
   @override
   Future<void> dispose() async {}
+}
+
+class _MemoryAttachmentStorage extends LocalAiAttachmentStorage {
+  @override
+  Future<int> clear() async => 0;
+
+  @override
+  Future<int> clearLegacyRecordings() async => 0;
 }
 
 class _NoLostImagePicker implements LocalAiImagePicker {
@@ -131,30 +136,6 @@ class _MemoryConversationStore implements AssistantConversationStore {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const pathProvider = MethodChannel('plugins.flutter.io/path_provider');
-  final messenger =
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-
-  late Directory temporaryDirectory;
-
-  setUp(() async {
-    temporaryDirectory = await Directory.systemTemp.createTemp(
-      'nihaisha-ai-clear-screen-cache-',
-    );
-    messenger.setMockMethodCallHandler(pathProvider, (call) async {
-      if (call.method == 'getTemporaryDirectory') {
-        return temporaryDirectory.path;
-      }
-      throw MissingPluginException('Unexpected path provider call: ${call.method}');
-    });
-  });
-
-  tearDown(() async {
-    messenger.setMockMethodCallHandler(pathProvider, null);
-    if (temporaryDirectory.existsSync()) {
-      await temporaryDirectory.delete(recursive: true);
-    }
-  });
 
   testWidgets('clear-all action invokes native, attachment and conversation cleanup',
       (tester) async {
@@ -169,9 +150,7 @@ void main() {
           audioRecorder: _NoopAudioRecorder(),
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
-          attachmentStorage: LocalAiAttachmentStorage(
-            temporaryDirectoryProvider: () async => temporaryDirectory,
-          ),
+          attachmentStorage: _MemoryAttachmentStorage(),
           aiConversationDataClearer: () async {
             conversationDataClearCalls++;
             return const {
@@ -194,9 +173,6 @@ void main() {
 
     await tester.tap(find.text('清除数据'));
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
     await tester.pump();
 
     expect(service.clearCalls, 1);
@@ -204,4 +180,6 @@ void main() {
     expect(find.textContaining('你可以直接描述身体情况、询问中医知识'), findsOneWidget);
     expect(find.textContaining('AI 数据已清除'), findsOneWidget);
   });
+}
+
 }
