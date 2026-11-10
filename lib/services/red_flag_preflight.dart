@@ -99,11 +99,20 @@ class RedFlagPreflight {
       );
     }
 
-    // Explicit knowledge discussion, another person's symptoms, past-only
-    // history, hypothetical statements, and negation are not current self
-    // reports. They must not be mislabeled as the user's current emergency.
-    if (assessment.subject == RedFlagSubject.other ||
-        assessment.subject == RedFlagSubject.knowledge ||
+    // Another person's current emergency is still urgent, but must not be
+    // represented as the user's own symptom. Keep the urgent path explicit.
+    if (assessment.subject == RedFlagSubject.other &&
+        assessment.time == RedFlagTime.current &&
+        assessment.polarity == RedFlagPolarity.affirmed) {
+      return const RedFlagPreflightResult(
+        RedFlagPreflightStatus.blockUrgent,
+        'CURRENT_OTHER_PERSON_AFFIRMED_MATCH',
+      );
+    }
+
+    // Explicit knowledge discussion, past-only history, hypothetical
+    // statements, and negation are not current affirmed emergency reports.
+    if (assessment.subject == RedFlagSubject.knowledge ||
         assessment.time == RedFlagTime.past ||
         assessment.time == RedFlagTime.hypothetical ||
         assessment.polarity == RedFlagPolarity.negated) {
