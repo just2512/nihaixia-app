@@ -6,6 +6,7 @@ import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/widgets/adaptive_master_detail.dart';
 
 class _ReadyLocalAiService extends LocalAiService {
   static const status = LocalAiModelStatus(
@@ -79,6 +80,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byType(AdaptiveSinglePane), findsOneWidget);
     final content = tester.getSize(
       find.byKey(const ValueKey('local-ai-content-width')),
     );
@@ -167,11 +169,13 @@ void main() {
     await tester.pumpAndSettle();
 
     final scaffold = tester.getRect(find.byType(Scaffold));
+    final appBar = tester.getSize(find.byType(AppBar));
     final content = tester.getRect(
       find.byKey(const ValueKey('local-ai-content-width')),
     );
     expect(scaffold.left, 0);
     expect(scaffold.right, 800);
+    expect(appBar.width, 800);
     expect(content.width, 640);
     expect(content.left, 80);
     expect(content.right, 720);
@@ -236,6 +240,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final scaffoldWidget = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(
+      scaffoldWidget.resizeToAvoidBottomInset,
+      isFalse,
+      reason: '键盘 inset 由外层导航 Scaffold 统一处理，避免双重 resize',
+    );
     final scaffold = tester.getRect(find.byType(Scaffold));
     final content = tester.getRect(
       find.byKey(const ValueKey('local-ai-content-width')),
