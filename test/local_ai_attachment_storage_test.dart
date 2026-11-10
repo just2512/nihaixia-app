@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:nihaisha_app/services/local_ai_attachment_storage.dart';
 
 void main() {
@@ -32,7 +33,7 @@ void main() {
     );
 
     expect(await File(adopted).exists(), isTrue);
-    expect(adopted, contains('/local_ai_attachments/'));
+    expect(p.basename(p.dirname(adopted)), LocalAiAttachmentStorage.directoryName);
     expect(await File(adopted).readAsBytes(), [1, 2, 3, 4]);
     expect(await source.exists(), isFalse);
   });
