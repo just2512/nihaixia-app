@@ -9,7 +9,11 @@ import java.io.File
 internal object LocalAiDataCleanup {
     fun deleteOwnedDirectory(cacheRoot: File, directoryName: String): Int {
         val canonicalRoot = cacheRoot.canonicalFile
-        val target = File(canonicalRoot, directoryName).canonicalFile
+        val rawTarget = File(canonicalRoot, directoryName)
+        val target = rawTarget.canonicalFile
+        if (target.path != rawTarget.absoluteFile.path) {
+            throw IllegalArgumentException("AI cache directory must not be a symbolic link")
+        }
         if (target.parentFile != canonicalRoot) {
             throw IllegalArgumentException("AI cache directory must be a direct child of cacheDir")
         }
@@ -17,7 +21,7 @@ internal object LocalAiDataCleanup {
         if (!target.isDirectory) {
             throw IllegalStateException("AI cache path is not a directory: ${target.name}")
         }
-        val deletedFiles = deleteRecursively(target)
+        val deletedFiles = deleteRecursively(target, canonicalRoot)
         if (!target.delete()) {
             throw IllegalStateException("Unable to delete AI cache directory: ${target.name}")
         }
@@ -44,13 +48,24 @@ internal object LocalAiDataCleanup {
         return deleted
     }
 
-    private fun deleteRecursively(directory: File): Int {
+    private fun deleteRecursively(directory: File, canonicalRoot: File): Int {
         val children = directory.listFiles()
             ?: throw IllegalStateException("Unable to enumerate AI cache directory: ${directory.name}")
         var deletedFiles = 0
         children.forEach { child ->
+            // Never follow symlinks out of the AI-owned cache tree.
+            if (child.canonicalFile.path != child.absoluteFile.path) {
+                if (!child.delete()) {
+                    throw IllegalStateException("Unable to delete AI cache link: ${child.name}")
+                }
+                return@forEach
+            }
+            val canonicalChild = child.canonicalFile
+            if (!canonicalChild.path.startsWith(canonicalRoot.path + File.separator)) {
+                throw IllegalStateException("AI cache entry escapes cacheDir: ${child.name}")
+            }
             if (child.isDirectory) {
-                deletedFiles += deleteRecursively(child)
+                deletedFiles += deleteRecursively(child, canonicalRoot)
                 if (!child.delete()) {
                     throw IllegalStateException("Unable to delete AI cache directory: ${child.name}")
                 }
