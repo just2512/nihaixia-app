@@ -52,12 +52,14 @@
 
 ## 专项报告
 
+本分支内已包含：
 - [能力清单](ai-capability-inventory.md)
 - [Page / Executed / Headless 逐项审计](ai-capability-inventory-audit.md)
 - [TRACE 与隐私审计](ai-trace-privacy-audit.md)
-- [多轮 Native transcript 恢复](ai-p0-transcript-rehydration.md)（由 A 分支提供）
-- [红旗入口审计](ai-redflag-entrypoint-audit.md)（由 B 分支提供）
-- [红旗 preflight 契约](ai-redflag-preflight-policy.md)（由 B 分支提供）
-- [AI 数据清除范围审计](ai-data-clear-audit.md)（由 E 分支提供）
-- [经典检索黄金基线](classic-retrieval-golden-baseline.md)（由 C 分支提供）
+
+其他专项报告目前分别位于独立工作分支，待对应 PR 集成后再建立主线链接：
+- A `work/ai-p0-transcript-rehydration`：`docs/ai-p0-transcript-rehydration.md`
+- B `work/ai-redflag-policy`：`docs/ai-redflag-entrypoint-audit.md`、`docs/ai-redflag-preflight-policy.md`
+- C `work/ai-retrieval-golden-snapshot`：`docs/classic-retrieval-golden-baseline.md`
+- E `work/ai-data-clear-audit`：`docs/ai-data-clear-audit.md`
 
