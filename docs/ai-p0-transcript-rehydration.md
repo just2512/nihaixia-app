@@ -30,7 +30,8 @@ This verifies that the API shape used by the implementation exists in the pinned
 
 ## Tests
 
-- `LocalAiConversationHistoryPolicyTest`: user/model ordering, stable snapshot behavior, and rejection of blank responses.
+- `LocalAiConversationHistoryPolicyTest`: user/model ordering, stable snapshot behavior, and rejection of blank user/model messages.
+- The pure transcript policy stores strings/turns and maps to LiteRT-LM `Message` objects only at the `MainActivity` boundary. This is intentional: the pinned LiteRT-LM 0.18.0 `Message` class is Java class-file version 65 (Java 21), while the current Android unit-test worker runs on Java 17 (class-file version 61). Tests must not load that SDK class directly.
 - Android unit tests must run through ` :app:testDebugUnitTest ` on the PR/Android CI path.
 - Static branch validation alone is not proof of Android compilation.
 
