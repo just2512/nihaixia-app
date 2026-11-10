@@ -6,6 +6,7 @@ import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/widgets/adaptive_master_detail.dart';
 
 class _ReadyLocalAiService extends LocalAiService {
   static const status = LocalAiModelStatus(
@@ -79,6 +80,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byType(AdaptiveSinglePane), findsOneWidget);
     final content = tester.getSize(
       find.byKey(const ValueKey('local-ai-content-width')),
     );
