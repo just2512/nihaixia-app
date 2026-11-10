@@ -188,3 +188,49 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 9. 2026-11-10 并行执行实时检查点
+
+本节覆盖当前活动分支与 PR；历史第 8 节保留为建立时记录，不再作为当前状态。当前 master 基线仍为 `3d982e8129a2659547df1cd21143a825c8c5f8fb`。
+
+### 9.1 活动工作流
+
+| ID | 分支 / PR | 最新 HEAD | 当前状态 | 最近证据 |
+|---|---|---|---|---|
+| UI 前置修复 | PR #22 `work/fix-foldable-assistant-layout-verified` | `b907e66362a58b577afd124e5fdee524d497ca73` | IN_PROGRESS | branch validation `42850899961` PASS；最新 PR full regression `42851126046` IN_PROGRESS；旧 head `7d726b9` full Flutter regression `42850952540` PASS，Android job仍执行 |
+| A | PR #21 `work/ai-p0-transcript-rehydration` | `9deebb4772877bbb33a754d1b46e21bb710f7955` | IN_PROGRESS | 最新 push validation `42851799278` IN_PROGRESS；旧 PR Android job `42849947422` APK build PASS，但 transcript unit tests 因 Java 21 LiteRT Message 被 JDK17 测试 JVM 直接加载而 FAIL；已将纯策略与 SDK 类型解耦，等待新测试复验 |
+| B | `work/ai-redflag-policy` | `9f459c021d71b696f3c94b1aff20791889d3cd2d` | PARTIAL / BLOCKED | branch validation `42850172292` PASS；只有纯 Dart preflight 策略/测试与入口审计；真实医学规则审核、detector、所有 Flutter/Native 入口接入均未完成 |
+| C | `work/ai-retrieval-golden-snapshot` | `c92a85e4ff73364f17e5caaaa76f196a15f68b9e` | IN_PROGRESS | branch validation `42848410995` PASS；真实黄金 JSON artifact、命中身份/顺序/上下文审阅与固定 expected snapshot 待 PR 全量 CI |
+| D | `work/ai-capability-inventory` | `2c167a183d1409850045676524fdc3d79b3f7bbb` | AUDIT PASS / IMPLEMENTATION PARTIAL | branch validation `42851493100` PASS；24 个 Router toolId、22 个 ToolsScreen 卡片、9 个页面结果回传设计、Headless 0 项；清单/审计/TRACE 报告已形成 |
+| E | `work/ai-data-clear-audit` | `b5e3c36a05be856dece7725423d65b5e5dfe8177` | IN_PROGRESS | branch validation `42850952252` IN_PROGRESS；Dart analyze PASS、changed tests 执行中；SQLite Linux host asset prewarm 与 Native Kotlin test pairing 尚需 C 工作流更新后复验；MainActivity MethodChannel handler 尚未接入 |
+| F | `work/ai-trace-audit` | `16616b4677d5e87766877df6d0a0c04c233b0b1e` | AUDIT PASS / IMPLEMENTATION NOT STARTED | branch validation `42851304632` PASS；审计确认端到端 trace_id、审计开关、执行状态链 MISSING；报告已复制进 D 分支 |
+| G | `work/ai-version-doc-consistency` | `35a757b83aa3bd7cb9b33d68dcbb369310fbc4eb` | IN_PROGRESS | branch validation `42851411393` PASS；README 在该分支已同步到 pubspec `1.11.30+8039`，一致性测试通过；尚未集成 master |
+| E 备份策略 | PR #19 `work/ai-data-protection` | `b012d03e2acbca822982c91aab49089c2c418908` | BLOCKED / PRODUCT IMPACT REVIEW | 旧 branch validation `42845095695` PASS；PR 基于旧 master `60011c4`；`allowBackup=false` 影响全应用私有数据，不仅 AI，会影响收藏/设置等数据迁移；需与数据清除实现及备份范围一起重新核验 |
+
+### 9.2 当前主线 CI 基线
+
+- 当前 master 尚未集成 PR #22，因此仍包含已确认的折叠屏布局回归。
+- 旧主线全量 Flutter run `42842094814` / Quality Gate run `42842094702` 曾失败；失败日志定位到 8 个 `local_ai_adaptive_content_test.dart` 布局断言。
+- 修复分支旧 head `7d726b943168004e6f30da3497efe97150fe9fa0` 的 full Flutter regression run `42850952540` 已 PASS，说明恢复 Scaffold 全宽和 body 内 640dp 内容约束有效。
+- PR #22 最新 head `b907e66362a58b577afd124e5fdee524d497ca73` 的 PR full regression run `42851126046` 尚未结束；必须等待该 head 的最终结果与 Android job。
+- branch validation PASS 不代表全量 Flutter、Android APK、Native unit tests 或 Find N2 真机 PASS。
+
+### 9.3 当前共享文件与依赖
+
+- `MainActivity.kt` 当前由 A 工作流独占。E 已实现 `LocalAiDataCleanup.kt` helper、数据库事务、附件专属目录、Dart service/UI，但 Native `clearAiData` handler 必须等 A 对 MainActivity 的工作完成并集成后再接入。
+- C 工作流更新 `.github/workflows/flutter-tests.yml`：为 branch validation 增加 SQLite Linux host asset prewarm，并识别/执行 Kotlin unit tests。该改动尚未合入 master；A/E 当前分支必须在 C 合入后更新分支并重跑。
+- B 不得修改 `MainActivity.kt`；Native 红旗调用边界需等 A/E 文件所有权释放后先冻结接口契约。
+- C 黄金快照未审阅前，不抽 ClassicSearch/KnowledgeContext 适配器、不更换检索算法。
+- B 医学审核未完成前，不启用未经审核的红旗词表或阈值。
+
+### 9.4 下一项自动执行任务（不等待用户逐条点名）
+
+1. 等待 PR #22 最新 head `b907e663` 的 full Flutter regression 与 Android job 完成；通过后小批量合并，刷新 master SHA。
+2. 将 C 分支作为下一项 CI/检索切片创建 PR；运行完整回归并下载真实 golden artifact，审阅后提交固定 JSON expected snapshot。该 PR 的 workflow 更新合入后，所有活动分支更新到最新 master workflow。
+3. 更新 A 分支到最新 master，重新运行 transcript Kotlin tests 和全量 Flutter/Android CI；测试通过后再合并 A。Find N2 GPU/CPU state:7 与 20 轮验收仍需真实设备 TRACE。
+4. 更新 E 分支到最新 master workflow，修复 changed Dart tests 与 Kotlin tests 的任何实际失败；等待 A 合入后再修改 MainActivity handler，完成 Native cache/attachment cleanup 与数据库事务集成。
+5. 更新/集成 B 纯 Dart preflight 契约；医学审核未完成时保持 BLOCKED，不启用生产门禁。
+6. 集成 D/F/G 审计与文档；F 的端到端 TRACE 实现仍为 MISSING，不得仅因审计报告完成而标 PASS。
+7. 重新评估 PR #19 备份策略：明确全应用禁用备份的非 AI 数据影响；在不破坏其他数据迁移的前提下确定最终方案，不得把全应用备份关闭描述为 AI-only。
+
