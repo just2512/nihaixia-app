@@ -138,7 +138,7 @@ void main() {
     ));
     await tester.pump();
 
-    final homeContext = tester.element(find.byType(HomeScreen));
+    final homeContext = tester.element(find.byType(AdaptiveHomeNavigation));
     final scaffoldContexts = tester.elementList(find.byType(Scaffold));
     expect(MediaQuery.textScalerOf(homeContext).scale(10), 17.5);
     expect(scaffoldContexts, isNotEmpty);
