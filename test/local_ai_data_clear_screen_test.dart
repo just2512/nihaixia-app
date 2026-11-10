@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:record/record.dart';
 
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
@@ -32,6 +33,20 @@ class _ClearAiService extends LocalAiService {
     clearCalls++;
     return _installedButReleased;
   }
+}
+
+class _NoopAudioRecorder implements LocalAiAudioRecorder {
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {}
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
 }
 
 class _NoLostImagePicker implements LocalAiImagePicker {
@@ -151,6 +166,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          audioRecorder: _NoopAudioRecorder(),
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
           attachmentStorage: LocalAiAttachmentStorage(
