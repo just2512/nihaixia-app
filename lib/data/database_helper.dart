@@ -364,6 +364,23 @@ class DatabaseHelper implements AssistantConversationStore {
     await db.delete('chat_history');
   }
 
+  /// Clears only AI conversation data. User settings, bookmarks, diagnosis
+  /// history, charts, and other app data are deliberately preserved.
+  Future<Map<String, int>> clearAiConversationData() async {
+    final db = await database;
+    return db.transaction((txn) async {
+      final messages = await txn.delete('assistant_messages');
+      final tasks = await txn.delete('tcm_interview_tasks');
+      final conversations = await txn.delete('assistant_conversations');
+      final legacyMessages = await txn.delete('chat_history');
+      return {
+        'assistantMessages': messages,
+        'tcmInterviewTasks': tasks,
+        'assistantConversations': conversations,
+        'legacyChatMessages': legacyMessages,
+      };
+    });
+  }
 
   // === 统一 AI 助手会话历史 ===
   Future<int> createAssistantConversation({
