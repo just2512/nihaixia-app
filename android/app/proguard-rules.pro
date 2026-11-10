@@ -6,3 +6,8 @@
 
 # 保留FileProvider（安装APK需要）
 -keep class androidx.core.content.FileProvider { *; }
+
+# 保留 LiteRT-LM JNI 类（R8 会剥离/改名 NativeLibraryLoader 等 JNI 绑定，
+# 导致 "No implementation found for nativeCheckLoaded" 与 LiteRtLmJniException）
+-keep class com.google.ai.edge.litertlm.** { *; }
+-keepclassmembers class com.google.ai.edge.litertlm.** { *; }

@@ -28,7 +28,6 @@ import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
-import '../widgets/adaptive_master_detail.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../data/acupuncture_repository.dart';
@@ -2598,10 +2597,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final ready = _status?.ready == true;
+    // 键盘弹出时收起顶部模型/模式/角色说明，把空间让给对话。
+    // ColorOS 不一定 resize 窗口，但 MediaQuery.viewInsets 走 WindowInsets.Type.ime()
+    // 现代 API，键盘可见时 bottom>0 可靠。
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
-    return AdaptiveSinglePane(
-      preferredAnchorPoint: widget.preferredAnchorPoint,
-      child: Scaffold(
+    return Scaffold(
+      // 交由外层 AdaptiveHomeNavigation 的 Scaffold 统一处理键盘 inset；
+      // 这里再 resize 会与外层叠加（ColorOS 下双重应用把 body 压到 ~0，
+      // 输入框被挤到顶部、对话区变空白）。
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('汉唐 AI 助手'),
         actions: [
@@ -2630,31 +2635,30 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Center(
-            child: ConstrainedBox(
-              key: const ValueKey('local-ai-content-width'),
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: SizedBox(
-                height: constraints.maxHeight,
-                child: Column(
-          children: [
-            _buildModelPanel(context),
-            _buildModeSelector(context),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
-              color: scheme.surfaceContainerLow,
-              child: Text(
-                '当前角色：${_assistantMode.label}。模型负责对话与整理；辨证规则、知识检索和工具计算分别由 App 对应模块执行。',
-                style: TextStyle(
-                  color: scheme.onSurfaceVariant,
-                  fontSize: AppType.caption,
-                  height: 1.45,
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
+            children: [
+            if (!keyboardVisible) ...[
+              _buildModelPanel(context),
+              _buildModeSelector(context),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+                color: scheme.surfaceContainerLow,
+                child: Text(
+                  '当前角色：${_assistantMode.label}。模型负责对话与整理；辨证规则、知识检索和工具计算分别由 App 对应模块执行。',
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: AppType.caption,
+                    height: 1.45,
+                  ),
                 ),
               ),
-            ),
+            ],
             if (ready && _confirmedDraft == null && _messages.any((m) => m.isUser))
               Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
@@ -2675,24 +2679,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
             if (_confirmedDraft != null)
               _buildConfirmedDraftPanel(context),
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
-                itemCount: _messages.length + (_sending || _extracting ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _messages.length) {
-                    return _InterviewMessageBubble(
-                      message: _InterviewMessage(
-                        text: _extracting ? '正在整理本次对话…' : '正在生成回复…',
-                        isUser: false,
-                      ),
-                    );
-                  }
-                  return _InterviewMessageBubble(message: _messages[index]);
-                },
+            ..._messages.map((message) => _InterviewMessageBubble(message: message)),
+            if (_sending || _extracting)
+              _InterviewMessageBubble(
+                message: _InterviewMessage(
+                  text: _extracting ? '正在整理本次对话…' : '正在生成回复…',
+                  isUser: false,
+                ),
               ),
-            ),
             if (_error != null)
               Container(
                 width: double.infinity,
@@ -2703,10 +2697,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   style: TextStyle(color: scheme.onErrorContainer, fontSize: AppType.caption),
                 ),
               ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+          ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            // 键盘弹出时输入框下沿紧贴键盘上沿：去掉底部安全区与内边距。
+            bottom: !keyboardVisible,
+            child: Padding(
+                padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, keyboardVisible ? 0 : AppSpacing.sm),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -2829,6 +2828,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                                 _confirmedDraft == null,
                             onChanged: (_) => setState(() {}),
                             textInputAction: TextInputAction.newline,
+                            // 点击对话区任意处（含消息气泡）收起键盘、退出输入模式。
+                            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
                             decoration: InputDecoration(
                               hintText: ready ? '描述你的情况…' : '请先安装并加载本地模型',
                               filled: true,
@@ -2868,13 +2869,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 ),
               ),
             ),
-          ],
-        )
-              ),
-            ),
-          );
-        },
-      ),
+        ],
       ),
     );
   }

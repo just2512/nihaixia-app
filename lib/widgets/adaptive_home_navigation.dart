@@ -192,6 +192,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
   Widget _buildScreens() => IndexedStack(
         key: _screensKey,
         index: widget.currentIndex,
+        sizing: StackFit.expand,
         children: widget.screens,
       );
 
