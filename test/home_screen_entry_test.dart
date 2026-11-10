@@ -83,21 +83,22 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(MaterialApp(
-      builder: (context, child) {
-        final mediaQuery = MediaQuery.of(context);
-        return MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: const TextScaler.linear(1.75),
-          ),
-          child: child!,
-        );
-      },
       theme: ThemeData(
         colorScheme: AppColors.colorSchemeFor(Brightness.light),
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      home: const HomeScreen(),
+      home: Builder(
+        builder: (context) {
+          final mediaQuery = MediaQuery.of(context);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: const TextScaler.linear(1.75),
+            ),
+            child: const HomeScreen(),
+          );
+        },
+      ),
     ));
     await tester.pump();
 
