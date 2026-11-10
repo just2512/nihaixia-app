@@ -126,6 +126,19 @@ class LocalAiService {
     );
   }
 
+  /// Releases the Native runtime and clears AI-only cache/attachment files.
+  /// The installed model artifact is intentionally preserved.
+  Future<LocalAiModelStatus> clearAiData() async {
+    final data = await _channel.invokeMapMethod<String, dynamic>('clearAiData');
+    if (data == null) {
+      throw PlatformException(
+        code: 'EMPTY_CLEAR_RESULT',
+        message: '没有收到 AI 数据清除结果',
+      );
+    }
+    return LocalAiModelStatus.fromMap(data);
+  }
+
   Future<LocalAiModelStatus> releaseModel() async {
     final data = await _channel.invokeMapMethod<String, dynamic>('releaseModel');
     if (data == null) {
