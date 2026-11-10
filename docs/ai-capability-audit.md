@@ -369,3 +369,19 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 多轮稳定性：自动化测试覆盖状态机和异常路径；Find N2 GPU/CPU 分别完成连续至少 20 轮测试，包含文字、图片、语音输入及进程中断/恢复；真机记录必须提供设备、Android、App SHA、模型版本、backend、轮次、trace/log。未实测一律 UNKNOWN。
 - 发布：红旗门禁、领域隔离、数据清除、执行状态安全、跨轮会话隔离任何一项 FAIL 均阻断相关发布；UNKNOWN 不得写成 PASS。
 
+
+
+### 14.9 多分支并行执行的规范入口
+
+本文件定义能力审计标准和发布硬门槛；多分支的具体执行方式由 `docs/ai-parallel-execution-protocol.md` 定义，任务状态与证据由 `docs/ai-modernization-execution-ledger.md` 记录。
+
+后续任何对本仓库 AI 现代化的执行会话，必须先读取以上三份文件，再读取对应工作流的专项审计报告。不得依赖对话记忆来决定分支策略、文件所有权或验收方式。
+
+固定执行顺序：
+1. 读取主线 HEAD、规范文件和最新执行台账；
+2. 检查所有活动分支、PR、CI 和文件所有权；
+3. 按独立文件/接口契约并行推进，禁止两个工作流同时改同一核心文件；
+4. 先跑 changed tests，再跑全量 Flutter、Android APK/Native unit tests；
+5. 小批量集成后更新主线基线和台账；
+6. 真机验收与 CI 分开记录；没有设备证据就保持 UNKNOWN。
+
