@@ -50,7 +50,6 @@ class LocalAiAttachmentStorage {
     if (!await source.exists()) {
       throw FileSystemException('AI attachment does not exist', sourcePath);
     }
-    final directory = await getDirectory();
     final targetPath = await createPath(
       kind: kind,
       extension: p.extension(sourcePath).replaceFirst('.', ''),
