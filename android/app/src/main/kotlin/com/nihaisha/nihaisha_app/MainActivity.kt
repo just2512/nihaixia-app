@@ -442,7 +442,7 @@ class MainActivity : FlutterActivity() {
                     error
                 )
             ) {
-                recreateCpuEngineAfterFirstTurnOpenClFailure(error)
+                recreateCpuEngineForRecovery(error)
                 val cpuConversation = aiConversation
                     ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
                 try {
@@ -458,7 +458,7 @@ class MainActivity : FlutterActivity() {
             // 多轮失败时，先在新 Engine/Conversation 中恢复所有已成功轮次，
             // 再重试当前纯模型请求；未成功的当前轮次不会进入历史。
             try {
-                recreateCpuEngineAfterFirstTurnOpenClFailure(error)
+                recreateCpuEngineForRecovery(error)
             } catch (recoveryError: Exception) {
                 recoveryError.addSuppressed(error)
                 throw IllegalStateException(
@@ -496,7 +496,7 @@ class MainActivity : FlutterActivity() {
     }
 
     /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
-    private fun recreateCpuEngineAfterFirstTurnOpenClFailure(originalError: Exception) {
+    private fun recreateCpuEngineForRecovery(originalError: Exception) {
         // The first-turn failure may have fired long after the last hash
         // verification; re-verify before any new Engine can open the file.
         ensureModelFileIntegrity()
@@ -527,7 +527,7 @@ class MainActivity : FlutterActivity() {
         if (releaseFailure != null) {
             releaseFailure.addSuppressed(originalError)
             throw IllegalStateException(
-                "GPU 首轮推理失败，旧 GPU 会话或引擎未能安全释放；已跳过 CPU 自动重试",
+                "模型推理失败，旧 GPU 会话或引擎未能安全释放；已跳过 CPU 自动恢复",
                 releaseFailure
             )
         }
@@ -549,7 +549,7 @@ class MainActivity : FlutterActivity() {
             // LiteRT-LM forbids closing an Engine whose initialize() failed.
             error.addSuppressed(originalError)
             throw IllegalStateException(
-                "GPU 首轮 OpenCL 错误后，CPU 引擎初始化也失败：${error.message}",
+                "模型推理失败后，CPU 引擎初始化也失败：${error.message}",
                 error
             )
         }
