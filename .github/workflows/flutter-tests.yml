@@ -92,6 +92,55 @@ jobs:
           sha256sum "$destination"
           rm -f "$tmp"
 
+      # Widget tests that instantiate the assistant screen can load SQLite
+      # native assets. Seed the Linux host binary before changed-test execution.
+      - name: Prewarm verified SQLite Linux host asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(awk '/^  sqlite3:/{found=1; next} found && /version:/{gsub(/[" ]/, "", $2); print $2; exit}' pubspec.lock)"
+          if [[ "$VERSION" != "3.5.2" ]]; then
+            echo "Update the SQLite host asset hash for locked sqlite3 version $VERSION." >&2
+            exit 1
+          fi
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/libsqlite3.x64.linux.so"
+          expected="b17729184e5a2818055ecbddd5ed6642521bfe6e56aafa472330e483c0e2e0d2"
+          api_url="https://api.github.com/repos/simolus3/sqlite3.dart/releases/assets/521380082"
+          tmp="$(mktemp)"
+          download_verified() {
+            local candidate actual
+            local -a urls=(
+              "$api_url"
+              "$url"
+              "https://ghfast.top/$url"
+              "https://gh-proxy.com/$url"
+              "https://ghproxy.net/$url"
+            )
+            for candidate in "${urls[@]}"; do
+              echo "Trying public SQLite host asset source: $candidate"
+              if ! curl --fail --location --show-error --retry 2 --retry-all-errors --connect-timeout 20 --max-time 180 --header "Accept: application/octet-stream" "$candidate" -o "$tmp"; then
+                echo "Download failed; trying the next source." >&2
+                rm -f "$tmp"
+                continue
+              fi
+              actual="$(sha256sum "$tmp" | cut -d' ' -f1)"
+              if [[ "$actual" == "$expected" ]]; then
+                echo "Verified SQLite host asset SHA-256: $actual"
+                return 0
+              fi
+              echo "Rejected SQLite host asset from $candidate: got $actual, expected $expected" >&2
+              file "$tmp" || true
+              rm -f "$tmp"
+            done
+            return 1
+          }
+          download_verified
+          destination=".dart_tool/hooks_runner/shared/sqlite3/build/download-b1772918/libsqlite3.so"
+          mkdir -p "$(dirname "$destination")"
+          install -m 0644 "$tmp" "$destination"
+          sha256sum "$destination"
+          rm -f "$tmp"
+
       - name: Static analysis
         run: flutter analyze --no-pub --no-fatal-infos
 
