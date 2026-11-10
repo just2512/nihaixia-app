@@ -8,12 +8,12 @@ This slice addresses the confirmed Native recovery defect: when a multi-turn Lit
 
 The app pins `com.google.ai.edge.litertlm:litertlm-android:0.18.0` in `android/app/build.gradle.kts`.
 
-The official LiteRT-LM Kotlin getting-started guide documents:
-- `ConversationConfig(initialMessages = listOf(Message.user(...), Message.model(...)))`;
-- `Message.user(Contents)` for multimodal message content;
-- `Conversation.sendMessage(...)`.
+The exact `0.18.0` source tag was inspected:
+- [`Config.kt`](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Config.kt) defines `ConversationConfig.initialMessages: List<Message>`.
+- [`Message.kt`](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Message.kt) defines `Message.user(String/Contents)`, `Message.model(String/Contents)` and `Role.USER` / `Role.MODEL`.
+- [`Conversation.kt`](https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt) exposes synchronous `sendMessage`.
 
-Reference: https://github.com/google-ai-edge/LiteRT-LM/blob/main/docs/api/kotlin/getting_started.md (sections 3–5). The documented constructor pattern is the basis for this implementation; the exact pinned 0.18.0 API still requires CI compilation against the repository dependency.
+This verifies that the API shape used by the implementation exists in the pinned source tag; repository Android compilation and tests remain required.
 
 ## Implementation
 
