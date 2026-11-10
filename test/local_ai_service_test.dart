@@ -39,6 +39,32 @@ void main() {
       expect(status.sizeBytes, 3659530240);
     });
 
+    test('clearAiData invokes native cleanup and keeps the installed model', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'installed': true,
+          'fileExists': true,
+          'hashVerified': true,
+          'ready': false,
+          'modelPath': '/app/files/ai_models/gemma-4-E4B-it.litertlm',
+          'sizeBytes': 3659530240,
+          'expectedSizeBytes': 3659530240,
+          'backend': 'not_loaded',
+          'deletedRuntimeFiles': 4,
+          'deletedAttachmentFiles': 2,
+        };
+      });
+
+      final status = await LocalAiService().clearAiData();
+
+      expect(received?.method, 'clearAiData');
+      expect(status.installed, isTrue);
+      expect(status.ready, isFalse);
+      expect(status.backend, 'not_loaded');
+    });
+
     test('sendImage passes cached path and user prompt to native channel', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
