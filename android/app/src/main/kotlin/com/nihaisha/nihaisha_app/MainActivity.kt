@@ -406,8 +406,19 @@ class MainActivity : FlutterActivity() {
             appendLine("【用户原文】")
             append(text)
         }
-        val reply = sendWithFirstTurnGpuFallback { conversation ->
+        var reply = sendWithFirstTurnGpuFallback { conversation ->
             conversation.sendMessage(modelInput).toString()
+        }
+        // Gemma 偶尔返回空串（多轮后更易出现，GPU 多轮不稳也会这样）；切 CPU 引擎重建会话重试。
+        if (reply.isBlank()) {
+            try {
+                recreateCpuEngineAfterFirstTurnOpenClFailure(IllegalStateException("模型返回空回复"))
+            } catch (_: Exception) {
+                recreateConversationOnly()
+            }
+            reply = sendWithFirstTurnGpuFallback { conversation ->
+                conversation.sendMessage(modelInput).toString()
+            }
         }
         // Only literal user text is eligible for symptom extraction.
         recordUserInput("用户文字自述", text)
@@ -443,16 +454,22 @@ class MainActivity : FlutterActivity() {
                     ).also { it.addSuppressed(error) }
                 }
             }
-            // 其他失败（多轮 state:7 等会话态错误）→ 重建会话重试一次。
-            // 牺牲多轮历史换可用性：重建后只剩 systemInstruction + 本轮消息。
-            recreateConversationOnly()
-            val freshConversation = aiConversation ?: throw error
+            // 其他失败（多轮 state:7 等 GPU 多轮不稳）→ 切 CPU 引擎重建会话重试。
+            // 本机 GPU 多轮推理非确定失败（state:7 或空回复），同引擎重建无效；切 CPU 换可靠性。
+            // 牺牲多轮历史与速度：CPU 会话只剩 systemInstruction + 本轮消息。
             try {
-                val result = send(freshConversation)
+                recreateCpuEngineAfterFirstTurnOpenClFailure(error)
+            } catch (recreateError: Exception) {
+                // CPU 引擎重建失败（如旧 GPU 资源未释放），退回同引擎重建会话
+                recreateConversationOnly()
+            }
+            val recoveryConversation = aiConversation ?: throw error
+            try {
+                val result = send(recoveryConversation)
                 conversationHasSuccessfulTurn = true
                 return result
             } catch (retryError: Exception) {
-                // 重建后仍失败，抛原始错误（保留 state:7 信息供排查）
+                // CPU 重试仍失败，抛原始错误（保留 state:7 信息供排查）
                 throw error
             }
         }
