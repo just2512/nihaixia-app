@@ -169,11 +169,13 @@ void main() {
     await tester.pumpAndSettle();
 
     final scaffold = tester.getRect(find.byType(Scaffold));
+    final appBar = tester.getSize(find.byType(AppBar));
     final content = tester.getRect(
       find.byKey(const ValueKey('local-ai-content-width')),
     );
     expect(scaffold.left, 0);
     expect(scaffold.right, 800);
+    expect(appBar.width, 800);
     expect(content.width, 640);
     expect(content.left, 80);
     expect(content.right, 720);
