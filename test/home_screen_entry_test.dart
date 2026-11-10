@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
+import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -76,7 +77,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('HomeScreen passes the inherited system text scaler to tab scaffolds', (tester) async {
+  testWidgets('AdaptiveHomeNavigation passes the inherited system text scaler to tab scaffolds', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -95,12 +96,49 @@ void main() {
       // itself so the test does not depend on MaterialApp.builder placement.
       home: MediaQuery(
         data: inheritedMediaQuery,
-        child: const HomeScreen(),
+        child: AdaptiveHomeNavigation(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          screens: const [
+            Scaffold(body: Text('AI tab')),
+            Scaffold(body: Text('Tools tab')),
+            Scaffold(body: Text('Knowledge tab')),
+            Scaffold(body: Text('Bookmarks tab')),
+            Scaffold(body: Text('Settings tab')),
+          ],
+          destinations: const [
+            AppNavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat),
+              label: 'AI',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: '工具',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.menu_book_outlined),
+              selectedIcon: Icon(Icons.menu_book),
+              label: '知识',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.bookmark_border),
+              selectedIcon: Icon(Icons.bookmark),
+              label: '收藏',
+            ),
+            AppNavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: '设置',
+            ),
+          ],
+        ),
       ),
     ));
     await tester.pump();
 
-    final homeContext = tester.element(find.byType(HomeScreen));
+    final homeContext = tester.element(find.byType(AdaptiveHomeNavigation));
     final scaffoldContexts = tester.elementList(find.byType(Scaffold));
     expect(MediaQuery.textScalerOf(homeContext).scale(10), 17.5);
     expect(scaffoldContexts, isNotEmpty);
