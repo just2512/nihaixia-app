@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/models/bookmark.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_storage.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -114,7 +115,7 @@ void main() {
     });
     await store.saveChatMessage('旧版聊天消息', true);
     await store.insertBookmark(
-      const Bookmark(
+      Bookmark(
         title: '保留收藏',
         content: '收藏内容',
         category: '知识',
@@ -151,7 +152,7 @@ void main() {
     expect(await db.query('assistant_conversations'), isEmpty);
     expect(await db.query('chat_history'), isEmpty);
     expect(await db.query('bookmarks'), hasLength(1));
-    expect(find.text('你可以直接描述身体情况、学习问题，或选择 App 内置工具。'), findsOneWidget);
+    expect(find.textContaining('你可以直接描述身体情况、询问中医知识'), findsOneWidget);
     expect(find.textContaining('AI 数据已清除'), findsOneWidget);
   });
 }
