@@ -75,4 +75,34 @@ void main() {
     expect(find.text('汉唐 AI 助手'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('HomeScreen preserves the inherited system text scaler', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 790);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MaterialApp(
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(
+            textScaler: const TextScaler.linear(1.75),
+          ),
+          child: child!,
+        );
+      },
+      theme: ThemeData(
+        colorScheme: AppColors.colorSchemeFor(Brightness.light),
+        useMaterial3: true,
+        extensions: [AppColors.light],
+      ),
+      home: const HomeScreen(),
+    ));
+    await tester.pump();
+
+    final context = tester.element(find.text('汉唐 AI 助手'));
+    expect(MediaQuery.textScalerOf(context).scale(10), 17.5);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -7,11 +7,7 @@ import 'settings_screen.dart';
 import '../widgets/adaptive_home_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
-  final double textScaleFactor;
-  const HomeScreen({
-    super.key,
-    this.textScaleFactor = 1.0,
-  });
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -30,17 +26,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(widget.textScaleFactor)),
-      child: AdaptiveHomeNavigation(
-        currentIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
-        screens: _screens,
-        destinations: const [
+    return AdaptiveHomeNavigation(
+      currentIndex: _currentIndex,
+      onDestinationSelected: (index) {
+        setState(() => _currentIndex = index);
+      },
+      screens: _screens,
+      destinations: const [
           AppNavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat),
@@ -66,8 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon: Icon(Icons.settings),
             label: '设置',
           ),
-        ],
-      ),
+      ],
     );
   }
 }

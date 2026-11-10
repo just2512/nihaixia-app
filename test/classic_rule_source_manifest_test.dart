@@ -77,7 +77,7 @@ void main() {
 
     test('第268条明确保留原文无方剂边界', () {
       final record = records.singleWhere(
-        (item) => item['conditionKey'] == 'three_yang_sleep',
+        (item) => item['conditionKey'] == CombinedPatternCondition.threeYangSleep,
       );
       expect(record['articleNumber'], 268);
       expect(record['classification'], 'EXPLICIT_COMBINED_NO_FORMULA_IN_CLAUSE');

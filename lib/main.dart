@@ -11,6 +11,7 @@ import 'data/ziwei_rules_repository.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_tokens.dart';
+import 'theme/app_preference_text_scaler.dart';
 import 'widgets/window_metrics_diagnostics.dart';
 
 /// 关闭 Zoom 转场快照：快照机制会在设备动画缩放异常/手势取消时
@@ -207,16 +208,22 @@ class NiHaishaApp extends StatelessWidget {
           themeMode: settings.themeMode,
           theme: _buildTheme(Brightness.light),
           darkTheme: _buildTheme(Brightness.dark),
-          home: HomeScreen(textScaleFactor: settings.textScaleFactor),
+          home: const HomeScreen(),
           // 字号缩放必须放在 builder（包住整个 Navigator）：只包 home 的话，
           // push 出去的详情页/设置页和弹窗都拿不到用户字号，调到 200% 也只有
           // 首页四个 tab 变大（issue #4 相关反馈的根因）。
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.linear(settings.textScaleFactor),
-            ),
-            child: WindowMetricsDiagnostics(child: child!),
-          ),
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                textScaler: AppPreferenceTextScaler(
+                  platformScaler: mediaQuery.textScaler,
+                  preferenceScale: settings.textScaleFactor,
+                ),
+              ),
+              child: WindowMetricsDiagnostics(child: child!),
+            );
+          },
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
