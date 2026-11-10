@@ -101,6 +101,7 @@ jobs:
           set -euo pipefail
           git fetch origin master
           changed_files="$(git diff --name-only origin/master...HEAD)"
+          # Pair native Kotlin production changes with native Kotlin unit tests.
           code_changed=0
           dart_test_files=()
           kotlin_test_files=()
