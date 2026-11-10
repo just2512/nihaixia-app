@@ -4,7 +4,7 @@
 
 ## 1. 现状结论
 
-<badge>FAIL — 未实现端到端 TRACE</badge>
+**FAIL — 未实现端到端 TRACE**
 
 在以下关键文件中检索 `traceId`、`trace_id`、`requestId`、`correlationId`、`spanId`，未发现贯穿一次请求的关联 ID：
 
