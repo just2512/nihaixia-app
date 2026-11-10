@@ -198,7 +198,7 @@
 
 | ID | 分支 / PR | 最新 HEAD | 当前状态 | 最近证据 |
 |---|---|---|---|---|
-| UI 前置修复 | PR #22 `work/fix-foldable-assistant-layout-verified` | `b907e66362a58b577afd124e5fdee524d497ca73` | IN_PROGRESS | branch validation `42850899961` PASS；最新 PR full regression `42851126046` IN_PROGRESS；旧 head `7d726b9` full Flutter regression `42850952540` PASS，Android job仍执行 |
+| UI 前置修复 | PR #22 `work/fix-foldable-assistant-layout-verified` | `b907e66362a58b577afd124e5fdee524d497ca73` | IN_PROGRESS | branch validation `42850899961` PASS；最新 head `b907e663` 的 PR full Flutter regression `42851126046` PASS；同一 run 的 Android arm64 APK/unit-test job仍执行；旧 head `7d726b9` 的 full Flutter regression `42850952540` 也 PASS |
 | A | PR #21 `work/ai-p0-transcript-rehydration` | `9deebb4772877bbb33a754d1b46e21bb710f7955` | IN_PROGRESS | 最新 push validation `42851799278` IN_PROGRESS；旧 PR Android job `42849947422` APK build PASS，但 transcript unit tests 因 Java 21 LiteRT Message 被 JDK17 测试 JVM 直接加载而 FAIL；已将纯策略与 SDK 类型解耦，等待新测试复验 |
 | B | `work/ai-redflag-policy` | `9f459c021d71b696f3c94b1aff20791889d3cd2d` | PARTIAL / BLOCKED | branch validation `42850172292` PASS；只有纯 Dart preflight 策略/测试与入口审计；真实医学规则审核、detector、所有 Flutter/Native 入口接入均未完成 |
 | C | `work/ai-retrieval-golden-snapshot` | `c92a85e4ff73364f17e5caaaa76f196a15f68b9e` | IN_PROGRESS | branch validation `42848410995` PASS；真实黄金 JSON artifact、命中身份/顺序/上下文审阅与固定 expected snapshot 待 PR 全量 CI |
