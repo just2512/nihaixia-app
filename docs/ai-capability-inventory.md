@@ -142,3 +142,107 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 这仍是从统一对话历史中打开的结构化问诊任务页，并非结构化问诊已完全变成同一聊天气泡内的交互卡片。
 - 结构化问诊的角色、文本和结果标记现随任务快照保存为 transcript，恢复后可查看此前问答；该 transcript 仍独立于 assistant_messages，不是同一聊天流内的原生消息卡。
 - 自动化测试和远端 CI 尚待本次提交触发后确认；在此之前标记为实现已提交、验证待完成，不标记为 PASS。
+
+
+---
+
+## 7. 2026-11-10 全局 AI 调用链复核（基线更新）
+
+> 本节是 2026-11-10 对当前 master 的重新读取，优先于上文 2026-11-04 至 11-06 的历史状态描述。审计基线：`1a1b30cb751bd9a2f332d99f89ca633e2398e801`；`pubspec.yaml` 版本 `1.11.30+8039`。本节只对明确读取的文件作结论；未逐页检查的底层算法仍标 UNKNOWN。
+
+### 7.1 核心调用链结论
+
+| 阶段 | 当前状态 | 最新源码证据与判断 |
+|---|---|---|
+| S1 输入 | PARTIAL | 文字/图片/音频通过统一 LocalAiInterviewScreen 和 MainActivity MethodChannel 接入；详情页可传 initialPrompt。见 `local_ai_interview_screen.dart:119-168,245-259`、`MainActivity.kt:82-126`。附件输入主要是音频转写/图片可见特征描述，不等于完整的跨模态任务规划。 |
+| S2 安全前置 | PARTIAL；确定性红旗拦截 MISSING | 红旗仅在 systemInstruction 中要求模型处理，见 `MainActivity.kt:42-66`。Orchestrator 和 `_send()` 前置路径未见确定性红旗检查，见 `assistant_conversation_orchestrator.dart:121-203,206-340`、`local_ai_interview_screen.dart:2096-2215`。 |
+| S3 意图理解 | PARTIAL | 当前 Orchestrator 是固定 cue/alias/actionWords 匹配；没有模型语义规划。见 `assistant_conversation_orchestrator.dart:24-31,32-119,121-203,206-340`。参数提取目前仅对 yunqi 日期做正则处理，见 102-119 行。 |
+| S4 任务规划 | MISSING（通用任务）；问诊专用状态 EXISTS | 有 `TcmInterviewTaskState` 和 `TcmInterviewConversationController`，但仅服务规则问诊；未发现通用 TaskPlan/ActiveTaskFrame。见 `tcm_interview_task_state.dart:41-83`、`tcm_interview_conversation_controller.dart:9-105`、`database_helper.dart:176-184`。 |
+| S5 业务调用 | PARTIAL | ToolRouter 24 项注册，其中 structured_diagnosis 在对话页内联执行；其余 23 项均注册为 Widget builder。见 `assistant_tool_router.dart:155-435,489-526`。目前没有统一 Headless execute 接口。 |
+| S6 结果验证 | PARTIAL | 工具参数校验、AssistantToolResult 校验和来源反查已经存在；但不是所有能力都有统一 typed result/provenance。见 `assistant_tool_router.dart:67-126`、`local_ai_interview_screen.dart:1665-1719`、`assistant_knowledge_context.dart:16-45,81-170`。 |
+| S7 模型综合 | PARTIAL | 模型在当前主链主要接收 prompt/context 后生成文本；学习/问诊/自动模式注入检索上下文，工具/玄学模式仅注入工具清单和页面执行说明。见 `local_ai_interview_screen.dart:771-880`。未发现模型结构化规划或原生工具调用。 |
+| S8 结果呈现 | PARTIAL | 工具页返回结果可进入消息流；来源 ID 可深链到部分知识详情页；部分经典章节仍只能打开书库。见 `local_ai_interview_screen.dart:1493-1610,1628-1758`。缺少所有业务能力共用的结果卡片协议。 |
+| S9 状态/安全 | PARTIAL | SQLite v7 有会话、消息和问诊任务；消息正文存储于 assistant_messages.content。见 `database_helper.dart:25-42,149-184,384-432`。本轮未见 SQLCipher 依赖；Android Keystore/备份排除/附件缓存全量清除仍需专项审计。 |
+
+### 7.2 五种模式当前真实行为
+
+| 模式 | 实际链路 | 当前能力判断 |
+|---|---|---|
+| 自动调度 | L0 cue/alias/actionWords 识别；单工具命中后产生“打开工具”操作；多工具命中要求用户选一个；其他情况进入知识检索/文本生成 | PARTIAL：不是语义 Agent，不会把复合需求拆成多个任务并自动执行 |
+| 问诊助手 | E4B 负责自由文本澄清；用户明确启动结构化问诊后，转入确定性 TcmInterviewConversationController/DiagnosticEngine | PARTIAL：规则问诊真实存在；自由文本不会自动写成规则答案，当前没有通用症状槽位追问器 |
+| 学习助手 | 当前输入触发本地检索，检索文本和来源状态注入 E4B prompt，再输出文本 | PARTIAL：检索已实现，教学规划、主动测验、学习进度管理未发现 |
+| 工具助手 | E4B 只收到已注册工具名称和“实际计算由 App 页面执行”的提示；用户点击按钮后打开页面；页面返回结果后写入会话 | PARTIAL：有人工触发的页面执行与结果回传；无模型自动调用 Headless 能力 |
+| 玄学大师 | E4B 收到工具清单和禁止编造排盘的提示；命中工具后由用户点击进入排盘/起卦页面；部分页面可回传结构化结果 | PARTIAL：真实算法页面存在，但模型没有直接读取/调用算法结果的统一执行接口，缺参收集也不完整 |
+
+模式 prompt 位置：`assistant_tool_router.dart:27-44`。实际模式 context 构造位置：`local_ai_interview_screen.dart:771-880`。路由位置：`assistant_conversation_orchestrator.dart:121-340`。
+
+### 7.3 ToolRouter 24 项登记清单
+
+以下是当前 `AssistantToolRouter._all` 的完整登记项（24 项），不是“24 个 Headless 能力”。`structured_diagnosis` 由对话页特殊处理；其余均通过页面 builder。工具定义行号见 `lib/screens/assistant_tool_router.dart:155-435`，builder 行号见 489-526。
+
+| ID | 名称 | 当前入口形态 | Headless 结论 |
+|---|---|---|---|
+| structured_diagnosis | 结构化辨证问诊 | 对话页内联 TcmInterviewConversationController | NEEDS_ADAPTER：已有纯业务 Controller/Adapter，但必须维持用户确认和 DiagnosticEngine 边界 |
+| yunqi | 五运六气推算 | YunQiScreen，日期参数可传入，页面可回传结果 | NEEDS_ADAPTER：已有 YunqiEngine，尚未完成调用契约审计 |
+| ziwei | 紫微斗数排盘 | ZiweiChartScreen，页面可回传结果 | NEEDS_ADAPTER：已有 ZiweiEngine，尚未完成输入输出契约审计 |
+| bazi | 八字排盘 | BaZiPaipanScreen，页面可回传结果 | NEEDS_ADAPTER：已有 BaziService/bazi_core，尚未完成调用契约审计 |
+| yijing | 易经起卦 | YiJingScreen，页面可回传结果 | UNKNOWN：页面底层计算边界待审 |
+| xiaoliuren | 小六壬起课 | XiaoliurenScreen，页面可回传结果 | UNKNOWN：页面底层计算边界待审 |
+| meihua | 梅花易数起卦 | MeihuaScreen，页面可回传结果 | UNKNOWN：页面底层计算边界待审 |
+| dosage | 经方剂量换算 | DosageConverterScreen，页面可回传结果 | UNKNOWN：需检查计算是否已抽成纯 Dart 服务 |
+| ziwu_liuzhu | 时辰开穴计算 | ZiWuLiuZhuScreen，页面可回传结果 | NEEDS_ADAPTER：已有 ZiwuliuzhuEngine，尚未完成调用契约审计 |
+| guji_library | 古籍原文 | GujiLibraryScreen | NEEDS_ADAPTER：已有 GujiRepository/ClassicSearchService，可复用但需统一结果结构 |
+| knowledge_hub | 中医知识库浏览 | KnowledgeScreen | NEEDS_ADAPTER：已有知识 Repository，不能用打开浏览页代替 AI 检索 |
+| medical_cases | 医案库检索 | MedicalCaseLibraryScreen | NEEDS_ADAPTER：已有医案数据服务，需核对来源字段和查询边界 |
+| almanac | 每日黄历 | DailyAlmanacScreen，页面可回传结果 | NEEDS_ADAPTER：已有 LunarAlmanacService，需核对纯函数接口 |
+| diagnosis_history | 诊断历史趋势 | DiagnosisHistoryScreen | BLOCKED：个人健康数据需单独授权和最小化读取 |
+| critical_illness | 闭门课重症资料 | CriticalIllnessListScreen | NEEDS_ADAPTER：只读资料能力；不得生成个体治疗建议 |
+| solar_terms | 节气养生 | SolarTermSectionScreen | NEEDS_ADAPTER：需抽取结构化查询能力 |
+| yuxiaji_omen | 玉匣灵兆 | YuxiajiOmenScreen | UNKNOWN：底层数据/算法边界待审 |
+| dream | 周公解梦 | DreamScreen | NEEDS_ADAPTER：已有 dream_data，需核对检索实现 |
+| guansha | 小儿关煞 | GuanshaScreen | UNKNOWN：底层算法边界待审 |
+| sanshan_lingqian | 三山国王灵签 | SanshanLingqianScreen | UNKNOWN：抽签状态与数据边界待审 |
+| chenggu | 袁天罡称骨 | ChengguBoneScreen | NEEDS_ADAPTER：已有 chenggu_data，需核对计算边界 |
+| shousheng_debt | 受生债查询 | ShoushengDebtScreen | NEEDS_ADAPTER：已有 shousheng_data，需核对计算边界 |
+| huangdi_siji | 轩辕黄帝四季歌 | HuangdiSijiScreen | NEEDS_ADAPTER：已有数据资产，需抽取查询接口 |
+| saved_charts | 我的命盘库 | SavedChartsScreen | BLOCKED：生辰资料属于个人数据，需显式授权后开放 |
+
+**重要限定：** NEEDS_ADAPTER 表示已有可复用的业务数据/服务线索，但尚未证明当前已具备符合统一契约的 Headless 接口；UNKNOWN 表示没有逐页检查底层实现。不得将以上估计写成已完成的底层代码审计。ToolRouter 本身没有 `execute(args)` 或等价 Headless executor。
+
+### 7.4 多轮异常恢复：源码与文档存在不一致
+
+- `MainActivity.sendLocalMessage()` 在空回复时尝试重建 CPU Engine/Conversation，再发送同一个本轮 `modelInput`：`MainActivity.kt:400-427`。
+- `sendWithFirstTurnGpuFallback()` 对非首轮异常也尝试重建 CPU Engine；重建成功后只对新 Conversation 发送当前 `send` 闭包内容：`MainActivity.kt:430-479`。
+- `recreateCpuEngineAfterFirstTurnOpenClFailure()` 先 detach/关闭旧 Conversation 与 Engine，再创建全新的 CPU Engine/Conversation：`MainActivity.kt:490-558`。
+- 新 Conversation 只初始化 systemInstruction；该恢复路径没有接收或回填 Flutter transcript。因此多轮异常后会丢失模型内部历史，而 UI/SQLite 仍保留历史。
+- CPU 重试失败时当前代码抛出原始异常，CPU retry 错误作为局部变量没有成为最终主错误，诊断信息可能不完整：`MainActivity.kt:466-479`。
+- 以上代码行为与 `docs/local-ai-e4b.md:48-50,85-86,96` 所述“仅首轮 OpenCL 错误回退；多轮故障不自动重放”不一致。应以当前代码为准，修正文档或代码策略，不可只改文档掩盖实际行为。
+- 真机 state:7、空回复、CPU 重建、连续轮次是否稳定：UNKNOWN。自动化策略测试不能替代 Find N2 实测。
+
+### 7.5 关键文件与测试覆盖
+
+已确认存在的相关测试：
+- 路由：`test/assistant_conversation_orchestrator_test.dart`、`test/assistant_tool_router_test.dart`、`test/assistant_tool_registry_build_test.dart`。
+- 工具结果回传：`test/assistant_tool_result_test.dart`、`test/assistant_tool_result_handoff_test.dart`。
+- 知识检索与溯源：`test/assistant_knowledge_context_test.dart`、`test/assistant_provenance_integration_test.dart`、`test/classic_search_backlink_test.dart`。
+- 本地模型 UI/服务：`test/local_ai_interview_screen_test.dart`、`test/local_ai_service_test.dart`。
+- 规则问诊：`test/services/tcm_interview_conversation_controller_test.dart`、`test/tcm_interview_adapter_test.dart`、`test/models/tcm_interview_task_state_test.dart`。
+- 原生模型策略：`android/app/src/test/kotlin/com/nihaisha/nihaisha_app/FirstTurnGpuFallbackPolicyTest.kt` 等。
+
+测试文件存在不等于每一项端到端行为已覆盖；需逐项核对断言和执行记录。当前审计时 master 最新 commit 的 GitHub combined status 为 `pending`，statuses 为空；本轮不能宣称 CI PASS。
+
+### 7.6 必须修正的审计口径
+
+1. 当前 ToolRouter 有 **24 个注册项**，不是 23 个；其中 1 个结构化问诊特殊处理、23 个页面 builder。
+2. 工具结果并非完全不能回到对话：页面结果可校验、保存、恢复模型上下文；缺口是必须由用户手动点击页面执行，模型没有 Headless 直接调用权。
+3. 不可仅凭 Widget builder 断言底层算法全部写在 Widget State；必须检查 Screen 调用的 Service/Repository/Engine。
+4. 原 Headless readiness 四类状态不足以表达未检查项，必须允许 UNKNOWN。
+5. “每轮最多一次模型调用”只能作为端侧性能目标，不能作为绝对硬约束。确定性路由/模板任务可以 0 次模型规划调用；复杂语义任务可用一次结构化规划；需要解释时再调用一次综合生成。必须根据 E4B 实测耗时、token/context 限制和错误率决定是否合并阶段。
+6. `ActiveTaskFrame` 不应把未经确认的原始症状、生辰、个人资料直接作为任意字符串长期持久化。敏感槽位要有来源、确认状态、用途权限、保留期限和删除策略；审计日志不得存症状原文。
+7. 任何工具重试都要区分“确定未执行”“执行结果未知”“已执行但返回失败”。不能把未知执行状态当作安全可重放；写操作必须幂等或要求重新确认。
+
+### 7.7 本轮结论与未关闭范围
+
+**已确认的核心病因：** 当前系统有多模式 prompt、确定性 L0 路由、知识检索、规则问诊和页面工具；缺少统一的语义任务规划、跨模式任务帧、Headless 能力注册/执行器和跨结果综合闭环。这是五种模式普遍表现为“有入口但不够聪明”的架构原因。
+
+**下一步不应立即创建 ActiveTaskFrame 或批量抽取 24 个工具。** 先完成每个工具页面与底层服务的逐项可调用性审计；同时优先修复 MainActivity 多轮恢复上下文丢失，并建立一条跨两项只读能力的最小复合任务端到端测试。所有未知项继续标记 UNKNOWN，不能提前写成 READY。
