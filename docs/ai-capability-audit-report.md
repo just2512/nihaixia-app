@@ -4,7 +4,7 @@
 > 代码基线：`master` @ `3d982e8129a2659547df1cd21143a825c8c5f8fb`  
 > 规范来源：[ai-capability-audit.md](ai-capability-audit.md)  
 > 执行约束：[ai-modernization-execution-ledger.md](ai-modernization-execution-ledger.md)  
-> 并行执行协议：[ai-parallel-workstreams.md](ai-parallel-workstreams.md)
+> 并行执行协议：[ai-parallel-execution-protocol.md](ai-parallel-workstreams.md)
 
 本报告区分“代码已实现”“分支测试通过”“PR 全量 CI 通过”“真机验收通过”。未完成的证据不得用文档或静态检查代替。
 
