@@ -396,12 +396,15 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendLocalMessage(text: String, context: String = ""): Map<String, Any> {
+        // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
+        // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
+        // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
+        // 与各角色 context 中给出。
         val modelInput = if (context.isBlank()) text else buildString {
-            appendLine("【应用提供的模式说明与本地检索资料】")
+            appendLine("【应用提供的角色说明与本地检索资料】")
             appendLine(context.take(7000))
-            appendLine("【用户问题】")
-            appendLine(text)
-            append("请区分资料原文与解释；资料未提供的内容明确说明未知，不得编造出处。")
+            appendLine("【用户原文】")
+            append(text)
         }
         val reply = sendWithFirstTurnGpuFallback { conversation ->
             conversation.sendMessage(modelInput).toString()
@@ -414,34 +417,60 @@ class MainActivity : FlutterActivity() {
     private fun <T> sendWithFirstTurnGpuFallback(send: (Conversation) -> T): T {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
-        return try {
+        try {
             val result = send(conversation)
             conversationHasSuccessfulTurn = true
-            result
+            return result
         } catch (error: Exception) {
-            if (!FirstTurnGpuFallbackPolicy.shouldFallback(
+            // 首轮 OpenCL 不可用 → 切 CPU 引擎重试（既有策略）
+            if (FirstTurnGpuFallbackPolicy.shouldFallback(
                     activeBackend,
                     conversationHasSuccessfulTurn,
                     error
                 )
             ) {
+                recreateCpuEngineAfterFirstTurnOpenClFailure(error)
+                val cpuConversation = aiConversation
+                    ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
+                try {
+                    val result = send(cpuConversation)
+                    conversationHasSuccessfulTurn = true
+                    return result
+                } catch (cpuError: Exception) {
+                    throw IllegalStateException(
+                        "GPU 首轮推理报告 OpenCL 不可用；已切换 CPU，但重试仍失败：${cpuError.message}",
+                        cpuError
+                    ).also { it.addSuppressed(error) }
+                }
+            }
+            // 其他失败（多轮 state:7 等会话态错误）→ 重建会话重试一次。
+            // 牺牲多轮历史换可用性：重建后只剩 systemInstruction + 本轮消息。
+            recreateConversationOnly()
+            val freshConversation = aiConversation ?: throw error
+            try {
+                val result = send(freshConversation)
+                conversationHasSuccessfulTurn = true
+                return result
+            } catch (retryError: Exception) {
+                // 重建后仍失败，抛原始错误（保留 state:7 信息供排查）
                 throw error
             }
-
-            recreateCpuEngineAfterFirstTurnOpenClFailure(error)
-            val cpuConversation = aiConversation
-                ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
-            try {
-                val result = send(cpuConversation)
-                conversationHasSuccessfulTurn = true
-                result
-            } catch (cpuError: Exception) {
-                throw IllegalStateException(
-                    "GPU 首轮推理报告 OpenCL 不可用；已切换 CPU，但重试仍失败：${cpuError.message}",
-                    cpuError
-                ).also { it.addSuppressed(error) }
-            }
         }
+    }
+
+    /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
+    private fun recreateConversationOnly() {
+        val engine = aiEngine
+            ?: throw IllegalStateException("引擎未加载，无法重建会话")
+        try {
+            aiConversation?.close()
+        } catch (_: Exception) {
+            // 旧会话可能已失效，忽略关闭异常
+        }
+        aiConversation = engine.createConversation(
+            ConversationConfig(systemInstruction = Contents.of(systemInstruction))
+        )
+        conversationHasSuccessfulTurn = false
     }
 
     private fun recreateCpuEngineAfterFirstTurnOpenClFailure(originalError: Exception) {

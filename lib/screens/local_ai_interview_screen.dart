@@ -776,6 +776,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       case AssistantMode.automatic:
         final knowledge =
             await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
+        // 无命中且无失败时，不注入知识检索框架与角色 context——
+        // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
+        // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
+        if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
+            knowledge.failureMessage == null) {
+          final reply = await _service.sendMessage(text);
+          return _AssistantTurnResponse(
+            text: reply,
+            sourceIds: knowledge.sourceIds,
+            knowledgeStatus: knowledge.statusLabel,
+          );
+        }
         final context = StringBuffer(
           '当前角色：通用助手。\n${AssistantMode.automatic.promptHint}\n'
           '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
