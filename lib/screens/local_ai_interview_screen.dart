@@ -231,6 +231,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _structuredDiagnosisBusy = false;
   TcmInterviewConversationController? _tcmInterviewController;
   late Future<int?> _conversationIdFuture;
+  Future<int?>? _lazyConversationCreation;
   Future<void> _taskStateWrite = Future<void>.value();
   final Set<String> _persistedDiagnosisTaskIds = <String>{};
   String? _pendingHistoryTranscript;
@@ -915,12 +916,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  /// Creates the first conversation lazily after an explicit AI-data clear.
+  /// Concurrent persistence callbacks share one pending creation Future.
+  Future<int?> _ensureConversationId() async {
+    final current = await _conversationIdFuture;
+    if (current != null) return current;
+    final pending = _lazyConversationCreation ??= _createNewConversation();
+    _conversationIdFuture = pending;
+    try {
+      return await pending;
+    } finally {
+      if (identical(_lazyConversationCreation, pending)) {
+        _lazyConversationCreation = null;
+      }
+    }
+  }
+
   Future<void> _persistTcmInterviewTaskState(
     TcmInterviewTaskState state,
   ) {
     // Capture the conversation future at callback time. History navigation may
     // switch the active conversation while an earlier SQLite write is queued.
-    final targetConversation = _conversationIdFuture;
+    final targetConversation = _ensureConversationId();
     _taskStateWrite = _taskStateWrite.catchError((Object error) {
       debugPrint('[TcmInterviewTask] 上一次状态保存失败，继续后续写入：$error');
     }).then((_) async {
@@ -946,7 +963,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? knowledgeStatus,
   }) async {
     try {
-      final id = await _conversationIdFuture;
+      final id = await _ensureConversationId();
       if (id == null) return;
       final activeMode = mode ?? _assistantMode;
       final replayable = userText.trim().isNotEmpty;
@@ -1197,7 +1214,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
 
-    final conversationId = await _conversationIdFuture;
+    final conversationId = await _ensureConversationId();
     if (conversationId != null) {
       for (final entry in added) {
         try {
@@ -1754,7 +1771,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ));
     });
     try {
-      final id = await _conversationIdFuture;
+      final id = await _ensureConversationId();
       if (id != null) {
         await _conversationStore.saveAssistantMessage(
           conversationId: id,
@@ -2528,6 +2545,104 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = errorMessage;
     });
   }
+  Future<void> _clearAllAiData() async {
+    if (_attachmentBusy ||
+        _modelControlBusy ||
+        _sending ||
+        _extracting ||
+        _recordingBusy ||
+        _recording ||
+        _structuredDiagnosisBusy ||
+        _toolRouteActive) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('清除全部 AI 数据？'),
+        content: const Text(
+          '将删除本机 AI 会话、消息、结构化问诊快照、附件和推理缓存。'
+          '已导入的 Gemma 模型文件会保留，不需要重新导入。'
+          '收藏、应用设置、独立辨证历史和命盘数据不会删除。此操作不可撤销。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('清除数据'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    setState(() {
+      _modelControlBusy = true;
+      _error = null;
+    });
+    try {
+      // Finish queued task-state writes before deleting the owning rows.
+      await _taskStateWrite;
+      final paths = <String?>[_imagePath, _audioPath];
+      final status = await _service.clearAiData();
+      final counts = await DatabaseHelper.instance.clearAiConversationData();
+      await _deleteCachedAttachments(paths);
+      final managedAttachments = await _attachmentStorage.clear();
+      final legacyRecordings = await _attachmentStorage.clearLegacyRecordings();
+
+      if (!mounted) return;
+      _historyRestoreGeneration++;
+      _conversationIdFuture = Future<int?>.value(null);
+      _lazyConversationCreation = null;
+      _taskStateWrite = Future<void>.value();
+      _lastEffectiveMode = null;
+      _pendingToolSelection = false;
+      _pendingHistoryTranscript = null;
+      _pendingHistoryUserMessages = const [];
+      _tcmInterviewController = null;
+      _persistedDiagnosisTaskIds.clear();
+      _inputController.clear();
+      setState(() {
+        _status = status;
+        _statusUnknown = false;
+        _checking = false;
+        _messages
+          ..clear()
+          ..add(const _InterviewMessage(
+            text: _assistantWelcomeMessage,
+            isUser: false,
+          ));
+        _confirmedDraft = null;
+        _imagePath = null;
+        _audioPath = null;
+        _error = null;
+      });
+      final deletedMessages =
+          (counts['assistantMessages'] ?? 0) +
+          (counts['legacyChatMessages'] ?? 0);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'AI 数据已清除：消息 $deletedMessages 条，'
+            '问诊快照 ${counts['tcmInterviewTasks'] ?? 0} 项，'
+            '附件 ${managedAttachments + legacyRecordings} 个。',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'AI 数据未能全部清除。请重试；已完成的文件清理可安全重复执行。详情：$error';
+      });
+    } finally {
+      if (mounted) setState(() => _modelControlBusy = false);
+    }
+  }
+
   Future<void> _resetConversation() async {
     if (_attachmentBusy ||
         _modelControlBusy ||
@@ -2546,6 +2661,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
       _conversationIdFuture = _createNewConversation();
+      _lazyConversationCreation = null;
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
       _pendingHistoryTranscript = null;
@@ -2652,6 +2768,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               onPressed: _sending ? null : _showZangFuEvidenceDialog,
               icon: const Icon(Icons.fact_check_outlined),
             ),
+          IconButton(
+            tooltip: '清除全部 AI 数据',
+            onPressed: _attachmentBusy ||
+                    _modelControlBusy ||
+                    _sending ||
+                    _extracting ||
+                    _recordingBusy ||
+                    _recording ||
+                    _structuredDiagnosisBusy ||
+                    _toolRouteActive
+                ? null
+                : _clearAllAiData,
+            icon: const Icon(Icons.delete_sweep_outlined),
+          ),
           IconButton(
             tooltip: '历史对话',
             onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting || _recordingBusy || _recording ? null : _openHistory,
