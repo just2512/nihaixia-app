@@ -11,11 +11,11 @@ internal object LocalAiDataCleanup {
         val canonicalRoot = cacheRoot.canonicalFile
         val rawTarget = File(canonicalRoot, directoryName)
         val target = rawTarget.canonicalFile
-        if (target.path != rawTarget.absoluteFile.path) {
-            throw IllegalArgumentException("AI cache directory must not be a symbolic link")
-        }
         if (target.parentFile != canonicalRoot) {
             throw IllegalArgumentException("AI cache directory must be a direct child of cacheDir")
+        }
+        if (target.path != rawTarget.absoluteFile.path) {
+            throw IllegalArgumentException("AI cache directory must not be a symbolic link")
         }
         if (!target.exists()) return 0
         if (!target.isDirectory) {
