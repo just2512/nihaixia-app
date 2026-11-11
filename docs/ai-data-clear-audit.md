@@ -108,7 +108,7 @@ Native 清除入口由主线程门禁 + 单线程 `aiExecutor` 执行：
 已在独立分支加入以下实现，但尚未集成、不得标记为完整 PASS：
 
 - `DatabaseHelper.clearAiConversationData()`：单个 SQLite transaction 清理四张 AI 会话表；保留其他业务表。
-- `LocalAiAttachmentStorage`：将 picker 图片复制到 `local_ai_attachments/`，录音直接创建在该目录；提供专属目录清理和旧版 `local_ai_<timestamp>.wav` 兼容清理。
+- `LocalAiAttachmentStorage`：将 picker 图片复制到 `local_ai_attachments/`，录音直接创建在该目录；拒绝附件根目录符号链接，清理递归不跟随链接；提供旧版 `local_ai_<timestamp>.wav` 兼容清理。
 - `LocalAiService.clearAiData()`：Dart MethodChannel 调用契约已添加。
 - `LocalAiInterviewScreen`：新增二次确认入口；清理后重置当前消息、会话 ID、问诊控制器和附件状态；下一次成功写入时延迟创建新会话，避免清除后留下空会话行。
 - `LocalAiDataCleanup.kt`：提供仅删除 AI 专属目录/旧版录音的 Native 文件清理 helper，包含目录越界和符号链接防护；Kotlin 测试新增根目录 symlink 越界拒绝用例。
