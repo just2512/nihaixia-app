@@ -395,6 +395,18 @@ class MainActivity : FlutterActivity() {
         return modelStatus()
     }
 
+    /// 剥离 LLM 回复里的常见 markdown 符号（**加粗**、`代码`、#标题、-列表、[链接]），
+    /// 让回复以纯文本呈现，避免"非人类语言"。
+    private fun stripSimpleMarkdown(text: String): String {
+        return text
+            .replace("**", "")
+            .replace("__", "")
+            .replace("`", "")
+            .replace(Regex("^\\s*#{1,6}\\s+", RegexOption.MULTILINE), "")
+            .replace(Regex("\\[([^\\]]+)\\]\\([^)]*\\)"), "$1")
+            .replace(Regex("^[ \t]*[-*+][ \t]+", RegexOption.MULTILINE), "• ")
+    }
+
     private fun sendLocalMessage(text: String, context: String = ""): Map<String, Any> {
         // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
         // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
@@ -422,13 +434,14 @@ class MainActivity : FlutterActivity() {
             ?: throw IllegalStateException("本地模型尚未加载")
 
         fun commitSuccessfulTurn(reply: String): String {
-            if (reply.isBlank()) throw IllegalStateException("模型没有返回有效文本")
+            val cleaned = stripSimpleMarkdown(reply)
+            if (cleaned.isBlank()) throw IllegalStateException("模型没有返回有效文本")
             LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
                 conversationHistoryTurns,
                 userMessageText,
-                reply
+                cleaned
             )
-            return reply
+            return cleaned
         }
 
         try {
@@ -617,8 +630,9 @@ class MainActivity : FlutterActivity() {
             throw IllegalArgumentException(error)
         }
         val prompt =
-            "请逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”，" +
-            "不要总结、推断、改写或自行补全。只做语音转写，不作诊断或辨证，不推荐药物或方剂。" +
+            "请先逐句转写这段用户语音，尽量保留原始措辞，只可补充必要标点；听不清的内容标记为“听不清”。" +
+            "转写完成后，若用户提出了健康问题或描述了不适，请以问诊助手身份回应用户：先复述你理解到的症状（明确标注为用户自述），" +
+            "再在安全范围内作一般性解释或澄清；不作现代医学诊断，不作中医六经辨证结论，不推荐方剂、药物或剂量。" +
             if (userPrompt.isBlank()) "" else "\n用户补充问题：" + userPrompt.take(500)
         val audioContents = Contents.of(
             Content.AudioFile(audio.absolutePath),

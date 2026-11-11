@@ -553,9 +553,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<bool?> _showTonguePhotoSourceSheet() {
+    final scheme = Theme.of(context).colorScheme;
     return showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
+      // ColorOS 上默认 bottom sheet 背景可能半透明，显式用不透明 surface 避免
+      // 菜单文字与后方对话气泡重叠。
+      backgroundColor: scheme.surface,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
