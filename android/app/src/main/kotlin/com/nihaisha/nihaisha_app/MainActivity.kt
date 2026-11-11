@@ -85,6 +85,10 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
             .setMethodCallHandler { call, result ->
+                if (aiDataClearPending && call.method != "getModelStatus") {
+                    result.error("AI_DATA_CLEAR_BUSY", "AI 数据清除正在执行", null)
+                    return@setMethodCallHandler
+                }
                 when (call.method) {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "importModel" -> beginModelImport(result)
