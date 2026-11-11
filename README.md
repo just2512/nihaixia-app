@@ -315,7 +315,7 @@ flutter analyze
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
 | `lib/theme/app_colors.dart` | 39 个语义色 Token（品牌棕/暖调中性/状态色/六经六色），全站硬编码颜色清零 |
 
-**版本号规则**：`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一来源；发布时按实际变更递增版本号和 build 号，`+N` 对应 Android `versionCode`。当前仓库版本为 `1.11.28+8037`。
+**版本号规则**：`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一来源；发布时按实际变更递增版本号和 build 号，`+N` 对应 Android `versionCode`。当前仓库版本为 `1.11.30+8039`。
 
 **发版方式**：推送与 `pubspec.yaml` 版本一致的 `v*` tag，`.github/workflows/build-apk.yml` 自动构建通用版与三个 ABI 分架构 APK，并发布到同名 GitHub Release。
 
