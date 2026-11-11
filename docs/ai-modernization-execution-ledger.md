@@ -273,3 +273,11 @@ CI artifact `13811868576`（ZIP SHA-256 `51311b321511dcf93603097efc4eea6f0c6eab0
 5. B：继续输入渠道/路由矩阵；医学审核前保持 REVIEW_REQUIRED，不启用未经审核的词表/阈值。
 6. D：补齐 24 项工具的 typed arguments/results、权限、错误/取消/超时和来源 ID 证据；逐项验证真实执行，Headless 仍为 0。
 7. PR #19 Android 全应用备份关闭策略仍 BLOCKED；不因 E 清除功能完成就直接合并。必须保留收藏/设置等非 AI 数据自动迁移能力。
+
+
+### 10.9 E 工作流最新 head 修订（2026-11-11）
+
+- PR #34 当前 head：`c4e50f7b410c66cde28acb6ece2651a70271980f`，包括 Native 全操作门禁、Dart 附件目录 symlink 防护、删除不跟随链接，以及两个录音生命周期测试对 picker/storage 的显式注入。
+- 较早 head `67cc12f` 的 PR full regression run `43007392308` 曾在录音 retry widget 测试失败；随后通过测试依赖注入消除共享 `/tmp` 和 lost-image 插件对该测试的非目标影响。该旧失败不是当前 head 的验收结果。
+- 当前 head `c4e50f7`：push branch validation `43008401769` static analysis PASS，changed tests 仍在执行；PR full regression `43008411362` 仍在执行。待其完成后检查 Android arm64 APK/Kotlin unit tests。
+- PR #32 本身 head `5b8b13056b9f1f3baf9ce9bdd12fdb39b8c2a1d7`：push validation `43007657861` PASS；PR full Flutter regression `43007666292` PASS；Android arm64 APK ABI build 与 Native unit tests PASS。台账合并前的本次修订会重新触发 PR checks。
