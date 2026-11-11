@@ -52,6 +52,7 @@ void main() {
           'snippet': hit.snippet,
           'localBacklink': hit.localBacklink,
           'locatorStatus': hit.locatorStatus,
+          'bibliographicLocatorVerified': hit.hasVerifiedBibliographicLocator,
         }).toList(growable: false),
       };
     }
