@@ -287,3 +287,14 @@ D-01 表格复核补充：复核完整注册定义后，`huangdi_siji` 的 modes
 - PR #36：旧台账 PR 与 #41 存在内容重复风险，先比较完整内容与最新 CI，再决定关闭；不得合并过期台账。
 
 **下一轮默认执行顺序：** (1) 读取本轮 PR #40/#41 新 SHA CI 与 job 结果；(2) D-03 补结果契约边界测试；(3) E 清除失败/重启测试；(4) F trace_id 贯穿最小切片；(5) C provenance manifest；(6) G 版本漂移检查。任一工作流受阻时继续其余无依赖项。
+
+
+### 10.5 E-02 Native close failure 后的重试安全复核
+
+- PR：[#39](https://github.com/just2512/nihaixia-app/pull/39)，分支仍为 `work/ai-data-clear-v3-final`。
+- 新增审计提交：`e2bc75f42b4eb2b6fa043df0754da3d86690d306`，只修改 `docs/ai-data-clear-audit.md`。
+- CODE：`MainActivity.releaseLocalModel()` 在 close 前清空 aiConversation/aiEngine 字段；`ConversationResourceReleasePolicy.closeBoth()` 会尝试关闭两者并聚合异常；`clearLocalAiData()` 在 release 抛错时停止删除 cache。
+- 风险：第一次 close 失败时引用已经置空；同一进程第二次清除可能把 null 引用当作释放成功并继续删 cache。当前没有 releaseState 持久状态或二次清除 fail-closed 测试。
+- 状态：E PARTIAL；PR #39 的既有 run `43015771142` 通过，但不覆盖本次发现的 close failure 重试路径。真机清除后重启仍 UNKNOWN。
+- 下一步：在 E 文件所有权分支内增加 Native releaseState（READY/RELEASED/UNKNOWN）和 close failure 注入测试；UNKNOWN 时禁止 load、clear cache 和把 null 资源当作已释放。只有此切片 CI 通过后，才复核其与 Flutter 清除编排的交互。
+
