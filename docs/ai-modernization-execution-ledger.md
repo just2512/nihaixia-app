@@ -426,3 +426,63 @@ E-03 实现复核补充：LocalAiResourceLifecycle 使用进程级 singleton，�
 - 用户明确表示会自行执行并拉取所需真机 TRACE；本工作流继续完成代码、测试、文档和验收方案，不将设备侧操作作为本轮自动任务。
 - 医学审核仍是 B 的外部专业依赖；不生成或启用未经审核的红旗词表、阈值和处置文案。
 - 继续按主线基线、独立工作分支、单文件所有权、小批量集成、CI 分层验收执行；不因旧 CI 通过或 GitHub mergeable 状态而合并。
+
+
+## 13. 2026-11-11 22:20 并行执行增量
+
+> 当前 master 基线仍为 `05f118e1d0b090cee7dbeaa37669c410dae0e876`。本节记录本轮在当前基线上重建的切片；CI 结论按本节列出的 run ID 刷新。
+
+### 13.1 旧 PR 清理与当前分支
+
+| 已关闭 PR | 原工作 | 替代 PR | 原因 |
+|---|---|---|---|
+| #38 | F 本地 TRACE writer（基于 c7a12ed） | #50 | 在当前 master 重建 writer，并补 Find N2 AI TRACE 验收方案 |
+| #42 | D-03 UNKNOWN 参数来源契约（基于 dfd5e911） | #46 | 在当前 master 重建两文件切片 |
+| #43 | B-02 红旗语义测试（基于 98521551） | #47 | 在当前 master 重建测试切片 |
+| #45 | B-03 红旗入口审计（基于 392f977c） | #48 | 在当前 master 重建审计文档 |
+
+### 13.2 当前活动 PR 与 CI
+
+| PR | 任务 | HEAD | Run | 当前 job 状态 | 结论 |
+|---|---|---|---|---|---|
+| #44 | G 执行台账 | `7eb83dce910cefc1662f87815b99bc3235a43fcc` | `43036909745` | Flutter regression SUCCESS；Android arm64 CI APK/native tests IN_PROGRESS；branch validation SKIPPED | 台账更新已完成，等待 Android job |
+| #46 | D-03 UNKNOWN 参数来源 | `63336da27cc87355f6be142f987e93aa9449030f` | `43036665826` | Flutter regression SUCCESS；Android arm64 CI APK/native tests IN_PROGRESS；branch validation SKIPPED | 等 Android job；不代表 Headless/Executed 完成 |
+| #47 | B-02 红旗语义边界测试 | `074619a4efb2fa9b50eca964d75c8c4b94e1f579` | `43037173941` | Flutter regression IN_PROGRESS；branch validation SKIPPED | 等待 |
+| #48 | B-03 红旗入口审计 | `fd2e1b5766215ee454996fd0bdc78fa83b38faf9` | `43037179378` | Flutter regression IN_PROGRESS；branch validation SKIPPED | 等待 |
+| #49 | G README/pubspec 防漂移测试 | `c63632e3b8dd45bdc5dfd9acb1e26654a4b866b0` | `43037313916` | Flutter regression IN_PROGRESS；branch validation SKIPPED | 等待；测试只新增文件，不改版本 |
+| #50 | F 本地 TRACE writer + 真机验收方案 | `8e5c02303032d5109363b89f8caaa7005d621fa6` | `43037747686` | Flutter regression IN_PROGRESS；branch validation SKIPPED | 等待；writer 尚未接生产调用链 |
+
+CI 说明：branch validation job 因 workflow 条件显示 SKIPPED；不能把它写成通过。Flutter regression 和 Android arm64 job 必须分别等待完成。Android arm64 是 CI APK/native unit tests，不是 Find N2 真机 TRACE。
+
+### 13.3 本轮实现内容
+
+**D-03 / PR #46**
+- 文件：`lib/models/assistant_tool_result.dart`、`test/assistant_tool_result_test.dart`。
+- `AssistantToolExecutionStatus.unknown` 纳入状态枚举与显示映射。
+- `withArguments(fallback)` 不再把请求候选参数复制成页面实际执行参数；实际参数缺失且请求参数非空时标 UNKNOWN。
+- `validateArgumentsMatch` 对缺少实际参数返回明确契约错误。
+- 旧 PR #42 已关闭；新 PR #46 从当前 master 建立。
+
+**B-02/B-03 / PR #47/#48**
+- #47 只增加策略语义测试：UNKNOWN/quoted/主体时间极性不明进入 CLARIFY；coverage 不完整进入 REVIEW_REQUIRED；非 CLEAR 不得继续普通流程。
+- #48 更新 Flutter/Native 红旗入口审计；明确 RedFlagPreflight 不是自然语言 detector。
+- 不增加医学词表、阈值或处置文案。生产 detector、全入口接入、医学审核仍 MISSING；B 继续 RELEASE BLOCKED。
+
+**G / PR #49**
+- README 当前版本已与 pubspec 一致，新增自动测试防止未来漂移。
+- 测试只读取 pubspec version 并断言 README 当前版本声明一致；不自动改版本号，不触碰历史 Release Notes。
+
+**F / PR #50**
+- 在当前 master 重建 `LocalAiTraceFileWriter` 和 writer 单测。
+- 新增 `docs/find-n2-ai-trace-acceptance-plan.md`，包含 GPU/CPU 各至少 20 轮、图片/语音、进程强制终止恢复、AI 数据清除后重启的步骤、证据字段和 PASS/FAIL/BLOCKED/UNKNOWN 判定。
+- 关键限制：当前 master 的 `AiTraceRecorder` 默认关闭且尚无 writer/生产调用点；PR #50 仅提供 writer，不会凭空生成端到端 TRACE。完整设备 TRACE 仍依赖后续 F 生产接线和 E 清除实现集成。
+
+### 13.4 下一步
+
+1. 监测 #44/#46/#47/#48/#49/#50 CI；对失败读取 job/step/log 后修复，不盲目重跑。
+2. D：复核 #46 UNKNOWN 状态的调用点、序列化与旧 String 包装；确认参数校验失败时不会把 UNKNOWN 结果作为成功结果展示或持久化为已验证执行。
+3. E：把 #39 作为审查来源，按当前 master 重建无重叠文件切片；MainActivity 与 LocalAiInterviewScreen 必须逐段语义整合，不整 PR 搬运。
+4. F：#50 通过后，冻结 Dart/Native trace_id 注入接口；生产接线不得和 B/A 同时争用 MainActivity 或 LocalAiInterviewScreen 文件所有权。
+5. G：#49 通过后，将版本一致性检查作为长期回归守护；#44 通过后更新唯一台账。
+6. C：补来源 manifest 与 derived-query provenance；不改检索算法，不把讲稿命中表述为古籍原文。
+7. B：入口覆盖可继续做只读/测试工作；医学审核未完成前不启用未审查规则。
