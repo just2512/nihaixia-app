@@ -30,6 +30,32 @@ class LocalAiDataCleanupTest {
     }
 
     @Test
+    fun rejectsAiOwnedDirectorySymlinkThatEscapesCacheRoot() {
+        withTempDirectory { cache ->
+            val outside = Files.createTempDirectory("local-ai-outside-").toFile()
+            try {
+                val sentinel = File(outside, "keep.bin")
+                sentinel.writeText("keep")
+                val link = File(cache, "local_ai_attachments")
+                Files.createSymbolicLink(link.toPath(), outside.toPath())
+
+                try {
+                    LocalAiDataCleanup.deleteOwnedDirectory(cache, "local_ai_attachments")
+                    throw AssertionError("Expected symbolic-link target to be rejected")
+                } catch (expected: IllegalArgumentException) {
+                    assertTrue(expected.message!!.contains("symbolic link"))
+                }
+
+                assertTrue(sentinel.isFile)
+                assertEquals("keep", sentinel.readText())
+                assertTrue(Files.isSymbolicLink(link.toPath()))
+            } finally {
+                outside.deleteRecursively()
+            }
+        }
+    }
+
+    @Test
     fun deletesOnlyLegacyLocalAiRecordingNamesAtCacheRoot() {
         withTempDirectory { cache ->
             val legacy = File(cache, "local_ai_123456.wav")
