@@ -195,8 +195,13 @@ class AdaptiveSinglePane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    final scheme = Theme.of(context).colorScheme;
+    // 半折叠时内容只占一个物理面板，另一个面板区域若透明会透出黑色窗口背景；
+    // 用 surface 颜色铺满整屏，保证空面板与 app 背景一致。
+    return ColoredBox(
+      color: scheme.surface,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
         final screenSize = MediaQuery.sizeOf(context);
         final feature = _findSinglePaneBlockingFeature(
           MediaQuery.displayFeaturesOf(context),
@@ -421,7 +426,8 @@ class AdaptiveSinglePane extends StatelessWidget {
             ),
           ),
         );
-      },
+        },
+      ),
     );
   }
 }
