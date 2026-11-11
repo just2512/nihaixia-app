@@ -175,3 +175,17 @@ Native 清除入口由主线程门禁 + 单线程 `aiExecutor` 执行：
 - Native close failure 后的二次清除/模型重载状态仍缺测试；本节将 E 标记为 PARTIAL，不能以现有 CI 通过覆盖该缺口。
 - 数据库清除发生在 Native 与附件清理之后；若 SQLite 事务失败，数据库记录应由事务回滚保留，Native/附件步骤已完成的部分需要幂等重试。该跨文件系统/数据库过程不是原子事务，UI 必须继续明确提示“未全部清除”。
 - 当前 PR #39 未合并；本次只更新该 PR 已有的审计文件，未修改 Native 运行时代码。
+
+
+## 9. E-02 Native 资源释放状态保护实现（2026-11-11）
+
+针对第 8.2 节风险，本分支新增最小状态保护切片：
+
+- 新增 LocalAiResourceLifecycle：状态为 RELEASED / READY / UNKNOWN。
+- MainActivity.loadLocalModel() 在创建 Engine 前检查 UNKNOWN；Engine 初始化成功并赋值后标记 READY。
+- MainActivity.releaseLocalModel() 将 Conversation/Engine close 委托给 lifecycle；close 成功进入 RELEASED，任何 close 异常进入 UNKNOWN。
+- UNKNOWN 状态下再次 release/clear 不会重复 close，也不会继续执行 cache 删除；模型加载同样 fail-closed。
+- RELEASED 状态的重复 release 为幂等空操作。
+- 新增 LocalAiResourceLifecycleTest 覆盖正常释放、close failure 后阻止第二次 close/cache 删除、阻止模型重载、重复成功释放。
+
+当前提交只完成代码和测试新增；必须以最新 PR SHA 的 Android arm64 CI Native unit tests 和 Flutter regression 结果为准。没有 Find N2 真机实测前，E 仍为 PARTIAL。
