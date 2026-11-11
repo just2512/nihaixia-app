@@ -85,8 +85,9 @@ class LocalAiTraceFileWriter {
         : retained;
     final content = bounded.map(jsonEncode).join('\n');
 
-    // Write a complete replacement before swapping the file. A process crash
-    // during serialization cannot leave a half-written final JSONL document.
+    // Serialize to a temporary file before replacing the current snapshot.
+    // The delete/rename pair has a small crash window; the recorder is
+    // best-effort and a missing trace file must never affect AI execution.
     final temporary = File('${file.path}.tmp');
     await temporary.writeAsString(
       content.isEmpty ? '' : '$content\n',
@@ -99,7 +100,13 @@ class LocalAiTraceFileWriter {
   }
 
   /// Deletes only this writer's file and its temporary replacement.
-  Future<void> clear() async {
+  Future<void> clear() {
+    final next = _queue.then((_) => _clear());
+    _queue = next.then<void>((_) {}, onError: (Object _) {});
+    return next;
+  }
+
+  Future<void> _clear() async {
     final directory = await _directoryProvider();
     final file = File(p.join(directory.path, fileName));
     final temporary = File('${file.path}.tmp');
