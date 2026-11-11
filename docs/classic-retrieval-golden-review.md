@@ -77,3 +77,17 @@
 - **当前检索行为正确性：PARTIAL**（已捕获真实输出，但来源定位普遍缺失，原始 query 无命中）。
 - **古籍原文来源可信：UNKNOWN / NOT VERIFIED**。
 - **检索算法重构许可：NOT GRANTED**（先修来源与元数据缺口，行为基线尚未获批）。
+
+
+### C-05：索引生成 schema 本身未写入讲稿的书目/条文元数据
+
+已核对 `tool/build_classic_search_index.py`：
+
+- 讲稿条目生成字段只有 `s`（source）、`t`（首个 Markdown heading）、`a`（本地 asset 路径）、`x`（正文）；没有 `bookId`、`chapterIndex`、`articleNumber`、`chapterTitle`、`edition` 或 `page`。
+- 古籍原文条目才写入 `b`（book id）、`t`、`i`（索引内章节序号）、`x`。
+- `ClassicSearchService._load()` 只从 `a/b/i` 映射到 `asset/bookId/chapterIndex`；`ClassicHit` 没有独立 `articleNumber` 字段。
+- `ClassicHit.sourceId` 将 `source + asset + MISSING + title` 组合为本地稳定身份；对讲稿而言它可识别具体文件，但不代表书目定位。
+
+因此 80 条讲稿 hit 的 `bookId/chapterIndex=null` 是当前索引 schema 的预期结果，不是搜索过程中丢失了已存在的这些字段。若要为讲稿条目建立真实条文映射，必须另建人工核验 manifest / metadata source，并明确讲稿章节与经典条文是一对一、多对一还是无对应关系。
+
+`docs/classic-rule-source-manifest.json` 的 scope 是 `DiagnosticRules.combinedPatterns 当前12条`，不是 380 条伤寒论讲稿的全量 manifest，不能拿它直接补齐所有搜索结果。
