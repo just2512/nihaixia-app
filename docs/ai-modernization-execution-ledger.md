@@ -242,3 +242,12 @@ CI artifact `13811868576`（ZIP SHA-256 `51311b321511dcf93603097efc4eea6f0c6eab0
 ### 10.5 跨会话恢复规则
 
 下一次对话不要先问用户“接下来做什么”。先读取最新 master、本文件、`docs/ai-capability-audit.md` 和 `docs/ai-parallel-execution-protocol.md`，检查 PR/CI，并自动执行上述队列中所有当前无依赖的最高优先级任务。若本轮无法后台持续运行，明确说明下一轮从远端状态恢复，不声称后台任务仍在运行。
+
+
+### 10.6 2026-11-11 后续 CI 状态修订
+
+- PR #30 A 工作流 head `abef47b212fababc516440bbdf2231312d0903af` 已完成 CI：Flutter full regression run `43003852143` PASS；Android arm64 job `130468394894` APK build PASS；`:app:testDebugUnitTest` 实际执行 51 tests / 0 failures / 0 errors / 0 skipped；push branch validation `43003814683` PASS。仅自动化/构建层 PASS，Find N2 真机 20+20 轮及附件/进程恢复 TRACE 仍 UNKNOWN。
+- PR #31 C 快照复核 head `8a138ba2af03b9df5c066422abbb720cdeafdde1`：push validation `43004769896` PASS；PR full Flutter run `43004777869` 当时仍执行中。报告已追加索引生成 schema 审计：讲稿索引只写 source/title/asset/text；古籍原文才有 bookId/index；manifest 当前仅覆盖合病规则 12 项，不是全量讲稿清单。
+- PR #32 本台账/规范入口 head `f1dca977d005080adb13a7692010ae6cfc7d51d4`：push validation `43004626363` PASS；PR full Flutter run `43004655186` 当时仍执行中。
+- PR #33 F TRACE typed contract head `06e689000b40030422e46450ab960bc84f736497`：push branch validation `43005078711` 与 PR full Flutter run `43005113495` 当时仍执行中。此切片仅有默认关闭的 typed schema/单测，无持久化 writer、审计开关、跨层透传或真机 TRACE。
+- 当前 master `7c16534c7a064e1fc756a681d1099269cc77f255` 的 Flutter regression `43003668218` PASS，Android arm64 APK + unit tests job `130467999673` PASS；Quality Gate `43003667206` 当时仍执行中，不能提前标为全绿。
