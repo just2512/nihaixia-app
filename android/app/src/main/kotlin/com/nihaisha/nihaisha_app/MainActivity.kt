@@ -26,6 +26,8 @@ class MainActivity : FlutterActivity() {
     private val expectedModelSha256 = "0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0"
     private val modelImportRequestCode = 8427
     private var pendingModelImportResult: MethodChannel.Result? = null
+    // Main-thread gate prevents a new model picker from racing an AI data clear.
+    private var aiDataClearPending = false
     private val localAiChannel = "com.nihaisha.app/local_ai"
     private val aiExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -125,6 +127,26 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "resetConversation" -> runAiTask(result) { resetLocalConversation() }
+                    "clearAiData" -> {
+                        if (pendingModelImportResult != null) {
+                            result.error(
+                                "MODEL_IMPORT_BUSY",
+                                "模型文件选择操作尚未完成，暂不能清除 AI 数据",
+                                null
+                            )
+                        } else if (aiDataClearPending) {
+                            result.error("AI_DATA_CLEAR_BUSY", "AI 数据清除正在执行", null)
+                        } else {
+                            aiDataClearPending = true
+                            runAiTask(result) {
+                                try {
+                                    clearLocalAiData()
+                                } finally {
+                                    mainHandler.post { aiDataClearPending = false }
+                                }
+                            }
+                        }
+                    }
                     "releaseModel" -> runAiTask(result) { releaseLocalModel() }
                     else -> result.notImplemented()
                 }
@@ -171,6 +193,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun beginModelImport(result: MethodChannel.Result) {
+        if (aiDataClearPending) {
+            result.error("AI_DATA_CLEAR_BUSY", "AI 数据清除正在执行，暂不能导入模型", null)
+            return
+        }
         if (pendingModelImportResult != null) {
             result.error("MODEL_IMPORT_BUSY", "已有模型文件选择操作正在进行", null)
             return
@@ -758,6 +784,35 @@ class MainActivity : FlutterActivity() {
             activeBackend = "not_loaded"
                 throw error
         }
+    }
+
+    /**
+     * Runs only on aiExecutor. Release LiteRT-LM resources before deleting the
+     * runtime cache; preserve the installed model artifact and all non-AI data.
+     */
+    private fun clearLocalAiData(): Map<String, Any> {
+        if (pendingModelImportResult != null) {
+            throw IllegalStateException("模型文件选择操作尚未完成，拒绝清除 AI 数据")
+        }
+
+        // If close fails, stop before deleting files that a live Engine may hold.
+        releaseLocalModel()
+
+        val runtimeCacheFilesDeleted =
+            LocalAiDataCleanup.deleteOwnedDirectory(cacheDir, "litertlm")
+        // path_provider's Android temporary directory is cacheDir; only the
+        // dedicated local_ai_attachments child is owned by this feature.
+        val attachmentFilesDeleted =
+            LocalAiDataCleanup.deleteOwnedDirectory(cacheDir, "local_ai_attachments")
+        val legacyRecordingFilesDeleted =
+            LocalAiDataCleanup.deleteLegacyRecordingFiles(cacheDir)
+
+        return modelStatus() + mapOf(
+            "cleanupStatus" to "SUCCEEDED",
+            "runtimeCacheFilesDeleted" to runtimeCacheFilesDeleted,
+            "attachmentFilesDeleted" to attachmentFilesDeleted,
+            "legacyRecordingFilesDeleted" to legacyRecordingFilesDeleted
+        )
     }
 
     private fun releaseLocalModel(): Map<String, Any> {
