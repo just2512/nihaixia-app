@@ -2843,7 +2843,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
         ],
       ),
-      body: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Center(
+            child: ConstrainedBox(
+              key: const ValueKey('local-ai-content-width'),
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Column(
         children: [
           Expanded(
             child: ListView(
@@ -3078,6 +3086,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
             ),
         ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
       ),
     );
