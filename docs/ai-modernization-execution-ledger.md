@@ -208,9 +208,9 @@
 
 | 工作流 | PR / 分支 | HEAD / CI | 当前状态与动作 |
 |---|---|---|---|
-| E AI 数据清除 | PR #37 `work/ai-data-clear-v3-verified` | HEAD `389c093bc01d984af70a183a2f17c3a3ed67b7b2`；PR run `43014813485` Flutter regression IN_PROGRESS；push branch validation run `43014799943` IN_PROGRESS | 已将 PR #34 的 13 个文件移植到当前 master；恢复 `AdaptiveSinglePane`/640dp 约束、补齐 `adaptive_master_detail.dart` import，并把清除确认改为 `showFoldAwareDialog`。等待最新 PR #37 全量 Flutter + Android APK/Kotlin tests |
+| E AI 数据清除 | PR #39 `work/ai-data-clear-v3-final` | HEAD `85f5a3d08393f2f2bd3f6e54705967cf6d6b38c6`；PR run `43015771142` Flutter regression IN_PROGRESS；push branch validation run `43015756947` IN_PROGRESS | 已将 PR #34 的 13 个文件移植到当前 master；恢复 `AdaptiveSinglePane`/640dp 约束、补齐 `adaptive_master_detail.dart` import，并把清除确认改为 `showFoldAwareDialog`。等待最新 PR #39 全量 Flutter + Android APK/Kotlin tests |
 | G 台账刷新 | 本分支 `work/ai-ledger-refresh-2026-11-11-v2` | 基线 `c7a12ed` | 正在同步本节及跨对话协议入口；仅文档改动 |
-| E 旧数据清除 PR | PR #34 `work/ai-data-clear-v2` | HEAD `c4e50f7`；run `43008411362` | Flutter 1286 PASS / 9 FAIL / 15 skipped；8 项折叠屏测试因分支屏幕实现删除 `AdaptiveSinglePane` 而失败，1 项 fold-aware contract 因新增直接 `showDialog` 而失败。PR #37 是修复后的当前替代分支；PR #35 因缺少 `AdaptiveSinglePane` import 已关闭，不再集成 |
+| E 旧数据清除 PR | PR #34 `work/ai-data-clear-v2` | HEAD `c4e50f7`；run `43008411362` | Flutter 1286 PASS / 9 FAIL / 15 skipped；8 项折叠屏测试因分支屏幕实现删除 `AdaptiveSinglePane` 而失败，1 项 fold-aware contract 因新增直接 `showDialog` 而失败。PR #39 是当前替代分支；PR #35 因缺少 `adaptive_master_detail.dart` import 已关闭；PR #37 因 body 缺少 `local-ai-content-width` 宽度约束已关闭；PR #39 已恢复完整 body 约束 |
 | E Android 备份 | PR #19 `work/ai-data-protection` | base `60011c4`；head `b012d03` | BLOCKED：`allowBackup=false` 影响整个应用私有数据，包括非 AI 数据；缺少在最新 master 上的 merged manifest/build 证据。不得直接合并 |
 | G 旧台账 PR | PR #32 `work/ai-ledger-refresh-2026-11-11` | base `7c16534`；head `74ce5c7`；CI run `43008912112` Flutter PASS、Android PASS | 内容快照已过期且漏记当前 master `c7a12ed` 的 TRACE 合约与 PR #35；由本分支替代，不应合并旧快照 |
 
@@ -224,7 +224,7 @@
 
 ### 9.4 下一项自动执行队列
 
-1. 监测 PR #37 最新 head 的 Flutter regression、Android APK 和 Kotlin unit tests。若 Flutter 仍失败，读取具体失败断言并修复；不得盲目重跑。
+1. 监测 PR #39 最新 head 的 Flutter regression、Android APK 和 Kotlin unit tests。若 Flutter 仍失败，读取具体失败断言并修复；不得盲目重跑。
 2. #35 全量 CI 通过后审查 SQLite 四表事务、附件专属目录与 symlink 防护、Native Engine 释放顺序、导入模型保留、非 AI 数据保留，再小批量合并。
 3. PR #35 合并后在 A 已释放 `MainActivity.kt` 所有权的基础上，完成 Find N2 清除实测：模型加载时清除、清除期间发送/导入被拒绝、附件/运行缓存/四张 AI 表清空、收藏/设置/命盘保留、重启后不可恢复。
 4. 并行推进 C 元数据源审计：为讲稿建立人工核验 manifest 的方案与数据质量报告；不得把讲稿条目冒充《伤寒论》经校勘原文，不改检索算法。
@@ -242,4 +242,14 @@
 - 单测覆盖隐私字段、TTL、最大条数、并发写入顺序、清理边界。
 - PR run `43015461548` 正在执行；push run `43015425132` pending。即使通过也只能标 F / PARTIAL，不代表设置页开关、生产链路或 Native TRACE 已完成。
 - 风险：文件替换采用临时文件后 delete/rename，存在极短的文件缺失窗口；TRACE 是 best-effort，不得影响 AI 主流程。
+
+
+
+### 9.6 E 数据清除分支的失败闭环（按日志修复，不盲目重跑）
+
+- PR #34 run `43008411362`: Flutter 1286 PASS / 9 FAIL / 15 skipped。8 个布局测试失败，另 1 个 fold-aware dialog contract 失败。
+- PR #35 run `43014163904`: Flutter 失败、Android 构建失败；日志定位为 `AdaptiveSinglePane` 引用缺少 `adaptive_master_detail.dart` import。
+- PR #37 run `43014813485`: import 修复后编译通过，但 8 个布局测试仍找不到 `local-ai-content-width`；说明只恢复外层 pane wrapper 不够，必须同时恢复 Scaffold.body 的 LayoutBuilder/Center/ConstrainedBox/SizedBox 高度约束。
+- PR #39 已按该证据恢复完整 body wrapper，并保留 fold-aware dialog。该 head 的 full CI 尚待完成。
+- 旧 PR #34/#35/#37 已关闭，不得从这些旧 head 合并；唯一有效 E 候选为 PR #39。
 
