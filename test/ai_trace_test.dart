@@ -65,7 +65,7 @@ void main() {
     });
 
     test('event JSON contains only allowlisted metadata', () {
-      const event = AiTraceEvent(
+      final event = AiTraceEvent(
         traceId: 'trace',
         stage: AiTraceStage.retrieval,
         status: AiTraceStatus.succeeded,
@@ -74,6 +74,7 @@ void main() {
       );
 
       final json = event.toJson();
+      expect(json['status'], 'SUCCEEDED');
       expect(json.keys, containsAll([
         'schema_version',
         'trace_id',
