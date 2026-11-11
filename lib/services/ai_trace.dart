@@ -140,20 +140,27 @@ class AiTraceRecorder {
     String? mode,
   }) {
     if (!_enabled) return const AiTraceContext.disabled();
-    final startedAt = _clock();
-    final context = AiTraceContext.enabled(
-      traceId: _idFactory(),
-      startedAt: startedAt,
-    );
-    unawaited(_writeSafely(AiTraceEvent(
-      traceId: context.traceId!,
-      stage: stage,
-      status: AiTraceStatus.notStarted,
-      occurredAt: startedAt,
-      route: route,
-      mode: mode,
-    )));
-    return context;
+    try {
+      final startedAt = _clock();
+      final traceId = _idFactory();
+      if (traceId.trim().isEmpty) return const AiTraceContext.disabled();
+      final context = AiTraceContext.enabled(
+        traceId: traceId,
+        startedAt: startedAt,
+      );
+      unawaited(_writeSafely(AiTraceEvent(
+        traceId: traceId,
+        stage: stage,
+        status: AiTraceStatus.notStarted,
+        occurredAt: startedAt,
+        route: route,
+        mode: mode,
+      )));
+      return context;
+    } catch (_) {
+      // Failure to create an audit identifier must not block the user request.
+      return const AiTraceContext.disabled();
+    }
   }
 
   Future<void> record(
@@ -175,22 +182,26 @@ class AiTraceRecorder {
     if (!_enabled || !context.enabled || traceId == null || traceId.isEmpty) {
       return;
     }
-    await _writeSafely(AiTraceEvent(
-      traceId: traceId,
-      stage: stage,
-      status: status,
-      occurredAt: _clock(),
-      durationMs: durationMs == null ? null : (durationMs < 0 ? 0 : durationMs),
-      conversationId: conversationId,
-      messageId: messageId,
-      route: route,
-      mode: mode,
-      toolId: toolId,
-      backend: backend,
-      modelVersion: modelVersion,
-      sourceIds: List<String>.unmodifiable(sourceIds),
-      errorCode: errorCode,
-    ));
+    try {
+      await _writeSafely(AiTraceEvent(
+        traceId: traceId,
+        stage: stage,
+        status: status,
+        occurredAt: _clock(),
+        durationMs: durationMs == null ? null : (durationMs < 0 ? 0 : durationMs),
+        conversationId: conversationId,
+        messageId: messageId,
+        route: route,
+        mode: mode,
+        toolId: toolId,
+        backend: backend,
+        modelVersion: modelVersion,
+        sourceIds: List<String>.unmodifiable(sourceIds),
+        errorCode: errorCode,
+      ));
+    } catch (_) {
+      // Clock/metadata failures must not escape into the AI business flow.
+    }
   }
 
   Future<void> _writeSafely(AiTraceEvent event) async {
