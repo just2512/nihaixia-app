@@ -14,9 +14,8 @@ internal object LocalAiTranscriptRestorePolicy {
 
         val alreadyMarked = transcript.startsWith(truncationMarker)
         val body = if (alreadyMarked) transcript.removePrefix(truncationMarker) else transcript
-        val marker = if (alreadyMarked) "" else truncationMarker
-        val availableBodyCharacters = maxTranscriptCharacters - marker.length
-        return marker + suffixWithoutSplittingSurrogate(body, availableBodyCharacters)
+        val availableBodyCharacters = maxTranscriptCharacters - truncationMarker.length
+        return truncationMarker + suffixWithoutSplittingSurrogate(body, availableBodyCharacters)
     }
 
     fun recentUserMessages(messages: List<String>): List<String> =
