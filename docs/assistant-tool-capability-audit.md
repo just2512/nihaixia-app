@@ -108,3 +108,79 @@
 - Executed Capability：**UNKNOWN**，本次未执行真实业务链。
 - Find N2 TRACE：**未执行 / UNKNOWN**。
 - 本审计不授权重构、不改变任何业务行为。
+
+
+## 8. D-02 页面调用链与结果回传复核（2026-11-11）
+
+> 基线仍为 master `c7a12ed32140fb2e8e97ea406e5fdc6504216907`。本节为只读静态调用链审计；未修改运行时代码，也未把页面回传等同于 Headless 执行。
+
+### 8.1 统一入口与结果消费链
+
+**CODE：**
+
+- `lib/screens/local_ai_interview_screen.dart:1629-1715`：`_openTool()` 是统一页面调用入口。
+  1. `structured_diagnosis` 不进入 ToolRouter 页面，转到 `_startInlineTcmInterview()`。
+  2. 其余工具先执行 `AssistantToolArguments.validateAgainst(tool)`；校验失败即停止。
+  3. 通过 `Navigator.push<Object?>` 打开注册表 builder；退出时拿到页面返回对象。
+  4. `AssistantToolResult` 会校验 toolId/title/成功结果字段；非空 String 被包装成旧式文本结果；其他返回值统一变成 `noResult`。
+  5. 结果参数再经 `validateArgumentsMatch()`，随后写入可见消息、持久化 metadata，并调用 `_restoreVisibleConversationToModel()` 同步 Native 模型上下文。
+- `lib/models/assistant_tool_result.dart:1-93`：typed result 包含 toolId/title/values/disclaimer/sourceIds/arguments/status；当前状态枚举只有 `succeeded/noResult/failed/cancelled`。
+- `lib/screens/assistant_tool_router.dart:488-525`：23 个页面 builder 的实际目标；只有 yunqi 同时有 `builderWithArguments`。
+
+**结果链结论：** 已存在“页面返回值 → 助手消息 → SQLite metadata → Native 上下文恢复”的通用消费路径；但这不证明每个页面都返回结果，也不证明结果有可信 source ID 或业务执行状态。
+
+### 8.2 23 个页面逐项回传分类
+
+分类只描述当前页面与助手之间的返回行为，不代表 Headless 或真机执行能力。
+
+| toolId | 页面 | 回传分类 | 当前可确认事实 |
+|---|---|---|---|
+| `yunqi` | `yunqi_screen.dart` | `returns_structured` + `executes_deterministic_calculation` | 返回 `AssistantToolResult`；包含本地引擎来源标识 `local-engine:yunqi`；页面接收日期参数 |
+| `ziwei` | `ziwei_chart_screen.dart` | `returns_text` | 计算完成后返回排盘摘要 String；出生信息属于敏感个人数据，不能默认跨域授权 |
+| `bazi` | `bazi_paipan_screen.dart` | `returns_text` | 通过 `_buildShareText()` 返回文本 |
+| `yijing` | `yijing_screen.dart` + `yijing_result_screen.dart` | `returns_text` | 结果页先返回 String，工具页再二次 pop 给助手；存在双层 Navigator 交接 |
+| `xiaoliuren` | `xiaoliuren_screen.dart` | `returns_text` | 有结果时返回包含日期、时辰和课体的文本 |
+| `meihua` | `meihua_screen.dart` | `returns_text` + `executes_deterministic_calculation` | 使用 `computeMeihuaByNumber()` 生成 chart，再返回摘要文本 |
+| `dosage` | `dosage_converter_screen.dart` | `returns_text` + `executes_deterministic_calculation` | `_convert()` 结果以文本返回；页面声明仅单位换算，不构成临床剂量或用药建议 |
+| `ziwu_liuzhu` | `ziwuliuzhu_screen.dart` | `returns_text` | 通过 `_buildAssistantSummary()` 返回文本 |
+| `almanac` | `daily_almanac_screen.dart` | `returns_text` + `executes_deterministic_calculation` | `getDailyAlmanac(_date)` 本地计算后返回黄历摘要 |
+| `guji_library` | `guji_library_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `knowledge_hub` | `knowledge_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `medical_cases` | `medical_case_library_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `diagnosis_history` | `diagnosis_history_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `critical_illness` | `critical_illness_list_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `solar_terms` | `solar_term_section_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `yuxiaji_omen` | `yuxiaji_omen_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `dream` | `dream_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `guansha` | `guansha_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `sanshan_lingqian` | `sanshan_lingqian_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `chenggu` | `chenggu_bone_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `shousheng_debt` | `shousheng_debt_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `huangdi_siji` | `huangdi_siji_screen.dart` | `opens_only` | 当前注册 builder 未启用助手结果回传 |
+| `saved_charts` | `saved_charts_screen.dart` | `opens_only` | 页面内部选择器会返回 chart 类型给页面调用方，但不是向助手返回排盘结果 |
+
+**数量复核：** 9 项具备助手回传入口（8 项 String、1 项 typed result），14 项当前只打开页面；其中确认调用本地确定性计算后回传的至少 4 项为 yunqi、meihua、dosage、almanac。其余页面是否包含可抽取的确定性业务函数，仍需按页面继续向下追踪，不能仅凭页面名称推定。
+
+### 8.3 已发现的结果契约风险
+
+1. **缺少 UNKNOWN 状态。** `AssistantToolExecutionStatus` 只有 succeeded/noResult/failed/cancelled；与全局审计要求的 `NOT_STARTED/SUCCEEDED/FAILED/UNKNOWN` 不一致。当前 `noResult` 还被用于“用户退出”和“旧页面未回传”两种不同语义。
+2. **旧式 String 被默认包装为成功。** 非空 String 会构造默认 `succeeded` 的 `AssistantToolResult`，但不会自动提供 sourceIds。可见文本返回不等于结果来源已核验。
+3. **参数回填会掩盖执行证据缺失。** `withArguments(fallback)` 在页面没有提供实际 arguments 时直接填入请求参数；随后 `validateArgumentsMatch()` 比较的是回填值。因此该检查不能证明页面计算时实际使用了这些参数。
+4. **失败后允许用户重试。** `failed` 状态显示重试按钮；当前未见统一副作用等级或幂等契约。对可能产生持久化/外部副作用的未来工具，不能把所有失败都安全地视为可重试。
+5. **来源 ID 允许为空。** `validateFor()` 只拒绝空字符串 ID，不要求成功结果必须具有 sourceIds；结果文本会把空来源显示为 MISSING。
+
+以上是契约层风险，不代表已观察到错误计算或数据损坏。先补测试和逐项业务调用链，不在本次文档审计中擅自改变运行行为。
+
+### 8.4 已核对测试与证据边界
+
+- `test/assistant_tool_result_handoff_test.dart`：已有五运六气结果回传、进入统一时间线并同步 Native 上下文，以及易经双层页面结果回传测试。
+- `test/assistant_tool_result_test.dart`：需进一步核验 status、sourceIds、arguments 的边界断言；本轮未重新运行该测试。
+- `test/assistant_tool_router_test.dart`：D-01 已记录参数校验与路由测试范围；本轮没有重新运行。
+- 本轮未执行 23 个页面的设备端真实操作；Executed Capability 和 Find N2 TRACE 仍为 UNKNOWN。
+
+### 8.5 D-03 下一步（自动续接）
+
+1. 先补 `AssistantToolResult` 的契约测试，明确 UNKNOWN、NO_RESULT、CANCELLED、FAILED 的不同含义；验证空 sourceIds、旧 String 回传、参数回填和失败重试语义。
+2. 对 `withArguments()` 的回填行为做测试并判断是否应改为“缺少实际执行参数即 UNKNOWN/契约错误”，不能继续用请求参数伪装执行参数。
+3. 从非医疗、非个人敏感数据工具中优先评估 almanac 或 meihua 的纯计算函数；dosage 虽是确定性换算，但涉及医疗剂量语义，不作为首个自动执行适配器候选。
+4. 先为候选函数锁定输入/输出黄金行为测试，再单独分支抽最小 Headless adapter；本审计不授权直接改造 23 项。
