@@ -562,6 +562,24 @@ class DatabaseHelper implements AssistantConversationStore {
     });
   }
 
+
+  /// Removes persisted AI conversation content without touching diagnosis
+  /// history, bookmarks, user settings, charts, or the installed model.
+  ///
+  /// Attachment files and Native runtime caches are owned by the E cleanup
+  /// orchestrator and are deliberately not deleted by this database primitive.
+  Future<void> clearAllAiConversationData() async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('assistant_messages');
+      await txn.delete('tcm_interview_tasks');
+      await txn.delete('assistant_conversations');
+      // Legacy chat_history is also conversational AI content. Keep it in
+      // the same transaction so partial database clearing cannot be reported.
+      await txn.delete('chat_history');
+    });
+  }
+
   // === 收藏文件夹 ===
   Future<int> insertFolder(String name) async {
     final db = await database;
