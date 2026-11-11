@@ -298,3 +298,13 @@ D-01 表格复核补充：复核完整注册定义后，`huangdi_siji` 的 modes
 - 状态：E PARTIAL；PR #39 的既有 run `43015771142` 通过，但不覆盖本次发现的 close failure 重试路径。真机清除后重启仍 UNKNOWN。
 - 下一步：在 E 文件所有权分支内增加 Native releaseState（READY/RELEASED/UNKNOWN）和 close failure 注入测试；UNKNOWN 时禁止 load、clear cache 和把 null 资源当作已释放。只有此切片 CI 通过后，才复核其与 Flutter 清除编排的交互。
 
+
+
+### 10.6 E-03 Native 资源释放 UNKNOWN 状态保护已实现，待 CI
+
+- PR #39 当前工作分支新增 E-03 切片：`LocalAiResourceLifecycle` 状态机（RELEASED/READY/UNKNOWN），并接入 MainActivity 的模型加载与释放路径。
+- close 成功后状态为 RELEASED；close 抛错后状态为 UNKNOWN。UNKNOWN 时禁止再次 close、禁止后续清理流程删除 runtime cache、禁止重新加载模型；进程重启后 Native Activity 状态重新初始化。
+- RELEASED 重复 release 为幂等空操作。
+- 新增 Native unit tests：正常释放、close failure 后二次 close/cache 删除被阻止、UNKNOWN 阻止 reload、重复成功释放。
+- 相关提交已推送 PR #39；最新 CI 尚待完成。不能把测试文件存在视为测试通过。
+- 若最新 CI 失败，先读失败 job/log；若通过，再复核 MainActivity 的状态接入和清除失败后的 Flutter 状态同步。Find N2 真机清除与重启验收仍 UNKNOWN。
