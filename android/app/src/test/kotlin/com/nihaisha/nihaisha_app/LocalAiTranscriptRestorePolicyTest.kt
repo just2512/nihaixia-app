@@ -17,7 +17,7 @@ class LocalAiTranscriptRestorePolicyTest {
     @Test
     fun longTranscriptKeepsMarkerAndNewestTailWithinLimit() {
         val newest = "最新一轮的完整结尾"
-        val transcript = "较早历史".repeat(2_000) + newest
+        val transcript = "较早历史".repeat(4_000) + newest
 
         val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
 
@@ -29,7 +29,7 @@ class LocalAiTranscriptRestorePolicyTest {
     @Test
     fun alreadyMarkedTranscriptRetainsMarkerAndNewestTail() {
         val newest = "最近一条助手回复"
-        val transcript = marker + "较早历史".repeat(2_000) + newest
+        val transcript = marker + "较早历史".repeat(4_000) + newest
 
         val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
 
