@@ -47,6 +47,23 @@ class AssistantKnowledgeSourceReference {
 
 enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
 
+
+class AssistantKnowledgeQueryProvenance {
+  const AssistantKnowledgeQueryProvenance({
+    required this.query,
+    required this.reasons,
+  });
+
+  final String query;
+  final List<String> reasons;
+
+  Map<String, Object?> toJson() => {
+        'query': query,
+        'reasons': reasons,
+      };
+}
+
+
 /// Retrieval text plus status and the exact, resolvable source IDs used for this turn.
 class AssistantKnowledgeContextResult {
   const AssistantKnowledgeContextResult({
@@ -278,6 +295,70 @@ class AssistantKnowledgeContextBuilder {
     );
   }
 
+
+  /// Returns the exact classic-index query sequence used by [buildAsync],
+  /// including why each derived query was added. This is observability only:
+  /// it must not change matching, ranking, truncation, or source resolution.
+  static List<AssistantKnowledgeQueryProvenance> deriveClassicQueries(
+    String query,
+  ) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return const [];
+
+    final reasons = <String, List<String>>{};
+    void add(String value, String reason) {
+      final entries = reasons.putIfAbsent(value, () => <String>[]);
+      if (!entries.contains(reason)) entries.add(reason);
+    }
+
+    add(normalized, 'ORIGINAL_QUERY');
+    for (final formula in FormulaRepository.getAll()) {
+      if (normalized.contains(formula.name)) {
+        add(formula.name, 'FORMULA_ID:${formula.id}');
+      }
+    }
+    for (final herb in HerbRepository.getAll()) {
+      if (normalized.contains(herb.name)) {
+        add(herb.name, 'HERB_NAME:${herb.name}');
+      }
+    }
+    for (final point in AcupointRepository.getAll()) {
+      if (normalized.contains(point.name)) {
+        add(point.name, 'ACUPOINT_NAME:${point.name}');
+      }
+    }
+    for (final phrase in const [
+      '太阳与阳明合病',
+      '太阳与少阳合病',
+      '阳明与少阳合病',
+      '三阳合病',
+      '二阳并病',
+      '少阴病',
+      '灵枢',
+      '针灸大成',
+      '伤寒论',
+      '金匮要略',
+    ]) {
+      if (normalized.contains(phrase)) {
+        add(phrase, 'DOMAIN_PHRASE:$phrase');
+      }
+    }
+    for (final match in RegExp(r'(?:第|条文)\s*(\d+)\s*条?').allMatches(normalized)) {
+      final number = match.group(1);
+      if (number == null) continue;
+      add('第${number}条', 'ARTICLE_NUMBER:$number');
+      add('条文$number', 'ARTICLE_NUMBER:$number');
+    }
+
+    return List.unmodifiable([
+      for (final entry in reasons.entries)
+        AssistantKnowledgeQueryProvenance(
+          query: entry.key,
+          reasons: List.unmodifiable(entry.value),
+        ),
+    ]);
+  }
+
   /// Extends the fast in-memory retrieval with the bundled classical-text and
   /// medical-case libraries. Case excerpts carry an explicit provenance warning:
   /// the local table sequence is not a primary-source locator.
@@ -321,38 +402,8 @@ class AssistantKnowledgeContextBuilder {
       if (normalized.contains(point.name)) terms.add(point.name);
     }
 
-    final classicQueries = <String>{normalized};
-    for (final formula in FormulaRepository.getAll()) {
-      if (normalized.contains(formula.name)) classicQueries.add(formula.name);
-    }
-    for (final herb in HerbRepository.getAll()) {
-      if (normalized.contains(herb.name)) classicQueries.add(herb.name);
-    }
-    for (final point in AcupointRepository.getAll()) {
-      if (normalized.contains(point.name)) classicQueries.add(point.name);
-    }
-    for (final phrase in const [
-      '太阳与阳明合病',
-      '太阳与少阳合病',
-      '阳明与少阳合病',
-      '三阳合病',
-      '二阳并病',
-      '少阴病',
-      '灵枢',
-      '针灸大成',
-      '伤寒论',
-      '金匮要略',
-    ]) {
-      if (normalized.contains(phrase)) classicQueries.add(phrase);
-    }
-    for (final match in RegExp(r'(?:第|条文)\s*(\d+)\s*条?').allMatches(normalized)) {
-      final number = match.group(1);
-      if (number != null) {
-        classicQueries
-          ..add('第${number}条')
-          ..add('条文$number');
-      }
-    }
+    final classicQueries = deriveClassicQueries(normalized)
+        .map((provenance) => provenance.query);
 
     final classicHits = <ClassicHit>[];
     try {
