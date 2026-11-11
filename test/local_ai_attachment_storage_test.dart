@@ -52,6 +52,31 @@ void main() {
     expect(await unrelated.exists(), isTrue);
   });
 
+  test('rejects a symlinked AI attachment root without touching its target', () async {
+    final outside = await Directory.systemTemp.createTemp(
+      'nihaisha-ai-attachments-outside-',
+    );
+    try {
+      final sentinel = File('${outside.path}/keep.bin');
+      await sentinel.writeAsBytes([7, 7, 7]);
+      final link = Link(
+        p.join(temporaryDirectory.path, LocalAiAttachmentStorage.directoryName),
+      );
+      await link.create(outside.path);
+
+      await expectLater(storage.createPath(kind: 'image', extension: 'jpg'),
+          throwsA(isA<FileSystemException>()));
+      await expectLater(
+        storage.clear(),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(await sentinel.readAsBytes(), [7, 7, 7]);
+      expect(await link.exists(), isTrue);
+    } finally {
+      await outside.delete(recursive: true);
+    }
+  });
+
   test('legacy cleanup deletes only known local AI recording names', () async {
     final legacy = File('${temporaryDirectory.path}/local_ai_123456.wav');
     final unrelated = File('${temporaryDirectory.path}/voice_123456.wav');
