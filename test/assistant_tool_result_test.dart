@@ -57,10 +57,12 @@ void main() {
     expect(legacy.validateArgumentsMatch(const {'date': '2026-11-07'}), isNotEmpty);
     final normalizedLegacy =
         legacy.withArguments(const {'date': '2026-11-07'});
-    expect(normalizedLegacy.arguments, const {'date': '2026-11-07'});
+    expect(normalizedLegacy.arguments, isEmpty);
+    expect(normalizedLegacy.status, AssistantToolExecutionStatus.unknown);
+    expect(normalizedLegacy.statusLabel, 'UNKNOWN');
     expect(
       normalizedLegacy.validateArgumentsMatch(const {'date': '2026-11-07'}),
-      isEmpty,
+      contains('工具结果缺少可验证的实际执行参数'),
     );
 
     const partial = AssistantToolResult(
