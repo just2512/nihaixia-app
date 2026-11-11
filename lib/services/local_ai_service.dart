@@ -194,6 +194,9 @@ class LocalAiModelStatus {
   final int sizeBytes;
   final int expectedSizeBytes;
   final String backend;
+  final int runtimeCacheFilesDeleted;
+  final int attachmentFilesDeleted;
+  final int legacyRecordingFilesDeleted;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -204,6 +207,9 @@ class LocalAiModelStatus {
     required this.expectedSizeBytes,
     required this.backend,
     this.hashVerified = false,
+    this.runtimeCacheFilesDeleted = 0,
+    this.attachmentFilesDeleted = 0,
+    this.legacyRecordingFilesDeleted = 0,
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
@@ -216,6 +222,12 @@ class LocalAiModelStatus {
       sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
+      runtimeCacheFilesDeleted:
+          (map['runtimeCacheFilesDeleted'] as num?)?.toInt() ?? 0,
+      attachmentFilesDeleted:
+          (map['attachmentFilesDeleted'] as num?)?.toInt() ?? 0,
+      legacyRecordingFilesDeleted:
+          (map['legacyRecordingFilesDeleted'] as num?)?.toInt() ?? 0,
     );
   }
 
