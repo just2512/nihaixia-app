@@ -1,8 +1,19 @@
 import 'dart:async';
-import 'dart:math';
 
 /// Execution state is deliberately separate from UI/network exception labels.
-enum AiTraceStatus { notStarted, succeeded, failed, unknown }
+enum AiTraceStatus {
+  notStarted,
+  succeeded,
+  failed,
+  unknown;
+
+  String get wireValue => switch (this) {
+        AiTraceStatus.notStarted => 'NOT_STARTED',
+        AiTraceStatus.succeeded => 'SUCCEEDED',
+        AiTraceStatus.failed => 'FAILED',
+        AiTraceStatus.unknown => 'UNKNOWN',
+      };
+}
 
 enum AiTraceStage {
   input,
@@ -13,7 +24,12 @@ enum AiTraceStage {
   toolExecution,
   resultValidation,
   persistence,
-  presentation,
+  presentation;
+
+  String get wireValue => name.replaceAllMapped(
+        RegExp(r'[A-Z]'),
+        (match) => '_' + match.group(0)!.toLowerCase(),
+      ).toUpperCase();
 }
 
 class AiTraceContext {
@@ -78,8 +94,8 @@ class AiTraceEvent {
   Map<String, Object?> toJson() => <String, Object?>{
         'schema_version': 1,
         'trace_id': traceId,
-        'stage': stage.name,
-        'status': status.name.toUpperCase(),
+        'stage': stage.wireValue,
+        'status': status.wireValue,
         'occurred_at': occurredAt.toUtc().toIso8601String(),
         if (durationMs != null) 'duration_ms': durationMs,
         if (conversationId != null) 'conversation_id': conversationId,
@@ -163,7 +179,7 @@ class AiTraceRecorder {
       stage: stage,
       status: status,
       occurredAt: _clock(),
-      durationMs: durationMs == null ? null : max(0, durationMs),
+      durationMs: durationMs == null ? null : (durationMs < 0 ? 0 : durationMs),
       conversationId: conversationId,
       messageId: messageId,
       route: route,
