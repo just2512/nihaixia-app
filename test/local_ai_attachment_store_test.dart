@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 
 void main() {
@@ -26,9 +27,11 @@ void main() {
     final second = await store.createAudioRecordingPath();
 
     expect(first, isNot(equals(second)));
-    expect(first, contains('/${LocalAiAttachmentStore.directoryName}/audio_'));
+    expect(
+      p.isWithin(p.join(temporaryDirectory.path, LocalAiAttachmentStore.directoryName), first),
+      isTrue,
+    );
     expect(first, endsWith('/recording.wav'));
-    expect(pDirectory(first), isTrue);
   });
 
   test('imports image bytes into an app-owned directory without modifying source',
@@ -40,7 +43,10 @@ void main() {
 
     expect(await File(managedPath).readAsBytes(), [1, 2, 3, 4]);
     expect(await source.exists(), isTrue);
-    expect(managedPath, contains('/${LocalAiAttachmentStore.directoryName}/image_'));
+    expect(
+      p.isWithin(p.join(temporaryDirectory.path, LocalAiAttachmentStore.directoryName), managedPath),
+      isTrue,
+    );
   });
 
   test('deletes only owned files and leaves files outside the AI directory', () async {
@@ -85,6 +91,3 @@ void main() {
     );
   });
 }
-
-bool pDirectory(String path) =>
-    path.contains('/${LocalAiAttachmentStore.directoryName}/audio_');
