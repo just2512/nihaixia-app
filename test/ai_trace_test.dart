@@ -75,6 +75,7 @@ void main() {
 
       final json = event.toJson();
       expect(json['status'], 'SUCCEEDED');
+      expect(json['stage'], 'RETRIEVAL');
       expect(json.keys, containsAll([
         'schema_version',
         'trace_id',
@@ -107,6 +108,18 @@ void main() {
         ),
         completes,
       );
+    });
+
+    test('trace ID factory failure does not escape or block the request', () {
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (_) async {},
+        idFactory: () => throw StateError('secure random unavailable'),
+      );
+
+      final context = recorder.start(stage: AiTraceStage.input);
+      expect(context.enabled, isFalse);
+      expect(context.traceId, isNull);
     });
 
     test('does not create an enabled context without a writer', () {
