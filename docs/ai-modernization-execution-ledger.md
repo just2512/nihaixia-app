@@ -12,7 +12,7 @@
 | 主分支 | `master` | 按用户既有要求直接提交 master |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
-| README 版本说明 | `1.11.28+8037` | 已确认文档漂移，待修正 |
+| README 版本说明 | `1.11.30+8039` | 2026-11-11 从当前 master README 重新核验，与 pubspec 一致；历史漂移已消除 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
@@ -373,3 +373,56 @@ E-03 实现复核补充：LocalAiResourceLifecycle 使用进程级 singleton，�
 - Find N2（PUG110）真机 GPU/CPU 多轮、附件、进程恢复、清除后重启等 TRACE 当前未提供；相关项保持 PARTIAL/UNKNOWN。
 - B 红旗词表、阈值与处置文案缺少医学背景人员审核记录；不能以代码测试或模型提示词替代。
 - 不引入新数据库、向量检索、Agent/DAG 平台或外部模型 API；没有失败证据和独立决策前维持现有架构。
+
+
+## 12. 2026-11-11 最新基线与并行分支复核
+
+> 本节覆盖较早段落中的旧 SHA、旧 CI 状态和旧 PR 基线。当前 master HEAD：`05f118e1d0b090cee7dbeaa37669c410dae0e876`。当前应用版本：`1.11.30+8039`。
+
+### 12.1 主线新增真机记录
+
+- master 新增 `docs/find-n2-test-results-final.md`，记录 OPPO Find N2（PGU110）、Android 16、版本 `1.11.30+8039` 的 A-K 真机验收。
+- A-K 覆盖外屏、内屏展开、半折叠、紫微排盘、系统字号、键盘 Insets、弹窗路由、相机/相册入口、折叠循环、结构化辨证、原位覆盖升级；文档记录均 PASS。
+- 同一记录列出 AI 助手 10 项修复的设备验证摘要，包括 JNI keep、第二轮 GPU 失败后 CPU 重建、空回复恢复、录音转写后问诊回答等。
+- 证据边界：该文档没有提供 AI 连续 GPU/CPU 各 20 轮的逐轮 TRACE、附件多轮关联、进程中断后 transcript/Native context 三方一致性、清除全部 AI 数据后重启不可恢复的场景记录。不得把 A-K 汇总扩大解释为这些独立场景已经验收。
+
+### 12.2 README / pubspec 版本核对
+
+- `pubspec.yaml` 当前版本：`1.11.30+8039`。
+- 当前 master 的 `README.md` 中版本字符串为 `1.11.30+8039`，与 pubspec 一致；旧台账中“README 仍为 1.11.28+8037”的记录已过期。
+- 尚未建立防漂移自动化检查；G 仍需补充可重复的版本一致性测试或 CI 检查。
+
+### 12.3 PR / CI 状态（按当前可读取证据）
+
+| PR | 工作流 | 当前基线 / HEAD | 已取得 CI | 当前状态 |
+|---|---|---|---|---|
+| #43 | B-02 红旗语义边界测试 | base 已改为 master `05f118e`；HEAD `f1a39ec` | 旧 base 下 PR run `43031570066`：Flutter regression SUCCESS、Android arm64 CI SUCCESS；branch validation SKIPPED | 新 base 需要重新验收；B 仍 PARTIAL / RELEASE BLOCKED |
+| #44 | G 执行台账 | base 已改为 master `05f118e`；HEAD `e335bfe` | 旧 base 下 PR run `43032237167`：Flutter regression SUCCESS、Android arm64 CI SUCCESS；branch validation SKIPPED | 本台账已更新；新 base/新提交 CI 待完成 |
+| #45 | B-03 红旗入口审计 | base 已改为 master `05f118e`；HEAD `e67fc5d` | 旧 base 下 PR run `43032477615`：Flutter regression SUCCESS、Android arm64 CI SUCCESS；branch validation SKIPPED | 新 base 需要重新验收；审计结论仍为 detector MISSING、全入口接入 MISSING、医学审核 MISSING |
+| #46 | D-03 参数来源契约 | base master `05f118e`；HEAD `63336da` | 新 PR CI 尚未取得 | 新建于当前 master；仅修改 `assistant_tool_result.dart` 和对应测试 |
+| #42 | D-03 旧基线 PR | 已关闭，由 #46 替代 | 旧 base 下 PR run `43028036727` SUCCESS | 不再集成，避免旧基线重复文件所有权 |
+| #39 | E 数据清除 | HEAD `9badee4` | 历史 CI SUCCESS | 与当前 master 的 `MainActivity.kt`、`local_ai_interview_screen.dart` 存在语义重叠；仍禁止整 PR 合并 |
+| #38 | F TRACE writer | HEAD `056cceb` | 历史 CI SUCCESS | writer 独立切片，不代表生产链路 trace_id 已贯穿 |
+| #40 | D 能力目录审计 | HEAD `f48fb98` | 历史 CI SUCCESS | 审计文档完成；Executed Capability 仍未证实 |
+| #19 | E Android backup | HEAD `b012d03` | 未取得当前 master 下完整 merged manifest/build 证据 | BLOCKED / UNKNOWN，不合并 |
+
+说明：PR #43/#44/#45 的旧 base CI 成功只证明当时对应 SHA 的构建/回归结果；retarget 到当前 master 后，不能沿用旧 CI 作为新 base 的 PASS。当前 master `05f118e` 的 push workflow runs 未能通过本轮可用的 commit-run 查询取得，主线最新完整 CI 结论保持 UNKNOWN，不能据此声称 master CI 全绿。
+
+### 12.4 A-G 状态与下一步执行队列
+
+| ID | 状态 | 下一项自动执行工作 | 仍未满足的条件 |
+|---|---|---|---|
+| A | PARTIAL | 继续审计 GPU→CPU fallback 后的 transcript replay、Engine/Conversation 重建状态和请求未知状态；用自动化测试锁住可复现边界 | 指定多轮、附件、进程恢复及持久化 TRACE 的独立设备证据未进入仓库 |
+| B | PARTIAL / RELEASE BLOCKED | 在不启用未经审核医学词表的前提下，补齐纯策略边界与所有 Flutter/Native 入口的可达性矩阵；明确每个旁路的阻断点 | detector、全入口接入、医学审核记录均缺失 |
+| C | PARTIAL | 为黄金检索结果补 source manifest、原始书目/版本/卷页定位和 derived-query provenance | 命中讲稿不能冒充古籍原文；缺少定位的来源继续标 MISSING |
+| D | PARTIAL | 完成 #46 UNKNOWN 状态在所有消费点、序列化和旧 String 结果包装中的兼容复核；再选非敏感工具锁定确定性行为基线 | 工具调用、参数、source ID、业务结果和会话回传尚无端到端 TRACE |
+| E | PARTIAL | 继续复核 Native 释放 UNKNOWN 状态、附件/数据库部分失败和清除编排；不得把 PR #39 旧分支整体并入 | 当前主线与 #39 有重叠；清除范围、失败恢复与不可恢复证据仍需闭合 |
+| F | PARTIAL | 从单一入口开始定义 trace_id 注入契约，并验证 recorder 默认关闭、写入失败隔离；与 #38 writer 保持文件所有权隔离 | 生产调用链未贯穿，TRACE off 等价性未证明 |
+| G | IN_PROGRESS | 更新本台账后等待 #44 新 CI；另建独立小切片实现 README/pubspec 版本防漂移测试 | README 当前值已一致，但自动防漂移检查缺失 |
+
+### 12.5 当前执行约束
+
+- Find N2 真机 A-K 已有独立汇总；未记录的 AI 多轮/附件/进程恢复/清除场景不得推断为通过。
+- 用户明确表示会自行执行并拉取所需真机 TRACE；本工作流继续完成代码、测试、文档和验收方案，不将设备侧操作作为本轮自动任务。
+- 医学审核仍是 B 的外部专业依赖；不生成或启用未经审核的红旗词表、阈值和处置文案。
+- 继续按主线基线、独立工作分支、单文件所有权、小批量集成、CI 分层验收执行；不因旧 CI 通过或 GitHub mergeable 状态而合并。
