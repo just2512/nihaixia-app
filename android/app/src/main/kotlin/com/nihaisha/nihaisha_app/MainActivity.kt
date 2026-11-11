@@ -38,7 +38,7 @@ class MainActivity : FlutterActivity() {
 
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
-    private val aiResourceLifecycle = LocalAiResourceLifecycle()
+    private val aiResourceLifecycle = LocalAiResourceLifecycle.process
     private var activeBackend = "not_loaded"
     // Keep only completed turns. A failed/blank current turn is never appended.
     private val conversationHistoryTurns = mutableListOf<LocalAiCompletedTurn>()
