@@ -372,6 +372,27 @@ void main() {
       expect(status.sizeLabel, '尚未安装');
     });
 
+    test('parses native AI cleanup file counts', () {
+      final status = LocalAiModelStatus.fromMap(const {
+        'installed': true,
+        'fileExists': true,
+        'ready': false,
+        'modelPath': '/app/model.litertlm',
+        'sizeBytes': 3659530240,
+        'expectedSizeBytes': 3659530240,
+        'backend': 'not_loaded',
+        'runtimeCacheFilesDeleted': 3,
+        'attachmentFilesDeleted': 2,
+        'legacyRecordingFilesDeleted': 1,
+      });
+
+      expect(status.runtimeCacheFilesDeleted, 3);
+      expect(status.attachmentFilesDeleted, 2);
+      expect(status.legacyRecordingFilesDeleted, 1);
+      expect(status.installed, isTrue);
+      expect(status.ready, isFalse);
+    });
+
     test('parses a user-reported symptom draft and ignores unsupported fields', () {
       final draft = LocalAiSymptomDraft.fromModelText('''
 ```json
