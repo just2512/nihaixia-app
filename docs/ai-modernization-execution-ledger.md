@@ -188,3 +188,188 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+## 9. 2026-11-11 20:11（+08:00）远端状态增量复核
+
+> 本节只记录本次实际读取的远端证据，优先于第 1、3、8 节中已过期的初始状态。核验时 master HEAD 为 `c7a12ed32140fb2e8e97ea406e5fdc6504216907`。CI 时间以 GitHub UTC 时间为准。
+
+### 9.1 当前打开 PR 与 CI
+
+| PR | 工作流/分支 | HEAD | 已读取 CI 证据 | 当前判定 |
+|---|---|---|---|---|
+| #39 | E 数据清除 / `work/ai-data-clear-v3-final` | `85f5a3d08393f2f2bd3f6e54705967cf6d6b38c6` | Flutter regression run `43015771142` SUCCESS；Android arm64 APK + unit tests SUCCESS | 自动化 CI PASS；Find N2 清除后重启不可恢复 TRACE 仍 UNKNOWN；PR 未合并 |
+| #38 | F 本地 TRACE writer / `work/ai-trace-local-writer` | `056cceb8f096982ea3d120148b8db5faf1bc973d` | Flutter regression run `43015461548` SUCCESS；Android arm64 APK + unit tests SUCCESS | writer 切片自动化 CI PASS；尚未端到端贯穿生产调用链，整体 F 仍 PARTIAL；PR 未合并 |
+| #36 | G 台账刷新 / `work/ai-ledger-refresh-2026-11-11-v2` | `4a79fe6b8a34442262d41d7ae04562ccae71a3f5` | Flutter regression run `43015840243` SUCCESS | 文档切片 CI PASS；内容在本次核验后仍需以最新状态增量修订；PR 未合并 |
+| #19 | E Android 备份策略 / `work/ai-data-protection` | `b012d03e2acbca822982c91aab49089c2c418908` | 本次未发现对应最新 PR-level Android merged manifest/build 通过证据 | BLOCKED / UNKNOWN；不得合并。全应用 allowBackup=false 的非 AI 数据迁移影响仍未决 |
+| #40 | D 工具能力目录审计 / `work/ai-capability-catalog-audit` | `c4de95c5f06502e5d7e3c03a403baf36bf81b30c` | 文档审计 PR 新建，CI 待完成 | IN_PROGRESS；只读审计，不改业务行为 |
+
+旧分支 `work/ai-data-clear-v2` 的 run `43008080016` 在 branch validation 的 changed tests 失败，Flutter regression 与 Android job 均 skipped。该失败属于旧 SHA `ec3d391365025e5be58f3f9bdac9441e15dc500f`，不能覆盖 PR #39 新 SHA 的成功结论，也不能忽略其失败事实。
+
+### 9.2 A-G 当前状态校正
+
+| ID | 当前状态 | 本次可确认事实 | 尚未关闭的硬缺口 |
+|---|---|---|---|
+| A | PARTIAL | 既有 Native 生命周期审计与若干自动化修复已合并/有测试证据 | Find N2 GPU/CPU 各至少 20 轮、图片/语音、进程恢复真实 TRACE 未提供；不能标 IMPLEMENTED |
+| B | PARTIAL / RELEASE BLOCKED | 已有纯 Dart preflight 策略契约和语义测试切片 | 所有模型入口/附件/结构化问诊/历史恢复的前置覆盖与医学审核记录未闭合；未经审核规则不得生产放行 |
+| C | PARTIAL | 已有检索黄金请求及部分真实本地命中快照/审阅材料 | 古籍版本、卷页/条文原始定位、来源可信度和逐项校勘未完成；不得将讲稿命中表述为已核验古籍原文 |
+| D | PARTIAL | master 的 `AssistantToolRouter._all` 静态盘点为 24 项；23 项为 Widget builder，structured_diagnosis 由统一对话内联接管；只有 yunqi 有 `builderWithArguments` | Headless/Executed 需逐项向下追踪业务函数、结果回传、权限、取消和错误语义；PR #40 审计文档 CI 待完成 |
+| E | PARTIAL | PR #39 最新 HEAD 的 Flutter regression 与 Android arm64 APK/native unit tests 均通过 | Find N2 清除全量 AI 数据后重启不可恢复验证未执行；备份策略 PR #19 未完成 merged manifest 验证及非 AI 数据影响决策 |
+| F | PARTIAL | PR #38 本地 writer 切片 Flutter regression 与 Android arm64 APK/native unit tests 均通过 | trace_id 尚未贯穿输入、安全、路由、检索、模型、工具、展示和持久化；隐私与 TRACE 关闭时行为不变需端到端验证 |
+| G | PARTIAL | 多分支协议已存在 master；PR #36 文档切片 CI 通过 | README/pubspec 版本一致性与本台账实时性仍须核验；PR #40、#39、#38 等当前状态须在后续更新 |
+
+### 9.3 本轮新增 D-01 审计交付
+
+- 分支：`work/ai-capability-catalog-audit`
+- PR：[#40](https://github.com/just2512/nihaixia-app/pull/40)
+- 文件：`docs/assistant-tool-capability-audit.md`
+- 基线：`c7a12ed32140fb2e8e97ea406e5fdc6504216907`
+- 源码证据：`lib/screens/assistant_tool_router.dart` blob `eca8e0d6787274811796d174ec16ff29ccef4ed7`；测试 `test/assistant_tool_router_test.dart` blob `f266d827f4d5a4e5b758366de0bc799550ead909`。
+- 结论：24 个注册 toolId；23 个页面 builder；structured_diagnosis 由助手页内联规则问诊接管；仅 yunqi 有 argument-aware builder。注册目录不等于 Headless/Executed 能力。
+- 状态：文档已提交，PR CI 待完成；本次没有重新运行 router tests。
+
+### 9.4 下一项自动执行任务（不等待逐项指派）
+
+1. **E**：继续检查 PR #39 具体清除调用链、SQLite 表清单、附件目录边界和清除失败状态；随后补充可自动化的删除/重启恢复测试。真实 Find N2 重启验证仍需设备。
+2. **F**：继续从 `LocalAiInterviewScreen` 和 Native MethodChannel 追踪 trace_id 的真实调用链，按文件所有权拆分，不在本地 writer PR 中混入业务路由改造。
+3. **D**：PR #40 CI 完成后继续逐项追踪 23 个页面的返回值消费；先挑无敏感数据、已有确定性计算的单个工具作为最小 Headless 候选，先补行为基线再改实现。
+4. **C**：继续古籍/医案来源定位与 manifest 核验；没有版本/卷页/原始 source ID 的条目保持 MISSING，不做自动补齐。
+5. **B/A**：并行补齐全入口红旗覆盖矩阵与多轮真实设备验收准备；医学审核、Find N2 设备 TRACE 未取得前保持 PARTIAL/UNKNOWN。
+6. 所有工作继续遵循 `docs/ai-parallel-execution-protocol.md`：每文件唯一实现所有者、小批量 PR、全量 CI 与设备验收分开记录；不因 PR mergeable 而跳过质量门槛。
+
+
+D-01 表格复核补充：复核完整注册定义后，`huangdi_siji` 的 modes 为 `tools/metaphysics`（不是 learning）；已在 PR #40 同一分支修正审计表。PR #40 当前 head 更新为 `c4de95c5f06502e5d7e3c03a403baf36bf81b30c`，对应新 CI 需重新等待。
+
+
+## 10. 2026-11-11 本轮复核增量（D-02 与最新 CI）
+
+> 本节为本轮新增证据；较早小节中的“CI 待完成”以此处最新 SHA 记录为准。master 基线仍为 `c7a12ed32140fb2e8e97ea406e5fdc6504216907`。
+
+### 10.1 最新自动化验收
+
+| PR | 最新 HEAD | Run | 结果 | 实际覆盖 |
+|---|---|---|---|---|
+| #40 D-01 | `c4de95c5f06502e5d7e3c03a403baf36bf81b30c` | `43018942308` push；`43018950777` PR | SUCCESS / SUCCESS | Flutter regression、Dart/Flutter analyze、AI contract tests、full regression、Android arm64 CI Debug APK ABI verification、Native unit tests |
+| #41 G 台账 | `1fe391a8d306b27a67b843af6d253eaa29869dc4` | `43018967324` push；`43018976749` PR | SUCCESS / SUCCESS | 同上完整回归与 Android arm64 CI 验证 |
+
+说明：以上是 D-01/G 对应 SHA 的通过证据；本轮将分别更新 PR #40 与 #41 的文件，因此新 SHA 必须重新等待 CI。Android job 是 CI Debug APK ABI verification，不是 Find N2 真机安装/运行。
+
+### 10.2 D-02 页面调用链审计
+
+- 分支：`work/ai-capability-catalog-audit`
+- PR：[#40](https://github.com/just2512/nihaixia-app/pull/40)
+- 新增 commit：`f48fb98fd0bb3d00509886c8e78da73ed511264d`
+- 文件：`docs/assistant-tool-capability-audit.md`
+- 审计基线：master `c7a12ed32140fb2e8e97ea406e5fdc6504216907`
+- CODE：`LocalAiInterviewScreen._openTool()`（`lib/screens/local_ai_interview_screen.dart:1629-1715`）；`AssistantToolResult`（`lib/models/assistant_tool_result.dart:1-93`）；23 个页面 builder（`lib/screens/assistant_tool_router.dart:488-525`）。
+- 页面回传分类：9 项具备助手回传入口（8 项 String、1 项 typed result），14 项 opens_only；其中至少 4 项确认由本地确定性计算后回传（yunqi、meihua、dosage、almanac）。
+- 新发现契约风险：状态枚举缺少 UNKNOWN；String 旧结果默认包装为 succeeded；arguments fallback 会回填请求值而不能证明页面实际使用值；sourceIds 可空；failed 统一提供重试入口。
+- 本轮只读审计，不改运行时代码；未重新运行相关测试；真机 TRACE 未执行。D 能力整体仍 PARTIAL，Executed Capability 未证实。
+
+### 10.3 A-G 当前状态与未完成任务
+
+| ID | 状态 | 当前下一步（不等待用户逐项指派） |
+|---|---|---|
+| A | PARTIAL | 继续审计 Native Conversation 重建/历史回放边界；准备 Find N2 GPU/CPU 多轮实测矩阵。无设备记录的轮次保持 UNKNOWN。 |
+| B | PARTIAL / RELEASE BLOCKED | 扩展红旗 preflight 到所有模型/附件/历史/结构化问诊入口；医学审核未完成前保持 REVIEW_REQUIRED。 |
+| C | PARTIAL | 对黄金检索快照补 source metadata/provenance；无古籍版本、卷页/条文定位的条目标 MISSING。 |
+| D | PARTIAL | D-02 已追踪 23 个页面的助手结果回传；下一步先补 AssistantToolResult 契约测试，再选 almanac/meihua 之一锁定纯函数黄金行为。Headless adapter 暂不启动。 |
+| E | PARTIAL | 复核 PR #39 清除调用链、SQLite 表清单、附件路径边界、部分失败恢复；补自动化清除失败与重启测试。Find N2 仍需真实设备。 |
+| F | PARTIAL | 从 Native MethodChannel 与助手调用链继续追踪 trace_id 传播；验证 TRACE 关闭不改变业务、日志失败不阻断业务。 |
+| G | PARTIAL | PR #41 已有旧 SHA CI PASS；本轮追加台账后以新 SHA 重新验收。同步检查 README/pubspec 版本漂移；不关闭旧 PR #36，直到确认 #41 内容完整替代。 |
+
+### 10.4 分支与集成状态
+
+- PR #40：本轮在其既有文件所有权分支上扩展 D-02 审计，避免第二个分支同时写 `docs/assistant-tool-capability-audit.md`。
+- PR #41：仅更新执行台账，和 PR #40 文件所有权分离。
+- PR #38/#39：最新已知 CI 通过，但均未据此宣称 Find N2 真实验收完成；不因 mergeable=true 自动合并。
+- PR #19：Android 全应用备份策略仍有非 AI 数据迁移影响决策及 merged manifest/build 证据缺口，保持 BLOCKED/UNKNOWN。
+- PR #36：旧台账 PR 与 #41 存在内容重复风险，先比较完整内容与最新 CI，再决定关闭；不得合并过期台账。
+
+**下一轮默认执行顺序：** (1) 读取本轮 PR #40/#41 新 SHA CI 与 job 结果；(2) D-03 补结果契约边界测试；(3) E 清除失败/重启测试；(4) F trace_id 贯穿最小切片；(5) C provenance manifest；(6) G 版本漂移检查。任一工作流受阻时继续其余无依赖项。
+
+
+### 10.5 E-02 Native close failure 后的重试安全复核
+
+- PR：[#39](https://github.com/just2512/nihaixia-app/pull/39)，分支仍为 `work/ai-data-clear-v3-final`。
+- 新增审计提交：`e2bc75f42b4eb2b6fa043df0754da3d86690d306`，只修改 `docs/ai-data-clear-audit.md`。
+- CODE：`MainActivity.releaseLocalModel()` 在 close 前清空 aiConversation/aiEngine 字段；`ConversationResourceReleasePolicy.closeBoth()` 会尝试关闭两者并聚合异常；`clearLocalAiData()` 在 release 抛错时停止删除 cache。
+- 风险：第一次 close 失败时引用已经置空；同一进程第二次清除可能把 null 引用当作释放成功并继续删 cache。当前没有 releaseState 持久状态或二次清除 fail-closed 测试。
+- 状态：E PARTIAL；PR #39 的既有 run `43015771142` 通过，但不覆盖本次发现的 close failure 重试路径。真机清除后重启仍 UNKNOWN。
+- 下一步：在 E 文件所有权分支内增加 Native releaseState（READY/RELEASED/UNKNOWN）和 close failure 注入测试；UNKNOWN 时禁止 load、clear cache 和把 null 资源当作已释放。只有此切片 CI 通过后，才复核其与 Flutter 清除编排的交互。
+
+
+
+### 10.6 E-03 Native 资源释放 UNKNOWN 状态保护已实现，待 CI
+
+- PR #39 当前工作分支新增 E-03 切片：`LocalAiResourceLifecycle` 状态机（RELEASED/READY/UNKNOWN），并接入 MainActivity 的模型加载与释放路径。
+- close 成功后状态为 RELEASED；close 抛错后状态为 UNKNOWN。UNKNOWN 时禁止再次 close、禁止后续清理流程删除 runtime cache、禁止重新加载模型；进程重启后 Native Activity 状态重新初始化。
+- RELEASED 重复 release 为幂等空操作。
+- 新增 Native unit tests：正常释放、close failure 后二次 close/cache 删除被阻止、UNKNOWN 阻止 reload、重复成功释放。
+- 相关提交已推送 PR #39；最新 CI 尚待完成。不能把测试文件存在视为测试通过。
+- 若最新 CI 失败，先读失败 job/log；若通过，再复核 MainActivity 的状态接入和清除失败后的 Flutter 状态同步。Find N2 真机清除与重启验收仍 UNKNOWN。
+
+
+E-03 实现复核补充：LocalAiResourceLifecycle 使用进程级 singleton，避免 Activity recreation 将 UNKNOWN 状态清零；AndroidManifest 对常见折叠屏/配置变化由 Activity 自行处理。跨 Activity 实例并发 Native 操作仍未单独验收。PR #39 最新提交仍需重新运行 CI；任何中间 SHA 的 cancelled run 不作为失败或通过证据。
+
+
+## 11. 2026-11-11 最新复核（master 392f977c）
+
+> 本节覆盖前面历史段落中的旧分支/旧 CI 状态。当前 master HEAD 为 `392f977c0c54603bf54daf9c7284e698ffee8a72`。本节所列 CI 只按对应 head SHA 记录；CI 不替代医学审核或 Find N2 真机 TRACE。
+
+### 11.1 主线与 CI
+
+- master `98521551ac650ac49cb02e38c5cbec886c2c2422`（相对 `dfd5e911` 的直接提交）修复相册菜单不透明背景、录音转写后再以问诊助手身份回应、统一剥离简单 Markdown。对应 Flutter tests run `43028761205` 与 Flutter Quality Gate run `43028761250` 均 SUCCESS；该提交还修改了 `MainActivity.kt` 与 `local_ai_interview_screen.dart`。
+- 当前 master `392f977c0c54603bf54daf9c7284e698ffee8a72` 修复半折叠态 AdaptiveSinglePane 空面板黑屏，变更 `lib/widgets/adaptive_master_detail.dart`。对应 Flutter tests run `43031586746` 与 Flutter Quality Gate run `43031585876` 在本次记录时均 IN_PROGRESS，不能提前标 PASS。
+- master 运行中不能覆盖上一 SHA 的成功结果；必须等待当前 SHA 两个 workflow 最终结论。
+
+### 11.2 活动 PR 与分支集成判定
+
+| PR | 工作流 | HEAD | CI 证据 | 与当前 master 的关系 | 判定 |
+|---|---|---|---|---|---|
+| #38 | F 本地 TRACE writer | `056cceb8f096982ea3d120148b8db5faf1bc973d` | 历史 Flutter regression 与 Android arm64 CI 验证通过；writer 文件专项切片 | 与 master merge-base 为 `c7a12ed`，落后 4 commits；变更仅 `docs/ai-trace-local-writer.md`、`lib/services/ai_trace_store.dart`、`test/ai_trace_store_test.dart`，未与最近两笔 master 变更文件重叠 | PARTIAL；需在最新基线重验后再集成，不能据 writer 存在宣称端到端 TRACE |
+| #39 | E AI 数据清除 | `9badee489e49e73137ca4482e587cdaa96cde811` | push run `43023123535`、PR run `43023135382` SUCCESS；包含 Flutter 全量回归与 Android arm64 CI APK/native tests | 落后 4 commits；变更 `MainActivity.kt`、`local_ai_interview_screen.dart`，与 master `98521551` 的这两个文件均有修改，必须逐段语义整合 | 不合并；先解决 Native transcript/录音和数据清除的重叠语义，再重跑 CI。Find N2 清除后重启 TRACE UNKNOWN |
+| #40 | D 能力目录审计 | `f48fb98fd0bb3d00509886c8e78da73ed511264d` | push run `43021937936`、PR run `43021949777` SUCCESS | 落后 4 commits；仅改 `docs/assistant-tool-capability-audit.md` | 审计文档 CI PASS；D 整体 PARTIAL，未证明 Executed Capability |
+| #42 | D-03 参数来源契约 | `670ecee54c2e94e4eae20c5ef7ba6ee31acfd540` | push run `43027995552`、PR run `43028036727` SUCCESS；PR 回归含静态分析、全量 Dart regression、Android arm64 CI APK/native tests | 基于 `dfd5e911`，落后当前 master 2 commits；变更仅 `assistant_tool_result.dart` 与对应测试，无当前 master 文件重叠 | 契约切片 CI PASS；PR 仍 open/draft，未合并；D 整体仍 PARTIAL |
+| #43 | B-02 preflight 语义边界测试 | `f1a39ecb3eaafb03e77e6e6db10d4ca139504810` | push run `43031537234` 的 analyze + changed tests SUCCESS；PR run `43031570066` 全量 regression IN_PROGRESS | 基于 `98521551`；仅改 `test/red_flag_preflight_test.dart`，与 master `392f977c` 的 AdaptiveSinglePane 变更不重叠 | 等待 PR 全量回归；不代表 detector 或入口接入完成 |
+| #19 | E Android backup policy | `b012d03e2acbca822982c91aab49089c2c418908` | 当前未取得 merged manifest + Android build 的完整通过证据 | merge-base `60011c4`，落后 16 commits；变更 Manifest/backup XML/测试 | BLOCKED/UNKNOWN；需重新基于当前 Android 配置审查，不能直接合并 |
+
+- PR #36（旧台账 v2）与 PR #41（台账 v3）均已关闭，原因是它们基于旧 master，PR #41 与当前 master compare 为 diverged（6 ahead / 4 behind），不应合并旧基线台账。
+- 本次台账由新分支 `work/ai-ledger-refresh-2026-11-11-v4` 从当前 master `392f977c` 创建；本 PR 仅负责本文件，替代 #36/#41 的旧台账分支。
+- PR 的 `mergeable` 字段不作为质量结论；合并前必须以当前 master 重新比较、检查变更文件和语义冲突。
+
+### 11.3 A-G 当前状态（按证据，不按文件存在）
+
+| ID | 状态 | 当前可确认事实 | 未关闭的硬缺口 | 下一项可执行工作 |
+|---|---|---|---|---|
+| A | PARTIAL | master 已合入 Native transcript rehydration；相关 Native/Flutter 自动化回归已在 master SHA `dfd5e911` 及后续 SHA 通过 | Find N2 GPU/CPU 各至少 20 轮，图片/语音、进程中断恢复的真实 TRACE 未提供 | 审核 Native Conversation 重建与 transcript 三方一致性；准备设备矩阵，设备未测项保持 UNKNOWN |
+| B | PARTIAL / RELEASE BLOCKED | master 有纯 Dart `RedFlagPreflight` 策略与 10 项原始测试；PR #43 增加 UNKNOWN/quoted/no-match coverage 语义测试 | `RedFlagPreflight` 尚未接入 `LocalAiInterviewScreen._send()`、结构化问诊分支、附件、症状提取、历史恢复或 Native MethodChannel；没有生产 detector；医学审核记录缺失 | 先完成入口调用图与统一边界接口审计；医学词表/阈值/处置文案在 REVIEW 前不得启用。PR #43 CI 完成后再进入入口接入设计 |
+| C | PARTIAL | 真实检索黄金快照及审阅记录已存在；记录明确原始 query 0 命中、派生 query 命中讲稿 | 讲稿命中不等于古籍原文；纸本版本、卷页、source ID、派生 query provenance 未闭合 | 补 source manifest 与可回链定位；不改检索算法、不引入 FTS5 |
+| D | PARTIAL | PR #40 已完成 23 个页面入口分类审计；PR #42 将参数 fallback 与实际执行参数分离，并新增 UNKNOWN 状态 | 未证明工具实际调用业务函数、结果来源校验与会话回传的端到端闭环；其他 enum/switch/持久化兼容需继续审查 | 在 #42 基于当前 master 做最终调用点/序列化复核；再选一个非敏感、已有确定性函数的工具锁定黄金行为 |
+| E | PARTIAL | PR #39 自动化回归及 Android arm64 CI APK/native tests 通过；清除目录与 SQLite/附件策略已有实现 | PR #39 与 master 的 MainActivity/Flutter screen 变更重叠；Find N2 真机清除、close failure 注入、重启后不可恢复及附件/DB 部分失败恢复 UNKNOWN | 先解决 PR #39 与 master 的语义冲突；随后在设备上验收清除/重启，不能把 CI 通过当作真实数据删除证明 |
+| F | PARTIAL | PR #38 有界本地 writer 仅 allowlist 元数据、默认不接入生产路径 | trace_id 未贯穿 input/redflag/route/retrieval/model/tool/result/render/persistence；TRACE off 等价性、写入失败不影响业务未做端到端验证 | 基于最新 master 定义跨层 trace_id 最小契约，先从不与 #38 writer 文件冲突的单一入口切片开始 |
+| G | IN_PROGRESS | README/pubspec 曾同步；执行协议已在 master；本轮新台账从 `392f977c` 重建 | README/pubspec 当前版本仍需重新核验；历史记录需与当前证据分层；新台账 PR CI 未完成 | 本 PR CI 通过后再核对 README/pubspec 和审计报告 SHA，保持单一 ledger 文件所有者 |
+
+### 11.4 B 线本轮新增切片（PR #43）
+
+- 任务：B-02，扩展 `RedFlagPreflight` 的纯 Dart 状态契约测试。
+- 基线：`98521551ac650ac49cb02e38c5cbec886c2c2422`；HEAD：`f1a39ecb3eaafb03e77e6e6db10d4ca139504810`。
+- 文件：仅 `test/red_flag_preflight_test.dart`。
+- 新增覆盖：无命中但语义主体/时间/极性未知时 CLARIFY；候选命中但语义未知/引用时 CLARIFY；他人否定/本人既往史不作为当前急症；coverage 不完整优先 REVIEW_REQUIRED；所有非 CLEAR 状态不得继续普通流程。
+- CI：push run `43031537234` changed-tests + analyze SUCCESS；PR run `43031570066` 全量回归截至本记录 IN_PROGRESS。
+- 重要限制：该切片只验证既有策略，不创建医学 detector，不覆盖入口接入，不构成医学审核。B 继续 RELEASE BLOCKED。
+
+### 11.5 继续执行队列（按依赖自动推进）
+
+1. **CI**：先取得 master `392f977c` 的 Flutter tests / Quality Gate 最终结果；取得 PR #43 全量 regression 结果，失败时读取具体 step/log 后修复。
+2. **D-03**：复核 PR #42 UNKNOWN enum 的全部 switch、序列化/反序列化、旧 String 结果包装与实际调用链；确认 master 前进后无语义冲突，再决定是否集成。
+3. **E-03**：PR #39 先做与当前 master `MainActivity.kt`、`local_ai_interview_screen.dart` 的逐段合并审查；不能从旧分支整分支合并。无设备期间继续自动化故障注入和清除范围审计。
+4. **B-03**：从所有 Flutter/Native 模型调用点建立入口矩阵，识别统一 preflight 可强制执行的最小边界；不增加未经医学审核的词表，不把未知覆盖判为 CLEAR。
+5. **F-02**：TRACE writer 与生产链路分开；建立 trace_id 传播接口契约后，选择单一入口推进，确保 TRACE 关闭/写入失败不改变业务。
+6. **C-02**：补齐黄金快照 source metadata、derived query provenance、原始书目/卷页定位。
+7. **G**：本台账通过 CI 后，核验 README/pubspec 版本与审计文件 SHA；关闭旧 PR 已完成，不再并行编辑本文件。
+
+### 11.6 设备与专业审核依赖
+
+- Find N2（PUG110）真机 GPU/CPU 多轮、附件、进程恢复、清除后重启等 TRACE 当前未提供；相关项保持 PARTIAL/UNKNOWN。
+- B 红旗词表、阈值与处置文案缺少医学背景人员审核记录；不能以代码测试或模型提示词替代。
+- 不引入新数据库、向量检索、Agent/DAG 平台或外部模型 API；没有失败证据和独立决策前维持现有架构。
