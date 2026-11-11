@@ -251,3 +251,25 @@ CI artifact `13811868576`（ZIP SHA-256 `51311b321511dcf93603097efc4eea6f0c6eab0
 - PR #32 本台账/规范入口 head `f1dca977d005080adb13a7692010ae6cfc7d51d4`：push validation `43004626363` PASS；PR full Flutter run `43004655186` 当时仍执行中。
 - PR #33 F TRACE typed contract head `06e689000b40030422e46450ab960bc84f736497`：push branch validation `43005078711` 与 PR full Flutter run `43005113495` 当时仍执行中。此切片仅有默认关闭的 typed schema/单测，无持久化 writer、审计开关、跨层透传或真机 TRACE。
 - 当前 master `7c16534c7a064e1fc756a681d1099269cc77f255` 的 Flutter regression `43003668218` PASS，Android arm64 APK + unit tests job `130467999673` PASS；Quality Gate `43003667206` 当时仍执行中，不能提前标为全绿。
+
+
+### 10.7 2026-11-11 集成修订（最新 master 基线）
+
+- 最新 master：`c7a12ed32140fb2e8e97ea406e5fdc6504216907`。
+- PR #30 A Native transcript 恢复已合并（`2c95d2311cf7bca3c0b9b71113b2d871d7e1e42b`），CI：Flutter regression PASS、Android arm64 APK PASS、Kotlin 51 tests PASS。
+- PR #31 C 黄金快照审阅已合并（`eff598d3476ea42626af5ecf7c6b7005e02648f0`），CI：Flutter regression PASS、Android arm64 PASS。报告明确区分本地讲稿回链与未核验纸本定位，并追溯到 index builder schema。
+- PR #33 F TRACE typed contract 已合并（`c7a12ed32140fb2e8e97ea406e5fdc6504216907`），CI：Flutter regression PASS、Android arm64 PASS、branch validation PASS。端到端 trace 仍未接入生产调用链；当前仅有默认关闭 typed contract。
+- PR #32（本台账）head `badcc2637a7248c63b2b4efc1a3ad1fcee8dab66`：push branch validation `43005283811` PASS；PR full Flutter regression `43005289902` PASS，Android arm64 job `130472974486` PASS。该 PR 只更新审计/台账，需按最新 master 复核无冲突后合并。
+- PR #34 E Native AI 数据清除 head `67cc12f05b951ec9adb875e7058bf44642c39b47`：branch validation run `43007383947` 执行中；PR full Flutter run `43007392308` 排队/执行中。此前 head 的 static analysis 曾因一个 unnecessary `!` 警告失败，已修复并重跑；不得把旧失败当成当前结果，也不得提前标 PASS。
+- PR #34 新增 Native 主线程门禁，清除期间拒绝所有新 AI MethodChannel 操作（只允许查询状态）；模型选择器等待中拒绝清除，清除期间拒绝新导入。Native 释放 Engine/Conversation 后才删 runtime cache；Dart 附件根目录拒绝 symlink，删除递归不跟随链接。
+- master 最新 push 的 Flutter regression / Quality Gate run `43007532722` 与 `43007532654` 当时仍执行中，等待最终结果。
+
+### 10.8 下一阶段自动队列
+
+1. E：监测 PR #34 最新 head 的 analyze、changed Dart/Kotlin tests、full Flutter regression、Android APK + Kotlin unit tests；修复真实失败。CI 全绿后合并。Find N2 真机清除前已加载 Engine、pending import、附件孤儿、保留模型文件、非 AI 数据保持、重启不可恢复仍需设备验收。
+2. G：合并本 PR #32 后，后续每次主线 SHA/PR/CI 变化都更新台账，不依赖聊天记忆。
+3. C：继续建立伤寒讲稿逐项人工核验 manifest；禁止从讲稿标题/文件名自动推断纸本条文号。先输出待核验条目，不自动补元数据。
+4. F：在现有 typed contract 上实现本地 opt-in 开关和有限保留 writer；写入失败不得影响业务。随后按文件所有权接入 Dart orchestrator、retrieval、MethodChannel、Native、tool、SQLite；关闭 TRACE 时对照测试证明业务输出与调用顺序一致。
+5. B：继续输入渠道/路由矩阵；医学审核前保持 REVIEW_REQUIRED，不启用未经审核的词表/阈值。
+6. D：补齐 24 项工具的 typed arguments/results、权限、错误/取消/超时和来源 ID 证据；逐项验证真实执行，Headless 仍为 0。
+7. PR #19 Android 全应用备份关闭策略仍 BLOCKED；不因 E 清除功能完成就直接合并。必须保留收藏/设置等非 AI 数据自动迁移能力。
