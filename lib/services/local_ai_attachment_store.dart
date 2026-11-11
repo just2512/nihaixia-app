@@ -18,6 +18,10 @@ class LocalAiAttachmentStore {
   Future<Directory> _ensureRoot() async {
     final temporary = await _temporaryDirectoryProvider();
     final root = Directory(p.join(temporary.path, directoryName));
+    final existingType = await FileSystemEntity.type(root.path, followLinks: false);
+    if (existingType == FileSystemEntityType.link) {
+      throw StateError('AI attachment directory must not be a symbolic link');
+    }
     await root.create(recursive: true);
     final canonicalTemporary = await temporary.resolveSymbolicLinks();
     final canonicalRoot = await root.resolveSymbolicLinks();
