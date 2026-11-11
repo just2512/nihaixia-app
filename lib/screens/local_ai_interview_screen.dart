@@ -508,8 +508,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _recoverLostImage() async {
+    String? pickerPath;
     try {
       final path = await _imagePicker.retrieveLostImagePath();
+      pickerPath = path;
       if (path == null || path.isEmpty) return;
       if (!mounted) {
         await _deleteCachedAttachments([path]);
@@ -542,6 +544,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         unawaited(_deleteCachedAttachments([previousPath]));
       }
     } catch (error) {
+      if (pickerPath != null) {
+        await _deleteCachedAttachments([pickerPath]);
+      }
       if (!mounted) return;
       setState(() => _error = '恢复照片失败：$error');
     } finally {
