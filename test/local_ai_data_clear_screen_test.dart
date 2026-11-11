@@ -20,6 +20,9 @@ const _installedButReleased = LocalAiModelStatus(
 );
 
 class _ClearAiService extends LocalAiService {
+  _ClearAiService([this.events]);
+
+  final List<String>? events;
   var clearCalls = 0;
 
   @override
@@ -28,7 +31,20 @@ class _ClearAiService extends LocalAiService {
   @override
   Future<LocalAiModelStatus> clearAiData() async {
     clearCalls++;
-    return _installedButReleased;
+    events?.add('native');
+    return const LocalAiModelStatus(
+      installed: true,
+      fileExists: true,
+      hashVerified: true,
+      ready: false,
+      modelPath: '/app/files/ai_models/gemma-4-E4B-it.litertlm',
+      sizeBytes: 3659530240,
+      expectedSizeBytes: 3659530240,
+      backend: 'not_loaded',
+      runtimeCacheFilesDeleted: 3,
+      attachmentFilesDeleted: 2,
+      legacyRecordingFilesDeleted: 1,
+    );
   }
 }
 
@@ -47,11 +63,21 @@ class _NoopAudioRecorder implements LocalAiAudioRecorder {
 }
 
 class _MemoryAttachmentStorage extends LocalAiAttachmentStorage {
-  @override
-  Future<int> clear() async => 0;
+  _MemoryAttachmentStorage([this.events]);
+
+  final List<String>? events;
 
   @override
-  Future<int> clearLegacyRecordings() async => 0;
+  Future<int> clear() async {
+    events?.add('attachments');
+    return 0;
+  }
+
+  @override
+  Future<int> clearLegacyRecordings() async {
+    events?.add('legacy');
+    return 0;
+  }
 }
 
 class _NoLostImagePicker implements LocalAiImagePicker {
@@ -139,7 +165,8 @@ void main() {
 
   testWidgets('clear-all action invokes native, attachment and conversation cleanup',
       (tester) async {
-    final service = _ClearAiService();
+    final events = <String>[];
+    final service = _ClearAiService(events);
     final store = _MemoryConversationStore();
     var conversationDataClearCalls = 0;
 
@@ -150,8 +177,9 @@ void main() {
           audioRecorder: _NoopAudioRecorder(),
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
-          attachmentStorage: _MemoryAttachmentStorage(),
+          attachmentStorage: _MemoryAttachmentStorage(events),
           aiConversationDataClearer: () async {
+            events.add('database');
             conversationDataClearCalls++;
             return const {
               'assistantMessages': 2,
@@ -177,7 +205,9 @@ void main() {
 
     expect(service.clearCalls, 1);
     expect(conversationDataClearCalls, 1);
+    expect(events, ['native', 'attachments', 'legacy', 'database']);
     expect(find.textContaining('你可以直接描述身体情况、询问中医知识'), findsOneWidget);
     expect(find.textContaining('AI 数据已清除'), findsOneWidget);
+    expect(find.textContaining('推理缓存文件 3 个'), findsOneWidget);
   });
 }
