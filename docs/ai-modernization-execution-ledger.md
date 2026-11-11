@@ -202,7 +202,7 @@
 | #38 | F 本地 TRACE writer / `work/ai-trace-local-writer` | `056cceb8f096982ea3d120148b8db5faf1bc973d` | Flutter regression run `43015461548` SUCCESS；Android arm64 APK + unit tests SUCCESS | writer 切片自动化 CI PASS；尚未端到端贯穿生产调用链，整体 F 仍 PARTIAL；PR 未合并 |
 | #36 | G 台账刷新 / `work/ai-ledger-refresh-2026-11-11-v2` | `4a79fe6b8a34442262d41d7ae04562ccae71a3f5` | Flutter regression run `43015840243` SUCCESS | 文档切片 CI PASS；内容在本次核验后仍需以最新状态增量修订；PR 未合并 |
 | #19 | E Android 备份策略 / `work/ai-data-protection` | `b012d03e2acbca822982c91aab49089c2c418908` | 本次未发现对应最新 PR-level Android merged manifest/build 通过证据 | BLOCKED / UNKNOWN；不得合并。全应用 allowBackup=false 的非 AI 数据迁移影响仍未决 |
-| #40 | D 工具能力目录审计 / `work/ai-capability-catalog-audit` | `f3d12106ab27be89dce082994b497b2927ccb166` | 文档审计 PR 新建，CI 待完成 | IN_PROGRESS；只读审计，不改业务行为 |
+| #40 | D 工具能力目录审计 / `work/ai-capability-catalog-audit` | `c4de95c5f06502e5d7e3c03a403baf36bf81b30c` | 文档审计 PR 新建，CI 待完成 | IN_PROGRESS；只读审计，不改业务行为 |
 
 旧分支 `work/ai-data-clear-v2` 的 run `43008080016` 在 branch validation 的 changed tests 失败，Flutter regression 与 Android job 均 skipped。该失败属于旧 SHA `ec3d391365025e5be58f3f9bdac9441e15dc500f`，不能覆盖 PR #39 新 SHA 的成功结论，也不能忽略其失败事实。
 
@@ -236,3 +236,6 @@
 4. **C**：继续古籍/医案来源定位与 manifest 核验；没有版本/卷页/原始 source ID 的条目保持 MISSING，不做自动补齐。
 5. **B/A**：并行补齐全入口红旗覆盖矩阵与多轮真实设备验收准备；医学审核、Find N2 设备 TRACE 未取得前保持 PARTIAL/UNKNOWN。
 6. 所有工作继续遵循 `docs/ai-parallel-execution-protocol.md`：每文件唯一实现所有者、小批量 PR、全量 CI 与设备验收分开记录；不因 PR mergeable 而跳过质量门槛。
+
+
+D-01 表格复核补充：复核完整注册定义后，`huangdi_siji` 的 modes 为 `tools/metaphysics`（不是 learning）；已在 PR #40 同一分支修正审计表。PR #40 当前 head 更新为 `c4de95c5f06502e5d7e3c03a403baf36bf81b30c`，对应新 CI 需重新等待。
