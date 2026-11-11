@@ -6,26 +6,38 @@ enum AiTraceStatus {
   notStarted,
   succeeded,
   failed,
-  unknown;
+  unknown,
+  notApplicable;
 
   String get wireValue => switch (this) {
         AiTraceStatus.notStarted => 'NOT_STARTED',
         AiTraceStatus.succeeded => 'SUCCEEDED',
         AiTraceStatus.failed => 'FAILED',
         AiTraceStatus.unknown => 'UNKNOWN',
+        AiTraceStatus.notApplicable => 'NOT_APPLICABLE',
       };
 }
 
 enum AiTraceStage {
   input,
   preflight,
+  redFlag,
   dispatch,
+  route,
+  entityResolution,
   retrieval,
+  contextAssembly,
+  modelInput,
+  modelOutput,
   nativeInference,
   toolExecution,
+  argumentValidation,
+  businessExecution,
   resultValidation,
   persistence,
-  presentation;
+  persistedState,
+  presentation,
+  finalRender;
 
   String get wireValue => name.replaceAllMapped(
         RegExp(r'[A-Z]'),
