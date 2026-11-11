@@ -512,3 +512,41 @@ CI 说明：branch validation job 因 workflow 条件显示 SKIPPED；不能把�
 5. B：继续审计结构化问诊、附件、历史恢复、Native MethodChannel 的所有旁路；未完成医学审核时保持 RELEASE BLOCKED。
 6. C：补 source manifest 与派生 query provenance；检索算法保持不变。
 7. G：#49 防漂移测试通过后集成；保持 README 与 pubspec 的当前版本一致。
+
+
+## 15. B/G 文档与策略测试切片集成（2026-11-11 最新）
+
+- PR #49 G 版本防漂移测试已 squash 合并：`3fed30c73595febc93e355f81b6a0720925c51c9`。测试读取 `pubspec.yaml` 的 version，并校验 README 当前版本声明；历史 Release Notes 不参与比较。
+- PR #47 B-02 语义边界测试已 squash 合并：`97c47195f78776aba62ff52b97542b2a15d5a0bd`。新增 UNKNOWN/quoted/主体时间极性不明 -> CLARIFY、coverage 不完整 -> REVIEW_REQUIRED、非 CLEAR 不继续普通流程等测试。只证明策略状态契约，不证明生产 detector/入口接入。
+- PR #48 B-03 入口审计已 squash 合并：`ef522bf7cb39c57b0190c1eaad06fbffc1d7088e`。当前 master HEAD 更新为该 SHA。
+- #47 的 run `43037173941`：Flutter regression SUCCESS，Android arm64 CI APK/native unit tests SUCCESS，branch validation SKIPPED。
+- #48 的 run `43037179378`：Flutter regression SUCCESS，Android arm64 CI APK/native unit tests SUCCESS，branch validation SKIPPED。
+- #49 的 run `43037313916`：Flutter regression SUCCESS，Android arm64 CI APK/native unit tests SUCCESS，branch validation SKIPPED。
+- 上述 run 在 #46/#49/#47 等集成前后分批触发；所有单项 CI 已通过，但不替代对最终 master 合并树的完整主线 CI。当前未取得 master push run 的完整记录。
+
+### 15.1 仍打开的主工作 PR
+
+| PR | 任务 | HEAD | 最新可读 CI | 状态 |
+|---|---|---|---|---|
+| #44 | G 唯一执行台账 | `c332f8671660a2b3826f64e00463254e7a0ccbab` | run `43038636801` Flutter regression IN_PROGRESS；branch validation SKIPPED | base 已刷新到 master `ef522bf`；等待 |
+| #50 | F TRACE writer + stage schema + Find N2 方案 | `82d16b2cf1b0b53bb33131ee8bcf4a45c68b17c1` | run `43038226181` Flutter regression IN_PROGRESS；branch validation SKIPPED | base 已刷新到 master `ef522bf`；等待 |
+
+#50 的 Android arm64 job 尚未启动/未出现在当前 job 列表；不能将其写为 PASS。#50 的当前工作树在 #47/#48/#49 合并前启动 CI；集成前需确认新 base 下的最终回归。
+
+### 15.2 A-G 状态校正
+
+- A：PARTIAL。master 已有 GPU 失败转 CPU 重建、空回复恢复等修复摘要；未以该摘要代替用户要求的设备 TRACE。
+- B：PARTIAL / RELEASE BLOCKED。#47 策略测试、#48 入口审计已集成；自然语言 detector、所有 Flutter/Native 入口前置门禁、医学审核仍缺失。
+- C：PARTIAL。真实黄金快照已有；source manifest、原始书目/卷页定位、derived-query provenance 未闭合。
+- D：PARTIAL。#46 参数来源 UNKNOWN 契约已合并；工具实际业务执行、source ID、结果验证、跨轮回传未形成完整 TRACE。
+- E：PARTIAL。#39 仍是旧基线且与主线 MainActivity/LocalAiInterviewScreen 有重叠；不能整 PR 合并。需重建清除服务/附件/数据库原语后再集成 UI/Native 编排。
+- F：PARTIAL。#50 待 CI；即使通过也只是 writer + stage schema，不等于生产 trace_id 接线。
+- G：IN_PROGRESS。README/pubspec 自动一致性测试已合并；唯一执行台账 #44 等待 CI。
+
+### 15.3 下一步
+
+1. 等 #44/#50 CI 结束；失败读取日志后修复。
+2. #50 通过后，下一独立 F 切片先冻结 Dart/Native trace_id 注入契约，再选择不与 A/B/E 冲突的最小入口。
+3. E 从 #39 提取不与 MainActivity/LocalAiInterviewScreen 重叠的数据库与附件清理原语；单独做失败注入和部分失败回滚测试。
+4. B 继续只读检查所有入口，医学审核未完成前不得将策略变为生产放行。
+5. C 补来源定位和 query provenance；禁止更换检索算法。
