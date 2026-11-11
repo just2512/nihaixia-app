@@ -308,3 +308,6 @@ D-01 表格复核补充：复核完整注册定义后，`huangdi_siji` 的 modes
 - 新增 Native unit tests：正常释放、close failure 后二次 close/cache 删除被阻止、UNKNOWN 阻止 reload、重复成功释放。
 - 相关提交已推送 PR #39；最新 CI 尚待完成。不能把测试文件存在视为测试通过。
 - 若最新 CI 失败，先读失败 job/log；若通过，再复核 MainActivity 的状态接入和清除失败后的 Flutter 状态同步。Find N2 真机清除与重启验收仍 UNKNOWN。
+
+
+E-03 实现复核补充：LocalAiResourceLifecycle 使用进程级 singleton，避免 Activity recreation 将 UNKNOWN 状态清零；AndroidManifest 对常见折叠屏/配置变化由 Activity 自行处理。跨 Activity 实例并发 Native 操作仍未单独验收。PR #39 最新提交仍需重新运行 CI；任何中间 SHA 的 cancelled run 不作为失败或通过证据。
