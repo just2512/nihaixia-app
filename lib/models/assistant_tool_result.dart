@@ -1,5 +1,5 @@
 /// Execution state of a tool invocation. NO_RESULT is distinct from success.
-enum AssistantToolExecutionStatus { succeeded, noResult, failed, cancelled }
+enum AssistantToolExecutionStatus { succeeded, noResult, failed, cancelled, unknown }
 
 /// Typed result returned by an in-app tool to the unified assistant timeline.
 class AssistantToolResult {
@@ -31,8 +31,12 @@ class AssistantToolResult {
       values: values,
       disclaimer: disclaimer,
       sourceIds: sourceIds,
-      arguments: arguments.isEmpty ? Map.unmodifiable(fallback) : arguments,
-      status: status,
+      // Fallback request arguments are not proof of the values the page actually
+      // used. Preserve missing provenance and make the execution state UNKNOWN.
+      arguments: arguments,
+      status: arguments.isEmpty && fallback.isNotEmpty
+          ? AssistantToolExecutionStatus.unknown
+          : status,
     );
   }
 
@@ -41,9 +45,13 @@ class AssistantToolResult {
         AssistantToolExecutionStatus.noResult => 'NO_RESULT',
         AssistantToolExecutionStatus.failed => 'FAILED',
         AssistantToolExecutionStatus.cancelled => 'CANCELLED',
+        AssistantToolExecutionStatus.unknown => 'UNKNOWN',
       };
 
   List<String> validateArgumentsMatch(Map<String, String> expectedArguments) {
+    if (expectedArguments.isNotEmpty && arguments.isEmpty) {
+      return const ['工具结果缺少可验证的实际执行参数'];
+    }
     if (_sameArguments(arguments, expectedArguments)) return const [];
     return const ['工具结果参数与实际调用参数不一致'];
   }
