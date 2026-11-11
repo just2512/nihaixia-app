@@ -791,9 +791,9 @@ class MainActivity : FlutterActivity() {
      * runtime cache; preserve the installed model artifact and all non-AI data.
      */
     private fun clearLocalAiData(): Map<String, Any> {
-        if (pendingModelImportResult != null) {
-            throw IllegalStateException("模型文件选择操作尚未完成，拒绝清除 AI 数据")
-        }
+        // The main-thread aiDataClearPending gate prevents a new picker from
+        // starting after the request was accepted; already queued imports run
+        // first on this single-thread executor.
 
         // If close fails, stop before deleting files that a live Engine may hold.
         releaseLocalModel()
