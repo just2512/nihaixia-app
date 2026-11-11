@@ -40,14 +40,16 @@ class LocalAiTranscriptRestorePolicyTest {
 
     @Test
     fun truncationDoesNotStartWithAnUnpairedLowSurrogate() {
-        val transcript = "a".repeat(9_999) + "😀" + "最新"
-        val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
-        val bodyStart = bounded.length - ("😀最新".length)
+        val bodyLimit = LocalAiTranscriptRestorePolicy.maxTranscriptCharacters - marker.length
+        val body = "a" + "😀" + "z".repeat(bodyLimit - 1)
+        val transcript = marker + body
 
-        assertTrue(bounded.length <= LocalAiTranscriptRestorePolicy.maxTranscriptCharacters)
+        val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
+
+        assertTrue(bounded.startsWith(marker))
         assertFalse(Character.isLowSurrogate(bounded[marker.length]))
-        assertTrue(bounded.endsWith("😀最新"))
-        assertTrue(bodyStart >= 0)
+        assertTrue(bounded.endsWith("z"))
+        assertTrue(bounded.length <= LocalAiTranscriptRestorePolicy.maxTranscriptCharacters)
     }
 
     @Test
