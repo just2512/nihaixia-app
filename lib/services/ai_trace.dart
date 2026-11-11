@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 /// Execution state is deliberately separate from UI/network exception labels.
 enum AiTraceStatus {
@@ -28,7 +29,7 @@ enum AiTraceStage {
 
   String get wireValue => name.replaceAllMapped(
         RegExp(r'[A-Z]'),
-        (match) => '_' + match.group(0)!.toLowerCase(),
+        (match) => '\u005f${match.group(0)!.toLowerCase()}',
       ).toUpperCase();
 }
 
