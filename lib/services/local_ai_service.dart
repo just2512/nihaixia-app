@@ -126,6 +126,19 @@ class LocalAiService {
     );
   }
 
+  /// Releases the Native runtime and clears AI-only cache/attachment files.
+  /// The installed model artifact is intentionally preserved.
+  Future<LocalAiModelStatus> clearAiData() async {
+    final data = await _channel.invokeMapMethod<String, dynamic>('clearAiData');
+    if (data == null) {
+      throw PlatformException(
+        code: 'EMPTY_CLEAR_RESULT',
+        message: '没有收到 AI 数据清除结果',
+      );
+    }
+    return LocalAiModelStatus.fromMap(data);
+  }
+
   Future<LocalAiModelStatus> releaseModel() async {
     final data = await _channel.invokeMapMethod<String, dynamic>('releaseModel');
     if (data == null) {
@@ -181,6 +194,9 @@ class LocalAiModelStatus {
   final int sizeBytes;
   final int expectedSizeBytes;
   final String backend;
+  final int runtimeCacheFilesDeleted;
+  final int attachmentFilesDeleted;
+  final int legacyRecordingFilesDeleted;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -191,6 +207,9 @@ class LocalAiModelStatus {
     required this.expectedSizeBytes,
     required this.backend,
     this.hashVerified = false,
+    this.runtimeCacheFilesDeleted = 0,
+    this.attachmentFilesDeleted = 0,
+    this.legacyRecordingFilesDeleted = 0,
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
@@ -203,6 +222,12 @@ class LocalAiModelStatus {
       sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
+      runtimeCacheFilesDeleted:
+          (map['runtimeCacheFilesDeleted'] as num?)?.toInt() ?? 0,
+      attachmentFilesDeleted:
+          (map['attachmentFilesDeleted'] as num?)?.toInt() ?? 0,
+      legacyRecordingFilesDeleted:
+          (map['legacyRecordingFilesDeleted'] as num?)?.toInt() ?? 0,
     );
   }
 

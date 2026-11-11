@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
-import '../widgets/adaptive_master_detail.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +12,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/local_ai_attachment_storage.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/tcm_interview_conversation_controller.dart';
@@ -124,7 +124,9 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.audioRecorder,
     this.recordingFileInspector,
     this.imagePicker,
+    this.attachmentStorage,
     this.conversationStore,
+    this.aiConversationDataClearer,
     this.bookmarkWriter,
     this.shareDiagnosisText,
     this.copyPrescriptionText,
@@ -144,7 +146,12 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
+  final LocalAiAttachmentStorage? attachmentStorage;
   final AssistantConversationStore? conversationStore;
+
+  /// Test seam for the UI flow; database deletion itself is covered separately.
+  @visibleForTesting
+  final Future<Map<String, int>> Function()? aiConversationDataClearer;
 
   /// Test seam for verifying the assistant's diagnosis bookmark action.
   @visibleForTesting
@@ -193,6 +200,7 @@ class _AssistantTurnResponse {
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
   late final LocalAiImagePicker _imagePicker;
+  late final LocalAiAttachmentStorage _attachmentStorage;
   late final LocalAiAudioRecorder _audioRecorder;
   late final LocalAiRecordingFileInspector _recordingFileInspector;
   Timer? _recordingTimer;
@@ -228,6 +236,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _structuredDiagnosisBusy = false;
   TcmInterviewConversationController? _tcmInterviewController;
   late Future<int?> _conversationIdFuture;
+  Future<int?>? _lazyConversationCreation;
   Future<void> _taskStateWrite = Future<void>.value();
   final Set<String> _persistedDiagnosisTaskIds = <String>{};
   String? _pendingHistoryTranscript;
@@ -247,6 +256,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     super.initState();
     _service = widget.service ?? LocalAiService();
     _imagePicker = widget.imagePicker ?? _PluginLocalAiImagePicker();
+    _attachmentStorage =
+        widget.attachmentStorage ?? LocalAiAttachmentStorage();
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _recordingFileInspector =
         widget.recordingFileInspector ?? _IoLocalAiRecordingFileInspector();
@@ -507,13 +518,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() => _error = validationError);
         return;
       }
+      final managedPath = await _attachmentStorage.adoptPickerFile(
+        path,
+        kind: 'image',
+      );
+      if (!mounted) {
+        await _deleteCachedAttachments([managedPath]);
+        return;
+      }
       final previousPath = _imagePath;
       setState(() {
-        _imagePath = path;
+        _imagePath = managedPath;
         _audioPath = null;
         _error = null;
       });
-      if (previousPath != null && previousPath != path) {
+      if (previousPath != null && previousPath != managedPath) {
         unawaited(_deleteCachedAttachments([previousPath]));
       }
     } catch (error) {
@@ -558,13 +577,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() => _error = validationError);
         return;
       }
+      final managedPath = await _attachmentStorage.adoptPickerFile(
+        photoPath,
+        kind: 'image',
+      );
+      photoPath = managedPath;
+      if (!mounted) {
+        await _deleteCachedAttachments([managedPath]);
+        return;
+      }
       final previousPath = _imagePath;
       setState(() {
-        _imagePath = photoPath;
+        _imagePath = managedPath;
         _audioPath = null;
         _error = null;
       });
-      if (previousPath != null && previousPath != photoPath) {
+      if (previousPath != null && previousPath != managedPath) {
         unawaited(_deleteCachedAttachments([previousPath]));
       }
     } on PlatformException catch (error) {
@@ -611,9 +639,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         });
         return;
       }
-      final directory = await getTemporaryDirectory();
-      final path =
-          '${directory.path}/local_ai_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final path = await _attachmentStorage.createPath(
+        kind: 'audio',
+        extension: 'wav',
+      );
       _activeRecordingPath = path;
       await _audioRecorder.start(
         const RecordConfig(
@@ -892,12 +921,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  /// Creates the first conversation lazily after an explicit AI-data clear.
+  /// Concurrent persistence callbacks share one pending creation Future.
+  Future<int?> _ensureConversationId() async {
+    final current = await _conversationIdFuture;
+    if (current != null) return current;
+    final pending = _lazyConversationCreation ??= _createNewConversation();
+    _conversationIdFuture = pending;
+    try {
+      return await pending;
+    } finally {
+      if (identical(_lazyConversationCreation, pending)) {
+        _lazyConversationCreation = null;
+      }
+    }
+  }
+
   Future<void> _persistTcmInterviewTaskState(
     TcmInterviewTaskState state,
   ) {
     // Capture the conversation future at callback time. History navigation may
     // switch the active conversation while an earlier SQLite write is queued.
-    final targetConversation = _conversationIdFuture;
+    final targetConversation = _ensureConversationId();
     _taskStateWrite = _taskStateWrite.catchError((Object error) {
       debugPrint('[TcmInterviewTask] 上一次状态保存失败，继续后续写入：$error');
     }).then((_) async {
@@ -923,7 +968,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? knowledgeStatus,
   }) async {
     try {
-      final id = await _conversationIdFuture;
+      final id = await _ensureConversationId();
       if (id == null) return;
       final activeMode = mode ?? _assistantMode;
       final replayable = userText.trim().isNotEmpty;
@@ -1174,7 +1219,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
 
-    final conversationId = await _conversationIdFuture;
+    final conversationId = await _ensureConversationId();
     if (conversationId != null) {
       for (final entry in added) {
         try {
@@ -1731,7 +1776,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ));
     });
     try {
-      final id = await _conversationIdFuture;
+      final id = await _ensureConversationId();
       if (id != null) {
         await _conversationStore.saveAssistantMessage(
           conversationId: id,
@@ -2505,6 +2550,138 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = errorMessage;
     });
   }
+  Future<void> _clearAllAiData() async {
+    if (_attachmentBusy ||
+        _modelControlBusy ||
+        _sending ||
+        _extracting ||
+        _recordingBusy ||
+        _recording ||
+        _structuredDiagnosisBusy ||
+        _toolRouteActive) {
+      return;
+    }
+
+    final confirmed = await showFoldAwareDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('清除全部 AI 数据？'),
+        content: const Text(
+          '将删除本机 AI 会话、消息、结构化问诊快照、附件和推理缓存。'
+          '已导入的 Gemma 模型文件会保留，不需要重新导入。'
+          '收藏、应用设置、独立辨证历史和命盘数据不会删除。此操作不可撤销。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('清除数据'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    setState(() {
+      _modelControlBusy = true;
+      _error = null;
+    });
+    LocalAiModelStatus? nativeStatus;
+    try {
+      // Wait for any initial conversation creation and queued task writes;
+      // otherwise a late insert could recreate an empty session after clearing.
+      await _conversationIdFuture;
+      await _taskStateWrite;
+
+      // Native first: serialize behind inference, close Engine/Conversation,
+      // then remove runtime cache and AI-owned attachment files. If this fails,
+      // keep durable history so the user can retry without losing records.
+      nativeStatus = await _service.clearAiData();
+
+      final paths = <String?>[_imagePath, _audioPath];
+      await _deleteCachedAttachments(paths);
+      final managedAttachments = await _attachmentStorage.clear();
+      final legacyRecordings = await _attachmentStorage.clearLegacyRecordings();
+
+      // SQLite is a separate atomic transaction. If it fails, native cleanup
+      // remains idempotent and the still-persisted history can be retried.
+      final counts = widget.aiConversationDataClearer != null
+          ? await widget.aiConversationDataClearer!()
+          : await DatabaseHelper.instance.clearAiConversationData();
+      final status = nativeStatus;
+
+      if (!mounted) return;
+      _historyRestoreGeneration++;
+      _conversationIdFuture = Future<int?>.value(null);
+      _lazyConversationCreation = null;
+      _taskStateWrite = Future<void>.value();
+      _lastEffectiveMode = null;
+      _pendingToolSelection = false;
+      _pendingHistoryTranscript = null;
+      _pendingHistoryUserMessages = const [];
+      _tcmInterviewController = null;
+      _persistedDiagnosisTaskIds.clear();
+      _inputController.clear();
+      setState(() {
+        _status = status;
+        _statusUnknown = false;
+        _checking = false;
+        _messages
+          ..clear()
+          ..add(const _InterviewMessage(
+            text: _assistantWelcomeMessage,
+            isUser: false,
+          ));
+        _confirmedDraft = null;
+        _imagePath = null;
+        _audioPath = null;
+        _error = null;
+      });
+      final deletedMessages =
+          (counts['assistantMessages'] ?? 0) +
+          (counts['legacyChatMessages'] ?? 0);
+      final deletedTasks = counts['tcmInterviewTasks'] ?? 0;
+      final deletedAttachments = managedAttachments +
+          legacyRecordings +
+          status.attachmentFilesDeleted +
+          status.legacyRecordingFilesDeleted;
+      final deletedRuntimeCache = status.runtimeCacheFilesDeleted;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'AI 数据已清除：消息 $deletedMessages 条，'
+            '问诊快照 $deletedTasks 项，附件 $deletedAttachments 个，'
+            '推理缓存文件 $deletedRuntimeCache 个。',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      LocalAiModelStatus? refreshedStatus = nativeStatus;
+      if (refreshedStatus == null) {
+        try {
+          refreshedStatus = await _service.getStatus();
+        } catch (_) {
+          // Keep the runtime state unknown rather than pretending it is ready.
+        }
+      }
+      setState(() {
+        if (refreshedStatus != null) {
+          _status = refreshedStatus;
+          _statusUnknown = false;
+        } else {
+          _statusUnknown = true;
+        }
+        _error = 'AI 数据未能全部清除。请重试；已完成的文件清理可安全重复执行。详情：$error';
+      });
+    } finally {
+      if (mounted) setState(() => _modelControlBusy = false);
+    }
+  }
+
   Future<void> _resetConversation() async {
     if (_attachmentBusy ||
         _modelControlBusy ||
@@ -2523,6 +2700,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
       _conversationIdFuture = _createNewConversation();
+      _lazyConversationCreation = null;
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
       _pendingHistoryTranscript = null;
@@ -2632,6 +2810,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               icon: const Icon(Icons.fact_check_outlined),
             ),
           IconButton(
+            tooltip: '清除全部 AI 数据',
+            onPressed: _attachmentBusy ||
+                    _modelControlBusy ||
+                    _sending ||
+                    _extracting ||
+                    _recordingBusy ||
+                    _recording ||
+                    _structuredDiagnosisBusy ||
+                    _toolRouteActive
+                ? null
+                : _clearAllAiData,
+            icon: const Icon(Icons.delete_sweep_outlined),
+          ),
+          IconButton(
             tooltip: '历史对话',
             onPressed: _attachmentBusy || _modelControlBusy || _sending || _extracting || _recordingBusy || _recording ? null : _openHistory,
             icon: const Icon(Icons.history),
@@ -2650,15 +2842,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Center(
-            child: ConstrainedBox(
-              key: const ValueKey('local-ai-content-width'),
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: SizedBox(
-                height: constraints.maxHeight,
-                child: Column(
+      body: Column(
         children: [
           Expanded(
             child: ListView(
@@ -2893,11 +3077,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
             ),
         ],
-                ),
-              ),
-            ),
-          );
-        },
       ),
       ),
     );

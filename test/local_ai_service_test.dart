@@ -39,6 +39,32 @@ void main() {
       expect(status.sizeBytes, 3659530240);
     });
 
+    test('clearAiData invokes native cleanup and keeps the installed model', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'installed': true,
+          'fileExists': true,
+          'hashVerified': true,
+          'ready': false,
+          'modelPath': '/app/files/ai_models/gemma-4-E4B-it.litertlm',
+          'sizeBytes': 3659530240,
+          'expectedSizeBytes': 3659530240,
+          'backend': 'not_loaded',
+          'deletedRuntimeFiles': 4,
+          'deletedAttachmentFiles': 2,
+        };
+      });
+
+      final status = await LocalAiService().clearAiData();
+
+      expect(received?.method, 'clearAiData');
+      expect(status.installed, isTrue);
+      expect(status.ready, isFalse);
+      expect(status.backend, 'not_loaded');
+    });
+
     test('sendImage passes cached path and user prompt to native channel', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -344,6 +370,27 @@ void main() {
       expect(status.expectedSizeBytes, 3659530240);
       expect(status.backend, 'not_loaded');
       expect(status.sizeLabel, '尚未安装');
+    });
+
+    test('parses native AI cleanup file counts', () {
+      final status = LocalAiModelStatus.fromMap(const {
+        'installed': true,
+        'fileExists': true,
+        'ready': false,
+        'modelPath': '/app/model.litertlm',
+        'sizeBytes': 3659530240,
+        'expectedSizeBytes': 3659530240,
+        'backend': 'not_loaded',
+        'runtimeCacheFilesDeleted': 3,
+        'attachmentFilesDeleted': 2,
+        'legacyRecordingFilesDeleted': 1,
+      });
+
+      expect(status.runtimeCacheFilesDeleted, 3);
+      expect(status.attachmentFilesDeleted, 2);
+      expect(status.legacyRecordingFilesDeleted, 1);
+      expect(status.installed, isTrue);
+      expect(status.ready, isFalse);
     });
 
     test('parses a user-reported symptom draft and ignores unsupported fields', () {

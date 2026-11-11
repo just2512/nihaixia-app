@@ -10,6 +10,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_attachment_storage.dart';
 import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
@@ -145,6 +146,15 @@ Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
     await tester.pump(const Duration(milliseconds: 10));
   }
   return latest;
+}
+
+class _RecorderRetryAttachmentStorage extends LocalAiAttachmentStorage {
+  @override
+  Future<String> createPath({
+    required String kind,
+    required String extension,
+  }) async =>
+      '/tmp/recorder_retry_test.$extension';
 }
 
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
@@ -641,10 +651,12 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: service,
             audioRecorder: recorder,
             recordingFileInspector: _ValidRecordingFileInspector(),
+            attachmentStorage: _RecorderRetryAttachmentStorage(),
+            imagePicker: _EmptyLocalAiImagePicker(),
           ),
         ),
       );
@@ -685,10 +697,12 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: _TextSendService(),
             audioRecorder: recorder,
             recordingFileInspector: _ThrowingRecordingFileInspector(),
+            attachmentStorage: _RecorderRetryAttachmentStorage(),
+            imagePicker: _EmptyLocalAiImagePicker(),
           ),
         ),
       );
