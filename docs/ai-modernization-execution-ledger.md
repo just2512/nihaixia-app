@@ -188,3 +188,51 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 9. 2026-11-11 20:11（+08:00）远端状态增量复核
+
+> 本节只记录本次实际读取的远端证据，优先于第 1、3、8 节中已过期的初始状态。核验时 master HEAD 为 `c7a12ed32140fb2e8e97ea406e5fdc6504216907`。CI 时间以 GitHub UTC 时间为准。
+
+### 9.1 当前打开 PR 与 CI
+
+| PR | 工作流/分支 | HEAD | 已读取 CI 证据 | 当前判定 |
+|---|---|---|---|---|
+| #39 | E 数据清除 / `work/ai-data-clear-v3-final` | `85f5a3d08393f2f2bd3f6e54705967cf6d6b38c6` | Flutter regression run `43015771142` SUCCESS；Android arm64 APK + unit tests SUCCESS | 自动化 CI PASS；Find N2 清除后重启不可恢复 TRACE 仍 UNKNOWN；PR 未合并 |
+| #38 | F 本地 TRACE writer / `work/ai-trace-local-writer` | `056cceb8f096982ea3d120148b8db5faf1bc973d` | Flutter regression run `43015461548` SUCCESS；Android arm64 APK + unit tests SUCCESS | writer 切片自动化 CI PASS；尚未端到端贯穿生产调用链，整体 F 仍 PARTIAL；PR 未合并 |
+| #36 | G 台账刷新 / `work/ai-ledger-refresh-2026-11-11-v2` | `4a79fe6b8a34442262d41d7ae04562ccae71a3f5` | Flutter regression run `43015840243` SUCCESS | 文档切片 CI PASS；内容在本次核验后仍需以最新状态增量修订；PR 未合并 |
+| #19 | E Android 备份策略 / `work/ai-data-protection` | `b012d03e2acbca822982c91aab49089c2c418908` | 本次未发现对应最新 PR-level Android merged manifest/build 通过证据 | BLOCKED / UNKNOWN；不得合并。全应用 allowBackup=false 的非 AI 数据迁移影响仍未决 |
+| #40 | D 工具能力目录审计 / `work/ai-capability-catalog-audit` | `f3d12106ab27be89dce082994b497b2927ccb166` | 文档审计 PR 新建，CI 待完成 | IN_PROGRESS；只读审计，不改业务行为 |
+
+旧分支 `work/ai-data-clear-v2` 的 run `43008080016` 在 branch validation 的 changed tests 失败，Flutter regression 与 Android job 均 skipped。该失败属于旧 SHA `ec3d391365025e5be58f3f9bdac9441e15dc500f`，不能覆盖 PR #39 新 SHA 的成功结论，也不能忽略其失败事实。
+
+### 9.2 A-G 当前状态校正
+
+| ID | 当前状态 | 本次可确认事实 | 尚未关闭的硬缺口 |
+|---|---|---|---|
+| A | PARTIAL | 既有 Native 生命周期审计与若干自动化修复已合并/有测试证据 | Find N2 GPU/CPU 各至少 20 轮、图片/语音、进程恢复真实 TRACE 未提供；不能标 IMPLEMENTED |
+| B | PARTIAL / RELEASE BLOCKED | 已有纯 Dart preflight 策略契约和语义测试切片 | 所有模型入口/附件/结构化问诊/历史恢复的前置覆盖与医学审核记录未闭合；未经审核规则不得生产放行 |
+| C | PARTIAL | 已有检索黄金请求及部分真实本地命中快照/审阅材料 | 古籍版本、卷页/条文原始定位、来源可信度和逐项校勘未完成；不得将讲稿命中表述为已核验古籍原文 |
+| D | PARTIAL | master 的 `AssistantToolRouter._all` 静态盘点为 24 项；23 项为 Widget builder，structured_diagnosis 由统一对话内联接管；只有 yunqi 有 `builderWithArguments` | Headless/Executed 需逐项向下追踪业务函数、结果回传、权限、取消和错误语义；PR #40 审计文档 CI 待完成 |
+| E | PARTIAL | PR #39 最新 HEAD 的 Flutter regression 与 Android arm64 APK/native unit tests 均通过 | Find N2 清除全量 AI 数据后重启不可恢复验证未执行；备份策略 PR #19 未完成 merged manifest 验证及非 AI 数据影响决策 |
+| F | PARTIAL | PR #38 本地 writer 切片 Flutter regression 与 Android arm64 APK/native unit tests 均通过 | trace_id 尚未贯穿输入、安全、路由、检索、模型、工具、展示和持久化；隐私与 TRACE 关闭时行为不变需端到端验证 |
+| G | PARTIAL | 多分支协议已存在 master；PR #36 文档切片 CI 通过 | README/pubspec 版本一致性与本台账实时性仍须核验；PR #40、#39、#38 等当前状态须在后续更新 |
+
+### 9.3 本轮新增 D-01 审计交付
+
+- 分支：`work/ai-capability-catalog-audit`
+- PR：[#40](https://github.com/just2512/nihaixia-app/pull/40)
+- 文件：`docs/assistant-tool-capability-audit.md`
+- 基线：`c7a12ed32140fb2e8e97ea406e5fdc6504216907`
+- 源码证据：`lib/screens/assistant_tool_router.dart` blob `eca8e0d6787274811796d174ec16ff29ccef4ed7`；测试 `test/assistant_tool_router_test.dart` blob `f266d827f4d5a4e5b758366de0bc799550ead909`。
+- 结论：24 个注册 toolId；23 个页面 builder；structured_diagnosis 由助手页内联规则问诊接管；仅 yunqi 有 argument-aware builder。注册目录不等于 Headless/Executed 能力。
+- 状态：文档已提交，PR CI 待完成；本次没有重新运行 router tests。
+
+### 9.4 下一项自动执行任务（不等待逐项指派）
+
+1. **E**：继续检查 PR #39 具体清除调用链、SQLite 表清单、附件目录边界和清除失败状态；随后补充可自动化的删除/重启恢复测试。真实 Find N2 重启验证仍需设备。
+2. **F**：继续从 `LocalAiInterviewScreen` 和 Native MethodChannel 追踪 trace_id 的真实调用链，按文件所有权拆分，不在本地 writer PR 中混入业务路由改造。
+3. **D**：PR #40 CI 完成后继续逐项追踪 23 个页面的返回值消费；先挑无敏感数据、已有确定性计算的单个工具作为最小 Headless 候选，先补行为基线再改实现。
+4. **C**：继续古籍/医案来源定位与 manifest 核验；没有版本/卷页/原始 source ID 的条目保持 MISSING，不做自动补齐。
+5. **B/A**：并行补齐全入口红旗覆盖矩阵与多轮真实设备验收准备；医学审核、Find N2 设备 TRACE 未取得前保持 PARTIAL/UNKNOWN。
+6. 所有工作继续遵循 `docs/ai-parallel-execution-protocol.md`：每文件唯一实现所有者、小批量 PR、全量 CI 与设备验收分开记录；不因 PR mergeable 而跳过质量门槛。
