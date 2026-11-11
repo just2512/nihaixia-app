@@ -41,7 +41,7 @@
 | sanshan_lingqian | 三山国王灵签 | tools/metaphysics | 打开灵签页面 | Page Tool |
 | chenggu | 袁天罡称骨 | tools/metaphysics | 打开称骨页面 | Page Tool |
 | shousheng_debt | 受生债 | tools/metaphysics | 打开民俗页面 | Page Tool |
-| huangdi_siji | 黄帝四季歌 | tools/learning/metaphysics | 打开资料页面 | Page Tool |
+| huangdi_siji | 轩辕黄帝四季歌 | tools/metaphysics | 打开资料页面 | Page Tool |
 | saved_charts | 我的命盘库 | tools/metaphysics | 打开保存命盘页面 | Page Tool |
 
 > 模式栏以注册定义为准；本表不表示这些模式下的安全授权已经完整。医疗、个人生辰和健康历史能力仍须遵守全局审计规范中的领域隔离、显式授权和红旗门禁。
