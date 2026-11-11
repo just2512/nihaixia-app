@@ -8,7 +8,7 @@ void main() {
     final readme = File('README.md').readAsStringSync();
 
     final versionMatch = RegExp(
-      r'^version:\\s*([0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+)\\s*$',
+      r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+\+[0-9]+)\s*$',
       multiLine: true,
     ).firstMatch(pubspec);
 
