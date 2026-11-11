@@ -188,3 +188,48 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 9. 2026-11-11 当前执行检查点（权威快照）
+
+> 本节覆盖第 1-8 节中早期历史状态。审计时间 2026-11-11；基线 master SHA `c7a12ed32140fb2e8e97ea406e5fdc6504216907`。后续续接必须刷新，不得将本快照当作永久现状。
+
+### 9.1 主线和已合并切片
+
+| 工作流 | 已合并内容 | 当前结论 | 未关闭条件 |
+|---|---|---|---|
+| A 多轮 Native 稳定性 | PR #30，merge `2c95d2311cf7bca3c0b9b71113b2d871d7e1e42b`；transcript 按成功 user/model 轮次保存，重建 Conversation 时回放 | 代码/自动化 CI PASS | Find N2 GPU/CPU 各连续 20 轮、附件后续轮、进程恢复真实 TRACE 均 UNKNOWN |
+| B 红旗策略 | PR #25，merge `32da9187ed1ad021408b85f462ab8c680daaa7d0`；纯 Dart preflight 契约和语义单测 | POLICY CONTRACT PASS；生产门禁 BLOCKED | 无真实医学审核 detector；未接入所有 Flutter/Native 入口；未完成每入口正反向测试 |
+| C 检索基线 | PR #29 与 PR #31 已合并；黄金测试及审阅记录 `docs/classic-retrieval-golden-review.md` | 行为观测基线 PASS；检索正确性 PARTIAL | 原始自然语言 query 命中 0；派生 query 结果是讲稿索引，纸本书目/卷页定位 MISSING；同 commit 重复快照未证明排序稳定；禁止算法重构/FTS5 |
+| F TRACE | master `c7a12ed` 已含默认关闭的 typed trace contract、allowlist 和单测 | CONTRACT PASS；端到端 TRACE NOT IMPLEMENTED | 尚无持久化 writer/用户开关/业务层注入/Native 贯穿/设备 TRACE |
+| G 文档与版本 | PR #26 已合并 README/pubspec 一致性测试；PR #22 已合并折叠屏布局修复 | 相关切片 CI PASS | 持续检查版本更新和规范/报告是否漂移 |
+
+### 9.2 活动 PR / 分支
+
+| 工作流 | PR / 分支 | HEAD / CI | 当前状态与动作 |
+|---|---|---|---|
+| E AI 数据清除 | PR #35 `work/ai-data-clear-v3` | HEAD `c5cad02b38d534cfc7acbc40268cc0c64ea7f2fa`；PR run `43014163904` Flutter regression IN_PROGRESS | 已将 PR #34 的 13 个文件移植到当前 master；恢复 `AdaptiveSinglePane`/640dp 约束，并把清除确认改为 `showFoldAwareDialog`。等待全量 Flutter + Android APK/Kotlin tests |
+| G 台账刷新 | 本分支 `work/ai-ledger-refresh-2026-11-11-v2` | 基线 `c7a12ed` | 正在同步本节及跨对话协议入口；仅文档改动 |
+| E 旧数据清除 PR | PR #34 `work/ai-data-clear-v2` | HEAD `c4e50f7`；run `43008411362` | Flutter 1286 PASS / 9 FAIL / 15 skipped；8 项折叠屏测试因分支屏幕实现删除 `AdaptiveSinglePane` 而失败，1 项 fold-aware contract 因新增直接 `showDialog` 而失败。PR #35 是修复后的当前替代分支，不再集成 #34 |
+| E Android 备份 | PR #19 `work/ai-data-protection` | base `60011c4`；head `b012d03` | BLOCKED：`allowBackup=false` 影响整个应用私有数据，包括非 AI 数据；缺少在最新 master 上的 merged manifest/build 证据。不得直接合并 |
+| G 旧台账 PR | PR #32 `work/ai-ledger-refresh-2026-11-11` | base `7c16534`；head `74ce5c7`；CI run `43008912112` Flutter PASS、Android PASS | 内容快照已过期且漏记当前 master `c7a12ed` 的 TRACE 合约与 PR #35；由本分支替代，不应合并旧快照 |
+
+### 9.3 最近 CI 事实
+
+- 当前 master `c7a12ed`：runs `43007532654`、`43007532722` 均 SUCCESS。
+- A PR #30 head `abef47b`：run `43003852143` 的 Flutter regression PASS；Android arm64 APK + Kotlin unit tests PASS。
+- C PR #29：run `42922894553` Flutter regression PASS；Android arm64 APK + Kotlin unit tests PASS；golden artifact `13811868576` 已审阅。
+- E PR #34 head `c4e50f7`：run `43008411362` Flutter regression FAIL（1286 passed / 9 failed / 15 skipped）；Android arm64 APK + Kotlin unit tests PASS。失败均已定位到该 PR 的 UI 变更，不应归因于主线。
+- E PR #35 head `c5cad02`：run `43014163904` 正在执行；不能以旧 PR #34 的 Android PASS 代替 #35 的验证。
+
+### 9.4 下一项自动执行队列
+
+1. 监测 PR #35 最新 head 的 Flutter regression、Android APK 和 Kotlin unit tests。若 Flutter 仍失败，读取具体失败断言并修复；不得盲目重跑。
+2. #35 全量 CI 通过后审查 SQLite 四表事务、附件专属目录与 symlink 防护、Native Engine 释放顺序、导入模型保留、非 AI 数据保留，再小批量合并。
+3. PR #35 合并后在 A 已释放 `MainActivity.kt` 所有权的基础上，完成 Find N2 清除实测：模型加载时清除、清除期间发送/导入被拒绝、附件/运行缓存/四张 AI 表清空、收藏/设置/命盘保留、重启后不可恢复。
+4. 并行推进 C 元数据源审计：为讲稿建立人工核验 manifest 的方案与数据质量报告；不得把讲稿条目冒充《伤寒论》经校勘原文，不改检索算法。
+5. 并行推进 D 工具逐项能力清单：为 24 个 toolId 补齐参数 schema、结果 schema、执行函数、sourceIds、错误/取消/超时语义和真实执行证据；只做审计，不先抽 adapter。
+6. B 继续保持 REVIEW_REQUIRED / BLOCKED，直到医学审核人员提供规则版本、阈值、例外和处置文案审核记录；可以继续入口覆盖审计，但不能启用未审核 detector。
+7. F 在独立分支推进本地 opt-in writer 与有界保留/删除策略；不与业务路由/Native 文件同时修改，先做 writer contract 和脱敏/保留测试，再分层接入。
+8. 重新评估 PR #19 的 AI-only 备份策略；未解决全应用数据迁移影响前保持 BLOCKED。
+
