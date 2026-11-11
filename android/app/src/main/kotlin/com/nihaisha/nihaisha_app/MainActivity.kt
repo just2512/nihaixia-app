@@ -38,6 +38,7 @@ class MainActivity : FlutterActivity() {
 
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
+    private val aiResourceLifecycle = LocalAiResourceLifecycle()
     private var activeBackend = "not_loaded"
     // Keep only completed turns. A failed/blank current turn is never appended.
     private val conversationHistoryTurns = mutableListOf<LocalAiCompletedTurn>()
@@ -358,6 +359,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun loadLocalModel(): Map<String, Any> {
+        aiResourceLifecycle.ensureLoadAllowed()
         LocalAiModelImportRecovery.recover(modelFile)
         if (!modelFile.isFile || modelFile.length() != expectedModelBytes) {
             return modelStatus()
@@ -416,6 +418,7 @@ class MainActivity : FlutterActivity() {
         }
 
         aiEngine = loadedEngine
+        aiResourceLifecycle.markReady()
         try {
             aiConversation = createConversationWithHistory(loadedEngine!!)
         } catch (error: Exception) {
@@ -829,10 +832,12 @@ class MainActivity : FlutterActivity() {
         userReportedInputsTruncated = false
         conversationHistoryTurns.clear()
         activeBackend = "not_loaded"
-        ConversationResourceReleasePolicy.closeBoth(
-            closeConversation = { conversation?.close() },
-            closeEngine = { engine?.close() }
-        )
+        aiResourceLifecycle.release {
+            ConversationResourceReleasePolicy.closeBoth(
+                closeConversation = { conversation?.close() },
+                closeEngine = { engine?.close() }
+            )
+        }
         return modelStatus()
     }
 
