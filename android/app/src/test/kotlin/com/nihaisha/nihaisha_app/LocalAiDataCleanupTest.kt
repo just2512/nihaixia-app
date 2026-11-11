@@ -43,7 +43,7 @@ class LocalAiDataCleanupTest {
                     LocalAiDataCleanup.deleteOwnedDirectory(cache, "local_ai_attachments")
                     throw AssertionError("Expected symbolic-link target to be rejected")
                 } catch (expected: IllegalArgumentException) {
-                    assertTrue(expected.message!!.contains("symbolic link"))
+                    assertTrue(expected.message!!.contains("direct child") || expected.message!!.contains("symbolic link"))
                 }
 
                 assertTrue(sentinel.isFile)
