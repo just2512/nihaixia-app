@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/tcm_interview_conversation_controller.dart';
@@ -137,6 +138,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.audioRecorder,
     this.recordingFileInspector,
     this.imagePicker,
+    this.attachmentStore,
     this.conversationStore,
     this.bookmarkWriter,
     this.shareDiagnosisText,
@@ -157,6 +159,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Optional camera/recovery adapter for deterministic attachment lifecycle tests.
   final LocalAiImagePicker? imagePicker;
+  final LocalAiAttachmentStore? attachmentStore;
   final AssistantConversationStore? conversationStore;
 
   /// Test seam for verifying the assistant's diagnosis bookmark action.
@@ -206,6 +209,7 @@ class _AssistantTurnResponse {
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   late final LocalAiService _service;
   late final LocalAiImagePicker _imagePicker;
+  late final LocalAiAttachmentStore _attachmentStore;
   late final LocalAiAudioRecorder _audioRecorder;
   late final LocalAiRecordingFileInspector _recordingFileInspector;
   Timer? _recordingTimer;
@@ -260,6 +264,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     super.initState();
     _service = widget.service ?? LocalAiService();
     _imagePicker = widget.imagePicker ?? _PluginLocalAiImagePicker();
+    _attachmentStore = widget.attachmentStore ?? LocalAiAttachmentStore();
     _audioRecorder = widget.audioRecorder ?? _PluginLocalAiAudioRecorder();
     _recordingFileInspector =
         widget.recordingFileInspector ?? _IoLocalAiRecordingFileInspector();
@@ -447,6 +452,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (candidates.isEmpty) return;
 
     try {
+      await _attachmentStore.deleteOwnedPaths(candidates);
       final tempRoot = p.normalize((await getTemporaryDirectory()).absolute.path);
       for (final rawPath in candidates) {
         final normalizedPath = p.normalize(File(rawPath).absolute.path);
@@ -520,9 +526,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() => _error = validationError);
         return;
       }
+      final managedPath = await _attachmentStore.importImage(path);
+      await _deleteCachedAttachments([path]);
+      if (!mounted) {
+        await _deleteCachedAttachments([managedPath]);
+        return;
+      }
       final previousPath = _imagePath;
       setState(() {
-        _imagePath = path;
+        _imagePath = managedPath;
         _audioPath = null;
         _error = null;
       });
@@ -607,9 +619,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() => _error = validationError);
         return;
       }
+      final managedPath = await _attachmentStore.importImage(photoPath);
+      await _deleteCachedAttachments([photoPath]);
+      if (!mounted) {
+        await _deleteCachedAttachments([managedPath]);
+        return;
+      }
       final previousPath = _imagePath;
       setState(() {
-        _imagePath = photoPath;
+        _imagePath = managedPath;
         _audioPath = null;
         _error = null;
       });
@@ -660,9 +678,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         });
         return;
       }
-      final directory = await getTemporaryDirectory();
-      final path =
-          '${directory.path}/local_ai_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final path = await _attachmentStore.createAudioRecordingPath();
       _activeRecordingPath = path;
       await _audioRecorder.start(
         const RecordConfig(
