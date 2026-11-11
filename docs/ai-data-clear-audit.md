@@ -189,3 +189,6 @@ Native 清除入口由主线程门禁 + 单线程 `aiExecutor` 执行：
 - 新增 LocalAiResourceLifecycleTest 覆盖正常释放、close failure 后阻止第二次 close/cache 删除、阻止模型重载、重复成功释放。
 
 当前提交只完成代码和测试新增；必须以最新 PR SHA 的 Android arm64 CI Native unit tests 和 Flutter regression 结果为准。没有 Find N2 真机实测前，E 仍为 PARTIAL。
+
+
+E-03 追加复核：LocalAiResourceLifecycle.process 使用进程级 singleton，避免 MainActivity 因配置变化/Activity recreation 重建时把 UNKNOWN 状态重置为 RELEASED。AndroidManifest 当前对 orientation、screenSize、smallestScreenSize、screenLayout、density、uiMode 等配置变化声明由 Activity 处理；本状态仍以进程重启作为恢复边界。跨多个 Activity 实例并发执行 Native 操作尚未单独验证，当前架构仍依赖单一 MainActivity 生命周期和各自 aiExecutor 的既有约束。
