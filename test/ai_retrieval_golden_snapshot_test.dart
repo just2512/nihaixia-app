@@ -103,6 +103,25 @@ void main() {
     };
   }
 
+  test('records the origin of derived classic search queries', () {
+    final provenance =
+        AssistantKnowledgeContextBuilder.deriveClassicQueries('第12条 桂枝汤');
+    final byQuery = {
+      for (final item in provenance) item.query: item,
+    };
+
+    expect(provenance.first.query, '第12条 桂枝汤');
+    expect(byQuery.containsKey('桂枝汤'), isTrue);
+    expect(byQuery['第12条']!.reasons, contains('ARTICLE_NUMBER:12'));
+    expect(byQuery['条文12']!.reasons, contains('ARTICLE_NUMBER:12'));
+    final formula = FormulaRepository.getByName('桂枝汤');
+    expect(formula, isNotNull);
+    expect(
+      byQuery['桂枝汤']!.reasons,
+      contains('FORMULA_ID:${formula!.id}'),
+    );
+  });
+
   test('captures reproducible Guizhi Tang and Shanghan Lun retrieval baseline', () async {
     final first = await capture();
     final second = await capture();
