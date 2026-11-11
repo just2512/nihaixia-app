@@ -188,3 +188,57 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 10. 2026-11-11 最新执行检查点（覆盖历史快照）
+
+> 本节是本次复核时的权威状态；第 8、9 节保留历史记录，不能覆盖本节。基线 SHA：`7c16534c7a064e1fc756a681d1099269cc77f255`。
+
+### 10.1 主线与已集成切片
+
+- 当前 master：`7c16534c7a064e1fc756a681d1099269cc77f255`。
+- PR #28（`501c6a584a08b38c0c273a0c9ccdc73c040358bc`）已合并：Gradle 9.1.0 setup，真正执行 `:app:testDebugUnitTest`，CI 统计 47 tests / 0 failures / 0 errors。
+- PR #29（`ef5ab388f01983e19b3d83a24dfb4dae7cf33c3e`）已合并：黄金检索测试与 CI artifact。PR full Flutter regression 与 Android arm64 APK/Kotlin unit tests 均 PASS；artifact 已审阅，观察结果详见 `docs/classic-retrieval-golden-review.md` 对应 PR。
+- PR #26（`7c16534c7a064e1fc756a681d1099269cc77f255`）已合并：README 与 pubspec `1.11.30+8039` 一致，并新增版本防漂移测试。
+- master 最新 Flutter regression run `43003668218` PASS；Quality Gate run `43003667206` 当时仍执行中；Android arm64 run `43003668218` 对应 job `130467999673` 当时仍执行中。后续必须以最新 head 的最终结果更新状态。
+
+### 10.2 活动 PR 与分支
+
+| 工作流 | 分支 / PR | 基线/HEAD | 状态 | 下一动作 |
+|---|---|---|---|---|
+| A 多轮 Native transcript | PR #30 `work/ai-p0-transcript-rehydration-v3` | base `7c16534`；head `abef47b212fababc516440bbdf2231312d0903af` | IN_PROGRESS | Flutter full regression `43003852143` 执行中；push branch validation `43003814683` 执行中，必须确认 Kotlin test task 真正运行并通过；之后设备 TRACE 仍必需 |
+| C 黄金快照审阅 | PR #31 `work/ai-retrieval-golden-review` | base `7c16534`；head `52ccbbc4ff454f588ee9f1363c1b962bca794890` | IN_PROGRESS | 文档修正了 MISSING 的语义：书目/纸本定位缺失，不等于本地讲稿文件回链不可用；等待 PR CI；继续核查 metadata manifest，不改检索算法 |
+| G 执行台账刷新 | 本分支 `work/ai-ledger-refresh-2026-11-11` | base `7c16534` | IN_PROGRESS | 更新本台账与审计文件；CI 通过后集成 |
+| B 红旗策略 | PR #25 已合并 | head `87bf7b2e11d784d300baeb0c954eb739c85807d8` | POLICY CONTRACT PASS / PRODUCTION BLOCKED | 当前仅纯 Dart 策略，无自然语言 detector、无所有入口接入、无医学审核；保持 REVIEW_REQUIRED，不得宣称门禁完成 |
+| E 数据清除 | `work/ai-data-clear-audit` | head `c8053074e3ebac1cf51a71152dca69a4efc64802`；落后 master 7 commits | IN_PROGRESS / NOT MERGEABLE | 最近 branch validation `42920881688` PASS；四张 AI 表事务清除、专属附件目录、UI 二次确认和 Native cleanup helper 已实现；Dart `clearAiData` 调用仍缺 MainActivity Native handler，必须等待 A 释放 MainActivity 所有权后接入 |
+| D Capability | `work/ai-capability-inventory` | head `a28e3acfa2770b7e5fe849372e477a44398f9697`；落后 master 7 commits | AUDIT PASS / IMPLEMENTATION PARTIAL | Router 24 toolId、22 个页面卡片、9 项页面结果回传设计、Headless 0；先完善 schema/执行证据，不抽 adapter |
+| F TRACE | `work/ai-trace-audit` | head `16616b4677d5e87766877df6d0a0c04c233b0b1e`；落后 master 7 commits | AUDIT PASS / IMPLEMENTATION NOT STARTED | 端到端 trace_id、默认关闭审计开关、NOT_STARTED/SUCCEEDED/FAILED/UNKNOWN 状态链仍 MISSING |
+| E Android 备份 | PR #19 `work/ai-data-protection` | base `60011c4`；head `b012d03e2acbca822982c91aab49089c2c418908` | BLOCKED / 不可合并 | `allowBackup=false` 影响全应用非 AI 数据；不得直接合并，须重新评估 AI-only 数据域和设备迁移影响 |
+| A 旧分支 | PR #21 | CLOSED / SUPERSEDED | 已将四个文件移植到最新 master 并建立 PR #30；旧 PR 已关闭 |
+
+### 10.3 C 黄金快照的真实观察
+
+CI artifact `13811868576`（ZIP SHA-256 `51311b321511dcf93603097efc4eea6f0c6eab0af251760d70815968b27be1ea`；JSON SHA-256 `d5612a59de89f98775e5e354a1bc4d5b8b51f8df25d289fb49772d118fb6a688`）显示：
+
+- 原始完整自然语言 query 命中 0；派生 query `桂枝汤` total 196、`伤寒论` total 121，各返回最多 40 条。
+- 80 条派生 query 命中记录均标为“伤寒论讲稿”；每条均有本地 Markdown asset/backlink。
+- 80 条 `locatorStatus=MISSING`、`bookId/chapterIndex=null`，表示纸本书目/卷页定位未核验，不代表本地 asset 不存在。
+- 上下文 RETRIEVED，3336 字符，9 个 sourceIds：4 方剂、1 本草、4 讲稿。
+- 当前只证明真实快照可生成；不能据此宣称古籍原文版本校勘通过、检索排序正确或算法需要替换。
+
+下一步：核查讲稿/古籍索引元数据 schema 与 `docs/classic-rule-source-manifest.json` 的覆盖关系；先修来源身份和展示语义，再讨论 query 行为；不引入 FTS5、不抽 adapter。
+
+### 10.4 后续自动执行队列（无须用户逐项点名）
+
+1. A：持续监测 PR #30 full Flutter、Kotlin unit tests、Android arm64 APK；修复实际失败；CI 通过后再请求 Find N2 GPU/CPU 20 轮真实 TRACE。未有设备证据保持 UNKNOWN。
+2. E：在 A 合并释放 `MainActivity.kt` 所有权后，接入 `clearAiData` MethodChannel：检查未完成模型导入、串行释放 Engine/Conversation、清除 Native runtime cache 与 AI 专属附件目录、返回逐项失败状态；之后更新 E 分支到最新 master 并跑 Dart/Kotlin/Android CI。
+3. C：核查 `classic_index.json.gz` 生成脚本对讲稿/古籍的字段差异，审计完整条文 manifest 覆盖；重复同一黄金测试验证输出可重复；来源元数据未修复前不锁定“正确性 expected”。
+4. B：扩展输入路径矩阵和 detector 接口契约；没有医学审核记录前只保留 REVIEW_REQUIRED，不把候选规则启用为正式安全门禁。
+5. D：逐项补齐 24 个 toolId 的 typed args/result、权限、错误/取消/超时和 sourceIds 证据；按功能文件所有权逐步执行。
+6. F：先实现默认关闭、脱敏、无业务副作用的 trace 事件模型和单测，再按文件所有权接入 Flutter/Native 关键节点。
+7. E 备份：与清除功能分开决策；保留非 AI 数据自动迁移能力，未证明 AI-only 规则有效前 PR #19 不合并。
+8. G：保持 README/pubspec 防漂移测试；每次主线版本变更自动更新报告基线。
+
+### 10.5 跨会话恢复规则
+
+下一次对话不要先问用户“接下来做什么”。先读取最新 master、本文件、`docs/ai-capability-audit.md` 和 `docs/ai-parallel-execution-protocol.md`，检查 PR/CI，并自动执行上述队列中所有当前无依赖的最高优先级任务。若本轮无法后台持续运行，明确说明下一轮从远端状态恢复，不声称后台任务仍在运行。
