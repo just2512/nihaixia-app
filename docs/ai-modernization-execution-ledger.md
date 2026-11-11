@@ -239,3 +239,51 @@
 
 
 D-01 表格复核补充：复核完整注册定义后，`huangdi_siji` 的 modes 为 `tools/metaphysics`（不是 learning）；已在 PR #40 同一分支修正审计表。PR #40 当前 head 更新为 `c4de95c5f06502e5d7e3c03a403baf36bf81b30c`，对应新 CI 需重新等待。
+
+
+## 10. 2026-11-11 本轮复核增量（D-02 与最新 CI）
+
+> 本节为本轮新增证据；较早小节中的“CI 待完成”以此处最新 SHA 记录为准。master 基线仍为 `c7a12ed32140fb2e8e97ea406e5fdc6504216907`。
+
+### 10.1 最新自动化验收
+
+| PR | 最新 HEAD | Run | 结果 | 实际覆盖 |
+|---|---|---|---|---|
+| #40 D-01 | `c4de95c5f06502e5d7e3c03a403baf36bf81b30c` | `43018942308` push；`43018950777` PR | SUCCESS / SUCCESS | Flutter regression、Dart/Flutter analyze、AI contract tests、full regression、Android arm64 CI Debug APK ABI verification、Native unit tests |
+| #41 G 台账 | `1fe391a8d306b27a67b843af6d253eaa29869dc4` | `43018967324` push；`43018976749` PR | SUCCESS / SUCCESS | 同上完整回归与 Android arm64 CI 验证 |
+
+说明：以上是 D-01/G 对应 SHA 的通过证据；本轮将分别更新 PR #40 与 #41 的文件，因此新 SHA 必须重新等待 CI。Android job 是 CI Debug APK ABI verification，不是 Find N2 真机安装/运行。
+
+### 10.2 D-02 页面调用链审计
+
+- 分支：`work/ai-capability-catalog-audit`
+- PR：[#40](https://github.com/just2512/nihaixia-app/pull/40)
+- 新增 commit：`f48fb98fd0bb3d00509886c8e78da73ed511264d`
+- 文件：`docs/assistant-tool-capability-audit.md`
+- 审计基线：master `c7a12ed32140fb2e8e97ea406e5fdc6504216907`
+- CODE：`LocalAiInterviewScreen._openTool()`（`lib/screens/local_ai_interview_screen.dart:1629-1715`）；`AssistantToolResult`（`lib/models/assistant_tool_result.dart:1-93`）；23 个页面 builder（`lib/screens/assistant_tool_router.dart:488-525`）。
+- 页面回传分类：9 项具备助手回传入口（8 项 String、1 项 typed result），14 项 opens_only；其中至少 4 项确认由本地确定性计算后回传（yunqi、meihua、dosage、almanac）。
+- 新发现契约风险：状态枚举缺少 UNKNOWN；String 旧结果默认包装为 succeeded；arguments fallback 会回填请求值而不能证明页面实际使用值；sourceIds 可空；failed 统一提供重试入口。
+- 本轮只读审计，不改运行时代码；未重新运行相关测试；真机 TRACE 未执行。D 能力整体仍 PARTIAL，Executed Capability 未证实。
+
+### 10.3 A-G 当前状态与未完成任务
+
+| ID | 状态 | 当前下一步（不等待用户逐项指派） |
+|---|---|---|
+| A | PARTIAL | 继续审计 Native Conversation 重建/历史回放边界；准备 Find N2 GPU/CPU 多轮实测矩阵。无设备记录的轮次保持 UNKNOWN。 |
+| B | PARTIAL / RELEASE BLOCKED | 扩展红旗 preflight 到所有模型/附件/历史/结构化问诊入口；医学审核未完成前保持 REVIEW_REQUIRED。 |
+| C | PARTIAL | 对黄金检索快照补 source metadata/provenance；无古籍版本、卷页/条文定位的条目标 MISSING。 |
+| D | PARTIAL | D-02 已追踪 23 个页面的助手结果回传；下一步先补 AssistantToolResult 契约测试，再选 almanac/meihua 之一锁定纯函数黄金行为。Headless adapter 暂不启动。 |
+| E | PARTIAL | 复核 PR #39 清除调用链、SQLite 表清单、附件路径边界、部分失败恢复；补自动化清除失败与重启测试。Find N2 仍需真实设备。 |
+| F | PARTIAL | 从 Native MethodChannel 与助手调用链继续追踪 trace_id 传播；验证 TRACE 关闭不改变业务、日志失败不阻断业务。 |
+| G | PARTIAL | PR #41 已有旧 SHA CI PASS；本轮追加台账后以新 SHA 重新验收。同步检查 README/pubspec 版本漂移；不关闭旧 PR #36，直到确认 #41 内容完整替代。 |
+
+### 10.4 分支与集成状态
+
+- PR #40：本轮在其既有文件所有权分支上扩展 D-02 审计，避免第二个分支同时写 `docs/assistant-tool-capability-audit.md`。
+- PR #41：仅更新执行台账，和 PR #40 文件所有权分离。
+- PR #38/#39：最新已知 CI 通过，但均未据此宣称 Find N2 真实验收完成；不因 mergeable=true 自动合并。
+- PR #19：Android 全应用备份策略仍有非 AI 数据迁移影响决策及 merged manifest/build 证据缺口，保持 BLOCKED/UNKNOWN。
+- PR #36：旧台账 PR 与 #41 存在内容重复风险，先比较完整内容与最新 CI，再决定关闭；不得合并过期台账。
+
+**下一轮默认执行顺序：** (1) 读取本轮 PR #40/#41 新 SHA CI 与 job 结果；(2) D-03 补结果契约边界测试；(3) E 清除失败/重启测试；(4) F trace_id 贯穿最小切片；(5) C provenance manifest；(6) G 版本漂移检查。任一工作流受阻时继续其余无依赖项。
