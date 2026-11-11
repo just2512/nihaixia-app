@@ -16,10 +16,46 @@ class LocalAiAttachmentStorage {
 
   static const directoryName = 'local_ai_attachments';
 
-  Future<Directory> getDirectory() async {
+  Future<Directory> getDirectory() => _ownedDirectory(create: true);
+
+  Future<Directory> _ownedDirectory({bool create = false}) async {
     final temporaryRoot = await _temporaryDirectoryProvider();
-    final directory = Directory(p.join(temporaryRoot.path, directoryName));
-    await directory.create(recursive: true);
+    final canonicalRoot = p.normalize(
+      await temporaryRoot.resolveSymbolicLinks(),
+    );
+    final directoryPath = p.join(canonicalRoot, directoryName);
+    final type = await FileSystemEntity.type(
+      directoryPath,
+      followLinks: false,
+    );
+    if (type == FileSystemEntityType.link) {
+      throw FileSystemException(
+        'AI attachment directory must not be a symbolic link',
+        directoryPath,
+      );
+    }
+    if (type != FileSystemEntityType.notFound &&
+        type != FileSystemEntityType.directory) {
+      throw FileSystemException(
+        'AI attachment path is not a directory',
+        directoryPath,
+      );
+    }
+
+    final directory = Directory(directoryPath);
+    if (create && type == FileSystemEntityType.notFound) {
+      await directory.create();
+    }
+    if (await directory.exists()) {
+      final resolvedPath = p.normalize(await directory.resolveSymbolicLinks());
+      if (resolvedPath != directoryPath ||
+          p.dirname(resolvedPath) != canonicalRoot) {
+        throw FileSystemException(
+          'AI attachment directory escapes the temporary root',
+          directoryPath,
+        );
+      }
+    }
     return directory;
   }
 
@@ -77,15 +113,25 @@ class LocalAiAttachmentStorage {
   }
 
   Future<int> clear() async {
-    final directory = Directory(
-      p.join((await _temporaryDirectoryProvider()).path, directoryName),
-    );
+    final directory = await _ownedDirectory();
     if (!await directory.exists()) return 0;
+    return _deleteOwnedTree(directory);
+  }
+
+  Future<int> _deleteOwnedTree(Directory directory) async {
     var deletedFiles = 0;
-    await for (final entity in directory.list(recursive: true, followLinks: false)) {
-      if (entity is File) deletedFiles++;
+    await for (final entity in directory.list(followLinks: false)) {
+      if (entity is Link) {
+        // Delete the link itself; never traverse its target.
+        await entity.delete();
+      } else if (entity is Directory) {
+        deletedFiles += await _deleteOwnedTree(entity);
+      } else if (entity is File) {
+        await entity.delete();
+        deletedFiles++;
+      }
     }
-    await directory.delete(recursive: true);
+    await directory.delete();
     return deletedFiles;
   }
 
