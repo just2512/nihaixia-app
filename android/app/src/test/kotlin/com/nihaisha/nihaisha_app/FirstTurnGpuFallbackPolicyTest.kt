@@ -53,6 +53,22 @@ class FirstTurnGpuFallbackPolicyTest {
     }
 
     @Test
+    fun terminatesWhenThrowableCauseChainContainsCycle() {
+        val first = RuntimeException("outer")
+        val second = RuntimeException("inner")
+        first.initCause(second)
+        second.initCause(first)
+
+        assertFalse(
+            FirstTurnGpuFallbackPolicy.shouldFallback(
+                activeBackend = "gpu",
+                conversationHasSuccessfulTurn = false,
+                error = first
+            )
+        )
+    }
+
+    @Test
     fun findsKnownOpenClFailureInCauseChain() {
         val wrapped = RuntimeException(
             "Native runtime failed",
