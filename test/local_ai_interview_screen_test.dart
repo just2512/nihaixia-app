@@ -697,10 +697,12 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(conversationStore: _store,
             service: _TextSendService(),
             audioRecorder: recorder,
             recordingFileInspector: _ThrowingRecordingFileInspector(),
+            attachmentStorage: _RecorderRetryAttachmentStorage(),
+            imagePicker: _EmptyLocalAiImagePicker(),
           ),
         ),
       );
