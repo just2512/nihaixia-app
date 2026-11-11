@@ -369,3 +369,18 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 多轮稳定性：自动化测试覆盖状态机和异常路径；Find N2 GPU/CPU 分别完成连续至少 20 轮测试，包含文字、图片、语音输入及进程中断/恢复；真机记录必须提供设备、Android、App SHA、模型版本、backend、轮次、trace/log。未实测一律 UNKNOWN。
 - 发布：红旗门禁、领域隔离、数据清除、执行状态安全、跨轮会话隔离任何一项 FAIL 均阻断相关发布；UNKNOWN 不得写成 PASS。
 
+
+
+## 15. 跨对话执行协议入口（强制）
+
+本仓库 AI 改造的持续执行方法固定保存在 `docs/ai-parallel-execution-protocol.md`，不得依赖聊天记忆。每次新会话或中断恢复必须先读取：
+
+1. 当前 `master` HEAD；
+2. 本文件 `docs/ai-capability-audit.md`；
+3. `docs/ai-modernization-execution-ledger.md`；
+4. `docs/ai-parallel-execution-protocol.md`；
+5. 与本轮工作流对应的专项审计和 PR/CI。
+
+随后按“主线基线 → 独立工作分支 → 文件所有权隔离 → 小批量集成 → 自动验收 → Find N2 真机 TRACE”的顺序执行。必须主动选择所有无依赖、尚未完成的最高优先级任务，不等待用户逐项点名。
+
+台账必须持续记录 master SHA、活动分支/PR、文件所有权、测试/CI/TRACE 证据、阻塞原因和下一项自动任务。不得把计划、源码存在、branch validation 或模拟测试冒充为完整验收。
