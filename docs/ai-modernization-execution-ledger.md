@@ -486,3 +486,29 @@ CI 说明：branch validation job 因 workflow 条件显示 SKIPPED；不能把�
 5. G：#49 通过后，将版本一致性检查作为长期回归守护；#44 通过后更新唯一台账。
 6. C：补来源 manifest 与 derived-query provenance；不改检索算法，不把讲稿命中表述为古籍原文。
 7. B：入口覆盖可继续做只读/测试工作；医学审核未完成前不启用未审查规则。
+
+
+## 14. D-03 集成与基线再次前进（2026-11-11）
+
+- PR #46 已通过当前 master 基线下的 Flutter regression（run `43036665826`）和 Android arm64 CI APK/native unit tests；branch validation job 为 SKIPPED。检查了 `LocalAiInterviewScreen._openTool()`：`withArguments()` 后立即执行 `validateArgumentsMatch()`；缺少实际执行参数时显示契约错误并提前返回，不会把 UNKNOWN 结果追加到会话或持久化为已验证执行。
+- PR #46 已 squash 合并，merge commit / 新 master HEAD：`c0983da895316096d550ea4a4e68e5a8dd354de4`。
+- #46 仅改 `lib/models/assistant_tool_result.dart` 和 `test/assistant_tool_result_test.dart`；无 Native、数据库或路由变更。D 工作流仍 PARTIAL，不能宣称工具已成为 Headless/Executed Capability。
+- 合并后将 PR #44/#47/#48/#49/#50 的 base 刷新为当前 master `c0983da`；GitHub mergeability 重新计算后均显示可合并，但不能替代各 PR 的当前基线 CI。
+- 最新 CI：
+  - #44 HEAD `9f7d61b`：run `43037901376`，Flutter regression QUEUED；branch validation SKIPPED。
+  - #47 HEAD `074619a`：run `43037173941`，Flutter regression SUCCESS；Android arm64 job `130581944576` IN_PROGRESS。
+  - #48 HEAD `fd2e1b5`：run `43037179378`，Flutter regression SUCCESS；Android arm64 job `130582177174` IN_PROGRESS。
+  - #49 HEAD `c63632e`：run `43037313916`，Flutter regression SUCCESS；Android arm64 job `130582272371` IN_PROGRESS。
+  - #50 HEAD `82d16b2`：run `43038226181`，Flutter regression IN_PROGRESS；branch validation SKIPPED。
+- #50 在 #46 合并前开始运行，需确认其当前 PR base 已刷新为 c0983da；如果最终 CI 不覆盖合并后的 master 树，需再触发当前基线验证。
+- 当前未取得 master push workflow 的完整 run 列表；不能宣称 c0983da 的主线 CI 全绿。
+
+### 下一项执行队列（最新）
+
+1. 完成 #44/#47/#48/#49/#50 CI；失败时读取具体 step/log 并修复。
+2. #47/#48/#49 的旧 run 起始于 #46 合并前，集成前确认最终 merge tree 包含 #46 后重新验收。
+3. #50 writer/stage schema 通过后，继续设计 F 的生产 trace_id 注入；目前不能执行完整设备 TRACE。
+4. E：重建清除数据实现的无冲突子切片，避免直接合并旧 #39 对 MainActivity/LocalAiInterviewScreen 的整分支改动。
+5. B：继续审计结构化问诊、附件、历史恢复、Native MethodChannel 的所有旁路；未完成医学审核时保持 RELEASE BLOCKED。
+6. C：补 source manifest 与派生 query provenance；检索算法保持不变。
+7. G：#49 防漂移测试通过后集成；保持 README 与 pubspec 的当前版本一致。
