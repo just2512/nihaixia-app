@@ -356,7 +356,7 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 ### 14.7 版本与文档基线
 
 - `pubspec.yaml` 是应用版本唯一来源；本次核验为 `1.11.30+8039`。
-- README 中仍存在 `1.11.28+8037` 的旧版本文字，属于文档漂移，需单独修正并加一致性检查。
+- PR #26 已将 README 同步到 `pubspec.yaml` 的 `1.11.30+8039`，并加入版本一致性测试；仍需后续版本更新时继续验证。
 - 规范文件为 `docs/ai-capability-audit.md`；静态/动态审计报告分别使用 `docs/ai-capability-audit-report.md`、`docs/local-ai-multiturn-audit.md`，不得互相覆盖。
 
 ### 14.8 本补充的验收门槛
@@ -369,3 +369,12 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 多轮稳定性：自动化测试覆盖状态机和异常路径；Find N2 GPU/CPU 分别完成连续至少 20 轮测试，包含文字、图片、语音输入及进程中断/恢复；真机记录必须提供设备、Android、App SHA、模型版本、backend、轮次、trace/log。未实测一律 UNKNOWN。
 - 发布：红旗门禁、领域隔离、数据清除、执行状态安全、跨轮会话隔离任何一项 FAIL 均阻断相关发布；UNKNOWN 不得写成 PASS。
 
+
+
+## 15. 跨对话执行协议入口（强制）
+
+本仓库 AI 改造的持续执行方法固定保存在 `docs/ai-parallel-execution-protocol.md`。每次新会话或中断恢复必须先读取当前 `master` HEAD、本文件、`docs/ai-modernization-execution-ledger.md`、并行协议及本轮专项报告，再刷新活动分支、PR、CI 和设备验收证据。
+
+执行顺序固定为：主线基线 → 独立工作分支 → 文件所有权隔离 → 小批量集成 → 自动验收 → Find N2 真机 TRACE。必须主动选择所有无依赖、尚未完成的最高优先级任务，不等待用户逐项点名。
+
+台账必须记录 master SHA、活动分支/PR、文件所有权、测试/CI/TRACE 证据、阻塞原因和下一项自动任务。branch validation 不等于全量回归；CI 不等于真机验收；计划和源码存在不等于完成。
