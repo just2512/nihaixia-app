@@ -2589,21 +2589,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _modelControlBusy = true;
       _error = null;
     });
+    LocalAiModelStatus? nativeStatus;
     try {
       // Wait for any initial conversation creation and queued task writes;
       // otherwise a late insert could recreate an empty session after clearing.
       await _conversationIdFuture;
       await _taskStateWrite;
+
+      // Native first: serialize behind inference, close Engine/Conversation,
+      // then remove runtime cache and AI-owned attachment files. If this fails,
+      // keep durable history so the user can retry without losing records.
+      nativeStatus = await _service.clearAiData();
+
       final paths = <String?>[_imagePath, _audioPath];
       await _deleteCachedAttachments(paths);
       final managedAttachments = await _attachmentStorage.clear();
       final legacyRecordings = await _attachmentStorage.clearLegacyRecordings();
-      // Clear durable conversation records even if the Native cache operation
-      // later fails; the UI reports partial completion and allows safe retry.
+
+      // SQLite is a separate atomic transaction. If it fails, native cleanup
+      // remains idempotent and the still-persisted history can be retried.
       final counts = widget.aiConversationDataClearer != null
           ? await widget.aiConversationDataClearer!()
           : await DatabaseHelper.instance.clearAiConversationData();
-      final status = await _service.clearAiData();
+      final status = nativeStatus;
 
       if (!mounted) return;
       _historyRestoreGeneration++;
@@ -2636,18 +2644,37 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           (counts['assistantMessages'] ?? 0) +
           (counts['legacyChatMessages'] ?? 0);
       final deletedTasks = counts['tcmInterviewTasks'] ?? 0;
-      final deletedAttachments = managedAttachments + legacyRecordings;
+      final deletedAttachments = managedAttachments +
+          legacyRecordings +
+          status.attachmentFilesDeleted +
+          status.legacyRecordingFilesDeleted;
+      final deletedRuntimeCache = status.runtimeCacheFilesDeleted;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'AI 数据已清除：消息 $deletedMessages 条，'
-            '问诊快照 $deletedTasks 项，附件 $deletedAttachments 个。',
+            '问诊快照 $deletedTasks 项，附件 $deletedAttachments 个，'
+            '推理缓存文件 $deletedRuntimeCache 个。',
           ),
         ),
       );
     } catch (error) {
       if (!mounted) return;
+      LocalAiModelStatus? refreshedStatus = nativeStatus;
+      if (refreshedStatus == null) {
+        try {
+          refreshedStatus = await _service.getStatus();
+        } catch (_) {
+          // Keep the runtime state unknown rather than pretending it is ready.
+        }
+      }
       setState(() {
+        if (refreshedStatus != null) {
+          _status = refreshedStatus;
+          _statusUnknown = false;
+        } else {
+          _statusUnknown = true;
+        }
         _error = 'AI 数据未能全部清除。请重试；已完成的文件清理可安全重复执行。详情：$error';
       });
     } finally {
