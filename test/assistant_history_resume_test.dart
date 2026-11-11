@@ -26,6 +26,9 @@ class _NoLostImagePicker implements LocalAiImagePicker {
   Future<String?> pickCameraImagePath() async => null;
 
   @override
+  Future<String?> pickGalleryImagePath() async => null;
+
+  @override
   Future<String?> retrieveLostImagePath() async => null;
 }
 

@@ -61,6 +61,7 @@ abstract interface class LocalAiRecordingFileInspector {
 /// Path-based adapter for deterministic camera and Android lost-result tests.
 abstract interface class LocalAiImagePicker {
   Future<String?> pickCameraImagePath();
+  Future<String?> pickGalleryImagePath();
   Future<String?> retrieveLostImagePath();
 }
 
@@ -98,6 +99,18 @@ class _PluginLocalAiImagePicker implements LocalAiImagePicker {
   Future<String?> pickCameraImagePath() async {
     final photo = await _picker.pickImage(
       source: ImageSource.camera,
+      imageQuality: 90,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      requestFullMetadata: false,
+    );
+    return photo?.path;
+  }
+
+  @override
+  Future<String?> pickGalleryImagePath() async {
+    final photo = await _picker.pickImage(
+      source: ImageSource.gallery,
       imageQuality: 90,
       maxWidth: 1600,
       maxHeight: 1600,
@@ -534,6 +547,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _audioPath != null) {
       return;
     }
+    final fromGallery = await _showTonguePhotoSourceSheet();
+    if (fromGallery == null) return;
+    await _captureTonguePhoto(fromGallery: fromGallery);
+  }
+
+  Future<bool?> _showTonguePhotoSourceSheet() {
+    return showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('拍照'),
+              onTap: () => Navigator.pop(sheetContext, false),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('从相册选择'),
+              onTap: () => Navigator.pop(sheetContext, true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _captureTonguePhoto({required bool fromGallery}) async {
     setState(() {
       _attachmentBusy = true;
       _error = null;
@@ -541,7 +584,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     String? photoPath;
     try {
-      photoPath = await _imagePicker.pickCameraImagePath();
+      photoPath = fromGallery
+          ? await _imagePicker.pickGalleryImagePath()
+          : await _imagePicker.pickCameraImagePath();
       if (photoPath == null || photoPath.isEmpty) return;
       if (!mounted) {
         await _deleteCachedAttachments([photoPath]);

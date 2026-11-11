@@ -198,6 +198,9 @@ class _EmptyLocalAiImagePicker implements LocalAiImagePicker {
 
   @override
   Future<String?> pickCameraImagePath() async => null;
+
+  @override
+  Future<String?> pickGalleryImagePath() async => null;
 }
 
 class _DeferredLocalAiImagePicker implements LocalAiImagePicker {
@@ -217,6 +220,9 @@ class _DeferredLocalAiImagePicker implements LocalAiImagePicker {
     pickCalls += 1;
     return pickResult.future;
   }
+
+  @override
+  Future<String?> pickGalleryImagePath() async => null;
 }
 
 class _DeferredModelControlService extends _TextSendService {
@@ -1874,6 +1880,8 @@ void main() {
         await tester.enterText(find.byType(TextField), '等待拍照期间必须保留的文字');
         await tester.pump();
         await tester.tap(find.byTooltip('拍摄舌象'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('拍照'));
         await tester.pump();
 
         expect(picker.pickCalls, 1);
