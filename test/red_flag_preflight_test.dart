@@ -99,5 +99,52 @@ void main() {
       );
       expect(unreviewed.status, RedFlagPreflightStatus.reviewRequired);
     });
+
+    test('no-match with unknown semantic scope requires clarification', () {
+      for (final candidate in [
+        assessment(matches: const [], subject: RedFlagSubject.unknown),
+        assessment(matches: const [], time: RedFlagTime.unknown),
+        assessment(matches: const [], polarity: RedFlagPolarity.unknown),
+      ]) {
+        final result = preflight.evaluate(candidate);
+        expect(result.status, RedFlagPreflightStatus.clarify);
+        expect(result.mayContinueOrdinaryFlow, isFalse);
+      }
+    });
+
+    test('matched but ambiguous semantic scope never clears', () {
+      for (final candidate in [
+        assessment(subject: RedFlagSubject.unknown),
+        assessment(time: RedFlagTime.unknown),
+        assessment(polarity: RedFlagPolarity.unknown),
+        assessment(polarity: RedFlagPolarity.quoted),
+      ]) {
+        final result = preflight.evaluate(candidate);
+        expect(result.status, RedFlagPreflightStatus.clarify);
+        expect(result.mayContinueOrdinaryFlow, isFalse);
+      }
+    });
+
+    test('other-person negation and past self match are not current emergencies', () {
+      final otherNegated = preflight.evaluate(
+        assessment(
+          subject: RedFlagSubject.other,
+          polarity: RedFlagPolarity.negated,
+        ),
+      );
+      final selfPast = preflight.evaluate(
+        assessment(time: RedFlagTime.past),
+      );
+      expect(otherNegated.status, RedFlagPreflightStatus.clear);
+      expect(selfPast.status, RedFlagPreflightStatus.clear);
+    });
+
+    test('incomplete detector coverage takes precedence over no-match', () {
+      final result = preflight.evaluate(
+        assessment(matches: const [], coverage: false),
+      );
+      expect(result.status, RedFlagPreflightStatus.reviewRequired);
+      expect(result.mayContinueOrdinaryFlow, isFalse);
+    });
   });
 }
