@@ -343,7 +343,7 @@ class AssistantKnowledgeContextBuilder {
         add(phrase, 'DOMAIN_PHRASE:$phrase');
       }
     }
-    for (final match in RegExp(r'(?:第|条文)\\s*(\\d+)\\s*条?').allMatches(normalized)) {
+    for (final match in RegExp(r'(?:第|条文)\s*(\d+)\s*条?').allMatches(normalized)) {
       final number = match.group(1);
       if (number == null) continue;
       add('第${number}条', 'ARTICLE_NUMBER:$number');
