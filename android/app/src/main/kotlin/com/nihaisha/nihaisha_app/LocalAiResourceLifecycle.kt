@@ -28,6 +28,7 @@ internal class LocalAiResourceLifecycle {
         check(state != State.UNKNOWN) {
             "本地模型资源释放状态未知，禁止重复关闭或删除运行缓存"
         }
+        if (state == State.RELEASED) return
         try {
             closeResources()
             state = State.RELEASED
