@@ -68,29 +68,30 @@ Native `loadLocalModel()` 使用 `File(cacheDir, "litertlm")` 作为 `EngineConf
 ## 4. 当前 Native 接口缺口
 
 当前 MethodChannel 已有：
-`getModelStatus`、`importModel`、`loadModel`、`extractSymptoms`、`sendImage`、`sendAudio`、`sendMessage`、`restoreConversation`、`resetConversation`、`releaseModel`。
+`getModelStatus`、`importModel`、`loadModel`、`extractSymptoms`、`sendImage`、`sendAudio`、`sendMessage`、`restoreConversation`、`resetConversation`、`releaseModel`、`clearAiData`（本分支新增，待 CI 验收）。
 
-尚无 `clearAiData` / `clearRuntimeCache` 接口。Native 单线程 `aiExecutor` 可保证清除任务与推理任务排队执行，但模型文件选择器的 `pendingModelImportResult` 在异步文件选择期间不属于 executor 队列，清除操作必须检测并拒绝与未完成导入并发。
+Native 清除入口由主线程门禁 + 单线程 `aiExecutor` 执行：
+- 若文件选择器仍等待用户选择（`pendingModelImportResult != null`），立即拒绝；
+- 清除排队/执行期间设置 `aiDataClearPending`，阻止新 `importModel` 请求；
+- 已经在 executor 排队的导入任务按队列顺序先完成，再执行清除；
+- 释放当前 Conversation/Engine，并清空 Native 内存中的 userReportedInputs 和 transcript；
+- 仅删除 `cacheDir/litertlm`、`cacheDir/local_ai_attachments` 和符合 `local_ai_<timestamp>.wav` 的旧录音；
+- 保留模型文件和其他 cache 内容；
+- 返回每类删除数量；任何删除失败通过 MethodChannel error 返回，不能伪报成功。
 
-建议 Native 清除接口职责：
-- 拒绝正在等待系统文件选择结果的导入任务；
-- 释放当前 Conversation/Engine，并清空 Native 内存中的 userReportedInputs 和会话历史；
-- 删除 `cacheDir/litertlm` 与专属 AI 附件目录；
-- 清理已知旧版 AI 录音文件；
-- 保留模型文件；返回每个目录的删除结果和失败路径摘要；
-- 删除失败时返回明确部分失败，不能返回成功。
 
 ## 5. 清除事务与失败语义
 
 跨 SQLite 与文件系统无法使用单一事务。推荐按可重试、幂等方式编排：
 
-1. UI 二次确认，按钮在发送/录音/模型控制/附件操作期间禁用。
-2. Native 先释放运行时并清理 AI 缓存/附件，返回逐项结果。
-3. Dart 在一个 SQLite transaction 内删除四张 AI 会话表。
-4. 任何一步失败都显示 PARTIAL/FAIL，指出尚未清除的范围；再次执行必须安全且幂等。
-5. 成功后清空当前 UI 消息、当前会话 ID、结构化问诊控制器、待恢复 transcript 和待处理附件状态。
-6. 强制/提示用户重新启动 App；重启后重新打开数据库、查询会话列表、扫描 AI 附件目录和 Native 缓存，确认不存在可恢复记录。
-7. 不删除整个数据库，不删除全局用户设置、收藏、命盘和医案数据。
+1. UI 二次确认，发送/录音/模型控制/附件操作期间禁用清除。
+2. 等待当前会话创建与问诊任务写入完成，避免清除后异步写入重新创建空会话。
+3. Native 先在 aiExecutor 串行释放 Engine/Conversation，再清理 runtime cache、AI 附件目录和旧录音。
+4. Dart 再清理当前附件路径与专属附件目录，并在单个 SQLite transaction 中删除四张 AI 会话表。
+5. 任一步失败都显示未全部清除；已完成的步骤可幂等重试。若 Native 已释放模型但后续 SQLite 失败，UI 必须同步模型状态为 not_ready，保留数据库历史供重试。
+6. 全部成功后清空 UI 消息、当前会话 ID、结构化问诊控制器、待恢复 transcript 和附件状态。
+7. 设备重启验收：数据库无会话/消息/问诊任务，AI 附件目录和 Native runtime cache 不存在；模型文件仍在，不要求重新导入。
+8. 不删除整个数据库，不删除全局用户设置、收藏、命盘和医案数据。
 
 ## 6. 自动化验收
 
@@ -102,7 +103,7 @@ Native `loadLocalModel()` 使用 `File(cacheDir, "litertlm")` 作为 `EngineConf
 - 重启验收：进程重启后 SQLite 无会话/消息/问诊任务，附件目录为空，Native runtime cache 不存在；重新导入模型不是清除会话的必要条件。
 - 真机：Find N2 实测模型已加载时执行清除，验证 Engine 释放、cache 删除、UI 重置和重启后不可恢复。
 
-## 当前实现进度（2026-11-10）
+## 当前实现进度（2026-11-11）
 
 已在独立分支加入以下实现，但尚未集成、不得标记为完整 PASS：
 
@@ -110,10 +111,12 @@ Native `loadLocalModel()` 使用 `File(cacheDir, "litertlm")` 作为 `EngineConf
 - `LocalAiAttachmentStorage`：将 picker 图片复制到 `local_ai_attachments/`，录音直接创建在该目录；提供专属目录清理和旧版 `local_ai_<timestamp>.wav` 兼容清理。
 - `LocalAiService.clearAiData()`：Dart MethodChannel 调用契约已添加。
 - `LocalAiInterviewScreen`：新增二次确认入口；清理后重置当前消息、会话 ID、问诊控制器和附件状态；下一次成功写入时延迟创建新会话，避免清除后留下空会话行。
-- `LocalAiDataCleanup.kt`：提供仅删除 AI 专属目录/旧版录音的 Native 文件清理 helper，包含目录越界和符号链接防护。
+- `LocalAiDataCleanup.kt`：提供仅删除 AI 专属目录/旧版录音的 Native 文件清理 helper，包含目录越界和符号链接防护；Kotlin 测试新增根目录 symlink 越界拒绝用例。
+- `MainActivity.kt`：新增 `clearAiData` MethodChannel handler；清除期间拒绝新模型导入，Engine/Conversation 释放成功后删除 `litertlm`、`local_ai_attachments` 与旧版录音；保留模型文件和其他 cache。
+- Dart `LocalAiModelStatus`：新增 Native 清理数量字段；UI 清理顺序调整为 Native runtime → 附件 → SQLite，失败时刷新/标记 runtime 状态，避免数据库先删而 Native 失败。
 - 新增 Dart 数据库/附件/服务/UI 测试和 Kotlin 文件清理测试。
 
-**尚未完成的硬阻断：** Native MethodChannel 的 `clearAiData` handler 需要调用 `releaseLocalModel()`、`LocalAiDataCleanup` 并返回状态。该 handler 必须在 A 工作流完成对 `MainActivity.kt` 的所有权修改后再接入，避免 A/E 同时修改同一文件。当前 Dart UI 调用会因 Native handler 尚不存在而失败，因此本分支仍是进行中的实现，不得合并。
+**当前剩余硬阻断：** Native `clearAiData` handler 已接入 `MainActivity.kt`，并设置主线程 `aiDataClearPending` 门禁；Engine/Conversation 释放后才删除 runtime cache，删除失败会向 Dart 返回错误。当前代码尚未通过本分支最新 CI，且没有 Find N2 真机测试，因此仍不得标记完整 PASS。
 
 验收仍需：
 - C 分支的 CI 改进合并后重新跑本分支 changed tests（包括 Linux SQLite host asset prewarm）；
