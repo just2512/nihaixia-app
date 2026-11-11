@@ -91,6 +91,24 @@ void main() {
       expect(json.keys, isNot(contains('attachment_path')));
     });
 
+    test('trace schema exposes required stages and NOT_APPLICABLE status', () {
+      expect(AiTraceStatus.notApplicable.wireValue, 'NOT_APPLICABLE');
+      expect(AiTraceStage.input.wireValue, 'INPUT');
+      expect(AiTraceStage.redFlag.wireValue, 'RED_FLAG');
+      expect(AiTraceStage.route.wireValue, 'ROUTE');
+      expect(AiTraceStage.entityResolution.wireValue, 'ENTITY_RESOLUTION');
+      expect(AiTraceStage.retrieval.wireValue, 'RETRIEVAL');
+      expect(AiTraceStage.contextAssembly.wireValue, 'CONTEXT_ASSEMBLY');
+      expect(AiTraceStage.modelInput.wireValue, 'MODEL_INPUT');
+      expect(AiTraceStage.modelOutput.wireValue, 'MODEL_OUTPUT');
+      expect(AiTraceStage.toolExecution.wireValue, 'TOOL_EXECUTION');
+      expect(AiTraceStage.argumentValidation.wireValue, 'ARGUMENT_VALIDATION');
+      expect(AiTraceStage.businessExecution.wireValue, 'BUSINESS_EXECUTION');
+      expect(AiTraceStage.resultValidation.wireValue, 'RESULT_VALIDATION');
+      expect(AiTraceStage.finalRender.wireValue, 'FINAL_RENDER');
+      expect(AiTraceStage.persistedState.wireValue, 'PERSISTED_STATE');
+    });
+
     test('writer failures do not propagate to the caller', () async {
       final recorder = AiTraceRecorder(
         enabled: true,
