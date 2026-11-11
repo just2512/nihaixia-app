@@ -2611,7 +2611,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final counts = widget.aiConversationDataClearer != null
           ? await widget.aiConversationDataClearer!()
           : await DatabaseHelper.instance.clearAiConversationData();
-      final status = nativeStatus!;
+      final status = nativeStatus;
 
       if (!mounted) return;
       _historyRestoreGeneration++;
