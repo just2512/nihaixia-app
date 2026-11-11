@@ -8,6 +8,11 @@ package com.nihaisha.nihaisha_app
  * or a replacement Engine loaded until the process restarts.
  */
 internal class LocalAiResourceLifecycle {
+    companion object {
+        // Process-scoped: an Activity recreation must not erase an UNKNOWN close state.
+        val process = LocalAiResourceLifecycle()
+    }
+
     enum class State { RELEASED, READY, UNKNOWN }
 
     var state: State = State.RELEASED
