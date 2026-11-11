@@ -132,3 +132,46 @@ Native 清除入口由主线程门禁 + 单线程 `aiExecutor` 执行：
 - 不实施 SQLCipher 或数据库密钥迁移。
 - 不清除独立 `diagnosis_history`、`user_settings`、收藏、命盘和医案数据；如产品定义将它们纳入 AI 清除，需独立更新范围与确认文案。
 
+
+
+## 8. PR #39 后续源码复核补充（2026-11-11）
+
+> 本节基于 PR #39 分支当前源码静态复核；不替代 CI，也不构成 Find N2 TRACE。
+
+### 8.1 已确认的实现路径
+
+- MainActivity.kt:134-152：Native clearAiData 先检查文件选择器和重复清除状态，再设置主线程 aiDataClearPending，将清除任务提交单线程 aiExecutor；清除结束后在主线程解除 gate。
+- MainActivity.kt:797-819：clearLocalAiData() 先调用 releaseLocalModel()，随后删除 cacheDir/litertlm、cacheDir/local_ai_attachments 和旧版录音文件。
+- MainActivity.kt:822-835：releaseLocalModel() 先保存 Engine/Conversation 引用，再将字段置空、清理内存状态，最后调用 ConversationResourceReleasePolicy.closeBoth()。
+- ConversationResourceReleasePolicy.kt：先关闭 Conversation，再关闭 Engine；即使 Conversation close 抛错，也继续尝试 Engine close，并保留 suppressed exception。
+- local_ai_interview_screen.dart:2554-2614：Flutter 侧等待会话创建和问诊任务写入，先执行 Native 清理，再清理当前附件路径、专属附件目录和旧录音，最后在 SQLite transaction 中删除四张 AI 会话表。
+- database_helper.dart:367-380：数据库事务删除 assistant_messages、tcm_interview_tasks、assistant_conversations、chat_history；事务失败会回滚数据库内删除。
+- local_ai_attachment_storage.dart:115-151：清理专属附件目录时不跟随符号链接；旧录音只匹配根目录 local_ai_<digits>.wav。
+
+### 8.2 新发现的 Native 资源释放重试风险
+
+**当前代码事实：**
+
+1. releaseLocalModel() 在调用 close 之前就把 aiConversation 和 aiEngine 字段置为 null。
+2. closeBoth() 会尝试关闭两个资源；任一 close 失败会抛异常。
+3. clearLocalAiData() 因异常停止，不继续删除 runtime cache。这一次调用是 fail-closed。
+4. 但 close 失败后，资源引用已经丢失。若用户在同一进程内再次执行清除，第二次 releaseLocalModel() 看到的将是 null 引用；closeBoth() 可能空操作成功，随后继续删除 litertlm cache。
+5. 因此当前实现没有证明“第一次 close 失败后，第二次重试仍不会在资源关闭状态未知时删除 cache”。
+
+**判定：** 这是需要修复/测试的资源生命周期缺口，不是已经观察到文件损坏。不能只凭第一次调用遇到异常就认为后续重试仍安全。
+
+**建议的最小修复方向：**
+
+- 为 Native Engine/Conversation 释放引入显式 releaseState（至少区分 READY/RELEASED/UNKNOWN），close 失败后进入 UNKNOWN 并保持该状态。
+- 在进程内资源释放状态为 UNKNOWN 时，禁止再次加载模型、禁止删除 runtime cache，也禁止将空引用解释为已释放。
+- 只有进程重启后 Native runtime 状态重新初始化，才允许重新尝试模型加载与缓存清理；不要对可能已部分关闭的同一对象盲目二次 close。
+- 增加可注入 close failure 的 Native 测试：Conversation close 失败、Engine close 失败、两者都失败；随后再次 clear/load 必须 fail-closed，且 cache sentinel 文件保留。
+- 正常 close 成功、重复清除、清除后重新加载仍需有独立回归测试。
+
+### 8.3 当前 E 线状态校正
+
+- PR #39 的 Flutter regression、Android arm64 CI Debug APK ABI verification、Native unit tests 已有通过证据（run 43015771142）。
+- 这些测试证明已有清理 helper、数据库事务、附件目录和 UI 编排的自动化路径，不证明 Find N2 真机已加载 Engine 时能安全清除。
+- Native close failure 后的二次清除/模型重载状态仍缺测试；本节将 E 标记为 PARTIAL，不能以现有 CI 通过覆盖该缺口。
+- 数据库清除发生在 Native 与附件清理之后；若 SQLite 事务失败，数据库记录应由事务回滚保留，Native/附件步骤已完成的部分需要幂等重试。该跨文件系统/数据库过程不是原子事务，UI 必须继续明确提示“未全部清除”。
+- 当前 PR #39 未合并；本次只更新该 PR 已有的审计文件，未修改 Native 运行时代码。
