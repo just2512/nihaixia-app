@@ -100,3 +100,38 @@ class RedFlagGate {
     return preflight.evaluate(assessment);
   }
 }
+
+
+/// Result of a gate-protected operation. A blocked operation has no [value]
+/// and [executed] is false; callers must not infer that business work started.
+class RedFlagGateRun<T> {
+  const RedFlagGateRun.blocked(this.preflight)
+      : executed = false,
+        value = null;
+
+  const RedFlagGateRun.executed(this.preflight, this.value)
+      : executed = true;
+
+  final RedFlagPreflightResult preflight;
+  final bool executed;
+  final T? value;
+}
+
+/// Shared sequencing seam for production entrypoints and deterministic tests.
+///
+/// The operation callback is invoked only after the configured detector and
+/// policy both return CLEAR. This helper does not install a detector, create
+/// medical rules, or decide which product flows should require review.
+extension RedFlagGateExecution on RedFlagGate {
+  Future<RedFlagGateRun<T>> runBefore<T>({
+    required RedFlagInput input,
+    required Future<T> Function() operation,
+  }) async {
+    final result = await evaluate(input);
+    if (!result.mayContinueOrdinaryFlow) {
+      return RedFlagGateRun<T>.blocked(result);
+    }
+    final value = await operation();
+    return RedFlagGateRun<T>.executed(result, value);
+  }
+}
