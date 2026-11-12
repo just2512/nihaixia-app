@@ -851,28 +851,91 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
 
+  Future<AssistantKnowledgeContextResult> _retrieveKnowledgeWithTrace(
+    String query, {
+    required AiTraceContext traceContext,
+    bool includeMedicalCases = true,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    try {
+      final result =
+          await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+        query,
+        includeMedicalCases: includeMedicalCases,
+      );
+      stopwatch.stop();
+      final failed =
+          result.status == AssistantKnowledgeRetrievalStatus.failed;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.retrieval,
+        status: failed ? AiTraceStatus.failed : AiTraceStatus.succeeded,
+        durationMs: stopwatch.elapsedMilliseconds,
+        sourceIds: result.sourceIds,
+        errorCode: failed
+            ? 'RETRIEVAL_FAILED'
+            : result.status == AssistantKnowledgeRetrievalStatus.partial
+                ? 'RETRIEVAL_PARTIAL'
+                : null,
+      );
+      return result;
+    } catch (_) {
+      stopwatch.stop();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.retrieval,
+        status: AiTraceStatus.failed,
+        durationMs: stopwatch.elapsedMilliseconds,
+        errorCode: 'RETRIEVAL_FAILED',
+      );
+      rethrow;
+    }
+  }
+
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
     required AssistantMode mode,
     required AiTraceContext traceContext,
   }) async {
     final traceId = traceContext.traceId;
-    Future<String> sendWithContext(String context) => traceId == null
-        ? _service.sendMessageWithContext(text, context: context)
-        : _service.sendMessageWithContextAndTrace(
-            text,
-            context: context,
-            traceId: traceId,
-          );
+    Future<String> sendWithContext(String context) async {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.contextAssembly,
+        status: AiTraceStatus.succeeded,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelInput,
+        status: AiTraceStatus.succeeded,
+      );
+      return traceId == null
+          ? _service.sendMessageWithContext(text, context: context)
+          : _service.sendMessageWithContextAndTrace(
+              text,
+              context: context,
+              traceId: traceId,
+            );
+    }
     switch (mode) {
       case AssistantMode.automatic:
         final knowledge =
-            await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
+            await _retrieveKnowledgeWithTrace(text, traceContext: traceContext);
         // 无命中且无失败时，不注入知识检索框架与角色 context——
         // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
         if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
             knowledge.failureMessage == null) {
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.contextAssembly,
+            status: AiTraceStatus.notApplicable,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.modelInput,
+            status: AiTraceStatus.succeeded,
+          );
           final reply = traceId == null
               ? await _service.sendMessage(text)
               : await _service.sendMessageWithTrace(text, traceId: traceId);
@@ -907,8 +970,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // as learning, but excludes unverified case records to avoid case-based
         // diagnostic anchoring. Retrieved text remains reference-only.
         final knowledge =
-            await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+            await _retrieveKnowledgeWithTrace(
           text,
+          traceContext: traceContext,
           includeMedicalCases: false,
         );
         final knowledgeContext = switch (knowledge.status) {
@@ -931,7 +995,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       case AssistantMode.learning:
         final knowledge =
-            await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(text);
+            await _retrieveKnowledgeWithTrace(text, traceContext: traceContext);
         final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
             '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
@@ -960,7 +1024,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前 App 已注册工具：$availableTools。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
         return _AssistantTurnResponse(
-          text: await _service.sendMessageWithContext(text, context: context),
+          text: await sendWithContext(context),
         );
     }
   }
