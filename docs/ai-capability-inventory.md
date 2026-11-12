@@ -367,3 +367,18 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 2. 对确实有无 UI 计算函数、且黄金行为已锁定的单项能力，才抽取最小 Headless adapter；优先从纯计算、无个人敏感数据的能力开始。
 3. 每个 adapter 必须定义 typed args/result、单位、参数校验、权限/领域边界、错误、取消、超时和 source IDs；执行结果回传必须有测试证明。
 4. 不得把 23 个页面一次性改造成工具平台；不引入通用 Agent、DAG、向量库或新会话表。
+
+
+## 2C. 2026-11-12 Headless 执行增量（PR #85，尚未合并）
+
+- 当前 master `b786f84df0452b9771e341c818e0d06a12451ef3` 仍是 2B 记录时的注册能力基线：24 项，23 个 Page builder，1 个特殊内联问诊流程；主线 Headless/Executed 仍未因本节代码而改变。
+- PR #85 在独立分支为 `yunqi` 增加 `headlessExecutor`，保留原页面 builder，形成 Page + Headless 双入口。
+- 自动执行仅在用户显式提供有效日期时发生；未提供日期时保留原页面确认流程。非法日期、越界日期、未声明参数均返回 FAILED，不静默使用今天。
+- 计算复用 `YunQiEngine`，不改动历法算法；结果以 `AssistantToolResult` 回传，校验 toolId、arguments、sourceIds、status，并写入既有 assistant message metadata。
+- PR #85 当前 head `21470fd5a14c3cee4b9ff4245f6c1cd59a3093c3`，基于 master `b786f84...`；Flutter regression 与 branch validation 正在运行，尚未有 Android/最终合并证据。
+
+### 状态口径
+
+- PR 合并前：主线 Headless = 0；PR 分支代码候选 = 1。
+- PR #85 完整 CI 通过并合并后：主线 Headless = 1，Executed = 1；Page builder 仍为 23（其中 yunqi 同时具备两种入口）。
+- 其余页面只有在各自 typed args/result、真实执行、来源和失败路径测试通过后才可更新状态；页面打开不计执行。
