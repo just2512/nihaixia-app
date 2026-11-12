@@ -553,3 +553,39 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 2. 每个代码 PR 合并后刷新 master SHA，再对后续 PR 重新核对 base、mergeability、CI。
 3. 仅代码 + 自动化测试 + 目标设备 TRACE 三者齐全才可将设备相关能力标为 IMPLEMENTED。
 4. 医学审核、Find N2 真机、旧附件归属和混合数据库备份边界未完成前继续标记 PARTIAL / UNKNOWN / RELEASE BLOCKED。
+
+
+## 2026-11-12 合并后续接：Headless almanac 与 per-turn TRACE
+
+### 主线基线
+- 本节基线：master @ `34c1fa11c61b83d75b0c01ac6272a39d0cbf4537`。
+- PR #86 已 squash merge，合并提交 `870362ae8ba92e25b195c62d9fc0be653d19600f`。
+- PR #87 已 squash merge，合并提交 `34c1fa11c61b83d75b0c01ac6272a39d0cbf4537`。
+- 两项 PR 的对应 head 全量 Flutter regression 与 Android arm64 APK/ABI + Native unit tests 均 SUCCESS：#86 run `43162562989`；#87 run `43162529437`。两次 Branch validation 均 SKIPPED，不计 PASS。
+- 上述是 PR head 的 CI 证据。合并后 master 新 SHA 的独立 workflow 结果尚未在本次查询中取得，master CI 状态记 UNKNOWN，不沿用 PR head 结果。
+
+### D：Headless capability
+- #86 将 `almanac` 加入统一助手 Headless executor，同时保留页面入口；复用 `getDailyAlmanac`，只接受显式日期或由设备本地日期确定性解析的今日/明日/昨日；拒绝无效日期、超出 1900-2100 范围及未声明参数。
+- 结果返回 `AssistantToolResult`，包含实际日期参数、`local-engine:almanac` source ID、结构化字段和民俗免责声明；不读取保存命盘或个人资料。
+- 主线 Headless / Executed 现有两项：`yunqi`、`almanac`。其余注册工具仍按实际调用链逐项分类；页面打开不计为 Executed。
+- 本次只证明黄历适配器的代码与自动化契约，不代表其他 22 项页面工具已经具备 Headless 能力。
+
+### F：per-turn trace_id
+- #87 已把默认关闭的 recorder 接入统一助手普通文本、图片、语音模型轮次；同一 32 位小写十六进制 trace_id 贯穿 traced Native API 响应校验，并写入 user/assistant 两条消息现有 metadata。
+- 已记录阶段：input、native_inference、model_output、persistence、final_render；独立症状提取也使用 traced Native API。
+- TRACE 关闭时不生成 ID、不传 traced 参数、不写 trace_id metadata；不记录用户正文、prompt、模型回复、症状或附件路径。
+- F 仍 PARTIAL：structured diagnosis、clarification/tool dispatch、retrieval 分阶段事件、失败轮次持久化关联及 Find N2 真实 TRACE 尚未完成。不得将普通文本/图片/语音轮次接入等同于全链路 TRACE 完成。
+
+### A-G 当前状态与后续顺序
+- A PARTIAL：Native teardown 与持久化回归已有 CI 证据；Find N2 GPU/CPU 长轮次、媒体、Activity/进程恢复 TRACE 仍 UNKNOWN。
+- B PARTIAL / RELEASE BLOCKED：自然语言红旗 detector、医学审核词表/阈值/处置文案及所有生产入口 fail-closed 证据仍缺失；不得自行补造医学规则。
+- C PARTIAL：精确方剂匹配修复已合并；继续逐条核验 subject/object ID、类型、文本、原始位置、source ID、谓词与重复候选，不以增加数量为目标。
+- D PARTIAL：主线 Headless/Executed = 2（yunqi、almanac）；继续审查第三个候选，先证明现有确定性业务函数、参数和结果来源，再做最小适配。
+- E PARTIAL：设置清理、附件归属、SQLite 边界、模型/TRACE 备份规则已有实现；混合 SQLite 中 AI 会话行的系统备份、无法归属的旧共享图片、外部导出副本和 Find N2 清理后重启仍未闭环。
+- F PARTIAL：普通文本/图片/语音 per-turn trace_id 已合并；继续覆盖 structured diagnosis、clarification/tool dispatch、retrieval 与失败状态，并补充跨层隐私/一致性测试。
+- G PARTIAL：本节后续文档需按当前 master 更新；README/pubspec 版本一致性自动检查仍需闭环。
+
+### 本轮执行边界
+- 未执行 Find N2 真机测试；设备相关能力保持 UNKNOWN。
+- PR head CI SUCCESS 不替代合并后 master CI；master 最新独立 workflow 未取得时不得标 PASS。
+- 不创建定时任务或周期性监控；后续工作按当前工程依赖顺序直接推进。
