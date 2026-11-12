@@ -318,6 +318,21 @@ class _PageToolTraceService extends _TextSendService {
   }
 }
 
+class _SequencedSymptomsTraceService extends _TextSendService {
+  final List<LocalAiSymptomDraft> drafts;
+  final extractedTraceIds = <String>[];
+
+  _SequencedSymptomsTraceService(this.drafts);
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
+    required String traceId,
+  }) async {
+    extractedTraceIds.add(traceId);
+    return drafts.removeAt(0);
+  }
+}
+
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentContexts = <String>[];
@@ -359,6 +374,19 @@ class _TextSendService extends LocalAiService {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
     return sendMessage(text);
+  }
+}
+
+class _FailingTextSendService extends _TextSendService {
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+  }) async {
+    throw PlatformException(
+      code: 'NATIVE_SEND_FAILED',
+      message: 'native send failed in test',
+    );
   }
 }
 
@@ -2815,6 +2843,111 @@ void main() {
           .single.errorCode,
       'RESULT_CONTRACT_INVALID',
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Native 发送失败后记录 finalRender 失败提示终态', (tester) async {
+    const traceId = '50505050505050505050505050505050';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 20),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: _FailingTextSendService(),
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '你好');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('native send failed in test'), findsOneWidget);
+    final finalRender = events
+        .where((event) =>
+            event.traceId == traceId &&
+            event.stage == AiTraceStage.finalRender)
+        .single;
+    expect(finalRender.status, AiTraceStatus.succeeded);
+    expect(finalRender.errorCode, 'NATIVE_SEND_FAILED');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('症状整理空结果和用户确认路径都记录 finalRender 终态',
+      (tester) async {
+    const sendTraceId = '10101010101010101010101010101010';
+    const emptyTraceId = '20202020202020202020202020202020';
+    const confirmedTraceId = '30303030303030303030303030303030';
+    final nextTraceIds = [sendTraceId, emptyTraceId, confirmedTraceId];
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => nextTraceIds.removeAt(0),
+      clock: () => DateTime(2026, 11, 12, 20),
+    );
+    final service = _SequencedSymptomsTraceService([
+      const LocalAiSymptomDraft(sourceTruncated: true),
+      const LocalAiSymptomDraft(
+        mainComplaint: '间断头痛',
+        duration: '三天',
+      ),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '我间断头痛三天');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('整理本次症状'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('原始输入记录曾被裁剪，但本次未提取到可核对内容。请补充遗漏描述后重新整理。'),
+      findsOneWidget,
+    );
+    final emptyFinalRender = events
+        .where((event) =>
+            event.traceId == emptyTraceId &&
+            event.stage == AiTraceStage.finalRender)
+        .single;
+    expect(emptyFinalRender.status, AiTraceStatus.succeeded);
+    expect(emptyFinalRender.errorCode, 'EMPTY_SYMPTOM_DRAFT');
+
+    await tester.tap(find.text('整理本次症状'));
+    await tester.pumpAndSettle();
+    expect(find.text('核对症状整理'), findsOneWidget);
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认这份整理'));
+    await tester.pumpAndSettle();
+
+    final confirmedFinalRender = events
+        .where((event) =>
+            event.traceId == confirmedTraceId &&
+            event.stage == AiTraceStage.finalRender)
+        .single;
+    expect(confirmedFinalRender.status, AiTraceStatus.succeeded);
+    expect(confirmedFinalRender.errorCode, isNull);
+    expect(service.extractedTraceIds, [emptyTraceId, confirmedTraceId]);
     expect(tester.takeException(), isNull);
   });
 
