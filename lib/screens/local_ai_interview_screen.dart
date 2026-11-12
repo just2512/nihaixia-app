@@ -2801,20 +2801,127 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final generation = _historyRestoreGeneration;
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.dispatch,
+      route: 'history_restore',
+      mode: _assistantMode.name,
+    );
+    final conversationFuture = _conversationIdFuture;
+    final watch = Stopwatch()..start();
+    int? conversationId;
     try {
+      conversationId = await conversationFuture;
+      if (conversationId == null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.failed,
+          route: 'history_restore',
+          errorCode: 'CONVERSATION_UNAVAILABLE',
+        );
+        if (mounted && generation == _historyRestoreGeneration) {
+          setState(() => _error = '历史会话标识不可用，未恢复模型上下文。请重新选择历史记录重试。');
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.presentation,
+            status: AiTraceStatus.succeeded,
+            conversationId: conversationId,
+            route: 'history_restore',
+          );
+        }
+        return;
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        conversationId: conversationId,
+        route: 'history_restore',
+      );
       await _service.restoreConversation(
         transcript: transcript,
         userMessages: _pendingHistoryUserMessages,
+        traceId: traceContext.traceId,
       );
-      if (!mounted || generation != _historyRestoreGeneration) return;
+      watch.stop();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        durationMs: watch.elapsedMilliseconds,
+        conversationId: conversationId,
+        route: 'history_restore',
+        backend: _status?.backend,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        conversationId: conversationId,
+        route: 'history_restore',
+      );
+      if (!mounted || generation != _historyRestoreGeneration) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.presentation,
+          status: AiTraceStatus.notApplicable,
+          conversationId: conversationId,
+          route: 'history_restore',
+          errorCode: 'HISTORY_SELECTION_SUPERSEDED',
+        );
+        return;
+      }
       setState(() {
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
         _error = null;
       });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.presentation,
+        status: AiTraceStatus.succeeded,
+        conversationId: conversationId,
+        route: 'history_restore',
+      );
     } catch (error) {
-      if (!mounted || generation != _historyRestoreGeneration) return;
+      watch.stop();
+      final traceMismatch =
+          error is PlatformException && error.code == 'TRACE_ID_MISMATCH';
+      await _traceRecorder.record(
+        traceContext,
+        stage: traceMismatch
+            ? AiTraceStage.resultValidation
+            : AiTraceStage.nativeInference,
+        status: AiTraceStatus.failed,
+        durationMs: watch.elapsedMilliseconds,
+        conversationId: conversationId,
+        route: 'history_restore',
+        backend: _status?.backend,
+        errorCode: traceMismatch
+            ? 'TRACE_ID_MISMATCH'
+            : error is PlatformException
+                ? error.code
+                : 'HISTORY_RESTORE_FAILED',
+      );
+      if (!mounted || generation != _historyRestoreGeneration) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.presentation,
+          status: AiTraceStatus.notApplicable,
+          conversationId: conversationId,
+          route: 'history_restore',
+          errorCode: 'HISTORY_SELECTION_SUPERSEDED',
+        );
+        return;
+      }
       setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.presentation,
+        status: AiTraceStatus.succeeded,
+        conversationId: conversationId,
+        route: 'history_restore',
+      );
     }
   }
 
