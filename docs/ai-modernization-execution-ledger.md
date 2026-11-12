@@ -188,3 +188,270 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 10. 2026-11-12 当前主线增量复核（基线：`28b6bbf5928c44e2befb85b3fbaa6220827634e7`）
+
+> 本节只记录本轮重新读取的 master 代码、已合并 PR 和当前 CI 证据。未合并 PR 不计入 master 已实现；CI 运行中/失败不得写 PASS；Find N2 真机没有本轮 TRACE，相关能力仍为 PARTIAL/UNKNOWN。
+
+### 10.1 当前主线与集成状态
+
+| 对象 | 状态 | 当前证据 / 处理 |
+|---|---|---|
+| master | 当前审计基线 | `28b6bbf5928c44e2befb85b3fbaa6220827634e7`；由 PR #73 合并后形成 |
+| PR #71 红旗 provenance 契约 | MERGED | 合并至 master；Flutter regression + Android arm64 CI run `43143105547` SUCCESS。仅证明策略契约，不证明自然语言 detector、生产入口门禁或医学审核完成 |
+| PR #73 TRACE 清理生命周期协调 | MERGED | 合并至 master；run `43143105547` Flutter regression SUCCESS、Android arm64 CI SUCCESS；Branch validation 为 SKIPPED |
+| PR #74 旧附件迁移分支 | CLOSED / SUPERSEDED | 旧 base `bc29aef2` 已过期；实现从当前 master 重建为 PR #78。旧 CI 不继承 |
+| PR #76 设置页清除入口 | OPEN / CI RE-RUN PENDING | 最新 head `3d8c02448d580ea2758c373e36536e8bdbbf3d93`；首次全量回归 run `43144522461` 1325 passed / 1 failed / 15 skipped。唯一失败为本 PR 新增直接 `showDialog` 违反 fold-aware navigation contract；已改为 `showFoldAwareDialog`，新 run `43145157603` pending，未验收 |
+| PR #77 SQLite 原子轮次故障注入测试 | OPEN / IN_PROGRESS | head `f52ecfbd8dd0627fe608f3152744ed146a205dec`；run `43144699629` 全量回归执行中。新测试通过 SQLite trigger 注入 assistant insert 失败，验证 user insert 同事务回滚 |
+| PR #78 生产附件归属迁移 | OPEN / IN_PROGRESS | head `e6935ce45e7499ceac5f7bb7d3903692234684eb`；run `43144948665` 正在执行录音重试 Widget 回归。未通过前不合并 |
+
+### 10.2 A-G 当前核验结果
+
+| ID | 状态 | 当前已核验事实 | 未闭环 / 下一项 |
+|---|---|---|---|
+| A 多轮稳定性与 Native 生命周期 | PARTIAL | `MainActivity.runAiTask` 使用单线程 `aiExecutor`；Native 多轮失败恢复此前成功轮次，不自动重放当前 UNKNOWN 请求；`DatabaseHelper.saveAssistantTurn` 已用 SQLite transaction 写入 user/assistant pair；`LocalAiInterviewScreen._persistSuccessfulTurn` 对历史持久化失败显示可见错误 | PR #77 故障注入测试待 CI；`onDestroy` 只排队释放并 shutdown executor，未等待 teardown 完成；Find N2 GPU/CPU 各 20 轮和跨层 TRACE UNKNOWN |
+| B 全模式红旗安全门禁 | PARTIAL / RELEASE BLOCKED | `RedFlagPreflight` 已有 source、detector/rule-set version provenance 与 subject/time/polarity 状态契约；PR #71 已合并，测试在 run `43143105547` 通过 | 没有自然语言 detector；尚未接入所有模型调用/普通业务路由入口；没有医学词表、阈值和处置文案审核记录。不得用人工构造的 `RedFlagAssessment` 单测替代真实 detector |
+| C 检索黄金行为基线 | PARTIAL | `test/ai_retrieval_golden_snapshot_test.dart` 与 `test/fixtures/ai_retrieval_golden_metadata.json` 已形成可版本控制基线；run `43143105547` 的 golden snapshot 步骤成功，artifact `13911060760` 可复核 | 本轮快照：原始自然语言 query 命中 0；派生 query “桂枝汤” 196、“桂枝” 294、“伤寒论” 121；上下文 RETRIEVED、9 个 source IDs、纸本/卷页定位 9 项均 MISSING。上下文含 4 个方剂 ID，其中 3 个并非用户直接点名；当前实现会按组成药名扩展方剂候选，需评估相关性，但在完成对照测试前不改变排序/检索语义 |
+| D Headless Capability | PARTIAL | `AssistantToolRouter` 当前 24 项注册；结构化辨证在统一对话内联执行，其余 23 项仍为 Widget/page builder；参数验证目前为 date/integer/choice/text 基础校验 | 未发现统一 Headless execute/result 协议、统一权限/取消/超时和结果回传证据；先逐项盘点真实业务函数及现有行为基线，再选最小适配器，不以页面打开冒充执行 |
+| E 本地 AI 数据保护 | PARTIAL | PR #73 已提供 TRACE 停止/flush、清理期间生命周期协调；PR #76 增加设置入口；PR #78 将新建图片/录音迁移到 AI-owned 目录。SQLite 清理测试覆盖 AI 会话表清理和非 AI 数据保留 | #76/#78 CI 未通过前不合并；旧共享 temp 孤儿附件没有可靠归属证据；Android Manifest 当前未显式声明 `allowBackup`、`fullBackupContent` 或 `dataExtractionRules`，合并 Manifest/备份行为尚未核验。不得未经独立决策全局禁用 Android backup |
+| F TRACE 与隐私 | PARTIAL | TRACE writer/recorder 默认关闭；事件字段白名单、失败不阻断业务、关闭后拒绝新事件等已有单测；PR #73 将 writer/recorder 进程级共享并与清理生命周期协调 | trace_id 尚未贯穿 Dart 输入、MethodChannel、Native 推理、检索/工具、最终展示和 SQLite 持久化；未完成设备级端到端 TRACE |
+| G 文档与版本一致性 | PARTIAL | README 与 `pubspec.yaml` 均显示 `1.11.30+8039` | 本次新增审计报告和台账更新仍在独立文档 PR；能力盘点文件需继续按最新审计 SHA 维护 |
+
+### 10.3 当前执行顺序（不等待用户逐项点名）
+
+1. 完成 PR #76 的 fold-aware dialog 修复后全量 Flutter 回归与 Android arm64 验收；失败则按失败测试继续修复。
+2. 完成 PR #77 原子事务故障注入测试；若失败，核对真实 SQLite transaction 和 test factory 隔离，不弱化回滚断言。
+3. 完成 PR #78 录音重试及全量 Flutter/Android CI；若失败，查路径注入、录音状态与测试等待条件，不通过跳过测试处理。
+4. 小批量集成上述通过的独立切片；每次集成后刷新 master 基线并重新校验后续分支。
+5. E：核查旧共享 temp 附件的历史命名和持久化引用；只对可证明属于 AI 的路径制定清理策略。补充 Android merged manifest / backup 行为证据；备份策略变更单独评估。
+6. A：补 Native Activity destroy / executor teardown 可注入测试；继续核对 SQLite、Flutter UI、Native 成功轮次的一致性。真机 GPU/CPU TRACE 必须由 Find N2 实测提供。
+7. F：冻结跨层 trace_id 契约后，再按输入→门禁→路由→检索→模型→工具→展示→持久化逐段接入；TRACE 默认关闭且不记录敏感正文。
+8. B：在没有医学审核记录前，不引入未经审核的词表/阈值/处置文案；先完成 detector 入口清单和 fail-closed 接入设计，避免静默放行。
+9. C：围绕当前黄金快照中方剂候选扩展行为补相关性对照用例；保持原始基线，任何检索语义变化必须显式更新 golden fixture 并说明影响。
+10. D：按 24 项工具逐项建立输入/输出、参数、权限、取消、错误和执行证据表；只对已有确定性业务函数建立 Headless adapter。
+11. 每个已合并代码切片立即更新本台账；真机未测、merged manifest 未核验、医学审核缺失等项目继续保持 PARTIAL/UNKNOWN。
+
+
+
+## 11. 2026-11-12 PR #77 集成后复核（当前 master：`e279d7a4ce65edc5a32d7521231f57c413db6895`）
+
+PR #77 已 squash merge。其 Flutter full regression `43144699629` SUCCESS（1326 passed / 15 skipped / 0 failed）；Android arm64 APK/ABI build 与 unit tests SUCCESS；Branch validation SKIPPED。合并后当前 master 为 `e279d7a4ce65edc5a32d7521231f57c413db6895`。
+
+### 11.1 最新未合并切片
+
+| PR | Head SHA | CI run | 当前状态 |
+|---|---|---|---|
+| #76 设置页清理入口 | `daf8cc732b902540089be8173e9df726075c38ae` | `43146455398` | Flutter regression IN_PROGRESS；前一修复版 run `43145157603` Flutter SUCCESS（1326 passed / 15 skipped），Android arm64 job仍在该旧head上执行；当前 head包含清理范围文案修订，必须等新head完整验收 |
+| #78 生产附件归属迁移 | `bddf71287b499edb807ec90e8c6b635d7ca76798` | `43146481834` | Flutter regression IN_PROGRESS；已增加固定泵帧等待，测试临时目录IO使用 tester.runAsync；仍待录音重试和图片归属回归通过 |
+| #79 审计/台账/能力/TRACE 契约文档 | head 随本 PR 文档提交持续更新 | `43146991805` 为较早 head 的 run | 较早 head Flutter SUCCESS；Android arm64 job IN_PROGRESS；当前 head 必须重新触发并验收 |
+
+### 11.2 E 清理范围增量
+
+PR #78 现在同时包括：
+- 图片/录音进入 `local_ai_attachments` AI-owned 目录；
+- 成功复制后，仅在来源路径位于 app temp root 内时删除 image_picker 的缓存副本；外部 provider 路径不删除；
+- `LocalAiAttachmentStore.clearAll` 除专属目录外，只额外清理共享 temp root 下精确匹配 `local_ai_<digits>.wav` 的旧版录音；不递归子目录，不删除泛化图片文件或其他 temp 文件；
+- 对上述 allowlist 新增单测，验证旧录音被清除、普通文件与嵌套目录文件保留。
+
+因此 E 的旧附件边界更新为：已知旧版录音有精确清理策略；旧版共享 temp 图片缺少稳定归属标识，仍不清理。Android backup 行为仍 UNKNOWN，不禁用全局备份。
+
+### 11.3 A-G 状态更新
+
+- A：原子轮次事务故障注入测试已合并并通过 Flutter/Android CI；Native Activity teardown 与 Find N2 真机一致性仍 PARTIAL/UNKNOWN。
+- B：仍 PARTIAL / RELEASE BLOCKED。已定位所有 Flutter 生产入口：活动结构化问诊答案、工具路由、文本 sendMessage、图片 sendImage、录音 sendAudio、症状整理 extractSymptoms；Native 对应 MethodChannel 入口仍无真实自然语言/多模态 detector。
+- C：黄金基线不变；候选相关性问题继续待对照用例，不直接改排序。
+- D：24 项注册表完整清单已追加至能力盘点；23 项仍是页面 builder，Headless 协议缺失。
+- E：#76/#78 当前 head 的 CI 未结束，不合并；旧版精确录音清理已加入 #78。
+- F：trace_id 端到端契约仍未实现。
+- G：README/pubspec 版本一致；审计报告和台账仍待文档 PR #79 最新 head 验收。
+
+### 11.4 下一步
+
+1. 完成 #76 当前 head Flutter/Android CI，成功后合并并验证主线。
+2. 完成 #78 当前 head 录音重试、图片复制/安全清理、旧录音 allowlist 测试及全量 Flutter/Android CI；成功后合并。
+3. 合并后重新读取 master，更新 #79 文档基线和 PR/CI 状态。
+4. 继续 A Native teardown 矩阵、F trace_id 契约、B detector 入口门禁设计、C 检索相关性对照、D Headless 适配。
+5. 真机、医学审核、Android merged manifest/backup 未取得证据的项目继续保持 UNKNOWN / RELEASE BLOCKED。
+
+
+## 12. F：trace_id 端到端契约已冻结为文档基线（尚未实现）
+
+新增 `docs/ai-trace-contract.md`，基于当前 `AiTraceRecorder`、`AiTraceEvent`、`LocalAiTraceFileWriter` 和 `assistant_messages.metadata` 现状定义传播契约。
+
+关键约束：
+- TRACE 关闭时不生成 ID、不传递、不写 SQLite metadata；开启时每个用户轮次只生成一个 32 位小写十六进制 trace_id。
+- trace context 必须显式贯穿结构化问诊、工具路由、文本、图片、录音、症状整理、Native MethodChannel、最终展示和 SQLite。
+- MethodChannel 增加可选 `trace_id`，Native 原样回传；缺失/错配标记 UNKNOWN，不重新生成 ID。
+- SQLite 复用现有 `assistant_messages.metadata TEXT`，user/assistant 两条消息写入相同 trace_id；不增加 conversation table/schema column。
+- 复用已有 AiTraceStage/AiTraceStatus；只写 allowlisted metadata，不记录用户原文、prompt、response、症状、附件路径、ASR/OCR 或身份信息。
+- writer 现有 500 events / 7 days 限额保持；清理仍由 process-wide runtime disableAndFlush → clear → restore 负责。
+
+实施按文档第 7 节逐层推进：Flutter context → Dart MethodChannel → Kotlin 原样回传 → SQLite metadata → 跨层故障注入/隐私测试 → Find N2 真机 TRACE。当前 F 仍 PARTIAL；文档冻结不等于代码实现完成。
+
+
+## 13. 2026-11-12 最新 CI 纠偏记录
+
+本节覆盖第 11 节之后的新提交，防止台账继续引用旧 head 或把失败写成运行中：
+
+| PR | 最新 head | 最新 CI | 处理 |
+|---|---|---|---|
+| #76 设置页清理入口 | `5ee908134f27e15caf907a0751c580fbed92a13a` | run `43147357775` PENDING | 前一 head run `43146455398` 的 1327 tests 中仅 1 项失败：测试仍查找旧警告文案；已同步更新断言。更早 head `43145157603` Flutter 1326 passed / 15 skipped，但不是当前 head 结论 |
+| #78 附件归属迁移 | `23efe6b625b88eabeae475c5374a8cea8dd8b9a4` | run `43147189070` PENDING | 旧 head run `43146732341` Flutter FAIL：附件存储文件 raw RegExp 字符串损坏、widget test 在 fakeAsync 中做真实文件系统操作且产生两个不必要非空断言 warning；已重建完整 store 文件，测试改用 fake recording store，清理 allowlist 由非-widget SQLite/文件系统单测覆盖 |
+| #79 审计/台账/能力/TRACE 契约文档 | head 随本 PR 文档提交持续更新 | run `43146991805` 为较早 head | 较早 head Flutter regression IN_PROGRESS；本轮更新后需验收新 head |
+
+### 当前执行约束
+
+- #76/#78 当前 head 的 CI 必须从头通过 Flutter regression 和 Android arm64；不能沿用旧 head 的部分成功。
+- #78 的生产代码保留图片来源清理：仅当来源路径位于 app temp root 内才删除；外部 provider 路径不删除。
+- #78 的旧录音清理严格使用 `local_ai_[0-9]+.wav` 文件名 allowlist，单层枚举，不递归；未知图片/普通文件/子目录均保留。
+- #76 警告文案区分“已知旧录音会清理”与“无法可靠归属的旧共享临时图片不清理”。
+- #79 只在其最新文档 head CI 完成后合并；合并前再次更新本台账中的当前 master SHA 和所有 PR/CI 状态。
+
+
+## 14. PR #76 集成后当前执行快照（2026-11-12）
+
+PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Flutter full regression SUCCESS，Android arm64 APK/ABI + unit tests SUCCESS。当前 master 为 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`。
+
+| PR | 最新 head | CI | 当前状态 |
+|---|---|---|---|
+| #76 | 已合并 | run `43147357775` | MERGED；Flutter + Android SUCCESS |
+| #78 附件归属/旧录音 allowlist | `6c3fb70bba38bff3831fea27dfcdadba5994dc48` | run `43148511074` | PENDING；前一 head targeted recorder test 已通过，full regression 因另一录音文件检查测试未注入 fake store失败，已补注入并改为固定帧等待 |
+| #80 Native Activity teardown 序列化 | `fc640d431eb58a62a81d507e663674fd1a746e28` | run `43148298845` | Flutter full regression IN_PROGRESS；Android job 尚未启动 |
+| #79 审计/台账/能力/TRACE 契约文档 | head 随本 PR 更新 | run `43147546530` | 该 run 的 Flutter + Android SUCCESS；本次台账更新后必须按新 head 重新验收 |
+
+### 14.1 A / E 当前状态
+
+- A：SQLite 原子轮次测试已合并；Native teardown 改为进程级单线程队列，Activity destroy 后拒绝未开始旧任务并将 release 排入共享队列，新 Activity 的模型任务排在 release 后。PR #80 仍待 CI；真机折叠屏/Activity recreation 和 GPU/CPU TRACE UNKNOWN。
+- E：设置页清理入口、二次确认、逐域结果和失败域中文说明已合并。附件归属迁移、旧版精确录音清理和 image_picker app-temp 缓存副本清理仍在 PR #78，未通过当前 head CI 前不合并。
+- #78 录音重试 UI 测试和文件存储测试分层：Widget 测试用 fake store 验证录音状态恢复；文件系统测试验证 AI-owned 目录与精确 legacy allowlist，不在 fakeAsync 中执行真实目录创建。
+- PR #80 的 process executor 是进程级 daemon 单线程队列，不在 Activity onDestroy 时 shutdown；这是为了确保旧 Activity release 先于新 Activity load。若模型调用永久不返回，新 Activity 也会等待旧任务结束；不能通过并行加载绕过该安全边界。
+
+### 14.2 下一步
+
+1. 完成 #78 当前 head 全量 Flutter regression 与 Android arm64；通过后小批量合并。
+2. 完成 #80 Flutter/Android CI；失败按真实日志修复，不降低队列顺序断言。
+3. #78/#80 合并后刷新 master，再更新 #79 的最终基线/PR 状态并合并文档。
+4. 继续 F trace_id 跨层实现；B 仍等待医学审核 detector；C 做检索相关性对照；D 做确定性 Headless adapter；真机证据由 Find N2 本地 TRACE 提供。
+
+
+---
+
+## 9. 2026-11-12 11:42（UTC+8）主线续接复核
+
+本节覆盖此前 2026-11-10 记录及 2026-11-12 早间增量记录；如状态冲突，以本节对应 SHA 的最新远端证据为准。
+
+### 9.1 当前主线与 CI
+
+- 当前 master：`eaa83b440ddb1299a7eac58b70067de38ad44ea2`。
+- Flutter 全量回归：run `43148541339`，job `130952021084`，SUCCESS。
+- Android arm64 APK/ABI 构建与 Native unit tests：run `43148541339`，job `130953844163`，SUCCESS。该 job 是 ABI/build 验证，不是 Find N2 真机运行。
+- `Analyze and test`：job `130952020768` 在本次记录时仍 IN_PROGRESS；因此 master CI 总状态不能标为全绿。
+- Branch validation 在主线事件中 CANCELLED/SKIPPED，不计 PASS。
+
+### 9.2 PR 与集成状态
+
+| PR | 工作流 | 当前状态 | 基线 / head | 证据与下一步 |
+|---|---|---|---|---|
+| #71 | B 红旗 provenance 契约 | MERGED | merge 已进入主线历史 | 仅证明结构化 provenance 契约；自然语言 detector、全入口 fail-closed、医学审核仍缺失 |
+| #73 | F TRACE runtime 与清理协调 | MERGED | merge commit `28b6bbf5928c44e2befb85b3fbaa6220827634e7` | 仅证明 recorder 生命周期协调；端到端 trace_id 仍 PARTIAL |
+| #76 | E 设置页清理入口 | MERGED | merge 已进入当前主线 | 入口/二次确认已存在；删除边界和重启后不可恢复尚未证明 |
+| #77 | A SQLite assistant turn 原子持久化测试 | MERGED | merge commit `e279d7a4ce65edc5a32d7521231f57c413db6895` | 测试覆盖 assistant insert 失败时 user insert 同事务回滚；不替代真机 transcript 一致性 |
+| #78 | E 生产附件归属 | OPEN | base `eaa83b44...`；head `7a03023aab43ac3fcae6af744fd94c571a8f92ae` | 已从旧基线重放到当前 master；Flutter regression 与 branch validation 仍运行。此前旧基线 Flutter/Android 通过不能替代新 head 验收 |
+| #79 | G 审计报告/能力盘点/台账/TRACE 契约 | OPEN | base `eaa83b44...`；head `5ecdfe8511aee825b2676541f2d3188acd29855f`（本台账更新前） | 已重放到当前 master；本次追加记录后 head 将变化，需以 GitHub 最新 head/CI 为准 |
+| #80 | A Native Activity teardown 串行化 | OPEN | base `eaa83b44...`；head `46ad1bb4c9c10a793b1d8808b7b6870fd00567d5` | 已从旧基线重放到当前 master；Flutter regression 与 branch validation 仍运行，等待新 head CI |
+| #81 | C 精确方剂查询避免无关候选扩展 | OPEN | base `eaa83b44...`；head `bff30502a261ecbc67b519991808cdeb39168a12` | Flutter regression FAIL，Android arm64 SUCCESS；失败见 9.3，修复并更新黄金快照前禁止合并 |
+| #74/#75 | 旧附件分支 / 旧台账分支 | CLOSED, NOT MERGED | base 为 `bc29aef2...` | 不再作为集成候选；对应工作已分别由 #78/#79 当前基线分支承接 |
+
+### 9.3 C 精确方剂检索失败基线（PR #81）
+
+- CI run `43148982819` Flutter job `130953417214`：失败；Android arm64 job `130954217277`：成功。
+- 新增的“单味药查询仍按方剂组成匹配相关方剂”测试在 `test/assistant_knowledge_context_test.dart:40` 失败：查询“桂枝”时，受 `maxFormulaEntries = 4` 上限影响，结果没有包含测试硬编码期待的“桂枝汤”。这是候选排序/上限与测试断言的冲突，不能通过扩大上限来掩盖。
+- `test/ai_retrieval_golden_snapshot_test.dart:183` 失败：精确方剂过滤后上下文构成变化，新增来源 ID `herb:桂枝`，与旧黄金快照不同。该变化必须基于实际输出审核并更新快照；不能删除快照断言或把变化默认为正确。
+- 下一步：分别审查“精确方名查询”与“单味药成分查询”的业务契约；保留精确方名不扩展无关方剂的目标，修正不合理测试前先确认候选截断行为；记录新旧来源 ID、排序和上下文差异，再更新黄金快照并跑完整回归。
+
+### 9.4 A-G 当前状态与可执行缺口
+
+- A：PARTIAL。SQLite 成功轮次原子写入测试已合并；PR #80 在当前 master 上重新验收。Find N2 GPU/CPU 各至少 20 轮、图片/语音和进程恢复 TRACE 仍 UNKNOWN。
+- B：PARTIAL / RELEASE BLOCKED。结构化 preflight 与 provenance 存在，但当前代码没有经医学审核的自然语言 detector；不能将无 detector 的输入当作 CLEAR，也不能自行编造医学词表/阈值/处置文案。下一步是全入口调用图和 fail-closed 接入设计，正式词表等待医学审核。
+- C：PARTIAL。黄金快照 CI 可执行；PR #81 当前行为变化未通过快照回归，暂停合并。
+- D：PARTIAL。按审计报告，24 项注册能力中 23 项为页面 builder；需继续逐项确认 Page Tool / Headless / Executed，不能将页面打开计作工具执行。
+- E：PARTIAL。设置入口已合并；PR #78 当前基线附件归属迁移正在 CI。旧共享临时目录中无法可靠归属的图片、Android 备份副本及外部导出副本不在可证明清理边界；SQLite 数据库混合 AI 与非 AI 数据，禁止直接排除整个数据库备份或全局关闭备份。
+- F：PARTIAL。writer/recorder 默认关闭且清理协调已合并；trace_id 尚未贯穿输入、安全、路由、检索、模型、工具、结果展示和 SQLite。
+- G：PARTIAL。PR #79 更新审计报告、能力盘点、TRACE 契约和本台账；README 与 pubspec 当前版本仍需自动一致性检查。
+
+### 9.5 当前并行调度
+
+1. 等待 #78/#80/#79 当前 master head 的 CI 完成；逐项读取失败日志，不用旧基线 CI 代替。
+2. #81 保持未合并，先修候选截断测试契约和黄金快照差异。
+3. E 下一切片：核对清理 coordinator 的每个数据域与 Android merged manifest；数据库/附件/Native runtime/TRACE 的清理结果分别报告，重启验证缺失时保持 UNKNOWN。
+4. B 在不修改 Native 共享文件的前提下，推进纯 Dart 入口清单、调用边界测试和 fail-closed 契约；不启用未经医学审核的 detector。
+5. D 完成 24 项 ToolRouter 注册表逐项分类，优先只读盘点，不抽取未有行为基线的 Headless adapter。
+6. F 先冻结跨层 trace_id 传递契约，再按文件所有权分批接入；不得将 #73 生命周期协调等同于端到端完成。
+
+### 9.6 证据边界
+
+本次状态只依据 GitHub master/PR、源码、测试文件和 Actions job/log。未执行 Find N2 真机测试；未取得用户设备的 GPU/CPU、图片/语音、进程恢复 TRACE。所有相关设备验收继续标记 UNKNOWN。
+
+
+## 10. 2026-11-12 后续增量：当前主线并行验收续接
+
+- PR #78 附件归属迁移已重放到 master `eaa83b440ddb1299a7eac58b70067de38ad44ea2`，当前 head `7a03023aab43ac3fcae6af744fd94c571a8f92ae`；Flutter regression 仍 IN_PROGRESS，branch validation changed tests 已 SUCCESS，另一轮 branch validation SKIPPED。Android arm64 job 尚未在该 head 上执行成功，不得标完整 CI PASS。
+- PR #80 Native Activity teardown 串行化已重放到同一 master，当前 head `46ad1bb4c9c10a793b1d8808b7b6870fd00567d5`；Flutter regression 和 branch validation 均 IN_PROGRESS；Android arm64 仅旧 head 有 SUCCESS，新 head 尚待验证。
+- PR #81 精确方剂检索当前 head 已更新为 `f26455f0ec1bcabaf04c5fa91ab4c8821274f827`。针对前次失败做了两项修订：成分匹配测试改用当前方剂库中唯一包含“白蜜”的“大半夏汤”，避免把前 4 条截断结果写成固定方剂排序契约；黄金 metadata 按 CI 实际观察到的差异更新为 sourceIds `formula:guizhi_tang`、`herb:桂枝` 和四条伤寒条目，context textLength 2199、MISSING locator 6。新 head Flutter regression 尚在 QUEUED/IN_PROGRESS，不能标 PASS。
+- PR #82 新增 `test/local_ai_data_clear_database_boundary_test.dart`，head `6089c4bcc73a00e749b7dfc413d15f87f42f5275`，从当前 master 创建。该测试使用真实 SQLite FFI，验证 assistant_conversations、assistant_messages、tcm_interview_tasks、legacy chat_history 清空，同时 bookmarks、diagnosis_history、search_history、user_settings 保留，并在关闭/重开数据库后复验。该测试只覆盖数据库边界，不替代附件、Native cache、TRACE、Android 备份和真机清理验收；CI 尚未结束。
+- PR #79 本台账分支在本节追加后会产生新 head，必须在 GitHub 上重新读取最终 SHA 和 CI，不得继续引用更新前 head `601606aa...`。
+
+### 后续执行约束
+
+1. #78/#80/#81/#82 的新 head CI 全部结束前不合并；每个失败必须读具体 job/step/log。
+2. #82 若通过，数据库清理子项可记为 CODE+TEST+CI 的 PARTIAL 证据；清理后重启仅由 FFI 文件重开证明数据库持久化结果，不代表 Android 进程重启或全数据不可恢复。
+3. #81 只有在新 head 的检索专项、黄金快照和完整 Flutter regression 通过后，才可进入小批量集成。
+4. 当前主线 Android arm64 build/Native unit tests 已 SUCCESS；主线 `Analyze and test` 仍以 Actions 最新状态为准，不沿用早前 IN_PROGRESS 记录。
+
+
+## 11. 2026-11-12 12:05（UTC+8）D 目录审计与 E 备份边界增量
+
+### 11.1 D：24 项工具注册表已完成源码逐项分类（审计完成，不等于功能改造完成）
+
+- 在 `docs/ai-capability-inventory.md` 新增 24 项逐项清单，按 `lib/screens/assistant_tool_router.dart` 的实际常量和 `_all` 列表核对。
+- 结论：24 项注册能力中，23 项是 Widget Page Tool；`structured_diagnosis` 是由 `LocalAiInterviewScreen` 特殊接管的内联问诊流程，其注册 builder 主动抛出 StateError；该注册表没有可证明的通用 Headless Capability。
+- 注册参数目前只有 `yunqi.date` 一个可选日期字段；没有统一 typed result、cancel、timeout、来源 ID 或通用执行状态协议。
+- 这完成的是代码盘点，不是 D 完成。下一步按页面逐项检查纯计算函数、输入、结果回传、持久化，再选一个低风险纯计算能力做最小 Headless adapter；不一次性改造 23 个页面。
+
+### 11.2 E：Android 备份规则的最小安全切片
+
+- PR #83：`work/ai-targeted-backup-exclusions-2026-11-12`，当前 head `f1f196ce0651cf37aea23a2739891d4ac47ea891`。
+- 配置 `fullBackupContent` 与 Android 12+ `dataExtractionRules`，只排除 `files/ai_models/`、`ai_trace.jsonl`、`ai_trace.jsonl.tmp`；不设置 `allowBackup=false`，不排除数据库 domain。
+- 清理确认页同步披露：AI 会话与非 AI 业务数据共用 SQLite，数据库备份副本仍可能保留。
+- 新增静态契约测试，锁定 manifest 两个规则引用、AI 文件排除项和“不全局关闭备份/不排除混合数据库”的约束。
+- 这只是降低模型/TRACE 进入系统备份的风险。最终 merged manifest 与 Android build 验收仍需当前 PR head 的 Android CI；AI 会话数据库备份问题保持 PARTIAL。
+
+### 11.3 E：SQLite 清理范围回归
+
+- PR #82：`work/ai-database-clear-boundary-test-2026-11-12`，当前 head `6089c4bcc73a00e749b7dfc413d15f87f42f5275`。
+- 新增 SQLite FFI 测试：写入 assistant_conversations、assistant_messages、tcm_interview_tasks、legacy chat_history；同时写入 bookmarks、diagnosis_history、search_history、user_settings。
+- 断言清理后 AI 表为空、非 AI 表保留，并关闭/重开同一数据库文件后复验。
+- 当前 Flutter 全量回归仍 IN_PROGRESS；测试通过前不标记数据库清理边界 PASS。即使通过，也只证明数据库行级范围和重开持久性，不证明 Android 进程重启、文件取证不可恢复或其他数据域已清理。
+
+### 11.4 当前并行 CI（本节记录时）
+
+| PR | 当前 head | Flutter regression | Android arm64 | Branch validation |
+|---|---|---|---|---|
+| #78 | `7a03023a...` | SUCCESS | IN_PROGRESS | 最新完整 changed-test 检查 SUCCESS；另有 SKIPPED |
+| #79 | `68fc10b2...` | IN_PROGRESS | SKIPPED（文档变更） | SUCCESS |
+| #80 | `46ad1bb4...` | SUCCESS | IN_PROGRESS | SUCCESS |
+| #81 | `f26455f0...` | SUCCESS（修订后） | IN_PROGRESS | SUCCESS |
+| #82 | `6089c4bc...` | IN_PROGRESS | SKIPPED（Dart 测试切片） | SUCCESS |
+| #83 | `f1f196ce...` | SKIPPED | SKIPPED | IN_PROGRESS |
+
+- 当前 master `eaa83b44...` 的 Flutter regression、Android arm64 build/Native unit tests、Analyze and test 均已 SUCCESS；branch validation CANCELLED/SKIPPED 不计 PASS。
+- 表内每个 PR 的 CI 都绑定具体 head；任何新 commit 都必须重新核对该 SHA 的 Actions。
+
+### 11.5 下一项自动推进
+
+1. #78/#80/#81 等待当前 head Android arm64；不以 Flutter 单项 SUCCESS 代替完整验收。
+2. #82 等待完整 Flutter regression；若失败读取 SQLite FFI 日志修复。
+3. #83 需要确保 Android manifest merge/build 真正执行；若 PR 工作流不触发 Android job，不能用静态契约测试代替，需通过可用 CI 入口补充 build 证据。
+4. #81 全量 Flutter 已 SUCCESS，Android arm64 完成后进入小批量集成候选。
+5. #79 审计文档 PR 本次继续追加了 D/E 证据，必须读取更新后的最新 head 和 CI。
