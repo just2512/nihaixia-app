@@ -32,7 +32,7 @@ void main() {
       (tester) async {
     var attachmentClearCalls = 0;
     final coordinator = _coordinator(
-      clearAttachments: () async => attachmentClearCalls++,
+      clearAttachments: () async { attachmentClearCalls++; },
     );
 
     await tester.pumpWidget(
