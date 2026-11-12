@@ -304,3 +304,43 @@ F 仍 PARTIAL。
 - B 在 detector 和医学审核完成前保持 RELEASE BLOCKED。
 - E 不得删除无法证明属于 AI 的共享临时文件；不得全局关闭 Android backup 或排除混合数据库。
 - F 不得把 per-turn 的普通文本/图片/语音接入夸大为所有模式的端到端 TRACE。
+
+
+---
+
+## 14. 2026-11-12 当前主线复核（master `2d2df1393cc5e77e6a7a8ce71f4fb52f11bf603c`）
+
+### 14.1 本轮已集成
+
+- #92：修复玄学模式普通文本调用 bypass，统一走 traced Native API。
+- #97：Orchestrator route/dispatch 与 Headless 执行阶段 TRACE。
+- #99：raw image/audio 红旗输入不能被伴随 prompt text 冒充已评估；返回 `RAW_ATTACHMENT_NOT_ASSESSED`。
+- #100：README/pubspec 版本源检查进入 Flutter regression 和 Android arm64 CI；Release tag 与 pubspec 版本校验。
+- #101：structured diagnosis 启动、选项回答、舌脉提交和消息 metadata per-turn TRACE。
+- #102：83 个 classic retrieval source assets 内容核验文档合并。
+
+### 14.2 CI 证据
+
+| PR | Flutter regression | Android arm64/Native tests | Branch validation |
+|---|---|---|---|
+| #92 | `43165079874` SUCCESS | `43165079874` SUCCESS | SKIPPED |
+| #97 | `43167373011` SUCCESS | `43167373011` SUCCESS | SKIPPED |
+| #99 | `43168152545` SUCCESS | `43168152545` SUCCESS | SKIPPED |
+| #100 | `43168612465` SUCCESS | `43168612465` SUCCESS | SKIPPED |
+| #101 | `43169514825` SUCCESS | `43169514825` SUCCESS | SKIPPED |
+
+PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核验的独立 post-merge workflow run，主线独立 CI 状态仍为 UNKNOWN。
+
+### 14.3 A-G 状态
+
+- **A PARTIAL / UNKNOWN：**自动化 teardown 与 Android arm64 构建证据存在；OPPO Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程恢复 TRACE 未执行。
+- **B PARTIAL / RELEASE BLOCKED：**raw attachment 来源边界已 fail closed；仍缺经医学审核的自然语言 detector 和所有生产模型入口的 fail-closed 集成证明。
+- **C PARTIAL：**83/83 本地讲稿资产存在并逐项读取；83/83 bibliographic locator 仍 MISSING。经典原文/版本/卷页溯源不能由讲稿标题推断。
+- **D 2/2 Headless + Executed：**`yunqi`、`almanac`；不为数量扩展第三项。
+- **E PARTIAL：**数据清理范围与 backup manifest 有 CI 检查；混合 SQLite 备份、旧共享附件归属、外部导出副本和真机重启后不可恢复性仍需核验。
+- **F PARTIAL：**检索/上下文、route/dispatch、Headless、structured diagnosis per-turn TRACE 已接入；persistedState/恢复/失败轮次与真机 TRACE 未闭环。
+- **G IMPLEMENTED（版本源子目标）：**README/pubspec/Flutter CI/Android CI/Release tag 版本一致性门禁已合并；主线 post-merge CI 仍 UNKNOWN。
+
+### 14.4 版本审计旧记录更新
+
+本报告早期版本基线曾记录 README `1.11.28+8037` 漂移。该旧问题已由 PR #100 解决：README 当前仓库版本与 `pubspec.yaml` 的 `1.11.30+8039` 一致；新增 `tool/check_version_source.sh`，并由 Flutter regression、Android arm64 CI 执行；Release workflow 强制 `vX.Y.Z` 与 pubspec `X.Y.Z+N` 的 `X.Y.Z` 匹配。旧记录作为历史审计发现保留，不再代表当前状态。

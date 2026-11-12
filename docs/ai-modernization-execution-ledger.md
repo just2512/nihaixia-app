@@ -600,3 +600,55 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 - B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
 - E 混合数据库备份与旧共享临时文件归属仍有风险；不得全局禁用备份或误删非 AI 数据。
 - F 的已合并 per-turn TRACE 不是全链路完成证明。
+
+
+---
+
+## 15. 2026-11-12 #92/#97/#99/#100/#101/#102 集成后执行快照
+
+### 15.1 主线与集成证据
+
+当前主线基线：`master @ 2d2df1393cc5e77e6a7a8ce71f4fb52f11bf603c`。
+
+| PR | 状态 | 交付 | 当前 head CI 证据 |
+|---|---|---|---|
+| #92 | MERGED | 修复玄学模式普通文本绕过 traced Native API 的路径 | head `bf7cefae...`；run `43165079874`：Flutter SUCCESS、Android arm64/ABI/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #97 | MERGED，merge commit `776a1e7af2c19815cf9d5d772e0bb7bb6720bf1d` | Orchestrator route/dispatch、Headless 参数校验/执行/结果校验/持久化/展示 TRACE | run `43167373011`：Flutter SUCCESS、Android arm64/ABI/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #99 | MERGED | 原始图片/录音来源 fail-closed，提示文字不能冒充附件已检查 | run `43168152545`：Flutter SUCCESS、Android arm64/ABI/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #100 | MERGED，merge commit `f4188927df3b15d3edfc553d3b113cbdfd5a68c9` | README/pubspec 版本检查进入 Flutter/Android CI；Release tag 与 pubspec 版本一致性门禁 | run `43168612465`：Flutter SUCCESS、Android arm64/ABI/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #101 | MERGED，merge commit `2d2df1393cc5e77e6a7a8ce71f4fb52f11bf603c` | structured diagnosis 启动、选项回答、舌脉提交和消息 metadata per-turn TRACE | run `43169514825`：Flutter SUCCESS、Android arm64/ABI/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #102 | MERGED，merge commit `cbd6ffc4973a6734856880ac64143a9a1d3d7e2d` | 83 个检索候选 Markdown 内容核验记录 | 文档 PR；不把它计为代码 CI 验收 |
+
+- 以上 PR 的 Branch validation 均为 SKIPPED；不得把 SKIPPED 记为 PASS。对应代码 PR 的 Flutter regression 与 Android arm64/Native tests 均 SUCCESS。
+- PR #90 的旧文档分支因主线文档已更新而关闭；以本次在最新 master 上追加的台账/报告为准，未用旧基线覆盖新内容。
+- squash merge 后没有取得 `master` 独立 workflow run 证据；当前主线合并后 CI 状态记为 **UNKNOWN**，不能用 PR head CI 代替。
+
+### 15.2 F：TRACE 当前覆盖
+
+- 已有检索阶段与上下文组装阶段事件（`retrieval`、`contextAssembly`），以及统一助手 Native inference/model output 事件。
+- PR #97 增加 Orchestrator route/dispatch；Headless 执行路径记录 argument validation、business execution、result validation、persistence、final render。Page Tool 记录 `NOT_STARTED`，不冒充业务执行。
+- PR #101 为结构化问诊启动、每次选项回答、舌脉输入、结构化澄清分别建立/继承 per-turn trace context；新增消息 metadata 关联 trace_id；业务执行与持久化失败分别记录。
+- Headless `cancelled` 现在记录 FAILED + `BUSINESS_EXECUTION_CANCELLED`，不再误记 SUCCEEDED。
+- TRACE 仍默认关闭；未将正文、prompt、模型回复、症状、附件路径写入 trace events。
+- F 仍为 PARTIAL：`persistedState`/恢复链路、模型响应结构验证、失败轮次完整持久化关联、历史恢复后的 trace 关联，以及 Find N2 真机 TRACE 尚未形成完整证据。
+
+### 15.3 A-G 当前状态
+
+| ID | 状态 | 已完成证据 | 未闭环项 |
+|---|---|---|---|
+| A Native 多轮与生命周期 | PARTIAL / 设备 UNKNOWN | 既有 teardown/原子轮次保护与 Android arm64 CI | Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程杀死/重启恢复的真实 TRACE |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | fail-closed gate contract；原始 image/audio 即使有 prompt text 也返回 `RAW_ATTACHMENT_NOT_ASSESSED`；必须先有独立 `attachmentTranscript` 来源 | 经医学审核的自然语言 detector/规则集；所有生产模型入口旁路矩阵和模型调用前 fail-closed 集成证据。不得自造词表、阈值或处置文案 |
+| C 检索来源 | PARTIAL | 83/83 source asset 存在且已逐项读文件；标题/正文命中层次记录于 `docs/classic-retrieval-golden-review.md` | 83/83 仍为 `bookId/chapterIndex` 缺失、locator MISSING；需逐条建立经人工核验的经典原文/版本/卷页来源 manifest |
+| D Headless | 当前主线 2 项 Headless / 2 项 Executed | `yunqi`、`almanac`；两项均复用既有确定性函数并保留 Page builder | 不以数量为目标；剩余 Page-only 工具逐项审计，未找到满足边界的确定性候选前不新增 adapter |
+| E 数据清理与备份 | PARTIAL | AI 数据清理范围审计、混合数据库边界和 Android backup manifest CI 检查 | 混合 SQLite 中 AI 行备份边界、旧共享临时图片归属、外部导出副本、Find N2 清理后进程重启与不可恢复证据 |
+| F TRACE | PARTIAL | 普通文本/图片/语音、检索/上下文、Orchestrator/Headless、结构化问诊 per-turn TRACE | persistedState/恢复/失败关联、模型结果验证、Find N2 真机 TRACE |
+| G 版本治理 | IMPLEMENTED（版本一致性子目标） | README 当前仓库版本与 pubspec 一致性脚本；Flutter regression 和 Android CI 执行；Release tag `vX.Y.Z` 必须匹配 pubspec `X.Y.Z+N` | 需要主线独立 CI 证据；不将历史 changelog 版本强行改成开发版本 |
+
+### 15.4 下一阶段只保留必要工作
+
+1. **F**：先完成 persistedState/恢复和失败轮次 trace 关联，再补模型响应结构验证；不再扩展新工具平台。
+2. **A/E**：设备验收集中在 OPPO Find N2，验证 GPU/CPU、媒体输入、Activity recreation、进程中断/恢复、AI 数据清理后重启；CI 不能替代真机。
+3. **B**：继续只读审计所有生产模型调用入口；无医学审核 detector 时保持 RELEASE BLOCKED，不允许通过默认 CLEAR 绕过。
+4. **C**：仅补书目/底本 locator manifest；不改排序、召回上限或引入 FTS5。
+5. **D**：当前两项 Headless 保持稳定；不为数量目标新增 adapter。
+6. **G**：版本源 guard 已落地；后续只维护，不另造版本系统。

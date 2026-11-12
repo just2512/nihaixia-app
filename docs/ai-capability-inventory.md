@@ -403,3 +403,17 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - `AssistantMessageMetadata.traceId` 复用既有 metadata JSON 字段 `trace_id`。TRACE 默认关闭；打开时普通文本/图片/语音统一助手轮次将同一 ID 传入 traced Native API 并关联 user/assistant 消息。
 - F 仍不是全链路：结构化问诊、澄清、工具执行、检索阶段事件、Native 失败轮次持久化关联和 Find N2 设备 TRACE 未完成。
 - A/B/C/E 的缺口与执行顺序以本文件最新审计章节及 `docs/ai-modernization-execution-ledger.md` 第 14 节为准；未取得医学审核和真实设备证据的能力不得标 IMPLEMENTED。
+
+
+---
+
+## 2F. 2026-11-12 #92/#97/#99/#100/#101 集成后状态
+
+- 当前 master：`2d2df1393cc5e77e6a7a8ce71f4fb52f11bf603c`。
+- Headless Capability = 2；Executed Capability = 2：`yunqi`、`almanac`。不将 Page Tool 页面导航计为执行。
+- TRACE 当前覆盖普通文本/图片/语音 Native 调用、检索与上下文组装、Orchestrator route/dispatch、Headless 参数校验/业务执行/结果校验/持久化/展示，以及 structured diagnosis 启动和每次选项/舌脉输入轮次。
+- 结构化问诊新增消息 metadata 写入 per-turn trace_id；执行失败与持久化失败分别记录；Page Tool 仅记录 `NOT_STARTED`。
+- TRACE 默认关闭；正文、prompt、模型回复、症状和附件路径不进入 trace events。
+- 红旗 gate 的 raw image/audio 输入即使附带用户 prompt 也 fail closed；只有可信转写作为 `attachmentTranscript` 独立来源才可进入 detector。该契约尚未接入生产模型入口，B 仍 RELEASE BLOCKED。
+- G 版本源检查已合并：README 当前仓库版本必须与 `pubspec.yaml` 完全一致；Flutter regression/Android CI 执行检查；Release tag 版本必须匹配 pubspec 的 X.Y.Z 部分。
+- C 的 83 个候选资产均存在，但全部缺少书目 locator；不得将讲稿文件标记为已校勘古籍原文。

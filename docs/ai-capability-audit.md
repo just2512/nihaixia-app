@@ -356,7 +356,8 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 ### 14.7 版本与文档基线
 
 - `pubspec.yaml` 是应用版本唯一来源；本次核验为 `1.11.30+8039`。
-- README 中仍存在 `1.11.28+8037` 的旧版本文字，属于文档漂移，需单独修正并加一致性检查。
+- 原审计发现 README `1.11.28+8037` 漂移；PR #100 已将 README 当前仓库版本同步为 `pubspec.yaml` 的 `1.11.30+8039`，并新增 `tool/check_version_source.sh`，由 Flutter regression 与 Android arm64 CI 执行。
+- Release workflow 现强制从版本 tag 运行，并校验 `vX.Y.Z` 与 pubspec `X.Y.Z+N` 的应用版本部分一致；手动 workflow_dispatch 必须选择版本 tag。历史 changelog 不被强制改写成开发版本。
 - 规范文件为 `docs/ai-capability-audit.md`；静态/动态审计报告分别使用 `docs/ai-capability-audit-report.md`、`docs/local-ai-multiturn-audit.md`，不得互相覆盖。
 
 ### 14.8 本补充的验收门槛
