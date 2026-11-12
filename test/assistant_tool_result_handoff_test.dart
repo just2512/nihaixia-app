@@ -83,6 +83,23 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
   }
 
   @override
+  Future<List<int>> saveAssistantMessagesAtomically({
+    required int conversationId,
+    required List<AssistantMessageDraft> messages,
+  }) async {
+    final ids = <int>[];
+    for (final message in messages) {
+      ids.add(await saveAssistantMessage(
+        conversationId: conversationId,
+        role: message.role,
+        content: message.content,
+        metadata: message.metadata,
+      ));
+    }
+    return ids;
+  }
+
+  @override
   Future<List<Map<String, Object?>>> getAssistantConversations({
     int? limit,
   }) async => const [];
