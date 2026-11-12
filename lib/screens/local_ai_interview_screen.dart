@@ -1694,7 +1694,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
     _inputController.clear();
-    await _persistSuccessfulTurn(
+    final persisted = await _persistSuccessfulTurn(
       userText: userText,
       assistantText: response,
       mode: mode,
@@ -1702,6 +1702,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolStatus: result.statusLabel,
       sourceIds: result.sourceIds,
       toolArguments: result.arguments,
+      traceId: traceContext.traceId,
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.persistence,
+      status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+      toolId: tool.id,
+      sourceIds: result.sourceIds,
+      errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.finalRender,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
+      sourceIds: result.sourceIds,
     );
     _scrollToBottom();
   }
@@ -1710,6 +1726,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String userText,
     AssistantToolDefinition tool, {
     AssistantMode? mode,
+    required AiTraceContext traceContext,
     AssistantToolArguments? arguments,
   }) async {
     if (tool.id == 'structured_diagnosis') {
@@ -1733,10 +1750,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         userText,
         tool,
         mode: activeMode,
+        traceContext: traceContext,
         arguments: arguments,
       );
       return;
     }
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.toolExecution,
+      status: AiTraceStatus.notStarted,
+      toolId: tool.id,
+      route: 'page_tool',
+    );
     final instruction =
         '已识别到你要使用「${tool.title}」。${tool.description}'
         '实际计算由 App 内置工具执行，不由模型猜测结果。点击下方按钮打开；完成后返回本对话，我会继续解释结果。';
@@ -1757,12 +1782,26 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
     _inputController.clear();
-    await _persistSuccessfulTurn(
+    final persisted = await _persistSuccessfulTurn(
       userText: userText,
       assistantText: instruction,
       mode: activeMode,
       toolId: tool.id,
       toolArguments: arguments?.values ?? const {},
+      traceId: traceContext.traceId,
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.persistence,
+      status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+      toolId: tool.id,
+      errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.finalRender,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
     );
     _scrollToBottom();
   }
