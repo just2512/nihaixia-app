@@ -17,6 +17,6 @@ internal object LocalAiTraceIdPolicy {
         traceId: String?
     ): Map<String, Any> {
         if (traceId == null) return payload
-        return payload + ("traceId" to traceId)
+        return payload + ("trace_id" to traceId)
     }
 }
