@@ -2581,11 +2581,16 @@ void main() {
     expect(assistantMetadata.traceId, traceId);
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
+      AiTraceStage.retrieval,
+      AiTraceStage.contextAssembly,
+      AiTraceStage.modelInput,
       AiTraceStage.nativeInference,
       AiTraceStage.modelOutput,
       AiTraceStage.persistence,
       AiTraceStage.finalRender,
     ]));
+    expect(events.where((event) => event.stage == AiTraceStage.retrieval)
+        .every((event) => event.sourceIds.isEmpty), isTrue);
     expect(tester.takeException(), isNull);
   });
 
