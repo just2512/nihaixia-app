@@ -455,3 +455,47 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 3. #83 需要确保 Android manifest merge/build 真正执行；若 PR 工作流不触发 Android job，不能用静态契约测试代替，需通过可用 CI 入口补充 build 证据。
 4. #81 全量 Flutter 已 SUCCESS，Android arm64 完成后进入小批量集成候选。
 5. #79 审计文档 PR 本次继续追加了 D/E 证据，必须读取更新后的最新 head 和 CI。
+
+
+## 12. 2026-11-12 当前主线合并台账（master b786f84）
+
+### 12.1 已合并且有 CI 证据的切片
+
+| PR | 合并提交 | 内容 | 状态 |
+|---|---|---|---|
+| #80 | `f59e66fa11c2b69c960f0dc6e4aa8d24dc28e647` | Native Activity teardown 串行化 | MERGED；Flutter/Android/Native tests PASS |
+| #78 | `7562c637c97c961e1690d31be7e925e6403c55db` | 生产附件归属 | MERGED；Flutter/Android PASS |
+| #81 | `2c1d363633b215e07135c827f282867e983c501c` | 精确方剂匹配与黄金快照更新 | MERGED；Flutter/Android PASS |
+| #82 | `021eecf00ce98e5118b6b77f6974375b911784b5` | SQLite 清理范围、非 AI 数据保留、事务回滚测试 | MERGED；Flutter/Android PASS |
+| #83 | `9fcc7b82e7e8a66b3f8b42d47caff4850af03eef` | 模型/TRACE 备份排除与 merged manifest 验证 | MERGED；Flutter/Android PASS，merged manifest step PASS |
+| #84 | `b786f84df0452b9771e341c818e0d06a12451ef3` | Dart/Native trace_id bridge | MERGED；Flutter/Android/Native tests PASS |
+
+当前 master：`b786f84df0452b9771e341c818e0d06a12451ef3`。该合并后的 master 全量 Flutter regression 与 Analyze and test 在本节记录时仍 IN_PROGRESS；完成前不把主线 CI 标为 PASS。
+
+### 12.2 当前唯一代码 PR
+
+- PR #85：`work/ai-headless-yunqi-executor-2026-11-12`。
+- Base：master `b786f84...`；head：`21470fd5a14c3cee4b9ff4245f6c1cd59a3093c3`。
+- 目标：复用既有 `YunQiEngine`，给 `yunqi` 增加 Headless + Page 双入口。
+- 显式日期才自动执行；无日期继续打开页面确认。无效日期、越界日期、未知参数均拒绝执行。
+- 测试覆盖 executor、router、原始日期参数校验、助手直接执行和消息 metadata 持久化。
+- 当前 Flutter regression/branch validation IN_PROGRESS；尚未合并，不能将 Headless 数量计入主线。
+
+### 12.3 A-G 主线状态
+
+- A PARTIAL：Native 生命周期和生产附件归属已合并；真机多轮、媒体和进程重启证据 UNKNOWN。
+- B PARTIAL / RELEASE BLOCKED：provenance 契约存在；自然语言 detector 与医学审核缺失。
+- C PARTIAL：精确方剂检索与黄金快照已合并；候选身份、来源和原始位置的逐条人工/规则审查继续。
+- D PARTIAL：24 项目录已逐项分类；PR #85 是第一个 Headless 候选，待完整 CI/合并。
+- E PARTIAL：入口、附件、SQLite 范围测试、模型/TRACE 备份排除已合并；混合数据库备份、旧共享临时图片和外部副本未闭环。
+- F PARTIAL：TRACE 生命周期和 Native bridge 已合并；per-turn UI 生成、SQLite trace_id、阶段事件尚未接入。
+- G PARTIAL：本审计文档正在刷新；README/pubspec/CI 版本一致性仍待自动检查。
+
+### 12.4 后续顺序
+
+1. 完成 PR #85 当前 head 的 Flutter regression、Android arm64 和 branch validation；失败按具体日志修复，不绕过。
+2. PR #85 合并后立即推进 F2：统一聊天每轮 trace context、Native traced API 调用、assistant message metadata 持久化和清理测试。
+3. E 继续审查清理 coordinator 的各域结果、Native cache、TRACE 文件和 Android 重启行为；不排除混合 SQLite 数据库。
+4. B 继续做生产入口调用图和 fail-closed 契约；正式 detector 仍需医学审核，不编造规则。
+5. D 继续从纯计算、无敏感数据页面挑选第二项 Headless 候选；不批量迁移 22 个页面。
+6. Find N2 真机验收仍由本地设备执行，未收到真实 TRACE 前保持 UNKNOWN。
