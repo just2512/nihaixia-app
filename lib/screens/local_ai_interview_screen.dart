@@ -1726,9 +1726,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String userText,
     AssistantToolDefinition tool, {
     AssistantMode? mode,
-    required AiTraceContext traceContext,
+    AiTraceContext? traceContext,
     AssistantToolArguments? arguments,
   }) async {
+    final activeTraceContext = activeTraceContext ??
+        _traceRecorder.start(
+          stage: AiTraceStage.input,
+          route: 'manual_tool',
+          mode: (mode ?? _assistantMode).name,
+        );
     if (tool.id == 'structured_diagnosis') {
       await _startInlineTcmInterview(initialUserMessage: userText);
       return;
@@ -1750,13 +1756,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         userText,
         tool,
         mode: activeMode,
-        traceContext: traceContext,
+        activeTraceContext: activeTraceContext,
         arguments: arguments,
       );
       return;
     }
     await _traceRecorder.record(
-      traceContext,
+      activeTraceContext,
       stage: AiTraceStage.toolExecution,
       status: AiTraceStatus.notStarted,
       toolId: tool.id,
@@ -1788,17 +1794,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       mode: activeMode,
       toolId: tool.id,
       toolArguments: arguments?.values ?? const {},
-      traceId: traceContext.traceId,
+      traceId: activeTraceContext.traceId,
     );
     await _traceRecorder.record(
-      traceContext,
+      activeTraceContext,
       stage: AiTraceStage.persistence,
       status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
       toolId: tool.id,
       errorCode: persisted ? null : 'PERSISTENCE_FAILED',
     );
     await _traceRecorder.record(
-      traceContext,
+      activeTraceContext,
       stage: AiTraceStage.finalRender,
       status: AiTraceStatus.succeeded,
       toolId: tool.id,
