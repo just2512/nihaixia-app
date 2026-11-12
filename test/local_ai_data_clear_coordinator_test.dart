@@ -106,7 +106,7 @@ void main() {
 
     final result = await coordinator.clearAll();
 
-    expect(order, ['stop-trace', 'native', 'attachments', 'trace', 'database']);
+    expect(order, ['stop-trace', 'native', 'attachments', 'trace', 'database', 'resume-trace']);
     expect(result.complete, isFalse);
     expect(result.failedDomains, ['attachments', 'trace']);
     expect(result.attachmentErrorCode, 'ATTACHMENT_CLEAR_FAILED');
@@ -177,6 +177,27 @@ void main() {
     expect(attachmentCalls, 1);
     expect(results.first.complete, isTrue);
     expect(identical(results.first, results.last), isTrue);
+  });
+
+  test('preserves default-off recorder state after clearing', () async {
+    bool? resumedFrom;
+    final coordinator = LocalAiDataClearCoordinator(
+      stopTraceRecording: () async => false,
+      resumeTraceRecording: (wasEnabled) async {
+        resumedFrom = wasEnabled;
+      },
+      clearRuntimeCache: () async => nativeResult(),
+      clearAttachments: () async {},
+      clearTrace: () async {},
+      clearDatabase: () async {},
+    );
+
+    final result = await coordinator.clearAll();
+
+    expect(resumedFrom, isFalse);
+    expect(result.traceRecordingStopped, isTrue);
+    expect(result.traceRecordingResumed, isTrue);
+    expect(result.complete, isTrue);
   });
 
   test('native method call exception makes model retention UNKNOWN', () async {
