@@ -652,3 +652,59 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 4. **C**：仅补书目/底本 locator manifest；不改排序、召回上限或引入 FTS5。
 5. **D**：当前两项 Headless 保持稳定；不为数量目标新增 adapter。
 6. **G**：版本源 guard 已落地；后续只维护，不另造版本系统。
+
+
+---
+
+## 16. 2026-11-12 PR #93-#96 / #104 集成后执行快照
+
+### 16.1 当前主线与 CI
+
+- master：`d2d1250807a55a4912f9bda4aa65964d068a5896`（PR #104 squash merge）。
+- PR #104：`feat(ai): trace structured persisted state and presentation`，merge commit `d2d1250807a55a4912f9bda4aa65964d068a5896`。
+- PR #104 head `b47f27cc5dbc0679136940fb43fe3a354dc99d43`，run `43171252541`：Flutter regression SUCCESS；Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS；Branch validation SKIPPED。
+- master push Flutter run `43175683193`：Flutter regression SUCCESS；Android arm64 job在本次记录时仍 IN_PROGRESS（仅剩 job 收尾步骤）。
+- master Flutter Quality Gate run `43175683140`：Analyze and test / Find N2 arm64 build 在本次记录时仍 IN_PROGRESS。master post-merge CI 尚未全部结束，不写整体 PASS。
+
+### 16.2 补齐此前遗漏的 #93-#96 主线证据
+
+| PR | 合并提交 | 已集成范围 | 自动验收 |
+|---|---|---|---|
+| #93 | `9f995a30b38ecf171295615f10d09b5074836ac6` | fail-closed RedFlagGate contract、detector interface、source types | run `43165576958` Flutter + Android SUCCESS；Branch validation `43165568953` SUCCESS |
+| #94 | `ce0d5fa650872559dfe3b15e8cd524e2c6ca3162` | retrieval/contextAssembly/modelInput TRACE；修复玄学普通文本 traced API 旁路 | run `43165512584` Flutter + Android SUCCESS；Branch validation `43165481369` SUCCESS |
+| #95 | `b4cd3a91a10426e9c825188dd5e344e3bb4c48b3` | E 数据清除范围审计刷新 | run `43165925272` Flutter + Android SUCCESS |
+| #96 | `b47397922d9348f89cc7a5586b7ca1b0659a63f5` | C 检索黄金 artifact 与候选身份结构核验 | run `43166311719` Flutter + Android SUCCESS |
+
+### 16.3 A-G 当前状态
+
+| 工作流 | 状态 | 已落地事实 | 尚未闭环 |
+|---|---|---|---|
+| A 多轮与 Native 生命周期 | PARTIAL / 设备 UNKNOWN | Activity teardown 串行化、SQLite 原子轮次、Native bridge 有自动化证据 | Find N2 GPU/CPU 长轮次、图片/语音、Activity recreation、进程中断/重启 TRACE |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | #93 的 fail-closed gate 在 detector 缺失、异常、超时、assessment/source 不完整时返回 REVIEW_REQUIRED | gate 未接入所有生产入口；无经医学审核的自然语言 detector/词表/阈值/处置文案；不得默认 CLEAR |
+| C 检索来源 | PARTIAL | #96 真实 CI artifact：4 个 query、120 条 top-40 hits、83 个 distinct sourceId；sourceId 与 asset 一致；context 2199 字符、6 个 source IDs（formula 1、herb 1、lecture 4） | 120 条 locator 均 MISSING；仍需逐条核验古籍底本/版本/卷页。不得把讲稿资产当作古籍原文 |
+| D Headless | PARTIAL | 主线 Headless/Executed = 2：`yunqi`、`almanac` | 其余 Page-only 能力不计 Headless；没有新的确定性候选前不扩展 |
+| E 数据清理与备份 | PARTIAL | AI 清理 coordinator、AI-owned attachments、Native runtime cache、TRACE 文件、设置 UI、SQLite AI 四表事务及 Android 模型/TRACE 备份排除已有代码/CI 证据 | 混合 SQLite 中 AI 行仍可能备份；旧共享图片/外部导出副本归属未知；Find N2 清理后强制停止/重启不可恢复验收缺失 |
+| F TRACE | PARTIAL | #94 retrieval/contextAssembly/modelInput；#97 route/dispatch/Headless stages；#101 structured per-turn；#104 structured persistedState/presentation。TRACE 默认关闭，正文不入事件 | 失败轮次与消息持久化关联、失败/恢复终态关联、完整模型结果验证审计和 Find N2 TRACE 仍未闭环 |
+| G 版本/证据治理 | PARTIAL（版本源子目标已完成） | README/pubspec 版本一致性 guard、Flutter/Android CI 检查、Release tag 校验已合并 | 当前 master 的 post-merge CI 收尾；本轮文档证据同步 |
+
+### 16.4 F 的当前代码边界
+
+- #104 将结构化问诊任务快照/诊断历史写入阶段记录为 `persistedState`，消息行保存仍单独记录 `persistence`，界面追加/滚动后记录 `presentation`。
+- #104 没有改变辨证规则、问诊结果、SQLite schema 或用户流程。
+- 历史 `restoreConversation` 明确不是新的用户轮次；按 `docs/ai-trace-contract.md` 第 2.3 节恢复时保留原消息 metadata，不生成新 trace_id。违反该约束的尝试 PR #105 已关闭，未合并。
+- 下一项 F 只处理真实用户轮次的失败状态与持久化关联；不得自动重放 Native 状态 UNKNOWN 的请求，不得把历史恢复伪装成新轮次。
+
+### 16.5 下一批执行顺序
+
+1. **F：失败轮次关联**：先锁定失败用户消息是否进入历史、`replayable` 语义和 UNKNOWN/FAILED 的持久化表示；只复用现有 metadata，不自动重放，不记录正文到 TRACE。
+2. **B：生产入口门禁**：先完成所有调用入口注入顺序测试；detector 未经医学审核前保持 REVIEW_REQUIRED/RELEASE BLOCKED，不启用自造规则，也不静默阻断全部模式。
+3. **C：来源 manifest**：仅补可由原始底本证据确认的书目/卷页定位；证据不足继续 MISSING，不改召回和排序。
+4. **A/E：Find N2 设备验收**：GPU/CPU、媒体、多轮、Activity/进程恢复、清理后重启；CI 不能替代设备 TRACE。
+5. **D/G**：Headless 维持 2 项；版本 guard 只维护，不另造系统。
+
+### 16.6 本轮 PR 队列
+
+- PR #104：MERGED。
+- PR #105：CLOSED / NOT MERGED。原因：为 `restoreConversation` 新建 trace_id 违反 `ai-trace-contract.md` 第 2.3 节；该路径是历史上下文恢复，不是用户轮次。
+- PR #98：仍是基于旧 master 的文档分支，behind 当前主线；本轮后续文档刷新应从最新 master 重建，不合并旧基线。
+- 本轮不创建定时任务或会话外周期性监控。
