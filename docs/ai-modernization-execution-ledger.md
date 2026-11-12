@@ -760,3 +760,43 @@ PR #107 修复失败轮次阶段误归因：
 - CI、模拟设备、静态代码不能替代 Find N2 真机 TRACE。
 - 医学审核、真机硬件、纸本底本/原始影像属于外部证据依赖；不能由代码或模型自我生成。
 - 不创建定时任务；本轮只在实际执行时检查 CI。
+
+---
+
+## 18. 2026-11-12 PR #109 红旗门禁调用顺序契约集成
+
+### 18.1 主线与自动验收
+
+- 基线：PR #109 以 master `cf83cf03478ea4fede960d16b903630a466d1253` 为 base。
+- PR #109：`feat(ai): add red-flag gate operation sequencing seam`，已 squash merge。
+- 合并提交：`00258671cf87188ac7ef82f5121c6f5bea48ef7e`。
+- PR head：`591d9b9c25d2c62d41e8a0b3b1ffb91180650f50`。
+- Flutter 全量回归与 Android arm64 APK/ABI、merged backup manifest、Native unit tests：run `43200924284`，必要 job 均 SUCCESS。
+- 独立 branch validation（静态分析 + changed tests）：run `43200883925`，SUCCESS。
+- PR run 内 Branch validation job 为 SKIPPED；该 job 不计 PASS。独立 branch validation run 已成功。
+- 合并提交的独立 push workflow run 尚未取得可核验证据；post-merge CI 状态保持 UNKNOWN，不以 PR head CI 替代。
+
+### 18.2 本次代码交付与边界
+
+- `lib/services/red_flag_gate.dart` 新增泛型 `RedFlagGateRun<T>`，显式区分 blocked/executed，并提供 `RedFlagGateExecution.runBefore`。
+- `test/red_flag_gate_test.dart` 覆盖 gate 先于副作用、detector 缺失时不执行副作用、原始图片附件不能绕过评估。
+- 本次未增加医学词表、阈值、detector 或急救文案；未接入任何 Flutter/Native 生产入口；未改变现有用户流程。
+- 该 PR 只证明可复用的调用顺序契约，不证明真实入口已受保护，不证明自然语言红旗识别准确性。
+
+### 18.3 B 工作流当前状态
+
+- Gate sequencing contract：CODE + TEST + PR CI 已通过。
+- 自然语言 detector 与医学审核：MISSING。
+- Flutter 生产入口（普通发送、结构化问诊、工具分发、附件、症状整理）：未接入，MISSING。
+- Native MethodChannel 纵深入口：未接入，MISSING。
+- Find N2 真机入口 TRACE：UNKNOWN。
+- B 继续 PARTIAL / RELEASE BLOCKED。
+
+### 18.4 下一步与明确阻塞
+
+1. B2 继续核对并设计统一可注入 seam，覆盖 `_send`、结构化问诊选项、工具分发、文本/图片/语音、症状整理和 Native MethodChannel；测试必须断言门禁严格早于 route/tool/model side effect。
+2. 不允许把可选 Gate 缺省为空后继续执行作为“已接入”；这会形成安全旁路。
+3. 当前 Gate 在 detector 缺失时返回 REVIEW_REQUIRED。若直接接入所有生产入口，将阻断现有 AI 流程；在没有医学审核 detector 和明确产品影响决策前，不得擅自全局启用，也不得默认 CLEAR。
+4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。
+5. A/E 真机验收、C 来源真实性核验仍依赖外部设备/底本证据；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
+
