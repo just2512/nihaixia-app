@@ -1,6 +1,6 @@
 # AI、问诊与全应用功能能力盘点
 
-审计基线：`master` @ `fa586d52ddaa8bb7046b3ad1e0236b0c6ccd6fea`（2026-11-04）；增量复核至 `08da70cd5d728418f3ec511bd8ed51f2a68c9ed8`（2026-11-05）。
+审计基线：`master` @ `5f7bf738ad5894e2de7fd5903d8d6002e3fe6502`（2026-11-12）；本文件已按当前主线重新核对。
 本文件只记录源码与测试能证明的现状；文档声明、静态布局测试和真实设备验收分开处理。状态采用 `EXISTS`、`PARTIAL`、`MISSING`、`UNKNOWN`，不以功能名称或 UI 文案代替验收。
 
 ## 1. 12 项计划落地矩阵
@@ -14,7 +14,7 @@
 | 5 | 经典条文、医案关联 | PARTIAL | `docs/classic-and-medical-case-source-audit.md`、`ClassicSearchService`、`AssistantKnowledgeContextBuilder` | 已对部分条文做在线交叉核验和分类纠错；李心机2022译注本逐页书影、赵开美具体馆藏/刻次、卷页、异文与本地 manifest 未完成。医案逐案原始定位缺失；1257 与来源统计 1337 的差异未核清，医案—经典自动关联保持 MISSING。 |
 | 6 | Find N2 内外屏适配 | PARTIAL（首批排盘表单已响应式调整） | `docs/find-n2-adaptive-layout.md`、`docs/find-n2-fold-aware-layout.md`；`adaptive_home_navigation_test.dart`、`adaptive_master_detail_test.dart`、`local_ai_adaptive_content_test.dart`、`fold_aware_routes_test.dart`；`test/bazi_foldable_layout_test.dart` | 已有窗口断点、导航双面板、折痕/铰链安全区和窄屏换行回归；八字排盘的生辰输入卡与地点行现采用 720dp 最大内容宽度，外屏占满可用宽度、内屏居中限宽，并新增 402dp/840dp widget 测试。其他排盘/知识页面仍需逐页布局审计；Find N2（PUG110）外屏、内屏、半折叠、键盘、相机、文件选择器、模型导入的实机截图与窗口指标仍为 MISSING。 |
 | 7 | 本地 AI 与辨证问诊统一 | PARTIAL（统一消息时间线主路径已实现） | `LocalAiInterviewScreen._requestTool()` / `_openTool()` 对 `structured_diagnosis` 拦截并调用 `_startInlineTcmInterview()`；`_appendTcmInterviewMessages()` 将题目、选项、用户回答和结果写入共用 `_messages` 与 SQLite `assistant_messages`；`TcmInterviewConversationController` 使用 `DiagnosticEngine` | 常规结构化问诊已在本地 AI 主对话内联进行，不再跳转独立 ChatScreen；规则计算仍由确定性引擎负责。仍需清理注册表旧 ChatScreen builder 兼容残留，并补齐跨重启/跨会话恢复一致性、完成态回看与附件生命周期。 |
-| 8 | 本地 AI 调用知识库和工具 | PARTIAL（知识检索已接入；工具仍以页面适配器执行） | `AssistantKnowledgeContextBuilder.buildAsync()`；`AssistantToolRouter` 23 项注册表；`LocalAiInterviewScreen._openTool()` 接收返回字符串并追加到当前消息流、重建模型上下文 | 中医知识以检索上下文注入，不等于结构化诊断证据；医案来源不明时标记 MISSING。工具尚无统一 typed args/result schema、参数抽取与缺参追问、可取消执行器、统一错误/状态协议；模型不能任意直接调用 Dart 函数。 |
+| 8 | 本地 AI 调用知识库和工具 | PARTIAL（知识检索已接入；1 项 Headless + 23 项 Page/内联） | `AssistantKnowledgeContextBuilder`；`AssistantToolRouter` 24 项注册表；`YunQiToolExecutor` 为 Page + Headless 双入口；`structured_diagnosis` 为内联规则流程 | `yunqi` 已在主线提供确定性执行和结构化结果回传；其余 22 个页面仍是 Page-only，结构化问诊是独立内联流程。统一取消/超时协议、语义参数抽取、缺参追问与跨轮工具状态仍缺失；模型不能任意直接调用 Dart 函数。 |
 | 9 | 设置入口 | EXISTS | `HomeScreen` 根导航含独立“设置”目的地；`home_screen_entry_test.dart` 断言设置可从根导航进入 | 当前已不依赖问诊页面内部入口；后续可继续优化设置分类与可发现性，不应把设置重新塞回聊天页。 |
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
 | 11 | 单一主入口与统一调度 | PARTIAL（澄清状态可持久化） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 统一助手覆盖 ToolsScreen 的 22 个页面/工具目的地，并包含独立结构化辨证入口，共 23 个注册工具；工具角色上下文动态读取注册表。已补排盘/起卦澄清后的短答案路由，并显式保存 `tool_choice=true` 状态，只有处于待选工具澄清时才允许别名启动工具；该状态随历史消息恢复，取消、学习问题和个人症状可结束待选状态；多个工具名同时出现时继续澄清。路由仍是关键词/别名/动作词确定性匹配，未具备模型语义参数抽取、表单缺参追问、跨轮工具任务状态和多工具计划，不能称为完整通用 Agent。 |
@@ -369,15 +369,27 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 4. 不得把 23 个页面一次性改造成工具平台；不引入通用 Agent、DAG、向量库或新会话表。
 
 
-## 2C. 2026-11-12 Headless 执行增量（PR #85，尚未合并）
+## 2C. 2026-11-12 Headless 执行增量（PR #85 已合并）
 
-- 当前 master `b786f84df0452b9771e341c818e0d06a12451ef3` 仍是 2B 记录时的注册能力基线：24 项，23 个 Page builder，1 个特殊内联问诊流程；主线 Headless/Executed 仍未因本节代码而改变。
-- PR #85 在独立分支为 `yunqi` 增加 `headlessExecutor`，保留原页面 builder，形成 Page + Headless 双入口。
-- 自动执行仅在用户显式提供有效日期时发生；未提供日期时保留原页面确认流程。非法日期、越界日期、未声明参数均返回 FAILED，不静默使用今天。
-- 计算复用 `YunQiEngine`，不改动历法算法；结果以 `AssistantToolResult` 回传，校验 toolId、arguments、sourceIds、status，并写入既有 assistant message metadata。
-- PR #85 当前 head `21470fd5a14c3cee4b9ff4245f6c1cd59a3093c3`，基于 master `b786f84...`；Flutter regression 与 branch validation 正在运行，尚未有 Android/最终合并证据。
+- 当前主线基线：`master @ 5f7bf738ad5894e2de7fd5903d8d6002e3fe6502`。
+- PR #85 已合并：`yunqi` 保留原页面 builder，同时增加同步 Headless executor，复用既有 `YunQiEngine`。
+- 只有用户显式提供有效日期才自动执行；无日期仍走页面确认。非法日期、越界日期和未声明参数拒绝执行。
+- 执行结果以 `AssistantToolResult` 回传，校验 toolId、实际 arguments、sourceIds 与 status，并写入既有 assistant message metadata。
+- 主线 Headless = 1（yunqi）；Executed = 1；Page builder = 23（yunqi 同时具备 Page 与 Headless），另有 1 个结构化问诊内联流程。
+- PR #85 的 Flutter regression 与 Android arm64 CI 均 SUCCESS；branch validation 为 SKIPPED，不将其单独计为通过。
 
 ### 状态口径
+
+- 页面打开不计执行；只有确定性业务函数实际执行、参数校验、来源和结果回传均有测试证据才计 Executed。
+- 其余页面只有在各自 typed args/result、真实执行、来源和失败路径测试通过后才可更新状态。
+
+## 2D. 第二个 Headless 候选（PR #86，CI 进行中）
+
+- 为 `almanac` 增加本地黄历引擎 Headless adapter，保留原 Page builder。
+- 复用 `getDailyAlmanac`，不复制历法算法、不读取用户保存命盘或个人资料。
+- 参数限定为日期 `YYYY-MM-DD`，拒绝不存在日期、1900-2100 范围外日期和未声明字段；“今日/明日/昨日”由设备本地日历确定性解析。
+- 结果包含结构化黄历字段、`local-engine:almanac` source ID 和民俗免责声明。
+- PR #86 当前 head `590a886eac8b8f9535e60ed229ed3a9cb5056e8a`；前一 head 曾因日期正则双重转义和测试中的 const map 编译失败，已在当前 head 修正。最新 Flutter regression / Android arm64 CI 尚未完成，不能计入主线。
 
 - PR 合并前：主线 Headless = 0；PR 分支代码候选 = 1。
 - PR #85 完整 CI 通过并合并后：主线 Headless = 1，Executed = 1；Page builder 仍为 23（其中 yunqi 同时具备两种入口）。
