@@ -1124,12 +1124,65 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _startInlineTcmInterview({
     required String initialUserMessage,
     String? userContext,
+    AiTraceContext? traceContext,
   }) async {
-    if (_structuredDiagnosisBusy) return;
+    final activeTraceContext = traceContext ??
+        _traceRecorder.start(
+          stage: AiTraceStage.input,
+          route: 'structured_diagnosis',
+          mode: AssistantMode.consultation.name,
+        );
+    if (traceContext == null) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_diagnosis',
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_diagnosis',
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+    }
+    if (_structuredDiagnosisBusy) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: 'structured_diagnosis',
+        errorCode: 'STRUCTURED_DIAGNOSIS_BUSY',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
+      return;
+    }
     if (_tcmInterviewController?.canAnswer == true) {
       setState(() {
         _error = '当前对话已有一项未完成的规则问诊。请先回答下方问题，或从历史记录恢复该任务。';
       });
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: 'structured_diagnosis',
+        errorCode: 'STRUCTURED_TASK_ALREADY_ACTIVE',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
       return;
     }
 
@@ -1144,29 +1197,68 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
     final before = controller.messages.length;
+    final executionWatch = Stopwatch()..start();
     try {
       controller.start(
         initialUserMessage: initialUserMessage,
         userContext: userContext,
       );
+      executionWatch.stop();
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.succeeded,
+        durationMs: executionWatch.elapsedMilliseconds,
+        toolId: 'structured_diagnosis',
+      );
       _inputController.clear();
-      await _appendTcmInterviewMessages(before);
+      final persisted = await _appendTcmInterviewMessages(
+        before,
+        traceId: activeTraceContext.traceId,
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
       if (mounted) {
         setState(() {
           _confirmedDraft = null;
           _structuredDiagnosisBusy = false;
         });
       }
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
     } catch (error) {
+      executionWatch.stop();
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.failed,
+        durationMs: executionWatch.elapsedMilliseconds,
+        toolId: 'structured_diagnosis',
+        errorCode: 'STRUCTURED_DIAGNOSIS_START_FAILED',
+      );
       if (mounted) {
         setState(() {
           _structuredDiagnosisBusy = false;
           _error = '无法启动规则问诊：$error';
         });
       }
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
     }
   }
-
 
   _InterviewMessage _diagnosisActionMessage(
     String text,
