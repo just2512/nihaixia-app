@@ -104,3 +104,23 @@
 5. 增加 Flutter、Native、SQLite 故障注入与隐私扫描测试。
 6. CI 通过后再用 Find N2 真机验证 GPU/CPU、图片/语音、多轮、清理/重启；没有真实 TRACE 不得标记 IMPLEMENTED。
 
+
+
+## 8. 2026-11-12 F1 Native bridge correlation implementation
+
+- PR #84 已合并到 master `b786f84df0452b9771e341c818e0d06a12451ef3`。
+- 保留旧方法签名并增加显式 traced API：`sendMessageWithTrace`、`sendMessageWithContextAndTrace`、`sendImageWithTrace`、`sendAudioWithTrace`、`extractSymptomsWithTrace`。
+- MethodChannel 字段统一为 `trace_id`；只接受 32 位小写十六进制标识。Native 在推理成功响应中原样回显；Dart 不匹配时抛出 `TRACE_ID_MISMATCH`。
+- 未提供 ID 时不添加 payload 字段；服务层不自行生成 ID。TRACE recorder 默认关闭时，旧调用行为不变。
+- 不将 prompt、模型输出、症状正文、附件路径或身份信息写入 ID 或 Native 日志。
+
+### F1 证据边界
+
+该实现证明了显式 ID 能跨越 Dart → MethodChannel → Native inference response；尚无统一聊天 UI 的生产调用者。因此它不是 per-turn trace，也没有证明 SQLite 持久化和后续阶段关联。
+
+### F2 下一切片
+
+1. 在统一聊天 UI 每轮开始时从默认关闭的 recorder 获取可选 trace context。
+2. 将同一 ID 传入上述 traced API，并为 retrieval/model/persistence/presentation 记录状态。
+3. 通过既有 assistant message metadata 的 `trace_id` 关联 user/assistant message，不新建会话表。
+4. 证明 TRACE 关闭时 metadata 不增加 ID，TRACE 开启时不记录敏感正文；清理入口必须一并清除 trace 文件与消息 metadata。
