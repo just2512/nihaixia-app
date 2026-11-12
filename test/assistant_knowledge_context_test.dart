@@ -29,6 +29,19 @@ void main() {
     expect(context, isNot(contains('克')));
   });
 
+  test('精确方剂查询不扩展到仅共享药味的其他方剂', () {
+    final context = AssistantKnowledgeContextBuilder.build('桂枝汤的组成和适用条文是什么？');
+    expect(context, contains('方名：桂枝汤'));
+    expect(context, isNot(contains('方名：麻黄汤')));
+  });
+
+  test('单味药查询仍按方剂组成匹配相关方剂', () {
+    // 白蜜在当前方剂库中只属于大半夏汤，避免断言被 maxFormulaEntries
+    // 截断的高频药味查询必须返回任意指定的前几首方剂。
+    final context = AssistantKnowledgeContextBuilder.build('白蜜');
+    expect(context, contains('方名：大半夏汤'));
+  });
+
   test('无命中时返回空上下文，避免把无关数据塞进模型', () {
     expect(AssistantKnowledgeContextBuilder.build('今天的天气怎么样'), isEmpty);
   });
