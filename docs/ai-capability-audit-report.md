@@ -344,3 +344,18 @@ PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核�
 ### 14.4 版本审计旧记录更新
 
 本报告早期版本基线曾记录 README `1.11.28+8037` 漂移。该旧问题已由 PR #100 解决：README 当前仓库版本与 `pubspec.yaml` 的 `1.11.30+8039` 一致；新增 `tool/check_version_source.sh`，并由 Flutter regression、Android arm64 CI 执行；Release workflow 强制 `vX.Y.Z` 与 pubspec `X.Y.Z+N` 的 `X.Y.Z` 匹配。旧记录作为历史审计发现保留，不再代表当前状态。
+
+
+---
+
+## 15. 2026-11-12 PR #93-#96 / #104 增量复核
+
+- #93 已集成 fail-closed RedFlagGate contract：detector 缺失、异常、超时、assessment 缺失、source mismatch/unknown、输入内容缺失时返回 REVIEW_REQUIRED。该契约尚未接入生产调用入口，也没有医学审核 detector；B 继续 PARTIAL / RELEASE BLOCKED。
+- #94 已集成 retrieval、contextAssembly、modelInput TRACE，并修复玄学模式普通文本 traced Native API 旁路；只记录状态、耗时、source IDs 和稳定错误码。
+- #95 已更新数据清除范围证据：coordinator、AI-owned attachments、Native runtime cache、TRACE 文件、设置 UI 和 SQLite AI 四表事务有代码/测试证据；混合 SQLite backup、旧共享图片/外部副本及 Find N2 重启验收仍缺。
+- #96 的真实 CI artifact 包含 4 个 query、120 条 top-40 hits、83 个 distinct sourceId；sourceId/asset 一致，但 120 条 locator 均 MISSING。该结果证明快照可复现，不证明古籍出处已核实。
+- #104 已将 structured interview 的任务状态持久化和 UI presentation 纳入 TRACE；Flutter regression、Android arm64/merged manifest/Native unit tests 均通过。master post-merge workflow 仍在执行时，不把当前主线 CI 写为整体 PASS。
+- 历史 `restoreConversation` 不属于新用户轮次，按 TRACE 契约不得生成新 trace_id；PR #105 因违反该约束关闭，未合并。
+
+### A-G 结论
+A PARTIAL / 设备 UNKNOWN；B PARTIAL / RELEASE BLOCKED；C PARTIAL / locator MISSING；D Headless/Executed = 2；E PARTIAL / 真机重启 UNKNOWN；F PARTIAL / 失败轮次关联和真机 TRACE 未闭环；G 版本源一致性子目标已完成，master post-merge CI 尚待最终结论。
