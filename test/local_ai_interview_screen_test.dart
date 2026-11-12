@@ -977,6 +977,8 @@ void main() {
         AiTraceStage.dispatch,
         AiTraceStage.businessExecution,
         AiTraceStage.persistence,
+        AiTraceStage.persistedState,
+        AiTraceStage.presentation,
         AiTraceStage.finalRender,
       ]));
     }
