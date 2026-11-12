@@ -270,15 +270,22 @@ class LocalAiService {
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
+    String? traceId,
   }) async {
     final normalized = transcript.trim();
     if (normalized.isEmpty) {
       throw const FormatException('历史对话为空，无法恢复');
     }
+    final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'restoreConversation',
-      {'transcript': normalized, 'userMessages': userMessages},
+      {
+        'transcript': normalized,
+        'userMessages': userMessages,
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+      },
     );
+    _verifyTraceId(data, normalizedTraceId);
     if (data?['restored'] != true) {
       throw PlatformException(
         code: 'RESTORE_FAILED',
