@@ -105,35 +105,37 @@
 本报告为静态入口审计，未修改业务代码，未进行医学审核或设备测试。
 
 
-## 6. 2026-11-11 增量复核（master 392f977c）
+## 6. 2026-11-12 增量复核（master 36484112ffadbfcb4c415b47a6a52eb7dac7f825）
 
-> 本节更新源码定位，不改变原始审计的结论边界。当前 master：`392f977c0c54603bf54daf9c7284e698ffee8a72`。相关源码 blob：`local_ai_interview_screen.dart` = `b0736715bb874c11f2ecc6301bcd14ec109c03fe`；`MainActivity.kt` = `3a4270106365862354f37d4e2101e1804978b954`；`assistant_conversation_orchestrator.dart` = `c2eba85bbaa3db509296218db19624989d4a8c03`。
+> 本节更新到 #58 原子持久化合并后的当前主线。相关源码 blob：local_ai_interview_screen.dart = d14f18edc606e0b01ffeb3c431dd8fcb37ada6d7；MainActivity.kt = c95bde52c5135336ba9b2b644ed8785deadf6004；assistant_conversation_orchestrator.dart = c2eba85bbaa3db509296218db19624989d4a8c03。
 
-### 6.1 入口调用顺序复核
+### 6.1 当前入口与调用顺序
 
 | 入口 | 当前源码定位 | 复核结果 |
 |---|---|---|
-| 统一文本/自动与手动路由 | `LocalAiInterviewScreen._send()`：2146 起；`AssistantConversationOrchestrator.resolve()`：121 起 | `_send()` 先检查结构化问诊活动任务，再决定是否调用 Orchestrator；在这两个边界前均未调用 `RedFlagPreflight` |
-| 结构化问诊选项 | `_handleTcmInterviewOption` 回调约 1219 起，实际处理由活动任务分支在 `_send()` 2146 起调用 | 结构化问诊可在普通 Orchestrator 之前消费选项；当前无红旗 preflight |
-| 图片 | `_send()` 2261 起调用 `_service.sendImage`；Native MethodChannel `MainActivity.kt` 91 起；Native `sendLocalImage()` 600 起 | 直接进入 Native 图片模型处理，Flutter 与 Native 均未引用 `RedFlagPreflight` |
-| 语音 | `_send()` 2257 起调用 `_service.sendAudio`；Native MethodChannel 100 起；Native `sendLocalAudio()` 627 起 | 直接进入 Native 语音模型处理，Flutter 与 Native 均未引用 `RedFlagPreflight` |
-| 纯文本 | `_send()` 2146 起，文本经 `_sendTextWithKnowledgeContext()` 821 起，之后进入 Native `sendMessage` MethodChannel 109 起与 `sendLocalMessage()` 410 起 | Orchestrator 只负责模式/工具路由，不承担红旗语义判定；Native 入口无纵深安全门禁 |
-| 症状提取 | Flutter `_extractSymptoms()` 2378 起；Native MethodChannel `extractSymptoms` 90；Native 函数 652 起 | 独立模型调用入口，不经过普通 `_send()` 或 Orchestrator，当前无前置红旗检查 |
-| 历史恢复 | `_restorePendingHistoryTranscript()` 约 1540 起，调用 `_service.restoreConversation()` | 恢复本身不是新用户当前症状；应保留历史时间/主体来源，不能把历史文本直接重判为当前本人急症。恢复后下一轮新输入仍须走安全门禁 |
+| 统一文本/自动与手动路由 | LocalAiInterviewScreen._send()：2144；AssistantConversationOrchestrator.resolve()：121 | _send() 先检查活动结构化问诊任务，再决定是否进入 Orchestrator；两个边界前均无 RedFlagPreflight 调用 |
+| 结构化问诊选项 | _handleTcmInterviewOption 定义约 1217；_send() 活动任务分支约 2168 | 结构化问诊可在普通 Orchestrator 之前消费选项；当前无红旗 preflight |
+| 工具路由 | _openTool()：1522 起；工具动作分支约 1676、1772、1999 | 工具路由和执行前没有红旗门禁；工具参数校验不是红旗识别 |
+| 图片 | _send() 2259 调用 _service.sendImage；Native MethodChannel MainActivity.kt 91；sendLocalImage() 607 | 直接进入 Native 图片模型处理，Flutter 与 Native 均未引用 RedFlagPreflight |
+| 语音 | _send() 2255 调用 _service.sendAudio；Native MethodChannel 100；sendLocalAudio() 634 | 直接进入 Native 语音模型处理，Flutter 与 Native 均未引用 RedFlagPreflight |
+| 纯文本 | _send() 2144；_sendTextWithKnowledgeContext() 定义 821、调用约 2261；Native sendMessage MethodChannel 109、sendLocalMessage() 417 | Orchestrator 负责模式/工具路由，不承担红旗语义判定；Native 文本入口无纵深门禁 |
+| 症状提取 | Flutter _extractSymptoms()：2376；Native MethodChannel extractSymptoms：90；Native 函数：659 | 独立模型调用入口，不经过普通 _send() 或 Orchestrator，当前无前置红旗检查 |
+| 历史恢复 | _restoreVisibleConversationToModel()：1541；调用点约 1803 | 恢复历史不是新用户当前症状；应保留时间/主体来源，不能将历史文本直接重标为当前本人急症 |
+| Native 缓存清除 | MainActivity.kt clearRuntimeCache MethodChannel | 仅释放 runtime 并清理 AI cache，不是模型输入入口，不构成红旗覆盖 |
 
-### 6.2 策略实现与生产调用的差异
+### 6.2 生产接入状态复核
 
-- `lib/services/red_flag_preflight.dart` 定义了纯 Dart 策略状态（CLEAR / BLOCK_URGENT / CLARIFY / REVIEW_REQUIRED），但当前 `local_ai_interview_screen.dart` 和 `MainActivity.kt` 均未 import 或引用 `RedFlagPreflight`。
-- 当前 `RedFlagPreflight` 接收外部 detector 提供的 `matchedRuleIds`、主体、时间、极性、审核状态和覆盖状态；它本身不是文本 detector，也不会从自然语言中识别胸痛、呼吸困难等症状。
-- `test/red_flag_preflight_test.dart` 验证的是策略状态契约，不证明自然语言 detector、附件转写覆盖或生产入口接入。
-- 因此：纯 Dart policy = CODE 存在；policy unit tests = TEST 存在；生产 detector = MISSING；Flutter/Native 全入口接入 = MISSING；医学审核 = MISSING。B 继续 PARTIAL / RELEASE BLOCKED。
+- 当前 master 的 local_ai_interview_screen.dart 与 MainActivity.kt 均没有 RedFlagPreflight / RedFlagAssessment / red_flag_preflight 引用。
+- RedFlagPreflight 仍只是接收外部 detector 结果的策略评估器；当前没有从原始文本、图片转写、语音转写或结构化问诊输入中产生 reviewed candidate rule IDs 的生产 detector。
+- Flutter 统一入口、结构化问诊、工具执行、图片/语音、症状提取、历史恢复和 Native MethodChannel 均未形成统一前置门禁。
+- #57 transcript 恢复与 #58 原子持久化改善了历史状态完整性；#64 清除编排与 #65 缓存目录保护改善数据生命周期，但都不等于红旗检测或红旗覆盖。
+- 因此：policy CODE = PRESENT；policy tests = PASS；production detector = MISSING；Flutter/Native full-entry enforcement = MISSING；medical review = MISSING。B 继续 PARTIAL / RELEASE BLOCKED。
 
 ### 6.3 实施边界与下一步
 
 1. 不直接增加未经医学审核的词表、阈值或急救文案；不使用模型 prompt 作为安全放行依据。
-2. 先定义 detector 输出契约：保留原始输入来源、本人/他人/知识讨论、当前/既往/假设、肯定/否定/引用、置信未知状态，以及覆盖完整性；不能解析时必须 REVIEW_REQUIRED 或 CLARIFY，不得 CLEAR。
-3. Flutter 层需在活动问诊分支、Orchestrator/工具路由、文本/附件发送、症状提取前共享执行策略；Native MethodChannel 再设独立 fail-closed 边界，防止直接调用绕过 Flutter。
-4. 图片本体不能用关键词检测；必须先取得用户描述或可信转写/观察结果，并明确该内容是用户输入还是模型生成，模型生成描述不能冒充用户本人症状。
-5. 历史 transcript 需按时间和说话主体区分，不得将过去症状或他人症状重标为当前本人症状。
+2. 先定义 detector 输出契约：保留原始输入来源、本人/他人/知识讨论、当前/既往/假设、肯定/否定/引用、语义未知状态和覆盖完整性；无法解析时必须 REVIEW_REQUIRED 或 CLARIFY，不得 CLEAR。
+3. Flutter 层需在活动问诊分支、Orchestrator/工具路由、文本/附件发送、症状提取前共享执行策略；Native MethodChannel 再设独立 fail-closed 边界。
+4. 图片本体不能用关键词检测；必须先取得用户描述或可信转写/观察结果，并区分用户输入与模型生成内容。
+5. 历史 transcript 按时间和说话主体区分；不得将过去症状或他人症状重标为当前本人症状。
 6. 医学审核未取得前，正式红旗规则不得放行生产流；设备 TRACE 未取得前不宣称真机覆盖。
-
