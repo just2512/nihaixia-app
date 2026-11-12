@@ -1729,7 +1729,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AiTraceContext? traceContext,
     AssistantToolArguments? arguments,
   }) async {
-    final activeTraceContext = activeTraceContext ??
+    final activeTraceContext = traceContext ??
         _traceRecorder.start(
           stage: AiTraceStage.input,
           route: 'manual_tool',
