@@ -175,3 +175,54 @@ F 仍 PARTIAL。
 8. 继续 B 全入口 detector 接入设计，医学审核未完成前保持发布阻断。
 9. 继续 C 相关性对照测试，不擅自改变已锁定检索行为。
 10. 继续 D 24 项工具逐项 Headless 审计。
+
+
+---
+
+## 2026-11-12 当前主线增量复核（master b786f84）
+
+本节覆盖旧审计结论中与本次合并发生冲突的状态；未列为完成的项目仍按原审计标准处理。
+
+### A. Native 与会话可靠性：PARTIAL
+
+- PR #80 已合并：Activity 销毁时把 Native release 排在进程级串行队列中；新 Activity 的模型初始化排在释放之后；销毁后尚未执行的任务被拒绝。
+- PR #78 已合并：生产问诊图片、录音进入 AI 专属附件目录，不再把共享临时目录当作 AI 所有权目录。
+- PR #77 已合并：assistant turn 的双消息持久化原子性测试。
+- 尚缺 Find N2 真机 GPU/CPU 长轮次、图片/语音、多轮切换、进程重启与 TRACE 证据；设备验收保持 UNKNOWN。
+
+### B. 医学红旗安全：PARTIAL / RELEASE BLOCKED
+
+- PR #71 已合并：结构化 preflight 的 detector/rule-set provenance 契约；缺失 provenance 不可标 CLEAR。
+- 当前 preflight 仍不是自然语言 detector；已审查的红旗词表、阈值、处置文案和医学审核缺失。
+- 生产聊天文本、图片/语音转写和 Native 直接调用路径仍未证明全部经过 fail-closed gate。系统提示词中的急症提醒不等于确定性安全门。
+- 不得自行补造医学规则；在 detector 与医学审核完成前，B 不得标 PASS。
+
+### C. 检索与方剂匹配：PARTIAL
+
+- PR #81 已合并：精确方名查询优先返回精确方剂，单味药组成检索仍保留独立候选路径；黄金 metadata 已按实际输出差异复核。
+- 后续仍需逐条审查 subject/object、sourceId、原始位置、来源可靠性和重复候选；不以候选数量增加为目标。
+
+### D. 工具能力：PARTIAL
+
+- 24 项 AssistantToolRouter 注册能力已在能力清单逐项列出：23 个 Widget 页面 builder，1 个结构化问诊特殊内联流程。
+- PR #85 正在实现第一个双入口能力：`yunqi` 保留页面 builder，同时增加同步 Headless executor；只有显式日期才自动执行，无日期仍走页面确认。当前 PR 尚未合并，不能计入主线 Headless/Executed 数量。
+- 其他页面不因注册、匹配或打开而视为 Executed。
+
+### E. 本地 AI 数据清理与备份：PARTIAL
+
+- PR #76：设置页清理入口已合并。
+- PR #78：生产附件归属迁移已合并。
+- PR #82：SQLite FFI 集成测试已合并，覆盖 AI 表清理、非 AI 表保留、数据库重开后状态，以及删除失败时事务回滚。
+- PR #83：已合并 Android 备份规则，排除本地模型目录和 TRACE 文件；Android CI 的 merged manifest 检查通过。
+- AI 会话与非 AI 业务数据仍共用 SQLite 数据库，故 Android 系统备份仍可能保留 AI 会话行。禁止排除整个数据库或关闭全应用备份来掩盖该问题。
+- 无法可靠归属的旧共享临时图片、外部导出副本仍不在可证明清理范围；Find N2 真机清理后重启仍 UNKNOWN。
+
+### F. trace_id：PARTIAL
+
+- PR #73：默认关闭的 writer/recorder 与清理生命周期协调已合并。
+- PR #84：Dart → MethodChannel → Native 推理响应的可选 `trace_id` 桥接已合并；采用 snake_case、32 位小写十六进制校验，Native 回显不一致时失败。
+- 尚未在统一聊天 UI 每轮生成 ID、将其写入 SQLite message metadata，也未串联 dispatch/retrieval/tool/result/presentation 阶段。F 不能标为端到端完成。
+
+### G. 审计与治理：PARTIAL
+
+- 本次审计台账、能力清单、TRACE 契约正在当前基线更新；README/pubspec/CI 版本一致性检查仍需单独闭环。
