@@ -875,3 +875,81 @@ PR #107 修复失败轮次阶段误归因：
 - 医学审核、原始纸本/影像、物理设备和外部备份副本属于外部证据依赖；不得由代码或模型自我生成。
 - 不把本轮 F 的局部断点修复夸大成 P0–P5 全部关闭；整体仍受 A/B/C/E/F 的真机或外部证据门槛约束。
 - 本轮没有增加 Agent/DAG、数据库表、模型/API、检索引擎或新的 Headless adapter。
+
+
+---
+
+## 20. 2026-11-12 PR #117 结构化问诊批量原子持久化集成
+
+### 20.1 主线与 CI 证据
+
+- 主线基线：`master @ 872a715a3817a57c8b4dd708a33f6b3a13c428c0`。
+- PR #117：`fix(ai): persist structured interview transcript atomically`；merge commit `872a715a3817a57c8b4dd708a33f6b3a13c428c0`。
+- 独立分支 push run `43237866155`：静态分析与 changed tests SUCCESS。
+- PR run `43238225000`：Flutter regression SUCCESS；Android arm64 APK/ABI、merged backup manifest、Native unit tests 及证据上传 SUCCESS。PR workflow 的 Branch validation job 为 SKIPPED，不单独计为 PASS。
+- 合并后的主线独立 workflow：Flutter tests run `43239874217`、Flutter Quality Gate run `43239874208`。本节初次更新时两者均为 IN_PROGRESS；必须等待这两个 run 对应 `872a715` 的终态，不用 PR head CI 代替 post-merge CI。
+
+### 20.2 本次代码交付与证据
+
+1. `AssistantMessageDraft` 定义有序消息草稿；`AssistantConversationStore.saveAssistantMessagesAtomically()` 作为现有接口的批量持久化边界。
+2. `DatabaseHelper.saveAssistantMessagesAtomically()` 在一个 SQLite transaction 中完成全部 `assistant_messages` 插入以及 `assistant_conversations` 的 title/preview/updated_at 更新；后续任意一条插入或元数据更新失败，整批回滚。
+3. 既有 `saveAssistantTurn()` 改为调用批量事务，保持原有 user/assistant 双消息原子写入语义；没有 schema migration、没有新表。
+4. 结构化问诊 `_appendTcmInterviewMessages()` 将本次新增 transcript 一次提交；批次失败时不留下前几条消息的半轮历史，并向用户显示历史记录可能不完整的明确提示。
+5. 任务快照与 transcript 消息持久化分别处理、分别记录：批量消息保存失败不伪装为消息已持久化；若任务快照本身成功，`persistedState=SUCCEEDED` 可以与 `persistence=FAILED` 同时存在。
+
+**测试证据：**
+- `test/assistant_history_persistence_test.dart`：批量成功路径验证消息顺序、metadata trace_id、conversation title 和最终 preview；SQLite trigger 在后续消息插入时注入失败，断言前序消息与 conversation metadata 全部回滚。
+- `test/local_ai_interview_screen_test.dart`：注入消息批次失败，断言没有半轮消息、问诊 task snapshot 独立保存、UI 有可见警告，TRACE 为 `persistence=FAILED`、`persistedState=SUCCEEDED`、`finalRender=SUCCEEDED`。
+- PR #117 全量 Flutter regression 和 Android arm64/Native CI 均 SUCCESS；合并后的主线 post-merge CI 仍以 20.1 的 run 终态为准。
+- 本次没有修改 DiagnosticEngine、DiagnosticRules、方剂规则、问诊提示词、检索排序、红旗策略、Native 模型行为或数据库 schema。
+
+### 20.3 A-G 当前状态
+
+| 工作流 | 当前状态 | 已新增证据 | 未关闭项 |
+|---|---|---|---|
+| A 多轮与持久化 | PARTIAL | 结构化问诊 transcript 批次原子写入；assistant user/assistant turn 复用事务；SQLite trigger 回滚测试；PR/Android CI 通过 | Find N2 GPU/CPU 多轮、媒体、Activity recreation、进程终止/恢复后的真实 TRACE；不能用 SQLite FFI 或 CI 替代真机 |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | `RedFlagGate`/`RedFlagPreflight` 的纯策略与 fail-closed contract 存在；PR #109 的 `runBefore` 只证明通用 operation 顺序 | 自然语言 detector、医学审核规则/阈值/文案、实际 Flutter/Native 生产入口覆盖均 MISSING |
+| C 检索来源 | PARTIAL / NOT VERIFIED | 83 个本地资产可存在性回链；12 条规则来源 manifest 有状态分类 | 83/83 bibliographic locator 仍 MISSING；纸本版本、卷页和原始影像未核验；不得改 query、top-40、排序、去重 |
+| D Headless | 2 Headless / 2 Executed | `yunqi`、`almanac` | 保持 2 项；无独立行为基线前不新增 adapter |
+| E 数据保护 | PARTIAL | AI 数据清理和 Android backup manifest 有自动化证据 | 混合 SQLite AI 行备份边界、旧共享附件归属、外部副本、Find N2 清理后强停/重启不可恢复实测 |
+| F TRACE | PARTIAL | #113 Headless reject、#114 Page Tool continuation、#115 send/symptom finalRender、#117 structured transcript persistence failure 状态区分 | Find N2 完整场景集、多轮/媒体/Activity/进程恢复真实 TRACE 仍缺 |
+| G 版本治理 | VERSION GUARD IMPLEMENTED | README/pubspec/Flutter/Android/Release tag 一致性 guard；#117 主线正在运行新的 post-merge CI | 以 `872a715` 的 run `43239874217` 与 `43239874208` 终态更新 |
+
+### 20.4 B2 全入口静态复核（基线 `872a715`）
+
+这部分是源码调用图复核，不代表红旗门禁已接入：
+
+| 输入/执行入口 | 当前源码定位 | 当前执行顺序 | RedFlagGate/Preflight 生产调用 |
+|---|---|---|---|
+| `initialPrompt` | `LocalAiInterviewScreen.initState()` 约 286 行 | 只预填输入框；用户提交后进入 `_send()` | 无；它不是自动模型调用入口 |
+| 普通文本/五模式 | `_send()` 约 3079 行 | 活动结构化问诊分支 → `AssistantConversationOrchestrator.resolve()` 约 3202 行 → 澄清/工具/模型 | 无 |
+| 结构化问诊选项 | `_handleTcmInterviewOption()` 约 1571 行；`_send()` 的活动任务分支直接调用 | `controller.answerOption()` → `_appendTcmInterviewMessages()` → transcript/task-state persistence | 无 |
+| 结构化问诊启动 | `_requestTool()` 约 2135 行 → `_startInlineTcmInterview()` 约 1130 行 | 进入既有确定性问诊 controller | 无 |
+| Headless 工具 | `_executeHeadlessTool()` 约 1977 行 | 业务 executor → typed result → 结果校验/持久化/展示 | 无 |
+| Page Tool | `_requestTool()` → `_openTool()` 约 2382 行 | 用户点击后打开既有 Widget 页面 | 无 |
+| 图片/语音 | `_send()` 约 3317/3327 行；`LocalAiService` `_sendAttachment()` 约 154 行 | Dart MethodChannel → Native `sendImage`/`sendAudio` handler（`MainActivity.kt` 约 105/122 行）→ `sendLocalImage`/`sendLocalAudio`（约 677/704 行） | 无 |
+| 症状整理 | `_extractSymptoms()` 约 3622 行；`LocalAiService._extractSymptoms()` 约 218 行 | MethodChannel `extractSymptoms` → Native handler 约 94 行 → `extractSymptoms()` 约 729 行 | 无 |
+| 文本模型调用 | `_sendTextWithKnowledgeContext()` 约 900 行；`LocalAiService._sendTextMessage()` 约 55 行、`_sendMessageWithContext()` 约 94 行 | Orchestrator/检索完成后 MethodChannel `sendMessage` → Native handler 约 139 行 → `sendLocalMessage()` 约 487 行 | 无 |
+| 历史恢复 | `_restoreVisibleConversationToModel()` 约 2247 行；`LocalAiService.restoreConversation()` 约 270 行 | 历史 transcript 回放到 Native Conversation；不是新用户轮次 | 无；历史来源/主体/时间必须保持 provenance，不能重标为当前本人症状 |
+
+静态复核同时确认：
+- `local_ai_interview_screen.dart`、`local_ai_service.dart`、`MainActivity.kt` 均没有 `RedFlagGate`、`RedFlagPreflight` 或 `RedFlagDetector` 生产引用。
+- `RedFlagGate.runBefore()` 目前只定义通用 fail-closed operation seam；它不证明上述生产入口已经经过 gate。
+- Native MethodChannel 是独立模型调用边界；仅在 Flutter 页面层做检查不足以覆盖 Native 直接入口。
+- 原始 image/audio attachment 不能用 prompt 文本冒充已评估；`restoreConversation` 是历史上下文恢复，不应当作新的当前症状输入。
+- 不得在 detector 未配置时把 `REVIEW_REQUIRED` 改成 `CLEAR`，也不得通过可选 gate 缺失静默跳过。医学审核及产品对 REVIEW_REQUIRED 影响的决策完成前，不接入会无差别阻断现有全部模式的生产 Gate。
+
+### 20.5 下一阶段执行顺序
+
+1. **收尾 `872a715` 主线 CI**：等待 Flutter tests `43239874217` 与 Flutter Quality Gate `43239874208`；如失败，只定位失败 job，不扩展范围。
+2. **B2**：基于 20.4 的实际调用图继续完成可注入入口顺序 seam 的设计与测试；不能用可选/null gate 形成旁路，也不能在无医学审核时伪造 detector。生产行为接入继续 BLOCKED，直到医学审核与产品影响决策有记录。
+3. **A/E**：Find N2 实机验证 GPU/CPU、连续多轮、图片/语音、Activity/进程恢复，以及 AI 数据清除后强停/重启不可恢复。没有真实设备、模型/backend、App SHA 和 trace_id 的场景维持 UNKNOWN。
+4. **C**：只接受可回链到真实底本、版本、卷页或原始影像的书目证据；没有证据继续 MISSING。
+5. **D/G**：保持两项 Headless 和当前版本 guard，不增加无证据支持的 adapter 或新的版本治理。
+
+### 20.6 执行边界
+
+- PR #117 提升了结构化问诊消息持久化的一致性，不代表 Find N2 多轮/进程恢复已验收。
+- PR/主线 Android arm64 APK 是 ABI/build 证据，不是 OPPO Find N2 实机运行证据。
+- B 的 Gate policy tests 不等于医学 detector 准确性或生产入口覆盖。
+- 本轮没有引入新的 Agent/DAG、数据库表、模型/API、检索引擎或医疗规则。
