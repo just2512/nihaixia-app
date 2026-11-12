@@ -2731,6 +2731,80 @@ void main() {
 
 
 
+  testWidgets('Headless 结果契约失败时记录失败终态且不持久化', (tester) async {
+    const traceId = 'abcdef0123456789abcdef0123456789';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 14),
+    );
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          traceRecorder: recorder,
+          testHeadlessToolExecutor: (arguments) => AssistantToolResult(
+            toolId: 'wrong-tool-id',
+            title: '无效测试结果',
+            values: const {'结果': '不应进入会话'},
+            arguments: arguments,
+            sourceIds: const ['local-engine:test'],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我推算五运六气 2026-11-12',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Headless 工具结果未通过契约校验'), findsOneWidget);
+    expect(find.textContaining('不应进入会话'), findsNothing);
+    expect(service.sentTexts, isEmpty);
+    final conversations = await _store.getAssistantConversations();
+    expect(conversations, isEmpty);
+    expect(
+      events.where((event) => event.stage == AiTraceStage.resultValidation)
+          .single.status,
+      AiTraceStatus.failed,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.resultValidation)
+          .single.errorCode,
+      'RESULT_CONTRACT_INVALID',
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.persistence)
+          .single.status,
+      AiTraceStatus.notStarted,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.persistence)
+          .single.errorCode,
+      'RESULT_CONTRACT_INVALID',
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.finalRender)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.finalRender)
+          .single.errorCode,
+      'RESULT_CONTRACT_INVALID',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('TRACE 开启时同一轮 ID 贯穿 Native 调用与 user/assistant metadata',
       (tester) async {
     const traceId = '0123456789abcdef0123456789abcdef';
