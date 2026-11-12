@@ -306,6 +306,18 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
   }
 }
 
+class _PageToolTraceService extends _TextSendService {
+  final restoredTranscripts = <String>[];
+
+  @override
+  Future<void> restoreConversation({
+    required String transcript,
+    required List<String> userMessages,
+  }) async {
+    restoredTranscripts.add(transcript);
+  }
+}
+
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentContexts = <String>[];
@@ -2803,6 +2815,110 @@ void main() {
           .single.errorCode,
       'RESULT_CONTRACT_INVALID',
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Page Tool 结果复用请求 TRACE ID 并记录执行、校验、持久化与恢复终态',
+      (tester) async {
+    const traceId = 'abcdefabcdefabcdefabcdefabcdefab';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 20),
+    );
+    final service = _PageToolTraceService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+          traceRecorder: recorder,
+          testToolRouteBuilder: (tool, arguments) => Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const ValueKey('complete-page-tool'),
+                  onPressed: () => Navigator.of(context).pop(
+                    AssistantToolResult(
+                      toolId: tool.id,
+                      title: tool.title,
+                      values: const {'结果': '页面结果已回传'},
+                      arguments: arguments.values,
+                      sourceIds: const ['local-engine:page-tool-test'],
+                    ),
+                  ),
+                  child: const Text('完成页面工具'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(find.text('打开五运六气推算'), findsOneWidget);
+
+    await tester.tap(find.text('打开五运六气推算'));
+    await tester.pumpAndSettle();
+    expect(find.text('完成页面工具'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('complete-page-tool')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('页面结果已回传'), findsOneWidget);
+    expect(service.restoredTranscripts, hasLength(1));
+    final conversations = await _store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await _store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    expect(messages, hasLength(3));
+    final resultMetadata = AssistantMessageMetadata.decode(
+      messages.last['metadata'] as String,
+    );
+    expect(resultMetadata.toolId, 'yunqi');
+    expect(resultMetadata.toolStatus, 'SUCCEEDED');
+    expect(resultMetadata.traceId, traceId);
+
+    final toolExecutionEvents = events
+        .where((event) => event.stage == AiTraceStage.toolExecution)
+        .toList(growable: false);
+    expect(toolExecutionEvents.map((event) => event.status), containsAll([
+      AiTraceStatus.notStarted,
+      AiTraceStatus.succeeded,
+    ]));
+    expect(
+      events.where((event) => event.stage == AiTraceStage.businessExecution)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.resultValidation)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.persistence)
+          .last.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.persistedState)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.finalRender)
+          .last.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(events.every((event) => event.traceId == traceId), isTrue);
     expect(tester.takeException(), isNull);
   });
 

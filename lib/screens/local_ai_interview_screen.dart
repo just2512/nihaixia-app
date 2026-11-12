@@ -2206,6 +2206,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             tool,
             mode: activeMode,
             arguments: arguments,
+            traceContext: activeTraceContext,
           ),
         ));
       _error = null;
@@ -2374,9 +2375,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolDefinition tool, {
     required AssistantMode mode,
     AssistantToolArguments? arguments,
+    AiTraceContext? traceContext,
   }) async {
+    final activeTraceContext =
+        traceContext ?? const AiTraceContext.disabled();
     if (tool.id == 'structured_diagnosis') {
-      await _startInlineTcmInterview(initialUserMessage: '继续规则辨证');
+      await _startInlineTcmInterview(
+        initialUserMessage: '继续规则辨证',
+        traceContext: traceContext,
+      );
       return;
     }
     // Every execution path (including quick actions with no extracted args)
@@ -2386,12 +2393,55 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         arguments ?? AssistantToolArguments(toolId: tool.id);
     final errors = toolArguments.validateAgainst(tool);
     if (errors.isNotEmpty) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.failed,
+        toolId: tool.id,
+        errorCode: 'INVALID_ARGUMENTS',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.toolExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'ARGUMENT_VALIDATION_FAILED',
+      );
       if (mounted) {
         setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
       }
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        toolId: tool.id,
+        errorCode: 'INVALID_ARGUMENTS',
+      );
       return;
     }
-    if (_toolRouteActive) return;
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.argumentValidation,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
+    );
+    if (_toolRouteActive) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.toolExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'TOOL_ROUTE_ALREADY_ACTIVE',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: tool.id,
+        errorCode: 'TOOL_ROUTE_ALREADY_ACTIVE',
+      );
+      return;
+    }
     _toolRouteActive = true;
     _pendingToolSelection = false;
     Object? result;
@@ -2427,11 +2477,67 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } finally {
       _toolRouteActive = false;
     }
-    if (!mounted) return;
+    if (!mounted) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.toolExecution,
+        status: AiTraceStatus.unknown,
+        toolId: tool.id,
+        errorCode: 'PAGE_RESULT_RECEIVED_AFTER_DISPOSE',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.notApplicable,
+        toolId: tool.id,
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'SCREEN_DISPOSED',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.notApplicable,
+        toolId: tool.id,
+      );
+      return;
+    }
     if (result is AssistantToolResult) {
       final errors = result.validateFor(tool.id);
       if (errors.isNotEmpty) {
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.toolExecution,
+          status: AiTraceStatus.unknown,
+          toolId: tool.id,
+          errorCode: 'PAGE_TOOL_RESULT_INVALID',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.resultValidation,
+          status: AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: 'RESULT_CONTRACT_INVALID',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'RESULT_CONTRACT_INVALID',
+        );
         setState(() => _error = '工具返回结果未通过契约校验：' + errors.join('；'));
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+          errorCode: 'RESULT_CONTRACT_INVALID',
+        );
         return;
       }
     }
@@ -2450,12 +2556,61 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           disclaimer: '工具页面退出时未返回结构化结果；无法区分用户取消与旧页面未实现回传。',
         ),
     }).withArguments(toolArguments.values);
+    final executionStatus = switch (normalizedResult.status) {
+      AssistantToolExecutionStatus.succeeded => AiTraceStatus.succeeded,
+      AssistantToolExecutionStatus.noResult => AiTraceStatus.unknown,
+      AssistantToolExecutionStatus.failed => AiTraceStatus.failed,
+      AssistantToolExecutionStatus.cancelled => AiTraceStatus.notStarted,
+      AssistantToolExecutionStatus.unknown => AiTraceStatus.unknown,
+    };
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.toolExecution,
+      status: executionStatus,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+    );
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.businessExecution,
+      status: executionStatus,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+    );
     final argumentErrors =
         normalizedResult.validateArgumentsMatch(toolArguments.values);
     if (argumentErrors.isNotEmpty) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        toolId: tool.id,
+        errorCode: 'RESULT_ARGUMENTS_MISMATCH',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'RESULT_ARGUMENTS_MISMATCH',
+      );
       setState(() => _error = '工具返回参数未通过契约校验：' + argumentErrors.join('；'));
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: tool.id,
+        errorCode: 'RESULT_ARGUMENTS_MISMATCH',
+      );
       return;
     }
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.resultValidation,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+    );
     final resultText = normalizedResult.toConversationText();
     final response = '【' + tool.title + '执行结果】\n' + resultText;
     final canRetry = normalizedResult.status ==
@@ -2470,15 +2625,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   tool,
                   mode: mode,
                   arguments: toolArguments,
+                  traceContext: activeTraceContext,
                 ))
             : null,
       ));
     });
+    int? conversationId;
+    var persistenceStarted = false;
+    var persistenceStatus = AiTraceStatus.notStarted;
+    String? persistenceErrorCode;
     try {
-      final id = await _conversationIdFuture;
-      if (id != null) {
+      conversationId = await _conversationIdFuture;
+      if (conversationId != null) {
+        persistenceStarted = true;
         await _conversationStore.saveAssistantMessage(
-          conversationId: id,
+          conversationId: conversationId,
           role: 'assistant',
           content: response,
           metadata: AssistantMessageMetadata(
@@ -2488,15 +2649,44 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             toolStatus: normalizedResult.statusLabel,
             sourceIds: normalizedResult.sourceIds,
             toolArguments: normalizedResult.arguments,
+            traceId: activeTraceContext.traceId,
           ).encode(),
         );
+        persistenceStatus = AiTraceStatus.succeeded;
+      } else {
+        persistenceErrorCode = 'CONVERSATION_UNAVAILABLE';
       }
     } catch (error) {
+      persistenceStatus = persistenceStarted
+          ? AiTraceStatus.unknown
+          : AiTraceStatus.notStarted;
+      persistenceErrorCode = persistenceStarted
+          ? 'TOOL_RESULT_PERSISTENCE_UNKNOWN'
+          : 'CONVERSATION_UNAVAILABLE';
       debugPrint('[AssistantHistory] 保存工具结果失败：$error');
     }
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.persistence,
+      status: persistenceStatus,
+      conversationId: conversationId,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+      errorCode: persistenceErrorCode,
+    );
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.persistedState,
+      status: persistenceStatus,
+      conversationId: conversationId,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+      errorCode: persistenceErrorCode,
+    );
+    String? finalRenderErrorCode;
     try {
-      // Returning a tool result to the visible timeline is not enough: rebuild
-      // the native model context so the next user turn can actually discuss it.
+      // Model context restoration continues the existing trace but is not
+      // evidence that the SQLite result message was persisted.
       await _restoreVisibleConversationToModel();
     } catch (error) {
       if (mounted) {
@@ -2504,8 +2694,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = '工具结果已加入对话记录，但同步到本地模型上下文失败：$error';
         });
       }
+      finalRenderErrorCode = 'MODEL_CONTEXT_RESTORE_FAILED';
     }
-    _scrollToBottom();
+    if (mounted) _scrollToBottom();
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.finalRender,
+      status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+      conversationId: conversationId,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+      errorCode: finalRenderErrorCode,
+    );
   }
 
   Widget _buildModeSelector(BuildContext context) {
@@ -2679,6 +2879,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               : pendingTool?.modes.contains(AssistantMode.tools) == true
                   ? AssistantMode.tools
                   : AssistantMode.consultation);
+      final restoredTraceId = messageMetadata.traceId?.trim();
+      final restoredTraceContext =
+          restoredTraceId == null || restoredTraceId.isEmpty
+              ? const AiTraceContext.disabled()
+              : AiTraceContext.enabled(
+                  traceId: restoredTraceId,
+                  startedAt: DateTime.now(),
+                );
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
@@ -2697,6 +2905,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       pendingTool,
                       mode: resolvedActionMode,
                       arguments: restoredToolArguments,
+                      traceContext: restoredTraceContext,
                     )
                 : null,
       ));
