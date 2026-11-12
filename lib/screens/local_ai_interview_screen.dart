@@ -988,7 +988,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       debugPrint('[TcmInterviewTask] 上一次状态保存失败，继续后续写入：$error');
     }).then((_) async {
       final id = await targetConversation;
-      if (id == null) return false;
+      if (id == null) return;
       await _conversationStore.saveTcmInterviewTaskState(
         conversationId: id,
         state: state,
@@ -1012,7 +1012,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     try {
       final id = await _conversationIdFuture;
-      if (id == null) return;
+      if (id == null) return false;
       final activeMode = mode ?? _assistantMode;
       final replayable = userText.trim().isNotEmpty;
       final metadata = AssistantMessageMetadata(
