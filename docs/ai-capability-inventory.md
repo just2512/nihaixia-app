@@ -389,6 +389,6 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 复用 `getDailyAlmanac`，不复制历法算法、不读取用户保存命盘或个人资料。
 - 参数限定为日期 `YYYY-MM-DD`，拒绝不存在日期、1900-2100 范围外日期和未声明字段；“今日/明日/昨日”由设备本地日历确定性解析。
 - 结果包含结构化黄历字段、`local-engine:almanac` source ID 和民俗免责声明。
-- PR #86 当前 head `590a886eac8b8f9535e60ed229ed3a9cb5056e8a`；前一 head 曾因日期正则双重转义和测试中的 const map 编译失败，已在当前 head 修正。最新 Flutter regression / Android arm64 CI 尚未完成，不能计入主线。
+- PR #86 当前 head `18ecc81a4ff6a18757386d39632b9a8567ae8b37`；前一 head 曾因日期正则双重转义、测试 const map 和断言文案问题失败，均已修正。最新 changed-test Branch validation run `43162555492` SUCCESS；PR Flutter regression run `43162562989` PENDING，Android arm64 尚未验收，不能计入主线。
 
 
