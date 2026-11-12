@@ -153,9 +153,11 @@ class AiTraceRecorder {
   }
 
   /// Stops accepting new events and waits for every already-enqueued write.
-  Future<void> disableAndFlush() async {
+  Future<bool> disableAndFlush() async {
+    final wasEnabled = _enabled;
     _enabled = false;
     await _pendingWrites;
+    return wasEnabled;
   }
   final AiTraceEventWriter? _writer;
   final AiTraceIdFactory _idFactory;
