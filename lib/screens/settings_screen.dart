@@ -203,7 +203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _clearCacheTile(ColorScheme cs) => ListTile(
         leading: Icon(Icons.cleaning_services, color: cs.secondary),
         title: const Text('清理缓存'),
-        subtitle: const Text('清理临时文件释放空间'),
+        subtitle: const Text('清理普通临时文件；不触碰本地 AI 附件与运行时缓存'),
         contentPadding: EdgeInsets.zero,
         onTap: () => clearAppCache(context),
       );

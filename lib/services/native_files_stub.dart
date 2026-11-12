@@ -2,4 +2,6 @@
 library;
 
 /// Browser-managed caches cannot be cleared through the native file API.
-Future<int> clearTempCacheBytes() async => 0;
+Future<int> clearTempCacheBytes({
+  Future<dynamic> Function()? directoryProvider,
+}) async => 0;
