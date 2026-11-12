@@ -22,6 +22,38 @@ void main() {
       );
 
   group('RedFlagPreflight policy contract', () {
+    test('requires source and versioned detector provenance before CLEAR', () {
+      for (final candidate in [
+        assessment(inputSource: RedFlagInputSource.unknown),
+        assessment(detectorId: null),
+        assessment(detectorVersion: '  '),
+        assessment(ruleSetVersion: null),
+        assessment(matches: const ['']),
+      ]) {
+        final result = preflight.evaluate(candidate);
+        expect(result.status, RedFlagPreflightStatus.reviewRequired);
+        expect(result.reason, 'DETECTOR_PROVENANCE_MISSING');
+        expect(result.mayContinueOrdinaryFlow, isFalse);
+      }
+    });
+
+    test('retains attachment and history origin without treating it as raw text', () {
+      final attachment = assessment(
+        inputSource: RedFlagInputSource.attachmentTranscript,
+      );
+      final history = assessment(
+        inputSource: RedFlagInputSource.historyRestore,
+        time: RedFlagTime.past,
+      );
+
+      expect(preflight.evaluate(attachment).status,
+          RedFlagPreflightStatus.blockUrgent);
+      expect(preflight.evaluate(history).status,
+          RedFlagPreflightStatus.clear);
+      expect(attachment.inputSource, RedFlagInputSource.attachmentTranscript);
+      expect(history.inputSource, RedFlagInputSource.historyRestore);
+    });
+
     test('blocks a reviewed, current, affirmed self match', () {
       final result = preflight.evaluate(assessment());
       expect(result.status, RedFlagPreflightStatus.blockUrgent);
