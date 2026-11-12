@@ -739,7 +739,7 @@ PR #107 修复失败轮次阶段误归因：
 |---|---|---|
 | A | PARTIAL / 设备 UNKNOWN | Find N2 GPU/CPU、多轮、媒体、Activity recreation、进程重启真实 TRACE 缺失 |
 | B | PARTIAL / RELEASE BLOCKED | Gate contract/test 已有；无自然语言 detector、医学审核规则集、生产入口调用和 Native 纵深门禁 |
-| C | PARTIAL | 83/83 lecture assets 存在可读，但 83/83 bibliographic locator MISSING；12 条 combinedPatterns 来源记录中 7 online text cross-checked、3 conditions cross-checked、2 MISSING；纸本版次/卷页/影像 12/12 缺失 |
+| C | PARTIAL | 83/83 lecture assets 存在可读，但 83/83 bibliographic locator MISSING；12 条 combinedPatterns 来源记录与代码中的 12 个 conditionKey 精确一一对应、无重复；其中 7 online text cross-checked、3 conditions cross-checked、2 MISSING；纸本版次/卷页/影像 12/12 缺失 |
 | D | 2 Headless / 2 Executed | yunqi、almanac；不为数量扩展 |
 | E | PARTIAL | 混合 SQLite AI 行备份、旧共享图片归属、外部副本、清理后真机重启不可恢复证据缺失 |
 | F | PARTIAL | #107 已补失败轮次 Native/resultValidation/persistence 状态；结构化问诊、工具、恢复全链路及设备 TRACE 仍缺 |
