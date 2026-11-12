@@ -1557,15 +1557,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       });
     }
 
-    await _persistDiagnosisHistoryOnce(controller);
-    final completedDiagnosis = controller.completedDiagnosis;
-    if (completedDiagnosis?.prescription != null &&
-        SettingsRepository.instance.autoCopyPrescription) {
-      try {
-        await _copyDiagnosisPrescription(completedDiagnosis!.prescription!);
-      } catch (error) {
-        if (mounted) {
-          setState(() => _error = '问诊记录已保存，但自动复制处方失败：$error');
+    if (taskStatePersisted) {
+      await _persistDiagnosisHistoryOnce(controller);
+      final completedDiagnosis = controller.completedDiagnosis;
+      if (completedDiagnosis?.prescription != null &&
+          SettingsRepository.instance.autoCopyPrescription) {
+        try {
+          await _copyDiagnosisPrescription(completedDiagnosis!.prescription!);
+        } catch (error) {
+          if (mounted) {
+            setState(() => _error = '问诊记录已保存，但自动复制处方失败：$error');
+          }
         }
       }
     }
