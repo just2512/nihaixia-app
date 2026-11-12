@@ -800,3 +800,52 @@ PR #107 修复失败轮次阶段误归因：
 4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。
 5. A/E 真机验收、C 来源真实性核验仍依赖外部设备/底本证据；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
 
+
+
+---
+
+## 19. 2026-11-12 PR #111 合并后复核快照
+
+### 19.1 主线与 post-merge CI
+
+- 当前复核基线：`master @ 8a80b9e71c61cecdf9d36d6a6013225185912f63`（PR #111）。
+- PR #111：Headless 结果契约校验失败时补齐 TRACE 失败终态：
+  - `resultValidation=FAILED`，错误码 `RESULT_CONTRACT_INVALID`；
+  - `persistence=NOT_STARTED`；
+  - 页面仍 mounted 时 `finalRender=SUCCEEDED`，页面已卸载时 `NOT_APPLICABLE`。
+- 合并后主线 Flutter tests run `43211557732`：SUCCESS；Flutter regression、AI contract、SQLite persistence/reopen、Android arm64 APK/ABI、Native unit tests 均通过。
+- 合并后主线 Flutter Quality Gate run `43211557461`：SUCCESS；static analysis、Dart tests、Android Native tests、Find N2 arm64 debug APK 均通过。
+- 两条 run 的 head SHA 均为上述 merge commit；这构成独立 post-merge CI 证据。
+
+### 19.2 本次复核确认与测试缺口
+
+- `lib/data/database_helper.dart::saveAssistantTurn` 已在同一个 SQLite transaction 中写入 user/assistant 消息并更新 conversation metadata；`LocalAiInterviewScreen._persistSuccessfulTurn` 调用该方法。
+- PR #77 的真实 SQLite FFI 故障注入测试已覆盖 assistant insert 失败时 user insert 同事务回滚。不得再把“双消息分开写入”列为当前缺陷，也不得重复实现原子写入。
+- PR #111 目前测试覆盖 Headless 成功执行的阶段状态，但没有直接构造 `validateFor` 或 `validateArgumentsMatch` 失败的 Headless 结果来命中 `RESULT_CONTRACT_INVALID` 分支。该分支的负向测试证据仍 MISSING；不能因成功路径 CI 通过而标记失败分支已验收。
+
+### 19.3 A-G 当前状态与最小后续任务
+
+| ID | 状态 | 下一项必要工作 |
+|---|---|---|
+| A | PARTIAL / Find N2 UNKNOWN | 只保留设备验收：GPU/CPU 多轮、图片/语音、Activity recreation、进程杀死/重启恢复及三方 transcript 一致性；CI 不替代真机 TRACE。 |
+| B | PARTIAL / RELEASE BLOCKED | 入口门禁未接入、医学审核 detector 缺失；继续只读旁路矩阵与调用顺序 seam，不擅自默认 CLEAR 或启用未经审核规则。 |
+| C | PARTIAL | 83 个讲稿 source locator 及 12 条规则纸本底本/版本/卷页/影像仍需人工证据核验；检索行为冻结，不改召回、排序、top-40、去重。 |
+| D | 2 Headless / 2 Executed | 保持 `yunqi`、`almanac`；无已证实确定性函数与行为基线前不新增 adapter。 |
+| E | PARTIAL | 混合 SQLite AI 行备份、旧共享图片归属、外部导出副本及 Find N2 清理后强停/重启不可恢复证据仍缺。 |
+| F | PARTIAL | 已有 Headless 成功与结果契约失败终态代码；补 #111 负向测试，再逐项核查结构化问诊、工具分发、恢复路径失败终态和真机 TRACE。 |
+| G | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag guard 已落地；本轮两条主线 post-merge CI 均 SUCCESS。 |
+
+### 19.4 下一批执行顺序（不扩展范围）
+
+1. F：为 #111 的 `RESULT_CONTRACT_INVALID` 分支增加一条可控失败结果测试，断言 resultValidation FAILED、persistence NOT_STARTED、finalRender 终态；不新增通用执行框架。
+2. F：检查结构化问诊和工具分发真实早退/异常分支，仅修复存在的 TRACE 断链。
+3. B：继续生产入口旁路矩阵；医学审核前维持 RELEASE BLOCKED，不接入虚构 detector。
+4. C：逐条核对原始来源定位；没有底本证据继续 MISSING。
+5. A/E：等待 Find N2 真机执行清单和外部证据；不以模拟器/CI 替代。
+6. D/G：维持现状，不增加无依据的 adapter 或版本系统。
+
+### 19.5 验收边界
+
+- 本快照未执行 Find N2 真机测试；A/E 设备项仍 UNKNOWN。
+- #111 的失败分支负向测试尚未补齐；该分支状态 PARTIAL。
+- B 仍 RELEASE BLOCKED；没有医学审核不能把 Gate contract 等同于生产保护。
