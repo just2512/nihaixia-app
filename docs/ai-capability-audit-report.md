@@ -253,3 +253,30 @@ F 仍 PARTIAL。
 - G PARTIAL：本轮 ledger/inventory/report 已刷新；版本一致性自动检查仍待实现。
 
 当前 master workflows：Flutter Quality Gate run `43161470395` IN_PROGRESS，Flutter tests run `43161470467` PENDING。PR #86/#87 的所有状态均按当前 head 记录，不得用旧 SHA 的 CI 覆盖。
+
+
+## 2026-11-12 合并后审计增量（master 34c1fa11）
+
+### D：第二项 Headless executor 已进入主线
+
+PR #86 已合并（`870362ae8ba92e25b195c62d9fc0be653d19600f`）。`AlmanacToolExecutor` 复用既有 `getDailyAlmanac`，校验日期格式、1900-2100 支持范围和未声明参数，返回结构化 `AssistantToolResult`、`local-engine:almanac` source ID 与民俗免责声明；保留原页面入口。主线 Headless/Executed 现为 2 项（yunqi、almanac），其余工具仍须逐项审计。
+
+### F：统一助手 per-turn TRACE 已部分接入
+
+PR #87 已合并（`34c1fa11c61b83d75b0c01ac6272a39d0cbf4537`）。默认关闭 recorder 接入普通文本、图片、语音轮次；同一 trace_id 写入 user/assistant message metadata，并记录 input、native_inference、model_output、persistence、final_render。独立症状提取调用使用 traced Native API。未记录用户正文、prompt、模型回复、症状或附件路径。
+
+仍缺 structured diagnosis、clarification/tool dispatch、retrieval 分阶段事件、失败轮次持久化关联和 Find N2 真实 TRACE，故 F 保持 PARTIAL。
+
+### CI 证据边界
+
+- PR #86：run `43162562989` Flutter regression SUCCESS；Android arm64 APK/ABI + Native unit tests SUCCESS；Branch validation SKIPPED。
+- PR #87：run `43162529437` Flutter regression SUCCESS；Android arm64 APK/ABI + Native unit tests SUCCESS；Branch validation SKIPPED。
+- 以上仅为 PR head CI。合并后 master 新 SHA 的独立 workflow 状态本次未取得，保持 UNKNOWN。Find N2 真机 TRACE 未执行。
+
+### 后续审计重点
+
+1. F：补齐 structured diagnosis、澄清/工具调度、检索各阶段和失败轮次的 trace 关联；每个阶段区分 NOT_APPLICABLE、FAILED、UNKNOWN，禁止用 UI 成功展示替代业务执行证据。
+2. D：选择第三个低风险候选前，先核验现有纯业务函数、参数校验、来源 ID、确定性结果和副作用；不批量迁移页面工具。
+3. C：按候选身份和来源定位逐条复核检索关系，保留 UNKNOWN，不以候选数量作为目标。
+4. B：继续生产入口调用图与 fail-closed 设计；医学审核未提供前不实现自造 detector 词表或阈值，维持 RELEASE BLOCKED。
+5. A/E：设备级模型、会话恢复、清理后重启和备份剩余边界仍需真实 Find N2 TRACE，不能由 CI 推定。
