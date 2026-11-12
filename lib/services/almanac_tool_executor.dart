@@ -14,7 +14,7 @@ class AlmanacToolExecutor {
     final rawDate = arguments['date'];
     final date = rawDate == null ? null : _parseDate(rawDate);
     if (date == null) {
-      return _failure(arguments, '查询日期无效；请使用 YYYY-MM-DD，未执行计算。');
+      return _failure(arguments, '查询日期不是有效日期；请使用 YYYY-MM-DD，未执行计算。');
     }
     if (date.year < 1900 || date.year > 2100) {
       return _failure(arguments, '查询日期超出支持范围（1900-2100），未执行计算。');
