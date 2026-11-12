@@ -2674,35 +2674,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
       errorCode: persistenceErrorCode,
     );
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.persistedState,
+      status: persistenceStatus,
+      conversationId: conversationId,
+      toolId: tool.id,
+      sourceIds: normalizedResult.sourceIds,
+      errorCode: persistenceErrorCode,
+    );
+    String? finalRenderErrorCode;
     try {
-      // Returning a tool result to the visible timeline is not enough: rebuild
-      // the native model context so the next user turn can actually discuss it.
+      // Model context restoration continues the existing trace but is not
+      // evidence that the SQLite result message was persisted.
       await _restoreVisibleConversationToModel();
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.persistedState,
-        status: _status?.ready == true
-            ? AiTraceStatus.succeeded
-            : AiTraceStatus.notApplicable,
-        conversationId: conversationId,
-        toolId: tool.id,
-        sourceIds: normalizedResult.sourceIds,
-      );
     } catch (error) {
       if (mounted) {
         setState(() {
           _error = '工具结果已加入对话记录，但同步到本地模型上下文失败：$error';
         });
       }
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.persistedState,
-        status: AiTraceStatus.failed,
-        conversationId: conversationId,
-        toolId: tool.id,
-        sourceIds: normalizedResult.sourceIds,
-        errorCode: 'MODEL_CONTEXT_RESTORE_FAILED',
-      );
+      finalRenderErrorCode = 'MODEL_CONTEXT_RESTORE_FAILED';
     }
     if (mounted) _scrollToBottom();
     await _traceRecorder.record(
@@ -2712,7 +2704,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       conversationId: conversationId,
       toolId: tool.id,
       sourceIds: normalizedResult.sourceIds,
-      errorCode: persistenceErrorCode,
+      errorCode: finalRenderErrorCode,
     );
   }
 
