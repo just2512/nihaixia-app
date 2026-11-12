@@ -81,3 +81,53 @@
 - Android 备份策略尚未核验 merged manifest。
 - Find N2 清除后重启不可恢复的实测 TRACE 尚未提供。
 - SQLCipher 不在本轮范围内；不得宣称数据库已加密。
+
+
+## 6. 2026-11-12 当前主线增量复核（master @ aadd7df0c8ffc1579d91ad425737ac5a70d2c656）
+
+> 本节修正上文中已过期的附件与清理编排结论。以下为静态源码复核；未执行 Find N2 清除后重启验收。
+
+### 6.1 已确认的实现变化
+
+- `DatabaseHelper.clearAllAiConversationData()` 已在同一 SQLite transaction 中删除 `assistant_messages`、`tcm_interview_tasks`、`assistant_conversations`、旧 `chat_history`。数据库文件仍为 `nihaisha.db`，schema version 7；诊断历史、收藏、设置、命盘等非 AI 数据保留。
+- `test/ai_data_clear_database_test.dart` 覆盖四类 AI 对话数据清空、非 AI sentinel 数据保留，以及删除中途失败时事务回滚。
+- `LocalAiRuntimeCacheClearPolicy` 已先调用 Native runtime release，再删除 `cacheDir/litertlm`；模型文件位于 `filesDir/ai_models`，不属于清理目标。Native `releaseLocalModel()` 清空 Engine/Conversation 引用、`userReportedInputs` 与 `conversationHistoryTurns`。
+- `LocalAiAttachmentStore` 已有独立目录和定向删除单测，但它目前没有被 `LocalAiInterviewScreen` 调用；“有附件存储类”不能证明生产附件已经迁移到专属目录。
+- `LocalAiDataClearCoordinator` 已有分域编排与故障注入测试；但当前 `settings_screen.dart` 和 `local_ai_interview_screen.dart` 未发现该协调器的生产调用，也未发现“清除全部 AI 数据”设置入口。工厂方法存在不等于用户可以执行清除。
+- TRACE writer 已有只删除自身 `ai_trace.jsonl` 与 `.tmp` 的能力；统一 recorder/runtime 生命周期仍由 PR #69 处理，且当前主线尚未集成 #69。
+
+### 6.2 附件归属的当前真实情况
+
+- 图片仍由 ImagePicker 返回临时路径，`LocalAiInterviewScreen._deleteCachedAttachments()` 仅按已知路径删除，并通过路径规范化限制在系统临时目录内。
+- 语音录音仍写入 `getTemporaryDirectory()/local_ai_<timestamp>.wav`。
+- 该屏幕没有使用 `LocalAiAttachmentStore`；因此图片/语音附件缺少可靠的全量枚举和进程重启后孤儿文件清理机制。
+- 单次发送/页面销毁时按当前已知路径清理，只能证明局部清理，不足以证明“清除全部 AI 数据”。
+
+### 6.3 Android 备份边界仍未解决
+
+- 当前 `android/app/src/main/AndroidManifest.xml` 未声明 `android:allowBackup`、`android:fullBackupContent` 或 `android:dataExtractionRules`。
+- 当前树中未发现 `backup_rules.xml` 或 `data_extraction_rules.xml`。
+- AI 对话表与收藏、设置、诊断历史共用 `nihaisha.db`。Android XML 备份规则只能按文件/目录域排除，不能按 SQLite 表或行排除。
+- 因此“只排除 AI 对话而保留同库非 AI 数据”不能仅靠现有 XML 规则实现。全应用 `allowBackup=false` 会扩大影响面，必须单独作产品决策，不作为默认修复。
+
+### 6.4 更新后的 E 状态
+
+| 子项 | 状态 | 证据 | 剩余缺口 |
+|---|---|---|---|
+| SQLite AI 对话原语 | PARTIAL（代码/测试存在） | `database_helper.dart` / `ai_data_clear_database_test.dart` | 尚未接入生产清除 UI；设备重启后不可恢复未验证 |
+| Native runtime/cache | PARTIAL（代码/Native 单测存在） | `MainActivity.kt` / `LocalAiRuntimeCacheClearPolicy.kt` | 必须经生产协调器调用；设备端释放与缓存删除未实测 |
+| AI 附件归属 | PARTIAL | `LocalAiAttachmentStore` 单测通过，但生产 screen 仍使用共享临时目录 | 迁移生产读写路径、清理历史遗留文件；不误删共享临时文件 |
+| TRACE | PARTIAL | writer/recorder 基础存在；#69 待集成 | 必须统一 writer/recorder 实例并纳入清理编排 |
+| UI/用户确认 | MISSING | 当前 Settings 与 AI screen 未发现清除入口/协调器调用 | 增加二次确认、执行期间互斥和逐域结果 |
+| Android backup | UNKNOWN / 产品决策阻塞 | Manifest 无显式策略；无规则 XML；同库混存 | 先评估备份影响与数据隔离替代方案，不擅自全局关闭 |
+| Find N2 重启验证 | UNKNOWN | 无本轮设备 TRACE | 合成数据清理、强制停止、重启、再次检查 |
+
+### 6.5 下一步（按依赖顺序）
+
+1. #69 合并后，确认 coordinator 使用进程级同一 recorder/writer，并保持默认关闭状态。
+2. 将生产附件写入迁移到 AI 专属目录；保留对历史共享临时路径的有限清理兼容，不能递归删除整个 temp 目录。
+3. 在设置页增加“清除全部 AI 对话数据”二次确认；调用 coordinator，执行期间禁止发送、恢复历史、加载/重置模型；逐项展示数据库、附件、Native cache、TRACE 清理状态和失败域。
+4. 为 coordinator 增加生产 wiring/widget 测试与并发互斥测试；确保部分失败不显示“全部清除成功”。
+5. Android backup 单独提交影响评估与 merged manifest/build 证据；在用户决策前不合并全应用禁用备份。
+6. Find N2 以合成数据执行清理、强制停止、重启、数据不可恢复及非 AI 数据/模型文件保留验证；未取得 TRACE 前 E 保持 PARTIAL。
+
