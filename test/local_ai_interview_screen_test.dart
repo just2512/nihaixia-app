@@ -31,6 +31,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
   int _nextMessageId = 1;
   int createConversationCalls = 0;
   int taskStateSaveCalls = 0;
+  bool failNextMessageBatch = false;
   final Map<int, Map<String, Object?>> _conversations = {};
   final Map<int, List<Map<String, Object?>>> _messages = {};
   final Map<int, TcmInterviewTaskState> _taskStates = {};
@@ -100,6 +101,27 @@ class _MemoryConversationStore implements AssistantConversationStore {
       content: assistantContent,
       metadata: assistantMetadata,
     );
+  }
+
+  @override
+  Future<List<int>> saveAssistantMessagesAtomically({
+    required int conversationId,
+    required List<AssistantMessageDraft> messages,
+  }) async {
+    if (failNextMessageBatch) {
+      failNextMessageBatch = false;
+      throw StateError('INJECTED_MESSAGE_BATCH_FAILURE');
+    }
+    final ids = <int>[];
+    for (final message in messages) {
+      ids.add(await saveAssistantMessage(
+        conversationId: conversationId,
+        role: message.role,
+        content: message.content,
+        metadata: message.metadata,
+      ));
+    }
+    return ids;
   }
 
   @override
@@ -956,6 +978,66 @@ void main() {
     final savedAfterSkip = afterSkip!;
     expect(savedAfterSkip.pendingPromptId, startsWith('ten:'));
     expect(service.sentTexts, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('结构化问诊批量消息保存失败时不留半轮并标记 persistence FAILED',
+      (tester) async {
+    const traceId = '61616161616161616161616161616161';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 15),
+    );
+    _store.failNextMessageBatch = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: _TextSendService(),
+          imagePicker: _EmptyLocalAiImagePicker(),
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    final conversationId = _store._conversations.keys.single;
+    expect(_store._messages[conversationId], isEmpty);
+    expect(_store._taskStates[conversationId]?.pendingPromptId, 'temperature');
+    expect(
+      find.text('规则问诊消息未能完整保存，当前页面仍保留内容；历史记录可能不完整，请核实后再继续。'),
+      findsOneWidget,
+    );
+    final persistence = events
+        .where((event) =>
+            event.traceId == traceId &&
+            event.stage == AiTraceStage.persistence)
+        .single;
+    expect(persistence.status, AiTraceStatus.failed);
+    expect(persistence.errorCode, 'PERSISTENCE_FAILED');
+    final persistedState = events
+        .where((event) =>
+            event.traceId == traceId &&
+            event.stage == AiTraceStage.persistedState)
+        .single;
+    expect(persistedState.status, AiTraceStatus.succeeded);
+    expect(
+      events
+          .where((event) =>
+              event.traceId == traceId &&
+              event.stage == AiTraceStage.finalRender)
+          .single
+          .status,
+      AiTraceStatus.succeeded,
+    );
     expect(tester.takeException(), isNull);
   });
 

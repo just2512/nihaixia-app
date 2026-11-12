@@ -432,17 +432,25 @@ class DatabaseHelper implements AssistantConversationStore {
   }
 
 
-  /// Persists both sides of a successful assistant turn in one SQLite
-  /// transaction. If either insert or conversation metadata update fails,
-  /// neither message is visible in history.
+  /// Atomically persists an ordered group of transcript rows. Both message
+  /// inserts and conversation preview/title updates share one SQLite commit.
   @override
-  Future<int> saveAssistantTurn({
+  Future<List<int>> saveAssistantMessagesAtomically({
     required int conversationId,
-    String? userContent,
-    String? userMetadata,
-    required String assistantContent,
-    String? assistantMetadata,
+    required List<AssistantMessageDraft> messages,
   }) async {
+    if (messages.isEmpty) return const <int>[];
+    final normalizedRoles = messages.map((message) {
+      final role = message.role.trim().toLowerCase();
+      if (!const {'user', 'assistant', 'system', 'tool'}.contains(role)) {
+        throw ArgumentError.value(
+          message.role,
+          'role',
+          'Unsupported assistant message role',
+        );
+      }
+      return role;
+    }).toList(growable: false);
     final db = await database;
     final now = DateTime.now().toIso8601String();
     return db.transaction((txn) async {
@@ -457,18 +465,17 @@ class DatabaseHelper implements AssistantConversationStore {
         throw StateError('Assistant conversation $conversationId does not exist');
       }
 
-      Future<int> insertMessage({
-        required String role,
-        required String content,
-        String? metadata,
-      }) async {
-        final normalized = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+      final messageIds = <int>[];
+      for (var index = 0; index < messages.length; index++) {
+        final message = messages[index];
+        final role = normalizedRoles[index];
+        final preview = message.content.replaceAll(RegExp(r'\s+'), ' ').trim();
         final id = await txn.insert('assistant_messages', {
           'conversation_id': conversationId,
           'role': role,
-          'content': content,
+          'content': message.content,
           'created_at': now,
-          'metadata': metadata,
+          'metadata': message.metadata,
         });
         await txn.rawUpdate(
           '''
@@ -483,28 +490,46 @@ class DatabaseHelper implements AssistantConversationStore {
           ''',
           [
             now,
-            normalized.length > 120 ? normalized.substring(0, 120) : normalized,
+            preview.length > 120 ? preview.substring(0, 120) : preview,
             role,
-            normalized,
+            preview,
             conversationId,
           ],
         );
-        return id;
+        messageIds.add(id);
       }
-
-      if (userContent != null && userContent.trim().isNotEmpty) {
-        await insertMessage(
-          role: 'user',
-          content: userContent,
-          metadata: userMetadata,
-        );
-      }
-      return insertMessage(
-        role: 'assistant',
-        content: assistantContent,
-        metadata: assistantMetadata,
-      );
+      return messageIds;
     });
+  }
+
+  /// Persists both sides of a successful assistant turn in one SQLite
+  /// transaction. [userContent] may be null for assistant-only system turns.
+  @override
+  Future<int> saveAssistantTurn({
+    required int conversationId,
+    String? userContent,
+    String? userMetadata,
+    required String assistantContent,
+    String? assistantMetadata,
+  }) async {
+    final messages = <AssistantMessageDraft>[];
+    if (userContent != null && userContent.trim().isNotEmpty) {
+      messages.add(AssistantMessageDraft(
+        role: 'user',
+        content: userContent,
+        metadata: userMetadata,
+      ));
+    }
+    messages.add(AssistantMessageDraft(
+      role: 'assistant',
+      content: assistantContent,
+      metadata: assistantMetadata,
+    ));
+    final ids = await saveAssistantMessagesAtomically(
+      conversationId: conversationId,
+      messages: messages,
+    );
+    return ids.last;
   }
 
   Future<List<Map<String, Object?>>> getAssistantConversations({
