@@ -154,12 +154,23 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "restoreConversation" -> {
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
                         val transcript = call.argument<String>("transcript")?.trim().orEmpty()
                         val userMessages = call.argument<List<String>>("userMessages") ?: emptyList()
                         if (transcript.isEmpty()) {
                             result.error("EMPTY_HISTORY", "历史对话为空", null)
                         } else {
-                            runAiTask(result) { restoreLocalConversation(transcript, userMessages) }
+                            runAiTask(result) {
+                                LocalAiTraceIdPolicy.attach(
+                                    restoreLocalConversation(transcript, userMessages),
+                                    traceId
+                                )
+                            }
                         }
                     }
                     "resetConversation" -> runAiTask(result) { resetLocalConversation() }
