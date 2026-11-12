@@ -104,12 +104,25 @@ class AssistantConversationOrchestrator {
     String query,
   ) {
     final values = <String, String>{};
-    if (tool.id == 'yunqi') {
-      final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
+    if (tool.id == 'yunqi' || tool.id == 'almanac') {
+      final match = RegExp(r'\\b\\d{4}-\\d{1,2}-\\d{1,2}\\b').firstMatch(query);
       if (match != null) {
         // Preserve the raw token; the execution boundary validates the actual
-        // calendar date so invalid input cannot silently become "today".
+        // calendar date so invalid input cannot silently become another date.
         values['date'] = match.group(0)!;
+      } else if (tool.id == 'almanac') {
+        // Daily almanac defaults to the device's local calendar day.
+        // Relative-day wording is resolved deterministically, without model inference.
+        final now = DateTime.now();
+        final offset = query.contains('明天') || query.contains('明日')
+            ? 1
+            : query.contains('昨天') || query.contains('昨日')
+                ? -1
+                : 0;
+        final date = DateTime(now.year, now.month, now.day + offset);
+        values['date'] = '${date.year.toString().padLeft(4, '0')}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}';
       }
     }
     return AssistantToolArguments(toolId: tool.id, values: values);
