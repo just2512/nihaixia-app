@@ -24,8 +24,8 @@ class LocalAiDataClearCoordinator {
         _clearTrace = clearTrace,
         _clearDatabase = clearDatabase;
 
-  /// Production wiring. The caller must pass the same recorder and writer
-  /// instances used by the AI workflow so stop/flush/clear share their queues.
+  /// Production wiring uses the process-wide recorder and writer so
+  /// stop/flush/clear share the same queues and preserve default-off state.
   factory LocalAiDataClearCoordinator.forApp() {
     return LocalAiDataClearCoordinator(
       stopTraceRecording: AiTraceRuntime.recorder.disableAndFlush,
