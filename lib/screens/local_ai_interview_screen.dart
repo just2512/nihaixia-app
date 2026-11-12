@@ -2197,7 +2197,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       mode: activeMode,
       toolId: tool.id,
       toolArguments: arguments?.values ?? const {},
-      traceContext: activeTraceContext,
+      traceId: activeTraceContext.traceId,
     );
     await _traceRecorder.record(
       activeTraceContext,
