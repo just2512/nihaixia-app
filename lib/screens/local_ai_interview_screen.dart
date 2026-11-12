@@ -13,6 +13,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/ai_trace.dart';
+import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
@@ -146,6 +148,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.preferredAnchorPoint,
     this.initialPrompt,
     this.testToolRouteBuilder,
+    this.traceRecorder,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -185,6 +188,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// never sent automatically; the user remains responsible for submission.
   final String? initialPrompt;
 
+  /// Injectable recorder for deterministic per-turn TRACE tests.
+  @visibleForTesting
+  final AiTraceRecorder? traceRecorder;
+
   /// Physical-panel anchor inherited from the control that opened this route.
   final Offset? preferredAnchorPoint;
 
@@ -208,6 +215,7 @@ class _AssistantTurnResponse {
 }
 
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
+  AiTraceRecorder get _traceRecorder => widget.traceRecorder ?? AiTraceRuntime.recorder;
   late final LocalAiService _service;
   late final LocalAiImagePicker _imagePicker;
   late final LocalAiAttachmentStore _attachmentStore;
@@ -846,7 +854,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
     required AssistantMode mode,
+    required AiTraceContext traceContext,
   }) async {
+    final traceId = traceContext.traceId;
+    Future<String> sendWithContext(String context) => traceId == null
+        ? _service.sendMessageWithContext(text, context: context)
+        : _service.sendMessageWithContextAndTrace(
+            text,
+            context: context,
+            traceId: traceId,
+          );
     switch (mode) {
       case AssistantMode.automatic:
         final knowledge =
@@ -856,7 +873,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
         if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
             knowledge.failureMessage == null) {
-          final reply = await _service.sendMessage(text);
+          final reply = traceId == null
+              ? await _service.sendMessage(text)
+              : await _service.sendMessageWithTrace(text, traceId: traceId);
           return _AssistantTurnResponse(
             text: reply,
             sourceIds: knowledge.sourceIds,
@@ -877,10 +896,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ..writeln('App 本地知识库相关检索结果（仅作有来源的参考）：')
             ..write(knowledge.text);
         }
-        final reply = await _service.sendMessageWithContext(
-          text,
-          context: context.toString(),
-        );
+        final reply = await sendWithContext(context.toString());
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
@@ -901,9 +917,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           AssistantKnowledgeRetrievalStatus.partial => 'App 本地知识库部分命中；仅引用已反查成功的来源（PARTIAL）：\n${knowledge.text}',
           AssistantKnowledgeRetrievalStatus.retrieved => 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n${knowledge.text}',
         };
-        final reply = await _service.sendMessageWithContext(
-          text,
-          context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
+        final reply = await sendWithContext(
+          '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
               '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊；'
               '普通对话不自动诊断、不推荐方剂或剂量。\n'
@@ -921,10 +936,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
             '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
-        final reply = await _service.sendMessageWithContext(
-          text,
-          context: context,
-        );
+        final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
@@ -938,7 +950,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前 App 已注册工具：$availableTools。'
             '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
         return _AssistantTurnResponse(
-          text: await _service.sendMessageWithContext(text, context: context),
+          text: await sendWithContext(context),
         );
       case AssistantMode.metaphysics:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
