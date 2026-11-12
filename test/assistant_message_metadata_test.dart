@@ -15,6 +15,7 @@ void main() {
       sourceIds: ['local-engine:yunqi'],
       toolArguments: {'date': '2026-11-06'},
       knowledgeStatus: 'RETRIEVED',
+      traceId: '0123456789abcdef0123456789abcdef',
     );
     final restored = AssistantMessageMetadata.decode(original.encode());
     expect(restored.mode, 'tools');
@@ -28,6 +29,7 @@ void main() {
     expect(restored.sourceIds, ['local-engine:yunqi']);
     expect(restored.toolArguments, {'date': '2026-11-06'});
     expect(restored.knowledgeStatus, 'RETRIEVED');
+    expect(restored.traceId, '0123456789abcdef0123456789abcdef');
   });
 
   test('legacy semicolon metadata remains readable', () {
@@ -42,6 +44,7 @@ void main() {
     expect(restored.replayable, isFalse);
     expect(restored.attachmentType, 'image');
     expect(restored.tcmTaskId, 'task-7');
+    expect(restored.traceId, isNull);
   });
 
   test('empty or unknown metadata safely falls back to default state', () {
