@@ -91,7 +91,17 @@ class MainActivity : FlutterActivity() {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "importModel" -> beginModelImport(result)
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
-                    "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
+                    "extractSymptoms" -> {
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
+                        runAiTask(result) {
+                            LocalAiTraceIdPolicy.attach(extractSymptoms(), traceId)
+                        }
+                    }
                     "sendImage" -> {
                         val traceId = try {
                             LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
