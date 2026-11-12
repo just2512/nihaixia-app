@@ -148,6 +148,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.preferredAnchorPoint,
     this.initialPrompt,
     this.testToolRouteBuilder,
+    this.testHeadlessToolExecutor,
     this.traceRecorder,
   });
 
@@ -183,6 +184,11 @@ class LocalAiInterviewScreen extends StatefulWidget {
   @visibleForTesting
   final Widget Function(AssistantToolDefinition tool, AssistantToolArguments arguments)?
       testToolRouteBuilder;
+
+  /// Test seam for forcing typed Headless results through the production validator.
+  @visibleForTesting
+  final AssistantToolResult Function(Map<String, String> arguments)?
+      testHeadlessToolExecutor;
 
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
   /// never sent automatically; the user remains responsible for submission.
@@ -1979,7 +1985,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
       errorCode: argumentErrors.isEmpty ? null : 'INVALID_ARGUMENTS',
     );
-    final executor = tool.headlessExecutor!;
+    final executor = widget.testHeadlessToolExecutor ?? tool.headlessExecutor!;
     final executionWatch = Stopwatch()..start();
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
