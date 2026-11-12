@@ -2048,11 +2048,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: tool.id,
         errorCode: 'RESULT_CONTRACT_INVALID',
       );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
       if (mounted) {
         setState(() {
           _error = 'Headless 工具结果未通过契约校验：${contractErrors.join('；')}';
         });
       }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
       return;
     }
     await _traceRecorder.record(

@@ -2717,6 +2717,16 @@ void main() {
           .single.status,
       AiTraceStatus.succeeded,
     );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.persistence)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
+    expect(
+      events.where((event) => event.stage == AiTraceStage.finalRender)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
   });
 
 
