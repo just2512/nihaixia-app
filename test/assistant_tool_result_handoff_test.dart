@@ -431,7 +431,7 @@ void main() {
     expect(content, contains('传统民俗文化参考'));
     expect(metadata.toolId, 'almanac');
     expect(metadata.toolStatus, 'SUCCEEDED');
-    expect(metadata.toolArguments, const {'date': expectedDate});
+    expect(metadata.toolArguments, {'date': expectedDate});
     expect(metadata.sourceIds, const ['local-engine:almanac']);
     expect(tester.takeException(), isNull);
   });
