@@ -168,7 +168,7 @@ void main() {
       }
     });
 
-    test('new attachment and tool-result sources retain their origin', () async {
+    test('raw attachment input without a reviewed text/transcript payload fails closed', () async {
       for (final source in [
         RedFlagInputSource.imageAttachment,
         RedFlagInputSource.audioAttachment,
@@ -182,7 +182,8 @@ void main() {
           timeout: timeout,
         );
         final result = await gate.evaluate(RedFlagInput(source: source));
-        expect(result.status, RedFlagPreflightStatus.clear);
+        expect(result.status, RedFlagPreflightStatus.reviewRequired);
+        expect(result.reason, 'INPUT_CONTENT_UNAVAILABLE');
       }
     });
   });
