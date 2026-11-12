@@ -103,6 +103,54 @@ void main() {
     };
   }
 
+  Map<String, int> countBy(List<Map> rows, String key) {
+    final counts = <String, int>{};
+    for (final row in rows) {
+      final value = row[key]?.toString() ?? 'UNKNOWN';
+      counts[value] = (counts[value] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  Map<String, Object?> summarize(Map<String, Object?> snapshot) {
+    final rawQueries = snapshot['classicQueries']! as Map<String, Object?>;
+    final queries = <String, Object?>{};
+    for (final entry in rawQueries.entries) {
+      final result = entry.value! as Map<String, Object?>;
+      final hits = (result['hits']! as List).cast<Map>();
+      queries[entry.key] = {
+        'total': result['total'],
+        'capturedCount': hits.length,
+        'topSourceIds': hits.take(3).map((hit) => hit['sourceId']).toList(),
+        'sourceCounts': countBy(hits, 'source'),
+        'locatorStatusCounts': countBy(hits, 'locatorStatus'),
+        'bibliographicVerifiedCount': hits
+            .where((hit) => hit['bibliographicLocatorVerified'] == true)
+            .length,
+      };
+    }
+
+    final rawContext = snapshot['context']! as Map<String, Object?>;
+    final sources = (rawContext['sources']! as List).cast<Map>();
+    return {
+      'schemaVersion': 1,
+      'request': snapshot['request'],
+      'formula': snapshot['formula'],
+      'sourceManifest': snapshot['sourceManifest'],
+      'queryProvenance': snapshot['queryProvenance'],
+      'classicQueries': queries,
+      'context': {
+        'status': rawContext['status'],
+        'sourceIds': rawContext['sourceIds'],
+        'textLength': (rawContext['text']! as String).length,
+        'bibliographicVerifiedCount': sources
+            .where((source) => source['bibliographicLocatorVerified'] == true)
+            .length,
+        'locatorStatusCounts': countBy(sources, 'locatorStatus'),
+      },
+    };
+  }
+
   test('records the origin of derived classic search queries', () {
     final provenance =
         AssistantKnowledgeContextBuilder.deriveClassicQueries('第12条 桂枝汤');
@@ -127,6 +175,16 @@ void main() {
     final second = await capture();
     expect(jsonEncode(second), jsonEncode(first),
         reason: '同一 commit 的检索命中、排序、来源和上下文必须可重复');
+
+    final expectedFile = File('test/fixtures/ai_retrieval_golden_metadata.json');
+    expect(expectedFile.existsSync(), isTrue,
+        reason: '检索行为基线必须有可审查、可版本控制的固定夹具');
+    final expected = jsonDecode(expectedFile.readAsStringSync());
+    expect(
+      jsonEncode(summarize(first)),
+      jsonEncode(expected),
+      reason: '检索数量、前序命中、资产 hash、来源状态或上下文组成发生变化时必须显式审查',
+    );
 
     expect(first['formula'], isNotNull,
         reason: '桂枝汤必须从本地方剂库解析');
@@ -156,8 +214,8 @@ void main() {
     output.writeAsStringSync(
       const JsonEncoder.withIndent('  ').convert(first),
     );
-    // The snapshot is a CI artifact, not a checked-in fixture. It must be
-    // reviewed before being promoted to a permanent golden expectation.
+    // The full text snapshot remains a CI artifact to avoid checking in
+    // copyrighted excerpts. Metadata-only expectations live in the fixture.
     // ignore: avoid_print
     print('AI_RETRIEVAL_GOLDEN_SNAPSHOT=${output.path}');
   });
