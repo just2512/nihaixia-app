@@ -471,4 +471,136 @@ void main() {
       expect(status.sizeLabel, '尚未安装');
     });
   });
+
+  group('LocalAiService trace ID bridge contract', () {
+    const traceId = '0123456789abcdef0123456789abcdef';
+
+    test('sendMessage forwards trace ID and requires an exact native echo', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'reply': '继续描述',
+          'trace_id': traceId,
+        };
+      });
+
+      final reply = await LocalAiService().sendMessageWithTrace(
+        '继续问诊',
+        traceId: traceId,
+      );
+
+      expect(reply, '继续描述');
+      expect(received?.arguments, <String, Object?>{
+        'text': '继续问诊',
+        'trace_id': traceId,
+      });
+    });
+
+    test('sendMessageWithContextAndTrace preserves context and correlation ID', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'reply': '依据本地资料整理',
+          'trace_id': traceId,
+        };
+      });
+
+      final reply = await LocalAiService().sendMessageWithContextAndTrace(
+        '柴胡的传统功用是什么？',
+        context: '[App本草库] 柴胡：原始条目',
+        traceId: traceId,
+      );
+
+      expect(reply, '依据本地资料整理');
+      expect(received?.arguments, <String, Object?>{
+        'text': '柴胡的传统功用是什么？',
+        'context': '[App本草库] 柴胡：原始条目',
+        'trace_id': traceId,
+      });
+    });
+
+    test('sendMessage rejects a mismatched native trace ID', () async {
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{
+          'reply': '回答',
+          'trace_id': 'ffffffffffffffffffffffffffffffff',
+        },
+      );
+
+      await expectLater(
+        LocalAiService().sendMessageWithTrace('继续问诊', traceId: traceId),
+        throwsA(
+          isA<PlatformException>().having(
+            (error) => error.code,
+            'code',
+            'TRACE_ID_MISMATCH',
+          ),
+        ),
+      );
+    });
+
+    test('image and audio calls forward and validate trace ID', () async {
+      final received = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received.add(call);
+        return <String, Object?>{
+          'reply': '附件分析',
+          'trace_id': traceId,
+        };
+      });
+
+      await LocalAiService().sendImageWithTrace(
+        '/app/cache/tongue.jpg',
+        traceId: traceId,
+      );
+      await LocalAiService().sendAudioWithTrace(
+        '/app/cache/interview.wav',
+        traceId: traceId,
+      );
+
+      expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
+      expect(received[0].arguments['trace_id'], traceId);
+      expect(received[1].arguments['trace_id'], traceId);
+    });
+
+    test('extractSymptomsWithTrace forwards and validates trace ID', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': '{"main_complaint":"头痛"}',
+          'sourceTruncated': false,
+          'trace_id': traceId,
+        };
+      });
+
+      final draft = await LocalAiService().extractSymptomsWithTrace(
+        traceId: traceId,
+      );
+
+      expect(draft.mainComplaint, '头痛');
+      expect(received?.method, 'extractSymptoms');
+      expect(received?.arguments, <String, Object?>{
+        'trace_id': traceId,
+      });
+    });
+
+    test('invalid trace ID is rejected before a platform call', () async {
+      var calls = 0;
+      messenger.setMockMethodCallHandler(channel, (_) async {
+        calls++;
+        return <String, Object?>{'reply': 'must not be called'};
+      });
+
+      await expectLater(
+        LocalAiService().sendMessageWithTrace('继续问诊', traceId: 'not-a-trace-id'),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(calls, 0);
+    });
+  });
+
 }

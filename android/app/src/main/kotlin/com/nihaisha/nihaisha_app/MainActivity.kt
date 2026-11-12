@@ -86,37 +86,71 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
-            .setMethodCallHandler { call, result ->
+            .setMethodCallHandler handler@{ call, result ->
                 when (call.method) {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "importModel" -> beginModelImport(result)
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
-                    "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
+                    "extractSymptoms" -> {
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
+                        runAiTask(result) {
+                            LocalAiTraceIdPolicy.attach(extractSymptoms(), traceId)
+                        }
+                    }
                     "sendImage" -> {
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
                         val path = call.argument<String>("path")?.trim().orEmpty()
                         val prompt = call.argument<String>("prompt")?.trim().orEmpty()
                         if (path.isEmpty()) {
                             result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
                         } else {
-                            runAiTask(result) { sendLocalImage(path, prompt) }
+                            runAiTask(result) {
+                                LocalAiTraceIdPolicy.attach(sendLocalImage(path, prompt), traceId)
+                            }
                         }
                     }
                     "sendAudio" -> {
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
                         val path = call.argument<String>("path")?.trim().orEmpty()
                         val prompt = call.argument<String>("prompt")?.trim().orEmpty()
                         if (path.isEmpty()) {
                             result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
                         } else {
-                            runAiTask(result) { sendLocalAudio(path, prompt) }
+                            runAiTask(result) {
+                                LocalAiTraceIdPolicy.attach(sendLocalAudio(path, prompt), traceId)
+                            }
                         }
                     }
                     "sendMessage" -> {
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
                         val text = call.argument<String>("text")?.trim().orEmpty()
                         val context = call.argument<String>("context")?.trim().orEmpty()
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
-                            runAiTask(result) { sendLocalMessage(text, context) }
+                            runAiTask(result) {
+                                LocalAiTraceIdPolicy.attach(sendLocalMessage(text, context), traceId)
+                            }
                         }
                     }
                     "restoreConversation" -> {
