@@ -1507,6 +1507,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return;
     }
+
     final before = controller.messages.length;
     final executionWatch = Stopwatch()..start();
     try {
@@ -1517,23 +1518,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         stage: AiTraceStage.businessExecution,
         status: AiTraceStatus.succeeded,
         durationMs: executionWatch.elapsedMilliseconds,
-        toolId: 'structured_diagnosis',
-      );
-      final persisted = await _appendTcmInterviewMessages(
-        before,
-        traceId: activeTraceContext.traceId,
-      );
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.persistence,
-        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
-        toolId: 'structured_diagnosis',
-        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
-      );
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.finalRender,
-        status: AiTraceStatus.succeeded,
         toolId: 'structured_diagnosis',
       );
     } catch (error) {
@@ -1553,7 +1537,37 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: 'structured_diagnosis',
       );
       if (mounted) setState(() => _error = '问诊选项未能提交：$error');
+      return;
     }
+
+    try {
+      final persisted = await _appendTcmInterviewMessages(
+        before,
+        traceId: activeTraceContext.traceId,
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+    } catch (error) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: 'PERSISTENCE_FAILED',
+      );
+      if (mounted) setState(() => _error = '问诊进度保存失败：$error');
+    }
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.finalRender,
+      status: AiTraceStatus.succeeded,
+      toolId: 'structured_diagnosis',
+    );
   }
 
   String _zangFuEvidenceStateLabel(ZangFuEvidenceAnswerState state) =>
