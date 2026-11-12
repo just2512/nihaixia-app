@@ -669,6 +669,29 @@ class _FailOnceTextSendService extends LocalAiService {
   }) => sendMessage(text);
 }
 
+class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
+  final sentTraceIds = <String>[];
+
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+  }) {
+    sentTraceIds.add(traceId);
+    return sendMessage(text);
+  }
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required String context,
+    required String traceId,
+  }) {
+    sentTraceIds.add(traceId);
+    return sendMessage(text);
+  }
+}
+
 class _UnexpectedStatusFailureService extends LocalAiService {
   @override
   Future<LocalAiModelStatus> getStatus() async {
@@ -1929,12 +1952,26 @@ void main() {
   testWidgets(
     'keeps failed text editable and retries without duplicate chat bubbles',
     (tester) async {
-      final service = _FailOnceTextSendService();
+      final service = _TraceFailOnceTextSendService();
       const userText = '昨晚开始咽喉不适，喝温水后稍有缓解。';
+      const failedTraceId = '44444444444444444444444444444444';
+      const retryTraceId = '55555555555555555555555555555555';
+      final traceIds = [failedTraceId, retryTraceId];
+      final traceEvents = <AiTraceEvent>[];
+      final traceRecorder = AiTraceRecorder(
+        enabled: true,
+        writer: (event) async => traceEvents.add(event),
+        idFactory: () => traceIds.removeAt(0),
+        clock: () => DateTime(2026, 11, 12, 15),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, service: service),
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            traceRecorder: traceRecorder,
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -1945,6 +1982,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 1);
+      expect(service.sentTraceIds, [failedTraceId]);
+      final failedEvents =
+          traceEvents.where((event) => event.traceId == failedTraceId).toList();
+      expect(
+        failedEvents.any(
+          (event) =>
+              event.stage == AiTraceStage.nativeInference &&
+              event.status == AiTraceStatus.unknown,
+        ),
+        isTrue,
+      );
+      final failedPersistence = failedEvents.singleWhere(
+        (event) => event.stage == AiTraceStage.persistence,
+      );
+      expect(failedPersistence.status, AiTraceStatus.notStarted);
+      expect(failedPersistence.conversationId, isNotNull);
+      expect(failedPersistence.errorCode, 'NATIVE_TURN_NOT_PERSISTED');
       expect(find.textContaining('首次本地推理失败'), findsOneWidget);
       expect(
         find.byWidgetPredicate(
@@ -1961,6 +2015,25 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 2);
+      expect(service.sentTraceIds, [failedTraceId, retryTraceId]);
+      final retryEvents =
+          traceEvents.where((event) => event.traceId == retryTraceId).toList();
+      expect(
+        retryEvents.any(
+          (event) =>
+              event.stage == AiTraceStage.resultValidation &&
+              event.status == AiTraceStatus.succeeded,
+        ),
+        isTrue,
+      );
+      expect(
+        retryEvents.any(
+          (event) =>
+              event.stage == AiTraceStage.persistence &&
+              event.status == AiTraceStatus.succeeded,
+        ),
+        isTrue,
+      );
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         isEmpty,
