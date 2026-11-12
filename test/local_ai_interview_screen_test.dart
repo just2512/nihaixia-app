@@ -2491,12 +2491,21 @@ void main() {
 
   testWidgets('五运六气通过 Headless 执行器直接计算并持久化真实参数与来源',
       (tester) async {
+    const traceId = 'fedcba9876543210fedcba9876543210';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 14),
+    );
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           conversationStore: _store,
           service: service,
+          traceRecorder: recorder,
         ),
       ),
     );
@@ -2529,6 +2538,22 @@ void main() {
     expect(metadata.toolStatus, 'SUCCEEDED');
     expect(metadata.toolArguments, const {'date': '2026-11-12'});
     expect(metadata.sourceIds, const ['local-engine:yunqi']);
+    expect(metadata.traceId, traceId);
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.input,
+      AiTraceStage.route,
+      AiTraceStage.dispatch,
+      AiTraceStage.argumentValidation,
+      AiTraceStage.businessExecution,
+      AiTraceStage.resultValidation,
+      AiTraceStage.persistence,
+      AiTraceStage.finalRender,
+    ]));
+    expect(
+      events.where((event) => event.stage == AiTraceStage.businessExecution)
+          .single.status,
+      AiTraceStatus.succeeded,
+    );
   });
 
 
