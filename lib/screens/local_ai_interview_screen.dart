@@ -2568,8 +2568,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _extracting = true;
       _error = null;
     });
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: 'symptom_extraction',
+      mode: 'consultation',
+    );
     try {
-      final draft = await _service.extractSymptoms();
+      final traceId = traceContext.traceId;
+      final draft = traceId == null
+          ? await _service.extractSymptoms()
+          : await _service.extractSymptomsWithTrace(traceId: traceId);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: 'consultation',
+      );
       if (!mounted) return;
       setState(() => _extracting = false);
       if (draft.summaryLines.isEmpty) {
@@ -2643,18 +2657,41 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _confirmedDraft = draft;
       });
     } on PlatformException catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: 'consultation',
+        errorCode: error.code == 'TRACE_ID_MISMATCH'
+            ? 'TRACE_ID_MISMATCH'
+            : 'NATIVE_CALL_FAILED',
+      );
       if (!mounted) return;
       setState(() {
         _extracting = false;
         _error = error.message ?? '症状整理失败';
       });
     } on FormatException catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: 'consultation',
+        errorCode: 'NATIVE_CALL_FAILED',
+      );
       if (!mounted) return;
       setState(() {
         _extracting = false;
         _error = error.message;
       });
     } catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: 'consultation',
+        errorCode: 'NATIVE_CALL_FAILED',
+      );
       if (!mounted) return;
       setState(() {
         _extracting = false;
