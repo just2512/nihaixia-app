@@ -359,3 +359,55 @@ PR #102 为文档更新。当前 master 合并提交 `2d2df139...` 没有可核�
 
 ### A-G 结论
 A PARTIAL / 设备 UNKNOWN；B PARTIAL / RELEASE BLOCKED；C PARTIAL / locator MISSING；D Headless/Executed = 2；E PARTIAL / 真机重启 UNKNOWN；F PARTIAL / 失败轮次关联和真机 TRACE 未闭环；G 版本源一致性子目标已完成，master post-merge CI 尚待最终结论。
+
+
+---
+
+## 17. 2026-11-12 PR #106/#107 集成后复核（master 5a9d2c7fccd4b291982d39699fe929eaa968a6fe）
+
+### 17.1 集成与自动验收
+
+- PR #106 已合并，merge commit：fb315306…（执行台账刷新）。
+- PR #107 已合并，merge commit：5a9d2c7fccd4b291982d39699fe929eaa968a6fe；只修改 local_ai_interview_screen.dart 与对应 widget test。
+- PR #107 head db6309d29e847fe9c4bad3c53921d240f681fcdd，run 43187508718：Flutter 全量 regression SUCCESS；Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS；Branch validation SKIPPED（不计 PASS）。
+- 新 master 5a9d2c7 的独立 push workflows：Flutter Quality Gate run 43195424227、Flutter tests run 43195424259。本次复核时两者均 IN_PROGRESS；因此 master post-merge CI 暂记 IN_PROGRESS，不沿用 PR head CI 代替。
+
+### 17.2 F：失败轮次状态关联增量
+
+- Native 推理完成与结果校验完成分别记录；EMPTY_REPLY 表示 Native 调用完成但回复契约校验失败；TRACE ID mismatch 保持 UNKNOWN。
+- Native 推理失败且持久化未开始时记录 persistence=NOT_STARTED、conversationId（若可得）及稳定错误码，不把未保存用户输入伪装成历史消息。
+- 持久化开始后异常时记录 persistence=UNKNOWN，不错误标记为 NOT_STARTED；持久化明确返回失败时仍记录 FAILED。
+- 症状整理成功与格式失败分别记录 Native inference / resultValidation 状态。
+- 不新增数据库表/列，不自动重放 UNKNOWN 请求，不改变用户输入保留、手动重试和历史恢复语义。
+- F 仍 PARTIAL：该增量不是所有模式的完整 TRACE；结构化问诊/工具/恢复的端到端失败终态与 Find N2 真机 TRACE 仍缺。
+
+### 17.3 B：红旗门禁生产入口复核
+
+当前主线静态复核确认：
+- RedFlagGate / RedFlagPreflight 已有 fail-closed 策略契约与纯 Dart 测试；Gate 只接收外部 detector assessment，没有自然语言 detector 实现。
+- local_ai_interview_screen.dart、local_ai_service.dart、Android MainActivity.kt 未引用/调用 RedFlagGate 或 RedFlagPreflight；生产入口尚未接入。
+- Flutter 入口包括活动结构化问诊选项、Orchestrator/工具路由、Headless/Page 工具、文本/图片/语音发送、症状整理；Native MethodChannel 仍可直接进入对应模型函数。
+- 未取得医学审核规则集、detector 语义覆盖证明或 Find N2 入口 TRACE。B 继续 PARTIAL / RELEASE BLOCKED。
+- 不把 detector 缺失时的 REVIEW_REQUIRED 偷换为默认 CLEAR；也不在没有产品影响评估和医学审核的情况下静默启用全局阻断。
+
+### 17.4 C：来源身份与定位复核
+
+- 经典检索黄金快照已有 83 个 distinct lecture sourceId；83/83 本地 Markdown asset 存在且可读，sourceId 与 asset 路径对应。
+- 83/83 的 bookId/chapterIndex 缺失，locatorStatus=MISSING，bibliographicLocatorVerified=false。本地文件可回链不等于古籍底本/版本/卷页已核验。
+- docs/classic-rule-source-manifest.json 的范围仅为 DiagnosticRules.combinedPatterns 当前 12 条：7 条 ONLINE_TEXT_CROSS_CHECKED、3 条 CONDITIONS_CROSS_CHECKED、2 条 MISSING；12/12 的纸本底本、卷、页和原始影像核验字段仍为 MISSING。
+- 该 12 条规则 manifest 不能替代 83 个讲稿 sourceId 的来源映射；不得据此补造讲稿到古籍条文的一对一关系。
+- 不调整 query 派生、top-40 上限、排序、去重或引入 FTS5。
+
+### 17.5 A-G 状态与剩余硬门槛
+
+| 项目 | 当前状态 | 尚未关闭的工作 |
+|---|---|---|
+| A Native 多轮/生命周期 | PARTIAL / 设备 UNKNOWN | Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程中断/恢复真实 TRACE |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 经过医学审核的 detector/规则集；Flutter 与 Native 全生产入口强制门禁；入口顺序测试与设备 TRACE |
+| C 检索来源 | PARTIAL | 83 个讲稿条目的人工条文映射/底本定位；12 条规则 manifest 的纸本版本与影像核验 |
+| D Headless | 2 项 Headless / 2 项 Executed | 保持现状；无确定性业务函数与行为基线前不新增 adapter |
+| E 数据清理/备份 | PARTIAL | 混合 SQLite AI 行备份边界、旧共享附件归属、外部副本、Find N2 清理后强停/重启不可恢复验收 |
+| F TRACE | PARTIAL | 失败轮次基础状态已补；结构化问诊/工具/恢复端到端状态与 Find N2 TRACE 仍缺 |
+| G 版本治理 | 版本源子目标 IMPLEMENTED | master 5a9d2c7 post-merge workflows 尚在运行；以两条主线 run 终态为准 |
+
+**下一步顺序：** B 先完成无医学规则的入口调用顺序 seam/测试设计，但不擅自上线未审核 detector；并行推进 C 来源 manifest 真实性核验；随后 A/E 真机与备份边界验收。D/G 不扩展。
