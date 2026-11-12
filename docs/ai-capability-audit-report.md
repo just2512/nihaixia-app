@@ -2,7 +2,7 @@
 
 - 审计日期：2026-11-12
 - 仓库：`just2512/nihaixia-app`
-- 审计基线：`master @ eaa83b440ddb1299a7eac58b70067de38ad44ea2`
+- 审计基线：`master @ eefa56e9cf159c5533de1c35556f82aa4c873a4f`（2026-11-12，#86/#87/#88 集成后）
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
 - 方法：读取当前 master 代码、专项测试、PR diff、GitHub Actions job/step/log、CI 生成的检索快照；未执行 Find N2 真机测试。
 
@@ -12,13 +12,13 @@
 
 | 工作流 | 状态 | 关键结论 |
 |---|---|---|
-| A 多轮稳定性 | PARTIAL | Native 串行执行和未知请求不自动重放已存在；SQLite 成功轮次已有事务接口和 UI 持久化失败提示；Activity teardown 等待、真机 GPU/CPU 证据未闭环 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | preflight 语义契约和 provenance 已实现；自然语言 detector、所有生产入口 fail-closed、医学审核均缺失 |
-| C 检索基线 | PARTIAL | 桂枝汤/伤寒论黄金快照已版本化并通过 CI；快照暴露原始 query 0 命中、派生 query 扩展以及纸本定位全部 MISSING |
-| D Headless Capability | PARTIAL | 24 项工具注册，23 项仍为页面 builder；没有统一 Headless 执行与 typed result 契约 |
-| E 数据保护 | PARTIAL | 清理 coordinator 已存在；设置入口与生产附件归属迁移正在独立 PR 验收；旧共享临时文件和 Android 备份行为未闭环 |
-| F TRACE | PARTIAL | writer/recorder 默认关闭，事件 schema 与生命周期协调存在；trace_id 未贯穿 Dart→Native→模型→工具→SQLite |
-| G 文档治理 | PARTIAL | README 与 pubspec 版本一致；当前审计报告首次建立，需随后续 master 增量维护 |
+| A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | preflight provenance 契约存在；自然语言 detector、全生产入口 fail-closed 和医学审核仍缺失 |
+| C 检索基线 | PARTIAL | 黄金快照与精确方剂修正已合并；候选身份、谓词、sourceId、原始位置及来源逐条审查仍未完成 |
+| D Headless Capability | PARTIAL | 主线已有 2 项 Headless/Executed（yunqi、almanac）；其余 22 项仍为 Page-only，结构化问诊为内联流程 |
+| E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
+| F TRACE | PARTIAL | per-turn trace_id 已接入普通文本/图片/语音统一助手轮次和消息 metadata；结构化问诊、工具/检索阶段及真机 TRACE 未闭环 |
+| G 文档治理 | PARTIAL | 审计报告、能力清单和执行台账已更新；README/pubspec 自动防漂移检查仍待实现 |
 
 ## 2. A：多轮稳定性与持久化
 
@@ -253,3 +253,54 @@ F 仍 PARTIAL。
 - G PARTIAL：本轮 ledger/inventory/report 已刷新；版本一致性自动检查仍待实现。
 
 当前 master workflows：Flutter Quality Gate run `43161470395` IN_PROGRESS，Flutter tests run `43161470467` PENDING。PR #86/#87 的所有状态均按当前 head 记录，不得用旧 SHA 的 CI 覆盖。
+
+
+---
+
+## 13. 2026-11-12 #86/#87/#88 集成后复核（master `eefa56e9cf159c5533de1c35556f82aa4c873a4f`）
+
+### 13.1 主线集成事实
+
+- PR #86 已 squash merge，提交 `870362ae8ba92e25b195c62d9fc0be653d19600f`：`almanac` 复用 `getDailyAlmanac`，保留页面入口，增加日期参数校验、结构化结果、source ID 和民俗免责声明。
+- PR #87 已 squash merge，提交 `34c1fa11c61b83d75b0c01ac6272a39d0cbf4537`：统一助手普通文本/图片/语音轮次按 TRACE 开关使用 traced Native API，同一 trace_id 写入 user/assistant message metadata；不新增表或列。
+- PR #88 已 squash merge，提交 `eefa56e9cf159c5533de1c35556f82aa4c873a4f`：审计报告、能力清单、执行台账更新进入主线。该文档提交本身的状态记录由本节覆盖。
+- PR #86 最新 head `18ecc81a4ff6a18757386d39632b9a8567ae8b37`：Flutter regression run `43162562989` SUCCESS；Android arm64 APK/ABI、merged manifest 和 Native unit tests 同一 run SUCCESS；Branch validation SKIPPED。
+- PR #87 最新 head `abef4bb9dc09ed6f2e690a06bdc76669067b7432`：Flutter regression run `43162529437` SUCCESS；Android arm64 APK/ABI、merged manifest 和 Native unit tests同一 run SUCCESS；Branch validation SKIPPED。
+- PR #88 最新 head `68e4e9ccf1c845bfe1d11b7bcae07af3d9d282f2`：Flutter regression run `43162775931` SUCCESS，Android arm64/merged manifest/Native unit tests SUCCESS；独立 branch validation run `43162770440` SUCCESS（其 Flutter/Android job按文档变更跳过）。
+- PR #86/#87 的旧 head failure/cancelled 记录不覆盖上述最终 head 的成功结果。
+
+### 13.2 当前主线 CI
+
+当前 master `eefa56e9cf159c5533de1c35556f82aa4c873a4f` 的合并后 CI：
+- Flutter tests run `43164417582`：IN_PROGRESS（本节写入时）。
+- Flutter Quality Gate run `43164416766`：IN_PROGRESS（本节写入时）。
+- 不能沿用父提交 `5f7bf738...` 的 SUCCESS 代替新 master 验收；待本 SHA 两个 workflow 结束后更新最终结论。
+
+### 13.3 A-G 状态（本次复核）
+
+| ID | 状态 | 当前证据与未闭环项 |
+|---|---|---|
+| A | PARTIAL | Native teardown 串行化、SQLite 原子轮次、CI 回归已合并；Find N2 GPU/CPU 各至少 20 轮、图片/语音、Activity/进程恢复 TRACE 仍 UNKNOWN。 |
+| B | PARTIAL / RELEASE BLOCKED | provenance 契约已合并；无自然语言 detector、全入口 fail-closed 证据及医学审核记录。不得编造词表/阈值/处置文案。 |
+| C | PARTIAL | 精确方剂匹配与黄金快照已合并；继续按 subject/object ID、类型、文本、谓词、sourceId、原始位置和来源逐条审查；不以候选数量增加为目标。 |
+| D | PARTIAL | 主线 Headless = 2、Executed = 2（`yunqi`、`almanac`）；其余 22 项 Page-only，结构化问诊保持独立内联流程。 |
+| E | PARTIAL | 清理入口、生产附件归属、SQLite 清理边界/回滚测试、模型与 TRACE 文件备份排除已合并；混合 SQLite 中 AI 行仍可能进入系统备份，旧共享图片归属未知，Android 清理后进程重启/不可恢复 TRACE 缺失。 |
+| F | PARTIAL | per-turn trace_id 已覆盖普通文本/图片/语音 unified assistant 调用、Native response 校验和 user/assistant metadata；结构化问诊、澄清/工具执行、检索阶段细分、失败轮次持久化关联和 Find N2 TRACE 未完成。 |
+| G | PARTIAL | 三份治理文档已刷新；README/pubspec 自动版本一致性 guard 尚未实现。 |
+
+### 13.4 下一批自动推进任务
+
+1. **B（最高优先级，安全阻断）**：完成五种模式、initialPrompt、历史续聊、图片/录音、症状整理、工具回流、Native 入口的调用旁路矩阵；先实现无医学规则时不会返回 CLEAR 的 fail-closed 契约和纯 Dart 测试。未经医学审核的词表/阈值不得启用。
+2. **F（依赖 B 接口）**：将 per-turn trace context 延伸至结构化问诊、澄清/工具 dispatch、检索、结果验证/展示；每一阶段保留默认关闭和不记录敏感正文。
+3. **E**：核对清理 coordinator 每个数据域的真实删除调用，特别是 Native model cache、TRACE、AI-owned attachments；验证 Android 进程重启后状态。混合 SQLite 备份的 AI 行风险单独记录，不误排除整个数据库。
+4. **C**：执行候选身份/关系/来源逐条审查，比较原始候选与过滤后候选，检查 subject/object ID、实体类型、文本、谓词、sourceId、原始位置；不以数量作为目标。
+5. **A**：补充 Native teardown/Activity recreation 的自动化状态矩阵；Find N2 GPU/CPU、媒体和多轮 TRACE 必须由真实设备提供。
+6. **D**：对剩余 22 项 Page-only 工具逐项确认是否存在可复用的确定性业务函数；每次只实现一个有行为基线的低风险 Headless adapter。
+7. **G**：建立 README 与 pubspec 版本单一来源检查，并将当前审计 SHA、workflow/run ID 纳入自动一致性验证。
+
+### 13.5 当前边界
+
+- CI SUCCESS 仅证明指定提交的自动化构建/测试；不替代 Find N2 真机 TRACE。
+- B 在 detector 和医学审核完成前保持 RELEASE BLOCKED。
+- E 不得删除无法证明属于 AI 的共享临时文件；不得全局关闭 Android backup 或排除混合数据库。
+- F 不得把 per-turn 的普通文本/图片/语音接入夸大为所有模式的端到端 TRACE。
