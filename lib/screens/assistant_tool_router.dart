@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/assistant_tool_result.dart';
 import '../services/yunqi_tool_executor.dart';
+import '../services/almanac_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -291,11 +292,21 @@ class AssistantToolRouter {
   static const almanac = AssistantToolDefinition(
     id: 'almanac',
     title: '每日黄历',
-    description: '打开本地黄历查询。',
+    description: '使用 App 本地黄历引擎计算指定日期；也可打开页面复核。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['黄历', '每日宜忌', '今日宜忌'],
     actionWords: ['查询', '查看', '打开', '今天'],
+    parameters: [
+      AssistantToolParameter(
+        key: 'date',
+        label: '查询日期',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+        description: 'YYYY-MM-DD；由用户明确日期或“今日”语义解析。',
+      ),
+    ],
     builder: _buildAlmanac,
+    headlessExecutor: AlmanacToolExecutor.execute,
   );
 
   // Existing ToolsScreen destinations must be addressable from the unified
