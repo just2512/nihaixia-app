@@ -221,6 +221,27 @@ void main() {
       });
     });
 
+    test('restoreConversation rejects a mismatched native trace id', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        return <String, Object?>{'restored': true, 'trace_id': 'ffffffffffffffffffffffffffffffff'};
+      });
+
+      await expectLater(
+        LocalAiService().restoreConversation(
+          transcript: '用户：测试历史恢复',
+          userMessages: ['测试历史恢复'],
+          traceId: '0123456789abcdef0123456789abcdef',
+        ),
+        throwsA(
+          isA<PlatformException>().having(
+            (error) => error.code,
+            'code',
+            'TRACE_ID_MISMATCH',
+          ),
+        ),
+      );
+    });
+
     test('resetConversation invokes native reset and returns fresh status', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
