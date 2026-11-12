@@ -1628,9 +1628,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.businessExecution,
-          status: AiTraceStatus.succeeded,
+          status: switch (result.status) {
+            AssistantToolExecutionStatus.failed => AiTraceStatus.failed,
+            AssistantToolExecutionStatus.unknown => AiTraceStatus.unknown,
+            AssistantToolExecutionStatus.succeeded ||
+            AssistantToolExecutionStatus.noResult ||
+            AssistantToolExecutionStatus.cancelled => AiTraceStatus.succeeded,
+          },
           durationMs: executionWatch.elapsedMilliseconds,
           toolId: tool.id,
+          errorCode: result.status == AssistantToolExecutionStatus.failed
+              ? 'BUSINESS_EXECUTION_FAILED'
+              : null,
         );
       } catch (_) {
         executionWatch.stop();
@@ -1645,6 +1654,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         rethrow;
       }
     } else {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'ARGUMENT_VALIDATION_FAILED',
+      );
       result = AssistantToolResult(
             toolId: tool.id,
             title: tool.title,
@@ -1735,6 +1751,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'manual_tool',
           mode: (mode ?? _assistantMode).name,
         );
+    if (traceContext == null) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'manual_tool',
+        mode: (mode ?? _assistantMode).name,
+        toolId: tool.id,
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: 'manual_tool',
+        mode: (mode ?? _assistantMode).name,
+        toolId: tool.id,
+      );
+    }
     if (tool.id == 'structured_diagnosis') {
       await _startInlineTcmInterview(initialUserMessage: userText);
       return;
