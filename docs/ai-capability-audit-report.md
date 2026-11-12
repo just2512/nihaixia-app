@@ -304,3 +304,71 @@ F 仍 PARTIAL。
 - B 在 detector 和医学审核完成前保持 RELEASE BLOCKED。
 - E 不得删除无法证明属于 AI 的共享临时文件；不得全局关闭 Android backup 或排除混合数据库。
 - F 不得把 per-turn 的普通文本/图片/语音接入夸大为所有模式的端到端 TRACE。
+
+
+---
+
+## 14. 2026-11-12 集成复核（master `b47397922d9348f89cc7a5586b7ca1b0659a63f5`）
+
+### 14.1 本轮已合并交付
+
+- #93：新增 `RedFlagGate` / `RedFlagDetector` 纯 Dart fail-closed 契约。detector 未配置、异常、超时、assessment 缺失、来源不匹配、来源未知或内容缺失时返回 REVIEW_REQUIRED；扩展 image/audio/toolResult/retrievalContext 来源类型。**未接入生产入口，不含医学 detector。**
+- #94：统一助手检索路径新增 retrieval、contextAssembly、modelInput TRACE 阶段；检索只记录状态、耗时、source IDs 和稳定错误码，不记录 query/正文。修复玄学模式普通文本绕过 traced API 的路径。
+- #95：刷新 E 数据清除审计，确认 coordinator、AI 专属附件目录、Native runtime cache、TRACE writer、设置 UI 与 SQLite 四表事务均已落地；保留混合 SQLite 备份和 Find N2 重启缺口。
+- #96：用真实 CI artifact 更新经典检索黄金复核，补充 120 条 hit 的 sourceId/asset 一致性和跨 query 重叠分析。
+- #92：在 #94 合并后又向主线补入玄学模式 TRACE 测试（commit `8f7aa7c5d5ad7805f0b985cb583edacac722f935`）。
+
+### 14.2 CI 证据
+
+| PR | 最新相关 run | Flutter | Android arm64 / Native | 结论 |
+|---|---:|---|---|---|
+| #89 | `43164663954` | SUCCESS | SUCCESS | 文档同步已合并 |
+| #91 | `43164955584` | SUCCESS | SUCCESS | 红旗入口旁路审计已合并 |
+| #93 | `43165576958` | SUCCESS | SUCCESS | B1 gate contract 已合并；Branch validation `43165568953` SUCCESS |
+| #94 | `43165512584` | SUCCESS | SUCCESS | 检索/上下文 TRACE 已合并；Branch validation `43165481369` SUCCESS |
+| #95 | `43165925272` | SUCCESS | SUCCESS | E 数据清除审计已合并 |
+| #96 | `43166311719` | SUCCESS | SUCCESS | C 黄金检索审计已合并 |
+
+#93 初始提交曾因 const 构造器中的 Duration 比较断言触发编译错误；已移除不兼容的 const assert，最终 head `3ec9a8c3...` 的 Flutter 与 Android CI 均通过。旧失败 run 不覆盖最终 head 的成功结果。
+
+当前 master `b47397922d9348f89cc7a5586b7ca1b0659a63f5`：
+- Flutter tests run `43167309805`：IN_PROGRESS（本节写入时）。
+- Flutter Quality Gate run `43167309687`：IN_PROGRESS（本节写入时）。
+- 不沿用父提交 SUCCESS 代替当前 SHA 的验收。
+
+### 14.3 A-G 状态
+
+| ID | 状态 | 当前事实 | 未闭环 |
+|---|---|---|---|
+| A | PARTIAL | Native teardown/串行任务、SQLite 原子轮次、错误可见性有 CI 证据 | Find N2 GPU/CPU 多轮、媒体、Activity/进程恢复 TRACE |
+| B | PARTIAL / RELEASE BLOCKED | fail-closed gate contract 已合并 | 自然语言 detector、医学审核、全生产入口调用及旁路测试；gate 尚未接入生产 |
+| C | PARTIAL | 黄金 artifact、metadata fixture、4 query、候选身份结构核对已合并 | 83 个不同讲稿资产的内容/条文映射逐条人工核验；纸本版本/卷页仍 MISSING |
+| D | PARTIAL | Headless/Executed = 2（yunqi、almanac） | 其余 22 项 Page-only；第三个 adapter 需先证明确定性业务函数与来源 |
+| E | PARTIAL | 清理 coordinator、附件归属、Native cache、TRACE、SQLite 边界测试和 UI 已落地 | 混合 SQLite 备份副本、旧共享图片、外部副本、Find N2 强制停止/重启证据 |
+| F | PARTIAL | per-turn trace_id 覆盖普通文本/图片/语音；新增 retrieval/contextAssembly/modelInput；玄学模式走 traced API | structured diagnosis、clarification/tool dispatch、Headless/Page 工具、失败轮次及 Find N2 TRACE |
+| G | PARTIAL | 审计报告、能力清单、执行台账、B/C/E 专项审计已刷新 | README/pubspec 版本单一来源 guard 和证据状态自动防漂移 |
+
+### 14.4 本轮关闭的过期/冲突 PR
+
+- #19：关闭。全局 `android:allowBackup=false` 会连带关闭收藏、设置、诊断历史等非 AI 数据备份，违背 AI-only 范围要求。
+- #60、#70、#90：关闭。旧执行台账分支已被当前主线文档刷新覆盖。
+- #69：关闭。TRACE runtime/coordinator 生命周期逻辑已进入主线，当前主线版本包含后续错误处理和并发保护。
+- #72：关闭。旧数据清除审计已由 #95 当前基线复核覆盖。
+- 上述 PR 均以 superseded/冲突范围为由关闭，不合并旧基线内容。
+
+### 14.5 下一批工作队列（按依赖顺序）
+
+1. **B2：生产入口接入设计与测试 seam**。以 #91 的旁路矩阵为依据，先补所有入口的注入点和调用顺序测试；在医学 detector 未审核前，不得让缺失 detector 伪装 CLEAR。全局 REVIEW_REQUIRED 对助手可用性的影响需要单独明确，不能静默关闭全部能力。
+2. **F4：工具与结构化问诊 TRACE**。先覆盖 clarification/dispatch、Headless executor、Page 工具返回、structured diagnosis 状态变化；继续只写阶段、状态、耗时、source IDs，不记录敏感正文。
+3. **C2：83 个 distinct sourceId 逐条内容核验**。检查标题/正文命中位置、讲稿解释与原文边界、候选是否真正对应查询；无底本证据继续 MISSING，不改排序/检索算法。
+4. **E2：Find N2 清除后进程重启验收**。覆盖 Native 运行中/空闲、附件存在、TRACE 开关两态、部分失败、强制停止/重启；同步评估 AI 独立数据库隔离，不能用全局禁用 backup 代替。
+5. **A2：Find N2 多轮稳定性与恢复**。补 GPU/CPU 真实模型长轮次、图片/语音、Activity recreation、进程重启及 TRACE。
+6. **D2：审计剩余 22 个 Page-only 工具**。逐个确认纯业务函数、参数契约、副作用、来源 ID 和可重复结果；选择一个低风险候选做最小 adapter，不批量迁移。
+7. **G2：版本与证据治理自动化**。README/pubspec 单一版本来源、审计 SHA、CI run 和 A-G 状态一致性 guard。
+
+### 14.6 执行规则
+
+- 不创建定时任务或周期性巡检；CI 只作为当前代码切片验收。
+- 独立分支按文件所有权隔离；小批量集成后以最新 master SHA 重新跑 CI。
+- 普通测试失败自动定位修复并继续；架构、安全、数据不可逆和产品决策边界才暂停。
+- 本轮未执行 Find N2 真机测试；A/E/F 设备级结论保持 UNKNOWN。
