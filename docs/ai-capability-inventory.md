@@ -246,3 +246,139 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 **已确认的核心病因：** 当前系统有多模式 prompt、确定性 L0 路由、知识检索、规则问诊和页面工具；缺少统一的语义任务规划、跨模式任务帧、Headless 能力注册/执行器和跨结果综合闭环。这是五种模式普遍表现为“有入口但不够聪明”的架构原因。
 
 **下一步不应立即创建 ActiveTaskFrame 或批量抽取 24 个工具。** 先完成每个工具页面与底层服务的逐项可调用性审计；同时优先修复 MainActivity 多轮恢复上下文丢失，并建立一条跨两项只读能力的最小复合任务端到端测试。所有未知项继续标记 UNKNOWN，不能提前写成 READY。
+
+
+## 1B. 2026-11-12 增量核验（master `eaa83b440ddb1299a7eac58b70067de38ad44ea2`）
+
+本节只更新本次实际读取的范围，不覆盖此前审计历史：
+
+- **A 多轮与持久化：** 当前 `DatabaseHelper.saveAssistantTurn` 已通过 SQLite transaction 原子写入一轮 user/assistant 消息；`LocalAiInterviewScreen._persistSuccessfulTurn` 已向用户显示持久化失败状态。PR #77 正在新增 SQLite FFI + trigger 故障注入回归。Native `onDestroy` 仍未等待 teardown 完成；Find N2 GPU/CPU TRACE UNKNOWN。
+- **B 红旗安全：** `RedFlagPreflight` 已有来源、版本和语义范围契约；没有自然语言 detector 或全生产入口接入证据；医学审核未完成，仍 RELEASE BLOCKED。
+- **C 知识检索：** `test/ai_retrieval_golden_snapshot_test.dart` 与 `test/fixtures/ai_retrieval_golden_metadata.json` 已存在并在 CI run `43143105547` 通过。快照原始 query 0 命中，派生 query 有结果；9 个上下文来源的纸本/卷页定位全部 MISSING。方剂组成匹配可能带入未直接点名方剂，需基于黄金集做对照，不先改变排序。
+- **D 工具能力：** `AssistantToolRouter` 24 项注册，其中结构化辨证内联执行，其余 23 项仍为页面 Widget builder；统一 Headless 执行/结果契约缺失。
+- **E 数据清理：** PR #73 已合并清理生命周期协调；PR #76 设置入口、PR #78 附件归属迁移仍在 CI。旧共享 temp 孤儿附件和 Android merged manifest/backup 行为仍未核验。
+- **F TRACE：** writer/recorder 默认关闭，事件 schema 和清理生命周期已存在；trace_id 未贯穿 Dart、Native、模型、工具、UI 和 SQLite 全链路。
+- **G 文档：** README 与 pubspec 均为 `1.11.30+8039`；当前审计报告独立建立为 `docs/ai-capability-audit-report.md`。
+
+对应 PR/CI/head SHA 与逐项下一步以 `docs/ai-modernization-execution-ledger.md` 第 10 节为准。以上项目没有 Find N2 真机 TRACE，不得标记为 IMPLEMENTED。
+
+
+### 1C. D：24 项 AssistantToolRouter 注册表逐项静态盘点
+
+审计来源：`lib/screens/assistant_tool_router.dart`（master `28b6bbf5928c44e2befb85b3fbaa6220827634e7`）。下表只描述注册表声明，不把页面打开计为 Headless 执行。
+
+| Tool ID | 名称 | 允许模式 | 当前入口形态 | 参数声明 |
+|---|---|---|---|---|
+| `structured_diagnosis` | 结构化辨证问诊 | consultation | 统一助手内联规则问诊；旧 builder 主动抛错 | 无 |
+| `yunqi` | 五运六气推算 | tools / metaphysics | 页面 builder + builderWithArguments | `date`（可选日期） |
+| `ziwei` | 紫微斗数排盘 | tools / metaphysics | 页面 builder | 无 |
+| `bazi` | 八字排盘 | tools / metaphysics | 页面 builder | 无 |
+| `yijing` | 易经起卦 | tools / metaphysics | 页面 builder | 无 |
+| `xiaoliuren` | 小六壬起课 | tools / metaphysics | 页面 builder | 无 |
+| `meihua` | 梅花易数起卦 | tools / metaphysics | 页面 builder | 无 |
+| `dosage` | 经方剂量换算 | tools | 页面 builder | 无 |
+| `ziwu_liuzhu` | 时辰开穴计算 | tools | 页面 builder | 无 |
+| `guji_library` | 古籍原文 | tools / learning | 页面 builder | 无 |
+| `knowledge_hub` | 中医知识库浏览 | learning | 页面 builder | 无 |
+| `medical_cases` | 医案库检索 | tools / learning | 页面 builder | 无 |
+| `almanac` | 每日黄历 | tools / metaphysics | 页面 builder | 无 |
+| `diagnosis_history` | 诊断历史趋势 | tools / consultation | 页面 builder | 无 |
+| `critical_illness` | 闭门课重症资料 | tools / learning | 页面 builder | 无 |
+| `solar_terms` | 节气养生 | tools / learning | 页面 builder | 无 |
+| `yuxiaji_omen` | 玉匣灵兆 | tools / metaphysics | 页面 builder | 无 |
+| `dream` | 周公解梦 | tools / metaphysics | 页面 builder | 无 |
+| `guansha` | 小儿关煞 | tools / metaphysics | 页面 builder | 无 |
+| `sanshan_lingqian` | 三山国王灵签 | tools / metaphysics | 页面 builder | 无 |
+| `chenggu` | 袁天罡称骨 | tools / metaphysics | 页面 builder | 无 |
+| `shousheng_debt` | 受生债查询 | tools / metaphysics | 页面 builder | 无 |
+| `huangdi_siji` | 轩辕黄帝四季歌 | tools / metaphysics | 页面 builder | 无 |
+| `saved_charts` | 我的命盘库 | tools / metaphysics | 页面 builder | 无 |
+
+#### D 当前边界
+
+- 24 项中只有 `yunqi` 声明了参数字段 `date`；其余 23 项没有注册级参数 schema。
+- `AssistantToolArguments.validateAgainst` 支持 tool ID、声明外字段、必填字段、date/integer/choice/text 的基本校验，但没有每个工具完整的单位、领域权限、来源、取消、超时、错误和 typed result 契约。
+- `structured_diagnosis` 是唯一明确不通过旧页面 builder 执行的工具；其余 23 项仍是页面路由，不是 Headless Capability。
+- 下一步必须逐项找到页面实际调用的确定性业务函数，记录参数/结果/副作用/权限，再建立行为基线；不允许仅把页面 builder 包装成一个名为 execute 的函数就宣称 Headless 完成。
+
+
+### 1D. PR #77 合并后增量
+
+- 当前 master：`e279d7a4ce65edc5a32d7521231f57c413db6895`。
+- A 的 SQLite FFI 故障注入测试已合并：assistant insert 被 trigger 拒绝时，user insert 同事务回滚；Flutter 1326 passed / 15 skipped，Android arm64 CI SUCCESS。
+- E 的 PR #78 增加旧版录音精确清理：仅 temp root 下 `local_ai_<digits>.wav`，不递归、不删除未知图片/普通文件；CI 仍 IN_PROGRESS。
+- PR #76 当前 head `daf8cc732b902540089be8173e9df726075c38ae`；PR #78 当前 head `bddf71287b499edb807ec90e8c6b635d7ca76798`；两者必须以各自最新 head CI 结论为准。
+- B 的生产入口核验明确了活动问诊选项、工具路由、文本、图片、录音和症状整理路径都需要在业务分发前受门禁保护；当前仍无 detector。
+
+
+### 1E. PR #76 合并后增量
+
+- 当前 master：`eaa83b440ddb1299a7eac58b70067de38ad44ea2`。
+- E 的设置页清理入口、二次确认、逐域结果、失败域中文映射已合并；Flutter regression 与 Android arm64 CI SUCCESS。
+- PR #78 当前仍负责生产附件归属、picker app-temp 缓存副本清理和精确旧录音 allowlist；当前 head CI 尚未通过。
+- PR #80 负责 Native Activity recreation teardown 顺序；当前 CI 尚未完成，不能标为 IMPLEMENTED。
+
+
+---
+
+## 2B. AssistantToolRouter 24 项注册能力逐项核对（2026-11-12）
+
+审计基线：`master @ eaa83b440ddb1299a7eac58b70067de38ad44ea2`。源码：`lib/screens/assistant_tool_router.dart`。此节按实际 `AssistantToolDefinition` 常量和 `_all` 注册表逐项核对，不把提示词描述当作执行能力。
+
+| # | tool ID | 页面/流程名称 | 声明模式 | 实际入口类型 | 参数/结果现状 |
+|---:|---|---|---|---|---|
+| 1 | `structured_diagnosis` | 结构化辨证问诊 | consultation | App 内联问诊流程；注册 builder 主动抛出 StateError，要求由 `LocalAiInterviewScreen` 特殊路由接管 | 通过 `TcmInterviewConversationController` 与 `DiagnosticEngine` 执行；不是通用 Headless adapter；结果为现有规则问诊流程产物 |
+| 2 | `yunqi` | 五运六气推算 | tools, metaphysics | Page Tool | 唯一提供 `builderWithArguments`；可选 `date`，格式 YYYY-MM-DD；未提供时使用当前日期；没有统一 typed result/cancel/timeout |
+| 3 | `ziwei` | 紫微斗数排盘 | tools, metaphysics | Page Tool | 无注册参数；打开排盘页面 |
+| 4 | `bazi` | 八字排盘 | tools, metaphysics | Page Tool | 无注册参数；打开排盘页面 |
+| 5 | `yijing` | 易经起卦 | tools, metaphysics | Page Tool | 无注册参数；打开起卦页面 |
+| 6 | `xiaoliuren` | 小六壬起课 | tools, metaphysics | Page Tool | 无注册参数；打开起课页面 |
+| 7 | `meihua` | 梅花易数起卦 | tools, metaphysics | Page Tool | 无注册参数；打开起卦页面 |
+| 8 | `dosage` | 经方剂量换算 | tools | Page Tool | 无注册参数；打开换算页面 |
+| 9 | `ziwu_liuzhu` | 时辰开穴计算 | tools | Page Tool | 无注册参数；打开计算页面 |
+| 10 | `guji_library` | 古籍原文 | tools, learning | Page Tool | 无注册参数；打开阅读页面 |
+| 11 | `knowledge_hub` | 中医知识库浏览 | learning | Page Tool | 无注册参数；页面浏览，不代表检索能力本身由该工具执行 |
+| 12 | `medical_cases` | 医案库检索 | tools, learning | Page Tool | 无注册参数；打开本地医案检索页面 |
+| 13 | `almanac` | 每日黄历 | tools, metaphysics | Page Tool | 无注册参数；打开黄历页面 |
+| 14 | `diagnosis_history` | 诊断历史趋势 | tools, consultation | Page Tool | 无注册参数；打开历史页面 |
+| 15 | `critical_illness` | 闭门课重症资料 | tools, learning | Page Tool | 无注册参数；打开资料页面 |
+| 16 | `solar_terms` | 节气养生 | tools, learning | Page Tool | 无注册参数；打开节气页面 |
+| 17 | `yuxiaji_omen` | 玉匣灵兆 | tools, metaphysics | Page Tool | 无注册参数；打开民俗查询页面 |
+| 18 | `dream` | 周公解梦 | tools, metaphysics | Page Tool | 无注册参数；打开梦境释义页面 |
+| 19 | `guansha` | 小儿关煞 | tools, metaphysics | Page Tool | 无注册参数；打开民俗资料/排算页面 |
+| 20 | `sanshan_lingqian` | 三山国王灵签 | tools, metaphysics | Page Tool | 无注册参数；打开签谱页面 |
+| 21 | `chenggu` | 袁天罡称骨 | tools, metaphysics | Page Tool | 无注册参数；打开称骨页面 |
+| 22 | `shousheng_debt` | 受生债查询 | tools, metaphysics | Page Tool | 无注册参数；打开传统文献/民俗计算页面 |
+| 23 | `huangdi_siji` | 轩辕黄帝四季歌 | tools, metaphysics | Page Tool | 无注册参数；打开资料页面 |
+| 24 | `saved_charts` | 我的命盘库 | tools, metaphysics | Page Tool | 无注册参数；打开已保存命盘页面 |
+
+### D 工作流的硬结论
+
+- 注册表当前 **24 项**：23 项具有 `Widget Function()` 页面 builder；1 项 `structured_diagnosis` 由统一问诊主界面特殊处理，其注册 builder 明确禁止旧页面直开。
+- **Headless Capability：0 项已由该注册表证明。** 注册参数只有 `yunqi.date` 一个可选日期字段；其余页面没有在注册表声明输入 schema。
+- **Executed Capability：不能仅凭注册表认定任何通用 AI 工具已执行。** `builder` 的返回类型是 Widget；打开页面、展示参数或模型说“已计算”都不等于模型/调度器调用了无 UI 业务函数并取得经验证的结构化结果。
+- `AssistantToolArguments.validateAgainst()` 能检查工具 ID、未声明参数、必填字段、日期、整数和枚举值，但它只验证传入的字符串参数；不提供领域授权、取消、超时、执行状态、结构化结果校验或来源 ID。
+- `matchAll()` 是别名 + 动作词的确定性匹配；多个命中必须由调用方澄清。它不是模型语义解析，也不提供自动槽位抽取。
+- `structured_diagnosis` 是已有独立业务流程，不应为满足 Headless 数量而重复抽象或新建问诊系统。其规则执行继续由现有确定性问诊控制器负责。
+
+### 下一步（D）
+
+1. 先逐页检查 23 个 Page Tool 的用户输入、确定性计算函数、结果回传方式和持久化位置；每项记录 Page Tool / Headless / Executed 三个独立状态。
+2. 对确实有无 UI 计算函数、且黄金行为已锁定的单项能力，才抽取最小 Headless adapter；优先从纯计算、无个人敏感数据的能力开始。
+3. 每个 adapter 必须定义 typed args/result、单位、参数校验、权限/领域边界、错误、取消、超时和 source IDs；执行结果回传必须有测试证明。
+4. 不得把 23 个页面一次性改造成工具平台；不引入通用 Agent、DAG、向量库或新会话表。
+
+
+## 2C. 2026-11-12 Headless 执行增量（PR #85，尚未合并）
+
+- 当前 master `b786f84df0452b9771e341c818e0d06a12451ef3` 仍是 2B 记录时的注册能力基线：24 项，23 个 Page builder，1 个特殊内联问诊流程；主线 Headless/Executed 仍未因本节代码而改变。
+- PR #85 在独立分支为 `yunqi` 增加 `headlessExecutor`，保留原页面 builder，形成 Page + Headless 双入口。
+- 自动执行仅在用户显式提供有效日期时发生；未提供日期时保留原页面确认流程。非法日期、越界日期、未声明参数均返回 FAILED，不静默使用今天。
+- 计算复用 `YunQiEngine`，不改动历法算法；结果以 `AssistantToolResult` 回传，校验 toolId、arguments、sourceIds、status，并写入既有 assistant message metadata。
+- PR #85 当前 head `21470fd5a14c3cee4b9ff4245f6c1cd59a3093c3`，基于 master `b786f84...`；Flutter regression 与 branch validation 正在运行，尚未有 Android/最终合并证据。
+
+### 状态口径
+
+- PR 合并前：主线 Headless = 0；PR 分支代码候选 = 1。
+- PR #85 完整 CI 通过并合并后：主线 Headless = 1，Executed = 1；Page builder 仍为 23（其中 yunqi 同时具备两种入口）。
+- 其余页面只有在各自 typed args/result、真实执行、来源和失败路径测试通过后才可更新状态；页面打开不计执行。
