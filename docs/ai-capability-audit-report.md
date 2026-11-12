@@ -233,13 +233,13 @@ F 仍 PARTIAL。
 ### D：Headless capability
 
 - PR #85 已合并，主线 `yunqi` 具备 Page + Headless 双入口；复用既有确定性计算，结果校验参数、source ID 与 status。主线 Headless / Executed 当前各 1 项。
-- PR #86 为第二项候选 `almanac`，复用 `getDailyAlmanac`，限制日期格式和 1900-2100 范围，拒绝非法日期/未知参数；未合并前仍计为 Page-only。当前 head `590a886e...`，Flutter regression 运行中，尚无最终 Android arm64 证据。
+- PR #86 为第二项候选 `almanac`，复用 `getDailyAlmanac`，限制日期格式和 1900-2100 范围，拒绝非法日期/未知参数；未合并前仍计为 Page-only。当前 head `18ecc81a...`，changed-test validation SUCCESS，PR Flutter regression PENDING，尚无 Android arm64 证据。
 
 ### F：TRACE per-turn
 
 - PR #87 将默认关闭 recorder 接入统一助手普通文本、图片、语音模型轮次，并把同一 trace_id 写入现有 user/assistant message metadata；不新增表/列。
 - 独立症状提取调用也接入 traced Native API。已记录 input、native inference、model output、persistence、final render；持久化失败不会记为成功。
-- PR #87 当前 head `65d98ab6...`，CI queued/pending；旧 head 静态分析错误已修复，不能把旧失败算作当前 head 结果。
+- PR #87 当前 head `abef4bb9...`，changed-test validation SUCCESS，PR Flutter regression IN_PROGRESS；旧 head 静态分析和测试注入错误已修复，不能把旧失败算作当前 head 结果。
 - structured diagnosis、clarification/tool dispatch、retrieval 分阶段、失败轮次持久化关联和 Find N2 真实 TRACE 仍缺失。
 
 ### A-G 当前结论
