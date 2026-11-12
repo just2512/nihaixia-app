@@ -3,6 +3,15 @@
 /// This class deliberately does not infer medical meaning from raw text. A
 /// reviewed detector must supply candidate rule IDs and semantic scope. Until
 /// the rule set and detector coverage are reviewed, the result cannot be CLEAR.
+enum RedFlagInputSource {
+  currentText,
+  attachmentTranscript,
+  historyRestore,
+  structuredInterview,
+  toolArguments,
+  unknown,
+}
+
 enum RedFlagSubject { self, other, knowledge, unknown }
 
 enum RedFlagTime { current, past, hypothetical, unknown }
@@ -23,8 +32,23 @@ class RedFlagAssessment {
     required this.polarity,
     required this.ruleSetReviewed,
     required this.detectorCoverageComplete,
+    this.inputSource = RedFlagInputSource.unknown,
+    this.detectorId,
+    this.detectorVersion,
+    this.ruleSetVersion,
     this.matchedRuleIds = const <String>[],
   });
+
+  /// Origin channel of the material evaluated by the detector. History and
+  /// attachment-derived text must retain their origin rather than being
+  /// silently reclassified as current user text.
+  final RedFlagInputSource inputSource;
+
+  /// Versioned provenance for the detector and the exact reviewed rule set.
+  /// These identifiers contain no user content and are required before CLEAR.
+  final String? detectorId;
+  final String? detectorVersion;
+  final String? ruleSetVersion;
 
   final RedFlagSubject subject;
   final RedFlagTime time;
@@ -56,6 +80,17 @@ class RedFlagPreflight {
   const RedFlagPreflight();
 
   RedFlagPreflightResult evaluate(RedFlagAssessment assessment) {
+    if (assessment.inputSource == RedFlagInputSource.unknown ||
+        _isBlank(assessment.detectorId) ||
+        _isBlank(assessment.detectorVersion) ||
+        _isBlank(assessment.ruleSetVersion) ||
+        assessment.matchedRuleIds.any(_isBlank)) {
+      return const RedFlagPreflightResult(
+        RedFlagPreflightStatus.reviewRequired,
+        'DETECTOR_PROVENANCE_MISSING',
+      );
+    }
+
     if (assessment.matchedRuleIds.isEmpty) {
       if (!assessment.ruleSetReviewed ||
           !assessment.detectorCoverageComplete) {
@@ -136,4 +171,6 @@ class RedFlagPreflight {
       'UNCLASSIFIED_SEMANTIC_SCOPE',
     );
   }
+
+  static bool _isBlank(String? value) => value == null || value.trim().isEmpty;
 }
