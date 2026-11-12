@@ -1008,6 +1008,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     List<String> sourceIds = const [],
     Map<String, String> toolArguments = const {},
     String? knowledgeStatus,
+    String? traceId,
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -1020,6 +1021,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         replayable: replayable,
         attachmentType: attachmentType,
         toolArguments: toolArguments,
+        traceId: traceId,
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
@@ -1040,6 +1042,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           sourceIds: sourceIds,
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
+          traceId: traceId,
         ).encode(),
       );
     } catch (error, stack) {
@@ -2348,6 +2351,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: audioPath != null
+          ? 'audio'
+          : imagePath != null
+              ? 'image'
+              : 'text',
+      mode: effectiveMode.name,
+    );
+    final traceId = traceContext.traceId;
+
     final userLabel = text.isNotEmpty
         ? text
         : imagePath != null
@@ -2364,21 +2378,58 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       final turnResponse = audioPath != null
           ? _AssistantTurnResponse(
-              text: await _service.sendAudio(audioPath, prompt: text),
+              text: traceId == null
+                  ? await _service.sendAudio(audioPath, prompt: text)
+                  : await _service.sendAudioWithTrace(
+                      audioPath,
+                      prompt: text,
+                      traceId: traceId,
+                    ),
             )
           : imagePath != null
               ? _AssistantTurnResponse(
-                  text: await _service.sendImage(imagePath, prompt: text),
+                  text: traceId == null
+                  ? await _service.sendImage(imagePath, prompt: text)
+                  : await _service.sendImageWithTrace(
+                      imagePath,
+                      prompt: text,
+                      traceId: traceId,
+                    ),
                 )
-              : await _sendTextWithKnowledgeContext(text, mode: effectiveMode);
+              : await _sendTextWithKnowledgeContext(
+                  text,
+                  mode: effectiveMode,
+                  traceContext: traceContext,
+                );
       final reply = turnResponse.text;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelOutput,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+      );
       await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
         mode: effectiveMode,
+        traceId: traceId,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
         sourceIds: turnResponse.sourceIds,
         knowledgeStatus: turnResponse.knowledgeStatus,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
@@ -2421,7 +2472,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : null;
       });
       _scrollToBottom();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+      );
     } on PlatformException catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: effectiveMode.name,
+        errorCode: error.code == 'TRACE_ID_MISMATCH'
+            ? 'TRACE_ID_MISMATCH'
+            : 'NATIVE_CALL_FAILED',
+      );
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
@@ -2453,6 +2520,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : message;
       });
     } catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: effectiveMode.name,
+        errorCode: 'NATIVE_CALL_FAILED',
+      );
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
