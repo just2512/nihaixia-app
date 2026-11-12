@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "request": "查桂枝汤组成，并找《伤寒论》对应条文",
+  "formula": {
+    "name": "桂枝汤",
+    "components": ["桂枝", "芍药", "生姜", "大枣", "炙甘草"]
+  },
+  "sourceManifest": {
+    "classicIndex": {
+      "asset": "assets/guji/classic_index.json.gz",
+      "sha256": "1154d465782316455ae3289af55bd4a7ae148898d6490076383a0d4663ee4a7e",
+      "bibliographicVerification": "MISSING"
+    },
+    "formulaData": {
+      "asset": "assets/data/formulas.json",
+      "sha256": "b128ec37b1644e6135e5cbdecb8f6ce89d8d5fe3976e51095a16484eeee5bc08"
+    }
+  },
+  "queryProvenance": [
+    {"query": "查桂枝汤组成，并找《伤寒论》对应条文", "reasons": ["ORIGINAL_QUERY"]},
+    {"query": "桂枝汤", "reasons": ["FORMULA_ID:guizhi_tang"]},
+    {"query": "桂枝", "reasons": ["HERB_NAME:桂枝"]},
+    {"query": "伤寒论", "reasons": ["DOMAIN_PHRASE:伤寒论"]}
+  ],
+  "classicQueries": {
+    "查桂枝汤组成，并找《伤寒论》对应条文": {
+      "total": 0,
+      "capturedCount": 0,
+      "topSourceIds": [],
+      "sourceCounts": {},
+      "locatorStatusCounts": {},
+      "bibliographicVerifiedCount": 0
+    },
+    "桂枝汤": {
+      "total": 196,
+      "capturedCount": 40,
+      "topSourceIds": [
+        "shanghan:assets/shanghan/clause_001.md:MISSING:条文2：太阳病中风（桂枝汤证）",
+        "shanghan:assets/shanghan/clause_014.md:MISSING:条文15：桂枝汤证（调和阴阳第一方）",
+        "shanghan:assets/shanghan/clause_015.md:MISSING:条文16：桂枝汤四主证"
+      ],
+      "sourceCounts": {"shanghan": 40},
+      "locatorStatusCounts": {"MISSING": 40},
+      "bibliographicVerifiedCount": 0
+    },
+    "桂枝": {
+      "total": 294,
+      "capturedCount": 40,
+      "topSourceIds": [
+        "shanghan:assets/shanghan/clause_001.md:MISSING:条文2：太阳病中风（桂枝汤证）",
+        "shanghan:assets/shanghan/clause_014.md:MISSING:条文15：桂枝汤证（调和阴阳第一方）",
+        "shanghan:assets/shanghan/clause_015.md:MISSING:条文16：桂枝汤四主证"
+      ],
+      "sourceCounts": {"shanghan": 40},
+      "locatorStatusCounts": {"MISSING": 40},
+      "bibliographicVerifiedCount": 0
+    },
+    "伤寒论": {
+      "total": 121,
+      "capturedCount": 40,
+      "topSourceIds": [
+        "shanghan:assets/shanghan/clause_000.md:MISSING:太阳病篇·条文1（总纲）",
+        "shanghan:assets/shanghan/clause_008.md:MISSING:条文9：汗吐下三法禁忌与误治后果",
+        "shanghan:assets/shanghan/clause_013.md:MISSING:条文14：真寒假热与真热假寒鉴别"
+      ],
+      "sourceCounts": {"shanghan": 40},
+      "locatorStatusCounts": {"MISSING": 40},
+      "bibliographicVerifiedCount": 0
+    }
+  },
+  "context": {
+    "status": "RETRIEVED",
+    "sourceIds": [
+      "formula:guizhi_tang",
+      "formula:mahuang_tang",
+      "formula:wumeiwan",
+      "formula:wuling_san",
+      "herb:桂枝",
+      "shanghan:assets/shanghan/clause_001.md:MISSING:条文2：太阳病中风（桂枝汤证）",
+      "shanghan:assets/shanghan/clause_014.md:MISSING:条文15：桂枝汤证（调和阴阳第一方）",
+      "shanghan:assets/shanghan/clause_015.md:MISSING:条文16：桂枝汤四主证",
+      "shanghan:assets/shanghan/clause_017.md:MISSING:条文18：误下后气上冲可与桂枝汤"
+    ],
+    "textLength": 3336,
+    "bibliographicVerifiedCount": 0,
+    "locatorStatusCounts": {"MISSING": 9}
+  }
+}
