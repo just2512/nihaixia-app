@@ -2377,17 +2377,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? arguments,
     AiTraceContext? traceContext,
   }) async {
-    // Reuse the request ID on both a live action and a restored pending action.
-    // History restoration must never mint a new ID for the old user turn.
     final activeTraceContext =
         traceContext ?? const AiTraceContext.disabled();
     if (tool.id == 'structured_diagnosis') {
       await _startInlineTcmInterview(
         initialUserMessage: '继续规则辨证',
-        traceContext: activeTraceContext,
+        traceContext: traceContext,
       );
       return;
     }
+    // Every execution path (including quick actions with no extracted args)
+    // must pass the same contract. Otherwise required parameters can be
+    // bypassed simply by opening a tool from a shortcut.
     final toolArguments =
         arguments ?? AssistantToolArguments(toolId: tool.id);
     final errors = toolArguments.validateAgainst(tool);
@@ -2405,13 +2406,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         status: AiTraceStatus.notStarted,
         toolId: tool.id,
         errorCode: 'ARGUMENT_VALIDATION_FAILED',
-      );
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.persistence,
-        status: AiTraceStatus.notStarted,
-        toolId: tool.id,
-        errorCode: 'RESULT_NOT_CREATED',
       );
       if (mounted) {
         setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
@@ -2442,7 +2436,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         activeTraceContext,
         stage: AiTraceStage.finalRender,
-        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        status: AiTraceStatus.succeeded,
         toolId: tool.id,
         errorCode: 'TOOL_ROUTE_ALREADY_ACTIVE',
       );
@@ -2453,6 +2447,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     Object? result;
     try {
       result = await Navigator.push<Object?>(
+
         context,
         FoldAwareMaterialPageRoute(
           sourceContext: context,
@@ -2512,18 +2507,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     if (result is AssistantToolResult) {
-      final validationErrors = result.validateFor(tool.id);
-      if (validationErrors.isNotEmpty) {
+      final errors = result.validateFor(tool.id);
+      if (errors.isNotEmpty) {
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.toolExecution,
-          status: switch (result.status) {
-            AssistantToolExecutionStatus.succeeded => AiTraceStatus.succeeded,
-            AssistantToolExecutionStatus.noResult => AiTraceStatus.unknown,
-            AssistantToolExecutionStatus.failed => AiTraceStatus.failed,
-            AssistantToolExecutionStatus.cancelled => AiTraceStatus.notStarted,
-            AssistantToolExecutionStatus.unknown => AiTraceStatus.unknown,
-          },
+          status: AiTraceStatus.unknown,
           toolId: tool.id,
           errorCode: 'PAGE_TOOL_RESULT_INVALID',
         );
@@ -2541,8 +2530,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolId: tool.id,
           errorCode: 'RESULT_CONTRACT_INVALID',
         );
-        setState(() => _error =
-            '工具返回结果未通过契约校验：' + validationErrors.join('；'));
+        setState(() => _error = '工具返回结果未通过契约校验：' + errors.join('；'));
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.finalRender,
@@ -2581,13 +2569,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       status: executionStatus,
       toolId: tool.id,
       sourceIds: normalizedResult.sourceIds,
-      errorCode: normalizedResult.status == AssistantToolExecutionStatus.unknown
-          ? 'TOOL_EXECUTION_STATE_UNKNOWN'
-          : normalizedResult.status == AssistantToolExecutionStatus.failed
-              ? 'TOOL_EXECUTION_FAILED'
-              : normalizedResult.status == AssistantToolExecutionStatus.cancelled
-                  ? 'TOOL_EXECUTION_CANCELLED'
-                  : null,
     );
     await _traceRecorder.record(
       activeTraceContext,
@@ -2595,13 +2576,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       status: executionStatus,
       toolId: tool.id,
       sourceIds: normalizedResult.sourceIds,
-      errorCode: normalizedResult.status == AssistantToolExecutionStatus.unknown
-          ? 'BUSINESS_EXECUTION_STATE_UNKNOWN'
-          : normalizedResult.status == AssistantToolExecutionStatus.failed
-              ? 'BUSINESS_EXECUTION_FAILED'
-              : normalizedResult.status == AssistantToolExecutionStatus.cancelled
-                  ? 'BUSINESS_EXECUTION_CANCELLED'
-                  : null,
     );
     final argumentErrors =
         normalizedResult.validateArgumentsMatch(toolArguments.values);
@@ -2611,7 +2585,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         stage: AiTraceStage.resultValidation,
         status: AiTraceStatus.failed,
         toolId: tool.id,
-        sourceIds: normalizedResult.sourceIds,
         errorCode: 'RESULT_ARGUMENTS_MISMATCH',
       );
       await _traceRecorder.record(
@@ -2627,7 +2600,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         stage: AiTraceStage.finalRender,
         status: AiTraceStatus.succeeded,
         toolId: tool.id,
-        sourceIds: normalizedResult.sourceIds,
         errorCode: 'RESULT_ARGUMENTS_MISMATCH',
       );
       return;
@@ -2705,7 +2677,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       // Returning a tool result to the visible timeline is not enough: rebuild
       // the native model context so the next user turn can actually discuss it.
-      // This continues the existing user-turn trace; it does not create a new ID.
       await _restoreVisibleConversationToModel();
       await _traceRecorder.record(
         activeTraceContext,
@@ -2745,7 +2716,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
-    Widget _buildModeSelector(BuildContext context) {
+  Widget _buildModeSelector(BuildContext context) {
     final tools = AssistantToolRouter.quickActions(_assistantMode);
     final busy = _sending || _modelControlBusy || _structuredDiagnosisBusy;
     return Padding(
