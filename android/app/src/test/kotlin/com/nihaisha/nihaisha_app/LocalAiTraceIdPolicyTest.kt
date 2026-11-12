@@ -18,7 +18,7 @@ class LocalAiTraceIdPolicyTest {
         val traceId = "0123456789abcdef0123456789abcdef"
         assertEquals(traceId, LocalAiTraceIdPolicy.normalize(" $traceId "))
         assertEquals(
-            mapOf("reply" to "ok", "traceId" to traceId),
+            mapOf("reply" to "ok", "trace_id" to traceId),
             LocalAiTraceIdPolicy.attach(mapOf("reply" to "ok"), traceId)
         )
     }
