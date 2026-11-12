@@ -208,10 +208,24 @@ class LocalAiService {
     }
   }
 
-  Future<LocalAiSymptomDraft> extractSymptoms() async {
+  Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
+
+  Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
+    required String traceId,
+  }) =>
+      _extractSymptoms(traceId: traceId);
+
+  Future<LocalAiSymptomDraft> _extractSymptoms({
+    String? traceId,
+  }) async {
+    final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'extractSymptoms',
+      {
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+      },
     );
+    _verifyTraceId(data, normalizedTraceId);
     final draft = data?['draft'];
     if (draft is! String || draft.trim().isEmpty) {
       throw const FormatException('模型没有返回症状整理内容');
