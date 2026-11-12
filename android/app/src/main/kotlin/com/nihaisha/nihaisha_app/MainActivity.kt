@@ -19,7 +19,6 @@ import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import java.io.File
 import java.security.MessageDigest
-import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
     private val expectedModelBytes = 3_659_530_240L
@@ -27,7 +26,12 @@ class MainActivity : FlutterActivity() {
     private val modelImportRequestCode = 8427
     private var pendingModelImportResult: MethodChannel.Result? = null
     private val localAiChannel = "com.nihaisha.app/local_ai"
-    private val aiExecutor = Executors.newSingleThreadExecutor()
+    private val aiTasks by lazy {
+        LocalAiActivityTaskLifecycle(LocalAiProcessExecutor.executor) {
+            releaseLocalModel()
+            Unit
+        }
+    }
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // The model stays outside the APK. Copy the .litertlm file into this app-private folder.
@@ -139,45 +143,77 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun runAiTask(result: MethodChannel.Result, task: () -> Any?) {
-        try {
-            aiExecutor.execute {
+        aiTasks.submit(
+            task = {
                 try {
                     val value = task()
-                    mainHandler.post { result.success(value) }
+                    mainHandler.post {
+                        if (aiTasks.isDestroyed()) {
+                            result.error(
+                                "LOCAL_AI_ACTIVITY_DESTROYED",
+                                "Activity 已销毁，本轮 Native 结果不可再交付",
+                                null
+                            )
+                        } else {
+                            result.success(value)
+                        }
+                    }
                 } catch (error: Exception) {
                     mainHandler.post {
-                        result.error(
-                            "LOCAL_AI_ERROR",
-                            error.message ?: error.javaClass.simpleName,
-                            null
-                        )
+                        if (aiTasks.isDestroyed()) {
+                            result.error(
+                                "LOCAL_AI_ACTIVITY_DESTROYED",
+                                "Activity 已销毁，本轮 Native 结果不可再交付",
+                                null
+                            )
+                        } else {
+                            result.error(
+                                "LOCAL_AI_ERROR",
+                                error.message ?: error.javaClass.simpleName,
+                                null
+                            )
+                        }
                     }
                 } catch (error: Throwable) {
-                    // Errors must not strand the Dart side on a never-resolving
-                    // Future; report them through the channel like Exceptions.
+                    // Fatal native failures must not strand the Dart Future.
                     mainHandler.post {
-                        result.error(
-                            "LOCAL_AI_FATAL",
-                            error.message ?: error.javaClass.simpleName,
-                            null
-                        )
+                        if (aiTasks.isDestroyed()) {
+                            result.error(
+                                "LOCAL_AI_ACTIVITY_DESTROYED",
+                                "Activity 已销毁，本轮 Native 结果不可再交付",
+                                null
+                            )
+                        } else {
+                            result.error(
+                                "LOCAL_AI_FATAL",
+                                error.message ?: error.javaClass.simpleName,
+                                null
+                            )
+                        }
                     }
                 }
+            },
+            onRejected = {
+                mainHandler.post {
+                    result.error(
+                        "LOCAL_AI_ACTIVITY_DESTROYED",
+                        "Activity 正在销毁，Native 任务未执行",
+                        null
+                    )
+                }
             }
-        } catch (error: Throwable) {
-            // Executor already shut down (Activity is tearing down). A queued
-            // task from Dart would otherwise leave its Future pending forever.
-            mainHandler.post {
-                result.error(
-                    "LOCAL_AI_SHUTDOWN",
-                    error.message ?: error.javaClass.simpleName,
-                    null
-                )
-            }
-        }
+        )
     }
 
     private fun beginModelImport(result: MethodChannel.Result) {
+        if (aiTasks.isDestroyed()) {
+            result.error(
+                "LOCAL_AI_ACTIVITY_DESTROYED",
+                "Activity 正在销毁，无法启动模型导入",
+                null
+            )
+            return
+        }
         if (pendingModelImportResult != null) {
             result.error("MODEL_IMPORT_BUSY", "已有模型文件选择操作正在进行", null)
             return
@@ -819,42 +855,62 @@ class MainActivity : FlutterActivity() {
             return
         }
 
-        try {
-            aiExecutor.execute {
+        aiTasks.submit(
+            task = {
                 try {
                     val status = importModelFromUri(uri)
-                    mainHandler.post { pending.success(status) }
+                    mainHandler.post {
+                        if (aiTasks.isDestroyed()) {
+                            pending.error(
+                                "MODEL_IMPORT_CANCELLED",
+                                "Activity 已销毁，模型导入结果不再可用",
+                                null
+                            )
+                        } else {
+                            pending.success(status)
+                        }
+                    }
                 } catch (error: Exception) {
                     mainHandler.post {
-                        pending.error(
-                            "MODEL_IMPORT_FAILED",
-                            error.message ?: error.javaClass.simpleName,
-                            null
-                        )
+                        if (aiTasks.isDestroyed()) {
+                            pending.error(
+                                "MODEL_IMPORT_CANCELLED",
+                                "Activity 已销毁，模型导入结果不再可用",
+                                null
+                            )
+                        } else {
+                            pending.error(
+                                "MODEL_IMPORT_FAILED",
+                                error.message ?: error.javaClass.simpleName,
+                                null
+                            )
+                        }
                     }
                 }
+            },
+            onRejected = {
+                mainHandler.post {
+                    pending.error(
+                        "MODEL_IMPORT_CANCELLED",
+                        "Activity 正在销毁，模型导入未执行",
+                        null
+                    )
+                }
             }
-        } catch (error: Throwable) {
-            mainHandler.post {
-                pending.error(
-                    "MODEL_IMPORT_FAILED",
-                    error.message ?: error.javaClass.simpleName,
-                    null
-                )
-            }
-        }
+        )
     }
 
     override fun onDestroy() {
+        pendingModelImportResult?.error(
+            "MODEL_IMPORT_CANCELLED",
+            "Activity 已销毁，模型导入选择已取消",
+            null
+        )
         pendingModelImportResult = null
-        aiExecutor.execute {
-            try {
-                releaseLocalModel()
-            } catch (_: Exception) {
-                // Activity teardown must not crash if native runtime shutdown fails.
-            }
-        }
-        aiExecutor.shutdown()
+
+        // Do not shut down the process-wide executor. A recreated Activity
+        // queues its work behind this release task and cannot race a live Engine.
+        aiTasks.destroy()
         super.onDestroy()
     }
 }
