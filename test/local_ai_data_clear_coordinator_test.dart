@@ -76,7 +76,8 @@ void main() {
   test('reports each failed domain and still attempts later safe domains', () async {
     final order = <String>[];
     final coordinator = LocalAiDataClearCoordinator(
-      stopTraceRecording: () async => order.add('stop-trace'),
+      stopTraceRecording: () async { order.add('stop-trace'); return true; },
+      resumeTraceRecording: (wasEnabled) async { order.add('resume-trace'); expect(wasEnabled, isTrue); },
       clearRuntimeCache: () async {
         order.add('native');
         return nativeResult();
@@ -96,7 +97,7 @@ void main() {
 
     final result = await coordinator.clearAll();
 
-    expect(order, ['stop-trace', 'native', 'attachments', 'trace', 'database']);
+    expect(order, ['stop-trace', 'native', 'attachments', 'trace', 'database', 'resume-trace']);
     expect(result.complete, isFalse);
     expect(result.failedDomains, ['attachments', 'trace']);
     expect(result.attachmentErrorCode, 'ATTACHMENT_CLEAR_FAILED');
