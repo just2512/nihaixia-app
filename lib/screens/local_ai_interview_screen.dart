@@ -3185,19 +3185,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } on PlatformException catch (error) {
       final emptyReply = error.code == 'EMPTY_REPLY';
       final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: nativeInferenceCompleted || emptyReply
-            ? AiTraceStatus.succeeded
-            : AiTraceStatus.unknown,
-        mode: effectiveMode.name,
-        errorCode: nativeInferenceCompleted || emptyReply
-            ? null
-            : traceMismatch
-                ? 'TRACE_ID_MISMATCH'
-                : 'NATIVE_CALL_FAILED',
-      );
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: emptyReply
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.unknown,
+          mode: effectiveMode.name,
+          errorCode: emptyReply
+              ? null
+              : traceMismatch
+                  ? 'TRACE_ID_MISMATCH'
+                  : 'NATIVE_CALL_FAILED',
+        );
+      }
       if (!resultValidationCompleted) {
         await _traceRecorder.record(
           traceContext,
@@ -3263,15 +3265,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : message;
       });
     } catch (error) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: nativeInferenceCompleted
-            ? AiTraceStatus.succeeded
-            : AiTraceStatus.unknown,
-        mode: effectiveMode.name,
-        errorCode: nativeInferenceCompleted ? null : 'NATIVE_CALL_FAILED',
-      );
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.unknown,
+          mode: effectiveMode.name,
+          errorCode: 'NATIVE_CALL_FAILED',
+        );
+      }
       if (!resultValidationCompleted) {
         await _traceRecorder.record(
           traceContext,
