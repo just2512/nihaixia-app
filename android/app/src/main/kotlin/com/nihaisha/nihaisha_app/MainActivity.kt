@@ -126,6 +126,13 @@ class MainActivity : FlutterActivity() {
                     }
                     "resetConversation" -> runAiTask(result) { resetLocalConversation() }
                     "releaseModel" -> runAiTask(result) { releaseLocalModel() }
+                    "clearRuntimeCache" -> runAiTask(result) {
+                        LocalAiRuntimeCacheClearPolicy.clear(
+                            runtimeCacheDirectory = File(cacheDir, "litertlm"),
+                            modelFile = modelFile,
+                            releaseRuntime = { releaseLocalModel() }
+                        ).toMap()
+                    }
                     else -> result.notImplemented()
                 }
             }
