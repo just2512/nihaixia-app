@@ -431,6 +431,82 @@ class DatabaseHelper implements AssistantConversationStore {
     return messageId;
   }
 
+
+  /// Persists both sides of a successful assistant turn in one SQLite
+  /// transaction. If either insert or conversation metadata update fails,
+  /// neither message is visible in history.
+  @override
+  Future<int> saveAssistantTurn({
+    required int conversationId,
+    String? userContent,
+    String? userMetadata,
+    required String assistantContent,
+    String? assistantMetadata,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    return db.transaction((txn) async {
+      final exists = await txn.query(
+        'assistant_conversations',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [conversationId],
+        limit: 1,
+      );
+      if (exists.isEmpty) {
+        throw StateError('Assistant conversation $conversationId does not exist');
+      }
+
+      Future<int> insertMessage({
+        required String role,
+        required String content,
+        String? metadata,
+      }) async {
+        final normalized = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+        final id = await txn.insert('assistant_messages', {
+          'conversation_id': conversationId,
+          'role': role,
+          'content': content,
+          'created_at': now,
+          'metadata': metadata,
+        });
+        await txn.rawUpdate(
+          '''
+          UPDATE assistant_conversations
+          SET updated_at = ?,
+              last_message_preview = ?,
+              title = CASE
+                WHEN title = '新对话' AND ? = 'user' THEN substr(?, 1, 48)
+                ELSE title
+              END
+          WHERE id = ?
+          ''',
+          [
+            now,
+            normalized.length > 120 ? normalized.substring(0, 120) : normalized,
+            role,
+            normalized,
+            conversationId,
+          ],
+        );
+        return id;
+      }
+
+      if (userContent != null && userContent.trim().isNotEmpty) {
+        await insertMessage(
+          role: 'user',
+          content: userContent,
+          metadata: userMetadata,
+        );
+      }
+      return insertMessage(
+        role: 'assistant',
+        content: assistantContent,
+        metadata: assistantMetadata,
+      );
+    });
+  }
+
   Future<List<Map<String, Object?>>> getAssistantConversations({
     int? limit,
   }) async {

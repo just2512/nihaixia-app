@@ -156,6 +156,30 @@ class _MemoryConversationStore implements AssistantConversationStore {
   }
 
   @override
+  Future<int> saveAssistantTurn({
+    required int conversationId,
+    String? userContent,
+    String? userMetadata,
+    required String assistantContent,
+    String? assistantMetadata,
+  }) async {
+    if (userContent != null && userContent.trim().isNotEmpty) {
+      await saveAssistantMessage(
+        conversationId: conversationId,
+        role: 'user',
+        content: userContent,
+        metadata: userMetadata,
+      );
+    }
+    return saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: assistantContent,
+      metadata: assistantMetadata,
+    );
+  }
+
+  @override
   Future<List<Map<String, Object?>>> getAssistantConversations({
     int? limit,
   }) async {
