@@ -188,3 +188,56 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 10. 2026-11-12 当前主线增量复核（master @ `bc29aef2e428100701ce59ab5bc6b9cfdcae3236`）
+
+> 本节仅记录已取得的 GitHub 源码、PR 与 CI 证据；未执行的设备场景继续保持 UNKNOWN。
+
+### 10.1 本轮已集成
+
+- PR #71 已于本轮 squash 合并，master commit：`bc29aef2e428100701ce59ab5bc6b9cfdcae3236`。
+- B 红旗 preflight 增加输入来源、detector ID/version、rule-set version provenance；缺失时返回 REVIEW_REQUIRED。该切片不包含自然语言 detector、生产入口接入、医学词表/阈值/处置文案，B 仍为 PARTIAL / RELEASE BLOCKED。
+- #71 对应 Flutter regression 与 Android arm64 CI 均通过（run `43139447208`）；Branch validation 为 SKIPPED。
+
+### 10.2 当前活动实现切片
+
+| PR | 工作流 | Head | 当前证据 | 状态与缺口 |
+|---|---|---|---|---|
+| #73 | E/F TRACE runtime 与清理生命周期 | `81e4ba88010954f8437a6c42ff281e871e732e0e` | Flutter run `43143105547` 进行中；静态分析、AI contract、recorder retry 等已完成步骤通过；Branch validation SKIPPED | IN_PROGRESS；等待全量回归结束并核对 Android arm64 CI；不等于端到端 TRACE |
+| #74 | E 生产附件迁移至 AI 专属目录 | `bbf5fa16ff0ef3d891154fede19727524cc366b2` | PR 已创建，尚未取得对应 CI run | IN_PROGRESS；等待 Flutter/Android CI；历史共享临时目录孤儿文件仍未盘点，Find N2 清除后重启 UNKNOWN |
+
+### 10.3 过期/替代 PR
+
+- #69 基于旧 master，当前 mergeable=false；其改动已按文件审查，移植到当前 master 的 #73，不合并旧分支。
+- #70 台账刷新分支基线过期，不整分支集成；本节作为当前 master 的新台账增量。
+- #72 数据清除范围审计基于旧 master；内容可供复核，但需在当前 master 重新校验后再集成。
+
+### 10.4 A-G 状态更新
+
+| ID | 当前状态 | 本轮变化 | 下一动作 |
+|---|---|---|---|
+| A | PARTIAL | 未取得新的 Find N2 TRACE | 继续核对 Conversation 重建、transcript 三方一致性、未知执行状态禁止重放 |
+| B | PARTIAL / RELEASE BLOCKED | #71 provenance 契约已合并 | 继续入口覆盖矩阵与 detector 设计；未医学审核前不得 CLEAR 放行 |
+| C | PARTIAL | #68 sourceId 稳定性已合并 | 继续补原始书目、版本、卷页定位与 derived-query provenance |
+| D | PARTIAL | 24 项能力盘点既有 | 逐项核对参数消费、Headless/Executed 分类和结果回传 |
+| E | IN_PROGRESS | #73 清理生命周期协调、#74 附件生产归属切片并行 | 等待 CI；后续接入设置页清除入口、失败恢复与重启验证 |
+| F | IN_PROGRESS | #73 统一 recorder/writer runtime 切片进行 CI | 通过后再冻结 trace_id 跨 Dart/Native/模型/SQLite 传播契约 |
+| G | IN_PROGRESS | 更新当前 master 的活动 PR/CI/缺口 | 后续每次集成同步 SHA、测试和下一动作 |
+
+### 10.5 当前发布阻断
+
+1. B 缺少自然语言 detector、全模式生产入口 fail-closed 接入与医学审核。
+2. A/F 缺少 Find N2 GPU/CPU、图片/语音、跨轮与进程恢复完整 TRACE。
+3. E 缺少生产清除入口、附件历史孤儿文件治理、清除后重启不可恢复证据；Android backup 策略仍需单独评估。
+4. D 缺少真实 Headless/Executed Capability 的完整参数、执行、结果与来源回传证据。
+5. C 的本地 sourceId 稳定不代表古籍版本、卷页和原文出处已核验。
+
+### 10.6 下一项自动执行顺序
+
+1. 监测 #73/#74 当前 head CI，失败先读 job/日志并定位，不盲目重跑。
+2. #73 通过后复核当前 master 兼容性并小批量集成；#74 独立验收，不捆绑合并。
+3. 在 #74 基础上推进 E：生产清除 UI、二次确认、执行互斥、逐域结果与失败恢复；不擅自全局禁用 Android backup。
+4. 推进 A：只读核对 Native Conversation 恢复和请求状态转换，针对真实缺口增加最小自动回归；设备缺席时 TRACE 保持 UNKNOWN。
+5. 推进 F：冻结跨层 trace_id 契约，之后按文件所有权分阶段接入，TRACE 默认关闭且不记录敏感正文。
+6. 推进 B/C/D/G 的无依赖任务，不因任一分支 CI 未完成而停摆。
