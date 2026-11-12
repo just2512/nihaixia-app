@@ -144,6 +144,20 @@ void main() {
   });
 
 
+  test('五运六气注册项同时保留页面入口并提供 Headless 执行器', () {
+    final tool = AssistantToolRouter.yunqi;
+    expect(tool.builderWithArguments, isNotNull);
+    expect(tool.headlessExecutor, isNotNull);
+
+    const arguments = {'date': '2026-11-12'};
+    final result = tool.headlessExecutor!(arguments);
+    expect(result.toolId, 'yunqi');
+    expect(result.validateFor('yunqi'), isEmpty);
+    expect(result.validateArgumentsMatch(arguments), isEmpty);
+    expect(result.sourceIds, ['local-engine:yunqi']);
+    expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
+  });
+
   test('必填参数在没有传参时也会被拒绝', () {
     final tool = AssistantToolDefinition(
       id: 'test_required',

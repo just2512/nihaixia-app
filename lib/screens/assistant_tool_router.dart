@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/assistant_tool_result.dart';
+import '../services/yunqi_tool_executor.dart';
+
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
 import 'daily_almanac_screen.dart';
@@ -109,12 +112,12 @@ class AssistantToolArguments {
           break;
         case AssistantToolParameterType.integer:
           if (int.tryParse(raw) == null) {
-            errors.add('参数「' + parameter.label + '」必须是整数');
+            errors.add('参数「${parameter.label}」必须是整数');
           }
           break;
         case AssistantToolParameterType.choice:
           if (!parameter.choices.contains(raw)) {
-            errors.add('参数「' + parameter.label + '」不在允许选项内');
+            errors.add('参数「${parameter.label}」不在允许选项内');
           }
           break;
         case AssistantToolParameterType.text:
@@ -134,6 +137,7 @@ class AssistantToolDefinition {
   final List<String> actionWords;
   final Widget Function() builder;
   final Widget Function(AssistantToolArguments arguments)? builderWithArguments;
+  final AssistantToolResult Function(Map<String, String> arguments)? headlessExecutor;
   final List<AssistantToolParameter> parameters;
 
   const AssistantToolDefinition({
@@ -145,12 +149,14 @@ class AssistantToolDefinition {
     required this.actionWords,
     required this.builder,
     this.builderWithArguments,
+    this.headlessExecutor,
     this.parameters = const [],
   });
 }
 
-/// Deterministic intent-to-screen registry. The model never fabricates tool
-/// output: a matched request opens the existing in-app calculator/page.
+/// Deterministic intent-to-tool registry. A definition may expose a Page Tool,
+/// a synchronous Headless executor, or both. Executed results remain typed and
+/// are validated by the caller before they enter the conversation timeline.
 class AssistantToolRouter {
   static const structuredDiagnosis = AssistantToolDefinition(
     id: 'structured_diagnosis',
@@ -165,7 +171,7 @@ class AssistantToolRouter {
   static const yunqi = AssistantToolDefinition(
     id: 'yunqi',
     title: '五运六气推算',
-    description: '打开本地五运六气计算器。',
+    description: '使用 App 本地五运六气引擎直接推算；也可打开页面复核。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['五运六气', '运气推算', '岁运司天在泉'],
     actionWords: ['推算', '计算', '算一下', '起算', '帮我算'],
@@ -179,6 +185,7 @@ class AssistantToolRouter {
     ],
     builder: _buildYunqi,
     builderWithArguments: _buildYunqiWithArguments,
+    headlessExecutor: YunQiToolExecutor.execute,
   );
 
   static const ziwei = AssistantToolDefinition(
