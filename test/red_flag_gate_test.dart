@@ -168,10 +168,48 @@ void main() {
       }
     });
 
-    test('raw attachment input without a reviewed text/transcript payload fails closed', () async {
+    test('raw attachment input cannot be cleared by accompanying prompt text', () async {
       for (final source in [
         RedFlagInputSource.imageAttachment,
         RedFlagInputSource.audioAttachment,
+      ]) {
+        var detectorCalls = 0;
+        final gate = RedFlagGate(
+          detector: _FakeDetector((input) async {
+            detectorCalls++;
+            return _assessment(source: input.source);
+          }),
+          timeout: timeout,
+        );
+        final result = await gate.evaluate(RedFlagInput(
+          source: source,
+          text: '用户同时输入的说明文字，不代表附件内容已经检查',
+        ));
+        expect(result.status, RedFlagPreflightStatus.reviewRequired);
+        expect(result.reason, 'RAW_ATTACHMENT_NOT_ASSESSED');
+        expect(result.mayContinueOrdinaryFlow, isFalse);
+        expect(detectorCalls, 0);
+      }
+    });
+
+    test('attachment transcript is assessed as its own provenance source', () async {
+      final gate = RedFlagGate(
+        detector: _FakeDetector(
+          (input) async => _assessment(source: input.source),
+        ),
+        timeout: timeout,
+      );
+      final result = await gate.evaluate(
+        const RedFlagInput(
+          source: RedFlagInputSource.attachmentTranscript,
+          text: '转写或观察得到的附件内容',
+        ),
+      );
+      expect(result.status, RedFlagPreflightStatus.clear);
+    });
+
+    test('tool result and retrieval context without content fail closed', () async {
+      for (final source in [
         RedFlagInputSource.toolResult,
         RedFlagInputSource.retrievalContext,
       ]) {
