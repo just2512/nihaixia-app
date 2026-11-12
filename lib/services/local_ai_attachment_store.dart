@@ -14,7 +14,7 @@ class LocalAiAttachmentStore {
     Random? random,
     DateTime Function()? clock,
   })  : _directoryProvider =
-            directoryProvider ?? getApplicationSupportDirectory,
+            directoryProvider ?? getTemporaryDirectory,
         _random = random ?? Random.secure(),
         _clock = clock ?? DateTime.now;
 
