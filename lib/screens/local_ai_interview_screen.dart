@@ -1384,16 +1384,82 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     final controller = _tcmInterviewController;
     if (controller == null || !controller.canAnswer) return;
+    final activeTraceContext = traceContext ??
+        _traceRecorder.start(
+          stage: AiTraceStage.input,
+          route: 'structured_interview_option',
+          mode: AssistantMode.consultation.name,
+        );
+    if (traceContext == null) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_option',
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_option',
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+    }
     if (controller.pendingPromptId == 'tongue_pulse' &&
         option == '选择舌诊脉诊') {
-      await _showUnifiedTonguePulseDialog();
+      await _showUnifiedTonguePulseDialog(
+        traceContext: activeTraceContext,
+      );
       return;
     }
     final before = controller.messages.length;
+    final executionWatch = Stopwatch()..start();
     try {
       controller.answerOption(option);
-      await _appendTcmInterviewMessages(before);
+      executionWatch.stop();
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.succeeded,
+        durationMs: executionWatch.elapsedMilliseconds,
+        toolId: 'structured_diagnosis',
+      );
+      final persisted = await _appendTcmInterviewMessages(
+        before,
+        traceId: activeTraceContext.traceId,
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
     } catch (error) {
+      executionWatch.stop();
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.failed,
+        durationMs: executionWatch.elapsedMilliseconds,
+        toolId: 'structured_diagnosis',
+        errorCode: 'STRUCTURED_INTERVIEW_FAILED',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
       if (mounted) setState(() => _error = '问诊选项未能提交：$error');
     }
   }
