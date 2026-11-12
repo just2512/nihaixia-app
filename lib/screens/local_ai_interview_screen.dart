@@ -2715,22 +2715,82 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: audioPath != null
+          ? 'audio'
+          : imagePath != null
+              ? 'image'
+              : 'text',
+      mode: _tcmInterviewController?.canAnswer == true
+          ? AssistantMode.consultation.name
+          : _assistantMode.name,
+    );
+    final traceId = traceContext.traceId;
+
     final activeTcmTask = _tcmInterviewController;
     if (activeTcmTask?.canAnswer == true) {
       if (imagePath != null || audioPath != null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.route,
+          status: AiTraceStatus.failed,
+          route: 'structured_interview_attachment_rejected',
+          mode: AssistantMode.consultation.name,
+          errorCode: 'ATTACHMENT_BLOCKED_DURING_STRUCTURED_INTERVIEW',
+        );
         setState(() {
           _error = '请先完成当前结构化问诊步骤，再发送照片或录音；附件不会被转换成规则答案。';
         });
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          mode: AssistantMode.consultation.name,
+        );
         return;
       }
       if (text.isNotEmpty) {
         if (activeTcmTask!.pendingOptions.contains(text)) {
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.route,
+            status: AiTraceStatus.succeeded,
+            route: 'structured_interview_option',
+            mode: AssistantMode.consultation.name,
+            toolId: 'structured_diagnosis',
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.dispatch,
+            status: AiTraceStatus.succeeded,
+            route: 'structured_interview_option',
+            mode: AssistantMode.consultation.name,
+            toolId: 'structured_diagnosis',
+          );
           _inputController.clear();
-          await _handleTcmInterviewOption(text);
+          await _handleTcmInterviewOption(
+            text,
+            traceContext: traceContext,
+          );
           return;
         }
         const clarification =
             '当前步骤需要使用下方结构化选项。你输入的文字会保留在对话中，但不会自动映射为辨证条件；请从问题下方选择最符合的一项。';
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.route,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_interview_clarification',
+          mode: AssistantMode.consultation.name,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_interview_clarification',
+          mode: AssistantMode.consultation.name,
+        );
         setState(() {
           _lastEffectiveMode = AssistantMode.consultation;
           _messages
@@ -2739,26 +2799,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = null;
         });
         _inputController.clear();
-        await _persistSuccessfulTurn(
+        final persisted = await _persistSuccessfulTurn(
           userText: text,
           assistantText: clarification,
           mode: AssistantMode.consultation,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+          mode: AssistantMode.consultation.name,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          mode: AssistantMode.consultation.name,
         );
         _scrollToBottom();
         return;
       }
     }
-
-    final traceContext = _traceRecorder.start(
-      stage: AiTraceStage.input,
-      route: audioPath != null
-          ? 'audio'
-          : imagePath != null
-              ? 'image'
-              : 'text',
-      mode: _assistantMode.name,
-    );
-    final traceId = traceContext.traceId;
 
     var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
