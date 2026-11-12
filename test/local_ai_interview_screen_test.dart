@@ -305,6 +305,19 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
   }
 }
 
+class _TraceRestoreService extends _TextSendService {
+  final restoredTraceIds = <String?>[];
+
+  @override
+  Future<void> restoreConversation({
+    required String transcript,
+    required List<String> userMessages,
+    String? traceId,
+  }) async {
+    restoredTraceIds.add(traceId);
+  }
+}
+
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentContexts = <String>[];
@@ -1892,6 +1905,63 @@ void main() {
   );
 
 
+
+  testWidgets('历史会话恢复贯穿 Native TRACE 并关联原会话 ID', (tester) async {
+    const traceId = '33333333333333333333333333333333';
+    final store = _MemoryConversationStore();
+    final conversationId =
+        await store.createAssistantConversation(title: 'TRACE 恢复会话');
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '历史中的用户问题',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '历史中的助手回答',
+    );
+    final service = _TraceRestoreService();
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 15),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: LocalAiInterviewScreen(
+        conversationStore: store,
+        service: service,
+        traceRecorder: recorder,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('历史对话'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('TRACE 恢复会话'));
+    await tester.pumpAndSettle();
+
+    expect(service.restoredTraceIds, [traceId]);
+    final restoreEvents = events.where((event) => event.traceId == traceId).toList();
+    expect(
+      restoreEvents.map((event) => event.stage),
+      containsAll([
+        AiTraceStage.dispatch,
+        AiTraceStage.nativeInference,
+        AiTraceStage.resultValidation,
+        AiTraceStage.presentation,
+      ]),
+    );
+    expect(
+      restoreEvents
+          .where((event) => event.stage != AiTraceStage.dispatch)
+          .every((event) => event.conversationId == conversationId),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('快速切换历史会话时较早的异步读取不能覆盖较新的选择', (tester) async {
     final store = _DelayedHistoryConversationStore();
