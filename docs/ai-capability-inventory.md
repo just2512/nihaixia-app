@@ -328,7 +328,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 | # | tool ID | 页面/流程名称 | 声明模式 | 实际入口类型 | 参数/结果现状 |
 |---:|---|---|---|---|---|
 | 1 | `structured_diagnosis` | 结构化辨证问诊 | consultation | App 内联问诊流程；注册 builder 主动抛出 StateError，要求由 `LocalAiInterviewScreen` 特殊路由接管 | 通过 `TcmInterviewConversationController` 与 `DiagnosticEngine` 执行；不是通用 Headless adapter；结果为现有规则问诊流程产物 |
-| 2 | `yunqi` | 五运六气推算 | tools, metaphysics | Page Tool | 唯一提供 `builderWithArguments`；可选 `date`，格式 YYYY-MM-DD；未提供时使用当前日期；没有统一 typed result/cancel/timeout |
+| 2 | `yunqi` | 五运六气推算 | tools, metaphysics | Page + Headless | 可选 `date`，格式 YYYY-MM-DD；仅显式有效日期触发 Headless；无日期保留页面确认；结果为 typed AssistantToolResult |
 | 3 | `ziwei` | 紫微斗数排盘 | tools, metaphysics | Page Tool | 无注册参数；打开排盘页面 |
 | 4 | `bazi` | 八字排盘 | tools, metaphysics | Page Tool | 无注册参数；打开排盘页面 |
 | 5 | `yijing` | 易经起卦 | tools, metaphysics | Page Tool | 无注册参数；打开起卦页面 |
@@ -354,17 +354,17 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 ### D 工作流的硬结论
 
-- 注册表当前 **24 项**：23 项具有 `Widget Function()` 页面 builder；1 项 `structured_diagnosis` 由统一问诊主界面特殊处理，其注册 builder 明确禁止旧页面直开。
-- **Headless Capability：0 项已由该注册表证明。** 注册参数只有 `yunqi.date` 一个可选日期字段；其余页面没有在注册表声明输入 schema。
-- **Executed Capability：不能仅凭注册表认定任何通用 AI 工具已执行。** `builder` 的返回类型是 Widget；打开页面、展示参数或模型说“已计算”都不等于模型/调度器调用了无 UI 业务函数并取得经验证的结构化结果。
+- 注册表当前 **24 项**：23 项具有页面 builder（其中 `yunqi` 同时具备 Headless executor），1 项 `structured_diagnosis` 由统一问诊主界面特殊处理。
+- **主线 Headless Capability：1 项（yunqi）。** `almanac` 的第二个 Headless adapter 仍在 PR #86，未合并前不计入主线。
+- **主线 Executed Capability：1 项（yunqi）。** 其余 22 个 Page-only 项目和结构化问诊内联流程不得因页面打开或提示词列举而计为通用工具执行。
 - `AssistantToolArguments.validateAgainst()` 能检查工具 ID、未声明参数、必填字段、日期、整数和枚举值，但它只验证传入的字符串参数；不提供领域授权、取消、超时、执行状态、结构化结果校验或来源 ID。
 - `matchAll()` 是别名 + 动作词的确定性匹配；多个命中必须由调用方澄清。它不是模型语义解析，也不提供自动槽位抽取。
 - `structured_diagnosis` 是已有独立业务流程，不应为满足 Headless 数量而重复抽象或新建问诊系统。其规则执行继续由现有确定性问诊控制器负责。
 
 ### 下一步（D）
 
-1. 先逐页检查 23 个 Page Tool 的用户输入、确定性计算函数、结果回传方式和持久化位置；每项记录 Page Tool / Headless / Executed 三个独立状态。
-2. 对确实有无 UI 计算函数、且黄金行为已锁定的单项能力，才抽取最小 Headless adapter；优先从纯计算、无个人敏感数据的能力开始。
+1. 继续逐页检查剩余 22 个 Page-only 工具的用户输入、确定性计算函数、结果回传方式和持久化位置；每项记录 Page Tool / Headless / Executed 三个独立状态。
+2. PR #86 的 almanac 适配器通过全量 Flutter 与 Android arm64 后再集成；随后从纯计算、无个人敏感数据的能力中选择下一项。
 3. 每个 adapter 必须定义 typed args/result、单位、参数校验、权限/领域边界、错误、取消、超时和 source IDs；执行结果回传必须有测试证明。
 4. 不得把 23 个页面一次性改造成工具平台；不引入通用 Agent、DAG、向量库或新会话表。
 
@@ -391,6 +391,4 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 结果包含结构化黄历字段、`local-engine:almanac` source ID 和民俗免责声明。
 - PR #86 当前 head `590a886eac8b8f9535e60ed229ed3a9cb5056e8a`；前一 head 曾因日期正则双重转义和测试中的 const map 编译失败，已在当前 head 修正。最新 Flutter regression / Android arm64 CI 尚未完成，不能计入主线。
 
-- PR 合并前：主线 Headless = 0；PR 分支代码候选 = 1。
-- PR #85 完整 CI 通过并合并后：主线 Headless = 1，Executed = 1；Page builder 仍为 23（其中 yunqi 同时具备两种入口）。
-- 其余页面只有在各自 typed args/result、真实执行、来源和失败路径测试通过后才可更新状态；页面打开不计执行。
+
