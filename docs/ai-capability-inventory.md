@@ -392,3 +392,12 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - PR #86 当前 head `18ecc81a4ff6a18757386d39632b9a8567ae8b37`；前一 head 曾因日期正则双重转义、测试 const map 和断言文案问题失败，均已修正。最新 changed-test Branch validation run `43162555492` SUCCESS；PR Flutter regression run `43162562989` PENDING，Android arm64 尚未验收，不能计入主线。
 
 
+
+
+## 2026-11-12 增量：#86/#87 已合并
+
+- 主线基线：`34c1fa11c61b83d75b0c01ac6272a39d0cbf4537`。
+- D：PR #86 已将 `almanac` 确定性 Headless executor 合并主线；与既有 `yunqi` 合计 2 项 Headless/Executed。其他页面 builder 不计执行能力。
+- F：PR #87 已将统一助手普通文本、图片、语音模型轮次的 trace_id 与 user/assistant message metadata 关联，并接入 input/native_inference/model_output/persistence/final_render 阶段。TRACE 默认关闭。
+- F 仍 PARTIAL：structured diagnosis、clarification/tool dispatch、retrieval 分阶段、失败轮次持久化关联和 Find N2 真机 TRACE 未完成。
+- PR #86 run `43162562989`、PR #87 run `43162529437` 的 Flutter regression 与 Android arm64 CI 均 SUCCESS；Branch validation 均 SKIPPED。合并后 master 独立 CI 状态未取得，保持 UNKNOWN。
