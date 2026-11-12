@@ -43,8 +43,9 @@ class RedFlagGate {
         'INPUT_SOURCE_UNKNOWN',
       );
     }
-    if (input.source == RedFlagInputSource.currentText &&
-        (input.text == null || input.text!.trim().isEmpty)) {
+    // This contract currently accepts text/transcript inputs only. Raw image/audio
+    // bytes or an absent transcript cannot be treated as a complete assessment.
+    if (input.text == null || input.text!.trim().isEmpty) {
       return const RedFlagPreflightResult(
         RedFlagPreflightStatus.reviewRequired,
         'INPUT_CONTENT_UNAVAILABLE',
