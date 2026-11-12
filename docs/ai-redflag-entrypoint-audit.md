@@ -139,3 +139,53 @@
 4. 图片本体不能用关键词检测；必须先取得用户描述或可信转写/观察结果，并区分用户输入与模型生成内容。
 5. 历史 transcript 按时间和说话主体区分；不得将过去症状或他人症状重标为当前本人症状。
 6. 医学审核未取得前，正式红旗规则不得放行生产流；设备 TRACE 未取得前不宣称真机覆盖。
+
+
+---
+
+## 7. 2026-11-12 增量复核（master `eefa56e9cf159c5533de1c35556f82aa4c873a4f`）
+
+本节覆盖前文基线过旧的静态入口结论；旧章节保留为历史审计记录。
+
+### 7.1 当前源码定位
+
+| 入口 | 当前源码 | 实际调用顺序 | 当前门禁 |
+|---|---|---|---|
+| initialPrompt | `local_ai_interview_screen.dart` initState，约 250 行 | 只预填输入框，不自动发送；用户提交后进入 `_send` | 发送时未检查 |
+| 普通文本/五种模式 | `local_ai_interview_screen.dart:2261` | `_send` → 活动问诊分支 → Orchestrator → clarification/tool 或知识检索/模型 | MISSING |
+| 结构化问诊选项 | screen `:1310`；controller `:123` | `_handleTcmInterviewOption` → `answerOption`，由规则控制器直接处理 | MISSING |
+| 结构化问诊启动 | screen `:1597`、`:1060`；controller `:105` | `_requestTool` → `_startInlineTcmInterview` → `controller.start` | MISSING |
+| Headless 工具 | screen `:1538`、`:1597` | `_executeHeadlessTool` 调用 executor 并回传结构化结果 | MISSING |
+| Page 工具 | screen `:1597`、`:1639` | `_requestTool` / `_openTool` → Widget 页面 | MISSING |
+| 图片 | screen `:2261`；Native `MainActivity.kt:105` | `sendImage` → `sendLocalImage` | MISSING |
+| 语音 | screen `:2261`；Native `MainActivity.kt:122` | `sendAudio` → `sendLocalAudio` | MISSING |
+| 症状整理 | screen `:2565`；Native `MainActivity.kt:94` | `_extractSymptoms` → `extractSymptoms` | MISSING |
+| 历史恢复 | screen `:383`、`:2240`；Native `MainActivity.kt:156` | `_restorePendingHistory` → `restoreConversation` | 历史来源未进入红旗策略；不得重标为当前症状 |
+| Native 直接调用 | `MainActivity.kt:94-156` | MethodChannel 直接进入 extractSymptoms/sendImage/sendAudio/sendMessage/restoreConversation | MISSING |
+
+### 7.2 策略和测试证据边界
+
+- `red_flag_preflight.dart:1-156` 只有接收 detector assessment 后的策略评估，没有自然语言 detector，也没有生产调用入口。
+- `test/red_flag_preflight_test.dart:32-` 证明构造 assessment 的策略分支，不证明自然语言识别准确性或生产入口已拦截。
+- `local_ai_interview_screen.dart` 未导入/调用 `RedFlagPreflight`；`MainActivity.kt` 的模型 MethodChannel 分支也未执行红旗校验。
+- 当前输入来源 enum 缺少明确的 image bytes、raw audio、tool result、retrieval context 类型；`attachmentTranscript` 不能自动代表原始图片/音频已经完整检测。
+- 历史恢复是上下文重建，不是新的当前症状申报；应保留历史时间和说话主体 provenance。
+
+### 7.3 必须先解决的策略问题
+
+1. detector 未配置、异常、超时、版本未审核或通道覆盖不完整时，统一返回 REVIEW_REQUIRED；任何调用方不得通过“不调用 preflight”静默放行。
+2. 门禁必须先于活动问诊选项消费、Orchestrator、Headless/Page 工具、检索、文本/图片/语音模型调用和症状整理。
+3. 明确 Native MethodChannel 是否需要第二道校验；Flutter UI 的门禁不能自动证明 Native 入口不可绕过。
+4. 不得把图片/音频未检测视为 CLEAR；必须区分原始附件、可信转写/观察结果和用户 prompt。
+5. 不得把其他人、知识讨论、否定、既往或假设描述误判为用户本人当前急症；语义不明时 CLARIFY。
+6. 医学词表、阈值、处置文案没有医学审核前不得进入生产 detector。若采用“detector 缺失时全局阻断”，必须先评估它会关闭哪些助手能力；不能暗中改变产品可用性。
+
+### 7.4 下一批实施顺序
+
+- B1：建立无医学规则的 detector/gate 接口契约；未配置、异常、超时、未审核、覆盖不完整均不可 CLEAR。
+- B2：为各入口增加可注入 gate seam 和调用顺序测试，先证明所有入口都必须经过同一策略；不伪造 detector 准确性。
+- B3：补充 image/rawAudio/toolResult/retrievalContext 等 source type，并保持历史兼容。
+- B4：取得医学审核记录后，再实现 detector 和语义负向测试。
+- B5：接入 Flutter 与必要的 Native 边界，跑完整 Flutter、Android arm64/Native tests；设备 TRACE 单独验收。
+
+结论仍为 **B = PARTIAL / RELEASE BLOCKED**。本增量是当前 master 的调用链复核，不代表门禁已经接入。
