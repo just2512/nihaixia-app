@@ -212,6 +212,7 @@
 
 - red_flag_gate.dart 只有 RedFlagDetector 接口和 RedFlagGate fail-closed 包装；没有自然语言 detector 实现。
 - red_flag_preflight.dart 只对外部 assessment 做策略判定，不从文本、图片或语音中抽取医学语义。
+- 当前 RedFlagInputSource 已显式区分 currentText、attachmentTranscript、imageAttachment、audioAttachment、toolResult、retrievalContext、historyRestore、structuredInterview、toolArguments 与 unknown；原始图片/音频即使附带 prompt 文字也会由 Gate 返回 REVIEW_REQUIRED。该类型补齐不等于 detector 已能检查二进制附件或生产入口已调用 Gate。
 - 当前 local_ai_interview_screen.dart、local_ai_service.dart、MainActivity.kt 均没有 RedFlagGate/RedFlagPreflight 引用；因此策略类和其单测不能证明生产入口受保护。
 - LocalAiService 的 Dart API 最终经 MethodChannel 调用 Native；Native 侧仍存在直接模型执行入口。Flutter 页面级门禁单独存在也不足以防止绕过，必须审计 Native 边界。
 - 历史恢复不是新用户轮次；应保留历史主体/时间 provenance，不得把历史内容自动重标为当前本人症状，也不得为恢复生成新 trace_id。
