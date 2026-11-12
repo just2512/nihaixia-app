@@ -109,7 +109,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
       modelStatus,
     ];
     if (result.failedDomains.isNotEmpty) {
-      lines.add('未完成的数据域：${result.failedDomains.join('、')}');
+      lines.add('未完成的数据域：${result.failedDomains.map(_domainLabel).join('、')}');
     }
     lines.add(
       '请完全退出并重新启动 App，再检查会话和附件是否仍可见。'
@@ -117,6 +117,17 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
     );
     return lines.join('\n\n');
   }
+
+  String _domainLabel(String domain) => switch (domain) {
+        'trace_recording_stop' => 'TRACE 录制停止',
+        'trace_recording_resume' => 'TRACE 录制恢复',
+        'native_runtime_release' => 'Native 模型运行时释放',
+        'native_runtime_cache' => 'Native 运行时缓存',
+        'attachments' => 'AI 附件',
+        'trace' => 'TRACE 文件',
+        'conversation_database' => 'AI 会话数据库',
+        _ => domain,
+      };
 
   @override
   Widget build(BuildContext context) {
