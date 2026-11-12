@@ -30,7 +30,7 @@ class RedFlagGate {
     required this.detector,
     required this.timeout,
     this.preflight = const RedFlagPreflight(),
-  }) : assert(timeout > Duration.zero);
+  });
 
   final RedFlagDetector? detector;
   final Duration timeout;
