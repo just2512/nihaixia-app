@@ -19,6 +19,7 @@ class LocalAiDataClearCoordinator {
     required Future<void> Function() clearTrace,
     required Future<void> Function() clearDatabase,
   })  : _stopTraceRecording = stopTraceRecording,
+        _resumeTraceRecording = resumeTraceRecording,
         _clearRuntimeCache = clearRuntimeCache,
         _clearAttachments = clearAttachments,
         _clearTrace = clearTrace,
