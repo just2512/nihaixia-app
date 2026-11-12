@@ -94,6 +94,46 @@ void main() {
       expect(decision.toolArguments?['date'], '2026-11-06');
     });
 
+    test('每日黄历明确日期进入 Headless 参数，非法日期原样保留待拒绝', () {
+      final valid = AssistantConversationOrchestrator.resolve(
+        query: '帮我查询黄历 2026-11-12',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(valid.tool?.id, 'almanac');
+      expect(valid.toolArguments?['date'], '2026-11-12');
+
+      final invalid = AssistantConversationOrchestrator.resolve(
+        query: '帮我查询黄历 2026-02-30',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(invalid.tool?.id, 'almanac');
+      expect(invalid.toolArguments?['date'], '2026-02-30');
+      expect(invalid.toolArguments!.validateAgainst(invalid.tool!), isNotEmpty);
+    });
+
+    test('今日与明日黄历使用设备本地日期，不依赖模型推断', () {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      String iso(DateTime date) =>
+          '${date.year.toString().padLeft(4, '0')}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+
+      final todayDecision = AssistantConversationOrchestrator.resolve(
+        query: '查询今日黄历',
+        selectedMode: AssistantMode.automatic,
+      );
+      final tomorrowDecision = AssistantConversationOrchestrator.resolve(
+        query: '查看明天黄历',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(todayDecision.tool?.id, 'almanac');
+      expect(todayDecision.toolArguments?['date'], iso(today));
+      expect(tomorrowDecision.tool?.id, 'almanac');
+      expect(tomorrowDecision.toolArguments?['date'], iso(tomorrow));
+    });
+
     test('玄学助手模式下也能直接调度五运六气计算器', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '推算五运六气',

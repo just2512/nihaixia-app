@@ -110,6 +110,7 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
 class _RecordingAssistantService extends LocalAiService {
   String? restoredTranscript;
   List<String> restoredUserMessages = const [];
+  int modelCalls = 0;
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
@@ -118,7 +119,10 @@ class _RecordingAssistantService extends LocalAiService {
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
-  }) async => '已收到：$text';
+  }) async {
+    modelCalls++;
+    return '已收到：$text';
+  }
 
   @override
   Future<void> restoreConversation({
@@ -384,6 +388,51 @@ void main() {
     expect(cancelledResult, findsOneWidget);
     expect(service.restoredTranscript, contains('执行状态：CANCELLED'));
     expect(service.restoredTranscript, isNot(contains('执行状态：NO_RESULT')));
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('每日黄历在统一助手中本地执行并保存日期、结果和来源', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我查询今日黄历');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.modelCalls, 0);
+    final resultMessages = store.savedMessages.where((message) =>
+        message['role'] == 'assistant' &&
+        (message['content'] as String).contains('工具：每日黄历'));
+    expect(resultMessages, hasLength(1));
+
+    final content = resultMessages.single['content'] as String;
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessages.single['metadata'] as String,
+    );
+    final now = DateTime.now();
+    final expectedDate =
+        '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    expect(content, contains('公历：$expectedDate'));
+    expect(content, contains('来源标识：local-engine:almanac'));
+    expect(content, contains('传统民俗文化参考'));
+    expect(metadata.toolId, 'almanac');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, {'date': expectedDate});
+    expect(metadata.sourceIds, const ['local-engine:almanac']);
     expect(tester.takeException(), isNull);
   });
 

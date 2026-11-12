@@ -158,6 +158,22 @@ void main() {
     expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
   });
 
+  test('每日黄历注册项提供受日期约束的 Headless 执行器', () {
+    final tool = AssistantToolRouter.almanac;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.single.key, 'date');
+    expect(tool.parameters.single.isRequired, isTrue);
+
+    const arguments = {'date': '2026-11-12'};
+    final result = tool.headlessExecutor!(arguments);
+    expect(result.toolId, 'almanac');
+    expect(result.validateFor('almanac'), isEmpty);
+    expect(result.validateArgumentsMatch(arguments), isEmpty);
+    expect(result.values['公历'], '2026-11-12');
+    expect(result.sourceIds, ['local-engine:almanac']);
+    expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
+  });
+
   test('必填参数在没有传参时也会被拒绝', () {
     final tool = AssistantToolDefinition(
       id: 'test_required',
