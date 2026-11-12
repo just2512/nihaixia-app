@@ -403,3 +403,16 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - `AssistantMessageMetadata.traceId` 复用既有 metadata JSON 字段 `trace_id`。TRACE 默认关闭；打开时普通文本/图片/语音统一助手轮次将同一 ID 传入 traced Native API 并关联 user/assistant 消息。
 - F 仍不是全链路：结构化问诊、澄清、工具执行、检索阶段事件、Native 失败轮次持久化关联和 Find N2 设备 TRACE 未完成。
 - A/B/C/E 的缺口与执行顺序以本文件最新审计章节及 `docs/ai-modernization-execution-ledger.md` 第 14 节为准；未取得医学审核和真实设备证据的能力不得标 IMPLEMENTED。
+
+
+---
+
+## 2F. 2026-11-12 最新主线能力状态（master `b47397922d9348f89cc7a5586b7ca1b0659a63f5`）
+
+- Headless/Executed 当前为 2：`yunqi`、`almanac`。其余 22 项仍为 Page-only，不能将页面打开计为 Headless 执行。
+- 普通文本/图片/语音统一助手轮次已有 per-turn trace_id；新增 retrieval、contextAssembly、modelInput 阶段。玄学模式文本也使用 traced Native API。
+- 红旗策略已有 `RedFlagPreflight` 与 fail-closed `RedFlagGate` 执行契约；未配置 detector 时不会返回 CLEAR，但 gate 尚未接入生产调用链，医学 detector 未审核，B 仍 RELEASE BLOCKED。
+- 数据清除已覆盖 AI 会话四表事务、AI 专属附件、Native runtime cache、TRACE 文件和设置 UI；模型文件与非 AI SQLite 数据保留。
+- Android backup 只排除模型与 TRACE 文件；混合 SQLite 中 AI 会话行仍可能进入系统备份。
+- 经典检索最新 CI artifact：4 个 query、120 条 top-40 hits、83 个 distinct sourceId；三个派生 query 全部来自伤寒论讲稿，120 条 locator 均 MISSING。6 个 context source IDs 中 formula 1、herb 1、lecture 4。
+- 当前 A/B/C/D/E/F/G 结论及下一步以 `docs/ai-modernization-execution-ledger.md` 第 15 节为准。
