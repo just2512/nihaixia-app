@@ -225,4 +225,26 @@ void main() {
     expect(result.traceCleared, isTrue);
     expect(result.databaseCleared, isTrue);
   });
+
+  test('reports recorder resume failure and does not claim clear complete', () async {
+    final coordinator = LocalAiDataClearCoordinator(
+      stopTraceRecording: () async => true,
+      resumeTraceRecording: (wasEnabled) async {
+        expect(wasEnabled, isTrue);
+        throw StateError('injected recorder resume failure');
+      },
+      clearRuntimeCache: () async => nativeResult(),
+      clearAttachments: () async {},
+      clearTrace: () async {},
+      clearDatabase: () async {},
+    );
+
+    final result = await coordinator.clearAll();
+
+    expect(result.traceRecordingStopped, isTrue);
+    expect(result.traceRecordingResumed, isFalse);
+    expect(result.traceResumeErrorCode, 'TRACE_RESUME_FAILED');
+    expect(result.failedDomains, ['trace_recording_resume']);
+    expect(result.complete, isFalse);
+  });
 }
