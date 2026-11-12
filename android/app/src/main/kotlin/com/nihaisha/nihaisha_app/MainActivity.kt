@@ -94,7 +94,7 @@ class MainActivity : FlutterActivity() {
                     "extractSymptoms" -> runAiTask(result) { extractSymptoms() }
                     "sendImage" -> {
                         val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("traceId"))
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
                             result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
                             return@handler
@@ -111,7 +111,7 @@ class MainActivity : FlutterActivity() {
                     }
                     "sendAudio" -> {
                         val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("traceId"))
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
                             result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
                             return@handler
@@ -128,7 +128,7 @@ class MainActivity : FlutterActivity() {
                     }
                     "sendMessage" -> {
                         val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("traceId"))
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
                             result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
                             return@handler
