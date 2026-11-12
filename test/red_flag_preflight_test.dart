@@ -10,9 +10,17 @@ void main() {
     RedFlagPolarity polarity = RedFlagPolarity.affirmed,
     bool reviewed = true,
     bool coverage = true,
+    RedFlagInputSource inputSource = RedFlagInputSource.currentText,
+    String? detectorId = 'reviewed-detector',
+    String? detectorVersion = '1',
+    String? ruleSetVersion = '2026-11-reviewed',
     List<String> matches = const ['candidate-rule-1'],
   }) =>
       RedFlagAssessment(
+        inputSource: inputSource,
+        detectorId: detectorId,
+        detectorVersion: detectorVersion,
+        ruleSetVersion: ruleSetVersion,
         subject: subject,
         time: time,
         polarity: polarity,
