@@ -1553,7 +1553,33 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
-  Future<void> _showUnifiedTonguePulseDialog() async {
+  Future<void> _showUnifiedTonguePulseDialog({
+    AiTraceContext? traceContext,
+  }) async {
+    final activeTraceContext = traceContext ??
+        _traceRecorder.start(
+          stage: AiTraceStage.input,
+          route: 'structured_interview_tongue_pulse',
+          mode: AssistantMode.consultation.name,
+        );
+    if (traceContext == null) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_tongue_pulse',
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_tongue_pulse',
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+    }
     final controller = _tcmInterviewController;
     if (controller == null || controller.pendingPromptId != 'tongue_pulse') {
       return;
@@ -1660,8 +1686,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ),
       ),
     );
-    if (!mounted || confirmed != true) return;
+    if (!mounted) return;
+    if (confirmed != true) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: 'structured_diagnosis',
+        errorCode: 'USER_CANCELLED_INPUT_DIALOG',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
+      return;
+    }
     final before = controller.messages.length;
+    final executionWatch = Stopwatch()..start();
     try {
       controller.answerTonguePulse(
         tongueCoating: tongueCoating,
@@ -1669,8 +1712,47 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         primaryPulse: primaryPulse,
         secondaryPulse: secondaryPulse,
       );
-      await _appendTcmInterviewMessages(before);
+      executionWatch.stop();
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.succeeded,
+        durationMs: executionWatch.elapsedMilliseconds,
+        toolId: 'structured_diagnosis',
+      );
+      final persisted = await _appendTcmInterviewMessages(
+        before,
+        traceId: activeTraceContext.traceId,
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
     } catch (error) {
+      executionWatch.stop();
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.failed,
+        durationMs: executionWatch.elapsedMilliseconds,
+        toolId: 'structured_diagnosis',
+        errorCode: 'STRUCTURED_INTERVIEW_FAILED',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'structured_diagnosis',
+      );
       if (mounted) setState(() => _error = '舌诊脉诊输入未能提交：$error');
     }
   }
