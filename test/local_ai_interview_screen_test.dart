@@ -2551,6 +2551,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          conversationStore: _store,
           traceRecorder: recorder,
         ),
       ),
