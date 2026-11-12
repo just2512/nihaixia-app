@@ -225,8 +225,6 @@ void main() {
       }
     });
   });
-}
-
   group('RedFlagGate operation sequencing seam', () {
     test('gate completes before the protected side effect starts', () async {
       final events = <String>[];
@@ -300,3 +298,5 @@ void main() {
     });
   });
 
+
+}
