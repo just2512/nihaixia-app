@@ -469,7 +469,7 @@ class DatabaseHelper implements AssistantConversationStore {
       for (var index = 0; index < messages.length; index++) {
         final message = messages[index];
         final role = normalizedRoles[index];
-        final preview = message.content.replaceAll(RegExp(r'\\s+'), ' ').trim();
+        final preview = message.content.replaceAll(RegExp(r'\s+'), ' ').trim();
         final id = await txn.insert('assistant_messages', {
           'conversation_id': conversationId,
           'role': role,
