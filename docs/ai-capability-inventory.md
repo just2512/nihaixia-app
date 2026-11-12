@@ -417,3 +417,16 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 红旗 gate 的 raw image/audio 输入即使附带用户 prompt 也 fail closed；只有可信转写作为 `attachmentTranscript` 独立来源才可进入 detector。该契约尚未接入生产模型入口，B 仍 RELEASE BLOCKED。
 - G 版本源检查已合并：README 当前仓库版本必须与 `pubspec.yaml` 完全一致；Flutter regression/Android CI 执行检查；Release tag 版本必须匹配 pubspec 的 X.Y.Z 部分。
 - C 的 83 个候选资产均存在，但全部缺少书目 locator；不得将讲稿文件标记为已校勘古籍原文。
+
+
+---
+
+## 2G. 2026-11-12 PR #93-#96 / #104 主线状态补充
+
+- B：#93 的 fail-closed RedFlagGate 只提供策略契约；detector 缺失/异常/超时/来源不完整时为 REVIEW_REQUIRED。生产入口尚未接入，医学 detector 未审核，不能标为完成。
+- C：#96 真实黄金 artifact 有 120 条 hits / 83 个 distinct sourceId；sourceId 与 asset 一致，但 locator 均 MISSING。sourceId 身份一致不等于古籍底本、卷页和原文出处已验证。
+- E：清理 coordinator、AI-owned 附件、Native runtime cache、TRACE 文件和 SQLite AI 表范围有代码/CI 证据；混合数据库备份、旧共享图片归属和 Find N2 重启后不可恢复仍缺证据。
+- F：主线覆盖 retrieval/contextAssembly/modelInput、route/dispatch/Headless、结构化问诊 per-turn、persistedState 和 presentation；失败轮次持久化关联及设备 TRACE 仍未完成。
+- 历史 restoreConversation 是恢复上下文，不是新轮次；不生成新 trace_id，保留原消息 metadata。
+- D Headless/Executed 保持 2（yunqi、almanac）；不为数量增加页面适配器。
+- G README/pubspec/CI/Release tag 版本源 guard 已合并；当前 master post-merge CI 另行按最新 SHA 核验。
