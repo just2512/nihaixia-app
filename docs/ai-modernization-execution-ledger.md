@@ -600,3 +600,74 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 - B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
 - E 混合数据库备份与旧共享临时文件归属仍有风险；不得全局禁用备份或误删非 AI 数据。
 - F 的已合并 per-turn TRACE 不是全链路完成证明。
+
+
+---
+
+## 15. 2026-11-12 #93-#96 集成后执行台账（master `b47397922d9348f89cc7a5586b7ca1b0659a63f5`）
+
+### 15.1 已合并代码/文档切片
+
+| PR | 合并提交 | 范围 | 自动验收 |
+|---|---|---|---|
+| #93 | `9f995a30b38ecf171295615f10d09b5074836ac6` | fail-closed RedFlagGate contract、detector interface、source types、纯 Dart tests | Flutter + Android arm64/Native SUCCESS |
+| #94 | `ce0d5fa650872559dfe3b15e8cd524e2c6ca3162` | retrieval/contextAssembly/modelInput TRACE；修复 metaphysics traced API 旁路 | Flutter + Android arm64/Native SUCCESS |
+| #95 | `b4cd3a91a10426e9c825188dd5e344e3bb4c48b3` | E 数据清除范围审计刷新 | Flutter + Android arm64/Native SUCCESS |
+| #96 | `b47397922d9348f89cc7a5586b7ca1b0659a63f5` | C 检索黄金快照和候选身份结构复核 | Flutter + Android arm64/Native SUCCESS |
+
+### 15.2 关键实现边界
+
+**B 红旗安全**
+- `RedFlagGate` 统一封装 detector 执行和既有 `RedFlagPreflight` 策略。
+- detector 未配置、抛错、超时、未返回 assessment、source mismatch、unknown source 或缺少文本/转写内容时返回 REVIEW_REQUIRED。
+- 不包含医学词表、阈值、处置话术；未接入 Flutter/Native 生产入口。B 仍 PARTIAL / RELEASE BLOCKED。
+
+**F TRACE**
+- `_retrieveKnowledgeWithTrace` 记录 retrieval status、duration、source IDs 和稳定错误码，不记录 query、上下文正文或模型输入。
+- `contextAssembly` 与 `modelInput` 阶段已纳入统一助手文本轮次。
+- 玄学模式普通文本改走 `sendWithContext`，不再绕过 traced Native API。
+- structured diagnosis、clarification/tool dispatch、Headless/Page 工具和失败轮次仍未接入。
+
+**E 数据清除**
+- #95 审计确认：coordinator/附件专属目录/Native cache/TRACE/UI/SQLite 四表事务均有代码与测试。
+- 混合 SQLite 备份副本、旧共享图片、外部导出副本和 Find N2 进程重启证据仍缺失。
+
+**C 检索**
+- 当前黄金请求派生 4 个 query：原始请求、桂枝汤、桂枝、伤寒论。
+- 3 个派生 query 各返回 40 条，120 条 hit 合计 83 个 distinct sourceId；桂枝汤与桂枝 query 重叠 35 条。
+- 120 条均为 shanghan lecture，sourceId 与 asset 一致，locator 全部 MISSING；context 2199 字符、6 个 source IDs，bibliographic verified = 0。
+- metadata fixture 证明可重复性，不代表相关性或古籍版本真实性已获人工批准。
+
+### 15.3 当前主线 CI
+
+- master：`b47397922d9348f89cc7a5586b7ca1b0659a63f5`
+- Flutter tests run `43167309805`：IN_PROGRESS（本节写入时）。
+- Flutter Quality Gate run `43167309687`：IN_PROGRESS（本节写入时）。
+- 等当前 SHA 的 workflow 结束后再更新最终状态，不用父 SHA 的结果代替。
+
+### 15.4 PR 队列清理
+
+- #19 全局关闭 Android backup 的方案已关闭：会影响非 AI 数据备份，不能作为 AI-only 保护。
+- #60/#70/#90 旧执行台账/审计文档分支已由主线新文档覆盖，关闭。
+- #69 TRACE runtime/coordinator 旧分支已由主线实现覆盖，关闭。
+- #72 旧 E 数据清除审计由 #95 当前基线审计覆盖，关闭。
+- 截至本节创建时，除本次文档刷新 PR 外，仓库没有其他 open PR。
+
+### 15.5 下一批执行顺序
+
+1. B2：按入口矩阵建立 gate injection seam 和调用顺序测试；不自行实现未经医学审核的 detector。
+2. F4：覆盖 clarification/tool dispatch、Headless/Page、structured diagnosis 和失败轮次 TRACE。
+3. C2：逐条核验 83 个 distinct candidate 的标题/正文命中、讲稿/原文边界和可追溯出处。
+4. E2：Find N2 清理后强制停止/重启验收；另行评估 AI 独立数据库迁移或应用层加密。
+5. A2：Find N2 GPU/CPU 长轮次、媒体、Activity recreation 和进程恢复 TRACE。
+6. D2：审计剩余 22 项 Page-only 工具，选择一个确定性、低副作用 adapter。
+7. G2：README/pubspec 版本一致性和证据状态自动 guard。
+
+### 15.6 不可越过的边界
+
+- B 无医学审核不得标 PASS；gate contract 未接入生产不得宣称已阻断所有旁路。
+- F 普通文本/图片/语音及检索 TRACE 不等于所有模式/工具的端到端 TRACE。
+- C 本地讲稿回链不等于古籍原文核验。
+- E 不得全局禁用 Android backup、删除整个 SQLite 数据库或清空共享 temp。
+- A/E/F 真机相关能力未取得 Find N2 证据前保持 UNKNOWN。
+- 不创建定时任务或周期性监控；在工作会话内按依赖顺序推进并用 CI 验收。
