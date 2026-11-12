@@ -4,8 +4,8 @@ import '../services/local_ai_data_clear_coordinator.dart';
 import '../utils/fold_aware_routes.dart';
 
 /// Settings entry for deleting only the local-AI data domains currently owned
-/// by the app. Legacy shared-temp files and Android backup copies are outside
-/// the coordinator's provable deletion boundary and are disclosed explicitly.
+/// by the app. Legacy shared-temp files and the mixed AI/non-AI database backup
+/// boundary are disclosed explicitly.
 class LocalAiDataClearTile extends StatefulWidget {
   const LocalAiDataClearTile({super.key, this.coordinator});
 
@@ -33,7 +33,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
             '• AI 专属附件目录中的图片和录音\n'
             '• 本地 TRACE 文件与 Native 运行时缓存\n\n'
             '不会删除已安装模型、收藏、诊断历史、用户设置或其他非 AI 业务数据。\n\n'
-            '注意：已知旧版 local_ai_时间戳.wav 录音会按精确文件名清理；旧版本遗留在共享临时目录、无法可靠归属的图片等文件，Android 系统备份副本及外部导出副本仍不在本次可证明范围内。此操作不可撤销。',
+            '注意：已知旧版 local_ai_时间戳.wav 录音会按精确文件名清理；旧版本遗留在共享临时目录、无法可靠归属的图片及外部导出副本不在本次可证明范围内。Android 备份规则排除本地模型与 TRACE 文件，但 AI 会话与非 AI 业务数据共用 SQLite 数据库，因此数据库备份副本仍可能保留。此操作不可撤销。',
           ),
         ),
         actions: [
