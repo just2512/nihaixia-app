@@ -367,7 +367,7 @@ A PARTIAL / 设备 UNKNOWN；B PARTIAL / RELEASE BLOCKED；C PARTIAL / locator M
 
 ### 17.1 集成与自动验收
 
-- PR #106 已合并，merge commit：fb315306bf76dd1a3545b07?（执行台账刷新）。
+- PR #106 已合并，merge commit：fb315306bf76dd1a3545b50758e92214e888cac0（执行台账刷新）。
 - PR #107 已合并，merge commit：5a9d2c7fccd4b291982d39699fe929eaa968a6fe；只修改 local_ai_interview_screen.dart 与对应 widget test。
 - PR #107 head db6309d29e847fe9c4bad3c53921d240f681fcdd，run 43187508718：Flutter 全量 regression SUCCESS；Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS；Branch validation SKIPPED（不计 PASS）。
 - 新 master 5a9d2c7 的独立 push workflows：Flutter Quality Gate run 43195424227、Flutter tests run 43195424259。本次复核时两者均 IN_PROGRESS；因此 master post-merge CI 暂记 IN_PROGRESS，不沿用 PR head CI 代替。
