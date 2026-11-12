@@ -499,3 +499,57 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 4. B 继续做生产入口调用图和 fail-closed 契约；正式 detector 仍需医学审核，不编造规则。
 5. D 继续从纯计算、无敏感数据页面挑选第二项 Headless 候选；不批量迁移 22 个页面。
 6. Find N2 真机验收仍由本地设备执行，未收到真实 TRACE 前保持 UNKNOWN。
+
+
+## 13. 2026-11-12 当前主线与并行执行续接（基线：`5f7bf738ad5894e2de7fd5903d8d6002e3fe6502`）
+
+> 本节覆盖第 12 节之后的实际合并和当前 PR 状态。CI 只按精确 head SHA 认定；旧 head 失败/取消不能覆盖新 head，运行中不能标 PASS。
+
+### 13.1 主线基线与已集成切片
+
+- PR #85 已 squash merge：`yunqi` 增加 Headless executor，保留 Page builder；合并后的代码提交为 `b786f84df0452b9771e341c818e0d06a12451ef3`。
+- PR #79 已 squash merge：审计报告、执行台账、能力清单和 TRACE 契约刷新；当前 master 为 `5f7bf738ad5894e2de7fd5903d8d6002e3fe6502`。
+- PR #85 的 Flutter regression run `43156803669` SUCCESS；Android arm64 build/native unit tests SUCCESS；Branch validation SKIPPED。此处按完整 Flutter + Android 证据集成，SKIPPED 不单独计 PASS。
+- PR #79 文档切片已合并；其代码基线没有替代主线测试。合并后 master workflows：Flutter Quality Gate run `43161470395` IN_PROGRESS；Flutter tests run `43161470467` PENDING。不得把旧 SHA 的成功结果冒充当前 master 全量 CI。
+
+### 13.2 当前代码 PR 与 CI
+
+| PR | 目标 | 最新 head | 当前 CI | 处理 |
+|---|---|---|---|---|
+| #86 | D：每日黄历 `almanac` Headless + Page | `590a886eac8b8f9535e60ed229ed3a9cb5056e8a` | Flutter regression run `43162028644` IN_PROGRESS；push run `43162022743` IN_PROGRESS；Android arm64 尚待对应 job 结论 | 前一 head 的日期正则双重转义、测试 const map 编译错误已在当前 head 修正；等待新 head 全量验收，不跳过失败测试 |
+| #87 | F：统一助手 per-turn trace_id、Native traced API 与 SQLite metadata | `65d98ab631c6689c2980462891e7fe61ba59f70c` | PR run `43162168985` QUEUED；push run `43162162128` PENDING；更早 head `8eb1ac9` 的静态分析失败已修正 | 等待当前 head 分析、Flutter 全量回归和 Android arm64；不继承旧 head 结论 |
+
+PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...`；GitHub 当前 mergeable=true，但合并前仍须确认最新 CI 对当前 merge ref 有效。PR #87 直接以 `5f7bf738...` 为 base。
+
+### 13.3 D：Headless 能力当前状态
+
+- 主线 Headless = 1：`yunqi`；主线 Executed = 1；其 Page builder 保留。
+- PR #86 为第二个候选：复用 `getDailyAlmanac`，不复制历法算法、不读取用户命盘；显式日期/相对日由设备本地日历解析，日期与未知字段 fail closed；结果包含结构化字段、`local-engine:almanac` source ID 和民俗免责声明。
+- #86 未合并前，主线仍只有 1 个 Headless。其余 Page-only 工具不得计为已执行。
+
+### 13.4 F：TRACE per-turn 当前状态
+
+- PR #87 复用默认关闭的 `AiTraceRuntime.recorder`；关闭时不生成 ID、不传 traced 参数、不在 SQLite metadata 增加 trace_id。
+- TRACE 开启时，普通文本、图片、语音调用已有 traced Native API；Native 响应由 `LocalAiService` 验证回传 ID。
+- 同一 ID 写入 user/assistant message metadata；未新增表/列；记录 input、native_inference、model_output、persistence、final_render 阶段。
+- 独立症状提取入口也已使用 traced API 并记录 Native 结果，但草稿不持久化 trace_id。
+- PR #87 尚未通过当前 head CI；结构化问诊、澄清/工具分支、检索阶段细分和设备 TRACE 仍未闭环。
+
+### 13.5 A-G 当前状态与后续自动推进
+
+| ID | 当前状态 | 下一步，不等待用户逐项点名 |
+|---|---|---|
+| A Native 多轮与生命周期 | PARTIAL / 真机 UNKNOWN | 复核 Activity teardown 串行队列和任务终态；继续 Find N2 GPU/CPU、图片/语音、多轮、重启实机 TRACE，不能用 CI 替代 |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 完成所有调用入口旁路矩阵与 fail-closed 集成设计；自然语言 detector 词表、阈值和处置文案必须有医学审核，未审核不自行编造或放行 |
+| C 检索来源与黄金行为 | PARTIAL | 按 subject/object/sourceId/原始位置/来源逐条审查候选身份与谓词分布；保持黄金快照，不为增加数量改排序 |
+| D Headless 工具 | PARTIAL | 先完成 #86；之后只挑一个无敏感数据、已有确定性函数的工具继续，不批量抽象 |
+| E 数据清理与备份 | PARTIAL | 继续审查旧共享 temp 图片无法归属的边界、混合 SQLite 的 AI 行备份影响及清理后进程重启；不误删非 AI 数据、不全局禁用备份 |
+| F TRACE | PARTIAL | 完成 #87；之后接入 structured diagnosis / clarification / tool dispatch / retrieval / result presentation，保持默认关闭和正文零记录 |
+| G 治理 | PARTIAL | 本次更新 inventory/ledger/report；补 README/pubspec/CI 版本单一来源检查，所有状态绑定最新 SHA 与 CI |
+
+### 13.6 本轮集成硬门槛
+
+1. #86/#87 均按各自最新 head 重新核对；任何失败先定位并修复，不得跳过或只跑 changed tests 后声称全量通过。
+2. 每个代码 PR 合并后刷新 master SHA，再对后续 PR 重新核对 base、mergeability、CI。
+3. 仅代码 + 自动化测试 + 目标设备 TRACE 三者齐全才可将设备相关能力标为 IMPLEMENTED。
+4. 医学审核、Find N2 真机、旧附件归属和混合数据库备份边界未完成前继续标记 PARTIAL / UNKNOWN / RELEASE BLOCKED。
