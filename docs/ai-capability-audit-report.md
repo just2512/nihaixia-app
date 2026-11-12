@@ -226,3 +226,30 @@ F 仍 PARTIAL。
 ### G. 审计与治理：PARTIAL
 
 - 本次审计台账、能力清单、TRACE 契约正在当前基线更新；README/pubspec/CI 版本一致性检查仍需单独闭环。
+
+
+## 2026-11-12 后续增量复核（master `5f7bf738ad5894e2de7fd5903d8d6002e3fe6502`）
+
+### D：Headless capability
+
+- PR #85 已合并，主线 `yunqi` 具备 Page + Headless 双入口；复用既有确定性计算，结果校验参数、source ID 与 status。主线 Headless / Executed 当前各 1 项。
+- PR #86 为第二项候选 `almanac`，复用 `getDailyAlmanac`，限制日期格式和 1900-2100 范围，拒绝非法日期/未知参数；未合并前仍计为 Page-only。当前 head `590a886e...`，Flutter regression 运行中，尚无最终 Android arm64 证据。
+
+### F：TRACE per-turn
+
+- PR #87 将默认关闭 recorder 接入统一助手普通文本、图片、语音模型轮次，并把同一 trace_id 写入现有 user/assistant message metadata；不新增表/列。
+- 独立症状提取调用也接入 traced Native API。已记录 input、native inference、model output、persistence、final render；持久化失败不会记为成功。
+- PR #87 当前 head `65d98ab6...`，CI queued/pending；旧 head 静态分析错误已修复，不能把旧失败算作当前 head 结果。
+- structured diagnosis、clarification/tool dispatch、retrieval 分阶段、失败轮次持久化关联和 Find N2 真实 TRACE 仍缺失。
+
+### A-G 当前结论
+
+- A PARTIAL：Native teardown 串行化已合并；设备级 GPU/CPU 长轮次与媒体/重启 TRACE UNKNOWN。
+- B PARTIAL / RELEASE BLOCKED：没有经医学审核的自然语言 detector、词表、阈值和处置文案；不自行补造。
+- C PARTIAL：精确方剂检索修正已合并；候选身份、谓词、来源、原始位置继续逐条审计。
+- D PARTIAL：主线 1 项 Headless/Executed；#86 待验收。
+- E PARTIAL：设置清理、附件归属、SQLite 边界和模型/TRACE 备份规则已有 CI 证据；混合数据库 AI 行备份、无法归属的旧共享图片和真机清理重启仍缺证据。
+- F PARTIAL：#87 待验收；跨所有路由与端到端设备 TRACE 未完成。
+- G PARTIAL：本轮 ledger/inventory/report 已刷新；版本一致性自动检查仍待实现。
+
+当前 master workflows：Flutter Quality Gate run `43161470395` IN_PROGRESS，Flutter tests run `43161470467` PENDING。PR #86/#87 的所有状态均按当前 head 记录，不得用旧 SHA 的 CI 覆盖。
