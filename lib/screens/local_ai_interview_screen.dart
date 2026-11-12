@@ -1603,15 +1603,49 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String userText,
     AssistantToolDefinition tool, {
     required AssistantMode mode,
+    required AiTraceContext traceContext,
     AssistantToolArguments? arguments,
   }) async {
     final request = arguments ??
         AssistantToolArguments(toolId: tool.id);
     final argumentErrors = request.validateAgainst(tool);
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.argumentValidation,
+      status: argumentErrors.isEmpty
+          ? AiTraceStatus.succeeded
+          : AiTraceStatus.failed,
+      toolId: tool.id,
+      errorCode: argumentErrors.isEmpty ? null : 'INVALID_ARGUMENTS',
+    );
     final executor = tool.headlessExecutor!;
-    final result = argumentErrors.isEmpty
-        ? executor(request.values)
-        : AssistantToolResult(
+    final executionWatch = Stopwatch()..start();
+    AssistantToolResult result;
+    if (argumentErrors.isEmpty) {
+      try {
+        result = executor(request.values);
+        executionWatch.stop();
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.succeeded,
+          durationMs: executionWatch.elapsedMilliseconds,
+          toolId: tool.id,
+        );
+      } catch (_) {
+        executionWatch.stop();
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.failed,
+          durationMs: executionWatch.elapsedMilliseconds,
+          toolId: tool.id,
+          errorCode: 'BUSINESS_EXECUTION_FAILED',
+        );
+        rethrow;
+      }
+    } else {
+      result = AssistantToolResult(
             toolId: tool.id,
             title: tool.title,
             status: AssistantToolExecutionStatus.failed,
@@ -1619,11 +1653,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             arguments: request.values,
             disclaimer: '参数校验未通过；本次没有执行工具。',
           );
+    }
     final contractErrors = <String>[
       ...result.validateFor(tool.id),
       ...result.validateArgumentsMatch(request.values),
     ];
     if (contractErrors.isNotEmpty) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
       if (mounted) {
         setState(() {
           _error = 'Headless 工具结果未通过契约校验：${contractErrors.join('；')}';
@@ -1631,6 +1673,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       return;
     }
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.resultValidation,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
+    );
 
     final response =
         '【${tool.title}执行结果】\n${result.toConversationText()}';
