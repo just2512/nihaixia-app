@@ -411,3 +411,17 @@ A PARTIAL / 设备 UNKNOWN；B PARTIAL / RELEASE BLOCKED；C PARTIAL / locator M
 | G 版本治理 | 版本源子目标 IMPLEMENTED | master 5a9d2c7 post-merge workflows 尚在运行；以两条主线 run 终态为准 |
 
 **下一步顺序：** B 先完成无医学规则的入口调用顺序 seam/测试设计，但不擅自上线未审核 detector；并行推进 C 来源 manifest 真实性核验；随后 A/E 真机与备份边界验收。D/G 不扩展。
+
+---
+
+## 18. 2026-11-12 PR #109 集成后红旗门禁复核
+
+- 当前 master：`00258671cf87188ac7ef82f5121c6f5bea48ef7e`（PR #109 squash merge）。
+- 新增 `RedFlagGate.runBefore` 仅提供通用 gate-before-operation 顺序和显式执行状态；配套测试证明 gate 先于副作用、detector 缺失和 raw image attachment 时不执行受保护操作。
+- 本次 PR 未将 Gate 接入 `LocalAiInterviewScreen`、`LocalAiService` 或 Android `MainActivity`。生产入口状态不变，仍为 MISSING。
+- PR head 的 Flutter regression、Android arm64/Native tests 通过（run `43200924284`）；独立 branch validation 通过（run `43200883925`）。PR run 中被跳过的 branch validation job 不计为 PASS。合并提交的独立 post-merge workflow 尚无可核验 run，保持 UNKNOWN。
+- B 状态：Gate sequencing contract = IMPLEMENTED（CODE + TEST + PR CI）；自然语言 detector = MISSING；医学审核 = MISSING；Flutter/Native 全入口调用 = MISSING；Find N2 TRACE = UNKNOWN。B 仍 PARTIAL / RELEASE BLOCKED。
+
+### 下一步限制
+
+B2 生产接入不能采用“可选 Gate 为空时跳过”方案，否则形成旁路；也不能在无医学审核 detector 时把 REVIEW_REQUIRED 默认改为 CLEAR。将 Gate 直接接入全部入口会阻断现有 AI 流程，需先完成医学审核和产品影响决策。未取得这些外部条件前，只推进不改变产品放行行为的入口审计、顺序契约与测试准备，不宣称生产门禁已完成。
