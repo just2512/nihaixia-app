@@ -43,8 +43,18 @@ class RedFlagGate {
         'INPUT_SOURCE_UNKNOWN',
       );
     }
-    // This contract currently accepts text/transcript inputs only. Raw image/audio
-    // bytes or an absent transcript cannot be treated as a complete assessment.
+    // A prompt accompanying an image/audio file is not evidence that the
+    // attachment itself was assessed. Callers must first produce a trusted,
+    // provenance-labelled attachmentTranscript input.
+    if (input.source == RedFlagInputSource.imageAttachment ||
+        input.source == RedFlagInputSource.audioAttachment) {
+      return const RedFlagPreflightResult(
+        RedFlagPreflightStatus.reviewRequired,
+        'RAW_ATTACHMENT_NOT_ASSESSED',
+      );
+    }
+    // This contract accepts text/transcript inputs only. An absent transcript
+    // cannot be treated as a complete assessment.
     if (input.text == null || input.text!.trim().isEmpty) {
       return const RedFlagPreflightResult(
         RedFlagPreflightStatus.reviewRequired,
