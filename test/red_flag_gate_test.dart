@@ -283,13 +283,14 @@ void main() {
         timeout: timeout,
       );
 
-      final run = await gate.runBefore<void>(
+      final run = await gate.runBefore<bool>(
         input: const RedFlagInput(
           source: RedFlagInputSource.imageAttachment,
           text: 'prompt text does not assess the image',
         ),
         operation: () async {
           sideEffects += 1;
+          return true;
         },
       );
 
