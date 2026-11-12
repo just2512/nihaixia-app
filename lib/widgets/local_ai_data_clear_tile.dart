@@ -33,7 +33,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
             '• AI 专属附件目录中的图片和录音\n'
             '• 本地 TRACE 文件与 Native 运行时缓存\n\n'
             '不会删除已安装模型、收藏、诊断历史、用户设置或其他非 AI 业务数据。\n\n'
-            '注意：旧版本遗留在共享系统临时目录中的附件、Android 系统备份副本及外部导出副本不在本次可证明清理范围内。此操作不可撤销。',
+            '注意：已知旧版 local_ai_时间戳.wav 录音会按精确文件名清理；旧版本遗留在共享临时目录、无法可靠归属的图片等文件，Android 系统备份副本及外部导出副本仍不在本次可证明范围内。此操作不可撤销。',
           ),
         ),
         actions: [
@@ -113,7 +113,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
     }
     lines.add(
       '请完全退出并重新启动 App，再检查会话和附件是否仍可见。'
-      '旧共享临时目录附件、系统备份副本及外部导出副本仍不在本流程的可证明范围内。',
+      '旧共享临时目录中无法可靠归属的图片等文件、系统备份副本及外部导出副本仍不在本流程的可证明范围内；已知旧版 local_ai_时间戳.wav 录音按精确文件名处理。',
     );
     return lines.join('\n\n');
   }
