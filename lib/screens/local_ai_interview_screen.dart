@@ -2020,7 +2020,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
     }
     if (tool.id == 'structured_diagnosis') {
-      await _startInlineTcmInterview(initialUserMessage: userText);
+      await _startInlineTcmInterview(
+        initialUserMessage: userText,
+        traceContext: activeTraceContext,
+      );
       return;
     }
     _pendingToolSelection = false;
