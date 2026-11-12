@@ -35,9 +35,9 @@
       "total": 196,
       "capturedCount": 40,
       "topSourceIds": [
-        "shanghan:assets/shanghan/clause_001.md:MISSING:条文2：太阳病中风（桂枝汤证）",
-        "shanghan:assets/shanghan/clause_014.md:MISSING:条文15：桂枝汤证（调和阴阳第一方）",
-        "shanghan:assets/shanghan/clause_015.md:MISSING:条文16：桂枝汤四主证"
+        "shanghan:assets/shanghan/clause_001.md",
+        "shanghan:assets/shanghan/clause_014.md",
+        "shanghan:assets/shanghan/clause_015.md"
       ],
       "sourceCounts": {"shanghan": 40},
       "locatorStatusCounts": {"MISSING": 40},
@@ -47,9 +47,9 @@
       "total": 294,
       "capturedCount": 40,
       "topSourceIds": [
-        "shanghan:assets/shanghan/clause_001.md:MISSING:条文2：太阳病中风（桂枝汤证）",
-        "shanghan:assets/shanghan/clause_014.md:MISSING:条文15：桂枝汤证（调和阴阳第一方）",
-        "shanghan:assets/shanghan/clause_015.md:MISSING:条文16：桂枝汤四主证"
+        "shanghan:assets/shanghan/clause_001.md",
+        "shanghan:assets/shanghan/clause_014.md",
+        "shanghan:assets/shanghan/clause_015.md"
       ],
       "sourceCounts": {"shanghan": 40},
       "locatorStatusCounts": {"MISSING": 40},
@@ -59,9 +59,9 @@
       "total": 121,
       "capturedCount": 40,
       "topSourceIds": [
-        "shanghan:assets/shanghan/clause_000.md:MISSING:太阳病篇·条文1（总纲）",
-        "shanghan:assets/shanghan/clause_008.md:MISSING:条文9：汗吐下三法禁忌与误治后果",
-        "shanghan:assets/shanghan/clause_013.md:MISSING:条文14：真寒假热与真热假寒鉴别"
+        "shanghan:assets/shanghan/clause_000.md",
+        "shanghan:assets/shanghan/clause_008.md",
+        "shanghan:assets/shanghan/clause_013.md"
       ],
       "sourceCounts": {"shanghan": 40},
       "locatorStatusCounts": {"MISSING": 40},
@@ -76,12 +76,12 @@
       "formula:wumeiwan",
       "formula:wuling_san",
       "herb:桂枝",
-      "shanghan:assets/shanghan/clause_001.md:MISSING:条文2：太阳病中风（桂枝汤证）",
-      "shanghan:assets/shanghan/clause_014.md:MISSING:条文15：桂枝汤证（调和阴阳第一方）",
-      "shanghan:assets/shanghan/clause_015.md:MISSING:条文16：桂枝汤四主证",
-      "shanghan:assets/shanghan/clause_017.md:MISSING:条文18：误下后气上冲可与桂枝汤"
+      "shanghan:assets/shanghan/clause_001.md",
+      "shanghan:assets/shanghan/clause_014.md",
+      "shanghan:assets/shanghan/clause_015.md",
+      "shanghan:assets/shanghan/clause_017.md"
     ],
-    "textLength": 3336,
+    "textLength": 3240,
     "bibliographicVerifiedCount": 0,
     "locatorStatusCounts": {"MISSING": 9}
   }

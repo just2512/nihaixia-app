@@ -44,12 +44,18 @@ class ClassicHit {
 
   /// Stable retrieval identity. This is an app-local backlink key, not a
   /// claim that the underlying historical text has a verified edition/page.
-  String get sourceId => [
-        source,
-        asset ?? bookId ?? 'MISSING',
-        chapterIndex?.toString() ?? 'MISSING',
-        title,
-      ].join(':');
+  String get sourceId {
+    if (asset != null && asset!.trim().isNotEmpty) {
+      return '$source:$asset';
+    }
+    if (bookId != null &&
+        bookId!.trim().isNotEmpty &&
+        chapterIndex != null &&
+        chapterIndex! >= 0) {
+      return '$source:$bookId:$chapterIndex';
+    }
+    return 'MISSING';
+  }
 
   /// PARTIAL means the app can reopen an internal asset/chapter but does not
   /// have a verified printed page locator. Lecture markdown remains MISSING.
@@ -185,9 +191,31 @@ class ClassicSearchService {
         chapterIndex: entry.chapterIndex,
         snippet: _snippet(entry.text, -1, 0),
       );
-      if (hit.sourceId == normalized) return hit;
+      if (_matchesSourceId(hit, normalized)) return hit;
     }
     return null;
+  }
+
+  /// Exact current IDs are preferred. Older IDs included title and MISSING
+  /// locator tokens; accept those legacy prefixes by stable asset/chapter key.
+  /// Never resolve by title alone or by fuzzy search.
+  static bool _matchesSourceId(ClassicHit hit, String candidate) {
+    if (hit.sourceId == candidate) return true;
+    final parts = candidate.split(':');
+    if (hit.asset != null && hit.asset!.trim().isNotEmpty) {
+      return parts.length >= 2 &&
+          parts[0] == hit.source &&
+          parts[1] == hit.asset;
+    }
+    if (hit.bookId != null &&
+        hit.chapterIndex != null &&
+        hit.chapterIndex! >= 0) {
+      return parts.length >= 3 &&
+          parts[0] == hit.source &&
+          parts[1] == hit.bookId &&
+          parts[2] == hit.chapterIndex.toString();
+    }
+    return false;
   }
 
   /// 检索：标题命中优先，其次正文命中；正文命中给出关键词上下文摘要。
