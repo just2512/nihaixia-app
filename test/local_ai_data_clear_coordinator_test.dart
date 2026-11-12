@@ -44,7 +44,8 @@ void main() {
   test('does not delete attachments while Native runtime release is unconfirmed', () async {
     final order = <String>[];
     final coordinator = LocalAiDataClearCoordinator(
-      stopTraceRecording: () async => order.add('stop-trace'),
+      stopTraceRecording: () async { order.add('stop-trace'); return true; },
+      resumeTraceRecording: (wasEnabled) async { order.add('resume-trace'); expect(wasEnabled, isTrue); },
       clearRuntimeCache: () async {
         order.add('native');
         return nativeResult(
