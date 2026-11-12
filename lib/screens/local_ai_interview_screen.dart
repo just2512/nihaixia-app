@@ -960,7 +960,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前 App 已注册工具：$availableTools。'
             '排盘结果必须由 App 工具生成，不得凭空推算。';
         return _AssistantTurnResponse(
-          text: await _service.sendMessageWithContext(text, context: context),
+          text: await sendWithContext(context),
         );
     }
   }
