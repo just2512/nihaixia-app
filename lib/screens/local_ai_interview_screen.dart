@@ -2818,6 +2818,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _recordTurnPersistenceNotStarted(
+    AiTraceContext traceContext, {
+    required String errorCode,
+    String? mode,
+  }) async {
+    int? conversationId;
+    try {
+      conversationId = await _conversationIdFuture;
+    } catch (_) {
+      // The trace still records that no history row was written.
+    }
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.persistence,
+      status: AiTraceStatus.notStarted,
+      conversationId: conversationId,
+      mode: mode,
+      errorCode: errorCode,
+    );
+  }
+
   Future<void> _send() async {
     if (_modelControlBusy) return;
     final text = _inputController.text.trim();
@@ -3081,6 +3102,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
       );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+      );
       final persisted = await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
@@ -3147,14 +3175,40 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         sourceIds: turnResponse.sourceIds,
       );
     } on PlatformException catch (error) {
+      final emptyReply = error.code == 'EMPTY_REPLY';
+      final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
+        status: emptyReply
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.unknown,
         mode: effectiveMode.name,
-        errorCode: error.code == 'TRACE_ID_MISMATCH'
-            ? 'TRACE_ID_MISMATCH'
-            : 'NATIVE_CALL_FAILED',
+        errorCode: emptyReply
+            ? null
+            : traceMismatch
+                ? 'TRACE_ID_MISMATCH'
+                : 'NATIVE_CALL_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: emptyReply
+            ? AiTraceStatus.failed
+            : traceMismatch
+                ? AiTraceStatus.unknown
+                : AiTraceStatus.notStarted,
+        mode: effectiveMode.name,
+        errorCode: emptyReply
+            ? 'MODEL_REPLY_INVALID'
+            : traceMismatch
+                ? 'TRACE_ID_MISMATCH'
+                : null,
+      );
+      await _recordTurnPersistenceNotStarted(
+        traceContext,
+        errorCode: 'NATIVE_TURN_NOT_PERSISTED',
+        mode: effectiveMode.name,
       );
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
@@ -3193,6 +3247,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         status: AiTraceStatus.unknown,
         mode: effectiveMode.name,
         errorCode: 'NATIVE_CALL_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.notStarted,
+        mode: effectiveMode.name,
+      );
+      await _recordTurnPersistenceNotStarted(
+        traceContext,
+        errorCode: 'NATIVE_TURN_NOT_PERSISTED',
+        mode: effectiveMode.name,
       );
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
@@ -3245,6 +3310,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: 'consultation',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
         status: AiTraceStatus.succeeded,
         mode: 'consultation',
       );
@@ -3321,14 +3392,35 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _confirmedDraft = draft;
       });
     } on PlatformException catch (error) {
+      final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
+      final emptyReply = error.code == 'EMPTY_REPLY';
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
+        status: emptyReply
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.unknown,
         mode: 'consultation',
-        errorCode: error.code == 'TRACE_ID_MISMATCH'
+        errorCode: traceMismatch
             ? 'TRACE_ID_MISMATCH'
-            : 'NATIVE_CALL_FAILED',
+            : emptyReply
+                ? null
+                : 'NATIVE_CALL_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: emptyReply
+            ? AiTraceStatus.failed
+            : traceMismatch
+                ? AiTraceStatus.unknown
+                : AiTraceStatus.notStarted,
+        mode: 'consultation',
+        errorCode: emptyReply
+            ? 'MODEL_REPLY_INVALID'
+            : traceMismatch
+                ? 'TRACE_ID_MISMATCH'
+                : null,
       );
       if (!mounted) return;
       setState(() {
@@ -3339,9 +3431,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
+        status: AiTraceStatus.succeeded,
         mode: 'consultation',
-        errorCode: 'NATIVE_CALL_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        mode: 'consultation',
+        errorCode: 'MODEL_OUTPUT_INVALID',
       );
       if (!mounted) return;
       setState(() {
@@ -3355,6 +3453,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         status: AiTraceStatus.unknown,
         mode: 'consultation',
         errorCode: 'NATIVE_CALL_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.notStarted,
+        mode: 'consultation',
       );
       if (!mounted) return;
       setState(() {
