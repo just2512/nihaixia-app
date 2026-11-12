@@ -60,7 +60,7 @@ class LocalAiService {
       'sendMessage',
       {
         'text': text,
-        if (normalizedTraceId != null) 'traceId': normalizedTraceId,
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
     _verifyTraceId(data, normalizedTraceId);
@@ -104,7 +104,7 @@ class LocalAiService {
       {
         'text': normalized,
         'context': context.trim(),
-        if (normalizedTraceId != null) 'traceId': normalizedTraceId,
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
     _verifyTraceId(data, normalizedTraceId);
@@ -164,7 +164,7 @@ class LocalAiService {
       {
         'path': path,
         'prompt': prompt,
-        if (normalizedTraceId != null) 'traceId': normalizedTraceId,
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
     _verifyTraceId(data, normalizedTraceId);
@@ -188,7 +188,7 @@ class LocalAiService {
     if (normalized.length != 32 || !isLowerHex) {
       throw ArgumentError.value(
         traceId,
-        'traceId',
+        'trace_id',
         'TRACE ID 必须是 32 位小写十六进制标识',
       );
     }
@@ -200,7 +200,7 @@ class LocalAiService {
     String? expectedTraceId,
   ) {
     if (expectedTraceId == null) return;
-    if (response?['traceId'] != expectedTraceId) {
+    if (response?['trace_id'] != expectedTraceId) {
       throw PlatformException(
         code: 'TRACE_ID_MISMATCH',
         message: 'Native 响应未返回与请求一致的 TRACE ID',
