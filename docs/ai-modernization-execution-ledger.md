@@ -10,9 +10,9 @@
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 按用户既有要求直接提交 master |
-| 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
+| 本轮复核 HEAD | `5f483743c85795ad1d24b76e45a427b01e6ca221` | 约束文件更新提交 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
-| README 版本说明 | `1.11.28+8037` | 已确认文档漂移，待修正 |
+| README 版本说明 | `1.11.30+8039` | 已与 pubspec 一致；#49 增加防漂移测试 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
@@ -44,10 +44,10 @@
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
-| B | 全模式红旗安全门禁 | `PARTIAL`（规则仅在提示词层的历史审计结论） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
-| C | 知识检索黄金行为基线 | `NOT_STARTED` | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
+| B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（策略状态契约已测试；自然语言 detector、全入口接入和医学审核仍缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
+| C | 知识检索黄金行为基线 | `PARTIAL`（#55 已增加查询来源与资产 manifest；原始检索/展示快照和纸本书目定位仍未闭合） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（Page Tool 与 Headless 尚未统一） | 目录审计可并行；适配器须等待对应基线 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据 |
-| E | 低成本数据保护 | `UNKNOWN` | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
+| E | 低成本数据保护 | `PARTIAL`（#51 数据库事务清除原语已合并；附件归属、Native cache、TRACE、UI 编排与真机重启验证未完成） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（已有部分结果/来源链路，不等于端到端 TRACE） | 与 A-E 按需并行 | 默认关闭、脱敏、trace_id 贯穿、关闭时行为不变、完整链路可复核 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
 
@@ -188,3 +188,43 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+## 9. 本轮复核记录（2026-11-12，master @ 5f483743c85795ad1d24b76e45a427b01e6ca221）
+
+### 已集成的小切片
+
+| PR | 合并 SHA | 交付 | 仍不能据此宣称 |
+|---|---|---|---|
+| #50 | `4dfff41049063925daa559830341053bd33c6528` | 默认关闭的本地 TRACE writer、stage schema、Find N2 测试方案 | 未接生产调用点，不是端到端 TRACE |
+| #51 | `f60a472eacc7432e5be0c6421ad4a13f8f8eff2e` | 四张 AI 对话表/旧聊天表的 SQLite 事务清除原语 | 不含附件、Native cache、TRACE、UI、备份和重启验证 |
+| #55 | `78d250235efc90d349eceb8470139eef4e3b2e69` | 检索派生查询 provenance、索引/方剂资产 SHA-256、来源定位状态 | 不证明纸本版本/卷页真实性，不改变检索算法 |
+| #56 | `83e5c548074afe0b40a2c7a4ebe70c54c7695c1a` | SQLite/附件/Native cache/TRACE/Android backup 数据域审计 | 静态审计，不是清除闭环 |
+| #57 | `5f483743c85795ad1d24b76e45a427b01e6ca221` | transcript 尾部保留、超 60 条 user history 时 sourceTruncated 显式传播 | 不证明设备多轮稳定性，不覆盖 SQLite user+assistant 原子持久化 |
+
+### 当前活动 PR 与 CI
+
+| PR | 工作流 | 分支 HEAD | CI | 状态/下一步 |
+|---|---|---|---|---|
+| #58 | A：user/assistant 成功轮次原子持久化 | `9f422049e9a94c5d762f885885352d103c21401f` | run `43131654789` 的 Flutter regression 因测试 fake 未实现新接口而失败；已在后续提交补齐 fake，run `43131930573` 待执行 | 等待最新 run 与 Android job 完成；不得合并失败 run |
+| #59 | E-02：AI 附件专属目录原语 | `58fd1283fcf5b80b6ad8ce20d8e319754c74cb95` | run `43131824839` Flutter regression 执行中；branch validation skipped | 等待 CI；UI 尚未接入新目录 |
+| #44 | G：旧执行台账刷新 | `d71b6bb0a71cd88c9e9742adb2c4e6c6c3b7eb63` | run `43039026940` Flutter tests SUCCESS | base 停留在 `ef522bf7`，已过期；由本轮台账分支替代，不得合并 |
+| #39 | E：旧 Native 清除整合 | 旧基线 | 旧分支 | 文件与当前布局/Native 生命周期重叠，禁止整分支合并；只提取经核验且不重叠的代码 |
+| #40 | D：工具能力目录审计 | 旧基线 | 旧分支 | 需要在当前主线重审证据，不得据旧审计标记 Headless/Executed |
+| #19 | Android 全应用备份禁用 | 旧基线 | 旧分支 | BLOCKED：会影响非 AI 数据迁移，且缺 merged manifest/build 证据 |
+
+### A-G 当前状态与下一步自动任务
+
+- **A — IN_PROGRESS：** #57 修复 transcript 尾部/截断标记；#58 正在修复双消息非原子持久化。下一项：合并前通过失败注入与全量回归；其后检查 UI/Native/SQLite 三方历史一致性、Activity teardown 与上下文预算。Find N2 GPU/CPU 各至少 20 轮 TRACE 仍由真实设备验收，未提供前保持 UNKNOWN。
+- **B — PARTIAL / RELEASE BLOCKED：** #47 策略语义测试与 #48 入口审计已合并；当前 preflight 只消费外部 detector 提供的规则 ID/主体/时间/极性，不自行理解原始文本。下一项：只读枚举五模式所有模型调用入口、initialPrompt、历史续聊、附件转写/图像描述和 Native 旁路；先定义无模型放行的入口契约。医学审核缺失前不得启用正式红旗规则。
+- **C — PARTIAL：** #55 增加派生查询来源与资产 hash；下一项：确认黄金检索用例的原始 query、实际 hits/order、source ID、上下文注入与最终展示均可复现，补可比较夹具；纸本版本/卷页继续标 MISSING。禁止无证据改检索算法或引入 FTS5。
+- **D — PARTIAL：** #46 UNKNOWN 参数来源契约已合并；旧 #40 审计基于旧 master。下一项：在当前 master 重做 Page Tool / Headless / Executed 能力矩阵，逐项核实业务函数签名、权限、取消、错误和结果回流；行为基线未锁定前不抽适配器。
+- **E — PARTIAL：** #51 SQLite 清除原语已合并，#56 已固定数据域，#59 建立 cacheDir 专属附件目录原语。下一项：#59 通过后再独立接入图片导入/录音路径；随后实现 Native runtime cache 删除、TRACE clear、二次确认 UI 和逐项部分失败结果。不得清空共享临时目录或模型文件。
+- **F — PARTIAL：** #50 writer/schema 已合并，但生产 recorder 默认关闭且没有生产调用点。下一项：在 A/#58 稳定后冻结 trace_id 跨 Dart/Native 的传递契约，按单文件所有权分批接线；TRACE 关闭不得改变业务行为，日志失败不得阻断请求。
+- **G — IN_PROGRESS：** 本 PR 更新唯一台账并记录当前基线/活动分支；README 与 pubspec 均为 `1.11.30+8039`，#49 防漂移测试已合并。下一项：每次合并后更新本表，保留历史记录但不将过期 run 当作当前 PASS。
+
+### 真机与发布状态
+
+- 本轮未取得 Find N2 真机 TRACE；GPU/CPU 轮次、图片/语音附件、强制终止恢复、AI 数据清除后重启不可恢复均保持 UNKNOWN。
+- B 全入口红旗、领域隔离、工具执行状态安全、来源可信、跨轮隔离、E 清除闭环均未全部满足发布门槛；相关能力不得标 IMPLEMENTED 或 RELEASE READY。
+- 本轮 CI 的成功只代表对应 PR 的自动化环境，不替代设备验收。
+
