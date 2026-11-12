@@ -516,10 +516,10 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 
 | PR | 目标 | 最新 head | 当前 CI | 处理 |
 |---|---|---|---|---|
-| #86 | D：每日黄历 `almanac` Headless + Page | `590a886eac8b8f9535e60ed229ed3a9cb5056e8a` | Flutter regression run `43162028644` IN_PROGRESS；push run `43162022743` IN_PROGRESS；Android arm64 尚待对应 job 结论 | 前一 head 的日期正则双重转义、测试 const map 编译错误已在当前 head 修正；等待新 head 全量验收，不跳过失败测试 |
-| #87 | F：统一助手 per-turn trace_id、Native traced API 与 SQLite metadata | `65d98ab631c6689c2980462891e7fe61ba59f70c` | PR run `43162168985` QUEUED；push run `43162162128` PENDING；更早 head `8eb1ac9` 的静态分析失败已修正 | 等待当前 head 分析、Flutter 全量回归和 Android arm64；不继承旧 head 结论 |
+| #86 | D：每日黄历 `almanac` Headless + Page | `18ecc81a4ff6a18757386d39632b9a8567ae8b37` | changed-test Branch validation run `43162555492` SUCCESS；PR Flutter regression run `43162562989` PENDING；Android arm64 尚待对应 job 结论 | 前一 head 的日期正则双重转义、测试 const map 编译错误已在当前 head 修正；等待新 head 全量验收，不跳过失败测试 |
+| #87 | F：统一助手 per-turn trace_id、Native traced API 与 SQLite metadata | `abef4bb9dc09ed6f2e690a06bdc76669067b7432` | changed-test Branch validation run `43162523644` SUCCESS；PR Flutter regression run `43162529437` IN_PROGRESS；Android arm64 尚待对应 job 结论 | 等待当前 head 分析、Flutter 全量回归和 Android arm64；不继承旧 head 结论 |
 
-PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...`；GitHub 当前 mergeable=true，但合并前仍须确认最新 CI 对当前 merge ref 有效。PR #87 直接以 `5f7bf738...` 为 base。
+PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...`；GitHub 当前 mergeable=true，changed-test 验证已通过，合并前仍须等待最新 PR 全量回归与 Android arm64。PR #87 直接以 `5f7bf738...` 为 base，changed-test 验证已通过。
 
 ### 13.3 D：Headless 能力当前状态
 
