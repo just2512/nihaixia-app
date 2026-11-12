@@ -50,7 +50,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _clearing = true);
-    LocalAiDataClearResult? result;
+    late final LocalAiDataClearResult result;
     try {
       result = await (widget.coordinator ??
               LocalAiDataClearCoordinator.forApp())
@@ -80,7 +80,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          result!.complete ? '清理范围内的数据已处理' : '本地 AI 数据未完整清理',
+          result.complete ? '清理范围内的数据已处理' : '本地 AI 数据未完整清理',
         ),
         content: SingleChildScrollView(
           child: Text(_resultSummary(result)),
