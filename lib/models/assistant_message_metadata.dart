@@ -15,6 +15,7 @@ class AssistantMessageMetadata {
     this.sourceIds = const [],
     this.toolArguments = const {},
     this.knowledgeStatus,
+    this.traceId,
   });
 
   final String? mode;
@@ -28,6 +29,8 @@ class AssistantMessageMetadata {
   final List<String> sourceIds;
   final Map<String, String> toolArguments;
   final String? knowledgeStatus;
+  /// Opaque per-turn correlation ID; never user content.
+  final String? traceId;
 
   Map<String, dynamic> toJson() => {
         'schemaVersion': 1,
@@ -42,6 +45,7 @@ class AssistantMessageMetadata {
         if (sourceIds.isNotEmpty) 'sourceIds': sourceIds,
         if (toolArguments.isNotEmpty) 'toolArguments': toolArguments,
         if (knowledgeStatus != null) 'knowledgeStatus': knowledgeStatus,
+        if (traceId != null) 'trace_id': traceId,
       };
 
   String encode() => jsonEncode(toJson());
@@ -65,6 +69,7 @@ class AssistantMessageMetadata {
               ? (decoded['sourceIds'] as List).whereType<String>().toList()
               : const [],
           knowledgeStatus: readString('knowledgeStatus'),
+          traceId: readString('trace_id'),
           toolArguments: decoded['toolArguments'] is Map
               ? Map<String, String>.fromEntries(
                   (decoded['toolArguments'] as Map).entries.where(

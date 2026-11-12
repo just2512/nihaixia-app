@@ -11,6 +11,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -307,6 +308,7 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
 class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentContexts = <String>[];
+  final sentTraceIds = <String>[];
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
@@ -322,6 +324,26 @@ class _TextSendService extends LocalAiService {
     String text, {
     required String context,
   }) async {
+    sentContexts.add(context);
+    return sendMessage(text);
+  }
+
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+  }) async {
+    sentTraceIds.add(traceId);
+    return sendMessage(text);
+  }
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required String context,
+    required String traceId,
+  }) async {
+    sentTraceIds.add(traceId);
     sentContexts.add(context);
     return sendMessage(text);
   }
@@ -2509,5 +2531,62 @@ void main() {
     expect(metadata.sourceIds, const ['local-engine:yunqi']);
   });
 
+
+
+  testWidgets('TRACE 开启时同一轮 ID 贯穿 Native 调用与 user/assistant metadata',
+      (tester) async {
+    const traceId = '0123456789abcdef0123456789abcdef';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async {
+        events.add(event);
+      },
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 12),
+    );
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '你好');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTraceIds, [traceId]);
+    final conversations = await _store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final conversationId = conversations.single['id'] as int;
+    final messages = await _store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(messages, hasLength(2));
+    final userMetadata = AssistantMessageMetadata.decode(
+      messages[0]['metadata'] as String,
+    );
+    final assistantMetadata = AssistantMessageMetadata.decode(
+      messages[1]['metadata'] as String,
+    );
+    expect(userMetadata.traceId, traceId);
+    expect(assistantMetadata.traceId, traceId);
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.input,
+      AiTraceStage.nativeInference,
+      AiTraceStage.modelOutput,
+      AiTraceStage.persistence,
+      AiTraceStage.finalRender,
+    ]));
+    expect(tester.takeException(), isNull);
+  });
 
 }

@@ -13,6 +13,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/ai_trace.dart';
+import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
@@ -146,6 +148,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.preferredAnchorPoint,
     this.initialPrompt,
     this.testToolRouteBuilder,
+    this.traceRecorder,
   });
 
   /// Injectable to verify initialization and error states without a native model.
@@ -185,6 +188,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// never sent automatically; the user remains responsible for submission.
   final String? initialPrompt;
 
+  /// Injectable recorder for deterministic per-turn TRACE tests.
+  @visibleForTesting
+  final AiTraceRecorder? traceRecorder;
+
   /// Physical-panel anchor inherited from the control that opened this route.
   final Offset? preferredAnchorPoint;
 
@@ -208,6 +215,7 @@ class _AssistantTurnResponse {
 }
 
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
+  AiTraceRecorder get _traceRecorder => widget.traceRecorder ?? AiTraceRuntime.recorder;
   late final LocalAiService _service;
   late final LocalAiImagePicker _imagePicker;
   late final LocalAiAttachmentStore _attachmentStore;
@@ -846,7 +854,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
     required AssistantMode mode,
+    required AiTraceContext traceContext,
   }) async {
+    final traceId = traceContext.traceId;
+    Future<String> sendWithContext(String context) => traceId == null
+        ? _service.sendMessageWithContext(text, context: context)
+        : _service.sendMessageWithContextAndTrace(
+            text,
+            context: context,
+            traceId: traceId,
+          );
     switch (mode) {
       case AssistantMode.automatic:
         final knowledge =
@@ -856,7 +873,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
         if (knowledge.status == AssistantKnowledgeRetrievalStatus.noResults &&
             knowledge.failureMessage == null) {
-          final reply = await _service.sendMessage(text);
+          final reply = traceId == null
+              ? await _service.sendMessage(text)
+              : await _service.sendMessageWithTrace(text, traceId: traceId);
           return _AssistantTurnResponse(
             text: reply,
             sourceIds: knowledge.sourceIds,
@@ -877,10 +896,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ..writeln('App 本地知识库相关检索结果（仅作有来源的参考）：')
             ..write(knowledge.text);
         }
-        final reply = await _service.sendMessageWithContext(
-          text,
-          context: context.toString(),
-        );
+        final reply = await sendWithContext(context.toString());
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
@@ -901,9 +917,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           AssistantKnowledgeRetrievalStatus.partial => 'App 本地知识库部分命中；仅引用已反查成功的来源（PARTIAL）：\n${knowledge.text}',
           AssistantKnowledgeRetrievalStatus.retrieved => 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n${knowledge.text}',
         };
-        final reply = await _service.sendMessageWithContext(
-          text,
-          context: '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
+        final reply = await sendWithContext(
+          '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
               '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊；'
               '普通对话不自动诊断、不推荐方剂或剂量。\n'
@@ -921,10 +936,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
             '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
-        final reply = await _service.sendMessageWithContext(
-          text,
-          context: context,
-        );
+        final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
           text: reply + knowledge.citationFooter,
           sourceIds: knowledge.sourceIds,
@@ -938,7 +950,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前 App 已注册工具：$availableTools。'
             '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
         return _AssistantTurnResponse(
-          text: await _service.sendMessageWithContext(text, context: context),
+          text: await sendWithContext(context),
         );
       case AssistantMode.metaphysics:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
@@ -985,7 +997,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _taskStateWrite;
   }
 
-  Future<void> _persistSuccessfulTurn({
+  Future<bool> _persistSuccessfulTurn({
     required String userText,
     required String assistantText,
     AssistantMode? mode,
@@ -996,10 +1008,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     List<String> sourceIds = const [],
     Map<String, String> toolArguments = const {},
     String? knowledgeStatus,
+    String? traceId,
   }) async {
     try {
       final id = await _conversationIdFuture;
-      if (id == null) return;
+      if (id == null) return false;
       final activeMode = mode ?? _assistantMode;
       final replayable = userText.trim().isNotEmpty;
       final metadata = AssistantMessageMetadata(
@@ -1008,6 +1021,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         replayable: replayable,
         attachmentType: attachmentType,
         toolArguments: toolArguments,
+        traceId: traceId,
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
@@ -1028,8 +1042,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           sourceIds: sourceIds,
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
+          traceId: traceId,
         ).encode(),
       );
+      return true;
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
       if (mounted) {
@@ -1037,6 +1053,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
         });
       }
+      return false;
     }
   }
 
@@ -2336,6 +2353,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: audioPath != null
+          ? 'audio'
+          : imagePath != null
+              ? 'image'
+              : 'text',
+      mode: effectiveMode.name,
+    );
+    final traceId = traceContext.traceId;
+
     final userLabel = text.isNotEmpty
         ? text
         : imagePath != null
@@ -2352,21 +2380,59 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       final turnResponse = audioPath != null
           ? _AssistantTurnResponse(
-              text: await _service.sendAudio(audioPath, prompt: text),
+              text: traceId == null
+                  ? await _service.sendAudio(audioPath, prompt: text)
+                  : await _service.sendAudioWithTrace(
+                      audioPath,
+                      prompt: text,
+                      traceId: traceId,
+                    ),
             )
           : imagePath != null
               ? _AssistantTurnResponse(
-                  text: await _service.sendImage(imagePath, prompt: text),
+                  text: traceId == null
+                  ? await _service.sendImage(imagePath, prompt: text)
+                  : await _service.sendImageWithTrace(
+                      imagePath,
+                      prompt: text,
+                      traceId: traceId,
+                    ),
                 )
-              : await _sendTextWithKnowledgeContext(text, mode: effectiveMode);
+              : await _sendTextWithKnowledgeContext(
+                  text,
+                  mode: effectiveMode,
+                  traceContext: traceContext,
+                );
       final reply = turnResponse.text;
-      await _persistSuccessfulTurn(
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelOutput,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+      );
+      final persisted = await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
         mode: effectiveMode,
+        traceId: traceId,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
         sourceIds: turnResponse.sourceIds,
         knowledgeStatus: turnResponse.knowledgeStatus,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
@@ -2409,7 +2475,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : null;
       });
       _scrollToBottom();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+      );
     } on PlatformException catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: effectiveMode.name,
+        errorCode: error.code == 'TRACE_ID_MISMATCH'
+            ? 'TRACE_ID_MISMATCH'
+            : 'NATIVE_CALL_FAILED',
+      );
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
@@ -2441,6 +2523,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : message;
       });
     } catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: effectiveMode.name,
+        errorCode: 'NATIVE_CALL_FAILED',
+      );
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
@@ -2479,8 +2568,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _extracting = true;
       _error = null;
     });
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: 'symptom_extraction',
+      mode: 'consultation',
+    );
     try {
-      final draft = await _service.extractSymptoms();
+      final traceId = traceContext.traceId;
+      final draft = traceId == null
+          ? await _service.extractSymptoms()
+          : await _service.extractSymptomsWithTrace(traceId: traceId);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: 'consultation',
+      );
       if (!mounted) return;
       setState(() => _extracting = false);
       if (draft.summaryLines.isEmpty) {
@@ -2554,18 +2657,41 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _confirmedDraft = draft;
       });
     } on PlatformException catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: 'consultation',
+        errorCode: error.code == 'TRACE_ID_MISMATCH'
+            ? 'TRACE_ID_MISMATCH'
+            : 'NATIVE_CALL_FAILED',
+      );
       if (!mounted) return;
       setState(() {
         _extracting = false;
         _error = error.message ?? '症状整理失败';
       });
     } on FormatException catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: 'consultation',
+        errorCode: 'NATIVE_CALL_FAILED',
+      );
       if (!mounted) return;
       setState(() {
         _extracting = false;
         _error = error.message;
       });
     } catch (error) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        mode: 'consultation',
+        errorCode: 'NATIVE_CALL_FAILED',
+      );
       if (!mounted) return;
       setState(() {
         _extracting = false;
