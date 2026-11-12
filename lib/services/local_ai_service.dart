@@ -138,6 +138,21 @@ class LocalAiService {
   }
 
 
+  /// Releases the native Engine/Conversation before deleting only cacheDir/litertlm.
+  /// A partial result is returned when release or cache deletion fails.
+  Future<LocalAiRuntimeCacheClearResult> clearRuntimeCache() async {
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'clearRuntimeCache',
+    );
+    if (data == null) {
+      throw PlatformException(
+        code: 'EMPTY_CLEAR_RESULT',
+        message: '没有收到本地 AI 缓存清理结果',
+      );
+    }
+    return LocalAiRuntimeCacheClearResult.fromMap(data);
+  }
+
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
@@ -169,6 +184,40 @@ class LocalAiService {
       );
     }
     return LocalAiModelStatus.fromMap(data);
+  }
+}
+
+
+class LocalAiRuntimeCacheClearResult {
+  const LocalAiRuntimeCacheClearResult({
+    required this.runtimeReleased,
+    required this.cacheDeleted,
+    required this.modelFileExists,
+    this.errorCode,
+  });
+
+  final bool runtimeReleased;
+  final bool cacheDeleted;
+  final bool modelFileExists;
+  final String? errorCode;
+
+  bool get complete => runtimeReleased && cacheDeleted;
+
+  factory LocalAiRuntimeCacheClearResult.fromMap(Map<String, dynamic> map) {
+    final runtimeReleased = map['runtimeReleased'];
+    final cacheDeleted = map['cacheDeleted'];
+    final modelFileExists = map['modelFileExists'];
+    if (runtimeReleased is! bool ||
+        cacheDeleted is! bool ||
+        modelFileExists is! bool) {
+      throw const FormatException('本地 AI 缓存清理结果字段不完整');
+    }
+    return LocalAiRuntimeCacheClearResult(
+      runtimeReleased: runtimeReleased,
+      cacheDeleted: cacheDeleted,
+      modelFileExists: modelFileExists,
+      errorCode: map['errorCode'] as String?,
+    );
   }
 }
 
