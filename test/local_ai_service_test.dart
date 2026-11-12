@@ -566,6 +566,28 @@ void main() {
       expect(received[1].arguments['trace_id'], traceId);
     });
 
+    test('extractSymptomsWithTrace forwards and validates trace ID', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': '{"main_complaint":"头痛"}',
+          'sourceTruncated': false,
+          'trace_id': traceId,
+        };
+      });
+
+      final draft = await LocalAiService().extractSymptomsWithTrace(
+        traceId: traceId,
+      );
+
+      expect(draft.mainComplaint, '头痛');
+      expect(received?.method, 'extractSymptoms');
+      expect(received?.arguments, <String, Object?>{
+        'trace_id': traceId,
+      });
+    });
+
     test('invalid trace ID is rejected before a platform call', () async {
       var calls = 0;
       messenger.setMockMethodCallHandler(channel, (_) async {
