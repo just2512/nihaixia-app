@@ -2639,4 +2639,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('玄学模式普通文本调用也必须透传本轮 TRACE ID', (tester) async {
+    const traceId = 'abcdef0123456789abcdef0123456789';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 12),
+    );
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '介绍紫微斗数的文化背景');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTraceIds, [traceId]);
+    expect(service.sentContexts.single, contains('玄学大师'));
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.input,
+      AiTraceStage.nativeInference,
+      AiTraceStage.modelOutput,
+      AiTraceStage.persistence,
+      AiTraceStage.finalRender,
+    ]));
+    expect(tester.takeException(), isNull);
+  });
+
 }
