@@ -1924,14 +1924,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             AssistantToolExecutionStatus.failed => AiTraceStatus.failed,
             AssistantToolExecutionStatus.unknown => AiTraceStatus.unknown,
             AssistantToolExecutionStatus.succeeded ||
-            AssistantToolExecutionStatus.noResult ||
-            AssistantToolExecutionStatus.cancelled => AiTraceStatus.succeeded,
+            AssistantToolExecutionStatus.noResult => AiTraceStatus.succeeded,
+            AssistantToolExecutionStatus.cancelled => AiTraceStatus.failed,
           },
           durationMs: executionWatch.elapsedMilliseconds,
           toolId: tool.id,
-          errorCode: result.status == AssistantToolExecutionStatus.failed
-              ? 'BUSINESS_EXECUTION_FAILED'
-              : null,
+          errorCode: switch (result.status) {
+            AssistantToolExecutionStatus.failed => 'BUSINESS_EXECUTION_FAILED',
+            AssistantToolExecutionStatus.cancelled =>
+              'BUSINESS_EXECUTION_CANCELLED',
+            AssistantToolExecutionStatus.succeeded ||
+            AssistantToolExecutionStatus.noResult ||
+            AssistantToolExecutionStatus.unknown => null,
+          },
         );
       } catch (_) {
         executionWatch.stop();
