@@ -2594,4 +2594,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('玄学模式普通文本也使用同一轮 TRACE ID 和上下文阶段', (tester) async {
+    const traceId = 'abcdef0123456789abcdef0123456789';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 13),
+    );
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '介绍传统术数文化的历史背景');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTraceIds, [traceId]);
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.input,
+      AiTraceStage.contextAssembly,
+      AiTraceStage.modelInput,
+      AiTraceStage.nativeInference,
+      AiTraceStage.modelOutput,
+      AiTraceStage.persistence,
+      AiTraceStage.finalRender,
+    ]));
+    expect(tester.takeException(), isNull);
+  });
+
 }
