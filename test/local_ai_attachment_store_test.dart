@@ -52,18 +52,38 @@ void main() {
     );
   });
 
-  test('clearAll deletes owned attachments but leaves shared temp files', () async {
+  test('clearAll deletes owned and exact legacy AI recordings but leaves shared temp files', () async {
     final source = File('${sharedTemp.path}/shared.jpg');
     await source.writeAsBytes([9, 8, 7]);
     final importedPath = await store.importFile(source.path);
     final recordingPath = await store.createRecordingPath();
     await File(recordingPath).writeAsBytes([5, 4, 3]);
 
+    final legacyRecording = File('${root.path}/local_ai_1731360000000.wav');
+    await legacyRecording.writeAsBytes([1, 2, 3]);
+    final unrelatedTempFile = File('${root.path}/unrelated.tmp');
+    await unrelatedTempFile.writeAsBytes([6, 7, 8]);
+    final nestedLegacyRecording = File('${sharedTemp.path}/local_ai_1731360000001.wav');
+    await nestedLegacyRecording.writeAsBytes([4, 5, 6]);
+
     await store.clearAll();
 
     expect(await File(importedPath).exists(), isFalse);
     expect(await File(recordingPath).exists(), isFalse);
+    expect(await legacyRecording.exists(), isFalse);
+    expect(await unrelatedTempFile.exists(), isTrue);
+    expect(await nestedLegacyRecording.exists(), isTrue);
     expect(await source.exists(), isTrue);
+    expect(await store.listOwnedFiles(), isEmpty);
+  });
+
+  test('clearAll removes allowlisted legacy recordings without an owned directory', () async {
+    final legacyRecording = File('${root.path}/local_ai_1731360000002.wav');
+    await legacyRecording.writeAsBytes([1, 2, 3]);
+
+    await store.clearAll();
+
+    expect(await legacyRecording.exists(), isFalse);
     expect(await store.listOwnedFiles(), isEmpty);
   });
 

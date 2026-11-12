@@ -10,6 +10,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
@@ -214,6 +215,23 @@ class _ValidRecordingFileInspector
     implements LocalAiRecordingFileInspector {
   @override
   Future<int?> sizeBytes(String path) async => 4;
+}
+
+class _FakeRecordingAttachmentStore extends LocalAiAttachmentStore {
+  _FakeRecordingAttachmentStore(this.path);
+
+  final String path;
+
+  @override
+  Future<String> createRecordingPath({String extension = '.wav'}) async =>
+      path;
+}
+
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var attempt = 0; attempt < 30 && finder.evaluate().isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsOneWidget);
 }
 
 class _EmptyLocalAiImagePicker implements LocalAiImagePicker {
@@ -671,33 +689,39 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
             service: service,
             audioRecorder: recorder,
             recordingFileInspector: _ValidRecordingFileInspector(),
+            attachmentStore: _FakeRecordingAttachmentStore('/tmp/local_ai_test.wav'),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('录制语音（最长 30 秒）'));
-      await tester.pumpAndSettle();
-      expect(find.byTooltip('停止录音'), findsOneWidget);
+      await _pumpUntilFound(tester, find.byTooltip('停止录音'));
       expect(recorder._path, isNotNull);
 
       await tester.tap(find.byTooltip('停止录音'));
-      await tester.pumpAndSettle();
+      await _pumpUntilFound(
+        tester,
+        find.textContaining('录音停止失败，录音可能仍在继续'),
+      );
 
       expect(recorder.stopCalls, 1);
-      expect(find.textContaining('录音停止失败，录音可能仍在继续'), findsOneWidget);
       expect(find.byTooltip('停止录音'), findsOneWidget);
 
       await tester.tap(find.byTooltip('停止录音'));
-      await tester.pumpAndSettle();
+      await _pumpUntilFound(
+        tester,
+        find.text('语音已录制（最长 30 秒），发送前可移除。'),
+      );
 
       expect(recorder.stopCalls, 2);
-      expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsOneWidget);
       expect(find.textContaining('录音停止失败'), findsNothing);
+
     },
   );
 
@@ -719,14 +743,20 @@ void main() {
             service: _TextSendService(),
             audioRecorder: recorder,
             recordingFileInspector: _ThrowingRecordingFileInspector(),
+            attachmentStore: _FakeRecordingAttachmentStore(
+              '/tmp/local_ai_inspection_failure.wav',
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('录制语音（最长 30 秒）'));
-      await tester.pumpAndSettle();
+      await _pumpUntilFound(tester, find.byTooltip('停止录音'));
       await tester.tap(find.byTooltip('停止录音'));
-      await tester.pumpAndSettle();
+      await _pumpUntilFound(
+        tester,
+        find.textContaining('录音已停止，但读取录音文件失败'),
+      );
 
       expect(recorder.stopCalls, 1);
       expect(find.textContaining('录音已停止，但读取录音文件失败'), findsOneWidget);
