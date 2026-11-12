@@ -717,7 +717,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 ### 17.1 主线基线与 CI
 
 - 当前 master：5a9d2c7fccd4b291982d39699fe929eaa968a6fe。
-- PR #106：merge commit fb315306bf76dd1a3545b07?（台账刷新）。
+- PR #106：merge commit fb315306bf76dd1a3545b50758e92214e888cac0（台账刷新）。
 - PR #107：merge commit 5a9d2c7fccd4b291982d39699fe929eaa968a6fe。
 - PR #107 head：db6309d29e847fe9c4bad3c53921d240f681fcdd；run 43187508718：Flutter regression SUCCESS；Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS；Branch validation SKIPPED。
 - master push runs：Flutter Quality Gate 43195424227、Flutter tests 43195424259；本次记录时均 IN_PROGRESS。必须等待这两个 run 结束，不能用 PR head SUCCESS 代替。
