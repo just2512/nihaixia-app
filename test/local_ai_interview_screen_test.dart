@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
@@ -661,6 +663,9 @@ void main() {
     (tester) async {
       final service = _TextSendService();
       final recorder = _FailOnceStopRecorder();
+      final attachmentRoot = await Directory.systemTemp.createTemp(
+        'nihaixia-ai-attachment-test-',
+      );
       messenger.setMockMethodCallHandler(
         const MethodChannel('plugins.flutter.io/path_provider'),
         (call) async {
@@ -671,10 +676,14 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: LocalAiInterviewScreen(conversationStore: _store, 
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
             service: service,
             audioRecorder: recorder,
             recordingFileInspector: _ValidRecordingFileInspector(),
+            attachmentStore: LocalAiAttachmentStore(
+              directoryProvider: () async => attachmentRoot,
+            ),
           ),
         ),
       );
@@ -698,6 +707,8 @@ void main() {
       expect(recorder.stopCalls, 2);
       expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsOneWidget);
       expect(find.textContaining('录音停止失败'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await attachmentRoot.delete(recursive: true);
     },
   );
 
