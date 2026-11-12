@@ -17,8 +17,8 @@
 | C 检索基线 | PARTIAL | 黄金快照与精确方剂修正已合并；候选身份、谓词、sourceId、原始位置及来源逐条审查仍未完成 |
 | D Headless Capability | PARTIAL | 主线已有 2 项 Headless/Executed（yunqi、almanac）；其余 22 项仍为 Page-only，结构化问诊为内联流程 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
-| F TRACE | PARTIAL | per-turn trace_id 已接入普通文本/图片/语音统一助手轮次和消息 metadata；结构化问诊、工具/检索阶段及真机 TRACE 未闭环 |
-| G 文档治理 | PARTIAL | 审计报告、能力清单和执行台账已更新；README/pubspec 自动防漂移检查仍待实现 |
+| F TRACE | PARTIAL | 已覆盖普通文本/图片/语音、检索/上下文、Orchestrator/Headless、结构化问诊阶段；PR #111 补 Headless 结果契约失败终态，但该失败分支缺直接负向测试，恢复/失败关联与真机 TRACE 未闭环 |
+| G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 版本一致性 guard 已合并；本次主线 post-merge CI 两条 run 均 SUCCESS |
 
 ## 2. A：多轮稳定性与持久化
 
@@ -425,3 +425,15 @@ A PARTIAL / 设备 UNKNOWN；B PARTIAL / RELEASE BLOCKED；C PARTIAL / locator M
 ### 下一步限制
 
 B2 生产接入不能采用“可选 Gate 为空时跳过”方案，否则形成旁路；也不能在无医学审核 detector 时把 REVIEW_REQUIRED 默认改为 CLEAR。将 Gate 直接接入全部入口会阻断现有 AI 流程，需先完成医学审核和产品影响决策。未取得这些外部条件前，只推进不改变产品放行行为的入口审计、顺序契约与测试准备，不宣称生产门禁已完成。
+
+
+---
+
+## 2026-11-12 PR #111 合并后增量复核
+
+- 当前复核主线：`8a80b9e71c61cecdf9d36d6a6013225185912f63`。
+- 主线 Flutter tests run `43211557732`：SUCCESS；Flutter regression、AI contract、SQLite persistence/reopen、Android arm64 APK/ABI、Native unit tests 均成功。
+- 主线 Flutter Quality Gate run `43211557461`：SUCCESS；static analysis、Dart tests、Android Native tests、Find N2 arm64 debug APK 均成功。
+- `saveAssistantTurn` 已通过单一 SQLite transaction 原子保存 user/assistant 消息；PR #77 已用真实 SQLite FFI trigger 测试验证 assistant insert 失败时 user insert 回滚。该项不是当前待修复缺陷。
+- PR #111 已为 Headless 结果契约失败补齐 TRACE 终态，但尚无直接构造无效结果的负向测试。当前只需补该分支测试，避免重复成功路径测试。
+- A/E 的 Find N2 真机多轮、媒体、Activity/进程恢复与清理后不可恢复证据仍 UNKNOWN；B 仍 RELEASE BLOCKED（医学审核 detector 和生产入口门禁缺失）；C 来源 locator 仍待人工底本核验；D 保持 2 项 Headless/Executed；G 版本源 guard 已完成。
