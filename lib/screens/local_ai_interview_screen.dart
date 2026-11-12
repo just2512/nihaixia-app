@@ -1603,15 +1603,49 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String userText,
     AssistantToolDefinition tool, {
     required AssistantMode mode,
+    required AiTraceContext traceContext,
     AssistantToolArguments? arguments,
   }) async {
     final request = arguments ??
         AssistantToolArguments(toolId: tool.id);
     final argumentErrors = request.validateAgainst(tool);
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.argumentValidation,
+      status: argumentErrors.isEmpty
+          ? AiTraceStatus.succeeded
+          : AiTraceStatus.failed,
+      toolId: tool.id,
+      errorCode: argumentErrors.isEmpty ? null : 'INVALID_ARGUMENTS',
+    );
     final executor = tool.headlessExecutor!;
-    final result = argumentErrors.isEmpty
-        ? executor(request.values)
-        : AssistantToolResult(
+    final executionWatch = Stopwatch()..start();
+    AssistantToolResult result;
+    if (argumentErrors.isEmpty) {
+      try {
+        result = executor(request.values);
+        executionWatch.stop();
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.succeeded,
+          durationMs: executionWatch.elapsedMilliseconds,
+          toolId: tool.id,
+        );
+      } catch (_) {
+        executionWatch.stop();
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.failed,
+          durationMs: executionWatch.elapsedMilliseconds,
+          toolId: tool.id,
+          errorCode: 'BUSINESS_EXECUTION_FAILED',
+        );
+        rethrow;
+      }
+    } else {
+      result = AssistantToolResult(
             toolId: tool.id,
             title: tool.title,
             status: AssistantToolExecutionStatus.failed,
@@ -1619,11 +1653,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             arguments: request.values,
             disclaimer: '参数校验未通过；本次没有执行工具。',
           );
+    }
     final contractErrors = <String>[
       ...result.validateFor(tool.id),
       ...result.validateArgumentsMatch(request.values),
     ];
     if (contractErrors.isNotEmpty) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
       if (mounted) {
         setState(() {
           _error = 'Headless 工具结果未通过契约校验：${contractErrors.join('；')}';
@@ -1631,6 +1673,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       return;
     }
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.resultValidation,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
+    );
 
     final response =
         '【${tool.title}执行结果】\n${result.toConversationText()}';
@@ -1646,7 +1694,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
     _inputController.clear();
-    await _persistSuccessfulTurn(
+    final persisted = await _persistSuccessfulTurn(
       userText: userText,
       assistantText: response,
       mode: mode,
@@ -1654,6 +1702,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolStatus: result.statusLabel,
       sourceIds: result.sourceIds,
       toolArguments: result.arguments,
+      traceId: traceContext.traceId,
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.persistence,
+      status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+      toolId: tool.id,
+      sourceIds: result.sourceIds,
+      errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.finalRender,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
+      sourceIds: result.sourceIds,
     );
     _scrollToBottom();
   }
@@ -1662,8 +1726,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String userText,
     AssistantToolDefinition tool, {
     AssistantMode? mode,
+    AiTraceContext? traceContext,
     AssistantToolArguments? arguments,
   }) async {
+    final activeTraceContext = traceContext ??
+        _traceRecorder.start(
+          stage: AiTraceStage.input,
+          route: 'manual_tool',
+          mode: (mode ?? _assistantMode).name,
+        );
     if (tool.id == 'structured_diagnosis') {
       await _startInlineTcmInterview(initialUserMessage: userText);
       return;
@@ -1685,10 +1756,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         userText,
         tool,
         mode: activeMode,
+        activeTraceContext: activeTraceContext,
         arguments: arguments,
       );
       return;
     }
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.toolExecution,
+      status: AiTraceStatus.notStarted,
+      toolId: tool.id,
+      route: 'page_tool',
+    );
     final instruction =
         '已识别到你要使用「${tool.title}」。${tool.description}'
         '实际计算由 App 内置工具执行，不由模型猜测结果。点击下方按钮打开；完成后返回本对话，我会继续解释结果。';
@@ -1709,12 +1788,26 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
     _inputController.clear();
-    await _persistSuccessfulTurn(
+    final persisted = await _persistSuccessfulTurn(
       userText: userText,
       assistantText: instruction,
       mode: activeMode,
       toolId: tool.id,
       toolArguments: arguments?.values ?? const {},
+      traceId: activeTraceContext.traceId,
+    );
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.persistence,
+      status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+      toolId: tool.id,
+      errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+    );
+    await _traceRecorder.record(
+      activeTraceContext,
+      stage: AiTraceStage.finalRender,
+      status: AiTraceStatus.succeeded,
+      toolId: tool.id,
     );
     _scrollToBottom();
   }
@@ -2369,6 +2462,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
 
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: audioPath != null
+          ? 'audio'
+          : imagePath != null
+              ? 'image'
+              : 'text',
+      mode: _assistantMode.name,
+    );
+    final traceId = traceContext.traceId;
+
     var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
       final decision = AssistantConversationOrchestrator.resolve(
@@ -2379,7 +2483,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       effectiveMode = decision.mode;
       _pendingToolSelection = decision.expectsToolSelection;
+      final resolvedRoute = decision.needsClarification
+          ? 'clarification'
+          : decision.tool != null
+              ? 'tool:${decision.tool!.id}'
+              : 'model';
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: resolvedRoute,
+        mode: effectiveMode.name,
+        toolId: decision.tool?.id,
+      );
       if (decision.needsClarification) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'clarification',
+          mode: effectiveMode.name,
+        );
         final clarification = decision.clarification!;
         setState(() {
           _lastEffectiveMode = effectiveMode;
@@ -2389,21 +2513,42 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = null;
         });
         _inputController.clear();
-        await _persistSuccessfulTurn(
+        final persisted = await _persistSuccessfulTurn(
           userText: text,
           assistantText: clarification,
           mode: effectiveMode,
           expectsToolSelection: decision.expectsToolSelection,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
         );
         _scrollToBottom();
         return;
       }
       if (decision.tool != null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'tool',
+          mode: effectiveMode.name,
+          toolId: decision.tool!.id,
+        );
         await _requestTool(
           text,
           decision.tool!,
           mode: effectiveMode,
           arguments: decision.toolArguments,
+          traceContext: traceContext,
         );
         return;
       }
@@ -2416,17 +2561,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       setState(() => _error = '本地模型尚未加载。可以先使用上方 App 内置工具；AI 对话请先加载 Gemma 4 E4B。');
       return;
     }
-
-    final traceContext = _traceRecorder.start(
-      stage: AiTraceStage.input,
-      route: audioPath != null
-          ? 'audio'
-          : imagePath != null
-              ? 'image'
-              : 'text',
-      mode: effectiveMode.name,
-    );
-    final traceId = traceContext.traceId;
 
     final userLabel = text.isNotEmpty
         ? text
