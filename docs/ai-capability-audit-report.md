@@ -395,7 +395,7 @@ A PARTIAL / 设备 UNKNOWN；B PARTIAL / RELEASE BLOCKED；C PARTIAL / locator M
 - 经典检索黄金快照已有 83 个 distinct lecture sourceId；83/83 本地 Markdown asset 存在且可读，sourceId 与 asset 路径对应。
 - 83/83 的 bookId/chapterIndex 缺失，locatorStatus=MISSING，bibliographicLocatorVerified=false。本地文件可回链不等于古籍底本/版本/卷页已核验。
 - docs/classic-rule-source-manifest.json 的范围仅为 DiagnosticRules.combinedPatterns 当前 12 条：7 条 ONLINE_TEXT_CROSS_CHECKED、3 条 CONDITIONS_CROSS_CHECKED、2 条 MISSING；12/12 的纸本底本、卷、页和原始影像核验字段仍为 MISSING。
-- 该 12 条规则 manifest 不能替代 83 个讲稿 sourceId 的来源映射；不得据此补造讲稿到古籍条文的一对一关系。
+- 该 12 条规则 manifest 不能替代 83 个讲稿 sourceId 的来源映射；不得据此补造讲稿到古籍条文的一对一关系。另行对照 DiagnosticRules.combinedPatterns：12/12 conditionKey 与 manifest 精确对应，无缺项、额外项或重复键；这证明清单覆盖完整，不代表来源真实性已核验。
 - 不调整 query 派生、top-40 上限、排序、去重或引入 FTS5。
 
 ### 17.5 A-G 状态与剩余硬门槛
