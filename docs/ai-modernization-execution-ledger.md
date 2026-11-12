@@ -553,3 +553,50 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 2. 每个代码 PR 合并后刷新 master SHA，再对后续 PR 重新核对 base、mergeability、CI。
 3. 仅代码 + 自动化测试 + 目标设备 TRACE 三者齐全才可将设备相关能力标为 IMPLEMENTED。
 4. 医学审核、Find N2 真机、旧附件归属和混合数据库备份边界未完成前继续标记 PARTIAL / UNKNOWN / RELEASE BLOCKED。
+
+
+---
+
+## 14. 2026-11-12 #86/#87/#88 集成后执行快照（master `eefa56e9cf159c5533de1c35556f82aa4c873a4f`）
+
+### 14.1 本轮集成记录
+
+| PR | 合并提交 | 交付 | 当前证据 |
+|---|---|---|---|
+| #86 | `870362ae8ba92e25b195c62d9fc0be653d19600f` | `almanac` Headless + Page | head `18ecc81a...`；Flutter run `43162562989` SUCCESS；Android arm64/merged manifest/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #87 | `34c1fa11c61b83d75b0c01ac6272a39d0cbf4537` | per-turn TRACE ID、Native traced API、message metadata | head `abef4bb9...`；Flutter run `43162529437` SUCCESS；Android arm64/merged manifest/Native unit tests SUCCESS；Branch validation SKIPPED |
+| #88 | `eefa56e9cf159c5533de1c35556f82aa4c873a4f` | 审计报告、能力清单、台账更新 | head `68e4e9cc...`；Flutter run `43162775931` SUCCESS；Android arm64/merged manifest/Native unit tests SUCCESS；Branch validation run `43162770440` SUCCESS（文档专属 workflow） |
+
+### 14.2 当前主线 CI
+
+- master：`eefa56e9cf159c5533de1c35556f82aa4c873a4f`
+- Flutter tests：run `43164417582`，IN_PROGRESS（本次记录时）。
+- Flutter Quality Gate：run `43164416766`，IN_PROGRESS（本次记录时）。
+- 父 SHA `5f7bf738...` 的旧 SUCCESS 不代替当前 SHA 验收；新主线两个 workflow 结束后更新本节，不得把 IN_PROGRESS 提前改为 PASS。
+
+### 14.3 A-G 状态与下一步
+
+- A PARTIAL：Native teardown 串行化、原子轮次持久化已有 CI；Find N2 GPU/CPU 各 20 轮、图片/语音、进程重启/Activity recreation TRACE UNKNOWN。下一步补 Native teardown 状态矩阵与真实设备验收。
+- B PARTIAL / RELEASE BLOCKED：结构化 provenance 契约存在；自然语言 detector、所有模型/工具入口前置 fail-closed 和医学审核缺失。下一步完成全入口旁路矩阵、无审核规则时不返回 CLEAR 的纯 Dart gate contract；不自造医学词表。
+- C PARTIAL：精确方剂检索和黄金快照已合并；按候选 subject/object ID、类型、文本、谓词、sourceId、原始位置、来源逐条审查，不以候选数量增加作为目标。
+- D PARTIAL：主线 Headless = 2 / Executed = 2（`yunqi`、`almanac`）；其余 22 项仍 Page-only，结构化问诊为独立内联流程。下一步逐项核实确定性函数后每次只抽取一个 adapter。
+- E PARTIAL：清理入口、AI-owned 附件、SQLite 清理边界与回滚测试、模型/TRACE 备份排除已合并；混合 SQLite 中 AI 行仍可能被备份、旧共享图片无法可靠归属、Android 清理后进程重启不可恢复证据缺失。
+- F PARTIAL：per-turn trace_id 覆盖普通文本/图片/语音统一助手及 user/assistant metadata；structured diagnosis、clarification/tool dispatch、retrieval、result validation/render、失败轮次和真机 TRACE 未闭环。
+- G PARTIAL：治理文档已刷新；README/pubspec 自动版本一致性 guard 未实现。
+
+### 14.4 当前工作会话内的执行顺序
+
+1. B：只读核验并建立五模式/所有入口旁路矩阵，先实现 fail-closed 状态契约和测试；医学规则等待审核。
+2. F：在不改 B 的 Native 共享文件前提下，推进 Dart per-turn trace context 至 structured diagnosis/clarification/tool dispatch/retrieval/result validation。
+3. E：审计清理 coordinator 的数据库、附件、Native cache、TRACE 清理结果；验证进程重启边界，不删除无法归属的旧共享图片。
+4. C：继续候选身份/关系/来源逐条审查；黄金快照保留，任何语义变化必须对照记录。
+5. A：补 Activity teardown 可注入状态测试；真实设备 GPU/CPU/媒体/恢复 TRACE 单独验收。
+6. D：盘点剩余 22 个 Page-only 工具的确定性函数，按行为基线挑选一个最小 adapter。
+7. G：增加 README/pubspec 单一版本来源检查和审计证据一致性检查。
+
+### 14.5 约束
+
+- 本轮未运行 Find N2 真机；设备相关项目继续 UNKNOWN。
+- B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
+- E 混合数据库备份与旧共享临时文件归属仍有风险；不得全局禁用备份或误删非 AI 数据。
+- F 的已合并 per-turn TRACE 不是全链路完成证明。
