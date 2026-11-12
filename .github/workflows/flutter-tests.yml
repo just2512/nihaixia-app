@@ -418,6 +418,25 @@ jobs:
         id: build_apk
         run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
 
+      - name: Verify merged Android backup manifest
+        id: verify_backup_manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest="$(find build/app/intermediates -type f -name AndroidManifest.xml | grep -E '/merged_manifests?/debug/' | head -n 1 || true)"
+          if [[ -z "$manifest" ]]; then
+            echo "Merged debug AndroidManifest.xml was not found." >&2
+            find build/app/intermediates -type f -name AndroidManifest.xml -print || true
+            exit 1
+          fi
+          grep -F 'android:fullBackupContent="@xml/backup_rules"' "$manifest"
+          grep -F 'android:dataExtractionRules="@xml/data_extraction_rules"' "$manifest"
+          if grep -F 'android:allowBackup="false"' "$manifest"; then
+            echo "Global Android backup disablement is not allowed by this scoped change." >&2
+            exit 1
+          fi
+          mkdir -p build/android-backup-manifest
+          cp "$manifest" build/android-backup-manifest/AndroidManifest.xml
       - name: Verify Android APK ABI and calculate SHA-256
         id: verify_apk
         shell: bash
@@ -476,7 +495,7 @@ jobs:
           PY
 
       - name: Upload Android CI APK ABI evidence
-        if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success'
+        if: always() && steps.build_apk.outcome == 'success' && steps.verify_apk.outcome == 'success' && steps.verify_backup_manifest.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
           name: android-arm64-ci-debug-abi-evidence
@@ -484,6 +503,7 @@ jobs:
             build/app/outputs/flutter-apk/app-debug.apk
             build/app/outputs/flutter-apk/app-debug.apk.sha256
             build/app/outputs/flutter-apk/app-debug.apk.NOT_FOR_DEVICE_INSTALL.txt
+            build/android-backup-manifest/AndroidManifest.xml
           if-no-files-found: error
           retention-days: 7
 

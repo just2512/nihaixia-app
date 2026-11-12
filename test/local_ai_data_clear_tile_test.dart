@@ -45,6 +45,7 @@ void main() {
     expect(find.text('确认清除'), findsOneWidget);
     expect(attachmentClearCalls, 0);
     expect(find.textContaining('旧版本遗留在共享临时目录'), findsOneWidget);
+    expect(find.textContaining('数据库备份副本仍可能保留'), findsOneWidget);
 
     await tester.tap(find.text('确认清除'));
     await tester.pumpAndSettle();
