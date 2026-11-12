@@ -188,3 +188,56 @@
 - E Android 备份限制 PR #19 已打开；PR-level Flutter regression run `42845985076` 正在执行，当前多个专项步骤已通过，后续全量回归尚未开始；Android merged manifest/build 证据仍缺失。不得合并。
 - 主线全量 Flutter 测试的既有失败原因尚未取得完整日志，保持 UNKNOWN；不得把它归因于本轮文档变更。
 - 下一项自动执行：继续 A 最小 transcript rehydration 修复前的 LiteRT-LM API/Native 生命周期核验；并行启动 B 纯 Dart 红旗 preflight 状态契约与语义单测；C 生成真实黄金检索快照；E 完成 merged manifest/build 与 AI 数据/附件清除范围盘点。各项按协议使用独立分支/文件所有权。
+
+
+## 9. 当前状态刷新（2026-11-12，master @ aadd7df0c8ffc1579d91ad425737ac5a70d2c656）
+
+> 本节为当前状态，历史记录保留作审计轨迹。不得将第 1 节的旧版本号/旧基线或第 8 节的 11 月 10 日记录当作当前状态。
+
+### 9.1 已集成切片
+
+| 工作流 | PR | 合并 SHA | 当前可证明内容 | 未证明内容 |
+|---|---:|---|---|---|
+| B | #66 | `2d1839e1814cd84072bd6848149755195e720751` | 基于 master `36484112` 的全入口只读审计已更新；Flutter 回归与 Android arm64 CI APK/单测通过 | detector、Flutter/Native 生产门禁、医学审核、全入口语义矩阵仍缺失 |
+| C | #68 | `aadd7df0c8ffc1579d91ad425737ac5a70d2c656` | sourceId 不再依赖可变标题；稳定资产/书籍章节键；旧 ID 仅按稳定键兼容解析；golden metadata 已同步，locatorStatus 仍为 MISSING | 真实书目/版本/卷页定位未补齐；不得把稳定本地 ID 误称为书目 provenance；设备 TRACE 未执行 |
+| F/E | #50/#64/#67（既有主线） | 以 master 当前树为准 | writer、数据清理协调器、recorder disableAndFlush/enable 已有基础 | 生产调用链和统一 runtime 仍待 #69；端到端 trace_id 尚未贯穿 |
+
+### 9.2 活动 PR 与 CI
+
+| PR | 工作流 | 当前状态 | 基线/Head | CI 与处理 |
+|---|---|---|---|---|
+| #69 | E/F TRACE runtime 与清理生命周期 | IN_PROGRESS | base `a53a57b`；head `7487e491` | run `43139121928` Flutter tests 正在执行；旧 head run `43136985416` Flutter regression 与 Android arm64 CI APK/单测通过，但不能替代新 head CI。新增 recorder resume failure 测试后必须等新 run 完成 |
+| #60 | G 执行台账刷新 | STALE / 不集成 | base `5f483743`，落后当前 master | 仅提取有用内容；不整分支合并 |
+| #19 | E Android 全应用禁用备份 | BLOCKED | base `60011c4d`，过期 | `allowBackup=false` 影响全部应用私有数据；未证明 AI-only 备份排除及 merged manifest/build，不合并 |
+
+PR #66、#68 已合并；旧 CI 只对应各自 head SHA。PR-level Android job 是 CI APK/ABI 验证，不是真机 Find N2 TRACE。Branch validation 在这些 runs 中为 SKIPPED，不能写成所有检查均执行。
+
+### 9.3 A-G 当前状态与下一动作
+
+| ID | 当前状态 | 当前证据/缺口 | 下一项自动执行 |
+|---|---|---|---|
+| A | PARTIAL | Native 生命周期/多轮回归有代码与 CI；Find N2 GPU/CPU 各 20 轮、附件、进程恢复 TRACE 未提供 | 继续审计 Conversation 重建、状态未知禁止重放与 transcript 三方一致性；不虚构设备结果 |
+| B | PARTIAL / RELEASE BLOCKED | #66 更新入口审计；策略契约测试存在；生产 detector 和所有 Flutter/Native 入口仍缺失；医学审核缺失 | 先冻结 detector 输入/输出与 fail-closed 契约，补纯 Dart 语义/覆盖状态测试；不启用未经医学审核的词表 |
+| C | PARTIAL | #68 稳定本地 sourceId 与 golden metadata 已合并；locatorStatus 保持 MISSING | 补 source manifest、原始书目/版本/卷页定位、derived-query provenance；不改检索排序/算法 |
+| D | PARTIAL | D-01 目录审计：24 项注册；23 项 Page Tool；D-02/D-03 已记录部分回传链与 UNKNOWN 参数契约 | 逐项核对页面参数消费、取消/失败、结果 sourceIds 与持久化；先选非医疗、非敏感工具做窄切片 |
+| E | PARTIAL | #64 数据清理编排已有；#19 备份方案阻塞；#69 统一 recorder 生命周期待新 head CI | 审计最终 merged manifest、SQLite/附件/缩略图/转写/缓存清单；分开验证清理与备份策略；失败必须可见 |
+| F | PARTIAL | #50 writer/schema 与 #67 recorder flush/enable 已有；#69 统一进程级 runtime 待 CI；生产 recorder 仍默认关闭 | #69 通过后冻结 Dart/Native trace_id 注入契约，再接输入、MethodChannel、Native inference、结果、持久化节点；不得先宣称端到端 TRACE |
+| G | IN_PROGRESS | #49 版本一致性自动测试已合并；#60 过期 | 本 PR 更新台账；继续核对 README/pubspec 当前值和审计文档 SHA |
+
+### 9.4 当前发布阻断项
+
+1. B：无全入口生产红旗 detector / fail-closed 门禁，且无医学审核记录。
+2. A/F：Find N2 多轮 GPU/CPU、附件、进程恢复 TRACE 未提供；代码与 CI 不替代设备证据。
+3. E：清除全部 AI 数据后重启不可恢复、Android merged manifest 和 AI-only 备份边界未闭合。
+4. D：Page Tool 不得冒充 Headless/Executed Capability；执行状态、来源和结果回传证据仍不完整。
+5. C：sourceId 只代表本地可回链身份，不代表古籍书目版本或页码已验证。
+
+### 9.5 执行顺序（依赖驱动，不等待用户逐项点名）
+
+1. 等待 #69 新 head `7487e491` 的 Flutter 全量回归与 Android arm64 CI 完成；检查 resume failure 测试实际进入运行清单。通过后复核合并树再集成。
+2. 独立推进 F：定义 trace_id 在 Dart 请求、MethodChannel、Native task、模型结果、UI 消息和 SQLite metadata 间的传播契约；TRACE 仍默认关闭，日志不包含正文。
+3. 独立推进 E：只读清点最终 Manifest 与全部 AI 数据域；随后按文件所有权拆分 AI-only backup 评估与清除失败恢复测试，不采用全应用禁用备份作为默认方案。
+4. 推进 B：只做 detector 契约和纯 Dart 状态测试；医学规则与文案保持 REVIEW_REQUIRED，直到获得专业审核。
+5. 推进 C/D：C provenance 不改检索算法；D 从已验证、非医疗、非敏感业务函数中选择单项做 Headless 可行性验证。
+6. 每个小切片更新本台账并在当前 master 上运行专项、Flutter 全量与 Android CI；Find N2 TRACE 独立记录。
+
