@@ -707,8 +707,6 @@ void main() {
       expect(recorder.stopCalls, 2);
       expect(find.text('语音已录制（最长 30 秒），发送前可移除。'), findsOneWidget);
       expect(find.textContaining('录音停止失败'), findsNothing);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await attachmentRoot.delete(recursive: true);
     },
   );
 
