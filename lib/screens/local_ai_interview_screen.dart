@@ -1479,25 +1479,33 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final conversationId = await _conversationIdFuture;
     var persisted = conversationId != null;
     if (conversationId != null) {
-      for (final entry in added) {
-        try {
-          await _conversationStore.saveAssistantMessage(
-            conversationId: conversationId,
-            role: entry.isUser ? 'user' : 'assistant',
-            content: entry.text,
-            metadata: AssistantMessageMetadata(
-              mode: 'consultation',
-              selectedMode: _assistantMode.name,
-              tcmTaskId: controller.taskId,
-              replayable: entry.isUser,
-              traceId: traceId,
-            ).encode(),
-          );
-        } catch (error, stack) {
-          persisted = false;
-          debugPrint('[TcmInterviewTask] 问诊消息保存失败：$error\n$stack');
-        }
+      final messageBatch = added
+          .map((entry) => AssistantMessageDraft(
+                role: entry.isUser ? 'user' : 'assistant',
+                content: entry.text,
+                metadata: AssistantMessageMetadata(
+                  mode: 'consultation',
+                  selectedMode: _assistantMode.name,
+                  tcmTaskId: controller.taskId,
+                  replayable: entry.isUser,
+                  traceId: traceId,
+                ).encode(),
+              ))
+          .toList(growable: false);
+      try {
+        await _conversationStore.saveAssistantMessagesAtomically(
+          conversationId: conversationId,
+          messages: messageBatch,
+        );
+      } catch (error, stack) {
+        persisted = false;
+        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\n$stack');
       }
+    }
+    if (!persisted && mounted) {
+      setState(() {
+        _error = '规则问诊消息未能完整保存，当前页面仍保留内容；历史记录可能不完整，请核实后再继续。';
+      });
     }
 
     final persistedStateWatch = Stopwatch()..start();
