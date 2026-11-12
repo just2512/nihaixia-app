@@ -183,7 +183,8 @@ void main() {
     expect(flushed, isFalse);
 
     release.complete();
-    await flush;
+    final wasEnabled = await flush;
+    expect(wasEnabled, isTrue);
     await recorder.record(
       context,
       stage: AiTraceStage.modelOutput,
@@ -202,7 +203,8 @@ void main() {
     );
 
     final first = recorder.start(stage: AiTraceStage.input);
-    await recorder.disableAndFlush();
+    final wasEnabled = await recorder.disableAndFlush();
+    expect(wasEnabled, isTrue);
     expect(recorder.isEnabled, isFalse);
     expect(recorder.start(stage: AiTraceStage.input).enabled, isFalse);
 
