@@ -210,12 +210,14 @@ void main() {
       await LocalAiService().restoreConversation(
         transcript: '用户：饭后腹胀\\n助手：请说明持续时间',
         userMessages: ['饭后腹胀'],
+        traceId: '0123456789abcdef0123456789abcdef',
       );
 
       expect(received?.method, 'restoreConversation');
       expect(received?.arguments, <String, Object?>{
         'transcript': '用户：饭后腹胀\\n助手：请说明持续时间',
         'userMessages': ['饭后腹胀'],
+        'trace_id': '0123456789abcdef0123456789abcdef',
       });
     });
 
