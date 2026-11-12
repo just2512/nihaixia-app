@@ -1297,13 +1297,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<void> _appendTcmInterviewMessages(int startIndex) async {
+  Future<bool> _appendTcmInterviewMessages(
+    int startIndex, {
+    String? traceId,
+  }) async {
     final controller = _tcmInterviewController;
-    if (controller == null) return;
+    if (controller == null) return false;
     final added = controller.messages.skip(startIndex).toList(growable: false);
     if (added.isEmpty) {
       await _persistTcmInterviewTaskState(controller.createTaskState());
-      return;
+      return true;
     }
 
     final taskState = controller.createTaskState();
@@ -1330,6 +1333,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
 
     final conversationId = await _conversationIdFuture;
+    var persisted = conversationId != null;
     if (conversationId != null) {
       for (final entry in added) {
         try {
@@ -1342,9 +1346,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               selectedMode: _assistantMode.name,
               tcmTaskId: controller.taskId,
               replayable: entry.isUser,
+              traceId: traceId,
             ).encode(),
           );
         } catch (error, stack) {
+          persisted = false;
           debugPrint('[TcmInterviewTask] 问诊消息保存失败：$error\n$stack');
         }
       }
@@ -1369,9 +1375,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
     _scrollToBottom();
+    return persisted;
   }
 
-  Future<void> _handleTcmInterviewOption(String option) async {
+  Future<void> _handleTcmInterviewOption(
+    String option, {
+    AiTraceContext? traceContext,
+  }) async {
     final controller = _tcmInterviewController;
     if (controller == null || !controller.canAnswer) return;
     if (controller.pendingPromptId == 'tongue_pulse' &&
