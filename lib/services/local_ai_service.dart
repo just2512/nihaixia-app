@@ -43,11 +43,27 @@ class LocalAiService {
     return LocalAiModelStatus.fromMap(data);
   }
 
-  Future<String> sendMessage(String text) async {
+  Future<String> sendMessage(String text) => _sendTextMessage(text);
+
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+  }) =>
+      _sendTextMessage(text, traceId: traceId);
+
+  Future<String> _sendTextMessage(
+    String text, {
+    String? traceId,
+  }) async {
+    final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'sendMessage',
-      {'text': text},
+      {
+        'text': text,
+        if (normalizedTraceId != null) 'traceId': normalizedTraceId,
+      },
     );
+    _verifyTraceId(data, normalizedTraceId);
     final reply = data?['reply'];
     if (reply is! String || reply.trim().isEmpty) {
       throw PlatformException(
@@ -58,21 +74,40 @@ class LocalAiService {
     return reply;
   }
 
-
   /// Sends user text with bounded app-retrieved reference context.
   /// The native bridge records only [text] for symptom extraction.
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
+  }) =>
+      _sendMessageWithContext(text, context: context);
+
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required String context,
+    required String traceId,
+  }) =>
+      _sendMessageWithContext(text, context: context, traceId: traceId);
+
+  Future<String> _sendMessageWithContext(
+    String text, {
+    required String context,
+    String? traceId,
   }) async {
     final normalized = text.trim();
     if (normalized.isEmpty) {
       throw PlatformException(code: 'EMPTY_MESSAGE', message: '请输入内容后再发送');
     }
+    final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'sendMessage',
-      {'text': normalized, 'context': context.trim()},
+      {
+        'text': normalized,
+        'context': context.trim(),
+        if (normalizedTraceId != null) 'traceId': normalizedTraceId,
+      },
     );
+    _verifyTraceId(data, normalizedTraceId);
     final reply = data?['reply'];
     if (reply is! String || reply.trim().isEmpty) {
       throw PlatformException(code: 'EMPTY_REPLY', message: '模型没有返回有效文本');
@@ -84,8 +119,36 @@ class LocalAiService {
     return _sendAttachment('sendImage', path, '照片', prompt: prompt);
   }
 
+  Future<String> sendImageWithTrace(
+    String path, {
+    String prompt = '',
+    required String traceId,
+  }) async {
+    return _sendAttachment(
+      'sendImage',
+      path,
+      '照片',
+      prompt: prompt,
+      traceId: traceId,
+    );
+  }
+
   Future<String> sendAudio(String path, {String prompt = ''}) async {
     return _sendAttachment('sendAudio', path, '录音', prompt: prompt);
+  }
+
+  Future<String> sendAudioWithTrace(
+    String path, {
+    String prompt = '',
+    required String traceId,
+  }) async {
+    return _sendAttachment(
+      'sendAudio',
+      path,
+      '录音',
+      prompt: prompt,
+      traceId: traceId,
+    );
   }
 
   Future<String> _sendAttachment(
@@ -93,11 +156,18 @@ class LocalAiService {
     String path,
     String label, {
     String prompt = '',
+    String? traceId,
   }) async {
+    final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       method,
-      {'path': path, 'prompt': prompt},
+      {
+        'path': path,
+        'prompt': prompt,
+        if (normalizedTraceId != null) 'traceId': normalizedTraceId,
+      },
     );
+    _verifyTraceId(data, normalizedTraceId);
     final reply = data?['reply'];
     if (reply is! String || reply.trim().isEmpty) {
       throw PlatformException(
@@ -106,6 +176,36 @@ class LocalAiService {
       );
     }
     return reply;
+  }
+
+  String? _normalizeTraceId(String? traceId) {
+    if (traceId == null) return null;
+    final normalized = traceId.trim();
+    final isLowerHex = normalized.codeUnits.every(
+      (unit) =>
+          (unit >= 48 && unit <= 57) || (unit >= 97 && unit <= 102),
+    );
+    if (normalized.length != 32 || !isLowerHex) {
+      throw ArgumentError.value(
+        traceId,
+        'traceId',
+        'TRACE ID 必须是 32 位小写十六进制标识',
+      );
+    }
+    return normalized;
+  }
+
+  void _verifyTraceId(
+    Map<String, dynamic>? response,
+    String? expectedTraceId,
+  ) {
+    if (expectedTraceId == null) return;
+    if (response?['traceId'] != expectedTraceId) {
+      throw PlatformException(
+        code: 'TRACE_ID_MISMATCH',
+        message: 'Native 响应未返回与请求一致的 TRACE ID',
+      );
+    }
   }
 
   Future<LocalAiSymptomDraft> extractSymptoms() async {
