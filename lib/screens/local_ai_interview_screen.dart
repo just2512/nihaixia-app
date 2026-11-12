@@ -2369,6 +2369,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
 
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: audioPath != null
+          ? 'audio'
+          : imagePath != null
+              ? 'image'
+              : 'text',
+      mode: _assistantMode.name,
+    );
+    final traceId = traceContext.traceId;
+
     var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
       final decision = AssistantConversationOrchestrator.resolve(
@@ -2416,17 +2427,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       setState(() => _error = '本地模型尚未加载。可以先使用上方 App 内置工具；AI 对话请先加载 Gemma 4 E4B。');
       return;
     }
-
-    final traceContext = _traceRecorder.start(
-      stage: AiTraceStage.input,
-      route: audioPath != null
-          ? 'audio'
-          : imagePath != null
-              ? 'image'
-              : 'text',
-      mode: effectiveMode.name,
-    );
-    final traceId = traceContext.traceId;
 
     final userLabel = text.isNotEmpty
         ? text
