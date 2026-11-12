@@ -708,3 +708,55 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 - PR #105：CLOSED / NOT MERGED。原因：为 `restoreConversation` 新建 trace_id 违反 `ai-trace-contract.md` 第 2.3 节；该路径是历史上下文恢复，不是用户轮次。
 - PR #98：仍是基于旧 master 的文档分支，behind 当前主线；本轮后续文档刷新应从最新 master 重建，不合并旧基线。
 - 本轮不创建定时任务或会话外周期性监控。
+
+
+---
+
+## 17. 2026-11-12 PR #106/#107 集成后执行台账
+
+### 17.1 主线基线与 CI
+
+- 当前 master：5a9d2c7fccd4b291982d39699fe929eaa968a6fe。
+- PR #106：merge commit fb315306…（台账刷新）。
+- PR #107：merge commit 5a9d2c7fccd4b291982d39699fe929eaa968a6fe。
+- PR #107 head：db6309d29e847fe9c4bad3c53921d240f681fcdd；run 43187508718：Flutter regression SUCCESS；Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS；Branch validation SKIPPED。
+- master push runs：Flutter Quality Gate 43195424227、Flutter tests 43195424259；本次记录时均 IN_PROGRESS。必须等待这两个 run 结束，不能用 PR head SUCCESS 代替。
+
+### 17.2 本轮 F 工作完成项
+
+PR #107 修复失败轮次阶段误归因：
+1. 成功 Native inference 与 resultValidation 分开记录。
+2. EMPTY_REPLY 记录 Native 已完成、resultValidation FAILED；trace ID mismatch 保持 UNKNOWN。
+3. Native 失败时 persistence 记录 NOT_STARTED 和 conversationId；不将未持久化的输入写入历史。
+4. persistence 已开始但状态不确定时记录 UNKNOWN；明确返回失败记录 FAILED。
+5. 症状整理路径分别记录 Native inference 与 resultValidation 状态。
+6. 手动重试仍生成独立 trace_id；不自动重放 UNKNOWN 请求。
+7. 未改 SQLite schema、用户流程或历史 restore 语义。
+
+### 17.3 A-G 最新状态
+
+| ID | 状态 | 当前结论 / 未闭环 |
+|---|---|---|
+| A | PARTIAL / 设备 UNKNOWN | Find N2 GPU/CPU、多轮、媒体、Activity recreation、进程重启真实 TRACE 缺失 |
+| B | PARTIAL / RELEASE BLOCKED | Gate contract/test 已有；无自然语言 detector、医学审核规则集、生产入口调用和 Native 纵深门禁 |
+| C | PARTIAL | 83/83 lecture assets 存在可读，但 83/83 bibliographic locator MISSING；12 条 combinedPatterns 来源记录中 7 online text cross-checked、3 conditions cross-checked、2 MISSING；纸本版次/卷页/影像 12/12 缺失 |
+| D | 2 Headless / 2 Executed | yunqi、almanac；不为数量扩展 |
+| E | PARTIAL | 混合 SQLite AI 行备份、旧共享图片归属、外部副本、清理后真机重启不可恢复证据缺失 |
+| F | PARTIAL | #107 已补失败轮次 Native/resultValidation/persistence 状态；结构化问诊、工具、恢复全链路及设备 TRACE 仍缺 |
+| G | 版本源子目标 IMPLEMENTED | 当前 master 的独立 post-merge workflows 尚未结束 |
+
+### 17.4 下一批仅保留以下必要工作
+
+1. **B：安全入口**：完成 Flutter/Native 入口调用顺序矩阵和可注入 gate seam 测试；不创建未经医学审核的 detector，不默认 CLEAR，也不擅自全局阻断现有产品能力。医学审核与设备验收未完成前继续 RELEASE BLOCKED。
+2. **C：来源核验**：对 83 个 sourceId 保留 ASSET_EXISTS 与 BIBLIOGRAPHIC_LOCATOR_MISSING 的区分；为 12 条规则逐条核验可取得的底本/版本/卷页/影像；证据不足保持 MISSING。检索行为冻结，不改 query/排序/top-40/去重。
+3. **A/E：设备和数据边界**：Find N2 真机验证 GPU/CPU 多轮、图片/语音、Activity/进程恢复、清理后强停重启；同时核实混合 SQLite 备份和旧共享附件归属，不误删、不全局关闭备份。
+4. **F：TRACE**：后续只补真实用户轮次缺失节点；历史 restore 不生成新 trace_id；不扩展通用 Agent/工作流平台。
+5. **D/G**：保持当前能力和版本 guard，不新增无证据 adapter 或第二套版本系统。
+
+### 17.5 执行约束
+
+- 每次代码 PR 以最新 master 为基线，先核对 compare/mergeability，再按最新 head 检查 Flutter 全量回归与 Android arm64/Native CI。
+- master 合并后独立 workflow 未完成前，状态为 IN_PROGRESS/UNKNOWN，不写 PASS。
+- CI、模拟设备、静态代码不能替代 Find N2 真机 TRACE。
+- 医学审核、真机硬件、纸本底本/原始影像属于外部证据依赖；不能由代码或模型自我生成。
+- 不创建定时任务；本轮只在实际执行时检查 CI。
