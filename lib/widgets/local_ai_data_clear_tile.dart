@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/local_ai_data_clear_coordinator.dart';
+import '../utils/fold_aware_routes.dart';
 
 /// Settings entry for deleting only the local-AI data domains currently owned
 /// by the app. Legacy shared-temp files and Android backup copies are outside
@@ -20,7 +21,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
 
   Future<void> _confirmAndClear() async {
     if (_clearing) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showFoldAwareDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('清除本地 AI 数据'),
@@ -58,7 +59,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _clearing = false);
-      await showDialog<void>(
+      await showFoldAwareDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('本地 AI 数据清理失败'),
@@ -76,7 +77,7 @@ class _LocalAiDataClearTileState extends State<LocalAiDataClearTile> {
 
     if (!mounted) return;
     setState(() => _clearing = false);
-    await showDialog<void>(
+    await showFoldAwareDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
