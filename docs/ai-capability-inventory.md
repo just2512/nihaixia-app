@@ -392,3 +392,14 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - PR #86 当前 head `18ecc81a4ff6a18757386d39632b9a8567ae8b37`；前一 head 曾因日期正则双重转义、测试 const map 和断言文案问题失败，均已修正。最新 changed-test Branch validation run `43162555492` SUCCESS；PR Flutter regression run `43162562989` PENDING，Android arm64 尚未验收，不能计入主线。
 
 
+
+
+---
+
+## 2E. 2026-11-12 #86/#87 合并后能力状态（master `eefa56e9cf159c5533de1c35556f82aa4c873a4f`）
+
+- `yunqi` 与 `almanac` 是当前主线仅有的 2 项 Headless + Executed 能力；两者均保留原页面入口，并复用已有确定性计算函数。
+- `almanac` 的执行参数仅为明确日期；日期必须为有效 ISO 日历日期且在 1900-2100 支持范围；结果 source ID 为 `local-engine:almanac`。民俗免责声明随结果返回。
+- `AssistantMessageMetadata.traceId` 复用既有 metadata JSON 字段 `trace_id`。TRACE 默认关闭；打开时普通文本/图片/语音统一助手轮次将同一 ID 传入 traced Native API 并关联 user/assistant 消息。
+- F 仍不是全链路：结构化问诊、澄清、工具执行、检索阶段事件、Native 失败轮次持久化关联和 Find N2 设备 TRACE 未完成。
+- A/B/C/E 的缺口与执行顺序以本文件最新审计章节及 `docs/ai-modernization-execution-ledger.md` 第 14 节为准；未取得医学审核和真实设备证据的能力不得标 IMPLEMENTED。
