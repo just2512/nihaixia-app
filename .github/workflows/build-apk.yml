@@ -2,7 +2,7 @@
 #
 # 触发方式：
 #   1. 推送以 "v" 开头的 tag（如 v1.11.9）→ 自动构建并发布
-#   2. 在 Actions 页面手动触发（workflow_dispatch）
+#   2. 手动触发 workflow_dispatch 时也必须选择与 pubspec.yaml 一致的 v* tag
 #
 # 产物：通用版 app-release.apk + 按 ABI 拆分的三架构包（arm64-v8a / armeabi-v7a / x86_64），
 #       共 4 个安装包发布到当前 Fork 自己的 GitHub Release。
@@ -43,6 +43,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify release tag, README and pubspec version
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tool/check_version_source.sh
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            echo "Release workflow must run from a version tag, not a branch." >&2
+            exit 1
+          fi
+          pub_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]]+).*/\1/p' pubspec.yaml | head -n 1)"
+          app_version="${pub_version%%+*}"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$tag_version" != "$app_version" ]]; then
+            echo "Release tag $GITHUB_REF_NAME does not match pubspec app version $app_version." >&2
+            exit 1
+          fi
+          echo "Release tag and pubspec app version match: $app_version"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
