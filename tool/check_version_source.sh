@@ -2,7 +2,7 @@
 set -euo pipefail
 
 pub_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]]+).*/\1/p' pubspec.yaml | head -n 1)"
-readme_version="$(sed -nE 's/.*当前仓库版本为 \x60([^\x60]+)\x60.*/\1/p' README.md | head -n 1)"
+readme_version="$(sed -nE 's/.*当前仓库版本为 `([^`]+)`.*/\\1/p' README.md | head -n 1)"
 
 if [[ ! "$pub_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
   echo "pubspec.yaml must contain a version in X.Y.Z+N form; got: $pub_version" >&2
