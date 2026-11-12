@@ -155,4 +155,67 @@ void main() {
       expect(ids, 0);
     });
   });
+
+  test('disableAndFlush waits for queued writes and rejects later events', () async {
+    final started = Completer<void>();
+    final release = Completer<void>();
+    var writes = 0;
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (_) async {
+        writes++;
+        if (writes == 1) {
+          started.complete();
+          await release.future;
+        }
+      },
+    );
+
+    final context = recorder.start(stage: AiTraceStage.input);
+    final flush = recorder.disableAndFlush();
+    await started.future;
+    expect(recorder.isEnabled, isFalse);
+    var flushed = false;
+    flush.then((_) => flushed = true);
+    await Future<void>.value();
+    expect(flushed, isFalse);
+
+    release.complete();
+    await flush;
+    await recorder.record(
+      context,
+      stage: AiTraceStage.modelOutput,
+      status: AiTraceStatus.succeeded,
+    );
+
+    expect(flushed, isTrue);
+    expect(writes, 1);
+  });
+
+  test('enable resumes recording after a controlled clear', () async {
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+    );
+
+    final first = recorder.start(stage: AiTraceStage.input);
+    await recorder.disableAndFlush();
+    expect(recorder.isEnabled, isFalse);
+    expect(recorder.start(stage: AiTraceStage.input).enabled, isFalse);
+
+    recorder.enable();
+    expect(recorder.isEnabled, isTrue);
+    final second = recorder.start(stage: AiTraceStage.input);
+    await recorder.record(
+      second,
+      stage: AiTraceStage.modelOutput,
+      status: AiTraceStatus.succeeded,
+    );
+
+    expect(first.enabled, isTrue);
+    expect(events, hasLength(3));
+    expect(events.map((event) => event.traceId).toSet(), hasLength(2));
+  });
+
 }
