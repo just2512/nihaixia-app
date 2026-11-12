@@ -226,3 +226,76 @@ void main() {
     });
   });
 }
+
+  group('RedFlagGate operation sequencing seam', () {
+    test('gate completes before the protected side effect starts', () async {
+      final events = <String>[];
+      final gate = RedFlagGate(
+        detector: _FakeDetector((input) async {
+          events.add('gate');
+          return _assessment(source: input.source);
+        }),
+        timeout: timeout,
+      );
+
+      final run = await gate.runBefore<String>(
+        input: const RedFlagInput(
+          source: RedFlagInputSource.currentText,
+          text: '介绍胸痛相关知识',
+        ),
+        operation: () async {
+          events.add('operation');
+          return 'completed';
+        },
+      );
+
+      expect(events, ['gate', 'operation']);
+      expect(run.executed, isTrue);
+      expect(run.value, 'completed');
+      expect(run.preflight.status, RedFlagPreflightStatus.clear);
+    });
+
+    test('missing detector prevents the protected side effect', () async {
+      var sideEffects = 0;
+      const gate = RedFlagGate(detector: null, timeout: timeout);
+
+      final run = await gate.runBefore<int>(
+        input: const RedFlagInput(
+          source: RedFlagInputSource.currentText,
+          text: '需要评估的用户输入',
+        ),
+        operation: () async {
+          sideEffects += 1;
+          return sideEffects;
+        },
+      );
+
+      expect(run.executed, isFalse);
+      expect(run.value, isNull);
+      expect(run.preflight.status, RedFlagPreflightStatus.reviewRequired);
+      expect(sideEffects, 0);
+    });
+
+    test('raw attachment cannot reach the protected operation', () async {
+      var sideEffects = 0;
+      final gate = RedFlagGate(
+        detector: _FakeDetector((input) async => _assessment(source: input.source)),
+        timeout: timeout,
+      );
+
+      final run = await gate.runBefore<void>(
+        input: const RedFlagInput(
+          source: RedFlagInputSource.imageAttachment,
+          text: 'prompt text does not assess the image',
+        ),
+        operation: () async {
+          sideEffects += 1;
+        },
+      );
+
+      expect(run.executed, isFalse);
+      expect(run.preflight.reason, 'RAW_ATTACHMENT_NOT_ASSESSED');
+      expect(sideEffects, 0);
+    });
+  });
+
