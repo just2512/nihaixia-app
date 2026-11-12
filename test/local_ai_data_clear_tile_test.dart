@@ -71,7 +71,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('本地 AI 数据未完整清理'), findsOneWidget);
-    expect(find.textContaining('attachments'), findsOneWidget);
+    expect(find.textContaining('AI 附件'), findsOneWidget);
     expect(find.textContaining('不能据此认为 AI 数据已全部删除'), findsOneWidget);
   });
 }
