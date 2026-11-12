@@ -141,7 +141,24 @@ class AiTraceRecorder {
         _idFactory = idFactory ?? _secureTraceId,
         _clock = clock ?? DateTime.now;
 
-  final bool _enabled;
+  bool _enabled;
+  Future<void> _pendingWrites = Future<void>.value();
+
+  bool get isEnabled => _enabled;
+
+  /// Re-enables recording after a controlled data-clear operation.
+  /// A recorder without a writer can never be enabled.
+  void enable() {
+    if (_writer != null) _enabled = true;
+  }
+
+  /// Stops accepting new events and waits for every already-enqueued write.
+  Future<bool> disableAndFlush() async {
+    final wasEnabled = _enabled;
+    _enabled = false;
+    await _pendingWrites;
+    return wasEnabled;
+  }
   final AiTraceEventWriter? _writer;
   final AiTraceIdFactory _idFactory;
   final AiTraceClock _clock;
@@ -216,12 +233,16 @@ class AiTraceRecorder {
     }
   }
 
-  Future<void> _writeSafely(AiTraceEvent event) async {
-    try {
-      await _writer?.call(event);
-    } catch (_) {
-      // Observability is best-effort and must never block AI execution.
-    }
+  Future<void> _writeSafely(AiTraceEvent event) {
+    final next = _pendingWrites.then((_) async {
+      try {
+        await _writer?.call(event);
+      } catch (_) {
+        // Observability is best-effort and must never block AI execution.
+      }
+    });
+    _pendingWrites = next;
+    return next;
   }
 
   static String _secureTraceId() {
