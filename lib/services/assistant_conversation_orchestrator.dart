@@ -105,7 +105,7 @@ class AssistantConversationOrchestrator {
   ) {
     final values = <String, String>{};
     if (tool.id == 'yunqi' || tool.id == 'almanac') {
-      final match = RegExp(r'\\b\\d{4}-\\d{1,2}-\\d{1,2}\\b').firstMatch(query);
+      final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
       if (match != null) {
         // Preserve the raw token; the execution boundary validates the actual
         // calendar date so invalid input cannot silently become another date.
