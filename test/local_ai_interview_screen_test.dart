@@ -895,6 +895,94 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('结构化问诊启动与每次选项回答分别关联 TRACE 和消息 metadata',
+      (tester) async {
+    const startTraceId = '11111111111111111111111111111111';
+    const answerTraceId = '22222222222222222222222222222222';
+    final traceIds = [startTraceId, answerTraceId];
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceIds.removeAt(0),
+      clock: () => DateTime(2026, 11, 12, 15),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: _TextSendService(),
+          imagePicker: _EmptyLocalAiImagePicker(),
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    final initial = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'temperature',
+    );
+    expect(initial, isNotNull);
+    final conversation = (await _store.getAssistantConversations()).single;
+    final initialMessages = await _store.getAssistantMessages(
+      conversationId: conversation['id'] as int,
+    );
+    expect(initialMessages, isNotEmpty);
+    expect(
+      initialMessages.every(
+        (message) =>
+            AssistantMessageMetadata.decode(
+              message['metadata'] as String,
+            ).traceId ==
+            startTraceId,
+      ),
+      isTrue,
+    );
+
+    await tester.tap(find.text('发热 + 怕冷').last);
+    await tester.pumpAndSettle();
+    final afterAnswer = await _waitForTcmInterviewTaskState(
+      tester,
+      conversationId: conversation['id'] as int,
+      expectedPendingPromptId: 'tongue_pulse',
+    );
+    expect(afterAnswer, isNotNull);
+
+    final allMessages = await _store.getAssistantMessages(
+      conversationId: conversation['id'] as int,
+    );
+    expect(
+      allMessages.skip(initialMessages.length).every(
+        (message) =>
+            AssistantMessageMetadata.decode(
+              message['metadata'] as String,
+            ).traceId ==
+            answerTraceId,
+      ),
+      isTrue,
+    );
+    for (final traceId in [startTraceId, answerTraceId]) {
+      final stages = events
+          .where((event) => event.traceId == traceId)
+          .map((event) => event.stage);
+      expect(stages, containsAll([
+        AiTraceStage.input,
+        AiTraceStage.route,
+        AiTraceStage.dispatch,
+        AiTraceStage.businessExecution,
+        AiTraceStage.persistence,
+        AiTraceStage.finalRender,
+      ]));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('问诊进行中可独立查看只读脏腑证据，不等待辨证结果', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(
