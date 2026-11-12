@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
@@ -458,6 +459,100 @@ void main() {
     );
     expect(conversation.single['title'], '新对话');
     expect(conversation.single['last_message_preview'], '');
+  });
+
+
+  test('structured transcript batch preserves order, metadata, and final preview', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation();
+    const traceId = '11111111111111111111111111111111';
+    final ids = await store.saveAssistantMessagesAtomically(
+      conversationId: conversationId,
+      messages: const [
+        AssistantMessageDraft(
+          role: 'user',
+          content: '开始规则问诊',
+          metadata: '{"trace_id":"11111111111111111111111111111111"}',
+        ),
+        AssistantMessageDraft(
+          role: 'assistant',
+          content: '欢迎开始规则问诊',
+          metadata: '{"trace_id":"11111111111111111111111111111111"}',
+        ),
+        AssistantMessageDraft(
+          role: 'assistant',
+          content: '你整体的寒热感觉是怎样的？',
+          metadata: '{"trace_id":"11111111111111111111111111111111"}',
+        ),
+      ],
+    );
+
+    final messages = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    final conversations = await store.getAssistantConversations();
+    expect(ids, hasLength(3));
+    expect(messages.map((row) => row['id']).toList(), ids);
+    expect(messages.map((row) => row['role']).toList(),
+        ['user', 'assistant', 'assistant']);
+    expect(messages.last['content'], '你整体的寒热感觉是怎样的？');
+    expect(
+      messages.every((row) => (row['metadata'] as String).contains(traceId)),
+      isTrue,
+    );
+    expect(conversations.single['title'], '开始规则问诊');
+    expect(
+      conversations.single['last_message_preview'],
+      '你整体的寒热感觉是怎样的？',
+    );
+  });
+
+  test('structured transcript batch rolls back earlier rows when a later insert fails', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation();
+    final db = await store.database;
+    await db.execute('''
+      CREATE TRIGGER fail_structured_transcript_batch
+      BEFORE INSERT ON assistant_messages
+      WHEN NEW.content = '寒热问题'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected structured transcript failure');
+      END
+    ''');
+
+    await expectLater(
+      store.saveAssistantMessagesAtomically(
+        conversationId: conversationId,
+        messages: const [
+          AssistantMessageDraft(
+            role: 'user',
+            content: '开始规则问诊',
+          ),
+          AssistantMessageDraft(
+            role: 'assistant',
+            content: '欢迎开始',
+          ),
+          AssistantMessageDraft(
+            role: 'assistant',
+            content: '寒热问题',
+          ),
+        ],
+      ),
+      throwsA(anything),
+    );
+
+    expect(
+      await store.getAssistantMessages(conversationId: conversationId),
+      isEmpty,
+    );
+    final conversation = (await db.query(
+      'assistant_conversations',
+      where: 'id = ?',
+      whereArgs: [conversationId],
+      limit: 1,
+    )).single;
+    expect(conversation['title'], '新对话');
+    expect(conversation['last_message_preview'], '');
   });
 
 
