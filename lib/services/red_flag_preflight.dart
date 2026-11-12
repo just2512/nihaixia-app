@@ -6,6 +6,10 @@
 enum RedFlagInputSource {
   currentText,
   attachmentTranscript,
+  imageAttachment,
+  audioAttachment,
+  toolResult,
+  retrievalContext,
   historyRestore,
   structuredInterview,
   toolArguments,
