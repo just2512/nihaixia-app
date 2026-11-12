@@ -81,3 +81,52 @@
 - Android 备份策略尚未核验 merged manifest。
 - Find N2 清除后重启不可恢复的实测 TRACE 尚未提供。
 - SQLCipher 不在本轮范围内；不得宣称数据库已加密。
+
+
+---
+
+## 6. 2026-11-12 增量复核（master `eefa56e9cf159c5533de1c35556f82aa4c873a4f`）
+
+本节覆盖前文 2026-11-11 的旧状态；历史章节保留为当时的审计记录。
+
+### 6.1 当前已落地的数据清除链
+
+| 数据域 | 当前实现 | 当前结论 |
+|---|---|---|
+| AI 会话/消息/结构化问诊快照/旧 chat_history | `DatabaseHelper.clearAllAiConversationData()` 单事务删除四张表；`test/local_ai_data_clear_database_boundary_test.dart` 验证重开 DB 后 AI 表为空、收藏/诊断历史/搜索历史/设置保留，并注入失败验证回滚 | CODE + TEST PRESENT |
+| AI 附件 | `LocalAiAttachmentStore` 将新附件复制/录音写入专属 `local_ai_attachments` 目录；clearAll 删除该目录直接子项，并按精确 `local_ai_[0-9]+.wav` 规则清理旧版录音 | CODE + TEST PRESENT；旧共享图片归属 UNKNOWN |
+| Native runtime cache | `MainActivity.clearRuntimeCache` 经 `aiTasks` executor 调用 `LocalAiRuntimeCacheClearPolicy`；先 `releaseLocalModel()`，再删除 `cacheDir/litertlm`；失败时保留缓存；模型文件在 `filesDir/ai_models` | CODE + Native unit tests PRESENT |
+| Native 内存会话 | `releaseLocalModel()` 先清空 Engine/Conversation 引用，再关闭资源，同时清空 `userReportedInputs`、截断标记、`conversationHistoryTurns` | CODE PRESENT |
+| TRACE | `LocalAiDataClearCoordinator.forApp()` 先调用 `AiTraceRecorder.disableAndFlush`，再调用 writer.clear() 删除 `ai_trace.jsonl` 和 `.tmp`；结束后按之前开关状态恢复 | CODE + tests PRESENT |
+| UI | `SettingsScreen` 数据管理区已挂载 `LocalAiDataClearTile`；二次确认、清理中状态、分域结果和部分失败提示均存在 | CODE + widget tests PRESENT |
+| Android backup | Manifest 显式引用 `backup_rules.xml` 与 `data_extraction_rules.xml`；两者仅排除 `ai_models/`、`ai_trace.jsonl`、`ai_trace.jsonl.tmp` | 模型/TRACE 排除有配置证据；混合 SQLite 仍在备份范围内 |
+
+### 6.2 数据库备份边界（仍未解决）
+
+- AI 对话与非 AI 数据共用 `nihaisha.db`。
+- 两套 Android 规则没有排除 `domain="database"`，因此 AI 会话行可能随数据库备份/设备迁移保留。
+- 不能通过 XML 按 SQLite 表/行选择性排除 AI 数据；排除整个数据库会连带影响 bookmarks、diagnosis_history、user_settings、user_charts 等非 AI 数据。
+- 当前清除动作删除的是设备本地数据库中的 AI 行，不会证明此前生成的云备份/设备迁移副本同步删除。
+- 可行的长期隔离方向是将 AI 会话数据迁入独立数据库文件，或采用应用层可撤销密钥/数据加密设计；两者均涉及迁移、恢复与产品行为，不在本轮擅自实施。
+
+### 6.3 当前剩余缺口
+
+1. **旧共享图片**：历史版本的 image_picker 临时文件没有完整所有权清单；不得扫描并删除共享临时目录中的任意图片。当前结论 UNKNOWN。
+2. **外部副本**：用户手动导出、系统备份、设备迁移副本不在本地 coordinator 控制范围。
+3. **进程重启**：数据库边界测试验证了关闭/重开 SQLite 连接后的行状态；尚未证明 Find N2 上强制停止/进程重启后不可恢复。UI 明确要求完全退出并重启后复查，但这不是已完成的真机证据。
+4. **真机清理**：尚无 Find N2 实测 TRACE，覆盖 Native 模型运行中、附件存在、TRACE 开关开启/关闭、清理失败和进程重启。
+5. **Native 任务并发**：Native cache 清除通过串行 `aiTasks` executor 执行；仍需真机验证清理触发时正在进行的模型调用、Activity teardown 与清理结果交付顺序。
+
+### 6.4 当前结论
+
+- SQLite、AI 专属附件、Native runtime cache、TRACE 和设置 UI 的清除代码已落地，并有单元/组件测试。
+- 模型文件按产品约定保留；非 AI 数据在数据库边界测试中得到保留证明。
+- **E = PARTIAL，不是 PASS。** 混合 SQLite 备份副本、旧共享图片和 Find N2 强制停止/重启后的不可恢复证据仍缺失。
+- 不得全局禁用 Android backup；不得删除整个 `nihaisha.db`；不得清空共享 temp 目录；不得把关闭/重开数据库连接等同于真实进程重启。
+
+### 6.5 下一步
+
+1. 为 Android backup 风险建立独立决策记录：保留现状并接受 AI 数据进入备份，或评估 AI 独立数据库迁移；不以全局关闭备份替代分析。
+2. 为旧版图片建立可验证归属证据；没有证据时继续保留并在 UI/文档披露。
+3. 在 Find N2 做合成数据清理验收：模型运行中/空闲、附件存在、TRACE 开关两种状态、清理成功/部分失败、强制停止、重启后重新检查；同时确认模型文件和非 AI 数据保留。
+4. 把设备结果记录为每个数据域的 CLEAR / RETAINED / UNKNOWN，附设备型号、Android 版本、构建 SHA、步骤和重启后复查结果。
