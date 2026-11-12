@@ -2818,6 +2818,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _recordTurnPersistenceNotStarted(
+    AiTraceContext traceContext, {
+    required String errorCode,
+    String? mode,
+  }) async {
+    int? conversationId;
+    try {
+      conversationId = await _conversationIdFuture;
+    } catch (_) {
+      // The trace still records that no history row was written.
+    }
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.persistence,
+      status: AiTraceStatus.notStarted,
+      conversationId: conversationId,
+      mode: mode,
+      errorCode: errorCode,
+    );
+  }
+
   Future<void> _send() async {
     if (_modelControlBusy) return;
     final text = _inputController.text.trim();
@@ -3041,6 +3062,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     });
     _scrollToBottom();
 
+    var nativeInferenceCompleted = false;
+    var resultValidationCompleted = false;
+    var persistenceStarted = false;
+    var persistenceRecorded = false;
     try {
       final turnResponse = audioPath != null
           ? _AssistantTurnResponse(
@@ -3068,6 +3093,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   traceContext: traceContext,
                 );
       final reply = turnResponse.text;
+      nativeInferenceCompleted = true;
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
@@ -3081,6 +3107,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
       );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        sourceIds: turnResponse.sourceIds,
+      );
+      resultValidationCompleted = true;
+      persistenceStarted = true;
       final persisted = await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
@@ -3098,6 +3133,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         sourceIds: turnResponse.sourceIds,
         errorCode: persisted ? null : 'PERSISTENCE_FAILED',
       );
+      persistenceRecorded = true;
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) return;
@@ -3147,15 +3183,57 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         sourceIds: turnResponse.sourceIds,
       );
     } on PlatformException catch (error) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
-        mode: effectiveMode.name,
-        errorCode: error.code == 'TRACE_ID_MISMATCH'
-            ? 'TRACE_ID_MISMATCH'
-            : 'NATIVE_CALL_FAILED',
-      );
+      final emptyReply = error.code == 'EMPTY_REPLY';
+      final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: emptyReply
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.unknown,
+          mode: effectiveMode.name,
+          errorCode: emptyReply
+              ? null
+              : traceMismatch
+                  ? 'TRACE_ID_MISMATCH'
+                  : 'NATIVE_CALL_FAILED',
+        );
+      }
+      if (!resultValidationCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: emptyReply
+              ? AiTraceStatus.failed
+              : traceMismatch
+                  ? AiTraceStatus.unknown
+                  : AiTraceStatus.notStarted,
+          mode: effectiveMode.name,
+          errorCode: emptyReply
+              ? 'MODEL_REPLY_INVALID'
+              : traceMismatch
+                  ? 'TRACE_ID_MISMATCH'
+                  : null,
+        );
+      }
+      if (!persistenceRecorded) {
+        if (persistenceStarted) {
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.persistence,
+            status: AiTraceStatus.unknown,
+            mode: effectiveMode.name,
+            errorCode: 'PERSISTENCE_STATE_UNKNOWN',
+          );
+        } else {
+          await _recordTurnPersistenceNotStarted(
+            traceContext,
+            errorCode: 'NATIVE_TURN_NOT_PERSISTED',
+            mode: effectiveMode.name,
+          );
+        }
+      }
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
@@ -3187,13 +3265,43 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : message;
       });
     } catch (error) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
-        mode: effectiveMode.name,
-        errorCode: 'NATIVE_CALL_FAILED',
-      );
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.unknown,
+          mode: effectiveMode.name,
+          errorCode: 'NATIVE_CALL_FAILED',
+        );
+      }
+      if (!resultValidationCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: nativeInferenceCompleted
+              ? AiTraceStatus.unknown
+              : AiTraceStatus.notStarted,
+          mode: effectiveMode.name,
+          errorCode: nativeInferenceCompleted ? 'RESULT_STATE_UNKNOWN' : null,
+        );
+      }
+      if (!persistenceRecorded) {
+        if (persistenceStarted) {
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.persistence,
+            status: AiTraceStatus.unknown,
+            mode: effectiveMode.name,
+            errorCode: 'PERSISTENCE_STATE_UNKNOWN',
+          );
+        } else {
+          await _recordTurnPersistenceNotStarted(
+            traceContext,
+            errorCode: 'NATIVE_TURN_NOT_PERSISTED',
+            mode: effectiveMode.name,
+          );
+        }
+      }
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
@@ -3237,17 +3345,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       route: 'symptom_extraction',
       mode: 'consultation',
     );
+    var nativeInferenceCompleted = false;
+    var resultValidationCompleted = false;
     try {
       final traceId = traceContext.traceId;
       final draft = traceId == null
           ? await _service.extractSymptoms()
           : await _service.extractSymptomsWithTrace(traceId: traceId);
+      nativeInferenceCompleted = true;
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
         status: AiTraceStatus.succeeded,
         mode: 'consultation',
       );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        mode: 'consultation',
+      );
+      resultValidationCompleted = true;
       if (!mounted) return;
       setState(() => _extracting = false);
       if (draft.summaryLines.isEmpty) {
@@ -3321,41 +3439,89 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _confirmedDraft = draft;
       });
     } on PlatformException catch (error) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
-        mode: 'consultation',
-        errorCode: error.code == 'TRACE_ID_MISMATCH'
-            ? 'TRACE_ID_MISMATCH'
-            : 'NATIVE_CALL_FAILED',
-      );
+      final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
+      final emptyReply = error.code == 'EMPTY_REPLY';
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: emptyReply
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.unknown,
+          mode: 'consultation',
+          errorCode: traceMismatch
+              ? 'TRACE_ID_MISMATCH'
+              : emptyReply
+                  ? null
+                  : 'NATIVE_CALL_FAILED',
+        );
+      }
+      if (!resultValidationCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: emptyReply
+              ? AiTraceStatus.failed
+              : traceMismatch
+                  ? AiTraceStatus.unknown
+                  : AiTraceStatus.notStarted,
+          mode: 'consultation',
+          errorCode: emptyReply
+              ? 'MODEL_REPLY_INVALID'
+              : traceMismatch
+                  ? 'TRACE_ID_MISMATCH'
+                  : null,
+        );
+      }
       if (!mounted) return;
       setState(() {
         _extracting = false;
         _error = error.message ?? '症状整理失败';
       });
     } on FormatException catch (error) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
-        mode: 'consultation',
-        errorCode: 'NATIVE_CALL_FAILED',
-      );
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.succeeded,
+          mode: 'consultation',
+        );
+      }
+      if (!resultValidationCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: AiTraceStatus.failed,
+          mode: 'consultation',
+          errorCode: 'MODEL_OUTPUT_INVALID',
+        );
+      }
       if (!mounted) return;
       setState(() {
         _extracting = false;
         _error = error.message;
       });
     } catch (error) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.unknown,
-        mode: 'consultation',
-        errorCode: 'NATIVE_CALL_FAILED',
-      );
+      if (!nativeInferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.unknown,
+          mode: 'consultation',
+          errorCode: 'NATIVE_CALL_FAILED',
+        );
+      }
+      if (!resultValidationCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: nativeInferenceCompleted
+              ? AiTraceStatus.unknown
+              : AiTraceStatus.notStarted,
+          mode: 'consultation',
+          errorCode: nativeInferenceCompleted ? 'RESULT_STATE_UNKNOWN' : null,
+        );
+      }
       if (!mounted) return;
       setState(() {
         _extracting = false;
