@@ -189,3 +189,45 @@
 - B5：接入 Flutter 与必要的 Native 边界，跑完整 Flutter、Android arm64/Native tests；设备 TRACE 单独验收。
 
 结论仍为 **B = PARTIAL / RELEASE BLOCKED**。本增量是当前 master 的调用链复核，不代表门禁已经接入。
+
+
+---
+
+## 8. 2026-11-12 PR #107 后主线复核（master 5a9d2c7fccd4b291982d39699fe929eaa968a6fe）
+
+### 8.1 当前源码入口定位
+
+| 路径 | 当前代码定位 | 是否调用 RedFlagGate/Preflight |
+|---|---|---|
+| 统一助手发送 | LocalAiInterviewScreen._send()，约 2842 行 | 否 |
+| 结构化问诊选项 | _handleTcmInterviewOption()，约 1557 行；由 _send() 活动任务分支调用 | 否 |
+| Headless 工具执行 | _executeHeadlessTool()，约 1963 行 | 否 |
+| 工具选择/执行分发 | _requestTool()，约 2107 行 | 否 |
+| 普通/知识文本 Native 调用 | LocalAiService.sendMessage*()，约 46-103 行 | 否 |
+| 图片/语音 Native 调用 | LocalAiService.sendImage*() / sendAudio*()，约 118-155 行 | 否 |
+| 症状整理 | _extractSymptoms()，约 3337 行；调用 extractSymptoms*() | 否 |
+| Native MethodChannel | MainActivity.kt handler：extractSymptoms 94、sendImage 105、sendAudio 122、sendMessage 139、restoreConversation 156 行附近 | 否 |
+
+### 8.2 当前实现边界
+
+- red_flag_gate.dart 只有 RedFlagDetector 接口和 RedFlagGate fail-closed 包装；没有自然语言 detector 实现。
+- red_flag_preflight.dart 只对外部 assessment 做策略判定，不从文本、图片或语音中抽取医学语义。
+- 当前 local_ai_interview_screen.dart、local_ai_service.dart、MainActivity.kt 均没有 RedFlagGate/RedFlagPreflight 引用；因此策略类和其单测不能证明生产入口受保护。
+- LocalAiService 的 Dart API 最终经 MethodChannel 调用 Native；Native 侧仍存在直接模型执行入口。Flutter 页面级门禁单独存在也不足以防止绕过，必须审计 Native 边界。
+- 历史恢复不是新用户轮次；应保留历史主体/时间 provenance，不得把历史内容自动重标为当前本人症状，也不得为恢复生成新 trace_id。
+
+### 8.3 当前状态与限制
+
+- Gate contract：CODE PRESENT；策略测试：PASS。
+- 自然语言 detector：MISSING；医学审核：MISSING。
+- Flutter/Native 全入口调用：MISSING。
+- Find N2 真机入口 TRACE：UNKNOWN。
+- B 继续 PARTIAL / RELEASE BLOCKED。
+- 在没有医学审核和产品影响决策前，不将 detector=null 的 REVIEW_REQUIRED 自动接入所有入口而静默关闭全部 AI 功能；也不允许绕过 Gate 后将未评估输入标记 CLEAR。
+
+### 8.4 下一步最小切片
+
+1. 只做 B2：为 _send、结构化问诊选项、工具分发、附件、症状整理和 Native MethodChannel 边界设计同一可注入 gate seam；测试断言门禁调用严格早于 route/tool/model side effect。
+2. 测试用 fake detector 只验证调用顺序和状态传播，不声称识别准确率；缺失/异常/超时/未审核仍必须 REVIEW_REQUIRED。
+3. 不实现医学词表、不生成急救阈值/文案；真实 detector 等待医学审核记录。
+4. B2 seam 通过后再评估全局阻断的产品影响和 Native 边界接入；在医学审核前保持生产 RELEASE BLOCKED。
