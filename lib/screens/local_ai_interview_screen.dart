@@ -678,8 +678,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         });
         return;
       }
-      final directory = await getTemporaryDirectory();
-      final path = await _attachmentStore.createRecordingPath(extension: '.wav');
+      final path = await _attachmentStore.createRecordingPath(
+        extension: '.wav',
+      );
       _activeRecordingPath = path;
       await _audioRecorder.start(
         const RecordConfig(
