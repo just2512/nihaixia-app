@@ -481,7 +481,7 @@ void main() {
         received = call;
         return <String, Object?>{
           'reply': '继续描述',
-          'traceId': traceId,
+          'trace_id': traceId,
         };
       });
 
@@ -493,7 +493,7 @@ void main() {
       expect(reply, '继续描述');
       expect(received?.arguments, <String, Object?>{
         'text': '继续问诊',
-        'traceId': traceId,
+        'trace_id': traceId,
       });
     });
 
@@ -503,7 +503,7 @@ void main() {
         received = call;
         return <String, Object?>{
           'reply': '依据本地资料整理',
-          'traceId': traceId,
+          'trace_id': traceId,
         };
       });
 
@@ -517,7 +517,7 @@ void main() {
       expect(received?.arguments, <String, Object?>{
         'text': '柴胡的传统功用是什么？',
         'context': '[App本草库] 柴胡：原始条目',
-        'traceId': traceId,
+        'trace_id': traceId,
       });
     });
 
@@ -526,7 +526,7 @@ void main() {
         channel,
         (_) async => <String, Object?>{
           'reply': '回答',
-          'traceId': 'ffffffffffffffffffffffffffffffff',
+          'trace_id': 'ffffffffffffffffffffffffffffffff',
         },
       );
 
@@ -548,7 +548,7 @@ void main() {
         received.add(call);
         return <String, Object?>{
           'reply': '附件分析',
-          'traceId': traceId,
+          'trace_id': traceId,
         };
       });
 
@@ -562,8 +562,8 @@ void main() {
       );
 
       expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
-      expect(received[0].arguments['traceId'], traceId);
-      expect(received[1].arguments['traceId'], traceId);
+      expect(received[0].arguments['trace_id'], traceId);
+      expect(received[1].arguments['trace_id'], traceId);
     });
 
     test('invalid trace ID is rejected before a platform call', () async {
