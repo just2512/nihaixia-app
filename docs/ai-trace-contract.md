@@ -1,6 +1,6 @@
 # Local AI TRACE 端到端契约
 
-- 状态：设计基线，尚未接入生产调用链
+- 状态：F2 部分落地；普通文本/图片/语音统一助手轮次已接入可选 trace_id 与 SQLite metadata，其他分支仍待接入
 - 审计基线：`master @ e279d7a4ce65edc5a32d7521231f57c413db6895`
 - 约束：TRACE 默认关闭；只记录 allowlisted metadata；写入失败不得影响 AI 业务；不创建新的 conversation table。
 
@@ -124,3 +124,14 @@
 2. 将同一 ID 传入上述 traced API，并为 retrieval/model/persistence/presentation 记录状态。
 3. 通过既有 assistant message metadata 的 `trace_id` 关联 user/assistant message，不新建会话表。
 4. 证明 TRACE 关闭时 metadata 不增加 ID，TRACE 开启时不记录敏感正文；清理入口必须一并清除 trace 文件与消息 metadata。
+
+
+## 9. 2026-11-12 F2 per-turn UI correlation（PR #87 验收中）
+
+- `LocalAiInterviewScreen` 在正常模型轮次创建可选 `AiTraceContext`；ID 只由默认关闭的 `AiTraceRecorder` 生成，TRACE 关闭时不生成。
+- 普通文本按有无 context 选择既有 traced API；图片、语音调用对应 traced API。Native 响应仍由 `LocalAiService` 校验相同 ID。
+- 同一 ID 写入现有 `assistant_messages.metadata` 的 user/assistant 两条消息；不新增表/列，历史 metadata 解码保持向后兼容。
+- 已记录 input、native_inference、model_output、persistence、final_render 阶段；持久化事件只有在 `saveAssistantTurn` 成功后才记为 SUCCEEDED。
+- 持久化失败记为 FAILED；Native 响应 ID 缺失/错配或推理调用异常记为 UNKNOWN，使用稳定错误码，不记录异常正文。
+- 新增可注入 recorder 的测试 seam，验证一个 ID 贯穿 traced Native API 与 user/assistant metadata，且事件阶段完整。
+- 本切片仍未覆盖结构化问诊分支、澄清/工具执行分支、独立症状提取入口、检索阶段细分、错误后持久化状态和真实 Find N2 TRACE；整体 F 仍为 PARTIAL。
