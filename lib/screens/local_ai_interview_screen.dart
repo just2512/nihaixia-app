@@ -3275,6 +3275,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     if (_status?.ready != true) {
       setState(() => _error = '本地模型尚未加载。可以先使用上方 App 内置工具；AI 对话请先加载 Gemma 4 E4B。');
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        errorCode: 'LOCAL_MODEL_NOT_READY',
+      );
       return;
     }
 
@@ -3365,7 +3372,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       persistenceRecorded = true;
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
-      if (!mounted) return;
+      if (!mounted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.notApplicable,
+          mode: effectiveMode.name,
+          errorCode: 'SCREEN_DISPOSED',
+        );
+        return;
+      }
       _inputController.clear();
       final nativeRuntimeUnavailable =
           refreshedStatus != null && !refreshedStatus.ready;
@@ -3466,6 +3482,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.notApplicable,
+          mode: effectiveMode.name,
+          errorCode: 'SCREEN_DISPOSED',
+        );
         return;
       }
       setState(() {
@@ -3493,6 +3516,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ? '$message；无法确认本地模型状态，请重新检查后继续。'
             : message;
       });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        errorCode: error.code,
+      );
     } catch (error) {
       if (!nativeInferenceCompleted) {
         await _traceRecorder.record(
@@ -3534,6 +3564,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final refreshedStatus = await _readNativeStatus();
       if (!mounted) {
         await _deleteCachedAttachments([imagePath, audioPath]);
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.notApplicable,
+          mode: effectiveMode.name,
+          errorCode: 'SCREEN_DISPOSED',
+        );
         return;
       }
       setState(() {
@@ -3560,6 +3597,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ? '处理失败：$error；无法确认本地模型状态，请重新检查后继续。'
             : '处理失败：$error';
       });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: effectiveMode.name,
+        errorCode: persistenceStarted && !persistenceRecorded
+            ? 'PERSISTENCE_STATE_UNKNOWN'
+            : nativeInferenceCompleted
+                ? 'RESULT_STATE_UNKNOWN'
+                : 'NATIVE_CALL_FAILED',
+      );
     }
   }
 
@@ -3574,6 +3622,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       route: 'symptom_extraction',
       mode: 'consultation',
     );
+    Future<void> recordFinalRender({String? errorCode}) =>
+        _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: mounted
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.notApplicable,
+          mode: 'consultation',
+          errorCode: errorCode,
+        );
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
     try {
@@ -3595,12 +3653,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: 'consultation',
       );
       resultValidationCompleted = true;
-      if (!mounted) return;
+      if (!mounted) {
+        await recordFinalRender(errorCode: 'SCREEN_DISPOSED');
+        return;
+      }
       setState(() => _extracting = false);
       if (draft.summaryLines.isEmpty) {
         setState(() => _error = draft.sourceTruncated
             ? '原始输入记录曾被裁剪，但本次未提取到可核对内容。请补充遗漏描述后重新整理。'
             : '目前没有提取到明确的自述信息，请补充描述后再整理。');
+        await recordFinalRender(errorCode: 'EMPTY_SYMPTOM_DRAFT');
         return;
       }
 
@@ -3663,10 +3725,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         },
       );
 
-      if (!mounted || confirmed != true) return;
+      if (!mounted || confirmed != true) {
+        await recordFinalRender(
+          errorCode: mounted ? 'USER_CANCELLED_DRAFT_REVIEW' : 'SCREEN_DISPOSED',
+        );
+        return;
+      }
       setState(() {
         _confirmedDraft = draft;
       });
+      await recordFinalRender();
     } on PlatformException catch (error) {
       final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
       final emptyReply = error.code == 'EMPTY_REPLY';
@@ -3702,11 +3770,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   : null,
         );
       }
-      if (!mounted) return;
+      if (!mounted) {
+        await recordFinalRender(errorCode: 'SCREEN_DISPOSED');
+        return;
+      }
       setState(() {
         _extracting = false;
         _error = error.message ?? '症状整理失败';
       });
+      await recordFinalRender(errorCode: error.code);
     } on FormatException catch (error) {
       if (!nativeInferenceCompleted) {
         await _traceRecorder.record(
@@ -3725,11 +3797,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           errorCode: 'MODEL_OUTPUT_INVALID',
         );
       }
-      if (!mounted) return;
+      if (!mounted) {
+        await recordFinalRender(errorCode: 'SCREEN_DISPOSED');
+        return;
+      }
       setState(() {
         _extracting = false;
         _error = error.message;
       });
+      await recordFinalRender(errorCode: 'MODEL_OUTPUT_INVALID');
     } catch (error) {
       if (!nativeInferenceCompleted) {
         await _traceRecorder.record(
@@ -3751,11 +3827,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           errorCode: nativeInferenceCompleted ? 'RESULT_STATE_UNKNOWN' : null,
         );
       }
-      if (!mounted) return;
+      if (!mounted) {
+        await recordFinalRender(errorCode: 'SCREEN_DISPOSED');
+        return;
+      }
       setState(() {
         _extracting = false;
         _error = '症状整理失败：$error';
       });
+      await recordFinalRender(
+        errorCode: nativeInferenceCompleted
+            ? 'RESULT_STATE_UNKNOWN'
+            : 'NATIVE_CALL_FAILED',
+      );
     }
   }
 
