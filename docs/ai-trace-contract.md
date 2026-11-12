@@ -134,4 +134,5 @@
 - 已记录 input、native_inference、model_output、persistence、final_render 阶段；持久化事件只有在 `saveAssistantTurn` 成功后才记为 SUCCEEDED。
 - 持久化失败记为 FAILED；Native 响应 ID 缺失/错配或推理调用异常记为 UNKNOWN，使用稳定错误码，不记录异常正文。
 - 新增可注入 recorder 的测试 seam，验证一个 ID 贯穿 traced Native API 与 user/assistant metadata，且事件阶段完整。
-- 本切片仍未覆盖结构化问诊分支、澄清/工具执行分支、独立症状提取入口、检索阶段细分、错误后持久化状态和真实 Find N2 TRACE；整体 F 仍为 PARTIAL。
+- 独立症状提取入口也已按 recorder 开关调用 traced API，并记录 Native 成功/UNKNOWN；该草稿尚未持久化到消息 metadata。
+- 本切片仍未覆盖结构化问诊分支、澄清/工具执行分支、检索阶段细分、Native 失败轮次的持久化关联及真实 Find N2 TRACE；整体 F 仍为 PARTIAL。
