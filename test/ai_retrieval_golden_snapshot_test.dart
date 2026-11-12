@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
@@ -14,6 +17,13 @@ void main() {
 
   const request = '查桂枝汤组成，并找《伤寒论》对应条文';
 
+  Future<String> digestAsset(String path) async {
+    final data = await rootBundle.load(path);
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    return sha256.convert(bytes).toString();
+  }
+
+
   setUpAll(() async {
     await FormulaRepository.load();
     await HerbRepository.load();
@@ -23,12 +33,11 @@ void main() {
   });
 
   Future<Map<String, Object?>> capture() async {
+    final queryProvenance =
+        AssistantKnowledgeContextBuilder.deriveClassicQueries(request);
     final queries = <String, Object?>{};
-    for (final query in [
-      request,
-      '桂枝汤',
-      '伤寒论',
-    ]) {
+    for (final provenance in queryProvenance) {
+      final query = provenance.query;
       final result = await ClassicSearchService.search(query);
       queries[query] = {
         'total': result.total,
@@ -43,6 +52,7 @@ void main() {
           'snippet': hit.snippet,
           'localBacklink': hit.localBacklink,
           'locatorStatus': hit.locatorStatus,
+          'bibliographicLocatorVerified': hit.hasVerifiedBibliographicLocator,
         }).toList(growable: false),
       };
     }
@@ -61,6 +71,19 @@ void main() {
               'name': formula.name,
               'components': formula.components.map((item) => item.name).toList(),
             },
+      'sourceManifest': {
+        'classicIndex': {
+          'asset': ClassicSearchService.assetPath,
+          'sha256': await digestAsset(ClassicSearchService.assetPath),
+          'bibliographicVerification': 'MISSING',
+        },
+        'formulaData': {
+          'asset': 'assets/data/formulas.json',
+          'sha256': await digestAsset('assets/data/formulas.json'),
+        },
+      },
+      'queryProvenance':
+          queryProvenance.map((item) => item.toJson()).toList(growable: false),
       'classicQueries': queries,
       'context': {
         'status': context.statusLabel,
@@ -80,6 +103,25 @@ void main() {
     };
   }
 
+  test('records the origin of derived classic search queries', () {
+    final provenance =
+        AssistantKnowledgeContextBuilder.deriveClassicQueries('第12条 桂枝汤');
+    final byQuery = {
+      for (final item in provenance) item.query: item,
+    };
+
+    expect(provenance.first.query, '第12条 桂枝汤');
+    expect(byQuery.containsKey('桂枝汤'), isTrue);
+    expect(byQuery['第12条']!.reasons, contains('ARTICLE_NUMBER:12'));
+    expect(byQuery['条文12']!.reasons, contains('ARTICLE_NUMBER:12'));
+    final formula = FormulaRepository.getByName('桂枝汤');
+    expect(formula, isNotNull);
+    expect(
+      byQuery['桂枝汤']!.reasons,
+      contains('FORMULA_ID:${formula!.id}'),
+    );
+  });
+
   test('captures reproducible Guizhi Tang and Shanghan Lun retrieval baseline', () async {
     final first = await capture();
     final second = await capture();
@@ -89,11 +131,22 @@ void main() {
     expect(first['formula'], isNotNull,
         reason: '桂枝汤必须从本地方剂库解析');
     final queryResults = first['classicQueries']! as Map<String, Object?>;
-    for (final query in [request, '桂枝汤', '伤寒论']) {
+    final provenance = first['queryProvenance']! as List<Object?>;
+    expect(provenance, isNotEmpty);
+    expect((provenance.first as Map)['query'], request);
+    expect(queryResults.keys.toSet(), provenance
+        .map((item) => (item as Map)['query'] as String)
+        .toSet());
+    expect(queryResults.containsKey('桂枝汤'), isTrue);
+    expect(queryResults.containsKey('伤寒论'), isTrue);
+    for (final query in queryResults.keys) {
       final result = queryResults[query]! as Map<String, Object?>;
       expect(result['total'], isA<int>());
       expect(result['hits'], isA<List<Object?>>());
     }
+    final manifest = first['sourceManifest']! as Map<String, Object?>;
+    expect((manifest['classicIndex']! as Map)['sha256'], isA<String>());
+    expect((manifest['formulaData']! as Map)['sha256'], isA<String>());
     final context = first['context']! as Map<String, Object?>;
     expect(context['text'], isA<String>());
     expect((context['text'] as String), isNotEmpty);
