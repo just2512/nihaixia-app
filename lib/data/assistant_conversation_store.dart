@@ -14,6 +14,16 @@ abstract interface class AssistantConversationStore {
     String? metadata,
   });
 
+  /// Atomically persists the user/assistant pair for one successful turn.
+  /// [userContent] may be null for assistant-only system turns.
+  Future<int> saveAssistantTurn({
+    required int conversationId,
+    String? userContent,
+    String? userMetadata,
+    required String assistantContent,
+    String? assistantMetadata,
+  });
+
   Future<List<Map<String, Object?>>> getAssistantConversations({
     int? limit,
   });

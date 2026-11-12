@@ -400,4 +400,65 @@ void main() {
   });
 
 
+  test('successful assistant turn persists user and assistant messages atomically', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation();
+    final assistantMessageId = await store.saveAssistantTurn(
+      conversationId: conversationId,
+      userContent: '请比较桂枝汤与麻黄汤',
+      userMetadata: '{"mode":"learning"}',
+      assistantContent: '两方的组成与适用边界如下。',
+      assistantMetadata: '{"mode":"learning","sourceIds":["classic:1"]}',
+    );
+
+    final messages = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(messages, hasLength(2));
+    expect(messages[0]['role'], 'user');
+    expect(messages[0]['content'], '请比较桂枝汤与麻黄汤');
+    expect(messages[0]['metadata'], '{"mode":"learning"}');
+    expect(messages[1]['role'], 'assistant');
+    expect(messages[1]['content'], '两方的组成与适用边界如下。');
+    expect(messages[1]['metadata'], contains('classic:1'));
+    expect(messages[1]['id'], assistantMessageId);
+  });
+
+  test('assistant insert failure rolls back the user half of a turn', () async {
+    final store = DatabaseHelper.instance;
+    final conversationId = await store.createAssistantConversation();
+    final db = await store.database;
+    await db.execute('''
+      CREATE TRIGGER fail_assistant_turn
+      BEFORE INSERT ON assistant_messages
+      WHEN NEW.role = 'assistant'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected assistant insert failure');
+      END
+    ''');
+
+    await expectLater(
+      store.saveAssistantTurn(
+        conversationId: conversationId,
+        userContent: '这条用户消息不得单独落库',
+        assistantContent: '模拟 assistant 持久化失败',
+      ),
+      throwsA(isA<Exception>()),
+    );
+
+    final messages = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(messages, isEmpty);
+    final conversation = await db.query(
+      'assistant_conversations',
+      where: 'id = ?',
+      whereArgs: [conversationId],
+      limit: 1,
+    );
+    expect(conversation.single['title'], '新对话');
+    expect(conversation.single['last_message_preview'], '');
+  });
+
+
 }

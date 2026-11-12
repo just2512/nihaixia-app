@@ -988,19 +988,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : replayable
               ? '$userText（另附$attachmentType；原始附件未持久化）'
               : '已附加$attachmentType（原始附件未持久化）';
-      if (storedUserText.trim().isNotEmpty) {
-        await _conversationStore.saveAssistantMessage(
-          conversationId: id,
-          role: 'user',
-          content: storedUserText,
-          metadata: metadata,
-        );
-      }
-      await _conversationStore.saveAssistantMessage(
+      await _conversationStore.saveAssistantTurn(
         conversationId: id,
-        role: 'assistant',
-        content: assistantText,
-        metadata: AssistantMessageMetadata(
+        userContent: storedUserText.trim().isEmpty ? null : storedUserText,
+        userMetadata: metadata,
+        assistantContent: assistantText,
+        assistantMetadata: AssistantMessageMetadata(
           mode: activeMode.name,
           selectedMode: _assistantMode.name,
           toolId: toolId,
@@ -1011,7 +1004,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ).encode(),
       );
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
+      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+      if (mounted) {
+        setState(() {
+          _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
+        });
+      }
     }
   }
 
