@@ -1240,7 +1240,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       final persisted = await _appendTcmInterviewMessages(
         before,
-        traceId: activeTraceContext.traceId,
+        traceContext: activeTraceContext,
       );
       await _traceRecorder.record(
         activeTraceContext,
@@ -1406,14 +1406,45 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<bool> _appendTcmInterviewMessages(
     int startIndex, {
-    String? traceId,
+    AiTraceContext? traceContext,
   }) async {
     final controller = _tcmInterviewController;
     if (controller == null) return false;
+    final traceId = traceContext?.traceId;
     final added = controller.messages.skip(startIndex).toList(growable: false);
     if (added.isEmpty) {
-      await _persistTcmInterviewTaskState(controller.createTaskState());
-      return true;
+      final conversationId = await _conversationIdFuture;
+      final persistedStateWatch = Stopwatch()..start();
+      try {
+        await _persistTcmInterviewTaskState(controller.createTaskState());
+        persistedStateWatch.stop();
+        if (traceContext != null) {
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.persistedState,
+            status: conversationId != null
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.failed,
+            durationMs: persistedStateWatch.elapsedMilliseconds,
+            toolId: 'structured_diagnosis',
+            errorCode: conversationId != null ? null : 'CONVERSATION_UNAVAILABLE',
+          );
+        }
+        return conversationId != null;
+      } catch (error) {
+        persistedStateWatch.stop();
+        if (traceContext != null) {
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.persistedState,
+            status: AiTraceStatus.failed,
+            durationMs: persistedStateWatch.elapsedMilliseconds,
+            toolId: 'structured_diagnosis',
+            errorCode: 'TASK_STATE_PERSISTENCE_FAILED',
+          );
+        }
+        rethrow;
+      }
     }
 
     final taskState = controller.createTaskState();
@@ -1462,12 +1493,42 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
       }
     }
-    await _persistTcmInterviewTaskState(taskState);
-    await _persistDiagnosisHistoryOnce(controller);
-    final completedDiagnosis = controller.completedDiagnosis;
-    if (completedDiagnosis?.prescription != null &&
-        SettingsRepository.instance.autoCopyPrescription) {
-      await _copyDiagnosisPrescription(completedDiagnosis!.prescription!);
+
+    final persistedStateWatch = Stopwatch()..start();
+    try {
+      await _persistTcmInterviewTaskState(taskState);
+      await _persistDiagnosisHistoryOnce(controller);
+      final completedDiagnosis = controller.completedDiagnosis;
+      if (completedDiagnosis?.prescription != null &&
+          SettingsRepository.instance.autoCopyPrescription) {
+        await _copyDiagnosisPrescription(completedDiagnosis!.prescription!);
+      }
+      persistedStateWatch.stop();
+      if (traceContext != null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistedState,
+          status: conversationId != null
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.failed,
+          durationMs: persistedStateWatch.elapsedMilliseconds,
+          toolId: 'structured_diagnosis',
+          errorCode: conversationId != null ? null : 'CONVERSATION_UNAVAILABLE',
+        );
+      }
+    } catch (error) {
+      persistedStateWatch.stop();
+      if (traceContext != null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistedState,
+          status: AiTraceStatus.failed,
+          durationMs: persistedStateWatch.elapsedMilliseconds,
+          toolId: 'structured_diagnosis',
+          errorCode: 'TASK_STATE_PERSISTENCE_FAILED',
+        );
+      }
+      rethrow;
     }
 
     if (controller.isCompleted) {
@@ -1482,6 +1543,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
     _scrollToBottom();
+    if (traceContext != null) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.presentation,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        toolId: 'structured_diagnosis',
+      );
+    }
     return persisted;
   }
 
@@ -1558,7 +1627,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       final persisted = await _appendTcmInterviewMessages(
         before,
-        traceId: activeTraceContext.traceId,
+        traceContext: activeTraceContext,
       );
       await _traceRecorder.record(
         activeTraceContext,
@@ -1864,7 +1933,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       final persisted = await _appendTcmInterviewMessages(
         before,
-        traceId: activeTraceContext.traceId,
+        traceContext: activeTraceContext,
       );
       await _traceRecorder.record(
         activeTraceContext,
@@ -2128,7 +2197,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       mode: activeMode,
       toolId: tool.id,
       toolArguments: arguments?.values ?? const {},
-      traceId: activeTraceContext.traceId,
+      traceContext: activeTraceContext,
     );
     await _traceRecorder.record(
       activeTraceContext,
