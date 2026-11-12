@@ -1,5 +1,5 @@
 import '../data/database_helper.dart';
-import 'ai_trace_store.dart';
+import 'ai_trace_runtime.dart';
 import 'local_ai_attachment_store.dart';
 import 'local_ai_service.dart';
 
@@ -11,34 +11,37 @@ import 'local_ai_service.dart';
 /// attempted after a failure, and every skipped domain is reported explicitly.
 class LocalAiDataClearCoordinator {
   LocalAiDataClearCoordinator({
-    required Future<void> Function() stopTraceRecording,
+    required Future<bool> Function() stopTraceRecording,
+    required Future<void> Function(bool wasEnabled) resumeTraceRecording,
     required Future<LocalAiRuntimeCacheClearResult> Function()
         clearRuntimeCache,
     required Future<void> Function() clearAttachments,
     required Future<void> Function() clearTrace,
     required Future<void> Function() clearDatabase,
   })  : _stopTraceRecording = stopTraceRecording,
+        _resumeTraceRecording = resumeTraceRecording,
         _clearRuntimeCache = clearRuntimeCache,
         _clearAttachments = clearAttachments,
         _clearTrace = clearTrace,
         _clearDatabase = clearDatabase;
 
-  /// Production wiring. The caller must pass the same recorder and writer
-  /// instances used by the AI workflow so stop/flush/clear share their queues.
-  factory LocalAiDataClearCoordinator.forApp({
-    required Future<void> Function() stopTraceRecording,
-    required LocalAiTraceFileWriter traceWriter,
-  }) {
+  /// Production wiring uses the process-wide recorder and writer so
+  /// stop/flush/clear share their queues and preserve default-off state.
+  factory LocalAiDataClearCoordinator.forApp() {
     return LocalAiDataClearCoordinator(
-      stopTraceRecording: stopTraceRecording,
+      stopTraceRecording: AiTraceRuntime.recorder.disableAndFlush,
+      resumeTraceRecording: (wasEnabled) async {
+        if (wasEnabled) AiTraceRuntime.recorder.enable();
+      },
       clearRuntimeCache: LocalAiService().clearRuntimeCache,
       clearAttachments: LocalAiAttachmentStore().clearAll,
-      clearTrace: traceWriter.clear,
+      clearTrace: AiTraceRuntime.writer.clear,
       clearDatabase: DatabaseHelper.instance.clearAllAiConversationData,
     );
   }
 
-  final Future<void> Function() _stopTraceRecording;
+  final Future<bool> Function() _stopTraceRecording;
+  final Future<void> Function(bool wasEnabled) _resumeTraceRecording;
   final Future<LocalAiRuntimeCacheClearResult> Function() _clearRuntimeCache;
   final Future<void> Function() _clearAttachments;
   final Future<void> Function() _clearTrace;
@@ -62,9 +65,10 @@ class LocalAiDataClearCoordinator {
 
   Future<LocalAiDataClearResult> _clear() async {
     var traceRecordingStopped = false;
+    var traceWasEnabled = false;
     String? traceStopErrorCode;
     try {
-      await _stopTraceRecording();
+      traceWasEnabled = await _stopTraceRecording();
       traceRecordingStopped = true;
     } catch (_) {
       traceStopErrorCode = 'TRACE_STOP_FAILED';
@@ -117,8 +121,21 @@ class LocalAiDataClearCoordinator {
       databaseErrorCode = 'DATABASE_CLEAR_FAILED';
     }
 
+    var traceRecordingResumed = false;
+    String? traceResumeErrorCode;
+    if (traceRecordingStopped) {
+      try {
+        await _resumeTraceRecording(traceWasEnabled);
+        traceRecordingResumed = true;
+      } catch (_) {
+        traceResumeErrorCode = 'TRACE_RESUME_FAILED';
+      }
+    }
+
     return LocalAiDataClearResult(
       traceRecordingStopped: traceRecordingStopped,
+      traceRecordingResumed: traceRecordingResumed,
+      traceResumeErrorCode: traceResumeErrorCode,
       traceStopErrorCode: traceStopErrorCode,
       runtime: runtime,
       attachmentsCleared: attachmentsCleared,
@@ -134,18 +151,22 @@ class LocalAiDataClearCoordinator {
 class LocalAiDataClearResult {
   const LocalAiDataClearResult({
     required this.traceRecordingStopped,
+    required this.traceRecordingResumed,
     required this.runtime,
     required this.attachmentsCleared,
     required this.traceCleared,
     required this.databaseCleared,
     this.traceStopErrorCode,
+    this.traceResumeErrorCode,
     this.attachmentErrorCode,
     this.traceErrorCode,
     this.databaseErrorCode,
   });
 
   final bool traceRecordingStopped;
+  final bool traceRecordingResumed;
   final String? traceStopErrorCode;
+  final String? traceResumeErrorCode;
   final LocalAiRuntimeCacheClearResult runtime;
   final bool attachmentsCleared;
   final String? attachmentErrorCode;
@@ -156,6 +177,7 @@ class LocalAiDataClearResult {
 
   bool get complete =>
       traceRecordingStopped &&
+      traceRecordingResumed &&
       runtime.complete &&
       attachmentsCleared &&
       traceCleared &&
@@ -169,6 +191,8 @@ class LocalAiDataClearResult {
 
   List<String> get failedDomains => [
         if (!traceRecordingStopped) 'trace_recording_stop',
+        if (traceRecordingStopped && !traceRecordingResumed)
+          'trace_recording_resume',
         if (!runtime.runtimeReleased) 'native_runtime_release',
         if (!runtime.cacheDeleted) 'native_runtime_cache',
         if (!attachmentsCleared) 'attachments',
