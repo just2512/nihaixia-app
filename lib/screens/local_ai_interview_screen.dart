@@ -2882,7 +2882,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final restoredTraceId = messageMetadata.traceId?.trim();
       final restoredTraceContext =
           restoredTraceId == null || restoredTraceId.isEmpty
-              ? null
+              ? const AiTraceContext.disabled()
               : AiTraceContext.enabled(
                   traceId: restoredTraceId,
                   startedAt: DateTime.now(),
