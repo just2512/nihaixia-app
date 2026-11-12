@@ -2390,7 +2390,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       effectiveMode = decision.mode;
       _pendingToolSelection = decision.expectsToolSelection;
+      final resolvedRoute = decision.needsClarification
+          ? 'clarification'
+          : decision.tool != null
+              ? 'tool:${decision.tool!.id}'
+              : 'model';
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: resolvedRoute,
+        mode: effectiveMode.name,
+        toolId: decision.tool?.id,
+      );
       if (decision.needsClarification) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'clarification',
+          mode: effectiveMode.name,
+        );
         final clarification = decision.clarification!;
         setState(() {
           _lastEffectiveMode = effectiveMode;
@@ -2400,21 +2420,42 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = null;
         });
         _inputController.clear();
-        await _persistSuccessfulTurn(
+        final persisted = await _persistSuccessfulTurn(
           userText: text,
           assistantText: clarification,
           mode: effectiveMode,
           expectsToolSelection: decision.expectsToolSelection,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
         );
         _scrollToBottom();
         return;
       }
       if (decision.tool != null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'tool',
+          mode: effectiveMode.name,
+          toolId: decision.tool!.id,
+        );
         await _requestTool(
           text,
           decision.tool!,
           mode: effectiveMode,
           arguments: decision.toolArguments,
+          traceContext: traceContext,
         );
         return;
       }
