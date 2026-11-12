@@ -1756,7 +1756,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         userText,
         tool,
         mode: activeMode,
-        activeTraceContext: activeTraceContext,
+        traceContext: activeTraceContext,
         arguments: arguments,
       );
       return;
