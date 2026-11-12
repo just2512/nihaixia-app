@@ -549,19 +549,23 @@ class AssistantKnowledgeContextBuilder {
         ...formula.alias.split(',').map((value) => value.trim()),
       ].where((value) => value.isNotEmpty);
       return names.any((name) => normalized.contains(name));
-    });
-    final keywordFormulaMatches = allFormulas.where((formula) =>
-        formula.keywords.any((keyword) => normalized.contains(keyword)));
-    final componentFormulaMatches = allFormulas.where((formula) =>
-        formula.components.any(
-          (component) => normalized.contains(component.name),
-        ));
+    }).toList(growable: false);
+    final formulaCandidates = exactFormulaMatches.isNotEmpty
+        // An exact formula-name lookup is a focused request. Do not broaden it
+        // to every other formula that happens to share one of its ingredients.
+        ? exactFormulaMatches
+        // Component-based expansion remains available for herb/component
+        // queries where the user did not name a specific formula.
+        : [
+            ...allFormulas.where((formula) =>
+                formula.keywords.any((keyword) => normalized.contains(keyword))),
+            ...allFormulas.where((formula) =>
+                formula.components.any(
+                  (component) => normalized.contains(component.name),
+                )),
+          ];
     final formulas = <Formula>[];
-    for (final formula in [
-      ...exactFormulaMatches,
-      ...keywordFormulaMatches,
-      ...componentFormulaMatches,
-    ]) {
+    for (final formula in formulaCandidates) {
       if (!formulas.any((item) => item.id == formula.id)) {
         formulas.add(formula);
       }
