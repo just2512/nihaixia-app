@@ -988,7 +988,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       debugPrint('[TcmInterviewTask] 上一次状态保存失败，继续后续写入：$error');
     }).then((_) async {
       final id = await targetConversation;
-      if (id == null) return;
+      if (id == null) return false;
       await _conversationStore.saveTcmInterviewTaskState(
         conversationId: id,
         state: state,
@@ -997,7 +997,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _taskStateWrite;
   }
 
-  Future<void> _persistSuccessfulTurn({
+  Future<bool> _persistSuccessfulTurn({
     required String userText,
     required String assistantText,
     AssistantMode? mode,
@@ -1045,6 +1045,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           traceId: traceId,
         ).encode(),
       );
+      return true;
     } catch (error, stack) {
       debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
       if (mounted) {
@@ -1052,6 +1053,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
         });
       }
+      return false;
     }
   }
 
@@ -2415,7 +2417,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
       );
-      await _persistSuccessfulTurn(
+      final persisted = await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
         mode: effectiveMode,
@@ -2427,9 +2429,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.persistence,
-        status: AiTraceStatus.succeeded,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
       );
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
