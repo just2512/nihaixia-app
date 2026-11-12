@@ -991,6 +991,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantMode? mode,
     String? attachmentType,
     String? toolId,
+    String? toolStatus,
     bool expectsToolSelection = false,
     List<String> sourceIds = const [],
     Map<String, String> toolArguments = const {},
@@ -1022,6 +1023,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           mode: activeMode.name,
           selectedMode: _assistantMode.name,
           toolId: toolId,
+          toolStatus: toolStatus,
           toolChoicePending: expectsToolSelection,
           sourceIds: sourceIds,
           toolArguments: toolArguments,
@@ -1516,6 +1518,65 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<void> _executeHeadlessTool(
+    String userText,
+    AssistantToolDefinition tool, {
+    required AssistantMode mode,
+    AssistantToolArguments? arguments,
+  }) async {
+    final request = arguments ??
+        AssistantToolArguments(toolId: tool.id);
+    final argumentErrors = request.validateAgainst(tool);
+    final executor = tool.headlessExecutor!;
+    final result = argumentErrors.isEmpty
+        ? executor(request.values)
+        : AssistantToolResult(
+            toolId: tool.id,
+            title: tool.title,
+            status: AssistantToolExecutionStatus.failed,
+            values: {'参数错误': argumentErrors.join('；')},
+            arguments: request.values,
+            disclaimer: '参数校验未通过；本次没有执行工具。',
+          );
+    final contractErrors = <String>[
+      ...result.validateFor(tool.id),
+      ...result.validateArgumentsMatch(request.values),
+    ];
+    if (contractErrors.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _error = 'Headless 工具结果未通过契约校验：${contractErrors.join('；')}';
+        });
+      }
+      return;
+    }
+
+    final response =
+        '【${tool.title}执行结果】\n${result.toConversationText()}';
+    setState(() {
+      _lastEffectiveMode = mode;
+      _messages
+        ..add(_InterviewMessage(text: userText, isUser: true))
+        ..add(_InterviewMessage(
+          text: response,
+          isUser: false,
+          sourceIds: result.sourceIds,
+        ));
+      _error = null;
+    });
+    _inputController.clear();
+    await _persistSuccessfulTurn(
+      userText: userText,
+      assistantText: response,
+      mode: mode,
+      toolId: tool.id,
+      toolStatus: result.statusLabel,
+      sourceIds: result.sourceIds,
+      toolArguments: result.arguments,
+    );
+    _scrollToBottom();
+  }
+
   Future<void> _requestTool(
     String userText,
     AssistantToolDefinition tool, {
@@ -1533,6 +1594,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
+    // Only auto-execute a Headless calculator when the user supplied its
+    // explicit date argument. Without a date, preserve the existing Page Tool
+    // flow so a broad "how is it calculated?" request is not silently run for
+    // today's date.
+    final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
+    if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        arguments: arguments,
+      );
+      return;
+    }
     final instruction =
         '已识别到你要使用「${tool.title}」。${tool.description}'
         '实际计算由 App 内置工具执行，不由模型猜测结果。点击下方按钮打开；完成后返回本对话，我会继续解释结果。';
@@ -1750,7 +1825,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         title: tool.title,
         status: AssistantToolExecutionStatus.failed,
         values: const {'错误': 'MISSING'},
-        disclaimer: '工具页面执行异常：' + error.toString(),
+        disclaimer: '工具页面执行异常：$error',
       );
     } finally {
       _toolRouteActive = false;

@@ -296,6 +296,19 @@ void main() {
       expect(symptom.expectsToolSelection, isFalse);
     });
 
+    test('日期参数保留原始输入，由执行边界拒绝无效日历日期', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我推算五运六气 2026-02-30',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'yunqi');
+      expect(decision.toolArguments?.values, const {'date': '2026-02-30'});
+      expect(
+        decision.toolArguments!.validateAgainst(decision.tool!),
+        isNotEmpty,
+      );
+    });
+
     test('手动玄学模式的泛化排盘请求也会先澄清', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '帮我排个盘',

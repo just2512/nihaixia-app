@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
+import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
@@ -2440,6 +2441,72 @@ void main() {
     expect(copiedTexts.single, contains('处方: 小柴胡汤'));
     expect(copiedTexts.single, contains('柴胡24g'));
     expect(tester.takeException(), isNull);
+  });
+
+
+
+  testWidgets('没有明确日期时五运六气仍保留页面确认流程', (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, isEmpty);
+    expect(find.text('打开五运六气推算'), findsOneWidget);
+    expect(find.textContaining('执行结果'), findsNothing);
+  });
+
+  testWidgets('五运六气通过 Headless 执行器直接计算并持久化真实参数与来源',
+      (tester) async {
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: service,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我推算五运六气 2026-11-12',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, isEmpty);
+    expect(find.textContaining('五运六气推算执行结果'), findsOneWidget);
+    expect(find.textContaining('推算日期：2026-11-12'), findsOneWidget);
+    expect(find.textContaining('丙午年'), findsOneWidget);
+    expect(find.text('打开五运六气推算'), findsNothing);
+
+    final conversations = await _store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await _store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    expect(messages, hasLength(2));
+    final metadata = AssistantMessageMetadata.decode(
+      messages.last['metadata'] as String,
+    );
+    expect(metadata.toolId, 'yunqi');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {'date': '2026-11-12'});
+    expect(metadata.sourceIds, const ['local-engine:yunqi']);
   });
 
 

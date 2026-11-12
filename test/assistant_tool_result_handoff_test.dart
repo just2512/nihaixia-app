@@ -223,7 +223,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('统一助手把用户指定日期传入五运六气工具并持久化已校验参数', (tester) async {
+  testWidgets('统一助手对用户指定日期直接执行五运六气并持久化已校验参数', (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
     await tester.pumpWidget(
@@ -244,20 +244,22 @@ void main() {
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
-    final requestMessages = store.savedMessages.where((message) =>
+
+    expect(find.text('打开五运六气推算'), findsNothing);
+    final resultMessage = store.savedMessages.where((message) =>
         message['role'] == 'assistant' &&
-        (message['content'] as String).contains('已识别到你要使用'));
-    expect(requestMessages, isNotEmpty);
-    final requestMetadata = AssistantMessageMetadata.decode(
-      requestMessages.last['metadata'] as String,
+        (message['content'] as String).contains('工具：五运六气推算'));
+    expect(resultMessage, hasLength(1));
+    expect(resultMessage.single['content'], contains('推算日期：2026-11-06'));
+
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage.single['metadata'] as String,
     );
-    expect(requestMetadata.toolId, 'yunqi');
-    expect(requestMetadata.toolArguments, {'date': '2026-11-06'});
-
-    await tester.tap(find.text('打开五运六气推算'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('2026-11-06'), findsOneWidget);
+    expect(metadata.toolId, 'yunqi');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {'date': '2026-11-06'});
+    expect(metadata.sourceIds, const ['local-engine:yunqi']);
+    expect(service.restoredTranscript, isNull);
     expect(tester.takeException(), isNull);
   });
 
