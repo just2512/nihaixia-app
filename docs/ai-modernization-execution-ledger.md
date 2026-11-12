@@ -800,3 +800,78 @@ PR #107 修复失败轮次阶段误归因：
 4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。
 5. A/E 真机验收、C 来源真实性核验仍依赖外部设备/底本证据；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
 
+
+
+---
+
+## 19. 2026-11-12 PR #113/#114/#115 集成后执行快照
+
+### 19.1 当前主线与代码集成
+
+- 当前主线：`master @ bfb518ef68bfc674d1af9699e410f4729dbbc3bc`。
+- PR #113：`test(ai): cover rejected Headless result TRACE terminal states`，merge commit `1b13dea7d1b239089d7d14e2810febf9a6f343bf`。
+- PR #114：`fix(ai): trace Page Tool result continuation`，merge commit `bb7d2897105c0a52577924ea3d35ccee8ea735cf`。
+- PR #115：`fix(ai): close send and symptom TRACE final states`，merge commit `bfb518ef68bfc674d1af9699e410f4729dbbc3bc`。
+- 三项均以当时最新 master 为 base，按独立分支、小批量集成；没有改写 `ai-capability-audit.md` 的约束条文。
+
+### 19.2 PR 与 CI 证据
+
+| PR | 独立分支验证（push） | PR 全量验收 | 结果 |
+|---|---|---|---|
+| #113 | run `43217158541` SUCCESS | run `43214895957`：Flutter regression、Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS | MERGED |
+| #114 | run `43217978870` SUCCESS | run `43217988520`：Flutter regression、Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS | MERGED |
+| #115 | run `43219357882` SUCCESS | run `43219648145`：Flutter regression、Android arm64 APK/ABI、merged backup manifest、Native unit tests SUCCESS | MERGED |
+
+说明：上述 PR workflow 中 Branch validation job 为 `SKIPPED`，不计作分支验证通过；表中的独立 push run 才是静态分析与 changed-tests 的分支验证证据。
+
+当前最新主线 `bfb518e` 的独立 post-merge workflow：
+- Flutter Quality Gate：run `43221099813`，本次台账更新时 `IN_PROGRESS`。
+- Flutter tests：run `43221099907`，本次台账更新时 `PENDING`。
+- 必须以这两个 run 对应 `bfb518e` 的终态更新主线 CI；不得用 PR head CI 替代 post-merge CI。若后续有新 master commit，改查新 SHA 的两条 workflow。
+
+### 19.3 F：本轮 TRACE 断点修复
+
+1. **PR #113 — Headless 结果契约负向路径**
+   - 通过注入 toolId 不匹配的 typed result，直接执行 `RESULT_CONTRACT_INVALID` 分支。
+   - 断言 `resultValidation=FAILED`、`persistence=NOT_STARTED`、`finalRender=SUCCEEDED`，并确认无错误结果写入会话。
+   - 本项补的是失败分支证据，不以既有成功路径测试代替。
+
+2. **PR #114 — Page Tool 延续同一用户轮次**
+   - Page Tool 请求按钮回调携带原请求 `trace_id`；页面返回的结构化结果、结果消息 metadata 继续使用同一 ID。
+   - 记录页面执行、业务执行、结果契约验证、SQLite persistence、persisted state 与 final render。
+   - 历史恢复时仅复用消息中已有的 `trace_id`；旧消息没有 ID 时保持 TRACE disabled，不为历史恢复伪造新用户轮次。
+   - 区分 SQLite 消息持久化与 Native `restoreConversation` 上下文重建；上下文恢复成功不能冒充 SQLite 已持久化。
+
+3. **PR #115 — 普通发送与症状整理终态**
+   - 症状整理的空结果、用户取消、确认成功、Native 异常、输出格式错误及页面卸载路径均记录 `finalRender` 终态。
+   - 普通发送的模型未就绪提前退出、页面卸载、Native 平台异常和通用异常路径补齐最终展示状态；不改变模型路由、对话写入或业务结果。
+   - 自动回归覆盖症状整理空结果与确认成功、Native 发送异常的最终错误展示；模型未就绪按钮在当前 UI 会禁用，保留 race-safe 代码门禁，不伪造不可达的按钮交互测试。
+
+**F 当前结论：** 本轮已补齐上述可复现的 Headless 结果拒绝、Page Tool 结果延续、普通发送/症状整理终态断点，并有 CODE + TEST + PR CI 证据。但 F 仍为 `PARTIAL`：Find N2 真机 TRACE、GPU/CPU 多轮、媒体输入、Activity/进程恢复以及完整场景集的逐场景 trace 仍未取得；不能因为自动化通过就标记 `IMPLEMENTED`。
+
+### 19.4 A-G 当前状态
+
+| ID | 当前状态 | 已有证据 | 未闭环项 |
+|---|---|---|---|
+| A Native 多轮与生命周期 | PARTIAL / 设备 UNKNOWN | teardown、轮次状态、历史恢复与 Native bridge 有自动化回归；当前 master Flutter/Android CI 持续验收 | Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程杀死/重启后 transcript 一致性真实 TRACE |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | `RedFlagGate` fail-closed contract、gate-before-operation sequencing contract 与 raw attachment 边界已测试 | 经医学背景人员审核的自然语言 detector/规则集；Flutter/Native 所有生产入口强制调用；真实入口顺序 TRACE。不得默认 CLEAR |
+| C 检索来源 | PARTIAL / NOT VERIFIED | 83/83 本地讲稿资产存在且已逐项读取；sourceId 与 asset 一致；12 条 combinedPatterns 来源行与 conditionKey 对应 | 83/83 bibliographic locator 仍 MISSING；12 条规则的纸本底本/版次/卷页/影像仍缺；讲稿不得冒充古籍原文 |
+| D Headless Capability | 2 项 Headless / 2 项 Executed | `yunqi`、`almanac` 复用确定性业务函数 | 保持现状；没有可验证的新确定性业务函数与行为基线前不增加 adapter |
+| E 数据保护 | PARTIAL | AI 数据清除 coordinator、AI-owned attachments、Native runtime cache、TRACE 文件、SQLite AI 表边界和 Android 模型/TRACE backup manifest 有代码/测试证据 | 混合 SQLite AI 行备份、旧共享图片归属、用户外部导出/备份副本及 Find N2 清理后强停/重启不可恢复实测 |
+| F TRACE | PARTIAL | #113 Headless 负向结果终态；#114 Page Tool 结果延续；#115 普通发送与症状整理 finalRender 终态；既有检索/上下文、Orchestrator、结构化问诊 per-turn TRACE | Find N2 场景集全链路 TRACE、多轮/恢复/媒体真实设备证据；任何未执行场景保持 UNKNOWN |
+| G 版本/证据治理 | 版本源子目标 IMPLEMENTED | README/pubspec 版本一致性 guard、Flutter/Android CI、Release tag 校验已合并 | 当前 `bfb518e` 的独立 post-merge Flutter tests 与 Quality Gate 尚在执行，按 19.2 记录终态 |
+
+### 19.5 下一阶段：只推进剩余硬门槛
+
+1. **先收尾当前主线 CI**：等待 `bfb518e` 的 run `43221099813` 与 `43221099907` 结束；如失败，只修复失败 job 实际指向的问题，不扩大范围。
+2. **A/E 真机验收**：按 `docs/local-ai-e4b.md` 和数据清除验收约束，在 OPPO Find N2（PGU110，16 GB）执行内外屏、GPU/CPU、连续多轮、图片/语音、Activity/进程恢复、AI 数据清除后强停/重启复查；没有设备记录、模型/backend 版本和 trace_id 的场景标 UNKNOWN。
+3. **B 医学审核阻塞**：继续保持 RELEASE BLOCKED。需要医学审核 detector/规则集和产品对 REVIEW_REQUIRED 影响的明确决策；完成前不接入会默认阻断现有全部 AI 流程的生产 gate，也不允许 optional gate 缺失时跳过。
+4. **C 原始来源核验**：仅接受可回链到真实底本、版次、卷页或原始影像的证据；证据缺失继续 MISSING，不调整 query 派生、top-40、排序、去重或引入 FTS5。
+5. **D/G 不扩展**：Headless 保持 2 项；版本 guard 仅维护，不另建系统。
+
+### 19.6 执行边界
+
+- CI、静态代码和模拟环境不能替代 Find N2 真机 TRACE。
+- 医学审核、原始纸本/影像、物理设备和外部备份副本属于外部证据依赖；不得由代码或模型自我生成。
+- 不把本轮 F 的局部断点修复夸大成 P0–P5 全部关闭；整体仍受 A/B/C/E/F 的真机或外部证据门槛约束。
+- 本轮没有增加 Agent/DAG、数据库表、模型/API、检索引擎或新的 Headless adapter。
