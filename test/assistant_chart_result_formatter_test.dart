@@ -36,14 +36,14 @@ void main() {
     );
 
     expect(text, contains('结果来源：App 本地确定性排盘'));
-    expect(text, contains('四柱：\${result.bazi.year} \${result.bazi.month} \${result.bazi.day} \${result.bazi.time}'));
-    expect(text, contains('日主：\${result.analysis.dayMaster}'));
-    expect(text, contains('格局：\${result.analysis.pattern}'));
-    expect(text, contains('日主强弱：\${result.analysis.strengthLevel}'));
+    expect(text, contains('四柱：${result.bazi.year} ${result.bazi.month} ${result.bazi.day} ${result.bazi.time}'));
+    expect(text, contains('日主：${result.analysis.dayMaster}'));
+    expect(text, contains('格局：${result.analysis.pattern}'));
+    expect(text, contains('日主强弱：${result.analysis.strengthLevel}'));
     expect(text, contains('五行分布状态：'));
-    expect(text, contains('用神：\${result.analysis.favorable.join('、')}'));
-    expect(text, contains('忌神：\${result.analysis.unfavorable.join('、')}'));
-    expect(text, contains('第\${fortune.decades.first.index}步：'));
+    expect(text, contains('用神：${result.analysis.favorable.join('、')}'));
+    expect(text, contains('忌神：${result.analysis.unfavorable.join('、')}'));
+    expect(text, contains('第${fortune.decades.first.index}步：'));
     expect(text, contains('区分排盘事实与 AI 归纳'));
     expect(text, isNot(contains('strengthScore')));
     expect(text, isNot(contains('(+0.5)')));
