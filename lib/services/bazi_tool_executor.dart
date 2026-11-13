@@ -113,7 +113,7 @@ class BaziToolExecutor {
 
   static DateTime? _parseDate(String? raw) {
     if (raw == null) return null;
-    final match = RegExp(r'^(\d{4})-(\\d{2})-(\\d{2})$').firstMatch(raw);
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(raw);
     if (match == null) return null;
     final year = int.parse(match.group(1)!);
     final month = int.parse(match.group(2)!);
@@ -127,7 +127,7 @@ class BaziToolExecutor {
 
   static (int, int)? _parseTime(String? raw) {
     if (raw == null) return null;
-    final match = RegExp(r'^(\d{2}):(\\d{2})$').firstMatch(raw);
+    final match = RegExp(r'^(\d{2}):(\d{2})$').firstMatch(raw);
     if (match == null) return null;
     final hour = int.parse(match.group(1)!);
     final minute = int.parse(match.group(2)!);
