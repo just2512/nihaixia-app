@@ -165,7 +165,7 @@ void main() {
     expect(tool.parameters.single.isRequired, isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final result = tool.headlessExecutor!(arguments);
+    final result = await tool.headlessExecutor!(arguments);
     expect(result.toolId, 'almanac');
     expect(result.validateFor('almanac'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
