@@ -2538,6 +2538,117 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    if (tool.id == 'meihua' && tool.headlessExecutor != null) {
+      var request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      // The page defaults to today's local calendar day. Apply that same
+      // deterministic default only after both user-supplied numbers exist;
+      // never invent either number or overwrite a date given in an earlier turn.
+      if (request['date'] == null &&
+          request['first']?.trim().isNotEmpty == true &&
+          request['second']?.trim().isNotEmpty == true) {
+        final now = DateTime.now();
+        final today = '${now.year.toString().padLeft(4, '0')}-'
+            '${now.month.toString().padLeft(2, '0')}-'
+            '${now.day.toString().padLeft(2, '0')}';
+        request = AssistantToolArguments(
+          toolId: tool.id,
+          values: {...request.values, 'date': today},
+        );
+      }
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingMeihuaArguments = request;
+        _pendingBaziArguments = null;
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                (request[parameter.key]?.trim().isNotEmpty ?? false))
+            .map((parameter) =>
+                '${parameter.label}：${request[parameter.key]}')
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final clarification = [
+          '我会在当前对话中调用 App 本地梅花易数数字起卦，不需要跳转到工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          '数字起卦需要两个正整数，分别作为第一数（上卦）和第二数（下卦）。可以分多轮补充。',
+          if (userText.contains('农历') || userText.contains('阴历'))
+            '当前数字起卦日期沿用 App 页面的公历日期口径，请提供公历日期；不会把农历日期当作公历使用。',
+          '例如：用 3 和 7 起卦；也可以补充公历日期：2026-11-13。',
+          '没有提供日期时，App 使用设备本地当天日期，并在结果中明确列出。',
+        ].join('\\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'MEIHUA_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingMeihuaArguments = null;
+      _pendingBaziArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
     if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
       await _executeHeadlessTool(
