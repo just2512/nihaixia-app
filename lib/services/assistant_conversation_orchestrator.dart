@@ -183,7 +183,8 @@ class AssistantConversationOrchestrator {
       final chineseDate =
           RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
       final dateMatch = isoDate ?? chineseDate;
-      if (dateMatch != null) {
+      final dateIsLunar = query.contains('农历') || query.contains('阴历');
+      if (dateMatch != null && !dateIsLunar) {
         values['birth_date'] =
             '${dateMatch.group(1)!.padLeft(4, '0')}-'
             '${dateMatch.group(2)!.padLeft(2, '0')}-'
