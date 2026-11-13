@@ -166,24 +166,8 @@ class BaziToolExecutor {
         .toList();
     return normalized.length == 1 ? normalized.single : null;
   }
-
   static String _normalizePlaceName(String value) =>
-      value.trim().replaceFirst(RegExp(r'(市|地区|州|省|县|区)
-
-  static AssistantToolResult _failure(
-    Map<String, String> arguments,
-    String message,
-  ) =>
-      AssistantToolResult(
-        toolId: 'bazi',
-        title: '八字排盘',
-        status: AssistantToolExecutionStatus.failed,
-        values: {'未执行原因': message},
-        arguments: Map<String, String>.unmodifiable(arguments),
-        disclaimer: '参数或地点校验未通过；本次未执行排盘。',
-      );
-}
-), '');
+      value.trim().replaceFirst(RegExp(r'(市|地区|州|省|县|区)$'), '');
 
   static AssistantToolResult _failure(
     Map<String, String> arguments,
