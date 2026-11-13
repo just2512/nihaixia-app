@@ -604,9 +604,9 @@ class LocalAiBaziSlotDraft {
     String userText,
   ) {
     if (userText.contains('农历') || userText.contains('阴历')) return null;
-    final iso = RegExp(r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})')
+    final iso = RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})')
         .firstMatch(evidence);
-    final chinese = RegExp(r'(\\d{4})年(\\d{1,2})月(\\d{1,2})[日号]?')
+    final chinese = RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})[日号]?')
         .firstMatch(evidence);
     final match = iso ?? chinese;
     if (match == null) return null;
@@ -624,7 +624,7 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeBirthTimeEvidence(String evidence) {
-    final clock = RegExp(r'([01]?\\d|2[0-3]):([0-5]\\d)')
+    final clock = RegExp(r'([01]?\d|2[0-3]):([0-5]\d)')
         .firstMatch(evidence);
     if (clock != null) {
       final hour = int.parse(clock.group(1)!);
@@ -634,7 +634,7 @@ class LocalAiBaziSlotDraft {
     }
 
     final chineseTime = RegExp(
-      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\\s*'
+      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
       r'([0-9零〇一二两三四五六七八九十]{1,3})(?:点|时)'
       r'(?:半|([0-9零〇一二两三四五六七八九十]{1,2})分?)?',
     ).firstMatch(evidence);
@@ -712,17 +712,17 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeGenderEvidence(String evidence) {
-    if (RegExp(r'(?:性别\\s*[：:]\\s*|我是|本人是|为)?男性').hasMatch(evidence)) {
+    if (RegExp(r'(?:性别\s*[：:]\s*|我是|本人是|为)?男性').hasMatch(evidence)) {
       return 'male';
     }
-    if (RegExp(r'(?:性别\\s*[：:]\\s*|我是|本人是|为)?女性').hasMatch(evidence)) {
+    if (RegExp(r'(?:性别\s*[：:]\s*|我是|本人是|为)?女性').hasMatch(evidence)) {
       return 'female';
     }
-    if (RegExp(r'性别\\s*[：:]\\s*男(?:\\b|$)').hasMatch(evidence) ||
+    if (RegExp(r'性别\s*[：:]\s*男(?:\b|$)').hasMatch(evidence) ||
         RegExp(r'(?:我是|本人是)男(?![朋同]).').hasMatch(evidence)) {
       return 'male';
     }
-    if (RegExp(r'性别\\s*[：:]\\s*女(?:\\b|$)').hasMatch(evidence) ||
+    if (RegExp(r'性别\s*[：:]\s*女(?:\b|$)').hasMatch(evidence) ||
         RegExp(r'(?:我是|本人是)女(?![朋同]).').hasMatch(evidence)) {
       return 'female';
     }
@@ -734,8 +734,8 @@ class LocalAiBaziSlotDraft {
     String evidence,
   ) {
     final patterns = [
-      RegExp(r'(?:出生地点|出生地)\\s*(?:是|为|在|：|:)?\\s*([^，,。；;]+)'),
-      RegExp(r'(?:出生于|生于)\\s*([^，,。；;]+)'),
+      RegExp(r'(?:出生地点|出生地)\s*(?:是|为|在|：|:)?\s*([^，,。；;]+)'),
+      RegExp(r'(?:出生于|生于)\s*([^，,。；;]+)'),
       RegExp(r'在([^，,。；;]{1,24})出生'),
     ];
     for (final pattern in patterns) {
