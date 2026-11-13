@@ -173,15 +173,20 @@ Future<void> _waitForText(WidgetTester tester, String value) async {
 
 Future<void> _scrollUntilTextVisible(WidgetTester tester, String value) async {
   final finder = find.text(value);
-  final verticalScrollables = find.byWidgetPredicate(
-    (widget) =>
-        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  // Target the scrollable that actually owns this page element. The previous
+  // assistant conversation remains mounted underneath the pushed tool route.
+  final ownerScrollable = find.ancestor(
+    of: finder,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    ),
   );
-  expect(verticalScrollables, findsWidgets);
+  expect(ownerScrollable, findsWidgets, reason: '找不到结果页纵向滚动容器：$value');
   await tester.scrollUntilVisible(
     finder,
     400,
-    scrollable: verticalScrollables.first,
+    scrollable: ownerScrollable.first,
   );
   expect(finder, findsOneWidget, reason: '结果卡片未出现：$value');
 }
