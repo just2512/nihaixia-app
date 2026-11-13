@@ -47,6 +47,12 @@ import 'neijing_knowledge_screen.dart';
 import 'markdown_doc_screen.dart';
 import 'guji_library_screen.dart';
 
+/// Provenance for results returned by the existing deterministic DiagnosticEngine.
+/// This is an engine origin, not a knowledge-base citation.
+const _diagnosticEngineSourceIds = <String>[
+  'local-engine:diagnostic-engine',
+];
+
 abstract interface class LocalAiAudioRecorder {
   Future<bool> hasPermission();
   Future<void> start(RecordConfig config, {required String path});
@@ -1324,16 +1330,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: text,
       isUser: false,
       actionLabel: 'AI解读辨证结果',
+      sourceIds: _diagnosticEngineSourceIds,
       onAction: () => unawaited(_requestAssistantResultInterpretation(
         prompt: '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
             '本次结果字段：六经 ${result.displayMeridian}；'
             '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
             '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
             '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
-            '不要重新辨证、增加或修改规则结论，不把缺失字段补成事实。',
+            '只解释 App 已返回的结果，不重新辨证，不增加或修改规则结论，不补造缺失字段。'
+            '不要生成个体处方、药物或剂量建议；原结果中的处方字段只可按原文引用，不得增删改。',
         mode: AssistantMode.consultation,
         toolId: 'structured_diagnosis',
         toolStatus: 'SUCCEEDED',
+        sourceIds: _diagnosticEngineSourceIds,
       )),
       diagnosisResult: result,
       onBookmark: () => _bookmarkDiagnosisResult(result),
