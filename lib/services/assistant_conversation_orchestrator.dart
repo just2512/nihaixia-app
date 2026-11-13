@@ -89,6 +89,10 @@ class AssistantConversationOrchestrator {
   static const _symptomCues = [
     '头痛',
     '头晕',
+    '不舒服',
+    '难受',
+    '不适',
+    '疼痛',
     '发热',
     '恶寒',
     '咳嗽',
@@ -113,11 +117,9 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
-  static bool isPersonalHealthNarrative(String query) {
+  static bool containsPotentialHealthContent(String query) {
     final text = query.trim();
-    return text.isNotEmpty &&
-        _personalContextCues.any(text.contains) &&
-        _symptomCues.any(text.contains);
+    return text.isNotEmpty && _symptomCues.any(text.contains);
   }
 
   static AssistantToolArguments argumentsFor(
