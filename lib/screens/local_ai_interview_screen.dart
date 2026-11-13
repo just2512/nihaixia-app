@@ -1320,6 +1320,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _InterviewMessage(
       text: text,
       isUser: false,
+      actionLabel: 'AI解读辨证结果',
+      onAction: () => unawaited(_requestAssistantResultInterpretation(
+        prompt: '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
+            '本次结果字段：六经 ${result.displayMeridian}；'
+            '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
+            '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
+            '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
+            '不要重新辨证、增加或修改规则结论，不把缺失字段补成事实。',
+        mode: AssistantMode.consultation,
+        toolId: 'structured_diagnosis',
+        toolStatus: 'SUCCEEDED',
+      )),
       diagnosisResult: result,
       onBookmark: () => _bookmarkDiagnosisResult(result),
       onShare: () => _shareDiagnosisResult(result),
@@ -2862,14 +2874,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
     );
     final resultText = normalizedResult.toConversationText();
-    final response = '【' + tool.title + '执行结果】\n' + resultText;
+    final response = '【' + tool.title + '执行结果】\\n' + resultText;
     final canRetry = normalizedResult.status ==
         AssistantToolExecutionStatus.failed;
+    final canInterpret = normalizedResult.status ==
+        AssistantToolExecutionStatus.succeeded;
+    final needsTcmKnowledge = mode == AssistantMode.tools &&
+        const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
+    final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
+        '先概括本次实际输入、关键输出和执行状态，再解释主要字段的含义、字段间关系及结果口径；'
+        '明确区分 App 本地工具计算/数据原文与 AI 的语言化归纳。'
+        '如果本地知识库返回了相关资料，请结合实际命中条目解释；'
+        '未返回或缺失的字段标记 MISSING，不猜算、不改写 App 已返回的结果。';
     setState(() {
       _messages.add(_InterviewMessage(
         text: response,
         isUser: false,
-        actionLabel: canRetry ? '重试${tool.title}' : null,
+        sourceIds: normalizedResult.sourceIds,
+        actionLabel: canRetry
+            ? '重试${tool.title}'
+            : canInterpret
+                ? 'AI总结解读'
+                : null,
         onAction: canRetry
             ? () => unawaited(_openTool(
                   tool,
@@ -2877,7 +2903,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   arguments: toolArguments,
                   traceContext: activeTraceContext,
                 ))
-            : null,
+            : canInterpret
+                ? () => unawaited(_requestAssistantResultInterpretation(
+                      prompt: interpretationPrompt,
+                      mode: mode,
+                      retrievalQuery: needsTcmKnowledge
+                          ? '${tool.title} $resultText'
+                          : null,
+                      toolId: tool.id,
+                      toolStatus: normalizedResult.statusLabel,
+                      sourceIds: normalizedResult.sourceIds,
+                    ))
+                : null,
       ));
     });
     int? conversationId;
