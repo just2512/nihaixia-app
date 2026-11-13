@@ -2328,11 +2328,35 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
         _pendingBaziArguments = request;
-        const clarification =
-            '我会在当前对话中调用 App 本地八字排盘，不需要跳转到排盘页面。'
-            '请补齐以下信息：出生日期（公历 YYYY-MM-DD）、出生时间（出生地当地钟表时间，24 小时制 HH:mm）、性别（男/女）、出生地点（城市或区县）。'
-            '可以分多轮发送，建议使用“出生日期：1990-01-02；出生时间：08:30；性别：男；出生地：上海市”的格式。'
-            '注意：本地引擎按出生地经度执行真太阳时校正，不处理历史时区或夏令时换算；不会使用示例日期、默认性别或默认经纬度。';
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                (request[parameter.key]?.trim().isNotEmpty ?? false))
+            .map((parameter) =>
+                '${parameter.label}：${request[parameter.key]}')
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final clarification = [
+          '我会在当前对话中调用 App 本地八字排盘，不需要跳转到排盘页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          '请只补充或更正上述项目，可以分多轮发送。',
+          '示例：出生日期：1990-01-02；出生时间：08:30；性别：男；出生地：上海市。',
+          '注意：出生日期使用公历；出生时间使用出生地当地钟表时间（24 小时制 HH:mm）。本地引擎按出生地经度执行真太阳时校正，不处理历史时区或夏令时换算；不会使用示例日期、默认性别或默认经纬度。',
+        ].join();
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.argumentValidation,
