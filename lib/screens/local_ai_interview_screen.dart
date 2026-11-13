@@ -3081,6 +3081,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolId: tool.id,
           title: tool.title,
           values: {'结果': legacy.trim()},
+          // The page returned a concrete result string from this registered
+          // App tool. Record its route as provenance; do not mislabel it as an
+          // engine or knowledge-base source.
+          sourceIds: ['local-page-tool:${tool.id}'],
         ),
       _ => AssistantToolResult(
           toolId: tool.id,
