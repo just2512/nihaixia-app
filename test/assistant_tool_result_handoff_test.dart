@@ -635,6 +635,7 @@ void main() {
       // route animation settles. Wait for the real calculate control before
       // tapping, then wait for the result handoff control.
       await _waitForText(tester, runAction);
+      await tester.ensureVisible(find.text(runAction));
       await tester.tap(find.text(runAction));
       await tester.pumpAndSettle();
       await _waitForText(tester, returnAction);
