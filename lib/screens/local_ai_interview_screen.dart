@@ -3725,6 +3725,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           decision.candidateTools.length >= 2 &&
           (decision.mode == AssistantMode.tools ||
               decision.mode == AssistantMode.metaphysics) &&
+          !AssistantConversationOrchestrator.isPersonalHealthNarrative(text) &&
           _status?.ready == true;
       if (mayUseBoundedIntentModel) {
         setState(() => _sending = true);
