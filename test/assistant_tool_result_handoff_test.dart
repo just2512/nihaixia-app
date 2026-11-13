@@ -601,7 +601,7 @@ void main() {
     expect(service.restoredTranscript, contains('忌神：'));
     expect(service.restoredTranscript, contains('【大运】'));
     expect(
-      service.sentTexts.any((text) => text.contains('总结并解释刚才返回的八字排盘结果')),
+      service.sentTexts.any((text) => text.contains('总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
       isTrue,
     );
     expect(
