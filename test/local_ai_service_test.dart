@@ -768,6 +768,7 @@ void main() {
         'birth_time': '08:30',
         'birthplace': '上海市',
       });
+      expect(draft.backend, 'cpu');
     });
 
     test("Bazi slot evidence rejects values that do not match the user's words", () {
