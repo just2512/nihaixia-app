@@ -624,6 +624,20 @@ void main() {
       );
     });
 
+    test('梅花时间起卦和随机起卦精确路由回原页面能力', () {
+      for (final query in [
+        '梅花易数时间起卦',
+        '梅花易数随机起卦',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.tool?.id, 'meihua', reason: query);
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+      }
+    });
+
     test('梅花起卦支持逐项补充数字和明确的公历日期', () {
       final firstNumber = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.meihua,
