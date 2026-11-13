@@ -349,18 +349,6 @@ class _PageToolTraceService extends _TextSendService {
   }
 
   @override
-  Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
-    required String query,
-    required Set<String> missingKeys,
-    required String traceId,
-  }) async {
-    baziSlotQueries.add(query);
-    baziSlotMissingKeys.add(Set<String>.unmodifiable(missingKeys));
-    baziSlotTraceIds.add(traceId);
-    return baziSlotDraft ?? const LocalAiBaziSlotDraft(values: {});
-  }
-
-  @override
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
@@ -404,6 +392,18 @@ class _TextSendService extends LocalAiService {
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
+
+  @override
+  Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
+    required String query,
+    required Set<String> missingKeys,
+    required String traceId,
+  }) async {
+    baziSlotQueries.add(query);
+    baziSlotMissingKeys.add(Set<String>.unmodifiable(missingKeys));
+    baziSlotTraceIds.add(traceId);
+    return baziSlotDraft ?? const LocalAiBaziSlotDraft(values: {});
+  }
 
   @override
   Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
