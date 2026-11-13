@@ -1,10 +1,10 @@
 # AI 能力静态/动态审计报告
 
-- 审计日期：2026-11-12
+- 审计日期：2026-11-13（A/F 增量复核）
 - 仓库：`just2512/nihaixia-app`
-- 最新复核基线：`master @ bfb518ef68bfc674d1af9699e410f4729dbbc3bc`（2026-11-12，PR #113/#114/#115 集成后；历史章节的旧 SHA 仅代表当时审计快照）
+- 最新复核基线：`master @ 3363a29d94fa0c9e0c87587d71553fc870fcede7`（PR #122 合并后；运行时代码基线仍为 `07cae6810db412e608ff0d3e2c0dcf1c872105be`，其后为文档变更）
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
-- 方法：读取当前 master 代码、专项测试、PR diff、GitHub Actions job/step/log、CI 生成的检索快照；未执行 Find N2 真机测试。
+- 方法：本轮增量复核 PR #117/#119/#120 的当前主线代码、专项测试和 Actions 结果；未重新执行全仓逐层审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
 
 ## 1. 审计结论
 
@@ -481,3 +481,70 @@ B2 生产接入不能采用“可选 Gate 为空时跳过”方案，否则形�
 
 本次不引入 Agent/DAG、额外数据库表、向量数据库、云端模型/API 或新的业务产品能力。静态/自动化证据、模拟设备与 Find N2 真机 TRACE 分开判定。
 
+
+
+---
+
+## 20. 2026-11-13 PR #117/#119/#120 集成后的 A/F 增量复核
+
+### 20.1 基线与范围
+
+- 复核对象：`master @ 3363a29d94fa0c9e0c87587d71553fc870fcede7`。
+- 运行时代码对应 `07cae6810db412e608ff0d3e2c0dcf1c872105be`；`3363a29` 是随后仅更新执行台账的文档提交，不改变应用代码。
+- 本节只补充此前报告第 19 节之后已合并的 A/F 代码增量。没有重新执行五种模式的全仓静态审计；B/C/D/E/G 状态以同日执行台账第 22 节为准。
+- `docs/ai-capability-audit.md` 仍是约束文件，本轮没有修改或降低其验收门槛。
+
+### 20.2 已合并代码与可复核定位
+
+| PR | 合并提交 | 变更事实 | CODE / TEST |
+|---|---|---|---|
+| #117 结构化问诊 transcript 原子写入 | `872a715a3817a57c8b4dd708a33f6b3a13c428c0` | 引入有序消息批量写入；一组 transcript 行和 conversation 标题/预览在同一个 SQLite transaction 中提交或回滚；普通 user/assistant turn 复用该事务；无 schema migration / 新表 | `lib/data/assistant_conversation_store.dart:33-40`；`lib/data/database_helper.dart:438-531`；`lib/screens/local_ai_interview_screen.dart:1509-1519`；`test/assistant_history_persistence_test.dart:404-545` |
+| #119 transcript 与 task snapshot TRACE 分离 | `5d73161b49fd3f38ffada31c0da1b06e7d24bec0` | `_appendTcmInterviewMessages` 返回 typed persistence result；`persistence` 只反映 transcript batch；`persistedState` 单独反映可恢复问诊快照；快照写入失败不再把已成功提交的 transcript 错报为失败，并向用户显示恢复风险 | `lib/screens/local_ai_interview_screen.dart:1422-1597`；`test/local_ai_interview_screen_test.dart:1049-1110` |
+| #120 Native Activity release failure fail-closed | `849ec817f6e11f154ea662316b32b2fbfa230ffc` | 新增进程级 `LocalAiProcessHealth`；Engine/Conversation 释放失败后当前进程不可继续执行本地模型任务；任务入队前和串行队列实际执行前均检查健康状态，关闭 Activity 重建竞态；需强制停止并重启进程后才能恢复 | `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycle.kt:14-96`；`android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycleTest.kt:75-140` |
+
+### 20.3 回归断言与 CI 证据
+
+- `assistant_history_persistence_test.dart` 的原子成功用例核对消息顺序、metadata、conversation title 和最后一条 preview；后续插入失败用例通过 SQLite trigger 注入失败，断言前序消息与会话 metadata 一并回滚。
+- `local_ai_interview_screen_test.dart` 的“结构化问诊消息已保存但任务快照失败时分别标记 persistence 和 persistedState”用例验证：transcript 已保存、task snapshot 缺失、用户收到恢复警告、`persistence=SUCCEEDED`、`persistedState=FAILED` 且错误码为 `TASK_STATE_PERSISTENCE_FAILED`，最终展示状态闭合。
+- Kotlin 用例 `releaseFailureBlocksWorkQueuedByARecreatedActivity` 验证旧 Activity release 失败后，新 Activity 已排队任务在触及 Engine 前被拒绝；后续提交也被立即拒绝。它验证的是同进程队列竞态，不是设备上的 Engine 真实释放行为。
+
+| PR head | Workflow run | Flutter regression | Android arm64 / Native | Branch validation |
+|---|---:|---|---|---|
+| #117 `132f6c4f` | `43238225000` | SUCCESS | SUCCESS | SKIPPED |
+| #119 `94964cb6` | `43242639810` | SUCCESS | SUCCESS | SKIPPED |
+| #120 `9ed99aa6` | `43342006102` | SUCCESS | SUCCESS | SKIPPED |
+
+PR head 的 Flutter regression 和 Android job 均已成功；Branch validation 是该触发事件下被跳过的独立 job，不计为 PASS，也不影响上述已完成 job 的结论。
+
+PR #121 合并后的主线 `07cae681` 自动化验收：
+- Flutter tests run `43344902200`：Flutter regression、静态分析、全量回归、SQLite persistence/reopen、assistant history、AI contract、retrieval golden snapshot 和 Android arm64/Native job SUCCESS。
+- Flutter Quality Gate run `43344902148`：静态分析、Dart tests、Android Native unit tests、Find N2 arm64 Debug APK build SUCCESS。
+- Flutter tests 内的 Branch validation 为 SKIPPED，单独保留该事实。
+- PR #122 只更新执行台账；其 PR run `43346632662` 的 Flutter regression 与 Android arm64/Native jobs SUCCESS。它不是 Find N2 真机验收。
+
+### 20.4 A/F 当前判定
+
+| 工作流 | 当前状态 | 本轮已证实 | 仍未证实 / 硬缺口 |
+|---|---|---|---|
+| A Native 多轮、生命周期与持久化 | PARTIAL / DEVICE UNKNOWN | 结构化问诊 transcript 原子批量持久化；SQLite 后续行失败整体回滚；transcript 与 task snapshot 的持久化状态分开报告；Native release failure 后进程级 fail-closed；相关 Flutter/Kotlin 回归及 PR/master CI 通过 | OPPO Find N2 GPU 至少 20 轮、CPU 至少 20 轮；图片/语音；Activity recreation；请求中断、强停/重启与历史恢复；SQLite、Flutter UI、Native history 逐轮一致性；`state:7` 根因仍 UNKNOWN |
+| F TRACE 与隐私 | PARTIAL / DEVICE UNKNOWN | #113/#114/#115 的 Headless reject、Page Tool continuation、send/symptom finalRender，及 #117/#119/#120 的 transcript rollback、task snapshot 独立状态、Native lifecycle release failure 终态均有 CODE + TEST + PR CI | Find N2 场景集从输入到最终展示/持久化的真实完整 TRACE；多轮、媒体、Activity/进程恢复与数据清除后复查 |
+
+以上证据只支持对应代码路径与自动化测试通过，不将 A 或 F 标为 IMPLEMENTED。
+
+### 20.5 A-G 全局状态与下一步
+
+当前 A-G 状态与下一动作以执行台账第 22 节为准，摘要如下：
+
+| 工作流 | 当前状态 | 下一项允许推进的工作 |
+|---|---|---|
+| A 多轮稳定性 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU 多轮、媒体、Activity/进程恢复真实 TRACE；不再用 CI 代替设备结果 |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 先取得医学审核记录与 detector/REVIEW_REQUIRED 产品决策；未审核前不接入生产放行路径、不默认 CLEAR |
+| C 检索来源 | PARTIAL / NOT VERIFIED | 83 个讲稿 sourceId 的真实书目定位，以及 12 条规则的底本版本/卷页/原始影像；无证据继续 MISSING |
+| D Headless Capability | 2 项 Headless / 2 项 Executed | 冻结；没有可复现失败和真实需求，不新增 adapter |
+| E 数据保护 | PARTIAL | 明确混合数据库备份边界决策；Find N2 上验证清除后强停/重启不可恢复；旧共享附件归属不明时保留 |
+| F TRACE | PARTIAL / DEVICE UNKNOWN | 与 A 同批完成 Find N2 端到端场景 TRACE，不另建埋点体系 |
+| G 版本与证据治理 | VERSION GUARD IMPLEMENTED | 只维护现有版本 guard 和证据一致性，不新增第二套治理 |
+
+**停止条件：** A/F 的设备门槛需要真实 OPPO Find N2 与本地模型；B 需要医学背景人员审核和产品决策；C 需要可回链的原始底本/影像；E 需要备份边界决策及设备清除验证。缺少这些外部条件时，相关项保持 PARTIAL / UNKNOWN / RELEASE BLOCKED。不得通过增加普通 CI、模拟器测试、文档描述或重复静态检查将其改写为 PASS。
+
+**范围约束：** 本轮没有更改问诊/辨证规则、红旗词表、模型 prompt、检索 query/ranking、数据库 schema、Android backup policy 或业务路由；没有引入 Agent/DAG、FTS5、向量检索、云端 API 或额外 Headless adapter。
