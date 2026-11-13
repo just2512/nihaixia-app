@@ -807,6 +807,25 @@ void main() {
       );
     });
 
+    test('Bazi birthplace evidence must identify the complete extracted place', () {
+      const query = '我在上海市出生';
+      final rawDraft = jsonEncode({
+        'birth_date': {'value': null, 'evidence': null},
+        'birth_time': {'value': null, 'evidence': null},
+        'gender': {'value': null, 'evidence': null},
+        'birthplace': {'value': '海市', 'evidence': '在上海市出生'},
+      });
+
+      expect(
+        () => LocalAiBaziSlotDraft.fromModelText(
+          rawDraft,
+          userText: query,
+          requestedKeys: const {'birthplace'},
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('Bazi slot evidence cannot overwrite fields that deterministic code already supplied', () {
       const query = '出生日期1990年1月2日；早上八点半';
       final rawDraft = jsonEncode({
