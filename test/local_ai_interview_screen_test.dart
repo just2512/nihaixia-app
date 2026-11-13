@@ -2972,7 +2972,8 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(service.sentTexts, isEmpty);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('自动总结并解释实际输入'));
     expect(find.textContaining('五运六气推算执行结果'), findsOneWidget);
     expect(find.textContaining('推算日期：2026-11-12'), findsOneWidget);
     expect(find.textContaining('丙午年'), findsOneWidget);
@@ -2983,15 +2984,21 @@ void main() {
     final messages = await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    expect(messages, hasLength(2));
+    expect(messages, hasLength(3));
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('五运六气推算执行结果'),
+    );
     final metadata = AssistantMessageMetadata.decode(
-      messages.last['metadata'] as String,
+      resultMessage['metadata'] as String,
     );
     expect(metadata.toolId, 'yunqi');
     expect(metadata.toolStatus, 'SUCCEEDED');
     expect(metadata.toolArguments, const {'date': '2026-11-12'});
     expect(metadata.sourceIds, const ['local-engine:yunqi']);
     expect(metadata.traceId, traceId);
+    expect(messages.last['role'], 'assistant');
+    expect(messages.last['content'], contains('已收到你的描述'));
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
       AiTraceStage.route,
@@ -3196,7 +3203,7 @@ void main() {
       reason: '模型已就绪且排盘结果通过来源/参数契约后，应由助手自动解释',
     );
     expect(
-      service.sentTexts.where((value) => value.contains('总结并解释刚才返回的八字排盘结果')),
+      service.sentTexts.where((value) => value.contains('总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
       hasLength(1),
     );
 
@@ -3476,13 +3483,20 @@ void main() {
     final messages = await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    expect(messages, hasLength(3));
+    expect(messages, hasLength(4));
+    final pageResultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('页面结果已回传'),
+    );
     final resultMetadata = AssistantMessageMetadata.decode(
-      messages.last['metadata'] as String,
+      pageResultMessage['metadata'] as String,
     );
     expect(resultMetadata.toolId, 'yunqi');
     expect(resultMetadata.toolStatus, 'SUCCEEDED');
+    expect(resultMetadata.sourceIds, const ['local-page-tool:yunqi']);
     expect(resultMetadata.traceId, traceId);
+    expect(messages.last['role'], 'assistant');
+    expect(messages.last['content'], contains('已收到你的描述'));
 
     final toolExecutionEvents = events
         .where((event) => event.stage == AiTraceStage.toolExecution)
@@ -3498,8 +3512,8 @@ void main() {
     );
     expect(
       events.where((event) => event.stage == AiTraceStage.resultValidation)
-          .single.status,
-      AiTraceStatus.succeeded,
+          .map((event) => event.status),
+      containsAll([AiTraceStatus.succeeded, AiTraceStatus.succeeded]),
     );
     expect(
       events.where((event) => event.stage == AiTraceStage.persistence)
