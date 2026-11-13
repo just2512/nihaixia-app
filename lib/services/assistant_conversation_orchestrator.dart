@@ -256,7 +256,7 @@ class AssistantConversationOrchestrator {
         }
         if (selectedMode == AssistantMode.tools &&
             (text.contains('开穴') || text.contains('剂量换算'))) {
-          return const AssistantDispatchDecision(
+          return AssistantDispatchDecision(
             mode: AssistantMode.tools,
             clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
             expectsToolSelection: true,
@@ -352,7 +352,7 @@ class AssistantConversationOrchestrator {
     }
 
     if (text.contains('排盘') || text.contains('排个盘') || text.contains('命盘')) {
-      return const AssistantDispatchDecision(
+      return AssistantDispatchDecision(
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？',
         expectsToolSelection: true,
@@ -363,7 +363,7 @@ class AssistantConversationOrchestrator {
       );
     }
     if (text.contains('起卦') || text.contains('起课')) {
-      return const AssistantDispatchDecision(
+      return AssistantDispatchDecision(
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种起卦工具：易经、小六壬，还是梅花易数？',
         expectsToolSelection: true,
@@ -375,7 +375,7 @@ class AssistantConversationOrchestrator {
       );
     }
     if (text.contains('开穴') || text.contains('剂量换算')) {
-      return const AssistantDispatchDecision(
+      return AssistantDispatchDecision(
         mode: AssistantMode.tools,
         clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
         expectsToolSelection: true,
