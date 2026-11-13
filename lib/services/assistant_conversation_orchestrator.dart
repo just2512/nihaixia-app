@@ -145,6 +145,8 @@ class AssistantConversationOrchestrator {
       return false;
     }
     if (missingKeys.contains('birth_date') &&
+        !text.contains('农历') &&
+        !text.contains('阴历') &&
         RegExp(
           r'\d{4}(?:年\d{1,2}月\d{1,2}[日号]?|[-/]\d{1,2}[-/]\d{1,2})',
         ).hasMatch(text)) {
