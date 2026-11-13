@@ -1,10 +1,11 @@
 # AI 数据清除范围审计
 
-- 审计基线：`master` @ `4dfff41049063925daa559830341053bd33c6528`
-- 审计日期：2026-11-11
-- 类型：静态代码与配置审计
-- 结论：E = PARTIAL；尚不存在可证明完整的“清除全部 AI 数据”闭环。
-- 本文只记录源码/配置事实；不把 CI、静态代码或 Find N2 既有 A-K 汇总当作清除后不可恢复证据。
+- 最近增量复核：2026-11-13
+- 仓库：`just2512/nihaixia-app`
+- 当前 master 文档/运行时代码基线：`a2450f12220444225a33c4882d65ce4e4b9b3eab`（该提交仅集成文档；E 运行时代码以此前合并的清除实现为准）
+- 类型：静态代码、专项测试与 Android backup 配置复核；未执行 Find N2 真机清除后强停/重启验收。
+- 结论：E = PARTIAL。应用内清除链的主要代码与自动化测试已落地；剩余项集中在混合 SQLite 的系统备份/设备迁移边界、历史共享图片归属，以及 Find N2 强停重启后的不可恢复证据。
+- 历史章节保留为当时审计快照；本文件第7节为当前有效状态。
 
 ## 1. 数据域清单
 
@@ -130,3 +131,38 @@
 2. 为旧版图片建立可验证归属证据；没有证据时继续保留并在 UI/文档披露。
 3. 在 Find N2 做合成数据清理验收：模型运行中/空闲、附件存在、TRACE 开关两种状态、清理成功/部分失败、强制停止、重启后重新检查；同时确认模型文件和非 AI 数据保留。
 4. 把设备结果记录为每个数据域的 CLEAR / RETAINED / UNKNOWN，附设备型号、Android 版本、构建 SHA、步骤和重启后复查结果。
+
+
+---
+
+## 7. 2026-11-13 当前主线复核（代码与测试证据）
+
+本节覆盖2026-11-11/12历史章节中已经完成的实现；历史记录保留，不再把历史待办误认为当前代码缺失。
+
+### 7.1 当前已落地且有自动化证据的清除链
+
+| 数据域 | 当前实现 | 直接测试证据 | 当前状态 |
+|---|---|---|---|
+| SQLite AI 对话数据 | `DatabaseHelper.clearAllAiConversationData()` 在同一 SQLite transaction 中删除 `assistant_messages`、`tcm_interview_tasks`、`assistant_conversations`、旧 `chat_history`；不删除整个 `nihaisha.db` | `test/ai_data_clear_database_test.dart`：AI 四表清空、非 AI 数据保留；触发器注入删除失败，断言事务整体回滚。`test/local_ai_data_clear_database_boundary_test.dart` 另覆盖关闭/重开 DB 后仍保留 bookmarks、diagnosis_history、search_history、user_settings | CODE + TEST PRESENT；真实进程重启仍未验证 |
+| AI 附件 | `LocalAiAttachmentStore` 将新选取文件复制到 `local_ai_attachments` 专属目录；录音直接写入该目录；`clearAll()` 仅删除该目录内容，并且只清理共享临时目录根部名称严格匹配 `local_ai_[0-9]+.wav` 的旧录音 | `test/local_ai_attachment_store_test.dart`：专属目录导入、录音路径、扩展名校验、旧录音清除，同时断言其它共享临时文件保留 | 新版 AI-owned 文件 CODE + TEST PRESENT；旧共享图片所有权 UNKNOWN，不能批量删除 |
+| Native runtime/cache | Native clear 通过 `aiTasks` 串行 executor 执行；先释放 Conversation/Engine，再删除 `cacheDir/litertlm`；释放失败时不删除缓存；模型文件 `filesDir/ai_models` 不属于删除目标 | `android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiRuntimeCacheClearPolicyTest.kt`：释放失败保留 cache、成功时清 cache，并核对模型文件状态 | CODE + Native unit tests PRESENT；Activity/推理并发和设备资源释放仍需真机验证 |
+| Native 内存会话 | `releaseLocalModel()` 清空 Engine/Conversation 引用，并清空 `userReportedInputs`、截断标记和 `conversationHistoryTurns` | Native lifecycle/runtime 相关单测及 PR #120 的 release-failure fail-closed 并发回归 | CODE + TEST PRESENT；不等于进程被杀后数据不可恢复 |
+| TRACE | `LocalAiDataClearCoordinator.forApp()` 先调用 `AiTraceRecorder.disableAndFlush`，再通过 writer 清除 `ai_trace.jsonl` 和 `.tmp`；结束后按之前的 recorder 开关状态恢复 | `test/local_ai_data_clear_coordinator_test.dart` 覆盖 stop/release/clear 顺序、Native release 未确认时不清附件、分域失败、TRACE 停止失败、并发点击、默认关闭状态恢复、Native 调用异常、TRACE 恢复失败 | CODE + TEST PRESENT |
+| UI 编排 | Settings 数据管理入口包含二次确认、清理中状态、按数据域显示结果和部分失败提示；清理同一时间只运行一次 | `test/local_ai_data_clear_tile_test.dart`、`test/local_ai_data_clear_coordinator_test.dart` | CODE + widget/unit tests PRESENT |
+| Android 模型/TRACE 备份排除 | Manifest 显式引用 `backup_rules.xml` 和 `data_extraction_rules.xml`；cloud backup 与 device transfer 都只排除 `ai_models/`、`ai_trace.jsonl`、`ai_trace.jsonl.tmp` | `test/android_ai_backup_rules_contract_test.dart`；PR #122 前主线的 Android CI 另执行 merged manifest 检查 | 配置与合同测试存在；不覆盖混合 SQLite 中 AI 对话行 |
+
+### 7.2 当前仍未闭环的边界
+
+1. **混合 SQLite 系统备份/设备迁移**：AI 会话和 bookmarks、diagnosis_history、settings 等非 AI 数据共用 `nihaisha.db`。当前 Android XML 规则没有排除 `domain="database"`，因此 AI 会话行仍可能进入系统云备份或设备迁移副本。Android 规则不能按 SQLite 表/行选择性排除；排除整个 database domain 会同时影响非 AI 数据。不得以全局 `allowBackup=false` 或排除整个数据库代替 AI-only 策略。
+2. **产品决策仍需明确**：可选方向是接受当前备份包含 AI 对话行，或批准将 AI 对话迁移到独立数据库文件/应用层可撤销密钥方案，并制定迁移、恢复、回滚和历史兼容计划。此决策会改变用户数据备份行为，不能由实现者自行假定。未决前保持当前备份行为并披露风险，不做迁移。
+3. **旧共享图片**：旧版本 image_picker 图片没有完整所有权清单。当前只清除专属 AI 目录和可证明归属的旧录音，不扫描、递归删除共享 temp 目录任意图片。其数据归属保持 UNKNOWN。
+4. **Find N2 强停/重启**：尚未提供真实 OPPO Find N2 证据，证明清除后强制停止/进程重启、重新打开应用仍不能恢复 AI 会话、快照、附件、Native cache 和 TRACE，同时收藏、设置、诊断历史与模型文件保留。关闭/重开 SQLite 连接的单测不等于系统进程重启。
+5. **外部副本**：用户主动导出、系统云备份和设备迁移形成的历史副本，不会因当前设备上清除 SQLite 行而被同步删除。产品界面或说明不能宣称清除操作能远程撤回已导出的副本。
+
+### 7.3 当前完成定义与下一步
+
+- **本地应用内清除链：** SQLite AI 对话、AI-owned 新附件、Native runtime/cache、内存会话、TRACE 与 UI 分项反馈已有 CODE + TEST 证据；本地代码切片不应重复开发。
+- **剩余自动化范围：** 后续只对实际改动运行相应 changed tests、Flutter regression 和 Android Native/manifest 构建；不要为已有 PASS 路径重复增加泛化测试。
+- **真机验收：** 在 OPPO Find N2 用合成数据覆盖模型运行中/空闲、附件存在、TRACE 开关开启/关闭、清理成功/部分失败、强制停止、重新启动后检查；同时确认 bookmarks、diagnosis_history、settings 和模型文件保持不变。记录设备型号、Android 版本、App SHA、步骤、每个数据域结果和重启后复查结果。设备未执行前保持 UNKNOWN。
+- **备份决策：** 在收到明确产品决策前，不改 Android backup policy，不迁移数据库，不排除整个 `nihaisha.db`，不全局禁用 backup。
+- **E 状态：PARTIAL。** 代码和自动化测试不替代备份决策、历史共享图片归属证据或 Find N2 真机清除后强停/重启验收。
