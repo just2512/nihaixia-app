@@ -307,4 +307,26 @@ void main() {
     );
   });
 
+  test('称骨注册项在助手对话中收集公历日期和出生钟表时间', () {
+    final tool = AssistantToolRouter.chenggu;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'birth_date',
+      'birth_time',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.time);
+    expect(
+      const AssistantToolArguments(
+        toolId: 'chenggu',
+        values: {
+          'birth_date': '1990-01-02',
+          'birth_time': '08:30',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
