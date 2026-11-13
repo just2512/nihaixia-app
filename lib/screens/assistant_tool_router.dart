@@ -7,6 +7,7 @@ import '../services/yunqi_tool_executor.dart';
 import '../services/almanac_tool_executor.dart';
 import '../services/bazi_tool_executor.dart';
 import '../services/meihua_tool_executor.dart';
+import '../services/chenggu_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -455,11 +456,27 @@ class AssistantToolRouter {
   static const chenggu = AssistantToolDefinition(
     id: 'chenggu',
     title: '袁天罡称骨',
-    description: '打开传统称骨计算；仅作民俗文化参考。',
+    description: '在当前对话中收集明确的公历出生日期和当地钟表时间，复用 App 原有八字与称骨计算；仅供传统民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['称骨', '袁天罡', '称骨算命'],
-    actionWords: ['计算', '测算', '查询', '打开'],
+    actionWords: ['计算', '测算', '查询', '打开', '帮我', '算一下'],
     builder: _buildChenggu,
+    headlessExecutor: ChengguToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；缺失时必须向用户追问，不使用默认时间。',
+      ),
+    ],
   );
 
   static const shoushengDebt = AssistantToolDefinition(
