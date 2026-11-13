@@ -130,19 +130,20 @@ void main() {
     expect(context, contains('来源定位：MISSING'));
   });
 
-  test('异步检索伤寒金匮全文索引时明确区分倪师讲稿与仲景原文', () async {
+  test('异步检索将课程讲稿作为学习资料回链，不要求纸本页码冒充来源', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
     expect(context, contains('App经典全文索引'));
     expect(context, contains('伤寒论讲稿'));
-    expect(context, contains('倪师讲稿/整理讲义'));
-    expect(context, contains('版本/底本/卷页：MISSING'));
+    expect(context, contains('倪师讲稿/整理讲义（学习资料）'));
     expect(context, contains('来源标识：shanghan:assets/'));
-    expect(context, contains('本地回链：assets/'));
-    expect(context, contains('来源定位状态：MISSING'));
-    expect(context, contains('不得当作仲景原文'));
+    expect(context, contains('本地回链：assets/shanghan/'));
+    expect(context, contains('来源说明：当前实际来源是 App 内的课程讲稿/整理讲义'));
+    expect(context, contains('可用于学习和知识解释'));
+    expect(context, contains('不得冒充已校勘的仲景原文'));
+    expect(context, isNot(contains('版本/底本/卷页：MISSING')));
   });
 
-  test('异步检索引用只暴露可反查的来源标识，纸本版本仍保持 MISSING', () async {
+  test('讲稿引用尾注显示本地学习资料回链而不把纸本卷页当作必填', () async {
     final result =
         await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '葛根加半夏汤',
@@ -153,8 +154,10 @@ void main() {
     expect(result.sources, isNotEmpty);
     expect(result.sourceIds, isNotEmpty);
     expect(result.sourceIds.every((id) => id.isNotEmpty), isTrue);
-    expect(result.citationFooter, contains('纸本版本/卷页：MISSING'));
-    expect(result.citationFooter, contains('来源标识：'));
+    expect(result.citationFooter, contains('课程讲稿/整理讲义（学习资料）'));
+    expect(result.citationFooter, contains('本地回链：assets/shanghan/'));
+    expect(result.citationFooter, contains('使用边界：讲稿用于学习内容检索'));
+    expect(result.citationFooter, isNot(contains('纸本版本/卷页：MISSING')));
     expect(result.sources.every((source) => source.locatorStatus != 'VERIFIED'), isTrue);
   });
 
