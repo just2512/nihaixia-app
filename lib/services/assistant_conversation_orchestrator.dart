@@ -112,14 +112,14 @@ class AssistantConversationOrchestrator {
       final dateMatch = isoDate ?? chineseDate;
       if (dateMatch != null) {
         values['birth_date'] =
-            '\${dateMatch.group(1)!.padLeft(4, '0')}-'
-            '\${dateMatch.group(2)!.padLeft(2, '0')}-'
-            '\${dateMatch.group(3)!.padLeft(2, '0')}';
+            '${dateMatch.group(1)!.padLeft(4, '0')}-'
+            '${dateMatch.group(2)!.padLeft(2, '0')}-'
+            '${dateMatch.group(3)!.padLeft(2, '0')}';
       }
       final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(query);
       if (timeMatch != null) {
         values['birth_time'] =
-            '\${timeMatch.group(1)!.padLeft(2, '0')}:\${timeMatch.group(2)}';
+            '${timeMatch.group(1)!.padLeft(2, '0')}:${timeMatch.group(2)}';
       }
       if (query.contains('女性') || query.contains('女')) {
         values['gender'] = 'female';
