@@ -774,22 +774,24 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 ### 26.4 下一步
 
-1. 在现有结构化规则问诊结果链补齐确定性引擎 source provenance；PR #137 正在推进（见第 27 节）。
+1. 在现有结构化规则问诊结果链补齐确定性引擎 source provenance；PR #137 已合并，来源标记及知识来源并存已由测试覆盖（见第 27 节）。
 2. 自由文本问诊需先有医学审核的红旗 detector 和全入口前置拦截证据；没有这些材料时不启用症状自由文本抽取或自动模型调用。
 3. 在 Find N2 真机验证 E4B 对八字/紫微/工具结果的归纳是否完整、是否保留来源和 MISSING，并记录 App SHA、设备、backend、TRACE 和真实输出。
 
 ## 27. 2026-11-13 PR #137：结构化问诊结果的引擎来源追溯
 
-### 27.1 变更范围
+### 27.1 集成基线与变更范围
 
-- 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`；分支 `work/p4-diagnostic-result-provenance-2026-11-13`；代码与测试提交 head `a459f9f2280525ade6178b0e6e17d3fa703ced28`（其后仅追加本台账/审计报告记录）。
-- 对现有结构化 `DiagnosisResult` 的解释入口加上 `local-engine:diagnostic-engine` 来源标识；用户手动触发现有解释动作时，source ID 会随解释请求和持久化 metadata 保存。
-- 本轮实际知识检索返回的 `neijing:*` 来源仍被合并保存；不把引擎来源伪装成知识库条目。
-- prompt 进一步明确只解释 App 已返回结果，不重新辨证、不补造缺失项，也不生成个体处方、药物或剂量建议。
+- 集成前 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`；独立分支 `work/p4-diagnostic-result-provenance-2026-11-13`；最终 PR head `2829595ed74d4fe7871831f6938d175b6ffd1ea3`。
+- PR #137 已 squash 合并，merge commit / 当前 master：`1bea32a1a81d2a776ddbb6ca7f325b7e6667045d`。
+- 对现有结构化 `DiagnosisResult` 的解释入口加上 `local-engine:diagnostic-engine` 来源标识；用户触发现有解释动作时，source ID 随解释请求 TRACE 和持久化 metadata 保存。
+- 本轮实际知识检索返回的 `neijing:*` 来源继续合并保存；不把引擎来源伪装成知识库条目。
+- prompt 只允许解释 App 已返回结果，不重新辨证、不补造缺失项，也不生成个体处方、药物或剂量建议。
 
 ### 27.2 验收状态
 
-- Branch validation run `43420458490` SUCCESS（静态分析 + changed tests）；最终 head `a459f9f2280525ade6178b0e6e17d3fa703ced28`。
-- PR 全量 Flutter regression、Android arm64 和合并后 master workflows 尚待 PR 建立/合并后验收。
+- 独立 Branch validation run `43421461053` SUCCESS。
+- PR 全量 run `43421508491` SUCCESS；Flutter regression job `131872388262` 与 Android arm64 CI verification job `131874363872` 均 SUCCESS。
+- 合并后 master runs：Flutter tests `43427610792`、Flutter Quality Gate `43427610691`。本次更新时 Flutter regression job `131892817389` SUCCESS；Quality Gate 的静态分析及 Dart tests SUCCESS，但 Android Native unit tests 尚 IN_PROGRESS；Flutter tests run 中 Android arm64 CI job `131895133016` 尚 IN_PROGRESS。最终结论以 run 终态为准。
 - 本次不自动触发健康结果解释，不修改问诊规则或知识库，也不绕过红旗门禁；当前自由文本问诊仍 BLOCKED BY RED-FLAG GATE。
 
