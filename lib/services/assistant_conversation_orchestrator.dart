@@ -238,13 +238,20 @@ class AssistantConversationOrchestrator {
       }
 
       const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-      final explicitBranch = branches.cast<String?>().firstWhere(
-        (branch) => query.contains('${branch}时'),
-        orElse: () => null,
-      );
+      final shouldCollectTime = values['method'] == 'time' ||
+          values['method'] == null;
+      String? explicitBranch;
+      if (shouldCollectTime) {
+        for (final branch in branches) {
+          if (query.contains('${branch}时')) {
+            explicitBranch = branch;
+            break;
+          }
+        }
+      }
       if (explicitBranch != null) {
         values['hour_branch'] = explicitBranch;
-      } else if (values['method'] == 'time') {
+      } else if (shouldCollectTime) {
         final timeMatch = RegExp(
           r'(凌晨|清晨|早上|上午|中午|下午|傍晚|晚上)?\s*(\d{1,2})(?::([0-5]\d)|点)',
         ).firstMatch(query);
@@ -264,7 +271,7 @@ class AssistantConversationOrchestrator {
       }
 
       final isoDate =
-          RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
+          RegExp(r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b').firstMatch(query);
       final chineseDate =
           RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
       if (query.contains('农历') || query.contains('阴历')) {
