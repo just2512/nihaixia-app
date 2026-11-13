@@ -173,20 +173,23 @@ Future<void> _waitForText(WidgetTester tester, String value) async {
 
 Future<void> _scrollUntilTextVisible(WidgetTester tester, String value) async {
   final finder = find.text(value);
-  // Target the scrollable that actually owns this page element. The previous
-  // assistant conversation remains mounted underneath the pushed tool route.
-  final ownerScrollable = find.ancestor(
-    of: finder,
+  // The active tool route is the last Scaffold in the Navigator stack. Its
+  // ListView may lazily build the handoff button only after it is scrolled.
+  // Looking for the target's ancestor first therefore fails for off-screen
+  // children; scope the scrollable lookup to the active route instead.
+  final activeRouteScaffold = find.byType(Scaffold).last;
+  final routeScrollables = find.descendant(
+    of: activeRouteScaffold,
     matching: find.byWidgetPredicate(
       (widget) =>
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
     ),
   );
-  expect(ownerScrollable, findsWidgets, reason: '找不到结果页纵向滚动容器：$value');
+  expect(routeScrollables, findsWidgets, reason: '找不到当前工具页纵向滚动容器：$value');
   await tester.scrollUntilVisible(
     finder,
     400,
-    scrollable: ownerScrollable.first,
+    scrollable: routeScrollables.first,
   );
   expect(finder, findsOneWidget, reason: '结果卡片未出现：$value');
 }
