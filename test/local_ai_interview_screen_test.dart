@@ -4185,8 +4185,9 @@ void main() {
 
       // Page Tools first render an explicit action in the assistant timeline.
       // The route builder is invoked only after the user taps that action.
-      expect(find.text('打开梅花易数起卦'), findsOneWidget);
-      await tester.tap(find.text('打开梅花易数起卦'));
+      final latestPageAction = find.text('打开梅花易数起卦').last;
+      expect(latestPageAction, findsOneWidget);
+      await tester.tap(latestPageAction);
       await tester.pumpAndSettle();
       expect(find.text('退出梅花页面'), findsOneWidget);
       await tester.tap(find.text('退出梅花页面'));
