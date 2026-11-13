@@ -56,7 +56,7 @@ void main() {
   test('无法唯一识别出生地时拒绝排盘，不退回默认经纬度', () async {
     final result = await BaziToolExecutor.execute({
       ...validArguments,
-      'birthplace': '火星月球市',
+      'birthplace': '朝阳',
     });
 
     expect(result.status, AssistantToolExecutionStatus.failed);
