@@ -3014,15 +3014,21 @@ void main() {
           .single.status,
       AiTraceStatus.succeeded,
     );
+    final persistenceEvents = events
+        .where((event) => event.stage == AiTraceStage.persistence)
+        .toList(growable: false);
+    expect(persistenceEvents, hasLength(2));
     expect(
-      events.where((event) => event.stage == AiTraceStage.persistence)
-          .single.status,
-      AiTraceStatus.succeeded,
+      persistenceEvents.map((event) => event.status),
+      everyElement(AiTraceStatus.succeeded),
     );
+    final finalRenderEvents = events
+        .where((event) => event.stage == AiTraceStage.finalRender)
+        .toList(growable: false);
+    expect(finalRenderEvents, hasLength(2));
     expect(
-      events.where((event) => event.stage == AiTraceStage.finalRender)
-          .single.status,
-      AiTraceStatus.succeeded,
+      finalRenderEvents.map((event) => event.status),
+      everyElement(AiTraceStatus.succeeded),
     );
   });
 
@@ -3493,7 +3499,7 @@ void main() {
     );
     expect(resultMetadata.toolId, 'yunqi');
     expect(resultMetadata.toolStatus, 'SUCCEEDED');
-    expect(resultMetadata.sourceIds, const ['local-page-tool:yunqi']);
+    expect(resultMetadata.sourceIds, const ['local-engine:page-tool-test']);
     expect(resultMetadata.traceId, traceId);
     expect(messages.last['role'], 'assistant');
     expect(messages.last['content'], contains('已收到你的描述'));
