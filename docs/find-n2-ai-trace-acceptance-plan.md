@@ -2,14 +2,27 @@
 
 > 本文是执行方案，不是 PASS 报告。测试必须在用户本地 Find N2 上执行；CI、模拟器和静态代码均不能替代真实设备 TRACE。
 
-## 0. 当前前置条件（必须先满足）
+## 0. 当前前置条件与实现基线
 
-以 master `05f118e1d0b090cee7dbeaa37669c410dae0e876` 为基线：
+复核基线：`master @ 14784fa2b93a3746419ea02de8290bf69876ed4b`。本分支在该基线上补齐仅调试构建可见的显式 TRACE 开关；本文件是执行方案，不是设备 PASS 报告。
 
-- `AiTraceRecorder` 已有默认关闭的元数据记录器（`lib/services/ai_trace.dart`），但当前 master 尚无 `LocalAiTraceFileWriter`，也没有生产调用链的 trace_id 注入和显式 Debug 开关。
-- 本分支只补本地有界 writer，不代表 writer 已接入生产链路。
-- E 数据清除 PR #39 尚未安全集成；清除测试须等当前 master 上的 E 清除实现通过 CI 后执行。
-- 因此，在 TRACE recorder + writer + 生产节点接线 + 显式本地审计开关均完成前，不得声称设备已能产生完整 TRACE，也不得用 adb 普通日志代替完整 TRACE。
+当前已有实现：
+
+- `AiTraceRecorder`：`lib/services/ai_trace.dart`，默认关闭。关闭时不生成 `trace_id`、不写入事件，也不把 ID 写入消息 metadata。
+- `LocalAiTraceFileWriter`：`lib/services/ai_trace_store.dart`，写入 App 私有 Application Support 目录的 `ai_trace.jsonl`，最多保留 500 条、7 天；只接受 `AiTraceEvent` 的 allowlist 字段。
+- `AiTraceRuntime`：`lib/services/ai_trace_runtime.dart`，进程级单例；生产记录和清除共用同一 recorder/writer，避免两个队列互相竞争。
+- `LocalAiInterviewScreen`：普通文本/知识检索/图片/语音的常规助手轮次已接入可选 turn `trace_id`、部分检索/上下文/Native推理/模型输出/持久化/最终展示事件，并将同一 ID 写入现有 user/assistant 消息 metadata。Native bridge 对请求和响应 ID 做校验。
+- 设置页在 `kDebugMode` 下展示“本地 AI 调试 TRACE”开关。本次分支开关只操作进程内 recorder：启用时显式调用 `enable()`，关闭时等待 `disableAndFlush()` 完成；不保存用户偏好，App 进程重启后恢复默认关闭。Release/Profile 构建不显示该开关。
+- `LocalAiDataClearCoordinator.forApp()` 使用相同的进程级 recorder/writer，按 `disableAndFlush → Native runtime release → clear owned attachments / trace file / AI conversation rows → restore previous recorder state` 编排。清除失败按数据域返回，不得将部分失败报为全部成功。
+
+尚未完成的事项：
+
+- F 仍为 `PARTIAL`。结构化问诊后续轮次、澄清/工具各分支、未完成/失败轮次、全部业务与结果验证节点并非都已形成完整 TRACE；不能因有 JSONL 文件或某次出现 trace_id 就判端到端通过。
+- 仅调试构建开关不是完整场景覆盖的证明。每个场景必须检查实际写出的阶段、状态、跨层 ID、SQLite metadata 和最终展示对应关系。
+- 尚无 OPPO Find N2 本地真实设备验收记录。GPU/CPU 多轮、图片/语音、Activity/进程恢复、数据清除后强停/重启仍需在设备执行；CI/模拟器不能替代。
+- E 的应用内清除代码与自动化测试已落地，但混合 `nihaisha.db` 的系统备份/设备迁移边界仍未决；旧共享图片归属 UNKNOWN，不能扩大删除范围。清除本地设备数据不代表远端备份或用户导出副本被删除。
+
+因此现在可以在 Debug 构建中显式开启并采集本地 TRACE，但不得将本地开关、CI 或静态代码证据表述为 Find N2 验收完成或 F/A/E 整体 PASS。
 
 ## 1. 设备 / 构建信息
 
@@ -24,7 +37,7 @@
 | 模型文件版本 / SHA-256 | 本地核验值，不上传模型文件 |
 | 实际 backend | 每次会话记录 Native 返回的 GPU 或 CPU；禁止按设置推断 |
 | 屏幕姿态 | 外屏 / 内屏展开 / 半折叠（仅在影响场景时记录） |
-| TRACE 开关 | 显式启用；默认必须关闭 |
+| TRACE 开关 | 仅 Debug 构建设置页显式启用；Release/Profile 不显示；只在当前进程有效，重启后默认关闭 |
 | 测试数据 | 合成数据，不使用真实健康信息 |
 
 ## 2. TRACE 事件完整性
@@ -33,9 +46,9 @@
 
 至少检查以下阶段：
 
-`INPUT → RED_FLAG → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → FINAL_RENDER → PERSISTED_STATE`
+`INPUT → PREFLIGHT → RED_FLAG → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
 
-若场景包含工具，再增加 `TOOL_EXECUTION`。不适用节点写 `NOT_APPLICABLE`，不能静默缺失。
+以上阶段与 `docs/ai-trace-contract.md` 的 `AiTraceStage` 保持一致。只在该场景确实不涉及某阶段时写 `NOT_APPLICABLE`；某阶段应当发生但当前未产生日志、关联 ID 缺失或没有可核对证据时，应记录为缺失/UNKNOWN，不得用 `NOT_APPLICABLE` 掩盖。包含工具的场景必须核对 TOOL_EXECUTION、ARGUMENT_VALIDATION、BUSINESS_EXECUTION 和 RESULT_VALIDATION。
 
 每个事件必须能关联：
 - trace_id、stage、status、时间戳、duration_ms；
@@ -45,7 +58,7 @@
 - source_ids（适用时）；
 - error_code（失败时）。
 
-关键节点缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。
+关键节点缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。当前已知接线并不覆盖全部上述阶段；未覆盖阶段必须如实标记，不可从预期流程反推日志已经存在。
 
 ## 3. GPU 多轮稳定性（G-01）
 
