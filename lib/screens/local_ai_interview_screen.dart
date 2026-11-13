@@ -2596,7 +2596,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前算法沿用 App 页面公历日期口径，请提供公历日期；不会把农历日期误当成公历。',
           '例如：用 3 和 7 起卦；也可以补充公历日期：2026-11-13。',
           '没有提供日期时，App 使用设备本地当天日期，并在结果中明确列出。',
-        ].join('\\n');
+        ].join('\n');
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.argumentValidation,
