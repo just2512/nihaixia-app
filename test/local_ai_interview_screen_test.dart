@@ -3027,6 +3027,7 @@ void main() {
       '"birthplace":{"value":"上海市","evidence":"在上海市出生"}}',
       userText: query,
       requestedKeys: const {'birth_time', 'birthplace'},
+      backend: 'cpu',
     );
     final service = _TextSendService(baziSlotDraft: slotDraft);
     final store = _MemoryConversationStore();
@@ -3090,6 +3091,12 @@ void main() {
           event.stage == AiTraceStage.resultValidation &&
           event.route == 'bazi_slot_evidence_validation' &&
           event.status == AiTraceStatus.succeeded),
+      isTrue,
+    );
+    expect(
+      events.where((event) => event.route == 'bazi_slot_extraction')
+          .where((event) => event.status == AiTraceStatus.succeeded)
+          .every((event) => event.backend == 'cpu'),
       isTrue,
     );
     expect(tester.takeException(), isNull);
