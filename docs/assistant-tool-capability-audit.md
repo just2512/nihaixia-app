@@ -190,3 +190,28 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 3. 为工具结果单独持久化失败增加 UI 可见状态与重试/恢复策略；不要与 #58 的 user+assistant 成功轮次原子写入混为一谈。
 4. 逐个核对 23 个页面的实际参数消费、取消、失败、输出验证、sourceIds 和持久化；不能用路由注册表测试代替业务执行测试。
 5. 仅从非医疗、非个人敏感数据工具评估最小 Headless adapter；先锁定输入/输出黄金行为，再抽取一个工具，不做 23 项批量迁移。
+
+
+## 9. 2026-11-13 D-03 集成后状态复核（PR #139）
+
+### 9.1 结果持久化错误可见性：已关闭
+
+- 旧问题（第 8.3 节第 7 项）：`LocalAiInterviewScreen._openTool()` 对 Page Tool 结果单独调用 `saveAssistantMessage()`；持久化异常只 `debugPrint`，当前对话没有可见的“历史保存失败/状态未知”提示。
+- PR #139 已合并，master merge SHA：`04de8e52abdc88d3c6f99d4b0db836721564acf4`。
+- 现在保存失败时，当前对话继续保留已通过业务结果契约的工具结果，并显示持久化警告；当前会话不可用与写入异常使用不同提示。
+- 写入异常保留 `persistence=UNKNOWN` 和 `persistedState=UNKNOWN`，不伪报历史保存成功，也不自动重跑工具。该处理尊重“请求可能已提交但响应丢失”的不确定状态，避免重复执行。
+- 故障注入 test 验证：单条结果消息保存抛错、可见结果保留、UI warning 出现、历史中不伪报保存、工具结果回传一次，以及两个 TRACE 持久化状态均 UNKNOWN。
+- PR #139 full run `43432900614`：Flutter regression 和 Android arm64/Native verification 均 SUCCESS。合并后 master runs `43434084780` / `43434084865` 在本节更新时仍 IN_PROGRESS。
+
+### 9.2 能力分类没有随修复升级
+
+- Page Tool 仍由用户进入页面完成操作；结果返回并在对话中解释，不等于后台执行。
+- 24 项注册能力中，当前已具备 Headless executor 的仍为 `yunqi / almanac / bazi`；本次未增加 executor。
+- 结果持久化缺口关闭，不代表 23 个 Page Tool 均已有完整参数消费、取消、来源、幂等和真机执行证据。
+- 本次不修改模型解释提示、工具计算或业务规则，不把页面回传来源伪装成底层计算引擎来源。
+
+### 9.3 下一步
+
+- 只在发现明确用户场景、既有确定性业务函数和可验证输入/输出契约时，才选择一个 Page Tool 评估 Headless 适配；不以数量为目标。
+- 对无真实来源的成功结果、旧式 String 回传和带副作用操作的取消/重试，继续保留 MISSING/UNKNOWN，不伪造来源或自动重放。
+- Find N2 真机执行和跨轮 TRACE 仍 UNKNOWN；CI 不替代设备验证。
