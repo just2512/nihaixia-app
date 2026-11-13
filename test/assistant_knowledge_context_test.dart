@@ -314,11 +314,15 @@ void main() {
   });
 
 
-  test('经典检索不得把本地讲稿或未校勘文本伪装成已核验原文', () async {
+  test('经典检索将本地讲稿标记为学习资料且不冒充指定版本古籍原文', () async {
     final lecture = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
-    expect(lecture, contains('资料类型：倪师讲稿/整理讲义'));
-    expect(lecture, contains('版本/底本/卷页：MISSING'));
-    expect(lecture, contains('不得当作仲景原文'));
+    expect(lecture, contains('资料类型：倪师讲稿/整理讲义（学习资料）'));
+    expect(lecture, contains('来源标识：shanghan:assets/shanghan/'));
+    expect(lecture, contains('本地回链：assets/shanghan/'));
+    expect(lecture, contains('可用于学习和知识解释'));
+    expect(lecture, contains('讲稿中引用的古籍文字未逐条核对指定版本'));
+    expect(lecture, contains('不得冒充已校勘的仲景原文'));
+    expect(lecture, isNot(contains('纸本版本/卷页：VERIFIED')));
     expect(lecture, isNot(contains('已完成校勘')));
   });
 
