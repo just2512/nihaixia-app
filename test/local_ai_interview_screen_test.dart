@@ -13,6 +13,7 @@ import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
+import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -377,9 +378,15 @@ class _TextSendService extends LocalAiService {
     this.intentResolution = const LocalAiIntentResolution(
       action: LocalAiIntentAction.clarify,
     ),
+    this.baziSlotDraft,
   });
 
   final LocalAiIntentResolution intentResolution;
+  final LocalAiBaziSlotDraft? baziSlotDraft;
+  int statusCalls = 0;
+  final baziSlotQueries = <String>[];
+  final baziSlotMissingKeys = <Set<String>>[];
+  final baziSlotTraceIds = <String>[];
   final intentQueries = <String>[];
   final intentCandidateIds = <List<String>>[];
   final intentTraceIds = <String>[];
@@ -387,6 +394,18 @@ class _TextSendService extends LocalAiService {
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
+
+  @override
+  Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
+    required String query,
+    required Set<String> missingKeys,
+    required String traceId,
+  }) async {
+    baziSlotQueries.add(query);
+    baziSlotMissingKeys.add(Set<String>.unmodifiable(missingKeys));
+    baziSlotTraceIds.add(traceId);
+    return baziSlotDraft ?? const LocalAiBaziSlotDraft(values: {});
+  }
 
   @override
   Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
@@ -409,7 +428,10 @@ class _TextSendService extends LocalAiService {
   }
 
   @override
-  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+  Future<LocalAiModelStatus> getStatus() async {
+    statusCalls += 1;
+    return _readyStatus;
+  }
 
   @override
   Future<String> sendMessage(String text) async {
@@ -2999,6 +3021,101 @@ void main() {
 
 
 
+  testWidgets('E4B 只补充有逐字证据的八字自然语言参数，再交给 App 校验执行',
+      (tester) async {
+    const traceId = 'abcdef0123456789abcdef0123456789';
+    const query = '我在上海市出生，1990年1月2日早上八点半，男性，帮我排八字';
+    final slotDraft = LocalAiBaziSlotDraft.fromModelText(
+      '{"birth_date":{"value":null,"evidence":null},'
+      '"birth_time":{"value":"08:30","evidence":"早上八点半"},'
+      '"gender":{"value":null,"evidence":null},'
+      '"birthplace":{"value":"上海市","evidence":"在上海市出生"}}',
+      userText: query,
+      requestedKeys: const {'birth_time', 'birthplace'},
+      backend: 'cpu',
+    );
+    final service = _TextSendService(baziSlotDraft: slotDraft);
+    final store = _MemoryConversationStore();
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 13, 12),
+    );
+    Map<String, String>? executedArguments;
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          traceRecorder: recorder,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return AssistantToolResult(
+              toolId: 'bazi',
+              title: '八字排盘',
+              values: const {'完整排盘结果': '四柱：庚午、己丑、甲子、戊辰'},
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const ['local-engine:bazi'],
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+    expect(service.statusCalls, greaterThan(0));
+    expect(
+      AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+        query,
+        const {'birth_time', 'birthplace'},
+      ),
+      isTrue,
+    );
+
+    await tester.enterText(find.byType(TextField).first, query);
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.baziSlotQueries, [query]);
+    expect(service.baziSlotMissingKeys, [const {'birth_time', 'birthplace'}]);
+    expect(service.baziSlotTraceIds, [traceId]);
+    expect(executedArguments, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(find.textContaining('四柱：庚午、己丑、甲子、戊辰'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(
+      events.where((event) => event.route == 'bazi_slot_extraction').length,
+      greaterThanOrEqualTo(2),
+    );
+    expect(
+      events.any((event) =>
+          event.stage == AiTraceStage.resultValidation &&
+          event.route == 'bazi_slot_evidence_validation' &&
+          event.status == AiTraceStatus.succeeded),
+      isTrue,
+    );
+    expect(
+      events.where((event) => event.route == 'bazi_slot_extraction')
+          .where((event) => event.status == AiTraceStatus.succeeded)
+          .every((event) => event.backend == 'cpu'),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('八字助手在对话中分轮补齐参数并后台执行，不打开排盘页面',
       (tester) async {
     final service = _TextSendService();
@@ -3043,6 +3160,11 @@ void main() {
     expect(find.text('打开八字排盘'), findsNothing);
     expect(pageOpened, isFalse);
     expect(service.sentTexts, isEmpty);
+    expect(
+      service.baziSlotQueries,
+      isEmpty,
+      reason: '没有任何出生资料线索时，不调用 E4B 猜测参数',
+    );
 
     await send('出生日期：1990年1月2日');
     expect(find.textContaining('出生日期（公历'), findsWidgets);

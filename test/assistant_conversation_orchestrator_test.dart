@@ -211,6 +211,58 @@ void main() {
       expect(invalid['birthplace'], '朝阳');
     });
 
+    test('八字槽位模型只在缺失字段有明确线索时调用', () {
+      expect(
+        AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+          '帮我排八字',
+          const {'birth_date', 'birth_time', 'gender', 'birthplace'},
+        ),
+        isFalse,
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+          '我在上海市出生，早上八点半，帮我排八字',
+          const {'birth_time', 'birthplace'},
+        ),
+        isTrue,
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+          '我最近三天口苦，早上八点半，在上海市出生，帮我排八字',
+          const {'birth_time', 'birthplace'},
+        ),
+        isFalse,
+        reason: '个人症状叙述不得进入非医疗术数参数抽取模型',
+      );
+    });
+
+    test('农历出生日期不进入公历参数，也不交给槽位模型猜算', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        '农历1990年1月2日出生，帮我排八字',
+      );
+      expect(parsed['birth_date'], isNull);
+      expect(
+        AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+          '农历1990年1月2日出生，帮我排八字',
+          const {'birth_date'},
+        ),
+        isFalse,
+      );
+    });
+
+    test('八字自然语言中男女信息冲突时不确定性别', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        '出生日期：1990-01-02；出生时间：08:30；可能是男也可能是女；出生地：上海市',
+      );
+      expect(parsed['gender'], isNull);
+      expect(
+        parsed.validateAgainst(AssistantToolRouter.bazi).join('；'),
+        contains('性别'),
+      );
+    });
+
     test('八字出生日期支持常见中文公历格式', () {
       final parsed = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.bazi,

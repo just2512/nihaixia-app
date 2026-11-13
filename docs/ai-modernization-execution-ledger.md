@@ -1322,16 +1322,17 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 原有 `BaziToolExecutor` 已复用 App 本地确定性排盘函数，必填字段为公历出生日期、出生地当地钟表时间、性别、出生地点；字段缺失或格式错误时不会调用排盘。
 - 本轮只改助手缺参回复：通过已有 `AssistantToolDefinition.parameters` 列出已识别字段、尚缺字段和需要更正字段；不再每轮都要求用户重复提供全部四项。
 - 分轮收参、会话状态、取消、Headless 执行、参数校验、结果契约及来源 ID 沿用现有实现；不改排盘算法、时间口径、城市目录或结果格式化。
-- PR #134 分支 `work/p4-bazi-missing-slot-clarification-2026-11-13`，head `45013bbda439afb8c73d4c590245b09cacaa0484`。Branch validation run `43406481958` SUCCESS（Static analysis + changed tests）。前一轮 run `43406215264` 的单测失败是断言写错：回复正确显示已识别日期，测试错误要求整条回复不出现日期；已更正为仅断言“目前还缺少”列表不包含已提供字段。
-- PR #134 的完整 PR workflow 及 master post-merge workflow，必须在其最终 head 和 merge SHA 上补记终态，不得以 Branch validation 代替全量 Flutter/Android 验收。
-- 本轮只是确定性缺参文案与校验反馈改善，不宣称 E4B 已完成通用 slot filling。
+- PR #134 已 squash 合并：PR head `0b7e31ad62f434326444df5f5ebc8b0babff2e27`，merge/master SHA `34a839ed661740ab7350e61ce8ca90ccc9a3c283`。
+- PR head Flutter regression `43407071833` SUCCESS，push validation `43407063342` SUCCESS；master post-merge Flutter tests `43408434463` 与 Flutter Quality Gate `43408434562` 均在 merge SHA `34a839e` 上 SUCCESS。
+- 前一轮 run `43406215264` 的测试失败来自断言误写：正确回复显示已识别日期，错误断言要求整条回复不出现日期；已修正为“目前还缺少”列表不含已提供字段。
+- PR #134 只完成确定性缺参列表的动态展示；不将其记为通用 E4B slot filling 完成。
 
 ### 28.4 当前边界与下一阶段
 
 | 领域 | 当前状态 | 下一步硬条件 |
 |---|---|---|
-| P4 工具意图 | Headless 候选受限选择已落地（CODE + TEST）；Find N2 真实推理仍 DEVICE UNKNOWN | 只在确定性解析存在歧义/缺项且输入确有对应线索时，推进固定 schema 的 E4B slot extraction；简单请求维持代码路径 |
-| P4 参数收集 | 八字现有确定性字段解析 + 分轮缺参追问；PR #134 改为仅问缺项 | 继续覆盖自然语言表述，但模型提取值必须保留原文、标记候选、经 Dart 校验；日期/时间/性别/城市不能由模型猜补 |
+| P4 工具意图 | Headless 候选受限选择已落地（CODE + TEST）；Find N2 真实推理仍 DEVICE UNKNOWN | 保持 2–6 个候选、候选 ID 白名单和 TRACE 契约；不扩为模型自由选工具 |
+| P4 参数收集 | 八字具备 L0 确定性解析 + 有界 E4B 自然语言候选抽取（PR #135）；PR #134 已合并 | 槽位结果必须逐字证据、只填当前缺项、Dart 校验后再走 App 参数校验；不推广到症状/诊断参数 |
 | 自由文本问诊 | 尚未形成审计要求的“自述理解—必要澄清—用户确认—既有规则执行”闭环 | 先满足独立红旗门禁；不得以普通模型 Prompt 或事后用户确认代替模型调用前的确定性门禁 |
 | 问诊规则与知识库 | 既有审核知识库和 DiagnosticEngine 保持原样 | 不重复审核知识库、不重建问诊十问、不修改辨证规则；只改善交互和结果解释链 |
 | 真机语义 | DEVICE UNKNOWN | Find N2 实测知识综合、既有问诊结果解释、八字与紫微结果解释；记录 App SHA、模型、backend、TRACE、真实输入输出 |
@@ -1343,3 +1344,45 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 未通过结果契约验证的执行结果不得交给 AI 当作事实；AI 不得更改辨证、排盘或剂量规则。
 - 不新增 Agent/DAG、第二套 Orchestrator、向量数据库、云 API 或通用工具平台；不为测试数量或 Headless 数量扩展。
 - 医学知识内容审核与红旗入口安全门禁不是同一件事：既有知识库内容不重复审核；但缺少完整、经过审核的红旗 detector 规则与 Flutter/Native 全入口拦截证据时，问诊自然语言抽取链仍不得绕过安全门禁。
+
+---
+
+## 29. 2026-11-13 PR #135：八字自然语言槽位抽取（受限 E4B）
+
+### 29.1 主线基线与当前验收
+
+- 基线为 master `34a839ed661740ab7350e61ce8ca90ccc9a3c283`，即 PR #134 合并后的主线。PR #134 的 PR Flutter regression、push changed tests 与 master post-merge Flutter tests / Quality Gate 均已 SUCCESS。
+- PR #135：`https://github.com/just2512/nihaixia-app/pull/135`，分支 `work/p4-bazi-evidence-slot-filling-2026-11-13`。代码头 `140232868612d9e581d8d28d87713db052bab780`；push Branch validation run `43412646761` SUCCESS（Static analysis + changed tests）。PR 触发的全量 Flutter regression run `43412653762` 在本记录时仍运行中；以后续 PR 最终 head 的完整 workflow 终态为准。不能用 push changed-tests 代替 Flutter regression / Android CI。
+- 早期 CI 暴露的 service 文件编辑破坏已从 master 基线重建；后来修正 fake service 的 override 位置，修复了集成测试未真正调用槽位抽取的问题。当前 Branch validation 对最新 head 已通过。
+
+### 29.2 槽位抽取调用链
+
+1. L0 先用既有 `AssistantConversationOrchestrator.argumentsFor` 提取稳定格式的出生日期、HH:mm 时间和明确性别。
+2. 仅当必填参数仍缺失、当前用户消息含有对应自然语言线索、本地模型 ready 且存在 TRACE ID 时才调用 E4B；无出生资料线索的“帮我排八字”不调用模型。检测到症状 cue 的消息不进入该非医疗槽位抽取器。
+3. Native `extractBaziSlots` 只接收本轮用户原文、缺失字段集合和 TRACE ID；字段集合由 Native 再次限制为 `birth_date / birth_time / gender / birthplace`。模型只输出固定四字段 JSON，不执行排盘。
+4. 每个非空候选必须带原文逐字 `evidence`。Dart 验证 JSON schema、用户原文包含证据、字段属于当前缺项、不得覆盖已解析字段，并校验日期日历有效性、公历口径、中文时间语义、性别和出生地完整名称。
+5. 验证失败、无效输出或 Native 错误时丢弃全部模型候选，回到确定性缺参追问；不会用部分/猜测结果执行。通过后仍必须通过 `AssistantToolArguments.validateAgainst`，才允许调用既有 `BaziToolExecutor`。
+6. 执行结果仍须通过 `AssistantToolResult.validateFor` 和参数匹配校验，来源 ID 保留；未执行、失败或契约校验失败的结果不得提供给 AI 当作事实。
+
+### 29.3 明确边界
+
+- 没有改变八字排盘算法、真太阳时校正、城市目录或输出格式。
+- E4B 不创建工具名、不生成默认出生资料、不换算农历、不推算时区/夏令时/真太阳时，不会覆盖已确定参数。
+- 本切片只针对八字非医疗出生资料；不表示问诊自然语言抽取已完成，也不表示通用参数槽位抽取已完成。
+- 当前成功排盘后仍由用户点击“AI总结解读”触发模型；“业务结果自动返回后由 AI 主动归纳”的无额外点击体验仍是后续任务，不能写成已闭环。
+
+### 29.4 下一步按依赖顺序收尾
+
+| 事项 | 当前状态 | 下一步范围 |
+|---|---|---|
+| PR #135 集成 | Branch validation SUCCESS；PR 全量 Flutter/Android 终态待定 | 只在最终 head 全量 CI 终态成功后合并；复核相同 merge SHA 的 master workflow |
+| 结果自动解释 | 已有结果解释 helper，但八字结果需要用户再点按钮 | 先从成功且契约校验通过的 Headless 结果做自动解释；模型只接收真实结果与 source IDs，不生成/修正业务结果；允许用户继续追问 |
+| Page Tool 对话内执行 | 当前 24 个注册工具中仅 `yunqi / almanac / bazi` 具备 Headless executor | 逐项审计纯业务函数与页面依赖，只挑有真实用户场景且可复用确定性函数的下一项；不批量迁移页面、不以数量为目标 |
+| 自然语言问诊 | 仍 PARTIAL / BLOCKED BY RED-FLAG GATE | 不重复审核既有知识库、不改 DiagnosticEngine/十问；先具备医学审核的红旗规则及所有入口模型调用前拦截，再做“症状事实草稿—必要追问—用户确认—既有规则问诊—AI解释” |
+| Find N2 真实模型 | DEVICE UNKNOWN | 用合成/非敏感数据核实 slot extraction、排盘结果解释、知识检索和 TRACE；CI 不替代设备验证 |
+
+### 29.5 冻结
+
+- 维持“AI 理解与解释，App 确定性执行与校验”；不新增第二套 Orchestrator、Agent/DAG、向量数据库或云服务。
+- 既有医学知识库的内容审核不重复做；医学红旗门禁是独立的调用前安全约束，不因知识库已审核而自动视为完成。
+- 只把已校验结构化结果提供给 AI；没有结果、结果状态 UNKNOWN、执行失败或 source ID 缺失时不得生成事实性结果解读。

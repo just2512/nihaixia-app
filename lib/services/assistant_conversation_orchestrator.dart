@@ -130,6 +130,48 @@ class AssistantConversationOrchestrator {
             _personalContextCues.any(text.contains));
   }
 
+  /// E4B may only help with a missing Bazi slot when the user's text
+  /// contains a concrete cue for that field. Empty requests stay deterministic,
+  /// and personal symptom narratives never enter this nonclinical extractor.
+  static bool shouldUseBaziSlotModel(
+    String query,
+    Set<String> missingKeys,
+  ) {
+    final text = query.trim();
+    if (text.isEmpty ||
+        text.length > 2000 ||
+        missingKeys.isEmpty ||
+        _symptomCues.any(text.contains)) {
+      return false;
+    }
+    if (missingKeys.contains('birth_date') &&
+        !text.contains('农历') &&
+        !text.contains('阴历') &&
+        RegExp(
+          r'\d{4}(?:年\d{1,2}月\d{1,2}[日号]?|[-/]\d{1,2}[-/]\d{1,2})',
+        ).hasMatch(text)) {
+      return true;
+    }
+    if (missingKeys.contains('birth_time') &&
+        RegExp(
+          r'(?:凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
+          r'[0-9零〇一二两三四五六七八九十]{1,3}(?:点|时)',
+        ).hasMatch(text)) {
+      return true;
+    }
+    if (missingKeys.contains('gender') &&
+        text.contains('男') != text.contains('女')) {
+      return true;
+    }
+    if (missingKeys.contains('birthplace') &&
+        RegExp(
+          r'(?:出生地|出生地点|出生于|出生在|生于|在[^，,。；;]{1,24}出生)',
+        ).hasMatch(text)) {
+      return true;
+    }
+    return false;
+  }
+
   static AssistantToolArguments argumentsFor(
     AssistantToolDefinition tool,
     String query,
@@ -141,7 +183,8 @@ class AssistantConversationOrchestrator {
       final chineseDate =
           RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
       final dateMatch = isoDate ?? chineseDate;
-      if (dateMatch != null) {
+      final dateIsLunar = query.contains('农历') || query.contains('阴历');
+      if (dateMatch != null && !dateIsLunar) {
         values['birth_date'] =
             '${dateMatch.group(1)!.padLeft(4, '0')}-'
             '${dateMatch.group(2)!.padLeft(2, '0')}-'
@@ -152,10 +195,10 @@ class AssistantConversationOrchestrator {
         values['birth_time'] =
             '${timeMatch.group(1)!.padLeft(2, '0')}:${timeMatch.group(2)}';
       }
-      if (query.contains('女性') || query.contains('女')) {
-        values['gender'] = 'female';
-      } else if (query.contains('男性') || query.contains('男')) {
-        values['gender'] = 'male';
+      final hasMale = query.contains('男性') || query.contains('男');
+      final hasFemale = query.contains('女性') || query.contains('女');
+      if (hasMale != hasFemale) {
+        values['gender'] = hasMale ? 'male' : 'female';
       }
       final birthplace = RegExp(
         r'出生(?:地点|地)?\s*[：:]\s*([^,，;；\n]+)',

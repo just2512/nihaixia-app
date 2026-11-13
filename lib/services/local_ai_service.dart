@@ -266,6 +266,55 @@ class LocalAiService {
     return resolution;
   }
 
+  Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
+    required String query,
+    required Set<String> missingKeys,
+    required String traceId,
+  }) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty || normalizedQuery.length > 2000) {
+      throw const FormatException('八字参数理解输入为空或超出长度限制');
+    }
+    const allowedKeys = {
+      'birth_date',
+      'birth_time',
+      'gender',
+      'birthplace',
+    };
+    if (missingKeys.isEmpty ||
+        missingKeys.length > allowedKeys.length ||
+        !allowedKeys.containsAll(missingKeys)) {
+      throw const FormatException('八字待补参数集合无效');
+    }
+    final normalizedTraceId = _normalizeTraceId(traceId);
+    if (normalizedTraceId == null) {
+      throw const FormatException('八字参数理解必须携带 TRACE ID');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'extractBaziSlots',
+      {
+        'text': normalizedQuery,
+        'missing_fields': jsonEncode(missingKeys.toList(growable: false)),
+        'trace_id': normalizedTraceId,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    final rawDraft = data?['draft'];
+    if (rawDraft is! String || rawDraft.trim().isEmpty) {
+      throw const FormatException('本地模型没有返回八字参数候选');
+    }
+    final backend = data?['backend'];
+    if (backend is! String || backend.trim().isEmpty) {
+      throw const FormatException('八字参数理解没有返回模型 backend');
+    }
+    return LocalAiBaziSlotDraft.fromModelText(
+      rawDraft,
+      userText: normalizedQuery,
+      requestedKeys: missingKeys,
+      backend: backend,
+    );
+  }
+
   Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
 
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
@@ -455,6 +504,243 @@ class LocalAiIntentResolution {
     }
   }
 }
+/// E4B 提取的八字参数候选。每个值必须有用户原文中的逐字证据，
+/// 并再次通过 Dart 语义校验后才可合并到确定性工具参数。
+class LocalAiBaziSlotDraft {
+  const LocalAiBaziSlotDraft({
+    required this.values,
+    this.backend,
+  });
+
+  final Map<String, String> values;
+  final String? backend;
+
+  static const Set<String> _allowedKeys = {
+    'birth_date',
+    'birth_time',
+    'gender',
+    'birthplace',
+  };
+  static const int maxModelOutputCharacters = 4000;
+
+  factory LocalAiBaziSlotDraft.fromModelText(
+    String text, {
+    required String userText,
+    required Set<String> requestedKeys,
+    String? backend,
+  }) {
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > maxModelOutputCharacters) {
+      throw const FormatException('八字参数候选输出为空或超出长度限制');
+    }
+    if (!normalized.startsWith('{') || !normalized.endsWith('}')) {
+      throw const FormatException('八字参数候选必须是纯 JSON 对象');
+    }
+    final decoded = jsonDecode(normalized);
+    if (decoded is! Map || decoded.keys.any((key) => key is! String)) {
+      throw const FormatException('八字参数候选结构无效');
+    }
+    final map = Map<String, dynamic>.from(decoded);
+    final keys = map.keys.toSet();
+    if (keys.difference(_allowedKeys).isNotEmpty ||
+        !keys.containsAll(_allowedKeys)) {
+      throw const FormatException('八字参数候选必须且只能包含四个声明字段');
+    }
+    if (requestedKeys.isEmpty || !_allowedKeys.containsAll(requestedKeys)) {
+      throw const FormatException('八字待补参数集合无效');
+    }
+
+    final verified = <String, String>{};
+    for (final key in _allowedKeys) {
+      final rawField = map[key];
+      if (rawField is! Map ||
+          rawField.keys.any((field) => field is! String)) {
+        throw FormatException('八字参数候选字段 $key 结构无效');
+      }
+      final field = Map<String, dynamic>.from(rawField);
+      if (field.keys.toSet().difference({'value', 'evidence'}).isNotEmpty ||
+          !field.keys.toSet().containsAll({'value', 'evidence'})) {
+        throw FormatException('八字参数候选字段 $key 必须包含 value 和 evidence');
+      }
+      final rawValue = field['value'];
+      final rawEvidence = field['evidence'];
+      if (rawValue == null && rawEvidence == null) continue;
+      if (!requestedKeys.contains(key)) {
+        throw FormatException('模型尝试覆盖非待补参数：$key');
+      }
+      if (rawValue is! String || rawEvidence is! String) {
+        throw FormatException('八字参数候选字段 $key 必须同时提供文本值和证据');
+      }
+      final value = rawValue.trim();
+      final evidence = rawEvidence.trim();
+      if (value.isEmpty ||
+          evidence.isEmpty ||
+          value.length > 80 ||
+          evidence.length > 100 ||
+          !userText.contains(evidence)) {
+        throw FormatException('八字参数候选字段 $key 缺少可回查的用户原文证据');
+      }
+
+      final normalizedValue = switch (key) {
+        'birth_date' => _normalizeGregorianDateEvidence(evidence, userText),
+        'birth_time' => _normalizeBirthTimeEvidence(evidence),
+        'gender' => _normalizeGenderEvidence(evidence),
+        'birthplace' => _normalizeBirthplaceEvidence(value, evidence),
+        _ => null,
+      };
+      if (normalizedValue == null || normalizedValue != value) {
+        throw FormatException('八字参数候选字段 $key 未通过原文语义校验');
+      }
+      verified[key] = value;
+    }
+    return LocalAiBaziSlotDraft(
+      values: Map<String, String>.unmodifiable(verified),
+      backend: backend,
+    );
+  }
+
+  static String? _normalizeGregorianDateEvidence(
+    String evidence,
+    String userText,
+  ) {
+    if (userText.contains('农历') || userText.contains('阴历')) return null;
+    final iso = RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})')
+        .firstMatch(evidence);
+    final chinese = RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})[日号]?')
+        .firstMatch(evidence);
+    final match = iso ?? chinese;
+    if (match == null) return null;
+    final year = int.tryParse(match.group(1)!);
+    final month = int.tryParse(match.group(2)!);
+    final day = int.tryParse(match.group(3)!);
+    if (year == null || month == null || day == null) return null;
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) {
+      return null;
+    }
+    return '${year.toString().padLeft(4, '0')}-'
+        '${month.toString().padLeft(2, '0')}-'
+        '${day.toString().padLeft(2, '0')}';
+  }
+
+  static String? _normalizeBirthTimeEvidence(String evidence) {
+    final clock = RegExp(r'([01]?\d|2[0-3]):([0-5]\d)')
+        .firstMatch(evidence);
+    if (clock != null) {
+      final hour = int.parse(clock.group(1)!);
+      final minute = int.parse(clock.group(2)!);
+      return '${hour.toString().padLeft(2, '0')}:'
+          '${minute.toString().padLeft(2, '0')}';
+    }
+
+    final chineseTime = RegExp(
+      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
+      r'([0-9零〇一二两三四五六七八九十]{1,3})(?:点|时)'
+      r'(?:半|([0-9零〇一二两三四五六七八九十]{1,2})分?)?',
+    ).firstMatch(evidence);
+    if (chineseTime == null) return null;
+    var hour = _parseSmallChineseInteger(chineseTime.group(2)!);
+    final minuteToken = chineseTime.group(3);
+    final minute = chineseTime[0]!.contains('半')
+        ? 30
+        : minuteToken == null
+            ? 0
+            : _parseSmallChineseInteger(minuteToken);
+    if (hour == null || minute == null || minute < 0 || minute > 59) {
+      return null;
+    }
+
+    final period = chineseTime.group(1);
+    if (const {'凌晨', '清晨', '早晨', '早上', '上午'}.contains(period)) {
+      if (hour == 12) {
+        hour = 0;
+      } else if (hour > 11) {
+        return null;
+      }
+    } else if (period == '晚上' && hour == 12) {
+      hour = 0;
+    } else if (const {'中午', '下午', '傍晚', '晚上'}.contains(period)) {
+      if (hour >= 1 && hour <= 11) {
+        hour += 12;
+      } else if (hour != 12) {
+        return null;
+      }
+    } else if (hour >= 1 && hour <= 12) {
+      // “八点” alone is ambiguous; do not guess AM/PM.
+      return null;
+    }
+    if (hour < 0 || hour > 23) return null;
+    return '${hour.toString().padLeft(2, '0')}:'
+        '${minute.toString().padLeft(2, '0')}';
+  }
+
+  static int? _parseSmallChineseInteger(String value) {
+    final arabic = int.tryParse(value);
+    if (arabic != null) return arabic;
+    const digits = {
+      '零': 0,
+      '〇': 0,
+      '一': 1,
+      '二': 2,
+      '两': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+    };
+    if (value.contains('十')) {
+      final parts = value.split('十');
+      if (parts.length != 2 ||
+          (parts[0].isNotEmpty && !digits.containsKey(parts[0])) ||
+          (parts[1].isNotEmpty && !digits.containsKey(parts[1]))) {
+        return null;
+      }
+      final tens = parts[0].isEmpty ? 1 : digits[parts[0]]!;
+      final ones = parts[1].isEmpty ? 0 : digits[parts[1]]!;
+      return tens * 10 + ones;
+    }
+    var result = 0;
+    for (final character in value.split('')) {
+      final digit = digits[character];
+      if (digit == null) return null;
+      result = result * 10 + digit;
+    }
+    return result;
+  }
+
+  static String? _normalizeGenderEvidence(String evidence) {
+    final hasMale = RegExp(
+      r'(?:男性|性别\s*[：:]?\s*男|(?:我是|本人是|我为)男(?:的|人|生)?)',
+    ).hasMatch(evidence);
+    final hasFemale = RegExp(
+      r'(?:女性|性别\s*[：:]?\s*女|(?:我是|本人是|我为)女(?:的|人|生)?)',
+    ).hasMatch(evidence);
+    if (hasMale == hasFemale) return null;
+    return hasMale ? 'male' : 'female';
+  }
+
+  static String? _normalizeBirthplaceEvidence(
+    String value,
+    String evidence,
+  ) {
+    final patterns = [
+      RegExp(r'(?:出生地点|出生地)\s*(?:是|为|在|：|:)?\s*([^，,。；;]+)'),
+      RegExp(r'(?:出生于|出生在|生于)\s*([^，,。；;]+)'),
+      RegExp(r'在([^，,。；;]{1,24})出生'),
+    ];
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(evidence);
+      if (match != null && match.group(1)?.trim() == value) {
+        return value;
+      }
+    }
+    return null;
+  }
+}
+
 class LocalAiRuntimeCacheClearResult {
   const LocalAiRuntimeCacheClearResult({
     required this.runtimeReleased,

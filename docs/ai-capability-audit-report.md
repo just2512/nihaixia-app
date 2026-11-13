@@ -692,8 +692,8 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 - 已有八字执行器复用本地排盘函数；四项必填出生资料经 Dart 校验后执行；成功结果校验并带来源 ID 后才提供 AI 总结入口。
 - 当前参数抽取仍以确定性标签/日期/时间解析为主，不是通用模型槽位抽取。PR #134 只将缺参回复改为动态列示已识别字段、缺失字段及错误字段。
-- PR #134 分支 head：`45013bbda439afb8c73d4c590245b09cacaa0484`；Branch validation `43406481958` SUCCESS（Static analysis + changed tests）；PR 全量工作流及 master post-merge 终态需以后续 run 记录为准。
-- 前一版测试曾错误断言回复的任何位置都不能出现已识别日期；修正后验证已识别值显示正确，且缺项清单只要求剩余三项。没有为该确定性提示增加模型调用。
+- PR #134 已 squash 合并到 master：merge SHA `34a839ed661740ab7350e61ce8ca90ccc9a3c283`。PR Flutter regression `43407071833`、push validation `43407063342`、master post-merge Flutter tests `43408434463` 和 Quality Gate `43408434562` 均 SUCCESS。
+- 该 PR 只动态列示已识别、缺失及错误字段，没有为确定性缺参提示增加模型调用；不计为通用 E4B slot filling。
 
 ### 24.3 问诊自然语言入口：当前真实边界
 
@@ -714,4 +714,34 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 | F TRACE | PARTIAL / DEVICE UNKNOWN | 真机跨场景 TRACE 未完成 |
 | G 版本治理 | VERSION GUARD IMPLEMENTED | 不新增平行版本治理机制 |
 
-下一步保持窄范围：先完成当前八字追问 PR 的全量 CI 与主线复核；然后做有边界的 E4B slot extraction 小切片（仅复杂/歧义输入，固定 schema，原文依据和业务校验），同时将问诊自由文本入口继续保持在红旗门禁之外不可执行的状态。Find N2 真实模型质量、A/F/E 设备验收不由 CI 代替。
+下一步保持窄范围：PR #135 正在实现八字非医疗出生资料的有界 E4B slot extraction（仅缺项且当前消息包含字段线索时触发，逐字 evidence + Dart 语义/业务校验）。完成 PR 全量 CI 和主线复核后，优先补齐已校验工具结果自动解释体验；问诊自由文本入口继续保持在红旗门禁之外不可执行。Find N2 真实模型质量、A/F/E 设备验收不由 CI 代替。
+
+---
+
+## 25. 2026-11-13 PR #135：八字出生参数自然语言槽位抽取
+
+### 25.1 交付边界
+
+- 目标是让 E4B 理解用户自然语言中已有的出生资料，并帮助补充当前缺失项；不是让模型推测资料或执行排盘。
+- L0 先执行已有确定性解析。只有缺项且本轮原文出现对应字段线索、本地 E4B ready、TRACE 可用时才调用 Native `extractBaziSlots`；普通“帮我排八字”不为体现 AI 能力而调用模型。
+- 原文含症状 cue 时排除该非医疗槽位抽取器；它不承接问诊、辨证、诊断或处方参数。
+
+### 25.2 证据与业务校验链
+
+- 模型只接收本轮用户原文、缺失字段白名单和 TRACE ID；输出固定四字段 JSON。每个非空候选都必须有逐字 evidence。
+- Dart 检查证据确实连续出现在用户原文、字段属于本轮缺项、非缺项字段为空、日期/时间/性别/出生地语义有效；任一候选不通过则整体丢弃。
+- 候选仍需通过 App `AssistantToolArguments.validateAgainst`；只有四项必填资料完整合法后才调用原有 `BaziToolExecutor`。排盘结果再经过现有结构化结果契约和来源 ID 校验。
+- 失败/证据不足回退确定性追问；不会使用模型的猜测值执行。未变更排盘、时区、真太阳时和城市目录算法。
+
+### 25.3 CI 与剩余状态
+
+- PR #135：`https://github.com/just2512/nihaixia-app/pull/135`；master 基线 `34a839ed661740ab7350e61ce8ca90ccc9a3c283`；当前代码 head `140232868612d9e581d8d28d87713db052bab780`。
+- 最新 push Branch validation run `43412646761` SUCCESS（Static analysis + changed tests）。PR 全量 Flutter regression run `43412653762` 在本记录时仍运行中；最终合并判定必须以最终 head 的全部必需 job 和 merge 后 master run 为准。
+- 当前八字排盘结果的 AI 解读仍需用户点击“AI总结解读”；自动解释仍 PARTIAL。Find N2 真实 E4B 语义、速度和多轮表现仍 DEVICE UNKNOWN。
+
+### 25.4 下一步
+
+1. 合并前完成 PR 最终 head 的全量 Flutter regression、Android arm64 APK/Manifest/ABI/SHA-256 与 Native unit tests，并在 merge SHA 上检查 master workflow。
+2. 将“通过结果契约的 Headless 结果自动交给解释 helper”作为下一代码切片，首先覆盖八字，确保显示/持久化仍保留真实结果、source IDs 与模型解释边界。
+3. 其余 Page Tool 不批量改造成 Headless。逐项核对是否存在无需 Widget/BuildContext 的确定性业务函数，再挑选下一项最有价值的用户场景。
+4. 问诊自然语言入口仍受前置红旗门禁阻断；不重审知识库内容，不修改既有问诊十问或 DiagnosticEngine。医学红旗 detector 的审核记录与全入口覆盖尚未 PASS。
