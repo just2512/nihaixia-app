@@ -337,6 +337,18 @@ class _PageToolTraceService extends _TextSendService {
   final restoredTranscripts = <String>[];
 
   @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    return intentResolution;
+  }
+
+  @override
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
@@ -361,6 +373,16 @@ class _SequencedSymptomsTraceService extends _TextSendService {
 }
 
 class _TextSendService extends LocalAiService {
+  _TextSendService({
+    this.intentResolution = const LocalAiIntentResolution(
+      action: LocalAiIntentAction.clarify,
+    ),
+  });
+
+  final LocalAiIntentResolution intentResolution;
+  final intentQueries = <String>[];
+  final intentCandidateIds = <List<String>>[];
+  final intentTraceIds = <String>[];
   final sentTexts = <String>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
@@ -3373,6 +3395,56 @@ void main() {
     ]));
     expect(events.where((event) => event.stage == AiTraceStage.retrieval)
         .every((event) => event.sourceIds.isEmpty), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('歧义排盘只把有界候选交给 E4B，命中后在同一对话进入 Headless 八字参数收集', (tester) async {
+    const traceId = '0123456789abcdef0123456789abcdef';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 13, 13),
+    );
+    final service = _TextSendService(
+      intentResolution: const LocalAiIntentResolution(
+        action: LocalAiIntentAction.select,
+        toolId: 'bazi',
+        backend: 'cpu',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我排个盘');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.intentQueries, ['帮我排个盘']);
+    expect(service.intentCandidateIds, [
+      ['ziwei', 'bazi'],
+    ]);
+    expect(service.intentTraceIds, [traceId]);
+    expect(find.textContaining('调用 App 本地八字排盘'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.nativeInference,
+      AiTraceStage.modelOutput,
+      AiTraceStage.resultValidation,
+      AiTraceStage.route,
+      AiTraceStage.dispatch,
+    ]));
     expect(tester.takeException(), isNull);
   });
 
