@@ -676,3 +676,42 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - 这不证明真实 E4B 已在 OPPO Find N2 产生正确答案。设备上的回答完整性、来源引用、字段关联、缺失项克制和模型性能仍为 DEVICE UNKNOWN。
 - 下一步用合成/非敏感数据做五类 Find N2 真实模型语义验证：本地知识对照、既有问诊结果追问、八字详批、紫微整体/大限、已选流年/流月/流日。记录设备/App SHA/模型/backend/实际输出；未执行保持 UNKNOWN。
 - A/F 多轮与生命周期真机验收、B 健康风险红旗门禁和医学审核、E 备份决策与清除后进程重启验收仍各自 PARTIAL/UNKNOWN，不因 PR #128 合并而变更状态。
+
+---
+
+## 24. 2026-11-13 P4 受限意图选择与八字对话收参复核
+
+### 24.1 PR #133：受限 E4B 意图选择已集成
+
+- 主线 merge SHA：`2418a8c5460f4d619aea71f5aa1037b7c38d3a9d`；PR #133 head：`9db9edc231f346a19d93d8b2e759148662ad4ca3`。
+- 候选由 `AssistantConversationOrchestrator` 的 L0 产生；仅 2–6 个、ID 唯一且每项都具备 Headless executor 时才可进入模型。
+- Native 一次性本地会话只接收用户原文和候选清单；要求严格 JSON `select / clarify / none`。Dart 对输出 schema、TRACE ID、候选 ID 做验证；异常回退 L0。
+- 个人健康/症状文本不进入该工具意图分类器；Page Tool 不进入 E4B 候选。此处不能扩写为“所有工具均由 AI 在对话内执行”。
+
+### 24.2 八字 Headless 已有能力与本轮缺参追问
+
+- 已有八字执行器复用本地排盘函数；四项必填出生资料经 Dart 校验后执行；成功结果校验并带来源 ID 后才提供 AI 总结入口。
+- 当前参数抽取仍以确定性标签/日期/时间解析为主，不是通用模型槽位抽取。PR #134 只将缺参回复改为动态列示已识别字段、缺失字段及错误字段。
+- PR #134 分支 head：`45013bbda439afb8c73d4c590245b09cacaa0484`；Branch validation `43406481958` SUCCESS（Static analysis + changed tests）；PR 全量工作流及 master post-merge 终态需以后续 run 记录为准。
+- 前一版测试曾错误断言回复的任何位置都不能出现已识别日期；修正后验证已识别值显示正确，且缺项清单只要求剩余三项。没有为该确定性提示增加模型调用。
+
+### 24.3 问诊自然语言入口：当前真实边界
+
+- 当前自由文本症状摘要通过助手界面的“整理本次症状”按钮由用户显式触发 `extractSymptoms`；结果经用户核对/确认后，才出现继续规则辨证操作。
+- 但 `_extractSymptoms` 在 Native 模型调用前尚未呈现审计要求的完整确定性红旗拦截证据；现有 Prompt 中的急症提示不等同于代码门禁。
+- 因此不得把现状写为已完成“AI 先理解全部症状并按需追问，再后台调用规则问诊”的完整链路。问诊自然语言自动收集/槽位提取仍为 PARTIAL / BLOCKED BY RED-FLAG GATE。
+- 此处不要求重新审核已有医学知识库，也不改 DiagnosticEngine 或既有十问；待有审核记录的 detector 规则、阈值、例外和处置文案，并覆盖自动/问诊/学习/工具/玄学、initialPrompt、历史续聊及附件路径后，再接入自由文本症状抽取。
+
+### 24.4 A-G 状态与任务边界
+
+| 项目 | 状态 | 说明 |
+|---|---|---|
+| A Native 稳定性 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU 多轮、媒体和进程恢复未完成 |
+| B 红旗/问诊安全 | PARTIAL / RELEASE BLOCKED | 缺少全入口模型调用前的确定性 detector 与医学审核记录；不能用 Prompt 替代 |
+| C 知识来源 | 当前普通学习来源口径已满足；规则来源 PARTIAL | 不重做 83 条学习讲稿溯源；规则来源缺项维持原状态 |
+| D Headless | 3 项：yunqi、almanac、bazi | 不为数量批量转换 Page Tool |
+| E 数据保护 | PARTIAL | SQLite 混合备份边界及清除后强停/重启证据未完成 |
+| F TRACE | PARTIAL / DEVICE UNKNOWN | 真机跨场景 TRACE 未完成 |
+| G 版本治理 | VERSION GUARD IMPLEMENTED | 不新增平行版本治理机制 |
+
+下一步保持窄范围：先完成当前八字追问 PR 的全量 CI 与主线复核；然后做有边界的 E4B slot extraction 小切片（仅复杂/歧义输入，固定 schema，原文依据和业务校验），同时将问诊自由文本入口继续保持在红旗门禁之外不可执行的状态。Find N2 真实模型质量、A/F/E 设备验收不由 CI 代替。

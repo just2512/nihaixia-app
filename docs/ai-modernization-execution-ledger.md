@@ -1298,3 +1298,48 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不批量 Headless 化所有工具；不以测试数量或工具数量作为目标。
 - 后续每个代码切片只围绕上述明确缺口；先检查现有能力和文档，再创建独立分支，修改最少文件，运行 changed tests 与对应 CI，最后核对主线 head。
 - 未取得医学审核、Find N2 真机记录或数据清除证据的事项，继续保持 PARTIAL / UNKNOWN；自动化 CI 不能替代外部验收。
+
+---
+
+## 28. 2026-11-13 P4 受限意图选择与八字缺参追问收敛
+
+### 28.1 主线基线与已集成能力
+
+- PR #133「feat(ai): add bounded E4B intent selection for Headless tools」已 squash 合并；merge commit / 当前主线基线：`2418a8c5460f4d619aea71f5aa1037b7c38d3a9d`。
+- PR head：`9db9edc231f346a19d93d8b2e759148662ad4ca3`；PR Flutter run `43403342243` SUCCESS；独立 push validation `43403333810` SUCCESS。
+- PR 事件中的 Branch validation 为 SKIPPED，不计为 PASS。合并后的 master Flutter tests `43405595087` 与 Quality Gate `43405595090` 在本执行记录开始时尚未取得终态；后续必须以同一 master SHA 的终态记录为准。
+- PR #133 之后 master 无其他开放 PR；新的八字缺参追问修正以该 SHA 为独立分支基线。
+
+### 28.2 P4 受限意图选择现状
+
+- L0 仍由 Dart 确定性识别模式、意图与候选集合；只有出现多个明确候选且候选均有 Headless executor 时才调用 E4B。
+- E4B 输入仅包括用户原文和 2–6 个已登记候选，输出严格 JSON 的 `select / clarify / none`；Dart 校验 schema、TRACE ID 和候选成员关系。
+- 模型不能生成工具名、参数或业务结果；Page Tool 不加入模型候选；模型不可用、输出非法或调用异常时退回确定性澄清。
+- 本轮不因普通单意图请求调用模型，不批量把 Page Tool 改成 Headless。此项是 bounded intent selection 的 CODE + TEST 证据，不等于全局自然语言 slot filling，也不等于 Find N2 真实模型语义验收。
+
+### 28.3 八字对话缺参追问修正（PR #134）
+
+- 原有 `BaziToolExecutor` 已复用 App 本地确定性排盘函数，必填字段为公历出生日期、出生地当地钟表时间、性别、出生地点；字段缺失或格式错误时不会调用排盘。
+- 本轮只改助手缺参回复：通过已有 `AssistantToolDefinition.parameters` 列出已识别字段、尚缺字段和需要更正字段；不再每轮都要求用户重复提供全部四项。
+- 分轮收参、会话状态、取消、Headless 执行、参数校验、结果契约及来源 ID 沿用现有实现；不改排盘算法、时间口径、城市目录或结果格式化。
+- PR #134 分支 `work/p4-bazi-missing-slot-clarification-2026-11-13`，head `45013bbda439afb8c73d4c590245b09cacaa0484`。Branch validation run `43406481958` SUCCESS（Static analysis + changed tests）。前一轮 run `43406215264` 的单测失败是断言写错：回复正确显示已识别日期，测试错误要求整条回复不出现日期；已更正为仅断言“目前还缺少”列表不包含已提供字段。
+- PR #134 的完整 PR workflow 及 master post-merge workflow，必须在其最终 head 和 merge SHA 上补记终态，不得以 Branch validation 代替全量 Flutter/Android 验收。
+- 本轮只是确定性缺参文案与校验反馈改善，不宣称 E4B 已完成通用 slot filling。
+
+### 28.4 当前边界与下一阶段
+
+| 领域 | 当前状态 | 下一步硬条件 |
+|---|---|---|
+| P4 工具意图 | Headless 候选受限选择已落地（CODE + TEST）；Find N2 真实推理仍 DEVICE UNKNOWN | 只在确定性解析存在歧义/缺项且输入确有对应线索时，推进固定 schema 的 E4B slot extraction；简单请求维持代码路径 |
+| P4 参数收集 | 八字现有确定性字段解析 + 分轮缺参追问；PR #134 改为仅问缺项 | 继续覆盖自然语言表述，但模型提取值必须保留原文、标记候选、经 Dart 校验；日期/时间/性别/城市不能由模型猜补 |
+| 自由文本问诊 | 尚未形成审计要求的“自述理解—必要澄清—用户确认—既有规则执行”闭环 | 先满足独立红旗门禁；不得以普通模型 Prompt 或事后用户确认代替模型调用前的确定性门禁 |
+| 问诊规则与知识库 | 既有审核知识库和 DiagnosticEngine 保持原样 | 不重复审核知识库、不重建问诊十问、不修改辨证规则；只改善交互和结果解释链 |
+| 真机语义 | DEVICE UNKNOWN | Find N2 实测知识综合、既有问诊结果解释、八字与紫微结果解释；记录 App SHA、模型、backend、TRACE、真实输入输出 |
+| A/F/E | 仍 PARTIAL / UNKNOWN | Find N2 多轮/生命周期/TRACE，混合 SQLite 备份决策和清除后重启不可恢复证据 |
+
+### 28.5 执行冻结
+
+- AI 负责理解、澄清与解释；App 确定性代码负责参数校验、知识检索、排盘/问诊/计算和结果校验。
+- 未通过结果契约验证的执行结果不得交给 AI 当作事实；AI 不得更改辨证、排盘或剂量规则。
+- 不新增 Agent/DAG、第二套 Orchestrator、向量数据库、云 API 或通用工具平台；不为测试数量或 Headless 数量扩展。
+- 医学知识内容审核与红旗入口安全门禁不是同一件事：既有知识库内容不重复审核；但缺少完整、经过审核的红旗 detector 规则与 Flutter/Native 全入口拦截证据时，问诊自然语言抽取链仍不得绕过安全门禁。
