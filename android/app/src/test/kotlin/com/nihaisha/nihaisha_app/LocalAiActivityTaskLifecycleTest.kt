@@ -73,6 +73,76 @@ class LocalAiActivityTaskLifecycleTest {
     }
 
     @Test
+    fun releaseFailureBlocksWorkQueuedByARecreatedActivity() {
+        val executor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "local-ai-release-failure-test").apply { isDaemon = true }
+        }
+        try {
+            val health = LocalAiProcessHealth()
+            val releaseError = IllegalStateException("native release failed")
+            val releaseStarted = CountDownLatch(1)
+            val finishRelease = CountDownLatch(1)
+            val newTaskFinished = CountDownLatch(1)
+            val queuedTaskRuns = AtomicInteger()
+            val unavailableCount = AtomicInteger()
+
+            val oldActivity = LocalAiActivityTaskLifecycle(
+                executor = executor,
+                release = {
+                    releaseStarted.countDown()
+                    assertTrue(finishRelease.await(5, TimeUnit.SECONDS))
+                    throw releaseError
+                },
+                processHealth = health
+            )
+            oldActivity.destroy()
+            assertTrue(releaseStarted.await(5, TimeUnit.SECONDS))
+
+            val newActivity = LocalAiActivityTaskLifecycle(
+                executor = executor,
+                release = {},
+                processHealth = health
+            )
+            newActivity.submit(
+                task = {
+                    queuedTaskRuns.incrementAndGet()
+                    newTaskFinished.countDown()
+                },
+                onRejected = {
+                    throw AssertionError("the recreated Activity was not destroyed")
+                },
+                onUnavailable = {
+                    unavailableCount.incrementAndGet()
+                    newTaskFinished.countDown()
+                }
+            )
+
+            // Keep the old release blocked until the new Activity task is
+            // enqueued, then let the release fail. The queued task must re-check
+            // process health before touching Engine.
+            finishRelease.countDown()
+            assertTrue(newTaskFinished.await(5, TimeUnit.SECONDS))
+            assertEquals(0, queuedTaskRuns.get())
+            assertEquals(1, unavailableCount.get())
+            assertTrue(health.releaseFailure() === releaseError)
+            assertFalse(newActivity.isDestroyed())
+
+            // Once the process is poisoned, later work is rejected immediately.
+            var immediateUnavailable = 0
+            newActivity.submit(
+                task = { throw AssertionError("unavailable process must not execute") },
+                onRejected = {
+                    throw AssertionError("the recreated Activity is still active")
+                },
+                onUnavailable = { immediateUnavailable++ }
+            )
+            assertEquals(1, immediateUnavailable)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
     fun destroyReleasesExactlyOnceAndRejectsLaterWork() {
         val executor = Executors.newSingleThreadExecutor { runnable ->
             Thread(runnable, "local-ai-lifecycle-test").apply { isDaemon = true }
