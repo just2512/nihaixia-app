@@ -261,6 +261,50 @@ void main() {
       expect(decision.clarification, contains('八字四柱'));
     });
 
+    test('排盘澄清生成受限的紫微/八字候选集', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我排个盘',
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(decision.needsClarification, isTrue);
+      expect(
+        decision.candidateTools.map((tool) => tool.id),
+        ['ziwei', 'bazi'],
+      );
+      expect(decision.candidateTools.length, inInclusiveRange(2, 6));
+    });
+
+    test('起卦澄清生成不超过六项的候选集', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(decision.needsClarification, isTrue);
+      expect(
+        decision.candidateTools.map((tool) => tool.id),
+        ['yijing', 'xiaoliuren', 'meihua'],
+      );
+      expect(decision.candidateTools.length, lessThanOrEqualTo(6));
+    });
+
+    test('问诊和学习路由不生成工具候选，避免送入工具意图判别器', () {
+      final consultation = AssistantConversationOrchestrator.resolve(
+        query: '我最近三天口苦，睡眠不好',
+        selectedMode: AssistantMode.automatic,
+      );
+      final learning = AssistantConversationOrchestrator.resolve(
+        query: '讲讲《伤寒论》的历史背景',
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(consultation.mode, AssistantMode.consultation);
+      expect(consultation.candidateTools, isEmpty);
+      expect(learning.mode, AssistantMode.learning);
+      expect(learning.candidateTools, isEmpty);
+    });
+
     test('没有指定体系的起卦请求先询问工具类型', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '帮我起卦',
