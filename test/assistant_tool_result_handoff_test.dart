@@ -675,6 +675,22 @@ void main() {
           (message['content'] as String).contains('【十二宫星曜】')),
       isTrue,
     );
+    final ziweiResultMessage = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('【紫微斗数排盘完整结果】'),
+    );
+    final ziweiMetadata = AssistantMessageMetadata.decode(
+      ziweiResultMessage['metadata'] as String,
+    );
+    expect(ziweiMetadata.toolId, 'ziwei');
+    expect(ziweiMetadata.toolStatus, 'SUCCEEDED');
+    expect(ziweiMetadata.sourceIds, const ['local-page-tool:ziwei']);
+    expect(
+      ziweiMetadata.sourceIds,
+      isNot(contains('local-engine:ziwei')),
+      reason: '旧 Page Tool 字符串只证明页面结果回传，不伪称底层引擎来源',
+    );
     expect(service.restoredTranscript, isNot(contains('身体留意')));
     expect(service.modelCalls, 1);
     expect(service.sentTexts.single, contains('总结并解释'));
