@@ -146,13 +146,13 @@ class AssistantConversationOrchestrator {
     }
     if (missingKeys.contains('birth_date') &&
         RegExp(
-          r'\\d{4}(?:年\\d{1,2}月\\d{1,2}[日号]?|[-/]\\d{1,2}[-/]\\d{1,2})',
+          r'\d{4}(?:年\d{1,2}月\d{1,2}[日号]?|[-/]\d{1,2}[-/]\d{1,2})',
         ).hasMatch(text)) {
       return true;
     }
     if (missingKeys.contains('birth_time') &&
         RegExp(
-          r'(?:凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\\s*'
+          r'(?:凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
           r'[0-9零〇一二两三四五六七八九十]{1,3}(?:点|时)',
         ).hasMatch(text)) {
       return true;
