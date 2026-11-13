@@ -208,6 +208,64 @@ class LocalAiService {
     }
   }
 
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty || normalizedQuery.length > 2000) {
+      throw const FormatException('意图识别输入为空或超出长度限制');
+    }
+    if (candidates.length < 2 || candidates.length > 6) {
+      throw const FormatException('意图识别候选数量必须为 2–6 项');
+    }
+    final ids = candidates.map((candidate) => candidate.id).toSet();
+    if (ids.length != candidates.length ||
+        candidates.any((candidate) =>
+            candidate.id.trim().isEmpty ||
+            candidate.title.trim().isEmpty ||
+            candidate.description.length > 300)) {
+      throw const FormatException('意图识别候选结构无效');
+    }
+    final candidatesJson = jsonEncode(
+      candidates.map((candidate) => candidate.toMap()).toList(),
+    );
+    if (candidatesJson.length > 6000) {
+      throw const FormatException('意图识别候选上下文过长');
+    }
+    final normalizedTraceId = _normalizeTraceId(traceId);
+    if (normalizedTraceId == null) {
+      throw const FormatException('意图识别必须携带 TRACE ID');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'resolveAssistantIntent',
+      {
+        'text': normalizedQuery,
+        'candidates': candidatesJson,
+        'trace_id': normalizedTraceId,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    final rawDecision = data?['decision'];
+    if (rawDecision is! String || rawDecision.trim().isEmpty) {
+      throw const FormatException('本地模型没有返回意图判别结果');
+    }
+    final backend = data?['backend'];
+    if (backend is! String || backend.trim().isEmpty) {
+      throw const FormatException('意图判别没有返回模型 backend');
+    }
+    final resolution = LocalAiIntentResolution.fromModelText(
+      rawDecision,
+      backend: backend,
+    );
+    if (resolution.action == LocalAiIntentAction.select &&
+        !ids.contains(resolution.toolId)) {
+      throw const FormatException('模型选择了候选集之外的工具');
+    }
+    return resolution;
+  }
+
   Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
 
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
@@ -302,6 +360,101 @@ class LocalAiService {
 }
 
 
+enum LocalAiIntentAction { select, clarify, none }
+
+class LocalAiIntentCandidate {
+  const LocalAiIntentCandidate({
+    required this.id,
+    required this.title,
+    required this.description,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+
+  Map<String, String> toMap() => {
+        'id': id,
+        'title': title,
+        'description': description,
+      };
+}
+
+class LocalAiIntentResolution {
+  const LocalAiIntentResolution({
+    required this.action,
+    this.toolId,
+    this.backend,
+  });
+
+  final LocalAiIntentAction action;
+  final String? toolId;
+  final String? backend;
+
+  static const int maxModelOutputCharacters = 2000;
+
+  factory LocalAiIntentResolution.fromModelText(
+    String text, {
+    String? backend,
+  }) {
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > maxModelOutputCharacters) {
+      throw const FormatException('意图判别输出为空或超出长度限制');
+    }
+    if (!normalized.startsWith('{') || !normalized.endsWith('}')) {
+      throw const FormatException('意图判别输出必须是纯 JSON 对象');
+    }
+    final decoded = jsonDecode(normalized);
+    if (decoded is! Map || decoded.keys.any((key) => key is! String)) {
+      throw const FormatException('意图判别结构无效');
+    }
+    final map = Map<String, dynamic>.from(decoded);
+    if (map.keys.toSet().difference({'action', 'tool_id'}).isNotEmpty) {
+      throw const FormatException('意图判别包含未声明字段');
+    }
+    final rawAction = map['action'];
+    if (rawAction is! String) {
+      throw const FormatException('意图判别 action 字段无效');
+    }
+    final rawToolId = map['tool_id'];
+    if (rawToolId != null && rawToolId is! String) {
+      throw const FormatException('意图判别 tool_id 字段无效');
+    }
+    final toolId = rawToolId is String ? rawToolId.trim() : null;
+    switch (rawAction) {
+      case 'select':
+        if (toolId == null ||
+            toolId.isEmpty ||
+            toolId.length > 64 ||
+            !RegExp(r'^[a-z0-9_]+$').hasMatch(toolId)) {
+          throw const FormatException('意图判别没有返回有效候选 ID');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.select,
+          toolId: toolId,
+          backend: backend,
+        );
+      case 'clarify':
+        if (toolId != null && toolId.isNotEmpty) {
+          throw const FormatException('澄清结果不应包含 tool_id');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.clarify,
+          backend: backend,
+        );
+      case 'none':
+        if (toolId != null && toolId.isNotEmpty) {
+          throw const FormatException('无工具结果不应包含 tool_id');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.none,
+          backend: backend,
+        );
+      default:
+        throw const FormatException('意图判别 action 不在允许范围内');
+    }
+  }
+}
 class LocalAiRuntimeCacheClearResult {
   const LocalAiRuntimeCacheClearResult({
     required this.runtimeReleased,

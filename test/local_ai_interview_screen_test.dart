@@ -337,6 +337,18 @@ class _PageToolTraceService extends _TextSendService {
   final restoredTranscripts = <String>[];
 
   @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    return intentResolution;
+  }
+
+  @override
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
@@ -361,10 +373,32 @@ class _SequencedSymptomsTraceService extends _TextSendService {
 }
 
 class _TextSendService extends LocalAiService {
+  _TextSendService({
+    this.intentResolution = const LocalAiIntentResolution(
+      action: LocalAiIntentAction.clarify,
+    ),
+  });
+
+  final LocalAiIntentResolution intentResolution;
+  final intentQueries = <String>[];
+  final intentCandidateIds = <List<String>>[];
+  final intentTraceIds = <String>[];
   final sentTexts = <String>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
+
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    return intentResolution;
+  }
 
   @override
   Future<void> restoreConversation({
@@ -410,6 +444,23 @@ class _TextSendService extends LocalAiService {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
     return sendMessage(text);
+  }
+}
+
+class _FailingIntentSelectionService extends _TextSendService {
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    throw PlatformException(
+      code: 'INTENT_CLASSIFICATION_FAILED',
+      message: 'intent classification unavailable in test',
+    );
   }
 }
 
@@ -2156,7 +2207,8 @@ void main() {
     'keeps failed text editable and retries without duplicate chat bubbles',
     (tester) async {
       final service = _TraceFailOnceTextSendService();
-      const userText = '昨晚开始咽喉不适，喝温水后稍有缓解。';
+      // This test exercises transport retry, not symptom routing.
+      const userText = '你好';
       const failedTraceId = '44444444444444444444444444444444';
       const retryTraceId = '55555555555555555555555555555555';
       final traceIds = [failedTraceId, retryTraceId];
@@ -3373,6 +3425,148 @@ void main() {
     ]));
     expect(events.where((event) => event.stage == AiTraceStage.retrieval)
         .every((event) => event.sourceIds.isEmpty), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('E4B 意图判别失败时退回确定性澄清，不执行任一工具', (tester) async {
+    final service = _FailingIntentSelectionService();
+    const traceId = 'fedcba9876543210fedcba9876543210';
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (_) async {},
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 13, 14),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '推算五运六气，并查询黄历',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.intentQueries, ['推算五运六气，并查询黄历']);
+    expect(service.intentCandidateIds, [
+      ['yunqi', 'almanac'],
+    ]);
+    expect(find.textContaining('多个工具'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('含个人症状的歧义请求不把健康文本送入工具意图模型', (tester) async {
+    final service = _TextSendService(
+      intentResolution: const LocalAiIntentResolution(
+        action: LocalAiIntentAction.select,
+        toolId: 'bazi',
+        backend: 'cpu',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '我最近三天口苦，帮我排个盘',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.intentQueries, isEmpty);
+    expect(find.textContaining('你想使用哪一种排盘工具'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('E4B 只从 Headless 候选中选择，并在当前对话回传真实工具结果', (tester) async {
+    const traceId = '0123456789abcdef0123456789abcdef';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 13, 13),
+    );
+    final service = _TextSendService(
+      intentResolution: const LocalAiIntentResolution(
+        action: LocalAiIntentAction.select,
+        toolId: 'almanac',
+        backend: 'cpu',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+          traceRecorder: recorder,
+          testHeadlessToolExecutor: (arguments) async => AssistantToolResult(
+            toolId: 'almanac',
+            title: '每日黄历',
+            values: const {'宜': '测试事项'},
+            arguments: Map<String, String>.unmodifiable(arguments),
+            sourceIds: const ['test:almanac'],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '推算五运六气，并查询黄历',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.intentQueries, ['推算五运六气，并查询黄历']);
+    expect(service.intentCandidateIds, [
+      ['yunqi', 'almanac'],
+    ]);
+    expect(service.intentTraceIds, [traceId]);
+    expect(find.textContaining('每日黄历'), findsWidgets);
+    expect(find.textContaining('宜：测试事项'), findsOneWidget);
+    expect(find.text('打开每日黄历'), findsNothing);
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.nativeInference,
+      AiTraceStage.modelOutput,
+      AiTraceStage.resultValidation,
+      AiTraceStage.route,
+      AiTraceStage.dispatch,
+    ]));
     expect(tester.takeException(), isNull);
   });
 

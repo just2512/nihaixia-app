@@ -16,6 +16,34 @@ void main() {
       }
     });
 
+    test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
+      expect(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
+          '我最近三天口苦，帮我排个盘',
+        ),
+        isTrue,
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
+          '我最近不舒服，帮我排个盘',
+        ),
+        isTrue,
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
+          '我有呼吸困难，帮我起卦',
+        ),
+        isTrue,
+        reason: '个人健康叙述即使不含当前显式症状别名，也不进入工具意图模型',
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
+          '帮我排个盘',
+        ),
+        isFalse,
+      );
+    });
+
     test('个人症状叙述进入问诊助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '我最近三天口苦，睡眠不好，半夜容易醒',
@@ -259,6 +287,67 @@ void main() {
       expect(decision.needsClarification, isTrue);
       expect(decision.clarification, contains('紫微斗数'));
       expect(decision.clarification, contains('八字四柱'));
+    });
+
+    test('排盘澄清生成受限的紫微/八字候选集', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我排个盘',
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(decision.needsClarification, isTrue);
+      expect(
+        decision.candidateTools,
+        isEmpty,
+        reason: '紫微仍是 Page Tool，不能交给 E4B 自动选择并导航',
+      );
+    });
+
+    test('起卦澄清生成不超过六项的候选集', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(decision.needsClarification, isTrue);
+      expect(
+        decision.candidateTools,
+        isEmpty,
+        reason: '易经/小六壬/梅花当前仍是 Page Tool',
+      );
+    });
+
+    test('只有全部具备 Headless 执行器的候选集才交给 E4B', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '推算五运六气，并查询黄历',
+        selectedMode: AssistantMode.metaphysics,
+      );
+
+      expect(decision.needsClarification, isTrue);
+      expect(
+        decision.candidateTools.map((tool) => tool.id),
+        ['yunqi', 'almanac'],
+      );
+      expect(
+        decision.candidateTools.every((tool) => tool.headlessExecutor != null),
+        isTrue,
+      );
+    });
+
+    test('问诊和学习路由不生成工具候选，避免送入工具意图判别器', () {
+      final consultation = AssistantConversationOrchestrator.resolve(
+        query: '我最近三天口苦，睡眠不好',
+        selectedMode: AssistantMode.automatic,
+      );
+      final learning = AssistantConversationOrchestrator.resolve(
+        query: '讲讲《伤寒论》的历史背景',
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(consultation.mode, AssistantMode.consultation);
+      expect(consultation.candidateTools, isEmpty);
+      expect(learning.mode, AssistantMode.learning);
+      expect(learning.candidateTools, isEmpty);
     });
 
     test('没有指定体系的起卦请求先询问工具类型', () {

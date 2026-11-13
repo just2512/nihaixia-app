@@ -241,6 +241,111 @@ void main() {
       expect(status.backend, 'cpu');
     });
 
+    test('resolveAssistantIntent sends a bounded candidate set and validates the selected ID', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'decision': '{"action":"select","tool_id":"bazi"}',
+          'backend': 'cpu',
+          'trace_id': traceId,
+        };
+      });
+
+      final result = await LocalAiService().resolveAssistantIntentWithTrace(
+        query: '按出生资料看看传统命盘',
+        candidates: const [
+          LocalAiIntentCandidate(
+            id: 'ziwei',
+            title: '紫微斗数',
+            description: '调用 App 原有紫微排盘。',
+          ),
+          LocalAiIntentCandidate(
+            id: 'bazi',
+            title: '八字四柱',
+            description: '调用 App 原有八字排盘。',
+          ),
+        ],
+        traceId: traceId,
+      );
+
+      expect(received?.method, 'resolveAssistantIntent');
+      expect(received?.arguments, <String, Object?>{
+        'text': '按出生资料看看传统命盘',
+        'candidates': '[{"id":"ziwei","title":"紫微斗数","description":"调用 App 原有紫微排盘。"},{"id":"bazi","title":"八字四柱","description":"调用 App 原有八字排盘。"}]',
+        'trace_id': traceId,
+      });
+      expect(result.action, LocalAiIntentAction.select);
+      expect(result.toolId, 'bazi');
+      expect(result.backend, 'cpu');
+    });
+
+    test('resolveAssistantIntent keeps clarification as a non-dispatch result', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{
+          'decision': '{"action":"clarify","tool_id":null}',
+          'backend': 'gpu',
+          'trace_id': traceId,
+        },
+      );
+
+      final result = await LocalAiService().resolveAssistantIntentWithTrace(
+        query: '帮我看一下',
+        candidates: const [
+          LocalAiIntentCandidate(
+            id: 'ziwei',
+            title: '紫微斗数',
+            description: '紫微排盘。',
+          ),
+          LocalAiIntentCandidate(
+            id: 'bazi',
+            title: '八字四柱',
+            description: '八字排盘。',
+          ),
+        ],
+        traceId: traceId,
+      );
+
+      expect(result.action, LocalAiIntentAction.clarify);
+      expect(result.toolId, isNull);
+      expect(result.backend, 'gpu');
+    });
+
+    test('resolveAssistantIntent rejects candidate IDs outside the supplied set', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      messenger.setMockMethodCallHandler(
+        channel,
+        (_) async => <String, Object?>{
+          'decision': '{"action":"select","tool_id":"dosage"}',
+          'backend': 'cpu',
+          'trace_id': traceId,
+        },
+      );
+
+      await expectLater(
+        LocalAiService().resolveAssistantIntentWithTrace(
+          query: '按出生资料排盘',
+          candidates: const [
+            LocalAiIntentCandidate(
+              id: 'ziwei',
+              title: '紫微斗数',
+              description: '紫微排盘。',
+            ),
+            LocalAiIntentCandidate(
+              id: 'bazi',
+              title: '八字四柱',
+              description: '八字排盘。',
+            ),
+          ],
+          traceId: traceId,
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('extractSymptoms invokes its isolated native operation and parses draft', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -309,6 +414,44 @@ void main() {
         LocalAiService().extractSymptoms(),
         throwsFormatException,
       );
+    });
+  });
+
+  group('LocalAiIntentResolution schema', () {
+    test('accepts only exact select, clarify, and none actions', () {
+      final selected = LocalAiIntentResolution.fromModelText(
+        '{"action":"select","tool_id":"bazi"}',
+      );
+      expect(selected.action, LocalAiIntentAction.select);
+      expect(selected.toolId, 'bazi');
+
+      final clarify = LocalAiIntentResolution.fromModelText(
+        '{"action":"clarify","tool_id":null}',
+      );
+      expect(clarify.action, LocalAiIntentAction.clarify);
+      expect(clarify.toolId, isNull);
+
+      final none = LocalAiIntentResolution.fromModelText(
+        '{"action":"none","tool_id":null}',
+      );
+      expect(none.action, LocalAiIntentAction.none);
+      expect(none.toolId, isNull);
+    });
+
+    test('rejects extra fields, invented IDs, malformed JSON, and oversized output', () {
+      for (final payload in <String>[
+        '{"action":"select","tool_id":"bazi","arguments":{"date":"today"}}',
+        '{"action":"select","tool_id":"not a tool"}',
+        '{"action":"delete","tool_id":null}',
+        'not json',
+        '{"action":"select","tool_id":"${List<String>.filled(2100, 'a').join()}"}',
+      ]) {
+        expect(
+          () => LocalAiIntentResolution.fromModelText(payload),
+          throwsFormatException,
+          reason: payload.length > 80 ? 'oversized payload' : payload,
+        );
+      }
     });
   });
 
