@@ -3312,7 +3312,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _error = [
           if (existingError != null && existingError.isNotEmpty) existingError,
           persistenceWarning,
-        ].join('\\n\\n');
+        ].join('\n\n');
       });
     }
   }
