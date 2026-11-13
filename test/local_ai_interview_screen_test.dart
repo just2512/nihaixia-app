@@ -4172,6 +4172,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
