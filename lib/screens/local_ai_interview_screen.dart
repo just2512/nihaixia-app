@@ -2538,64 +2538,82 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    // Only the deterministic numeric method is headless. Explicit time/random
-    // methods retain the original page workflow and its own input controls.
-    final meihuaPageMethodRequested = tool.id == 'meihua' &&
-        (userText.contains('时间起卦') ||
-            userText.contains('按时间起卦') ||
-            userText.contains('随机起卦'));
-    if (tool.id == 'meihua' &&
-        tool.headlessExecutor != null &&
-        !meihuaPageMethodRequested) {
+    // All three existing Meihua methods now use the same in-chat executor.
+    // Method-specific values are still collected and validated before execution.
+    if (tool.id == 'meihua' && tool.headlessExecutor != null) {
+      final now = DateTime.now();
       var request = arguments ?? AssistantToolArguments(toolId: tool.id);
-      // Match the existing numeric page's local-day default, but only after
-      // both explicit numbers are present. Never invent either number.
-      if (request['date'] == null &&
-          request['first']?.trim().isNotEmpty == true &&
-          request['second']?.trim().isNotEmpty == true) {
-        final now = DateTime.now();
-        final today = '${now.year.toString().padLeft(4, '0')}-'
+      final method = request['method'];
+      final values = <String, String>{...request.values};
+      if (method != null && request['date'] == null) {
+        values['date'] = '${now.year.toString().padLeft(4, '0')}-'
             '${now.month.toString().padLeft(2, '0')}-'
             '${now.day.toString().padLeft(2, '0')}';
-        request = AssistantToolArguments(
-          toolId: tool.id,
-          values: {...request.values, 'date': today},
-        );
       }
+      if (method == 'time' && request['hour_branch'] == null) {
+        const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+        final branchIndex = ((now.hour.clamp(0, 23) + 1) ~/ 2) % 12;
+        values['hour_branch'] = branches[branchIndex];
+      }
+      request = AssistantToolArguments(
+        toolId: tool.id,
+        values: Map<String, String>.unmodifiable(values),
+      );
+
       final argumentErrors = request.validateAgainst(tool);
-      if (argumentErrors.isNotEmpty) {
+      final missingParameters = <String>[];
+      if (method == null || method.isEmpty) {
+        missingParameters.add('起卦方式');
+      } else if (method == 'number') {
+        if (request['first']?.trim().isNotEmpty != true) {
+          missingParameters.add('第一数（上卦）');
+        }
+        if (request['second']?.trim().isNotEmpty != true) {
+          missingParameters.add('第二数（下卦）');
+        }
+      }
+      final needsClarification = argumentErrors.isNotEmpty ||
+          missingParameters.isNotEmpty;
+      if (needsClarification) {
         _pendingMeihuaArguments = request;
         _pendingBaziArguments = null;
-        final missingParameters = tool.parameters
-            .where((parameter) =>
-                parameter.isRequired &&
-                (request[parameter.key]?.trim().isEmpty ?? true))
-            .map((parameter) => parameter.label)
-            .toList(growable: false);
-        final suppliedParameters = tool.parameters
-            .where((parameter) =>
+        final methodLabel = switch (method) {
+          'number' => '数字起卦',
+          'time' => '时间起卦',
+          'random' => '随机起卦',
+          _ => null,
+        };
+        final suppliedParameters = <String>[
+          if (methodLabel != null) '起卦方式：$methodLabel',
+          for (final parameter in tool.parameters)
+            if (parameter.key != 'method' &&
                 (request[parameter.key]?.trim().isNotEmpty ?? false))
-            .map((parameter) =>
-                '${parameter.label}：${request[parameter.key]}')
-            .toList(growable: false);
+              '${parameter.label}：${request[parameter.key]}',
+        ];
         final invalidParameterErrors = argumentErrors
             .where((error) =>
                 !error.startsWith('缺少必填参数：') &&
                 !error.startsWith('未声明的参数：'))
             .toList(growable: false);
         final clarification = [
-          '我会在当前对话中调用 App 本地梅花易数数字起卦，不需要跳转到工具页面。',
+          '三种梅花起卦方式都可以直接在当前对话中完成，使用 App 原有本地算法，不需要跳转页面。',
           if (suppliedParameters.isNotEmpty)
             '已识别的信息：${suppliedParameters.join('；')}。',
           if (missingParameters.isNotEmpty)
             '目前还缺少：${missingParameters.join('、')}。',
+          if (method == null || method.isEmpty)
+            '请先选择：数字起卦、时间起卦或随机起卦。',
+          if (method == 'number')
+            '数字起卦需要两个正整数，分别作为第一数（上卦）和第二数（下卦）；可以分多轮补充。',
+          if (method == 'time')
+            '时间起卦沿用 App 页面口径；未指定日期或时辰时，使用设备本地当天和当前时辰，并在结果中回显。',
+          if (method == 'random')
+            '随机起卦由 App 本地随机数生成上卦、下卦和动爻，模型不会生成卦象。',
           if (invalidParameterErrors.isNotEmpty)
             '以下信息需要更正：${invalidParameterErrors.join('；')}。',
-          '数字起卦需要两个正整数，分别作为第一数（上卦）和第二数（下卦）。可以分多轮补充。',
           if (userText.contains('农历') || userText.contains('阴历'))
-            '当前算法沿用 App 页面公历日期口径，请提供公历日期；不会把农历日期误当成公历。',
-          '例如：用 3 和 7 起卦；也可以补充公历日期：2026-11-13。',
-          '没有提供日期时，App 使用设备本地当天日期，并在结果中明确列出。',
+            '当前起卦日期参数使用公历；不会把农历日期误当成公历或自动换算。',
+          '例如：数字起卦可说“用 3 和 7”；时间起卦可说“2026-11-13，申时”；随机起卦可直接说“随机起卦”。',
         ].join('\n');
         await _traceRecorder.record(
           activeTraceContext,
@@ -2644,6 +2662,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
+
       _pendingMeihuaArguments = null;
       _pendingBaziArguments = null;
       await _executeHeadlessTool(
@@ -2657,9 +2676,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
-    if (tool.headlessExecutor != null &&
-        hasExplicitHeadlessDate &&
-        !meihuaPageMethodRequested) {
+    if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
       await _executeHeadlessTool(
         userText,
         tool,
@@ -2692,7 +2709,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             mode: activeMode,
             arguments: arguments,
             traceContext: activeTraceContext,
-            pageOwnsInput: meihuaPageMethodRequested,
           ),
         ));
       _error = null;
@@ -3959,7 +3975,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final pendingMeihua = _pendingMeihuaArguments;
     if (pendingMeihua != null && (imagePath != null || audioPath != null)) {
       setState(() {
-        _error = '梅花数字起卦需要文字输入两个数字。请先用文字补充第一数和第二数，或发送“取消起卦”结束本次操作。';
+        _error = '梅花起卦参数请用文字补充。数字起卦需提供两个正整数；时间或随机起卦请说明对应方式。也可以发送“取消起卦”结束本次操作。';
       });
       await _traceRecorder.record(
         traceContext,
@@ -3999,7 +4015,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: 'meihua',
       );
       if (cancelRequested) {
-        const reply = '已取消本次梅花数字起卦；尚未执行任何计算。';
+        const reply = '已取消本次梅花起卦；尚未执行任何计算。';
         setState(() {
           _pendingMeihuaArguments = null;
           _messages
@@ -4037,21 +4053,41 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         AssistantToolRouter.meihua,
         text,
       );
+      final previousMethod = pendingMeihua['method'];
+      final followUpMethod = followUp['method'];
+      final methodChanged =
+          followUpMethod != null && followUpMethod != previousMethod;
       final mergedArguments = <String, String>{
-        ...pendingMeihua.values,
+        if (!methodChanged) ...pendingMeihua.values,
+        if (methodChanged) ...{
+          if (pendingMeihua['date'] != null)
+            'date': pendingMeihua['date']!,
+          if (followUpMethod == 'time' &&
+              pendingMeihua['hour_branch'] != null)
+            'hour_branch': pendingMeihua['hour_branch']!,
+          if (followUpMethod == 'number' &&
+              pendingMeihua['first'] != null)
+            'first': pendingMeihua['first']!,
+          if (followUpMethod == 'number' &&
+              pendingMeihua['second'] != null)
+            'second': pendingMeihua['second']!,
+        },
         ...followUp.values,
       };
-      final missingParameters = AssistantToolRouter.meihua.parameters
-          .where((parameter) =>
-              parameter.isRequired &&
-              (mergedArguments[parameter.key]?.trim().isEmpty ?? true))
-          .toList(growable: false);
-      final singleNumber = int.tryParse(text.trim());
-      if (missingParameters.length == 1 &&
-          singleNumber != null &&
-          singleNumber > 0 &&
-          !followUp.values.containsKey(missingParameters.single.key)) {
-        mergedArguments[missingParameters.single.key] = singleNumber.toString();
+      final selectedMethod = mergedArguments['method'];
+      if (selectedMethod == 'number') {
+        final missingNumberKeys = <String>[
+          if (mergedArguments['first']?.trim().isNotEmpty != true) 'first',
+          if (mergedArguments['second']?.trim().isNotEmpty != true) 'second',
+        ];
+        final singleNumber = int.tryParse(text.trim());
+        if (missingNumberKeys.isNotEmpty &&
+            singleNumber != null &&
+            singleNumber > 0 &&
+            !followUp.values.containsKey(missingNumberKeys.first)) {
+          // A bare number fills the next missing numeric slot in order.
+          mergedArguments[missingNumberKeys.first] = singleNumber.toString();
+        }
       }
       await _requestTool(
         text,

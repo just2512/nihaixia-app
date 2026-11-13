@@ -607,6 +607,15 @@ void main() {
       expect(decision.expectsToolSelection, isTrue);
     });
 
+    test('只提到梅花起卦但没有说明方法时不替用户猜选数字/时间/随机', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '梅花易数起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'meihua');
+      expect(decision.toolArguments?['method'], isNull);
+    });
+
     test('梅花数字起卦提取用户明确给出的两个数字，不调用模型猜测', () {
       const query = '梅花易数起卦，用 3 和 7';
       final decision = AssistantConversationOrchestrator.resolve(
@@ -615,6 +624,7 @@ void main() {
       );
       expect(decision.mode, AssistantMode.metaphysics);
       expect(decision.tool?.id, 'meihua');
+      expect(decision.toolArguments?['method'], 'number');
       expect(decision.toolArguments?['first'], '3');
       expect(decision.toolArguments?['second'], '7');
       expect(decision.toolArguments?['date'], isNull);
@@ -624,18 +634,62 @@ void main() {
       );
     });
 
-    test('梅花时间起卦和随机起卦精确路由回原页面能力', () {
-      for (final query in [
-        '梅花易数时间起卦',
-        '梅花易数随机起卦',
+    test('梅花时间和随机起卦路由到对话内 Headless，并识别方法', () {
+      for (final item in [
+        (query: '梅花易数时间起卦', method: 'time'),
+        (query: '梅花易数随机起卦', method: 'random'),
       ]) {
         final decision = AssistantConversationOrchestrator.resolve(
-          query: query,
+          query: item.query,
           selectedMode: AssistantMode.automatic,
         );
-        expect(decision.tool?.id, 'meihua', reason: query);
-        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool?.id, 'meihua', reason: item.query);
+        expect(decision.mode, AssistantMode.metaphysics, reason: item.query);
+        expect(decision.toolArguments?['method'], item.method);
       }
+    });
+
+    test('梅花时间起卦识别显式日期与十二时辰，不猜测未提供时辰', () {
+      final explicitBranch = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '时间起卦，公历日期 2026-11-13，申时',
+      );
+      expect(explicitBranch['method'], 'time');
+      expect(explicitBranch['date'], '2026-11-13');
+      expect(explicitBranch['hour_branch'], '申');
+
+      final explicitClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '时间起卦，2026-11-13，下午3点',
+      );
+      expect(explicitClock['hour_branch'], '申');
+
+      final slashDate = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '时间起卦，公历日期 2026/11/13，申时',
+      );
+      expect(slashDate['date'], '2026-11-13');
+
+      final noClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '时间起卦，公历日期 2026-11-13',
+      );
+      expect(noClock['method'], 'time');
+      expect(noClock['date'], '2026-11-13');
+      expect(noClock['hour_branch'], isNull);
+      final followUpClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '下午3点',
+      );
+      expect(followUpClock['method'], isNull);
+      expect(followUpClock['hour_branch'], '申');
+
+      final irrelevantBranch = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '随机起卦，申时',
+      );
+      expect(irrelevantBranch['method'], 'random');
+      expect(irrelevantBranch['hour_branch'], isNull);
     });
 
     test('梅花起卦支持逐项补充数字和明确的公历日期', () {
@@ -643,6 +697,7 @@ void main() {
         AssistantToolRouter.meihua,
         '第一数：3',
       );
+      expect(firstNumber['method'], 'number');
       expect(firstNumber['first'], '3');
       expect(firstNumber['second'], isNull);
 
@@ -650,6 +705,7 @@ void main() {
         AssistantToolRouter.meihua,
         '第二数：7；公历日期：2026-11-13',
       );
+      expect(secondNumber['method'], 'number');
       expect(secondNumber['second'], '7');
       expect(secondNumber['date'], '2026-11-13');
     });
@@ -659,6 +715,7 @@ void main() {
         AssistantToolRouter.meihua,
         '梅花易数起卦，用3和7，明天',
       );
+      expect(tomorrow['method'], 'number');
       expect(tomorrow['first'], '3');
       expect(tomorrow['second'], '7');
       expect(tomorrow['date'], isNotNull);
@@ -671,6 +728,7 @@ void main() {
         AssistantToolRouter.meihua,
         '梅花易数起卦，用3和7，农历2026年十月',
       );
+      expect(lunar['method'], 'number');
       expect(lunar['date'], 'LUNAR_DATE_NOT_SUPPORTED');
     });
 

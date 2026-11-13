@@ -282,18 +282,28 @@ void main() {
   });
 
 
-  test('梅花 Headless 只接入数字起卦，并声明完整且受限的参数契约', () {
+  test('梅花三种起卦方式都声明 Headless 参数契约并按方式约束输入', () {
     final tool = AssistantToolRouter.meihua;
     expect(tool.headlessExecutor, isNotNull);
-    expect(tool.parameters.map((item) => item.key), ['first', 'second', 'date']);
-    expect(tool.parameters[0].isRequired, isTrue);
-    expect(tool.parameters[1].isRequired, isTrue);
-    expect(tool.parameters[2].isRequired, isFalse);
+    expect(
+      tool.parameters.map((item) => item.key),
+      ['method', 'first', 'second', 'date', 'hour_branch'],
+    );
+    expect(tool.parameters.first.isRequired, isTrue);
+    expect(
+      tool.parameters.first.choices,
+      ['number', 'time', 'random'],
+    );
+    expect(tool.parameters.skip(1).every((item) => !item.isRequired), isTrue);
     expect(
       tool.parameters
           .where((item) => item.type == AssistantToolParameterType.integer)
           .map((item) => item.key),
       ['first', 'second'],
+    );
+    expect(
+      tool.parameters.last.choices,
+      ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'],
     );
   });
 

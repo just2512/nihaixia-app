@@ -271,7 +271,7 @@ class AssistantToolRouter {
   static const meihua = AssistantToolDefinition(
     id: 'meihua',
     title: '梅花易数起卦',
-    description: '数字起卦在当前对话中调用 App 本地算法；时间起卦和随机起卦仍使用原页面。',
+    description: '时间、数字和随机三种起卦均在当前对话中调用 App 原有本地算法。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['梅花易数', '梅花'],
     actionWords: ['起卦', '推算', '算一下'],
@@ -279,22 +279,32 @@ class AssistantToolRouter {
     headlessExecutor: MeihuaToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
+        key: 'method',
+        label: '起卦方式',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['number', 'time', 'random'],
+      ),
+      AssistantToolParameter(
         key: 'first',
         label: '第一数（上卦）',
         type: AssistantToolParameterType.integer,
-        isRequired: true,
       ),
       AssistantToolParameter(
         key: 'second',
         label: '第二数（下卦）',
         type: AssistantToolParameterType.integer,
-        isRequired: true,
       ),
       AssistantToolParameter(
         key: 'date',
         label: '公历起卦日期',
         type: AssistantToolParameterType.date,
-        isRequired: false,
+      ),
+      AssistantToolParameter(
+        key: 'hour_branch',
+        label: '时间起卦时辰',
+        type: AssistantToolParameterType.choice,
+        choices: ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'],
       ),
     ],
   );
