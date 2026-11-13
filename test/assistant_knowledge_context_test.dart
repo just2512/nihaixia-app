@@ -170,6 +170,23 @@ void main() {
     expect(result.citationFooter, isNot(contains(r'\n  来源类型：')));
   });
 
+  test('App 古籍文本资产仍显示原文与版本定位的未核验状态', () {
+    const source = AssistantKnowledgeSourceReference(
+      sourceId: 'guji:shanghan_lun:1',
+      sourceLabel: '伤寒论',
+      title: '卷一',
+      localBacklink: 'guji:shanghan_lun#chapter:1',
+      locatorStatus: 'MISSING',
+      sourceKind: 'classic_text',
+      sourceVerificationStatus: 'UNKNOWN',
+    );
+    final citation = source.toCitationText();
+    expect(citation, contains('来源类型：App 古籍文本资产'));
+    expect(citation, contains('原文来源核验状态：UNKNOWN'));
+    expect(citation, contains('版本/卷页定位：MISSING'));
+    expect(citation, contains('来源标识：guji:shanghan_lun:1'));
+  });
+
   test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
