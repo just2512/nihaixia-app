@@ -536,6 +536,10 @@ void main() {
       'gender': 'male',
       'birthplace': '上海市',
     }, reason: '后台执行必须收到从用户原话提取并校验的完整出生参数');
+    // The headless executor loads the bundled city directory asynchronously.
+    // pumpAndSettle only waits for scheduled frames, not this pending Future;
+    // wait for the actual validated result before asserting its action.
+    await _waitForText(tester, 'AI总结解读');
     expect(
       find.text('AI总结解读'),
       findsOneWidget,
