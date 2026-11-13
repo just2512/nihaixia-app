@@ -2199,7 +2199,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         result.status == AssistantToolExecutionStatus.failed &&
         unresolvedBirthplace) {
       _pendingBaziArguments = request;
-_pendingHuangdiSijiArguments = null;
+      _pendingHuangdiSijiArguments = null;
       const clarification =
           '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行排盘。';
       setState(() {
@@ -2471,7 +2471,7 @@ _pendingHuangdiSijiArguments = null;
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
         _pendingChengguArguments = request;
-_pendingHuangdiSijiArguments = null;
+        _pendingHuangdiSijiArguments = null;
         _pendingBaziArguments = null;
         _pendingMeihuaArguments = null;
         final missingParameters = tool.parameters
@@ -2664,7 +2664,7 @@ _pendingHuangdiSijiArguments = null;
       }
       if (argumentErrors.isNotEmpty) {
         _pendingBaziArguments = request;
-_pendingHuangdiSijiArguments = null;
+        _pendingHuangdiSijiArguments = null;
         final missingParameters = tool.parameters
             .where((parameter) =>
                 parameter.isRequired &&
@@ -2790,7 +2790,7 @@ _pendingHuangdiSijiArguments = null;
           missingParameters.isNotEmpty;
       if (needsClarification) {
         _pendingMeihuaArguments = request;
-_pendingHuangdiSijiArguments = null;
+        _pendingHuangdiSijiArguments = null;
         _pendingBaziArguments = null;
         final methodLabel = switch (method) {
           'number' => '数字起卦',
