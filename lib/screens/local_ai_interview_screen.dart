@@ -4236,7 +4236,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (pendingHuangdiSiji != null && text.isNotEmpty) {
       final cancellationCommand = text
           .trim()
-          .replaceAll(RegExp(r'[，。.!！?？\\s]+
+          .replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消四季歌',
+        '取消黄帝四季歌',
+        '停止查询',
+        '先不查',
+        '算了',
+        '取消',
+      }.contains(cancellationCommand);
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.route,
