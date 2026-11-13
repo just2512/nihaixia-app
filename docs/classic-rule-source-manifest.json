@@ -253,5 +253,50 @@
       "sourceVerificationStatus": "CONDITIONS_CROSS_CHECKED",
       "primaryImageVerification": "MISSING"
     }
+  ],
+  "researchUpdatedAt": "2026-11-13",
+  "archivalWitnesses": [
+    {
+      "witnessId": "shanghai-tcmu-04567",
+      "workTitle": "仲景全书：二十六卷",
+      "catalogue": "中华古籍智慧化服务平台（国家图书馆）",
+      "catalogueRecordUrl": "https://guji.nlc.cn/resource/resourceDetail?id=1047540",
+      "nationalRareBookCatalogueNumber": "04567",
+      "edition": "明万历二十七年（1599）赵开美刻本",
+      "holdingInstitution": "上海中医药大学",
+      "callNumber": "94014-23",
+      "physicalDescription": "线装（金镶玉）10册；26卷；开本29.2×19.1cm",
+      "volumeStructure": "第一册（卷前、卷一至二）；平台记录列有第二至第十册及各册卷次",
+      "catalogueStatus": "CATALOGUE_METADATA_VERIFIED",
+      "imageAccessStatus": "PLATFORM_READING_ENTRIES_LISTED_PAGE_LEVEL_ARTICLE_CROSSWALK_NOT_CAPTURED",
+      "relationToCurrentTranscription": "ARCHIVAL_WITNESS_ONLY_SOURCE_COPY_NOT_PROVEN",
+      "limitations": [
+        "该记录证明一部具体馆藏的版本、收藏单位、索书号和册卷结构；不能证明当前三芦书屋数字转录直接据此本录入。",
+        "本记录没有把1955年398条编号映射到赵开美本的具体册、卷、叶、面或影像坐标。",
+        "因此不得据此填写12条规则记录的baseEdition、volume、page或primaryImageVerification。"
+      ]
+    },
+    {
+      "witnessId": "national-library-of-china-cbm1499-volume-1",
+      "workTitle": "仲景全书",
+      "catalogue": "国家图书馆数字古籍（Wikimedia Commons 对该馆扫描文件的元数据页）",
+      "catalogueRecordUrl": "https://commons.wikimedia.org/wiki/File:NLC892-1244-209199_%E4%BB%B2%E6%99%AF%E5%85%A8%E6%9B%B8_%E7%AC%AC1%E5%86%8A.pdf",
+      "digitalFileId": "NLC892-1244-209199",
+      "holdingInstitution": "国家图书馆",
+      "rareBookCallNumber": "CBM1499",
+      "volume": "第1册",
+      "pageCount": 122,
+      "fileDescription": "卷首、目录、《伤寒论》卷第一至卷第四",
+      "edition": "明万历刻本（该文件元数据只给出明万历宽年代，未在此记录页确认1599具体年）",
+      "digitalFileFormat": "PDF",
+      "digitalFileSize": "36.06 MB",
+      "sourceStatus": "DIGITIZED_SCAN_METADATA_VERIFIED",
+      "relationToCurrentTranscription": "SEPARATE_ARCHIVAL_WITNESS_NOT_PROVEN_SOURCE_COPY",
+      "limitations": [
+        "该扫描文件与上一个上海中医药大学馆藏记录是分开的馆藏见证，不得把二者合并成同一册或同一索书号。",
+        "当前只登记了扫描文件元数据和卷目范围；尚未逐页核对条文内容、叶码、版心信息和规则编号映射。",
+        "不得据此将12条规则的page或primaryImageVerification升级为已核验。"
+      ]
+    }
   ]
 }
