@@ -290,6 +290,17 @@ class AssistantConversationOrchestrator {
           _learningCues.any(text.contains)) {
         return const AssistantDispatchDecision(mode: AssistantMode.learning);
       }
+      if (selectedMode == AssistantMode.metaphysics &&
+          (text.contains('梅花易数') || text.contains('梅花')) &&
+          (text.contains('时间起卦') ||
+              text.contains('按时间起卦') ||
+              text.contains('随机起卦'))) {
+        return AssistantDispatchDecision(
+          mode: selectedMode,
+          tool: AssistantToolRouter.meihua,
+          toolArguments: argumentsFor(AssistantToolRouter.meihua, text),
+        );
+      }
       final explicitMatches = AssistantToolRouter.matchAll(text, selectedMode);
       if (explicitMatches.length == 1) {
         return AssistantDispatchDecision(
@@ -376,6 +387,16 @@ class AssistantConversationOrchestrator {
     // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
     if (_learningCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    }
+    if ((text.contains('梅花易数') || text.contains('梅花')) &&
+        (text.contains('时间起卦') ||
+            text.contains('按时间起卦') ||
+            text.contains('随机起卦'))) {
+      return AssistantDispatchDecision(
+        mode: AssistantMode.metaphysics,
+        tool: AssistantToolRouter.meihua,
+        toolArguments: argumentsFor(AssistantToolRouter.meihua, text),
+      );
     }
     if (pendingToolSelection &&
         _personalContextCues.any(text.contains) &&
