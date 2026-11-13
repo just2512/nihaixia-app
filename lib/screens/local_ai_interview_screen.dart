@@ -275,6 +275,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
   AssistantToolArguments? _pendingBaziArguments;
+  AssistantToolArguments? _pendingMeihuaArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -321,6 +322,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _lastEffectiveMode = null;
         _pendingToolSelection = false;
         _pendingBaziArguments = null;
+        _pendingMeihuaArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -1233,6 +1235,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _lastEffectiveMode = AssistantMode.consultation;
       _pendingToolSelection = false;
       _pendingBaziArguments = null;
+      _pendingMeihuaArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
@@ -2987,6 +2990,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _toolRouteActive = true;
     _pendingToolSelection = false;
     _pendingBaziArguments = null;
+    _pendingMeihuaArguments = null;
     Object? result;
     try {
       result = await Navigator.push<Object?>(
@@ -3339,6 +3343,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               }
               _pendingToolSelection = false;
               _pendingBaziArguments = null;
+              _pendingMeihuaArguments = null;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
