@@ -8,7 +8,6 @@ import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
-import 'package:nihaisha_app/screens/chenggu_bone_screen.dart';
 import 'package:nihaisha_app/screens/guansha_screen.dart';
 import 'package:nihaisha_app/screens/shousheng_debt_screen.dart';
 import 'package:nihaisha_app/screens/huangdi_siji_screen.dart';
@@ -705,7 +704,7 @@ void main() {
   });
 
 
-  testWidgets('五种民俗/术数工具均把真实计算结果交给助手，并可一键调用 AI 解释',
+  testWidgets('四种民俗 Page Tool 将真实计算结果交给助手，并可调用 AI 解释',
       (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
@@ -717,7 +716,6 @@ void main() {
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
           testToolRouteBuilder: (tool, _) => switch (tool.id) {
-            'chenggu' => const ChengguBoneScreen(returnResultOnComplete: true),
             'guansha' => const GuanshaScreen(returnResultOnComplete: true),
             'shousheng_debt' =>
               const ShoushengDebtScreen(returnResultOnComplete: true),
@@ -771,13 +769,6 @@ void main() {
     }
 
     await execute(
-      query: '帮我测算称骨',
-      openAction: '打开袁天罡称骨',
-      runAction: '称骨测算',
-      returnAction: '将本次称骨结果带回助手对话',
-      expectedResult: '总骨重：',
-    );
-    await execute(
       query: '帮我测算小儿关煞',
       openAction: '打开小儿关煞',
       runAction: '测算关煞',
@@ -806,9 +797,9 @@ void main() {
       expectedResult: '签号：',
     );
 
-    expect(service.modelCalls, 5);
+    expect(service.modelCalls, 4);
     expect(service.restoredTranscript, contains('签号：'));
-    expect(service.sentTexts, hasLength(5));
+    expect(service.sentTexts, hasLength(4));
     expect(service.sentTexts.every((text) => text.contains('总结并解释')), isTrue);
     expect(
       store.savedMessages.any((message) =>
@@ -821,7 +812,7 @@ void main() {
       store.savedMessages.where((message) =>
           message['role'] == 'assistant' &&
           (message['content'] as String).contains('已收到：')),
-      hasLength(5),
+      hasLength(4),
     );
     expect(tester.takeException(), isNull);
   });
