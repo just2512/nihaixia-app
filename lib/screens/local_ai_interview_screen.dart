@@ -275,6 +275,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
   AssistantToolArguments? _pendingBaziArguments;
+  AssistantToolArguments? _pendingMeihuaArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -321,6 +322,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _lastEffectiveMode = null;
         _pendingToolSelection = false;
         _pendingBaziArguments = null;
+        _pendingMeihuaArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -1233,6 +1235,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _lastEffectiveMode = AssistantMode.consultation;
       _pendingToolSelection = false;
       _pendingBaziArguments = null;
+      _pendingMeihuaArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
@@ -2535,8 +2538,128 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    // Only the deterministic numeric method is headless. Explicit time/random
+    // methods retain the original page workflow and its own input controls.
+    final meihuaPageMethodRequested = tool.id == 'meihua' &&
+        (userText.contains('时间起卦') ||
+            userText.contains('按时间起卦') ||
+            userText.contains('随机起卦'));
+    if (tool.id == 'meihua' &&
+        tool.headlessExecutor != null &&
+        !meihuaPageMethodRequested) {
+      var request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      // Match the existing numeric page's local-day default, but only after
+      // both explicit numbers are present. Never invent either number.
+      if (request['date'] == null &&
+          request['first']?.trim().isNotEmpty == true &&
+          request['second']?.trim().isNotEmpty == true) {
+        final now = DateTime.now();
+        final today = '${now.year.toString().padLeft(4, '0')}-'
+            '${now.month.toString().padLeft(2, '0')}-'
+            '${now.day.toString().padLeft(2, '0')}';
+        request = AssistantToolArguments(
+          toolId: tool.id,
+          values: {...request.values, 'date': today},
+        );
+      }
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingMeihuaArguments = request;
+        _pendingBaziArguments = null;
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                (request[parameter.key]?.trim().isNotEmpty ?? false))
+            .map((parameter) =>
+                '${parameter.label}：${request[parameter.key]}')
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final clarification = [
+          '我会在当前对话中调用 App 本地梅花易数数字起卦，不需要跳转到工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          '数字起卦需要两个正整数，分别作为第一数（上卦）和第二数（下卦）。可以分多轮补充。',
+          if (userText.contains('农历') || userText.contains('阴历'))
+            '当前算法沿用 App 页面公历日期口径，请提供公历日期；不会把农历日期误当成公历。',
+          '例如：用 3 和 7 起卦；也可以补充公历日期：2026-11-13。',
+          '没有提供日期时，App 使用设备本地当天日期，并在结果中明确列出。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'MEIHUA_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingMeihuaArguments = null;
+      _pendingBaziArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
-    if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
+    if (tool.headlessExecutor != null &&
+        hasExplicitHeadlessDate &&
+        !meihuaPageMethodRequested) {
       await _executeHeadlessTool(
         userText,
         tool,
@@ -2569,6 +2692,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             mode: activeMode,
             arguments: arguments,
             traceContext: activeTraceContext,
+            pageOwnsInput: meihuaPageMethodRequested,
           ),
         ));
       _error = null;
@@ -2918,6 +3042,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AssistantMode mode,
     AssistantToolArguments? arguments,
     AiTraceContext? traceContext,
+    bool pageOwnsInput = false,
   }) async {
     final activeTraceContext =
         traceContext ?? const AiTraceContext.disabled();
@@ -2933,40 +3058,52 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // bypassed simply by opening a tool from a shortcut.
     final toolArguments =
         arguments ?? AssistantToolArguments(toolId: tool.id);
-    final errors = toolArguments.validateAgainst(tool);
-    if (errors.isNotEmpty) {
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.argumentValidation,
-        status: AiTraceStatus.failed,
-        toolId: tool.id,
-        errorCode: 'INVALID_ARGUMENTS',
-      );
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.toolExecution,
-        status: AiTraceStatus.notStarted,
-        toolId: tool.id,
-        errorCode: 'ARGUMENT_VALIDATION_FAILED',
-      );
-      if (mounted) {
-        setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
+    if (!pageOwnsInput) {
+      final errors = toolArguments.validateAgainst(tool);
+      if (errors.isNotEmpty) {
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: 'INVALID_ARGUMENTS',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.toolExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'ARGUMENT_VALIDATION_FAILED',
+        );
+        if (mounted) {
+          setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
+        }
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+          toolId: tool.id,
+          errorCode: 'INVALID_ARGUMENTS',
+        );
+        return;
       }
       await _traceRecorder.record(
         activeTraceContext,
-        stage: AiTraceStage.finalRender,
-        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.succeeded,
         toolId: tool.id,
-        errorCode: 'INVALID_ARGUMENTS',
       );
-      return;
+    } else {
+      // Time/random Meihua methods collect their own inputs in the legacy
+      // page. Headless number parameters must not block this separate method.
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.notApplicable,
+        toolId: tool.id,
+        errorCode: 'PAGE_OWNS_METHOD_INPUT',
+      );
     }
-    await _traceRecorder.record(
-      activeTraceContext,
-      stage: AiTraceStage.argumentValidation,
-      status: AiTraceStatus.succeeded,
-      toolId: tool.id,
-    );
     if (_toolRouteActive) {
       await _traceRecorder.record(
         activeTraceContext,
@@ -2987,6 +3124,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _toolRouteActive = true;
     _pendingToolSelection = false;
     _pendingBaziArguments = null;
+    _pendingMeihuaArguments = null;
     Object? result;
     try {
       result = await Navigator.push<Object?>(
@@ -3339,6 +3477,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               }
               _pendingToolSelection = false;
               _pendingBaziArguments = null;
+              _pendingMeihuaArguments = null;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
@@ -3444,6 +3583,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var restoredEffectiveMode = _lastEffectiveMode;
     var restoredPendingToolSelection = false;
     AssistantToolArguments? restoredPendingBaziArguments;
+    AssistantToolArguments? restoredPendingMeihuaArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -3467,6 +3607,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (isUser) {
         restoredPendingToolSelection = false;
         restoredPendingBaziArguments = null;
+        restoredPendingMeihuaArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -3487,6 +3628,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             );
       if (!isUser && pendingToolId == 'bazi') {
         restoredPendingBaziArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'meihua') {
+        restoredPendingMeihuaArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -3629,6 +3776,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
       _pendingBaziArguments = restoredPendingBaziArguments;
+      _pendingMeihuaArguments = restoredPendingMeihuaArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -3806,6 +3954,116 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
+    }
+
+    final pendingMeihua = _pendingMeihuaArguments;
+    if (pendingMeihua != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '梅花数字起卦需要文字输入两个数字。请先用文字补充第一数和第二数，或发送“取消起卦”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:meihua_attachment_rejected',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'meihua',
+        errorCode: 'MEIHUA_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'meihua',
+      );
+      return;
+    }
+    if (pendingMeihua != null && text.isNotEmpty) {
+      final cancelRequested =
+          ['取消起卦', '停止起卦', '算了', '先不算', '不用起卦', '取消'].any(text.contains);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:meihua' : 'tool_follow_up:meihua',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'meihua',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:meihua' : 'tool_follow_up:meihua',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'meihua',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次梅花数字起卦；尚未执行任何计算。';
+        setState(() {
+          _pendingMeihuaArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.metaphysics,
+          toolId: 'meihua',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingMeihua.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'meihua',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'meihua',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingMeihua.values,
+        ...followUp.values,
+      };
+      final missingParameters = AssistantToolRouter.meihua.parameters
+          .where((parameter) =>
+              parameter.isRequired &&
+              (mergedArguments[parameter.key]?.trim().isEmpty ?? true))
+          .toList(growable: false);
+      final singleNumber = int.tryParse(text.trim());
+      if (missingParameters.length == 1 &&
+          singleNumber != null &&
+          singleNumber > 0 &&
+          !followUp.values.containsKey(missingParameters.single.key)) {
+        mergedArguments[missingParameters.single.key] = singleNumber.toString();
+      }
+      await _requestTool(
+        text,
+        AssistantToolRouter.meihua,
+        mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
+        arguments: AssistantToolArguments(
+          toolId: 'meihua',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
     }
 
     final pendingBazi = _pendingBaziArguments;
@@ -4752,6 +5010,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _conversationIdFuture = _createNewConversation();
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
+      _pendingBaziArguments = null;
+      _pendingMeihuaArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {

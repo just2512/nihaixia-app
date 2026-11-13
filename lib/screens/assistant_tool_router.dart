@@ -6,6 +6,7 @@ import '../models/assistant_tool_result.dart';
 import '../services/yunqi_tool_executor.dart';
 import '../services/almanac_tool_executor.dart';
 import '../services/bazi_tool_executor.dart';
+import '../services/meihua_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -270,11 +271,32 @@ class AssistantToolRouter {
   static const meihua = AssistantToolDefinition(
     id: 'meihua',
     title: '梅花易数起卦',
-    description: '打开本地梅花易数工具。',
+    description: '数字起卦在当前对话中调用 App 本地算法；时间起卦和随机起卦仍使用原页面。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['梅花易数', '梅花'],
     actionWords: ['起卦', '推算', '算一下'],
     builder: _buildMeihua,
+    headlessExecutor: MeihuaToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'first',
+        label: '第一数（上卦）',
+        type: AssistantToolParameterType.integer,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'second',
+        label: '第二数（下卦）',
+        type: AssistantToolParameterType.integer,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'date',
+        label: '公历起卦日期',
+        type: AssistantToolParameterType.date,
+        isRequired: false,
+      ),
+    ],
   );
 
   static const dosage = AssistantToolDefinition(

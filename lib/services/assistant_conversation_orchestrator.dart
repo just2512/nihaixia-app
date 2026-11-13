@@ -205,6 +205,48 @@ class AssistantConversationOrchestrator {
       ).firstMatch(query);
       final place = birthplace?.group(1)?.trim();
       if (place != null && place.isNotEmpty) values['birthplace'] = place;
+    } else if (tool.id == 'meihua') {
+      // Numeric Meihua is a bounded local calculator. Extract only explicit
+      // positive-number pairs; never infer either number from unrelated dates.
+      final firstLabel =
+          RegExp(r'(?:第一数|上卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
+      final secondLabel =
+          RegExp(r'(?:第二数|下卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
+      if (firstLabel != null) values['first'] = firstLabel.group(1)!;
+      if (secondLabel != null) values['second'] = secondLabel.group(1)!;
+      if (firstLabel == null && secondLabel == null) {
+        final pair = RegExp(
+          r'(?:用|以)?\s*(\d{1,10})\s*(?:和|与|及|、|，|,)\s*(\d{1,10})',
+        ).firstMatch(query);
+        if (pair != null) {
+          values['first'] = pair.group(1)!;
+          values['second'] = pair.group(2)!;
+        }
+      }
+
+      final isoDate =
+          RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
+      final chineseDate =
+          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
+      if (query.contains('农历') || query.contains('阴历')) {
+        // Preserve an explicit unsupported calendar basis as invalid input;
+        // the caller must clarify instead of silently substituting today's date.
+        values['date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else if (isoDate != null) {
+        values['date'] = isoDate.group(0)!;
+      } else if (chineseDate != null) {
+        values['date'] =
+            '${chineseDate.group(1)}-${chineseDate.group(2)!.padLeft(2, '0')}-'
+            '${chineseDate.group(3)!.padLeft(2, '0')}';
+      } else if (query.contains('明天') || query.contains('明日') ||
+          query.contains('昨天') || query.contains('昨日')) {
+        final now = DateTime.now();
+        final offset = query.contains('明天') || query.contains('明日') ? 1 : -1;
+        final date = DateTime(now.year, now.month, now.day + offset);
+        values['date'] = '${date.year.toString().padLeft(4, '0')}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}';
+      }
     } else if (tool.id == 'yunqi' || tool.id == 'almanac') {
       final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
       if (match != null) {
@@ -247,6 +289,17 @@ class AssistantConversationOrchestrator {
       if (selectedMode == AssistantMode.learning &&
           _learningCues.any(text.contains)) {
         return const AssistantDispatchDecision(mode: AssistantMode.learning);
+      }
+      if (selectedMode == AssistantMode.metaphysics &&
+          (text.contains('梅花易数') || text.contains('梅花')) &&
+          (text.contains('时间起卦') ||
+              text.contains('按时间起卦') ||
+              text.contains('随机起卦'))) {
+        return AssistantDispatchDecision(
+          mode: selectedMode,
+          tool: AssistantToolRouter.meihua,
+          toolArguments: argumentsFor(AssistantToolRouter.meihua, text),
+        );
       }
       final explicitMatches = AssistantToolRouter.matchAll(text, selectedMode);
       if (explicitMatches.length == 1) {
@@ -334,6 +387,16 @@ class AssistantConversationOrchestrator {
     // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
     if (_learningCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    }
+    if ((text.contains('梅花易数') || text.contains('梅花')) &&
+        (text.contains('时间起卦') ||
+            text.contains('按时间起卦') ||
+            text.contains('随机起卦'))) {
+      return AssistantDispatchDecision(
+        mode: AssistantMode.metaphysics,
+        tool: AssistantToolRouter.meihua,
+        toolArguments: argumentsFor(AssistantToolRouter.meihua, text),
+      );
     }
     if (pendingToolSelection &&
         _personalContextCues.any(text.contains) &&

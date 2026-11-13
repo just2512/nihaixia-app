@@ -281,4 +281,20 @@ void main() {
     expect(AssistantMode.metaphysics.promptHint, contains('基于回传字段归纳结构'));
   });
 
+
+  test('梅花 Headless 只接入数字起卦，并声明完整且受限的参数契约', () {
+    final tool = AssistantToolRouter.meihua;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), ['first', 'second', 'date']);
+    expect(tool.parameters[0].isRequired, isTrue);
+    expect(tool.parameters[1].isRequired, isTrue);
+    expect(tool.parameters[2].isRequired, isFalse);
+    expect(
+      tool.parameters
+          .where((item) => item.type == AssistantToolParameterType.integer)
+          .map((item) => item.key),
+      ['first', 'second'],
+    );
+  });
+
 }
