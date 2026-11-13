@@ -173,9 +173,15 @@ Future<void> _waitForText(WidgetTester tester, String value) async {
 
 Future<void> _scrollUntilTextVisible(WidgetTester tester, String value) async {
   final finder = find.text(value);
-  // The caller waits for the result control to be built. Let Flutter reveal
-  // that exact RenderObject through its owning Scrollable; do not select an
-  // arbitrary Scrollable from the still-mounted assistant route or TabBarView.
+  // ListView(children: ...) lazily builds later result actions. Drag the last
+  // ListView in the active route (not the assistant's still-mounted timeline)
+  // until the target exists, then reveal its exact render object.
+  for (var attempt = 0; attempt < 30 && finder.evaluate().isEmpty; attempt++) {
+    final activeLists = find.byType(ListView);
+    expect(activeLists, findsWidgets, reason: '当前工具页缺少 ListView：$value');
+    await tester.drag(activeLists.last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+  }
   expect(finder, findsOneWidget, reason: '等待页面元素超时：$value');
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
