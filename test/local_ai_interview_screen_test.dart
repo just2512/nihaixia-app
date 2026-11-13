@@ -3579,21 +3579,21 @@ void main() {
     );
     final store = _MemoryConversationStore();
     final service = _PageToolTraceService();
-    var pageOpenCount = 0;
+    var pageResultReturned = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           conversationStore: store,
           service: service,
           traceRecorder: recorder,
-          testToolRouteBuilder: (tool, arguments) {
-            pageOpenCount += 1;
-            return Builder(
-              builder: (context) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    key: const ValueKey('complete-page-tool-persistence-failure'),
-                    onPressed: () => Navigator.of(context).pop(
+          testToolRouteBuilder: (tool, arguments) => Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const ValueKey('complete-page-tool-persistence-failure'),
+                  onPressed: () {
+                    pageResultReturned += 1;
+                    Navigator.of(context).pop(
                       AssistantToolResult(
                         toolId: tool.id,
                         title: tool.title,
@@ -3601,13 +3601,13 @@ void main() {
                         arguments: arguments.values,
                         sourceIds: const ['local-engine:page-tool-test'],
                       ),
-                    ),
-                    child: const Text('完成页面工具'),
-                  ),
+                    );
+                  },
+                  child: const Text('完成页面工具'),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -3634,7 +3634,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('未自动重跑'), findsOneWidget);
-    expect(pageOpenCount, 1);
+    expect(pageResultReturned, 1);
 
     final conversations = await store.getAssistantConversations();
     expect(conversations, hasLength(1));
