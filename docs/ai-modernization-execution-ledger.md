@@ -1442,12 +1442,14 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ## 31. 2026-11-13 PR #137：结构化问诊结果解释的 DiagnosticEngine 来源追溯
 
-### 31.1 主线基线与当前分支
+### 31.1 主线基线与集成终态
 
-- 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`（PR #136 合并后）。
-- 分支：`work/p4-diagnostic-result-provenance-2026-11-13`；代码与测试提交 head：`a459f9f2280525ade6178b0e6e17d3fa703ced28`（其后仅追加本台账/审计报告记录）。
-- Branch validation run `43420458490`：SUCCESS（静态分析 + changed tests）。PR 全量 Flutter regression 和 Android arm64 CI 尚待 PR 建立后的终态。
-- PR #137 尚未创建/合并；不得将 branch validation 视作完整集成验收。
+- 集成前 master 基线：`9fa7f400170569ba6c6b57728c5d26f486b98885`（PR #136 合并后）。
+- 独立分支：`work/p4-diagnostic-result-provenance-2026-11-13`；最终 PR head：`2829595ed74d4fe7871831f6938d175b6ffd1ea3`。
+- Branch validation run `43421461053`：SUCCESS。
+- PR #137 全量 workflow run `43421508491`：SUCCESS；Flutter regression job `131872388262` 和 Android arm64 CI verification job `131874363872` 均 SUCCESS。
+- PR #137 已 squash 合并，merge commit / 当前 master：`1bea32a1a81d2a776ddbb6ca7f325b7e6667045d`。
+- 合并后 master workflow：Flutter tests run `43427610792`；Flutter Quality Gate run `43427610691`。本次台账更新时两个 run 仍 IN_PROGRESS：Flutter regression job `131892817389` 已 SUCCESS，Android arm64 job `131895133016` 仍 IN_PROGRESS；Quality Gate job `131892816779` 的静态分析、完整 Dart test suite 已 SUCCESS，Native unit tests 仍 IN_PROGRESS，arm64 APK 构建尚未开始。不能将未结束步骤记为 PASS。
 
 ### 31.2 本次窄范围改动
 
@@ -1463,3 +1465,19 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 该改动只是来源追溯，不等于自由文本问诊的理解、澄清或后台规则执行已经完成；也不将现有手动解释按钮改为自动模型调用。
 - 自由文本健康叙述仍保持 PARTIAL / BLOCKED BY RED-FLAG GATE；没有经过医学审核的 detector 规则、阈值、例外、处置文案及全入口模型调用前拦截证据，不扩大健康数据进入 E4B 的范围。
 
+
+
+### 31.4 主线集成后的验收范围
+
+- PR branch validation、PR 全量 Flutter regression 和 Android arm64/Native CI 均已通过；PR 已合并到 master。
+- 合并后 master 的 Dart/Flutter 回归已通过；Android Native unit tests 与 Find N2 arm64 CI APK 仍以 run `43427610691`、`43427610792` 的终态为准。当前尚未得到终态，不把流程中的状态折算为通过。
+- 本次集成没有在 OPPO Find N2 真机运行 E4B；真机推理质量、GPU/CPU fallback、多媒体多轮和中断恢复 TRACE 仍 DEVICE UNKNOWN。
+
+### 31.5 下一步收尾顺序
+
+1. **B 红旗门禁与自然语言问诊**：唯一允许的下一步是取得医学审核后的 detector 规则、阈值、否定/历史/他人/知识提问处理及处置文案，然后覆盖 Flutter/Native 所有模型入口；完成前不接自由文本症状抽取，不把 REVIEW_REQUIRED 默认放行。
+2. **A/F Find N2 真机验收**：用合成/非敏感数据跑 GPU 与 CPU、文本/图片/语音、多轮和 Activity/进程恢复；记录设备、Android、App SHA、模型版本、backend、轮次和 TRACE。CI APK 不替代实机验收。
+3. **E 数据清理实机闭环**：复核合并 Manifest 后，在清除全部 AI 数据后重启验证会话、问诊快照、附件原件、缩略图与孤儿文件不可恢复；不把静态测试写成重启验证。
+4. **C 来源缺失保持事实状态**：12 条规则 conditionKey 已与 manifest 一一对应；其中 2 条 UNVERIFIED/MISSING 没有可追溯条文或医案来源，继续保留 MISSING，不补造条号、出处或方剂。83 条普通学习讲稿不重复做纸本校勘。
+
+- 冻结：不修改业务辨证/排盘/剂量计算规则，不把 AI 推断作为诊断，不重复审核已有知识库，不批量迁移 Page Tool，不新增 Agent/DAG、云 API 或第二套 Orchestrator。
