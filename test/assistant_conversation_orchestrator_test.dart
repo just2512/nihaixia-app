@@ -176,13 +176,9 @@ void main() {
         AssistantToolRouter.bazi,
         '出生日期：1990-02-31；出生时间：25:70；性别：女；出生地：朝阳',
       );
-      expect(
-        invalid.validateAgainst(AssistantToolRouter.bazi),
-        containsAll([
-          contains('出生日期'),
-          contains('出生时间'),
-        ]),
-      );
+      final errors = invalid.validateAgainst(AssistantToolRouter.bazi);
+      expect(errors.join('；'), contains('出生日期'));
+      expect(errors.join('；'), contains('出生时间'));
       expect(invalid['gender'], 'female');
       expect(invalid['birthplace'], '朝阳');
     });
