@@ -238,12 +238,6 @@ class AssistantConversationOrchestrator {
         values['date'] =
             '${chineseDate.group(1)}-${chineseDate.group(2)!.padLeft(2, '0')}-'
             '${chineseDate.group(3)!.padLeft(2, '0')}';
-      } else {
-        // Match the existing page's default local calendar day.
-        final now = DateTime.now();
-        values['date'] = '${now.year.toString().padLeft(4, '0')}-'
-            '${now.month.toString().padLeft(2, '0')}-'
-            '${now.day.toString().padLeft(2, '0')}';
       }
     } else if (tool.id == 'yunqi' || tool.id == 'almanac') {
       final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
