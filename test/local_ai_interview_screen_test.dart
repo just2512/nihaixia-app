@@ -3054,11 +3054,15 @@ void main() {
     );
     final latestClarification =
         messagesAfterDate.last['content'] as String;
-    expect(latestClarification, contains('目前还缺少'));
-    expect(latestClarification, contains('出生时间'));
-    expect(latestClarification, contains('性别'));
-    expect(latestClarification, contains('出生地点'));
-    expect(latestClarification, isNot(contains('出生日期（公历）')));
+    expect(
+      latestClarification,
+      contains('已识别的信息：出生日期（公历）：1990-01-02'),
+    );
+    expect(latestClarification, contains('目前还缺少：出生时间、性别、出生地点'));
+    expect(
+      latestClarification,
+      isNot(contains('目前还缺少：出生日期（公历）')),
+    );
 
     await send('出生时间：08:30；性别：男；出生地：上海市');
     expect(find.textContaining('四柱：庚午、己丑、甲子、戊辰'), findsOneWidget);
