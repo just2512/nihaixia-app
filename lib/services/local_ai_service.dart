@@ -712,21 +712,14 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeGenderEvidence(String evidence) {
-    if (RegExp(r'(?:性别\s*[：:]\s*|我是|本人是|为)?男性').hasMatch(evidence)) {
-      return 'male';
-    }
-    if (RegExp(r'(?:性别\s*[：:]\s*|我是|本人是|为)?女性').hasMatch(evidence)) {
-      return 'female';
-    }
-    if (RegExp(r'性别\s*[：:]\s*男(?:\b|$)').hasMatch(evidence) ||
-        RegExp(r'(?:我是|本人是)男(?![朋同]).').hasMatch(evidence)) {
-      return 'male';
-    }
-    if (RegExp(r'性别\s*[：:]\s*女(?:\b|$)').hasMatch(evidence) ||
-        RegExp(r'(?:我是|本人是)女(?![朋同]).').hasMatch(evidence)) {
-      return 'female';
-    }
-    return null;
+    final hasMale = RegExp(
+      r'(?:男性|性别\s*[：:]?\s*男|(?:我是|本人是|我为)男(?:的|人|生)?)',
+    ).hasMatch(evidence);
+    final hasFemale = RegExp(
+      r'(?:女性|性别\s*[：:]?\s*女|(?:我是|本人是|我为)女(?:的|人|生)?)',
+    ).hasMatch(evidence);
+    if (hasMale == hasFemale) return null;
+    return hasMale ? 'male' : 'female';
   }
 
   static String? _normalizeBirthplaceEvidence(
@@ -735,7 +728,7 @@ class LocalAiBaziSlotDraft {
   ) {
     final patterns = [
       RegExp(r'(?:出生地点|出生地)\s*(?:是|为|在|：|:)?\s*([^，,。；;]+)'),
-      RegExp(r'(?:出生于|生于)\s*([^，,。；;]+)'),
+      RegExp(r'(?:出生于|出生在|生于)\s*([^，,。；;]+)'),
       RegExp(r'在([^，,。；;]{1,24})出生'),
     ];
     for (final pattern in patterns) {
