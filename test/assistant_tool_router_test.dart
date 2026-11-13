@@ -144,13 +144,13 @@ void main() {
   });
 
 
-  test('五运六气注册项同时保留页面入口并提供 Headless 执行器', () {
+  test('五运六气注册项同时保留页面入口并提供 Headless 执行器', () async {
     final tool = AssistantToolRouter.yunqi;
     expect(tool.builderWithArguments, isNotNull);
     expect(tool.headlessExecutor, isNotNull);
 
     const arguments = {'date': '2026-11-12'};
-    final result = tool.headlessExecutor!(arguments);
+    final result = await tool.headlessExecutor!(arguments);
     expect(result.toolId, 'yunqi');
     expect(result.validateFor('yunqi'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
@@ -158,20 +158,51 @@ void main() {
     expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
   });
 
-  test('每日黄历注册项提供受日期约束的 Headless 执行器', () {
+  test('每日黄历注册项提供受日期约束的 Headless 执行器', () async {
     final tool = AssistantToolRouter.almanac;
     expect(tool.headlessExecutor, isNotNull);
     expect(tool.parameters.single.key, 'date');
     expect(tool.parameters.single.isRequired, isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final result = tool.headlessExecutor!(arguments);
+    final result = await tool.headlessExecutor!(arguments);
     expect(result.toolId, 'almanac');
     expect(result.validateFor('almanac'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
     expect(result.values['公历'], '2026-11-12');
     expect(result.sourceIds, ['local-engine:almanac']);
     expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
+  });
+
+  test('八字注册项要求四项出生参数并提供 Headless 执行器', () {
+    final tool = AssistantToolRouter.bazi;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((parameter) => parameter.key), [
+      'birth_date',
+      'birth_time',
+      'gender',
+      'birthplace',
+    ]);
+    const valid = AssistantToolArguments(
+      toolId: 'bazi',
+      values: {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(valid.validateAgainst(tool), isEmpty);
+    const invalidTime = AssistantToolArguments(
+      toolId: 'bazi',
+      values: {
+        'birth_date': '1990-01-02',
+        'birth_time': '25:70',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(invalidTime.validateAgainst(tool), isNotEmpty);
   });
 
   test('必填参数在没有传参时也会被拒绝', () {
