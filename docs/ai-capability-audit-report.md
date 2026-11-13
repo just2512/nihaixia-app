@@ -650,3 +650,29 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 3. 合并后确认 master Flutter tests 与 Quality Gate 终态成功，并更新本报告/台账基线。
 4. Find N2 本地 E4B 做小批量语义验收：一条本地知识对照、一条完成的结构化问诊结果追问、一条八字详批、一条紫微整体/大限解释、一条选定流年/流月/流日追问。只记录实际返回，逐项核对来源、字段、推理边界与 MISSING 处理；未执行保持 UNKNOWN。
 
+
+
+---
+
+## 23. 2026-11-13 PR #128 合并后主线验收记录
+
+### 23.1 交付与 PR CI
+
+- PR #128 已合并，merge commit / 当前 master：`5edba1ea894a435536430640f575f395c42f932e`。
+- PR head：`d4a0351fe6216887d1507af0be11c1237708d835`。
+- PR CI run `43359969709`：全量 Flutter regression SUCCESS；Android arm64 CI Debug APK build、merged Manifest verification、ABI/SHA-256、Native unit tests 与 XML 结果核验全部 SUCCESS。
+- 独立分支 changed-tests/static-analysis run `43359725232` SUCCESS。PR workflow Branch validation SKIPPED 不计 PASS。
+- PR 无 unresolved review threads。
+
+### 23.2 Master post-merge
+
+- Flutter tests run `43360881240`：head `5edba1e`，整体 SUCCESS；Flutter regression 与 Android arm64/Native job 均 SUCCESS。
+- Flutter Quality Gate run `43360881283`：head `5edba1e`，本节记录时仍 IN_PROGRESS。静态分析、Dart 全量测试、Native unit tests 已 SUCCESS；Find N2 arm64 Debug APK build 尚未结束，未见失败。
+- 两个 workflow 分开判定；Quality Gate 仍为 IN_PROGRESS 时不得将 master 全部 post-merge checks 统称 PASS。
+
+### 23.3 当前 AI 交付边界
+
+- CODE + TEST 证明本地知识命中、已完成结构化辨证结果、八字/紫微完整确定性结果能进入本地模型历史上下文；提示词要求模型做知识综合和结果解释。
+- 这不证明真实 E4B 已在 OPPO Find N2 产生正确答案。设备上的回答完整性、来源引用、字段关联、缺失项克制和模型性能仍为 DEVICE UNKNOWN。
+- 下一步用合成/非敏感数据做五类 Find N2 真实模型语义验证：本地知识对照、既有问诊结果追问、八字详批、紫微整体/大限、已选流年/流月/流日。记录设备/App SHA/模型/backend/实际输出；未执行保持 UNKNOWN。
+- A/F 多轮与生命周期真机验收、B 健康风险红旗门禁和医学审核、E 备份决策与清除后进程重启验收仍各自 PARTIAL/UNKNOWN，不因 PR #128 合并而变更状态。
