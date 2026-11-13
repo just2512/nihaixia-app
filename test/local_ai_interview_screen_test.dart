@@ -4177,6 +4177,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
+
+      // Page Tools first render an explicit action in the assistant timeline.
+      // The route builder is invoked only after the user taps that action.
+      expect(find.text('打开梅花易数起卦'), findsOneWidget);
+      await tester.tap(find.text('打开梅花易数起卦'));
+      await tester.pumpAndSettle();
       expect(find.text('退出梅花页面'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
