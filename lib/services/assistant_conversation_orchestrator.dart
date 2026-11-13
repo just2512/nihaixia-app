@@ -270,8 +270,9 @@ class AssistantConversationOrchestrator {
         }
       }
 
-      final isoDate =
-          RegExp(r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b').firstMatch(query);
+      final isoDate = RegExp(
+        r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b',
+      ).firstMatch(query);
       final chineseDate =
           RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
       if (query.contains('农历') || query.contains('阴历')) {
@@ -279,7 +280,10 @@ class AssistantConversationOrchestrator {
         // the caller must clarify instead of silently substituting today's date.
         values['date'] = 'LUNAR_DATE_NOT_SUPPORTED';
       } else if (isoDate != null) {
-        values['date'] = isoDate.group(0)!;
+        values['date'] =
+            '${isoDate.group(1)!.padLeft(4, '0')}-'
+            '${isoDate.group(2)!.padLeft(2, '0')}-'
+            '${isoDate.group(3)!.padLeft(2, '0')}';
       } else if (chineseDate != null) {
         values['date'] =
             '${chineseDate.group(1)}-${chineseDate.group(2)!.padLeft(2, '0')}-'
