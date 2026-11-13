@@ -314,6 +314,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _conversationIdFuture = _createNewConversation();
         _lastEffectiveMode = null;
         _pendingToolSelection = false;
+        _pendingBaziArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -1203,6 +1204,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _structuredDiagnosisBusy = true;
       _lastEffectiveMode = AssistantMode.consultation;
       _pendingToolSelection = false;
+      _pendingBaziArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
@@ -2569,6 +2571,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     _toolRouteActive = true;
     _pendingToolSelection = false;
+    _pendingBaziArguments = null;
     Object? result;
     try {
       result = await Navigator.push<Object?>(
@@ -2854,6 +2857,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 _lastEffectiveMode = mode;
               }
               _pendingToolSelection = false;
+              _pendingBaziArguments = null;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
@@ -3324,6 +3328,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final pendingBazi = _pendingBaziArguments;
+    if (pendingBazi != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '八字排盘需要文本出生资料。请先用文字补齐出生日期、时间、性别和出生地点，或发送“取消”结束本次排盘。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:bazi_attachment_rejected',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+        errorCode: 'BAZI_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+      );
+      return;
+    }
     if (pendingBazi != null &&
         text.isNotEmpty &&
         imagePath == null &&
