@@ -173,25 +173,13 @@ Future<void> _waitForText(WidgetTester tester, String value) async {
 
 Future<void> _scrollUntilTextVisible(WidgetTester tester, String value) async {
   final finder = find.text(value);
-  // The active tool route is the last Scaffold in the Navigator stack. Its
-  // ListView may lazily build the handoff button only after it is scrolled.
-  // Looking for the target's ancestor first therefore fails for off-screen
-  // children; scope the scrollable lookup to the active route instead.
-  final activeRouteScaffold = find.byType(Scaffold).last;
-  final routeScrollables = find.descendant(
-    of: activeRouteScaffold,
-    matching: find.byWidgetPredicate(
-      (widget) =>
-          widget is Scrollable && widget.axisDirection == AxisDirection.down,
-    ),
-  );
-  expect(routeScrollables, findsWidgets, reason: '找不到当前工具页纵向滚动容器：$value');
-  await tester.scrollUntilVisible(
-    finder,
-    400,
-    scrollable: routeScrollables.first,
-  );
-  expect(finder, findsOneWidget, reason: '结果卡片未出现：$value');
+  // The caller waits for the result control to be built. Let Flutter reveal
+  // that exact RenderObject through its owning Scrollable; do not select an
+  // arbitrary Scrollable from the still-mounted assistant route or TabBarView.
+  expect(finder, findsOneWidget, reason: '等待页面元素超时：$value');
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  expect(finder, findsOneWidget, reason: '结果控件未显示：$value');
 }
 
 void main() {
