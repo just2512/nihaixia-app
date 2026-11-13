@@ -4020,6 +4020,7 @@ void main() {
 
     expect(executionCount, 1);
     expect(executedArguments, const {
+      'method': 'number',
       'first': '3',
       'second': '7',
       'date': '2026-11-13',
@@ -4048,6 +4049,7 @@ void main() {
     expect(metadata.toolId, 'meihua');
     expect(metadata.toolStatus, 'SUCCEEDED');
     expect(metadata.toolArguments, const {
+      'method': 'number',
       'first': '3',
       'second': '7',
       'date': '2026-11-13',
@@ -4131,6 +4133,7 @@ void main() {
 
     await send('7');
     expect(executedArguments, hasLength(1));
+    expect(executedArguments.single['method'], 'number');
     expect(executedArguments.single['first'], '3');
     expect(executedArguments.single['second'], '7');
     expect(executedArguments.single['date'], isNotEmpty);
@@ -4139,11 +4142,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('梅花时间起卦和随机起卦仍进入原页面，不误走数字 Headless',
+  testWidgets('梅花起卦方式在对话中追问、执行并返回校验结果，不打开页面',
       (tester) async {
     final service = _TextSendService();
-    var pageOpenCount = 0;
-    var executionCount = 0;
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -4151,30 +4154,36 @@ void main() {
           conversationStore: _MemoryConversationStore(),
           service: service,
           testToolRouteBuilder: (_, __) {
-            pageOpenCount += 1;
-            return Builder(
-              builder: (context) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('退出梅花页面'),
-                  ),
-                ),
-              ),
-            );
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开梅花页面'));
           },
           testHeadlessToolExecutor: (arguments) {
-            executionCount += 1;
-            throw StateError('时间/随机起卦不应调用数字 Headless');
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            final methodLabel = switch (arguments['method']) {
+              'number' => '数字起卦',
+              'time' => '时间起卦',
+              'random' => '随机起卦',
+              _ => '未知方式',
+            };
+            return AssistantToolResult(
+              toolId: 'meihua',
+              title: '梅花易数起卦',
+              values: {
+                '起卦方式': methodLabel,
+                '公历日期': arguments['date'] ?? 'MISSING',
+                '主卦': '第17卦 泽雷随',
+                '推算过程': 'App 原有算法返回的实际执行结果',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const [
+                'local-engine:meihua',
+                'local-data:yijing-hexagrams',
+              ],
+            );
           },
         ),
       ),
     );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('切换助手角色'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('玄学大师').last);
     await tester.pumpAndSettle();
 
     Future<void> send(String value) async {
@@ -4182,25 +4191,40 @@ void main() {
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
-
-      // Page Tools first render an explicit action in the assistant timeline.
-      // The route builder is invoked only after the user taps that action.
-      final latestPageAction = find.text('打开梅花易数起卦').last;
-      expect(latestPageAction, findsOneWidget);
-      await tester.tap(latestPageAction);
-      await tester.pumpAndSettle();
-      expect(find.text('退出梅花页面'), findsOneWidget);
-      await tester.tap(find.text('退出梅花页面'));
-      await tester.pumpAndSettle();
     }
 
-    await send('梅花易数时间起卦');
-    expect(pageOpenCount, 1);
-    expect(executionCount, 0);
+    // Ambiguous method stays in the conversation and asks one targeted question.
+    await send('梅花易数起卦');
+    expect(find.textContaining('请先选择：数字起卦、时间起卦或随机起卦'), findsOneWidget);
+    expect(executedArguments, isEmpty);
 
-    await send('梅花易数随机起卦');
-    expect(pageOpenCount, 2);
-    expect(executionCount, 0);
+    // The follow-up method and inputs are merged with the pending conversation.
+    await send('时间起卦，公历日期 2026-11-13，申时');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'method': 'time',
+      'date': '2026-11-13',
+      'hour_branch': '申',
+    });
+    expect(find.textContaining('时间起卦'), findsWidgets);
+
+    await send('梅花易数随机起卦，公历日期 2026-11-13');
+    expect(executedArguments, hasLength(2));
+    expect(executedArguments.last, const {
+      'method': 'random',
+      'date': '2026-11-13',
+    });
+
+    await send('梅花易数数字起卦，用 3 和 7，公历日期 2026-11-13');
+    expect(executedArguments, hasLength(3));
+    expect(executedArguments.last, const {
+      'method': 'number',
+      'first': '3',
+      'second': '7',
+      'date': '2026-11-13',
+    });
+    expect(pageOpened, isFalse);
+    expect(find.textContaining('第17卦 泽雷随'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
