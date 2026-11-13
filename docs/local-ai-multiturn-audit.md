@@ -119,3 +119,94 @@ Flutter 历史恢复先在超过 10,000 UTF-16 code units 时添加“较早历�
 3. 为 Native 成功轮次历史定义可测量的上下文预算与裁剪策略；必须显式标记 truncation，不以猜测 token 数设硬阈值。
 4. 对 Activity destroy、请求执行中离开页面、release/reset 排队和重复请求做状态矩阵与可注入测试。
 5. 完成设备 TRACE 对照；设备侧实测缺失前 A 不得转 PASS。
+
+
+---
+
+## 8. 2026-11-13 增量复核：SQLite 原子持久化、TRACE 分离与 Activity 释放失败隔离
+
+> 本节以 `master @ 849ec817f6e11f154ea662316b32b2fbfa230ffc` 为当前代码基线，覆盖前文尚未更新的持久化和 Activity 生命周期结论。前文第 4、5、7 节保留为 2026-11-11 历史审计记录；与本节冲突的旧结论不再代表当前 master。
+
+### 8.1 已关闭的确定性代码问题
+
+| 原审计问题 | 当前实现 | 当前证据 | 结论 |
+|---|---|---|---|
+| 普通 user + assistant 成功轮次分两次 SQLite insert，可能只保存一半 | `DatabaseHelper.saveAssistantTurn()` 将两条 `AssistantMessageDraft` 交给 `saveAssistantMessagesAtomically()`，同一 SQLite transaction 写消息与 conversation metadata | PR #117；`test/assistant_history_persistence_test.dart` 的事务成功及 trigger 故障回滚测试 | CODE + TEST + CI PASS |
+| `_persistSuccessfulTurn()` 保存失败只写 debug log，UI 无明确告警 | `_persistSuccessfulTurn()` 捕获异常后在 UI 显示“本轮回复已生成，但保存到历史记录失败”；返回 false | 当前 `local_ai_interview_screen.dart`；PR #117 Flutter regression | CODE + TEST + CI PASS |
+| 结构化问诊一轮新增多条 transcript 逐条写入，后续失败可能留半轮 | `_appendTcmInterviewMessages()` 将新增消息组装成有序批次，通过 `saveAssistantMessagesAtomically()` 一次提交；事务失败时不保留部分消息 | PR #117；SQLite trigger 回滚测试；`test/local_ai_interview_screen_test.dart` 批次失败回归 | CODE + TEST + CI PASS |
+| transcript 消息写入失败和问诊任务快照失败使用同一 `persistence` 结果，可能错报 | `_TcmInterviewMessagePersistenceResult` 分离 transcript applicability/commit；`AiTraceStage.persistence` 只记录 transcript batch，`AiTraceStage.persistedState` 只记录任务快照 | PR #119；反向故障注入断言 message SUCCESS + task snapshot FAILED | CODE + TEST + CI PASS |
+| task snapshot 失败时诊断历史索引/自动复制后续动作可能越过原有依赖 | `_persistDiagnosisHistoryOnce()` 和自动复制处方只在 `taskStatePersisted` 时执行；失败时保留独立错误提示 | PR #119 最新 head `94964cb653ec1400a7944e7f25d23c83a8259588` 的全量 Flutter/Android CI | CODE + TEST + CI PASS |
+
+**当前持久化语义：**
+- 普通助手成功轮次：user + assistant 消息成对事务提交；失败后显示历史保存失败，不把 SQLite 成功状态假装为成功。
+- 结构化问诊 transcript：本次新增的多条消息在一个 transaction 内提交；任意 insert 或 preview/title 更新失败时整批回滚。
+- 结构化问诊任务快照：与 transcript 分开保存、分开记录 TRACE。以下两种状态都允许且有独立测试：
+  - transcript `FAILED` + task snapshot `SUCCEEDED`；
+  - transcript `SUCCEEDED` + task snapshot `FAILED`。
+- SQLite transaction 保证的是数据库消息批次一致性；不代表 Native Conversation 内存历史、Flutter 页面状态与 SQLite 在设备进程崩溃后的所有时刻都已完成三方一致性验收。
+
+### 8.2 Activity destroy / process-wide Native executor 当前实现
+
+当前源码：
+- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycle.kt`
+- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt`
+- `android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycleTest.kt`
+
+当前行为：
+1. `LocalAiProcessExecutor.executor` 是进程级单线程队列；Activity 的 Native AI 操作和 teardown 进入同一队列。
+2. `LocalAiActivityTaskLifecycle.destroy()` 使用原子标记，防止重复 release；已开始的任务先结束，queued-but-not-started 的旧 Activity 操作被拒绝；旧 Activity 的 `releaseLocalModel()` 排在已运行任务之后。
+3. 新 Activity 通过同一进程级队列提交模型加载/推理任务，因此在 release 正常完成时，其操作排在旧 Activity release 之后。
+4. `LocalAiProcessHealth` 记录第一次 release failure。release 失败后：
+   - 进程健康状态保持 unavailable；
+   - 新任务在提交前检查一次，在队列执行时再检查一次，覆盖“新 Activity 已入队，旧 Activity release 随后失败”的竞态；
+   - 新模型操作/导入返回 `LOCAL_AI_RUNTIME_RELEASE_FAILED`，不会在同一进程继续创建另一套 Engine；
+   - Activity teardown 记录 Native release error；用户提示通过系统设置强行停止 App 进程后再重新打开。
+5. 该保护是进程级 fail-closed 状态，不是自动恢复机制。当前进程不会通过重新创建 Activity 清除 poisoned 状态；必须结束 App 进程后重新启动。
+
+**新增测试：**
+- `LocalAiActivityTaskLifecycleTest.releaseFailureBlocksWorkQueuedByARecreatedActivity` 使用 latch 让旧 release 保持阻塞，确认新 Activity 任务已经入队后再让旧 release 抛错；断言新任务没有执行、收到 unavailable 回调、进程健康状态保留原始失败，后续提交立即拒绝。
+- 既有 `oldActivityTeardownRunsBeforeNextActivityTasks` 和 `destroyReleasesExactlyOnceAndRejectsLaterWork` 继续覆盖正常 teardown 顺序和 exactly-once 行为。
+- 这一组是 executor/lifecycle 协调层 Kotlin 单元测试；不是 OPPO Find N2 上 LiteRT-LM Engine/Conversation 实例确实释放的实机证据。
+
+### 8.3 PR 与 CI 证据
+
+| 交付 | 主线提交 | PR/CI 证据 | 状态 |
+|---|---|---|---|
+| #117 SQLite transcript 原子批量持久化 | `872a715a3817a57c8b4dd708a33f6b3a13c428c0` | PR run `43238225000` Flutter + Android arm64/Native SUCCESS；post-merge runs `43239874217`、`43239874208` SUCCESS | MERGED / PASS |
+| #118 执行台账和 B2 当前入口调用图 | `2ddbd43b14f4c90d3a328eb53108e2d90d894d03` | PR run `43240664441` Flutter regression + Android arm64/manifest/ABI/Native SUCCESS；post-merge runs `43242258923`、`43242259297` SUCCESS | MERGED / PASS |
+| #119 transcript / task snapshot TRACE 分离 | `5d73161b49fd3f38ffada31c0da1b06e7d24bec0` | PR run `43242639810` Flutter regression + Android arm64/Native SUCCESS；post-merge runs `43339881225`、`43339881116` SUCCESS | MERGED / PASS |
+| #120 Native release failure fail-closed | `849ec817f6e11f154ea662316b32b2fbfa230ffc` | PR run `43342006102`：Flutter job `131612308210` SUCCESS；Android job `131614130546` SUCCESS（APK/ABI、Native unit tests、XML 报告和证据上传）；post-merge runs `43343151516` 和 `43343151619` 在本节更新时为 IN_PROGRESS | MERGED / PR CI PASS；post-merge CI PENDING |
+
+PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾因 Kotlin constructor 参数顺序不兼容而在 `compileDebugUnitTestKotlin` 失败；已将可选 `processHealth` 参数放到最后一个 `release` 函数参数之前，保持历史尾随 lambda 调用兼容。该失败 head 不作为最新 head `9ed99aa66f2047b985682ff4df9dd425647600b5` 的验收结果。
+
+### 8.4 A 当前状态和剩余 UNKNOWN
+
+| 场景 | 当前结论 | 仍需的证据 |
+|---|---|---|
+| 普通 user + assistant SQLite 半轮持久化 | 对应代码缺陷已修复 | 真机连续轮次后 SQLite / UI / Native transcript 三方逐轮对照 |
+| 结构化问诊 transcript 半批次写入 | 对应代码缺陷已修复 | Find N2 实际连续问诊、Activity recreation、进程终止恢复 TRACE |
+| task snapshot / transcript TRACE 错误归属 | 对应状态分类缺陷已修复 | 真实设备故障/恢复场景及持久化 trace 对照 |
+| Activity release success 后新 Activity 串行加载 | executor 单元测试覆盖 | Find N2 实际 Activity recreation、模型 release/load、GPU/CPU backend 日志 |
+| Activity release failure 后新 Activity fail-closed | 新 Kotlin 并发回归通过 | Find N2 注入或可复现的 Native release failure 实机记录；当前进程强行停止/重新启动后可恢复加载 |
+| `state:7` 根因 | UNKNOWN | 必须取得设备 logcat、LiteRT-LM backend、App SHA 和逐轮 trace；不能用 executor 测试推断 |
+| GPU 连续推理 / CPU 连续推理 | UNKNOWN | Find N2 GPU 至少 20 轮、CPU 至少 20 轮；不能用 arm64 APK 构建或 JVM tests 代替 |
+| 图片/语音附件连续输入和中断恢复 | UNKNOWN | 真实附件、转写状态、临时文件生命周期和每轮 trace |
+| 历史恢复后 Native context / Flutter UI / SQLite 一致性 | PARTIAL / DEVICE UNKNOWN | 真实恢复前后 transcript、成功轮次、任务快照及 trace_id 对照 |
+| `conversationHistoryTurns` context budget | UNKNOWN | 基于 Gemma 4 E4B 实际上下文行为测量，不按猜测 token 数增加裁剪阈值 |
+
+**A 继续保持 `PARTIAL`。** #117/#119/#120 关闭了可通过代码和自动化精确复现的问题，但没有完成设备验收。本轮没有更改 GPU/CPU fallback 条件，没有对未知执行状态自动重放当前请求，也没有猜测模型上下文窗口并添加 token 上限。
+
+### 8.5 下一项 A 工作
+
+1. **设备 TRACE**：Find N2 GPU 至少 20 轮、CPU 至少 20 轮，覆盖文字、图片、语音；记录设备型号、Android 版本、App SHA、模型 SHA/版本、backend、轮次和 trace_id。
+2. **生命周期实机**：真实执行 Activity recreation、请求中离开页面、进程强行停止/重启；核对 release failure 时新 Engine 是否被阻断、进程重启后能否重新加载。
+3. **三方历史一致性**：逐轮对照 SQLite transcript、Flutter UI 和 Native successful-turn history；历史恢复后核对任务快照、来源截断标记和上下文恢复结果。
+4. **上下文预算**：只记录设备测量数据；没有模型实测前不擅自为 `conversationHistoryTurns` 设置 token 硬限制。
+5. **数据清除与备份副本**：沿 E 工作流继续核对共享 SQLite 的备份边界、旧共享附件和外部副本；本节 lifecycle 修复不代表清除后重启不可恢复已完成。
+
+### 8.6 执行边界
+
+- PR/主线 Android arm64 APK 是 build/ABI 证据，不是 OPPO Find N2 实机运行证据。
+- JVM lifecycle test 验证的是进程级串行队列与失败传播，不证明 LiteRT-LM Native 资源在真机所有异常类型下都一定可释放。
+- release failure 后的策略是 fail-closed：宁可要求用户强停并重启进程，也不在资源释放状态未知时继续初始化另一套模型对象。
+- 没有设备 logcat、backend 及 trace_id 的场景继续标 `UNKNOWN`；不得以 CI 绿灯冒充真机 PASS。
