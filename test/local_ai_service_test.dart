@@ -770,7 +770,7 @@ void main() {
       });
     });
 
-    test('Bazi slot evidence rejects values that do not match the user's words', () {
+    test("Bazi slot evidence rejects values that do not match the user's words", () {
       const query = '我出生时是早上八点半，在上海市出生';
       final rawDraft = jsonEncode({
         'birth_date': {'value': null, 'evidence': null},
