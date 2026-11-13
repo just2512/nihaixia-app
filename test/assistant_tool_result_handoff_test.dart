@@ -613,7 +613,8 @@ void main() {
     expect(
       store.savedMessages.where((message) =>
           message['role'] == 'user' &&
-          (message['content'] as String).contains('总结并解释刚才返回的八字排盘结果')),
+          (message['content'] as String).contains(
+              '总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
       isEmpty,
     );
     expect(tester.takeException(), isNull);
