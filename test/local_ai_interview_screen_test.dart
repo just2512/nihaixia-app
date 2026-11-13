@@ -3954,4 +3954,234 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('梅花数字起卦在助手对话内执行并自动解释真实结果', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final events = <AiTraceEvent>[];
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    var executionCount = 0;
+    var traceSequence = 0;
+    final traceIds = [
+      '11111111111111111111111111111111',
+      '22222222222222222222222222222222',
+    ];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceIds[traceSequence++],
+      clock: () => DateTime(2026, 11, 13, 12),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          traceRecorder: recorder,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开梅花页面'));
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executionCount += 1;
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return AssistantToolResult(
+              toolId: 'meihua',
+              title: '梅花易数数字起卦',
+              values: const {
+                '第一数（上卦）': '3',
+                '第二数（下卦）': '7',
+                '主卦': '第17卦 泽雷随',
+                '互卦': '第53卦 风山渐',
+                '变卦': '第25卦 天雷无妄',
+                '推算过程': '数字起卦结果由 App 原有算法返回',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const [
+                'local-engine:meihua',
+                'local-data:yijing-hexagrams',
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField).first,
+      '梅花易数起卦，用 3 和 7，公历日期 2026-11-13',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executionCount, 1);
+    expect(executedArguments, const {
+      'first': '3',
+      'second': '7',
+      'date': '2026-11-13',
+    });
+    expect(find.textContaining('第17卦 泽雷随'), findsOneWidget);
+    expect(find.textContaining('第53卦 风山渐'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1));
+    expect(
+      service.sentTexts.single,
+      contains('总结并解释实际输入'),
+    );
+
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('第17卦 泽雷随'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'meihua');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'first': '3',
+      'second': '7',
+      'date': '2026-11-13',
+    });
+    expect(metadata.sourceIds, const [
+      'local-engine:meihua',
+      'local-data:yijing-hexagrams',
+    ]);
+    expect(events.map((event) => event.stage), containsAll([
+      AiTraceStage.argumentValidation,
+      AiTraceStage.businessExecution,
+      AiTraceStage.resultValidation,
+      AiTraceStage.persistence,
+      AiTraceStage.finalRender,
+    ]));
+    expect(
+      events.any((event) =>
+          event.stage == AiTraceStage.businessExecution &&
+          event.toolId == 'meihua' &&
+          event.status == AiTraceStatus.succeeded),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('梅花数字起卦在对话中分轮追问并恢复已提供参数，不打开页面',
+      (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开梅花页面'));
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return AssistantToolResult(
+              toolId: 'meihua',
+              title: '梅花易数数字起卦',
+              values: const {
+                '第一数（上卦）': '3',
+                '第二数（下卦）': '7',
+                '主卦': '第17卦 泽雷随',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const [
+                'local-engine:meihua',
+                'local-data:yijing-hexagrams',
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('梅花易数数字起卦');
+    expect(find.textContaining('目前还缺少：第一数（上卦）、第二数（下卦）'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(pageOpened, isFalse);
+
+    await send('第一数：3');
+    expect(find.textContaining('目前还缺少：第二数（下卦）'), findsOneWidget);
+    expect(find.textContaining('第一数（上卦）：3'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(pageOpened, isFalse);
+
+    await send('7');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single['first'], '3');
+    expect(executedArguments.single['second'], '7');
+    expect(executedArguments.single['date'], isNotEmpty);
+    expect(find.textContaining('第17卦 泽雷随'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('梅花时间起卦和随机起卦仍进入原页面，不误走数字 Headless',
+      (tester) async {
+    final service = _TextSendService();
+    var pageOpenCount = 0;
+    var executionCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _MemoryConversationStore(),
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpenCount += 1;
+            return Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(tester.element(find.byType(Scaffold))).pop(),
+                  child: const Text('退出梅花页面'),
+                ),
+              ),
+            );
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executionCount += 1;
+            throw StateError('时间/随机起卦不应调用数字 Headless');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '梅花易数时间起卦');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpenCount, 1);
+    expect(executionCount, 0);
+    expect(find.text('退出梅花页面'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+
 }
