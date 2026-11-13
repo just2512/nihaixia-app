@@ -205,6 +205,46 @@ class AssistantConversationOrchestrator {
       ).firstMatch(query);
       final place = birthplace?.group(1)?.trim();
       if (place != null && place.isNotEmpty) values['birthplace'] = place;
+    } else if (tool.id == 'meihua') {
+      // Numeric Meihua is a bounded local calculator. Extract only explicit
+      // positive-number pairs; never infer either number from unrelated dates.
+      final firstLabel =
+          RegExp(r'(?:第一数|上卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
+      final secondLabel =
+          RegExp(r'(?:第二数|下卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
+      if (firstLabel != null && secondLabel != null) {
+        values['first'] = firstLabel.group(1)!;
+        values['second'] = secondLabel.group(1)!;
+      } else {
+        final pair = RegExp(
+          r'(?:用|以)?\s*(\d{1,10})\s*(?:和|与|及|、|，|,)\s*(\d{1,10})',
+        ).firstMatch(query);
+        if (pair != null) {
+          values['first'] = pair.group(1)!;
+          values['second'] = pair.group(2)!;
+        }
+      }
+
+      final isoDate =
+          RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
+      final chineseDate =
+          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
+      if (query.contains('农历') || query.contains('阴历')) {
+        // The existing page accepts Gregorian dates only; do not silently
+        // reinterpret a lunar date as a solar date or today's date.
+      } else if (isoDate != null) {
+        values['date'] = isoDate.group(0)!;
+      } else if (chineseDate != null) {
+        values['date'] =
+            '${chineseDate.group(1)}-${chineseDate.group(2)!.padLeft(2, '0')}-'
+            '${chineseDate.group(3)!.padLeft(2, '0')}';
+      } else {
+        // Match the existing page's default local calendar day.
+        final now = DateTime.now();
+        values['date'] = '${now.year.toString().padLeft(4, '0')}-'
+            '${now.month.toString().padLeft(2, '0')}-'
+            '${now.day.toString().padLeft(2, '0')}';
+      }
     } else if (tool.id == 'yunqi' || tool.id == 'almanac') {
       final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
       if (match != null) {
