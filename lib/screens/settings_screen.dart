@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../data/settings_repository.dart';
 import '../widgets/text_scale_slider.dart';
 import '../widgets/local_ai_data_clear_tile.dart';
+import '../widgets/local_ai_trace_debug_tile.dart';
 import 'app_dialogs.dart';
 
 /// 独立设置页：集中所有「模块级可自定义」设置，并与各排盘页内的开关双向同步。
@@ -51,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _exportTile(cs),
             _clearCacheTile(cs),
             const LocalAiDataClearTile(),
+            if (kDebugMode) const LocalAiTraceDebugTile(),
             const Divider(height: 24),
             _aboutTile(cs),
           ],
