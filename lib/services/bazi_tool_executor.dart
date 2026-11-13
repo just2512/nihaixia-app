@@ -156,17 +156,34 @@ class BaziToolExecutor {
     if (exact.length == 1) return exact.single;
     if (exact.length > 1) return null;
 
-    // A short city name such as “上海” may resolve to one city-level record,
-    // while an ambiguous district name such as “朝阳” must be clarified.
-    final cityLevel = locations
+    // Permit omitting a terminal administrative suffix only when the result
+    // remains unique. Names such as “朝阳” can refer to a city or multiple
+    // districts and must therefore be clarified rather than guessed.
+    final normalizedQuery = _normalizePlaceName(query);
+    final normalized = locations
         .where((place) =>
-            place.city == null &&
-            (place.name.startsWith(query) ||
-                (place.en?.toLowerCase() ?? '').startsWith(query.toLowerCase())))
+            _normalizePlaceName(place.name) == normalizedQuery)
         .toList();
-    if (cityLevel.length == 1) return cityLevel.single;
-    return null;
+    return normalized.length == 1 ? normalized.single : null;
   }
+
+  static String _normalizePlaceName(String value) =>
+      value.trim().replaceFirst(RegExp(r'(市|地区|州|省|县|区)
+
+  static AssistantToolResult _failure(
+    Map<String, String> arguments,
+    String message,
+  ) =>
+      AssistantToolResult(
+        toolId: 'bazi',
+        title: '八字排盘',
+        status: AssistantToolExecutionStatus.failed,
+        values: {'未执行原因': message},
+        arguments: Map<String, String>.unmodifiable(arguments),
+        disclaimer: '参数或地点校验未通过；本次未执行排盘。',
+      );
+}
+), '');
 
   static AssistantToolResult _failure(
     Map<String, String> arguments,
