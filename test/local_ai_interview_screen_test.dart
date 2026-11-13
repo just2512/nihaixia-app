@@ -2940,6 +2940,82 @@ void main() {
 
 
 
+  testWidgets('八字助手在对话中分轮补齐参数并后台执行，不打开排盘页面',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    var pageOpened = false;
+    const sourceIds = [
+      'local-engine:bazi',
+      'local-data:city-locations',
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) => AssistantToolResult(
+            toolId: 'bazi',
+            title: '八字排盘',
+            values: const {
+              '完整排盘结果': '四柱：庚午、己丑、甲子、戊辰',
+            },
+            arguments: Map<String, String>.unmodifiable(arguments),
+            sourceIds: sourceIds,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String text) async {
+      await tester.enterText(find.byType(TextField).first, text);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我排八字');
+    expect(find.textContaining('出生日期（公历'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, isEmpty);
+
+    await send('出生日期：1990年1月2日');
+    expect(find.textContaining('出生日期（公历'), findsWidgets);
+    expect(pageOpened, isFalse);
+
+    await send('出生时间：08:30；性别：男；出生地：上海市');
+    expect(find.textContaining('四柱：庚午、己丑、甲子、戊辰'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, isEmpty);
+
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    expect(messages, hasLength(6));
+    final metadata = AssistantMessageMetadata.decode(
+      messages.last['metadata'] as String,
+    );
+    expect(metadata.toolId, 'bazi');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(metadata.sourceIds, sourceIds);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Headless 结果契约失败时记录失败终态且不持久化', (tester) async {
     const traceId = 'abcdef0123456789abcdef0123456789';
     final events = <AiTraceEvent>[];
