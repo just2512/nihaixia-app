@@ -1158,3 +1158,63 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 - PR #123 已合并：`e5932a2ecf59167c7456d9348bcc61d68e473799`；PR #124 已合并：`a2450f12220444225a33c4882d65ce4e4b9b3eab`。两者均为文档/来源登记改动，PR head 的 Flutter regression 与 Android arm64/Native job 均 SUCCESS，Branch validation SKIPPED。
 - 当前 master：`a2450f12220444225a33c4882d65ce4e4b9b3eab`。合并后的 Flutter tests run `43350618944` 与 Flutter Quality Gate run `43350618932` 当前 IN_PROGRESS；在终态完成前不把新 master post-merge CI 记为 PASS。
 - 本工作分支以 `a2450f1` 为基线，只修改学习资料来源展示、对应测试和来源分层文档；没有改检索算法、诊断规则、模型 prompt、Android 配置或数据库 schema。
+
+---
+
+## 25. 2026-11-13 AI 结果理解、知识综合与术数排盘解释能力
+
+### 25.1 本轮确认的产品目标
+
+本 App 定位为以本地中医学习资料与确定性领域功能为基础的学习助手，不是医学诊断软件。本轮按以下目标复核 AI 能力：
+
+1. **知识库综合：** AI 必须调取 App 本地知识条目，对检索命中内容做总结、比较、归纳与解释；回答标示实际来源类型、标题、sourceId/本地回链和缺失项，不把模型记忆当成检索证据。
+2. **已有问诊结果解释：** 六经、证型、方剂等结果由 App 的 DiagnosticEngine 和现有任务状态生成。AI 可以解释、归纳、比较该结果与本地知识依据；不得另起一套诊断、改写规则输出、补出未确认症状或给出个体处方/剂量。
+3. **八字/紫微结果解释：** 排盘由 App 确定性引擎执行。AI 接收已计算的结构化结果，再总结关系、分层解释与时间脉络；不得重新排盘、改写四柱/宫位/四化或补造 MISSING。
+4. **职责分层：** App 负责数据检索、来源定位、规则执行和确定性计算；AI 负责理解用户追问、跨字段关联、语言化归纳和解释。输出应区分 App 原始字段、App 规则/模板、AI 归纳。
+
+医学审核不是所有 AI 功能的总门槛。它限于健康风险、红旗识别与规则依据/处置文案；不得以医学审核未完成为由阻断普通中医知识学习或八字/紫微文化结果解释。红旗安全边界仍须保持：没有经审核的 detector 时不得默认 CLEAR，也不得把一般学习提问直接升级为个体诊断。
+
+### 25.2 已有链路与本轮代码落地
+
+| 能力 | 当前链路 | 本轮核验/改动 |
+|---|---|---|
+| 本地中医知识检索 | `AssistantKnowledgeContextBuilder.buildAsync` 按模式取本地公式、本草、经络穴位、经典文本/讲稿等资料，按来源元数据构建上下文 | 学习模式提示改为围绕命中资料总结、比较、归纳与解释；清楚区分讲稿、古籍文本、医案、App 数据和 AI 归纳；未命中或缺依据保持 MISSING |
+| 已完成结构化辨证 | `LocalAiInterviewScreen` 保存 transcript 与问诊 task snapshot；恢复会话时由 `_restoreVisibleConversationToModel` 把可见历史交给 `LocalAiService.restoreConversation` | 问诊提示明确允许解释已有 DiagnosticEngine 结果，并结合本轮本地知识来源说明依据；新增恢复回归，断言模型恢复 transcript 包含六经、证型、方剂结果 |
+| 八字排盘 | `BaZiPaipanScreen(returnResultOnComplete: true)` → 工具结果回传 → 助手时间线持久化 → 恢复 Native 模型上下文 | 新增 `formatBaZiChartForAssistant`，输出四柱、十神、纳音、旬空、刑冲合害、十二长生、藏干十神、日主、格局、强弱依据、五行状态、用忌神、建议、神煞、大运及每步大运所辖流年 |
+| 紫微排盘 | `ZiweiChartScreen(returnResultOnComplete: true)` → 工具结果回传 → 助手时间线持久化 → 恢复 Native 模型上下文 | 新增 `formatZiweiChartForAssistant`，输出十二宫星曜、命/身宫、命主/身主、生年四化、整体规则模板解读、大限区间及逐限解读；并把用户当前选择的流年、流月、流日和流曜落宫一起回传 |
+| 工具结果解释 | Page Tool 完成后返回字符串结果；`_openTool` 将结果加入助手消息并恢复本地模型上下文 | 工具模式提示明确：实际计算由 App 工具完成，回传后 AI 基于结果字段总结和解释，不猜算；区分 App 确定性计算与 AI 解释 |
+
+### 25.3 解释数据边界
+
+- 八字与紫微格式化层只读 App 已产生的数据；强弱权重内部数值不暴露给模型，仅传递可读判断依据。
+- 紫微仅传递排盘、流曜定位及页面已有非健康规则模板；不向 AI 传递 `analyzeHealthWatch` 健康提醒清单，也不把疾厄宫/身体部位文本作为医学结论。
+- 若没有选择流年/流月/流日，不为用户自动补选日期；若选择了，回传当前页面实际计算结果。
+- 所有字段如缺失则输出 MISSING/未选择，不由 AI 补造。
+- 普通知识答案仍依来源状态区分课程讲稿、古籍文本、医案与 App 结构化数据；83 个学习讲稿的本地 sourceId 回链口径按第 21、24 节执行，不重新开启逐册逐页考古映射。
+- 不改 DiagnosticEngine 规则、问诊流程、红旗门禁实现、检索排序、数据库 schema、模型下载/配置或 Android backup policy。
+
+### 25.4 针对性自动化验收
+
+本轮新增或补强以下回归，不扩展成全新测试框架：
+
+- `test/assistant_chart_result_formatter_test.dart`：用真实本地八字/紫微计算样例核对关键字段；核对大运所辖流年和已选流年/流月/流日；核对紫微健康提醒未进入回传文本。
+- `test/assistant_tool_result_handoff_test.dart`：从统一助手触发八字/紫微 Page Tool，真实走页面本地计算和“返回 AI 助手”，再核对完整摘要进入会话消息并进入 `restoreConversation` transcript。
+- `test/local_ai_interview_screen_test.dart`：核对问诊模式上下文包含“解释和归纳已有结果”指令；恢复已完成的结构化问诊会话后，模型 transcript 包含六经、证型和方剂结果。
+- `test/assistant_tool_router_test.dart`：锁定学习、问诊、工具、玄学四种角色的知识综合/结果解释提示，防止后续回归成仅导航或原样复述。
+
+这些测试证明**来源/结果数据确实被组织并交给本地模型上下文**，不等于证明 E4B 在 Find N2 上对每类问题都能生成正确、充分的自然语言解释。语义回答质量仍需设备实测；未实测场景保持 UNKNOWN。
+
+### 25.5 A-G 状态与下一阶段
+
+| 项目 | 状态 | 当前边界 |
+|---|---|---|
+| A Native 稳定性 | PARTIAL / DEVICE UNKNOWN | GPU/CPU 多轮、图片/语音、Activity/进程恢复与真实设备 transcript 一致性仍需 Find N2 验收 |
+| B 健康风险与规则边界 | PARTIAL / 健康风险路径受限 | 只对健康红旗、潜在个体诊疗输出及规则依据实施相应审核；不把医学审核泛化为全部学习/术数解释的前置条件。自然语言 detector 与 Flutter/Native 全入口红旗门禁仍不能默认为已完成 |
+| C 知识来源 | 一般学习资料回链已满足当前口径；规则来源 PARTIAL | 83 条讲稿按本地学习资料回链使用；12 条规则来源仍为 7 ONLINE_TEXT_CROSS_CHECKED、3 CONDITIONS_CROSS_CHECKED、2 MISSING |
+| D Headless Capability | 2 项 Headless / 2 项 Executed | 保持冻结，不为增加数量而扩展 |
+| E 数据保护 | PARTIAL | 混合 SQLite 备份边界决策、旧共享图片归属及 Find N2 清除后强停/重启不可恢复仍未闭环 |
+| F TRACE | PARTIAL / DEVICE UNKNOWN | Debug-only 本地采集入口已实现；完整场景 TRACE 与设备采证仍未完成 |
+| G 版本治理 | VERSION GUARD IMPLEMENTED | 维持现有版本源 guard，不增加第二套治理 |
+
+**接下来优先顺序：** 完成当前独立分支的最新 head changed tests；创建 PR 后执行完整 Flutter regression、Android arm64 APK/Manifest/Native CI；合并后核验 master post-merge CI。随后在 Find N2 上用合成/非敏感测试数据完成实际 E4B 回答验证，检查知识来源引用、结构化问诊结果解释、八字详批、紫微命盘/大限/已选流层的总结质量。未执行的真实设备场景不写 PASS。
+
