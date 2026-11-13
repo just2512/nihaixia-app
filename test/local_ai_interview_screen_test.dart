@@ -4388,7 +4388,7 @@ void main() {
     expect(service.sentTexts, isEmpty);
     expect(pageOpened, isFalse);
 
-    await send('出生时间：晚上8:30');
+    await send('不要取消，出生时间：晚上8:30');
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'birth_date': '1990-01-02',
