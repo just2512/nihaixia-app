@@ -771,6 +771,23 @@ void main() {
       expect(draft.backend, 'cpu');
     });
 
+    test('Bazi natural-language midnight maps to 00:00', () {
+      const query = '晚上12点出生';
+      final rawDraft = jsonEncode({
+        'birth_date': {'value': null, 'evidence': null},
+        'birth_time': {'value': '00:00', 'evidence': '晚上12点'},
+        'gender': {'value': null, 'evidence': null},
+        'birthplace': {'value': null, 'evidence': null},
+      });
+
+      final draft = LocalAiBaziSlotDraft.fromModelText(
+        rawDraft,
+        userText: query,
+        requestedKeys: const {'birth_time'},
+      );
+      expect(draft.values['birth_time'], '00:00');
+    });
+
     test("Bazi slot evidence rejects values that do not match the user's words", () {
       const query = '我出生时是早上八点半，在上海市出生';
       final rawDraft = jsonEncode({
