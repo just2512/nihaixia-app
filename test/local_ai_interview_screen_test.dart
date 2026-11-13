@@ -2820,12 +2820,6 @@ void main() {
     expect(find.text('分享辨证结果'), findsOneWidget);
     expect(find.text('复制处方'), findsOneWidget);
 
-    await tapAction('AI解读辨证结果');
-    expect(service.sentTexts.last, contains('总结并解释'));
-    expect(service.sentTexts.last, contains('少阳证'));
-    expect(service.sentContexts.last, contains('当前角色：问诊助手'));
-    expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
-
     await tapAction('收藏辨证结果');
     expect(bookmarks, hasLength(1));
     expect(bookmarks.single.category, '辨证结果');
@@ -2841,6 +2835,12 @@ void main() {
     expect(copiedTexts, hasLength(1));
     expect(copiedTexts.single, contains('处方: 小柴胡汤'));
     expect(copiedTexts.single, contains('柴胡24g'));
+
+    await tapAction('AI解读辨证结果');
+    expect(service.sentTexts.last, contains('总结并解释'));
+    expect(service.sentTexts.last, contains('少阳证'));
+    expect(service.sentContexts.last, contains('当前角色：问诊助手'));
+    expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
     expect(tester.takeException(), isNull);
   });
 
