@@ -3237,7 +3237,8 @@ void main() {
     expect(
       messages.where((message) =>
           message['role'] == 'user' &&
-          (message['content'] as String).contains('总结并解释刚才返回的八字排盘结果')),
+          (message['content'] as String).contains(
+              '总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
       isEmpty,
       reason: '自动解释指令是内部调度内容，不得伪装成用户发言持久化',
     );
