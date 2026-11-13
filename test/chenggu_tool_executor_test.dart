@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart'
     show AstroDateTime, LunarDate;
 
@@ -12,6 +13,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
     final settings = SettingsRepository.instance;
     if (!settings.isLoaded) await settings.load();
     await ChengguData.ensureLoaded();

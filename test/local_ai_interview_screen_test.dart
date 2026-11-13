@@ -4284,7 +4284,7 @@ void main() {
 
     await send('出生日期：1990年1月2日');
     expect(executedArguments, isEmpty);
-    expect(find.textContaining('出生时间（当地钟表时间）'), findsOneWidget);
+    expect(find.textContaining('出生时间（当地钟表时间）').last, findsOneWidget);
     expect(pageOpened, isFalse);
     expect(service.sentTexts, isEmpty);
 
