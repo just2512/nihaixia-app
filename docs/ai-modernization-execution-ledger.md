@@ -798,7 +798,7 @@ PR #107 修复失败轮次阶段误归因：
 2. 不允许把可选 Gate 缺省为空后继续执行作为“已接入”；这会形成安全旁路。
 3. 当前 Gate 在 detector 缺失时返回 REVIEW_REQUIRED。若直接接入所有生产入口，将阻断现有 AI 流程；在没有医学审核 detector 和明确产品影响决策前，不得擅自全局启用，也不得默认 CLEAR。
 4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。
-5. A/E 真机验收、C 来源真实性核验仍依赖外部设备/底本证据；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
+5. A/E 真机验收仍依赖 Find N2；C 的普通学习来源回链已有证据，只有指定原文/诊断规则来源需要继续核验；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
 
 
 
@@ -1046,9 +1046,9 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 
 ### 22.1 基线与集成事实
 
-- 本节复核基线：`master @ 07cae6810db412e608ff0d3e2c0dcf1c872105be`。
+- 原运行时代码复核基线：`07cae6810db412e608ff0d3e2c0dcf1c872105be`；后续 PR #122/#123/#124 只更新执行台账、审计报告和来源 manifest，已依次合并，当前 master 文档集成基线为 `a2450f12220444225a33c4882d65ce4e4b9b3eab`。
 - PR #121 `docs(ai): reconcile multiturn audit and execution ledger with merged fixes` 已合并，merge commit 即上述 SHA。
-- PR #121 仅更新 `docs/ai-modernization-execution-ledger.md` 与 `docs/local-ai-multiturn-audit.md`，将 #117/#119/#120 的持久化与 Native Activity 生命周期修复纳入审计；没有新增生产业务行为。
+- PR #121 将 #117/#119/#120 的持久化与 Native Activity 生命周期修复纳入审计；PR #122/#123/#124 后续只更新文档和来源登记，没有新增业务行为。
 - 本节以前的历史快照保留，不再把其中标记为 IN_PROGRESS/PENDING 的旧 CI 状态当作当前状态。
 
 ### 22.2 当前 master CI 终态
@@ -1069,7 +1069,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 |---|---|---|---|
 | A Native 多轮与持久化 | PARTIAL / DEVICE UNKNOWN | #117 成功轮次与结构化问诊 transcript 原子持久化；#119 transcript 与 task snapshot TRACE 分离；#120 Activity release failure 后进程级 fail-closed；最新 master CI PASS | Find N2 GPU 至少 20 轮、CPU 至少 20 轮；图片/语音；Activity recreation；强制停止/进程重启；SQLite、Flutter UI、Native history 逐轮一致性；`state:7` 根因仍 UNKNOWN |
 | B 红旗安全 | PARTIAL / RELEASE BLOCKED | Gate fail-closed、来源 provenance、gate-before-operation 顺序契约及测试；B2 全入口静态调用图已有记录 | 经医学背景人员审核的规则/阈值/处置文案；可审计的自然语言 detector；Flutter 与 Native 所有生产入口强制调用；真实入口 TRACE；对 `REVIEW_REQUIRED` 产品影响的明确决策 |
-| C 检索来源 | PARTIAL / NOT VERIFIED | 83 个 sourceId 与本地 Markdown 资产对应，资产存在性与内容语境已核对；12 个 conditionKey 与来源 manifest 对应 | 83/83 bibliographic locator 缺失；12 条规则的真实底本、版次、卷页或原始影像仍缺；讲稿资产不得冒充校勘古籍原文 |
+| C 知识来源 | PARTIAL（学习来源回链已实现；原文/规则来源分层） | 83 个讲稿 sourceId 与 83 个本地 Markdown 资产对应；检索上下文/引用尾注带 sourceLabel、sourceKind、sourceId 和本地回链；12 个 conditionKey 与规则来源 manifest 对应 | 一般学习资料不要求逐本逐页校勘；仍需对明确声称“古籍原文”或被 DiagnosticEngine 使用的规则来源保持核验。12 条规则当前 7 条 ONLINE_TEXT_CROSS_CHECKED、3 条 CONDITIONS_CROSS_CHECKED、2 条 MISSING；不得把讲稿观点当作规则来源。医案仅作为本地整理资料，不作为疗效证据 |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | `yunqi`、`almanac` 复用确定性业务逻辑 | 无新能力的行为基线与实际需求；保持现状，不以数量为目标 |
 | E 数据保护 | PARTIAL | 应用内 AI 数据清除 coordinator、AI 专属新附件目录、Native runtime cache 与 TRACE 清除、SQLite AI 表事务、Android 模型/TRACE backup exclusion 均有代码与测试证据 | AI 与非 AI 业务行仍共用 `nihaisha.db`；Android XML 不能按表/行选择性排除；旧共享图片所有权 UNKNOWN；系统备份/迁移副本、外部导出副本及 Find N2 清除后强停/重启不可恢复证据缺失 |
 | F TRACE | PARTIAL | #113/#114/#115/#117/#119/#120 已补齐 Headless 拒绝、Page Tool 延续、发送/症状整理终态、transcript 原子批量失败、task snapshot 独立状态及 Native lifecycle 失败终态 | Find N2 场景集完整链路、多轮、媒体、Activity/进程恢复真实 TRACE |
@@ -1079,7 +1079,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 
 1. **A/F 真机验收**：在 OPPO Find N2 按 `docs/local-ai-e4b.md` 与 `docs/find-n2-ai-trace-acceptance-plan.md` 执行 GPU/CPU 各至少 20 轮，覆盖文字、图片、语音、Activity recreation、请求中断、强停/重启和历史恢复。每条记录设备型号、Android 版本、App SHA、模型版本/SHA、backend、轮次和 trace_id；缺任何关键证据的场景保持 UNKNOWN。不得用 CI、模拟器或 arm64 APK 代替。
 2. **B2/B4/B5 安全闭环**：先取得医学审核记录（规则 ID、适用范围、阈值、例外、处置文案、规则版本及审核责任），再确定 detector 覆盖和 `REVIEW_REQUIRED` 对产品流程的影响；之后才允许在独立分支接入 Flutter/Native 门禁并验证每条入口均先 gate、后 route/tool/model side effect。审核前不得生成医学规则、不得把 Gate 接入生产、不得默认 CLEAR，也不得用 optional/null gate 形成旁路。
-3. **C 来源真实性**：逐项补充可回链到真实底本、具体版本、卷页或原始影像的 locator。无法取得证据的条目继续 MISSING；不通过网络转述、讲稿文件名或猜测补齐。
+3. **C 学习来源与原文分层**：普通学习检索以实际 sourceId、来源类别/标题和本地回链为最低标准；现有83个讲稿资产已具备该回链，不再把83条逐本逐页校勘作为知识库完成条件。只有明确声称引用某版古籍原文、或该来源被用于 DiagnosticEngine 诊断规则时，才逐条核对可用的原文出处、规则适用条件与必要版本定位；缺失项仍标 MISSING，不猜测补齐。
 4. **E 备份边界决策**：先明确是接受当前 Android 系统备份中可能包含 AI 会话，还是批准将 AI 对话迁移至独立数据库文件并制定迁移/回滚/恢复方案。Android XML 不能选择性排除 SQLite 表/行；不得排除整个 `nihaisha.db`，不得全局关闭 backup 来冒充 AI-only exclusion。
 5. **E 真机清除验收**：按合成数据执行模型运行中/空闲、附件存在、TRACE 开关开启/关闭、清除成功/部分失败、强制停止和重启复查；确认 AI 数据不可恢复，同时收藏、设置、诊断历史及模型文件保留。旧共享图片无法证明归属时保留，不扫描清空共享临时目录。
 6. **D/G 冻结**：保持 2 项 Headless 与现有版本 guard；除非出现可复现失败证据，不增加 adapter、Agent/DAG、数据库表、检索引擎或治理模块。
@@ -1087,7 +1087,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 ### 22.5 验收与停止条件
 
 - 本次复核未发现需要重跑的 master CI；后续只对实际修改的代码运行对应 changed tests，并按影响范围执行 Flutter regression、Android Native/arm64 与 post-merge CI。
-- B 的医学审核、A/E 的 Find N2、C 的底本/影像和 E 的备份产品决策属于外部硬条件。未取得相应证据前，相关状态必须保持 PARTIAL / UNKNOWN / RELEASE BLOCKED，不得以文档更新或自动化测试代替。
+- B 的医学审核、A/E 的 Find N2、C 中具体原文/诊断规则的来源依据，以及 E 的备份产品决策属于不同性质的硬条件。一般学习讲稿无需纸本/影像校勘；对外声称指定版本原文或将来源用于诊断规则时，缺失证据必须保持 MISSING。不得以文档更新或自动化测试代替真机、医学审核或原文核验。
 - 本节只同步已核实的主线状态和下一阶段硬门槛；不改变业务行为、不新增医学规则、不触碰数据库迁移或备份策略。
 
 
@@ -1099,13 +1099,13 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 
 - 核验基线：`master @ 3363a29d94fa0c9e0c87587d71553fc870fcede7`。
 - 更新文件：`docs/classic-rule-source-manifest.json`；仅新增 `archivalWitnesses` 与 `researchUpdatedAt`，不修改12条规则的既有来源/校勘状态。
-- 馆藏见证一：国家图书馆“中华古籍智慧化服务平台”资源记录 `1047540`，著录《仲景全书》二十六卷，为明万历二十七年（1599）赵开美刻本；馆藏单位上海中医药大学，索书号 `94014-23`，线装10册。记录列出第一册卷前、卷一至二以及后续册卷结构。
+- 本节内容已随 PR #124 合并到 master `a2450f12220444225a33c4882d65ce4e4b9b3eab`；馆藏见证一：国家图书馆“中华古籍智慧化服务平台”资源记录 `1047540`，著录《仲景全书》二十六卷，为明万历二十七年（1599）赵开美刻本；馆藏单位上海中医药大学，索书号 `94014-23`，线装10册。记录列出第一册卷前、卷一至二以及后续册卷结构。
 - 馆藏见证二：国家图书馆数字古籍扫描文件 `NLC892-1244-209199`，著录为《仲景全书》第1册，馆藏机构国家图书馆，善本书号 `CBM1499`；扫描文件为122页，元数据列出卷首、目录及《伤寒论》卷第一至卷第四。该文件记录的出版年代只到“明万历”，未在文件元数据中确认1599具体年。
 - 两项是不同馆藏见证，不得合并成同一册、同一索书号或同一数字文件；公开记录也没有证明现有三芦书屋转录直接据上述任一馆藏抄录。
 
 ### 23.2 状态边界
 
-- 这一步只补齐可追溯的古籍馆藏/扫描资源目录证据，为后续逐页校勘确定候选底本；不等于已经完成条文页码定位。
+- 这两项仅是可选的古籍馆藏/扫描参考资源，供将来需要核对指定版本原文时使用；不是一般学习资料检索、引用或知识库上线的前置条件。
 - 12条 `records[]` 的 `baseEdition`、`volume`、`page` 和 `primaryImageVerification` 均保持 `MISSING`；其中第32、33、36、172、256、268条的 `ONLINE_TEXT_CROSS_CHECKED` 仍只代表在线文本交叉核对。
 - 当前 `articleNumber` 使用 `1955-chongqing-398` 编号体系。赵开美本须按其原书册、卷、叶/面重新定位；不得把1955年条文编号直接写成赵本页码或卷号。
 - 83个讲稿 `sourceId` 的书目定位仍为 `MISSING`；本次两项馆藏目录记录不能替代83条逐项映射。
@@ -1113,6 +1113,48 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 
 ### 23.3 后续动作
 
-1. 以国家图书馆可读取的馆藏扫描为第一份候选影像，逐项核对当前12条规则对应的原文位置，记录扫描文件 SHA、册/卷、原叶码、数字影像页序及图像定位；不能确认的条目保持 `MISSING`。
-2. 对照上海中医药大学馆藏的1599年赵开美刻本目录/影像，核对版本异文；不得仅依据网页二次转录或1955年条文编号补造页码。
-3. 仅在获得原始影像并完成逐条人工核验后，才更新单条记录的 `baseEdition`、`volume`、`page` 和 `primaryImageVerification`；不得因新增馆藏见证而整体升级 C 状态。
+1. 日常学习场景继续使用已经可反查的本地讲稿 sourceId 与回链；不开展83条讲稿的逐页/逐影像映射工程。
+2. 只有具体回答需要声称某一指定版本的仲景原文，或某一条被用于诊断规则的来源时，再对该条做定点核验，记录可取得的数字文本/版本/卷页/影像信息。
+3. 馆藏见证仅作为可选研究线索；没有实际使用到的版本定位，不要求填入12条规则的 `baseEdition`、`volume`、`page` 或 `primaryImageVerification`。
+
+---
+
+## 24. 2026-11-13 C：学习知识库来源分层决策（用户产品定位确认）
+
+### 24.1 决策理由
+
+- 产品定位是中医学习与知识检索，不是古籍版本校勘或学术影印数据库。来源工作应保证用户知道资料是什么、内容来自哪里、能否回到实际资料；不把“每条讲稿都找到纸本卷页/原始影像”作为一般学习检索的前置门槛。
+- 该决策不改变 `docs/ai-capability-audit.md` 第4.3节的来源区分要求：原文、规则结果、App数据、AI归纳仍必须分开；引用仍需能回链到真实 sourceId/业务结果；缺失不得伪造。
+- 本决策只调整不同资料用途所需的来源粒度，不降低医学安全、诊断规则审核、原文真实性声明或真机 TRACE 门槛。
+
+### 24.2 来源分层与允许用途
+
+| 来源层 | 最低可用来源信息 | 允许用途 | 仍需保留的限制 |
+|---|---|---|---|
+| 课程讲稿/整理讲义（`sourceKind=lecture`） | sourceLabel、title、稳定 sourceId、本地 Markdown 回链 | 一般学习检索、知识解释、按讲稿观点进行归纳 | 明确标注为课程讲稿/整理资料；不得冒充已校勘的仲景原文，不单独作为 DiagnosticEngine 规则来源或临床证据 |
+| App 古籍文本资产（`sourceKind=classic_text`） | 书名/篇章、sourceId、本地章节回链 | 学习性阅读、内容检索 | 未核验时不声称特定版本、卷页或异文；需要精确原文引用时再核对该条文本 |
+| 规则来源（12个 `conditionKey`） | 条件键、引用条文/数字文本来源、规则条件与来源状态 | 为确定性辨证规则提供可审查依据 | 仍按条目核实原文条件；当前7条在线文本交叉核对、3条条件交叉核对、2条 MISSING；讲稿不能替代规则依据 |
+| 本地医案整理记录 | 医案 sourceId、内部回链、来源账本状态 | 作为学习案例/检索线索 | 不把内部序号冒充原始出处，不把病例内容当作疗效证据；来源状态如实显示 |
+| App 方剂/本草/针灸等结构化数据 | 数据类型、条目 ID/sourceId、本地数据文件或仓储回链 | 查询 App 内已维护数据 | 不把 App 数据说成已核验的古籍版本或临床指南 |
+
+### 24.3 本轮代码和测试调整
+
+- `AssistantKnowledgeContextBuilder` 继续输出来源类别、标题、sourceId 与本地回链；课程讲稿引用尾注显示为“课程讲稿/整理讲义（学习资料）”，不再把缺少纸本页码显示成讲稿条目的检索失败。
+- 讲稿上下文明确提示：实际引用来源是本地课程讲稿/整理讲义；其中所引古籍文字未自动等同于指定版本原文。古籍文本资产和医案仍保留各自的来源核验状态。
+- `docs/classic-rule-source-manifest.json` 新增 `learningMaterialCollections`，登记伤寒讲稿集合的 sourceId 模式、本地资产模式、Golden Snapshot 中83个 distinct sourceId 到83个本地资产的回链证据及使用边界。12条诊断规则的原有状态未被升级。
+- 自动化回归只验证上述来源文案/结构化引用契约；不增加无关的全量测试，不宣称完成纸本校勘或 Find N2 真机验收。
+
+### 24.4 C 项新的完成定义
+
+1. **一般学习检索来源：** 返回的来源能区分讲稿、古籍文本、医案和 App 数据；每条命中可通过 sourceId 回到实际本地资料；不把二次讲稿标成原文。当前83条 golden source 的资产身份/本地回链和引用测试已满足这一层要求。
+2. **指定古籍原文引用：** 只有在回答明确声称某条是某一古籍原文或指定版本原文时，才需要该条文本的可靠数字文本/版本定位；无法核实时改为“讲稿所引/本地文本摘录”或明确 MISSING。
+3. **诊断规则来源：** 12条规则继续按各自 `sourceVerificationStatus` 管理；要成为诊断规则依据，必须验证原文前提和规则适用边界，不能用讲稿解释代替条文证据。
+4. **医案学习：** 1256条本地医案可以作为整理案例检索，但逐案原始出处和来源统计差异不再是一般学习检索的上线阻断项；不得据此形成疗效证明、个体治疗建议或虚构原始出处。
+
+**明确不做：** 不开展83个讲稿的逐册逐页考古映射；不为一般学习答案追逐纸本影印坐标；不因`locatorStatus=MISSING`就把有稳定本地回链的讲稿资料判成“没有来源”。
+
+### 24.5 本轮主线基线与 CI
+
+- PR #123 已合并：`e5932a2ecf59167c7456d9348bcc61d68e473799`；PR #124 已合并：`a2450f12220444225a33c4882d65ce4e4b9b3eab`。两者均为文档/来源登记改动，PR head 的 Flutter regression 与 Android arm64/Native job 均 SUCCESS，Branch validation SKIPPED。
+- 当前 master：`a2450f12220444225a33c4882d65ce4e4b9b3eab`。合并后的 Flutter tests run `43350618944` 与 Flutter Quality Gate run `43350618932` 当前 IN_PROGRESS；在终态完成前不把新 master post-merge CI 记为 PASS。
+- 本工作分支以 `a2450f1` 为基线，只修改学习资料来源展示、对应测试和来源分层文档；没有改检索算法、诊断规则、模型 prompt、Android 配置或数据库 schema。
