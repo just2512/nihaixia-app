@@ -3190,12 +3190,14 @@ void main() {
     expect(find.textContaining('四柱：庚午、己丑、甲子、戊辰'), findsOneWidget);
     expect(find.text('打开八字排盘'), findsNothing);
     expect(pageOpened, isFalse);
-    expect(service.sentTexts, isEmpty);
-    await tester.tap(find.text('AI总结解读'));
-    await tester.pumpAndSettle();
+    expect(
+      find.text('AI总结解读'),
+      findsNothing,
+      reason: '模型已就绪且排盘结果通过来源/参数契约后，应由助手自动解释',
+    );
     expect(
       service.sentTexts.where((value) => value.contains('总结并解释刚才返回的八字排盘结果')),
-      isNotEmpty,
+      hasLength(1),
     );
 
     final conversations = await store.getAssistantConversations();
@@ -3219,6 +3221,19 @@ void main() {
       'birthplace': '上海市',
     });
     expect(metadata.sourceIds, sourceIds);
+    expect(
+      messages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释刚才返回的八字排盘结果')),
+      isEmpty,
+      reason: '自动解释指令是内部调度内容，不得伪装成用户发言持久化',
+    );
+    expect(
+      messages.where((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到')),
+      hasLength(1),
+    );
     expect(tester.takeException(), isNull);
   });
 
