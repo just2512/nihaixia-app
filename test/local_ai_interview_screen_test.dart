@@ -389,6 +389,18 @@ class _TextSendService extends LocalAiService {
   final restoredTranscripts = <String>[];
 
   @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    return intentResolution;
+  }
+
+  @override
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
