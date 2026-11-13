@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/data/shousheng_data.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 
 /// 受生债查询（禄库受生经 / 五斗金章受生经）。
@@ -11,7 +14,9 @@ import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 /// 五斗金章：按经文口径（出生日天干分组 → 五斗；出生时辰地支 → 库神）。
 /// 均属道教文献 / 民俗文化参考，非科学或宗教实践指导。
 class ShoushengDebtScreen extends StatefulWidget {
-  const ShoushengDebtScreen({super.key});
+  const ShoushengDebtScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<ShoushengDebtScreen> createState() => _ShoushengDebtScreenState();
@@ -28,6 +33,9 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
 
   LukuResult? _luku;
   WudouResult? _wudou;
+  String? _computedYearZhi;
+  String? _computedDayGan;
+  String? _computedTimeZhi;
   String? _error;
 
   @override
@@ -69,16 +77,66 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
       final dayGan = p.gans[2]; // 日天干
       final timeZhi = p.zhis[3]; // 时辰地支
       if (!mounted) return;
+      final luku = _isLuku ? ShoushengData.computeLuku(yearZhi) : null;
+      final wudou = _isLuku ? null : ShoushengData.computeWudou(dayGan, timeZhi);
       setState(() {
-        if (_isLuku) {
-          _luku = ShoushengData.computeLuku(yearZhi);
-        } else {
-          _wudou = ShoushengData.computeWudou(dayGan, timeZhi);
-        }
+        _luku = luku;
+        _wudou = wudou;
+        _computedYearZhi = yearZhi;
+        _computedDayGan = dayGan;
+        _computedTimeZhi = timeZhi;
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
     }
+  }
+
+  void _returnResultToAssistant() {
+    if (_luku == null && _wudou == null) return;
+    final solar = DateTime(
+      _birthDate.year,
+      _birthDate.month,
+      _birthDate.day,
+      _birthHour,
+      _birthMinute,
+    );
+    final values = <String, String>{
+      '出生公历': '${solar.year}-${solar.month.toString().padLeft(2, '0')}-${solar.day.toString().padLeft(2, '0')} ${solar.hour.toString().padLeft(2, '0')}:${solar.minute.toString().padLeft(2, '0')}',
+      '查询体系': _isLuku ? '禄库受生经' : '五斗金章受生经',
+      '年支': _computedYearZhi ?? 'MISSING',
+      '日干': _computedDayGan ?? 'MISSING',
+      '时支': _computedTimeZhi ?? 'MISSING',
+      '真太阳时校正': _useTrueSolarTime ? '开启' : '关闭',
+      '早晚子时区分': _distinguishZiShi ? '开启' : '关闭',
+    };
+    if (_luku != null) {
+      values
+        ..['禄库曹官数据'] = jsonEncode(_luku!.warehouse)
+        ..['本命元辰数据'] = jsonEncode(_luku!.yuanchen);
+    }
+    if (_wudou != null) {
+      values
+        ..['五斗本命钱数据'] = jsonEncode(_wudou!.fiveDou)
+        ..['十二库神数据'] = jsonEncode(_wudou!.kushen)
+        ..['口径说明'] = ShoushengData.wudouNote.isEmpty
+            ? 'MISSING'
+            : ShoushengData.wudouNote;
+    }
+    Navigator.pop(
+      context,
+      AssistantToolResult(
+        toolId: 'shousheng_debt',
+        title: '受生债查询',
+        values: values,
+        sourceIds: [
+          'local-engine:shousheng_debt',
+          _isLuku ? 'local-data:luku-shousheng-debt' : 'local-data:wudou-shousheng-debt',
+        ],
+        disclaimer: _isLuku
+            ? ShoushengData.lukuDisclaimer
+            : ShoushengData.wudouDisclaimer,
+      ),
+    );
   }
 
   @override
@@ -183,6 +241,17 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
             ),
           if (_luku != null) _buildLuku(cs),
           if (_wudou != null) _buildWudou(cs),
+          if (widget.returnResultOnComplete && (_luku != null || _wudou != null)) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _returnResultToAssistant,
+                icon: const Icon(Icons.reply),
+                label: const Text('将本次受生债查询结果带回助手对话'),
+              ),
+            ),
+          ],
         ],
       ),
     );
