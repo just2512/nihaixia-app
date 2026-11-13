@@ -1449,7 +1449,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - Branch validation run `43421461053`：SUCCESS。
 - PR #137 全量 workflow run `43421508491`：SUCCESS；Flutter regression job `131872388262` 和 Android arm64 CI verification job `131874363872` 均 SUCCESS。
 - PR #137 已 squash 合并，merge commit / 当前 master：`1bea32a1a81d2a776ddbb6ca7f325b7e6667045d`。
-- 合并后 master workflow：Flutter tests run `43427610792`；Flutter Quality Gate run `43427610691`。本次台账更新时两个 run 仍 IN_PROGRESS：Flutter regression job `131892817389` 已 SUCCESS，Android arm64 job `131895133016` 仍 IN_PROGRESS；Quality Gate job `131892816779` 的静态分析、完整 Dart test suite 已 SUCCESS，Native unit tests 仍 IN_PROGRESS，arm64 APK 构建尚未开始。不能将未结束步骤记为 PASS。
+- 合并后 master workflow：Flutter tests run `43427610792` 与 Flutter Quality Gate run `43427610691` 均 SUCCESS，且均对应 merge SHA `1bea32a1a81d2a776ddbb6ca7f325b7e6667045d`；Flutter regression、Android arm64 APK/ABI、Native unit tests 和 Quality Gate 均已完成。此前记录的 IN_PROGRESS 是当时的观察快照，现以 workflow 终态为准。
 
 ### 31.2 本次窄范围改动
 
@@ -1470,7 +1470,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 31.4 主线集成后的验收范围
 
 - PR branch validation、PR 全量 Flutter regression 和 Android arm64/Native CI 均已通过；PR 已合并到 master。
-- 合并后 master 的 Dart/Flutter 回归已通过；Android Native unit tests 与 Find N2 arm64 CI APK 仍以 run `43427610691`、`43427610792` 的终态为准。当前尚未得到终态，不把流程中的状态折算为通过。
+- 合并后 master 的 Flutter tests run `43427610792` 与 Quality Gate run `43427610691` 均已 SUCCESS；后者包含 Android Native unit tests 与 Find N2 arm64 CI APK 构建、ABI 校验。该结果仍只是 CI 构建/自动化证据，不是 OPPO Find N2 真机 E4B 运行证据。
 - 本次集成没有在 OPPO Find N2 真机运行 E4B；真机推理质量、GPU/CPU fallback、多媒体多轮和中断恢复 TRACE 仍 DEVICE UNKNOWN。
 
 ### 31.5 下一步收尾顺序
@@ -1481,3 +1481,44 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 4. **C 来源缺失保持事实状态**：12 条规则 conditionKey 已与 manifest 一一对应；其中 2 条 UNVERIFIED/MISSING 没有可追溯条文或医案来源，继续保留 MISSING，不补造条号、出处或方剂。83 条普通学习讲稿不重复做纸本校勘。
 
 - 冻结：不修改业务辨证/排盘/剂量计算规则，不把 AI 推断作为诊断，不重复审核已有知识库，不批量迁移 Page Tool，不新增 Agent/DAG、云 API 或第二套 Orchestrator。
+
+
+## 32. 2026-11-13 PR #139：Page Tool 结果持久化失败可见性
+
+### 32.1 基线、变更与集成
+
+- 基线 master：`cb7f2e8fd7fc597f2bafc725e369290ca78bbe34`。
+- 独立分支：`work/p4-tool-result-persistence-visible-2026-11-13`；最终 PR head：`19cd6d98bf22c946820f8ee8aabf372682265bca`。
+- PR #139 已 squash 合并；merge commit / 当前 master：`04de8e52abdc88d3c6f99d4b0db836721564acf4`。
+- 只修改 `lib/screens/local_ai_interview_screen.dart` 和 `test/local_ai_interview_screen_test.dart`；不改工具计算、参数 schema、source IDs、结果契约或模型解释规则。
+
+### 32.2 修复内容
+
+- `LocalAiInterviewScreen._openTool()` 已通过结果/参数契约的 Page Tool 结果，在独立 SQLite 消息保存失败或会话不可用时，原先只有 `debugPrint`，用户看不到历史保存失败。
+- 现在当前对话继续显示真实业务结果，同时显示明确的持久化提示：会话不可用时提示未能写入历史；写入异常时提示保存状态 UNKNOWN，并提示离开前先复制结果、核对历史记录。
+- 工具执行成功与结果校验成功不被回写成失败；但 SQLite 的 `persistence` / `persistedState` 仍保持原有 `UNKNOWN`。不因写入异常自动重新执行 Page Tool，避免把“执行状态未知/可能已提交”当作安全重试。
+- 用户仍可看到本轮真实结果；若保存未确认，不宣称历史已完整持久化。
+
+### 32.3 针对性故障注入与 CI
+
+- 新增单条 `saveAssistantMessage` 故障注入；测试先保存原始请求，再令工具结果消息写入抛错。
+- Widget test 验证：工具结果仍在当前对话可见；界面出现“历史保存状态未知”和“不自动重跑”提示；持久化存储中不伪报工具结果已保存；业务结果只返回一次；TRACE 的 `persistence` 与 `persistedState` 均为 `UNKNOWN`。
+- Branch validation run `43432527658`：SUCCESS（静态分析 + changed tests）。
+- PR #139 full workflow run `43432900614`：SUCCESS；Flutter regression job `131910595578` SUCCESS，Android arm64 CI job `131912798580` SUCCESS。Android job 完成 arm64 Debug APK 构建、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 校验及报告上传。
+- PR #139 已合并；合并后 master runs：Flutter tests `43434084780`、Flutter Quality Gate `43434084865`。本次文档更新时两条仍 IN_PROGRESS；不得用 PR CI 代替 merge SHA 的 post-merge 终态。
+
+### 32.4 D-03 缺口状态更新
+
+- 专项审计第 8.3 节第 7 项“Page Tool 结果写入失败仅 debugPrint、无 UI 可见状态”已由 PR #139 关闭：CODE + 故障注入 TEST + PR Flutter/Android CI PASS。
+- 这项修复不是 Headless 迁移，不改变 Page Tool 仍由用户完成页面操作的事实；也不证明 23 个 Page Tool 均已真实执行。
+- 当前 24 项注册能力中仍只有 `yunqi / almanac / bazi` 具备 Headless executor；不为数量增加工具适配器。
+- 后续只保留有证据的问题：逐项核实工具的实际参数、执行结果来源和取消/失败语义；不得将页面打开或旧式 String 回传一概视为已验证的 Headless Capability。
+
+### 32.5 未完成项与冻结
+
+1. 自由文本问诊：仍 BLOCKED BY RED-FLAG GATE。医学审核后的 detector、阈值/例外/处置文案和 Flutter/Native 全入口前置拦截未齐之前，不启用症状自由文本抽取，不将 REVIEW_REQUIRED 默认放行。
+2. Find N2 真机：E4B 真实语义、GPU/CPU 多轮、图片/语音和 Activity/进程恢复 TRACE 仍 DEVICE UNKNOWN；CI APK 不替代真机。
+3. 数据清理：清除后完全退出/重启并核对数据库、附件、缩略图和孤儿文件是否不可恢复，仍需真机证据；共享 SQLite 备份边界和外部副本不得写成已清除。
+4. 经典来源：两条无可追溯来源的规则继续 MISSING；不补造条号、出处或方剂，普通学习讲稿不重复纸本校勘。
+
+- 冻结：不修改 DiagnosticEngine、问诊十问、排盘/剂量/民俗计算；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不批量迁移 Page Tool；不重复审核已经审核的知识库。

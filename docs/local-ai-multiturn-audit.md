@@ -210,3 +210,29 @@ PR #120 早期 head `43ebdb5931111ae75631a4a2942514f65e32371f` 的一次 CI 曾�
 - JVM lifecycle test 验证的是进程级串行队列与失败传播，不证明 LiteRT-LM Native 资源在真机所有异常类型下都一定可释放。
 - release failure 后的策略是 fail-closed：宁可要求用户强停并重启进程，也不在资源释放状态未知时继续初始化另一套模型对象。
 - 没有设备 logcat、backend 及 trace_id 的场景继续标 `UNKNOWN`；不得以 CI 绿灯冒充真机 PASS。
+
+
+## 9. 2026-11-13 主线核验：transcript restore policy 已集成
+
+本节是对上文第 5/8 节“LocalAiTranscriptRestorePolicy 新增后等待本分支 CI”的后续状态更新；旧段落保留为历史记录，不再代表当前主线状态。
+
+### 9.1 当前主线调用链
+
+- 当前 master 集成基线：`04de8e52abdc88d3c6f99d4b0db836721564acf4`。
+- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicy.kt` 已在 master；`MainActivity.restoreLocalConversation()` 调用：
+  - `boundTranscript(transcript)`：限制恢复 transcript 到 10,000 个 UTF-16 code units，保留明确的“较早历史已省略”标记和最新尾部，避免在代理项对中间切断。
+  - `hasOmittedUserMessages(userMessages)`：在超过 60 条用户文字输入时，先设置 `userReportedInputsTruncated=true`。
+  - `recentUserMessages(userMessages)`：仅将最近 60 条显式用户文字自述交给 `recordUserInput`；助手回复和附件占位不作为症状来源。
+- Native `extractSymptoms()` 使用 `userReportedInputsTruncated` 传播 `sourceTruncated=true`，避免把保留的 60 条误当作完整历史来源。
+
+### 9.2 当前测试与验收证据
+
+- 对应 Kotlin 测试：`android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicyTest.kt`，覆盖短 transcript 原样保留、长 transcript marker/最新尾部、已有 marker、surrogate 边界、最近 60 条和省略状态传播。
+- PR #139 Android arm64 CI job `131912798580` 已通过 Native unit tests 与 JUnit XML 校验；这条 CI 的测试运行包含当前 master 的 Kotlin 测试源。
+- 这关闭的是“策略/单测仍在分支等待”的代码状态；并不等于 Find N2 真机恢复后的 Native/Flutter/SQLite 三方 transcript 已完成逐轮一致性验证。
+
+### 9.3 A 项剩余状态
+
+- Transcript 裁剪和 sourceTruncated 传播：CODE + TEST + PR Android Native CI PASS。
+- Find N2 GPU 至少 20 轮、CPU 至少 20 轮、图片/语音、多轮、Activity/进程恢复以及恢复后 SQLite/Flutter/Native 三方历史一致性：继续 DEVICE UNKNOWN。
+- `state:7` 等 Native 推理根因仍须设备 logcat、backend 和 trace_id；不使用 JVM lifecycle test 推断真机根因。

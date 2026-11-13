@@ -792,6 +792,37 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 - 独立 Branch validation run `43421461053` SUCCESS。
 - PR 全量 run `43421508491` SUCCESS；Flutter regression job `131872388262` 与 Android arm64 CI verification job `131874363872` 均 SUCCESS。
-- 合并后 master runs：Flutter tests `43427610792`、Flutter Quality Gate `43427610691`。本次更新时 Flutter regression job `131892817389` SUCCESS；Quality Gate 的静态分析及 Dart tests SUCCESS，但 Android Native unit tests 尚 IN_PROGRESS；Flutter tests run 中 Android arm64 CI job `131895133016` 尚 IN_PROGRESS。最终结论以 run 终态为准。
+- 合并后 master runs：Flutter tests `43427610792` 与 Flutter Quality Gate `43427610691` 均 SUCCESS，均对应 merge SHA `1bea32a1a81d2a776ddbb6ca7f325b7e6667045d`；Android arm64 APK/ABI、Native unit tests 和 Flutter/Dart 回归均通过。该结论不替代 Find N2 真机 E4B 语义验收。
 - 本次不自动触发健康结果解释，不修改问诊规则或知识库，也不绕过红旗门禁；当前自由文本问诊仍 BLOCKED BY RED-FLAG GATE。
 
+
+
+## 28. 2026-11-13 PR #139：Page Tool 持久化失败显式反馈
+
+### 28.1 核验结论
+
+- PR #139 基线 master `cb7f2e8fd7fc597f2bafc725e369290ca78bbe34`；最终 head `19cd6d98bf22c946820f8ee8aabf372682265bca`；已 squash 合并至 `04de8e52abdc88d3c6f99d4b0db836721564acf4`。
+- PR full run `43432900614` SUCCESS：Flutter regression job `131910595578` 和 Android arm64 CI verification job `131912798580` 均 SUCCESS。Android job 包含 CI APK、backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 和报告上传。
+- 合并后 master runs `43434084780`（Flutter tests）与 `43434084865`（Flutter Quality Gate）在本报告更新时仍 IN_PROGRESS；不预先记 PASS。
+
+### 28.2 代码修复和状态语义
+
+- Page Tool 的实际业务结果、工具 ID、执行参数与 source IDs 已通过契约校验后，若 SQLite 单条结果消息写入失败或当前会话不可用，统一助手现在显示明确警告；当前时间线继续显示本轮真实结果。
+- 写入异常不能证明后端事务一定未提交，所以 `persistence` / `persistedState` 继续标记 `UNKNOWN`；不自动重跑工具，避免重复执行。执行与结果校验仍按各自阶段记录，不将持久化失败伪装成业务计算失败。
+- 故障注入 widget test 覆盖写入失败、当前结果仍可见、历史未伪报保存、警告可见、只返回一次结果及两个 TRACE 持久化阶段均为 UNKNOWN。
+- 本 PR 不把 Page Tool 转成 Headless，不触碰任何排盘、问诊、剂量、民俗计算，也不改 source provenance 和模型解释 prompt。
+
+### 28.3 当前 D 项范围
+
+- 24 个注册能力仍应分开记录：Page Tool 代表页面导航/页面执行路径；Headless 仅指无 Widget/BuildContext 的确定性 executor；Executed 需本轮真实执行并回传验证结果。
+- 当前已核实的 Headless executor 是 `yunqi / almanac / bazi`；其余页面不因有结果回传或自动解释就升级为 Headless。
+- 专项目录审计第 8.3 节第 7 项已从“持久化失败仅 debugPrint”更新为“CODE + TEST + PR CI PASS”；设备端逐项执行、取消/失败和多轮 TRACE 仍 UNKNOWN。
+
+### 28.4 剩余优先事项
+
+1. 自由文本问诊仍 BLOCKED BY RED-FLAG GATE；医学审核 detector 与全部 Flutter/Native 模型入口的调用前拦截是自然语言问诊的前置条件。
+2. Find N2 GPU/CPU、多媒体、多轮和中断恢复的真实 E4B/TRACE 仍待设备验收。
+3. AI 数据清除后重启不可恢复验证仍待设备验收；共享 SQLite 的备份副本、旧共享临时目录和外部导出副本不能宣称已被清除。
+4. 两条没有可追溯经典来源的规则仍 MISSING；不补造出处。普通学习讲稿不重复审核。
+
+- 不新增 Agent/DAG、云 API、向量数据库或第二套 Orchestrator；不批量迁移 Page Tool；不修改确定性业务规则。
