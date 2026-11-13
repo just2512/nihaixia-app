@@ -324,7 +324,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingToolSelection = false;
         _pendingBaziArguments = null;
         _pendingMeihuaArguments = null;
-      _pendingChengguArguments = null;
         _pendingChengguArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
@@ -3601,8 +3600,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               _pendingBaziArguments = null;
               _pendingMeihuaArguments = null;
               _pendingChengguArguments = null;
-      _pendingChengguArguments = null;
-        _pendingChengguArguments = null;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
@@ -4235,8 +4232,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         const reply = '已取消本次梅花起卦；尚未执行任何计算。';
         setState(() {
           _pendingMeihuaArguments = null;
-      _pendingChengguArguments = null;
-        _pendingChengguArguments = null;
+          _pendingChengguArguments = null;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(const _InterviewMessage(text: reply, isUser: false));
