@@ -401,12 +401,10 @@ class LocalAiIntentResolution {
     if (normalized.isEmpty || normalized.length > maxModelOutputCharacters) {
       throw const FormatException('意图判别输出为空或超出长度限制');
     }
-    final start = normalized.indexOf('{');
-    final end = normalized.lastIndexOf('}');
-    if (start < 0 || end <= start) {
-      throw const FormatException('意图判别输出不是有效 JSON');
+    if (!normalized.startsWith('{') || !normalized.endsWith('}')) {
+      throw const FormatException('意图判别输出必须是纯 JSON 对象');
     }
-    final decoded = jsonDecode(normalized.substring(start, end + 1));
+    final decoded = jsonDecode(normalized);
     if (decoded is! Map || decoded.keys.any((key) => key is! String)) {
       throw const FormatException('意图判别结构无效');
     }
