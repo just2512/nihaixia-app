@@ -535,10 +535,10 @@ class AssistantToolRouter {
   static Widget _buildSolarTerms() => const SolarTermSectionScreen();
   static Widget _buildYuxiaji() => const YuxiajiOmenScreen();
   static Widget _buildDream() => const DreamScreen();
-  static Widget _buildGuansha() => const GuanshaScreen();
-  static Widget _buildSanshan() => const SanshanLingqianScreen();
-  static Widget _buildChenggu() => const ChengguBoneScreen();
-  static Widget _buildShoushengDebt() => const ShoushengDebtScreen();
-  static Widget _buildHuangdiSiji() => const HuangdiSijiScreen();
+  static Widget _buildGuansha() => const GuanshaScreen(returnResultOnComplete: true);
+  static Widget _buildSanshan() => const SanshanLingqianScreen(returnResultOnComplete: true);
+  static Widget _buildChenggu() => const ChengguBoneScreen(returnResultOnComplete: true);
+  static Widget _buildShoushengDebt() => const ShoushengDebtScreen(returnResultOnComplete: true);
+  static Widget _buildHuangdiSiji() => const HuangdiSijiScreen(returnResultOnComplete: true);
   static Widget _buildSavedCharts() => const SavedChartsScreen();
 }
