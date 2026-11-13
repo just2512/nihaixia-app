@@ -8,6 +8,8 @@ import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/screens/bazi_paipan_screen.dart';
+import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
@@ -450,6 +452,117 @@ void main() {
     expect(metadata.toolStatus, 'SUCCEEDED');
     expect(metadata.toolArguments, {'date': expectedDate});
     expect(metadata.sourceIds, const ['local-engine:almanac']);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('八字排盘完整结果回到助手时间线并进入本地模型上下文', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'bazi') {
+              return BaZiPaipanScreen(
+                returnResultOnComplete: true,
+                initialSolar: DateTime(1995, 8, 16, 12),
+                initialIsMale: true,
+                initialLng: 120,
+                initialLat: 30,
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我排八字');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(find.text('打开八字排盘'), findsOneWidget);
+
+    await tester.tap(find.text('打开八字排盘'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('返回 AI 助手'));
+    await tester.pumpAndSettle();
+
+    expect(service.restoredTranscript, contains('【八字排盘完整结果】'));
+    expect(service.restoredTranscript, contains('日主强弱：'));
+    expect(service.restoredTranscript, contains('格局说明：'));
+    expect(service.restoredTranscript, contains('五行分布状态：'));
+    expect(service.restoredTranscript, contains('用神：'));
+    expect(service.restoredTranscript, contains('忌神：'));
+    expect(service.restoredTranscript, contains('【大运】'));
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('日主强弱：')),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('紫微排盘完整十二宫和大限解读回到助手本地模型上下文',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'ziwei') {
+              return ZiweiChartScreen(
+                returnResultOnComplete: true,
+                initialSolar: DateTime(1990, 6, 15, 10),
+                initialGender: true,
+                initialLng: 120,
+                initialLat: 30,
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我排紫微斗数');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(find.text('打开紫微斗数排盘'), findsOneWidget);
+
+    await tester.tap(find.text('打开紫微斗数排盘'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('返回 AI 助手'));
+    await tester.pumpAndSettle();
+
+    expect(service.restoredTranscript, contains('【紫微斗数排盘完整结果】'));
+    expect(service.restoredTranscript, contains('【十二宫星曜】'));
+    expect(service.restoredTranscript, contains('整体运势：'));
+    expect(service.restoredTranscript, contains('大限解读：'));
+    expect(service.restoredTranscript, contains('生年四化：'));
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('【十二宫星曜】')),
+      isTrue,
+    );
+    expect(service.restoredTranscript, isNot(contains('身体留意')));
     expect(tester.takeException(), isNull);
   });
 
