@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
+import '../models/assistant_tool_result.dart';
 
 /// 三山国王灵签 —— 广东揭西三山国王祖庙传承 92 签。
 ///
 /// 求签与签谱查阅。属民俗文化参考，非吉凶指令。
 class SanshanLingqianScreen extends StatelessWidget {
-  const SanshanLingqianScreen({super.key});
+  const SanshanLingqianScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +27,14 @@ class SanshanLingqianScreen extends StatelessWidget {
         body: Column(
           children: [
             _disclaimer(cs),
-            const Expanded(child: TabBarView(children: [_DrawTab(), _BrowseTab()])),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _DrawTab(returnResultOnComplete: returnResultOnComplete),
+                  const _BrowseTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -58,7 +68,9 @@ class SanshanLingqianScreen extends StatelessWidget {
 }
 
 class _DrawTab extends StatefulWidget {
-  const _DrawTab();
+  const _DrawTab({this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<_DrawTab> createState() => _DrawTabState();
@@ -70,6 +82,27 @@ class _DrawTabState extends State<_DrawTab> {
   void _draw() {
     final r = Random().nextInt(kSanShanLingqian.length);
     setState(() => _sign = kSanShanLingqian[r]);
+  }
+
+  void _returnResultToAssistant() {
+    final sign = _sign;
+    if (sign == null) return;
+    Navigator.pop(
+      context,
+      AssistantToolResult(
+        toolId: 'sanshan_lingqian',
+        title: '三山国王灵签',
+        values: {
+          '签号': sign.id.toString(),
+          '签题': sign.title,
+          '签诗': sign.verse,
+          '签级': sign.luck.label,
+          '签谱范围': '本地三山国王祖庙传承 92 签签谱',
+        },
+        sourceIds: ['local-data:sanshan-lingqian:${sign.id}'],
+        disclaimer: '潮汕客家民间信仰与签谱文化参考，不是现实吉凶保证或决策依据。',
+      ),
+    );
   }
 
   @override
@@ -90,8 +123,17 @@ class _DrawTabState extends State<_DrawTab> {
             '心默所问之事，然后摇签。',
             style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
           )
-        else
+        else ...[
           _SignCard(sign: s, cs: cs),
+          if (widget.returnResultOnComplete) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _returnResultToAssistant,
+              icon: const Icon(Icons.reply),
+              label: const Text('将本次灵签结果带回助手对话'),
+            ),
+          ],
+        ],
       ],
     );
   }
