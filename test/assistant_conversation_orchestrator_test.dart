@@ -18,13 +18,19 @@ void main() {
 
     test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
       expect(
-        AssistantConversationOrchestrator.isPersonalHealthNarrative(
+        AssistantConversationOrchestrator.containsPotentialHealthContent(
           '我最近三天口苦，帮我排个盘',
         ),
         isTrue,
       );
       expect(
-        AssistantConversationOrchestrator.isPersonalHealthNarrative(
+        AssistantConversationOrchestrator.containsPotentialHealthContent(
+          '我最近不舒服，帮我排个盘',
+        ),
+        isTrue,
+      );
+      expect(
+        AssistantConversationOrchestrator.containsPotentialHealthContent(
           '帮我排个盘',
         ),
         isFalse,
