@@ -671,6 +671,19 @@ void main() {
       expect(noClock['method'], 'time');
       expect(noClock['date'], '2026-11-13');
       expect(noClock['hour_branch'], isNull);
+      final followUpClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '下午3点',
+      );
+      expect(followUpClock['method'], isNull);
+      expect(followUpClock['hour_branch'], '申');
+
+      final irrelevantBranch = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '随机起卦，申时',
+      );
+      expect(irrelevantBranch['method'], 'random');
+      expect(irrelevantBranch['hour_branch'], isNull);
     });
 
     test('梅花起卦支持逐项补充数字和明确的公历日期', () {
