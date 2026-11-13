@@ -2538,7 +2538,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'meihua' && tool.headlessExecutor != null) {
+    final meihuaPageMethodRequested = tool.id == 'meihua' &&
+        (userText.contains('时间起卦') ||
+            userText.contains('按时间起卦') ||
+            userText.contains('随机起卦'));
+    if (tool.id == 'meihua' &&
+        tool.headlessExecutor != null &&
+        !meihuaPageMethodRequested) {
       var request = arguments ?? AssistantToolArguments(toolId: tool.id);
       // The page defaults to today's local calendar day. Apply that same
       // deterministic default only after both user-supplied numbers exist;
@@ -2650,7 +2656,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
-    if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
+    if (tool.headlessExecutor != null &&
+        hasExplicitHeadlessDate &&
+        !meihuaPageMethodRequested) {
       await _executeHeadlessTool(
         userText,
         tool,
