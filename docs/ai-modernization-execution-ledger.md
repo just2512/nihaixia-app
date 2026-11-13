@@ -953,3 +953,89 @@ PR #107 修复失败轮次阶段误归因：
 - PR/主线 Android arm64 APK 是 ABI/build 证据，不是 OPPO Find N2 实机运行证据。
 - B 的 Gate policy tests 不等于医学 detector 准确性或生产入口覆盖。
 - 本轮没有引入新的 Agent/DAG、数据库表、模型/API、检索引擎或医疗规则。
+
+
+---
+
+## 21. 2026-11-13 PR #117/#119/#120 集成后执行快照
+
+### 21.1 当前主线与代码集成
+
+- 当前主线：master @ 849ec817f6e11f154ea662316b32b2fbfa230ffc。
+- PR #117：结构化问诊 transcript 原子批量持久化，merge 872a715a3817a57c8b4dd708a33f6b3a13c428c0。
+- PR #118：执行台账更新和 B2 全入口静态调用图，merge 2ddbd43b14f4c90d3a328eb53108e2d90d894d03。
+- PR #119：transcript 与 task snapshot TRACE 分离，merge 5d73161b49fd3f38ffada31c0da1b06e7d24bec0。
+- PR #120：Native Activity release failure fail-closed，merge 849ec817f6e11f154ea662316b32b2fbfa230ffc。
+- 四个 PR 均使用独立分支、小范围集成和自动验收；没有直接推送 master，没有修改 ai-capability-audit.md 约束文件。
+
+### 21.2 PR #120 关闭的确定性故障
+
+旧 Activity 销毁时，releaseLocalModel() 若在 Conversation/Engine close 时失败，异常虽被 lifecycle 捕获，但 MainActivity 未提供 release error handler，也没有进程级健康状态。新 Activity 随后仍可能在同一单线程 executor 中创建另一套 Engine，而旧 Native 资源是否释放已经 UNKNOWN。
+
+本次最小修复：
+1. 新增 LocalAiProcessHealth，首次 Native release failure 会将当前进程标记为不可用。
+2. LocalAiProcessExecutor 持有进程级共享 health；每个 Activity 的 lifecycle 都使用同一状态。
+3. LocalAiActivityTaskLifecycle.submit() 在入队前和任务真正出队执行前各检查一次 health，覆盖新 Activity 已排队、旧 Activity release 随后失败的竞态。
+4. 后续模型操作/模型导入返回 LOCAL_AI_RUNTIME_RELEASE_FAILED；teardown error 写入 Native log。
+5. 用户被明确提示：在系统设置中强行停止 App 进程，再重新打开。当前进程不会通过重新创建 Activity 自动清除 unavailable 状态。
+6. 正常释放路径保持单线程串行顺序和 exactly-once release；没有更改 GPU/CPU fallback、推理参数、模型文件、history policy 或数据库 schema。
+
+新增 Kotlin 回归 LocalAiActivityTaskLifecycleTest.releaseFailureBlocksWorkQueuedByARecreatedActivity 使用 latch 固定竞态：阻塞旧 Activity release，确认新 Activity task 已入队后再触发 release failure；断言 queued task 未执行、收到 unavailable 回调、后续提交立即被拒绝。既有正常 teardown 顺序和 exactly-once 测试继续通过。
+
+### 21.3 PR #120 CI 证据
+
+最新 PR head：9ed99aa66f2047b985682ff4df9dd425647600b5。
+
+- Flutter regression run 43342006102 / job 131612308210：SUCCESS。
+- Android arm64 CI job 131614130546：SUCCESS。
+- arm64 Debug APK build、merged backup manifest、ABI/SHA-256：SUCCESS。
+- Android Native unit tests、XML 报告校验、APK/测试报告上传：SUCCESS。
+- Branch validation job：SKIPPED，不单独计为 PASS。
+- PR #120 已合并，merge commit 849ec817f6e11f154ea662316b32b2fbfa230ffc。
+
+早期 head 43ebdb5931111ae75631a4a2942514f65e32371f 曾因 Kotlin constructor 参数顺序与既有 trailing-lambda 调用不兼容而在 compileDebugUnitTestKotlin 失败。已将可选 processHealth 参数放在 release lambda 之前，最终 head 9ed99aa 的完整 Flutter/Android 验收成功。早期失败 head 不作为最新验收结果。
+
+合并后的主线 post-merge CI：
+- Flutter tests：run 43343151516，head 849ec817f6e11f154ea662316b32b2fbfa230ffc。
+- Flutter Quality Gate：run 43343151619，head 同上。
+- 本节初次更新时两条 run 均为 IN_PROGRESS；必须按终态回填，不能用 PR head CI 代替 post-merge CI。
+
+### 21.4 A-G 当前状态
+
+| 工作流 | 当前状态 | 已有代码/自动化证据 | 未关闭项 |
+|---|---|---|---|
+| A Native 多轮与持久化 | PARTIAL | #117 普通成功轮次和结构化问诊 transcript 使用 SQLite 原子 batch；#119 分离 transcript 与 task snapshot TRACE；#120 Native release failure fail-closed；PR/Android CI 通过 | Find N2 GPU 至少 20 轮、CPU 至少 20 轮、图片/语音、Activity recreation、进程强停/重启、SQLite/UI/Native history 逐轮对照仍无实机 TRACE；state:7 根因 UNKNOWN；context budget 不得凭猜测设阈值 |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | RedFlagGate / RedFlagPreflight 策略及 fail-closed contract 有测试；B2 入口调用图已静态盘点 | 自然语言 detector、医学审核后的规则/阈值/文案、所有 Flutter/Native 生产入口强制覆盖、真实入口 TRACE、产品对 REVIEW_REQUIRED 的影响决策均 MISSING |
+| C 检索来源 | PARTIAL / NOT VERIFIED | 83 个本地讲稿资产存在并有 sourceId 回链；12 条 combinedPatterns 来源 manifest 已分类 | 83/83 bibliographic locator 仍 MISSING；12 条规则真实底本、版次、卷页/影像仍缺；讲稿不得冒充古籍原文；不改 query/top-40/排序/去重 |
+| D Headless Capability | 2 项 Headless / 2 项 Executed | yunqi、almanac | 保持 2 项；无独立行为基线前不新增 adapter；Page Tool 导航不等于 Headless execution |
+| E 数据保护 | PARTIAL | 本地 AI data clear coordinator、SQLite AI 表清理事务、reopen tests、Android backup manifest contract tests | AI 与非 AI 业务行共用 nihaisha.db；当前不能排除整个 database domain，否则会一并丢失 bookmarks、diagnosis history、settings、search history；系统备份中的 AI 行副本、旧共享附件、孤儿文件和外部导出副本仍未闭环 |
+| F TRACE | PARTIAL | #113 Headless reject、#114 Page Tool continuation、#115 普通发送/症状整理终态、#117 transcript batch failure、#119 message/task snapshot 独立状态、#120 lifecycle error fail-closed | Find N2 全场景链路 TRACE、多轮/媒体/Activity/进程恢复真机证据缺失 |
+| G 版本与证据治理 | VERSION GUARD IMPLEMENTED | README/pubspec/Flutter/Android/Release tag guard；PR 与主线 CI 分开记录 | 849ec817 的 post-merge runs 43343151516 与 43343151619 待终态回填 |
+
+### 21.5 B2 当前结论不变
+
+PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #120 只改变 Native Activity lifecycle，不涉及 red-flag：
+- local_ai_interview_screen.dart、local_ai_service.dart 和 MainActivity.kt 仍没有 RedFlagGate / RedFlagPreflight / reviewed detector 的生产调用。
+- Native MethodChannel 是独立执行边界；只在 Flutter 页面层检查不足以覆盖 Native 直接入口。
+- 原始图片/音频不能用 prompt 文本冒充已评估；历史恢复必须保留历史主体和时间来源。
+- detector 未配置、超时或覆盖不足时不得 CLEAR；未经医学审核的规则不得成为 production detector。
+- 不把 REVIEW_REQUIRED 静默接入全部现有模式，也不允许 optional gate 缺失后静默旁路。
+- B 继续 PARTIAL / RELEASE BLOCKED。
+
+### 21.6 下一阶段：只推进剩余硬门槛
+
+1. 等待当前 master 的 43343151516 和 43343151619 两条 post-merge CI；失败时只修复失败 job 实际指向的问题。
+2. A/E 真机验收：按 local-ai-e4b.md、find-n2-ai-trace-acceptance-plan.md 和数据清除约束，在 Find N2 完成 GPU/CPU、至少 20 轮、多媒体、Activity recreation、进程强停/重启和清除后复查。每个场景记录设备、Android、App SHA、模型/backend、轮次和 trace_id；缺记录保持 UNKNOWN。
+3. B 医学审核阻塞：取得医学背景审核记录、detector 覆盖与产品 REVIEW_REQUIRED 影响决策前，不接入 production gate，不生成医学词表、阈值或处置文案。
+4. C 原始来源核验：只接受真实底本、版次、卷页或原始影像回链；83/83 locator 缺失时不能宣称文献来源闭环。
+5. E 备份边界：评估 AI conversation 数据与非 AI 业务数据分离或可验证的自定义备份方案；不能通过排除整个数据库来解决 AI 行备份问题。
+6. D/G 不扩展：维持 2 项 Headless 和现有版本 guard；不增加无行为基线的新 adapter 或新的治理系统。
+
+### 21.7 执行边界
+
+- #117/#119/#120 关闭了三个由代码与自动化精确复现的故障，不等于 A 整体 PASS。
+- arm64 APK/ABI 和 JVM unit tests 不等于 OPPO Find N2 真机 GPU/CPU、多轮和生命周期验收。
+- B 的纯策略测试不等于自然语言 detector 准确性、医学审核或 Flutter/Native 全入口覆盖。
+- E 的应用内清除不等于系统备份和外部副本已删除；混合数据库备份边界仍未闭环。
+- C 不允许推测或补造书名版本、卷页和底本证据。
+- 本轮没有引入新数据库表、Agent/DAG、模型/API、检索引擎、FTS5 或额外 Headless adapter。
