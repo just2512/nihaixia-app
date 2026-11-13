@@ -435,6 +435,23 @@ class _TextSendService extends LocalAiService {
   }
 }
 
+class _FailingIntentSelectionService extends _TextSendService {
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    throw PlatformException(
+      code: 'INTENT_CLASSIFICATION_FAILED',
+      message: 'intent classification unavailable in test',
+    );
+  }
+}
+
 class _FailingTextSendService extends _TextSendService {
   @override
   Future<String> sendMessageWithTrace(
@@ -3395,6 +3412,33 @@ void main() {
     ]));
     expect(events.where((event) => event.stage == AiTraceStage.retrieval)
         .every((event) => event.sourceIds.isEmpty), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('E4B 意图判别失败时退回确定性澄清，不执行任一工具', (tester) async {
+    final service = _FailingIntentSelectionService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我排个盘');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.intentQueries, ['帮我排个盘']);
+    expect(service.intentCandidateIds, [
+      ['ziwei', 'bazi'],
+    ]);
+    expect(find.textContaining('你想使用哪一种排盘工具'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
