@@ -1238,9 +1238,9 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 | Workflow | Run | Head | 当前状态 |
 |---|---:|---|---|
 | Flutter tests | `43360881240` | `5edba1e` | SUCCESS；包含 Flutter regression、Android arm64 APK/Manifest/Native job |
-| Flutter Quality Gate | `43360881283` | `5edba1e` | 本次记录时 IN_PROGRESS；静态分析、assistant history resume、全量 Dart tests、Android Native unit tests SUCCESS；Find N2 arm64 Debug APK build 尚在执行 |
+| Flutter Quality Gate | `43360881283` | `5edba1e` | SUCCESS；静态分析、assistant history resume、全量 Dart tests、Android Native unit tests、Find N2 arm64 Debug APK build 全部 SUCCESS |
 
-不能因为 Flutter tests workflow 已成功就将独立 Quality Gate 也记为 PASS。Quality Gate 终态待后续刷新本节；此前 12 个步骤均成功，当前未报告失败。
+Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 master head `5edba1e` 上终态 SUCCESS。
 
 ### 26.3 AI 能力交付结论
 
