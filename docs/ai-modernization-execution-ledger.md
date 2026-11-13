@@ -1218,3 +1218,33 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 
 **接下来优先顺序：** 完成当前独立分支的最新 head changed tests；创建 PR 后执行完整 Flutter regression、Android arm64 APK/Manifest/Native CI；合并后核验 master post-merge CI。随后在 Find N2 上用合成/非敏感测试数据完成实际 E4B 回答验证，检查知识来源引用、结构化问诊结果解释、八字详批、紫微命盘/大限/已选流层的总结质量。未执行的真实设备场景不写 PASS。
 
+
+
+---
+
+## 26. 2026-11-13 PR #128 集成与主线验收状态
+
+### 26.1 集成事实
+
+- PR #128「feat(ai): synthesize knowledge and explain returned domain results」已 squash 合并。
+- Merge commit / 当前 master：`5edba1ea894a435536430640f575f395c42f932e`。
+- PR head：`d4a0351fe6216887d1507af0be11c1237708d835`。
+- PR 修改 11 个文件，包含知识/问诊/术数提示、八字/紫微完整结果格式化与回传、四组针对性回归及本执行台账/审计报告。
+- PR 本身 CI run `43359969709`：Flutter regression SUCCESS；Android arm64 Debug APK、合并 Manifest、ABI/SHA-256 和 Native unit tests SUCCESS。独立 push branch validation `43359725232` SUCCESS；PR 事件里的 Branch validation SKIPPED 单独记录，不计 PASS。
+- Review threads 无未解决项；PR 已合并。
+
+### 26.2 Master post-merge CI
+
+| Workflow | Run | Head | 当前状态 |
+|---|---:|---|---|
+| Flutter tests | `43360881240` | `5edba1e` | SUCCESS；包含 Flutter regression、Android arm64 APK/Manifest/Native job |
+| Flutter Quality Gate | `43360881283` | `5edba1e` | 本次记录时 IN_PROGRESS；静态分析、assistant history resume、全量 Dart tests、Android Native unit tests SUCCESS；Find N2 arm64 Debug APK build 尚在执行 |
+
+不能因为 Flutter tests workflow 已成功就将独立 Quality Gate 也记为 PASS。Quality Gate 终态待后续刷新本节；此前 12 个步骤均成功，当前未报告失败。
+
+### 26.3 AI 能力交付结论
+
+- **已具备代码/自动化证据：** 本地知识命中进入上下文并要求总结比较；既有 DiagnosticEngine 问诊结果进入历史恢复 transcript；八字详批、大运/流年和紫微十二宫、四化、大限及页面已选流层可回传本地模型上下文。
+- **未被本轮 CI 证明：** E4B 在 OPPO Find N2 上是否能稳定生成正确、充分、可追溯的自然语言解释。fake/recording service 测试证明的是上下文交付，不是模型语义质量。
+- **真实设备待办：** 使用合成/非敏感数据完成本地知识对照、既有问诊结果追问、八字详批、紫微整体/大限及已选流年/流月/流日解释；记录 App SHA、模型版本、backend、原始输入摘要、真实输出及来源核对。未执行场景保持 UNKNOWN。
+- **其他独立外部边界：** A/F 真机多轮和生命周期 TRACE、B 健康风险红旗 detector/审核、E 混合 SQLite 备份决策及清除后强停/重启验证仍保持 PARTIAL/UNKNOWN；不阻断普通学习与术数解释代码链路，也不被本 PR 宣称完成。
