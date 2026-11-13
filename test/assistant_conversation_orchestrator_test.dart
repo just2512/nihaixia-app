@@ -18,19 +18,26 @@ void main() {
 
     test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
       expect(
-        AssistantConversationOrchestrator.containsPotentialHealthContent(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
           '我最近三天口苦，帮我排个盘',
         ),
         isTrue,
       );
       expect(
-        AssistantConversationOrchestrator.containsPotentialHealthContent(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
           '我最近不舒服，帮我排个盘',
         ),
         isTrue,
       );
       expect(
-        AssistantConversationOrchestrator.containsPotentialHealthContent(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
+          '我有呼吸困难，帮我起卦',
+        ),
+        isTrue,
+        reason: '个人健康叙述即使不含当前显式症状别名，也不进入工具意图模型',
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldExcludeFromIntentModel(
           '帮我排个盘',
         ),
         isFalse,
