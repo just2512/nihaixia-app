@@ -46,8 +46,8 @@ internal object LocalAiProcessExecutor {
  */
 internal class LocalAiActivityTaskLifecycle(
     private val executor: ExecutorService,
-    private val release: () -> Unit,
-    private val processHealth: LocalAiProcessHealth? = null
+    private val processHealth: LocalAiProcessHealth? = null,
+    private val release: () -> Unit
 ) {
     private val destroyed = AtomicBoolean(false)
 
