@@ -152,6 +152,51 @@ void main() {
       expect(decision.tool?.id, 'bazi');
     });
 
+    test('八字请求在对话中抽取出生参数并校验完整性', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我排八字',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'bazi');
+      expect(decision.toolArguments?.values, isEmpty);
+
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        '出生日期：1990年1月2日；出生时间：08:30；性别：男；出生地：上海市',
+      );
+      expect(parsed.values, const {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      });
+      expect(parsed.validateAgainst(AssistantToolRouter.bazi), isEmpty);
+
+      final invalid = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        '出生日期：1990-02-31；出生时间：25:70；性别：女；出生地：朝阳',
+      );
+      expect(
+        invalid.validateAgainst(AssistantToolRouter.bazi),
+        containsAll([
+          contains('出生日期'),
+          contains('出生时间'),
+        ]),
+      );
+      expect(invalid['gender'], 'female');
+      expect(invalid['birthplace'], '朝阳');
+    });
+
+    test('八字出生日期支持常见中文公历格式', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        '1990年1月2日，时间 8:30，男性，出生地：上海市',
+      );
+      expect(parsed['birth_date'], '1990-01-02');
+      expect(parsed['birth_time'], '08:30');
+      expect(parsed['gender'], 'male');
+    });
+
     test('没有个人语境的单独症状先澄清，不擅自问诊', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '头痛',
