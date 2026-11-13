@@ -99,12 +99,39 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
-  static AssistantToolArguments _argumentsFor(
+  static AssistantToolArguments argumentsFor(
     AssistantToolDefinition tool,
     String query,
   ) {
     final values = <String, String>{};
-    if (tool.id == 'yunqi' || tool.id == 'almanac') {
+    if (tool.id == 'bazi') {
+      final isoDate =
+          RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(query);
+      final chineseDate =
+          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
+      final dateMatch = isoDate ?? chineseDate;
+      if (dateMatch != null) {
+        values['birth_date'] =
+            '\${dateMatch.group(1)!.padLeft(4, '0')}-'
+            '\${dateMatch.group(2)!.padLeft(2, '0')}-'
+            '\${dateMatch.group(3)!.padLeft(2, '0')}';
+      }
+      final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(query);
+      if (timeMatch != null) {
+        values['birth_time'] =
+            '\${timeMatch.group(1)!.padLeft(2, '0')}:\${timeMatch.group(2)}';
+      }
+      if (query.contains('女性') || query.contains('女')) {
+        values['gender'] = 'female';
+      } else if (query.contains('男性') || query.contains('男')) {
+        values['gender'] = 'male';
+      }
+      final birthplace = RegExp(
+        r'出生(?:地点|地)?\s*[：:]\s*([^,，;；\n]+)',
+      ).firstMatch(query);
+      final place = birthplace?.group(1)?.trim();
+      if (place != null && place.isNotEmpty) values['birthplace'] = place;
+    } else if (tool.id == 'yunqi' || tool.id == 'almanac') {
       final match = RegExp(r'\b\d{4}-\d{1,2}-\d{1,2}\b').firstMatch(query);
       if (match != null) {
         // Preserve the raw token; the execution boundary validates the actual
@@ -152,7 +179,7 @@ class AssistantConversationOrchestrator {
         return AssistantDispatchDecision(
           mode: selectedMode,
           tool: explicitMatches.single,
-          toolArguments: _argumentsFor(explicitMatches.single, text),
+          toolArguments: argumentsFor(explicitMatches.single, text),
         );
       }
       if (explicitMatches.length > 1) {
@@ -172,7 +199,7 @@ class AssistantConversationOrchestrator {
           return AssistantDispatchDecision(
             mode: selectedMode,
             tool: matches.single,
-            toolArguments: _argumentsFor(matches.single, text),
+            toolArguments: argumentsFor(matches.single, text),
           );
         }
         if (matches.length > 1) {
@@ -244,7 +271,7 @@ class AssistantConversationOrchestrator {
         return AssistantDispatchDecision(
           mode: mode,
           tool: matches.single,
-          toolArguments: _argumentsFor(matches.single, text),
+          toolArguments: argumentsFor(matches.single, text),
         );
       }
       if (matches.length > 1) {
@@ -288,7 +315,7 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(
         mode: effectiveMode,
         tool: tool,
-        toolArguments: _argumentsFor(tool, text),
+        toolArguments: argumentsFor(tool, text),
       );
     }
 
