@@ -3294,6 +3294,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         allowWhileSending: true,
       );
     }
+
+    // A validated result remains useful in the current timeline even when its
+    // SQLite write is unavailable. Do not silently equate that with history
+    // persistence, and never re-run a tool whose write outcome is unknown.
+    if (mounted && persistenceStatus != AiTraceStatus.succeeded) {
+      final existingError = _error?.trim();
+      final persistenceWarning = switch (persistenceErrorCode) {
+        'CONVERSATION_UNAVAILABLE' =>
+          '工具结果已在当前对话显示，但当前会话不可用，未能写入历史记录。离开前请先复制结果。',
+        'TOOL_RESULT_PERSISTENCE_UNKNOWN' =>
+          '工具结果已在当前对话显示，但历史保存状态未知。为避免可能重复执行工具，本次未自动重跑；请先复制结果并核对历史记录。',
+        _ =>
+          '工具结果已在当前对话显示，但历史保存未确认（${persistenceErrorCode ?? 'UNKNOWN'}）。请先复制结果并核对历史记录。',
+      };
+      setState(() {
+        _error = [
+          if (existingError != null && existingError.isNotEmpty) existingError,
+          persistenceWarning,
+        ].join('\n\n');
+      });
+    }
   }
 
   Widget _buildModeSelector(BuildContext context) {

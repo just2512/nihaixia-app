@@ -33,6 +33,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
   int createConversationCalls = 0;
   int taskStateSaveCalls = 0;
   bool failNextMessageBatch = false;
+  bool failNextSingleMessageSave = false;
   bool failNextTaskStateSave = false;
   final Map<int, Map<String, Object?>> _conversations = {};
   final Map<int, List<Map<String, Object?>>> _messages = {};
@@ -65,6 +66,10 @@ class _MemoryConversationStore implements AssistantConversationStore {
     required String content,
     String? metadata,
   }) async {
+    if (failNextSingleMessageSave) {
+      failNextSingleMessageSave = false;
+      throw StateError('INJECTED_SINGLE_MESSAGE_SAVE_FAILURE');
+    }
     final id = _nextMessageId++;
     _messages.putIfAbsent(conversationId, () => []).add({
       'id': id,
@@ -3559,6 +3564,102 @@ void main() {
       AiTraceStatus.succeeded,
     );
     expect(events.every((event) => event.traceId == traceId), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Page Tool 结果持久化状态未知时显示告警且不自动重跑工具',
+      (tester) async {
+    const traceId = 'fedcba9876543210fedcba9876543210';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 13, 18),
+    );
+    final store = _MemoryConversationStore();
+    final service = _PageToolTraceService();
+    var pageResultReturned = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          traceRecorder: recorder,
+          testToolRouteBuilder: (tool, arguments) => Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const ValueKey('complete-page-tool-persistence-failure'),
+                  onPressed: () {
+                    pageResultReturned += 1;
+                    Navigator.of(context).pop(
+                      AssistantToolResult(
+                        toolId: tool.id,
+                        title: tool.title,
+                        values: const {'结果': '页面结果已回传'},
+                        arguments: arguments.values,
+                        sourceIds: const ['local-engine:page-tool-test'],
+                      ),
+                    );
+                  },
+                  child: const Text('完成页面工具'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开五运六气推算'));
+    await tester.pumpAndSettle();
+    expect(find.text('完成页面工具'), findsOneWidget);
+
+    // Fail only the tool-result row; the initial request has already been saved.
+    store.failNextSingleMessageSave = true;
+    await tester.tap(
+      find.byKey(const ValueKey('complete-page-tool-persistence-failure')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('页面结果已回传'), findsOneWidget);
+    expect(
+      find.textContaining('历史保存状态未知'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('未自动重跑'), findsOneWidget);
+    expect(pageResultReturned, 1);
+
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final persisted = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    expect(
+      persisted.any((message) =>
+          (message['content'] as String).contains('页面结果已回传')),
+      isFalse,
+      reason: '故障注入必须真实命中工具结果写入失败，不能假装历史已保存',
+    );
+
+    final persistenceFailure = events.singleWhere(
+      (event) =>
+          event.stage == AiTraceStage.persistence &&
+          event.errorCode == 'TOOL_RESULT_PERSISTENCE_UNKNOWN',
+    );
+    expect(persistenceFailure.status, AiTraceStatus.unknown);
+    final persistedStateFailure = events.singleWhere(
+      (event) =>
+          event.stage == AiTraceStage.persistedState &&
+          event.errorCode == 'TOOL_RESULT_PERSISTENCE_UNKNOWN',
+    );
+    expect(persistedStateFailure.status, AiTraceStatus.unknown);
     expect(tester.takeException(), isNull);
   });
 
