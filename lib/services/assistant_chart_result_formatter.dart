@@ -65,7 +65,7 @@ String formatBaZiChartForAssistant({
       '大运明细：MISSING'
     else
       ...fortune.decades.map((item) =>
-          '第${item.index}步：${item.ganZhi}，${item.startAge}–${item.endAge}岁'),
+          '第${item.index}步：${item.ganZhi}，${item.startAge}–${item.endAge}岁；所辖流年：${item.years.map((year) => '${year.year} ${year.ganZhi}').join('、')}'),
     '',
     '解读要求：请基于以上 App 已计算字段做归纳，解释强弱、格局、五行和大运之间的关系；区分排盘事实与 AI 归纳，不得自行改动四柱或补造缺失字段。',
     '边界：传统命理文化学习参考，不是科学预测，不用于医疗、法律或投资决策。',
@@ -81,6 +81,9 @@ String formatZiweiChartForAssistant({
   required bool distinguishZiShi,
   required String locationDescription,
   required ZiweiChart chart,
+  FlowYearMark? flowYear,
+  FlowMonthMark? flowMonth,
+  FlowDayMark? flowDay,
 }) {
   final life = chart.palaces.firstWhere((palace) => palace.isLife);
   final body = chart.palaces.firstWhere((palace) => palace.isBody);
@@ -93,6 +96,27 @@ String formatZiweiChartForAssistant({
     return '${palace.roleLabel}（${palace.branchLabel}）${markers.isEmpty ? '' : '〔${markers.join('、')}〕'}：${stars.isEmpty ? '无星曜条目' : stars.join('、')}';
   }).toList(growable: false);
   final decadeInterpretations = summarizeDecades(chart);
+  String palaceRole(int index) =>
+      chart.palaces.firstWhere((palace) => palace.index == index).roleLabel;
+  final flowYearLines = flowYear == null
+      ? const <String>[]
+      : <String>[
+          '流年：${flowYear.year}年 ${flowYear.ganzhi}',
+          '流年命宫：${palaceRole(flowYear.mingIndex)}；太岁宫：${palaceRole(flowYear.taiSuiIndex)}',
+          '流曜落宫：${flowYear.flowStars.entries.map((entry) => '${palaceRole(entry.key)}：${entry.value.join('、')}').join('；')}',
+        ];
+  final flowMonthLines = flowMonth == null
+      ? const <String>[]
+      : <String>[
+          '流月：${flowMonth.date.year}-${flowMonth.date.month.toString().padLeft(2, '0')}-${flowMonth.date.day.toString().padLeft(2, '0')}；农历${flowMonth.isLeap ? '闰' : ''}${flowMonth.month}月 ${flowMonth.ganzhi}',
+          '流月命宫：${flowMonth.roleLabel}；宫位地支索引：${flowMonth.mingIndex}',
+        ];
+  final flowDayLines = flowDay == null
+      ? const <String>[]
+      : <String>[
+          '流日：${flowDay.date.year}-${flowDay.date.month.toString().padLeft(2, '0')}-${flowDay.date.day.toString().padLeft(2, '0')} ${flowDay.ganzhi}',
+          '流日命宫：${flowDay.roleLabel}；宫位地支索引：${flowDay.mingIndex}',
+        ];
   final sihua = chart.sihua
       .map((item) => '化${item.typeLabel}：${item.starLabelName}')
       .join('；');
@@ -116,6 +140,14 @@ String formatZiweiChartForAssistant({
     '整体运势：${summarizeOverall(chart)}',
     '大限区间：${chart.decades.map((item) => '第${item.index}限 ${item.rangeLabel} 行${item.roleLabel}（${item.ganzhiLabel}）').join('；')}',
     '大限解读：${decadeInterpretations.isEmpty ? 'MISSING' : decadeInterpretations.join('；')}',
+    if (flowYear != null || flowMonth != null || flowDay != null) ...[
+      '',
+      '【本次已选择的流年/流月/流日】',
+      ...flowYearLines,
+      ...flowMonthLines,
+      ...flowDayLines,
+      '以上仅记录当前页面已选择并由 App 计算的流层字段；没有选择的流层不补算。',
+    ],
     '',
     '解读要求：请先归纳命宫、身宫、生年四化和十二宫之间的主要关系，再结合大限作分层解释；明确哪些是 App 排盘字段、哪些是 App 规则模板、哪些是 AI 归纳。缺失字段保持 MISSING，不自行重排或补造。',
     '边界：传统术数与民俗文化学习参考，不是科学预测，不用于医疗、法律或投资决策；不要把疾厄宫或星曜解释成医学诊断。',
