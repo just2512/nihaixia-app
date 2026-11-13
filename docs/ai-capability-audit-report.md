@@ -826,3 +826,40 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 4. 两条没有可追溯经典来源的规则仍 MISSING；不补造出处。普通学习讲稿不重复审核。
 
 - 不新增 Agent/DAG、云 API、向量数据库或第二套 Orchestrator；不批量迁移 Page Tool；不修改确定性业务规则。
+
+---
+
+## 29. 2026-11-13 PR #141：梅花易数数字起卦的对话内 Headless 执行
+
+### 29.1 交付边界
+
+- PR #141：https://github.com/just2512/nihaixia-app/pull/141；集成前 master `cdc6d7bb60c7d7b60c4e3cb96f340ae0d019be13`；最终 PR head `7173e994958b40a6bffcd3d52f0442a09ffc8e70`；squash merge / 当前 master `996e019412f1baf8e4896b86cf607a986214525e`。
+- 仅新增梅花数字起卦 Headless executor 和对话参数收集/结果回传；调用既有 `computeMeihuaByNumber`，不改卦象算法、爻变逻辑或本地卦爻数据。
+- 时间起卦和随机起卦保留原 Page Tool 路径；数字起卦的两个必填数缺失时在对话中追问，跨轮保留已提供参数；不从生日、日期或无关文本推断起卦数。
+- 只有执行成功、请求参数匹配、结果契约校验通过且 source ID 非空，才把结构化业务结果交给现有解释链。未执行/UNKNOWN/失败/参数不匹配不作为事实解释。
+
+### 29.2 验收证据
+
+- Branch validation run `43440528168` SUCCESS（Static analysis + changed tests/test-pairing）。
+- PR full run `43440833538` SUCCESS；Flutter regression job `131937690657` SUCCESS；Android arm64 CI verification job `131940462857` SUCCESS。
+- Android CI 已验证 arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests 和 JUnit XML；成功上传 `android-arm64-ci-debug-abi-evidence` 与 `android-unit-test-reports` artifacts。
+- merge commit：`996e019412f1baf8e4896b86cf607a986214525e`。
+- merge 后 master workflows：Flutter tests `43442279739`、Flutter Quality Gate `43442277653`。本次报告更新时两者仍 IN_PROGRESS，不能把 PR 全量 CI 成功替代 post-merge master 验收。
+
+### 29.3 能力状态更新
+
+- 注册工具数由 24 增至 25；Headless executor 由 3 增至 4：`yunqi / almanac / bazi / meihua`。
+- 这只表示梅花**数字起卦**已可在统一助手对话内 Headless 执行；不表示时间/随机起卦也变成 Headless，不表示其余 Page Tool 已完成后台执行。
+- 简单明确的数字槽位由确定性解析完成，不额外调用 E4B；模型只负责已有结果的解释，不生成卦象或覆盖 App 的计算结果。
+- 本次未在 OPPO Find N2 真机安装/运行模型；E4B 语义、速度、GPU/CPU fallback、多媒体多轮和 TRACE 继续 DEVICE UNKNOWN。
+- 自由文本问诊仍 BLOCKED BY RED-FLAG GATE；没有医学审核 detector 与全入口调用前拦截证据前，不启用症状自由文本抽取。
+- AI 数据清除后的完全退出/重启不可恢复验证仍需真机证据；两条无可追溯经典来源的规则继续 MISSING。
+
+### 29.4 下一步
+
+1. 完成 merge SHA `996e019412f1baf8e4896b86cf607a986214525e` 的 post-merge master Flutter tests 与 Quality Gate 终态核验。
+2. 取得医学审核后的红旗 detector、阈值/例外/处置文案，并覆盖 Flutter/Native 所有可能触发模型调用的入口；完成前不接入自由文本问诊抽取。
+3. 继续 Find N2 真机 E4B、GPU/CPU、多媒体多轮及中断恢复 TRACE 验收；CI APK 不替代设备验证。
+4. 完成“清除全部 AI 数据”后的重启核验，确认会话、问诊快照、附件原件、缩略图和孤儿文件的删除范围。
+
+- 冻结：不修改诊断、排盘、剂量或民俗算法；不重复审核已审核知识库；不批量迁移 Page Tool；不新增 Agent/DAG、云 API、向量数据库或第二套 Orchestrator。

@@ -1522,3 +1522,55 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 4. 经典来源：两条无可追溯来源的规则继续 MISSING；不补造条号、出处或方剂，普通学习讲稿不重复纸本校勘。
 
 - 冻结：不修改 DiagnosticEngine、问诊十问、排盘/剂量/民俗计算；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不批量迁移 Page Tool；不重复审核已经审核的知识库。
+
+## 33. 2026-11-13 PR #141：梅花易数数字起卦对话内 Headless 执行
+
+### 33.1 基线、范围与集成
+
+- 集成前 master：`cdc6d7bb60c7d7b60c4e3cb96f340ae0d019be13`。
+- 独立分支：`work/p4-meihua-number-headless-2026-11-13`；最终 PR head：`7173e994958b40a6bffcd3d52f0442a09ffc8e70`。
+- PR #141 已 squash 合并；merge commit / 当前 master：`996e019412f1baf8e4896b86cf607a986214525e`。
+- 仅涉及 8 个文件：工具注册、对话编排、统一助手入口、新增 `MeihuaToolExecutor`，以及对应 executor/router/orchestrator/widget tests。未改梅花算法实现、卦爻本地数据或起卦规则。
+- 本切片只将**数字起卦**从页面操作改为统一助手对话内 Headless 执行；时间起卦与随机起卦继续使用原 Page Tool 页面，不计为 Headless。
+
+### 33.2 交互与确定性执行边界
+
+- 助手只从用户明确提供的数字中提取第一数、第二数；两个数字都是必要参数。缺项时在当前对话追问，可跨轮补齐并从历史恢复未完成参数；不从生日、日期或其他无关文本推断起卦数字。
+- 日期是可选上下文。两个数字明确且没有另给日期时，执行器使用设备本地当天日期，并在结构化结果中回显；显式公历/相对日期按确定性解析；不支持的农历日期进入澄清，不暗中猜测或换算。
+- `MeihuaToolExecutor` 只做参数边界校验、日期/农历月上下文准备、调用既有 `computeMeihuaByNumber`、结构化结果封装和来源标识。卦象、动爻、互卦及变卦仍由 App 现有确定性函数产生。
+- 只有 Headless 执行成功、请求参数匹配、结果契约通过且来源非空，才进入现有解释链。模型未就绪、参数不完整、结果 UNKNOWN/失败或契约失败时，不生成事实性解释。
+- 时间/随机方法明确走原页面路由；由页面采集它们自己的输入，不被数字 Headless 的 first/second 必填校验拦截，并以 `PAGE_OWNS_METHOD_INPUT` 记录相应 TRACE 状态。
+- 简单数字输入采用确定性槽位解析，不为体现 AI 能力而额外调用 E4B；复杂歧义仍按现有受约束澄清路径处理。
+
+### 33.3 针对性验收与 PR CI
+
+- 最终分支 validation run `43440528168`：SUCCESS；静态分析与 changed tests / test-pairing 检查均通过。
+- PR #141 全量 workflow run `43440833538`：SUCCESS；Flutter regression job `131937690657` 与 Android arm64 CI verification job `131940462857` 均 SUCCESS。
+- Flutter job 完成全量 Dart/Flutter regression、local AI contract tests、助手历史恢复、问诊快照、工具参数/重试、知识引用、检索 golden snapshot 和 legacy ChatScreen audit。
+- Android job 完成 arm64 Debug CI APK 构建、merged backup Manifest 验证、ABI/SHA-256 校验、Native unit tests、JUnit XML 验证及报告上传。
+- 可复核的 CI artifacts：`android-arm64-ci-debug-abi-evidence`（artifact `14045987493`）、`android-unit-test-reports`（artifact `14044624749`）。这些是 CI 构建证据，不是 Find N2 真机运行证据。
+- PR #141 没有 review thread 或未解决 review comment；最终 head 与合并时 expected head 一致。
+
+### 33.4 集成后主线 CI
+
+- 合并后 master workflow 对应 merge SHA `996e019412f1baf8e4896b86cf607a986214525e`：
+  - Flutter tests run `43442279739`；
+  - Flutter Quality Gate run `43442277653`。
+- 本台账更新时，两条 post-merge workflow 均仍为 `IN_PROGRESS`：Flutter full regression 正在 `Run full regression suite`；Quality Gate 已通过静态分析及 history-resume 专项回归，完整 Dart test suite 仍在运行。**不得把 PR CI 的 SUCCESS 折算成这两条 master workflow 的 PASS。**
+- 后续必须继续复核这两个 run 的终态，并只按同一 merge SHA 的实际结果更新主线状态。
+
+### 33.5 Capability 状态与剩余事项
+
+| 项目 | PR #141 集成后状态 | 边界 / 剩余验收 |
+|---|---|---|
+| 注册工具 | 25 项 | 仅增加本项数字起卦能力，不以覆盖数量为目标 |
+| Headless executor | 4 项：`yunqi / almanac / bazi / meihua` | 其他 Page Tool 仍逐项审计，不批量迁移 |
+| 梅花数字起卦 | CODE + TEST + targeted validation + PR Flutter/Android CI PASS | Find N2 真实 E4B 语义与运行性能仍 DEVICE UNKNOWN |
+| 梅花时间/随机起卦 | 保留 Page Tool | 由原页面采集时间/随机输入，不归类为 Headless |
+| 自由文本问诊 | PARTIAL / BLOCKED BY RED-FLAG GATE | 医学审核 detector、阈值/例外/处置文案和 Flutter/Native 全入口前置拦截未齐 |
+| Find N2 真机 | DEVICE UNKNOWN | GPU/CPU、多媒体、多轮、Activity/进程恢复与真实 E4B TRACE 仍需设备证据 |
+| AI 数据清除 | PARTIAL / DEVICE UNKNOWN | 清除后重启，验证会话、问诊快照、附件、缩略图和孤儿文件不可恢复 |
+
+- 继续遵守：AI 理解/澄清/解释，App 确定性执行；没有校验的结果不得交给 AI 作为事实；AI 解释不得变成新的卦象或业务计算。
+- 不修改 DiagnosticEngine、问诊十问、排盘或剂量规则；不重复审核已有医学知识库；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+- 两条无可追溯经典来源的规则继续保持 MISSING，不补造条号、出处或方剂；83 条普通学习讲稿不重复做纸本校勘。
