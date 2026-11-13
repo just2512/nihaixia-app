@@ -166,7 +166,7 @@ void main() {
       '葛根加半夏汤',
       includeMedicalCases: false,
     );
-    expect(result.citationFooter, contains('\n  来源类型：'));
+    expect(result.citationFooter, contains('\n  资料类型：'));
     expect(result.citationFooter, isNot(contains(r'\n  来源类型：')));
   });
 
