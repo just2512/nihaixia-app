@@ -34,15 +34,38 @@ class AssistantKnowledgeSourceReference {
   final String sourceVerificationStatus;
   final bool bibliographicLocatorVerified;
 
-  String toCitationText() => '- $sourceLabel｜$title\n'
-      '  来源类型：$sourceKind\n'
-      '  原文来源核验状态：$sourceVerificationStatus\n'
-      '  本地回链：$localBacklink\n'
-      '  本地回链状态：${localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE'}；'
-      '书目定位状态：$locatorStatus；纸本版本/卷页：'
-      '${bibliographicLocatorVerified ? 'VERIFIED' : 'MISSING'}'
-      '${bibliographicLocatorVerified ? '' : '（尚未完成纸本/影印本核验）'}\n'
-      '  来源标识：$sourceId';
+  String toCitationText() {
+    final backlinkStatus = localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE';
+    if (sourceKind == 'lecture') {
+      return '- $sourceLabel｜$title\n'
+          '  资料类型：课程讲稿/整理讲义（学习资料）\n'
+          '  本地回链：$localBacklink（$backlinkStatus）\n'
+          '  来源标识：$sourceId\n'
+          '  使用边界：讲稿用于学习内容检索；其中引用的古籍文字不自动等同于已核验的指定版本原文。';
+    }
+    if (sourceKind == 'classic_text') {
+      return '- $sourceLabel｜$title\n'
+          '  来源类型：App 古籍文本资产\n'
+          '  原文来源核验状态：$sourceVerificationStatus\n'
+          '  本地回链：$localBacklink（$backlinkStatus）\n'
+          '  版本/卷页定位：$locatorStatus；未核验时不声明具体版本或页码。\n'
+          '  来源标识：$sourceId';
+    }
+    if (sourceKind == 'medical_case') {
+      return '- $sourceLabel｜$title\n'
+          '  来源类型：$sourceKind\n'
+          '  原文来源核验状态：$sourceVerificationStatus\n'
+          '  本地回链：$localBacklink（$backlinkStatus）\n'
+          '  书目定位状态：$locatorStatus；纸本版本/卷页：'
+          '${bibliographicLocatorVerified ? 'VERIFIED' : 'MISSING'}'
+          '${bibliographicLocatorVerified ? '' : '（尚未完成纸本/影印本核验）'}\n'
+          '  来源标识：$sourceId';
+    }
+    return '- $sourceLabel｜$title\n'
+        '  App 数据类型：$sourceKind\n'
+        '  本地回链：$localBacklink（$backlinkStatus）\n'
+        '  来源标识：$sourceId';
+  }
 }
 
 enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
@@ -432,22 +455,23 @@ class AssistantKnowledgeContextBuilder {
       final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
-        ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义' : '古籍原文文本资产'}')
+        ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义（学习资料）' : 'App 古籍文本资产'}')
         ..writeln('来源标识：${hit.sourceId}')
         ..writeln('本地回链：${hit.localBacklink}')
         ..writeln('本地回链标识可用：${hit.hasLocalBacklink ? 'YES' : 'NO'}')
-        ..writeln('纸本版本/卷页已核验：${hit.hasVerifiedBibliographicLocator ? 'YES' : 'NO'}')
-        ..writeln('来源定位状态：${hit.locatorStatus}')
         ..writeln('本地来源：$sourcePath')
         ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
         ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
-        ..writeln('版本/底本/卷页：MISSING（需对照纸本影印本核验）')
-        ..writeln('检索摘要：${hit.snippet}')
-        ..writeln(
-          isLecture
-              ? '使用限制：这是讲稿或整理讲义，不得当作仲景原文、版本校勘或独立医案证据。'
-              : '使用限制：这是本地古籍文本资产；在版本、卷页和异文核验完成前，不得声称已完成校勘。',
-        );
+        ..writeln('检索摘要：${hit.snippet}');
+      if (isLecture) {
+        buffer
+          ..writeln('来源说明：当前实际来源是 App 内的课程讲稿/整理讲义；原始录音、具体讲次和版本未在该资料条目中登记。')
+          ..writeln('使用限制：可用于学习和知识解释；讲稿中引用的古籍文字未逐条核对指定版本，不得冒充已校勘的仲景原文，也不得作为诊断规则的唯一来源。');
+      } else {
+        buffer
+          ..writeln('版本/底本/卷页：${hit.hasVerifiedBibliographicLocator ? 'VERIFIED' : 'MISSING'}')
+          ..writeln('使用限制：这是 App 内古籍文本资产；未核验版本、卷页和异文时，不声明特定版本或已完成校勘。');
+      }
     }
 
     final requestedGujiBooks = kGujiBooks.where((book) {
