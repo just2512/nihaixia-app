@@ -27,10 +27,14 @@ class MainActivity : FlutterActivity() {
     private var pendingModelImportResult: MethodChannel.Result? = null
     private val localAiChannel = "com.nihaisha.app/local_ai"
     private val aiTasks by lazy {
-        LocalAiActivityTaskLifecycle(LocalAiProcessExecutor.executor) {
-            releaseLocalModel()
-            Unit
-        }
+        LocalAiActivityTaskLifecycle(
+            executor = LocalAiProcessExecutor.executor,
+            release = {
+                releaseLocalModel()
+                Unit
+            },
+            processHealth = LocalAiProcessExecutor.health
+        )
     }
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -235,11 +239,28 @@ class MainActivity : FlutterActivity() {
                         null
                     )
                 }
+            },
+            onUnavailable = {
+                mainHandler.post {
+                    result.error(
+                        "LOCAL_AI_RUNTIME_RELEASE_FAILED",
+                        "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请完全退出 App 后重新打开。",
+                        null
+                    )
+                }
             }
         )
     }
 
     private fun beginModelImport(result: MethodChannel.Result) {
+        if (aiTasks.releaseFailure() != null) {
+            result.error(
+                "LOCAL_AI_RUNTIME_RELEASE_FAILED",
+                "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请完全退出 App 后重新打开。",
+                null
+            )
+            return
+        }
         if (aiTasks.isDestroyed()) {
             result.error(
                 "LOCAL_AI_ACTIVITY_DESTROYED",
@@ -930,6 +951,15 @@ class MainActivity : FlutterActivity() {
                         null
                     )
                 }
+            },
+            onUnavailable = {
+                mainHandler.post {
+                    pending.error(
+                        "LOCAL_AI_RUNTIME_RELEASE_FAILED",
+                        "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请完全退出 App 后重新打开。",
+                        null
+                    )
+                }
             }
         )
     }
@@ -944,7 +974,13 @@ class MainActivity : FlutterActivity() {
 
         // Do not shut down the process-wide executor. A recreated Activity
         // queues its work behind this release task and cannot race a live Engine.
-        aiTasks.destroy()
+        aiTasks.destroy { error ->
+            android.util.Log.e(
+                "LocalAiLifecycle",
+                "Native model release failed; new model operations are blocked for this process",
+                error
+            )
+        }
         super.onDestroy()
     }
 }
