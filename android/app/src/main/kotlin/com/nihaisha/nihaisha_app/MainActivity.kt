@@ -244,7 +244,7 @@ class MainActivity : FlutterActivity() {
                 mainHandler.post {
                     result.error(
                         "LOCAL_AI_RUNTIME_RELEASE_FAILED",
-                        "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请完全退出 App 后重新打开。",
+                        "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请在系统设置中强行停止 App 进程后重新打开。",
                         null
                     )
                 }
@@ -256,7 +256,7 @@ class MainActivity : FlutterActivity() {
         if (aiTasks.releaseFailure() != null) {
             result.error(
                 "LOCAL_AI_RUNTIME_RELEASE_FAILED",
-                "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请完全退出 App 后重新打开。",
+                "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请在系统设置中强行停止 App 进程后重新打开。",
                 null
             )
             return
@@ -956,7 +956,7 @@ class MainActivity : FlutterActivity() {
                 mainHandler.post {
                     pending.error(
                         "LOCAL_AI_RUNTIME_RELEASE_FAILED",
-                        "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请完全退出 App 后重新打开。",
+                        "上一 Activity 的本地模型资源释放失败。本进程已停止新的模型操作，请在系统设置中强行停止 App 进程后重新打开。",
                         null
                     )
                 }
