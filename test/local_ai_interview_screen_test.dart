@@ -2913,8 +2913,29 @@ void main() {
     await tapAction('AI解读辨证结果');
     expect(service.sentTexts.last, contains('总结并解释'));
     expect(service.sentTexts.last, contains('少阳证'));
+    expect(service.sentTexts.last, contains('不要生成个体处方、药物或剂量建议'));
     expect(service.sentContexts.last, contains('当前角色：问诊助手'));
     expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
+
+    final persistedMessages = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    final interpretationMetadata = AssistantMessageMetadata.decode(
+      persistedMessages.last['metadata'] as String,
+    );
+    expect(interpretationMetadata.toolId, 'structured_diagnosis');
+    expect(interpretationMetadata.toolStatus, 'SUCCEEDED');
+    expect(
+      interpretationMetadata.sourceIds,
+      contains('local-engine:diagnostic-engine'),
+    );
+    expect(
+      interpretationMetadata.sourceIds.any(
+        (sourceId) => sourceId.startsWith('neijing:'),
+      ),
+      isTrue,
+      reason: '保留本轮实际检索到的知识来源，不能只留下引擎来源',
+    );
     expect(tester.takeException(), isNull);
   });
 

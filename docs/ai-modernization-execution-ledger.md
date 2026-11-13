@@ -1391,47 +1391,75 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ## 30. 2026-11-13 PR #136：通过校验的工具结果在统一对话中自动解释
 
-### 30.1 主线基线与当前集成状态
+### 30.1 主线基线与集成终态
 
-- 基线：master `84a07efbb7713007e30b7a88bff3b4f786b236c6`（PR #135 合并后）。
-- PR #136：`https://github.com/just2512/nihaixia-app/pull/136`；分支 `work/p4-auto-tool-result-interpretation-2026-11-13`；当前 head `3e462e8c8c77f5e3e4c9bf7f6c214f5f0b0fe7af`。
-- push validation run `43417906260` SUCCESS（静态分析 + changed tests）。PR 全量 Flutter regression run `43418155569` 在记录时仍运行中；Android arm64 验收尚未取得本 PR 最终 head 的终态。不得用 push validation 代替 PR Flutter/Android 全量验收。
-- PR #136 仍未合并；必须在最终 head 的必需 job 全部成功后再合并，并在 merge SHA 上重新核对 master workflows。
+- PR #136 基线 master：`84a07efbb7713007e30b7a88bff3b4f786b236c6`；最终 PR head：`9c7af72a550928f2f58d98c522e7dc83d2c82dd6`。
+- PR #136 已 squash 合并，merge commit / 当前主线集成点：`9fa7f400170569ba6c6b57728c5d26f486b98885`。
+- PR head push Branch validation run `43418427885`：SUCCESS。
+- PR 全量 workflow run `43418437453`：SUCCESS；Flutter regression job `131862103871` 与 Android arm64 CI verification job `131864278445` 均 SUCCESS。Android job 完成 CI APK 构建、merged Manifest、ABI/SHA-256、Native unit tests、test XML 验证及报告上传。
+- 合并后 master Flutter tests run `43419630906`：SUCCESS；master Flutter Quality Gate run `43419630904`：SUCCESS。两者都对应 merge SHA `9fa7f400170569ba6c6b57728c5d26f486b98885`。Quality Gate 包含完整 Dart tests、Native unit tests 和 Find N2 arm64 debug APK 构建。
+- 上述 CI 证明构建、自动化回归和原生测试通过；不代表已在 OPPO Find N2 真机安装模型、完成真实 E4B 推理或验证回答质量。设备级语义验收继续标记 DEVICE UNKNOWN。
 
 ### 30.2 Headless 工具结果自动解释
 
-- `_executeHeadlessTool` 仍先执行原有工具参数校验、确定性业务函数、结果契约和参数匹配校验；只有状态为 `SUCCEEDED` 且 source IDs 非空时，结果才具备解释入口。
+- `_executeHeadlessTool` 先执行原有参数校验、确定性业务函数、结果契约和参数匹配校验；只有状态为 `SUCCEEDED` 且 source IDs 非空时，结果才可进入自动解释。
 - 本地模型状态明确 ready 时，助手自动调用现有 `_requestAssistantResultInterpretation`；模型未就绪时保留人工“AI总结解读”入口。
 - 自动解释前先将当前对话中已经展示的真实执行结果恢复到本地模型上下文；内部解释提示不插入为用户消息，解释内容作为助手消息单独持久化。原业务结果的工具 ID、实际参数、执行状态和来源标识继续保留；解释轮有独立 TRACE，来源合并原业务来源与本次实际知识检索来源。
-- Bazi 与 YunQi Headless 的针对性 widget tests 已调整为验证“执行结果 + 自动解释”两条消息及其独立持久化；未改变排盘或五运六气计算函数。
+- Bazi 与 YunQi Headless 的针对性 widget tests 覆盖“执行结果 + 自动解释”两条消息及独立持久化；不改变排盘或五运六气计算函数。
 
 ### 30.3 Page Tool 结果回传与来源边界
 
-- Typed `AssistantToolResult` 保留页面提供的原始 source IDs；成功状态、工具 ID 契约、参数回传匹配均通过后，且来源不为空/模型 ready 时自动解释。
-- 旧页面回传非空 String 时，统一包装为结果字段，并使用 `local-page-tool:<toolId>` 标记“本 App 注册页面的回传路径”。这只是页面来源标识，不冒充 `local-engine`、`local-data` 或知识库条目。紫微旧页面回传测试验证了解释调用及该来源口径。
-- 结果带有显式请求参数，但页面没有回传实际执行参数时，现有 `withArguments` 将状态置为 `UNKNOWN`；UNKNOWN 不进入自动解释。无返回、取消、失败、参数不匹配、source IDs 缺失也不进入自动解释。
-- 这只完成“页面结果返回后在助手对话中自动解释”，不等于 Page Tool 已改成后台 Headless 执行；用户仍需要进入页面完成相应操作。
+- Typed `AssistantToolResult` 保留页面提供的原始 source IDs；成功状态、工具 ID 契约、参数回传匹配均通过后，且来源非空/模型 ready 时自动解释。
+- 旧页面回传非空 String 时，统一包装为结果字段，并使用 `local-page-tool:<toolId>` 标记“本 App 注册页面的回传路径”。这是页面来源标识，不冒充 `local-engine`、`local-data` 或知识库条目。紫微旧页面回传测试验证该来源口径。
+- 结果带显式请求参数但页面没有回传实际执行参数时，现有 `withArguments` 将状态置为 `UNKNOWN`；UNKNOWN 不进入自动解释。无返回、取消、失败、参数不匹配或 source IDs 缺失也不进入自动解释。
+- 这只完成“页面结果返回后在助手对话中自动解释”，不等于 Page Tool 已改成后台 Headless 执行；用户仍需进入页面完成相应操作。
 
 ### 30.4 自动化验收与失败修正
 
-- Branch validation `43417906260` SUCCESS。此前失败的根因与修正：
-  - Bazi 测试仍断言旧手动按钮/旧 prompt；已改为断言内部新 prompt 触发且不写成用户发言。
-  - Headless 自动解释比原流程多一组独立 persistence/finalRender TRACE；测试改为分别核对业务结果与解释消息，不再假定每个阶段只有一个事件。
-  - Typed Page Tool mock 自己提供 `local-engine:page-tool-test`；测试保留该原始来源，不误判成 legacy String 页面回传的 `local-page-tool`。
-  - 紫微页面旧字符串回传没有底层 engine source ID；代码新增页面路由级 provenance，测试核对该 ID 不伪装成 engine 来源。
-- PR 全量 Flutter regression/Android CI 结果以后续最终 head 记录为准；设备真实模型输出质量不能由 CI 代替。
+- Branch validation `43417906260`（早期代码 head）SUCCESS；最终 PR head 的 `43418427885` SUCCESS。
+- 最终 PR run `43418437453`、合并后 master runs `43419630906` 与 `43419630904` 全部 SUCCESS。
+- 失败修正记录：
+  - Bazi 测试仍断言旧手动按钮/旧 prompt；改为断言内部新 prompt 触发且不写成用户发言。
+  - Headless 自动解释增加独立 persistence/finalRender TRACE；测试分别核对业务结果与解释消息，不再假定每个阶段只有一个事件。
+  - Typed Page Tool mock 自己提供 `local-engine:page-tool-test`；测试保留原始来源，不误判为 legacy String 页面的 `local-page-tool`。
+  - 紫微页面旧字符串回传没有底层 engine source ID；代码新增页面路由级 provenance，明确不伪装成 engine 来源。
+- PR 最终全量 CI 和合并后 master workflows 均通过；Find N2 真机模型语义不由 CI 代替。
 
 ### 30.5 能力状态与冻结
 
 | 领域 | 当前状态 | 仍未完成 |
 |---|---|---|
-| Headless 结果自动解释 | CODE + TEST；PR #136 全量 CI待终态 | Find N2 实际 E4B 输出语义/速度/来源一致性仍 DEVICE UNKNOWN |
-| Page Tool 回传后自动解释 | CODE + TEST；保留实际 source ID 或页面路由 provenance | Page Tool 仍需用户完成页面操作；未批量转换为 Headless |
+| Headless 结果自动解释 | CODE + TEST + PR CI + master CI PASS | Find N2 实际 E4B 输出语义、速度、来源一致性仍 DEVICE UNKNOWN |
+| Page Tool 回传后自动解释 | CODE + TEST + PR CI + master CI PASS | 页面操作仍由用户完成；未批量转换为 Headless |
 | 学习助手知识综合 | 继续复用现有本地检索和解释链 | 黄金用例设备级语义验收未完成 |
-| 问诊结构化结果解释 | 已有用户主动解释入口；本 PR 不改变辨证逻辑 | 可在现有规则结果安全链内继续核查是否需要同样的自动解释；不得改 DiagnosticEngine |
+| 问诊结构化结果解释 | 已有用户主动解释入口；来源标识补齐见第 31 节 | 自由文本问诊自动抽取仍受红旗门禁阻断 |
 | 自由文本问诊 | PARTIAL / BLOCKED BY RED-FLAG GATE | 医学审核的红旗 detector、阈值/例外、处置文案及 Flutter/Native 全入口前置拦截证据未齐 |
-| 工具覆盖 | 24 项注册工具，3 项 Headless：yunqi/almanac/bazi | 其他工具仅在存在纯确定性业务函数、明确用户场景和独立验收时逐项迁移 |
+| 工具覆盖 | 24 项注册工具，3 项 Headless：yunqi/almanac/bazi | 其余工具仅在有纯确定性函数、明确用户场景及独立验收时逐项迁移 |
 
 - 不重复审核已审核知识库，不修改排盘、剂量计算、DiagnosticEngine 或问诊十问。
 - 不把 AI 解释写成诊断结论，不让 AI 生成业务事实或修正 App 结果。
 - 不新增 Agent/DAG、第二套 Orchestrator、云 API、向量数据库；不批量迁移 Page Tool。
+
+## 31. 2026-11-13 PR #137：结构化问诊结果解释的 DiagnosticEngine 来源追溯
+
+### 31.1 主线基线与当前分支
+
+- 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`（PR #136 合并后）。
+- 分支：`work/p4-diagnostic-result-provenance-2026-11-13`；代码与测试提交 head：`a459f9f2280525ade6178b0e6e17d3fa703ced28`（其后仅追加本台账/审计报告记录）。
+- Branch validation run `43420458490`：SUCCESS（静态分析 + changed tests）。PR 全量 Flutter regression 和 Android arm64 CI 尚待 PR 建立后的终态。
+- PR #137 尚未创建/合并；不得将 branch validation 视作完整集成验收。
+
+### 31.2 本次窄范围改动
+
+- 结构化问诊完成并生成非空 `DiagnosisResult` 时，现有结果解释入口将来源标记为 `local-engine:diagnostic-engine`，明确它是 App 确定性规则引擎来源，不冒充知识库条目。
+- 用户点击现有“AI解读辨证结果”时，调用既有解释 helper，并把引擎 source ID 传入结果解释 TRACE 和助手消息 metadata；本轮知识检索返回的 `neijing:*` 来源继续与引擎来源合并，不覆盖或丢弃任何一侧。
+- 解释提示明确只解释 App 已返回结果，不重新辨证、不补造缺项，不生成个体处方、药物或剂量建议；原结果中的处方字段仅可按原文引用，不得增删改。
+- 不改变 `TcmInterviewAdapter`、`DiagnosticEngine`、问诊十问、辨证规则、知识库内容或结果计算；不新增模型调用，也不自动启动问诊解释。
+
+### 31.3 针对性验收和边界
+
+- changed widget test 验证：结果解释消息 metadata 同时保留 `local-engine:diagnostic-engine` 和本轮实际检索到的 `neijing:*` 来源；解释仍处于问诊助手上下文。
+- 上一版测试误将来源断言为“只能有一个引擎来源”，但实际知识检索按设计返回了多条 `neijing:*` 引用；已修正为分别断言引擎来源与知识来源均存在。这不是生产代码失败。
+- 该改动只是来源追溯，不等于自由文本问诊的理解、澄清或后台规则执行已经完成；也不将现有手动解释按钮改为自动模型调用。
+- 自由文本健康叙述仍保持 PARTIAL / BLOCKED BY RED-FLAG GATE；没有经过医学审核的 detector 规则、阈值、例外、处置文案及全入口模型调用前拦截证据，不扩大健康数据进入 E4B 的范围。
+

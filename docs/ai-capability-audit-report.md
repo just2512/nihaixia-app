@@ -752,9 +752,10 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 ### 26.1 核验结论
 
-- PR #136：`https://github.com/just2512/nihaixia-app/pull/136`，基于 master `84a07efbb7713007e30b7a88bff3b4f786b236c6`，当前 head `3e462e8c8c77f5f3e4c9bf7f6c214f5f0b0fe7af`。
-- push Branch validation `43417906260` SUCCESS；PR Flutter regression `43418155569` 尚待终态，Android arm64 job 尚待 PR 最终 head 结果。未合并。
-- 自动解释仅发生在 App 工具结果成功、结果/参数契约核对通过、source IDs 非空且本地模型 ready 的条件下。否则不把结果交给模型做事实解释；模型未就绪时仅对有来源的成功结果保留人工解释入口。
+- PR #136 基线 master `84a07efbb7713007e30b7a88bff3b4f786b236c6`；最终 PR head `9c7af72a550928f2f58d98c522e7dc83d2c82dd6`；已 squash merge 至 `9fa7f400170569ba6c6b57728c5d26f486b98885`。
+- push Branch validation `43418427885` SUCCESS；PR 全量 run `43418437453` SUCCESS（Flutter regression job `131862103871`、Android arm64 job `131864278445` 均 SUCCESS）。
+- 合并后 master Flutter tests `43419630906` SUCCESS；master Flutter Quality Gate `43419630904` SUCCESS；两者都对应 merge SHA `9fa7f400170569ba6c6b57728c5d26f486b98885`。
+- 自动解释只发生于 App 工具结果成功、结果/参数契约核对通过、source IDs 非空且本地模型 ready 的条件下；否则不把结果交给模型做事实解释。
 
 ### 26.2 代码路径核对
 
@@ -762,6 +763,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - Page Tool：Typed 结果保留真实 source IDs；旧页面回传 String 用 `local-page-tool:<toolId>` 标记页面回传来源，不冒充本地引擎来源。若用户请求参数没有被页面结果回传确认，状态为 UNKNOWN，不自动解释。
 - 结果失败、取消、NO_RESULT、UNKNOWN、缺少来源、参数不匹配均不会自动解释。现有工具计算和页面执行流程未被替换。
 - 针对性测试覆盖 Bazi、YunQi Headless、Ziwei legacy Page Tool 返回、隐藏内部 prompt、source provenance 和额外 TRACE/persistence 阶段。
+- PR 与 master CI 均 PASS；CI build 的 arm64 APK 不代表已在 Find N2 真机安装/运行模型，也不代表真实 E4B 语义质量已完成验收。
 
 ### 26.3 与审计发布门槛的关系
 
@@ -772,6 +774,22 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 ### 26.4 下一步
 
-1. 完成 PR #136 最终 head 的 Flutter regression 和 Android arm64 构建/Manifest/ABI/SHA-256/Native unit tests；合并后复核 merge SHA 的 master workflows。
-2. 在现有结构化规则问诊结果链上，核对是否可复用同一套“规则结果校验后自动解释”交互；不得越过红旗门禁启用自由文本问诊抽取。
-3. 真机验证 E4B 对八字/紫微/工具结果的归纳是否完整、是否保留来源和 MISSING，并记录 App SHA、设备、backend、TRACE 和真实输出。
+1. 在现有结构化规则问诊结果链补齐确定性引擎 source provenance；PR #137 正在推进（见第 27 节）。
+2. 自由文本问诊需先有医学审核的红旗 detector 和全入口前置拦截证据；没有这些材料时不启用症状自由文本抽取或自动模型调用。
+3. 在 Find N2 真机验证 E4B 对八字/紫微/工具结果的归纳是否完整、是否保留来源和 MISSING，并记录 App SHA、设备、backend、TRACE 和真实输出。
+
+## 27. 2026-11-13 PR #137：结构化问诊结果的引擎来源追溯
+
+### 27.1 变更范围
+
+- 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`；分支 `work/p4-diagnostic-result-provenance-2026-11-13`；代码与测试提交 head `a459f9f2280525ade6178b0e6e17d3fa703ced28`（其后仅追加本台账/审计报告记录）。
+- 对现有结构化 `DiagnosisResult` 的解释入口加上 `local-engine:diagnostic-engine` 来源标识；用户手动触发现有解释动作时，source ID 会随解释请求和持久化 metadata 保存。
+- 本轮实际知识检索返回的 `neijing:*` 来源仍被合并保存；不把引擎来源伪装成知识库条目。
+- prompt 进一步明确只解释 App 已返回结果，不重新辨证、不补造缺失项，也不生成个体处方、药物或剂量建议。
+
+### 27.2 验收状态
+
+- Branch validation run `43420458490` SUCCESS（静态分析 + changed tests）；最终 head `a459f9f2280525ade6178b0e6e17d3fa703ced28`。
+- PR 全量 Flutter regression、Android arm64 和合并后 master workflows 尚待 PR 建立/合并后验收。
+- 本次不自动触发健康结果解释，不修改问诊规则或知识库，也不绕过红旗门禁；当前自由文本问诊仍 BLOCKED BY RED-FLAG GATE。
+
