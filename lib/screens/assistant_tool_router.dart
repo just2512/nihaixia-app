@@ -1,8 +1,11 @@
+import 'dart:async' show FutureOr;
+
 import 'package:flutter/material.dart';
 
 import '../models/assistant_tool_result.dart';
 import '../services/yunqi_tool_executor.dart';
 import '../services/almanac_tool_executor.dart';
+import '../services/bazi_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -66,7 +69,7 @@ class AssistantToolParameter {
   final List<String> choices;
 }
 
-enum AssistantToolParameterType { text, date, integer, choice }
+enum AssistantToolParameterType { text, date, time, integer, choice }
 
 class AssistantToolArguments {
   const AssistantToolArguments({
@@ -111,6 +114,11 @@ class AssistantToolArguments {
             errors.add('参数「' + parameter.label + '」必须是有效日期 YYYY-MM-DD');
           }
           break;
+        case AssistantToolParameterType.time:
+          if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(raw)) {
+            errors.add('参数「' + parameter.label + '」必须使用 24 小时制 HH:mm');
+          }
+          break;
         case AssistantToolParameterType.integer:
           if (int.tryParse(raw) == null) {
             errors.add('参数「${parameter.label}」必须是整数');
@@ -138,7 +146,7 @@ class AssistantToolDefinition {
   final List<String> actionWords;
   final Widget Function() builder;
   final Widget Function(AssistantToolArguments arguments)? builderWithArguments;
-  final AssistantToolResult Function(Map<String, String> arguments)? headlessExecutor;
+  final FutureOr<AssistantToolResult> Function(Map<String, String> arguments)? headlessExecutor;
   final List<AssistantToolParameter> parameters;
 
   const AssistantToolDefinition({
@@ -202,11 +210,41 @@ class AssistantToolRouter {
   static const bazi = AssistantToolDefinition(
     id: 'bazi',
     title: '八字排盘',
-    description: '打开本地四柱八字排盘。',
+    description: '在当前对话收集出生资料并调用 App 本地确定性八字引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['八字', '四柱', '生辰八字'],
     actionWords: ['排盘', '起盘', '命盘', '帮我排'],
     builder: _buildBazi,
+    headlessExecutor: BaziToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '出生地当地钟表时间，24 小时制 HH:mm',
+      ),
+      AssistantToolParameter(
+        key: 'gender',
+        label: '性别',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['male', 'female'],
+      ),
+      AssistantToolParameter(
+        key: 'birthplace',
+        label: '出生地点',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '出生城市或区县，用于读取本地经纬度',
+      ),
+    ],
   );
 
   static const yijing = AssistantToolDefinition(

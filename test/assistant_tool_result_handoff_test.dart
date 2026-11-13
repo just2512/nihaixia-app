@@ -8,7 +8,6 @@ import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
-import 'package:nihaisha_app/screens/bazi_paipan_screen.dart';
 import 'package:nihaisha_app/screens/chenggu_bone_screen.dart';
 import 'package:nihaisha_app/screens/guansha_screen.dart';
 import 'package:nihaisha_app/screens/shousheng_debt_screen.dart';
@@ -18,6 +17,7 @@ import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/bazi_tool_executor.dart';
 
 
 const _readyStatus = LocalAiModelStatus(
@@ -491,9 +491,35 @@ void main() {
   });
 
 
-  testWidgets('八字排盘完整结果回到助手时间线并进入本地模型上下文', (tester) async {
+  testWidgets('八字助手在当前对话后台调用本地引擎并把完整结果交给 AI 解读',
+      (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
+    const expectedArguments = <String, String>{
+      'birth_date': '1995-08-16',
+      'birth_time': '12:00',
+      'gender': 'male',
+      'birthplace': '上海市',
+    };
+    // Run the resource-backed deterministic engine before mounting the widget.
+    // This keeps the engine's rootBundle IO out of the widget's fake-async zone.
+    String? enginePreparationError;
+    final preparedResult = await tester.runAsync(() async {
+      try {
+        return await BaziToolExecutor.execute(expectedArguments);
+      } catch (error, stackTrace) {
+        enginePreparationError = '$error\\n$stackTrace';
+        rethrow;
+      }
+    });
+    expect(
+      preparedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '本地八字引擎准备真实结果失败：$enginePreparationError',
+    );
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -501,42 +527,69 @@ void main() {
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
           testToolRouteBuilder: (tool, _) {
-            if (tool.id == 'bazi') {
-              return BaZiPaipanScreen(
-                returnResultOnComplete: true,
-                initialSolar: DateTime(1995, 8, 16, 12),
-                initialIsMale: true,
-                initialLng: 120,
-                initialLat: 30,
-              );
-            }
+            pageOpened = true;
             return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            executedResult = preparedResult;
+            return preparedResult!;
           },
         ),
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我排八字');
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我排八字；出生日期：1995-08-16；出生时间：12:00；性别：男；出生地：上海市',
+    );
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
-    expect(find.text('打开八字排盘'), findsOneWidget);
 
-    await tester.tap(find.text('打开八字排盘'));
-    await tester.pumpAndSettle();
-    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('返回 AI 助手'));
+    expect(pageOpened, isFalse);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(
+      executedArguments,
+      expectedArguments,
+      reason: '后台执行必须收到从用户原话提取并校验的完整出生参数',
+    );
+    expect(
+      executedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '助手必须把独立执行并验证过的真实本地排盘结果交给会话；失败原因：${executedResult?.values['未执行原因']}',
+    );
+    expect(executedResult?.validateFor('bazi'), isEmpty);
+    expect(
+      executedResult?.validateArgumentsMatch(executedArguments!),
+      isEmpty,
+    );
+    await _waitForText(tester, 'AI总结解读');
+    expect(
+      find.text('AI总结解读'),
+      findsOneWidget,
+      reason: '助手未生成可解释的成功结果；已持久化消息：${store.savedMessages.map((m) => m['content']).join(' | ')}',
+    );
+    await tester.tap(find.text('AI总结解读'));
     await tester.pumpAndSettle();
 
     expect(service.restoredTranscript, contains('【八字排盘完整结果】'));
+    expect(service.restoredTranscript, contains('出生时间：1995-08-16 12:00'));
     expect(service.restoredTranscript, contains('日主强弱：'));
     expect(service.restoredTranscript, contains('格局说明：'));
     expect(service.restoredTranscript, contains('五行分布状态：'));
     expect(service.restoredTranscript, contains('用神：'));
     expect(service.restoredTranscript, contains('忌神：'));
     expect(service.restoredTranscript, contains('【大运】'));
+    expect(
+      service.sentTexts.any((text) => text.contains('总结并解释刚才返回的八字排盘结果')),
+      isTrue,
+    );
     expect(
       store.savedMessages.any((message) =>
           message['role'] == 'assistant' &&

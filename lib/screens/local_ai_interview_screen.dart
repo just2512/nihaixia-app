@@ -187,7 +187,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Test seam for forcing typed Headless results through the production validator.
   @visibleForTesting
-  final AssistantToolResult Function(Map<String, String> arguments)?
+  final FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
       testHeadlessToolExecutor;
 
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
@@ -268,6 +268,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantMode _assistantMode = AssistantMode.automatic;
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
+  AssistantToolArguments? _pendingBaziArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -313,6 +314,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _conversationIdFuture = _createNewConversation();
         _lastEffectiveMode = null;
         _pendingToolSelection = false;
+        _pendingBaziArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -1224,6 +1226,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _structuredDiagnosisBusy = true;
       _lastEffectiveMode = AssistantMode.consultation;
       _pendingToolSelection = false;
+      _pendingBaziArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
@@ -2080,7 +2083,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
       try {
-        result = executor(request.values);
+        result = await executor(request.values);
         executionWatch.stop();
         await _traceRecorder.record(
           traceContext,
@@ -2172,16 +2175,73 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
     );
 
+    final unresolvedBirthplace =
+        result.values['未执行原因']?.contains('无法唯一识别') == true;
+    if (tool.id == 'bazi' &&
+        result.status == AssistantToolExecutionStatus.failed &&
+        unresolvedBirthplace) {
+      _pendingBaziArguments = request;
+      const clarification =
+          '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行排盘。';
+      setState(() {
+        _lastEffectiveMode = mode;
+        _messages
+          ..add(_InterviewMessage(text: userText, isUser: true))
+          ..add(const _InterviewMessage(text: clarification, isUser: false));
+        _error = null;
+      });
+      _inputController.clear();
+      final persisted = await _persistSuccessfulTurn(
+        userText: userText,
+        assistantText: clarification,
+        mode: mode,
+        toolId: 'bazi',
+        toolStatus: 'AWAITING_PARAMETERS',
+        toolArguments: request.values,
+        traceId: traceContext.traceId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        toolId: 'bazi',
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'bazi',
+      );
+      _scrollToBottom();
+      return;
+    }
     final response =
         '【${tool.title}执行结果】\n${result.toConversationText()}';
     setState(() {
       _lastEffectiveMode = mode;
+      final canInterpretBazi = tool.id == 'bazi' &&
+          result.status == AssistantToolExecutionStatus.succeeded;
+      final interpretationPrompt =
+          '请结合用户原始请求“' + userText + '”，总结并解释刚才返回的八字排盘结果。'
+          '先概括实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
+          '区分 App 本地引擎输出与 AI 归纳；不改动原始四柱，不补造缺失字段，也不把传统命理表述成科学预测。';
       _messages
         ..add(_InterviewMessage(text: userText, isUser: true))
         ..add(_InterviewMessage(
           text: response,
           isUser: false,
           sourceIds: result.sourceIds,
+          actionLabel: canInterpretBazi ? 'AI总结解读' : null,
+          onAction: canInterpretBazi
+              ? () => unawaited(_requestAssistantResultInterpretation(
+                    prompt: interpretationPrompt,
+                    mode: mode,
+                    toolId: tool.id,
+                    toolStatus: result.statusLabel,
+                    sourceIds: result.sourceIds,
+                  ))
+              : null,
         ));
       _error = null;
     });
@@ -2263,6 +2323,74 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // explicit date argument. Without a date, preserve the existing Page Tool
     // flow so a broad "how is it calculated?" request is not silently run for
     // today's date.
+    if (tool.id == 'bazi' && tool.headlessExecutor != null) {
+      final request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingBaziArguments = request;
+        const clarification =
+            '我会在当前对话中调用 App 本地八字排盘，不需要跳转到排盘页面。'
+            '请补齐以下信息：出生日期（公历 YYYY-MM-DD）、出生时间（出生地当地钟表时间，24 小时制 HH:mm）、性别（男/女）、出生地点（城市或区县）。'
+            '可以分多轮发送，建议使用“出生日期：1990-01-02；出生时间：08:30；性别：男；出生地：上海市”的格式。'
+            '注意：本地引擎按出生地经度执行真太阳时校正，不处理历史时区或夏令时换算；不会使用示例日期、默认性别或默认经纬度。';
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'BAZI_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = argumentErrors.join('；');
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingBaziArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
     if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
       await _executeHeadlessTool(
@@ -2706,6 +2834,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     _toolRouteActive = true;
     _pendingToolSelection = false;
+    _pendingBaziArguments = null;
     Object? result;
     try {
       result = await Navigator.push<Object?>(
@@ -3016,6 +3145,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 _lastEffectiveMode = mode;
               }
               _pendingToolSelection = false;
+              _pendingBaziArguments = null;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
@@ -3120,6 +3250,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
     var restoredPendingToolSelection = false;
+    AssistantToolArguments? restoredPendingBaziArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -3142,6 +3273,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final isUser = role == 'user';
       if (isUser) {
         restoredPendingToolSelection = false;
+        restoredPendingBaziArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -3160,6 +3292,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               toolId: pendingTool.id,
               values: messageMetadata.toolArguments,
             );
+      if (!isUser && pendingToolId == 'bazi') {
+        restoredPendingBaziArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
       final resolvedActionMode = actionMode ??
           (pendingTool?.modes.contains(AssistantMode.metaphysics) == true
               ? AssistantMode.metaphysics
@@ -3297,6 +3435,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _assistantMode = restoredMode;
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
+      _pendingBaziArguments = restoredPendingBaziArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -3474,6 +3613,104 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
+    }
+
+    final pendingBazi = _pendingBaziArguments;
+    if (pendingBazi != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '八字排盘需要文本出生资料。请先用文字补齐出生日期、时间、性别和出生地点，或发送“取消”结束本次排盘。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:bazi_attachment_rejected',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+        errorCode: 'BAZI_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+      );
+      return;
+    }
+    if (pendingBazi != null && text.isNotEmpty) {
+      final cancelRequested =
+          ['取消', '算了', '先不排', '不用排了', '停止排盘'].any(text.contains);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:bazi' : 'tool_follow_up:bazi',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:bazi' : 'tool_follow_up:bazi',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次八字排盘；尚未执行任何计算。';
+        setState(() {
+          _pendingBaziArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.metaphysics,
+          toolId: 'bazi',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingBazi.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'bazi',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'bazi',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingBazi.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.bazi,
+        mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
+        arguments: AssistantToolArguments(
+          toolId: 'bazi',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
     }
 
     var effectiveMode = _assistantMode;
