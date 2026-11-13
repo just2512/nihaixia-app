@@ -92,9 +92,11 @@ class MeihuaToolExecutor {
           second: second,
           lunarMonth: lunar.month,
         );
+        // Keep the exact validated request values in provenance metadata;
+        // the displayed calculation values below use parsed integers.
         executionArguments
-          ..['first'] = '$first'
-          ..['second'] = '$second';
+          ..['first'] = arguments['first']!
+          ..['second'] = arguments['second']!;
         break;
 
       case 'time':
