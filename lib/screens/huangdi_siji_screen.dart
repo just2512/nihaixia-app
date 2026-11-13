@@ -4,13 +4,16 @@ import '../utils/fold_aware_routes.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import 'package:nihaisha_app/data/huangdi_siji_data.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 
 /// 轩辕黄帝四季歌（四季诗）查询。
 ///
 /// 输入公历生辰 → 取农历月定季节、按时辰定黄帝身体部位 → 查部位诗与释义断一生运程。
 /// 属民间通胜简易命法（托名轩辕黄帝），民俗文化参考，非科学或医学定论。
 class HuangdiSijiScreen extends StatefulWidget {
-  const HuangdiSijiScreen({super.key});
+  const HuangdiSijiScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<HuangdiSijiScreen> createState() => _HuangdiSijiScreenState();
@@ -39,6 +42,7 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
   HuangdiPart? _result;
   String? _season;
   String? _shiChen;
+  int? _computedLunarMonth;
   String? _error;
 
   @override
@@ -80,10 +84,47 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
         _result = HuangdiSijiData.compute(lunarMonth, shiChen);
         _season = HuangdiSijiData.seasonOfLunarMonth(lunarMonth);
         _shiChen = shiChen;
+        _computedLunarMonth = lunarMonth;
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
     }
+  }
+
+  void _returnResultToAssistant() {
+    final result = _result;
+    if (result == null) return;
+    final solar = DateTime(
+      _birthDate.year,
+      _birthDate.month,
+      _birthDate.day,
+      _birthHour,
+      _birthMinute,
+    );
+    Navigator.pop(
+      context,
+      AssistantToolResult(
+        toolId: 'huangdi_siji',
+        title: '轩辕黄帝四季歌',
+        values: {
+          '出生公历': '${solar.year}-${solar.month.toString().padLeft(2, '0')}-${solar.day.toString().padLeft(2, '0')} ${solar.hour.toString().padLeft(2, '0')}:${solar.minute.toString().padLeft(2, '0')}',
+          '农历月份': _computedLunarMonth?.toString() ?? 'MISSING',
+          '季节口径': _season ?? 'MISSING',
+          '出生时辰': _shiChen ?? 'MISSING',
+          '对应部位': result.part,
+          '命格标题': result.title.isEmpty ? 'MISSING' : result.title,
+          '部位诗': result.poem.isEmpty ? 'MISSING' : result.poem,
+          '现有释义': result.interpretation.isEmpty ? 'MISSING' : result.interpretation,
+          '季节边界说明': HuangdiSijiData.seasonBasisNote.isEmpty
+              ? 'MISSING'
+              : HuangdiSijiData.seasonBasisNote,
+        },
+        sourceIds: const ['local-engine:huangdi-siji', 'local-data:huangdi-siji-ge'],
+        disclaimer: HuangdiSijiData.disclaimer.isEmpty
+            ? '托名轩辕黄帝的民间通胜命法，仅供民俗文化参考，非科学预测。'
+            : HuangdiSijiData.disclaimer,
+      ),
+    );
   }
 
   @override
@@ -258,6 +299,17 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
                 ),
               ),
             ),
+            if (widget.returnResultOnComplete) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _returnResultToAssistant,
+                  icon: const Icon(Icons.reply),
+                  label: const Text('将本次四季歌结果带回助手对话'),
+                ),
+              ),
+            ],
           ],
         ],
       ),
