@@ -4189,7 +4189,7 @@ void main() {
       await tester.tap(find.text('打开梅花易数起卦'));
       await tester.pumpAndSettle();
       expect(find.text('退出梅花页面'), findsOneWidget);
-      await tester.pageBack();
+      await tester.tap(find.text('退出梅花页面'));
       await tester.pumpAndSettle();
     }
 
