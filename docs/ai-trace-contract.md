@@ -3,7 +3,6 @@
 - 状态：F 部分落地；普通文本/图片/语音常规助手轮次已有 per-turn trace_id、Native bridge correlation 和 SQLite metadata；Debug-only 本地显式开关已纳入实现分支；结构化问诊/澄清/工具等其余分支、完整阶段覆盖及 Find N2 真实 TRACE 仍未闭环
 - 最近复核主线：`master @ 14784fa2b93a3746419ea02de8290bf69876ed4b`；本分支新增 Debug-only 开关，尚待 PR/CI 集成
 - 约束：TRACE 默认关闭；Release/Profile 不提供启用入口；只记录 allowlisted metadata；写入失败不得影响 AI 业务；不创建新的 conversation table。
-- 约束：TRACE 默认关闭；只记录 allowlisted metadata；写入失败不得影响 AI 业务；不创建新的 conversation table。
 
 ## 1. 核心不变量
 
