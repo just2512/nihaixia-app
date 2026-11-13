@@ -2334,6 +2334,178 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  Future<void> _requestAssistantResultInterpretation({
+    required String prompt,
+    required AssistantMode mode,
+    String? retrievalQuery,
+    String? toolId,
+    String? toolStatus,
+    List<String> sourceIds = const [],
+  }) async {
+    if (_sending || _modelControlBusy || _structuredDiagnosisBusy) return;
+    if (_status?.ready != true || _statusUnknown) {
+      if (mounted) {
+        setState(() => _error = '本地模型尚未就绪，无法生成结果解释；请先确认模型状态。');
+      }
+      return;
+    }
+    final normalizedPrompt = prompt.trim();
+    if (normalizedPrompt.isEmpty) return;
+
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: 'result_interpretation',
+      mode: mode.name,
+    );
+    var inferenceCompleted = false;
+    try {
+      // Ensure the immediately preceding deterministic result is part of the
+      // native model context before adding this explicit user-requested action.
+      await _restoreVisibleConversationToModel();
+      if (!mounted) return;
+      setState(() {
+        _lastEffectiveMode = mode;
+        _messages.add(_InterviewMessage(
+          text: normalizedPrompt,
+          isUser: true,
+        ));
+        _sending = true;
+        _error = null;
+      });
+      _scrollToBottom();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'result_interpretation',
+        mode: mode.name,
+        toolId: toolId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: 'result_interpretation',
+        mode: mode.name,
+        toolId: toolId,
+      );
+
+      final response = await _sendTextWithKnowledgeContext(
+        normalizedPrompt,
+        mode: mode,
+        traceContext: traceContext,
+        retrievalQuery: retrievalQuery,
+      );
+      inferenceCompleted = true;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: mode.name,
+        toolId: toolId,
+      );
+      final mergedSourceIds = <String>{
+        ...sourceIds,
+        ...response.sourceIds,
+      }.toList(growable: false);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelOutput,
+        status: AiTraceStatus.succeeded,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_InterviewMessage(
+          text: response.text,
+          isUser: false,
+          sourceIds: response.sourceIds,
+          onSourceTap: _openKnowledgeSource,
+          knowledgeStatus: response.knowledgeStatus,
+        ));
+      });
+      final persisted = await _persistSuccessfulTurn(
+        userText: normalizedPrompt,
+        assistantText: response.text,
+        mode: mode,
+        toolId: toolId,
+        toolStatus: toolStatus,
+        sourceIds: mergedSourceIds,
+        knowledgeStatus: response.knowledgeStatus,
+        traceId: traceContext.traceId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      if (mounted) _scrollToBottom();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'AI 结果解释未完成：$error');
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: inferenceCompleted ? AiTraceStatus.succeeded : AiTraceStatus.unknown,
+        mode: mode.name,
+        toolId: toolId,
+        errorCode: inferenceCompleted ? null : 'RESULT_INTERPRETATION_FAILED',
+      );
+      if (!inferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: AiTraceStatus.notStarted,
+          mode: mode.name,
+          toolId: toolId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.notStarted,
+          mode: mode.name,
+          toolId: toolId,
+          errorCode: 'RESULT_INTERPRETATION_NOT_PERSISTED',
+        );
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        mode: mode.name,
+        toolId: toolId,
+        errorCode: 'RESULT_INTERPRETATION_FAILED',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _sending = false);
+      }
+    }
+  }
+
   Future<void> _openKnowledgeSource(String sourceId) async {
     final parts = sourceId.split(':');
     if (parts.isEmpty || !mounted) return;
