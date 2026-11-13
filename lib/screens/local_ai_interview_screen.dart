@@ -2958,6 +2958,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
     var restoredPendingToolSelection = false;
+    AssistantToolArguments? restoredPendingBaziArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -2980,6 +2981,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final isUser = role == 'user';
       if (isUser) {
         restoredPendingToolSelection = false;
+        restoredPendingBaziArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -2998,6 +3000,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               toolId: pendingTool.id,
               values: messageMetadata.toolArguments,
             );
+      if (!isUser && pendingToolId == 'bazi') {
+        restoredPendingBaziArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
       final resolvedActionMode = actionMode ??
           (pendingTool?.modes.contains(AssistantMode.metaphysics) == true
               ? AssistantMode.metaphysics
@@ -3135,6 +3143,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _assistantMode = restoredMode;
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
+      _pendingBaziArguments = restoredPendingBaziArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -4145,6 +4154,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _conversationIdFuture = _createNewConversation();
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
+      _pendingBaziArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
