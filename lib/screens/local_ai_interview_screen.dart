@@ -3727,7 +3727,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               decision.mode == AssistantMode.metaphysics) &&
           !AssistantConversationOrchestrator.containsPotentialHealthContent(text) &&
           _status?.ready == true;
-      if (mayUseBoundedIntentModel) {
+      if (mayUseBoundedIntentModel && traceId != null) {
         setState(() => _sending = true);
         try {
           final resolution = await _service.resolveAssistantIntentWithTrace(
