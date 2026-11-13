@@ -536,7 +536,7 @@ class LocalAiBaziSlotDraft {
     }
     final map = Map<String, dynamic>.from(decoded);
     if (map.keys.toSet().difference(_allowedKeys).isNotEmpty ||
-        !_allowedKeys.containsAll(map.keys)) {
+        !map.keys.toSet().containsAll(_allowedKeys)) {
       throw const FormatException('八字参数候选包含未声明字段或字段不完整');
     }
     if (requestedKeys.isEmpty ||
@@ -550,7 +550,7 @@ class LocalAiBaziSlotDraft {
       if (rawField is! Map ||
           rawField.keys.any((field) => field is! String) ||
           rawField.keys.toSet().difference({'value', 'evidence'}).isNotEmpty ||
-          !{'value', 'evidence'}.containsAll(rawField.keys)) {
+          !rawField.keys.toSet().containsAll({'value', 'evidence'})) {
         throw FormatException('八字参数候选字段 $key 结构无效');
       }
       final field = Map<String, dynamic>.from(rawField);
@@ -591,9 +591,9 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeGregorianDateEvidence(String evidence) {
-    final iso = RegExp(r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})')
+    final iso = RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})')
         .firstMatch(evidence);
-    final chinese = RegExp(r'(\\d{4})年(\\d{1,2})月(\\d{1,2})[日号]?')
+    final chinese = RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})[日号]?')
         .firstMatch(evidence);
     final match = iso ?? chinese;
     if (match == null) return null;
@@ -611,7 +611,7 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeBirthTimeEvidence(String evidence) {
-    final clock = RegExp(r'([01]?\\d|2[0-3]):([0-5]\\d)')
+    final clock = RegExp(r'([01]?\d|2[0-3]):([0-5]\d)')
         .firstMatch(evidence);
     if (clock != null) {
       final hour = int.parse(clock.group(1)!);
@@ -621,7 +621,7 @@ class LocalAiBaziSlotDraft {
     }
 
     final chineseTime = RegExp(
-      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\\s*'
+      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
       r'([0-9零〇一二两三四五六七八九十]{1,3})(?:点|时)'
       r'(?:半|([0-9零〇一二两三四五六七八九十]{1,2})分?)?',
     ).firstMatch(evidence);
