@@ -496,6 +496,7 @@ void main() {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
     var pageOpened = false;
+    Map<String, String>? executedArguments;
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -506,7 +507,10 @@ void main() {
             pageOpened = true;
             return const SizedBox.shrink();
           },
-          testHeadlessToolExecutor: BaziToolExecutor.execute,
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments = Map<String, String>.from(arguments);
+            return BaziToolExecutor.execute(arguments);
+          },
         ),
       ),
     );
@@ -526,7 +530,17 @@ void main() {
 
     expect(pageOpened, isFalse);
     expect(find.text('打开八字排盘'), findsNothing);
-    expect(find.text('AI总结解读'), findsOneWidget);
+    expect(executedArguments, {
+      'birth_date': '1995-08-16',
+      'birth_time': '12:00',
+      'gender': 'male',
+      'birthplace': '上海市',
+    }, reason: '后台执行必须收到从用户原话提取并校验的完整出生参数');
+    expect(
+      find.text('AI总结解读'),
+      findsOneWidget,
+      reason: '助手未生成可解释的成功结果；已持久化消息：${store.savedMessages.map((m) => m['content']).join(' | ')}',
+    );
     await tester.tap(find.text('AI总结解读'));
     await tester.pumpAndSettle();
 
