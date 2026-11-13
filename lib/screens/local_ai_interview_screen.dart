@@ -2324,8 +2324,96 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // flow so a broad "how is it calculated?" request is not silently run for
     // today's date.
     if (tool.id == 'bazi' && tool.headlessExecutor != null) {
-      final request = arguments ?? AssistantToolArguments(toolId: tool.id);
-      final argumentErrors = request.validateAgainst(tool);
+      var request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      var argumentErrors = request.validateAgainst(tool);
+      final missingKeys = tool.parameters
+          .where((parameter) =>
+              parameter.isRequired &&
+              (request[parameter.key]?.trim().isEmpty ?? true))
+          .map((parameter) => parameter.key)
+          .toSet();
+      final slotTraceId = activeTraceContext.traceId;
+      if (argumentErrors.isNotEmpty &&
+          _status?.ready == true &&
+          slotTraceId != null &&
+          AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+            userText,
+            missingKeys,
+          )) {
+        setState(() => _sending = true);
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.notStarted,
+          route: 'bazi_slot_extraction',
+          toolId: tool.id,
+        );
+        try {
+          final draft = await _service.extractBaziSlotsWithTrace(
+            query: userText,
+            missingKeys: missingKeys,
+            traceId: slotTraceId,
+          );
+          request = AssistantToolArguments(
+            toolId: tool.id,
+            values: {
+              ...request.values,
+              ...draft.values,
+            },
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.nativeInference,
+            status: AiTraceStatus.succeeded,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.modelOutput,
+            status: AiTraceStatus.succeeded,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.succeeded,
+            route: 'bazi_slot_evidence_validation',
+            toolId: tool.id,
+          );
+        } catch (error) {
+          // Slot extraction is advisory. Invalid JSON, weak evidence, or Native
+          // failure falls back to the deterministic missing-field prompt.
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.nativeInference,
+            status: AiTraceStatus.unknown,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+            errorCode: 'BAZI_SLOT_EXTRACTION_FAILED',
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.modelOutput,
+            status: AiTraceStatus.failed,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+            errorCode: 'BAZI_SLOT_OUTPUT_REJECTED',
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.notStarted,
+            route: 'bazi_slot_evidence_validation',
+            toolId: tool.id,
+          );
+        } finally {
+          if (mounted) setState(() => _sending = false);
+        }
+        if (!mounted) return;
+        argumentErrors = request.validateAgainst(tool);
+      }
       if (argumentErrors.isNotEmpty) {
         _pendingBaziArguments = request;
         final missingParameters = tool.parameters
