@@ -2589,7 +2589,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '当前数字起卦日期沿用 App 页面的公历日期口径，请提供公历日期；不会把农历日期当作公历使用。',
           '例如：用 3 和 7 起卦；也可以补充公历日期：2026-11-13。',
           '没有提供日期时，App 使用设备本地当天日期，并在结果中明确列出。',
-        ].join('\\n');
+        ].join('\n');
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.argumentValidation,
@@ -4023,7 +4023,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               parameter.isRequired &&
               (mergedArguments[parameter.key]?.trim().isEmpty ?? true))
           .toList(growable: false);
-      final singleNumber = RegExp(r'^\\s*(\\d{1,10})\\s*
+      final singleNumber = int.tryParse(text.trim());
+      if (missingParameters.length == 1 &&
+          singleNumber != null &&
+          singleNumber > 0 &&
+          !followUp.values.containsKey(missingParameters.single.key)) {
+        mergedArguments[missingParameters.single.key] = singleNumber.toString();
+      }
       setState(() {
         _error = '八字排盘需要文本出生资料。请先用文字补齐出生日期、时间、性别和出生地点，或发送“取消”结束本次排盘。';
       });
