@@ -187,7 +187,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
 
   /// Test seam for forcing typed Headless results through the production validator.
   @visibleForTesting
-  final AssistantToolResult Function(Map<String, String> arguments)?
+  final FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
       testHeadlessToolExecutor;
 
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
@@ -268,6 +268,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantMode _assistantMode = AssistantMode.automatic;
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
+  AssistantToolArguments? _pendingBaziArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -2046,7 +2047,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
       try {
-        result = executor(request.values);
+        result = await executor(request.values);
         executionWatch.stop();
         await _traceRecorder.record(
           traceContext,
