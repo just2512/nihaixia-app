@@ -1472,7 +1472,7 @@ void main() {
     expect(service.sentContexts, hasLength(1));
     expect(service.sentContexts.single, contains('当前角色：问诊助手'));
     expect(service.sentContexts.single, contains('App 本地知识库'));
-    expect(service.sentContexts.single, contains('不自动诊断'));
+    expect(service.sentContexts.single, contains('不独立作个体诊断'));
     expect(service.sentContexts.single, contains('解释和归纳已有结果'));
     expect(service.sentContexts.single, contains('必须区分规则输出、知识来源与 AI 解释'));
     expect(tester.takeException(), isNull);
