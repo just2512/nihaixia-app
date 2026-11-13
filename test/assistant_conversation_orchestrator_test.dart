@@ -236,6 +236,21 @@ void main() {
       );
     });
 
+    test('农历出生日期不进入公历参数，也不交给槽位模型猜算', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        '农历1990年1月2日出生，帮我排八字',
+      );
+      expect(parsed['birth_date'], isNull);
+      expect(
+        AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+          '农历1990年1月2日出生，帮我排八字',
+          const {'birth_date'},
+        ),
+        isFalse,
+      );
+    });
+
     test('八字自然语言中男女信息冲突时不确定性别', () {
       final parsed = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.bazi,
