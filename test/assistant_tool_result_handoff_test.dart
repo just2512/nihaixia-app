@@ -317,7 +317,20 @@ void main() {
     expect(metadata.toolStatus, 'SUCCEEDED');
     expect(metadata.toolArguments, const {'date': '2026-11-06'});
     expect(metadata.sourceIds, const ['local-engine:yunqi']);
-    expect(service.restoredTranscript, isNull);
+    expect(service.modelCalls, 1);
+    expect(service.restoredTranscript, contains('岁运：'));
+    expect(
+      store.savedMessages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释')),
+      isEmpty,
+    );
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到：')),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -465,11 +478,19 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(service.modelCalls, 0);
+    expect(service.modelCalls, 1);
+    expect(find.text('AI总结解读'), findsNothing);
     final resultMessages = store.savedMessages.where((message) =>
         message['role'] == 'assistant' &&
         (message['content'] as String).contains('工具：每日黄历'));
     expect(resultMessages, hasLength(1));
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到：')),
+      isTrue,
+      reason: '已校验的黄历结果应由助手自动归纳',
+    );
 
     final content = resultMessages.single['content'] as String;
     final metadata = AssistantMessageMetadata.decode(
@@ -569,15 +590,8 @@ void main() {
       executedResult?.validateArgumentsMatch(executedArguments!),
       isEmpty,
     );
-    await _waitForText(tester, 'AI总结解读');
-    expect(
-      find.text('AI总结解读'),
-      findsOneWidget,
-      reason: '助手未生成可解释的成功结果；已持久化消息：${store.savedMessages.map((m) => m['content']).join(' | ')}',
-    );
-    await tester.tap(find.text('AI总结解读'));
-    await tester.pumpAndSettle();
-
+    expect(find.text('AI总结解读'), findsNothing);
+    expect(service.modelCalls, 1);
     expect(service.restoredTranscript, contains('【八字排盘完整结果】'));
     expect(service.restoredTranscript, contains('出生时间：1995-08-16 12:00'));
     expect(service.restoredTranscript, contains('日主强弱：'));
@@ -595,6 +609,12 @@ void main() {
           message['role'] == 'assistant' &&
           (message['content'] as String).contains('日主强弱：')),
       isTrue,
+    );
+    expect(
+      store.savedMessages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释刚才返回的八字排盘结果')),
+      isEmpty,
     );
     expect(tester.takeException(), isNull);
   });
@@ -656,6 +676,14 @@ void main() {
       isTrue,
     );
     expect(service.restoredTranscript, isNot(contains('身体留意')));
+    expect(service.modelCalls, 1);
+    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到：')),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -721,7 +749,8 @@ void main() {
             (message['content'] as String).contains(expectedResult)),
         isTrue,
       );
-      expect(find.text('AI总结解读'), findsWidgets);
+      expect(find.text('AI总结解读'), findsNothing);
+      expect(service.modelCalls, greaterThan(0));
     }
 
     await execute(
@@ -760,24 +789,22 @@ void main() {
       expectedResult: '签号：',
     );
 
-    expect(service.modelCalls, 0);
-    await tester.tap(find.text('AI总结解读').last);
-    await tester.pumpAndSettle();
-
-    expect(service.modelCalls, 1);
+    expect(service.modelCalls, 5);
     expect(service.restoredTranscript, contains('签号：'));
-    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts, hasLength(5));
+    expect(service.sentTexts.every((text) => text.contains('总结并解释')), isTrue);
     expect(
       store.savedMessages.any((message) =>
           message['role'] == 'user' &&
           (message['content'] as String).contains('总结并解释')),
-      isTrue,
+      isFalse,
+      reason: '自动解释指令不应被伪装成用户输入',
     );
     expect(
-      store.savedMessages.any((message) =>
+      store.savedMessages.where((message) =>
           message['role'] == 'assistant' &&
           (message['content'] as String).contains('已收到：')),
-      isTrue,
+      hasLength(5),
     );
     expect(tester.takeException(), isNull);
   });
