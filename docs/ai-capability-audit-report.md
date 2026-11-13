@@ -2,7 +2,7 @@
 
 - 审计日期：2026-11-13（A/F 增量复核）
 - 仓库：`just2512/nihaixia-app`
-- 最新复核基线：`master @ 3363a29d94fa0c9e0c87587d71553fc870fcede7`（PR #122 合并后；运行时代码基线仍为 `07cae6810db412e608ff0d3e2c0dcf1c872105be`，其后为文档变更）
+- 最新复核基线：`master @ a2450f12220444225a33c4882d65ce4e4b9b3eab`（PR #122/#123/#124 文档集成后；应用运行时代码仍以 `07cae6810db412e608ff0d3e2c0dcf1c872105be` 为本轮审计基线）
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
 - 方法：本轮增量复核 PR #117/#119/#120 的当前主线代码、专项测试和 Actions 结果；未重新执行全仓逐层审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
 
@@ -539,7 +539,7 @@ PR #121 合并后的主线 `07cae681` 自动化验收：
 |---|---|---|
 | A 多轮稳定性 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU 多轮、媒体、Activity/进程恢复真实 TRACE；不再用 CI 代替设备结果 |
 | B 红旗安全 | PARTIAL / RELEASE BLOCKED | 先取得医学审核记录与 detector/REVIEW_REQUIRED 产品决策；未审核前不接入生产放行路径、不默认 CLEAR |
-| C 检索来源 | PARTIAL / NOT VERIFIED | 83 个讲稿 sourceId 的真实书目定位，以及 12 条规则的底本版本/卷页/原始影像；无证据继续 MISSING |
+| C 知识来源 | PARTIAL（学习资料回链已实现；原文/规则来源分层） | 83 个讲稿 sourceId 对应本地 Markdown 资产，检索结果携带来源类别、标题、sourceId 和回链；12 个规则 conditionKey 对应 manifest | 一般学习资料不要求逐页纸本校勘；指定古籍原文和诊断规则仍需单条来源核验。12 条规则当前7条在线文本交叉核对、3条条件交叉核对、2条 MISSING |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | 冻结；没有可复现失败和真实需求，不新增 adapter |
 | E 数据保护 | PARTIAL | 明确混合数据库备份边界决策；Find N2 上验证清除后强停/重启不可恢复；旧共享附件归属不明时保留 |
 | F TRACE | PARTIAL / DEVICE UNKNOWN | 与 A 同批完成 Find N2 端到端场景 TRACE，不另建埋点体系 |
@@ -548,3 +548,33 @@ PR #121 合并后的主线 `07cae681` 自动化验收：
 **停止条件：** A/F 的设备门槛需要真实 OPPO Find N2 与本地模型；B 需要医学背景人员审核和产品决策；C 需要可回链的原始底本/影像；E 需要备份边界决策及设备清除验证。缺少这些外部条件时，相关项保持 PARTIAL / UNKNOWN / RELEASE BLOCKED。不得通过增加普通 CI、模拟器测试、文档描述或重复静态检查将其改写为 PASS。
 
 **范围约束：** 本轮没有更改问诊/辨证规则、红旗词表、模型 prompt、检索 query/ranking、数据库 schema、Android backup policy 或业务路由；没有引入 Agent/DAG、FTS5、向量检索、云端 API 或额外 Headless adapter。
+
+---
+
+## 21. 2026-11-13 C：学习知识库来源验收口径收敛
+
+### 21.1 已有来源链路事实
+
+- `ClassicSearchService` 为命中生成稳定 sourceId：讲稿使用 `shanghan:assets/shanghan/<asset>.md`；古籍文本使用书名/章节标识。sourceId 是可反查的 App 内来源键，不冒充纸本页码。
+- `AssistantKnowledgeContextBuilder` 通过 sourceId 反查命中，输出 `sourceLabel`、`sourceKind`、本地回链和来源状态；测试覆盖稳定 ID、未知 ID 不模糊回退、引用反查、讲稿与古籍文本区分，以及医案来源缺失边界。
+- 2026-11-13 的来源分层 manifest 记录：Golden Snapshot 中83个 distinct sourceId 对应83个不同本地 Markdown 资产。该证据证明检索来源能回到本地资料，不证明这些讲稿是原始古籍版本。
+- 当前 `assets/shanghan/clause_*.md` 的实际性质是课程讲稿/整理讲义，内容可能混合条文摘录、讲解和经验性观点；应作为学习资料归属展示，不得把讲稿内摘录自动等同已核验的仲景原文。
+
+### 21.2 本次用户确认的产品定位
+
+- 本应用知识库用于中医学习，不以建设古籍校勘数据库为目标。一般学习检索只要求资料类别清楚、来源名称/标题清楚、sourceId 可反查、本地内容可定位。
+- 不再将83条讲稿逐一追溯到纸本版本、卷、页或原始影像作为普通学习检索的完成条件。`bibliographicLocator=MISSING` 继续保留为事实状态，但不再等价于“没有学习资料来源”。
+- 对明确声称某一古籍原文/指定版本，或来源被用于 DiagnosticEngine 诊断规则的内容，继续执行更严格的单条文本与适用条件核验；不能核实时说明是“讲稿所引/本地摘录”或标记 MISSING。
+- 医案仍明确标记为本地整理案例；来源缺失不阻止一般学习检索，但内部序号不能冒充原始出处，病例不能被描述为疗效证据。
+
+### 21.3 C 项当前拆分状态
+
+| 子项 | 状态 | 说明 |
+|---|---|---|
+| 学习讲稿 sourceId/本地资产回链 | PASS（源码与自动化契约范围） | 83/83 Golden Snapshot sourceId 与本地资产对应；可按 sourceId 反查；未把它扩大解释为纸本溯源 |
+| 学习内容来源标识展示 | PASS（当前来源契约） | 具备来源类型、来源标签/标题、sourceId 和本地回链；本轮将讲稿引用尾注调整为学习资料语义 |
+| 83条讲稿的纸本卷页/原始影像定位 | NOT REQUIRED FOR GENERAL LEARNING | 仅在某条内容被明确当作指定版本原文引用时定点核验，不做全量考古式映射 |
+| 12条规则来源 | PARTIAL | 7 ONLINE_TEXT_CROSS_CHECKED、3 CONDITIONS_CROSS_CHECKED、2 MISSING；规则运行安全边界不因讲稿回链通过而放宽 |
+| 医案来源/疗效证据 | PARTIAL / MISSING | 作为本地整理案例检索；未核实原始出处不做确切归属或疗效论证 |
+
+本拆分不修改 `docs/ai-capability-audit.md` 第4.3节的来源类型与反伪造要求，也不放宽红旗门禁、医学审核、规则引擎或 Find N2 真机验收标准。
