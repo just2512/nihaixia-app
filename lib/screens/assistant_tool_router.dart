@@ -115,7 +115,7 @@ class AssistantToolArguments {
           }
           break;
         case AssistantToolParameterType.time:
-          if (!RegExp(r'^([01]\\d|2[0-3]):[0-5]\\d
+          if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d
             errors.add('参数「${parameter.label}」必须是整数');
           }
           break;
