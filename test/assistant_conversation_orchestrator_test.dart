@@ -757,6 +757,24 @@ void main() {
       expect(pm['birth_date'], '1990-01-02');
       expect(pm['birth_time'], '20:00');
 
+      final pmClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02；出生时间：晚上8:30',
+      );
+      expect(pmClock['birth_time'], '20:30');
+
+      final midnightClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02；出生时间：凌晨12:30',
+      );
+      expect(midnightClock['birth_time'], '00:30');
+
+      final noonClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02；出生时间：中午12:30',
+      );
+      expect(noonClock['birth_time'], '12:30');
+
       final dateOnly = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.chenggu,
         '出生日期：1990-01-02',
