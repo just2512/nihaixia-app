@@ -40,6 +40,12 @@ class AssistantConversationOrchestrator {
     }
     final ids = candidates.map((tool) => tool.id).toSet();
     if (ids.length != candidates.length) return const [];
+    // E4B may only select capabilities that execute inside this conversation.
+    // Page Tools remain deterministic clarifications until they gain a
+    // validated Headless executor; never let model routing open another page.
+    if (candidates.any((tool) => tool.headlessExecutor == null)) {
+      return const [];
+    }
     return List.unmodifiable(candidates);
   }
 
