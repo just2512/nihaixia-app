@@ -113,6 +113,13 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
+  static bool isPersonalHealthNarrative(String query) {
+    final text = query.trim();
+    return text.isNotEmpty &&
+        _personalContextCues.any(text.contains) &&
+        _symptomCues.any(text.contains);
+  }
+
   static AssistantToolArguments argumentsFor(
     AssistantToolDefinition tool,
     String query,
