@@ -2807,7 +2807,8 @@ void main() {
     expect(service.restoredTranscripts.last, contains('【六经】少阳'));
     expect(service.restoredTranscripts.last, contains('【证型】少阳证'));
     expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
-    
+    expect(find.text('AI解读辨证结果'), findsOneWidget);
+
     Future<void> tapAction(String label) async {
       final target = find.text(label).last;
       await tester.ensureVisible(target);
@@ -2834,6 +2835,12 @@ void main() {
     expect(copiedTexts, hasLength(1));
     expect(copiedTexts.single, contains('处方: 小柴胡汤'));
     expect(copiedTexts.single, contains('柴胡24g'));
+
+    await tapAction('AI解读辨证结果');
+    expect(service.sentTexts.last, contains('总结并解释'));
+    expect(service.sentTexts.last, contains('少阳证'));
+    expect(service.sentContexts.last, contains('当前角色：问诊助手'));
+    expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
     expect(tester.takeException(), isNull);
   });
 

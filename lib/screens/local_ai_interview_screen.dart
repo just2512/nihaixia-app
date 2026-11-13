@@ -902,6 +902,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String text, {
     required AssistantMode mode,
     required AiTraceContext traceContext,
+    String? retrievalQuery,
   }) async {
     final traceId = traceContext.traceId;
     Future<String> sendWithContext(String context) async {
@@ -1017,11 +1018,32 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
             .map((tool) => tool.title)
             .join('、');
+        final knowledge = retrievalQuery == null || retrievalQuery.trim().isEmpty
+            ? null
+            : await _retrieveKnowledgeWithTrace(
+                retrievalQuery,
+                traceContext: traceContext,
+              );
+        final knowledgeContext = switch (knowledge?.status) {
+          null => '',
+          AssistantKnowledgeRetrievalStatus.noResults =>
+            '本轮本地知识库未命中可引用条目（NO_RESULTS）。',
+          AssistantKnowledgeRetrievalStatus.failed =>
+            '本轮本地知识库检索失败（FAILED）：${knowledge?.failureMessage ?? 'MISSING'}。不得将失败说成无命中。',
+          AssistantKnowledgeRetrievalStatus.partial =>
+            '本轮本地知识库部分命中；只使用已返回的资料（PARTIAL）：\n${knowledge?.text}',
+          AssistantKnowledgeRetrievalStatus.retrieved =>
+            '本轮本地知识库检索结果：\n${knowledge?.text}',
+        };
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
-            '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
+            '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。\n'
+            '$knowledgeContext';
+        final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
-          text: await sendWithContext(context),
+          text: reply + (knowledge?.citationFooter ?? ''),
+          sourceIds: knowledge?.sourceIds ?? const [],
+          knowledgeStatus: knowledge?.statusLabel,
         );
       case AssistantMode.metaphysics:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
@@ -1298,6 +1320,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _InterviewMessage(
       text: text,
       isUser: false,
+      actionLabel: 'AI解读辨证结果',
+      onAction: () => unawaited(_requestAssistantResultInterpretation(
+        prompt: '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
+            '本次结果字段：六经 ${result.displayMeridian}；'
+            '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
+            '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
+            '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
+            '不要重新辨证、增加或修改规则结论，不把缺失字段补成事实。',
+        mode: AssistantMode.consultation,
+        toolId: 'structured_diagnosis',
+        toolStatus: 'SUCCEEDED',
+      )),
       diagnosisResult: result,
       onBookmark: () => _bookmarkDiagnosisResult(result),
       onShare: () => _shareDiagnosisResult(result),
@@ -2312,6 +2346,178 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  Future<void> _requestAssistantResultInterpretation({
+    required String prompt,
+    required AssistantMode mode,
+    String? retrievalQuery,
+    String? toolId,
+    String? toolStatus,
+    List<String> sourceIds = const [],
+  }) async {
+    if (_sending || _modelControlBusy || _structuredDiagnosisBusy) return;
+    if (_status?.ready != true || _statusUnknown) {
+      if (mounted) {
+        setState(() => _error = '本地模型尚未就绪，无法生成结果解释；请先确认模型状态。');
+      }
+      return;
+    }
+    final normalizedPrompt = prompt.trim();
+    if (normalizedPrompt.isEmpty) return;
+
+    final traceContext = _traceRecorder.start(
+      stage: AiTraceStage.input,
+      route: 'result_interpretation',
+      mode: mode.name,
+    );
+    var inferenceCompleted = false;
+    try {
+      // Ensure the immediately preceding deterministic result is part of the
+      // native model context before adding this explicit user-requested action.
+      await _restoreVisibleConversationToModel();
+      if (!mounted) return;
+      setState(() {
+        _lastEffectiveMode = mode;
+        _messages.add(_InterviewMessage(
+          text: normalizedPrompt,
+          isUser: true,
+        ));
+        _sending = true;
+        _error = null;
+      });
+      _scrollToBottom();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'result_interpretation',
+        mode: mode.name,
+        toolId: toolId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: 'result_interpretation',
+        mode: mode.name,
+        toolId: toolId,
+      );
+
+      final response = await _sendTextWithKnowledgeContext(
+        normalizedPrompt,
+        mode: mode,
+        traceContext: traceContext,
+        retrievalQuery: retrievalQuery,
+      );
+      inferenceCompleted = true;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        mode: mode.name,
+        toolId: toolId,
+      );
+      final mergedSourceIds = <String>{
+        ...sourceIds,
+        ...response.sourceIds,
+      }.toList(growable: false);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelOutput,
+        status: AiTraceStatus.succeeded,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_InterviewMessage(
+          text: response.text,
+          isUser: false,
+          sourceIds: response.sourceIds,
+          onSourceTap: _openKnowledgeSource,
+          knowledgeStatus: response.knowledgeStatus,
+        ));
+      });
+      final persisted = await _persistSuccessfulTurn(
+        userText: normalizedPrompt,
+        assistantText: response.text,
+        mode: mode,
+        toolId: toolId,
+        toolStatus: toolStatus,
+        sourceIds: mergedSourceIds,
+        knowledgeStatus: response.knowledgeStatus,
+        traceId: traceContext.traceId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      if (mounted) _scrollToBottom();
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        mode: mode.name,
+        toolId: toolId,
+        sourceIds: mergedSourceIds,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'AI 结果解释未完成：$error');
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: inferenceCompleted ? AiTraceStatus.succeeded : AiTraceStatus.unknown,
+        mode: mode.name,
+        toolId: toolId,
+        errorCode: inferenceCompleted ? null : 'RESULT_INTERPRETATION_FAILED',
+      );
+      if (!inferenceCompleted) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.resultValidation,
+          status: AiTraceStatus.notStarted,
+          mode: mode.name,
+          toolId: toolId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.notStarted,
+          mode: mode.name,
+          toolId: toolId,
+          errorCode: 'RESULT_INTERPRETATION_NOT_PERSISTED',
+        );
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        mode: mode.name,
+        toolId: toolId,
+        errorCode: 'RESULT_INTERPRETATION_FAILED',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _sending = false);
+      }
+    }
+  }
+
   Future<void> _openKnowledgeSource(String sourceId) async {
     final parts = sourceId.split(':');
     if (parts.isEmpty || !mounted) return;
@@ -2668,14 +2874,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
     );
     final resultText = normalizedResult.toConversationText();
-    final response = '【' + tool.title + '执行结果】\n' + resultText;
+    final response = '【' + tool.title + '执行结果】\\n' + resultText;
     final canRetry = normalizedResult.status ==
         AssistantToolExecutionStatus.failed;
+    final canInterpret = normalizedResult.status ==
+        AssistantToolExecutionStatus.succeeded;
+    final needsTcmKnowledge = mode == AssistantMode.tools &&
+        const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
+    final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
+        '先概括本次实际输入、关键输出和执行状态，再解释主要字段的含义、字段间关系及结果口径；'
+        '明确区分 App 本地工具计算/数据原文与 AI 的语言化归纳。'
+        '如果本地知识库返回了相关资料，请结合实际命中条目解释；'
+        '未返回或缺失的字段标记 MISSING，不猜算、不改写 App 已返回的结果。';
     setState(() {
       _messages.add(_InterviewMessage(
         text: response,
         isUser: false,
-        actionLabel: canRetry ? '重试${tool.title}' : null,
+        sourceIds: normalizedResult.sourceIds,
+        actionLabel: canRetry
+            ? '重试${tool.title}'
+            : canInterpret
+                ? 'AI总结解读'
+                : null,
         onAction: canRetry
             ? () => unawaited(_openTool(
                   tool,
@@ -2683,7 +2903,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   arguments: toolArguments,
                   traceContext: activeTraceContext,
                 ))
-            : null,
+            : canInterpret
+                ? () => unawaited(_requestAssistantResultInterpretation(
+                      prompt: interpretationPrompt,
+                      mode: mode,
+                      retrievalQuery: needsTcmKnowledge
+                          ? '${tool.title} $resultText'
+                          : null,
+                      toolId: tool.id,
+                      toolStatus: normalizedResult.statusLabel,
+                      sourceIds: normalizedResult.sourceIds,
+                    ))
+                : null,
       ));
     });
     int? conversationId;

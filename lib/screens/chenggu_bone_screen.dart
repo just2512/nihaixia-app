@@ -4,6 +4,7 @@ import '../utils/fold_aware_routes.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import 'package:nihaisha_app/data/chenggu_data.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 
@@ -12,7 +13,9 @@ import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 /// 输入公历生辰 → 复用八字引擎算四柱（年/月/日/时干支）→ 取农历年干支、农历月日数、
 /// 时辰名 → 按骨重求和查称骨歌诀。属传统民俗文化参考，非医学或科学定论。
 class ChengguBoneScreen extends StatefulWidget {
-  const ChengguBoneScreen({super.key});
+  const ChengguBoneScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<ChengguBoneScreen> createState() => _ChengguBoneScreenState();
@@ -31,6 +34,10 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
   bool _ready = false;
 
   ChengguResult? _result;
+  String? _computedYearGanZhi;
+  int? _computedLunarMonth;
+  int? _computedLunarDay;
+  String? _computedShiChen;
   String? _error;
 
   @override
@@ -77,13 +84,51 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
       final lunarMonth = lunar.month;
       final lunarDay = lunar.day;
       if (!mounted) return;
+      final result = ChengguData.compute(yearGz, lunarMonth, lunarDay, timeZhi);
       setState(() {
-        _result =
-            ChengguData.compute(yearGz, lunarMonth, lunarDay, timeZhi);
+        _result = result;
+        _computedYearGanZhi = yearGz;
+        _computedLunarMonth = lunarMonth;
+        _computedLunarDay = lunarDay;
+        _computedShiChen = _shiChenNames[_shiChenIndexOfHour(_birthHour)];
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
     }
+  }
+
+  void _returnResultToAssistant() {
+    final result = _result;
+    if (result == null) return;
+    final solar = DateTime(
+      _birthDate.year,
+      _birthDate.month,
+      _birthDate.day,
+      _birthHour,
+      _birthMinute,
+    );
+    Navigator.pop(
+      context,
+      AssistantToolResult(
+        toolId: 'chenggu',
+        title: '袁天罡称骨',
+        values: {
+          '出生公历': '${solar.year}-${solar.month.toString().padLeft(2, '0')}-${solar.day.toString().padLeft(2, '0')} ${solar.hour.toString().padLeft(2, '0')}:${solar.minute.toString().padLeft(2, '0')}',
+          '出生农历口径': '${_computedYearGanZhi ?? 'MISSING'}年农历${_computedLunarMonth ?? 'MISSING'}月${_computedLunarDay ?? 'MISSING'}日',
+          '出生时辰': _computedShiChen ?? 'MISSING',
+          '真太阳时校正': _useTrueSolarTime ? '开启' : '关闭',
+          '早晚子时区分': _distinguishZiShi ? '开启' : '关闭',
+          '总骨重': '${result.liang}两${result.qian}钱（${result.totalQian}钱）',
+          '称骨歌诀标题': result.title.isEmpty ? 'MISSING' : result.title,
+          '称骨歌诀': result.poem.isEmpty ? 'MISSING' : result.poem,
+          '称骨说明': result.detail.isEmpty ? 'MISSING' : result.detail,
+        },
+        sourceIds: const ['local-engine:chenggu'],
+        disclaimer: ChengguData.disclaimer.isEmpty
+            ? '传统民俗文化参考，非科学预测。'
+            : ChengguData.disclaimer,
+      ),
+    );
   }
 
   @override
@@ -236,6 +281,17 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
                 ),
               ),
             ),
+            if (widget.returnResultOnComplete) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _returnResultToAssistant,
+                  icon: const Icon(Icons.reply),
+                  label: const Text('将本次称骨结果带回助手对话'),
+                ),
+              ),
+            ],
           ],
         ],
       ),

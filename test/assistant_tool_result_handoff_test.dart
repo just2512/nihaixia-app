@@ -9,6 +9,11 @@ import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/bazi_paipan_screen.dart';
+import 'package:nihaisha_app/screens/chenggu_bone_screen.dart';
+import 'package:nihaisha_app/screens/guansha_screen.dart';
+import 'package:nihaisha_app/screens/shousheng_debt_screen.dart';
+import 'package:nihaisha_app/screens/huangdi_siji_screen.dart';
+import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
@@ -130,6 +135,8 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
 class _RecordingAssistantService extends LocalAiService {
   String? restoredTranscript;
   List<String> restoredUserMessages = const [];
+  final sentTexts = <String>[];
+  final sentContexts = <String>[];
   int modelCalls = 0;
 
   @override
@@ -141,6 +148,8 @@ class _RecordingAssistantService extends LocalAiService {
     required String context,
   }) async {
     modelCalls++;
+    sentTexts.add(text);
+    sentContexts.add(context);
     return '已收到：$text';
   }
 
@@ -152,6 +161,31 @@ class _RecordingAssistantService extends LocalAiService {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
+}
+
+Future<void> _waitForText(WidgetTester tester, String value) async {
+  final finder = find.text(value);
+  for (var attempt = 0; attempt < 50 && finder.evaluate().isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsOneWidget, reason: '等待页面元素超时：$value');
+}
+
+Future<void> _scrollUntilTextVisible(WidgetTester tester, String value) async {
+  final finder = find.text(value);
+  // ListView(children: ...) lazily builds later result actions. Drag the last
+  // ListView in the active route (not the assistant's still-mounted timeline)
+  // until the target exists, then reveal its exact render object.
+  for (var attempt = 0; attempt < 30 && finder.evaluate().isEmpty; attempt++) {
+    final activeLists = find.byType(ListView);
+    expect(activeLists, findsWidgets, reason: '当前工具页缺少 ListView：$value');
+    await tester.drag(activeLists.last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+  }
+  expect(finder, findsOneWidget, reason: '等待页面元素超时：$value');
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  expect(finder, findsOneWidget, reason: '结果控件未显示：$value');
 }
 
 void main() {
@@ -569,6 +603,129 @@ void main() {
       isTrue,
     );
     expect(service.restoredTranscript, isNot(contains('身体留意')));
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('五种民俗/术数工具均把真实计算结果交给助手，并可一键调用 AI 解释',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) => switch (tool.id) {
+            'chenggu' => const ChengguBoneScreen(returnResultOnComplete: true),
+            'guansha' => const GuanshaScreen(returnResultOnComplete: true),
+            'shousheng_debt' =>
+              const ShoushengDebtScreen(returnResultOnComplete: true),
+            'huangdi_siji' =>
+              const HuangdiSijiScreen(returnResultOnComplete: true),
+            'sanshan_lingqian' =>
+              const SanshanLingqianScreen(returnResultOnComplete: true),
+            _ => const SizedBox.shrink(),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> execute({
+      required String query,
+      required String openAction,
+      required String runAction,
+      required String returnAction,
+      required String expectedResult,
+    }) async {
+      await tester.enterText(find.byType(TextField).first, query);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      expect(find.text(openAction), findsOneWidget, reason: query);
+      await tester.tap(find.text(openAction));
+      await tester.pumpAndSettle();
+      // Some data-backed calculators stay on a loading scaffold after the
+      // route animation settles. Wait for the real calculate control before
+      // tapping, then wait for the result handoff control.
+      await _waitForText(tester, runAction);
+      await _scrollUntilTextVisible(tester, runAction);
+      await tester.tap(find.text(runAction));
+      await tester.pumpAndSettle();
+      // Result cards are ListView children and may not be built until scrolled
+      // into view; absence from the current viewport is not a missing result.
+      await _scrollUntilTextVisible(tester, returnAction);
+      await tester.tap(find.text(returnAction));
+      await tester.pumpAndSettle();
+
+      expect(service.restoredTranscript, contains(expectedResult));
+      expect(
+        store.savedMessages.any((message) =>
+            message['role'] == 'assistant' &&
+            (message['content'] as String).contains(expectedResult)),
+        isTrue,
+      );
+      expect(find.text('AI总结解读'), findsWidgets);
+    }
+
+    await execute(
+      query: '帮我测算称骨',
+      openAction: '打开袁天罡称骨',
+      runAction: '称骨测算',
+      returnAction: '将本次称骨结果带回助手对话',
+      expectedResult: '总骨重：',
+    );
+    await execute(
+      query: '帮我测算小儿关煞',
+      openAction: '打开小儿关煞',
+      runAction: '测算关煞',
+      returnAction: '将本次关煞结果带回助手对话',
+      expectedResult: '本地规则结果：',
+    );
+    await execute(
+      query: '帮我查询受生债',
+      openAction: '打开受生债查询',
+      runAction: '查询受生债',
+      returnAction: '将本次受生债查询结果带回助手对话',
+      expectedResult: '查询体系：禄库受生经',
+    );
+    await execute(
+      query: '帮我查询黄帝四季歌',
+      openAction: '打开轩辕黄帝四季歌',
+      runAction: '查询四季歌',
+      returnAction: '将本次四季歌结果带回助手对话',
+      expectedResult: '对应部位：',
+    );
+    await execute(
+      query: '帮我抽签三山国王灵签',
+      openAction: '打开三山国王灵签',
+      runAction: '摇签',
+      returnAction: '将本次灵签结果带回助手对话',
+      expectedResult: '签号：',
+    );
+
+    expect(service.modelCalls, 0);
+    await tester.tap(find.text('AI总结解读').last);
+    await tester.pumpAndSettle();
+
+    expect(service.modelCalls, 1);
+    expect(service.restoredTranscript, contains('签号：'));
+    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释')),
+      isTrue,
+    );
+    expect(
+      store.savedMessages.any((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到：')),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 

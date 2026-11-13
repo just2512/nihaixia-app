@@ -8,6 +8,7 @@ import 'package:nihaisha_app/services/bazi_service.dart'
 import 'package:nihaisha_app/services/city_location_service.dart'
     show CityLocation;
 import 'package:nihaisha_app/data/settings_repository.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/widgets/bazi_location_picker.dart' show BaZiLocationRow;
 import 'package:nihaisha_app/data/guansha_data.dart'
     show GuanshaEntry, searchGuansha;
@@ -21,7 +22,9 @@ import 'package:nihaisha_app/engine/guansha_engine.dart'
 /// 百科：36 关 + 18 扩展煞可搜索 / 浏览。
 /// 属传统民俗文化参考，非医学或命理定论。
 class GuanshaScreen extends StatefulWidget {
-  const GuanshaScreen({super.key});
+  const GuanshaScreen({super.key, this.returnResultOnComplete = false});
+
+  final bool returnResultOnComplete;
 
   @override
   State<GuanshaScreen> createState() => _GuanshaScreenState();
@@ -122,6 +125,58 @@ class _GuanshaScreenState extends State<GuanshaScreen>
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
     }
+  }
+
+  void _returnResultToAssistant() {
+    final paipan = _paipan;
+    final hits = _hits;
+    if (paipan == null || hits == null) return;
+    final solar = DateTime(
+      _birthDate.year,
+      _birthDate.month,
+      _birthDate.day,
+      _birthHour,
+      _birthMinute,
+    );
+    final pillars = [
+      paipan.bazi.year,
+      paipan.bazi.month,
+      paipan.bazi.day,
+      paipan.bazi.time,
+    ];
+    final hitText = hits.isEmpty
+        ? '未命中本地规则库收录的关煞。'
+        : hits.map((hit) {
+            final entry = hit.entry;
+            return [
+              '${entry.name}（${entry.severity}；${entry.category}）',
+              '判定原因：${hit.reason}',
+              if (entry.jue.isNotEmpty) '口诀：${entry.jue}',
+              if (entry.fanZheJi.isNotEmpty) '条目所载犯者忌：${entry.fanZheJi.join('；')}',
+              if (entry.huaJie.isNotEmpty) '条目所载民俗化解：${entry.huaJie.join('；')}',
+            ].join('\n');
+          }).join('\n\n');
+    Navigator.pop(
+      context,
+      AssistantToolResult(
+        toolId: 'guansha',
+        title: '小儿关煞',
+        values: {
+          '出生公历': '${solar.year}-${solar.month.toString().padLeft(2, '0')}-${solar.day.toString().padLeft(2, '0')} ${solar.hour.toString().padLeft(2, '0')}:${solar.minute.toString().padLeft(2, '0')}',
+          '性别': _isMale ? '男' : '女',
+          '出生地点': _locName ?? '未指定；使用排盘引擎默认地点',
+          '出生农历': paipan.lunarText,
+          '四柱': pillars.join(' '),
+          '真太阳时校正': _useTrueSolarTime ? '开启' : '关闭',
+          '早晚子时区分': _distinguishZiShi ? '开启' : '关闭',
+          '关煞命中数量': hits.length.toString(),
+          '本地规则结果': hitText,
+          '规则库范围': '本地数据集收录的 36 关与 18 条扩展煞；不代表所有民俗流派。',
+        },
+        sourceIds: const ['local-engine:guansha', 'local-data:guansha'],
+        disclaimer: '传统民俗文化参考，非医学结论；不得将关煞名称、儿童身体部位或化解说法解释为健康诊断或治疗建议。',
+      ),
+    );
   }
 
   Color _severityColor(String severity) {
@@ -371,6 +426,17 @@ class _GuanshaScreenState extends State<GuanshaScreen>
         if (_hits != null) ...[
           const SizedBox(height: 12),
           _buildResultList(cs),
+          if (widget.returnResultOnComplete) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _returnResultToAssistant,
+                icon: const Icon(Icons.reply),
+                label: const Text('将本次关煞结果带回助手对话'),
+              ),
+            ),
+          ],
         ],
       ],
     );
