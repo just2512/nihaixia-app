@@ -177,7 +177,52 @@ class AssistantConversationOrchestrator {
     String query,
   ) {
     final values = <String, String>{};
-    if (tool.id == 'bazi') {
+    if (tool.id == 'chenggu') {
+      final isoDate = RegExp(
+        r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b',
+      ).firstMatch(query);
+      final chineseDate =
+          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
+      final dateMatch = isoDate ?? chineseDate;
+      if (query.contains('农历') || query.contains('阴历')) {
+        values['birth_date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else if (dateMatch != null) {
+        values['birth_date'] =
+            dateMatch.group(1)!.padLeft(4, '0') + '-' +
+            dateMatch.group(2)!.padLeft(2, '0') + '-' +
+            dateMatch.group(3)!.padLeft(2, '0');
+      }
+
+      // Parse the period before normalizing both clock and Chinese formats.
+      // Otherwise "晚上8:30" would be mistaken for 08:30 because the old
+      // colon-only branch discarded its period prefix.
+      final timeMatch = RegExp(
+        r'(凌晨|清晨|早上|上午|中午|下午|傍晚|晚上)?\s*(\d{1,2})(?::([0-5]\d)|(?:点|时)(?:(\d{1,2})分|半)?)',
+      ).firstMatch(query);
+      if (timeMatch != null) {
+        var hour = int.parse(timeMatch.group(2)!);
+        final minute = timeMatch.group(3) != null
+            ? int.parse(timeMatch.group(3)!)
+            : timeMatch.group(4) != null
+                ? int.parse(timeMatch.group(4)!)
+                : timeMatch.group(0)!.contains('半')
+                    ? 30
+                    : 0;
+        final period = timeMatch.group(1);
+        if ((period == '下午' || period == '傍晚' || period == '晚上') &&
+            hour >= 1 && hour < 12) {
+          hour += 12;
+        } else if (period == '凌晨' && hour == 12) {
+          hour = 0;
+        }
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+          values['birth_time'] =
+              hour.toString().padLeft(2, '0') + ':' +
+              minute.toString().padLeft(2, '0');
+        }
+      }
+    } else if (tool.id == 'bazi') {
+
       final isoDate =
           RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(query);
       final chineseDate =

@@ -732,6 +732,68 @@ void main() {
       expect(lunar['date'], 'LUNAR_DATE_NOT_SUPPORTED');
     });
 
+    test('称骨请求确定性提取公历日期和出生钟表时间，不猜缺失字段', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我称骨',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'chenggu');
+      expect(decision.toolArguments?.values, isEmpty);
+
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990年1月2日；出生时间：上午8点半',
+      );
+      expect(parsed.values, const {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+      });
+      expect(parsed.validateAgainst(AssistantToolRouter.chenggu), isEmpty);
+
+      final pm = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990/01/02，出生时间：晚上8点',
+      );
+      expect(pm['birth_date'], '1990-01-02');
+      expect(pm['birth_time'], '20:00');
+
+      final pmClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02；出生时间：晚上8:30',
+      );
+      expect(pmClock['birth_time'], '20:30');
+
+      final midnightClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02；出生时间：凌晨12:30',
+      );
+      expect(midnightClock['birth_time'], '00:30');
+
+      final noonClock = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02；出生时间：中午12:30',
+      );
+      expect(noonClock['birth_time'], '12:30');
+
+      final dateOnly = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '出生日期：1990-01-02',
+      );
+      expect(dateOnly['birth_date'], '1990-01-02');
+      expect(dateOnly['birth_time'], isNull);
+
+      final lunar = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.chenggu,
+        '农历1990年正月初二出生，出生时间早上8点',
+      );
+      expect(lunar['birth_date'], 'LUNAR_DATE_NOT_SUPPORTED');
+      expect(lunar['birth_time'], '08:00');
+      expect(
+        lunar.validateAgainst(AssistantToolRouter.chenggu),
+        isNotEmpty,
+      );
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',

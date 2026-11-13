@@ -4228,5 +4228,100 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('称骨助手在当前对话分轮收集出生资料、后台执行并解释，不打开页面',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开称骨页面'));
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return AssistantToolResult(
+              toolId: 'chenggu',
+              title: '袁天罡称骨',
+              values: const {
+                '出生公历': '1990-01-02 08:30',
+                '总骨重': '4两2钱（42钱）',
+                '称骨歌诀': '传统歌诀示例文本',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const [
+                'local-engine:chenggu',
+                'local-data:chenggu-bone-weight',
+              ],
+              disclaimer: '仅供传统民俗文化学习参考。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我称骨');
+    expect(find.textContaining('出生日期（公历）'), findsOneWidget);
+    expect(find.textContaining('出生时间（当地钟表时间）'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty,
+        reason: '缺少简单参数时直接由确定性代码追问，不调用 E4B');
+    expect(pageOpened, isFalse);
+
+    await send('出生日期：1990年1月2日');
+    expect(executedArguments, isEmpty);
+    expect(find.textContaining('出生时间（当地钟表时间）').last, findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, isEmpty);
+
+    await send('出生时间：08:30');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+    });
+    expect(find.textContaining('4两2钱（42钱）'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(
+      service.sentTexts.any((value) => value.contains('袁天罡称骨')),
+      isTrue,
+      reason: '只有真实执行结果通过来源和参数校验后才进入 AI 解释',
+    );
+
+    final conversations = await store.getAssistantConversations();
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessage = messages.firstWhere(
+      (message) => (message['content'] as String).contains('4两2钱'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'chenggu');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+    });
+    expect(metadata.sourceIds, contains('local-engine:chenggu'));
+    expect(metadata.sourceIds, contains('local-data:chenggu-bone-weight'));
+    expect(tester.takeException(), isNull);
+  });
+
 
 }
