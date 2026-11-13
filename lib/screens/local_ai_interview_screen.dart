@@ -2290,6 +2290,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolStatus: result.statusLabel,
         sourceIds: result.sourceIds,
         showPromptInTimeline: false,
+        allowWhileSending: true,
       );
     }
   }
@@ -2616,8 +2617,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? toolStatus,
     List<String> sourceIds = const [],
     bool showPromptInTimeline = true,
+    bool allowWhileSending = false,
   }) async {
-    if (_sending || _modelControlBusy || _structuredDiagnosisBusy) return;
+    if ((_sending && !allowWhileSending) ||
+        _modelControlBusy ||
+        _structuredDiagnosisBusy) {
+      return;
+    }
     if (_status?.ready != true || _statusUnknown) {
       if (mounted) {
         setState(() => _error = '本地模型尚未就绪，无法生成结果解释；请先确认模型状态。');
@@ -3272,6 +3278,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolStatus: normalizedResult.statusLabel,
         sourceIds: normalizedResult.sourceIds,
         showPromptInTimeline: false,
+        allowWhileSending: true,
       );
     }
   }
