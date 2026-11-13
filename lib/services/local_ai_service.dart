@@ -398,8 +398,7 @@ class LocalAiIntentResolution {
     String? backend,
   }) {
     final normalized = text.trim();
-    if (normalized.isEmpty ||
-        normalized.length > maxModelOutputCharacters) {
+    if (normalized.isEmpty || normalized.length > maxModelOutputCharacters) {
       throw const FormatException('意图判别输出为空或超出长度限制');
     }
     final start = normalized.indexOf('{');
@@ -428,39 +427,36 @@ class LocalAiIntentResolution {
       case 'select':
         if (toolId == null ||
             toolId.isEmpty ||
-            !RegExp(r'^[a-z0-9_]{1,64}
-  const LocalAiRuntimeCacheClearResult({
-    required this.runtimeReleased,
-    required this.cacheDeleted,
-    required this.modelFileExists,
-    this.errorCode,
-  });
-
-  final bool runtimeReleased;
-  final bool cacheDeleted;
-  final bool modelFileExists;
-  final String? errorCode;
-
-  bool get complete => runtimeReleased && cacheDeleted;
-
-  factory LocalAiRuntimeCacheClearResult.fromMap(Map<String, dynamic> map) {
-    final runtimeReleased = map['runtimeReleased'];
-    final cacheDeleted = map['cacheDeleted'];
-    final modelFileExists = map['modelFileExists'];
-    if (runtimeReleased is! bool ||
-        cacheDeleted is! bool ||
-        modelFileExists is! bool) {
-      throw const FormatException('本地 AI 缓存清理结果字段不完整');
+            toolId.length > 64 ||
+            !RegExp(r'^[a-z0-9_]+$').hasMatch(toolId)) {
+          throw const FormatException('意图判别没有返回有效候选 ID');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.select,
+          toolId: toolId,
+          backend: backend,
+        );
+      case 'clarify':
+        if (toolId != null && toolId.isNotEmpty) {
+          throw const FormatException('澄清结果不应包含 tool_id');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.clarify,
+          backend: backend,
+        );
+      case 'none':
+        if (toolId != null && toolId.isNotEmpty) {
+          throw const FormatException('无工具结果不应包含 tool_id');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.none,
+          backend: backend,
+        );
+      default:
+        throw const FormatException('意图判别 action 不在允许范围内');
     }
-    return LocalAiRuntimeCacheClearResult(
-      runtimeReleased: runtimeReleased,
-      cacheDeleted: cacheDeleted,
-      modelFileExists: modelFileExists,
-      errorCode: map['errorCode'] as String?,
-    );
   }
 }
-
 class LocalAiModelStatus {
   final bool installed;
   final bool fileExists;
@@ -631,36 +627,6 @@ class LocalAiSymptomDraft {
     return lines;
   }
 }
-).hasMatch(toolId)) {
-          throw const FormatException('意图判别没有返回有效候选 ID');
-        }
-        return LocalAiIntentResolution(
-          action: LocalAiIntentAction.select,
-          toolId: toolId,
-          backend: backend,
-        );
-      case 'clarify':
-        if (toolId != null && toolId.isNotEmpty) {
-          throw const FormatException('澄清结果不应包含 tool_id');
-        }
-        return LocalAiIntentResolution(
-          action: LocalAiIntentAction.clarify,
-          backend: backend,
-        );
-      case 'none':
-        if (toolId != null && toolId.isNotEmpty) {
-          throw const FormatException('无工具结果不应包含 tool_id');
-        }
-        return LocalAiIntentResolution(
-          action: LocalAiIntentAction.none,
-          backend: backend,
-        );
-      default:
-        throw const FormatException('意图判别 action 不在允许范围内');
-    }
-  }
-}
-
 class LocalAiRuntimeCacheClearResult {
   const LocalAiRuntimeCacheClearResult({
     required this.runtimeReleased,
