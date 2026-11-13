@@ -13,6 +13,7 @@ import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
+import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -382,6 +383,7 @@ class _TextSendService extends LocalAiService {
 
   final LocalAiIntentResolution intentResolution;
   final LocalAiBaziSlotDraft? baziSlotDraft;
+  int statusCalls = 0;
   final baziSlotQueries = <String>[];
   final baziSlotMissingKeys = <Set<String>>[];
   final baziSlotTraceIds = <String>[];
@@ -426,7 +428,10 @@ class _TextSendService extends LocalAiService {
   }
 
   @override
-  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+  Future<LocalAiModelStatus> getStatus() async {
+    statusCalls += 1;
+    return _readyStatus;
+  }
 
   @override
   Future<String> sendMessage(String text) async {
@@ -3065,6 +3070,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.pump();
+    expect(service.statusCalls, greaterThan(0));
+    expect(
+      AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+        query,
+        const {'birth_time', 'birthplace'},
+      ),
+      isTrue,
+    );
 
     await tester.enterText(find.byType(TextField).first, query);
     await tester.pump();
