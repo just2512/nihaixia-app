@@ -171,6 +171,21 @@ Future<void> _waitForText(WidgetTester tester, String value) async {
   expect(finder, findsOneWidget, reason: '等待页面元素超时：$value');
 }
 
+Future<void> _scrollUntilTextVisible(WidgetTester tester, String value) async {
+  final finder = find.text(value);
+  final verticalScrollables = find.byWidgetPredicate(
+    (widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down,
+  );
+  expect(verticalScrollables, findsWidgets);
+  await tester.scrollUntilVisible(
+    finder,
+    400,
+    scrollable: verticalScrollables.first,
+  );
+  expect(finder, findsOneWidget, reason: '结果卡片未出现：$value');
+}
+
 void main() {
   testWidgets('五运六气工具可把实际推算结果返回统一助手', (tester) async {
     Object? returned;
@@ -638,8 +653,9 @@ void main() {
       await tester.ensureVisible(find.text(runAction));
       await tester.tap(find.text(runAction));
       await tester.pumpAndSettle();
-      await _waitForText(tester, returnAction);
-      await tester.ensureVisible(find.text(returnAction));
+      // Result cards are ListView children and may not be built until scrolled
+      // into view; absence from the current viewport is not a missing result.
+      await _scrollUntilTextVisible(tester, returnAction);
       await tester.tap(find.text(returnAction));
       await tester.pumpAndSettle();
 
