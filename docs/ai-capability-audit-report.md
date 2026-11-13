@@ -667,8 +667,8 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 ### 23.2 Master post-merge
 
 - Flutter tests run `43360881240`：head `5edba1e`，整体 SUCCESS；Flutter regression 与 Android arm64/Native job 均 SUCCESS。
-- Flutter Quality Gate run `43360881283`：head `5edba1e`，本节记录时仍 IN_PROGRESS。静态分析、Dart 全量测试、Native unit tests 已 SUCCESS；Find N2 arm64 Debug APK build 尚未结束，未见失败。
-- 两个 workflow 分开判定；Quality Gate 仍为 IN_PROGRESS 时不得将 master 全部 post-merge checks 统称 PASS。
+- Flutter Quality Gate run `43360881283`：head `5edba1e`，终态 SUCCESS；静态分析、Dart 全量测试、Native unit tests 和 Find N2 arm64 Debug APK build 全部 SUCCESS。
+- 两个 workflow 分开核验后，Flutter tests 与 Quality Gate 均 SUCCESS。
 
 ### 23.3 当前 AI 交付边界
 
