@@ -212,10 +212,9 @@ class AssistantConversationOrchestrator {
           RegExp(r'(?:第一数|上卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
       final secondLabel =
           RegExp(r'(?:第二数|下卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
-      if (firstLabel != null && secondLabel != null) {
-        values['first'] = firstLabel.group(1)!;
-        values['second'] = secondLabel.group(1)!;
-      } else {
+      if (firstLabel != null) values['first'] = firstLabel.group(1)!;
+      if (secondLabel != null) values['second'] = secondLabel.group(1)!;
+      if (firstLabel == null && secondLabel == null) {
         final pair = RegExp(
           r'(?:用|以)?\s*(\d{1,10})\s*(?:和|与|及|、|，|,)\s*(\d{1,10})',
         ).firstMatch(query);
@@ -230,8 +229,9 @@ class AssistantConversationOrchestrator {
       final chineseDate =
           RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
       if (query.contains('农历') || query.contains('阴历')) {
-        // The existing page accepts Gregorian dates only; do not silently
-        // reinterpret a lunar date as a solar date or today's date.
+        // Preserve an explicit unsupported calendar basis as invalid input;
+        // the caller must clarify instead of silently substituting today's date.
+        values['date'] = 'LUNAR_DATE_NOT_SUPPORTED';
       } else if (isoDate != null) {
         values['date'] = isoDate.group(0)!;
       } else if (chineseDate != null) {
