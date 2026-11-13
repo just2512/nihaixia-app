@@ -4152,11 +4152,13 @@ void main() {
           service: service,
           testToolRouteBuilder: (_, __) {
             pageOpenCount += 1;
-            return Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(tester.element(find.byType(Scaffold))).pop(),
-                  child: const Text('退出梅花页面'),
+            return Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('退出梅花页面'),
+                  ),
                 ),
               ),
             );
@@ -4170,16 +4172,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, '梅花易数时间起卦');
-    await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
-    await tester.pumpAndSettle();
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+      expect(find.text('退出梅花页面'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    }
 
+    await send('梅花易数时间起卦');
     expect(pageOpenCount, 1);
     expect(executionCount, 0);
-    expect(find.text('退出梅花页面'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
+
+    await send('梅花易数随机起卦');
+    expect(pageOpenCount, 2);
+    expect(executionCount, 0);
     expect(tester.takeException(), isNull);
   });
 
