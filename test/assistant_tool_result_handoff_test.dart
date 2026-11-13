@@ -625,6 +625,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(runAction));
       await tester.pumpAndSettle();
+      expect(find.text(returnAction), findsOneWidget,
+          reason: '未显示结果回传按钮：$query；当前页面：$runAction');
       await tester.ensureVisible(find.text(returnAction));
       await tester.tap(find.text(returnAction));
       await tester.pumpAndSettle();
