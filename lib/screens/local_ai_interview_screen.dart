@@ -2367,6 +2367,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             status: AiTraceStatus.succeeded,
             route: 'bazi_slot_extraction',
             toolId: tool.id,
+            backend: draft.backend,
           );
           await _traceRecorder.record(
             activeTraceContext,
@@ -2374,6 +2375,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             status: AiTraceStatus.succeeded,
             route: 'bazi_slot_extraction',
             toolId: tool.id,
+            backend: draft.backend,
           );
           await _traceRecorder.record(
             activeTraceContext,
