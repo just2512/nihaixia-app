@@ -607,6 +607,59 @@ void main() {
       expect(decision.expectsToolSelection, isTrue);
     });
 
+    test('梅花数字起卦提取用户明确给出的两个数字，不调用模型猜测', () {
+      const query = '梅花易数起卦，用 3 和 7';
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: query,
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool?.id, 'meihua');
+      expect(decision.toolArguments?['first'], '3');
+      expect(decision.toolArguments?['second'], '7');
+      expect(decision.toolArguments?['date'], isNull);
+      expect(
+        AssistantConversationOrchestrator.shouldUseBaziSlotModel(query, const {}),
+        isFalse,
+      );
+    });
+
+    test('梅花起卦支持逐项补充数字和明确的公历日期', () {
+      final firstNumber = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '第一数：3',
+      );
+      expect(firstNumber['first'], '3');
+      expect(firstNumber['second'], isNull);
+
+      final secondNumber = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '第二数：7；公历日期：2026-11-13',
+      );
+      expect(secondNumber['second'], '7');
+      expect(secondNumber['date'], '2026-11-13');
+    });
+
+    test('梅花相对日期确定性解析，农历日期不伪装成公历', () {
+      final tomorrow = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '梅花易数起卦，用3和7，明天',
+      );
+      expect(tomorrow['first'], '3');
+      expect(tomorrow['second'], '7');
+      expect(tomorrow['date'], isNotNull);
+      expect(
+        DateTime.tryParse(tomorrow['date']!),
+        isNotNull,
+      );
+
+      final lunar = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '梅花易数起卦，用3和7，农历2026年十月',
+      );
+      expect(lunar['date'], 'LUNAR_DATE_NOT_SUPPORTED');
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
