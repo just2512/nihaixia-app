@@ -2927,7 +2927,14 @@ void main() {
     expect(interpretationMetadata.toolStatus, 'SUCCEEDED');
     expect(
       interpretationMetadata.sourceIds,
-      const ['local-engine:diagnostic-engine'],
+      contains('local-engine:diagnostic-engine'),
+    );
+    expect(
+      interpretationMetadata.sourceIds.any(
+        (sourceId) => sourceId.startsWith('neijing:'),
+      ),
+      isTrue,
+      reason: '保留本轮实际检索到的知识来源，不能只留下引擎来源',
     );
     expect(tester.takeException(), isNull);
   });
