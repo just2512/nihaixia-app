@@ -1445,7 +1445,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 31.1 主线基线与当前分支
 
 - 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`（PR #136 合并后）。
-- 分支：`work/p4-diagnostic-result-provenance-2026-11-13`；当前 head：`a459f9f2280525ade6178b0e6e17d3fa703ced28`。
+- 分支：`work/p4-diagnostic-result-provenance-2026-11-13`；代码与测试提交 head：`a459f9f2280525ade6178b0e6e17d3fa703ced28`（其后仅追加本台账/审计报告记录）。
 - Branch validation run `43420458490`：SUCCESS（静态分析 + changed tests）。PR 全量 Flutter regression 和 Android arm64 CI 尚待 PR 建立后的终态。
 - PR #137 尚未创建/合并；不得将 branch validation 视作完整集成验收。
 
