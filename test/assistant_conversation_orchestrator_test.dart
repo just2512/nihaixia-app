@@ -16,6 +16,21 @@ void main() {
       }
     });
 
+    test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
+      expect(
+        AssistantConversationOrchestrator.isPersonalHealthNarrative(
+          '我最近三天口苦，帮我排个盘',
+        ),
+        isTrue,
+      );
+      expect(
+        AssistantConversationOrchestrator.isPersonalHealthNarrative(
+          '帮我排个盘',
+        ),
+        isFalse,
+      );
+    });
+
     test('个人症状叙述进入问诊助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '我最近三天口苦，睡眠不好，半夜容易醒',
