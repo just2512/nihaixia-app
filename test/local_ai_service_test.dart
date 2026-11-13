@@ -771,6 +771,26 @@ void main() {
       expect(draft.backend, 'cpu');
     });
 
+    test('Bazi slot validation accepts explicit birthplace and gender wording', () {
+      const query = '我出生在上海市，性别男';
+      final rawDraft = jsonEncode({
+        'birth_date': {'value': null, 'evidence': null},
+        'birth_time': {'value': null, 'evidence': null},
+        'gender': {'value': 'male', 'evidence': '性别男'},
+        'birthplace': {'value': '上海市', 'evidence': '出生在上海市'},
+      });
+
+      final draft = LocalAiBaziSlotDraft.fromModelText(
+        rawDraft,
+        userText: query,
+        requestedKeys: const {'gender', 'birthplace'},
+      );
+      expect(draft.values, const {
+        'gender': 'male',
+        'birthplace': '上海市',
+      });
+    });
+
     test('Bazi natural-language midnight maps to 00:00', () {
       const query = '晚上12点出生';
       final rawDraft = jsonEncode({
