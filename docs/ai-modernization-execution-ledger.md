@@ -1248,3 +1248,53 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - **未被本轮 CI 证明：** E4B 在 OPPO Find N2 上是否能稳定生成正确、充分、可追溯的自然语言解释。fake/recording service 测试证明的是上下文交付，不是模型语义质量。
 - **真实设备待办：** 使用合成/非敏感数据完成本地知识对照、既有问诊结果追问、八字详批、紫微整体/大限及已选流年/流月/流日解释；记录 App SHA、模型版本、backend、原始输入摘要、真实输出及来源核对。未执行场景保持 UNKNOWN。
 - **其他独立外部边界：** A/F 真机多轮和生命周期 TRACE、B 健康风险红旗 detector/审核、E 混合 SQLite 备份决策及清除后强停/重启验证仍保持 PARTIAL/UNKNOWN；不阻断普通学习与术数解释代码链路，也不被本 PR 宣称完成。
+
+---
+
+## 27. 2026-11-13 PR #131：八字对话内 Headless 执行闭环集成
+
+### 27.1 主线集成与 CI 证据
+
+- PR #131「feat(ai): collect Bazi inputs in chat and execute headlessly」已 squash 合并。
+- PR head：`a1b3d63713eedcbdbf3195a5c32105a83548fea2`；merge commit / 当前 master 基线：`5f81d48b29cf2680daf6a1ce902b2758db2a771d`。
+- PR 修改 9 个文件：Headless Bazi executor、工具参数类型/注册、助手对话参数收集和结果回传，以及对应单元/Widget/路由测试；未修改八字计算规则、问诊辨证规则或知识库。
+- PR Flutter workflow run `43397003322`：SUCCESS；全量 Flutter regression `1398 tests passed, 15 skipped`。
+- 同一 PR workflow 的 Android arm64 job：SUCCESS；Debug APK 构建、合并 Manifest 校验、ABI/SHA-256 校验、Android Native unit tests 与测试报告/XML 校验均 SUCCESS；Android unit tests `66 tests, 0 failures, 0 errors, 0 skipped`。
+- 独立 push branch validation run `43396994807`：SUCCESS（Static analysis + changed tests）。PR 事件里的 branch-validation job 是 SKIPPED，不能把它单独计为 PASS；对应的独立 push validation 才是通过证据。
+- PR #131 已关闭且 merged；当前 master 为 merge commit `5f81d48b29cf2680daf6a1ce902b2758db2a771d`。
+- 合并后的 master Flutter tests run `43398367412` 和 Flutter Quality Gate run `43398367761` 在本节记录时均为 IN_PROGRESS；终态尚未取得，不得写为 PASS。
+
+### 27.2 本次交付边界
+
+- 新增 `BaziToolExecutor`，复用原有 `computeBaZiPaipan`、`computeBaZiFortune`、结果格式化器和本地城市位置数据。参数校验、地点唯一性校验通过后才执行；不使用示例日期、默认性别或默认经纬度。
+- 统一助手对话内收集公历出生日期、出生地当地钟表时间、性别、出生地点；支持分轮补齐、待补参状态恢复、文本取消。成功计算结果、实际参数和来源 ID 被写回会话；仅成功且通过结果契约校验时出现「AI总结解读」入口。
+- 结果解释输入来自 App 实际排盘结果；AI 只解释，不重算、不改四柱、不补造字段。当前计算仍沿用原有真太阳时设置及其时间口径声明；不做历史时区/夏令时换算。
+- 当前字段提取仍是确定性解析（日期、时间、性别、出生地标签），不是通用 E4B 结构化自然语言理解；不得将本 PR 记为 P4 L1 完成。
+- 本 PR 只把用户明确指定的八字用例新增为第三项 Headless 能力；未把其它 Page Tool 批量改成后台执行。
+
+### 27.3 D Headless Capability 状态更新
+
+| 状态 | 能力 | 当前实现 |
+|---|---|---|
+| Headless / Executed | `yunqi` | 原有确定性执行器 |
+| Headless / Executed | `almanac` | 原有确定性执行器 |
+| Headless / Executed | `bazi` | 本 PR 新增；真实参数与结果契约校验、来源 ID、对话持久化和解释入口 |
+
+- D 从「2 项 Headless / 2 项 Executed」更新为「3 项 Headless / 3 项 Executed」。这是用户明确要求的八字对话场景，不是增加数量目标。
+- 其余工具维持既有 Page Tool/能力路径；只有出现明确用户需求、可复用确定性逻辑和独立验收方案时才开新切片，不做批量 Headless 转换。
+
+### 27.4 AI 能力总状态与后续顺序
+
+1. **P4 结构化意图理解仍待实现：** 当前 L0 主要由确定性关键词/别名路由；Bazi 参数字段抽取也仍是确定性格式解析。下一阶段按审计要求设计有界候选集和参数 schema，由 E4B 只在候选范围内做复杂/歧义意图选择与 slot filling；所有输出经 schema/业务约束校验后才能调用工具。简单请求继续走确定性路径，不允许模型自由指定工具名。
+2. **自然语言问诊前置理解仍待实现：** 当前规则问诊仍沿用既有十问/问诊控制器流程。目标是保留用户原始自由文本，由 AI 提取候选症状事实、标记未确认/缺失项，只追问必要字段；用户确认后再调用既有规则问诊和 DiagnosticEngine；结果继续来自 App 已审核知识库/规则，再由 AI 总结解释。不得重建知识库、修改诊断规则或把 AI 推断标为诊断。
+3. **健康红旗门禁是问诊自然语言入口前置硬门槛：** 当前原始文本 detector、医学审核记录和 Flutter/Native 全入口强制拦截仍未形成完整证据。取得医学审核的 detector 规则、阈值、例外、处置文案和版本记录之前，不得让症状抽取/普通模型路径绕过门禁，不得自行编造医学词表，也不得默认 CLEAR。此限制只针对健康风险/潜在个体诊疗路径，不应扩展到普通学习或非医疗术数解释。
+4. **结果解释的真实设备语义验收仍待完成：** 自动化证明真实 App 结果与来源上下文进入本地模型调用链，不证明 E4B 已在 OPPO Find N2 上稳定正确回答。需用合成/非敏感样例核对本地知识综合、已有问诊结果追问、八字详批、紫微整体/大限及已选流年/流月/流日解释，并记录模型/设备/backend/App SHA/真实输出/来源一致性；未实测场景保持 UNKNOWN。
+5. **A/F 与 E 的设备级硬门槛未因本 PR 改变：** Find N2 多轮、媒体、Activity/进程中断恢复和完整 TRACE 采证仍待设备执行；SQLite 混合数据库备份产品决策、清除后的强停/重启不可恢复性仍为 PARTIAL/UNKNOWN。
+
+### 27.5 冻结范围与停止条件
+
+- 不重新建设知识库，不重复医学审核已经完成的知识内容，不改 DiagnosticEngine/辨证/剂量/八字算法。
+- 不引入第二套 Orchestrator、Agent/DAG 框架、云模型或向量数据库。
+- 不批量 Headless 化所有工具；不以测试数量或工具数量作为目标。
+- 后续每个代码切片只围绕上述明确缺口；先检查现有能力和文档，再创建独立分支，修改最少文件，运行 changed tests 与对应 CI，最后核对主线 head。
+- 未取得医学审核、Find N2 真机记录或数据清除证据的事项，继续保持 PARTIAL / UNKNOWN；自动化 CI 不能替代外部验收。
