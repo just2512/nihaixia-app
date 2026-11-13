@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
@@ -729,6 +731,81 @@ void main() {
       expect(received?.arguments, <String, Object?>{
         'trace_id': traceId,
       });
+    });
+
+    test('Bazi slot extraction sends only missing fields and returns evidenced values', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      const query = '我在上海市出生，生日是1990年1月2日，早上八点半，男性';
+      final rawDraft = jsonEncode({
+        'birth_date': {'value': null, 'evidence': null},
+        'birth_time': {'value': '08:30', 'evidence': '早上八点半'},
+        'gender': {'value': null, 'evidence': null},
+        'birthplace': {'value': '上海市', 'evidence': '在上海市出生'},
+      });
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': rawDraft,
+          'backend': 'cpu',
+          'trace_id': traceId,
+        };
+      });
+
+      final draft = await LocalAiService().extractBaziSlotsWithTrace(
+        query: query,
+        missingKeys: const {'birth_time', 'birthplace'},
+        traceId: traceId,
+      );
+
+      expect(received?.method, 'extractBaziSlots');
+      expect(received?.arguments, <String, Object?>{
+        'text': query,
+        'missing_fields': '["birth_time","birthplace"]',
+        'trace_id': traceId,
+      });
+      expect(draft.values, const {
+        'birth_time': '08:30',
+        'birthplace': '上海市',
+      });
+    });
+
+    test('Bazi slot evidence rejects values that do not match the user's words', () {
+      const query = '我出生时是早上八点半，在上海市出生';
+      final rawDraft = jsonEncode({
+        'birth_date': {'value': null, 'evidence': null},
+        'birth_time': {'value': '09:30', 'evidence': '早上八点半'},
+        'gender': {'value': null, 'evidence': null},
+        'birthplace': {'value': '上海市', 'evidence': '在上海市出生'},
+      });
+
+      expect(
+        () => LocalAiBaziSlotDraft.fromModelText(
+          rawDraft,
+          userText: query,
+          requestedKeys: const {'birth_time', 'birthplace'},
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('Bazi slot evidence cannot overwrite fields that deterministic code already supplied', () {
+      const query = '出生日期1990年1月2日；早上八点半';
+      final rawDraft = jsonEncode({
+        'birth_date': {'value': '1990-01-02', 'evidence': '1990年1月2日'},
+        'birth_time': {'value': '08:30', 'evidence': '早上八点半'},
+        'gender': {'value': null, 'evidence': null},
+        'birthplace': {'value': null, 'evidence': null},
+      });
+
+      expect(
+        () => LocalAiBaziSlotDraft.fromModelText(
+          rawDraft,
+          userText: query,
+          requestedKeys: const {'birth_time'},
+        ),
+        throwsFormatException,
+      );
     });
 
     test('invalid trace ID is rejected before a platform call', () async {
