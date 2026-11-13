@@ -902,6 +902,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String text, {
     required AssistantMode mode,
     required AiTraceContext traceContext,
+    String? retrievalQuery,
   }) async {
     final traceId = traceContext.traceId;
     Future<String> sendWithContext(String context) async {
@@ -1017,11 +1018,32 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
             .map((tool) => tool.title)
             .join('、');
+        final knowledge = retrievalQuery == null || retrievalQuery.trim().isEmpty
+            ? null
+            : await _retrieveKnowledgeWithTrace(
+                retrievalQuery,
+                traceContext: traceContext,
+              );
+        final knowledgeContext = switch (knowledge?.status) {
+          null => '',
+          AssistantKnowledgeRetrievalStatus.noResults =>
+            '本轮本地知识库未命中可引用条目（NO_RESULTS）。',
+          AssistantKnowledgeRetrievalStatus.failed =>
+            '本轮本地知识库检索失败（FAILED）：${knowledge?.failureMessage ?? 'MISSING'}。不得将失败说成无命中。',
+          AssistantKnowledgeRetrievalStatus.partial =>
+            '本轮本地知识库部分命中；只使用已返回的资料（PARTIAL）：\n${knowledge?.text}',
+          AssistantKnowledgeRetrievalStatus.retrieved =>
+            '本轮本地知识库检索结果：\n${knowledge?.text}',
+        };
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
-            '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。';
+            '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。\n'
+            '$knowledgeContext';
+        final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
-          text: await sendWithContext(context),
+          text: reply + (knowledge?.citationFooter ?? ''),
+          sourceIds: knowledge?.sourceIds ?? const [],
+          knowledgeStatus: knowledge?.statusLabel,
         );
       case AssistantMode.metaphysics:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
