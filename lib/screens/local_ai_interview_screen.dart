@@ -3715,12 +3715,105 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
-      final decision = AssistantConversationOrchestrator.resolve(
+      var decision = AssistantConversationOrchestrator.resolve(
         query: text,
         selectedMode: _assistantMode,
         currentMode: _lastEffectiveMode,
         pendingToolSelection: _pendingToolSelection,
       );
+      final mayUseBoundedIntentModel =
+          decision.candidateTools.length >= 2 &&
+          (decision.mode == AssistantMode.tools ||
+              decision.mode == AssistantMode.metaphysics) &&
+          _status?.ready == true;
+      if (mayUseBoundedIntentModel) {
+        setState(() => _sending = true);
+        try {
+          final resolution = await _service.resolveAssistantIntentWithTrace(
+            query: text,
+            candidates: decision.candidateTools
+                .map(
+                  (tool) => LocalAiIntentCandidate(
+                    id: tool.id,
+                    title: tool.title,
+                    description: tool.description,
+                  ),
+                )
+                .toList(growable: false),
+            traceId: traceId,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.nativeInference,
+            status: AiTraceStatus.succeeded,
+            route: 'bounded_intent_selection',
+            mode: decision.mode.name,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.modelOutput,
+            status: AiTraceStatus.succeeded,
+            route: 'bounded_intent_selection',
+            mode: decision.mode.name,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.succeeded,
+            route: 'bounded_intent_selection:${resolution.action.name}',
+            mode: decision.mode.name,
+          );
+          if (resolution.action == LocalAiIntentAction.select) {
+            AssistantToolDefinition? selectedTool;
+            for (final candidate in decision.candidateTools) {
+              if (candidate.id == resolution.toolId) {
+                selectedTool = candidate;
+                break;
+              }
+            }
+            if (selectedTool != null) {
+              decision = AssistantDispatchDecision(
+                mode: decision.mode,
+                tool: selectedTool,
+                toolArguments:
+                    AssistantConversationOrchestrator.argumentsFor(
+                  selectedTool,
+                  text,
+                ),
+              );
+            }
+          }
+        } catch (error) {
+          // E4B is advisory only. A native failure or invalid schema falls
+          // back to the deterministic L0 clarification; it never dispatches.
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.nativeInference,
+            status: AiTraceStatus.unknown,
+            route: 'bounded_intent_selection',
+            mode: decision.mode.name,
+            errorCode: 'INTENT_CLASSIFICATION_FAILED',
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.modelOutput,
+            status: AiTraceStatus.failed,
+            route: 'bounded_intent_selection',
+            mode: decision.mode.name,
+            errorCode: 'INTENT_OUTPUT_INVALID',
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.notStarted,
+            route: 'fallback_to_deterministic_l0',
+            mode: decision.mode.name,
+          );
+        } finally {
+          if (mounted) setState(() => _sending = false);
+        }
+        if (!mounted) return;
+      }
       effectiveMode = decision.mode;
       _pendingToolSelection = decision.expectsToolSelection;
       final resolvedRoute = decision.needsClarification
