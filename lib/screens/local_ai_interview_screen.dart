@@ -3560,6 +3560,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var restoredEffectiveMode = _lastEffectiveMode;
     var restoredPendingToolSelection = false;
     AssistantToolArguments? restoredPendingBaziArguments;
+    AssistantToolArguments? restoredPendingMeihuaArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -3583,6 +3584,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (isUser) {
         restoredPendingToolSelection = false;
         restoredPendingBaziArguments = null;
+        restoredPendingMeihuaArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -3603,6 +3605,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             );
       if (!isUser && pendingToolId == 'bazi') {
         restoredPendingBaziArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'meihua') {
+        restoredPendingMeihuaArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -3745,6 +3753,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
       _pendingBaziArguments = restoredPendingBaziArguments;
+      _pendingMeihuaArguments = restoredPendingMeihuaArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
