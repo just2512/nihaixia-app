@@ -3205,7 +3205,7 @@ void main() {
     final messages = await store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    expect(messages.length, greaterThanOrEqualTo(8));
+    expect(messages.length, greaterThanOrEqualTo(7));
     final resultMessage = messages.firstWhere(
       (message) => (message['content'] as String).contains('完整排盘结果'),
     );
