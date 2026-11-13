@@ -1,4 +1,3 @@
-import '../engine/bazi_analysis.dart';
 import 'bazi_service.dart';
 import 'ziwei_engine.dart';
 import 'ziwei_interpretation.dart';
@@ -22,7 +21,7 @@ String formatBaZiChartForAssistant({
   ];
   final analysis = result.analysis;
   final factorLabels = analysis.strengthFactors
-      .map((value) => value.replaceAll(RegExp(r'\\s*\\([+-]?\\d+(?:\\.\\d+)?\\)'), ''))
+      .map((value) => value.replaceAll(RegExp(r'\s*\([+-]?\d+(?:\.\d+)?\)'), ''))
       .toList(growable: false);
   const pillarLabels = ['年柱', '月柱', '日柱', '时柱'];
 
@@ -71,7 +70,7 @@ String formatBaZiChartForAssistant({
     '解读要求：请基于以上 App 已计算字段做归纳，解释强弱、格局、五行和大运之间的关系；区分排盘事实与 AI 归纳，不得自行改动四柱或补造缺失字段。',
     '边界：传统命理文化学习参考，不是科学预测，不用于医疗、法律或投资决策。',
   ];
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 /// Full deterministic Ziwei result plus the interpretation templates already
@@ -121,5 +120,5 @@ String formatZiweiChartForAssistant({
     '解读要求：请先归纳命宫、身宫、生年四化和十二宫之间的主要关系，再结合大限作分层解释；明确哪些是 App 排盘字段、哪些是 App 规则模板、哪些是 AI 归纳。缺失字段保持 MISSING，不自行重排或补造。',
     '边界：传统术数与民俗文化学习参考，不是科学预测，不用于医疗、法律或投资决策；不要把疾厄宫或星曜解释成医学诊断。',
   ];
-  return lines.join('\\n');
+  return lines.join('\n');
 }
