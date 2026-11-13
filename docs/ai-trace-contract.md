@@ -1,8 +1,8 @@
 # Local AI TRACE 端到端契约
 
-- 状态：F2 部分落地；普通文本/图片/语音统一助手轮次已接入可选 trace_id 与 SQLite metadata，其他分支仍待接入
-- 审计基线：`master @ e279d7a4ce65edc5a32d7521231f57c413db6895`
-- 约束：TRACE 默认关闭；只记录 allowlisted metadata；写入失败不得影响 AI 业务；不创建新的 conversation table。
+- 状态：F 部分落地；普通文本/图片/语音常规助手轮次已有 per-turn trace_id、Native bridge correlation 和 SQLite metadata；Debug-only 本地显式开关已纳入实现分支；结构化问诊/澄清/工具等其余分支、完整阶段覆盖及 Find N2 真实 TRACE 仍未闭环
+- 最近复核主线：`master @ 14784fa2b93a3746419ea02de8290bf69876ed4b`；PR #127 新增 Debug-only 开关，待当前 PR CI 完成后集成
+- 约束：TRACE 默认关闭；Release/Profile 不提供启用入口；只记录 allowlisted metadata；写入失败不得影响 AI 业务；不创建新的 conversation table。
 
 ## 1. 核心不变量
 
@@ -136,3 +136,35 @@
 - 新增可注入 recorder 的测试 seam，验证一个 ID 贯穿 traced Native API 与 user/assistant metadata，且事件阶段完整。
 - 独立症状提取入口也已按 recorder 开关调用 traced API，并记录 Native 成功/UNKNOWN；该草稿尚未持久化到消息 metadata。
 - 本切片仍未覆盖结构化问诊分支、澄清/工具执行分支、检索阶段细分、Native 失败轮次的持久化关联及真实 Find N2 TRACE；整体 F 仍为 PARTIAL。
+
+---
+
+## 10. 2026-11-13 Debug-only 开关与当前实现边界
+
+### 10.1 已有基础设施与普通轮次接线
+
+- `AiTraceRecorder` 默认 `enabled=false`；没有可用 writer 时也不能启用。TRACE 关闭时不生成 ID、不写事件、不向 Native 传 ID、不向消息 metadata 写 `trace_id`。
+- `LocalAiTraceFileWriter` 写入 App 私有 Application Support 目录中的 `ai_trace.jsonl`，最多 500 条、保留 7 天；只持久化 `AiTraceEvent.toJson()` allowlist 字段。
+- `AiTraceRuntime` 是进程级 recorder/writer 单例。`LocalAiInterviewScreen` 普通文本、知识检索、图片、语音、结构化问诊启动/选项/舌脉输入、澄清路由、Headless/Page 工具和症状整理均已有不同程度的事件记录调用点；普通助手轮次已有可选 turn context、Native bridge correlation 和 user/assistant message metadata。当前代码对 retrieval/context assembly/model input/native inference/model output/argument validation/tool execution/business execution/result validation/persistence/persisted state/presentation/final render 等阶段有明确调用点，但不能据此推断所有路径的事件链已完整。
+- 上述接线不代表所有路径和所有阶段都已覆盖。当前静态核对未发现生产代码记录 `AiTraceStage.preflight` 或 `AiTraceStage.redFlag` 的调用点；B 项自然语言 detector 与全入口 Gate 仍缺经医学审核的生产接入，因此这两个阶段保持 MISSING/UNKNOWN。失败/取消/未完成轮次及部分跨层终态仍需在设备上按场景核对；不得根据文件存在或某条正常路径的 JSONL 推断全链路完成。
+
+### 10.2 显式开关的产品与生命周期约束
+
+- Debug 设置页加入 `LocalAiTraceDebugTile`，仅在 `kDebugMode` 下显示；Release/Profile 构建不显示该入口。
+- 打开开关时调用进程级 `AiTraceRuntime.recorder.enable()`；关闭时调用 `disableAndFlush()`，等待已排队写入完成后再报告关闭。
+- 开关仅在当前进程内生效，不持久化用户偏好；App 进程重启后 recorder 重新按默认 `enabled=false` 创建。不得把开关状态同步到云端或长期偏好设置。
+- UI 文案必须说明只记录脱敏流程元数据，明确 500 条/7 天保留边界，不记录聊天正文、prompt、模型回复、症状、附件内容或身份信息。
+
+### 10.3 清除协调与隐私边界
+
+- `LocalAiDataClearCoordinator.forApp()` 与生产采集共享同一 `AiTraceRuntime` 单例：`disableAndFlush → Native runtime release → clear AI-owned attachments / ai_trace.jsonl + .tmp / AI conversation rows → restore previous recorder state`。
+- Native release 未确认时不删除仍可能被推理占用的附件；各数据域失败必须单独返回。应用内清除代码与自动化测试已落地，但它不证明混合数据库的系统备份/设备迁移副本、旧共享图片或外部导出副本被删除。
+- 不允许通过清除操作删除整个 `nihaisha.db`、任意共享临时图片或已安装模型；Android backup policy 维持当前状态，除非产品另行决策。
+
+### 10.4 尚未通过的验收
+
+- `AiTraceStage` 规范阶段以本文件第 4 节为准。真机记录必须核对每个场景实际适用的阶段；真正不适用才记 `NOT_APPLICABLE`。应有事件却未接线/未写出时记缺失或 `UNKNOWN`，不得伪造补齐。
+- Debug-only 开关和本地 JSONL writer 只解决“如何显式开启并本地留存”；它们不补齐所有路由节点、失败节点、Native 生命周期节点，也不证明某次模型请求一定由预期 backend 完成。
+- Find N2 GPU 至少 20 轮、CPU 至少 20 轮，图片/语音、进程中断/恢复、模型/Activity 生命周期，以及 AI 数据清除后强停/重启的真实验收仍未执行；未提供设备 TRACE 的项目保持 `UNKNOWN`。红旗相关场景还必须先解决 B 的医学审核与生产 fail-closed Gate，不能用关闭 TRACE 或跳过红旗阶段换取验收通过。
+- 因此 F 整体保持 `PARTIAL / DEVICE UNKNOWN`，不能标 `IMPLEMENTED` 或 RELEASE READY。CI、静态审计和 Widget 测试不能替代真实设备 TRACE。
+
