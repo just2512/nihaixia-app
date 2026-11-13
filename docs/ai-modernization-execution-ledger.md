@@ -1152,3 +1152,9 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 4. **医案学习：** 1256条本地医案可以作为整理案例检索，但逐案原始出处和来源统计差异不再是一般学习检索的上线阻断项；不得据此形成疗效证明、个体治疗建议或虚构原始出处。
 
 **明确不做：** 不开展83个讲稿的逐册逐页考古映射；不为一般学习答案追逐纸本影印坐标；不因`locatorStatus=MISSING`就把有稳定本地回链的讲稿资料判成“没有来源”。
+
+### 24.5 本轮主线基线与 CI
+
+- PR #123 已合并：`e5932a2ecf59167c7456d9348bcc61d68e473799`；PR #124 已合并：`a2450f12220444225a33c4882d65ce4e4b9b3eab`。两者均为文档/来源登记改动，PR head 的 Flutter regression 与 Android arm64/Native job 均 SUCCESS，Branch validation SKIPPED。
+- 当前 master：`a2450f12220444225a33c4882d65ce4e4b9b3eab`。合并后的 Flutter tests run `43350618944` 与 Flutter Quality Gate run `43350618932` 当前 IN_PROGRESS；在终态完成前不把新 master post-merge CI 记为 PASS。
+- 本工作分支以 `a2450f1` 为基线，只修改学习资料来源展示、对应测试和来源分层文档；没有改检索算法、诊断规则、模型 prompt、Android 配置或数据库 schema。
