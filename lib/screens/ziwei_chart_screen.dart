@@ -427,6 +427,9 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         distinguishZiShi: _distinguishZiShi,
         locationDescription: locationDescription,
         chart: chart,
+        flowYear: _flowMark,
+        flowMonth: _flowMonthMark,
+        flowDay: _flowDayMark,
       ),
     );
   }
