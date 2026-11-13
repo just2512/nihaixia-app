@@ -2220,7 +2220,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         '【${tool.title}执行结果】\n${result.toConversationText()}';
     final canInterpret = result.status == AssistantToolExecutionStatus.succeeded &&
         result.sourceIds.isNotEmpty;
-    final autoInterpret = canInterpret && _status?.ready == true;
+    final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = mode == AssistantMode.tools &&
         const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
     final interpretationPrompt = tool.id == 'bazi'
@@ -3146,7 +3146,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final canInterpret = normalizedResult.status ==
             AssistantToolExecutionStatus.succeeded &&
         normalizedResult.sourceIds.isNotEmpty;
-    final autoInterpret = canInterpret && _status?.ready == true;
+    final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = mode == AssistantMode.tools &&
         const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
     final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
