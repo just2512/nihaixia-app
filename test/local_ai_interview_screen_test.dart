@@ -4194,12 +4194,12 @@ void main() {
     }
 
     // Ambiguous method stays in the conversation and asks one targeted question.
-    await send('梅花易数起卦');
+    await send('梅花易数起卦，申时');
     expect(find.textContaining('请先选择：数字起卦、时间起卦或随机起卦'), findsOneWidget);
     expect(executedArguments, isEmpty);
 
     // The follow-up method and inputs are merged with the pending conversation.
-    await send('时间起卦，公历日期 2026-11-13，申时');
+    await send('时间起卦，公历日期 2026-11-13');
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'method': 'time',

@@ -4055,13 +4055,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       final previousMethod = pendingMeihua['method'];
       final followUpMethod = followUp['method'];
-      final methodChanged = followUpMethod != null &&
-          previousMethod != null &&
-          followUpMethod != previousMethod;
+      final methodChanged =
+          followUpMethod != null && followUpMethod != previousMethod;
       final mergedArguments = <String, String>{
-        if (methodChanged && pendingMeihua['date'] != null)
-          'date': pendingMeihua['date']!,
         if (!methodChanged) ...pendingMeihua.values,
+        if (methodChanged) ...{
+          if (pendingMeihua['date'] != null)
+            'date': pendingMeihua['date']!,
+          if (followUpMethod == 'time' &&
+              pendingMeihua['hour_branch'] != null)
+            'hour_branch': pendingMeihua['hour_branch']!,
+          if (followUpMethod == 'number' &&
+              pendingMeihua['first'] != null)
+            'first': pendingMeihua['first']!,
+          if (followUpMethod == 'number' &&
+              pendingMeihua['second'] != null)
+            'second': pendingMeihua['second']!,
+        },
         ...followUp.values,
       };
       final selectedMethod = mergedArguments['method'];

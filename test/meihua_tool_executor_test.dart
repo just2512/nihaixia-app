@@ -63,6 +63,23 @@ void main() {
     expect(result.disclaimer, contains('传统民俗文化学习参考'));
   });
 
+  test('数字参数的前导零保留在执行来源中，计算结果按整数显示', () {
+    final result = MeihuaToolExecutor.execute(
+      const {
+        'method': 'number',
+        'first': '03',
+        'second': '07',
+        'date': '2026-11-13',
+      },
+      now: fixedNow,
+    );
+    expect(result.status, AssistantToolExecutionStatus.succeeded);
+    expect(result.arguments['first'], '03');
+    expect(result.arguments['second'], '07');
+    expect(result.values['第一数（上卦）'], '3');
+    expect(result.values['第二数（下卦）'], '7');
+  });
+
   test('时间起卦复用页面相同的年支、时支和公历正午农历转换口径', () {
     const arguments = {
       'method': 'time',

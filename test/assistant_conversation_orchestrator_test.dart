@@ -664,6 +664,12 @@ void main() {
       );
       expect(explicitClock['hour_branch'], '申');
 
+      final slashDate = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.meihua,
+        '时间起卦，公历日期 2026/11/13，申时',
+      );
+      expect(slashDate['date'], '2026-11-13');
+
       final noClock = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.meihua,
         '时间起卦，公历日期 2026-11-13',
