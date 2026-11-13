@@ -3314,6 +3314,85 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
 
+    final pendingBazi = _pendingBaziArguments;
+    if (pendingBazi != null &&
+        text.isNotEmpty &&
+        imagePath == null &&
+        audioPath == null) {
+      final cancelRequested =
+          ['取消', '算了', '先不排', '不用排了', '停止排盘'].any(text.contains);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:bazi' : 'tool_follow_up:bazi',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:bazi' : 'tool_follow_up:bazi',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'bazi',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次八字排盘；尚未执行任何计算。';
+        setState(() {
+          _pendingBaziArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.metaphysics,
+          toolId: 'bazi',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingBazi.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'bazi',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'bazi',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.bazi,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingBazi.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.bazi,
+        mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
+        arguments: AssistantToolArguments(
+          toolId: 'bazi',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
     var effectiveMode = _assistantMode;
     if (text.isNotEmpty && imagePath == null && audioPath == null) {
       final decision = AssistantConversationOrchestrator.resolve(
