@@ -1175,7 +1175,9 @@ class LocalAiBaziSlotDraft {
         return null;
       }
     } else if (const {'中午', '下午', '傍晚', '晚上'}.contains(period)) {
-      if (hour >= 1 && hour <= 11) {
+      if (period == '晚上' && hour == 12) {
+        hour = 0;
+      } else if (hour >= 1 && hour <= 11) {
         hour += 12;
       } else if (hour != 12) {
         return null;
