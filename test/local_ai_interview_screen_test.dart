@@ -3428,16 +3428,24 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我排个盘');
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '推算五运六气，并查询黄历',
+    );
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(service.intentQueries, ['帮我排个盘']);
+    expect(service.intentQueries, ['推算五运六气，并查询黄历']);
     expect(service.intentCandidateIds, [
-      ['ziwei', 'bazi'],
+      ['yunqi', 'almanac'],
     ]);
-    expect(find.textContaining('你想使用哪一种排盘工具'), findsOneWidget);
+    expect(find.textContaining('多个工具'), findsOneWidget);
     expect(find.text('打开八字排盘'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -3475,7 +3483,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('歧义排盘只把有界候选交给 E4B，命中后在同一对话进入 Headless 八字参数收集', (tester) async {
+  testWidgets('E4B 只从 Headless 候选中选择，并在当前对话回传真实工具结果', (tester) async {
     const traceId = '0123456789abcdef0123456789abcdef';
     final events = <AiTraceEvent>[];
     final recorder = AiTraceRecorder(
@@ -3487,7 +3495,7 @@ void main() {
     final service = _TextSendService(
       intentResolution: const LocalAiIntentResolution(
         action: LocalAiIntentAction.select,
-        toolId: 'bazi',
+        toolId: 'almanac',
         backend: 'cpu',
       ),
     );
@@ -3498,23 +3506,39 @@ void main() {
           service: service,
           conversationStore: _store,
           traceRecorder: recorder,
+          testHeadlessToolExecutor: (arguments) async => AssistantToolResult(
+            toolId: 'almanac',
+            title: '每日黄历',
+            values: const {'宜': '测试事项'},
+            arguments: Map<String, String>.unmodifiable(arguments),
+            sourceIds: const ['test:almanac'],
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我排个盘');
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '推算五运六气，并查询黄历',
+    );
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(service.intentQueries, ['帮我排个盘']);
+    expect(service.intentQueries, ['推算五运六气，并查询黄历']);
     expect(service.intentCandidateIds, [
-      ['ziwei', 'bazi'],
+      ['yunqi', 'almanac'],
     ]);
     expect(service.intentTraceIds, [traceId]);
-    expect(find.textContaining('调用 App 本地八字排盘'), findsOneWidget);
-    expect(find.text('打开八字排盘'), findsNothing);
+    expect(find.textContaining('每日黄历'), findsWidgets);
+    expect(find.textContaining('宜：测试事项'), findsOneWidget);
+    expect(find.text('打开每日黄历'), findsNothing);
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.nativeInference,
       AiTraceStage.modelOutput,
