@@ -85,9 +85,9 @@ class ChengguToolExecutor {
           '总骨重': result.liang.toString() + '两' +
               result.qian.toString() + '钱（' +
               result.totalQian.toString() + '钱）',
-          '称骨歌诀标题': result.title.isEmpty ? 'MISSING' : result.title,
-          '称骨歌诀': result.poem.isEmpty ? 'MISSING' : result.poem,
-          '称骨说明': result.detail.isEmpty ? 'MISSING' : result.detail,
+          '称骨歌诀标题': result.title,
+          '称骨歌诀': result.poem,
+          '称骨说明': result.detail,
         },
         sourceIds: const [sourceId, dataSourceId],
         arguments: Map<String, String>.unmodifiable(normalizedArguments),
