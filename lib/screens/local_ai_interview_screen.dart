@@ -2692,6 +2692,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             mode: activeMode,
             arguments: arguments,
             traceContext: activeTraceContext,
+            pageOwnsInput: meihuaPageMethodRequested,
           ),
         ));
       _error = null;
@@ -3041,6 +3042,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AssistantMode mode,
     AssistantToolArguments? arguments,
     AiTraceContext? traceContext,
+    bool pageOwnsInput = false,
   }) async {
     final activeTraceContext =
         traceContext ?? const AiTraceContext.disabled();
@@ -3056,40 +3058,52 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // bypassed simply by opening a tool from a shortcut.
     final toolArguments =
         arguments ?? AssistantToolArguments(toolId: tool.id);
-    final errors = toolArguments.validateAgainst(tool);
-    if (errors.isNotEmpty) {
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.argumentValidation,
-        status: AiTraceStatus.failed,
-        toolId: tool.id,
-        errorCode: 'INVALID_ARGUMENTS',
-      );
-      await _traceRecorder.record(
-        activeTraceContext,
-        stage: AiTraceStage.toolExecution,
-        status: AiTraceStatus.notStarted,
-        toolId: tool.id,
-        errorCode: 'ARGUMENT_VALIDATION_FAILED',
-      );
-      if (mounted) {
-        setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
+    if (!pageOwnsInput) {
+      final errors = toolArguments.validateAgainst(tool);
+      if (errors.isNotEmpty) {
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: 'INVALID_ARGUMENTS',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.toolExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'ARGUMENT_VALIDATION_FAILED',
+        );
+        if (mounted) {
+          setState(() => _error = '工具参数未通过校验：${errors.join('；')}');
+        }
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+          toolId: tool.id,
+          errorCode: 'INVALID_ARGUMENTS',
+        );
+        return;
       }
       await _traceRecorder.record(
         activeTraceContext,
-        stage: AiTraceStage.finalRender,
-        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.succeeded,
         toolId: tool.id,
-        errorCode: 'INVALID_ARGUMENTS',
       );
-      return;
+    } else {
+      // Time/random Meihua methods collect their own inputs in the legacy
+      // page. Headless number parameters must not block this separate method.
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.notApplicable,
+        toolId: tool.id,
+        errorCode: 'PAGE_OWNS_METHOD_INPUT',
+      );
     }
-    await _traceRecorder.record(
-      activeTraceContext,
-      stage: AiTraceStage.argumentValidation,
-      status: AiTraceStatus.succeeded,
-      toolId: tool.id,
-    );
     if (_toolRouteActive) {
       await _traceRecorder.record(
         activeTraceContext,
