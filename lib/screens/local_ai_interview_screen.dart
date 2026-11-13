@@ -2614,7 +2614,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (userText.contains('农历') || userText.contains('阴历'))
             '当前起卦日期参数使用公历；不会把农历日期误当成公历或自动换算。',
           '例如：数字起卦可说“用 3 和 7”；时间起卦可说“2026-11-13，申时”；随机起卦可直接说“随机起卦”。',
-        ].join('\\n');
+        ].join('\n');
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.argumentValidation,
