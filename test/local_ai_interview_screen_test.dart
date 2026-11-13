@@ -2195,7 +2195,8 @@ void main() {
     'keeps failed text editable and retries without duplicate chat bubbles',
     (tester) async {
       final service = _TraceFailOnceTextSendService();
-      const userText = '昨晚开始咽喉不适，喝温水后稍有缓解。';
+      // This test exercises transport retry, not symptom routing.
+      const userText = '你好';
       const failedTraceId = '44444444444444444444444444444444';
       const retryTraceId = '55555555555555555555555555555555';
       final traceIds = [failedTraceId, retryTraceId];
@@ -3417,12 +3418,20 @@ void main() {
 
   testWidgets('E4B 意图判别失败时退回确定性澄清，不执行任一工具', (tester) async {
     final service = _FailingIntentSelectionService();
+    const traceId = 'fedcba9876543210fedcba9876543210';
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (_) async {},
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 13, 14),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
           conversationStore: _store,
+          traceRecorder: recorder,
         ),
       ),
     );
