@@ -782,7 +782,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 ### 27.1 变更范围
 
-- 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`；分支 `work/p4-diagnostic-result-provenance-2026-11-13`；当前 head `a459f9f2280525ade6178b0e6e17d3fa703ced28`。
+- 基线 master：`9fa7f400170569ba6c6b57728c5d26f486b98885`；分支 `work/p4-diagnostic-result-provenance-2026-11-13`；代码与测试提交 head `a459f9f2280525ade6178b0e6e17d3fa703ced28`（其后仅追加本台账/审计报告记录）。
 - 对现有结构化 `DiagnosisResult` 的解释入口加上 `local-engine:diagnostic-engine` 来源标识；用户手动触发现有解释动作时，source ID 会随解释请求和持久化 metadata 保存。
 - 本轮实际知识检索返回的 `neijing:*` 来源仍被合并保存；不把引擎来源伪装成知识库条目。
 - prompt 进一步明确只解释 App 已返回结果，不重新辨证、不补造缺失项，也不生成个体处方、药物或剂量建议。
