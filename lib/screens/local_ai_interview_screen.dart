@@ -277,6 +277,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingBaziArguments;
   AssistantToolArguments? _pendingMeihuaArguments;
   AssistantToolArguments? _pendingChengguArguments;
+  AssistantToolArguments? _pendingHuangdiSijiArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -325,6 +326,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingBaziArguments = null;
         _pendingMeihuaArguments = null;
         _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -1239,6 +1241,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingBaziArguments = null;
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
+      _pendingHuangdiSijiArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
@@ -2196,6 +2199,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         result.status == AssistantToolExecutionStatus.failed &&
         unresolvedBirthplace) {
       _pendingBaziArguments = request;
+_pendingHuangdiSijiArguments = null;
       const clarification =
           '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行排盘。';
       setState(() {
@@ -2359,11 +2363,115 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // explicit date argument. Without a date, preserve the existing Page Tool
     // flow so a broad "how is it calculated?" request is not silently run for
     // today's date.
+    if (tool.id == 'huangdi_siji' && tool.headlessExecutor != null) {
+      final request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingHuangdiSijiArguments = request;
+        _pendingBaziArguments = null;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                (request[parameter.key]?.trim().isNotEmpty ?? false))
+            .map((parameter) =>
+                parameter.label + '：' + request[parameter.key]!)
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final unsupportedLunarDate =
+            request['birth_date'] == 'LUNAR_DATE_NOT_SUPPORTED';
+        final clarification = [
+          '我会在当前对话中调用 App 原有黄帝四季歌本地算法和数据表，不需要打开工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：' + suppliedParameters.join('；') + '。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：' + missingParameters.join('、') + '。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：' + invalidParameterErrors.join('；') + '。',
+          if (unsupportedLunarDate)
+            '现有页面按公历日期换算农历月份；请提供公历日期，不会把农历日期当作公历或自行猜测换算。',
+          '请补充出生日期（公历 YYYY-MM-DD）和出生地当地钟表时间（24 小时制 HH:mm），可以分多轮发送。',
+          '未提供的日期或时间不会使用页面示例值或默认值；结果会回显实际采用的农历月份、季节口径和时辰。',
+          '例如：出生日期：1990-01-02；出生时间：晚上8:30。',
+          '四季歌属于传统民俗文化资料，仅作文化参考，不是科学预测或生活决策依据。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'HUANGDI_SIJI_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingHuangdiSijiArguments = null;
+      _pendingBaziArguments = null;
+      _pendingMeihuaArguments = null;
+      _pendingChengguArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     if (tool.id == 'chenggu' && tool.headlessExecutor != null) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
         _pendingChengguArguments = request;
+_pendingHuangdiSijiArguments = null;
         _pendingBaziArguments = null;
         _pendingMeihuaArguments = null;
         final missingParameters = tool.parameters
@@ -2448,6 +2556,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       _pendingChengguArguments = null;
+      _pendingHuangdiSijiArguments = null;
       _pendingBaziArguments = null;
       _pendingMeihuaArguments = null;
       await _executeHeadlessTool(
@@ -2555,6 +2664,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (argumentErrors.isNotEmpty) {
         _pendingBaziArguments = request;
+_pendingHuangdiSijiArguments = null;
         final missingParameters = tool.parameters
             .where((parameter) =>
                 parameter.isRequired &&
@@ -2680,6 +2790,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           missingParameters.isNotEmpty;
       if (needsClarification) {
         _pendingMeihuaArguments = request;
+_pendingHuangdiSijiArguments = null;
         _pendingBaziArguments = null;
         final methodLabel = switch (method) {
           'number' => '数字起卦',
@@ -2769,6 +2880,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
+      _pendingHuangdiSijiArguments = null;
       _pendingBaziArguments = null;
       await _executeHeadlessTool(
         userText,
@@ -3600,6 +3712,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               _pendingBaziArguments = null;
               _pendingMeihuaArguments = null;
               _pendingChengguArguments = null;
+              _pendingHuangdiSijiArguments = null;
             }),
             itemBuilder: (context) => [
               for (final mode in AssistantMode.values)
@@ -3707,6 +3820,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingBaziArguments;
     AssistantToolArguments? restoredPendingMeihuaArguments;
     AssistantToolArguments? restoredPendingChengguArguments;
+    AssistantToolArguments? restoredPendingHuangdiSijiArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -3732,6 +3846,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingBaziArguments = null;
         restoredPendingMeihuaArguments = null;
         restoredPendingChengguArguments = null;
+        restoredPendingHuangdiSijiArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -3764,6 +3879,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'chenggu') {
         restoredPendingChengguArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'huangdi_siji') {
+        restoredPendingHuangdiSijiArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -3908,6 +4029,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingBaziArguments = restoredPendingBaziArguments;
       _pendingMeihuaArguments = restoredPendingMeihuaArguments;
       _pendingChengguArguments = restoredPendingChengguArguments;
+      _pendingHuangdiSijiArguments = restoredPendingHuangdiSijiArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -4087,6 +4209,115 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
 
+    final pendingHuangdiSiji = _pendingHuangdiSijiArguments;
+    if (pendingHuangdiSiji != null &&
+        (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '黄帝四季歌需要文字出生资料。请补充公历出生日期和当地钟表时间，或发送“取消四季歌”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:huangdi_siji_attachment_rejected',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'huangdi_siji',
+        errorCode: 'HUANGDI_SIJI_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'huangdi_siji',
+      );
+      return;
+    }
+    if (pendingHuangdiSiji != null && text.isNotEmpty) {
+      final cancelRequested = [
+        '取消四季歌',
+        '取消黄帝四季歌',
+        '停止查询',
+        '先不查',
+        '算了',
+        '取消',
+      ].any(text.contains);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:huangdi_siji'
+            : 'tool_follow_up:huangdi_siji',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'huangdi_siji',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:huangdi_siji'
+            : 'tool_follow_up:huangdi_siji',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'huangdi_siji',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次黄帝四季歌查询；尚未执行任何查询。';
+        setState(() {
+          _pendingHuangdiSijiArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.metaphysics,
+          toolId: 'huangdi_siji',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingHuangdiSiji.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'huangdi_siji',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'huangdi_siji',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.huangdiSiji,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingHuangdiSiji.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.huangdiSiji,
+        mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
+        arguments: AssistantToolArguments(
+          toolId: 'huangdi_siji',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
     final pendingChenggu = _pendingChengguArguments;
     if (pendingChenggu != null && (imagePath != null || audioPath != null)) {
       setState(() {
@@ -4134,6 +4365,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         const reply = '已取消本次称骨；尚未执行任何计算。';
         setState(() {
           _pendingChengguArguments = null;
+          _pendingHuangdiSijiArguments = null;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(const _InterviewMessage(text: reply, isUser: false));
@@ -4233,6 +4465,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() {
           _pendingMeihuaArguments = null;
           _pendingChengguArguments = null;
+          _pendingHuangdiSijiArguments = null;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(const _InterviewMessage(text: reply, isUser: false));
@@ -5264,6 +5497,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingBaziArguments = null;
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
+      _pendingHuangdiSijiArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
