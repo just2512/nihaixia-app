@@ -7,13 +7,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Serializes native AI work across Activity instances in the same process.
- *
- * Activity teardown is queued on this process-wide executor. A newly created
- * Activity submits its work to the same queue, so model release always precedes
- * the next Activity's model initialization.
- */
-/**
  * Process-wide health state. A failed Engine/Conversation release is terminal
  * for this process: a recreated Activity must not initialize another Engine
  * while the previous native resources may still be alive.
@@ -30,6 +23,13 @@ internal class LocalAiProcessHealth {
     fun isAvailable(): Boolean = releaseFailure.get() == null
 }
 
+/**
+ * Serializes native AI work across Activity instances in the same process.
+ *
+ * Activity teardown is queued on this process-wide executor. A newly created
+ * Activity submits its work to the same queue, so model release always precedes
+ * the next Activity's model initialization.
+ */
 internal object LocalAiProcessExecutor {
     val health = LocalAiProcessHealth()
     val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
