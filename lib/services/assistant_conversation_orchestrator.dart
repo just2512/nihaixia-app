@@ -206,21 +206,60 @@ class AssistantConversationOrchestrator {
       final place = birthplace?.group(1)?.trim();
       if (place != null && place.isNotEmpty) values['birthplace'] = place;
     } else if (tool.id == 'meihua') {
-      // Numeric Meihua is a bounded local calculator. Extract only explicit
-      // positive-number pairs; never infer either number from unrelated dates.
+      final isTime = query.contains('时间起卦') || query.contains('按时间起卦');
+      final isRandom = query.contains('随机起卦');
       final firstLabel =
           RegExp(r'(?:第一数|上卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
       final secondLabel =
           RegExp(r'(?:第二数|下卦数)\s*[：:]?\s*(\d{1,10})').firstMatch(query);
+      final pair = firstLabel == null && secondLabel == null
+          ? RegExp(
+              r'(?:用|以)?\s*(\d{1,10})\s*(?:和|与|及|、|，|,)\s*(\d{1,10})',
+            ).firstMatch(query)
+          : null;
+
+      // Method selection and simple slots are deterministic. Never infer a
+      // number from an unrelated date, age, or other text.
+      if (isTime) {
+        values['method'] = 'time';
+      } else if (isRandom) {
+        values['method'] = 'random';
+      } else if (query.contains('数字起卦') ||
+          firstLabel != null ||
+          secondLabel != null ||
+          pair != null) {
+        values['method'] = 'number';
+      }
       if (firstLabel != null) values['first'] = firstLabel.group(1)!;
       if (secondLabel != null) values['second'] = secondLabel.group(1)!;
-      if (firstLabel == null && secondLabel == null) {
-        final pair = RegExp(
-          r'(?:用|以)?\s*(\d{1,10})\s*(?:和|与|及|、|，|,)\s*(\d{1,10})',
+      if (pair != null) {
+        values['first'] = pair.group(1)!;
+        values['second'] = pair.group(2)!;
+      }
+
+      const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+      final explicitBranch = branches.cast<String?>().firstWhere(
+        (branch) => query.contains('${branch}时'),
+        orElse: () => null,
+      );
+      if (explicitBranch != null) {
+        values['hour_branch'] = explicitBranch;
+      } else if (values['method'] == 'time') {
+        final timeMatch = RegExp(
+          r'(凌晨|清晨|早上|上午|中午|下午|傍晚|晚上)?\s*(\d{1,2})(?::([0-5]\d)|点)',
         ).firstMatch(query);
-        if (pair != null) {
-          values['first'] = pair.group(1)!;
-          values['second'] = pair.group(2)!;
+        if (timeMatch != null) {
+          var hour = int.parse(timeMatch.group(2)!);
+          final period = timeMatch.group(1);
+          if ((period == '下午' || period == '傍晚' || period == '晚上') &&
+              hour >= 1 && hour < 12) {
+            hour += 12;
+          } else if (period == '凌晨' && hour == 12) {
+            hour = 0;
+          }
+          if (hour >= 0 && hour <= 23) {
+            values['hour_branch'] = branches[((hour + 1) ~/ 2) % 12];
+          }
         }
       }
 
