@@ -163,6 +163,14 @@ class _RecordingAssistantService extends LocalAiService {
   }
 }
 
+Future<void> _waitForText(WidgetTester tester, String value) async {
+  final finder = find.text(value);
+  for (var attempt = 0; attempt < 50 && finder.evaluate().isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsOneWidget, reason: '等待页面元素超时：$value');
+}
+
 void main() {
   testWidgets('五运六气工具可把实际推算结果返回统一助手', (tester) async {
     Object? returned;
@@ -623,10 +631,13 @@ void main() {
       expect(find.text(openAction), findsOneWidget, reason: query);
       await tester.tap(find.text(openAction));
       await tester.pumpAndSettle();
+      // Some data-backed calculators stay on a loading scaffold after the
+      // route animation settles. Wait for the real calculate control before
+      // tapping, then wait for the result handoff control.
+      await _waitForText(tester, runAction);
       await tester.tap(find.text(runAction));
       await tester.pumpAndSettle();
-      expect(find.text(returnAction), findsOneWidget,
-          reason: '未显示结果回传按钮：$query；当前页面：$runAction');
+      await _waitForText(tester, returnAction);
       await tester.ensureVisible(find.text(returnAction));
       await tester.tap(find.text(returnAction));
       await tester.pumpAndSettle();
