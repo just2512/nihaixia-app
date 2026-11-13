@@ -123,9 +123,11 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
-  static bool containsPotentialHealthContent(String query) {
+  static bool shouldExcludeFromIntentModel(String query) {
     final text = query.trim();
-    return text.isNotEmpty && _symptomCues.any(text.contains);
+    return text.isNotEmpty &&
+        (_symptomCues.any(text.contains) ||
+            _personalContextCues.any(text.contains));
   }
 
   static AssistantToolArguments argumentsFor(
