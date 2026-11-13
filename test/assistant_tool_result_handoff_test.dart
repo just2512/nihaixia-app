@@ -497,6 +497,7 @@ void main() {
     final store = _NoopAssistantConversationStore();
     var pageOpened = false;
     Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -509,7 +510,13 @@ void main() {
           },
           testHeadlessToolExecutor: (arguments) async {
             executedArguments = Map<String, String>.from(arguments);
-            return BaziToolExecutor.execute(arguments);
+            // The real executor loads bundled city JSON. Widget tests run in
+            // fake async time, so perform this resource-backed Future in the
+            // binding's real async zone rather than leaving it unresolved.
+            executedResult = await tester.runAsync(
+              () => BaziToolExecutor.execute(arguments),
+            );
+            return executedResult!;
           },
         ),
       ),
@@ -536,6 +543,16 @@ void main() {
       'gender': 'male',
       'birthplace': '上海市',
     }, reason: '后台执行必须收到从用户原话提取并校验的完整出生参数');
+    expect(
+      executedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '真实本地引擎必须返回可验证成功结果；失败原因：${executedResult?.values['未执行原因']}',
+    );
+    expect(executedResult?.validateFor('bazi'), isEmpty);
+    expect(
+      executedResult?.validateArgumentsMatch(executedArguments!),
+      isEmpty,
+    );
     // The headless executor loads the bundled city directory asynchronously.
     // pumpAndSettle only waits for scheduled frames, not this pending Future;
     // wait for the actual validated result before asserting its action.
