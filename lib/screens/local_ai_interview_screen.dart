@@ -4071,11 +4071,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (mergedArguments['second']?.trim().isNotEmpty != true) 'second',
         ];
         final singleNumber = int.tryParse(text.trim());
-        if (missingNumberKeys.length == 1 &&
+        if (missingNumberKeys.isNotEmpty &&
             singleNumber != null &&
             singleNumber > 0 &&
-            !followUp.values.containsKey(missingNumberKeys.single)) {
-          mergedArguments[missingNumberKeys.single] = singleNumber.toString();
+            !followUp.values.containsKey(missingNumberKeys.first)) {
+          // A bare number fills the next missing numeric slot in order.
+          mergedArguments[missingNumberKeys.first] = singleNumber.toString();
         }
       }
       await _requestTool(
