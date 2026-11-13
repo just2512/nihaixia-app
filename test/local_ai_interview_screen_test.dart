@@ -32,6 +32,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
   int createConversationCalls = 0;
   int taskStateSaveCalls = 0;
   bool failNextMessageBatch = false;
+  bool failNextTaskStateSave = false;
   final Map<int, Map<String, Object?>> _conversations = {};
   final Map<int, List<Map<String, Object?>>> _messages = {};
   final Map<int, TcmInterviewTaskState> _taskStates = {};
@@ -148,6 +149,10 @@ class _MemoryConversationStore implements AssistantConversationStore {
     required TcmInterviewTaskState state,
   }) async {
     taskStateSaveCalls += 1;
+    if (failNextTaskStateSave) {
+      failNextTaskStateSave = false;
+      throw StateError('INJECTED_TASK_STATE_FAILURE');
+    }
     _taskStates[conversationId] = state;
   }
 
@@ -1029,6 +1034,70 @@ void main() {
             event.stage == AiTraceStage.persistedState)
         .single;
     expect(persistedState.status, AiTraceStatus.succeeded);
+    expect(
+      events
+          .where((event) =>
+              event.traceId == traceId &&
+              event.stage == AiTraceStage.finalRender)
+          .single
+          .status,
+      AiTraceStatus.succeeded,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('结构化问诊消息已保存但任务快照失败时分别标记 persistence 和 persistedState',
+      (tester) async {
+    const traceId = '62626262626262626262626262626262';
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 16),
+    );
+    _store.failNextTaskStateSave = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: _store,
+          service: _TextSendService(),
+          imagePicker: _EmptyLocalAiImagePicker(),
+          traceRecorder: recorder,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '开始规则问诊');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    final conversationId = _store._conversations.keys.single;
+    expect(_store._messages[conversationId], isNotEmpty);
+    expect(_store._messages[conversationId]!.first['content'], '开始规则问诊');
+    expect(_store._taskStates[conversationId], isNull);
+    expect(
+      find.text('问诊消息已保存，但进度快照保存失败；重新进入历史记录时可能无法恢复到当前步骤，请核实后再继续。'),
+      findsOneWidget,
+    );
+
+    final persistence = events
+        .where((event) =>
+            event.traceId == traceId &&
+            event.stage == AiTraceStage.persistence)
+        .single;
+    expect(persistence.status, AiTraceStatus.succeeded);
+    expect(persistence.errorCode, isNull);
+
+    final persistedState = events
+        .where((event) =>
+            event.traceId == traceId &&
+            event.stage == AiTraceStage.persistedState)
+        .single;
+    expect(persistedState.status, AiTraceStatus.failed);
+    expect(persistedState.errorCode, 'TASK_STATE_PERSISTENCE_FAILED');
     expect(
       events
           .where((event) =>
