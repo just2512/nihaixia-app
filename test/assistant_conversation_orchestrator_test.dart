@@ -243,8 +243,8 @@ void main() {
       );
       expect(parsed['gender'], isNull);
       expect(
-        parsed.validateAgainst(AssistantToolRouter.bazi),
-        contains(contains('性别')),
+        parsed.validateAgainst(AssistantToolRouter.bazi).join('；'),
+        contains('性别'),
       );
     });
 
