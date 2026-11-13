@@ -314,6 +314,54 @@ class LocalAiService {
     );
   }
 
+  Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
+    required String query,
+    required Set<String> missingKeys,
+    required String traceId,
+  }) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty || normalizedQuery.length > 2000) {
+      throw const FormatException('八字参数理解输入为空或超出长度限制');
+    }
+    const allowedKeys = {
+      'birth_date',
+      'birth_time',
+      'gender',
+      'birthplace',
+    };
+    if (missingKeys.isEmpty ||
+        missingKeys.length > allowedKeys.length ||
+        !allowedKeys.containsAll(missingKeys)) {
+      throw const FormatException('八字待补参数集合无效');
+    }
+    final normalizedTraceId = _normalizeTraceId(traceId);
+    if (normalizedTraceId == null) {
+      throw const FormatException('八字参数理解必须携带 TRACE ID');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'extractBaziSlots',
+      {
+        'text': normalizedQuery,
+        'missing_fields': jsonEncode(missingKeys.toList(growable: false)),
+        'trace_id': normalizedTraceId,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    final rawDraft = data?['draft'];
+    if (rawDraft is! String || rawDraft.trim().isEmpty) {
+      throw const FormatException('本地模型没有返回八字参数候选');
+    }
+    final backend = data?['backend'];
+    if (backend is! String || backend.trim().isEmpty) {
+      throw const FormatException('八字参数理解没有返回模型 backend');
+    }
+    return LocalAiBaziSlotDraft.fromModelText(
+      rawDraft,
+      userText: normalizedQuery,
+      requestedKeys: missingKeys,
+    );
+  }
+
   Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
 
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
