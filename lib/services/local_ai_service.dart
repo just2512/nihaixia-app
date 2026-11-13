@@ -1239,15 +1239,20 @@ class LocalAiBaziSlotDraft {
     String value,
     String evidence,
   ) {
-    final hasBirthContext = RegExp(
-      r'(?:出生(?:地点|地)?(?:是|为|在|：|:)?|出生于|生于|在[^，,。；;]{1,24}出生)',
-    ).hasMatch(evidence);
-    if (!hasBirthContext ||
-        !evidence.contains(value) ||
-        value.trim() != value) {
-      return null;
+    final patterns = [
+      RegExp(
+        r'(?:出生地点|出生地)\s*(?:是|为|在|：|:)?\s*([^，,。；;]+)',
+      ),
+      RegExp(r'(?:出生于|生于)\s*([^，,。；;]+)'),
+      RegExp(r'在([^，,。；;]{1,24})出生'),
+    ];
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(evidence);
+      if (match != null && match.group(1)?.trim() == value) {
+        return value;
+      }
     }
-    return value;
+    return null;
   }
 }
 
