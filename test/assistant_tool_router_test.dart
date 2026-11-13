@@ -240,4 +240,14 @@ void main() {
     expect(restored.sourceIds, isEmpty);
     expect(restored.knowledgeStatus, isNull);
   });
+
+  test('学习与工具角色明确要求知识综合和已执行结果解释', () {
+    expect(AssistantMode.learning.promptHint, contains('总结、比较、归纳和解释'));
+    expect(AssistantMode.learning.promptHint, contains('明确区分课程讲稿、古籍文本、医案'));
+    expect(AssistantMode.tools.promptHint, contains('工具结果返回对话后'));
+    expect(AssistantMode.tools.promptHint, contains('区分 App 确定性计算与 AI 解释'));
+    expect(AssistantMode.consultation.promptHint, contains('解释、归纳该结果'));
+    expect(AssistantMode.metaphysics.promptHint, contains('基于回传字段归纳结构'));
+  });
+
 }
