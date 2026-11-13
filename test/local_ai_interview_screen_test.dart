@@ -364,6 +364,15 @@ class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
+  final restoredTranscripts = <String>[];
+
+  @override
+  Future<void> restoreConversation({
+    required String transcript,
+    required List<String> userMessages,
+  }) async {
+    restoredTranscripts.add(transcript);
+  }
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
@@ -1463,7 +1472,9 @@ void main() {
     expect(service.sentContexts, hasLength(1));
     expect(service.sentContexts.single, contains('当前角色：问诊助手'));
     expect(service.sentContexts.single, contains('App 本地知识库'));
-    expect(service.sentContexts.single, contains('不自动诊断'));
+    expect(service.sentContexts.single, contains('不独立作个体诊断'));
+    expect(service.sentContexts.single, contains('解释和归纳已有结果'));
+    expect(service.sentContexts.single, contains('必须区分规则输出、知识来源与 AI 解释'));
     expect(tester.takeException(), isNull);
   });
 
@@ -2766,10 +2777,11 @@ void main() {
     final bookmarks = <Bookmark>[];
     final sharedTexts = <String>[];
     final copiedTexts = <String>[];
+    final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          service: _TextSendService(),
+          service: service,
           conversationStore: store,
           imagePicker: _EmptyLocalAiImagePicker(),
           bookmarkWriter: (bookmark) async {
@@ -2791,6 +2803,11 @@ void main() {
     await tester.tap(find.text('已完成的结构化辨证'));
     await tester.pumpAndSettle();
 
+    expect(service.restoredTranscripts, isNotEmpty);
+    expect(service.restoredTranscripts.last, contains('【六经】少阳'));
+    expect(service.restoredTranscripts.last, contains('【证型】少阳证'));
+    expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
+    
     Future<void> tapAction(String label) async {
       final target = find.text(label).last;
       await tester.ensureVisible(target);

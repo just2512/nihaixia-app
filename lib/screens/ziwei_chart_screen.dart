@@ -4,6 +4,7 @@ import '../widgets/adaptive_master_detail.dart';
 import '../widgets/state_view.dart';
 import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/services/ziwei_engine.dart';
+import 'package:nihaisha_app/services/assistant_chart_result_formatter.dart';
 import 'package:nihaisha_app/services/ziwei_interpretation.dart';
 import 'package:nihaisha_app/services/city_location_service.dart';
 import 'ziwei_reference_screen.dart';
@@ -411,24 +412,26 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   void _returnAssistantResult() {
     final chart = _chart;
     if (chart == null) return;
-    final life = chart.palaces.firstWhere((palace) => palace.isLife);
-    final body = chart.palaces.firstWhere((palace) => palace.isBody);
-    final sihua = chart.sihua
-        .map((item) => '${item.typeLabel}：${item.starLabelName}')
-        .join('；');
-    final summary = [
-      '紫微斗数排盘结果（民俗文化参考）',
-      '出生四柱：${chart.baziFull}',
-      '出生农历：${chart.lunarText}',
-      '性别：${chart.genderLabel}',
-      '五行局：${chart.elementBureauLabel}',
-      '命宫：${life.roleLabel}（${life.branchLabel}）',
-      '身宫：${body.roleLabel}（${body.branchLabel}）',
-      '命主：${chart.mingZhuLabel ?? 'MISSING'}；身主：${chart.shenZhuLabel ?? 'MISSING'}',
-      '生年四化：${sihua.isEmpty ? 'MISSING' : sihua}',
-      '说明：民俗文化参考，不是科学预测，不用于医疗、法律或投资决策。',
-    ].join('\n');
-    Navigator.pop(context, summary);
+
+    final solar = DateTime(_year, _month, _day, _birthHour, _birthMinute);
+    final locationDescription = _selectedCity?.displayName ??
+        (_longitudeCtrl.text.trim().isEmpty
+            ? '未指定；引擎使用默认地点'
+            : '经度：${_longitudeCtrl.text.trim()}');
+
+    Navigator.pop(
+      context,
+      formatZiweiChartForAssistant(
+        solar: solar,
+        useTrueSolarTime: _useTrueSolarTime,
+        distinguishZiShi: _distinguishZiShi,
+        locationDescription: locationDescription,
+        chart: chart,
+        flowYear: _flowMark,
+        flowMonth: _flowMonthMark,
+        flowDay: _flowDayMark,
+      ),
+    );
   }
 
   /// 存图 / 分享长图：命盘 + 概览 + 大限表。

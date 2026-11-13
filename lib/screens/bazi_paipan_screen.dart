@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../utils/chart_export.dart';
 
 import 'package:nihaisha_app/services/bazi_service.dart';
+import 'package:nihaisha_app/services/assistant_chart_result_formatter.dart';
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/engine/bazi_twelve_stages.dart' show TwelveStageMode;
@@ -198,6 +199,31 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     );
   }
 
+  void _returnAssistantResult() {
+    final result = _result;
+    if (result == null) return;
+
+    final solar = DateTime(_year, _month, _day, _birthHour, _birthMinute);
+    final locationDescription = _locName?.trim().isNotEmpty == true
+        ? '$_locName（经度：${_locLng ?? 'MISSING'}，纬度：${_locLat ?? 'MISSING'}）'
+        : _locLng != null
+            ? '经度：$_locLng，纬度：${_locLat ?? 'MISSING'}'
+            : '未指定；引擎默认地点为东经120°、北纬30°';
+
+    Navigator.pop(
+      context,
+      formatBaZiChartForAssistant(
+        solar: solar,
+        isMale: _isMale,
+        useTrueSolarTime: _useTrueSolarTime,
+        distinguishZiShi: _distinguishZiShi,
+        locationDescription: locationDescription,
+        result: result,
+        fortune: _fortune,
+      ),
+    );
+  }
+
   String _buildShareText() {
     final r = _result!;
     final pillars = [r.bazi.year, r.bazi.month, r.bazi.day, r.bazi.time];
@@ -299,7 +325,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
       IconButton(
         icon: const Icon(Icons.reply),
         tooltip: '返回 AI 助手',
-        onPressed: () => Navigator.pop(context, _buildShareText()),
+        onPressed: _returnAssistantResult,
       ),
     if (_result != null) ...[
       IconButton(
