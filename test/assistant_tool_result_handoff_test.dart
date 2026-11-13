@@ -650,7 +650,7 @@ void main() {
       // route animation settles. Wait for the real calculate control before
       // tapping, then wait for the result handoff control.
       await _waitForText(tester, runAction);
-      await tester.ensureVisible(find.text(runAction));
+      await _scrollUntilTextVisible(tester, runAction);
       await tester.tap(find.text(runAction));
       await tester.pumpAndSettle();
       // Result cards are ListView children and may not be built until scrolled
