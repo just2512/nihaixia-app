@@ -294,7 +294,7 @@ class AssistantToolRouter {
         key: 'date',
         label: '公历起卦日期',
         type: AssistantToolParameterType.date,
-        isRequired: true,
+        isRequired: false,
       ),
     ],
   );
