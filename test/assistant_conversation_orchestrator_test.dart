@@ -794,6 +794,59 @@ void main() {
       );
     });
 
+    test('黄帝四季歌请求只提取明确的公历日期和当地钟表时间', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '查询黄帝四季歌',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'huangdi_siji');
+      expect(decision.toolArguments?.values, isEmpty);
+
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.huangdiSiji,
+        '出生日期：1990年1月2日；出生时间：晚上8:30',
+      );
+      expect(parsed.values, const {
+        'birth_date': '1990-01-02',
+        'birth_time': '20:30',
+      });
+      expect(parsed.validateAgainst(AssistantToolRouter.huangdiSiji), isEmpty);
+
+      final midnight = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.huangdiSiji,
+        '出生日期：1990-01-02；出生时间：凌晨12:30',
+      );
+      expect(midnight['birth_time'], '00:30');
+
+      final noon = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.huangdiSiji,
+        '出生日期：1990-01-02；出生时间：中午12:30',
+      );
+      expect(noon['birth_time'], '12:30');
+
+      final dateOnly = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.huangdiSiji,
+        '出生日期：1990-01-02',
+      );
+      expect(dateOnly['birth_date'], '1990-01-02');
+      expect(dateOnly['birth_time'], isNull);
+      expect(
+        dateOnly.validateAgainst(AssistantToolRouter.huangdiSiji),
+        isNotEmpty,
+      );
+
+      final lunar = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.huangdiSiji,
+        '农历1990年正月初二出生，出生时间早上8点',
+      );
+      expect(lunar['birth_date'], 'LUNAR_DATE_NOT_SUPPORTED');
+      expect(lunar['birth_time'], '08:00');
+      expect(
+        lunar.validateAgainst(AssistantToolRouter.huangdiSiji),
+        isNotEmpty,
+      );
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
