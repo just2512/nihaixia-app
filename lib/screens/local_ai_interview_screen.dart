@@ -990,8 +990,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final reply = await sendWithContext(
           '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
-              '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊；'
-              '普通对话不自动诊断、不推荐方剂或剂量。\n'
+              '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊。'
+              '若历史对话已经包含该引擎的结构化结果，用户追问时应解释和归纳已有结果，并结合本轮检索到的知识条目说明依据；'
+              '必须区分规则输出、知识来源与 AI 解释，不得自行新增或改写证型/规则结论，也不得给出个体处方或剂量。\n'
               '$knowledgeContext',
         );
         return _AssistantTurnResponse(
@@ -1028,7 +1029,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             .join('、');
         final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
-            '排盘结果必须由 App 工具生成，不得凭空推算。';
+            '八字、紫微等排盘结果必须由 App 工具生成；结果返回后，应基于完整回传字段作总结、关联解释和分层归纳。'
+            '明确区分 App 确定性计算、App 规则模板与 AI 解释，不得自行重排、篡改计算字段或补造 MISSING。';
         return _AssistantTurnResponse(
           text: await sendWithContext(context),
         );
