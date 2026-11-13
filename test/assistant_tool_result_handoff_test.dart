@@ -495,10 +495,31 @@ void main() {
       (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
+    const expectedArguments = <String, String>{
+      'birth_date': '1995-08-16',
+      'birth_time': '12:00',
+      'gender': 'male',
+      'birthplace': '上海市',
+    };
+    // Run the resource-backed deterministic engine before mounting the widget.
+    // This keeps the engine's rootBundle IO out of the widget's fake-async zone.
+    String? enginePreparationError;
+    final preparedResult = await tester.runAsync(() async {
+      try {
+        return await BaziToolExecutor.execute(expectedArguments);
+      } catch (error, stackTrace) {
+        enginePreparationError = '$error\\n$stackTrace';
+        rethrow;
+      }
+    });
+    expect(
+      preparedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '本地八字引擎准备真实结果失败：$enginePreparationError',
+    );
     var pageOpened = false;
     Map<String, String>? executedArguments;
     AssistantToolResult? executedResult;
-    String? executorError;
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -509,28 +530,10 @@ void main() {
             pageOpened = true;
             return const SizedBox.shrink();
           },
-          testHeadlessToolExecutor: (arguments) async {
+          testHeadlessToolExecutor: (arguments) {
             executedArguments = Map<String, String>.from(arguments);
-            // The real executor loads bundled city JSON. Widget tests run in
-            // fake async time, so perform this resource-backed Future in the
-            // binding's real async zone rather than leaving it unresolved.
-            executedResult = await tester.runAsync(() async {
-              try {
-                return await BaziToolExecutor.execute(arguments);
-              } catch (error, stackTrace) {
-                executorError = '$error\\n$stackTrace';
-                rethrow;
-              }
-            });
-            return executedResult ?? AssistantToolResult(
-              toolId: 'bazi',
-              title: '八字排盘',
-              status: AssistantToolExecutionStatus.failed,
-              values: {
-                '未执行原因': executorError ?? 'Widget test async executor returned null',
-              },
-              arguments: arguments,
-            );
+            executedResult = preparedResult;
+            return preparedResult!;
           },
         ),
       ),
@@ -551,25 +554,21 @@ void main() {
 
     expect(pageOpened, isFalse);
     expect(find.text('打开八字排盘'), findsNothing);
-    expect(executedArguments, {
-      'birth_date': '1995-08-16',
-      'birth_time': '12:00',
-      'gender': 'male',
-      'birthplace': '上海市',
-    }, reason: '后台执行必须收到从用户原话提取并校验的完整出生参数');
+    expect(
+      executedArguments,
+      expectedArguments,
+      reason: '后台执行必须收到从用户原话提取并校验的完整出生参数',
+    );
     expect(
       executedResult?.status,
       AssistantToolExecutionStatus.succeeded,
-      reason: '真实本地引擎必须返回可验证成功结果；失败原因：${executedResult?.values['未执行原因']}；异常：$executorError',
+      reason: '助手必须把独立执行并验证过的真实本地排盘结果交给会话；失败原因：${executedResult?.values['未执行原因']}',
     );
     expect(executedResult?.validateFor('bazi'), isEmpty);
     expect(
       executedResult?.validateArgumentsMatch(executedArguments!),
       isEmpty,
     );
-    // The headless executor loads the bundled city directory asynchronously.
-    // pumpAndSettle only waits for scheduled frames, not this pending Future;
-    // wait for the actual validated result before asserting its action.
     await _waitForText(tester, 'AI总结解读');
     expect(
       find.text('AI总结解读'),
