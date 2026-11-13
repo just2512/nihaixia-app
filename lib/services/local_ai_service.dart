@@ -504,8 +504,8 @@ class LocalAiIntentResolution {
     }
   }
 }
-/// E4B 提取的八字参数候选。每个值必须带有用户原文中的逐字证据，
-/// 并由 Dart 再做日期、时间、性别和出生地约束校验后才可合并到工具参数。
+/// E4B 提取的八字参数候选。每个值必须有用户原文中的逐字证据，
+/// 并再次通过 Dart 语义校验后才可合并到确定性工具参数。
 class LocalAiBaziSlotDraft {
   const LocalAiBaziSlotDraft({
     required this.values,
@@ -541,12 +541,12 @@ class LocalAiBaziSlotDraft {
       throw const FormatException('八字参数候选结构无效');
     }
     final map = Map<String, dynamic>.from(decoded);
-    if (map.keys.toSet().difference(_allowedKeys).isNotEmpty ||
-        !map.keys.toSet().containsAll(_allowedKeys)) {
-      throw const FormatException('八字参数候选包含未声明字段或字段不完整');
+    final keys = map.keys.toSet();
+    if (keys.difference(_allowedKeys).isNotEmpty ||
+        !keys.containsAll(_allowedKeys)) {
+      throw const FormatException('八字参数候选必须且只能包含四个声明字段');
     }
-    if (requestedKeys.isEmpty ||
-        !_allowedKeys.containsAll(requestedKeys)) {
+    if (requestedKeys.isEmpty || !_allowedKeys.containsAll(requestedKeys)) {
       throw const FormatException('八字待补参数集合无效');
     }
 
@@ -554,12 +554,14 @@ class LocalAiBaziSlotDraft {
     for (final key in _allowedKeys) {
       final rawField = map[key];
       if (rawField is! Map ||
-          rawField.keys.any((field) => field is! String) ||
-          rawField.keys.toSet().difference({'value', 'evidence'}).isNotEmpty ||
-          !rawField.keys.toSet().containsAll({'value', 'evidence'})) {
+          rawField.keys.any((field) => field is! String)) {
         throw FormatException('八字参数候选字段 $key 结构无效');
       }
       final field = Map<String, dynamic>.from(rawField);
+      if (field.keys.toSet().difference({'value', 'evidence'}).isNotEmpty ||
+          !field.keys.toSet().containsAll({'value', 'evidence'})) {
+        throw FormatException('八字参数候选字段 $key 必须包含 value 和 evidence');
+      }
       final rawValue = field['value'];
       final rawEvidence = field['evidence'];
       if (rawValue == null && rawEvidence == null) continue;
@@ -580,14 +582,14 @@ class LocalAiBaziSlotDraft {
       }
 
       final normalizedValue = switch (key) {
-        'birth_date' => _normalizeGregorianDateEvidence(evidence),
+        'birth_date' => _normalizeGregorianDateEvidence(evidence, userText),
         'birth_time' => _normalizeBirthTimeEvidence(evidence),
         'gender' => _normalizeGenderEvidence(evidence),
         'birthplace' => _normalizeBirthplaceEvidence(value, evidence),
         _ => null,
       };
       if (normalizedValue == null || normalizedValue != value) {
-        throw FormatException('八字参数候选字段 $key 未通过原文证据校验');
+        throw FormatException('八字参数候选字段 $key 未通过原文语义校验');
       }
       verified[key] = value;
     }
@@ -597,10 +599,14 @@ class LocalAiBaziSlotDraft {
     );
   }
 
-  static String? _normalizeGregorianDateEvidence(String evidence) {
-    final iso = RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})')
+  static String? _normalizeGregorianDateEvidence(
+    String evidence,
+    String userText,
+  ) {
+    if (userText.contains('农历') || userText.contains('阴历')) return null;
+    final iso = RegExp(r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})')
         .firstMatch(evidence);
-    final chinese = RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})[日号]?')
+    final chinese = RegExp(r'(\\d{4})年(\\d{1,2})月(\\d{1,2})[日号]?')
         .firstMatch(evidence);
     final match = iso ?? chinese;
     if (match == null) return null;
@@ -618,7 +624,7 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeBirthTimeEvidence(String evidence) {
-    final clock = RegExp(r'([01]?\d|2[0-3]):([0-5]\d)')
+    final clock = RegExp(r'([01]?\\d|2[0-3]):([0-5]\\d)')
         .firstMatch(evidence);
     if (clock != null) {
       final hour = int.parse(clock.group(1)!);
@@ -628,7 +634,7 @@ class LocalAiBaziSlotDraft {
     }
 
     final chineseTime = RegExp(
-      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
+      r'(凌晨|清晨|早晨|早上|上午|中午|下午|傍晚|晚上)?\\s*'
       r'([0-9零〇一二两三四五六七八九十]{1,3})(?:点|时)'
       r'(?:半|([0-9零〇一二两三四五六七八九十]{1,2})分?)?',
     ).firstMatch(evidence);
@@ -643,17 +649,18 @@ class LocalAiBaziSlotDraft {
     if (hour == null || minute == null || minute < 0 || minute > 59) {
       return null;
     }
+
     final period = chineseTime.group(1);
     if (const {'凌晨', '清晨', '早晨', '早上', '上午'}.contains(period)) {
       if (hour == 12) {
         hour = 0;
-      } else if (hour < 0 || hour > 11) {
+      } else if (hour > 11) {
         return null;
       }
+    } else if (period == '晚上' && hour == 12) {
+      hour = 0;
     } else if (const {'中午', '下午', '傍晚', '晚上'}.contains(period)) {
-      if (period == '晚上' && hour == 12) {
-        hour = 0;
-      } else if (hour >= 1 && hour <= 11) {
+      if (hour >= 1 && hour <= 11) {
         hour += 12;
       } else if (hour != 12) {
         return null;
@@ -705,10 +712,21 @@ class LocalAiBaziSlotDraft {
   }
 
   static String? _normalizeGenderEvidence(String evidence) {
-    final hasMale = evidence.contains('男');
-    final hasFemale = evidence.contains('女');
-    if (hasMale == hasFemale) return null;
-    return hasMale ? 'male' : 'female';
+    if (RegExp(r'(?:性别\\s*[：:]\\s*|我是|本人是|为)?男性').hasMatch(evidence)) {
+      return 'male';
+    }
+    if (RegExp(r'(?:性别\\s*[：:]\\s*|我是|本人是|为)?女性').hasMatch(evidence)) {
+      return 'female';
+    }
+    if (RegExp(r'性别\\s*[：:]\\s*男(?:\\b|$)').hasMatch(evidence) ||
+        RegExp(r'(?:我是|本人是)男(?![朋同]).').hasMatch(evidence)) {
+      return 'male';
+    }
+    if (RegExp(r'性别\\s*[：:]\\s*女(?:\\b|$)').hasMatch(evidence) ||
+        RegExp(r'(?:我是|本人是)女(?![朋同]).').hasMatch(evidence)) {
+      return 'female';
+    }
+    return null;
   }
 
   static String? _normalizeBirthplaceEvidence(
@@ -716,10 +734,8 @@ class LocalAiBaziSlotDraft {
     String evidence,
   ) {
     final patterns = [
-      RegExp(
-        r'(?:出生地点|出生地)\s*(?:是|为|在|：|:)?\s*([^，,。；;]+)',
-      ),
-      RegExp(r'(?:出生于|生于)\s*([^，,。；;]+)'),
+      RegExp(r'(?:出生地点|出生地)\\s*(?:是|为|在|：|:)?\\s*([^，,。；;]+)'),
+      RegExp(r'(?:出生于|生于)\\s*([^，,。；;]+)'),
       RegExp(r'在([^，,。；;]{1,24})出生'),
     ];
     for (final pattern in patterns) {
