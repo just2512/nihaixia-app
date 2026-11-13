@@ -1039,3 +1039,53 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 - E 的应用内清除不等于系统备份和外部副本已删除；混合数据库备份边界仍未闭环。
 - C 不允许推测或补造书名版本、卷页和底本证据。
 - 本轮没有引入新数据库表、Agent/DAG、模型/API、检索引擎、FTS5 或额外 Headless adapter。
+
+---
+
+## 22. 2026-11-13 最新主线复核（PR #121 与 master 07cae681）
+
+### 22.1 基线与集成事实
+
+- 本节复核基线：`master @ 07cae6810db412e608ff0d3e2c0dcf1c872105be`。
+- PR #121 `docs(ai): reconcile multiturn audit and execution ledger with merged fixes` 已合并，merge commit 即上述 SHA。
+- PR #121 仅更新 `docs/ai-modernization-execution-ledger.md` 与 `docs/local-ai-multiturn-audit.md`，将 #117/#119/#120 的持久化与 Native Activity 生命周期修复纳入审计；没有新增生产业务行为。
+- 本节以前的历史快照保留，不再把其中标记为 IN_PROGRESS/PENDING 的旧 CI 状态当作当前状态。
+
+### 22.2 当前 master CI 终态
+
+| Workflow | Run | Head SHA | 结果 | 说明 |
+|---|---:|---|---|---|
+| Flutter tests | 43344902200 | 07cae6810db412e608ff0d3e2c0dcf1c872105be | SUCCESS | Flutter regression、Dart/Flutter static analysis、全量 regression、SQLite persistence/reopen、assistant history、AI contract 与 retrieval golden snapshot 均通过 |
+| Flutter Quality Gate | 43344902148 | 07cae6810db412e608ff0d3e2c0dcf1c872105be | SUCCESS | static analysis、Dart tests、Android Native unit tests、Find N2 arm64 Debug APK build 均通过 |
+
+- Flutter tests run 的 Android arm64 CI job同时完成 APK/ABI、merged backup manifest、Native unit tests 与报告校验；全部 SUCCESS。
+- Flutter tests workflow 内的 Branch validation job 为 SKIPPED，不计为通过；该 run 是 master push 验收，不以该 job 的跳过状态否定已完成的 regression/Android jobs。
+- 两条主线 workflow 均已完成，当前 master 自动化 CI 可记录为 PASS。
+- arm64 APK build、merged manifest 检查和 JVM/Kotlin tests 只证明构建与自动化行为；均不能替代 OPPO Find N2 真机运行 TRACE。
+
+### 22.3 A-G 当前硬门槛
+
+| 工作流 | 当前状态 | 已闭环事实 | 仍未闭环的硬门槛 |
+|---|---|---|---|
+| A Native 多轮与持久化 | PARTIAL / DEVICE UNKNOWN | #117 成功轮次与结构化问诊 transcript 原子持久化；#119 transcript 与 task snapshot TRACE 分离；#120 Activity release failure 后进程级 fail-closed；最新 master CI PASS | Find N2 GPU 至少 20 轮、CPU 至少 20 轮；图片/语音；Activity recreation；强制停止/进程重启；SQLite、Flutter UI、Native history 逐轮一致性；`state:7` 根因仍 UNKNOWN |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | Gate fail-closed、来源 provenance、gate-before-operation 顺序契约及测试；B2 全入口静态调用图已有记录 | 经医学背景人员审核的规则/阈值/处置文案；可审计的自然语言 detector；Flutter 与 Native 所有生产入口强制调用；真实入口 TRACE；对 `REVIEW_REQUIRED` 产品影响的明确决策 |
+| C 检索来源 | PARTIAL / NOT VERIFIED | 83 个 sourceId 与本地 Markdown 资产对应，资产存在性与内容语境已核对；12 个 conditionKey 与来源 manifest 对应 | 83/83 bibliographic locator 缺失；12 条规则的真实底本、版次、卷页或原始影像仍缺；讲稿资产不得冒充校勘古籍原文 |
+| D Headless Capability | 2 项 Headless / 2 项 Executed | `yunqi`、`almanac` 复用确定性业务逻辑 | 无新能力的行为基线与实际需求；保持现状，不以数量为目标 |
+| E 数据保护 | PARTIAL | 应用内 AI 数据清除 coordinator、AI 专属新附件目录、Native runtime cache 与 TRACE 清除、SQLite AI 表事务、Android 模型/TRACE backup exclusion 均有代码与测试证据 | AI 与非 AI 业务行仍共用 `nihaisha.db`；Android XML 不能按表/行选择性排除；旧共享图片所有权 UNKNOWN；系统备份/迁移副本、外部导出副本及 Find N2 清除后强停/重启不可恢复证据缺失 |
+| F TRACE | PARTIAL | #113/#114/#115/#117/#119/#120 已补齐 Headless 拒绝、Page Tool 延续、发送/症状整理终态、transcript 原子批量失败、task snapshot 独立状态及 Native lifecycle 失败终态 | Find N2 场景集完整链路、多轮、媒体、Activity/进程恢复真实 TRACE |
+| G 版本与证据治理 | VERSION GUARD IMPLEMENTED | README/pubspec/Flutter/Android/Release tag 一致性门禁；当前 master 两条 post-merge workflow SUCCESS | 仅维护既有 guard，不新增第二套版本治理 |
+
+### 22.4 下一阶段执行顺序（只处理硬门槛）
+
+1. **A/F 真机验收**：在 OPPO Find N2 按 `docs/local-ai-e4b.md` 与 `docs/find-n2-ai-trace-acceptance-plan.md` 执行 GPU/CPU 各至少 20 轮，覆盖文字、图片、语音、Activity recreation、请求中断、强停/重启和历史恢复。每条记录设备型号、Android 版本、App SHA、模型版本/SHA、backend、轮次和 trace_id；缺任何关键证据的场景保持 UNKNOWN。不得用 CI、模拟器或 arm64 APK 代替。
+2. **B2/B4/B5 安全闭环**：先取得医学审核记录（规则 ID、适用范围、阈值、例外、处置文案、规则版本及审核责任），再确定 detector 覆盖和 `REVIEW_REQUIRED` 对产品流程的影响；之后才允许在独立分支接入 Flutter/Native 门禁并验证每条入口均先 gate、后 route/tool/model side effect。审核前不得生成医学规则、不得把 Gate 接入生产、不得默认 CLEAR，也不得用 optional/null gate 形成旁路。
+3. **C 来源真实性**：逐项补充可回链到真实底本、具体版本、卷页或原始影像的 locator。无法取得证据的条目继续 MISSING；不通过网络转述、讲稿文件名或猜测补齐。
+4. **E 备份边界决策**：先明确是接受当前 Android 系统备份中可能包含 AI 会话，还是批准将 AI 对话迁移至独立数据库文件并制定迁移/回滚/恢复方案。Android XML 不能选择性排除 SQLite 表/行；不得排除整个 `nihaisha.db`，不得全局关闭 backup 来冒充 AI-only exclusion。
+5. **E 真机清除验收**：按合成数据执行模型运行中/空闲、附件存在、TRACE 开关开启/关闭、清除成功/部分失败、强制停止和重启复查；确认 AI 数据不可恢复，同时收藏、设置、诊断历史及模型文件保留。旧共享图片无法证明归属时保留，不扫描清空共享临时目录。
+6. **D/G 冻结**：保持 2 项 Headless 与现有版本 guard；除非出现可复现失败证据，不增加 adapter、Agent/DAG、数据库表、检索引擎或治理模块。
+
+### 22.5 验收与停止条件
+
+- 本次复核未发现需要重跑的 master CI；后续只对实际修改的代码运行对应 changed tests，并按影响范围执行 Flutter regression、Android Native/arm64 与 post-merge CI。
+- B 的医学审核、A/E 的 Find N2、C 的底本/影像和 E 的备份产品决策属于外部硬条件。未取得相应证据前，相关状态必须保持 PARTIAL / UNKNOWN / RELEASE BLOCKED，不得以文档更新或自动化测试代替。
+- 本节只同步已核实的主线状态和下一阶段硬门槛；不改变业务行为、不新增医学规则、不触碰数据库迁移或备份策略。
