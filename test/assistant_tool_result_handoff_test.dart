@@ -10,6 +10,7 @@ import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/bazi_paipan_screen.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 
@@ -517,6 +518,11 @@ void main() {
     final store = _NoopAssistantConversationStore();
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          useMaterial3: true,
+          extensions: [AppColors.light],
+        ),
         home: LocalAiInterviewScreen(
           service: service,
           conversationStore: store,
