@@ -745,3 +745,33 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 2. 将“通过结果契约的 Headless 结果自动交给解释 helper”作为下一代码切片，首先覆盖八字，确保显示/持久化仍保留真实结果、source IDs 与模型解释边界。
 3. 其余 Page Tool 不批量改造成 Headless。逐项核对是否存在无需 Widget/BuildContext 的确定性业务函数，再挑选下一项最有价值的用户场景。
 4. 问诊自然语言入口仍受前置红旗门禁阻断；不重审知识库内容，不修改既有问诊十问或 DiagnosticEngine。医学红旗 detector 的审核记录与全入口覆盖尚未 PASS。
+
+---
+
+## 26. 2026-11-13 PR #136：统一对话中自动解释已校验工具结果
+
+### 26.1 核验结论
+
+- PR #136：`https://github.com/just2512/nihaixia-app/pull/136`，基于 master `84a07efbb7713007e30b7a88bff3b4f786b236c6`，当前 head `3e462e8c8c77f5f3e4c9bf7f6c214f5f0b0fe7af`。
+- push Branch validation `43417906260` SUCCESS；PR Flutter regression `43418155569` 尚待终态，Android arm64 job 尚待 PR 最终 head 结果。未合并。
+- 自动解释仅发生在 App 工具结果成功、结果/参数契约核对通过、source IDs 非空且本地模型 ready 的条件下。否则不把结果交给模型做事实解释；模型未就绪时仅对有来源的成功结果保留人工解释入口。
+
+### 26.2 代码路径核对
+
+- Headless：真实结果与原始来源先进入助手时间线并持久化，再恢复模型上下文，使用助手内部提示调用现有解释 helper；内部提示不伪装成用户发言，解释结果另存为助手消息。
+- Page Tool：Typed 结果保留真实 source IDs；旧页面回传 String 用 `local-page-tool:<toolId>` 标记页面回传来源，不冒充本地引擎来源。若用户请求参数没有被页面结果回传确认，状态为 UNKNOWN，不自动解释。
+- 结果失败、取消、NO_RESULT、UNKNOWN、缺少来源、参数不匹配均不会自动解释。现有工具计算和页面执行流程未被替换。
+- 针对性测试覆盖 Bazi、YunQi Headless、Ziwei legacy Page Tool 返回、隐藏内部 prompt、source provenance 和额外 TRACE/persistence 阶段。
+
+### 26.3 与审计发布门槛的关系
+
+- 这项交付仅补足“已执行且校验结果的解释交互”，不等于全部工具均能在对话后台执行。
+- 工具目录仍有 24 项注册能力，其中 Headless 只有 `yunqi / almanac / bazi`；Page Tool 结果可以在用户返回后解释，但用户仍须先完成页面操作。
+- 自由文本症状问诊仍 PARTIAL / BLOCKED BY RED-FLAG GATE；本 PR 不增加症状抽取，不修改医学知识库、问诊十问、DiagnosticEngine 或辨证规则。
+- A/F/E 的 Find N2 设备稳定性、真实 E4B 语义与 TRACE/data-clear 验收不由 CI 替代。普通学习、工具和玄学结果的设备级知识综合仍需合成/非敏感样例采证。
+
+### 26.4 下一步
+
+1. 完成 PR #136 最终 head 的 Flutter regression 和 Android arm64 构建/Manifest/ABI/SHA-256/Native unit tests；合并后复核 merge SHA 的 master workflows。
+2. 在现有结构化规则问诊结果链上，核对是否可复用同一套“规则结果校验后自动解释”交互；不得越过红旗门禁启用自由文本问诊抽取。
+3. 真机验证 E4B 对八字/紫微/工具结果的归纳是否完整、是否保留来源和 MISSING，并记录 App SHA、设备、backend、TRACE 和真实输出。

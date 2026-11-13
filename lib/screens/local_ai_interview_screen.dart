@@ -2218,25 +2218,34 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     final response =
         '【${tool.title}执行结果】\n${result.toConversationText()}';
+    final canInterpret = result.status == AssistantToolExecutionStatus.succeeded &&
+        result.sourceIds.isNotEmpty;
+    final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
+    final needsTcmKnowledge = mode == AssistantMode.tools &&
+        const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
+    final interpretationPrompt = tool.id == 'bazi'
+        ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
+            '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
+            '区分 App 本地引擎输出与 AI 归纳；不改动原始四柱，不补造缺失字段，也不把传统命理表述成科学预测。'
+        : '请根据本轮用户原始请求“$userText”和下方已通过 App 结果契约校验的“' +
+            tool.title +
+            '”执行结果，自动总结并解释实际输入、关键输出、字段含义、字段间关系和结果口径。'
+            '明确区分 App 确定性计算/数据与 AI 的语言化归纳；缺失字段标记 MISSING，不猜算、不修改 App 返回值。'
+            '只有在本地知识库返回了可引用条目时才结合该资料解释，并保留来源。';
     setState(() {
       _lastEffectiveMode = mode;
-      final canInterpretBazi = tool.id == 'bazi' &&
-          result.status == AssistantToolExecutionStatus.succeeded;
-      final interpretationPrompt =
-          '请结合用户原始请求“' + userText + '”，总结并解释刚才返回的八字排盘结果。'
-          '先概括实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
-          '区分 App 本地引擎输出与 AI 归纳；不改动原始四柱，不补造缺失字段，也不把传统命理表述成科学预测。';
       _messages
         ..add(_InterviewMessage(text: userText, isUser: true))
         ..add(_InterviewMessage(
           text: response,
           isUser: false,
           sourceIds: result.sourceIds,
-          actionLabel: canInterpretBazi ? 'AI总结解读' : null,
-          onAction: canInterpretBazi
+          actionLabel: canInterpret && !autoInterpret ? 'AI总结解读' : null,
+          onAction: canInterpret && !autoInterpret
               ? () => unawaited(_requestAssistantResultInterpretation(
                     prompt: interpretationPrompt,
                     mode: mode,
+                    retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
                     toolId: tool.id,
                     toolStatus: result.statusLabel,
                     sourceIds: result.sourceIds,
@@ -2272,6 +2281,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: result.sourceIds,
     );
     _scrollToBottom();
+    if (autoInterpret && mounted) {
+      await _requestAssistantResultInterpretation(
+        prompt: interpretationPrompt,
+        mode: mode,
+        retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
+        toolId: tool.id,
+        toolStatus: result.statusLabel,
+        sourceIds: result.sourceIds,
+        showPromptInTimeline: false,
+        allowWhileSending: true,
+      );
+    }
   }
 
   Future<void> _requestTool(
@@ -2595,8 +2616,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? toolId,
     String? toolStatus,
     List<String> sourceIds = const [],
+    bool showPromptInTimeline = true,
+    bool allowWhileSending = false,
   }) async {
-    if (_sending || _modelControlBusy || _structuredDiagnosisBusy) return;
+    if ((_sending && !allowWhileSending) ||
+        _modelControlBusy ||
+        _structuredDiagnosisBusy) {
+      return;
+    }
     if (_status?.ready != true || _statusUnknown) {
       if (mounted) {
         setState(() => _error = '本地模型尚未就绪，无法生成结果解释；请先确认模型状态。');
@@ -2619,10 +2646,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (!mounted) return;
       setState(() {
         _lastEffectiveMode = mode;
-        _messages.add(_InterviewMessage(
-          text: normalizedPrompt,
-          isUser: true,
-        ));
+        if (showPromptInTimeline) {
+          _messages.add(_InterviewMessage(
+            text: normalizedPrompt,
+            isUser: true,
+          ));
+        }
         _sending = true;
         _error = null;
       });
@@ -2689,7 +2718,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ));
       });
       final persisted = await _persistSuccessfulTurn(
-        userText: normalizedPrompt,
+        userText: showPromptInTimeline ? normalizedPrompt : '',
         assistantText: response.text,
         mode: mode,
         toolId: toolId,
@@ -3052,6 +3081,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolId: tool.id,
           title: tool.title,
           values: {'结果': legacy.trim()},
+          // The page returned a concrete result string from this registered
+          // App tool. Record its route as provenance; do not mislabel it as an
+          // engine or knowledge-base source.
+          sourceIds: ['local-page-tool:${tool.id}'],
         ),
       _ => AssistantToolResult(
           toolId: tool.id,
@@ -3121,7 +3154,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final canRetry = normalizedResult.status ==
         AssistantToolExecutionStatus.failed;
     final canInterpret = normalizedResult.status ==
-        AssistantToolExecutionStatus.succeeded;
+            AssistantToolExecutionStatus.succeeded &&
+        normalizedResult.sourceIds.isNotEmpty;
+    final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = mode == AssistantMode.tools &&
         const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
     final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
@@ -3136,7 +3171,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         sourceIds: normalizedResult.sourceIds,
         actionLabel: canRetry
             ? '重试${tool.title}'
-            : canInterpret
+            : canInterpret && !autoInterpret
                 ? 'AI总结解读'
                 : null,
         onAction: canRetry
@@ -3146,7 +3181,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   arguments: toolArguments,
                   traceContext: activeTraceContext,
                 ))
-            : canInterpret
+            : canInterpret && !autoInterpret
                 ? () => unawaited(_requestAssistantResultInterpretation(
                       prompt: interpretationPrompt,
                       mode: mode,
@@ -3215,9 +3250,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
     String? finalRenderErrorCode;
     try {
-      // Model context restoration continues the existing trace but is not
-      // evidence that the SQLite result message was persisted.
-      await _restoreVisibleConversationToModel();
+      // Automatic interpretation restores the same verified result in its
+      // own traced call. Other result states still synchronize the normal context.
+      if (!autoInterpret) {
+        await _restoreVisibleConversationToModel();
+      }
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -3236,6 +3273,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
       errorCode: finalRenderErrorCode,
     );
+    if (autoInterpret && mounted) {
+      await _requestAssistantResultInterpretation(
+        prompt: interpretationPrompt,
+        mode: mode,
+        retrievalQuery: needsTcmKnowledge ? '${tool.title} $resultText' : null,
+        toolId: tool.id,
+        toolStatus: normalizedResult.statusLabel,
+        sourceIds: normalizedResult.sourceIds,
+        showPromptInTimeline: false,
+        allowWhileSending: true,
+      );
+    }
   }
 
   Widget _buildModeSelector(BuildContext context) {

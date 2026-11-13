@@ -2972,7 +2972,8 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(service.sentTexts, isEmpty);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('自动总结并解释实际输入'));
     expect(find.textContaining('五运六气推算执行结果'), findsOneWidget);
     expect(find.textContaining('推算日期：2026-11-12'), findsOneWidget);
     expect(find.textContaining('丙午年'), findsOneWidget);
@@ -2983,15 +2984,21 @@ void main() {
     final messages = await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    expect(messages, hasLength(2));
+    expect(messages, hasLength(3));
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('五运六气推算执行结果'),
+    );
     final metadata = AssistantMessageMetadata.decode(
-      messages.last['metadata'] as String,
+      resultMessage['metadata'] as String,
     );
     expect(metadata.toolId, 'yunqi');
     expect(metadata.toolStatus, 'SUCCEEDED');
     expect(metadata.toolArguments, const {'date': '2026-11-12'});
     expect(metadata.sourceIds, const ['local-engine:yunqi']);
     expect(metadata.traceId, traceId);
+    expect(messages.last['role'], 'assistant');
+    expect(messages.last['content'], contains('已收到你的描述'));
     expect(events.map((event) => event.stage), containsAll([
       AiTraceStage.input,
       AiTraceStage.route,
@@ -3007,15 +3014,21 @@ void main() {
           .single.status,
       AiTraceStatus.succeeded,
     );
+    final persistenceEvents = events
+        .where((event) => event.stage == AiTraceStage.persistence)
+        .toList(growable: false);
+    expect(persistenceEvents, hasLength(2));
     expect(
-      events.where((event) => event.stage == AiTraceStage.persistence)
-          .single.status,
-      AiTraceStatus.succeeded,
+      persistenceEvents.map((event) => event.status),
+      everyElement(AiTraceStatus.succeeded),
     );
+    final finalRenderEvents = events
+        .where((event) => event.stage == AiTraceStage.finalRender)
+        .toList(growable: false);
+    expect(finalRenderEvents, hasLength(2));
     expect(
-      events.where((event) => event.stage == AiTraceStage.finalRender)
-          .single.status,
-      AiTraceStatus.succeeded,
+      finalRenderEvents.map((event) => event.status),
+      everyElement(AiTraceStatus.succeeded),
     );
   });
 
@@ -3190,12 +3203,14 @@ void main() {
     expect(find.textContaining('四柱：庚午、己丑、甲子、戊辰'), findsOneWidget);
     expect(find.text('打开八字排盘'), findsNothing);
     expect(pageOpened, isFalse);
-    expect(service.sentTexts, isEmpty);
-    await tester.tap(find.text('AI总结解读'));
-    await tester.pumpAndSettle();
     expect(
-      service.sentTexts.where((value) => value.contains('总结并解释刚才返回的八字排盘结果')),
-      isNotEmpty,
+      find.text('AI总结解读'),
+      findsNothing,
+      reason: '模型已就绪且排盘结果通过来源/参数契约后，应由助手自动解释',
+    );
+    expect(
+      service.sentTexts.where((value) => value.contains('总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
+      hasLength(1),
     );
 
     final conversations = await store.getAssistantConversations();
@@ -3203,7 +3218,7 @@ void main() {
     final messages = await store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    expect(messages.length, greaterThanOrEqualTo(8));
+    expect(messages.length, greaterThanOrEqualTo(7));
     final resultMessage = messages.firstWhere(
       (message) => (message['content'] as String).contains('完整排盘结果'),
     );
@@ -3219,6 +3234,20 @@ void main() {
       'birthplace': '上海市',
     });
     expect(metadata.sourceIds, sourceIds);
+    expect(
+      messages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains(
+              '总结并解释刚才由 App 本地引擎返回的八字排盘结果')),
+      isEmpty,
+      reason: '自动解释指令是内部调度内容，不得伪装成用户发言持久化',
+    );
+    expect(
+      messages.where((message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('已收到')),
+      hasLength(1),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -3461,13 +3490,20 @@ void main() {
     final messages = await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    expect(messages, hasLength(3));
+    expect(messages, hasLength(4));
+    final pageResultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('页面结果已回传'),
+    );
     final resultMetadata = AssistantMessageMetadata.decode(
-      messages.last['metadata'] as String,
+      pageResultMessage['metadata'] as String,
     );
     expect(resultMetadata.toolId, 'yunqi');
     expect(resultMetadata.toolStatus, 'SUCCEEDED');
+    expect(resultMetadata.sourceIds, const ['local-engine:page-tool-test']);
     expect(resultMetadata.traceId, traceId);
+    expect(messages.last['role'], 'assistant');
+    expect(messages.last['content'], contains('已收到你的描述'));
 
     final toolExecutionEvents = events
         .where((event) => event.stage == AiTraceStage.toolExecution)
@@ -3483,8 +3519,8 @@ void main() {
     );
     expect(
       events.where((event) => event.stage == AiTraceStage.resultValidation)
-          .single.status,
-      AiTraceStatus.succeeded,
+          .map((event) => event.status),
+      containsAll([AiTraceStatus.succeeded, AiTraceStatus.succeeded]),
     );
     expect(
       events.where((event) => event.stage == AiTraceStage.persistence)
