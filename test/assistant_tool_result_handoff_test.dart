@@ -498,6 +498,7 @@ void main() {
     var pageOpened = false;
     Map<String, String>? executedArguments;
     AssistantToolResult? executedResult;
+    String? executorError;
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
@@ -513,10 +514,23 @@ void main() {
             // The real executor loads bundled city JSON. Widget tests run in
             // fake async time, so perform this resource-backed Future in the
             // binding's real async zone rather than leaving it unresolved.
-            executedResult = await tester.runAsync(
-              () => BaziToolExecutor.execute(arguments),
+            executedResult = await tester.runAsync(() async {
+              try {
+                return await BaziToolExecutor.execute(arguments);
+              } catch (error, stackTrace) {
+                executorError = '$error\\n$stackTrace';
+                rethrow;
+              }
+            });
+            return executedResult ?? AssistantToolResult(
+              toolId: 'bazi',
+              title: '八字排盘',
+              status: AssistantToolExecutionStatus.failed,
+              values: {
+                '未执行原因': executorError ?? 'Widget test async executor returned null',
+              },
+              arguments: arguments,
             );
-            return executedResult!;
           },
         ),
       ),
@@ -546,7 +560,7 @@ void main() {
     expect(
       executedResult?.status,
       AssistantToolExecutionStatus.succeeded,
-      reason: '真实本地引擎必须返回可验证成功结果；失败原因：${executedResult?.values['未执行原因']}',
+      reason: '真实本地引擎必须返回可验证成功结果；失败原因：${executedResult?.values['未执行原因']}；异常：$executorError',
     );
     expect(executedResult?.validateFor('bazi'), isEmpty);
     expect(
