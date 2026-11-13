@@ -578,3 +578,75 @@ PR #121 合并后的主线 `07cae681` 自动化验收：
 | 医案来源/疗效证据 | PARTIAL / MISSING | 作为本地整理案例检索；未核实原始出处不做确切归属或疗效论证 |
 
 本拆分不修改 `docs/ai-capability-audit.md` 第4.3节的来源类型与反伪造要求，也不放宽红旗门禁、医学审核、规则引擎或 Find N2 真机验收标准。
+
+---
+
+## 22. 2026-11-13 AI 结果解释与知识库综合能力复核
+
+### 22.1 验收目标
+
+用户确认的产品定位是：本 App 是本地中医学习知识库和领域工具，不是医学诊断软件。AI 不应替代确定性业务引擎，而应利用已有数据做理解、总结、关联、比较与解释。
+
+本轮将“发挥 AI 能力”拆成三条可核验链：
+
+1. 本地知识库命中资料 → 来源可回链的上下文 → AI 总结/比较/解释。
+2. App DiagnosticEngine 已完成的结构化问诊结果 → transcript/task snapshot → 会话恢复 → AI 解读既有六经/证型/方剂结果，并引用本地知识依据。
+3. App 八字/紫微确定性排盘 → Page Tool 结果返回助手 → 结果持久化及 Native transcript 恢复 → AI 解释字段关系、格局/强弱/大运或命宫/四化/大限/已选流层。
+
+AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、重新排盘、补造缺失来源或把术数内容包装成科学预测。
+
+### 22.2 代码核验结果
+
+**A. 知识库检索与总结**
+
+- `lib/services/assistant_knowledge_context.dart` 的 `AssistantKnowledgeContextBuilder.buildAsync` 继续从 App 本地资料构建上下文，包含来源类型、标题、sourceId、本地回链和使用边界。
+- 学习模式 Prompt 已明确要求基于检索命中资料进行总结、比较、归纳和解释，指出共同点、差异、适用条件与来源分歧；课程讲稿、古籍文本、医案、App 数据、AI 归纳必须区分。
+- 未检索命中或缺少依据时保持 MISSING，不补造出处。
+- 不调整检索 query、top-40、排序、去重或来源状态。
+
+**B. 已完成问诊结果解释**
+
+- 结构化问诊结果由 App DiagnosticEngine 生成并作为消息/transcript 与 task snapshot 持久化。
+- 历史恢复路径 `_restoreVisibleConversationToModel` 将可见 transcript 传入 `LocalAiService.restoreConversation`。
+- 问诊 Prompt 明确允许 AI 解释、归纳历史中已有的 DiagnosticEngine 结果，并结合本轮知识检索条目说明依据；不得自行新增/改写证型或规则结论，不独立作个体诊断、处方或剂量建议。
+- 回归测试用已完成任务状态验证 Native 恢复 transcript 包含“六经/证型/方剂”；这证明数据确实可供模型使用，不替代模型自然语言输出的真机质量验证。
+
+**C. 八字结果解释**
+
+- 八字工具此前返回摘要字段不完整；本轮通过 `lib/services/assistant_chart_result_formatter.dart` 和 `BaZiPaipanScreen._returnAssistantResult` 扩展为完整学习解释上下文。
+- 包含出生/排盘口径、四柱、十神、纳音、旬空、刑冲合害、十二长生、各柱自坐、胎元胎息、藏干十神、日主、格局与说明、强弱与可读依据、五行分布状态、用神/忌神、建议、神煞、大运起运时间、每步大运和其所辖流年。
+- 不传递内部数值权重；模型被要求基于 App 结果解释强弱、格局、五行与大运关系，不能改四柱或补造缺失值。
+
+**D. 紫微结果解释**
+
+- 紫微工具此前返回结果只有生辰、五行局、命/身宫、命主/身主、生年四化；未包含完整宫星和页面既有解读。
+- 当前格式化结果包含 12 宫及星曜、命/身宫、生年四化、`summarizeOverall` 和 `summarizeDecades` 的 App 规则模板结果。
+- 如果页面已选择流年、流月、流日，则一并传入对应年份/日期、干支、命宫位置和流曜落宫；没有选择时不自动补算。
+- 不包含 `analyzeHealthWatch` 健康提醒，不把疾厄宫/身体部位解释作为医学诊断。
+- Prompt 要求先归纳命宫、身宫、四化与十二宫关系，再结合大限分层解释，并区分 App 排盘字段、规则模板和 AI 归纳。
+
+### 22.3 回归证据
+
+| 测试 | 实际验证内容 |
+|---|---|
+| `test/assistant_chart_result_formatter_test.dart` | 真实本地八字/紫微样例生成摘要；核对八字详批/十年流年、紫微十二宫/四化/整体和大限模板，以及已选流年/流月/流日字段；排除紫微健康提醒 |
+| `test/assistant_tool_result_handoff_test.dart` | 通过统一助手打开八字/紫微页面、本地计算并返回；确认结果已保存到助手 timeline 并进入 `restoreConversation` Native model transcript |
+| `test/local_ai_interview_screen_test.dart` | 确认问诊上下文具备既有结果解释指令；恢复已完成的结构化辨证会话后，Native transcript 包含六经、证型和方剂 |
+| `test/assistant_tool_router_test.dart` | 锁定学习、问诊、工具和术数模式的结果综合提示，不退化成只会导航或原样复制 |
+
+以上是 CODE + TEST 证据。测试使用 fake/recording service 验证上下文交付，**没有调用真实 E4B 模型验证生成答案的语义质量**；Find N2 实机结果需单独提供设备、模型、backend 和实际回答/TRACE 证据。
+
+### 22.4 风险与边界
+
+- 优势：把 App 已经投入开发的本地知识、诊断规则和排盘引擎转换为 AI 可理解的数据上下文，使 AI 可以发挥跨字段总结与解释能力；不需要云 API、向量库、新数据库表或 Agent/DAG。
+- 风险：上下文存在长度上限；超长历史、资料冲突、规则未核验、模型对传统术数的概念理解可能影响回答。AI 回答不能反过来修改原始规则/排盘数据；来源 MISSING 时不能补造。
+- 医学审核只针对健康风险和红旗门禁等受控路径，不作为普通学习或术数文化解释的统一前置条件。当前红旗 detector/全入口门禁仍需按规范继续收敛，不能默认 CLEAR。
+- 真实模型质量（是否能正确比较不同来源、理解字段间关系、解释大运/流年、对缺失项保持克制）仍是 DEVICE UNKNOWN，不能以回归通过替代。
+
+### 22.5 下一步
+
+1. 最新分支 head 的静态分析与 changed tests 成功后创建独立 PR。
+2. PR 执行全量 Flutter regression 和 Android arm64 APK、合并 Manifest、Native unit tests；不将 push workflow 的 SKIPPED job 计作 PASS。
+3. 合并后确认 master Flutter tests 与 Quality Gate 终态成功，并更新本报告/台账基线。
+4. Find N2 本地 E4B 做小批量语义验收：一条本地知识对照、一条完成的结构化问诊结果追问、一条八字详批、一条紫微整体/大限解释、一条选定流年/流月/流日追问。只记录实际返回，逐项核对来源、字段、推理边界与 MISSING 处理；未执行保持 UNKNOWN。
+
