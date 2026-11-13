@@ -3398,6 +3398,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('含个人症状的歧义请求不把健康文本送入工具意图模型', (tester) async {
+    final service = _TextSendService(
+      intentResolution: const LocalAiIntentResolution(
+        action: LocalAiIntentAction.select,
+        toolId: 'bazi',
+        backend: 'cpu',
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: _store,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '我最近三天口苦，帮我排个盘',
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.intentQueries, isEmpty);
+    expect(find.textContaining('你想使用哪一种排盘工具'), findsOneWidget);
+    expect(find.text('打开八字排盘'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('歧义排盘只把有界候选交给 E4B，命中后在同一对话进入 Headless 八字参数收集', (tester) async {
     const traceId = '0123456789abcdef0123456789abcdef';
     final events = <AiTraceEvent>[];
