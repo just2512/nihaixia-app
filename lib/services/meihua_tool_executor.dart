@@ -72,6 +72,8 @@ class MeihuaToolExecutor {
     };
     late final MeihuaChart chart;
     String? executedHourBranch;
+    String? normalizedFirst;
+    String? normalizedSecond;
 
     switch (method) {
       case 'number':
@@ -94,6 +96,8 @@ class MeihuaToolExecutor {
         );
         // Keep the exact validated request values in provenance metadata;
         // the displayed calculation values below use parsed integers.
+        normalizedFirst = '$first';
+        normalizedSecond = '$second';
         executionArguments
           ..['first'] = arguments['first']!
           ..['second'] = arguments['second']!;
@@ -159,8 +163,8 @@ class MeihuaToolExecutor {
         '公历日期': _formatDate(date),
         '农历月份': '${lunar.month}月',
         if (executedHourBranch != null) '起卦时辰': '${executedHourBranch}时',
-        if (method == 'number') '第一数（上卦）': executionArguments['first']!,
-        if (method == 'number') '第二数（下卦）': executionArguments['second']!,
+        if (method == 'number') '第一数（上卦）': normalizedFirst!,
+        if (method == 'number') '第二数（下卦）': normalizedSecond!,
         '主卦': '第${chart.main.seq}卦 ${chart.main.name}',
         '主卦卦辞': chart.main.judgement,
         '互卦': '第${chart.mutual.seq}卦 ${chart.mutual.name}',
