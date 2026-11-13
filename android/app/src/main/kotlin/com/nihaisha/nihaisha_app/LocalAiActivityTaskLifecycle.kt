@@ -4,6 +4,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Serializes native AI work across Activity instances in the same process.
@@ -12,7 +13,25 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Activity submits its work to the same queue, so model release always precedes
  * the next Activity's model initialization.
  */
+/**
+ * Process-wide health state. A failed Engine/Conversation release is terminal
+ * for this process: a recreated Activity must not initialize another Engine
+ * while the previous native resources may still be alive.
+ */
+internal class LocalAiProcessHealth {
+    private val releaseFailure = AtomicReference<Throwable?>(null)
+
+    fun releaseFailure(): Throwable? = releaseFailure.get()
+
+    fun markReleaseFailure(error: Throwable) {
+        releaseFailure.compareAndSet(null, error)
+    }
+
+    fun isAvailable(): Boolean = releaseFailure.get() == null
+}
+
 internal object LocalAiProcessExecutor {
+    val health = LocalAiProcessHealth()
     val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "local-ai-process-serial").apply { isDaemon = true }
     }
@@ -27,23 +46,34 @@ internal object LocalAiProcessExecutor {
  */
 internal class LocalAiActivityTaskLifecycle(
     private val executor: ExecutorService,
-    private val release: () -> Unit
+    private val release: () -> Unit,
+    private val processHealth: LocalAiProcessHealth? = null
 ) {
     private val destroyed = AtomicBoolean(false)
 
     fun isDestroyed(): Boolean = destroyed.get()
 
-    fun submit(task: () -> Unit, onRejected: () -> Unit) {
+    fun releaseFailure(): Throwable? = processHealth?.releaseFailure()
+
+    fun submit(
+        task: () -> Unit,
+        onRejected: () -> Unit,
+        onUnavailable: () -> Unit = onRejected
+    ) {
         if (destroyed.get()) {
             onRejected()
             return
         }
+        if (processHealth?.isAvailable() == false) {
+            onUnavailable()
+            return
+        }
         try {
             executor.execute {
-                if (destroyed.get()) {
-                    onRejected()
-                } else {
-                    task()
+                when {
+                    destroyed.get() -> onRejected()
+                    processHealth?.isAvailable() == false -> onUnavailable()
+                    else -> task()
                 }
             }
         } catch (_: RejectedExecutionException) {
@@ -58,10 +88,12 @@ internal class LocalAiActivityTaskLifecycle(
                 try {
                     release()
                 } catch (error: Throwable) {
+                    processHealth?.markReleaseFailure(error)
                     onReleaseError(error)
                 }
             }
         } catch (error: Throwable) {
+            processHealth?.markReleaseFailure(error)
             onReleaseError(error)
         }
     }
