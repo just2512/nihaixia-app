@@ -9,6 +9,7 @@ class AssistantDispatchDecision {
     this.toolArguments,
     this.clarification,
     this.expectsToolSelection = false,
+    this.candidateTools = const [],
   });
 
   final AssistantMode mode;
@@ -16,6 +17,7 @@ class AssistantDispatchDecision {
   final AssistantToolArguments? toolArguments;
   final String? clarification;
   final bool expectsToolSelection;
+  final List<AssistantToolDefinition> candidateTools;
 
   bool get needsClarification => clarification != null;
   bool get launchesTool => tool != null;
@@ -29,6 +31,18 @@ class AssistantDispatchDecision {
 /// This is intentionally rule-based: it does not claim model confidence or
 /// silently execute an uncertain tool call.
 class AssistantConversationOrchestrator {
+  static List<AssistantToolDefinition> _boundedCandidates(
+    Iterable<AssistantToolDefinition> tools,
+  ) {
+    final candidates = tools.toList(growable: false);
+    if (candidates.length < 2 || candidates.length > 6) {
+      return const [];
+    }
+    final ids = candidates.map((tool) => tool.id).toSet();
+    if (ids.length != candidates.length) return const [];
+    return List.unmodifiable(candidates);
+  }
+
   static const _personalContextCues = [
     '我最近',
     '我这几天',
@@ -188,6 +202,7 @@ class AssistantConversationOrchestrator {
           clarification:
               '你同时提出了多个工具（${explicitMatches.map((tool) => tool.title).join('、')}），请先选择一个执行。',
           expectsToolSelection: true,
+          candidateTools: _boundedCandidates(explicitMatches),
         );
       }
       if (pendingToolSelection &&
@@ -207,6 +222,7 @@ class AssistantConversationOrchestrator {
             mode: selectedMode,
             clarification: '你提到了多个工具（${matches.map((tool) => tool.title).join('、')}），请只选择其中一个。',
             expectsToolSelection: true,
+            candidateTools: _boundedCandidates(matches),
           );
         }
         return AssistantDispatchDecision(
@@ -226,6 +242,16 @@ class AssistantConversationOrchestrator {
                 ? '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？'
                 : '你想使用哪一种起卦工具：易经、小六壬，还是梅花易数？',
             expectsToolSelection: true,
+            candidateTools: text.contains('排盘')
+                ? _boundedCandidates([
+                    AssistantToolRouter.ziwei,
+                    AssistantToolRouter.bazi,
+                  ])
+                : _boundedCandidates([
+                    AssistantToolRouter.yijing,
+                    AssistantToolRouter.xiaoliuren,
+                    AssistantToolRouter.meihua,
+                  ]),
           );
         }
         if (selectedMode == AssistantMode.tools &&
@@ -234,6 +260,10 @@ class AssistantConversationOrchestrator {
             mode: AssistantMode.tools,
             clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
             expectsToolSelection: true,
+            candidateTools: _boundedCandidates([
+              AssistantToolRouter.ziwu,
+              AssistantToolRouter.dosage,
+            ]),
           );
         }
       }
@@ -279,6 +309,7 @@ class AssistantConversationOrchestrator {
           mode: mode,
           clarification: '你提到了多个工具（${matches.map((tool) => tool.title).join('、')}），请只选择其中一个。',
           expectsToolSelection: true,
+          candidateTools: _boundedCandidates(matches),
         );
       }
       return AssistantDispatchDecision(
@@ -303,6 +334,7 @@ class AssistantConversationOrchestrator {
         mode: mode,
         clarification: '你同时提出了多个工具（$titles），请先选择一个执行，避免只运行其中一项。',
         expectsToolSelection: true,
+        candidateTools: _boundedCandidates(explicitMatches),
       );
     }
     if (explicitMatches.length == 1) {
@@ -324,6 +356,10 @@ class AssistantConversationOrchestrator {
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种排盘工具：紫微斗数，还是八字四柱？',
         expectsToolSelection: true,
+        candidateTools: _boundedCandidates([
+          AssistantToolRouter.ziwei,
+          AssistantToolRouter.bazi,
+        ]),
       );
     }
     if (text.contains('起卦') || text.contains('起课')) {
@@ -331,6 +367,11 @@ class AssistantConversationOrchestrator {
         mode: AssistantMode.metaphysics,
         clarification: '你想使用哪一种起卦工具：易经、小六壬，还是梅花易数？',
         expectsToolSelection: true,
+        candidateTools: _boundedCandidates([
+          AssistantToolRouter.yijing,
+          AssistantToolRouter.xiaoliuren,
+          AssistantToolRouter.meihua,
+        ]),
       );
     }
     if (text.contains('开穴') || text.contains('剂量换算')) {
@@ -338,6 +379,10 @@ class AssistantConversationOrchestrator {
         mode: AssistantMode.tools,
         clarification: '你想使用子午流注/时辰开穴工具，还是经方剂量换算工具？',
         expectsToolSelection: true,
+        candidateTools: _boundedCandidates([
+          AssistantToolRouter.ziwu,
+          AssistantToolRouter.dosage,
+        ]),
       );
     }
 
