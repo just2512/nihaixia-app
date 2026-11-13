@@ -44,7 +44,7 @@ void main() {
     expect(text, contains('用神：${result.analysis.favorable.join('、')}'));
     expect(text, contains('忌神：${result.analysis.unfavorable.join('、')}'));
     expect(text, contains('第${fortune.decades.first.index}步：'));
-    expect(text, contains('哪些是 App 排盘字段'));
+    expect(text, contains('区分排盘事实与 AI 归纳'));
     expect(text, isNot(contains('strengthScore')));
     expect(text, isNot(contains('(+0.5)')));
   });
@@ -75,7 +75,7 @@ void main() {
     expect(text, contains('生年四化：'));
     expect(text, contains(summarizeOverall(chart)));
     expect(text, contains(summarizeDecades(chart).first));
-    expect(text, contains('区分哪些是 App 排盘字段'));
+    expect(text, contains('明确哪些是 App 排盘字段'));
     expect(text, isNot(contains('身体留意')));
     expect(text, isNot(contains('健康提醒清单')));
   });
