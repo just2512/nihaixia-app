@@ -298,5 +298,34 @@
         "不得据此将12条规则的page或primaryImageVerification升级为已核验。"
       ]
     }
+  ],
+  "learningMaterialCollections": [
+    {
+      "collectionId": "shanghan-course-lecture-notes",
+      "sourceLabel": "伤寒论讲稿",
+      "sourceKind": "lecture",
+      "localAssetPattern": "assets/shanghan/clause_*.md",
+      "sourceIdPattern": "shanghan:assets/shanghan/clause_*.md",
+      "goldenSnapshotEvidence": {
+        "distinctSourceIds": 83,
+        "distinctLocalAssets": 83,
+        "verificationScope": "retrieval golden snapshot source IDs resolve to distinct local Markdown assets"
+      },
+      "contentNature": "本地课程讲稿/整理讲义；单条资料可能同时包含古籍条文摘录、讲解、经验性观点和学习笔记。",
+      "attribution": "应用内当前展示为倪师相关课程讲稿/整理讲义。原始录音文件、具体讲次、整理者、修订日期和出版版本未在该资料目录逐条登记。",
+      "localBacklinkStatus": "VERIFIED",
+      "bibliographicStatus": "NOT_REQUIRED_FOR_GENERAL_LEARNING_RETRIEVAL",
+      "quotedClassicalTextStatus": "NOT_SYSTEMATICALLY_VERIFIED_AGAINST_A_SPECIFIC_EDITION",
+      "allowedUse": [
+        "作为课程讲稿/整理讲义进行知识检索、学习和概念解释。",
+        "展示实际命中的 sourceLabel、title、sourceId 与本地资产回链。",
+        "对讲稿观点使用“讲稿/课程资料提到”等归属表述。"
+      ],
+      "restrictedUse": [
+        "不得把讲稿内摘录自动称为已校勘的仲景原文或特定版本原文。",
+        "不得仅凭讲稿观点作为 DiagnosticEngine 医疗规则、急症门禁或个体处方依据。",
+        "不得把讲稿中的疗效/用药观点表述为现代临床证据。"
+      ]
+    }
   ]
 }
