@@ -73,6 +73,67 @@ class LocalAiActivityTaskLifecycleTest {
     }
 
     @Test
+    fun releaseFailureBlocksWorkQueuedByARecreatedActivity() {
+        val executor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "local-ai-release-failure-test").apply { isDaemon = true }
+        }
+        try {
+            val health = LocalAiProcessHealth()
+            val releaseError = IllegalStateException("native release failed")
+            val newTaskFinished = CountDownLatch(1)
+            val queuedTaskRuns = AtomicInteger()
+            val unavailableCount = AtomicInteger()
+
+            val oldActivity = LocalAiActivityTaskLifecycle(
+                executor = executor,
+                release = { throw releaseError },
+                processHealth = health
+            )
+            oldActivity.destroy()
+
+            val newActivity = LocalAiActivityTaskLifecycle(
+                executor = executor,
+                release = {},
+                processHealth = health
+            )
+            newActivity.submit(
+                task = {
+                    queuedTaskRuns.incrementAndGet()
+                    newTaskFinished.countDown()
+                },
+                onRejected = {
+                    throw AssertionError("the recreated Activity was not destroyed")
+                },
+                onUnavailable = {
+                    unavailableCount.incrementAndGet()
+                    newTaskFinished.countDown()
+                }
+            )
+
+            // The task is queued behind oldActivity's release. It must observe
+            // the release failure on the serial executor before touching Engine.
+            assertTrue(newTaskFinished.await(5, TimeUnit.SECONDS))
+            assertEquals(0, queuedTaskRuns.get())
+            assertEquals(1, unavailableCount.get())
+            assertTrue(health.releaseFailure() === releaseError)
+            assertFalse(newActivity.isDestroyed())
+
+            // Once the process is poisoned, later work is rejected immediately.
+            var immediateUnavailable = 0
+            newActivity.submit(
+                task = { throw AssertionError("unavailable process must not execute") },
+                onRejected = {
+                    throw AssertionError("the recreated Activity is still active")
+                },
+                onUnavailable = { immediateUnavailable++ }
+            )
+            assertEquals(1, immediateUnavailable)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    @Test
     fun destroyReleasesExactlyOnceAndRejectsLaterWork() {
         val executor = Executors.newSingleThreadExecutor { runnable ->
             Thread(runnable, "local-ai-lifecycle-test").apply { isDaemon = true }
