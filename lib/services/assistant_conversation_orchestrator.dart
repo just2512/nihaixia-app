@@ -141,7 +141,7 @@ class AssistantConversationOrchestrator {
     if (text.isEmpty ||
         text.length > 2000 ||
         missingKeys.isEmpty ||
-        shouldExcludeFromIntentModel(text)) {
+        _symptomCues.any(text.contains)) {
       return false;
     }
     if (missingKeys.contains('birth_date') &&
