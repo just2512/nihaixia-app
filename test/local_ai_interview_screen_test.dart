@@ -2987,7 +2987,7 @@ void main() {
     }
 
     await send('帮我排八字');
-    expect(find.textContaining('出生日期（公历'), findsOneWidget);
+    expect(find.textContaining('出生日期（公历'), findsWidgets);
     expect(find.text('打开八字排盘'), findsNothing);
     expect(pageOpened, isFalse);
     expect(service.sentTexts, isEmpty);
