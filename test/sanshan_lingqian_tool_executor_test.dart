@@ -37,7 +37,7 @@ void main() {
     final result = await SanshanLingqianToolExecutor.execute(const {});
     final id = int.parse(result.values['签号']!);
     expect(result.status, AssistantToolExecutionStatus.succeeded);
-    expect(result.sourceIds, [SanshanLingqianToolExecutor.dataSourcePrefix + '$id']);
+    expect(result.sourceIds, ['${SanshanLingqianToolExecutor.dataSourcePrefix}$id']);
     expect(kSanShanLingqian.any((sign) => sign.id == id), isTrue);
     expect(
       result.values['签诗'],
