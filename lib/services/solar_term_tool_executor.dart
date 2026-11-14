@@ -55,7 +55,7 @@ class SolarTermToolExecutor {
       final isCurrentQuery = requestedTerm == null || requestedTerm.isEmpty;
       final current = isCurrentQuery ? getCurrentSolarTerm() : null;
       final term = isCurrentQuery ? current?.currentTerm ?? '' : requestedTerm!;
-      if (term.isEmpty || (isCurrentQuery && current!.nextTerm.isEmpty)) {
+      if (term.isEmpty || (isCurrentQuery && current.nextTerm.isEmpty)) {
         return _failure(arguments, 'App 节气服务当前未返回有效节气信息，本次未生成解释结果。');
       }
 
