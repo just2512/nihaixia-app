@@ -290,7 +290,7 @@ class AssistantToolRouter {
     description: '在当前对话中调用 App 原有易经引擎，支持数字、当前时间、手动选卦和铜钱摇卦；计算结果由 AI 归纳解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['易经', '六十四卦', '周易'],
-    actionWords: ['起卦', '占卦', '卜卦', '排卦'],
+    actionWords: ['起卦', '摇卦', '选卦', '占卦', '卜卦', '排卦'],
     builder: _buildYijing,
     headlessExecutor: YiJingToolExecutor.execute,
     parameters: [
