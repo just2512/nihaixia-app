@@ -193,24 +193,39 @@ class AssistantConversationOrchestrator {
       final chineseDates = RegExp(
         r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
       ).allMatches(query).toList(growable: false);
-      final dates = isoDates.isNotEmpty ? isoDates : chineseDates;
+      final dateMatches = [...isoDates, ...chineseDates];
+      final dates = dateMatches
+          .map((match) =>
+              '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}')
+          .toSet();
       if (query.contains('农历') || query.contains('阴历')) {
         values['date'] = 'LUNAR_DATE_NOT_SUPPORTED';
       } else if (dates.length == 1) {
-        final match = dates.single;
-        values['date'] =
-            '${match.group(1)!.padLeft(4, '0')}-'
-            '${match.group(2)!.padLeft(2, '0')}-'
-            '${match.group(3)!.padLeft(2, '0')}';
+        values['date'] = dates.single;
+      } else if (dates.isEmpty &&
+          (query.contains('今天') || query.contains('今日') ||
+              query.contains('明天') || query.contains('明日') ||
+              query.contains('昨天') || query.contains('昨日'))) {
+        final offset =
+            query.contains('明天') || query.contains('明日') ? 1 :
+            query.contains('昨天') || query.contains('昨日') ? -1 : 0;
+        final now = DateTime.now();
+        final date = DateTime(now.year, now.month, now.day + offset);
+        values['date'] = '${date.year.toString().padLeft(4, '0')}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}';
       }
       final hours = XiaoliurenToolExecutor.hourBranches
           .where(query.contains)
           .toList(growable: false);
       if (hours.length == 1) values['hour'] = hours.single;
-      if (query.contains('多能鄙事')) {
-        values['rule'] = 'duoneng';
-      } else if (query.contains('通行掌诀') || query.contains('通行口径')) {
-        values['rule'] = 'common';
+      final requestsDuoneng = query.contains('多能鄙事');
+      final requestsCommon =
+          query.contains('通行掌诀') || query.contains('通行口径');
+      if (requestsDuoneng != requestsCommon) {
+        values['rule'] = requestsDuoneng ? 'duoneng' : 'common';
       }
     } else if (tool.id == 'chenggu') {
       final isoDate = RegExp(
@@ -530,18 +545,32 @@ class AssistantConversationOrchestrator {
       final chineseDates = RegExp(
         r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
       ).allMatches(text).toList(growable: false);
-      final dateCount = isoDates.isNotEmpty ? isoDates.length : chineseDates.length;
+      final dateValues = [...isoDates, ...chineseDates]
+          .map((match) =>
+              '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}')
+          .toSet();
+      final dateCount = dateValues.length;
       final hourCount = XiaoliurenToolExecutor.hourBranches
           .where(text.contains)
           .length;
-      if (dateCount > 1 || hourCount > 1) {
+      final requestsDuoneng = text.contains('多能鄙事');
+      final requestsCommon =
+          text.contains('通行掌诀') || text.contains('通行口径');
+      final ruleCount = requestsDuoneng || requestsCommon
+          ? (requestsDuoneng ? 1 : 0) + (requestsCommon ? 1 : 0)
+          : 0;
+      if (dateCount > 1 || hourCount > 1 || ruleCount > 1) {
         return AssistantDispatchDecision(
           mode: selectedMode == AssistantMode.automatic
               ? AssistantMode.metaphysics
               : selectedMode,
           clarification: dateCount > 1
               ? '你提供了多个公历日期，请明确本次起课使用哪一天；尚未执行。'
-              : '你提到了多个时辰，请明确选择一个时辰；尚未执行。',
+              : hourCount > 1
+                  ? '你提到了多个时辰，请明确选择一个时辰；尚未执行。'
+                  : '你提到了两种起课口径，请明确选择通行掌诀或《多能鄙事》卷八口径；尚未执行。',
         );
       }
     }
