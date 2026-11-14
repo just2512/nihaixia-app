@@ -705,7 +705,7 @@ void main() {
     expect(service.restoredTranscript, contains('出生时间：1990-06-15 10:00'));
     expect(
       service.sentTexts.single,
-      contains('总结并解释刚才由 App 本地引擎返回的紫微排盘结果'),
+      contains('自动总结并解释实际输入、关键输出、字段含义'),
     );
     final resultMessage = store.savedMessages.firstWhere(
       (message) =>
