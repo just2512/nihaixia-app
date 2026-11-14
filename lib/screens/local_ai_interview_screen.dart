@@ -325,7 +325,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _lastEffectiveMode = null;
         _pendingToolSelection = false;
         _pendingBaziArguments = null;
-      _pendingZiweiArguments = null;
         _pendingZiweiArguments = null;
         _pendingMeihuaArguments = null;
         _pendingChengguArguments = null;
@@ -2407,7 +2406,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (argumentErrors.isNotEmpty) {
         _pendingHuangdiSijiArguments = request;
         _pendingBaziArguments = null;
-      _pendingZiweiArguments = null;
         _pendingZiweiArguments = null;
         _pendingMeihuaArguments = null;
         _pendingChengguArguments = null;
@@ -2514,7 +2512,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingChengguArguments = request;
         _pendingHuangdiSijiArguments = null;
         _pendingBaziArguments = null;
-      _pendingZiweiArguments = null;
         _pendingZiweiArguments = null;
         _pendingMeihuaArguments = null;
         final missingParameters = tool.parameters
@@ -2709,7 +2706,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (argumentErrors.isNotEmpty) {
         _pendingBaziArguments = request;
         _pendingZiweiArguments = null;
-      _pendingZiweiArguments = null;
         _pendingHuangdiSijiArguments = null;
         final missingParameters = tool.parameters
             .where((parameter) =>
@@ -2839,7 +2835,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingMeihuaArguments = request;
         _pendingHuangdiSijiArguments = null;
         _pendingBaziArguments = null;
-      _pendingZiweiArguments = null;
         _pendingZiweiArguments = null;
         final methodLabel = switch (method) {
           'number' => '数字起卦',
@@ -3410,6 +3405,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _toolRouteActive = true;
     _pendingToolSelection = false;
     _pendingBaziArguments = null;
+    _pendingZiweiArguments = null;
     _pendingMeihuaArguments = null;
     Object? result;
     try {
@@ -3763,8 +3759,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               }
               _pendingToolSelection = false;
               _pendingBaziArguments = null;
-      _pendingZiweiArguments = null;
-        _pendingZiweiArguments = null;
+              _pendingZiweiArguments = null;
               _pendingMeihuaArguments = null;
               _pendingChengguArguments = null;
               _pendingHuangdiSijiArguments = null;
@@ -4663,8 +4658,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         const reply = '已取消本次八字排盘；尚未执行任何计算。';
         setState(() {
           _pendingBaziArguments = null;
-      _pendingZiweiArguments = null;
-        _pendingZiweiArguments = null;
+          _pendingZiweiArguments = null;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(const _InterviewMessage(text: reply, isUser: false));
