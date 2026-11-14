@@ -394,6 +394,42 @@ void main() {
     );
   });
 
+  test('小六壬注册为 Headless，要求用户明确提供日期、时辰和起课口径', () {
+    final tool = AssistantToolRouter.xiaoliuren;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'date',
+      'hour',
+      'rule',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.choice);
+    expect(
+      tool.parameters[1].choices,
+      ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', '午时', '未时', '申时', '酉时', '戌时', '亥时'],
+    );
+    expect(tool.parameters[2].choices, ['common', 'duoneng']);
+    expect(
+      const AssistantToolArguments(
+        toolId: 'xiaoliuren',
+        values: {
+          'date': '2026-11-14',
+          'hour': '午时',
+          'rule': 'common',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'xiaoliuren',
+        values: {'date': '2026-11-14', 'hour': '午时'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+  });
+
   test('黄帝四季歌注册为 Headless，必需参数为公历出生日期和当地钟表时间', () {
     final tool = AssistantToolRouter.huangdiSiji;
     expect(tool.headlessExecutor, isNotNull);
