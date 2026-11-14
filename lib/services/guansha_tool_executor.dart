@@ -107,7 +107,6 @@ class GuanshaToolExecutor {
 
     try {
       final settings = SettingsRepository.instance;
-      if (!settings.isLoaded) await settings.load();
       final solar = DateTime(
         date.year,
         date.month,
