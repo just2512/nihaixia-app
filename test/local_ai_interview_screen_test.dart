@@ -5338,8 +5338,21 @@ void mainRedFlagEntrypointOrderingTests() {
         ),
       );
       await tester.pumpAndSettle();
-
+      // The model-ready state is asynchronous. Do not mistake a disabled send
+      // button for a successful preflight-order test.
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
       await tester.enterText(find.byType(TextField), '我现在身体不舒服');
+      await tester.pump();
+      final sendButton = find.ancestor(
+        of: find.byTooltip('发送'),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
@@ -5371,8 +5384,19 @@ void mainRedFlagEntrypointOrderingTests() {
         ),
       );
       await tester.pumpAndSettle();
-
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
       await tester.enterText(find.byType(TextField), '请介绍中医里的阴阳概念');
+      await tester.pump();
+      final sendButton = find.ancestor(
+        of: find.byTooltip('发送'),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
