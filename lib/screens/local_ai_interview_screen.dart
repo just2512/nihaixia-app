@@ -2448,13 +2448,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             (date != null &&
                 date != 'AMBIGUOUS_DATE_SELECTION' &&
                 date != 'INVALID_DATE' &&
-                !RegExp(r'^\\d{4}-\\d{2}-\\d{2}$').hasMatch(date)))
+                !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date)))
           '公历日期无效，请使用 YYYY-MM-DD',
         if (time == 'AMBIGUOUS_TIME_SELECTION')
           '你提供了多个时刻，请明确一个 HH:mm 时刻',
         if (time != null &&
             time != 'AMBIGUOUS_TIME_SELECTION' &&
-            !RegExp(r'^(?:[01]\\d|2[0-3]):[0-5]\\d$').hasMatch(time))
+            !RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$').hasMatch(time))
           '时刻无效，请使用 24 小时制 HH:mm',
       ];
       final executionErrors = [
