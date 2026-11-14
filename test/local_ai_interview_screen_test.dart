@@ -14,6 +14,7 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
+import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -1073,6 +1074,132 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('规则引擎完成且消息与任务快照持久化后自动由 AI 解释结果',
+      (tester) async {
+    final adapter = TcmInterviewAdapter();
+    adapter.answerTemperature('fever_chills');
+    adapter.answerTonguePulse(
+      tongueCoating: '薄白',
+      tongueShape: '淡白',
+      primaryPulse: '数',
+    );
+    adapter.answerFollowUp('pulse_cross_drink', '口渴，喜热饮');
+    adapter.answerFollowUp('pulse_cross_urine', '清长色淡');
+    final pending = adapter.pulseTongueCrossChecks.singleWhere(
+      (prompt) => prompt.id == 'pulse_cross_limbs',
+    );
+
+    const taskId = 'verified-diagnosis-auto-interpretation';
+    final taskState = TcmInterviewTaskState(
+      taskId: taskId,
+      snapshot: adapter.createSnapshot(),
+      status: 'in_progress',
+      pendingPromptId: 'followup:${pending.id}',
+      pendingPromptText: pending.question,
+      pendingOptions: pending.options,
+      transcript: [
+        const TcmInterviewTaskMessage(
+          text: '开始规则问诊',
+          isUser: true,
+        ),
+        TcmInterviewTaskMessage(
+          text: pending.question,
+          isUser: false,
+        ),
+      ],
+      updatedAt: DateTime.now().toUtc(),
+    );
+    final store = _MemoryConversationStore();
+    final conversationId = await store.createAssistantConversation(
+      title: '待完成的规则问诊',
+      mode: 'unified',
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '开始规则问诊',
+      metadata: const AssistantMessageMetadata(
+        mode: 'consultation',
+        tcmTaskId: taskId,
+        replayable: true,
+      ).encode(),
+    );
+    await store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: pending.question,
+      metadata: const AssistantMessageMetadata(
+        mode: 'consultation',
+        tcmTaskId: taskId,
+        replayable: false,
+      ).encode(),
+    );
+    await store.saveTcmInterviewTaskState(
+      conversationId: conversationId,
+      state: taskState,
+    );
+
+    final service = _TextSendService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('待完成的规则问诊'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, isEmpty,
+        reason: '恢复未完成问诊不应把尚未完成的内容交给 AI 作为诊断结果');
+    final finalAnswer = find.text('偏冷').last;
+    await tester.ensureVisible(finalAnswer);
+    await tester.tap(finalAnswer);
+    await tester.pumpAndSettle();
+
+    final completedState = await store.getTcmInterviewTaskState(
+      conversationId: conversationId,
+    );
+    expect(completedState?.status, 'completed');
+    expect(
+      completedState?.completedDiagnosis,
+      isNotNull,
+      reason: '解释触发前必须先得到 DiagnosticEngine 的真实结构化结果',
+    );
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts.single, contains('六经'));
+    expect(service.sentTexts.single, contains('不要生成个体处方、药物或剂量建议'));
+    expect(service.sentContexts.single, contains('当前角色：问诊助手'));
+    expect(
+      find.textContaining('已收到你的描述：'),
+      findsOneWidget,
+    );
+
+    final savedMessages = await store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    final interpretation = AssistantMessageMetadata.decode(
+      savedMessages.last['metadata'] as String,
+    );
+    expect(savedMessages.last['role'], 'assistant');
+    expect(interpretation.toolId, 'structured_diagnosis');
+    expect(interpretation.toolStatus, 'SUCCEEDED');
+    expect(
+      interpretation.sourceIds,
+      contains('local-engine:diagnostic-engine'),
+    );
+    expect(interpretation.traceId, isNull,
+        reason: 'TRACE 默认关闭时不生成 trace_id');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('结构化问诊批量消息保存失败时不留半轮并标记 persistence FAILED',
       (tester) async {
     const traceId = '61616161616161616161616161616161';
@@ -1525,7 +1652,14 @@ void main() {
       isTrue,
     );
     expect(completed.snapshot.answers['dry_throat'], isNull);
-    expect(service.sentTexts, isEmpty);
+    expect(completed.completedDiagnosis, isNotNull);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts.single, contains('不重新辨证'));
+    expect(
+      service.sentContexts.single,
+      contains('当前角色：问诊助手'),
+    );
     expect(tester.takeException(), isNull);
   });
 
