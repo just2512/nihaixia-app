@@ -135,39 +135,8 @@ class BaziToolExecutor {
     return (hour, minute);
   }
 
-  static Future<CityLocation?> _resolveBirthplace(String query) async {
-    final domestic = await CityLocationService.load(PlaceScope.domestic);
-    final domesticMatch = _matchLocation(domestic, query);
-    if (domesticMatch != null) return domesticMatch;
-
-    final world = await CityLocationService.load(PlaceScope.world);
-    return _matchLocation(world, query);
-  }
-
-  static CityLocation? _matchLocation(
-    List<CityLocation> locations,
-    String query,
-  ) {
-    final exact = locations.where((place) =>
-        place.name == query ||
-        place.label == query ||
-        place.displayName == query ||
-        place.en?.toLowerCase() == query.toLowerCase()).toList();
-    if (exact.length == 1) return exact.single;
-    if (exact.length > 1) return null;
-
-    // Permit omitting a terminal administrative suffix only when the result
-    // remains unique. Names such as “朝阳” can refer to a city or multiple
-    // districts and must therefore be clarified rather than guessed.
-    final normalizedQuery = _normalizePlaceName(query);
-    final normalized = locations
-        .where((place) =>
-            _normalizePlaceName(place.name) == normalizedQuery)
-        .toList();
-    return normalized.length == 1 ? normalized.single : null;
-  }
-  static String _normalizePlaceName(String value) =>
-      value.trim().replaceFirst(RegExp(r'(市|地区|州|省|县|区)$'), '');
+  static Future<CityLocation?> _resolveBirthplace(String query) =>
+      CityLocationService.resolveUnique(query);
 
   static AssistantToolResult _failure(
     Map<String, String> arguments,
