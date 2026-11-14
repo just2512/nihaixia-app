@@ -78,6 +78,10 @@ void main() {
         CityLocationService.findUniqueIn(sample, '长宁区（上海市）')?.province,
         '上海市',
       );
+      expect(
+        CityLocationService.findUniqueIn(sample, '上海市长宁区')?.province,
+        '上海市',
+      );
     });
 
     test('可省略唯一行政后缀，但同名区县必须返回 null', () {
