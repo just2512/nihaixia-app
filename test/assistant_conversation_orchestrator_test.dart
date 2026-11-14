@@ -616,7 +616,6 @@ void main() {
       final cases = <({String query, String id})>[
         (query: '打开诊断历史趋势', id: 'diagnosis_history'),
         (query: '查阅闭门课重症临床', id: 'critical_illness'),
-        (query: '打开节气养生', id: 'solar_terms'),
         (query: '查询玉匣灵兆', id: 'yuxiaji_omen'),
         (query: '搜索周公解梦', id: 'dream'),
         (query: '测算小儿关煞', id: 'guansha'),
@@ -633,6 +632,13 @@ void main() {
         );
         expect(decision.tool?.id, item.id, reason: item.query);
       }
+      final solar = AssistantConversationOrchestrator.resolve(
+        query: '打开节气养生',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(solar.tool, isNull);
+      expect(solar.needsClarification, isTrue);
+      expect(solar.clarification, contains('明确要查询哪一个节气'));
     });
 
     test('同一请求明确调用两个工具时必须澄清，不得静默只执行第一个', () {
