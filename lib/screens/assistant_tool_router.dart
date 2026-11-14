@@ -15,6 +15,8 @@ import '../services/xiaoliuren_tool_executor.dart';
 import '../services/yijing_tool_executor.dart';
 import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
+import '../services/ziwuliuzhu_calculation_service.dart';
+import '../services/ziwuliuzhu_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -451,11 +453,29 @@ class AssistantToolRouter {
   static const ziwu = AssistantToolDefinition(
     id: 'ziwu_liuzhu',
     title: '时辰开穴计算',
-    description: '打开中医时辰开穴综合计算器。',
+    description: '在当前助手对话中调用 App 原有子午流注引擎，归纳纳子法、纳甲法、灵龟八法和飞腾八法的真实结果。',
     modes: {AssistantMode.tools},
     aliases: ['时辰开穴', '子午流注', '灵龟八法', '纳子法', '纳甲法'],
     actionWords: ['计算', '开穴', '推算', '查穴'],
     builder: _buildZiwu,
+    headlessExecutor: ZiWuLiuZhuToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'at',
+        label: 'App 注入的设备本地计算时间',
+        type: AssistantToolParameterType.text,
+      ),
+      AssistantToolParameter(
+        key: 'date',
+        label: '公历日期（YYYY-MM-DD）',
+        type: AssistantToolParameterType.text,
+      ),
+      AssistantToolParameter(
+        key: 'time',
+        label: '设备本地时刻（HH:mm）',
+        type: AssistantToolParameterType.text,
+      ),
+    ],
   );
 
   static const guji = AssistantToolDefinition(
