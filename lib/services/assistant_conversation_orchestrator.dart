@@ -202,6 +202,8 @@ class AssistantConversationOrchestrator {
           .toSet();
       if (query.contains('农历') || query.contains('阴历')) {
         values['date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else if (dates.length > 1) {
+        values['date'] = 'AMBIGUOUS_DATE_SELECTION';
       } else if (dates.length == 1) {
         values['date'] = dates.single;
       } else if (dates.isEmpty &&
@@ -220,11 +222,17 @@ class AssistantConversationOrchestrator {
       final hours = XiaoliurenToolExecutor.hourBranches
           .where(query.contains)
           .toList(growable: false);
-      if (hours.length == 1) values['hour'] = hours.single;
+      if (hours.length > 1) {
+        values['hour'] = 'AMBIGUOUS_HOUR_SELECTION';
+      } else if (hours.length == 1) {
+        values['hour'] = hours.single;
+      }
       final requestsDuoneng = query.contains('多能鄙事');
       final requestsCommon =
           query.contains('通行掌诀') || query.contains('通行口径');
-      if (requestsDuoneng != requestsCommon) {
+      if (requestsDuoneng && requestsCommon) {
+        values['rule'] = 'AMBIGUOUS_RULE_SELECTION';
+      } else if (requestsDuoneng != requestsCommon) {
         values['rule'] = requestsDuoneng ? 'duoneng' : 'common';
       }
     } else if (tool.id == 'chenggu') {
