@@ -593,3 +593,19 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 自由文本问诊仍 PARTIAL / RELEASE BLOCKED：`TcmInterviewConversationController.start()` 会保存初始用户描述，但问诊实际仍按 `temperature`、`tongue_pulse`、十问顺序执行；它没有把自由描述结构化映射为已确认字段并只追问缺项。B 红旗门禁未完成前不得开放模型辅助的自由文本自动辨证。
 - 梦境资料适合作为后续单项 Headless 候选，但本地 412 条记录只有 244 个不同 keyword，78 个 keyword 对应多条记录；例如“蛇”有 4 条。必须基于具体情节澄清，不能按第一条命中输出，也不能把民俗内容包装为预测。
 - 继续遵守：不修改 DiagnosticEngine/DiagnosticRules/十问/剂量与排盘规则，不重做已审核知识库内容审核，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+
+---
+
+## 2M. 2026-11-14 PR #163 合并后能力清单
+
+- 当前主线基线：master @ c2ae6448ce209b7e3ec3d51aa18532663b35467d（PR #163 squash merge）。
+- AssistantToolRouter 共 24 个定义：23 个常规工具入口 + 1 个确定性 structured_diagnosis 内联问诊控制器。
+- 23 个常规工具中 14 项具备 Headless executor：yunqi、almanac、bazi、xiaoliuren、meihua、chenggu、huangdi_siji、ziwei、solar_terms、yijing、dosage、ziwu_liuzhu、dream、guansha。
+- 9 项仍为 Page-only：guji_library、knowledge_hub、medical_cases、diagnosis_history、critical_illness、yuxiaji_omen、sanshan_lingqian、shousheng_debt、saved_charts。structured_diagnosis 仍由现有 TcmInterviewConversationController / DiagnosticEngine 执行，不计入通用 Headless。Page builder 或可打开页面均不代表 Headless/Executed。
+- PR #163 在同一 head 890dd6b 的分支验证和 PR CI 均 SUCCESS；PR CI 覆盖 Flutter 全量回归、Android arm64 APK/Manifest/ABI、Native tests、JUnit XML 和工件上传。合并后 master tests 与 Quality Gate 当时仍 IN_PROGRESS，待同一 merge SHA 的终态结果补记。
+- 下一 D 切片：受生债执行层和契约测试已在独立准备分支完成，但尚无 router/当前对话调用链，暂不计入 14 项 Headless。接入必须要求明确选择禄库/五斗体系，复用 App 原八字及本地两套数据，逐轮询问缺项，不沿用页面默认体系；经过来源与结果验证后才允许 AI 解释。
+- B 仍 PARTIAL / RELEASE BLOCKED：没有生产红旗 detector 医学审核版本、审批记录、阈值/例外/处置文案及全 Flutter/Native 模型入口 fail-closed 证据前，不开放自由文本症状自动辨证。
+- 用户要求的自由文本症状描述→受约束结构化理解→只追问缺项→原规则问诊→解释真实结果闭环仍未完成；须先满足 B 门禁。不得修改原十问或辨证规则，不重复审核已医学审核的知识库。
+- OPPO Find N2 E4B 真机多轮/多媒体/GPU-CPU/Activity 与进程恢复/清除数据后不可恢复/端到端 TRACE 继续为 DEVICE UNKNOWN；CI 不替代真机证据。
+- C 来源 locator 仍只允许用可追溯原始材料补充；不猜测书目、底本、卷页或原文，不重复审核已有知识库。
+- 不为扩大 Headless 数量而批量迁移 Page-only，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
