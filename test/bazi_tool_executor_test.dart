@@ -75,4 +75,15 @@ void main() {
     expect(result.values['未执行原因'], contains('未声明'));
     expect(result.sourceIds, isEmpty);
   });
+  test('出生地点共享唯一解析器仍拒绝同名朝阳，不退回默认经纬度', () async {
+    final ambiguous = await BaziToolExecutor.execute({
+      ...validArguments,
+      'birthplace': '朝阳',
+    });
+    expect(ambiguous.status, AssistantToolExecutionStatus.failed);
+    expect(ambiguous.values['未执行原因'], contains('无法唯一识别'));
+    expect(ambiguous.values['未执行原因'], contains('未使用默认经纬度'));
+    expect(ambiguous.sourceIds, isEmpty);
+  });
+
 }
