@@ -2231,6 +2231,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  String _tcmToolKnowledgeQueryForResult(
+    String currentUserText,
+    AssistantToolDefinition tool,
+  ) {
+    final userTurns = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((text) => text.isNotEmpty)
+        .toList(growable: true);
+    final current = currentUserText.trim();
+    if (current.isNotEmpty && (userTurns.isEmpty || userTurns.last != current)) {
+      userTurns.add(current);
+    }
+    final boundedStart = userTurns.length > 4 ? userTurns.length - 4 : 0;
+    final boundedUserContext = userTurns.skip(boundedStart).join(' ');
+    return _tcmToolKnowledgeQuery(boundedUserContext, tool);
+  }
+
   Future<void> _executeHeadlessTool(
     String userText,
     AssistantToolDefinition tool, {
@@ -2446,7 +2464,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     prompt: interpretationPrompt,
                     mode: mode,
                     retrievalQuery: needsTcmKnowledge
-            ? _tcmToolKnowledgeQuery(userText, tool)
+            ? _tcmToolKnowledgeQueryForResult(userText, tool)
             : null,
                     toolId: needsDreamFollowUp ? null : tool.id,
                     toolStatus: needsDreamFollowUp ? null : result.statusLabel,
@@ -2488,7 +2506,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         prompt: interpretationPrompt,
         mode: mode,
         retrievalQuery: needsTcmKnowledge
-            ? _tcmToolKnowledgeQuery(userText, tool)
+            ? _tcmToolKnowledgeQueryForResult(userText, tool)
             : null,
         toolId: needsDreamFollowUp ? null : tool.id,
         toolStatus: needsDreamFollowUp ? null : result.statusLabel,
@@ -4571,7 +4589,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _requestAssistantResultInterpretation(
         prompt: interpretationPrompt,
         mode: mode,
-        retrievalQuery: needsTcmKnowledge ? '${tool.title} $resultText' : null,
+        retrievalQuery: needsTcmKnowledge ? '${_tcmToolKnowledgeQueryForResult(userText, tool)}' : null,
         toolId: tool.id,
         toolStatus: normalizedResult.statusLabel,
         sourceIds: normalizedResult.sourceIds,
