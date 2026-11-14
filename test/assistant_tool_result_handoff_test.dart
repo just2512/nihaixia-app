@@ -11,7 +11,6 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/guansha_screen.dart';
 import 'package:nihaisha_app/screens/shousheng_debt_screen.dart';
 import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
-import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
