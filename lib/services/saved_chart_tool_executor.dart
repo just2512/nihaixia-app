@@ -96,10 +96,8 @@ class SavedChartToolExecutor {
       return 'ID ${chart.id ?? 'MISSING'}｜${chart.name}';
     }).join('\n');
     final remaining = charts.length - visible.length;
-    return '已保存命盘（按保存时间从新到旧）：\n' + lines +
-        (remaining > 0
-            ? '\n另有 ' + remaining.toString() + ' 条记录；可直接提供记录名称或 ID。'
-            : '');
+    return '已保存命盘（按保存时间从新到旧）：\n$lines'
+        '\${remaining > 0 ? '\n另有 $remaining 条记录；可直接提供记录名称或 ID。' : ''}';
   }
 
   static Future<AssistantToolResult> execute(
