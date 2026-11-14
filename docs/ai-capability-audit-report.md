@@ -1053,3 +1053,29 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 ### 不变边界
 
 AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊、剂量、排盘、民俗计算继续由 App 确定性代码执行。只有经执行与契约校验且带来源的真实结果才交给 AI 解释。模型不能伪造结果、覆盖规则或将推断包装成医学诊断。
+
+
+---
+
+## 35. 2026-11-14 C：医案库来源账本页面加载链路增量复核
+
+### 复核基线与问题
+
+- 当前复核基线：`master @ 19c5635461a16dab316f13614a4832817379c723`。
+- `MedicalCaseSourceLedger` 已将网页/原文核验状态与纸本/影印本书目定位状态分开；只有完整字段与显式状态匹配才允许 `VERIFIED`。
+- 发现页面加载链路未使用已有来源账本：`MedicalCaseLibraryScreen._load()` 直接加载 `assets/medical_cases/cases_table.md` 后调用 `parseMedicalCaseTable(md)`，未传入 `sourceLedgers`，导致页面中所有病例都使用默认 `MedicalCaseSourceLedger.missing`。而数据层已有 `getAllMedicalCases()` 会加载 `source_ledger.json` 并按内部序号注入。
+- 当前账本本身的状态（原始 JSON，不做内容更改）：1,256 条记录；10 条 `verificationStatus=VERIFIED` 且来源字段完整；1,246 条来源状态 `MISSING`；全部 1,256 条 `bibliographicLocatorStatus=MISSING`。没有任何记录完成纸本/影印本版本、卷次与页码定位核验。
+
+### 最小修复
+
+- 在 `lib/data/medical_case_data.dart` 抽出 `loadMedicalCasesFromAssets()`，统一完成 Markdown 主表加载、来源账本读取和主键关联。
+- `MedicalCaseLibraryScreen._load()` 改为调用共享加载函数；`getAllMedicalCases()` 也复用该函数，保持缓存与页面加载的来源映射一致。
+- 账本读取失败不会隐藏病例正文；没有来源账本的记录保持 `MISSING`。主 Markdown 加载失败继续抛给页面 FutureBuilder，保持原错误态。
+- 新增 `medical_case_source_integrity_test.dart` 回归测试，验证真实资产加载路径、原文核验与纸本定位状态不互相升级、缺来源记录保持 `MISSING`。
+- 不修改任何医案内容、source ledger 数据、医学知识结论或 DiagnosticEngine/DiagnosticRules；不重复进行已完成的医学审核。
+
+### 验收与状态
+
+- 独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
+- **状态：自动化验收中。** 以最新分支 head 的 CI 结果和合并后的 master CI 为准；静态代码与测试存在不替代执行结果。
+- 本项只修复已有来源证据的加载链路，不补齐纸本 locator。C 仍 PARTIAL，后续只接受可追溯原始来源材料，不得推测或填造卷页。
