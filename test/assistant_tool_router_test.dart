@@ -547,4 +547,38 @@ void main() {
     );
   });
 
+
+  test('受生债注册为 Headless 并要求出生日期、时间和明确查询体系', () {
+    final tool = AssistantToolRouter.shoushengDebt;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'birth_date',
+      'birth_time',
+      'method',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters.last.type, AssistantToolParameterType.choice);
+    expect(tool.parameters.last.choices, ['luku', 'wudou']);
+    expect(
+      AssistantToolRouter.match('查询受生债', AssistantMode.automatic)?.id,
+      'shousheng_debt',
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'shousheng_debt').validateAgainst(tool),
+      isNotEmpty,
+      reason: '不得继承页面默认日期、时间或查询体系',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'shousheng_debt',
+        values: {
+          'birth_date': '1990-01-02',
+          'birth_time': '08:30',
+          'method': 'luku',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
