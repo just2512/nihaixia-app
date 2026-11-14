@@ -309,6 +309,96 @@ void main() {
       );
     });
 
+    test('小六壬在对话中提取公历日期、时辰和明确口径', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '小六壬起课，公历日期：2026年11月14日，午时，起课口径：通行掌诀',
+      );
+      expect(parsed.values, const {
+        'date': '2026-11-14',
+        'hour': '午时',
+        'rule': 'common',
+      });
+      expect(parsed.validateAgainst(AssistantToolRouter.xiaoliuren), isEmpty);
+
+      final duoneng = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '小六壬，2026-11-14，午时，《多能鄙事》卷八',
+      );
+      expect(duoneng.values, const {
+        'date': '2026-11-14',
+        'hour': '午时',
+        'rule': 'duoneng',
+      });
+      expect(duoneng.validateAgainst(AssistantToolRouter.xiaoliuren), isEmpty);
+    });
+
+    test('小六壬不默认时辰或起课口径，农历日期明确拒绝', () {
+      final missing = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '小六壬起课，公历日期：2026-11-14',
+      );
+      expect(missing['date'], '2026-11-14');
+      expect(missing['hour'], isNull);
+      expect(missing['rule'], isNull);
+      final errors = missing.validateAgainst(AssistantToolRouter.xiaoliuren);
+      expect(errors.join('；'), contains('时辰'));
+      expect(errors.join('；'), contains('起课口径'));
+
+      final lunar = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '农历2026年十月初五，午时，通行掌诀，小六壬起课',
+      );
+      expect(lunar['date'], 'LUNAR_DATE_NOT_SUPPORTED');
+      expect(lunar.validateAgainst(AssistantToolRouter.xiaoliuren), isNotEmpty);
+    });
+
+    test('小六壬多日期、多时辰和多口径均保留为待澄清状态', () {
+      final multipleDates = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '小六壬，2026-11-14或2026-11-15，午时，通行掌诀',
+      );
+      expect(multipleDates['date'], 'AMBIGUOUS_DATE_SELECTION');
+      expect(multipleDates.validateAgainst(AssistantToolRouter.xiaoliuren), isNotEmpty);
+
+      final multipleHours = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '小六壬，2026-11-14，午时或未时，通行掌诀',
+      );
+      expect(multipleHours['hour'], 'AMBIGUOUS_HOUR_SELECTION');
+      expect(multipleHours.validateAgainst(AssistantToolRouter.xiaoliuren), isNotEmpty);
+
+      final multipleRules = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        '小六壬，2026-11-14，午时，通行掌诀或多能鄙事',
+      );
+      expect(multipleRules['rule'], 'AMBIGUOUS_RULE_SELECTION');
+      expect(multipleRules.validateAgainst(AssistantToolRouter.xiaoliuren), isNotEmpty);
+    });
+
+    test('小六壬明确工具请求中的多日期或多选择先澄清，不执行', () {
+      final dates = AssistantConversationOrchestrator.resolve(
+        query: '小六壬起课，2026-11-14或2026-11-15，午时，通行掌诀',
+        selectedMode: AssistantMode.metaphysics,
+      );
+      expect(dates.needsClarification, isTrue);
+      expect(dates.clarification, contains('多个公历日期'));
+
+      final hours = AssistantConversationOrchestrator.resolve(
+        query: '小六壬起课，2026-11-14，午时或未时，通行掌诀',
+        selectedMode: AssistantMode.metaphysics,
+      );
+      expect(hours.needsClarification, isTrue);
+      expect(hours.clarification, contains('多个时辰'));
+
+      final rules = AssistantConversationOrchestrator.resolve(
+        query: '小六壬起课，2026-11-14，午时，通行掌诀或多能鄙事',
+        selectedMode: AssistantMode.metaphysics,
+      );
+      expect(rules.needsClarification, isTrue);
+      expect(rules.clarification, contains('两种起课口径'));
+    });
+
     test('八字出生日期支持常见中文公历格式', () {
       final parsed = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.bazi,
@@ -415,7 +505,7 @@ void main() {
       expect(
         decision.candidateTools,
         isEmpty,
-        reason: '易经/小六壬/梅花当前仍是 Page Tool',
+        reason: '易经仍是 Page-only；混合候选集不能交给 E4B 任意选择',
       );
     });
 
