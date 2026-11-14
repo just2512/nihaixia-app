@@ -503,9 +503,9 @@ void main() {
 
       expect(decision.needsClarification, isTrue);
       expect(
-        decision.candidateTools,
-        isEmpty,
-        reason: '易经仍是 Page-only；混合候选集不能交给 E4B 任意选择',
+        decision.candidateTools.map((tool) => tool.id),
+        ['yijing', 'xiaoliuren', 'meihua'],
+        reason: '三种起卦能力均已具备 Headless 执行器，受约束候选可交给 E4B 选择',
       );
     });
 
