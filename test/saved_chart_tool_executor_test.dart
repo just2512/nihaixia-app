@@ -67,7 +67,7 @@ void main() {
       '${SavedChartToolExecutor.savedChartSourcePrefix}$savedId',
       SavedChartToolExecutor.baziSourceId,
     ]);
-    expect(result.disclaimer, contains('不是历史结果快照'));
+    expect(result.disclaimer, contains('不是历史排盘结果快照'));
     expect(result.disclaimer, contains('AI 只负责解释'));
   });
 
