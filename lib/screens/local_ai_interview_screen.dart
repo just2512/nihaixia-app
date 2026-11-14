@@ -1331,6 +1331,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  String _diagnosisInterpretationPrompt(DiagnosisResult result) =>
+      '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
+      '本次结果字段：六经 ${result.displayMeridian}；'
+      '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
+      '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
+      '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
+      '知识库内容只用于解释已有规则，不得据此新增个体诊断结论。'
+      '只解释 App 已返回的结果，不重新辨证，不增加或修改规则结论，不补造缺失字段。'
+      '不要生成个体处方、药物或剂量建议；原结果中的处方字段只可按原文引用，不得增删改。';
+
   _InterviewMessage _diagnosisActionMessage(
     String text,
     DiagnosisResult result,
@@ -1341,13 +1351,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       actionLabel: 'AI解读辨证结果',
       sourceIds: _diagnosticEngineSourceIds,
       onAction: () => unawaited(_requestAssistantResultInterpretation(
-        prompt: '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
-            '本次结果字段：六经 ${result.displayMeridian}；'
-            '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
-            '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
-            '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
-            '只解释 App 已返回的结果，不重新辨证，不增加或修改规则结论，不补造缺失字段。'
-            '不要生成个体处方、药物或剂量建议；原结果中的处方字段只可按原文引用，不得增删改。',
+        prompt: _diagnosisInterpretationPrompt(result),
         mode: AssistantMode.consultation,
         toolId: 'structured_diagnosis',
         toolStatus: 'SUCCEEDED',
@@ -1629,9 +1633,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
 
+    var modelContextRestored = false;
     if (controller.isCompleted) {
       try {
         await _restoreVisibleConversationToModel();
+        modelContextRestored = true;
       } catch (error) {
         if (mounted) {
           setState(() {
@@ -1649,6 +1655,33 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: 'structured_diagnosis',
       );
     }
+
+    final completedDiagnosis = controller.completedDiagnosis;
+    final hasNewDiagnosisResult = added.any((entry) => entry.isResult);
+    if (mounted &&
+        modelContextRestored &&
+        messagesPersisted &&
+        taskStatePersisted &&
+        controller.isCompleted &&
+        hasNewDiagnosisResult &&
+        completedDiagnosis != null &&
+        _status?.ready == true &&
+        !_statusUnknown &&
+        _diagnosticEngineSourceIds.isNotEmpty) {
+      // The deterministic result and completed task snapshot are durable, and
+      // the exact visible transcript has been restored before E4B can interpret.
+      await _requestAssistantResultInterpretation(
+        prompt: _diagnosisInterpretationPrompt(completedDiagnosis),
+        mode: AssistantMode.consultation,
+        toolId: 'structured_diagnosis',
+        toolStatus: 'SUCCEEDED',
+        sourceIds: _diagnosticEngineSourceIds,
+        showPromptInTimeline: false,
+        allowWhileSending: true,
+        restoreVisibleConversation: false,
+      );
+    }
+
     return _TcmInterviewMessagePersistenceResult(
       transcriptMessagesApplicable: true,
       transcriptMessagesPersisted: messagesPersisted,
@@ -2984,6 +3017,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     List<String> sourceIds = const [],
     bool showPromptInTimeline = true,
     bool allowWhileSending = false,
+    bool restoreVisibleConversation = true,
   }) async {
     if ((_sending && !allowWhileSending) ||
         _modelControlBusy ||
@@ -3008,7 +3042,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       // Ensure the immediately preceding deterministic result is part of the
       // native model context before adding this explicit user-requested action.
-      await _restoreVisibleConversationToModel();
+      if (restoreVisibleConversation) {
+        await _restoreVisibleConversationToModel();
+      }
       if (!mounted) return;
       setState(() {
         _lastEffectiveMode = mode;
