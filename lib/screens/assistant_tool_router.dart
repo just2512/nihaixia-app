@@ -13,6 +13,8 @@ import '../services/ziwei_tool_executor.dart';
 import '../services/solar_term_tool_executor.dart';
 import '../services/xiaoliuren_tool_executor.dart';
 import '../services/yijing_tool_executor.dart';
+import '../services/dosage_tool_executor.dart';
+import '../services/dosage_conversion_service.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -416,12 +418,34 @@ class AssistantToolRouter {
 
   static const dosage = AssistantToolDefinition(
     id: 'dosage',
-    title: '经方剂量换算',
-    description: '打开古代度量衡换算器。',
+    title: '经方度量衡单位换算',
+    description: '在当前对话中调用 App 原有单位换算函数，支持重量、容量和长度单位。只做单位换算，不提供处方或个体用药剂量建议。',
     modes: {AssistantMode.tools},
-    aliases: ['剂量换算', '经方换算', '两升铢', '古代度量衡'],
-    actionWords: ['换算', '计算', '转换'],
+    aliases: ['剂量换算', '经方换算', '两升铢', '古代度量衡', '单位换算', '经方度量衡'],
+    actionWords: ['换算', '计算', '转换', '打开'],
     builder: _buildDosage,
+    headlessExecutor: DosageToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'value',
+        label: '换算数值',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'unit',
+        label: '原始单位',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: DosageConversionService.supportedUnits,
+      ),
+      AssistantToolParameter(
+        key: 'standard',
+        label: '度量标准',
+        type: AssistantToolParameterType.choice,
+        choices: DosageConversionService.standardIds,
+      ),
+    ],
   );
 
   static const ziwu = AssistantToolDefinition(
