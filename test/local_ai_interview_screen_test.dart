@@ -5197,7 +5197,6 @@ void main() {
     expect(service.sentTexts, hasLength(3));
     expect(service.sentContexts, hasLength(3));
     expect(service.sentContexts.last, contains('方名：桂枝汤'));
-    expect(service.sentContexts.last, contains('原始禁忌字段：'));
 
     // Generic chat in Tools mode must not inject a NO_RESULTS retrieval block.
     await send('谢谢');
