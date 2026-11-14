@@ -5261,6 +5261,7 @@ void main() {
   });
 
 
+  mainRedFlagEntrypointOrderingTests();
 }
 
 
@@ -5385,6 +5386,3 @@ void mainRedFlagEntrypointOrderingTests() {
   });
 }
 
-void main() {
-  mainRedFlagEntrypointOrderingTests();
-}
