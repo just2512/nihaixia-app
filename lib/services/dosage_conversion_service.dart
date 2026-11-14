@@ -16,6 +16,10 @@ class DosageConversionService {
     '钱',
   ];
 
+  static const volumeUnits = <String>['升', '合', '圭', '撮'];
+
+  static const lengthUnits = <String>['尺', '寸'];
+
   static const volumeFactors = <String, double>{
     '升': 200.0,
     '合': 20.0,
