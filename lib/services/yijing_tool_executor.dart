@@ -23,8 +23,9 @@ class YiJingToolExecutor {
   };
 
   /// App-owned values for modes that use device state or randomness.
-  /// The returned values are persisted as tool arguments, so history/retry
-  /// replays the exact same timestamp or six coin tosses rather than rerolling.
+  /// Every new execution overwrites caller-supplied values. The generated
+  /// timestamp or six coin tosses are persisted with the result; history
+  /// displays/replays those stored arguments without generating them again.
   static Map<String, String> prepareExecutionArguments(
     Map<String, String> arguments, {
     DateTime? now,
