@@ -4584,7 +4584,7 @@ void main() {
     expect(find.textContaining('【易经起卦执行结果】'), findsOneWidget);
     expect(pageOpened, isFalse);
     expect(service.sentTexts, hasLength(1));
-    expect(service.sentTexts.single, contains('易经起卦结果'));
+    expect(service.sentTexts.single, contains('易经起卦'));
 
     final conversations = await store.getAssistantConversations();
     final rows = await store.getAssistantMessages(
@@ -4706,7 +4706,9 @@ void main() {
     );
     final persistedToolRows = rows.where((row) {
       final metadata = AssistantMessageMetadata.decode(row['metadata'] as String? ?? '');
-      return metadata.toolId == 'yijing' && metadata.toolStatus == 'SUCCEEDED';
+      return metadata.toolId == 'yijing' &&
+          metadata.toolStatus == 'SUCCEEDED' &&
+          (row['content'] as String).startsWith('【易经起卦执行结果】');
     }).toList(growable: false);
     expect(persistedToolRows, hasLength(2));
     final timeMetadata = AssistantMessageMetadata.decode(
