@@ -414,6 +414,39 @@ List<MedicalCase> parseMedicalCaseTable(
   return cases;
 }
 
+/// 从 App 原始资产加载医案，并按内部主键注入独立来源账本。
+///
+/// 来源账本读取失败不隐藏医案正文；未能关联的来源统一保持 MISSING。
+/// Markdown 主资产加载失败则向调用方抛出异常，页面可展示明确错误状态。
+Future<List<MedicalCase>> loadMedicalCasesFromAssets() async {
+  final md =
+      await rootBundle.loadString('assets/medical_cases/cases_table.md');
+  var sourceLedgers = <int, MedicalCaseSourceLedger>{};
+  try {
+    final ledgerText = await rootBundle.loadString(
+      'assets/medical_cases/source_ledger.json',
+    );
+    final decoded = jsonDecode(ledgerText) as Map<String, dynamic>;
+    final records = decoded['records'] as Map<String, dynamic>? ?? const {};
+    sourceLedgers = {
+      for (final entry in records.entries)
+        if (int.tryParse(entry.key) != null &&
+            entry.value is Map<String, dynamic>)
+          int.parse(entry.key): MedicalCaseSourceLedger.fromJson(
+            entry.value as Map<String, dynamic>,
+          ),
+    };
+  } catch (e) {
+    // Ledger failure must not hide the underlying case corpus. Every
+    // unlinked record remains explicitly MISSING through the model default.
+    debugPrint('[MedicalCase] 来源账本读取失败，记录来源状态降级为 MISSING：$e');
+  }
+  return parseMedicalCaseTable(
+    md,
+    sourceLedgers: sourceLedgers,
+  );
+}
+
 /// 全量医案（进程内缓存）：供详情页「含此药的医案」后向关联使用。
 /// 首次解析 + 索引提取约数秒（随病例数增长），之后复用缓存；
 /// 与医案详情「相关医案」共用同一 [_herbNameCache]/[_formulaNameCache]，不重复计算。
@@ -421,32 +454,7 @@ List<MedicalCase>? _allCasesCache;
 Future<List<MedicalCase>> getAllMedicalCases() async {
   if (_allCasesCache != null) return _allCasesCache!;
   try {
-    final md =
-        await rootBundle.loadString('assets/medical_cases/cases_table.md');
-    var sourceLedgers = <int, MedicalCaseSourceLedger>{};
-    try {
-      final ledgerText = await rootBundle.loadString(
-        'assets/medical_cases/source_ledger.json',
-      );
-      final decoded = jsonDecode(ledgerText) as Map<String, dynamic>;
-      final records = decoded['records'] as Map<String, dynamic>? ?? const {};
-      sourceLedgers = {
-        for (final entry in records.entries)
-          if (int.tryParse(entry.key) != null &&
-              entry.value is Map<String, dynamic>)
-            int.parse(entry.key): MedicalCaseSourceLedger.fromJson(
-              entry.value as Map<String, dynamic>,
-            ),
-      };
-    } catch (e) {
-      // Ledger failure must not hide the underlying case corpus. Every
-      // unlinked record remains explicitly MISSING through the model default.
-      debugPrint('[MedicalCase] 来源账本读取失败，记录来源状态降级为 MISSING：$e');
-    }
-    _allCasesCache = parseMedicalCaseTable(
-      md,
-      sourceLedgers: sourceLedgers,
-    );
+    _allCasesCache = await loadMedicalCasesFromAssets();
   } catch (e, st) {
     debugPrint('[MedicalCase] 加载 cases_table.md 失败，降级为空：$e\n$st');
     _allCasesCache = const [];

@@ -1840,3 +1840,14 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - B2 注入式红旗门禁接缝已随 PR #158 合并，但生产自然语言 detector 仍无医学审核版本/审核记录/阈值与例外/处置文案和全部 Flutter/Native 入口 fail-closed 证据；B 继续 PARTIAL / RELEASE BLOCKED。
 - 用户要求的自由文本症状描述→结构化理解→仅追问缺项→既有规则问诊→真实结果解释，仍受 B 的生产门禁条件约束，当前没有开放，也没有修改问诊十问或辨证规则。
 - A/E/F 继续等待 OPPO Find N2 真机证据；C 继续只补来源定位；其余 10 个 Page-only 工具不批量迁移，逐项做确定性输入/输出/来源审计后再决定。
+
+
+## 39. 2026-11-14 C：医案库页面来源账本注入路径修复（自动验收中）
+
+- 基线：`master @ 19c5635461a16dab316f13614a4832817379c723`；独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
+- 发现的确定性断点：`MedicalCaseLibraryScreen._load()` 直接读取 `cases_table.md` 并调用 `parseMedicalCaseTable(md)`，未传入 `sourceLedgers`；因此页面实际展示的 `MedicalCase.sourceLedger` 全部走默认 `MISSING`。同仓既有 `getAllMedicalCases()` 已读取 `source_ledger.json` 并按内部序号关联，但列表页面没有走该入口。
+- 最小修复：抽出 `loadMedicalCasesFromAssets()` 作为列表/缓存共享加载入口；它读取 Markdown 主表和独立来源账本，按内部主键注入账本。账本缺失/解析失败时病例仍可展示，但来源保持 `MISSING`；主表加载失败继续向列表页抛错，保留页面错误态。缓存查询 `getAllMedicalCases()` 复用同一加载函数，避免两个加载实现漂移。
+- 数据核对（当前原始 ledger，不修改数据）：1,256 条账本记录；10 条原文/网页来源状态为 `VERIFIED`，1,246 条为 `MISSING`；1,256 条纸本/影印本书目定位状态均为 `MISSING`。因此修复只会恢复已有 10 条网页原文来源信息的正确展示，不会将任何记录升级为纸本核验，也不会补造书名、底本、卷页或原文。
+- 自动化新增：通过实际资产加载入口断言 1,256 条记录完整保留；内部序号 2 的原文来源为 `VERIFIED` 但纸本定位仍为 `MISSING`；序号 11 的来源保持 `MISSING`；所有记录的纸本定位均继续为 `MISSING`。
+- 变更文件：`lib/data/medical_case_data.dart`、`lib/screens/medical_case_library_screen.dart`、`test/medical_case_source_integrity_test.dart`，以及本台账和 `docs/ai-capability-audit-report.md`。不修改医案正文、来源账本 JSON、医学结论、辨证规则或已审核知识库内容。
+- **状态：等待分支与 PR CI。** 只有最新 head 的静态分析、相关来源完整性测试、Flutter 全量回归及必要 Android 验收通过，并完成 post-merge master CI，才标记自动化验收完成。此修复不代表纸本 locator 缺口关闭；C 仍 PARTIAL。
