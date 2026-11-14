@@ -1061,7 +1061,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 
 ### 复核基线与问题
 
-- 当前复核基线：`master @ 19c5635461a16dab316f13614a4832817379c723`。
+- 当前复核基线：`master @ f73d6743794b9e253752a372e3e0f19667e9c34f`；PR #160 squash merge：`f73d6743794b9e253752a372e3e0f19667e9c34f`。
 - `MedicalCaseSourceLedger` 已将网页/原文核验状态与纸本/影印本书目定位状态分开；只有完整字段与显式状态匹配才允许 `VERIFIED`。
 - 发现页面加载链路未使用已有来源账本：`MedicalCaseLibraryScreen._load()` 直接加载 `assets/medical_cases/cases_table.md` 后调用 `parseMedicalCaseTable(md)`，未传入 `sourceLedgers`，导致页面中所有病例都使用默认 `MedicalCaseSourceLedger.missing`。而数据层已有 `getAllMedicalCases()` 会加载 `source_ledger.json` 并按内部序号注入。
 - 当前账本本身的状态（原始 JSON，不做内容更改）：1,256 条记录；10 条 `verificationStatus=VERIFIED` 且来源字段完整；1,246 条来源状态 `MISSING`；全部 1,256 条 `bibliographicLocatorStatus=MISSING`。没有任何记录完成纸本/影印本版本、卷次与页码定位核验。
@@ -1077,5 +1077,26 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 ### 验收与状态
 
 - 独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
-- **状态：自动化验收中。** 以最新分支 head 的 CI 结果和合并后的 master CI 为准；静态代码与测试存在不替代执行结果。
+- **状态：自动化验收通过。** PR run `43585625501`、分支验证 run `43585569847`、合并后 master Flutter tests run `43586347265`、master Quality Gate run `43586347314` 均为 SUCCESS；覆盖真实资产来源注入、Flutter 全量回归、Android arm64 Debug APK/Manifest/ABI、Native 单测及报告工件。此项仅修复现有来源账本的加载链路。
 - 本项只修复已有来源证据的加载链路，不补齐纸本 locator。C 仍 PARTIAL，后续只接受可追溯原始来源材料，不得推测或填造卷页。
+
+
+---
+
+## 36. 2026-11-14 D：小儿关煞 Page-only → Headless 对话执行审计（PR验收中）
+
+### 复核结论与确定性边界
+
+- 复用现有 `computeBaZiPaipan` + `matchGuansha` 与本地 36 关煞/18 扩展煞规则；规则表和引擎完全不改。
+- 现有页面允许示例出生参数/未选地点的默认经纬度；Headless 不能继承这些页面默认值。新增执行适配要求出生公历日期、当地钟表时间、性别、出生地点四项齐全，地点必须由本地城市目录唯一识别。
+- 为 Bazi 与 Guansha 共用唯一地点匹配，抽取 `CityLocationService.findUniqueIn/resolveUnique`；同名行政区返回 null/澄清，复合市区名称也必须匹配唯一实体。Bazi 既有执行器改用该服务，并保留无默认经纬度的失败结果。
+- 日期、时间、性别、地点从自然语言中由确定性解析器提取；多日期/多时刻/多性别/多地点不选择第一项。农历日期当前不自动转换，提示用户提供公历日期。
+- 只有 App 八字引擎与关煞规则执行成功、结果契约校验成功且包含 sourceIds 后，才交给模型解释；解释提示词将其限制为传统民俗文化文本，严禁将其转化为儿童健康风险、疾病、寿命、事故或现实事件预测，不提供医学或民俗化解治疗建议。
+- 对话支持缺参追问、分轮补齐、取消、历史恢复；不打开独立关煞页面。
+
+### 自动验收状态
+
+- 分支：`work/guansha-headless-in-chat-2026-11-14`；基线：`f73d6743794b9e253752a372e3e0f19667e9c34f`。
+- 分支验证 run `43587434118` SUCCESS，覆盖 Flutter 静态分析、关联变更测试与测试配对。
+- 当前状态：等待 PR 的 Flutter 全量回归、Android arm64 APK/Native 单测和合并后主线 CI；未把分支验证写成最终交付。
+- 本项仅将一个确定性民俗工具接入统一对话，不改变诊断规则、医学知识库和关煞数据。古籍/医案仍通过现有知识上下文检索，无重复建设；critical illness 口述重症讲义仍不开放为无约束个体治疗建议。
