@@ -373,28 +373,23 @@ class _NaZiTab extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Column(
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('甲己合化土')), Text('临泣+太白')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('乙庚合化金')), Text('大敦+商阳')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('丙辛合化水')), Text('阳谷+经渠')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('丁壬合化木')), Text('少府+通谷')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('戊癸合化火')), Text('足三里+阴谷')]),
-                    ),
-                  ],
+                  children: ZiWuLiuZhuCalculationService.wuMen.map(
+                    (entry) {
+                      final (first, second, element, acupoints) = entry;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text('$first$second合化$element')),
+                            Text(acupoints),
+                          ],
+                        ),
+                      );
+                    },
+                  ).toList(growable: false),
                 ),
               ),
             ],
