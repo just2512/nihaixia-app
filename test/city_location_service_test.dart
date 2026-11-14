@@ -63,4 +63,32 @@ void main() {
       expect(r.length, 5);
     });
   });
+  group('CityLocationService.findUniqueIn', () {
+    final sample = CityLocationService.parseJson('''
+[
+  {"name":"上海市","lng":121.47,"lat":31.23,"province":"上海市"},
+  {"name":"长宁区","lng":121.42,"lat":31.22,"province":"上海市","city":"上海市"},
+  {"name":"长宁区","lng":111.62,"lat":27.24,"province":"湖南省","city":"邵阳市"}
+]
+''');
+
+    test('唯一城市名和省份/区县完整标签可精确解析', () {
+      expect(CityLocationService.findUniqueIn(sample, '上海市')?.name, '上海市');
+      expect(
+        CityLocationService.findUniqueIn(sample, '长宁区（上海市）')?.province,
+        '上海市',
+      );
+    });
+
+    test('可省略唯一行政后缀，但同名区县必须返回 null', () {
+      expect(CityLocationService.findUniqueIn(sample, '上海')?.name, '上海市');
+      expect(CityLocationService.findUniqueIn(sample, '长宁') , isNull);
+      expect(CityLocationService.findUniqueIn(sample, '长宁区'), isNull);
+    });
+
+    test('空地点不产生默认城市', () {
+      expect(CityLocationService.findUniqueIn(sample, ''), isNull);
+    });
+  });
+
 }
