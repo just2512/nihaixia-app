@@ -63,6 +63,20 @@ void main() {
     expect(missingBirthplace.sourceIds, isEmpty);
   });
 
+  test('省份加城市的明确组合可以唯一定位内置坐标', () async {
+    final result = await ZiweiToolExecutor.execute({
+      ...validArguments,
+      'birthplace': '浙江省杭州市',
+    });
+
+    expect(result.status, AssistantToolExecutionStatus.succeeded);
+    expect(result.values['完整排盘结果'], contains('杭州市'));
+    expect(result.sourceIds, [
+      ZiweiToolExecutor.sourceId,
+      ZiweiToolExecutor.locationSourceId,
+    ]);
+  });
+
   test('无法唯一识别出生地时拒绝排盘，不退回默认经纬度', () async {
     final result = await ZiweiToolExecutor.execute({
       ...validArguments,
