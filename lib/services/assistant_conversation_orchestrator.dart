@@ -241,7 +241,7 @@ class AssistantConversationOrchestrator {
       if (RegExp(r'(铜钱摇卦|摇铜钱|铜钱起卦)').hasMatch(query)) {
         methods.add('coins');
       }
-      if (RegExp(r'(手动选卦|手动起卦|手动指定上下卦)').hasMatch(query)) {
+      if (RegExp(r'(手动选卦|手动起卦|手动指定上下卦|上卦|下卦|静卦|动爻)').hasMatch(query)) {
         methods.add('manual');
       }
       if (RegExp(r'(按当前时间起卦|当前时间起卦|按现在时间起卦|现在起卦|此刻起卦)').hasMatch(query)) {
@@ -251,6 +251,7 @@ class AssistantConversationOrchestrator {
         r'(?:用|数字)?\\s*(\\d+)\\s*(?:和|与|、|，|,)\\s*(\\d+)',
       ).firstMatch(query);
       if (query.contains('数字起卦') || query.contains('用数字') ||
+          RegExp(r'(第一数|第二数|上卦数|下卦数)').hasMatch(query) ||
           numberPair != null) {
         methods.add('number');
       }
