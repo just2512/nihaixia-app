@@ -215,6 +215,20 @@ Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
   return latest;
 }
 
+class _NoopLocalAiAudioRecorder implements LocalAiAudioRecorder {
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {}
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
+}
+
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
   _FailOnceStopRecorder({this.failFirstStop = true});
 
@@ -5087,6 +5101,7 @@ void main() {
         home: LocalAiInterviewScreen(
           conversationStore: store,
           service: service,
+          audioRecorder: _NoopLocalAiAudioRecorder(),
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
             return const Scaffold(body: Text('不应打开经方换算页面'));
@@ -5219,6 +5234,7 @@ void main() {
         home: LocalAiInterviewScreen(
           conversationStore: store,
           service: service,
+          audioRecorder: _NoopLocalAiAudioRecorder(),
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
             return const Scaffold(body: Text('不应打开子午流注页面'));
