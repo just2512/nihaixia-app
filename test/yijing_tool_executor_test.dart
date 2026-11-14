@@ -23,8 +23,10 @@ void main() {
     expect(result.arguments, arguments);
     expect(result.values['本卦'], '第${cast.primary.seq}卦 ${cast.primary.name}');
     expect(result.values['卦辞'], cast.primary.judgement);
-    expect(result.values['动爻'], cast.movingTitles.join('、'));
-    expect(result.values['爻辞'], cast.movingTexts.join('；'));
+    expect(result.values['动爻'], cast.movingTitle);
+    expect(result.values['动爻位置（初爻至上爻）'], cast.moving.toString());
+    expect(result.values['爻辞'], cast.movingText);
+    expect(cast.moving, 4, reason: '3 + 7 的余数决定第 4 爻');
   });
 
   test('当前时间由 App 注入并记录，可用完全相同的本地时间回放', () {
@@ -42,6 +44,10 @@ void main() {
     expect(result.validateArgumentsMatch(prepared), isEmpty);
     expect(result.values['实际起卦时刻'], prepared['at']);
     expect(result.values['本卦'], '第${cast.primary.seq}卦 ${cast.primary.name}');
+    expect(result.values['动爻'], cast.movingTitle);
+    expect(result.values['动爻位置（初爻至上爻）'], cast.moving.toString());
+    expect(result.values['爻辞'], cast.movingText);
+    expect(cast.moving, isNot(0));
   });
 
   test('手动选卦校验上卦、下卦和动爻后调用原引擎', () {
@@ -57,7 +63,25 @@ void main() {
     expect(result.validateArgumentsMatch(arguments), isEmpty);
     expect(result.values['本卦'], '第${cast.primary.seq}卦 ${cast.primary.name}');
     expect(result.values['动爻'], '静卦（六爻皆静）');
+    expect(result.values['动爻位置（初爻至上爻）'], '无（静卦）');
     expect(result.values['变卦'], isNull);
+  });
+
+  test('手动选卦的单动爻按原引擎 moving 字段解释', () {
+    const arguments = {
+      'method': 'manual',
+      'upper': '1',
+      'lower': '8',
+      'moving': '2',
+    };
+    final cast = YiJingEngine.castManual(1, 8, 2);
+    final result = YiJingToolExecutor.execute(arguments);
+    expect(result.status, AssistantToolExecutionStatus.succeeded);
+    expect(result.values['动爻'], cast.movingTitle);
+    expect(result.values['动爻位置（初爻至上爻）'], '2');
+    expect(result.values['爻辞'], cast.movingText);
+    expect(result.values['动爻'], isNot('静卦（六爻皆静）'));
+    expect(result.values['变卦'], isNotNull);
   });
 
   test('六次铜钱投掷由 App 随机生成、持久化后可确定性回放', () {
@@ -76,6 +100,10 @@ void main() {
     expect(result.values['六次铜钱投掷值（初爻至上爻）'], prepared['coins']);
     expect(result.values['本卦'], '第${cast.primary.seq}卦 ${cast.primary.name}');
     expect(result.values['动爻'], cast.movingTitles.join('、'));
+    expect(
+      result.values['动爻位置（初爻至上爻）'],
+      cast.movingLines.isEmpty ? '无（静卦）' : cast.movingLines.join('、'),
+    );
   });
 
   test('外部传入的时间和铜钱值不能覆盖 App 生成的真实输入', () {
