@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
+import 'package:nihaisha_app/screens/saved_charts_screen.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/services/solar_term_tool_executor.dart';
 
@@ -592,6 +593,33 @@ void main() {
       ).validateAgainst(tool),
       isEmpty,
     );
+  });
+
+
+  test('已保存命盘 Headless 支持对话调度，同时保留原页面入口', () {
+    final tool = AssistantToolRouter.savedCharts;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'saved_chart_id',
+      'chart_type',
+    ]);
+    expect(tool.parameters.every((item) => !item.isRequired), isTrue);
+    expect(tool.parameters.last.type, AssistantToolParameterType.choice);
+    expect(tool.parameters.last.choices, ['bazi', 'ziwei']);
+    expect(
+      AssistantToolRouter.match('查看我的命盘库', AssistantMode.automatic)?.id,
+      'saved_charts',
+    );
+    expect(
+      AssistantToolRouter.match('帮我解读保存的命盘', AssistantMode.metaphysics)?.id,
+      'saved_charts',
+    );
+    expect(
+      const AssistantToolArguments(toolId: 'saved_charts').validateAgainst(tool),
+      isEmpty,
+      reason: '记录和排盘类型在对话中由用户逐轮明确选择',
+    );
+    expect(tool.builder(), isA<SavedChartsScreen>());
   });
 
 }

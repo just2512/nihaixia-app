@@ -10,6 +10,7 @@ import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
 import 'package:nihaisha_app/data/sanshan_lingqian_data.dart';
+import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/services/sanshan_lingqian_tool_executor.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
@@ -779,6 +780,200 @@ void main() {
     await tester.pumpAndSettle();
     expect(pageOpened, isTrue, reason: '仅查阅签谱时仍保留原页面浏览路径');
     expect(find.text('签谱'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('已保存命盘在聊天中先选记录再选排盘类型，并由 App 执行后交给 AI 解读', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final charts = [
+      SavedChart(
+        id: 41,
+        name: '家庭命盘 A',
+        isMale: true,
+        solarIso: DateTime(1990, 1, 2, 8, 30).toIso8601String(),
+        lng: 121.47,
+        lat: 31.23,
+        cityName: '上海市',
+        createdAt: 200,
+      ),
+      SavedChart(
+        id: 42,
+        name: '个人命盘 B',
+        isMale: false,
+        solarIso: DateTime(1988, 6, 7, 12, 0).toIso8601String(),
+        createdAt: 100,
+      ),
+    ];
+    Map<String, String>? executedArguments;
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testSavedChartsLoader: () async => charts,
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'saved_charts') {
+              pageOpened = true;
+              return const SizedBox.shrink();
+            }
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return AssistantToolResult(
+              toolId: 'saved_charts',
+              title: '我的命盘库',
+              values: const {
+                '保存记录 ID': '42',
+                '保存记录名称': '个人命盘 B',
+                '排盘类型': '八字',
+                '出生时间': '1988-06-07T12:00:00.000',
+                '出生地点': '保存记录未存地点坐标；App 原引擎按默认东经120°、北纬30°计算',
+                '完整排盘结果': '【八字排盘完整结果】\n四柱：戊辰、戊午、甲寅、庚午',
+              },
+              sourceIds: const [
+                'local-data:saved-chart:42',
+                'local-engine:bazi',
+              ],
+              arguments: Map<String, String>.unmodifiable(arguments),
+              disclaimer: '本次使用 App 原有确定性八字引擎重新计算；传统命理不是科学预测。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '查看我的命盘库');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse, reason: '命盘库请求应留在当前助手对话');
+    expect(executedArguments, isNull, reason: '尚未选择记录和类型，不得执行重算');
+    expect(service.modelCalls, 0, reason: '参数澄清不需要调用模型');
+    expect(find.textContaining('ID 41｜家庭命盘 A'), findsOneWidget);
+    expect(find.textContaining('ID 42｜个人命盘 B'), findsOneWidget);
+    expect(find.textContaining('出生时间：1988'), findsNothing,
+        reason: '列表选择阶段不把出生细节暴露到对话');
+
+    final waitingForRecord = store.savedMessages.lastWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('请回复记录 ID'),
+    );
+    var waitingMetadata = AssistantMessageMetadata.decode(
+      waitingForRecord['metadata'] as String,
+    );
+    expect(waitingMetadata.toolId, 'saved_charts');
+    expect(waitingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(waitingMetadata.toolArguments, isEmpty);
+
+    await tester.enterText(find.byType(TextField).first, 'ID 42');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executedArguments, isNull, reason: '仍未选择八字或紫微');
+    expect(service.modelCalls, 0);
+    expect(store.savedMessages.last['content'] as String, contains('请明确选择排盘类型'));
+    waitingMetadata = AssistantMessageMetadata.decode(
+      store.savedMessages.last['metadata'] as String,
+    );
+    expect(waitingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(waitingMetadata.toolArguments, const {'saved_chart_id': '42'});
+
+    await tester.enterText(find.byType(TextField).first, '八字');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse);
+    expect(executedArguments, const {
+      'saved_chart_id': '42',
+      'chart_type': 'bazi',
+    });
+    expect(service.modelCalls, 1, reason: '只有 App 返回真实排盘结果后才调用 E4B 解读');
+    expect(service.restoredTranscript, contains('四柱：戊辰、戊午、甲寅、庚午'));
+    expect(service.restoredTranscript, contains('local-data:saved-chart:42'));
+    expect(service.sentTexts.single, contains('不是科学预测'));
+    expect(service.sentTexts.single, contains('不得描述为用户实际出生地'));
+
+    final resultMessage = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('工具：我的命盘库'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'saved_charts');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'saved_chart_id': '42',
+      'chart_type': 'bazi',
+    });
+    expect(metadata.sourceIds, const [
+      'local-data:saved-chart:42',
+      'local-engine:bazi',
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('已保存命盘未执行时可以在聊天中取消', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final charts = [
+      SavedChart(
+        id: 7,
+        name: '待选命盘',
+        isMale: true,
+        solarIso: DateTime(1990, 1, 2, 8, 30).toIso8601String(),
+        createdAt: 1,
+      ),
+    ];
+    var executorCalled = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testSavedChartsLoader: () async => charts,
+          testHeadlessToolExecutor: (arguments) {
+            executorCalled = true;
+            throw StateError('取消后不应执行');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '查看我的命盘库');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(executorCalled, isFalse);
+
+    await tester.enterText(find.byType(TextField).first, '取消命盘查询');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executorCalled, isFalse);
+    expect(service.modelCalls, 0);
+    expect(store.savedMessages.last['content'] as String, contains('已取消本次命盘查询'));
+    final metadata = AssistantMessageMetadata.decode(
+      store.savedMessages.last['metadata'] as String,
+    );
+    expect(metadata.toolId, 'saved_charts');
+    expect(metadata.toolStatus, 'CANCELLED');
     expect(tester.takeException(), isNull);
   });
 

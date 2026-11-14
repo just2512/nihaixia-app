@@ -20,6 +20,7 @@ import '../services/dream_tool_executor.dart';
 import '../services/guansha_tool_executor.dart';
 import '../services/shousheng_debt_tool_executor.dart';
 import '../services/sanshan_lingqian_tool_executor.dart';
+import '../services/saved_chart_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -777,11 +778,25 @@ class AssistantToolRouter {
   static const savedCharts = AssistantToolDefinition(
     id: 'saved_charts',
     title: '我的命盘库',
-    description: '查看已保存的生辰资料与命盘。',
+    description: '用户明确请求后，在当前对话读取其指定的保存记录，并由 App 原有八字或紫微引擎重新计算；不自动读取或注入全部个人记录。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
-    aliases: ['我的命盘库', '保存的命盘', '已保存命盘'],
-    actionWords: ['查看', '打开', '管理', '回看'],
+    aliases: ['我的命盘库', '我的命盘', '保存的命盘', '已保存命盘'],
+    actionWords: ['查看', '打开', '管理', '回看', '分析', '解读', '看看'],
     builder: _buildSavedCharts,
+    headlessExecutor: SavedChartToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'saved_chart_id',
+        label: '保存记录 ID',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'chart_type',
+        label: '排盘类型',
+        type: AssistantToolParameterType.choice,
+        choices: ['bazi', 'ziwei'],
+      ),
+    ],
   );
 
   static const List<AssistantToolDefinition> _all = [
