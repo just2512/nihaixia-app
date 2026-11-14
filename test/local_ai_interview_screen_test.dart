@@ -5261,6 +5261,121 @@ void main() {
   });
 
 
+
+  testWidgets('周公解梦在对话中追问缺参、处理候选并接收补充情节', (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    final executedArguments = <Map<String, String>>[];
+    var executionCount = 0;
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开解梦页面'));
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            executionCount += 1;
+            final ambiguous = executionCount == 1;
+            return AssistantToolResult(
+              toolId: 'dream',
+              title: '周公解梦',
+              values: {
+                '检索状态': ambiguous
+                    ? 'CANDIDATES_REQUIRE_CLARIFICATION'
+                    : 'SINGLE_MATCH',
+                if (ambiguous)
+                  '候选列表': '蛇；蛇咬；蛇缠身；很多蛇',
+                if (!ambiguous)
+                  '梦境词条': '梦见蛇咬',
+                if (!ambiguous)
+                  '词条释义原文': '本地数据集中的原文释义',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const ['local-data:dream-dataset-412'],
+              disclaimer: '传统民俗文本，不是现实预测。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我解梦');
+    expect(executedArguments, isEmpty,
+        reason: '缺少梦境内容时只追问，不调用本地检索或模型');
+    expect(find.textContaining('还不足以检索'), findsOneWidget);
+    expect(service.sentTexts, isEmpty);
+
+    await send('昨晚梦见蛇');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single['dream_text'], '昨晚梦见蛇');
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('不得替用户挑选或排序'));
+    expect(pageOpened, isFalse);
+
+    final conversations = await store.getAssistantConversations();
+    final firstResultMessages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final candidateMessage = firstResultMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('CANDIDATES_REQUIRE_CLARIFICATION'),
+    );
+    final candidateMetadata = AssistantMessageMetadata.decode(
+      candidateMessage['metadata'] as String,
+    );
+    expect(candidateMetadata.toolId, 'dream');
+    expect(candidateMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(candidateMetadata.sourceIds, const ['local-data:dream-dataset-412']);
+
+    await send('是被蛇咬了');
+    expect(executedArguments, hasLength(2));
+    expect(executedArguments.last['dream_text'], contains('是被蛇咬了'));
+    expect(service.sentTexts, hasLength(2));
+    expect(service.sentTexts.last, contains('App 本地梦境民俗数据集'));
+    expect(service.sentTexts.last, contains('SINGLE_MATCH'));
+    expect(pageOpened, isFalse);
+
+    final finalMessages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final finalResult = finalMessages.firstWhere((message) {
+      if (message['role'] != 'assistant' ||
+          !(message['content'] as String).contains('SINGLE_MATCH')) {
+        return false;
+      }
+      final metadata = AssistantMessageMetadata.decode(
+        message['metadata'] as String,
+      );
+      return metadata.toolId == 'dream' &&
+          metadata.toolStatus == 'SUCCEEDED';
+    });
+    final finalMetadata = AssistantMessageMetadata.decode(
+      finalResult['metadata'] as String,
+    );
+    expect(finalMetadata.toolId, 'dream');
+    expect(finalMetadata.toolStatus, 'SUCCEEDED');
+    expect(
+      finalMetadata.toolArguments['dream_text'],
+      contains('是被蛇咬了'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   mainRedFlagEntrypointOrderingTests();
 }
 

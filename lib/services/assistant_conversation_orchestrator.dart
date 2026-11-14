@@ -190,7 +190,18 @@ class AssistantConversationOrchestrator {
     String query,
   ) {
     final values = <String, String>{};
-    if (tool.id == 'solar_terms') {
+    if (tool.id == 'dream') {
+      final marker = RegExp(r'(?:梦见|梦到|梦里有?|梦境(?:是|里)?|做梦(?:时)?)')
+          .firstMatch(query);
+      final detail = marker == null ? '' : query.substring(marker.end);
+      final meaningfulDetail = detail.replaceAll(
+        RegExp(r'(?:补充梦境细节|帮我|麻烦|请|解梦|解读|解释|分析|一下|什么意思|是什么意思|怎么理解|代表什么|一个|一条|一只|一群|很多|看到|看见|出现|我|是|被|有|了|的)'),
+        '',
+      ).replaceAll(RegExp(r'[，,。.!！?？；;：:、()（）“”"‘’·\s]+'), '');
+      if (meaningfulDetail.isNotEmpty) {
+        values['dream_text'] = query.trim();
+      }
+    } else if (tool.id == 'solar_terms') {
       final matches = SolarTermToolExecutor.termNames
           .where(query.contains)
           .toList(growable: false);

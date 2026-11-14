@@ -296,6 +296,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingYiJingArguments;
   AssistantToolArguments? _pendingDosageArguments;
   AssistantToolArguments? _pendingZiWuArguments;
+  AssistantToolArguments? _pendingDreamArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -421,6 +422,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingYiJingArguments = null;
         _pendingDosageArguments = null;
         _pendingZiWuArguments = null;
+        _pendingDreamArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2338,6 +2340,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
     );
 
+    final needsDreamFollowUp = tool.id == 'dream' &&
+        (result.status == AssistantToolExecutionStatus.noResult ||
+            result.values['检索状态'] == 'CANDIDATES_REQUIRE_CLARIFICATION');
+    if (tool.id == 'dream') {
+      _pendingDreamArguments = needsDreamFollowUp ? request : null;
+    }
+
     final unresolvedBirthplace =
         result.values['未执行原因']?.contains('无法唯一识别') == true;
     if ((tool.id == 'bazi' || tool.id == 'ziwei') &&
@@ -2399,11 +2408,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
             '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
             '区分 App 本地引擎输出与 AI 归纳；不改动原始四柱，不补造缺失字段，也不把传统命理表述成科学预测。'
-        : '请根据本轮用户原始请求“$userText”和下方已通过 App 结果契约校验的“' +
-            tool.title +
-            '”执行结果，自动总结并解释实际输入、关键输出、字段含义、字段间关系和结果口径。'
-            '明确区分 App 确定性计算/数据与 AI 的语言化归纳；缺失字段标记 MISSING，不猜算、不修改 App 返回值。'
-            '只有在本地知识库返回了可引用条目时才结合该资料解释，并保留来源。';
+        : tool.id == 'dream'
+            ? '请解释刚才 App 本地梦境民俗数据集的检索结果。用户原始描述只是检索线索，不是事实证据。'
+                '只归纳结果字段中的原文和候选差异，不补写数据集中不存在的释义，不把“吉/凶”等民俗标签说成现实预测或事实。'
+                '若检索状态为 CANDIDATES_REQUIRE_CLARIFICATION，必须明确尚未选定匹配词条，只按数据集原始顺序简要列出候选，不得替用户挑选或排序，并只向用户追问一个能区分情节的问题。'
+                '若为 SINGLE_MATCH，也必须说明这是本地民俗文本条目，不是科学结论或未来预言。不要给医疗、法律或投资建议。'
+            : '请根据本轮用户原始请求“$userText”和下方已通过 App 结果契约校验的“' +
+                tool.title +
+                '”执行结果，自动总结并解释实际输入、关键输出、字段含义、字段间关系和结果口径。'
+                '明确区分 App 确定性计算/数据与 AI 的语言化归纳；缺失字段标记 MISSING，不猜算、不修改 App 返回值。'
+                '只有在本地知识库返回了可引用条目时才结合该资料解释，并保留来源。';
     setState(() {
       _lastEffectiveMode = mode;
       _messages
@@ -2418,8 +2432,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     prompt: interpretationPrompt,
                     mode: mode,
                     retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
-                    toolId: tool.id,
-                    toolStatus: result.statusLabel,
+                    toolId: needsDreamFollowUp ? null : tool.id,
+                    toolStatus: needsDreamFollowUp ? null : result.statusLabel,
                     sourceIds: result.sourceIds,
                   ))
               : null,
@@ -2432,7 +2446,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       assistantText: response,
       mode: mode,
       toolId: tool.id,
-      toolStatus: result.statusLabel,
+      toolStatus: needsDreamFollowUp ? 'AWAITING_PARAMETERS' : result.statusLabel,
       sourceIds: result.sourceIds,
       toolArguments: result.arguments,
       traceId: traceContext.traceId,
@@ -2458,8 +2472,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         prompt: interpretationPrompt,
         mode: mode,
         retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
-        toolId: tool.id,
-        toolStatus: result.statusLabel,
+        toolId: needsDreamFollowUp ? null : tool.id,
+        toolStatus: needsDreamFollowUp ? null : result.statusLabel,
         sourceIds: result.sourceIds,
         showPromptInTimeline: false,
         allowWhileSending: true,
@@ -2517,12 +2531,85 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
     if (tool.id != 'dosage') _pendingDosageArguments = null;
     if (tool.id != 'ziwu_liuzhu') _pendingZiWuArguments = null;
+    if (tool.id != 'dream') _pendingDreamArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
+    if (tool.id == 'dream' && tool.headlessExecutor != null) {
+      final currentArguments = arguments ??
+          AssistantConversationOrchestrator.argumentsFor(tool, userText);
+      final mergedValues = <String, String>{
+        ...?_pendingDreamArguments?.values,
+        ...currentArguments.values,
+      };
+      final request = AssistantToolArguments(
+        toolId: 'dream',
+        values: Map<String, String>.unmodifiable(mergedValues),
+      );
+      if (request['dream_text']?.trim().isNotEmpty != true) {
+        _pendingDreamArguments = request;
+        const clarification =
+            '我会直接在当前对话中检索 App 本地梦境资料。请描述梦中实际出现的事物和具体情节，例如看到了什么、发生了什么、场景或结局如何；仅说“帮我解梦”还不足以检索。资料属于传统民俗文本，不代表现实吉凶或未来预测。';
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'DREAM_DESCRIPTION_MISSING',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(const _InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingDreamArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
     if (tool.id == 'ziwu_liuzhu' &&
         tool.headlessExecutor != null) {
       // Do not trust a model-proposed timestamp or slot value. Re-extract
@@ -4637,6 +4724,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingYiJingArguments;
     AssistantToolArguments? restoredPendingDosageArguments;
     AssistantToolArguments? restoredPendingZiWuArguments;
+    AssistantToolArguments? restoredPendingDreamArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4668,6 +4756,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingYiJingArguments = null;
         restoredPendingDosageArguments = null;
         restoredPendingZiWuArguments = null;
+        restoredPendingDreamArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4736,6 +4825,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'ziwu_liuzhu') {
         restoredPendingZiWuArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'dream') {
+        restoredPendingDreamArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4886,6 +4981,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingYiJingArguments = restoredPendingYiJingArguments;
       _pendingDosageArguments = restoredPendingDosageArguments;
       _pendingZiWuArguments = restoredPendingZiWuArguments;
+      _pendingDreamArguments = restoredPendingDreamArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5086,6 +5182,109 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
+    }
+
+    final pendingDream = _pendingDreamArguments;
+    if (pendingDream != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '周公解梦需要文字描述梦境情节；请用文字补充，或发送“取消解梦”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:dream_attachment_rejected',
+        mode: (_lastEffectiveMode ?? AssistantMode.metaphysics).name,
+        toolId: 'dream',
+        errorCode: 'DREAM_DESCRIPTION_REQUIRES_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: (_lastEffectiveMode ?? AssistantMode.metaphysics).name,
+        toolId: 'dream',
+      );
+      return;
+    }
+    if (pendingDream != null && text.isNotEmpty) {
+      final command = text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      const cancelCommands = {
+        '取消解梦',
+        '停止解梦',
+        '不用解梦了',
+        '算了',
+        '取消',
+      };
+      final cancelRequested = cancelCommands.contains(command);
+      final mode = _lastEffectiveMode ?? AssistantMode.metaphysics;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:dream' : 'tool_follow_up:dream',
+        mode: mode.name,
+        toolId: 'dream',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:dream' : 'tool_follow_up:dream',
+        mode: mode.name,
+        toolId: 'dream',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次解梦查询；尚未生成新的解释结果。';
+        setState(() {
+          _pendingDreamArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: mode,
+          toolId: 'dream',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingDream.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'dream',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'dream',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final previousDescription = pendingDream['dream_text']?.trim() ?? '';
+      final combinedDescription = [
+        if (previousDescription.isNotEmpty) previousDescription,
+        text,
+      ].join('\n补充梦境细节：');
+      await _requestTool(
+        text,
+        AssistantToolRouter.dream,
+        mode: mode,
+        arguments: AssistantToolArguments(
+          toolId: 'dream',
+          values: {'dream_text': combinedDescription},
+        ),
+        traceContext: traceContext,
+      );
+      return;
     }
 
     final pendingHuangdiSiji = _pendingHuangdiSijiArguments;
@@ -6934,6 +7133,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
+      _pendingDreamArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
