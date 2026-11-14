@@ -46,7 +46,7 @@
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
 | B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（fail-closed Gate 契约存在；医学审核 detector 与生产入口接入缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
 | C | 知识检索黄金行为基线 | `PARTIAL`（黄金快照和 sourceId/asset 一致性已建立；书目 locator 仍缺失） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
-| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（6 项 Headless；17 项 Page-only；结构化问诊独立内联） | 目录审计可并行；适配器须等待对应基线 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据 |
+| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（8 项 Headless；15 项 Page-only；结构化问诊独立内联） | 已合并 `yunqi/almanac/bazi/meihua/chenggu/huangdi_siji/ziwei/solar_terms`；保留各自 Page builder；逐项复用原确定性函数 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | 低成本数据保护 | `PARTIAL`（Manifest/清理代码有 CI 证据；真机清除后重启不可恢复未验收） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（已有部分结果/来源链路，不等于端到端 TRACE） | 与 A-E 按需并行 | 默认关闭、脱敏、trace_id 贯穿、关闭时行为不变、完整链路可复核 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
@@ -1627,3 +1627,54 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不重复审核已经完成医学审核的知识库。
 - 不在缺少医学审核 detector 时启用自由文本症状抽取；不把 `REVIEW_REQUIRED/UNKNOWN` 视为安全放行。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库或批量 Page Tool 迁移。
+
+---
+
+## 35. 2026-11-14 PR #147/#148/#149 集成与当前 master 状态
+
+### 35.1 当前主线基线
+
+- 当前 master：`8e44e0c7f6f58249e2adc55fbec1afb37610954f`。
+- PR #147 文档刷新已合并；只更新执行台账、能力盘点和审计报告，规范性约束文件 `docs/ai-capability-audit.md` 未修改。
+- PR #148 紫微 Headless 对话执行已合并，merge commit `fd41842e5042a2678dfb68fb40a1d528fb4eee7f`。
+- PR #149 节气知识 Headless 对话执行已合并，最终 PR head `26aabe3fc43eb21a943189fea995a82b36465f12`，merge commit / 当前 master `8e44e0c7f6f58249e2adc55fbec1afb37610954f`。
+
+### 35.2 PR #148/#149 交付与边界
+
+- PR #148 复用现有紫微引擎、结果格式化、城市坐标目录和当前设置；要求公历日期、当地钟表时间、性别和唯一出生地；无默认生日/性别/经纬度，农历日期不被误读为公历。只将经过参数/结果/sourceIds 校验的本地计算结果交给 AI 解释，不改 `ziwei_engine.dart`。
+- PR #149 复用 `solar_term_service.dart` 与 `solar_term_knowledge.json`；单一明确节气查询走确定性提取，明确请求当前节气则读取 App 当前服务，泛化或多节气歧义先澄清。只将原服务/资产返回的结构化字段和 sourceIds 交给 AI 解释；未增加新天文计算、养生规则、个体诊断或用药内容。
+- 两项均保留原页面入口作为兼容路径，但统一助手在明确满足参数时可在当前对话后台执行。打开页面不计为 Headless 执行。
+- Headless 共用现有 `_executeHeadlessTool` 结果契约/持久化/自动解释路径；模型只总结已执行的 App 结果，业务计算仍由原代码执行。
+
+### 35.3 CI 与证据
+
+- PR #148 最终 head `42543f914f3f18cd8c8a011846b5f395cc949656`：Flutter full regression run `43551889499` SUCCESS；Android arm64/Manifest/ABI/Native tests 与 evidence artifacts SUCCESS；分支验证 push run `43551885608` SUCCESS。
+- PR #149 最终 head `26aabe3fc43eb21a943189fea995a82b36465f12`：Flutter full regression job `132320970943` SUCCESS；Android arm64 job `132322096941` SUCCESS，含 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML、两份 Android artifacts 上传；分支验证 push run `43553278374` SUCCESS。
+- PR #149 artifacts：`android-unit-test-reports` id `14097701587`、`android-arm64-ci-debug-abi-evidence` id `14097232618`、`ai-retrieval-golden-snapshot` id `14096004897`。
+- merge SHA `8e44e0c7f6f58249e2adc55fbec1afb37610954f` 的 master Flutter tests run `43554222428`、补充 Flutter tests run `43554273400` 和 Flutter Quality Gate run `43554222553` 在本节生成时为 IN_PROGRESS；Flutter full regression job `132323303067` 正在运行。**不能把 PR CI 的 SUCCESS 折算成 master post-merge PASS。**后续按相同 SHA 复核终态。
+
+### 35.4 D：当前工具能力分层
+
+- `AssistantToolRouter` 共 24 个定义：23 个常规页面工具入口 + 1 个特殊处理的 `structured_diagnosis` 内联问诊流程。
+- 23 个页面工具入口中 8 项 Headless：`yunqi`、`almanac`、`bazi`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`；15 项仍 Page-only。
+- `structured_diagnosis` 不计入通用 Headless。Page builder 与 Headless executor 可并存，不能重复计数。
+- 余下工具逐项审计后再决定是否适配。优先选择能复用确定性函数、有现成数据/来源、输入槽位和行为边界清晰的低风险候选；不为数量而批量迁移。
+
+### 35.5 A-G 状态与后续顺序
+
+| 工作流 | 当前状态 | 后续最小任务 / 门槛 |
+|---|---|---|
+| A Native 多轮与生命周期 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU、多媒体、Activity/进程中断恢复与真实 TRACE；CI APK 不替代真机 |
+| B 全模式红旗安全 | PARTIAL / RELEASE BLOCKED | 等待具备医学背景人员审核的自然语言 detector 版本、规则范围、阈值/例外/处置文案；并验证 Flutter/Native 所有模型入口调用前覆盖。未取得审核材料前不开放自由文本症状抽取，不把 REVIEW_REQUIRED/UNKNOWN 当 CLEAR |
+| C 知识检索与来源身份 | PARTIAL | 已审核知识库不重复审核；继续补书目 locator、底本版本、卷页/原文身份缺失项 |
+| D Headless 能力 | PARTIAL（8 Headless / 15 Page-only） | 逐项建立页面行为基线；下一项只有在能复用原确定性计算、输入边界明确且结果有来源时才实施 |
+| E 数据保护 | PARTIAL / DEVICE UNKNOWN | 在 Find N2 清除全部 AI 数据后强停/重启，验证 DB/附件/缩略图/孤儿文件不可恢复；共享备份副本边界需明确 |
+| F TRACE | PARTIAL / DEVICE UNKNOWN | 完成 Find N2 端到端真实 TRACE，覆盖输入、执行状态、来源、持久化、模型解释和恢复 |
+| G 文档治理 | IN_PROGRESS | 本分支更新 inventory/audit report/ledger；合并后核对文档 PR 和对应 master CI |
+
+### 35.6 冻结项
+
+- 不修改 DiagnosticEngine、DiagnosticRules、问诊十问、八字/紫微/梅花/节气确定性算法和剂量换算规则。
+- 不重复审核已经医学审核通过的知识库内容；自然语言红旗 detector 与知识内容审核是不同对象。
+- 不在缺少医学审核 detector 时启用自由文本症状问诊，不以模型自我判断代替红旗前置检查。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page Tool。
