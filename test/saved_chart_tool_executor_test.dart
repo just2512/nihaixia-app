@@ -64,7 +64,7 @@ void main() {
     expect(result.values['完整排盘结果'], contains('1990-01-02 08:30'));
     expect(result.values['本次计算设置'], contains('真太阳时：'));
     expect(result.sourceIds, [
-      '$savedChartSourcePrefix$savedId',
+      '${SavedChartToolExecutor.savedChartSourcePrefix}$savedId',
       SavedChartToolExecutor.baziSourceId,
     ]);
     expect(result.disclaimer, contains('不是历史结果快照'));
@@ -84,7 +84,7 @@ void main() {
     expect(result.values['排盘类型'], '紫微斗数');
     expect(result.values['完整排盘结果'], contains('十二宫星曜'));
     expect(result.sourceIds, [
-      '$savedChartSourcePrefix$savedId',
+      '${SavedChartToolExecutor.savedChartSourcePrefix}$savedId',
       SavedChartToolExecutor.ziweiSourceId,
     ]);
   });
