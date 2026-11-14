@@ -2131,9 +2131,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     debugPrint('[DOSAGE_DIAG] executeHeadless tool=${tool.id} args=${arguments?.values}');
     debugPrint('[DOSAGE_DIAG] executeHeadless tool=${tool.id} args=${arguments?.values}');
+    debugPrint('[DOSAGE_DIAG] testExecutorInjected=${widget.testHeadlessToolExecutor != null} toolExecutorInjected=${tool.headlessExecutor != null}');
     final request = arguments ??
         AssistantToolArguments(toolId: tool.id);
     final argumentErrors = request.validateAgainst(tool);
+    debugPrint('[DOSAGE_DIAG] headless validation=$argumentErrors');
     await _traceRecorder.record(
       traceContext,
       stage: AiTraceStage.argumentValidation,
@@ -2148,6 +2150,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
       try {
+        debugPrint('[DOSAGE_DIAG] before executor call');
         result = await executor(request.values);
         executionWatch.stop();
         await _traceRecorder.record(
