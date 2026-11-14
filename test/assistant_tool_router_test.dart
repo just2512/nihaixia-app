@@ -496,4 +496,46 @@ void main() {
     );
   });
 
+  test('剂量工具只对明确的度量衡换算意图提供 Headless 能力', () {
+    final tool = AssistantToolRouter.dosage;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'amount',
+      'unit',
+      'standard',
+    ]);
+    expect(tool.parameters[0].isRequired, isTrue);
+    expect(tool.parameters[1].isRequired, isTrue);
+    expect(tool.parameters[2].isRequired, isFalse);
+    expect(
+      AssistantToolRouter.match(
+        '汉制 1.5 两换算成克',
+        AssistantMode.automatic,
+      )?.id,
+      'dosage',
+    );
+    expect(
+      AssistantToolRouter.match(
+        '把 1 升换算成毫升',
+        AssistantMode.tools,
+      )?.id,
+      'dosage',
+    );
+    expect(
+      AssistantToolRouter.match(
+        '我应该吃几两药',
+        AssistantMode.automatic,
+      ),
+      isNull,
+      reason: '用药建议不应被误路由为单位换算',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'dosage',
+        values: {'amount': '1', 'unit': '两', 'standard': 'han'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
