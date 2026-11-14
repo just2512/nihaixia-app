@@ -1806,14 +1806,14 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 38.4 D：当前 Headless / Page-only 能力分层
 
 - `AssistantToolRouter` 共 24 个定义：23 个常规页面工具入口 + 1 个由确定性问诊控制器内联执行的 `structured_diagnosis`。
-- 23 个页面工具入口中 12 项配置 Headless executor：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`、`yijing`、`dosage`、`ziwu_liuzhu`；11 项仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`、`dream`、`guansha`、`sanshan_lingqian`、`shousheng_debt`、`saved_charts`。
+- 23 个页面工具入口中 13 项配置 Headless executor：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`、`yijing`、`dosage`、`ziwu_liuzhu`、`dream`；10 项仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`、`guansha`、`sanshan_lingqian`、`shousheng_debt`、`saved_charts`。
 - `structured_diagnosis` 继续由 `TcmInterviewConversationController` / `DiagnosticEngine` 内联执行，不计入通用 Headless 数量。打开页面不计为 Executed；只有真实调用、参数/结果/sourceIds 契约校验和对话回传都有证据才计入。
 
 ### 38.5 尚未关闭的用户目标与优先级
 
 1. **B 红旗安全，仍 PARTIAL / RELEASE BLOCKED。** 生产自然语言 detector 尚无可追溯的医学审核版本、审核记录、阈值/例外/处置文案，也没有全部 Flutter/Native 模型调用入口前的 fail-closed 覆盖证据。先完成 B2 注入式门禁接缝和 fake-detector 调用顺序测试；不自行编造红旗词表/阈值/医疗处置文案。已医学审核通过的知识库内容不重复审核。
 2. **自由文本问诊闭环仍未完成。** 当前 `TcmInterviewConversationController.start()` 把初始描述保留在 transcript/context，但实际仍从 `temperature`、`tongue_pulse` 再进入问诊十问的既定顺序；没有把用户自由描述结构化映射为已答字段，也没有只对缺失项进行追问。完成 B 门禁前不得开放自由文本自动症状辨证；门禁具备审核依据后，再以受约束结构化输出抽取候选症状、保留原话、标记待确认，经用户确认后才映射到现有规则问诊输入。不得修改 DiagnosticEngine/DiagnosticRules 或问诊十问。
-3. **D 下一项单工具候选为 `dream`。** 本地梦境数据有 412 条记录、244 个不同 keyword，其中 78 个 keyword 重复对应多条记录；例如“蛇”对应 4 条。不得按第一条命中直接输出，应基于梦境具体情节澄清或列出候选；结果只能作为民俗文化资料解释，不作现实吉凶预测。仅在 B2 与 PR #156 文档闭环后开独立小分支。
+3. **D：`dream` 已完成首个 Page-only → Headless 小批量迁移。** 本地梦境数据有 412 条记录、244 个不同 keyword，其中 78 个 keyword 重复对应多条记录；例如“蛇”对应 4 条。PR #159 已按具体情节匹配/重复候选澄清/无匹配状态接入统一助手对话，未改数据源；结果只作为民俗文化资料解释，不作现实吉凶预测。剩余 10 个 Page-only 工具继续逐项审计确定性输入、输出、来源和取消/恢复语义，只有单项契约明确且有用户场景证据才开独立分支，不批量迁移。
 4. **A/E/F 仍需 OPPO Find N2 真机证据。** E4B GPU/CPU、多轮文本/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复及端到端 TRACE，CI APK 不可替代真机验收。
 5. **C 只补来源定位。** 医案与经典资料仍有书目 locator、底本版本、卷页/原文身份缺口；不重复审核已审核医学知识内容。
 
@@ -1827,13 +1827,13 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ## 38.7 D：PR #159 周公解梦对话内执行（自动验收中）
 
-- PR：https://github.com/just2512/nihaixia-app/pull/159；独立分支：`work/dream-headless-in-chat-2026-11-14`；当前提交：`20c053f0e30084b4e5bf0ff71964e25566e6f462`。
+- PR：https://github.com/just2512/nihaixia-app/pull/159；独立分支：`work/dream-headless-in-chat-2026-11-14`；PR 最终 head：`f1788b1de3f0aacc4e60aa028d6a8f81c3572831`；squash merge：`56ca614e5bdd5d0970afdc4d2a5e798f2d84d9c0`。
 - 将原 Page-only `dream` 接入现有 `AssistantToolRouter` Headless 执行链。缺少梦境情节时在当前对话追问；多义关键词保留数据集原始顺序候选，等待用户补充，不取第一条、不按模型相关度排序；支持待补状态持久化/历史恢复及取消。
 - 新执行器只检索现有 `lib/data/dream_data.dart` 的情节和 keyword 字段，不扫描释义全文以制造宽泛命中；单条命中返回词条原始分类、释义、民俗标签、来源字段及 `local-data:dream-dataset-412`；无匹配返回 `NO_RESULT`，多匹配返回 `CANDIDATES_REQUIRE_CLARIFICATION`。未修改或再生成数据集。
 - E4B 仅在执行器结果状态为 SUCCEEDED 且携带 sourceId、通过现有结果契约校验后进行语言归纳；提示词禁止补写民俗释义、预测现实吉凶、选择/排序歧义候选。工具执行和匹配均由 App 确定性代码完成。
 - 变更限定为工具路由、参数提取、统一助手对话状态、梦境数据执行适配和配套测试；未修改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、剂量计算、医学知识库或梦境数据源。
 - 自动化覆盖：唯一具体情节、重复 keyword“蛇”返回四条候选、无匹配、未声明参数拒绝；路由/编排参数契约；对话内“缺参追问 → 候选澄清 → 用户补充 → 真实数据结果”的端到端流程，并验证未导航到原工具页面。
-- **状态：待 PR CI 完成。** 仅当 PR 的静态分析、变更测试、Flutter 全量回归及 Android arm64/Native 验证均为 SUCCESS，且合并后 master CI 终态 SUCCESS，才将 D 的 dream 项标记为自动化验收通过。CI 不替代 Find N2 真机验收。
+- **状态：自动化验收通过。** PR run `43582490362` SUCCESS；分支验证 run `43582485878` SUCCESS；PR Flutter 全量回归、Android arm64 Debug APK、Manifest/ABI/SHA-256、Android Native 单测、JUnit XML 与工件上传全部 SUCCESS。合并后 master Flutter tests run `43583154915` SUCCESS（含完整 `flutter test --no-pub`、Android arm64 APK/Manifest/ABI、本地单测、XML 和证据工件上传）；master Flutter Quality Gate run `43583154917` SUCCESS（含 Dart 全量测试、Android Native 单测及 Find N2 arm64 Debug APK 构建）。CI 不替代 Find N2 真机验收。
 
 ### 38.8 仍未关闭的边界
 
