@@ -36,6 +36,7 @@ import '../services/yijing_tool_executor.dart';
 import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
 import '../services/ziwuliuzhu_tool_executor.dart';
+import '../services/guansha_tool_executor.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../data/formula_repository.dart';
@@ -297,6 +298,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingDosageArguments;
   AssistantToolArguments? _pendingZiWuArguments;
   AssistantToolArguments? _pendingDreamArguments;
+  AssistantToolArguments? _pendingGuanshaArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -423,6 +425,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingDosageArguments = null;
         _pendingZiWuArguments = null;
         _pendingDreamArguments = null;
+        _pendingGuanshaArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2348,22 +2351,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final unresolvedBirthplace =
-        result.values['未执行原因']?.contains('无法唯一识别') == true;
-    if ((tool.id == 'bazi' || tool.id == 'ziwei') &&
+        result.values['未执行原因']?.contains('唯一识别') == true;
+    if ((tool.id == 'bazi' || tool.id == 'ziwei' || tool.id == 'guansha') &&
         result.status == AssistantToolExecutionStatus.failed &&
         unresolvedBirthplace) {
       if (tool.id == 'bazi') {
         _pendingBaziArguments = request;
         _pendingZiweiArguments = null;
-      } else {
+      } else if (tool.id == 'ziwei') {
         _pendingZiweiArguments = request;
         _pendingBaziArguments = null;
+      } else {
+        _pendingGuanshaArguments = request;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
       }
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
       final clarification = tool.id == 'ziwei'
           ? '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行紫微排盘。'
-          : '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行八字排盘。';
+          : tool.id == 'guansha'
+              ? '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行排盘或关煞规则匹配。'
+              : '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行八字排盘。';
       setState(() {
         _lastEffectiveMode = mode;
         _messages
@@ -2413,6 +2422,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 '只归纳结果字段中的原文和候选差异，不补写数据集中不存在的释义，不把“吉/凶”等民俗标签说成现实预测或事实。'
                 '若检索状态为 CANDIDATES_REQUIRE_CLARIFICATION，必须明确尚未选定匹配词条，只按数据集原始顺序简要列出候选，不得替用户挑选或排序，并只向用户追问一个能区分情节的问题。'
                 '若为 SINGLE_MATCH，也必须说明这是本地民俗文本条目，不是科学结论或未来预言。不要给医疗、法律或投资建议。'
+        : tool.id == 'guansha'
+            ? '请解释刚才由 App 本地八字引擎和关煞规则表返回的民俗文化匹配结果。'
+                '仅解释实际出生参数、已校验四柱、命中条目、规则匹配依据和来源字段；不得修改四柱或规则结果，不得新增或预测任何现实事件。'
+                '关煞名称、轻重等级和民俗口诀不代表儿童健康风险、疾病、寿命、事故或现实安全状况，不是医学诊断。'
+                '不得据此推断儿童身体状况、推荐治疗或化解方案；若用户询问真实健康问题，应说明本工具不能评估健康并建议咨询正规医疗机构。'
             : '请根据本轮用户原始请求“$userText”和下方已通过 App 结果契约校验的“' +
                 tool.title +
                 '”执行结果，自动总结并解释实际输入、关键输出、字段含义、字段间关系和结果口径。'
@@ -2481,6 +2495,127 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+
+  Future<void> _requestGuanshaHeadless(
+    String userText, {
+    required AssistantMode mode,
+    required AiTraceContext traceContext,
+    required AssistantToolArguments request,
+  }) async {
+    final tool = AssistantToolRouter.guansha;
+    final contractErrors = request.validateAgainst(tool);
+    final businessErrors =
+        GuanshaToolExecutor.validateArguments(request.values);
+    final missingParameters = tool.parameters
+        .where((parameter) =>
+            parameter.isRequired &&
+            (request[parameter.key]?.trim().isEmpty ?? true))
+        .map((parameter) => parameter.label)
+        .toList(growable: false);
+    final invalidParameterErrors = <String>{
+      ...contractErrors.where((error) =>
+          !error.startsWith('缺少必填参数：') &&
+          !error.startsWith('未声明的参数：')),
+      ...businessErrors.where((error) =>
+          !error.startsWith('缺少') &&
+          !error.startsWith('未声明的关煞参数：')),
+    }.toList(growable: false);
+
+    if (contractErrors.isNotEmpty ||
+        businessErrors.isNotEmpty ||
+        missingParameters.isNotEmpty) {
+      _pendingGuanshaArguments = request;
+      _pendingBaziArguments = null;
+      _pendingZiweiArguments = null;
+      _pendingMeihuaArguments = null;
+      _pendingChengguArguments = null;
+      _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
+      final suppliedParameters = tool.parameters
+          .where((parameter) =>
+              request[parameter.key]?.trim().isNotEmpty == true)
+          .map((parameter) =>
+              parameter.label + '：' + request[parameter.key]!)
+          .toList(growable: false);
+      final unsupportedLunarDate =
+          request['birth_date'] == 'LUNAR_DATE_NOT_SUPPORTED';
+      final ambiguousLocation =
+          request['birthplace'] == 'AMBIGUOUS_LOCATION_SELECTION';
+      final clarification = [
+        '我会在当前对话中调用 App 原有八字排盘和小儿关煞规则，不需要打开独立页面。',
+        if (suppliedParameters.isNotEmpty)
+          '已识别的信息：' + suppliedParameters.join('；') + '。',
+        if (missingParameters.isNotEmpty)
+          '目前还缺少：' + missingParameters.join('、') + '。',
+        if (invalidParameterErrors.isNotEmpty)
+          '以下信息需要明确或更正：' + invalidParameterErrors.join('；') + '。',
+        if (unsupportedLunarDate)
+          '当前工具只接受公历出生日期；不会把农历日期当作公历，也不会自行猜测换算。',
+        if (ambiguousLocation)
+          '你提供了多个出生地点，请明确一个实际出生城市或区县。',
+        '请补充：公历出生日期（YYYY-MM-DD）、出生地当地钟表时间（HH:mm）、性别（男/女）和出生地点（城市或区县）。可以分多轮提供。',
+        '出生地点必须能在 App 本地城市目录中唯一识别；同名区县会继续追问，不使用默认经纬度。',
+        '计算沿用 App 当前保存的真太阳时和早晚子时设置；不会使用页面示例生日、性别或默认时刻。',
+        '关煞名称、等级和口诀只是传统民俗文本，不代表儿童健康、疾病、寿命或现实风险，也不是医学诊断。',
+      ].join('\n');
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'GUANSHA_PARAMETERS_INCOMPLETE',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'AWAITING_PARAMETERS',
+      );
+      setState(() {
+        _lastEffectiveMode = mode;
+        _messages
+          ..add(_InterviewMessage(text: userText, isUser: true))
+          ..add(_InterviewMessage(text: clarification, isUser: false));
+        _error = null;
+      });
+      _inputController.clear();
+      final persisted = await _persistSuccessfulTurn(
+        userText: userText,
+        assistantText: clarification,
+        mode: mode,
+        toolId: tool.id,
+        toolStatus: 'AWAITING_PARAMETERS',
+        toolArguments: request.values,
+        traceId: traceContext.traceId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        toolId: tool.id,
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: tool.id,
+      );
+      _scrollToBottom();
+      return;
+    }
+
+    _pendingGuanshaArguments = null;
+    await _executeHeadlessTool(
+      userText,
+      tool,
+      mode: mode,
+      traceContext: traceContext,
+      arguments: request,
+    );
+  }
+
   Future<void> _requestTool(
     String userText,
     AssistantToolDefinition tool, {
@@ -2532,6 +2667,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (tool.id != 'dosage') _pendingDosageArguments = null;
     if (tool.id != 'ziwu_liuzhu') _pendingZiWuArguments = null;
     if (tool.id != 'dream') _pendingDreamArguments = null;
+    if (tool.id != 'guansha') _pendingGuanshaArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
@@ -2986,6 +3122,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: activeMode,
         traceContext: activeTraceContext,
         arguments: request,
+      );
+      return;
+    }
+
+    if (tool.id == 'guansha' && tool.headlessExecutor != null) {
+      final currentArguments = arguments ??
+          AssistantConversationOrchestrator.argumentsFor(tool, userText);
+      final mergedValues = <String, String>{
+        ...?_pendingGuanshaArguments?.values,
+        ...currentArguments.values,
+      };
+      await _requestGuanshaHeadless(
+        userText,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        request: AssistantToolArguments(
+          toolId: 'guansha',
+          values: Map<String, String>.unmodifiable(mergedValues),
+        ),
       );
       return;
     }
@@ -4725,6 +4880,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingDosageArguments;
     AssistantToolArguments? restoredPendingZiWuArguments;
     AssistantToolArguments? restoredPendingDreamArguments;
+    AssistantToolArguments? restoredPendingGuanshaArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4757,6 +4913,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingDosageArguments = null;
         restoredPendingZiWuArguments = null;
         restoredPendingDreamArguments = null;
+        restoredPendingGuanshaArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4831,6 +4988,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'dream') {
         restoredPendingDreamArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'guansha') {
+        restoredPendingGuanshaArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4982,6 +5145,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingDosageArguments = restoredPendingDosageArguments;
       _pendingZiWuArguments = restoredPendingZiWuArguments;
       _pendingDreamArguments = restoredPendingDreamArguments;
+      _pendingGuanshaArguments = restoredPendingGuanshaArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5392,6 +5556,105 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
         arguments: AssistantToolArguments(
           toolId: 'huangdi_siji',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
+    final pendingGuansha = _pendingGuanshaArguments;
+    if (pendingGuansha != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '小儿关煞出生参数请用文字补充，不能从图片或录音推断出生日期、性别和出生地。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:guansha_attachment_rejected',
+        mode: (_lastEffectiveMode ?? AssistantMode.metaphysics).name,
+        toolId: 'guansha',
+        errorCode: 'GUANSHA_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'guansha',
+      );
+      return;
+    }
+    if (pendingGuansha != null && text.isNotEmpty) {
+      final cancelRequested = [
+        '取消关煞', '停止关煞', '不用关煞', '算了', '先不算', '取消'
+      ].any(text.contains);
+      final mode = _lastEffectiveMode ?? AssistantMode.metaphysics;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:guansha' : 'tool_follow_up:guansha',
+        mode: mode.name,
+        toolId: 'guansha',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:guansha' : 'tool_follow_up:guansha',
+        mode: mode.name,
+        toolId: 'guansha',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次关煞民俗查询；尚未执行排盘或规则匹配。';
+        setState(() {
+          _pendingGuanshaArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: mode,
+          toolId: 'guansha',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingGuansha.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'guansha',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'guansha',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.guansha,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingGuansha.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.guansha,
+        mode: mode,
+        arguments: AssistantToolArguments(
+          toolId: 'guansha',
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
