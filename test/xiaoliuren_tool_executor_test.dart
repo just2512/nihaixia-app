@@ -52,7 +52,8 @@ void main() {
 
   test('可选择多能鄙事口径，不把两种算法口径合并或伪装成唯一传统', () async {
     const alternative = {
-      ...arguments,
+      'date': '2026-11-14',
+      'hour': '午时',
       'rule': 'duoneng',
     };
     final result = await XiaoliurenToolExecutor.execute(alternative);
