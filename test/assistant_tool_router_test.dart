@@ -496,4 +496,24 @@ void main() {
     );
   });
 
+  test('经方换算注册为 Headless，并声明最小参数契约', () {
+    final tool = AssistantToolRouter.dosage;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(
+      tool.parameters.map((item) => item.key),
+      ['value', 'unit', 'standard'],
+    );
+    expect(tool.parameters[0].isRequired, isTrue);
+    expect(tool.parameters[1].isRequired, isTrue);
+    expect(tool.parameters[2].isRequired, isFalse);
+    expect(tool.parameters[1].choices, [
+      '两', '铢', '斤', '石', '钱', '升', '合', '圭', '撮', '尺', '寸',
+    ]);
+    expect(tool.parameters[2].choices, ['han', 'taiwan', 'tang']);
+    expect(
+      AssistantToolRouter.match('打开经方剂量换算', AssistantMode.tools)?.id,
+      'dosage',
+    );
+  });
+
 }
