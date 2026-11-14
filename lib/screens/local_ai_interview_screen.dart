@@ -3389,6 +3389,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           invalidParameterErrors.isNotEmpty;
       if (needsClarification) {
         _pendingDosageArguments = request;
+        debugPrint('[DOSAGE_DIAG] pending set=${request.values}');
         _pendingBaziArguments = null;
         _pendingZiweiArguments = null;
         _pendingMeihuaArguments = null;
@@ -4750,6 +4751,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : _assistantMode.name,
     );
     final traceId = traceContext.traceId;
+    debugPrint('[DOSAGE_DIAG] send text=$text pending=${_pendingDosageArguments?.values}');
 
     final activeTcmTask = _tcmInterviewController;
     if (activeTcmTask?.canAnswer == true) {
@@ -5528,6 +5530,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     if (pendingDosage != null && text.isNotEmpty) {
+      debugPrint('[DOSAGE_DIAG] follow-up entered previous=${pendingDosage.values}');
       final cancelText =
           text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
       final cancelRequested = const {
@@ -5593,6 +5596,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         AssistantToolRouter.dosage,
         text,
       );
+      debugPrint('[DOSAGE_DIAG] follow-up parsed=${followUp.values}');
       final mergedArguments = <String, String>{
         ...pendingDosage.values,
         ...followUp.values,
