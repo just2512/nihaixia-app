@@ -20,9 +20,11 @@ import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
+import '../services/saved_chart_tool_executor.dart';
 import '../services/tcm_interview_conversation_controller.dart';
 import 'assistant_tool_router.dart';
 import '../data/database_helper.dart';
+import '../data/saved_chart_repository.dart';
 import '../data/assistant_conversation_store.dart';
 import '../data/settings_repository.dart';
 import '../models/tcm_interview_task_state.dart';
@@ -169,6 +171,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.initialPrompt,
     this.testToolRouteBuilder,
     this.testHeadlessToolExecutor,
+    this.testSavedChartsLoader,
     this.traceRecorder,
   });
 
@@ -215,6 +218,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   @visibleForTesting
   final FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
       testHeadlessToolExecutor;
+
+  /// Test seam for saved-chart rows; production reads the user's local SQLite database.
+  @visibleForTesting
+  final Future<List<SavedChart>> Function()? testSavedChartsLoader;
 
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
   /// never sent automatically; the user remains responsible for submission.
@@ -306,6 +313,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingZiWuArguments;
   AssistantToolArguments? _pendingDreamArguments;
   AssistantToolArguments? _pendingShoushengDebtArguments;
+  AssistantToolArguments? _pendingSavedChartsArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -434,6 +442,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingZiWuArguments = null;
         _pendingDreamArguments = null;
         _pendingShoushengDebtArguments = null;
+        _pendingSavedChartsArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
