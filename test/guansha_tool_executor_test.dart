@@ -84,4 +84,20 @@ void main() {
     expect(result.values['未执行原因'], contains('未声明'));
     expect(result.sourceIds, isEmpty);
   });
+  test('参数校验区分缺失与歧义出生槽位', () {
+    final missing = GuanshaToolExecutor.validateArguments(const {});
+    expect(missing, hasLength(4));
+    expect(missing.every((error) => error.startsWith('缺少')), isTrue);
+
+    final ambiguous = GuanshaToolExecutor.validateArguments({
+      'birth_date': '2018-05-01',
+      'birth_time': 'AMBIGUOUS_TIME_SELECTION',
+      'gender': 'male',
+      'birthplace': 'AMBIGUOUS_LOCATION_SELECTION',
+    });
+    expect(ambiguous, hasLength(2));
+    expect(ambiguous.any((error) => error.contains('时间存在多个候选')), isTrue);
+    expect(ambiguous.any((error) => error.contains('地点存在多个候选')), isTrue);
+  });
+
 }
