@@ -1001,7 +1001,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 
 - Branch validation run `43563718624` SUCCESS。
 - PR workflow `43563859567` SUCCESS：Flutter regression job `132353274615` 与 Android arm64 verification job `132354564040` 均 SUCCESS。Android job 包含 arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifacts。
-- post-merge master Flutter tests run `43564609205` 和 Flutter Quality Gate run `43564609235` 以 master merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 为目标，目前为 IN_PROGRESS；本审计不将 PR workflow 的 PASS 折算为 master post-merge PASS。
+- post-merge master Flutter tests run `43564609205` 和 Flutter Quality Gate run `43564609235` 均以 master merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 为 head_sha，终态均为 SUCCESS；PR workflow 与 post-merge master CI 分别留档，互不替代。
 
 ### A-G 状态与剩余事项
 
