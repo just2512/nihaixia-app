@@ -31,6 +31,7 @@ import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
 import '../services/yijing_tool_executor.dart';
+import '../services/dosage_conversion_service.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../data/formula_repository.dart';
@@ -282,6 +283,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingHuangdiSijiArguments;
   AssistantToolArguments? _pendingXiaoliurenArguments;
   AssistantToolArguments? _pendingYiJingArguments;
+  AssistantToolArguments? _pendingDosageArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -334,6 +336,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingHuangdiSijiArguments = null;
         _pendingXiaoliurenArguments = null;
         _pendingYiJingArguments = null;
+        _pendingDosageArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2404,6 +2407,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     _pendingToolSelection = false;
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
+    if (tool.id != 'dosage') _pendingDosageArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
@@ -3319,6 +3323,161 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       _pendingYiJingArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
+    if (tool.id == 'dosage' && tool.headlessExecutor != null) {
+      final request = arguments ?? AssistantToolArguments(toolId: 'dosage');
+      final argumentErrors = request.validateAgainst(tool);
+      final missingParameters = <String>[];
+      final invalidParameterErrors = argumentErrors
+          .where((error) =>
+              !error.startsWith('缺少必填参数：') &&
+              !error.startsWith('未声明的参数：'))
+          .toList(growable: false);
+
+      final rawAmount = request['amount']?.trim();
+      final rawUnit = request['unit']?.trim();
+      final rawStandard = request['standard']?.trim();
+      if (rawAmount == null || rawAmount.isEmpty) {
+        missingParameters.add('待换算数量');
+      } else {
+        final amount = double.tryParse(rawAmount);
+        if (amount == null || !amount.isFinite || amount <= 0) {
+          invalidParameterErrors.add('数量必须是有限且大于零的数字');
+        }
+      }
+      if (rawUnit == null || rawUnit.isEmpty) {
+        missingParameters.add('原始单位');
+      } else if (!DosageConversionService.isKnownUnit(rawUnit)) {
+        invalidParameterErrors.add('原始单位不在 App 当前支持范围内');
+      } else if (DosageConversionService.needsWeightStandard(rawUnit) &&
+          (rawStandard == null || rawStandard.isEmpty)) {
+        missingParameters.add('重量度量标准（汉制、台制或唐制）');
+      }
+
+      final output = rawAmount != null &&
+              rawUnit != null &&
+              missingParameters.isEmpty &&
+              invalidParameterErrors.isEmpty
+          ? DosageConversionService.convert(
+              amount: rawAmount,
+              unit: rawUnit,
+              standard: rawStandard,
+            )
+          : null;
+      if (rawAmount != null &&
+          rawUnit != null &&
+          missingParameters.isEmpty &&
+          invalidParameterErrors.isEmpty &&
+          output == null) {
+        invalidParameterErrors.add(
+          '所选重量标准不支持该单位，或换算结果超出有效范围',
+        );
+      }
+
+      final needsClarification =
+          argumentErrors.isNotEmpty ||
+          missingParameters.isNotEmpty ||
+          invalidParameterErrors.isNotEmpty;
+      if (needsClarification) {
+        _pendingDosageArguments = request;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
+        _pendingYiJingArguments = null;
+        final suppliedParameters = <String>[
+          if (rawAmount != null && rawAmount.isNotEmpty) '数量：$rawAmount',
+          if (rawUnit != null && rawUnit.isNotEmpty) '单位：$rawUnit',
+          if (rawStandard != null && rawStandard.isNotEmpty)
+            '重量标准：${switch (rawStandard) {
+              'han' => '汉制',
+              'tai' => '台制',
+              'tang' => '唐制',
+              _ => rawStandard,
+            }}',
+        ];
+        final clarification = [
+          '我会在当前对话中调用 App 原有的度量衡换算函数，不需要打开工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          if (rawUnit == null || rawUnit.isEmpty)
+            '请提供原始单位：两、铢、斤、石、钱、升、合、圭、撮、尺或寸。',
+          if (rawAmount == null || rawAmount.isEmpty)
+            '请提供正数数量，例如“1.5”。',
+          if (rawUnit != null &&
+              DosageConversionService.needsWeightStandard(rawUnit) &&
+              (rawStandard == null || rawStandard.isEmpty))
+            '重量换算必须明确选择汉制、台制或唐制；不会默认汉制。',
+          if (rawUnit != null &&
+              !DosageConversionService.needsWeightStandard(rawUnit))
+            '容量和长度换算沿用 App 原页面常数，不需要选择重量标准。',
+          '当前只支持古制单位换算为克、毫升或厘米；不支持反向换算。',
+          '本功能只做单位换算，不分析方剂，不提供处方或个体用药剂量建议。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'DOSAGE_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+
+      _pendingDosageArguments = null;
       await _executeHeadlessTool(
         userText,
         tool,
@@ -4266,6 +4425,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingHuangdiSijiArguments;
     AssistantToolArguments? restoredPendingXiaoliurenArguments;
     AssistantToolArguments? restoredPendingYiJingArguments;
+    AssistantToolArguments? restoredPendingDosageArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4295,6 +4455,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingHuangdiSijiArguments = null;
         restoredPendingXiaoliurenArguments = null;
         restoredPendingYiJingArguments = null;
+        restoredPendingDosageArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4351,6 +4512,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'yijing') {
         restoredPendingYiJingArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'dosage') {
+        restoredPendingDosageArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4499,6 +4666,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHuangdiSijiArguments = restoredPendingHuangdiSijiArguments;
       _pendingXiaoliurenArguments = restoredPendingXiaoliurenArguments;
       _pendingYiJingArguments = restoredPendingYiJingArguments;
+      _pendingDosageArguments = restoredPendingDosageArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
