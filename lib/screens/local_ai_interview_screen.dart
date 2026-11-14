@@ -5504,6 +5504,112 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final pendingDosage = _pendingDosageArguments;
+    if (pendingDosage != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '单位换算参数请用文字补充；本功能只处理数量、单位和重量标准，不读取附件作为换算值。也可以发送“取消换算”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:dosage_attachment_rejected',
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+        errorCode: 'DOSAGE_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+      );
+      return;
+    }
+    if (pendingDosage != null && text.isNotEmpty) {
+      final cancelText =
+          text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消换算',
+        '取消剂量换算',
+        '停止换算',
+        '算了',
+        '先不算',
+        '取消',
+      }.contains(cancelText);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:dosage' : 'tool_follow_up:dosage',
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:dosage' : 'tool_follow_up:dosage',
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次单位换算；尚未执行任何计算。';
+        setState(() {
+          _pendingDosageArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.tools,
+          toolId: 'dosage',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingDosage.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'dosage',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'dosage',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingDosage.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.dosage,
+        mode: AssistantMode.tools,
+        arguments: AssistantToolArguments(
+          toolId: 'dosage',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
     final pendingYiJing = _pendingYiJingArguments;
     if (pendingYiJing != null && (imagePath != null || audioPath != null)) {
       setState(() {
