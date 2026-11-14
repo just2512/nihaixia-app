@@ -4216,6 +4216,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    // A draw is an explicit App action and can run in-chat. Browsing/searching
+    // the sign catalogue remains a Page Tool; do not turn "open the catalogue"
+    // into an unsolicited random draw.
+    final isSanshanDrawRequest = RegExp(
+      r'(?:抽签|摇签|求签|求一签|抽一签|求个签|抽个签|抽一支|抽一根)',
+    ).hasMatch(userText);
+    if (tool.id == 'sanshan_lingqian' &&
+        tool.headlessExecutor != null &&
+        isSanshanDrawRequest) {
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
+      );
+      return;
+    }
+
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
     if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
       await _executeHeadlessTool(
