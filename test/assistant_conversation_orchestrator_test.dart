@@ -1111,6 +1111,49 @@ void main() {
           reason: '六次投掷值必须由 App 生成');
     });
 
+    test('剂量单位换算确定性提取数量、单位和标准，并支持逐轮补参', () {
+      final intent = AssistantConversationOrchestrator.resolve(
+        query: '帮我把1.5两换算成克',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(intent.tool?.id, 'dosage');
+      expect(intent.toolArguments?.values, const {
+        'amount': '1.5',
+        'unit': '两',
+      });
+
+      final standard = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '按汉制',
+      );
+      expect(standard.values, const {'standard': 'han'});
+
+      final amount = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '1.25',
+      );
+      expect(amount.values, const {'amount': '1.25'});
+
+      final unit = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '升',
+      );
+      expect(unit.values, const {'unit': '升'});
+
+      final chineseAmount = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '半两',
+      );
+      expect(chineseAmount.values, const {'amount': '0.5', 'unit': '两'});
+
+      final ambiguous = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '1两和2铢分别换算成克',
+      );
+      expect(ambiguous['amount'], 'AMBIGUOUS_AMOUNT_SELECTION');
+      expect(ambiguous['unit'], 'AMBIGUOUS_UNIT_SELECTION');
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
