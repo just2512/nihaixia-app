@@ -17,6 +17,7 @@ import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
 import 'package:nihaisha_app/services/yijing_tool_executor.dart';
+import 'package:nihaisha_app/services/dosage_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -5068,6 +5069,97 @@ void main() {
     });
     expect(metadata.sourceIds, contains('local-engine:huangdi-siji'));
     expect(metadata.sourceIds, contains('local-data:huangdi-siji-ge'));
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('经方单位换算在助手对话内追问制式、执行并交由 AI 解释', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开经方换算页面'));
+          },
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return DosageToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('把1.5两换算成克');
+    expect(find.textContaining('目前还缺少：度量标准'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty,
+        reason: '确定性参数缺失只做澄清，不调用 E4B');
+    expect(pageOpened, isFalse);
+
+    final pendingConversations = await store.getAssistantConversations();
+    final pendingRows = await store.getAssistantMessages(
+      conversationId: pendingConversations.single['id'] as int,
+    );
+    final pendingMetadata = AssistantMessageMetadata.decode(
+      pendingRows.last['metadata'] as String,
+    );
+    expect(pendingMetadata.toolId, 'dosage');
+    expect(pendingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(pendingMetadata.toolArguments, const {
+      'value': '1.5',
+      'unit': '两',
+    });
+
+    await send('汉制');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'value': '1.5',
+      'unit': '两',
+      'standard': 'han',
+    });
+    expect(find.textContaining('23.438'), findsOneWidget);
+    expect(find.textContaining('仅单位换算；不计算药物处方剂量'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1),
+        reason: '只有 App 计算并通过 sourceIds/arguments 校验后才交给模型解释');
+
+    final conversations = await store.getAssistantConversations();
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultRow = rows.firstWhere(
+      (row) => (row['content'] as String)
+          .startsWith('【经方度量衡单位换算执行结果】'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultRow['metadata'] as String,
+    );
+    expect(metadata.toolId, 'dosage');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'value': '1.5',
+      'unit': '两',
+      'standard': 'han',
+    });
+    expect(metadata.sourceIds, const [
+      DosageToolExecutor.sourceId,
+      DosageToolExecutor.factorsSourceId,
+    ]);
     expect(tester.takeException(), isNull);
   });
 
