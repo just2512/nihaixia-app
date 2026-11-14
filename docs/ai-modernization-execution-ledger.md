@@ -1651,7 +1651,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - PR #148 最终 head `42543f914f3f18cd8c8a011846b5f395cc949656`：Flutter full regression run `43551889499` SUCCESS；Android arm64/Manifest/ABI/Native tests 与 evidence artifacts SUCCESS；分支验证 push run `43551885608` SUCCESS。
 - PR #149 最终 head `26aabe3fc43eb21a943189fea995a82b36465f12`：Flutter full regression job `132320970943` SUCCESS；Android arm64 job `132322096941` SUCCESS，含 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML、两份 Android artifacts 上传；分支验证 push run `43553278374` SUCCESS。
 - PR #149 artifacts：`android-unit-test-reports` id `14097701587`、`android-arm64-ci-debug-abi-evidence` id `14097232618`、`ai-retrieval-golden-snapshot` id `14096004897`。
-- merge SHA `8e44e0c7f6f58249e2adc55fbec1afb37610954f` 的 master Flutter tests run `43554222428`、补充 Flutter tests run `43554273400` 和 Flutter Quality Gate run `43554222553` 在本节生成时为 IN_PROGRESS；Flutter full regression job `132323303067` 正在运行。**不能把 PR CI 的 SUCCESS 折算成 master post-merge PASS。**后续按相同 SHA 复核终态。
+- merge SHA `8e44e0c7f6f58249e2adc55fbec1afb37610954f` 的 master Flutter tests run `43554222428` 仍 IN_PROGRESS（full regression job `132323303067`）；重复触发的 run `43554273400` 已被并发策略 CANCELLED；Flutter Quality Gate run `43554222553` 仍 IN_PROGRESS。**不能把 PR CI 的 SUCCESS 折算成 master post-merge PASS。**后续按相同 SHA 复核有效 run `43554222428` 与 `43554222553` 终态。
 
 ### 35.4 D：当前工具能力分层
 
