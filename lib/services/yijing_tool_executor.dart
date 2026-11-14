@@ -134,12 +134,26 @@ class YiJingToolExecutor {
         break;
     }
 
+    // Number/time/manual modes populate the single main line in
+    // CastResult.moving; only coin mode populates movingLines for multiple
+    // moving lines. Do not read movingTitles/movingTexts for the former:
+    // their getters intentionally describe an empty movingLines list as static.
+    final movingTitles = method == 'coins'
+        ? cast.movingTitles
+        : [cast.movingTitle];
+    final movingTexts = method == 'coins'
+        ? cast.movingTexts
+        : [cast.movingText];
+    final movingPositions = method == 'coins'
+        ? (cast.movingLines.isEmpty ? '无（静卦）' : cast.movingLines.join('、'))
+        : (cast.moving == 0 ? '无（静卦）' : cast.moving.toString());
     final values = <String, String>{
       '起卦方式': cast.method,
       '本卦': '第${cast.primary.seq}卦 ${cast.primary.name}',
       '卦辞': cast.primary.judgement,
-      '动爻': cast.movingTitles.join('、'),
-      '爻辞': cast.movingTexts.join('；'),
+      '动爻': movingTitles.join('、'),
+      '动爻位置（初爻至上爻）': movingPositions,
+      '爻辞': movingTexts.join('；'),
       if (cast.nuclear != null)
         '互卦': '第${cast.nuclear!.seq}卦 ${cast.nuclear!.name}',
       if (cast.nuclear != null) '互卦卦辞': cast.nuclear!.judgement,
