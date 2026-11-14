@@ -4600,8 +4600,8 @@ void main() {
     expect(find.textContaining('23.438 克'), findsOneWidget);
     expect(pageOpened, isFalse);
     expect(service.sentTexts, hasLength(1));
-    expect(service.sentTexts.single, contains('23.438 克'));
-    expect(service.sentTexts.single, contains('不是中药处方'));
+    expect(service.sentTexts.single, contains('按汉制'));
+    expect(service.sentTexts.single, contains('自动总结并解释'));
 
     final conversations = await store.getAssistantConversations();
     final rows = await store.getAssistantMessages(
@@ -4610,6 +4610,10 @@ void main() {
     final resultRow = rows.firstWhere(
       (row) => (row['content'] as String).startsWith('【经方度量衡单位换算结果执行结果】'),
     );
+    expect(resultRow['content'], contains('23.438 克'));
+    expect(resultRow['content'], contains('不是中药处方'));
+    expect(service.restoredTranscripts.last, contains('23.438 克'));
+    expect(service.restoredTranscripts.last, contains('不是中药处方'));
     final metadata = AssistantMessageMetadata.decode(
       resultRow['metadata'] as String,
     );
