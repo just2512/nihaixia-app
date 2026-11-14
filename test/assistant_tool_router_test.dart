@@ -452,4 +452,48 @@ void main() {
     );
   });
 
+  test('易经注册为 Headless，并声明四种起卦方式及回放参数', () {
+    final tool = AssistantToolRouter.yijing;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'method',
+      'first',
+      'second',
+      'upper',
+      'lower',
+      'moving',
+      'at',
+      'coins',
+    ]);
+    expect(tool.parameters.first.isRequired, isTrue);
+    expect(tool.parameters.first.choices, ['number', 'time', 'manual', 'coins']);
+    expect(tool.parameters.skip(1).every((item) => !item.isRequired), isTrue);
+    expect(
+      tool.parameters
+          .where((item) => item.type == AssistantToolParameterType.integer)
+          .map((item) => item.key),
+      ['first', 'second', 'upper', 'lower', 'moving'],
+    );
+    expect(
+      AssistantToolRouter.match('帮我用易经铜钱摇卦', AssistantMode.automatic)?.id,
+      'yijing',
+    );
+    expect(
+      AssistantToolRouter.match('帮我用易经手动选卦', AssistantMode.automatic)?.id,
+      'yijing',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'yijing',
+        values: {
+          'method': 'manual',
+          'upper': '1',
+          'lower': '8',
+          'moving': '0',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
