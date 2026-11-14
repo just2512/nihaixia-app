@@ -882,7 +882,7 @@ void main() {
 
     expect(executedArguments, isNull, reason: '仍未选择八字或紫微');
     expect(service.modelCalls, 0);
-    expect(store.savedMessages.last['content'], contains('请明确选择排盘类型'));
+    expect(store.savedMessages.last['content'] as String, contains('请明确选择排盘类型'));
     waitingMetadata = AssistantMessageMetadata.decode(
       store.savedMessages.last['metadata'] as String,
     );
@@ -969,7 +969,7 @@ void main() {
 
     expect(executorCalled, isFalse);
     expect(service.modelCalls, 0);
-    expect(store.savedMessages.last['content'], contains('已取消本次命盘查询'));
+    expect(store.savedMessages.last['content'] as String, contains('已取消本次命盘查询'));
     final metadata = AssistantMessageMetadata.decode(
       store.savedMessages.last['metadata'] as String,
     );
