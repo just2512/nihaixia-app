@@ -12,8 +12,10 @@ class ZiWuLiuZhuToolExecutor {
     DateTime? now,
   }) {
     final prepared = <String, String>{...arguments};
-    if (prepared.containsKey('at')) return Map.unmodifiable(prepared);
-
+    // The App owns the final device-local timestamp. Never trust a caller or
+    // model-supplied "at"; rebuild it only from explicit user date/time slots
+    // or capture the current device time at the execution boundary.
+    prepared.remove('at');
     final date = prepared['date'];
     final time = prepared['time'];
     if (date != null && time != null) {
