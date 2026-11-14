@@ -1,6 +1,7 @@
 import '../screens/assistant_tool_router.dart';
 import 'solar_term_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
+import 'yijing_tool_executor.dart';
 
 /// A single-turn dispatch decision. The selected UI mode may remain automatic;
 /// [mode] is the effective domain adapter for this turn.
@@ -235,6 +236,77 @@ class AssistantConversationOrchestrator {
       } else if (requestsDuoneng != requestsCommon) {
         values['rule'] = requestsDuoneng ? 'duoneng' : 'common';
       }
+    } else if (tool.id == 'yijing') {
+      final methods = <String>[];
+      if (RegExp(r'(铜钱摇卦|摇铜钱|铜钱起卦)').hasMatch(query)) {
+        methods.add('coins');
+      }
+      if (RegExp(r'(手动选卦|手动起卦|手动指定上下卦|静卦|动爻)').hasMatch(query) ||
+          RegExp(r'(?:上卦|下卦)\s*(?:是|为)?\s*[：:]?\s*(?:乾|兑|離|离|震|巽|坎|艮|坤|[1-8])').hasMatch(query)) {
+        methods.add('manual');
+      }
+      if (RegExp(r'(按当前时间.{0,6}起卦|当前时间起卦|按现在(?:的)?时间起卦|按当前时刻起卦|现在起卦|此刻起卦)').hasMatch(query)) {
+        methods.add('time');
+      }
+      final numberPair = RegExp(
+        r'(?:用|数字)?\s*(\d+)\s*(?:和|与|、|，|,)\s*(\d+)',
+      ).firstMatch(query);
+      if (query.contains('数字起卦') || query.contains('用数字') ||
+          RegExp(r'(第一数|第二数|上卦数|下卦数)').hasMatch(query) ||
+          numberPair != null) {
+        methods.add('number');
+      }
+      final uniqueMethods = methods.toSet().toList(growable: false);
+      if (uniqueMethods.length == 1) {
+        values['method'] = uniqueMethods.single;
+      } else if (uniqueMethods.length > 1) {
+        values['method'] = 'AMBIGUOUS_METHOD_SELECTION';
+      }
+
+      if (uniqueMethods.contains('number')) {
+        final first = RegExp(
+          r'(?:第一数|上卦数)\s*(?:是|为)?\s*[：:]?\s*(\d+)',
+        ).firstMatch(query);
+        final second = RegExp(
+          r'(?:第二数|下卦数)\s*(?:是|为)?\s*[：:]?\s*(\d+)',
+        ).firstMatch(query);
+        if (first != null) {
+          values['first'] = first.group(1)!;
+        }
+        if (second != null) {
+          values['second'] = second.group(1)!;
+        }
+        if ((first == null || second == null) && numberPair != null) {
+          values['first'] ??= numberPair.group(1)!;
+          values['second'] ??= numberPair.group(2)!;
+        }
+      } else if (uniqueMethods.contains('manual')) {
+        String? trigramValue(RegExp expression) {
+          final match = expression.firstMatch(query);
+          if (match == null) return null;
+          final raw = match.group(1)!;
+          return YiJingToolExecutor.trigramNumbers[raw]?.toString() ?? raw;
+        }
+
+        final upper = trigramValue(RegExp(
+          r'上卦\s*(?:是|为)?\s*[：:]?\s*(乾|兑|離|离|震|巽|坎|艮|坤|[1-8])',
+        ));
+        final lower = trigramValue(RegExp(
+          r'下卦\s*(?:是|为)?\s*[：:]?\s*(乾|兑|離|离|震|巽|坎|艮|坤|[1-8])',
+        ));
+        if (upper != null) values['upper'] = upper;
+        if (lower != null) values['lower'] = lower;
+        if (query.contains('静卦') || query.contains('六爻皆静')) {
+          values['moving'] = '0';
+        } else {
+          final moving = RegExp(
+            r'(?:动爻\s*[：:]?\s*|第\s*)([0-6])\s*爻?(?:动)?',
+          ).firstMatch(query);
+          if (moving != null) values['moving'] = moving.group(1)!;
+        }
+      }
+      // For time and coin modes, only the App injects the actual local clock
+      // or six random outcomes at the execution boundary.
     } else if (tool.id == 'chenggu') {
       final isoDate = RegExp(
         r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b',

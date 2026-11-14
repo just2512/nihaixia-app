@@ -30,6 +30,7 @@ import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
+import '../services/yijing_tool_executor.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../data/formula_repository.dart';
@@ -280,6 +281,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingChengguArguments;
   AssistantToolArguments? _pendingHuangdiSijiArguments;
   AssistantToolArguments? _pendingXiaoliurenArguments;
+  AssistantToolArguments? _pendingYiJingArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -331,6 +333,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingChengguArguments = null;
         _pendingHuangdiSijiArguments = null;
         _pendingXiaoliurenArguments = null;
+        _pendingYiJingArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2400,6 +2403,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     _pendingToolSelection = false;
+    if (tool.id != 'yijing') _pendingYiJingArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
@@ -3169,6 +3173,152 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       _pendingXiaoliurenArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
+    if (tool.id == 'yijing' && tool.headlessExecutor != null) {
+      var request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      final method = request['method'];
+      // Device time and random coin outcomes are generated only by the App,
+      // after the user explicitly selects one of these methods.
+      if (method == 'time' || method == 'coins') {
+        request = AssistantToolArguments(
+          toolId: 'yijing',
+          values: YiJingToolExecutor.prepareExecutionArguments(request.values),
+        );
+      }
+      final argumentErrors = request.validateAgainst(tool);
+      final missingParameters = <String>[];
+      if (method == null || method.isEmpty || method == 'AMBIGUOUS_METHOD_SELECTION') {
+        missingParameters.add('起卦方式');
+      } else if (method == 'number') {
+        if (request['first']?.trim().isNotEmpty != true) {
+          missingParameters.add('第一数');
+        }
+        if (request['second']?.trim().isNotEmpty != true) {
+          missingParameters.add('第二数');
+        }
+      } else if (method == 'manual') {
+        if (request['upper']?.trim().isNotEmpty != true) {
+          missingParameters.add('上卦');
+        }
+        if (request['lower']?.trim().isNotEmpty != true) {
+          missingParameters.add('下卦');
+        }
+        if (request['moving']?.trim().isNotEmpty != true) {
+          missingParameters.add('动爻（或明确说明静卦）');
+        }
+      }
+      final needsClarification =
+          argumentErrors.isNotEmpty || missingParameters.isNotEmpty;
+      if (needsClarification) {
+        _pendingYiJingArguments = request;
+        _pendingXiaoliurenArguments = null;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
+        final methodLabel = switch (method) {
+          'number' => '数字起卦',
+          'time' => '当前时间起卦',
+          'manual' => '手动选卦',
+          'coins' => '铜钱摇卦',
+          _ => null,
+        };
+        final suppliedParameters = <String>[
+          if (methodLabel != null) '起卦方式：$methodLabel',
+          if (method == 'number' && request['first'] != null)
+            '第一数：${request['first']}',
+          if (method == 'number' && request['second'] != null)
+            '第二数：${request['second']}',
+          if (method == 'manual' && request['upper'] != null)
+            '上卦先天数：${request['upper']}',
+          if (method == 'manual' && request['lower'] != null)
+            '下卦先天数：${request['lower']}',
+          if (method == 'manual' && request['moving'] != null)
+            '动爻：${request['moving']}',
+        ];
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final clarification = [
+          '我会在当前对话中调用 App 原有易经引擎，不需要打开工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (method == null || method == 'AMBIGUOUS_METHOD_SELECTION')
+            '请明确选择一种方式：数字起卦、按当前时间起卦、手动选卦或铜钱摇卦；一次只执行一种方式。',
+          if (method == 'number')
+            '数字起卦需要两个非负整数，可以分两轮补充，例如“第一数：3”“第二数：7”。',
+          if (method == 'time')
+            '按当前时间起卦会由 App 读取本机当前本地日期和时间，并把实际时刻写入结果与历史。',
+          if (method == 'manual')
+            '手动选卦需要上卦、下卦（先天数 1–8 或乾、兑、离、震、巽、坎、艮、坤）以及动爻 0–6；静卦请明确说“静卦”。',
+          if (method == 'coins')
+            '铜钱摇卦的六次投掷由 App 随机生成并保存真实六爻值；AI 不生成随机结果，历史回放使用同一组投掷值。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          '易经结果属于传统文化学习参考，不是科学预测或确定性结论，不用于医疗、法律或投资决策。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'YIJING_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingYiJingArguments = null;
       await _executeHeadlessTool(
         userText,
         tool,
@@ -4115,6 +4265,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingChengguArguments;
     AssistantToolArguments? restoredPendingHuangdiSijiArguments;
     AssistantToolArguments? restoredPendingXiaoliurenArguments;
+    AssistantToolArguments? restoredPendingYiJingArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4143,6 +4294,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingChengguArguments = null;
         restoredPendingHuangdiSijiArguments = null;
         restoredPendingXiaoliurenArguments = null;
+        restoredPendingYiJingArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4193,6 +4345,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'xiaoliuren') {
         restoredPendingXiaoliurenArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'yijing') {
+        restoredPendingYiJingArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4340,6 +4498,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingChengguArguments = restoredPendingChengguArguments;
       _pendingHuangdiSijiArguments = restoredPendingHuangdiSijiArguments;
       _pendingXiaoliurenArguments = restoredPendingXiaoliurenArguments;
+      _pendingYiJingArguments = restoredPendingYiJingArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5170,6 +5329,113 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
         arguments: AssistantToolArguments(
           toolId: 'xiaoliuren',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
+    final pendingYiJing = _pendingYiJingArguments;
+    if (pendingYiJing != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '易经起卦参数请用文字补充；铜钱摇卦由 App 自动投掷，无需上传结果。也可以发送“取消易经起卦”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:yijing_attachment_rejected',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'yijing',
+        errorCode: 'YIJING_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'yijing',
+      );
+      return;
+    }
+    if (pendingYiJing != null && text.isNotEmpty) {
+      final cancelText =
+          text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消易经',
+        '取消易经起卦',
+        '取消起卦',
+        '停止起卦',
+        '算了',
+        '先不算',
+        '取消',
+      }.contains(cancelText);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:yijing' : 'tool_follow_up:yijing',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'yijing',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:yijing' : 'tool_follow_up:yijing',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'yijing',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次易经起卦；尚未执行任何计算。';
+        setState(() {
+          _pendingYiJingArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.metaphysics,
+          toolId: 'yijing',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingYiJing.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'yijing',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'yijing',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.yijing,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingYiJing.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.yijing,
+        mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
+        arguments: AssistantToolArguments(
+          toolId: 'yijing',
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,

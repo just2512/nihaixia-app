@@ -503,9 +503,9 @@ void main() {
 
       expect(decision.needsClarification, isTrue);
       expect(
-        decision.candidateTools,
-        isEmpty,
-        reason: '易经仍是 Page-only；混合候选集不能交给 E4B 任意选择',
+        decision.candidateTools.map((tool) => tool.id),
+        ['yijing', 'xiaoliuren', 'meihua'],
+        reason: '三种起卦能力均已具备 Headless 执行器，受约束候选可交给 E4B 选择',
       );
     });
 
@@ -1041,6 +1041,74 @@ void main() {
         lunar.validateAgainst(AssistantToolRouter.huangdiSiji),
         isNotEmpty,
       );
+    });
+
+    test('易经在对话中识别四种明确起卦方式并逐轮提取参数', () {
+      final numberIntent = AssistantConversationOrchestrator.resolve(
+        query: '帮我用易经数字起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(numberIntent.tool?.id, 'yijing');
+      expect(numberIntent.toolArguments?['method'], 'number');
+      expect(numberIntent.toolArguments?['first'], isNull);
+      expect(numberIntent.toolArguments?['second'], isNull);
+
+      final first = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.yijing,
+        '第一数：3',
+      );
+      expect(first.values, const {'method': 'number', 'first': '3'});
+      final second = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.yijing,
+        '第二数：7',
+      );
+      expect(second.values, const {'method': 'number', 'second': '7'});
+
+      final pair = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.yijing,
+        '用 3 和 7 起卦',
+      );
+      expect(pair.values, const {
+        'method': 'number',
+        'first': '3',
+        'second': '7',
+      });
+
+      final timeIntent = AssistantConversationOrchestrator.resolve(
+        query: '帮我按当前时间用易经起卦',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(timeIntent.tool?.id, 'yijing');
+      expect(timeIntent.toolArguments?.values, const {'method': 'time'});
+      expect(timeIntent.toolArguments?.values.containsKey('at'), isFalse,
+          reason: '实际本地时刻只能由 App 在执行边界注入');
+
+      final manual = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.yijing,
+        '手动选卦，上卦乾，下卦坤，静卦',
+      );
+      expect(manual.values, const {
+        'method': 'manual',
+        'upper': '1',
+        'lower': '8',
+        'moving': '0',
+      });
+      final manualFollowUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.yijing,
+        '动爻：六',
+      );
+      expect(manualFollowUp['method'], 'manual');
+      expect(manualFollowUp['moving'], isNull,
+          reason: '不把中文数字或不明确的爻位猜测为数字');
+
+      final coinsIntent = AssistantConversationOrchestrator.resolve(
+        query: '帮我用易经铜钱摇卦',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(coinsIntent.tool?.id, 'yijing');
+      expect(coinsIntent.toolArguments?['method'], 'coins');
+      expect(coinsIntent.toolArguments?.values.containsKey('coins'), isFalse,
+          reason: '六次投掷值必须由 App 生成');
     });
 
     test('学习语境优先于症状关键词', () {

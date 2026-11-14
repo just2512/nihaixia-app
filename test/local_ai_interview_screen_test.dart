@@ -16,6 +16,7 @@ import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
+import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -4515,6 +4516,209 @@ void main() {
       'local-engine:xiaoliuren',
       'local-data:xiaoliuren-rule-data',
     ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('易经数字起卦在对话中分轮追问、执行并持久化来源', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开易经页面'));
+          },
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return YiJingToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我用易经数字起卦');
+    expect(find.textContaining('目前还缺少：第一数、第二数'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty);
+    expect(pageOpened, isFalse);
+
+    await send('第一数：3');
+    expect(find.textContaining('目前还缺少：第二数'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+
+    final conversationsBeforeExecution = await store.getAssistantConversations();
+    final pendingRows = await store.getAssistantMessages(
+      conversationId: conversationsBeforeExecution.single['id'] as int,
+    );
+    final pendingMetadata = AssistantMessageMetadata.decode(
+      pendingRows.last['metadata'] as String,
+    );
+    expect(pendingMetadata.toolId, 'yijing');
+    expect(pendingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(pendingMetadata.toolArguments, const {
+      'method': 'number',
+      'first': '3',
+    });
+
+    await send('第二数：7');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'method': 'number',
+      'first': '3',
+      'second': '7',
+    });
+    expect(find.textContaining('【易经起卦执行结果】'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('易经起卦'));
+
+    final conversations = await store.getAssistantConversations();
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultRow = rows.firstWhere(
+      (row) => (row['content'] as String).contains('【易经起卦执行结果】'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultRow['metadata'] as String,
+    );
+    expect(metadata.toolId, 'yijing');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'method': 'number',
+      'first': '3',
+      'second': '7',
+    });
+    expect(metadata.sourceIds, const [
+      'local-engine:yijing',
+      'local-data:yijing-hexagrams',
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('易经手动选卦支持分轮补充上下卦和静卦参数', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return YiJingToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我用易经手动选卦');
+    expect(find.textContaining('目前还缺少：上卦、下卦、动爻'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+
+    await send('上卦乾');
+    expect(find.textContaining('目前还缺少：下卦、动爻'), findsOneWidget);
+    await send('下卦坤，静卦');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'method': 'manual',
+      'upper': '1',
+      'lower': '8',
+      'moving': '0',
+    });
+    expect(find.textContaining('【易经起卦执行结果】'), findsOneWidget);
+    expect(service.sentTexts, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('易经当前时间和铜钱模式只使用 App 注入并保存实际执行值',
+      (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return YiJingToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我按当前时间用易经起卦');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.first['method'], 'time');
+    final actualAt = DateTime.tryParse(executedArguments.first['at'] ?? '');
+    expect(actualAt, isNotNull);
+    expect(actualAt!.toIso8601String(), executedArguments.first['at']);
+
+    await send('帮我用易经铜钱摇卦');
+    expect(executedArguments, hasLength(2));
+    expect(executedArguments.last['method'], 'coins');
+    final coinValues = executedArguments.last['coins']!
+        .split(',')
+        .map(int.parse)
+        .toList(growable: false);
+    expect(coinValues, hasLength(6));
+    expect(coinValues.every(const {6, 7, 8, 9}.contains), isTrue);
+    expect(service.sentTexts, hasLength(2));
+
+    final conversations = await store.getAssistantConversations();
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final persistedToolRows = rows.where((row) {
+      final metadata = AssistantMessageMetadata.decode(row['metadata'] as String? ?? '');
+      return metadata.toolId == 'yijing' &&
+          metadata.toolStatus == 'SUCCEEDED' &&
+          (row['content'] as String).startsWith('【易经起卦执行结果】');
+    }).toList(growable: false);
+    expect(persistedToolRows, hasLength(2));
+    final timeMetadata = AssistantMessageMetadata.decode(
+      persistedToolRows.first['metadata'] as String,
+    );
+    final coinsMetadata = AssistantMessageMetadata.decode(
+      persistedToolRows.last['metadata'] as String,
+    );
+    expect(timeMetadata.toolArguments['at'], executedArguments.first['at']);
+    expect(coinsMetadata.toolArguments['coins'], executedArguments.last['coins']);
     expect(tester.takeException(), isNull);
   });
 
