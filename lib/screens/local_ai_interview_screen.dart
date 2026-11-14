@@ -2664,12 +2664,192 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (tool.id != 'ziwu_liuzhu') _pendingZiWuArguments = null;
     if (tool.id != 'dream') _pendingDreamArguments = null;
     if (tool.id != 'shousheng_debt') _pendingShoushengDebtArguments = null;
+    if (tool.id != 'saved_charts') _pendingSavedChartsArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
+    if (tool.id == 'saved_charts' && tool.headlessExecutor != null) {
+      final currentArguments = arguments ??
+          AssistantConversationOrchestrator.argumentsFor(tool, userText);
+      final mergedValues = <String, String>{
+        ...?_pendingSavedChartsArguments?.values,
+        ...currentArguments.values,
+      };
+      final charts = await (widget.testSavedChartsLoader ??
+          SavedChartToolExecutor.loadSavedCharts)();
+      final selectedId = SavedChartToolExecutor.resolveRecordId(
+        userText,
+        charts,
+        pendingArguments: mergedValues,
+      );
+      final mentionsBazi = RegExp(r'八字|四柱|子平').hasMatch(userText);
+      final mentionsZiwei = RegExp(r'紫微|斗数').hasMatch(userText);
+      final chartType = mentionsBazi && mentionsZiwei
+          ? null
+          : SavedChartToolExecutor.resolveChartType(
+              userText,
+              pendingChartType: mergedValues['chart_type'],
+            );
+      final selectedCharts = selectedId == null
+          ? const <SavedChart>[]
+          : charts.where((chart) => chart.id == selectedId).toList();
+      final selectedChart =
+          selectedCharts.length == 1 ? selectedCharts.single : null;
+
+      if (charts.isEmpty) {
+        _pendingSavedChartsArguments = null;
+        const reply =
+            '当前命盘库没有已保存的命盘记录。可以先在八字或紫微排盘页计算后选择“添加到命盘库”。';
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: reply,
+          mode: activeMode,
+          toolId: 'saved_charts',
+          toolStatus: AssistantToolExecutionStatus.noResult.name.toUpperCase(),
+          toolArguments: mergedValues,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.succeeded,
+          toolId: 'saved_charts',
+          errorCode: 'SAVED_CHART_LIBRARY_EMPTY',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: 'saved_charts',
+          errorCode: 'NO_SAVED_CHARTS',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'saved_charts',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'saved_charts',
+        );
+        _scrollToBottom();
+        return;
+      }
+
+      if (selectedChart == null || chartType == null) {
+        final pendingValues = <String, String>{
+          if (selectedChart != null) 'saved_chart_id': selectedChart.id.toString(),
+          if (chartType != null) 'chart_type': chartType,
+        };
+        final request = AssistantToolArguments(
+          toolId: 'saved_charts',
+          values: Map<String, String>.unmodifiable(pendingValues),
+        );
+        _pendingSavedChartsArguments = request;
+        final selectedLine = selectedChart == null
+            ? SavedChartToolExecutor.formatSavedChartChoices(charts)
+            : '已选中：ID ' + selectedChart.id.toString() + '｜' + selectedChart.name + '。';
+        final clarification = [
+          '我会在当前对话中读取你选择的本地保存记录，并调用 App 原有排盘引擎重新计算；不会把全部个人记录交给模型。',
+          if (selectedChart == null) ...[
+            selectedLine,
+            '请回复记录 ID 或完整记录名称；也可以明确说“最近保存的”。',
+          ],
+          if (selectedChart != null)
+            '请明确选择排盘类型：八字，或紫微斗数。',
+          if (mentionsBazi && mentionsZiwei)
+            '你同时提到八字和紫微，请明确选择其中一种。',
+          '记录选择和排盘类型都明确后，App 才会执行重算。发送“取消命盘查询”可结束本次操作。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: 'saved_charts',
+          errorCode: 'SAVED_CHART_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: 'saved_charts',
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: 'saved_charts',
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'saved_charts',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'saved_charts',
+        );
+        _scrollToBottom();
+        return;
+      }
+
+      final request = AssistantToolArguments(
+        toolId: 'saved_charts',
+        values: Map<String, String>.unmodifiable({
+          'saved_chart_id': selectedChart.id.toString(),
+          'chart_type': chartType,
+        }),
+      );
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingSavedChartsArguments = request;
+        setState(() {
+          _error = '保存命盘参数需要重新确认：' + argumentErrors.join('；');
+        });
+        return;
+      }
+      _pendingSavedChartsArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     if (tool.id == 'guansha' && tool.headlessExecutor != null) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
