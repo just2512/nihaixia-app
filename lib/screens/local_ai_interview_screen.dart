@@ -2422,12 +2422,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 : AssistantMode.consultation);
     if (tool.id == 'ziwu_liuzhu' &&
         tool.headlessExecutor != null) {
-      var request = arguments ?? AssistantToolArguments(toolId: tool.id);
-      request = AssistantToolArguments(
+      // Do not trust a model-proposed timestamp or slot value. Re-extract
+      // only values visible in the user's current text, and carry forward only
+      // the previously persisted AWAITING_PARAMETERS slots.
+      final carriedSlots =
+          _pendingZiWuArguments?.values ?? const <String, String>{};
+      final currentTextSlots = AssistantConversationOrchestrator.argumentsFor(
+        tool,
+        userText,
+      );
+      final request = AssistantToolArguments(
         toolId: 'ziwu_liuzhu',
-        values: ZiWuLiuZhuToolExecutor.prepareExecutionArguments(
-          request.values,
-        ),
+        values: ZiWuLiuZhuToolExecutor.prepareExecutionArguments({
+          ...carriedSlots,
+          ...currentTextSlots.values,
+        }),
       );
       final argumentErrors = request.validateAgainst(tool);
       final businessErrors =
