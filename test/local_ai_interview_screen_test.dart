@@ -1195,7 +1195,8 @@ void main() {
       interpretation.sourceIds,
       contains('local-engine:diagnostic-engine'),
     );
-    expect(interpretation.traceId, isNotEmpty);
+    expect(interpretation.traceId, isNull,
+        reason: 'TRACE 默认关闭时不生成 trace_id');
     expect(tester.takeException(), isNull);
   });
 
@@ -1651,7 +1652,14 @@ void main() {
       isTrue,
     );
     expect(completed.snapshot.answers['dry_throat'], isNull);
-    expect(service.sentTexts, isEmpty);
+    expect(completed.completedDiagnosis, isNotNull);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts.single, contains('不重新辨证'));
+    expect(
+      service.sentContexts.single,
+      contains('当前角色：问诊助手'),
+    );
     expect(tester.takeException(), isNull);
   });
 
