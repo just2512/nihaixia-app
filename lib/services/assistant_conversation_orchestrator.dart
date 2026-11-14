@@ -285,7 +285,7 @@ class AssistantConversationOrchestrator {
           final match = expression.firstMatch(query);
           if (match == null) return null;
           final raw = match.group(1)!;
-          return YiJingToolExecutor.trigramNumbers[raw] ?? raw;
+          return YiJingToolExecutor.trigramNumbers[raw]?.toString() ?? raw;
         }
 
         final upper = trigramValue(RegExp(
