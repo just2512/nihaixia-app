@@ -5099,6 +5099,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('工具助手').last);
+    await tester.pumpAndSettle();
 
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
@@ -5107,7 +5111,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await send('把1.5两换算成克');
+    await send('把桂枝汤里的1.5两换算成克');
     expect(find.textContaining('目前还缺少：度量标准'), findsOneWidget);
     expect(executedArguments, isEmpty);
     expect(service.sentTexts, isEmpty,
@@ -5140,6 +5144,26 @@ void main() {
     expect(pageOpened, isFalse);
     expect(service.sentTexts, hasLength(1),
         reason: '只有 App 计算并通过 sourceIds/arguments 校验后才交给模型解释');
+    expect(service.sentContexts, hasLength(1));
+    expect(
+      service.sentContexts.single,
+      contains('方名：桂枝汤'),
+      reason: '经方换算结果解释应同时引用已命中的本地知识条目',
+    );
+
+    // The same tool-mode conversation must retrieve knowledge on an ordinary
+    // follow-up question, without requiring a new tool invocation.
+    await send('桂枝汤的组成有哪些？');
+    expect(service.sentTexts, hasLength(2));
+    expect(service.sentContexts, hasLength(2));
+    expect(service.sentContexts.last, contains('方名：桂枝汤'));
+
+    // Generic chat in Tools mode must not inject a NO_RESULTS retrieval block.
+    await send('谢谢');
+    expect(service.sentTexts, hasLength(3));
+    expect(service.sentContexts, hasLength(3));
+    expect(service.sentContexts.last, isNot(contains('本轮本地知识库未命中可引用条目')));
+    expect(service.sentContexts.last, isNot(contains('App方剂库')));
 
     final conversations = await store.getAssistantConversations();
     final rows = await store.getAssistantMessages(
