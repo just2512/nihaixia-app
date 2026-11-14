@@ -882,7 +882,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - PR #144：Flutter regression 与 Android arm64/Native CI run `43458542859` SUCCESS；push workflow `43458531935` SUCCESS。PR workflow 中 Branch validation 为 SKIPPED，不计 PASS。
 - PR #145：Flutter regression 与 Android arm64/Native CI run `43543965618` SUCCESS；最终 head 对应 push workflow `43543961251` SUCCESS。
 - PR #146：最终 head 独立 Branch validation run `43547647496` SUCCESS；PR full run `43547653711` SUCCESS，其中 Flutter regression job `132302637020` 和 Android arm64/Native job `132303970143` 均 SUCCESS。后者完成 APK ABI 构建、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifact 上传。
-- merge SHA `67bb3597` 的 post-merge Flutter tests run `43548507345` 与 Flutter Quality Gate run `43548507387` 在本报告生成时为 QUEUED；因此主线 post-merge CI 暂记 IN_PROGRESS，后续必须复核两条 run 终态，不能以 PR CI 代替。
+- merge SHA `67bb3597e9abb411627545a8e2a3b25105633c52` 的 post-merge Flutter tests run `43548507345` 与 Flutter Quality Gate run `43548507387` 均为 SUCCESS；两条 run 的 head_sha 都与该 merge SHA 一致。
 
 ### 30.3 D：当前确定性能力数量
 
