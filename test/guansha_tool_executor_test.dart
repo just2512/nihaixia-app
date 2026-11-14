@@ -42,7 +42,7 @@ void main() {
       'birth_date': '1990-02-30',
     });
     expect(invalidDate.status, AssistantToolExecutionStatus.failed);
-    expect(invalidDate.values['未执行原因'], contains('出生日期'));
+    expect(invalidDate.values['未执行原因'], contains('出生公历日期'));
 
     final invalidTime = await GuanshaToolExecutor.execute({
       ...validArguments,
