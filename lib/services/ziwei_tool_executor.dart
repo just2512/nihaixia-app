@@ -144,15 +144,29 @@ class ZiweiToolExecutor {
     if (exact.length == 1) return exact.single;
     if (exact.length > 1) return null;
 
-    final normalizedQuery = _normalizePlaceName(query);
-    final normalized = locations
-        .where((place) => _normalizePlaceName(place.name) == normalizedQuery)
-        .toList();
+    final normalizedQuery = _normalizeLocationQuery(query);
+    final normalized = locations.where((place) {
+      final candidates = <String>{
+        place.name,
+        place.province,
+        place.city ?? '',
+        '${place.province}${place.name}',
+        '${place.name}${place.province}',
+        '${place.city ?? ''}${place.name}',
+        '${place.province}${place.city ?? ''}${place.name}',
+        '${place.city ?? ''}${place.name}${place.province}',
+      };
+      return candidates
+          .where((candidate) => candidate.isNotEmpty)
+          .map(_normalizeLocationQuery)
+          .contains(normalizedQuery);
+    }).toList();
     return normalized.length == 1 ? normalized.single : null;
   }
 
-  static String _normalizePlaceName(String value) =>
-      value.trim().replaceFirst(RegExp(r'(市|地区|州|省|县|区)$'), '');
+  static String _normalizeLocationQuery(String value) => value
+      .trim()
+      .replaceAll(RegExp(r'[\\s,，、·（）()]'), '');
 
   static AssistantToolResult _failure(
     Map<String, String> arguments,
