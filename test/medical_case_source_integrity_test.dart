@@ -18,4 +18,27 @@ void main() {
     expect(cases.map((item) => item.seq).toSet(), hasLength(cases.length));
     expect(cases.any((item) => item.seq == 1), isFalse);
   });
+  test('医案列表与详情共用的资产加载入口必须注入真实来源账本', () async {
+    final cases = await loadMedicalCasesFromAssets();
+    expect(cases, hasLength(1256));
+
+    final firstSourceVerified = cases.firstWhere((item) => item.seq == 2);
+    expect(firstSourceVerified.sourceLedger.sourceStatus, 'VERIFIED');
+    expect(
+      firstSourceVerified.sourceLedger.status,
+      'MISSING',
+      reason: '网页原文核验不能自动升级为纸本版本、卷次和页码核验',
+    );
+
+    final missingSource = cases.firstWhere((item) => item.seq == 11);
+    expect(missingSource.sourceLedger.sourceStatus, 'MISSING');
+    expect(missingSource.sourceLedger.status, 'MISSING');
+
+    expect(
+      cases.every((item) => item.sourceLedger.status == 'MISSING'),
+      isTrue,
+      reason: '当前来源账本中没有任何记录完成纸本/影印本卷页核验',
+    );
+  });
+
 }
