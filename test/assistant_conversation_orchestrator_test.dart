@@ -1277,4 +1277,63 @@ void main() {
         reason: '只分享梦境不等于请求启动解梦工具');
   });
 
+
+  test('受生债只提取有明确证据的公历日期、钟表时间和查询体系', () {
+    final tool = AssistantToolRouter.shoushengDebt;
+    final missing = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '查询受生债',
+    );
+    expect(missing.values, isEmpty);
+    expect(missing.validateAgainst(tool), isNotEmpty);
+
+    final complete = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '查询受生债，公历出生日期1990年1月2日，出生时间晚上8点半，选择禄库受生经',
+    );
+    expect(complete.values, const {
+      'method': 'luku',
+      'birth_date': '1990-01-02',
+      'birth_time': '20:30',
+    });
+    expect(complete.validateAgainst(tool), isEmpty);
+
+    final fiveDou = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '出生日期：1990-01-02；出生时间：08:30；五斗金章',
+    );
+    expect(fiveDou.values['method'], 'wudou');
+    expect(fiveDou.values['birth_date'], '1990-01-02');
+    expect(fiveDou.values['birth_time'], '08:30');
+    expect(fiveDou.validateAgainst(tool), isEmpty);
+
+    final lunar = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '农历1990年正月初二，早上8点，禄库受生经',
+    );
+    expect(lunar['birth_date'], 'LUNAR_DATE_NOT_SUPPORTED');
+    expect(lunar.validateAgainst(tool), isNotEmpty);
+
+    final ambiguousMethod = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '1990-01-02 08:30，查禄库和五斗两种',
+    );
+    expect(ambiguousMethod['method'], 'AMBIGUOUS_METHOD_SELECTION');
+    expect(ambiguousMethod.validateAgainst(tool), isNotEmpty);
+
+    final ambiguousDate = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '1990-01-02和1991-02-03，08:30，禄库受生经',
+    );
+    expect(ambiguousDate['birth_date'], 'AMBIGUOUS_DATE_SELECTION');
+    expect(ambiguousDate.validateAgainst(tool), isNotEmpty);
+
+    final ambiguousTime = AssistantConversationOrchestrator.argumentsFor(
+      tool,
+      '1990-01-02，08:30和09:30，禄库受生经',
+    );
+    expect(ambiguousTime['birth_time'], 'AMBIGUOUS_TIME_SELECTION');
+    expect(ambiguousTime.validateAgainst(tool), isNotEmpty);
+  });
+
 }
