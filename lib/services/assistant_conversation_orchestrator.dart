@@ -494,6 +494,10 @@ class AssistantConversationOrchestrator {
               minute.toString().padLeft(2, '0');
         }
       }
+    } else if (tool.id == 'guansha') {
+      // Guansha uses the same explicit birth-slot grammar as Bazi; reuse the
+      // deterministic parser without invoking E4B or converting lunar dates.
+      values.addAll(argumentsFor(AssistantToolRouter.bazi, query).values);
     } else if (tool.id == 'bazi') {
 
       final isoDate =
