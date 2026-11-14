@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
-import 'package:flutter/services.dart';
 
 import '../data/database_helper.dart';
 import '../data/formula_repository.dart';
@@ -67,9 +66,7 @@ class _MedicalCaseLibraryScreenState extends State<MedicalCaseLibraryScreen> {
     // 被首次访问并永久缓存为 []，将导致治法栏 freqF 错算、filter 0 结果）。
     await FormulaRepository.load();
     await HerbRepository.load();
-    final md =
-        await rootBundle.loadString('assets/medical_cases/cases_table.md');
-    _all = parseMedicalCaseTable(md);
+    _all = await loadMedicalCasesFromAssets();
     _years = _computeYears(_all);
     // 同步累计治法(方剂名)/疾病(西医病名)分类频次：访问 c.formulaNames /
     // c.diseaseNames 同时填充全局 memo 缓存（保证详情秒开），并让
