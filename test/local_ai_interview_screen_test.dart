@@ -4538,6 +4538,7 @@ void main() {
             return const Scaffold(body: Text('不应打开剂量换算页面'));
           },
           testHeadlessToolExecutor: (arguments) async {
+            debugPrint('[DOSAGE_TEST_CALLBACK] invoked args=$arguments');
             executedArguments.add(Map<String, String>.unmodifiable(arguments));
             return DosageToolExecutor.execute(arguments);
           },
