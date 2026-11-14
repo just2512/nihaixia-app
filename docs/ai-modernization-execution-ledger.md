@@ -1943,3 +1943,41 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - AI 是交互与理解中枢，不是规则和计算引擎；确定性业务继续由 App 原有代码执行。
 - 未经真实业务执行、参数/结果校验且没有可靠来源 ID 的内容，不作为业务事实交给 AI。
 - AI 的总结/推断不得覆盖业务结果或包装成医学诊断；不重复审核已审核知识库，不降低安全门禁和验收标准。
+
+
+## 42. 2026-11-14 PR #164/#165/#166 合并收敛
+
+### 42.1 主线与集成记录
+
+- 当前主线：`master @ f05751dfc3c5548769c02ad3eaf066bda720dd9e`。
+- PR #164：同步 PR #163 的审计报告、能力清单与执行台账，squash merge `9f549b44b1f71b4b6edef67f4231453e6daa2e91`；仅文档变更。
+- PR #165：`feat(ai): run shousheng debt lookup in assistant conversation`，head `504b1f750cb8ea661af23ded54fcc2ca110059b4`，squash merge `d15478a0c716c2ba4ade9becbc84299facd3dee7`。
+- PR #166：`feat(ai): run sanshan lingqian draws in assistant chat`，head `2b3ef924a23ae737bbb6438018766cee865085a7`，squash merge `f05751dfc3c5548769c02ad3eaf066bda720dd9e`。
+- 规范性文件 `docs/ai-capability-audit.md` 保持不变。
+
+### 42.2 PR #165：受生债对话内执行
+
+- 新增执行器复用 App 既有八字排盘、受生债计算与本地禄库/五斗数据；没有另建排盘或债额计算逻辑。
+- 必需参数为公历出生日期、当地钟表时间和明确查询体系 `luku/wudou`。任何缺项或体系未选择时都留在助手对话追问，不使用页面默认体系/日期/时间，不让模型替用户作选择。
+- 成功结果保留真实计算字段和本地来源，经过工具 ID、输入参数、执行状态、结果结构及 sourceIds 契约校验后才交给 E4B 解释。执行失败/取消不作为成功结果解释。
+- PR 和主线验收：PR run `43603236412` SUCCESS；master Flutter tests `43604662112` 与 Quality Gate `43604662115` 在 merge SHA `d15478a0c716c2ba4ade9becbc84299facd3dee7` 上均 SUCCESS，含 Flutter 全量回归、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、Dart 全量测试及 Find N2 arm64 Debug APK。
+
+### 42.3 PR #166：三山国王灵签对话内执行
+
+- 新增 `SanshanLingqianToolExecutor`，读取既有本地 92 签资料，由 App 选择随机索引并构造结构化结果；原页面与对话使用同一结果映射，不复制签文、不重写资料。
+- 只有“抽签/求签/摇签”等明确抽签意图才进入 Headless 执行；“打开/查阅签谱”仍进入原页面，防止把浏览意图误当作一次抽签。
+- 执行器拒绝任何模型提供的签号或其他参数。成功结果包括签号、签题、签诗、签级、签谱范围及 `local-data:sanshan-lingqian:<signId>`；E4B 只能解释这条实际结果，不能生成/改写签文或签级。
+- 解释提示明确标示民俗文化性质，不是科学预测、事实保证或现实吉凶结论；不补写签谱外断语，不给医疗、法律、投资建议，不鼓励以签文作重大决定。
+- 自动化覆盖本地抽签/数据精确映射/来源 ID/拒绝模型指定签号、路由匹配、对话内结果交接及目录浏览继续 Page-only。
+- 分支验证 run `43605363179` SUCCESS；PR run `43605365431` SUCCESS，最终 head `2b3ef924a23ae737bbb6438018766cee865085a7`。Flutter 全量 regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、JUnit XML 和证据工件上传均成功。
+- 合并后主线 Flutter tests run `43606161767` 与 Quality Gate run `43606161792` 均针对 merge SHA `f05751dfc3c5548769c02ad3eaf066bda720dd9e`；本节初次写入时仍 IN_PROGRESS，待终态后补记。不能以 PR CI 替代 post-merge master CI。
+
+### 42.4 能力盘点与下一阶段边界
+
+- 路由定义共 24 项：23 个常规工具 + 1 个结构化问诊内联控制器。通用 Headless 为 16/23；Page-only 为 7/23。名单见 `docs/ai-capability-inventory.md` 的 §2N。
+- Page-only 保留不是待补任务清单：知识文档入口复用已有学习助手知识检索与解释；医案、经典页面不复制检索器；个人诊断历史/保存排盘只在用户明确选择且授权后使用；玉匣灵兆为易与症状混淆的民俗文本，缺少安全、明确的对话执行契约。没有真实用户场景和确定性输入/结果/来源契约，不创建适配器。
+- 下一阶段优先级不是扩充 Headless 数量，而是完成自由文本问诊生产安全门禁的证据收敛。B 仍 `PARTIAL / RELEASE BLOCKED`：生产 RedFlag detector 医学审核版本/审批记录/阈值例外/处置文案及所有模型入口 fail-closed 证据未齐。不得自行发明规则、不得开放自由文本自动辨证。
+- B 门禁解除后，按用户目标实现对话式问诊：保留用户原始描述及证据 → 结构化理解已提供字段 → 只追问缺失/歧义项 → 用户确认 → 原有规则问诊执行 → 业务结果/来源校验 → AI 解释。不要让 E4B 取代十问/DiagnosticEngine；不要重复审核已医学审核的知识库。
+- Find N2 E4B GPU/CPU、多轮、多媒体、Activity/进程恢复、清除数据后不可恢复及真实 TRACE 仍需真实设备证据；CI 构建与 Native tests 不等于设备验收。
+- C 只补可追溯来源定位，MISSING 保持 MISSING；E 的数据删除/备份行为仍需符合既有清除数据边界。G 维持单一版本来源。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不改变排盘、问诊、剂量或现有民俗计算规则；不降低测试门槛。
