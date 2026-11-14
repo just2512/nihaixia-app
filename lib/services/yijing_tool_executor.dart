@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import '../data/yijing_data.dart';
 import '../engine/yijing_engine.dart';
 import '../models/assistant_tool_result.dart';
 
