@@ -155,7 +155,6 @@ void main() {
     expect(result.validateFor('yunqi'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
     expect(result.sourceIds, ['local-engine:yunqi']);
-    expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
   });
 
   test('每日黄历注册项提供受日期约束的 Headless 执行器', () async {
@@ -171,7 +170,42 @@ void main() {
     expect(result.validateArgumentsMatch(arguments), isEmpty);
     expect(result.values['公历'], '2026-11-12');
     expect(result.sourceIds, ['local-engine:almanac']);
-    expect(AssistantToolRouter.ziwei.headlessExecutor, isNull);
+  });
+
+  test('紫微注册项要求四项出生资料并提供 Headless 执行器', () {
+    final tool = AssistantToolRouter.ziwei;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((parameter) => parameter.key), [
+      'birth_date',
+      'birth_time',
+      'gender',
+      'birthplace',
+    ]);
+    expect(tool.parameters.every((parameter) => parameter.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.time);
+    expect(tool.parameters[2].choices, ['male', 'female']);
+    expect(tool.parameters[3].type, AssistantToolParameterType.text);
+    const valid = AssistantToolArguments(
+      toolId: 'ziwei',
+      values: {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(valid.validateAgainst(tool), isEmpty);
+    final invalidDate = AssistantToolArguments(
+      toolId: 'ziwei',
+      values: {
+        'birth_date': '1990-02-30',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      },
+    );
+    expect(invalidDate.validateAgainst(tool), isNotEmpty);
   });
 
   test('八字注册项要求四项出生参数并提供 Headless 执行器', () {
