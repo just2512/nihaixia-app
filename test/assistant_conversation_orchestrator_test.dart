@@ -866,6 +866,15 @@ void main() {
       expect(learningRole.mode, AssistantMode.learning);
       expect(learningRole.tool?.id, 'solar_terms');
       expect(learningRole.toolArguments?.values, const {'term': '立春'});
+
+      final generic = AssistantConversationOrchestrator.resolve(
+        query: '查询二十四节气养生',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(generic.tool, isNull);
+      expect(generic.needsClarification, isTrue);
+      expect(generic.clarification, contains('明确要查询哪一个节气'));
+      expect(generic.clarification, contains('查询当前节气'));
     });
 
     test('同时提到多个节气时先澄清，不静默选第一个或查询当前节气', () {
