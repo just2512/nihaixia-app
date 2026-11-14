@@ -19,6 +19,7 @@ import '../services/ziwuliuzhu_tool_executor.dart';
 import '../services/dream_tool_executor.dart';
 import '../services/guansha_tool_executor.dart';
 import '../services/shousheng_debt_tool_executor.dart';
+import '../services/sanshan_lingqian_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
