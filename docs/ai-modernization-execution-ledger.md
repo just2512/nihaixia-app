@@ -1720,7 +1720,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 36.5 冻结项
 
-- 不改 `DiagnosticEngine`、`DiagnosticRules)、问诊十问、排盘/剂量/民俗确定性算法。
+- 不改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、排盘/剂量/民俗确定性算法。
 - 不重复审核已经完成医学审核的知识库内容。
 - 红旗 detector 未经医学审核并覆盖所有生产模型入口前，不启用自由文本症状自动辨证；`REVIEW_REQUIRED/UNKNOWN` 不得当作 CLEAR。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page-only 工具。
