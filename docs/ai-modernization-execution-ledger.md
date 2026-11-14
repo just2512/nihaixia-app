@@ -1851,3 +1851,49 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 自动化新增：通过实际资产加载入口断言 1,256 条记录完整保留；内部序号 2 的原文来源为 `VERIFIED` 但纸本定位仍为 `MISSING`；序号 11 的来源保持 `MISSING`；所有记录的纸本定位均继续为 `MISSING`。
 - 变更文件：`lib/data/medical_case_data.dart`、`lib/screens/medical_case_library_screen.dart`、`test/medical_case_source_integrity_test.dart`，以及本台账和 `docs/ai-capability-audit-report.md`。不修改医案正文、来源账本 JSON、医学结论、辨证规则或已审核知识库内容。
 - **状态：自动化验收通过。** 分支验证 run `43585569847` SUCCESS；PR CI run `43585625501` SUCCESS（Flutter 全量回归、Android arm64 Debug APK/Manifest/ABI、Native 单测、JUnit XML 与工件上传）；合并后 master Flutter tests run `43586347265` SUCCESS，master Quality Gate run `43586347314` SUCCESS。此修复只恢复已有 10 条网页原文来源的加载/显示，不代表纸本 locator 缺口关闭；1,256 条纸本/影印本卷页定位仍全部为 `MISSING`，C 仍 PARTIAL。
+
+---
+
+## 40. 2026-11-14 PR #161：已验证工具结果的知识检索与省略追问
+
+### 40.1 基线与集成
+
+- 基线：`master @ a9052504e55bae29fccc980f88dab06836b4e9cb`（PR #161 squash merge）。
+- PR：https://github.com/just2512/nihaixia-app/pull/161；独立分支：`work/ai-tool-result-knowledge-followup-2026-11-14`。
+- PR 最终 head：`b33bff0ba6df94a7ca89e7abd2b1e3f294788e3c`；merge SHA：`a9052504e55bae29fccc980f88dab06836b4e9cb`。
+- 变更文件：`lib/screens/local_ai_interview_screen.dart`、`lib/services/assistant_knowledge_context.dart`、`test/assistant_knowledge_context_test.dart`、`test/local_ai_interview_screen_test.dart`。
+- 规范性约束 `docs/ai-capability-audit.md` 未修改。本次只增强现有对话检索和解释链，不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库或新的医学内容。
+
+### 40.2 实现边界
+
+- 已通过 App 结果契约、且带 `local-engine:*` 来源的工具执行结果，可作为知识检索上下文；结构化问诊结果只接受带 `local-engine:diagnostic-engine` 来源的 typed diagnosis result。
+- 对“那它的禁忌呢？”等省略实体的知识追问，检索 query 只补充有限的最近用户原话和最近一条有来源的 App 结果。上下文最多取最近 3 条用户消息；结果文本最多 1,600 字符。
+- 不使用 AI 自由文本解释作为事实检索锚点；没有可信 App 结果时保留用户当前 query，不从模型输出中反推业务实体。
+- 工具结果后的 TCM 知识检索受确定性意图门禁控制，只对本轮确有中医知识解释线索的请求检索；排除无关医案记录，避免将未完成来源定位的案例当作可靠出处。
+- 工具助手提示优先使用已有 Headless Capability 在当前会话执行；Page-only 能力只有在确实需要页面交互时才导航。已完成计算后的知识追问复用当前结果，不重复执行原工具。
+- 普通寒暄不触发检索；未命中、检索失败、部分命中状态继续显式区分，不把失败伪装为无结果。
+- 未修改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、排盘算法、剂量换算算法、已审核医学知识库内容或其来源账本。
+
+### 40.3 自动化验收
+
+- 分支验证 push run `43595221690`：SUCCESS；head 为 PR 最终 head `b33bff0`。
+- PR workflow run `43595241256`：SUCCESS。Flutter 全量 regression、Android arm64 Debug APK、backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifacts 上传均通过。
+- Android 证据 artifacts：`android-arm64-ci-debug-abi-evidence` id `14114860428`；`android-unit-test-reports` id `14114073681`；检索黄金快照 `ai-retrieval-golden-snapshot` id `14114195696`。
+- PR merge SHA 对应的 master Flutter tests run `43595987567` 与 Flutter Quality Gate run `43595987556` 在本记录写入时仍为 IN_PROGRESS；只有两者在同一 merge SHA 上终态 SUCCESS 后才可更新为 PASS。PR CI 不替代 post-merge master CI。
+
+### 40.4 当前能力分层与未关闭事项
+
+- `AssistantToolRouter` 仍为 24 个定义：23 个常规工具入口 + 1 个确定性问诊控制器内联的 `structured_diagnosis`。
+- 常规工具中 13 项具备 Headless executor：`yunqi / almanac / bazi / xiaoliuren / meihua / chenggu / huangdi_siji / ziwei / solar_terms / yijing / dosage / ziwu_liuzhu / dream`；10 项仍为 Page-only：`guji_library / knowledge_hub / medical_cases / diagnosis_history / critical_illness / yuxiaji_omen / guansha / sanshan_lingqian / shousheng_debt / saved_charts`。`structured_diagnosis` 由原规则问诊控制器执行，不计入通用 Headless 数量。
+- B 红旗安全仍 `PARTIAL / RELEASE BLOCKED`：生产自然语言 detector 的医学审核版本、审核记录、阈值/例外/处置文案及全部 Flutter/Native 模型调用入口前的 fail-closed 证据仍未齐备。不得据此开放自由文本自动症状辨证，也不得自行编造医学规则。
+- 自由文本问诊目标仍是：理解用户原话 → 结构化候选并保留原话 → 只追问必要缺项/待确认项 → 用户确认 → 调用现有 `DiagnosticEngine` → 解释真实、有来源的结果。须先解除 B 的生产安全门禁；本 PR 不改变既有问诊十问或规则。
+- A/E/F 仍需 OPPO Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复，以及完整 TRACE。CI APK/native 测试不等于真机通过。
+- C 仍只补书目 locator、底本版本、卷页/原文身份缺口；已审核医学知识库内容不重复审核。当前医案账本 1,256 条中 10 条网页/原文来源为 VERIFIED、1,246 条来源为 MISSING，纸本/影印本 locator 1,256 条仍全部 MISSING；不得推测或补造卷页。
+- D 剩余 10 个 Page-only 能力逐项审计现有确定性入口、输入/输出、来源、取消/恢复语义。学习助手已可在会话中调用本地知识检索，不能为体现工具数量而重复建设 `knowledge_hub` / `guji_library` 等能力；只有确有独立场景和完整 Headless 契约的单项能力才建立分支。
+
+### 40.5 冻结边界
+
+- AI 负责理解、归纳、缺参追问、调度和解释；所有确定性计算继续由 App 原有代码执行。
+- 未经 App 执行、参数/结果契约校验且无可靠 sourceIds 的内容，不作为业务事实交给 AI。
+- 不允许 AI 推断覆盖规则，不允许把模型归纳包装成医学诊断。
+- 不重复医学审核已审核知识库，不批量迁移 Page-only，不降低安全门禁或测试验收标准。
