@@ -140,12 +140,12 @@ class YiJingToolExecutor {
       '卦辞': cast.primary.judgement,
       '动爻': cast.movingTitles.join('、'),
       '爻辞': cast.movingTexts.join('；'),
-      '互卦': if (cast.nuclear != null)
-        '第${cast.nuclear!.seq}卦 ${cast.nuclear!.name}',
-      '互卦卦辞': if (cast.nuclear != null) cast.nuclear!.judgement,
-      '变卦': if (cast.changed != null)
-        '第${cast.changed!.seq}卦 ${cast.changed!.name}',
-      '变卦卦辞': if (cast.changed != null) cast.changed!.judgement,
+      if (cast.nuclear != null)
+        '互卦': '第${cast.nuclear!.seq}卦 ${cast.nuclear!.name}',
+      if (cast.nuclear != null) '互卦卦辞': cast.nuclear!.judgement,
+      if (cast.changed != null)
+        '变卦': '第${cast.changed!.seq}卦 ${cast.changed!.name}',
+      if (cast.changed != null) '变卦卦辞': cast.changed!.judgement,
       '本卦人事应用资料': cast.primary.renjian,
       if (method == 'time') '实际起卦时刻': arguments['at']!,
       if (method == 'coins')
