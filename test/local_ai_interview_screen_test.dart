@@ -5112,13 +5112,15 @@ void main() {
     }
 
     Future<void> waitForModelCalls(int expected) async {
-      // TCM retrieval loads the bundled classic index asynchronously; wait for
-      // the model call rather than assuming pumpAndSettle waits on that Future.
-      for (var attempt = 0;
-          attempt < 150 && service.sentTexts.length < expected;
-          attempt++) {
-        await tester.pump(const Duration(milliseconds: 20));
-      }
+      // The classic index is loaded through real async I/O. WidgetTester.pump
+      // advances fake time but does not complete that I/O Future.
+      await tester.runAsync(() async {
+        for (var attempt = 0;
+            attempt < 150 && service.sentTexts.length < expected;
+            attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
       await tester.pumpAndSettle();
     }
 
@@ -5238,13 +5240,15 @@ void main() {
     }
 
     Future<void> waitForModelCalls(int expected) async {
-      // TCM retrieval loads the bundled classic index asynchronously; wait for
-      // the model call rather than assuming pumpAndSettle waits on that Future.
-      for (var attempt = 0;
-          attempt < 150 && service.sentTexts.length < expected;
-          attempt++) {
-        await tester.pump(const Duration(milliseconds: 20));
-      }
+      // The classic index is loaded through real async I/O. WidgetTester.pump
+      // advances fake time but does not complete that I/O Future.
+      await tester.runAsync(() async {
+        for (var attempt = 0;
+            attempt < 150 && service.sentTexts.length < expected;
+            attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
       await tester.pumpAndSettle();
     }
 
