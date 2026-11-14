@@ -509,7 +509,7 @@ class AssistantConversationOrchestrator {
         // The deterministic city directory still has to resolve it uniquely.
         final standalonePlace = query.trim();
         if (standalonePlace.length <= 28 &&
-            RegExp(r'(市|区|县|州|省|地区)$').hasMatch(standalonePlace) &&
+            RegExp(r'(市|区|县|州|省|地区)(?:（[^）]+）)?$').hasMatch(standalonePlace) &&
             !standalonePlace.contains('关煞') &&
             !standalonePlace.contains('出生')) {
           values['birthplace'] = standalonePlace;
