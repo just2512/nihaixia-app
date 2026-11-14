@@ -133,7 +133,37 @@ class DosageConversionService {
   static String _format(double value, int precision) =>
       value
           .toStringAsFixed(precision)
-          .replaceAll(RegExp(r'\\.?0+$'), '');
+          .replaceAll(RegExp(r'\.?0+, '');
+}
+
+class DosageConversionOutput {
+  const DosageConversionOutput({
+    required this.quantity,
+    required this.inputUnit,
+    required this.standard,
+    required this.standardLabel,
+    required this.category,
+    required this.convertedValue,
+    required this.targetUnit,
+    required this.formattedNumber,
+    required this.formattedResult,
+    required this.precision,
+    required this.standardAffectsCalculation,
+  });
+
+  final double quantity;
+  final String inputUnit;
+  final String? standard;
+  final String standardLabel;
+  final String category;
+  final double convertedValue;
+  final String targetUnit;
+  final String formattedNumber;
+  final String formattedResult;
+  final int precision;
+  final bool standardAffectsCalculation;
+}
+), '');
 }
 
 class DosageConversionOutput {
