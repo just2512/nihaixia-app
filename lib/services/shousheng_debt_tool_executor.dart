@@ -124,7 +124,7 @@ class ShoushengDebtToolExecutor {
 
   static DateTime? _parseDate(String? raw) {
     if (raw == null) return null;
-    final match = RegExp(r'^(\\d{4})-(\\d{2})-(\\d{2})$').firstMatch(raw);
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(raw);
     if (match == null) return null;
     final year = int.parse(match.group(1)!);
     final month = int.parse(match.group(2)!);
@@ -143,7 +143,7 @@ class ShoushengDebtToolExecutor {
 
   static (int, int)? _parseTime(String? raw) {
     if (raw == null) return null;
-    final match = RegExp(r'^([01]\\d|2[0-3]):([0-5]\\d)$').firstMatch(raw);
+    final match = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(raw);
     if (match == null) return null;
     return (int.parse(match.group(1)!), int.parse(match.group(2)!));
   }
