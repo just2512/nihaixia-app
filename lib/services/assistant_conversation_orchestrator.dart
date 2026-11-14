@@ -503,6 +503,17 @@ class AssistantConversationOrchestrator {
         values['birthplace'] = placeCandidates.single;
       } else if (placeCandidates.length > 1) {
         values['birthplace'] = 'AMBIGUOUS_LOCATION_SELECTION';
+      } else {
+        // A short standalone reply such as “上海市” is a valid follow-up
+        // candidate only when it looks like an administrative place name.
+        // The deterministic city directory still has to resolve it uniquely.
+        final standalonePlace = query.trim();
+        if (standalonePlace.length <= 28 &&
+            RegExp(r'(市|区|县|州|省|地区)$').hasMatch(standalonePlace) &&
+            !standalonePlace.contains('关煞') &&
+            !standalonePlace.contains('出生')) {
+          values['birthplace'] = standalonePlace;
+        }
       }
     } else if (tool.id == 'chenggu') {
       final isoDate = RegExp(
