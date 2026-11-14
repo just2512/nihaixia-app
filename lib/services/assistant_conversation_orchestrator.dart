@@ -1,5 +1,6 @@
 import '../screens/assistant_tool_router.dart';
 import 'solar_term_tool_executor.dart';
+import 'xiaoliuren_tool_executor.dart';
 
 /// A single-turn dispatch decision. The selected UI mode may remain automatic;
 /// [mode] is the effective domain adapter for this turn.
@@ -184,6 +185,32 @@ class AssistantConversationOrchestrator {
           .toList(growable: false);
       if (matches.length == 1) {
         values['term'] = matches.single;
+      }
+    } else if (tool.id == 'xiaoliuren') {
+      final isoDates = RegExp(
+        r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})',
+      ).allMatches(query).toList(growable: false);
+      final chineseDates = RegExp(
+        r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
+      ).allMatches(query).toList(growable: false);
+      final dates = isoDates.isNotEmpty ? isoDates : chineseDates;
+      if (query.contains('农历') || query.contains('阴历')) {
+        values['date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else if (dates.length == 1) {
+        final match = dates.single;
+        values['date'] =
+            '${match.group(1)!.padLeft(4, '0')}-'
+            '${match.group(2)!.padLeft(2, '0')}-'
+            '${match.group(3)!.padLeft(2, '0')}';
+      }
+      final hours = XiaoliurenToolExecutor.hourBranches
+          .where(query.contains)
+          .toList(growable: false);
+      if (hours.length == 1) values['hour'] = hours.single;
+      if (query.contains('多能鄙事')) {
+        values['rule'] = 'duoneng';
+      } else if (query.contains('通行掌诀') || query.contains('通行口径')) {
+        values['rule'] = 'common';
       }
     } else if (tool.id == 'chenggu') {
       final isoDate = RegExp(
@@ -488,6 +515,33 @@ class AssistantConversationOrchestrator {
               : selectedMode,
           clarification:
               '请明确要查询哪一个节气；也可以说“查询当前节气”。目前尚未执行查询。',
+        );
+      }
+    }
+
+    final explicitXiaoliurenTools =
+        AssistantToolRouter.matchAll(text, selectedMode)
+            .where((tool) => tool.id == 'xiaoliuren')
+            .toList(growable: false);
+    if (explicitXiaoliurenTools.length == 1) {
+      final isoDates = RegExp(
+        r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})',
+      ).allMatches(text).toList(growable: false);
+      final chineseDates = RegExp(
+        r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
+      ).allMatches(text).toList(growable: false);
+      final dateCount = isoDates.isNotEmpty ? isoDates.length : chineseDates.length;
+      final hourCount = XiaoliurenToolExecutor.hourBranches
+          .where(text.contains)
+          .length;
+      if (dateCount > 1 || hourCount > 1) {
+        return AssistantDispatchDecision(
+          mode: selectedMode == AssistantMode.automatic
+              ? AssistantMode.metaphysics
+              : selectedMode,
+          clarification: dateCount > 1
+              ? '你提供了多个公历日期，请明确本次起课使用哪一天；尚未执行。'
+              : '你提到了多个时辰，请明确选择一个时辰；尚未执行。',
         );
       }
     }
