@@ -7054,6 +7054,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
+      _pendingDreamArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
@@ -9922,6 +9923,7 @@ class _AssistantToolRouteGuardState extends State<_AssistantToolRouteGuard> {
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
+      _pendingDreamArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {
