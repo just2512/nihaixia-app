@@ -241,10 +241,11 @@ class AssistantConversationOrchestrator {
       if (RegExp(r'(铜钱摇卦|摇铜钱|铜钱起卦)').hasMatch(query)) {
         methods.add('coins');
       }
-      if (RegExp(r'(手动选卦|手动起卦|手动指定上下卦|上卦|下卦|静卦|动爻)').hasMatch(query)) {
+      if (RegExp(r'(手动选卦|手动起卦|手动指定上下卦|静卦|动爻)').hasMatch(query) ||
+          RegExp(r'(?:上卦|下卦)\\s*(?:是|为)?\\s*[：:]?\\s*(?:乾|兑|離|离|震|巽|坎|艮|坤|[1-8])').hasMatch(query)) {
         methods.add('manual');
       }
-      if (RegExp(r'(按当前时间起卦|当前时间起卦|按现在时间起卦|现在起卦|此刻起卦)').hasMatch(query)) {
+      if (RegExp(r'(按当前时间起卦|当前时间起卦|按现在(?:的)?时间起卦|按当前时刻起卦|现在起卦|此刻起卦)').hasMatch(query)) {
         methods.add('time');
       }
       final numberPair = RegExp(
