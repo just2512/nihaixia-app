@@ -1180,7 +1180,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? userContext,
     AiTraceContext? traceContext,
   }) async {
-    debugPrint('[DOSAGE_DIAG] requestTool tool=${tool.id} args=${arguments?.values}');
     final activeTraceContext = traceContext ??
         _traceRecorder.start(
           stage: AiTraceStage.input,
@@ -2131,6 +2130,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? arguments,
   }) async {
     debugPrint('[DOSAGE_DIAG] executeHeadless tool=${tool.id} args=${arguments?.values}');
+    debugPrint('[DOSAGE_DIAG] executeHeadless tool=${tool.id} args=${arguments?.values}');
     final request = arguments ??
         AssistantToolArguments(toolId: tool.id);
     final argumentErrors = request.validateAgainst(tool);
@@ -2376,6 +2376,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AiTraceContext? traceContext,
     AssistantToolArguments? arguments,
   }) async {
+    debugPrint('[DOSAGE_DIAG] requestTool tool=${tool.id} args=${arguments?.values}');
     final activeTraceContext = traceContext ??
         _traceRecorder.start(
           stage: AiTraceStage.input,
@@ -3222,7 +3223,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           missingParameters.add('动爻（或明确说明静卦）');
         }
       }
-      debugPrint('[DOSAGE_DIAG] validation errors=$argumentErrors missing=$missingParameters invalid=$invalidParameterErrors output=${output?.formattedResult}');
       final needsClarification =
           argumentErrors.isNotEmpty || missingParameters.isNotEmpty;
       if (needsClarification) {
@@ -3386,6 +3386,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       }
 
+      debugPrint('[DOSAGE_DIAG] validation errors=$argumentErrors missing=$missingParameters invalid=$invalidParameterErrors output=${output?.formattedResult}');
       final needsClarification =
           argumentErrors.isNotEmpty ||
           missingParameters.isNotEmpty ||
@@ -3482,6 +3483,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
 
       _pendingDosageArguments = null;
+      debugPrint('[DOSAGE_DIAG] executing Headless request=${request.values}');
       debugPrint('[DOSAGE_DIAG] executing Headless request=${request.values}');
       await _executeHeadlessTool(
         userText,
