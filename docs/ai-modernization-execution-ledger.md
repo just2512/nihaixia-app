@@ -46,7 +46,7 @@
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
 | B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（fail-closed Gate 契约存在；医学审核 detector 与生产入口接入缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
 | C | 知识检索黄金行为基线 | `PARTIAL`（黄金快照和 sourceId/asset 一致性已建立；书目 locator 仍缺失） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
-| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（8 项 Headless；15 项 Page-only；结构化问诊独立内联） | 已合并 `yunqi/almanac/bazi/meihua/chenggu/huangdi_siji/ziwei/solar_terms`；保留各自 Page builder；逐项复用原确定性函数 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
+| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（9 项 Headless；14 项 Page-only；结构化问诊独立内联） | 已合并 `yunqi/almanac/bazi/xiaoliuren/meihua/chenggu/huangdi_siji/ziwei/solar_terms`；保留各自 Page builder；逐项复用原确定性函数 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | 低成本数据保护 | `PARTIAL`（Manifest/清理代码有 CI 证据；真机清除后重启不可恢复未验收） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（已有部分结果/来源链路，不等于端到端 TRACE） | 与 A-E 按需并行 | 默认关闭、脱敏、trace_id 贯穿、关闭时行为不变、完整链路可复核 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
@@ -1678,3 +1678,49 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不重复审核已经医学审核通过的知识库内容；自然语言红旗 detector 与知识内容审核是不同对象。
 - 不在缺少医学审核 detector 时启用自由文本症状问诊，不以模型自我判断代替红旗前置检查。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page Tool。
+
+
+---
+
+## 36. 2026-11-14 PR #151 小六壬 Headless 集成与当前主线状态
+
+### 36.1 主线与变更
+
+- PR #151 最终 head：`eda34a85d917e58ac2afc8fe255d3f4349a8b4ac`。
+- merge commit / 当前 master：`3915a404200ed8721fbc7715261c5b5e7ac592f0`。
+- 新增 `XiaoliurenToolExecutor`，复用现有 `LunarDate.fromSolar`、`computeXiaoliuren` 和 `xiaoliurenVerse`；没有修改原页面或小六壬计算规则。
+- 小六壬必须明确收集公历日期、一个地支时辰、以及 `common`（通行掌诀）或 `duoneng`（《多能鄙事》卷八）口径。缺参、多日期/时辰、双口径冲突、农历输入和非法值均先澄清或拒绝执行；不默认算法口径。
+- 对话状态通过现有 assistant message metadata 持久化并可跨轮/历史恢复；支持明确取消。完整参数通过校验并由 App 纯函数成功执行、结果契约及 sourceIds 校验后，才将真实结果交给 AI 解释。用户不需要跳转小六壬页面。
+- 未改问诊引擎、排盘引擎、剂量计算、医学知识库或 RedFlagGate。
+
+### 36.2 自动化验收证据
+
+- 分支验证 push run `43560093070` SUCCESS：静态分析与 changed-tests/test pairing 均通过。
+- PR workflow `43560097611` SUCCESS：Flutter full regression job `132341891873` SUCCESS；Android arm64/Native job `132342897892` SUCCESS。
+- Android job 已完成 arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifacts 上传。
+- merge SHA `3915a404200ed8721fbc7715261c5b5e7ac592f0` 的 post-merge Flutter tests run `43560857686` 与 Flutter Quality Gate run `43560857654` 在本节写入时均 IN_PROGRESS。只有 head_sha 匹配且终态 SUCCESS 才能记作 master CI PASS。
+
+### 36.3 D：当前能力分层
+
+- `AssistantToolRouter` 24 项定义中，23 个页面工具入口有 9 项 Headless executor：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`；14 项仍为 Page-only。
+- `structured_diagnosis` 为原有确定性问诊控制器内联流程，不计入通用 Headless。Page builder 可以保留，但页面导航不构成业务执行证据。
+- 下一项候选为 `yijing`。既有 `YiJingEngine` 有数字、当前时间、手动选卦、铜钱四种计算方式；实施前需锁定各自参数与回放契约，随机投掷只能由 App 生成并持久化真实六次结果，不能让模型伪造随机值。
+
+### 36.4 A-G 未关闭状态
+
+| 工作流 | 当前状态 | 下一项最小任务 |
+|---|---|---|
+| A 本地模型多轮/生命周期 | PARTIAL / DEVICE UNKNOWN | Find N2 E4B GPU/CPU、图片/语音、Activity/进程恢复实测及真实 TRACE |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 等待医学审核 detector、版本、阈值/例外/处置文案和全生产入口调用前覆盖证据；不重复审核已审核知识库，不自行编造 detector |
+| C 知识来源 | PARTIAL | 补书目 locator、底本版本、卷页/原文身份；不重复审核医学内容 |
+| D Headless 工具 | PARTIAL（9 Headless / 14 Page-only） | 先对 Yijing 四种起卦模式建立行为基线，再选最小实现；不批量迁移 |
+| E 数据保护 | PARTIAL / DEVICE UNKNOWN | Find N2 清除全部 AI 数据后强停/重启，核验 DB/附件/缩略图/孤儿文件不可恢复 |
+| F TRACE | PARTIAL / DEVICE UNKNOWN | 真实设备端端到端 trace 覆盖输入、执行状态、sourceIds、持久化、解释与恢复 |
+| G 文档治理 | IN_PROGRESS | 本文档 PR 合并后复核三份文档在 master 的最终内容和对应 CI |
+
+### 36.5 冻结项
+
+- 不改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、排盘/剂量/民俗确定性算法。
+- 不重复审核已经完成医学审核的知识库内容。
+- 红旗 detector 未经医学审核并覆盖所有生产模型入口前，不启用自由文本症状自动辨证；`REVIEW_REQUIRED/UNKNOWN` 不得当作 CLEAR。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page-only 工具。

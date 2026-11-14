@@ -1,10 +1,10 @@
 # AI 能力静态/动态审计报告
 
-- 审计日期：2026-11-14（PR #147/#148/#149 集成后增量复核）
+- 审计日期：2026-11-14（PR #151 小六壬 Headless 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
-- 最新复核基线：`master @ 8e44e0c7f6f58249e2adc55fbec1afb37610954f`
+- 最新复核基线：`master @ 3915a404200ed8721fbc7715261c5b5e7ac592f0`
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
-- 方法：按最新主线增量核对 AssistantToolRouter、参数抽取、8 项 Headless executor、结构化问诊结果链、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
+- 方法：按最新主线增量核对 AssistantToolRouter、确定性参数抽取、9 项 Headless executor、真实工具执行与结果来源契约、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
 
 ## 1. 审计结论
 
@@ -15,7 +15,7 @@
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
 | B 红旗安全 | PARTIAL / RELEASE BLOCKED | preflight provenance 契约存在；自然语言 detector、全生产入口 fail-closed 和医学审核仍缺失 |
 | C 检索基线 | PARTIAL / NOT VERIFIED | 已复核 83 个 distinct sourceId 的本地资产存在性、身份和正文命中语境；83/83 bibliographic locator 仍 MISSING，纸本底本/版本/卷页/影像未核验 |
-| D Headless Capability | PARTIAL | 当前 24 个定义中，23 个常规页面入口有 8 项 Headless executor（yunqi、almanac、bazi、meihua、chenggu、huangdi_siji、ziwei、solar_terms），15 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
+| D Headless Capability | PARTIAL | 当前 24 个定义中，23 个常规页面入口有 9 项 Headless executor（yunqi、almanac、bazi、xiaoliuren、meihua、chenggu、huangdi_siji、ziwei、solar_terms），14 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
 | F TRACE | PARTIAL | 已覆盖检索/上下文、Orchestrator/Headless、结构化问诊 per-turn；#113 补 Headless 结果契约失败终态，#114 补 Page Tool 结果延续，#115 补普通发送/症状整理 finalRender；Find N2 场景集 TRACE 仍未闭环 |
 | G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 一致性 guard 已合并；当前 master post-merge CI 需以最新 SHA 的两条独立 push workflow 为准 |
@@ -939,3 +939,46 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 2. 继续逐项审计剩余 15 个 Page-only 工具，只在能复用原确定性代码、有清晰输入 schema 和来源的前提下实现一个最小 Headless 切片；不批量迁移。
 3. B 维持 RELEASE BLOCKED，直到医学审核 detector 版本、审核记录、阈值/例外/处置文案和全入口覆盖证据齐备；期间不开放自由文本症状自动辨证。
 4. 真机 A/E/F 按设备清单收集 Find N2 E4B、清理与 TRACE 证据；CI 结果不替代设备验收。
+
+
+---
+
+## 32. 2026-11-14 PR #151 小六壬 Headless 集成后增量复核
+
+### 32.1 当前主线与能力分层
+
+- 当前 master：`3915a404200ed8721fbc7715261c5b5e7ac592f0`。
+- `AssistantToolRouter` 共 24 个定义：23 个常规页面工具入口和 1 个特殊内联确定性问诊流程 `structured_diagnosis`。
+- 23 个页面入口中 9 项 Headless：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`；14 项仍 Page-only。Page builder 与 Headless executor 可并存，不能重复计数。
+- `structured_diagnosis` 继续由原有 `TcmInterviewConversationController` / `DiagnosticEngine` 规则问诊控制器内联执行，不计入通用 Headless 数量。
+
+### 32.2 PR #151 交付与边界
+
+- PR #151 最终 head `eda34a85d917e58ac2afc8fe255d3f4349a8b4ac`，merge commit `3915a404200ed8721fbc7715261c5b5e7ac592f0`。
+- 新增 `XiaoliurenToolExecutor`，复用现有 `LunarDate.fromSolar`、`computeXiaoliuren` 与 `xiaoliurenVerse`；没有复制或修改小六壬计算规则。
+- 对话要求明确提供公历日期、单一地支时辰和算法口径 `common`（通行掌诀）或 `duoneng`（《多能鄙事》卷八）；不默认任何算法口径。农历、多个日期/时辰、冲突口径和非法参数均先澄清/拒绝执行。
+- 缺参时在当前对话追问，已有参数跨轮持久化并可从历史恢复；支持取消。完整参数通过校验后由 App 原有纯函数执行，只有成功且 sourceIds/result contract 校验通过的真实结果才交给 AI 解释。
+- 用户无需跳转小六壬页面；不新增数据库表，不改医学诊断、排盘或剂量计算。
+
+### 32.3 自动化验收
+
+- 分支验证 push run `43560093070` SUCCESS：Flutter 静态分析、changed tests 和 test pairing 全部通过。
+- PR workflow `43560097611` SUCCESS：Flutter 全量回归 job `132341891873` SUCCESS；Android arm64/Native job `132342897892` SUCCESS。
+- Android job 完成 arm64 Debug APK 构建、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifacts 上传。
+- merge SHA `3915a404200ed8721fbc7715261c5b5e7ac592f0` 的 post-merge Flutter tests run `43560857686` 和 Flutter Quality Gate run `43560857654` 均已在相同 head SHA 上完成，终态均为 SUCCESS。
+- PR/CI APK 不等于 OPPO Find N2 真机 E4B 推理、GPU/CPU、多媒体、Activity/进程恢复和真实 TRACE 验收。
+
+### 32.4 未关闭问题及后续任务
+
+- 自由文本问诊继续 PARTIAL / RELEASE BLOCKED：已审核医学知识库不重复审核；但自然语言红旗 detector 的正式医学审核记录、版本/阈值/例外/处置文案，以及全部生产模型入口调用前的 fail-closed 接入证据仍缺。不能自行编造词表，不能把 `REVIEW_REQUIRED/UNKNOWN` 当作 CLEAR。
+- 用户要求的自然语言问诊完整闭环仍未完成：从用户自由描述中结构化理解已覆盖信息、只追问必要缺项、后台运行原确定性问诊规则、解释真实结果。当前结构化十问仍保留，PR #146 只负责完成结果自动解释。
+- A/E/F 仍需 Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程中断恢复、清除 AI 数据后强停/重启不可恢复、端到端 TRACE。CI arm64 APK 不替代真机。
+- C 不重复审核既有知识库；只补书目 locator、底本版本、卷页和原文身份缺失。
+- D 下一项候选为 `yijing`：现有 `YiJingEngine` 支持数字、当前时间、手动选卦和铜钱四种确定性计算。需为每种模式建立参数与回放契约；App 负责铜钱随机生成并持久化真实投掷值，模型不能伪造。逐项适配，不批量迁移。
+
+### 32.5 不变边界
+
+- AI 负责理解、澄清、调度和解释；原有业务函数负责计算，规则和知识库内容不由模型改写。
+- 只将已执行、经过输入/结果契约校验并具有 sourceIds 的 App 结果交给模型作为事实解释。
+- 不修改 `DiagnosticEngine`、`DiagnosticRules`、排盘算法、剂量换算和已审核知识库内容。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库；不为追求工具数量批量迁移 Page-only。
