@@ -133,7 +133,7 @@ class DosageConversionService {
   static String _format(double value, int precision) =>
       value
           .toStringAsFixed(precision)
-          .replaceAll(RegExp(r'\.?0+, '');
+          .replaceAll(RegExp(r'\.?0+$'), '');
 }
 
 class DosageConversionOutput {
