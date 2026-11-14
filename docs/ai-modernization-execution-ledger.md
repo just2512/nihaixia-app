@@ -1751,7 +1751,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - Branch validation run `43563718624` SUCCESS：静态分析、changed tests 与 test pairing 通过。
 - PR workflow `43563859567` SUCCESS：Flutter regression job `132353274615` SUCCESS；Android arm64 verification job `132354564040` SUCCESS。
 - Android job 完成 arm64 Debug APK 构建、merged backup Manifest 检查、ABI/SHA-256、Native unit tests、JUnit XML 和 evidence artifacts 上传。
-- merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 的 post-merge Flutter tests run `43564609205`、Flutter Quality Gate run `43564609235` 当前仍为 IN_PROGRESS。以两条 run 的 head_sha 严格匹配且终态 SUCCESS 为 master CI PASS 条件；PR workflow SUCCESS 不替代 post-merge master CI。
+- merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 的 post-merge Flutter tests run `43564609205` 与 Flutter Quality Gate run `43564609235` 均已在相同 head_sha 上终态 SUCCESS。Flutter tests job 包含 Flutter regression 与 Android arm64 CI APK/Native tests；Quality Gate job 包含 Dart suite、Android Native unit tests 与 Find N2 arm64 Debug APK。
 - CI arm64 APK/native tests 不能替代 OPPO Find N2 真机 E4B、GPU/CPU、多媒体、多轮、Activity/进程恢复和端到端 TRACE。
 
 ### 37.4 D 能力数量
