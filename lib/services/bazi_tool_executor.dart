@@ -48,7 +48,7 @@ class BaziToolExecutor {
       return _failure(arguments, '出生地点缺失；请提供出生城市或区县。');
     }
 
-    final place = await _resolveBirthplace(birthplace);
+    final place = await resolveBirthplace(birthplace);
     if (place == null) {
       return _failure(
         arguments,
@@ -135,7 +135,9 @@ class BaziToolExecutor {
     return (hour, minute);
   }
 
-  static Future<CityLocation?> _resolveBirthplace(String query) async {
+  /// Shared strict birthplace resolver for tools that reuse the App chart engine.
+  /// Returns null unless the local city directory has exactly one match.
+  static Future<CityLocation?> resolveBirthplace(String query) async {
     final domestic = await CityLocationService.load(PlaceScope.domestic);
     final domesticMatch = _matchLocation(domestic, query);
     if (domesticMatch != null) return domesticMatch;
