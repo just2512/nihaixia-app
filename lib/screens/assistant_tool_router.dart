@@ -16,7 +16,6 @@ import '../services/yijing_tool_executor.dart';
 import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
 import '../services/ziwuliuzhu_tool_executor.dart';
-import '../services/dream_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -616,21 +615,11 @@ class AssistantToolRouter {
   static const dream = AssistantToolDefinition(
     id: 'dream',
     title: '周公解梦',
-    description: '在当前对话中检索 App 本地梦境民俗资料；多个词条命中时先澄清，不作现实吉凶判断。',
+    description: '检索传统梦境释义；不作现实吉凶判断。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
-    aliases: ['周公解梦', '解梦', '梦境释义', '梦见', '梦到', '梦境', '做梦', '这个梦'],
-    actionWords: ['查询', '查看', '解释', '解读', '分析', '是什么意思', '什么意思', '检索', '搜索', '打开', '帮我'],
+    aliases: ['周公解梦', '解梦', '梦境释义'],
+    actionWords: ['查询', '查看', '解释', '检索', '搜索', '打开'],
     builder: _buildDream,
-    headlessExecutor: DreamToolExecutor.execute,
-    parameters: [
-      AssistantToolParameter(
-        key: 'dream_text',
-        label: '梦境描述',
-        type: AssistantToolParameterType.text,
-        isRequired: true,
-        description: '保留用户原始叙述；没有具体情节时在对话中追问。',
-      ),
-    ],
   );
 
   static const guansha = AssistantToolDefinition(

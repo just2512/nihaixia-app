@@ -1250,31 +1250,4 @@ void main() {
       expect(decision.needsClarification, isFalse);
     });
   });
-
-  test('解梦只在用户明确提出解读需求时进入工具，缺少梦境描述时不伪造参数', () {
-    final missing = AssistantConversationOrchestrator.resolve(
-      query: '帮我解梦',
-      selectedMode: AssistantMode.automatic,
-    );
-    expect(missing.tool?.id, 'dream');
-    expect(missing.toolArguments?.values, isEmpty);
-
-    final described = AssistantConversationOrchestrator.resolve(
-      query: '我昨晚梦见一条蛇缠身，帮我解梦',
-      selectedMode: AssistantMode.automatic,
-    );
-    expect(described.tool?.id, 'dream');
-    expect(
-      described.toolArguments?['dream_text'],
-      '我昨晚梦见一条蛇缠身，帮我解梦',
-    );
-
-    final narrativeOnly = AssistantConversationOrchestrator.resolve(
-      query: '我昨晚梦见一条蛇',
-      selectedMode: AssistantMode.automatic,
-    );
-    expect(narrativeOnly.tool, isNull,
-        reason: '只分享梦境不等于请求启动解梦工具');
-  });
-
 }

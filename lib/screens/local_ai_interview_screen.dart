@@ -2549,7 +2549,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: 'dream',
         values: Map<String, String>.unmodifiable(mergedValues),
       );
-      if (request['dream_text']?.trim().isEmpty != false) {
+      if (request['dream_text']?.trim().isNotEmpty != true) {
         _pendingDreamArguments = request;
         const clarification =
             '我会直接在当前对话中检索 App 本地梦境资料。请描述梦中实际出现的事物和具体情节，例如看到了什么、发生了什么、场景或结局如何；仅说“帮我解梦”还不足以检索。资料属于传统民俗文本，不代表现实吉凶或未来预测。';
