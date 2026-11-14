@@ -5277,8 +5277,6 @@ class _WidgetRedFlagDetector implements RedFlagDetector {
   final List<String> events;
   final List<String> matchedRuleIds;
   final RedFlagSubject subject;
-  final RedFlagTime time;
-  final RedFlagPolarity polarity;
 
   @override
   Future<RedFlagAssessment?> assess(RedFlagInput input) async {
@@ -5289,8 +5287,8 @@ class _WidgetRedFlagDetector implements RedFlagDetector {
       detectorVersion: 'test-only-1',
       ruleSetVersion: 'test-reviewed-rule-set-1',
       subject: subject,
-      time: time,
-      polarity: polarity,
+      time: RedFlagTime.current,
+      polarity: RedFlagPolarity.affirmed,
       ruleSetReviewed: true,
       detectorCoverageComplete: true,
       matchedRuleIds: matchedRuleIds,
