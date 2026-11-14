@@ -3521,6 +3521,103 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('节气查询留在助手对话，返回校验结果后自动解释知识资产',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    var pageOpened = false;
+    final executedArguments = <Map<String, String>>[];
+    const sources = [
+      'local-engine:solar-term-service',
+      'local-asset:solar-term-knowledge',
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开节气养生页面'));
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            final term = arguments['term'] ?? 'App 当前节气';
+            return AssistantToolResult(
+              toolId: 'solar_terms',
+              title: '节气养生',
+              values: {
+                '目标节气': term,
+                '通用养生常识': '现有节气知识资产中的原始内容',
+                '倪师讲座相关整理': '【推断】现有资料中的整理内容',
+                '节气三候': '一候原文；二候原文；三候原文',
+                '起居调摄': '【推断】资料中的起居信息',
+                '食疗资料': '现有资产中的食疗信息',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: sources,
+              disclaimer: '只解释 App 已有节气资料，不生成个体诊断或用药建议。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('查询立春养生');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.first, const {'term': '立春'});
+    expect(find.textContaining('一候原文；二候原文；三候原文'), findsOneWidget);
+    expect(find.textContaining('现有资产中的食疗信息'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('总结并解释实际输入'));
+    expect(service.sentContexts.single, contains('当前角色：工具助手'));
+
+    await send('查询当前节气');
+    expect(executedArguments, hasLength(2));
+    expect(executedArguments.last, isEmpty,
+        reason: '没有指定节气时由 App 服务读取当前真实节气，不要求模型补算');
+    expect(find.textContaining('App 当前节气'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(2));
+
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessages = messages.where(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('现有节气知识资产中的原始内容'),
+    ).toList(growable: false);
+    expect(resultMessages, hasLength(2));
+    final specifiedMetadata = AssistantMessageMetadata.decode(
+      resultMessages.first['metadata'] as String,
+    );
+    expect(specifiedMetadata.toolId, 'solar_terms');
+    expect(specifiedMetadata.toolStatus, 'SUCCEEDED');
+    expect(specifiedMetadata.toolArguments, const {'term': '立春'});
+    expect(specifiedMetadata.sourceIds, sources);
+    final currentMetadata = AssistantMessageMetadata.decode(
+      resultMessages.last['metadata'] as String,
+    );
+    expect(currentMetadata.toolId, 'solar_terms');
+    expect(currentMetadata.toolStatus, 'SUCCEEDED');
+    expect(currentMetadata.toolArguments, isEmpty);
+    expect(currentMetadata.sourceIds, sources);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Headless 结果契约失败时记录失败终态且不持久化', (tester) async {
     const traceId = 'abcdef0123456789abcdef0123456789';
     final events = <AiTraceEvent>[];
