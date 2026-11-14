@@ -78,6 +78,33 @@ void main() {
     expect(result.values['动爻'], cast.movingTitles.join('、'));
   });
 
+  test('外部传入的时间和铜钱值不能覆盖 App 生成的真实输入', () {
+    const forgedTime = {
+      'method': 'time',
+      'at': '1980-01-01T00:00:00.000',
+    };
+    final preparedTime = YiJingToolExecutor.prepareExecutionArguments(
+      forgedTime,
+      now: fixedNow,
+    );
+    expect(preparedTime['at'], '2026-11-14T13:26:00.000');
+
+    const forgedCoins = {
+      'method': 'coins',
+      'coins': '6,6,6,6,6,6',
+    };
+    final preparedCoins = YiJingToolExecutor.prepareExecutionArguments(
+      forgedCoins,
+      rng: Random(41),
+    );
+    final appCoins = YiJingToolExecutor.prepareExecutionArguments(
+      const {'method': 'coins'},
+      rng: Random(41),
+    );
+    expect(preparedCoins['coins'], appCoins['coins']);
+    expect(preparedCoins['coins'], isNot('6,6,6,6,6,6'));
+  });
+
   test('缺少方法专属参数、无效参数或混合模式均 fail closed', () {
     for (final arguments in [
       const {'method': 'number', 'first': '3'},
