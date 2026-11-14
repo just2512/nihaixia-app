@@ -20,6 +20,8 @@ import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/dosage_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
+import 'package:nihaisha_app/services/red_flag_gate.dart';
+import 'package:nihaisha_app/services/red_flag_preflight.dart';
 import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
@@ -5259,4 +5261,130 @@ void main() {
   });
 
 
+}
+
+
+class _WidgetRedFlagDetector implements RedFlagDetector {
+  const _WidgetRedFlagDetector({
+    required this.events,
+    required this.matchedRuleIds,
+    required this.subject,
+    this.time = RedFlagTime.current,
+    this.polarity = RedFlagPolarity.affirmed,
+  });
+
+  final List<String> events;
+  final List<String> matchedRuleIds;
+  final RedFlagSubject subject;
+  final RedFlagTime time;
+  final RedFlagPolarity polarity;
+
+  @override
+  Future<RedFlagAssessment?> assess(RedFlagInput input) async {
+    events.add('gate:${input.source.name}');
+    return RedFlagAssessment(
+      inputSource: input.source,
+      detectorId: 'test-only-detector',
+      detectorVersion: 'test-only-1',
+      ruleSetVersion: 'test-reviewed-rule-set-1',
+      subject: subject,
+      time: time,
+      polarity: polarity,
+      ruleSetReviewed: true,
+      detectorCoverageComplete: true,
+      matchedRuleIds: matchedRuleIds,
+    );
+  }
+}
+
+class _OrderedIntentSendService extends _TextSendService {
+  _OrderedIntentSendService(this.events);
+
+  final List<String> events;
+
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) {
+    events.add('intent');
+    return super.resolveAssistantIntentWithTrace(
+      query: query,
+      candidates: candidates,
+      traceId: traceId,
+    );
+  }
+}
+
+void mainRedFlagEntrypointOrderingTests() {
+  group('红旗门禁注入入口顺序', () {
+    testWidgets('阻断结果必须早于意图识别和模型调用', (tester) async {
+      final events = <String>[];
+      final service = _OrderedIntentSendService(events);
+      final gate = RedFlagGate(
+        detector: _WidgetRedFlagDetector(
+          events: events,
+          matchedRuleIds: const ['reviewed-test-rule'],
+          subject: RedFlagSubject.self,
+        ),
+        timeout: const Duration(milliseconds: 100),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            redFlagGate: gate,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '我现在身体不舒服');
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(events, ['gate:currentText']);
+      expect(service.intentQueries, isEmpty);
+      expect(service.sentTexts, isEmpty);
+      expect(find.textContaining('安全评估命中阻断条件'), findsOneWidget);
+    });
+
+    testWidgets('只有 CLEAR 才允许继续进入确定性意图候选筛选', (tester) async {
+      final events = <String>[];
+      final service = _OrderedIntentSendService(events);
+      final gate = RedFlagGate(
+        detector: _WidgetRedFlagDetector(
+          events: events,
+          matchedRuleIds: const [],
+          subject: RedFlagSubject.knowledge,
+        ),
+        timeout: const Duration(milliseconds: 100),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            redFlagGate: gate,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '请介绍中医里的阴阳概念');
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(events, ['gate:currentText', 'intent']);
+      expect(service.intentQueries, ['请介绍中医里的阴阳概念']);
+    });
+  });
+}
+
+void main() {
+  mainRedFlagEntrypointOrderingTests();
 }
