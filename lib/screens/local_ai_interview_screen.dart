@@ -31,6 +31,8 @@ import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
 import '../services/yijing_tool_executor.dart';
+import '../services/dosage_tool_executor.dart';
+import '../services/dosage_conversion_service.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../data/formula_repository.dart';
@@ -282,6 +284,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingHuangdiSijiArguments;
   AssistantToolArguments? _pendingXiaoliurenArguments;
   AssistantToolArguments? _pendingYiJingArguments;
+  AssistantToolArguments? _pendingDosageArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -333,7 +336,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingChengguArguments = null;
         _pendingHuangdiSijiArguments = null;
         _pendingXiaoliurenArguments = null;
-        _pendingYiJingArguments = null;
+_pendingDosageArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2404,12 +2407,123 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     _pendingToolSelection = false;
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
+    if (tool.id != 'dosage') _pendingDosageArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
+    if (tool.id == 'dosage' && tool.headlessExecutor != null) {
+      final request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      final argumentErrors = request.validateAgainst(tool);
+      final businessErrors =
+          DosageToolExecutor.validateArguments(request.values);
+      final missingParameters = <String>[
+        if (request['value']?.trim().isNotEmpty != true) '换算数值',
+        if (request['unit']?.trim().isNotEmpty != true) '原始单位',
+        if (DosageConversionService.isWeightUnit(request['unit'] ?? '') &&
+            request['standard']?.trim().isNotEmpty != true)
+          '度量标准',
+      ];
+      final allErrors = [...argumentErrors, ...businessErrors];
+      final invalidParameterErrors = allErrors
+          .where((error) =>
+              !error.startsWith('缺少必填参数：') &&
+              !error.startsWith('缺少换算数值') &&
+              !error.startsWith('缺少原始单位'))
+          .toSet()
+          .toList(growable: false);
+      if (allErrors.isNotEmpty || missingParameters.isNotEmpty) {
+        _pendingDosageArguments = request;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
+        _pendingYiJingArguments = null;
+        final suppliedParameters = <String>[
+          if (request['value']?.trim().isNotEmpty == true)
+            '数值：${request['value']}',
+          if (request['unit']?.trim().isNotEmpty == true &&
+              request['unit'] != 'AMBIGUOUS_UNIT_SELECTION')
+            '原始单位：${request['unit']}',
+          if (request['standard']?.trim().isNotEmpty == true &&
+              request['standard'] != 'AMBIGUOUS_STANDARD_SELECTION')
+            '度量标准：${DosageConversionService.standardLabel(request['standard']!)}',
+        ];
+        final clarification = [
+          '我会在当前对话中调用 App 原有经方度量衡单位换算函数，不需要打开换算器页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要明确或更正：${invalidParameterErrors.join('；')}。',
+          if (missingParameters.contains('度量标准'))
+            '重量单位必须明确选择汉制、台制或唐制；容量和长度单位不依赖这三种重量标准。',
+          '支持重量单位：两、铢、斤、石、钱；容量单位：升、合、圭、撮；长度单位：尺、寸。',
+          '本工具只把单位换算为克、毫升或厘米，不计算处方、药物剂量或个人用药建议。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'DOSAGE_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingDosageArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     // Only auto-execute a Headless calculator when the user supplied its
     // explicit date argument. Without a date, preserve the existing Page Tool
     // flow so a broad "how is it calculated?" request is not silently run for
@@ -3318,7 +3432,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
-      _pendingYiJingArguments = null;
+_pendingDosageArguments = null;
       await _executeHeadlessTool(
         userText,
         tool,
@@ -4266,6 +4380,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingHuangdiSijiArguments;
     AssistantToolArguments? restoredPendingXiaoliurenArguments;
     AssistantToolArguments? restoredPendingYiJingArguments;
+    AssistantToolArguments? restoredPendingDosageArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4295,6 +4410,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingHuangdiSijiArguments = null;
         restoredPendingXiaoliurenArguments = null;
         restoredPendingYiJingArguments = null;
+        restoredPendingDosageArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4351,6 +4467,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'yijing') {
         restoredPendingYiJingArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'dosage') {
+        restoredPendingDosageArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4499,6 +4621,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHuangdiSijiArguments = restoredPendingHuangdiSijiArguments;
       _pendingXiaoliurenArguments = restoredPendingXiaoliurenArguments;
       _pendingYiJingArguments = restoredPendingYiJingArguments;
+      _pendingDosageArguments = restoredPendingDosageArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5336,6 +5459,113 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final pendingDosage = _pendingDosageArguments;
+    if (pendingDosage != null &&
+        (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '经方换算只需要文字数值、单位和必要的度量标准；请用文字补充，或发送“取消剂量换算”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:dosage_attachment_rejected',
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+        errorCode: 'DOSAGE_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+      );
+      return;
+    }
+    if (pendingDosage != null && text.isNotEmpty) {
+      final cancelText =
+          text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消剂量换算',
+        '取消换算',
+        '停止换算',
+        '算了',
+        '先不算',
+        '取消',
+      }.contains(cancelText);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:dosage' : 'tool_follow_up:dosage',
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:dosage' : 'tool_follow_up:dosage',
+        mode: AssistantMode.tools.name,
+        toolId: 'dosage',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次单位换算；尚未执行计算。';
+        setState(() {
+          _pendingDosageArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.tools,
+          toolId: 'dosage',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingDosage.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'dosage',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'dosage',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingDosage.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.dosage,
+        mode: AssistantMode.tools,
+        arguments: AssistantToolArguments(
+          toolId: 'dosage',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
     final pendingYiJing = _pendingYiJingArguments;
     if (pendingYiJing != null && (imagePath != null || audioPath != null)) {
       setState(() {
@@ -5390,7 +5620,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (cancelRequested) {
         const reply = '已取消本次易经起卦；尚未执行任何计算。';
         setState(() {
-          _pendingYiJingArguments = null;
+_pendingDosageArguments = null;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(const _InterviewMessage(text: reply, isUser: false));
