@@ -1118,3 +1118,36 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 先以 merge SHA `a9052504e55bae29fccc980f88dab06836b4e9cb` 核验 post-merge Flutter tests 和 Flutter Quality Gate 终态；两个都 SUCCESS 后将证据补入本节。
 - 自由文本问诊不越过 B 门禁。等待医学审核资料和生产接入依据；不重复审核现有知识库。
 - 对 Page-only 工具只审计与用户场景有明确关系的现有代码；没有必要的知识检索入口不重复建设。
+
+---
+
+## 37. 2026-11-14 PR #163：小儿关煞助手对话内执行增量复核
+
+### 基线与集成事实
+
+- 复核基线：master @ 76330d41cd828fe4fbb16af64e9ef415c4bfea21。
+- PR #163：最终 head 890dd6b120f59c3b4c772b9b748c578cc020157f；squash merge / 当前 master c2ae6448ce209b7e3ec3d51aa18532663b35467d。
+- PR 分支验证 run 43600907066 SUCCESS；PR run 43600911523 SUCCESS（Flutter 全量 regression、Android arm64 Debug APK/Manifest/ABI/SHA-256、Native tests、JUnit XML 和工件上传全部通过）。
+- PR artifacts：ABI evidence 14116890626、Android Native reports 14117045230、retrieval golden snapshot 14115784702。
+
+### 行为与职责复核
+
+- 关煞 Headless adapter 复用原八字排盘与 matchGuansha 规则，不改业务计算；出生日期、时间、性别和出生地缺一不可。地点必须被本地城市目录唯一匹配，不允许默认经纬度。
+- 助手支持确定性槽位解析、证据约束的缺项抽取、逐轮追问、历史恢复、取消和当前对话内真实执行；只有结果契约和来源验证通过后，才调用模型解释。
+- 关煞解释限制在本地规则结果与数据集原文的文化性说明，不得输出医学诊断、儿童健康风险或治疗/用药建议。
+- 旧 Page-navigation 测试已按 Headless 真实行为修正；新增了对话取消状态持久化回归测试。最终 PR head 全量 Flutter 和 Android CI 均成功。
+- 没有修改 DiagnosticEngine/DiagnosticRules、问诊十问、剂量算法、关煞规则或已审核医学知识库。
+
+### A-G 状态与剩余事项
+
+- D：通用 Headless 从 13/23 增至 14/23；剩余 9 个 Page-only 为 guji_library / knowledge_hub / medical_cases / diagnosis_history / critical_illness / yuxiaji_omen / sanshan_lingqian / shousheng_debt / saved_charts。不批量迁移。
+- B：仍 PARTIAL / RELEASE BLOCKED；生产 RedFlag detector 的医学审核资料和全模型入口 fail-closed 证据未闭合。自由文本症状自动辨证仍不得开放。
+- A/E/F：仍需 OPPO Find N2 实机验证 E4B GPU/CPU、多轮、多媒体、进程恢复、清除数据后不可恢复及 TRACE。
+- C：仍仅接受真实、可追溯来源定位，不补造 locator；不重复审核已审核医学知识库。
+- G：本次同步执行台账、审计报告和能力清单；规范文件保持不变。
+
+### 下一项
+
+- merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 对应的 master Flutter tests run 43601665980 与 Quality Gate run 43601665970 均已终态 SUCCESS。
+- 受生债已有独立执行器/契约测试准备分支，但没有助手会话集成；应基于最新 master 单独完成路由、缺参澄清、跨轮状态、取消及解释闭环。
+- 自由文本问诊继续受 B 红旗门禁约束；不修改原十问、辨证规则或已审核知识库。
