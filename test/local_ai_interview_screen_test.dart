@@ -4436,6 +4436,7 @@ void main() {
             return const Scaffold(body: Text('不应打开小六壬页面'));
           },
           testHeadlessToolExecutor: (arguments) async {
+            debugPrint('[DOSAGE_DIAG] TEST_CALLBACK called args=$arguments');
             executedArguments.add(Map<String, String>.unmodifiable(arguments));
             return XiaoliurenToolExecutor.execute(arguments);
           },
