@@ -459,6 +459,25 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: selectedMode);
     }
 
+    final explicitSolarTool =
+        AssistantToolRouter.matchAll(text, selectedMode)
+            .where((tool) => tool.id == 'solar_terms')
+            .toList(growable: false);
+    if (explicitSolarTool.length == 1) {
+      final mentionedTerms = SolarTermToolExecutor.termNames
+          .where(text.contains)
+          .toList(growable: false);
+      if (mentionedTerms.length > 1) {
+        return AssistantDispatchDecision(
+          mode: selectedMode == AssistantMode.automatic
+              ? AssistantMode.tools
+              : selectedMode,
+          clarification:
+              '你同时提到了${mentionedTerms.join('、')}。一次只查询一个节气；请重新发送一个明确的节气名称，例如“查询立春养生”。尚未执行查询。',
+        );
+      }
+    }
+
     if (selectedMode != AssistantMode.automatic) {
       // The explicitly selected learning role is explanatory, not an execution
       // surface. A query such as “介绍医案检索方式” must not open the case page
@@ -623,21 +642,6 @@ class AssistantConversationOrchestrator {
 
     final explicitMatches =
         AssistantToolRouter.matchAll(text, AssistantMode.automatic);
-    if (explicitMatches.length == 1 &&
-        explicitMatches.single.id == 'solar_terms') {
-      final mentionedTerms = SolarTermToolExecutor.termNames
-          .where(text.contains)
-          .toList(growable: false);
-      if (mentionedTerms.length > 1) {
-        return AssistantDispatchDecision(
-          mode: selectedMode == AssistantMode.automatic
-              ? AssistantMode.tools
-              : selectedMode,
-          clarification:
-              '你同时提到了${mentionedTerms.join('、')}。一次只查询一个节气；请重新发送一个明确的节气名称，例如“查询立春养生”。尚未执行查询。',
-        );
-      }
-    }
     if (explicitMatches.length > 1) {
       final titles = explicitMatches.map((tool) => tool.title).join('、');
       final mode = explicitMatches.any(
