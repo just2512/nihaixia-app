@@ -17,7 +17,7 @@ class ZiWuLiuZhuToolExecutor {
     final date = prepared['date'];
     final time = prepared['time'];
     if (date != null && time != null) {
-      final candidate = '$date${'T'}$time';
+      final candidate = '${date}T$time';
       if (ZiWuLiuZhuCalculationService.parseLocalAt(candidate) != null) {
         prepared['at'] = candidate;
       }
