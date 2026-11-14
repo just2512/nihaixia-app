@@ -133,11 +133,24 @@ class AssistantKnowledgeContextBuilder {
   // needed when the current turn contains a TCM domain cue.
   static const Set<String> _knowledgeQueryCues = {
     '中医', '伤寒', '金匮', '黄帝内经', '素问', '灵枢', '脏腑', '经络',
-    '穴位', '方剂', '中药', '药材', '医案', '古籍', '经典', '条文',
+    '穴位', '方剂', '经方', '中药', '药材', '医案', '古籍', '经典', '条文',
+    '子午流注', '纳子法', '纳甲法',
     '五运六气', '脉象', '舌象', '太阳', '阳明', '少阳', '太阴', '少阴',
     '厥阴', '咳嗽', '头痛', '头晕', '腹痛', '腹胀', '失眠', '发热',
     '恶寒', '口苦', '胸闷', '尿频', '便秘', '腹泻', '心悸', '呕吐',
   };
+
+  /// Cheap deterministic gate for deciding whether a user turn needs the
+  /// bundled TCM retrieval path. Ordinary chat and non-TCM metaphysics queries
+  /// do not load/search the classic corpus.
+  static bool shouldRetrieveForQuery(String query) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return false;
+    return _knowledgeQueryCues.any(normalized.contains) ||
+        FormulaRepository.getAll().any((item) => normalized.contains(item.name)) ||
+        HerbRepository.getAll().any((item) => normalized.contains(item.name)) ||
+        AcupointRepository.getAll().any((item) => normalized.contains(item.name));
+  }
 
   /// Builds bounded retrieval context and resolves every emitted classic
   /// source ID back to the bundled index before exposing it as a citation.
@@ -392,13 +405,7 @@ class AssistantKnowledgeContextBuilder {
     final normalized = query.trim();
     if (normalized.isEmpty) return '';
     final base = build(normalized);
-    final matchesBundledEntry =
-        FormulaRepository.getAll().any((item) => normalized.contains(item.name)) ||
-        HerbRepository.getAll().any((item) => normalized.contains(item.name)) ||
-        AcupointRepository.getAll().any((item) => normalized.contains(item.name));
-    if (!_knowledgeQueryCues.any(normalized.contains) && !matchesBundledEntry) {
-      return base;
-    }
+    if (!shouldRetrieveForQuery(normalized)) return base;
     final buffer = StringBuffer();
     if (base.isNotEmpty) {
       buffer.writeln(base.length > 3500 ? base.substring(0, 3500) : base);

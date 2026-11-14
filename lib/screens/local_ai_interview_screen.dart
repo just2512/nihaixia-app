@@ -59,6 +59,13 @@ const _diagnosticEngineSourceIds = <String>[
   'local-engine:diagnostic-engine',
 ];
 
+bool _needsTcmKnowledgeForTool(AssistantMode mode, String toolId) =>
+    mode == AssistantMode.tools &&
+    const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(toolId);
+
+String _tcmToolKnowledgeQuery(String userText, AssistantToolDefinition tool) =>
+    '${userText.trim()} ${tool.title}';
+
 abstract interface class LocalAiAudioRecorder {
   Future<bool> hasPermission();
   Future<void> start(RecordConfig config, {required String path});
@@ -1036,8 +1043,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     switch (mode) {
       case AssistantMode.automatic:
+        final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
-            await _retrieveKnowledgeWithTrace(text, traceContext: traceContext);
+            await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
         // 无命中且无失败时，不注入知识检索框架与角色 context——
         // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
@@ -1086,9 +1094,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // Consultation uses the same bundled classical-text and TCM retrieval
         // as learning, but excludes unverified case records to avoid case-based
         // diagnostic anchoring. Retrieved text remains reference-only.
+        final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
             await _retrieveKnowledgeWithTrace(
-          text,
+          query,
           traceContext: traceContext,
           includeMedicalCases: false,
         );
@@ -1112,8 +1121,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.learning:
+        final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
-            await _retrieveKnowledgeWithTrace(text, traceContext: traceContext);
+            await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
         final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
             '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
@@ -1128,12 +1138,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
             .map((tool) => tool.title)
             .join('、');
-        final knowledge = retrievalQuery == null || retrievalQuery.trim().isEmpty
-            ? null
-            : await _retrieveKnowledgeWithTrace(
-                retrievalQuery,
+        final requestedQuery = retrievalQuery?.trim().isNotEmpty == true
+            ? retrievalQuery!.trim()
+            : text;
+        final query = _knowledgeQueryForCurrentTurn(requestedQuery);
+        final knowledge = AssistantKnowledgeContextBuilder.shouldRetrieveForQuery(query)
+            ? await _retrieveKnowledgeWithTrace(
+                query,
                 traceContext: traceContext,
-              );
+                // Tool-result explanation uses the bundled formula/herb/classic/
+                // acupoint corpus. Do not load unrelated case records (some
+                // still have MISSING bibliographic locators) for unit or
+                // calendrical tool explanations.
+                includeMedicalCases: false,
+              )
+            : null;
         final knowledgeContext = switch (knowledge?.status) {
           null => '',
           AssistantKnowledgeRetrievalStatus.noResults =>
@@ -1147,7 +1166,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         };
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
-            '只有用户明确提出动作时才建议打开对应工具；工具实际计算由 App 页面完成。\n'
+            '新动作优先通过 App 已有 Headless Capability 在当前对话内执行；只有该能力仍为 Page-only 且确需页面交互时，才建议打开工具页。'
+            '对已经完成的工具结果追问，应复用当前会话中的已验证结果与本轮知识检索，不重复执行、不把用户送到工具页面。\n'
             '$knowledgeContext';
         final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
@@ -2216,6 +2236,76 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  /// Reuses verified conversation context for elliptical knowledge follow-ups.
+  /// This expands only retrieval text; it never chooses a tool or business input.
+  String _knowledgeQueryForCurrentTurn(String currentText) {
+    final normalized = currentText.trim();
+    if (normalized.isEmpty) return '';
+
+    const followUpCues = [
+      '为什么', '怎么理解', '什么意思', '含义', '依据', '原理',
+      '组成', '禁忌', '适应证', '区别', '差异', '进一步', '详细解释',
+      '再解释', '这个', '它的', '它呢', '这些', '刚才', '上面', '上述',
+      '那它', '那这个',
+    ];
+    if (!followUpCues.any(normalized.contains)) return normalized;
+
+    final priorUserTurns = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((text) => text.isNotEmpty && text != normalized)
+        .toList(growable: false);
+    final boundedStart =
+        priorUserTurns.length > 3 ? priorUserTurns.length - 3 : 0;
+    final contextParts = <String>[...priorUserTurns.skip(boundedStart)];
+
+    // Reuse only a source-attributed App result, never free-form AI prose.
+    for (final message in _messages.reversed) {
+      if (message.isUser || message.sourceIds.isEmpty) continue;
+      final isAppToolResult =
+          message.text.startsWith('【') &&
+              message.text.contains('执行结果】') &&
+              message.sourceIds.any((sourceId) =>
+                  sourceId.startsWith('local-engine:'));
+      final isAppDiagnosisResult =
+          message.diagnosisResult != null &&
+              message.sourceIds.contains('local-engine:diagnostic-engine');
+      final isAppResult = isAppToolResult || isAppDiagnosisResult;
+      if (!isAppResult) continue;
+      final resultText = message.text.trim();
+      contextParts.add(
+        resultText.length > 1600 ? resultText.substring(0, 1600) : resultText,
+      );
+      break;
+    }
+
+    if (contextParts.isEmpty) return normalized;
+    final contextualQuery = '${contextParts.join(' ')} $normalized';
+    return AssistantKnowledgeContextBuilder.shouldRetrieveForQuery(
+      contextualQuery,
+    )
+        ? contextualQuery
+        : normalized;
+  }
+
+  String _tcmToolKnowledgeQueryForResult(
+    String currentUserText,
+    AssistantToolDefinition tool,
+  ) {
+    final userTurns = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((text) => text.isNotEmpty)
+        .toList(growable: true);
+    final current = currentUserText.trim();
+    if (current.isNotEmpty && (userTurns.isEmpty || userTurns.last != current)) {
+      userTurns.add(current);
+    }
+    final boundedStart = userTurns.length > 4 ? userTurns.length - 4 : 0;
+    final boundedUserContext = userTurns.skip(boundedStart).join(' ');
+    return _tcmToolKnowledgeQuery(boundedUserContext, tool);
+  }
+
   Future<void> _executeHeadlessTool(
     String userText,
     AssistantToolDefinition tool, {
@@ -2402,8 +2492,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final canInterpret = result.status == AssistantToolExecutionStatus.succeeded &&
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
-    final needsTcmKnowledge = mode == AssistantMode.tools &&
-        const {'yunqi'}.contains(tool.id);
+    final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
     final interpretationPrompt = tool.id == 'bazi'
         ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
             '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
@@ -2431,7 +2520,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ? () => unawaited(_requestAssistantResultInterpretation(
                     prompt: interpretationPrompt,
                     mode: mode,
-                    retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
+                    retrievalQuery: needsTcmKnowledge
+            ? _tcmToolKnowledgeQueryForResult(userText, tool)
+            : null,
                     toolId: needsDreamFollowUp ? null : tool.id,
                     toolStatus: needsDreamFollowUp ? null : result.statusLabel,
                     sourceIds: result.sourceIds,
@@ -2471,7 +2562,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _requestAssistantResultInterpretation(
         prompt: interpretationPrompt,
         mode: mode,
-        retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
+        retrievalQuery: needsTcmKnowledge
+            ? _tcmToolKnowledgeQueryForResult(userText, tool)
+            : null,
         toolId: needsDreamFollowUp ? null : tool.id,
         toolStatus: needsDreamFollowUp ? null : result.statusLabel,
         sourceIds: result.sourceIds,
@@ -4434,8 +4527,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             AssistantToolExecutionStatus.succeeded &&
         normalizedResult.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
-    final needsTcmKnowledge = mode == AssistantMode.tools &&
-        const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
+    final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
     final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
         '先概括本次实际输入、关键输出和执行状态，再解释主要字段的含义、字段间关系及结果口径；'
         '明确区分 App 本地工具计算/数据原文与 AI 的语言化归纳。'
@@ -4554,7 +4646,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _requestAssistantResultInterpretation(
         prompt: interpretationPrompt,
         mode: mode,
-        retrievalQuery: needsTcmKnowledge ? '${tool.title} $resultText' : null,
+        retrievalQuery: needsTcmKnowledge
+            ? _tcmToolKnowledgeQueryForResult('', tool)
+            : null,
         toolId: tool.id,
         toolStatus: normalizedResult.statusLabel,
         sourceIds: normalizedResult.sourceIds,

@@ -46,6 +46,37 @@ void main() {
     expect(AssistantKnowledgeContextBuilder.build('今天的天气怎么样'), isEmpty);
   });
 
+  test('确定性检索门禁只对中医信号或本地知识实体开启', () {
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('桂枝汤的组成有哪些？'),
+      isTrue,
+    );
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('经方度量衡换算'),
+      isTrue,
+    );
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('子午流注开穴结果'),
+      isTrue,
+    );
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('纳子法与纳甲法'),
+      isTrue,
+    );
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('谢谢'),
+      isFalse,
+    );
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('正官是什么'),
+      isFalse,
+    );
+    expect(
+      AssistantKnowledgeContextBuilder.shouldRetrieveForQuery('今天的天气怎么样'),
+      isFalse,
+    );
+  });
+
 
   test('检索状态具有稳定的大写契约标签', () {
     const expected = {

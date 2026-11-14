@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
@@ -213,6 +214,20 @@ Future<TcmInterviewTaskState?> _waitForTcmInterviewTaskState(
     await tester.pump(const Duration(milliseconds: 10));
   }
   return latest;
+}
+
+class _NoopLocalAiAudioRecorder implements LocalAiAudioRecorder {
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {}
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
 }
 
 class _FailOnceStopRecorder implements LocalAiAudioRecorder {
@@ -5077,6 +5092,8 @@ void main() {
 
 
   testWidgets('经方单位换算在助手对话内追问制式、执行并交由 AI 解释', (tester) async {
+    // Mirror main.dart's startup preload before the widget retrieves formulas.
+    await tester.runAsync(() => FormulaRepository.load());
     final store = _MemoryConversationStore();
     final service = _TextSendService();
     final executedArguments = <Map<String, String>>[];
@@ -5087,6 +5104,7 @@ void main() {
         home: LocalAiInterviewScreen(
           conversationStore: store,
           service: service,
+          audioRecorder: _NoopLocalAiAudioRecorder(),
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
             return const Scaffold(body: Text('不应打开经方换算页面'));
@@ -5099,6 +5117,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('工具助手').last);
+    await tester.pumpAndSettle();
 
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
@@ -5107,7 +5129,20 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await send('把1.5两换算成克');
+    Future<void> waitForModelCalls(int expected) async {
+      // The classic index is loaded through real async I/O. WidgetTester.pump
+      // advances fake time but does not complete that I/O Future.
+      await tester.runAsync(() async {
+        for (var attempt = 0;
+            attempt < 150 && service.sentTexts.length < expected;
+            attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
+      await tester.pumpAndSettle();
+    }
+
+    await send('把桂枝汤里的1.5两换算成克');
     expect(find.textContaining('目前还缺少：度量标准'), findsOneWidget);
     expect(executedArguments, isEmpty);
     expect(service.sentTexts, isEmpty,
@@ -5129,6 +5164,7 @@ void main() {
     });
 
     await send('汉制');
+    await waitForModelCalls(1);
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'value': '1.5',
@@ -5140,6 +5176,35 @@ void main() {
     expect(pageOpened, isFalse);
     expect(service.sentTexts, hasLength(1),
         reason: '只有 App 计算并通过 sourceIds/arguments 校验后才交给模型解释');
+    expect(service.sentContexts, hasLength(1));
+    expect(
+      service.sentContexts.single,
+      contains('方名：桂枝汤'),
+      reason: '经方换算结果解释应同时引用已命中的本地知识条目',
+    );
+
+    // The same tool-mode conversation must retrieve knowledge on an ordinary
+    // follow-up question, without requiring a new tool invocation.
+    await send('桂枝汤的组成有哪些？');
+    await waitForModelCalls(2);
+    expect(service.sentTexts, hasLength(2));
+    expect(service.sentContexts, hasLength(2));
+    expect(service.sentContexts.last, contains('方名：桂枝汤'));
+
+    // Elliptical follow-ups reuse the last verified App result and its entity.
+    await send('那它的禁忌呢？');
+    await waitForModelCalls(3);
+    expect(service.sentTexts, hasLength(3));
+    expect(service.sentContexts, hasLength(3));
+    expect(service.sentContexts.last, contains('方名：桂枝汤'));
+
+    // Generic chat in Tools mode must not inject a NO_RESULTS retrieval block.
+    await send('谢谢');
+    await waitForModelCalls(4);
+    expect(service.sentTexts, hasLength(4));
+    expect(service.sentContexts, hasLength(4));
+    expect(service.sentContexts.last, isNot(contains('本轮本地知识库未命中可引用条目')));
+    expect(service.sentContexts.last, isNot(contains('App方剂库')));
 
     final conversations = await store.getAssistantConversations();
     final rows = await store.getAssistantMessages(
@@ -5179,6 +5244,7 @@ void main() {
         home: LocalAiInterviewScreen(
           conversationStore: store,
           service: service,
+          audioRecorder: _NoopLocalAiAudioRecorder(),
           testToolRouteBuilder: (_, __) {
             pageOpened = true;
             return const Scaffold(body: Text('不应打开子午流注页面'));
@@ -5196,6 +5262,19 @@ void main() {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> waitForModelCalls(int expected) async {
+      // The classic index is loaded through real async I/O. WidgetTester.pump
+      // advances fake time but does not complete that I/O Future.
+      await tester.runAsync(() async {
+        for (var attempt = 0;
+            attempt < 150 && service.sentTexts.length < expected;
+            attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+      });
       await tester.pumpAndSettle();
     }
 
@@ -5218,6 +5297,7 @@ void main() {
     expect(pendingMetadata.toolArguments, const {'date': '2026-11-14'});
 
     await send('10:30');
+    await waitForModelCalls(1);
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'date': '2026-11-14',
