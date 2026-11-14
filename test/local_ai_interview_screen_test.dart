@@ -5443,13 +5443,13 @@ void mainRedFlagEntrypointOrderingTests() {
       }
       expect(find.byTooltip('释放模型内存'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField), '请介绍中医里的阴阳概念');
+      await tester.enterText(find.byType(TextField), '我想排盘');
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
       expect(intentEvents, ['intent']);
-      expect(service.intentQueries, ['请介绍中医里的阴阳概念']);
+      expect(service.intentQueries, ['我想排盘']);
       final redFlagEvent = traceEvents.singleWhere(
         (event) => event.stage == AiTraceStage.redFlag,
       );
