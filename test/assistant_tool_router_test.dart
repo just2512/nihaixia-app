@@ -516,4 +516,18 @@ void main() {
     );
   });
 
+  test('子午流注注册为 Headless 并保留设备本地时间槽位', () {
+    final tool = AssistantToolRouter.ziwu;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), ['at', 'date', 'time']);
+    expect(tool.parameters.every((item) => !item.isRequired), isTrue);
+    expect(
+      AssistantToolRouter.match(
+        '帮我计算现在子午流注时辰开穴',
+        AssistantMode.automatic,
+      )?.id,
+      'ziwu_liuzhu',
+    );
+  });
+
 }
