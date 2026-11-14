@@ -5594,7 +5594,9 @@ void main() {
     const traceId = 'dddddddddddddddddddddddddddddddd';
     const query = '我在上海市出生，1990年1月2日早上八点半，男性，帮我测算小儿关煞';
     final slotDraft = LocalAiBaziSlotDraft.fromModelText(
-      '{"birth_time":{"value":"08:30","evidence":"早上八点半"},'
+      '{"birth_date":{"value":null,"evidence":null},'
+      '"birth_time":{"value":"08:30","evidence":"早上八点半"},'
+      '"gender":{"value":null,"evidence":null},'
       '"birthplace":{"value":"上海市","evidence":"在上海市出生"}}',
       userText: query,
       requestedKeys: const {'birth_time', 'birthplace'},
