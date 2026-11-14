@@ -4589,7 +4589,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _requestAssistantResultInterpretation(
         prompt: interpretationPrompt,
         mode: mode,
-        retrievalQuery: needsTcmKnowledge ? '${_tcmToolKnowledgeQueryForResult(userText, tool)}' : null,
+        retrievalQuery: needsTcmKnowledge
+            ? _tcmToolKnowledgeQueryForResult(userText, tool)
+            : null,
         toolId: tool.id,
         toolStatus: normalizedResult.statusLabel,
         sourceIds: normalizedResult.sourceIds,
