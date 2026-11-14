@@ -2298,6 +2298,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final canInterpret = result.status == AssistantToolExecutionStatus.succeeded &&
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
+    debugPrint('[DOSAGE_DIAG] interpretation gate tool=${tool.id} resultStatus=${result.status} sourceIds=${result.sourceIds} statusReady=${_status?.ready} statusUnknown=$_statusUnknown sending=$_sending modelBusy=$_modelControlBusy tcmBusy=$_structuredDiagnosisBusy auto=$autoInterpret');
     final needsTcmKnowledge = mode == AssistantMode.tools &&
         const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
     final interpretationPrompt = tool.id == 'bazi'
@@ -3592,12 +3593,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool allowWhileSending = false,
     bool restoreVisibleConversation = true,
   }) async {
+    debugPrint('[DOSAGE_DIAG] interpretation entry tool=$toolId statusReady=${_status?.ready} statusUnknown=$_statusUnknown sending=$_sending allowWhileSending=$allowWhileSending modelBusy=$_modelControlBusy tcmBusy=$_structuredDiagnosisBusy');
     if ((_sending && !allowWhileSending) ||
         _modelControlBusy ||
         _structuredDiagnosisBusy) {
+      debugPrint('[DOSAGE_DIAG] interpretation skipped busy gate');
       return;
     }
     if (_status?.ready != true || _statusUnknown) {
+      debugPrint('[DOSAGE_DIAG] interpretation skipped model gate');
       if (mounted) {
         setState(() => _error = '本地模型尚未就绪，无法生成结果解释；请先确认模型状态。');
       }
@@ -3648,12 +3652,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: toolId,
       );
 
+      debugPrint('[DOSAGE_DIAG] interpretation sending retrieval=$retrievalQuery');
       final response = await _sendTextWithKnowledgeContext(
         normalizedPrompt,
         mode: mode,
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
       );
+      debugPrint('[DOSAGE_DIAG] interpretation response received sources=${response.sourceIds}');
       inferenceCompleted = true;
       await _traceRecorder.record(
         traceContext,
