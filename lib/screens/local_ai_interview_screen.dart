@@ -2444,7 +2444,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingChengguArguments = null;
         _pendingHuangdiSijiArguments = null;
         _pendingXiaoliurenArguments = null;
-        _pendingYiJingArguments = null;
         final suppliedParameters = <String>[
           if (request['value']?.trim().isNotEmpty == true)
             '数值：${request['value']}',
