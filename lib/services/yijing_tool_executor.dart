@@ -32,9 +32,9 @@ class YiJingToolExecutor {
   }) {
     final prepared = <String, String>{...arguments};
     final method = prepared['method'];
-    if (method == 'time' && !prepared.containsKey('at')) {
+    if (method == 'time') {
       prepared['at'] = (now ?? DateTime.now()).toIso8601String();
-    } else if (method == 'coins' && !prepared.containsKey('coins')) {
+    } else if (method == 'coins') {
       final random = rng ?? Random();
       final rolls = <String>[];
       for (var line = 0; line < 6; line++) {
