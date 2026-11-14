@@ -902,7 +902,7 @@ void main() {
     expect(service.restoredTranscript, contains('四柱：戊辰、戊午、甲寅、庚午'));
     expect(service.restoredTranscript, contains('local-data:saved-chart:42'));
     expect(service.sentTexts.single, contains('不是科学预测'));
-    expect(service.sentTexts.single, contains('不能描述为用户实际出生地'));
+    expect(service.sentTexts.single, contains('不得描述为用户实际出生地'));
 
     final resultMessage = store.savedMessages.firstWhere(
       (message) =>
