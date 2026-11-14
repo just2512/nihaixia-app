@@ -68,7 +68,7 @@ class AssistantConversationOrchestrator {
 
   static bool _isDosageConversionRequest(String query) {
     final hasQuantityAndUnit = RegExp(
-      r'\\d+(?:\\.\\d+)?\\s*(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)',
+      r'\d+(?:\.\d+)?\s*(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)',
     ).hasMatch(query);
     final hasConversionAction = RegExp(
       r'(换算|转换|折合|换成|折为|多少克|多少毫升|多少厘米)',
@@ -200,7 +200,7 @@ class AssistantConversationOrchestrator {
     } else if (tool.id == 'dosage') {
       const unitPattern = r'(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)';
       final quantityUnitMatches = RegExp(
-        r'(\\d+(?:\\.\\d+)?)\\s*' + unitPattern,
+        r'(\d+(?:\.\d+)?)\s*' + unitPattern,
       ).allMatches(query).toList(growable: false);
       if (quantityUnitMatches.length == 1) {
         values['value'] = quantityUnitMatches.single.group(1)!;
@@ -209,10 +209,10 @@ class AssistantConversationOrchestrator {
         values['unit'] = 'AMBIGUOUS_UNIT_SELECTION';
       } else {
         final value = RegExp(
-          r'(?:数值|数量|换算数值|输入)\\s*(?:是|为)?\\s*[：:]?\\s*(\\d+(?:\\.\\d+)?)',
+          r'(?:数值|数量|换算数值|输入)\s*(?:是|为)?\s*[：:]?\s*(\d+(?:\.\d+)?)',
         ).firstMatch(query);
         final unit = RegExp(
-          r'(?:原始单位|输入单位|单位)\\s*(?:是|为)?\\s*[：:]?\\s*' + unitPattern,
+          r'(?:原始单位|输入单位|单位)\s*(?:是|为)?\s*[：:]?\s*' + unitPattern,
         ).firstMatch(query);
         if (value != null) values['value'] = value.group(1)!;
         if (unit != null) values['unit'] = unit.group(1)!;
