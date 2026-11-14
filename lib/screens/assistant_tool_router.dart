@@ -9,6 +9,7 @@ import '../services/bazi_tool_executor.dart';
 import '../services/meihua_tool_executor.dart';
 import '../services/chenggu_tool_executor.dart';
 import '../services/huangdi_siji_tool_executor.dart';
+import '../services/ziwei_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -203,11 +204,41 @@ class AssistantToolRouter {
   static const ziwei = AssistantToolDefinition(
     id: 'ziwei',
     title: '紫微斗数排盘',
-    description: '打开本地紫微斗数排盘。',
+    description: '在当前对话收集明确的出生资料并调用 App 本地确定性紫微引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['紫微斗数', '紫微排盘', '紫微命盘'],
     actionWords: ['排盘', '起盘', '命盘', '帮我排'],
     builder: _buildZiwei,
+    headlessExecutor: ZiweiToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '出生地当地钟表时间，24 小时制 HH:mm',
+      ),
+      AssistantToolParameter(
+        key: 'gender',
+        label: '性别',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['male', 'female'],
+      ),
+      AssistantToolParameter(
+        key: 'birthplace',
+        label: '出生地点',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '出生城市或区县，用于读取本地经纬度',
+      ),
+    ],
   );
 
   static const bazi = AssistantToolDefinition(
