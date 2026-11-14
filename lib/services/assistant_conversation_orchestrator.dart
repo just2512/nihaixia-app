@@ -190,7 +190,79 @@ class AssistantConversationOrchestrator {
     String query,
   ) {
     final values = <String, String>{};
-    if (tool.id == 'dream') {
+    if (tool.id == 'shousheng_debt') {
+      // The two local tables have different source-system conventions.
+      // Never infer a method from an omitted choice or silently default to
+      // the page's initial selection.
+      final methods = <String>{
+        if (query.contains('禄库受生经') ||
+            query.contains('禄库受生') ||
+            query.contains('禄库'))
+          'luku',
+        if (query.contains('五斗金章') || query.contains('五斗')) 'wudou',
+      };
+      if (methods.length == 1) {
+        values['method'] = methods.single;
+      } else if (methods.length > 1) {
+        values['method'] = 'AMBIGUOUS_METHOD_SELECTION';
+      }
+
+      if (query.contains('农历') || query.contains('阴历')) {
+        values['birth_date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else {
+        final dateMatches = <String>{};
+        final isoDates = RegExp(
+          r'(?<!\d)(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?!\d)',
+        ).allMatches(query);
+        final chineseDates = RegExp(
+          r'(\d{4})年(\d{1,2})月(\d{1,2})日?',
+        ).allMatches(query);
+        for (final match in [...isoDates, ...chineseDates]) {
+          dateMatches.add(
+            match.group(1)!.padLeft(4, '0') + '-' +
+                match.group(2)!.padLeft(2, '0') + '-' +
+                match.group(3)!.padLeft(2, '0'),
+          );
+        }
+        if (dateMatches.length == 1) {
+          values['birth_date'] = dateMatches.single;
+        } else if (dateMatches.length > 1) {
+          values['birth_date'] = 'AMBIGUOUS_DATE_SELECTION';
+        }
+      }
+
+      final timeMatches = RegExp(
+        r'(凌晨|清晨|早上|上午|中午|下午|傍晚|晚上)?\s*'
+        r'(\d{1,2})(?::([0-5]\d)|(?:点|时)(?:(\d{1,2})分|半)?)',
+      ).allMatches(query).map((match) {
+        var hour = int.parse(match.group(2)!);
+        final minute = match.group(3) != null
+            ? int.parse(match.group(3)!)
+            : match.group(4) != null
+                ? int.parse(match.group(4)!)
+                : match.group(0)!.contains('半')
+                    ? 30
+                    : 0;
+        final period = match.group(1);
+        if ((period == '下午' || period == '傍晚' || period == '晚上') &&
+            hour >= 1 &&
+            hour < 12) {
+          hour += 12;
+        } else if (period == '凌晨' && hour == 12) {
+          hour = 0;
+        }
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+          return 'INVALID_TIME';
+        }
+        return hour.toString().padLeft(2, '0') + ':' +
+            minute.toString().padLeft(2, '0');
+      }).toSet();
+      if (timeMatches.length == 1) {
+        values['birth_time'] = timeMatches.single;
+      } else if (timeMatches.length > 1) {
+        values['birth_time'] = 'AMBIGUOUS_TIME_SELECTION';
+      }
+    } else if (tool.id == 'dream') {
       final marker = RegExp(r'(?:梦见|梦到|梦里有?|梦境(?:是|里)?|做梦(?:时)?)')
           .firstMatch(query);
       final detail = marker == null ? '' : query.substring(marker.end);

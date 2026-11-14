@@ -305,6 +305,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingDosageArguments;
   AssistantToolArguments? _pendingZiWuArguments;
   AssistantToolArguments? _pendingDreamArguments;
+  AssistantToolArguments? _pendingShoushengDebtArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -432,6 +433,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingDosageArguments = null;
         _pendingZiWuArguments = null;
         _pendingDreamArguments = null;
+        _pendingShoushengDebtArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2504,7 +2506,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
-    final interpretationPrompt = tool.id == 'guansha'
+    final interpretationPrompt = tool.id == 'shousheng_debt'
+        ? '请只解释 App 本地受生债数据表返回的实际字段和来源。'
+            '这是传统道教文献与民俗表格的程序化查询，不代表现实中存在需要偿还的债务、欠款金额或法律/财务义务。'
+            '严格区分禄库受生经与五斗金章两套表格，按 App 返回的查询体系和口径说明解释；若口径说明指出不同学术考订或民间流传版本有差异，必须保留差异，不自行选择、改写或合并口径。'
+            '不得建议用户捐款、付款、购买供品、做法事或作出任何财务/宗教决定；不得将金额解释为现实债务或预测命运。'
+            '只归纳 App 返回的出生参数、年支/日干/时支、对应表格数据、用途声明和来源，不重新排盘、不补造字段或出处。'
+        : tool.id == 'guansha'
         ? '请只解释 App 本地关煞引擎返回的结构化字段和数据集原文。必须明确这属于传统民俗文化文本，不是科学事实、命运预测或医学判断。'
             '不得把关煞名称、儿童身体部位、犯者忌或化解文字解释为孩子患病、身体缺陷、寿命或健康风险；不得给出治疗、用药或就医替代建议，也不得鼓励因民俗结果采取惩罚、恐吓或限制儿童的做法。'
             '只总结已返回的实际出生参数、四柱、命中条目、规则依据和数据集范围；不重新排盘、不改写命中结果，不补造未返回的出处。'
@@ -2641,6 +2649,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (tool.id != 'dosage') _pendingDosageArguments = null;
     if (tool.id != 'ziwu_liuzhu') _pendingZiWuArguments = null;
     if (tool.id != 'dream') _pendingDreamArguments = null;
+    if (tool.id != 'shousheng_debt') _pendingShoushengDebtArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
@@ -2841,6 +2850,109 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingGuanshaArguments = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
+    if (tool.id == 'shousheng_debt' && tool.headlessExecutor != null) {
+      final currentArguments = arguments ??
+          AssistantConversationOrchestrator.argumentsFor(tool, userText);
+      final request = AssistantToolArguments(
+        toolId: 'shousheng_debt',
+        values: Map<String, String>.unmodifiable({
+          ...?_pendingShoushengDebtArguments?.values,
+          ...currentArguments.values,
+        }),
+      );
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingShoushengDebtArguments = request;
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                request[parameter.key]?.trim().isNotEmpty == true)
+            .map((parameter) =>
+                parameter.label + '：' + request[parameter.key]!)
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final clarification = [
+          '我会直接在当前对话中调用 App 原有受生债查询函数和本地数据表，不需要跳转工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：' + suppliedParameters.join('；') + '。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：' + missingParameters.join('、') + '。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：' + invalidParameterErrors.join('；') + '。',
+          if (userText.contains('农历') || userText.contains('阴历'))
+            '当前查询只接受公历出生日期；农历不会被当作公历，也不会由 AI 猜算或自动转换。',
+          '请提供公历出生日期（YYYY-MM-DD）、当地钟表时间（HH:mm，例如 20:30 或晚上8点半），并明确选择「禄库受生经」或「五斗金章受生经」。',
+          '两套本地表格口径不同；未明确选择前不会执行，也不会沿用页面默认体系。可以分多轮补充，发送“取消受生债查询”可结束本次操作。',
+          '这是传统道教文献与民俗表格查询，不代表现实中存在需要偿还的债务或金额，也不构成宗教、捐献或财务建议。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'SHOUSHENG_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+
+      _pendingShoushengDebtArguments = null;
       await _executeHeadlessTool(
         userText,
         tool,
@@ -5046,6 +5158,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingDosageArguments;
     AssistantToolArguments? restoredPendingZiWuArguments;
     AssistantToolArguments? restoredPendingDreamArguments;
+    AssistantToolArguments? restoredPendingShoushengDebtArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -5079,6 +5192,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingDosageArguments = null;
         restoredPendingZiWuArguments = null;
         restoredPendingDreamArguments = null;
+        restoredPendingShoushengDebtArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -5159,6 +5273,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'dream') {
         restoredPendingDreamArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'shousheng_debt') {
+        restoredPendingShoushengDebtArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -5311,6 +5431,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingDosageArguments = restoredPendingDosageArguments;
       _pendingZiWuArguments = restoredPendingZiWuArguments;
       _pendingDreamArguments = restoredPendingDreamArguments;
+      _pendingShoushengDebtArguments = restoredPendingShoushengDebtArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5511,6 +5632,117 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
+    }
+
+    final pendingShoushengDebt = _pendingShoushengDebtArguments;
+    if (pendingShoushengDebt != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '受生债查询需要文字出生资料和明确的查询体系。请用文字补充，或发送“取消受生债查询”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:shousheng_attachment_rejected',
+        mode: (_lastEffectiveMode ?? AssistantMode.tools).name,
+        toolId: 'shousheng_debt',
+        errorCode: 'SHOUSHENG_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: (_lastEffectiveMode ?? AssistantMode.tools).name,
+        toolId: 'shousheng_debt',
+      );
+      return;
+    }
+    if (pendingShoushengDebt != null && text.isNotEmpty) {
+      final command = text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消受生债',
+        '取消受生债查询',
+        '停止受生债查询',
+        '不查了',
+        '先不查',
+        '算了',
+        '取消',
+      }.contains(command);
+      final mode = _lastEffectiveMode ?? AssistantMode.tools;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:shousheng_debt'
+            : 'tool_follow_up:shousheng_debt',
+        mode: mode.name,
+        toolId: 'shousheng_debt',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:shousheng_debt'
+            : 'tool_follow_up:shousheng_debt',
+        mode: mode.name,
+        toolId: 'shousheng_debt',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次受生债查询；尚未执行查询。';
+        setState(() {
+          _pendingShoushengDebtArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: mode,
+          toolId: 'shousheng_debt',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingShoushengDebt.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'shousheng_debt',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'shousheng_debt',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.shoushengDebt,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingShoushengDebt.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.shoushengDebt,
+        mode: mode,
+        arguments: AssistantToolArguments(
+          toolId: 'shousheng_debt',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
     }
 
     final pendingDream = _pendingDreamArguments;
@@ -7576,6 +7808,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
       _pendingDreamArguments = null;
+      _pendingShoushengDebtArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {

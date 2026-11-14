@@ -18,6 +18,7 @@ import '../services/dosage_conversion_service.dart';
 import '../services/ziwuliuzhu_tool_executor.dart';
 import '../services/dream_tool_executor.dart';
 import '../services/guansha_tool_executor.dart';
+import '../services/shousheng_debt_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -713,11 +714,36 @@ class AssistantToolRouter {
   static const shoushengDebt = AssistantToolDefinition(
     id: 'shousheng_debt',
     title: '受生债查询',
-    description: '查阅传统道教文献与民俗计算；不构成宗教或财务建议。',
+    description: '在当前对话中收集明确的公历出生日期、当地钟表时间和查询体系，复用 App 原有八字设置及本地受生债数据表；仅作道教文献与民俗文化参考，不构成现实债务、宗教或财务建议。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['受生债', '禄库受生经', '五斗金章'],
-    actionWords: ['查询', '计算', '测算', '打开'],
+    actionWords: ['查询', '计算', '测算', '帮我查', '算一下'],
     builder: _buildShoushengDebt,
+    headlessExecutor: ShoushengDebtToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+        description: '仅接受明确公历日期；农历输入需先澄清，不自动换算。',
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；不使用页面默认时间。',
+      ),
+      AssistantToolParameter(
+        key: 'method',
+        label: '查询体系（禄库受生经 / 五斗金章）',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['luku', 'wudou'],
+        description: '两套表格口径不同，必须由用户明确选择，不沿用页面默认选项。',
+      ),
+    ],
   );
 
   static const huangdiSiji = AssistantToolDefinition(
