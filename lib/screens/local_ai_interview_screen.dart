@@ -33,6 +33,7 @@ import '../models/assistant_message_metadata.dart';
 import '../services/yijing_tool_executor.dart';
 import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
+import '../services/ziwuliuzhu_tool_executor.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../data/formula_repository.dart';
@@ -285,6 +286,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingXiaoliurenArguments;
   AssistantToolArguments? _pendingYiJingArguments;
   AssistantToolArguments? _pendingDosageArguments;
+  AssistantToolArguments? _pendingZiWuArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -338,6 +340,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingXiaoliurenArguments = null;
         _pendingYiJingArguments = null;
         _pendingDosageArguments = null;
+        _pendingZiWuArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2295,7 +2298,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = mode == AssistantMode.tools &&
-        const {'yunqi', 'ziwu_liuzhu'}.contains(tool.id);
+        const {'yunqi'}.contains(tool.id);
     final interpretationPrompt = tool.id == 'bazi'
         ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
             '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
@@ -2409,12 +2412,159 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _pendingToolSelection = false;
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
     if (tool.id != 'dosage') _pendingDosageArguments = null;
+    if (tool.id != 'ziwu_liuzhu') _pendingZiWuArguments = null;
     final activeMode = mode ??
         (tool.modes.contains(AssistantMode.metaphysics)
             ? AssistantMode.metaphysics
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
+    if (tool.id == 'ziwu_liuzhu' &&
+        tool.headlessExecutor != null) {
+      // Do not trust a model-proposed timestamp or slot value. Re-extract
+      // only values visible in the user's current text, and carry forward only
+      // the previously persisted AWAITING_PARAMETERS slots.
+      final carriedSlots =
+          _pendingZiWuArguments?.values ?? const <String, String>{};
+      final currentTextSlots = AssistantConversationOrchestrator.argumentsFor(
+        tool,
+        userText,
+      );
+      final request = AssistantToolArguments(
+        toolId: 'ziwu_liuzhu',
+        values: ZiWuLiuZhuToolExecutor.prepareExecutionArguments({
+          ...carriedSlots,
+          ...currentTextSlots.values,
+        }),
+      );
+      final argumentErrors = request.validateAgainst(tool);
+      final businessErrors =
+          ZiWuLiuZhuToolExecutor.validateArguments(request.values);
+      final date = request['date'];
+      final time = request['time'];
+      final missingParameters = <String>[
+        if (date != null &&
+            date != 'AMBIGUOUS_DATE_SELECTION' &&
+            time == null &&
+            request['at'] == null)
+          '具体时刻（HH:mm）',
+      ];
+      final invalidParameterErrors = <String>[
+        if (date == 'AMBIGUOUS_DATE_SELECTION')
+          '你提供了多个日期，请明确一个公历日期',
+        if (date == 'INVALID_DATE' ||
+            (date != null &&
+                date != 'AMBIGUOUS_DATE_SELECTION' &&
+                date != 'INVALID_DATE' &&
+                !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date)))
+          '公历日期无效，请使用 YYYY-MM-DD',
+        if (time == 'AMBIGUOUS_TIME_SELECTION')
+          '你提供了多个时刻，请明确一个 HH:mm 时刻',
+        if (time != null &&
+            time != 'AMBIGUOUS_TIME_SELECTION' &&
+            !RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$').hasMatch(time))
+          '时刻无效，请使用 24 小时制 HH:mm',
+      ];
+      final executionErrors = [
+        ...argumentErrors,
+        ...businessErrors.where(
+          (error) => !error.startsWith('缺少完整的设备本地日期和时间'),
+        ),
+      ];
+      if (executionErrors.isNotEmpty ||
+          missingParameters.isNotEmpty ||
+          invalidParameterErrors.isNotEmpty) {
+        _pendingZiWuArguments = request;
+        _pendingDosageArguments = null;
+        _pendingYiJingArguments = null;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
+        final suppliedParameters = <String>[
+          if (date != null &&
+              date != 'INVALID_DATE' &&
+              date != 'AMBIGUOUS_DATE_SELECTION')
+            '公历日期：$date',
+          if (time != null &&
+              time != 'AMBIGUOUS_TIME_SELECTION')
+            '设备本地时刻：$time',
+          if (request['at'] != null) '最终计算时间：${request['at']}',
+        ];
+        final clarification = [
+          '我会在当前对话中调用 App 原有子午流注引擎，不需要打开时辰开穴页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            invalidParameterErrors.join('；') + '。',
+          if (missingParameters.isNotEmpty)
+            '请补充精确到分钟的设备本地时刻，例如“10:30”；补齐后会按 App 原有口径计算。',
+          '未指定日期和时刻时，App 使用设备当前本地时间；指定日期时必须同时提供时刻。',
+          '计算口径固定为默认经度 120E、纬度 30N，子时按 23:00 换日，未启用真太阳时。',
+          '结果是传统时辰开穴计算资料，不是疾病诊断、针刺处方或个体治疗建议。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'ZIWU_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingZiWuArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     if (tool.id == 'dosage' && tool.headlessExecutor != null) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
@@ -4382,6 +4532,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingXiaoliurenArguments;
     AssistantToolArguments? restoredPendingYiJingArguments;
     AssistantToolArguments? restoredPendingDosageArguments;
+    AssistantToolArguments? restoredPendingZiWuArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4412,6 +4563,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingXiaoliurenArguments = null;
         restoredPendingYiJingArguments = null;
         restoredPendingDosageArguments = null;
+        restoredPendingZiWuArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4474,6 +4626,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'dosage') {
         restoredPendingDosageArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'ziwu_liuzhu') {
+        restoredPendingZiWuArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4623,6 +4781,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingXiaoliurenArguments = restoredPendingXiaoliurenArguments;
       _pendingYiJingArguments = restoredPendingYiJingArguments;
       _pendingDosageArguments = restoredPendingDosageArguments;
+      _pendingZiWuArguments = restoredPendingZiWuArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5453,6 +5612,114 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
         arguments: AssistantToolArguments(
           toolId: 'xiaoliuren',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
+    final pendingZiWu = _pendingZiWuArguments;
+    if (pendingZiWu != null &&
+        (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '子午流注计算需要明确的公历日期和本地时刻，请用文字补充；也可以发送“取消子午流注”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:ziwu_attachment_rejected',
+        mode: AssistantMode.tools.name,
+        toolId: 'ziwu_liuzhu',
+        errorCode: 'ZIWU_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.tools.name,
+        toolId: 'ziwu_liuzhu',
+      );
+      return;
+    }
+    if (pendingZiWu != null && text.isNotEmpty) {
+      final cancelText =
+          text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消子午流注',
+        '取消时辰开穴',
+        '取消开穴计算',
+        '停止计算',
+        '算了',
+        '先不算',
+        '取消',
+      }.contains(cancelText);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:ziwu_liuzhu' : 'tool_follow_up:ziwu_liuzhu',
+        mode: AssistantMode.tools.name,
+        toolId: 'ziwu_liuzhu',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested ? 'tool_cancel:ziwu_liuzhu' : 'tool_follow_up:ziwu_liuzhu',
+        mode: AssistantMode.tools.name,
+        toolId: 'ziwu_liuzhu',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次子午流注计算；尚未执行计算。';
+        setState(() {
+          _pendingZiWuArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.tools,
+          toolId: 'ziwu_liuzhu',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingZiWu.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'ziwu_liuzhu',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'ziwu_liuzhu',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwu,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingZiWu.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.ziwu,
+        mode: AssistantMode.tools,
+        arguments: AssistantToolArguments(
+          toolId: 'ziwu_liuzhu',
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,

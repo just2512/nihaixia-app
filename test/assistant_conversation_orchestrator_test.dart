@@ -1186,6 +1186,61 @@ void main() {
       expect(learning.tool, isNull);
     });
 
+    test('子午流注根据用户明确的日期和时刻提取槽位，当前时刻由 App 注入', () {
+      final current = AssistantConversationOrchestrator.resolve(
+        query: '帮我计算现在子午流注时辰开穴',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(current.tool?.id, 'ziwu_liuzhu');
+      expect(current.mode, AssistantMode.tools);
+      expect(current.toolArguments?.values, isEmpty,
+          reason: '“现在”由 App 在执行边界读取设备本地时间');
+
+      final explicit = AssistantConversationOrchestrator.resolve(
+        query: '请计算2026-11-14 10:30子午流注开穴',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(explicit.tool?.id, 'ziwu_liuzhu');
+      expect(explicit.toolArguments?.values, const {
+        'date': '2026-11-14',
+        'time': '10:30',
+      });
+
+      final dateOnly = AssistantConversationOrchestrator.resolve(
+        query: '计算2026年11月14日子午流注开穴',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(dateOnly.tool?.id, 'ziwu_liuzhu');
+      expect(dateOnly.toolArguments?.values, const {
+        'date': '2026-11-14',
+      });
+
+      final timeOnly = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwu,
+        '10:30',
+      );
+      expect(timeOnly.values, const {'time': '10:30'});
+
+      final multipleDates = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwu,
+        '2026-11-14和2026-11-15子午流注开穴',
+      );
+      expect(multipleDates['date'], 'AMBIGUOUS_DATE_SELECTION');
+
+      final multipleTimes = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwu,
+        '2026-11-14 10:30和11:30子午流注开穴',
+      );
+      expect(multipleTimes['time'], 'AMBIGUOUS_TIME_SELECTION');
+
+      final learning = AssistantConversationOrchestrator.resolve(
+        query: '学习子午流注纳子法、纳甲法的原理',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(learning.mode, AssistantMode.learning);
+      expect(learning.tool, isNull);
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',

@@ -43,7 +43,7 @@ const List<String> kDiZhi = [
 ];
 
 String _sourcePath() {
-  const rel = 'lib/screens/ziwuliuzhu_screen.dart';
+  const rel = 'lib/services/ziwuliuzhu_calculation_service.dart';
   var dir = Directory.current;
   for (int i = 0; i < 5; i++) {
     final candidate = '${dir.path}/$rel';
@@ -54,6 +54,17 @@ String _sourcePath() {
 }
 
 String _readSource() => File(_sourcePath()).readAsStringSync();
+
+String _readScreenSource() {
+  const rel = 'lib/screens/ziwuliuzhu_screen.dart';
+  var dir = Directory.current;
+  for (int i = 0; i < 5; i++) {
+    final candidate = '${dir.path}/$rel';
+    if (File(candidate).existsSync()) return File(candidate).readAsStringSync();
+    dir = dir.parent;
+  }
+  throw StateError('找不到 $rel，cwd=${Directory.current.path}');
+}
 
 /// 去掉行注释，避免注释里出现的穴名干扰后续正则解析。
 String _stripLineComments(String src) => src
@@ -83,7 +94,7 @@ String _blockOf(String src, String decl, String label) {
 
 /// 解析 `_benXue`（经络→本穴）。
 Map<String, String> _parseBenXueTable() {
-  final block = _blockOf(_stripLineComments(_readSource()), '_benXue = ', '_benXue');
+  final block = _blockOf(_stripLineComments(_readSource()), 'benXueByMeridian = ', 'benXueByMeridian');
   final re = RegExp(r"'([^']+)'\s*:\s*'([^']+)'");
   final entries = re
       .allMatches(block)
@@ -95,7 +106,7 @@ Map<String, String> _parseBenXueTable() {
 /// 解析 `_zhiToMeridian`（地支→(经络, 时段)），返回地支→经络。
 Map<String, String> _parseZhiToMeridian() {
   final block =
-      _blockOf(_stripLineComments(_readSource()), '_zhiToMeridian = ', '_zhiToMeridian');
+      _blockOf(_stripLineComments(_readSource()), 'zhiToMeridian = ', 'zhiToMeridian');
   final re = RegExp(r"'(.)'\s*:\s*\(\s*'([^']+)'");
   return Map<String, String>.fromEntries(
       re.allMatches(block).map((m) => MapEntry(m.group(1)!, m.group(2)!)));
@@ -175,14 +186,21 @@ void main() {
         expect(benXue[unknown] ?? '', '', reason: '$unknown 应安全回落为空串');
       }
 
-      final src = _stripLineComments(_readSource());
-      final declAt = src.indexOf('_getBenXue(String meridian) {');
-      expect(declAt, greaterThanOrEqualTo(0), reason: '找不到 _getBenXue 实现');
-      final impl = src.substring(declAt, src.indexOf('}', declAt) + 1);
-      expect(impl.contains('_benXue[meridian]'), isTrue,
-          reason: '_getBenXue 不再是查表实现，请复核');
-      expect(RegExp(r"\?\?\s*''").hasMatch(impl), isTrue,
-          reason: '_getBenXue 缺少 ?? \'\' 兜底，未知经络会返回 null 并在 UI 抛错');
+      final screen = _stripLineComments(_readScreenSource());
+      final service = _stripLineComments(_readSource());
+      expect(
+        RegExp(
+          r'String _getBenXue\(String meridian\)\s*=>\s*ZiWuLiuZhuCalculationService\.benXue\(meridian\);',
+        ).hasMatch(screen),
+        isTrue,
+        reason: '页面必须复用共享服务的本穴查询',
+      );
+      expect(
+        RegExp(r"static String benXue\(String meridian\) => benXueByMeridian\[meridian\] \?\? '';")
+            .hasMatch(service),
+        isTrue,
+        reason: '共享本穴查询必须对未知经络 fail safe 返回空串',
+      );
     });
   });
 

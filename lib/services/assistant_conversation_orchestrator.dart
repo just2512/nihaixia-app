@@ -228,6 +228,54 @@ class AssistantConversationOrchestrator {
       } else if (standards.length > 1) {
         values['standard'] = 'AMBIGUOUS_STANDARD_SELECTION';
       }
+    } else if (tool.id == 'ziwu_liuzhu') {
+      final isoDates = RegExp(
+        r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
+      ).allMatches(query).toList(growable: false);
+      final chineseDates = RegExp(
+        r'(\d{4})年(\d{1,2})月(\d{1,2})日?',
+      ).allMatches(query).toList(growable: false);
+      final dateValues = <String>{
+        for (final match in [...isoDates, ...chineseDates])
+          '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}',
+      };
+      if (dateValues.length == 1) {
+        final date = dateValues.single;
+        final parts = date.split('-').map(int.parse).toList(growable: false);
+        final parsed = DateTime(parts[0], parts[1], parts[2]);
+        values['date'] = parsed.year == parts[0] &&
+                parsed.month == parts[1] &&
+                parsed.day == parts[2] &&
+                parts[0] >= 1900 &&
+                parts[0] <= 2100
+            ? date
+            : 'INVALID_DATE';
+      } else if (dateValues.length > 1) {
+        values['date'] = 'AMBIGUOUS_DATE_SELECTION';
+      }
+
+      final timeMatches = RegExp(
+        r'(?<!\d)([01]?\d|2[0-3])[:：]([0-5]\d)(?!\d)',
+      ).allMatches(query).toList(growable: false);
+      final timeValues = timeMatches
+          .map((match) =>
+              '${match.group(1)!.padLeft(2, '0')}:${match.group(2)}')
+          .toSet();
+      if (timeValues.length == 1) {
+        values['time'] = timeValues.single;
+      } else if (timeValues.length > 1) {
+        values['time'] = 'AMBIGUOUS_TIME_SELECTION';
+      } else if (RegExp(r'(\d{1,2}点|上午|下午|晚上|早上|凌晨|今晚|今早|午时|子时|酉时)')
+          .hasMatch(query)) {
+        values['time'] = 'UNPARSED_TIME';
+      }
+      if (dateValues.isEmpty &&
+          RegExp(r'(\d{4}年|\d{4}[-/]|今天|明天|后天|昨天)')
+              .hasMatch(query)) {
+        values['date'] = 'UNPARSED_DATE';
+      }
     } else if (tool.id == 'xiaoliuren') {
       final isoDates = RegExp(
         r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',

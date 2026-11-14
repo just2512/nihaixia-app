@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
+import 'package:nihaisha_app/services/ziwuliuzhu_calculation_service.dart';
 
 class ZiWuLiuZhuScreen extends StatefulWidget {
   const ZiWuLiuZhuScreen({
@@ -22,62 +23,13 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
 
   late final TabController _tabController;
 
-  // 天干
-  static const _tianGan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+  static const _tianGan = ZiWuLiuZhuCalculationService.tianGan;
+  static const _diZhi = ZiWuLiuZhuCalculationService.diZhi;
+  static const _ganToOrgan = ZiWuLiuZhuCalculationService.ganToOrgan;
+  static const _zhiToMeridian = ZiWuLiuZhuCalculationService.zhiToMeridian;
 
-  // 地支
-  static const _diZhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-  // 天干→脏腑
-  static const _ganToOrgan = {
-    '甲': '胆', '乙': '肝', '丙': '小肠', '丁': '心', '戊': '胃',
-    '己': '脾', '庚': '大肠', '辛': '肺', '壬': '膀胱', '癸': '肾',
-  };
-
-  // 地支→时辰→经络
-  static const _zhiToMeridian = {
-    '子': ('胆经', '23:00–01:00'),
-    '丑': ('肝经', '01:00–03:00'),
-    '寅': ('肺经', '03:00–05:00'),
-    '卯': ('大肠经', '05:00–07:00'),
-    '辰': ('胃经', '07:00–09:00'),
-    '巳': ('脾经', '09:00–11:00'),
-    '午': ('心经', '11:00–13:00'),
-    '未': ('小肠经', '13:00–15:00'),
-    '申': ('膀胱经', '15:00–17:00'),
-    '酉': ('肾经', '17:00–19:00'),
-    '戌': ('心包经', '19:00–21:00'),
-    '亥': ('三焦经', '21:00–23:00'),
-  };
-
-  // 本穴表（经络→本穴）——「本穴」＝ 穴性与该经五行属性相同之穴，十二经各一穴。
-  // 口径以参考站 acuherb.xyz/ziwu 为准（教材通用口径），已用 Lightpanda 逐格对拍验证。
-  // ⚠️ 历史坑：本机曾用「行间（肝经·荥火·子穴）」「二间（大肠经·荥水·子穴）」当本穴，属取错；
-  //    讲义明载肝经本穴＝大敦（井木）、大肠经本穴＝商阳（井金）。
-  // ⚠️ 心包/三焦：讲义只给天干归属（三焦亦向壬中寄、心包同归入癸水），未给具体穴名，
-  //    本机曾自行推导为「借阴谷/通谷」，现按参考站改为劳宫/支沟。勿再改回归癸寄壬推导。
-  static const _benXue = {
-    '胆经': '临泣', '肝经': '大敦', '小肠经': '阳谷', '心经': '少府',
-    '胃经': '足三里', '脾经': '太白', '大肠经': '商阳', '肺经': '经渠',
-    '膀胱经': '通谷', '肾经': '阴谷', '心包经': '劳宫', '三焦经': '支沟',
-  };
-
-  String _getBenXue(String meridian) {
-    return _benXue[meridian] ?? '';
-  }
-
-  // 五门十变：十天干两两合化 + 夫妻经本穴配。合化关系口径已对拍参考站 acuherb.xyz/ziwu
-  // （180 天实跑，5/5 一致）。
-  // ⚠️ 历史坑：本机曾用「乙庚 = 行间+二间」，源自讲义 zhenjiu_doc.md L6895 的举例，但那是
-  //    **讲师口误**——同份讲义 L6901 亲口定义「本穴就是与该经属性相同的穴道」，按此定义
-  //    肝经本穴应是井木「大敦」、大肠经本穴应是井金「商阳」（12 经举例中唯这 2 条不符定义）。
-  //    「行间+二间」的真实身份是**乙庚合化金的配穴对**（壮水：金生水），不是夫妻经本穴配。
-  // ⚠️ 同一份数据在下方 UI 表里还有一份**硬编码**（搜「乙庚合化金」），改这里必须同步改那边。
-  static const _wuMen = [
-    ('甲', '己', '土', '临泣+太白'), ('乙', '庚', '金', '大敦+商阳'),
-    ('丙', '辛', '水', '阳谷+经渠'), ('丁', '壬', '木', '少府+通谷'),
-    ('戊', '癸', '火', '足三里+阴谷'),
-  ];
+  String _getBenXue(String meridian) =>
+      ZiWuLiuZhuCalculationService.benXue(meridian);
 
   @override
   void initState() {
@@ -86,59 +38,8 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
     _tabController = TabController(length: 4, vsync: this);
   }
 
-  String _buildAssistantSummary() {
-    final gz = eng.calcDayGanZhi(_selectedDate);
-    final hour = eng.calcHourGanZhi(
-      gz.dayGan,
-      _selectedDate.hour,
-      _selectedDate.minute,
-    );
-    final dayGan = eng.ganName(gz.dayGan);
-    final dayZhi = eng.zhiName(gz.dayZhi);
-    final hourGan = eng.ganName(hour.hourGan);
-    final hourZhi = eng.zhiName(hour.hourZhi);
-
-    final shichen = _diZhi[_getShichenIndex(_selectedDate)];
-    final (meridian, timeRange) = _zhiToMeridian[shichen]!;
-    final naZi = '时辰 $shichen（$timeRange），对应$meridian，本穴 ${_getBenXue(meridian)}；'
-        '日干 $dayGan 对应${_ganToOrgan[dayGan]}，${_getWuMenInfo(dayGan)}。';
-
-    final najia = eng.najiaOpen(gz.dayGan, hour.hourGan, hour.hourZhi) ??
-        eng.najiaHeRi(gz.dayGan, hour.hourGan, hour.hourZhi);
-    final najiaText = najia == null
-        ? '当前时间无正开穴，也无合日互用取穴。'
-        : '${najia['point'] ?? 'MISSING'}，${najia['meridian'] ?? 'MISSING'}，'
-            '${najia['type'] ?? 'MISSING'}'
-            '${najia['yuan'] == null ? '' : '；返本还原取原穴 ${najia['yuan']}'}。';
-
-    final linggui = eng.lingguiOpen(
-      gz.dayGan,
-      gz.dayZhi,
-      hour.hourGan,
-      hour.hourZhi,
-    );
-    final gua = linggui['gua'] as List<String>;
-    final lingguiText = '${gua[0]}卦，主穴 ${gua[1]}（${gua[2]}），'
-        '配穴 ${linggui['peidui']}（${linggui['peiduiMai']}）；'
-        '${linggui['note'] == null || (linggui['note'] as String).isEmpty ? '无特殊处理' : linggui['note']}。';
-
-    final feiteng = eng.feitengOpen(hour.hourGan);
-    final feitengText = feiteng == null
-        ? '当前时干无对应飞腾八法取穴。'
-        : '${feiteng[0]}卦，开穴 ${feiteng[1]}。';
-
-    return [
-      '中医时辰开穴计算结果',
-      '计算时间：${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')} '
-          '${_selectedDate.hour.toString().padLeft(2, '0')}:${_selectedDate.minute.toString().padLeft(2, '0')}（设备本地时间）',
-      '日干支：$dayGan$dayZhi；时干支：$hourGan$hourZhi。',
-      '纳子法：$naZi',
-      '纳甲法：$najiaText',
-      '灵龟八法：$lingguiText',
-      '飞腾八法：$feitengText',
-      '计算口径：使用 App 内置子午流注计算引擎；日干支默认经纬度 120E/30N，子时按 23:00 换日。结果为计算输出，不代表个体诊疗建议。',
-    ].join('\n');
-  }
+  String _buildAssistantSummary() =>
+      ZiWuLiuZhuCalculationService.calculate(_selectedDate).summary;
 
   @override
   void dispose() {
@@ -146,30 +47,11 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
     super.dispose();
   }
 
-  int _getShichenIndex(DateTime dt) {
-    final minutes = dt.hour * 60 + dt.minute;
-    if (minutes >= 1380 || minutes < 60) return 0; // 子
-    if (minutes < 180) return 1;
-    if (minutes < 300) return 2;
-    if (minutes < 420) return 3;
-    if (minutes < 540) return 4;
-    if (minutes < 660) return 5;
-    if (minutes < 780) return 6;
-    if (minutes < 900) return 7;
-    if (minutes < 1020) return 8;
-    if (minutes < 1140) return 9;
-    if (minutes < 1260) return 10;
-    return 11;
-  }
+  int _getShichenIndex(DateTime dt) =>
+      ZiWuLiuZhuCalculationService.shichenIndex(dt);
 
-  String _getWuMenInfo(String gan) {
-    for (final (a, b, element, acupoints) in _wuMen) {
-      if (gan == a || gan == b) {
-        return '$a$b合化$element（$acupoints）';
-      }
-    }
-    return '';
-  }
+  String _getWuMenInfo(String gan) =>
+      ZiWuLiuZhuCalculationService.wuMenInfo(gan);
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -488,28 +370,23 @@ class _NaZiTab extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Column(
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('甲己合化土')), Text('临泣+太白')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('乙庚合化金')), Text('大敦+商阳')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('丙辛合化水')), Text('阳谷+经渠')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('丁壬合化木')), Text('少府+通谷')]),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(children: [Expanded(child: Text('戊癸合化火')), Text('足三里+阴谷')]),
-                    ),
-                  ],
+                  children: ZiWuLiuZhuCalculationService.wuMen.map(
+                    (entry) {
+                      final (first, second, element, acupoints) = entry;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text('$first$second合化$element')),
+                            Text(acupoints),
+                          ],
+                        ),
+                      );
+                    },
+                  ).toList(growable: false),
                 ),
               ),
             ],
