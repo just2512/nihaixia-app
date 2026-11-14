@@ -4565,6 +4565,28 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    Future<Map<String, Object?>> waitForPersistedResult(
+      String expectedValue,
+    ) async {
+      for (var attempt = 0; attempt < 30; attempt++) {
+        final conversations = await store.getAssistantConversations();
+        if (conversations.isNotEmpty) {
+          final rows = await store.getAssistantMessages(
+            conversationId: conversations.single['id'] as int,
+          );
+          for (final row in rows) {
+            final content = row['content'] as String? ?? '';
+            if (content.startsWith('【经方度量衡单位换算结果执行结果】') &&
+                content.contains(expectedValue)) {
+              return row;
+            }
+          }
+        }
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      throw StateError('单位换算结果未在历史消息中持久化：$expectedValue');
+    }
+
     await send('帮我把1.5两换算成克');
     expect(
       find.textContaining('目前还缺少：重量度量标准'),
@@ -4603,14 +4625,7 @@ void main() {
     expect(service.sentTexts.single, contains('按汉制'));
     expect(service.sentTexts.single, contains('自动总结并解释'));
 
-    final conversations = await store.getAssistantConversations();
-    final rows = await store.getAssistantMessages(
-      conversationId: conversations.single['id'] as int,
-    );
-    final resultRow = rows.firstWhere(
-      (row) => (row['content'] as String).startsWith('【经方度量衡单位换算结果执行结果】'),
-    );
-    expect(resultRow['content'], contains('23.438 克'));
+    final resultRow = await waitForPersistedResult('23.438 克');
     expect(resultRow['content'], contains('不是中药处方'));
     expect(service.restoredTranscripts.last, contains('23.438 克'));
     expect(service.restoredTranscripts.last, contains('不是中药处方'));
@@ -4638,6 +4653,8 @@ void main() {
       'unit': '升',
     });
     expect(find.textContaining('200 毫升'), findsOneWidget);
+    final volumeResultRow = await waitForPersistedResult('200 毫升');
+    expect(volumeResultRow['content'], contains('单位换算'));
     expect(pageOpened, isFalse);
     expect(service.sentTexts, hasLength(2));
     expect(tester.takeException(), isNull);
