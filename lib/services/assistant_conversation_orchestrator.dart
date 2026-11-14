@@ -239,7 +239,7 @@ class AssistantConversationOrchestrator {
     } else if (tool.id == 'dosage') {
       const unitPattern = r'(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)';
       final paired = RegExp(
-        r'(\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九半])\\s*' +
+        r'(\d+(?:\.\d+)?|[零〇一二两三四五六七八九半])\s*' +
             unitPattern,
       ).allMatches(query).toList(growable: false);
       String normalizeAmount(String raw) {
@@ -265,7 +265,7 @@ class AssistantConversationOrchestrator {
       if (paired.length == 1) {
         final match = paired.single;
         final amountMatch = RegExp(
-          r'(\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九半])',
+          r'(\d+(?:\.\d+)?|[零〇一二两三四五六七八九半])',
         ).firstMatch(match.group(0)!);
         final unitMatch = RegExp(unitPattern).firstMatch(match.group(0)!);
         if (amountMatch != null && unitMatch != null) {
@@ -277,7 +277,7 @@ class AssistantConversationOrchestrator {
         values['unit'] = 'AMBIGUOUS_UNIT_SELECTION';
       } else {
         final standaloneAmount = RegExp(
-          r'^\\s*(\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九半])\\s*',
+          r'^\s*(\d+(?:\.\d+)?|[零〇一二两三四五六七八九半])\s*',
         ).firstMatch(query);
         if (standaloneAmount != null &&
             standaloneAmount.group(0)!.trim() == query.trim()) {
