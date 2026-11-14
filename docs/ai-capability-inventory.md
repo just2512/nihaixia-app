@@ -602,7 +602,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - AssistantToolRouter 共 24 个定义：23 个常规工具入口 + 1 个确定性 structured_diagnosis 内联问诊控制器。
 - 23 个常规工具中 14 项具备 Headless executor：yunqi、almanac、bazi、xiaoliuren、meihua、chenggu、huangdi_siji、ziwei、solar_terms、yijing、dosage、ziwu_liuzhu、dream、guansha。
 - 9 项仍为 Page-only：guji_library、knowledge_hub、medical_cases、diagnosis_history、critical_illness、yuxiaji_omen、sanshan_lingqian、shousheng_debt、saved_charts。structured_diagnosis 仍由现有 TcmInterviewConversationController / DiagnosticEngine 执行，不计入通用 Headless。Page builder 或可打开页面均不代表 Headless/Executed。
-- PR #163 在同一 head 890dd6b 的分支验证和 PR CI 均 SUCCESS；PR CI 覆盖 Flutter 全量回归、Android arm64 APK/Manifest/ABI、Native tests、JUnit XML 和工件上传。合并后 master tests 与 Quality Gate 当时仍 IN_PROGRESS，待同一 merge SHA 的终态结果补记。
+- PR #163 在同一 head 890dd6b 的分支验证和 PR CI 均 SUCCESS；PR CI 覆盖 Flutter 全量回归、Android arm64 APK/Manifest/ABI、Native tests、JUnit XML 和工件上传。合并后 master Flutter tests run 43601665980 与 Quality Gate run 43601665970 也均在 merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 上终态 SUCCESS。
 - 下一 D 切片：受生债执行层和契约测试已在独立准备分支完成，但尚无 router/当前对话调用链，暂不计入 14 项 Headless。接入必须要求明确选择禄库/五斗体系，复用 App 原八字及本地两套数据，逐轮询问缺项，不沿用页面默认体系；经过来源与结果验证后才允许 AI 解释。
 - B 仍 PARTIAL / RELEASE BLOCKED：没有生产红旗 detector 医学审核版本、审批记录、阈值/例外/处置文案及全 Flutter/Native 模型入口 fail-closed 证据前，不开放自由文本症状自动辨证。
 - 用户要求的自由文本症状描述→受约束结构化理解→只追问缺项→原规则问诊→解释真实结果闭环仍未完成；须先满足 B 门禁。不得修改原十问或辨证规则，不重复审核已医学审核的知识库。
