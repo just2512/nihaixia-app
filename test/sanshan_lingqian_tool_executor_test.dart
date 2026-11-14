@@ -32,7 +32,7 @@ void main() {
     final invalid = await SanshanLingqianToolExecutor.execute(const {'sign_id': '1'});
     expect(invalid.status, AssistantToolExecutionStatus.failed);
     expect(invalid.sourceIds, isEmpty);
-    expect(invalid.values['未执行原因'], contains('不能接受模型指定签号'));
+    expect(invalid.values['未执行原因'], contains('不接受模型指定签号'));
 
     final result = await SanshanLingqianToolExecutor.execute(const {});
     final id = int.parse(result.values['签号']!);
