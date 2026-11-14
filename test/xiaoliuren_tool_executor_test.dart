@@ -75,12 +75,15 @@ void main() {
     expect(result.sourceIds, contains(XiaoliurenToolExecutor.ruleDataSourceId));
   });
 
-  test('未指定口径时与原页面默认值一致，使用通行掌诀', () async {
-    final result = await XiaoliurenToolExecutor.execute(arguments);
+  test('未选择起课口径时拒绝执行，不替用户默认选择通行掌诀', () async {
+    final result = await XiaoliurenToolExecutor.execute({
+      'date': arguments['date']!,
+      'hour': arguments['hour']!,
+    });
 
-    expect(result.status, AssistantToolExecutionStatus.succeeded);
-    expect(result.values['起课口径'], XiaoliurenRule.common.label);
-    expect(result.values['口径说明'], XiaoliurenRule.common.source);
+    expect(result.status, AssistantToolExecutionStatus.failed);
+    expect(result.values['未执行原因'], contains('缺少起课口径'));
+    expect(result.sourceIds, isEmpty);
   });
 
   test('拒绝无效日期、越界日期和缺失时辰', () async {
