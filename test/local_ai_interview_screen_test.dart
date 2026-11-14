@@ -5330,7 +5330,7 @@ void mainRedFlagEntrypointOrderingTests() {
       final recorder = AiTraceRecorder(
         enabled: true,
         writer: (_) async {},
-        idFactory: () => 'b2-blocked-entrypoint-trace',
+        idFactory: () => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       );
       await tester.pumpWidget(
         MaterialApp(
@@ -5382,7 +5382,7 @@ void mainRedFlagEntrypointOrderingTests() {
       final recorder = AiTraceRecorder(
         enabled: true,
         writer: (_) async {},
-        idFactory: () => 'b2-clear-entrypoint-trace',
+        idFactory: () => 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       );
       await tester.pumpWidget(
         MaterialApp(
@@ -5391,6 +5391,7 @@ void mainRedFlagEntrypointOrderingTests() {
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
             redFlagGate: gate,
+            traceRecorder: recorder,
           ),
         ),
       );
