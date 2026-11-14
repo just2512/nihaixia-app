@@ -5191,11 +5191,19 @@ void main() {
     expect(service.sentContexts, hasLength(2));
     expect(service.sentContexts.last, contains('方名：桂枝汤'));
 
-    // Generic chat in Tools mode must not inject a NO_RESULTS retrieval block.
-    await send('谢谢');
+    // Elliptical follow-ups reuse the last verified App result and its entity.
+    await send('那它的禁忌呢？');
     await waitForModelCalls(3);
     expect(service.sentTexts, hasLength(3));
     expect(service.sentContexts, hasLength(3));
+    expect(service.sentContexts.last, contains('方名：桂枝汤'));
+    expect(service.sentContexts.last, contains('原始禁忌字段：'));
+
+    // Generic chat in Tools mode must not inject a NO_RESULTS retrieval block.
+    await send('谢谢');
+    await waitForModelCalls(4);
+    expect(service.sentTexts, hasLength(4));
+    expect(service.sentContexts, hasLength(4));
     expect(service.sentContexts.last, isNot(contains('本轮本地知识库未命中可引用条目')));
     expect(service.sentContexts.last, isNot(contains('App方剂库')));
 
