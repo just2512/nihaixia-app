@@ -9,10 +9,10 @@
 | 项目 | 当前值 | 说明 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
-| 主分支 | `master` | 按用户既有要求直接提交 master |
+| 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
-| README 版本说明 | `1.11.28+8037` | 已确认文档漂移，待修正 |
+| README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
@@ -44,10 +44,10 @@
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
-| B | 全模式红旗安全门禁 | `PARTIAL`（规则仅在提示词层的历史审计结论） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
-| C | 知识检索黄金行为基线 | `NOT_STARTED` | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
-| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（Page Tool 与 Headless 尚未统一） | 目录审计可并行；适配器须等待对应基线 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据 |
-| E | 低成本数据保护 | `UNKNOWN` | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
+| B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（fail-closed Gate 契约存在；医学审核 detector 与生产入口接入缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
+| C | 知识检索黄金行为基线 | `PARTIAL`（黄金快照和 sourceId/asset 一致性已建立；书目 locator 仍缺失） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
+| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（6 项 Headless；17 项 Page-only；结构化问诊独立内联） | 目录审计可并行；适配器须等待对应基线 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据 |
+| E | 低成本数据保护 | `PARTIAL`（Manifest/清理代码有 CI 证据；真机清除后重启不可恢复未验收） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（已有部分结果/来源链路，不等于端到端 TRACE） | 与 A-E 按需并行 | 默认关闭、脱敏、trace_id 贯穿、关闭时行为不变、完整链路可复核 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
 
@@ -1574,3 +1574,56 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 继续遵守：AI 理解/澄清/解释，App 确定性执行；没有校验的结果不得交给 AI 作为事实；AI 解释不得变成新的卦象或业务计算。
 - 不修改 DiagnosticEngine、问诊十问、排盘或剂量规则；不重复审核已有医学知识库；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
 - 两条无可追溯经典来源的规则继续保持 MISSING，不补造条号、出处或方剂；83 条普通学习讲稿不重复做纸本校勘。
+
+
+---
+
+## 34. 2026-11-14 PR #144/#145/#146 集成及当前执行状态
+
+### 34.1 集成基线和 PR 证据
+
+- 本节基线：`master @ 67bb3597e9abb411627545a8e2a3b25105633c52`。
+- PR #144「称骨对话内执行」：最终 head `e0d8eddc9155ffd5dd8c670e3db6eedaba26ffe2`，merge commit `34906712b42c78a4e6ff5e60172ae9517d16d657`；PR workflow `43458542859` 的 Flutter regression 与 Android arm64/Native job 均 SUCCESS。
+- PR #145「黄帝四季歌对话内执行」：最终 head `8f9ffb1816f48cfbc0b9234f8248322e93720052`，merge commit `d328afbd6d346ba9cfbf06fe289020fc79e86186`；PR workflow `43543965618` 的 Flutter regression 与 Android arm64/Native job均 SUCCESS。
+- PR #146「规则问诊结果自动解释」：最终 head `a42af20a29fe6f5c64bf1cf5afe32b57716bc061b`，merge commit / 当前 master `67bb3597e9abb411627545a8e2a3b25105633c52`；独立 Branch validation `43547647496` SUCCESS；PR workflow `43547653711` 中 Flutter regression job `132302637020`、Android arm64/Native job `132303970143` 均 SUCCESS。PR 内 Branch validation job 为 SKIPPED，独立 push run 才是该项验证证据。
+- PR #146 Android CI 已完成 arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Android Native unit tests、JUnit XML 与 evidence artifact 检查。APK 证据不代表 Find N2 真机运行。
+
+### 34.2 PR #146 的行为边界
+
+- 只有现有 `DiagnosticEngine` 产生 typed `DiagnosisResult`，问诊消息和 completed task snapshot 已成功持久化、可见对话上下文已成功恢复、本地模型状态为 ready 且 source ID 可用时，才自动请求 AI 解释。
+- 自动解释使用 `local-engine:diagnostic-engine` 标识业务结果来源；prompt 只允许总结/解释现有字段和检索上下文，不重新辨证、不增加规则结论、不补造缺失字段、不生成个体处方/药物/剂量建议。
+- 历史结果保留显式手动解释入口；未完成问诊、结果为空、持久化失败、上下文恢复失败或模型未就绪时不触发解释。
+- 该改动只修改助手编排与 widget test；未修改 `DiagnosticEngine`、`DiagnosticRules`、剂量/排盘业务计算或既有知识库内容。
+- 这不是自由文本问诊的交付：现有十问/规则追问流程仍在。用户提出自然语言症状后由 AI 自动识别缺项、只追问必要信息、后台组合规则问诊的目标仍未完成。
+
+### 34.3 D 工作流当前能力基数
+
+- `AssistantToolRouter` 有 24 个定义：23 个页面工具入口和 1 个 `structured_diagnosis` 特殊内联流程。
+- 页面入口中 6 项配置 Headless executor：`yunqi`、`almanac`、`bazi`、`meihua`、`chenggu`、`huangdi_siji`；其余 17 项为 Page-only。
+- Page Tool 可以保留页面 builder，同时也具有 Headless executor；数量不能重复累计。只有实际执行且参数、结果契约、来源和消息回传均验证成功，才记为 Executed。
+- 下一项候选是紫微斗数 `ziwei`：当前仅有页面入口，既有 `ziwei_engine.dart` 提供确定性排盘函数。实施前需要先对照原页面的时间处理、子时口径、地点经纬度、真太阳时和设置读取建立行为基线；不得复制算法或使用样例默认值。该切片不得与其它分支同时修改统一助手入口文件。
+
+### 34.4 A-G 状态与后续顺序
+
+| 工作流 | 当前状态 | 下一项最小工作 |
+|---|---|---|
+| A Native 多轮/生命周期 | PARTIAL / DEVICE UNKNOWN | 保持只修复有复现证据的 CI/自动化问题；Find N2 GPU/CPU、多媒体、Activity/进程恢复至少 20 轮记录仍需设备 |
+| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 不编造自然语言 detector；等待医学审核版本、阈值/例外/处置文案和产品决策；在此之前不开放症状自由文本抽取或自动模型诊断 |
+| C 检索来源 | PARTIAL | 保留既有黄金快照；书目 locator/纸本底本缺失独立列出，不重复审核已审核知识库内容 |
+| D 确定性工具 | PARTIAL | 在紫微工具上先做页面行为基线，再抽一个最小 Headless executor；其余 Page-only 不批量迁移 |
+| E 数据保护 | PARTIAL / DEVICE UNKNOWN | 合并 Manifest 与 CI 检查已通过；完成清除全部 AI 数据后的强停/重启不可恢复验证及共享 DB/附件边界核验 |
+| F TRACE | PARTIAL / DEVICE UNKNOWN | 自动解释沿用既有结果来源 metadata；设备真实 TRACE 与失败轮次/恢复链仍需核验 |
+| G 文档治理 | IN_PROGRESS | 当前分支同步 inventory、audit report 与本台账；合并后再记录 master 文档提交及对应 post-merge CI |
+
+### 34.5 当前 master CI
+
+- merge SHA `67bb3597e9abb411627545a8e2a3b25105633c52` 的 Flutter tests run `43548507345` 和 Flutter Quality Gate run `43548507387` 在本节形成时均为 QUEUED。
+- PR #146 的 Flutter regression、Android arm64/Manifest/Native CI 已 SUCCESS；不能替代 merge SHA 的 post-merge 两条工作流。
+- 后续在合并文档 PR 前后分别复核以上 run；只有同一 SHA 对应的终态 SUCCESS 才能记为 master CI PASS。
+
+### 34.6 冻结项
+
+- 不改 DiagnosticEngine、DiagnosticRules、问诊十问、排盘算法、剂量换算和民俗计算规则。
+- 不重复审核已经完成医学审核的知识库。
+- 不在缺少医学审核 detector 时启用自由文本症状抽取；不把 `REVIEW_REQUIRED/UNKNOWN` 视为安全放行。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库或批量 Page Tool 迁移。
