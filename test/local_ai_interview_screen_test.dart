@@ -3411,6 +3411,116 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('紫微助手在对话中分轮补齐参数并后台执行，不打开排盘页面',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    var pageOpened = false;
+    const sourceIds = [
+      'local-engine:ziwei',
+      'local-data:city-locations',
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) => AssistantToolResult(
+            toolId: 'ziwei',
+            title: '紫微斗数排盘',
+            values: const {
+              '出生地坐标': '东经 121.4737，北纬 31.2304',
+              '完整排盘结果': '出生资料：1990-01-02 08:30；十二宫星曜：命宫 ...',
+            },
+            arguments: Map<String, String>.unmodifiable(arguments),
+            sourceIds: sourceIds,
+            disclaimer: '传统术数文化参考。',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String text) async {
+      await tester.enterText(find.byType(TextField).first, text);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我排一个紫微斗数命盘');
+    expect(find.textContaining('出生日期（公历'), findsWidgets);
+    expect(find.text('打开紫微斗数排盘'), findsNothing);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, isEmpty);
+
+    await send('出生日期：1990年1月2日');
+    final conversationsAfterDate = await store.getAssistantConversations();
+    final messagesAfterDate = await store.getAssistantMessages(
+      conversationId: conversationsAfterDate.single['id'] as int,
+    );
+    final latestClarification =
+        messagesAfterDate.last['content'] as String;
+    expect(
+      latestClarification,
+      contains('已识别的信息：出生日期（公历）：1990-01-02'),
+    );
+    expect(
+      latestClarification,
+      contains('目前还缺少：出生时间、性别、出生地点'),
+    );
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, isEmpty);
+
+    await send('出生时间：08:30；性别：男；出生地：上海市');
+    expect(find.textContaining('十二宫星曜：命宫'), findsOneWidget);
+    expect(find.text('打开紫微斗数排盘'), findsNothing);
+    expect(pageOpened, isFalse);
+    expect(
+      service.sentTexts,
+      hasLength(1),
+      reason: '确定性排盘结果通过来源和参数契约后，模型只负责自动解释',
+    );
+    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts.single, contains('紫微斗数排盘'));
+    expect(service.sentContexts.single, contains('当前角色：玄学大师'));
+
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('完整排盘结果'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(resultMessage['role'], 'assistant');
+    expect(metadata.toolId, 'ziwei');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(metadata.sourceIds, sourceIds);
+    expect(
+      messages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释')),
+      isEmpty,
+      reason: '自动解释是内部调度指令，不得伪装成用户发言持久化',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Headless 结果契约失败时记录失败终态且不持久化', (tester) async {
     const traceId = 'abcdef0123456789abcdef0123456789';
     final events = <AiTraceEvent>[];
