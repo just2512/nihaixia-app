@@ -1327,6 +1327,12 @@ void main() {
     );
     expect(standaloneCity['birthplace'], '北京市');
 
+    final standaloneDistrict = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '长宁区（上海市）',
+    );
+    expect(standaloneDistrict['birthplace'], '长宁区（上海市）');
+
     final unsupportedLunar = AssistantConversationOrchestrator.argumentsFor(
       AssistantToolRouter.guansha,
       '农历2018年五月初一',
