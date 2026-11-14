@@ -1277,4 +1277,62 @@ void main() {
         reason: '只分享梦境不等于请求启动解梦工具');
   });
 
+  test('小儿关煞从自然语言提取明确出生槽位，不推断缺失信息', () {
+    final missing = AssistantConversationOrchestrator.resolve(
+      query: '帮我测算小儿关煞',
+      selectedMode: AssistantMode.automatic,
+    );
+    expect(missing.tool?.id, 'guansha');
+    expect(missing.toolArguments?.values, isEmpty);
+
+    final described = AssistantConversationOrchestrator.resolve(
+      query: '帮我测算小儿关煞：男孩，2018年5月1日，早上8点半出生在上海市',
+      selectedMode: AssistantMode.automatic,
+    );
+    expect(described.tool?.id, 'guansha');
+    expect(described.toolArguments?.values, {
+      'birth_date': '2018-05-01',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+
+    final multipleDates = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '出生日期：2018-05-01 和 2018-05-02',
+    );
+    expect(multipleDates['birth_date'], 'AMBIGUOUS_DATE_SELECTION');
+
+    final multipleTimes = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '早上8:30，晚上8:30',
+    );
+    expect(multipleTimes['birth_time'], 'AMBIGUOUS_TIME_SELECTION');
+
+    final multipleGenders = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '男孩还是女孩',
+    );
+    expect(multipleGenders['gender'], 'AMBIGUOUS_GENDER_SELECTION');
+
+    final multiplePlaces = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '出生地：上海市，出生于北京市',
+    );
+    expect(multiplePlaces['birthplace'], 'AMBIGUOUS_LOCATION_SELECTION');
+
+    final unsupportedLunar = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '农历2018年五月初一',
+    );
+    expect(unsupportedLunar['birth_date'], 'LUNAR_DATE_NOT_SUPPORTED');
+
+    final learning = AssistantConversationOrchestrator.resolve(
+      query: '学习小儿关煞规则表的历史背景',
+      selectedMode: AssistantMode.automatic,
+    );
+    expect(learning.mode, AssistantMode.learning);
+    expect(learning.tool, isNull);
+  });
+
 }
