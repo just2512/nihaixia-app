@@ -1,10 +1,10 @@
 # AI 能力静态/动态审计报告
 
-- 审计日期：2026-11-14（PR #151 小六壬 Headless 集成后增量复核）
+- 审计日期：2026-11-14（PR #153 易经四种起卦模式 Headless 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
-- 最新复核基线：`master @ 3915a404200ed8721fbc7715261c5b5e7ac592f0`
+- 最新复核基线：`master @ 59ca2a746d8dc4d29abb06f52697d02ce52a26df`
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
-- 方法：按最新主线增量核对 AssistantToolRouter、确定性参数抽取、9 项 Headless executor、真实工具执行与结果来源契约、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
+- 方法：以 master 当前 HEAD 对照规范性审计文件和执行台账，复核 AssistantToolRouter 的 24 项注册、10 项 Headless executor、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 仅代表当时审计快照。
 
 ## 1. 审计结论
 
@@ -15,7 +15,7 @@
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
 | B 红旗安全 | PARTIAL / RELEASE BLOCKED | preflight provenance 契约存在；自然语言 detector、全生产入口 fail-closed 和医学审核仍缺失 |
 | C 检索基线 | PARTIAL / NOT VERIFIED | 已复核 83 个 distinct sourceId 的本地资产存在性、身份和正文命中语境；83/83 bibliographic locator 仍 MISSING，纸本底本/版本/卷页/影像未核验 |
-| D Headless Capability | PARTIAL | 当前 24 个定义中，23 个常规页面入口有 9 项 Headless executor（yunqi、almanac、bazi、xiaoliuren、meihua、chenggu、huangdi_siji、ziwei、solar_terms），14 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
+| D Headless Capability | PARTIAL | 当前 24 个定义中，23 个常规页面入口有 10 项 Headless executor（yunqi、almanac、bazi、xiaoliuren、meihua、chenggu、huangdi_siji、ziwei、solar_terms、yijing），13 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
 | F TRACE | PARTIAL | 已覆盖检索/上下文、Orchestrator/Headless、结构化问诊 per-turn；#113 补 Headless 结果契约失败终态，#114 补 Page Tool 结果延续，#115 补普通发送/症状整理 finalRender；Find N2 场景集 TRACE 仍未闭环 |
 | G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 一致性 guard 已合并；当前 master post-merge CI 需以最新 SHA 的两条独立 push workflow 为准 |
@@ -982,3 +982,35 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - 只将已执行、经过输入/结果契约校验并具有 sourceIds 的 App 结果交给模型作为事实解释。
 - 不修改 `DiagnosticEngine`、`DiagnosticRules`、排盘算法、剂量换算和已审核知识库内容。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库；不为追求工具数量批量迁移 Page-only。
+
+
+---
+
+## 33. 2026-11-14 PR #153：易经四种起卦模式 Headless 集成后增量审计
+
+### 基线与实现
+
+- 当前 master / merge SHA：`59ca2a746d8dc4d29abb06f52697d02ce52a26df`；PR #153 最终 head：`18e9cd6feb97d65c4c36f18a84a47358b3483c17`。
+- `AssistantToolRouter` 有 24 个定义：23 个页面工具入口 + 1 个由确定性问诊控制器内联执行的 `structured_diagnosis`。其中 10 个页面工具入口具备 Headless executor，13 项仍 Page-only。
+- 新增 `YiJingToolExecutor`，复用原 `YiJingEngine` 的数字、当前时间、手动选卦、铜钱六次投掷四种方法；未修改易经引擎计算逻辑、原页面或本地六十四卦资料。
+- 参数缺失在统一助手对话中澄清和跨轮补充；时间由 App 注入，铜钱六次投掷由 App 生成并保存原始结果。模型不生成时间、随机值或卦象。
+- 适配层按原引擎的单动爻/多动爻字段分别读取；执行成功并通过参数、结果、来源契约校验后才进入现有解释链，sourceIds 为 `local-engine:yijing` 与 `local-data:yijing-hexagrams`。
+- 未改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、剂量换算或已审核医学知识库。
+
+### 自动化验收
+
+- Branch validation run `43563718624` SUCCESS。
+- PR workflow `43563859567` SUCCESS：Flutter regression job `132353274615` 与 Android arm64 verification job `132354564040` 均 SUCCESS。Android job 包含 arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifacts。
+- post-merge master Flutter tests run `43564609205` 和 Flutter Quality Gate run `43564609235` 以 master merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 为目标，目前为 IN_PROGRESS；本审计不将 PR workflow 的 PASS 折算为 master post-merge PASS。
+
+### A-G 状态与剩余事项
+
+- A Native 多轮/生命周期：PARTIAL / DEVICE UNKNOWN；Find N2 E4B GPU/CPU、多媒体、多轮、Activity/进程恢复与真实 TRACE 仍缺设备证据。
+- B 红旗安全：PARTIAL / RELEASE BLOCKED；自然语言 detector 的医学审核版本、阈值/例外/处置文案及 Flutter/Native 全模型调用入口前置 fail-closed 证据仍缺。不得编造 detector；已审核医学知识库不重复审核。
+- C 检索来源：PARTIAL；只补书目 locator、底本版本、卷页/原文身份缺口，不重新审核已审核医学知识内容。
+- D Headless：10 项 Headless / 13 项 Page-only；剩余工具逐项建立确定性函数、输入 schema、来源和行为基线，不批量迁移。
+- E 数据保护：PARTIAL / DEVICE UNKNOWN；Find N2 清除 AI 数据后强停/重启，核验 DB、附件、缩略图和孤儿文件不可恢复仍未完成。
+- F TRACE：PARTIAL / DEVICE UNKNOWN；仍需真实设备场景贯穿输入、执行、sourceIds、持久化、解释和恢复。
+- G 文档治理：本轮更新三份增量审计文档；规范性文件 `docs/ai-capability-audit.md` 保持不变。
+
+用户要求的自由文本问诊闭环仍受 B 门禁阻塞：在自然语言红旗 detector 完成医学审核且覆盖全部生产模型入口前，不开放由模型直接把自由症状变成诊断输入。结构化问诊继续由 App 原规则引擎执行；AI 只解释已完成、已校验、有来源的业务结果。
