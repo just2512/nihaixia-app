@@ -5346,7 +5346,8 @@ void main() {
     expect(executedArguments, hasLength(2));
     expect(executedArguments.last['dream_text'], contains('是被蛇咬了'));
     expect(service.sentTexts, hasLength(2));
-    expect(service.sentTexts.last, contains('周公解梦'));
+    expect(service.sentTexts.last, contains('App 本地梦境民俗数据集'));
+    expect(service.sentTexts.last, contains('SINGLE_MATCH'));
     expect(pageOpened, isFalse);
 
     final finalMessages = await store.getAssistantMessages(
