@@ -20,6 +20,63 @@ class NativeRedFlagExecutionBoundaryTest {
     )
 
     @Test
+    fun missingDetectorBlocksOperationBeforeItCanRun() {
+        var operationCalls = 0
+        val execution = NativeRedFlagExecutionBoundary(null).runBefore(
+            NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, "user text")
+        ) {
+            operationCalls += 1
+            "inference"
+        }
+
+        assertEquals(NativeRedFlagStatus.REVIEW_REQUIRED, execution.verdict.status)
+        assertFalse(execution.executed)
+        assertEquals(0, operationCalls)
+    }
+
+    @Test
+    fun operationRunsOnlyAfterReviewedClearAssessment() {
+        val events = mutableListOf<String>()
+        val boundary = NativeRedFlagExecutionBoundary(
+            NativeRedFlagDetector { input ->
+                events.add("detector")
+                clearVerdict(input.source)
+            }
+        )
+
+        val execution = boundary.runBefore(
+            NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, "user text")
+        ) {
+            events.add("operation")
+            "inference"
+        }
+
+        assertEquals(listOf("detector", "operation"), events)
+        assertEquals(NativeRedFlagStatus.CLEAR, execution.verdict.status)
+        assertTrue(execution.executed)
+        assertEquals("inference", execution.value)
+    }
+
+    @Test
+    fun nonClearAssessmentNeverRunsOperation() {
+        var operationCalls = 0
+        val boundary = NativeRedFlagExecutionBoundary(
+            NativeRedFlagDetector { input ->
+                clearVerdict(input.source).copy(status = NativeRedFlagStatus.CLARIFY)
+            }
+        )
+        val execution = boundary.runBefore(
+            NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, "user text")
+        ) {
+            operationCalls += 1
+        }
+
+        assertEquals(NativeRedFlagStatus.CLARIFY, execution.verdict.status)
+        assertFalse(execution.executed)
+        assertEquals(0, operationCalls)
+    }
+
+    @Test
     fun missingDetectorNeverReturnsClear() {
         val verdict = NativeRedFlagExecutionBoundary(null).evaluate(
             NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, "user text")
