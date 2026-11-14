@@ -296,6 +296,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   bool _pendingToolSelection = false;
   AssistantToolArguments? _pendingBaziArguments;
   AssistantToolArguments? _pendingZiweiArguments;
+  AssistantToolArguments? _pendingGuanshaArguments;
   AssistantToolArguments? _pendingMeihuaArguments;
   AssistantToolArguments? _pendingChengguArguments;
   AssistantToolArguments? _pendingHuangdiSijiArguments;
@@ -1356,6 +1357,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingToolSelection = false;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
+      _pendingGuanshaArguments = null;
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
@@ -2439,21 +2441,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     final unresolvedBirthplace =
         result.values['未执行原因']?.contains('无法唯一识别') == true;
-    if ((tool.id == 'bazi' || tool.id == 'ziwei') &&
+    if ((tool.id == 'bazi' || tool.id == 'ziwei' || tool.id == 'guansha') &&
         result.status == AssistantToolExecutionStatus.failed &&
         unresolvedBirthplace) {
       if (tool.id == 'bazi') {
         _pendingBaziArguments = request;
         _pendingZiweiArguments = null;
-      } else {
+        _pendingGuanshaArguments = null;
+      } else if (tool.id == 'ziwei') {
         _pendingZiweiArguments = request;
         _pendingBaziArguments = null;
+        _pendingGuanshaArguments = null;
+      } else {
+        _pendingGuanshaArguments = request;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
       }
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
-      final clarification = tool.id == 'ziwei'
-          ? '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行紫微排盘。'
-          : '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行八字排盘。';
+      final clarification = switch (tool.id) {
+        'ziwei' => '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行紫微排盘。',
+        'guansha' => '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；没有使用默认地点，本次没有执行关煞测算。',
+        _ => '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行八字排盘。',
+      };
       setState(() {
         _lastEffectiveMode = mode;
         _messages
@@ -2493,8 +2503,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
-    final interpretationPrompt = tool.id == 'bazi'
-        ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
+    final interpretationPrompt = tool.id == 'guansha'
+        ? '请只解释 App 本地关煞引擎返回的结构化字段和数据集原文。必须明确这属于传统民俗文化文本，不是科学事实、命运预测或医学判断。'
+            '不得把关煞名称、儿童身体部位、犯者忌或化解文字解释为孩子患病、身体缺陷、寿命或健康风险；不得给出治疗、用药或就医替代建议，也不得鼓励因民俗结果采取惩罚、恐吓或限制儿童的做法。'
+            '只总结已返回的实际出生参数、四柱、命中条目、规则依据和数据集范围；不重新排盘、不改写命中结果，不补造未返回的出处。'
+        : tool.id == 'bazi'        ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
             '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
             '区分 App 本地引擎输出与 AI 归纳；不改动原始四柱，不补造缺失字段，也不把传统命理表述成科学预测。'
         : tool.id == 'dream'
@@ -2621,6 +2634,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     _pendingToolSelection = false;
+    if (tool.id != 'guansha') _pendingGuanshaArguments = null;
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
     if (tool.id != 'dosage') _pendingDosageArguments = null;
     if (tool.id != 'ziwu_liuzhu') _pendingZiWuArguments = null;
@@ -2631,6 +2645,116 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
+    if (tool.id == 'guansha' && tool.headlessExecutor != null) {
+      final currentArguments = arguments ??
+          AssistantConversationOrchestrator.argumentsFor(tool, userText);
+      final request = AssistantToolArguments(
+        toolId: 'guansha',
+        values: Map<String, String>.unmodifiable({
+          ...?_pendingGuanshaArguments?.values,
+          ...currentArguments.values,
+        }),
+      );
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingGuanshaArguments = request;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                request[parameter.key]?.trim().isNotEmpty == true)
+            .map((parameter) => '${parameter.label}：${request[parameter.key]}')
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final clarification = [
+          '我会直接在当前对话中调用 App 原有的小儿关煞规则，不需要跳转工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          if (userText.contains('农历') || userText.contains('阴历'))
+            '当前 App 规则页要求公历出生日期；农历日期不会被当作公历，也不会由 AI 猜算转换。',
+          '请提供公历日期（YYYY-MM-DD）、出生地当地钟表时间（24 小时制 HH:mm）、性别和出生地点。',
+          '出生地点必须能被 App 本地城市目录唯一识别；地点不明确时会继续追问，不使用默认经纬度。',
+          '出生日期、时间、性别或地点未齐全前不会执行测算；可以分多轮补充，发送“取消关煞”可结束。',
+          '关煞内容是传统民俗文化文本，不代表疾病、健康风险或未来事件，不是医学诊断或治疗建议。',
+        ].join('\\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'GUANSHA_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingGuanshaArguments = null;
+      _pendingBaziArguments = null;
+      _pendingZiweiArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
     if (tool.id == 'dream' && tool.headlessExecutor != null) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
