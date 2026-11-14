@@ -3097,6 +3097,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 !error.startsWith('未声明的参数：'))
             .toList(growable: false);
         final lunarDate = request['date'] == 'LUNAR_DATE_NOT_SUPPORTED';
+        final ambiguousDate = request['date'] == 'AMBIGUOUS_DATE_SELECTION';
+        final ambiguousHour = request['hour'] == 'AMBIGUOUS_HOUR_SELECTION';
         final ambiguousRule = request['rule'] == 'AMBIGUOUS_RULE_SELECTION';
         final clarification = [
           '我会在当前对话中调用 App 原有的小六壬排课纯函数，不需要打开工具页面。',
@@ -3106,6 +3108,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '目前还缺少：${missingParameters.join('、')}。',
           if (lunarDate)
             '小六壬此入口要求公历日期；不会把农历日期当作公历，也不会自行猜测换算。',
+          if (ambiguousDate)
+            '你提到了多个日期，请明确本次起课使用哪一天。',
+          if (ambiguousHour)
+            '你提到了多个时辰，请明确选择其中一个。',
           if (ambiguousRule)
             '你提到了两种起课口径，请明确选择其中一种。',
           if (invalidParameterErrors.isNotEmpty)
