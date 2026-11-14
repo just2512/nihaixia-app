@@ -27,6 +27,10 @@ class MainActivity : FlutterActivity() {
     private val modelImportRequestCode = 8427
     private var pendingModelImportResult: MethodChannel.Result? = null
     private val localAiChannel = "com.nihaisha.app/local_ai"
+
+    /** Test/host injection only. No medically reviewed detector is bundled yet. */
+    @Volatile
+    internal var nativeRedFlagDetector: NativeRedFlagDetector? = null
     private val aiTasks by lazy {
         LocalAiActivityTaskLifecycle(
             executor = LocalAiProcessExecutor.executor,
@@ -103,7 +107,13 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
                             return@handler
                         }
-                        runAiTask(result) {
+                        runAiTaskAfterNativeRedFlag(
+                            result,
+                            NativeRedFlagInput(
+                                NativeRedFlagInputSource.STRUCTURED_INPUT,
+                                userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() }
+                            )
+                        ) {
                             LocalAiTraceIdPolicy.attach(extractSymptoms(), traceId)
                         }
                     }
@@ -121,7 +131,10 @@ class MainActivity : FlutterActivity() {
                         } else if (candidates.isEmpty() || candidates.length > 6000) {
                             result.error("INVALID_INTENT_CANDIDATES", "意图识别候选内容为空或超出长度限制", null)
                         } else {
-                            runAiTask(result) {
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, text)
+                            ) {
                                 LocalAiTraceIdPolicy.attach(
                                     resolveAssistantIntent(text, candidates),
                                     traceId
@@ -143,7 +156,10 @@ class MainActivity : FlutterActivity() {
                         } else if (missingFields.isEmpty() || missingFields.length > 300) {
                             result.error("INVALID_BAZI_SLOT_FIELDS", "八字待补参数集合为空或超出长度限制", null)
                         } else {
-                            runAiTask(result) {
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(NativeRedFlagInputSource.TOOL_ARGUMENTS, text)
+                            ) {
                                 LocalAiTraceIdPolicy.attach(
                                     extractBaziSlots(text, missingFields),
                                     traceId
@@ -163,7 +179,10 @@ class MainActivity : FlutterActivity() {
                         if (path.isEmpty()) {
                             result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
                         } else {
-                            runAiTask(result) {
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(NativeRedFlagInputSource.IMAGE_ATTACHMENT, prompt)
+                            ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalImage(path, prompt), traceId)
                             }
                         }
@@ -180,7 +199,10 @@ class MainActivity : FlutterActivity() {
                         if (path.isEmpty()) {
                             result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
                         } else {
-                            runAiTask(result) {
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(NativeRedFlagInputSource.AUDIO_ATTACHMENT, prompt)
+                            ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalAudio(path, prompt), traceId)
                             }
                         }
@@ -197,7 +219,10 @@ class MainActivity : FlutterActivity() {
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
-                            runAiTask(result) {
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, text)
+                            ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalMessage(text, context), traceId)
                             }
                         }
@@ -208,7 +233,13 @@ class MainActivity : FlutterActivity() {
                         if (transcript.isEmpty()) {
                             result.error("EMPTY_HISTORY", "历史对话为空", null)
                         } else {
-                            runAiTask(result) { restoreLocalConversation(transcript, userMessages) }
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(
+                                    NativeRedFlagInputSource.HISTORY_RESTORE,
+                                    (listOf(transcript) + userMessages).joinToString("\n")
+                                )
+                            ) { restoreLocalConversation(transcript, userMessages) }
                         }
                     }
                     "resetConversation" -> runAiTask(result) { resetLocalConversation() }
@@ -223,6 +254,41 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /**
+     * Native MethodChannel boundary for all model-facing calls.
+     *
+     * A missing or unreviewed detector must not become implicit CLEAR. The
+     * Flutter seam blocks first; this native boundary prevents MethodChannel
+     * bypasses and remains closed until a reviewed detector is injected.
+     */
+    private fun runAiTaskAfterNativeRedFlag(
+        result: MethodChannel.Result,
+        input: NativeRedFlagInput,
+        task: () -> Any?
+    ) {
+        val detector = nativeRedFlagDetector
+        if (detector == null) {
+            // B2 is an injectable seam, not activation of an unreviewed
+            // medical detector. Keep the existing product flow available,
+            // but do not claim CLEAR; B remains RELEASE BLOCKED.
+            android.util.Log.w(
+                "NativeRedFlagGate",
+                "REDFLAG_GATE_NOT_CONFIGURED: native inference remains NOT_APPLICABLE"
+            )
+            runAiTask(result, task)
+            return
+        }
+        val execution = NativeRedFlagExecutionBoundary(detector)
+            .runBefore(input) { runAiTask(result, task) }
+        if (!execution.executed) {
+            result.error(
+                "REDFLAG_${execution.verdict.status.name}",
+                "普通模型调用未通过安全评估：${execution.verdict.reason}",
+                null
+            )
+        }
     }
 
     private fun runAiTask(result: MethodChannel.Result, task: () -> Any?) {

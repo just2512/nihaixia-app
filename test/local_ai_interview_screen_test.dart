@@ -20,6 +20,8 @@ import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/dosage_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
+import 'package:nihaisha_app/services/red_flag_gate.dart';
+import 'package:nihaisha_app/services/red_flag_preflight.dart';
 import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
@@ -5259,4 +5261,207 @@ void main() {
   });
 
 
+  mainRedFlagEntrypointOrderingTests();
 }
+
+
+class _WidgetRedFlagDetector implements RedFlagDetector {
+  const _WidgetRedFlagDetector({
+    required this.events,
+    required this.matchedRuleIds,
+    required this.subject,
+  });
+
+  final List<String> events;
+  final List<String> matchedRuleIds;
+  final RedFlagSubject subject;
+
+  @override
+  Future<RedFlagAssessment?> assess(RedFlagInput input) async {
+    events.add('gate:${input.source.name}');
+    return RedFlagAssessment(
+      inputSource: input.source,
+      detectorId: 'test-only-detector',
+      detectorVersion: 'test-only-1',
+      ruleSetVersion: 'test-reviewed-rule-set-1',
+      subject: subject,
+      time: RedFlagTime.current,
+      polarity: RedFlagPolarity.affirmed,
+      ruleSetReviewed: true,
+      detectorCoverageComplete: true,
+      matchedRuleIds: matchedRuleIds,
+    );
+  }
+}
+
+class _OrderedIntentSendService extends _TextSendService {
+  _OrderedIntentSendService(this.events);
+
+  final List<String> events;
+
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) {
+    events.add('intent');
+    return super.resolveAssistantIntentWithTrace(
+      query: query,
+      candidates: candidates,
+      traceId: traceId,
+    );
+  }
+}
+
+void mainRedFlagEntrypointOrderingTests() {
+  group('红旗门禁注入入口顺序', () {
+    testWidgets('阻断结果必须早于意图识别和模型调用', (tester) async {
+      final events = <String>[];
+      final service = _OrderedIntentSendService(events);
+      final gate = RedFlagGate(
+        detector: _WidgetRedFlagDetector(
+          events: events,
+          matchedRuleIds: const ['reviewed-test-rule'],
+          subject: RedFlagSubject.self,
+        ),
+        timeout: const Duration(milliseconds: 100),
+      );
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (_) async {},
+        idFactory: () => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            redFlagGate: gate,
+            traceRecorder: recorder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // The model-ready state is asynchronous. Do not mistake a disabled send
+      // button for a successful preflight-order test.
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '我现在身体不舒服');
+      await tester.pump();
+      final sendButton = find.ancestor(
+        of: find.byTooltip('发送'),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(events, ['gate:currentText']);
+      expect(service.intentQueries, isEmpty);
+      expect(service.sentTexts, isEmpty);
+      expect(find.textContaining('安全评估命中阻断条件'), findsOneWidget);
+    });
+
+    testWidgets('只有 CLEAR 才允许继续进入确定性意图候选筛选', (tester) async {
+      final events = <String>[];
+      final service = _OrderedIntentSendService(events);
+      final gate = RedFlagGate(
+        detector: _WidgetRedFlagDetector(
+          events: events,
+          matchedRuleIds: const [],
+          subject: RedFlagSubject.knowledge,
+        ),
+        timeout: const Duration(milliseconds: 100),
+      );
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (_) async {},
+        idFactory: () => 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            redFlagGate: gate,
+            traceRecorder: recorder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '我想排盘');
+      await tester.pump();
+      final sendButton = find.ancestor(
+        of: find.byTooltip('发送'),
+        matching: find.byType(IconButton),
+      );
+      expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(events, ['gate:currentText', 'intent']);
+      expect(service.intentQueries, ['我想排盘']);
+    });
+
+    testWidgets('未配置 Gate 时记录 NOT_APPLICABLE 而不伪造 CLEAR，也不静默关闭助手', (tester) async {
+      final intentEvents = <String>[];
+      final traceEvents = <AiTraceEvent>[];
+      final service = _OrderedIntentSendService(intentEvents);
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (event) async => traceEvents.add(event),
+        idFactory: () => 'cccccccccccccccccccccccccccccccc',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            traceRecorder: recorder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '我想排盘');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(intentEvents, ['intent']);
+      expect(service.intentQueries, ['我想排盘']);
+      final redFlagEvent = traceEvents.singleWhere(
+        (event) => event.stage == AiTraceStage.redFlag,
+      );
+      expect(redFlagEvent.status, AiTraceStatus.notApplicable);
+      expect(redFlagEvent.errorCode, 'REDFLAG_GATE_NOT_CONFIGURED');
+      expect(
+        traceEvents.where((event) => event.stage == AiTraceStage.redFlag)
+            .every((event) => event.status != AiTraceStatus.succeeded),
+        isTrue,
+      );
+    });
+
+  });
+}
+
