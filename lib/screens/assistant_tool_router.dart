@@ -11,6 +11,7 @@ import '../services/chenggu_tool_executor.dart';
 import '../services/huangdi_siji_tool_executor.dart';
 import '../services/ziwei_tool_executor.dart';
 import '../services/solar_term_tool_executor.dart';
+import '../services/xiaoliuren_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -295,11 +296,35 @@ class AssistantToolRouter {
   static const xiaoliuren = AssistantToolDefinition(
     id: 'xiaoliuren',
     title: '小六壬起课',
-    description: '打开本地小六壬工具。',
+    description: '在当前对话收集公历日期和时辰，调用 App 原有小六壬纯函数；两种既有起课口径由用户明确选择。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
-    aliases: ['小六壬'],
+    aliases: ['小六壬', '小六壬起课', '六壬时课'],
     actionWords: ['起课', '起卦', '推算', '算一下'],
     builder: _buildXiaoliuren,
+    headlessExecutor: XiaoliurenToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'date',
+        label: '公历日期',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'hour',
+        label: '时辰',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: XiaoliurenToolExecutor.hourBranches,
+      ),
+      AssistantToolParameter(
+        key: 'rule',
+        label: '起课口径',
+        type: AssistantToolParameterType.choice,
+        description: '必须由用户明确选择 common（通行掌诀）或 duoneng（《多能鄙事》卷八）；两种口径并列，不把其中一种说成唯一传统。',
+        isRequired: true,
+        choices: ['common', 'duoneng'],
+      ),
+    ],
   );
 
   static const meihua = AssistantToolDefinition(

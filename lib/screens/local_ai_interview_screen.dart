@@ -279,6 +279,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingMeihuaArguments;
   AssistantToolArguments? _pendingChengguArguments;
   AssistantToolArguments? _pendingHuangdiSijiArguments;
+  AssistantToolArguments? _pendingXiaoliurenArguments;
   LocalAiSymptomDraft? _confirmedDraft;
   String? _error;
 
@@ -329,6 +330,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingMeihuaArguments = null;
         _pendingChengguArguments = null;
         _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -1245,6 +1247,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
@@ -2242,6 +2245,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingBaziArguments = null;
       }
       _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
       final clarification = tool.id == 'ziwei'
           ? '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行紫微排盘。'
           : '本地城市目录无法唯一识别刚才的出生地点。请补充省/州和城市/区县，使用“出生地：省市区”的格式；本次没有执行八字排盘。';
@@ -2511,6 +2515,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
       _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
       _pendingMeihuaArguments = null;
@@ -2531,6 +2536,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (argumentErrors.isNotEmpty) {
         _pendingChengguArguments = request;
         _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
         _pendingBaziArguments = null;
         _pendingZiweiArguments = null;
         _pendingMeihuaArguments = null;
@@ -2617,6 +2623,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
       _pendingMeihuaArguments = null;
@@ -2639,6 +2646,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingMeihuaArguments = null;
         _pendingChengguArguments = null;
         _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
         final missingParameters = tool.parameters
             .where((parameter) =>
                 parameter.isRequired &&
@@ -2828,6 +2836,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingBaziArguments = request;
         _pendingZiweiArguments = null;
         _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
         final missingParameters = tool.parameters
             .where((parameter) =>
                 parameter.isRequired &&
@@ -2955,6 +2964,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (needsClarification) {
         _pendingMeihuaArguments = request;
         _pendingHuangdiSijiArguments = null;
+        _pendingXiaoliurenArguments = null;
         _pendingBaziArguments = null;
         _pendingZiweiArguments = null;
         final methodLabel = switch (method) {
@@ -3046,8 +3056,119 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: request,
+      );
+      return;
+    }
+
+    if (tool.id == 'xiaoliuren' && tool.headlessExecutor != null) {
+      final request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      final argumentErrors = request.validateAgainst(tool);
+      if (argumentErrors.isNotEmpty) {
+        _pendingXiaoliurenArguments = request;
+        _pendingMeihuaArguments = null;
+        _pendingChengguArguments = null;
+        _pendingHuangdiSijiArguments = null;
+        _pendingBaziArguments = null;
+        _pendingZiweiArguments = null;
+        final missingParameters = tool.parameters
+            .where((parameter) =>
+                parameter.isRequired &&
+                (request[parameter.key]?.trim().isEmpty ?? true))
+            .map((parameter) => parameter.label)
+            .toList(growable: false);
+        final suppliedParameters = tool.parameters
+            .where((parameter) =>
+                request[parameter.key]?.trim().isNotEmpty ?? false)
+            .map((parameter) =>
+                '${parameter.label}：${request[parameter.key]}')
+            .toList(growable: false);
+        final invalidParameterErrors = argumentErrors
+            .where((error) =>
+                !error.startsWith('缺少必填参数：') &&
+                !error.startsWith('未声明的参数：'))
+            .toList(growable: false);
+        final lunarDate = request['date'] == 'LUNAR_DATE_NOT_SUPPORTED';
+        final ambiguousDate = request['date'] == 'AMBIGUOUS_DATE_SELECTION';
+        final ambiguousHour = request['hour'] == 'AMBIGUOUS_HOUR_SELECTION';
+        final ambiguousRule = request['rule'] == 'AMBIGUOUS_RULE_SELECTION';
+        final clarification = [
+          '我会在当前对话中调用 App 原有的小六壬排课纯函数，不需要打开工具页面。',
+          if (suppliedParameters.isNotEmpty)
+            '已识别的信息：${suppliedParameters.join('；')}。',
+          if (missingParameters.isNotEmpty)
+            '目前还缺少：${missingParameters.join('、')}。',
+          if (lunarDate)
+            '小六壬此入口要求公历日期；不会把农历日期当作公历，也不会自行猜测换算。',
+          if (ambiguousDate)
+            '你提到了多个日期，请明确本次起课使用哪一天。',
+          if (ambiguousHour)
+            '你提到了多个时辰，请明确选择其中一个。',
+          if (ambiguousRule)
+            '你提到了两种起课口径，请明确选择其中一种。',
+          if (invalidParameterErrors.isNotEmpty)
+            '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          '请提供公历日期、一个时辰（子时至亥时）和明确的起课口径：通行掌诀，或《多能鄙事》卷八。',
+          '两种口径的月初一落宫规则不同；App 会按你明确选择的口径计算，不会替你默认选择。',
+          '例如：公历日期：2026-11-14；时辰：午时；起课口径：通行掌诀。',
+          '结果属于传统民俗文化参考，不是事实预测或吉凶指令，不用于医疗、法律、投资或其他重要决策。',
+        ].join('\n');
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.argumentValidation,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'XIAOLIUREN_PARAMETERS_INCOMPLETE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.businessExecution,
+          status: AiTraceStatus.notStarted,
+          toolId: tool.id,
+          errorCode: 'AWAITING_PARAMETERS',
+        );
+        setState(() {
+          _lastEffectiveMode = activeMode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: clarification, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: userText,
+          assistantText: clarification,
+          mode: activeMode,
+          toolId: tool.id,
+          toolStatus: 'AWAITING_PARAMETERS',
+          toolArguments: request.values,
+          traceId: activeTraceContext.traceId,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: tool.id,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: tool.id,
+        );
+        _scrollToBottom();
+        return;
+      }
+      _pendingXiaoliurenArguments = null;
       await _executeHeadlessTool(
         userText,
         tool,
@@ -3993,6 +4114,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingMeihuaArguments;
     AssistantToolArguments? restoredPendingChengguArguments;
     AssistantToolArguments? restoredPendingHuangdiSijiArguments;
+    AssistantToolArguments? restoredPendingXiaoliurenArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -4020,6 +4142,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingMeihuaArguments = null;
         restoredPendingChengguArguments = null;
         restoredPendingHuangdiSijiArguments = null;
+        restoredPendingXiaoliurenArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -4064,6 +4187,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'huangdi_siji') {
         restoredPendingHuangdiSijiArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'xiaoliuren') {
+        restoredPendingXiaoliurenArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -4210,6 +4339,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingMeihuaArguments = restoredPendingMeihuaArguments;
       _pendingChengguArguments = restoredPendingChengguArguments;
       _pendingHuangdiSijiArguments = restoredPendingHuangdiSijiArguments;
+      _pendingXiaoliurenArguments = restoredPendingXiaoliurenArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -4929,6 +5059,117 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
         arguments: AssistantToolArguments(
           toolId: 'bazi',
+          values: Map<String, String>.unmodifiable(mergedArguments),
+        ),
+        traceContext: traceContext,
+      );
+      return;
+    }
+
+    final pendingXiaoliuren = _pendingXiaoliurenArguments;
+    if (pendingXiaoliuren != null &&
+        (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '小六壬起课需要文字资料。请用文字补齐公历日期、时辰和起课口径，或发送“取消小六壬”结束本次起课。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:xiaoliuren_attachment_rejected',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'xiaoliuren',
+        errorCode: 'XIAOLIUREN_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'xiaoliuren',
+      );
+      return;
+    }
+    if (pendingXiaoliuren != null && text.isNotEmpty) {
+      final cancelText =
+          text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消小六壬',
+        '取消起课',
+        '停止起课',
+        '算了',
+        '先不算',
+        '取消',
+      }.contains(cancelText);
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:xiaoliuren'
+            : 'tool_follow_up:xiaoliuren',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'xiaoliuren',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:xiaoliuren'
+            : 'tool_follow_up:xiaoliuren',
+        mode: AssistantMode.metaphysics.name,
+        toolId: 'xiaoliuren',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次小六壬起课；尚未执行任何计算。';
+        setState(() {
+          _pendingXiaoliurenArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: AssistantMode.metaphysics,
+          toolId: 'xiaoliuren',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingXiaoliuren.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'xiaoliuren',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'xiaoliuren',
+        );
+        _scrollToBottom();
+        return;
+      }
+      final followUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.xiaoliuren,
+        text,
+      );
+      final mergedArguments = <String, String>{
+        ...pendingXiaoliuren.values,
+        ...followUp.values,
+      };
+      await _requestTool(
+        text,
+        AssistantToolRouter.xiaoliuren,
+        mode: _lastEffectiveMode ?? AssistantMode.metaphysics,
+        arguments: AssistantToolArguments(
+          toolId: 'xiaoliuren',
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
@@ -5787,6 +6028,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingMeihuaArguments = null;
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
+      _pendingXiaoliurenArguments = null;
       _pendingHistoryTranscript = null;
       _pendingHistoryUserMessages = const [];
       setState(() {

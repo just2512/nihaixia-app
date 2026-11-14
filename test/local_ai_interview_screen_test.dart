@@ -15,6 +15,7 @@ import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
+import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -4413,6 +4414,107 @@ void main() {
           event.status == AiTraceStatus.succeeded),
       isTrue,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('小六壬助手只追问缺失参数并在对话中执行真实规则结果',
+      (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开小六壬页面'));
+          },
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return XiaoliurenToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我用小六壬起课');
+    expect(
+      find.textContaining('目前还缺少：公历日期、时辰、起课口径'),
+      findsOneWidget,
+    );
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty);
+    expect(pageOpened, isFalse);
+
+    await send('公历日期：2026-11-14');
+    expect(
+      find.textContaining('已识别的信息：公历日期：2026-11-14'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('目前还缺少：时辰、起课口径'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty);
+
+    final conversationsBeforeExecute = await store.getAssistantConversations();
+    final pendingMessages = await store.getAssistantMessages(
+      conversationId: conversationsBeforeExecute.single['id'] as int,
+    );
+    final pendingMetadata = AssistantMessageMetadata.decode(
+      pendingMessages.last['metadata'] as String,
+    );
+    expect(pendingMetadata.toolId, 'xiaoliuren');
+    expect(pendingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(pendingMetadata.toolArguments, const {'date': '2026-11-14'});
+
+    await send('午时，通行掌诀');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'date': '2026-11-14',
+      'hour': '午时',
+      'rule': 'common',
+    });
+    expect(find.textContaining('【小六壬起课执行结果】'), findsOneWidget);
+    expect(find.text('打开小六壬起课'), findsNothing);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('小六壬起课'));
+    expect(service.sentContexts.single, contains('当前角色：玄学大师'));
+
+    final conversations = await store.getAssistantConversations();
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('【小六壬起课执行结果】'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(resultMessage['role'], 'assistant');
+    expect(metadata.toolId, 'xiaoliuren');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'date': '2026-11-14',
+      'hour': '午时',
+      'rule': 'common',
+    });
+    expect(metadata.sourceIds, const [
+      'local-engine:xiaoliuren',
+      'local-data:xiaoliuren-rule-data',
+    ]);
     expect(tester.takeException(), isNull);
   });
 
