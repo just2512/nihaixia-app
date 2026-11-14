@@ -844,6 +844,47 @@ void main() {
       );
     });
 
+    test('节气查询在当前对话选择真实节气或读取 App 当前节气', () {
+      final named = AssistantConversationOrchestrator.resolve(
+        query: '查询立春养生',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(named.tool?.id, 'solar_terms');
+      expect(named.toolArguments?.values, const {'term': '立春'});
+
+      final current = AssistantConversationOrchestrator.resolve(
+        query: '查看当前节气养生',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(current.tool?.id, 'solar_terms');
+      expect(current.toolArguments?.values, isEmpty);
+
+      final learningRole = AssistantConversationOrchestrator.resolve(
+        query: '查询立春的三候和食疗',
+        selectedMode: AssistantMode.learning,
+      );
+      expect(learningRole.mode, AssistantMode.learning);
+      expect(learningRole.tool?.id, 'solar_terms');
+      expect(learningRole.toolArguments?.values, const {'term': '立春'});
+    });
+
+    test('同时提到多个节气时先澄清，不静默选第一个或查询当前节气', () {
+      for (final mode in [
+        AssistantMode.automatic,
+        AssistantMode.learning,
+        AssistantMode.tools,
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: '查询立春和雨水的节气养生',
+          selectedMode: mode,
+        );
+        expect(decision.tool, isNull, reason: mode.name);
+        expect(decision.needsClarification, isTrue, reason: mode.name);
+        expect(decision.clarification, contains('立春、雨水'), reason: mode.name);
+        expect(decision.clarification, contains('尚未执行查询'), reason: mode.name);
+      }
+    });
+
     test('黄帝四季歌请求只提取明确的公历日期和当地钟表时间', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '查询黄帝四季歌',
