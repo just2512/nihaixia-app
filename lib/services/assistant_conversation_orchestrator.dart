@@ -236,6 +236,74 @@ class AssistantConversationOrchestrator {
       } else if (requestsDuoneng != requestsCommon) {
         values['rule'] = requestsDuoneng ? 'duoneng' : 'common';
       }
+    } else if (tool.id == 'dosage') {
+      const unitPattern = r'(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)';
+      final paired = RegExp(
+        r'(\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九半])\\s*' +
+            unitPattern,
+      ).allMatches(query).toList(growable: false);
+      String normalizeAmount(String raw) {
+        if (double.tryParse(raw) != null) return raw;
+        const chineseDigits = {
+          '零': '0',
+          '〇': '0',
+          '一': '1',
+          '二': '2',
+          '两': '2',
+          '三': '3',
+          '四': '4',
+          '五': '5',
+          '六': '6',
+          '七': '7',
+          '八': '8',
+          '九': '9',
+          '半': '0.5',
+        };
+        return chineseDigits[raw] ?? raw;
+      }
+
+      if (paired.length == 1) {
+        final match = paired.single;
+        final amountMatch = RegExp(
+          r'(\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九半])',
+        ).firstMatch(match.group(0)!);
+        final unitMatch = RegExp(unitPattern).firstMatch(match.group(0)!);
+        if (amountMatch != null && unitMatch != null) {
+          values['amount'] = normalizeAmount(amountMatch.group(1)!);
+          values['unit'] = unitMatch.group(1)!;
+        }
+      } else if (paired.length > 1) {
+        values['amount'] = 'AMBIGUOUS_AMOUNT_SELECTION';
+        values['unit'] = 'AMBIGUOUS_UNIT_SELECTION';
+      } else {
+        final standaloneAmount = RegExp(
+          r'^\\s*(\\d+(?:\\.\\d+)?|[零〇一二两三四五六七八九半])\\s*',
+        ).firstMatch(query);
+        if (standaloneAmount != null &&
+            standaloneAmount.group(0)!.trim() == query.trim()) {
+          values['amount'] = normalizeAmount(standaloneAmount.group(1)!);
+        }
+        final units = RegExp(unitPattern)
+            .allMatches(query)
+            .map((match) => match.group(1)!)
+            .toSet();
+        if (units.length == 1) {
+          values['unit'] = units.single;
+        } else if (units.length > 1) {
+          values['unit'] = 'AMBIGUOUS_UNIT_SELECTION';
+        }
+      }
+
+      final standards = <String>[
+        if (query.contains('汉制')) 'han',
+        if (query.contains('台制')) 'tai',
+        if (query.contains('唐制')) 'tang',
+      ].toSet();
+      if (standards.length == 1) {
+        values['standard'] = standards.single;
+      } else if (standards.length > 1) {
+        values['standard'] = 'AMBIGUOUS_STANDARD_SELECTION';
+      }
     } else if (tool.id == 'yijing') {
       final methods = <String>[];
       if (RegExp(r'(铜钱摇卦|摇铜钱|铜钱起卦)').hasMatch(query)) {
