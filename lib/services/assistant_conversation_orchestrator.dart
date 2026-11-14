@@ -197,7 +197,7 @@ class AssistantConversationOrchestrator {
       final meaningfulDetail = detail.replaceAll(
         RegExp(r'(?:补充梦境细节|帮我|麻烦|请|解梦|解读|解释|分析|一下|什么意思|是什么意思|怎么理解|代表什么|一个|一条|一只|一群|很多|看到|看见|出现|我|是|被|有|了|的)'),
         '',
-      ).replaceAll(RegExp(r'[，,。.!！?？；;：:、()（）【】[]“”"‘’·\s]+'), '');
+      ).replaceAll(RegExp(r'[，,。.!！?？；;：:、()（）“”"‘’·\s]+'), '');
       if (meaningfulDetail.isNotEmpty) {
         values['dream_text'] = query.trim();
       }
