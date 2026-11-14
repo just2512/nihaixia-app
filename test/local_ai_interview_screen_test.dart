@@ -5233,10 +5233,14 @@ void main() {
     final rows = await store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    final resultRow = rows.firstWhere(
-      (row) => (row['content'] as String)
-          .startsWith('【子午流注时辰开穴计算结果执行结果】'),
-    );
+    final resultRow = rows.firstWhere((row) {
+      final metadata = AssistantMessageMetadata.decode(
+        row['metadata'] as String? ?? '',
+      );
+      return metadata.toolId == 'ziwu_liuzhu' &&
+          metadata.toolStatus == 'SUCCEEDED' &&
+          metadata.sourceIds.contains(ZiWuLiuZhuToolExecutor.sourceId);
+    });
     final metadata = AssistantMessageMetadata.decode(
       resultRow['metadata'] as String,
     );
