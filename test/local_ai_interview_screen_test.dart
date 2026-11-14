@@ -20,6 +20,7 @@ import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
 import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/dosage_tool_executor.dart';
 import 'package:nihaisha_app/services/guansha_tool_executor.dart';
+import 'package:nihaisha_app/services/shousheng_debt_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:nihaisha_app/services/red_flag_gate.dart';
@@ -5457,6 +5458,144 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('受生债在当前助手对话逐轮补齐参数，执行原表格并解释已校验结果',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+    const sourceIds = [
+      ShoushengDebtToolExecutor.sourceId,
+      ShoushengDebtToolExecutor.lukuDataSourceId,
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return AssistantToolResult(
+              toolId: 'shousheng_debt',
+              title: '受生债查询',
+              values: const {
+                '出生公历': '1990-01-02 20:30',
+                '查询体系': '禄库受生经',
+                '年支': '巳',
+                '日干': '己',
+                '时支': '戌',
+                '禄库曹官数据': '{"ku_no": 3}',
+                '本命元辰数据': '{"yuanchen": "己巳"}',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: sourceIds,
+              disclaimer: '传统道教文献与民俗表格参考，不代表现实债务或财务义务。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('查询受生债');
+    expect(find.textContaining('目前还缺少：出生日期（公历）'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty);
+    expect(pageOpened, isFalse);
+
+    await send('公历出生日期：1990-01-02，出生时间：晚上8点半');
+    expect(find.textContaining('目前还缺少：查询体系'), findsOneWidget);
+    expect(executedArguments, isEmpty,
+        reason: '未明确选禄库或五斗时，不能执行页面默认体系');
+    expect(service.sentTexts, isEmpty);
+
+    await send('我选择禄库受生经');
+    expect(pageOpened, isFalse);
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '20:30',
+      'method': 'luku',
+    });
+    expect(find.textContaining('【受生债查询执行结果】'), findsOneWidget);
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('不代表现实中存在需要偿还的债务'));
+    expect(service.sentTexts.single, contains('禄库受生经'));
+
+    final conversations = await store.getAssistantConversations();
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultRow = rows.cast<Map<String, Object?>>().firstWhere(
+      (row) => (row['content'] as String).contains('【受生债查询执行结果】'),
+    );
+    final resultMetadata = AssistantMessageMetadata.decode(
+      resultRow['metadata'] as String,
+    );
+    expect(resultMetadata.toolId, 'shousheng_debt');
+    expect(resultMetadata.toolStatus, 'SUCCEEDED');
+    expect(resultMetadata.sourceIds, sourceIds);
+    expect(resultMetadata.toolArguments, executedArguments.single);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('受生债缺参可在当前助手对话取消，不执行表格也不调用模型',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    var executionCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testHeadlessToolExecutor: (_) {
+            executionCount += 1;
+            throw StateError('取消前不应调用受生债执行器');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('查询受生债');
+    expect(executionCount, 0);
+    await send('取消受生债查询');
+    expect(find.text('已取消本次受生债查询；尚未执行查询。'), findsOneWidget);
+    expect(executionCount, 0);
+    expect(service.sentTexts, isEmpty);
+
+    final conversations = await store.getAssistantConversations();
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final cancelled = AssistantMessageMetadata.decode(
+      rows.last['metadata'] as String,
+    );
+    expect(cancelled.toolId, 'shousheng_debt');
+    expect(cancelled.toolStatus, 'CANCELLED');
+    expect(cancelled.sourceIds, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('小儿关煞助手在当前对话逐轮补齐参数、调用本地规则并解释真实结果',
       (tester) async {
