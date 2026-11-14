@@ -336,7 +336,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _pendingChengguArguments = null;
         _pendingHuangdiSijiArguments = null;
         _pendingXiaoliurenArguments = null;
-_pendingDosageArguments = null;
+        _pendingYiJingArguments = null;
+        _pendingDosageArguments = null;
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
       }
@@ -2435,6 +2436,7 @@ _pendingDosageArguments = null;
           .toSet()
           .toList(growable: false);
       if (allErrors.isNotEmpty || missingParameters.isNotEmpty) {
+        _pendingYiJingArguments = null;
         _pendingDosageArguments = request;
         _pendingBaziArguments = null;
         _pendingZiweiArguments = null;
@@ -3432,7 +3434,7 @@ _pendingDosageArguments = null;
         _scrollToBottom();
         return;
       }
-_pendingDosageArguments = null;
+      _pendingDosageArguments = null;
       await _executeHeadlessTool(
         userText,
         tool,
@@ -5620,7 +5622,8 @@ _pendingDosageArguments = null;
       if (cancelRequested) {
         const reply = '已取消本次易经起卦；尚未执行任何计算。';
         setState(() {
-_pendingDosageArguments = null;
+          _pendingYiJingArguments = null;
+          _pendingDosageArguments = null;
           _messages
             ..add(_InterviewMessage(text: text, isUser: true))
             ..add(const _InterviewMessage(text: reply, isUser: false));
