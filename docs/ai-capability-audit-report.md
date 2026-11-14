@@ -1182,7 +1182,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 
 - PR #165 的 PR workflow run `43603236412` SUCCESS；合并后 master Flutter tests run `43604662112` 和 Flutter Quality Gate run `43604662115` 均在 merge SHA `d15478a0c716c2ba4ade9becbc84299facd3dee7` 上 SUCCESS，覆盖 Flutter 回归、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、Dart 全量测试及 Find N2 arm64 Debug APK 构建。
 - PR #166 分支验证 run `43605363179` SUCCESS；PR workflow run `43605365431` SUCCESS，最终 head 为 `2b3ef924a23ae737bbb6438018766cee865085a7`。Flutter 全量 regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Android Native 单测、JUnit XML 和证据上传均通过。
-- PR #166 合并后 master Flutter tests run `43606161767` 与 Flutter Quality Gate run `43606161792` 均以 `f05751dfc3c5548769c02ad3eaf066bda720dd9e` 为 head；本节初次写入时两条仍 IN_PROGRESS，终态须在后续同步记录，不得将运行中标成通过。
+- PR #166 合并后 master Flutter tests run `43606161767` 与 Flutter Quality Gate run `43606161792` 均以 `f05751dfc3c5548769c02ad3eaf066bda720dd9e` 为 head，终态均 SUCCESS。Flutter tests 的 Flutter regression、Android arm64 verification APK/Manifest/ABI/SHA-256、Native tests 和工件上传全部通过；Quality Gate 的静态分析、Dart 全量测试、Android Native 单测及 Find N2 arm64 Debug APK 构建全部通过。
 
 ### A-G 未关闭事项
 
