@@ -1142,6 +1142,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ? await _retrieveKnowledgeWithTrace(
                 query,
                 traceContext: traceContext,
+                // Tool-result explanation uses the bundled formula/herb/classic/
+                // acupoint corpus. Do not load unrelated case records (some
+                // still have MISSING bibliographic locators) for unit or
+                // calendrical tool explanations.
+                includeMedicalCases: false,
               )
             : null;
         final knowledgeContext = switch (knowledge?.status) {
