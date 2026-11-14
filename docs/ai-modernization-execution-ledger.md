@@ -1617,7 +1617,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 34.5 当前 master CI
 
-- merge SHA `67bb3597e9abb411627545a8e2a3b25105633c52` 的 Flutter tests run `43548507345` 和 Flutter Quality Gate run `43548507387` 在本节形成时均为 QUEUED。
+- merge SHA `67bb3597e9abb411627545a8e2a3b25105633c52` 的 Flutter tests run `43548507345` 与 Flutter Quality Gate run `43548507387` 均 SUCCESS，且两条 run 的 head_sha 均匹配该 merge SHA。
 - PR #146 的 Flutter regression、Android arm64/Manifest/Native CI 已 SUCCESS；不能替代 merge SHA 的 post-merge 两条工作流。
 - 后续在合并文档 PR 前后分别复核以上 run；只有同一 SHA 对应的终态 SUCCESS 才能记为 master CI PASS。
 
