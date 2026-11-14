@@ -180,6 +180,52 @@ void main() {
       expect(decision.tool?.id, 'bazi');
     });
 
+    test('紫微请求在对话中抽取出生参数并校验完整性', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '帮我排一个紫微斗数命盘',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.tool?.id, 'ziwei');
+      expect(decision.toolArguments?.values, isEmpty);
+
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwei,
+        '出生日期：1990年1月2日；出生时间：08:30；性别：男；出生地：上海市',
+      );
+      expect(parsed.values, const {
+        'birth_date': '1990-01-02',
+        'birth_time': '08:30',
+        'gender': 'male',
+        'birthplace': '上海市',
+      });
+      expect(parsed.validateAgainst(AssistantToolRouter.ziwei), isEmpty);
+
+      final ambiguous = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwei,
+        '出生日期：1990-02-30；出生时间：25:70；可能是男也可能是女；出生地：朝阳',
+      );
+      final errors = ambiguous.validateAgainst(AssistantToolRouter.ziwei);
+      expect(errors.join('；'), contains('出生日期'));
+      expect(errors.join('；'), contains('出生时间'));
+      expect(errors.join('；'), contains('性别'));
+      expect(ambiguous['gender'], isNull);
+      expect(ambiguous['birthplace'], '朝阳');
+    });
+
+    test('紫微农历日期不转换为公历，要求用户明确提供公历日期', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwei,
+        '农历1990年正月初二出生，出生时间早上8点，帮我排紫微斗数',
+      );
+      expect(parsed['birth_date'], 'LUNAR_DATE_NOT_SUPPORTED');
+      expect(parsed['birth_time'], isNull,
+          reason: '没有 HH:mm 明确钟表时间时不猜测时刻');
+      expect(
+        parsed.validateAgainst(AssistantToolRouter.ziwei),
+        isNotEmpty,
+      );
+    });
+
     test('八字请求在对话中抽取出生参数并校验完整性', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '帮我排八字',
@@ -349,9 +395,13 @@ void main() {
 
       expect(decision.needsClarification, isTrue);
       expect(
-        decision.candidateTools,
-        isEmpty,
-        reason: '紫微仍是 Page Tool，不能交给 E4B 自动选择并导航',
+        decision.candidateTools.map((tool) => tool.id),
+        ['ziwei', 'bazi'],
+        reason: '两种排盘都能在当前对话内确定性执行，候选集允许交给受约束的 E4B 选择',
+      );
+      expect(
+        decision.candidateTools.every((tool) => tool.headlessExecutor != null),
+        isTrue,
       );
     });
 
