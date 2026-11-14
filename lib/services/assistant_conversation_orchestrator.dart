@@ -267,12 +267,12 @@ class AssistantConversationOrchestrator {
         values['time'] = timeValues.single;
       } else if (timeValues.length > 1) {
         values['time'] = 'AMBIGUOUS_TIME_SELECTION';
-      } else if (RegExp(r'(\\d{1,2}点|上午|下午|晚上|早上|凌晨|今晚|今早|午时|子时|酉时)')
+      } else if (RegExp(r'(\d{1,2}点|上午|下午|晚上|早上|凌晨|今晚|今早|午时|子时|酉时)')
           .hasMatch(query)) {
         values['time'] = 'UNPARSED_TIME';
       }
       if (dateValues.isEmpty &&
-          RegExp(r'(\\d{4}年|\\d{4}[-/]|今天|明天|后天|昨天)')
+          RegExp(r'(\d{4}年|\d{4}[-/]|今天|明天|后天|昨天)')
               .hasMatch(query)) {
         values['date'] = 'UNPARSED_DATE';
       }
