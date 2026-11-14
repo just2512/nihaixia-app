@@ -5376,6 +5376,94 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('小儿关煞在对话内追问出生参数并执行校验后的本地结果', (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开关煞页面'));
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return AssistantToolResult(
+              toolId: 'guansha',
+              title: '小儿关煞',
+              values: const {
+                '四柱': '戊戌 庚申 壬午 甲辰',
+                '关煞命中数量': '2',
+                '本地规则结果': '示例本地条目；确定性规则匹配依据已由 App 返回。',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: const [
+                'local-engine:guansha',
+                'local-data:guansha',
+              ],
+              disclaimer: '传统民俗资料，不代表儿童健康风险或医学诊断。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我测算小儿关煞');
+    expect(executedArguments, isEmpty,
+        reason: '缺少出生参数时不能启动排盘或调用模型');
+    expect(find.textContaining('目前还缺少'), findsOneWidget);
+    expect(service.sentTexts, isEmpty);
+
+    await send('男孩，2018年5月1日，早上8点半出生在上海市');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, {
+      'birth_date': '2018-05-01',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(service.sentTexts, hasLength(1));
+    expect(service.sentTexts.single, contains('儿童健康风险'));
+    expect(service.sentTexts.single, contains('不是医学诊断'));
+    expect(service.sentTexts.single, contains('不得修改四柱或规则结果'));
+    expect(pageOpened, isFalse);
+
+    final conversations = await store.getAssistantConversations();
+    final messages = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('【小儿关煞执行结果】'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'guansha');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments['birthplace'], '上海市');
+    expect(
+      metadata.sourceIds,
+      const ['local-engine:guansha', 'local-data:guansha'],
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   mainRedFlagEntrypointOrderingTests();
 }
 
