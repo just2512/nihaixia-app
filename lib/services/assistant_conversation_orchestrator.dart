@@ -1,4 +1,5 @@
 import '../screens/assistant_tool_router.dart';
+import 'solar_term_tool_executor.dart';
 
 /// A single-turn dispatch decision. The selected UI mode may remain automatic;
 /// [mode] is the effective domain adapter for this turn.
@@ -177,7 +178,14 @@ class AssistantConversationOrchestrator {
     String query,
   ) {
     final values = <String, String>{};
-    if (tool.id == 'chenggu') {
+    if (tool.id == 'solar_terms') {
+      final matches = SolarTermToolExecutor.termNames
+          .where(query.contains)
+          .toList(growable: false);
+      if (matches.length == 1) {
+        values['term'] = matches.single;
+      }
+    } else if (tool.id == 'chenggu') {
       final isoDate = RegExp(
         r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b',
       ).firstMatch(query);
@@ -449,6 +457,39 @@ class AssistantConversationOrchestrator {
     final text = query.trim();
     if (text.isEmpty) {
       return AssistantDispatchDecision(mode: selectedMode);
+    }
+
+    final explicitSolarTool =
+        AssistantToolRouter.matchAll(text, selectedMode)
+            .where((tool) => tool.id == 'solar_terms')
+            .toList(growable: false);
+    if (explicitSolarTool.length == 1) {
+      final mentionedTerms = SolarTermToolExecutor.termNames
+          .where(text.contains)
+          .toList(growable: false);
+      if (mentionedTerms.length > 1) {
+        return AssistantDispatchDecision(
+          mode: selectedMode == AssistantMode.automatic
+              ? AssistantMode.tools
+              : selectedMode,
+          clarification:
+              '你同时提到了${mentionedTerms.join('、')}。一次只查询一个节气；请重新发送一个明确的节气名称，例如“查询立春养生”。尚未执行查询。',
+        );
+      }
+      final asksForCurrentTerm = const [
+        '当前节气',
+        '今天的节气',
+        '现在的节气',
+      ].any(text.contains);
+      if (mentionedTerms.isEmpty && !asksForCurrentTerm) {
+        return AssistantDispatchDecision(
+          mode: selectedMode == AssistantMode.automatic
+              ? AssistantMode.tools
+              : selectedMode,
+          clarification:
+              '请明确要查询哪一个节气；也可以说“查询当前节气”。目前尚未执行查询。',
+        );
+      }
     }
 
     if (selectedMode != AssistantMode.automatic) {
