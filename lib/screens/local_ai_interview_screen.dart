@@ -317,20 +317,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (_redFlagPreflightedContexts.contains(traceContext)) return false;
 
     final gate = widget.redFlagGate;
-    if (gate == null) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.redFlag,
-        status: AiTraceStatus.notApplicable,
-        route: route,
-        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
-      );
-      return false;
-    }
-
-    final result = await gate.evaluate(
-      RedFlagInput(source: source, text: text),
-    );
+    final result = gate == null
+        ? const RedFlagPreflightResult(
+            RedFlagPreflightStatus.reviewRequired,
+            'DETECTOR_NOT_CONFIGURED',
+          )
+        : await gate.evaluate(
+            RedFlagInput(source: source, text: text),
+          );
     final traceStatus = switch (result.status) {
       RedFlagPreflightStatus.clear => AiTraceStatus.succeeded,
       RedFlagPreflightStatus.blockUrgent => AiTraceStatus.failed,
