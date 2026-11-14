@@ -1148,6 +1148,6 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 
 ### 下一项
 
-- 先核验 merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 对应的 master Flutter tests run 43601665980 与 Quality Gate run 43601665970 终态；不得将 IN_PROGRESS 标记为 PASS。
+- merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 对应的 master Flutter tests run 43601665980 与 Quality Gate run 43601665970 均已终态 SUCCESS。
 - 受生债已有独立执行器/契约测试准备分支，但没有助手会话集成；应基于最新 master 单独完成路由、缺参澄清、跨轮状态、取消及解释闭环。
 - 自由文本问诊继续受 B 红旗门禁约束；不修改原十问、辨证规则或已审核知识库。
