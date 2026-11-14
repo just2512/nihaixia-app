@@ -2406,6 +2406,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // explicit date argument. Without a date, preserve the existing Page Tool
     // flow so a broad "how is it calculated?" request is not silently run for
     // today's date.
+    if (tool.id == 'solar_terms' && tool.headlessExecutor != null) {
+      // A generic current-term request is valid with no slot. A named term is
+      // deterministically extracted by AssistantConversationOrchestrator.
+      // The executor owns current-term calculation and knowledge-asset lookup.
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
+      );
+      return;
+    }
+
     if (tool.id == 'huangdi_siji' && tool.headlessExecutor != null) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
