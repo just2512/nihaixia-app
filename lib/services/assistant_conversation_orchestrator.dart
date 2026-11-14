@@ -186,6 +186,128 @@ class AssistantConversationOrchestrator {
       if (matches.length == 1) {
         values['term'] = matches.single;
       }
+    } else if (tool.id == 'yijing') {
+      final methods = <String>{};
+      if (query.contains('数字起卦') ||
+          query.contains('数字卦') ||
+          query.contains('两个数起卦')) {
+        methods.add('numbers');
+      }
+      if (query.contains('时间起卦') ||
+          query.contains('按当前时间') ||
+          query.contains('按现在起卦') ||
+          query.contains('现在起卦')) {
+        methods.add('time');
+      }
+      if (query.contains('手动选卦') ||
+          query.contains('手动起卦') ||
+          (query.contains('上卦') && query.contains('下卦'))) {
+        methods.add('manual');
+      }
+      if (query.contains('铜钱') ||
+          query.contains('摇铜钱') ||
+          query.contains('铜钱摇卦')) {
+        methods.add('coins');
+      }
+      if (methods.length > 1) {
+        values['method'] = 'AMBIGUOUS_METHOD_SELECTION';
+      } else if (methods.length == 1) {
+        values['method'] = methods.single;
+      }
+
+      final firstNumbers = RegExp(
+        r'(?:第一个数|第一数|上卦数)\\s*[：:]?\\s*(\\d{1,10})',
+      ).allMatches(query).toList(growable: false);
+      final secondNumbers = RegExp(
+        r'(?:第二个数|第二数|下卦数)\\s*[：:]?\\s*(\\d{1,10})',
+      ).allMatches(query).toList(growable: false);
+      final numberPairs = RegExp(
+        r'(?:用|以|数字起卦(?:使用)?|两个数)\\s*[：:]?\\s*(\\d{1,10})\\s*(?:和|与|及|、|，|,)\\s*(\\d{1,10})',
+      ).allMatches(query).toList(growable: false);
+      final loosePairs = numberPairs.isEmpty
+          ? RegExp(
+              r'(\\d{1,10})\\s*(?:和|与|及|、|，|,)\\s*(\\d{1,10})',
+            ).allMatches(query).toList(growable: false)
+          : const <RegExpMatch>[];
+      if (firstNumbers.length > 1 ||
+          secondNumbers.length > 1 ||
+          numberPairs.length > 1 ||
+          loosePairs.length > 1) {
+        values['number_a'] = 'AMBIGUOUS_NUMBERS';
+        values['number_b'] = 'AMBIGUOUS_NUMBERS';
+      } else {
+        if (firstNumbers.isNotEmpty) {
+          values['number_a'] = firstNumbers.single.group(1)!;
+        }
+        if (secondNumbers.isNotEmpty) {
+          values['number_b'] = secondNumbers.single.group(1)!;
+        }
+        final pair = numberPairs.isNotEmpty
+            ? numberPairs.single
+            : loosePairs.isNotEmpty
+                ? loosePairs.single
+                : null;
+        if (pair != null) {
+          if (values['number_a'] == null && values['number_b'] == null) {
+            values['number_a'] = pair.group(1)!;
+            values['number_b'] = pair.group(2)!;
+          } else if (values['number_a'] != pair.group(1) ||
+              values['number_b'] != pair.group(2)) {
+            values['number_a'] = 'AMBIGUOUS_NUMBERS';
+            values['number_b'] = 'AMBIGUOUS_NUMBERS';
+          }
+        }
+      }
+
+      int? parseTrigram(String? raw) {
+        if (raw == null) return null;
+        return YiJingToolExecutor.trigramNumbers[raw] ?? int.tryParse(raw);
+      }
+
+      final upperMatches = RegExp(
+        r'上卦(?:先天数)?\\s*(?:为|是)?\\s*[：:]?\\s*(乾|兑|离|震|巽|坎|艮|坤|[1-8])',
+      ).allMatches(query).toList(growable: false);
+      final lowerMatches = RegExp(
+        r'下卦(?:先天数)?\\s*(?:为|是)?\\s*[：:]?\\s*(乾|兑|离|震|巽|坎|艮|坤|[1-8])',
+      ).allMatches(query).toList(growable: false);
+      if (upperMatches.length > 1) {
+        values['upper'] = 'AMBIGUOUS_TRIGRAM';
+      } else if (upperMatches.isNotEmpty) {
+        values['upper'] = '${parseTrigram(upperMatches.single.group(1)) ?? -1}';
+      }
+      if (lowerMatches.length > 1) {
+        values['lower'] = 'AMBIGUOUS_TRIGRAM';
+      } else if (lowerMatches.isNotEmpty) {
+        values['lower'] = '${parseTrigram(lowerMatches.single.group(1)) ?? -1}';
+      }
+      final movingMatch = RegExp(
+        r'(?:动爻\\s*[：:]?\\s*|第)([0-6一二三四五六])(?:爻)?(?:动)?',
+      ).firstMatch(query);
+      if (query.contains('静卦')) {
+        values['moving'] = '0';
+      } else if (movingMatch != null) {
+        final raw = movingMatch.group(1)!;
+        const chineseNumbers = {
+          '一': 1,
+          '二': 2,
+          '三': 3,
+          '四': 4,
+          '五': 5,
+          '六': 6,
+        };
+        values['moving'] = '${int.tryParse(raw) ?? chineseNumbers[raw] ?? -1}';
+      }
+
+      final explicitCoins = RegExp(
+        r'(?:六爻结果|铜钱结果|六次投掷)\\s*[：:]?\\s*([6-9](?:\\s*[,，、]\\s*[6-9]){5})',
+      ).firstMatch(query);
+      if (explicitCoins != null) {
+        values['coins'] = explicitCoins
+            .group(1)!
+            .split(RegExp(r'[,，、]'))
+            .map((value) => value.trim())
+            .join(',');
+      }
     } else if (tool.id == 'xiaoliuren') {
       final isoDates = RegExp(
         r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
@@ -581,6 +703,22 @@ class AssistantConversationOrchestrator {
                   : '你提到了两种起课口径，请明确选择通行掌诀或《多能鄙事》卷八口径；尚未执行。',
         );
       }
+    }
+
+    final explicitYijingTools =
+        AssistantToolRouter.matchAll(text, selectedMode)
+            .where((tool) => tool.id == 'yijing')
+            .toList(growable: false);
+    final explicitlyNamesYijing = const ['易经', '周易', '六十四卦']
+        .any(text.contains);
+    if (explicitYijingTools.length == 1 && explicitlyNamesYijing) {
+      return AssistantDispatchDecision(
+        mode: selectedMode == AssistantMode.automatic
+            ? AssistantMode.metaphysics
+            : selectedMode,
+        tool: explicitYijingTools.single,
+        toolArguments: argumentsFor(explicitYijingTools.single, text),
+      );
     }
 
     if (selectedMode != AssistantMode.automatic) {
