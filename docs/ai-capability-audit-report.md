@@ -924,7 +924,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - PR #148：Flutter full regression run `43551889499` SUCCESS；Android arm64/Manifest/ABI/Native tests 与 artifacts 上传 SUCCESS；branch validation push run `43551885608` SUCCESS。
 - PR #149：最终 head `26aabe3fc43eb21a943189fea995a82b36465f12`；branch validation run `43553278374` SUCCESS；PR full Flutter run `43553482280` SUCCESS，Flutter regression job `132320970943` SUCCESS；Android arm64 job `132322096941` SUCCESS，包含 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 和 evidence artifact 上传。
 - PR #149 artifacts：`android-unit-test-reports` id `14097701587`、`android-arm64-ci-debug-abi-evidence` id `14097232618`、`ai-retrieval-golden-snapshot` id `14096004897`。
-- merge SHA `8e44e0c7f6f58249e2adc55fbec1afb37610954f` 的 post-merge Flutter tests run `43554222428`、附加 Flutter tests run `43554273400` 与 Quality Gate run `43554222553` 在本报告更新时均 IN_PROGRESS；全量 Flutter regression job `132323303067` 正在执行。**master CI 尚未终态通过**，需要后续按该 SHA 复核。
+- merge SHA `8e44e0c7f6f58249e2adc55fbec1afb37610954f` 的 post-merge Flutter tests run `43554222428` 仍 IN_PROGRESS（全量 regression job `132323303067`）；重复触发的 Flutter tests run `43554273400` 已被并发策略 CANCELLED；Flutter Quality Gate run `43554222553` 仍 IN_PROGRESS。**master CI 尚未终态通过**，需按该 SHA 复核 `43554222428` 与 `43554222553` 两条有效 workflow。
 
 ### 31.4 未关闭的发布阻塞和验收项
 
