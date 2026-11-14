@@ -1925,7 +1925,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - PR workflow run 43600911523：SUCCESS，head 890dd6b。Flutter regression job 132465252938 SUCCESS；Android arm64 job 132466566609 SUCCESS，包含 Debug APK 构建、合并 Manifest/备份配置、ABI/SHA-256、Android Native 单测、JUnit XML 与工件上传。
 - PR artifacts：android-arm64-ci-debug-abi-evidence id 14116890626；android-unit-test-reports id 14117045230；AI retrieval golden snapshot id 14115784702。
 - PR 初始测试曾暴露一项旧 Page navigation 断言与新 Headless 行为不一致；已将该断言改为只覆盖仍为 Page-only 的两项工具，并保留其真实结果回传检查。另新增当前对话中的关煞取消持久化回归测试；最终 head 的 Flutter 全量回归和 Android 全量门禁均通过。
-- 合并后 master Flutter tests run 43601665980 与 Flutter Quality Gate run 43601665970 在本节记录时为 IN_PROGRESS；只有二者在 merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 上终态 SUCCESS 后才可补记为 PASS。PR CI 不替代 post-merge master CI。
+- 合并后 master Flutter tests run 43601665980 与 Flutter Quality Gate run 43601665970 均已在 merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 上终态 SUCCESS；post-merge master CI 通过。PR CI 和 master CI 分别核验，均未把 IN_PROGRESS 误记为 PASS。
 
 ### 41.4 当前能力分层与未关闭事项
 
