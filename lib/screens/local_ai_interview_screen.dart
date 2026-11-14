@@ -2650,14 +2650,107 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (tool.id == 'guansha' && tool.headlessExecutor != null) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
-      final request = AssistantToolArguments(
+      var request = AssistantToolArguments(
         toolId: 'guansha',
         values: Map<String, String>.unmodifiable({
           ...?_pendingGuanshaArguments?.values,
           ...currentArguments.values,
         }),
       );
-      final argumentErrors = request.validateAgainst(tool);
+      var argumentErrors = request.validateAgainst(tool);
+      final missingKeys = tool.parameters
+          .where((parameter) =>
+              parameter.isRequired &&
+              (request[parameter.key]?.trim().isEmpty ?? true))
+          .map((parameter) => parameter.key)
+          .toSet();
+      final slotTraceId = activeTraceContext.traceId;
+      if (argumentErrors.isNotEmpty &&
+          _status?.ready == true &&
+          slotTraceId != null &&
+          AssistantConversationOrchestrator.shouldUseBaziSlotModel(
+            userText,
+            missingKeys,
+          )) {
+        setState(() => _sending = true);
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.notStarted,
+          route: 'bazi_slot_extraction',
+          toolId: tool.id,
+        );
+        try {
+          // Use the existing evidence-bound Bazi slot extractor for the
+          // identical birth fields. Model output remains a candidate only;
+          // LocalAiBaziSlotDraft and the tool schema validate it before use.
+          final draft = await _service.extractBaziSlotsWithTrace(
+            query: userText,
+            missingKeys: missingKeys,
+            traceId: slotTraceId,
+          );
+          request = AssistantToolArguments(
+            toolId: tool.id,
+            values: {
+              ...request.values,
+              ...draft.values,
+            },
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.nativeInference,
+            status: AiTraceStatus.succeeded,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+            backend: draft.backend,
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.modelOutput,
+            status: AiTraceStatus.succeeded,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+            backend: draft.backend,
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.succeeded,
+            route: 'bazi_slot_evidence_validation',
+            toolId: tool.id,
+          );
+        } catch (error) {
+          // Advisory extraction failure falls back to deterministic
+          // clarification. Unverified model values are never merged.
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.nativeInference,
+            status: AiTraceStatus.unknown,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+            errorCode: 'GUANSHA_SLOT_EXTRACTION_FAILED',
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.modelOutput,
+            status: AiTraceStatus.failed,
+            route: 'bazi_slot_extraction',
+            toolId: tool.id,
+            errorCode: 'GUANSHA_SLOT_OUTPUT_REJECTED',
+          );
+          await _traceRecorder.record(
+            activeTraceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.notStarted,
+            route: 'bazi_slot_evidence_validation',
+            toolId: tool.id,
+          );
+        } finally {
+          if (mounted) setState(() => _sending = false);
+        }
+        if (!mounted) return;
+        argumentErrors = request.validateAgainst(tool);
+      }
       if (argumentErrors.isNotEmpty) {
         _pendingGuanshaArguments = request;
         _pendingBaziArguments = null;
