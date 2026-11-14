@@ -609,3 +609,16 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - OPPO Find N2 E4B 真机多轮/多媒体/GPU-CPU/Activity 与进程恢复/清除数据后不可恢复/端到端 TRACE 继续为 DEVICE UNKNOWN；CI 不替代真机证据。
 - C 来源 locator 仍只允许用可追溯原始材料补充；不猜测书目、底本、卷页或原文，不重复审核已有知识库。
 - 不为扩大 Headless 数量而批量迁移 Page-only，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+
+
+## 2N. 2026-11-14 PR #165/#166 合并后的能力清单
+
+- 当前主线：`f05751dfc3c5548769c02ad3eaf066bda720dd9e`。
+- `AssistantToolRouter` 有 24 个定义，其中 23 个为常规工具入口，另 1 个 `structured_diagnosis` 由原问诊控制器内联执行。
+- 常规工具入口中 16 个具备 Headless executor：`yunqi`、`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`、`dosage`、`ziwu_liuzhu`、`almanac`、`solar_terms`、`dream`、`guansha`、`sanshan_lingqian`、`chenggu`、`shousheng_debt`、`huangdi_siji`。
+- 7 个常规工具仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`、`saved_charts`。
+- `structured_diagnosis` 使用既有 `TcmInterviewConversationController` / `DiagnosticEngine`，不纳入 16 项通用 Headless。页面 builder 不代表后台执行。
+- PR #165 增加 `ShoushengDebtToolExecutor`：复用原八字排盘、受生债计算和本地禄库/五斗资料，要求用户明确体系、日期与时间；缺参不执行，校验后才把真实数据和来源交给 E4B。
+- PR #166 增加 `SanshanLingqianToolExecutor`：复用本地 92 签数据，签号由 App 本地随机生成；只对明确抽签意图在对话内执行，目录浏览仍使用原页面；模型不能指定签号或伪造签文。
+- Page-only 不批量迁移：知识/文档入口复用现有知识检索解释能力；个人历史/保存记录需用户选择与授权；玉匣灵兆是易与医疗症状混淆的民俗占断，缺乏安全、明确的对话执行契约。
+- B 仍 `PARTIAL / RELEASE BLOCKED`；自由文本问诊在生产红旗门禁闭合前不得开放。A/E/F 真机验收、C 来源定位和 E 数据清除/恢复证据继续按各自缺口管理。已审核知识库不重复审核。
