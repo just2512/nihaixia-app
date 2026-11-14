@@ -63,6 +63,9 @@ bool _needsTcmKnowledgeForTool(AssistantMode mode, String toolId) =>
     mode == AssistantMode.tools &&
     const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(toolId);
 
+String _tcmToolKnowledgeQuery(String userText, AssistantToolDefinition tool) =>
+    '${userText.trim()} ${tool.title}';
+
 abstract interface class LocalAiAudioRecorder {
   Future<bool> hasPermission();
   Future<void> start(RecordConfig config, {required String path});
@@ -2437,7 +2440,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ? () => unawaited(_requestAssistantResultInterpretation(
                     prompt: interpretationPrompt,
                     mode: mode,
-                    retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
+                    retrievalQuery: needsTcmKnowledge
+            ? _tcmToolKnowledgeQuery(userText, tool)
+            : null,
                     toolId: needsDreamFollowUp ? null : tool.id,
                     toolStatus: needsDreamFollowUp ? null : result.statusLabel,
                     sourceIds: result.sourceIds,
@@ -2477,7 +2482,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _requestAssistantResultInterpretation(
         prompt: interpretationPrompt,
         mode: mode,
-        retrievalQuery: needsTcmKnowledge ? '$userText $response' : null,
+        retrievalQuery: needsTcmKnowledge
+            ? _tcmToolKnowledgeQuery(userText, tool)
+            : null,
         toolId: needsDreamFollowUp ? null : tool.id,
         toolStatus: needsDreamFollowUp ? null : result.statusLabel,
         sourceIds: result.sourceIds,
