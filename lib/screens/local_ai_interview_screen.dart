@@ -3270,7 +3270,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (invalidParameterErrors.isNotEmpty)
             '以下信息需要更正：${invalidParameterErrors.join('；')}。',
           '易经结果属于传统文化学习参考，不是科学预测或确定性结论，不用于医疗、法律或投资决策。',
-        ].join('\\n');
+        ].join('\n');
         await _traceRecorder.record(
           activeTraceContext,
           stage: AiTraceStage.argumentValidation,
