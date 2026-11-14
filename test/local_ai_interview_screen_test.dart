@@ -5590,6 +5590,92 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('小儿关煞自然语言出生资料仅提取有逐字证据的缺失槽位', (tester) async {
+    const traceId = 'dddddddddddddddddddddddddddddddd';
+    const query = '我在上海市出生，1990年1月2日早上八点半，男性，帮我测算小儿关煞';
+    final slotDraft = LocalAiBaziSlotDraft.fromModelText(
+      '{"birth_time":{"value":"08:30","evidence":"早上八点半"},'
+      '"birthplace":{"value":"上海市","evidence":"在上海市出生"}}',
+      userText: query,
+      requestedKeys: const {'birth_time', 'birthplace'},
+      backend: 'cpu',
+    );
+    final service = _TextSendService(baziSlotDraft: slotDraft);
+    final store = _MemoryConversationStore();
+    final events = <AiTraceEvent>[];
+    final recorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => events.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 14, 12),
+    );
+    Map<String, String>? executedArguments;
+    var pageOpened = false;
+    const sourceIds = [
+      GuanshaToolExecutor.sourceId,
+      GuanshaToolExecutor.dataSourceId,
+      GuanshaToolExecutor.locationSourceId,
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          traceRecorder: recorder,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return AssistantToolResult(
+              toolId: 'guansha',
+              title: '小儿关煞',
+              values: const {
+                '四柱': '庚午、己丑、甲子、戊辰',
+                '关煞命中数量': '0',
+                '本地规则结果': '未命中本地规则库收录的关煞。',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: sourceIds,
+              disclaimer: '传统民俗文化参考，非医学诊断。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, query);
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.baziSlotQueries, [query]);
+    expect(service.baziSlotMissingKeys, [const {'birth_time', 'birthplace'}]);
+    expect(service.baziSlotTraceIds, [traceId]);
+    expect(executedArguments, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(find.textContaining('未命中本地规则库收录的关煞'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1),
+        reason: '只在 App 本地执行、结果契约与来源校验后调用 AI 解释');
+    expect(
+      events.any((event) =>
+          event.stage == AiTraceStage.resultValidation &&
+          event.route == 'bazi_slot_evidence_validation' &&
+          event.toolId == 'guansha' &&
+          event.status == AiTraceStatus.succeeded),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   mainRedFlagEntrypointOrderingTests();
 }
 
