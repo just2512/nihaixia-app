@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/dosage_conversion_service.dart';
 
 class DosageConverterScreen extends StatefulWidget {
   const DosageConverterScreen({super.key, this.returnResultOnComplete = false});
@@ -18,26 +19,11 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
 
   static const _standards = ['汉制', '台制', '唐制'];
 
-  // 重量单位（各标准下1单位→克）
-  static const _weightUnits = ['两', '铢', '斤', '石', '钱'];
-  static const _weightFactors = [
-    // 汉制（倪海厦讲义：1石=29760g, 1斤=16两=248g, 1两=24铢=15.625g, 1铢=0.65g）
-    {'两': 15.625, '铢': 0.65, '斤': 248, '石': 29760, '钱': 1.5625},
-    // 台制（倪海厦讲义：1斤=600g, 1两=37.5g, 1钱=3.75g；台制无"石""铢"单位）
-    {'两': 37.5, '斤': 600, '钱': 3.75},
-    // 唐制（范吉平《经方剂量揭秘》：1两≈13.75g，1斤≈220g；唐制无"石""钱"单位）
-    {'两': 13.75, '铢': 0.573, '斤': 220},
-  ];
-
-  // 容量单位
-  static const _volumeUnits = ['升', '合', '圭', '撮'];
-  static const _volumeFactors = {
-    '升': 200.0, '合': 20.0, '圭': 0.5, '撮': 2.0,
-  };
-
-  // 长度单位
-  static const _lengthUnits = ['尺', '寸'];
-  static const _lengthFactors = {'尺': 23.1, '寸': 2.31};
+  // Conversion constants are shared with the Headless adapter so the
+  // legacy UI and assistant cannot drift into separate calculation engines.
+  static const _weightUnits = DosageConversionService.weightUnits;
+  static const _volumeUnits = DosageConversionService.volumeUnits;
+  static const _lengthUnits = DosageConversionService.lengthUnits;
 
   // 特殊药物容积→重量（一升=X克）——数据来源：倪海厦人纪讲义·伤寒论度量衡
   static const _specialVolumeToWeight = [
@@ -65,28 +51,14 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
   ];
 
   String _convert() {
-    final input = double.tryParse(_inputController.text);
-    // tryParse 会接受 'NaN'/'Infinity'/'1e309' 等，转为 NaN/Infinity 后
-    // toStringAsFixed 会抛 UnsupportedError；统一按无效输入处理。
-    if (input == null || !input.isFinite || input <= 0) return '—';
-
-    double grams;
-    final factors = _weightFactors[_standard];
-    if (factors.containsKey(_unit)) {
-      grams = input * factors[_unit]!;
-      return '${grams.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')} 克';
-    }
-    if (_volumeFactors.containsKey(_unit)) {
-      final ml = input * _volumeFactors[_unit]!;
-      return '${ml.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '')} 毫升';
-    }
-    if (_lengthFactors.containsKey(_unit)) {
-      final cm = input * _lengthFactors[_unit]!;
-      return '${cm.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '')} 厘米';
-    }
-    return '—';
+    final standard = const ['han', 'tai', 'tang'][_standard];
+    final output = DosageConversionService.convert(
+      amount: _inputController.text,
+      unit: _unit,
+      standard: standard,
+    );
+    return output?.formattedResult ?? '—';
   }
-
   @override
   void dispose() {
     _inputController.dispose();
