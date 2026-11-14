@@ -1724,3 +1724,49 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不重复审核已经完成医学审核的知识库内容。
 - 红旗 detector 未经医学审核并覆盖所有生产模型入口前，不启用自由文本症状自动辨证；`REVIEW_REQUIRED/UNKNOWN` 不得当作 CLEAR。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page-only 工具。
+
+
+---
+
+## 37. 2026-11-14 PR #153：易经四种起卦模式对话内 Headless 集成
+
+### 37.1 基线与合并
+
+- PR #153：https://github.com/just2512/nihaixia-app/pull/153。
+- 独立分支：`work/yijing-headless-4-modes-2026-11-14`。
+- 最终 PR head：`18e9cd6feb97d65c4c36f18a84a47358b3483c17`。
+- squash merge SHA / 当前 master：`59ca2a746d8dc4d29abb06f52697d02ce52a26df`。
+- 规范性约束文件 `docs/ai-capability-audit.md` 未修改。
+
+### 37.2 最小代码切片
+
+- 新增 `YiJingToolExecutor`，调用原 `YiJingEngine.castByNumbers`、`castByTime`、`castManual`、`castByCoins`；原引擎与易经页面保持不变。
+- 用户在助手对话内明确选择起卦方式；数字和手动模式按缺失槽位追问，可跨轮恢复，不跳转独立工具页面。
+- 当前时间由 App 在执行边界读取并保存；铜钱六次投掷由 App 生成，持久化真实六爻值。新请求不接受外部伪造的时间/投掷值覆盖 App 输入；历史回看使用已保存参数，不重新随机。
+- 单动爻模式按原引擎 `moving/movingTitle/movingText` 字段解释；铜钱多爻模式按 `movingLines/movingTitles/movingTexts` 读取，避免把单动爻误报为静卦。
+- 工具结果携带 `local-engine:yijing`、`local-data:yijing-hexagrams`。缺参、混合方式、未声明字段和非法输入 fail closed；只有原引擎成功、参数与结果契约通过且来源 ID 齐全后，才进入对话解释链。
+
+### 37.3 自动化验收证据
+
+- Branch validation run `43563718624` SUCCESS：静态分析、changed tests 与 test pairing 通过。
+- PR workflow `43563859567` SUCCESS：Flutter regression job `132353274615` SUCCESS；Android arm64 verification job `132354564040` SUCCESS。
+- Android job 完成 arm64 Debug APK 构建、merged backup Manifest 检查、ABI/SHA-256、Native unit tests、JUnit XML 和 evidence artifacts 上传。
+- merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 的 post-merge Flutter tests run `43564609205`、Flutter Quality Gate run `43564609235` 当前仍为 IN_PROGRESS。以两条 run 的 head_sha 严格匹配且终态 SUCCESS 为 master CI PASS 条件；PR workflow SUCCESS 不替代 post-merge master CI。
+- CI arm64 APK/native tests 不能替代 OPPO Find N2 真机 E4B、GPU/CPU、多媒体、多轮、Activity/进程恢复和端到端 TRACE。
+
+### 37.4 D 能力数量
+
+- `AssistantToolRouter` 当前 24 个定义：23 个常规页面工具 + 1 个确定性问诊控制器内联的 `structured_diagnosis`。
+- 23 个页面工具中 10 项配置 Headless executor：`yunqi / almanac / bazi / xiaoliuren / meihua / chenggu / huangdi_siji / ziwei / solar_terms / yijing`；13 项仍为 Page-only。
+- `structured_diagnosis` 继续由原 `TcmInterviewConversationController` / `DiagnosticEngine` 内联执行，不计入通用 Headless 数量。
+- “具备 Headless executor”不等于已经在 Find N2 完成真实设备场景验收；每次真实执行仍需保留工具参数、结果状态、sourceIds、TRACE 与持久化证据。
+
+### 37.5 剩余工作与冻结边界
+
+1. B 红旗安全仍 PARTIAL / RELEASE BLOCKED：等待医学审核的自然语言 detector 版本、审核记录、阈值/例外/处置文案，以及 Flutter/Native 所有模型调用入口前的 fail-closed 覆盖证据。不得自行编造 detector 规则；`REVIEW_REQUIRED/UNKNOWN` 不得作为 CLEAR。
+2. 用户要求的自由文本问诊闭环仍未完成：自由描述理解、仅追问十问必要缺项、后台调用原确定性规则、解释真实结果。红旗安全门禁未满足前不得启用自动症状辨证。既有已审核知识库内容不重复审核。
+3. A/E/F 仍需 OPPO Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程中断恢复、清除全部 AI 数据后强停/重启不可恢复、真实端到端 TRACE。
+4. C 只补书目 locator、底本版本、卷页/原文身份缺口；不重做已审核医学知识库内容审核。
+5. D 剩余 13 个 Page-only 工具先做确定性函数、输入边界、结果来源和行为基线审计；只对具备完整前置条件的单项能力开独立小分支，不批量迁移。
+
+- 冻结：不修改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、剂量计算及其他已存在排盘/民俗算法；不伪造业务结果；不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库。
