@@ -1061,7 +1061,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 
 ### 复核基线与问题
 
-- 当前复核基线：`master @ 19c5635461a16dab316f13614a4832817379c723`。
+- 当前复核基线：`master @ f73d6743794b9e253752a372e3e0f19667e9c34f`；PR #160 squash merge：`f73d6743794b9e253752a372e3e0f19667e9c34f`。
 - `MedicalCaseSourceLedger` 已将网页/原文核验状态与纸本/影印本书目定位状态分开；只有完整字段与显式状态匹配才允许 `VERIFIED`。
 - 发现页面加载链路未使用已有来源账本：`MedicalCaseLibraryScreen._load()` 直接加载 `assets/medical_cases/cases_table.md` 后调用 `parseMedicalCaseTable(md)`，未传入 `sourceLedgers`，导致页面中所有病例都使用默认 `MedicalCaseSourceLedger.missing`。而数据层已有 `getAllMedicalCases()` 会加载 `source_ledger.json` 并按内部序号注入。
 - 当前账本本身的状态（原始 JSON，不做内容更改）：1,256 条记录；10 条 `verificationStatus=VERIFIED` 且来源字段完整；1,246 条来源状态 `MISSING`；全部 1,256 条 `bibliographicLocatorStatus=MISSING`。没有任何记录完成纸本/影印本版本、卷次与页码定位核验。
@@ -1077,5 +1077,5 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 ### 验收与状态
 
 - 独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
-- **状态：自动化验收中。** 以最新分支 head 的 CI 结果和合并后的 master CI 为准；静态代码与测试存在不替代执行结果。
+- **状态：自动化验收通过。** PR run `43585625501`、分支验证 run `43585569847`、合并后 master Flutter tests run `43586347265`、master Quality Gate run `43586347314` 均为 SUCCESS；覆盖真实资产来源注入、Flutter 全量回归、Android arm64 Debug APK/Manifest/ABI、Native 单测及报告工件。此项仅修复现有来源账本的加载链路。
 - 本项只修复已有来源证据的加载链路，不补齐纸本 locator。C 仍 PARTIAL，后续只接受可追溯原始来源材料，不得推测或填造卷页。
