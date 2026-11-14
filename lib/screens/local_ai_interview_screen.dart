@@ -2642,6 +2642,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 !error.startsWith('缺少必填参数：') &&
                 !error.startsWith('未声明的参数：'))
             .toList(growable: false);
+        final unsupportedLunarDate =
+            request['birth_date'] == 'LUNAR_DATE_NOT_SUPPORTED';
         final clarification = [
           '我会在当前对话中调用 App 原有紫微斗数本地排盘引擎，不需要打开排盘页面。',
           if (suppliedParameters.isNotEmpty)
@@ -2650,6 +2652,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '目前还缺少：${missingParameters.join('、')}。',
           if (invalidParameterErrors.isNotEmpty)
             '以下信息需要更正：${invalidParameterErrors.join('；')}。',
+          if (unsupportedLunarDate)
+            '紫微排盘入口要求公历出生日期；请提供公历日期，不会把农历日期当作公历，也不会自行推算或猜测。',
           '请补充出生日期（公历 YYYY-MM-DD）、出生地当地钟表时间（24 小时制 HH:mm）、性别和出生地；可以分多轮发送。',
           '出生地必须能在 App 城市目录中唯一识别；不会使用页面示例生日、默认性别或默认经纬度。真太阳时和早晚子时按 App 当前设置执行。',
           '例如：出生日期：1990-01-02；出生时间：08:30；性别：男；出生地：上海市。',
