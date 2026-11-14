@@ -165,10 +165,15 @@ class ZiWuLiuZhuCalculationService {
     final open = eng.najiaOpen(gz.dayGan, hour.hourGan, hour.hourZhi);
     final isHeRi = open == null;
     final najia = open ?? eng.najiaHeRi(gz.dayGan, hour.hourGan, hour.hourZhi);
+    if (najia != null &&
+        [najia['point'], najia['meridian'], najia['type']]
+            .any((value) => value == null || value.isEmpty)) {
+      throw StateError('纳甲法返回结果缺少穴位、经络或穴性字段。');
+    }
     final najiaText = najia == null
         ? '当前时间无正开穴，也无合日互用取穴。'
-        : '${najia['point'] ?? 'MISSING'}，${najia['meridian'] ?? 'MISSING'}，'
-            '${najia['type'] ?? 'MISSING'}'
+        : '${najia['point']}，${najia['meridian']}，'
+            '${najia['type']}'
             '${najia['yuan'] == null ? '' : '；返本还原取原穴 ${najia['yuan']}'}。';
 
     final linggui = eng.lingguiOpen(
@@ -240,7 +245,7 @@ class ZiWuLiuZhuCalculationService {
       '灵龟主脉': gua[2],
       '灵龟配穴': linggui['peidui'] as String,
       '灵龟配脉': linggui['peiduiMai'] as String,
-      '灵龟计算步骤': linggui['step'] as String? ?? '',
+      '灵龟计算步骤': linggui['step']?.toString() ?? '',
       '飞腾八法': feitengText,
       if (feiteng != null) '飞腾卦': feiteng[0],
       if (feiteng != null) '飞腾开穴': feiteng[1],
