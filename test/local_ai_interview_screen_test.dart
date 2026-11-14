@@ -5327,6 +5327,11 @@ void mainRedFlagEntrypointOrderingTests() {
         ),
         timeout: const Duration(milliseconds: 100),
       );
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (_) async {},
+        idFactory: () => 'b2-blocked-entrypoint-trace',
+      );
       await tester.pumpWidget(
         MaterialApp(
           home: LocalAiInterviewScreen(
@@ -5334,6 +5339,7 @@ void mainRedFlagEntrypointOrderingTests() {
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
             redFlagGate: gate,
+            traceRecorder: recorder,
           ),
         ),
       );
@@ -5373,6 +5379,11 @@ void mainRedFlagEntrypointOrderingTests() {
         ),
         timeout: const Duration(milliseconds: 100),
       );
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (_) async {},
+        idFactory: () => 'b2-clear-entrypoint-trace',
+      );
       await tester.pumpWidget(
         MaterialApp(
           home: LocalAiInterviewScreen(
@@ -5401,7 +5412,7 @@ void mainRedFlagEntrypointOrderingTests() {
       await tester.pumpAndSettle();
 
       expect(events, ['gate:currentText', 'intent']);
-      expect(service.intentQueries, ['请介绍中医里的阴阳概念']);
+      expect(service.intentQueries, ['我想排盘']);
     });
   });
 }
