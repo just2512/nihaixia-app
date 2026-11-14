@@ -1343,6 +1343,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingChengguArguments = null;
       _pendingHuangdiSijiArguments = null;
       _pendingXiaoliurenArguments = null;
+      _pendingGuanshaArguments = null;
       _error = null;
     });
     final before = controller.messages.length;
