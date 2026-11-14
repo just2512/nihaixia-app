@@ -10,6 +10,7 @@ void main() {
   const arguments = {
     'date': '2026-11-14',
     'hour': '午时',
+    'rule': 'common',
   };
 
   test('Headless 结果与页面现有正午农历换算及纯函数排课一致', () async {
