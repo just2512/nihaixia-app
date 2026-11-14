@@ -4590,7 +4590,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         prompt: interpretationPrompt,
         mode: mode,
         retrievalQuery: needsTcmKnowledge
-            ? _tcmToolKnowledgeQueryForResult(userText, tool)
+            ? _tcmToolKnowledgeQueryForResult('', tool)
             : null,
         toolId: tool.id,
         toolStatus: normalizedResult.statusLabel,
