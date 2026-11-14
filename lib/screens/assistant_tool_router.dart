@@ -12,6 +12,7 @@ import '../services/huangdi_siji_tool_executor.dart';
 import '../services/ziwei_tool_executor.dart';
 import '../services/solar_term_tool_executor.dart';
 import '../services/xiaoliuren_tool_executor.dart';
+import '../services/yijing_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -286,11 +287,63 @@ class AssistantToolRouter {
   static const yijing = AssistantToolDefinition(
     id: 'yijing',
     title: '易经起卦',
-    description: '打开本地易经六十四卦工具。',
+    description: '在当前对话中选择数字、当前时间、手动选卦或铜钱摇卦方式；由 App 原有 YiJingEngine 计算并返回真实本卦、动爻、变卦和互卦。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['易经', '六十四卦', '周易'],
     actionWords: ['起卦', '占卦', '卜卦', '排卦'],
     builder: _buildYijing,
+    headlessExecutor: YiJingToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'method',
+        label: '起卦方式',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['numbers', 'time', 'manual', 'coins'],
+      ),
+      AssistantToolParameter(
+        key: 'number_a',
+        label: '第一个数',
+        type: AssistantToolParameterType.integer,
+        description: '数字起卦使用，非负整数',
+      ),
+      AssistantToolParameter(
+        key: 'number_b',
+        label: '第二个数',
+        type: AssistantToolParameterType.integer,
+        description: '数字起卦使用，非负整数',
+      ),
+      AssistantToolParameter(
+        key: 'upper',
+        label: '上卦先天数',
+        type: AssistantToolParameterType.integer,
+        description: '手动选卦使用，1–8',
+      ),
+      AssistantToolParameter(
+        key: 'lower',
+        label: '下卦先天数',
+        type: AssistantToolParameterType.integer,
+        description: '手动选卦使用，1–8',
+      ),
+      AssistantToolParameter(
+        key: 'moving',
+        label: '动爻',
+        type: AssistantToolParameterType.integer,
+        description: '手动选卦使用，0 表示静卦，1–6 表示动爻',
+      ),
+      AssistantToolParameter(
+        key: 'coins',
+        label: '六次铜钱结果',
+        type: AssistantToolParameterType.text,
+        description: '初爻至上爻的六个 6/7/8/9 值；正常摇卦由 App 生成并持久化',
+      ),
+      AssistantToolParameter(
+        key: 'cast_at',
+        label: '起卦时间快照',
+        type: AssistantToolParameterType.text,
+        description: '仅由 App 写入的本地时间快照，保证历史结果可复现',
+      ),
+    ],
   );
 
   static const xiaoliuren = AssistantToolDefinition(
