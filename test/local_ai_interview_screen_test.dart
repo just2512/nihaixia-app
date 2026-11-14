@@ -19,6 +19,7 @@ import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
 import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/dosage_tool_executor.dart';
+import 'package:nihaisha_app/services/guansha_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:nihaisha_app/services/red_flag_gate.dart';
@@ -5453,6 +5454,139 @@ void main() {
       finalMetadata.toolArguments['dream_text'],
       contains('是被蛇咬了'),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('小儿关煞助手在当前对话逐轮补齐参数、调用本地规则并解释真实结果',
+      (tester) async {
+    final service = _TextSendService();
+    final store = _MemoryConversationStore();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+    const sourceIds = [
+      GuanshaToolExecutor.sourceId,
+      GuanshaToolExecutor.dataSourceId,
+      GuanshaToolExecutor.locationSourceId,
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return AssistantToolResult(
+              toolId: 'guansha',
+              title: '小儿关煞',
+              values: const {
+                '四柱': '庚午、己丑、甲子、戊辰',
+                '关煞命中数量': '0',
+                '本地规则结果': '未命中本地规则库收录的关煞。',
+              },
+              arguments: Map<String, String>.unmodifiable(arguments),
+              sourceIds: sourceIds,
+              disclaimer: '传统民俗文化参考，非医学诊断、健康风险判断或治疗建议。',
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我测算小儿关煞');
+    expect(
+      find.textContaining(
+        '目前还缺少：出生日期（公历）、出生时间（当地钟表时间）、性别、出生地点',
+      ),
+      findsOneWidget,
+    );
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty,
+        reason: '参数缺失由确定性代码追问，不让 E4B 猜测出生资料');
+    expect(pageOpened, isFalse);
+
+    var conversations = await store.getAssistantConversations();
+    var rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    var pending = AssistantMessageMetadata.decode(rows.last['metadata'] as String);
+    expect(pending.toolId, 'guansha');
+    expect(pending.toolStatus, 'AWAITING_PARAMETERS');
+    expect(pending.toolArguments, isEmpty);
+
+    await send('出生日期：1990年1月2日');
+    expect(
+      find.textContaining(
+        '目前还缺少：出生时间（当地钟表时间）、性别、出生地点',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('已识别的信息：出生日期（公历）：1990-01-02'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty);
+    expect(pageOpened, isFalse);
+
+    conversations = await store.getAssistantConversations();
+    rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    pending = AssistantMessageMetadata.decode(rows.last['metadata'] as String);
+    expect(pending.toolId, 'guansha');
+    expect(pending.toolStatus, 'AWAITING_PARAMETERS');
+    expect(pending.toolArguments, const {'birth_date': '1990-01-02'});
+
+    await send('出生时间：08:30；性别：男；出生地点：上海市');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(find.textContaining('【小儿关煞执行结果】'), findsOneWidget);
+    expect(find.textContaining('未命中本地规则库收录的关煞'), findsOneWidget);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1),
+        reason: 'App 本地规则执行并通过结果契约后，才交给模型解释');
+    expect(
+      service.sentTexts.single,
+      contains('请只解释 App 本地关煞引擎返回的结构化字段和数据集原文'),
+    );
+    expect(
+      service.sentTexts.single,
+      contains('不得把关煞名称、儿童身体部位'),
+    );
+
+    conversations = await store.getAssistantConversations();
+    rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultRow = rows.firstWhere(
+      (row) => (row['content'] as String).startsWith('【小儿关煞执行结果】'),
+    );
+    final resultMetadata =
+        AssistantMessageMetadata.decode(resultRow['metadata'] as String);
+    expect(resultMetadata.toolId, 'guansha');
+    expect(resultMetadata.toolStatus, 'SUCCEEDED');
+    expect(resultMetadata.toolArguments, const {
+      'birth_date': '1990-01-02',
+      'birth_time': '08:30',
+      'gender': 'male',
+      'birthplace': '上海市',
+    });
+    expect(resultMetadata.sourceIds, sourceIds);
     expect(tester.takeException(), isNull);
   });
 
