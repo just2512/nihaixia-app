@@ -548,6 +548,19 @@ void main() {
   });
 
 
+  test('三山国王灵签的抽签动作可 Headless 执行，签谱浏览仍保留页面入口', () {
+    final tool = AssistantToolRouter.sanshan;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters, isEmpty);
+    expect(
+      AssistantToolRouter.match(
+        '帮我抽签三山国王灵签',
+        AssistantMode.automatic,
+      )?.id,
+      'sanshan_lingqian',
+    );
+  });
+
   test('受生债注册为 Headless 并要求出生日期、时间和明确查询体系', () {
     final tool = AssistantToolRouter.shoushengDebt;
     expect(tool.headlessExecutor, isNotNull);

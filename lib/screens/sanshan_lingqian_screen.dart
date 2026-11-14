@@ -1,10 +1,8 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
-import '../models/assistant_tool_result.dart';
+import '../services/sanshan_lingqian_tool_executor.dart';
 
 /// 三山国王灵签 —— 广东揭西三山国王祖庙传承 92 签。
 ///
@@ -80,29 +78,13 @@ class _DrawTabState extends State<_DrawTab> {
   LingqianSign? _sign;
 
   void _draw() {
-    final r = Random().nextInt(kSanShanLingqian.length);
-    setState(() => _sign = kSanShanLingqian[r]);
+    setState(() => _sign = SanshanLingqianToolExecutor.draw());
   }
 
   void _returnResultToAssistant() {
     final sign = _sign;
     if (sign == null) return;
-    Navigator.pop(
-      context,
-      AssistantToolResult(
-        toolId: 'sanshan_lingqian',
-        title: '三山国王灵签',
-        values: {
-          '签号': sign.id.toString(),
-          '签题': sign.title,
-          '签诗': sign.verse,
-          '签级': sign.luck.label,
-          '签谱范围': '本地三山国王祖庙传承 92 签签谱',
-        },
-        sourceIds: ['local-data:sanshan-lingqian:${sign.id}'],
-        disclaimer: '潮汕客家民间信仰与签谱文化参考，不是现实吉凶保证或决策依据。',
-      ),
-    );
+    Navigator.pop(context, SanshanLingqianToolExecutor.resultForSign(sign));
   }
 
   @override

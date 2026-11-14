@@ -19,6 +19,7 @@ import '../services/ziwuliuzhu_tool_executor.dart';
 import '../services/dream_tool_executor.dart';
 import '../services/guansha_tool_executor.dart';
 import '../services/shousheng_debt_tool_executor.dart';
+import '../services/sanshan_lingqian_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -678,11 +679,12 @@ class AssistantToolRouter {
   static const sanshan = AssistantToolDefinition(
     id: 'sanshan_lingqian',
     title: '三山国王灵签',
-    description: '打开传统签谱与求签页面；仅作民俗文化参考。',
+    description: '用户明确求签/抽签时，由 App 本地随机选择既有 92 签签谱并在当前对话返回；查阅签谱仍可打开页面。仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['三山国王', '三山灵签', '灵签'],
     actionWords: ['求签', '抽签', '抽', '查看', '查签', '打开'],
     builder: _buildSanshan,
+    headlessExecutor: SanshanLingqianToolExecutor.execute,
   );
 
   static const chenggu = AssistantToolDefinition(
