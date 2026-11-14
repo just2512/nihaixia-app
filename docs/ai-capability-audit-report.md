@@ -1151,3 +1151,43 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 对应的 master Flutter tests run 43601665980 与 Quality Gate run 43601665970 均已终态 SUCCESS。
 - 受生债已有独立执行器/契约测试准备分支，但没有助手会话集成；应基于最新 master 单独完成路由、缺参澄清、跨轮状态、取消及解释闭环。
 - 自由文本问诊继续受 B 红旗门禁约束；不修改原十问、辨证规则或已审核知识库。
+
+
+## 38. 2026-11-14 PR #164/#165/#166 合并后能力复核
+
+### 基线与集成事实
+
+- 当前主线基线：`master @ f05751dfc3c5548769c02ad3eaf066bda720dd9e`。
+- PR #164 为 PR #163 的文档同步，squash merge：`9f549b44b1f71b4b6edef67f4231453e6daa2e91`；仅同步能力清单、审计报告和执行台账，不改产品代码或规范文件。
+- PR #165：受生债对话内 Headless 执行，最终 head `504b1f750cb8ea661af23ded54fcc2ca110059b4`，squash merge `d15478a0c716c2ba4ade9becbc84299facd3dee7`。
+- PR #166：三山国王灵签抽签对话内执行，最终 head `2b3ef924a23ae737bbb6438018766cee865085a7`，squash merge / 当前 master `f05751dfc3c5548769c02ad3eaf066bda720dd9e`。
+- 规范性约束文件 `docs/ai-capability-audit.md` 未修改。
+
+### D：本批次交付与当前数量
+
+- PR #165 的 `ShoushengDebtToolExecutor` 复用原八字排盘、现有受生债计算及本地禄库/五斗数据；用户必须明确选择查询体系，并提供公历出生日期和当地钟表时间。缺项不执行、不使用页面默认值。真实结果经过工具标识、参数、状态、结构和来源校验后才进入 E4B 解释链；支持在当前助手对话追问、恢复和取消。
+- PR #166 的 `SanshanLingqianToolExecutor` 复用本地 92 签数据和 App 原有随机选择；签号由 App 生成，模型传入签号会被拒绝。明确“抽签/求签/摇签”在当前对话执行；“打开/查阅签谱”仍保留原页面浏览路径。页面和对话共用结果映射，签文及 `local-data:sanshan-lingqian:<signId>` 来源保持一致。
+- E4B 只归纳解释 App 返回的实际签文，提示其属于民俗文化文本，不是科学预测或现实保证；不补写签谱外断语，不给医疗、法律或投资建议。
+- 当前 `AssistantToolRouter` 共 24 个定义：23 个常规工具入口 + 1 个 `structured_diagnosis` 内联问诊控制器。23 个常规入口中 16 个配置 Headless executor：`yunqi`、`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`、`dosage`、`ziwu_liuzhu`、`almanac`、`solar_terms`、`dream`、`guansha`、`sanshan_lingqian`、`chenggu`、`shousheng_debt`、`huangdi_siji`；7 个仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`、`saved_charts`。
+- `structured_diagnosis` 仍由既有 `TcmInterviewConversationController` / `DiagnosticEngine` 执行，不计入通用 Headless 数量。仅有 builder 或能打开页面不代表 Headless，更不代表已经执行。
+
+### Page-only 保留原因
+
+- `guji_library`、`knowledge_hub`、`medical_cases`、`critical_illness` 主要是知识/文档浏览入口；已有学习助手和经验证结果后的知识检索/解释链应承担知识问答，不复制一套 Headless 检索器，也不重复审核已经审核的医学知识内容。
+- `diagnosis_history`、`saved_charts` 涉及用户个人历史或保存记录；必须基于用户明确选择的记录和授权上下文，不能将全部个人数据自动注入模型。
+- `yuxiaji_omen` 是《玉匣记》身体兆占民俗内容，包含眼跳、耳鸣、心悸等词条；当前页面没有明确的对话执行契约。为避免将民俗占断误解为医学判断，继续保留页面入口。
+- 不为扩大 Headless 数量而批量迁移以上页面；只有出现明确用户场景、可复用确定性函数、输入/结果/来源契约及取消/恢复语义时，才做单项最小适配。
+
+### 自动化验收
+
+- PR #165 的 PR workflow run `43603236412` SUCCESS；合并后 master Flutter tests run `43604662112` 和 Flutter Quality Gate run `43604662115` 均在 merge SHA `d15478a0c716c2ba4ade9becbc84299facd3dee7` 上 SUCCESS，覆盖 Flutter 回归、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、Dart 全量测试及 Find N2 arm64 Debug APK 构建。
+- PR #166 分支验证 run `43605363179` SUCCESS；PR workflow run `43605365431` SUCCESS，最终 head 为 `2b3ef924a23ae737bbb6438018766cee865085a7`。Flutter 全量 regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Android Native 单测、JUnit XML 和证据上传均通过。
+- PR #166 合并后 master Flutter tests run `43606161767` 与 Flutter Quality Gate run `43606161792` 均以 `f05751dfc3c5548769c02ad3eaf066bda720dd9e` 为 head；本节初次写入时两条仍 IN_PROGRESS，终态须在后续同步记录，不得将运行中标成通过。
+
+### A-G 未关闭事项
+
+- B：自然语言 RedFlag detector 的生产医学审核版本、审批记录、阈值/例外/处置文案，以及所有模型入口调用前 fail-closed 的可追溯证据仍未齐备，继续 `PARTIAL / RELEASE BLOCKED`。不得自行编造 detector 规则，不得把 `REVIEW_REQUIRED/UNKNOWN` 当作 CLEAR。
+- 自由文本问诊目标仍未完成：理解用户原话 → 提取有原文证据的候选信息 → 只追问缺失/歧义项 → 用户确认 → 调用原有确定性问诊/辨证代码 → 校验真实结果和来源 → E4B 归纳解释。B 的生产门禁关闭前不得开放自由文本自动辨证；不改原十问、DiagnosticEngine/DiagnosticRules，也不重复审核已审知识库。
+- A/E/F：OPPO Find N2 真机 E4B GPU/CPU、多轮文本/图片/语音、Activity/进程恢复、数据清除后强停/重启不可恢复及端到端 TRACE 仍为 DEVICE UNKNOWN/PARTIAL；CI APK 和 Native tests 不能替代实机证据。
+- C：经典/医案的底本版本、书目 locator、卷页和原文身份缺口仍按 MISSING 管理；只接受可追溯原始材料，不猜测或补造来源，不重复审核已审核医学知识内容。
+- G：版本来源单点已完成；本批次没有引入第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
