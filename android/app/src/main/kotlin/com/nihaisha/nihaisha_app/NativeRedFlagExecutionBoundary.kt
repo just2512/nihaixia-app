@@ -70,7 +70,7 @@ class NativeRedFlagExecutionBoundary(
 
         val verdict = try {
             activeDetector.assess(input)
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             null
         } ?: return reviewRequired(input.source, "DETECTOR_ASSESSMENT_MISSING")
 
