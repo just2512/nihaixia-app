@@ -5587,6 +5587,29 @@ void main() {
       'birthplace': '上海市',
     });
     expect(resultMetadata.sourceIds, sourceIds);
+
+    // A fresh request can be cancelled before the App rule engine is invoked.
+    await send('帮我测算小儿关煞');
+    conversations = await store.getAssistantConversations();
+    rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final awaitingCancellation =
+        AssistantMessageMetadata.decode(rows.last['metadata'] as String);
+    expect(awaitingCancellation.toolStatus, 'AWAITING_PARAMETERS');
+    await send('取消关煞');
+    expect(find.text('已取消本次小儿关煞测算；尚未执行任何计算。'), findsOneWidget);
+    expect(executedArguments, hasLength(1));
+    expect(service.sentTexts, hasLength(1),
+        reason: '取消未执行的工具请求不应调用 E4B 解释');
+
+    rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final cancelled = AssistantMessageMetadata.decode(rows.last['metadata'] as String);
+    expect(cancelled.toolId, 'guansha');
+    expect(cancelled.toolStatus, 'CANCELLED');
+    expect(cancelled.sourceIds, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
