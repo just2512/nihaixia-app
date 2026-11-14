@@ -4526,6 +4526,8 @@ void main() {
     final store = _MemoryConversationStore();
     final service = _TextSendService();
     final executedArguments = <Map<String, String>>[];
+    final firstExecutionCompleted = Completer<void>();
+    final secondExecutionCompleted = Completer<void>();
     var pageOpened = false;
 
     await tester.pumpWidget(
@@ -4538,8 +4540,12 @@ void main() {
             return const Scaffold(body: Text('不应打开剂量换算页面'));
           },
           testHeadlessToolExecutor: (arguments) async {
-            debugPrint('[DOSAGE_TEST_CALLBACK] invoked args=$arguments');
             executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            if (executedArguments.length == 1) {
+              firstExecutionCompleted.complete();
+            } else if (executedArguments.length == 2) {
+              secondExecutionCompleted.complete();
+            }
             return DosageToolExecutor.execute(arguments);
           },
         ),
@@ -4578,6 +4584,8 @@ void main() {
     });
 
     await send('按汉制');
+    await firstExecutionCompleted.future;
+    await tester.pumpAndSettle();
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'amount': '1.5',
@@ -4613,6 +4621,8 @@ void main() {
     ]);
 
     await send('把1升换算成毫升');
+    await secondExecutionCompleted.future;
+    await tester.pumpAndSettle();
     expect(executedArguments, hasLength(2));
     expect(executedArguments.last, const {
       'amount': '1',
