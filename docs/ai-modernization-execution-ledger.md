@@ -1842,12 +1842,27 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - A/E/F 继续等待 OPPO Find N2 真机证据；C 继续只补来源定位；其余 10 个 Page-only 工具不批量迁移，逐项做确定性输入/输出/来源审计后再决定。
 
 
-## 39. 2026-11-14 C：医案库页面来源账本注入路径修复（自动验收中）
+## 39. 2026-11-14 C：医案库页面来源账本注入路径修复（PR 与合并后 CI 验收通过）
 
-- 基线：`master @ 19c5635461a16dab316f13614a4832817379c723`；独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
+- 基线：`master @ f73d6743794b9e253752a372e3e0f19667e9c34f`；PR #160：`08ce2654e7488c977d3b20c478e6ecf22c4730c7`；squash merge：`f73d6743794b9e253752a372e3e0f19667e9c34f`；独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
 - 发现的确定性断点：`MedicalCaseLibraryScreen._load()` 直接读取 `cases_table.md` 并调用 `parseMedicalCaseTable(md)`，未传入 `sourceLedgers`；因此页面实际展示的 `MedicalCase.sourceLedger` 全部走默认 `MISSING`。同仓既有 `getAllMedicalCases()` 已读取 `source_ledger.json` 并按内部序号关联，但列表页面没有走该入口。
 - 最小修复：抽出 `loadMedicalCasesFromAssets()` 作为列表/缓存共享加载入口；它读取 Markdown 主表和独立来源账本，按内部主键注入账本。账本缺失/解析失败时病例仍可展示，但来源保持 `MISSING`；主表加载失败继续向列表页抛错，保留页面错误态。缓存查询 `getAllMedicalCases()` 复用同一加载函数，避免两个加载实现漂移。
 - 数据核对（当前原始 ledger，不修改数据）：1,256 条账本记录；10 条原文/网页来源状态为 `VERIFIED`，1,246 条为 `MISSING`；1,256 条纸本/影印本书目定位状态均为 `MISSING`。因此修复只会恢复已有 10 条网页原文来源信息的正确展示，不会将任何记录升级为纸本核验，也不会补造书名、底本、卷页或原文。
 - 自动化新增：通过实际资产加载入口断言 1,256 条记录完整保留；内部序号 2 的原文来源为 `VERIFIED` 但纸本定位仍为 `MISSING`；序号 11 的来源保持 `MISSING`；所有记录的纸本定位均继续为 `MISSING`。
 - 变更文件：`lib/data/medical_case_data.dart`、`lib/screens/medical_case_library_screen.dart`、`test/medical_case_source_integrity_test.dart`，以及本台账和 `docs/ai-capability-audit-report.md`。不修改医案正文、来源账本 JSON、医学结论、辨证规则或已审核知识库内容。
-- **状态：等待分支与 PR CI。** 只有最新 head 的静态分析、相关来源完整性测试、Flutter 全量回归及必要 Android 验收通过，并完成 post-merge master CI，才标记自动化验收完成。此修复不代表纸本 locator 缺口关闭；C 仍 PARTIAL。
+- **状态：自动化验收通过。** 分支验证 run `43585569847` SUCCESS；PR CI run `43585625501` SUCCESS（Flutter 全量回归、Android arm64 Debug APK/Manifest/ABI、Native 单测、JUnit XML 与工件上传）；合并后 master Flutter tests run `43586347265` SUCCESS，master Quality Gate run `43586347314` SUCCESS。此修复只恢复已有 10 条网页原文来源的加载/显示，不代表纸本 locator 缺口关闭；1,256 条纸本/影印本卷页定位仍全部为 `MISSING`，C 仍 PARTIAL。
+
+
+## 40. 2026-11-14 D：小儿关煞对话内执行（独立分支自动验证通过，PR 全量验收待完成）
+
+- 基线：代码主线 `f73d6743794b9e253752a372e3e0f19667e9c34f`（PR #160 合并后）；独立分支：`work/guansha-headless-in-chat-2026-11-14`。
+- 迁移对象：既有 Page-only `guansha`。复用 `computeBaZiPaipan`、`matchGuansha` 和本地 36 条关煞/18 条扩展煞数据；不修改八字计算、关煞规则、规则说明及医学内容。
+- 对话交互：缺少出生日期/时间/性别/出生地点时，在当前对话列出已识别字段并追问缺项；可分多轮补齐、取消并从历史任务恢复。简单结构化参数由确定性解析先处理，不对缺失信息调用模型猜测。
+- 出生输入边界：必须提供有效公历日期、出生地当地钟表时间、明确性别和出生城市/区县；农历日期当前拒绝自动换算；多个日期/时间/地点或性别歧义时继续追问。出生地点必须在 App 本地城市目录中唯一解析，复用同一 `CityLocationService.resolveUnique`；不使用页面示例生日、性别、默认时刻或默认经纬度。
+- 计算与结果：沿用 App 当前 SettingsRepository 中的真太阳时和早晚子时设置；本地排盘成功后才调用关煞规则。结果携带实际出生参数、坐标、四柱、规则命中、匹配依据及 `local-engine:guansha` / `local-data:guansha` 来源标识。执行失败或地点歧义时不返回成功结果或来源事实。
+- 解释限制：仅允许对经过执行和结果契约校验的本地输出作民俗文化归纳。关煞名称、等级、口诀不代表儿童健康风险、疾病、寿命、事故或现实安全状况；不得给孩子作健康判断、医疗建议或民俗化解治疗建议。系统真实健康问题仍走医学知识库与正规医疗流程。
+- 共享定位修复：抽取 `CityLocationService.findUniqueIn/resolveUnique`，`BaziToolExecutor` 也改用同一唯一解析器；同名行政区返回歧义，不按目录顺序猜测。新增“上海市长宁区”等完整市区复合名称匹配测试。
+- 自动化覆盖：Headless 注册/必要参数；自然语言日期、时刻、性别、地点槽位提取；多值歧义与农历拒绝；唯一/同名地点解析；八字共享唯一定位回归；执行器成功/缺参/无效日期时间/歧义地点/未声明参数；统一对话缺参追问→用户补充→确定性执行→E4B 受约束解释，不打开独立页面；任务状态持久化与恢复。
+- 变更范围：`assistant_tool_router.dart`、`assistant_conversation_orchestrator.dart`、`local_ai_interview_screen.dart`、`city_location_service.dart`、`bazi_tool_executor.dart`、新增 `guansha_tool_executor.dart`，以及对应路由/编排/屏幕/执行器/城市与八字回归测试。不改 `guansha_data.dart`、`guansha_engine.dart`、医案来源账本、诊断规则或医学知识库。
+- 分支验证：run `43587434118` SUCCESS（静态分析、变更测试及测试配对）；当前提交：`d14bd4758e2b9eba0a97e29b2ef0b0abfd761a3a`。
+- **状态：等待 PR 全量 Flutter/Android CI 与合并后 master CI。** 分支验证不替代 PR 的全量回归；若 CI 发现问题继续在本分支修复，不直接合并。
