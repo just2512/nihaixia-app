@@ -59,6 +59,10 @@ const _diagnosticEngineSourceIds = <String>[
   'local-engine:diagnostic-engine',
 ];
 
+bool _needsTcmKnowledgeForTool(AssistantMode mode, String toolId) =>
+    mode == AssistantMode.tools &&
+    const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(toolId);
+
 abstract interface class LocalAiAudioRecorder {
   Future<bool> hasPermission();
   Future<void> start(RecordConfig config, {required String path});
@@ -1128,12 +1132,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
             .map((tool) => tool.title)
             .join('、');
-        final knowledge = retrievalQuery == null || retrievalQuery.trim().isEmpty
-            ? null
-            : await _retrieveKnowledgeWithTrace(
-                retrievalQuery,
+        final query = retrievalQuery?.trim().isNotEmpty == true
+            ? retrievalQuery!.trim()
+            : text;
+        final knowledge = AssistantKnowledgeContextBuilder.shouldRetrieveForQuery(query)
+            ? await _retrieveKnowledgeWithTrace(
+                query,
                 traceContext: traceContext,
-              );
+              )
+            : null;
         final knowledgeContext = switch (knowledge?.status) {
           null => '',
           AssistantKnowledgeRetrievalStatus.noResults =>
@@ -2402,8 +2409,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final canInterpret = result.status == AssistantToolExecutionStatus.succeeded &&
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
-    final needsTcmKnowledge = mode == AssistantMode.tools &&
-        const {'yunqi'}.contains(tool.id);
+    final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
     final interpretationPrompt = tool.id == 'bazi'
         ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
             '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
@@ -4434,8 +4440,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             AssistantToolExecutionStatus.succeeded &&
         normalizedResult.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
-    final needsTcmKnowledge = mode == AssistantMode.tools &&
-        const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
+    final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
     final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
         '先概括本次实际输入、关键输出和执行状态，再解释主要字段的含义、字段间关系及结果口径；'
         '明确区分 App 本地工具计算/数据原文与 AI 的语言化归纳。'
