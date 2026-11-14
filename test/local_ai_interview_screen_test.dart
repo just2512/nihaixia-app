@@ -5093,7 +5093,7 @@ void main() {
 
   testWidgets('经方单位换算在助手对话内追问制式、执行并交由 AI 解释', (tester) async {
     // Mirror main.dart's startup preload before the widget retrieves formulas.
-    await FormulaRepository.load();
+    await tester.runAsync(() => FormulaRepository.load());
     final store = _MemoryConversationStore();
     final service = _TextSendService();
     final executedArguments = <Map<String, String>>[];
