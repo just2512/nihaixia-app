@@ -1970,7 +1970,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 解释提示明确标示民俗文化性质，不是科学预测、事实保证或现实吉凶结论；不补写签谱外断语，不给医疗、法律、投资建议，不鼓励以签文作重大决定。
 - 自动化覆盖本地抽签/数据精确映射/来源 ID/拒绝模型指定签号、路由匹配、对话内结果交接及目录浏览继续 Page-only。
 - 分支验证 run `43605363179` SUCCESS；PR run `43605365431` SUCCESS，最终 head `2b3ef924a23ae737bbb6438018766cee865085a7`。Flutter 全量 regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、JUnit XML 和证据工件上传均成功。
-- 合并后主线 Flutter tests run `43606161767` 与 Quality Gate run `43606161792` 均针对 merge SHA `f05751dfc3c5548769c02ad3eaf066bda720dd9e`；本节初次写入时仍 IN_PROGRESS，待终态后补记。不能以 PR CI 替代 post-merge master CI。
+- 合并后主线 Flutter tests run `43606161767` 与 Quality Gate run `43606161792` 均针对 merge SHA `f05751dfc3c5548769c02ad3eaf066bda720dd9e`，终态均 SUCCESS。Flutter tests 的 Flutter regression、Android arm64 verification APK/Manifest/ABI/SHA-256、Native tests 和工件上传全部通过；Quality Gate 的静态分析、Dart 全量测试、Android Native 单测及 Find N2 arm64 Debug APK 构建全部通过。已分别核对两个 run 与 job 的终态，未用 PR CI 替代主线 CI。
 
 ### 42.4 能力盘点与下一阶段边界
 
