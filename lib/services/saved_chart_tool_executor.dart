@@ -30,13 +30,7 @@ class SavedChartToolExecutor {
     List<SavedChart> charts, {
     Map<String, String> pendingArguments = const {},
   }) {
-    final pending = int.tryParse(
-      pendingArguments['saved_chart_id']?.trim() ?? '',
-    );
-    if (pending != null && charts.any((chart) => chart.id == pending)) {
-      return pending;
-    }
-
+    // Explicit input in the current turn overrides the pending selection.
     final idMatch = RegExp(
       r'(?:记录\s*ID|命盘\s*ID|ID|编号|记录号|#)\s*[：:=]?\s*(\d+)',
       caseSensitive: false,
@@ -52,13 +46,14 @@ class SavedChartToolExecutor {
     final numericOnly = int.tryParse(
       text.trim().replaceAll(RegExp(r'[，。.!！?？\s]+$'), ''),
     );
-    if (numericOnly != null &&
-        charts.any((chart) => chart.id == numericOnly)) {
-      return numericOnly;
+    if (numericOnly != null) {
+      return charts.any((chart) => chart.id == numericOnly)
+          ? numericOnly
+          : null;
     }
 
     final nameMatches = charts
-        .where((chart) => text.contains(chart.name))
+        .where((chart) => chart.name.isNotEmpty && text.contains(chart.name))
         .toList(growable: false);
     if (nameMatches.length == 1) return nameMatches.single.id;
     if (nameMatches.length > 1) return null;
@@ -67,7 +62,16 @@ class SavedChartToolExecutor {
         charts.isNotEmpty) {
       return charts.first.id;
     }
-    if (charts.length == 1) return charts.single.id;
+
+    // A short follow-up such as "八字" uses the saved ID from the prior turn.
+    final pending = int.tryParse(
+      pendingArguments['saved_chart_id']?.trim() ?? '',
+    );
+    if (pending != null) {
+      return charts.any((chart) => chart.id == pending) ? pending : null;
+    }
+
+    // Even a one-row library requires an explicit record or "latest" request.
     return null;
   }
 
@@ -87,25 +91,15 @@ class SavedChartToolExecutor {
     if (charts.isEmpty) return '当前命盘库没有已保存的记录。';
     final visible = charts.take(30).toList(growable: false);
     final lines = visible.map((chart) {
-      final date = DateTime.tryParse(chart.solarIso);
-      final birth = date == null
-          ? '出生时间 MISSING'
-          : '${date.year.toString().padLeft(4, '0')}-'
-              '${date.month.toString().padLeft(2, '0')}-'
-              '${date.day.toString().padLeft(2, '0')} '
-              '${date.hour.toString().padLeft(2, '0')}:'
-              '${date.minute.toString().padLeft(2, '0')}';
-      final place = chart.cityName?.trim().isNotEmpty == true
-          ? chart.cityName!.trim()
-          : chart.lng != null
-              ? '已保存坐标'
-              : '地点 MISSING（原引擎默认地点口径）';
-      return 'ID ${chart.id ?? 'MISSING'}｜${chart.name}｜$birth｜'
-          '${chart.isMale ? '男' : '女'}｜$place';
+      // Expose only the minimum selector fields. Birth details and coordinates
+      // remain inside the executor until the user selects a record and type.
+      return 'ID ' + (chart.id?.toString() ?? 'MISSING') + '｜' + chart.name;
     }).join('\n');
     final remaining = charts.length - visible.length;
-    return '已保存命盘（按保存时间从新到旧）：\n$lines'
-        '${remaining > 0 ? '\n另有 $remaining 条记录；可直接提供记录名称或 ID。' : ''}';
+    return '已保存命盘（按保存时间从新到旧）：\n' + lines +
+        (remaining > 0
+            ? '\n另有 ' + remaining.toString() + ' 条记录；可直接提供记录名称或 ID。'
+            : '');
   }
 
   static Future<AssistantToolResult> execute(
