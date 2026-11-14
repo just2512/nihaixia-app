@@ -1111,6 +1111,81 @@ void main() {
           reason: '六次投掷值必须由 App 生成');
     });
 
+    test('经方单位换算在确定性路由中提取数值、单位和制式', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '把1.5两按汉制换算成克',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.tools);
+      expect(decision.tool?.id, 'dosage');
+      expect(decision.toolArguments?.values, const {
+        'value': '1.5',
+        'unit': '两',
+        'standard': 'han',
+      });
+      expect(
+        decision.toolArguments!.validateAgainst(AssistantToolRouter.dosage),
+        isEmpty,
+      );
+
+      final noStandard = AssistantConversationOrchestrator.resolve(
+        query: '把1.5两换算成克',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(noStandard.tool?.id, 'dosage');
+      expect(noStandard.toolArguments?.values, const {
+        'value': '1.5',
+        'unit': '两',
+      });
+
+      final standardFollowUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '汉制',
+      );
+      expect(standardFollowUp.values, const {'standard': 'han'});
+
+      final quantityFollowUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '换算数值：1.25',
+      );
+      expect(quantityFollowUp.values, const {'value': '1.25'});
+
+      final unitFollowUp = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '原始单位：尺',
+      );
+      expect(unitFollowUp.values, const {'unit': '尺'});
+
+      final volume = AssistantConversationOrchestrator.resolve(
+        query: '把1升换算成毫升',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(volume.tool?.id, 'dosage');
+      expect(volume.toolArguments?.values, const {
+        'value': '1',
+        'unit': '升',
+      });
+
+      final ambiguous = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '把1两和2斤都换算成克',
+      );
+      expect(ambiguous['unit'], 'AMBIGUOUS_UNIT_SELECTION');
+
+      final ambiguousStandard = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.dosage,
+        '汉制和台制的1两分别换算成克',
+      );
+      expect(ambiguousStandard['standard'], 'AMBIGUOUS_STANDARD_SELECTION');
+
+      final learning = AssistantConversationOrchestrator.resolve(
+        query: '学习古代两制和经方度量衡的换算原理',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(learning.mode, AssistantMode.learning);
+      expect(learning.tool, isNull);
+    });
+
     test('学习语境优先于症状关键词', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '学习口苦在少阳病中的含义',
