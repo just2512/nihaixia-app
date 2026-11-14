@@ -116,6 +116,49 @@ class CityLocationService {
         .toList();
   }
 
+  /// 在某一已加载城市列表中进行唯一精确/规范化匹配。
+  ///
+  /// 先匹配 name/label/displayName/英文名；若无精确命中，再允许省略
+  /// “市/地区/州/省/县/区”后缀，但只有唯一结果才返回。
+  /// 同名区县不得按列表顺序或行政级别猜选。
+  static CityLocation? findUniqueIn(
+    List<CityLocation> locations,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return null;
+    final exact = locations.where((place) =>
+        place.name == query.trim() ||
+        place.label == query.trim() ||
+        place.displayName == query.trim() ||
+        place.en?.toLowerCase() == normalizedQuery).toList(growable: false);
+    if (exact.length == 1) return exact.single;
+    if (exact.length > 1) return null;
+
+    final normalized = _normalizePlaceName(query);
+    final matches = locations
+        .where((place) => _normalizePlaceName(place.name) == normalized)
+        .toList(growable: false);
+    return matches.length == 1 ? matches.single : null;
+  }
+
+  /// 按国内/国外两个独立资源范围解析出生地点；不猜测多个候选中的任意一项。
+  static Future<CityLocation?> resolveUnique(String query) async {
+    if (query.trim().isEmpty) return null;
+    final domestic = await load(PlaceScope.domestic);
+    final domesticMatch = findUniqueIn(domestic, query);
+    if (domesticMatch != null) return domesticMatch;
+
+    final world = await load(PlaceScope.world);
+    return findUniqueIn(world, query);
+  }
+
+  static String _normalizePlaceName(String value) =>
+      value.trim().toLowerCase().replaceFirst(
+        RegExp(r'(市|地区|州|省|县|区)$'),
+        '',
+      );
+
   /// 便捷封装：基于已加载缓存按 [scope] 搜索（未加载时返回空）。
   static List<CityLocation> search(
     PlaceScope scope,
