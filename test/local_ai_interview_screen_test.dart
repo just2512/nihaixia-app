@@ -5270,8 +5270,6 @@ class _WidgetRedFlagDetector implements RedFlagDetector {
     required this.events,
     required this.matchedRuleIds,
     required this.subject,
-    this.time = RedFlagTime.current,
-    this.polarity = RedFlagPolarity.affirmed,
   });
 
   final List<String> events;
