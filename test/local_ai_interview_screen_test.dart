@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
@@ -5091,6 +5092,8 @@ void main() {
 
 
   testWidgets('经方单位换算在助手对话内追问制式、执行并交由 AI 解释', (tester) async {
+    // Mirror main.dart's startup preload before the widget retrieves formulas.
+    await FormulaRepository.load();
     final store = _MemoryConversationStore();
     final service = _TextSendService();
     final executedArguments = <Map<String, String>>[];
