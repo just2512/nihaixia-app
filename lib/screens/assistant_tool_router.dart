@@ -6,6 +6,7 @@ import '../models/assistant_tool_result.dart';
 import '../services/yunqi_tool_executor.dart';
 import '../services/almanac_tool_executor.dart';
 import '../services/bazi_tool_executor.dart';
+import '../services/guansha_tool_executor.dart';
 import '../services/meihua_tool_executor.dart';
 import '../services/chenggu_tool_executor.dart';
 import '../services/huangdi_siji_tool_executor.dart';
@@ -636,11 +637,42 @@ class AssistantToolRouter {
   static const guansha = AssistantToolDefinition(
     id: 'guansha',
     title: '小儿关煞',
-    description: '打开传统民俗关煞资料和排算页面；非医学结论。',
+    description: '在当前对话中复用 App 本地八字排盘与关煞确定性规则；仅作传统民俗文化参考，不代表儿童健康或现实风险。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['小儿关煞', '关煞', '小孩关煞'],
-    actionWords: ['查询', '查看', '测算', '排算', '打开'],
+    actionWords: ['查询', '查看', '测算', '排算', '分析', '解释', '帮我测'],
     builder: _buildGuansha,
+    headlessExecutor: GuanshaToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+        description: '必须明确提供公历日期；不使用页面示例生日或当前日期替代。',
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（出生地当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；缺失时在对话中追问，不使用默认时刻。',
+      ),
+      AssistantToolParameter(
+        key: 'gender',
+        label: '性别',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['male', 'female'],
+      ),
+      AssistantToolParameter(
+        key: 'birthplace',
+        label: '出生地点（城市或区县）',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '必须在本地城市目录中唯一识别；歧义时继续追问。',
+      ),
+    ],
   );
 
   static const sanshan = AssistantToolDefinition(
