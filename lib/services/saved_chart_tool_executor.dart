@@ -93,7 +93,7 @@ class SavedChartToolExecutor {
     final lines = visible.map((chart) {
       // Expose only the minimum selector fields. Birth details and coordinates
       // remain inside the executor until the user selects a record and type.
-      return 'ID ' + (chart.id?.toString() ?? 'MISSING') + '｜' + chart.name;
+      return 'ID ${chart.id ?? 'MISSING'}｜${chart.name}';
     }).join('\n');
     final remaining = charts.length - visible.length;
     return '已保存命盘（按保存时间从新到旧）：\n' + lines +
