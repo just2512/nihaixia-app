@@ -1,10 +1,8 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
-import '../models/assistant_tool_result.dart';
+import '../services/sanshan_lingqian_tool_executor.dart';
 
 /// 三山国王灵签 —— 广东揭西三山国王祖庙传承 92 签。
 ///
@@ -80,8 +78,7 @@ class _DrawTabState extends State<_DrawTab> {
   LingqianSign? _sign;
 
   void _draw() {
-    final r = Random().nextInt(kSanShanLingqian.length);
-    setState(() => _sign = kSanShanLingqian[r]);
+    setState(() => _sign = SanshanLingqianToolExecutor.draw());
   }
 
   void _returnResultToAssistant() {
