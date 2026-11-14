@@ -12,6 +12,7 @@ import '../services/huangdi_siji_tool_executor.dart';
 import '../services/ziwei_tool_executor.dart';
 import '../services/solar_term_tool_executor.dart';
 import '../services/xiaoliuren_tool_executor.dart';
+import '../services/yijing_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -286,11 +287,56 @@ class AssistantToolRouter {
   static const yijing = AssistantToolDefinition(
     id: 'yijing',
     title: '易经起卦',
-    description: '打开本地易经六十四卦工具。',
+    description: '在当前对话中调用 App 原有易经引擎，支持数字、当前时间、手动选卦和铜钱摇卦；计算结果由 AI 归纳解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['易经', '六十四卦', '周易'],
     actionWords: ['起卦', '占卦', '卜卦', '排卦'],
     builder: _buildYijing,
+    headlessExecutor: YiJingToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'method',
+        label: '起卦方式',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['number', 'time', 'manual', 'coins'],
+      ),
+      AssistantToolParameter(
+        key: 'first',
+        label: '第一数',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'second',
+        label: '第二数',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'upper',
+        label: '上卦（先天数 1–8）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'lower',
+        label: '下卦（先天数 1–8）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'moving',
+        label: '动爻（0 为静卦，1–6 为动爻）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'at',
+        label: 'App 记录的本地起卦时刻',
+        type: AssistantToolParameterType.text,
+      ),
+      AssistantToolParameter(
+        key: 'coins',
+        label: 'App 实际生成的六次铜钱结果',
+        type: AssistantToolParameterType.text,
+      ),
+    ],
   );
 
   static const xiaoliuren = AssistantToolDefinition(
