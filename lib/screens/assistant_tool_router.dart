@@ -8,6 +8,7 @@ import '../services/almanac_tool_executor.dart';
 import '../services/bazi_tool_executor.dart';
 import '../services/meihua_tool_executor.dart';
 import '../services/chenggu_tool_executor.dart';
+import '../services/huangdi_siji_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -492,11 +493,27 @@ class AssistantToolRouter {
   static const huangdiSiji = AssistantToolDefinition(
     id: 'huangdi_siji',
     title: '轩辕黄帝四季歌',
-    description: '打开传统四季歌查询；仅作民俗文化参考。',
+    description: '在当前对话中收集明确的公历出生日期和当地钟表时间，复用 App 原有农历月份换算与本地四季歌数据；仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
     aliases: ['黄帝四季歌', '轩辕黄帝四季歌', '四季歌'],
     actionWords: ['查询', '查看', '测算', '打开'],
     builder: _buildHuangdiSiji,
+    headlessExecutor: HuangdiSijiToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；缺失时必须向用户追问，不使用页面默认时间。',
+      ),
+    ],
   );
 
   static const savedCharts = AssistantToolDefinition(

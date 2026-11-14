@@ -329,4 +329,27 @@ void main() {
     );
   });
 
+
+  test('黄帝四季歌注册为 Headless，必需参数为公历出生日期和当地钟表时间', () {
+    final tool = AssistantToolRouter.huangdiSiji;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), [
+      'birth_date',
+      'birth_time',
+    ]);
+    expect(tool.parameters.every((item) => item.isRequired), isTrue);
+    expect(tool.parameters[0].type, AssistantToolParameterType.date);
+    expect(tool.parameters[1].type, AssistantToolParameterType.time);
+    expect(
+      const AssistantToolArguments(
+        toolId: 'huangdi_siji',
+        values: {
+          'birth_date': '1990-01-02',
+          'birth_time': '20:30',
+        },
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+  });
+
 }
