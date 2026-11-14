@@ -733,10 +733,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('仍为 Page-only 的三山国王灵签将真实抽签结果交给助手，并可调用 AI 解释',
-      (tester) async {
+  testWidgets('三山国王抽签在当前助手对话调用本地签谱；打开签谱仍进入浏览页面', (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
+    final expectedSign = kSanShanLingqian.first;
+    final expectedResult = SanshanLingqianToolExecutor.resultForSign(expectedSign);
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -744,79 +747,58 @@ void main() {
           service: service,
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
-          testToolRouteBuilder: (tool, _) => switch (tool.id) {
-            'sanshan_lingqian' =>
-              const SanshanLingqianScreen(returnResultOnComplete: true),
-            _ => const SizedBox.shrink(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'sanshan_lingqian') {
+              pageOpened = true;
+              return const SanshanLingqianScreen(returnResultOnComplete: true);
+            }
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.unmodifiable(arguments);
+            return expectedResult;
           },
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    Future<void> execute({
-      required String query,
-      required String openAction,
-      required String runAction,
-      required String returnAction,
-      required String expectedResult,
-    }) async {
-      await tester.enterText(find.byType(TextField).first, query);
-      await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
-      await tester.pumpAndSettle();
-      expect(find.text(openAction), findsOneWidget, reason: query);
-      await tester.tap(find.text(openAction));
-      await tester.pumpAndSettle();
-      // Some data-backed calculators stay on a loading scaffold after the
-      // route animation settles. Wait for the real calculate control before
-      // tapping, then wait for the result handoff control.
-      await _waitForText(tester, runAction);
-      await _scrollUntilTextVisible(tester, runAction);
-      await tester.tap(find.text(runAction));
-      await tester.pumpAndSettle();
-      // Result cards are ListView children and may not be built until scrolled
-      // into view; absence from the current viewport is not a missing result.
-      await _scrollUntilTextVisible(tester, returnAction);
-      await tester.tap(find.text(returnAction));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '帮我抽签三山国王灵签');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
 
-      expect(service.restoredTranscript, contains(expectedResult));
-      expect(
-        store.savedMessages.any((message) =>
-            message['role'] == 'assistant' &&
-            (message['content'] as String).contains(expectedResult)),
-        isTrue,
-      );
-      expect(find.text('AI总结解读'), findsNothing);
-      expect(service.modelCalls, greaterThan(0));
-    }
-
-    await execute(
-      query: '帮我抽签三山国王灵签',
-      openAction: '打开三山国王灵签',
-      runAction: '摇签',
-      returnAction: '将本次灵签结果带回助手对话',
-      expectedResult: '签号：',
-    );
-
+    expect(pageOpened, isFalse, reason: '抽签应在当前对话调用 App 本地签谱，不跳转页面');
+    expect(executedArguments, isEmpty);
     expect(service.modelCalls, 1);
-    expect(service.restoredTranscript, contains('签号：'));
-    expect(service.sentTexts, hasLength(1));
-    expect(service.sentTexts.every((text) => text.contains('总结并解释')), isTrue);
-    expect(
-      store.savedMessages.any((message) =>
-          message['role'] == 'user' &&
-          (message['content'] as String).contains('总结并解释')),
-      isFalse,
-      reason: '自动解释指令不应被伪装成用户输入',
-    );
-    expect(
-      store.savedMessages.where((message) =>
+    expect(service.restoredTranscript, contains(expectedSign.verse));
+    expect(service.restoredTranscript, contains('签号：1'));
+    expect(service.restoredTranscript, contains('来源标识：local-data:sanshan-lingqian:1'));
+    expect(service.sentTexts.single, contains('不是科学预测'));
+    expect(service.sentTexts.single, contains('不鼓励用户据此作重大决定'));
+
+    final resultMessage = store.savedMessages.firstWhere(
+      (message) =>
           message['role'] == 'assistant' &&
-          (message['content'] as String).contains('已收到：')),
-      hasLength(1),
+          (message['content'] as String).contains('工具：三山国王灵签'),
     );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'sanshan_lingqian');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.sourceIds, const ['local-data:sanshan-lingqian:1']);
+    expect(metadata.toolArguments, isEmpty);
+
+    await tester.enterText(find.byType(TextField).first, '打开三山国王灵签');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    expect(find.text('打开三山国王灵签'), findsOneWidget);
+    await tester.tap(find.text('打开三山国王灵签'));
+    await tester.pumpAndSettle();
+    expect(pageOpened, isTrue, reason: '仅查阅签谱时仍保留原页面浏览路径');
+    expect(find.text('签谱'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
