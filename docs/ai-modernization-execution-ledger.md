@@ -1823,3 +1823,20 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 只有真实业务执行成功、输入/结果契约通过并带可追溯 sourceIds 的结果才能交给 AI 解释。
 - AI 不伪造排盘/开穴/问诊结果，不覆盖辨证规则，不把推断包装成医学诊断。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库；不批量迁移 Page-only 工具。
+
+
+## 38.7 D：PR #159 周公解梦对话内执行（自动验收中）
+
+- PR：https://github.com/just2512/nihaixia-app/pull/159；独立分支：`work/dream-headless-in-chat-2026-11-14`；当前提交：`20c053f0e30084b4e5bf0ff71964e25566e6f462`。
+- 将原 Page-only `dream` 接入现有 `AssistantToolRouter` Headless 执行链。缺少梦境情节时在当前对话追问；多义关键词保留数据集原始顺序候选，等待用户补充，不取第一条、不按模型相关度排序；支持待补状态持久化/历史恢复及取消。
+- 新执行器只检索现有 `lib/data/dream_data.dart` 的情节和 keyword 字段，不扫描释义全文以制造宽泛命中；单条命中返回词条原始分类、释义、民俗标签、来源字段及 `local-data:dream-dataset-412`；无匹配返回 `NO_RESULT`，多匹配返回 `CANDIDATES_REQUIRE_CLARIFICATION`。未修改或再生成数据集。
+- E4B 仅在执行器结果状态为 SUCCEEDED 且携带 sourceId、通过现有结果契约校验后进行语言归纳；提示词禁止补写民俗释义、预测现实吉凶、选择/排序歧义候选。工具执行和匹配均由 App 确定性代码完成。
+- 变更限定为工具路由、参数提取、统一助手对话状态、梦境数据执行适配和配套测试；未修改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、剂量计算、医学知识库或梦境数据源。
+- 自动化覆盖：唯一具体情节、重复 keyword“蛇”返回四条候选、无匹配、未声明参数拒绝；路由/编排参数契约；对话内“缺参追问 → 候选澄清 → 用户补充 → 真实数据结果”的端到端流程，并验证未导航到原工具页面。
+- **状态：待 PR CI 完成。** 仅当 PR 的静态分析、变更测试、Flutter 全量回归及 Android arm64/Native 验证均为 SUCCESS，且合并后 master CI 终态 SUCCESS，才将 D 的 dream 项标记为自动化验收通过。CI 不替代 Find N2 真机验收。
+
+### 38.8 仍未关闭的边界
+
+- B2 注入式红旗门禁接缝已随 PR #158 合并，但生产自然语言 detector 仍无医学审核版本/审核记录/阈值与例外/处置文案和全部 Flutter/Native 入口 fail-closed 证据；B 继续 PARTIAL / RELEASE BLOCKED。
+- 用户要求的自由文本症状描述→结构化理解→仅追问缺项→既有规则问诊→真实结果解释，仍受 B 的生产门禁条件约束，当前没有开放，也没有修改问诊十问或辨证规则。
+- A/E/F 继续等待 OPPO Find N2 真机证据；C 继续只补来源定位；其余 10 个 Page-only 工具不批量迁移，逐项做确定性输入/输出/来源审计后再决定。
