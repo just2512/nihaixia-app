@@ -772,8 +772,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
-    expect(find.text('打开三山国王灵签'), findsOneWidget);
-    await tester.tap(find.text('打开三山国王灵签'));
+    // The same string remains in the input field after sending; select the
+    // assistant's action link rather than matching both the input and link.
+    expect(find.text('打开三山国王灵签'), findsNWidgets(2));
+    await tester.tap(find.text('打开三山国王灵签').last);
     await tester.pumpAndSettle();
     expect(pageOpened, isTrue, reason: '仅查阅签谱时仍保留原页面浏览路径');
     expect(find.text('签谱'), findsOneWidget);
