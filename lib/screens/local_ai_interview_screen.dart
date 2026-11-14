@@ -2515,7 +2515,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         result.sourceIds.isNotEmpty;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
-    final interpretationPrompt = tool.id == 'shousheng_debt'
+    final interpretationPrompt = tool.id == 'saved_charts'
+        ? '只解释 App 已根据用户明确选择的本地保存记录重新计算后返回的真实八字/紫微结果。'
+            '先说明记录名称、记录 ID、排盘类型、保存的出生参数和本次使用的 App 设置。'
+            '保存命盘存储的是出生资料与地点，不是历史结果快照；本次结果由 App 原有确定性引擎按当前设置重新计算。'
+            '严格区分 App 计算字段与 AI 语言解释；不得改写四柱、宫位、星曜或其他计算字段，不补造缺失地点或参数。'
+            '若地点字段显示 MISSING 或采用引擎默认地点，必须明确指出，不得描述为用户实际出生地。'
+            '传统命理仅供文化学习参考，不是科学预测，不用于医疗、法律或投资决策。'
+        : tool.id == 'shousheng_debt'
         ? '请只解释 App 本地受生债数据表返回的实际字段和来源。'
             '这是传统道教文献与民俗表格的程序化查询，不代表现实中存在需要偿还的债务、欠款金额或法律/财务义务。'
             '严格区分禄库受生经与五斗金章两套表格，按 App 返回的查询体系和口径说明解释；若口径说明指出不同学术考订或民间流传版本有差异，必须保留差异，不自行选择、改写或合并口径。'
@@ -5372,6 +5379,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingZiWuArguments;
     AssistantToolArguments? restoredPendingDreamArguments;
     AssistantToolArguments? restoredPendingShoushengDebtArguments;
+    AssistantToolArguments? restoredPendingSavedChartsArguments;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -5406,6 +5414,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingZiWuArguments = null;
         restoredPendingDreamArguments = null;
         restoredPendingShoushengDebtArguments = null;
+        restoredPendingSavedChartsArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
       }
@@ -5492,6 +5501,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!isUser && pendingToolId == 'shousheng_debt') {
         restoredPendingShoushengDebtArguments =
+            completedToolStatus == 'AWAITING_PARAMETERS'
+                ? restoredToolArguments
+                : null;
+      }
+      if (!isUser && pendingToolId == 'saved_charts') {
+        restoredPendingSavedChartsArguments =
             completedToolStatus == 'AWAITING_PARAMETERS'
                 ? restoredToolArguments
                 : null;
@@ -5645,6 +5660,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingZiWuArguments = restoredPendingZiWuArguments;
       _pendingDreamArguments = restoredPendingDreamArguments;
       _pendingShoushengDebtArguments = restoredPendingShoushengDebtArguments;
+      _pendingSavedChartsArguments = restoredPendingSavedChartsArguments;
       _messages
         ..clear()
         ..addAll(restoredMessages);
@@ -5845,6 +5861,106 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _scrollToBottom();
         return;
       }
+    }
+
+    final pendingSavedCharts = _pendingSavedChartsArguments;
+    if (pendingSavedCharts != null && (imagePath != null || audioPath != null)) {
+      setState(() {
+        _error = '命盘库选择和排盘类型确认只接受文字。请用文字补充，或发送“取消命盘查询”结束本次操作。';
+      });
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.failed,
+        route: 'tool_follow_up:saved_charts_attachment_rejected',
+        mode: (_lastEffectiveMode ?? AssistantMode.metaphysics).name,
+        toolId: 'saved_charts',
+        errorCode: 'SAVED_CHART_PARAMETERS_REQUIRE_TEXT',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: 'saved_charts',
+      );
+      return;
+    }
+    if (pendingSavedCharts != null && text.isNotEmpty) {
+      final command = text.trim().replaceAll(RegExp(r'[，。.!！?？]+$'), '');
+      final cancelRequested = const {
+        '取消命盘查询',
+        '取消查看命盘',
+        '取消命盘库',
+        '停止命盘查询',
+        '不看了',
+        '不查了',
+        '取消',
+        '算了',
+      }.contains(command);
+      final mode = _lastEffectiveMode ?? AssistantMode.metaphysics;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:saved_charts'
+            : 'tool_follow_up:saved_charts',
+        mode: mode.name,
+        toolId: 'saved_charts',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.succeeded,
+        route: cancelRequested
+            ? 'tool_cancel:saved_charts'
+            : 'tool_follow_up:saved_charts',
+        mode: mode.name,
+        toolId: 'saved_charts',
+      );
+      if (cancelRequested) {
+        const reply = '已取消本次命盘查询；没有读取或重新计算命盘。';
+        setState(() {
+          _pendingSavedChartsArguments = null;
+          _messages
+            ..add(_InterviewMessage(text: text, isUser: true))
+            ..add(const _InterviewMessage(text: reply, isUser: false));
+          _error = null;
+        });
+        _inputController.clear();
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: mode,
+          toolId: 'saved_charts',
+          toolStatus: AssistantToolExecutionStatus.cancelled.name.toUpperCase(),
+          toolArguments: pendingSavedCharts.values,
+          traceId: traceId,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          toolId: 'saved_charts',
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.finalRender,
+          status: AiTraceStatus.succeeded,
+          toolId: 'saved_charts',
+        );
+        _scrollToBottom();
+        return;
+      }
+      await _requestTool(
+        text,
+        AssistantToolRouter.savedCharts,
+        mode: mode,
+        arguments: pendingSavedCharts,
+        traceContext: traceContext,
+      );
+      return;
     }
 
     final pendingShoushengDebt = _pendingShoushengDebtArguments;
