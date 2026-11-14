@@ -272,7 +272,7 @@ class AssistantConversationOrchestrator {
           RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
       final dateMatch = isoDate ?? chineseDate;
       final dateIsLunar = query.contains('农历') || query.contains('阴历');
-      if (dateMatch != null && dateIsLunar) {
+      if (dateIsLunar) {
         values['birth_date'] = 'LUNAR_DATE_NOT_SUPPORTED';
       } else if (dateMatch != null) {
         values['birth_date'] =
