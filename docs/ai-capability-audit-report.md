@@ -1,10 +1,10 @@
 # AI 能力静态/动态审计报告
 
-- 审计日期：2026-11-14（PR #144/#145/#146 集成后增量复核）
+- 审计日期：2026-11-14（PR #147/#148/#149 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
-- 最新复核基线：`master @ 67bb3597e9abb411627545a8e2a3b25105633c52`
+- 最新复核基线：`master @ 8e44e0c7f6f58249e2adc55fbec1afb37610954f`
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
-- 方法：按最新主线增量核对 AssistantToolRouter、参数抽取、Headless executor 清单、结构化问诊结果链、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
+- 方法：按最新主线增量核对 AssistantToolRouter、参数抽取、8 项 Headless executor、结构化问诊结果链、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
 
 ## 1. 审计结论
 
@@ -15,7 +15,7 @@
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
 | B 红旗安全 | PARTIAL / RELEASE BLOCKED | preflight provenance 契约存在；自然语言 detector、全生产入口 fail-closed 和医学审核仍缺失 |
 | C 检索基线 | PARTIAL / NOT VERIFIED | 已复核 83 个 distinct sourceId 的本地资产存在性、身份和正文命中语境；83/83 bibliographic locator 仍 MISSING，纸本底本/版本/卷页/影像未核验 |
-| D Headless Capability | PARTIAL | 当前 24 个工具定义中，23 个页面工具入口有 6 项 Headless executor（yunqi、almanac、bazi、meihua、chenggu、huangdi_siji），17 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
+| D Headless Capability | PARTIAL | 当前 24 个定义中，23 个常规页面入口有 8 项 Headless executor（yunqi、almanac、bazi、meihua、chenggu、huangdi_siji、ziwei、solar_terms），15 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
 | F TRACE | PARTIAL | 已覆盖检索/上下文、Orchestrator/Headless、结构化问诊 per-turn；#113 补 Headless 结果契约失败终态，#114 补 Page Tool 结果延续，#115 补普通发送/症状整理 finalRender；Find N2 场景集 TRACE 仍未闭环 |
 | G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 一致性 guard 已合并；当前 master post-merge CI 需以最新 SHA 的两条独立 push workflow 为准 |
@@ -899,3 +899,43 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - A/E/F：OPPO Find N2 的 GPU/CPU 多轮、图片/语音、Activity/进程恢复和端到端真实 TRACE 仍 DEVICE UNKNOWN；CI arm64 APK 不替代实机运行。
 - C：既有知识库临床审核不重复开展；书目 locator/纸本版本/卷页等来源身份缺口与临床内容审核是不同工作，按来源材料缺失状态继续记录。
 - 不改诊断/排盘/剂量算法，不批量迁移 Page Tool，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+
+
+---
+
+## 31. 2026-11-14 PR #147/#148/#149 合并后增量复核
+
+### 31.1 当前主线和改动摘要
+
+- 当前复核基线：`master @ 8e44e0c7f6f58249e2adc55fbec1afb37610954f`。
+- PR #147 合并了能力盘点/审计报告/执行台账刷新；规范性约束文件 `docs/ai-capability-audit.md` 保持未修改。
+- PR #148 合并紫微斗数对话内 Headless 执行：复用原 `calculateZiweiChart`、`formatZiweiChartForAssistant`、城市坐标目录及 App 真太阳时/早晚子时设置；不使用页面示例出生资料或默认经纬度，缺失/歧义输入不执行。
+- PR #149 合并节气养生对话内 Headless 查询：复用 `getCurrentSolarTerm`、`getSolarTermKnowledge` 和 `solar_term_knowledge.json`。用户明确指定一个节气时查询该项；明确请求当前节气时读取 App 当前服务；泛化请求或多节气歧义先澄清，不擅自选第一项或默认今天。
+
+### 31.2 当前 Headless/Page-only 盘点
+
+- `AssistantToolRouter` 当前 24 个定义：23 个常规页面入口 + 1 个结构化问诊特殊内联流程。
+- 23 个常规页面入口中 8 项配置 Headless executor：`yunqi`、`almanac`、`bazi`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`；15 项仍为 Page-only。
+- `structured_diagnosis` 由原有确定性问诊控制器内联处理，不计作通用 Headless。页面入口可保留 builder，但页面打开不计为后台执行。
+- 所有 Headless 结果必须经过现有 toolId、arguments、status、sourceIds/result contract 校验和持久化后才能交给模型解释。缺参/歧义先澄清；没有明确执行或来源的结果不进入事实解释。
+
+### 31.3 PR 验收和主线 CI
+
+- PR #148：Flutter full regression run `43551889499` SUCCESS；Android arm64/Manifest/ABI/Native tests 与 artifacts 上传 SUCCESS；branch validation push run `43551885608` SUCCESS。
+- PR #149：最终 head `26aabe3fc43eb21a943189fea995a82b36465f12`；branch validation run `43553278374` SUCCESS；PR full Flutter run `43553482280` SUCCESS，Flutter regression job `132320970943` SUCCESS；Android arm64 job `132322096941` SUCCESS，包含 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 和 evidence artifact 上传。
+- PR #149 artifacts：`android-unit-test-reports` id `14097701587`、`android-arm64-ci-debug-abi-evidence` id `14097232618`、`ai-retrieval-golden-snapshot` id `14096004897`。
+- merge SHA `8e44e0c7f6f58249e2adc55fbec1afb37610954f` 的 post-merge Flutter tests run `43554222428`、附加 Flutter tests run `43554273400` 与 Quality Gate run `43554222553` 在本报告更新时均 IN_PROGRESS；全量 Flutter regression job `132323303067` 正在执行。**master CI 尚未终态通过**，需要后续按该 SHA 复核。
+
+### 31.4 未关闭的发布阻塞和验收项
+
+- 自由文本问诊仍 PARTIAL / RELEASE BLOCKED：现有 `RedFlagGate` / `RedFlagPreflight` 是 fail-closed 策略契约与 fake-detector 测试 seam，不是生产医学 detector。当前没有可追溯的医学审核自然语言 detector 版本，也没有所有 Flutter/Native 模型入口的调用前接入证据。不能用已审核知识库代替 detector 审核；不重复审核知识库，也不编造红旗词表。
+- 用户希望的“自由文本理解 → 只追问问诊十问所缺字段 → 后台执行现有规则问诊 → 解释真实结果”仍未完成。PR #146 完成的是已有结构化问诊结果在成功持久化后自动解释，不是自然语言替代问诊十问。
+- OPPO Find N2 E4B GPU/CPU、多轮、图片/语音、Activity/进程恢复、AI 数据清除后强停/重启不可恢复、端到端 TRACE，仍需设备记录；CI ARM64 APK/Native tests 不能替代真机运行。
+- C 的知识资产临床审核不重复开展；仍缺的书目 locator、底本版本、卷页和原文身份属于来源治理，不得凭推测补齐。
+
+### 31.5 后续推进顺序
+
+1. 等待 merge SHA `8e44e0c7` 的 Flutter tests / Quality Gate 终态；若失败，只修复该 SHA 上实际失败的 job。
+2. 继续逐项审计剩余 15 个 Page-only 工具，只在能复用原确定性代码、有清晰输入 schema 和来源的前提下实现一个最小 Headless 切片；不批量迁移。
+3. B 维持 RELEASE BLOCKED，直到医学审核 detector 版本、审核记录、阈值/例外/处置文案和全入口覆盖证据齐备；期间不开放自由文本症状自动辨证。
+4. 真机 A/E/F 按设备清单收集 Find N2 E4B、清理与 TRACE 证据；CI 结果不替代设备验收。
