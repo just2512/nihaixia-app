@@ -21,11 +21,55 @@ class GuanshaToolExecutor {
     'birthplace',
   };
 
+  static List<String> validateArguments(Map<String, String> arguments) {
+    final errors = <String>[];
+    final unknown = arguments.keys
+        .where((key) => !_allowedArguments.contains(key))
+        .toList(growable: false);
+    if (unknown.isNotEmpty) {
+      errors.add('未声明的关煞参数：' + unknown.join('、'));
+      return errors;
+    }
+
+    final rawDate = arguments['birth_date']?.trim();
+    if (rawDate == null || rawDate.isEmpty) {
+      errors.add('缺少出生日期（公历 YYYY-MM-DD）');
+    } else if (_parseDate(rawDate) == null) {
+      errors.add('出生日期无效；请使用有效的公历 YYYY-MM-DD，且不能晚于今天');
+    }
+
+    final rawTime = arguments['birth_time']?.trim();
+    if (rawTime == null || rawTime.isEmpty) {
+      errors.add('缺少出生时间（24 小时制 HH:mm）');
+    } else if (rawTime == 'AMBIGUOUS_TIME_SELECTION') {
+      errors.add('出生时间存在多个候选，请明确一个 HH:mm 时刻');
+    } else if (_parseTime(rawTime) == null) {
+      errors.add('出生时间无效；请使用 24 小时制 HH:mm');
+    }
+
+    final gender = arguments['gender']?.trim();
+    if (gender == null || gender.isEmpty) {
+      errors.add('缺少性别；请明确选择男或女');
+    } else if (gender != 'male' && gender != 'female') {
+      errors.add('性别无效；请明确选择男或女');
+    }
+
+    final birthplace = arguments['birthplace']?.trim();
+    if (birthplace == null || birthplace.isEmpty) {
+      errors.add('缺少出生地点（城市或区县）');
+    } else if (birthplace == 'AMBIGUOUS_LOCATION_SELECTION') {
+      errors.add('出生地点存在多个候选，请明确一个实际出生城市或区县');
+    }
+
+    return errors;
+  }
+
   static Future<AssistantToolResult> execute(
     Map<String, String> arguments,
   ) async {
-    if (arguments.keys.any((key) => !_allowedArguments.contains(key))) {
-      return _failure(arguments, '包含未声明的关煞参数；本次没有执行排盘或规则匹配。');
+    final validationErrors = validateArguments(arguments);
+    if (validationErrors.isNotEmpty) {
+      return _failure(arguments, validationErrors.join('；'));
     }
 
     final date = _parseDate(arguments['birth_date']);
