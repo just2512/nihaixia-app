@@ -17,7 +17,6 @@ import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/bazi_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
-import 'package:nihaisha_app/services/saved_chart_tool_executor.dart';
 
 
 const _readyStatus = LocalAiModelStatus(
