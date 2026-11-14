@@ -456,7 +456,7 @@ class AssistantToolRouter {
     description: '在当前助手对话中调用 App 原有子午流注引擎，归纳纳子法、纳甲法、灵龟八法和飞腾八法的真实结果。',
     modes: {AssistantMode.tools},
     aliases: ['时辰开穴', '子午流注', '灵龟八法', '纳子法', '纳甲法'],
-    actionWords: ['计算', '开穴', '推算', '查穴'],
+    actionWords: ['计算', '开穴', '推算', '查穴', '查询'],
     builder: _buildZiwu,
     headlessExecutor: ZiWuLiuZhuToolExecutor.execute,
     parameters: [
