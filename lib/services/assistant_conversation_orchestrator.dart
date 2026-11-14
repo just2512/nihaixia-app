@@ -66,6 +66,16 @@ class AssistantConversationOrchestrator {
     '我身体',
   ];
 
+  static bool _isDosageConversionRequest(String query) {
+    final hasQuantityAndUnit = RegExp(
+      r'\\d+(?:\\.\\d+)?\\s*(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)',
+    ).hasMatch(query);
+    final hasConversionAction = RegExp(
+      r'(换算|转换|折合|换成|折为|多少克|多少毫升|多少厘米)',
+    ).hasMatch(query);
+    return hasQuantityAndUnit && hasConversionAction;
+  }
+
   static const _learningCues = [
     '什么是',
     '是什么',
@@ -186,6 +196,37 @@ class AssistantConversationOrchestrator {
           .toList(growable: false);
       if (matches.length == 1) {
         values['term'] = matches.single;
+      }
+    } else if (tool.id == 'dosage') {
+      const unitPattern = r'(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)';
+      final quantityUnitMatches = RegExp(
+        r'(\\d+(?:\\.\\d+)?)\\s*' + unitPattern,
+      ).allMatches(query).toList(growable: false);
+      if (quantityUnitMatches.length == 1) {
+        values['value'] = quantityUnitMatches.single.group(1)!;
+        values['unit'] = quantityUnitMatches.single.group(2)!;
+      } else if (quantityUnitMatches.length > 1) {
+        values['unit'] = 'AMBIGUOUS_UNIT_SELECTION';
+      } else {
+        final value = RegExp(
+          r'(?:数值|数量|换算数值|输入)\\s*(?:是|为)?\\s*[：:]?\\s*(\\d+(?:\\.\\d+)?)',
+        ).firstMatch(query);
+        final unit = RegExp(
+          r'(?:原始单位|输入单位|单位)\\s*(?:是|为)?\\s*[：:]?\\s*' + unitPattern,
+        ).firstMatch(query);
+        if (value != null) values['value'] = value.group(1)!;
+        if (unit != null) values['unit'] = unit.group(1)!;
+      }
+
+      final standards = <String>[
+        if (query.contains('汉制')) 'han',
+        if (query.contains('台制')) 'taiwan',
+        if (query.contains('唐制')) 'tang',
+      ];
+      if (standards.length == 1) {
+        values['standard'] = standards.single;
+      } else if (standards.length > 1) {
+        values['standard'] = 'AMBIGUOUS_STANDARD_SELECTION';
       }
     } else if (tool.id == 'xiaoliuren') {
       final isoDates = RegExp(
@@ -674,6 +715,14 @@ class AssistantConversationOrchestrator {
           toolArguments: argumentsFor(AssistantToolRouter.meihua, text),
         );
       }
+      if (selectedMode == AssistantMode.tools &&
+          _isDosageConversionRequest(text)) {
+        return AssistantDispatchDecision(
+          mode: selectedMode,
+          tool: AssistantToolRouter.dosage,
+          toolArguments: argumentsFor(AssistantToolRouter.dosage, text),
+        );
+      }
       final explicitMatches = AssistantToolRouter.matchAll(text, selectedMode);
       if (explicitMatches.length == 1) {
         return AssistantDispatchDecision(
@@ -817,6 +866,13 @@ class AssistantConversationOrchestrator {
       );
     }
 
+    if (_isDosageConversionRequest(text)) {
+      return AssistantDispatchDecision(
+        mode: AssistantMode.tools,
+        tool: AssistantToolRouter.dosage,
+        toolArguments: argumentsFor(AssistantToolRouter.dosage, text),
+      );
+    }
     final explicitMatches =
         AssistantToolRouter.matchAll(text, AssistantMode.automatic);
     if (explicitMatches.length > 1) {
