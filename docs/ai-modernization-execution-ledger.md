@@ -1770,3 +1770,56 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 5. D 剩余 13 个 Page-only 工具先做确定性函数、输入边界、结果来源和行为基线审计；只对具备完整前置条件的单项能力开独立小分支，不批量迁移。
 
 - 冻结：不修改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、剂量计算及其他已存在排盘/民俗算法；不伪造业务结果；不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库。
+
+
+---
+
+## 38. 2026-11-14 PR #156：子午流注在统一助手对话内 Headless 执行
+
+### 38.1 基线与合并
+
+- PR #156：https://github.com/just2512/nihaixia-app/pull/156。
+- 独立分支：`work/ziwuliuzhu-headless-in-chat-2026-11-14`。
+- PR 最终 head：`86c7398cb5635c7387182c6582a3bbe638a0c410`。
+- squash merge SHA / 当前 master 基线：`aed6c4b0c3b7684a437b61253c16fd495e6ab717`。
+- 本次只修改工具路由、对话参数恢复、子午流注共享计算服务/执行器及对应回归测试；规范性约束文件 `docs/ai-capability-audit.md` 未修改。
+
+### 38.2 最小实现
+
+- 新增 `ZiWuLiuZhuCalculationService`，把页面原有纳子、纳甲、五门十变、本穴等结果组合和参考映射收敛为页面与助手共用的确定性服务；页面不再维护另一套表。
+- 新增 `ZiWuLiuZhuToolExecutor`，调用共享服务并复用原 `ziwuliuzhu_engine.dart`；未修改干支、纳子、纳甲、开穴、穴位或其他既有算法。
+- `ziwu_liuzhu` 增加 Headless executor，同时保留原页面 builder。用户在统一助手对话提出需求，日期和时刻缺失时由当前对话澄清；明确日期但缺时刻不会静默补成当天当前时刻。
+- 用户未指定日期/时刻时，沿用原页面的“按设备当前本地时间计算”语义，并在对话回复中明示；该时间由 App 在执行边界读取，不接受模型或外部调用者传入的 `at` 覆盖。明确日期与时刻则组合为本地时间；拒绝时区偏移、无效日期、无效时刻、日期/时刻不匹配及未声明参数。
+- 待补参数随现有 assistant message metadata 跨轮保存，可从历史恢复；完成后使用原计算结果，不要求用户跳转时辰开穴页面。
+- 成功结果携带 `local-engine:ziwuliuzhu`、`local-data:ziwuliuzhu-reference-tables`；只有执行成功且 toolId、arguments、status、result/sourceIds 契约校验通过后才进入现有 AI 解释链。
+- 结果明确说明默认经纬度、子时换日和未启用真太阳时；说明该结果属于传统时辰开穴计算资料，不构成疾病诊断、针刺处方或个体治疗建议。
+
+### 38.3 自动化验收证据
+
+- Branch validation push run `43575671526` SUCCESS，head 为 PR 最终 head `86c7398`。
+- PR workflow `43575673793` SUCCESS：Flutter 全量回归 job `132389779409` SUCCESS；Android arm64 verification job `132390872014` SUCCESS。
+- Flutter regression 覆盖静态分析、局部契约/路由/恢复/知识检索回归与完整 `flutter test --no-pub`。
+- Android job 完成 arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 和 evidence artifact 上传。
+- PR artifacts：`android-arm64-ci-debug-abi-evidence` id `14106526485`；`android-unit-test-reports` id `14106930205`；`ai-retrieval-golden-snapshot` id `14106108282`。
+- merge SHA `aed6c4b` 的 post-merge Flutter tests run `43576475144` 与 Flutter Quality Gate run `43576475147` 在本节编写时均为 IN_PROGRESS；只有 head_sha 与 merge SHA 一致且终态 SUCCESS 后才记录 master CI PASS。PR CI SUCCESS 不替代 post-merge master CI。
+
+### 38.4 D：当前 Headless / Page-only 能力分层
+
+- `AssistantToolRouter` 共 24 个定义：23 个常规页面工具入口 + 1 个由确定性问诊控制器内联执行的 `structured_diagnosis`。
+- 23 个页面工具入口中 12 项配置 Headless executor：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`、`yijing`、`dosage`、`ziwu_liuzhu`；11 项仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`、`dream`、`guansha`、`sanshan_lingqian`、`shousheng_debt`、`saved_charts`。
+- `structured_diagnosis` 继续由 `TcmInterviewConversationController` / `DiagnosticEngine` 内联执行，不计入通用 Headless 数量。打开页面不计为 Executed；只有真实调用、参数/结果/sourceIds 契约校验和对话回传都有证据才计入。
+
+### 38.5 尚未关闭的用户目标与优先级
+
+1. **B 红旗安全，仍 PARTIAL / RELEASE BLOCKED。** 生产自然语言 detector 尚无可追溯的医学审核版本、审核记录、阈值/例外/处置文案，也没有全部 Flutter/Native 模型调用入口前的 fail-closed 覆盖证据。先完成 B2 注入式门禁接缝和 fake-detector 调用顺序测试；不自行编造红旗词表/阈值/医疗处置文案。已医学审核通过的知识库内容不重复审核。
+2. **自由文本问诊闭环仍未完成。** 当前 `TcmInterviewConversationController.start()` 把初始描述保留在 transcript/context，但实际仍从 `temperature`、`tongue_pulse` 再进入问诊十问的既定顺序；没有把用户自由描述结构化映射为已答字段，也没有只对缺失项进行追问。完成 B 门禁前不得开放自由文本自动症状辨证；门禁具备审核依据后，再以受约束结构化输出抽取候选症状、保留原话、标记待确认，经用户确认后才映射到现有规则问诊输入。不得修改 DiagnosticEngine/DiagnosticRules 或问诊十问。
+3. **D 下一项单工具候选为 `dream`。** 本地梦境数据有 412 条记录、244 个不同 keyword，其中 78 个 keyword 重复对应多条记录；例如“蛇”对应 4 条。不得按第一条命中直接输出，应基于梦境具体情节澄清或列出候选；结果只能作为民俗文化资料解释，不作现实吉凶预测。仅在 B2 与 PR #156 文档闭环后开独立小分支。
+4. **A/E/F 仍需 OPPO Find N2 真机证据。** E4B GPU/CPU、多轮文本/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复及端到端 TRACE，CI APK 不可替代真机验收。
+5. **C 只补来源定位。** 医案与经典资料仍有书目 locator、底本版本、卷页/原文身份缺口；不重复审核已审核医学知识内容。
+
+### 38.6 不变边界
+
+- AI 负责理解、归纳、调度、缺参追问和解释；排盘、问诊、剂量、子午流注等仍由 App 原有确定性代码执行。
+- 只有真实业务执行成功、输入/结果契约通过并带可追溯 sourceIds 的结果才能交给 AI 解释。
+- AI 不伪造排盘/开穴/问诊结果，不覆盖辨证规则，不把推断包装成医学诊断。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库；不批量迁移 Page-only 工具。
