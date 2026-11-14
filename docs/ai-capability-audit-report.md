@@ -1079,3 +1079,42 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 独立分支：`work/medical-case-source-ledger-wiring-2026-11-14`。
 - **状态：自动化验收通过。** PR run `43585625501`、分支验证 run `43585569847`、合并后 master Flutter tests run `43586347265`、master Quality Gate run `43586347314` 均为 SUCCESS；覆盖真实资产来源注入、Flutter 全量回归、Android arm64 Debug APK/Manifest/ABI、Native 单测及报告工件。此项仅修复现有来源账本的加载链路。
 - 本项只修复已有来源证据的加载链路，不补齐纸本 locator。C 仍 PARTIAL，后续只接受可追溯原始来源材料，不得推测或填造卷页。
+
+---
+
+## 36. 2026-11-14 PR #161：工具结果知识追问链路复核
+
+### 36.1 集成事实
+
+- PR #161：https://github.com/just2512/nihaixia-app/pull/161。
+- 独立分支：`work/ai-tool-result-knowledge-followup-2026-11-14`；PR head：`b33bff0ba6df94a7ca89e7abd2b1e3f294788e3c`。
+- squash merge SHA / 当前 master：`a9052504e55bae29fccc980f88dab06836b4e9cb`。
+- 4 个变更文件只涉及助手检索上下文、知识检索门禁及配套回归测试；规范性约束 `docs/ai-capability-audit.md` 未修改。
+
+### 36.2 行为与边界复核
+
+- 工具结果解释可按确定性门禁检索本地 TCM 知识，省略式追问可用最近用户原话与已验证 App 结果恢复指代；结果必须有 App 来源，不能使用 AI 自由文本伪装成事实。
+- “那它的禁忌呢？”会以有限会话上下文补全检索 query；不重新调用已完成的工具、不把用户送到独立工具页面。
+- 寒暄类输入不触发知识检索。医案记录不被无差别注入工具结果解释，缺失来源仍明确为 MISSING。
+- 未修改医学规则、十问、确定性排盘/剂量业务、知识库内容、来源账本或 RedFlag detector。
+
+### 36.3 验收证据
+
+- 分支验证 run `43595221690` SUCCESS。
+- PR run `43595241256` SUCCESS：Flutter regression 与 Android arm64 verification 全部成功，含 APK 构建、Manifest/ABI/SHA-256、Native tests、JUnit XML 与证据工件上传。
+- PR artifacts：ABI evidence `14114860428`；Native reports `14114073681`；retrieval snapshot `14114195696`。
+- post-merge master Flutter tests run `43595987567` 和 Quality Gate run `43595987556` 在本节记录时尚未结束；不得将 IN_PROGRESS 标为 SUCCESS。最终状态应在这两项结束后补记。
+
+### 36.4 A-G 状态
+
+- A/E/F：仍为 DEVICE UNKNOWN，等待 OPPO Find N2 真实设备、多轮、多媒体、进程恢复、清除数据和端到端 TRACE 证据。
+- B：仍 `PARTIAL / RELEASE BLOCKED`；缺生产自然语言 detector 医学审核记录及所有模型入口 fail-closed 证明。自由文本自动辨证不得开放。
+- C：仍 PARTIAL；来源定位缺口保持 MISSING，不重复审核已有审核内容。
+- D：23 个常规工具入口中 13 个 Headless、10 个 Page-only；按独立场景逐项审计，不批量迁移。
+- G：本次补充审计报告与执行台账；规范性约束文件保持不变。
+
+### 36.5 下一步
+
+- 先以 merge SHA `a9052504e55bae29fccc980f88dab06836b4e9cb` 核验 post-merge Flutter tests 和 Flutter Quality Gate 终态；两个都 SUCCESS 后将证据补入本节。
+- 自由文本问诊不越过 B 门禁。等待医学审核资料和生产接入依据；不重复审核现有知识库。
+- 对 Page-only 工具只审计与用户场景有明确关系的现有代码；没有必要的知识检索入口不重复建设。
