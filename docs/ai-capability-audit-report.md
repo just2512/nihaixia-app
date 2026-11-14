@@ -1014,3 +1014,42 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - G 文档治理：本轮更新三份增量审计文档；规范性文件 `docs/ai-capability-audit.md` 保持不变。
 
 用户要求的自由文本问诊闭环仍受 B 门禁阻塞：在自然语言红旗 detector 完成医学审核且覆盖全部生产模型入口前，不开放由模型直接把自由症状变成诊断输入。结构化问诊继续由 App 原规则引擎执行；AI 只解释已完成、已校验、有来源的业务结果。
+
+
+---
+
+## 34. 2026-11-14 PR #156：子午流注对话内 Headless 执行后增量复核
+
+### 当前主线与合并结果
+
+- master merge SHA：`aed6c4b0c3b7684a437b61253c16fd495e6ab717`。
+- PR #156 最终 head：`86c7398cb5635c7387182c6582a3bbe638a0c410`；PR 已 squash merge。
+- `AssistantToolRouter` 保持 24 个定义：23 个常规工具页面入口 + 1 个确定性问诊控制器内联 `structured_diagnosis`。
+- 23 个常规页面入口中 12 项具备 Headless executor：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`、`yijing`、`dosage`、`ziwu_liuzhu`；11 项仍为 Page-only。
+- `structured_diagnosis` 继续由 `TcmInterviewConversationController` / `DiagnosticEngine` 执行，不计入通用 Headless 数量。
+
+### 实现和职责边界
+
+- `ZiWuLiuZhuCalculationService` 收敛页面与助手共享计算/数据映射；`ZiWuLiuZhuToolExecutor` 复用既有子午流注引擎，不修改原算法。
+- 用户在助手对话内完成子午流注参数澄清和调用；日期/时间槽位跨轮持久化，日期单独提供时追问时刻。未指定日期/时间时沿用原页面“设备当前本地时间”的透明语义；最终时间由 App 注入，不接受模型伪造时间。
+- 结果包含 `local-engine:ziwuliuzhu` 与 `local-data:ziwuliuzhu-reference-tables`。执行、参数、结果和来源契约通过后才交给 AI 解释；结果明确说明默认经纬度、换日口径及非诊断/非处方边界。
+- 没有修改 DiagnosticEngine、DiagnosticRules、问诊十问、剂量规则、排盘/民俗算法或已审核知识库。
+
+### 自动化验收
+
+- Branch validation run `43575671526` SUCCESS（head `86c7398`）。
+- PR run `43575673793` SUCCESS：Flutter regression job `132389779409` SUCCESS；Android arm64 job `132390872014` SUCCESS。
+- Android arm64 Debug APK、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 及证据上传全部 SUCCESS。
+- artifacts：`android-arm64-ci-debug-abi-evidence` id `14106526485`；`android-unit-test-reports` id `14106930205`。
+- post-merge master Flutter tests `43576475144` 与 Flutter Quality Gate `43576475147` 在本次复核时仍 IN_PROGRESS；不得提前标记 master CI PASS。
+
+### 未关闭目标
+
+- B 红旗仍 RELEASE BLOCKED：自然语言 detector 缺正式医学审核版本/阈值/例外/处置文案与所有 Flutter/Native 模型入口调用前的 fail-closed 证据；先补 B2 注入式门禁接缝，不自行发明医学规则，也不重复审核知识库。
+- 自由文本问诊未完成：当前结构化控制器仍按既定问题顺序推进；初始自由描述只进入上下文/transcript，没有映射成待确认字段、自动跳过已覆盖信息。完成 B 门禁后再做“结构化理解—确认—仅追问缺项—调用原规则引擎—解释真实结果”。
+- D 还有 11 个 Page-only 工具；下一项低风险候选为本地梦境资料检索，但 keyword 存在大量多义，需要先澄清情节，不得取第一条命中。
+- Find N2 真机 A/E/F 和 C 书目 locator 仍 PARTIAL/UNKNOWN；已审核知识库内容不重复审核。
+
+### 不变边界
+
+AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊、剂量、排盘、民俗计算继续由 App 确定性代码执行。只有经执行与契约校验且带来源的真实结果才交给 AI 解释。模型不能伪造结果、覆盖规则或将推断包装成医学诊断。
