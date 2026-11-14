@@ -5353,11 +5353,17 @@ void main() {
     final finalMessages = await store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
     );
-    final finalResult = finalMessages.lastWhere(
-      (message) =>
-          message['role'] == 'assistant' &&
-          (message['content'] as String).contains('SINGLE_MATCH'),
-    );
+    final finalResult = finalMessages.firstWhere((message) {
+      if (message['role'] != 'assistant' ||
+          !(message['content'] as String).contains('SINGLE_MATCH')) {
+        return false;
+      }
+      final metadata = AssistantMessageMetadata.decode(
+        message['metadata'] as String,
+      );
+      return metadata.toolId == 'dream' &&
+          metadata.toolStatus == 'SUCCEEDED';
+    });
     final finalMetadata = AssistantMessageMetadata.decode(
       finalResult['metadata'] as String,
     );
