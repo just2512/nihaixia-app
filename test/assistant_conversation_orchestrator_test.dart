@@ -1321,6 +1321,12 @@ void main() {
     );
     expect(multiplePlaces['birthplace'], 'AMBIGUOUS_LOCATION_SELECTION');
 
+    final standaloneCity = AssistantConversationOrchestrator.argumentsFor(
+      AssistantToolRouter.guansha,
+      '北京市',
+    );
+    expect(standaloneCity['birthplace'], '北京市');
+
     final unsupportedLunar = AssistantConversationOrchestrator.argumentsFor(
       AssistantToolRouter.guansha,
       '农历2018年五月初一',
