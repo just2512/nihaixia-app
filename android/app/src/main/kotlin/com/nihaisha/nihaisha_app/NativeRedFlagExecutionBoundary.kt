@@ -39,6 +39,12 @@ data class NativeRedFlagVerdict(
     val reason: String
 )
 
+data class NativeRedFlagRunResult<T>(
+    val verdict: NativeRedFlagVerdict,
+    val executed: Boolean,
+    val value: T?
+)
+
 fun interface NativeRedFlagDetector {
     fun assess(input: NativeRedFlagInput): NativeRedFlagVerdict?
 }
@@ -87,6 +93,21 @@ class NativeRedFlagExecutionBoundary(
             return reviewRequired(input.source, "RULESET_OR_COVERAGE_UNVERIFIED")
         }
         return verdict
+    }
+
+    /**
+     * Executes the model-facing operation only after a versioned, reviewed,
+     * complete assessment returns CLEAR.
+     */
+    fun <T> runBefore(
+        input: NativeRedFlagInput,
+        operation: () -> T
+    ): NativeRedFlagRunResult<T> {
+        val verdict = evaluate(input)
+        if (verdict.status != NativeRedFlagStatus.CLEAR) {
+            return NativeRedFlagRunResult(verdict, false, null)
+        }
+        return NativeRedFlagRunResult(verdict, true, operation())
     }
 
     private fun reviewRequired(
