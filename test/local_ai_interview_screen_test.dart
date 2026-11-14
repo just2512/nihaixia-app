@@ -402,6 +402,7 @@ class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
+  final sendMessageSignals = <Completer<void>>[];
   final restoredTranscripts = <String>[];
 
   @override
@@ -445,6 +446,11 @@ class _TextSendService extends LocalAiService {
   @override
   Future<String> sendMessage(String text) async {
     sentTexts.add(text);
+    final signalIndex = sentTexts.length - 1;
+    if (signalIndex < sendMessageSignals.length &&
+        !sendMessageSignals[signalIndex].isCompleted) {
+      sendMessageSignals[signalIndex].complete();
+    }
     return '已收到你的描述：$text';
   }
 
@@ -4526,8 +4532,12 @@ void main() {
     final store = _MemoryConversationStore();
     final service = _TextSendService();
     final executedArguments = <Map<String, String>>[];
-    final firstExecutionCompleted = Completer<void>();
-    final secondExecutionCompleted = Completer<void>();
+    final firstExplanationRequested = Completer<void>();
+    final secondExplanationRequested = Completer<void>();
+    service.sendMessageSignals.addAll([
+      firstExplanationRequested,
+      secondExplanationRequested,
+    ]);
     var pageOpened = false;
 
     await tester.pumpWidget(
@@ -4541,11 +4551,6 @@ void main() {
           },
           testHeadlessToolExecutor: (arguments) async {
             executedArguments.add(Map<String, String>.unmodifiable(arguments));
-            if (executedArguments.length == 1) {
-              firstExecutionCompleted.complete();
-            } else if (executedArguments.length == 2) {
-              secondExecutionCompleted.complete();
-            }
             return DosageToolExecutor.execute(arguments);
           },
         ),
@@ -4584,7 +4589,7 @@ void main() {
     });
 
     await send('按汉制');
-    await firstExecutionCompleted.future;
+    await firstExplanationRequested.future;
     await tester.pumpAndSettle();
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
@@ -4621,7 +4626,7 @@ void main() {
     ]);
 
     await send('把1升换算成毫升');
-    await secondExecutionCompleted.future;
+    await secondExplanationRequested.future;
     await tester.pumpAndSettle();
     expect(executedArguments, hasLength(2));
     expect(executedArguments.last, const {
