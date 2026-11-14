@@ -1,12 +1,9 @@
-import 'package:flutter/foundation.dart';
-
 import 'ziwuliuzhu_engine.dart' as eng;
 
 /// Shared deterministic result composer for the legacy ZiWuLiuZhu page and
 /// the unified assistant. All GanZhi/open-point calculations remain in the
 /// existing ziwuliuzhu_engine; this class only combines its outputs with the
 /// page's established NaZi reference tables.
-@immutable
 class ZiWuLiuZhuCalculationResult {
   const ZiWuLiuZhuCalculationResult({
     required this.at,
