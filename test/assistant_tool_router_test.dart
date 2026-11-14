@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/services/solar_term_tool_executor.dart';
 
 void main() {
   test('工具注册表 ID 唯一且每个 ID 都能精确恢复同一工具定义', () {
@@ -363,6 +364,35 @@ void main() {
     );
   });
 
+
+  test('节气养生注册为 Headless，目标节气可选且来自现有二十四节气目录', () {
+    final tool = AssistantToolRouter.solarTerms;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(
+      tool.parameters.map((item) => item.key),
+      ['term'],
+    );
+    expect(tool.parameters.single.isRequired, isFalse);
+    expect(tool.parameters.single.choices, SolarTermToolExecutor.termNames);
+    expect(
+      AssistantToolRouter.match('查询立春养生', AssistantMode.automatic)?.id,
+      'solar_terms',
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'solar_terms',
+        values: {'term': '立春'},
+      ).validateAgainst(tool),
+      isEmpty,
+    );
+    expect(
+      const AssistantToolArguments(
+        toolId: 'solar_terms',
+        values: {'term': '不存在的节气'},
+      ).validateAgainst(tool),
+      isNotEmpty,
+    );
+  });
 
   test('黄帝四季歌注册为 Headless，必需参数为公历出生日期和当地钟表时间', () {
     final tool = AssistantToolRouter.huangdiSiji;
