@@ -2300,7 +2300,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     debugPrint('[DOSAGE_DIAG] interpretation gate tool=${tool.id} resultStatus=${result.status} sourceIds=${result.sourceIds} statusReady=${_status?.ready} statusUnknown=$_statusUnknown sending=$_sending modelBusy=$_modelControlBusy tcmBusy=$_structuredDiagnosisBusy auto=$autoInterpret');
     final needsTcmKnowledge = mode == AssistantMode.tools &&
-        const {'yunqi', 'dosage', 'ziwu_liuzhu'}.contains(tool.id);
+        const {'yunqi', 'ziwu_liuzhu'}.contains(tool.id);
     final interpretationPrompt = tool.id == 'bazi'
         ? '请结合用户原始请求“$userText”，总结并解释刚才由 App 本地引擎返回的八字排盘结果。'
             '先概括本次实际出生参数和排盘口径，再解释四柱、十神、格局、强弱依据、五行状态和大运之间的关系。'
@@ -3492,7 +3492,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _executeHeadlessTool(
         userText,
         tool,
-        mode: activeMode,
+        mode: AssistantMode.tools,
         traceContext: activeTraceContext,
         arguments: request,
       );
