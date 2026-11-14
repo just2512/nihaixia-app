@@ -547,4 +547,18 @@ void main() {
     );
   });
 
+  test('小儿关煞注册为对话内 Headless 工具并声明全部必要出生参数', () {
+    final tool = AssistantToolRouter.guansha;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(
+      tool.parameters.map((parameter) => parameter.key),
+      ['birth_date', 'birth_time', 'gender', 'birthplace'],
+    );
+    expect(tool.parameters.every((parameter) => parameter.isRequired), isTrue);
+    expect(
+      AssistantToolRouter.match('帮我测算小儿关煞', AssistantMode.automatic)?.id,
+      'guansha',
+    );
+  });
+
 }
