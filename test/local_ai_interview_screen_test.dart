@@ -5111,6 +5111,17 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    Future<void> waitForModelCalls(int expected) async {
+      // TCM retrieval loads the bundled classic index asynchronously; wait for
+      // the model call rather than assuming pumpAndSettle waits on that Future.
+      for (var attempt = 0;
+          attempt < 150 && service.sentTexts.length < expected;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      await tester.pumpAndSettle();
+    }
+
     await send('把桂枝汤里的1.5两换算成克');
     expect(find.textContaining('目前还缺少：度量标准'), findsOneWidget);
     expect(executedArguments, isEmpty);
@@ -5133,6 +5144,7 @@ void main() {
     });
 
     await send('汉制');
+    await waitForModelCalls(1);
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'value': '1.5',
@@ -5154,12 +5166,14 @@ void main() {
     // The same tool-mode conversation must retrieve knowledge on an ordinary
     // follow-up question, without requiring a new tool invocation.
     await send('桂枝汤的组成有哪些？');
+    await waitForModelCalls(2);
     expect(service.sentTexts, hasLength(2));
     expect(service.sentContexts, hasLength(2));
     expect(service.sentContexts.last, contains('方名：桂枝汤'));
 
     // Generic chat in Tools mode must not inject a NO_RESULTS retrieval block.
     await send('谢谢');
+    await waitForModelCalls(3);
     expect(service.sentTexts, hasLength(3));
     expect(service.sentContexts, hasLength(3));
     expect(service.sentContexts.last, isNot(contains('本轮本地知识库未命中可引用条目')));
@@ -5223,6 +5237,17 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    Future<void> waitForModelCalls(int expected) async {
+      // TCM retrieval loads the bundled classic index asynchronously; wait for
+      // the model call rather than assuming pumpAndSettle waits on that Future.
+      for (var attempt = 0;
+          attempt < 150 && service.sentTexts.length < expected;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      await tester.pumpAndSettle();
+    }
+
     await send('帮我计算2026-11-14子午流注开穴');
     expect(find.textContaining('目前还缺少：具体时刻（HH:mm）'), findsOneWidget);
     expect(executedArguments, isEmpty);
@@ -5242,6 +5267,7 @@ void main() {
     expect(pendingMetadata.toolArguments, const {'date': '2026-11-14'});
 
     await send('10:30');
+    await waitForModelCalls(1);
     expect(executedArguments, hasLength(1));
     expect(executedArguments.single, const {
       'date': '2026-11-14',
