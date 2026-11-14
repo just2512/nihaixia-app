@@ -530,4 +530,21 @@ void main() {
     );
   });
 
+
+  test('周公解梦注册为对话内 Headless 工具并声明梦境描述参数', () {
+    final tool = AssistantToolRouter.dream;
+    expect(tool.headlessExecutor, isNotNull);
+    expect(tool.parameters.map((item) => item.key), ['dream_text']);
+    expect(tool.parameters.single.isRequired, isTrue);
+    expect(tool.parameters.single.type, AssistantToolParameterType.text);
+    expect(
+      AssistantToolRouter.match('帮我解梦', AssistantMode.automatic)?.id,
+      'dream',
+    );
+    expect(
+      AssistantToolRouter.match('梦见蛇是什么意思', AssistantMode.automatic)?.id,
+      'dream',
+    );
+  });
+
 }
