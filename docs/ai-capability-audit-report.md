@@ -965,7 +965,7 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 - 分支验证 push run `43560093070` SUCCESS：Flutter 静态分析、changed tests 和 test pairing 全部通过。
 - PR workflow `43560097611` SUCCESS：Flutter 全量回归 job `132341891873` SUCCESS；Android arm64/Native job `132342897892` SUCCESS。
 - Android job 完成 arm64 Debug APK 构建、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifacts 上传。
-- merge SHA `3915a404200ed8721fbc7715261c5b5e7ac592f0` 的 post-merge Flutter tests run `43560857686` 和 Flutter Quality Gate run `43560857654` 在本报告更新时均 IN_PROGRESS；尚未记录为 master CI PASS。
+- merge SHA `3915a404200ed8721fbc7715261c5b5e7ac592f0` 的 post-merge Flutter tests run `43560857686` 和 Flutter Quality Gate run `43560857654` 均已在相同 head SHA 上完成，终态均为 SUCCESS。
 - PR/CI APK 不等于 OPPO Find N2 真机 E4B 推理、GPU/CPU、多媒体、Activity/进程恢复和真实 TRACE 验收。
 
 ### 32.4 未关闭问题及后续任务
