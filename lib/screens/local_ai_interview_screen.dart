@@ -13,6 +13,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/red_flag_gate.dart';
+import '../services/red_flag_preflight.dart';
 import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
@@ -147,6 +149,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
   const LocalAiInterviewScreen({
     super.key,
     this.service,
+    this.redFlagGate,
     this.audioRecorder,
     this.recordingFileInspector,
     this.imagePicker,
@@ -161,6 +164,12 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.testHeadlessToolExecutor,
     this.traceRecorder,
   });
+
+  /// Optional gate injection for B2 entrypoint-order tests. Production must not
+  /// supply this until a medically reviewed detector and rollout policy exist.
+  /// A missing gate is recorded as NOT_APPLICABLE, never as CLEAR.
+  @visibleForTesting
+  final RedFlagGate? redFlagGate;
 
   /// Injectable to verify initialization and error states without a native model.
   final LocalAiService? service;
@@ -292,6 +301,77 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   AssistantConversationStore get _conversationStore =>
       widget.conversationStore ?? DatabaseHelper.instance;
+
+  // One conversation trace can pass through _send -> routing -> tool execution.
+  // Identity-based memoization ensures the injected detector is called once for
+  // the originating input while every downstream boundary still checks it.
+  final Set<AiTraceContext> _redFlagPreflightedContexts =
+      Set<AiTraceContext>.identity();
+
+  Future<bool> _blockIfRedFlagPreflightDoesNotClear({
+    required RedFlagInputSource source,
+    required String? text,
+    required AiTraceContext traceContext,
+    required String route,
+  }) async {
+    if (_redFlagPreflightedContexts.contains(traceContext)) return false;
+
+    final gate = widget.redFlagGate;
+    if (gate == null) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.redFlag,
+        status: AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
+      );
+      return false;
+    }
+
+    final result = await gate.evaluate(
+      RedFlagInput(source: source, text: text),
+    );
+    final traceStatus = switch (result.status) {
+      RedFlagPreflightStatus.clear => AiTraceStatus.succeeded,
+      RedFlagPreflightStatus.blockUrgent => AiTraceStatus.failed,
+      RedFlagPreflightStatus.clarify ||
+      RedFlagPreflightStatus.reviewRequired => AiTraceStatus.unknown,
+    };
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.redFlag,
+      status: traceStatus,
+      route: route,
+      errorCode: result.reason,
+    );
+
+    if (result.mayContinueOrdinaryFlow) {
+      if (_redFlagPreflightedContexts.length >= 32) {
+        _redFlagPreflightedContexts.clear();
+      }
+      _redFlagPreflightedContexts.add(traceContext);
+      return false;
+    }
+
+    final message = switch (result.status) {
+      RedFlagPreflightStatus.blockUrgent =>
+        '安全评估命中阻断条件，普通助手流程已暂停。系统不会在此处生成未经审核的医疗处置建议。',
+      RedFlagPreflightStatus.clarify =>
+        '安全评估无法确认内容范围，普通助手流程已暂停。请先澄清相关信息。',
+      RedFlagPreflightStatus.reviewRequired =>
+        '安全评估尚未完成（${result.reason}），普通助手流程已暂停；未完成评估不能视为无风险。',
+      RedFlagPreflightStatus.clear => '',
+    };
+    if (mounted) setState(() => _error = message);
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.finalRender,
+      status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+      route: route,
+      errorCode: 'REDFLAG_${result.status.name.toUpperCase()}',
+    );
+    return true;
+  }
 
   @override
   void initState() {
@@ -1716,6 +1796,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'structured_interview_option',
           mode: AssistantMode.consultation.name,
         );
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.structuredInterview,
+      text: option,
+      traceContext: activeTraceContext,
+      route: 'structured_interview_option',
+    )) {
+      return;
+    }
     if (traceContext == null) {
       await _traceRecorder.record(
         activeTraceContext,
@@ -2133,6 +2221,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AiTraceContext traceContext,
     AssistantToolArguments? arguments,
   }) async {
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.toolArguments,
+      text: userText,
+      traceContext: traceContext,
+      route: 'headless_tool:${tool.id}',
+    )) {
+      return;
+    }
     final request = arguments ??
         AssistantToolArguments(toolId: tool.id);
     final argumentErrors = request.validateAgainst(tool);
@@ -2384,6 +2480,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'manual_tool',
           mode: (mode ?? _assistantMode).name,
         );
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.toolArguments,
+      text: userText,
+      traceContext: activeTraceContext,
+      route: 'tool_dispatch:${tool.id}',
+    )) {
+      return;
+    }
     if (traceContext == null) {
       await _traceRecorder.record(
         activeTraceContext,
@@ -4802,6 +4906,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final generation = _historyRestoreGeneration;
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.historyRestore,
+      text: transcript,
+      traceContext: const AiTraceContext.disabled(),
+      route: 'history_restore',
+    )) {
+      return;
+    }
     try {
       await _service.restoreConversation(
         transcript: transcript,
@@ -4865,8 +4977,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : _assistantMode.name,
     );
     final traceId = traceContext.traceId;
-
     final activeTcmTask = _tcmInterviewController;
+    final inputSource = audioPath != null
+        ? RedFlagInputSource.audioAttachment
+        : imagePath != null
+            ? RedFlagInputSource.imageAttachment
+            : activeTcmTask?.canAnswer == true
+                ? RedFlagInputSource.structuredInterview
+                : RedFlagInputSource.currentText;
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: inputSource,
+      text: text.isEmpty ? null : text,
+      traceContext: traceContext,
+      route: 'assistant_send',
+    )) {
+      return;
+    }
+
+    //
     if (activeTcmTask?.canAnswer == true) {
       if (imagePath != null || audioPath != null) {
         await _traceRecorder.record(
@@ -6481,6 +6609,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
+    final userReportedText = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text)
+        .join('\n');
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.structuredInterview,
+      text: userReportedText.isEmpty ? null : userReportedText,
+      traceContext: traceContext,
+      route: 'symptom_extraction',
+    )) {
+      if (mounted) setState(() => _extracting = false);
+      return;
+    }
     try {
       final traceId = traceContext.traceId;
       final draft = traceId == null
