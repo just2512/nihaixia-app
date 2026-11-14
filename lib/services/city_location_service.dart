@@ -127,11 +127,15 @@ class CityLocationService {
   ) {
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) return null;
+    final trimmedQuery = query.trim();
     final exact = locations.where((place) =>
-        place.name == query.trim() ||
-        place.label == query.trim() ||
-        place.displayName == query.trim() ||
-        place.en?.toLowerCase() == normalizedQuery).toList(growable: false);
+        place.name == trimmedQuery ||
+        place.label == trimmedQuery ||
+        place.displayName == trimmedQuery ||
+        place.en?.toLowerCase() == normalizedQuery ||
+        (place.city != null && trimmedQuery == place.city! + place.name) ||
+        (place.province.isNotEmpty &&
+            trimmedQuery == place.province + place.name)).toList(growable: false);
     if (exact.length == 1) return exact.single;
     if (exact.length > 1) return null;
 
