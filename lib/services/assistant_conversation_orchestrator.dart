@@ -188,10 +188,10 @@ class AssistantConversationOrchestrator {
       }
     } else if (tool.id == 'xiaoliuren') {
       final isoDates = RegExp(
-        r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})',
+        r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
       ).allMatches(query).toList(growable: false);
       final chineseDates = RegExp(
-        r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
+        r'(\d{4})年(\d{1,2})月(\d{1,2})日?',
       ).allMatches(query).toList(growable: false);
       final dateMatches = [...isoDates, ...chineseDates];
       final dates = dateMatches
@@ -548,10 +548,10 @@ class AssistantConversationOrchestrator {
             .toList(growable: false);
     if (explicitXiaoliurenTools.length == 1) {
       final isoDates = RegExp(
-        r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})',
+        r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
       ).allMatches(text).toList(growable: false);
       final chineseDates = RegExp(
-        r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
+        r'(\d{4})年(\d{1,2})月(\d{1,2})日?',
       ).allMatches(text).toList(growable: false);
       final dateValues = [...isoDates, ...chineseDates]
           .map((match) =>
