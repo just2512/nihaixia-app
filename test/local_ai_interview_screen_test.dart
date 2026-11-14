@@ -18,6 +18,7 @@ import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
 import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/dosage_tool_executor.dart';
+import 'package:nihaisha_app/services/ziwuliuzhu_tool_executor.dart';
 import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:record/record.dart';
 
@@ -5159,6 +5160,96 @@ void main() {
     expect(metadata.sourceIds, const [
       DosageToolExecutor.sourceId,
       DosageToolExecutor.factorsSourceId,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('子午流注在助手对话中追问时刻、执行四法并解释真实结果',
+      (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          conversationStore: store,
+          service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const Scaffold(body: Text('不应打开子午流注页面'));
+          },
+          testHeadlessToolExecutor: (arguments) async {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return ZiWuLiuZhuToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> send(String value) async {
+      await tester.enterText(find.byType(TextField).first, value);
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+    }
+
+    await send('帮我计算2026-11-14子午流注开穴');
+    expect(find.textContaining('目前还缺少：具体时刻（HH:mm）'), findsOneWidget);
+    expect(executedArguments, isEmpty);
+    expect(service.sentTexts, isEmpty,
+        reason: '缺少计算时刻时只在对话澄清，不调用 E4B 或业务引擎');
+    expect(pageOpened, isFalse);
+
+    final pendingConversations = await store.getAssistantConversations();
+    final pendingRows = await store.getAssistantMessages(
+      conversationId: pendingConversations.single['id'] as int,
+    );
+    final pendingMetadata = AssistantMessageMetadata.decode(
+      pendingRows.last['metadata'] as String,
+    );
+    expect(pendingMetadata.toolId, 'ziwu_liuzhu');
+    expect(pendingMetadata.toolStatus, 'AWAITING_PARAMETERS');
+    expect(pendingMetadata.toolArguments, const {'date': '2026-11-14'});
+
+    await send('10:30');
+    expect(executedArguments, hasLength(1));
+    expect(executedArguments.single, const {
+      'date': '2026-11-14',
+      'time': '10:30',
+      'at': '2026-11-14T10:30',
+    });
+    expect(find.textContaining('灵龟八法'), findsWidgets);
+    expect(find.textContaining('纳甲法'), findsWidgets);
+    expect(find.textContaining('飞腾八法'), findsWidgets);
+    expect(pageOpened, isFalse);
+    expect(service.sentTexts, hasLength(1),
+        reason: '只有 App 执行并通过 sourceIds/arguments 校验后才进入 AI 解释');
+
+    final conversations = await store.getAssistantConversations();
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultRow = rows.firstWhere(
+      (row) => (row['content'] as String)
+          .startsWith('【子午流注时辰开穴计算结果执行结果】'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultRow['metadata'] as String,
+    );
+    expect(metadata.toolId, 'ziwu_liuzhu');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, const {
+      'date': '2026-11-14',
+      'time': '10:30',
+      'at': '2026-11-14T10:30',
+    });
+    expect(metadata.sourceIds, const [
+      ZiWuLiuZhuToolExecutor.sourceId,
+      ZiWuLiuZhuToolExecutor.referenceSourceId,
     ]);
     expect(tester.takeException(), isNull);
   });
