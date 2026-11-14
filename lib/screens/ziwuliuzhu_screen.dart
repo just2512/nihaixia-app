@@ -27,12 +27,9 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
   static const _diZhi = ZiWuLiuZhuCalculationService.diZhi;
   static const _ganToOrgan = ZiWuLiuZhuCalculationService.ganToOrgan;
   static const _zhiToMeridian = ZiWuLiuZhuCalculationService.zhiToMeridian;
-  static const _benXue = ZiWuLiuZhuCalculationService.benXueByMeridian;
-  static const _wuMen = ZiWuLiuZhuCalculationService.wuMen;
 
   String _getBenXue(String meridian) =>
       ZiWuLiuZhuCalculationService.benXue(meridian);
-
 
   @override
   void initState() {
