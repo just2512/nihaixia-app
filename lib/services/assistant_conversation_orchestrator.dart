@@ -407,6 +407,103 @@ class AssistantConversationOrchestrator {
       }
       // For time and coin modes, only the App injects the actual local clock
       // or six random outcomes at the execution boundary.
+    } else if (tool.id == 'guansha') {
+      final isoDates = RegExp(
+        r'(?<!\d)(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?!\d)',
+      ).allMatches(query).toList(growable: false);
+      final chineseDates = RegExp(
+        r'(\d{4})年(\d{1,2})月(\d{1,2})日?',
+      ).allMatches(query).toList(growable: false);
+      final dateValues = <String>{
+        for (final match in [...isoDates, ...chineseDates])
+          match.group(1)!.padLeft(4, '0') + '-' +
+              match.group(2)!.padLeft(2, '0') + '-' +
+              match.group(3)!.padLeft(2, '0'),
+      };
+      if (query.contains('农历') || query.contains('阴历')) {
+        values['birth_date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else if (dateValues.length == 1) {
+        final raw = dateValues.single.split('-').map(int.parse).toList();
+        final parsed = DateTime(raw[0], raw[1], raw[2]);
+        values['birth_date'] = parsed.year == raw[0] &&
+                parsed.month == raw[1] &&
+                parsed.day == raw[2]
+            ? dateValues.single
+            : 'INVALID_DATE';
+      } else if (dateValues.length > 1) {
+        values['birth_date'] = 'AMBIGUOUS_DATE_SELECTION';
+      } else if (RegExp(r'(\d{4}年|\d{4}[-/]|今天|明天|昨天)')
+          .hasMatch(query)) {
+        values['birth_date'] = 'UNPARSED_DATE';
+      }
+
+      final timePattern = RegExp(
+        r'(凌晨|清晨|早上|上午|中午|下午|傍晚|晚上)?\s*(\d{1,2})(?::([0-5]\d)|(?:点|时)(?:(\d{1,2})分|半)?)',
+      );
+      final timeValues = <String>{};
+      for (final match in timePattern.allMatches(query)) {
+        var hour = int.parse(match.group(2)!);
+        final minute = match.group(3) != null
+            ? int.parse(match.group(3)!)
+            : match.group(4) != null
+                ? int.parse(match.group(4)!)
+                : match.group(0)!.contains('半')
+                    ? 30
+                    : 0;
+        final period = match.group(1);
+        if ((period == '下午' || period == '傍晚' || period == '晚上') &&
+            hour >= 1 &&
+            hour < 12) {
+          hour += 12;
+        } else if (period == '凌晨' && hour == 12) {
+          hour = 0;
+        }
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+          timeValues.add(
+            hour.toString().padLeft(2, '0') +
+                ':' +
+                minute.toString().padLeft(2, '0'),
+          );
+        }
+      }
+      if (timeValues.length == 1) {
+        values['birth_time'] = timeValues.single;
+      } else if (timeValues.length > 1) {
+        values['birth_time'] = 'AMBIGUOUS_TIME_SELECTION';
+      } else if (RegExp(r'(\d{1,2}点|上午|下午|晚上|早上|凌晨|中午|时辰)')
+          .hasMatch(query)) {
+        values['birth_time'] = 'UNPARSED_TIME';
+      }
+
+      final hasMale = RegExp(r'(男孩|男童|男婴|男性|男生|男)').hasMatch(query);
+      final hasFemale = RegExp(r'(女孩|女童|女婴|女性|女生|女)').hasMatch(query);
+      if (hasMale && hasFemale) {
+        values['gender'] = 'AMBIGUOUS_GENDER_SELECTION';
+      } else if (hasMale) {
+        values['gender'] = 'male';
+      } else if (hasFemale) {
+        values['gender'] = 'female';
+      }
+
+      final placeCandidates = <String>{};
+      final labelledPlace = RegExp(
+        r'(?:出生地点|出生地|出生城市)\s*[：:]?\s*(?:是|为)?\s*([^，,。；;、\s]+)',
+      ).firstMatch(query);
+      final bornAtPlace = RegExp(
+        r'(?:出生在|出生于|生于)\s*([^，,。；;、\s]+)',
+      ).firstMatch(query);
+      final placeBeforeBorn = RegExp(
+        r'在\s*([^，,。；;、\s]{2,24})\s*出生',
+      ).firstMatch(query);
+      for (final match in [labelledPlace, bornAtPlace, placeBeforeBorn]) {
+        final place = match?.group(1)?.trim();
+        if (place != null && place.isNotEmpty) placeCandidates.add(place);
+      }
+      if (placeCandidates.length == 1) {
+        values['birthplace'] = placeCandidates.single;
+      } else if (placeCandidates.length > 1) {
+        values['birthplace'] = 'AMBIGUOUS_LOCATION_SELECTION';
+      }
     } else if (tool.id == 'chenggu') {
       final isoDate = RegExp(
         r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b',
