@@ -168,11 +168,11 @@ class AiTraceRecorder {
     String? route,
     String? mode,
   }) {
-    if (!_enabled) return const AiTraceContext.disabled();
+    if (!_enabled) return AiTraceContext.disabled();
     try {
       final startedAt = _clock();
       final traceId = _idFactory();
-      if (traceId.trim().isEmpty) return const AiTraceContext.disabled();
+      if (traceId.trim().isEmpty) return AiTraceContext.disabled();
       final context = AiTraceContext.enabled(
         traceId: traceId,
         startedAt: startedAt,
@@ -188,7 +188,7 @@ class AiTraceRecorder {
       return context;
     } catch (_) {
       // Failure to create an audit identifier must not block the user request.
-      return const AiTraceContext.disabled();
+      return AiTraceContext.disabled();
     }
   }
 
