@@ -476,6 +476,20 @@ class AssistantConversationOrchestrator {
               '你同时提到了${mentionedTerms.join('、')}。一次只查询一个节气；请重新发送一个明确的节气名称，例如“查询立春养生”。尚未执行查询。',
         );
       }
+      final asksForCurrentTerm = const [
+        '当前节气',
+        '今天的节气',
+        '现在的节气',
+      ].any(text.contains);
+      if (mentionedTerms.isEmpty && !asksForCurrentTerm) {
+        return AssistantDispatchDecision(
+          mode: selectedMode == AssistantMode.automatic
+              ? AssistantMode.tools
+              : selectedMode,
+          clarification:
+              '请明确要查询哪一个节气；也可以说“查询当前节气”。目前尚未执行查询。',
+        );
+      }
     }
 
     if (selectedMode != AssistantMode.automatic) {
