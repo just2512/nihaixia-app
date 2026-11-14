@@ -4909,7 +4909,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.historyRestore,
       text: transcript,
-      traceContext: const AiTraceContext.disabled(),
+      traceContext: AiTraceContext.disabled(),
       route: 'history_restore',
     )) {
       return;
@@ -4994,7 +4994,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    //
     if (activeTcmTask?.canAnswer == true) {
       if (imagePath != null || audioPath != null) {
         await _traceRecorder.record(
