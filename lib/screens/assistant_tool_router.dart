@@ -10,6 +10,7 @@ import '../services/meihua_tool_executor.dart';
 import '../services/chenggu_tool_executor.dart';
 import '../services/huangdi_siji_tool_executor.dart';
 import '../services/ziwei_tool_executor.dart';
+import '../services/solar_term_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -438,11 +439,50 @@ class AssistantToolRouter {
   static const solarTerms = AssistantToolDefinition(
     id: 'solar_terms',
     title: '节气养生',
-    description: '查看二十四节气知识、起居与食养资料。',
+    description: '在当前对话查询 App 已有节气计算结果及二十四节气知识资产；AI 只负责归纳和解释，不新增养生或个体医学结论。',
     modes: {AssistantMode.tools, AssistantMode.learning},
-    aliases: ['节气养生', '二十四节气', '节气知识'],
-    actionWords: ['查看', '学习', '查阅', '打开', '介绍'],
+    aliases: [
+      '节气养生',
+      '二十四节气',
+      '节气知识',
+      '立春',
+      '雨水',
+      '惊蛰',
+      '春分',
+      '清明',
+      '谷雨',
+      '立夏',
+      '小满',
+      '芒种',
+      '夏至',
+      '小暑',
+      '大暑',
+      '立秋',
+      '处暑',
+      '白露',
+      '秋分',
+      '寒露',
+      '霜降',
+      '立冬',
+      '小雪',
+      '大雪',
+      '冬至',
+      '小寒',
+      '大寒',
+    ],
+    actionWords: ['查询', '查看', '学习', '查阅', '打开', '介绍', '解释', '讲解', '比较', '对比'],
     builder: _buildSolarTerms,
+    headlessExecutor: SolarTermToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'term',
+        label: '目标节气',
+        type: AssistantToolParameterType.choice,
+        isRequired: false,
+        description: '不指定时读取 App 当前节气；指定时从现有二十四节气知识资产检索。',
+        choices: SolarTermToolExecutor.termNames,
+      ),
+    ],
   );
 
   static const yuxiaji = AssistantToolDefinition(
