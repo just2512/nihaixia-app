@@ -248,7 +248,7 @@ class AssistantConversationOrchestrator {
         methods.add('time');
       }
       final numberPair = RegExp(
-        r'(?:用|数字)?\\s*(\\d+)\\s*(?:和|与|、|，|,)\\s*(\\d+)',
+        r'(?:用|数字)?\s*(\d+)\s*(?:和|与|、|，|,)\s*(\d+)',
       ).firstMatch(query);
       if (query.contains('数字起卦') || query.contains('用数字') ||
           RegExp(r'(第一数|第二数|上卦数|下卦数)').hasMatch(query) ||
@@ -264,10 +264,10 @@ class AssistantConversationOrchestrator {
 
       if (uniqueMethods.contains('number')) {
         final first = RegExp(
-          r'(?:第一数|上卦数)\\s*(?:是|为)?\\s*[：:]?\\s*(\\d+)',
+          r'(?:第一数|上卦数)\s*(?:是|为)?\s*[：:]?\s*(\d+)',
         ).firstMatch(query);
         final second = RegExp(
-          r'(?:第二数|下卦数)\\s*(?:是|为)?\\s*[：:]?\\s*(\\d+)',
+          r'(?:第二数|下卦数)\s*(?:是|为)?\s*[：:]?\s*(\d+)',
         ).firstMatch(query);
         if (first != null) {
           values['first'] = first.group(1)!;
@@ -288,10 +288,10 @@ class AssistantConversationOrchestrator {
         }
 
         final upper = trigramValue(RegExp(
-          r'上卦\\s*(?:是|为)?\\s*[：:]?\\s*(乾|兑|離|离|震|巽|坎|艮|坤|[1-8])',
+          r'上卦\s*(?:是|为)?\s*[：:]?\s*(乾|兑|離|离|震|巽|坎|艮|坤|[1-8])',
         ));
         final lower = trigramValue(RegExp(
-          r'下卦\\s*(?:是|为)?\\s*[：:]?\\s*(乾|兑|離|离|震|巽|坎|艮|坤|[1-8])',
+          r'下卦\s*(?:是|为)?\s*[：:]?\s*(乾|兑|離|离|震|巽|坎|艮|坤|[1-8])',
         ));
         if (upper != null) values['upper'] = upper;
         if (lower != null) values['lower'] = lower;
@@ -299,7 +299,7 @@ class AssistantConversationOrchestrator {
           values['moving'] = '0';
         } else {
           final moving = RegExp(
-            r'(?:动爻\\s*[：:]?\\s*|第\\s*)([0-6])\\s*爻?(?:动)?',
+            r'(?:动爻\s*[：:]?\s*|第\s*)([0-6])\s*爻?(?:动)?',
           ).firstMatch(query);
           if (moving != null) values['moving'] = moving.group(1)!;
         }
