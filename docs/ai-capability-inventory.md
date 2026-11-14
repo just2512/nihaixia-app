@@ -1,6 +1,6 @@
 # AI、问诊与全应用功能能力盘点
 
-当前复核基线：`master` @ `67bb3597e9abb411627545a8e2a3b25105633c52`（2026-11-14）。下方早期日期章节保留为历史记录；当前能力数量和结论以本文末尾“2H 当前主线复核”覆盖旧快照。
+当前复核基线：`master` @ `3915a404200ed8721fbc7715261c5b5e7ac592f0`（2026-11-14）。下方早期日期章节保留为历史记录；当前能力数量和结论以本文末尾“2J 当前主线复核”覆盖旧快照。
 本文件只记录源码与测试能证明的现状；文档声明、静态布局测试和真实设备验收分开处理。状态采用 `EXISTS`、`PARTIAL`、`MISSING`、`UNKNOWN`，不以功能名称或 UI 文案代替验收。
 
 ## 1. 12 项计划落地矩阵
@@ -495,3 +495,46 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - OPPO Find N2 的 E4B GPU/CPU 多轮、图片/语音输入、Activity/进程恢复、数据清除后重启不可恢复和真实端到端 TRACE，均不能由 CI arm64 APK/Native tests 替代；未取得设备证据的项目保持 DEVICE UNKNOWN/PARTIAL。
 - 其余 15 个 Page-only 工具逐项做函数与数据来源盘点；只在存在可复用的确定性业务函数、行为基线清晰、结果有来源且输入缺项可安全澄清时才增加 Headless adapter，不为扩大数量批量迁移。
 - 不重复审核已经完成医学审核的知识库内容；书目 locator/纸本版本/卷页缺口仍是来源身份治理问题，与临床内容审核分开记录。
+
+
+---
+
+## 2J. 2026-11-14 PR #151 小六壬 Headless 集成后当前主线复核
+
+### 当前工具数量与分层
+
+- 复核基线：`master @ 3915a404200ed8721fbc7715261c5b5e7ac592f0`。
+- `AssistantToolRouter` 有 24 个定义：23 个常规页面工具入口 + 1 个特殊内联的 `structured_diagnosis`。
+- 23 个页面入口中 **9 项具备 Headless executor**：`yunqi`、`almanac`、`bazi`、`xiaoliuren`、`meihua`、`chenggu`、`huangdi_siji`、`ziwei`、`solar_terms`；其余 **14 项为 Page-only**。
+- `structured_diagnosis` 仍由确定性问诊控制器内联执行，不计入 Headless executor 数量。Page builder 与 Headless executor 可并存，页面打开不计为 Executed。
+
+### PR #151 交付边界
+
+- PR #151 最终 head：`eda34a85d917e58ac2afc8fe255d3f4349a8b4ac`；merge commit：`3915a404200ed8721fbc7715261c5b5e7ac592f0`。
+- 新增 `XiaoliurenToolExecutor`，复用页面既有农历日期换算及 `computeXiaoliuren` 纯函数；没有复制或修改小六壬月宫、日宫、时宫计算规则。
+- 必须明确提供公历日期、一个地支时辰，以及算法口径 `common`（通行掌诀）或 `duoneng`（《多能鄙事》卷八）；不默认为任何一种口径。两种算法的规则差异保留并列。
+- 农历输入、多日期、多时辰、冲突口径、缺参或非法参数均先澄清/拒绝执行；不会让 AI 猜测日期、时辰或口径。
+- 参数跨轮保存到现有 assistant message metadata，支持历史恢复和明确取消；不新增数据库表，不要求用户跳转小六壬页面。
+- 只有原有纯函数成功执行、结果契约校验通过并带 `local-engine:xiaoliuren`、`local-data:xiaoliuren-rule-data` 来源后，结果才进入对话，由 AI 解释实际结果。
+
+### 自动化验收证据
+
+- 分支验证 push run `43560093070` SUCCESS：Flutter static analysis、changed tests 和 test pairing 均通过。
+- PR workflow `43560097611` SUCCESS：Flutter 全量 regression job `132341891873` SUCCESS；Android arm64/Native job `132342897892` SUCCESS。
+- Android job 完成 arm64 Debug APK 构建、merged backup Manifest 检查、ABI/SHA-256、Android Native unit tests、JUnit XML 和 evidence artifact 上传。
+- merge 后 master Flutter tests run `43560857686` 与 Flutter Quality Gate run `43560857654` 在本节形成时均为 IN_PROGRESS；它们的 head_sha 必须与 `3915a404` 完全一致，终态未核验前不得记为 master CI PASS。
+- CI APK/Native unit tests 不等于 OPPO Find N2 真机 E4B 推理、GPU/CPU fallback、多媒体多轮、Activity/进程恢复或 TRACE 实测。
+
+### 下一项 D 候选
+
+- Yijing（`yijing`）目前为 Page-only；原有 `YiJingEngine` 已有 `castByNumbers`、`castByTime`、`castManual`、`castByCoins` 确定性方法。
+- 实施前分别锁定数字、当前时间、手动选卦、铜钱四种模式的输入和回放契约。当前时间只在用户明确指定“按当前时间”时由 App 读取；铜钱随机投掷必须由 App 生成并持久化六次真实结果，不能让模型编造随机值。
+- 下一 PR 仅适配原引擎与结果格式化，不重写卦象算法；四种模式未全部具备真实结果回传证据前，不宣称 Yijing 完整 Headless。
+
+### 未关闭边界
+
+- 自由文本症状问诊仍 PARTIAL / RELEASE BLOCKED：已审核医学知识库内容不重复审核；但自然语言 RedFlag detector 与所有生产模型入口调用前的 fail-closed 接入仍缺可追溯证据。不得编造 detector 规则，也不得把 `REVIEW_REQUIRED/UNKNOWN` 当作 CLEAR。
+- 用户希望的自由文本问诊闭环尚未交付：AI 理解症状、根据已有问诊十问识别缺项、只追问必要信息、后台调用原确定性规则、再解释真实结果。PR #146 只完成结构化问诊结果自动解释。
+- OPPO Find N2 真机 E4B 多轮、GPU/CPU、图片/语音、Activity/进程恢复、AI 数据清除后重启不可恢复和真实 TRACE 继续标为 DEVICE UNKNOWN/PARTIAL。
+- 书目 locator/纸本底本/卷页来源缺口独立治理；不重复审核已审核知识库。
+
