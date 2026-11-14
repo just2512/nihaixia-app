@@ -45,9 +45,10 @@ class XiaoliurenToolExecutor {
       return _failure(arguments, '缺少或无法识别时辰；请明确提供子时至亥时之一。');
     }
 
-    final ruleValue = arguments['rule']?.trim().isNotEmpty == true
-        ? arguments['rule']!.trim()
-        : 'common';
+    final ruleValue = arguments['rule']?.trim();
+    if (ruleValue == null || ruleValue.isEmpty) {
+      return _failure(arguments, '缺少起课口径；请明确选择通行掌诀或《多能鄙事》卷八口径。');
+    }
     final rule = switch (ruleValue) {
       'common' => XiaoliurenRule.common,
       'duoneng' => XiaoliurenRule.duoneng,
