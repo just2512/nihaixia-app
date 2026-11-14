@@ -2262,9 +2262,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // Reuse only a source-attributed App result, never free-form AI prose.
     for (final message in _messages.reversed) {
       if (message.isUser || message.sourceIds.isEmpty) continue;
-      final isAppResult =
-          (message.text.startsWith('【') && message.text.contains('执行结果】')) ||
-              message.text.contains('辨证结果');
+      final isAppToolResult =
+          message.text.startsWith('【') &&
+              message.text.contains('执行结果】') &&
+              message.sourceIds.any((sourceId) =>
+                  sourceId.startsWith('local-engine:'));
+      final isAppDiagnosisResult =
+          message.diagnosisResult != null &&
+              message.sourceIds.contains('local-engine:diagnostic-engine');
+      final isAppResult = isAppToolResult || isAppDiagnosisResult;
       if (!isAppResult) continue;
       final resultText = message.text.trim();
       contextParts.add(
