@@ -1,10 +1,10 @@
 # AI 能力静态/动态审计报告
 
-- 审计日期：2026-11-13（A/F 增量复核）
+- 审计日期：2026-11-14（PR #144/#145/#146 集成后增量复核）
 - 仓库：`just2512/nihaixia-app`
-- 最新复核基线：`master @ a2450f12220444225a33c4882d65ce4e4b9b3eab`（PR #122/#123/#124 文档集成后；应用运行时代码仍以 `07cae6810db412e608ff0d3e2c0dcf1c872105be` 为本轮审计基线）
+- 最新复核基线：`master @ 67bb3597e9abb411627545a8e2a3b25105633c52`
 - 约束来源：`docs/ai-capability-audit.md`、`docs/ai-modernization-execution-ledger.md`
-- 方法：本轮增量复核 PR #117/#119/#120 的当前主线代码、专项测试和 Actions 结果；未重新执行全仓逐层审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
+- 方法：按最新主线增量核对 AssistantToolRouter、参数抽取、Headless executor 清单、结构化问诊结果链、PR/merge SHA 与 Actions；未重新执行全仓逐层静态审计，未执行 Find N2 真机测试。历史章节的旧 SHA 只代表当时审计快照。
 
 ## 1. 审计结论
 
@@ -15,7 +15,7 @@
 | A 多轮稳定性 | PARTIAL | Native Activity teardown 串行化、SQLite 原子轮次与错误可见性已有 CI 证据；Find N2 GPU/CPU、媒体和进程恢复 TRACE 未闭环 |
 | B 红旗安全 | PARTIAL / RELEASE BLOCKED | preflight provenance 契约存在；自然语言 detector、全生产入口 fail-closed 和医学审核仍缺失 |
 | C 检索基线 | PARTIAL / NOT VERIFIED | 已复核 83 个 distinct sourceId 的本地资产存在性、身份和正文命中语境；83/83 bibliographic locator 仍 MISSING，纸本底本/版本/卷页/影像未核验 |
-| D Headless Capability | PARTIAL | 主线已有 2 项 Headless/Executed（yunqi、almanac）；其余 22 项仍为 Page-only，结构化问诊为内联流程 |
+| D Headless Capability | PARTIAL | 当前 24 个工具定义中，23 个页面工具入口有 6 项 Headless executor（yunqi、almanac、bazi、meihua、chenggu、huangdi_siji），17 项仍 Page-only；structured_diagnosis 为单独内联确定性流程 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
 | F TRACE | PARTIAL | 已覆盖检索/上下文、Orchestrator/Headless、结构化问诊 per-turn；#113 补 Headless 结果契约失败终态，#114 补 Page Tool 结果延续，#115 补普通发送/症状整理 finalRender；Find N2 场景集 TRACE 仍未闭环 |
 | G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 一致性 guard 已合并；当前 master post-merge CI 需以最新 SHA 的两条独立 push workflow 为准 |
@@ -863,3 +863,39 @@ AI 只能解释和归纳已有结果，不得新增/修改辨证规则结果、�
 4. 完成“清除全部 AI 数据”后的重启核验，确认会话、问诊快照、附件原件、缩略图和孤儿文件的删除范围。
 
 - 冻结：不修改诊断、排盘、剂量或民俗算法；不重复审核已审核知识库；不批量迁移 Page Tool；不新增 Agent/DAG、云 API、向量数据库或第二套 Orchestrator。
+
+
+---
+
+## 30. 2026-11-14 PR #144/#145/#146 集成后增量复核
+
+### 30.1 代码与集成结果
+
+- PR #144（称骨）最终 head `e0d8eddc9155ffd5dd8c670e3db6eedaba26ffe2`，merge master `34906712b42c78a4e6ff5e60172ae9517d16d657`。复用既有称骨/历法函数和结果格式化，不复制算法。
+- PR #145（黄帝四季歌）最终 head `8f9ffb1816f48cfbc0b9234f8248322e93720052`，merge master `d328afbd6d346ba9cfbf06fe289020fc79e86186`。复用原页面的历法换算、时辰映射和数据，不复制业务规则。
+- PR #146（规则问诊结果自动解释）最终 head `a42af20a29fe6f5c64bf1cf5afe32b57716bc061b`，merge master `67bb3597e9abb411627545a8e2a3b25105633c52`。仅改 `local_ai_interview_screen.dart` 与其 widget test，没有修改 `DiagnosticEngine`、`DiagnosticRules` 或知识库。
+- PR #146 在问诊结果消息、completed task snapshot 持久化成功、可见对话上下文恢复成功、本地模型状态 ready 且来源 ID 存在时，自动请求解释；未完成任务、结果缺失、持久化失败、上下文恢复失败或模型未就绪时不自动解释。历史结果仍保留手动解释入口。
+- 解释 prompt 明确限制为归纳解释 App 已返回字段和已检索来源；不重新辨证、不新增诊断、处方、药物或剂量，不把知识库上下文升级成新的个体诊断依据。
+
+### 30.2 自动化验收证据
+
+- PR #144：Flutter regression 与 Android arm64/Native CI run `43458542859` SUCCESS；push workflow `43458531935` SUCCESS。PR workflow 中 Branch validation 为 SKIPPED，不计 PASS。
+- PR #145：Flutter regression 与 Android arm64/Native CI run `43543965618` SUCCESS；最终 head 对应 push workflow `43543961251` SUCCESS。
+- PR #146：最终 head 独立 Branch validation run `43547647496` SUCCESS；PR full run `43547653711` SUCCESS，其中 Flutter regression job `132302637020` 和 Android arm64/Native job `132303970143` 均 SUCCESS。后者完成 APK ABI 构建、merged backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 与 evidence artifact 上传。
+- merge SHA `67bb3597` 的 post-merge Flutter tests run `43548507345` 与 Flutter Quality Gate run `43548507387` 在本报告生成时为 QUEUED；因此主线 post-merge CI 暂记 IN_PROGRESS，后续必须复核两条 run 终态，不能以 PR CI 代替。
+
+### 30.3 D：当前确定性能力数量
+
+- `AssistantToolRouter` 当前源码有 24 个工具定义：23 个页面工具入口及一个由统一助手特殊处理的 `structured_diagnosis`。
+- 23 个页面工具入口中 6 项声明 Headless executor：`yunqi`、`almanac`、`bazi`、`meihua`、`chenggu`、`huangdi_siji`；17 项仍为 Page-only。Page builder 与 Headless 可并存，不应重复相加。
+- `structured_diagnosis` 是现有控制器驱动的确定性内联问诊流程，不作为通用 Headless adapter 计数。
+- “具备 executor”不等于每个设备场景都已完成真实运行验收。只有本轮实际执行、参数校验、结果契约、来源 ID 和消息回传全部有证据时，才记录为 Executed。
+
+### 30.4 未关闭事项与发布边界
+
+- 自由文本症状问诊仍 PARTIAL / RELEASE BLOCKED：RedFlagGate 有 fail-closed 策略契约，但医学审核自然语言 detector 和 Flutter/Native 所有生产模型入口的前置接入仍缺失。医学知识库已审核不等于 detector 已审核；不重复审核知识库，也不编造 detector 词表。
+- 用户所要求的“先理解自由文本，只追问缺失的必要信息，再后台运行规则问诊”尚未完成。PR #146 只完成已有结构化规则结果的自动解释，不将十问直接替换为自然语言问诊。
+- 其余简单工具请求继续使用确定性意图/槽位匹配；复杂歧义才进入受约束澄清。没有必要的请求不增加模型调用。
+- A/E/F：OPPO Find N2 的 GPU/CPU 多轮、图片/语音、Activity/进程恢复和端到端真实 TRACE 仍 DEVICE UNKNOWN；CI arm64 APK 不替代实机运行。
+- C：既有知识库临床审核不重复开展；书目 locator/纸本版本/卷页等来源身份缺口与临床内容审核是不同工作，按来源材料缺失状态继续记录。
+- 不改诊断/排盘/剂量算法，不批量迁移 Page Tool，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
