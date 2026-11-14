@@ -562,7 +562,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 - 分支验证 run `43563718624` SUCCESS：静态分析与变更测试/测试配对通过。
 - PR workflow `43563859567` SUCCESS：Flutter regression job `132353274615` SUCCESS；Android arm64 CI job `132354564040` SUCCESS。Android job 完成 Debug APK 构建、backup Manifest、ABI/SHA-256、Native unit tests、JUnit XML 和 evidence artifacts 上传。
-- merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 的 post-merge Flutter tests run `43564609205` 与 Flutter Quality Gate run `43564609235` 当前仍在执行；只有两条 run 的 head_sha 与 merge SHA 完全一致且终态 SUCCESS，才可记为 master CI PASS。
+- merge SHA `59ca2a746d8dc4d29abb06f52697d02ce52a26df` 的 post-merge Flutter tests run `43564609205` 与 Flutter Quality Gate run `43564609235` 均已在相同 head SHA 上完成，终态均为 SUCCESS。Flutter tests 包含 Flutter 全量回归、Android arm64 CI Debug APK、备份 Manifest、ABI/SHA-256 与 Android local unit tests；Quality Gate 包含 Dart 全量测试、Native unit tests 与 Find N2 arm64 Debug APK。
 - CI arm64 APK 和 Native unit tests 不等于 OPPO Find N2 实机端 E4B 推理、GPU/CPU、多媒体、多轮、Activity/进程恢复和端到端 TRACE 验收。
 
 ### 未关闭事项
