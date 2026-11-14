@@ -1897,3 +1897,49 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 未经 App 执行、参数/结果契约校验且无可靠 sourceIds 的内容，不作为业务事实交给 AI。
 - 不允许 AI 推断覆盖规则，不允许把模型归纳包装成医学诊断。
 - 不重复医学审核已审核知识库，不批量迁移 Page-only，不降低安全门禁或测试验收标准。
+
+---
+
+## 41. 2026-11-14 PR #163：小儿关煞助手对话内 Headless 执行
+
+### 41.1 基线与集成
+
+- 基线：master @ 76330d41cd828fe4fbb16af64e9ef415c4bfea21。
+- PR：https://github.com/just2512/nihaixia-app/pull/163；独立分支：work/ai-guansha-headless-2026-11-14。
+- PR 最终 head：890dd6b120f59c3b4c772b9b748c578cc020157f；squash merge SHA / 当前主线：c2ae6448ce209b7e3ec3d51aa18532663b35467d。
+- 变更范围：assistant_tool_router.dart、local_ai_interview_screen.dart、assistant_conversation_orchestrator.dart、bazi_tool_executor.dart、新增 guansha_tool_executor.dart 及三组相关回归测试。规范文件 docs/ai-capability-audit.md 未修改。
+
+### 41.2 实现边界
+
+- 新增 GuanshaToolExecutor，复用 App 既有 computeBaZiPaipan、matchGuansha、真太阳时/早晚子时设置和本地城市目录；只抽出八字工具已有的严格出生地解析器供复用，没有复制或改写八字/关煞规则。
+- 必须显式取得公历出生日期、当地钟表时间、性别和出生地点。日期遵循原页面 1920 年至当天范围，时间严格为 24 小时制 HH:mm；地点只有本地城市目录唯一匹配时才执行。缺项逐轮追问；歧义地点继续澄清；不填充页面示例日期、默认时间或默认经纬度。
+- 简单、明确的结构化输入先由确定性解析器处理；只有用户原话存在出生信息线索且仍有缺项时，才复用现有 Bazi slot extractor。模型抽取值必须有用户原文逐字证据并通过既有参数 schema 校验，失败就回到确定性追问；不让模型猜测出生资料。
+- 当前助手会话内完成参数合并、待执行状态保存/恢复、取消与 Headless 执行。取消时记录 CANCELLED，不调用业务引擎、不调用模型解释。
+- 成功结果包含四柱、农历、命中数量、实际命中条目、规则库范围和实际输入；结果附 local-engine:guansha、local-data:guansha、local-data:city-locations 来源。经工具 ID、参数匹配、执行状态、结果结构及来源契约验证后，才交给 AI 归纳解释。
+- 关煞解释提示明确限定为传统民俗文化文本，不是科学事实、命运预测或医学诊断；不得把关煞、身体部位或化解文字解释为儿童疾病/健康风险，不给出治疗、用药建议，不鼓励恐吓、惩罚或限制儿童，也不得延误就医。
+- 不修改 DiagnosticEngine、DiagnosticRules、问诊十问、剂量计算、八字/关煞计算规则或已审核医学知识库内容；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+
+### 41.3 自动化验收
+
+- 分支验证 push run 43600907066：SUCCESS（最新 head 890dd6b）。
+- PR workflow run 43600911523：SUCCESS，head 890dd6b。Flutter regression job 132465252938 SUCCESS；Android arm64 job 132466566609 SUCCESS，包含 Debug APK 构建、合并 Manifest/备份配置、ABI/SHA-256、Android Native 单测、JUnit XML 与工件上传。
+- PR artifacts：android-arm64-ci-debug-abi-evidence id 14116890626；android-unit-test-reports id 14117045230；AI retrieval golden snapshot id 14115784702。
+- PR 初始测试曾暴露一项旧 Page navigation 断言与新 Headless 行为不一致；已将该断言改为只覆盖仍为 Page-only 的两项工具，并保留其真实结果回传检查。另新增当前对话中的关煞取消持久化回归测试；最终 head 的 Flutter 全量回归和 Android 全量门禁均通过。
+- 合并后 master Flutter tests run 43601665980 与 Flutter Quality Gate run 43601665970 在本节记录时为 IN_PROGRESS；只有二者在 merge SHA c2ae6448ce209b7e3ec3d51aa18532663b35467d 上终态 SUCCESS 后才可补记为 PASS。PR CI 不替代 post-merge master CI。
+
+### 41.4 当前能力分层与未关闭事项
+
+- AssistantToolRouter 仍为 24 个定义：23 个常规工具入口 + 1 个确定性问诊控制器内联的 structured_diagnosis。
+- 常规工具中 14 项具备 Headless executor：yunqi / almanac / bazi / xiaoliuren / meihua / chenggu / huangdi_siji / ziwei / solar_terms / yijing / dosage / ziwu_liuzhu / dream / guansha；9 项仍为 Page-only：guji_library / knowledge_hub / medical_cases / diagnosis_history / critical_illness / yuxiaji_omen / sanshan_lingqian / shousheng_debt / saved_charts。structured_diagnosis 仍由原规则问诊控制器执行，不计入通用 Headless 数量。
+- B 红旗安全仍 PARTIAL / RELEASE BLOCKED：生产自然语言 detector 的医学审核版本、审核记录、阈值/例外/处置文案和全部 Flutter/Native 模型入口前 fail-closed 证据仍未齐备。不能因此开放自由文本自动症状辨证，也不能自行编造医学规则。
+- 用户要求的自由文本问诊闭环仍未交付：AI 理解症状描述、提取候选字段、仅追问必要缺项、用户确认后调用原 DiagnosticEngine、最后解释真实结果。须先满足 B 的生产安全门禁；当前不改十问顺序或辨证规则。已医学审核的知识库不重复审核。
+- A/E/F 仍需 OPPO Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复及端到端 TRACE；CI APK/Native 测试不等于真机验收。
+- C 继续只补可追溯的 locator、底本版本、卷页/原文身份缺口；不推测或补造来源，不重复审核已审核医学知识。
+- D 下一项已完成独立准备但尚未接入对话的是受生债：分支 work/ai-shousheng-headless-contract-2026-11-14 已有复用原八字与两套本地受生债表的执行器和参数/来源契约测试；push run 43600621825 的静态分析及变更测试 SUCCESS。该分支仍以旧基线为起点、没有路由/会话集成，不能计为 Headless 或 Executed Capability。待本次文档与主线 CI 收敛后，基于新 master 完成路由、缺参追问、跨轮持久化/恢复、取消、真实结果校验和解释测试，再走完整 PR/Android CI。
+- 继续逐项审计其余 Page-only 工具的原代码、输入/输出、来源、取消/恢复和隐私边界；不以 Headless 数量增长为目标，不批量迁移知识库页面。
+
+### 41.5 不变边界
+
+- AI 是交互与理解中枢，不是规则和计算引擎；确定性业务继续由 App 原有代码执行。
+- 未经真实业务执行、参数/结果校验且没有可靠来源 ID 的内容，不作为业务事实交给 AI。
+- AI 的总结/推断不得覆盖业务结果或包装成医学诊断；不重复审核已审核知识库，不降低安全门禁和验收标准。
