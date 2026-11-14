@@ -5415,6 +5415,47 @@ void mainRedFlagEntrypointOrderingTests() {
       expect(events, ['gate:currentText', 'intent']);
       expect(service.intentQueries, ['我想排盘']);
     });
+
+    testWidgets('未配置 Gate 时记录 NOT_APPLICABLE 而不伪造 CLEAR，也不静默关闭助手', (tester) async {
+      final intentEvents = <String>[];
+      final traceEvents = <AiTraceEvent>[];
+      final service = _OrderedIntentSendService(intentEvents);
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (event) async => traceEvents.add(event),
+        idFactory: () => 'cccccccccccccccccccccccccccccccc',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            traceRecorder: recorder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '请介绍中医里的阴阳概念');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(intentEvents, ['intent']);
+      expect(service.intentQueries, ['请介绍中医里的阴阳概念']);
+      final redFlagEvent = traceEvents.singleWhere(
+        (event) => event.stage == AiTraceStage.redFlag,
+      );
+      expect(redFlagEvent.status, AiTraceStatus.notApplicable);
+      expect(redFlagEvent.errorCode, 'REDFLAG_GATE_NOT_CONFIGURED');
+      expect(
+        traceEvents.where((event) => event.stage == AiTraceStage.redFlag)
+            .every((event) => event.status != AiTraceStatus.succeeded),
+        isTrue,
+      );
+    });
+
   });
 }
 
