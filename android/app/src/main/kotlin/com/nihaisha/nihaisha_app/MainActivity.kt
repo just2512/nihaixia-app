@@ -259,31 +259,24 @@ class MainActivity : FlutterActivity() {
     /**
      * Native MethodChannel boundary for all model-facing calls.
      *
-     * With no reviewed detector injected, this bridge reports no CLEAR verdict
-     * and retains legacy behavior for now; B remains release-blocked. The
-     * Flutter-side injectable seam is exercised separately. Once a reviewed
-     * detector/policy is approved, injection enables fail-closed native calls.
+     * A missing or unreviewed detector must not become implicit CLEAR. The
+     * Flutter seam blocks first; this native boundary prevents MethodChannel
+     * bypasses and remains closed until a reviewed detector is injected.
      */
     private fun runAiTaskAfterNativeRedFlag(
         result: MethodChannel.Result,
         input: NativeRedFlagInput,
         task: () -> Any?
     ) {
-        val detector = nativeRedFlagDetector
-        if (detector == null) {
-            runAiTask(result, task)
-            return
-        }
-        val verdict = NativeRedFlagExecutionBoundary(detector).evaluate(input)
-        if (verdict.status != NativeRedFlagStatus.CLEAR) {
+        val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
+            .runBefore(input) { runAiTask(result, task) }
+        if (!execution.executed) {
             result.error(
-                "REDFLAG_${verdict.status.name}",
-                "普通模型调用未通过安全评估：${verdict.reason}",
+                "REDFLAG_${execution.verdict.status.name}",
+                "普通模型调用未通过安全评估：${execution.verdict.reason}",
                 null
             )
-            return
         }
-        runAiTask(result, task)
     }
 
     private fun runAiTask(result: MethodChannel.Result, task: () -> Any?) {
