@@ -34,7 +34,7 @@ const Map<String, String> kGanToMeridian = {
 };
 
 String _sourcePath() {
-  const relativePath = 'lib/screens/ziwuliuzhu_screen.dart';
+  const relativePath = 'lib/services/ziwuliuzhu_calculation_service.dart';
   var directory = Directory.current;
   for (var i = 0; i < 5; i++) {
     final candidate = '${directory.path}/$relativePath';
@@ -45,6 +45,17 @@ String _sourcePath() {
 }
 
 String _readSource() => File(_sourcePath()).readAsStringSync();
+
+String _readScreenSource() {
+  const relativePath = 'lib/screens/ziwuliuzhu_screen.dart';
+  var directory = Directory.current;
+  for (var i = 0; i < 5; i++) {
+    final candidate = '${directory.path}/$relativePath';
+    if (File(candidate).existsSync()) return File(candidate).readAsStringSync();
+    directory = directory.parent;
+  }
+  throw StateError('找不到 $relativePath，cwd=${Directory.current.path}');
+}
 
 String _stripLineComments(String source) => source
     .split('\n')
@@ -79,7 +90,7 @@ String _bracketBlockOf(
 
 List<WuMenEntry> _parseWuMen() {
   final source = _stripLineComments(_readSource());
-  final block = _bracketBlockOf(source, '_wuMen = ', '_wuMen', '[', ']');
+  final block = _bracketBlockOf(source, 'wuMen = ', 'wuMen', '[', ']');
   final entryPattern = RegExp(
     r"\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*\)",
   );
@@ -98,24 +109,12 @@ List<WuMenEntry> _parseWuMen() {
 
 Map<String, String> _parseBenXue() {
   final source = _stripLineComments(_readSource());
-  final block = _bracketBlockOf(source, '_benXue = ', '_benXue', '{', '}');
+  final block = _bracketBlockOf(source, 'benXueByMeridian = ', 'benXueByMeridian', '{', '}');
   final entryPattern = RegExp(r"'([^']+)'\s*:\s*'([^']+)'");
   return Map.fromEntries(
     entryPattern
         .allMatches(block)
         .map((match) => MapEntry(match.group(1)!, match.group(2)!)),
-  );
-}
-
-Map<String, String> _parseUiWuMenTable() {
-  final source = _stripLineComments(_readSource());
-  final rowPattern = RegExp(
-    r"Row\(children:\s*\[Expanded\(child:\s*Text\('([^']+合化[^']+)'\)\),\s*Text\('([^']+)'\)\]\)",
-  );
-  final rows = rowPattern.allMatches(source).toList();
-  expect(rows, hasLength(5), reason: '五门十变 UI 表应恰有 5 行');
-  return Map.fromEntries(
-    rows.map((match) => MapEntry(match.group(1)!, match.group(2)!)),
   );
 }
 
@@ -187,12 +186,21 @@ void main() {
       }
     });
 
-    test('_wuMen 常量与硬编码五门十变 UI 表逐行一致', () {
-      final expectedUiRows = <String, String>{
-        for (final entry in _parseWuMen())
-          '${entry.a}${entry.b}合化${entry.element}': entry.acupoints,
-      };
-      expect(_parseUiWuMenTable(), expectedUiRows);
+    test('页面五门十变 UI 直接读取共享计算服务，不维护第二份常量', () {
+      final screen = _stripLineComments(_readScreenSource());
+      final entries = _parseWuMen();
+
+      expect(entries, hasLength(5));
+      expect(
+        screen,
+        contains('ZiWuLiuZhuCalculationService.wuMen.map'),
+        reason: '页面必须从共享服务的唯一五门十变表生成 UI',
+      );
+      expect(
+        screen,
+        contains('ZiWuLiuZhuCalculationService.wuMenInfo(gan)'),
+        reason: '页面显示的十干摘要必须调用共享服务',
+      );
     });
   });
 
