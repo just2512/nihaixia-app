@@ -268,7 +268,19 @@ class MainActivity : FlutterActivity() {
         input: NativeRedFlagInput,
         task: () -> Any?
     ) {
-        val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
+        val detector = nativeRedFlagDetector
+        if (detector == null) {
+            // B2 is an injectable seam, not activation of an unreviewed
+            // medical detector. Keep the existing product flow available,
+            // but do not claim CLEAR; B remains RELEASE BLOCKED.
+            android.util.Log.w(
+                "NativeRedFlagGate",
+                "REDFLAG_GATE_NOT_CONFIGURED: native inference remains NOT_APPLICABLE"
+            )
+            runAiTask(result, task)
+            return
+        }
+        val execution = NativeRedFlagExecutionBoundary(detector)
             .runBefore(input) { runAiTask(result, task) }
         if (!execution.executed) {
             result.error(
