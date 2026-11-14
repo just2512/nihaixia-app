@@ -5436,6 +5436,12 @@ void mainRedFlagEntrypointOrderingTests() {
         ),
       );
       await tester.pumpAndSettle();
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), '请介绍中医里的阴阳概念');
       await tester.pump();
