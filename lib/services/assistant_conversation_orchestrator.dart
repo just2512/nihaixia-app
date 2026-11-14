@@ -230,10 +230,10 @@ class AssistantConversationOrchestrator {
       }
     } else if (tool.id == 'ziwu_liuzhu') {
       final isoDates = RegExp(
-        r'(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})',
+        r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
       ).allMatches(query).toList(growable: false);
       final chineseDates = RegExp(
-        r'(\\d{4})年(\\d{1,2})月(\\d{1,2})日?',
+        r'(\d{4})年(\d{1,2})月(\d{1,2})日?',
       ).allMatches(query).toList(growable: false);
       final dateValues = <String>{
         for (final match in [...isoDates, ...chineseDates])
@@ -257,7 +257,7 @@ class AssistantConversationOrchestrator {
       }
 
       final timeMatches = RegExp(
-        r'(?<!\\d)([01]?\\d|2[0-3])[:：]([0-5]\\d)(?!\\d)',
+        r'(?<!\d)([01]?\d|2[0-3])[:：]([0-5]\d)(?!\d)',
       ).allMatches(query).toList(growable: false);
       final timeValues = timeMatches
           .map((match) =>
