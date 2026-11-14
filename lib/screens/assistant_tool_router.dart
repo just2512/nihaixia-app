@@ -761,8 +761,17 @@ class AssistantToolRouter {
       if (mode != AssistantMode.automatic && !tool.modes.contains(mode)) {
         return false;
       }
-      return tool.aliases.any(normalized.contains) &&
-          tool.actionWords.any(normalized.contains);
+      final hasAction = tool.actionWords.any(normalized.contains);
+      if (tool.id == 'dosage') {
+        final hasExplicitConversionUnit = RegExp(
+          r'(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)',
+        ).hasMatch(normalized);
+        final hasExplicitToolName = tool.aliases.any(normalized.contains);
+        // Only route a quantity/unit conversion request. Mentions of medicine
+        // dosage or a unit without a conversion action are not enough.
+        return hasAction && (hasExplicitToolName || hasExplicitConversionUnit);
+      }
+      return tool.aliases.any(normalized.contains) && hasAction;
     }).toList(growable: false);
   }
 
