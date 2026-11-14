@@ -293,6 +293,37 @@ class AssistantConversationOrchestrator {
       ).firstMatch(query);
       final place = birthplace?.group(1)?.trim();
       if (place != null && place.isNotEmpty) values['birthplace'] = place;
+    } else if (tool.id == 'ziwei') {
+      final isoDate = RegExp(
+        r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
+      ).firstMatch(query);
+      final chineseDate =
+          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
+      final dateMatch = isoDate ?? chineseDate;
+      final dateIsLunar = query.contains('农历') || query.contains('阴历');
+      if (dateIsLunar) {
+        values['birth_date'] = 'LUNAR_DATE_NOT_SUPPORTED';
+      } else if (dateMatch != null) {
+        values['birth_date'] =
+            '${dateMatch.group(1)!.padLeft(4, '0')}-'
+            '${dateMatch.group(2)!.padLeft(2, '0')}-'
+            '${dateMatch.group(3)!.padLeft(2, '0')}';
+      }
+      final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(query);
+      if (timeMatch != null) {
+        values['birth_time'] =
+            '${timeMatch.group(1)!.padLeft(2, '0')}:${timeMatch.group(2)}';
+      }
+      final hasMale = query.contains('男性') || query.contains('男');
+      final hasFemale = query.contains('女性') || query.contains('女');
+      if (hasMale != hasFemale) {
+        values['gender'] = hasMale ? 'male' : 'female';
+      }
+      final birthplace = RegExp(
+        r'出生(?:地点|地)\s*[：:]\s*([^,，;；\n]+)',
+      ).firstMatch(query);
+      final place = birthplace?.group(1)?.trim();
+      if (place != null && place.isNotEmpty) values['birthplace'] = place;
     } else if (tool.id == 'meihua') {
       final isTime = query.contains('时间起卦') || query.contains('按时间起卦');
       final isRandom = query.contains('随机起卦');

@@ -11,11 +11,11 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/guansha_screen.dart';
 import 'package:nihaisha_app/screens/shousheng_debt_screen.dart';
 import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
-import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/bazi_tool_executor.dart';
+import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
 
 
 const _readyStatus = LocalAiModelStatus(
@@ -618,10 +618,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('紫微排盘完整十二宫和大限解读回到助手本地模型上下文',
+  testWidgets('紫微助手在对话中调用本地引擎并把完整十二宫结果交给 AI 解读',
       (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
+    const expectedArguments = <String, String>{
+      'birth_date': '1990-06-15',
+      'birth_time': '10:00',
+      'gender': 'male',
+      'birthplace': '上海市',
+    };
+    String? enginePreparationError;
+    final preparedResult = await tester.runAsync(() async {
+      try {
+        return await ZiweiToolExecutor.execute(expectedArguments);
+      } catch (error, stackTrace) {
+        enginePreparationError = '$error\\n$stackTrace';
+        rethrow;
+      }
+    });
+    expect(
+      preparedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '本地紫微引擎准备真实结果失败：$enginePreparationError',
+    );
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
@@ -634,74 +657,83 @@ void main() {
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
           testToolRouteBuilder: (tool, _) {
-            if (tool.id == 'ziwei') {
-              return ZiweiChartScreen(
-                returnResultOnComplete: true,
-                initialSolar: DateTime(1990, 6, 15, 10),
-                initialGender: true,
-                initialLng: 120,
-                initialLat: 30,
-              );
-            }
+            if (tool.id == 'ziwei') pageOpened = true;
             return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            executedResult = preparedResult;
+            return preparedResult!;
           },
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我排紫微斗数');
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextField),
+      '帮我排紫微斗数；出生日期：1990-06-15；出生时间：10:00；性别：男；出生地：上海市',
+    );
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
-    expect(find.text('打开紫微斗数排盘'), findsOneWidget);
 
-    await tester.tap(find.text('打开紫微斗数排盘'));
-    await tester.pumpAndSettle();
-    expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('返回 AI 助手'));
-    await tester.pumpAndSettle();
-
+    expect(pageOpened, isFalse);
+    expect(find.text('打开紫微斗数排盘'), findsNothing);
+    expect(executedArguments, expectedArguments);
+    expect(
+      executedResult?.status,
+      AssistantToolExecutionStatus.succeeded,
+      reason: '必须只把本地紫微引擎的有效结果交给助手；失败原因：${executedResult?.values['未执行原因']}',
+    );
+    expect(executedResult?.validateFor('ziwei'), isEmpty);
+    expect(
+      executedResult?.validateArgumentsMatch(executedArguments!),
+      isEmpty,
+    );
+    expect(service.modelCalls, 1);
     expect(service.restoredTranscript, contains('【紫微斗数排盘完整结果】'));
     expect(service.restoredTranscript, contains('【十二宫星曜】'));
     expect(service.restoredTranscript, contains('整体运势：'));
     expect(service.restoredTranscript, contains('大限解读：'));
     expect(service.restoredTranscript, contains('生年四化：'));
+    expect(service.restoredTranscript, contains('出生时间：1990-06-15 10:00'));
     expect(
-      store.savedMessages.any((message) =>
-          message['role'] == 'assistant' &&
-          (message['content'] as String).contains('【十二宫星曜】')),
-      isTrue,
+      service.sentTexts.single,
+      contains('自动总结并解释实际输入、关键输出、字段含义'),
     );
-    final ziweiResultMessage = store.savedMessages.firstWhere(
+    final resultMessage = store.savedMessages.firstWhere(
       (message) =>
           message['role'] == 'assistant' &&
           (message['content'] as String).contains('【紫微斗数排盘完整结果】'),
     );
-    final ziweiMetadata = AssistantMessageMetadata.decode(
-      ziweiResultMessage['metadata'] as String,
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
     );
-    expect(ziweiMetadata.toolId, 'ziwei');
-    expect(ziweiMetadata.toolStatus, 'SUCCEEDED');
-    expect(ziweiMetadata.sourceIds, const ['local-page-tool:ziwei']);
+    expect(metadata.toolId, 'ziwei');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, expectedArguments);
+    expect(metadata.sourceIds, const [
+      'local-engine:ziwei',
+      'local-data:city-locations',
+    ]);
     expect(
-      ziweiMetadata.sourceIds,
-      isNot(contains('local-engine:ziwei')),
-      reason: '旧 Page Tool 字符串只证明页面结果回传，不伪称底层引擎来源',
+      metadata.sourceIds,
+      isNot(contains('local-page-tool:ziwei')),
     );
-    expect(service.restoredTranscript, isNot(contains('身体留意')));
-    expect(service.modelCalls, 1);
-    expect(service.sentTexts.single, contains('总结并解释'));
     expect(
-      store.savedMessages.any((message) =>
-          message['role'] == 'assistant' &&
-          (message['content'] as String).contains('已收到：')),
-      isTrue,
+      store.savedMessages.where((message) =>
+          message['role'] == 'user' &&
+          (message['content'] as String).contains('总结并解释刚才由 App 本地引擎返回')),
+      isEmpty,
     );
     expect(tester.takeException(), isNull);
   });
-
 
   testWidgets('三种民俗 Page Tool 将真实计算结果交给助手，并可调用 AI 解释',
       (tester) async {
