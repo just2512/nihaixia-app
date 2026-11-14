@@ -1825,7 +1825,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库；不批量迁移 Page-only 工具。
 
 
-## 38.7 D：PR #159 周公解梦对话内执行（自动验收中）
+## 38.7 D：PR #159 周公解梦对话内执行（PR 与合并后 CI 验收通过）
 
 - PR：https://github.com/just2512/nihaixia-app/pull/159；独立分支：`work/dream-headless-in-chat-2026-11-14`；PR 最终 head：`f1788b1de3f0aacc4e60aa028d6a8f81c3572831`；squash merge：`56ca614e5bdd5d0970afdc4d2a5e798f2d84d9c0`。
 - 将原 Page-only `dream` 接入现有 `AssistantToolRouter` Headless 执行链。缺少梦境情节时在当前对话追问；多义关键词保留数据集原始顺序候选，等待用户补充，不取第一条、不按模型相关度排序；支持待补状态持久化/历史恢复及取消。
