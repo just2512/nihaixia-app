@@ -4581,7 +4581,7 @@ void main() {
       'first': '3',
       'second': '7',
     });
-    expect(find.textContaining('【易经起卦结果执行结果】'), findsOneWidget);
+    expect(find.textContaining('【易经起卦执行结果】'), findsOneWidget);
     expect(pageOpened, isFalse);
     expect(service.sentTexts, hasLength(1));
     expect(service.sentTexts.single, contains('易经起卦结果'));
@@ -4591,7 +4591,7 @@ void main() {
       conversationId: conversations.single['id'] as int,
     );
     final resultRow = rows.firstWhere(
-      (row) => (row['content'] as String).contains('【易经起卦结果执行结果】'),
+      (row) => (row['content'] as String).contains('【易经起卦执行结果】'),
     );
     final metadata = AssistantMessageMetadata.decode(
       resultRow['metadata'] as String,
@@ -4650,7 +4650,7 @@ void main() {
       'lower': '8',
       'moving': '0',
     });
-    expect(find.textContaining('【易经起卦结果执行结果】'), findsOneWidget);
+    expect(find.textContaining('【易经起卦执行结果】'), findsOneWidget);
     expect(service.sentTexts, hasLength(1));
     expect(tester.takeException(), isNull);
   });
