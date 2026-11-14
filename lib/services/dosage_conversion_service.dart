@@ -86,6 +86,12 @@ class DosageConversionService {
       errors.add('单位不在 App 当前换算器支持范围内');
       return List.unmodifiable(errors);
     }
+    if (standard != null &&
+        standard.isNotEmpty &&
+        !standardIds.contains(standard)) {
+      errors.add('度量标准不在允许范围内');
+      return List.unmodifiable(errors);
+    }
     if (isWeightUnit(unit)) {
       if (standard == null || standard.isEmpty) {
         errors.add('重量单位必须明确选择汉制、台制或唐制');
