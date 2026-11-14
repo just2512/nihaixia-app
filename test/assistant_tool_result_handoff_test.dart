@@ -9,6 +9,8 @@ import 'package:nihaisha_app/screens/yijing_result_screen.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
+import 'package:nihaisha_app/data/sanshan_lingqian_data.dart';
+import 'package:nihaisha_app/services/sanshan_lingqian_tool_executor.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
