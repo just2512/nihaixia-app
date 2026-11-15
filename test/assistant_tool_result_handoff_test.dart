@@ -145,6 +145,7 @@ class _RecordingAssistantService extends LocalAiService {
     String text, {
     required String context,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     modelCalls++;
     sentTexts.add(text);
