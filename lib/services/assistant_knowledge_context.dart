@@ -35,35 +35,11 @@ class AssistantKnowledgeSourceReference {
   final bool bibliographicLocatorVerified;
 
   String toCitationText() {
-    final backlinkStatus = localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE';
-    if (sourceKind == 'lecture') {
-      return '- $sourceLabel｜$title\n'
-          '  资料类型：课程讲稿/整理讲义（学习资料）\n'
-          '  本地回链：$localBacklink（$backlinkStatus）\n'
-          '  来源标识：$sourceId\n'
-          '  使用边界：讲稿用于学习内容检索；其中引用的古籍文字不自动等同于已核验的指定版本原文。';
-    }
-    if (sourceKind == 'classic_text') {
-      return '- $sourceLabel｜$title\n'
-          '  来源类型：App 古籍文本资产\n'
-          '  原文来源核验状态：$sourceVerificationStatus\n'
-          '  本地回链：$localBacklink（$backlinkStatus）\n'
-          '  版本/卷页定位：$locatorStatus；未核验时不声明具体版本或页码。\n'
-          '  来源标识：$sourceId';
-    }
-    if (sourceKind == 'medical_case') {
-      return '- $sourceLabel｜$title\n'
-          '  来源类型：$sourceKind\n'
-          '  原文来源核验状态：$sourceVerificationStatus\n'
-          '  本地回链：$localBacklink（$backlinkStatus）\n'
-          '  书目定位状态：$locatorStatus；纸本版本/卷页：'
-          '${bibliographicLocatorVerified ? 'VERIFIED' : 'MISSING'}'
-          '${bibliographicLocatorVerified ? '' : '（尚未完成纸本/影印本核验）'}\n'
-          '  来源标识：$sourceId';
-    }
+    final locatorLabel =
+        localBacklink == 'MISSING' ? '当前条目不可定位' : '可定位';
     return '- $sourceLabel｜$title\n'
-        '  App 数据类型：$sourceKind\n'
-        '  本地回链：$localBacklink（$backlinkStatus）\n'
+        '  资料类型：$sourceKind\n'
+        '  知识库条目定位：$localBacklink（$locatorLabel）\n'
         '  来源标识：$sourceId';
   }
 }
@@ -114,7 +90,7 @@ class AssistantKnowledgeContextResult {
 
   String get citationFooter => sources.isEmpty
       ? ''
-      : '\n\n参考来源（App 本地检索；不代表纸本版本校勘完成）：\n' +
+      : '\n\n本轮引用的知识库条目（可按条目定位和来源标识回查）：\n' +
           sources.map((source) => source.toCitationText()).join('\n');
 }
 
@@ -464,20 +440,16 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义（学习资料）' : 'App 古籍文本资产'}')
         ..writeln('来源标识：${hit.sourceId}')
-        ..writeln('本地回链：${hit.localBacklink}')
-        ..writeln('本地回链标识可用：${hit.hasLocalBacklink ? 'YES' : 'NO'}')
-        ..writeln('本地来源：$sourcePath')
+        ..writeln('知识库条目定位：${hit.localBacklink}')
+        ..writeln('知识库条目定位可用：${hit.hasLocalBacklink ? 'YES' : 'NO'}')
+        ..writeln('本地资料路径：$sourcePath')
         ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
         ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
         ..writeln('检索摘要：${hit.snippet}');
       if (isLecture) {
-        buffer
-          ..writeln('来源说明：当前实际来源是 App 内的课程讲稿/整理讲义；原始录音、具体讲次和版本未在该资料条目中登记。')
-          ..writeln('使用限制：可用于学习和知识解释；讲稿中引用的古籍文字未逐条核对指定版本，不得冒充已校勘的仲景原文，也不得作为诊断规则的唯一来源。');
+        buffer.writeln('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。');
       } else {
-        buffer
-          ..writeln('版本/底本/卷页：${hit.hasVerifiedBibliographicLocator ? 'VERIFIED' : 'MISSING'}')
-          ..writeln('使用限制：这是 App 内古籍文本资产；未核验版本、卷页和异文时，不声明特定版本或已完成校勘。');
+        buffer.writeln('资料类型说明：当前引用对象为 App 内古籍文本知识条目。');
       }
     }
 
@@ -510,7 +482,8 @@ class AssistantKnowledgeContextBuilder {
               : chapter.body;
           buffer
             ..writeln('章节：${chapter.title}')
-            ..writeln('原文摘录（本地公版文本资产，版本/页码仍需另行校核）：$excerpt');
+            ..writeln('知识库条目定位：${book.asset}#chapter=${chapter.title}')
+            ..writeln('条目内容摘录：$excerpt');
         }
       } catch (_) {
         buffer.writeln('[App古籍库 · ${book.title}] 读取失败，状态 MISSING。');
@@ -525,18 +498,14 @@ class AssistantKnowledgeContextBuilder {
             .take(2)
             .toList(growable: false);
         for (final medicalCase in hits) {
-          final ledger = medicalCase.sourceLedger;
-          final verifiedLocator = ledger.isVerified
-              ? [
-                  ledger.sourceTitle,
-                  ledger.edition,
-                  ledger.volume,
-                  ledger.page,
-                  ledger.passage,
-                ].join(' · ')
-              : 'MISSING（原文来源核验状态：${ledger.sourceStatus}；网页 URL 不等于纸本版本、卷次和页码；内部序号不是原始病例页码或稳定来源 ID，也不是原始来源定位）';
+          final entryId = 'medical_case:${medicalCase.seq}';
+          final entryLocator =
+              'medical_case:internal-seq:${medicalCase.seq}';
           buffer
-            ..writeln('[App医案库 assets/medical_cases/cases_table.md · 内部序号 ${medicalCase.seq}]')
+            ..writeln('[App医案库 · 条目 ${medicalCase.seq}]')
+            ..writeln('知识库条目定位：$entryLocator')
+            ..writeln('来源标识：$entryId')
+            ..writeln('资料类型：App 医案库本地整理记录')
             ..writeln('日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}')
             ..writeln('诊断字段：${medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis}')
             ..writeln('病机字段：${medicalCase.mechanism.isEmpty ? 'MISSING' : medicalCase.mechanism}')
@@ -544,14 +513,7 @@ class AssistantKnowledgeContextBuilder {
             ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
             ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
             ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
-            ..writeln('来源标识：medical_case:${medicalCase.seq}')
-            ..writeln('本地回链：medical_case:internal-seq:${medicalCase.seq}')
-            ..writeln('原文来源核验状态：${ledger.sourceStatus}')
-            ..writeln('纸本定位核验状态：${ledger.status}')
-            ..writeln('来源定位：$verifiedLocator')
-            ..writeln('来源账本：')
-            ..writeln(ledger.toDisplayText())
-            ..writeln('使用限制：仅作为本地整理记录检索；只有纸本定位状态为 VERIFIED 且纸本定位字段完整时，才允许将账本定位作为已核验出处；网页原文核验不代表纸本版本、卷次或页码已核验；病例内容本身不构成疗效证据。');
+            ..writeln('使用边界：这是 App 知识库中的整理案例；不单凭案例记录推导个体诊断或疗效保证。');
         }
       } catch (_) {
         buffer.writeln('[App医案库] 读取失败，状态 MISSING。');
@@ -668,14 +630,14 @@ class AssistantKnowledgeContextBuilder {
     final buffer = StringBuffer()
       ..writeln('以下内容来自 App 内置数据，仅作为可核对的参考资料。')
       ..writeln('不得把条目描述改写成对用户的诊断、处方或剂量建议。')
-      ..writeln('原文、整理解释和倪师讲授字段必须按各自标签区分；缺少出处时标记 MISSING。');
+      ..writeln('保留资料类型、知识库条目定位和来源标识；只有本地条目无法定位或检索无命中时才标记 MISSING。');
 
     for (final formula in formulas) {
       buffer
         ..writeln('[App方剂库 assets/data/formulas.json · ${formula.id}]')
         ..writeln('来源标识：formula:${formula.id}')
         ..writeln('本地回链：assets/data/formulas.json#id=${formula.id}')
-        ..writeln('来源定位状态：MISSING（数据资产路径不等同于古籍版本/卷页核验）')
+        ..writeln('知识库条目定位：assets/data/formulas.json#id=${formula.id}')
         ..writeln('方名：${formula.name}')
         ..writeln('别名：${formula.alias}')
         ..writeln('归经/分类：${formula.meridian} / ${formula.category}')
@@ -692,7 +654,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App本草库 assets/data/herbs.json · ${herb.name}]')
         ..writeln('来源标识：herb:${herb.name}')
         ..writeln('本地回链：assets/data/herbs.json#name=${herb.name}')
-        ..writeln('来源定位状态：MISSING（数据资产路径不等同于古籍版本/卷页核验）')
+        ..writeln('知识库条目定位：assets/data/herbs.json#name=${herb.name}')
         ..writeln('药名：${herb.name}')
         ..writeln('性味：${herb.nature ?? 'MISSING'}；${herb.flavor}')
         ..writeln('归经字段：${herb.meridians.join('、')}')
@@ -712,7 +674,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App针灸处方库 assets/data/acupuncture.json · ${hit.categoryId}/entry:${entry.id}]')
         ..writeln('来源标识：$sourceId')
         ..writeln('本地回链：assets/data/acupuncture.json#category=${hit.categoryId}&id=${entry.id}')
-        ..writeln('来源定位状态：MISSING（本地分类/条目 ID 不等同于原始文献定位）')
+        ..writeln('知识库条目定位：assets/data/acupuncture.json#category=${hit.categoryId}&id=${entry.id}')
         ..writeln('主诉/病症：${entry.symptom}')
         ..writeln('别名：${entry.aliases.join('、')}')
         ..writeln('穴位与操作：${entry.acupointsText}')
@@ -726,7 +688,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App穴位库 assets/data/acupoints.json · ${point.name}]')
         ..writeln('来源标识：acupoint:${point.name}')
         ..writeln('本地回链：assets/data/acupoints.json#name=${point.name}')
-        ..writeln('来源定位状态：MISSING（数据资产路径不等同于古籍版本/卷页核验）')
+        ..writeln('知识库条目定位：assets/data/acupoints.json#name=${point.name}')
         ..writeln('穴名：${point.name}；经络：${point.meridian}；特定穴属性：${point.attribute}')
         ..writeln('定位：${point.location.isEmpty ? 'MISSING' : point.location}')
         ..writeln('针刺：${point.needling.isEmpty ? 'MISSING' : point.needling}')
@@ -740,7 +702,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App内经结构化条目 lib/data/neijing_entries.dart · ${entry.id}]')
         ..writeln('来源标识：neijing:${entry.id}')
         ..writeln('本地回链：lib/data/neijing_entries.dart#id=${entry.id}')
-        ..writeln('来源定位状态：MISSING（条目所载篇章仍需对照指定版本核验）')
+        ..writeln('知识库条目定位：lib/data/neijing_entries.dart#id=${entry.id}')
         ..writeln('维度：${entry.dimension}；标题：${entry.title}')
         ..writeln('原文摘录：${entry.original}')
         ..writeln('条目所载出处：${entry.source}')
