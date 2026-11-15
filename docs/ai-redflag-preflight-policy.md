@@ -1,8 +1,8 @@
-# 红旗 preflight 策略契约（未接入生产路由）
+# 红旗 preflight 策略契约与生产接入状态
 
 ## 目的
 
-把红旗判定从单一提示词约束提升为可测试、可在所有输入入口复用的确定性策略。当前切片只实现纯 Dart 策略层，不负责从自然语言/图片/语音中识别医学红旗，也没有接入生产路由。
+把红旗判定从单一提示词约束提升为可测试、可复用的确定性策略。纯 Dart 策略层本身不负责从自然语言/图片/语音识别医学红旗；PR #169 已将 fail-closed Gate/Preflight 接入助手 Flutter 临床相关入口和 Android Native 模型调用边界。当前生产接入证明的是“未评估不放行”，不是 detector 的医学识别能力或准确率。
 
 ## 输入契约
 
@@ -51,3 +51,12 @@
 6. Find N2 真机验证所有入口均不能绕过门禁。
 
 医学词表/阈值/文案未经医学审核不得正式启用；detector 不可用时必须保持 `REVIEW_REQUIRED`，不能退化为关键词漏检后放行。
+
+
+## 当前生产接入状态（2026-11-15，PR #169）
+
+- `LocalAiInterviewScreen` 的临床相关 Flutter 调用路径与 Android `MainActivity` Native 模型边界已接入既有 Gate/Preflight。
+- 缺少 detector、assessment/主体/时间/极性为 UNKNOWN、规则版本未审核、输入渠道覆盖不完整、检测失败/超时或原始图片/音频无可信提取时，保持 `REVIEW_REQUIRED/CLARIFY` 并阻断受保护模型调用；不能将未知当作 CLEAR。
+- PR #169 的测试验证 Gate 顺序、状态传播与 fail-closed 阻断，不验证真实医学语义识别准确率。
+- 自然语言/图像/语音 detector、医学审核版本、责任审批记录、阈值/例外与处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。在上述证据完成前，不开放自由文本自动症状辨证。
+- 本文件早期“未接入生产路由”的描述是 PR #169 之前的历史记录，以本节为当前状态；策略契约仍不等同于 detector。
