@@ -44,9 +44,9 @@
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
-| B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（fail-closed Gate 契约存在；医学审核 detector 与生产入口接入缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
-| C | 知识检索黄金行为基线 | `PARTIAL`（黄金快照和 sourceId/asset 一致性已建立；书目 locator 仍缺失） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例有原始检索与展示记录；抽适配器前后行为可比较 |
-| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（9 项 Headless；14 项 Page-only；结构化问诊独立内联） | 已合并 `yunqi/almanac/bazi/xiaoliuren/meihua/chenggu/huangdi_siji/ziwei/solar_terms`；保留各自 Page builder；逐项复用原确定性函数 | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
+| B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（PR #169 已接入 fail-closed Gate；医学审核 detector 仍缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
+| C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
+| D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | 低成本数据保护 | `PARTIAL`（Manifest/清理代码有 CI 证据；真机清除后重启不可恢复未验收） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（已有部分结果/来源链路，不等于端到端 TRACE） | 与 A-E 按需并行 | 默认关闭、脱敏、trace_id 贯穿、关闭时行为不变、完整链路可复核 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
@@ -1981,3 +1981,47 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - Find N2 E4B GPU/CPU、多轮、多媒体、Activity/进程恢复、清除数据后不可恢复及真实 TRACE 仍需真实设备证据；CI 构建与 Native tests 不等于设备验收。
 - C 只补可追溯来源定位，MISSING 保持 MISSING；E 的数据删除/备份行为仍需符合既有清除数据边界。G 维持单一版本来源。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不改变排盘、问诊、剂量或现有民俗计算规则；不降低测试门槛。
+
+
+## 43. 2026-11-15 PR #169/#170/#171/#172 集成收敛
+
+### 43.1 主线基线与 CI
+
+- 当前主线基线：`master @ 1370855b3f6a94f4a9cf0bcb235478f753348443`。
+- PR #169 的 squash merge 基线为 `986417b06790ad85c3c9487c9227c034b87cb676`；PR #170 为 `d9170b5f566bba973a11049a4b5f7401881b1b28`；PR #171 为 `e45b28e9e80793da291b4a5a016188e44fb11065`；PR #172 为 `1370855b3f6a94f4a9cf0bcb235478f753348443`。
+- PR #170 最终 head `2e597c1817de2001b71c07b3d4d8b28d9d1b36c6`，PR Flutter regression、独立分支验证和 Android arm64 APK/Manifest/ABI/SHA-256/Native tests 均 SUCCESS；PR #168 已由 #170 替代并关闭。
+- PR #171 最终 head `c5e0b25d5d1e5283e7f93d4664b0865141b583b9`，分支验证和 PR Flutter regression、Android arm64/Native tests 均 SUCCESS。合并后 master e45 基线的 Flutter tests run `43671088342` 与 Quality Gate run `43671088143` 均 SUCCESS。
+- PR #172 最终 head `03159bc645c6e06ef5062ec5438b1417111bb067`，分支验证 run `43671166718` SUCCESS，PR workflow run `43671170314` SUCCESS，含 Flutter regression、Android arm64 APK/Manifest/ABI/SHA-256、Native unit tests、JUnit XML 和证据工件上传。Squash merge 为当前 master `1370855b3f6a94f4a9cf0bcb235478f753348443`；合并后 Flutter tests run `43671870660` 与 Quality Gate run `43671870662` 均终态 SUCCESS。Flutter regression job `132683481307`、Android arm64 APK/Manifest/ABI/SHA-256/Native tests job `132684675722`、Quality Gate job `132683481181` 均 SUCCESS。
+- 代码范围以 PR 差异为准；不把 PR/CI 成功描述成 Find N2 实机验收。
+
+### 43.2 B：红旗安全门禁实际状态
+
+- PR #169 将既有 fail-closed `RedFlagGate/RedFlagPreflight` 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界。缺少 detector、assessment UNKNOWN、规则未审核、覆盖不完整、超时或原始图片/音频没有可信提取时，不得按 CLEAR 放行。
+- 这是门禁调用接线和阻断契约，不是自然语言、视觉或语音医学红旗 detector。detector 的医学审核版本、责任审批、阈值/例外和处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。
+- 不修改医学规则、不重审已审核知识库；在合格 detector 与证据完备前，不开放模型抽取自由文本症状并自动执行诊断。
+
+### 43.3 D：工具/玄学能力盘点
+
+- `AssistantToolRouter` 仍为 24 个定义：23 个常规工具 + 1 个 `structured_diagnosis` 内联问诊控制器。常规工具 Headless = 17/23；Page-only = 6/23：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。
+- #170 让保存命盘可在对话内经用户明确选择后调用既有八字/紫微计算能力；不自动选择单条记录，不在选择前暴露生日、性别和地点，真实结果/source IDs 校验后才交 AI 解释。
+- Page-only 不代表都要转成 Headless：知识库、古籍、医案内容问答使用现有检索/引用路径；个人诊断历史需要用户明确选择与授权；重症资料和民俗条目须保留各自边界。没有具体对话场景和确定性输入/结果契约时不批量新增执行器。
+
+### 43.4 C：本地知识库来源闭环
+
+- #171 统一引用尾注：资料类型 + App 内知识库条目定位 + 稳定 sourceId；覆盖讲稿、经典文本、医案及现有结构化知识资产。外部纸本卷页元数据缺失不再被展示为本地知识来源 MISSING。
+- #172 让经典命中按 book ID + chapter index 直达具体古籍章节，内经结构化 sourceId 直达目标条目并展开；无效 ID 明确报无法解析，不做模糊猜测。
+- 普通学习/知识回答的验收为“答案中的知识内容能回链并打开到 App 内实际条目”。不开展 83 条讲稿逐册逐页考证，不重复医学审核。
+- 实际检索未命中、读取/打开失败、sourceId 无法解析或条目字段缺失仍需如实说明；不得用模型预训练记忆补造知识库之外的出处和医学事实。
+
+### 43.5 问诊助手下一阶段
+
+- 当前 `TcmInterviewConversationController.start()` 保留用户自由描述作为上下文，但仍从寒热、舌脉和十问顺序开始；尚未把自由描述映射为待确认的规范十问字段，也未仅追问缺项。
+- 目标闭环：用户原话留存 → AI 提取候选字段及原文依据 → 用户确认/修正 → 仅对缺失或歧义字段追问 → 原有 DiagnosticEngine/DiagnosticRules 执行 → 参数、结果和 sourceId 校验 → AI 解释结果并复用本地知识库作进一步解读。
+- 不改 DiagnosticEngine、DiagnosticRules、十问内容/答案、剂量及排盘规则。该闭环必须受 B 的生产 fail-closed Gate 约束；没有医学审核 detector 前，不开放模型症状抽取和自动辨证。
+- Find N2 GPU/CPU、多轮媒体、Activity/进程恢复、清除数据后不可恢复和端到端 TRACE 不是云端任务，需用户在实体设备上验证并提供设备/版本/模型/backend/日志证据。
+
+### 43.6 不变边界
+
+- AI 只负责理解、归纳、追问、调度和解释；确定性排盘、辨证、剂量与起卦由 App 原有代码执行。
+- 只有已执行并完成参数/结果/来源校验的业务结果才能交 AI 解读；模型推断不得包装成诊断结论。
+- 不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不为增加 Headless 数量批量迁移页面工具。
