@@ -51,7 +51,7 @@ enum AssistantMode { automatic, consultation, learning, tools, metaphysics }
 extension AssistantModePresentation on AssistantMode {
   String get label => switch (this) {
         AssistantMode.automatic => '自动调度',
-        AssistantMode.consultation => '问诊助手',
+        AssistantMode.consultation => '问诊学习助手',
         AssistantMode.learning => '学习助手',
         AssistantMode.tools => '工具助手',
         AssistantMode.metaphysics => '玄学大师',
@@ -59,7 +59,7 @@ extension AssistantModePresentation on AssistantMode {
 
   String get promptHint => switch (this) {
         AssistantMode.automatic => '先识别任务领域；明确工具动作交给 App 工具，个人症状进入问诊，知识问题进入学习。意图不清时先澄清，不猜测。',
-        AssistantMode.consultation => '围绕用户自述澄清症状。若历史中已有 App DiagnosticEngine 的结构化问诊结果，可以解释、归纳该结果并结合本地知识来源说明依据；不得自行新增或改写规则结论，不独立作个体诊断、处方或剂量建议。',
+        AssistantMode.consultation => '以模拟方式演示中医问诊与辨证思路，帮助用户理解问项、证据和规则推演过程；本功能仅用于学习，不提供真实医疗诊断、治疗或个体用药建议。规则结果只作学习材料，解释时不得新增或改写规则结论。',
         AssistantMode.learning => '围绕中医知识学习；优先检索和引用 App 本地知识条目，基于命中资料做总结、比较、归纳和解释，指出共同点、差异、适用条件与来源分歧。明确区分课程讲稿、古籍文本、医案、App 结构化数据和 AI 归纳；讲稿观点不得冒充古籍原文，缺少依据或未检索到的内容标记 MISSING，不补造出处。',
         AssistantMode.tools => '实际计算必须由 App 已实现工具执行，不得猜算；工具结果返回对话后，基于返回字段做总结、归纳和解释，指出输入、结果、单位、来源及缺失项，并区分 App 确定性计算与 AI 解释。',
         AssistantMode.metaphysics => '解释八字、紫微等传统术数与民俗文化结果。排盘必须调用 App 内置工具；收到结果后，基于回传字段归纳结构、关系和时间层次，明确区分 App 确定性计算、App 规则模板与 AI 解释，不得重新排盘、篡改字段或补造缺失项。说明其非科学预测，不用于医疗、法律或投资决策。',
@@ -184,8 +184,8 @@ class AssistantToolDefinition {
 class AssistantToolRouter {
   static const structuredDiagnosis = AssistantToolDefinition(
     id: 'structured_diagnosis',
-    title: '结构化辨证问诊',
-    description: '按现有六经规则逐项问诊；完成后把记录带回助手对话。',
+    title: '中医问诊模拟（学习）',
+    description: '以 App 现有六经规则演示问诊和辨证思路；仅用于辅助学习，不用于真实诊断或用药。',
     modes: {AssistantMode.consultation},
     aliases: ['结构化辨证', '规则辨证', '结构化问诊', '规则问诊', '六经问诊'],
     actionWords: ['开始', '进入', '进行', '帮我', '我要', '打开'],
