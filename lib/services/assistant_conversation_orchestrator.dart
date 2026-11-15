@@ -1199,6 +1199,11 @@ class AssistantConversationOrchestrator {
 
     final hasSymptoms = _symptomCues.any(text.contains);
     final hasPersonalContext = _personalContextCues.any(text.contains);
+    if (hasSymptoms && _explicitClinicalRequestCues.any(text.contains)) {
+      // A direct request for help with the described symptoms is an intake
+      // request; do not stop at the generic "self or theory?" clarification.
+      return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+    }
     if (hasSymptoms && hasPersonalContext) {
       return const AssistantDispatchDecision(mode: AssistantMode.consultation);
     }
