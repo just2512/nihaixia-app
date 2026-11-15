@@ -46,24 +46,32 @@ class LocalAiService {
   Future<String> sendMessage(
     String text, {
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) =>
-      _sendTextMessage(text, requireMedicalSafety: requireMedicalSafety);
+      _sendTextMessage(
+        text,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+      );
 
   Future<String> sendMessageWithTrace(
     String text, {
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) =>
       _sendTextMessage(
         text,
         traceId: traceId,
         requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
       );
 
   Future<String> _sendTextMessage(
     String text, {
     String? traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -71,6 +79,10 @@ class LocalAiService {
       {
         'text': text,
         if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -91,11 +103,13 @@ class LocalAiService {
     String text, {
     required String context,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) =>
       _sendMessageWithContext(
         text,
         context: context,
         requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
       );
 
   Future<String> sendMessageWithContextAndTrace(
@@ -103,12 +117,14 @@ class LocalAiService {
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) =>
       _sendMessageWithContext(
         text,
         context: context,
         traceId: traceId,
         requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
       );
 
   Future<String> _sendMessageWithContext(
@@ -116,6 +132,7 @@ class LocalAiService {
     required String context,
     String? traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     final normalized = text.trim();
     if (normalized.isEmpty) {
@@ -128,6 +145,10 @@ class LocalAiService {
         'text': normalized,
         'context': context.trim(),
         if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
