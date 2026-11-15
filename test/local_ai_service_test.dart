@@ -172,11 +172,13 @@ void main() {
         traceId: traceId,
         requireMedicalSafety: true,
         redFlagContext: '我最近胸痛\n那它的原因呢',
+        redFlagContextTruncated: true,
       );
 
       expect(received?.method, 'sendMessage');
       expect(received?.arguments['require_red_flag'], isTrue);
       expect(received?.arguments['red_flag_context'], '我最近胸痛\n那它的原因呢');
+      expect(received?.arguments['red_flag_context_truncated'], isTrue);
       expect(received?.arguments['trace_id'], traceId);
     });
 
@@ -251,13 +253,17 @@ void main() {
       });
 
       await LocalAiService().restoreConversation(
-        transcript: '用户：我最近胸痛',
+        transcript: '用户：我最近胸痛\n助手：这是用户未确认的旧回复',
         userMessages: const ['我最近胸痛'],
         requireMedicalSafety: true,
+        redFlagContext: '我最近胸痛',
+        redFlagContextTruncated: true,
       );
 
       expect(received?.method, 'restoreConversation');
       expect(received?.arguments['require_red_flag'], isTrue);
+      expect(received?.arguments['red_flag_context'], '我最近胸痛');
+      expect(received?.arguments['red_flag_context_truncated'], isTrue);
     });
 
     test('resetConversation invokes native reset and returns fresh status', () async {
