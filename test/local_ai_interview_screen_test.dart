@@ -411,6 +411,7 @@ class _SequencedSymptomsTraceService extends _TextSendService {
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
+    String? currentUserText,
   }) async => drafts.removeAt(0);
 
   @override
@@ -418,6 +419,7 @@ class _SequencedSymptomsTraceService extends _TextSendService {
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
+    String? currentUserText,
   }) async {
     extractedTraceIds.add(traceId);
     return drafts.removeAt(0);
@@ -430,10 +432,13 @@ class _TextSendService extends LocalAiService {
       action: LocalAiIntentAction.clarify,
     ),
     this.baziSlotDraft,
+    this.symptomDraft,
   });
 
   final LocalAiIntentResolution intentResolution;
   final LocalAiBaziSlotDraft? baziSlotDraft;
+  final LocalAiSymptomDraft? symptomDraft;
+  final symptomExtractionInputs = <String>[];
   int statusCalls = 0;
   final baziSlotQueries = <String>[];
   final baziSlotMissingKeys = <Set<String>>[];
@@ -454,16 +459,22 @@ class _TextSendService extends LocalAiService {
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
-  }) =>
-      extractSymptoms();
+    String? currentUserText,
+  }) async {
+    if (currentUserText != null) symptomExtractionInputs.add(currentUserText);
+    return symptomDraft ?? await extractSymptoms();
+  }
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
-  }) =>
-      extractSymptoms();
+    String? currentUserText,
+  }) async {
+    if (currentUserText != null) symptomExtractionInputs.add(currentUserText);
+    return symptomDraft ?? await extractSymptoms();
+  }
 
   @override
   Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
@@ -1785,6 +1796,65 @@ void main() {
       service.sentContexts.single,
       contains('当前角色：问诊助手'),
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('助手对话中的明确问诊请求先做证据候选确认，再启动原规则问诊', (tester) async {
+    const original = '我最近不舒服，三天里半夜醒了两次，帮我诊断一下';
+    final service = _TextSendService(
+      symptomDraft: const LocalAiSymptomDraft(
+        mainComplaint: '最近不舒服',
+        duration: '三天',
+        questionCandidates: [
+          LocalAiSymptomQuestionCandidate(
+            questionId: 'sleep',
+            question: '睡眠情况',
+            answer: '夜间易醒',
+            evidence: '半夜醒了两次',
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), original);
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.symptomExtractionInputs, [original]);
+    expect(service.sentTexts, isEmpty);
+    expect(find.text('核对症状整理'), findsOneWidget);
+    expect(find.text('睡眠情况：夜间易醒'), findsOneWidget);
+    expect(find.text('原文证据：半夜醒了两次'), findsOneWidget);
+
+    final confirmations = find.byType(CheckboxListTile);
+    expect(confirmations, findsNWidgets(2));
+    await tester.tap(confirmations.first);
+    await tester.pump();
+    await tester.tap(confirmations.last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认这份整理'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('寒热感觉'), findsOneWidget);
+    expect(
+      find.textContaining('已逐项确认 1 条十问候选'),
+      findsOneWidget,
+    );
+    expect(service.sentTexts, isEmpty,
+        reason: '当前轮次必须先进入本地规则问诊，不能先生成普通模型答复');
     expect(tester.takeException(), isNull);
   });
 
