@@ -70,6 +70,11 @@ void main() {
       );
       expect(requires('我想排盘'), isFalse);
       expect(
+        requires('最近有点说不清楚的怪感觉', mode: AssistantMode.consultation),
+        isTrue,
+        reason: '显式问诊模式不能只依赖有限症状词表触发安全评估',
+      );
+      expect(
         requires('', mode: AssistantMode.consultation, attachment: true),
         isTrue,
       );
