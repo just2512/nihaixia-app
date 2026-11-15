@@ -2,6 +2,7 @@ package com.nihaisha.nihaisha_app
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Handler
@@ -583,7 +584,7 @@ class MainActivity : FlutterActivity() {
         // This override exists only for reproducible Find N2 CPU acceptance.
         // Release builds ignore the launch extra and always keep GPU-first behavior.
         val forceCpuForDebug = LocalAiBackendSelectionPolicy.shouldForceCpu(
-            debuggableBuild = BuildConfig.DEBUG,
+            debuggableBuild = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
             requested = intent?.getBooleanExtra(
                 DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA,
                 false
