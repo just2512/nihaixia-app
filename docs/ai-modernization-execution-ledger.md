@@ -2113,7 +2113,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 45.5 云端与本地执行边界
 
 - 云端职责：源码审计、精确范围 Dart/Kotlin 测试、Flutter regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、文档、PR 集成和合并后主线 CI。
-- Find N2 真实设备场景统一为本地验收，不列为云端待办，也不能用 CI 构建替代：GPU 默认后端至少 20 轮；Debug Intent 强制 CPU 至少 20 轮；覆盖文字/图片/语音；Activity recreation、进程 force-stop/restart 和会话恢复；应用内清除 AI 数据后 force-stop/restart（设备重启如执行也记录）；Debug TRACE 核验每轮 backend 与 trace_id 全链。
+- Find N2 真实设备场景统一为本地验收，不列为云端待办，也不能用 CI 构建替代：设置页手动选择 GPU/CPU，各至少 20 轮；覆盖文字/图片/语音；Activity recreation、进程 force-stop/restart 和会话恢复；应用内清除 AI 数据后 force-stop/restart（设备重启如执行也记录）；Debug TRACE 核验每轮 backend 与 trace_id 全链。
 - 本地证据必须记录设备/Android/App SHA/模型版本或 SHA/Native 实际 backend/轮次/脱敏 trace_id、关键事件和结果。未知项标 UNKNOWN，不伪造 PASS。
 - AI 数据清除代码与自动化已有实现；混合 SQLite 的系统备份/设备迁移副本和旧版共享图片归属仍是产品/数据边界风险。不得删除整个共享数据库/临时目录，也不得全局关闭 Android Backup 来伪装清除完成；非 AI 数据与已安装模型按既有契约保留。
 
@@ -2149,20 +2149,63 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 以下项目只在用户本地 OPPO Find N2 执行；云端不得代报 PASS：
 
-1. GPU：普通图标启动、不带 CPU override，确认 Native 实际 backend 为 GPU，连续完成至少 20 轮。
-2. CPU：Debug 构建 force-stop 后用以下 Intent 启动，确认 Native 实际 backend 为 CPU，连续完成至少 20 轮：
-   ```sh
-   adb shell am force-stop com.nihaisha.nihaisha_app
-   adb shell am start -n com.nihaisha.nihaisha_app/.MainActivity --ez com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND true
-   ```
-3. GPU/CPU 两组分别覆盖多轮文字、图片、语音；记录空回复、state:7、fallback 和实际 backend，不将请求 backend 当成实际 backend。
-4. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
-5. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
-6. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
-7. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
+1. GPU：在 App「设置 → 本地 AI → E4B 推理后端」选择 GPU，加载模型，核对 Native 实际 backend 为 GPU，连续完成至少 20 轮。
+2. CPU：在同一设置入口选择 CPU，核对偏好持久化和 Native 实际 backend 为 CPU，连续完成至少 20 轮；不需要 Debug Intent、ADB 参数或后台改配置。
+3. 模型运行中切换 GPU/CPU，确认旧 Engine/Conversation 被安全释放并重建、已完成对话历史恢复、未完成/状态未知请求不自动重放；初始化失败时可选择另一 backend 重试。GPU fallback CPU 时必须分别记录用户选择与 Native 实际 backend。
+4. GPU/CPU 两组分别覆盖多轮文字、图片、语音；记录空回复、state:7、fallback 和实际 backend。当前 GPU EngineConfig 的 audioBackend 仍为 CPU，不得把音频路径记作 GPU。
+5. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
+6. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
+7. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
+8. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
 
 ### 46.4 非代码决策边界
 
 - AI 对话行与非 AI 数据目前共用 `nihaisha.db`；Android backup 规则不能按 SQLite 行选择性排除。当前不得全局关闭备份或排除整个数据库。是否接受混合数据库备份、或批准后续 AI 独立数据库迁移，需要产品侧明确数据保留决策；在决策前保持现有备份行为并披露边界。
 - 旧版本共享临时图片所有权仍 UNKNOWN；没有所有权证据不得批量删除共享 temp 文件。
 - 除上述本地验收及明确的外部医学审核/数据保留决策外，本轮没有剩余可由云端安全闭环的运行时代码任务。云端后续只处理本地实测或外部审核材料揭示的具体可复现问题。
+
+
+## 47. 2026-11-15 用户可手动切换 E4B GPU/CPU 与真机验收文件
+
+### 47.1 主线基线与工作分支
+
+- 工作基线：master @ 6e49b7346acccfdea18f400c07ebb3896ceed937（PR #180 合并后）。
+- 本项独立分支：feat/find-n2-user-selectable-ai-backend-2026-11-15。
+- 本节记录实现范围与验收要求；代码分支 CI 尚未终态前，不标记通过，不将本地设备验收计为云端 PASS。
+
+### 47.2 用户选择和 Native 运行协议
+
+- 设置页新增「本地 AI → E4B 推理后端」，GPU / CPU 两种选择在 Debug 与 Release 均可使用；用户偏好写入 Android App 私有 SharedPreferences，默认 GPU。
+- MainActivity 新增 setBackendPreference MethodChannel 操作，并在 getModelStatus 同时返回 preferredBackend 与 backend。前者是用户选择，后者是 Native 实际运行状态。
+- 运行中切换通过现有 LocalAiActivityTaskLifecycle 单线程队列串行执行：释放旧 Conversation / Engine，按新偏好重建；只回放 conversationHistoryTurns 中已经成功完成的轮次，不重放当前 in-flight 或 UNKNOWN 请求。
+- GPU 模式复用既有 GPU/视觉 GPU、音频 CPU 配置；CPU 模式语言/视觉/音频均使用 CPU。GPU 初始化或后续恢复若实际回退 CPU，状态中必须如实返回 CPU，界面不能把偏好 GPU 伪装成实际 GPU。
+- 新后端初始化失败时，已保存用户偏好并保留此前成功轮次；设置页展示错误，用户可选择另一 backend 重试。Native Debug Intent 仅保留为无已保存用户偏好时的兼容验收入口；一旦用户保存选择，用户选择优先。
+
+### 47.3 本批次代码和测试
+
+- Native：MainActivity.kt、LocalAiBackendSelectionPolicy.kt；偏好持久化、运行中重建、实际 backend 与用户偏好分离。
+- Flutter：LocalAiService / LocalAiModelStatus、LocalAiBackendSettingsTile、SettingsScreen；设置页可手动切换并显示实际 backend/fallback，失败后可选择另一项或重新尝试所选 backend。
+- 自动化：LocalAiBackendSelectionPolicyTest 覆盖 GPU/CPU 白名单、默认 GPU、Release 用户选择、Debug Intent 优先级；local_ai_service_test.dart 覆盖 MethodChannel 参数和旧 status 默认兼容；local_ai_backend_settings_tile_test.dart 覆盖选择、失败切换和 fallback 重试。
+- 需要在精确分支 head 上运行 Flutter 全量回归、Android arm64 APK/Manifest/ABI/SHA-256 与 Native tests；只有终态成功后才能更新本节 CI 证据。
+
+### 47.4 Find N2 本地验收执行文件
+
+- 新增 docs/find-n2-local-ai-acceptance-checklist.md。按该文件执行 B-01 用户选择、G-01 GPU 至少 20 轮、C-01 CPU 至少 20 轮、两种 backend 的图片/语音、Activity/进程恢复、AI 数据清除和 TRACE。
+- 文件明确区分用户偏好和 Native 实际 backend；明确 GPU 模式音频仍走当前 CPU 音频配置；不再要求用户通过 Debug Intent / ADB 参数切换 CPU。
+- 真机记录只保存脱敏摘要与实际状态。未执行项为 UNKNOWN；云端代码测试、APK 构建和模拟环境均不能替代 Find N2 TRACE。
+
+### 47.5 不变边界
+
+- AI 继续只负责理解、参数澄清、调度、总结和解释；确定性排盘、问诊、剂量和其他业务计算仍由 App 执行。
+- 只有 App 真实执行、参数和结果通过校验的数据才能交 AI 解读。
+- 不改变 DiagnosticEngine / DiagnosticRules / 十问 / 剂量或玄学计算规则；不重审已审核知识库，不做经典医案外部卷页考据。
+- 除本后端手动选择与本地验收交接外，不扩张模型管理架构，不增加后台改配置步骤。
+
+## 48. 2026-11-15 知识库引用口径收敛：关闭外部底本/卷页待办
+
+- 本节覆盖旧台账中所有将 bookId/chapterIndex、纸本底本、版本、卷页或影印本坐标标为完成门槛的历史记录。此前记录保留为审计历史，不再作为当前待办或发布阻断。
+- 当前唯一要求：AI 对知识库事实的引用必须有稳定 sourceId，且该 ID 能在 App 内打开对应知识条目、章节或医案记录；回答应附可点击链接或能直接定位的备注。
+- 不要求为已存在且可打开的知识库内容额外补充外部纸本版本、卷页、底本或影印本坐标；不以外部书目元数据缺失标记知识库内容 MISSING；不重复医学审核已审核知识库。
+- 只有本地条目确实不存在、检索未命中/失败、sourceId 解析或打开失败，或回答所需字段在对应条目中确实不存在，才说明具体本地知识缺项。不得以模型训练记忆补齐缺失内容。
+- C 工作流保留 PARTIAL 的原因只限于黄金检索集实际揭示的召回覆盖、相关性、排序、上下文和 sourceId 链路问题；不得把历史 bibliographic locator MISSING 计入 C 的剩余工作或发布条件。
+- 本项不改既有知识库内容，不改检索 query、召回上限、排序、去重或 FTS5；只统一验收口径和关闭无意义的考古式来源核验待办。

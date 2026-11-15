@@ -154,3 +154,17 @@ output/find-n2-ai/<run-id>/
 - 对应 TRACE 行范围和截图编号。
 
 最终统计必须按实际执行场景计算：PASS、FAIL、BLOCKED、UNKNOWN 分开列；未执行项不得计入分母或写成 PASS。
+
+
+## 9. 用户手动选择 GPU / CPU（B-01）
+
+当前端侧后端选择入口为 App「设置 → 本地 AI → E4B 推理后端」，不要求用户通过 Debug Intent、ADB 参数或后台配置切换。
+
+1. GPU、CPU 两个选项均应在 Debug / Release 构建显示；首次未保存偏好时默认为 GPU。
+2. 用户偏好保存在 App 私有设置中，App 重启后保持；Native status 必须同时提供用户偏好与实际 backend。
+3. 模型未加载时选择只保存偏好，下次 Load Model 按偏好加载。
+4. 模型运行中切换时，Native 串行队列先完成当前已排队操作，再释放旧 Engine/Conversation，按新偏好重建并恢复此前成功完成的历史轮次。当前失败或 UNKNOWN 请求不重放。
+5. 初始化失败后设置页必须显示失败，并能切换到另一 backend 重试。GPU 自动 fallback CPU 时显示实际 backend=CPU；用户可切换为 CPU 固定使用，或重新尝试 GPU。
+6. GPU 仍沿用当前配置：语言模型/视觉 backend GPU，audioBackend CPU；CPU 模式语言/视觉/音频均为 CPU。媒体场景按实际 Native backend 和对应子后端记录。
+
+本地完整执行步骤见 docs/find-n2-local-ai-acceptance-checklist.md。B-01 / G-01 / C-01 / ATT-01 / REC-01 / CLR-01 / F-01 均由 OPPO Find N2 实测；CI 不替代真机证据。

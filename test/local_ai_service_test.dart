@@ -120,6 +120,53 @@ void main() {
     });
   });
 
+  group('LocalAiService backend preference', () {
+    test('setBackendPreference sends the normalized selection to Native', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'installed': true,
+          'fileExists': true,
+          'hashVerified': true,
+          'ready': true,
+          'modelPath': '/app/files/ai_models/gemma-4-E4B-it.litertlm',
+          'sizeBytes': 3659530240,
+          'expectedSizeBytes': 3659530240,
+          'backend': 'cpu',
+          'preferredBackend': 'cpu',
+        };
+      });
+
+      final status = await LocalAiService().setBackendPreference('CPU');
+
+      expect(received?.method, 'setBackendPreference');
+      expect(received?.arguments, <String, Object?>{'backend': 'cpu'});
+      expect(status.ready, isTrue);
+      expect(status.backend, 'cpu');
+      expect(status.preferredBackend, 'cpu');
+    });
+
+    test('setBackendPreference rejects unsupported values before Native call',
+        () async {
+      await expectLater(
+        LocalAiService().setBackendPreference('auto'),
+        throwsArgumentError,
+      );
+    });
+
+    test('older Native status defaults preferred backend to GPU', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': false,
+        'backend': 'not_loaded',
+      });
+
+      expect(status.preferredBackend, 'gpu');
+    });
+  });
+
   group('LocalAiService text conversation contract', () {
     test('sendMessage forwards the exact user text and returns native reply', () async {
       MethodCall? received;
