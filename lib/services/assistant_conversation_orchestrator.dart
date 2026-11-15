@@ -143,10 +143,11 @@ class AssistantConversationOrchestrator {
     bool structuredInterviewActive = false,
   }) {
     if (structuredInterviewActive) return true;
-    if (hasAttachment) {
-      return selectedMode == AssistantMode.automatic ||
-          selectedMode == AssistantMode.consultation;
-    }
+    // Current image/audio paths can contain clinical observations or
+    // symptom speech. Native red-flag policy deliberately refuses to clear
+    // raw attachments; they must not enter E4B before a provenance-labelled
+    // transcript/observation has been assessed.
+    if (hasAttachment) return true;
 
     final text = query.trim();
     if (text.isEmpty) return false;
