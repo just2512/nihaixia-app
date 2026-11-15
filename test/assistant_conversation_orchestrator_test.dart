@@ -37,7 +37,7 @@ void main() {
           reason: '只有症状叙述而没有诊断请求时先理解/澄清，不擅自进入规则辨证');
     });
 
-    test('安全门禁区分个人诊断、学习请求与未评估附件', () {
+    test('问诊是模拟学习流程，不依赖临床分诊检测器', () {
       bool requires(
         String query, {
         AssistantMode mode = AssistantMode.automatic,
@@ -51,60 +51,29 @@ void main() {
             structuredInterviewActive: activeTask,
           );
 
-      expect(requires('最近不舒服，帮我诊断一下什么问题？'), isTrue);
-      expect(requires('我最近胸痛'), isTrue);
-      expect(requires('我最近几天头晕'), isTrue);
-      expect(
-        requires('我父亲最近胸痛'),
-        isTrue,
-        reason: '第三人称患者症状不能因缺少第一人称标记而绕过安全评估',
-      );
-      expect(
-        requires('孩子最近发热'),
-        isTrue,
-        reason: '症状描述可以涉及家庭成员或其他患者',
-      );
-      expect(
-        requires('我最近胸痛\n那它的原因呢'),
-        isTrue,
-        reason: '后续省略主语的追问仍继承用户此前的健康上下文',
-      );
-      expect(
-        requires('胸痛'),
-        isTrue,
-        reason: '单独症状词在缺少安全评估时也不能进入模型；应先经确定性门禁',
-      );
-      expect(requires('我有呼吸困难，帮我起卦'), isTrue);
-      expect(requires('喘不上气'), isTrue);
-      expect(requires('突发偏瘫'), isTrue);
-      expect(requires('意识障碍'), isTrue);
-      expect(requires('大量出血'), isTrue);
-      expect(requires('自伤风险'), isTrue);
-      expect(
-        requires('解释胸痛的中医理论', mode: AssistantMode.learning),
-        isFalse,
-      );
-      expect(
-        requires('什么是呼吸困难', mode: AssistantMode.learning),
-        isFalse,
-        reason: '明确知识学习问题不进入个人健康评估路径',
-      );
-      expect(requires('我想排盘'), isFalse);
+      for (final query in [
+        '最近不舒服，帮我诊断一下什么问题？',
+        '我最近胸痛',
+        '我父亲最近胸痛',
+        '孩子最近发热',
+        '我有呼吸困难，帮我起卦',
+        '喘不上气',
+        '突发偏瘫',
+        '意识障碍',
+        '大量出血',
+        '自伤风险',
+        '解释胸痛的中医理论',
+      ]) {
+        expect(requires(query), isFalse, reason: query);
+      }
+
       expect(
         requires('最近有点说不清楚的怪感觉', mode: AssistantMode.consultation),
-        isTrue,
-        reason: '显式问诊模式不能只依赖有限症状词表触发安全评估',
+        isFalse,
       );
-      expect(
-        requires('', mode: AssistantMode.consultation, attachment: true),
-        isTrue,
-      );
-      expect(
-        requires('', mode: AssistantMode.learning, attachment: true),
-        isTrue,
-        reason: '原始图片和语音尚没有可供红旗门禁评估的文本来源',
-      );
-      expect(requires('', activeTask: true), isTrue);
+      expect(requires('', mode: AssistantMode.consultation, attachment: true), isFalse);
+      expect(requires('', mode: AssistantMode.learning, attachment: true), isFalse);
+      expect(requires('', activeTask: true), isFalse);
     });
 
     test('个人症状文本被识别为健康叙述，不进入工具意图模型', () {
