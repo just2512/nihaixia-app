@@ -434,7 +434,45 @@ class LocalAiService {
     final normalizedQuestion = question.trim();
     final normalizedText = currentText.trim();
     final normalizedContext = userContext.trim();
-    if (!RegExp(r'^[a-zA-Z0-9_:]{1,80}
+    if (normalizedQuestionId.isEmpty ||
+        normalizedQuestionId.length > 80 ||
+        !RegExp(r'^[a-zA-Z0-9_:]+$').hasMatch(normalizedQuestionId) ||
+        normalizedQuestion.isEmpty ||
+        normalizedQuestion.length > 300 ||
+        normalizedText.isEmpty ||
+        normalizedText.length > 2000 ||
+        normalizedContext.isEmpty ||
+        normalizedContext.length > 5000 ||
+        !normalizedContext.contains(normalizedText) ||
+        options.isEmpty ||
+        options.length > 30 ||
+        options.any((option) => option.trim().isEmpty || option.length > 120) ||
+        options.toSet().length != options.length) {
+      throw const FormatException('当前问诊问题或可选答案不符合受限理解契约');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'understandTcmInterviewAnswer',
+      {
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+        'question_id': normalizedQuestionId,
+        'question': normalizedQuestion,
+        'options': jsonEncode(options),
+        'current_text': normalizedText,
+        'user_context': normalizedContext,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    final rawDraft = data?['draft'];
+    if (rawDraft is! String || rawDraft.trim().isEmpty) {
+      throw const FormatException('本地模型没有返回当前问项的理解结果');
+    }
+    return LocalAiInterviewAnswer.fromModelText(
+      rawDraft,
+      questionId: normalizedQuestionId,
+      options: options,
+      sourceText: normalizedContext,
+    );
+  }
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
     required String traceId,
   }) =>
