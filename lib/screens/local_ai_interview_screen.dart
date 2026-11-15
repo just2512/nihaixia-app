@@ -1208,7 +1208,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             await _retrieveKnowledgeWithTrace(
           query,
           traceContext: traceContext,
-          includeMedicalCases: true,
+          includeMedicalCases: RegExp(r'医案|病例|案例').hasMatch(query),
         );
         final knowledgeContext = switch (knowledge.status) {
           AssistantKnowledgeRetrievalStatus.noResults => 'App 本地知识库本轮未命中可引用条目（NO_RESULTS）。',
@@ -1220,7 +1220,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
               '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
-              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典/医案。'
+              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 医案库并保留整理案例的来源身份。'
               '诊断性陈述必须有可追溯的知识库 sourceId；必须区分 App 规则结果、知识库内容和 AI 解释，不得自行新增或改写规则结论，不得补造缺失字段。\n'
               '$knowledgeContext',
         );
@@ -1803,7 +1803,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
       '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
       '先解释本次 App 实际返回的辨病辨证结果和字段关系，再结合本轮本地知识库实际检索到的条目说明诊断依据。'
-      '在知识来源支持的范围内，继续讲解相关病机、治法、方剂组成与配伍、针灸选穴思路，以及经典条文和医案对照。'
+      '在知识来源支持的范围内，继续讲解相关病机、治法、方剂组成与配伍、针灸选穴思路和经典依据。'
       '每个诊断性陈述都必须能够对应本轮 App 规则结果和可追溯知识库 sourceId；知识库无依据的内容标记 MISSING，不得以模型记忆补齐。'
       '明确区分 App 规则结果、知识库原文和 AI 归纳；不重新执行辨证，不增加、修改或伪造 App 规则结论，不补造缺失字段。';
 
