@@ -246,6 +246,22 @@ class _AssistantTurnResponse {
   final String? knowledgeStatus;
 }
 
+/// Bounded, user-authored context sent only to the RedFlag safety boundary.
+/// The unbounded classificationText is kept in-memory and is never sent to
+/// Native or E4B; it prevents a prior symptom turn from disappearing merely
+/// because the review payload has a storage/transport cap.
+class _RedFlagContextSnapshot {
+  const _RedFlagContextSnapshot({
+    required this.text,
+    required this.classificationText,
+    required this.sourceTruncated,
+  });
+
+  final String text;
+  final String classificationText;
+  final bool sourceTruncated;
+}
+
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AiTraceRecorder get _traceRecorder => widget.traceRecorder ?? AiTraceRuntime.recorder;
   late final LocalAiService _service;
@@ -323,23 +339,64 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required String? text,
     required AiTraceContext traceContext,
     required String route,
+    required bool requireAssessment,
+    bool sourceTruncated = false,
   }) async {
-    if (_redFlagPreflightedContexts.contains(traceContext)) return false;
+    // The default-off recorder returns the same const disabled context for
+    // every turn. Only memoize an enabled, per-turn TRACE identity; otherwise
+    // a prior CLEAR could suppress review for a later clinical message.
+    final canMemoizePreflight = traceContext.enabled && traceContext.traceId != null;
+    if (canMemoizePreflight &&
+        _redFlagPreflightedContexts.contains(traceContext)) {
+      return false;
+    }
 
     final gate = widget.redFlagGate;
-    if (gate == null) {
+    if (!requireAssessment) {
+      // Medical review is scoped to clinical requests. Non-clinical tools and
+      // learning questions remain available without invoking a detector.
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.redFlag,
         status: AiTraceStatus.notApplicable,
         route: route,
-        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
+        errorCode: gate == null
+            ? 'REDFLAG_GATE_NOT_CONFIGURED'
+            : 'REDFLAG_ASSESSMENT_NOT_REQUIRED',
       );
       return false;
     }
 
+    if (gate == null) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.redFlag,
+        status: AiTraceStatus.unknown,
+        route: route,
+        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
+      );
+      if (mounted) {
+        setState(() {
+          _error = '安全评估器尚未配置，无法确认这段个人健康信息是否可以进入问诊流程。'
+              '本轮已暂停，未调用模型，也未执行规则辨证。';
+        });
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
+      );
+      return true;
+    }
+
     final result = await gate.evaluate(
-      RedFlagInput(source: source, text: text),
+      RedFlagInput(
+        source: source,
+        text: text,
+        sourceTruncated: sourceTruncated,
+      ),
     );
     final traceStatus = switch (result.status) {
       RedFlagPreflightStatus.clear => AiTraceStatus.succeeded,
@@ -356,10 +413,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
 
     if (result.mayContinueOrdinaryFlow) {
-      if (_redFlagPreflightedContexts.length >= 32) {
-        _redFlagPreflightedContexts.clear();
+      if (canMemoizePreflight) {
+        if (_redFlagPreflightedContexts.length >= 32) {
+          _redFlagPreflightedContexts.clear();
+        }
+        _redFlagPreflightedContexts.add(traceContext);
       }
-      _redFlagPreflightedContexts.add(traceContext);
       return false;
     }
 
@@ -1024,6 +1083,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AssistantMode mode,
     required AiTraceContext traceContext,
     String? retrievalQuery,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
     Future<String> sendWithContext(String context) async {
@@ -1038,11 +1100,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         status: AiTraceStatus.succeeded,
       );
       return traceId == null
-          ? _service.sendMessageWithContext(text, context: context)
+          ? _service.sendMessageWithContext(
+              text,
+              context: context,
+              requireMedicalSafety: requireMedicalSafety,
+              redFlagContext: redFlagContext,
+              redFlagContextTruncated: redFlagContextTruncated,
+            )
           : _service.sendMessageWithContextAndTrace(
               text,
               context: context,
               traceId: traceId,
+              requireMedicalSafety: requireMedicalSafety,
+              redFlagContext: redFlagContext,
+              redFlagContextTruncated: redFlagContextTruncated,
             );
     }
     switch (mode) {
@@ -1066,8 +1137,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             status: AiTraceStatus.succeeded,
           );
           final reply = traceId == null
-              ? await _service.sendMessage(text)
-              : await _service.sendMessageWithTrace(text, traceId: traceId);
+              ? await _service.sendMessage(
+                  text,
+                  requireMedicalSafety: requireMedicalSafety,
+                  redFlagContext: redFlagContext,
+                  redFlagContextTruncated: redFlagContextTruncated,
+                )
+              : await _service.sendMessageWithTrace(
+                  text,
+                  traceId: traceId,
+                  requireMedicalSafety: requireMedicalSafety,
+                  redFlagContext: redFlagContext,
+                  redFlagContextTruncated: redFlagContextTruncated,
+                );
           return _AssistantTurnResponse(
             text: reply,
             sourceIds: knowledge.sourceIds,
@@ -1296,6 +1378,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'structured_diagnosis',
           mode: AssistantMode.consultation.name,
         );
+    final redFlagSnapshot = _boundedRedFlagContext(
+      currentText: [
+        initialUserMessage,
+        userContext,
+      ].whereType<String>().where((value) => value.trim().isNotEmpty).join('\n'),
+    );
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.structuredInterview,
+      text: redFlagSnapshot.text,
+      traceContext: activeTraceContext,
+      route: 'structured_diagnosis',
+      requireAssessment: true,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
+    )) {
+      return;
+    }
     if (traceContext == null) {
       await _traceRecorder.record(
         activeTraceContext,
@@ -1759,7 +1857,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var modelContextRestored = false;
     if (controller.isCompleted) {
       try {
-        await _restoreVisibleConversationToModel();
+        await _restoreVisibleConversationToModel(requireMedicalSafety: true);
         modelContextRestored = true;
       } catch (error) {
         if (mounted) {
@@ -1823,11 +1921,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'structured_interview_option',
           mode: AssistantMode.consultation.name,
         );
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: option);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
-      text: option,
+      text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_interview_option',
+      requireAssessment: true,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
@@ -2318,11 +2419,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AiTraceContext traceContext,
     AssistantToolArguments? arguments,
   }) async {
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.toolArguments,
-      text: userText,
+      text: redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'headless_tool:${tool.id}',
+      requireAssessment: tool.id == 'structured_diagnosis',
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
@@ -2615,11 +2719,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'manual_tool',
           mode: (mode ?? _assistantMode).name,
         );
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.toolArguments,
-      text: userText,
+      text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'tool_dispatch:${tool.id}',
+      requireAssessment: tool.id == 'structured_diagnosis',
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
@@ -4303,7 +4410,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _scrollToBottom();
   }
 
-  Future<void> _restoreVisibleConversationToModel() async {
+  Future<void> _restoreVisibleConversationToModel({
+    bool requireMedicalSafety = false,
+    _RedFlagContextSnapshot? safetyContext,
+  }) async {
     if (_status?.ready != true) return;
     final transcriptLines = _messages
         .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
@@ -4317,9 +4427,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .where((message) => message.isUser)
         .map((message) => message.text)
         .toList(growable: false);
+    final redFlagSnapshot = safetyContext ?? _boundedRedFlagContext();
+    final historyRequiresMedicalSafety =
+        requireMedicalSafety ||
+        AssistantConversationOrchestrator.requiresMedicalSafetyPreflight(
+          query: redFlagSnapshot.classificationText,
+          selectedMode: _lastEffectiveMode ?? _assistantMode,
+          structuredInterviewActive:
+              _tcmInterviewController?.canAnswer == true ,
+        );
     await _service.restoreConversation(
       transcript: transcript,
       userMessages: userMessages,
+      requireMedicalSafety: historyRequiresMedicalSafety,
+      redFlagContext: historyRequiresMedicalSafety ? redFlagSnapshot.text : null,
+      redFlagContextTruncated:
+          historyRequiresMedicalSafety && redFlagSnapshot.sourceTruncated,
     );
   }
 
@@ -4353,12 +4476,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       route: 'result_interpretation',
       mode: mode.name,
     );
+    final redFlagContext = _boundedRedFlagContext(
+      currentText: normalizedPrompt,
+    );
+    final requiresMedicalSafety = AssistantConversationOrchestrator
+        .requiresMedicalSafetyPreflight(
+      query: redFlagContext.classificationText,
+      selectedMode: mode,
+      structuredInterviewActive:
+          _tcmInterviewController?.canAnswer == true ,
+    );
+    if (requiresMedicalSafety &&
+        await _blockIfRedFlagPreflightDoesNotClear(
+          source: RedFlagInputSource.structuredInterview,
+          text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
+          traceContext: traceContext,
+          route: 'result_interpretation',
+          requireAssessment: true,
+          sourceTruncated: redFlagContext.sourceTruncated,
+        )) {
+      return;
+    }
     var inferenceCompleted = false;
     try {
       // Ensure the immediately preceding deterministic result is part of the
       // native model context before adding this explicit user-requested action.
       if (restoreVisibleConversation) {
-        await _restoreVisibleConversationToModel();
+        await _restoreVisibleConversationToModel(
+          requireMedicalSafety: requiresMedicalSafety,
+          safetyContext: redFlagContext,
+        );
       }
       if (!mounted) return;
       setState(() {
@@ -4395,6 +4542,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: mode,
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
+        requireMedicalSafety: requiresMedicalSafety,
+        redFlagContext: requiresMedicalSafety ? redFlagContext.text : null,
+        redFlagContextTruncated:
+            requiresMedicalSafety && redFlagContext.sourceTruncated,
       );
       inferenceCompleted = true;
       await _traceRecorder.record(
@@ -5476,11 +5627,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final generation = _historyRestoreGeneration;
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
+    final redFlagSnapshot = _boundedRedFlagContext();
+    final requireMedicalSafety = AssistantConversationOrchestrator
+        .requiresMedicalSafetyPreflight(
+      query: redFlagSnapshot.classificationText,
+      selectedMode: _lastEffectiveMode ?? _assistantMode,
+      structuredInterviewActive:
+          _tcmInterviewController?.canAnswer == true ,
+    );
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.historyRestore,
-      text: transcript,
+      text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
       traceContext: AiTraceContext.disabled(),
       route: 'history_restore',
+      requireAssessment: requireMedicalSafety,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
@@ -5488,6 +5649,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _service.restoreConversation(
         transcript: transcript,
         userMessages: _pendingHistoryUserMessages,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: requireMedicalSafety ? redFlagSnapshot.text : null,
+        redFlagContextTruncated:
+            requireMedicalSafety && redFlagSnapshot.sourceTruncated,
       );
       if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() {
@@ -5522,6 +5687,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  _RedFlagContextSnapshot _boundedRedFlagContext({String? currentText}) {
+    const maxUserMessages = 60;
+    const maxContextCharacters = 10000;
+    final allUserTurns = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: true);
+    final current = currentText?.trim();
+    if (current != null && current.isNotEmpty) allUserTurns.add(current);
+
+    final classificationText = allUserTurns.join('\n');
+    var sourceTruncated = allUserTurns.length > maxUserMessages ||
+        classificationText.contains('【较早历史已省略');
+    final recentTurns = allUserTurns.length > maxUserMessages
+        ? allUserTurns.skip(allUserTurns.length - maxUserMessages)
+        : allUserTurns;
+    final joined = recentTurns.join('\n');
+    final boundedText = joined.length <= maxContextCharacters
+        ? joined
+        : joined.substring(joined.length - maxContextCharacters);
+    if (joined.length > maxContextCharacters) sourceTruncated = true;
+
+    return _RedFlagContextSnapshot(
+      text: boundedText,
+      classificationText: classificationText,
+      sourceTruncated: sourceTruncated,
+    );
+  }
+
   Future<void> _send() async {
     if (_modelControlBusy) return;
     final text = _inputController.text.trim();
@@ -5548,6 +5743,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
     final traceId = traceContext.traceId;
     final activeTcmTask = _tcmInterviewController;
+    final redFlagContext = _boundedRedFlagContext(currentText: text);
+    final requiresMedicalSafety = AssistantConversationOrchestrator
+        .requiresMedicalSafetyPreflight(
+      query: redFlagContext.classificationText,
+      selectedMode: _lastEffectiveMode ?? _assistantMode,
+      hasAttachment: imagePath != null || audioPath != null,
+      structuredInterviewActive: activeTcmTask?.canAnswer == true ,
+    );
     final inputSource = audioPath != null
         ? RedFlagInputSource.audioAttachment
         : imagePath != null
@@ -5557,9 +5760,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 : RedFlagInputSource.currentText;
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: inputSource,
-      text: text.isEmpty ? null : text,
+      text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
       traceContext: traceContext,
       route: 'assistant_send',
+      requireAssessment: requiresMedicalSafety,
+      sourceTruncated: redFlagContext.sourceTruncated,
     )) {
       return;
     }
@@ -7175,27 +7380,42 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final turnResponse = audioPath != null
           ? _AssistantTurnResponse(
               text: traceId == null
-                  ? await _service.sendAudio(audioPath, prompt: text)
+                  ? await _service.sendAudio(
+                      audioPath,
+                      prompt: text,
+                      requireMedicalSafety: requiresMedicalSafety,
+                    )
                   : await _service.sendAudioWithTrace(
                       audioPath,
                       prompt: text,
                       traceId: traceId,
+                      requireMedicalSafety: requiresMedicalSafety,
                     ),
             )
           : imagePath != null
               ? _AssistantTurnResponse(
                   text: traceId == null
-                  ? await _service.sendImage(imagePath, prompt: text)
-                  : await _service.sendImageWithTrace(
-                      imagePath,
-                      prompt: text,
-                      traceId: traceId,
-                    ),
+                      ? await _service.sendImage(
+                          imagePath,
+                          prompt: text,
+                          requireMedicalSafety: requiresMedicalSafety,
+                        )
+                      : await _service.sendImageWithTrace(
+                          imagePath,
+                          prompt: text,
+                          traceId: traceId,
+                          requireMedicalSafety: requiresMedicalSafety,
+                        ),
                 )
               : await _sendTextWithKnowledgeContext(
                   text,
                   mode: effectiveMode,
                   traceContext: traceContext,
+                  requireMedicalSafety: requiresMedicalSafety,
+                  redFlagContext:
+                      requiresMedicalSafety ? redFlagContext.text : null,
+                  redFlagContextTruncated:
+                      requiresMedicalSafety && redFlagContext.sourceTruncated,
                 );
       final reply = turnResponse.text;
       nativeInferenceCompleted = true;
@@ -7503,15 +7723,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
-    final userReportedText = _messages
-        .where((message) => message.isUser)
-        .map((message) => message.text)
-        .join('\n');
+    final redFlagSnapshot = _boundedRedFlagContext();
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
-      text: userReportedText.isEmpty ? null : userReportedText,
+      text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'symptom_extraction',
+      requireAssessment: true,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       if (mounted) setState(() => _extracting = false);
       return;

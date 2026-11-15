@@ -25,7 +25,8 @@ enum class NativeRedFlagStatus {
 
 data class NativeRedFlagInput(
     val source: NativeRedFlagInputSource,
-    val text: String?
+    val text: String?,
+    val sourceTruncated: Boolean = false
 )
 
 data class NativeRedFlagVerdict(
@@ -62,6 +63,9 @@ class NativeRedFlagExecutionBoundary(
     fun evaluate(input: NativeRedFlagInput): NativeRedFlagVerdict {
         if (input.source == NativeRedFlagInputSource.UNKNOWN) {
             return reviewRequired(input.source, "INPUT_SOURCE_UNKNOWN")
+        }
+        if (input.sourceTruncated) {
+            return reviewRequired(input.source, "INPUT_CONTEXT_TRUNCATED")
         }
         if (input.source == NativeRedFlagInputSource.IMAGE_ATTACHMENT ||
             input.source == NativeRedFlagInputSource.AUDIO_ATTACHMENT

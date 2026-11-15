@@ -43,23 +43,53 @@ class LocalAiService {
     return LocalAiModelStatus.fromMap(data);
   }
 
-  Future<String> sendMessage(String text) => _sendTextMessage(text);
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) =>
+      _sendTextMessage(
+        text,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
+      );
 
   Future<String> sendMessageWithTrace(
     String text, {
     required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
-      _sendTextMessage(text, traceId: traceId);
+      _sendTextMessage(
+        text,
+        traceId: traceId,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
+      );
 
   Future<String> _sendTextMessage(
     String text, {
     String? traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'sendMessage',
       {
         'text': text,
+        if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety && redFlagContextTruncated)
+          'red_flag_context_truncated': true,
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -79,20 +109,42 @@ class LocalAiService {
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
-      _sendMessageWithContext(text, context: context);
+      _sendMessageWithContext(
+        text,
+        context: context,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
+      );
 
   Future<String> sendMessageWithContextAndTrace(
     String text, {
     required String context,
     required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
-      _sendMessageWithContext(text, context: context, traceId: traceId);
+      _sendMessageWithContext(
+        text,
+        context: context,
+        traceId: traceId,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
+      );
 
   Future<String> _sendMessageWithContext(
     String text, {
     required String context,
     String? traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final normalized = text.trim();
     if (normalized.isEmpty) {
@@ -104,6 +156,13 @@ class LocalAiService {
       {
         'text': normalized,
         'context': context.trim(),
+        if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety && redFlagContextTruncated)
+          'red_flag_context_truncated': true,
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -115,14 +174,25 @@ class LocalAiService {
     return reply;
   }
 
-  Future<String> sendImage(String path, {String prompt = ''}) async {
-    return _sendAttachment('sendImage', path, '照片', prompt: prompt);
+  Future<String> sendImage(
+    String path, {
+    String prompt = '',
+    bool requireMedicalSafety = false,
+  }) async {
+    return _sendAttachment(
+      'sendImage',
+      path,
+      '照片',
+      prompt: prompt,
+      requireMedicalSafety: requireMedicalSafety,
+    );
   }
 
   Future<String> sendImageWithTrace(
     String path, {
     String prompt = '',
     required String traceId,
+    bool requireMedicalSafety = false,
   }) async {
     return _sendAttachment(
       'sendImage',
@@ -130,17 +200,29 @@ class LocalAiService {
       '照片',
       prompt: prompt,
       traceId: traceId,
+      requireMedicalSafety: requireMedicalSafety,
     );
   }
 
-  Future<String> sendAudio(String path, {String prompt = ''}) async {
-    return _sendAttachment('sendAudio', path, '录音', prompt: prompt);
+  Future<String> sendAudio(
+    String path, {
+    String prompt = '',
+    bool requireMedicalSafety = false,
+  }) async {
+    return _sendAttachment(
+      'sendAudio',
+      path,
+      '录音',
+      prompt: prompt,
+      requireMedicalSafety: requireMedicalSafety,
+    );
   }
 
   Future<String> sendAudioWithTrace(
     String path, {
     String prompt = '',
     required String traceId,
+    bool requireMedicalSafety = false,
   }) async {
     return _sendAttachment(
       'sendAudio',
@@ -148,6 +230,7 @@ class LocalAiService {
       '录音',
       prompt: prompt,
       traceId: traceId,
+      requireMedicalSafety: requireMedicalSafety,
     );
   }
 
@@ -157,6 +240,7 @@ class LocalAiService {
     String label, {
     String prompt = '',
     String? traceId,
+    bool requireMedicalSafety = false,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -164,6 +248,7 @@ class LocalAiService {
       {
         'path': path,
         'prompt': prompt,
+        if (requireMedicalSafety) 'require_red_flag': true,
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -377,6 +462,9 @@ class LocalAiService {
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final normalized = transcript.trim();
     if (normalized.isEmpty) {
@@ -384,7 +472,18 @@ class LocalAiService {
     }
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'restoreConversation',
-      {'transcript': normalized, 'userMessages': userMessages},
+      {
+        'transcript': normalized,
+        'userMessages': userMessages,
+        if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety &&
+            (redFlagContextTruncated || userMessages.length > 60))
+          'red_flag_context_truncated': true,
+      },
     );
     if (data?['restored'] != true) {
       throw PlatformException(

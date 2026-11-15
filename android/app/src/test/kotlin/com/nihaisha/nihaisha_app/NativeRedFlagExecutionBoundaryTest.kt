@@ -117,6 +117,35 @@ class NativeRedFlagExecutionBoundaryTest {
     }
 
     @Test
+    fun truncatedClinicalContextNeverReachesDetectorOrOperation() {
+        var detectorCalls = 0
+        var operationCalls = 0
+        val boundary = NativeRedFlagExecutionBoundary(
+            NativeRedFlagDetector { input ->
+                detectorCalls += 1
+                clearVerdict(input.source)
+            }
+        )
+
+        val execution = boundary.runBefore(
+            NativeRedFlagInput(
+                NativeRedFlagInputSource.CURRENT_TEXT,
+                "那它的原因呢",
+                sourceTruncated = true
+            )
+        ) {
+            operationCalls += 1
+            "inference"
+        }
+
+        assertEquals(NativeRedFlagStatus.REVIEW_REQUIRED, execution.verdict.status)
+        assertEquals("INPUT_CONTEXT_TRUNCATED", execution.verdict.reason)
+        assertFalse(execution.executed)
+        assertEquals(0, detectorCalls)
+        assertEquals(0, operationCalls)
+    }
+
+    @Test
     fun unknownInputAndRawAttachmentsNeverReachDetector() {
         var detectorCalls = 0
         val boundary = NativeRedFlagExecutionBoundary(

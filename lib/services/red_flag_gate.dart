@@ -8,10 +8,15 @@ class RedFlagInput {
   const RedFlagInput({
     required this.source,
     this.text,
+    this.sourceTruncated = false,
   });
 
   final RedFlagInputSource source;
   final String? text;
+
+  /// True when older user-authored context was omitted to satisfy a bounded
+  /// transport/history limit. A truncated clinical context is never CLEAR.
+  final bool sourceTruncated;
 }
 
 /// Implementations must return an assessment from a versioned detector.
@@ -41,6 +46,12 @@ class RedFlagGate {
       return const RedFlagPreflightResult(
         RedFlagPreflightStatus.reviewRequired,
         'INPUT_SOURCE_UNKNOWN',
+      );
+    }
+    if (input.sourceTruncated) {
+      return const RedFlagPreflightResult(
+        RedFlagPreflightStatus.reviewRequired,
+        'INPUT_CONTEXT_TRUNCATED',
       );
     }
     // A prompt accompanying an image/audio file is not evidence that the

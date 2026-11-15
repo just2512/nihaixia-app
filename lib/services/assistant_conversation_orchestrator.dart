@@ -66,6 +66,25 @@ class AssistantConversationOrchestrator {
     '我身体',
   ];
 
+  // Symptom narratives can concern family members or another patient, not
+  // only the current user. A missing first-person pronoun must not bypass
+  // the clinical preflight.
+  static const _otherPersonContextCues = [
+    '我父亲',
+    '我母亲',
+    '我爸爸',
+    '我妈妈',
+    '父亲',
+    '母亲',
+    '爸爸',
+    '妈妈',
+    '孩子',
+    '老人',
+    '家人',
+    '朋友',
+    '患者',
+  ];
+
   static bool _isDosageConversionRequest(String query) {
     final hasQuantityAndUnit = RegExp(
       r'\d+(?:\.\d+)?\s*(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)',
@@ -105,6 +124,9 @@ class AssistantConversationOrchestrator {
     '病机',
   ];
 
+  // These are routing cues only: a match requires a reviewed safety
+  // assessment; it does not label urgency or provide a medical conclusion.
+  // The red-flag examples below mirror the normative audit boundary.
   static const _symptomCues = [
     '头痛',
     '头晕',
@@ -117,6 +139,17 @@ class AssistantConversationOrchestrator {
     '咳嗽',
     '胸闷',
     '胸痛',
+    '呼吸困难',
+    '喘不上气',
+    '意识障碍',
+    '意识不清',
+    '突发偏瘫',
+    '偏瘫',
+    '言语障碍',
+    '说话不清',
+    '大量出血',
+    '自伤风险',
+    '想伤害自己',
     '腹痛',
     '腹胀',
     '腹泻',
@@ -135,6 +168,57 @@ class AssistantConversationOrchestrator {
     '怕冷',
     '怕热',
   ];
+
+  static bool requiresMedicalSafetyPreflight({
+    required String query,
+    required AssistantMode selectedMode,
+    bool hasAttachment = false,
+    bool structuredInterviewActive = false,
+  }) {
+    if (structuredInterviewActive) return true;
+    // Current image/audio paths can contain clinical observations or
+    // symptom speech. Native red-flag policy deliberately refuses to clear
+    // raw attachments; they must not enter E4B before a provenance-labelled
+    // transcript/observation has been assessed.
+    if (hasAttachment) return true;
+
+    final text = query.trim();
+    if (text.isEmpty) return false;
+    final hasSymptoms = _symptomCues.any(text.contains);
+    final hasPersonalContext =
+        _personalContextCues.any(text.contains) ||
+        _otherPersonContextCues.any(text.contains) ||
+        (hasSymptoms &&
+            const ['我最近', '我这几天', '我今天', '我现在', '我本人', '本人']
+                .any(text.contains));
+    final explicitClinicalRequest = const [
+      '帮我诊断',
+      '诊断一下',
+      '给我诊断',
+      '帮我辨证',
+      '辨证一下',
+      '给我辨证',
+      '帮我问诊',
+      '给我问诊',
+      '判断我是不是',
+      '看看我的症状',
+    ].any(text.contains);
+    final explicitLearningRequest = _learningCues.any(text.contains);
+
+    // A clear educational question about a symptom is not a patient assessment.
+    if (explicitLearningRequest &&
+        !hasPersonalContext &&
+        !explicitClinicalRequest) {
+      return false;
+    }
+    if (explicitClinicalRequest) return true;
+    // An explicitly selected consultation mode is clinical context even when
+    // the user's description does not match a finite symptom vocabulary.
+    if (selectedMode == AssistantMode.consultation) return true;
+    // Ambiguous symptom-only text is also gated before model inference.
+    // Only an explicit educational request may bypass this preflight.
+    return hasSymptoms;
+  }
 
   static bool shouldExcludeFromIntentModel(String query) {
     final text = query.trim();
