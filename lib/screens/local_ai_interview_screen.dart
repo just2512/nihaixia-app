@@ -5135,15 +5135,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       structuredInterviewActive:
           _tcmInterviewController?.canAnswer == true ,
     );
-    if (requiresMedicalSafety &&
-        await _blockIfRedFlagPreflightDoesNotClear(
-          source: RedFlagInputSource.structuredInterview,
-          text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
-          traceContext: traceContext,
-          route: 'result_interpretation',
-          requireAssessment: false,
-          sourceTruncated: redFlagContext.sourceTruncated,
-        )) {
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.structuredInterview,
+      text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
+      traceContext: traceContext,
+      route: 'result_interpretation',
+      requireAssessment: requiresMedicalSafety,
+      sourceTruncated: redFlagContext.sourceTruncated,
+    )) {
       return;
     }
     var inferenceCompleted = false;
