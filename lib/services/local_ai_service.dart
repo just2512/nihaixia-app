@@ -410,31 +410,47 @@ class LocalAiService {
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
+    String? currentUserText,
   }) =>
-      _extractSymptoms(questionSchema: questionSchema, sourceText: sourceText);
+      _extractSymptoms(
+        questionSchema: questionSchema,
+        sourceText: sourceText,
+        currentUserText: currentUserText,
+      );
 
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
+    String? currentUserText,
   }) =>
       _extractSymptoms(
         traceId: traceId,
         questionSchema: questionSchema,
         sourceText: sourceText,
+        currentUserText: currentUserText,
       );
 
   Future<LocalAiSymptomDraft> _extractSymptoms({
     String? traceId,
     List<Map<String, Object?>>? questionSchema,
     String sourceText = '',
+    String? currentUserText,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
+    final normalizedCurrentUserText = currentUserText?.trim();
+    if (normalizedCurrentUserText != null &&
+        (normalizedCurrentUserText.isEmpty ||
+            normalizedCurrentUserText.length > 2000)) {
+      throw const FormatException('当前问诊输入为空或超出长度限制');
+    }
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'extractSymptoms',
       {
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
         if (questionSchema != null) 'question_schema': jsonEncode(questionSchema),
+        if (normalizedCurrentUserText != null)
+          'current_user_text': normalizedCurrentUserText,
       },
     );
     _verifyTraceId(data, normalizedTraceId);
