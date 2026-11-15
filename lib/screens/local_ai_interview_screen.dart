@@ -1946,15 +1946,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       });
       return;
     }
-    var userContext = [...previousUserMessages, userText.trim()].join('\\n');
+    var userContext = [...previousUserMessages, userText.trim()].join('\n');
     if (userContext.length > 5000) {
       final current = userText.trim();
       final priorBudget = 5000 - current.length - 1;
-      final priorText = priorBudget > 0 ? previousUserMessages.join('\\n') : '';
+      final priorText = priorBudget > 0 ? previousUserMessages.join('\n') : '';
       final boundedPrior = priorText.length > priorBudget
           ? priorText.substring(priorText.length - priorBudget)
           : priorText;
-      userContext = [if (boundedPrior.isNotEmpty) boundedPrior, current].join('\\n');
+      userContext = [if (boundedPrior.isNotEmpty) boundedPrior, current].join('\n');
     }
 
     final before = controller.messages.length;
@@ -2054,7 +2054,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   ? AiTraceStatus.succeeded
                   : AiTraceStatus.failed,
           toolId: 'structured_diagnosis',
-          errorCode: 'PERSISTENCE_AFTER_MODEL_FAILURE',
+          errorCode: persistence.transcriptMessagesApplicable &&
+                  !persistence.transcriptMessagesPersisted
+              ? 'PERSISTENCE_FAILED'
+              : null,
         );
       } catch (_) {
         await _traceRecorder.record(
@@ -2065,6 +2068,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           errorCode: 'PERSISTENCE_FAILED',
         );
       }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        route: 'structured_interview_natural_language',
+        mode: AssistantMode.consultation.name,
+        errorCode: 'NATIVE_INTERVIEW_ANSWER_UNAVAILABLE',
+      );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.resultValidation,
@@ -9110,7 +9121,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (draft == null || _structuredDiagnosisBusy) return;
     await _startInlineTcmInterview(
       initialUserMessage: '继续规则辨证',
-      userContext: draft.summaryLines.join('\\n'),
+      userContext: draft.summaryLines.join('\n'),
       confirmedTenAnswers: _confirmedTenAnswers,
     );
   }
