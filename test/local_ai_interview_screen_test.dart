@@ -877,15 +877,38 @@ class _CandidateDraftTextService extends _DraftTextService {
 
   final LocalAiSymptomQuestionCandidate candidate;
 
+  LocalAiSymptomDraft _candidateDraft() => LocalAiSymptomDraft(
+        mainComplaint: '饭后腹胀',
+        duration: '约两周',
+        unknowns: const ['是否与某种食物有关'],
+        questionCandidates: [candidate],
+      );
+
   @override
   Future<LocalAiSymptomDraft> extractSymptoms() async {
     extractionCalls += 1;
-    return LocalAiSymptomDraft(
-      mainComplaint: '饭后腹胀',
-      duration: '约两周',
-      unknowns: const ['是否与某种食物有关'],
-      questionCandidates: [candidate],
-    );
+    return _candidateDraft();
+  }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) async {
+    extractionCalls += 1;
+    return _candidateDraft();
+  }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) async {
+    extractionCalls += 1;
+    return _candidateDraft();
   }
 }
 
