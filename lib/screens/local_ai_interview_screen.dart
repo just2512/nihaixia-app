@@ -1369,15 +1369,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'structured_diagnosis',
           mode: AssistantMode.consultation.name,
         );
+    final redFlagSnapshot = _boundedRedFlagContext(
+      currentText: [
+        initialUserMessage,
+        userContext,
+      ].whereType<String>().where((value) => value.trim().isNotEmpty).join('\n'),
+    );
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
-      text: [initialUserMessage, userContext]
-          .whereType<String>()
-          .where((value) => value.trim().isNotEmpty)
-          .join('\n'),
+      text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_diagnosis',
       requireAssessment: true,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
