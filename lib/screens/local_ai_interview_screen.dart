@@ -1200,15 +1200,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.consultation:
-        // Consultation uses the same bundled classical-text and TCM retrieval
-        // as learning, but excludes unverified case records to avoid case-based
-        // diagnostic anchoring. Retrieved text remains reference-only.
+        // Consultation uses the same bundled classical-text, TCM, and local
+        // medical-case sources as learning. Case entries retain their local
+        // record identity and are cited as App-organized case data.
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
             await _retrieveKnowledgeWithTrace(
           query,
           traceContext: traceContext,
-          includeMedicalCases: false,
+          includeMedicalCases: true,
         );
         final knowledgeContext = switch (knowledge.status) {
           AssistantKnowledgeRetrievalStatus.noResults => 'App 本地知识库本轮未命中可引用条目（NO_RESULTS）。',
