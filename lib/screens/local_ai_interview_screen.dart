@@ -4545,7 +4545,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final explicitlyOpenYunqiPage = RegExp(
-      r'(?:打开|进入|跳转到|去到).{0,16}(?:页面|工具页|工具)',
+      r'(?:打开|进入|跳转到|去到).{0,16}(?:五运六气|推算|页面|工具页|工具)',
     ).hasMatch(userText);
     if (tool.id == 'yunqi' &&
         tool.headlessExecutor != null &&
