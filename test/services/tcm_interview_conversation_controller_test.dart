@@ -114,6 +114,11 @@ void main() {
           reason: '自然语言理解与澄清不能直接写入 DiagnosticEngine');
       expect(pending.transcript.last.hasPendingOptions, isTrue);
       expect(
+        pending.transcript.where((message) => message.hasPendingOptions),
+        hasLength(1),
+        reason: '只有当前待答问题可以显示选项，历史问题不能重复出现可点击选项',
+      );
+      expect(
         TcmInterviewTaskState.decode(pending.encode()).transcript.last.hasPendingOptions,
         isTrue,
       );
