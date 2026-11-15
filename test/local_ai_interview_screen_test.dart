@@ -1164,6 +1164,78 @@ void main() {
     },
   );
 
+  testWidgets('自然语言诊断请求先确认自述候选，再调用同一规则问诊控制器', (tester) async {
+    const query = '最近三天头痛，昨晚睡觉时醒了两次，帮我诊断一下什么问题？';
+    const answer = '半夜1-3点醒';
+    final service = _TextSendService(
+      initialSymptomDraft: const LocalAiSymptomDraft(
+        mainComplaint: '头痛',
+        questionCandidates: [
+          LocalAiSymptomQuestionCandidate(
+            questionId: 'sleep',
+            question: '【九问睡眠】晚上能一觉到天亮吗？几点醒？',
+            answer: answer,
+            evidence: '醒了两次',
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: _store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), query);
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('先核对你刚才的描述'), findsOneWidget);
+    expect(service.initialSymptomTexts, [query]);
+    expect(
+      service.initialSymptomSchemas.single.any(
+        (item) =>
+            item['id'] == 'sleep' &&
+            (item['options'] as List).contains(answer),
+      ),
+      isTrue,
+      reason: 'Native 提取必须使用 App 当前 DiagnosticEngine 的题目和原选项',
+    );
+
+    final reviewChecks = find.byType(CheckboxListTile);
+    expect(reviewChecks, findsNWidgets(2));
+    await tester.tap(reviewChecks.first);
+    await tester.pumpAndSettle();
+    await tester.tap(reviewChecks.last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认并开始规则问诊'));
+    await tester.pumpAndSettle();
+
+    final saved = await _waitForTcmInterviewTaskState(
+      tester,
+      expectedPendingPromptId: 'temperature',
+    );
+    expect(saved, isNotNull);
+    expect(saved!.pendingConfirmedTenAnswers, {'sleep': answer});
+    expect(
+      saved.snapshot.answers.containsKey('sleep'),
+      isFalse,
+      reason: '用户虽确认了候选，但在规则引擎轮到该题前不能提前写入答案',
+    );
+    expect(
+      saved.transcript.any((message) => message.text.contains(query)),
+      isTrue,
+    );
+  });
+
   testWidgets('规则辨证问题和答案留在统一助手时间线并持久化', (tester) async {
     final service = _TextSendService();
     await tester.pumpWidget(
