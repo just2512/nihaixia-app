@@ -637,3 +637,28 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 自由文本问诊仍未闭环：控制器尚未按 AI 提取并经用户确认的字段跳过已回答项、只追问缺项；受生产 RedFlag detector 缺失约束，不能开放自动辨证。
 - Find N2 的 GPU/CPU、多轮媒体、进程恢复、数据清除后不可恢复和端到端 TRACE 必须由实体设备完成；CI APK、模拟器/Native 单测不代替真机验收。
 - 不修改 DiagnosticEngine/DiagnosticRules/十问/剂量/排盘算法；不重审已审核知识库；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+
+
+## 2P. 2026-11-15 PR #178/#179 后当前能力清单
+
+- 当前复核主线：`master @ 2989aa9231c715b6215eda9bfa99f9e984aed715`。PR #178 的代码合并基线为 `5b2c3d8738128a5965e54f807719eb2d6fe16635`；其 post-merge Flutter tests `43685797528` 与 Quality Gate `43685797546` 均 SUCCESS。PR #179 合并后的当前主线 Flutter tests `43689074134` 与 Quality Gate `43689074197` 均 SUCCESS。
+- `AssistantToolRouter`：24 个定义，其中 23 个常规工具入口 + 1 个 `structured_diagnosis` 内联问诊控制器。23 个常规工具中 17 项具备 Headless executor：`yunqi`、`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`、`dosage`、`ziwu_liuzhu`、`almanac`、`solar_terms`、`dream`、`guansha`、`sanshan_lingqian`、`chenggu`、`shousheng_debt`、`huangdi_siji`、`saved_charts`。
+- 6 项 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。它们按知识检索复用、个人数据明确授权和领域安全语义保留；不作为批量迁移目标。
+
+### 问诊助手
+
+- PR #178 已增加受约束的自然语言候选槽位提取：模型只从 App 给定的现有十问题目 ID/选项中提出候选，并附用户原话连续证据；Dart 验证 ID、选项白名单、唯一性和原文证据。
+- 用户逐项确认/取消；只有确认答案进入现有 `TcmInterviewConversationController`。控制器将已确认答案交给既有 `DiagnosticEngine`，跳过已有答案并继续追问未答项目；待确认候选可随问诊任务快照恢复。
+- AI 不生成诊断、证型、方剂或剂量，不改 `DiagnosticRules`、十问和引擎。只有 App 规则执行并校验后的真实结果才能交给 AI 解读。
+- 生产 RedFlag detector 尚无医学审核版本/覆盖证明/处置文案，Flutter 和 Native Gate 继续 fail-closed；因此自然语言临床入口保持 `PARTIAL / RELEASE BLOCKED`。测试夹具不是生产 detector，不得放行。此处需要的是 detector 自身的安全审核材料，不是重复审核已有知识库。
+
+### 工具、玄学和学习助手
+
+- 已有 17 项 Headless 工具由 App 原函数执行；缺参在助手对话中澄清，执行结果通过 toolId、实际 arguments、状态、结构和 sourceIds 校验后才交给 AI 总结/解释。模型不得计算或伪造业务结果。
+- 学习和结果追问使用现有知识检索；回答引用必须带稳定 `sourceId` 并能打开 App 内具体条目。古籍章节、内经条目及医案按已有稳定 ID/索引定位；不要求普通知识回答补外部纸本版本、卷页或影印本。
+- 不重复医学审核知识库，不通过模型记忆补造本地库外医学事实。6 项 Page-only 不因数字目标而迁移。
+
+### 本地设备与收尾
+
+- Find N2 GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除 AI 数据后的重启复查及 TRACE 均为本地实机验收；云端 CI 只证明构建和自动化，不替代设备证据。清单详见执行台账 §46.3。
+- 本轮无新增运行时代码任务；只有在本地真机或生产 RedFlag detector 审核材料提供后，才根据具体失败证据继续修复。不得重复运行无明确目标的泛化测试或扩张架构。
