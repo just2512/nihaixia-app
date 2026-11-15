@@ -101,14 +101,17 @@ void main() {
       controller.answerOption(controller.pendingOptions.first);
       controller.answerOption('跳过，直接问诊');
       final before = controller.createTaskState().snapshot.answers;
+      final canonicalPrompt = controller.pendingPromptText;
 
       expect(controller.canAcceptNaturalLanguageAnswer, isTrue);
       controller.recordNaturalLanguageInput('晚上睡觉时醒了两次');
-      controller.updatePendingPrompt('你醒来后还能再次入睡吗？');
+      controller.appendPendingPromptNotice('我理解为夜里醒来，具体是在几点醒？请从下方原有选项确认。');
 
       final pending = controller.createTaskState();
       expect(pending.pendingPromptId, startsWith('ten:'));
-      expect(pending.pendingPromptText, '你醒来后还能再次入睡吗？');
+      expect(pending.pendingPromptText, canonicalPrompt,
+          reason: '自然语言澄清不覆盖 App 原始问项契约');
+      expect(pending.transcript.last.text, contains('几点醒'));
       expect(pending.pendingOptions, isNotEmpty);
       expect(pending.snapshot.answers, before,
           reason: '自然语言理解与澄清不能直接写入 DiagnosticEngine');
