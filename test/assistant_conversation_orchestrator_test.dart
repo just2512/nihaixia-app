@@ -124,6 +124,69 @@ void main() {
       expect(decision.needsClarification, isFalse);
     });
 
+    test('明确诊断请求从助手对话进入结构化症状整理而不是普通模型回复', () {
+      const query = '最近不舒服，帮我诊断一下什么问题？';
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: query,
+        selectedMode: AssistantMode.automatic,
+      );
+
+      expect(decision.mode, AssistantMode.consultation);
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isFalse);
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: query,
+          selectedMode: decision.mode,
+        ),
+        isTrue,
+      );
+    });
+
+    test('问诊模式的本人症状叙述进入结构化整理', () {
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: '我这几天饭后腹胀',
+          selectedMode: AssistantMode.consultation,
+        ),
+        isTrue,
+      );
+    });
+
+    test('纯学习问题和没有主体的单独症状不自动启动规则问诊', () {
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: '解释胸痛的中医理论',
+          selectedMode: AssistantMode.learning,
+        ),
+        isFalse,
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: '胸痛',
+          selectedMode: AssistantMode.automatic,
+        ),
+        isFalse,
+      );
+    });
+
+    test('只有明确临床请求才会在缺少具体症状时开始问诊', () {
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: '帮我诊断一下',
+          selectedMode: AssistantMode.automatic,
+        ),
+        isTrue,
+      );
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: '你好，介绍一下你能做什么',
+          selectedMode: AssistantMode.automatic,
+        ),
+        isFalse,
+      );
+    });
+
     test('中医概念和经典条文问题进入学习助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '《伤寒论》第172条原文和黄芩汤的关系是什么？',
