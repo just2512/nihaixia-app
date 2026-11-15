@@ -2123,3 +2123,44 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - D：已有工具能力在当前助手对话内调用；只修具体、可复现的分流或参数契约错误，不扩张架构。
 - B：生产自然语言/视觉/语音红旗检测器审核证据缺失前，不开放自然语言自动辨证。
 - A/E/F：真实设备验收由本地执行，不占用云端任务列表。
+
+
+## 46. 2026-11-15 PR #177 合并后的最终云端收口
+
+### 46.1 主线与自动验收
+
+- 本节当前基线：`master @ 5b2c3d8738128a5965e54f807719eb2d6fe16635`。
+- PR #177（AI 能力审计与执行台账收口）最终 head：`64c1729b6bcbb3a6879750cf596e758a8138da78`；squash merge：`4e8885f6d87bc55e19820e6d68350d70a52e3b27`。
+- PR 精确 head workflow `43682352558` 终态 SUCCESS：Flutter regression job `132715497320` SUCCESS；Android arm64 verification APK/Manifest/ABI/SHA-256/Native tests job `132716569251` SUCCESS。
+- 合并后 master Flutter Tests run `43685797528` 与 Flutter Quality Gate run `43685797546` 均以精确 master SHA `5b2c3d8738128a5965e54f807719eb2d6fe16635` 终态 SUCCESS。前者的 Flutter regression job `132725887264` 和 Android arm64 verification APK/Manifest/ABI/SHA-256/Native tests job `132726914027` SUCCESS；后者 Analyze and test job `132725886994` SUCCESS。
+- PR #177 仅改 `docs/ai-capability-audit.md` 与本台账，没有修改运行时代码、DiagnosticEngine/DiagnosticRules、剂量/排盘算法或知识库内容。
+
+### 46.2 当前能力收口状态
+
+- AI 与 App 的职责边界、工具执行校验、知识库 sourceId 可打开定位、optional/default 参数规则，已在规范和本台账统一。知识库已有且能打开的内容不标 MISSING；不做纸本底本、版本、卷页考据，不重复审核已审核知识库。
+- 常规工具 17/23 已有 Headless executor；其余 6 项 Page-only 保留现有知识检索、个人数据授权或领域隔离边界。不为扩大数字批量迁移。
+- 云端代码和 CI 收尾已完成。没有证据支持再改造其他工具路由；不重复执行已通过的泛化测试，不新增 Agent/DAG、第二套 Orchestrator、云端 API、向量数据库或无明确失败证据的架构。
+- 自然语言问诊仍为 PARTIAL / RELEASE BLOCKED：当前控制器保留用户自述，但尚未完成“候选字段与逐字证据 → 用户确认/修正 → 只追问缺项 → 既有规则问诊执行 → 真实结果校验 → AI 解释”的适配闭环。生产 RedFlag detector 的医学审核版本和覆盖证明仍缺；未审核 detector 不得由模型 prompt 或自造规则替代。此项不是重复审核现有知识库。
+- 因上述独立安全前置条件未满足，不开放自由文本症状自动辨证。等待具备医学背景的责任方提供经审核 detector 规则/版本/覆盖和处置文案证据后，才继续该代码切片；此前不把 Gate 的 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR。
+
+### 46.3 本地设备验收交接（非云端待办）
+
+以下项目只在用户本地 OPPO Find N2 执行；云端不得代报 PASS：
+
+1. GPU：普通图标启动、不带 CPU override，确认 Native 实际 backend 为 GPU，连续完成至少 20 轮。
+2. CPU：Debug 构建 force-stop 后用以下 Intent 启动，确认 Native 实际 backend 为 CPU，连续完成至少 20 轮：
+   ```sh
+   adb shell am force-stop com.nihaisha.nihaisha_app
+   adb shell am start -n com.nihaisha.nihaisha_app/.MainActivity --ez com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND true
+   ```
+3. GPU/CPU 两组分别覆盖多轮文字、图片、语音；记录空回复、state:7、fallback 和实际 backend，不将请求 backend 当成实际 backend。
+4. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
+5. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
+6. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
+7. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
+
+### 46.4 非代码决策边界
+
+- AI 对话行与非 AI 数据目前共用 `nihaisha.db`；Android backup 规则不能按 SQLite 行选择性排除。当前不得全局关闭备份或排除整个数据库。是否接受混合数据库备份、或批准后续 AI 独立数据库迁移，需要产品侧明确数据保留决策；在决策前保持现有备份行为并披露边界。
+- 旧版本共享临时图片所有权仍 UNKNOWN；没有所有权证据不得批量删除共享 temp 文件。
+- 除上述本地验收及明确的外部医学审核/数据保留决策外，本轮没有剩余可由云端安全闭环的运行时代码任务。云端后续只处理本地实测或外部审核材料揭示的具体可复现问题。
