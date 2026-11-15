@@ -16,7 +16,7 @@ void main() {
       }
     });
 
-    test('安全门禁只覆盖个人症状、诊断请求和问诊附件，不拦截学习与工具', () {
+    test('安全门禁区分个人诊断、学习请求与未评估附件', () {
       bool requires(
         String query, {
         AssistantMode mode = AssistantMode.automatic,
@@ -44,36 +44,10 @@ void main() {
         requires('', mode: AssistantMode.consultation, attachment: true),
         isTrue,
       );
-      expect(requires('', activeTask: true), isTrue);
-    });
-
-    test('安全门禁只覆盖个人症状、诊断请求和问诊附件，不拦截学习与工具', () {
-      bool requires(
-        String query, {
-        AssistantMode mode = AssistantMode.automatic,
-        bool attachment = false,
-        bool activeTask = false,
-      }) =>
-          AssistantConversationOrchestrator.requiresMedicalSafetyPreflight(
-            query: query,
-            selectedMode: mode,
-            hasAttachment: attachment,
-            structuredInterviewActive: activeTask,
-          );
-
-      expect(requires('最近不舒服，帮我诊断一下什么问题？'), isTrue);
-      expect(requires('我最近胸痛'), isTrue);
-      expect(requires('我最近几天头晕'), isTrue);
-      expect(requires('胸痛'), isFalse,
-          reason: '没有个人语境的症状词仍由确定性路由请求澄清');
       expect(
-        requires('解释胸痛的中医理论', mode: AssistantMode.learning),
-        isFalse,
-      );
-      expect(requires('我想排盘'), isFalse);
-      expect(
-        requires('', mode: AssistantMode.consultation, attachment: true),
+        requires('', mode: AssistantMode.learning, attachment: true),
         isTrue,
+        reason: '原始图片和语音尚没有可供红旗门禁评估的文本来源',
       );
       expect(requires('', activeTask: true), isTrue);
     });
