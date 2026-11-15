@@ -704,7 +704,11 @@ class _PostSendStatusFailureService extends _TextSendService {
   }
 
   @override
-  Future<String> sendMessage(String text) async {
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+  }) async {
     sentTexts.add(text);
     _statusUnavailable = true;
     if (failSend) {
@@ -739,7 +743,11 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   }
 
   @override
-  Future<String> sendMessage(String text) async {
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+  }) async {
     sentTexts.add(text);
     if (text == triggerText) {
       _notReady = true;
