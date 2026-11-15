@@ -2587,7 +2587,7 @@ void main() {
       );
       expect(
         savedTaskState.transcript.any(
-          (message) => message.text.contains('原文保留为上下文'),
+          (message) => message.text == '我饭后腹胀，已经持续约两周。',
         ),
         isTrue,
       );
