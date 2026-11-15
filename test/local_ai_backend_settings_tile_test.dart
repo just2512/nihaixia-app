@@ -173,7 +173,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('所选：GPU；当前实际运行：CPU（已回退）'), findsOneWidget);
+    expect(find.text('所选偏好：GPU；当前实际运行：CPU（以 Native 实际值为准）'), findsOneWidget);
     await tester.tap(find.text('重新尝试 GPU'));
     await tester.pumpAndSettle();
 
