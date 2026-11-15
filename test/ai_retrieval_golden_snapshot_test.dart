@@ -51,8 +51,8 @@ void main() {
           'chapterIndex': hit.chapterIndex,
           'snippet': hit.snippet,
           'localBacklink': hit.localBacklink,
-          'locatorStatus': hit.locatorStatus,
-          'bibliographicLocatorVerified': hit.hasVerifiedBibliographicLocator,
+          'localBacklinkStatus':
+              hit.hasLocalBacklink ? 'AVAILABLE' : 'MISSING',
         }).toList(growable: false),
       };
     }
@@ -75,7 +75,7 @@ void main() {
         'classicIndex': {
           'asset': ClassicSearchService.assetPath,
           'sha256': await digestAsset(ClassicSearchService.assetPath),
-          'bibliographicVerification': 'MISSING',
+          'entryLocator': 'App-local asset or chapter locator plus stable sourceId',
         },
         'formulaData': {
           'asset': 'assets/data/formulas.json',
@@ -95,9 +95,8 @@ void main() {
           'sourceLabel': source.sourceLabel,
           'title': source.title,
           'localBacklink': source.localBacklink,
-          'locatorStatus': source.locatorStatus,
-          'sourceVerificationStatus': source.sourceVerificationStatus,
-          'bibliographicLocatorVerified': source.bibliographicLocatorVerified,
+          'localBacklinkStatus':
+              source.localBacklink == 'MISSING' ? 'MISSING' : 'AVAILABLE',
         }).toList(growable: false),
       },
     };
@@ -123,10 +122,7 @@ void main() {
         'capturedCount': hits.length,
         'topSourceIds': hits.take(3).map((hit) => hit['sourceId']).toList(),
         'sourceCounts': countBy(hits, 'source'),
-        'locatorStatusCounts': countBy(hits, 'locatorStatus'),
-        'bibliographicVerifiedCount': hits
-            .where((hit) => hit['bibliographicLocatorVerified'] == true)
-            .length,
+        'localBacklinkStatusCounts': countBy(hits, 'localBacklinkStatus'),
       };
     }
 
@@ -143,10 +139,8 @@ void main() {
         'status': rawContext['status'],
         'sourceIds': rawContext['sourceIds'],
         'textLength': (rawContext['text']! as String).length,
-        'bibliographicVerifiedCount': sources
-            .where((source) => source['bibliographicLocatorVerified'] == true)
-            .length,
-        'locatorStatusCounts': countBy(sources, 'locatorStatus'),
+        'localBacklinkStatusCounts':
+            countBy(sources, 'localBacklinkStatus'),
       },
     };
   }
@@ -183,7 +177,7 @@ void main() {
     expect(
       jsonEncode(summarize(first)),
       jsonEncode(expected),
-      reason: '检索数量、前序命中、资产 hash、来源状态或上下文组成发生变化时必须显式审查',
+      reason: '检索数量、前序命中、资产 hash、知识库条目回链或上下文组成发生变化时必须显式审查',
     );
 
     expect(first['formula'], isNotNull,
@@ -201,6 +195,15 @@ void main() {
       final result = queryResults[query]! as Map<String, Object?>;
       expect(result['total'], isA<int>());
       expect(result['hits'], isA<List<Object?>>());
+      final hits = (result['hits']! as List).cast<Map>();
+      expect(
+        hits.every((hit) =>
+            hit['localBacklink'] is String &&
+            (hit['localBacklink'] as String).isNotEmpty &&
+            hit['localBacklink'] != 'MISSING'),
+        isTrue,
+        reason: '$query 的命中必须能回链到 App 本地知识条目',
+      );
     }
     final manifest = first['sourceManifest']! as Map<String, Object?>;
     expect((manifest['classicIndex']! as Map)['sha256'], isA<String>());
