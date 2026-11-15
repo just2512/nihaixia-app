@@ -11,6 +11,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
+| 本轮最新核验基线 | `4398bc365c43718b105c06f66ab13b106b21ede2` | PR #182 已合并；对应 post-merge 主线 CI 见第 49 节 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -18,7 +19,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**基线限制：** 当前只核验了 GitHub master HEAD、约束文件、能力盘点文件、pubspec 与 README 版本文字。除文档已明确引用的历史审计证据外，本台账不宣称本轮重新完成全仓代码审计、CI 检查或 Find N2 真机测试。
+**本轮核验范围：** 已复核当前 master HEAD、两份 AI 约束文档、PR #182 的实现与完整变更、PR 分支 CI 及合并后的主线 CI；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 仍未由云端执行，必须按本地清单取得设备证据。历史审计没有在本轮全部重跑的部分，仍以原记录和证据为准。
 
 ## 2. 状态定义
 
@@ -43,12 +44,12 @@
 
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
-| A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
+| A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS`（剩余项为 LOCAL ONLY；云端代码/CI 已收口） | 与 B/C/E 并行 | 多轮审计报告和自动化回归已交付；Find N2 GPU/CPU 各至少 20 轮实测由本地执行 |
 | B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（PR #169 已接入 fail-closed Gate；医学审核 detector 仍缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
 | C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
-| E | 低成本数据保护 | `PARTIAL`（Manifest/清理代码有 CI 证据；真机清除后重启不可恢复未验收） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
-| F | 统一 TRACE 与审计证据 | `PARTIAL`（已有部分结果/来源链路，不等于端到端 TRACE） | 与 A-E 按需并行 | 默认关闭、脱敏、trace_id 贯穿、关闭时行为不变、完整链路可复核 |
+| E | 低成本数据保护 | `PARTIAL`（清理代码/Manifest 有 CI 证据；剩余为 LOCAL ONLY 真机清除后重启验证及产品数据保留决策） | 与 A/B/C 并行 | Find N2 本地核验清除范围、重启后不可恢复；共享数据库备份/旧共享图片归属须按产品数据边界处理 |
+| F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY，生产 RedFlag 未覆盖处继续 UNKNOWN） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件；未知或无 detector 的阶段不得写 PASS |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
 
 > A 的问题不能冻结 B/C/E。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
@@ -2209,3 +2210,55 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 只有本地条目确实不存在、检索未命中/失败、sourceId 解析或打开失败，或回答所需字段在对应条目中确实不存在，才说明具体本地知识缺项。不得以模型训练记忆补齐缺失内容。
 - C 工作流保留 PARTIAL 的原因只限于黄金检索集实际揭示的召回覆盖、相关性、排序、上下文和 sourceId 链路问题；不得把历史 bibliographic locator MISSING 计入 C 的剩余工作或发布条件。
 - 本项不改既有知识库内容，不改检索 query、召回上限、排序、去重或 FTS5；只统一验收口径和关闭无意义的考古式来源核验待办。
+
+## 49. 2026-11-15 PR #182 合并：对话式问诊缺项追问与远端收尾
+
+### 49.1 基线与集成证据
+
+- 当前 master 基线：`4398bc365c43718b105c06f66ab13b106b21ede2`；PR #182 已 squash merge。
+- PR 分支：`feat/ai-natural-language-interview-clarification-2026-11-15`；最终 head：`d87649f36dd7ad574fa6d08f5533bb1feeecd5a0`。
+- PR workflow run `43703324830` 终态 SUCCESS：Flutter regression job `132779225485` SUCCESS；Android arm64 CI verification APK / Manifest / ABI / SHA-256 / Native unit tests job `132780243139` SUCCESS。分支验证 job 为条件跳过；Flutter regression 已包含静态分析、AI 合同回归和全量 Dart 回归。
+- 合并提交：`4398bc365c43718b105c06f66ab13b106b21ede2`。合并后 master Flutter Tests run `43704033073`：Flutter regression job `132781138541` 已 SUCCESS，Android arm64 APK/Native tests job `132782306566` 在本次台账记录时仍 IN_PROGRESS；Quality Gate run `43704033047`：静态分析和 Dart 全量测试已 SUCCESS，Android Native unit tests 仍 IN_PROGRESS。只有这些主线运行均到终态 SUCCESS，才可将合并后 CI 标为 PASS。
+- 本批次只处理助手内自然语言问诊交接、原始自述保存及对应测试；没有修改 `DiagnosticEngine`、`DiagnosticRules`、剂量/排盘/玄学计算规则、知识库正文或 Find N2 硬件配置。
+
+### 49.2 对话问诊交互闭环
+
+- 用户在助手对话中提出“帮我诊断/辨证”请求时，现有 `AssistantConversationOrchestrator` 将其路由到 `structured_diagnosis` 内联能力，不要求先跳转独立问诊页面。
+- 首轮由本地 E4B 根据 App 提供的十问题目 ID、题干和合法选项 schema 理解用户自述；候选必须通过题目 ID、既有选项白名单、唯一性及用户原文证据校验。
+- `LocalAiSymptomDraft` 保留传给模型并用于证据验证的原始 `sourceText`。用户确认候选后，原始自述与结构化摘要一并写入问诊任务 transcript；按钮文案不得冒充用户输入。该原文丢失问题已由 PR #182 修复，并有 service 与 widget 回归断言。
+- 经过用户确认的既有选项才进入 `TcmInterviewConversationController`；控制器继续按原有问诊顺序执行，已确认项跳过，只追问缺项。未确认候选、模型自由文本和模型推断不得直接写入 `DiagnosticEngine`。
+- 当前待答单选项可以接受自然语言：Native E4B 只能在该题现有选项中提出候选并给出原文证据；无法唯一映射时提出澄清。最终仍由用户选择 App 原有选项，控制器再写入规则问诊状态。舌脉及多选项继续使用 App 原有结构化控件，不伪称已经支持全部题型的自由文本自动提交。
+- 问诊完成后的结论仍来自 App 规则执行结果；AI 只对已执行、已校验的结果做归纳解释，并从知识库检索可定位来源。AI 不生成证型/方剂/剂量，不修改规则，不得把模型判断包装为医学诊断。
+
+### 49.3 统一执行边界确认
+
+- AI 是交互、理解、参数澄清、能力调度和结果解释中枢；App 原有确定性模块负责排盘、规则问诊、剂量和其他实际计算。
+- 只有 App 实际执行且结果通过校验后，才将其交给 AI 解读；参数不足时只追问缺项，不得臆造默认值、工具结果或业务字段。
+- 工具助手、学习助手和玄学助手继续遵循第 45.3 节的统一顺序：意图/槽位解析 → 参数与权限校验 → App 原能力实际执行 → 结果结构/参数/sourceIds 校验 → AI 归纳解释。当前不批量迁移 6 项 Page-only 能力，不新增 Agent/DAG 或第二套执行器。
+- 经典、医案和学习资料只以 App 内稳定 `sourceId` 作为可回查引用；能打开的知识条目不标 MISSING，不补纸本版本/卷页考证，不重复审核已审核知识库。仅实际检索未命中、条目不存在或 sourceId 无法解析/打开时说明本地知识缺项。
+
+### 49.4 云端与本地任务清单
+
+**云端已完成或可继续完成的工作：**
+
+- 自然语言问诊入口、候选抽取、证据校验、用户确认、缺项追问、原文持久化：已合并 PR #182。
+- E4B GPU/CPU 用户手动选择、偏好持久化、Native 实际后端反馈、切换失败后选择另一后端重试：已合并，见第 47 节。
+- 工具/学习/玄学结果的既有执行后校验与 AI 解释、知识库 sourceId 直达：按第 45.3、46.2 和第 48 节保持，不重复扩张。
+- 除本节记录的 post-merge master CI 收尾、外部审核材料到达后的 RedFlag detector 接入，或本地实测发现明确可复现的软件缺陷外，本轮没有新增云端运行时代码任务。
+
+**必须在本地 OPPO Find N2 执行的工作：**
+
+- `docs/find-n2-local-ai-acceptance-checklist.md` 是正式执行文件；不是云端待办，也不能由 CI APK 构建替代。
+- B-01：设置页手动切换 GPU/CPU，验证用户偏好、Native 实际 backend、重启持久化及失败后切换另一 backend。
+- G-01 / C-01：GPU、CPU 分别完成至少 20 轮；核对实际 backend，不能把 GPU fallback CPU 或 GPU 模式下仍走 CPU 的音频算作 GPU 通过。
+- ATT-01：GPU/CPU 分别测试图片和语音输入、取消/权限失败、结果持久化。
+- REC-01：Activity recreation、force-stop/restart、原会话恢复；比较 SQLite、Flutter transcript、Native completed-turn history 和问诊 task snapshot。
+- CLR-01：执行“清除全部 AI 数据”后 force-stop/restart，核对 AI 会话、消息、问诊快照、附件缓存、Native runtime cache、TRACE 的清除，同时确认非 AI 数据与已安装模型按契约保留。
+- F-01：Debug TRACE 覆盖输入、路由、检索、Native 模型、参数校验、工具执行、结果校验、持久化和展示；缺少生产 detector 的安全阶段仍记录 UNKNOWN/MISSING。
+- 本地记录设备/Android/App commit 与 APK SHA-256/模型版本与 SHA-256/Native 实际 backend/轮次/脱敏 trace_id/结果。没有设备证据一律 UNKNOWN，不提交原始症状、会话、媒体或密钥。
+
+### 49.5 唯一外部安全阻断与非扩展项
+
+- 生产 RedFlag detector 仍为独立发布阻断：当前 Gate 必须 fail-closed；生产 detector、审核版本、覆盖证明、处置文案和责任审批尚缺。需要具备医学责任的外部审核方提供可追溯输入规则/版本/批准证据后，云端才能按其材料接入。这里审核的是用户输入危险信号的检测器，不是重审已经医学审核的知识库，也不能由 AI prompt 或本轮开发者自行编造规则替代。
+- 混合 SQLite 数据库备份范围、旧版本共享临时图片所有权仍属于产品数据保留决策；没有决策与所有权证据，不删除整个数据库/临时目录，也不全局关闭 Android Backup。
+- 不再把 Find N2 真机项目、纸本底本/版本/卷页考证、重复知识库医学审核、无具体缺陷证据的工具迁移或无意义的泛化测试列为云端下一阶段任务。
