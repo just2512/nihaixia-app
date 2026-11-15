@@ -1629,7 +1629,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'structured_diagnosis_initial_symptom_candidates_validated',
           mode: AssistantMode.consultation.name,
         );
-        if (draft.summaryLines.isNotEmpty) {
+        if (draft.summaryLines.isNotEmpty || draft.questionCandidates.isNotEmpty) {
           final accepted = await _reviewInitialTcmSymptomDraft(draft);
           if (!mounted) {
             await _traceRecorder.record(
