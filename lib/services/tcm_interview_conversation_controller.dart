@@ -270,22 +270,6 @@ class TcmInterviewConversationController {
     _appendAssistant(normalized, hasPendingOptions: true);
   }
 
-  /// Replaces the visible wording of the current prompt while preserving its
-  /// stable question ID and exact option whitelist for confirmation or another
-  /// clarification turn.
-  void updatePendingPrompt(String text) {
-    if (!canAcceptNaturalLanguageAnswer) {
-      throw StateError('当前没有可澄清的单选问诊问题');
-    }
-    final normalized = text.trim();
-    if (normalized.isEmpty || normalized.length > 300) {
-      throw ArgumentError.value(text, 'text', '问诊澄清内容为空或过长');
-    }
-    _clearPendingOptionMarkers();
-    _pendingPromptText = normalized;
-    _appendAssistant(normalized, hasPendingOptions: true);
-  }
-
   /// Commits canonical tongue/pulse values from the structured selector.
   void answerTonguePulse({
     String? tongueCoating,
