@@ -9,6 +9,8 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
 import 'support/test_only_red_flag_gate.dart';
 
@@ -278,6 +280,80 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('恢复等待参数的保存命盘后可在对话中继续确认并执行', (tester) async {
+    final store = _MemoryConversationStore();
+    store.messages[2]![1]['content'] = '请回复列表中的记录 ID。';
+    store.messages[2]![1]['metadata'] = AssistantMessageMetadata(
+      mode: 'metaphysics',
+      selectedMode: 'automatic',
+      toolId: 'saved_charts',
+      toolStatus: 'AWAITING_PARAMETERS',
+      toolArguments: const {'saved_chart_id': '42'},
+    ).encode();
+
+    final service = _HistoryResumeService();
+    final charts = [
+      SavedChart(
+        id: 42,
+        name: '命盘 1988-06-07 女',
+        isMale: false,
+        solarIso: DateTime(1988, 6, 7, 12, 0).toIso8601String(),
+        createdAt: 100,
+      ),
+    ];
+    Map<String, String>? executedArguments;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          service: service,
+          imagePicker: _NoLostImagePicker(),
+          conversationStore: store,
+          testSavedChartsLoader: () async => charts,
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            return AssistantToolResult(
+              toolId: 'saved_charts',
+              title: '我的命盘库',
+              values: const {
+                '保存记录 ID': '42',
+                '排盘类型': '八字',
+                '完整排盘结果': '【八字排盘完整结果】四柱：戊辰、戊午、甲寅、庚午',
+              },
+              sourceIds: const [
+                'local-data:saved-chart:42',
+                'local-engine:bazi',
+              ],
+              arguments: Map<String, String>.unmodifiable(arguments),
+            );
+          },
+        ),
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byTooltip('历史对话'));
+    await _pumpFrames(tester);
+    await tester.tap(find.byType(ListTile).first);
+    await _pumpFrames(tester);
+
+    expect(service.restoredTranscript, contains('请回复列表中的记录 ID'));
+    expect(find.textContaining('1988-06-07'), findsNothing);
+    await tester.enterText(find.byType(TextField).first, '八字');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await _pumpFrames(tester);
+
+    expect(executedArguments, const {
+      'saved_chart_id': '42',
+      'chart_type': 'bazi',
+    });
+    expect(service.restoredTranscript, contains('四柱：戊辰、戊午、甲寅、庚午'));
+    expect(service.restoredTranscript, contains('local-data:saved-chart:42'));
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('恢复 FAILED 工具结果时显示重试入口并保留原始参数', (tester) async {
     tester.view.devicePixelRatio = 1;
