@@ -15,7 +15,7 @@
     "classicIndex": {
       "asset": "assets/guji/classic_index.json.gz",
       "sha256": "1154d465782316455ae3289af55bd4a7ae148898d6490076383a0d4663ee4a7e",
-      "bibliographicVerification": "MISSING"
+      "entryLocator": "App-local asset or chapter locator plus stable sourceId"
     },
     "formulaData": {
       "asset": "assets/data/formulas.json",
@@ -54,8 +54,7 @@
       "capturedCount": 0,
       "topSourceIds": [],
       "sourceCounts": {},
-      "locatorStatusCounts": {},
-      "bibliographicVerifiedCount": 0
+      "localBacklinkStatusCounts": {}
     },
     "桂枝汤": {
       "total": 196,
@@ -68,10 +67,9 @@
       "sourceCounts": {
         "shanghan": 40
       },
-      "locatorStatusCounts": {
-        "MISSING": 40
-      },
-      "bibliographicVerifiedCount": 0
+      "localBacklinkStatusCounts": {
+        "AVAILABLE": 40
+      }
     },
     "桂枝": {
       "total": 294,
@@ -84,10 +82,9 @@
       "sourceCounts": {
         "shanghan": 40
       },
-      "locatorStatusCounts": {
-        "MISSING": 40
-      },
-      "bibliographicVerifiedCount": 0
+      "localBacklinkStatusCounts": {
+        "AVAILABLE": 40
+      }
     },
     "伤寒论": {
       "total": 121,
@@ -100,10 +97,9 @@
       "sourceCounts": {
         "shanghan": 40
       },
-      "locatorStatusCounts": {
-        "MISSING": 40
-      },
-      "bibliographicVerifiedCount": 0
+      "localBacklinkStatusCounts": {
+        "AVAILABLE": 40
+      }
     }
   },
   "context": {
@@ -116,10 +112,9 @@
       "shanghan:assets/shanghan/clause_015.md",
       "shanghan:assets/shanghan/clause_017.md"
     ],
-    "textLength": 2315,
-    "bibliographicVerifiedCount": 0,
-    "locatorStatusCounts": {
-      "MISSING": 6
+    "textLength": 1806,
+    "localBacklinkStatusCounts": {
+      "AVAILABLE": 6
     }
   }
 }
