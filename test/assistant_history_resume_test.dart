@@ -43,6 +43,7 @@ class _HistoryResumeService extends LocalAiService {
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
+    bool requireMedicalSafety = false,
   }) async {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
@@ -52,6 +53,7 @@ class _HistoryResumeService extends LocalAiService {
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
+    bool requireMedicalSafety = false,
   }) async =>
       '续聊成功：$text';
 }
