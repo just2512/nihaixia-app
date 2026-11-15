@@ -342,7 +342,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required bool requireAssessment,
     bool sourceTruncated = false,
   }) async {
-    if (_redFlagPreflightedContexts.contains(traceContext)) return false;
+    // The default-off recorder returns the same const disabled context for
+    // every turn. Only memoize an enabled, per-turn TRACE identity; otherwise
+    // a prior CLEAR could suppress review for a later clinical message.
+    final canMemoizePreflight = traceContext.enabled && traceContext.traceId != null;
+    if (canMemoizePreflight &&
+        _redFlagPreflightedContexts.contains(traceContext)) {
+      return false;
+    }
 
     final gate = widget.redFlagGate;
     if (!requireAssessment) {
@@ -406,10 +413,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
 
     if (result.mayContinueOrdinaryFlow) {
-      if (_redFlagPreflightedContexts.length >= 32) {
-        _redFlagPreflightedContexts.clear();
+      if (canMemoizePreflight) {
+        if (_redFlagPreflightedContexts.length >= 32) {
+          _redFlagPreflightedContexts.clear();
+        }
+        _redFlagPreflightedContexts.add(traceContext);
       }
-      _redFlagPreflightedContexts.add(traceContext);
       return false;
     }
 
