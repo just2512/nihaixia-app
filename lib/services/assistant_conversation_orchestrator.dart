@@ -124,6 +124,9 @@ class AssistantConversationOrchestrator {
     '病机',
   ];
 
+  // These are routing cues only: a match requires a reviewed safety
+  // assessment; it does not label urgency or provide a medical conclusion.
+  // The red-flag examples below mirror the normative audit boundary.
   static const _symptomCues = [
     '头痛',
     '头晕',
@@ -136,6 +139,17 @@ class AssistantConversationOrchestrator {
     '咳嗽',
     '胸闷',
     '胸痛',
+    '呼吸困难',
+    '喘不上气',
+    '意识障碍',
+    '意识不清',
+    '突发偏瘫',
+    '偏瘫',
+    '言语障碍',
+    '说话不清',
+    '大量出血',
+    '自伤风险',
+    '想伤害自己',
     '腹痛',
     '腹胀',
     '腹泻',
@@ -198,8 +212,9 @@ class AssistantConversationOrchestrator {
       return false;
     }
     if (explicitClinicalRequest) return true;
-    if (hasSymptoms && selectedMode == AssistantMode.consultation) return true;
-    return hasSymptoms && hasPersonalContext;
+    // Ambiguous symptom-only text is also gated before model inference.
+    // Only an explicit educational request may bypass this preflight.
+    return hasSymptoms;
   }
 
   static bool shouldExcludeFromIntentModel(String query) {
