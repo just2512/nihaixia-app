@@ -37,7 +37,7 @@ class MainActivity : FlutterActivity() {
         getSharedPreferences(LOCAL_AI_BACKEND_PREFERENCES, MODE_PRIVATE)
     }
 
-    /** Test/host injection only. No medically reviewed detector is bundled yet. */
+    /** Legacy optional gate seam; educational TCM simulation does not require it. */
     @Volatile
     internal var nativeRedFlagDetector: NativeRedFlagDetector? = null
     private val aiTasks by lazy {
