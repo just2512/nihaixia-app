@@ -17,6 +17,7 @@ void main() {
       final transcript = controller.messages.map((message) => message.text);
       expect(transcript, contains(TcmInterviewConversationController.learningNotice + '\n' + TcmInterviewConversationController.emergencyReminder));
       expect(transcript, contains('开始规则辨证'));
+      expect(transcript, contains(TcmInterviewConversationController.learningNotice + '\n' + TcmInterviewConversationController.emergencyReminder));
       expect(
         transcript.any((text) => text.contains('最近头痛，睡眠后缓解')),
         isTrue,
