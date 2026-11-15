@@ -34,7 +34,7 @@ void main() {
       expect(requires('我最近胸痛'), isTrue);
       expect(requires('我最近几天头晕'), isTrue);
       expect(
-        requires('我最近胸痛\\n那它的原因呢'),
+        requires('我最近胸痛\n那它的原因呢'),
         isTrue,
         reason: '后续省略主语的追问仍继承用户此前的健康上下文',
       );
