@@ -1907,7 +1907,7 @@ void main() {
     expect(completed.snapshot.answers['dry_throat'], isNull);
     expect(completed.completedDiagnosis, isNotNull);
     expect(service.sentTexts, hasLength(1));
-    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts.single, contains('完整解释'));
     expect(service.sentTexts.single, contains('不重新执行辨证'));
     expect(
       service.sentContexts.single,
