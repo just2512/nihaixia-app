@@ -1940,12 +1940,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .map((message) => message.text.trim())
         .where((message) => message.isNotEmpty)
         .toList(growable: false);
-    var userContext = [...previousUserMessages, userText.trim()].join('\n');
-    if (userContext.length > 5000) {
-      userContext = userContext.substring(userContext.length - 5000);
+    if (userText.trim().length > 2000) {
+      setState(() {
+        _error = '单次问诊补充内容过长，请拆分成较短的描述后发送。';
+      });
+      return;
     }
-    if (!userContext.contains(userText.trim())) {
-      throw StateError('问诊上下文裁剪后未保留本轮用户输入');
+    var userContext = [...previousUserMessages, userText.trim()].join('\\n');
+    if (userContext.length > 5000) {
+      final current = userText.trim();
+      final priorBudget = 5000 - current.length - 1;
+      final priorText = priorBudget > 0 ? previousUserMessages.join('\\n') : '';
+      final boundedPrior = priorText.length > priorBudget
+          ? priorText.substring(priorText.length - priorBudget)
+          : priorText;
+      userContext = [if (boundedPrior.isNotEmpty) boundedPrior, current].join('\\n');
     }
 
     final before = controller.messages.length;
