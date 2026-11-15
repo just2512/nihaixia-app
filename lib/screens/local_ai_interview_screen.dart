@@ -176,9 +176,8 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.traceRecorder,
   });
 
-  /// Optional gate injection for B2 entrypoint-order tests. Production must not
-  /// supply this until a medically reviewed detector and rollout policy exist.
-  /// A missing gate is recorded as NOT_APPLICABLE, never as CLEAR.
+  /// Legacy test seam for the generic RedFlagGate component. Educational TCM
+  /// simulation does not depend on a clinical detector or use this gate to block flow.
   @visibleForTesting
   final RedFlagGate? redFlagGate;
 
