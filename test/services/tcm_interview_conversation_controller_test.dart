@@ -128,7 +128,7 @@ void main() {
       final restored = TcmInterviewConversationController.restore(
         TcmInterviewTaskState.decode(pending.encode()),
       );
-      expect(restored.pendingPromptText, '你醒来后还能再次入睡吗？');
+      expect(restored.pendingPromptText, canonicalPrompt);
       expect(restored.pendingPromptId, pending.pendingPromptId);
       expect(restored.pendingOptions, pending.pendingOptions);
     });
