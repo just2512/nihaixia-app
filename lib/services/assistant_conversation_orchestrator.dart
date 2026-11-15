@@ -150,9 +150,10 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
-  /// This app's consultation flow is a simulated-learning feature, not clinical
-  /// triage. A fixed on-screen disclaimer and emergency reminder define its
-  /// safety boundary; no medical detector is required to use the learning flow.
+  /// Consultation accepts real user descriptions as well as book, case, and
+  /// hypothetical inputs. Deterministic App rules own diagnosis; the AI explains
+  /// only verified results with local knowledge sources. A separate clinical
+  /// detector is not a prerequisite for this product flow.
   static bool requiresMedicalSafetyPreflight({
     required String query,
     required AssistantMode selectedMode,

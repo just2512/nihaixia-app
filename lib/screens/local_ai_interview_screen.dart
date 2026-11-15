@@ -339,8 +339,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       widget.conversationStore ?? DatabaseHelper.instance;
 
   // One conversation trace can pass through _send -> routing -> tool execution.
-  // Identity-based memoization ensures the injected detector is called once for
-  // the originating input while every downstream boundary still checks it.
+  // Reuse the originating input's assessment decision across those boundaries:
+  // record a non-required stage once, and never rerun a configured detector.
   final Set<AiTraceContext> _redFlagPreflightedContexts =
       Set<AiTraceContext>.identity();
 
@@ -363,17 +363,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     final gate = widget.redFlagGate;
     if (!requireAssessment) {
-      // Medical review is scoped to clinical requests. Non-clinical tools and
-      // learning questions remain available without invoking a detector.
+      // The current product does not require a clinical detector to enter the
+      // consultation flow. Record both pipeline stages as NOT_APPLICABLE;
+      // that is not a detector CLEAR result or a safety PASS.
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.preflight,
+        status: AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: 'PREFLIGHT_NOT_REQUIRED',
+      );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.redFlag,
         status: AiTraceStatus.notApplicable,
         route: route,
-        errorCode: gate == null
-            ? 'REDFLAG_GATE_NOT_CONFIGURED'
-            : 'REDFLAG_ASSESSMENT_NOT_REQUIRED',
+        errorCode: 'REDFLAG_ASSESSMENT_NOT_REQUIRED',
       );
+      if (canMemoizePreflight) {
+        if (_redFlagPreflightedContexts.length >= 32) {
+          _redFlagPreflightedContexts.clear();
+        }
+        _redFlagPreflightedContexts.add(traceContext);
+      }
       return false;
     }
 
@@ -5123,15 +5135,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       structuredInterviewActive:
           _tcmInterviewController?.canAnswer == true ,
     );
-    if (requiresMedicalSafety &&
-        await _blockIfRedFlagPreflightDoesNotClear(
-          source: RedFlagInputSource.structuredInterview,
-          text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
-          traceContext: traceContext,
-          route: 'result_interpretation',
-          requireAssessment: false,
-          sourceTruncated: redFlagContext.sourceTruncated,
-        )) {
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.structuredInterview,
+      text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
+      traceContext: traceContext,
+      route: 'result_interpretation',
+      requireAssessment: requiresMedicalSafety,
+      sourceTruncated: redFlagContext.sourceTruncated,
+    )) {
       return;
     }
     var inferenceCompleted = false;
