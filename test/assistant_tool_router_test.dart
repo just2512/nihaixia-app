@@ -322,7 +322,7 @@ void main() {
     expect(AssistantMode.learning.promptHint, contains('明确区分课程讲稿、古籍文本、医案'));
     expect(AssistantMode.tools.promptHint, contains('工具结果返回对话后'));
     expect(AssistantMode.tools.promptHint, contains('区分 App 确定性计算与 AI 解释'));
-    expect(AssistantMode.consultation.promptHint, contains('解释、归纳该结果'));
+    expect(AssistantMode.consultation.promptHint, contains('只有结果返回并通过校验后才交给 AI 解读'));
     expect(AssistantMode.metaphysics.promptHint, contains('基于回传字段归纳结构'));
   });
 
