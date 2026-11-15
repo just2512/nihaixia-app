@@ -1232,3 +1232,41 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - 当前 controller 保留用户自述，但仍按原有寒热、舌脉、十问顺序提问；尚未把自述转成待确认的规范字段并仅追问缺项。
 - 下一步目标是候选字段抽取与用户确认、缺项追问、原有 DiagnosticEngine 执行、真实结果与 source ID 校验、AI 总结和知识库二次解读。不得更改 DiagnosticEngine/DiagnosticRules/十问内容/剂量规则。
 - 此工作必须遵守 B Gate；在生产医学 detector 审核与覆盖证明完成前，不能开放模型症状抽取后直接进入自动辨证。
+
+
+## 19. 2026-11-15 PR #178/#179 后当前主线复核
+
+- 当前主线：`master @ 2989aa9231c715b6215eda9bfa99f9e984aed715`。
+- PR #178（问诊候选槽位桥接）最终 head `15776a5efe4cdb35a0c60f60ea74e2ef740ad120`，squash merge 后主线基线为 `5b2c3d8738128a5965e54f807719eb2d6fe16635`。合并后 Flutter tests run `43685797528`、Flutter Quality Gate run `43685797546` 均在该精确 SHA 上终态 SUCCESS。
+- PR #179 仅更新执行台账，合并后当前 master 为 `2989aa9231c715b6215eda9bfa99f9e984aed715`。当前主线 Flutter tests run `43689074134` 与 Quality Gate run `43689074197` 均终态 SUCCESS；前者的 Flutter regression 与 Android arm64 verification APK/Native tests jobs SUCCESS，后者 Analyze and test job SUCCESS。
+- 本轮查询未发现开放 PR 或开放 Issue。当前没有需要继续排队的云端 PR 集成任务。
+
+### 19.1 问诊助手：候选理解与确定性问诊桥接已落地
+
+- PR #178 已将用户自然语言自述接入现有问诊流程：Native E4B 仅接收 App 已有十问题目 ID、题干和选项 schema；模型只提出候选答案，并必须给出用户原话中的连续文本证据。
+- Dart 端再次校验题目 ID、选项白名单、候选唯一性及原文证据。UI 展示候选及对应原文，由用户逐项确认或取消；未确认候选不进入问诊引擎。
+- 已确认字段进入现有 `TcmInterviewConversationController`，由控制器按 `DiagnosticEngine` 原题目顺序消费已确认答案，跳过已有答案并继续询问尚缺项目。待确认候选随问诊任务快照保存/恢复。
+- AI 不生成证型、诊断、方剂或剂量；不改 `DiagnosticEngine`、`DiagnosticRules`、十问题目/选项及剂量规则。规则引擎产生且经校验的真实结果才进入解释路径。
+- **边界：代码和 CI 已完成，不等于生产自由文本问诊已开放。** PR #169 的 RedFlagGate 继续 fail-closed；生产自然语言/视觉/语音 RedFlag detector 的医学审核版本、覆盖证据和处置文案尚未提供，B 仍为 `PARTIAL / RELEASE BLOCKED`。测试中的 reviewed-no-match fixture 是合成夹具，不是生产医学 detector，禁止带入生产。不得把 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR，也不得自造词表、阈值或急救文案。
+- 这项安全门禁审核的是输入风险识别器，不是重新审核已有医学知识库。已审核知识库不重复审核。
+
+### 19.2 助手模式、工具结果与知识引用
+
+- 工具助手与玄学大师：23 个常规工具中 17 个已有 Headless executor；App 按各工具既有参数契约追问缺项，在对话中调用原确定性函数。只有执行成功且 toolId、arguments、状态、结果结构及 sourceIds 校验通过的真实结果，才进入 AI 归纳解释。模型不得生成排盘、起卦、历法、单位换算或其他业务计算结果。
+- 其余 6 个 Page-only（`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`）按知识检索、用户个人数据授权及领域安全边界保留；它们不是待批量迁移清单。没有明确的可复用确定性函数和输入/结果/来源契约，不新增 Headless 适配器。
+- 学习助手及结果追问使用现有本地知识检索。回答中的知识主张必须关联稳定 `sourceId` 和 App 内可打开的实际条目/章节/医案记录；无命中、ID 无法解析或打开、必需字段实际为空时，才说明相应本地资料缺失。模型不得用训练记忆补造知识库外的医学事实。
+- 不要求补充普通知识条目的外部纸本版本、卷页或影印本定位；不逐条重审已经医学审核的知识库。
+
+### 19.3 云端与本地的最终边界
+
+- 云端已完成：规范和台账更新、候选问诊映射代码、工具结果/知识来源闭环的既有实现复核、Dart/Flutter 自动化、Android arm64 APK/Manifest/ABI/SHA-256/Native tests，以及当前主线 CI。当前没有新的、由现有证据支持的云端运行时代码任务。
+- 仅本地 OPPO Find N2 执行：GPU 默认 backend 连续至少 20 轮；Debug Intent 强制 CPU backend 连续至少 20 轮；两组分别覆盖文字/图片/语音；Activity recreation 与 force-stop/restart 会话恢复；合成数据下清除 AI 数据后强停/重启复查；Debug TRACE 核对 trace_id 全链和 Native 实际 backend。未执行项保持 UNKNOWN，不能由 CI 或模拟测试代报 PASS。具体步骤以执行台账 §46.3 为准。
+- 非代码决策：AI 与非 AI 数据共用 SQLite 时的系统备份边界，以及旧共享临时图片的所有权边界继续按执行台账 §46.4 处理；不得通过删除整个数据库/共享目录或全局关闭备份来伪造完成。
+
+### 19.4 收尾结论
+
+- 云端实现和 CI：当前主线 PASS。
+- 问诊候选提取—原文证据—用户确认—既有规则问诊映射：CODE + TEST + CI 已完成；生产临床入口仍受 B 门禁阻断。
+- Find N2 真机验收：DEVICE UNKNOWN，交由本地执行。
+- 知识库来源：以 sourceId + App 可打开定位为准，不做外部书目考据、不重复医学审核。
+- 除本地设备记录及生产 RedFlag detector 的合格医学审核材料外，不新增功能、不重复跑泛化测试、不扩张架构。
