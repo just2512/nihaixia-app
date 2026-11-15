@@ -10,6 +10,7 @@ import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
+import 'support/test_only_red_flag_gate.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -248,6 +249,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -303,6 +305,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -345,6 +348,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -369,6 +373,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -408,6 +413,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -479,6 +485,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -538,6 +545,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: _HistoryResumeService(),
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -639,6 +647,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: _HistoryResumeService(),
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
