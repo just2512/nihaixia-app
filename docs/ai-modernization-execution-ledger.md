@@ -2297,11 +2297,11 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 51.3 本阶段云端执行顺序
 
-1. **问诊结果解释收敛**：移除仍残留的“仅模拟学习”提示；让 AI 基于真实规则结果和知识库来源解释辨病辨证、病机、治法、方剂和针灸，不修改 DiagnosticEngine / DiagnosticRules。
-2. **四类助手结果闭环复核**：问诊、工具、学习、玄学分别核对成功执行、结果校验、sourceId、自动解读及跨轮追问。只修复真实断点，不重建 Orchestrator、ToolRouter 或 KnowledgeContextBuilder。
-3. **定向验收**：只补覆盖上述断点的测试，重点验证未执行/校验失败时不生成事实性解释，成功结果解释不丢失来源，缺失信息标 MISSING/UNKNOWN。
-4. **CI 与文档收尾**：每个代码切片独立分支、小批量 PR；合并后核对 master CI 和台账证据。不得把文档完成写成运行时能力 PASS。
-5. **本地设备事项**：Find N2 上的 E4B GPU/CPU 多轮、图片/语音和进程恢复只保留为本地验证项；没有设备证据就标 UNKNOWN，不阻断可在云端完成的代码收尾。
+1. **DONE — 问诊结果解释收敛**：PR #186、#188 已移除残留的“仅模拟学习”限制，问诊助手可处理用户自身体验、经典/医案和假设病例；基于 App 实际规则结果与可追溯知识库来源解释辨病辨证、病机、治法、方剂和针灸，不修改 DiagnosticEngine / DiagnosticRules。
+2. **DONE — 四类助手结果闭环复核**：问诊、工具、学习、玄学已复核现有执行路径、参数/结果校验、sourceId、自动解读和续问。既有 Orchestrator、ToolRouter、KnowledgeContextBuilder 已覆盖所需职责，没有重建或批量迁移。
+3. **DONE — 定向验收**：已有回归覆盖未成功/校验失败不进入事实性解释、成功结果保留来源、参数缺项追问和知识来源状态；本轮新增结果解释入口的 PREFLIGHT/RED_FLAG NOT_APPLICABLE 事件断言。MISSING/UNKNOWN 保持真实缺失语义，不伪造 PASS。
+4. **DONE — CI 与文档收尾**：PR #186/#187/#188 分支验收后小批量合并；最终 master `51276fc` 的 Flutter Tests 与 Flutter Quality Gate 均 SUCCESS。详细证据见第 52 节。文档记录不替代本地设备验收。
+5. **LOCAL / UNKNOWN — 本地设备事项**：Find N2 上的 E4B GPU/CPU 多轮、图片/语音和进程恢复只保留为本地验证项；没有设备证据就标 UNKNOWN，不阻断已完成的云端代码收尾。
 
 ### 51.4 明确不做
 
@@ -2310,3 +2310,62 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不新增双数据库、SQLCipher、复杂备份与密钥恢复体系。
 - 不新增与当前具体缺陷无关的泛化测试、医学 detector 或临床分诊体系。
 - 不降低现有测试门槛，不删除失败测试，不伪造 CI、设备或知识来源证据。
+
+
+## 52. 2026-11-15 本轮云端收尾与验收证据
+
+### 52.1 合并记录
+
+| PR | 最终分支 HEAD | 合并提交 | PR 工作流 | 结果 |
+|---|---|---|---|---|
+| #186 问诊结果解释与知识来源 | `19e017122398ddbf61c135b258719148aa501541` | `320a47e633a5b1b6d41aea5878988b1b5e420e8c` | `43718741337` | SUCCESS |
+| #187 项目身份、README、关于页与 Fork 维护策略 | `f246e84b0e3aed2f31b8835076b692b3e573840d` | `d0206f30dceee5200eca47186927e8c68aeda7df` | `43720592165` | SUCCESS |
+| #188 问诊定位、Native 提示与 TRACE 合约 | `e7e97c8489e9c46d844cc0d1848d2fe18908cf64` | `51276fc3b4b7148bce725a8e48297dbfc88c3fd5` | `43721472623` | SUCCESS |
+
+- PR #186：Flutter regression job `132826201029` SUCCESS；Android arm64 APK / Manifest / ABI / SHA-256 / Native unit tests job `132827570078` SUCCESS。
+- PR #187：Flutter regression job `132831908755` SUCCESS；Android arm64 验证 job `132833298347` SUCCESS。
+- PR #188：Flutter regression job `132834879659` SUCCESS；Android arm64 验证 job `132836314305` SUCCESS。
+- 上述 PR workflow 中的 Branch validation job 按 workflow 条件 SKIPPED；不将其写成失败，也不替代已实际执行的 Flutter 全量回归和 Android 验收 job。
+
+### 52.2 最终主线 CI
+
+- 最终主线：`master @ 51276fc3b4b7148bce725a8e48297dbfc88c3fd5`（PR #188 合并后）。
+- Flutter Tests：run `43722702448` SUCCESS；Flutter regression job `132837912259` SUCCESS；Android arm64 APK / Manifest / ABI / SHA-256 / Native unit tests job `132839385819` SUCCESS。
+- Flutter Quality Gate：run `43722702481` SUCCESS；Analyze and test job `132837912358` SUCCESS，包含静态分析、Dart test suite、Android Native unit tests 与 Find N2 arm64 Debug APK 构建。
+- PR #187 合并后的中间主线 `d0206f30dceee5200eca47186927e8c68aeda7df` 也已通过 Flutter Tests run `43721511757` 和 Flutter Quality Gate run `43721511820`，两者均 SUCCESS。
+- 云端证据只证明提交代码、自动化测试和 APK 构建通过；不代表 OPPO Find N2 真机性能、多模态或进程恢复验收已完成。
+
+### 52.3 四类助手闭环复核结论
+
+- **问诊助手**：可接收用户自身体验、经典/医案和假设病例；AI 理解表达、整理已确认内容并追问缺项。既有 `TcmInterviewConversationController` / `DiagnosticEngine` 执行规则问诊和辨病辨证。结果解释提示要求区分 App 规则结果、知识库原文与 AI 归纳；诊断性解释必须对应本轮 App 结果和可追溯知识库 sourceId，缺少依据时标 MISSING。
+- **工具助手**：沿用现有工具定义、参数 schema、headless/page 执行能力和统一结果协议。缺参留在当前助手对话追问；只有工具 SUCCEEDED、参数匹配且结果校验通过、来源标识有效时才进入自动解释。失败、未执行、参数不匹配或结果无有效来源的结果不作为已验证事实交给模型。
+- **学习助手**：沿用 `AssistantKnowledgeContextBuilder`，按检索状态提供实际命中的知识条目、sourceId 和可定位引用；未命中、部分命中或失败按真实状态呈现，不用模型记忆补齐知识库缺项。
+- **玄学大师**：排盘、历法和相关计算继续由 App 现有确定性工具执行；AI 解释工具真实返回字段和对应来源，可围绕已验证结果继续追问，不重新计算或伪造盘面。
+- 复核未发现需要新增第二套 Orchestrator、ToolRouter 或 KnowledgeContextBuilder 的断点；没有批量迁移 Page-only 工具。
+
+### 52.4 Native 提示与 TRACE 口径收敛
+
+- Android Native 全局问诊提示与产品定位统一：允许分析用户自身体验、经典/医案和假设病例；实际辨病辨证仍由 App 原有确定性代码执行。AI 可解释 App 已返回且通过校验的病机、治法、方剂组成/配伍、剂量字段、针灸思路和经典依据；不得自行选方、计算剂量、伪造或覆盖业务结果。
+- 清除旧版“仅模拟学习”框架及泛化的个体治疗内容禁令；保留简明急重症求助提醒。不新增临床 detector 或把 detector 作为普通问诊入口的准入门槛。
+- 正常 `requireAssessment=false` 问诊发送和结果解释路径将 `PREFLIGHT` / `RED_FLAG` 记录为 `NOT_APPLICABLE`，错误码分别为 `PREFLIGHT_NOT_REQUIRED`、`REDFLAG_ASSESSMENT_NOT_REQUIRED`。这不表示 detector 已评估、风险已清除或安全 PASS；只有明确要求实际评估的路径才使用真实评估结果，应评估但未配置时标 UNKNOWN。
+- 结果解释入口已补充对应 TRACE 回归，确保真实事件与合约、Find N2 验收文档一致。
+
+### 52.5 范围与不变项
+
+- 本轮没有修改 `DiagnosticEngine`、`DiagnosticRules`、问诊题目/选项、方剂规则、剂量计算或排盘/历法计算逻辑。
+- 沿用单一 SQLite、既有 AI 数据清除逻辑；不拆分数据库，不新增 SQLCipher、复杂密钥管理、复杂备份规则或 Android 全局备份变更。
+- 不新增 Agent/DAG、第二套执行器/路由器/知识检索器、临床 detector 或临床分诊系统。
+- README 与「关于」页统一使用本仓库产品名称和当前安装包版本信息；保留 GitHub Fork 与上游来源，明确上游变更需人工评估、审查和同步，不使用上游版本号、Release 或 APK。
+
+### 52.6 唯一剩余验收：OPPO Find N2 本地设备
+
+以下内容不能由 GitHub CI 或 arm64 Debug APK 构建替代，实际设备证据补齐前一律 UNKNOWN：
+
+- 按 `docs/find-n2-local-ai-acceptance-checklist.md` 验证 GPU 与 CPU 各至少 20 轮，并记录 Native 实际 backend，不能把 fallback 误记为目标后端通过。
+- GPU/CPU 图片与语音输入、权限/取消分支、Activity recreation、force-stop/restart、原会话及问诊 task snapshot 恢复。
+- 执行「清除全部 AI 数据」后强停重启，核验 AI 会话、消息、问诊快照、附件缓存、Native runtime cache 与 TRACE 清除，同时确认非 AI 业务数据及已安装模型保留。
+- 核验脱敏 TRACE 的输入、路由、检索、Native 模型、参数/结果校验、持久化和最终展示关联；不提交原始症状、prompt、response、媒体、文件路径或密钥。
+
+### 52.7 云端收尾结论
+
+第 51.3 节第 1 至 4 项云端任务已完成。除 Find N2 本地验收结果揭示的具体、可复现软件缺陷外，本轮没有尚需扩展的云端运行时代码任务；不因继续开发而增加无关功能、检测器、数据库或泛化测试。
