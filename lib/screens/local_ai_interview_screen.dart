@@ -4407,20 +4407,26 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       route: 'result_interpretation',
       mode: mode.name,
     );
-    if (mode == AssistantMode.consultation) {
-      final reportedText = _messages
-          .where((message) => message.isUser)
-          .map((message) => message.text)
-          .join('\n');
-      if (await _blockIfRedFlagPreflightDoesNotClear(
-        source: RedFlagInputSource.structuredInterview,
-        text: reportedText.isEmpty ? null : reportedText,
-        traceContext: traceContext,
-        route: 'result_interpretation',
-        requireAssessment: true,
-      )) {
-        return;
-      }
+    final redFlagContext = _boundedRedFlagContext(
+      currentText: normalizedPrompt,
+    );
+    final requiresMedicalSafety = AssistantConversationOrchestrator
+        .requiresMedicalSafetyPreflight(
+      query: redFlagContext,
+      selectedMode: mode,
+      structuredInterviewActive:
+          _tcmInterviewController?.canAnswer == true ||
+              _tcmInterviewController?.completedDiagnosis != null,
+    );
+    if (requiresMedicalSafety &&
+        await _blockIfRedFlagPreflightDoesNotClear(
+          source: RedFlagInputSource.structuredInterview,
+          text: redFlagContext.isEmpty ? null : redFlagContext,
+          traceContext: traceContext,
+          route: 'result_interpretation',
+          requireAssessment: true,
+        )) {
+      return;
     }
     var inferenceCompleted = false;
     try {
@@ -4428,7 +4434,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       // native model context before adding this explicit user-requested action.
       if (restoreVisibleConversation) {
         await _restoreVisibleConversationToModel(
-          requireMedicalSafety: mode == AssistantMode.consultation,
+          requireMedicalSafety: requiresMedicalSafety,
         );
       }
       if (!mounted) return;
@@ -4466,7 +4472,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: mode,
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
-        requireMedicalSafety: mode == AssistantMode.consultation,
+        requireMedicalSafety: requiresMedicalSafety,
+        redFlagContext: requiresMedicalSafety ? redFlagContext : null,
       );
       inferenceCompleted = true;
       await _traceRecorder.record(
