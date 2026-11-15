@@ -1396,14 +1396,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         userContext,
       ].whereType<String>().where((value) => value.trim().isNotEmpty).join('\n'),
     );
-    if (await _blockIfRedFlagPreflightDoesNotClear(
-      source: RedFlagInputSource.structuredInterview,
-      text: redFlagSnapshot.text,
-      traceContext: activeTraceContext,
-      route: 'structured_diagnosis',
-      requireAssessment: true,
-      sourceTruncated: redFlagSnapshot.sourceTruncated,
-    )) {
+    if (!redFlagPreflightAlreadyCleared &&
+        await _blockIfRedFlagPreflightDoesNotClear(
+          source: RedFlagInputSource.structuredInterview,
+          text: redFlagSnapshot.text,
+          traceContext: activeTraceContext,
+          route: 'structured_diagnosis',
+          requireAssessment: true,
+          sourceTruncated: redFlagSnapshot.sourceTruncated,
+        )) {
       return;
     }
     if (traceContext == null) {
@@ -7571,6 +7572,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           currentUserText: text,
           traceContextOverride: traceContext,
           autoStartRuleInterview: true,
+          flutterPreflightAlreadyCleared: true,
         );
         return;
       }
@@ -8101,6 +8103,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? currentUserText,
     AiTraceContext? traceContextOverride,
     bool autoStartRuleInterview = false,
+    bool flutterPreflightAlreadyCleared = false,
   }) async {
     if (_attachmentBusy || _modelControlBusy || _sending || _extracting) return;
     setState(() {
@@ -8125,14 +8128,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
     final redFlagSnapshot = _boundedRedFlagContext(currentText: currentUserText);
-    if (await _blockIfRedFlagPreflightDoesNotClear(
-      source: RedFlagInputSource.structuredInterview,
-      text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
-      traceContext: activeTraceContext,
-      route: 'symptom_extraction',
-      requireAssessment: true,
-      sourceTruncated: redFlagSnapshot.sourceTruncated,
-    )) {
+    if (!flutterPreflightAlreadyCleared &&
+        await _blockIfRedFlagPreflightDoesNotClear(
+          source: RedFlagInputSource.structuredInterview,
+          text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
+          traceContext: activeTraceContext,
+          route: 'symptom_extraction',
+          requireAssessment: true,
+          sourceTruncated: redFlagSnapshot.sourceTruncated,
+        )) {
       if (mounted) setState(() => _extracting = false);
       return;
     }
@@ -8182,6 +8186,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             userContext: '',
             confirmedTenAnswers: const {},
             traceContext: activeTraceContext,
+            redFlagPreflightAlreadyCleared: true,
           );
           return;
         }
@@ -8298,6 +8303,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           userContext: draft.summaryLines.join('\n'),
           confirmedTenAnswers: confirmedAnswers,
           traceContext: activeTraceContext,
+          redFlagPreflightAlreadyCleared: true,
         );
         return;
       }
