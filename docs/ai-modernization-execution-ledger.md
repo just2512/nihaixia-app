@@ -2153,10 +2153,10 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 2. CPU：在同一设置入口选择 CPU，核对偏好持久化和 Native 实际 backend 为 CPU，连续完成至少 20 轮；不需要 Debug Intent、ADB 参数或后台改配置。
 3. 模型运行中切换 GPU/CPU，确认旧 Engine/Conversation 被安全释放并重建、已完成对话历史恢复、未完成/状态未知请求不自动重放；初始化失败时可选择另一 backend 重试。GPU fallback CPU 时必须分别记录用户选择与 Native 实际 backend。
 4. GPU/CPU 两组分别覆盖多轮文字、图片、语音；记录空回复、state:7、fallback 和实际 backend。当前 GPU EngineConfig 的 audioBackend 仍为 CPU，不得把音频路径记作 GPU。
-4. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
-5. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
-6. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
-7. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
+5. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
+6. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
+7. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
+8. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
 
 ### 46.4 非代码决策边界
 
