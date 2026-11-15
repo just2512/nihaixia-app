@@ -1289,7 +1289,7 @@ void main() {
     expect(savedState.status, 'in_progress');
     expect(savedState.pendingPromptId, 'temperature');
     expect(savedState.pendingPromptText, contains('寒热感觉'));
-    expect(find.textContaining('本问诊仅用于模拟学习中医辨证思路'), findsOneWidget);
+    expect(find.textContaining('辨病辨证由 App 现有规则执行'), findsOneWidget);
     expect(
       savedState.transcript.any((message) => message.text.contains('开始规则问诊')),
       isTrue,
@@ -1426,9 +1426,9 @@ void main() {
       reason: '解释触发前必须先得到 DiagnosticEngine 的真实结构化结果',
     );
     expect(service.sentTexts, hasLength(1));
-    expect(service.sentTexts.single, contains('总结并解释'));
+    expect(service.sentTexts.single, contains('完整解释'));
     expect(service.sentTexts.single, contains('六经'));
-    expect(service.sentTexts.single, contains('不要生成个体处方、药物或剂量建议'));
+    expect(service.sentTexts.single, contains('每个诊断性陈述都必须能够对应本轮 App 规则结果'));
     expect(service.sentContexts.single, contains('当前角色：问诊助手'));
     expect(
       find.textContaining('已收到你的描述：'),
@@ -1907,8 +1907,8 @@ void main() {
     expect(completed.snapshot.answers['dry_throat'], isNull);
     expect(completed.completedDiagnosis, isNotNull);
     expect(service.sentTexts, hasLength(1));
-    expect(service.sentTexts.single, contains('总结并解释'));
-    expect(service.sentTexts.single, contains('不重新辨证'));
+    expect(service.sentTexts.single, contains('完整解释'));
+    expect(service.sentTexts.single, contains('不重新执行辨证'));
     expect(
       service.sentContexts.single,
       contains('当前角色：问诊助手'),
@@ -1937,9 +1937,9 @@ void main() {
     expect(service.sentContexts, hasLength(1));
     expect(service.sentContexts.single, contains('当前角色：问诊助手'));
     expect(service.sentContexts.single, contains('App 本地知识库'));
-    expect(service.sentContexts.single, contains('不独立作个体诊断'));
-    expect(service.sentContexts.single, contains('解释和归纳已有结果'));
-    expect(service.sentContexts.single, contains('必须区分规则输出、知识来源与 AI 解释'));
+    expect(service.sentContexts.single, contains('诊断性陈述必须有可追溯的知识库 sourceId'));
+    expect(service.sentContexts.single, contains('结合本轮本地知识库实际命中的条目解释规则结果'));
+    expect(service.sentContexts.single, contains('必须区分 App 规则结果、知识库内容和 AI 解释'));
     expect(tester.takeException(), isNull);
   });
 
@@ -3319,9 +3319,11 @@ void main() {
     expect(copiedTexts.single, contains('柴胡24g'));
 
     await tapAction('AI解读辨证结果');
-    expect(service.sentTexts.last, contains('总结并解释'));
+    expect(service.sentTexts.last, contains('完整解释'));
     expect(service.sentTexts.last, contains('少阳证'));
-    expect(service.sentTexts.last, contains('不要生成个体处方、药物或剂量建议'));
+    expect(service.sentTexts.last, contains('本地知识库实际检索到的条目说明诊断依据'));
+    expect(service.sentTexts.last, contains('方剂组成与配伍、针灸选穴思路'));
+    expect(service.sentTexts.last, isNot(contains('仅用于模拟学习')));
     expect(service.sentContexts.last, contains('当前角色：问诊助手'));
     expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
 
@@ -6206,8 +6208,8 @@ class _OrderedIntentSendService extends _TextSendService {
 }
 
 void mainRedFlagEntrypointOrderingTests() {
-  group('模拟问诊安全提示边界', () {
-    testWidgets('模拟规则问诊不调用注入的临床 detector，免责声明保持可见',
+  group('问诊结果说明与简明急重症提示', () {
+    testWidgets('规则问诊不调用临床 detector，规则与知识库提示保持可见',
         (tester) async {
       final events = <String>[];
       final service = _OrderedIntentSendService(events);
@@ -6253,7 +6255,7 @@ void mainRedFlagEntrypointOrderingTests() {
         reason: '模拟学习不依赖临床分诊 detector',
       );
       expect(
-        find.textContaining('本问诊仅用于模拟学习中医辨证思路'),
+        find.textContaining('辨病辨证由 App 现有规则执行'),
         findsOneWidget,
       );
       expect(service.sentTexts, isEmpty,
@@ -6294,7 +6296,7 @@ void mainRedFlagEntrypointOrderingTests() {
       expect(detector.calls, 0);
       expect(service.sentTexts, ['我最近胸痛']);
       expect(
-        find.textContaining('本问诊仅用于模拟学习中医辨证思路'),
+        find.textContaining('辨病辨证由 App 现有规则执行'),
         findsOneWidget,
       );
 
@@ -6306,7 +6308,7 @@ void mainRedFlagEntrypointOrderingTests() {
       expect(detector.calls, 0,
           reason: '模拟学习多轮不依赖临床 detector 的跨轮评估');
       expect(service.sentTexts, ['我最近胸痛', '我最近头痛']);
-      expect(find.textContaining('请及时就医'), findsOneWidget);
+      expect(find.textContaining('立即拨打120'), findsOneWidget);
     });
 
     testWidgets('非临床排盘请求不触发临床 detector并进入确定性意图筛选',
@@ -6440,7 +6442,7 @@ void mainRedFlagEntrypointOrderingTests() {
       );
       expect(state, isNotNull);
       expect(service.initialSymptomTexts, [query]);
-      expect(find.textContaining('本问诊仅用于模拟学习中医辨证思路'), findsOneWidget);
+      expect(find.textContaining('辨病辨证由 App 现有规则执行'), findsOneWidget);
       expect(find.textContaining('安全评估器尚未配置'), findsNothing);
       final redFlagEvents = traceEvents
           .where((event) => event.stage == AiTraceStage.redFlag)

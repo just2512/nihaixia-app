@@ -523,7 +523,7 @@ class AssistantKnowledgeContextBuilder {
             ..writeln('针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}')
             ..writeln('治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}')
             ..writeln('结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}')
-            ..writeln('使用边界：这是 App 知识库中的整理案例；不单凭案例记录推导个体诊断或疗效保证。');
+            ..writeln('使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照，引用时保留条目身份，不把条目未记载的信息补成病例事实。');
         }
       } catch (_) {
         buffer.writeln('[App医案库] 读取失败，状态 MISSING。');
@@ -638,9 +638,9 @@ class AssistantKnowledgeContextBuilder {
     }
 
     final buffer = StringBuffer()
-      ..writeln('以下内容来自 App 内置数据，仅作为可核对的参考资料。')
-      ..writeln('不得把条目描述改写成对用户的诊断、处方或剂量建议。')
-      ..writeln('保留资料类型、知识库条目定位和来源标识；只有本地条目无法定位或检索无命中时才标记 MISSING。');
+      ..writeln('以下内容来自 App 内置知识库，应按资料类型、条目定位和来源标识核对。')
+      ..writeln('可据此解释辨病辨证依据、病机、治法、方剂和针灸思路；具体问诊结果的诊断解释须同时对应 App 已校验业务结果与可追溯知识条目，一般知识讲解以知识条目为依据。')
+      ..writeln('不得补造未返回字段；保留资料类型、知识库条目定位和 sourceId，无法定位或检索无命中时标记 MISSING。');
 
     for (final formula in formulas) {
       buffer

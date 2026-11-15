@@ -1202,15 +1202,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           AssistantKnowledgeRetrievalStatus.noResults => 'App 本地知识库本轮未命中可引用条目（NO_RESULTS）。',
           AssistantKnowledgeRetrievalStatus.failed => 'App 本地知识库检索失败（FAILED）：${knowledge.failureMessage ?? 'MISSING'}。不得将失败说成无命中。',
           AssistantKnowledgeRetrievalStatus.partial => 'App 本地知识库部分命中；仅引用已反查成功的来源（PARTIAL）：\n${knowledge.text}',
-          AssistantKnowledgeRetrievalStatus.retrieved => 'App 本地知识库检索结果（仅供知识解释，不是个体诊断依据）：\n${knowledge.text}',
+          AssistantKnowledgeRetrievalStatus.retrieved => 'App 本地知识库检索结果（可用于解释辨病辨证依据、病机、治法、方剂与针灸思路；保留可追溯来源）：\n${knowledge.text}',
         };
         final reply = await sendWithContext(
           '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
-              '本轮问诊只用于模拟学习中医辨证思路，不是医疗诊断。先澄清学习案例中的症状与时间线，不把模型整理内容当成已确认事实。'
-              '若用户描述现实身体不适，提醒及时就医；不得给出个体用药、停药或剂量建议。'
-              '只有用户明确启动模拟问诊时，才通过 App 的 DiagnosticEngine 工具展示既有规则问诊过程。'
-              '若历史对话已经包含该引擎的结构化结果，用户追问时应解释和归纳已有结果，并结合本轮检索到的知识条目说明依据；'
-              '必须区分规则输出、知识来源与 AI 解释，不得自行新增或改写证型/规则结论，也不得给出个体处方或剂量。\n'
+              '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
+              '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
+              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典/医案。'
+              '诊断性陈述必须有可追溯的知识库 sourceId；必须区分 App 规则结果、知识库内容和 AI 解释，不得自行新增或改写规则结论，不得补造缺失字段。\n'
               '$knowledgeContext',
         );
         return _AssistantTurnResponse(
@@ -1787,15 +1786,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   String _diagnosisInterpretationPrompt(DiagnosisResult result) =>
-      '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
-      '本次结果字段：六经 ${result.displayMeridian}；'
+      '请基于 App DiagnosticEngine 已完成并通过校验的结构化辨证结果，进行完整解释。'
+      '本次 App 返回字段：六经 ${result.displayMeridian}；'
       '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
       '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
-      '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
-      '知识库内容只用于解释已有规则，不得据此新增个体诊断结论。'
-      '只解释 App 已返回的结果，不重新辨证，不增加或修改规则结论，不补造缺失字段。'
-      '明确说明这是模拟学习结果，不是对用户本人现实症状的医疗诊断。'
-      '不要生成个体处方、药物或剂量建议；原结果中的处方字段只可按原文引用，不得增删改。';
+      '先解释本次 App 实际返回的辨病辨证结果和字段关系，再结合本轮本地知识库实际检索到的条目说明诊断依据。'
+      '在知识来源支持的范围内，继续讲解相关病机、治法、方剂组成与配伍、针灸选穴思路，以及经典条文和医案对照。'
+      '每个诊断性陈述都必须能够对应本轮 App 规则结果和可追溯知识库 sourceId；知识库无依据的内容标记 MISSING，不得以模型记忆补齐。'
+      '明确区分 App 规则结果、知识库原文和 AI 归纳；不重新执行辨证，不增加、修改或伪造 App 规则结论，不补造缺失字段。';
 
   _InterviewMessage _diagnosisActionMessage(
     String text,
@@ -8983,8 +8981,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              '本问诊仅用于模拟学习中医辨证思路，不构成医疗诊断或治疗建议。'
-              '若你或他人有任何现实身体不适，请及时就医；请勿依据模拟结果自行诊断、用药或停药。'
+              '辨病辨证由 App 现有规则执行；诊断依据来自本地知识库。AI 结合已校验结果解释病机、治法、方剂配伍和针灸思路。'
               '如出现胸痛、明显呼吸困难、意识不清、抽搐或大量出血等急重症表现，请立即拨打120或前往急诊。',
               style: TextStyle(
                 color: scheme.onSurfaceVariant,

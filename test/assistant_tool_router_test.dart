@@ -21,6 +21,15 @@ void main() {
     }
   });
 
+  test('问诊助手允许完整解释 App 规则结果且诊断依据必须来自知识库', () {
+    final prompt = AssistantMode.consultation.promptHint;
+    expect(prompt, contains('DiagnosticEngine'));
+    expect(prompt, contains('本地知识库'));
+    expect(prompt, contains('病机、治法、方剂组成与配伍、针灸思路'));
+    expect(prompt, isNot(contains('仅用于模拟学习')));
+    expect(prompt, isNot(contains('不提供个体治疗')));
+  });
+
   test('问诊模式只把明确结构化辨证请求交给规则问诊', () {
     expect(
       AssistantToolRouter.match('请开始结构化辨证问诊', AssistantMode.consultation)?.id,
@@ -313,7 +322,7 @@ void main() {
     expect(AssistantMode.learning.promptHint, contains('明确区分课程讲稿、古籍文本、医案'));
     expect(AssistantMode.tools.promptHint, contains('工具结果返回对话后'));
     expect(AssistantMode.tools.promptHint, contains('区分 App 确定性计算与 AI 解释'));
-    expect(AssistantMode.consultation.promptHint, contains('解释、归纳该结果'));
+    expect(AssistantMode.consultation.promptHint, contains('只有结果返回并通过校验后才交给 AI 解读'));
     expect(AssistantMode.metaphysics.promptHint, contains('基于回传字段归纳结构'));
   });
 
