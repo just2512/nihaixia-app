@@ -80,6 +80,20 @@ class GujiRepository {
     });
   }
 
+  /// Resolves a stable app-local chapter index without falling back to a
+  /// title search or the library root.
+  static Future<GujiChapter?> chapterAtIndex(
+    GujiBook book,
+    int chapterIndex,
+  ) async {
+    if (chapterIndex < 0) return null;
+    final chapters = await chaptersOf(book);
+    for (final chapter in chapters) {
+      if (chapter.index == chapterIndex) return chapter;
+    }
+    return null;
+  }
+
   /// 解析原文：结构为「分隔线 / 章节标题 / 分隔线 / 正文 / 分隔线 / 标题 …」，
   /// 每个标题被一对分隔线夹住，按分隔线切块后成对取（首块是书名/前言）。
   static List<GujiChapter> parse(String raw) {
