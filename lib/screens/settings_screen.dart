@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/settings_repository.dart';
 import '../widgets/text_scale_slider.dart';
 import '../widgets/local_ai_data_clear_tile.dart';
+import '../widgets/local_ai_backend_settings_tile.dart';
 import '../widgets/local_ai_trace_debug_tile.dart';
 import 'app_dialogs.dart';
 
@@ -38,6 +39,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _genderTile(cs),
             _diagnosticLevelTile(cs),
             _autoCopyTile(cs),
+            const Divider(height: 24),
+            _sectionTitle('本地 AI'),
+            const LocalAiBackendSettingsTile(),
             const Divider(height: 24),
             _sectionTitle('紫微斗数排盘'),
             _trueSolarTile(cs),
