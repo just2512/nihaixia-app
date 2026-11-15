@@ -580,12 +580,17 @@ class MainActivity : FlutterActivity() {
             LocalAiBackendSelectionPolicy.parseRequestedBackend(requestedBackend)
                 ?: throw IllegalArgumentException("推理后端只支持 GPU 或 CPU")
 
+        val hasSavedPreference =
+            backendPreferences.contains(LOCAL_AI_BACKEND_PREFERENCE_KEY)
         val previousPreference = preferredBackend()
         val hasRuntime = aiEngine != null || aiConversation != null
         val shouldRetrySelectedBackend =
             hasRuntime && !activeBackend.equals(selectedBackend, ignoreCase = true)
 
-        if (previousPreference == selectedBackend && !shouldRetrySelectedBackend) {
+        if (previousPreference == selectedBackend &&
+            hasSavedPreference &&
+            !shouldRetrySelectedBackend
+        ) {
             return modelStatus()
         }
 
@@ -597,7 +602,12 @@ class MainActivity : FlutterActivity() {
             releaseRuntimePreservingConversationState()
         }
 
-        if (previousPreference != selectedBackend) {
+        if (LocalAiBackendSelectionPolicy.shouldPersistPreference(
+                hasSavedPreference = hasSavedPreference,
+                currentPreference = previousPreference,
+                requestedBackend = selectedBackend
+            )
+        ) {
             val saved = backendPreferences.edit()
                 .putString(LOCAL_AI_BACKEND_PREFERENCE_KEY, selectedBackend)
                 .commit()
