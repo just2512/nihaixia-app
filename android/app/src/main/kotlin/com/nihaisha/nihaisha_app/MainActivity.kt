@@ -221,12 +221,17 @@ class MainActivity : FlutterActivity() {
                         val context = call.argument<String>("context")?.trim().orEmpty()
                         val requireMedicalSafety =
                             call.argument<Boolean>("require_red_flag") == true
+                        val redFlagContext =
+                            call.argument<String>("red_flag_context")?.trim().orEmpty()
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
                             runAiTaskAfterNativeRedFlag(
                                 result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, text),
+                                NativeRedFlagInput(
+                                    NativeRedFlagInputSource.CURRENT_TEXT,
+                                    redFlagContext.ifEmpty { text }
+                                ),
                                 required = requireMedicalSafety
                             ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalMessage(text, context), traceId)
