@@ -2882,7 +2882,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '我会在当前对话中读取你选择的本地保存记录，并调用 App 原有排盘引擎重新计算；不会把全部个人记录交给模型。',
           if (selectedChart == null) ...[
             selectedLine,
-            '请回复记录 ID 或完整记录名称；也可以明确说“最近保存的”。',
+            '请回复列表中的记录 ID；如果你已知完整名称，也可直接输入，或明确说“最近保存的”。',
           ],
           if (selectedChart != null)
             '请明确选择排盘类型：八字，或紫微斗数。',
