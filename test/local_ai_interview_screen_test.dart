@@ -3319,7 +3319,7 @@ void main() {
     expect(copiedTexts.single, contains('柴胡24g'));
 
     await tapAction('AI解读辨证结果');
-    expect(service.sentTexts.last, contains('总结并解释'));
+    expect(service.sentTexts.last, contains('完整解释'));
     expect(service.sentTexts.last, contains('少阳证'));
     expect(service.sentTexts.last, contains('本地知识库实际检索到的条目说明诊断依据'));
     expect(service.sentTexts.last, contains('方剂组成与配伍、针灸选穴思路'));
@@ -6209,7 +6209,7 @@ class _OrderedIntentSendService extends _TextSendService {
 
 void mainRedFlagEntrypointOrderingTests() {
   group('问诊结果说明与简明急重症提示', () {
-    testWidgets('模拟规则问诊不调用注入的临床 detector，免责声明保持可见',
+    testWidgets('规则问诊不调用临床 detector，规则与知识库提示保持可见',
         (tester) async {
       final events = <String>[];
       final service = _OrderedIntentSendService(events);

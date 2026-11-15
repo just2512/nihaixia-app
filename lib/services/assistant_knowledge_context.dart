@@ -639,7 +639,7 @@ class AssistantKnowledgeContextBuilder {
 
     final buffer = StringBuffer()
       ..writeln('以下内容来自 App 内置知识库，应按资料类型、条目定位和来源标识核对。')
-      ..writeln('可据此解释辨病辨证依据、病机、治法、方剂和针灸思路；诊断性陈述必须与本次 App 已校验业务结果及可追溯知识条目一致。')
+      ..writeln('可据此解释辨病辨证依据、病机、治法、方剂和针灸思路；具体问诊结果的诊断解释须同时对应 App 已校验业务结果与可追溯知识条目，一般知识讲解以知识条目为依据。')
       ..writeln('不得补造未返回字段；保留资料类型、知识库条目定位和 sourceId，无法定位或检索无命中时标记 MISSING。');
 
     for (final formula in formulas) {
