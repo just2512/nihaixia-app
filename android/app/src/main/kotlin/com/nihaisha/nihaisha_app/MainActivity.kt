@@ -1478,7 +1478,8 @@ class MainActivity : FlutterActivity() {
         return try {
             mapOf(
                 "draft" to extractionConversation.sendMessage(prompt).toString(),
-                "sourceTruncated" to sourceWasTruncated
+                "sourceTruncated" to sourceWasTruncated,
+                "backend" to activeBackend
             )
         } finally {
             extractionConversation.close()
