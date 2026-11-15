@@ -2025,3 +2025,101 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - AI 只负责理解、归纳、追问、调度和解释；确定性排盘、辨证、剂量与起卦由 App 原有代码执行。
 - 只有已执行并完成参数/结果/来源校验的业务结果才能交 AI 解读；模型推断不得包装成诊断结论。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不为增加 Headless 数量批量迁移页面工具。
+
+## 44. 2026-11-15 PR #173/#175 合并与问诊/工具边界复核
+
+### 44.1 主线基线与合并证据
+
+- 本节按最新主线基线复核并更新：`master @ d82272bd4fe72d95230a96cc5b8ee27d0efef4c5`。
+- PR #173（知识来源定位口径）最终 head `afa227dee9bc35ff7f481d58585624527d50cae0`，PR Flutter CI run `43673375134` SUCCESS；squash merge 为 `c8f5e04a32343a7f4751217593fbeff18a9f279f`。合并后 master Flutter tests run `43677774908` 与 Quality Gate run `43677774909` 均 SUCCESS。
+- PR #175（Android Native 助手提示词与 Flutter 角色契约统一）最终 head `1bc8c564f499b67066bd76d2a26d82e745ce4ef5`；PR run `43678009090` 的 Flutter regression 与 Android arm64 CI verification APK/Manifest/ABI/SHA-256/Native unit tests 均 SUCCESS；squash merge 为 `8286138b53a3630e0333b595efe578b77ac04f90`。
+- PR #175 合并后 master Flutter tests run `43678586814` 与 Quality Gate run `43678586803` 均已终态 SUCCESS。
+- PR #174（Find N2 Debug-only CPU backend override）最终 head `b56789de166ef51886687a55d876ac5fe6e3ebfd`，PR run `43678167064` 终态 SUCCESS：Flutter regression job `132703392304` SUCCESS，Android arm64 verification APK/Manifest/ABI/SHA-256/Native tests job `132704465339` SUCCESS；squash merge 为 `d82272bd4fe72d95230a96cc5b8ee27d0efef4c5`。此前 `BuildConfig` 编译失败已修正，最终实现使用 Android `ApplicationInfo.FLAG_DEBUGGABLE`。
+- PR #174 仅增加 Debug 构建显式 CPU 测试入口；Release 忽略 Intent extra，普通 Debug 启动仍 GPU-first，保留已有 GPU 初始化/首轮 OpenCL fallback。它只解决本地 CPU 后端测试可达性，不构成 Find N2 设备验收。
+
+### 44.2 AI 与 App 的责任边界
+
+- PR #175 将 Android Native systemInstruction 与现有 Flutter 角色提示、Headless 执行器和结果解释链对齐：AI 可理解意图、识别缺项、提出追问、调度已有 Headless 能力并解释校验通过的结果；不执行排盘、辨证、剂量换算或其他确定性计算。
+- 只有 App 已实际执行且参数、结果和来源通过校验的数据才能作为业务事实交给 AI。失败、未执行、无结果或状态未知不得被模型包装成成功结果。
+- 问诊助手可以归纳用户自述并解释现有 `DiagnosticEngine` 已产生的结果；不得自行产生或修改六经辨证、覆盖 `DiagnosticRules` 或给出个体处方/剂量。
+- 工具助手在当前对话中调用已有 Headless 执行器；存在 Headless 能力时不得无故将用户引导到独立工具页面。玄学工具的计算仍由 App 执行，AI 只解释真实返回字段。
+- 学习助手及结果解释只引用本轮实际检索到的 App 本地知识条目，附稳定 `sourceId` 和可打开定位。知识库已有并可定位时，不要求普通知识回答补纸本底本版本、卷页或原始影像坐标；不重复审核已审核知识库。仅本地条目实际缺失、检索未命中/失败、无法解析/打开或必需字段为空时才说明 MISSING。
+
+### 44.3 工具能力盘点，不以数量扩张为目标
+
+- `AssistantToolRouter` 当前 24 个定义：23 项常规工具 + 1 项结构化问诊内联控制器；17/23 常规工具已有 Headless executor。
+- 六项 Page-only（`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`）按现有数据隐私、知识检索或民俗语义边界保留。知识/医案内容问答复用已有本地知识检索；个人历史必须由用户明确选择与授权；不为扩大 Headless 数字批量迁移页面。
+- 现有 Headless 成功结果均带 App 引擎/本地资料来源标识；当前执行链先校验参数、真实执行、校验结果契约，再允许成功且有来源的结果进入 AI 解释。未知/失败结果不会进入自动解释。
+
+### 44.4 自然语言问诊的准确缺口及门禁
+
+- `TcmInterviewConversationController.start()` 仍保留用户自述作为上下文，然后依次进入寒热、舌脉和现有十问；当前没有将自由文本候选答案映射为规范问题 ID/选项并经用户确认后写入既有引擎状态的闭环。
+- 不把用户自述直接转换成规则答案，不调用模型跳过现有引擎顺序，不修改十问、`DiagnosticEngine` 或 `DiagnosticRules`。未来对话闭环应为：保留用户原话及证据 → AI 提取有限候选字段 → 用原始文本证据验证并展示用户确认/修正 → 仅追问缺项/歧义 → 顺序调用现有规则问诊 → 校验真实结果和来源 → AI 解释并回链本地知识条目。
+- B 的 fail-closed Gate 已接入临床相关入口，但生产自然语言/视觉/语音 RedFlag detector、审核版本、责任审批、阈值/例外及处置文案证据仍不齐；B 继续 `PARTIAL / RELEASE BLOCKED`。这是输入安全检测边界，不是要求重复审核知识库。不得绕过 Gate，也不得自行发明医学词表/阈值后开放自由文本自动辨证。
+
+### 44.5 Find N2 与本地验收边界
+
+- 云端可完成源码审计、Dart/Kotlin 自动化、Android arm64 APK 构建、Manifest/ABI/SHA-256 检查、Native unit tests、文档和 PR 集成；这些只能证明代码和构建链路。
+- 以下必须在 OPPO Find N2 实体设备执行：GPU 默认后端连续至少 20 轮；Debug Intent 显式 CPU 后端连续至少 20 轮；同组场景覆盖文字、图片和语音；Activity/进程强停重启及会话恢复；应用内清除全部 AI 数据后强停/重启复核；启用 Debug TRACE 并检查各轮跨层关联。
+- 每次后端均记录 Native 实际返回的 backend，不得把“请求 GPU/CPU”当作实际 backend。核对 SQLite transcript、Flutter UI、Native successful-turn history 与 task snapshot；未知请求不得自动重放。
+- TRACE 使用独立 `trace_id`，核对输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化和最终展示阶段；不记录用户正文、prompt/response、症状、附件路径或媒体内容。生产 `PREFLIGHT/RED_FLAG` 阶段尚缺完整生产调用证据，设备记录必须标 MISSING/UNKNOWN，不得伪造 NOT_APPLICABLE。
+- AI 数据清除的数据库事务、AI 专属附件目录、Native runtime/cache、内存会话、TRACE 文件及 UI 分项反馈已有代码与自动化证据；真机清除后重启不可恢复仍 UNKNOWN。混合 SQLite 中的 AI 对话行仍可能处于系统备份/设备迁移副本，旧共享图片所有权 UNKNOWN；不得删除整个数据库、整个共享临时目录或全局禁用备份来冒充完成。模型文件及非 AI 数据按既有清除契约保留。
+- A/E/F 继续为 `PARTIAL / DEVICE UNKNOWN`，未取得 Find N2 证据前不得写 PASS。详见 `docs/local-ai-multiturn-audit.md`、`docs/ai-data-clear-scope-audit.md`、`docs/find-n2-ai-trace-acceptance-plan.md`。
+
+### 44.6 收尾原则
+
+- C 的知识库引用定位口径已由 PR #173 落地；不再开展逐册逐页考据或重复医学审核。
+- D 的现有 Headless 能力和 in-chat 结果解释以现有执行契约为准；只修具体可复现缺陷，不追求工具数量。
+- G 不增加第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+- 剩余云端任务只包括已记录的真实代码缺口和当前 PR/CI 收尾；Find N2 真实设备场景统一移交本地执行，不再列为云端待办。
+
+
+## 45. 2026-11-15 PR #174 集成与对话内工具调用缺口收敛
+
+### 45.1 最新主线与 CI
+
+- 最新主线基线：`master @ a18156d281193004d5acf265874d8d5699dad7f8`。
+- PR #174 最终 head `b56789de166ef51886687a55d876ac5fe6e3ebfd`，PR run `43678167064` 终态 SUCCESS；Flutter regression job `132703392304` 与 Android arm64 验证 APK/Manifest/ABI/SHA-256/Native tests job `132704465339` 均 SUCCESS。Squash merge 为 `d82272bd4fe72d95230a96cc5b8ee27d0efef4c5`。
+- PR #174 post-merge master Flutter Tests run `43679658857` 与 Quality Gate run `43679658856` 均已针对精确 merge SHA `d82272bd4fe72d95230a96cc5b8ee27d0efef4c5` 终态 SUCCESS；Flutter regression、Android arm64 CI verification APK/Manifest/ABI/SHA-256/Native tests、Static analysis、Dart 全量测试及 Find N2 arm64 Debug APK 均通过。
+- PR #173 的知识来源定位口径合并为 `c8f5e04a32343a7f4751217593fbeff18a9f279f`；该基线 post-merge Flutter Tests `43677774908` 与 Quality Gate `43677774909` 均 SUCCESS。
+- PR #175 的 Native/Flutter system prompt 边界统一合并为 `8286138b53a3630e0333b595efe578b77ac04f90`；PR run `43678009090` 与 post-merge master Flutter Tests `43678586814`、Quality Gate `43678586803` 均 SUCCESS。
+
+### 45.2 一个已定位并正在修复的对话内执行缺口
+
+- 工具注册定义 `AssistantToolRouter.yunqi` 明确把 `date` 声明为可选参数，description 写明未提供时使用当前日期；`YunQiToolExecutor.execute()` 也在 date 缺失时用 App 本地日期执行既有 `YunQiEngine`。
+- 旧助手入口 `LocalAiInterviewScreen._requestTool()` 的通用 Headless 自动执行条件却要求调用参数中必须显式包含 `date`。因此用户说“帮我推算五运六气”时，即使业务契约允许 App 默认当前日期，也会被送去页面流程，与对话内完成任务的目标不一致。
+- PR #176 `fix(ai): run default-date yunqi requests in chat` 最终 head `2124500812caf3c9e23664ce14eda0d56c03c509`，PR workflow run `43680440826` 终态 SUCCESS：Flutter regression job `132709994066` 与 Android arm64 verification APK/Manifest/ABI/SHA-256/Native tests job `132710901375` 均 SUCCESS；squash merge 为 `a18156d281193004d5acf265874d8d5699dad7f8`。改动限于 `lib/screens/local_ai_interview_screen.dart`、`test/local_ai_interview_screen_test.dart` 和 `test/assistant_tool_result_handoff_test.dart`。
+- 修复在执行边界由 App 注入设备本地日期，并将实际日期写入执行参数及结果 metadata；TRACE 仍只记录既有 allowlisted 工具/阶段状态，不写入业务参数正文。明确提供的日期原样保留，由现有校验拒绝非法日期，不能回退到今天。没有新增计算逻辑、模型推断或其他工具默认值。
+- 新回归验证未提供日期时实际调用 `YunQiToolExecutor`、返回真实 `local-engine:yunqi` 结果、在助手时间线解释与持久化，并断言没有打开独立页面。明确的“打开/进入五运六气页面”请求仍保留 Page Tool 行为。
+- 最初 PR run `43679897169` 的 Flutter 全量回归为 1562 passed / 4 failed / 15 skipped。4 个失败均为既有 Page Tool 回传/取消/持久化测试仍使用“帮我推算五运六气”计算意图，却断言打开页面。未删除测试或降低门槛；已将这些用例改为明确页面导航文案，保留原来的页面返回、CANCELLED 和持久化 UNKNOWN 断言，并在路由处加入显式页面意图区分。
+- PR #176 已在 `2124500812caf3c9e23664ce14eda0d56c03c509` 精确 head 上通过完整 Flutter regression 与 Android arm64/Native CI 后合并；合并后 master Flutter Tests run `43681123896` 与 Quality Gate run `43681123898` 已针对 merge SHA `a18156d281193004d5acf265874d8d5699dad7f8` 启动，本节更新时仍 IN_PROGRESS，分别核验终态，不以 PR CI 替代 post-merge CI。
+
+
+### 45.3 其余工具与模式的推进准则
+
+- 排盘/起卦/历法/单位换算仍复用各自已有 Headless executor；参数不完整或歧义时，助手保存已确认的槽位并只追问缺项，不能引入模型编造默认参数。
+- 有意采用 App 默认值的工具，仅在注册参数契约与既有执行器均明确声明 optional/default 口径时允许；默认值由 App 确定性代码生成并写入实际 result arguments/会话 metadata，模型不得生成默认值。该例外已同步写入 `docs/ai-capability-audit.md` §4.1；必填参数仍必须追问。
+- 其他工具只在源码审计能证明存在“注册契约允许但助手入口错误地要求额外参数/跳转页面”的具体断点时逐项修复；不批量迁移 Page-only 工具，不新增 Agent/DAG，也不为扩大 Headless 数量做架构改造。
+- 同一轮参数路由复核确认：`solar_terms` 已有无参数读取 App 当前节气的专用 Headless 分支；`ziwu_liuzhu` 已有设备本地时间注入、已确认槽位保留和缺项追问分支；小六壬、易经、梅花、剂量、保存命盘等也各有专用参数/授权处理。它们不是本次新发现的缺口，不重复改造。
+- 工具执行的统一硬门槛不变：意图与槽位解析 → 参数校验 → App 原有函数实际执行 → 结果结构/参数/sourceIds 校验 → 将真实结果交给 AI 归纳解释。没有真实成功结果或来源时不得自动解读成事实。
+
+### 45.4 问诊助手与知识来源边界
+
+- 结构化问诊仍由现有 `TcmInterviewConversationController` / `DiagnosticEngine` 执行；AI 可以解释已产生且已校验的辨证结果，但不能代替引擎输出证型或改写 `DiagnosticRules`。
+- 当前 free-text 症状到规范十问字段的“候选提取—原文证据—用户确认—仅追问缺项”适配闭环仍未实现。该功能受 B 的生产 RedFlag detector 医学审核和 fail-closed 证据约束；detector 缺失时 Gate 必须保持 REVIEW_REQUIRED/UNKNOWN，不能绕过或自造医学规则。
+- 已医学审核的知识库不重复审核。经典、医案、讲稿和其他知识解读只要求 AI 回答挂接稳定 `sourceId`，并可打开 App 内实际资产/章节/医案记录。纸本底本、版本、卷页、影印本坐标不再作为普通知识回答验收门槛。
+- 只有实际检索未命中、条目不存在、sourceId 无法解析/打开或必需条目字段确实为空时，才说明对应知识项未找到；不能使用模型记忆补造医学内容/来源，也不能因外部书目字段未校验就声称本地知识库无来源。
+
+### 45.5 云端与本地执行边界
+
+- 云端职责：源码审计、精确范围 Dart/Kotlin 测试、Flutter regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、文档、PR 集成和合并后主线 CI。
+- Find N2 真实设备场景统一为本地验收，不列为云端待办，也不能用 CI 构建替代：GPU 默认后端至少 20 轮；Debug Intent 强制 CPU 至少 20 轮；覆盖文字/图片/语音；Activity recreation、进程 force-stop/restart 和会话恢复；应用内清除 AI 数据后 force-stop/restart（设备重启如执行也记录）；Debug TRACE 核验每轮 backend 与 trace_id 全链。
+- 本地证据必须记录设备/Android/App SHA/模型版本或 SHA/Native 实际 backend/轮次/脱敏 trace_id、关键事件和结果。未知项标 UNKNOWN，不伪造 PASS。
+- AI 数据清除代码与自动化已有实现；混合 SQLite 的系统备份/设备迁移副本和旧版共享图片归属仍是产品/数据边界风险。不得删除整个共享数据库/临时目录，也不得全局关闭 Android Backup 来伪装清除完成；非 AI 数据与已安装模型按既有契约保留。
+
+### 45.6 收尾边界
+
+- C：来源定位闭环已经完成，不做纸本考据，不重复医学审核。
+- D：已有工具能力在当前助手对话内调用；只修具体、可复现的分流或参数契约错误，不扩张架构。
+- B：生产自然语言/视觉/语音红旗检测器审核证据缺失前，不开放自然语言自动辨证。
+- A/E/F：真实设备验收由本地执行，不占用云端任务列表。
