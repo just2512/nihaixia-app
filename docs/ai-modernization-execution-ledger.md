@@ -2113,7 +2113,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 45.5 云端与本地执行边界
 
 - 云端职责：源码审计、精确范围 Dart/Kotlin 测试、Flutter regression、Android arm64 验证 APK、Manifest/ABI/SHA-256、Native tests、文档、PR 集成和合并后主线 CI。
-- Find N2 真实设备场景统一为本地验收，不列为云端待办，也不能用 CI 构建替代：GPU 默认后端至少 20 轮；Debug Intent 强制 CPU 至少 20 轮；覆盖文字/图片/语音；Activity recreation、进程 force-stop/restart 和会话恢复；应用内清除 AI 数据后 force-stop/restart（设备重启如执行也记录）；Debug TRACE 核验每轮 backend 与 trace_id 全链。
+- Find N2 真实设备场景统一为本地验收，不列为云端待办，也不能用 CI 构建替代：设置页手动选择 GPU/CPU，各至少 20 轮；覆盖文字/图片/语音；Activity recreation、进程 force-stop/restart 和会话恢复；应用内清除 AI 数据后 force-stop/restart（设备重启如执行也记录）；Debug TRACE 核验每轮 backend 与 trace_id 全链。
 - 本地证据必须记录设备/Android/App SHA/模型版本或 SHA/Native 实际 backend/轮次/脱敏 trace_id、关键事件和结果。未知项标 UNKNOWN，不伪造 PASS。
 - AI 数据清除代码与自动化已有实现；混合 SQLite 的系统备份/设备迁移副本和旧版共享图片归属仍是产品/数据边界风险。不得删除整个共享数据库/临时目录，也不得全局关闭 Android Backup 来伪装清除完成；非 AI 数据与已安装模型按既有契约保留。
 
@@ -2200,3 +2200,12 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 只有 App 真实执行、参数和结果通过校验的数据才能交 AI 解读。
 - 不改变 DiagnosticEngine / DiagnosticRules / 十问 / 剂量或玄学计算规则；不重审已审核知识库，不做经典医案外部卷页考据。
 - 除本后端手动选择与本地验收交接外，不扩张模型管理架构，不增加后台改配置步骤。
+
+## 48. 2026-11-15 知识库引用口径收敛：关闭外部底本/卷页待办
+
+- 本节覆盖旧台账中所有将 bookId/chapterIndex、纸本底本、版本、卷页或影印本坐标标为完成门槛的历史记录。此前记录保留为审计历史，不再作为当前待办或发布阻断。
+- 当前唯一要求：AI 对知识库事实的引用必须有稳定 sourceId，且该 ID 能在 App 内打开对应知识条目、章节或医案记录；回答应附可点击链接或能直接定位的备注。
+- 不要求为已存在且可打开的知识库内容额外补充外部纸本版本、卷页、底本或影印本坐标；不以外部书目元数据缺失标记知识库内容 MISSING；不重复医学审核已审核知识库。
+- 只有本地条目确实不存在、检索未命中/失败、sourceId 解析或打开失败，或回答所需字段在对应条目中确实不存在，才说明具体本地知识缺项。不得以模型训练记忆补齐缺失内容。
+- C 工作流保留 PARTIAL 的原因只限于黄金检索集实际揭示的召回覆盖、相关性、排序、上下文和 sourceId 链路问题；不得把历史 bibliographic locator MISSING 计入 C 的剩余工作或发布条件。
+- 本项不改既有知识库内容，不改检索 query、召回上限、排序、去重或 FTS5；只统一验收口径和关闭无意义的考古式来源核验待办。
