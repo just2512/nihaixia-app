@@ -24,6 +24,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 private const val DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA = "com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND"
+private const val LOCAL_AI_BACKEND_PREFERENCES = "local_ai_backend_preferences"
+private const val LOCAL_AI_BACKEND_PREFERENCE_KEY = "preferred_backend"
 
 class MainActivity : FlutterActivity() {
     private val expectedModelBytes = 3_659_530_240L
@@ -31,6 +33,9 @@ class MainActivity : FlutterActivity() {
     private val modelImportRequestCode = 8427
     private var pendingModelImportResult: MethodChannel.Result? = null
     private val localAiChannel = "com.nihaisha.app/local_ai"
+    private val backendPreferences by lazy {
+        getSharedPreferences(LOCAL_AI_BACKEND_PREFERENCES, MODE_PRIVATE)
+    }
 
     /** Test/host injection only. No medically reviewed detector is bundled yet. */
     @Volatile
@@ -103,6 +108,10 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler handler@{ call, result ->
                 when (call.method) {
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
+                    "setBackendPreference" -> {
+                        val requestedBackend = call.argument<String>("backend")
+                        runAiTask(result) { updateBackendPreference(requestedBackend) }
+                    }
                     "importModel" -> beginModelImport(result)
                     "loadModel" -> runAiTask(result) { loadLocalModel() }
                     "extractSymptoms" -> {
@@ -555,6 +564,91 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun preferredBackend(): String =
+        LocalAiBackendSelectionPolicy.normalizePreference(
+            backendPreferences.getString(LOCAL_AI_BACKEND_PREFERENCE_KEY, null)
+        )
+
+    /**
+     * Changes the user's persistent backend preference. If a model is running,
+     * the serialized Native task queue ensures the old turn finishes first.
+     * The current Engine/Conversation is then released and recreated with the
+     * completed-turn transcript; the in-flight request is never replayed.
+     */
+    private fun updateBackendPreference(requestedBackend: String?): Map<String, Any> {
+        val selectedBackend =
+            LocalAiBackendSelectionPolicy.parseRequestedBackend(requestedBackend)
+                ?: throw IllegalArgumentException("推理后端只支持 GPU 或 CPU")
+
+        val previousPreference = preferredBackend()
+        val hasRuntime = aiEngine != null || aiConversation != null
+        val shouldRetrySelectedBackend =
+            hasRuntime && !activeBackend.equals(selectedBackend, ignoreCase = true)
+
+        if (previousPreference == selectedBackend && !shouldRetrySelectedBackend) {
+            return modelStatus()
+        }
+
+        val completedTurns = conversationHistoryTurns.toList()
+        val reportedInputs = userReportedInputs.toList()
+        val inputsTruncated = userReportedInputsTruncated
+
+        if (hasRuntime) {
+            releaseRuntimePreservingConversationState()
+        }
+
+        if (previousPreference != selectedBackend) {
+            val saved = backendPreferences.edit()
+                .putString(LOCAL_AI_BACKEND_PREFERENCE_KEY, selectedBackend)
+                .commit()
+            if (!saved) {
+                if (hasRuntime) {
+                    try {
+                        loadLocalModel()
+                    } catch (restoreError: Exception) {
+                        restoreError.addSuppressed(
+                            IllegalStateException("原推理后端偏好未能保存")
+                        )
+                    }
+                }
+                throw IllegalStateException("无法保存本地 AI 推理后端设置")
+            }
+        }
+
+        if (hasRuntime) {
+            try {
+                return loadLocalModel()
+            } catch (error: Exception) {
+                // loadLocalModel may clear transient state if Conversation
+                // construction fails. Restore only previously completed turns
+                // and explicit user text; never restore/replay the failed turn.
+                conversationHistoryTurns.clear()
+                conversationHistoryTurns.addAll(completedTurns)
+                userReportedInputs.clear()
+                userReportedInputs.addAll(reportedInputs)
+                userReportedInputsTruncated = inputsTruncated
+                throw IllegalStateException(
+                    "已选择 $selectedBackend 后端，但重新加载失败。可在设置中切换到另一后端后重试：${error.message}",
+                    error
+                )
+            }
+        }
+
+        return modelStatus()
+    }
+
+    private fun releaseRuntimePreservingConversationState() {
+        val conversation = aiConversation
+        val engine = aiEngine
+        aiConversation = null
+        aiEngine = null
+        activeBackend = "not_loaded"
+        ConversationResourceReleasePolicy.closeBoth(
+            closeConversation = { conversation?.close() },
+            closeEngine = { engine?.close() }
+        )
+    }
+
     private fun modelStatus(): Map<String, Any> {
         modelFile.parentFile?.mkdirs()
         // Restore an interrupted import before reporting status; otherwise an
@@ -571,7 +665,8 @@ class MainActivity : FlutterActivity() {
             "sizeBytes" to if (fileExists) modelFile.length() else 0L,
             "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
-            "backend" to activeBackend
+            "backend" to activeBackend,
+            "preferredBackend" to preferredBackend()
         )
     }
 
@@ -588,17 +683,19 @@ class MainActivity : FlutterActivity() {
         modelFile.parentFile?.mkdirs()
         val cachePath = File(cacheDir, "litertlm").apply { mkdirs() }.absolutePath
 
-        // This override exists only for reproducible Find N2 CPU acceptance.
-        // Release builds ignore the launch extra and always keep GPU-first behavior.
-        val forceCpuForDebug = LocalAiBackendSelectionPolicy.shouldForceCpu(
+        // The user preference works in both Debug and Release builds. The
+        // Debug-only Intent remains as a local acceptance override and takes
+        // precedence only when the app is explicitly debuggable.
+        val selectedBackend = LocalAiBackendSelectionPolicy.resolveBackend(
+            preferredBackend = preferredBackend(),
             debuggableBuild = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
-            requested = intent?.getBooleanExtra(
+            debugForceCpu = intent?.getBooleanExtra(
                 DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA,
                 false
             ) == true
         )
         var loadedEngine: Engine? = null
-        if (forceCpuForDebug) {
+        if (selectedBackend == LocalAiBackendSelectionPolicy.CPU) {
             val candidate = Engine(
                 EngineConfig(
                     modelPath = modelFile.absolutePath,
