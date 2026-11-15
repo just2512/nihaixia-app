@@ -2123,3 +2123,32 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - D：已有工具能力在当前助手对话内调用；只修具体、可复现的分流或参数契约错误，不扩张架构。
 - B：生产自然语言/视觉/语音红旗检测器审核证据缺失前，不开放自然语言自动辨证。
 - A/E/F：真实设备验收由本地执行，不占用云端任务列表。
+
+
+## 46. 2026-11-15 PR #178：自由文本问诊候选槽位与用户确认闭环增量
+
+### 46.1 集成与 CI 证据
+
+- 合并前主线：`master @ 4e8885f6d87bc55e19820e6d68350d70a52e3b27`。
+- PR #178 最终 head：`15776a5efe4cdb35a0c60f60ea74e2ef740ad120`；squash merge：`5b2c3d8738128a5965e54f807719eb2d6fe16635`。
+- 独立分支 changed-test/static analysis run `43685119657` 的 job `132723871918` SUCCESS。
+- PR workflow run `43685123461` 终态 SUCCESS：Flutter regression job `132723942972` SUCCESS；Android arm64 verification APK/Manifest/ABI/SHA-256/Native unit tests job `132724813365` SUCCESS，Android unit-test JUnit XML 检查和工件上传成功。
+- 合并后 master Flutter Tests run `43685797528`（job `132725887264`）与 Flutter Quality Gate run `43685797546`（job `132725886994`）在本节落笔时仍 IN_PROGRESS；终态需按精确 merge SHA 分别核验，不以 PR CI 替代。
+
+### 46.2 本次实际落地
+
+- Flutter 将当前 App 的 DiagnosticEngine 十问题目 ID、题目文本和原有选项传给 Native 症状整理能力；Native 限制 schema 数量/字段长度并规范化输入，不允许模型新增问题或选项。
+- E4B 只返回受约束的 `candidate_answers`：现有 question ID、原有精确选项和用户原文连续证据。候选不包含诊断、证型、方剂或剂量。
+- Dart 再校验每个候选：question ID 必须来自 App schema、answer 必须精确属于该题原有选项、evidence 必须是用户原始输入中的实际子串、同一题不能重复。输出不合法时拒绝候选，不将其写入规则引擎。
+- 助手核对界面逐项展示候选答案和原文证据；所有候选默认不勾选。用户勾选确认后，才将确认项交给既有 `TcmInterviewConversationController`。未勾选/缺失/歧义项继续由既有问诊流程追问。
+- 控制器仅调用原 `TcmInterviewAdapter.answerTenQuestion`，按引擎原题序消费已确认答案；不重排题目、不修改问题/选项、不改变 `DiagnosticEngine` / `DiagnosticRules`。
+- 任务状态 schema v3 增加未消费确认候选的持久化；schema v1/v2 仍可读取，恢复任务时保留尚未应用的确认字段，避免进程恢复后丢失用户确认。
+- 定向测试覆盖候选选项/原文证据校验、UI 显式确认、按原题序写入引擎、未消费候选保存/恢复与非法 question ID/答案拒绝。
+
+### 46.3 未完成的发布边界
+
+- 本 PR 完成的是“用户自述 → 有界候选槽位 → 原文证据 → 用户确认 → 既有确定性问诊”的代码适配增量；它不把 E4B 推断变成诊断，也不代表自由文本问诊生产放行。
+- 生产自然语言/视觉/语音 RedFlag detector 的审核版本、责任审批和完整输入覆盖证据仍未具备。Gate 仍 fail-closed；detector 未配置/未知/来源不完整时必须 REVIEW_REQUIRED/UNKNOWN，不能绕过。
+- 只有既有 DiagnosticEngine 实际生成并通过结果契约校验的结果才能交给 AI 总结；后续知识追问只使用本地检索实际命中的知识库条目，并通过稳定 `sourceId` 定位到 App 内可打开资产/章节/医案。已审核知识库不重复审核，不补纸本底本/卷页考据。
+- 不修改排盘、十问、辨证、剂量或知识库内容；不新增 Agent/DAG、云 API、向量数据库或新的 Page-only 工具迁移。
+- Find N2 的 E4B GPU/CPU、多轮、多媒体、进程恢复、数据清除和 TRACE 仍为本地实体设备验收，不列为云端待办。
