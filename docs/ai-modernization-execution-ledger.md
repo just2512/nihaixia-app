@@ -44,7 +44,7 @@
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS` | 与 B/C/E 并行 | 多轮审计报告完成；修复有自动化回归；Find N2 GPU/CPU 各至少 20 轮实测通过 |
-| B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（fail-closed Gate 契约存在；医学审核 detector 与生产入口接入缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
+| B | 全模式红旗安全门禁 | `PARTIAL / RELEASE BLOCKED`（PR #169 已接入 fail-closed Gate；医学审核 detector 仍缺失） | 与 A/C/E 并行 | 所有模型/业务路由入口前置确定性门禁；歧义澄清；医学词表审核；正反向测试通过 |
 | C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | 低成本数据保护 | `PARTIAL`（Manifest/清理代码有 CI 证据；真机清除后重启不可恢复未验收） | 与 A/B/C 并行 | Android 备份配置核验、清除全部 AI 数据、附件缓存生命周期与重启后不可恢复验证 |
