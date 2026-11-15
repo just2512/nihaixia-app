@@ -405,6 +405,22 @@ class _SequencedSymptomsTraceService extends _TextSendService {
     extractedTraceIds.add(traceId);
     return drafts.removeAt(0);
   }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) async => drafts.removeAt(0);
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) async {
+    extractedTraceIds.add(traceId);
+    return drafts.removeAt(0);
+  }
 }
 
 class _TextSendService extends LocalAiService {
@@ -428,6 +444,21 @@ class _TextSendService extends LocalAiService {
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) =>
+      extractSymptoms();
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) =>
+      extractSymptoms();
 
   @override
   Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
