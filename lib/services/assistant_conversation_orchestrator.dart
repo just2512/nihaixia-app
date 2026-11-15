@@ -66,25 +66,6 @@ class AssistantConversationOrchestrator {
     '我身体',
   ];
 
-  // Symptom narratives can concern family members or another patient, not
-  // only the current user. A missing first-person pronoun must not bypass
-  // the clinical preflight.
-  static const _otherPersonContextCues = [
-    '我父亲',
-    '我母亲',
-    '我爸爸',
-    '我妈妈',
-    '父亲',
-    '母亲',
-    '爸爸',
-    '妈妈',
-    '孩子',
-    '老人',
-    '家人',
-    '朋友',
-    '患者',
-  ];
-
   static bool _isDosageConversionRequest(String query) {
     final hasQuantityAndUnit = RegExp(
       r'\d+(?:\.\d+)?\s*(两|铢|斤|石|钱|升|合|圭|撮|尺|寸)',
