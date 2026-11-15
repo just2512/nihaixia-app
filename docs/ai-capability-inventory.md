@@ -37,7 +37,7 @@
 - CI：当前 `master` HEAD 为 `c83993b17749f3380b7164882a88b86175a63fca`。2026-11-06 对应的 Flutter tests run `42153999654` 与 Flutter Quality Gate run `42153999821` 均已完成并为 `success`。Flutter regression tests、Android debug APK、Dart 静态分析、完整 Dart suite、Android native unit tests 和 arm64 Debug APK 构建均通过。CI 结果仅证明该 SHA 的自动化检查通过，不等于 OPPO Find N2 真机验收。
 - 当前 `master` 分支 HEAD 与最新两条工作流的 `head_sha` 一致；旧 SHA 的取消/失败运行不覆盖当前 SHA 的成功结果。
 - Fork 与上游分支关系已更新为 781 ahead / 29 behind；未执行 Sync fork 或合并。完整潜在冲突清单仍需基于完整三方 diff 穷举，不能把 compare API 的截断文件列表当作最终结果。
-- 其余未完成事项仍保持 `PARTIAL` / `MISSING`：经典与医案逐条来源校勘、Find N2 真机验收、工具统一参数/执行协议、问诊完全内联到同一聊天消息流、全 App 逐页功能盘点及附件原件持久化。
+- 其余未完成事项仍保持 `PARTIAL` / `UNKNOWN`：自由文本问诊的候选字段确认与缺项追问、Find N2 真机验收、工具统一参数/执行协议、全 App 逐页功能盘点及附件原件持久化。本地知识库来源定位以 2O 的 sourceId + 可打开条目为当前验收口径，不再开展普通学习资料的外部逐条卷页考证。
 
 ## 2. 当前统一助手的数据流
 
