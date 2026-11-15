@@ -141,7 +141,7 @@ void showSettingsDialog(
               ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: const Text('关于'),
-                subtitle: const Text('版本信息与致谢'),
+                subtitle: const Text('项目介绍、版本信息与开源致谢'),
                 contentPadding: EdgeInsets.zero,
                 onTap: () {
                   Navigator.pop(context);
@@ -205,7 +205,7 @@ Future<void> exportBookmarks(BuildContext context) async {
     return;
   }
 
-  String text = '【汉唐中医·收藏导出】\n\n';
+  String text = '【理象集·收藏导出】\n\n';
   for (final b in bookmarks) {
     text += '━━━━━━━━━━━━━━\n';
     text += '${b.title}\n';
@@ -213,7 +213,7 @@ Future<void> exportBookmarks(BuildContext context) async {
     text += '${b.createdAt}\n\n';
     text += '${b.content}\n\n';
   }
-  text += '—— 来自「汉唐中医」App';
+  text += '—— 来自「理象集」App';
 
   await Share.share(text);
 }
@@ -276,7 +276,7 @@ Future<void> showAboutPage(BuildContext context) async {
                   Icon(Icons.menu_book_rounded, size: 64,
                       color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 8),
-                  const Text('汉唐中医', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('理象集', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text('v${info.version}', style: TextStyle(color: context.colors.onSurfaceVariant)),
                   const SizedBox(height: 2),
@@ -288,11 +288,11 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('中医诊疗全过程辅助学习软件',
+            const Text('中国传统经典研习与实践工具',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '围绕四诊问诊、信息整理与补问，帮助用户理解辨病、辨证、病机、治法、方剂配伍、针灸取穴，以及经典依据和医案复盘。'
+              '以中国传统经典为基础，围绕中医、易学与传统导引组织学习内容。中医主线覆盖四诊问诊、辨病辨证、病机、治法、方剂配伍、针灸思路和医案复盘；易学主线涵盖易理与传统术数；导引主线为后续规划方向。'
               '辨病辨证结论由 App 既有确定性业务规则执行，并应关联可追溯的本地知识依据；AI 负责理解、引导和解释，不凭自身推断生成或覆盖业务结论。',
               style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
@@ -370,7 +370,7 @@ Future<void> showAboutPage(BuildContext context) async {
             const Divider(),
             const SizedBox(height: 8),
             Center(
-              child: Text('© 2026 just2512 · 汉唐中医',
+              child: Text('© 2026 just2512 · 理象集',
                   style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
             ),
           ],
