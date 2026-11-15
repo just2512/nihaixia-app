@@ -340,7 +340,7 @@ void main() {
     await _pumpFrames(tester);
 
     expect(service.restoredTranscript, contains('请回复列表中的记录 ID'));
-    expect(find.textContaining('1990-01-02'), findsNothing);
+    expect(find.textContaining('1988-06-07'), findsNothing);
     await tester.enterText(find.byType(TextField).first, '八字');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
