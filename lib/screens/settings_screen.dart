@@ -220,7 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _aboutTile(ColorScheme cs) => ListTile(
         leading: const Icon(Icons.info_outline),
         title: const Text('关于'),
-        subtitle: const Text('版本信息与致谢'),
+        subtitle: const Text('项目介绍、版本信息与开源致谢'),
         contentPadding: EdgeInsets.zero,
         onTap: () => showAboutPage(context),
       );
