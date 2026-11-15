@@ -1210,7 +1210,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
@@ -1242,7 +1241,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(reviewChecks.last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('确认并开始规则问诊'));
+    await tester.tap(find.text('确认并开始模拟问诊'));
     await tester.pumpAndSettle();
 
     final saved = await _waitForTcmInterviewTaskState(
@@ -1428,7 +1427,7 @@ void main() {
     expect(service.sentTexts.single, contains('总结并解释'));
     expect(service.sentTexts.single, contains('六经'));
     expect(service.sentTexts.single, contains('不要生成个体处方、药物或剂量建议'));
-    expect(service.sentContexts.single, contains('当前角色：问诊助手'));
+    expect(service.sentContexts.single, contains('当前角色：问诊学习助手'));
     expect(
       find.textContaining('已收到你的描述：'),
       findsOneWidget,
@@ -1910,7 +1909,7 @@ void main() {
     expect(service.sentTexts.single, contains('不重新辨证'));
     expect(
       service.sentContexts.single,
-      contains('当前角色：问诊助手'),
+      contains('当前角色：问诊学习助手'),
     );
     expect(tester.takeException(), isNull);
   });
@@ -1934,7 +1933,7 @@ void main() {
 
     expect(service.sentTexts, ['我最近三天口苦，胸闷']);
     expect(service.sentContexts, hasLength(1));
-    expect(service.sentContexts.single, contains('当前角色：问诊助手'));
+    expect(service.sentContexts.single, contains('当前角色：问诊学习助手'));
     expect(service.sentContexts.single, contains('App 本地知识库'));
     expect(service.sentContexts.single, contains('不独立作个体诊断'));
     expect(service.sentContexts.single, contains('解释和归纳已有结果'));
@@ -3321,7 +3320,7 @@ void main() {
     expect(service.sentTexts.last, contains('总结并解释'));
     expect(service.sentTexts.last, contains('少阳证'));
     expect(service.sentTexts.last, contains('不要生成个体处方、药物或剂量建议'));
-    expect(service.sentContexts.last, contains('当前角色：问诊助手'));
+    expect(service.sentContexts.last, contains('当前角色：问诊学习助手'));
     expect(service.restoredTranscripts.last, contains('【方剂】小柴胡汤'));
 
     final persistedMessages = await store.getAssistantMessages(
