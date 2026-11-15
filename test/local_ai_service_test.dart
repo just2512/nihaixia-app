@@ -14,6 +14,139 @@ void main() {
     messenger.setMockMethodCallHandler(channel, null);
   });
 
+  group('LocalAiService natural-language TCM answer contract', () {
+    const traceId = '0123456789abcdef0123456789abcdef';
+    const questionId = 'ten:sleep';
+    const question = '晚上能一觉到天亮吗？几点醒？';
+    const options = ['一觉到天亮', '半夜1-3点醒', '半夜3-5点醒', '整夜睡不着'];
+    const userText = '昨晚睡觉时醒了两次';
+    const context = '用户：昨晚睡觉时醒了两次';
+
+    test('forwards only the current question contract and validates evidence-backed candidate', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': jsonEncode({
+            'question_id': questionId,
+            'answer': '半夜1-3点醒',
+            'evidence': '醒了两次',
+            'clarification': null,
+          }),
+          'backend': 'cpu',
+          'trace_id': traceId,
+        };
+      });
+
+      final result = await LocalAiService().understandTcmInterviewAnswer(
+        questionId: questionId,
+        question: question,
+        options: options,
+        currentText: userText,
+        userContext: context,
+        traceId: traceId,
+      );
+
+      expect(received?.method, 'understandTcmInterviewAnswer');
+      expect(received?.arguments, {
+        'trace_id': traceId,
+        'question_id': questionId,
+        'question': question,
+        'options': jsonEncode(options),
+        'current_text': userText,
+        'user_context': context,
+      });
+      expect(result.hasCandidate, isTrue);
+      expect(result.answer, '半夜1-3点醒');
+      expect(result.evidence, '醒了两次');
+    });
+
+    test('returns a bounded clarification when the user wording does not select an option', () {
+      final result = LocalAiInterviewAnswer.fromModelText(
+        jsonEncode({
+          'question_id': questionId,
+          'answer': null,
+          'evidence': null,
+          'clarification': '你说的醒来，是夜里醒后还能继续入睡，还是整夜难以入睡？',
+        }),
+        questionId: questionId,
+        options: options,
+        sourceText: context,
+      );
+
+      expect(result.hasCandidate, isFalse);
+      expect(result.clarification, contains('继续入睡'));
+    });
+
+    test('rejects an option not defined by the current DiagnosticEngine question', () {
+      expect(
+        () => LocalAiInterviewAnswer.fromModelText(
+          jsonEncode({
+            'question_id': questionId,
+            'answer': '失眠导致心神不宁',
+            'evidence': '醒了两次',
+            'clarification': null,
+          }),
+          questionId: questionId,
+          options: options,
+          sourceText: context,
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects evidence that is not present in user-provided text', () {
+      expect(
+        () => LocalAiInterviewAnswer.fromModelText(
+          jsonEncode({
+            'question_id': questionId,
+            'answer': '半夜1-3点醒',
+            'evidence': '每天凌晨醒来',
+            'clarification': null,
+          }),
+          questionId: questionId,
+          options: options,
+          sourceText: context,
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects a result for a different pending question', () {
+      expect(
+        () => LocalAiInterviewAnswer.fromModelText(
+          jsonEncode({
+            'question_id': 'ten:appetite',
+            'answer': '一觉到天亮',
+            'evidence': '醒了两次',
+            'clarification': null,
+          }),
+          questionId: questionId,
+          options: options,
+          sourceText: context,
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects a clarification without a natural-language question', () {
+      expect(
+        () => LocalAiInterviewAnswer.fromModelText(
+          jsonEncode({
+            'question_id': questionId,
+            'answer': null,
+            'evidence': null,
+            'clarification': '',
+          }),
+          questionId: questionId,
+          options: options,
+          sourceText: context,
+        ),
+        throwsFormatException,
+      );
+    });
+  });
+
   group('LocalAiService attachment channel contract', () {
     test('importModel returns native model installation status', () async {
       MethodCall? received;
