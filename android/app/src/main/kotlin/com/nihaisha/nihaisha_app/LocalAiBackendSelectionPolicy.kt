@@ -4,7 +4,8 @@ package com.nihaisha.nihaisha_app
  * Resolves the persisted, user-selectable E4B backend.
  *
  * The normal preference is available in Debug and Release builds. The
- * historical Intent override remains restricted to debuggable builds.
+ * historical Intent override is accepted only in debuggable builds and only
+ * before the user has explicitly saved a backend choice.
  */
 internal object LocalAiBackendSelectionPolicy {
     const val GPU = "gpu"
@@ -25,10 +26,13 @@ internal object LocalAiBackendSelectionPolicy {
 
     fun resolveBackend(
         preferredBackend: String?,
+        hasUserPreference: Boolean,
         debuggableBuild: Boolean,
         debugForceCpu: Boolean
     ): String {
-        if (shouldForceCpu(debuggableBuild, debugForceCpu)) return CPU
+        if (!hasUserPreference && shouldForceCpu(debuggableBuild, debugForceCpu)) {
+            return CPU
+        }
         return normalizePreference(preferredBackend)
     }
 }
