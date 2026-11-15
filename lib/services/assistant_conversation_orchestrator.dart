@@ -124,6 +124,19 @@ class AssistantConversationOrchestrator {
     '病机',
   ];
 
+  static const _explicitClinicalRequestCues = [
+    '帮我诊断',
+    '诊断一下',
+    '给我诊断',
+    '帮我辨证',
+    '辨证一下',
+    '给我辨证',
+    '帮我问诊',
+    '给我问诊',
+    '判断我是不是',
+    '看看我的症状',
+  ];
+
   // These are routing cues only: a match requires a reviewed safety
   // assessment; it does not label urgency or provide a medical conclusion.
   // The red-flag examples below mirror the normative audit boundary.
@@ -191,18 +204,8 @@ class AssistantConversationOrchestrator {
         (hasSymptoms &&
             const ['我最近', '我这几天', '我今天', '我现在', '我本人', '本人']
                 .any(text.contains));
-    final explicitClinicalRequest = const [
-      '帮我诊断',
-      '诊断一下',
-      '给我诊断',
-      '帮我辨证',
-      '辨证一下',
-      '给我辨证',
-      '帮我问诊',
-      '给我问诊',
-      '判断我是不是',
-      '看看我的症状',
-    ].any(text.contains);
+    final explicitClinicalRequest =
+        _explicitClinicalRequestCues.any(text.contains);
     final explicitLearningRequest = _learningCues.any(text.contains);
 
     // A clear educational question about a symptom is not a patient assessment.
@@ -218,6 +221,43 @@ class AssistantConversationOrchestrator {
     // Ambiguous symptom-only text is also gated before model inference.
     // Only an explicit educational request may bypass this preflight.
     return hasSymptoms;
+  }
+
+  /// Starts the structured intake flow from the assistant conversation.
+  ///
+  /// The extractor only proposes answers from the existing App question schema;
+  /// the user must confirm each candidate before the deterministic engine sees it.
+  /// Learning requests remain explanatory and never enter the clinical intake path.
+  static bool shouldStartSymptomIntake({
+    required String query,
+    required AssistantMode selectedMode,
+    AssistantMode? currentMode,
+  }) {
+    final text = query.trim();
+    if (text.isEmpty) return false;
+
+    final explicitClinicalRequest =
+        _explicitClinicalRequestCues.any(text.contains);
+    final hasSymptoms = _symptomCues.any(text.contains);
+    final hasPatientContext = _personalContextCues.any(text.contains) ||
+        _otherPersonContextCues.any(text.contains) ||
+        (hasSymptoms &&
+            const ['我', '本人', '自己'].any(text.contains));
+    final explicitLearningRequest = _learningCues.any(text.contains);
+
+    if (explicitLearningRequest &&
+        !hasPatientContext &&
+        !explicitClinicalRequest) {
+      return false;
+    }
+    if (explicitClinicalRequest) return true;
+
+    final effectiveMode = selectedMode == AssistantMode.automatic
+        ? currentMode ?? selectedMode
+        : selectedMode;
+    return effectiveMode == AssistantMode.consultation &&
+        hasSymptoms &&
+        hasPatientContext;
   }
 
   static bool shouldExcludeFromIntentModel(String query) {
