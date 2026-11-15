@@ -839,7 +839,10 @@ class _FailOnceTextSendService extends LocalAiService {
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
 
   @override
-  Future<String> sendMessage(String text) async {
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+  }) async {
     sendAttempts += 1;
     if (sendAttempts == 1) {
       throw PlatformException(
