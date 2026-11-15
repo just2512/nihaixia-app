@@ -169,21 +169,40 @@ class MainActivity : FlutterActivity() {
                             return@handler
                         }
                         val questionSchema = call.argument<String>("question_schema")?.trim() ?: "[]"
+                        val explicitSourceText = call.argument<String>("source_text")?.trim()
+                        val explicitSourceTruncated =
+                            call.argument<Boolean>("source_truncated") == true
+                        val extractionSource = explicitSourceText
+                            ?.takeIf { it.isNotEmpty() }
+                            ?: userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() }.orEmpty()
+                        val extractionSourceTruncated = if (explicitSourceText != null) {
+                            explicitSourceTruncated || explicitSourceText.length > 10_000
+                        } else {
+                            userReportedInputsTruncated || extractionSource.length > 10_000
+                        }
                         if (questionSchema.length > 12_000) {
                             result.error("INVALID_SYMPTOM_QUESTION_SCHEMA", "问诊题目 schema 超出长度限制", null)
-                            return@handler
-                        }
-                        runAiTaskAfterNativeRedFlag(
-                            result,
-                            NativeRedFlagInput(
-                                NativeRedFlagInputSource.STRUCTURED_INPUT,
-                                userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() },
-                                sourceTruncated = userReportedInputsTruncated ||
-                                    userReportedInputs.joinToString("\n").length > 10_000
-                            ),
-                            required = true
-                        ) {
-                            LocalAiTraceIdPolicy.attach(extractSymptoms(questionSchema), traceId)
+                        } else if (explicitSourceText != null && explicitSourceText.length > 10_000) {
+                            result.error("INVALID_SYMPTOM_SOURCE_TEXT", "本次问诊原文超出长度限制", null)
+                        } else {
+                            runAiTaskAfterNativeRedFlag(
+                                result,
+                                NativeRedFlagInput(
+                                    NativeRedFlagInputSource.STRUCTURED_INPUT,
+                                    extractionSource.takeIf { it.isNotBlank() },
+                                    sourceTruncated = extractionSourceTruncated
+                                ),
+                                required = true
+                            ) {
+                                LocalAiTraceIdPolicy.attach(
+                                    extractSymptoms(
+                                        questionSchema,
+                                        explicitSourceText,
+                                        extractionSourceTruncated
+                                    ),
+                                    traceId
+                                )
+                            }
                         }
                     }
                     "resolveAssistantIntent" -> {
@@ -1347,9 +1366,21 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun extractSymptoms(questionSchemaJson: String = "[]"): Map<String, Any> {
+    private fun extractSymptoms(
+        questionSchemaJson: String = "[]",
+        explicitSourceText: String? = null,
+        explicitSourceTruncated: Boolean = false
+    ): Map<String, Any> {
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
+        val sourceEntries = explicitSourceText?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { listOf(it) }
+            ?: userReportedInputs
+        val sourceWasTruncated = if (explicitSourceText != null) {
+            explicitSourceTruncated || explicitSourceText.length > 10_000
+        } else {
+            userReportedInputsTruncated
+        }
         val schemaInput = JSONArray(questionSchemaJson)
         require(schemaInput.length() <= 20) { "问诊题目 schema 过多" }
         val schema = JSONArray()
@@ -1382,15 +1413,15 @@ class MainActivity : FlutterActivity() {
                     .put("options", normalizedOptions)
             )
         }
-        if (userReportedInputs.isEmpty()) {
+        if (sourceEntries.isEmpty()) {
             return mapOf(
                 "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[],"candidate_answers":[]}""",
-                "sourceTruncated" to userReportedInputsTruncated,
+                "sourceTruncated" to sourceWasTruncated,
                 "backend" to activeBackend
             )
         }
         val userInputContext = buildString {
-            if (userReportedInputsTruncated) {
+            if (sourceWasTruncated) {
                 appendLine(
                     "记录范围提示：应用为控制本地上下文大小，已省略较早或超长的用户输入。" +
                         "被省略内容可能曾由用户提及，不得据此断言用户没有相关症状；" +
@@ -1398,7 +1429,7 @@ class MainActivity : FlutterActivity() {
                 )
             }
             append(
-                userReportedInputs.mapIndexed { index, input ->
+                sourceEntries.mapIndexed { index, input ->
                     (index + 1).toString() + ". " + input
                 }.joinToString("\n")
             )
@@ -1447,7 +1478,7 @@ class MainActivity : FlutterActivity() {
         return try {
             mapOf(
                 "draft" to extractionConversation.sendMessage(prompt).toString(),
-                "sourceTruncated" to userReportedInputsTruncated
+                "sourceTruncated" to sourceWasTruncated
             )
         } finally {
             extractionConversation.close()
