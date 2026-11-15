@@ -648,10 +648,20 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         activeBackend = "not_loaded"
-        ConversationResourceReleasePolicy.closeBoth(
-            closeConversation = { conversation?.close() },
-            closeEngine = { engine?.close() }
-        )
+        try {
+            ConversationResourceReleasePolicy.closeBoth(
+                closeConversation = { conversation?.close() },
+                closeEngine = { engine?.close() }
+            )
+        } catch (error: Throwable) {
+            // Never initialize a second Engine while release of the previous
+            // Native runtime is uncertain. Require a process restart instead.
+            LocalAiProcessExecutor.health.markReleaseFailure(error)
+            throw IllegalStateException(
+                "旧推理后端未能安全释放。为避免 Native 资源冲突，请强制停止 App 进程后重新打开。",
+                error
+            )
+        }
     }
 
     private fun modelStatus(): Map<String, Any> {
