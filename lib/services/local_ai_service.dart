@@ -509,6 +509,19 @@ class LocalAiService {
         sourceTruncated: sourceTruncated,
       );
 
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) =>
+      _extractSymptoms(
+        questionSchema: questionSchema,
+        sourceText: sourceText,
+        sendSourceTextToNative: true,
+        sourceTruncated: sourceTruncated,
+      );
+
+
   Future<LocalAiSymptomDraft> _extractSymptoms({
     String? traceId,
     List<Map<String, Object?>>? questionSchema,
