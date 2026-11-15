@@ -430,10 +430,15 @@ class _TextSendService extends LocalAiService {
       action: LocalAiIntentAction.clarify,
     ),
     this.baziSlotDraft,
+    this.initialSymptomDraft,
   });
 
   final LocalAiIntentResolution intentResolution;
   final LocalAiBaziSlotDraft? baziSlotDraft;
+  final LocalAiSymptomDraft? initialSymptomDraft;
+  final initialSymptomTexts = <String>[];
+  final initialSymptomTraceIds = <String>[];
+  final initialSymptomSchemas = <List<Map<String, Object?>> >[];
   int statusCalls = 0;
   final baziSlotQueries = <String>[];
   final baziSlotMissingKeys = <Set<String>>[];
@@ -464,6 +469,30 @@ class _TextSendService extends LocalAiService {
     required List<Map<String, Object?>> questionSchema,
   }) =>
       extractSymptoms();
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) async {
+    initialSymptomTexts.add(sourceText);
+    initialSymptomSchemas.add(questionSchema);
+    return initialSymptomDraft ?? const LocalAiSymptomDraft();
+  }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) async {
+    initialSymptomTexts.add(sourceText);
+    initialSymptomTraceIds.add(traceId);
+    initialSymptomSchemas.add(questionSchema);
+    return initialSymptomDraft ?? const LocalAiSymptomDraft();
+  }
 
   @override
   Future<LocalAiBaziSlotDraft> extractBaziSlotsWithTrace({
