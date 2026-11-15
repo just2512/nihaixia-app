@@ -87,7 +87,10 @@ void main() {
       );
       expect(saved.pendingConfirmedTenAnswers, {questionId: answer});
       final restored = TcmInterviewConversationController.restore(saved);
-      expect(restored.pendingConfirmedTenAnswers, {questionId: answer});
+      expect(
+        restored.createTaskState().pendingConfirmedTenAnswers,
+        {questionId: answer},
+      );
       expect(restored.pendingPromptId, saved.pendingPromptId);
       expect(restored.pendingOptions, saved.pendingOptions);
     });
