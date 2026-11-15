@@ -5597,6 +5597,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
+  String _boundedRedFlagContext({String? currentText}) {
+    final userTurns = _messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: true);
+    final current = currentText?.trim();
+    if (current != null && current.isNotEmpty) userTurns.add(current);
+    final recentTurns = userTurns.length > 8
+        ? userTurns.skip(userTurns.length - 8)
+        : userTurns;
+    final joined = recentTurns.join('\n');
+    return joined.length <= 4000
+        ? joined
+        : joined.substring(joined.length - 4000);
+  }
+
   Future<void> _send() async {
     if (_modelControlBusy) return;
     final text = _inputController.text.trim();
@@ -5623,12 +5640,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
     final traceId = traceContext.traceId;
     final activeTcmTask = _tcmInterviewController;
+    final redFlagContext = _boundedRedFlagContext(currentText: text);
     final requiresMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
-      query: text,
-      selectedMode: _assistantMode,
+      query: redFlagContext,
+      selectedMode: _lastEffectiveMode ?? _assistantMode,
       hasAttachment: imagePath != null || audioPath != null,
-      structuredInterviewActive: activeTcmTask?.canAnswer == true,
+      structuredInterviewActive: activeTcmTask?.canAnswer == true ||
+          activeTcmTask?.completedDiagnosis != null,
     );
     final inputSource = audioPath != null
         ? RedFlagInputSource.audioAttachment
@@ -5639,7 +5658,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 : RedFlagInputSource.currentText;
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: inputSource,
-      text: text.isEmpty ? null : text,
+      text: redFlagContext.isEmpty ? null : redFlagContext,
       traceContext: traceContext,
       route: 'assistant_send',
       requireAssessment: requiresMedicalSafety,
@@ -7290,6 +7309,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   mode: effectiveMode,
                   traceContext: traceContext,
                   requireMedicalSafety: requiresMedicalSafety,
+                  redFlagContext: requiresMedicalSafety ? redFlagContext : null,
                 );
       final reply = turnResponse.text;
       nativeInferenceCompleted = true;
