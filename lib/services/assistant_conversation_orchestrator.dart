@@ -255,9 +255,9 @@ class AssistantConversationOrchestrator {
     final effectiveMode = selectedMode == AssistantMode.automatic
         ? currentMode ?? selectedMode
         : selectedMode;
-    return effectiveMode == AssistantMode.consultation &&
-        hasSymptoms &&
-        hasPatientContext;
+    // Explicit consultation mode supplies the patient-assessment context;
+    // an unqualified symptom still belongs in the intake flow, not a free-form reply.
+    return effectiveMode == AssistantMode.consultation && hasSymptoms;
   }
 
   static bool shouldExcludeFromIntentModel(String query) {
