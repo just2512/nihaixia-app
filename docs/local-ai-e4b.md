@@ -97,7 +97,7 @@ adb shell am start -n com.nihaisha.nihaisha_app/.MainActivity --ez com.nihaisha.
 
 启动后在本地 AI 状态中核对实际 `backend=cpu`，再执行 CPU 多轮场景并记录 TRACE。验证 GPU 时再次 force-stop，然后从桌面正常启动 App（不带该 extra），加载后必须核对实际 `backend=gpu`；若设备无法初始化 GPU，则按真实回退结果记录 `cpu`，不能将请求 GPU 视作 GPU 已通过。
 
-此参数只在 `BuildConfig.DEBUG` 为 true 时生效；Release 包即使收到同名 Intent extra，也必须忽略并保持默认后端选择策略。不要通过修改生产数据或业务规则来触发 CPU 测试。
+此参数只在 Android `ApplicationInfo.FLAG_DEBUGGABLE` 标记为启用时生效；Release 包即使收到同名 Intent extra，也必须忽略并保持默认后端选择策略。不要通过修改生产数据或业务规则来触发 CPU 测试。
 
 ## 当前实现范围
 
