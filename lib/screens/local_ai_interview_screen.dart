@@ -1076,6 +1076,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     String? retrievalQuery,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
     Future<String> sendWithContext(String context) async {
@@ -1095,6 +1096,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               context: context,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
+              redFlagContextTruncated: redFlagContextTruncated,
             )
           : _service.sendMessageWithContextAndTrace(
               text,
@@ -1102,6 +1104,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
+              redFlagContextTruncated: redFlagContextTruncated,
             );
     }
     switch (mode) {
@@ -1129,12 +1132,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   text,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
+                  redFlagContextTruncated: redFlagContextTruncated,
                 )
               : await _service.sendMessageWithTrace(
                   text,
                   traceId: traceId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
+                  redFlagContextTruncated: redFlagContextTruncated,
                 );
           return _AssistantTurnResponse(
             text: reply,
