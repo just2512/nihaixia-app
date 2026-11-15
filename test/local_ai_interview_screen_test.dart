@@ -384,6 +384,8 @@ class _PageToolTraceService extends _TextSendService {
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscripts.add(transcript);
   }
@@ -455,6 +457,8 @@ class _TextSendService extends LocalAiService {
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscripts.add(transcript);
   }
@@ -470,6 +474,7 @@ class _TextSendService extends LocalAiService {
     String text, {
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sentTexts.add(text);
     return '已收到你的描述：$text';
@@ -481,6 +486,7 @@ class _TextSendService extends LocalAiService {
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sentContexts.add(context);
     return sendMessage(text);
@@ -492,6 +498,7 @@ class _TextSendService extends LocalAiService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sentTraceIds.add(traceId);
     return sendMessage(text, requireMedicalSafety: requireMedicalSafety);
@@ -504,6 +511,7 @@ class _TextSendService extends LocalAiService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
@@ -535,6 +543,7 @@ class _FailingTextSendService extends _TextSendService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     throw PlatformException(
       code: 'NATIVE_SEND_FAILED',
@@ -709,6 +718,7 @@ class _PostSendStatusFailureService extends _TextSendService {
     String text, {
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sentTexts.add(text);
     _statusUnavailable = true;
@@ -748,6 +758,7 @@ class _PostSendNotReadyStatusService extends _TextSendService {
     String text, {
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sentTexts.add(text);
     if (text == triggerText) {
@@ -857,6 +868,7 @@ class _FailOnceTextSendService extends LocalAiService {
     String text, {
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     sendAttempts += 1;
     if (sendAttempts == 1) {
@@ -874,6 +886,7 @@ class _FailOnceTextSendService extends LocalAiService {
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) => sendMessage(text);
 }
 
@@ -886,6 +899,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) {
     sentTraceIds.add(traceId);
     return sendMessage(text);
@@ -898,6 +912,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) {
     sentTraceIds.add(traceId);
     return sendMessage(text);
