@@ -2140,8 +2140,10 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - AI 与 App 的职责边界、工具执行校验、知识库 sourceId 可打开定位、optional/default 参数规则，已在规范和本台账统一。知识库已有且能打开的内容不标 MISSING；不做纸本底本、版本、卷页考据，不重复审核已审核知识库。
 - 常规工具 17/23 已有 Headless executor；其余 6 项 Page-only 保留现有知识检索、个人数据授权或领域隔离边界。不为扩大数字批量迁移。
 - 云端代码和 CI 收尾已完成。没有证据支持再改造其他工具路由；不重复执行已通过的泛化测试，不新增 Agent/DAG、第二套 Orchestrator、云端 API、向量数据库或无明确失败证据的架构。
-- 自然语言问诊仍为 PARTIAL / RELEASE BLOCKED：当前控制器保留用户自述，但尚未完成“候选字段与逐字证据 → 用户确认/修正 → 只追问缺项 → 既有规则问诊执行 → 真实结果校验 → AI 解释”的适配闭环。生产 RedFlag detector 的医学审核版本和覆盖证明仍缺；未审核 detector 不得由模型 prompt 或自造规则替代。此项不是重复审核现有知识库。
-- 因上述独立安全前置条件未满足，不开放自由文本症状自动辨证。等待具备医学背景的责任方提供经审核 detector 规则/版本/覆盖和处置文案证据后，才继续该代码切片；此前不把 Gate 的 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR。
+- 自然语言问诊的**候选理解与规则问项映射代码已落地**：master commit `5b2c3d8738128a5965e54f807719eb2d6fe16635`（`feat(ai): map confirmed symptom slots into existing rule interview`）把 App 的十问题目 ID/原选项 schema 传给本地 E4B；E4B 仅能提出既有选项候选，并提供用户原文连续证据。Dart 再校验候选 ID、选项白名单、原文证据与题目唯一性；UI 展示题目/答案/证据，由用户逐项确认；确认答案交给 `TcmInterviewConversationController`，控制器二次校验后按 `DiagnosticEngine` 原题目顺序消费已确认项、跳过这些已回答题目并继续追问未回答项。待确认候选随问诊任务快照保存/恢复。未确认候选不会写入引擎，模型不能输出证型、诊断、方剂或剂量。
+- 该 commit 涉及 Native E4B schema 提示、Dart 候选结构/证据验证、用户确认 UI、控制器适配和任务快照 schema v3；针对无效选项、非原文证据、候选 ID/答案、确认/取消、任务保存/恢复已有回归。合并后 master Flutter Tests run `43685797528`（Flutter regression + Android arm64 verification）与 Quality Gate run `43685797546` 均在精确 head `5b2c3d8738128a5965e54f807719eb2d6fe16635` SUCCESS。此为 CODE + TEST + CI 证据，不等于生产临床输入已开放或 E4B 真机语义验收通过。
+- 问诊适配代码仍受独立安全门禁约束：`LocalAiInterviewScreen._extractSymptoms()` 在调用 E4B 前要求 RedFlagGate CLEAR；Android `MainActivity` 的 `extractSymptoms` MethodChannel 也要求 NativeRedFlagExecutionBoundary CLEAR。Flutter 页面 Gate 为测试注入 seam，Native detector 当前仍为 host/test injection only、默认 `null`；测试使用的 `testOnlyReviewedNoMatchRedFlagGate` 明确是合成夹具，不是医学 detector，绝不能进入生产。生产自然语言/视觉/语音 RedFlag detector、审核版本、覆盖证明、责任审批和处置文案仍 MISSING，B 继续 `PARTIAL / RELEASE BLOCKED`。
+- 因此，当前**候选提取—用户确认—规则问项映射代码已完成，但生产自由文本问诊仍 BLOCKED**。下一步不是重写槽位适配器，也不是复审知识库；仅在外部责任方提供经审核 detector 规则/版本/覆盖和处置文案后，再接入生产 Flutter/Native detector，并针对真实 Gate 行为补齐正负向入口回归。此前绝不把 Gate 的 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR，也不使用模型 prompt 或自造规则替代医学审核。
 
 ### 46.3 本地设备验收交接（非云端待办）
 
