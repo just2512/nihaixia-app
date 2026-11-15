@@ -9343,7 +9343,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final draft = _confirmedDraft;
     if (draft == null || _structuredDiagnosisBusy) return;
     await _startInlineTcmInterview(
-      initialUserMessage: '继续规则辨证',
+      // The button label is not user input. Keep the source used for extraction
+      // in the durable task transcript so the rule interview retains its evidence.
+      initialUserMessage: draft.sourceText.trim(),
       userContext: draft.summaryLines.join('\n'),
       confirmedTenAnswers: _confirmedTenAnswers,
     );
