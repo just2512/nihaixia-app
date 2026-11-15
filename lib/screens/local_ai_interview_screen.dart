@@ -4544,11 +4544,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'yunqi' && tool.headlessExecutor != null) {
+    final explicitlyOpenYunqiPage = RegExp(
+      r'(?:打开|进入|跳转到|去到).{0,16}(?:页面|工具页|工具)',
+    ).hasMatch(userText);
+    if (tool.id == 'yunqi' &&
+        tool.headlessExecutor != null &&
+        !explicitlyOpenYunqiPage) {
       // The registered YunQi date slot is optional and explicitly defaults to
       // the device-local calendar day. Resolve that App-owned default before
-      // execution so the actual date is persisted with the result; do not send
-      // the user to a separate page for a valid defaulted calculation.
+      // execution so the actual date is persisted with the result.
+      // Only an explicit page-navigation request keeps the Page Tool path.
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final suppliedDate = request['date']?.trim();
       final now = DateTime.now();
