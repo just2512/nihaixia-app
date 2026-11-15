@@ -171,10 +171,12 @@ void main() {
         context: '当前角色：问诊助手',
         traceId: traceId,
         requireMedicalSafety: true,
+        redFlagContext: '我最近胸痛\n那它的原因呢',
       );
 
       expect(received?.method, 'sendMessage');
       expect(received?.arguments['require_red_flag'], isTrue);
+      expect(received?.arguments['red_flag_context'], '我最近胸痛\n那它的原因呢');
       expect(received?.arguments['trace_id'], traceId);
     });
 
