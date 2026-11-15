@@ -606,6 +606,11 @@ class MainActivity : FlutterActivity() {
                     try {
                         loadLocalModel()
                     } catch (restoreError: Exception) {
+                        conversationHistoryTurns.clear()
+                        conversationHistoryTurns.addAll(completedTurns)
+                        userReportedInputs.clear()
+                        userReportedInputs.addAll(reportedInputs)
+                        userReportedInputsTruncated = inputsTruncated
                         restoreError.addSuppressed(
                             IllegalStateException("原推理后端偏好未能保存")
                         )
@@ -688,6 +693,7 @@ class MainActivity : FlutterActivity() {
         // precedence only when the app is explicitly debuggable.
         val selectedBackend = LocalAiBackendSelectionPolicy.resolveBackend(
             preferredBackend = preferredBackend(),
+            hasUserPreference = backendPreferences.contains(LOCAL_AI_BACKEND_PREFERENCE_KEY),
             debuggableBuild = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
             debugForceCpu = intent?.getBooleanExtra(
                 DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA,
