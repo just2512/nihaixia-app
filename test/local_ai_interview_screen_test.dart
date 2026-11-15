@@ -6053,6 +6053,57 @@ void mainRedFlagEntrypointOrderingTests() {
       );
     });
 
+    testWidgets('未配置安全评估器的个人诊断请求在意图识别前 fail closed',
+        (tester) async {
+      final intentEvents = <String>[];
+      final traceEvents = <AiTraceEvent>[];
+      final service = _OrderedIntentSendService(intentEvents);
+      final recorder = AiTraceRecorder(
+        enabled: true,
+        writer: (event) async => traceEvents.add(event),
+        idFactory: () => 'dddddddddddddddddddddddddddddddd',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            traceRecorder: recorder,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+
+      await tester.enterText(
+        find.byType(TextField),
+        '最近不舒服，帮我诊断一下什么问题？',
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(intentEvents, isEmpty);
+      expect(service.intentQueries, isEmpty);
+      expect(service.sentTexts, isEmpty);
+      expect(find.textContaining('安全评估器尚未配置'), findsOneWidget);
+      final redFlagEvent = traceEvents.singleWhere(
+        (event) => event.stage == AiTraceStage.redFlag,
+      );
+      expect(redFlagEvent.status, AiTraceStatus.unknown);
+      expect(redFlagEvent.errorCode, 'REDFLAG_GATE_NOT_CONFIGURED');
+      expect(
+        traceEvents.where((event) => event.stage == AiTraceStage.nativeInference),
+        isEmpty,
+      );
+    });
+
   });
 }
 
