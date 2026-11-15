@@ -2444,8 +2444,7 @@ void main() {
       await tester.tap(find.text('继续规则辨证'));
       await tester.pumpAndSettle();
 
-      // 已确认自述直接进入当前消息时间线；自由文本只作上下文，
-      // 不会被模型或控制器自动转换为规则答案。
+      // 模型候选先显示原文证据，由用户逐项确认；只有确认项进入引擎，其他项仍待追问。
       expect(find.byType(LocalAiInterviewScreen), findsOneWidget);
       final taskState = await _waitForTcmInterviewTaskState(
         tester,
@@ -2464,7 +2463,7 @@ void main() {
       );
       expect(
         savedTaskState.transcript.any(
-          (message) => message.text.contains('未自动转换为规则答案'),
+          (message) => message.text.contains('原文保留为上下文'),
         ),
         isTrue,
       );
