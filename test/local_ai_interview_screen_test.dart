@@ -1289,6 +1289,7 @@ void main() {
     expect(savedState.status, 'in_progress');
     expect(savedState.pendingPromptId, 'temperature');
     expect(savedState.pendingPromptText, contains('寒热感觉'));
+    expect(find.textContaining('本问诊仅用于模拟学习中医辨证思路'), findsOneWidget);
     expect(
       savedState.transcript.any((message) => message.text.contains('开始规则问诊')),
       isTrue,
