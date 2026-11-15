@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108" role="img" aria-labelledby="title desc">
-  <title id="title">汉唐中医</title>
-  <desc id="desc">米白底色上的砖红色打开书册图标，书页为米白色，书脊为金色。</desc>
+  <title id="title">理象集</title>
+  <desc id="desc">米白底色上的打开书册图标，象征经典研习与知识整理。</desc>
   <rect x="0" y="0" width="108" height="108" fill="#F3EBDD"/>
   <path fill="#A93226" d="M22,30 C31,27 42,29 53,36 L54,80 C43,73 31,71 22,76 Z"/>
   <path fill="#A93226" d="M86,30 C77,27 66,29 55,36 L54,80 C65,73 77,71 86,76 Z"/>
