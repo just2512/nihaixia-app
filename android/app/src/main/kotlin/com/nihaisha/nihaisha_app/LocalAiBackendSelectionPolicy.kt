@@ -21,6 +21,13 @@ internal object LocalAiBackendSelectionPolicy {
     fun normalizePreference(value: String?): String =
         parseRequestedBackend(value) ?: GPU
 
+    fun shouldPersistPreference(
+        hasSavedPreference: Boolean,
+        currentPreference: String?,
+        requestedBackend: String
+    ): Boolean =
+        !hasSavedPreference || normalizePreference(currentPreference) != requestedBackend
+
     fun shouldForceCpu(debuggableBuild: Boolean, requested: Boolean): Boolean =
         debuggableBuild && requested
 
