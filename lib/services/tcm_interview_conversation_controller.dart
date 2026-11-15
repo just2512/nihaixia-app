@@ -265,6 +265,7 @@ class TcmInterviewConversationController {
     if (normalized.isEmpty || normalized.length > 300) {
       throw ArgumentError.value(text, 'text', '问诊澄清内容为空或过长');
     }
+    _clearPendingOptionMarkers();
     _pendingPromptText = normalized;
     _appendAssistant(normalized, hasPendingOptions: true);
   }
@@ -519,6 +520,7 @@ class TcmInterviewConversationController {
   }
 
   void _completeWithText(String text) {
+    _clearPendingOptionMarkers();
     _status = 'completed';
     _pendingPromptId = null;
     _pendingPromptText = null;
@@ -531,11 +533,25 @@ class TcmInterviewConversationController {
     required String text,
     required List<String> options,
   }) {
+    _clearPendingOptionMarkers();
     _status = 'in_progress';
     _pendingPromptId = id;
     _pendingPromptText = text;
     _pendingOptions = List.unmodifiable(options);
     _appendAssistant(text, hasPendingOptions: true);
+  }
+
+  void _clearPendingOptionMarkers() {
+    for (var index = 0; index < _messages.length; index++) {
+      final message = _messages[index];
+      if (!message.isUser && message.hasPendingOptions) {
+        _messages[index] = TcmInterviewTaskMessage(
+          text: message.text,
+          isUser: false,
+          isResult: message.isResult,
+        );
+      }
+    }
   }
 
   void _appendAssistant(
