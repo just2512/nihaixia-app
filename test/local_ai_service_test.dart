@@ -158,6 +158,26 @@ void main() {
       });
     });
 
+    test('clinical request marker is forwarded to the native text boundary', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '本地回复', 'trace_id': traceId};
+      });
+
+      await LocalAiService().sendMessageWithContextAndTrace(
+        '最近不舒服，帮我诊断一下什么问题？',
+        context: '当前角色：问诊助手',
+        traceId: traceId,
+        requireMedicalSafety: true,
+      );
+
+      expect(received?.method, 'sendMessage');
+      expect(received?.arguments['require_red_flag'], isTrue);
+      expect(received?.arguments['trace_id'], traceId);
+    });
+
     test('sendMessage rejects missing, null, and whitespace-only native replies', () async {
       final invalidResponses = <Object?>[
         <String, Object?>{},
@@ -219,6 +239,23 @@ void main() {
         'transcript': '用户：饭后腹胀\\n助手：请说明持续时间',
         'userMessages': ['饭后腹胀'],
       });
+    });
+
+    test('clinical history restoration carries the native safety requirement', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'restored': true, 'backend': 'cpu'};
+      });
+
+      await LocalAiService().restoreConversation(
+        transcript: '用户：我最近胸痛',
+        userMessages: const ['我最近胸痛'],
+        requireMedicalSafety: true,
+      );
+
+      expect(received?.method, 'restoreConversation');
+      expect(received?.arguments['require_red_flag'], isTrue);
     });
 
     test('resetConversation invokes native reset and returns fresh status', () async {
@@ -709,6 +746,30 @@ void main() {
       expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
       expect(received[0].arguments['trace_id'], traceId);
       expect(received[1].arguments['trace_id'], traceId);
+    });
+
+    test('medical attachments carry the native safety requirement', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      final received = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received.add(call);
+        return <String, Object?>{'reply': '附件结果', 'trace_id': traceId};
+      });
+
+      await LocalAiService().sendImageWithTrace(
+        '/app/cache/medical-image.jpg',
+        traceId: traceId,
+        requireMedicalSafety: true,
+      );
+      await LocalAiService().sendAudioWithTrace(
+        '/app/cache/medical-audio.wav',
+        traceId: traceId,
+        requireMedicalSafety: true,
+      );
+
+      expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
+      expect(received.every((call) => call.arguments['require_red_flag'] == true),
+          isTrue);
     });
 
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {
