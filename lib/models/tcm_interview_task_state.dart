@@ -50,6 +50,7 @@ class TcmInterviewTaskState {
     this.pendingPromptText,
     this.pendingOptions = const [],
     this.transcript = const [],
+    this.pendingConfirmedTenAnswers = const {},
     this.updatedAt,
     this.completedDiagnosis,
   });
@@ -62,12 +63,14 @@ class TcmInterviewTaskState {
   final String? pendingPromptText;
   final List<String> pendingOptions;
   final List<TcmInterviewTaskMessage> transcript;
+  /// User-approved model candidates not yet reached in the engine question order.
+  final Map<String, String> pendingConfirmedTenAnswers;
   final DateTime? updatedAt;
   /// Immutable structured result captured at completion; never recalculated on restore.
   final DiagnosisResult? completedDiagnosis;
 
   Map<String, Object?> toJson() => {
-        'schemaVersion': 2,
+        'schemaVersion': 3,
         'taskId': taskId,
         'status': status,
         'snapshot': _snapshotToJson(snapshot),
@@ -75,6 +78,7 @@ class TcmInterviewTaskState {
         if (pendingPromptText != null) 'pendingPromptText': pendingPromptText,
         'pendingOptions': List<String>.unmodifiable(pendingOptions),
         'transcript': transcript.map((message) => message.toJson()).toList(growable: false),
+        'pendingConfirmedTenAnswers': Map<String, String>.unmodifiable(pendingConfirmedTenAnswers),
         if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
         if (completedDiagnosis != null)
           'completedDiagnosis': DiagnosisResultCodec.toJson(completedDiagnosis!),
@@ -89,7 +93,7 @@ class TcmInterviewTaskState {
     }
     final json = Map<String, Object?>.from(decoded);
     final schemaVersion = json['schemaVersion'];
-    if (schemaVersion != 1 && schemaVersion != 2) {
+    if (schemaVersion != 1 && schemaVersion != 2 && schemaVersion != 3) {
       throw FormatException('Unsupported TCM task schema: $schemaVersion');
     }
     final taskId = json['taskId'];
@@ -97,6 +101,8 @@ class TcmInterviewTaskState {
     final rawSnapshot = json['snapshot'];
     final rawOptions = json['pendingOptions'];
     final rawTranscript = json['transcript'] ?? const [];
+    final rawPendingConfirmedTenAnswers =
+        json['pendingConfirmedTenAnswers'] ?? const <String, Object?>{};
     final promptId = json['pendingPromptId'];
     final promptText = json['pendingPromptText'];
     final updatedAt = json['updatedAt'];
@@ -110,6 +116,9 @@ class TcmInterviewTaskState {
         rawOptions.any((item) => item is! String) ||
         rawTranscript is! List ||
         rawTranscript.any((item) => item is! Map) ||
+        rawPendingConfirmedTenAnswers is! Map ||
+        rawPendingConfirmedTenAnswers.keys.any((key) => key is! String) ||
+        rawPendingConfirmedTenAnswers.values.any((value) => value is! String) ||
         (promptId != null && promptId is! String) ||
         (promptText != null && promptText is! String) ||
         (updatedAt != null && updatedAt is! String) ||
@@ -128,6 +137,9 @@ class TcmInterviewTaskState {
         rawTranscript.map((item) => TcmInterviewTaskMessage.fromJson(
           Map<String, Object?>.from(item as Map),
         )),
+      ),
+      pendingConfirmedTenAnswers: Map<String, String>.unmodifiable(
+        Map<String, String>.from(rawPendingConfirmedTenAnswers),
       ),
       updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt as String).toUtc(),
       completedDiagnosis: rawCompletedDiagnosis == null
