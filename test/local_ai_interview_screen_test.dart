@@ -3259,6 +3259,14 @@ void main() {
     final bookmarks = <Bookmark>[];
     final sharedTexts = <String>[];
     final copiedTexts = <String>[];
+    const traceId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    final traceEvents = <AiTraceEvent>[];
+    final traceRecorder = AiTraceRecorder(
+      enabled: true,
+      writer: (event) async => traceEvents.add(event),
+      idFactory: () => traceId,
+      clock: () => DateTime(2026, 11, 12, 14),
+    );
     final service = _TextSendService();
     await tester.pumpWidget(
       MaterialApp(
@@ -3266,6 +3274,7 @@ void main() {
           service: service,
           conversationStore: store,
           imagePicker: _EmptyLocalAiImagePicker(),
+          traceRecorder: traceRecorder,
           bookmarkWriter: (bookmark) async {
             bookmarks.add(bookmark);
             return 1;
@@ -3319,6 +3328,19 @@ void main() {
     expect(copiedTexts.single, contains('柴胡24g'));
 
     await tapAction('AI解读辨证结果');
+    final resultInterpretationEvents = traceEvents
+        .where((event) => event.traceId == traceId)
+        .toList(growable: false);
+    final preflightEvent = resultInterpretationEvents.singleWhere(
+      (event) => event.stage == AiTraceStage.preflight,
+    );
+    expect(preflightEvent.status, AiTraceStatus.notApplicable);
+    expect(preflightEvent.errorCode, 'PREFLIGHT_NOT_REQUIRED');
+    final redFlagEvent = resultInterpretationEvents.singleWhere(
+      (event) => event.stage == AiTraceStage.redFlag,
+    );
+    expect(redFlagEvent.status, AiTraceStatus.notApplicable);
+    expect(redFlagEvent.errorCode, 'REDFLAG_ASSESSMENT_NOT_REQUIRED');
     expect(service.sentTexts.last, contains('完整解释'));
     expect(service.sentTexts.last, contains('少阳证'));
     expect(service.sentTexts.last, contains('本地知识库实际检索到的条目说明诊断依据'));
