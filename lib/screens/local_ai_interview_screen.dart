@@ -340,6 +340,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AiTraceContext traceContext,
     required String route,
     required bool requireAssessment,
+    bool sourceTruncated = false,
   }) async {
     if (_redFlagPreflightedContexts.contains(traceContext)) return false;
 
@@ -384,7 +385,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final result = await gate.evaluate(
-      RedFlagInput(source: source, text: text),
+      RedFlagInput(
+        source: source,
+        text: text,
+        sourceTruncated: sourceTruncated,
+      ),
     );
     final traceStatus = switch (result.status) {
       RedFlagPreflightStatus.clear => AiTraceStatus.succeeded,
