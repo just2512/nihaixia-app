@@ -2368,4 +2368,43 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 52.7 云端收尾结论
 
-第 51.3 节第 1 至 4 项云端任务已完成。除 Find N2 本地验收结果揭示的具体、可复现软件缺陷外，本轮没有尚需扩展的云端运行时代码任务；不因继续开发而增加无关功能、检测器、数据库或泛化测试。
+第 51.3 节第 1 至 4 项云端任务在 PR #189 合并时完成收口。随后复核运行时代码时，仍发现问诊助手未接入现有 App 医案检索的具体断点；该断点已由 PR #190 修复并通过分支全量 Flutter 与 Android arm64 CI。后续状态和证据见第 53 节。除 Find N2 本地验收结果揭示的具体、可复现软件缺陷外，不再扩展无关功能、检测器、数据库或泛化测试。
+
+
+## 53. 2026-11-15 二次复核：问诊医案按需检索
+
+### 53.1 发现与修复
+
+- 二次代码复核发现：问诊助手的知识检索调用显式设置 `includeMedicalCases: false`，导致问诊结果解释虽然要求结合经典/医案，但实际检索上下文不会返回 App 已有医案条目。
+- PR #190 将医案检索接回问诊对话，但不在每一轮普通问诊中无条件解析和索引完整医案库。仅当当前检索查询明确包含“医案”“病例”或“案例”时，才启用现有医案检索。
+- 用户可以在同一问诊对话中继续提出医案/病例对照请求；AI 仍只负责理解请求和解释检索结果，医案检索由现有 `AssistantKnowledgeContextBuilder` 执行。
+- 自动辨病辨证结果解释继续走常规知识检索路径，解释 App 已执行并通过校验的规则结果、病机、治法、方剂、针灸和实际命中的经典依据；不因普通问诊消息加载完整医案索引。
+
+### 53.2 来源与性能边界
+
+- 医案引用使用稳定 `medical_case:<seq>` sourceId 和 `medical_case:internal-seq:<seq>` App 内部条目定位；引用注明为 App 医案库整理条目，不将整理案例冒充已核验的古籍原始出处。
+- 现有医案首次载入和索引存在数秒级开销。首次尝试将医案检索无条件加入每轮问诊后，问诊 UI 全量回归出现 9 项失败；核对后将触发条件收敛为用户明确提出医案/病例/案例对照。修订后原有交互回归恢复通过。未删除测试、未降低验收要求，也未修改医案数据或诊断规则。
+- 仅修改 `lib/screens/local_ai_interview_screen.dart` 与 `test/assistant_knowledge_context_test.dart`。未修改 `TcmInterviewConversationController`、`DiagnosticEngine`、`DiagnosticRules`、问诊题目、方剂/剂量规则、排盘引擎或医案资产。
+
+### 53.3 合并与自动验收证据
+
+| 项目 | 证据 | 结果 |
+|---|---|---|
+| PR | [#190](https://github.com/just2512/nihaixia-app/pull/190) | MERGED |
+| PR 分支 HEAD | `d17553128bcd20b1f631b60be7eb14d9091c6706` | 已合并 |
+| Squash merge | `1c92a06851951cd03648efa7b05489889e90bf8c` | master |
+| PR workflow | [run 43725491481](https://github.com/just2512/nihaixia-app/actions/runs/43725491481) | SUCCESS |
+| Flutter regression | job `132846424133` | 1,596 passed / 15 skipped / 0 failed |
+| Android arm64 验证 | job `132847671063` | SUCCESS：Debug APK、ABI/SHA-256、Native 单元测试及结果 XML 校验 |
+| Android APK 证据 | artifact `14166362286` | 已上传 |
+| Android 单元测试报告 | artifact `14166204085` | 已上传 |
+| 检索黄金快照 | artifact `14165879825` | 已上传 |
+
+- PR workflow 的 Branch validation job 按现有 workflow 条件 SKIPPED；不计为失败，也不代替上表实际运行的 Flutter 全量回归和 Android arm64 验收。
+- 以上为分支 CI 证据；合并后的 master Flutter Tests 与 Flutter Quality Gate 应以提交 `1c92a06851951cd03648efa7b05489889e90bf8c` 对应的主线 workflow 最终状态为准。CI 不替代 Find N2 真机验收。
+
+### 53.4 收尾状态
+
+- 问诊助手现有链路：用户在当前对话提出需求 → AI 理解/追问 → App 既有规则问诊执行 → 结果校验 → 结合本轮可追溯知识库条目解释；用户明确要求医案对照时再按需检索医案库。
+- 四类助手的 AI/App 分工、工具结果校验、知识来源状态和单一 SQLite 数据清理边界均不变。
+- 云端代码任务至此收尾；Find N2 GPU/CPU 多轮、多媒体、进程恢复及清除 AI 数据后的真机验证仍按第 52.6 节保留为 LOCAL / UNKNOWN，不能由 CI 或 Debug APK 构建替代。
