@@ -1289,6 +1289,7 @@ void main() {
     expect(savedState.status, 'in_progress');
     expect(savedState.pendingPromptId, 'temperature');
     expect(savedState.pendingPromptText, contains('寒热感觉'));
+    expect(find.textContaining('本问诊仅用于模拟学习中医辨证思路'), findsOneWidget);
     expect(
       savedState.transcript.any((message) => message.text.contains('开始规则问诊')),
       isTrue,
@@ -6205,22 +6206,18 @@ class _OrderedIntentSendService extends _TextSendService {
 }
 
 void mainRedFlagEntrypointOrderingTests() {
-  group('红旗门禁注入入口顺序', () {
-    testWidgets('阻断结果必须早于意图识别和模型调用', (tester) async {
+  group('模拟问诊安全提示边界', () {
+    testWidgets('模拟规则问诊不调用注入的临床 detector，免责声明保持可见',
+        (tester) async {
       final events = <String>[];
       final service = _OrderedIntentSendService(events);
       final gate = RedFlagGate(
         detector: _WidgetRedFlagDetector(
           events: events,
-          matchedRuleIds: const ['reviewed-test-rule'],
+          matchedRuleIds: const ['legacy-test-rule'],
           subject: RedFlagSubject.self,
         ),
         timeout: const Duration(milliseconds: 100),
-      );
-      final recorder = AiTraceRecorder(
-        enabled: true,
-        writer: (_) async {},
-        idFactory: () => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       );
       await tester.pumpWidget(
         MaterialApp(
@@ -6229,36 +6226,41 @@ void mainRedFlagEntrypointOrderingTests() {
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
             redFlagGate: gate,
-            traceRecorder: recorder,
           ),
         ),
       );
       await tester.pumpAndSettle();
-      // The model-ready state is asynchronous. Do not mistake a disabled send
-      // button for a successful preflight-order test.
       for (var attempt = 0;
           attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
           attempt++) {
         await tester.pump(const Duration(milliseconds: 20));
       }
       expect(find.byTooltip('释放模型内存'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '我现在身体不舒服');
+
+      await tester.enterText(find.byType(TextField), '开始规则问诊');
       await tester.pump();
-      final sendButton = find.ancestor(
-        of: find.byTooltip('发送'),
-        matching: find.byType(IconButton),
-      );
-      expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(events, ['gate:currentText']);
-      expect(service.intentQueries, isEmpty);
-      expect(service.sentTexts, isEmpty);
-      expect(find.textContaining('安全评估命中阻断条件'), findsOneWidget);
+      final state = await _waitForTcmInterviewTaskState(
+        tester,
+        expectedPendingPromptId: 'temperature',
+      );
+      expect(state, isNotNull);
+      expect(
+        events.where((event) => event.startsWith('gate:')),
+        isEmpty,
+        reason: '模拟学习不依赖临床分诊 detector',
+      );
+      expect(
+        find.textContaining('本问诊仅用于模拟学习中医辨证思路'),
+        findsOneWidget,
+      );
+      expect(service.sentTexts, isEmpty,
+          reason: '结构化问诊由 App 规则控制器提问，不把规则题目发给自由聊天模型');
     });
 
-    testWidgets('TRACE 默认关闭时每个临床轮次都重新执行安全评估', (tester) async {
+    testWidgets('现实症状学习对话多轮进行时不调用临床 detector', (tester) async {
       final events = <String>[];
       final detector = _ClearThenUnknownRedFlagDetector(events);
       final gate = RedFlagGate(
@@ -6273,7 +6275,6 @@ void mainRedFlagEntrypointOrderingTests() {
             service: service,
             imagePicker: _EmptyLocalAiImagePicker(),
             redFlagGate: gate,
-            // Intentionally omit traceRecorder: production default is disabled.
           ),
         ),
       );
@@ -6290,22 +6291,26 @@ void mainRedFlagEntrypointOrderingTests() {
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(detector.calls, 1);
+      expect(detector.calls, 0);
       expect(service.sentTexts, ['我最近胸痛']);
+      expect(
+        find.textContaining('本问诊仅用于模拟学习中医辨证思路'),
+        findsOneWidget,
+      );
 
       await tester.enterText(find.byType(TextField), '我最近头痛');
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(detector.calls, 2,
-          reason: 'disabled TRACE 是共享常量，不能作为跨轮缓存身份');
-      expect(service.sentTexts, ['我最近胸痛'],
-          reason: '第二轮 UNKNOWN 必须在模型调用前阻断');
-      expect(find.textContaining('安全评估尚未完成'), findsOneWidget);
+      expect(detector.calls, 0,
+          reason: '模拟学习多轮不依赖临床 detector 的跨轮评估');
+      expect(service.sentTexts, ['我最近胸痛', '我最近头痛']);
+      expect(find.textContaining('请及时就医'), findsOneWidget);
     });
 
-    testWidgets('非临床排盘请求不触发医学门禁并进入确定性意图筛选', (tester) async {
+    testWidgets('非临床排盘请求不触发临床 detector并进入确定性意图筛选',
+        (tester) async {
       final events = <String>[];
       final service = _OrderedIntentSendService(events);
       final gate = RedFlagGate(
@@ -6349,12 +6354,12 @@ void mainRedFlagEntrypointOrderingTests() {
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(events, ['intent'],
-          reason: '非临床工具请求由确定性路由处理，不调用医学安全检测器');
+      expect(events, ['intent']);
       expect(service.intentQueries, ['我想排盘']);
     });
 
-    testWidgets('未配置 Gate 时记录 NOT_APPLICABLE 而不伪造 CLEAR，也不静默关闭助手', (tester) async {
+    testWidgets('未配置临床 detector 时非临床工具对话仍可正常运行',
+        (tester) async {
       final intentEvents = <String>[];
       final traceEvents = <AiTraceEvent>[];
       final service = _OrderedIntentSendService(intentEvents);
@@ -6393,15 +6398,11 @@ void mainRedFlagEntrypointOrderingTests() {
       );
       expect(redFlagEvent.status, AiTraceStatus.notApplicable);
       expect(redFlagEvent.errorCode, 'REDFLAG_GATE_NOT_CONFIGURED');
-      expect(
-        traceEvents.where((event) => event.stage == AiTraceStage.redFlag)
-            .every((event) => event.status != AiTraceStatus.succeeded),
-        isTrue,
-      );
     });
 
-    testWidgets('未配置安全评估器的个人诊断请求在意图识别前 fail closed',
+    testWidgets('没有配置临床 detector 时自然语言问诊仍能启动模拟学习',
         (tester) async {
+      const query = '最近不舒服，帮我诊断一下什么问题？';
       final intentEvents = <String>[];
       final traceEvents = <AiTraceEvent>[];
       final service = _OrderedIntentSendService(intentEvents);
@@ -6428,29 +6429,29 @@ void mainRedFlagEntrypointOrderingTests() {
       }
       expect(find.byTooltip('释放模型内存'), findsOneWidget);
 
-      await tester.enterText(
-        find.byType(TextField),
-        '最近不舒服，帮我诊断一下什么问题？',
-      );
+      await tester.enterText(find.byType(TextField), query);
       await tester.pump();
       await tester.tap(find.byTooltip('发送'));
       await tester.pumpAndSettle();
 
-      expect(intentEvents, isEmpty);
-      expect(service.intentQueries, isEmpty);
-      expect(service.sentTexts, isEmpty);
-      expect(find.textContaining('安全评估器尚未配置'), findsOneWidget);
-      final redFlagEvent = traceEvents.singleWhere(
-        (event) => event.stage == AiTraceStage.redFlag,
+      final state = await _waitForTcmInterviewTaskState(
+        tester,
+        expectedPendingPromptId: 'temperature',
       );
-      expect(redFlagEvent.status, AiTraceStatus.unknown);
-      expect(redFlagEvent.errorCode, 'REDFLAG_GATE_NOT_CONFIGURED');
+      expect(state, isNotNull);
+      expect(service.initialSymptomTexts, [query]);
+      expect(find.textContaining('本问诊仅用于模拟学习中医辨证思路'), findsOneWidget);
+      expect(find.textContaining('安全评估器尚未配置'), findsNothing);
+      final redFlagEvents = traceEvents
+          .where((event) => event.stage == AiTraceStage.redFlag)
+          .toList();
+      expect(redFlagEvents, isNotEmpty);
       expect(
-        traceEvents.where((event) => event.stage == AiTraceStage.nativeInference),
-        isEmpty,
+        redFlagEvents.every((event) => event.status == AiTraceStatus.notApplicable),
+        isTrue,
+        reason: '未配置临床 detector 不应阻断模拟问诊，也不应伪造 CLEAR',
       );
     });
-
   });
 }
 

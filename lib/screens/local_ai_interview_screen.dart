@@ -1206,8 +1206,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         };
         final reply = await sendWithContext(
           '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
-              '先澄清症状与时间线，不把模型整理内容当成已确认事实。'
-              '只有用户明确启动结构化辨证时，才通过 App 的 DiagnosticEngine 工具执行规则问诊。'
+              '本轮问诊只用于模拟学习中医辨证思路，不是医疗诊断。先澄清学习案例中的症状与时间线，不把模型整理内容当成已确认事实。'
+              '若用户描述现实身体不适，提醒及时就医；不得给出个体用药、停药或剂量建议。'
+              '只有用户明确启动模拟问诊时，才通过 App 的 DiagnosticEngine 工具展示既有规则问诊过程。'
               '若历史对话已经包含该引擎的结构化结果，用户追问时应解释和归纳已有结果，并结合本轮检索到的知识条目说明依据；'
               '必须区分规则输出、知识来源与 AI 解释，不得自行新增或改写证型/规则结论，也不得给出个体处方或剂量。\n'
               '$knowledgeContext',
@@ -1500,7 +1501,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_diagnosis',
-      requireAssessment: true,
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -1793,6 +1794,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
       '知识库内容只用于解释已有规则，不得据此新增个体诊断结论。'
       '只解释 App 已返回的结果，不重新辨证，不增加或修改规则结论，不补造缺失字段。'
+      '明确说明这是模拟学习结果，不是对用户本人现实症状的医疗诊断。'
       '不要生成个体处方、药物或剂量建议；原结果中的处方字段只可按原文引用，不得增删改。';
 
   _InterviewMessage _diagnosisActionMessage(
@@ -2344,7 +2346,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_interview_option',
-      requireAssessment: true,
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -2842,7 +2844,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'headless_tool:${tool.id}',
-      requireAssessment: tool.id == 'structured_diagnosis',
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -3149,7 +3151,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'tool_dispatch:${tool.id}',
-      requireAssessment: tool.id == 'structured_diagnosis',
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -5129,7 +5131,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
           traceContext: traceContext,
           route: 'result_interpretation',
-          requireAssessment: true,
+          requireAssessment: false,
           sourceTruncated: redFlagContext.sourceTruncated,
         )) {
       return;
@@ -8505,7 +8507,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'symptom_extraction',
-      requireAssessment: true,
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       if (mounted) setState(() => _extracting = false);
@@ -8952,10 +8954,58 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     super.dispose();
   }
 
+  Widget _buildTcmLearningDisclaimer(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 17,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              '本问诊仅用于模拟学习中医辨证思路，不构成医疗诊断或治疗建议。'
+              '若你或他人有任何现实身体不适，请及时就医；请勿依据模拟结果自行诊断、用药或停药。'
+              '如出现胸痛、明显呼吸困难、意识不清、抽搐或大量出血等急重症表现，请立即拨打120或前往急诊。',
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: AppType.caption,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final ready = _status?.ready == true;
+    final showTcmLearningDisclaimer =
+        _assistantMode == AssistantMode.consultation ||
+        _lastEffectiveMode == AssistantMode.consultation ||
+        _tcmInterviewController != null;
     // 键盘弹出时收起顶部模型/模式/角色说明，把空间让给对话。
     // ColorOS 不一定 resize 窗口，但 MediaQuery.viewInsets 走 WindowInsets.Type.ime()
     // 现代 API，键盘可见时 bottom>0 可靠。
@@ -9069,6 +9119,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ],
             ),
           ),
+          if (showTcmLearningDisclaimer)
+            _buildTcmLearningDisclaimer(context),
           SafeArea(
             top: false,
             // 键盘弹出时输入框下沿紧贴键盘上沿：去掉底部安全区与内边距。
