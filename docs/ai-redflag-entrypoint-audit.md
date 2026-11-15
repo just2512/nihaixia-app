@@ -232,3 +232,25 @@
 2. 测试用 fake detector 只验证调用顺序和状态传播，不声称识别准确率；缺失/异常/超时/未审核仍必须 REVIEW_REQUIRED。
 3. 不实现医学词表、不生成急救阈值/文案；真实 detector 等待医学审核记录。
 4. B2 seam 通过后再评估全局阻断的产品影响和 Native 边界接入；在医学审核前保持生产 RELEASE BLOCKED。
+
+
+## 9. 2026-11-15 PR #169 后生产入口复核
+
+### 9.1 当前 Gate 接入事实
+
+- PR #169 已将 `RedFlagGate/RedFlagPreflight` 接到助手 Flutter 临床相关入口与 Android Native 模型调用边界；Flutter 路由与 Native 边界均有 fail-closed 保护，不能只依赖页面层检查。
+- 缺少 detector、检测状态 UNKNOWN、审核版本/覆盖证明不完整、超时/异常或原始图片/音频没有可信提取时，Gate 不返回 CLEAR，不允许未评估请求进入受保护模型调用。
+- 第三人称症状（例如替家人描述）也应触发评估；subject/time/polarity 不清楚时走澄清/阻断，而不是把他人症状错误写成用户本人症状。
+
+### 9.2 仍未完成的部分
+
+- 自然语言、视觉和语音医学红旗 detector：MISSING。
+- 经医学审核的 detector/规则集版本、责任审批、阈值、例外与处置文案：MISSING。
+- 因 detector 缺失，真实临床输入不能被证明已完成语义覆盖；Gate 的 fail-closed 状态必须阻断，不允许把 UNKNOWN 降级为 CLEAR。
+- B 保持 `PARTIAL / RELEASE BLOCKED`。不得重复审核既有医学知识库，也不得自行发明临床红旗规则或开放自由文本自动辨证。
+
+### 9.3 CI 与设备证据边界
+
+- PR #169 的 PR/独立分支 CI 及合并后 master CI 已通过 Gate 接线和自动化契约测试。
+- CI 不证明 Find N2 真机的 GPU/CPU、多媒体、Activity/进程恢复或端到端 TRACE；这些设备验收必须在实体设备上进行，不能由云端构建结果代替。
+- 本节更新当前状态；§1-§8 中 PR #169 之前“所有生产入口均 MISSING”的记录保留为历史快照，不再代表当前 master。
