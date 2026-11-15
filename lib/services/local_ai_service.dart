@@ -32,6 +32,27 @@ class LocalAiService {
     return LocalAiModelStatus.fromMap(data);
   }
 
+  /// Persists the user's preferred E4B backend. If a Native model is
+  /// currently loaded, Android releases and rebuilds it on the serialized AI
+  /// queue while restoring only completed conversation turns.
+  Future<LocalAiModelStatus> setBackendPreference(String backend) async {
+    final normalized = backend.trim().toLowerCase();
+    if (normalized != 'gpu' && normalized != 'cpu') {
+      throw ArgumentError.value(backend, 'backend', '只支持 GPU 或 CPU');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'setBackendPreference',
+      {'backend': normalized},
+    );
+    if (data == null) {
+      throw PlatformException(
+        code: 'EMPTY_STATUS',
+        message: '没有收到推理后端设置结果',
+      );
+    }
+    return LocalAiModelStatus.fromMap(data);
+  }
+
   Future<LocalAiModelStatus> importModel() async {
     final data = await _channel.invokeMapMethod<String, dynamic>('importModel');
     if (data == null) {
@@ -918,6 +939,7 @@ class LocalAiModelStatus {
   final int sizeBytes;
   final int expectedSizeBytes;
   final String backend;
+  final String preferredBackend;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -927,6 +949,7 @@ class LocalAiModelStatus {
     required this.sizeBytes,
     required this.expectedSizeBytes,
     required this.backend,
+    this.preferredBackend = 'gpu',
     this.hashVerified = false,
   });
 
@@ -940,6 +963,7 @@ class LocalAiModelStatus {
       sizeBytes: (map['sizeBytes'] as num?)?.toInt() ?? 0,
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
+      preferredBackend: map['preferredBackend'] as String? ?? 'gpu',
     );
   }
 
