@@ -135,7 +135,7 @@ class _LocalAiBackendSettingsTileState
       runtimeLabel = '当前实际运行：${_backendLabel(actual)}';
     } else {
       runtimeLabel =
-          '所选：${_backendLabel(preferred)}；当前实际运行：${_backendLabel(actual)}（已回退）';
+          '所选偏好：${_backendLabel(preferred)}；当前实际运行：${_backendLabel(actual)}（以 Native 实际值为准）';
     }
 
     return Padding(
