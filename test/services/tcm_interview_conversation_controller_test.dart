@@ -15,6 +15,7 @@ void main() {
       expect(controller.pendingPromptText, contains('寒热感觉'));
       expect(controller.pendingOptions, isNotEmpty);
       final transcript = controller.messages.map((message) => message.text);
+      expect(transcript, contains(TcmInterviewConversationController.learningNotice + '\n' + TcmInterviewConversationController.emergencyReminder));
       expect(transcript, contains('开始规则辨证'));
       expect(
         transcript.any((text) => text.contains('最近头痛，睡眠后缓解')),
