@@ -2133,7 +2133,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - PR #178 最终 head：`15776a5efe4cdb35a0c60f60ea74e2ef740ad120`；squash merge：`5b2c3d8738128a5965e54f807719eb2d6fe16635`。
 - 独立分支 changed-test/static analysis run `43685119657` 的 job `132723871918` SUCCESS。
 - PR workflow run `43685123461` 终态 SUCCESS：Flutter regression job `132723942972` SUCCESS；Android arm64 verification APK/Manifest/ABI/SHA-256/Native unit tests job `132724813365` SUCCESS，Android unit-test JUnit XML 检查和工件上传成功。
-- 合并后 master Flutter Tests run `43685797528`（job `132725887264`）与 Flutter Quality Gate run `43685797546`（job `132725886994`）在本节落笔时仍 IN_PROGRESS；终态需按精确 merge SHA 分别核验，不以 PR CI 替代。
+- 合并后 master Flutter Tests run `43685797528`（job `132725887264`）与 Flutter Quality Gate run `43685797546`（job `132725886994`）均以精确 merge SHA `5b2c3d8738128a5965e54f807719eb2d6fe16635` 终态 SUCCESS。Flutter 全量 regression、Dart 全量测试、Android Native unit tests 和 Find N2 arm64 Debug APK 构建均通过；这些云端结果不替代 Find N2 真机验收。
 
 ### 46.2 本次实际落地
 
