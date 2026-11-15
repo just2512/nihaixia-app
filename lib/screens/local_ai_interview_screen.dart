@@ -4463,7 +4463,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
     final requiresMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
-      query: redFlagContext,
+      query: redFlagContext.classificationText,
       selectedMode: mode,
       structuredInterviewActive:
           _tcmInterviewController?.canAnswer == true ||
@@ -4472,10 +4472,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (requiresMedicalSafety &&
         await _blockIfRedFlagPreflightDoesNotClear(
           source: RedFlagInputSource.structuredInterview,
-          text: redFlagContext.isEmpty ? null : redFlagContext,
+          text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
           traceContext: traceContext,
           route: 'result_interpretation',
           requireAssessment: true,
+          sourceTruncated: redFlagContext.sourceTruncated,
         )) {
       return;
     }
@@ -4486,6 +4487,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (restoreVisibleConversation) {
         await _restoreVisibleConversationToModel(
           requireMedicalSafety: requiresMedicalSafety,
+          safetyContext: redFlagContext,
         );
       }
       if (!mounted) return;
@@ -4524,7 +4526,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
         requireMedicalSafety: requiresMedicalSafety,
-        redFlagContext: requiresMedicalSafety ? redFlagContext : null,
+        redFlagContext: requiresMedicalSafety ? redFlagContext.text : null,
+        redFlagContextTruncated:
+            requiresMedicalSafety && redFlagContext.sourceTruncated,
       );
       inferenceCompleted = true;
       await _traceRecorder.record(
