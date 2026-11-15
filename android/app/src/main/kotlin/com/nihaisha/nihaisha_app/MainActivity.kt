@@ -112,7 +112,8 @@ class MainActivity : FlutterActivity() {
                             NativeRedFlagInput(
                                 NativeRedFlagInputSource.STRUCTURED_INPUT,
                                 userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() }
-                            )
+                            ),
+                            required = true
                         ) {
                             LocalAiTraceIdPolicy.attach(extractSymptoms(), traceId)
                         }
@@ -181,7 +182,8 @@ class MainActivity : FlutterActivity() {
                         } else {
                             runAiTaskAfterNativeRedFlag(
                                 result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.IMAGE_ATTACHMENT, prompt)
+                                NativeRedFlagInput(NativeRedFlagInputSource.IMAGE_ATTACHMENT, prompt),
+                                required = call.argument<Boolean>("require_red_flag") == true
                             ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalImage(path, prompt), traceId)
                             }
@@ -201,7 +203,8 @@ class MainActivity : FlutterActivity() {
                         } else {
                             runAiTaskAfterNativeRedFlag(
                                 result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.AUDIO_ATTACHMENT, prompt)
+                                NativeRedFlagInput(NativeRedFlagInputSource.AUDIO_ATTACHMENT, prompt),
+                                required = call.argument<Boolean>("require_red_flag") == true
                             ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalAudio(path, prompt), traceId)
                             }
@@ -216,12 +219,15 @@ class MainActivity : FlutterActivity() {
                         }
                         val text = call.argument<String>("text")?.trim().orEmpty()
                         val context = call.argument<String>("context")?.trim().orEmpty()
+                        val requireMedicalSafety =
+                            call.argument<Boolean>("require_red_flag") == true
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
                             runAiTaskAfterNativeRedFlag(
                                 result,
-                                NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, text)
+                                NativeRedFlagInput(NativeRedFlagInputSource.CURRENT_TEXT, text),
+                                required = requireMedicalSafety
                             ) {
                                 LocalAiTraceIdPolicy.attach(sendLocalMessage(text, context), traceId)
                             }
@@ -238,7 +244,8 @@ class MainActivity : FlutterActivity() {
                                 NativeRedFlagInput(
                                     NativeRedFlagInputSource.HISTORY_RESTORE,
                                     (listOf(transcript) + userMessages).joinToString("\n")
-                                )
+                                ),
+                                required = call.argument<Boolean>("require_red_flag") == true
                             ) { restoreLocalConversation(transcript, userMessages) }
                         }
                     }
@@ -266,21 +273,23 @@ class MainActivity : FlutterActivity() {
     private fun runAiTaskAfterNativeRedFlag(
         result: MethodChannel.Result,
         input: NativeRedFlagInput,
+        required: Boolean = false,
         task: () -> Any?
     ) {
-        val detector = nativeRedFlagDetector
-        if (detector == null) {
-            // B2 is an injectable seam, not activation of an unreviewed
-            // medical detector. Keep the existing product flow available,
-            // but do not claim CLEAR; B remains RELEASE BLOCKED.
-            android.util.Log.w(
-                "NativeRedFlagGate",
-                "REDFLAG_GATE_NOT_CONFIGURED: native inference remains NOT_APPLICABLE"
-            )
+        if (!required) {
+            if (nativeRedFlagDetector == null) {
+                android.util.Log.d(
+                    "NativeRedFlagGate",
+                    "REDFLAG_GATE_NOT_APPLICABLE: non-clinical request"
+                )
+            }
             runAiTask(result, task)
             return
         }
-        val execution = NativeRedFlagExecutionBoundary(detector)
+
+        // Required clinical paths never fall through when the detector is
+        // absent, unreviewed, incomplete, or unable to assess the source.
+        val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
             .runBefore(input) { runAiTask(result, task) }
         if (!execution.executed) {
             result.error(
