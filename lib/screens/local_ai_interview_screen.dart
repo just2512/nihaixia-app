@@ -1767,7 +1767,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       for (final entry in added) {
         final isPendingPrompt = !entry.isUser &&
             controller.canAnswer &&
-            entry.text == controller.pendingPromptText;
+            (entry.hasPendingOptions ||
+                entry.text == controller.pendingPromptText);
         if (entry.isResult && controller.completedDiagnosis != null) {
           _messages.add(
             _diagnosisActionMessage(entry.text, controller.completedDiagnosis!),
@@ -1921,6 +1922,165 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       transcriptMessagesApplicable: true,
       transcriptMessagesPersisted: messagesPersisted,
     );
+  }
+
+  Future<void> _handleTcmInterviewNaturalLanguage(
+    String userText, {
+    required AiTraceContext traceContext,
+  }) async {
+    final controller = _tcmInterviewController;
+    if (controller == null || !controller.canAcceptNaturalLanguageAnswer) {
+      return;
+    }
+    final questionId = controller.pendingPromptId!;
+    final question = controller.pendingPromptText!;
+    final options = controller.pendingOptions;
+    final previousUserMessages = controller.messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((message) => message.isNotEmpty)
+        .toList(growable: false);
+    var userContext = [...previousUserMessages, userText.trim()].join('\n');
+    if (userContext.length > 5000) {
+      userContext = userContext.substring(userContext.length - 5000);
+    }
+    if (!userContext.contains(userText.trim())) {
+      throw StateError('问诊上下文裁剪后未保留本轮用户输入');
+    }
+
+    final before = controller.messages.length;
+    controller.recordNaturalLanguageInput(userText);
+    _inputController.clear();
+    setState(() {
+      _sending = true;
+      _lastEffectiveMode = AssistantMode.consultation;
+      _error = null;
+    });
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.route,
+      status: AiTraceStatus.succeeded,
+      route: 'structured_interview_natural_language',
+      mode: AssistantMode.consultation.name,
+      toolId: 'structured_diagnosis',
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.dispatch,
+      status: AiTraceStatus.succeeded,
+      route: 'structured_interview_natural_language',
+      mode: AssistantMode.consultation.name,
+      toolId: 'structured_diagnosis',
+    );
+
+    try {
+      final answer = await _service.understandTcmInterviewAnswer(
+        questionId: questionId,
+        question: question,
+        options: options,
+        currentText: userText,
+        userContext: userContext,
+        traceId: traceContext.traceId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_natural_language',
+        mode: AssistantMode.consultation.name,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelOutput,
+        status: AiTraceStatus.succeeded,
+        route: answer.hasCandidate
+            ? 'structured_interview_candidate'
+            : 'structured_interview_clarification',
+        mode: AssistantMode.consultation.name,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_candidate_validated',
+        mode: AssistantMode.consultation.name,
+      );
+
+      final nextPrompt = answer.hasCandidate
+          ? '我把你刚才的描述理解为「${answer.answer}」。原文依据：「${answer.evidence}」。请确认下方 App 选项；不准确也可以继续用自然语言补充。'
+          : answer.clarification!;
+      controller.updatePendingPrompt(nextPrompt);
+      final persistence = await _appendTcmInterviewMessages(
+        before,
+        traceContext: traceContext,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: !persistence.transcriptMessagesApplicable
+            ? AiTraceStatus.notApplicable
+            : persistence.transcriptMessagesPersisted
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: persistence.transcriptMessagesApplicable &&
+                !persistence.transcriptMessagesPersisted
+            ? 'PERSISTENCE_FAILED'
+            : null,
+      );
+    } catch (error) {
+      // Keep the user's original wording in the resumable task even when the
+      // local model fails. No rule answer is committed on this path.
+      try {
+        final persistence = await _appendTcmInterviewMessages(
+          before,
+          traceContext: traceContext,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: !persistence.transcriptMessagesApplicable
+              ? AiTraceStatus.notApplicable
+              : persistence.transcriptMessagesPersisted
+                  ? AiTraceStatus.succeeded
+                  : AiTraceStatus.failed,
+          toolId: 'structured_diagnosis',
+          errorCode: 'PERSISTENCE_AFTER_MODEL_FAILURE',
+        );
+      } catch (_) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.failed,
+          toolId: 'structured_diagnosis',
+          errorCode: 'PERSISTENCE_FAILED',
+        );
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        route: 'structured_interview_natural_language',
+        mode: AssistantMode.consultation.name,
+        errorCode: 'INTERVIEW_ANSWER_VALIDATION_FAILED',
+      );
+      if (mounted) {
+        setState(() {
+          _error = '这段描述暂时无法可靠对应当前问项。原话已保留，规则答案未改变；请换一种说法或选择下方原有选项。';
+        });
+      }
+      debugPrint('[TcmInterviewNaturalLanguage] 候选理解失败：$error');
+    } finally {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+      if (mounted) setState(() => _sending = false);
+      _scrollToBottom();
+    }
   }
 
   Future<void> _handleTcmInterviewOption(
@@ -6081,8 +6241,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           );
           return;
         }
+        if (activeTcmTask.canAcceptNaturalLanguageAnswer) {
+          await _handleTcmInterviewNaturalLanguage(
+            text,
+            traceContext: traceContext,
+          );
+          return;
+        }
         const clarification =
-            '当前步骤需要使用下方结构化选项。你输入的文字会保留在对话中，但不会自动映射为辨证条件；请从问题下方选择最符合的一项。';
+            '当前步骤需要使用下方 App 结构化控件。你的文字不会被转换为辨证条件；舌诊脉诊请打开选择器，寒热真假线索请使用下方多选项。';
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.route,
