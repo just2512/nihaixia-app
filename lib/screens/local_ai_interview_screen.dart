@@ -5606,9 +5606,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final generation = _historyRestoreGeneration;
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
+    final redFlagSnapshot = _boundedRedFlagContext();
     final requireMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
-      query: _boundedRedFlagContext(),
+      query: redFlagSnapshot.classificationText,
       selectedMode: _lastEffectiveMode ?? _assistantMode,
       structuredInterviewActive:
           _tcmInterviewController?.canAnswer == true ||
@@ -5616,10 +5617,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.historyRestore,
-      text: transcript,
+      text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
       traceContext: AiTraceContext.disabled(),
       route: 'history_restore',
       requireAssessment: requireMedicalSafety,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
@@ -5628,6 +5630,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         transcript: transcript,
         userMessages: _pendingHistoryUserMessages,
         requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: requireMedicalSafety ? redFlagSnapshot.text : null,
+        redFlagContextTruncated:
+            requireMedicalSafety && redFlagSnapshot.sourceTruncated,
       );
       if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() {
