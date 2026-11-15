@@ -564,6 +564,74 @@ void main() {
       expect(draft.summaryLines.join('、'), isNot(contains('不应接受')));
     });
 
+    test('accepts ten-question candidates only with an App option and verbatim user evidence', () {
+      const sourceText = '昨晚睡觉时醒了两次，之后很难再睡着';
+      final draft = LocalAiSymptomDraft.fromModelText(
+        jsonEncode({
+          'candidate_answers': [
+            {
+              'question_id': 'sleep',
+              'answer': '夜间易醒',
+              'evidence': '醒了两次',
+            },
+          ],
+        }),
+        sourceText: sourceText,
+        allowedQuestionOptions: const {
+          'sleep': ['一觉到天亮', '夜间易醒'],
+        },
+        questionLabels: const {'sleep': '睡眠情况'},
+      );
+
+      expect(draft.questionCandidates, hasLength(1));
+      expect(draft.questionCandidates.single.questionId, 'sleep');
+      expect(draft.questionCandidates.single.question, '睡眠情况');
+      expect(draft.questionCandidates.single.answer, '夜间易醒');
+      expect(draft.questionCandidates.single.evidence, '醒了两次');
+    });
+
+    test('rejects a candidate answer outside the App question options', () {
+      expect(
+        () => LocalAiSymptomDraft.fromModelText(
+          jsonEncode({
+            'candidate_answers': [
+              {
+                'question_id': 'sleep',
+                'answer': '模型自创的诊断答案',
+                'evidence': '醒了两次',
+              },
+            ],
+          }),
+          sourceText: '昨晚睡觉时醒了两次',
+          allowedQuestionOptions: const {
+            'sleep': ['一觉到天亮', '夜间易醒'],
+          },
+        ),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects candidate evidence that is not a verbatim user excerpt', () {
+      expect(
+        () => LocalAiSymptomDraft.fromModelText(
+          jsonEncode({
+            'candidate_answers': [
+              {
+                'question_id': 'sleep',
+                'answer': '夜间易醒',
+                'evidence': '每天失眠',
+              },
+            ],
+          }),
+          sourceText: '昨晚睡觉时醒了两次',
+          allowedQuestionOptions: const {
+            'sleep': ['一觉到天亮', '夜间易醒'],
+          },
+        ),
+        throwsFormatException,
+      );
+    });
+
     test('accepts ten-question candidates only with an exact App option and verbatim user evidence', () {
       const sourceText = '昨晚睡觉时醒了两次，之后很难再睡着';
       const allowed = <String, List<String>>{
@@ -869,6 +937,50 @@ void main() {
       expect(received?.arguments, <String, Object?>{
         'trace_id': traceId,
       });
+    });
+
+    test('question schema is sent to Native and candidates are checked against it', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      const sourceText = '昨晚睡觉时醒了两次';
+      const questionSchema = <Map<String, Object?>>[
+        {
+          'id': 'sleep',
+          'question': '睡眠情况如何？',
+          'options': ['一觉到天亮', '夜间易醒'],
+        },
+      ];
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': jsonEncode({
+            'main_complaint': '夜间易醒',
+            'candidate_answers': [
+              {
+                'question_id': 'sleep',
+                'answer': '夜间易醒',
+                'evidence': '醒了两次',
+              },
+            ],
+          }),
+          'sourceTruncated': false,
+          'trace_id': traceId,
+        };
+      });
+
+      final draft = await LocalAiService().extractSymptomsWithQuestionSchemaAndTrace(
+        traceId: traceId,
+        sourceText: sourceText,
+        questionSchema: questionSchema,
+      );
+
+      expect(received?.method, 'extractSymptoms');
+      expect(received?.arguments, {
+        'trace_id': traceId,
+        'question_schema': jsonEncode(questionSchema),
+      });
+      expect(draft.questionCandidates.single.answer, '夜间易醒');
+      expect(draft.questionCandidates.single.evidence, '醒了两次');
     });
 
     test('question schema is passed to Native and returned candidates are evidence-validated', () async {
