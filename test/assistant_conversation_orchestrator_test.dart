@@ -34,6 +34,16 @@ void main() {
       expect(requires('我最近胸痛'), isTrue);
       expect(requires('我最近几天头晕'), isTrue);
       expect(
+        requires('我父亲最近胸痛'),
+        isTrue,
+        reason: '第三人称患者症状不能因缺少第一人称标记而绕过安全评估',
+      );
+      expect(
+        requires('孩子最近发热'),
+        isTrue,
+        reason: '症状描述可以涉及家庭成员或其他患者',
+      );
+      expect(
         requires('我最近胸痛\n那它的原因呢'),
         isTrue,
         reason: '后续省略主语的追问仍继承用户此前的健康上下文',
