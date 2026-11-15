@@ -16,6 +16,27 @@ void main() {
       }
     });
 
+    test('用户明确要求诊断时在同一对话调度现有规则问诊；只描述症状时先不自动诊断', () {
+      for (final mode in [
+        AssistantMode.automatic,
+        AssistantMode.consultation,
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: '最近不舒服，帮我诊断一下什么问题？',
+          selectedMode: mode,
+        );
+        expect(decision.mode, AssistantMode.consultation);
+        expect(decision.tool?.id, 'structured_diagnosis');
+      }
+
+      final narrativeOnly = AssistantConversationOrchestrator.resolve(
+        query: '我最近三天偶尔头痛，睡眠后会缓解',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(narrativeOnly.tool, isNull,
+          reason: '只有症状叙述而没有诊断请求时先理解/澄清，不擅自进入规则辨证');
+    });
+
     test('安全门禁区分个人诊断、学习请求与未评估附件', () {
       bool requires(
         String query, {
