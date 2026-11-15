@@ -233,7 +233,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
@@ -258,7 +258,7 @@ void main() {
     expect(returnedToolResult, findsOneWidget);
     expect(service.restoredTranscript, contains('司天：'));
     expect(service.restoredTranscript, contains('在泉：'));
-    expect(service.restoredUserMessages, contains('帮我推算五运六气'));
+    expect(service.restoredUserMessages, contains('打开五运六气推算页面'));
     expect(tester.takeException(), isNull);
   });
 
@@ -419,7 +419,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
