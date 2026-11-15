@@ -877,11 +877,14 @@ class _CandidateDraftTextService extends _DraftTextService {
 
   final LocalAiSymptomQuestionCandidate candidate;
 
-  LocalAiSymptomDraft _candidateDraft() => LocalAiSymptomDraft(
+  LocalAiSymptomDraft _candidateDraft({
+    String sourceText = '我饭后腹胀，已经持续约两周。',
+  }) => LocalAiSymptomDraft(
         mainComplaint: '饭后腹胀',
         duration: '约两周',
         unknowns: const ['是否与某种食物有关'],
         questionCandidates: [candidate],
+        sourceText: sourceText,
       );
 
   @override
