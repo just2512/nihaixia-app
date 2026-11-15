@@ -33,6 +33,11 @@ void main() {
       expect(requires('最近不舒服，帮我诊断一下什么问题？'), isTrue);
       expect(requires('我最近胸痛'), isTrue);
       expect(requires('我最近几天头晕'), isTrue);
+      expect(
+        requires('我最近胸痛\\n那它的原因呢'),
+        isTrue,
+        reason: '后续省略主语的追问仍继承用户此前的健康上下文',
+      );
       expect(requires('胸痛'), isFalse,
           reason: '没有个人语境的症状词仍由确定性路由请求澄清');
       expect(
