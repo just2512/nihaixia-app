@@ -5711,7 +5711,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final redFlagContext = _boundedRedFlagContext(currentText: text);
     final requiresMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
-      query: redFlagContext,
+      query: redFlagContext.classificationText,
       selectedMode: _lastEffectiveMode ?? _assistantMode,
       hasAttachment: imagePath != null || audioPath != null,
       structuredInterviewActive: activeTcmTask?.canAnswer == true ||
@@ -5726,10 +5726,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 : RedFlagInputSource.currentText;
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: inputSource,
-      text: redFlagContext.isEmpty ? null : redFlagContext,
+      text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
       traceContext: traceContext,
       route: 'assistant_send',
       requireAssessment: requiresMedicalSafety,
+      sourceTruncated: redFlagContext.sourceTruncated,
     )) {
       return;
     }
@@ -7377,7 +7378,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   mode: effectiveMode,
                   traceContext: traceContext,
                   requireMedicalSafety: requiresMedicalSafety,
-                  redFlagContext: requiresMedicalSafety ? redFlagContext : null,
+                  redFlagContext:
+                      requiresMedicalSafety ? redFlagContext.text : null,
+                  redFlagContextTruncated:
+                      requiresMedicalSafety && redFlagContext.sourceTruncated,
                 );
       final reply = turnResponse.text;
       nativeInferenceCompleted = true;
