@@ -1270,3 +1270,14 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - Find N2 真机验收：DEVICE UNKNOWN，交由本地执行。
 - 知识库来源：以 sourceId + App 可打开定位为准，不做外部书目考据、不重复医学审核。
 - 除本地设备记录及生产 RedFlag detector 的合格医学审核材料外，不新增功能、不重复跑泛化测试、不扩张架构。
+
+
+## 20. 2026-11-15 E4B GPU/CPU 用户手动切换实现批次
+
+- 以 PR #180 合并后的主线 6e49b7346acccfdea18f400c07ebb3896ceed937 为基线，独立分支 feat/find-n2-user-selectable-ai-backend-2026-11-15 增加用户手动选择 GPU / CPU。
+- Native 后端偏好由 App 私有 SharedPreferences 持久化；getModelStatus 同时区分 preferredBackend 和真实 backend。GPU fallback CPU 时真实 backend 为 CPU。
+- 模型运行中切换复用现有 Native 串行任务队列，释放并重建 Engine/Conversation；只恢复已成功完成的历史轮次，不自动重放 in-flight / UNKNOWN 请求。失败后用户可手动切换另一后端。
+- Flutter 设置页增加 GPU/CPU 选择，展示实际 backend、fallback、切换错误及重新尝试所选 backend 的入口。
+- GPU 模式保留当前 EngineConfig：语言模型/视觉 GPU，音频 CPU；CPU 模式语言/视觉/音频均 CPU。选择偏好不能代替实测 backend。
+- 新增 docs/find-n2-local-ai-acceptance-checklist.md，将后端切换、GPU/CPU 多轮、多媒体、进程恢复、数据清除、TRACE 的具体操作和结果记录模板交给本地 Find N2 执行。该文件是执行清单，不是验收结果。
+- 本节代码自动化证据等待该独立分支精确 head CI 终态；Find N2 设备结果必须由本地填写，云端不代报 PASS。
