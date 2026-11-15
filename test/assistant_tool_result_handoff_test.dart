@@ -874,7 +874,7 @@ void main() {
     final waitingForRecord = store.savedMessages.lastWhere(
       (message) =>
           message['role'] == 'assistant' &&
-          (message['content'] as String).contains('请回复记录 ID'),
+          (message['content'] as String).contains('请回复列表中的记录 ID'),
     );
     var waitingMetadata = AssistantMessageMetadata.decode(
       waitingForRecord['metadata'] as String,
