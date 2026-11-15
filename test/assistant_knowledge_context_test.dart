@@ -145,13 +145,25 @@ void main() {
     expect(context, contains('assets/guji/lingshu.txt'));
   });
 
-  test('问诊检索可调用经典全文索引但排除未核验医案库', () async {
-    final context = await AssistantKnowledgeContextBuilder.buildAsync(
-      '葛根加半夏汤',
-      includeMedicalCases: false,
+  test('问诊检索可引用医案库本地条目并保留来源回链', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '医案 桂枝汤',
+      includeMedicalCases: true,
     );
-    expect(context, contains('App经典全文索引'));
-    expect(context, isNot(contains('[App医案库')));
+    final caseSources = result.sources
+        .where((source) => source.sourceKind == 'medical_case')
+        .toList(growable: false);
+
+    expect(caseSources, isNotEmpty);
+    expect(result.text, contains('[App医案库'));
+    expect(result.citationFooter, contains('资料类型：App 医案库整理条目'));
+    expect(result.citationFooter, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(result.citationFooter, contains('来源标识：medical_case:'));
+    expect(result.citationFooter, isNot(contains('MISSING')));
+    for (final source in caseSources) {
+      expect(source.sourceId, startsWith('medical_case:'));
+      expect(source.localBacklink, startsWith('medical_case:internal-seq:'));
+    }
   });
 
   test('异步检索医案时提供可回查的知识库条目定位', () async {
