@@ -1908,12 +1908,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'structured_interview_option',
           mode: AssistantMode.consultation.name,
         );
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: option);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
-      text: option,
+      text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_interview_option',
       requireAssessment: true,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
