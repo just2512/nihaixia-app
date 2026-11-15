@@ -13,6 +13,7 @@ import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
+import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
@@ -838,6 +839,23 @@ class _DraftTextService extends _TextSendService {
       mainComplaint: '饭后腹胀',
       duration: '约两周',
       unknowns: ['是否与某种食物有关'],
+    );
+  }
+}
+
+class _CandidateDraftTextService extends _DraftTextService {
+  _CandidateDraftTextService(this.candidate);
+
+  final LocalAiSymptomQuestionCandidate candidate;
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms() async {
+    extractionCalls += 1;
+    return LocalAiSymptomDraft(
+      mainComplaint: '饭后腹胀',
+      duration: '约两周',
+      unknowns: const ['是否与某种食物有关'],
+      questionCandidates: [candidate],
     );
   }
 }
@@ -2365,9 +2383,19 @@ void main() {
   });
 
   testWidgets(
-    'returns symptom summary to rule interview only after explicit confirmation',
+    'returns symptom summary and user-confirmed question candidates to rule interview',
     (tester) async {
-      final service = _DraftTextService();
+      final question = TcmInterviewConversationController().symptomQuestionSchema.first;
+      final questionId = question['id']! as String;
+      final questionLabel = question['question']! as String;
+      final answer = (question['options']! as List).first as String;
+      final candidate = LocalAiSymptomQuestionCandidate(
+        questionId: questionId,
+        question: questionLabel,
+        answer: answer,
+        evidence: '饭后腹胀',
+      );
+      final service = _CandidateDraftTextService(candidate);
 
       await tester.pumpWidget(
         MaterialApp(home: _InterviewHandoffHost(service: service)),
@@ -2401,7 +2429,13 @@ void main() {
       );
       expect(find.text('核对症状整理'), findsOneWidget);
       expect(find.text('确认这份整理'), findsOneWidget);
-      await tester.tap(find.byType(CheckboxListTile));
+      expect(find.text(questionLabel + '：' + answer), findsOneWidget);
+      expect(find.text('原文证据：饭后腹胀'), findsOneWidget);
+      final confirmationTiles = find.byType(CheckboxListTile);
+      expect(confirmationTiles, findsNWidgets(2));
+      await tester.tap(confirmationTiles.first); // accept this explicit candidate
+      await tester.pump();
+      await tester.tap(confirmationTiles.last); // confirm the summary
       await tester.pump();
       await tester.tap(find.text('确认这份整理'));
       await tester.pumpAndSettle();
@@ -2421,6 +2455,7 @@ void main() {
       final savedTaskState = taskState!;
       expect(savedTaskState.pendingPromptId, 'temperature');
       expect(savedTaskState.pendingPromptText, contains('寒热感觉'));
+      expect(savedTaskState.pendingConfirmedTenAnswers, {questionId: answer});
       expect(
         savedTaskState.transcript.any(
           (message) => message.text.contains('主要不适：饭后腹胀'),
