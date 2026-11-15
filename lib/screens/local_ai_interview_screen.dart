@@ -2159,7 +2159,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .map((message) => message.text.trim())
         .where((message) =>
             message.isNotEmpty &&
-            !message.startsWith('已确认的症状自述（') &&
+            !message.startsWith('已核对的症状摘要（') &&
             !message.startsWith('已逐项确认 ') &&
             !message.startsWith('已确认自述对应问项'))
         .toList(growable: false);
