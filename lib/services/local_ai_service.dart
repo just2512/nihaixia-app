@@ -47,11 +47,13 @@ class LocalAiService {
     String text, {
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
       _sendTextMessage(
         text,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
       );
 
   Future<String> sendMessageWithTrace(
@@ -59,12 +61,14 @@ class LocalAiService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
       _sendTextMessage(
         text,
         traceId: traceId,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
       );
 
   Future<String> _sendTextMessage(
@@ -72,6 +76,7 @@ class LocalAiService {
     String? traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -83,6 +88,8 @@ class LocalAiService {
             redFlagContext != null &&
             redFlagContext.trim().isNotEmpty)
           'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety && redFlagContextTruncated)
+          'red_flag_context_truncated': true,
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -104,12 +111,14 @@ class LocalAiService {
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
       _sendMessageWithContext(
         text,
         context: context,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
       );
 
   Future<String> sendMessageWithContextAndTrace(
@@ -118,6 +127,7 @@ class LocalAiService {
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) =>
       _sendMessageWithContext(
         text,
@@ -125,6 +135,7 @@ class LocalAiService {
         traceId: traceId,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
       );
 
   Future<String> _sendMessageWithContext(
@@ -133,6 +144,7 @@ class LocalAiService {
     String? traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final normalized = text.trim();
     if (normalized.isEmpty) {
@@ -149,6 +161,8 @@ class LocalAiService {
             redFlagContext != null &&
             redFlagContext.trim().isNotEmpty)
           'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety && redFlagContextTruncated)
+          'red_flag_context_truncated': true,
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -449,6 +463,8 @@ class LocalAiService {
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     final normalized = transcript.trim();
     if (normalized.isEmpty) {
@@ -460,6 +476,13 @@ class LocalAiService {
         'transcript': normalized,
         'userMessages': userMessages,
         if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety &&
+            (redFlagContextTruncated || userMessages.length > 60))
+          'red_flag_context_truncated': true,
       },
     );
     if (data?['restored'] != true) {
