@@ -22,6 +22,39 @@ class LocalAiBackendSelectionPolicyTest {
     }
 
     @Test
+    fun firstExplicitGpuChoiceIsPersistedEvenThoughGpuIsTheDefault() {
+        assertTrue(
+            LocalAiBackendSelectionPolicy.shouldPersistPreference(
+                hasSavedPreference = false,
+                currentPreference = "gpu",
+                requestedBackend = "gpu"
+            )
+        )
+    }
+
+    @Test
+    fun existingMatchingGpuPreferenceDoesNotNeedAnotherWrite() {
+        assertFalse(
+            LocalAiBackendSelectionPolicy.shouldPersistPreference(
+                hasSavedPreference = true,
+                currentPreference = "gpu",
+                requestedBackend = "gpu"
+            )
+        )
+    }
+
+    @Test
+    fun changedBackendPreferenceIsPersisted() {
+        assertTrue(
+            LocalAiBackendSelectionPolicy.shouldPersistPreference(
+                hasSavedPreference = true,
+                currentPreference = "gpu",
+                requestedBackend = "cpu"
+            )
+        )
+    }
+
+    @Test
     fun releaseBuildHonorsExplicitCpuPreference() {
         assertEquals(
             "cpu",
