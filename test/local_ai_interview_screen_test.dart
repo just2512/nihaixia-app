@@ -17,6 +17,7 @@ import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
+import 'package:nihaisha_app/services/yunqi_tool_executor.dart';
 import 'package:nihaisha_app/services/yijing_tool_executor.dart';
 import 'package:nihaisha_app/services/dosage_tool_executor.dart';
 import 'package:nihaisha_app/services/guansha_tool_executor.dart';
@@ -3151,13 +3152,30 @@ void main() {
 
 
 
-  testWidgets('没有明确日期时五运六气仍保留页面确认流程', (tester) async {
+  testWidgets('五运六气未提供日期时由 App 使用设备本地日期在对话内执行',
+      (tester) async {
+    final now = DateTime.now();
+    final expectedDate = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    final executedArguments = <Map<String, String>>[];
+    var pageOpened = false;
     final service = _TextSendService();
+
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: _store,
           service: service,
+          testToolRouteBuilder: (_, __) {
+            pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments.add(Map<String, String>.unmodifiable(arguments));
+            return YunQiToolExecutor.execute(arguments);
+          },
         ),
       ),
     );
@@ -3168,9 +3186,32 @@ void main() {
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
 
-    expect(service.sentTexts, isEmpty);
-    expect(find.text('打开五运六气推算'), findsOneWidget);
-    expect(find.textContaining('执行结果'), findsNothing);
+    expect(executedArguments, [
+      {'date': expectedDate},
+    ]);
+    expect(service.sentTexts, hasLength(1));
+    expect(find.textContaining('五运六气推算执行结果'), findsOneWidget);
+    expect(find.textContaining('推算日期：$expectedDate'), findsOneWidget);
+    expect(find.text('打开五运六气推算'), findsNothing);
+    expect(pageOpened, isFalse);
+
+    final conversations = await _store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final messages = await _store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final resultMessage = messages.firstWhere(
+      (message) =>
+          (message['content'] as String).contains('五运六气推算执行结果'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      resultMessage['metadata'] as String,
+    );
+    expect(metadata.toolId, 'yunqi');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, {'date': expectedDate});
+    expect(metadata.sourceIds, const ['local-engine:yunqi']);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('五运六气通过 Headless 执行器直接计算并持久化真实参数与来源',
@@ -3909,7 +3950,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
@@ -4025,7 +4066,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();

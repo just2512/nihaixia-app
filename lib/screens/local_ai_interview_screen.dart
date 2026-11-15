@@ -4544,6 +4544,39 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    final explicitlyOpenYunqiPage = RegExp(
+      r'(?:打开|进入|跳转到|去到).{0,16}(?:五运六气|推算|页面|工具页|工具)',
+    ).hasMatch(userText);
+    if (tool.id == 'yunqi' &&
+        tool.headlessExecutor != null &&
+        !explicitlyOpenYunqiPage) {
+      // The registered YunQi date slot is optional and explicitly defaults to
+      // the device-local calendar day. Resolve that App-owned default before
+      // execution so the actual date is persisted with the result.
+      // Only an explicit page-navigation request keeps the Page Tool path.
+      final request = arguments ?? AssistantToolArguments(toolId: tool.id);
+      final suppliedDate = request['date']?.trim();
+      final now = DateTime.now();
+      final currentDate = '${now.year.toString().padLeft(4, '0')}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}';
+      final executionArguments = AssistantToolArguments(
+        toolId: tool.id,
+        values: Map<String, String>.unmodifiable({
+          ...request.values,
+          if (suppliedDate == null || suppliedDate.isEmpty) 'date': currentDate,
+        }),
+      );
+      await _executeHeadlessTool(
+        userText,
+        tool,
+        mode: activeMode,
+        traceContext: activeTraceContext,
+        arguments: executionArguments,
+      );
+      return;
+    }
+
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
     if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
       await _executeHeadlessTool(
