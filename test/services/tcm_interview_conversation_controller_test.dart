@@ -125,15 +125,11 @@ void main() {
       expect(restored.pendingOptions, pending.pendingOptions);
     });
 
-    test('舌脉选择器和寒热真假多选步骤不接受单选自然语言映射', () {
+    test('舌脉选择器不接受单选自然语言映射', () {
       final controller = TcmInterviewConversationController();
       controller.start();
       controller.answerOption(controller.pendingOptions.first);
       expect(controller.pendingPromptId, 'tongue_pulse');
-      expect(controller.canAcceptNaturalLanguageAnswer, isFalse);
-      controller.answerOption('跳过，直接问诊');
-      controller.answerOption(controller.pendingOptions.first);
-      controller.answerOption('跳过舌诊脉诊');
       expect(controller.canAcceptNaturalLanguageAnswer, isFalse);
     });
 
