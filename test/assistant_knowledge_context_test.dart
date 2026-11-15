@@ -147,7 +147,7 @@ void main() {
 
   test('问诊检索可引用医案库本地条目并保留来源回链', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
-      '桂枝汤',
+      '医案 桂枝汤',
       includeMedicalCases: true,
     );
     final caseSources = result.sources
