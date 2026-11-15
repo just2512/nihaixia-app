@@ -246,6 +246,22 @@ class _AssistantTurnResponse {
   final String? knowledgeStatus;
 }
 
+/// Bounded, user-authored context sent only to the RedFlag safety boundary.
+/// The unbounded classificationText is kept in-memory and is never sent to
+/// Native or E4B; it prevents a prior symptom turn from disappearing merely
+/// because the review payload has a storage/transport cap.
+class _RedFlagContextSnapshot {
+  const _RedFlagContextSnapshot({
+    required this.text,
+    required this.classificationText,
+    required this.sourceTruncated,
+  });
+
+  final String text;
+  final String classificationText;
+  final bool sourceTruncated;
+}
+
 class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AiTraceRecorder get _traceRecorder => widget.traceRecorder ?? AiTraceRuntime.recorder;
   late final LocalAiService _service;
@@ -5631,21 +5647,34 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
-  String _boundedRedFlagContext({String? currentText}) {
-    final userTurns = _messages
+  _RedFlagContextSnapshot _boundedRedFlagContext({String? currentText}) {
+    const maxUserMessages = 60;
+    const maxContextCharacters = 10000;
+    final allUserTurns = _messages
         .where((message) => message.isUser)
         .map((message) => message.text.trim())
         .where((value) => value.isNotEmpty)
         .toList(growable: true);
     final current = currentText?.trim();
-    if (current != null && current.isNotEmpty) userTurns.add(current);
-    final recentTurns = userTurns.length > 8
-        ? userTurns.skip(userTurns.length - 8)
-        : userTurns;
+    if (current != null && current.isNotEmpty) allUserTurns.add(current);
+
+    final classificationText = allUserTurns.join('\n');
+    var sourceTruncated = allUserTurns.length > maxUserMessages ||
+        classificationText.contains('【较早历史已省略');
+    final recentTurns = allUserTurns.length > maxUserMessages
+        ? allUserTurns.skip(allUserTurns.length - maxUserMessages)
+        : allUserTurns;
     final joined = recentTurns.join('\n');
-    return joined.length <= 4000
+    final boundedText = joined.length <= maxContextCharacters
         ? joined
-        : joined.substring(joined.length - 4000);
+        : joined.substring(joined.length - maxContextCharacters);
+    if (joined.length > maxContextCharacters) sourceTruncated = true;
+
+    return _RedFlagContextSnapshot(
+      text: boundedText,
+      classificationText: classificationText,
+      sourceTruncated: sourceTruncated,
+    );
   }
 
   Future<void> _send() async {
