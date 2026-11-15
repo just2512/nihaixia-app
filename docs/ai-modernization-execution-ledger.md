@@ -2025,3 +2025,51 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - AI 只负责理解、归纳、追问、调度和解释；确定性排盘、辨证、剂量与起卦由 App 原有代码执行。
 - 只有已执行并完成参数/结果/来源校验的业务结果才能交 AI 解读；模型推断不得包装成诊断结论。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不为增加 Headless 数量批量迁移页面工具。
+
+
+## 44. 2026-11-15 PR #173/#175 合并与问诊/工具边界复核
+
+### 44.1 主线基线与合并证据
+
+- 本节文档分支创建时主线基线：`master @ 8286138b53a3630e0333b595efe578b77ac04f90`。
+- PR #173（知识来源定位口径）最终 head `afa227dee9bc35ff7f481d58585624527d50cae0`，PR Flutter CI run `43673375134` SUCCESS；squash merge 为 `c8f5e04a32343a7f4751217593fbeff18a9f279f`。合并后 master Flutter tests run `43677774908` 与 Quality Gate run `43677774909` 均 SUCCESS。
+- PR #175（Android Native 助手提示词与 Flutter 角色契约统一）最终 head `1bc8c564f499b67066bd76d2a26d82e745ce4ef5`；PR run `43678009090` 的 Flutter regression 与 Android arm64 CI verification APK/Manifest/ABI/SHA-256/Native unit tests 均 SUCCESS；squash merge 为 `8286138b53a3630e0333b595efe578b77ac04f90`。
+- PR #175 合并后 master Flutter tests run `43678586814`、Quality Gate run `43678586803` 已启动；以这两个 run 的最终状态为后续主线验收证据，不以 PR CI 替代 post-merge CI。
+- PR #174（Find N2 Debug-only CPU backend override）最新 head `b56789de166ef51886687a55d876ac5fe6e3ebfd`，PR run `43678167064` 在本节创建时仍处于 IN_PROGRESS；此前 head `af84cfffd67af540a73e86e4bb405d8f24080d64` 的 BuildConfig 编译失败已修正，后续实现改用 Android `ApplicationInfo.FLAG_DEBUGGABLE`。只有最新 head 的 Flutter regression、Android arm64 verification APK 与 Native unit tests 全部 SUCCESS 后才可合并。
+- PR #174 仅增加 Debug 构建显式 CPU 测试入口；Release 忽略 Intent extra，普通 Debug 启动仍 GPU-first，保留已有 GPU 初始化/首轮 OpenCL fallback。它只解决本地 CPU 后端测试可达性，不构成 Find N2 设备验收。
+
+### 44.2 AI 与 App 的责任边界
+
+- PR #175 将 Android Native systemInstruction 与现有 Flutter 角色提示、Headless 执行器和结果解释链对齐：AI 可理解意图、识别缺项、提出追问、调度已有 Headless 能力并解释校验通过的结果；不执行排盘、辨证、剂量换算或其他确定性计算。
+- 只有 App 已实际执行且参数、结果和来源通过校验的数据才能作为业务事实交给 AI。失败、未执行、无结果或状态未知不得被模型包装成成功结果。
+- 问诊助手可以归纳用户自述并解释现有 `DiagnosticEngine` 已产生的结果；不得自行产生或修改六经辨证、覆盖 `DiagnosticRules` 或给出个体处方/剂量。
+- 工具助手在当前对话中调用已有 Headless 执行器；存在 Headless 能力时不得无故将用户引导到独立工具页面。玄学工具的计算仍由 App 执行，AI 只解释真实返回字段。
+- 学习助手及结果解释只引用本轮实际检索到的 App 本地知识条目，附稳定 `sourceId` 和可打开定位。知识库已有并可定位时，不要求普通知识回答补纸本底本版本、卷页或原始影像坐标；不重复审核已审核知识库。仅本地条目实际缺失、检索未命中/失败、无法解析/打开或必需字段为空时才说明 MISSING。
+
+### 44.3 工具能力盘点，不以数量扩张为目标
+
+- `AssistantToolRouter` 当前 24 个定义：23 项常规工具 + 1 项结构化问诊内联控制器；17/23 常规工具已有 Headless executor。
+- 六项 Page-only（`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`）按现有数据隐私、知识检索或民俗语义边界保留。知识/医案内容问答复用已有本地知识检索；个人历史必须由用户明确选择与授权；不为扩大 Headless 数字批量迁移页面。
+- 现有 Headless 成功结果均带 App 引擎/本地资料来源标识；当前执行链先校验参数、真实执行、校验结果契约，再允许成功且有来源的结果进入 AI 解释。未知/失败结果不会进入自动解释。
+
+### 44.4 自然语言问诊的准确缺口及门禁
+
+- `TcmInterviewConversationController.start()` 仍保留用户自述作为上下文，然后依次进入寒热、舌脉和现有十问；当前没有将自由文本候选答案映射为规范问题 ID/选项并经用户确认后写入既有引擎状态的闭环。
+- 不把用户自述直接转换成规则答案，不调用模型跳过现有引擎顺序，不修改十问、`DiagnosticEngine` 或 `DiagnosticRules`。未来对话闭环应为：保留用户原话及证据 → AI 提取有限候选字段 → 用原始文本证据验证并展示用户确认/修正 → 仅追问缺项/歧义 → 顺序调用现有规则问诊 → 校验真实结果和来源 → AI 解释并回链本地知识条目。
+- B 的 fail-closed Gate 已接入临床相关入口，但生产自然语言/视觉/语音 RedFlag detector、审核版本、责任审批、阈值/例外及处置文案证据仍不齐；B 继续 `PARTIAL / RELEASE BLOCKED`。这是输入安全检测边界，不是要求重复审核知识库。不得绕过 Gate，也不得自行发明医学词表/阈值后开放自由文本自动辨证。
+
+### 44.5 Find N2 与本地验收边界
+
+- 云端可完成源码审计、Dart/Kotlin 自动化、Android arm64 APK 构建、Manifest/ABI/SHA-256 检查、Native unit tests、文档和 PR 集成；这些只能证明代码和构建链路。
+- 以下必须在 OPPO Find N2 实体设备执行：GPU 默认后端连续至少 20 轮；Debug Intent 显式 CPU 后端连续至少 20 轮；同组场景覆盖文字、图片和语音；Activity/进程强停重启及会话恢复；应用内清除全部 AI 数据后强停/重启复核；启用 Debug TRACE 并检查各轮跨层关联。
+- 每次后端均记录 Native 实际返回的 backend，不得把“请求 GPU/CPU”当作实际 backend。核对 SQLite transcript、Flutter UI、Native successful-turn history 与 task snapshot；未知请求不得自动重放。
+- TRACE 使用独立 `trace_id`，核对输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化和最终展示阶段；不记录用户正文、prompt/response、症状、附件路径或媒体内容。生产 `PREFLIGHT/RED_FLAG` 阶段尚缺完整生产调用证据，设备记录必须标 MISSING/UNKNOWN，不得伪造 NOT_APPLICABLE。
+- AI 数据清除的数据库事务、AI 专属附件目录、Native runtime/cache、内存会话、TRACE 文件及 UI 分项反馈已有代码与自动化证据；真机清除后重启不可恢复仍 UNKNOWN。混合 SQLite 中的 AI 对话行仍可能处于系统备份/设备迁移副本，旧共享图片所有权 UNKNOWN；不得删除整个数据库、整个共享临时目录或全局禁用备份来冒充完成。模型文件及非 AI 数据按既有清除契约保留。
+- A/E/F 继续为 `PARTIAL / DEVICE UNKNOWN`，未取得 Find N2 证据前不得写 PASS。详见 `docs/local-ai-multiturn-audit.md`、`docs/ai-data-clear-scope-audit.md`、`docs/find-n2-ai-trace-acceptance-plan.md`。
+
+### 44.6 收尾原则
+
+- C 的知识库引用定位口径已由 PR #173 落地；不再开展逐册逐页考据或重复医学审核。
+- D 的现有 Headless 能力和 in-chat 结果解释以现有执行契约为准；只修具体可复现缺陷，不追求工具数量。
+- G 不增加第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
+- 剩余云端任务只包括已记录的真实代码缺口和当前 PR/CI 收尾；Find N2 真实设备场景统一移交本地执行，不再列为云端待办。
