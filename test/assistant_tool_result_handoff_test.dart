@@ -796,7 +796,7 @@ void main() {
     final charts = [
       SavedChart(
         id: 41,
-        name: '家庭命盘 A',
+        name: '命盘 1990-01-02 男',
         isMale: true,
         solarIso: DateTime(1990, 1, 2, 8, 30).toIso8601String(),
         lng: 121.47,
@@ -806,7 +806,7 @@ void main() {
       ),
       SavedChart(
         id: 42,
-        name: '个人命盘 B',
+        name: '命盘 1988-06-07 女',
         isMale: false,
         solarIso: DateTime(1988, 6, 7, 12, 0).toIso8601String(),
         createdAt: 100,
@@ -863,10 +863,13 @@ void main() {
     expect(pageOpened, isFalse, reason: '命盘库请求应留在当前助手对话');
     expect(executedArguments, isNull, reason: '尚未选择记录和类型，不得执行重算');
     expect(service.modelCalls, 0, reason: '参数澄清不需要调用模型');
-    expect(find.textContaining('ID 41｜家庭命盘 A'), findsOneWidget);
-    expect(find.textContaining('ID 42｜个人命盘 B'), findsOneWidget);
-    expect(find.textContaining('出生时间：1988'), findsNothing,
-        reason: '列表选择阶段不把出生细节暴露到对话');
+    expect(find.textContaining('ID 41'), findsOneWidget);
+    expect(find.textContaining('ID 42'), findsOneWidget);
+    expect(find.textContaining('1990-01-02'), findsNothing,
+        reason: '保存命盘默认名称含出生日期，选择前不得进入对话');
+    expect(find.textContaining('1988-06-07'), findsNothing,
+        reason: '未选择的第二条记录出生日期不得进入对话');
+    expect(find.textContaining('命盘 1990-01-02 男'), findsNothing);
 
     final waitingForRecord = store.savedMessages.lastWhere(
       (message) =>
