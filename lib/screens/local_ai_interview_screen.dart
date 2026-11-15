@@ -328,18 +328,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (_redFlagPreflightedContexts.contains(traceContext)) return false;
 
     final gate = widget.redFlagGate;
+    if (!requireAssessment) {
+      // Medical review is scoped to clinical requests. Non-clinical tools and
+      // learning questions remain available without invoking a detector.
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.redFlag,
+        status: AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: gate == null
+            ? 'REDFLAG_GATE_NOT_CONFIGURED'
+            : 'REDFLAG_ASSESSMENT_NOT_REQUIRED',
+      );
+      return false;
+    }
+
     if (gate == null) {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.redFlag,
-        status: requireAssessment
-            ? AiTraceStatus.unknown
-            : AiTraceStatus.notApplicable,
+        status: AiTraceStatus.unknown,
         route: route,
         errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
       );
-      if (!requireAssessment) return false;
-
       if (mounted) {
         setState(() {
           _error = '安全评估器尚未配置，无法确认这段个人健康信息是否可以进入问诊流程。'
