@@ -990,7 +990,7 @@ void main() {
         LocalAiService().extractSymptomsWithQuestionSchema(
           sourceText: '当前输入',
           questionSchema: const [],
-          currentUserText: '过长' * 1001,
+          currentUserText: List<String>.filled(1001, '过长').join(),
         ),
         throwsFormatException,
       );
