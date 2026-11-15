@@ -2218,7 +2218,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 当前 master 基线：`4398bc365c43718b105c06f66ab13b106b21ede2`；PR #182 已 squash merge。
 - PR 分支：`feat/ai-natural-language-interview-clarification-2026-11-15`；最终 head：`d87649f36dd7ad574fa6d08f5533bb1feeecd5a0`。
 - PR workflow run `43703324830` 终态 SUCCESS：Flutter regression job `132779225485` SUCCESS；Android arm64 CI verification APK / Manifest / ABI / SHA-256 / Native unit tests job `132780243139` SUCCESS。分支验证 job 为条件跳过；Flutter regression 已包含静态分析、AI 合同回归和全量 Dart 回归。
-- 合并提交：`4398bc365c43718b105c06f66ab13b106b21ede2`。合并后 master Flutter Tests run `43704033073` 和 Quality Gate run `43704033047` 已触发，完成状态以本节后续更新为准。
+- 合并提交：`4398bc365c43718b105c06f66ab13b106b21ede2`。合并后 master Flutter Tests run `43704033073`：Flutter regression job `132781138541` 已 SUCCESS，Android arm64 APK/Native tests job `132782306566` 在本次台账记录时仍 IN_PROGRESS；Quality Gate run `43704033047`：静态分析和 Dart 全量测试已 SUCCESS，Android Native unit tests 仍 IN_PROGRESS。只有这些主线运行均到终态 SUCCESS，才可将合并后 CI 标为 PASS。
 - 本批次只处理助手内自然语言问诊交接、原始自述保存及对应测试；没有修改 `DiagnosticEngine`、`DiagnosticRules`、剂量/排盘/玄学计算规则、知识库正文或 Find N2 硬件配置。
 
 ### 49.2 对话问诊交互闭环
