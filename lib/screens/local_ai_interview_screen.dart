@@ -4425,8 +4425,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           query: redFlagSnapshot.classificationText,
           selectedMode: _lastEffectiveMode ?? _assistantMode,
           structuredInterviewActive:
-              _tcmInterviewController?.canAnswer == true ||
-                  _tcmInterviewController?.completedDiagnosis != null,
+              _tcmInterviewController?.canAnswer == true ,
         );
     await _service.restoreConversation(
       transcript: transcript,
@@ -4476,8 +4475,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       query: redFlagContext.classificationText,
       selectedMode: mode,
       structuredInterviewActive:
-          _tcmInterviewController?.canAnswer == true ||
-              _tcmInterviewController?.completedDiagnosis != null,
+          _tcmInterviewController?.canAnswer == true ,
     );
     if (requiresMedicalSafety &&
         await _blockIfRedFlagPreflightDoesNotClear(
@@ -5626,8 +5624,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       query: redFlagSnapshot.classificationText,
       selectedMode: _lastEffectiveMode ?? _assistantMode,
       structuredInterviewActive:
-          _tcmInterviewController?.canAnswer == true ||
-              _tcmInterviewController?.completedDiagnosis != null,
+          _tcmInterviewController?.canAnswer == true ,
     );
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.historyRestore,
@@ -5743,8 +5740,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       query: redFlagContext.classificationText,
       selectedMode: _lastEffectiveMode ?? _assistantMode,
       hasAttachment: imagePath != null || audioPath != null,
-      structuredInterviewActive: activeTcmTask?.canAnswer == true ||
-          activeTcmTask?.completedDiagnosis != null,
+      structuredInterviewActive: activeTcmTask?.canAnswer == true ,
     );
     final inputSource = audioPath != null
         ? RedFlagInputSource.audioAttachment
