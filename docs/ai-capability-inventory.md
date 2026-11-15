@@ -155,7 +155,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 | 阶段 | 当前状态 | 最新源码证据与判断 |
 |---|---|---|
 | S1 输入 | PARTIAL | 文字/图片/音频通过统一 LocalAiInterviewScreen 和 MainActivity MethodChannel 接入；详情页可传 initialPrompt。见 `local_ai_interview_screen.dart:119-168,245-259`、`MainActivity.kt:82-126`。附件输入主要是音频转写/图片可见特征描述，不等于完整的跨模态任务规划。 |
-| S2 安全前置 | PARTIAL；确定性红旗拦截 MISSING | 红旗仅在 systemInstruction 中要求模型处理，见 `MainActivity.kt:42-66`。Orchestrator 和 `_send()` 前置路径未见确定性红旗检查，见 `assistant_conversation_orchestrator.dart:121-203,206-340`、`local_ai_interview_screen.dart:2096-2215`。 |
+| S2 安全前置 | PARTIAL / RELEASE BLOCKED | PR #169 已将 fail-closed RedFlagGate/Preflight 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界；缺 detector、UNKNOWN、超时或来源审核/覆盖不完整时不放行。自然语言/视觉/语音医学 detector 与医学审核仍 MISSING；Gate 接线不代表 detector 准确率。 |
 | S3 意图理解 | PARTIAL | 当前 Orchestrator 是固定 cue/alias/actionWords 匹配；没有模型语义规划。见 `assistant_conversation_orchestrator.dart:24-31,32-119,121-203,206-340`。参数提取目前仅对 yunqi 日期做正则处理，见 102-119 行。 |
 | S4 任务规划 | MISSING（通用任务）；问诊专用状态 EXISTS | 有 `TcmInterviewTaskState` 和 `TcmInterviewConversationController`，但仅服务规则问诊；未发现通用 TaskPlan/ActiveTaskFrame。见 `tcm_interview_task_state.dart:41-83`、`tcm_interview_conversation_controller.dart:9-105`、`database_helper.dart:176-184`。 |
 | S5 业务调用 | PARTIAL | ToolRouter 24 项注册，其中 structured_diagnosis 在对话页内联执行；其余 23 项均注册为 Widget builder。见 `assistant_tool_router.dart:155-435,489-526`。目前没有统一 Headless execute 接口。 |
