@@ -468,6 +468,7 @@ class _TextSendService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     sentTexts.add(text);
     return '已收到你的描述：$text';
@@ -478,6 +479,7 @@ class _TextSendService extends LocalAiService {
     String text, {
     required String context,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     sentContexts.add(context);
     return sendMessage(text);
@@ -488,6 +490,7 @@ class _TextSendService extends LocalAiService {
     String text, {
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     sentTraceIds.add(traceId);
     return sendMessage(text, requireMedicalSafety: requireMedicalSafety);
@@ -499,6 +502,7 @@ class _TextSendService extends LocalAiService {
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
@@ -529,6 +533,7 @@ class _FailingTextSendService extends _TextSendService {
     String text, {
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     throw PlatformException(
       code: 'NATIVE_SEND_FAILED',
@@ -842,6 +847,7 @@ class _FailOnceTextSendService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async {
     sendAttempts += 1;
     if (sendAttempts == 1) {
@@ -858,6 +864,7 @@ class _FailOnceTextSendService extends LocalAiService {
     String text, {
     required String context,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) => sendMessage(text);
 }
 
@@ -869,6 +876,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     String text, {
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) {
     sentTraceIds.add(traceId);
     return sendMessage(text);
@@ -880,6 +888,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) {
     sentTraceIds.add(traceId);
     return sendMessage(text);
