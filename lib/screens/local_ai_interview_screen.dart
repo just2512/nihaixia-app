@@ -7543,6 +7543,37 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         currentMode: _lastEffectiveMode,
         pendingToolSelection: _pendingToolSelection,
       );
+      if (decision.tool == null &&
+          !decision.needsClarification &&
+          AssistantConversationOrchestrator.shouldStartSymptomIntake(
+            query: text,
+            selectedMode: decision.mode,
+            currentMode: _lastEffectiveMode,
+          )) {
+        _pendingToolSelection = false;
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.route,
+          status: AiTraceStatus.succeeded,
+          route: 'symptom_intake',
+          mode: AssistantMode.consultation.name,
+          toolId: 'structured_diagnosis',
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'symptom_intake',
+          mode: AssistantMode.consultation.name,
+          toolId: 'structured_diagnosis',
+        );
+        await _extractSymptoms(
+          currentUserText: text,
+          traceContextOverride: traceContext,
+          autoStartRuleInterview: true,
+        );
+        return;
+      }
       final mayUseBoundedIntentModel =
           decision.candidateTools.length >= 2 &&
           (decision.mode == AssistantMode.tools ||
