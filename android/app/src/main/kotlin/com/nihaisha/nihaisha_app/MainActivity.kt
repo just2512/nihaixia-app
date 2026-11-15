@@ -1,5 +1,7 @@
 package com.nihaisha.nihaisha_app
 
+private const val DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA = "com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND"
+
 import android.app.Activity
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -578,29 +580,17 @@ class MainActivity : FlutterActivity() {
         modelFile.parentFile?.mkdirs()
         val cachePath = File(cacheDir, "litertlm").apply { mkdirs() }.absolutePath
 
-        // Prefer GPU where the device exposes a compatible OpenCL runtime; retry on CPU.
-        // A failed Engine.initialize() instance is intentionally not closed: LiteRT-LM
-        // documents that closing an engine whose initialize() failed can throw.
+        // This override exists only for reproducible Find N2 CPU acceptance.
+        // Release builds ignore the launch extra and always keep GPU-first behavior.
+        val forceCpuForDebug = LocalAiBackendSelectionPolicy.shouldForceCpu(
+            debuggableBuild = BuildConfig.DEBUG,
+            requested = intent?.getBooleanExtra(
+                DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA,
+                false
+            ) == true
+        )
         var loadedEngine: Engine? = null
-        var gpuFailure: Exception? = null
-        try {
-            val candidate = Engine(
-                EngineConfig(
-                    modelPath = modelFile.absolutePath,
-                    backend = Backend.GPU(),
-                    visionBackend = Backend.GPU(),
-                    audioBackend = Backend.CPU(),
-                    cacheDir = cachePath
-                )
-            )
-            candidate.initialize()
-            loadedEngine = candidate
-            activeBackend = "gpu"
-        } catch (error: Exception) {
-            gpuFailure = error
-        }
-
-        if (loadedEngine == null) {
+        if (forceCpuForDebug) {
             val candidate = Engine(
                 EngineConfig(
                     modelPath = modelFile.absolutePath,
@@ -610,16 +600,52 @@ class MainActivity : FlutterActivity() {
                     cacheDir = cachePath
                 )
             )
+            candidate.initialize()
+            loadedEngine = candidate
+            activeBackend = "cpu"
+        } else {
+            // Prefer GPU where the device exposes a compatible OpenCL runtime; retry on CPU.
+            // A failed Engine.initialize() instance is intentionally not closed: LiteRT-LM
+            // documents that closing an engine whose initialize() failed can throw.
+            var gpuFailure: Exception? = null
             try {
+                val candidate = Engine(
+                    EngineConfig(
+                        modelPath = modelFile.absolutePath,
+                        backend = Backend.GPU(),
+                        visionBackend = Backend.GPU(),
+                        audioBackend = Backend.CPU(),
+                        cacheDir = cachePath
+                    )
+                )
                 candidate.initialize()
                 loadedEngine = candidate
-                activeBackend = "cpu"
-            } catch (cpuError: Exception) {
-                activeBackend = "not_loaded"
-                throw IllegalStateException(
-                    "GPU 初始化失败：${gpuFailure?.message ?: "未知错误"}；CPU 初始化也失败：${cpuError.message}",
-                    cpuError
+                activeBackend = "gpu"
+            } catch (error: Exception) {
+                gpuFailure = error
+            }
+
+            if (loadedEngine == null) {
+                val candidate = Engine(
+                    EngineConfig(
+                        modelPath = modelFile.absolutePath,
+                        backend = Backend.CPU(),
+                        visionBackend = Backend.CPU(),
+                        audioBackend = Backend.CPU(),
+                        cacheDir = cachePath
+                    )
                 )
+                try {
+                    candidate.initialize()
+                    loadedEngine = candidate
+                    activeBackend = "cpu"
+                } catch (cpuError: Exception) {
+                    activeBackend = "not_loaded"
+                    throw IllegalStateException(
+                        "GPU 初始化失败：${gpuFailure?.message ?: "未知错误"}；CPU 初始化也失败：${cpuError.message}",
+                        cpuError
+                    )
+                }
             }
         }
 
