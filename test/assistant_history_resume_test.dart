@@ -54,6 +54,7 @@ class _HistoryResumeService extends LocalAiService {
     String text, {
     required String context,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
   }) async =>
       '续聊成功：$text';
 }
