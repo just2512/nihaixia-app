@@ -136,6 +136,51 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
+  static bool requiresMedicalSafetyPreflight({
+    required String query,
+    required AssistantMode selectedMode,
+    bool hasAttachment = false,
+    bool structuredInterviewActive = false,
+  }) {
+    if (structuredInterviewActive) return true;
+    if (hasAttachment) {
+      return selectedMode == AssistantMode.automatic ||
+          selectedMode == AssistantMode.consultation;
+    }
+
+    final text = query.trim();
+    if (text.isEmpty) return false;
+    final hasSymptoms = _symptomCues.any(text.contains);
+    final hasPersonalContext = _personalContextCues.any(text.contains) ||
+        text.startsWith('我') ||
+        (hasSymptoms &&
+            const ['最近', '近来', '这几天', '这段时间', '本人', '我自己']
+                .any(text.contains));
+    final explicitClinicalRequest = const [
+      '帮我诊断',
+      '诊断一下',
+      '给我诊断',
+      '帮我辨证',
+      '辨证一下',
+      '给我辨证',
+      '帮我问诊',
+      '给我问诊',
+      '判断我是不是',
+      '看看我的症状',
+    ].any(text.contains);
+    final explicitLearningRequest = _learningCues.any(text.contains);
+
+    // A clear educational question about a symptom is not a patient assessment.
+    if (explicitLearningRequest &&
+        !hasPersonalContext &&
+        !explicitClinicalRequest) {
+      return false;
+    }
+    if (explicitClinicalRequest) return true;
+    if (hasSymptoms && selectedMode == AssistantMode.consultation) return true;
+    return hasSymptoms && hasPersonalContext;
+  }
+
   static bool shouldExcludeFromIntentModel(String query) {
     final text = query.trim();
     return text.isNotEmpty &&
