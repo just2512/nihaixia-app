@@ -185,6 +185,33 @@ void main() {
     );
   });
 
+  test('选择列表只展示记录 ID，不泄露默认名称中的出生日期和性别', () {
+    final choices = SavedChartToolExecutor.formatSavedChartChoices([
+      SavedChart(
+        id: 41,
+        name: '命盘 1990-01-02 男',
+        isMale: true,
+        solarIso: DateTime(1990, 1, 2, 8, 30).toIso8601String(),
+        cityName: '上海市',
+        createdAt: 200,
+      ),
+      SavedChart(
+        id: 42,
+        name: '命盘 1988-06-07 女',
+        isMale: false,
+        solarIso: DateTime(1988, 6, 7, 12, 0).toIso8601String(),
+        createdAt: 100,
+      ),
+    ]);
+
+    expect(choices, contains('ID 41'));
+    expect(choices, contains('ID 42'));
+    expect(choices, isNot(contains('1990-01-02')));
+    expect(choices, isNot(contains('1988-06-07')));
+    expect(choices, isNot(contains('命盘 1990-01-02 男')));
+    expect(choices, isNot(contains('上海市')));
+  });
+
   test('排盘类型必须来自明确表述或上一轮已确认的选择', () {
     expect(
       SavedChartToolExecutor.resolveChartType('请用八字重排'),
