@@ -48,11 +48,25 @@ void main() {
         isTrue,
         reason: '后续省略主语的追问仍继承用户此前的健康上下文',
       );
-      expect(requires('胸痛'), isFalse,
-          reason: '没有个人语境的症状词仍由确定性路由请求澄清');
+      expect(
+        requires('胸痛'),
+        isTrue,
+        reason: '单独症状词在缺少安全评估时也不能进入模型；应先经确定性门禁',
+      );
+      expect(requires('我有呼吸困难，帮我起卦'), isTrue);
+      expect(requires('喘不上气'), isTrue);
+      expect(requires('突发偏瘫'), isTrue);
+      expect(requires('意识障碍'), isTrue);
+      expect(requires('大量出血'), isTrue);
+      expect(requires('自伤风险'), isTrue);
       expect(
         requires('解释胸痛的中医理论', mode: AssistantMode.learning),
         isFalse,
+      );
+      expect(
+        requires('什么是呼吸困难', mode: AssistantMode.learning),
+        isFalse,
+        reason: '明确知识学习问题不进入个人健康评估路径',
       );
       expect(requires('我想排盘'), isFalse);
       expect(
