@@ -53,6 +53,30 @@ void main() {
       expect(result.mayContinueOrdinaryFlow, isFalse);
     });
 
+    test('truncated clinical history requires review before detector', () async {
+      var detectorCalls = 0;
+      final gate = RedFlagGate(
+        detector: _FakeDetector((input) async {
+          detectorCalls++;
+          return _assessment(source: input.source);
+        }),
+        timeout: timeout,
+      );
+
+      final result = await gate.evaluate(
+        const RedFlagInput(
+          source: RedFlagInputSource.currentText,
+          text: '那它的原因呢',
+          sourceTruncated: true,
+        ),
+      );
+
+      expect(result.status, RedFlagPreflightStatus.reviewRequired);
+      expect(result.reason, 'INPUT_CONTEXT_TRUNCATED');
+      expect(result.mayContinueOrdinaryFlow, isFalse);
+      expect(detectorCalls, 0);
+    });
+
     test('unknown source and empty current text fail closed before detector', () async {
       var calls = 0;
       final detector = _FakeDetector((_) async {
