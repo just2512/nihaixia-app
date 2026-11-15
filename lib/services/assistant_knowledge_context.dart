@@ -37,8 +37,14 @@ class AssistantKnowledgeSourceReference {
   String toCitationText() {
     final locatorLabel =
         localBacklink == 'MISSING' ? '当前条目不可定位' : '可定位';
+    final sourceType = switch (sourceKind) {
+      'lecture' => '课程讲稿/整理讲义（学习资料）',
+      'classic_text' => 'App 古籍文本知识条目',
+      'medical_case' => 'App 医案库整理条目',
+      _ => 'App 本地知识库数据（$sourceKind）',
+    };
     return '- $sourceLabel｜$title\n'
-        '  资料类型：$sourceKind\n'
+        '  资料类型：$sourceType\n'
         '  知识库条目定位：$localBacklink（$locatorLabel）\n'
         '  来源标识：$sourceId';
   }
