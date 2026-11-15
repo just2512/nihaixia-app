@@ -30,6 +30,8 @@ void main() {
       AssistantToolRouter.match('我想了解六经辨证的概念', AssistantMode.consultation),
       isNull,
     );
+    expect(AssistantMode.consultation.label, '问诊学习助手');
+    expect(AssistantToolRouter.structuredDiagnosis.title, '中医问诊模拟（学习）');
   });
 
   test('旧结构化辨证页面入口必须 fail closed，问诊只能在统一对话内继续', () {
