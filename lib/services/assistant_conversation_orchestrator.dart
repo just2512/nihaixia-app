@@ -959,6 +959,17 @@ class AssistantConversationOrchestrator {
           candidateTools: _boundedCandidates(explicitMatches),
         );
       }
+      final explicitlyRequestsDiagnosis = RegExp(
+        r'(帮我|请帮我|给我)(?:做|进行)?(?:个|一次)?(诊断|辨证)|诊断一下|辨证一下',
+      ).hasMatch(text);
+      if (explicitlyRequestsDiagnosis) {
+        return AssistantDispatchDecision(
+          mode: AssistantMode.consultation,
+          tool: AssistantToolRouter.structuredDiagnosis,
+          toolArguments: AssistantToolArguments(toolId: 'structured_diagnosis'),
+        );
+      }
+
       if (pendingToolSelection &&
           !_learningCues.any(text.contains) &&
           (selectedMode == AssistantMode.tools ||
@@ -1121,6 +1132,17 @@ class AssistantConversationOrchestrator {
         toolArguments: argumentsFor(tool, text),
       );
     }
+
+      final explicitlyRequestsDiagnosis = RegExp(
+        r'(帮我|请帮我|给我)(?:做|进行)?(?:个|一次)?(诊断|辨证)|诊断一下|辨证一下',
+      ).hasMatch(text);
+      if (explicitlyRequestsDiagnosis) {
+        return AssistantDispatchDecision(
+          mode: AssistantMode.consultation,
+          tool: AssistantToolRouter.structuredDiagnosis,
+          toolArguments: AssistantToolArguments(toolId: 'structured_diagnosis'),
+        );
+      }
 
     if (text.contains('排盘') || text.contains('排个盘') || text.contains('命盘')) {
       return AssistantDispatchDecision(

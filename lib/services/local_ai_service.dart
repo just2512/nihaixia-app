@@ -423,6 +423,58 @@ class LocalAiService {
 
   Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
 
+  Future<LocalAiInterviewAnswer> understandTcmInterviewAnswer({
+    required String questionId,
+    required String question,
+    required List<String> options,
+    required String currentText,
+    required String userContext,
+    String? traceId,
+  }) async {
+    final normalizedTraceId = _normalizeTraceId(traceId);
+    final normalizedQuestionId = questionId.trim();
+    final normalizedQuestion = question.trim();
+    final normalizedText = currentText.trim();
+    final normalizedContext = userContext.trim();
+    if (normalizedQuestionId.isEmpty ||
+        normalizedQuestionId.length > 80 ||
+        !RegExp(r'^[a-zA-Z0-9_:]+$').hasMatch(normalizedQuestionId) ||
+        normalizedQuestion.isEmpty ||
+        normalizedQuestion.length > 300 ||
+        normalizedText.isEmpty ||
+        normalizedText.length > 2000 ||
+        normalizedContext.isEmpty ||
+        normalizedContext.length > 5000 ||
+        !normalizedContext.contains(normalizedText) ||
+        options.isEmpty ||
+        options.length > 30 ||
+        options.any((option) => option.trim().isEmpty || option.length > 120) ||
+        options.toSet().length != options.length) {
+      throw const FormatException('当前问诊问题或可选答案不符合受限理解契约');
+    }
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'understandTcmInterviewAnswer',
+      {
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+        'question_id': normalizedQuestionId,
+        'question': normalizedQuestion,
+        'options': jsonEncode(options),
+        'current_text': normalizedText,
+        'user_context': normalizedContext,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    final rawDraft = data?['draft'];
+    if (rawDraft is! String || rawDraft.trim().isEmpty) {
+      throw const FormatException('本地模型没有返回当前问项的理解结果');
+    }
+    return LocalAiInterviewAnswer.fromModelText(
+      rawDraft,
+      questionId: normalizedQuestionId,
+      options: options,
+      sourceText: normalizedContext,
+    );
+  }
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
     required String traceId,
   }) =>
@@ -445,10 +497,39 @@ class LocalAiService {
         sourceText: sourceText,
       );
 
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) =>
+      _extractSymptoms(
+        traceId: traceId,
+        questionSchema: questionSchema,
+        sourceText: sourceText,
+        sendSourceTextToNative: true,
+        sourceWasTruncated: sourceTruncated,
+      );
+
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) =>
+      _extractSymptoms(
+        questionSchema: questionSchema,
+        sourceText: sourceText,
+        sendSourceTextToNative: true,
+        sourceWasTruncated: sourceTruncated,
+      );
+
+
   Future<LocalAiSymptomDraft> _extractSymptoms({
     String? traceId,
     List<Map<String, Object?>>? questionSchema,
     String sourceText = '',
+    bool sendSourceTextToNative = false,
+    bool sourceWasTruncated = false,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -456,6 +537,8 @@ class LocalAiService {
       {
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
         if (questionSchema != null) 'question_schema': jsonEncode(questionSchema),
+        if (sendSourceTextToNative) 'source_text': sourceText.trim(),
+        if (sendSourceTextToNative && sourceWasTruncated) 'source_truncated': true,
       },
     );
     _verifyTraceId(data, normalizedTraceId);
@@ -975,6 +1058,99 @@ class LocalAiModelStatus {
 }
 
 
+/// Constrained interpretation of one free-text answer to the currently pending
+/// interview question. A candidate is never committed until the user taps one
+/// of the existing App-provided options.
+class LocalAiInterviewAnswer {
+  const LocalAiInterviewAnswer({
+    required this.questionId,
+    this.answer,
+    this.evidence,
+    this.clarification,
+  });
+
+  final String questionId;
+  final String? answer;
+  final String? evidence;
+  final String? clarification;
+
+  bool get hasCandidate => answer != null;
+
+  static const int maxOutputCharacters = 4000;
+  static const int maxEvidenceCharacters = 200;
+  static const int maxClarificationCharacters = 240;
+
+  factory LocalAiInterviewAnswer.fromModelText(
+    String text, {
+    required String questionId,
+    required List<String> options,
+    required String sourceText,
+  }) {
+    final normalized = text.trim();
+    if (normalized.length > maxOutputCharacters) {
+      throw const FormatException('问诊回答理解内容过长');
+    }
+    final start = normalized.indexOf('{');
+    final end = normalized.lastIndexOf('}');
+    if (start < 0 || end <= start) {
+      throw const FormatException('问诊回答理解不是有效 JSON');
+    }
+    final decoded = jsonDecode(normalized.substring(start, end + 1));
+    if (decoded is! Map || decoded.keys.any((key) => key is! String)) {
+      throw const FormatException('问诊回答理解结构无效');
+    }
+    final map = Map<String, dynamic>.from(decoded);
+    if (map.keys.toSet().difference(
+          {'question_id', 'answer', 'evidence', 'clarification'},
+        ).isNotEmpty ||
+        !map.keys.toSet().containsAll(
+          {'question_id', 'answer', 'evidence', 'clarification'},
+        )) {
+      throw const FormatException('问诊回答理解字段不符合契约');
+    }
+    if (map['question_id'] != questionId) {
+      throw const FormatException('模型返回了非当前待答问项');
+    }
+
+    final rawAnswer = map['answer'];
+    final rawEvidence = map['evidence'];
+    final rawClarification = map['clarification'];
+    if (rawAnswer == null) {
+      if (rawEvidence != null || rawClarification is! String) {
+        throw const FormatException('无法确认候选时必须返回澄清问题，不得附带答案证据');
+      }
+      final clarification = rawClarification.trim();
+      if (clarification.isEmpty ||
+          clarification.length > maxClarificationCharacters) {
+        throw const FormatException('问诊澄清问题为空或超出长度限制');
+      }
+      return LocalAiInterviewAnswer(
+        questionId: questionId,
+        clarification: clarification,
+      );
+    }
+
+    if (rawAnswer is! String ||
+        rawEvidence is! String ||
+        (rawClarification != null && rawClarification != '')) {
+      throw const FormatException('问诊候选的答案、证据或澄清字段类型无效');
+    }
+    final answer = rawAnswer.trim();
+    final evidence = rawEvidence.trim();
+    if (!options.contains(answer) ||
+        evidence.isEmpty ||
+        evidence.length > maxEvidenceCharacters ||
+        !sourceText.contains(evidence)) {
+      throw const FormatException('问诊候选未通过当前选项白名单或用户原文证据校验');
+    }
+    return LocalAiInterviewAnswer(
+      questionId: questionId,
+      answer: answer,
+      evidence: evidence,
+    );
+  }
+}
+
 /// One model-proposed mapping from user wording to an existing DiagnosticEngine option.
 /// It remains a candidate until the user explicitly confirms it.
 class LocalAiSymptomQuestionCandidate {
@@ -1004,6 +1180,7 @@ class LocalAiSymptomDraft {
   final List<String> redFlags;
   final List<String> unknowns;
   final List<LocalAiSymptomQuestionCandidate> questionCandidates;
+  final String sourceText;
   final bool sourceTruncated;
 
   const LocalAiSymptomDraft({
@@ -1018,6 +1195,7 @@ class LocalAiSymptomDraft {
     this.redFlags = const [],
     this.unknowns = const [],
     this.questionCandidates = const [],
+    this.sourceText = '',
     this.sourceTruncated = false,
   });
 
@@ -1149,6 +1327,7 @@ class LocalAiSymptomDraft {
       redFlags: stringList('red_flags'),
       unknowns: stringList('unknowns'),
       questionCandidates: List.unmodifiable(candidates),
+      sourceText: sourceText.trim(),
       sourceTruncated: sourceTruncated,
     );
   }

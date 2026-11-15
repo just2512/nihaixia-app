@@ -1378,6 +1378,105 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<Map<String, String>?> _reviewInitialTcmSymptomDraft(
+    LocalAiSymptomDraft draft,
+  ) {
+    return showFoldAwareDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) {
+        var checked = false;
+        final accepted = <String, bool>{
+          for (final candidate in draft.questionCandidates)
+            candidate.questionId: false,
+        };
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('先核对你刚才的描述'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '我先把你刚才说的情况整理了一遍。请核对摘要和十问候选；只有你勾选确认的候选才会交给原规则问诊。未提及或不确定的信息仍会继续追问。',
+                    style: TextStyle(fontSize: AppType.caption, height: 1.45),
+                  ),
+                  if (draft.sourceTruncated) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildSourceTruncationWarning(context),
+                  ],
+                  const SizedBox(height: AppSpacing.md),
+                  ...draft.summaryLines.map(
+                    (line) => Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: Text(
+                        line,
+                        style: const TextStyle(fontSize: AppType.caption),
+                      ),
+                    ),
+                  ),
+                  if (draft.questionCandidates.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    const Text(
+                      '以下是根据你原话和 App 现有十问题目提出的候选。请逐项核对，模型没有给出的答案不会自动补齐。',
+                      style: TextStyle(fontSize: AppType.caption, height: 1.45),
+                    ),
+                    ...draft.questionCandidates.map(
+                      (candidate) => CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: accepted[candidate.questionId] == true,
+                        onChanged: (value) => setDialogState(() {
+                          accepted[candidate.questionId] = value == true;
+                        }),
+                        title: Text(
+                          '${candidate.question}：${candidate.answer}',
+                          style: const TextStyle(fontSize: AppType.caption),
+                        ),
+                        subtitle: Text(
+                          '原文依据：${candidate.evidence}',
+                          style: const TextStyle(fontSize: AppType.micro),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: checked,
+                    onChanged: (value) =>
+                        setDialogState(() => checked = value == true),
+                    title: const Text(
+                      '我已核对上面的自述整理',
+                      style: TextStyle(fontSize: AppType.caption),
+                    ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('跳过候选，逐项问我'),
+              ),
+              FilledButton(
+                onPressed: checked
+                    ? () => Navigator.pop(dialogContext, {
+                        for (final candidate in draft.questionCandidates)
+                          if (accepted[candidate.questionId] == true)
+                            candidate.questionId: candidate.answer,
+                      })
+                    : null,
+                child: const Text('确认并开始规则问诊'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _startInlineTcmInterview({
     required String initialUserMessage,
     String? userContext,
@@ -1460,6 +1559,123 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
+    var effectiveUserContext = userContext;
+    var effectiveConfirmedAnswers =
+        Map<String, String>.unmodifiable(confirmedTenAnswers);
+    String? firstTurnUnderstandingNotice;
+    final normalizedInitialMessage = initialUserMessage.trim();
+    final syntheticStarts = const {
+      '继续规则辨证',
+      '开始规则辨证',
+      '开始规则问诊',
+      '继续问诊',
+    };
+    final shouldUnderstandInitialText =
+        userContext == null &&
+        confirmedTenAnswers.isEmpty &&
+        normalizedInitialMessage.length >= 5 &&
+        normalizedInitialMessage.length <= 10_000 &&
+        !syntheticStarts.contains(normalizedInitialMessage);
+    if (shouldUnderstandInitialText) {
+      setState(() {
+        _structuredDiagnosisBusy = true;
+        _lastEffectiveMode = AssistantMode.consultation;
+        _error = null;
+      });
+      final extractionController = TcmInterviewConversationController(
+        defaultGender: SettingsRepository.instance.defaultGender,
+      );
+      final traceId = activeTraceContext.traceId;
+      var inferenceCompleted = false;
+      try {
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.route,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_diagnosis_initial_symptom_extraction',
+          mode: AssistantMode.consultation.name,
+          toolId: 'structured_diagnosis',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_diagnosis_initial_symptom_extraction',
+          mode: AssistantMode.consultation.name,
+          toolId: 'structured_diagnosis',
+        );
+        final draft = traceId == null
+            ? await _service.extractSymptomsFromExplicitText(
+                sourceText: normalizedInitialMessage,
+                questionSchema: extractionController.symptomQuestionSchema,
+              )
+            : await _service.extractSymptomsFromExplicitTextWithTrace(
+                traceId: traceId,
+                sourceText: normalizedInitialMessage,
+                questionSchema: extractionController.symptomQuestionSchema,
+              );
+        inferenceCompleted = true;
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.nativeInference,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_diagnosis_initial_symptom_extraction',
+          mode: AssistantMode.consultation.name,
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.resultValidation,
+          status: AiTraceStatus.succeeded,
+          route: 'structured_diagnosis_initial_symptom_candidates_validated',
+          mode: AssistantMode.consultation.name,
+        );
+        if (draft.summaryLines.isNotEmpty || draft.questionCandidates.isNotEmpty) {
+          final accepted = await _reviewInitialTcmSymptomDraft(draft);
+          if (!mounted) {
+            await _traceRecorder.record(
+              activeTraceContext,
+              stage: AiTraceStage.finalRender,
+              status: AiTraceStatus.notApplicable,
+              errorCode: 'SCREEN_DISPOSED',
+            );
+            return;
+          }
+          if (accepted != null) {
+            effectiveConfirmedAnswers =
+                Map<String, String>.unmodifiable(accepted);
+            effectiveUserContext = draft.summaryLines.join('\n');
+          } else {
+            firstTurnUnderstandingNotice =
+                '本轮没有确认 AI 提出的候选，下面将按原规则问诊逐项核对；未确认信息不会写入辨证条件。';
+          }
+        }
+      } catch (error) {
+        firstTurnUnderstandingNotice =
+            '首轮自述整理暂不可用，下面继续使用 App 原有规则问诊；模型没有写入任何辨证答案。';
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.nativeInference,
+          status: inferenceCompleted
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.unknown,
+          route: 'structured_diagnosis_initial_symptom_extraction',
+          mode: AssistantMode.consultation.name,
+          errorCode: 'INITIAL_SYMPTOM_EXTRACTION_UNAVAILABLE',
+        );
+        await _traceRecorder.record(
+          activeTraceContext,
+          stage: AiTraceStage.resultValidation,
+          status: inferenceCompleted
+              ? AiTraceStatus.failed
+              : AiTraceStatus.notStarted,
+          route: 'structured_diagnosis_initial_symptom_extraction',
+          mode: AssistantMode.consultation.name,
+          errorCode: 'INITIAL_SYMPTOM_CANDIDATES_NOT_ACCEPTED',
+        );
+        debugPrint('[InitialTcmSymptomExtraction] 首轮整理不可用：$error');
+      }
+    }
+
     final controller = TcmInterviewConversationController(
       defaultGender: SettingsRepository.instance.defaultGender,
     );
@@ -1482,9 +1698,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       controller.start(
         initialUserMessage: initialUserMessage,
-        userContext: userContext,
-        confirmedTenAnswers: confirmedTenAnswers,
+        userContext: effectiveUserContext,
+        confirmedTenAnswers: effectiveConfirmedAnswers,
       );
+      if (firstTurnUnderstandingNotice != null) {
+        controller.addAssistantNotice(firstTurnUnderstandingNotice);
+      }
       executionWatch.stop();
       await _traceRecorder.record(
         activeTraceContext,
@@ -1767,7 +1986,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       for (final entry in added) {
         final isPendingPrompt = !entry.isUser &&
             controller.canAnswer &&
-            entry.text == controller.pendingPromptText;
+            (entry.hasPendingOptions ||
+                entry.text == controller.pendingPromptText);
         if (entry.isResult && controller.completedDiagnosis != null) {
           _messages.add(
             _diagnosisActionMessage(entry.text, controller.completedDiagnosis!),
@@ -1921,6 +2141,189 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       transcriptMessagesApplicable: true,
       transcriptMessagesPersisted: messagesPersisted,
     );
+  }
+
+  Future<void> _handleTcmInterviewNaturalLanguage(
+    String userText, {
+    required AiTraceContext traceContext,
+  }) async {
+    final controller = _tcmInterviewController;
+    if (controller == null || !controller.canAcceptNaturalLanguageAnswer) {
+      return;
+    }
+    final questionId = controller.pendingPromptId!;
+    final question = controller.pendingPromptText!;
+    final options = controller.pendingOptions;
+    final previousUserMessages = controller.messages
+        .where((message) => message.isUser)
+        .map((message) => message.text.trim())
+        .where((message) =>
+            message.isNotEmpty &&
+            !message.startsWith('已核对的症状摘要（') &&
+            !message.startsWith('已逐项确认 ') &&
+            !message.startsWith('已确认自述对应问项'))
+        .toList(growable: false);
+    if (userText.trim().length > 2000) {
+      setState(() {
+        _error = '单次问诊补充内容过长，请拆分成较短的描述后发送。';
+      });
+      return;
+    }
+    var userContext = [...previousUserMessages, userText.trim()].join('\n');
+    if (userContext.length > 5000) {
+      final current = userText.trim();
+      final priorBudget = 5000 - current.length - 1;
+      final priorText = priorBudget > 0 ? previousUserMessages.join('\n') : '';
+      final boundedPrior = priorText.length > priorBudget
+          ? priorText.substring(priorText.length - priorBudget)
+          : priorText;
+      userContext = [if (boundedPrior.isNotEmpty) boundedPrior, current].join('\n');
+    }
+
+    final before = controller.messages.length;
+    controller.recordNaturalLanguageInput(userText);
+    _inputController.clear();
+    setState(() {
+      _sending = true;
+      _lastEffectiveMode = AssistantMode.consultation;
+      _error = null;
+    });
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.route,
+      status: AiTraceStatus.succeeded,
+      route: 'structured_interview_natural_language',
+      mode: AssistantMode.consultation.name,
+      toolId: 'structured_diagnosis',
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.dispatch,
+      status: AiTraceStatus.succeeded,
+      route: 'structured_interview_natural_language',
+      mode: AssistantMode.consultation.name,
+      toolId: 'structured_diagnosis',
+    );
+
+    try {
+      final answer = await _service.understandTcmInterviewAnswer(
+        questionId: questionId,
+        question: question,
+        options: options,
+        currentText: userText,
+        userContext: userContext,
+        traceId: traceContext.traceId,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_natural_language',
+        mode: AssistantMode.consultation.name,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.modelOutput,
+        status: AiTraceStatus.succeeded,
+        route: answer.hasCandidate
+            ? 'structured_interview_candidate'
+            : 'structured_interview_clarification',
+        mode: AssistantMode.consultation.name,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.succeeded,
+        route: 'structured_interview_candidate_validated',
+        mode: AssistantMode.consultation.name,
+      );
+
+      final nextPrompt = answer.hasCandidate
+          ? '我把你刚才的描述理解为「${answer.answer}」。原文依据：「${answer.evidence}」。请确认下方 App 选项；不准确也可以继续用自然语言补充。'
+          : answer.clarification!;
+      controller.appendPendingPromptNotice(nextPrompt);
+      final persistence = await _appendTcmInterviewMessages(
+        before,
+        traceContext: traceContext,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: !persistence.transcriptMessagesApplicable
+            ? AiTraceStatus.notApplicable
+            : persistence.transcriptMessagesPersisted
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.failed,
+        toolId: 'structured_diagnosis',
+        errorCode: persistence.transcriptMessagesApplicable &&
+                !persistence.transcriptMessagesPersisted
+            ? 'PERSISTENCE_FAILED'
+            : null,
+      );
+    } catch (error) {
+      // Keep the user's original wording in the resumable task even when the
+      // local model fails. No rule answer is committed on this path.
+      try {
+        final persistence = await _appendTcmInterviewMessages(
+          before,
+          traceContext: traceContext,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: !persistence.transcriptMessagesApplicable
+              ? AiTraceStatus.notApplicable
+              : persistence.transcriptMessagesPersisted
+                  ? AiTraceStatus.succeeded
+                  : AiTraceStatus.failed,
+          toolId: 'structured_diagnosis',
+          errorCode: persistence.transcriptMessagesApplicable &&
+                  !persistence.transcriptMessagesPersisted
+              ? 'PERSISTENCE_FAILED'
+              : null,
+        );
+      } catch (_) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.failed,
+          toolId: 'structured_diagnosis',
+          errorCode: 'PERSISTENCE_FAILED',
+        );
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.nativeInference,
+        status: AiTraceStatus.unknown,
+        route: 'structured_interview_natural_language',
+        mode: AssistantMode.consultation.name,
+        errorCode: 'NATIVE_INTERVIEW_ANSWER_UNAVAILABLE',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        route: 'structured_interview_natural_language',
+        mode: AssistantMode.consultation.name,
+        errorCode: 'INTERVIEW_ANSWER_VALIDATION_FAILED',
+      );
+      if (mounted) {
+        setState(() {
+          _error = '这段描述暂时无法可靠对应当前问项。原话已保留，规则答案未改变；请换一种说法或选择下方原有选项。';
+        });
+      }
+      debugPrint('[TcmInterviewNaturalLanguage] 候选理解失败：$error');
+    } finally {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        mode: AssistantMode.consultation.name,
+        toolId: 'structured_diagnosis',
+      );
+      if (mounted) setState(() => _sending = false);
+      _scrollToBottom();
+    }
   }
 
   Future<void> _handleTcmInterviewOption(
@@ -6081,8 +6484,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           );
           return;
         }
+        if (activeTcmTask.canAcceptNaturalLanguageAnswer) {
+          await _handleTcmInterviewNaturalLanguage(
+            text,
+            traceContext: traceContext,
+          );
+          return;
+        }
         const clarification =
-            '当前步骤需要使用下方结构化选项。你输入的文字会保留在对话中，但不会自动映射为辨证条件；请从问题下方选择最符合的一项。';
+            '当前步骤需要使用下方 App 结构化控件。你的文字不会被转换为辨证条件；舌诊脉诊请打开选择器，寒热真假线索请使用下方多选项。';
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.route,
@@ -8933,8 +9343,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final draft = _confirmedDraft;
     if (draft == null || _structuredDiagnosisBusy) return;
     await _startInlineTcmInterview(
-      initialUserMessage: '继续规则辨证',
-      userContext: draft.summaryLines.join('\\n'),
+      // The button label is not user input. Keep the source used for extraction
+      // in the durable task transcript so the rule interview retains its evidence.
+      initialUserMessage: draft.sourceText.trim(),
+      userContext: draft.summaryLines.join('\n'),
       confirmedTenAnswers: _confirmedTenAnswers,
     );
   }

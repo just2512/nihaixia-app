@@ -95,6 +95,52 @@ void main() {
       expect(restored.pendingOptions, saved.pendingOptions);
     });
 
+    test('自然语言澄清只更新当前问项提示，不写入规则引擎答案', () {
+      final controller = TcmInterviewConversationController();
+      controller.start();
+      controller.answerOption(controller.pendingOptions.first);
+      controller.answerOption('跳过，直接问诊');
+      final before = controller.createTaskState().snapshot.answers;
+      final canonicalPrompt = controller.pendingPromptText;
+
+      expect(controller.canAcceptNaturalLanguageAnswer, isTrue);
+      controller.recordNaturalLanguageInput('晚上睡觉时醒了两次');
+      controller.appendPendingPromptNotice('我理解为夜里醒来，具体是在几点醒？请从下方原有选项确认。');
+
+      final pending = controller.createTaskState();
+      expect(pending.pendingPromptId, startsWith('ten:'));
+      expect(pending.pendingPromptText, canonicalPrompt,
+          reason: '自然语言澄清不覆盖 App 原始问项契约');
+      expect(pending.transcript.last.text, contains('几点醒'));
+      expect(pending.pendingOptions, isNotEmpty);
+      expect(pending.snapshot.answers, before,
+          reason: '自然语言理解与澄清不能直接写入 DiagnosticEngine');
+      expect(pending.transcript.last.hasPendingOptions, isTrue);
+      expect(
+        pending.transcript.where((message) => message.hasPendingOptions),
+        hasLength(1),
+        reason: '只有当前待答问题可以显示选项，历史问题不能重复出现可点击选项',
+      );
+      expect(
+        TcmInterviewTaskState.decode(pending.encode()).transcript.last.hasPendingOptions,
+        isTrue,
+      );
+      final restored = TcmInterviewConversationController.restore(
+        TcmInterviewTaskState.decode(pending.encode()),
+      );
+      expect(restored.pendingPromptText, canonicalPrompt);
+      expect(restored.pendingPromptId, pending.pendingPromptId);
+      expect(restored.pendingOptions, pending.pendingOptions);
+    });
+
+    test('舌脉选择器不接受单选自然语言映射', () {
+      final controller = TcmInterviewConversationController();
+      controller.start();
+      controller.answerOption(controller.pendingOptions.first);
+      expect(controller.pendingPromptId, 'tongue_pulse');
+      expect(controller.canAcceptNaturalLanguageAnswer, isFalse);
+    });
+
     test('拒绝非当前十问题目或选项的模型候选', () {
       final controller = TcmInterviewConversationController();
       expect(

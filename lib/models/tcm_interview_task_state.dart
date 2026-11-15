@@ -11,29 +11,38 @@ class TcmInterviewTaskMessage {
     required this.text,
     required this.isUser,
     this.isResult = false,
+    this.hasPendingOptions = false,
   });
 
   final String text;
   final bool isUser;
   final bool isResult;
+  final bool hasPendingOptions;
 
   Map<String, Object?> toJson() => {
         'text': text,
         'isUser': isUser,
         'isResult': isResult,
+        'hasPendingOptions': hasPendingOptions,
       };
 
   factory TcmInterviewTaskMessage.fromJson(Map<String, Object?> json) {
     final text = json['text'];
     final isUser = json['isUser'];
     final isResult = json['isResult'] ?? false;
-    if (text is! String || isUser is! bool || isResult is! bool) {
+    final hasPendingOptions = json['hasPendingOptions'] ?? false;
+    if (text is! String ||
+        isUser is! bool ||
+        isResult is! bool ||
+        hasPendingOptions is! bool ||
+        (hasPendingOptions && (isUser || isResult))) {
       throw const FormatException('Invalid TCM interview transcript message');
     }
     return TcmInterviewTaskMessage(
       text: text,
       isUser: isUser,
       isResult: isResult,
+      hasPendingOptions: hasPendingOptions,
     );
   }
 }
@@ -70,7 +79,7 @@ class TcmInterviewTaskState {
   final DiagnosisResult? completedDiagnosis;
 
   Map<String, Object?> toJson() => {
-        'schemaVersion': 3,
+        'schemaVersion': 4,
         'taskId': taskId,
         'status': status,
         'snapshot': _snapshotToJson(snapshot),
@@ -93,7 +102,7 @@ class TcmInterviewTaskState {
     }
     final json = Map<String, Object?>.from(decoded);
     final schemaVersion = json['schemaVersion'];
-    if (schemaVersion != 1 && schemaVersion != 2 && schemaVersion != 3) {
+    if (schemaVersion != 1 && schemaVersion != 2 && schemaVersion != 3 && schemaVersion != 4) {
       throw FormatException('Unsupported TCM task schema: $schemaVersion');
     }
     final taskId = json['taskId'];

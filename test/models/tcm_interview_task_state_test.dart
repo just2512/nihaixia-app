@@ -284,7 +284,7 @@ void main() {
     test('rejects unsupported schema versions instead of silently restoring', () {
       expect(
         () => TcmInterviewTaskState.decode(
-          '{"schemaVersion":4,"taskId":"task-1","status":"in_progress",'
+          '{"schemaVersion":5,"taskId":"task-1","status":"in_progress",'
           '"snapshot":{},"pendingOptions":[]}',
         ),
         throwsFormatException,

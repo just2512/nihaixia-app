@@ -60,6 +60,15 @@ class TcmInterviewConversationController {
       _pendingPromptId != null &&
       _pendingOptions.isNotEmpty;
 
+  /// Natural language may only map into one of the current single-choice
+  /// questions. Multi-select clues and tongue/pulse forms retain their
+  /// dedicated App controls.
+  bool get canAcceptNaturalLanguageAnswer =>
+      canAnswer &&
+      (_pendingPromptId == 'temperature' ||
+          _pendingPromptId!.startsWith('ten:') ||
+          _pendingPromptId!.startsWith('followup:'));
+
   List<String> get tongueCoatingOptions => _adapter.tongueCoatingOptions;
   List<String> get tongueShapeOptions => _adapter.tongueShapeOptions;
   List<String> get pulseOptions => _adapter.pulseOptions;
@@ -140,7 +149,7 @@ class TcmInterviewConversationController {
       _appendUser(initialUserMessage.trim());
     }
     if (userContext != null && userContext.trim().isNotEmpty) {
-      _appendUser('已确认的症状自述（原文保留为上下文；只有逐项确认的候选才会映射到规则问项）：\n' + userContext.trim());
+      _appendUser('已核对的症状摘要（仅作对话上下文；只有逐项确认的候选才会映射到规则问项）：\n' + userContext.trim());
     }
     if (_pendingConfirmedTenAnswers.isNotEmpty) {
       _appendUser('已逐项确认 ' + _pendingConfirmedTenAnswers.length.toString() + ' 条十问候选；只将这些选项提交给原规则问诊，其余信息继续追问。');
@@ -218,6 +227,47 @@ class TcmInterviewConversationController {
     }
 
     throw StateError('无法识别待回答问诊问题：$promptId');
+  }
+
+  /// Keeps a free-text answer in the task transcript without writing it to
+  /// DiagnosticEngine. It remains evidence/context only until the user chooses
+  /// one of the exact current App-provided options.
+  void recordNaturalLanguageInput(String text) {
+    if (!canAcceptNaturalLanguageAnswer) {
+      throw StateError('当前问诊步骤不接受自然语言候选');
+    }
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 2000) {
+      throw ArgumentError.value(text, 'text', '问诊补充内容为空或过长');
+    }
+    _appendUser(normalized);
+  }
+
+  /// Adds an informational assistant line to the same durable interview
+  /// transcript. It does not alter the DiagnosticEngine snapshot or pending
+  /// question.
+  void addAssistantNotice(String text) {
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 1000) {
+      throw ArgumentError.value(text, 'text', '问诊提示为空或过长');
+    }
+    _appendAssistant(normalized);
+  }
+
+  /// Adds a user-facing interpretation or clarification while keeping the
+  /// canonical App question and its option whitelist unchanged for Native
+  /// validation. The new visible assistant message becomes the only bubble
+  /// carrying the current option controls.
+  void appendPendingPromptNotice(String text) {
+    if (!canAcceptNaturalLanguageAnswer) {
+      throw StateError('当前没有可追问的单选问诊问题');
+    }
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 300) {
+      throw ArgumentError.value(text, 'text', '问诊澄清内容为空或过长');
+    }
+    _clearPendingOptionMarkers();
+    _appendAssistant(normalized, hasPendingOptions: true);
   }
 
   /// Commits canonical tongue/pulse values from the structured selector.
@@ -470,6 +520,7 @@ class TcmInterviewConversationController {
   }
 
   void _completeWithText(String text) {
+    _clearPendingOptionMarkers();
     _status = 'completed';
     _pendingPromptId = null;
     _pendingPromptText = null;
@@ -482,18 +533,37 @@ class TcmInterviewConversationController {
     required String text,
     required List<String> options,
   }) {
+    _clearPendingOptionMarkers();
     _status = 'in_progress';
     _pendingPromptId = id;
     _pendingPromptText = text;
     _pendingOptions = List.unmodifiable(options);
-    _appendAssistant(text);
+    _appendAssistant(text, hasPendingOptions: true);
   }
 
-  void _appendAssistant(String text, {bool isResult = false}) {
+  void _clearPendingOptionMarkers() {
+    for (var index = 0; index < _messages.length; index++) {
+      final message = _messages[index];
+      if (!message.isUser && message.hasPendingOptions) {
+        _messages[index] = TcmInterviewTaskMessage(
+          text: message.text,
+          isUser: false,
+          isResult: message.isResult,
+        );
+      }
+    }
+  }
+
+  void _appendAssistant(
+    String text, {
+    bool isResult = false,
+    bool hasPendingOptions = false,
+  }) {
     _messages.add(TcmInterviewTaskMessage(
       text: text,
       isUser: false,
       isResult: isResult,
+      hasPendingOptions: hasPendingOptions,
     ));
   }
 
