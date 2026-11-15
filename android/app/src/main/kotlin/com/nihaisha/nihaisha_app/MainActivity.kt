@@ -113,20 +113,34 @@ class MainActivity : FlutterActivity() {
                             return@handler
                         }
                         val questionSchema = call.argument<String>("question_schema")?.trim() ?: "[]"
+                        val currentUserText = call.argument<String>("current_user_text")?.trim().orEmpty()
                         if (questionSchema.length > 12_000) {
                             result.error("INVALID_SYMPTOM_QUESTION_SCHEMA", "问诊题目 schema 超出长度限制", null)
                             return@handler
                         }
+                        if (currentUserText.length > 2_000) {
+                            result.error("INVALID_SYMPTOM_CURRENT_INPUT", "当前问诊输入超出长度限制", null)
+                            return@handler
+                        }
+                        val priorUserInput = userReportedInputs.joinToString("\n")
+                        val redFlagInput = listOf(priorUserInput, currentUserText)
+                            .filter { it.isNotBlank() }
+                            .joinToString("\n")
                         runAiTaskAfterNativeRedFlag(
                             result,
                             NativeRedFlagInput(
                                 NativeRedFlagInputSource.STRUCTURED_INPUT,
-                                userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() },
+                                redFlagInput.takeIf { it.isNotBlank() },
                                 sourceTruncated = userReportedInputsTruncated ||
-                                    userReportedInputs.joinToString("\n").length > 10_000
+                                    redFlagInput.length > 10_000
                             ),
                             required = true
                         ) {
+                            // The new chat turn is persisted into the native user-only
+                            // symptom source only after the native safety gate returns CLEAR.
+                            if (currentUserText.isNotEmpty()) {
+                                recordUserInput("用户文字自述", currentUserText)
+                            }
                             LocalAiTraceIdPolicy.attach(extractSymptoms(questionSchema), traceId)
                         }
                     }
