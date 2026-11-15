@@ -50,8 +50,25 @@ void main() {
       expect(chapters.first.body.trim().isNotEmpty, isTrue, reason: book.id);
     }
   });
+ 
+  test('稳定书目 ID 与章节索引可以解析到唯一古籍章节', () async {
+    GujiRepository.clearCache();
+    final book = kGujiBooks.singleWhere((item) => item.id == 'lingshu');
+    final chapter = await GujiRepository.chapterAtIndex(book, 0);
+    expect(chapter, isNotNull);
+    expect(chapter!.index, 0);
+    expect(chapter.title, isNotEmpty);
+    expect(chapter.body, isNotEmpty);
+    expect(await GujiRepository.chapterAtIndex(book, -1), isNull);
+    expect(
+      await GujiRepository.chapterAtIndex(book, book.chapterCount + 1),
+      isNull,
+    );
+  });
+
 
   testWidgets('书库页渲染全部书目', (tester) async {
+
     await tester.pumpWidget(const MaterialApp(home: GujiLibraryScreen()));
     for (final book in kGujiBooks) {
       expect(find.text(book.title), findsOneWidget);

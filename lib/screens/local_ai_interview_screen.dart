@@ -45,15 +45,16 @@ import '../data/herb_repository.dart';
 import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
 import '../data/medical_case_data.dart';
+import '../data/guji_data.dart';
 import '../services/classic_search_service.dart';
 import 'formula_detail_screen.dart';
 import 'herb_detail_screen.dart';
 import 'acupoint_detail_screen.dart';
 import 'acupuncture_screen.dart';
 import 'medical_case_detail_screen.dart';
-import 'neijing_knowledge_screen.dart';
+import 'neijing_entries_screen.dart';
 import 'markdown_doc_screen.dart';
-import 'guji_library_screen.dart';
+import 'guji_library_screen.dart'; // GujiChapterScreen renders the exact resolved chapter.
 
 /// Provenance for results returned by the existing deterministic DiagnosticEngine.
 /// This is an engine origin, not a knowledge-base citation.
@@ -4853,11 +4854,34 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<Widget?> _resolveClassicKnowledgeDestination(
+    ClassicHit hit,
+  ) async {
+    final asset = hit.asset?.trim();
+    if (asset != null && asset.isNotEmpty) {
+      return MarkdownDocScreen(title: hit.title, asset: asset);
+    }
+    final bookId = hit.bookId;
+    final chapterIndex = hit.chapterIndex;
+    if (bookId == null || chapterIndex == null) return null;
+
+    GujiBook? book;
+    for (final candidate in kGujiBooks) {
+      if (candidate.id == bookId) {
+        book = candidate;
+        break;
+      }
+    }
+    if (book == null) return null;
+    final chapter = await GujiRepository.chapterAtIndex(book, chapterIndex);
+    if (chapter == null) return null;
+    return GujiChapterScreen(book: book, chapter: chapter);
+  }
+
   Future<void> _openKnowledgeSource(String sourceId) async {
     final parts = sourceId.split(':');
     if (parts.isEmpty || !mounted) return;
     Widget? destination;
-    String? unavailableMessage;
     try {
       switch (parts.first) {
         case 'formula':
@@ -4873,14 +4897,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           if (parts.length < 2) break;
           await HerbRepository.load();
           final name = parts.sublist(1).join(':');
-          final matches = HerbRepository.getAll().where((item) => item.name == name);
-          if (matches.isNotEmpty) destination = HerbDetailScreen(herb: matches.first);
+          final matches = HerbRepository.getAll()
+              .where((item) => item.name == name);
+          if (matches.isNotEmpty) {
+            destination = HerbDetailScreen(herb: matches.first);
+          }
           break;
         case 'acupoint':
           if (parts.length < 2) break;
           await AcupointRepository.load();
           final name = parts.sublist(1).join(':');
-          final matches = AcupointRepository.getAll().where((item) => item.name == name);
+          final matches = AcupointRepository.getAll()
+              .where((item) => item.name == name);
           if (matches.isNotEmpty) {
             destination = AcupointDetailScreen(acupoint: matches.first);
           }
@@ -4913,20 +4941,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           final cases = await getAllMedicalCases();
           final matches = cases.where((item) => item.seq == sequence);
           if (matches.isNotEmpty) {
-            destination = MedicalCaseDetailScreen(c: matches.first, allCases: cases);
+            destination = MedicalCaseDetailScreen(
+              c: matches.first,
+              allCases: cases,
+            );
           }
           break;
         case 'neijing':
-          final hit = await ClassicSearchService.findBySourceId(sourceId);
-          if (hit?.asset != null) {
-            destination = MarkdownDocScreen(title: hit!.title, asset: hit.asset!);
-          } else if (hit?.bookId != null && hit?.chapterIndex != null) {
-            destination = const GujiLibraryScreen();
-            unavailableMessage = '已打开对应古籍书库；该来源的章节级深链尚未接入。';
-          } else {
-            // Structured Neijing IDs resolve through the local entry catalog;
-            // classic lecture IDs resolve through ClassicSearchService above.
-            destination = const NeijingKnowledgeScreen();
+          // Classic lecture/text IDs resolve through the classic index first.
+          // Structured Neijing entries resolve only by their exact entry ID.
+          final classicHit =
+              await ClassicSearchService.findBySourceId(sourceId);
+          if (classicHit != null) {
+            destination =
+                await _resolveClassicKnowledgeDestination(classicHit);
+          } else if (parts.length >= 2) {
+            final entryId = parts.sublist(1).join(':');
+            if (entryId.isNotEmpty) {
+              destination = NeijingEntriesScreen(initialEntryId: entryId);
+            }
           }
           break;
         case 'shanghan':
@@ -4934,12 +4967,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         case 'guji':
         case 'zhenjiu':
           final hit = await ClassicSearchService.findBySourceId(sourceId);
-          if (hit == null) break;
-          if (hit.asset != null) {
-            destination = MarkdownDocScreen(title: hit.title, asset: hit.asset!);
-          } else if (hit.bookId != null && hit.chapterIndex != null) {
-            destination = const GujiLibraryScreen();
-            unavailableMessage = '已打开对应古籍书库；该来源的章节级深链尚未接入。';
+          if (hit != null) {
+            destination = await _resolveClassicKnowledgeDestination(hit);
           }
           break;
       }
@@ -4951,7 +4980,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     if (!mounted) return;
     if (destination == null) {
-      setState(() => _error = '该来源仍有可追溯标识，但没有可用的页面定位：$sourceId');
+      setState(() => _error = '该来源 ID 无法解析到现有知识库条目：$sourceId');
       return;
     }
     await Navigator.push<void>(
@@ -4961,11 +4990,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         builder: (_) => destination!,
       ),
     );
-    if (mounted && unavailableMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(unavailableMessage)),
-      );
-    }
   }
 
   Future<void> _openTool(

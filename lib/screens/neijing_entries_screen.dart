@@ -27,7 +27,7 @@ const String kNeijingInferenceMark = '【推断】';
 /// 按「搜索词 + 维度 + 标签」过滤条目。
 ///
 /// - [query]：不区分大小写；按空白切分为多个关键词，关键词之间为「与」关系；
-///   匹配范围 = title + original + **source（篇名，如「热论」「灵枢」）**
+///   匹配范围 = id + title + original + **source（篇名，如「热论」「灵枢」）**
 ///   + vernacular + nishi + tags。
 /// - [dimension]：为 `null` 或 [kNeijingAllDimensionKey] 时不限维度。
 /// - [tags]：多选，标签之间为「或」关系（命中任一即可）。为空集时不限标签。
@@ -57,6 +57,7 @@ List<NeijingEntry> filterNeijingEntries({
     }
     if (keywords.isEmpty) return true;
     final haystack = <String>[
+      entry.id,
       entry.title,
       entry.original,
       entry.source, // 篇名检索：输「热论」「灵枢」可直接定位该篇条目
@@ -134,7 +135,10 @@ List<TextSpan> highlightNeijingMark(
 
 /// 十维度结构化条目检索页。
 class NeijingEntriesScreen extends StatefulWidget {
-  const NeijingEntriesScreen({super.key});
+  const NeijingEntriesScreen({super.key, this.initialEntryId});
+
+  /// Optional exact local entry ID emitted in knowledge-source metadata.
+  final String? initialEntryId;
 
   @override
   State<NeijingEntriesScreen> createState() => _NeijingEntriesScreenState();
@@ -146,6 +150,13 @@ class _NeijingEntriesScreenState extends State<NeijingEntriesScreen> {
   String _query = '';
   String _dimension = kNeijingAllDimensionKey;
   final Set<String> _selectedTags = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _query = widget.initialEntryId?.trim() ?? '';
+    _searchController.text = _query;
+  }
 
   @override
   void dispose() {
@@ -237,6 +248,8 @@ class _NeijingEntriesScreenState extends State<NeijingEntriesScreen> {
                       return _NeijingEntryCard(
                         key: ValueKey(results[index].id),
                         entry: results[index],
+                        initiallyExpanded:
+                            widget.initialEntryId == results[index].id,
                         selectedTags: effectiveTags,
                         onTagTap: _onTagToggled,
                       );
@@ -503,12 +516,14 @@ class _NeijingEntriesScreenState extends State<NeijingEntriesScreen> {
 /// 单条条目卡片：折叠态显示「标题 / 维度+出处 / 标签」，点击头部展开四段内容。
 class _NeijingEntryCard extends StatefulWidget {
   final NeijingEntry entry;
+  final bool initiallyExpanded;
   final Set<String> selectedTags;
   final ValueChanged<String> onTagTap;
 
   const _NeijingEntryCard({
     super.key,
     required this.entry,
+    this.initiallyExpanded = false,
     required this.selectedTags,
     required this.onTagTap,
   });
@@ -518,7 +533,13 @@ class _NeijingEntryCard extends StatefulWidget {
 }
 
 class _NeijingEntryCardState extends State<_NeijingEntryCard> {
-  bool _expanded = false;
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -34,6 +34,11 @@ void main() {
   });
 
   group('filterNeijingEntries 过滤逻辑', () {
+    test('按稳定条目 ID 检索只返回指定内经知识条目', () {
+      final hit = filterNeijingEntries(query: 'zx-01');
+      expect(hit.map((entry) => entry.id).toList(), ['zx-01']);
+    });
+
     test('默认不过滤时返回全量 52 条', () {
       expect(filterNeijingEntries().length, 52);
     });
@@ -184,6 +189,29 @@ void main() {
   }
 
   group('条目检索页交互', () {
+    testWidgets('来源 ID 打开内经条目时只显示并自动展开目标条目', (tester) async {
+      const entryId = 'zx-01';
+      final entry = kNeijingEntries.singleWhere((item) => item.id == entryId);
+      await tester.pumpWidget(
+        const MaterialApp(home: NeijingEntriesScreen(initialEntryId: entryId)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('共 1 条'), findsOneWidget);
+      expect(find.text(entry.title), findsOneWidget);
+      expect(find.text('经典原文'), findsOneWidget);
+      expect(find.text(entry.original), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText() == entry.nishi,
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('默认渲染全部 52 条并显示计数', (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
