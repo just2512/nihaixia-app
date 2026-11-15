@@ -1468,7 +1468,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                             candidate.questionId: candidate.answer,
                       })
                     : null,
-                child: const Text('确认并开始规则问诊'),
+                child: const Text('确认并开始模拟问诊'),
               ),
             ],
           ),
@@ -1500,7 +1500,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_diagnosis',
-      requireAssessment: true,
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -1786,12 +1786,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   String _diagnosisInterpretationPrompt(DiagnosisResult result) =>
-      '请总结并解释刚才 App DiagnosticEngine 已完成的结构化辨证结果。'
+      '请总结并解释刚才 App 现有规则引擎生成的模拟辨证学习结果。'
       '本次结果字段：六经 ${result.displayMeridian}；'
       '${result.isCombined ? '合病 ${result.meridian}与${result.combinedMeridian}；' : ''}'
       '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
       '请说明现有规则结果表达了什么、各字段之间的关系，并结合本轮本地知识检索来源解释依据；'
       '知识库内容只用于解释已有规则，不得据此新增个体诊断结论。'
+      '此结果仅用于中医学习模拟，不是对用户本人作出的医疗诊断。'
       '只解释 App 已返回的结果，不重新辨证，不增加或修改规则结论，不补造缺失字段。'
       '不要生成个体处方、药物或剂量建议；原结果中的处方字段只可按原文引用，不得增删改。';
 
@@ -1802,7 +1803,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _InterviewMessage(
       text: text,
       isUser: false,
-      actionLabel: 'AI解读辨证结果',
+      actionLabel: 'AI解读模拟辨证结果',
       sourceIds: _diagnosticEngineSourceIds,
       onAction: () => unawaited(_requestAssistantResultInterpretation(
         prompt: _diagnosisInterpretationPrompt(result),
@@ -1832,6 +1833,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         '组成：${formula.componentsText}',
       result.patternDetail,
       result.explanation,
+      TcmInterviewConversationController.resultLearningNotice,
       if (result.pulseTongueContradiction != null)
         '脉舌交叉核验：${result.pulseTongueContradiction}',
       if (result.recommendConsult || result.formula.isEmpty)
@@ -1839,9 +1841,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     ].where((line) => line.trim().isNotEmpty).join('\n');
     try {
       await (widget.bookmarkWriter ?? DatabaseHelper.instance.insertBookmark)(Bookmark(
-        title: '${result.displayMeridian}病 - ${result.pattern}',
+        title: '模拟学习：${result.displayMeridian}病 - ${result.pattern}',
         content: content,
-        category: '辨证结果',
+        category: '模拟辨证学习',
         source: 'chat_diagnosis',
       ));
       if (mounted) {
@@ -1857,7 +1859,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   void _shareDiagnosisResult(DiagnosisResult result) {
     final formula = FormulaRepository.getByName(result.formula);
     final lines = <String>[
-      '【汉唐中医辨证结果】',
+      '【汉唐中医模拟辨证学习结果】',
       '六经：${result.displayMeridian}病',
       if (result.isCombined)
         '合病：${result.meridian}与${result.combinedMeridian}同病',
@@ -1884,6 +1886,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (result.prescription != null) result.prescription!.toCopyText(),
       if (result.recommendConsult || result.formula.isEmpty)
         '证据不足，不自动推荐方剂；请由执业中医师结合四诊面诊核实。',
+      TcmInterviewConversationController.resultLearningNotice,
       '—— 来自「汉唐中医」App',
     ];
     final text = lines.where((line) => line.trim().isNotEmpty).join('\n\n');
@@ -2344,7 +2347,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'structured_interview_option',
-      requireAssessment: true,
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -2842,7 +2845,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'headless_tool:${tool.id}',
-      requireAssessment: tool.id == 'structured_diagnosis',
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -3149,7 +3152,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'tool_dispatch:${tool.id}',
-      requireAssessment: tool.id == 'structured_diagnosis',
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
@@ -5129,7 +5132,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           text: redFlagContext.text.isEmpty ? null : redFlagContext.text,
           traceContext: traceContext,
           route: 'result_interpretation',
-          requireAssessment: true,
+          requireAssessment: false,
           sourceTruncated: redFlagContext.sourceTruncated,
         )) {
       return;
@@ -8505,7 +8508,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'symptom_extraction',
-      requireAssessment: true,
+      requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       if (mounted) setState(() => _extracting = false);
