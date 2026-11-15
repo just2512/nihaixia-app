@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../utils/fold_aware_routes.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -241,6 +242,18 @@ Future<void> clearAppCache(BuildContext context) async {
 
 // ==================== 关于 ====================
 
+Future<void> _copyAboutAddress(
+  BuildContext context, {
+  required String label,
+  required String address,
+}) async {
+  await Clipboard.setData(ClipboardData(text: address));
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('$label已复制到剪贴板')),
+  );
+}
+
 Future<void> showAboutPage(BuildContext context) async {
   final info = await PackageInfo.fromPlatform();
   await ChangelogRepository.load();
@@ -266,18 +279,21 @@ Future<void> showAboutPage(BuildContext context) async {
                   const Text('汉唐中医', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text('v${info.version}', style: TextStyle(color: context.colors.onSurfaceVariant)),
+                  const SizedBox(height: 2),
+                  Text('构建号 ${info.buildNumber}',
+                      style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('中医经典与本地健康信息工具',
+            const Text('中医诊疗全过程辅助学习软件',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '提供六经规则问诊、经典知识检索、经方资料和传统文化工具。'
-              '规则问诊输出仅作传统医学知识参考，不能替代医疗机构的诊断和治疗。',
+              '围绕四诊问诊、信息整理与补问，帮助用户理解辨病、辨证、病机、治法、方剂配伍、针灸取穴，以及经典依据和医案复盘。'
+              '辨病辨证结论由 App 既有确定性业务规则执行，并应关联可追溯的本地知识依据；AI 负责理解、引导和解释，不凭自身推断生成或覆盖业务结论。',
               style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
@@ -288,12 +304,57 @@ Future<void> showAboutPage(BuildContext context) async {
               '• 舌象、脉象等问诊参考信息\\n'
               '• 经方、本草、穴位与经典资料库\\n'
               '• 医案收藏、分享与离线检索\\n'
-              '• 本地 E4B 健康信息澄清与自述整理（不提供疾病诊断或处方）\\n'
+              '• 本地 AI 辅助理解、问诊追问与已验证结果解释（诊断结论由 App 确定性规则产生）\\n'
               '• 易经、八字、紫微等传统文化工具（非医疗用途）',
             ),
             const SizedBox(height: 16),
-            const SizedBox(height: 16),
-            const Text('更新日志', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('项目与版本', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('开发维护：just2512',
+                style: TextStyle(color: context.colors.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            Text('版本信息读取自当前安装包，不引用上游版本号。',
+                style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
+            const SizedBox(height: 8),
+            const Text('本项目仓库', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SelectableText('https://github.com/just2512/nihaixia-app'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _copyAboutAddress(
+                  context,
+                  label: '本项目仓库地址',
+                  address: 'https://github.com/just2512/nihaixia-app',
+                ),
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('复制本项目地址'),
+              ),
+            ),
+            const Text('上游开源项目', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SelectableText('https://github.com/jangviktor-web/nihaixia-app'),
+            Text(
+              '本仓库保留 GitHub Fork 关系；上游变更按维护策略人工评估、审查和同步。应用版本、更新记录与发行渠道以本仓库为准。',
+              style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _copyAboutAddress(
+                  context,
+                  label: '上游仓库地址',
+                  address: 'https://github.com/jangviktor-web/nihaixia-app',
+                ),
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('复制上游地址'),
+              ),
+            ),
+            const Divider(),
+            const Text('本仓库更新记录', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(
+              '以下为本仓库已登记的更新记录；当前安装包版本以页面顶部显示为准。',
+              style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12),
+            ),
             const SizedBox(height: 8),
             if (entries.isEmpty)
               Text('暂无更新记录', style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12))
@@ -302,14 +363,14 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Text('致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('倪海厦老师 · 经方医学传承\n'
-                '仲景先师 · 伤寒论原典',
+            Text('感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
+                '感谢 jangviktor-web/nihaixia-app 原作者提供原始开源项目与代码基础，也感谢其他开源组件作者和社区贡献者。',
                 style: TextStyle(color: context.colors.onSurfaceVariant)),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
             Center(
-              child: Text('© 2024-2026 汉唐中医',
+              child: Text('© 2026 just2512 · 汉唐中医',
                   style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
             ),
           ],
@@ -356,7 +417,7 @@ Widget _buildChangelogEntry(BuildContext context, ChangelogEntry e) {
                   color: context.colors.successContainer,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text('最新',
+                child: Text('最近记录',
                     style: TextStyle(color: context.colors.success, fontSize: 10)),
               ),
             ],
