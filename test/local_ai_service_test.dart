@@ -972,15 +972,28 @@ void main() {
         traceId: traceId,
         sourceText: sourceText,
         questionSchema: questionSchema,
+        currentUserText: '半夜醒了两次',
       );
 
       expect(received?.method, 'extractSymptoms');
       expect(received?.arguments, {
         'trace_id': traceId,
         'question_schema': jsonEncode(questionSchema),
+        'current_user_text': '半夜醒了两次',
       });
       expect(draft.questionCandidates.single.answer, '夜间易醒');
       expect(draft.questionCandidates.single.evidence, '醒了两次');
+    });
+
+    test('current chat input exceeding the native boundary limit is rejected', () async {
+      await expectLater(
+        LocalAiService().extractSymptomsWithQuestionSchema(
+          sourceText: '当前输入',
+          questionSchema: const [],
+          currentUserText: '过长' * 1001,
+        ),
+        throwsFormatException,
+      );
     });
 
     test('question schema is passed to Native and returned candidates are evidence-validated', () async {
