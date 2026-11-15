@@ -243,6 +243,17 @@ class TcmInterviewConversationController {
     _appendUser(normalized);
   }
 
+  /// Adds an informational assistant line to the same durable interview
+  /// transcript. It does not alter the DiagnosticEngine snapshot or pending
+  /// question.
+  void addAssistantNotice(String text) {
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 1000) {
+      throw ArgumentError.value(text, 'text', '问诊提示为空或过长');
+    }
+    _appendAssistant(normalized);
+  }
+
   /// Replaces the visible wording of the current prompt while preserving its
   /// stable question ID and exact option whitelist for confirmation or another
   /// clarification turn.
