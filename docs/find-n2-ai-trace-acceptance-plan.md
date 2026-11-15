@@ -18,7 +18,7 @@
 尚未完成的事项：
 
 - F 仍为 `PARTIAL`。当前代码已有结构化问诊启动/选项/舌脉输入、澄清路由、Headless/Page 工具、普通文本/图片/语音和症状整理等路径的 TRACE 调用点；但这些调用点不等于每条分支的事件链已完整验收。失败/取消/未完成轮次、跨层状态、持久化与最终展示仍要按实际结果核对。
-- 当前生产调用代码没有 `PREFLIGHT`、`RED_FLAG` 的事件记录调用点；B 项尚无经医学审核的自然语言 detector 与全入口生产 Gate。因此红旗安全场景在这两个阶段必须保持 MISSING/UNKNOWN，不得用 `NOT_APPLICABLE` 或普通路由事件替代。仅调试构建开关不是完整场景覆盖的证明。每个场景必须检查实际写出的阶段、状态、跨层 ID、SQLite metadata 和最终展示对应关系。
+- 当前产品准则不建设临床 detector，也不把它作为正常问诊前置阻断。`requireAssessment=false` 的场景应由应用显式记录 `PREFLIGHT`、`RED_FLAG` 为 `NOT_APPLICABLE`（`PREFLIGHT_NOT_REQUIRED` / `REDFLAG_ASSESSMENT_NOT_REQUIRED`）；这不是 detector 已评估或 `CLEAR/PASS`。只有产品明确要求实际评估的路径才记录真实检测结果；这类路径若应评估却未配置 detector，必须为 `UNKNOWN` 并暂停。每个场景仍须检查实际写出的阶段、状态、跨层 ID、SQLite metadata 和最终展示对应关系。
 - 尚无 OPPO Find N2 本地真实设备验收记录。GPU/CPU 多轮、图片/语音、Activity/进程恢复、数据清除后强停/重启仍需在设备执行；CI/模拟器不能替代。
 - E 的应用内清除代码与自动化测试已落地，但混合 `nihaisha.db` 的系统备份/设备迁移边界仍未决；旧共享图片归属 UNKNOWN，不能扩大删除范围。清除本地设备数据不代表远端备份或用户导出副本被删除。
 
