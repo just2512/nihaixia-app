@@ -5892,6 +5892,32 @@ void main() {
 }
 
 
+class _ClearThenUnknownRedFlagDetector implements RedFlagDetector {
+  _ClearThenUnknownRedFlagDetector(this.events);
+
+  final List<String> events;
+  int calls = 0;
+
+  @override
+  Future<RedFlagAssessment?> assess(RedFlagInput input) async {
+    calls += 1;
+    events.add('gate:${input.source.name}');
+    if (calls > 1) return null;
+    return RedFlagAssessment(
+      inputSource: input.source,
+      detectorId: 'test-only-sequenced-detector',
+      detectorVersion: 'test-only-1',
+      ruleSetVersion: 'test-only-sequenced-rules',
+      subject: RedFlagSubject.knowledge,
+      time: RedFlagTime.hypothetical,
+      polarity: RedFlagPolarity.negated,
+      ruleSetReviewed: true,
+      detectorCoverageComplete: true,
+      matchedRuleIds: const [],
+    );
+  }
+}
+
 class _WidgetRedFlagDetector implements RedFlagDetector {
   const _WidgetRedFlagDetector({
     required this.events,
@@ -5993,6 +6019,53 @@ void mainRedFlagEntrypointOrderingTests() {
       expect(service.intentQueries, isEmpty);
       expect(service.sentTexts, isEmpty);
       expect(find.textContaining('安全评估命中阻断条件'), findsOneWidget);
+    });
+
+    testWidgets('TRACE 默认关闭时每个临床轮次都重新执行安全评估', (tester) async {
+      final events = <String>[];
+      final detector = _ClearThenUnknownRedFlagDetector(events);
+      final gate = RedFlagGate(
+        detector: detector,
+        timeout: const Duration(milliseconds: 100),
+      );
+      final service = _OrderedIntentSendService(events);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LocalAiInterviewScreen(
+            conversationStore: _store,
+            service: service,
+            imagePicker: _EmptyLocalAiImagePicker(),
+            redFlagGate: gate,
+            // Intentionally omit traceRecorder: production default is disabled.
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      for (var attempt = 0;
+          attempt < 50 && find.byTooltip('释放模型内存').evaluate().isEmpty;
+          attempt++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byTooltip('释放模型内存'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '我最近胸痛');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(detector.calls, 1);
+      expect(service.sentTexts, ['我最近胸痛']);
+
+      await tester.enterText(find.byType(TextField), '我最近头痛');
+      await tester.pump();
+      await tester.tap(find.byTooltip('发送'));
+      await tester.pumpAndSettle();
+
+      expect(detector.calls, 2,
+          reason: 'disabled TRACE 是共享常量，不能作为跨轮缓存身份');
+      expect(service.sentTexts, ['我最近胸痛'],
+          reason: '第二轮 UNKNOWN 必须在模型调用前阻断');
+      expect(find.textContaining('安全评估尚未完成'), findsOneWidget);
     });
 
     testWidgets('非临床排盘请求不触发医学门禁并进入确定性意图筛选', (tester) async {
