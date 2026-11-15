@@ -506,7 +506,7 @@ class LocalAiService {
         questionSchema: questionSchema,
         sourceText: sourceText,
         sendSourceTextToNative: true,
-        sourceTruncated: sourceTruncated,
+        sourceWasTruncated: sourceTruncated,
       );
 
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
@@ -518,7 +518,7 @@ class LocalAiService {
         questionSchema: questionSchema,
         sourceText: sourceText,
         sendSourceTextToNative: true,
-        sourceTruncated: sourceTruncated,
+        sourceWasTruncated: sourceTruncated,
       );
 
 
@@ -527,7 +527,7 @@ class LocalAiService {
     List<Map<String, Object?>>? questionSchema,
     String sourceText = '',
     bool sendSourceTextToNative = false,
-    bool sourceTruncated = false,
+    bool sourceWasTruncated = false,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -536,7 +536,7 @@ class LocalAiService {
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
         if (questionSchema != null) 'question_schema': jsonEncode(questionSchema),
         if (sendSourceTextToNative) 'source_text': sourceText.trim(),
-        if (sendSourceTextToNative && sourceTruncated) 'source_truncated': true,
+        if (sendSourceTextToNative && sourceWasTruncated) 'source_truncated': true,
       },
     );
     _verifyTraceId(data, normalizedTraceId);
