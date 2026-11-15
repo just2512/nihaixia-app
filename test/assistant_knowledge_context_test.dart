@@ -222,7 +222,7 @@ void main() {
 
   test('本地医案检索注入助手上下文时保留可定位的知识库条目', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
-    expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
+    expect(context, contains('[App医案库 · 条目'));
     expect(context, contains('知识库条目定位：medical_case:internal-seq:'));
     expect(context, contains('来源标识：medical_case:'));
     expect(context, contains('资料类型：App 医案库本地整理记录'));
@@ -363,9 +363,9 @@ void main() {
     expect(lecture, isNot(contains('已完成校勘')));
   });
 
-  test('医案关联上下文使用稳定知识库条目编号定位', () async {
+  test('医案关联上下文使用稳定知识库条目编号定位而不显示书目缺失', () async {
     final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
-    expect(cases, contains('内部序号'));
+    expect(cases, contains('[App医案库 · 条目'));
     expect(cases, contains('知识库条目定位：medical_case:internal-seq:'));
     expect(cases, contains('来源标识：medical_case:'));
     expect(cases, isNot(contains('来源定位：MISSING')));
