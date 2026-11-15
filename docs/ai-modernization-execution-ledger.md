@@ -1991,7 +1991,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - PR #169 的 squash merge 基线为 `986417b06790ad85c3c9487c9227c034b87cb676`；PR #170 为 `d9170b5f566bba973a11049a4b5f7401881b1b28`；PR #171 为 `e45b28e9e80793da291b4a5a016188e44fb11065`；PR #172 为 `1370855b3f6a94f4a9cf0bcb235478f753348443`。
 - PR #170 最终 head `2e597c1817de2001b71c07b3d4d8b28d9d1b36c6`，PR Flutter regression、独立分支验证和 Android arm64 APK/Manifest/ABI/SHA-256/Native tests 均 SUCCESS；PR #168 已由 #170 替代并关闭。
 - PR #171 最终 head `c5e0b25d5d1e5283e7f93d4664b0865141b583b9`，分支验证和 PR Flutter regression、Android arm64/Native tests 均 SUCCESS。合并后 master e45 基线的 Flutter tests run `43671088342` 与 Quality Gate run `43671088143` 均 SUCCESS。
-- PR #172 最终 head `03159bc645c6e06ef5062ec5438b1417111bb067`，分支验证 run `43671166718` SUCCESS，PR workflow run `43671170314` SUCCESS，含 Flutter regression、Android arm64 APK/Manifest/ABI/SHA-256、Native unit tests、JUnit XML 和证据工件上传。Squash merge 为当前 master `1370855b3f6a94f4a9cf0bcb235478f753348443`。该 merge SHA 的 post-merge Flutter tests run `43671870660` 与 Quality Gate run `43671870662` 在本节更新时仍 IN_PROGRESS，不写为 SUCCESS。
+- PR #172 最终 head `03159bc645c6e06ef5062ec5438b1417111bb067`，分支验证 run `43671166718` SUCCESS，PR workflow run `43671170314` SUCCESS，含 Flutter regression、Android arm64 APK/Manifest/ABI/SHA-256、Native unit tests、JUnit XML 和证据工件上传。Squash merge 为当前 master `1370855b3f6a94f4a9cf0bcb235478f753348443`；合并后 Flutter tests run `43671870660` 与 Quality Gate run `43671870662` 均终态 SUCCESS。Flutter regression job `132683481307`、Android arm64 APK/Manifest/ABI/SHA-256/Native tests job `132684675722`、Quality Gate job `132683481181` 均 SUCCESS。
 - 代码范围以 PR 差异为准；不把 PR/CI 成功描述成 Find N2 实机验收。
 
 ### 43.2 B：红旗安全门禁实际状态
