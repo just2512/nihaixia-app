@@ -8295,7 +8295,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (autoStartRuleInterview && currentUserText?.trim().isNotEmpty == true) {
         await _startInlineTcmInterview(
           initialUserMessage: currentUserText!.trim(),
-          userContext: draft.summaryLines.join('\\n'),
+          userContext: draft.summaryLines.join('\n'),
           confirmedTenAnswers: confirmedAnswers,
           traceContext: activeTraceContext,
         );
