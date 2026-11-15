@@ -1,6 +1,6 @@
 # AI、问诊与全应用功能能力盘点
 
-当前复核基线：`master` @ `aed6c4b0c3b7684a437b61253c16fd495e6ab717`（2026-11-14）。下方早期日期章节保留为历史记录；当前能力数量和结论以本文末尾“2L 当前主线复核”覆盖旧快照。
+当前复核基线：`master` @ `1370855b3f6a94f4a9cf0bcb235478f753348443`（2026-11-15）。下方早期日期章节保留为历史记录；当前能力数量和结论以本文末尾“2O 当前主线复核”覆盖旧快照。
 本文件只记录源码与测试能证明的现状；文档声明、静态布局测试和真实设备验收分开处理。状态采用 `EXISTS`、`PARTIAL`、`MISSING`、`UNKNOWN`，不以功能名称或 UI 文案代替验收。
 
 ## 1. 12 项计划落地矩阵
@@ -14,7 +14,7 @@
 | 5 | 经典条文、医案关联 | PARTIAL | `docs/classic-and-medical-case-source-audit.md`、`ClassicSearchService`、`AssistantKnowledgeContextBuilder` | 已对部分条文做在线交叉核验和分类纠错；李心机2022译注本逐页书影、赵开美具体馆藏/刻次、卷页、异文与本地 manifest 未完成。医案逐案原始定位缺失；1257 与来源统计 1337 的差异未核清，医案—经典自动关联保持 MISSING。 |
 | 6 | Find N2 内外屏适配 | PARTIAL（首批排盘表单已响应式调整） | `docs/find-n2-adaptive-layout.md`、`docs/find-n2-fold-aware-layout.md`；`adaptive_home_navigation_test.dart`、`adaptive_master_detail_test.dart`、`local_ai_adaptive_content_test.dart`、`fold_aware_routes_test.dart`；`test/bazi_foldable_layout_test.dart` | 已有窗口断点、导航双面板、折痕/铰链安全区和窄屏换行回归；八字排盘的生辰输入卡与地点行现采用 720dp 最大内容宽度，外屏占满可用宽度、内屏居中限宽，并新增 402dp/840dp widget 测试。其他排盘/知识页面仍需逐页布局审计；Find N2（PUG110）外屏、内屏、半折叠、键盘、相机、文件选择器、模型导入的实机截图与窗口指标仍为 MISSING。 |
 | 7 | 本地 AI 与辨证问诊统一 | PARTIAL（统一消息时间线主路径已实现） | `LocalAiInterviewScreen._requestTool()` / `_openTool()` 对 `structured_diagnosis` 拦截并调用 `_startInlineTcmInterview()`；`_appendTcmInterviewMessages()` 将题目、选项、用户回答和结果写入共用 `_messages` 与 SQLite `assistant_messages`；`TcmInterviewConversationController` 使用 `DiagnosticEngine` | 常规结构化问诊已在本地 AI 主对话内联进行，不再跳转独立 ChatScreen；规则计算仍由确定性引擎负责。仍需清理注册表旧 ChatScreen builder 兼容残留，并补齐跨重启/跨会话恢复一致性、完成态回看与附件生命周期。 |
-| 8 | 本地 AI 调用知识库和工具 | PARTIAL（知识检索已接入；12 项 Headless executor，11 项 Page-only，另有 1 项结构化问诊内联流程） | `AssistantToolRouter` 当前 24 个定义；Headless：`YunQiToolExecutor`、`AlmanacToolExecutor`、`BaziToolExecutor`、`XiaoliurenToolExecutor`、`MeihuaToolExecutor`、`ChengguToolExecutor`、`HuangdiSijiToolExecutor`、`ZiweiToolExecutor`、`SolarTermToolExecutor`、`YiJingToolExecutor`、`DosageToolExecutor`、`ZiWuLiuZhuToolExecutor`；`structured_diagnosis` 由问诊控制器内联执行 | 23 个页面工具入口中 12 项具备 Headless executor，另 11 项仍为 Page-only；结构化问诊不是通用 Headless 工具。执行结果仍须校验 toolId、arguments、status、sourceIds 后才进入解释链；页面打开不计执行。全工具通用语义参数抽取、取消/超时统一协议仍未完成。 |
+| 8 | 本地 AI 调用知识库和工具 | PARTIAL（知识库条目引用/直达已接通；17 项 Headless executor，6 项 Page-only，另有 1 项结构化问诊内联流程） | `AssistantToolRouter` 当前 24 个定义；17 项 Headless：`YunQiToolExecutor`、`ZiweiToolExecutor`、`BaziToolExecutor`、`YiJingToolExecutor`、`XiaoliurenToolExecutor`、`MeihuaToolExecutor`、`DosageToolExecutor`、`ZiWuLiuZhuToolExecutor`、`AlmanacToolExecutor`、`SolarTermToolExecutor`、`DreamToolExecutor`、`GuanshaToolExecutor`、`SanshanLingqianToolExecutor`、`ChengguToolExecutor`、`ShoushengDebtToolExecutor`、`HuangdiSijiToolExecutor`、`SavedChartToolExecutor`；`structured_diagnosis` 由问诊控制器内联执行 | 23 个常规工具中 17 项具备 Headless executor，6 项为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。结构化问诊不是通用 Headless 工具。执行结果仍须校验 toolId、arguments、status、sourceIds；打开知识引用不计 Headless。全工具通用语义参数抽取、取消/超时统一协议仍未完成。 |
 | 9 | 设置入口 | EXISTS | `HomeScreen` 根导航含独立“设置”目的地；`home_screen_entry_test.dart` 断言设置可从根导航进入 | 当前已不依赖问诊页面内部入口；后续可继续优化设置分类与可发现性，不应把设置重新塞回聊天页。 |
 | 10 | 全应用功能盘点与 AI 融合 | PARTIAL | 本文件；`README.md`、`HomeScreen`、`AssistantToolRouter` | 本轮先盘点本计划相关功能；尚未逐页完成全量功能、数据源、入口、重复能力、权限、持久化和 AI 可调用性清单。不得据此宣称全 App 设计重构完成。 |
 | 11 | 单一主入口与统一调度 | PARTIAL（澄清状态可持久化） | `HomeScreen` 默认 AI 一级入口；`AssistantMode`（automatic/consultation/learning/tools/metaphysics）；`AssistantConversationOrchestrator`；`AssistantToolRouter.all`；`assistant_conversation_orchestrator_test.dart` | 当前注册表共 24 项：23 个页面工具入口和 1 个由问诊控制器内联处理的 `structured_diagnosis`；当前 12 项页面工具可 Headless 执行，11 项仍为 Page-only。工具角色上下文动态读取注册表。已覆盖排盘/起卦/单节气等参数澄清后的短答案路由；易经数字与手动选卦支持分轮补参，当前时间/铜钱随机输入由 App 注入。路由仍以确定性关键词/别名/动作词和槽位抽取为主，未具备覆盖全部工具的通用语义规划器，不允许模型直接执行任意 Dart 函数。
@@ -622,3 +622,18 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - PR #166 增加 `SanshanLingqianToolExecutor`：复用本地 92 签数据，签号由 App 本地随机生成；只对明确抽签意图在对话内执行，目录浏览仍使用原页面；模型不能指定签号或伪造签文。
 - Page-only 不批量迁移：知识/文档入口复用现有知识检索解释能力；个人历史/保存记录需用户选择与授权；玉匣灵兆是易与医疗症状混淆的民俗占断，缺乏安全、明确的对话执行契约。
 - B 仍 `PARTIAL / RELEASE BLOCKED`；自由文本问诊在生产红旗门禁闭合前不得开放。A/E/F 真机验收、C 来源定位和 E 数据清除/恢复证据继续按各自缺口管理。已审核知识库不重复审核。
+
+
+## 2O. 2026-11-15 PR #169/#170/#171/#172 合并后的能力清单
+
+- 当前主线：`master @ 1370855b3f6a94f4a9cf0bcb235478f753348443`。
+- `AssistantToolRouter` 共 24 个定义：23 个常规工具入口 + 1 个 `structured_diagnosis` 内联问诊控制器。
+- 23 个常规工具中 17 项具备 Headless executor：`yunqi`、`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`、`dosage`、`ziwu_liuzhu`、`almanac`、`solar_terms`、`dream`、`guansha`、`sanshan_lingqian`、`chenggu`、`shousheng_debt`、`huangdi_siji`、`saved_charts`。
+- 6 项仍为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。这不是要求批量迁移的任务清单：前三项的知识问答已通过现有知识检索和引用完成；个人历史需明确选择授权；重症和民俗资料应保留领域边界。
+- `structured_diagnosis` 继续由既有 `TcmInterviewConversationController` / `DiagnosticEngine` 内联执行，不计入通用 Headless。页面导航不等于 Executed Capability。
+- PR #169 已把 fail-closed RedFlagGate/Preflight 接到助手 Flutter 临床入口及 Android Native 模型边界；但自然语言/视觉/语音医学 detector、医学审核和审批证据仍 MISSING，B = `PARTIAL / RELEASE BLOCKED`。
+- PR #170 已让保存命盘在用户明确选择后于助手对话中复用既有八字/紫微计算能力；未选择记录前不暴露出生资料，不自动选择单条记录。
+- PR #171 统一知识回答的本地条目引用尾注；PR #172 修复古籍章节和内经条目的精确直达，引用必须能通过稳定 sourceId 回查具体 App 记录。普通学习资料不要求外部纸本卷页考证。
+- 自由文本问诊仍未闭环：控制器尚未按 AI 提取并经用户确认的字段跳过已回答项、只追问缺项；受生产 RedFlag detector 缺失约束，不能开放自动辨证。
+- Find N2 的 GPU/CPU、多轮媒体、进程恢复、数据清除后不可恢复和端到端 TRACE 必须由实体设备完成；CI APK、模拟器/Native 单测不代替真机验收。
+- 不修改 DiagnosticEngine/DiagnosticRules/十问/剂量/排盘算法；不重审已审核知识库；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
