@@ -7714,16 +7714,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
-    final userReportedText = _messages
-        .where((message) => message.isUser)
-        .map((message) => message.text)
-        .join('\n');
+    final redFlagSnapshot = _boundedRedFlagContext();
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
-      text: userReportedText.isEmpty ? null : userReportedText,
+      text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'symptom_extraction',
       requireAssessment: true,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       if (mounted) setState(() => _extracting = false);
       return;
