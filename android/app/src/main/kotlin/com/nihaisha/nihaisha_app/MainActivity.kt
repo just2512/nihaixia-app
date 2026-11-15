@@ -21,6 +21,7 @@ import com.google.ai.edge.litertlm.Message
 import java.io.File
 import java.security.MessageDigest
 import org.json.JSONArray
+import org.json.JSONObject
 
 private const val DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA = "com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND"
 
@@ -111,6 +112,11 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
                             return@handler
                         }
+                        val questionSchema = call.argument<String>("question_schema")?.trim() ?: "[]"
+                        if (questionSchema.length > 12_000) {
+                            result.error("INVALID_SYMPTOM_QUESTION_SCHEMA", "问诊题目 schema 超出长度限制", null)
+                            return@handler
+                        }
                         runAiTaskAfterNativeRedFlag(
                             result,
                             NativeRedFlagInput(
@@ -121,7 +127,7 @@ class MainActivity : FlutterActivity() {
                             ),
                             required = true
                         ) {
-                            LocalAiTraceIdPolicy.attach(extractSymptoms(), traceId)
+                            LocalAiTraceIdPolicy.attach(extractSymptoms(questionSchema), traceId)
                         }
                     }
                     "resolveAssistantIntent" -> {
@@ -1070,13 +1076,46 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun extractSymptoms(): Map<String, Any> {
+    private fun extractSymptoms(questionSchemaJson: String = "[]"): Map<String, Any> {
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
+        val schemaInput = JSONArray(questionSchemaJson)
+        require(schemaInput.length() <= 20) { "问诊题目 schema 过多" }
+        val schema = JSONArray()
+        repeat(schemaInput.length()) { index ->
+            val item = schemaInput.optJSONObject(index)
+                ?: throw IllegalArgumentException("问诊题目 schema 结构无效")
+            val id = item.optString("id").trim()
+            val question = item.optString("question").trim()
+            val options = item.optJSONArray("options")
+                ?: throw IllegalArgumentException("问诊题目缺少选项列表")
+            require(id.matches(Regex("^[a-zA-Z0-9_]+$")) && id.length <= 64) {
+                "问诊题目 ID 无效"
+            }
+            require(question.isNotEmpty() && question.length <= 300) {
+                "问诊题目文本无效"
+            }
+            require(options.length() in 1..30) { "问诊题目选项数量无效" }
+            val normalizedOptions = JSONArray()
+            repeat(options.length()) { optionIndex ->
+                val option = options.optString(optionIndex).trim()
+                require(option.isNotEmpty() && option.length <= 120) {
+                    "问诊题目选项无效"
+                }
+                normalizedOptions.put(option)
+            }
+            schema.put(
+                JSONObject()
+                    .put("id", id)
+                    .put("question", question)
+                    .put("options", normalizedOptions)
+            )
+        }
         if (userReportedInputs.isEmpty()) {
             return mapOf(
-                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[]}""",
-                "sourceTruncated" to userReportedInputsTruncated
+                "draft" to """{"main_complaint":null,"onset":null,"duration":null,"location":null,"sensation":null,"aggravating_factors":[],"relieving_factors":[],"associated_symptoms":[],"red_flags":[],"unknowns":[],"candidate_answers":[]}""",
+                "sourceTruncated" to userReportedInputsTruncated,
+                "backend" to activeBackend
             )
         }
         val userInputContext = buildString {
@@ -1109,13 +1148,20 @@ class MainActivity : FlutterActivity() {
               "relieving_factors": string[],
               "associated_symptoms": string[],
               "red_flags": string[],
-              "unknowns": string[]
+              "unknowns": string[],
+              "candidate_answers": [{"question_id":string,"answer":string,"evidence":string}]
             }
+            candidate_answers 只可使用下面 App 提供的题目 ID 和原有选项；answer 必须逐字等于该题某个既有选项，evidence 必须是用户原文中连续、可回查的片段。
+            只有用户明确提供的信息足以唯一支持某个既有选项时才提出候选；语义含糊、选项不匹配或缺少逐字证据时不要输出该题候选。不得把未提及的信息推断成“没有此症状”。
+            candidate_answers 不包含舌脉、诊断、证型、方剂或剂量；模型不得替代规则引擎作结论。
             red_flags 只记录用户明确说出的急症相关表现，不要自行判定风险等级。
             unknowns 记录仍需向用户核实的信息。
             以下内容是应用单独保存的用户原始文字输入和待核对语音识别草稿。
             不得使用照片、舌象观察或模型此前的回复；这些内容没有提供给你。
             语音识别草稿尚未由用户核对，只能按其文字整理，不得补全。
+
+            App 当前 DiagnosticEngine 十问题目和选项（不可增删或改写）：
+            $schema
 
             用户输入记录：
             $userInputContext
