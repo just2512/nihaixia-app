@@ -3950,7 +3950,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
@@ -4066,7 +4066,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '帮我推算五运六气');
+    await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
     await tester.pumpAndSettle();
