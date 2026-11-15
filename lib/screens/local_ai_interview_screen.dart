@@ -4393,6 +4393,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<void> _restoreVisibleConversationToModel({
     bool requireMedicalSafety = false,
+    _RedFlagContextSnapshot? safetyContext,
   }) async {
     if (_status?.ready != true) return;
     final transcriptLines = _messages
@@ -4407,10 +4408,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .where((message) => message.isUser)
         .map((message) => message.text)
         .toList(growable: false);
+    final redFlagSnapshot = safetyContext ?? _boundedRedFlagContext();
     final historyRequiresMedicalSafety =
         requireMedicalSafety ||
         AssistantConversationOrchestrator.requiresMedicalSafetyPreflight(
-          query: _boundedRedFlagContext(),
+          query: redFlagSnapshot.classificationText,
           selectedMode: _lastEffectiveMode ?? _assistantMode,
           structuredInterviewActive:
               _tcmInterviewController?.canAnswer == true ||
@@ -4420,6 +4422,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       transcript: transcript,
       userMessages: userMessages,
       requireMedicalSafety: historyRequiresMedicalSafety,
+      redFlagContext: historyRequiresMedicalSafety ? redFlagSnapshot.text : null,
+      redFlagContextTruncated:
+          historyRequiresMedicalSafety && redFlagSnapshot.sourceTruncated,
     );
   }
 
