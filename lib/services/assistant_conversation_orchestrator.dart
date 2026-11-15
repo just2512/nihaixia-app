@@ -152,9 +152,8 @@ class AssistantConversationOrchestrator {
     if (text.isEmpty) return false;
     final hasSymptoms = _symptomCues.any(text.contains);
     final hasPersonalContext = _personalContextCues.any(text.contains) ||
-        text.startsWith('我') ||
         (hasSymptoms &&
-            const ['最近', '近来', '这几天', '这段时间', '本人', '我自己']
+            const ['我最近', '我这几天', '我今天', '我现在', '我本人', '本人']
                 .any(text.contains));
     final explicitClinicalRequest = const [
       '帮我诊断',
