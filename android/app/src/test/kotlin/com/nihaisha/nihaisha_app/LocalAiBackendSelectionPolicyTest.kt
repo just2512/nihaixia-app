@@ -27,6 +27,7 @@ class LocalAiBackendSelectionPolicyTest {
             "cpu",
             LocalAiBackendSelectionPolicy.resolveBackend(
                 preferredBackend = "cpu",
+                hasUserPreference = true,
                 debuggableBuild = false,
                 debugForceCpu = false
             )
@@ -39,6 +40,7 @@ class LocalAiBackendSelectionPolicyTest {
             "gpu",
             LocalAiBackendSelectionPolicy.resolveBackend(
                 preferredBackend = "gpu",
+                hasUserPreference = true,
                 debuggableBuild = false,
                 debugForceCpu = false
             )
@@ -46,11 +48,25 @@ class LocalAiBackendSelectionPolicyTest {
     }
 
     @Test
-    fun debugIntentCanStillForceCpuForAcceptance() {
+    fun debugIntentCanForceCpuBeforeUserHasSavedPreference() {
         assertEquals(
             "cpu",
             LocalAiBackendSelectionPolicy.resolveBackend(
                 preferredBackend = "gpu",
+                hasUserPreference = false,
+                debuggableBuild = true,
+                debugForceCpu = true
+            )
+        )
+    }
+
+    @Test
+    fun explicitUserGpuPreferenceTakesPrecedenceOverDebugIntent() {
+        assertEquals(
+            "gpu",
+            LocalAiBackendSelectionPolicy.resolveBackend(
+                preferredBackend = "gpu",
+                hasUserPreference = true,
                 debuggableBuild = true,
                 debugForceCpu = true
             )
@@ -63,6 +79,7 @@ class LocalAiBackendSelectionPolicyTest {
             "gpu",
             LocalAiBackendSelectionPolicy.resolveBackend(
                 preferredBackend = "gpu",
+                hasUserPreference = false,
                 debuggableBuild = false,
                 debugForceCpu = true
             )
