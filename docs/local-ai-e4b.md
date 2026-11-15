@@ -84,6 +84,21 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 
 注意：ADB 方式不经过应用内导入流程的校验，但 App 会在首次加载前再次流式计算 SHA-256，匹配后才创建 LiteRT-LM Engine；哈希不匹配时拒绝加载。电脑端手动核对仍建议保留，作为导入前检查。模型加载优先尝试 GPU；GPU Engine.initialize() 失败时会在加载阶段尝试 CPU。若 GPU 初始化成功但首轮推理出现 LiteRT-LM 明确的 `Can not find OpenCL library on this device` 错误，应用会先关闭旧 Conversation 和 Engine，再重建 CPU Engine/Conversation，并只重试该首轮一次。其他运行时错误、CPU 重试失败及已有成功对话轮次后的 GPU 故障不会自动重放。界面显示实际后端，所有回退路径仍需 Find N2 实机验证。
 
+## Debug 构建：强制 CPU 后端验收
+
+Find N2 的 GPU 与 CPU 后端需要分别实测。应用默认优先 GPU；为避免 GPU 正常时无法独立验证 CPU，Debug APK 提供一个仅调试构建有效的启动参数。该入口没有用户设置界面，不改变 Release 构建的 GPU 优先和原有 CPU fallback。
+
+强制 CPU 启动（先停止现有进程，确保冷启动 Intent 生效）：
+
+```powershell
+adb shell am force-stop com.nihaisha.nihaisha_app
+adb shell am start -n com.nihaisha.nihaisha_app/.MainActivity --ez com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND true
+```
+
+启动后在本地 AI 状态中核对实际 `backend=cpu`，再执行 CPU 多轮场景并记录 TRACE。验证 GPU 时再次 force-stop，然后从桌面正常启动 App（不带该 extra），加载后必须核对实际 `backend=gpu`；若设备无法初始化 GPU，则按真实回退结果记录 `cpu`，不能将请求 GPU 视作 GPU 已通过。
+
+此参数只在 `BuildConfig.DEBUG` 为 true 时生效；Release 包即使收到同名 Intent extra，也必须忽略并保持默认后端选择策略。不要通过修改生产数据或业务规则来触发 CPU 测试。
+
 ## 当前实现范围
 
 - 完全离线：推理在 Android 本地执行，没有模型 API、远端服务或模型自动下载。
