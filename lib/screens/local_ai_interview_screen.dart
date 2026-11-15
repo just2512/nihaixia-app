@@ -8128,7 +8128,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
       text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
-      activeTraceContext: activeTraceContext,
+      traceContext: activeTraceContext,
       route: 'symptom_extraction',
       requireAssessment: true,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
