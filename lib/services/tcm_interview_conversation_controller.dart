@@ -38,6 +38,7 @@ class TcmInterviewConversationController {
   final String taskId;
   final List<TcmInterviewTaskMessage> _messages = [];
   final List<String> _zhenJiaSelected = [];
+  final Map<String, String> _pendingConfirmedTenAnswers = {};
 
   String _status = 'in_progress';
   String? _pendingPromptId;
@@ -63,6 +64,16 @@ class TcmInterviewConversationController {
   List<String> get tongueShapeOptions => _adapter.tongueShapeOptions;
   List<String> get pulseOptions => _adapter.pulseOptions;
 
+  /// Existing DiagnosticEngine questions/options, exposed as a bounded extraction schema.
+  List<Map<String, Object?>> get symptomQuestionSchema =>
+      _adapter.tenQuestionPrompts
+          .map((prompt) => <String, Object?>{
+                'id': prompt.id,
+                'question': prompt.question,
+                'options': prompt.options,
+              })
+          .toList(growable: false);
+
   factory TcmInterviewConversationController.restore(
     TcmInterviewTaskState state, {
     String? defaultGender,
@@ -79,6 +90,7 @@ class TcmInterviewConversationController {
     controller._pendingPromptId = state.pendingPromptId;
     controller._pendingPromptText = state.pendingPromptText;
     controller._pendingOptions = List<String>.unmodifiable(state.pendingOptions);
+    controller._pendingConfirmedTenAnswers.addAll(state.pendingConfirmedTenAnswers);
     controller._messages.addAll(state.transcript);
     for (final entry in _zhenJiaClueKeys.entries) {
       if (state.snapshot.answers['zhenjia_${entry.value}'] == true) {
@@ -102,15 +114,36 @@ class TcmInterviewConversationController {
 
   /// Starts the deterministic question flow. Free-text context is preserved
   /// as a user message only; it is never silently converted into engine keys.
-  void start({String? initialUserMessage, String? userContext}) {
+  void start({
+    String? initialUserMessage,
+    String? userContext,
+    Map<String, String> confirmedTenAnswers = const {},
+  }) {
     if (_messages.isNotEmpty || _pendingPromptId != null) {
       throw StateError('问诊任务已经启动');
     }
+    final prompts = _adapter.tenQuestionPrompts;
+    final allowed = <String, Set<String>>{
+      for (final prompt in prompts) prompt.id: prompt.options.toSet(),
+    };
+    for (final entry in confirmedTenAnswers.entries) {
+      if (!allowed.containsKey(entry.key) || !allowed[entry.key]!.contains(entry.value)) {
+        throw ArgumentError.value(
+          entry.value,
+          entry.key,
+          '已确认候选不属于当前 DiagnosticEngine 题目/选项',
+        );
+      }
+    }
+    _pendingConfirmedTenAnswers.addAll(confirmedTenAnswers);
     if (initialUserMessage != null && initialUserMessage.trim().isNotEmpty) {
       _appendUser(initialUserMessage.trim());
     }
     if (userContext != null && userContext.trim().isNotEmpty) {
-      _appendUser('已确认的症状自述（仅作上下文，未自动转换为规则答案）：\n${userContext.trim()}');
+      _appendUser('已确认的症状自述（原文保留为上下文；只有逐项确认的候选才会映射到规则问项）：\n' + userContext.trim());
+    }
+    if (_pendingConfirmedTenAnswers.isNotEmpty) {
+      _appendUser('已逐项确认 ' + _pendingConfirmedTenAnswers.length.toString() + ' 条十问候选；只将这些选项提交给原规则问诊，其余信息继续追问。');
     }
     _appendAssistant(_adapter.initialGreeting);
     _askTemperature();
@@ -228,6 +261,7 @@ class TcmInterviewConversationController {
         pendingOptions:
             _status == 'in_progress' ? _pendingOptions : const [],
         transcript: List.unmodifiable(_messages),
+        pendingConfirmedTenAnswers: Map.unmodifiable(_pendingConfirmedTenAnswers),
         updatedAt: DateTime.now().toUtc(),
         completedDiagnosis: _completedDiagnosis,
       );
@@ -249,18 +283,29 @@ class TcmInterviewConversationController {
   }
 
   void _askTenQuestion() {
-    final questions = _adapter.tenQuestionPrompts;
-    final index = _adapter.questionIndex;
-    if (index >= questions.length) {
-      _afterTenQuestions();
+    while (true) {
+      final questions = _adapter.tenQuestionPrompts;
+      final validIds = questions.map((question) => question.id).toSet();
+      _pendingConfirmedTenAnswers.removeWhere((id, _) => !validIds.contains(id));
+      final index = _adapter.questionIndex;
+      if (index >= questions.length) {
+        _afterTenQuestions();
+        return;
+      }
+      final question = questions[index];
+      final confirmedAnswer = _pendingConfirmedTenAnswers.remove(question.id);
+      if (confirmedAnswer != null) {
+        _appendUser('已确认自述对应问项「' + question.question + '」：' + confirmedAnswer);
+        _adapter.answerTenQuestion(question.id, confirmedAnswer);
+        continue;
+      }
+      _setPrompt(
+        id: 'ten:' + question.id,
+        text: question.question,
+        options: question.options,
+      );
       return;
     }
-    final question = questions[index];
-    _setPrompt(
-      id: 'ten:${question.id}',
-      text: question.question,
-      options: question.options,
-    );
   }
 
   void _afterTenQuestions() {

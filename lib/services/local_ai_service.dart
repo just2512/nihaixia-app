@@ -407,14 +407,34 @@ class LocalAiService {
   }) =>
       _extractSymptoms(traceId: traceId);
 
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) =>
+      _extractSymptoms(questionSchema: questionSchema, sourceText: sourceText);
+
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) =>
+      _extractSymptoms(
+        traceId: traceId,
+        questionSchema: questionSchema,
+        sourceText: sourceText,
+      );
+
   Future<LocalAiSymptomDraft> _extractSymptoms({
     String? traceId,
+    List<Map<String, Object?>>? questionSchema,
+    String sourceText = '',
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'extractSymptoms',
       {
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+        if (questionSchema != null) 'question_schema': jsonEncode(questionSchema),
       },
     );
     _verifyTraceId(data, normalizedTraceId);
@@ -426,9 +446,25 @@ class LocalAiService {
     if (sourceTruncated is! bool) {
       throw const FormatException('本地问诊没有返回完整性标记，请重新整理');
     }
+    final allowedQuestionOptions = <String, List<String>>{};
+    final questionLabels = <String, String>{};
+    for (final item in questionSchema ?? const <Map<String, Object?>>[]) {
+      final id = item['id'];
+      final question = item['question'];
+      final rawOptions = item['options'];
+      if (id is! String || question is! String || rawOptions is! List ||
+          rawOptions.isEmpty || rawOptions.any((option) => option is! String)) {
+        throw const FormatException('App 提供的问诊题目 schema 无效');
+      }
+      allowedQuestionOptions[id] = List<String>.unmodifiable(rawOptions.cast<String>());
+      questionLabels[id] = question;
+    }
     return LocalAiSymptomDraft.fromModelText(
       draft,
       sourceTruncated: sourceTruncated,
+      sourceText: sourceText,
+      allowedQuestionOptions: allowedQuestionOptions,
+      questionLabels: questionLabels,
     );
   }
 
@@ -915,6 +951,22 @@ class LocalAiModelStatus {
 }
 
 
+/// One model-proposed mapping from user wording to an existing DiagnosticEngine option.
+/// It remains a candidate until the user explicitly confirms it.
+class LocalAiSymptomQuestionCandidate {
+  const LocalAiSymptomQuestionCandidate({
+    required this.questionId,
+    required this.question,
+    required this.answer,
+    required this.evidence,
+  });
+
+  final String questionId;
+  final String question;
+  final String answer;
+  final String evidence;
+}
+
 /// 模型从对话中提取的用户自述草稿。只保留固定字段，不接受辨证或处方字段。
 class LocalAiSymptomDraft {
   final String? mainComplaint;
@@ -927,6 +979,7 @@ class LocalAiSymptomDraft {
   final List<String> associatedSymptoms;
   final List<String> redFlags;
   final List<String> unknowns;
+  final List<LocalAiSymptomQuestionCandidate> questionCandidates;
   final bool sourceTruncated;
 
   const LocalAiSymptomDraft({
@@ -940,6 +993,7 @@ class LocalAiSymptomDraft {
     this.associatedSymptoms = const [],
     this.redFlags = const [],
     this.unknowns = const [],
+    this.questionCandidates = const [],
     this.sourceTruncated = false,
   });
 
@@ -953,6 +1007,9 @@ class LocalAiSymptomDraft {
   factory LocalAiSymptomDraft.fromModelText(
     String text, {
     bool sourceTruncated = false,
+    String sourceText = '',
+    Map<String, List<String>> allowedQuestionOptions = const {},
+    Map<String, String> questionLabels = const {},
   }) {
     final normalized = text.trim();
     if (normalized.length > maxModelOutputCharacters) {
@@ -1005,6 +1062,57 @@ class LocalAiSymptomDraft {
       return List<String>.unmodifiable(result);
     }
 
+    final rawCandidates = map['candidate_answers'];
+    final candidates = <LocalAiSymptomQuestionCandidate>[];
+    if (rawCandidates != null) {
+      if (rawCandidates is! List || rawCandidates.length > 20) {
+        throw const FormatException('模型返回的问诊候选列表无效或过长');
+      }
+      final seenQuestionIds = <String>{};
+      for (final rawCandidate in rawCandidates) {
+        if (rawCandidate is! Map ||
+            rawCandidate.keys.any((key) => key is! String)) {
+          throw const FormatException('模型返回的问诊候选结构无效');
+        }
+        final candidate = Map<String, dynamic>.from(rawCandidate);
+        if (candidate.keys.toSet().difference(
+              {'question_id', 'answer', 'evidence'},
+            ).isNotEmpty ||
+            !candidate.keys.toSet().containsAll(
+              {'question_id', 'answer', 'evidence'},
+            )) {
+          throw const FormatException('问诊候选字段不符合声明契约');
+        }
+        final questionId = candidate['question_id'];
+        final answer = candidate['answer'];
+        final evidence = candidate['evidence'];
+        if (questionId is! String || answer is! String || evidence is! String) {
+          throw const FormatException('问诊候选的题目、答案或原文证据类型无效');
+        }
+        final id = questionId.trim();
+        final normalizedAnswer = answer.trim();
+        final normalizedEvidence = evidence.trim();
+        final allowed = allowedQuestionOptions[id];
+        if (id.isEmpty ||
+            normalizedAnswer.isEmpty ||
+            normalizedEvidence.isEmpty ||
+            normalizedEvidence.length > 200 ||
+            sourceText.isEmpty ||
+            !sourceText.contains(normalizedEvidence) ||
+            allowed == null ||
+            !allowed.contains(normalizedAnswer) ||
+            !seenQuestionIds.add(id)) {
+          throw FormatException('问诊候选 ' + id + ' 未通过选项白名单、原文证据或唯一性校验');
+        }
+        candidates.add(LocalAiSymptomQuestionCandidate(
+          questionId: id,
+          question: questionLabels[id] ?? id,
+          answer: normalizedAnswer,
+          evidence: normalizedEvidence,
+        ));
+      }
+    }
+
     return LocalAiSymptomDraft(
       mainComplaint: stringValue('main_complaint'),
       onset: stringValue('onset'),
@@ -1016,6 +1124,7 @@ class LocalAiSymptomDraft {
       associatedSymptoms: stringList('associated_symptoms'),
       redFlags: stringList('red_flags'),
       unknowns: stringList('unknowns'),
+      questionCandidates: List.unmodifiable(candidates),
       sourceTruncated: sourceTruncated,
     );
   }

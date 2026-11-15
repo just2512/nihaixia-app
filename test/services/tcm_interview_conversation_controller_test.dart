@@ -43,6 +43,68 @@ void main() {
       expect(controller.pendingOptions, isNotEmpty);
     });
 
+    test('只将用户确认的十问候选按原题序写入规则引擎，其余问题继续追问', () {
+      final controller = TcmInterviewConversationController();
+      final firstQuestion = controller.symptomQuestionSchema.first;
+      final questionId = firstQuestion['id']! as String;
+      final answer = (firstQuestion['options']! as List).first as String;
+
+      controller.start(
+        initialUserMessage: '最近有睡眠问题',
+        userContext: '最近有睡眠问题',
+        confirmedTenAnswers: {questionId: answer},
+      );
+      expect(controller.pendingPromptId, 'temperature');
+
+      controller.answerOption(controller.pendingOptions.first);
+      controller.answerOption('跳过，直接问诊');
+
+      final state = controller.createTaskState();
+      expect(state.snapshot.answers[questionId], answer);
+      expect(controller.pendingPromptId, startsWith('ten:'));
+      expect(controller.pendingPromptId, isNot('ten:' + questionId));
+      expect(
+        controller.messages.any((message) =>
+            message.text.contains('已确认自述对应问项') &&
+            message.text.contains(answer)),
+        isTrue,
+      );
+    });
+
+    test('未消费的已确认候选在任务恢复后仍保留，不改变当前待问项目', () {
+      final controller = TcmInterviewConversationController();
+      final schema = controller.symptomQuestionSchema;
+      final lastQuestion = schema.last;
+      final questionId = lastQuestion['id']! as String;
+      final answer = (lastQuestion['options']! as List).first as String;
+
+      controller.start(confirmedTenAnswers: {questionId: answer});
+      controller.answerOption(controller.pendingOptions.first);
+      controller.answerOption('跳过，直接问诊');
+
+      final saved = TcmInterviewTaskState.decode(
+        controller.createTaskState().encode(),
+      );
+      expect(saved.pendingConfirmedTenAnswers, {questionId: answer});
+      final restored = TcmInterviewConversationController.restore(saved);
+      expect(
+        restored.createTaskState().pendingConfirmedTenAnswers,
+        {questionId: answer},
+      );
+      expect(restored.pendingPromptId, saved.pendingPromptId);
+      expect(restored.pendingOptions, saved.pendingOptions);
+    });
+
+    test('拒绝非当前十问题目或选项的模型候选', () {
+      final controller = TcmInterviewConversationController();
+      expect(
+        () => controller.start(
+          confirmedTenAnswers: const {'not_a_question': '任意答案'},
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('主脉和兼脉通过同一问诊任务提交并持久化', () {
       final controller = TcmInterviewConversationController();
       controller.start();
