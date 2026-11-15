@@ -4370,10 +4370,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .where((message) => message.isUser)
         .map((message) => message.text)
         .toList(growable: false);
+    final historyRequiresMedicalSafety =
+        requireMedicalSafety ||
+        AssistantConversationOrchestrator.requiresMedicalSafetyPreflight(
+          query: _boundedRedFlagContext(),
+          selectedMode: _lastEffectiveMode ?? _assistantMode,
+          structuredInterviewActive:
+              _tcmInterviewController?.canAnswer == true ||
+                  _tcmInterviewController?.completedDiagnosis != null,
+        );
     await _service.restoreConversation(
       transcript: transcript,
       userMessages: userMessages,
-      requireMedicalSafety: requireMedicalSafety,
+      requireMedicalSafety: historyRequiresMedicalSafety,
     );
   }
 
@@ -5557,9 +5566,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (transcript == null || _status?.ready != true) return;
     final requireMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
-      query: _pendingHistoryUserMessages.join('\n'),
+      query: _boundedRedFlagContext(),
       selectedMode: _lastEffectiveMode ?? _assistantMode,
-      structuredInterviewActive: _tcmInterviewController?.canAnswer == true,
+      structuredInterviewActive:
+          _tcmInterviewController?.canAnswer == true ||
+              _tcmInterviewController?.completedDiagnosis != null,
     );
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.historyRestore,
