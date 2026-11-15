@@ -305,7 +305,8 @@ Future<void> showAboutPage(BuildContext context) async {
               '• 经方、本草、穴位与经典资料库\\n'
               '• 医案收藏、分享与离线检索\\n'
               '• 本地 AI 辅助理解、问诊追问与已验证结果解释（诊断结论由 App 确定性规则产生）\\n'
-              '• 易经、八字、紫微等传统文化工具（非医疗用途）',
+              '• 易学义理与传统术数工具（文化学习用途）\\n'
+              '• 八段锦、易筋经、五禽戏等导引内容为后续规划，当前版本以实际交付功能为准',
             ),
             const SizedBox(height: 16),
             const Text('项目与版本', style: TextStyle(fontWeight: FontWeight.bold)),
