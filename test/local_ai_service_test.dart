@@ -103,6 +103,7 @@ void main() {
         'source_text': sourceText,
       });
       expect(draft.mainComplaint, '头痛');
+      expect(draft.sourceText, sourceText);
       expect(draft.questionCandidates.single.answer, '半夜1-3点醒');
       expect(draft.questionCandidates.single.evidence, '醒了两次');
     });
