@@ -140,7 +140,7 @@ class TcmInterviewConversationController {
       _appendUser(initialUserMessage.trim());
     }
     if (userContext != null && userContext.trim().isNotEmpty) {
-      _appendUser('已确认的症状自述（仅作上下文，未自动转换为规则答案）：\n' + userContext.trim());
+      _appendUser('已确认的症状自述（原文保留为上下文；只有逐项确认的候选才会映射到规则问项）：\n' + userContext.trim());
     }
     if (_pendingConfirmedTenAnswers.isNotEmpty) {
       _appendUser('已逐项确认 ' + _pendingConfirmedTenAnswers.length.toString() + ' 条十问候选；只将这些选项提交给原规则问诊，其余信息继续追问。');
