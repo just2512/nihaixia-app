@@ -421,6 +421,8 @@ class LocalAiService {
     );
   }
 
+  Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
+
   Future<LocalAiInterviewAnswer> understandTcmInterviewAnswer({
     required String questionId,
     required String question,
