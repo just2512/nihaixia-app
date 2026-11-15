@@ -332,6 +332,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantToolArguments? _pendingShoushengDebtArguments;
   AssistantToolArguments? _pendingSavedChartsArguments;
   LocalAiSymptomDraft? _confirmedDraft;
+  Map<String, String> _confirmedTenAnswers = const {};
   String? _error;
 
   AssistantConversationStore get _conversationStore =>
@@ -1380,6 +1381,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _startInlineTcmInterview({
     required String initialUserMessage,
     String? userContext,
+    Map<String, String> confirmedTenAnswers = const {},
     AiTraceContext? traceContext,
   }) async {
     final activeTraceContext = traceContext ??
@@ -1481,6 +1483,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       controller.start(
         initialUserMessage: initialUserMessage,
         userContext: userContext,
+        confirmedTenAnswers: confirmedTenAnswers,
       );
       executionWatch.stop();
       await _traceRecorder.record(
@@ -1551,6 +1554,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (mounted) {
       setState(() {
         _confirmedDraft = null;
+        _confirmedTenAnswers = const {};
         _structuredDiagnosisBusy = false;
       });
     }
@@ -8099,9 +8103,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     try {
       final traceId = traceContext.traceId;
+      final schemaController = TcmInterviewConversationController(
+        defaultGender: SettingsRepository.instance.defaultGender,
+      );
+      final questionSchema = schemaController.symptomQuestionSchema;
       final draft = traceId == null
-          ? await _service.extractSymptoms()
-          : await _service.extractSymptomsWithTrace(traceId: traceId);
+          ? await _service.extractSymptomsWithQuestionSchema(
+              sourceText: redFlagSnapshot.text,
+              questionSchema: questionSchema,
+            )
+          : await _service.extractSymptomsWithQuestionSchemaAndTrace(
+              traceId: traceId,
+              sourceText: redFlagSnapshot.text,
+              questionSchema: questionSchema,
+            );
       nativeInferenceCompleted = true;
       await _traceRecorder.record(
         traceContext,
@@ -8129,10 +8144,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return;
       }
 
-      final confirmed = await showFoldAwareDialog<bool>(
+      final confirmedAnswers = await showFoldAwareDialog<Map<String, String>>(
         context: context,
         builder: (dialogContext) {
           var checked = false;
+          final accepted = <String, bool>{
+            for (final candidate in draft.questionCandidates)
+              candidate.questionId: false,
+          };
           return StatefulBuilder(
             builder: (context, setDialogState) => AlertDialog(
               title: const Text('核对症状整理'),
@@ -8156,6 +8175,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                         child: Text(line, style: const TextStyle(fontSize: AppType.caption)),
                       ),
                     ),
+                    if (draft.questionCandidates.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      const Text(
+                        'AI 根据原文提出以下十问候选。只有你逐项勾选的答案才会写入原规则问诊；未勾选或不确定的项目仍由问诊追问。',
+                        style: TextStyle(fontSize: AppType.caption, height: 1.45),
+                      ),
+                      ...draft.questionCandidates.map((candidate) => CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: accepted[candidate.questionId] == true,
+                            onChanged: (value) => setDialogState(() {
+                              accepted[candidate.questionId] = value == true;
+                            }),
+                            title: Text(
+                              candidate.question + '：' + candidate.answer,
+                              style: const TextStyle(fontSize: AppType.caption),
+                            ),
+                            subtitle: Text(
+                              '原文证据：' + candidate.evidence,
+                              style: const TextStyle(fontSize: AppType.micro),
+                            ),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          )),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
@@ -8163,7 +8205,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       onChanged: (value) =>
                           setDialogState(() => checked = value == true),
                       title: const Text(
-                        '我已核对，内容符合我的实际描述',
+                        '我已核对上面的自述摘要',
                         style: TextStyle(fontSize: AppType.caption),
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
@@ -8173,12 +8215,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
+                  onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('返回修改'),
                 ),
                 FilledButton(
                   onPressed: checked
-                      ? () => Navigator.pop(dialogContext, true)
+                      ? () => Navigator.pop(dialogContext, {
+                          for (final candidate in draft.questionCandidates)
+                            if (accepted[candidate.questionId] == true)
+                              candidate.questionId: candidate.answer,
+                        })
                       : null,
                   child: const Text('确认这份整理'),
                 ),
@@ -8188,7 +8234,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         },
       );
 
-      if (!mounted || confirmed != true) {
+      if (!mounted || confirmedAnswers == null) {
         await recordFinalRender(
           errorCode: mounted ? 'USER_CANCELLED_DRAFT_REVIEW' : 'SCREEN_DISPOSED',
         );
@@ -8196,6 +8242,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       setState(() {
         _confirmedDraft = draft;
+        _confirmedTenAnswers = Map<String, String>.unmodifiable(confirmedAnswers);
       });
       await recordFinalRender();
     } on PlatformException catch (error) {
@@ -8888,6 +8935,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     await _startInlineTcmInterview(
       initialUserMessage: '继续规则辨证',
       userContext: draft.summaryLines.join('\\n'),
+      confirmedTenAnswers: _confirmedTenAnswers,
     );
   }
 
