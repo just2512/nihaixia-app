@@ -140,14 +140,7 @@ class MainActivity : FlutterActivity() {
                         ) {
                             result.error("INVALID_TCM_USER_CONTEXT", "问诊用户上下文为空、不完整或超出长度限制", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(
-                                    NativeRedFlagInputSource.STRUCTURED_INPUT,
-                                    currentText
-                                ),
-                                required = true
-                            ) {
+                            runAiTask(result) {
                                 LocalAiTraceIdPolicy.attach(
                                     understandTcmInterviewAnswer(
                                         questionId,
@@ -185,15 +178,7 @@ class MainActivity : FlutterActivity() {
                         } else if (explicitSourceText != null && explicitSourceText.length > 10_000) {
                             result.error("INVALID_SYMPTOM_SOURCE_TEXT", "本次问诊原文超出长度限制", null)
                         } else {
-                            runAiTaskAfterNativeRedFlag(
-                                result,
-                                NativeRedFlagInput(
-                                    NativeRedFlagInputSource.STRUCTURED_INPUT,
-                                    extractionSource.takeIf { it.isNotBlank() },
-                                    sourceTruncated = extractionSourceTruncated
-                                ),
-                                required = true
-                            ) {
+                            runAiTask(result) {
                                 LocalAiTraceIdPolicy.attach(
                                     extractSymptoms(
                                         questionSchema,
