@@ -1429,11 +1429,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                           accepted[candidate.questionId] = value == true;
                         }),
                         title: Text(
-                          '\${candidate.question}：\${candidate.answer}',
+                          '${candidate.question}：${candidate.answer}',
                           style: const TextStyle(fontSize: AppType.caption),
                         ),
                         subtitle: Text(
-                          '原文依据：\${candidate.evidence}',
+                          '原文依据：${candidate.evidence}',
                           style: const TextStyle(fontSize: AppType.micro),
                         ),
                         controlAffinity: ListTileControlAffinity.leading,
