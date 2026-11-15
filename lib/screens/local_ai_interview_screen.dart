@@ -8066,20 +8066,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<void> _extractSymptoms() async {
+  Future<void> _extractSymptoms({
+    String? currentUserText,
+    AiTraceContext? traceContextOverride,
+    bool autoStartRuleInterview = false,
+  }) async {
     if (_attachmentBusy || _modelControlBusy || _sending || _extracting) return;
     setState(() {
       _extracting = true;
       _error = null;
     });
-    final traceContext = _traceRecorder.start(
+    final activeTraceContext = traceContextOverride ?? _traceRecorder.start(
       stage: AiTraceStage.input,
       route: 'symptom_extraction',
       mode: 'consultation',
     );
     Future<void> recordFinalRender({String? errorCode}) =>
         _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.finalRender,
           status: mounted
               ? AiTraceStatus.succeeded
@@ -8089,11 +8093,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
-    final redFlagSnapshot = _boundedRedFlagContext();
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: currentUserText);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.structuredInterview,
       text: redFlagSnapshot.text.isEmpty ? null : redFlagSnapshot.text,
-      traceContext: traceContext,
+      activeTraceContext: activeTraceContext,
       route: 'symptom_extraction',
       requireAssessment: true,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
@@ -8102,7 +8106,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     try {
-      final traceId = traceContext.traceId;
+      final traceId = activeTraceContext.traceId;
       final schemaController = TcmInterviewConversationController(
         defaultGender: SettingsRepository.instance.defaultGender,
       );
@@ -8111,21 +8115,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ? await _service.extractSymptomsWithQuestionSchema(
               sourceText: redFlagSnapshot.text,
               questionSchema: questionSchema,
+              currentUserText: currentUserText,
             )
           : await _service.extractSymptomsWithQuestionSchemaAndTrace(
               traceId: traceId,
               sourceText: redFlagSnapshot.text,
               questionSchema: questionSchema,
+              currentUserText: currentUserText,
             );
       nativeInferenceCompleted = true;
       await _traceRecorder.record(
-        traceContext,
+        activeTraceContext,
         stage: AiTraceStage.nativeInference,
         status: AiTraceStatus.succeeded,
         mode: 'consultation',
       );
       await _traceRecorder.record(
-        traceContext,
+        activeTraceContext,
         stage: AiTraceStage.resultValidation,
         status: AiTraceStatus.succeeded,
         mode: 'consultation',
@@ -8137,6 +8143,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       setState(() => _extracting = false);
       if (draft.summaryLines.isEmpty) {
+        if (autoStartRuleInterview && currentUserText?.trim().isNotEmpty == true) {
+          // An explicit consultation request with no extractable slots still
+          // enters the existing deterministic flow, which asks for missing data.
+          await _startInlineTcmInterview(
+            initialUserMessage: currentUserText!.trim(),
+            userContext: '',
+            confirmedTenAnswers: const {},
+            traceContext: activeTraceContext,
+          );
+          return;
+        }
         setState(() => _error = draft.sourceTruncated
             ? '原始输入记录曾被裁剪，但本次未提取到可核对内容。请补充遗漏描述后重新整理。'
             : '目前没有提取到明确的自述信息，请补充描述后再整理。');
@@ -8244,13 +8261,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _confirmedDraft = draft;
         _confirmedTenAnswers = Map<String, String>.unmodifiable(confirmedAnswers);
       });
+      if (autoStartRuleInterview && currentUserText?.trim().isNotEmpty == true) {
+        await _startInlineTcmInterview(
+          initialUserMessage: currentUserText!.trim(),
+          userContext: draft.summaryLines.join('\\n'),
+          confirmedTenAnswers: confirmedAnswers,
+          traceContext: activeTraceContext,
+        );
+        return;
+      }
       await recordFinalRender();
     } on PlatformException catch (error) {
       final traceMismatch = error.code == 'TRACE_ID_MISMATCH';
       final emptyReply = error.code == 'EMPTY_REPLY';
       if (!nativeInferenceCompleted) {
         await _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.nativeInference,
           status: emptyReply
               ? AiTraceStatus.succeeded
@@ -8265,7 +8291,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!resultValidationCompleted) {
         await _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.resultValidation,
           status: emptyReply
               ? AiTraceStatus.failed
@@ -8292,7 +8318,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } on FormatException catch (error) {
       if (!nativeInferenceCompleted) {
         await _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.nativeInference,
           status: AiTraceStatus.succeeded,
           mode: 'consultation',
@@ -8300,7 +8326,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!resultValidationCompleted) {
         await _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.resultValidation,
           status: AiTraceStatus.failed,
           mode: 'consultation',
@@ -8319,7 +8345,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     } catch (error) {
       if (!nativeInferenceCompleted) {
         await _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.nativeInference,
           status: AiTraceStatus.unknown,
           mode: 'consultation',
@@ -8328,7 +8354,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       if (!resultValidationCompleted) {
         await _traceRecorder.record(
-          traceContext,
+          activeTraceContext,
           stage: AiTraceStage.resultValidation,
           status: nativeInferenceCompleted
               ? AiTraceStatus.unknown
