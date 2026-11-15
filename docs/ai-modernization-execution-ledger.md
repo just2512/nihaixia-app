@@ -2030,7 +2030,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 44.1 主线基线与合并证据
 
-- 本节按最新主线基线复核并更新：`master @ d82272bd4fe72d95230a96cc5b8ee27d0efef4c5`。
+- 本节记录 PR #173/#175/#174 集成完成时的阶段性基线：PR #174 squash merge 后为 `master @ d82272bd4fe72d95230a96cc5b8ee27d0efef4c5`；后续 PR #176 已在 §45.2 记录，当前主线已推进至 `a18156d281193004d5acf265874d8d5699dad7f8`。
 - PR #173（知识来源定位口径）最终 head `afa227dee9bc35ff7f481d58585624527d50cae0`，PR Flutter CI run `43673375134` SUCCESS；squash merge 为 `c8f5e04a32343a7f4751217593fbeff18a9f279f`。合并后 master Flutter tests run `43677774908` 与 Quality Gate run `43677774909` 均 SUCCESS。
 - PR #175（Android Native 助手提示词与 Flutter 角色契约统一）最终 head `1bc8c564f499b67066bd76d2a26d82e745ce4ef5`；PR run `43678009090` 的 Flutter regression 与 Android arm64 CI verification APK/Manifest/ABI/SHA-256/Native unit tests 均 SUCCESS；squash merge 为 `8286138b53a3630e0333b595efe578b77ac04f90`。
 - PR #175 合并后 master Flutter tests run `43678586814` 与 Quality Gate run `43678586803` 均已终态 SUCCESS。
@@ -2092,7 +2092,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 修复在执行边界由 App 注入设备本地日期，并将实际日期写入执行参数及结果 metadata；TRACE 仍只记录既有 allowlisted 工具/阶段状态，不写入业务参数正文。明确提供的日期原样保留，由现有校验拒绝非法日期，不能回退到今天。没有新增计算逻辑、模型推断或其他工具默认值。
 - 新回归验证未提供日期时实际调用 `YunQiToolExecutor`、返回真实 `local-engine:yunqi` 结果、在助手时间线解释与持久化，并断言没有打开独立页面。明确的“打开/进入五运六气页面”请求仍保留 Page Tool 行为。
 - 最初 PR run `43679897169` 的 Flutter 全量回归为 1562 passed / 4 failed / 15 skipped。4 个失败均为既有 Page Tool 回传/取消/持久化测试仍使用“帮我推算五运六气”计算意图，却断言打开页面。未删除测试或降低门槛；已将这些用例改为明确页面导航文案，保留原来的页面返回、CANCELLED 和持久化 UNKNOWN 断言，并在路由处加入显式页面意图区分。
-- PR #176 已在 `2124500812caf3c9e23664ce14eda0d56c03c509` 精确 head 上通过完整 Flutter regression 与 Android arm64/Native CI 后合并；合并后 master Flutter Tests run `43681123896` 与 Quality Gate run `43681123898` 已针对 merge SHA `a18156d281193004d5acf265874d8d5699dad7f8` 启动，本节更新时仍 IN_PROGRESS，分别核验终态，不以 PR CI 替代 post-merge CI。
+- PR #176 已在 `2124500812caf3c9e23664ce14eda0d56c03c509` 精确 head 上通过完整 Flutter regression 与 Android arm64/Native CI 后合并；合并后 master Flutter Tests run `43681123896` 与 Quality Gate run `43681123898` 均已针对 merge SHA `a18156d281193004d5acf265874d8d5699dad7f8` 终态 SUCCESS。Flutter regression、Android arm64 验证 APK/Manifest/ABI/SHA-256/Native tests、静态分析与 Dart 全量测试均完成；该主线 CI 闭环不替代 Find N2 真机验收。
 
 
 ### 45.3 其余工具与模式的推进准则
