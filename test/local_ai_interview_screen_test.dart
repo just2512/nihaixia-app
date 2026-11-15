@@ -6360,7 +6360,7 @@ void mainRedFlagEntrypointOrderingTests() {
       expect(service.intentQueries, ['我想排盘']);
     });
 
-    testWidgets('未配置临床 detector 时非临床工具对话仍可正常运行',
+    testWidgets('不要求临床评估时工具对话仍可正常运行',
         (tester) async {
       final intentEvents = <String>[];
       final traceEvents = <AiTraceEvent>[];
@@ -6395,14 +6395,19 @@ void mainRedFlagEntrypointOrderingTests() {
 
       expect(intentEvents, ['intent']);
       expect(service.intentQueries, ['我想排盘']);
+      final preflightEvent = traceEvents.singleWhere(
+        (event) => event.stage == AiTraceStage.preflight,
+      );
+      expect(preflightEvent.status, AiTraceStatus.notApplicable);
+      expect(preflightEvent.errorCode, 'PREFLIGHT_NOT_REQUIRED');
       final redFlagEvent = traceEvents.singleWhere(
         (event) => event.stage == AiTraceStage.redFlag,
       );
       expect(redFlagEvent.status, AiTraceStatus.notApplicable);
-      expect(redFlagEvent.errorCode, 'REDFLAG_GATE_NOT_CONFIGURED');
+      expect(redFlagEvent.errorCode, 'REDFLAG_ASSESSMENT_NOT_REQUIRED');
     });
 
-    testWidgets('没有配置临床 detector 时自然语言问诊仍能启动模拟学习',
+    testWidgets('不要求临床评估时自然语言问诊仍按 App 规则启动',
         (tester) async {
       const query = '最近不舒服，帮我诊断一下什么问题？';
       final intentEvents = <String>[];
@@ -6451,7 +6456,7 @@ void mainRedFlagEntrypointOrderingTests() {
       expect(
         redFlagEvents.every((event) => event.status == AiTraceStatus.notApplicable),
         isTrue,
-        reason: '未配置临床 detector 不应阻断模拟问诊，也不应伪造 CLEAR',
+        reason: '当前产品流程不要求独立临床 detector，也不应伪造 CLEAR',
       );
     });
   });
