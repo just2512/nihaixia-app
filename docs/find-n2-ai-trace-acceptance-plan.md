@@ -58,7 +58,7 @@
 - source_ids（适用时）；
 - error_code（失败时）。
 
-关键节点缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。当前 `PREFLIGHT` 和 `RED_FLAG` 尚无生产调用点；其它阶段也须按当前场景实际记录核验，不能从预期流程反推日志已经存在。
+关键节点缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。当前正常问诊发送与结果解释入口已有 `PREFLIGHT` / `RED_FLAG` 生产记录：`requireAssessment=false` 时分别为 `NOT_APPLICABLE`（`PREFLIGHT_NOT_REQUIRED` / `REDFLAG_ASSESSMENT_NOT_REQUIRED`），这不表示临床 detector 已评估或风险已清除；只有明确要求实际评估的专门路径才必须记录真实评估结果，应评估但未调用/未配置时记 `UNKNOWN`。其它阶段仍须按当前场景实际记录核验，不能从预期流程反推日志已经存在。
 
 ## 3. GPU 多轮稳定性（G-01）
 
