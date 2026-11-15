@@ -18,7 +18,7 @@
 | D Headless Capability | PARTIAL | 24 个定义中，23 个常规工具入口有 17 项 Headless executor、6 项 Page-only；structured_diagnosis 为独立内联确定性流程。Page-only 不自动构成待改造缺口 |
 | E 数据保护 | PARTIAL | 清理入口、附件归属、SQLite 边界测试、模型/TRACE 备份排除已合并；混合 SQLite 备份、旧共享图片与真机重启验证仍未闭环 |
 | F TRACE | PARTIAL | 已覆盖检索/上下文、Orchestrator/Headless、结构化问诊 per-turn；#113 补 Headless 结果契约失败终态，#114 补 Page Tool 结果延续，#115 补普通发送/症状整理 finalRender；Find N2 场景集 TRACE 仍未闭环 |
-| G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 一致性 guard 已合并；当前 master post-merge CI 需以最新 SHA 的两条独立 push workflow 为准 |
+| G 文档治理 | 版本源子目标 IMPLEMENTED | README/pubspec/Flutter CI/Android CI/Release tag 一致性 guard 已合并；master `1370855b` 的 Flutter tests `43671870660` 与 Quality Gate `43671870662` 均终态 SUCCESS |
 
 ## 2. A：多轮稳定性与持久化
 
@@ -1201,7 +1201,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - PR #169 merge：`986417b06790ad85c3c9487c9227c034b87cb676`；PR #170 merge：`d9170b5f566bba973a11049a4b5f7401881b1b28`；PR #171 merge：`e45b28e9e80793da291b4a5a016188e44fb11065`；PR #172 merge：`1370855b3f6a94f4a9cf0bcb235478f753348443`。
 - PR #170、#171、#172 的精确 head 均通过各自的分支验证、Flutter regression 和 Android arm64 APK/Manifest/ABI/SHA-256/Native tests；#172 PR workflow `43671170314` SUCCESS，分支验证 `43671166718` SUCCESS。
 - PR #171 合并后 e45 的 master Flutter tests `43671088342` 与 Quality Gate `43671088143` 均 SUCCESS；Flutter regression、Android arm64 verification、merged backup Manifest、ABI/SHA-256、Native unit tests、Dart suite 和 Find N2 arm64 Debug APK 构建均成功。
-- #172 合并后 master Flutter tests `43671870660` 与 Quality Gate `43671870662` 在写入本节时仍 IN_PROGRESS；不能用 PR CI 代替最新 merge SHA 的 post-merge CI。
+- #172 合并后 master Flutter tests `43671870660` 与 Quality Gate `43671870662` 均以 merge SHA `1370855b3f6a94f4a9cf0bcb235478f753348443` 终态 SUCCESS；Flutter regression job `132683481307`、Android arm64 APK/Manifest/ABI/SHA-256/Native tests job `132684675722`、Quality Gate job `132683481181` 均 SUCCESS。
 
 ### 18.2 A：稳定性与数据保护
 
