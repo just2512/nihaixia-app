@@ -144,6 +144,7 @@ class _RecordingAssistantService extends LocalAiService {
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
+    bool requireMedicalSafety = false,
   }) async {
     modelCalls++;
     sentTexts.add(text);
@@ -155,6 +156,7 @@ class _RecordingAssistantService extends LocalAiService {
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
+    bool requireMedicalSafety = false,
   }) async {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
