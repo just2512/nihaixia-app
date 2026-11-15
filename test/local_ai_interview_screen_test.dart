@@ -382,6 +382,7 @@ class _PageToolTraceService extends _TextSendService {
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
+    bool requireMedicalSafety = false,
   }) async {
     restoredTranscripts.add(transcript);
   }
@@ -452,6 +453,7 @@ class _TextSendService extends LocalAiService {
   Future<void> restoreConversation({
     required String transcript,
     required List<String> userMessages,
+    bool requireMedicalSafety = false,
   }) async {
     restoredTranscripts.add(transcript);
   }
@@ -463,7 +465,10 @@ class _TextSendService extends LocalAiService {
   }
 
   @override
-  Future<String> sendMessage(String text) async {
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+  }) async {
     sentTexts.add(text);
     return '已收到你的描述：$text';
   }
@@ -472,6 +477,7 @@ class _TextSendService extends LocalAiService {
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
+    bool requireMedicalSafety = false,
   }) async {
     sentContexts.add(context);
     return sendMessage(text);
@@ -481,9 +487,10 @@ class _TextSendService extends LocalAiService {
   Future<String> sendMessageWithTrace(
     String text, {
     required String traceId,
+    bool requireMedicalSafety = false,
   }) async {
     sentTraceIds.add(traceId);
-    return sendMessage(text);
+    return sendMessage(text, requireMedicalSafety: requireMedicalSafety);
   }
 
   @override
@@ -491,6 +498,7 @@ class _TextSendService extends LocalAiService {
     String text, {
     required String context,
     required String traceId,
+    bool requireMedicalSafety = false,
   }) async {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
@@ -520,6 +528,7 @@ class _FailingTextSendService extends _TextSendService {
   Future<String> sendMessageWithTrace(
     String text, {
     required String traceId,
+    bool requireMedicalSafety = false,
   }) async {
     throw PlatformException(
       code: 'NATIVE_SEND_FAILED',
@@ -845,6 +854,7 @@ class _FailOnceTextSendService extends LocalAiService {
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
+    bool requireMedicalSafety = false,
   }) => sendMessage(text);
 }
 
@@ -855,6 +865,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
   Future<String> sendMessageWithTrace(
     String text, {
     required String traceId,
+    bool requireMedicalSafety = false,
   }) {
     sentTraceIds.add(traceId);
     return sendMessage(text);
@@ -865,6 +876,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     String text, {
     required String context,
     required String traceId,
+    bool requireMedicalSafety = false,
   }) {
     sentTraceIds.add(traceId);
     return sendMessage(text);
