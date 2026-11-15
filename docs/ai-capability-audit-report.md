@@ -1260,7 +1260,7 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 ### 19.3 云端与本地的最终边界
 
 - 云端已完成：规范和台账更新、候选问诊映射代码、工具结果/知识来源闭环的既有实现复核、Dart/Flutter 自动化、Android arm64 APK/Manifest/ABI/SHA-256/Native tests，以及当前主线 CI。当前没有新的、由现有证据支持的云端运行时代码任务。
-- 仅本地 OPPO Find N2 执行：GPU 默认 backend 连续至少 20 轮；Debug Intent 强制 CPU backend 连续至少 20 轮；两组分别覆盖文字/图片/语音；Activity recreation 与 force-stop/restart 会话恢复；合成数据下清除 AI 数据后强停/重启复查；Debug TRACE 核对 trace_id 全链和 Native 实际 backend。未执行项保持 UNKNOWN，不能由 CI 或模拟测试代报 PASS。具体步骤以执行台账 §46.3 为准。
+- 仅本地 OPPO Find N2 执行：在 App 设置中手动选择 GPU、CPU，各自连续至少 20 轮；两组分别覆盖文字/图片/语音；Activity recreation 与 force-stop/restart 会话恢复；合成数据下清除 AI 数据后强停/重启复查；Debug TRACE 核对 trace_id 全链和 Native 实际 backend。未执行项保持 UNKNOWN，不能由 CI 或模拟测试代报 PASS。具体步骤以执行台账 §46.3 / §47.4 为准。
 - 非代码决策：AI 与非 AI 数据共用 SQLite 时的系统备份边界，以及旧共享临时图片的所有权边界继续按执行台账 §46.4 处理；不得通过删除整个数据库/共享目录或全局关闭备份来伪造完成。
 
 ### 19.4 收尾结论
@@ -1281,3 +1281,11 @@ AI 是交互与理解中枢，不是业务规则和计算引擎；规则问诊�
 - GPU 模式保留当前 EngineConfig：语言模型/视觉 GPU，音频 CPU；CPU 模式语言/视觉/音频均 CPU。选择偏好不能代替实测 backend。
 - 新增 docs/find-n2-local-ai-acceptance-checklist.md，将后端切换、GPU/CPU 多轮、多媒体、进程恢复、数据清除、TRACE 的具体操作和结果记录模板交给本地 Find N2 执行。该文件是执行清单，不是验收结果。
 - 本节代码自动化证据等待该独立分支精确 head CI 终态；Find N2 设备结果必须由本地填写，云端不代报 PASS。
+
+## 21. 2026-11-15 知识库引用与旧 locator MISSING 记录的最终口径
+
+- 旧报告中书目、底本、卷页等 locator=MISSING 是历史审计记录，不再是当前 C 工作流待办、AI 回答缺来源或发布阻断条件。
+- 当前验收只检查稳定 sourceId 是否能在 App 内打开对应知识库条目、章节或医案记录，以及回答是否附链接或可直接定位的备注。
+- 对已有且可打开的条目，不补充外部纸本版本/卷页，不把外部元数据未核验标成知识库 MISSING，不重复审核已审核知识库。
+- 只有本地条目不存在、检索未命中/失败、sourceId 无法解析/打开，或回答所需内容在该条目中确实为空时，才说明对应本地资料缺失。
+- C 保持 PARTIAL 的理由只限于黄金集揭示的真实召回覆盖、相关性、排序、上下文与引用链路问题；不再把旧 bibliographic locator 缺项算进剩余工作。
