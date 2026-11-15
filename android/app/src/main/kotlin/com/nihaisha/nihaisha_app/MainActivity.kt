@@ -1,7 +1,5 @@
 package com.nihaisha.nihaisha_app
 
-private const val DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA = "com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND"
-
 import android.app.Activity
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -22,6 +20,8 @@ import com.google.ai.edge.litertlm.Message
 import java.io.File
 import java.security.MessageDigest
 import org.json.JSONArray
+
+private const val DEBUG_FORCE_CPU_BACKEND_INTENT_EXTRA = "com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND"
 
 class MainActivity : FlutterActivity() {
     private val expectedModelBytes = 3_659_530_240L
