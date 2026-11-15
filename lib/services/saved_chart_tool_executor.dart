@@ -90,14 +90,16 @@ class SavedChartToolExecutor {
   static String formatSavedChartChoices(List<SavedChart> charts) {
     if (charts.isEmpty) return '当前命盘库没有已保存的记录。';
     final visible = charts.take(30).toList(growable: false);
-    final lines = visible.map((chart) {
-      // Expose only the minimum selector fields. Birth details and coordinates
-      // remain inside the executor until the user selects a record and type.
-      return 'ID ${chart.id ?? 'MISSING'}｜${chart.name}';
+    final lines = visible.asMap().entries.map((entry) {
+      // Saved-chart default names include date and gender. Do not put names,
+      // birth dates, gender, or locations into the assistant transcript before
+      // the user explicitly selects a record.
+      final chart = entry.value;
+      return '${entry.key + 1}. ID ${chart.id ?? 'MISSING'}';
     }).join('\n');
     final remaining = charts.length - visible.length;
     final tail = remaining > 0
-        ? '\n另有 $remaining 条记录；可直接提供记录名称或 ID。'
+        ? '\n另有 $remaining 条记录；可继续提供记录 ID。'
         : '';
     return '已保存命盘（按保存时间从新到旧）：\n$lines$tail';
   }
