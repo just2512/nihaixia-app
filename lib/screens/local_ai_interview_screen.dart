@@ -2410,12 +2410,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required AiTraceContext traceContext,
     AssistantToolArguments? arguments,
   }) async {
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.toolArguments,
-      text: userText,
+      text: redFlagSnapshot.text,
       traceContext: traceContext,
       route: 'headless_tool:${tool.id}',
       requireAssessment: tool.id == 'structured_diagnosis',
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
@@ -2708,12 +2710,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: 'manual_tool',
           mode: (mode ?? _assistantMode).name,
         );
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
     if (await _blockIfRedFlagPreflightDoesNotClear(
       source: RedFlagInputSource.toolArguments,
-      text: userText,
+      text: redFlagSnapshot.text,
       traceContext: activeTraceContext,
       route: 'tool_dispatch:${tool.id}',
       requireAssessment: tool.id == 'structured_diagnosis',
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
       return;
     }
