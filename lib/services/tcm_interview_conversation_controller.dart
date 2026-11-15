@@ -34,6 +34,16 @@ class TcmInterviewConversationController {
     '大便硬结/肛门灼热': 'stool_burning',
   };
 
+  static const String learningNotice =
+      '【学习模拟说明】本问诊仅用于模拟学习中医问诊与辨证思路，不是医疗诊断或治疗服务。'
+      '若您或他人有任何身体不适，请及时就医；请勿根据本结果自行诊断、用药或停药。';
+  static const String emergencyReminder =
+      '【急重症提醒】如出现胸痛、呼吸困难、意识不清、抽搐或大量出血等急重症表现，'
+      '请立即拨打当地急救电话（中国大陆为120）或前往急诊。';
+  static const String resultLearningNotice =
+      '【学习用途】本结果仅用于模拟学习中医辨证思路，不构成医疗诊断或治疗建议。'
+      '有任何症状请及时就医，请勿依据本结果自行诊断、用药或停药。';
+
   final TcmInterviewAdapter _adapter;
   final String taskId;
   final List<TcmInterviewTaskMessage> _messages = [];
@@ -154,6 +164,7 @@ class TcmInterviewConversationController {
     if (_pendingConfirmedTenAnswers.isNotEmpty) {
       _appendUser('已逐项确认 ' + _pendingConfirmedTenAnswers.length.toString() + ' 条十问候选；只将这些选项提交给原规则问诊，其余信息继续追问。');
     }
+    _appendAssistant('$learningNotice\n$emergencyReminder');
     _appendAssistant(_adapter.initialGreeting);
     _askTemperature();
   }
@@ -470,7 +481,7 @@ class TcmInterviewConversationController {
   void _completeWithDiagnosis(DiagnosisResult result) {
     _completedDiagnosis = result;
     final lines = <String>[
-      '辨证结果',
+      '模拟辨证学习结果',
       '【六经】${result.displayMeridian}',
       if (result.isCombined) '【合病】${result.meridian}与${result.combinedMeridian}同病',
       '【证型】${result.pattern}',
@@ -525,7 +536,10 @@ class TcmInterviewConversationController {
     _pendingPromptId = null;
     _pendingPromptText = null;
     _pendingOptions = const [];
-    _appendAssistant(text, isResult: true);
+    final body = text.contains(resultLearningNotice)
+        ? text
+        : '$text\n\n$resultLearningNotice';
+    _appendAssistant(body, isResult: true);
   }
 
   void _setPrompt({
