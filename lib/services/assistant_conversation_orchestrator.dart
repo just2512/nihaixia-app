@@ -212,6 +212,9 @@ class AssistantConversationOrchestrator {
       return false;
     }
     if (explicitClinicalRequest) return true;
+    // An explicitly selected consultation mode is clinical context even when
+    // the user's description does not match a finite symptom vocabulary.
+    if (selectedMode == AssistantMode.consultation) return true;
     // Ambiguous symptom-only text is also gated before model inference.
     // Only an explicit educational request may bypass this preflight.
     return hasSymptoms;
