@@ -163,16 +163,16 @@ void main() {
     expect(context, isNot(contains('来源定位：MISSING')));
   });
 
-  test('异步检索将课程讲稿作为学习资料回链，不要求纸本页码冒充来源', () async {
+  test('异步检索将课程讲稿作为本地知识库资料定位', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
     expect(context, contains('App经典全文索引'));
     expect(context, contains('伤寒论讲稿'));
-    expect(context, contains('倪师讲稿/整理讲义（学习资料）'));
+    expect(context, contains('资料类型：倪师讲稿/整理讲义（学习资料）'));
     expect(context, contains('来源标识：shanghan:assets/'));
     expect(context, contains('知识库条目定位：assets/shanghan/'));
     expect(context, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
-    expect(context, contains('来源标识：shanghan:assets/'));
     expect(context, isNot(contains('版本/底本/卷页：MISSING')));
+    expect(context, isNot(contains('纸本版本/卷页')));
   });
 
   test('讲稿引用尾注显示本地学习资料回链而不把纸本卷页当作必填', () async {
@@ -203,7 +203,7 @@ void main() {
     expect(result.citationFooter, isNot(contains(r'\n  来源类型：')));
   });
 
-  test('App 古籍文本资产仍显示原文与版本定位的未核验状态', () {
+  test('App 古籍文本引用指向具体知识库章节', () {
     const source = AssistantKnowledgeSourceReference(
       sourceId: 'guji:shanghan_lun:1',
       sourceLabel: '伤寒论',
@@ -220,7 +220,7 @@ void main() {
     expect(citation, isNot(contains('MISSING')));
   });
 
-  test('本地医案检索注入助手上下文时保留来源缺失边界', () async {
+  test('本地医案检索注入助手上下文时保留可定位的知识库条目', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库 assets/medical_cases/cases_table.md'));
     expect(context, contains('知识库条目定位：medical_case:internal-seq:'));
@@ -264,7 +264,7 @@ void main() {
     }
   });
 
-  test('网页医案原文已核验时仍明确标记纸本版本卷页 MISSING', () async {
+  test('医案引用回链到知识库条目且不输出外部书目缺失', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 肝癌',
     );
@@ -286,12 +286,12 @@ void main() {
     expect(result.citationFooter, isNot(contains('MISSING')));
   });
 
-  test('医案来源标识可反查账本记录并进入结构化引用，不把内部序号冒充出处', () async {
+  test('医案来源标识可反查知识库条目并进入结构化引用', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '桂枝汤',
     );
     expect(result.text, contains('来源标识：medical_case:'));
-    expect(result.text, contains('本地回链：medical_case:internal-seq:'));
+    expect(result.text, contains('知识库条目定位：medical_case:internal-seq:'));
 
     final caseSources = result.sources
         .where((source) => source.sourceKind == 'medical_case')
@@ -312,7 +312,7 @@ void main() {
 
 
 
-  test('经典命中区分可回链与纸本出处核验状态', () {
+  test('经典命中区分本地知识库回链与外部书目元数据', () {
     const lecture = ClassicHit(
       source: 'shanghan',
       sourceLabel: '伤寒论讲稿',
@@ -352,17 +352,18 @@ void main() {
   });
 
 
-  test('经典检索将本地讲稿标记为学习资料且不冒充指定版本古籍原文', () async {
+  test('经典检索将本地讲稿标记为学习资料并提供知识库定位', () async {
     final lecture = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
     expect(lecture, contains('知识库条目定位：assets/shanghan/'));
     expect(lecture, contains('来源标识：shanghan:assets/shanghan/'));
     expect(lecture, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
-    expect(lecture, isNot(contains('MISSING')));
+    expect(lecture, isNot(contains('版本/底本/卷页：MISSING')));
+    expect(lecture, isNot(contains('纸本版本/卷页')));
     expect(lecture, isNot(contains('纸本版本/卷页：VERIFIED')));
     expect(lecture, isNot(contains('已完成校勘')));
   });
 
-  test('医案关联上下文不得把内部序号升级为原始出处', () async {
+  test('医案关联上下文使用稳定知识库条目编号定位', () async {
     final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(cases, contains('内部序号'));
     expect(cases, contains('知识库条目定位：medical_case:internal-seq:'));
