@@ -446,6 +446,10 @@ class _TextSendService extends LocalAiService {
   final restoredTranscripts = <String>[];
 
   @override
+  Future<LocalAiSymptomDraft> extractSymptoms() async =>
+      const LocalAiSymptomDraft();
+
+  @override
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
