@@ -22,6 +22,7 @@ void main() {
           TcmInterviewTaskMessage(text: '恶心、口苦', isUser: true),
           TcmInterviewTaskMessage(text: '已记录舌脉信息', isUser: false),
         ],
+        pendingConfirmedTenAnswers: const {'sleep': '一觉到天亮'},
         updatedAt: DateTime.utc(2026, 11, 5, 12, 30),
         snapshot: EngineSnapshot(
           stage: DiagnosticStage.meridianLocation,
@@ -54,6 +55,7 @@ void main() {
       expect(restored.pendingPromptId, original.pendingPromptId);
       expect(restored.pendingPromptText, original.pendingPromptText);
       expect(restored.pendingOptions, original.pendingOptions);
+      expect(restored.pendingConfirmedTenAnswers, original.pendingConfirmedTenAnswers);
       expect(restored.transcript.map((message) => message.text).toList(), [
         '你目前有什么不适？',
         '恶心、口苦',
@@ -282,7 +284,7 @@ void main() {
     test('rejects unsupported schema versions instead of silently restoring', () {
       expect(
         () => TcmInterviewTaskState.decode(
-          '{"schemaVersion":3,"taskId":"task-1","status":"in_progress",'
+          '{"schemaVersion":4,"taskId":"task-1","status":"in_progress",'
           '"snapshot":{},"pendingOptions":[]}',
         ),
         throwsFormatException,
