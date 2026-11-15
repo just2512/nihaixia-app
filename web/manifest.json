@@ -1,11 +1,11 @@
 {
-    "name": "nihaisha_app",
-    "short_name": "nihaisha_app",
+    "name": "理象集",
+    "short_name": "理象集",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "中国传统经典研习与实践工具",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
