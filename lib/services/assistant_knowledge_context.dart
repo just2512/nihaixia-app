@@ -11,8 +11,8 @@ import '../models/acupuncture.dart';
 import '../models/acupoint_detail.dart';
 
 
-/// A source that was actually resolved from the bundled classic-text index.
-/// A local backlink is not a verified printed-edition/page citation.
+/// A source resolved to a concrete entry in the App's local knowledge base.
+/// The source ID and backlink identify the exact entry used for this answer.
 class AssistantKnowledgeSourceReference {
   const AssistantKnowledgeSourceReference({
     required this.sourceId,
@@ -444,14 +444,18 @@ class AssistantKnowledgeContextBuilder {
       final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
-        ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义（学习资料）' : 'App 古籍文本资产'}')
+        ..writeln('资料类型：${isLecture ? '倪师讲稿/整理讲义（学习资料）' : 'App 古籍文本知识条目'}')
         ..writeln('来源标识：${hit.sourceId}')
         ..writeln('知识库条目定位：${hit.localBacklink}')
         ..writeln('知识库条目定位可用：${hit.hasLocalBacklink ? 'YES' : 'NO'}')
-        ..writeln('本地资料路径：$sourcePath')
-        ..writeln('内部章节序号：${hit.chapterIndex?.toString() ?? 'MISSING'}')
-        ..writeln('条文号：${articleNumber ?? 'MISSING'}（仅从标题显式提取，不由内部文件序号推断）')
-        ..writeln('检索摘要：${hit.snippet}');
+        ..writeln('本地资料路径：$sourcePath');
+      if (hit.chapterIndex != null) {
+        buffer.writeln('内部章节序号：${hit.chapterIndex}');
+      }
+      if (articleNumber != null) {
+        buffer.writeln('条文号：$articleNumber');
+      }
+      buffer.writeln('检索摘要：${hit.snippet}');
       if (isLecture) {
         buffer.writeln('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。');
       } else {
@@ -642,7 +646,6 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App方剂库 assets/data/formulas.json · ${formula.id}]')
         ..writeln('来源标识：formula:${formula.id}')
-        ..writeln('本地回链：assets/data/formulas.json#id=${formula.id}')
         ..writeln('知识库条目定位：assets/data/formulas.json#id=${formula.id}')
         ..writeln('方名：${formula.name}')
         ..writeln('别名：${formula.alias}')
@@ -659,7 +662,6 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App本草库 assets/data/herbs.json · ${herb.name}]')
         ..writeln('来源标识：herb:${herb.name}')
-        ..writeln('本地回链：assets/data/herbs.json#name=${herb.name}')
         ..writeln('知识库条目定位：assets/data/herbs.json#name=${herb.name}')
         ..writeln('药名：${herb.name}')
         ..writeln('性味：${herb.nature ?? 'MISSING'}；${herb.flavor}')
@@ -679,7 +681,6 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App针灸处方库 assets/data/acupuncture.json · ${hit.categoryId}/entry:${entry.id}]')
         ..writeln('来源标识：$sourceId')
-        ..writeln('本地回链：assets/data/acupuncture.json#category=${hit.categoryId}&id=${entry.id}')
         ..writeln('知识库条目定位：assets/data/acupuncture.json#category=${hit.categoryId}&id=${entry.id}')
         ..writeln('主诉/病症：${entry.symptom}')
         ..writeln('别名：${entry.aliases.join('、')}')
@@ -693,7 +694,6 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App穴位库 assets/data/acupoints.json · ${point.name}]')
         ..writeln('来源标识：acupoint:${point.name}')
-        ..writeln('本地回链：assets/data/acupoints.json#name=${point.name}')
         ..writeln('知识库条目定位：assets/data/acupoints.json#name=${point.name}')
         ..writeln('穴名：${point.name}；经络：${point.meridian}；特定穴属性：${point.attribute}')
         ..writeln('定位：${point.location.isEmpty ? 'MISSING' : point.location}')
@@ -707,7 +707,6 @@ class AssistantKnowledgeContextBuilder {
       buffer
         ..writeln('[App内经结构化条目 lib/data/neijing_entries.dart · ${entry.id}]')
         ..writeln('来源标识：neijing:${entry.id}')
-        ..writeln('本地回链：lib/data/neijing_entries.dart#id=${entry.id}')
         ..writeln('知识库条目定位：lib/data/neijing_entries.dart#id=${entry.id}')
         ..writeln('维度：${entry.dimension}；标题：${entry.title}')
         ..writeln('原文摘录：${entry.original}')
