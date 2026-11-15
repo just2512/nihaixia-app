@@ -5545,7 +5545,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (transcript == null || _status?.ready != true) return;
     final requireMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
-      query: transcript,
+      query: _pendingHistoryUserMessages.join('\n'),
       selectedMode: _lastEffectiveMode ?? _assistantMode,
       structuredInterviewActive: _tcmInterviewController?.canAnswer == true,
     );
