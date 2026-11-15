@@ -168,6 +168,14 @@ void main() {
         ),
         isFalse,
       );
+      expect(
+        AssistantConversationOrchestrator.shouldStartSymptomIntake(
+          query: '胸痛',
+          selectedMode: AssistantMode.consultation,
+        ),
+        isTrue,
+        reason: '用户已明确进入问诊助手，后续症状不再退回普通模型回答',
+      );
     });
 
     test('只有明确临床请求才会在缺少具体症状时开始问诊', () {
