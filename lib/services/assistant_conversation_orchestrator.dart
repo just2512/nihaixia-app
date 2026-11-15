@@ -169,56 +169,16 @@ class AssistantConversationOrchestrator {
     '怕热',
   ];
 
+  /// Compatibility hook retained for existing call sites. This App's
+  /// consultation flow is an educational simulation, not clinical triage.
+  /// A fixed learning disclaimer and simple emergency reminder are displayed
+  /// in the interview; symptom words do not trigger a clinical detector gate.
   static bool requiresMedicalSafetyPreflight({
     required String query,
     required AssistantMode selectedMode,
     bool hasAttachment = false,
     bool structuredInterviewActive = false,
-  }) {
-    if (structuredInterviewActive) return true;
-    // Current image/audio paths can contain clinical observations or
-    // symptom speech. Native red-flag policy deliberately refuses to clear
-    // raw attachments; they must not enter E4B before a provenance-labelled
-    // transcript/observation has been assessed.
-    if (hasAttachment) return true;
-
-    final text = query.trim();
-    if (text.isEmpty) return false;
-    final hasSymptoms = _symptomCues.any(text.contains);
-    final hasPersonalContext =
-        _personalContextCues.any(text.contains) ||
-        _otherPersonContextCues.any(text.contains) ||
-        (hasSymptoms &&
-            const ['我最近', '我这几天', '我今天', '我现在', '我本人', '本人']
-                .any(text.contains));
-    final explicitClinicalRequest = const [
-      '帮我诊断',
-      '诊断一下',
-      '给我诊断',
-      '帮我辨证',
-      '辨证一下',
-      '给我辨证',
-      '帮我问诊',
-      '给我问诊',
-      '判断我是不是',
-      '看看我的症状',
-    ].any(text.contains);
-    final explicitLearningRequest = _learningCues.any(text.contains);
-
-    // A clear educational question about a symptom is not a patient assessment.
-    if (explicitLearningRequest &&
-        !hasPersonalContext &&
-        !explicitClinicalRequest) {
-      return false;
-    }
-    if (explicitClinicalRequest) return true;
-    // An explicitly selected consultation mode is clinical context even when
-    // the user's description does not match a finite symptom vocabulary.
-    if (selectedMode == AssistantMode.consultation) return true;
-    // Ambiguous symptom-only text is also gated before model inference.
-    // Only an explicit educational request may bypass this preflight.
-    return hasSymptoms;
-  }
+  }) => false;
 
   static bool shouldExcludeFromIntentModel(String query) {
     final text = query.trim();
