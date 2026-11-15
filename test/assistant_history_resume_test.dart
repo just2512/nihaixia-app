@@ -45,6 +45,8 @@ class _HistoryResumeService extends LocalAiService {
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
@@ -56,6 +58,7 @@ class _HistoryResumeService extends LocalAiService {
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
+    bool redFlagContextTruncated = false,
   }) async =>
       '续聊成功：$text';
 }
