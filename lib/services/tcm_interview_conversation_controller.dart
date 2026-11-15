@@ -60,6 +60,15 @@ class TcmInterviewConversationController {
       _pendingPromptId != null &&
       _pendingOptions.isNotEmpty;
 
+  /// Natural language may only map into one of the current single-choice
+  /// questions. Multi-select clues and tongue/pulse forms retain their
+  /// dedicated App controls.
+  bool get canAcceptNaturalLanguageAnswer =>
+      canAnswer &&
+      (_pendingPromptId == 'temperature' ||
+          _pendingPromptId!.startsWith('ten:') ||
+          _pendingPromptId!.startsWith('followup:'));
+
   List<String> get tongueCoatingOptions => _adapter.tongueCoatingOptions;
   List<String> get tongueShapeOptions => _adapter.tongueShapeOptions;
   List<String> get pulseOptions => _adapter.pulseOptions;
@@ -218,6 +227,35 @@ class TcmInterviewConversationController {
     }
 
     throw StateError('无法识别待回答问诊问题：$promptId');
+  }
+
+  /// Keeps a free-text answer in the task transcript without writing it to
+  /// DiagnosticEngine. It remains evidence/context only until the user chooses
+  /// one of the exact current App-provided options.
+  void recordNaturalLanguageInput(String text) {
+    if (!canAcceptNaturalLanguageAnswer) {
+      throw StateError('当前问诊步骤不接受自然语言候选');
+    }
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 2000) {
+      throw ArgumentError.value(text, 'text', '问诊补充内容为空或过长');
+    }
+    _appendUser(normalized);
+  }
+
+  /// Replaces the visible wording of the current prompt while preserving its
+  /// stable question ID and exact option whitelist for confirmation or another
+  /// clarification turn.
+  void updatePendingPrompt(String text) {
+    if (!canAcceptNaturalLanguageAnswer) {
+      throw StateError('当前没有可澄清的单选问诊问题');
+    }
+    final normalized = text.trim();
+    if (normalized.isEmpty || normalized.length > 300) {
+      throw ArgumentError.value(text, 'text', '问诊澄清内容为空或过长');
+    }
+    _pendingPromptText = normalized;
+    _appendAssistant(normalized, hasPendingOptions: true);
   }
 
   /// Commits canonical tongue/pulse values from the structured selector.
@@ -486,14 +524,19 @@ class TcmInterviewConversationController {
     _pendingPromptId = id;
     _pendingPromptText = text;
     _pendingOptions = List.unmodifiable(options);
-    _appendAssistant(text);
+    _appendAssistant(text, hasPendingOptions: true);
   }
 
-  void _appendAssistant(String text, {bool isResult = false}) {
+  void _appendAssistant(
+    String text, {
+    bool isResult = false,
+    bool hasPendingOptions = false,
+  }) {
     _messages.add(TcmInterviewTaskMessage(
       text: text,
       isUser: false,
       isResult: isResult,
+      hasPendingOptions: hasPendingOptions,
     ));
   }
 
