@@ -2123,3 +2123,46 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - D：已有工具能力在当前助手对话内调用；只修具体、可复现的分流或参数契约错误，不扩张架构。
 - B：生产自然语言/视觉/语音红旗检测器审核证据缺失前，不开放自然语言自动辨证。
 - A/E/F：真实设备验收由本地执行，不占用云端任务列表。
+
+
+## 46. 2026-11-15 PR #177 合并后的最终云端收口
+
+### 46.1 主线与自动验收
+
+- 本节当前基线：`master @ 5b2c3d8738128a5965e54f807719eb2d6fe16635`。
+- PR #177（AI 能力审计与执行台账收口）最终 head：`64c1729b6bcbb3a6879750cf596e758a8138da78`；squash merge：`4e8885f6d87bc55e19820e6d68350d70a52e3b27`。
+- PR 精确 head workflow `43682352558` 终态 SUCCESS：Flutter regression job `132715497320` SUCCESS；Android arm64 verification APK/Manifest/ABI/SHA-256/Native tests job `132716569251` SUCCESS。
+- 合并后 master Flutter Tests run `43685797528` 与 Flutter Quality Gate run `43685797546` 均以精确 master SHA `5b2c3d8738128a5965e54f807719eb2d6fe16635` 终态 SUCCESS。前者的 Flutter regression job `132725887264` 和 Android arm64 verification APK/Manifest/ABI/SHA-256/Native tests job `132726914027` SUCCESS；后者 Analyze and test job `132725886994` SUCCESS。
+- PR #177 仅改 `docs/ai-capability-audit.md` 与本台账，没有修改运行时代码、DiagnosticEngine/DiagnosticRules、剂量/排盘算法或知识库内容。
+
+### 46.2 当前能力收口状态
+
+- AI 与 App 的职责边界、工具执行校验、知识库 sourceId 可打开定位、optional/default 参数规则，已在规范和本台账统一。知识库已有且能打开的内容不标 MISSING；不做纸本底本、版本、卷页考据，不重复审核已审核知识库。
+- 常规工具 17/23 已有 Headless executor；其余 6 项 Page-only 保留现有知识检索、个人数据授权或领域隔离边界。不为扩大数字批量迁移。
+- 云端代码和 CI 收尾已完成。没有证据支持再改造其他工具路由；不重复执行已通过的泛化测试，不新增 Agent/DAG、第二套 Orchestrator、云端 API、向量数据库或无明确失败证据的架构。
+- 自然语言问诊的**候选理解与规则问项映射代码已落地**：master commit `5b2c3d8738128a5965e54f807719eb2d6fe16635`（`feat(ai): map confirmed symptom slots into existing rule interview`）把 App 的十问题目 ID/原选项 schema 传给本地 E4B；E4B 仅能提出既有选项候选，并提供用户原文连续证据。Dart 再校验候选 ID、选项白名单、原文证据与题目唯一性；UI 展示题目/答案/证据，由用户逐项确认；确认答案交给 `TcmInterviewConversationController`，控制器二次校验后按 `DiagnosticEngine` 原题目顺序消费已确认项、跳过这些已回答题目并继续追问未回答项。待确认候选随问诊任务快照保存/恢复。未确认候选不会写入引擎，模型不能输出证型、诊断、方剂或剂量。
+- 该 commit 涉及 Native E4B schema 提示、Dart 候选结构/证据验证、用户确认 UI、控制器适配和任务快照 schema v3；针对无效选项、非原文证据、候选 ID/答案、确认/取消、任务保存/恢复已有回归。合并后 master Flutter Tests run `43685797528`（Flutter regression + Android arm64 verification）与 Quality Gate run `43685797546` 均在精确 head `5b2c3d8738128a5965e54f807719eb2d6fe16635` SUCCESS。此为 CODE + TEST + CI 证据，不等于生产临床输入已开放或 E4B 真机语义验收通过。
+- 问诊适配代码仍受独立安全门禁约束：`LocalAiInterviewScreen._extractSymptoms()` 在调用 E4B 前要求 RedFlagGate CLEAR；Android `MainActivity` 的 `extractSymptoms` MethodChannel 也要求 NativeRedFlagExecutionBoundary CLEAR。Flutter 页面 Gate 为测试注入 seam，Native detector 当前仍为 host/test injection only、默认 `null`；测试使用的 `testOnlyReviewedNoMatchRedFlagGate` 明确是合成夹具，不是医学 detector，绝不能进入生产。生产自然语言/视觉/语音 RedFlag detector、审核版本、覆盖证明、责任审批和处置文案仍 MISSING，B 继续 `PARTIAL / RELEASE BLOCKED`。
+- 因此，当前**候选提取—用户确认—规则问项映射代码已完成，但生产自由文本问诊仍 BLOCKED**。下一步不是重写槽位适配器，也不是复审知识库；仅在外部责任方提供经审核 detector 规则/版本/覆盖和处置文案后，再接入生产 Flutter/Native detector，并针对真实 Gate 行为补齐正负向入口回归。此前绝不把 Gate 的 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR，也不使用模型 prompt 或自造规则替代医学审核。
+
+### 46.3 本地设备验收交接（非云端待办）
+
+以下项目只在用户本地 OPPO Find N2 执行；云端不得代报 PASS：
+
+1. GPU：普通图标启动、不带 CPU override，确认 Native 实际 backend 为 GPU，连续完成至少 20 轮。
+2. CPU：Debug 构建 force-stop 后用以下 Intent 启动，确认 Native 实际 backend 为 CPU，连续完成至少 20 轮：
+   ```sh
+   adb shell am force-stop com.nihaisha.nihaisha_app
+   adb shell am start -n com.nihaisha.nihaisha_app/.MainActivity --ez com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND true
+   ```
+3. GPU/CPU 两组分别覆盖多轮文字、图片、语音；记录空回复、state:7、fallback 和实际 backend，不将请求 backend 当成实际 backend。
+4. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
+5. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
+6. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
+7. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
+
+### 46.4 非代码决策边界
+
+- AI 对话行与非 AI 数据目前共用 `nihaisha.db`；Android backup 规则不能按 SQLite 行选择性排除。当前不得全局关闭备份或排除整个数据库。是否接受混合数据库备份、或批准后续 AI 独立数据库迁移，需要产品侧明确数据保留决策；在决策前保持现有备份行为并披露边界。
+- 旧版本共享临时图片所有权仍 UNKNOWN；没有所有权证据不得批量删除共享 temp 文件。
+- 除上述本地验收及明确的外部医学审核/数据保留决策外，本轮没有剩余可由云端安全闭环的运行时代码任务。云端后续只处理本地实测或外部审核材料揭示的具体可复现问题。
