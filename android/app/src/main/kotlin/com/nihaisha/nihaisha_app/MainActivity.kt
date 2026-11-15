@@ -111,7 +111,8 @@ class MainActivity : FlutterActivity() {
                             result,
                             NativeRedFlagInput(
                                 NativeRedFlagInputSource.STRUCTURED_INPUT,
-                                userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() }
+                                userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() },
+                                sourceTruncated = userReportedInputsTruncated
                             ),
                             required = true
                         ) {
@@ -223,6 +224,8 @@ class MainActivity : FlutterActivity() {
                             call.argument<Boolean>("require_red_flag") == true
                         val redFlagContext =
                             call.argument<String>("red_flag_context")?.trim().orEmpty()
+                        val redFlagContextTruncated =
+                            call.argument<Boolean>("red_flag_context_truncated") == true
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
@@ -230,7 +233,8 @@ class MainActivity : FlutterActivity() {
                                 result,
                                 NativeRedFlagInput(
                                     NativeRedFlagInputSource.CURRENT_TEXT,
-                                    redFlagContext.ifEmpty { text }
+                                    redFlagContext.ifEmpty { text },
+                                    sourceTruncated = redFlagContextTruncated
                                 ),
                                 required = requireMedicalSafety
                             ) {
@@ -241,6 +245,11 @@ class MainActivity : FlutterActivity() {
                     "restoreConversation" -> {
                         val transcript = call.argument<String>("transcript")?.trim().orEmpty()
                         val userMessages = call.argument<List<String>>("userMessages") ?: emptyList()
+                        val redFlagContext =
+                            call.argument<String>("red_flag_context")?.trim().orEmpty()
+                        val redFlagContextTruncated =
+                            call.argument<Boolean>("red_flag_context_truncated") == true ||
+                                LocalAiTranscriptRestorePolicy.hasOmittedUserMessages(userMessages)
                         if (transcript.isEmpty()) {
                             result.error("EMPTY_HISTORY", "历史对话为空", null)
                         } else {
@@ -248,7 +257,8 @@ class MainActivity : FlutterActivity() {
                                 result,
                                 NativeRedFlagInput(
                                     NativeRedFlagInputSource.HISTORY_RESTORE,
-                                    (listOf(transcript) + userMessages).joinToString("\n")
+                                    redFlagContext.ifEmpty { userMessages.joinToString("\n") },
+                                    sourceTruncated = redFlagContextTruncated
                                 ),
                                 required = call.argument<Boolean>("require_red_flag") == true
                             ) { restoreLocalConversation(transcript, userMessages) }
