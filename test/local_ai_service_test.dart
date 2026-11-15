@@ -61,6 +61,52 @@ void main() {
       expect(result.evidence, '醒了两次');
     });
 
+    test('explicit first-turn extraction sends original text and current App question schema to Native', () async {
+      const traceId = 'abcdefabcdefabcdefabcdefabcdefab';
+      const sourceText = '昨晚睡觉时醒了两次';
+      const questionSchema = <Map<String, Object?>>[
+        {
+          'id': 'sleep',
+          'question': '晚上能一觉到天亮吗？',
+          'options': ['一觉到天亮', '半夜1-3点醒', '半夜3-5点醒'],
+        },
+      ];
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'draft': jsonEncode({
+            'main_complaint': '头痛',
+            'candidate_answers': [
+              {
+                'question_id': 'sleep',
+                'answer': '半夜1-3点醒',
+                'evidence': '醒了两次',
+              },
+            ],
+          }),
+          'sourceTruncated': false,
+          'trace_id': traceId,
+        };
+      });
+
+      final draft = await LocalAiService().extractSymptomsFromExplicitTextWithTrace(
+        traceId: traceId,
+        sourceText: sourceText,
+        questionSchema: questionSchema,
+      );
+
+      expect(received?.method, 'extractSymptoms');
+      expect(received?.arguments, {
+        'trace_id': traceId,
+        'question_schema': jsonEncode(questionSchema),
+        'source_text': sourceText,
+      });
+      expect(draft.mainComplaint, '头痛');
+      expect(draft.questionCandidates.single.answer, '半夜1-3点醒');
+      expect(draft.questionCandidates.single.evidence, '醒了两次');
+    });
+
     test('returns a bounded clarification when the user wording does not select an option', () {
       final result = LocalAiInterviewAnswer.fromModelText(
         jsonEncode({
