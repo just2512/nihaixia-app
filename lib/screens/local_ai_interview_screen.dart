@@ -2157,7 +2157,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final previousUserMessages = controller.messages
         .where((message) => message.isUser)
         .map((message) => message.text.trim())
-        .where((message) => message.isNotEmpty)
+        .where((message) =>
+            message.isNotEmpty &&
+            !message.startsWith('已确认的症状自述（') &&
+            !message.startsWith('已逐项确认 ') &&
+            !message.startsWith('已确认自述对应问项'))
         .toList(growable: false);
     if (userText.trim().length > 2000) {
       setState(() {
@@ -2237,7 +2241,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final nextPrompt = answer.hasCandidate
           ? '我把你刚才的描述理解为「${answer.answer}」。原文依据：「${answer.evidence}」。请确认下方 App 选项；不准确也可以继续用自然语言补充。'
           : answer.clarification!;
-      controller.updatePendingPrompt(nextPrompt);
+      controller.appendPendingPromptNotice(nextPrompt);
       final persistence = await _appendTcmInterviewMessages(
         before,
         traceContext: traceContext,
