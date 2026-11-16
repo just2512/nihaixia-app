@@ -33,13 +33,15 @@ void main() {
             brightness == Brightness.dark ? AppColors.dark : AppColors.light,
           ],
         ),
-        home: MediaQuery(
-          data: MediaQueryData(
-            size: Size(width, 900),
+        builder: (context, child) => MediaQuery(
+          // Apply 200% scaling above Navigator so pushed chapter routes are
+          // covered too, not only the library root page.
+          data: MediaQuery.of(context).copyWith(
             textScaler: const TextScaler.linear(2),
           ),
-          child: const GujiLibraryScreen(),
+          child: child!,
         ),
+        home: const GujiLibraryScreen(),
       ),
     );
     await tester.pumpAndSettle();
@@ -62,6 +64,12 @@ void main() {
     await tester.pump();
 
     expect(find.byType(GujiBookScreen), findsOneWidget);
+    final chapterContext = tester.element(find.byType(GujiBookScreen));
+    expect(
+      MediaQuery.textScalerOf(chapterContext).scale(1),
+      2,
+      reason: '章节目录路由也必须继承200%字号',
+    );
     expect(chapters, isNotNull);
     expect(find.text(chapters!.first.title), findsWidgets);
     return chapters;
