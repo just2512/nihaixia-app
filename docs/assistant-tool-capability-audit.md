@@ -303,5 +303,5 @@ PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge c
 ### 11.5 本节未声称已完成的项目
 
 - 本地 OPPO Find N2 的 E4B GPU/CPU 多轮、权限/取消、Activity recreation、force-stop/restart、AI 数据清除与 TRACE 实测仍为 `UNKNOWN`；GitHub CI 不能替代设备证据。
-- 经典/本草现代讲稿的权利来源仍按 `docs/upstream-sync-ledger.md` 的 HOLD 状态，不因 Headless 改造而改变。
+- 经典/本草现代讲稿已按 upstream/main 增量集成（PR #198/#199/#202）；来源、许可口径及不设整批考据阻塞的结论见 `docs/upstream-sync-ledger.md` §§17—21。本附录此处旧 HOLD 是历史快照，不代表当前阻塞或待办。
 - 不新增 Agent/DAG、第二套 ToolRouter、第二套知识检索系统或新的 SQLite schema。
