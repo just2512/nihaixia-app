@@ -154,6 +154,10 @@ void main() {
       find.text(lastChapter.title),
       480,
       scrollable: chapterList,
+      // 339 chapter rows can become much taller at 200% text scaling.
+      // Bound the search by the actual book length instead of relying on
+      // scrollUntilVisible's default 50 iterations.
+      maxScrolls: book.chapterCount,
     );
     expect(find.text(lastChapter.title), findsOneWidget);
     expect(find.text('${book.chapterCount}'), findsOneWidget);
