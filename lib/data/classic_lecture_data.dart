@@ -408,6 +408,22 @@ const List<ClassicLecture> kShangHanLectures = [
   ClassicLecture(seq: 377, name: '六经总结·六经传变规律', asset: 'assets/shanghan/clause_377.md'),
   ClassicLecture(seq: 378, name: '六经总结·六经病欲解时', asset: 'assets/shanghan/clause_378.md'),
   ClassicLecture(seq: 379, name: '六经总结·六经辨证临床要点', asset: 'assets/shanghan/clause_379.md'),
+
+  ClassicLecture(seq: 380, name: '宋本380·「伤寒」大吐、大下之，极虚，复极汗者，其人外气怫郁，复与之水，以…', asset: 'assets/shanghan/clause_380.md'),
+  ClassicLecture(seq: 381, name: '宋本381·「伤寒」哕而腹满，视其前后，知何部不利，利之即愈。', asset: 'assets/shanghan/clause_381.md'),
+  ClassicLecture(seq: 382, name: '宋本382·问曰：病有「霍乱」者何？答曰：呕吐而利，此名「霍乱」。', asset: 'assets/shanghan/clause_382.md'),
+  ClassicLecture(seq: 383, name: '宋本383·问曰：病发热、头痛、身疼、恶寒、吐利者，此属何病？答曰：此名「霍…', asset: 'assets/shanghan/clause_383.md'),
+  ClassicLecture(seq: 384, name: '宋本384·「伤寒」其脉微涩者，本是「霍乱」，今是「伤寒」，却四五日，至阴经…', asset: 'assets/shanghan/clause_384.md'),
+  ClassicLecture(seq: 385, name: '宋本385·恶寒脉微而复利，利止，亡血也，「四逆加人参汤」主之。', asset: 'assets/shanghan/clause_385.md'),
+  ClassicLecture(seq: 386, name: '宋本386·「霍乱」头痛，发热，身疼痛，热多欲饮水者，「五苓散」主之。寒多不…', asset: 'assets/shanghan/clause_386.md'),
+  ClassicLecture(seq: 387, name: '宋本387·吐利止而身痛不休者，当消息和解其外，宜「桂枝汤」小和之。', asset: 'assets/shanghan/clause_387.md'),
+  ClassicLecture(seq: 388, name: '宋本388·吐利，汗出，发热，恶寒，四肢拘急，手足厥冷者，「四逆汤」主之。', asset: 'assets/shanghan/clause_388.md'),
+  ClassicLecture(seq: 389, name: '宋本389·既吐且利，小便复利而大汗出，下利清谷，内寒外热，脉微欲绝者，「四…', asset: 'assets/shanghan/clause_389.md'),
+  ClassicLecture(seq: 390, name: '宋本390·吐已下断，汗出而厥，四肢拘急不解，脉微欲绝者，「通脉四逆加猪胆汁…', asset: 'assets/shanghan/clause_390.md'),
+  ClassicLecture(seq: 391, name: '附录一：六经辨证总结', asset: 'assets/shanghan/appendix_001_六经辨证总结.md'),
+  ClassicLecture(seq: 392, name: '附录二：六经传变规律', asset: 'assets/shanghan/appendix_002_六经传变规律.md'),
+  ClassicLecture(seq: 393, name: '附录三：六经病欲解时', asset: 'assets/shanghan/appendix_003_六经病欲解时.md'),
+  ClassicLecture(seq: 394, name: '附录四：六经辨证临床要点', asset: 'assets/shanghan/appendix_004_六经辨证临床要点.md'),
 ];
 
 const List<ClassicLecture> kJinguiLectures = [
@@ -864,4 +880,6 @@ const List<ClassicLecture> kJinguiLectures = [
   ClassicLecture(seq: 450, name: '阴阳易差后劳复·大病差复，喜唾久不了了，胃上有寒，当以丸药温之，…', asset: 'assets/jingui/clause_450.md'),
   ClassicLecture(seq: 451, name: '阴阳易差后劳复·伤寒解后，虚羸少气，气逆欲吐，竹叶石膏汤主之。', asset: 'assets/jingui/clause_451.md'),
   ClassicLecture(seq: 452, name: '阴阳易差后劳复·病人脉已解，而曰暮微烦，以病新差，人强舆谷，脾胃…', asset: 'assets/jingui/clause_452.md'),
+  ClassicLecture(seq: 453, name: '呕吐哕下利病·气利，诃黎勒散主之。', asset: 'assets/jingui/clause_453.md'),
+  ClassicLecture(seq: 454, name: '水气病·气分，心下坚大如盘，桂枝去芍药加麻辛附子汤主之', asset: 'assets/jingui/clause_454.md'),
 ];

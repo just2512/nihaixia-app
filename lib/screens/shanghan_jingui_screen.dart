@@ -52,6 +52,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
             onTap: () => _open(context, const ClassicLibraryScreen(
               title: '伤寒论 · 阅读库',
               lectures: kShangHanLectures,
+              seqLabel: (seq) => seq <= 379 ? '${seq + 1}' : seq <= 390 ? '宋本${seq}' : '附录${seq - 390}',
               footer: '出处：《人纪·伤寒论》倪师讲稿 · 传统文化参考',
             )),
           ),
@@ -62,6 +63,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
             onTap: () => _open(context, const ClassicLibraryScreen(
               title: '金匮要略 · 阅读库',
               lectures: kJinguiLectures,
+              seqLabel: (seq) => seq <= 452 ? '${seq + 1}' : '补录${seq - 452}',
               footer: '出处：《人纪·金匮要略》倪师讲稿 · 传统文化参考',
             )),
           ),
