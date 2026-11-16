@@ -5,20 +5,7 @@ import '../data/database_helper.dart';
 import '../models/bookmark.dart';
 import '../data/yuxiaji_omen_data.dart';
 
-/// 十二时辰 → 索引（0=子 … 11=亥）。
-///
-/// 时辰从 23:00 起每两小时一换：23-0 时为子、1-2 为丑……纯函数便于单测。
-int shiChenIndexOf(DateTime t) => ((t.hour + 1) ~/ 2) % 12;
-
-/// 时辰索引 → 显示标签（含钟表区间）。
-String shiChenLabel(int index) {
-  const names = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  final start = (index * 2 + 23) % 24;
-  final startLabel = '$start:00'.padLeft(5, '0');
-  final endHour = (start + 2) % 24;
-  final endLabel = endHour == 1 ? '00:59' : '${endHour - 1}:59';
-  return '${names[index]}时 $startLabel–$endLabel';
-}
+import '../services/yuxiaji_omen_time.dart';
 
 /// 玉匣灵兆 —— 《玉匣记》杂占篇·身体兆占。
 ///
