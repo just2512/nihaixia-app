@@ -60,7 +60,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
             icon: Icons.local_hospital_outlined,
             title: '金匮要略',
             subtitle: '杂病辨证 · ${kJinguiLectures.length} 篇',
-            onTap: () => _open(context, const ClassicLibraryScreen(
+            onTap: () => _open(context, ClassicLibraryScreen(
               title: '金匮要略 · 阅读库',
               lectures: kJinguiLectures,
               seqLabel: (seq) => seq <= 452 ? '${seq + 1}' : '补录${seq - 452}',
