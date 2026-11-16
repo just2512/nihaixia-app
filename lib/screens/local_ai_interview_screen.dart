@@ -5710,8 +5710,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final canInterpret = normalizedResult.status ==
             AssistantToolExecutionStatus.succeeded &&
         normalizedResult.sourceIds.isNotEmpty;
-    final excludeFromModelContext =
-        normalizedResult.status == AssistantToolExecutionStatus.unknown;
     final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
     final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
     final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
@@ -5724,7 +5722,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         text: response,
         isUser: false,
         sourceIds: normalizedResult.sourceIds,
-        includeInModelContext: !excludeFromModelContext,
+        // Only validated successful results are replayable model facts.
+        includeInModelContext: canInterpret,
         actionLabel: canRetry
             ? '重试${tool.title}'
             : canInterpret && !autoInterpret
@@ -6156,11 +6155,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 );
       // Historical UNKNOWN tool output (including older synthetic page-route
       // IDs) remains visible to the user but is not replayed into model context.
-      final includeInModelContext = isUser ||
-          (messageMetadata.toolStatus !=
-                  AssistantToolExecutionStatus.unknown.name.toUpperCase() &&
+      final hasToolHandoff =
+          messageMetadata.toolId != null || messageMetadata.toolStatus != null;
+      final hasVerifiedToolResult =
+          messageMetadata.toolStatus ==
+                  AssistantToolExecutionStatus.succeeded.name.toUpperCase() &&
+              messageMetadata.sourceIds.isNotEmpty &&
               !messageMetadata.sourceIds
-                  .any((id) => id.startsWith('local-page-tool:')));
+                  .any((id) => id.startsWith('local-page-tool:'));
+      // Ordinary assistant prose is still replayed. Tool handoffs are replayed
+      // only when their persisted status and source IDs prove a validated success.
+      final includeInModelContext =
+          isUser || !hasToolHandoff || hasVerifiedToolResult;
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
