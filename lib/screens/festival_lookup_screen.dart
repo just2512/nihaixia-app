@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart';
 
+import '../theme/app_tokens.dart';
+
 import '../data/chaoshan_festival_data.dart';
 import '../data/yuxiaji_deity_data.dart';
 import '../widgets/state_view.dart';
@@ -126,7 +128,12 @@ class _FestivalLookupScreenState extends State<FestivalLookupScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
             child: TextField(
               controller: _ctrl,
               onChanged: (v) => setState(() => _query = v),
@@ -134,7 +141,9 @@ class _FestivalLookupScreenState extends State<FestivalLookupScreen> {
                 prefixIcon: const Icon(Icons.search),
                 hintText: '搜神诞 / 节俗，如：妈祖、天公、双忠',
                 isDense: true,
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
@@ -151,19 +160,26 @@ class _FestivalLookupScreenState extends State<FestivalLookupScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Text(
                 '共 ${list.length} 条 · 公历按 $_year 年档推算',
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
               ),
             ),
           ),
           Expanded(
             child: list.isEmpty
                 ? StateView.empty(title: '未找到「$_query」相关的神诞 / 节俗')
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
                     itemCount: list.length,
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: AppSpacing.md),
                     itemBuilder: (_, i) => _tile(context, list[i]),
                   ),
           ),
@@ -175,43 +191,52 @@ class _FestivalLookupScreenState extends State<FestivalLookupScreen> {
   Widget _tile(BuildContext context, FestivalEntry e) {
     final cs = Theme.of(context).colorScheme;
     final solar = lunarToSolar(e.month, e.day, _year);
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  e.lunarLabel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: cs.primary,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 元数据使用 Wrap；窄屏和 200% 字号下允许自然换行。
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                e.lunarLabel,
+                style: TextStyle(
+                  fontSize: AppType.body,
+                  fontWeight: FontWeight.bold,
+                  color: cs.primary,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  e.sourceLabel,
-                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
+              Text(
+                e.sourceLabel,
+                style: TextStyle(
+                  fontSize: AppType.micro,
+                  color: cs.onSurfaceVariant,
                 ),
-                const Spacer(),
-                Text(
-                  solar == null ? '当年无此日' : '公历 ${solar.month}月${solar.day}日',
-                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
+              Text(
+                solar == null
+                    ? '当年无此日'
+                    : '公历 ${solar.month}月${solar.day}日',
+                style: TextStyle(
+                  fontSize: AppType.micro,
+                  color: cs.onSurfaceVariant,
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            e.names.join(' · '),
+            style: const TextStyle(
+              fontSize: AppType.body,
+              height: 1.4,
             ),
-            const SizedBox(height: 6),
-            Text(
-              e.names.join(' · '),
-              style: const TextStyle(fontSize: 14, height: 1.4),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
