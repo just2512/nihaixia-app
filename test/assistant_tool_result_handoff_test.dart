@@ -17,6 +17,7 @@ import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/bazi_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
+import 'package:nihaisha_app/services/yuxiaji_omen_tool_executor.dart';
 import 'support/test_only_red_flag_gate.dart';
 
 
@@ -591,6 +592,75 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('玉匣灵兆在助手对话中按 App 本机时辰查询并只解释民俗资料',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    final fixedTime = DateTime(2026, 11, 16, 0, 30);
+    var pageOpened = false;
+    Map<String, String>? executedArguments;
+    AssistantToolResult? executedResult;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'yuxiaji_omen') pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executedArguments = Map<String, String>.from(arguments);
+            executedResult = YuxiajiOmenToolExecutor.execute(
+              arguments,
+              clock: () => fixedTime,
+            );
+            return executedResult!;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '查询玉匣灵兆');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(pageOpened, isFalse, reason: '常规当前时辰查询应留在助手对话中');
+    expect(executedArguments, isEmpty);
+    expect(executedResult?.status, AssistantToolExecutionStatus.succeeded);
+    expect(executedResult?.validateFor('yuxiaji_omen'), isEmpty);
+    expect(executedResult?.sourceIds, ['local-data:yuxiaji-omen']);
+    expect(executedResult?.values['当前时辰'], '子时 23:00–00:59');
+    expect(service.modelCalls, 1);
+    expect(
+      service.sentTexts.any((text) => text.contains('不是医学诊断')),
+      isTrue,
+      reason: '民俗结果的解释提示必须显式排除医学诊断',
+    );
+    final savedResult = store.savedMessages.singleWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('工具：玉匣灵兆'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      savedResult['metadata'] as String,
+    );
+    expect(metadata.toolId, 'yuxiaji_omen');
+    expect(metadata.toolStatus, 'SUCCEEDED');
+    expect(metadata.toolArguments, isEmpty);
+    expect(metadata.sourceIds, ['local-data:yuxiaji-omen']);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('八字助手在当前对话后台调用本地引擎并把完整结果交给 AI 解读',
       (tester) async {
