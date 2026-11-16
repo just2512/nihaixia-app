@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:nihaisha_app/data/acupoint_repository.dart';
@@ -9,11 +13,55 @@ import 'package:nihaisha_app/screens/guji_library_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
+String _fixtureFor(GujiBook book) {
+  final buffer = StringBuffer('《${book.title}》测试前言\n');
+  for (var index = 0; index < book.chapterCount; index++) {
+    final serial = (index + 1).toString().padLeft(3, '0');
+    buffer
+      ..writeln('====')
+      ..writeln('第${serial}章')
+      ..writeln('====')
+      ..writeln(
+        '章节${(index + 1).toString().padLeft(3, '0')}：'
+        '${book.id} 原文内容，用于检索、显示和布局回归。',
+      );
+  }
+  return buffer.toString();
+}
+
+void _installGujiAssetFixtures() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMessageHandler('flutter/assets', (message) async {
+    if (message == null) return null;
+    final assetPath = Uri.decodeComponent(
+      utf8.decode(message.buffer.asUint8List()),
+    );
+    final book = kGujiBooks.where((candidate) => candidate.asset == assetPath);
+    if (book.isEmpty) return null;
+    final bytes = Uint8List.fromList(utf8.encode(_fixtureFor(book.first)));
+    return ByteData.sublistView(bytes);
+  });
+}
+
+void _removeGujiAssetFixtures() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMessageHandler('flutter/assets', null);
+}
+
 void main() {
   setUpAll(() async {
     await FormulaRepository.load();
     await HerbRepository.load();
     await AcupointRepository.load();
+  });
+
+  setUp(() {
+    GujiRepository.clearCache();
+    _installGujiAssetFixtures();
+  });
+
+  tearDown(() {
+    _removeGujiAssetFixtures();
     GujiRepository.clearCache();
   });
 
@@ -53,16 +101,10 @@ void main() {
     GujiBook book,
   ) async {
     await tester.tap(find.text(book.title).first);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    // The chapter ListView keeps a spinning progress indicator while rootBundle
-    // reads a large public-domain text asset. Await real I/O instead of
-    // pumpAndSettle, which cannot settle a live indeterminate animation.
-    final chapters =
-        await tester.runAsync(() => GujiRepository.chaptersOf(book));
-    await tester.pump();
-    await tester.pump();
+    // The test asset handler returns a small deterministic fixture. Waiting
+    // for the route to settle exercises the actual rootBundle/FutureBuilder
+    // contract without real-file I/O or a second runAsync event loop.
+    await tester.pumpAndSettle();
 
     expect(find.byType(GujiBookScreen), findsOneWidget);
     final chapterContext = tester.element(find.byType(GujiBookScreen));
@@ -71,15 +113,16 @@ void main() {
       2,
       reason: '章节目录路由也必须继承200%字号',
     );
-    expect(chapters, isNotNull);
-    expect(find.text(chapters!.first.title), findsWidgets);
+
+    final chapters = await GujiRepository.chaptersOf(book);
+    expect(chapters, hasLength(book.chapterCount));
+    expect(find.text(chapters.first.title), findsWidgets);
     return chapters;
   }
 
   Future<void> returnToLibrary(WidgetTester tester) async {
     await tester.pageBack();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
   }
 
   testWidgets('古籍书目在402/775dp、浅深主题与200%字号下可读且无重复卡片',
@@ -117,13 +160,13 @@ void main() {
     );
 
     for (final book in kGujiBooks) {
-      await openBookAndLoad(tester, book);
-
+      final chapters = await openBookAndLoad(tester, book);
       final route = tester.widget<GujiBookScreen>(
         find.byType(GujiBookScreen),
       );
       expect(route.book.id, book.id,
           reason: '每个书目入口必须携带自身稳定 ID');
+      expect(chapters, hasLength(book.chapterCount));
       expect(find.text(book.title), findsOneWidget);
       expect(find.byType(Card), findsNothing,
           reason: '章节目录不应重新引入重复 Card');
@@ -154,9 +197,6 @@ void main() {
       find.text(lastChapter.title),
       480,
       scrollable: chapterList,
-      // 339 chapter rows can become much taller at 200% text scaling.
-      // Bound the search by the actual book length instead of relying on
-      // scrollUntilVisible's default 50 iterations.
       maxScrolls: book.chapterCount,
     );
     expect(find.text(lastChapter.title), findsOneWidget);
@@ -188,31 +228,26 @@ void main() {
       expect(bodyText.length, greaterThan(3));
       await tester.enterText(
         find.byType(TextField),
-        bodyText.substring(0, 4),
+        bodyText.substring(0, 5),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text(firstChapter.title), findsWidgets,
           reason: '应能按章节正文内容命中该章节');
       expect(find.text('没有匹配的章节'), findsNothing);
 
       await tester.enterText(find.byType(TextField), firstChapter.title);
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text(firstChapter.title), findsWidgets,
           reason: '应能按章节标题检索');
 
       await tester.tap(find.byIcon(Icons.clear));
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text(firstChapter.title), findsWidgets);
 
       final chapterTitle = find.text(firstChapter.title).last;
       await tester.ensureVisible(chapterTitle);
       await tester.tap(chapterTitle);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.byType(MarkdownDocScreen), findsOneWidget);
       expect(find.textContaining('原文出自'), findsOneWidget);
       expect(tester.takeException(), isNull);
