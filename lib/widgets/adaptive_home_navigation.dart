@@ -98,9 +98,11 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: '展开菜单栏',
-      child: InkWell(
-        onTap: () => setState(() => _railCollapsed = false),
-        child: Container(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _railCollapsed = false),
+          child: Container(
           width: 18,
           height: 48,
           decoration: BoxDecoration(
@@ -111,7 +113,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
+                color: scheme.shadow.withValues(alpha: 0.25),
                 blurRadius: 6,
                 offset: const Offset(2, 0),
               ),
@@ -123,6 +125,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
             color: scheme.onPrimary,
           ),
         ),
+      ),
       ),
     );
   }

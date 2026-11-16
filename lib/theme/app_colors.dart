@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 
 /// 语义化设计 Token（Design Tokens）——App 内颜色唯一来源（P0-3 根治）。
 ///
-/// 设计依据（设计师终稿）：品牌棕 seed #8B4513；中性系暖调去纯白纯黑；
+/// 设计方向：低饱和松墨绿作为品牌主色，灰绿中性色降低浅色主题亮度；
 /// 状态系含 container；六经专用色 light 深 shade / dark 亮 shade（对比度≥4.5:1）。
 ///
 /// 使用方式：`Theme.of(context).extension<AppColors>()!`，或
 /// `context.colors`（见 [AppColorsContext]）。不要在页面内写裸颜色字面量。
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
-  // ---- 主色系（品牌棕） ----
+  // ---- 主色系（低饱和松墨绿） ----
   final Color primary;
   final Color onPrimary;
   final Color primaryContainer;
   final Color onPrimaryContainer;
 
-  // ---- 中性系（暖调） ----
+  // ---- 中性系（低眩光灰绿） ----
   final Color background;
   final Color surface;
   final Color surfaceContainerHighest;
@@ -104,29 +104,29 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.metaphysicsZone,
   });
 
-  /// 六经 container = 该色 12% alpha 叠加在底色上（light 白底 / dark 深底）。
+  /// 六经 container = 该色 12% alpha 叠加在对应主题的内容表面上。
   static Color _tint(Color c, {required bool dark}) {
-    final bg = dark ? const Color(0xFF221D18) : const Color(0xFFFFFFFF);
+    final bg = dark ? const Color(0xFF202823) : const Color(0xFFEFF0EB);
     return Color.alphaBlend(c.withValues(alpha: 0.12), bg);
   }
 
   static final AppColors light = AppColors(
-    primary: const Color(0xFFA63B2E),
+    primary: const Color(0xFF43594D),
     onPrimary: const Color(0xFFFFFFFF),
-    primaryContainer: const Color(0xFFF4DED8),
-    onPrimaryContainer: const Color(0xFF3A0A04),
-    background: const Color(0xFFF6F7F8),
-    surface: const Color(0xFFFFFFFF),
-    surfaceContainerHighest: const Color(0xFFE4E7EA),
-    surfaceContainerLow: const Color(0xFFECEEF0),
-    onSurface: const Color(0xFF191C1E),
-    onSurfaceVariant: const Color(0xFF697180),
-    outline: const Color(0xFF868E99),
-    outlineVariant: const Color(0xFFD6DBE1),
+    primaryContainer: const Color(0xFFDFE6DF),
+    onPrimaryContainer: const Color(0xFF20342A),
+    background: const Color(0xFFE7E9E4),
+    surface: const Color(0xFFEFF0EB),
+    surfaceContainerHighest: const Color(0xFFD9DDD6),
+    surfaceContainerLow: const Color(0xFFE1E4DE),
+    onSurface: const Color(0xFF262C28),
+    onSurfaceVariant: const Color(0xFF59635C),
+    outline: const Color(0xFF747E76),
+    outlineVariant: const Color(0xFFC8CEC6),
     danger: const Color(0xFFB3261E),
     onDanger: const Color(0xFFFFFFFF),
     dangerContainer: const Color(0xFFF6DAD7),
-    warning: const Color(0xFF9A6A00),
+    warning: const Color(0xFF896000),
     warningContainer: const Color(0xFFF3E1C2),
     success: const Color(0xFF2E6B4F),
     successContainer: const Color(0xFFD4E5DB),
@@ -155,18 +155,18 @@ class AppColors extends ThemeExtension<AppColors> {
   );
 
   static final AppColors dark = AppColors(
-    primary: const Color(0xFFE8A79B),
-    onPrimary: const Color(0xFF4A1507),
-    primaryContainer: const Color(0xFF5E2315),
-    onPrimaryContainer: const Color(0xFFF7D8CE),
-    background: const Color(0xFF191512),
-    surface: const Color(0xFF221D18),
-    surfaceContainerHighest: const Color(0xFF2C2620),
-    surfaceContainerLow: const Color(0xFF1E1A15),
-    onSurface: const Color(0xFFEFE9E2),
-    onSurfaceVariant: const Color(0xFFC4BBB0),
-    outline: const Color(0xFF8F867A),
-    outlineVariant: const Color(0xFF4F483E),
+    primary: const Color(0xFFA7B8AA),
+    onPrimary: const Color(0xFF1F3026),
+    primaryContainer: const Color(0xFF34483C),
+    onPrimaryContainer: const Color(0xFFDDE8DE),
+    background: const Color(0xFF181E1B),
+    surface: const Color(0xFF202823),
+    surfaceContainerHighest: const Color(0xFF303B34),
+    surfaceContainerLow: const Color(0xFF252F29),
+    onSurface: const Color(0xFFE4EAE4),
+    onSurfaceVariant: const Color(0xFFB7C1B8),
+    outline: const Color(0xFF879388),
+    outlineVariant: const Color(0xFF465149),
     danger: const Color(0xFFFFB4AB),
     onDanger: const Color(0xFF690005),
     dangerContainer: const Color(0xFF93000A),
