@@ -42,6 +42,8 @@ apksigner verify --print-certs .\old-installed.apk
 
 记录 `Signer #1 certificate SHA-256 digest`。若设备无法提取旧 APK，可使用确认来自该设备当前安装版本的旧安装包；不要用未经确认的网络 APK 作为证书基线。
 
+> 历史 `CHANGELOG.md` 仅保存过缩写指纹 `b0fcd4f4…55069`，没有完整 SHA-256；这只能作为线索，**不能**代替从当前设备旧版 APK 读取并逐字比对完整证书指纹。
+
 ## 3. 本地构建
 
 在仓库根目录运行：
