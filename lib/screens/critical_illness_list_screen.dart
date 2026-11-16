@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
+import '../theme/app_tokens.dart';
 
 import '../data/critical_illness_data.dart';
 import '../data/formula_repository.dart';
@@ -19,13 +20,12 @@ class CriticalIllnessListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('闭门课 · 重症临床')),
       body: ListView.separated(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         itemCount: kCriticalIllnesses.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           final item = kCriticalIllnesses[index];
           return Card(
-            elevation: 2,
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => Navigator.push(
@@ -40,7 +40,7 @@ class CriticalIllnessListScreen extends StatelessWidget {
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -53,12 +53,12 @@ class CriticalIllnessListScreen extends StatelessWidget {
                           color: item.isOverview ? cs.outline : cs.primary,
                           size: 22,
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             item.title,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: AppType.title,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -66,19 +66,19 @@ class CriticalIllnessListScreen extends StatelessWidget {
                         Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       item.subtitle,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: AppType.caption,
                         color: cs.onSurfaceVariant,
                       ),
                     ),
                     if (item.tags.isNotEmpty) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppSpacing.sm),
                       Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
                         children: item.tags
                             .map(
                               (t) => ActionChip(
