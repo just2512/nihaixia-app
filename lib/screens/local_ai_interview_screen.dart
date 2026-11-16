@@ -4950,7 +4950,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final explicitlyOpenYuxiajiPage = RegExp(
-      r'(?:打开|进入|跳转到|去到).{0,16}(?:玉匣灵兆|玉匣记).{0,8}(?:页面|工具页)',
+      r'(?:打开|进入|跳转到|去到).{0,16}(?:玉匣灵兆|玉匣记)',
     ).hasMatch(userText);
     if (tool.id == 'yuxiaji_omen' &&
         tool.headlessExecutor != null &&
