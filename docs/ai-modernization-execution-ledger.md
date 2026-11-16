@@ -2456,7 +2456,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 ### 55.2 其它工具的布局审计
 - 工具注册表中的页面入口均通过 `FoldAwareMaterialPageRoute` 打开；统一路由会根据来源控件锚点使用 `AdaptiveSinglePane`，不重复增加第二套页面容器。
-- 仅检查入口路由是否单侧约束不足以证明页面内容没有 RenderFlex overflow。新增逐工具 Widget 验收：在 800×1000 dp、竖向 hinge（x=388..412）模拟窗口中，从右侧物理面板依次打开每个工具页面，检查页面边界留在右侧面板并检查布局异常。
+- 仅检查入口路由是否单侧约束不足以证明页面内容没有 RenderFlex overflow。新增逐工具 Widget 验收：覆盖 775×830 dp 完全展开的平折痕整屏，以及 800×1000 dp、竖向 hinge（x=388..412）的半折叠窗口；从右侧物理面板逐个打开 18 项 Headless 工具页面，检查整屏/单侧面板边界和布局异常。梅花页使用空加速度流避免测试环境硬件插件噪声。
 - 测试失败时按失败 toolId 定位页面内部的 Row、固定宽度、网格或弹层；只修复确有溢出的页面，不按工具数量做机械重构。
 - Flutter 模拟窗口测试不等于 Find N2 真机验收；设备侧仍须记录实际 `sizeDp`、`displayFeatures`、截图和系统版本。
 

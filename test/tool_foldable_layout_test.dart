@@ -3,8 +3,10 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/meihua_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/utils/fold_aware_routes.dart';
+import 'package:sensors_plus/sensors_plus.dart' show AccelerometerEvent;
 
 final _testTheme = ThemeData(
   colorScheme: AppColors.colorSchemeFor(Brightness.light),
@@ -12,77 +14,127 @@ final _testTheme = ThemeData(
   extensions: [AppColors.light],
 );
 
+Stream<AccelerometerEvent> _emptyAccelerometerStream({
+  Duration samplingPeriod = const Duration(milliseconds: 20),
+}) => const Stream<AccelerometerEvent>.empty();
+
+Widget _pageForTool(AssistantToolDefinition tool) {
+  // Widget tests have no physical accelerometer. Keep the production page and
+  // its default computed chart, but inject an empty sensor stream.
+  if (tool.id == 'meihua') {
+    return MeihuaScreen(
+      returnResultOnComplete: true,
+      accelSource: _emptyAccelerometerStream,
+    );
+  }
+  return tool.builder();
+}
+
+Future<void> _openToolAndCheck({
+  required WidgetTester tester,
+  required AssistantToolDefinition tool,
+  required Size windowSize,
+  required List<DisplayFeature> displayFeatures,
+  required double expectedLeft,
+}) async {
+  tester.view.physicalSize = windowSize;
+  tester.view.displayFeatures = displayFeatures;
+
+  final routeKey = ValueKey('tool-route-${tool.id}');
+  final openKey = ValueKey('open-tool-${tool.id}');
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: _testTheme,
+      home: Scaffold(
+        body: Row(
+          children: [
+            const SizedBox(width: 412),
+            Expanded(
+              child: Builder(
+                builder: (sourceContext) => Center(
+                  child: ElevatedButton(
+                    key: openKey,
+                    onPressed: () {
+                      Navigator.of(sourceContext).push<void>(
+                        FoldAwareMaterialPageRoute<void>(
+                          sourceContext: sourceContext,
+                          builder: (_) => KeyedSubtree(
+                            key: routeKey,
+                            child: _pageForTool(tool),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text('打开 ${tool.id}'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  await tester.tap(find.byKey(openKey));
+  await tester.pumpAndSettle();
+
+  final route = find.byKey(routeKey);
+  expect(route, findsOneWidget, reason: tool.id);
+  final bounds = tester.getRect(route);
+  expect(bounds.left, greaterThanOrEqualTo(expectedLeft), reason: tool.id);
+  expect(bounds.right, lessThanOrEqualTo(windowSize.width), reason: tool.id);
+  expect(
+    tester.takeException(),
+    isNull,
+    reason: '${tool.id} 在当前屏幕姿态下存在布局异常',
+  );
+}
+
 void main() {
   final tools = AssistantToolRouter.all
-      .where((tool) => tool.id != 'structured_diagnosis')
+      .where((tool) => tool.headlessExecutor != null)
       .toList(growable: false);
 
   for (final tool in tools) {
     testWidgets(
-      '${tool.id} 工具页从右侧物理面板打开时不跨 hinge 且无布局异常',
+      '${tool.id} 计算工具在展开内屏和半折叠单屏内保持可布局',
       (tester) async {
         tester.view.devicePixelRatio = 1;
-        tester.view.physicalSize = const Size(800, 1000);
-        tester.view.displayFeatures = [
-          DisplayFeature(
-            bounds: const Rect.fromLTWH(388, 0, 24, 1000),
-            type: DisplayFeatureType.hinge,
-            state: DisplayFeatureState.postureHalfOpened,
-          ),
-        ];
         addTearDown(tester.view.resetDisplayFeatures);
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final routeKey = ValueKey('tool-route-${tool.id}');
-        final openKey = ValueKey('open-tool-${tool.id}');
-
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: _testTheme,
-            home: Scaffold(
-              body: Row(
-                children: [
-                  const SizedBox(width: 412),
-                  Expanded(
-                    child: Builder(
-                      builder: (sourceContext) => Center(
-                        child: ElevatedButton(
-                          key: openKey,
-                          onPressed: () {
-                            Navigator.of(sourceContext).push<void>(
-                              FoldAwareMaterialPageRoute<void>(
-                                sourceContext: sourceContext,
-                                builder: (_) => KeyedSubtree(
-                                  key: routeKey,
-                                  child: tool.builder(),
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text('打开 ${tool.id}'),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        // Fully unfolded Find N2 inner display: a flat, zero-width crease is
+        // one continuous canvas; page content may use the full 775dp width.
+        await _openToolAndCheck(
+          tester: tester,
+          tool: tool,
+          windowSize: const Size(775, 830),
+          displayFeatures: [
+            DisplayFeature(
+              bounds: const Rect.fromLTWH(387.5, 0, 0, 830),
+              type: DisplayFeatureType.fold,
+              state: DisplayFeatureState.postureFlat,
             ),
-          ),
+          ],
+          expectedLeft: 0,
         );
 
-        await tester.tap(find.byKey(openKey));
-        await tester.pumpAndSettle();
-
-        final route = find.byKey(routeKey);
-        expect(route, findsOneWidget, reason: tool.id);
-        final bounds = tester.getRect(route);
-        expect(bounds.left, greaterThanOrEqualTo(412), reason: tool.id);
-        expect(bounds.right, lessThanOrEqualTo(800), reason: tool.id);
-        expect(
-          tester.takeException(),
-          isNull,
-          reason: '${tool.id} 在单侧物理面板内存在布局异常',
+        // Half-open posture: an actual hinge separates two physical panels.
+        // A tool opened from the right-side control must remain on that panel.
+        await _openToolAndCheck(
+          tester: tester,
+          tool: tool,
+          windowSize: const Size(800, 1000),
+          displayFeatures: [
+            DisplayFeature(
+              bounds: const Rect.fromLTWH(388, 0, 24, 1000),
+              type: DisplayFeatureType.hinge,
+              state: DisplayFeatureState.postureHalfOpened,
+            ),
+          ],
+          expectedLeft: 412,
         );
       },
     );
