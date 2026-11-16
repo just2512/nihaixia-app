@@ -247,18 +247,18 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 
 | 类别 | 数量 | 内容 |
 |---|---:|---|
-| Headless deterministic/data executor | 17（本 PR 将增至 18） | App 原有计算/数据能力，可在当前对话调用 |
-| Page-only | 6（本 PR 将降至 5） | 仅负责知识/历史页面浏览，不代表后台执行 |
+| Headless deterministic/data executor | 18 | App 原有计算/数据能力，可在当前对话调用 |
+| Page-only | 5 | 仅负责知识/历史页面浏览，不代表后台执行 |
 | Inline deterministic workflow | 1 | `structured_diagnosis`，走现有 `TcmInterviewConversationController / DiagnosticEngine`，不是 ToolRouter Headless |
 
-当前已经注册 Headless 的 17 项：
+当前已经注册 Headless 的 18 项：
 - 排盘/起卦：`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`；
 - 历法/术数：`yunqi`、`almanac`、`ziwu_liuzhu`、`chenggu`、`huangdi_siji`、`sanshan_lingqian`、`shousheng_debt`；
-- 单位换算/知识数据：`dosage`、`solar_terms`、`dream`、`guansha`、`saved_charts`。
+- 单位换算/知识数据：`dosage`、`solar_terms`、`dream`、`guansha`、`saved_charts`、`yuxiaji_omen`（仅当前本机时辰文本查询）。
 
-仍为 Page-only 的 6 项：
-`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。
-本 PR 将 `yuxiaji_omen` 的“当前本机时辰文本查询”升为 Headless；原页面仍保留方向、形态等需额外观察输入的特殊占法，合并后分类应为 18 Headless / 5 Page-only / 1 Inline workflow。
+仍为 Page-only 的 5 项：
+`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`。
+`yuxiaji_omen` 同时保留原页面：当前本机时辰文本查询由 Headless executor 执行；“鸦鸣鹊噪方向”“占灯花法”等需要用户实际观察的特殊占法仍走原页面，不由 AI 猜测观察输入。分类按已注册 Headless executor 计 18 项，不把特殊页面入口重复计为第二个工具。
 
 Page-only 并不是全部都需要改为 Headless：
 - 古籍、知识库、医案是可浏览的知识资料入口；学习助手及问诊助手的资料检索复用 `AssistantKnowledgeContextBuilder`，不靠跳转页面代替检索。
@@ -282,7 +282,7 @@ Page-only 并不是全部都需要改为 Headless：
 
 失败、取消、没有结果或来源/参数不完整时不由模型补造结果。医学诊断性内容除有 App 规则实际执行结果外，还必须由本地知识库可追溯条目支持；民俗/命理来源只能支持文化解释，不能升级为医学诊断。
 
-### 11.3 本 PR：玉匣灵兆的最小 Headless 切片
+### 11.3 玉匣灵兆：Headless 当前时辰查询与特殊页面入口
 
 - 原页面 `YuxiajiOmenScreen` 的常规“当前时辰”数据只依赖 App 本机时间、`shiChenIndexOf` 和 `kYuXiaJiShiChenOmens` 本地表，不需要额外用户参数。
 - 本 PR 把当前时辰查询抽为共享纯时间 helper 与 `YuxiajiOmenToolExecutor`；页面复用同一 helper，避免两个时辰算法漂移。
