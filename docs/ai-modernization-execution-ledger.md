@@ -197,6 +197,7 @@
 > 本节只记录本轮重新读取的 master 代码、已合并 PR 和当前 CI 证据。未合并 PR 不计入 master 已实现；CI 运行中/失败不得写 PASS；Find N2 真机没有本轮 TRACE，相关能力仍为 PARTIAL/UNKNOWN。
 
 ### 10.1 当前主线与集成状态
+
 | 对象 | 状态 | 当前证据 / 处理 |
 |---|---|---|
 | master | 当前审计基线 | `28b6bbf5928c44e2befb85b3fbaa6220827634e7`；由 PR #73 合并后形成 |
@@ -396,6 +397,7 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 
 
 ## 10. 2026-11-12 后续增量：当前主线并行验收续接
+
 - PR #78 附件归属迁移已重放到 master `eaa83b440ddb1299a7eac58b70067de38ad44ea2`，当前 head `7a03023aab43ac3fcae6af744fd94c571a8f92ae`；Flutter regression 仍 IN_PROGRESS，branch validation changed tests 已 SUCCESS，另一轮 branch validation SKIPPED。Android arm64 job 尚未在该 head 上执行成功，不得标完整 CI PASS。
 - PR #80 Native Activity teardown 串行化已重放到同一 master，当前 head `46ad1bb4c9c10a793b1d8808b7b6870fd00567d5`；Flutter regression 和 branch validation 均 IN_PROGRESS；Android arm64 仅旧 head 有 SUCCESS，新 head 尚待验证。
 - PR #81 精确方剂检索当前 head 已更新为 `f26455f0ec1bcabaf04c5fa91ab4c8821274f827`。针对前次失败做了两项修订：成分匹配测试改用当前方剂库中唯一包含“白蜜”的“大半夏汤”，避免把前 4 条截断结果写成固定方剂排序契约；黄金 metadata 按 CI 实际观察到的差异更新为 sourceIds `formula:guizhi_tang`、`herb:桂枝` 和四条伤寒条目，context textLength 2199、MISSING locator 6。新 head Flutter regression 尚在 QUEUED/IN_PROGRESS，不能标 PASS。
@@ -595,6 +597,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 7. G：增加 README/pubspec 单一版本来源检查和审计证据一致性检查。
 
 ### 14.5 约束
+
 - 本轮未运行 Find N2 真机；设备相关项目继续 UNKNOWN。
 - B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
 - E 混合数据库备份与旧共享临时文件归属仍有风险；不得全局禁用备份或误删非 AI 数据。
@@ -1594,6 +1597,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 历史结果保留显式手动解释入口；未完成问诊、结果为空、持久化失败、上下文恢复失败或模型未就绪时不触发解释。
 - 该改动只修改助手编排与 widget test；未修改 `DiagnosticEngine`、`DiagnosticRules`、剂量/排盘业务计算或既有知识库内容。
 - 这不是自由文本问诊的交付：现有十问/规则追问流程仍在。用户提出自然语言症状后由 AI 自动识别缺项、只追问必要信息、后台组合规则问诊的目标仍未完成。
+
 ### 34.3 D 工作流当前能力基数
 
 - `AssistantToolRouter` 有 24 个定义：23 个页面工具入口和 1 个 `structured_diagnosis` 特殊内联流程。
@@ -1793,6 +1797,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 结果明确说明默认经纬度、子时换日和未启用真太阳时；说明该结果属于传统时辰开穴计算资料，不构成疾病诊断、针刺处方或个体治疗建议。
 
 ### 38.3 自动化验收证据
+
 - Branch validation push run `43575671526` SUCCESS，head 为 PR 最终 head `86c7398`。
 - PR workflow `43575673793` SUCCESS：Flutter 全量回归 job `132389779409` SUCCESS；Android arm64 verification job `132390872014` SUCCESS。
 - Flutter regression 覆盖静态分析、局部契约/路由/恢复/知识检索回归与完整 `flutter test --no-pub`。
@@ -1992,6 +1997,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 代码范围以 PR 差异为准；不把 PR/CI 成功描述成 Find N2 实机验收。
 
 ### 43.2 B：红旗安全门禁实际状态
+
 - PR #169 将既有 fail-closed `RedFlagGate/RedFlagPreflight` 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界。缺少 detector、assessment UNKNOWN、规则未审核、覆盖不完整、超时或原始图片/音频没有可信提取时，不得按 CLEAR 放行。
 - 这是门禁调用接线和阻断契约，不是自然语言、视觉或语音医学红旗 detector。detector 的医学审核版本、责任审批、阈值/例外和处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。
 - 不修改医学规则、不重审已审核知识库；在合格 detector 与证据完备前，不开放模型抽取自由文本症状并自动执行诊断。
@@ -2191,6 +2197,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 真机记录只保存脱敏摘要与实际状态。未执行项为 UNKNOWN；云端代码测试、APK 构建和模拟环境均不能替代 Find N2 TRACE。
 
 ### 47.5 不变边界
+
 - AI 继续只负责理解、参数澄清、调度、总结和解释；确定性排盘、问诊、剂量和其他业务计算仍由 App 执行。
 - 只有 App 真实执行、参数和结果通过校验的数据才能交 AI 解读。
 - 不改变 DiagnosticEngine / DiagnosticRules / 十问 / 剂量或玄学计算规则；不重审已审核知识库，不做经典医案外部卷页考据。
