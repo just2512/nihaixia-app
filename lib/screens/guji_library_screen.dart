@@ -111,10 +111,17 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
   final TextEditingController _controller = TextEditingController();
   String _query = '';
 
+  bool _futureInitialized = false;
+
   @override
-  void initState() {
-    super.initState();
-    _future = GujiRepository.chaptersOf(widget.book);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_futureInitialized) return;
+    _future = GujiRepository.chaptersOf(
+      widget.book,
+      bundle: DefaultAssetBundle.of(context),
+    );
+    _futureInitialized = true;
   }
 
   @override
