@@ -2518,8 +2518,8 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 | Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
 |---|---|---|---|---|
-| CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | IN_PROGRESS | `docs/contextual-ask-ai-protocol`；base `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` | 协议文档与台账进入 PR；文档链接、Markdown 结构及约束一致性检查通过；合并后记录 merge SHA |
-| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 选择来源可靠地绑定唯一条文锚点；调用既有助手会话/模型链路；针对性测试与 CI 通过 |
+| CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | PARTIAL（PR #221 已合并；未检索到可复核的 CI run） | `docs/contextual-ask-ai-protocol`；merge `5c50605724e9a27ad03df700f5e4aa5aa0766d92` | 协议已进入 master；仍缺 CI 检查运行证据，不把人工读取核对写成自动验收 PASS |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS | `work/ai-contextual-read-sample`；base `5c50605724e9a27ad03df700f5e4aa5aa0766d92`；head `ba35dcab4a54baa3153efad793e303d1a52698c4` | 单条文独立来源锚点、划词入口、情境面板及现有助手链路接入；定向测试与 PR CI 通过后才可 PASS；Find N2 真机另行记录 |
 | CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
 
 ### 57.3 实施顺序与边界
@@ -2537,3 +2537,16 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前仅完成远端文档读取与协议固化；尚未实施划词组件、结果问 AI 入口或会话锚点代码。
 - 本次文档工作没有执行 Flutter 测试、Android 构建或 Find N2 实机测试；这些结果不适用，不能记为 PASS。
 - 本节状态应在 PR 创建、CI 结束和合并后按实际证据更新。
+
+
+### 57.5 CAI-READ-01 当前实现切片（2026-11-16）
+
+- 分支基线：`5c50605724e9a27ad03df700f5e4aa5aa0766d92`（本轮开始时最新 master）。
+- 当前 head：`ba35dcab4a54baa3153efad793e303d1a52698c4`。
+- 接入页面：`ClassicLibraryScreen` 中仅对 `assets/shanghan/clause_001.md` 启用情境入口；来源锚点为 `shanghan:clause:002`，内容版本按原始 Markdown 资产 SHA-256 计算。
+- 新增：`AiContextRef`、`AiContextPromptBuilder`、`ContextualAiSheet`；复用 `LocalAiInterviewScreen`、SQLite 会话/消息和模型执行链路。
+- 消息 metadata 增加可选 `contextRef`，schemaVersion 仍为 1，旧版 semicolon/JSON metadata 保持兼容。
+- 阅读页只在完整来源信息齐备时启用 `SelectionArea` 自定义菜单；普通 Markdown 阅读页不改变原有 selectable 行为；来源 ID 使用现有 ClassicSearchService 可解析的 `shanghan:<asset path>` 形式。
+- 情境会话设置 explanation-only 路由，避免将包含“紫微/排盘/工具”等上下文内容重新送入工具调度器触发重复计算；既有模型调用、安全前置检查及会话持久化继续复用。
+- 已新增/修改定向测试：`test/ai_context_prompt_builder_test.dart`、`test/assistant_message_metadata_test.dart`、`test/markdown_doc_contextual_selection_test.dart`。当前尚未取得测试实际运行结果，TEST/CI 状态为 UNKNOWN；不标记 PASS。
+- 本切片不覆盖全库阅读页，不代表 Find N2 真机验收完成。PR 创建后补记实际 CI run、失败日志与修复结果。
