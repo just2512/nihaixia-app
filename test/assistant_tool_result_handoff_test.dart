@@ -170,6 +170,68 @@ class _RecordingAssistantService extends LocalAiService {
 
 
 void main() {
+  test('旧页面字符串只显示为 UNKNOWN，不作为业务来源或模型上下文', (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    String? openedToolId;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            openedToolId = tool.id;
+            return Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).pop('旧页面未结构化文本：未校验计算结果'),
+                  child: const Text('返回旧页面文本'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '打开诊断历史趋势');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(openedToolId, 'diagnosis_history');
+    expect(find.text('返回旧页面文本'), findsOneWidget);
+    await tester.tap(find.text('返回旧页面文本'));
+    await tester.pumpAndSettle();
+
+    final resultText = find.byWidgetPredicate(
+      (widget) => widget is SelectableText &&
+          (widget.data ?? '').contains('旧页面未结构化文本'),
+    );
+    expect(resultText, findsOneWidget);
+    expect(find.text('执行状态：UNKNOWN'), findsOneWidget);
+    expect(find.text('来源标识：MISSING'), findsOneWidget);
+    expect(find.text('AI总结解读'), findsNothing);
+    expect(service.modelCalls, 0);
+    expect(service.restoredTranscript, isNot(contains('旧页面未结构化文本')));
+    expect(service.restoredTranscript, isNot(contains('local-page-tool:')));
+
+    final storedResult = store.savedMessages.firstWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('旧页面未结构化文本'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      storedResult['metadata'] as String,
+    );
+    expect(metadata.toolId, 'diagnosis_history');
+    expect(metadata.toolStatus, 'UNKNOWN');
+    expect(metadata.sourceIds, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('五运六气工具可把实际推算结果返回统一助手', (tester) async {
     Object? returned;
     await tester.pumpWidget(
