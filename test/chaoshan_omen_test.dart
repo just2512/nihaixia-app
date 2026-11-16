@@ -5,6 +5,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/yuxiaji_omen_data.dart';
 import 'package:nihaisha_app/screens/yuxiaji_omen_screen.dart';
+import 'package:nihaisha_app/services/yuxiaji_omen_time.dart';
 import 'package:nihaisha_app/services/lunar_almanac_service.dart';
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart';
 
