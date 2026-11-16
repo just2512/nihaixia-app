@@ -513,8 +513,8 @@ void main() {
       final expandButton = find.byTooltip('展开菜单栏');
       expect(expandButton, findsOneWidget);
       final handle = tester.widget<Container>(
-        find.descendant(
-          of: expandButton,
+        find.ancestor(
+          of: find.byIcon(Icons.chevron_right),
           matching: find.byType(Container),
         ).first,
       );
