@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
@@ -11,6 +15,10 @@ import '../data/zhenjiu_lecture_index.dart';
 import 'formula_detail_screen.dart';
 import 'herb_detail_screen.dart';
 import 'acupoint_detail_screen.dart';
+import '../models/ai_context_ref.dart';
+import '../screens/assistant_tool_router.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 /// 解码 flutter_markdown 传给 `onTapLink` 的 href。
 ///
@@ -45,6 +53,11 @@ class MarkdownDocScreen extends StatefulWidget {
   final String? footer;
   final bool linkFormulas;
 
+  /// Stable source anchor; enabled only for the first Shanghan clause sample.
+  final String? contextualAskModuleId;
+  final String? contextualAskAnchorId;
+  final String? contextualAskSourceId;
+
   const MarkdownDocScreen({
     super.key,
     required this.title,
@@ -52,6 +65,9 @@ class MarkdownDocScreen extends StatefulWidget {
     this.content,
     this.footer,
     this.linkFormulas = false,
+    this.contextualAskModuleId,
+    this.contextualAskAnchorId,
+    this.contextualAskSourceId,
   }) : assert(asset != '' || content != null, 'asset 与 content 至少要提供一个');
 
   @override
@@ -149,6 +165,78 @@ class MarkdownDocScreen extends StatefulWidget {
 
 class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
   late Future<String> _future;
+  String _selectedText = '';
+
+  bool get _contextualAskEnabled =>
+      widget.contextualAskModuleId?.trim().isNotEmpty == true &&
+      widget.contextualAskAnchorId?.trim().isNotEmpty == true &&
+      widget.contextualAskSourceId?.trim().isNotEmpty == true;
+
+  void _askAiAboutSelection(String selectedText, String fullPassage) {
+    if (!_contextualAskEnabled || selectedText.trim().isEmpty) return;
+    final moduleId = widget.contextualAskModuleId!;
+    final anchorId = widget.contextualAskAnchorId!;
+    final sourcePath = widget.contextualAskSourceId!;
+    final version = sha256.convert(utf8.encode(fullPassage)).toString();
+    final ref = AiContextRef(
+      kind: 'classic',
+      moduleId: moduleId,
+      anchorId: anchorId,
+      anchorVersion: version,
+      sourceId: 'asset:$sourcePath',
+      title: widget.title,
+    );
+    final prompt = AiContextPromptBuilder.buildClassicSelection(
+      ref: ref,
+      selectedText: selectedText.trim(),
+      fullPassage: fullPassage,
+    );
+    unawaited(showContextualAiSheet(
+      context: context,
+      contextRef: ref,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.learning,
+    ));
+  }
+
+  Widget _buildMarkdownBody(String data) {
+    final markdown = Markdown(
+      data: data,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      selectable: !_contextualAskEnabled,
+      onTapLink: (text, href, title) => _onTapLink(href),
+      styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+    );
+    if (!_contextualAskEnabled) return markdown;
+    return SelectionArea(
+      onSelectionChanged: (selection) {
+        final selected = selection?.plainText ?? '';
+        if (selected != _selectedText) {
+          setState(() => _selectedText = selected);
+        }
+      },
+      contextMenuBuilder: (context, state) {
+        final items = List<ContextMenuButtonItem>.of(
+          state.contextMenuButtonItems,
+        );
+        if (_selectedText.trim().isNotEmpty) {
+          items.add(ContextMenuButtonItem(
+            label: '问 AI',
+            onPressed: () {
+              final selected = _selectedText;
+              state.hideToolbar();
+              _askAiAboutSelection(selected, data);
+            },
+          ));
+        }
+        return AdaptiveTextSelectionToolbar.buttonItems(
+          anchors: state.contextMenuAnchors,
+          buttonItems: items,
+        );
+      },
+      child: markdown,
+    );
+  }
 
   @override
   void initState() {
@@ -269,13 +357,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           return Column(
             children: [
               Expanded(
-                child: Markdown(
-                  data: snapshot.data ?? '',
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  selectable: true,
-                  onTapLink: (text, href, title) => _onTapLink(href),
-                  styleSheet: MarkdownDocScreen.buildStyleSheet(context),
-                ),
+                child: _buildMarkdownBody(snapshot.data ?? ''),
               ),
               SafeArea(
                 child: Padding(
