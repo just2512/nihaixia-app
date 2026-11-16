@@ -130,6 +130,7 @@ class ClassicSearchService {
     'jingui': '金匮要略讲稿',
     'neijing': '内经讲稿',
     'zhenjiu': '针灸讲稿',
+    'bencao': '本草讲稿',
   };
 
   static String _labelOf(String source, String? bookId) {
@@ -161,7 +162,7 @@ class ClassicSearchService {
     final bytes = gunzipBytes(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
     final decoded = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     final list = (decoded['entries'] as List<dynamic>).cast<Map<String, dynamic>>();
-    _entries = [
+    final entries = <_IndexEntry>[
       for (final e in list)
         _IndexEntry(
           source: e['s'] as String,
@@ -172,6 +173,75 @@ class ClassicSearchService {
           text: (e['x'] as String?) ?? '',
         ),
     ];
+
+    // Keep the fork's existing classic index as the primary source. The
+    // supplemental upstream index is filtered to genuinely missing asset
+    // paths only; same-path upstream rewrites must never shadow local content.
+    final supplemental = await rootBundle.load(
+      'assets/guji/upstream_increment_index.json.gz',
+    );
+    final supplementalBytes = gunzipBytes(
+      supplemental.buffer.asUint8List(
+        supplemental.offsetInBytes,
+        supplemental.lengthInBytes,
+      ),
+    );
+    final supplementalDecoded =
+        jsonDecode(utf8.decode(supplementalBytes)) as Map<String, dynamic>;
+    final supplementalList = (supplementalDecoded['entries'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    const supplementalShanghanAssets = <String>{
+      'assets/shanghan/clause_380.md',
+      'assets/shanghan/clause_381.md',
+      'assets/shanghan/clause_382.md',
+      'assets/shanghan/clause_383.md',
+      'assets/shanghan/clause_384.md',
+      'assets/shanghan/clause_385.md',
+      'assets/shanghan/clause_386.md',
+      'assets/shanghan/clause_387.md',
+      'assets/shanghan/clause_388.md',
+      'assets/shanghan/clause_389.md',
+      'assets/shanghan/clause_390.md',
+      'assets/shanghan/appendix_001_六经辨证总结.md',
+      'assets/shanghan/appendix_002_六经传变规律.md',
+      'assets/shanghan/appendix_003_六经病欲解时.md',
+      'assets/shanghan/appendix_004_六经辨证临床要点.md',
+    };
+    const supplementalJinguiAssets = <String>{
+      'assets/jingui/clause_453.md',
+      'assets/jingui/clause_454.md',
+    };
+    final indexedAssetKeys = entries
+        .where((entry) => entry.asset != null)
+        .map((entry) => '${entry.source}:${entry.asset}')
+        .toSet();
+    for (final e in supplementalList) {
+      final source = e['s'] as String?;
+      final asset = e['a'] as String?;
+      final isMissingPath =
+          (source == 'shanghan' && asset != null &&
+              supplementalShanghanAssets.contains(asset)) ||
+          (source == 'jingui' && asset != null &&
+              supplementalJinguiAssets.contains(asset)) ||
+          (source == 'bencao' &&
+              asset != null &&
+              asset.startsWith('assets/bencao_lecture/') &&
+              asset.endsWith('.md'));
+      final key = source != null && asset != null ? '$source:$asset' : '';
+      if (!isMissingPath || indexedAssetKeys.contains(key)) continue;
+      entries.add(
+        _IndexEntry(
+          source: source!,
+          title: (e['t'] as String?) ?? '',
+          asset: asset,
+          bookId: e['b'] as String?,
+          chapterIndex: e['i'] as int?,
+          text: (e['x'] as String?) ?? '',
+        ),
+      );
+      indexedAssetKeys.add(key);
+    }
+    _entries = entries;
   }
 
   /// Resolve a previously emitted local source ID back to the indexed hit.

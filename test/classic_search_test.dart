@@ -34,6 +34,35 @@ void main() {
         reason: '灵枢应能搜到九针相关章节');
   });
 
+  test('上游独有条文可检索且不覆盖本地同名条文', () async {
+    final jingui = await ClassicSearchService.search('诃黎勒散');
+    expect(
+      jingui.hits.any((h) => h.asset == 'assets/jingui/clause_453.md'),
+      isTrue,
+      reason: '新增金匮条文应进入搜索索引',
+    );
+
+    final shanghan = await ClassicSearchService.search('霍乱');
+    expect(
+      shanghan.hits.any((h) => h.asset == 'assets/shanghan/clause_382.md'),
+      isTrue,
+      reason: '新增伤寒宋本条文应进入搜索索引',
+    );
+  });
+
+  test('本草讲稿进入经典全文检索', () async {
+    final bencao = await ClassicSearchService.search('丹砂');
+    expect(
+      bencao.hits.any(
+        (hit) =>
+            hit.source == 'bencao' &&
+            (hit.asset ?? '').startsWith('assets/bencao_lecture/'),
+      ),
+      isTrue,
+      reason: '本草讲稿应通过本地经典搜索索引命中',
+    );
+  });
+
   test('命中带来源标签与摘要，标题命中排在正文命中之前', () async {
     final r = await ClassicSearchService.search('上古天真论');
     expect(r.hits, isNotEmpty);

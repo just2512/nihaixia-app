@@ -18,6 +18,20 @@ void main() {
     expect(resolved.localBacklink, original.localBacklink);
   });
 
+  test('本草讲稿 sourceId 可精确反查原始资产', () async {
+    final result = await ClassicSearchService.search('丹砂');
+    final original = result.hits.firstWhere(
+      (hit) =>
+          hit.source == 'bencao' &&
+          (hit.asset ?? '').startsWith('assets/bencao_lecture/'),
+    );
+    final resolved =
+        await ClassicSearchService.findBySourceId(original.sourceId);
+    expect(resolved, isNotNull);
+    expect(resolved!.sourceId, original.sourceId);
+    expect(resolved.localBacklink, original.localBacklink);
+  });
+
   test('未知或 MISSING 来源 ID 不回退到模糊检索', () async {
     expect(await ClassicSearchService.findBySourceId('MISSING'), isNull);
     expect(await ClassicSearchService.findBySourceId(''), isNull);
