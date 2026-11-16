@@ -748,7 +748,7 @@ class _SearchTabState extends State<SearchTab> {
                     color: e.source == 'nihaisha'
                         ? context.colors.warningContainer
                         : context.colors.infoContainer,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
                   ),
                   child: Text(e.sourceLabel,
                     style: TextStyle(fontSize: AppType.micro,
