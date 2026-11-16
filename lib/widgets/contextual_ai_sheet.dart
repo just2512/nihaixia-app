@@ -11,6 +11,8 @@ Future<void> showContextualAiSheet({
   required AiContextRef contextRef,
   required String initialPrompt,
   required AssistantMode initialMode,
+  String? contextualTitle,
+  bool contextualExplanationOnly = true,
 }) {
   final normalizedRef = AiContextRef.normalizeMetadata(contextRef.toMetadata());
   if (normalizedRef.isEmpty) {
@@ -38,6 +40,8 @@ Future<void> showContextualAiSheet({
           ),
           initialPrompt: initialPrompt,
           initialMode: initialMode,
+          contextualTitle: contextualTitle,
+          contextualExplanationOnly: contextualExplanationOnly,
           contextRef: normalizedRef,
           sheetScrollController: scrollController,
         ),
