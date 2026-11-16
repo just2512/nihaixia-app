@@ -431,6 +431,12 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 
 ### 18.3 当前实施状态
 
-- 分支：`sync/upstream-classics-20261116`，基于上述 master SHA。
-- 本节记录切片范围和差异判定；PR 与 CI 运行结果待本切片提交后补录。
+- 分支：`sync/upstream-classics-20261116`，基于 master `c69b5ba95f2ac50516cfcb184f1467a285a73545`。
+- 本节记录切片范围和差异判定；PR #198 最新 head 与 Actions 结果以 GitHub 元数据为准。
 - 本地 Find N2 阅读布局仍须设备验收；云端 CI 不替代真机证据。
+
+### 18.4 CI 失败定位与修正记录
+
+- 首轮全量回归 `43798546328`：1611 passed / 1 failed / 15 skipped。唯一失败为新增伤寒检索用例使用高频词“霍乱”，目标 `clause_382.md` 未进入搜索展示上限 40 的命中列表；不是资产缺失或索引未加载。
+- 修正为查询新增条文中特征短语“胃中寒冷故也”，断言目标资产 `assets/shanghan/clause_380.md`，保留搜索展示上限、排序与原有断言，不删测试、不放宽验收。
+- 修正后新提交：`cc5fa686c6a6d86af07680c2486060c908f5ad9b`；对应 PR workflow run `43799091870` 初始状态 PENDING。最终状态以该 head 的完整 Flutter regression 结果为准。
