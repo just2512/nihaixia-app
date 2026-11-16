@@ -473,9 +473,9 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 
 ### 20.1 辨证规则
 
-- fork `DiagnosticEngine` 已包含 `answerZhenJia`、`healthyBaselineOk`、`getSimilarityRanking` 等上游已有能力；不覆盖或重写 `diagnostic_engine.dart`。
-- fork 与 upstream/main 的 `lib/engine/formula_matcher.dart` blob SHA 同为 `05d2c983e25dc82640efe4710147383bf1ef7cb5`，内容完全一致；fork 已包含口语语料 `oral/indicators`、否定命中过滤、加权召回和基线非劣化排序。历史表中该项 `PARTIAL / REVIEW_REQUIRED` 更新为 `ALREADY_PRESENT / NO_PORT`。
-- 将真假寒热线索常量从页面抽取进 `DiagnosticRules` 属可选整理，不改变业务输出；没有证据证明能修复当前缺陷，本轮不移植。
+- fork `DiagnosticEngine` 已包含 `answerZhenJia`、`healthyBaselineOk`、`getSimilarityRanking` 等上游接口。对比方法声明，fork 有54个方法、upstream/main 有48个；未发现 upstream-only 方法，fork 另有脏腑证据、脉舌评估和合病必答追问等6个方法。此为接口面盘点，不宣称所有分支语义已逐行等价；没有发现需从上游补入的缺失入口。
+- fork 与 upstream/main 的 `lib/engine/formula_matcher.dart` blob SHA 同为 `05d2c983e25dc82640efe4710147383bf1ef7cb5`，`lib/engine/formula_rules.dart` blob SHA 同为 `a97fde39651d2318ab173f47412f0bfb6a1675e2`，两文件内容完全一致；fork 已包含口语语料 `oral/indicators`、否定命中过滤、加权召回和基线非劣化排序。历史表中该项 `PARTIAL / REVIEW_REQUIRED` 当前状态为 `ALREADY_PRESENT / NO_PORT`。
+- 上游 `DiagnosticRules.zhenJiaClueKeys` 与 fork `ChatScreen._zhenJiaClueKeys` 的9组 label/key 映射完全一致；差异只是常量归属位置。抽取到规则类属于可选整理，不改变业务输出；没有证据证明能修复当前缺陷，本轮不移植。
 - 合病/兼病、canonical key 和分支遮蔽的后续核验只针对有明确失败场景的规则，不做整文件同步或无目标规则重构。
 
 ### 20.2 医案数据库与来源
