@@ -41,6 +41,9 @@ void main() {
     tester.view.physicalSize = Size(width, 900);
     await tester.pumpWidget(
       MaterialApp(
+        // Keep each width/theme combination's Navigator and PageStorage
+        // isolated so a prior iteration's scroll offset cannot leak forward.
+        key: ValueKey('${width.toInt()}-${brightness.name}'),
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: AppColors.colorSchemeFor(brightness),
