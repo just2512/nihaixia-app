@@ -45,6 +45,34 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<List<GujiChapter>> openBookAndLoad(
+    WidgetTester tester,
+    GujiBook book,
+  ) async {
+    await tester.tap(find.text(book.title).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // The chapter ListView keeps a spinning progress indicator while rootBundle
+    // reads a large public-domain text asset. Await real I/O instead of
+    // pumpAndSettle, which cannot settle a live indeterminate animation.
+    final chapters =
+        await tester.runAsync(() => GujiRepository.chaptersOf(book));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(GujiBookScreen), findsOneWidget);
+    expect(chapters, isNotNull);
+    expect(find.text(chapters!.first.title), findsWidgets);
+    return chapters;
+  }
+
+  Future<void> returnToLibrary(WidgetTester tester) async {
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
   testWidgets('古籍书目在402/775dp、浅深主题与200%字号下可读且无重复卡片',
       (tester) async {
     addTearDown(tester.view.resetPhysicalSize);
@@ -80,10 +108,8 @@ void main() {
     );
 
     for (final book in kGujiBooks) {
-      await tester.tap(find.text(book.title).first);
-      await tester.pumpAndSettle();
+      await openBookAndLoad(tester, book);
 
-      expect(find.byType(GujiBookScreen), findsOneWidget);
       final route = tester.widget<GujiBookScreen>(
         find.byType(GujiBookScreen),
       );
@@ -94,8 +120,7 @@ void main() {
           reason: '章节目录不应重新引入重复 Card');
       expect(tester.takeException(), isNull);
 
-      await tester.pageBack();
-      await tester.pumpAndSettle();
+      await returnToLibrary(tester);
     }
   });
 
@@ -111,36 +136,35 @@ void main() {
         brightness: Brightness.dark,
       );
       final book = kGujiBooks.first;
-      await tester.tap(find.text(book.title));
-      await tester.pumpAndSettle();
-
-      final chapters = await GujiRepository.chaptersOf(book);
+      final chapters = await openBookAndLoad(tester, book);
       final firstChapter = chapters.first;
-      expect(find.text(firstChapter.title), findsWidgets);
+
       expect(find.byType(TextField), findsOneWidget);
       expect(find.byType(Card), findsNothing);
       expect(tester.takeException(), isNull);
 
       await tester.enterText(find.byType(TextField), firstChapter.title);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
       expect(find.text(firstChapter.title), findsWidgets);
       expect(find.text('没有匹配的章节'), findsNothing);
 
       await tester.tap(find.byIcon(Icons.clear));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
       expect(find.text(firstChapter.title), findsWidgets);
 
-      await tester.ensureVisible(find.text(firstChapter.title).last);
-      await tester.tap(find.text(firstChapter.title).last);
-      await tester.pumpAndSettle();
+      final chapterTitle = find.text(firstChapter.title).last;
+      await tester.ensureVisible(chapterTitle);
+      await tester.tap(chapterTitle);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
       expect(find.byType(MarkdownDocScreen), findsOneWidget);
       expect(find.textContaining('原文出自'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      await tester.pageBack();
-      await tester.pumpAndSettle();
+      await returnToLibrary(tester);
     }
   });
 }
