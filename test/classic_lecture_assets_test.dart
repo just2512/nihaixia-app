@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:nihaisha_app/data/classic_lecture_data.dart';
+import 'package:nihaisha_app/data/bencao_lecture_data.dart';
 import 'package:nihaisha_app/data/neijing_lecture_data.dart';
 
 /// 阅读库索引 ↔ 资产一致性检查。
@@ -31,6 +32,11 @@ void main() {
     // 条文级拆分后：25 篇 → 453 条
     expect(kJinguiLectures.length, 455);
     await expectAllLoadable(kJinguiLectures, '金匮要略');
+  });
+
+  test('本草讲稿 335 篇阅读资产全部可加载', () async {
+    expect(kBenCaoLectures.length, 335);
+    await expectAllLoadable(kBenCaoLectures, '本草讲稿');
   });
 
   test('内经 阅读库资产仍可加载（回归）', () async {

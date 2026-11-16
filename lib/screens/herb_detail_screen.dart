@@ -7,8 +7,10 @@ import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../data/database_helper.dart';
 import '../data/medical_case_data.dart';
+import '../data/bencao_lecture_index.dart';
 import '../data/critical_illness_data.dart';
 import 'herb_related_screens.dart';
+import 'markdown_doc_screen.dart';
 
 class HerbDetailScreen extends StatefulWidget {
   final Herb herb;
@@ -24,12 +26,14 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
   List<MedicalCase> _relatedCases = const [];
   bool _casesReady = false;
   List<CriticalIllness> _relatedCritical = const [];
+  late final Future<BenCaoLectureIndex> _bencaoLectureIndexFuture;
 
   @override
   void initState() {
     super.initState();
     _checkBookmark();
     _loadBacklinks();
+    _bencaoLectureIndexFuture = BenCaoLectureIndex.load();
   }
 
   void _checkBookmark() async {
@@ -362,6 +366,8 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
               ),
             ),
 
+          _buildLectureEntry(cs),
+
           // 相关内容入口（三级结构第一级：药物页仅放入口按钮，列表/详情各自独立加载）
           Card(
             margin: const EdgeInsets.only(bottom: 12),
@@ -445,6 +451,97 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLectureEntry(ColorScheme colorScheme) {
+    return FutureBuilder<BenCaoLectureIndex>(
+      future: _bencaoLectureIndexFuture,
+      builder: (context, snapshot) {
+        final hits = snapshot.data?.hitsFor(widget.herb.name) ?? const [];
+        if (hits.isEmpty) return const SizedBox.shrink();
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: Icon(Icons.menu_book_outlined, color: colorScheme.primary),
+            title: const Text('讲义讲解', style: TextStyle(fontSize: 15)),
+            subtitle: Text(
+              '倪师本草讲稿中 ${hits.length} 篇提及本药',
+              style: const TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showLectureSheet(context, hits, colorScheme),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLectureSheet(
+    BuildContext context,
+    List<LectureHit> hits,
+    ColorScheme colorScheme,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                '${widget.herb.name} · 讲义提及',
+                style: Theme.of(sheetContext)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            for (final hit in hits)
+              ListTile(
+                dense: true,
+                leading: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Text(
+                    '${hit.seq + 1}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                title: Text(
+                  BenCaoLectureIndex.nameOf(hit.seq),
+                  style: const TextStyle(fontSize: 14),
+                ),
+                trailing: Text(
+                  '提及 ${hit.count} 次',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(
+                    context,
+                    FoldAwareMaterialPageRoute(
+                      sourceContext: context,
+                      builder: (_) => MarkdownDocScreen(
+                        title: BenCaoLectureIndex.nameOf(hit.seq),
+                        asset: BenCaoLectureIndex.assetOf(hit.seq),
+                        linkFormulas: true,
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
         ),
       ),
     );

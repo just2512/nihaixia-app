@@ -402,13 +402,14 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 3. **第二批收敛**：辨证规则已存在的能力标记 `ALREADY_PRESENT`；医案数据只采纳明确的检索/映射缺口；共享页面只移植已证明有价值且不破坏 AI 对话、Find N2 布局及手动更新机制的函数级改动。
 4. **验收**：仅围绕这次变更执行资源注册/索引映射/阅读跳转/搜索/受影响页面回归及现有 CI。不得用泛化测试扩张工期；不得降低既有门槛、删除失败测试或伪造设备证据。
 
-### 17.4 当前状态
+### 17.4 当前状态（本节为早期快照，后续以 §§18—20 为准）
 
-- `master` 当前集成基线：`2a9929fa30c2c3a9728c08f7645825addf4a90e7`。
-- 唯一 upstream source：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
-- PR #194、#195、#196、#197 已进入 master；AI 结果真实性门禁和四类助手既有边界保留。
-- PR #193 为本台账文档 PR；本节提交后以最新 master 为基线更新分支和 CI 记录。
-- 尚未同步的经典/本草资产当前状态为 `INTEGRATION_PENDING`，不再标记 `RIGHTS_EVIDENCE_MISSING` 或 `PROVENANCE_REQUIRED`。
+- 本节记录时 master 为 `2a9929fa30c2c3a9728c08f7645825addf4a90e7`；后续主线已由 PR #198 推进至 `d10e52fba8d829532dd5fbbe627073fdce1562f6`。
+- 唯一 upstream source 仍为 `jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
+- PR #193—#198 已合并；AI 结果真实性门禁、四类助手既有职责边界和手动更新机制均保留。
+- 经典增量已完成并通过云端 Flutter regression 与 Android arm64 CI；Find N2 阅读布局仍为设备侧 UNKNOWN。
+- 本草 335 篇讲稿及双向关联已在独立分支 `sync/upstream-bencao-20261116` 准备，正重放到最新 master；不覆盖 fork 原有 465 味药库。
+
 
 ## 18. 2026-11-16 经典资料增量切片（独立分支实施）
 
@@ -429,14 +430,83 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 搜索：保留 fork 的 `classic_index.json.gz`；额外加入 upstream/main 生成的索引 blob `e144a44b3f9c5141e7e82a5ab6c820ae25218e51`，运行时只纳入上述 17 个新增 asset 路径，防止同名内容覆盖或重复命中。
 - 定向验收：阅读资产逐条加载；新增金匮/伤寒关键词可搜索；已有文件路径与内容保持不变。
 
-### 18.3 当前实施状态
+### 18.3 合并与 CI 结果
 
-- 分支：`sync/upstream-classics-20261116`，基于 master `c69b5ba95f2ac50516cfcb184f1467a285a73545`。
-- 本节记录切片范围和差异判定；PR #198 最新 head 与 Actions 结果以 GitHub 元数据为准。
-- 本地 Find N2 阅读布局仍须设备验收；云端 CI 不替代真机证据。
+- PR [#198](https://github.com/just2512/nihaixia-app/pull/198)：`MERGED`。
+- PR head：`b15674452d2c8f7005cc5abc98afca7e0ad99ff1`；squash merge commit：`d10e52fba8d829532dd5fbbe627073fdce1562f6`。
+- Actions run [43799309770](https://github.com/just2512/nihaixia-app/actions/runs/43799309770)：Flutter regression `SUCCESS`（包含静态分析、定向门禁、AI retrieval golden snapshot 与全量 Dart regression）；Android arm64 Debug APK/ABI、Manifest 和 Native unit tests `SUCCESS`。
+- Branch validation job 按 PR workflow 条件显示 `SKIPPED`，不作为 PASS；Flutter regression job 内静态分析及测试均已执行并通过。
+- PR head 前一轮全量套件唯一失败为高频搜索词命中受 40 条展示上限影响；改用新增条文特征短语 `胃中寒冷故也` 精确断言 `clause_380.md` 后，最新 head 全量回归通过。未改搜索上限、排序或降低原断言。
+- Find N2 真机阅读布局、内外屏/半折叠排版仍为设备侧 `UNKNOWN`；云端 CI 不替代设备验收。
 
-### 18.4 CI 失败定位与修正记录
+## 19. 2026-11-16 本草讲稿阅读与双向关联切片（待重放最新 master 后独立 PR）
 
-- 首轮全量回归 `43798546328`：1611 passed / 1 failed / 15 skipped。唯一失败为新增伤寒检索用例使用高频词“霍乱”，目标 `clause_382.md` 未进入搜索展示上限 40 的命中列表；不是资产缺失或索引未加载。
-- 修正为查询新增条文中特征短语“胃中寒冷故也”，断言目标资产 `assets/shanghan/clause_380.md`，保留搜索展示上限、排序与原有断言，不删测试、不放宽验收。
-- 修正后新提交：`cc5fa686c6a6d86af07680c2486060c908f5ad9b`；对应 PR workflow run `43799091870` 初始状态 PENDING。最终状态以该 head 的完整 Flutter regression 结果为准。
+### 19.1 上游已有实现与 fork 差异
+
+- 唯一来源：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
+- 来源提交：`b120bc04cd6894ac329c94d05401d2c5cb2fd085`。
+- 上游 `assets/bencao_lecture/` 共 336 个文件：335 篇 Markdown 正文及 `herb_index.json`；上游已提供阅读清单、反向关联索引和阅读页面。
+- fork 原有 `assets/data/herbs.json` 为 465 味药材，保留原文件及其别名、字段、临床心悟内容，不做覆盖或批量改写。
+
+### 19.2 fork 侧集成范围
+
+- 新增上游 336 个本草讲稿资产、`bencao_lecture_data.dart`、`bencao_lecture_index.dart` 和 `bencao_library_screen.dart`。
+- 在本草知识页增加“讲稿”入口，复用现有 `ClassicLibraryScreen`、`MarkdownDocScreen` 和 Fold-aware 路由。
+- 在药材详情页增加按需加载的“讲义讲解”回链；点击药材命中篇目后进入原讲稿，并复用现有 Markdown 方剂/药材链接解析，不新增详情页面体系。
+- 将 `assets/bencao_lecture/` 注册为 Flutter 资产；经典索引构建脚本增加本草来源。
+- 经典搜索服务从已有 supplemental gzip 索引中只接纳 `source=bencao` 且路径位于 `assets/bencao_lecture/*.md` 的条目；以 `source:asset` 去重，主索引或补充索引重复时不产生双份命中。
+- AI 学习上下文复用 `ClassicSearchService` 和既有来源反查机制；新增本草检索结果必须保留稳定 `bencao:assets/bencao_lecture/<file>.md` sourceId 与本地回链，不能仅把文本裸传给模型。
+
+### 19.3 药材索引映射
+
+- 上游 `herb_index.json` 有 440 个药名键、2301 条篇目引用；逐项核对 seq 均位于 0..334，未发现非法序号或同一药名下的重复 seq。
+- fork 465 味药库中有 439 个索引键可精确匹配。
+- 唯一未匹配键：`石菖蒲（九节菖蒲）`。fork 当前药库没有石菖蒲/九节菖蒲条目，不为提高覆盖率而新增药材或将其错误映射到其他药材；该条目保持未关联，待真实数据依据出现后再处理。
+- 未覆盖本地 465 味药材的任何记录，也不以讲稿别名反向改写药库正名。
+
+### 19.4 定向验收
+
+- `test/bencao_lecture_index_test.dart`：335 条阅读清单、真实药名命中、seq 范围、资产路径与正文可加载、未知药名返回空列表。
+- `test/classic_lecture_assets_test.dart`：逐项加载335篇本草讲稿资产。
+- `test/classic_search_test.dart`：用“丹砂”验证本草讲稿进入全文搜索。
+- `test/assistant_knowledge_context_test.dart`：验证本草查询返回 lecture 类型、稳定 sourceId 和有效本地回链。
+- `test/classic_search_backlink_test.dart`：验证本草 sourceId 可反查到同一索引条目。
+- PR/CI 和实际运行状态以本草集成 PR 最新 head 的 Actions 为准；Find N2 设备侧阅读跳转和折叠屏布局仍需实机验证，不能用 CI 替代。
+
+## 20. 2026-11-16 第二批共享业务逻辑复核结论（覆盖历史初步状态）
+
+### 20.1 辨证规则
+
+- fork `DiagnosticEngine` 已包含 `answerZhenJia`、`healthyBaselineOk`、`getSimilarityRanking` 等上游接口。对比方法声明，fork 有54个方法、upstream/main 有48个；未发现 upstream-only 方法，fork 另有脏腑证据、脉舌评估和合病必答追问等6个方法。此为接口面盘点，不宣称所有分支语义已逐行等价；没有发现需从上游补入的缺失入口。
+- fork 与 upstream/main 的 `lib/engine/formula_matcher.dart` blob SHA 同为 `05d2c983e25dc82640efe4710147383bf1ef7cb5`，`lib/engine/formula_rules.dart` blob SHA 同为 `a97fde39651d2318ab173f47412f0bfb6a1675e2`，两文件内容完全一致；fork 已包含口语语料 `oral/indicators`、否定命中过滤、加权召回和基线非劣化排序。历史表中该项 `PARTIAL / REVIEW_REQUIRED` 当前状态为 `ALREADY_PRESENT / NO_PORT`。
+- 上游 `DiagnosticRules.zhenJiaClueKeys` 与 fork `ChatScreen._zhenJiaClueKeys` 的9组 label/key 映射完全一致；差异只是常量归属位置。抽取到规则类属于可选整理，不改变业务输出；没有证据证明能修复当前缺陷，本轮不移植。
+- 合病/兼病、canonical key 和分支遮蔽的后续核验只针对有明确失败场景的规则，不做整文件同步或无目标规则重构。
+
+### 20.2 医案数据库与来源
+
+- fork `assets/medical_cases/cases_table.md` 仍为1256条原始记录；`source_ledger.json` 有1256条对应记录，内部 seq 保持原主键。
+- 来源账本状态中 10 条 `VERIFIED`、1246 条 `MISSING`；此处 `MISSING` 表示相应外部书目/原文定位证据尚未完成，不表示医案记录缺失。不能据此删例或改写内容。
+- PR #195 已只吸收唯一映射的方名异写索引，未改医案正文、序号或来源账本。
+- 上游医案批量简体化、删除记录、改写处方和序号的变更拒绝整批同步；如发现具体文本错误，按单条证据处理。
+
+### 20.3 SQLite 与会话数据
+
+- fork `DatabaseHelper` 当前 schema version 7，已含统一助手会话、消息、结构化问诊任务及数据清理生命周期。
+- upstream/main 旧数据库为 version 6，使用旧 `llm_sessions/llm_turns`；标记 `REJECT_OLD_SCHEMA`，不回退版本、不覆盖 migration、不引入第二套会话表。
+
+### 20.4 检索与共享页面
+
+- fork `AssistantKnowledgeContextBuilder` 已分别检索医案、穴位和经典资料，并为结果生成稳定 sourceId / 本地详情回链。上游增加穴位规范化字段目前没有检索黄金集收益证据，保持 `HOLD / RETRIEVAL_GOLDEN_REQUIRED`。
+- upstream/main 的 `main.dart` 以 `Future.wait` 并行加载八个仓库；fork 目前串行加载。尚无 Find N2 上的启动耗时对照证据，标记 `HOLD / NO_BENCHMARK`，不为代码形式一致而改变启动顺序。
+- 上游宽屏侧栏、Home/Chat 页面和旧 AI 聊天页不能直接覆盖 fork 的 Find N2 折叠屏路由及统一助手状态；没有可复现交互缺口时不移植。
+- 第二批本轮不修改生产诊断规则、医案正文、数据库 schema、AI Orchestrator/ToolRouter、共享页面或手动更新机制；仅将已存在能力标记为 `ALREADY_PRESENT`，对没有性能/行为证据的改动保持 HOLD/REJECT。
+
+### 20.5 与 AI 产品边界的关系
+
+本轮共享逻辑审计继续遵守：
+1. AI 负责意图理解、缺参澄清、工具选择和结果解释；App 原有确定性代码执行问诊辨证、排盘、剂量和本地数据查询。
+2. 只有真实执行且经过参数/结果/sourceId 校验的数据进入 AI 事实上下文。
+3. 医学诊断结论必须对应 App 既有规则执行及本地知识库可追溯依据；AI 解释、比较、归纳和跨轮追问，不得将模型推断伪装为诊断或原文。
+
+第二批除确实证明的缺口外不再扩展实现；后续仅保留 Find N2 本地 E4B/折叠屏实际验收及明确复现的软件问题。
+

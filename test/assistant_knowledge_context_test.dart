@@ -42,6 +42,21 @@ void main() {
     expect(context, contains('方名：大半夏汤'));
   });
 
+  test('学习助手可检索并引用本草讲稿的本地来源', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '丹砂',
+      includeMedicalCases: false,
+    );
+    final source = result.sources.where(
+      (item) =>
+          item.sourceKind == 'lecture' &&
+          item.sourceId.startsWith('bencao:assets/bencao_lecture/'),
+    );
+    expect(source, isNotEmpty);
+    expect(source.first.localBacklink, startsWith('assets/bencao_lecture/'));
+    expect(source.first.localBacklink, isNot('MISSING'));
+  });
+
   test('无命中时返回空上下文，避免把无关数据塞进模型', () {
     expect(AssistantKnowledgeContextBuilder.build('今天的天气怎么样'), isEmpty);
   });

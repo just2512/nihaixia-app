@@ -19,6 +19,7 @@ import 'meridian_detail_screen.dart';
 import 'neijing_knowledge_screen.dart';
 import 'search_tab.dart';
 import 'shanghan_jingui_screen.dart';
+import 'bencao_library_screen.dart';
 
 class KnowledgeScreen extends StatefulWidget {
   const KnowledgeScreen({super.key});
@@ -821,18 +822,37 @@ class _HerbTabState extends State<_HerbTab> {
             },
           ),
         ),
-        // Count
+        // Count + lecture entry
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '共 ${herbs.length} 味药',
-              style: TextStyle(
-                fontSize: AppType.caption,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '共 ${herbs.length} 味药',
+                  style: TextStyle(
+                    fontSize: AppType.caption,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
-            ),
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.menu_book_outlined, size: 16),
+                label: const Text('讲稿', style: TextStyle(fontSize: AppType.caption)),
+                onPressed: () => Navigator.push(
+                  context,
+                  FoldAwareMaterialPageRoute(
+                    sourceContext: context,
+                    builder: (_) => const BenCaoLibraryScreen(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         // 本草列表与详情摘要
