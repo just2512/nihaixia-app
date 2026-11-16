@@ -395,22 +395,27 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 本台账不对任何未核实的第三方权属作法律保证。若同步时实际发现某个文件含明确的第三方单独许可、版权排除声明或来源冲突，只对该文件单独处理；不得将个别例外扩大成整类资料或整套知识库的阻塞。
 - 既有且可定位的医学知识不重复开展整库医学审核。只检查新增文件本身的结构完整性、资产路径、索引映射和现有 App 引用是否正确；内容问题有具体证据时才按具体条目修复。
 
-### 17.3 剩余实施顺序
+### 17.3 原定实施顺序与完成状态
 
-1. **经典增量切片**：从最新 `master` 分支追加 2 个金匮和 16 个伤寒 upstream-only 文件；补充对应 `classic_lecture_data.dart` 条目；不整文件替换经典索引。
-2. **本草讲稿功能切片**：导入 336 个现有资产及必要索引/阅读/搜索/药材双向关联代码；保留 `herbs.json` 当前 465 条数据及 fork 自有别名、详情、折叠屏和 AI 上下文行为。
-3. **第二批收敛**：辨证规则已存在的能力标记 `ALREADY_PRESENT`；医案数据只采纳明确的检索/映射缺口；共享页面只移植已证明有价值且不破坏 AI 对话、Find N2 布局及手动更新机制的函数级改动。
-4. **验收**：仅围绕这次变更执行资源注册/索引映射/阅读跳转/搜索/受影响页面回归及现有 CI。不得用泛化测试扩张工期；不得降低既有门槛、删除失败测试或伪造设备证据。
+1. **经典增量**：已完成。金匮2篇 Markdown；伤寒16个 upstream-only 文件（15篇 Markdown + 1张板书图）。上游宋本第176条与 fork 本地同路径条文冲突，另存 `clause_176_upstream.md` 并建立独立阅读项，未覆盖本地原文。
+2. **本草讲稿**：已完成。336个上游资产（335篇讲稿 + 索引）、阅读清单/页面、药材详情反向关联、搜索索引和 AI sourceId/backlink 已集成；本地465味药库保持原样。
+3. **第二批共享逻辑**：已完成审计并收敛。辨证已有能力标记 `ALREADY_PRESENT`；医案1256条、原始序号与来源账本保护；旧数据库v6不覆盖fork v7；共享页面无已证明的迁移收益，不作代码搬运。
+4. **验收**：PR #198、#199、#201、#202 均已独立合并；对应 Flutter regression 与要求的 Android arm64 门禁通过。后续仅剩 Find N2 真机验收，不再安排无目标的云端扩展测试。
 
-### 17.4 当前状态（2026-11-16 云端同步收口）
 
-- 当前集成基线：`just2512/nihaixia-app:master @ fd330edbde5e524bf422485f98f36de17589784b`。
-- 唯一 upstream source：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
-- PR #193—#199 已合并；经典增量、穴位改进、本草讲稿阅读/搜索/药材双向关联均已进入 master。
-- AI 结果真实性门禁、问诊/工具/学习/玄学四类助手、确定性业务执行、知识来源引用及手动更新机制均保留。
-- 主线 PR #198 合并后 CI：run `43799309770` Flutter regression + Android arm64 均 SUCCESS；run `43800335771` master Flutter regression + Android arm64 均 SUCCESS；run `43800335768` Flutter Quality Gate SUCCESS。
-- 本草 PR #199：run `43800855316` Flutter regression + Android arm64 均 SUCCESS；详细 evidence 与 artifact ID 见第 19.5 节。
-- Find N2 真机阅读跳转、内外屏/半折叠布局和 Native E4B 多轮/恢复仍是设备侧 UNKNOWN；云端 CI 不替代设备证据。
+### 17.4 当前状态（2026-11-16 第一批及第二批云端收口）
+
+- 当前集成基线：`just2512/nihaixia-app:master @ 8d0b3e1c77167dcbd6e94588fb9ae56e1162d759`。
+- 唯一 upstream source：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`；本轮核验时上游 HEAD 未变化。
+- PR #193—#202 中相关 PR #198、#199、#200、#201、#202 均已合并；经典、本草和阅读导航/板书补充均已进入 master。
+- AI 结果真实性门禁、问诊/工具/学习/玄学四类助手、确定性业务执行、知识来源引用及手动更新机制保留。
+- PR #198：run `43799309770` Flutter regression + Android arm64 均 SUCCESS。
+- PR #199：run `43800855316` Flutter regression + Android arm64 均 SUCCESS。
+- PR #201：run `43810936336` Flutter regression SUCCESS，新增阅读入口与药材反向跳转 Widget 点击验收。
+- PR #202：run `43813263514` Flutter regression + Android arm64 均 SUCCESS。
+- PR #202 合并后 master commit `8d0b3e1c77167dcbd6e94588fb9ae56e1162d759` 的 post-merge Flutter regression / Quality Gate 已启动；以该 master SHA 的最新 Actions 结果为准。
+- Find N2 真机阅读跳转、内外屏/半折叠布局和 Native E4B 多轮/恢复仍为设备侧 UNKNOWN；云端 CI 不替代设备证据。
+
 
 
 ## 18. 2026-11-16 经典资料增量切片（独立分支实施）
@@ -420,26 +425,29 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 基线：`master @ c69b5ba95f2ac50516cfcb184f1467a285a73545`。
 - 上游：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
 - 金匮：新增路径仅 `clause_453.md`、`clause_454.md`；共同的 431 个路径中有 423 个内容 SHA 不同。
-- 伤寒：新增路径包括 11 个 `clause_380.md`—`clause_390.md` 和 4 篇六经附录；共同的 379 个路径内容 SHA 全部不同。
-- 因此本切片只追加上游独有的 17 个 Markdown 文件；不覆盖任何同名本地原文，不将上游宋本整理口径替换为 fork 原有讲稿。
-- `176_board.jpg` 不直接挂到 fork 原 `clause_176.md`：上游同路径文件是宋本第176条（白虎汤），fork 同路径是本地整理的第186条，内容不同且不引用该图。为保留两种资料且不覆盖本地条文，本轮增补将上游原文另存为 `clause_176_upstream.md`，板书图只由该独立阅读项引用。
+- 伤寒：上游独有16个文件由15篇 Markdown（11个 `clause_380.md`—`clause_390.md` + 4篇六经附录）及1张 `176_board.jpg` 构成；共同的379个原路径内容 SHA 全部不同。
+- 为处理 `clause_176.md` 同路径冲突，PR #202 将上游宋本第176条另存为 fork 专用路径 `clause_176_upstream.md`，并保留原始 `176_board.jpg`；该重命名副本用于避免路径冲突，不计入上游原始16个 upstream-only 文件数量。
+- fork 原 `clause_176.md` 实为本地整理的第186条，内容不同且不引用该板书；现通过独立阅读条目解决，不覆盖本地原文，也不把两种讲解混成一条。
 
 ### 18.2 实施范围
 
 - 上游来源提交：金匮 `688d6b30fddc31e0683570bb9029ed38f9666755`、`a0380f2afd7531e084c61a6db2e758499aab8560`；伤寒 `ffff7ba46d8906473ac2084736e68dc1c6fd0efb`、`741afaa685c4307afb78dd116eefcab067a1d711`、`1ac793216168031ca0bd204783d64c4535299fa6`、`f9f0d05991e5a0c15934afce6710d33365163d2e`。
-- `classic_lecture_data.dart`：在现有伤寒 380 项之后分配唯一 seq 380—394；金匮在现有 453 项之后分配 seq 453—454。原有 seq 和 asset 不改。
-- 阅读入口明确标识新增的宋本条目与附录，避免与本地原有讲稿序号混淆。
-- 搜索：保留 fork 的 `classic_index.json.gz`；额外加入 upstream/main 生成的索引 blob `e144a44b3f9c5141e7e82a5ab6c820ae25218e51`，运行时只纳入上述 17 个新增 asset 路径，防止同名内容覆盖或重复命中。
+- `classic_lecture_data.dart`：初次增量在现有伤寒380项之后分配 seq 380—394；PR #202 再为独立“上游宋本176”阅读项分配 seq 395（伤寒阅读清单共396项）。金匮在现有453项后分配 seq 453—454。原有本地 seq 和 asset 不改。
+- 阅读入口分别标识上游追加条文、附录和“上游176”，不把上游宋本第176条与 fork 本地第186条混为一条。
+- 搜索：保留 fork 的 `classic_index.json.gz`；增量索引按白名单接纳15篇新增伤寒 Markdown、独立 `clause_176_upstream.md` 及2篇金匮 Markdown；上游索引原始路径只映射到独立本地路径，不覆盖同名条文。
 - 定向验收：阅读资产逐条加载；新增金匮/伤寒关键词可搜索；已有文件路径与内容保持不变。
 
 ### 18.3 合并与 CI 结果
 
-- PR [#198](https://github.com/just2512/nihaixia-app/pull/198)：`MERGED`。
-- PR head：`b15674452d2c8f7005cc5abc98afca7e0ad99ff1`；squash merge commit：`d10e52fba8d829532dd5fbbe627073fdce1562f6`。
-- Actions run [43799309770](https://github.com/just2512/nihaixia-app/actions/runs/43799309770)：Flutter regression `SUCCESS`（包含静态分析、定向门禁、AI retrieval golden snapshot 与全量 Dart regression）；Android arm64 Debug APK/ABI、Manifest 和 Native unit tests `SUCCESS`。
-- Branch validation job 按 PR workflow 条件显示 `SKIPPED`，不作为 PASS；Flutter regression job 内静态分析及测试均已执行并通过。
-- PR head 前一轮全量套件唯一失败为高频搜索词命中受 40 条展示上限影响；改用新增条文特征短语 `胃中寒冷故也` 精确断言 `clause_380.md` 后，最新 head 全量回归通过。未改搜索上限、排序或降低原断言。
-- Find N2 真机阅读布局、内外屏/半折叠排版仍为设备侧 `UNKNOWN`；云端 CI 不替代设备验收。
+- PR [#198](https://github.com/just2512/nihaixia-app/pull/198)：MERGED；merge commit `d10e52fba8d829532dd5fbbe627073fdce1562f6`。
+- PR [#202](https://github.com/just2512/nihaixia-app/pull/202)：MERGED；merge commit `8d0b3e1c77167dcbd6e94588fb9ae56e1162d759`，补齐上游伤寒第16项板书资料。
+- PR #198 Actions run [43799309770](https://github.com/just2512/nihaixia-app/actions/runs/43799309770)：Flutter regression 与 Android arm64 Debug APK/ABI、Manifest、Native unit tests 均 SUCCESS。
+- PR #202 Actions run [43813263514](https://github.com/just2512/nihaixia-app/actions/runs/43813263514)：Flutter regression 33/33 steps 与 Android arm64 19/19 steps 均 SUCCESS。
+- 初次高频搜索断言曾受搜索展示前40条限制；已改用新增条文特征短语 `胃中寒冷故也` 精确断言 `clause_380.md`。未改搜索上限、排序或降低原断言。
+- PR #202 新增 `test/shanghan_upstream_board_test.dart`：实际渲染 Markdown 并断言板书为 `AssetImage(assets/shanghan/176_board.jpg)`；原始 `clause_176.md` 未被修改。
+- Find N2 真机阅读布局、内外屏/半折叠排版仍为设备侧 UNKNOWN；云端 CI 不替代设备验收。
+
+
 
 ## 19. 2026-11-16 本草讲稿阅读与双向关联切片（最新 master 独立集成分支）
 
@@ -459,6 +467,13 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 经典搜索服务从已有 supplemental gzip 索引中只接纳 `source=bencao` 且路径位于 `assets/bencao_lecture/*.md` 的条目；以 `source:asset` 去重，主索引或补充索引重复时不产生双份命中。
 - AI 学习上下文复用 `ClassicSearchService` 和既有来源反查机制；新增本草检索结果必须保留稳定 `bencao:assets/bencao_lecture/<file>.md` sourceId 与本地回链，不能仅把文本裸传给模型。
 
+### 19.2A 原仓库资料与许可口径
+
+- 原仓库已完成本草讲稿整理与产品化：`assets/bencao_lecture/` 336个文件、335篇讲稿、`herb_index.json`、`bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart` 及导入脚本均已存在；本次工作是复用上游实现并适配 fork 接口，不是重新考订或重编整套资料。
+- 本轮核验的上游 README 声明项目采用 Apache License 2.0，根目录 LICENSE 与 fork 的 LICENSE blob SHA 相同；讲稿文件头标注为“倪海厦《人纪·神农本草经》讲稿（书面整理）”，生成脚本记录其输入源文件名。同步保留了 LICENSE、原始资料标识与上游资产内容。
+- 这说明仓库声明的许可口径与资料标识，不等同于对原始讲稿著作权作独立法律鉴定；本工程任务不要求额外纸本版本、卷页坐标或书面授权证明作为代码同步前置条件。此前把整批资料置于“来源/权利链核验完成前 HOLD”是执行台账自行加设的过度门槛，不是用户要求或产品规范，已撤销。
+- 资料来源信息的用途是学习引用时区分“经典原文”“倪师课堂讲稿/书面整理”和 App 自行生成的索引；不把现代课堂讲解包装成古籍原文，也不将工程工作扩展成考古项目。
+
 ### 19.3 药材索引映射
 
 - 上游 `herb_index.json` 有 440 个药名键、2301 条篇目引用；逐项核对 seq 均位于 0..334，未发现非法序号或同一药名下的重复 seq。
@@ -473,6 +488,7 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - `test/classic_search_test.dart`：用“丹砂”验证本草讲稿进入全文搜索。
 - `test/assistant_knowledge_context_test.dart`：验证本草查询返回 lecture 类型、稳定 sourceId 和有效本地回链。
 - `test/classic_search_backlink_test.dart`：验证本草 sourceId 可反查到同一索引条目。
+- PR [#201](https://github.com/just2512/nihaixia-app/pull/201) 新增 `test/bencao_lecture_navigation_test.dart`：Widget 级点击本草阅读入口及药材详情“讲义讲解”命中项，断言实际打开的 Markdown title/asset 与索引一致；run [43810936336](https://github.com/just2512/nihaixia-app/actions/runs/43810936336) SUCCESS。
 - 首轮 AI 检索黄金快照在本草补充索引加入后，仅三个经典查询总命中数变化：桂枝汤 200→208、桂枝 300→331、伤寒论 125→141；前40条命中顺序、sourceIds、sourceCounts、本地回链状态、context textLength 和 context sourceIds 均与旧基线一致。新数值按 CI 实际输出回填，不更改排序、capturedCount 或断言门槛。
 - PR/CI 和实际运行状态以本草集成 PR 最新 head 的 Actions 为准；Find N2 设备侧阅读跳转和折叠屏布局仍需实机验证，不能用 CI 替代。
 
@@ -525,4 +541,38 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 3. 医学诊断结论必须对应 App 既有规则执行及本地知识库可追溯依据；AI 解释、比较、归纳和跨轮追问，不得将模型推断伪装为诊断或原文。
 
 第二批除确实证明的缺口外不再扩展实现；后续仅保留 Find N2 本地 E4B/折叠屏实际验收及明确复现的软件问题。
+
+
+## 21. 2026-11-16 第一批与第二批最终收口
+
+### 21.1 第一批：经典与本草资料
+
+- 金匮：追加2篇 Markdown。
+- 伤寒：同步上游16个 upstream-only 文件（15篇 Markdown + 1张板书图）；因 `clause_176.md` 路径与 fork 本地条文冲突，另建 `clause_176_upstream.md` 独立阅读项，不覆盖本地文件。
+- 本草：336个资产文件（335篇 Markdown + 索引）；阅读页、药材详情反向关联、全文搜索、AI sourceId/backlink 和 Widget 点击跳转均完成。
+- fork 的465味药材库未替换；索引440个键/2301条关联已完成完整性测试，439个键精确匹配，唯一未匹配“石菖蒲（九节菖蒲）”保持未关联。
+- PR #198、#199、#201、#202 均已合并；各 PR 对应 Flutter regression 与要求的 Android arm64 门禁通过。PR #200 已收口同步台账。
+- 第一批工程集成完成。唯一未在云端完成的是 Find N2 真机内外屏、半折叠阅读和触控跳转验收。
+
+### 21.2 第二批：共享业务逻辑
+
+- 辨证规则：FormulaMatcher/FormulaRules 与 upstream/main 完全同 SHA；DiagnosticEngine 方法面没有 upstream-only 入口；真假寒热线索9组键值映射一致。没有实际缺口，标记 `ALREADY_PRESENT / NO_PORT`，不重写规则。
+- 医案：本地1256条记录、原始序号及1256条 source ledger 保持；只保留此前已合并的唯一方名异写检索索引，不做整库覆盖。
+- 数据库：fork schema v7 保留；拒绝上游旧 v6 schema 覆盖。
+- 共享页面：未发现足以抵消回归风险的实际收益，不搬运旧 AI 聊天页、宽屏导航或启动加载写法；Find N2、自有助手会话和手动更新机制保持。
+- 第二批审计完成，无需额外生产代码 PR。只有复现出具体行为缺陷时再开窄范围修复。
+
+### 21.3 AI / App 边界（继续作为产品硬约束）
+
+1. AI 是交互与理解中枢：理解自然语言、识别意图、抽取参数、发现缺项、追问澄清、选择 App 已有能力，并在同一助手对话中承接用户、执行结果和解释。
+2. 问诊辨病辨证、排盘、历法、剂量换算等确定性业务仍由 App 原有控制器、规则和计算代码执行。AI 不伪造计算结果、不覆盖规则、不代算。
+3. 只有成功执行、参数与结果已校验、来源标识可追溯的结果才进入 AI 事实性上下文。失败、取消、无结果或 UNKNOWN 不得被包装为成功。
+4. 诊断教学结果必须来自 App 既有规则执行，并关联本地知识库依据；AI 负责解释、比较、归纳、引用和跨轮追问，不凭自身推断生成诊断，也不把课堂讲稿伪装成经典原文。
+5. 问诊助手、工具助手、学习助手、玄学大师都可解读真实业务结果；玄学工具按本地排盘/历法算法和资料来源解释，不伪造排盘，不包装医学诊断。
+
+### 21.4 当前剩余事项
+
+- 云端第一批验收已收口；主线 `master @ 8d0b3e1c77167dcbd6e94588fb9ae56e1162d759` 的 PR #202 合并后 Flutter regression / Quality Gate 以当前 Actions 为准。
+- Find N2 真机：讲稿打开、药材详情反向跳转、板书图片显示、内屏/外屏/半折叠布局、助手对话中真实工具执行后的跨轮解释及 Native E4B 多轮/恢复。以上属于设备侧验证，云端不可代替。
+- 除上述设备侧验收或出现可复现的软件缺陷外，本轮同步计划不再追加新功能、整库复核或泛化测试。
 
