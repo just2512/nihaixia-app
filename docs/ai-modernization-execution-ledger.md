@@ -13,8 +13,8 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | 本轮最新核验基线 | `09293c55b7c3069e3118291e871ef96d087b5a17` | PR #206 已合并；合并后主线 CI 见第 56 节 |
-| 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
-| README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
+| 应用版本 | `2.0.0+8047` | 独立产品 SemVer；Android versionCode 高于共享 applicationId 已知上限；规则见 `docs/versioning-policy.md` |
+| README 版本说明 | `2.0.0+8047` | 与 `pubspec.yaml`、`docs/versioning-policy.md` 同步；由版本源 guard 检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
@@ -51,7 +51,7 @@
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
-| G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
+| G | 文档与版本一致性 | `PARTIAL`（独立版本规则已落文档，待本分支 CI） | 可独立执行 | README、pubspec、版本规范一致；Android build number 高于共享 applicationId 已知上限；Release tag 只匹配本项目 SemVer |
 
 > A 的问题不能冻结 B/C/E。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
 
@@ -129,7 +129,7 @@
 
 ### G. 文档与版本一致性
 
-- [ ] README 版本从 `pubspec.yaml` 单一来源同步为 `1.11.30+8039`（若版本有更新，以更新后的 pubspec 为准）。
+- [ ] README 与 `docs/versioning-policy.md` 从 `pubspec.yaml` 单一来源同步为 `2.0.0+8047`；Android `versionCode` 必须高于共享 applicationId 已知上限 `8046`。
 - [ ] `docs/ai-capability-audit.md` 只放规范与硬门槛。
 - [ ] `docs/ai-capability-audit-report.md` 放静态/动态审计报告。
 - [ ] `docs/local-ai-multiturn-audit.md` 放 Native 多轮专项审计。
