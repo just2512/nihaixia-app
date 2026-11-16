@@ -206,6 +206,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('诊断历史趋势').last);
     await tester.pumpAndSettle();
+    await tester.tap(find.text('打开诊断历史趋势').last);
+    await tester.pumpAndSettle();
 
     expect(openedToolId, 'diagnosis_history');
     expect(find.text('返回旧页面文本'), findsOneWidget);
@@ -308,7 +310,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('打开五运六气推算'), findsOneWidget);
 
-    await tester.tap(find.text('打开五运六气推算'));
+    await tester.tap(find.text('打开五运六气推算').last);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('将本次推算结果带回助手对话'),
