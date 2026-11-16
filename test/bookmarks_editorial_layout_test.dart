@@ -78,7 +78,14 @@ void main() {
     );
     await tester.pump();
     await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    // Exercise the same refresh notification used when bookmarks are added
+    // from another tab; this makes the screen's async reload observable.
+    DatabaseHelper.bookmarkVersion.value++;
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     await tester.pumpAndSettle();
   }
