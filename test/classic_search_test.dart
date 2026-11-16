@@ -1,4 +1,4 @@
-// 经典全文检索回归：伤寒 / 金匮 / 内经 / 本草讲稿及古籍原文统一索引。
+// 经典全文检索回归：讲稿 + 古籍原文统一索引。
 // 运行：flutter test test/classic_search_test.dart
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,7 +13,7 @@ void main() {
     expect(r.hits, isEmpty);
   });
 
-  test('索引可加载，覆盖本地讲稿、上游增量讲稿与古籍原文', () async {
+  test('索引可加载，条目数覆盖讲稿 906 + 古籍 421', () async {
     await ClassicSearchService.ensureLoaded();
     expect(ClassicSearchService.isLoaded, isTrue);
 
@@ -42,9 +42,9 @@ void main() {
       reason: '新增金匮条文应进入搜索索引',
     );
 
-    final shanghan = await ClassicSearchService.search('霍乱');
+    final shanghan = await ClassicSearchService.search('胃中寒冷故也');
     expect(
-      shanghan.hits.any((h) => h.asset == 'assets/shanghan/clause_382.md'),
+      shanghan.hits.any((h) => h.asset == 'assets/shanghan/clause_380.md'),
       isTrue,
       reason: '新增伤寒宋本条文应进入搜索索引',
     );
