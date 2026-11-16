@@ -73,8 +73,14 @@ class AssistantToolResult {
     if (status == AssistantToolExecutionStatus.succeeded && values.isEmpty) {
       errors.add('成功的工具结果缺少结构化输出字段');
     }
+    if (status == AssistantToolExecutionStatus.succeeded && sourceIds.isEmpty) {
+      errors.add('成功的工具结果缺少可验证的业务来源或引擎标识');
+    }
     if (sourceIds.any((id) => id.trim().isEmpty)) {
       errors.add('工具结果包含空来源标识');
+    }
+    if (sourceIds.any((id) => id.startsWith('local-page-tool:'))) {
+      errors.add('页面路由标识不能作为业务结果来源');
     }
     if (arguments.keys.any((key) => key.trim().isEmpty)) {
       errors.add('工具结果包含空参数名称');
