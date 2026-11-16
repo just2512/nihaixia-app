@@ -29,23 +29,16 @@ String _fixtureFor(GujiBook book) {
   return buffer.toString();
 }
 
-void _installGujiAssetFixtures() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMessageHandler('flutter/assets', (message) async {
-    if (message == null) return null;
-    final assetPath = Uri.decodeComponent(
-      utf8.decode(message.buffer.asUint8List()),
-    );
-    final book = kGujiBooks.where((candidate) => candidate.asset == assetPath);
-    if (book.isEmpty) return null;
-    final bytes = Uint8List.fromList(utf8.encode(_fixtureFor(book.first)));
+class _GujiTestAssetBundle extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) async {
+    final books = kGujiBooks.where((book) => book.asset == key);
+    if (books.isEmpty) {
+      throw FlutterError('Unexpected test asset request: $key');
+    }
+    final bytes = Uint8List.fromList(utf8.encode(_fixtureFor(books.first)));
     return ByteData.sublistView(bytes);
-  });
-}
-
-void _removeGujiAssetFixtures() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMessageHandler('flutter/assets', null);
+  }
 }
 
 void main() {
@@ -57,11 +50,9 @@ void main() {
 
   setUp(() {
     GujiRepository.clearCache();
-    _installGujiAssetFixtures();
   });
 
   tearDown(() {
-    _removeGujiAssetFixtures();
     GujiRepository.clearCache();
   });
 
@@ -82,13 +73,16 @@ void main() {
             brightness == Brightness.dark ? AppColors.dark : AppColors.light,
           ],
         ),
-        builder: (context, child) => MediaQuery(
-          // Apply 200% scaling above Navigator so pushed chapter routes are
-          // covered too, not only the library root page.
-          data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(2),
+        builder: (context, child) => DefaultAssetBundle(
+          // This sits above Navigator so pushed chapter routes use the same
+          // deterministic in-memory assets as the library root page.
+          bundle: _GujiTestAssetBundle(),
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(2),
+            ),
+            child: child!,
           ),
-          child: child!,
         ),
         home: const GujiLibraryScreen(),
       ),
@@ -101,16 +95,19 @@ void main() {
     GujiBook book,
   ) async {
     await tester.tap(find.text(book.title).first);
-    // The Future is backed by the deterministic mocked asset. Await that
-    // contract directly; do not wait for the indeterminate loading spinner
-    // or use a lazily built list row as the completion signal.
+    // The in-memory bundle completes after Flutter pumps the route. A bounded
+    // frame loop avoids waiting for an indeterminate progress indicator.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
-    final chapters = await GujiRepository.chaptersOf(book);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
+    for (var frame = 0;
+        frame < 20 && find.text('第001章').evaluate().isEmpty;
+        frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(find.byType(GujiBookScreen), findsOneWidget);
+    expect(find.text('第001章'), findsOneWidget);
+    final chapters = await GujiRepository.chaptersOf(book);
     expect(chapters, hasLength(book.chapterCount));
     expect(find.text(chapters.first.title), findsWidgets);
     final chapterContext = tester.element(find.byType(GujiBookScreen));
