@@ -1357,117 +1357,125 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         child: SafeArea(
           top: false,
           child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    p.roleLabel,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    p.ganzhiLabel,
-                    style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
-                  ),
-                  const SizedBox(width: 8),
-                  if (p.isLife) _badge('命宫', cs.error),
-                  if (p.isBody) _badge('身宫', cs.tertiary),
-                  if (flow != null && flow.mingIndex == p.index)
-                    _badge('流年命宫 ${flow.ganzhi}', cs.primary),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (meaning != null)
-                Text(
-                  '主管：$meaning',
-                  style: const TextStyle(fontSize: 14, height: 1.5),
-                ),
-              const SizedBox(height: 12),
-              if (p.stars.isEmpty)
-                Text(
-                  '本宫无星曜',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                ),
-              ...p.stars.map(
-                (s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Wrap(
+                  Wrap(
                     spacing: 8,
-                    runSpacing: 4,
+                    runSpacing: 6,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        s.label,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: s.isMajor ? cs.onSurface : cs.onSurfaceVariant,
+                        p.roleLabel,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (s.brightness != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          '${s.brightness}',
-                          style: TextStyle(fontSize: 12, color: cs.primary),
+                      Text(
+                        p.ganzhiLabel,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: cs.onSurfaceVariant,
                         ),
-                      ],
-                      if (s.sihua != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          s.sihuaText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: _sihuaColor(s.sihuaText),
+                      ),
+                      if (p.isLife) _badge('命宫', cs.error),
+                      if (p.isBody) _badge('身宫', cs.tertiary),
+                      if (flow != null && flow.mingIndex == p.index)
+                        _badge('流年命宫 ${flow.ganzhi}', cs.primary),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (meaning != null)
+                    Text(
+                      '主管：$meaning',
+                      style: const TextStyle(fontSize: 14, height: 1.5),
+                    ),
+                  const SizedBox(height: 12),
+                  if (p.stars.isEmpty)
+                    Text(
+                      '本宫无星曜',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ...p.stars.map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            s.label,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: s.isMajor
+                                  ? cs.onSurface
+                                  : cs.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
-                      const SizedBox(width: 6),
-                      Text(
-                        _starKindLabel(s),
-                        style: TextStyle(fontSize: 10, color: cs.outline),
+                          if (s.brightness != null)
+                            Text(
+                              '${s.brightness}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.primary,
+                              ),
+                            ),
+                          if (s.sihua != null)
+                            Text(
+                              s.sihuaText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _sihuaColor(s.sihuaText),
+                              ),
+                            ),
+                          Text(
+                            _starKindLabel(s),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: cs.outline,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (flowStarsHere.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.event, size: 14, color: cs.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        '流曜：${flowStarsHere.join('、')}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                  const SizedBox(height: 12),
+                  if (flowStarsHere.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Icon(Icons.event, size: 14, color: cs.primary),
+                          Text(
+                            '流曜：${flowStarsHere.join('、')}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: cs.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  Text(
+                    '宫位主管出自倪师《天纪·天机道》· 民俗文化参考',
+                    style: TextStyle(fontSize: 10, color: cs.outline),
                   ),
-                ),
-              Text(
-                '宫位主管出自倪师《天纪·天机道》· 民俗文化参考',
-                style: TextStyle(fontSize: 10, color: cs.outline),
+                ],
               ),
-            ],
-          ),
-          ),
-        ),
+            ),
           ),
         ),
       ),
