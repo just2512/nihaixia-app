@@ -479,12 +479,13 @@ void main() {
 
   testWidgets('退出统一助手工具页回传 CANCELLED，不与 NO_RESULT 混淆', (tester) async {
     final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
           redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
-          conversationStore: _NoopAssistantConversationStore(),
+          conversationStore: store,
           imagePicker: _NoLostImagePicker(),
         ),
       ),
@@ -506,8 +507,20 @@ void main() {
           (widget.data ?? '').contains('执行状态：CANCELLED'),
     );
     expect(cancelledResult, findsOneWidget);
-    expect(service.restoredTranscript, contains('执行状态：CANCELLED'));
+    // Cancellation remains visible and persisted, but an unexecuted tool
+    // outcome must not be replayed to the model as a business fact.
+    expect(service.restoredTranscript, isNot(contains('执行状态：CANCELLED')));
     expect(service.restoredTranscript, isNot(contains('执行状态：NO_RESULT')));
+    final savedCancellation = store.savedMessages.singleWhere(
+      (message) =>
+          message['role'] == 'assistant' &&
+          (message['content'] as String).contains('执行状态：CANCELLED'),
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      savedCancellation['metadata'] as String,
+    );
+    expect(metadata.toolStatus, 'CANCELLED');
+    expect(metadata.sourceIds, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
