@@ -183,7 +183,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       moduleId: moduleId,
       anchorId: anchorId,
       anchorVersion: version,
-      sourceId: 'asset:$sourcePath',
+      sourceId: 'shanghan:$sourcePath',
       title: widget.title,
     );
     final prompt = AiContextPromptBuilder.buildClassicSelection(
@@ -196,6 +196,8 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       contextRef: ref,
       initialPrompt: prompt,
       initialMode: AssistantMode.learning,
+      contextualTitle: widget.title,
+      contextualExplanationOnly: true,
     ));
   }
 
