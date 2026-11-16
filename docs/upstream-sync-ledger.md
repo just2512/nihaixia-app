@@ -408,7 +408,7 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 唯一 upstream source 仍为 `jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
 - PR #193—#198 已合并；AI 结果真实性门禁、四类助手既有职责边界和手动更新机制均保留。
 - 经典增量已完成并通过云端 Flutter regression 与 Android arm64 CI；Find N2 阅读布局仍为设备侧 UNKNOWN。
-- 本草 335 篇讲稿及双向关联已在独立分支 `sync/upstream-bencao-20261116` 准备，正重放到最新 master；不覆盖 fork 原有 465 味药库。
+- 本草 335 篇讲稿及双向关联已重放到独立分支 `sync/upstream-bencao-integrated-20261116`，以当前 master 为父提交；不覆盖 fork 原有 465 味药库。
 
 
 ## 18. 2026-11-16 经典资料增量切片（独立分支实施）
@@ -439,7 +439,7 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - PR head 前一轮全量套件唯一失败为高频搜索词命中受 40 条展示上限影响；改用新增条文特征短语 `胃中寒冷故也` 精确断言 `clause_380.md` 后，最新 head 全量回归通过。未改搜索上限、排序或降低原断言。
 - Find N2 真机阅读布局、内外屏/半折叠排版仍为设备侧 `UNKNOWN`；云端 CI 不替代设备验收。
 
-## 19. 2026-11-16 本草讲稿阅读与双向关联切片（待重放最新 master 后独立 PR）
+## 19. 2026-11-16 本草讲稿阅读与双向关联切片（最新 master 独立集成分支）
 
 ### 19.1 上游已有实现与 fork 差异
 
@@ -472,6 +472,15 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - `test/assistant_knowledge_context_test.dart`：验证本草查询返回 lecture 类型、稳定 sourceId 和有效本地回链。
 - `test/classic_search_backlink_test.dart`：验证本草 sourceId 可反查到同一索引条目。
 - PR/CI 和实际运行状态以本草集成 PR 最新 head 的 Actions 为准；Find N2 设备侧阅读跳转和折叠屏布局仍需实机验证，不能用 CI 替代。
+
+### 19.5 最新主线重放与保护项
+
+- 集成分支：`sync/upstream-bencao-integrated-20261116`；父提交为最新 `master @ d10e52fba8d829532dd5fbbe627073fdce1562f6`；与 master 比较 `ahead 1 / behind 0`。
+- 本切片包含 336 个上游资产文件及 14 个本草相关源代码/测试/台账文件；336 个资产 blob SHA 与 upstream/main 文件清单逐项一致。
+- 重放时明确排除旧分支的 `lib/data/classic_lecture_data.dart`、`lib/screens/shanghan_jingui_screen.dart` 和 `test/fixtures/ai_retrieval_golden_metadata.json`，保留刚合入 master 的经典阅读清单、动态序号路由、搜索修复和经典黄金快照。
+- `ClassicSearchService` 同时保留经典17路径白名单和本草335篇白名单，按 `source:asset` 去重；无同名覆盖、重复检索命中或第二套检索器。
+- fork 本地 `herbs.json` 465 条、别名和临床心悟内容保持不变；不修改诊断规则、医案正文、数据库 schema、AI Orchestrator/ToolRouter、版本号、签名或手动更新机制。
+- 当前 CI 待本 PR 执行；本地 Find N2 的讲稿打开、药材回链与折叠屏布局仍为设备侧 UNKNOWN。
 
 ## 20. 2026-11-16 第二批共享业务逻辑复核结论（覆盖历史初步状态）
 
