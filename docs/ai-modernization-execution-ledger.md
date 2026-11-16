@@ -2519,7 +2519,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 | Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
 |---|---|---|---|---|
 | CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | PARTIAL（PR #221 已合并；未检索到可复核的 CI run） | `docs/contextual-ask-ai-protocol`；merge `5c50605724e9a27ad03df700f5e4aa5aa0766d92` | 协议已进入 master；仍缺 CI 检查运行证据，不把人工读取核对写成自动验收 PASS |
-| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS | `work/ai-contextual-read-sample`；base `5c50605724e9a27ad03df700f5e4aa5aa0766d92`；head `ba35dcab4a54baa3153efad793e303d1a52698c4` | 单条文独立来源锚点、划词入口、情境面板及现有助手链路接入；定向测试与 PR CI 通过后才可 PASS；Find N2 真机另行记录 |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | PARTIAL（分支 L0/L1 PASS；PR 全量回归/Android/真机未验收） | `work/ai-contextual-read-sample`；base `5c50605724e9a27ad03df700f5e4aa5aa0766d92`；实现 head `07df10cf70f12596aaa379d4152c6fe0ca384003` | 单条文来源锚点、划词入口、情境面板及现有助手链路已接入；分支静态分析与 changed-tests PASS；PR 全量回归、Android 和 Find N2 证据仍缺 |
 | CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
 
 ### 57.3 实施顺序与边界
@@ -2542,7 +2542,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 ### 57.5 CAI-READ-01 当前实现切片（2026-11-16）
 
 - 分支基线：`5c50605724e9a27ad03df700f5e4aa5aa0766d92`（本轮开始时最新 master）。
-- 当前 head：`ba35dcab4a54baa3153efad793e303d1a52698c4`。
+- 当前实现 head：`07df10cf70f12596aaa379d4152c6fe0ca384003`（此后台账记录提交另行追加，不改变上述代码实现定位）。
 - 接入页面：`ClassicLibraryScreen` 中仅对 `assets/shanghan/clause_001.md` 启用情境入口；来源锚点为 `shanghan:clause:002`，内容版本按原始 Markdown 资产 SHA-256 计算。
 - 新增：`AiContextRef`、`AiContextPromptBuilder`、`ContextualAiSheet`；复用 `LocalAiInterviewScreen`、SQLite 会话/消息和模型执行链路。
 - 消息 metadata 增加可选 `contextRef`，schemaVersion 仍为 1，旧版 semicolon/JSON metadata 保持兼容。
@@ -2550,3 +2550,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 情境会话设置 explanation-only 路由，避免将包含“紫微/排盘/工具”等上下文内容重新送入工具调度器触发重复计算；既有模型调用、安全前置检查及会话持久化继续复用。
 - 已新增/修改定向测试：`test/ai_context_prompt_builder_test.dart`、`test/assistant_message_metadata_test.dart`、`test/markdown_doc_contextual_selection_test.dart`。当前尚未取得测试实际运行结果，TEST/CI 状态为 UNKNOWN；不标记 PASS。
 - 本切片不覆盖全库阅读页，不代表 Find N2 真机验收完成。PR 创建后补记实际 CI run、失败日志与修复结果。
+
+- 分支验收：Flutter tests workflow run `43891880364`（head `07df10cf70f12596aaa379d4152c6fe0ca384003`）SUCCESS；`Static analysis` 和 `Run changed tests and enforce test pairing` 均 PASS，新增上下文提示词、metadata 往返、Markdown 选择菜单（含长按后“问 AI”动作）定向测试均由该 job 执行。
+- PR #223：当前仍为 OPEN；GitHub 曾对 head `4a78330b096d7654dc326ff8112c52e6c5e7f387` 启动的 PR 回归 run `43891860834` 被取消；最新 head 的全量 PR 回归尚无可用 PASS 证据。不得把分支 changed-tests PASS 扩大为全量回归 PASS。
+- Android arm64 build 与 Find N2 真机 TRACE 尚未验收；均保持 UNKNOWN。
