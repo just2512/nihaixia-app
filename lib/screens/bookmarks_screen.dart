@@ -16,7 +16,10 @@ import '../screens/herb_detail_screen.dart';
 import '../screens/acupoint_detail_screen.dart';
 
 class BookmarksScreen extends StatefulWidget {
-  const BookmarksScreen({super.key});
+  @visibleForTesting
+  final ValueChanged<List<Bookmark>>? onDataLoaded;
+
+  const BookmarksScreen({super.key, this.onDataLoaded});
 
   @override
   State<BookmarksScreen> createState() => _BookmarksScreenState();
@@ -141,6 +144,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         _selectedBookmarkId = null;
       }
     });
+    widget.onDataLoaded?.call(bookmarks);
   }
 
   void _deleteBookmark(int id) async {
