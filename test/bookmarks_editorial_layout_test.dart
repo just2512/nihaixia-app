@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType, Rect;
 
 import 'package:flutter/material.dart';
@@ -53,6 +54,7 @@ void main() {
   Future<void> pumpBookmarks(
     WidgetTester tester, {
     required Size size,
+    required ValueChanged<List<Bookmark>> onDataLoaded,
     double textScale = 1,
     List<DisplayFeature> displayFeatures = const [],
   }) async {
@@ -72,23 +74,24 @@ void main() {
             textScaler: TextScaler.linear(textScale),
             displayFeatures: displayFeatures,
           ),
-          child: const BookmarksScreen(),
+          child: BookmarksScreen(onDataLoaded: onDataLoaded),
         ),
       ),
     );
     await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-    });
-    // Exercise the same refresh notification used when bookmarks are added
-    // from another tab; this makes the screen's async reload observable.
-    DatabaseHelper.bookmarkVersion.value++;
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    });
-    await tester.pumpAndSettle();
   }
+
+  Future<List<Bookmark>> waitForLoad(
+    WidgetTester tester,
+    Completer<List<Bookmark>> load,
+  ) async {
+    final rows = await tester.runAsync(
+      () => load.future.timeout(const Duration(seconds: 5)),
+    );
+    await tester.pump();
+    return rows!;
+  }
+
 
   testWidgets('收藏分类、文件夹移动与删除在紧凑屏和200%字号下可用',
       (tester) async {
@@ -99,43 +102,62 @@ void main() {
       await seedFormulaBookmark();
       expect((await DatabaseHelper.instance.getAllBookmarks()).length, 2);
     });
+
+    final pendingLoads = <Completer<List<Bookmark>>>[];
+    void onDataLoaded(List<Bookmark> rows) {
+      if (pendingLoads.isNotEmpty && !pendingLoads.first.isCompleted) {
+        pendingLoads.removeAt(0).complete(rows);
+      }
+    }
+
+    final initialLoad = Completer<List<Bookmark>>();
+    pendingLoads.add(initialLoad);
     await pumpBookmarks(
       tester,
       size: const Size(402, 900),
       textScale: 2,
+      onDataLoaded: onDataLoaded,
     );
-
-    expect(tester.takeException(), isNull, reason: '收藏页初始数据库加载不应抛出异常');
+    final initialRows = await waitForLoad(tester, initialLoad);
+    expect(initialRows.map((row) => row.title).toSet(), {'桂枝汤', '黄芪'});
     expect(find.text('暂无收藏'), findsNothing);
     expect(find.text('桂枝汤'), findsOneWidget);
     expect(find.text('黄芪'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
+    final filterLoad = Completer<List<Bookmark>>();
+    pendingLoads.add(filterLoad);
     await tester.tap(find.widgetWithText(FilterChip, '本草'));
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    });
-    await tester.pump();
+    final filteredRows = await waitForLoad(tester, filterLoad);
+    expect(filteredRows.map((row) => row.title).toList(), ['黄芪']);
     expect(find.text('黄芪'), findsOneWidget);
     expect(find.text('桂枝汤'), findsNothing);
 
+    final clearFilterLoad = Completer<List<Bookmark>>();
+    pendingLoads.add(clearFilterLoad);
     await tester.tap(find.widgetWithText(FilterChip, '本草'));
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    });
-    await tester.pump();
+    final allRows = await waitForLoad(tester, clearFilterLoad);
+    expect(allRows.length, 2);
+    expect(find.text('桂枝汤'), findsOneWidget);
 
     // 对桂枝汤执行移动到文件夹。
     await tester.tap(find.byType(PopupMenuButton<String>).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('移动到文件夹'));
     await tester.pumpAndSettle();
+    final moveLoad = Completer<List<Bookmark>>();
+    pendingLoads.add(moveLoad);
     await tester.tap(find.text('常用经方').last);
     await tester.pumpAndSettle();
+    final afterMove = await waitForLoad(tester, moveLoad);
+    expect(afterMove.where((row) => row.title == '桂枝汤').single.folderId,
+        isNotNull);
 
+    final folderLoad = Completer<List<Bookmark>>();
+    pendingLoads.add(folderLoad);
     await tester.tap(find.widgetWithText(FilterChip, '常用经方'));
-    await tester.pumpAndSettle();
+    final folderRows = await waitForLoad(tester, folderLoad);
+    expect(folderRows.map((row) => row.title).toList(), ['桂枝汤']);
     expect(find.text('桂枝汤'), findsOneWidget);
     expect(find.text('黄芪'), findsNothing);
 
@@ -145,13 +167,12 @@ void main() {
     await tester.tap(find.text('删除').last);
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
-    await tester.tap(find.text('删除').last);
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    });
-    await tester.pumpAndSettle();
 
+    final deleteLoad = Completer<List<Bookmark>>();
+    pendingLoads.add(deleteLoad);
+    await tester.tap(find.text('删除').last);
+    final remainingRows = await waitForLoad(tester, deleteLoad);
+    expect(remainingRows, isEmpty);
     expect(find.text('暂无收藏'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -165,6 +186,8 @@ void main() {
       await seedFormulaBookmark();
       expect((await DatabaseHelper.instance.getAllBookmarks()).length, 2);
     });
+
+    final initialLoad = Completer<List<Bookmark>>();
     await pumpBookmarks(
       tester,
       size: const Size(775, 900),
@@ -176,8 +199,13 @@ void main() {
           state: DisplayFeatureState.postureFlat,
         ),
       ],
+      onDataLoaded: (rows) {
+        if (!initialLoad.isCompleted) initialLoad.complete(rows);
+      },
     );
-
+    final rows = await waitForLoad(tester, initialLoad);
+    expect(rows.length, 2);
+    expect(find.text('桂枝汤'), findsOneWidget);
     expect(tester.takeException(), isNull,
         reason: '展开主从列表在选择收藏之前不应横向溢出');
 
@@ -186,6 +214,8 @@ void main() {
 
     expect(find.text('来源：伤寒论'), findsOneWidget);
     expect(find.text('打开完整详情'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(tester.takeException(), isNull,
+        reason: '展开主从详情在200%字号下不应横向溢出');
   });
+
 }
