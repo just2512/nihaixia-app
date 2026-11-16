@@ -306,62 +306,81 @@ class _YiJingScreenState extends State<YiJingScreen> {
           color: colorScheme.tertiary,
           child: Column(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _manualUpper,
-                      decoration: const InputDecoration(
-                        labelText: '上卦',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (final t in kTrigrams)
-                          DropdownMenuItem(
-                            value: t.xiantian,
-                            child: Text('${t.name}${t.symbol}${t.nature}'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _manualUpper = v ?? 1),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final upperField = DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: _manualUpper,
+                    decoration: const InputDecoration(
+                      labelText: '上卦',
+                      border: OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _manualLower,
-                      decoration: const InputDecoration(
-                        labelText: '下卦',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (final t in kTrigrams)
-                          DropdownMenuItem(
-                            value: t.xiantian,
-                            child: Text('${t.name}${t.symbol}${t.nature}'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _manualLower = v ?? 1),
+                    items: [
+                      for (final t in kTrigrams)
+                        DropdownMenuItem(
+                          value: t.xiantian,
+                          child: Text('${t.name}${t.symbol}${t.nature}'),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _manualUpper = v ?? 1),
+                  );
+                  final lowerField = DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: _manualLower,
+                    decoration: const InputDecoration(
+                      labelText: '下卦',
+                      border: OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _manualMoving,
-                      decoration: const InputDecoration(
-                        labelText: '动爻',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (var i = 0; i <= 6; i++)
-                          DropdownMenuItem(
-                            value: i,
-                            child: Text(i == 0 ? '静卦' : '$i爻动'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() => _manualMoving = v ?? 0),
+                    items: [
+                      for (final t in kTrigrams)
+                        DropdownMenuItem(
+                          value: t.xiantian,
+                          child: Text('${t.name}${t.symbol}${t.nature}'),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _manualLower = v ?? 1),
+                  );
+                  final movingField = DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: _manualMoving,
+                    decoration: const InputDecoration(
+                      labelText: '动爻',
+                      border: OutlineInputBorder(),
                     ),
-                  ),
-                ],
+                    items: [
+                      for (var i = 0; i <= 6; i++)
+                        DropdownMenuItem(
+                          value: i,
+                          child: Text(i == 0 ? '静卦' : '${i}爻动'),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _manualMoving = v ?? 0),
+                  );
+
+                  // Narrow foldable panels cannot reliably fit three decorated
+                  // dropdowns in one row. Stack the selectors on a single pane.
+                  if (constraints.maxWidth < 440) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        upperField,
+                        const SizedBox(height: 8),
+                        lowerField,
+                        const SizedBox(height: 8),
+                        movingField,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: upperField),
+                      const SizedBox(width: 12),
+                      Expanded(child: lowerField),
+                      const SizedBox(width: 12),
+                      Expanded(child: movingField),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 12),
               Align(

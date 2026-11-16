@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/meihua_screen.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/utils/fold_aware_routes.dart';
 import 'package:sensors_plus/sensors_plus.dart' show AccelerometerEvent;
@@ -89,9 +91,28 @@ Future<void> _openToolAndCheck({
     isNull,
     reason: '${tool.id} 在当前屏幕姿态下存在布局异常',
   );
+
+  // Return to the launcher before testing the second physical posture.
+  Navigator.of(tester.element(route)).pop();
+  await tester.pumpAndSettle();
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    databaseFactory = databaseFactoryFfi;
+  });
+  setUp(() {
+    DatabaseHelper.configureTestDatabase(
+      'tool_foldable_layout_test.db',
+      factory: databaseFactoryFfi,
+    );
+  });
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
+  });
+
   final tools = AssistantToolRouter.all
       .where((tool) => tool.headlessExecutor != null)
       .toList(growable: false);

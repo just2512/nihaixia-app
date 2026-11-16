@@ -101,46 +101,92 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
           const SizedBox(height: 16),
 
           // 输入区
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: _inputController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: '数值',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onChanged: (_) => setState(() {}),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final valueField = TextField(
+                controller: _inputController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: '数值',
+                  border: OutlineInputBorder(),
+                  isDense: true,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _unit,
-                  decoration: const InputDecoration(
-                    labelText: '单位',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+                onChanged: (_) => setState(() {}),
+              );
+              final unitField = DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _unit,
+                decoration: const InputDecoration(
+                  labelText: '单位',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                items: [
+                  DropdownMenuItem(
+                    enabled: false,
+                    child: Text(
+                      '── 重量 ──',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                  items: [
-                    DropdownMenuItem(enabled: false, child: Text('── 重量 ──', style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant))),
-                    ..._weightUnits.map((u) => DropdownMenuItem(value: u, child: Text(u))),
-                    DropdownMenuItem(enabled: false, child: Text('── 容量 ──', style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant))),
-                    ..._volumeUnits.map((u) => DropdownMenuItem(value: u, child: Text(u))),
-                    DropdownMenuItem(enabled: false, child: Text('── 长度 ──', style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant))),
-                    ..._lengthUnits.map((u) => DropdownMenuItem(value: u, child: Text(u))),
+                  ..._weightUnits.map(
+                    (u) => DropdownMenuItem(value: u, child: Text(u)),
+                  ),
+                  DropdownMenuItem(
+                    enabled: false,
+                    child: Text(
+                      '── 容量 ──',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  ..._volumeUnits.map(
+                    (u) => DropdownMenuItem(value: u, child: Text(u)),
+                  ),
+                  DropdownMenuItem(
+                    enabled: false,
+                    child: Text(
+                      '── 长度 ──',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  ..._lengthUnits.map(
+                    (u) => DropdownMenuItem(value: u, child: Text(u)),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _unit = v);
+                },
+              );
+
+              if (constraints.maxWidth < 420) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    valueField,
+                    const SizedBox(height: 8),
+                    unitField,
                   ],
-                  onChanged: (v) {
-                    if (v != null) setState(() => _unit = v);
-                  },
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 3, child: valueField),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 2, child: unitField),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 20),
 
