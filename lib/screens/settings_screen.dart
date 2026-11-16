@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../data/settings_repository.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/text_scale_slider.dart';
 import '../widgets/local_ai_data_clear_tile.dart';
 import '../widgets/local_ai_backend_settings_tile.dart';
@@ -28,37 +29,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListenableBuilder(
         listenable: _settings,
         builder: (context, _) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             _sectionTitle('外观'),
             _themeModeTile(),
             _fontScaleTile(),
             _solarTermTile(cs),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.xl),
             _sectionTitle('诊断'),
             _genderTile(cs),
             _diagnosticLevelTile(cs),
             _autoCopyTile(cs),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.xl),
             _sectionTitle('本地 AI'),
             const LocalAiBackendSettingsTile(),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.xl),
             _sectionTitle('紫微斗数排盘'),
             _trueSolarTile(cs),
             _lateZiTile(cs, isBazi: false),
             _twelveStageTile(cs),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.xl),
             _sectionTitle('八字排盘'),
             _lateZiTile(cs, isBazi: true),
             _twelveStageTile(cs),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.xl),
             _sectionTitle('数据管理'),
             _clearHistoryTile(cs),
             _exportTile(cs),
             _clearCacheTile(cs),
             const LocalAiDataClearTile(),
             if (kDebugMode) const LocalAiTraceDebugTile(),
-            const Divider(height: 24),
+            const Divider(height: AppSpacing.xl),
             _aboutTile(cs),
           ],
         ),
@@ -67,16 +68,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _sectionTitle(String t) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: Text(t,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: const TextStyle(fontSize: AppType.title, fontWeight: FontWeight.bold)),
       );
 
   Widget _themeModeTile() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('暗黑模式', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           SegmentedButton<ThemeMode>(
             segments: const [
               ButtonSegment(value: ThemeMode.system, label: Text('跟随系统')),
@@ -93,7 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('字体大小', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           TextScaleSlider(
             value: _settings.textScaleFactor,
             onChanged: _settings.setTextScaleFactor,
@@ -110,24 +111,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
         contentPadding: EdgeInsets.zero,
       );
 
-  Widget _genderTile(ColorScheme cs) => ListTile(
-        leading: const Icon(Icons.person),
-        title: const Text('默认性别'),
-        subtitle: Text(_settings.defaultGender.isEmpty
-            ? '未设置（每次询问）'
-            : _settings.defaultGender == 'male'
-                ? '男'
-                : '女'),
-        contentPadding: EdgeInsets.zero,
-        trailing: SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: '', label: Text('不设置')),
-            ButtonSegment(value: 'male', label: Text('男')),
-            ButtonSegment(value: 'female', label: Text('女')),
-          ],
-          selected: {_settings.defaultGender},
-          onSelectionChanged: (s) => _settings.setDefaultGender(s.first),
-        ),
+  Widget _genderTile(ColorScheme cs) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text('默认性别'),
+            subtitle: Text(_settings.defaultGender.isEmpty
+                ? '未设置（每次询问）'
+                : _settings.defaultGender == 'male'
+                    ? '男'
+                    : '女'),
+            contentPadding: EdgeInsets.zero,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpacing.xxl),
+            child: Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                ChoiceChip(
+                  label: const Text('不设置'),
+                  selected: _settings.defaultGender.isEmpty,
+                  onSelected: (_) => _settings.setDefaultGender(''),
+                ),
+                ChoiceChip(
+                  label: const Text('男'),
+                  selected: _settings.defaultGender == 'male',
+                  onSelected: (_) => _settings.setDefaultGender('male'),
+                ),
+                ChoiceChip(
+                  label: const Text('女'),
+                  selected: _settings.defaultGender == 'female',
+                  onSelected: (_) => _settings.setDefaultGender('female'),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
 
   Widget _diagnosticLevelTile(ColorScheme cs) => ListTile(
@@ -181,7 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           const Text('长生十二神 · 起长生口径',
               style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           SegmentedButton<bool>(
             segments: const [
               ButtonSegment(value: true, label: Text('火土同宫')),

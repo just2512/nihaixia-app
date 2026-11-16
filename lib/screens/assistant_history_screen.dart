@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/database_helper.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 
 /// Persistent assistant sessions. Long-press or enter selection mode to
@@ -165,20 +166,23 @@ class _AssistantHistoryScreenState extends State<AssistantHistoryScreen> {
                             : const CircleAvatar(
                                 child: Icon(Icons.chat_bubble_outline),
                               ),
-                        title: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        title: Text(title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(preview.isEmpty ? '暂无消息' : preview),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              _dateLabel(item['updated_at']),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
                         ),
-                        subtitle: Text(
-                          preview.isEmpty ? '暂无消息' : preview,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Text(
-                          _dateLabel(item['updated_at']),
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
+                        isThreeLine: true,
                         selected: selected,
                         onLongPress: () {
                           if (!_selectionMode) {

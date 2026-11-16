@@ -85,7 +85,7 @@ void main() {
 
   testWidgets('收藏分类、文件夹移动与删除在紧凑屏和200%字号下可用',
       (tester) async {
-    await seedFormulaBookmark();
+    await tester.runAsync(() => seedFormulaBookmark());
     await pumpBookmarks(
       tester,
       size: const Size(402, 900),
@@ -136,7 +136,7 @@ void main() {
 
   testWidgets('内屏零宽折痕与200%字号下收藏主从预览保持可读',
       (tester) async {
-    await seedFormulaBookmark();
+    await tester.runAsync(() => seedFormulaBookmark());
     await pumpBookmarks(
       tester,
       size: const Size(775, 900),

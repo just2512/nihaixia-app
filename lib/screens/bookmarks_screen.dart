@@ -266,7 +266,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     _loadData();
                   },
                 )),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
           ],
         ),
       ),
@@ -294,12 +294,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.bookmark_outline, size: 40, color: scheme.onSurfaceVariant),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Text(
             '选择一条收藏',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             '在左侧列表选择条目，在这里预览内容',
             style: TextStyle(color: scheme.onSurfaceVariant),
@@ -312,7 +312,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   Widget _buildBookmarkPreview(BuildContext context, Bookmark bookmark) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -344,12 +344,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             bookmark.title,
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             bookmark.source.isEmpty ? '未记录来源' : '来源：${bookmark.source}',
             style: TextStyle(
@@ -357,7 +357,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
               color: scheme.onSurfaceVariant,
             ),
           ),
-          const Divider(height: 24),
+          const Divider(height: AppSpacing.xl),
           Expanded(
             child: SingleChildScrollView(
               child: SelectableText(
@@ -366,7 +366,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
@@ -424,67 +424,70 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         children: [
           // 文件夹列表
           if (_folders.isNotEmpty)
-            Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: FilterChip(
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    FilterChip(
                       label: const Text('全部'),
                       selected: _selectedFolderId == null,
                       onSelected: (_) {
-                        setState(() {
-                          _selectedFolderId = null;
-                        });
+                        setState(() => _selectedFolderId = null);
                         _loadData();
                       },
                     ),
-                  ),
-                  ..._folders.map((f) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: GestureDetector(
-                          onLongPress: () =>
-                              _showDeleteFolderDialog(f['id'], f['name']),
-                          child: FilterChip(
-                            avatar: const Icon(Icons.folder, size: 16),
-                            label: Text(f['name']),
-                            selected: _selectedFolderId == f['id'],
-                            onSelected: (_) {
-                              setState(() {
-                                _selectedFolderId = f['id'];
-                              });
-                              _loadData();
-                            },
+                    ..._folders.map((f) => Padding(
+                          padding: const EdgeInsets.only(left: AppSpacing.sm),
+                          child: GestureDetector(
+                            onLongPress: () =>
+                                _showDeleteFolderDialog(f['id'], f['name']),
+                            child: FilterChip(
+                              avatar: const Icon(Icons.folder, size: 16),
+                              label: Text(f['name']),
+                              selected: _selectedFolderId == f['id'],
+                              onSelected: (_) {
+                                setState(() => _selectedFolderId = f['id']);
+                                _loadData();
+                              },
+                            ),
                           ),
-                        ),
-                      )),
-                ],
+                        )),
+                  ],
+                ),
               ),
             ),
           // 分类标签
           if (categories.isNotEmpty && _selectedFolderId == null)
-            Container(
-              height: 50,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  ...categories.map((cat) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: FilterChip(
-                          label: Text(cat),
-                          selected: _selectedCategory == cat,
-                          onSelected: (_) {
-                            setState(() =>
-                                _selectedCategory = _selectedCategory == cat ? null : cat);
-                            _loadData();
-                          },
-                        ),
-                      )),
-                ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    ...categories.map((cat) => Padding(
+                          padding: const EdgeInsets.only(right: AppSpacing.sm),
+                          child: FilterChip(
+                            label: Text(cat),
+                            selected: _selectedCategory == cat,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedCategory =
+                                    _selectedCategory == cat ? null : cat;
+                              });
+                              _loadData();
+                            },
+                          ),
+                        )),
+                  ],
+                ),
               ),
             ),
           // 收藏列表
@@ -507,101 +510,121 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         }
                       }
                       return AdaptiveMasterDetail(
-                        master: ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                        master: ListView.separated(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.sm,
+                          ),
                           itemCount: _bookmarks.length,
+                          separatorBuilder: (_, __) => const Divider(
+                            height: AppSpacing.md,
+                            indent: 56,
+                          ),
                           itemBuilder: (context, index) {
-                      final b = _bookmarks[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer,
-                            child: Icon(
-                              b.category == '方剂'
-                                  ? Icons.medication
-                                  : b.category == '本草'
-                                      ? Icons.eco
-                                      : b.category == '穴位'
-                                          ? Icons.spa
-                                          : Icons.bookmark,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          title: Text(
-                            b.title,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: AppType.body),
-                          ),
-                          subtitle: Text(
-                            b.content.length > 80
-                                ? '${b.content.substring(0, 80)}...'
-                                : b.content,
-                            style: const TextStyle(fontSize: AppType.caption),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (value) {
-                              if (value == 'delete') {
-                                showFoldAwareDialog(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('删除收藏'),
-                                    content: const Text('确定删除这条收藏吗？'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(ctx),
-                                        child: const Text('取消'),
+                            final bookmark = _bookmarks[index];
+                            final scheme = Theme.of(context).colorScheme;
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor: scheme.primaryContainer,
+                                child: Icon(
+                                  bookmark.category == '方剂'
+                                      ? Icons.medication
+                                      : bookmark.category == '本草'
+                                          ? Icons.eco
+                                          : bookmark.category == '穴位'
+                                              ? Icons.spa
+                                              : Icons.bookmark,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                              title: Text(
+                                bookmark.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: AppType.body,
+                                ),
+                              ),
+                              subtitle: Text(
+                                bookmark.content.length > 80
+                                    ? '${bookmark.content.substring(0, 80)}...'
+                                    : bookmark.content,
+                                style: const TextStyle(
+                                  fontSize: AppType.caption,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                onSelected: (value) {
+                                  if (value == 'delete') {
+                                    showFoldAwareDialog(
+                                      context: context,
+                                      builder: (dialogContext) => AlertDialog(
+                                        title: const Text('删除收藏'),
+                                        content: const Text('确定删除这条收藏吗？'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(dialogContext),
+                                            child: const Text('取消'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              _deleteBookmark(bookmark.id!);
+                                              Navigator.pop(dialogContext);
+                                            },
+                                            child: const Text('删除'),
+                                          ),
+                                        ],
                                       ),
-                                      TextButton(
-                                        onPressed: () {
-                                          _deleteBookmark(b.id!);
-                                          Navigator.pop(ctx);
-                                        },
-                                        child: const Text('删除'),
-                                      ),
-                                    ],
+                                    );
+                                  }
+                                  if (value == 'move') {
+                                    _showMoveToFolderDialog(bookmark);
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'move',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.folder, size: 20),
+                                        SizedBox(width: AppSpacing.sm),
+                                        Text('移动到文件夹'),
+                                      ],
+                                    ),
                                   ),
-                                );
-                              }
-                              if (value == 'move') _showMoveToFolderDialog(b);
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'move',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.folder, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('移动到文件夹'),
-                                  ],
-                                ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_outline, size: 20),
+                                        SizedBox(width: AppSpacing.sm),
+                                        Text('删除'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete_outline, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('删除'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          selected: useMasterDetail && b.id == _selectedBookmarkId,
-                          onTap: () {
-                            if (useMasterDetail) {
-                              setState(() => _selectedBookmarkId = b.id);
-                            } else {
-                              _openBookmark(b);
-                            }
-                          },
-                        ),
-                      );
+                              selected:
+                                  useMasterDetail &&
+                                  bookmark.id == _selectedBookmarkId,
+                              selectedTileColor: scheme.primaryContainer,
+                              selectedColor: scheme.onPrimaryContainer,
+                              onTap: () {
+                                if (useMasterDetail) {
+                                  setState(
+                                    () => _selectedBookmarkId = bookmark.id,
+                                  );
+                                } else {
+                                  _openBookmark(bookmark);
+                                }
+                              },
+                            );
                           },
                         ),
                         detail: selectedBookmark == null
