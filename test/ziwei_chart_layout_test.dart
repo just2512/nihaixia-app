@@ -76,6 +76,43 @@ void main() {
     expect(tester.getSize(plate).width, lessThanOrEqualTo(370));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('展开内屏可整屏显示完整紫微十二宫盘面', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(775, 830);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme,
+        home: ZiweiChartScreen(initialSolar: DateTime(2000, 8, 16, 10)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final fullscreenAction = find.byTooltip('整屏查看命盘');
+    expect(fullscreenAction, findsOneWidget);
+    await tester.tap(fullscreenAction);
+    await tester.pumpAndSettle();
+
+    final viewport = find.byKey(
+      const ValueKey('ziwei-fullscreen-plate-viewport'),
+    );
+    final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+    expect(viewport, findsOneWidget);
+    expect(plate, findsOneWidget);
+    final viewportRect = tester.getRect(viewport);
+    final plateRect = tester.getRect(plate);
+    expect(plateRect.width, lessThanOrEqualTo(viewportRect.width + 1));
+    expect(plateRect.height, lessThanOrEqualTo(viewportRect.height + 1));
+    expect(plateRect.top, greaterThanOrEqualTo(viewportRect.top - 1));
+    expect(plateRect.bottom, lessThanOrEqualTo(viewportRect.bottom + 1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('紫微摘要双栏断点在 640dp 精确切换且边界无溢出', (tester) async {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -309,6 +346,22 @@ void main() {
     final sheetRect = tester.getRect(sheet);
     expect(sheetRect.left, greaterThanOrEqualTo(412));
     expect(sheetRect.right, lessThanOrEqualTo(800));
+    expect(
+      tester.widget<BottomSheet>(sheet).backgroundColor,
+      _testTheme.colorScheme.surface,
+    );
+    final detailSurface = find.byKey(
+      const ValueKey('ziwei-palace-detail-surface'),
+    );
+    expect(detailSurface, findsOneWidget);
+    expect(
+      tester.widget<Material>(detailSurface).color,
+      _testTheme.colorScheme.surface,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.byType(Wrap)),
+      findsWidgets,
+    );
     expect(tester.takeException(), isNull);
   });
 
