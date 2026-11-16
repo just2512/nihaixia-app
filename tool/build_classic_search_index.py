@@ -34,6 +34,7 @@ LECTURE_SOURCES = [
     ("jingui", os.path.join(ROOT, "assets", "jingui")),
     ("neijing", os.path.join(ROOT, "assets", "neijing")),
     ("zhenjiu", os.path.join(ROOT, "assets", "zhenjiu_lecture")),
+    ("bencao", os.path.join(ROOT, "assets", "bencao_lecture")),
 ]
 
 GUJI_SOURCES = [
