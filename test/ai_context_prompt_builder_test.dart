@@ -9,7 +9,7 @@ void main() {
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
-      sourceId: 'asset:assets/shanghan/clause_001.md',
+      sourceId: 'shanghan:assets/shanghan/clause_001.md',
       title: '太阳·太阳病中风（桂枝汤证',
     );
     final prompt = AiContextPromptBuilder.buildClassicSelection(
