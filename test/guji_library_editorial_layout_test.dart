@@ -94,7 +94,10 @@ void main() {
     WidgetTester tester,
     GujiBook book,
   ) async {
-    await tester.tap(find.text(book.title).first);
+    final bookTitle = find.text(book.title).first;
+    await tester.ensureVisible(bookTitle);
+    await tester.pump();
+    await tester.tap(bookTitle);
     // The in-memory bundle completes after Flutter pumps the route. A bounded
     // frame loop avoids waiting for an indeterminate progress indicator.
     await tester.pump();
@@ -120,7 +123,8 @@ void main() {
   }
 
   Future<void> returnToLibrary(WidgetTester tester) async {
-    await tester.pageBack();
+    final routeContext = tester.element(find.byType(GujiBookScreen));
+    Navigator.of(routeContext).pop();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
   }
