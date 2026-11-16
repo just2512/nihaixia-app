@@ -171,13 +171,23 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前执行分支**：`work/yanji-editorial-phase3`，父基线 `7681d6584d3a3667a5f54a19fac0f675774fd749`。
+**当前执行分支**：`work/yanji-editorial-phase3-auxiliary`，父基线 `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`（Phase 3.2 合并提交）。
 
-**Phase 3.1 首批实施范围（分支针对性测试已通过，PR 门禁待执行）**
-- 收藏页：`ListView` 列表改为平面 `ListTile + Divider`；文件夹/分类筛选行使用自然高度横向滚动，不锁死 50dp；预览区间距迁移到 `AppSpacing`；保留文件夹创建/删除、分类筛选、移动、删除确认、导出、详情打开与 `AdaptiveMasterDetail`。
-- 设置页：章节标题字号/间距迁移到 `AppType` / `AppSpacing`；字号滑块两端标签使用共享 Token；保留设置项、即时刷新和 `SettingsRepository` 持久化。
-- 历史对话：移除标题单行与摘要两行强制截断；时间信息放入次级行并使用 `onSurfaceVariant`；保留恢复会话 ID、多选和删除逻辑。
-- 自动化：新增收藏分类/移动/删除、402dp/200% 字号、775dp/零宽 fold 主从预览；新增设置页 402dp/200% 字号及主题持久化测试；新增历史对话 402/775dp/200% 字号换行测试。
+**Phase 3.1 已合并：收藏、设置与历史对话**
+- 收藏页列表改为平面 `ListTile + Divider`；文件夹/分类筛选使用自然高度横向滚动；保留文件夹创建/删除、分类筛选、移动、删除确认、导出、详情打开与 `AdaptiveMasterDetail`。
+- 设置页章节标题和间距对齐 `AppType` / `AppSpacing`；保留全部设置项、实时监听和 `SettingsRepository` 持久化。
+- 历史对话标题和摘要自然换行，时间作为次级信息；保留会话 ID、多选和删除逻辑。
+- PR #214 已合并，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；PR 全量 Flutter、Android arm64、分支定向测试及合并后主线 CI 已通过。
+
+**Phase 3.2 已合并：命盘库与诊断历史**
+- 命盘库移除重复 `Card(elevation: 2)`，改用主题表面与分隔线；Token 化字号、间距和圆角；保留出生信息、紫微/八字排盘入口和左滑删除。
+- 诊断历史统一字号/间距/圆角 Token；趋势图高度随字号变化；日期移至次级信息行，避免窄屏挤压正文；保留六经趋势、语义色和历史数据。
+- PR #217 已合并，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；PR 全量 Flutter、Android arm64 和分支定向测试均通过；合并后 master CI 正在执行。
+
+**Phase 3.3 当前批次：闭门课重症临床列表**
+- 七条列表项移除重复高 elevation Card，改为主题表面、轻分隔线与点击反馈；标题/摘要/标签字号及间距使用共享 Token。
+- 保留七条原文内容、资产路径、原文 Markdown 路由、方剂/本草标签精确导航和非医疗建议 footer；不改数据、辨证与用药逻辑。
+- 新增测试覆盖 402/775dp、浅/深主题、200% 字号、七条滚动可读性、Markdown 原文路由，以及方剂/药材详情跳转。
 
 **Phase 3.1 实施前只读审计（历史基线：Phase 2 master）**
 
@@ -187,7 +197,7 @@
 - `assistant_history_screen.dart` 采用列表和 `outlineVariant` 分隔线；已有列表、多选删除、恢复和持久化相关测试。尚缺少该页的折叠窗口与 200% 字号视觉覆盖。
 - `tool_foldable_layout_test.dart` 已覆盖注册工具的展开内屏零宽 fold 与半折叠物理 hinge 路由边界；不得删除或缩小现有覆盖范围。
 
-该只读审计先于 Phase 3 实施，用于确定小批量边界。Phase 3.1 已在独立分支落地并通过定向测试；其 PR 全量验收完成前不合并。不得把“已有共享组件/局部 Token”误报为需要重做。
+该只读审计是 Phase 3.1 的历史基线检查，不代表当前所有辅助页都需要重做。Phase 3.1、3.2 已完成合并；Phase 3.3 按页面独立分支和小批次推进。不得把“已有共享组件/局部 Token”误报为需要重做。
 
 **主要文件族**
 - `lib/screens/tools_screen.dart` 及其实际存在的工具页面。
@@ -297,9 +307,11 @@
 | Phase 3.1 收藏/设置/历史改造 | `PASS`（代码与自动化门禁） | PR #214；HEAD `b29b09b3fb6d61cad11d99dd52f6cc6a607678f3`；Flutter 全量回归 Run `43864106649` success；Android arm64 job `133290336254` success；分支静态分析及 6 个 Widget tests Run `43863636922` success |
 
 | Phase 3.1 集成状态 | `PASS` | PR #214 于 2026-11-16 squash 合并；master 集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205` |
-| Phase 3.1 合并后主线 CI | `UNKNOWN`（运行中） | Flutter tests Run `43865416982`、Flutter Quality Gate Run `43865416976` 正在执行；完成后补记结果 |
-| Phase 3.2 命盘库与诊断历史 | `IN_PROGRESS`（定向测试 PASS） | 独立分支 `work/yanji-editorial-phase3-aux-v2`，基于 master SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；最新代码/测试 HEAD `98c1755c3a4efc969843b3b9300e6530e62b93b3`；Run `43865637995` 静态分析及 3 个 Widget tests success；PR 全量回归/Android arm64 尚待验收 |
-| Phase 3.2 集成状态 | `MISSING` | 尚未合并；必须通过 PR 全量 Flutter regression、Android arm64 及合并后主线 CI |
-| Phase 3.3 其他工具与辅助页面 | `MISSING`（只读审计） | 工具入口现有轻表面与 Fold 测试保留；其他工具详情、易学/命盘深层页面、医案/经典辅助页面继续逐批审查，不扩大本批范围 |
+| Phase 3.1 合并后主线 CI | `PASS` | master SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`：Flutter tests Run `43865416982` success；Android arm64 job `133294922898` success；Flutter Quality Gate Run `43865416976` success |
+| Phase 3.2 命盘库与诊断历史 | `PASS`（代码与自动化门禁） | PR #217；HEAD `12b3859a05d4bfcf28ff51605d48107a77218e4a`；分支 Run `43865969348` success；Flutter 全量回归 Run `43866032021` success；Android arm64 job `133296754178` success |
+| Phase 3.2 集成状态 | `PASS` | PR #217 于 2026-11-16 squash 合并；master 集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` |
+| Phase 3.2 合并后主线 CI | `UNKNOWN`（运行中） | master SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`：Flutter tests Run `43868280609` 与 Flutter Quality Gate Run `43868280610` 正在执行；Android arm64 job 待主线 workflow 报告 |
+| Phase 3.3 闭门课重症临床列表 | `IN_PROGRESS`（分支定向测试待验收） | 分支 `work/yanji-editorial-phase3-auxiliary`，基线 master SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；最新测试 HEAD `ea178de5cbf76033d9693fc3f3f688030f97779a`；push Run `43868608311` 进行中 |
+| Phase 3.3 集成状态 | `MISSING` | 尚未建立 PR；须先通过分支静态分析与定向测试，再通过 PR 全量 Flutter 与 Android arm64 门禁 |
 | Find N2 实机阅读 | `MISSING` | 需要 OPPO Find N2 真实设备截图、系统/窗口参数和连续阅读记录 |
 
