@@ -481,6 +481,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: _NoopAssistantConversationStore(),
           imagePicker: _NoLostImagePicker(),
         ),
