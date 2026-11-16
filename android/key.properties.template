@@ -1,10 +1,11 @@
-# 签名配置模板
-# 使用方法：
-# 1. 生成签名文件：keytool -genkey -v -keystore nihaisha.jks -keyalg RSA -keysize 2048 -validity 10000 -alias nihaisha
-# 2. 填写以下配置
-# 3. 将 nihaisha.jks 放到 android/ 目录下
+# Local Android Release signing configuration example.
+# IMPORTANT: an existing installation can only be upgraded in place with the same signing certificate.
+# Do NOT generate a new keystore for an already-installed app. Restore and use the original signing key.
+# Place the existing keystore under android/ or adjust storeFile to its actual location.
+# storeFile is resolved relative to android/app/, so ../nihaisha.jks refers to android/nihaisha.jks.
 
-storePassword=你的密钥库密码
-keyPassword=你的密钥密码
-keyAlias=nihaisha
-storeFile=nihaisha.jks
+storePassword=填入原密钥库密码
+keyPassword=填入原密钥密码
+keyAlias=填入原证书别名
+storeFile=../nihaisha.jks
+storeType=PKCS12

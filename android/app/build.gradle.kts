@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -7,6 +9,33 @@ plugins {
 // CI builds only the arm64 artifact used by the Find N2 acceptance target.
 // Local and release builds keep all configured ABI splits.
 val ciArm64Only = providers.gradleProperty("ciArm64Only").orNull == "true"
+
+// A signed Release must use the existing local signing identity; never fall back to the Debug key.
+val releaseKeyPropertiesFile = rootProject.file("key.properties")
+val releaseSigningProperties = Properties()
+if (releaseKeyPropertiesFile.isFile) {
+    releaseKeyPropertiesFile.inputStream().use { input -> releaseSigningProperties.load(input) }
+}
+val releaseStoreFilePath = releaseSigningProperties.getProperty("storeFile")?.trim().orEmpty()
+val releaseKeystoreFile = releaseStoreFilePath.takeIf { it.isNotEmpty() }?.let { file(it) }
+val releaseTaskRequested = gradle.startParameter.taskNames.any { requestedTask ->
+    requestedTask.substringAfterLast(":").contains("release", ignoreCase = true)
+}
+if (releaseTaskRequested) {
+    if (!releaseKeyPropertiesFile.isFile) {
+        throw GradleException("Release signing is required. Configure android/key.properties with the existing signing key before building.")
+    }
+    val requiredSigningFields = listOf("storePassword", "keyPassword", "keyAlias")
+    val missingSigningFields = requiredSigningFields.filter {
+        releaseSigningProperties.getProperty(it)?.isNotBlank() != true
+    }
+    if (releaseStoreFilePath.isBlank() || missingSigningFields.isNotEmpty()) {
+        throw GradleException("Release signing configuration is incomplete. Check storeFile, storePassword, keyAlias and keyPassword in android/key.properties.")
+    }
+    if (releaseKeystoreFile?.isFile != true) {
+        throw GradleException("Release signing keystore file configured in android/key.properties was not found.")
+    }
+}
 
 android {
     namespace = "com.nihaisha.nihaisha_app"
@@ -37,36 +66,17 @@ android {
 
     signingConfigs {
         create("release") {
-            // 从 key.properties 读取签名配置
-            val keyPropertiesFile = rootProject.file("key.properties")
-            if (keyPropertiesFile.exists()) {
-                val map = mutableMapOf<String, String>()
-                keyPropertiesFile.readLines().forEach { line ->
-                    val trimmed = line.trim()
-                    if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && trimmed.contains("=")) {
-                        val parts = trimmed.split("=", limit = 2)
-                        map[parts[0].trim()] = parts[1].trim()
-                    }
-                }
-                keyAlias = map["keyAlias"]
-                keyPassword = map["keyPassword"]
-                storeFile = file(map["storeFile"] ?: "")
-                storePassword = map["storePassword"]
-                // canonical keystore 是 openssl 生成的 PKCS12（.jks 后缀），必须显式 storeType 否则 Gradle 按默认 jks 解析失败
-                storeType = map["storeType"] ?: "PKCS12"
-            }
+            keyAlias = releaseSigningProperties.getProperty("keyAlias")
+            keyPassword = releaseSigningProperties.getProperty("keyPassword")
+            storeFile = releaseKeystoreFile
+            storePassword = releaseSigningProperties.getProperty("storePassword")
+            storeType = releaseSigningProperties.getProperty("storeType")?.takeIf { it.isNotBlank() } ?: "PKCS12"
         }
     }
 
     buildTypes {
         release {
-            // 如果key.properties存在则用release签名，否则fallback到debug签名
-            val keyPropertiesFile = rootProject.file("key.properties")
-            signingConfig = if (keyPropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
             // 生产构建：开启 R8 混淆 + 资源收缩（瘦身 + 符号混淆）
             isMinifyEnabled = true
             isShrinkResources = true
