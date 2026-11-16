@@ -235,3 +235,73 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 - `test/assistant_tool_result_test.dart`：source-less SUCCEEDED 被拒绝；page-route-only source 被拒绝；真实 engine source 保持通过。
 - `test/assistant_tool_result_handoff_test.dart`：真实 legacy 页面返回文本显示 UNKNOWN，来源 MISSING，不触发模型解释，并且不写入 Native transcript。
 - 以上只针对本次识别的结果契约断点；不扩充 23 个 Page Tool 的泛化测试矩阵。
+
+
+## 11. 2026-11-16 当前主线能力复核（以代码和本节为准）
+
+本节覆盖前面 D-01/D-02 中已被后续实现改变的历史快照。历史章节保留作为决策轨迹，不再用其中旧的“没有 Headless 接口 / 只有 3 个 Headless”结论描述当前主线。
+
+### 11.1 当前注册表分类
+
+以 `lib/screens/assistant_tool_router.dart` 当前实际注册项为准，共 24 个 `toolId`：
+
+| 类别 | 数量 | 内容 |
+|---|---:|---|
+| Headless deterministic/data executor | 17（本 PR 将增至 18） | App 原有计算/数据能力，可在当前对话调用 |
+| Page-only | 6（本 PR 将降至 5） | 仅负责知识/历史页面浏览，不代表后台执行 |
+| Inline deterministic workflow | 1 | `structured_diagnosis`，走现有 `TcmInterviewConversationController / DiagnosticEngine`，不是 ToolRouter Headless |
+
+当前已经注册 Headless 的 17 项：
+- 排盘/起卦：`ziwei`、`bazi`、`yijing`、`xiaoliuren`、`meihua`；
+- 历法/术数：`yunqi`、`almanac`、`ziwu_liuzhu`、`chenggu`、`huangdi_siji`、`sanshan_lingqian`、`shousheng_debt`；
+- 单位换算/知识数据：`dosage`、`solar_terms`、`dream`、`guansha`、`saved_charts`。
+
+仍为 Page-only 的 6 项：
+`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。
+本 PR 将 `yuxiaji_omen` 的“当前本机时辰文本查询”升为 Headless；原页面仍保留方向、形态等需额外观察输入的特殊占法，合并后分类应为 18 Headless / 5 Page-only / 1 Inline workflow。
+
+Page-only 并不是全部都需要改为 Headless：
+- 古籍、知识库、医案是可浏览的知识资料入口；学习助手及问诊助手的资料检索复用 `AssistantKnowledgeContextBuilder`，不靠跳转页面代替检索。
+- 诊断历史、重症资料属于用户主动浏览的页面能力，不是应由模型自动打开的业务计算器。
+- 不以 Headless 数量作为目标；只把已有纯函数/本地数据查询且参数与来源可验证的能力放入当前对话。
+
+### 11.2 当前对话执行链已经存在
+
+核心代码：
+- `lib/services/assistant_conversation_orchestrator.dart`：规则优先识别工具意图、提取已声明参数、保留未知值并在歧义/缺项时澄清；E4B 候选工具筛选只允许 `headlessExecutor != null` 的能力，不把 Page Tool 路由给模型执行。
+- `lib/screens/local_ai_interview_screen.dart::_requestTool`：收集槽位、追问、保持待补参数状态；只有明确页面意图才走页面导航。
+- `lib/screens/local_ai_interview_screen.dart::_executeHeadlessTool`：执行前参数校验和红旗边界检查，调用 App executor，验证 toolId、结构化输出、实际参数和 sourceIds，写 TRACE、持久化并按结果状态决定是否交给 AI。
+- `lib/models/assistant_tool_result.dart`：SUCCEEDED 必须有结构化字段和真实来源；拒绝 `local-page-tool:` 合成路由来源。
+- `lib/screens/local_ai_interview_screen.dart::_restoreVisibleConversationToModel`：UNKNOWN/FAILED/CANCELLED/NO_RESULT 或旧式页面 String 结果可供用户查看，但不回放为模型事实；待补参数 `AWAITING_PARAMETERS` 消息仍保留。
+
+只有同时满足以下条件的结果才交给 AI 解读：
+1. App 原有确定性代码或受控本地数据 executor 已实际执行；
+2. 返回 `AssistantToolResult.status == SUCCEEDED`；
+3. 有结构化 `values`、可核实的实际参数（若该工具有参数）和真实 `sourceIds`；
+4. 通过 `validateFor()` 与 `validateArgumentsMatch()`。
+
+失败、取消、没有结果或来源/参数不完整时不由模型补造结果。医学诊断性内容除有 App 规则实际执行结果外，还必须由本地知识库可追溯条目支持；民俗/命理来源只能支持文化解释，不能升级为医学诊断。
+
+### 11.3 本 PR：玉匣灵兆的最小 Headless 切片
+
+- 原页面 `YuxiajiOmenScreen` 的常规“当前时辰”数据只依赖 App 本机时间、`shiChenIndexOf` 和 `kYuXiaJiShiChenOmens` 本地表，不需要额外用户参数。
+- 本 PR 把当前时辰查询抽为共享纯时间 helper 与 `YuxiajiOmenToolExecutor`；页面复用同一 helper，避免两个时辰算法漂移。
+- 助手对话默认调用本地 executor，保存真实本机时间、UTC 偏移、时辰、对应文本和 `local-data:yuxiaji-omen` sourceId。
+- “方向/形态”特殊占法仍留在原页面，因为它们需要用户提供额外观察信息；不把无法验证的观察默认成已知值。
+- 解释提示明确规定：只解释本地民俗文本，不得把面热、眼跳、耳鸣、心惊、肉颤等条目包装为疾病、病因或健康风险；不输出诊断或治疗建议。
+- 针对性测试：`test/yuxiaji_omen_tool_executor_test.dart` 验证时辰边界、数据与来源；`test/assistant_tool_result_handoff_test.dart` 验证当前对话真实执行、无页面跳转、来源持久化和民俗解释边界。
+
+### 11.4 结果真实性门禁已进入 master（PR #196）
+
+PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge commit `2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97afe`。
+- `AssistantToolResult.validateFor()` 拒绝没有来源的 SUCCEEDED。
+- `local-page-tool:` 不能冒充业务执行来源。
+- Legacy String 页面回传变成 UNKNOWN，保持用户可见，但不进入模型 transcript，也不触发自动解释。
+- 历史恢复同样过滤 UNKNOWN/合成页面来源；参数澄清的等待状态继续保留。
+- PR CI：run [43787526563](https://github.com/just2512/nihaixia-app/actions/runs/43787526563) Flutter regression + Android arm64 均 SUCCESS；run [43787521411](https://github.com/just2512/nihaixia-app/actions/runs/43787521411) 静态分析、changed tests 和 test-pairing SUCCESS。
+
+### 11.5 本节未声称已完成的项目
+
+- 本地 OPPO Find N2 的 E4B GPU/CPU 多轮、权限/取消、Activity recreation、force-stop/restart、AI 数据清除与 TRACE 实测仍为 `UNKNOWN`；GitHub CI 不能替代设备证据。
+- 经典/本草现代讲稿的权利来源仍按 `docs/upstream-sync-ledger.md` 的 HOLD 状态，不因 Headless 改造而改变。
+- 不新增 Agent/DAG、第二套 ToolRouter、第二套知识检索系统或新的 SQLite schema。
