@@ -662,6 +662,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('玉匣灵兆的方向与灯花占法保留原页面，不猜测用户观察输入',
+      (tester) async {
+    final service = _RecordingAssistantService();
+    final store = _NoopAssistantConversationStore();
+    var pageOpened = false;
+    var executorCalled = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          service: service,
+          conversationStore: store,
+          imagePicker: _NoLostImagePicker(),
+          testToolRouteBuilder: (tool, _) {
+            if (tool.id == 'yuxiaji_omen') pageOpened = true;
+            return const SizedBox.shrink();
+          },
+          testHeadlessToolExecutor: (arguments) {
+            executorCalled = true;
+            return YuxiajiOmenToolExecutor.execute(arguments);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('玄学大师').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '查询鸦鸣鹊噪方向');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(executorCalled, isFalse,
+        reason: '方向占需要用户观察到的来向，不应由本机时间查询代替');
+    expect(pageOpened, isFalse);
+    expect(find.text('打开玉匣灵兆'), findsOneWidget);
+    await tester.tap(find.text('打开玉匣灵兆'));
+    await tester.pumpAndSettle();
+    expect(pageOpened, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('八字助手在当前对话后台调用本地引擎并把完整结果交给 AI 解读',
       (tester) async {
     final service = _RecordingAssistantService();
