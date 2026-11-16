@@ -179,7 +179,7 @@
 - `assistant_history_screen.dart` 采用列表和 `outlineVariant` 分隔线；已有列表、多选删除、恢复和持久化相关测试。尚缺少该页的折叠窗口与 200% 字号视觉覆盖。
 - `tool_foldable_layout_test.dart` 已覆盖注册工具的展开内屏零宽 fold 与半折叠物理 hinge 路由边界；不得删除或缩小现有覆盖范围。
 
-该审计只确定下一批核对重点。Phase 2 合并前不修改 Phase 3 页面，也不把“已有共享组件/局部 Token”误报为需要重做。
+该只读审计在 Phase 2 合并前完成，只确定下一批核对重点；Phase 2 已合并后，Phase 3 才允许在独立分支按下述顺序实施。不得把“已有共享组件/局部 Token”误报为需要重做。
 
 **主要文件族**
 - `lib/screens/tools_screen.dart` 及其实际存在的工具页面。
@@ -283,9 +283,9 @@
 | Token 对比度自动测试 | `PASS`（CI） | PR #211 的 Flutter regression 与 Android arm64 CI success；Run `43839568819`，Android job `133207359364` |
 | Token 已进入 master | `PASS` | PR #211 已合并，集成提交 `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4` |
 | Phase 1 首页主题一致性 | `PASS` | PR #211 合并；Run `43839560908` 静态分析/改动测试 success，Run `43839568819` Flutter regression 与 Android arm64 success；合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4` |
-| Phase 2 知识与详情改造 | `PASS`（代码与自动化门禁） | PR #212，代码 HEAD `6d19e6e28d594d745295d9571ba12378e733c22f`；Flutter 全量回归 Run `43847224909` success；分支静态分析/改动测试 Run `43847218322` success；Android arm64 job `133233113371` success。计划台账更新会产生新 HEAD，合并前仍须确认新 HEAD 的 CI |
-| Phase 2 集成状态 | `MISSING` | PR #212 尚未合并；须等待台账更新后的最新 CI 通过，再按预期 HEAD 合并 |
-| Phase 3 其他页面改造 | `MISSING`（只读审计已开始） | 已核对工具、收藏、设置、历史对话入口和现有测试；审计结论见下方，不代表 Phase 3 已实施 |
+| Phase 2 知识与详情改造 | `PASS`（代码与自动化门禁） | PR #212；代码 HEAD `8f997362eb9574d02ab2b541a75a526428e45b66`；Flutter 全量回归 Run `43851588625` success；push 分支校验 Run `43851581819` success；Android arm64 job `133247973799` success |
+| Phase 2 集成状态 | `PASS` | PR #212 已于 2026-11-16 squash 合并；master 集成 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749` |
+| Phase 2 合并后主线 CI | `UNKNOWN`（运行中） | Flutter tests Run `43855518336`、Flutter Quality Gate Run `43855518261` 尚在执行；完成后需复核结果 |
+| Phase 3 其他页面改造 | `MISSING`（独立分支已建立） | `work/yanji-editorial-phase3` 基于 Phase 2 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749` 创建；当前为只读审计结束、代码验收未开始 |
 | Find N2 实机阅读 | `MISSING` | 需要 OPPO Find N2 真实设备截图、系统/窗口参数和连续阅读记录 |
-| Find N2 实机阅读 | `MISSING` | 需要真实设备截图与阅读记录 |
 

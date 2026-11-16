@@ -12,7 +12,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新核验基线 | `4398bc365c43718b105c06f66ab13b106b21ede2` | PR #182 已合并；对应 post-merge 主线 CI 见第 49 节 |
+| 本轮最新核验基线 | `09293c55b7c3069e3118291e871ef96d087b5a17` | PR #206 已合并；合并后主线 CI 见第 56 节 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -20,7 +20,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**本轮核验范围：** 已复核当前 master HEAD、两份 AI 约束文档、PR #182 的实现与完整变更、PR 分支 CI 及合并后的主线 CI；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 仍未由云端执行，必须按本地清单取得设备证据。历史审计没有在本轮全部重跑的部分，仍以原记录和证据为准。
+**核验基线说明：** 本表所列为当前台账最新核验的代码主线基线；历史任务范围与历次核验仍以各节记录为准。PR #206 的合并和 post-merge CI 见第 56 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
 
 ## 2. 状态定义
 
@@ -2466,3 +2466,36 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - AI 仍只负责理解意图、提取参数、澄清缺项、选择已有能力和解释已校验结果。
 - 排盘、问诊辨证、历法和剂量等业务执行仍由 App 确定性代码完成；没有 `SUCCEEDED`、结构化结果、参数匹配和真实 sourceId 的结果不得交给 AI 作为事实。
 - 本次工具布局审计不修改业务规则、排盘算法、AI 编排、ToolRouter、知识库、数据库或手动更新机制。
+
+
+## 56. 2026-11-16 PR #206：Find N2 工具页面单侧面板布局修复与验收
+
+### 56.1 合并信息
+- PR [#206](https://github.com/just2512/nihaixia-app/pull/206) 已 squash 合并至 `master`。
+- 工作分支：`test/find-n2-tool-pages-single-pane-2026-11-16`。
+- PR 最终 head：`0a0c32d7b08fee4e8991e11ccbd271df4b36a0d3`；合并前 base：`5932beb62dd9317db9b2018a6ae8d5169a1956b8`。
+- 最终 merge commit / 本轮代码核验基线：`09293c55b7c3069e3118291e871ef96d087b5a17`（2026-11-16 08:33 UTC）。
+- 本切片只处理工具页面单侧面板约束、窄屏控件布局及相应 Widget 测试；未修改排盘/问诊/剂量业务规则、AI 编排、ToolRouter、知识库、数据库或手动更新机制。
+
+### 56.2 布局测试与实际修复
+- `test/tool_foldable_layout_test.dart` 对 18 项 Headless 工具页面逐项进行 Widget 验收：完全展开窗口 775×830 dp、零宽 fold；半折叠窗口 800×1000 dp、竖向 hinge x=388..412；从右侧物理面板入口打开，并检查页面边界及 `tester.takeException()`。
+- 测试首轮 run `43825637377` 发现真实窄屏溢出：易经手动选卦的上卦/下卦/动爻下拉控件横向排列溢出约 7.1 dp；剂量换算单位下拉控件溢出约 16 dp（单侧可用内容宽度约 356 dp）。
+- `lib/screens/yijing_screen.dart` 在窄宽度下将三个选择控件改为纵向排列并展开下拉内容；宽屏保留原有横向布局。
+- `lib/screens/dosage_converter_screen.dart` 在窄宽度下将数值与单位控件改为纵向排列并展开下拉内容；宽屏保留原有横向布局。两处仅调整布局，不改变计算逻辑。
+- 测试夹具通过显式返回首页、等待工具路由子树挂载、固定帧推进持续加载页面、隔离 sqflite FFI 测试数据库等方式处理 Navigator/动画/数据库生命周期；梅花页注入空加速度流隔离测试环境硬件依赖，不改变生产传感器行为。
+
+### 56.3 PR head 与合并后主线 CI
+| 验收范围 | Workflow / Run | Head SHA | 实际执行结果 |
+|---|---|---|---|
+| PR 最终 head | Flutter tests / `43830447764` | `0a0c32d7b08fee4e8991e11ccbd271df4b36a0d3` | Flutter regression tests：SUCCESS；Android arm64 APK、ABI、Manifest、Native unit tests：SUCCESS |
+| 合并后 master | Flutter tests / `43832185814` | `09293c55b7c3069e3118291e871ef96d087b5a17` | Flutter regression tests：SUCCESS；Android arm64 APK、ABI、Manifest、Native unit tests：SUCCESS |
+| 合并后 master | Flutter Quality Gate / `43832185754` | `09293c55b7c3069e3118291e871ef96d087b5a17` | Analyze and test：SUCCESS；包括 Dart tests、Android Native unit tests、Find N2 arm64 Debug APK build |
+
+- 上述 PR 与主线 Workflow 中的 Branch validation job 均按 workflow 条件为 SKIPPED；该状态不计为 PASS，也不是失败。所有实际执行的验收 Job 均为 SUCCESS。
+- **云端自动化验收：PASS。** PR 最终 head 的 Flutter 回归与 Android arm64 验证通过；合并后的 master 两条 Workflow 也已全部完成，实际执行项全部通过。
+
+### 56.4 真机验收边界
+- Find N2 真机验收仍为 `LOCAL / MISSING`，不能由模拟窗口 Widget 测试、CI 或 Debug APK 构建替代。
+- 设备侧仍需核对：内屏展开时紫微整屏命盘与宫位详情；半折叠时工具页是否限制在触发侧且避开 hinge；易经手动选卦与剂量换算控件；外屏入口和主要操作。
+- 真机记录至少应包含系统版本、App commit SHA、实际 `sizeDp`、`displayFeatures`、页面截图及异常日志。取得这些证据前，不将 Find N2 设备验收标记为 PASS。
+
