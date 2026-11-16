@@ -160,7 +160,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
         child: ListView(
           key: ValueKey(acupoint.name),
           padding: const EdgeInsets.all(16),
-        children: [
+          children: [
           if (_siblings.length > 1)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -715,8 +715,11 @@ class _AcupointBookmarkButtonState extends State<_AcupointBookmarkButton> {
 
   Future<void> _loadSavedState() async {
     try {
-      final saved = await DatabaseHelper.instance
-          .isBookmarked(widget.acupoint.name);
+      final bookmarks =
+          await DatabaseHelper.instance.getAllBookmarks();
+      final saved = bookmarks.any((bookmark) =>
+          bookmark.title == widget.acupoint.name &&
+          bookmark.category == '穴位');
       if (mounted) setState(() => _saved = saved);
     } catch (_) {
       // 收藏表不可用时不影响穴位详情页。
