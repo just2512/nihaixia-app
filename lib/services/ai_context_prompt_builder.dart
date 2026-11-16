@@ -1,11 +1,30 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
+
 import '../models/ai_context_ref.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
 class AiContextPromptBuilder {
   const AiContextPromptBuilder._();
+
+  /// Content-addresses a deterministic tool result using its exact input,
+  /// rule version and normalized result payload. Callers supply an insertion-
+  /// ordered map; no wall-clock timestamp participates in the identity.
+  static String snapshotIdForToolResult({
+    required Map<String, Object?> input,
+    required String ruleVersion,
+    required String resultPayload,
+  }) {
+    final snapshot = jsonEncode({
+      'schema': 'tool-result-snapshot-v1',
+      'input': input,
+      'ruleVersion': ruleVersion,
+      'result': resultPayload,
+    });
+    return sha256.convert(utf8.encode(snapshot)).toString();
+  }
 
   static String buildClassicSelection({
     required AiContextRef ref,
