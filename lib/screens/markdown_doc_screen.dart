@@ -165,6 +165,7 @@ class MarkdownDocScreen extends StatefulWidget {
 
 class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
   late Future<String> _future;
+  String? _rawDocumentContent;
   String _selectedText = '';
 
   bool get _contextualAskEnabled =>
@@ -227,7 +228,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
             onPressed: () {
               final selected = _selectedText;
               state.hideToolbar();
-              _askAiAboutSelection(selected, data);
+              _askAiAboutSelection(selected, _rawDocumentContent ?? data);
             },
           ));
         }
@@ -248,6 +249,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
 
   Future<String> _load() async {
     final raw = widget.content ?? await rootBundle.loadString(widget.asset);
+    _rawDocumentContent = raw;
     return widget.linkFormulas ? _injectLinks(raw) : raw;
   }
 
