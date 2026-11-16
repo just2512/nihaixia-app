@@ -34,6 +34,22 @@ void main() {
         reason: '灵枢应能搜到九针相关章节');
   });
 
+  test('上游独有条文可检索且不覆盖本地同名条文', () async {
+    final jingui = await ClassicSearchService.search('诃黎勒散');
+    expect(
+      jingui.hits.any((h) => h.asset == 'assets/jingui/clause_453.md'),
+      isTrue,
+      reason: '新增金匮条文应进入搜索索引',
+    );
+
+    final shanghan = await ClassicSearchService.search('胃中寒冷故也');
+    expect(
+      shanghan.hits.any((h) => h.asset == 'assets/shanghan/clause_380.md'),
+      isTrue,
+      reason: '新增伤寒宋本条文应进入搜索索引',
+    );
+  });
+
   test('命中带来源标签与摘要，标题命中排在正文命中之前', () async {
     final r = await ClassicSearchService.search('上古天真论');
     expect(r.hits, isNotEmpty);

@@ -409,3 +409,34 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - PR #194、#195、#196、#197 已进入 master；AI 结果真实性门禁和四类助手既有边界保留。
 - PR #193 为本台账文档 PR；本节提交后以最新 master 为基线更新分支和 CI 记录。
 - 尚未同步的经典/本草资产当前状态为 `INTEGRATION_PENDING`，不再标记 `RIGHTS_EVIDENCE_MISSING` 或 `PROVENANCE_REQUIRED`。
+
+## 18. 2026-11-16 经典资料增量切片（独立分支实施）
+
+### 18.1 文件差异结论
+
+- 基线：`master @ c69b5ba95f2ac50516cfcb184f1467a285a73545`。
+- 上游：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
+- 金匮：新增路径仅 `clause_453.md`、`clause_454.md`；共同的 431 个路径中有 423 个内容 SHA 不同。
+- 伤寒：新增路径包括 11 个 `clause_380.md`—`clause_390.md` 和 4 篇六经附录；共同的 379 个路径内容 SHA 全部不同。
+- 因此本切片只追加上游独有的 17 个 Markdown 文件；不覆盖任何同名本地原文，不将上游宋本整理口径替换为 fork 原有讲稿。
+- `176_board.jpg` 未采纳：它只被上游版本的 `assets/shanghan/clause_176.md` 引用；fork 同路径的 clause_176 内容完全不同且不引用该图，单独复制会形成无入口孤儿资源。
+
+### 18.2 实施范围
+
+- 上游来源提交：金匮 `688d6b30fddc31e0683570bb9029ed38f9666755`、`a0380f2afd7531e084c61a6db2e758499aab8560`；伤寒 `ffff7ba46d8906473ac2084736e68dc1c6fd0efb`、`741afaa685c4307afb78dd116eefcab067a1d711`、`1ac793216168031ca0bd204783d64c4535299fa6`、`f9f0d05991e5a0c15934afce6710d33365163d2e`。
+- `classic_lecture_data.dart`：在现有伤寒 380 项之后分配唯一 seq 380—394；金匮在现有 453 项之后分配 seq 453—454。原有 seq 和 asset 不改。
+- 阅读入口明确标识新增的宋本条目与附录，避免与本地原有讲稿序号混淆。
+- 搜索：保留 fork 的 `classic_index.json.gz`；额外加入 upstream/main 生成的索引 blob `e144a44b3f9c5141e7e82a5ab6c820ae25218e51`，运行时只纳入上述 17 个新增 asset 路径，防止同名内容覆盖或重复命中。
+- 定向验收：阅读资产逐条加载；新增金匮/伤寒关键词可搜索；已有文件路径与内容保持不变。
+
+### 18.3 当前实施状态
+
+- 分支：`sync/upstream-classics-20261116`，基于 master `c69b5ba95f2ac50516cfcb184f1467a285a73545`。
+- 本节记录切片范围和差异判定；PR #198 最新 head 与 Actions 结果以 GitHub 元数据为准。
+- 本地 Find N2 阅读布局仍须设备验收；云端 CI 不替代真机证据。
+
+### 18.4 CI 失败定位与修正记录
+
+- 首轮全量回归 `43798546328`：1611 passed / 1 failed / 15 skipped。唯一失败为新增伤寒检索用例使用高频词“霍乱”，目标 `clause_382.md` 未进入搜索展示上限 40 的命中列表；不是资产缺失或索引未加载。
+- 修正为查询新增条文中特征短语“胃中寒冷故也”，断言目标资产 `assets/shanghan/clause_380.md`，保留搜索展示上限、排序与原有断言，不删测试、不放宽验收。
+- 修正后新提交：`cc5fa686c6a6d86af07680c2486060c908f5ad9b`；对应 PR workflow run `43799091870` 初始状态 PENDING。最终状态以该 head 的完整 Flutter regression 结果为准。

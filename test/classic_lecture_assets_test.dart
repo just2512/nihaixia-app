@@ -23,13 +23,13 @@ void main() {
 
   test('伤寒论 阅读库资产全部可加载', () async {
     // 条文级拆分后：23 篇 → 380 条
-    expect(kShangHanLectures.length, 380);
+    expect(kShangHanLectures.length, 395);
     await expectAllLoadable(kShangHanLectures, '伤寒论');
   });
 
   test('金匮要略 阅读库资产全部可加载', () async {
     // 条文级拆分后：25 篇 → 453 条
-    expect(kJinguiLectures.length, 453);
+    expect(kJinguiLectures.length, 455);
     await expectAllLoadable(kJinguiLectures, '金匮要略');
   });
 
