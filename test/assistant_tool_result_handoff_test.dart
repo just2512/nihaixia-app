@@ -170,7 +170,7 @@ class _RecordingAssistantService extends LocalAiService {
 
 
 void main() {
-  test('旧页面字符串只显示为 UNKNOWN，不作为业务来源或模型上下文', (tester) async {
+  testWidgets('旧页面字符串只显示为 UNKNOWN，不作为业务来源或模型上下文', (tester) async {
     final service = _RecordingAssistantService();
     final store = _NoopAssistantConversationStore();
     String? openedToolId;
