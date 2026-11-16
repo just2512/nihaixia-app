@@ -34,6 +34,7 @@ import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
+import '../models/ai_context_ref.dart';
 import '../services/yijing_tool_executor.dart';
 import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
@@ -170,6 +171,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.copyPrescriptionText,
     this.preferredAnchorPoint,
     this.initialPrompt,
+    this.contextRef = const {},
+    this.contextualTitle,
+    this.initialMode,
+    this.sheetScrollController,
     this.testToolRouteBuilder,
     this.testHeadlessToolExecutor,
     this.testSavedChartsLoader,
@@ -227,6 +232,13 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
   /// never sent automatically; the user remains responsible for submission.
   final String? initialPrompt;
+
+  /// Stable context anchor persisted in message metadata for this conversation.
+  final Map<String, String> contextRef;
+  final String? contextualTitle;
+  final AssistantMode? initialMode;
+  /// Optional scroll controller supplied by DraggableScrollableSheet.
+  final ScrollController? sheetScrollController;
 
   /// Injectable recorder for deterministic per-turn TRACE tests.
   @visibleForTesting
@@ -289,7 +301,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _activeRecordingPath;
   Future<void> _recorderOperation = Future<void>.value();
   final TextEditingController _inputController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  late final ScrollController _scrollController =
+      widget.sheetScrollController ?? ScrollController();
+  bool get _ownsScrollController => widget.sheetScrollController == null;
   final List<_InterviewMessage> _messages = [
     const _InterviewMessage(
       text: _assistantWelcomeMessage,
@@ -316,6 +330,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   List<String> _pendingHistoryUserMessages = const [];
   int _historyRestoreGeneration = 0;
   AssistantMode _assistantMode = AssistantMode.automatic;
+  Map<String, String> _activeContextRef = const {};
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
   AssistantToolArguments? _pendingBaziArguments;
@@ -467,6 +482,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   @override
   void initState() {
     super.initState();
+    _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
+    if (widget.initialMode != null) _assistantMode = widget.initialMode!;
     _service = widget.service ?? LocalAiService();
     _imagePicker = widget.imagePicker ?? _PluginLocalAiImagePicker();
     _attachmentStore = widget.attachmentStore ?? LocalAiAttachmentStore();
@@ -1355,6 +1372,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         attachmentType: attachmentType,
         toolArguments: toolArguments,
         traceId: traceId,
+        contextRef: _activeContextRef,
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
@@ -1376,6 +1394,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
           traceId: traceId,
+          contextRef: _activeContextRef,
         ).encode(),
       );
       return true;
@@ -6035,12 +6054,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingDreamArguments;
     AssistantToolArguments? restoredPendingShoushengDebtArguments;
     AssistantToolArguments? restoredPendingSavedChartsArguments;
+    var restoredContextRef = const <String, String>{};
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
       final metadata = row['metadata'] as String? ?? '';
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
       final messageMetadata = AssistantMessageMetadata.decode(metadata);
+      if (messageMetadata.contextRef.isNotEmpty) {
+        restoredContextRef = AiContextRef.normalizeMetadata(messageMetadata.contextRef);
+      }
       final selectedModeValue = messageMetadata.selectedMode;
       final effectiveModeValue = messageMetadata.mode;
       final legacyModeValue = selectedModeValue == null ? effectiveModeValue : null;
@@ -6319,6 +6342,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
+      _activeContextRef = Map.unmodifiable(restoredContextRef);
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
       _pendingBaziArguments = restoredPendingBaziArguments;
@@ -8917,6 +8941,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
       _conversationIdFuture = _createNewConversation();
+      _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
       _pendingBaziArguments = null;
@@ -9006,7 +9031,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         : <String?>[_imagePath, _audioPath];
     unawaited(_disposeRecorder(pendingAttachments));
     _inputController.dispose();
-    _scrollController.dispose();
+    if (_ownsScrollController) _scrollController.dispose();
     super.dispose();
   }
 
@@ -9074,7 +9099,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       // 输入框被挤到顶部、对话区变空白）。
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('汉唐 AI 助手'),
+        title: Text(widget.contextualTitle == null
+            ? '汉唐 AI 助手'
+            : '问 AI · ${widget.contextualTitle}'),
         actions: [
           if (_tcmInterviewController != null)
             IconButton(
