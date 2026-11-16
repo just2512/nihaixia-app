@@ -79,7 +79,16 @@ Future<void> _openToolAndCheck({
   );
 
   await tester.tap(find.byKey(openKey));
-  await tester.pumpAndSettle();
+  if (tool.id == 'saved_charts') {
+    // SavedChartsScreen performs an async SQLite read while showing an
+    // indeterminate progress indicator. Advance the route and first data
+    // frame without waiting for that animation to "settle".
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+  } else {
+    await tester.pumpAndSettle();
+  }
 
   final route = find.byKey(routeKey);
   expect(route, findsOneWidget, reason: tool.id);
@@ -94,7 +103,13 @@ Future<void> _openToolAndCheck({
 
   // Return to the launcher before testing the second physical posture.
   Navigator.of(tester.element(route)).pop();
-  await tester.pumpAndSettle();
+  if (tool.id == 'saved_charts') {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+  } else {
+    await tester.pumpAndSettle();
+  }
 }
 
 void main() {
