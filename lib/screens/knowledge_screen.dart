@@ -162,7 +162,7 @@ class _MeridianTab extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '欲解时：$healingTime',
-                            style: TextStyle(fontSize: 10, color: context.colors.onSurfaceVariant),
+                            style: TextStyle(fontSize: AppType.micro, color: context.colors.onSurfaceVariant),
                           ),
                         ),
                       ],
@@ -440,7 +440,7 @@ class _FormulaTabState extends State<_FormulaTab> {
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
             onChanged: (v) => setState(() {
@@ -744,7 +744,7 @@ class _HerbTabState extends State<_HerbTab> {
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
             onChanged: (v) => setState(() {

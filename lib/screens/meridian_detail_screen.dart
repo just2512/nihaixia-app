@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import '../engine/diagnostic_rules.dart';
@@ -61,7 +62,7 @@ class MeridianDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: context.colors.meridianContainer(meridian),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(color: context.colors.outlineVariant),
               ),
               child: Column(
@@ -78,7 +79,7 @@ class MeridianDetailScreen extends StatelessWidget {
                             Text(
                               '$meridian病',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: AppType.headline,
                                 fontWeight: FontWeight.bold,
                                 color: color,
                               ),
@@ -86,7 +87,7 @@ class MeridianDetailScreen extends StatelessWidget {
                             Text(
                               '${details['nature']} · ${details['organ']}',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: AppType.body,
                                 color: context.colors.onSurfaceVariant,
                               ),
                             ),
@@ -101,12 +102,12 @@ class MeridianDetailScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: cs.surface,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       '核心脉证：${details['keyPulse']}',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: AppType.body,
                         fontWeight: FontWeight.w500,
                         color: cs.onSurface,
                       ),
@@ -125,7 +126,7 @@ class MeridianDetailScreen extends StatelessWidget {
               runSpacing: 6,
               children: (details['coreSymptoms'] as List<String>)
                   .map((s) => Chip(
-                        label: Text(s, style: const TextStyle(fontSize: 12)),
+                        label: Text(s, style: const TextStyle(fontSize: AppType.caption)),
                         backgroundColor: context.colors.meridianContainer(meridian),
                         side: BorderSide(color: context.colors.outlineVariant),
                       ))
@@ -141,7 +142,7 @@ class MeridianDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: context.colors.meridianContainer(meridian),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Row(
                 children: [
@@ -150,7 +151,7 @@ class MeridianDetailScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       healingTime,
-                      style: const TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: AppType.body),
                     ),
                   ),
                 ],
@@ -172,12 +173,12 @@ class MeridianDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: context.colors.infoContainer,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(
                 details['classicText'],
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppType.body,
                   height: 1.6,
                   color: cs.onTertiaryContainer,
                 ),
@@ -193,12 +194,12 @@ class MeridianDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: context.colors.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(
                 details['niNote'],
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppType.body,
                   height: 1.6,
                   color: cs.onPrimaryContainer,
                 ),
@@ -221,7 +222,7 @@ class MeridianDetailScreen extends StatelessWidget {
                         f.indication.length > 50
                             ? '${f.indication.substring(0, 50)}...'
                             : f.indication,
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: AppType.caption),
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
@@ -251,7 +252,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 16,
+        fontSize: AppType.title,
         fontWeight: FontWeight.bold,
         color: color,
       ),
@@ -281,7 +282,7 @@ class _TransmissionCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
@@ -310,7 +311,7 @@ class _TransmissionCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: context.colors.meridianContainer(meridian),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -365,14 +366,14 @@ class _TransmissionRow extends StatelessWidget {
         Text(
           '$label：',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: AppType.caption,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 12),
+            style: const TextStyle(fontSize: AppType.caption),
           ),
         ),
       ],

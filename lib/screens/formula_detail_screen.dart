@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import '../models/formula.dart';
@@ -179,7 +180,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
-        title: Text(lec.name, style: const TextStyle(fontSize: 13)),
+        title: Text(lec.name, style: const TextStyle(fontSize: AppType.body)),
         trailing: const Icon(Icons.chevron_right, size: 18),
         onTap: () => Navigator.push(
           context,
@@ -201,7 +202,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
       Padding(
         padding: const EdgeInsets.only(top: 8, bottom: 2),
         child: Text(bookName,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+            style: TextStyle(fontSize: AppType.body, fontWeight: FontWeight.w600, color: color)),
       ),
       ...hits.map(_buildClauseCard),
     ];
@@ -235,7 +236,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,7 +244,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                   Text(
                     f.name,
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: AppType.headline,
                       fontWeight: FontWeight.bold,
                       color: cs.onPrimaryContainer,
                     ),
@@ -253,7 +254,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                     Text(
                       f.alias,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: AppType.body,
                         color: context.colors.onSurfaceVariant,
                       ),
                     ),
@@ -287,7 +288,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                             ),
                           )
                       : null,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
@@ -307,7 +308,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                           child: RichText(
                             text: TextSpan(
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: AppType.body,
                                 color: cs.onSurface,
                               ),
                               children: [
@@ -330,7 +331,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                             child: Text(
                               c.role,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: AppType.caption,
                                 color: context.colors.onSurfaceVariant,
                               ),
                             ),
@@ -348,7 +349,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
             const SizedBox(height: 8),
             Text(
               f.indication,
-              style: const TextStyle(fontSize: 14, height: 1.6),
+              style: const TextStyle(fontSize: AppType.body, height: 1.6),
             ),
             const SizedBox(height: 20),
 
@@ -361,12 +362,12 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: context.colors.dangerContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(
                   f.contraindication,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppType.body,
                     color: cs.onErrorContainer,
                     height: 1.5,
                   ),
@@ -381,7 +382,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 f.dosage,
-                style: const TextStyle(fontSize: 14, height: 1.6),
+                style: const TextStyle(fontSize: AppType.body, height: 1.6),
               ),
               const SizedBox(height: 20),
             ],
@@ -395,12 +396,12 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: context.colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(
                   f.explanation,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppType.body,
                     height: 1.6,
                     color: cs.onTertiaryContainer,
                   ),
@@ -419,7 +420,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
               )
             else if (_shanghanHits.isEmpty && _jinguiHits.isEmpty)
               Text('暂未在该模块经典中找到出处',
-                  style: TextStyle(fontSize: 13, color: context.colors.onSurfaceVariant))
+                  style: TextStyle(fontSize: AppType.body, color: context.colors.onSurfaceVariant))
             else ...[
               if (_shanghanHits.isNotEmpty) ..._buildBookGroup('伤寒论', _shanghanHits),
               if (_jinguiHits.isNotEmpty) ..._buildBookGroup('金匮要略', _jinguiHits),
@@ -440,7 +441,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: TextStyle(
-        fontSize: 16,
+        fontSize: AppType.title,
         fontWeight: FontWeight.bold,
         color: Theme.of(context).colorScheme.primary,
       ),
@@ -459,12 +460,12 @@ class _Tag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: AppType.caption,
           color: color,
           fontWeight: FontWeight.w500,
         ),

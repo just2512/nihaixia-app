@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../models/bookmark.dart';
 import '../utils/fold_aware_routes.dart';
 import '../models/acupoint_detail.dart';
@@ -167,7 +168,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
               child: Text(
                 '第 ${_index + 1}/${_siblings.length} 穴 · 左右滑动切换同经络穴位',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppType.caption,
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -181,7 +182,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: context.colors.infoContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(acupoint.attribute),
               ),
@@ -242,10 +243,10 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: Icon(Icons.auto_stories_outlined, color: colorScheme.primary),
-        title: const Text('古籍原文', style: TextStyle(fontSize: 15)),
+        title: const Text('古籍原文', style: TextStyle(fontSize: AppType.title)),
         subtitle: const Text(
           '《针灸大成》《灵枢》中提及本穴的章节',
-          style: TextStyle(fontSize: 12),
+          style: TextStyle(fontSize: AppType.caption),
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _showGujiSheet(context),
@@ -303,9 +304,9 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                   ListTile(
                     dense: true,
                     title: Text(hit.value.title,
-                        style: const TextStyle(fontSize: 14)),
+                        style: const TextStyle(fontSize: AppType.body)),
                     subtitle: Text('《${hit.key.title}》',
-                        style: const TextStyle(fontSize: 12)),
+                        style: const TextStyle(fontSize: AppType.caption)),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       Navigator.push(
@@ -339,10 +340,10 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: Icon(Icons.menu_book_outlined, color: colorScheme.primary),
-            title: const Text('讲义讲解', style: TextStyle(fontSize: 15)),
+            title: const Text('讲义讲解', style: TextStyle(fontSize: AppType.title)),
             subtitle: Text(
               '倪师针灸讲稿中 ${hits.length} 篇提及本穴',
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: AppType.caption),
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLectureSheet(context, hits, colorScheme),
@@ -380,17 +381,17 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                   child: Text(
                     '${h.seq + 1}',
                     style: TextStyle(
-                        fontSize: 11, color: colorScheme.onPrimaryContainer),
+                        fontSize: AppType.micro, color: colorScheme.onPrimaryContainer),
                   ),
                 ),
                 title: Text(
                   ZhenJiuLectureIndex.nameOf(h.seq),
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: AppType.body),
                 ),
                 trailing: Text(
                   '提及 ${h.count} 次',
                   style: TextStyle(
-                      fontSize: 12, color: colorScheme.onSurfaceVariant),
+                      fontSize: AppType.caption, color: colorScheme.onSurfaceVariant),
                 ),
                 onTap: () {
                   Navigator.pop(sheetCtx);
@@ -434,7 +435,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppType.title,
               fontWeight: FontWeight.bold,
               color: isWarning
                   ? colors.danger
@@ -449,12 +450,12 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               border: Border.all(color: borderColor),
             ),
             child: Text(
               content,
-              style: const TextStyle(fontSize: 14, height: 1.6),
+              style: const TextStyle(fontSize: AppType.body, height: 1.6),
             ),
           ),
         ],
@@ -472,7 +473,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           Text(
             '倪师处方公式',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppType.title,
               fontWeight: FontWeight.bold,
               color: colorScheme.primary,
             ),
@@ -483,7 +484,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: context.colors.infoContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                   border: Border.all(color: context.colors.info),
                 ),
                 child: Column(
@@ -495,12 +496,12 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
                         color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
                       ),
                       child: Text(
                         f.title,
                         style: TextStyle(
-                            fontSize: 12,
+                            fontSize: AppType.caption,
                             color: colorScheme.onPrimary,
                             fontWeight: FontWeight.bold),
                       ),
@@ -530,7 +531,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           Text(
             '关联穴位处方',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppType.title,
               fontWeight: FontWeight.bold,
               color: colorScheme.onSurface,
             ),
@@ -538,7 +539,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           const SizedBox(height: 4),
           Text(
             '以下穴位处方包含本穴',
-            style: TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant),
+            style: TextStyle(fontSize: AppType.caption, color: context.colors.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           ...entries.map((e) => Card(
@@ -564,12 +565,12 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                               color: e.source == 'nihaisha'
                                   ? context.colors.warningContainer
                                   : context.colors.infoContainer,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(AppRadius.xs),
                             ),
                             child: Text(
                               e.sourceLabel,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: AppType.micro,
                                 color: e.source == 'nihaisha'
                                     ? context.colors.warning
                                     : context.colors.info,
@@ -608,7 +609,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           Text(
             '关联透针透穴',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppType.title,
               fontWeight: FontWeight.bold,
               color: colorScheme.onSurface,
             ),
@@ -633,7 +634,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                           children: p.indications
                               .map((ind) => Chip(
                                     label: Text(ind,
-                                        style: const TextStyle(fontSize: 10)),
+                                        style: const TextStyle(fontSize: AppType.micro)),
                                     backgroundColor: context.colors.successContainer,
                                     visualDensity: VisualDensity.compact,
                                   ))
@@ -667,7 +668,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
     if (detail == null) {
       return Chip(
         label: Text(name,
-            style: TextStyle(fontSize: 12, color: context.colors.outline)),
+            style: TextStyle(fontSize: AppType.caption, color: context.colors.onSurfaceVariant)),
         backgroundColor: context.colors.surfaceContainerHighest,
         visualDensity: VisualDensity.compact,
       );
@@ -684,7 +685,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
               );
             },
       child: Chip(
-        label: Text(name, style: const TextStyle(fontSize: 12)),
+        label: Text(name, style: const TextStyle(fontSize: AppType.caption)),
         backgroundColor: isSelf
             ? context.colors.warningContainer
             : context.colors.infoContainer,

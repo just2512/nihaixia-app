@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import '../models/herb.dart';
 import '../theme/app_colors.dart';
@@ -128,7 +129,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                   const SizedBox(width: 4),
                   Text(
                     herb.natureCategory,
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: AppType.title),
                   ),
                 ],
               ),
@@ -149,7 +150,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                   Text(
                     herb.name,
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                        fontSize: AppType.headline, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -229,7 +230,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                         Text(
                           '禁忌',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppType.title,
                             fontWeight: FontWeight.bold,
                             color: cs.onErrorContainer,
                           ),
@@ -240,7 +241,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                     Text(
                       herb.contraindication!,
                       style: TextStyle(
-                          fontSize: 14,
+                          fontSize: AppType.body,
                           height: 1.6,
                           color: cs.onErrorContainer),
                     ),
@@ -267,7 +268,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                         Text(
                           '倪师临床口述',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppType.title,
                             fontWeight: FontWeight.bold,
                             color: cs.onTertiaryContainer,
                           ),
@@ -278,7 +279,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                     Text(
                       herb.clinicalNotes!,
                       style: TextStyle(
-                          fontSize: 14,
+                          fontSize: AppType.body,
                           height: 1.6,
                           color: cs.onTertiaryContainer),
                     ),
@@ -305,7 +306,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                         Text(
                           '历代医家注释',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppType.title,
                             fontWeight: FontWeight.bold,
                             color: cs.onSurfaceVariant,
                           ),
@@ -316,7 +317,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                     Text(
                       herb.historicalNotes!,
                       style: TextStyle(
-                          fontSize: 14,
+                          fontSize: AppType.body,
                           height: 1.6,
                           color: cs.onSurfaceVariant),
                     ),
@@ -343,7 +344,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                         Text(
                           '药物比较',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppType.title,
                             fontWeight: FontWeight.bold,
                             color: cs.primary,
                           ),
@@ -356,7 +357,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                       child: Text(
                         '· $c',
                         style: TextStyle(
-                            fontSize: 14,
+                            fontSize: AppType.body,
                             height: 1.5,
                             color: cs.onSurface),
                       ),
@@ -433,7 +434,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
     final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
@@ -442,12 +443,12 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
             children: [
               Icon(icon, size: 22, color: cs.primary),
               const SizedBox(height: 4),
-              Text(label, style: const TextStyle(fontSize: 12)),
+              Text(label, style: const TextStyle(fontSize: AppType.caption)),
               const SizedBox(height: 2),
               Text(
                 count == null ? '…' : '$count 条',
                 style:
-                    TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                    TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
               ),
             ],
           ),
@@ -466,10 +467,10 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: Icon(Icons.menu_book_outlined, color: colorScheme.primary),
-            title: const Text('讲义讲解', style: TextStyle(fontSize: 15)),
+            title: const Text('讲义讲解', style: TextStyle(fontSize: AppType.title)),
             subtitle: Text(
               '倪师本草讲稿中 ${hits.length} 篇提及本药',
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: AppType.caption),
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLectureSheet(context, hits, colorScheme),
@@ -510,19 +511,19 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                   child: Text(
                     '${hit.seq + 1}',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: AppType.micro,
                       color: colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ),
                 title: Text(
                   BenCaoLectureIndex.nameOf(hit.seq),
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: AppType.body),
                 ),
                 trailing: Text(
                   '提及 ${hit.count} 次',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: AppType.caption,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -554,28 +555,27 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
       );
 
   Widget _buildSection(String title, String content, ColorScheme cs) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: cs.primary,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: AppType.title,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              content,
-              style: const TextStyle(fontSize: 14, height: 1.6),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            content,
+            style: const TextStyle(fontSize: AppType.body, height: 1.6),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+        ],
       ),
     );
   }

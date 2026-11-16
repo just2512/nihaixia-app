@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -121,7 +122,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppType.caption,
                   fontWeight: FontWeight.bold,
                   color: cs.primary,
                 ),
@@ -207,7 +208,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
               Text(
                 '相关医案',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: AppType.body,
                   fontWeight: FontWeight.bold,
                   color: cs.primary,
                 ),
@@ -291,7 +292,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: AppType.body,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -301,12 +302,12 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
                     '共方：${shared.join('、')}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: cs.primary),
+                    style: TextStyle(fontSize: AppType.micro, color: cs.primary),
                   )
                 else
                   Text(
                     '同诊断',
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                    style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
                   ),
               ],
             ),
