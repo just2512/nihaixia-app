@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   testWidgets('contextual selection is enabled only for a fully anchored reading block',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: [AppColors.light]),
       home: MarkdownDocScreen(
         title: '伤寒论条文样板',
         content: '#### 条文2\n\n> 太阳病，发热，汗出，恶风，脉缓者，名为中风。',
