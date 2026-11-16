@@ -172,8 +172,14 @@ void main() {
           maxScrolls: 24,
         );
         expect(ledgerLabel, findsOneWidget);
-        expect(find.textContaining('MISSING'), findsWidgets,
-            reason: '来源账本必须完整呈现缺失状态，不能裁掉状态标记');
+        final renderedRichText = tester
+            .widgetList<RichText>(find.byType(RichText))
+            .map((widget) => widget.text.toPlainText());
+        expect(
+          renderedRichText.any((text) => text.contains('MISSING')),
+          isTrue,
+          reason: '来源账本必须在 RichText 渲染树中完整保留缺失状态',
+        );
         expect(tester.takeException(), isNull,
             reason: '医案详情在${width.toInt()}dp / ${brightness.name} / 200% 不应溢出');
         await tester.pumpWidget(const SizedBox.shrink());
