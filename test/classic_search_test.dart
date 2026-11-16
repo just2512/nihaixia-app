@@ -42,9 +42,9 @@ void main() {
       reason: '新增金匮条文应进入搜索索引',
     );
 
-    final shanghan = await ClassicSearchService.search('霍乱');
+    final shanghan = await ClassicSearchService.search('胃中寒冷故也');
     expect(
-      shanghan.hits.any((h) => h.asset == 'assets/shanghan/clause_382.md'),
+      shanghan.hits.any((h) => h.asset == 'assets/shanghan/clause_380.md'),
       isTrue,
       reason: '新增伤寒宋本条文应进入搜索索引',
     );
