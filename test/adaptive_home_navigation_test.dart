@@ -480,4 +480,51 @@ void main() {
     },
   );
 
+
+  testWidgets(
+    'collapsed navigation handle shadow follows the active color scheme',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(775, 829);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const expectedShadow = Color(0xFF31463B);
+      final colorScheme = ColorScheme.fromSeed(
+        seedColor: const Color(0xFF43594D),
+        brightness: Brightness.dark,
+      ).copyWith(shadow: expectedShadow);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(colorScheme: colorScheme, useMaterial3: true),
+          home: AdaptiveHomeNavigation(
+            currentIndex: 0,
+            onDestinationSelected: (_) {},
+            destinations: _destinations,
+            screens: _screens(),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byTooltip('收起菜单栏'));
+      await tester.pumpAndSettle();
+
+      final expandButton = find.byTooltip('展开菜单栏');
+      expect(expandButton, findsOneWidget);
+      final handle = tester.widget<Container>(
+        find.descendant(
+          of: expandButton,
+          matching: find.byType(Container),
+        ).first,
+      );
+      final decoration = handle.decoration! as BoxDecoration;
+      expect(
+        decoration.boxShadow!.single.color,
+        expectedShadow.withValues(alpha: 0.25),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
 }

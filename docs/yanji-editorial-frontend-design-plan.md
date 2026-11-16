@@ -277,7 +277,7 @@
 | 浅色/深色主题 Token | `PASS`（分支内） | `lib/theme/app_colors.dart` |
 | Token 对比度自动测试 | `PASS`（CI） | PR #208 Flutter regression / Android arm64 CI success；Run 43834875048 |
 | Token 已进入 master | `MISSING` | PR #208 仍为 Draft，尚未合并 |
-| Phase 1 首页改造 | `MISSING` | 尚未开始 |
+| Phase 1 首页主题一致性 | `UNKNOWN` | 已提交一个最小主题 Token 对齐修正及定向 Widget 测试；等待本批 CI。其余首页/AI 首屏审查未发现需要重做布局的偏差 |
 | Phase 2 知识与详情改造 | `MISSING` | 尚未开始 |
 | Phase 3 其他页面改造 | `MISSING` | 尚未开始 |
 | Find N2 实机阅读 | `MISSING` | 需要真实设备截图与阅读记录 |
