@@ -50,6 +50,19 @@ void main() {
     );
   });
 
+  test('本草讲稿进入经典全文检索', () async {
+    final bencao = await ClassicSearchService.search('丹砂');
+    expect(
+      bencao.hits.any(
+        (hit) =>
+            hit.source == 'bencao' &&
+            (hit.asset ?? '').startsWith('assets/bencao_lecture/'),
+      ),
+      isTrue,
+      reason: '本草讲稿应通过本地经典搜索索引命中',
+    );
+  });
+
   test('命中带来源标签与摘要，标题命中排在正文命中之前', () async {
     final r = await ClassicSearchService.search('上古天真论');
     expect(r.hits, isNotEmpty);
