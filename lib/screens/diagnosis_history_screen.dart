@@ -125,7 +125,8 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
 
     final textScale = MediaQuery.textScalerOf(context)
         .scale(1)
-        .clamp(1.0, AppTextScale.max);
+        .clamp(1.0, AppTextScale.max)
+        .toDouble();
     final axisRowHeight = 25.0 * textScale;
 
     return SizedBox(
