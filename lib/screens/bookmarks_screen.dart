@@ -100,7 +100,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   String? _selectedCategory;
   int? _selectedFolderId;
   int? _selectedBookmarkId;
-  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -120,7 +119,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   void _loadData() async {
-    final generation = ++_loadGeneration;
     final db = DatabaseHelper.instance;
     final folders = await db.getAllFolders();
     List<Bookmark> bookmarks;
@@ -135,7 +133,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     } else {
       bookmarks = await db.getAllBookmarks();
     }
-    if (!mounted || generation != _loadGeneration) return;
+    if (!mounted) return;
     setState(() {
       _folders = folders;
       _bookmarks = bookmarks;
