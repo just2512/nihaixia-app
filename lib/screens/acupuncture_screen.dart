@@ -649,8 +649,6 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
 
   Widget _buildAcupointCard(AcupointDetail acupoint) {
     final colorScheme = Theme.of(context).colorScheme;
-    final hasDetail = acupoint.description.isNotEmpty || acupoint.location.isNotEmpty;
-
     return Card(
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
@@ -679,17 +677,16 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 style: const TextStyle(fontSize: 12),
               )
             : null,
-        trailing: hasDetail ? const Icon(Icons.chevron_right) : null,
-        onTap: hasDetail
-            ? () {
-                Navigator.push(
-                  context,
-                  FoldAwareMaterialPageRoute(sourceContext: context, 
-                    builder: (_) => AcupointDetailScreen(acupoint: acupoint),
-                  ),
-                );
-              }
-            : null,
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          Navigator.push(
+            context,
+            FoldAwareMaterialPageRoute(
+              sourceContext: context,
+              builder: (_) => AcupointDetailScreen(acupoint: acupoint),
+            ),
+          );
+        },
       ),
     );
   }
