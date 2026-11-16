@@ -13,8 +13,8 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | 本轮最新核验基线 | `09293c55b7c3069e3118291e871ef96d087b5a17` | PR #206 已合并；合并后主线 CI 见第 56 节 |
-| 应用版本 | `2.0.0+8040` | 独立产品 SemVer；Android versionCode 连续递增；规则见 `docs/versioning-policy.md` |
-| README 版本说明 | `2.0.0+8040` | 与 `pubspec.yaml`、`docs/versioning-policy.md` 同步；由版本源 guard 检查 |
+| 应用版本 | `2.0.0+8047` | 独立产品 SemVer；Android versionCode 连续递增；规则见 `docs/versioning-policy.md` |
+| README 版本说明 | `2.0.0+8047` | 与 `pubspec.yaml`、`docs/versioning-policy.md` 同步；由版本源 guard 检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
@@ -129,7 +129,7 @@
 
 ### G. 文档与版本一致性
 
-- [ ] README 与 `docs/versioning-policy.md` 从 `pubspec.yaml` 单一来源同步为 `2.0.0+8040`；Android `versionCode` 必须高于旧安装基线 `8039`。
+- [ ] README 与 `docs/versioning-policy.md` 从 `pubspec.yaml` 单一来源同步为 `2.0.0+8047`；Android `versionCode` 必须高于共享 applicationId 已知上限 `8046`。
 - [ ] `docs/ai-capability-audit.md` 只放规范与硬门槛。
 - [ ] `docs/ai-capability-audit-report.md` 放静态/动态审计报告。
 - [ ] `docs/local-ai-multiturn-audit.md` 放 Native 多轮专项审计。
