@@ -48,8 +48,20 @@ void main() {
             brightness == Brightness.dark ? AppColors.dark : AppColors.light,
           ],
         ),
-        home: const CriticalIllnessListScreen(),
+        home: MediaQuery(
+          data: MediaQueryData(
+            size: Size(width, 900),
+            textScaler: const TextScaler.linear(2),
+          ),
+          child: const CriticalIllnessListScreen(),
+        ),
       ),
+    );
+    final pageContext = tester.element(find.byType(CriticalIllnessListScreen));
+    expect(
+      MediaQuery.textScalerOf(pageContext).scale(1),
+      2,
+      reason: '本测试必须真实运行在200%字号，而非仅在标题中标注',
     );
     await tester.pumpAndSettle();
   }
