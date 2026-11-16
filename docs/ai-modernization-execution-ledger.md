@@ -2440,6 +2440,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 - `test/yuxiaji_omen_tool_executor_test.dart`：时辰边界、原始数据映射、真实来源、未声明参数拒绝。
 - `test/assistant_tool_result_handoff_test.dart`：用户在玄学大师对话请求查询时，Headless executor 被调用、页面未打开、结果/sourceId 持久化，解释提示明确排除医学诊断。
-- PR #197 当前 head：`7f0bb86beb9d653443f249d046c25163e0d78b59`。
+- 同一测试文件另覆盖特殊观察占法：请求“鸦鸣鹊噪方向”时不调用当前时辰 executor，先提示打开原页面；只有用户确认页面动作后才进入页面。
+- PR #197 head 和验收状态以 GitHub PR 元数据及该 head 对应的 Actions 运行记录为准；代码迭代期间不在本执行台账中固定过期 SHA。
 - Actions run：`43789354244` 与 `43789350484` 已创建，核验时仍在队列/执行阶段；此 head 的 Flutter 回归和 Android arm64 结果必须完成后再合并。
 - Find N2 真机执行、折叠屏适配、Native E4B 多轮及 TRACE 仍按第 52.6 节标记 LOCAL / UNKNOWN。CI 成功不替代设备证据。
