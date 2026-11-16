@@ -26,6 +26,7 @@ void main() {
     tester.view.physicalSize = Size(width, 900);
     await tester.pumpWidget(
       MaterialApp(
+        key: ValueKey('guji-${width.toInt()}-${brightness.name}'),
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: AppColors.colorSchemeFor(brightness),
@@ -179,11 +180,23 @@ void main() {
       expect(find.byType(Card), findsNothing);
       expect(tester.takeException(), isNull);
 
+      final bodyText = firstChapter.body.trim();
+      expect(bodyText.length, greaterThan(3));
+      await tester.enterText(
+        find.byType(TextField),
+        bodyText.substring(0, 4),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(firstChapter.title), findsWidgets,
+          reason: '应能按章节正文内容命中该章节');
+      expect(find.text('没有匹配的章节'), findsNothing);
+
       await tester.enterText(find.byType(TextField), firstChapter.title);
       await tester.pump();
       await tester.pump();
-      expect(find.text(firstChapter.title), findsWidgets);
-      expect(find.text('没有匹配的章节'), findsNothing);
+      expect(find.text(firstChapter.title), findsWidgets,
+          reason: '应能按章节标题检索');
 
       await tester.tap(find.byIcon(Icons.clear));
       await tester.pump();
