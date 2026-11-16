@@ -101,12 +101,20 @@ void main() {
     GujiBook book,
   ) async {
     await tester.tap(find.text(book.title).first);
-    // The test asset handler returns a small deterministic fixture. Waiting
-    // for the route to settle exercises the actual rootBundle/FutureBuilder
-    // contract without real-file I/O or a second runAsync event loop.
-    await tester.pumpAndSettle();
+    // Do not use pumpAndSettle here: the loading state contains an
+    // indeterminate progress indicator. Advance the route and then poll for
+    // the first chapter row with a bounded number of frames.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    for (var frame = 0;
+        frame < 20 && find.text('第001章').evaluate().isEmpty;
+        frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     expect(find.byType(GujiBookScreen), findsOneWidget);
+    expect(find.text('第001章'), findsOneWidget,
+        reason: '固定测试资产应在有限帧数内完成加载');
     final chapterContext = tester.element(find.byType(GujiBookScreen));
     expect(
       MediaQuery.textScalerOf(chapterContext).scale(1),
@@ -122,7 +130,8 @@ void main() {
 
   Future<void> returnToLibrary(WidgetTester tester) async {
     await tester.pageBack();
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
   }
 
   testWidgets('古籍书目在402/775dp、浅深主题与200%字号下可读且无重复卡片',
@@ -230,24 +239,28 @@ void main() {
         find.byType(TextField),
         bodyText.substring(0, 5),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       expect(find.text(firstChapter.title), findsWidgets,
           reason: '应能按章节正文内容命中该章节');
       expect(find.text('没有匹配的章节'), findsNothing);
 
       await tester.enterText(find.byType(TextField), firstChapter.title);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       expect(find.text(firstChapter.title), findsWidgets,
           reason: '应能按章节标题检索');
 
       await tester.tap(find.byIcon(Icons.clear));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       expect(find.text(firstChapter.title), findsWidgets);
 
       final chapterTitle = find.text(firstChapter.title).last;
       await tester.ensureVisible(chapterTitle);
       await tester.tap(chapterTitle);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
       expect(find.byType(MarkdownDocScreen), findsOneWidget);
       expect(find.textContaining('原文出自'), findsOneWidget);
       expect(tester.takeException(), isNull);
