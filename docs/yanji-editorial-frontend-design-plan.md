@@ -294,8 +294,8 @@
 | Phase 2 知识与详情改造 | `PASS`（代码与自动化门禁） | PR #212，最终 HEAD `8f997362eb9574d02ab2b541a75a526428e45b66`；Flutter 全量回归 Run `43851588625` success；push 分支校验 Run `43851581819` success |
 | Phase 2 集成状态 | `PASS` | PR #212 已于 2026-11-16 squash 合并；master 集成 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749` |
 | Phase 2 合并后主线 CI | `PASS` | master SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`：Flutter tests Run `43855518336` success；Android arm64 job `133261664292` success；Flutter Quality Gate Run `43855518261` success |
-| Phase 3 其他页面改造 | `IN_PROGRESS`（首批针对性验收通过） | 分支 `work/yanji-editorial-phase3`，HEAD `d68833fa86950ba2119a0b41a5fccd1b237242fd`；收藏、设置、历史对话与共享字号控件已改；Run `43863636922` 静态分析及 6 个 Widget 测试 success；PR 全量回归/Android arm64 尚待 PR 验收 |
-| Phase 3.1 集成状态 | `MISSING` | 尚未建立 PR；待最新分支门禁核对后创建 PR，执行全量 Flutter regression 和 Android arm64 检查 |
+| Phase 3 其他页面改造 | `IN_PROGRESS`（首批针对性验收通过） | 分支 `work/yanji-editorial-phase3`；收藏/设置/历史代码与测试提交 `d68833fa86950ba2119a0b41a5fccd1b237242fd`，台账同步提交 `63efa2bddf18e3cd85d8180aa94906844151c7d3`；Run `43863636922` 静态分析及 6 个 Widget 测试 success；PR 全量回归/Android arm64 尚待验收 |
+| Phase 3.1 集成状态 | `MISSING` | Phase 3.1 尚未合并；必须通过 PR 全量 Flutter regression、Android arm64 及合并后主线 CI，当前不能以分支定向测试代替 |
 | Phase 3.2 工具与辅助页面 | `MISSING`（只读审计） | 工具入口现有轻表面与 Fold 测试保留；后续按独立页面批次审查工具详情、命盘/易学辅助页和医案/经典辅助页 |
 | Find N2 实机阅读 | `MISSING` | 需要 OPPO Find N2 真实设备截图、系统/窗口参数和连续阅读记录 |
 
