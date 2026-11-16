@@ -101,30 +101,24 @@ void main() {
     GujiBook book,
   ) async {
     await tester.tap(find.text(book.title).first);
-    // Do not use pumpAndSettle here: the loading state contains an
-    // indeterminate progress indicator. Advance the route and then poll for
-    // the first chapter row with a bounded number of frames.
+    // The Future is backed by the deterministic mocked asset. Await that
+    // contract directly; do not wait for the indeterminate loading spinner
+    // or use a lazily built list row as the completion signal.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
-    for (var frame = 0;
-        frame < 20 && find.text('第001章').evaluate().isEmpty;
-        frame++) {
-      await tester.pump(const Duration(milliseconds: 100));
-    }
+    final chapters = await GujiRepository.chaptersOf(book);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.byType(GujiBookScreen), findsOneWidget);
-    expect(find.text('第001章'), findsOneWidget,
-        reason: '固定测试资产应在有限帧数内完成加载');
+    expect(chapters, hasLength(book.chapterCount));
+    expect(find.text(chapters.first.title), findsWidgets);
     final chapterContext = tester.element(find.byType(GujiBookScreen));
     expect(
       MediaQuery.textScalerOf(chapterContext).scale(1),
       2,
       reason: '章节目录路由也必须继承200%字号',
     );
-
-    final chapters = await GujiRepository.chaptersOf(book);
-    expect(chapters, hasLength(book.chapterCount));
-    expect(find.text(chapters.first.title), findsWidgets);
     return chapters;
   }
 
@@ -176,7 +170,10 @@ void main() {
       expect(route.book.id, book.id,
           reason: '每个书目入口必须携带自身稳定 ID');
       expect(chapters, hasLength(book.chapterCount));
-      expect(find.text(book.title), findsOneWidget);
+      // The previous route remains in the Navigator's overlay while the
+      // pushed chapter route is active, so the book title can be rendered
+      // both in the list below and in the current AppBar.
+      expect(find.text(book.title), findsWidgets);
       expect(find.byType(Card), findsNothing,
           reason: '章节目录不应重新引入重复 Card');
       expect(tester.takeException(), isNull);
