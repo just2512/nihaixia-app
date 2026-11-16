@@ -179,7 +179,16 @@ void main() {
           reason: '章节目录不应重新引入重复 Card');
       expect(tester.takeException(), isNull);
 
-      await returnToLibrary(tester);
+      // Recreate the Navigator between book cases. The test is verifying the
+      // two independent entry routes and their stable book IDs, not coupling
+      // both assertions to Flutter's overlapping route transition overlays.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await pumpLibrary(
+        tester,
+        width: 402,
+        brightness: Brightness.light,
+      );
     }
   });
 
@@ -263,7 +272,10 @@ void main() {
       expect(find.textContaining('原文出自'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
-      await returnToLibrary(tester);
+      // Isolate the next viewport/theme scenario from the previous Navigator
+      // transition and its retained Back tooltip.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     }
   });
 }
