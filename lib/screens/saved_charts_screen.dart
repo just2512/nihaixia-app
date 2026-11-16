@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
@@ -76,14 +78,14 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xs),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       '「${c.name}」用哪种方式排盘？',
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: AppType.body,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -92,11 +94,11 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
+              padding: const EdgeInsets.only(left: AppSpacing.lg, right: AppSpacing.lg, bottom: AppSpacing.xs),
               child: Text(
                 '两种排盘共用同一生辰数据，选择后自动带入',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: AppType.caption,
                   color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -116,7 +118,7 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.pop(ctx, 'bazi'),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
           ],
         ),
       ),
@@ -168,9 +170,9 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   itemCount: _charts.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const Divider(height: AppSpacing.md, indent: 56),
                   itemBuilder: (_, i) {
                     final c = _charts[i];
                     final solar = DateTime.tryParse(c.solarIso);
@@ -182,10 +184,10 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
                       direction: DismissDirection.endToStart,
                       background: Container(
                         alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
+                        padding: const EdgeInsets.only(right: AppSpacing.lg),
                         decoration: BoxDecoration(
                           color: cs.errorContainer,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: Icon(Icons.delete_outline, color: cs.onErrorContainer),
                       ),
@@ -193,9 +195,13 @@ class _SavedChartsScreenState extends State<SavedChartsScreen> {
                         return true;
                       },
                       onDismissed: (_) => _delete(c),
-                      child: Card(
-                        elevation: 2,
+                      child: Material(
+                        color: cs.surface,
                         child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
                           leading: Icon(
                             c.isMale ? Icons.male_outlined : Icons.female_outlined,
                             color: cs.primary,
