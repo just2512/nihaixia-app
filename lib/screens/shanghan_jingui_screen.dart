@@ -49,7 +49,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
             icon: Icons.account_tree_outlined,
             title: '伤寒论',
             subtitle: '六经辨证 · ${kShangHanLectures.length} 篇（条文级 + 五经概述）',
-            onTap: () => _open(context, const ClassicLibraryScreen(
+            onTap: () => _open(context, ClassicLibraryScreen(
               title: '伤寒论 · 阅读库',
               lectures: kShangHanLectures,
               seqLabel: (seq) => seq <= 379 ? '${seq + 1}' : seq <= 390 ? '宋本${seq}' : '附录${seq - 390}',
