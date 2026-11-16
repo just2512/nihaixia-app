@@ -122,13 +122,6 @@ void main() {
     return chapters;
   }
 
-  Future<void> returnToLibrary(WidgetTester tester) async {
-    final routeContext = tester.element(find.byType(GujiBookScreen));
-    Navigator.of(routeContext).pop();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-  }
-
   testWidgets('古籍书目在402/775dp、浅深主题与200%字号下可读且无重复卡片',
       (tester) async {
     addTearDown(tester.view.resetPhysicalSize);
