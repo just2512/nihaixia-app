@@ -88,7 +88,7 @@ android {
     }
 
     // ABI 分包：生成 armeabi-v7a / arm64-v8a / x86_64 独立 APK + 通用包，
-    // 单架构 APK 体积约减半（原 52MB 通用包），便于 GitHub 直发与 Play 上架。
+    // 单架构 APK 体积约减半（原 52MB 通用包），便于按设备架构选择并进行本地交付。
     splits {
         abi {
             // CI uses one ordinary arm64 APK so Flutter can discover app-debug.apk.

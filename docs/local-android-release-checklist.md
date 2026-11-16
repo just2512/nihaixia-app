@@ -6,7 +6,7 @@
 
 | 项目 | 当前值 | 核对要求 |
 |---|---|---|
-| Flutter version | `1.11.30+8039` | `versionName=1.11.30`，`versionCode=8039` |
+| App version | `1.11.30+8039` | `versionName=1.11.30`，`versionCode=8039` |
 | Android applicationId | `com.nihaisha.nihaisha_app` | 必须与设备现有安装包一致 |
 | 当前 master 基线 | `7681d6584d3a3667a5f54a19fac0f675774fd749` | 本清单对应本版本源码；构建前以仓库最新 master 为准 |
 | 分发渠道 | 本地构建 / 本地签名 / 线下或私下交付 | 不创建发行 Tag，不发布 GitHub Release，不上传正式 APK |
