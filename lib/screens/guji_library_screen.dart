@@ -22,7 +22,10 @@ class GujiLibraryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.sm,
+              horizontal: AppSpacing.md,
+            ),
             decoration: BoxDecoration(
               color: cs.tertiaryContainer,
               borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -46,7 +49,7 @@ class GujiLibraryScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          for (var i = 0; i < kGujiBooks.length; i++) ...[
+          for (final entry in kGujiBooks.asMap().entries) ...[
             Material(
               color: cs.surface,
               child: ListTile(
@@ -60,14 +63,14 @@ class GujiLibraryScreen extends StatelessWidget {
                       size: 20, color: cs.onPrimaryContainer),
                 ),
                 title: Text(
-                  kGujiBooks[i].title,
+                  entry.value.title,
                   style: const TextStyle(
                     fontSize: AppType.title,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 subtitle: Text(
-                  '${kGujiBooks[i].author} · ${kGujiBooks[i].chapterCount} 章',
+                  '${entry.value.author} · ${entry.value.chapterCount} 章',
                   style: TextStyle(
                     fontSize: AppType.caption,
                     color: cs.onSurfaceVariant,
@@ -78,12 +81,12 @@ class GujiLibraryScreen extends StatelessWidget {
                   context,
                   FoldAwareMaterialPageRoute(
                     sourceContext: context,
-                    builder: (_) => GujiBookScreen(book: kGujiBooks[i]),
+                    builder: (_) => GujiBookScreen(book: entry.value),
                   ),
                 ),
               ),
             ),
-            if (i < kGujiBooks.length - 1)
+            if (entry.key < kGujiBooks.length - 1)
               const Divider(height: AppSpacing.lg, indent: 56),
           ],
         ],
@@ -135,7 +138,12 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
             child: TextField(
               controller: _controller,
               decoration: InputDecoration(
