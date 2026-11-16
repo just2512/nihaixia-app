@@ -168,7 +168,7 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 1. **UNKNOWN 状态已加入。** AssistantToolExecutionStatus 当前包含 succeeded / noResult / failed / cancelled / unknown；statusLabel 有对应 wire value。
 2. **请求参数不再伪装成实际执行参数。** withArguments(fallback) 现在保留真实 arguments；当实际参数为空而请求参数非空时标记 UNKNOWN。validateArgumentsMatch() 在 expected 非空、actual 为空时明确报“工具结果缺少可验证的实际执行参数”。
 3. **消费入口有阻断。** LocalAiInterviewScreen._openTool() 先校验 typed result，再做参数匹配；参数证据缺失时设置契约错误并提前返回，不追加到会话历史，也不把 UNKNOWN 当作已验证执行结果持久化。
-4. **旧式 String 回传边界已关闭（本 PR 待验收）。** 非空 String 不再默认包装为 SUCCEEDED，也不再生成 `local-page-tool:<toolId>` 合成来源；统一标记 UNKNOWN，保留在用户可见时间线，但从当前和恢复后的模型上下文排除。当前对话中所有非 SUCCEEDED 结果均不回放给模型；历史工具消息只有状态为 SUCCEEDED、sourceIds 非空且没有 `local-page-tool:` 合成标识时才进入模型上下文。旧历史中的页面路由来源同样不回放给模型。
+4. **旧式 String 回传边界已关闭（本 PR 待验收）。** 非空 String 不再默认包装为 SUCCEEDED，也不再生成 `local-page-tool:<toolId>` 合成来源；统一标记 UNKNOWN，保留在用户可见时间线，但从当前和恢复后的模型上下文排除。当前对话中所有非 SUCCEEDED 结果均不回放给模型；历史工具结果只有状态为 SUCCEEDED、sourceIds 非空且没有 `local-page-tool:` 合成标识时才进入模型上下文；`AWAITING_PARAMETERS` 等待补参的澄清消息继续保留，避免恢复后丢失追问上下文。旧历史中的页面路由来源同样不回放给模型。
 5. **成功结果来源约束已收紧（本 PR 待验收）。** `validateFor()` 要求 SUCCEEDED 必须有非空 sourceIds，并拒绝将 `local-page-tool:` 页面路由标识当作业务来源。现有本地确定性 executor 的成功分支均提供实际 engine/data/rule 来源标识；失败、未执行、取消及 UNKNOWN 不要求伪造来源。
 6. **失败重试仍缺统一幂等契约。** 当前 failed 显示重试入口，但注册表没有副作用等级/幂等键/执行去重协议；对未来有持久化副作用的工具不能默认安全重试。
 7. **工具结果持久化错误可见性不足。** _openTool() 的工具结果消息单独调用 saveAssistantMessage()；异常目前仅 debugPrint，UI 没有明确显示“结果已显示但历史保存失败”。#58 已合并的成功轮次原子保存不覆盖此处。
@@ -227,7 +227,7 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 ### 10.2 本次最小修复（独立分支，CI 待验）
 - SUCCEEDED 必须有非空 `sourceIds`；拒绝 `local-page-tool:` 前缀作为来源。
 - Legacy String 回传保留可见文本，但标记 UNKNOWN，不产生合成 sourceId，不显示 AI 解读按钮。
-- 当前对话 transcript 按消息 `includeInModelContext` 过滤；只有通过结果契约校验的 SUCCEEDED + 真实来源可进入模型上下文。FAILED / CANCELLED / NO_RESULT / UNKNOWN 仍可见，但不回放给模型；历史恢复采用相同门禁。
+- 当前对话 transcript 按消息 `includeInModelContext` 过滤；只有通过结果契约校验的 SUCCEEDED + 真实来源可进入模型上下文。FAILED / CANCELLED / NO_RESULT / UNKNOWN 仍可见，但不回放给模型；`AWAITING_PARAMETERS` 澄清消息保留为对话上下文。历史恢复采用相同门禁。
 - 不修改任何排盘、历法、五运六气、规则问诊、剂量换算或方剂计算逻辑，不改数据库 schema，不重写 ToolRouter / Orchestrator / KnowledgeContextBuilder。
 - 现有 deterministic executor 成功分支提供 engine/data/rule 来源标识；未来若有真实成功执行但没有可追溯来源，应先补真实来源定义，不能以页面 ID 或通用占位来源绕过门禁。
 
