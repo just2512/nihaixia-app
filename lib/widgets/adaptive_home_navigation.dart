@@ -111,7 +111,7 @@ class _AdaptiveHomeNavigationState extends State<AdaptiveHomeNavigation> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
+                color: scheme.shadow.withValues(alpha: 0.25),
                 blurRadius: 6,
                 offset: const Offset(2, 0),
               ),
