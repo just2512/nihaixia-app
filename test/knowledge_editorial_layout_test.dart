@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/classic_lecture_data.dart';
+import 'package:nihaisha_app/screens/classic_library_screen.dart';
 import 'package:nihaisha_app/screens/neijing_knowledge_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/theme/app_tokens.dart';
@@ -83,4 +85,58 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'classic library uses flat rows and preserves search at 200%',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(402, 790);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            colorScheme: AppColors.colorSchemeFor(Brightness.light),
+            extensions: [AppColors.light],
+            cardTheme: const CardThemeData(elevation: 0),
+            useMaterial3: true,
+          ),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: const TextScaler.linear(2),
+            ),
+            child: child!,
+          ),
+          home: const ClassicLibraryScreen(
+            title: '经典阅读测试',
+            lectures: [
+              ClassicLecture(
+                seq: 1,
+                name: '测试篇目甲',
+                asset: 'assets/shanghan/clause_001.md',
+              ),
+              ClassicLecture(
+                seq: 2,
+                name: '测试篇目乙',
+                asset: 'assets/shanghan/clause_002.md',
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Card), findsNothing);
+      expect(find.text('测试篇目甲'), findsOneWidget);
+      expect(find.text('测试篇目乙'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '篇目乙');
+      await tester.pumpAndSettle();
+      expect(find.text('测试篇目甲'), findsNothing);
+      expect(find.text('测试篇目乙'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
 }

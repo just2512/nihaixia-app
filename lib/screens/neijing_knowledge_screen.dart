@@ -229,73 +229,78 @@ class _WangZhenTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        for (final e in kWangZhenColors)
-          Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: _colorContainerOf(context, e.color),
-                    child: Text(
-                      e.color,
-                      style: TextStyle(
-                        fontSize: AppType.caption,
-                        fontWeight: FontWeight.bold,
-                        color: _colorOf(context, e.color),
+        for (var index = 0; index < kWangZhenColors.length; index++) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: _colorContainerOf(
+                    context,
+                    kWangZhenColors[index].color,
+                  ),
+                  child: Text(
+                    kWangZhenColors[index].color,
+                    style: TextStyle(
+                      fontSize: AppType.caption,
+                      fontWeight: FontWeight.bold,
+                      color: _colorOf(context, kWangZhenColors[index].color),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${kWangZhenColors[index].zangFu}（${kWangZhenColors[index].color}色）',
+                        style: const TextStyle(
+                          fontSize: AppType.body,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '正常：${kWangZhenColors[index].normal}',
+                        style: TextStyle(
+                          fontSize: AppType.caption,
+                          color: context.colors.success,
+                        ),
+                      ),
+                      Text(
+                        '病色：${kWangZhenColors[index].abnormal}',
+                        style: TextStyle(
+                          fontSize: AppType.caption,
+                          color: context.colors.danger,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        kWangZhenColors[index].note,
+                        style: const TextStyle(
+                          fontSize: AppType.body,
+                          height: 1.5,
+                        ),
+                      ),
+                      Text(
+                        kWangZhenColors[index].source,
+                        style: TextStyle(
+                          fontSize: AppType.micro,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${e.zangFu}（${e.color}色）',
-                          style: const TextStyle(
-                            fontSize: AppType.body,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '正常：${e.normal}',
-                          style: TextStyle(
-                            fontSize: AppType.caption,
-                            color: context.colors.success,
-                          ),
-                        ),
-                        Text(
-                          '病色：${e.abnormal}',
-                          style: TextStyle(
-                            fontSize: AppType.caption,
-                            color: context.colors.danger,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          e.note,
-                          style: const TextStyle(fontSize: AppType.body, height: 1.5),
-                        ),
-                        Text(
-                          e.source,
-                          style: TextStyle(
-                            fontSize: AppType.micro,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        const SizedBox(height: 6),
+          if (index < kWangZhenColors.length - 1)
+            const Divider(height: 1, indent: 44),
+        ],        const SizedBox(height: 6),
         Text(
           '眼诊 · 观眼辨五脏（倪师）',
           style: TextStyle(
@@ -305,29 +310,32 @@ class _WangZhenTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        for (final e in kEyeDiag)
-          Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: Icon(Icons.visibility_outlined,
-                  color: cs.primary, size: 22),
-              title: Text(
-                '${e.zone} → ${e.zangFu}',
-                style: const TextStyle(
-                  fontSize: AppType.body,
-                  fontWeight: FontWeight.w600,
-                ),
+        for (var index = 0; index < kEyeDiag.length; index++) ...[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.visibility_outlined,
+              color: cs.primary,
+              size: 22,
+            ),
+            title: Text(
+              '${kEyeDiag[index].zone} → ${kEyeDiag[index].zangFu}',
+              style: const TextStyle(
+                fontSize: AppType.body,
+                fontWeight: FontWeight.w600,
               ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  e.note,
-                  style: const TextStyle(fontSize: AppType.body, height: 1.5),
-                ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                kEyeDiag[index].note,
+                style: const TextStyle(fontSize: AppType.body, height: 1.5),
               ),
             ),
           ),
-        const SizedBox(height: 8),
+          if (index < kEyeDiag.length - 1)
+            const Divider(height: 1, indent: 44),
+        ],        const SizedBox(height: 8),
         Text(
           '出处：《脉要精微论》《五脏生成》· 倪师讲解 · 传统文化参考',
           textAlign: TextAlign.center,
@@ -443,45 +451,51 @@ class _MaiZhenTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        for (final e in kMaiZhenCommon)
-          Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Text(
-                e.name,
-                style: const TextStyle(
-                  fontSize: AppType.body,
-                  fontWeight: FontWeight.w600,
-                ),
+        for (var index = 0; index < kMaiZhenCommon.length; index++) ...[
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              kMaiZhenCommon[index].name,
+              style: const TextStyle(
+                fontSize: AppType.body,
+                fontWeight: FontWeight.w600,
               ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      e.diagnosis,
-                      style: TextStyle(
-                        fontSize: AppType.caption,
-                        color: context.colors.success,
-                        fontWeight: FontWeight.w500,
-                      ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    kMaiZhenCommon[index].diagnosis,
+                    style: TextStyle(
+                      fontSize: AppType.caption,
+                      color: context.colors.success,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      e.detail,
-                      style: const TextStyle(fontSize: AppType.body, height: 1.5),
+                  ),
+                  const SizedBox(height: AppSpacing.xs / 2),
+                  Text(
+                    kMaiZhenCommon[index].detail,
+                    style: const TextStyle(
+                      fontSize: AppType.body,
+                      height: 1.5,
                     ),
-                    Text(
-                      e.source,
-                      style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
+                  ),
+                  Text(
+                    kMaiZhenCommon[index].source,
+                    style: TextStyle(
+                      fontSize: AppType.micro,
+                      color: cs.onSurfaceVariant,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-        const SizedBox(height: 6),
+          if (index < kMaiZhenCommon.length - 1)
+            const Divider(height: 1),
+        ],        const SizedBox(height: 6),
         Text(
           '死脉警示（临证当慎）',
           style: TextStyle(

@@ -136,52 +136,59 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                       ),
                     ),
                   ),
-                for (final l in lectures)
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    child: ListTile(
-                      dense: true,
-                      leading: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: cs.primaryContainer,
-                        child: Text(
-                          widget.seqLabel?.call(l.seq) ?? '${l.seq}',
-                          style: TextStyle(
-                            fontSize: AppType.micro,
-                            fontWeight: FontWeight.bold,
-                            color: cs.onPrimaryContainer,
-                          ),
+                for (var index = 0; index < lectures.length; index++) ...[
+                  ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    leading: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: cs.primaryContainer,
+                      child: Text(
+                        widget.seqLabel?.call(lectures[index].seq) ??
+                            '${lectures[index].seq}',
+                        style: TextStyle(
+                          fontSize: AppType.micro,
+                          fontWeight: FontWeight.bold,
+                          color: cs.onPrimaryContainer,
                         ),
                       ),
-                      title: Text(
-                        l.name,
-                        style: const TextStyle(
-                          fontSize: AppType.body,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: widget.seqSubtitle == null
-                          ? null
-                          : Text(
-                              widget.seqSubtitle!(l.seq),
-                              style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
-                            ),
-                      trailing: const Icon(Icons.chevron_right, size: 18),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          FoldAwareMaterialPageRoute(sourceContext: context, 
-                            builder: (_) => MarkdownDocScreen(
-                              title: l.name,
-                              asset: l.asset,
-                              footer: widget.footer,
-                              linkFormulas: true,
-                            ),
-                          ),
-                        );
-                      },
                     ),
+                    title: Text(
+                      lectures[index].name,
+                      style: const TextStyle(
+                        fontSize: AppType.body,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: widget.seqSubtitle == null
+                        ? null
+                        : Text(
+                            widget.seqSubtitle!(lectures[index].seq),
+                            style: TextStyle(
+                              fontSize: AppType.micro,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                    trailing: const Icon(Icons.chevron_right, size: 18),
+                    onTap: () {
+                      final lecture = lectures[index];
+                      Navigator.push(
+                        context,
+                        FoldAwareMaterialPageRoute(
+                          sourceContext: context,
+                          builder: (_) => MarkdownDocScreen(
+                            title: lecture.name,
+                            asset: lecture.asset,
+                            footer: widget.footer,
+                            linkFormulas: true,
+                          ),
+                        ),
+                      );
+                    },
                   ),
+                  if (index < lectures.length - 1)
+                    const Divider(height: 1, indent: 56),
+                ],
               ],
             ),
           ),

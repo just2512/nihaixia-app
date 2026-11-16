@@ -555,28 +555,27 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
       );
 
   Widget _buildSection(String title, String content, ColorScheme cs) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: AppType.title,
-                fontWeight: FontWeight.bold,
-                color: cs.primary,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: AppType.title,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
             ),
-            const SizedBox(height: 8),
-            Text(
-              content,
-              style: const TextStyle(fontSize: AppType.body, height: 1.6),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            content,
+            style: const TextStyle(fontSize: AppType.body, height: 1.6),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+        ],
       ),
     );
   }
