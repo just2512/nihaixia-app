@@ -142,33 +142,76 @@ def safe_name(title: str) -> str:
     return re.sub(r"[\\/:*?\"<>|（）()\s、，。·]", "", title)[:40]
 
 
-def acupoint_index(bodies):
-    """扫全部篇正文，统计穴位名出现次数。"""
+_ALIAS_FORMS = {
+    "口禾髎": ["禾髎"],   # 手阳明大肠经作「禾髎」
+    "耳和髎": ["和髎"],   # 手少阳三焦经书证段作「和髎」
+    "渊腋": ["渊液"],     # 讲稿异体字
+    # 2026-11-13 同穴双条目合并（库 407→402）后，简称条目已删，讲稿里的
+    # 简称必须归到保留下来的正名，否则这些穴的详情页「讲义讲解」入口消失。
+    "水沟": ["人中"],     # 督脉 DU26，讲稿通篇写「人中」
+    "足五里": ["五里"],   # ⚠️ 24_大肠经 的「五里」实为手五里，会带入 1~2 篇噪音
+    "膝阳关": ["阳关"],   # ⚠️ 「阳关」偶指腰阳关，同上
+    "足通谷": ["通谷"],
+    # 2026-11-15 补：以下 6 穴在讲稿里只以简称/异写出现，按正名扫 0 命中，
+    # 详情页「讲义讲解」入口一直缺失。
+    "手五里": ["五里"],
+    "腰阳关": ["阳关"],
+    "腹通谷": ["通谷"],
+    "头窍阴": ["窍阴"],
+    "足窍阴": ["窍阴"],
+    "譩譆": ["譩嘻"],     # 讲稿通篇作「譩嘻」
+}
+
+# 跨经重名穴：简称只在**所属经络章**有意义，否则会把同名异穴的段落错归过去。
+# 2026-11-15 实测错装：足五里 5 篇里 3 篇属他经（手阳明篇的「五里」是手五里）、
+# 膝阳关 4 篇里 2 篇是腰阳关（督脉篇）、足通谷 6 篇里 1 篇是腹通谷（足少阴篇）。
+# 头窍阴/足窍阴同属胆经一篇，两穴都指向该篇——那是真的同篇讲过，不算错装。
+_CHAPTER_FILTER = {
+    "足五里": ["足厥阴肝经"],
+    "手五里": ["手阳明大肠经"],
+    "膝阳关": ["足少阳胆经"],
+    "腰阳关": ["督脉"],
+    "足通谷": ["足太阳膀胱经"],
+    "腹通谷": ["足少阴肾经"],
+    "头窍阴": ["足少阳胆经"],
+    "足窍阴": ["足少阳胆经"],
+    "譩譆": ["足太阳膀胱经"],
+}
+
+
+def acupoint_index(bodies, titles=None):
+    """扫全部篇正文，统计穴位名出现次数。
+
+    titles 给出篇名时，跨经重名穴仅在所属经络章计数；
+    不提供 titles 时兼容旧调用。
+    """
     data = json.load(io.open(ACUPOINT_JSON, encoding="utf-8"))
     names = sorted(
         {a["name"].replace("穴", "") for a in data["acupoints"]},
-        key=len,
-        reverse=True,
+        key=lambda name: (-len(name), name),
     )
-    index = {}
     used = [n for n in names if n not in _EXCLUDED and n not in _FORCE_FORM]
-    used += list(_FORCE_FORM.values())  # 子宫穴（3 字形态）
-    # str.count 逐词统计（C 级实现，秒级；alternation 正则在此量级会慢到分钟级）。
-    # 注：长词与短词重叠（腹通谷/通谷）各自独立计数，消费端按列表展示无歧义。
+    used += list(_FORCE_FORM.values())
     out = {}
     for name in used:
+        forms = [_FORCE_FORM[name]] if name in _FORCE_FORM else [name]
+        forms += _ALIAS_FORMS.get(name, [])
+        only_chapters = _CHAPTER_FILTER.get(name)
         per = {}
         for seq, body in enumerate(bodies):
-            c = body.count(name)
-            if c:
-                per[seq] = c
+            if only_chapters and titles and not any(
+                chapter in titles[seq] for chapter in only_chapters
+            ):
+                continue
+            count = sum(body.count(form) for form in forms)
+            if count:
+                per[seq] = count
         if per:
             out[name] = sorted(
-                ({"s": s, "n": n} for s, n in per.items()),
-                key=lambda x: -x["n"],
+                ({"s": seq, "n": count} for seq, count in per.items()),
+                key=lambda item: -item["n"],
             )
     return {"_excluded": _EXCLUDED, **out}
-
 
 def write_dart(items):
     lines = [
