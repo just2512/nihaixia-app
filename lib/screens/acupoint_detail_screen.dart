@@ -496,7 +496,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
                         color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
                       ),
                       child: Text(
                         f.title,
@@ -565,7 +565,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                               color: e.source == 'nihaisha'
                                   ? context.colors.warningContainer
                                   : context.colors.infoContainer,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(AppRadius.xs),
                             ),
                             child: Text(
                               e.sourceLabel,

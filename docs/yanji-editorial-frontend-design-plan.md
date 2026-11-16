@@ -103,7 +103,7 @@
 | Token 组 | 当前值 | 执行约束 |
 |---|---|---|
 | `AppSpacing` | xs 4 / sm 8 / md 12 / lg 16 / xl 24 / xxl 32 | 保持现值；只在局部确有拥挤或浪费时调整 |
-| `AppRadius` | sm 8 / md 12 / lg 16 / xl 24 | 保持现值；不把所有元素统一做成大圆角 |
+| `AppRadius` | xs 4 / sm 8 / md 12 / lg 16 / xl 24 | 保持现值；不把所有元素统一做成大圆角 |
 | `AppType` | display 24 / headline 20 / subhead 18 / title 16 / body 14 / caption 12 / micro 11 | 保持现值；页面不得为适配窄屏而低于可读字号 |
 | `AppFonts` | display = serif，正文系统默认字体 | 衬线仅承担标题/编辑感，不扩展到长正文和表单 |
 | `AppTextScale` | min 0.8 / max 2.0 / default 1.0 / step 0.05 | 保持最大 200% 和持久化行为 |
