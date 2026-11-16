@@ -81,6 +81,17 @@ void main() {
     await tester.pump();
   }
 
+  Finder bookmarkMenuFor(String title) {
+    final tile = find.ancestor(
+      of: find.text(title),
+      matching: find.byType(ListTile),
+    ).first;
+    return find.descendant(
+      of: tile,
+      matching: find.byType(PopupMenuButton<String>),
+    );
+  }
+
   Future<List<Bookmark>> waitForLoad(
     WidgetTester tester,
     Completer<List<Bookmark>> load,
@@ -151,8 +162,11 @@ void main() {
     expect(find.text('桂枝汤'), findsOneWidget);
 
     // 对桂枝汤执行移动到文件夹。
-    await tester.tap(find.byType(PopupMenuButton<String>).last);
+    final moveMenu = bookmarkMenuFor('桂枝汤');
+    await tester.ensureVisible(moveMenu);
+    await tester.tap(moveMenu);
     await tester.pumpAndSettle();
+    expect(find.text('移动到文件夹'), findsOneWidget);
     await tester.tap(find.text('移动到文件夹'));
     await tester.pumpAndSettle();
     final moveLoad = Completer<List<Bookmark>>();
@@ -172,8 +186,11 @@ void main() {
     expect(find.text('黄芪'), findsNothing);
 
     // 删除动作仍需二次确认。
-    await tester.tap(find.byType(PopupMenuButton<String>).last);
+    final deleteMenu = bookmarkMenuFor('桂枝汤');
+    await tester.ensureVisible(deleteMenu);
+    await tester.tap(deleteMenu);
     await tester.pumpAndSettle();
+    expect(find.text('删除').last, findsOneWidget);
     await tester.tap(find.text('删除').last);
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
