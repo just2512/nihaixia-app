@@ -668,7 +668,7 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
     if (detail == null) {
       return Chip(
         label: Text(name,
-            style: TextStyle(fontSize: AppType.caption, color: context.colors.outline)),
+            style: TextStyle(fontSize: AppType.caption, color: context.colors.onSurfaceVariant)),
         backgroundColor: context.colors.surfaceContainerHighest,
         visualDensity: VisualDensity.compact,
       );

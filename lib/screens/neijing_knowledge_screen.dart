@@ -114,7 +114,7 @@ class _ZangFuTab extends StatelessWidget {
         Text(
           '出处：《灵兰秘典论》《六节藏象论》《阴阳应象大论》· 倪师讲解 · 传统文化参考',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: AppType.micro, color: cs.outline),
+          style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
         ),
       ],
     );
@@ -172,12 +172,12 @@ class _ZangFuCardTile extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             card.niShi,
-            style: const TextStyle(fontSize: AppType.caption, height: 1.55),
+            style: const TextStyle(fontSize: AppType.body, height: 1.55),
           ),
           const SizedBox(height: 6),
           Text(
             '出处：${card.source}',
-            style: TextStyle(fontSize: AppType.micro, color: cs.outline),
+            style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
           ),
         ],
       ),
@@ -279,13 +279,13 @@ class _WangZhenTab extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           e.note,
-                          style: const TextStyle(fontSize: AppType.caption, height: 1.5),
+                          style: const TextStyle(fontSize: AppType.body, height: 1.5),
                         ),
                         Text(
                           e.source,
                           style: TextStyle(
                             fontSize: AppType.micro,
-                            color: cs.outline,
+                            color: cs.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -314,7 +314,7 @@ class _WangZhenTab extends StatelessWidget {
               title: Text(
                 '${e.zone} → ${e.zangFu}',
                 style: const TextStyle(
-                  fontSize: AppType.caption,
+                  fontSize: AppType.body,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -322,7 +322,7 @@ class _WangZhenTab extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   e.note,
-                  style: const TextStyle(fontSize: AppType.caption, height: 1.5),
+                  style: const TextStyle(fontSize: AppType.body, height: 1.5),
                 ),
               ),
             ),
@@ -331,7 +331,7 @@ class _WangZhenTab extends StatelessWidget {
         Text(
           '出处：《脉要精微论》《五脏生成》· 倪师讲解 · 传统文化参考',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: AppType.micro, color: cs.outline),
+          style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
         ),
       ],
     );
@@ -403,7 +403,7 @@ class _MaiZhenTab extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   kPingRenMai,
-                  style: const TextStyle(fontSize: AppType.caption, height: 1.6),
+                  style: const TextStyle(fontSize: AppType.body, height: 1.6),
                 ),
               ],
             ),
@@ -427,7 +427,7 @@ class _MaiZhenTab extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   kMaiYinYang,
-                  style: const TextStyle(fontSize: AppType.caption, height: 1.6),
+                  style: const TextStyle(fontSize: AppType.body, height: 1.6),
                 ),
               ],
             ),
@@ -450,7 +450,7 @@ class _MaiZhenTab extends StatelessWidget {
               title: Text(
                 e.name,
                 style: const TextStyle(
-                  fontSize: AppType.caption,
+                  fontSize: AppType.body,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -470,11 +470,11 @@ class _MaiZhenTab extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       e.detail,
-                      style: const TextStyle(fontSize: AppType.caption, height: 1.5),
+                      style: const TextStyle(fontSize: AppType.body, height: 1.5),
                     ),
                     Text(
                       e.source,
-                      style: TextStyle(fontSize: AppType.micro, color: cs.outline),
+                      style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -501,7 +501,7 @@ class _MaiZhenTab extends StatelessWidget {
               title: Text(
                 e.name,
                 style: TextStyle(
-                  fontSize: AppType.caption,
+                  fontSize: AppType.body,
                   fontWeight: FontWeight.w600,
                   color: cs.error,
                 ),
@@ -510,7 +510,7 @@ class _MaiZhenTab extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   e.detail,
-                  style: const TextStyle(fontSize: AppType.caption, height: 1.5),
+                  style: const TextStyle(fontSize: AppType.body, height: 1.5),
                 ),
               ),
               isThreeLine: true,
@@ -520,7 +520,7 @@ class _MaiZhenTab extends StatelessWidget {
         Text(
           '出处：《脉要精微论》《平人气象论》《阴阳别论》· 倪师讲解 · 传统文化参考',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: AppType.micro, color: cs.outline),
+          style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
         ),
       ],
     );
