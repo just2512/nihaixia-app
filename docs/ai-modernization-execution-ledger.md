@@ -2520,7 +2520,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 |---|---|---|---|---|
 | CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | PARTIAL（PR #221 已合并；未检索到可复核的 CI run） | `docs/contextual-ask-ai-protocol`；merge `5c50605724e9a27ad03df700f5e4aa5aa0766d92` | 协议已进入 master；仍缺 CI 检查运行证据，不把人工读取核对写成自动验收 PASS |
 | CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS | `work/ai-contextual-read-sample`；base `5c50605724e9a27ad03df700f5e4aa5aa0766d92`；head `ba35dcab4a54baa3153efad793e303d1a52698c4` | 单条文独立来源锚点、划词入口、情境面板及现有助手链路接入；定向测试与 PR CI 通过后才可 PASS；Find N2 真机另行记录 |
-| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
+| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | IN_PROGRESS | `work/ai-contextual-ziwei-result-sample-v2`；依赖 CAI-READ-01 branch head `eb0b5ece2cce8d6d568197ae06be077cd7c6d795`，PR #223 合并后 retarget 到 master | 当前结果绑定真实输入、规则版本和 formatter 输出的 SHA-256 snapshotId；只解释快照，不重算；针对性测试与 CI 通过后才可 PASS |
 
 ### 57.3 实施顺序与边界
 
@@ -2550,3 +2550,14 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 情境会话设置 explanation-only 路由，避免将包含“紫微/排盘/工具”等上下文内容重新送入工具调度器触发重复计算；既有模型调用、安全前置检查及会话持久化继续复用。
 - 已新增/修改定向测试：`test/ai_context_prompt_builder_test.dart`、`test/assistant_message_metadata_test.dart`、`test/markdown_doc_contextual_selection_test.dart`。当前尚未取得测试实际运行结果，TEST/CI 状态为 UNKNOWN；不标记 PASS。
 - 本切片不覆盖全库阅读页，不代表 Find N2 真机验收完成。PR 创建后补记实际 CI run、失败日志与修复结果。
+
+
+### 57.6 CAI-RESULT-01 当前实现切片（2026-11-16）
+
+- 工作分支：`work/ai-contextual-ziwei-result-sample-v2`。
+- 依赖基线：CAI-READ-01 分支最新 head `eb0b5ece2cce8d6d568197ae06be077cd7c6d795`；该分支已建立 `AiContextRef`、提示词构建器、情境面板与 explanation-only 会话能力。PR #223 集成后，本分支应将 PR base retarget 到最新 master，并核对 compare diff 只包含本切片。
+- 目标页面：`ZiweiChartScreen`，仅在最近一次排盘成功且当前没有计算错误时展示“问 AI 解读当前排盘”入口。
+- 结果快照：保存排盘实际使用的出生时间、性别、地点说明、真太阳时/早晚子时设置；结合当前已选流年/流月/流日、App formatter 输出及 `ziwei_core@0.13.0` 规则版本生成内容寻址 SHA-256。切换表单参数但未重新排盘时，不使用新表单值伪装旧排盘输入。
+- 助手模式：`metaphysics`；情境解释只接收既有 App 排盘快照，禁用本会话工具调度，防止把上下文中的“紫微/排盘”内容误判成新的排盘执行请求。
+- 新增 `snapshotIdForToolResult` 确定性身份函数；定向测试验证相同输入/规则/结果生成同一 ID，输入、规则版本或结果变化均生成不同 ID。
+- 当前测试尚未运行，自动验收和 Find N2 设备验收均保持 UNKNOWN；不得以本分支代码存在标记 PASS。
