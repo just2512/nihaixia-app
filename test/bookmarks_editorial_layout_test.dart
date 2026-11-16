@@ -85,11 +85,21 @@ void main() {
     WidgetTester tester,
     Completer<List<Bookmark>> load,
   ) async {
-    final rows = await tester.runAsync(
-      () => load.future.timeout(const Duration(seconds: 5)),
+    // Do not await the completer inside runAsync: the widget's async database
+    // continuation may need another tester frame before its callback is
+    // observable. Advance real IO and the fake widget clock in bounded steps.
+    for (var frame = 0; frame < 50 && !load.isCompleted; frame++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+    }
+    expect(
+      load.isCompleted,
+      isTrue,
+      reason: '收藏数据加载回调应在 5 秒内完成',
     );
-    await tester.pump();
-    return rows!;
+    return load.future;
   }
 
 
