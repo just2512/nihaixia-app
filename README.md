@@ -198,7 +198,7 @@
 > 本项目 APK 由本仓库 GitHub Actions 构建；当前尚未发布本仓库独立 APK Release
 > **最后维护：2026-11-16（汉唐中医独立维护；上游同步采用人工审核）**
 
-> **当前源码版本：`2.0.0+8040`**（首个独立主版本基线；尚未创建对应 tag 或 APK Release）。
+> **当前源码版本：`2.0.0+8047`**（首个独立主版本基线；尚未创建对应 tag 或 APK Release）。
 > 
 > 当前仓库尚未发布独立 APK Release。请勿将上游 `jangviktor-web/nihaixia-app` 的安装包或版本号当作汉唐中医的发行版。后续安装包只从[本仓库 Releases](https://github.com/just2512/nihaixia-app/releases)获取；上游更新仅按维护策略人工评估和同步。
 
@@ -324,7 +324,7 @@ flutter analyze
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
 | `lib/theme/app_colors.dart` | 39 个语义色 Token（品牌棕/暖调中性/状态色/六经六色），全站硬编码颜色清零 |
 
-**版本号规则**：遵循独立产品 SemVer：`MAJOR.MINOR.PATCH+BUILD`。`pubspec.yaml` 是唯一版本源；当前仓库版本为 `2.0.0+8040`，其中 `2.0.0` 是产品版本，`+8040` 是 Android `versionCode`。旧 `1.11.x` 序列仅保留历史记录，不再递增；版本决策、构建号和升级兼容规则见 [独立版本管理规范](docs/versioning-policy.md)。
+**版本号规则**：遵循独立产品 SemVer：`MAJOR.MINOR.PATCH+BUILD`。`pubspec.yaml` 是唯一版本源；当前仓库版本为 `2.0.0+8047`，其中 `2.0.0` 是产品版本，`+8040` 是 Android `versionCode`。旧 `1.11.x` 序列仅保留历史记录，不再递增；版本决策、构建号和升级兼容规则见 [独立版本管理规范](docs/versioning-policy.md)。
 
 **发版方式**：推送与 `pubspec.yaml` 版本一致的 `v*` tag，`.github/workflows/build-apk.yml` 自动构建通用版与三个 ABI 分架构 APK，并发布到同名 GitHub Release。
 
