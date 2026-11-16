@@ -70,15 +70,23 @@ void main() {
     WidgetTester tester,
     String title,
   ) async {
-    final scrollable = find.descendant(
-      of: find.byType(Scaffold),
-      matching: find.byType(Scrollable),
-    ).first;
-    await tester.scrollUntilVisible(
-      find.text(title),
-      320,
-      scrollable: scrollable,
-    );
+    final target = find.text(title);
+    final listView = find.byType(ListView);
+    expect(listView, findsOneWidget,
+        reason: '闭门课列表必须保持单一纵向 ListView');
+
+    // Drag the concrete ListView instead of searching its nested Scrollable.
+    // This keeps the test deterministic across different TextScaler values.
+    for (var attempt = 0;
+        attempt < 30 && target.evaluate().isEmpty;
+        attempt++) {
+      await tester.drag(listView, const Offset(0, -320));
+      await tester.pumpAndSettle();
+    }
+
+    expect(target, findsOneWidget,
+        reason: '$title 应能通过纵向滚动到达');
+    await tester.ensureVisible(target);
   }
 
   testWidgets(
