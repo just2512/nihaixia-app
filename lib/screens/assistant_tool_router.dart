@@ -21,6 +21,7 @@ import '../services/guansha_tool_executor.dart';
 import '../services/shousheng_debt_tool_executor.dart';
 import '../services/sanshan_lingqian_tool_executor.dart';
 import '../services/saved_chart_tool_executor.dart';
+import '../services/yuxiaji_omen_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -610,11 +611,12 @@ class AssistantToolRouter {
   static const yuxiaji = AssistantToolDefinition(
     id: 'yuxiaji_omen',
     title: '玉匣灵兆',
-    description: '打开传统民俗身体兆占查询；仅作民俗文化参考。',
+    description: '默认在当前对话中按 App 本机时辰查询《玉匣记》身兆文本；需要方向、形态等额外观察时仍可打开原页面。仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
-    aliases: ['玉匣灵兆', '玉匣记', '面热占', '眼跳占', '耳鸣占', '心惊占'],
+    aliases: ['玉匣灵兆', '玉匣记', '面热占', '眼跳占', '耳鸣占', '心惊占', '鸦鸣鹊噪方向', '鸦鸣鹊噪', '鸦鸣', '鹊噪', '占灯花法', '灯花占'],
     actionWords: ['查询', '查看', '起占', '打开', '推算'],
     builder: _buildYuxiaji,
+    headlessExecutor: YuxiajiOmenToolExecutor.execute,
   );
 
   static const dream = AssistantToolDefinition(
