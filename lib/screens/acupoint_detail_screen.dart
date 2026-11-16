@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import '../models/bookmark.dart';
 import '../utils/fold_aware_routes.dart';
 import '../models/acupoint_detail.dart';
 import '../data/acupoint_repository.dart';
+import '../data/database_helper.dart';
+import '../data/guji_data.dart';
 import '../data/acupuncture_repository.dart';
 import '../data/zhenjiu_lecture_index.dart';
 import '../models/acupuncture.dart';
 import '../theme/app_colors.dart';
+import 'guji_library_screen.dart';
 import 'markdown_doc_screen.dart';
 
 /// 临床心悟中解析出的处方公式（如「暖宫方：三毛 + 关元 + 气海 + 三阴交」）。
@@ -67,10 +71,51 @@ bool _nameMatches(String container, String target) {
   return parts.contains(t);
 }
 
-class AcupointDetailScreen extends StatelessWidget {
+class AcupointDetailScreen extends StatefulWidget {
   final AcupointDetail acupoint;
 
   const AcupointDetailScreen({super.key, required this.acupoint});
+
+  @override
+  State<AcupointDetailScreen> createState() => _AcupointDetailScreenState();
+}
+
+class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
+  late List<AcupointDetail> _siblings = _buildSiblings();
+  late int _index = _indexOf(widget.acupoint.name);
+
+  int _indexOf(String name) {
+    final index = _siblings.indexWhere((item) => item.name == name);
+    return index < 0 ? 0 : index;
+  }
+
+  List<AcupointDetail> _buildSiblings() {
+    final sameMeridian = AcupointRepository.getAll()
+        .where((item) => item.meridian == widget.acupoint.meridian)
+        .toList();
+    if (sameMeridian.isEmpty) return [widget.acupoint];
+    if (!sameMeridian.any((item) => item.name == widget.acupoint.name)) {
+      sameMeridian.add(widget.acupoint);
+    }
+    return sameMeridian;
+  }
+
+  @override
+  void didUpdateWidget(covariant AcupointDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.acupoint.name != widget.acupoint.name) {
+      _siblings = _buildSiblings();
+      _index = _indexOf(widget.acupoint.name);
+    }
+  }
+
+  AcupointDetail get acupoint => _siblings[_index];
+
+  void _swipe(int delta) {
+    final next = _index + delta;
+    if (next < 0 || next >= _siblings.length) return;
+    setState(() => _index = next);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +133,10 @@ class AcupointDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(acupoint.name),
         actions: [
+          _AcupointBookmarkButton(
+            key: ValueKey(acupoint.name),
+            acupoint: acupoint,
+          ),
           if (acupoint.meridian.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 16),
@@ -102,16 +151,39 @@ class AcupointDetailScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          final velocity = details.primaryVelocity ?? 0;
+          if (velocity > 200) _swipe(-1);
+          if (velocity < -200) _swipe(1);
+        },
+        child: ListView(
+          key: ValueKey(acupoint.name),
+          padding: const EdgeInsets.all(16),
+          children: [
+          if (_siblings.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                '第 ${_index + 1}/${_siblings.length} 穴 · 左右滑动切换同经络穴位',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           // 属性标签
           if (acupoint.attribute.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Chip(
-                label: Text(acupoint.attribute),
-                backgroundColor: context.colors.infoContainer,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: context.colors.infoContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(acupoint.attribute),
               ),
             ),
 
@@ -121,6 +193,9 @@ class AcupointDetailScreen extends StatelessWidget {
 
           // 讲义讲解：针灸讲稿中提及本穴的篇目（索引无命中则不显示）
           _buildLectureEntry(colorScheme),
+
+          // 古籍原文：在《针灸大成》《灵枢》中定位本穴相关章节
+          _buildGujiEntry(context, colorScheme),
 
           // 位置
           if (acupoint.location.isNotEmpty)
@@ -156,6 +231,99 @@ class AcupointDetailScreen extends StatelessWidget {
           if (relatedPens.isNotEmpty)
             _buildRelatedPenetrationSection(context, relatedPens, colorScheme),
         ],
+        ),
+      ),
+    );
+  }
+
+  /// 古籍原文：《针灸大成》《灵枢》中提及本穴的章节入口。
+  Widget _buildGujiEntry(BuildContext context, ColorScheme colorScheme) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Icon(Icons.auto_stories_outlined, color: colorScheme.primary),
+        title: const Text('古籍原文', style: TextStyle(fontSize: 15)),
+        subtitle: const Text(
+          '《针灸大成》《灵枢》中提及本穴的章节',
+          style: TextStyle(fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _showGujiSheet(context),
+      ),
+    );
+  }
+
+  Future<List<MapEntry<GujiBook, GujiChapter>>> _gujiHits(
+      List<String> keys) async {
+    final hits = <MapEntry<GujiBook, GujiChapter>>[];
+    for (final book in kGujiBooks) {
+      for (final chapter in await GujiRepository.chaptersOf(book)) {
+        if (keys.any(
+          (key) => chapter.title.contains(key) || chapter.body.contains(key),
+        )) {
+          hits.add(MapEntry(book, chapter));
+        }
+      }
+    }
+    return hits;
+  }
+
+  void _showGujiSheet(BuildContext context) {
+    final key = acupoint.name.replaceAll('穴', '');
+    final keys = [key, ...?AcupointRepository.kClassicsAliases[key]];
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: FutureBuilder<List<MapEntry<GujiBook, GujiChapter>>>(
+          future: _gujiHits(keys),
+          builder: (context, snapshot) {
+            final hits = snapshot.data ??
+                const <MapEntry<GujiBook, GujiChapter>>[];
+            return ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Text(
+                    '${acupoint.name} · 古籍提及',
+                    style: Theme.of(sheetContext)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (!snapshot.hasData && !snapshot.hasError)
+                  const ListTile(title: Text('加载中…')),
+                if (snapshot.hasError)
+                  ListTile(title: Text('加载失败：${snapshot.error}')),
+                if (snapshot.hasData && hits.isEmpty)
+                  const ListTile(title: Text('暂无相关章节')),
+                for (final hit in hits)
+                  ListTile(
+                    dense: true,
+                    title: Text(hit.value.title,
+                        style: const TextStyle(fontSize: 14)),
+                    subtitle: Text('《${hit.key.title}》',
+                        style: const TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        context,
+                        FoldAwareMaterialPageRoute(
+                          sourceContext: context,
+                          builder: (_) => GujiChapterScreen(
+                            book: hit.key,
+                            chapter: hit.value,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -522,6 +690,82 @@ class AcupointDetailScreen extends StatelessWidget {
             : context.colors.infoContainer,
         visualDensity: VisualDensity.compact,
       ),
+    );
+  }
+}
+
+/// 穴位收藏按钮复用现有 bookmarks 表，不创建第二套收藏存储。
+class _AcupointBookmarkButton extends StatefulWidget {
+  final AcupointDetail acupoint;
+  const _AcupointBookmarkButton({super.key, required this.acupoint});
+
+  @override
+  State<_AcupointBookmarkButton> createState() =>
+      _AcupointBookmarkButtonState();
+}
+
+class _AcupointBookmarkButtonState extends State<_AcupointBookmarkButton> {
+  bool _saved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedState();
+  }
+
+  Future<void> _loadSavedState() async {
+    try {
+      final bookmarks =
+          await DatabaseHelper.instance.getAllBookmarks();
+      final saved = bookmarks.any((bookmark) =>
+          bookmark.title == widget.acupoint.name &&
+          bookmark.category == '穴位');
+      if (mounted) setState(() => _saved = saved);
+    } catch (_) {
+      // 收藏表不可用时不影响穴位详情页。
+    }
+  }
+
+  Future<void> _toggle() async {
+    final database = DatabaseHelper.instance;
+    final acupoint = widget.acupoint;
+    try {
+      if (_saved) {
+        final bookmarks = await database.getAllBookmarks();
+        for (final bookmark in bookmarks) {
+          if (bookmark.title == acupoint.name &&
+              bookmark.category == '穴位' &&
+              bookmark.id != null) {
+            await database.deleteBookmark(bookmark.id!);
+            break;
+          }
+        }
+      } else {
+        await database.insertBookmark(Bookmark(
+          title: acupoint.name,
+          content: acupoint.description.isNotEmpty
+              ? acupoint.description
+              : acupoint.clinicalNotes,
+          category: '穴位',
+          source: 'acupoint_detail',
+        ));
+      }
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _saved = !_saved);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_saved ? '已收藏穴位' : '已取消收藏')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: _saved ? '取消收藏' : '收藏穴位',
+      icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border),
+      onPressed: _toggle,
     );
   }
 }

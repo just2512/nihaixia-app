@@ -10,8 +10,10 @@ import '../models/bookmark.dart';
 import '../data/database_helper.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
+import '../data/acupoint_repository.dart';
 import '../screens/formula_detail_screen.dart';
 import '../screens/herb_detail_screen.dart';
+import '../screens/acupoint_detail_screen.dart';
 
 class BookmarksScreen extends StatefulWidget {
   const BookmarksScreen({super.key});
@@ -166,6 +168,18 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         );
         return;
       }
+    } else if (b.category == '穴位') {
+      final acupoint = AcupointRepository.findByName(b.title);
+      if (acupoint != null) {
+        Navigator.push(
+          context,
+          FoldAwareMaterialPageRoute(
+            sourceContext: context,
+            builder: (_) => AcupointDetailScreen(acupoint: acupoint),
+          ),
+        );
+        return;
+      }
     }
     showFoldAwareDialog(
       context: context,
@@ -310,7 +324,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                       ? Icons.medication
                       : bookmark.category == '本草'
                           ? Icons.eco
-                          : Icons.bookmark,
+                          : bookmark.category == '穴位'
+                              ? Icons.spa
+                              : Icons.bookmark,
                   size: 16,
                 ),
                 label: Text(bookmark.category),
@@ -508,7 +524,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                                   ? Icons.medication
                                   : b.category == '本草'
                                       ? Icons.eco
-                                      : Icons.bookmark,
+                                      : b.category == '穴位'
+                                          ? Icons.spa
+                                          : Icons.bookmark,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
