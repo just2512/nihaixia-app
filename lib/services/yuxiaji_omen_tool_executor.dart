@@ -44,7 +44,7 @@ class YuxiajiOmenToolExecutor {
       sourceIds: const [sourceId],
       arguments: const {},
       disclaimer:
-          '传统民俗文化文本参考；不是科学预测、吉凶指令或医学诊断。面热、眼跳、耳鸣、心惊等条目不构成疾病判断、病因判断或健康风险评估。',
+          '传统民俗文化文本参考；不是科学预测或吉凶指令，也不是医学诊断。面热、眼跳、耳鸣、心惊等条目不构成疾病判断、病因判断或健康风险评估。',
     );
   }
 }
