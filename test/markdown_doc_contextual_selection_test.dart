@@ -24,7 +24,8 @@ void main() {
 
   testWidgets('ordinary markdown reading keeps its existing selectable behavior',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: [AppColors.light]),
       home: MarkdownDocScreen(
         title: '普通阅读页',
         content: '这是一段普通的可选择正文。',
@@ -38,7 +39,8 @@ void main() {
 
   testWidgets('incomplete reading provenance does not expose contextual menu area',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: [AppColors.light]),
       home: MarkdownDocScreen(
         title: '缺少来源的阅读页',
         content: '这段文字没有完整来源锚点。',
