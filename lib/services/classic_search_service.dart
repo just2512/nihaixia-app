@@ -9,12 +9,12 @@ import 'gzip_codec_stub.dart' if (dart.library.io) 'gzip_codec_io.dart';
 ///
 /// 索引是构建期产物 `assets/guji/classic_index.json.gz`
 /// （生成脚本 `tool/build_classic_search_index.py`），覆盖：
-/// 伤寒论讲稿 380 条、金匮要略讲稿 453 条、内经讲稿 73 篇，
-/// 以及古籍原文《灵枢》《针灸大成》共 421 章。
+/// fork 主索引包含伤寒、金匮、内经讲稿与古籍原文《灵枢》《针灸大成》；
+/// supplemental 索引按文件级白名单追加上游独有经典条文、六经附录及本草讲稿 335 篇。
 ///
 /// ⚠️ 讲稿或古书有增删改后必须重跑脚本，否则搜索漏内容。
 class ClassicHit {
-  /// shanghan / jingui / neijing / guji
+  /// shanghan / jingui / neijing / bencao / guji
   final String source;
 
   /// 展示用来源名（如「伤寒论讲稿」「针灸大成」）。

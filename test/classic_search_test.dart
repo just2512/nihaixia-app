@@ -1,4 +1,4 @@
-// 经典全文检索回归：讲稿 + 古籍原文统一索引。
+// 经典全文检索回归：伤寒 / 金匮 / 内经 / 本草讲稿及古籍原文统一索引。
 // 运行：flutter test test/classic_search_test.dart
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,7 +13,7 @@ void main() {
     expect(r.hits, isEmpty);
   });
 
-  test('索引可加载，条目数覆盖讲稿 906 + 古籍 421', () async {
+  test('索引可加载，覆盖本地讲稿、上游增量讲稿与古籍原文', () async {
     await ClassicSearchService.ensureLoaded();
     expect(ClassicSearchService.isLoaded, isTrue);
 
