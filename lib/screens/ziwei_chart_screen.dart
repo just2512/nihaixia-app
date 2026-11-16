@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -16,6 +17,10 @@ import '../data/saved_chart_repository.dart';
 import '../data/settings_repository.dart';
 import '../theme/app_colors.dart';
 import '../utils/ziwei_plate_layout.dart';
+import '../models/ai_context_ref.dart';
+import 'assistant_tool_router.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 /// 紫微斗数排盘界面。
 ///
@@ -180,6 +185,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   }
 
   ZiweiChart? _chart;
+  DateTime? _calculatedSolar;
+  bool? _calculatedUseTrueSolarTime;
+  bool? _calculatedDistinguishZiShi;
+  String? _calculatedLocationDescription;
   bool _calculating = false;
   String? _error;
 
@@ -193,6 +202,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         setState(() {
           _error = '经度格式不正确（范围 -180 ~ 180，如 120 或 116.41）';
           _chart = null;
+          _calculatedSolar = null;
+          _calculatedUseTrueSolarTime = null;
+          _calculatedDistinguishZiShi = null;
+          _calculatedLocationDescription = null;
         });
         return;
       }
@@ -213,6 +226,12 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         // 区分早晚子时：直接传原始公历生辰（含 23 点），由引擎按 ratHourMode 校正，
         // 不再在此预滚动日期（避免与引擎口径重复）。
         final solar = DateTime(_year, _month, _day, _birthHour, _birthMinute);
+        final useTrueSolarTime = _useTrueSolarTime;
+        final distinguishZiShi = _distinguishZiShi;
+        final locationDescription = _selectedCity?.displayName ??
+            (lngText.isEmpty
+                ? '未指定；引擎使用默认地点'
+                : '经度：$lngText');
         final chart = calculateZiweiChart(
           solar: solar,
           gender: _isMale ? Gender.male : Gender.female,
@@ -222,12 +241,16 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           location: _selectedCity != null
               ? Location(_selectedCity!.lng, _selectedCity!.lat)
               : Location(lng ?? 120, 30),
-          useTrueSolarTime: _useTrueSolarTime,
-          ratHourMode: _distinguishZiShi,
+          useTrueSolarTime: useTrueSolarTime,
+          ratHourMode: distinguishZiShi,
         );
         if (mounted) {
           setState(() {
             _chart = chart;
+            _calculatedSolar = solar;
+            _calculatedUseTrueSolarTime = useTrueSolarTime;
+            _calculatedDistinguishZiShi = distinguishZiShi;
+            _calculatedLocationDescription = locationDescription;
             _calculating = false;
           });
         }
@@ -303,6 +326,12 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               onPressed: () => setState(
                 () => _showPlateFullscreen = !_showPlateFullscreen,
               ),
+            ),
+          if (_chart != null && !_calculating && _error == null)
+            IconButton(
+              tooltip: '问 AI 解读当前排盘',
+              icon: const Icon(Icons.auto_awesome_outlined),
+              onPressed: _askAiAboutCurrentResult,
             ),
           if (widget.returnResultOnComplete && _chart != null && !_calculating)
             IconButton(
@@ -452,6 +481,68 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             cellAspectRatio +
         frameExtent;
     return fitWidth.clamp(1.0, 640.0).toDouble();
+  }
+
+  void _askAiAboutCurrentResult() {
+    final chart = _chart;
+    final solar = _calculatedSolar;
+    final useTrueSolarTime = _calculatedUseTrueSolarTime;
+    final distinguishZiShi = _calculatedDistinguishZiShi;
+    final locationDescription = _calculatedLocationDescription;
+    if (chart == null ||
+        solar == null ||
+        useTrueSolarTime == null ||
+        distinguishZiShi == null ||
+        locationDescription == null ||
+        _calculating ||
+        _error != null) {
+      return;
+    }
+
+    final resultPayload = formatZiweiChartForAssistant(
+      solar: solar,
+      useTrueSolarTime: useTrueSolarTime,
+      distinguishZiShi: distinguishZiShi,
+      locationDescription: locationDescription,
+      chart: chart,
+      flowYear: _flowMark,
+      flowMonth: _flowMonthMark,
+      flowDay: _flowDayMark,
+    );
+    const ruleVersion = 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
+    final snapshotId = AiContextPromptBuilder.snapshotIdForToolResult(
+      input: {
+        'solar': solar.toIso8601String(),
+        'gender': chart.genderLabel,
+        'location': locationDescription,
+        'useTrueSolarTime': useTrueSolarTime,
+        'distinguishZiShi': distinguishZiShi,
+      },
+      ruleVersion: ruleVersion,
+      resultPayload: resultPayload,
+    );
+    final contextRef = AiContextRef(
+      kind: 'toolResult',
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+      title: '紫微斗数排盘结果',
+    );
+    final prompt = AiContextPromptBuilder.buildToolResult(
+      ref: contextRef,
+      resultPayload: resultPayload,
+    );
+    unawaited(showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.metaphysics,
+      contextualTitle: '紫微斗数排盘结果',
+      contextualExplanationOnly: true,
+    ));
   }
 
   void _returnAssistantResult() {
