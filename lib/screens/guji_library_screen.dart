@@ -77,6 +77,7 @@ class GujiLibraryScreen extends StatelessWidget {
                   ),
                 ),
                 trailing: const Icon(Icons.chevron_right, size: 20),
+                isThreeLine: true,
                 onTap: () => Navigator.push(
                   context,
                   FoldAwareMaterialPageRoute(
@@ -196,41 +197,7 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
                     final c = chapters[i];
                     return Material(
                       color: cs.surface,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xs,
-                        ),
-                        minVerticalPadding: AppSpacing.xs,
-                        leading: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: cs.primaryContainer,
-                          child: Text(
-                            '${c.index + 1}',
-                            style: const TextStyle(
-                              fontSize: AppType.micro,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          c.title,
-                          style: const TextStyle(
-                            fontSize: AppType.body,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Text(
-                          c.body.replaceAll('\n', ' '),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: AppType.caption,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        isThreeLine: true,
-                        trailing: const Icon(Icons.chevron_right, size: 18),
+                      child: InkWell(
                         onTap: () => Navigator.push(
                           context,
                           FoldAwareMaterialPageRoute(
@@ -239,6 +206,60 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
                               book: widget.book,
                               chapter: c,
                             ),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.md,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: cs.primaryContainer,
+                                child: Text(
+                                  '${c.index + 1}',
+                                  style: const TextStyle(
+                                    fontSize: AppType.micro,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      c.title,
+                                      style: const TextStyle(
+                                        fontSize: AppType.body,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text(
+                                      c.body.replaceAll('\n', ' '),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: AppType.caption,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ],
                           ),
                         ),
                       ),
