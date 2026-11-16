@@ -81,7 +81,7 @@ void main() {
 
       expect(find.textContaining('桂枝汤：桂枝、芍药、生姜'), findsOneWidget);
       expect(find.textContaining('大承气汤：大黄、厚朴'), findsOneWidget);
-      expect(find.text('清空历史'), findsOneWidget);
+      expect(find.byTooltip('清空历史'), findsOneWidget);
 
       final firstTile = tester.widget<ListTile>(
         find.ancestor(
