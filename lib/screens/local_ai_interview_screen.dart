@@ -175,6 +175,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.contextualTitle,
     this.initialMode,
     this.sheetScrollController,
+    this.contextualExplanationOnly = false,
     this.testToolRouteBuilder,
     this.testHeadlessToolExecutor,
     this.testSavedChartsLoader,
@@ -239,6 +240,8 @@ class LocalAiInterviewScreen extends StatefulWidget {
   final AssistantMode? initialMode;
   /// Optional scroll controller supplied by DraggableScrollableSheet.
   final ScrollController? sheetScrollController;
+  /// Prevents an anchored result/excerpt from being treated as a new tool request.
+  final bool contextualExplanationOnly;
 
   /// Injectable recorder for deterministic per-turn TRACE tests.
   @visibleForTesting
@@ -8028,7 +8031,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     var effectiveMode = _assistantMode;
-    if (text.isNotEmpty && imagePath == null && audioPath == null) {
+    if (text.isNotEmpty &&
+        imagePath == null &&
+        audioPath == null &&
+        !widget.contextualExplanationOnly) {
       var decision = AssistantConversationOrchestrator.resolve(
         query: text,
         selectedMode: _assistantMode,
@@ -8200,6 +8206,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         return;
       }
+    } else if (widget.contextualExplanationOnly) {
+      // A contextual sheet is anchored to an already-resolved excerpt/result.
+      // Never route its payload back into a tool dispatcher that could recalculate it.
+      effectiveMode = _assistantMode;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'contextual_explanation_only',
+        mode: effectiveMode.name,
+      );
     } else if (_assistantMode == AssistantMode.automatic) {
       // 照片/语音附件默认进入问诊域；不凭附件类型猜测排盘或学习任务。
       _pendingToolSelection = false;
