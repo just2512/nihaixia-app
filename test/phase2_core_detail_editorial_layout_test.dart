@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/data/medical_case_data.dart';
-import 'package:nihaisha_app/models/medical_case.dart';
 import 'package:nihaisha_app/screens/formula_detail_screen.dart';
 import 'package:nihaisha_app/screens/herb_detail_screen.dart';
 import 'package:nihaisha_app/screens/medical_case_detail_screen.dart';
@@ -22,11 +20,13 @@ void main() {
     databaseFactory = databaseFactoryFfi;
     await FormulaRepository.load();
     await HerbRepository.load();
-    await AcupointRepository.load();
 
     final cases = await loadMedicalCasesFromAssets();
     _sampleCase = cases.firstWhere(
-      (item) => item.patient.isNotEmpty && item.diagnosis.isNotEmpty,
+      (item) =>
+          item.patient.isNotEmpty &&
+          item.diagnosis.isNotEmpty &&
+          item.mechanism.isNotEmpty,
       orElse: () => cases.first,
     );
   });
