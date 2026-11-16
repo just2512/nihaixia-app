@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/adaptive_master_detail.dart';
@@ -513,20 +510,17 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       flowDay: _flowDayMark,
     );
     const ruleVersion = 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
-    final snapshotPayload = jsonEncode({
-      'schema': 'ziwei-result-v1',
-      'input': {
+    final snapshotId = AiContextPromptBuilder.snapshotIdForToolResult(
+      input: {
         'solar': solar.toIso8601String(),
         'gender': chart.genderLabel,
         'location': locationDescription,
         'useTrueSolarTime': useTrueSolarTime,
         'distinguishZiShi': distinguishZiShi,
       },
-      'ruleVersion': ruleVersion,
-      'result': resultPayload,
-    });
-    final snapshotId =
-        sha256.convert(utf8.encode(snapshotPayload)).toString();
+      ruleVersion: ruleVersion,
+      resultPayload: resultPayload,
+    );
     final contextRef = AiContextRef(
       kind: 'toolResult',
       moduleId: 'ziwei',
