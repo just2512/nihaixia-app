@@ -12,7 +12,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新核验基线 | `4398bc365c43718b105c06f66ab13b106b21ede2` | PR #182 已合并；对应 post-merge 主线 CI 见第 49 节 |
+| 本轮最新核验基线 | `09293c55b7c3069e3118291e871ef96d087b5a17` | PR #206 已合并；合并后主线 CI 见第 56 节 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -20,7 +20,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**本轮核验范围：** 已复核当前 master HEAD、两份 AI 约束文档、PR #182 的实现与完整变更、PR 分支 CI 及合并后的主线 CI；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 仍未由云端执行，必须按本地清单取得设备证据。历史审计没有在本轮全部重跑的部分，仍以原记录和证据为准。
+**核验基线说明：** 本表所列为当前台账最新核验的代码主线基线；历史任务范围与历次核验仍以各节记录为准。PR #206 的合并和 post-merge CI 见第 56 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
 
 ## 2. 状态定义
 
@@ -197,7 +197,6 @@
 > 本节只记录本轮重新读取的 master 代码、已合并 PR 和当前 CI 证据。未合并 PR 不计入 master 已实现；CI 运行中/失败不得写 PASS；Find N2 真机没有本轮 TRACE，相关能力仍为 PARTIAL/UNKNOWN。
 
 ### 10.1 当前主线与集成状态
-
 | 对象 | 状态 | 当前证据 / 处理 |
 |---|---|---|
 | master | 当前审计基线 | `28b6bbf5928c44e2befb85b3fbaa6220827634e7`；由 PR #73 合并后形成 |
@@ -397,7 +396,6 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 
 
 ## 10. 2026-11-12 后续增量：当前主线并行验收续接
-
 - PR #78 附件归属迁移已重放到 master `eaa83b440ddb1299a7eac58b70067de38ad44ea2`，当前 head `7a03023aab43ac3fcae6af744fd94c571a8f92ae`；Flutter regression 仍 IN_PROGRESS，branch validation changed tests 已 SUCCESS，另一轮 branch validation SKIPPED。Android arm64 job 尚未在该 head 上执行成功，不得标完整 CI PASS。
 - PR #80 Native Activity teardown 串行化已重放到同一 master，当前 head `46ad1bb4c9c10a793b1d8808b7b6870fd00567d5`；Flutter regression 和 branch validation 均 IN_PROGRESS；Android arm64 仅旧 head 有 SUCCESS，新 head 尚待验证。
 - PR #81 精确方剂检索当前 head 已更新为 `f26455f0ec1bcabaf04c5fa91ab4c8821274f827`。针对前次失败做了两项修订：成分匹配测试改用当前方剂库中唯一包含“白蜜”的“大半夏汤”，避免把前 4 条截断结果写成固定方剂排序契约；黄金 metadata 按 CI 实际观察到的差异更新为 sourceIds `formula:guizhi_tang`、`herb:桂枝` 和四条伤寒条目，context textLength 2199、MISSING locator 6。新 head Flutter regression 尚在 QUEUED/IN_PROGRESS，不能标 PASS。
@@ -597,7 +595,6 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 7. G：增加 README/pubspec 单一版本来源检查和审计证据一致性检查。
 
 ### 14.5 约束
-
 - 本轮未运行 Find N2 真机；设备相关项目继续 UNKNOWN。
 - B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
 - E 混合数据库备份与旧共享临时文件归属仍有风险；不得全局禁用备份或误删非 AI 数据。
@@ -1597,7 +1594,6 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 历史结果保留显式手动解释入口；未完成问诊、结果为空、持久化失败、上下文恢复失败或模型未就绪时不触发解释。
 - 该改动只修改助手编排与 widget test；未修改 `DiagnosticEngine`、`DiagnosticRules`、剂量/排盘业务计算或既有知识库内容。
 - 这不是自由文本问诊的交付：现有十问/规则追问流程仍在。用户提出自然语言症状后由 AI 自动识别缺项、只追问必要信息、后台组合规则问诊的目标仍未完成。
-
 ### 34.3 D 工作流当前能力基数
 
 - `AssistantToolRouter` 有 24 个定义：23 个页面工具入口和 1 个 `structured_diagnosis` 特殊内联流程。
@@ -1797,7 +1793,6 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 结果明确说明默认经纬度、子时换日和未启用真太阳时；说明该结果属于传统时辰开穴计算资料，不构成疾病诊断、针刺处方或个体治疗建议。
 
 ### 38.3 自动化验收证据
-
 - Branch validation push run `43575671526` SUCCESS，head 为 PR 最终 head `86c7398`。
 - PR workflow `43575673793` SUCCESS：Flutter 全量回归 job `132389779409` SUCCESS；Android arm64 verification job `132390872014` SUCCESS。
 - Flutter regression 覆盖静态分析、局部契约/路由/恢复/知识检索回归与完整 `flutter test --no-pub`。
@@ -1997,7 +1992,6 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 代码范围以 PR 差异为准；不把 PR/CI 成功描述成 Find N2 实机验收。
 
 ### 43.2 B：红旗安全门禁实际状态
-
 - PR #169 将既有 fail-closed `RedFlagGate/RedFlagPreflight` 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界。缺少 detector、assessment UNKNOWN、规则未审核、覆盖不完整、超时或原始图片/音频没有可信提取时，不得按 CLEAR 放行。
 - 这是门禁调用接线和阻断契约，不是自然语言、视觉或语音医学红旗 detector。detector 的医学审核版本、责任审批、阈值/例外和处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。
 - 不修改医学规则、不重审已审核知识库；在合格 detector 与证据完备前，不开放模型抽取自由文本症状并自动执行诊断。
@@ -2197,7 +2191,6 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 真机记录只保存脱敏摘要与实际状态。未执行项为 UNKNOWN；云端代码测试、APK 构建和模拟环境均不能替代 Find N2 TRACE。
 
 ### 47.5 不变边界
-
 - AI 继续只负责理解、参数澄清、调度、总结和解释；确定性排盘、问诊、剂量和其他业务计算仍由 App 执行。
 - 只有 App 真实执行、参数和结果通过校验的数据才能交 AI 解读。
 - 不改变 DiagnosticEngine / DiagnosticRules / 十问 / 剂量或玄学计算规则；不重审已审核知识库，不做经典医案外部卷页考据。
@@ -2466,3 +2459,36 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - AI 仍只负责理解意图、提取参数、澄清缺项、选择已有能力和解释已校验结果。
 - 排盘、问诊辨证、历法和剂量等业务执行仍由 App 确定性代码完成；没有 `SUCCEEDED`、结构化结果、参数匹配和真实 sourceId 的结果不得交给 AI 作为事实。
 - 本次工具布局审计不修改业务规则、排盘算法、AI 编排、ToolRouter、知识库、数据库或手动更新机制。
+
+
+## 56. 2026-11-16 PR #206：Find N2 工具页面单侧面板布局修复与验收
+
+### 56.1 合并信息
+- PR [#206](https://github.com/just2512/nihaixia-app/pull/206) 已 squash 合并至 `master`。
+- 工作分支：`test/find-n2-tool-pages-single-pane-2026-11-16`。
+- PR 最终 head：`0a0c32d7b08fee4e8991e11ccbd271df4b36a0d3`；合并前 base：`5932beb62dd9317db9b2018a6ae8d5169a1956b8`。
+- 最终 merge commit / 本轮代码核验基线：`09293c55b7c3069e3118291e871ef96d087b5a17`（2026-11-16 08:33 UTC）。
+- 本切片只处理工具页面单侧面板约束、窄屏控件布局及相应 Widget 测试；未修改排盘/问诊/剂量业务规则、AI 编排、ToolRouter、知识库、数据库或手动更新机制。
+
+### 56.2 布局测试与实际修复
+- `test/tool_foldable_layout_test.dart` 对 18 项 Headless 工具页面逐项进行 Widget 验收：完全展开窗口 775×830 dp、零宽 fold；半折叠窗口 800×1000 dp、竖向 hinge x=388..412；从右侧物理面板入口打开，并检查页面边界及 `tester.takeException()`。
+- 测试首轮 run `43825637377` 发现真实窄屏溢出：易经手动选卦的上卦/下卦/动爻下拉控件横向排列溢出约 7.1 dp；剂量换算单位下拉控件溢出约 16 dp（单侧可用内容宽度约 356 dp）。
+- `lib/screens/yijing_screen.dart` 在窄宽度下将三个选择控件改为纵向排列并展开下拉内容；宽屏保留原有横向布局。
+- `lib/screens/dosage_converter_screen.dart` 在窄宽度下将数值与单位控件改为纵向排列并展开下拉内容；宽屏保留原有横向布局。两处仅调整布局，不改变计算逻辑。
+- 测试夹具通过显式返回首页、等待工具路由子树挂载、固定帧推进持续加载页面、隔离 sqflite FFI 测试数据库等方式处理 Navigator/动画/数据库生命周期；梅花页注入空加速度流隔离测试环境硬件依赖，不改变生产传感器行为。
+
+### 56.3 PR head 与合并后主线 CI
+| 验收范围 | Workflow / Run | Head SHA | 实际执行结果 |
+|---|---|---|---|
+| PR 最终 head | Flutter tests / `43830447764` | `0a0c32d7b08fee4e8991e11ccbd271df4b36a0d3` | Flutter regression tests：SUCCESS；Android arm64 APK、ABI、Manifest、Native unit tests：SUCCESS |
+| 合并后 master | Flutter tests / `43832185814` | `09293c55b7c3069e3118291e871ef96d087b5a17` | Flutter regression tests：SUCCESS；Android arm64 APK、ABI、Manifest、Native unit tests：SUCCESS |
+| 合并后 master | Flutter Quality Gate / `43832185754` | `09293c55b7c3069e3118291e871ef96d087b5a17` | Analyze and test：SUCCESS；包括 Dart tests、Android Native unit tests、Find N2 arm64 Debug APK build |
+
+- 上述 PR 与主线 Workflow 中的 Branch validation job 均按 workflow 条件为 SKIPPED；该状态不计为 PASS，也不是失败。所有实际执行的验收 Job 均为 SUCCESS。
+- **云端自动化验收：PASS。** PR 最终 head 的 Flutter 回归与 Android arm64 验证通过；合并后的 master 两条 Workflow 也已全部完成，实际执行项全部通过。
+
+### 56.4 真机验收边界
+- Find N2 真机验收仍为 `LOCAL / MISSING`，不能由模拟窗口 Widget 测试、CI 或 Debug APK 构建替代。
+- 设备侧仍需核对：内屏展开时紫微整屏命盘与宫位详情；半折叠时工具页是否限制在触发侧且避开 hinge；易经手动选卦与剂量换算控件；外屏入口和主要操作。
+- 真机记录至少应包含系统版本、App commit SHA、实际 `sizeDp`、`displayFeatures`、页面截图及异常日志。取得这些证据前，不将 Find N2 设备验收标记为 PASS。
+
