@@ -20,6 +20,12 @@ void main() {
 
     expect(find.byType(SelectionArea), findsOneWidget);
     expect(find.text('伤寒论条文样板'), findsOneWidget);
+
+    final passageText = find.textContaining('太阳病', findRichText: true);
+    expect(passageText, findsOneWidget);
+    await tester.longPress(passageText);
+    await tester.pumpAndSettle();
+    expect(find.text('问 AI'), findsOneWidget);
   });
 
   testWidgets('ordinary markdown reading keeps its existing selectable behavior',
