@@ -44,12 +44,24 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text('黄帝内经 · 速查'), findsOneWidget);
-          expect(
-            tester.widgetList<Card>(find.byType(Card)).every(
-              (card) => card.elevation == 0,
-            ),
-            isTrue,
-          );
+          void expectFlatCardSurface() {
+            final pageContext =
+                tester.element(find.byType(NeijingKnowledgeScreen));
+            expect(Theme.of(pageContext).cardTheme.elevation, 0);
+            final localElevations = tester
+                .widgetList<Card>(find.byType(Card))
+                .map((card) => card.elevation);
+            expect(
+              localElevations.every(
+                (elevation) => elevation == null || elevation == 0,
+              ),
+              isTrue,
+              reason:
+                  'Cards must inherit the zero-elevation theme; local overrides: $localElevations',
+            );
+          }
+
+          expectFlatCardSurface();
           expect(tester.takeException(), isNull);
 
           await tester.tap(find.text('望诊'));
