@@ -24,7 +24,7 @@ class TextScaleSlider extends StatelessWidget {
     final current = AppTextScale.normalize(value);
     return Row(
       children: [
-        const Text('小', style: TextStyle(fontSize: 12)),
+        const Text('小', style: TextStyle(fontSize: AppType.caption)),
         Expanded(
           child: Slider(
             value: current,
@@ -35,7 +35,7 @@ class TextScaleSlider extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        const Text('大', style: TextStyle(fontSize: 16)),
+        const Text('大', style: TextStyle(fontSize: AppType.title)),
       ],
     );
   }

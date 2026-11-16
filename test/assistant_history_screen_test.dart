@@ -107,4 +107,53 @@ void main() {
     expect(find.text('暂无历史对话'), findsOneWidget);
     expect(rows, isEmpty);
   });
+
+  testWidgets('历史对话标题与摘要在402/775dp和200%字号下自然排版',
+      (tester) async {
+    const longTitle = '这是一条用于验证大字号下自然换行的较长历史对话标题';
+    const longPreview = '这段摘要用于检查历史对话列表在窄屏及大字号时是否仍然可读。'
+        '内容应随文字缩放自然换行，不应被固定单行布局强制截断。';
+    final rows = [
+      {
+        'id': 71,
+        'title': longTitle,
+        'mode': 'learning',
+        'created_at': '2026-11-03T08:00:00.000',
+        'updated_at': '2026-11-03T08:10:00.000',
+        'last_message_preview': longPreview,
+      },
+    ];
+
+    for (final width in [402.0, 775.0]) {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 900);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(
+              size: Size(width, 900),
+              textScaler: const TextScaler.linear(2),
+            ),
+            child: AssistantHistoryScreen(
+              loadConversations: () async =>
+                  List<Map<String, Object?>>.from(rows),
+              deleteConversations: (_) async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final title = tester.widget<Text>(find.text(longTitle));
+      expect(title.maxLines, isNull,
+          reason: '历史标题应自然换行，而不是固定单行截断');
+      expect(find.text(longPreview), findsOneWidget);
+      expect(tester.takeException(), isNull,
+          reason: '历史列表在${width.toInt()}dp与200%字号下不应溢出');
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  });
 }
