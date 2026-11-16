@@ -216,14 +216,22 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: cs.primaryContainer,
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.sm),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                  vertical: AppSpacing.xs,
+                                ),
                                 child: Text(
                                   '${c.index + 1}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: AppType.micro,
                                     fontWeight: FontWeight.bold,
+                                    color: cs.onPrimaryContainer,
                                   ),
                                 ),
                               ),
