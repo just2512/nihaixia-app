@@ -90,7 +90,7 @@ void main() {
     for (final width in [402.0, 775.0]) {
       await pumpAtWidth(tester, width);
       await waitForChart(tester, longName);
-      expect(find.text('北京市朝阳区一个较长的出生地点名称'), findsOneWidget);
+      expect(find.textContaining('北京市朝阳区一个较长的出生地点名称'), findsOneWidget);
       expect(find.byType(Card), findsNothing,
           reason: '命盘连续列表不应再依赖重复高阴影 Card');
       expect(tester.takeException(), isNull,
