@@ -4,6 +4,7 @@ import '../widgets/state_view.dart';
 import '../data/database_helper.dart';
 import '../widgets/meridian_icons.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 
 class DiagnosisHistoryScreen extends StatefulWidget {
   const DiagnosisHistoryScreen({super.key});
@@ -71,11 +72,11 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
     final trend = _detectTrend(meridians);
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,20 +84,20 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
           Row(
             children: [
               const Icon(Icons.trending_up, size: 20),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Text('六经传变趋势',
                   style: Theme.of(context).textTheme.titleMedium),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           _buildTrendChart(sorted),
           if (trend.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
                 color: context.colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Row(
                 children: [
@@ -122,27 +123,32 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
     final display = sorted.length > 12 ? sorted.sublist(sorted.length - 12) : sorted;
     final meridianOrder = ['太阳', '阳明', '少阳', '太阴', '少阴', '厥阴'];
 
+    final textScale = MediaQuery.textScalerOf(context)
+        .scale(1)
+        .clamp(1.0, AppTextScale.max);
+    final axisRowHeight = 25.0 * textScale;
+
     return SizedBox(
-      height: 180,
+      height: 180 * textScale,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Y轴标签
+          // Y轴标签随系统/应用字号自然增高，避免 200% 时固定高度裁字。
           Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: meridianOrder.reversed.map((m) {
               return SizedBox(
-                height: 25,
+                height: axisRowHeight,
                 child: Text(m,
                     style: TextStyle(
-                        fontSize: 10,
+                        fontSize: AppType.micro,
                         color: _meridianColor(m),
                         fontWeight: FontWeight.w600)),
               );
             }).toList(),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           // 柱状图
           Expanded(
             child: Row(
@@ -151,7 +157,7 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
               children: display.map((r) {
                 final meridian = r['meridian'] as String? ?? '';
                 final idx = meridianOrder.indexOf(meridian);
-                final height = idx >= 0 ? (idx + 1) * 25.0 : 25.0;
+                final height = idx >= 0 ? (idx + 1) * axisRowHeight : axisRowHeight;
                 final date = DateTime.tryParse(r['created_at'] as String? ?? '');
                 final dayStr = date != null ? '${date.month}/${date.day}' : '';
 
@@ -163,11 +169,11 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
                       height: height,
                       decoration: BoxDecoration(
                         color: _meridianColor(meridian),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(dayStr, style: const TextStyle(fontSize: 10)),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(dayStr, style: const TextStyle(fontSize: AppType.micro)),
                   ],
                 );
               }).toList(),
@@ -222,6 +228,7 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
   // ==================== 历史记录列表 ====================
 
   Widget _buildHistoryList() {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: _records.map((r) {
         final meridian = r['meridian'] as String? ?? '';
@@ -241,11 +248,22 @@ class _DiagnosisHistoryScreenState extends State<DiagnosisHistoryScreen> {
           ),
           title: Text('$meridian · $pattern',
               style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text('$formula  置信度${(confidence * 100).round()}%'),
-          trailing: Text(dateStr,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$formula  置信度${(confidence * 100).round()}%'),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                dateStr,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          isThreeLine: true,
         );
       }).toList(),
     );
