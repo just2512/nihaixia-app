@@ -196,9 +196,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '打开诊断历史趋势');
-    await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.tap(find.byTooltip('切换助手角色'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('工具助手').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('调用 App 工具'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('诊断历史趋势').last);
     await tester.pumpAndSettle();
 
     expect(openedToolId, 'diagnosis_history');
