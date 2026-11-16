@@ -63,6 +63,22 @@ void main() {
     );
   });
 
+  test('上游宋本176独立条文可搜索且回链到独立资产', () async {
+    final result = await ClassicSearchService.search('脉浮滑，此以表有热');
+    expect(
+      result.hits.any(
+        (hit) => hit.asset == 'assets/shanghan/clause_176_upstream.md',
+      ),
+      isTrue,
+    );
+    final hit = result.hits.firstWhere(
+      (item) => item.asset == 'assets/shanghan/clause_176_upstream.md',
+    );
+    final resolved = await ClassicSearchService.findBySourceId(hit.sourceId);
+    expect(resolved, isNotNull);
+    expect(resolved!.asset, 'assets/shanghan/clause_176_upstream.md');
+  });
+
   test('命中带来源标签与摘要，标题命中排在正文命中之前', () async {
     final r = await ClassicSearchService.search('上古天真论');
     expect(r.hits, isNotEmpty);

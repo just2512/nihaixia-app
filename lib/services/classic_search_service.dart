@@ -202,6 +202,7 @@ class ClassicSearchService {
       'assets/shanghan/clause_388.md',
       'assets/shanghan/clause_389.md',
       'assets/shanghan/clause_390.md',
+      'assets/shanghan/clause_176_upstream.md',
       'assets/shanghan/appendix_001_六经辨证总结.md',
       'assets/shanghan/appendix_002_六经传变规律.md',
       'assets/shanghan/appendix_003_六经病欲解时.md',
@@ -217,7 +218,13 @@ class ClassicSearchService {
         .toSet();
     for (final e in supplementalList) {
       final source = e['s'] as String?;
-      final asset = e['a'] as String?;
+      final indexedAsset = e['a'] as String?;
+      // Upstream clause_176.md conflicts with the fork's local clause_176.md
+      // (which contains a different lecture article). Keep the upstream article
+      // as an explicitly named parallel reading asset rather than overwrite it.
+      final asset = indexedAsset == 'assets/shanghan/clause_176.md'
+          ? 'assets/shanghan/clause_176_upstream.md'
+          : indexedAsset;
       final isMissingPath =
           (source == 'shanghan' && asset != null &&
               supplementalShanghanAssets.contains(asset)) ||

@@ -52,7 +52,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
             onTap: () => _open(context, ClassicLibraryScreen(
               title: '伤寒论 · 阅读库',
               lectures: kShangHanLectures,
-              seqLabel: (seq) => seq <= 379 ? '${seq + 1}' : seq <= 390 ? '宋本${seq}' : '附录${seq - 390}',
+              seqLabel: (seq) => seq == 395 ? '上游176' : seq <= 379 ? '${seq + 1}' : seq <= 390 ? '宋本${seq}' : '附录${seq - 390}',
               footer: '出处：《人纪·伤寒论》倪师讲稿 · 传统文化参考',
             )),
           ),
