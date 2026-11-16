@@ -6155,18 +6155,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 );
       // Historical UNKNOWN tool output (including older synthetic page-route
       // IDs) remains visible to the user but is not replayed into model context.
-      final hasToolHandoff =
-          messageMetadata.toolId != null || messageMetadata.toolStatus != null;
+      final hasTerminalToolOutcome = messageMetadata.toolStatus != null &&
+          messageMetadata.toolStatus != 'AWAITING_PARAMETERS';
       final hasVerifiedToolResult =
           messageMetadata.toolStatus ==
                   AssistantToolExecutionStatus.succeeded.name.toUpperCase() &&
               messageMetadata.sourceIds.isNotEmpty &&
               !messageMetadata.sourceIds
                   .any((id) => id.startsWith('local-page-tool:'));
-      // Ordinary assistant prose is still replayed. Tool handoffs are replayed
-      // only when their persisted status and source IDs prove a validated success.
+      // Ordinary assistant prose and parameter-clarification messages are
+      // replayed. Terminal tool outcomes are replayed only when their persisted
+      // status and source IDs prove a validated success.
       final includeInModelContext =
-          isUser || !hasToolHandoff || hasVerifiedToolResult;
+          isUser || !hasTerminalToolOutcome || hasVerifiedToolResult;
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
