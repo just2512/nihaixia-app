@@ -4,8 +4,8 @@
 生效日期：2026-11-16  
 维护仓库：`just2512/nihaixia-app`
 
-**当前项目版本**：`2.0.0+8040`  
-**独立版本切换前最高 Android versionCode**：`8039`
+**当前项目版本**：`2.0.0+8047`  
+**同 applicationId 已知最高 Android versionCode**：`8046`
 
 本文件是项目版本治理的权威规范。README 和发布工作流是其受检验的镜像与执行入口。
 
@@ -34,16 +34,16 @@
 
 1. `pubspec.yaml` 中的 `+BUILD` 是 Android `versionCode` 的来源；`MAJOR.MINOR.PATCH` 是 Android `versionName` 的来源。
 2. 构建号必须高于所有曾向用户交付的旧安装包，禁止重置、回退或重复使用已交付构建号。
-3. 本次切换前的最高构建号为 `8039`，因此独立基线使用 `+8040`。后续可分发 APK 继续递增。
+3. 本仓库与上游使用相同的 Android `applicationId`。已核实本仓库旧构建号为 `8039`，上游当前构建号为 `8046`；为避免同包名 APK 出现 versionCode 降级，独立基线使用 `+8047`。后续可分发 APK 继续递增。
 4. 同一版本的通用 APK 与 ABI 分包应保持一致的版本名和构建号。
-5. 为确保旧 APK 可覆盖升级，不得擅自修改 Android `applicationId`、既有发布签名密钥/证书或数据目录身份。
+5. 为确保旧 APK 可覆盖升级，不得擅自修改 Android `applicationId`、既有发布签名密钥/证书或数据目录身份。versionCode 足够高只是必要条件；APK 覆盖安装仍要求签名证书兼容，必须由实际旧 APK 安装测试确认。
 6. 当前 Android Gradle 配置从 Flutter 版本字段读取 `versionCode` / `versionName`；不得在 Gradle 中另设一套与 `pubspec.yaml` 不一致的版本号。
 
 ## 4. 唯一来源与自动校验
 
 - `pubspec.yaml` 是应用版本的唯一可编辑来源。
 - README 的当前版本值与本文件中的当前版本值必须和 `pubspec.yaml` 完全一致。
-- `tool/check_version_source.sh` 校验三处版本一致，并阻止 Android 构建号不高于切换前基线。
+- `tool/check_version_source.sh` 校验三处版本一致，并阻止 Android 构建号不高于共享 applicationId 的已知历史构建号上限。
 - 正式 Release tag 使用 `vMAJOR.MINOR.PATCH`，必须与 `pubspec.yaml` 中不含 `+BUILD` 的产品版本完全一致。
 - 对应的 `release_notes/vX.Y.Z.md` 必须存在；发布工作流校验通过后，才可构建并发布本仓库 APK。
 
@@ -60,7 +60,7 @@
 
 - `1.11.x` 及其更早记录作为历史编号保留，不改写历史记录，不再沿用该序列发版。
 - `assets/data/changelog.json` 按产品版本倒序展示；新版本必须高于历史版本，避免旧记录被排序到当前版本之前。
-- 当前 `2.0.0+8040` 是独立源码版本基线，不代表已经创建 Git tag、GitHub Release 或正式发布 APK。
+- 当前 `2.0.0+8047` 是独立源码版本基线，不代表已经创建 Git tag、GitHub Release 或正式发布 APK。
 - 发布前仍须通过当前提交对应的 CI、安全门禁、签名配置和安装升级验收；没有证据时不得宣称已发布或已完成真机覆盖升级。
 
 ## 7. 变更控制
