@@ -43,10 +43,10 @@
 
 | 上游提交 | 文件范围 | 决策 | 原因 / 验收条件 |
 |---|---|---|---|
-| `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | `assets/bencao_lecture/**`（提交说明称 335 篇） | `HOLD / MISSING_PROVENANCE` | 上游有 335 篇《人纪·神农本草经》讲稿整理内容，但仓库根目录 Apache-2.0 声明不足以单独证明第三方讲稿/转录文本的著作权授权链。暂不复制整批正文。先核对权利来源、授权/许可范围、版本来源和内容审核责任；通过后再同步正文、索引、阅读入口及药材双向链接。 |
-| `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | 本草讲稿数据结构、阅读入口、索引及相关工具（以 `main` 文件树为准） | `REVIEW_REQUIRED` | 只有确认正文授权后才整体接入；避免把指向未导入资产的阅读入口或索引单独合入。还需检查 `herbs.json` 主名/别名口径、讲稿序号连续性和反向引用。 |
+| `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | `assets/bencao_lecture/**`（upstream/main 当前 336 个文件，含 335 篇讲稿及索引/资源） | `ACCEPT_CANDIDATE / IMPLEMENTATION_PENDING` | 上游 main 已有讲稿资产及配套阅读/索引实现。按仓库声明的 Apache-2.0 许可口径同步并保留许可、版权与归属信息；验收文件清单、索引映射、资源引用、搜索/详情跳转和现有功能回归。不要求重新考证纸本底本，不重复审核已有医学资料。导入时保留 fork 自有 `herbs.json`，不整文件覆盖。 |
+| `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | `lib/data/bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart`、药材双向联动及搜索入口 | `ACCEPT_CANDIDATE / IMPLEMENTATION_PENDING` | 与讲稿资产同一切片集成，避免悬空入口；复用 fork 现有药材详情、路由和搜索基础设施，人工合并映射，不覆盖现有药材记录。 |
 
-备注：上游 `docs/bencao_ingestion_plan.md` 记录过 SHELVED 状态和本地原始讲稿来源描述。该文件是上游项目记录，不自动构成本仓库的授权证明或产品决策。
+备注：上游 `docs/bencao_ingestion_plan.md` 是 2026-11-01 的历史计划，仍写 SHELVED；但当前 main 已存在 336 个本草资产及完整阅读/索引代码。该状态与当前文件树不一致，按过期计划记录，不得作为本仓库暂停同步的依据。
 
 ### 3.2 针灸穴位功能
 
@@ -93,11 +93,10 @@
 
 ## 6. 本轮下一步
 
-1. 完成本草讲稿正文的权利来源与内容来源核验；未核验前不复制 335 篇正文。
-2. 单独移植针灸穴位 UI/索引修复，不带入 `assets/data/acupoints.json` 的批量临床文本改写。
-3. 经典文本资产按书种/条目记录来源和差异，再决定是否导入；禁止复制 `docs/web/**`。
-4. 建立第二批只读差异报告后，分别处理诊断引擎、医案数据库和共享页面。
-
+1. 集成金匮 2 个、伤寒 16 个 upstream-only 资产，并只追加对应索引项；不得覆盖 fork 已有条文或本地独有条目。
+2. 集成本草 336 个资产文件及上游已有的索引、阅读、药材双向联动和搜索代码；复用 fork 465 味药库，不整表替换。
+3. 第二批按已存在能力做差异收敛：辨证引擎已有逻辑标记 ALREADY_PRESENT；医案、数据库和共享页面只吸收明确缺口，不重写 AI 现代化链路。
+4. 只运行受本轮实际代码/资产变更影响的定向检查及必要 CI；不为追求测试数量增加泛化测试。
 
 ## 7. 2026-11-16 第一批穴位切片执行记录
 
@@ -184,49 +183,35 @@
 以上 PR 均从 fork 当前 master 的 `09a3a00148aba99eb03d6f7cd99f6791e66ff936` 单独派生，不把台账分支或未验收代码合入 master。PR/CI 的最终结论以对应 head SHA 的实际检查为准。
 
 
-## 10. 第一批经典与本草资产来源核验（2026-11-16）
+## 10. 第一批经典与本草资产的实际差异（2026-11-16）
 
-### 10.1 共同祖先之后新增的上游经典资料
+### 10.1 金匮与伤寒
 
-按共同祖先与 `upstream/main` 文件树比对，新增文件集中为：
+| 目录 | upstream/main 文件数 | fork 当前文件数 | upstream-only 文件 | 决策 |
+|---|---:|---:|---|---|
+| `assets/jingui/` | 433 | 453 | `clause_453.md`、`clause_454.md` | `ACCEPT_CANDIDATE / INTEGRATION_PENDING`；只追加 2 个文件及对应索引项，保留 fork 的其余条目 |
+| `assets/shanghan/` | 395 | 380 | `176_board.jpg`、4 篇六经附录、`clause_380.md`—`clause_390.md` | `ACCEPT_CANDIDATE / INTEGRATION_PENDING`；只追加 16 个文件及对应索引项，保留 fork 的 `clause_000.md` 和其他本地内容 |
+| `assets/neijing/` | 无新增路径 | 有既有文件差异 | 需要看具体差异是否造成学习功能缺口 | `REVIEW_ONLY_IF_BEHAVIORAL_GAP`；不重复审核整库 |
 
-| 目录 | 新增文件 | 内容核验 | 决策 |
-|---|---:|---|---|
-| `assets/jingui/` | 2 | `clause_453.md`、`clause_454.md` 均包含经典原文，同时含「倪海厦解读」现代讲解段落 | `HOLD / PROVENANCE_REQUIRED` |
-| `assets/shanghan/` | 16 | `clause_380.md`—`clause_390.md`、4 篇六经附录及 `176_board.jpg`；条文页含现代课程讲解 | `HOLD / PROVENANCE_REQUIRED` |
-| `assets/neijing/` | 0 个新路径 | 有既有文件变化，需要按条文范围核对，不等同于新增原文 | `REVIEW_REQUIRED` |
-
-本轮抽查的金匮/伤寒文件同时包含古典原文和「倪海厦解读」内容；后者属于现代讲课整理，不因古典原文本身属于公版作品，就自动成为可自由复制的文本。因此暂不整文件复制。后续可在确认版本和来源后，仅引入已核验的公版原文部分；现代讲稿、板书图片和整理注释须另有权利依据。
+这些文件已经存在于 upstream/main 的实际文件树。当前同步不要求补齐纸本版本、卷页、影印本坐标；应保留原始文件、索引语义和仓库许可/归属信息。只有遇到文件本身明确标示的第三方单独许可或排除声明，才对该文件单独处理，不把个别例外扩大成整书阻塞。
 
 ### 10.2 本草讲稿库
 
-上游新增 `assets/bencao_lecture/` 共 336 个文件（335 篇讲稿正文及配套索引/资源）。上游 `docs/bencao_ingestion_plan.md` 记录的源输入是本地文件 `D:/nhx/人纪-神农本草经-倪海厦.txt`，约 59.6 万字，内容为授课实录整理；该计划在上游文档中标记为 `SHELVED`。
+上游 `assets/bencao_lecture/` 当前有 336 个文件（335 篇讲稿正文及配套索引/资源），并已提供 `bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart`、药材反向联动和搜索入口。上游 `docs/bencao_ingestion_plan.md` 的 SHELVED 状态是 2026-11-01 的历史计划，与当前 main 的真实资产/功能状态不一致，不构成同步阻断。
 
-当前没有从仓库文件中取得足以核实该讲稿整理文本复制、再发布和二次改编权限的授权材料。仓库根目录许可证不能证明第三方课程文本的权利人已授权。因此：
+- `assets/bencao_lecture/**`：`ACCEPT_CANDIDATE / INTEGRATION_PENDING`；按原文件导入并检查数量、文件名/序号、Markdown 资产引用。
+- 本草索引、阅读、联动和搜索代码：`ACCEPT_CANDIDATE / INTEGRATION_PENDING`；与资产同一切片集成，避免悬空入口。
+- upstream 与 fork 根目录 `LICENSE` 文件 SHA 均为 `261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64`，声明 Apache-2.0。同步时保留该许可、版权和归属信息；不额外要求纸本底本或独立授权材料作为整批技术同步前置条件。此记录说明仓库声明的许可口径，不对未核实的第三方权属作法律保证。
+- fork 已有 `assets/data/herbs.json` 465 味结构化药库，当前 SHA 与 upstream 不同；保留 fork 数据，不整文件覆盖，只合并讲稿必要映射。
 
-- `assets/bencao_lecture/**` 正文：`HOLD / RIGHTS_EVIDENCE_MISSING`；
-- `bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart` 和药材反向联动：`HOLD / DEPENDS_ON_CORPUS`；
-- 不导入孤立索引或空入口，避免产生悬空资产引用；
-- 可先独立核验已有 `assets/data/herbs.json` 药材结构，但不重复导入或覆盖现有药库。
-
-本轮用户明确提出重新评估/吸收经典与本草资料；故上述 HOLD 是权利证据门槛，不是永久关闭该工作。取得书面授权、明确可再发布许可，或确定只使用公版原文并完成文本比对后，重新打开这两个工作域。
+工程验收聚焦实际可用性：资产注册、索引映射、药材详情双向跳转、搜索命中及现有药库回归，不重复开展整库医学审核。
 
 ### 10.3 第一批当前交付边界
 
 - 针灸穴位功能：PR #194 已合入 master；Flutter regression 与 Android arm64 CI 均 PASS；Find N2 真机验收 UNKNOWN。
-- 金匮/伤寒新增讲稿和附录：HOLD，未复制。
-- 本草 335 篇讲稿正文及阅读入口：HOLD，未复制。
+- 金匮/伤寒新增条文与附录：待从 upstream/main 小批量追加，保留 fork 原有条目。
+- 本草 335 篇讲稿正文及阅读入口：待集成上游现有 336 文件资产及配套代码；不再受纸本考证或整库权利审查阻塞。
 - 上游 `docs/web/**` 和发版生成文件：REJECT，不复制。
-
-### 10.4 最新 CI / PR 证据更新
-
-| PR | 最新证据 | 当前状态 |
-|---|---|---|
-| #194 穴位切片 | Run `43781702971`：Flutter regression SUCCESS；Android arm64 APK/单测 SUCCESS；branch validation SKIPPED | `PASS`（云端）；Find N2 实机仍 `UNKNOWN` |
-| #195 医案别名 | head `99c6832f523750f7b616f4304885bb9f08b425d9`；Run `43782949576` Flutter regression 与 Android arm64 均 SUCCESS | `MERGED / PASS`（云端） |
-| #193 同步台账 | 最新 head 与 Checks 以 PR 页面为准；已重放到 master `31ed1c7a`，仅台账文件 | `DRAFT / IN_PROGRESS` |
-
-
 
 ## 11. 经典/本草内容对应的上游提交 SHA 补录
 
@@ -240,7 +225,7 @@
 | 伤寒原文标点统一 | `f9f0d05991e5a0c15934afce6710d33365163d2e` | 全库标点格式调整 |
 | 本草 335 篇讲稿库 | `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | 新增本草讲稿正文、索引和药材双向联动 |
 
-上述 SHA 仅建立可追踪来源，不构成采纳许可或内容正确性证明。当前经典/本草文件仍按第 10 节状态处理。
+上述 SHA 用于追踪上游具体变更。实际采纳以文件树差异、fork 侧索引/资源引用检查和本仓库 CI 为准；不要求对既有内容重新考古或重复医学审核。
 
 
 ## 12. 2026-11-16 CI 增量复核
@@ -308,7 +293,7 @@ PR #195 曾以 `5a9c0271` 为父提交独立重放、验收后合入；PR #193 �
 ### 14.4 当前待办
 1. 等待 PR #196 最新 head 的 Flutter regression 与 Android arm64 CI；只在二者通过后合并。
 2. PR #193 台账文档分支重放到当前 master 后，核实最新 head 和文档 CI，再合并。
-3. 金匮/伤寒现代讲稿、本草 335 篇讲稿仍保持来源/权利证据 HOLD；未获得授权证据前不复制。
+3. 金匮/伤寒增量与本草讲稿阅读层转入小批量集成；上游 LICENSE/NOTICE 按原样保留，个别明确例外按文件处理，不设全库阻塞。
 4. Find N2 实机滑动/折叠屏/本地 E4B 多轮与工具端恢复测试仍为设备侧 UNKNOWN；CI 不替代实机证据。
 
 
@@ -317,7 +302,7 @@ PR #195 曾以 `5a9c0271` 为父提交独立重放、验收后合入；PR #193 �
 - PR #195：MERGED；Flutter regression 与 Android arm64 均 PASS；未修改医案原文、序号或来源台账。
 - PR #196：Draft / OPEN；head `d7373e36e6c1fb7e071d982b51b3b5ef8f6ff7a5`；CI run [43785779751](https://github.com/just2512/nihaixia-app/actions/runs/43785779751) 仍在运行；未合并。
 - PR #193：Draft / OPEN；已以 master `31ed1c7a` 为父提交重放，只包含同步台账文档；CI/Checks 以 PR 页面最新 head 为准，避免将台账自身的旧 head 或旧 run 写成当前状态。
-- 经典/本草现代讲稿仍保持权利来源 HOLD；不以技术合并替代授权证明。
+- 经典/本草新增资产尚未进入 fork；状态为集成待办，不是来源考古或全库授权阻塞。
 
 ## 16. 2026-11-16 最终收口记录（本节为当前状态权威）
 
@@ -376,8 +361,8 @@ PR #197 的结果边界：
 
 | 项目 | 状态 | 关闭条件 |
 |---|---|---|
-| 金匮/伤寒新增条文与附录 | HOLD / PROVENANCE_REQUIRED | 分离核验公版古籍原文与现代讲课解释，明确版本、出处和文本准确性后，再以原文最小切片导入 |
-| 本草 335 篇讲稿与阅读入口 | HOLD / RIGHTS_EVIDENCE_MISSING | 取得可再发布的书面授权/许可，或改为只使用经核对的公版原文；未满足前不复制讲稿正文或导入悬空索引 |
+| 金匮/伤寒新增条文与附录 | INTEGRATION_PENDING | 追加 upstream-only 的 2 个金匮文件和 16 个伤寒文件，补齐索引引用并做定向资产测试；不覆盖 fork 本地条目 |
+| 本草 335 篇讲稿与阅读入口 | INTEGRATION_PENDING | 集成 upstream 已有 336 个资产及配套入口/索引/联动，复用 fork 465 味药库；检查文件/资源映射、阅读和搜索，不做整库重审 |
 | OPPO Find N2 实机验收 | UNKNOWN | 用户设备实测同经络滑动、收藏持久化、古籍跳转、内外屏/半折叠布局 |
 | Native E4B 实机多轮 | UNKNOWN | Find N2 实测多轮、取消、重建/恢复、强制停止重启与 TRACE；云端 CI 不替代设备证据 |
 
@@ -386,3 +371,41 @@ PR #197 的结果边界：
 ### 16.6 当前 PR #193
 
 PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必须以该 SHA 为唯一父提交重放，compare 应为 ahead 1 / behind 0。台账 PR 的 CI 只验文档变更，不替代上表四条代码 PR 的验收证据。
+
+## 17. 2026-11-16 同步范围纠偏与当前执行口径（覆盖前述历史 HOLD）
+
+本节为当前执行口径；前文 §§3、6、10、14—16 中将本草/经典整批内容设为“纸本版本/来源权利链核验完成前不得同步”的 HOLD，均以本节为准撤销。此前该门槛是执行台账自行增加的过度保守条件，不是用户明确提出的产品要求，也不是本仓库产品规范要求。项目目标是诊疗全过程学习，不是古籍考古；不能把上游已经存在的学习资料和功能长期搁置在纸本考据流程中。
+
+### 17.1 已核实的事实
+
+| 范围 | upstream/main | fork master | 当前差异与处理 |
+|---|---|---|---|
+| 本草讲稿 | `assets/bencao_lecture/` 336 个文件，含 335 篇讲稿正文及索引/资源；另有 `bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart` 和药材联动/搜索实现 | 没有 `assets/bencao_lecture/` 及对应阅读层；已有 `assets/data/herbs.json` 465 味结构化药库 | 补本草讲稿阅读层和关联能力；保留 fork 的 465 味药库，不覆盖 upstream/fork 内容差异 |
+| 金匮 | 433 个文件 | 453 个文件 | upstream-only 为 `clause_453.md`、`clause_454.md`；仅追加并注册这 2 项 |
+| 伤寒 | 395 个文件 | 380 个文件 | upstream-only 为 `176_board.jpg`、4 篇六经附录及 `clause_380.md`—`clause_390.md`；仅补这 16 项，保留 fork 的 `clause_000.md` 和其他本地内容 |
+| 穴位 | 上游已有同经络切换、稀疏字段详情等改进 | PR #194 已合入 | 云端 Flutter regression 与 Android arm64 检查通过；Find N2 实机仍为设备侧 UNKNOWN |
+| 医案别名 | 上游提供唯一方名异写索引变更 | PR #195 已合入 | 只合唯一可判定别名，不覆盖医案正文和来源台账 |
+
+上游本草源提交：`b120bc04cd6894ac329c94d05401d2c5cb2fd085`。金匮增量：`688d6b30fddc31e0683570bb9029ed38f9666755`、`a0380f2afd7531e084c61a6db2e758499aab8560`。伤寒增量：`ffff7ba46d8906473ac2084736e68dc1c6fd0efb`、`741afaa685c4307afb78dd116eefcab067a1d711`、`1ac793216168031ca0bd204783d64c4535299fa6`、`f9f0d05991e5a0c15934afce6710d33365163d2e`。
+
+### 17.2 许可和来源口径
+
+- upstream 与 fork 当前根目录 `LICENSE` 文件 SHA 均为 `261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64`，声明 Apache License 2.0。同步时保留许可证、版权/归属声明及明确的 NOTICE/文件级许可信息。
+- 不再要求纸本底本、版本卷页、影印本坐标或额外书面授权证明作为整批技术同步的前置门槛。上游 `docs/bencao_ingestion_plan.md` 中 2026-11-01 的 SHELVED 记载属于历史计划，已与当前 main 的实际资产/功能状态不一致。
+- 本台账不对任何未核实的第三方权属作法律保证。若同步时实际发现某个文件含明确的第三方单独许可、版权排除声明或来源冲突，只对该文件单独处理；不得将个别例外扩大成整类资料或整套知识库的阻塞。
+- 既有且可定位的医学知识不重复开展整库医学审核。只检查新增文件本身的结构完整性、资产路径、索引映射和现有 App 引用是否正确；内容问题有具体证据时才按具体条目修复。
+
+### 17.3 剩余实施顺序
+
+1. **经典增量切片**：从最新 `master` 分支追加 2 个金匮和 16 个伤寒 upstream-only 文件；补充对应 `classic_lecture_data.dart` 条目；不整文件替换经典索引。
+2. **本草讲稿功能切片**：导入 336 个现有资产及必要索引/阅读/搜索/药材双向关联代码；保留 `herbs.json` 当前 465 条数据及 fork 自有别名、详情、折叠屏和 AI 上下文行为。
+3. **第二批收敛**：辨证规则已存在的能力标记 `ALREADY_PRESENT`；医案数据只采纳明确的检索/映射缺口；共享页面只移植已证明有价值且不破坏 AI 对话、Find N2 布局及手动更新机制的函数级改动。
+4. **验收**：仅围绕这次变更执行资源注册/索引映射/阅读跳转/搜索/受影响页面回归及现有 CI。不得用泛化测试扩张工期；不得降低既有门槛、删除失败测试或伪造设备证据。
+
+### 17.4 当前状态
+
+- `master` 当前集成基线：`2a9929fa30c2c3a9728c08f7645825addf4a90e7`。
+- 唯一 upstream source：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
+- PR #194、#195、#196、#197 已进入 master；AI 结果真实性门禁和四类助手既有边界保留。
+- PR #193 为本台账文档 PR；本节提交后以最新 master 为基线更新分支和 CI 记录。
+- 尚未同步的经典/本草资产当前状态为 `INTEGRATION_PENDING`，不再标记 `RIGHTS_EVIDENCE_MISSING` 或 `PROVENANCE_REQUIRED`。
