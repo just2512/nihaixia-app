@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108" role="img" aria-labelledby="title desc">
-  <title id="title">汉唐中医</title>
-  <desc id="desc">米白底色上的砖红色打开书册图标，书页为米白色，书脊为金色。</desc>
-  <rect x="0" y="0" width="108" height="108" fill="#F3EBDD"/>
-  <path fill="#A93226" d="M22,30 C31,27 42,29 53,36 L54,80 C43,73 31,71 22,76 Z"/>
-  <path fill="#A93226" d="M86,30 C77,27 66,29 55,36 L54,80 C65,73 77,71 86,76 Z"/>
-  <path fill="#F3EBDD" d="M27,37 C35,35 43,37 50,42 L51,72 C43,67 35,66 27,70 Z"/>
-  <path fill="#F3EBDD" d="M81,37 C73,35 65,37 58,42 L57,72 C65,67 73,66 81,70 Z"/>
-  <path fill="#B89453" d="M52,36 L56,36 L56,80 L52,80 Z"/>
-  <path fill="#24211F" d="M32,46 C38,44 43,46 47,49 L47,52 C42,49 37,48 32,50 Z"/>
-  <path fill="#24211F" d="M32,57 C38,55 43,57 47,60 L47,63 C42,60 37,59 32,61 Z"/>
-  <path fill="#24211F" d="M76,46 C70,44 65,46 61,49 L61,52 C66,49 71,48 76,50 Z"/>
-  <path fill="#24211F" d="M76,57 C70,55 65,57 61,60 L61,63 C66,60 71,59 76,61 Z"/>
+  <title id="title">研纪</title>
+  <desc id="desc">以中心知识节点连接三个领域节点的关系图，象征三纪研习与知识关联。</desc>
+  <rect x="0" y="0" width="108" height="108" rx="18" fill="#F3EBDD"/>
+  <g fill="none" stroke="#A93226" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M54 53 L27 29"/>
+    <path d="M54 53 L81 29"/>
+    <path d="M54 53 L54 84"/>
+    <path d="M27 29 Q54 7 81 29"/>
+    <path d="M27 29 Q14 56 54 84"/>
+    <path d="M81 29 Q94 56 54 84"/>
+  </g>
+  <g fill="#F3EBDD" stroke="#A93226" stroke-width="4">
+    <circle cx="27" cy="29" r="8.5"/>
+    <circle cx="81" cy="29" r="8.5"/>
+    <circle cx="54" cy="84" r="8.5"/>
+  </g>
+  <circle cx="54" cy="53" r="12" fill="#B89453" stroke="#24211F" stroke-width="2.5"/>
+  <circle cx="54" cy="53" r="3.5" fill="#F3EBDD"/>
 </svg>
