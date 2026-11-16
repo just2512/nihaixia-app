@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/critical_illness_list_screen.dart';
 import 'package:nihaisha_app/screens/formula_detail_screen.dart';
 import 'package:nihaisha_app/screens/herb_detail_screen.dart';
@@ -12,9 +14,22 @@ import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   setUpAll(() async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
     await FormulaRepository.load();
     await HerbRepository.load();
     await AcupointRepository.load();
+  });
+
+  setUp(() {
+    DatabaseHelper.configureTestDatabase(
+      'critical_illness_layout_${DateTime.now().microsecondsSinceEpoch}.db',
+      factory: databaseFactoryFfi,
+    );
+  });
+
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
   });
 
   Future<void> pumpList(
