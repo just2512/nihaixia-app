@@ -86,6 +86,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   bool _distinguishZiShi = false; // 区分早晚子时：默认关闭（子时归自然日）
   bool _fireEarthSame = true; // 长生十二神起长生口径：默认火土同宫（现代子平主流）
   bool _showAllHealth = false; // 健康提醒：展开终身（出生→百岁）vs 默认未来30年
+  bool _showPlateFullscreen = false; // 展开内屏时以视口高度缩放盘面，整屏查看十二宫
   final _longitudeCtrl = TextEditingController(); // 出生地经度（东经，留空用默认 120°）
   CityLocation? _selectedCity; // 选中的出生城市（真太阳时定位，优先于手动经度）
 
@@ -291,6 +292,18 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       appBar: AppBar(
         title: const Text('紫微斗数排盘'),
         actions: [
+          if (MediaQuery.sizeOf(context).width >= 600 &&
+              _chart != null &&
+              !_calculating)
+            IconButton(
+              tooltip: _showPlateFullscreen ? '退出整屏命盘' : '整屏查看命盘',
+              icon: Icon(
+                _showPlateFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+              ),
+              onPressed: () => setState(
+                () => _showPlateFullscreen = !_showPlateFullscreen,
+              ),
+            ),
           if (widget.returnResultOnComplete && _chart != null && !_calculating)
             IconButton(
               tooltip: '返回 AI 助手',
@@ -318,6 +331,25 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           // 双栏断点按内容区宽度计算。700dp 在 Find N2 展开屏经过系统
           // 安全区/外层留白后可能无法触发；640dp 仍能为两张卡片各留约 300dp。
           final isExpanded = constraints.maxWidth >= 640;
+          if (_showPlateFullscreen && _chart != null && !_calculating) {
+            final fitWidth = _plateMaxWidthForHeight(constraints.maxHeight);
+            return SizedBox.expand(
+              key: const ValueKey('ziwei-fullscreen-plate-viewport'),
+              child: ColoredBox(
+                color: cs.surface,
+                child: Center(
+                  child: _buildPlate(
+                    cs,
+                    _chart!,
+                    _flowMark,
+                    flowMonthMingIndex: _flowMonthMark?.mingIndex,
+                    flowDayMingIndex: _flowDayMark?.mingIndex,
+                    maxWidthOverride: fitWidth,
+                  ),
+                ),
+              ),
+            );
+          }
           return ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -408,6 +440,19 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     );
   }
 
+
+  /// 将 4×4 盘面按当前可用高度缩放到单屏可见范围。
+  /// 高度预算包含 Card 默认外边距、内边距和 GridView 主轴间距。
+  double _plateMaxWidthForHeight(double availableHeight) {
+    const frameExtent = 36.0;
+    const cellAspectRatio = 0.72;
+    final safeHeight = availableHeight.isFinite ? availableHeight : 0.0;
+    final fitWidth =
+        (safeHeight - frameExtent).clamp(0.0, double.infinity) *
+            cellAspectRatio +
+        frameExtent;
+    return fitWidth.clamp(1.0, 640.0).toDouble();
+  }
 
   void _returnAssistantResult() {
     final chart = _chart;
@@ -1054,6 +1099,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     FlowYearMark? flow, {
     int? flowMonthMingIndex,
     int? flowDayMingIndex,
+    double? maxWidthOverride,
   }) {
     // 4×4 盘面：外围 12 宫按地支固定盘位，中心 2×2 为命盘核心。
     // slot(0..15) → 地支索引(0子..11亥) 或 -1(核心)
@@ -1071,7 +1117,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         final availableWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
-        final plateWidth = ziweiPlateWidthFor(availableWidth);
+        final plateWidth = ziweiPlateWidthFor(
+          availableWidth,
+          maxWidth: maxWidthOverride ?? 640,
+        );
         return Center(
           child: SizedBox(
             key: const ValueKey('ziwei-chart-plate-width'),
@@ -1292,17 +1341,32 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     showModalBottomSheet<void>(
       context: context,
       anchorPoint: foldAwareRouteAnchorPoint(context),
+      backgroundColor: cs.surface,
+      barrierColor: Colors.black54,
+      elevation: 12,
+      clipBehavior: Clip.antiAlias,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
+      builder: (context) => Material(
+        key: const ValueKey('ziwei-palace-detail-surface'),
+        color: cs.surface,
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     p.roleLabel,
@@ -1338,7 +1402,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               ...p.stars.map(
                 (s) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
                         s.label,
@@ -1399,6 +1466,8 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               ),
             ],
           ),
+          ),
+        ),
           ),
         ),
       ),
