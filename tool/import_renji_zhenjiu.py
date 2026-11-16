@@ -183,14 +183,14 @@ def acupoint_index(bodies, titles=None):
     """扫全部篇正文，统计穴位名出现次数。
 
     titles 给出篇名时，跨经重名穴仅在所属经络章计数；
-    不提供 titles 时兼容旧调用。
+    不提供 titles 时兼容旧调用。保留当前项目的 _EXCLUDED 过滤语义。
     """
     data = json.load(io.open(ACUPOINT_JSON, encoding="utf-8"))
     names = sorted(
         {a["name"].replace("穴", "") for a in data["acupoints"]},
         key=lambda name: (-len(name), name),
     )
-    used = [n for n in names if n not in _EXCLUDED and n not in _FORCE_FORM]
+    used = [name for name in names if name not in _EXCLUDED and name not in _FORCE_FORM]
     used += list(_FORCE_FORM.values())
     out = {}
     for name in used:
@@ -249,6 +249,9 @@ def write_dart(items):
 
 
 def main():
+    """重建入口会重写全部讲稿 Markdown；禁止只为更新索引而运行。
+    仅更新索引请运行 tool/reindex_zhenjiu_index.py。
+    """
     src_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_SRC
     src = io.open(src_path, encoding="utf-8").read()
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -287,7 +290,8 @@ def main():
     print("兜底清理修正篇数:", n_fixed)
     idx = acupoint_index(
         [io.open(os.path.join(ROOT, it["asset"]), encoding="utf-8").read()
-         for it in items]
+         for it in items],
+        [it["name"] for it in items],
     )
     io.open(
         os.path.join(OUT_DIR, "acupoint_index.json"),
