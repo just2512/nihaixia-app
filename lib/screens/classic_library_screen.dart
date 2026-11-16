@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/zhenjiu_lecture_index.dart';
@@ -88,7 +89,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                         },
                       ),
                 border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
@@ -103,7 +104,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                     decoration: BoxDecoration(
                       color: cs.tertiaryContainer,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Row(
                       children: [
@@ -114,7 +115,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                           child: Text(
                             widget.infoText!,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: AppType.caption,
                               color: cs.onTertiaryContainer,
                               height: 1.5,
                             ),
@@ -138,7 +139,6 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                 for (final l in lectures)
                   Card(
                     margin: const EdgeInsets.only(bottom: 6),
-                    elevation: 1,
                     child: ListTile(
                       dense: true,
                       leading: CircleAvatar(
@@ -147,7 +147,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                         child: Text(
                           widget.seqLabel?.call(l.seq) ?? '${l.seq}',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: AppType.micro,
                             fontWeight: FontWeight.bold,
                             color: cs.onPrimaryContainer,
                           ),
@@ -156,7 +156,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                       title: Text(
                         l.name,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: AppType.body,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -164,7 +164,7 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                           ? null
                           : Text(
                               widget.seqSubtitle!(l.seq),
-                              style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                              style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
                             ),
                       trailing: const Icon(Icons.chevron_right, size: 18),
                       onTap: () {

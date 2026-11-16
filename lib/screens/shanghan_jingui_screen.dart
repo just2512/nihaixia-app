@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/classic_lecture_data.dart';
@@ -23,7 +24,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
               color: cs.tertiaryContainer,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
               children: [
@@ -35,7 +36,7 @@ class ShangHanJinguiScreen extends StatelessWidget {
                     '《人纪·伤寒论》《人纪·金匮要略》倪师讲稿全文：伤寒六经条文 + 金匮 23 篇杂病。'
                     '正文里的方剂名 / 药材名可直接点开详情。属传统文化参考，非医疗建议。',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: AppType.caption,
                       color: cs.onTertiaryContainer,
                       height: 1.5,
                     ),
@@ -101,7 +102,6 @@ class _BookCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      elevation: 1,
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         leading: CircleAvatar(
@@ -111,11 +111,11 @@ class _BookCard extends StatelessWidget {
         ),
         title: Text(
           title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: AppType.title, fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          style: TextStyle(fontSize: AppType.caption, color: cs.onSurfaceVariant),
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,

@@ -276,9 +276,9 @@
 | 设计规范初版 | `PASS` | 本文档已写入仓库分支 |
 | 浅色/深色主题 Token | `PASS`（分支内） | `lib/theme/app_colors.dart` |
 | Token 对比度自动测试 | `PASS`（CI） | PR #208 Flutter regression / Android arm64 CI success；Run 43834875048 |
-| Token 已进入 master | `MISSING` | PR #208 仍为 Draft，尚未合并 |
-| Phase 1 首页主题一致性 | `UNKNOWN` | 已提交一个最小主题 Token 对齐修正及定向 Widget 测试；等待本批 CI。其余首页/AI 首屏审查未发现需要重做布局的偏差 |
-| Phase 2 知识与详情改造 | `MISSING` | 尚未开始 |
+| Token 已进入 master | `PASS` | PR #211 已合并，集成提交 `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4` |
+| Phase 1 首页主题一致性 | `PASS` | PR #211 合并；Run `43839560908` 静态分析/改动测试 success，Run `43839568819` Flutter regression 与 Android arm64 success；合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4` |
+| Phase 2 知识与详情改造 | `UNKNOWN` | 工作分支 `work/yanji-knowledge-phase2` 已建立；开始将知识浏览、经典阅读和核心详情的字号/圆角迁移到 `AppType` / `AppRadius`，移除局部 `Card(elevation: 1)` 覆盖；等待新增视觉回归测试与 CI |
 | Phase 3 其他页面改造 | `MISSING` | 尚未开始 |
 | Find N2 实机阅读 | `MISSING` | 需要真实设备截图与阅读记录 |
 

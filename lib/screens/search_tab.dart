@@ -298,7 +298,7 @@ class _SearchTabState extends State<SearchTab> {
                       },
                     )
                   : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
             onChanged: (v) {
               _onSearchChanged(v);
@@ -319,7 +319,7 @@ class _SearchTabState extends State<SearchTab> {
                 avatar: _activeFilterCount > 0
                     ? Badge(
                         label: Text('$_activeFilterCount',
-                            style: const TextStyle(fontSize: 10)),
+                            style: const TextStyle(fontSize: AppType.micro)),
                         child: const Icon(Icons.tune, size: 18),
                       )
                     : null,
@@ -448,7 +448,7 @@ class _SearchTabState extends State<SearchTab> {
                   hintText: '主治症状关键词...',
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                   prefixIcon: const Icon(Icons.search, size: 18),
                 ),
                 onChanged: (v) {
@@ -482,7 +482,7 @@ class _SearchTabState extends State<SearchTab> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: ChoiceChip(
-                    label: Text(opt, style: const TextStyle(fontSize: 10)),
+                    label: Text(opt, style: const TextStyle(fontSize: AppType.micro)),
                     selected: selected == opt,
                     onSelected: (_) => onSelected(opt),
                     visualDensity: VisualDensity.compact,
@@ -751,7 +751,7 @@ class _SearchTabState extends State<SearchTab> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(e.sourceLabel,
-                    style: TextStyle(fontSize: 10,
+                    style: TextStyle(fontSize: AppType.micro,
                       color: e.source == 'nihaisha'
                           ? context.colors.warning
                           : context.colors.info)),
@@ -815,7 +815,7 @@ class _SearchTabState extends State<SearchTab> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: context.colors.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(e.medicalCase, style: const TextStyle(fontSize: AppType.caption)),
                   ),
@@ -851,7 +851,7 @@ class _SearchTabState extends State<SearchTab> {
               spacing: 4,
               runSpacing: 4,
               children: p.indications.map((ind) => Chip(
-                label: Text(ind, style: const TextStyle(fontSize: 10)),
+                label: Text(ind, style: const TextStyle(fontSize: AppType.micro)),
                 backgroundColor: context.colors.successContainer,
                 visualDensity: VisualDensity.compact,
               )).toList(),
@@ -882,7 +882,7 @@ class _SearchTabState extends State<SearchTab> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: context.colors.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                         child: Text(p.medicalCase),
                       ),
