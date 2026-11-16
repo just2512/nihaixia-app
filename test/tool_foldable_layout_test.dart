@@ -51,6 +51,24 @@ Future<void> _pumpUntilRouteAnimationStatus({
   expect(route.animation?.status, expected, reason: reason);
 }
 
+Future<ModalRoute<dynamic>> _waitForToolRoute({
+  required WidgetTester tester,
+  required Finder routeFinder,
+  required String reason,
+}) async {
+  // Navigator.push schedules the route transition. The route subtree may not
+  // exist on the very first frame after a tap, so wait until it is mounted
+  // before reading its ModalRoute animation.
+  for (var frame = 0; frame < 40; frame++) {
+    await tester.pump(const Duration(milliseconds: 25));
+    if (routeFinder.evaluate().length == 1) {
+      final route = ModalRoute.of(tester.element(routeFinder));
+      if (route != null) return route;
+    }
+  }
+  fail('$reason：页面路由未挂载');
+}
+
 Future<void> _openToolAndCheck({
   required WidgetTester tester,
   required AssistantToolDefinition tool,
@@ -101,16 +119,16 @@ Future<void> _openToolAndCheck({
   final route = find.byKey(routeKey);
   if (tool.id == 'saved_charts') {
     // SavedChartsScreen performs an async SQLite read while showing an
-    // indeterminate progress indicator. Wait for the route animation's
-    // terminal state, then allow the first data frame; do not settle the
-    // perpetual loading animation.
-    await tester.pump();
-    expect(route, findsOneWidget, reason: tool.id);
-    final modalRoute = ModalRoute.of(tester.element(route));
-    expect(modalRoute, isNotNull, reason: tool.id);
+    // indeterminate progress indicator. Wait for the route subtree to mount,
+    // then for its transition; do not settle the perpetual loading animation.
+    final modalRoute = await _waitForToolRoute(
+      tester: tester,
+      routeFinder: route,
+      reason: tool.id,
+    );
     await _pumpUntilRouteAnimationStatus(
       tester: tester,
-      route: modalRoute!,
+      route: modalRoute,
       expected: AnimationStatus.completed,
       reason: '${tool.id} 页面进入动画未完成',
     );
