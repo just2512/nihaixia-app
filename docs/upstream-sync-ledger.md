@@ -471,6 +471,7 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - `test/classic_search_test.dart`：用“丹砂”验证本草讲稿进入全文搜索。
 - `test/assistant_knowledge_context_test.dart`：验证本草查询返回 lecture 类型、稳定 sourceId 和有效本地回链。
 - `test/classic_search_backlink_test.dart`：验证本草 sourceId 可反查到同一索引条目。
+- 首轮 AI 检索黄金快照在本草补充索引加入后，仅三个经典查询总命中数变化：桂枝汤 200→208、桂枝 300→331、伤寒论 125→141；前40条命中顺序、sourceIds、sourceCounts、本地回链状态、context textLength 和 context sourceIds 均与旧基线一致。新数值按 CI 实际输出回填，不更改排序、capturedCount 或断言门槛。
 - PR/CI 和实际运行状态以本草集成 PR 最新 head 的 Actions 为准；Find N2 设备侧阅读跳转和折叠屏布局仍需实机验证，不能用 CI 替代。
 
 ### 19.5 最新主线重放与保护项

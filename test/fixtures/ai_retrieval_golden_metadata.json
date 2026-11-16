@@ -57,7 +57,7 @@
       "localBacklinkStatusCounts": {}
     },
     "桂枝汤": {
-      "total": 200,
+      "total": 208,
       "capturedCount": 40,
       "topSourceIds": [
         "shanghan:assets/shanghan/clause_001.md",
@@ -72,7 +72,7 @@
       }
     },
     "桂枝": {
-      "total": 300,
+      "total": 331,
       "capturedCount": 40,
       "topSourceIds": [
         "shanghan:assets/shanghan/clause_001.md",
@@ -87,7 +87,7 @@
       }
     },
     "伤寒论": {
-      "total": 125,
+      "total": 141,
       "capturedCount": 40,
       "topSourceIds": [
         "shanghan:assets/shanghan/clause_000.md",
