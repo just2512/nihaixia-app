@@ -1,11 +1,30 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
+
 import '../models/ai_context_ref.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
 class AiContextPromptBuilder {
   const AiContextPromptBuilder._();
+
+  /// Content-addresses a deterministic tool result using its exact input,
+  /// rule version and normalized result payload. Callers supply an insertion-
+  /// ordered map; no wall-clock timestamp participates in the identity.
+  static String snapshotIdForToolResult({
+    required Map<String, Object?> input,
+    required String ruleVersion,
+    required String resultPayload,
+  }) {
+    final snapshot = jsonEncode({
+      'schema': 'tool-result-snapshot-v1',
+      'input': input,
+      'ruleVersion': ruleVersion,
+      'result': resultPayload,
+    });
+    return sha256.convert(utf8.encode(snapshot)).toString();
+  }
 
   static String buildClassicSelection({
     required AiContextRef ref,
@@ -28,6 +47,7 @@ class AiContextPromptBuilder {
       '条文锚点：${ref.anchorId}',
       '内容版本：${ref.anchorVersion}',
       '本地资料引用：${ref.sourceId}',
+      '当前上下文 token 计数：UNKNOWN（尚未接入对应模型 tokenizer；不以字符数代替 token 数）',
       '',
       '【选中文字与原文】',
       jsonEncode(source),
@@ -59,6 +79,7 @@ class AiContextPromptBuilder {
       '结果标题：${ref.title ?? 'MISSING'}',
       '结果快照：${ref.snapshotId ?? 'MISSING'}',
       '规则版本：${ref.ruleVersion ?? 'UNKNOWN'}',
+      '当前上下文 token 计数：UNKNOWN（尚未接入对应模型 tokenizer；不以字符数代替 token 数）',
       '【App 实际计算结果】',
       jsonEncode(source),
       '',
