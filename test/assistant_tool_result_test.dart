@@ -12,6 +12,7 @@ void main() {
         '岁运病候': '',
       },
       disclaimer: '仅供理论学习。',
+      sourceIds: ['local-engine:yunqi'],
       arguments: {'date': '2026-11-06'},
     );
 
@@ -21,7 +22,7 @@ void main() {
     expect(text, contains('执行参数：date=2026-11-06'));
     expect(text, contains('推算日期：2026-11-06'));
     expect(text, contains('岁运病候：MISSING'));
-    expect(text, contains('来源标识：MISSING'));
+    expect(text, contains('来源标识：local-engine:yunqi'));
     expect(text, contains('说明：仅供理论学习。'));
     expect(result.validateFor('yunqi'), isEmpty);
     expect(result.validateFor('ziwei'), isNotEmpty);
@@ -92,6 +93,30 @@ void main() {
     );
     expect(result.validateFor('ziwei'), isEmpty);
     expect(result.toConversationText(), contains('来源标识：ziwei-engine:local-rules:v1'));
+  });
+
+  test('成功工具结果必须带有实际业务来源，页面路由不能冒充来源', () {
+    const missing = AssistantToolResult(
+      toolId: 'yunqi',
+      title: '五运六气推算',
+      values: {'司天': '少阳相火'},
+      arguments: {'date': '2026-11-06'},
+    );
+    expect(
+      missing.validateFor('yunqi'),
+      contains('成功的工具结果缺少可验证的业务来源或引擎标识'),
+    );
+
+    const pageRouteOnly = AssistantToolResult(
+      toolId: 'yijing',
+      title: '易经起卦结果',
+      values: {'卦象': '乾为天'},
+      sourceIds: ['local-page-tool:yijing'],
+    );
+    expect(
+      pageRouteOnly.validateFor('yijing'),
+      contains('页面路由标识不能作为业务结果来源'),
+    );
   });
 
   test('来源标识和参数名称不得为空白', () {

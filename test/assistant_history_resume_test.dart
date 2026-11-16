@@ -399,12 +399,26 @@ void main() {
     await _pumpFrames(tester);
 
     expect(find.text('重试五运六气推算'), findsOneWidget);
+    final visibleFailedResult = find.byWidgetPredicate(
+      (widget) => widget is SelectableText &&
+          (widget.data ?? '').contains('执行状态：FAILED') &&
+          (widget.data ?? '').contains('执行参数：date=2026-11-07'),
+    );
+    expect(visibleFailedResult, findsOneWidget);
+    expect(service.restoredTranscript, contains('帮我推算五运六气'));
+    expect(service.restoredTranscript, isNot(contains('执行状态：FAILED')));
+    expect(service.restoredTranscript, isNot(contains('执行参数：date=2026-11-07')));
+    final failedMessage = store.messages[2]!.last;
+    final failedMetadata = AssistantMessageMetadata.decode(
+      failedMessage['metadata']! as String,
+    );
+    expect(failedMetadata.toolArguments, {'date': '2026-11-07'});
+
+    // The preserved retry action still resolves the original App arguments.
     await tester.tap(find.text('重试五运六气推算'));
     await _pumpFrames(tester);
-
     expect(find.text('五运六气推算'), findsWidgets);
     expect(find.text('2026-11-07'), findsWidgets);
-    expect(service.restoredTranscript, contains('执行参数：date=2026-11-07'));
     expect(tester.takeException(), isNull);
   });
 
@@ -481,8 +495,13 @@ void main() {
     expect(metadata.toolId, 'yunqi');
     expect(metadata.toolStatus, 'CANCELLED');
     expect(metadata.replayable, isTrue);
-    // The returned result must also be injected into the next model turn's context.
-    expect(service.restoredTranscript, contains('执行状态：CANCELLED'));
+    // The cancelled execution remains persisted and visible, but is not a
+    // validated business result and therefore must not enter model context.
+    expect(
+      service.restoredTranscript,
+      isNot(contains('执行状态：CANCELLED')),
+    );
+    expect(service.restoredTranscript, contains('帮我推算五运六气'));
     expect(tester.takeException(), isNull);
   });
 

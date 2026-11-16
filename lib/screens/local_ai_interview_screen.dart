@@ -5065,6 +5065,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     if (_status?.ready != true) return;
     final transcriptLines = _messages
+        .where((message) => message.includeInModelContext)
         .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
         .toList(growable: false);
     final fullTranscript = transcriptLines.join('\n');
@@ -5634,11 +5635,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       String legacy when legacy.trim().isNotEmpty => AssistantToolResult(
           toolId: tool.id,
           title: tool.title,
-          values: {'结果': legacy.trim()},
-          // The page returned a concrete result string from this registered
-          // App tool. Record its route as provenance; do not mislabel it as an
-          // engine or knowledge-base source.
-          sourceIds: ['local-page-tool:${tool.id}'],
+          status: AssistantToolExecutionStatus.unknown,
+          values: {'旧式页面返回文本': legacy.trim()},
+          disclaimer:
+              '页面只返回了未结构化文本，缺少可验证的实际执行参数和业务来源；仅保留查看，不交给 AI 解读。',
         ),
       _ => AssistantToolResult(
           toolId: tool.id,
@@ -5722,6 +5722,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         text: response,
         isUser: false,
         sourceIds: normalizedResult.sourceIds,
+        // Only validated successful results are replayable model facts.
+        includeInModelContext: canInterpret,
         actionLabel: canRetry
             ? '重试${tool.title}'
             : canInterpret && !autoInterpret
@@ -6151,9 +6153,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   traceId: restoredTraceId,
                   startedAt: DateTime.now(),
                 );
+      // Historical UNKNOWN tool output (including older synthetic page-route
+      // IDs) remains visible to the user but is not replayed into model context.
+      final hasTerminalToolOutcome = messageMetadata.toolStatus != null &&
+          messageMetadata.toolStatus != 'AWAITING_PARAMETERS';
+      final hasVerifiedToolResult =
+          messageMetadata.toolStatus ==
+                  AssistantToolExecutionStatus.succeeded.name.toUpperCase() &&
+              messageMetadata.sourceIds.isNotEmpty &&
+              !messageMetadata.sourceIds
+                  .any((id) => id.startsWith('local-page-tool:'));
+      // Ordinary assistant prose and parameter-clarification messages are
+      // replayed. Terminal tool outcomes are replayed only when their persisted
+      // status and source IDs prove a validated success.
+      final includeInModelContext =
+          isUser || !hasTerminalToolOutcome || hasVerifiedToolResult;
       restoredMessages.add(_InterviewMessage(
         text: content,
         isUser: isUser,
+        includeInModelContext: includeInModelContext,
         sourceIds: isUser ? const [] : messageMetadata.sourceIds,
         onSourceTap: _openKnowledgeSource,
         knowledgeStatus: isUser ? null : messageMetadata.knowledgeStatus,
@@ -6173,7 +6191,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     )
                 : null,
       ));
-      transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
+      if (includeInModelContext) {
+        transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
+      }
       if (isUser && messageMetadata.replayable) {
         final attachmentNote = content.indexOf('（另附');
         replayableUserMessages.add(
@@ -9624,6 +9644,9 @@ class _TcmInterviewMessagePersistenceResult {
 class _InterviewMessage {
   final String text;
   final bool isUser;
+  /// Retain unverified tool output in the visible timeline without replaying it
+  /// as model context or later treating it as an established App result.
+  final bool includeInModelContext;
   final String? actionLabel;
   final VoidCallback? onAction;
   final List<String> options;
@@ -9639,6 +9662,7 @@ class _InterviewMessage {
   const _InterviewMessage({
     required this.text,
     required this.isUser,
+    this.includeInModelContext = true,
     this.actionLabel,
     this.onAction,
     this.options = const [],

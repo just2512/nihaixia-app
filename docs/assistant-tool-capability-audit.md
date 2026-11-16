@@ -168,8 +168,8 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 1. **UNKNOWN 状态已加入。** AssistantToolExecutionStatus 当前包含 succeeded / noResult / failed / cancelled / unknown；statusLabel 有对应 wire value。
 2. **请求参数不再伪装成实际执行参数。** withArguments(fallback) 现在保留真实 arguments；当实际参数为空而请求参数非空时标记 UNKNOWN。validateArgumentsMatch() 在 expected 非空、actual 为空时明确报“工具结果缺少可验证的实际执行参数”。
 3. **消费入口有阻断。** LocalAiInterviewScreen._openTool() 先校验 typed result，再做参数匹配；参数证据缺失时设置契约错误并提前返回，不追加到会话历史，也不把 UNKNOWN 当作已验证执行结果持久化。
-4. **旧式 String 回传仍有边界。** 非空 String 会被包装为 succeeded，但若本次请求带有参数，随后会因缺少实际参数而被阻断；若本次请求无参数，旧 String 仍可作为 succeeded 展示。该路径没有自动来源 ID，输出中的来源标识仍显示 MISSING。
-5. **成功结果仍允许 sourceIds 为空。** validateFor() 检查空白 source ID，但没有要求成功结果必须提供非空 sourceIds。不能将结构化输出存在等同于来源已核验。
+4. **旧式 String 回传边界已关闭（本 PR 待验收）。** 非空 String 不再默认包装为 SUCCEEDED，也不再生成 `local-page-tool:<toolId>` 合成来源；统一标记 UNKNOWN，保留在用户可见时间线，但从当前和恢复后的模型上下文排除。当前对话中所有非 SUCCEEDED 结果均不回放给模型；历史工具结果只有状态为 SUCCEEDED、sourceIds 非空且没有 `local-page-tool:` 合成标识时才进入模型上下文；`AWAITING_PARAMETERS` 等待补参的澄清消息继续保留，避免恢复后丢失追问上下文。旧历史中的页面路由来源同样不回放给模型。
+5. **成功结果来源约束已收紧（本 PR 待验收）。** `validateFor()` 要求 SUCCEEDED 必须有非空 sourceIds，并拒绝将 `local-page-tool:` 页面路由标识当作业务来源。现有本地确定性 executor 的成功分支均提供实际 engine/data/rule 来源标识；失败、未执行、取消及 UNKNOWN 不要求伪造来源。
 6. **失败重试仍缺统一幂等契约。** 当前 failed 显示重试入口，但注册表没有副作用等级/幂等键/执行去重协议；对未来有持久化副作用的工具不能默认安全重试。
 7. **工具结果持久化错误可见性不足。** _openTool() 的工具结果消息单独调用 saveAssistantMessage()；异常目前仅 debugPrint，UI 没有明确显示“结果已显示但历史保存失败”。#58 已合并的成功轮次原子保存不覆盖此处。
 
@@ -185,11 +185,11 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 
 ### 8.5 D-03 下一步（自动续接）
 
-1. 为“成功但无 sourceIds”补齐状态语义：区分本地计算器的 engine/version provenance、知识检索来源和真正无来源；不得统一伪造一个 source ID。
-2. 为旧 String 回传补负向测试：带参数必须 UNKNOWN/阻断；无参数旧页面应显示 LEGACY/UNKNOWN，而不是默认 SUCCEEDED。该调整需先评估现有页面兼容性。
+1. **已在独立切片实现，待 CI：** SUCCEEDED 必须携带真实 engine/data/rule/knowledge sourceId；页面路由 ID 不算业务来源。
+2. **已在独立切片实现，待 CI：** 旧 String 回传标记 UNKNOWN；保持用户可见，但不自动解释、不进入当前或恢复后的模型 transcript；补一条真实页面回传 widget 回归。
 3. 为工具结果单独持久化失败增加 UI 可见状态与重试/恢复策略；不要与 #58 的 user+assistant 成功轮次原子写入混为一谈。
-4. 逐个核对 23 个页面的实际参数消费、取消、失败、输出验证、sourceIds 和持久化；不能用路由注册表测试代替业务执行测试。
-5. 仅从非医疗、非个人敏感数据工具评估最小 Headless adapter；先锁定输入/输出黄金行为，再抽取一个工具，不做 23 项批量迁移。
+4. 不批量审计/迁移 23 个页面。只有出现明确用户场景、可复现断点和既有确定性业务函数时，才单独选一项处理。
+5. Headless adapter 不作为数量目标；只有具体能力存在可验证断点时再单独评估。
 
 
 ## 9. 2026-11-13 D-03 集成后状态复核（PR #139）
@@ -215,3 +215,23 @@ PR #46 已合并（master 中的 AssistantToolResult 契约）：
 - 只在发现明确用户场景、既有确定性业务函数和可验证输入/输出契约时，才选择一个 Page Tool 评估 Headless 适配；不以数量为目标。
 - 对无真实来源的成功结果、旧式 String 回传和带副作用操作的取消/重试，继续保留 MISSING/UNKNOWN，不伪造来源或自动重放。
 - Find N2 真机执行和跨轮 TRACE 仍 UNKNOWN；CI 不替代设备验证。
+
+
+## 10. 2026-11-16 业务结果来源门禁与旧页面回传隔离
+
+### 10.1 复核发现
+- `AssistantToolResult.validateFor()` 原来允许 `status=SUCCEEDED` 且 `sourceIds=[]`；结构化字段存在并不证明结果经过 App 业务执行或能追溯来源。
+- `LocalAiInterviewScreen._openTool()` 原来把非空 legacy `String` 返回值包装成 SUCCEEDED，并生成 `local-page-tool:<toolId>`。这是页面路由来源，不是确定性计算/业务数据来源。
+- 该旧结果可能被 `canInterpret` 判定为可解读，并在后续轮次通过可见 transcript 再次进入模型上下文。
+
+### 10.2 本次最小修复（独立分支，CI 待验）
+- SUCCEEDED 必须有非空 `sourceIds`；拒绝 `local-page-tool:` 前缀作为来源。
+- Legacy String 回传保留可见文本，但标记 UNKNOWN，不产生合成 sourceId，不显示 AI 解读按钮。
+- 当前对话 transcript 按消息 `includeInModelContext` 过滤；只有通过结果契约校验的 SUCCEEDED + 真实来源可进入模型上下文。FAILED / CANCELLED / NO_RESULT / UNKNOWN 仍可见，但不回放给模型；`AWAITING_PARAMETERS` 澄清消息保留为对话上下文。历史恢复采用相同门禁。
+- 不修改任何排盘、历法、五运六气、规则问诊、剂量换算或方剂计算逻辑，不改数据库 schema，不重写 ToolRouter / Orchestrator / KnowledgeContextBuilder。
+- 现有 deterministic executor 成功分支提供 engine/data/rule 来源标识；未来若有真实成功执行但没有可追溯来源，应先补真实来源定义，不能以页面 ID 或通用占位来源绕过门禁。
+
+### 10.3 针对性验收
+- `test/assistant_tool_result_test.dart`：source-less SUCCEEDED 被拒绝；page-route-only source 被拒绝；真实 engine source 保持通过。
+- `test/assistant_tool_result_handoff_test.dart`：真实 legacy 页面返回文本显示 UNKNOWN，来源 MISSING，不触发模型解释，并且不写入 Native transcript。
+- 以上只针对本次识别的结果契约断点；不扩充 23 个 Page Tool 的泛化测试矩阵。
