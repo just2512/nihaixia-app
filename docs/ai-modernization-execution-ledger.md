@@ -2408,3 +2408,38 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 问诊助手现有链路：用户在当前对话提出需求 → AI 理解/追问 → App 既有规则问诊执行 → 结果校验 → 结合本轮可追溯知识库条目解释；用户明确要求医案对照时再按需检索医案库。
 - 四类助手的 AI/App 分工、工具结果校验、知识来源状态和单一 SQLite 数据清理边界均不变。
 - 云端代码任务至此收尾；Find N2 GPU/CPU 多轮、多媒体、进程恢复及清除 AI 数据后的真机验证仍按第 52.6 节保留为 LOCAL / UNKNOWN，不能由 CI 或 Debug APK 构建替代。
+
+
+## 54. 2026-11-16 助手业务结果门禁收口与玉匣灵兆对话执行
+
+### 54.1 结果真实性门禁已进入 master
+
+PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97afe`。
+- SUCCEEDED 必须同时具备结构化输出和真实 sourceIds；页面路由标识不能冒充业务引擎/数据来源。
+- 旧 Page Tool String 返回仍可在用户时间线查看，但状态为 UNKNOWN，不自动解读、不进入当前或恢复后的模型事实 transcript。
+- FAILED、CANCELLED、NO_RESULT、UNKNOWN 不作为业务事实回放；AWAITING_PARAMETERS 澄清状态仍然保留。
+- CI：run `43787526563` Flutter regression 与 Android arm64 均 SUCCESS；run `43787521411` 静态分析、changed tests 和 test-pairing SUCCESS。
+
+### 54.2 玉匣灵兆当前时辰查询进入同一对话
+
+本次小切片在 PR [#197](https://github.com/just2512/nihaixia-app/pull/197)：
+- 将现有 `shiChenIndexOf / shiChenLabel` 提取为 `lib/services/yuxiaji_omen_time.dart`；原页面与 Headless executor 共用，不复制计算口径。
+- `YuxiajiOmenToolExecutor` 读取 App 本机当前时间及 `kYuXiaJiShiChenOmens`，返回实际时间、UTC 偏移、时辰、对应本地条文和 sourceId `local-data:yuxiaji-omen`。
+- `LocalAiInterviewScreen._requestTool` 对“查询玉匣灵兆”在当前助手会话直接调用 executor；只有用户明确说“打开/进入玉匣灵兆”才保留原页面导航。
+- 方向、形态、灯花等特殊占法需要用户补充实际观察，继续留在原页面，不由模型猜测或生成输入。
+- 结果解释提示限定为民俗文本释义，明确不是科学预测或医学诊断；不得把面热、眼跳、耳鸣、心惊、肉颤包装成疾病、病因或健康风险。
+
+### 54.3 本轮 AI / App 边界复核
+
+- AI 仍负责用户意图理解、参数缺项澄清、能力选择、跨轮追问和结果解释；App 既有确定性业务逻辑负责排盘、规则问诊、剂量换算和本地时辰/数据查询。
+- 只有 executor 实际返回且通过 `validateFor()` 与 `validateArgumentsMatch()` 的 SUCCEEDED 结果，才进入 AI 解读；模型不能自行生成时辰/排盘/辨证/剂量结果。
+- 医学诊断性结论必须来自 App 规则执行和可追溯知识库证据；民俗文本不能作为医学诊断来源。
+- 本 PR 不修改 `DiagnosticEngine`、`DiagnosticRules`、`FormulaRules`、问诊题目、排盘/历法/剂量算法、AI Orchestrator、SQLite schema、数据清理边界或手动更新机制；不新增 Agent/DAG 或第二套 ToolRouter。
+
+### 54.4 定向验收与状态
+
+- `test/yuxiaji_omen_tool_executor_test.dart`：时辰边界、原始数据映射、真实来源、未声明参数拒绝。
+- `test/assistant_tool_result_handoff_test.dart`：用户在玄学大师对话请求查询时，Headless executor 被调用、页面未打开、结果/sourceId 持久化，解释提示明确排除医学诊断。
+- PR #197 当前 head：`7f0bb86beb9d653443f249d046c25163e0d78b59`。
+- Actions run：`43789354244` 与 `43789350484` 已创建，核验时仍在队列/执行阶段；此 head 的 Flutter 回归和 Android arm64 结果必须完成后再合并。
+- Find N2 真机执行、折叠屏适配、Native E4B 多轮及 TRACE 仍按第 52.6 节标记 LOCAL / UNKNOWN。CI 成功不替代设备证据。
