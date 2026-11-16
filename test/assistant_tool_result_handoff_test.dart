@@ -219,8 +219,22 @@ void main() {
           (widget.data ?? '').contains('旧页面未结构化文本'),
     );
     expect(resultText, findsOneWidget);
-    expect(find.text('执行状态：UNKNOWN'), findsOneWidget);
-    expect(find.text('来源标识：MISSING'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            (widget.data ?? '').contains('执行状态：UNKNOWN'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            (widget.data ?? '').contains('来源标识：MISSING'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('AI总结解读'), findsNothing);
     expect(service.modelCalls, 0);
     expect(service.restoredTranscript, isNot(contains('旧页面未结构化文本')));
