@@ -26,8 +26,11 @@ void main() {
       (item) =>
           item.patient.isNotEmpty &&
           item.diagnosis.isNotEmpty &&
-          item.mechanism.isNotEmpty,
-      orElse: () => cases.first,
+          item.mechanism.isNotEmpty &&
+          item.sourceLedger.missingFields.isNotEmpty,
+      orElse: () => throw StateError(
+        'Expected at least one real medical case with incomplete source ledger data',
+      ),
     );
   });
 
