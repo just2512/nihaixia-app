@@ -310,8 +310,8 @@
 | Phase 3.1 合并后主线 CI | `PASS` | master SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`：Flutter tests Run `43865416982` success；Android arm64 job `133294922898` success；Flutter Quality Gate Run `43865416976` success |
 | Phase 3.2 命盘库与诊断历史 | `PASS`（代码与自动化门禁） | PR #217；HEAD `12b3859a05d4bfcf28ff51605d48107a77218e4a`；分支 Run `43865969348` success；Flutter 全量回归 Run `43866032021` success；Android arm64 job `133296754178` success |
 | Phase 3.2 集成状态 | `PASS` | PR #217 于 2026-11-16 squash 合并；master 集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` |
-| Phase 3.2 合并后主线 CI | `UNKNOWN`（部分门禁通过） | master SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`：Flutter tests Run `43868280609` success；Android arm64 job `133304915717` success；Flutter Quality Gate Run `43868280610` 仍在执行 Find N2 arm64 Debug APK 构建 |
-| Phase 3.3 闭门课重症临床列表 | `IN_PROGRESS`（分支定向测试 PASS） | 分支 `work/yanji-editorial-phase3-auxiliary`，基线 master SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；代码/测试 HEAD `e596d7acb610829cad85c57a7404df7fdbe29cc9`；Run `43868942520` 静态分析及 3 个 Widget tests success |
-| Phase 3.3 集成状态 | `MISSING` | 尚未建立 PR；须先通过分支静态分析与定向测试，再通过 PR 全量 Flutter 与 Android arm64 门禁 |
+| Phase 3.2 合并后主线 CI | `PASS` | master SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`：Flutter tests Run `43868280609` success；Android arm64 job `133304915717` success；Flutter Quality Gate Run `43868280610` completed success |
+| Phase 3.3 闭门课重症临床列表 | `PASS`（PR 代码与自动化门禁） | PR #219 head `ccfd8e016ec301617e73e8057bba2388e3ca8efb`；分支定向 Run `43869683123` 静态分析及 3 个 Widget tests success；PR Run `43876377810` Flutter regression success、Android arm64 job `133333364319` success |
+| Phase 3.3 集成状态 | `IN_PROGRESS` | PR #219 已建立且仍未合并；当前 head 的分支定向测试、PR Flutter regression 与 Android arm64 均 `PASS`，等待合并及合并后主线 CI |
 | Find N2 实机阅读 | `MISSING` | 需要 OPPO Find N2 真实设备截图、系统/窗口参数和连续阅读记录 |
 
