@@ -178,6 +178,9 @@ void main() {
       ],
     );
 
+    expect(tester.takeException(), isNull,
+        reason: '展开主从列表在选择收藏之前不应横向溢出');
+
     await tester.tap(find.text('桂枝汤'));
     await tester.pumpAndSettle();
 
