@@ -32,6 +32,25 @@ Widget _pageForTool(AssistantToolDefinition tool) {
   return tool.builder();
 }
 
+Future<void> _pumpUntilRouteAnimationStatus({
+  required WidgetTester tester,
+  required ModalRoute<dynamic> route,
+  required AnimationStatus expected,
+  required String reason,
+}) async {
+  // saved_charts shows an indeterminate loading animation, so pumpAndSettle
+  // cannot be used. Wait for the actual route transition instead of guessing
+  // that a fixed frame interval has completed it.
+  for (var frame = 0; frame < 40; frame++) {
+    if (route.animation?.status == expected) {
+      await tester.pump();
+      return;
+    }
+    await tester.pump(const Duration(milliseconds: 25));
+  }
+  expect(route.animation?.status, expected, reason: reason);
+}
+
 Future<void> _openToolAndCheck({
   required WidgetTester tester,
   required AssistantToolDefinition tool,
@@ -79,18 +98,28 @@ Future<void> _openToolAndCheck({
   );
 
   await tester.tap(find.byKey(openKey));
+  final route = find.byKey(routeKey);
   if (tool.id == 'saved_charts') {
     // SavedChartsScreen performs an async SQLite read while showing an
-    // indeterminate progress indicator. Advance the route and first data
-    // frame without waiting for that animation to "settle".
+    // indeterminate progress indicator. Wait for the route animation's
+    // terminal state, then allow the first data frame; do not settle the
+    // perpetual loading animation.
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    expect(route, findsOneWidget, reason: tool.id);
+    final modalRoute = ModalRoute.of(tester.element(route));
+    expect(modalRoute, isNotNull, reason: tool.id);
+    await _pumpUntilRouteAnimationStatus(
+      tester: tester,
+      route: modalRoute!,
+      expected: AnimationStatus.completed,
+      reason: '${tool.id} 页面进入动画未完成',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pump();
   } else {
     await tester.pumpAndSettle();
   }
 
-  final route = find.byKey(routeKey);
   expect(route, findsOneWidget, reason: tool.id);
   final bounds = tester.getRect(route);
   expect(bounds.left, greaterThanOrEqualTo(expectedLeft), reason: tool.id);
@@ -102,11 +131,15 @@ Future<void> _openToolAndCheck({
   );
 
   // Return to the launcher before testing the second physical posture.
+  final routeObject = ModalRoute.of(tester.element(route))!;
   Navigator.of(tester.element(route)).pop();
   if (tool.id == 'saved_charts') {
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump();
+    await _pumpUntilRouteAnimationStatus(
+      tester: tester,
+      route: routeObject,
+      expected: AnimationStatus.dismissed,
+      reason: '${tool.id} 页面退出动画未完成',
+    );
   } else {
     await tester.pumpAndSettle();
   }
