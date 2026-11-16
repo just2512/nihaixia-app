@@ -24,8 +24,13 @@ void main() {
 
   test('伤寒论 阅读库资产全部可加载', () async {
     // 条文级拆分后：23 篇 → 380 条
-    expect(kShangHanLectures.length, 395);
+    expect(kShangHanLectures.length, 396);
     await expectAllLoadable(kShangHanLectures, '伤寒论');
+  });
+
+  test('上游宋本第176条板书图资源已注册且非空', () async {
+    final image = await rootBundle.load('assets/shanghan/176_board.jpg');
+    expect(image.lengthInBytes, 135897);
   });
 
   test('金匮要略 阅读库资产全部可加载', () async {

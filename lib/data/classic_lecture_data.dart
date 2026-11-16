@@ -424,6 +424,11 @@ const List<ClassicLecture> kShangHanLectures = [
   ClassicLecture(seq: 392, name: '附录二：六经传变规律', asset: 'assets/shanghan/appendix_002_六经传变规律.md'),
   ClassicLecture(seq: 393, name: '附录三：六经病欲解时', asset: 'assets/shanghan/appendix_003_六经病欲解时.md'),
   ClassicLecture(seq: 394, name: '附录四：六经辨证临床要点', asset: 'assets/shanghan/appendix_004_六经辨证临床要点.md'),
+  ClassicLecture(
+    seq: 395,
+    name: '上游宋本176·「伤寒」脉浮滑，此以表有热，里有寒，「白虎汤」主之。',
+    asset: 'assets/shanghan/clause_176_upstream.md',
+  ),
 ];
 
 const List<ClassicLecture> kJinguiLectures = [
