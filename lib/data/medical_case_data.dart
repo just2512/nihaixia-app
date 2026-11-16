@@ -30,11 +30,85 @@ final Map<String, List<String>> _diseaseNameCache = {};
 
 /// 从方剂字段提取已知方剂名（简繁归一 + 箭头分段 + 噪声清洗 + 长度降序 + 去重）。
 /// 返回命中的方剂名（FormulaRepository 正名）。按原文 memo 缓存，返回不可变列表。
+/// 只把明确登记、形态像方名且映射唯一的别名纳入医案抽取。
+/// Formula.alias 还混有称号、治法名、组合描述和重复别名；不做过滤会把
+/// 「虫剂」等非方名写入医案索引，重复别名则可能把同一医案归错方。
+const Set<String> _formulaAliasWhitelist = {
+  '木防己汤去石膏加茯苓芒硝汤',
+  '白通汤加猪胆汁汤',
+  '白通汤加猪胆汁',
+  '桂枝汤去芍药方中加附子汤',
+  '白散',
+};
+
+Map<String, String>? _formulaAliasMapCache;
+
+Map<String, String> _uniqueFormulaAliasMap() {
+  if (_formulaAliasMapCache != null) return _formulaAliasMapCache!;
+  // 在 FormulaRepository 尚未加载时不缓存空表；调用方完成加载后可正常建立索引。
+  if (FormulaRepository.getAll().isEmpty) return const <String, String>{};
+  _formulaAliasMapCache = _buildUniqueFormulaAliasMap();
+  return _formulaAliasMapCache!;
+}
+
+Map<String, String> _buildUniqueFormulaAliasMap() {
+  final formulas = FormulaRepository.getAll();
+  final canonicalNames = formulas.map((f) => f.name).toSet();
+  final aliases = <String, String>{};
+  final ambiguous = <String>{};
+  final dosageSuffix = RegExp(r'[汤丸散膏丹煎]$');
+
+  for (final formula in formulas) {
+    for (final raw in formula.alias.split(',')) {
+      final alias = raw.trim();
+      if (alias.isEmpty ||
+          canonicalNames.contains(alias) ||
+          ambiguous.contains(alias)) {
+        continue;
+      }
+
+      final whitelisted = _formulaAliasWhitelist.contains(alias);
+      if (!whitelisted && alias.length < 3) continue;
+      if (!whitelisted && !dosageSuffix.hasMatch(alias)) continue;
+      if (!whitelisted &&
+          (alias.contains('（') ||
+              alias.contains('(') ||
+              alias.contains('/'))) {
+        continue;
+      }
+      if (!whitelisted && canonicalNames.any(alias.startsWith)) continue;
+
+      final previous = aliases[alias];
+      if (previous != null && previous != formula.name) {
+        aliases.remove(alias);
+        ambiguous.add(alias);
+        continue;
+      }
+      aliases[alias] = formula.name;
+    }
+  }
+
+  return aliases;
+}
+
 List<String> extractFormulaNames(String formula) {
   return _formulaNameCache.putIfAbsent(formula, () {
-    final candidates = FormulaRepository.getAll().map((f) => f.name).toList();
+    final formulas = FormulaRepository.getAll();
+    final canonicalNames = formulas.map((f) => f.name).toSet();
+    final aliasToCanonical = _uniqueFormulaAliasMap();
+    final candidates = <String>{
+      ...canonicalNames,
+      ...aliasToCanonical.keys,
+    }.toList();
+
     return List.unmodifiable(
-      extractKnownNames(formula, candidates, resolve: (c) => c),
+      extractKnownNames(
+        formula,
+        candidates,
+        resolve: (candidate) => canonicalNames.contains(candidate)
+            ? candidate
+            : aliasToCanonical[candidate],
+      ),
     );
   });
 }
@@ -86,7 +160,10 @@ List<String> extractKnownNames(
       .where((c) => c.length >= 2)
       .toSet()
       .toList()
-    ..sort((a, b) => b.length.compareTo(a.length));
+    ..sort((a, b) {
+      final byLength = b.length.compareTo(a.length);
+      return byLength != 0 ? byLength : a.compareTo(b);
+    });
   if (sorted.isEmpty) return const [];
 
   final result = <String>[];
