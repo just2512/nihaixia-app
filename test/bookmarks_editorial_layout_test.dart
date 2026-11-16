@@ -98,9 +98,10 @@ void main() {
       textScale: 2,
     );
 
+    expect(tester.takeException(), isNull, reason: '收藏页初始数据库加载不应抛出异常');
+    expect(find.text('暂无收藏'), findsNothing);
     expect(find.text('桂枝汤'), findsOneWidget);
     expect(find.text('黄芪'), findsOneWidget);
-    expect(tester.takeException(), isNull);
 
     await tester.tap(find.widgetWithText(FilterChip, '本草'));
     await tester.pump();
