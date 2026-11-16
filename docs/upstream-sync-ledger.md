@@ -402,13 +402,15 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 3. **第二批收敛**：辨证规则已存在的能力标记 `ALREADY_PRESENT`；医案数据只采纳明确的检索/映射缺口；共享页面只移植已证明有价值且不破坏 AI 对话、Find N2 布局及手动更新机制的函数级改动。
 4. **验收**：仅围绕这次变更执行资源注册/索引映射/阅读跳转/搜索/受影响页面回归及现有 CI。不得用泛化测试扩张工期；不得降低既有门槛、删除失败测试或伪造设备证据。
 
-### 17.4 当前状态（本节为早期快照，后续以 §§18—20 为准）
+### 17.4 当前状态（2026-11-16 云端同步收口）
 
-- 本节记录时 master 为 `2a9929fa30c2c3a9728c08f7645825addf4a90e7`；后续主线已由 PR #198 推进至 `d10e52fba8d829532dd5fbbe627073fdce1562f6`。
-- 唯一 upstream source 仍为 `jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
-- PR #193—#198 已合并；AI 结果真实性门禁、四类助手既有职责边界和手动更新机制均保留。
-- 经典增量已完成并通过云端 Flutter regression 与 Android arm64 CI；Find N2 阅读布局仍为设备侧 UNKNOWN。
-- 本草 335 篇讲稿及双向关联已重放到独立分支 `sync/upstream-bencao-integrated-20261116`，以当前 master 为父提交；不覆盖 fork 原有 465 味药库。
+- 当前集成基线：`just2512/nihaixia-app:master @ fd330edbde5e524bf422485f98f36de17589784b`。
+- 唯一 upstream source：`jangviktor-web/nihaixia-app:main @ 4c66bd3af3c45523033ebcb68e1afba45f429351`。
+- PR #193—#199 已合并；经典增量、穴位改进、本草讲稿阅读/搜索/药材双向关联均已进入 master。
+- AI 结果真实性门禁、问诊/工具/学习/玄学四类助手、确定性业务执行、知识来源引用及手动更新机制均保留。
+- 主线 PR #198 合并后 CI：run `43799309770` Flutter regression + Android arm64 均 SUCCESS；run `43800335771` master Flutter regression + Android arm64 均 SUCCESS；run `43800335768` Flutter Quality Gate SUCCESS。
+- 本草 PR #199：run `43800855316` Flutter regression + Android arm64 均 SUCCESS；详细 evidence 与 artifact ID 见第 19.5 节。
+- Find N2 真机阅读跳转、内外屏/半折叠布局和 Native E4B 多轮/恢复仍是设备侧 UNKNOWN；云端 CI 不替代设备证据。
 
 
 ## 18. 2026-11-16 经典资料增量切片（独立分支实施）
@@ -481,7 +483,11 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 重放时明确排除旧分支的 `lib/data/classic_lecture_data.dart`、`lib/screens/shanghan_jingui_screen.dart` 和 `test/fixtures/ai_retrieval_golden_metadata.json`，保留刚合入 master 的经典阅读清单、动态序号路由、搜索修复和经典黄金快照。
 - `ClassicSearchService` 同时保留经典17路径白名单和本草335篇白名单，按 `source:asset` 去重；无同名覆盖、重复检索命中或第二套检索器。
 - fork 本地 `herbs.json` 465 条、别名和临床心悟内容保持不变；不修改诊断规则、医案正文、数据库 schema、AI Orchestrator/ToolRouter、版本号、签名或手动更新机制。
-- 当前 CI 待本 PR 执行；本地 Find N2 的讲稿打开、药材回链与折叠屏布局仍为设备侧 UNKNOWN。
+- PR [#199](https://github.com/just2512/nihaixia-app/pull/199) 已合并：head `a7a23d9bdb877236e61fe76d80bf7b6556bf7bb6`，merge commit `fd330edbde5e524bf422485f98f36de17589784b`。
+- Actions run [43800855316](https://github.com/just2512/nihaixia-app/actions/runs/43800855316)：Flutter regression `SUCCESS`（静态分析、AI/Native 定向门禁、AI retrieval golden snapshot、全量 Dart regression 均通过）；Android arm64 Debug APK、ABI/SHA-256、Manifest、原生单测及 XML 报告检查 `SUCCESS`。
+- CI artifacts：Android ABI/APK evidence `14196403850`；Android unit-test reports `14196796702`；AI retrieval golden snapshot `14196571192`。
+- 黄金快照仅三个总命中数按新讲稿索引的实测结果更新：桂枝汤 208、桂枝 331、伤寒论 141；前40条命中顺序、sourceIds、sourceCounts、本地回链状态、上下文 sourceIds/textLength 均保持。
+- 本地 Find N2 的讲稿打开、药材回链与折叠屏布局仍为设备侧 `UNKNOWN`。
 
 ## 20. 2026-11-16 第二批共享业务逻辑复核结论（覆盖历史初步状态）
 
