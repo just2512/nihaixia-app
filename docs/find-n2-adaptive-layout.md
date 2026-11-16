@@ -146,3 +146,8 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 - 宫位详情弹层使用明确的不透明主题 surface、遮罩、圆角和裁切；标题与星曜属性改用可换行布局，避免窄面板文字横向挤压。
 - 自动化覆盖 Find N2 内屏估算窗口 775×830 dp 下整盘边界，以及宫位弹层背景色和内容换行。
 - Widget 测试只证明布局约束；OPPO Find N2 真机内屏、外屏和半折叠姿态仍需实际截图验收。
+
+
+## 2026-11-16 工具页面逐项单侧面板验收
+
+工具页面入口已统一通过 `FoldAwareMaterialPageRoute` 与 `AdaptiveSinglePane` 选择调用控件所在的物理面板；但统一路由边界测试不能证明各页面内部内容没有横向溢出。新增 `test/tool_foldable_layout_test.dart`，逐个构建工具注册表页面，在带竖向 hinge 的 800×1000 dp 模拟内屏中从右侧面板打开，检查页面边界和 Flutter 布局异常。它用于定位具体失败页面，不把“测试覆盖了页面”当成页面内容已适配的证明。只有实际失败页面才进入窄范围 UI 修复。
