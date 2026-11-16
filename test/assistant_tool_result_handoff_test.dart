@@ -17,6 +17,7 @@ import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/bazi_tool_executor.dart';
 import 'package:nihaisha_app/services/ziwei_tool_executor.dart';
+import 'support/test_only_red_flag_gate.dart';
 
 
 const _readyStatus = LocalAiModelStatus(
@@ -178,6 +179,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: store,
           imagePicker: _NoLostImagePicker(),
           testToolRouteBuilder: (tool, _) {
@@ -292,6 +294,7 @@ void main() {
       MaterialApp(
         home: LocalAiInterviewScreen(
           service: service,
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           conversationStore: _NoopAssistantConversationStore(),
           imagePicker: _NoLostImagePicker(),
         ),
