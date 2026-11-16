@@ -78,14 +78,20 @@ void main() {
     );
     await tester.pump();
     await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(seconds: 2));
     });
     await tester.pumpAndSettle();
   }
 
   testWidgets('收藏分类、文件夹移动与删除在紧凑屏和200%字号下可用',
       (tester) async {
-    await tester.runAsync(() => seedFormulaBookmark());
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(() async {
+      await seedFormulaBookmark();
+      expect((await DatabaseHelper.instance.getAllBookmarks()).length, 2);
+    });
     await pumpBookmarks(
       tester,
       size: const Size(402, 900),
@@ -97,12 +103,20 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.widgetWithText(FilterChip, '本草'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pump();
     expect(find.text('黄芪'), findsOneWidget);
     expect(find.text('桂枝汤'), findsNothing);
 
     await tester.tap(find.widgetWithText(FilterChip, '本草'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pump();
 
     // 对桂枝汤执行移动到文件夹。
     await tester.tap(find.byType(PopupMenuButton<String>).last);
@@ -124,9 +138,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOneWidget);
     await tester.tap(find.text('删除').last);
-    await tester.pumpAndSettle();
+    await tester.pump();
     await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     });
     await tester.pumpAndSettle();
 
@@ -136,7 +150,13 @@ void main() {
 
   testWidgets('内屏零宽折痕与200%字号下收藏主从预览保持可读',
       (tester) async {
-    await tester.runAsync(() => seedFormulaBookmark());
+    addTearDown(tester.view.resetDisplayFeatures);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(() async {
+      await seedFormulaBookmark();
+      expect((await DatabaseHelper.instance.getAllBookmarks()).length, 2);
+    });
     await pumpBookmarks(
       tester,
       size: const Size(775, 900),

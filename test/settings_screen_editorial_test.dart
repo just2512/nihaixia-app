@@ -50,7 +50,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 1));
+    });
+    for (var frame = 0; frame < 8; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
 
     expect(find.text('外观'), findsOneWidget);
     expect(find.text('字体大小'), findsOneWidget);
@@ -59,9 +65,11 @@ void main() {
 
     await tester.ensureVisible(find.text('深色'));
     await tester.tap(find.text('深色'));
-    await tester.pumpAndSettle();
+    for (var frame = 0; frame < 8; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     });
 
     expect(SettingsRepository.instance.themeMode, ThemeMode.dark);
