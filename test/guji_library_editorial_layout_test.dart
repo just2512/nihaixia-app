@@ -124,6 +124,34 @@ void main() {
     }
   });
 
+  testWidgets('针灸大成末章三位数编号在200%字号下自然扩宽', (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pumpLibrary(
+      tester,
+      width: 402,
+      brightness: Brightness.light,
+    );
+    final book = kGujiBooks.singleWhere(
+      (item) => item.id == 'zhenjiudacheng',
+    );
+    final chapters = await openBookAndLoad(tester, book);
+    expect(chapters, hasLength(book.chapterCount));
+
+    final lastChapter = chapters.last;
+    final chapterList = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.text(lastChapter.title),
+      480,
+      scrollable: chapterList,
+    );
+    expect(find.text(lastChapter.title), findsOneWidget);
+    expect(find.text('${book.chapterCount}'), findsOneWidget);
+    expect(tester.takeException(), isNull,
+        reason: '三位数章节号在200%字号下不应挤压标题或溢出');
+  });
+
   testWidgets('章节目录支持正文搜索、清除筛选与原文阅读跳转',
       (tester) async {
     addTearDown(tester.view.resetPhysicalSize);
