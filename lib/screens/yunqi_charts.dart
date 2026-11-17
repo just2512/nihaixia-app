@@ -10,7 +10,7 @@
 // `ColorScheme` token 表达，故本文件内建 [wxColorOf] 私有亮/暗两套映射——
 // 这是全文件**唯一**的硬编码颜色来源。除此之外，所有颜色一律取自
 // `colorScheme.*` 或已有颜色的 `withValues(alpha:)`，深色模式下文字对比度
-// 由 [_textOn] 按背景亮度派生（浅底深字 / 深底浅字），不写死黑白。
+// 由 [chartLabelColorOn] 按实际对比度派生（浅底深字 / 深底浅字），不写死黑白。
 //
 // ## 绘制纪律
 //
@@ -58,16 +58,65 @@ Color wxColorOf(String wx, Brightness brightness) {
   return m[wx] ?? (brightness == Brightness.dark ? _wxFallbackDark : _wxFallbackLight);
 }
 
-/// 由背景色派生可读的前景色（浅底深字 / 深底浅字）。
+/// 为五行语义底色生成满足普通文字 WCAG AA 的前景色。
 ///
-/// 不写死黑白，而是沿原色相调整明度，保证与五行色同源、深色模式可读。
-Color _textOn(Color bg) {
-  final HSLColor hsl = HSLColor.fromColor(bg);
-  final bool onDark = bg.computeLuminance() < 0.45;
-  return hsl
-      .withLightness(onDark ? 0.93 : 0.16)
-      .withSaturation(math.min(hsl.saturation, 0.45))
-      .toColor();
+/// 保留背景色相与受限饱和度，只沿 HSL 明度向黑/白中对比度更高的一侧移动；
+/// 二分搜索得到最接近原色、且对比度不低于 4.5:1 的颜色。避免仅用固定明度阈值
+/// 导致中等明度的绿/红/蓝底色上出现低对比度文字。
+Color chartLabelColorOn(Color bg) {
+  const double minimumContrast = 4.6; // 留出颜色量化与抗锯齿余量。
+  final HSLColor original = HSLColor.fromColor(bg);
+  final HSLColor base = original.withSaturation(
+    math.min(original.saturation, 0.45),
+  );
+  final double darkContrast = _contrastRatio(
+    base.withLightness(0).toColor(),
+    bg,
+  );
+  final double lightContrast = _contrastRatio(
+    base.withLightness(1).toColor(),
+    bg,
+  );
+  final bool towardLight = lightContrast > darkContrast;
+
+  // 选定方向后，对比度随明度向黑/白端点移动而单调增加。
+  double low = towardLight ? base.lightness : 0;
+  double high = towardLight ? 1 : base.lightness;
+  for (int i = 0; i < 20; i++) {
+    final double mid = (low + high) / 2;
+    final Color candidate = base.withLightness(mid).toColor();
+    final bool meetsTarget =
+        _contrastRatio(candidate, bg) >= minimumContrast;
+    if (towardLight) {
+      if (meetsTarget) {
+        high = mid;
+      } else {
+        low = mid;
+      }
+    } else {
+      if (meetsTarget) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+  }
+
+  final double resultLightness = towardLight ? high : low;
+  Color result = base.withLightness(resultLightness).toColor();
+  if (_contrastRatio(result, bg) < 4.5) {
+    // 量化边界兜底：回退到当前选择方向的端点，确保不低于 AA。
+    result = base.withLightness(towardLight ? 1 : 0).toColor();
+  }
+  return result;
+}
+
+double _contrastRatio(Color foreground, Color background) {
+  final double foregroundLuminance = foreground.computeLuminance();
+  final double backgroundLuminance = background.computeLuminance();
+  final double lighter = math.max(foregroundLuminance, backgroundLuminance);
+  final double darker = math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 // ==================== 三图输入快照 ====================
@@ -455,7 +504,7 @@ class _WuxingPainter extends CustomPainter {
         wx,
         pc - Offset(0, r * 0.42),
         r * 0.66,
-        _textOn(wxColor),
+        chartLabelColorOn(wxColor),
         weight: FontWeight.bold,
       );
 
@@ -471,7 +520,7 @@ class _WuxingPainter extends CustomPainter {
         final double bf = _fitFont(g.text, badgeMaxW - 10, 8.5, min: 7.2);
         final double h = bf + 4.2;
         final TextPainter tp =
-            _tp(g.text, bf, _textOn(wxColor), weight: FontWeight.w600)
+            _tp(g.text, bf, chartLabelColorOn(wxColor), weight: FontWeight.w600)
               ..layout();
         final double w = tp.width + 10;
         final Rect rect = Rect.fromLTWH(pc.dx - w / 2, y, w, h);
@@ -598,7 +647,7 @@ class _WuyunPainter extends CustomPainter {
           label,
           c + Offset(midR * math.cos(mid), midR * math.sin(mid)),
           font,
-          hi ? colors.onPrimaryContainer : _textOn(wx),
+          hi ? colors.onPrimaryContainer : chartLabelColorOn(wx),
           weight: hi ? FontWeight.bold : FontWeight.w600,
         );
       }
@@ -725,7 +774,7 @@ class _LiuqiPainter extends CustomPainter {
         keR,
         mid,
         keFont,
-        hi ? colors.onPrimaryContainer : _textOn(keWx),
+        hi ? colors.onPrimaryContainer : chartLabelColorOn(keWx),
         weight: hi ? FontWeight.bold : FontWeight.w600,
       );
 
@@ -750,7 +799,7 @@ class _LiuqiPainter extends CustomPainter {
         line1R,
         mid,
         zhuFont,
-        hi ? colors.onPrimaryContainer : _textOn(zhuWx),
+        hi ? colors.onPrimaryContainer : chartLabelColorOn(zhuWx),
         weight: hi ? FontWeight.bold : FontWeight.w600,
       );
       _drawTangential(
