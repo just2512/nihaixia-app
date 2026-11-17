@@ -2773,3 +2773,12 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 合并后必须在合并 SHA 上复核主线 Flutter regression、Android arm64 CI 和 Quality Gate。
 - Find N2 外屏/内屏/半折叠、键盘及本地 E4B 真实多轮 TRACE 仍属 `UNKNOWN / LOCAL ONLY`；云端自动化不替代真机证据。未取得设备证据前，不启动 Phase 3 页面扩展。
 
+
+
+#### 新 head 首轮 CI 失败与时序修正
+
+- PR #268 初始 head `79992a608b44d4ead65866cf4e612271be8c438f` 的 Flutter workflow run `44095366676`：静态分析及前置专项测试均 SUCCESS；全量 Dart/Flutter regression 为 `1713 passed / 1 failed / 15 skipped`。
+- 唯一失败仍为本节滚动保持断言：打开前 `736.0`，关闭后 `558.0`；日志确认原 ScrollController / ScrollPosition 未更换，viewInsets 为 zero。失败说明第一次修复在底层路由刚恢复 current 且 metrics 可用时过早恢复 offset，弹层 reverse transition 后续布局再次覆盖位置。
+- 未改测试容差、未删除失败用例。修正为等待源页面路由与滚动尺寸连续稳定 18 帧（总等待最多 60 帧）后再恢复原 offset，给弹层 reverse transition 完成留出稳定窗口。
+- 时序修正提交：`07172c2cfd122027256e42108c22ef0271b5f9fb`。新 head 会重新触发完整 workflow；该失败 run 不继承 PASS，新 head 仍须从头验收。
+- Android arm64 job 在首轮记录时仍为 IN_PROGRESS；其结果同样不能替代 Flutter regression。
