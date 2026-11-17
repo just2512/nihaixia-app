@@ -561,6 +561,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         _error = null;
       });
+      if (status.ready && _pendingHistoryTranscript != null) {
+        await _restorePendingHistory();
+      }
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
