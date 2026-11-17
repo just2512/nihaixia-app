@@ -589,10 +589,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _error = '读取本地模型状态失败：$error。请重新检查后继续。';
       });
     }
-      if (status.ready && _pendingHistoryTranscript != null) {
-        await _restorePendingHistory();
-      }
   }
+
   Future<void> _loadModel() async {
     if (_attachmentBusy ||
         _modelControlBusy ||
