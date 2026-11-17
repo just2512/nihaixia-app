@@ -58,9 +58,6 @@ Color wxColorOf(String wx, Brightness brightness) {
   return m[wx] ?? (brightness == Brightness.dark ? _wxFallbackDark : _wxFallbackLight);
 }
 
-/// 由背景色派生可读的前景色（浅底深字 / 深底浅字）。
-///
-/// 不写死黑白，而是沿原色相调整明度，保证与五行色同源、深色模式可读。
 /// 为五行语义底色生成满足普通文字 WCAG AA 的前景色。
 ///
 /// 保留背景色相与受限饱和度，只沿 HSL 明度向黑/白中对比度更高的一侧移动；
@@ -68,11 +65,18 @@ Color wxColorOf(String wx, Brightness brightness) {
 /// 导致中等明度的绿/红/蓝底色上出现低对比度文字。
 Color chartLabelColorOn(Color bg) {
   const double minimumContrast = 4.6; // 留出颜色量化与抗锯齿余量。
-  final HSLColor base = HSLColor.fromColor(bg).withSaturation(
-    math.min(HSLColor.fromColor(bg).saturation, 0.45),
+  final HSLColor original = HSLColor.fromColor(bg);
+  final HSLColor base = original.withSaturation(
+    math.min(original.saturation, 0.45),
   );
-  final double darkContrast = _contrastRatio(base.withLightness(0).toColor(), bg);
-  final double lightContrast = _contrastRatio(base.withLightness(1).toColor(), bg);
+  final double darkContrast = _contrastRatio(
+    base.withLightness(0).toColor(),
+    bg,
+  );
+  final double lightContrast = _contrastRatio(
+    base.withLightness(1).toColor(),
+    bg,
+  );
   final bool towardLight = lightContrast > darkContrast;
 
   // 选定方向后，对比度随明度向黑/白端点移动而单调增加。
