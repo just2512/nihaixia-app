@@ -2518,9 +2518,9 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 | Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
 |---|---|---|---|---|
-| CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | IN_PROGRESS | `docs/contextual-ask-ai-protocol`；base `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` | 协议文档与台账进入 PR；文档链接、Markdown 结构及约束一致性检查通过；合并后记录 merge SHA |
-| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS（新基线分支修复中；PR CI 待执行） | `work/ai-contextual-read-sample-v2`；base `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`；当前代码 head `822f5555e2d17dc7f0a014f8f4954e8b9f243f98` | 单条文来源锚点只作用于唯一原文块；同锚点/同版本会话复用；changed tests、PR 全量 Flutter 回归及 Android CI 通过；Find N2 真机单独验收 |
-| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
+| CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | PASS（PR #221 MERGED；规范文件已在 master 复核） | PR #221；merge `5c50605724e9a27ad03df700f5e4aa5aa0766d92` | `docs/contextual-ask-ai-spec.md` 已进入 master；PR run `43887125112` Flutter regression 与 Android arm64 SUCCESS，Quality Gate run `43887125122` SUCCESS |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | PARTIAL（已合并；PR CI PASS；合并后 master CI 执行中；Find N2 TRACE UNKNOWN） | PR #228；merge `c34986daecdead6d73e017a4aa15c883669306d3`；head `7f1274095415fee2832cc199bb32826fc45b82b7` | PR run `43996471384` Flutter regression 与 Android arm64 SUCCESS；master runs `43998754518` / `43998754472` 完成后再更新云端集成状态；设备验收独立 |
+| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | IN_PROGRESS（PR #237 已 retarget 最新 master；修复测试 import URI 后待新 CI） | `work/ai-contextual-ziwei-result-sample-v9`；base `c34986daecdead6d73e017a4aa15c883669306d3`；当前 head `1731102a895277d58092c4661817a5cb0434727d` | 真实排盘输入/规则/完整 formatter 输出生成快照；成功结果入口、失败不展示；新 head 全量 Flutter + Android arm64 CI 通过；真机 TRACE 独立 |
 
 ### 57.3 实施顺序与边界
 
@@ -2531,12 +2531,11 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 5. 每个实施 PR 记录 base/head SHA、改动文件、最小测试、静态分析、CI run、失败日志、风险、回滚方式及未完成项。未执行的 Find N2 实机验收保持 UNKNOWN。
 6. 任何无法确认的来源、锚点、结果版本或执行状态必须显式标记 UNKNOWN / MISSING，不允许用模型推断补齐。
 
-### 57.4 当前证据状态
+### 57.4 初始文档固化记录（历史状态）
 
-- 本次文档工作分支基于 master `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` 创建。
-- 当前仅完成远端文档读取与协议固化；尚未实施划词组件、结果问 AI 入口或会话锚点代码。
-- 本次文档工作没有执行 Flutter 测试、Android 构建或 Find N2 实机测试；这些结果不适用，不能记为 PASS。
-- 本节状态应在 PR 创建、CI 结束和合并后按实际证据更新。
+- 本节原始记录对应 PR #221 尚未完成实施时的时间点，现已由 PR #221 合并；历史描述不代表当前状态。
+- 协议文件已进入 master，合并信息与文档验收见下方 57.21。
+- 划词和工具结果样板的后续实施、CI 与设备验收，以本节任务表和 57.21 之后的增量记录为准。
 
 
 ### 57.6 CAI-READ-01 基线刷新、失败证据与修复
@@ -2595,4 +2594,75 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
   - 宽屏侧栏改用现有 `showFoldAwareDialog`，让调用方锚点、原始 MediaQuery 和 AdaptiveSinglePane 由项目统一封装处理；没有新增私有 showDialog 旁路。
   - widget test 将 AppColors 导入改回 `package:nihaisha_app/theme/app_colors.dart`，与错误堆栈中的正式 package library URI 匹配；MarkdownDocScreen 和 contextual sheet 继续使用 package URI，避免复制大依赖树。
 - 新提交仍须重跑完整 Flutter regression、Android arm64；不删测试、不改弱质量门禁。Find N2 真机测试继续为 UNKNOWN。
+
+
+
+### 57.7 CAI-RESULT-01 基线与结果快照校验
+
+- 替代工作分支：`work/ai-contextual-ziwei-result-sample-v9`，从 CAI-READ-01 当前工作分支 head `7f1274095415fee2832cc199bb32826fc45b82b7` 派生；本分支不得在 CAI-READ-01 未集成前以 master 为 base 合并。
+- 旧 PR #224 继承旧 PR #223 的过期分支关系，不直接集成；新分支只承接紫微结果页面和快照身份切片，待 CAI-READ-01 合并后 retarget 到届时最新 master 并重新运行 CI。
+- 代码复核发现原快照只记录地点显示名，没有记录实际传给 `calculateZiweiChart` 的经纬度。所选城市会传入真实经纬度；未选城市时，计算使用手动经度或默认东经 120°、纬度 30°。显示名不能替代这些实际参数，原实现可能把使用不同坐标计算的结果错误判为相同输入。
+- 新实现把真实计算经度/纬度在排盘成功时与命盘一起捕获；问 AI 时从这组已执行输入构建快照，不读取用户可能已修改但尚未重新排盘的表单值。输入摘要包含公历时间、性别、地点说明、经纬度、真太阳时和早晚子时口径；内容身份同时纳入规则版本及完整 App formatter 输出（包含当前流年/流月/流日结果）。
+- 新增 `AiToolResultSnapshot` 纯函数，对输入键排序后生成 SHA-256；定向测试覆盖键顺序不影响 ID、经纬度变化、规则版本变化、结果内容变化均改变 ID。
+- 仍须由 CAI-READ-01 提供并验证 `AiContextRef`、情境面板及 explanation-only 会话能力。AI 不重算；新结果快照不能改写旧会话引用。
+- 当前代码 head（快照工具与紫微页面已实现）：`e506aabdf17beb4e5a5d71590ab5b9052d9eb002`。新切片的 branch validation/PR CI 尚未取得结果；Find N2 真机内外屏和真实模型问答仍为 UNKNOWN。
+
+
+
+### 57.8 CAI-RESULT-01 页面入口与针对性测试
+
+- 将结果提问入口放在命盘结果摘要下方，显示明确的“问 AI 解读当前排盘”按钮，不仅依赖 AppBar 隐藏的 tooltip。入口只在实际排盘成功、未计算中且无错误时展示。
+- 新增 `test/ziwei_contextual_result_entry_test.dart`：覆盖真实成功排盘显示入口、无效经度输入不显示入口，并检查 widget 无异常。
+- 新增快照身份测试覆盖：输入 Map 键顺序无关；经度、纬度、规则版本和 formatter 结果变化均改变 snapshotId。
+- 当前分支的代码与测试已写入独立堆叠分支；新 PR head 在本次台账提交后更新。分支静态分析和定向测试仍待 GitHub Actions 实际结果，不以文件存在推断 PASS。
+
+
+### 57.14 CAI-RESULT-01 第三次依赖刷新
+
+- v5 从父分支 head `5caedc20a64f33049581b317f8bba6dd208bbfa9` 创建；CAI-READ-01 后续又补充“历史查询失败时建立新隔离会话”的持久化兜底，v5 不含该修复，因此不直接合并。
+- v6 已从当前 CAI-READ-01 head `7f1274095415fee2832cc199bb32826fc45b82b7` 创建；紫微结果实现只修改 Ziwei screen、独立快照身份函数、两组针对性测试和本台账，不覆盖父分支助手/面板实现。
+- PR #232 由本分支替代并关闭；本 PR 必须先等待 PR #228 合并，再 retarget master 和重新执行完整 CI。
+
+
+### 57.18 CAI-RESULT-01 依赖分支第五次刷新
+
+- v7 从父分支 head `566f9632cbe06fae2259ee133a835291cad59bfa` 创建；父分支随后调整情境侧栏断点以覆盖 Find N2 展开内屏（约 775 dp），因此 v7 未包含最新面板决策。
+- v8 从当前 CAI-READ-01 head `7f1274095415fee2832cc199bb32826fc45b82b7` 建立，并仅叠加原有紫微结果快照切片；不重新修改父分支助手、面板、测试导入或锚点代码。
+- PR #234 由 v8 替代；等待 PR #228 合并后 retarget master，并对最终合并树重新运行 Flutter full regression 和 Android arm64 CI。
+
+### 57.20 CAI-RESULT-01 依赖分支第六次刷新
+
+- v8 从 CAI-READ-01 父分支 `5f7b1c339e899a9b379c19963a7ce54406191cbf` 创建；父分支随后修复 fold-aware dialog 契约和 AppColors ThemeExtension 测试 URI，因此 v8 不含最新父分支修复。
+- v9 已从 CAI-READ-01 当前 head `7f1274095415fee2832cc199bb32826fc45b82b7` 创建。只添加紫微结果入口、结果快照身份和对应测试，继承全部父分支 UI、会话、安全及测试修复。
+- PR #235 由 v9 替代。待 PR #228 合并后以最新 master 为基线重新运行全量 Flutter / Android arm64 CI。
+
+
+
+---
+
+### 57.21 2026-11-17 CAI-DOC-01 与 CAI-READ-01 集成复核
+
+#### CAI-DOC-01：功能协议
+
+- PR [#221](https://github.com/just2512/nihaixia-app/pull/221) 已合并；merge commit：`5c50605724e9a27ad03df700f5e4aa5aa0766d92`。
+- 正式协议 `docs/contextual-ask-ai-spec.md` 已在最新 master 读取复核。
+- PR workflow run `43887125112`：Flutter regression SUCCESS、Android arm64 CI SUCCESS；Flutter Quality Gate run `43887125122` SUCCESS。文档固化任务 PASS。
+
+#### CAI-READ-01：《伤寒论》单条文划词样板
+
+- PR [#228](https://github.com/just2512/nihaixia-app/pull/228) 已以普通 merge 方式合并，保留原分支 33 个提交的 ancestry；merge commit：`c34986daecdead6d73e017a4aa15c883669306d3`。
+- PR 最终 head：`7f1274095415fee2832cc199bb32826fc45b82b7`。
+- PR workflow run `43996471384`：Flutter regression tests SUCCESS，Android arm64 CI verification SUCCESS；Branch validation 按 workflow 条件 SKIPPED，不计作 PASS，也不计作失败。
+- 代码接入范围：仅《伤寒论》条文 2 的唯一 Markdown 原文 blockquote 开启情境入口；同文件多个 blockquote、注释/讲解块、来源字段不完整或原文/渲染行边界不一致时关闭情境操作。来源使用 `shanghan:assets/shanghan/clause_001.md`，锚点为 `shanghan:clause:002`，版本以原文 SHA-256 标识。
+- 复用既有助手会话、消息 metadata、Native transcript 恢复和安全前置流程；锚点/版本必须完全匹配才复用，不匹配或查询失败时创建隔离会话；解释专用上下文不触发工具执行或重算。
+- 合并后 master workflow：Flutter tests run `43998754518`、Flutter Quality Gate run `43998754472`。本条记录写入时两者均 IN_PROGRESS，完成后应按终态刷新。本次合并后自动化验收尚未最终 PASS。
+- Find N2 外屏/内屏、铰链、键盘、滚动状态以及 E4B 真实多轮 TRACE 未执行，保持 UNKNOWN；不得由 CI 替代。
+
+#### CAI-RESULT-01：紫微结果样板进入最终基线
+
+- PR [#237](https://github.com/just2512/nihaixia-app/pull/237) 原先堆叠于 CAI-READ-01 工作分支；父 PR #228 合并后已 retarget 到 master，base SHA：`c34986daecdead6d73e017a4aa15c883669306d3`，保持原父子 ancestry，当前 diff 只含台账与紫微结果相关 4 个实现/测试文件。
+- 旧 head `f3e7758ba1a10735c99f420d606ca670c7921868` 的 Branch validation 在 `test/ziwei_contextual_result_entry_test.dart` 触发 Dart package URI / file URI 类型身份冲突；不是生产计算逻辑失败。修复提交 `1731102a895277d58092c4661817a5cb0434727d` 已将该测试的页面与主题导入统一为 package URI。必须以新 head CI 结果判断修复是否通过。
+- PR #237 的新 head 全量 Flutter 回归与 Android arm64 CI 尚待执行；旧 run `43996564180` 不能继承为 PASS。
+- 紫微结果快照将真实计算的公历输入、实际传入引擎的经纬度、性别、真太阳时/早晚子时口径、规则版本和完整 formatter 输出纳入 SHA-256；问 AI 仅使用成功计算时捕获的结果，不读取未重新计算的编辑表单状态。
+- 后续集成门槛：新 head Flutter 全量回归、Android arm64 CI 均 SUCCESS；合并后 master CI 再复核。Find N2 与真实 E4B 多轮仍独立记录 TRACE。
 
