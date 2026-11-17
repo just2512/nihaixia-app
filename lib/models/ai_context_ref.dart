@@ -8,6 +8,7 @@ class AiContextRef {
     this.snapshotId,
     this.ruleVersion,
     this.title,
+    this.selectedText,
   });
 
   final String kind;
@@ -18,6 +19,7 @@ class AiContextRef {
   final String? snapshotId;
   final String? ruleVersion;
   final String? title;
+  final String? selectedText;
 
   Map<String, String> toMetadata() => Map.unmodifiable({
         'kind': kind,
@@ -28,6 +30,7 @@ class AiContextRef {
         if (snapshotId != null) 'snapshotId': snapshotId!,
         if (ruleVersion != null) 'ruleVersion': ruleVersion!,
         if (title != null) 'title': title!,
+        if (selectedText != null) 'selectedText': selectedText!,
       });
 
   static Map<String, String> normalizeMetadata(Map<String, String>? value) {
