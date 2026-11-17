@@ -2584,3 +2584,15 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 仓库设备适配基准记录 Find N2 外屏约 403 dp、展开内屏约 775 dp；内屏的预估窗口属于 medium（600–839 dp），不能继续用 840 dp 的平板宽屏阈值，否则用户在展开内屏仍只能得到底部弹层。
 - 情境助手侧栏最小宽度约束为 340 dp；将侧栏开启阈值调整为 720 dp：外屏（约 403 dp）仍使用底部弹层，展开内屏（约 775 dp）进入侧栏，侧栏和当前页面各保留可用宽度。
 - 更新断点单测，明确 719 dp 以下为底部弹层、720 dp 起侧栏；Find N2 真机内外屏实际 dp 与分屏宽度仍以设备 TRACE 为准。
+
+
+### 57.19 CAI-READ-01 第三轮全量回归失败：两项现存质量门禁
+
+- Flutter regression run `43995743353`：
+  1. `test/fold_aware_navigation_contract_test.dart` 检测到 `lib/widgets/contextual_ai_sheet.dart` 使用直接 `showDialog`，违反仓库既有折叠屏路由契约；
+  2. `markdown_doc_contextual_selection_test.dart` 的 5 个 widget tests 仍在 `StateView` 中触发 `AppColorsContext.colors` 空值。堆栈定位到 package URI 的 AppColors 类型；测试中的相对 AppColors 导入与 StateView 最终解析的 package library identity 不一致。
+- 修复：
+  - 宽屏侧栏改用现有 `showFoldAwareDialog`，让调用方锚点、原始 MediaQuery 和 AdaptiveSinglePane 由项目统一封装处理；没有新增私有 showDialog 旁路。
+  - widget test 将 AppColors 导入改回 `package:nihaisha_app/theme/app_colors.dart`，与错误堆栈中的正式 package library URI 匹配；MarkdownDocScreen 和 contextual sheet 继续使用 package URI，避免复制大依赖树。
+- 新提交仍须重跑完整 Flutter regression、Android arm64；不删测试、不改弱质量门禁。Find N2 真机测试继续为 UNKNOWN。
+
