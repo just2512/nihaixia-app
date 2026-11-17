@@ -196,7 +196,15 @@ void main() {
       final editedButNotRecalculatedSnapshot = await readAskAiSnapshot();
       expect(editedButNotRecalculatedSnapshot, originalSnapshot);
 
+      // The contextual assistant must now preserve the page offset. The
+      // calculate action is near the top of this lazy ListView, so return to
+      // the top explicitly before locating the button for the third snapshot.
+      await tester.drag(chartScroll, const Offset(0, 2400));
+      await tester.pumpAndSettle();
+
       final calculateButton = find.text('开始排盘');
+      expect(calculateButton, findsOneWidget,
+          reason: '返回列表顶部后应重新构建排盘按钮');
       await tester.ensureVisible(calculateButton);
       await tester.tap(calculateButton);
       await tester.pumpAndSettle();
