@@ -47,7 +47,8 @@ Future<void> _revealAndCheck(
   required double width,
   required Brightness brightness,
 }) async {
-  expect(target, findsOneWidget, reason: '$segment 应存在于页面结构中');
+  // ListView uses lazy children: an off-screen section is not in the
+  // widget tree until scrolling reaches it. Scroll first, then assert.
   await tester.scrollUntilVisible(
     target,
     220,
@@ -55,6 +56,7 @@ Future<void> _revealAndCheck(
   );
   await tester.pumpAndSettle();
 
+  expect(target, findsOneWidget, reason: '$segment 应存在于页面结构中');
   expect(
     tester.takeException(),
     isNull,
