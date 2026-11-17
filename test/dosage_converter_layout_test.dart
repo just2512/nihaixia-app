@@ -92,6 +92,13 @@ void main() {
           220,
           scrollable: find.byType(Scrollable).first,
         );
+        // The target may be built while its center is still a few pixels
+        // outside the root view; explicitly align it before pointer input.
+        await tester.ensureVisible(secondTableTitle);
+        await tester.pumpAndSettle();
+        final secondTitleBounds = tester.getRect(secondTableTitle);
+        expect(secondTitleBounds.top, greaterThanOrEqualTo(0));
+        expect(secondTitleBounds.bottom, lessThanOrEqualTo(900));
         await tester.tap(secondTableTitle);
         await tester.pumpAndSettle();
 
