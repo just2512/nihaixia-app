@@ -570,17 +570,25 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     // transition has necessarily removed the route from the Navigator. Wait
     // until this source page is current again so its Scrollable is attached
     // and its viewport metrics are stable before restoring the offset.
-    while (mounted &&
-        sourcePageRoute != null &&
-        !sourcePageRoute.isCurrent) {
+    // The dialog normally completes its reverse transition within 200 ms.
+    // Bound the frame wait so an unrelated route left above this page cannot
+    // hold this action open indefinitely.
+    for (var frame = 0;
+        frame < 30 &&
+            mounted &&
+            sourcePageRoute != null &&
+            !sourcePageRoute.isCurrent;
+        frame++) {
       await WidgetsBinding.instance.endOfFrame;
     }
-    await WidgetsBinding.instance.endOfFrame;
     if (!mounted ||
+        (sourcePageRoute != null && !sourcePageRoute.isCurrent) ||
         pageScrollOffset == null ||
         !_pageScrollController.hasClients) {
       return;
     }
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !_pageScrollController.hasClients) return;
     final position = _pageScrollController.position;
     if (!position.hasContentDimensions) return;
     final targetOffset = pageScrollOffset
