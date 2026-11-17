@@ -61,7 +61,7 @@ Color wxColorOf(String wx, Brightness brightness) {
 /// 由背景色派生可读的前景色（浅底深字 / 深底浅字）。
 ///
 /// 不写死黑白，而是沿原色相调整明度，保证与五行色同源、深色模式可读。
-Color _textOn(Color bg) {
+Color chartLabelColorOn(Color bg) {
   final HSLColor hsl = HSLColor.fromColor(bg);
   final bool onDark = bg.computeLuminance() < 0.45;
   return hsl
@@ -455,7 +455,7 @@ class _WuxingPainter extends CustomPainter {
         wx,
         pc - Offset(0, r * 0.42),
         r * 0.66,
-        _textOn(wxColor),
+        chartLabelColorOn(wxColor),
         weight: FontWeight.bold,
       );
 
@@ -471,7 +471,7 @@ class _WuxingPainter extends CustomPainter {
         final double bf = _fitFont(g.text, badgeMaxW - 10, 8.5, min: 7.2);
         final double h = bf + 4.2;
         final TextPainter tp =
-            _tp(g.text, bf, _textOn(wxColor), weight: FontWeight.w600)
+            _tp(g.text, bf, chartLabelColorOn(wxColor), weight: FontWeight.w600)
               ..layout();
         final double w = tp.width + 10;
         final Rect rect = Rect.fromLTWH(pc.dx - w / 2, y, w, h);
@@ -598,7 +598,7 @@ class _WuyunPainter extends CustomPainter {
           label,
           c + Offset(midR * math.cos(mid), midR * math.sin(mid)),
           font,
-          hi ? colors.onPrimaryContainer : _textOn(wx),
+          hi ? colors.onPrimaryContainer : chartLabelColorOn(wx),
           weight: hi ? FontWeight.bold : FontWeight.w600,
         );
       }
@@ -725,7 +725,7 @@ class _LiuqiPainter extends CustomPainter {
         keR,
         mid,
         keFont,
-        hi ? colors.onPrimaryContainer : _textOn(keWx),
+        hi ? colors.onPrimaryContainer : chartLabelColorOn(keWx),
         weight: hi ? FontWeight.bold : FontWeight.w600,
       );
 
@@ -750,7 +750,7 @@ class _LiuqiPainter extends CustomPainter {
         line1R,
         mid,
         zhuFont,
-        hi ? colors.onPrimaryContainer : _textOn(zhuWx),
+        hi ? colors.onPrimaryContainer : chartLabelColorOn(zhuWx),
         weight: hi ? FontWeight.bold : FontWeight.w600,
       );
       _drawTangential(
