@@ -111,9 +111,12 @@ void main() {
       brightness: Brightness.light,
     );
 
-    final scrollable = find.byType(Scrollable).first;
     final gujiEntry = find.text('古籍原文');
-    await tester.scrollUntilVisible(gujiEntry, 260, scrollable: scrollable);
+    await tester.ensureVisible(gujiEntry);
+    await tester.pumpAndSettle();
+    final gujiBounds = tester.getRect(gujiEntry);
+    expect(gujiBounds.top, greaterThanOrEqualTo(0));
+    expect(gujiBounds.bottom, lessThanOrEqualTo(900));
     await tester.tap(gujiEntry);
     await tester.pumpAndSettle();
 
