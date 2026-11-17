@@ -564,13 +564,25 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       contextualTitle: '紫微斗数排盘结果',
       contextualExplanationOnly: true,
     );
-    if (!mounted || pageScrollOffset == null || !_pageScrollController.hasClients) {
+
+    // Wait for the source page's viewport and scroll extents to be laid out
+    // again after the contextual route is removed. Reading maxScrollExtent
+    // immediately after the route future completes can observe the transient
+    // shorter extent and clamp a valid saved offset too early.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
       return;
     }
     final position = _pageScrollController.position;
-    _pageScrollController.jumpTo(
-      pageScrollOffset.clamp(0.0, position.maxScrollExtent),
-    );
+    if (!position.hasContentDimensions) return;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > precisionErrorTolerance) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
   }
 
   void _returnAssistantResult() {
