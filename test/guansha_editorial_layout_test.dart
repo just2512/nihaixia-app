@@ -82,7 +82,8 @@ void main() {
         expect(tester.takeException(), isNull,
             reason: '${width.toInt()}dp / ${brightness.name} / 200% 详情弹层不得溢出');
 
-        await tester.pageBack();
+        final detailContext = tester.element(find.text('查法'));
+        Navigator.of(detailContext).pop();
         await tester.pumpAndSettle();
 
         await tester.enterText(find.byType(TextField), '阎罗关');
