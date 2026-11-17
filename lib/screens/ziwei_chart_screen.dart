@@ -1135,7 +1135,13 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 4,
                   crossAxisSpacing: 4,
-                  childAspectRatio: 0.72,
+                  // 200% 字号下宫位文字自然换行会增加纵向行数。
+                // 在保持四列地支盘位不变的前提下，为每宫增加纵向空间；
+                // 整张命盘随外层 ListView 滚动，不缩小文字或隐藏条目。
+                childAspectRatio:
+                    MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                    ? 0.52
+                    : 0.72,
                   children: [
                     for (int slot = 0; slot < 16; slot++)
                       slotToBranch[slot] == -1
