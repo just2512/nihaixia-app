@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/widgets/contextual_ai_sheet.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 void main() {
   test('contextual panel uses a bottom sheet below the wide-window breakpoint', () {
