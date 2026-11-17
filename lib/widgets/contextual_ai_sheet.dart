@@ -41,6 +41,7 @@ class ContextualAiPanel extends StatelessWidget {
         alignment: Alignment.centerRight,
         insetPadding: const EdgeInsets.all(12),
         child: SizedBox(
+          key: const ValueKey('contextual-ai-panel-content'),
           width: panelWidth,
           height: panelHeight,
           child: assistantBuilder(null),
