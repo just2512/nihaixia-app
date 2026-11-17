@@ -6742,9 +6742,10 @@ void mainRedFlagEntrypointOrderingTests() {
       'selectedText': '发热，汗出，恶风，脉缓',
     };
 
-    final indexedHit = await ClassicSearchService.findBySourceId(sourceId);
-    expect(indexedHit, isNotNull);
-    expect(indexedHit!.asset, 'assets/shanghan/clause_001.md');
+    final nullableHit = await ClassicSearchService.findBySourceId(sourceId);
+    expect(nullableHit, isNotNull);
+    final indexedHit = nullableHit!;
+    expect(indexedHit.asset, 'assets/shanghan/clause_001.md');
 
     final conversationId = await _store.createAssistantConversation(
       title: '伤寒论条文2情境会话',
