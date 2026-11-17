@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/screens/ziwei_chart_screen.dart';
-import '../lib/theme/app_colors.dart';
+import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   testWidgets('a successful calculated chart exposes a contextual Ask AI entry',
