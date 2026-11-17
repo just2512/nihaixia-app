@@ -288,7 +288,9 @@
 | Phase 3.3：闭门课重症临床列表 | `PASS`（已合并） | PR #219，集成 SHA `e58d6035fb29843ca419069191683198a17aa3f4`；Flutter Run `43991748328`、Android arm64 job `133735808445` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.5：农历节日与神诞 | `PASS`（已合并） | PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`；Flutter Run `43993000618`、Android arm64 job `133740441503` SUCCESS；Branch validation `SKIPPED`。 |
 | 工具入口 200% 字号截断问题 | `MISSING`（待定向测试） | 代码审计发现标题单行、摘要两行省略可能隐藏信息；尚未取得该页面 402/775dp × 浅深主题 × 200% 的布局失败证据。先补测试，再决定最小修复；不提前认定为已复现溢出。 |
-| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Flutter Run `44014531870` 运行中，Branch validation `SKIPPED`，Android arm64 尚无终态。 |\n| 易经 / 五运六气页面大字号布局 | `MISSING`（只读审计） | 需补 402/775dp × 浅深主题 × 200% 的可达性/无溢出测试；固定宽列等仅列为待验证风险，不视为已复现缺陷。 |\n| 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
+| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Flutter Run `44014531870` 运行中，Branch validation `SKIPPED`，Android arm64 尚无终态。 |
+| 易经 / 五运六气页面大字号布局 | `MISSING`（只读审计） | 需补 402/775dp × 浅深主题 × 200% 的可达性/无溢出测试；固定宽列等仅列为待验证风险，不视为已复现缺陷。 |
+| 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录；CI/Widget 不替代真机。 |
 
 
