@@ -95,6 +95,22 @@ void main() {
 
       Future<String> readAskAiSnapshot() async {
         await tester.ensureVisible(askAi);
+        await tester.pumpAndSettle();
+
+        // Resolve the Scrollable that actually contains the Ask AI action.
+        // The page has nested scrollable content, so selecting the first
+        // descendant can observe a different viewport from the owning ListView.
+        final sourcePageScrollable = find.ancestor(
+          of: askAi,
+          matching: find.byType(Scrollable),
+        ).first;
+        final sourcePageScrollableWidget =
+            tester.widget<Scrollable>(sourcePageScrollable);
+        final sourcePageController = sourcePageScrollableWidget.controller;
+        final sourcePagePosition =
+            tester.state<ScrollableState>(sourcePageScrollable).position;
+        final pageOffsetBeforeOpen = sourcePagePosition.pixels;
+
         await tester.tap(askAi);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
@@ -117,6 +133,34 @@ void main() {
           find.byType(ZiweiChartScreen),
           findsOneWidget,
           reason: '关闭情境助手必须返回原排盘页，不能退出排盘路由',
+        );
+        final restoredScrollable = find.ancestor(
+          of: askAi,
+          matching: find.byType(Scrollable),
+        ).first;
+        final restoredScrollableWidget =
+            tester.widget<Scrollable>(restoredScrollable);
+        final restoredController = restoredScrollableWidget.controller;
+        final restoredPosition =
+            tester.state<ScrollableState>(restoredScrollable).position;
+        final pageOffsetAfterClose = restoredPosition.pixels;
+        final sameScrollController =
+            identical(sourcePageController, restoredController);
+        final sameScrollPosition =
+            identical(sourcePagePosition, restoredPosition);
+        final pageViewInsets =
+            MediaQuery.viewInsetsOf(tester.element(find.byType(ZiweiChartScreen)));
+        expect(
+          pageOffsetAfterClose,
+          closeTo(pageOffsetBeforeOpen, 0.5),
+          reason: '情境助手关闭后必须保留原排盘页的滚动位置；'
+              'before=${pageOffsetBeforeOpen}, after=${pageOffsetAfterClose}, '
+              'max=${restoredPosition.maxScrollExtent}, '
+              'viewport=${restoredPosition.viewportDimension}, '
+              'viewInsets=$pageViewInsets, '
+              'sameController=$sameScrollController, '
+              'samePosition=$sameScrollPosition, '
+              'controllerOffset=${restoredController is ScrollController ? restoredController.offset : "none"}',
         );
         return snapshotId!;
       }
