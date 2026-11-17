@@ -2519,7 +2519,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 | Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
 |---|---|---|---|---|
 | CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | IN_PROGRESS | `docs/contextual-ask-ai-protocol`；base `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` | 协议文档与台账进入 PR；文档链接、Markdown 结构及约束一致性检查通过；合并后记录 merge SHA |
-| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 选择来源可靠地绑定唯一条文锚点；调用既有助手会话/模型链路；针对性测试与 CI 通过 |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS（新基线分支修复中；PR CI 待执行） | `work/ai-contextual-read-sample-v2`；base `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`；当前代码 head `822f5555e2d17dc7f0a014f8f4954e8b9f243f98` | 单条文来源锚点只作用于唯一原文块；同锚点/同版本会话复用；changed tests、PR 全量 Flutter 回归及 Android CI 通过；Find N2 真机单独验收 |
 | CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
 
 ### 57.3 实施顺序与边界
@@ -2537,3 +2537,62 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前仅完成远端文档读取与协议固化；尚未实施划词组件、结果问 AI 入口或会话锚点代码。
 - 本次文档工作没有执行 Flutter 测试、Android 构建或 Find N2 实机测试；这些结果不适用，不能记为 PASS。
 - 本节状态应在 PR 创建、CI 结束和合并后按实际证据更新。
+
+
+### 57.6 CAI-READ-01 基线刷新、失败证据与修复
+
+- 旧 PR #223（`work/ai-contextual-read-sample`）基于 `5c50605724e9a27ad03df700f5e4aa5aa0766d92`，落后当时最新 master 两个提交；不得直接把旧分支整支并入主线。
+- 旧 PR Flutter workflow run `43890014986`：Flutter regression job `133378352310` 失败，实际记录为 1659 passed / 4 failed / 15 skipped；Android arm64 job `133381711763` 成功。4 个失败分为：
+  1. 提示词测试把本地来源 ID 错写成 `asset:assets/...`，而当前代码及 ClassicSearchService 的正式 ID 形式为 `shanghan:assets/...`；
+  2. 3 个 Markdown widget 测试因测试导入 AppColors 的 URI 与 StateView 导入 URI 不一致，导致 ThemeExtension 实例无法解析。修复测试导入路径，不改变生产主题实现。
+- 新分支 `work/ai-contextual-read-sample-v2` 从最新 master `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7` 独立创建；仅复制该切片的相关实现文件，并重新处理测试/台账，不复用旧分支过期的台账版本。
+- 修复还收紧了首批划词边界：只对唯一 Markdown blockquote 原文块建立 SelectionArea 和“问 AI”菜单；条文标题、讲解/注释等其他内容保留普通文本选择；同页存在多个引用块、来源映射不唯一或原始与渲染块行范围不一致时，关闭情境入口并回退普通 Markdown 选择。上下文只发送该原文块，不把整篇讲义误当作条文。
+- 增加情境锚点的严格匹配：复用会话必须对所有持久化 user/assistant 消息验证完整 contextRef；条文版本或工具结果 snapshot 不一致时不复用。命中时沿用现有历史恢复流程和 Native transcript restore；不新增聊天表或会话引擎。
+- 当前新分支 head：`822f5555e2d17dc7f0a014f8f4954e8b9f243f98`。本次修改尚未取得新的 CI 运行结果；不能将旧分支 changed-tests PASS 或旧 Android job 迁移为新 head 的验收证据。
+- Find N2 真机划词/底部面板、外屏/内屏、键盘与滚动状态测试仍为 UNKNOWN，必须单独取得实际设备 TRACE。
+
+
+
+### 57.9 CAI-READ-01 CI 首轮失败与测试 URI 修复
+
+- PR #228 Flutter regression run `43992749992`：静态分析、AI 合同测试、各既有专项回归与检索黄金快照步骤均 SUCCESS；全量回归失败，当前可定位的 5 个失败均发生在 `markdown_doc_contextual_selection_test.dart`，共同栈为 `StateView` → `AppColorsContext.colors` 的 ThemeExtension lookup null。
+- 根因是测试通过 `package:nihaisha_app/screens/markdown_doc_screen.dart` 加载页面，而页面以相对 URI 加载 `state_view.dart` / `app_colors.dart`；测试却以另一个 URI 加载 AppColors，导致 Dart 运行时把同一源文件识别成两个 library identity，ThemeData 注册的 AppColors 与 StateView 查找的类型不是同一类型。
+- 修复：该 widget test 的 MarkdownDocScreen 和 AppColors 均以 `../lib/...` 相对 URI 导入，确保测试 ThemeExtension 和页面传递依赖使用同一规范化文件 URI；紫微情境入口 widget test 同样改为相对 URI，提前消除相同风险。未修改生产主题系统，也未屏蔽 StateView。
+- 本次修复已推送到 CAI-READ-01 分支；新 CI 运行结果尚未取得。之前失败的 run 不继承为 PASS。
+
+
+### 57.13 情境历史查找失败时的会话隔离
+
+- 对情境历史进行精确匹配时，如果 SQLite 查询/历史解析失败，不得将 `_conversationIdFuture` 置为 null 后仍允许用户发送，造成回复无法持久化。
+- 新处理为：记录明确错误提示，不复用任何历史会话，并创建一个绑定当前 contextRef 的全新会话。该回退不会把未知历史误配为当前条文或结果，同时保留消息持久化能力。
+- 本修复属于 CAI-READ-01 会话生命周期边界，需随当前 head 的 Flutter 全量回归重新验收；旧 run 不可继承。
+
+
+### 57.15 CAI-READ-01 第二轮全量回归失败：测试导入 URI 重复
+
+- Flutter regression run `43994486374`：
+  - Dart/Flutter 静态分析、AI 合同测试、工具参数/重试、知识引用、检索黄金快照、既有专项回归与 legacy ChatScreen audit 步骤均 SUCCESS。
+  - Full regression FAILED。失败集中在 `markdown_doc_contextual_selection_test.dart` 编译阶段，出现 60 条同源类型不兼容：`Herb`、`TwelveStageMode`、`BaZiPaipan`、`AlmanacDay`、`ZiweiChart`、`Hexagram` 分别被 Dart 识别为相同文件的 package URI 与 file URI 两个 library 类型。
+- 根因：测试用相对文件 URI 导入 `MarkdownDocScreen`，同时其依赖树和仓库其他测试使用 package URI；同一 Dart 文件被加载为两个 library identity，导致跨模块参数类型不一致。为解决 StateView 的 ThemeExtension lookup，AppColors 测试仍需与 StateView 的相对导入保持相同 file URI，但页面/大型依赖树本身必须统一使用 package URI。
+- 修复：`markdown_doc_contextual_selection_test.dart` 改回 package URI 导入 MarkdownDocScreen，保留与 StateView 一致的相对 AppColors URI；`contextual_ai_panel_layout_test.dart` 改用 package URI 导入 contextual sheet，避免把 LocalAiInterviewScreen/AssistantToolRouter 整个依赖树再次复制为 file URI。
+- 未修改业务代码、引擎模型、服务和测试断言；没有删除测试或缩小全量测试范围。新提交必须重新运行完整 Flutter 回归及 Android arm64 CI，旧 run 的失败与 Android pending 均不作为新 head 证据。
+
+
+
+### 57.17 Find N2 展开内屏的面板断点校正
+
+- 仓库设备适配基准记录 Find N2 外屏约 403 dp、展开内屏约 775 dp；内屏的预估窗口属于 medium（600–839 dp），不能继续用 840 dp 的平板宽屏阈值，否则用户在展开内屏仍只能得到底部弹层。
+- 情境助手侧栏最小宽度约束为 340 dp；将侧栏开启阈值调整为 720 dp：外屏（约 403 dp）仍使用底部弹层，展开内屏（约 775 dp）进入侧栏，侧栏和当前页面各保留可用宽度。
+- 更新断点单测，明确 719 dp 以下为底部弹层、720 dp 起侧栏；Find N2 真机内外屏实际 dp 与分屏宽度仍以设备 TRACE 为准。
+
+
+### 57.19 CAI-READ-01 第三轮全量回归失败：两项现存质量门禁
+
+- Flutter regression run `43995743353`：
+  1. `test/fold_aware_navigation_contract_test.dart` 检测到 `lib/widgets/contextual_ai_sheet.dart` 使用直接 `showDialog`，违反仓库既有折叠屏路由契约；
+  2. `markdown_doc_contextual_selection_test.dart` 的 5 个 widget tests 仍在 `StateView` 中触发 `AppColorsContext.colors` 空值。堆栈定位到 package URI 的 AppColors 类型；测试中的相对 AppColors 导入与 StateView 最终解析的 package library identity 不一致。
+- 修复：
+  - 宽屏侧栏改用现有 `showFoldAwareDialog`，让调用方锚点、原始 MediaQuery 和 AdaptiveSinglePane 由项目统一封装处理；没有新增私有 showDialog 旁路。
+  - widget test 将 AppColors 导入改回 `package:nihaisha_app/theme/app_colors.dart`，与错误堆栈中的正式 package library URI 匹配；MarkdownDocScreen 和 contextual sheet 继续使用 package URI，避免复制大依赖树。
+- 新提交仍须重跑完整 Flutter regression、Android arm64；不删测试、不改弱质量门禁。Find N2 真机测试继续为 UNKNOWN。
+

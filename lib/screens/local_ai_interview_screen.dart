@@ -34,6 +34,7 @@ import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
+import '../models/ai_context_ref.dart';
 import '../services/yijing_tool_executor.dart';
 import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
@@ -170,6 +171,11 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.copyPrescriptionText,
     this.preferredAnchorPoint,
     this.initialPrompt,
+    this.contextRef = const {},
+    this.contextualTitle,
+    this.initialMode,
+    this.sheetScrollController,
+    this.contextualExplanationOnly = false,
     this.testToolRouteBuilder,
     this.testHeadlessToolExecutor,
     this.testSavedChartsLoader,
@@ -227,6 +233,15 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Optional draft supplied by a knowledge/detail page. It is prefilled but
   /// never sent automatically; the user remains responsible for submission.
   final String? initialPrompt;
+
+  /// Stable context anchor persisted in message metadata for this conversation.
+  final Map<String, String> contextRef;
+  final String? contextualTitle;
+  final AssistantMode? initialMode;
+  /// Optional scroll controller supplied by DraggableScrollableSheet.
+  final ScrollController? sheetScrollController;
+  /// Prevents an anchored result/excerpt from being treated as a new tool request.
+  final bool contextualExplanationOnly;
 
   /// Injectable recorder for deterministic per-turn TRACE tests.
   @visibleForTesting
@@ -289,7 +304,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _activeRecordingPath;
   Future<void> _recorderOperation = Future<void>.value();
   final TextEditingController _inputController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  late final ScrollController _scrollController =
+      widget.sheetScrollController ?? ScrollController();
+  bool get _ownsScrollController => widget.sheetScrollController == null;
   final List<_InterviewMessage> _messages = [
     const _InterviewMessage(
       text: _assistantWelcomeMessage,
@@ -315,7 +332,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   String? _pendingHistoryTranscript;
   List<String> _pendingHistoryUserMessages = const [];
   int _historyRestoreGeneration = 0;
+  bool _contextualInitializationPending = false;
+  bool _restoringPendingHistory = false;
   AssistantMode _assistantMode = AssistantMode.automatic;
+  Map<String, String> _activeContextRef = const {};
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
   AssistantToolArguments? _pendingBaziArguments;
@@ -467,6 +487,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   @override
   void initState() {
     super.initState();
+    _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
+    if (widget.initialMode != null) _assistantMode = widget.initialMode!;
     _service = widget.service ?? LocalAiService();
     _imagePicker = widget.imagePicker ?? _PluginLocalAiImagePicker();
     _attachmentStore = widget.attachmentStore ?? LocalAiAttachmentStore();
@@ -480,7 +502,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         offset: initialPrompt.length,
       );
     }
-    _conversationIdFuture = _createNewConversation();
+    _contextualInitializationPending = _activeContextRef.isNotEmpty;
+    _conversationIdFuture = _contextualInitializationPending
+        ? _initializeContextualConversation()
+        : _createNewConversation();
     _refreshStatus();
     _recoverLostImage();
   }
@@ -536,6 +561,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         _error = null;
       });
+      if (status.ready && _pendingHistoryTranscript != null) {
+        await _restorePendingHistory();
+      }
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -1355,6 +1383,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         attachmentType: attachmentType,
         toolArguments: toolArguments,
         traceId: traceId,
+        contextRef: _activeContextRef,
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
@@ -1376,6 +1405,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
           traceId: traceId,
+          contextRef: _activeContextRef,
         ).encode(),
       );
       return true;
@@ -5990,7 +6020,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
 
   Future<void> _openHistory() async {
-    final generation = ++_historyRestoreGeneration;
     final selectedId = await Navigator.push<int>(
       context,
       FoldAwareMaterialPageRoute(
@@ -6001,8 +6030,85 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ),
       ),
     );
-    if (!mounted || generation != _historyRestoreGeneration || selectedId == null) return;
+    if (!mounted || selectedId == null) return;
+    await _restoreConversationById(selectedId);
+  }
 
+  Future<int?> _initializeContextualConversation() async {
+    final expected = AiContextRef.normalizeMetadata(widget.contextRef);
+    if (expected.isEmpty) {
+      if (mounted) {
+        setState(() => _contextualInitializationPending = false);
+      }
+      return _createNewConversation();
+    }
+    try {
+      final conversations = await _conversationStore.getAssistantConversations(
+        limit: 500,
+      );
+      for (final conversation in conversations) {
+        final id = conversation['id'];
+        if (id is! int) continue;
+        final rows = await _conversationStore.getAssistantMessages(
+          conversationId: id,
+        );
+        final persistedRefs = <Map<String, String>>[];
+        var hasTranscript = false;
+        for (final row in rows) {
+          final role = row['role'] as String? ?? '';
+          if (role != 'user' && role != 'assistant') continue;
+          final messageContent = row['content'] as String? ?? '';
+          if (messageContent.isEmpty) continue;
+          hasTranscript = true;
+          final metadata = AssistantMessageMetadata.decode(
+            row['metadata'] as String? ?? '',
+          );
+          final storedRef = AiContextRef.normalizeMetadata(metadata.contextRef);
+          if (storedRef.isEmpty) {
+            persistedRefs.clear();
+            break;
+          }
+          persistedRefs.add(storedRef);
+        }
+        if (!hasTranscript || persistedRefs.isEmpty) continue;
+        if (!persistedRefs.every(
+          (stored) => AiContextRef.matchesSameAnchor(stored, expected),
+        )) {
+          continue;
+        }
+
+        // Reuse only when every persisted turn carries this exact anchor,
+        // including the passage/result version and snapshot identity.
+        await _restoreConversationById(id, preserveContextPrompt: true);
+        if (mounted) {
+          setState(() => _contextualInitializationPending = false);
+        }
+        return id;
+      }
+      final created = await _createNewConversation();
+      if (mounted) {
+        setState(() => _contextualInitializationPending = false);
+      }
+      return created;
+    } catch (error) {
+      // Failure to inspect old history must not bind a different context. It is
+      // safe to start a fresh conversation with the requested immutable ref.
+      final created = await _createNewConversation();
+      if (mounted) {
+        setState(() {
+          _contextualInitializationPending = false;
+          _error = '无法检查当前情境的历史会话：$error。已新建独立会话，不会接入其他上下文。';
+        });
+      }
+      return created;
+    }
+  }
+
+  Future<void> _restoreConversationById(
+    int selectedId, {
+    bool preserveContextPrompt = false,
+  }) async {
+    final generation = ++_historyRestoreGeneration;
     final rows = await _conversationStore.getAssistantMessages(
       conversationId: selectedId,
     );
@@ -6035,12 +6141,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingDreamArguments;
     AssistantToolArguments? restoredPendingShoushengDebtArguments;
     AssistantToolArguments? restoredPendingSavedChartsArguments;
+    var restoredContextRef = const <String, String>{};
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
       final metadata = row['metadata'] as String? ?? '';
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
       final messageMetadata = AssistantMessageMetadata.decode(metadata);
+      if (messageMetadata.contextRef.isNotEmpty) {
+        restoredContextRef = AiContextRef.normalizeMetadata(messageMetadata.contextRef);
+      }
       final selectedModeValue = messageMetadata.selectedMode;
       final effectiveModeValue = messageMetadata.mode;
       final legacyModeValue = selectedModeValue == null ? effectiveModeValue : null;
@@ -6319,6 +6429,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
+      _activeContextRef = Map.unmodifiable(restoredContextRef);
+      if (preserveContextPrompt) _inputController.clear();
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
       _pendingBaziArguments = restoredPendingBaziArguments;
@@ -6351,7 +6463,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _restorePendingHistory() async {
+    if (_restoringPendingHistory) return;
+    _restoringPendingHistory = true;
     final generation = _historyRestoreGeneration;
+    try {
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
     final redFlagSnapshot = _boundedRedFlagContext();
@@ -6391,8 +6506,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (!mounted || generation != _historyRestoreGeneration) return;
       setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
     }
+    } finally {
+      _restoringPendingHistory = false;
+    }
   }
-
   Future<void> _recordTurnPersistenceNotStarted(
     AiTraceContext traceContext, {
     required String errorCode,
@@ -6445,7 +6562,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _send() async {
-    if (_modelControlBusy) return;
+    if (_modelControlBusy || _contextualInitializationPending) return;
     final text = _inputController.text.trim();
     final imagePath = _imagePath;
     final audioPath = _audioPath;
@@ -8004,7 +8121,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     var effectiveMode = _assistantMode;
-    if (text.isNotEmpty && imagePath == null && audioPath == null) {
+    if (text.isNotEmpty &&
+        imagePath == null &&
+        audioPath == null &&
+        !widget.contextualExplanationOnly) {
       var decision = AssistantConversationOrchestrator.resolve(
         query: text,
         selectedMode: _assistantMode,
@@ -8176,6 +8296,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         return;
       }
+    } else if (widget.contextualExplanationOnly) {
+      // A contextual sheet is anchored to an already-resolved excerpt/result.
+      // Never route its payload back into a tool dispatcher that could recalculate it.
+      effectiveMode = _assistantMode;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.route,
+        status: AiTraceStatus.succeeded,
+        route: 'contextual_explanation_only',
+        mode: effectiveMode.name,
+      );
     } else if (_assistantMode == AssistantMode.automatic) {
       // 照片/语音附件默认进入问诊域；不凭附件类型猜测排盘或学习任务。
       _pendingToolSelection = false;
@@ -8917,6 +9048,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
       _conversationIdFuture = _createNewConversation();
+      _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
       _pendingBaziArguments = null;
@@ -9006,7 +9138,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         : <String?>[_imagePath, _audioPath];
     unawaited(_disposeRecorder(pendingAttachments));
     _inputController.dispose();
-    _scrollController.dispose();
+    if (_ownsScrollController) _scrollController.dispose();
     super.dispose();
   }
 
@@ -9074,7 +9206,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       // 输入框被挤到顶部、对话区变空白）。
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('汉唐 AI 助手'),
+        title: Text(widget.contextualTitle == null
+            ? '汉唐 AI 助手'
+            : '问 AI · ${widget.contextualTitle}'),
         actions: [
           if (_tcmInterviewController != null)
             IconButton(

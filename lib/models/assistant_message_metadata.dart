@@ -16,6 +16,7 @@ class AssistantMessageMetadata {
     this.toolArguments = const {},
     this.knowledgeStatus,
     this.traceId,
+    this.contextRef = const {},
   });
 
   final String? mode;
@@ -31,6 +32,8 @@ class AssistantMessageMetadata {
   final String? knowledgeStatus;
   /// Opaque per-turn correlation ID; never user content.
   final String? traceId;
+  /// Immutable contextual anchor carried by every message in the anchored turn.
+  final Map<String, String> contextRef;
 
   Map<String, dynamic> toJson() => {
         'schemaVersion': 1,
@@ -46,6 +49,7 @@ class AssistantMessageMetadata {
         if (toolArguments.isNotEmpty) 'toolArguments': toolArguments,
         if (knowledgeStatus != null) 'knowledgeStatus': knowledgeStatus,
         if (traceId != null) 'trace_id': traceId,
+        if (contextRef.isNotEmpty) 'contextRef': contextRef,
       };
 
   String encode() => jsonEncode(toJson());
@@ -70,6 +74,16 @@ class AssistantMessageMetadata {
               : const [],
           knowledgeStatus: readString('knowledgeStatus'),
           traceId: readString('trace_id'),
+          contextRef: decoded['contextRef'] is Map
+              ? Map<String, String>.fromEntries(
+                  (decoded['contextRef'] as Map).entries.where(
+                    (entry) => entry.key is String && entry.value is String,
+                  ).map((entry) => MapEntry(
+                        entry.key as String,
+                        entry.value as String,
+                      )),
+                )
+              : const {},
           toolArguments: decoded['toolArguments'] is Map
               ? Map<String, String>.fromEntries(
                   (decoded['toolArguments'] as Map).entries.where(

@@ -181,6 +181,18 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                             asset: lecture.asset,
                             footer: widget.footer,
                             linkFormulas: true,
+                            contextualAskModuleId:
+                                lecture.asset == 'assets/shanghan/clause_001.md'
+                                    ? 'shanghan'
+                                    : null,
+                            contextualAskAnchorId:
+                                lecture.asset == 'assets/shanghan/clause_001.md'
+                                    ? 'shanghan:clause:002'
+                                    : null,
+                            contextualAskSourceId:
+                                lecture.asset == 'assets/shanghan/clause_001.md'
+                                    ? lecture.asset
+                                    : null,
                           ),
                         ),
                       );

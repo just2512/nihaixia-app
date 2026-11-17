@@ -16,6 +16,13 @@ void main() {
       toolArguments: {'date': '2026-11-06'},
       knowledgeStatus: 'RETRIEVED',
       traceId: '0123456789abcdef0123456789abcdef',
+      contextRef: const {
+        'kind': 'classic',
+        'moduleId': 'shanghan',
+        'anchorId': 'shanghan:clause:002',
+        'anchorVersion': 'sha256:abc123',
+        'sourceId': 'asset:assets/shanghan/clause_001.md',
+      },
     );
     final restored = AssistantMessageMetadata.decode(original.encode());
     expect(restored.mode, 'tools');
@@ -30,6 +37,13 @@ void main() {
     expect(restored.toolArguments, {'date': '2026-11-06'});
     expect(restored.knowledgeStatus, 'RETRIEVED');
     expect(restored.traceId, '0123456789abcdef0123456789abcdef');
+    expect(restored.contextRef, {
+      'kind': 'classic',
+      'moduleId': 'shanghan',
+      'anchorId': 'shanghan:clause:002',
+      'anchorVersion': 'sha256:abc123',
+      'sourceId': 'asset:assets/shanghan/clause_001.md',
+    });
   });
 
   test('legacy semicolon metadata remains readable', () {
@@ -45,6 +59,7 @@ void main() {
     expect(restored.attachmentType, 'image');
     expect(restored.tcmTaskId, 'task-7');
     expect(restored.traceId, isNull);
+    expect(restored.contextRef, isEmpty);
   });
 
   test('empty or unknown metadata safely falls back to default state', () {
