@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/data/zhenjiu_lecture_index.dart';
 import 'package:nihaisha_app/models/acupoint_detail.dart';
 import 'package:nihaisha_app/screens/acupoint_detail_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
@@ -23,6 +26,83 @@ const AcupointDetail _p = AcupointDetail(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  var databaseSequence = 0;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() {
+    DatabaseHelper.configureTestDatabase(
+      'acupoint_editorial_layout_${databaseSequence++}.db',
+      factory: databaseFactoryFfi,
+    );
+  });
+
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
+  });
+
+  testWidgets('穴位详情在402/775dp、浅深主题与200%字号下保持内容可读',
+      (tester) async {
+    await tester.runAsync(() async {
+      try {
+        await ZhenJiuLectureIndex.load();
+      } catch (_) {}
+    });
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+
+    for (final brightness in Brightness.values) {
+      for (final width in [402.0, 775.0]) {
+        tester.view.physicalSize = Size(width, 900);
+        await tester.pumpWidget(
+          MaterialApp(
+            key: ValueKey('acupoint-${width.toInt()}-${brightness.name}'),
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: AppColors.colorSchemeFor(brightness),
+              extensions: [
+                brightness == Brightness.dark ? AppColors.dark : AppColors.light,
+              ],
+            ),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(2),
+              ),
+              child: child!,
+            ),
+            home: const AcupointDetailScreen(acupoint: _p),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final context = tester.element(find.byType(AcupointDetailScreen));
+        expect(MediaQuery.textScalerOf(context).scale(1), 2);
+        expect(find.text('内关穴'), findsWidgets);
+        expect(find.text('古籍原文'), findsOneWidget);
+        expect(find.text('倪海厦临床心悟'), findsOneWidget);
+
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.text(_longAttr),
+        );
+        expect(paragraph.size.height, greaterThan(30),
+            reason: '长属性在200%字号下必须自然换行');
+        expect(
+          paragraph.size.width,
+          lessThanOrEqualTo(width - 32 + 0.5),
+          reason: '属性文字不得超出内容列',
+        );
+        expect(tester.takeException(), isNull,
+            reason: '${width.toInt()}dp / ${brightness.name} / 200% 不应布局溢出');
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      }
+    }
+  });
 
   testWidgets('320dp + 字号 2.0：54 字属性换行显示、不被裁', (tester) async {
     tester.view.physicalSize = const Size(320 * 3, 640 * 3);

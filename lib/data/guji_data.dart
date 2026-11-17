@@ -73,9 +73,13 @@ class GujiRepository {
   static final Map<String, Future<List<GujiChapter>>> _cache = {};
 
   /// 读取并解析一本书的全部章节（同一本书只解析一次）。
-  static Future<List<GujiChapter>> chaptersOf(GujiBook book) {
+  static Future<List<GujiChapter>> chaptersOf(
+    GujiBook book, {
+    AssetBundle? bundle,
+  }) {
+    final assets = bundle ?? rootBundle;
     return _cache.putIfAbsent(book.id, () async {
-      final raw = await rootBundle.loadString(book.asset);
+      final raw = await assets.loadString(book.asset);
       return parse(raw);
     });
   }
