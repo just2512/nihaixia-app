@@ -6,6 +6,7 @@ import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 
 void main() {
   test('classic selection prompt retains selected text and stable source anchor', () {
+    const selectedText = '发热，汗出，恶风，脉缓';
     const ref = AiContextRef(
       kind: 'classic',
       moduleId: 'shanghan',
@@ -13,10 +14,10 @@ void main() {
       anchorVersion: 'sha256:content-version',
       sourceId: 'shanghan:assets/shanghan/clause_001.md',
       title: '太阳·太阳病中风（桂枝汤证',
+      selectedText: selectedText,
     );
     final prompt = AiContextPromptBuilder.buildClassicSelection(
       ref: ref,
-      selectedText: '发热，汗出，恶风，脉缓',
       fullPassage: '太阳病，发热，汗出，恶风，脉缓者，名为中风。',
     );
 
@@ -37,11 +38,11 @@ void main() {
       anchorVersion: 'sha256:content-version',
       sourceId: 'shanghan:assets/shanghan/clause_001.md',
       title: '伤寒论条文2',
+      selectedText: selectedText,
     );
 
     final prompt = AiContextPromptBuilder.buildClassicSelection(
       ref: ref,
-      selectedText: selectedText,
       fullPassage: '太阳病，发热，汗出，恶风，脉缓者，名为中风。',
     );
     final encoded = prompt
@@ -52,6 +53,7 @@ void main() {
     final payload = jsonDecode(encoded) as Map<String, dynamic>;
 
     expect(payload['selectedText'], selectedText);
+    expect(ref.toMetadata()['selectedText'], selectedText);
   });
 
   test('context anchor reuse requires an exact version and snapshot match', () {
@@ -82,6 +84,52 @@ void main() {
     expect(AiContextRef.matchesSameAnchor(original, same), isTrue);
     expect(AiContextRef.matchesSameAnchor(original, differentSnapshot), isFalse);
     expect(AiContextRef.matchesSameAnchor(original, const {}), isFalse);
+  });
+
+  test('classic session identity distinguishes selections within one passage', () {
+    const first = AiContextRef(
+      kind: 'classic',
+      moduleId: 'shanghan',
+      anchorId: 'shanghan:clause:002',
+      anchorVersion: 'sha256:content-version',
+      sourceId: 'shanghan:assets/shanghan/clause_001.md',
+      title: '伤寒论条文2',
+      selectedText: '发热，汗出',
+    );
+    const sameSelection = AiContextRef(
+      kind: 'classic',
+      moduleId: 'shanghan',
+      anchorId: 'shanghan:clause:002',
+      anchorVersion: 'sha256:content-version',
+      sourceId: 'shanghan:assets/shanghan/clause_001.md',
+      title: '伤寒论条文2',
+      selectedText: '发热，汗出',
+    );
+    const differentSelection = AiContextRef(
+      kind: 'classic',
+      moduleId: 'shanghan',
+      anchorId: 'shanghan:clause:002',
+      anchorVersion: 'sha256:content-version',
+      sourceId: 'shanghan:assets/shanghan/clause_001.md',
+      title: '伤寒论条文2',
+      selectedText: '脉缓',
+    );
+
+    expect(
+      AiContextRef.matchesSameAnchor(
+        first.toMetadata(),
+        sameSelection.toMetadata(),
+      ),
+      isTrue,
+    );
+    expect(
+      AiContextRef.matchesSameAnchor(
+        first.toMetadata(),
+        differentSelection.toMetadata(),
+      ),
+      isFalse,
+      reason: '同一 passage 中不同的用户选择不能共用同一情境会话',
+    );
   });
 
   test('tool result prompt binds one immutable result snapshot', () {
