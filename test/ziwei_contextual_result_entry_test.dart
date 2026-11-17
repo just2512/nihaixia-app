@@ -97,14 +97,16 @@ void main() {
         await tester.ensureVisible(askAi);
         await tester.pumpAndSettle();
 
-        final sourcePageScrollable = find.descendant(
-          of: find.byType(ZiweiChartScreen),
+        // Resolve the Scrollable that actually contains the Ask AI action.
+        // The page has nested scrollable content, so selecting the first
+        // descendant can observe a different viewport from the owning ListView.
+        final sourcePageScrollable = find.ancestor(
+          of: askAi,
           matching: find.byType(Scrollable),
         ).first;
-        final pageOffsetBeforeOpen =
-            tester.state<ScrollableState>(sourcePageScrollable)
-                .position
-                .pixels;
+        final sourcePagePosition =
+            tester.state<ScrollableState>(sourcePageScrollable).position;
+        final pageOffsetBeforeOpen = sourcePagePosition.pixels;
 
         await tester.tap(askAi);
         await tester.pump();
@@ -129,14 +131,23 @@ void main() {
           findsOneWidget,
           reason: '关闭情境助手必须返回原排盘页，不能退出排盘路由',
         );
-        final pageOffsetAfterClose =
-            tester.state<ScrollableState>(sourcePageScrollable)
-                .position
-                .pixels;
+        final restoredScrollable = find.ancestor(
+          of: askAi,
+          matching: find.byType(Scrollable),
+        ).first;
+        final restoredPosition =
+            tester.state<ScrollableState>(restoredScrollable).position;
+        final pageOffsetAfterClose = restoredPosition.pixels;
+        final pageViewInsets =
+            MediaQuery.viewInsetsOf(tester.element(find.byType(ZiweiChartScreen)));
         expect(
           pageOffsetAfterClose,
           closeTo(pageOffsetBeforeOpen, 0.5),
-          reason: '情境助手关闭后必须保留原排盘页的滚动位置',
+          reason: '情境助手关闭后必须保留原排盘页的滚动位置；'
+              'before=${pageOffsetBeforeOpen}, after=${pageOffsetAfterClose}, '
+              'max=${restoredPosition.maxScrollExtent}, '
+              'viewport=${restoredPosition.viewportDimension}, '
+              'viewInsets=$pageViewInsets',
         );
         return snapshotId!;
       }
