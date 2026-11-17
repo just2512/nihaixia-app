@@ -148,6 +148,22 @@ void main() {
       isFalse,
       reason: '同一 passage 中不同的用户选择不能共用同一情境会话',
     );
+    const legacyRefWithoutSelection = {
+      'kind': 'classic',
+      'moduleId': 'shanghan',
+      'anchorId': 'shanghan:clause:002',
+      'anchorVersion': 'sha256:content-version',
+      'sourceId': 'shanghan:assets/shanghan/clause_001.md',
+      'title': '伤寒论条文2',
+    };
+    expect(
+      AiContextRef.matchesSameAnchor(
+        legacyRefWithoutSelection,
+        first.toMetadata(),
+      ),
+      isFalse,
+      reason: '没有保存选中文字的旧历史不能冒充当前精确选区',
+    );
   });
 
   test('tool result prompt binds one immutable result snapshot', () {
