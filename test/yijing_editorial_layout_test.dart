@@ -56,10 +56,24 @@ void main() {
 
         expect(find.text('易经六十四卦'), findsOneWidget);
         expect(find.text('铜钱摇卦（六爻）'), findsOneWidget);
-        expect(find.text('时间起卦（梅花易数）'), findsOneWidget);
-        expect(find.text('数字起卦'), findsOneWidget);
 
         final scrollable = find.byType(Scrollable).first;
+        final timeMethod = find.text('时间起卦（梅花易数）');
+        await tester.scrollUntilVisible(
+          timeMethod,
+          260,
+          scrollable: scrollable,
+        );
+        expect(timeMethod, findsOneWidget);
+
+        final numberMethod = find.text('数字起卦');
+        await tester.scrollUntilVisible(
+          numberMethod,
+          260,
+          scrollable: scrollable,
+        );
+        expect(numberMethod, findsOneWidget);
+
         final manualMethod = find.text('手动选卦');
         await tester.scrollUntilVisible(
           manualMethod,
