@@ -1,10 +1,40 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory databaseDirectory;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    databaseDirectory = await Directory.systemTemp.createTemp(
+      'nihaisha-ziwei-context-snapshot-',
+    );
+    DatabaseHelper.configureTestDatabase(
+      'ziwei_context_snapshot_test.db',
+      factory: databaseFactoryFfi,
+      directoryPath: databaseDirectory.path,
+    );
+  });
+
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
+    if (await databaseDirectory.exists()) {
+      await databaseDirectory.delete(recursive: true);
+    }
+  });
   testWidgets('a successful calculated chart exposes a contextual Ask AI entry',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
@@ -66,7 +96,9 @@ void main() {
       Future<String> readAskAiSnapshot() async {
         await tester.ensureVisible(askAi);
         await tester.tap(askAi);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
 
         final assistant = find.byType(LocalAiInterviewScreen);
         expect(assistant, findsOneWidget);
@@ -77,7 +109,9 @@ void main() {
         expect(snapshotId, hasLength(64));
 
         Navigator.of(tester.element(assistant)).pop();
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
         return snapshotId!;
       }
 
