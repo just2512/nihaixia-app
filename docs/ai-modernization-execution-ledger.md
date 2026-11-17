@@ -2499,3 +2499,41 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 设备侧仍需核对：内屏展开时紫微整屏命盘与宫位详情；半折叠时工具页是否限制在触发侧且避开 hinge；易经手动选卦与剂量换算控件；外屏入口和主要操作。
 - 真机记录至少应包含系统版本、App commit SHA、实际 `sizeDp`、`displayFeatures`、页面截图及异常日志。取得这些证据前，不将 Find N2 设备验收标记为 PASS。
 
+
+
+---
+
+## 57. 2026-11-16 情境问 AI（Contextual Ask AI）协议固化
+
+> 本节登记功能协议与后续实施任务的边界。协议文件定义稳定的产品/工程接入标准；本台账只跟踪实际实施切片及其证据。文档存在不代表功能已经实现。
+
+### 57.1 规范文件
+
+- 功能协议与接入标准：[`docs/contextual-ask-ai-spec.md`](contextual-ask-ai-spec.md)。
+- 工程执行约束：[`docs/ai-capability-audit.md`](ai-capability-audit.md)。
+- 分支、文件所有权、小批量集成与 CI：[`docs/ai-parallel-execution-protocol.md`](ai-parallel-execution-protocol.md)。
+- 本台账记录各实施切片的状态、分支、提交、测试、CI、设备证据和遗留缺口。
+
+### 57.2 任务登记
+
+| Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
+|---|---|---|---|---|
+| CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | IN_PROGRESS | `docs/contextual-ask-ai-protocol`；base `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` | 协议文档与台账进入 PR；文档链接、Markdown 结构及约束一致性检查通过；合并后记录 merge SHA |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 选择来源可靠地绑定唯一条文锚点；调用既有助手会话/模型链路；针对性测试与 CI 通过 |
+| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
+
+### 57.3 实施顺序与边界
+
+1. 先完成 CAI-DOC-01 的文档审查和集成，不把规范提交当作两个样板功能已完成。
+2. CAI-READ-01 与 CAI-RESULT-01 是两个独立工作切片；分别从实施时最新 master 派生分支，明确文件所有权和依赖，避免两个分支并行覆盖同一助手核心文件。
+3. 先做单条文和单个真实结果页样板，验收其来源、锚点、会话和快照行为；样板通过后再决定扩展页面范围。
+4. 不新增第二套聊天 UI、会话表、模型执行链路或结果计算引擎；优先复用现有助手会话、消息持久化、模型路由、安全前置检查和结果解释流程。
+5. 每个实施 PR 记录 base/head SHA、改动文件、最小测试、静态分析、CI run、失败日志、风险、回滚方式及未完成项。未执行的 Find N2 实机验收保持 UNKNOWN。
+6. 任何无法确认的来源、锚点、结果版本或执行状态必须显式标记 UNKNOWN / MISSING，不允许用模型推断补齐。
+
+### 57.4 当前证据状态
+
+- 本次文档工作分支基于 master `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` 创建。
+- 当前仅完成远端文档读取与协议固化；尚未实施划词组件、结果问 AI 入口或会话锚点代码。
+- 本次文档工作没有执行 Flutter 测试、Android 构建或 Find N2 实机测试；这些结果不适用，不能记为 PASS。
+- 本节状态应在 PR 创建、CI 结束和合并后按实际证据更新。

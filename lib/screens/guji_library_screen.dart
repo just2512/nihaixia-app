@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/guji_data.dart';
@@ -17,24 +19,27 @@ class GujiLibraryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('古籍原文')),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.sm,
+              horizontal: AppSpacing.md,
+            ),
             decoration: BoxDecoration(
               color: cs.tertiaryContainer,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Row(
               children: [
                 Icon(Icons.auto_stories_outlined,
                     size: 18, color: cs.onTertiaryContainer),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     '收录《灵枢》《针灸大成》原文。与「倪师讲稿」并列：讲稿是讲解，这里是经典本身。内容供学习参考，非医疗建议。',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: AppType.caption,
                       height: 1.5,
                       color: cs.onTertiaryContainer,
                     ),
@@ -43,34 +48,48 @@ class GujiLibraryScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          for (final book in kGujiBooks)
-            Card(
-              margin: const EdgeInsets.only(bottom: 8),
+          const SizedBox(height: AppSpacing.md),
+          for (final entry in kGujiBooks.asMap().entries) ...[
+            Material(
+              color: cs.surface,
               child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
                 leading: CircleAvatar(
                   backgroundColor: cs.primaryContainer,
                   child: Icon(Icons.menu_book,
                       size: 20, color: cs.onPrimaryContainer),
                 ),
                 title: Text(
-                  book.title,
+                  entry.value.title,
                   style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
+                    fontSize: AppType.title,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 subtitle: Text(
-                  '${book.author} · ${book.chapterCount} 章',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  '${entry.value.author} · ${entry.value.chapterCount} 章',
+                  style: TextStyle(
+                    fontSize: AppType.caption,
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
                 trailing: const Icon(Icons.chevron_right, size: 20),
+                isThreeLine: true,
                 onTap: () => Navigator.push(
                   context,
-                  FoldAwareMaterialPageRoute(sourceContext: context, 
-                    builder: (_) => GujiBookScreen(book: book),
+                  FoldAwareMaterialPageRoute(
+                    sourceContext: context,
+                    builder: (_) => GujiBookScreen(book: entry.value),
                   ),
                 ),
               ),
             ),
+            if (entry.key < kGujiBooks.length - 1)
+              const Divider(height: AppSpacing.lg, indent: 56),
+          ],
         ],
       ),
     );
@@ -92,10 +111,17 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
   final TextEditingController _controller = TextEditingController();
   String _query = '';
 
+  bool _futureInitialized = false;
+
   @override
-  void initState() {
-    super.initState();
-    _future = GujiRepository.chaptersOf(widget.book);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_futureInitialized) return;
+    _future = GujiRepository.chaptersOf(
+      widget.book,
+      bundle: DefaultAssetBundle.of(context),
+    );
+    _futureInitialized = true;
   }
 
   @override
@@ -120,7 +146,12 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
             child: TextField(
               controller: _controller,
               decoration: InputDecoration(
@@ -137,7 +168,7 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
                         },
                       ),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
@@ -159,47 +190,91 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
                 if (chapters.isEmpty) {
                   return const Center(child: Text('没有匹配的章节'));
                 }
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.xs,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                  ),
                   itemCount: chapters.length,
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: AppSpacing.md, indent: 48),
                   itemBuilder: (context, i) {
                     final c = chapters[i];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      child: ListTile(
-                        dense: true,
-                        leading: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: cs.primaryContainer,
-                          child: Text(
-                            '${c.index + 1}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: cs.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          c.title,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          c.body.replaceAll('\n', ' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                        ),
-                        trailing:
-                            const Icon(Icons.chevron_right, size: 18),
+                    return Material(
+                      color: cs.surface,
+                      child: InkWell(
                         onTap: () => Navigator.push(
                           context,
-                          FoldAwareMaterialPageRoute(sourceContext: context, 
+                          FoldAwareMaterialPageRoute(
+                            sourceContext: context,
                             builder: (_) => GujiChapterScreen(
                               book: widget.book,
                               chapter: c,
                             ),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.md,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: cs.primaryContainer,
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.sm),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                child: Text(
+                                  '${c.index + 1}',
+                                  style: TextStyle(
+                                    fontSize: AppType.micro,
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.onPrimaryContainer,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      c.title,
+                                      style: const TextStyle(
+                                        fontSize: AppType.body,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text(
+                                      c.body.replaceAll('\n', ' '),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: AppType.caption,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ],
                           ),
                         ),
                       ),
