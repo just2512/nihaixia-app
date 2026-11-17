@@ -37,10 +37,13 @@ Future<CustomPainter> _pumpChart(
       ),
       home: Scaffold(
         body: Center(
-          child: SizedBox(
-            width: 378,
-            height: 380,
-            child: builder(YunQiChartData.of(DateTime(2026, 10, 9))),
+          child: RepaintBoundary(
+            key: const ValueKey('yunqi-chart-area'),
+            child: SizedBox(
+              width: 378,
+              height: 380,
+              child: builder(YunQiChartData.of(DateTime(2026, 10, 9))),
+            ),
           ),
         ),
       ),
@@ -48,7 +51,18 @@ Future<CustomPainter> _pumpChart(
   );
   await tester.pumpAndSettle();
 
-  return tester.widget<CustomPaint>(find.byType(CustomPaint)).painter!;
+  final chartPainters = tester
+      .widgetList<CustomPaint>(
+        find.descendant(
+          of: find.byKey(const ValueKey('yunqi-chart-area')),
+          matching: find.byType(CustomPaint),
+        ),
+      )
+      .map((widget) => widget.painter)
+      .whereType<CustomPainter>()
+      .toList();
+  expect(chartPainters, hasLength(1), reason: '每张图应只读取自身的 CustomPainter');
+  return chartPainters.single;
 }
 
 Future<void> _expectPainterTracksTextScale(
