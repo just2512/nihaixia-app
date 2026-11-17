@@ -19,6 +19,41 @@ Future<void> showContextualAiSheet({
     throw ArgumentError('A contextual AI sheet requires a stable context reference.');
   }
 
+  Widget buildAssistant({ScrollController? scrollController}) =>
+      LocalAiInterviewScreen(
+        key: ValueKey(contextRef.snapshotId ?? contextRef.anchorId),
+        initialPrompt: initialPrompt,
+        initialMode: initialMode,
+        contextualTitle: contextualTitle,
+        contextualExplanationOnly: contextualExplanationOnly,
+        contextRef: normalizedRef,
+        sheetScrollController: scrollController,
+      );
+
+  final windowSize = MediaQuery.sizeOf(context);
+  if (windowSize.width >= 760) {
+    // Wide windows retain the reading/result page as the main surface and
+    // present the assistant as a right-side panel. Dialog's anchor follows
+    // Flutter's fold-aware sub-screen selection for the invoking context.
+    final panelWidth = (windowSize.width * 0.46)
+        .clamp(400.0, 560.0)
+        .toDouble();
+    final panelHeight = (windowSize.height - 24).clamp(320.0, 2000.0).toDouble();
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => Dialog(
+        alignment: Alignment.centerRight,
+        insetPadding: const EdgeInsets.all(12),
+        child: SizedBox(
+          width: panelWidth,
+          height: panelHeight,
+          child: buildAssistant(),
+        ),
+      ),
+    );
+  }
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -34,17 +69,7 @@ Future<void> showContextualAiSheet({
       maxChildSize: 0.95,
       builder: (sheetContext, scrollController) => ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-        child: LocalAiInterviewScreen(
-          key: ValueKey(
-            contextRef.snapshotId ?? contextRef.anchorId,
-          ),
-          initialPrompt: initialPrompt,
-          initialMode: initialMode,
-          contextualTitle: contextualTitle,
-          contextualExplanationOnly: contextualExplanationOnly,
-          contextRef: normalizedRef,
-          sheetScrollController: scrollController,
-        ),
+        child: buildAssistant(scrollController: scrollController),
       ),
     ),
   );
