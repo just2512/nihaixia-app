@@ -106,7 +106,7 @@ void main() {
       ),
       home: MarkdownDocScreen(
         title: '伤寒论条文样板',
-        content: '#### 条文2\\n\\n> 太阳病，发热，汗出，恶风，脉缓者，名为中风。',
+        content: '#### 条文2\n\n> 太阳病，发热，汗出，恶风，脉缓者，名为中风。',
         contextualAskModuleId: 'shanghan',
         contextualAskAnchorId: 'shanghan:clause:002',
         contextualAskSourceId: 'assets/shanghan/clause_001.md',
