@@ -1541,37 +1541,64 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             ...chart.decades.map(
               (d) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 64,
-                      child: Text(
-                        '第${d.index}大限',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                child: MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                    ? Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            '第${d.index}大限',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: cs.primary,
+                            ),
+                          ),
+                          Text(
+                            d.rangeLabel,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            '${d.roleLabel} ${d.ganzhiLabel}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          SizedBox(
+                            width: 64,
+                            child: Text(
+                              '第${d.index}大限',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 84,
+                            child: Text(
+                              d.rangeLabel,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              '${d.roleLabel} ${d.ganzhiLabel}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(
-                      width: 84,
-                      child: Text(
-                        d.rangeLabel,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '${d.roleLabel} ${d.ganzhiLabel}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

@@ -700,6 +700,17 @@ void main() {
         expect(tester.takeException(), isNull,
             reason: '${width.toInt()}dp / ${brightness.name} / 200% 命盘盘面不得溢出');
 
+        final decadeTitle = find.text('十二大限（十年运）');
+        await tester.scrollUntilVisible(
+          decadeTitle,
+          320,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(decadeTitle, findsOneWidget);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull,
+            reason: '${width.toInt()}dp / ${brightness.name} / 200% 大限列表不得横向溢出');
+
         await tester.pumpWidget(const SizedBox.shrink());
       }
     }
