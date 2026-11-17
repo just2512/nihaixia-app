@@ -171,7 +171,7 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前主线基线**：`a405d22fe183ad8c9a59256634c5e9551bb060bc`（2026-11-17 复核时的 master HEAD）。工作分支必须从该基线或其后续主线创建；设计链接中的旧 Phase 1 分支 `work/yanji-editorial-phase1` 已分叉，不得继续作为实施基线。
+**当前主线基线**：`343e30269e2707a8938ea260a4f9918e10e0c118`（2026-11-17 最新复核时的 master HEAD；其后若主线继续推进，以新 HEAD 为准）。工作分支必须从该基线或其后续主线创建；设计链接中的旧 Phase 1 分支 `work/yanji-editorial-phase1` 已分叉，不得继续作为实施基线。
 
 **已合并批次**
 
@@ -187,10 +187,10 @@
 **下一批工具页面审计**
 
 - **Phase 3.4：工具入口 200% 字号显示**。PR #226 已合并，集成 SHA `45a11103406a6912452b861c2bd45bb75216eb57`；Flutter Run `43994364804` 与 Android arm64 job `133745179275` SUCCESS。标题/摘要已取消固定行数与省略号；测试覆盖 402/775dp、浅/深主题、200% TextScaler 和古籍原文入口路由。Branch validation `SKIPPED`，不计为 PASS。保留工具分区、顺序、图标、语义色和导航回调。
-- **紫微大字号折叠布局**：旧 PR #230（HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d`）相对最新主线已 DIVERGED，不直接合并；已将其两文件修复移植到新 PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`、HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`。同一 HEAD 的 Push Run `44014524225` 中 Branch validation job `133809148241` SUCCESS；PR Run `44014531870` 的 Flutter regression 正在执行，Android arm64 尚未取得终态。PR Run 内 Branch validation `SKIPPED` 是事件门控结果，不覆盖 Push Run 的 PASS。必须等待新 HEAD 全部 CI 结果后再合并。移植保留 PR #237 已合并的情境 AI 入口与快照代码。
+- **紫微大字号折叠布局**：旧 PR #230（HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d`）相对最新主线 DIVERGED，未直接合并。两文件改动移植为 PR #240；其初始提交 `144e8b0f56299a4dc7e9154b2266517fe6c00a31` 已在刷新时以第二父提交保留，当前 HEAD 为 merge commit `ebd74b9341913d7b1ec63fc3211649f7779f7912`，第一父提交为最新主线 `343e30269e2707a8938ea260a4f9918e10e0c118`。与 master 比较 ahead 2 / behind 0，仅含两个目标文件的差异。新 HEAD Push Run `44015132609` 正在运行，PR Run `44015138291` 已创建并待执行；原 HEAD `144e8b0...` 的 CI 结果不继承。必须等待新 HEAD 全量 Flutter regression 与 Android arm64 终态后再合并。移植保留 PR #237 已合并的情境 AI 入口与快照代码。
 - **Phase 3.6：易经起卦与六十四卦大字号布局**。PR #227 已合并，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；Flutter Run `43995775982` 与 Android arm64 job `133749132339` SUCCESS。测试覆盖 402/775dp、浅/深主题、200% TextScaler、三个功能 Tab、起卦方法表面以及滚动到第 64 卦；修复窄屏高字号下网格溢出。Branch validation `SKIPPED`，不计为 PASS。
 - **Phase 3.7：五运六气布局**。当前 `yunqi_screen.dart` 仅有冒烟、引擎数据一致性和深色构建测试；尚无 402/775dp × 浅/深主题 × 200% 字号矩阵。固定 132dp/64dp/52dp/88dp 列宽及未受约束的尾列仅是待验证风险，不得提前认定为已复现缺陷；下一步先补逐段可达与无溢出测试，再依据失败点局部修复。
-- **Phase 3.8：紫微大字号折叠布局**。旧 PR #230（HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d`）相对最新主线已 DIVERGED，不直接合并；已将其两文件修复移植到新 PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`、HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`。同一 HEAD 的 Push Run `44014524225` 中 Branch validation job `133809148241` SUCCESS；PR Run `44014531870` 的 Flutter regression 仍在执行，Android arm64 尚未取得终态。PR Run 内 Branch validation `SKIPPED` 是事件门控结果，不覆盖 Push Run 的 PASS。必须等待新 HEAD 全部 CI 结果后再合并。移植保留 PR #237 已合并的情境 AI 入口与快照代码。
+- **Phase 3.8：紫微大字号折叠布局**。旧 PR #230 不直接合并；改动由 PR #240 从当前主线重新移植。该 PR 当前 HEAD `ebd74b9341913d7b1ec63fc3211649f7779f7912` 是以 `343e30269e2707a8938ea260a4f9918e10e0c118` 为第一父提交的刷新合并提交，原移植提交 `144e8b0...` 为第二父提交。新 HEAD Push Run `44015132609` 正在运行，PR Run `44015138291` 待执行；旧 HEAD CI 不继承。CI 全部终态通过前不合并，且保留 PR #237 的情境 AI 入口与快照代码。
 - `tool_foldable_layout_test.dart` 已覆盖注册工具的内屏零宽 fold 与半折叠物理 hinge 路由边界；不得删除或缩小现有覆盖范围。
 - 收藏、设置、历史页面已在 Phase 3.1 完成；除发现可复现缺陷外不重复改造。
 
@@ -292,13 +292,13 @@
 | Phase 3.5：农历节日与神诞 | `PASS`（已合并） | PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`；Flutter Run `43993000618`、Android arm64 job `133740441503` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.6：易经起卦与六十四卦布局 | `PASS`（已合并） | PR #227，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；Flutter Run `43995775982`、Android arm64 job `133749132339` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.7：五运六气布局 | `MISSING`（待补矩阵测试） | 当前仅冒烟/数据一致性/深色构建测试；402/775dp、浅深主题、200% 字号及逐段滚动可达性均未覆盖。固定宽列是待验证风险，不是已复现缺陷。 |
-| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | 新 PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Push Run `44014524225` 的 Branch validation job `133809148241` SUCCESS；PR Run `44014531870` 的 Flutter regression 运行中，Android arm64 尚无终态。PR Run 内 Branch validation `SKIPPED` 属事件门控；旧 PR #230 的 Run 不继承。 |
+| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | PR #240 当前 HEAD `ebd74b9341913d7b1ec63fc3211649f7779f7912`，刷新基线 `343e30269e2707a8938ea260a4f9918e10e0c118`；Push Run `44015132609` 运行中，PR Run `44015138291` 待执行。旧 HEAD 的 Run `44014524225` / `44014531870` 不继承；Android arm64 待新 HEAD 的结果。 |
 | 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录；CI/Widget 不替代真机。 |
 
 ### 2026-11-17 当前主线复核补充
 
-- 当前 `master` HEAD 为 `a405d22fe183ad8c9a59256634c5e9551bb060bc`；该基线包含 PR #237 的紫微情境问 AI 集成，以及 PR #239 的执行台账更新。
+- 当前 `master` HEAD 已推进到 `343e30269e2707a8938ea260a4f9918e10e0c118`；包含 PR #237 的紫微情境问 AI 集成、PR #239 / #241 对 AI 执行台账的后续记录。
 - 设计文档链接原指向的 `work/yanji-editorial-phase1` 已过期分叉；执行必须以当前 master 或其后续提交为基线。
 - Phase 1 与 Phase 2 自动化状态沿用本节前述已合并证据 `PASS`；Find N2 实机外屏/内屏/半折叠连续阅读仍为 `MISSING`。
 - Phase 3.3（PR #219）和 Phase 3.5（PR #220）已合并，不再列为进行中；本轮的紫微大字号工作由新 PR #240 承接旧 PR #230 的两文件改动。
