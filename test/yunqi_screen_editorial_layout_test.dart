@@ -47,16 +47,23 @@ Future<void> _revealAndCheck(
   required double width,
   required Brightness brightness,
 }) async {
-  // ListView uses lazy children: an off-screen section is not in the
-  // widget tree until scrolling reaches it. Scroll first, then assert.
-  await tester.scrollUntilVisible(
-    target,
-    220,
-    scrollable: scrollable,
-  );
-  await tester.pumpAndSettle();
+  // ListView lazily builds off-screen children. In a half-fold panel,
+  // the target may not exist in the widget tree yet, so scroll the real
+  // viewport until it is built before asking the tester to reveal it.
+  var attempts = 0;
+  while (target.evaluate().isEmpty && attempts < 80) {
+    await tester.drag(scrollable, const Offset(0, -220));
+    await tester.pumpAndSettle();
+    attempts++;
+  }
 
-  expect(target, findsOneWidget, reason: '$segment 应存在于页面结构中');
+  expect(
+    target,
+    findsOneWidget,
+    reason: '$segment 必须在最多 80 次真实视口滚动后可构建、可到达',
+  );
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
   expect(
     tester.takeException(),
     isNull,
