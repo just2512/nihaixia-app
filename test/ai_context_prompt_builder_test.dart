@@ -56,6 +56,24 @@ void main() {
     expect(ref.toMetadata()['selectedText'], selectedText);
   });
 
+  test('classic prompt rejects a context reference without selected text', () {
+    const ref = AiContextRef(
+      kind: 'classic',
+      moduleId: 'shanghan',
+      anchorId: 'shanghan:clause:002',
+      anchorVersion: 'sha256:content-version',
+      sourceId: 'shanghan:assets/shanghan/clause_001.md',
+    );
+
+    expect(
+      () => AiContextPromptBuilder.buildClassicSelection(
+        ref: ref,
+        fullPassage: '太阳病，发热，汗出，恶风，脉缓者，名为中风。',
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('context anchor reuse requires an exact version and snapshot match', () {
     const original = {
       'kind': 'toolResult',
