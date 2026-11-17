@@ -12,6 +12,8 @@ import 'package:nihaisha_app/models/bookmark.dart';
 import 'package:nihaisha_app/models/diagnosis.dart';
 import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
+import 'package:nihaisha_app/services/classic_search_service.dart';
 import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
@@ -6726,5 +6728,79 @@ void mainRedFlagEntrypointOrderingTests() {
       );
     });
   });
-}
 
+  testWidgets('点击助手历史中的伤寒论 sourceId 打开精确本地条文资产',
+      (tester) async {
+    const sourceId = 'shanghan:assets/shanghan/clause_001.md';
+    const contextRef = {
+      'kind': 'classic',
+      'moduleId': 'shanghan',
+      'anchorId': 'shanghan:clause:002',
+      'anchorVersion': 'sha256:clause-002-version',
+      'sourceId': sourceId,
+      'title': '伤寒论条文2',
+      'selectedText': '发热，汗出，恶风，脉缓',
+    };
+
+    final indexedHit = await ClassicSearchService.findBySourceId(sourceId);
+    expect(indexedHit, isNotNull);
+    expect(indexedHit!.asset, 'assets/shanghan/clause_001.md');
+
+    final conversationId = await _store.createAssistantConversation(
+      title: '伤寒论条文2情境会话',
+      mode: 'unified',
+    );
+    await _store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '请解释发热、汗出、恶风、脉缓。',
+      metadata: const AssistantMessageMetadata(
+        mode: 'learning',
+        selectedMode: 'learning',
+        contextRef: contextRef,
+      ).encode(),
+    );
+    await _store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '这些表现应结合本条文上下文理解。',
+      metadata: const AssistantMessageMetadata(
+        mode: 'learning',
+        selectedMode: 'learning',
+        sourceIds: [sourceId],
+        knowledgeStatus: 'RETRIEVED',
+        contextRef: contextRef,
+      ).encode(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialPrompt: '继续解释本条文。',
+        contextRef: contextRef,
+        contextualExplanationOnly: true,
+        conversationStore: _store,
+        service: _TextSendService(),
+        imagePicker: _EmptyLocalAiImagePicker(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    const chipLabel = '伤寒论：assets/shanghan/clause_001.md';
+    final sourceChip = find.widgetWithText(ActionChip, chipLabel);
+    for (var attempt = 0;
+        attempt < 50 && sourceChip.evaluate().isEmpty;
+        attempt++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(sourceChip, findsOneWidget);
+
+    await tester.tap(sourceChip);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MarkdownDocScreen), findsOneWidget);
+    expect(find.text(indexedHit.title), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+}
