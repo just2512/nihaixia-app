@@ -34,7 +34,7 @@ void main() {
       theme: ThemeData(extensions: [AppColors.light]),
       home: MarkdownDocScreen(
         title: '伤寒论条文样板',
-        content: '#### 条文2\\n\\n> 太阳病，发热，汗出，恶风，脉缓者，名为中风。\\n\\n这段是讲解者的补充说明，不属于原文条文。',
+        content: '#### 条文2\n\n> 太阳病，发热，汗出，恶风，脉缓者，名为中风。\n\n这段是讲解者的补充说明，不属于原文条文。',
         contextualAskModuleId: 'shanghan',
         contextualAskAnchorId: 'shanghan:clause:002',
         contextualAskSourceId: 'assets/shanghan/clause_001.md',
@@ -55,7 +55,7 @@ void main() {
       theme: ThemeData(extensions: [AppColors.light]),
       home: MarkdownDocScreen(
         title: '多条文阅读页',
-        content: '> 第一条原文。\\n\\n解释文字。\\n\\n> 第二条原文。',
+        content: '> 第一条原文。\n\n解释文字。\n\n> 第二条原文。',
         contextualAskModuleId: 'shanghan',
         contextualAskAnchorId: 'shanghan:clause:002',
         contextualAskSourceId: 'assets/shanghan/clause_001.md',
