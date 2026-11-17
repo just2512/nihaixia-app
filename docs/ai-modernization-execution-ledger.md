@@ -2743,3 +2743,50 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 - Phase 1/2 云端样板与自动化验收继续按各自证据状态记录；Find N2 实机外屏/内屏/半折叠、键盘和真实 E4B 多轮 TRACE 仍为 `UNKNOWN / LOCAL ONLY`。
 - 未取得真实设备证据前，不启动 Phase 3 的本草、方剂、医案及其他排盘页面扩展。下一项动作是关闭 PR #261 的全量回归缺口，并继续保留本地验收阻塞项。
+
+
+---
+
+### 57.25 2026-11-17 情境面板关闭后的紫微页面滚动恢复（主线重基）
+
+#### 基线与旧分支处置
+
+- 本切片以最新主线 `4136bc616fa382cc7196e277c99f67f7f3e23007` 为唯一基线；独立分支：`fix/ai-contextual-panel-scroll-preservation-mainline-20261117`。
+- 旧 PR #261 所在分支基于 `932f0a7e67492ed8602d7285b3b3939792c95060`，相对当前 master 为 diverged（3 commits ahead / 6 commits behind），其 Flutter regression run `44080902253` 终态为 `cancelled`，Android arm64 job 同样为 `cancelled`。旧 head 的检查不继承为 PASS，不在旧分支上继续堆叠提交。
+- 旧 PR #261 首轮 run `44073436041` 曾记录 1711 passed / 1 failed / 15 skipped；失败断言实测打开前滚动 offset 736.0、关闭后 558.0。该失败证据保留，不删除测试、不放宽容差来掩盖问题。
+
+#### 当前实施切片
+
+- 基线 SHA：`4136bc616fa382cc7196e277c99f67f7f3e23007`。
+- 分支：`fix/ai-contextual-panel-scroll-preservation-mainline-20261117`。
+- 生产代码提交：`4a0bcdcde1f70091507ab5b261793e0ce7025f6c`。
+- 测试提交：`d7cf6d818658f35930bd79c7db4ceb83307aab1b`。
+- 文件所有权：`lib/screens/ziwei_chart_screen.dart`、`test/ziwei_contextual_result_entry_test.dart`；本节仅登记本切片，不改写其他工作流任务的文件所有权。
+- 生产改动：紫微页主列表使用显式 `ScrollController`；打开情境面板前记录位置，等待面板关闭且原页面路由/滚动尺寸恢复后，将位置恢复到当前合法滚动范围；页面销毁时释放 controller。排盘输入、排盘引擎、结果快照 ID 和 AI 上下文内容不变。
+- 测试改动：在现有快照集成测试的每次打开/关闭中记录并断言同一页面滚动位置，覆盖首次打开、编辑未重算后的再次打开及重新排盘后的第三次打开；保留原有快照稳定性断言。
+- 本分支的提交及源码静态拼接检查已完成；本执行环境未运行 Flutter/Dart 工具链，故本地测试结果记为 `UNKNOWN`，不得标记 PASS。
+
+#### CI 与合并门槛
+
+- 新 head 的 PR Flutter regression、Android arm64 CI 及适用的 Quality Gate 必须分别取得终态；`SKIPPED` 不记 PASS，`CANCELLED` 不记 PASS。
+- CI 完成前状态为 `IN_PROGRESS`；若失败，读取失败 job/log，按失败断言修复后重跑新 head。
+- 合并后必须在合并 SHA 上复核主线 Flutter regression、Android arm64 CI 和 Quality Gate。
+- Find N2 外屏/内屏/半折叠、键盘及本地 E4B 真实多轮 TRACE 仍属 `UNKNOWN / LOCAL ONLY`；云端自动化不替代真机证据。未取得设备证据前，不启动 Phase 3 页面扩展。
+
+
+
+#### 新 head 首轮 CI 失败与时序修正
+
+- PR #268 初始 head `79992a608b44d4ead65866cf4e612271be8c438f` 的 Flutter workflow run `44095366676`：静态分析及前置专项测试均 SUCCESS；全量 Dart/Flutter regression 为 `1713 passed / 1 failed / 15 skipped`。
+- 唯一失败仍为本节滚动保持断言：打开前 `736.0`，关闭后 `558.0`；日志确认原 ScrollController / ScrollPosition 未更换，viewInsets 为 zero。失败说明第一次修复在底层路由刚恢复 current 且 metrics 可用时过早恢复 offset，弹层 reverse transition 后续布局再次覆盖位置。
+- 未改测试容差、未删除失败用例。修正为等待源页面路由与滚动尺寸连续稳定 18 帧（总等待最多 60 帧）后再恢复原 offset，给弹层 reverse transition 完成留出稳定窗口。
+- 时序修正提交：`07172c2cfd122027256e42108c22ef0271b5f9fb`。新 head 会重新触发完整 workflow；该失败 run 不继承 PASS，新 head 仍须从头验收。
+- Android arm64 job 在首轮记录时仍为 IN_PROGRESS；其结果同样不能替代 Flutter regression。
+
+
+#### 第二轮 CI 的测试流程修正
+
+- 时序修正 head `f44eb47ac2b79f6ea6336ab462934b9e26cd45ca` 的 Flutter regression run `44096698628`：全量结果 `1714 passed / 1 failed / 15 skipped`。
+- 原滚动 offset 断言在首次打开和编辑未重算后的第二次打开均已通过；失败发生在随后重新排盘步骤，测试在页面保留于问 AI 按钮附近时，直接查找顶部的懒加载“开始排盘”按钮，导致 `StateError: No element`。这是测试导航未适配正确的滚动保留行为，不是滚动断言失败。
+- 已在第三次快照计算前显式将同一页面 ListView 滚回顶部，并断言“开始排盘”按钮重新构建后再点击；原三次打开/关闭 offset 断言均保留。
+- 本次测试流程修正提交：`420fd3b7c2b59a248f983b2bf95df5339431ba9b`。新 head 必须重新跑全量 Flutter 与 Android arm64 CI。

@@ -94,6 +94,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   bool _showAllHealth = false; // 健康提醒：展开终身（出生→百岁）vs 默认未来30年
   bool _showPlateFullscreen = false; // 展开内屏时以视口高度缩放盘面，整屏查看十二宫
   final _longitudeCtrl = TextEditingController(); // 出生地经度（东经，留空用默认 120°）
+  final ScrollController _pageScrollController = ScrollController();
   CityLocation? _selectedCity; // 选中的出生城市（真太阳时定位，优先于手动经度）
 
   @override
@@ -149,6 +150,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
 
   @override
   void dispose() {
+    _pageScrollController.dispose();
     _longitudeCtrl.dispose();
     super.dispose();
   }
@@ -380,6 +382,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             );
           }
           return ListView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: [
           // 民俗参考声明
@@ -493,7 +496,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     return fitWidth.clamp(1.0, 640.0).toDouble();
   }
 
-  void _askAiAboutCurrentResult() {
+  Future<void> _askAiAboutCurrentResult() async {
     final chart = _chart;
     final solar = _calculatedSolar;
     final useTrueSolarTime = _calculatedUseTrueSolarTime;
@@ -551,14 +554,62 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       ref: contextRef,
       resultPayload: resultPayload,
     );
-    unawaited(showContextualAiSheet(
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    final sourcePageRoute = ModalRoute.of(context);
+    await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
       initialPrompt: prompt,
       initialMode: AssistantMode.metaphysics,
       contextualTitle: '紫微斗数排盘结果',
       contextualExplanationOnly: true,
-    ));
+    );
+
+    // The dialog future resolves when it is popped, before its reverse
+    // transition has necessarily removed the route from the Navigator. Wait
+    // until this source page is current again so its Scrollable is attached
+    // and its viewport metrics are stable before restoring the offset.
+    // The dialog normally completes its reverse transition within 200 ms.
+    // Bound the frame wait so an unrelated route left above this page cannot
+    // hold this action open indefinitely.
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollPosition = _pageScrollController.hasClients;
+      final hasScrollMetrics = hasScrollPosition &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        // The route becomes current as soon as pop starts, not when the
+        // modal reverse transition has finished. Keep the page stable for
+        // several frames so the sheet cannot overwrite the restored offset.
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    if (!position.hasContentDimensions) return;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
   }
 
   void _returnAssistantResult() {
