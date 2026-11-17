@@ -3270,7 +3270,10 @@ void main() {
     expect(service.restoredTranscripts, hasLength(1));
     expect(service.restoredTranscripts.single, contains('请解释当前排盘结果中的命宫。'));
     expect(service.restoredTranscripts.single, contains('历史情境回答：当前快照的命宫信息。'));
-    expect(tester.widget<TextField>(find.byType(TextField).first).controller?.text, '');
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      '',
+    );
 
     const followUp = '请基于当前快照重新排盘并核对命宫。';
     await tester.enterText(find.byType(TextField).first, followUp);
@@ -3368,7 +3371,14 @@ void main() {
       tester.widget<TextField>(find.byType(TextField).first).controller?.text,
       '解释刚刚重新计算的新排盘结果。',
     );
-    expect(find.byWidgetPredicate((widget) => widget is SelectableText && widget.data == '旧快照专属历史回答，不应进入新会话。'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            widget.data == '旧快照专属历史回答，不应进入新会话。',
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('统一助手恢复结构化诊断结果后保留收藏、分享和复制处方操作', (tester) async {
