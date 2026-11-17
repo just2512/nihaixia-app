@@ -292,7 +292,7 @@
 | Phase 3.5：农历节日与神诞 | `PASS`（已合并） | PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`；Flutter Run `43993000618`、Android arm64 job `133740441503` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.6：易经起卦与六十四卦布局 | `PASS`（已合并） | PR #227，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；Flutter Run `43995775982`、Android arm64 job `133749132339` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.7：五运六气布局 | `MISSING`（待补矩阵测试） | 当前仅冒烟/数据一致性/深色构建测试；402/775dp、浅深主题、200% 字号及逐段滚动可达性均未覆盖。固定宽列是待验证风险，不是已复现缺陷。 |
-| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | 新 PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Flutter Run `44014531870` 仍在运行，Branch validation `SKIPPED`，Android arm64 尚未取得终态。旧 PR #230 的 Run 不继承。 |
+| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | 新 PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Push Run `44014524225` 的 Branch validation job `133809148241` SUCCESS；PR Run `44014531870` 的 Flutter regression 运行中，Android arm64 尚无终态。PR Run 内 Branch validation `SKIPPED` 属事件门控；旧 PR #230 的 Run 不继承。 |
 | 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录；CI/Widget 不替代真机。 |
 
