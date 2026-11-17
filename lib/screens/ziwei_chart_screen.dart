@@ -580,7 +580,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final targetOffset = pageScrollOffset
         .clamp(position.minScrollExtent, position.maxScrollExtent)
         .toDouble();
-    if ((position.pixels - targetOffset).abs() > precisionErrorTolerance) {
+    if ((position.pixels - targetOffset).abs() > 0.5) {
       _pageScrollController.jumpTo(targetOffset);
     }
   }
