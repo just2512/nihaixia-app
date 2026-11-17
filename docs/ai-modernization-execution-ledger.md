@@ -2782,3 +2782,11 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 未改测试容差、未删除失败用例。修正为等待源页面路由与滚动尺寸连续稳定 18 帧（总等待最多 60 帧）后再恢复原 offset，给弹层 reverse transition 完成留出稳定窗口。
 - 时序修正提交：`07172c2cfd122027256e42108c22ef0271b5f9fb`。新 head 会重新触发完整 workflow；该失败 run 不继承 PASS，新 head 仍须从头验收。
 - Android arm64 job 在首轮记录时仍为 IN_PROGRESS；其结果同样不能替代 Flutter regression。
+
+
+#### 第二轮 CI 的测试流程修正
+
+- 时序修正 head `f44eb47ac2b79f6ea6336ab462934b9e26cd45ca` 的 Flutter regression run `44096698628`：全量结果 `1714 passed / 1 failed / 15 skipped`。
+- 原滚动 offset 断言在首次打开和编辑未重算后的第二次打开均已通过；失败发生在随后重新排盘步骤，测试在页面保留于问 AI 按钮附近时，直接查找顶部的懒加载“开始排盘”按钮，导致 `StateError: No element`。这是测试导航未适配正确的滚动保留行为，不是滚动断言失败。
+- 已在第三次快照计算前显式将同一页面 ListView 滚回顶部，并断言“开始排盘”按钮重新构建后再点击；原三次打开/关闭 offset 断言均保留。
+- 本次测试流程修正提交：`420fd3b7c2b59a248f983b2bf95df5339431ba9b`。新 head 必须重新跑全量 Flutter 与 Android arm64 CI。
