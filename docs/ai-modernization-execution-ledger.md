@@ -2559,3 +2559,10 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 根因是测试通过 `package:nihaisha_app/screens/markdown_doc_screen.dart` 加载页面，而页面以相对 URI 加载 `state_view.dart` / `app_colors.dart`；测试却以另一个 URI 加载 AppColors，导致 Dart 运行时把同一源文件识别成两个 library identity，ThemeData 注册的 AppColors 与 StateView 查找的类型不是同一类型。
 - 修复：该 widget test 的 MarkdownDocScreen 和 AppColors 均以 `../lib/...` 相对 URI 导入，确保测试 ThemeExtension 和页面传递依赖使用同一规范化文件 URI；紫微情境入口 widget test 同样改为相对 URI，提前消除相同风险。未修改生产主题系统，也未屏蔽 StateView。
 - 本次修复已推送到 CAI-READ-01 分支；新 CI 运行结果尚未取得。之前失败的 run 不继承为 PASS。
+
+
+### 57.13 情境历史查找失败时的会话隔离
+
+- 对情境历史进行精确匹配时，如果 SQLite 查询/历史解析失败，不得将 `_conversationIdFuture` 置为 null 后仍允许用户发送，造成回复无法持久化。
+- 新处理为：记录明确错误提示，不复用任何历史会话，并创建一个绑定当前 contextRef 的全新会话。该回退不会把未知历史误配为当前条文或结果，同时保留消息持久化能力。
+- 本修复属于 CAI-READ-01 会话生命周期边界，需随当前 head 的 Flutter 全量回归重新验收；旧 run 不可继承。
