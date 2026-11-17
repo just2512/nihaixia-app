@@ -171,41 +171,33 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前执行分支**：`work/yanji-editorial-phase3`，父基线 `7681d6584d3a3667a5f54a19fac0f675774fd749`。
+**当前主线基线**：`b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`。工作分支必须从该基线或其后续主线创建；旧 Phase 1 分支 `work/yanji-editorial-phase1` 已分叉，不得继续作为实施基线。
 
-**Phase 3.1 首批实施范围（分支针对性测试已通过，PR 门禁待执行）**
-- 收藏页：`ListView` 列表改为平面 `ListTile + Divider`；文件夹/分类筛选行使用自然高度横向滚动，不锁死 50dp；预览区间距迁移到 `AppSpacing`；保留文件夹创建/删除、分类筛选、移动、删除确认、导出、详情打开与 `AdaptiveMasterDetail`。
-- 设置页：章节标题字号/间距迁移到 `AppType` / `AppSpacing`；字号滑块两端标签使用共享 Token；保留设置项、即时刷新和 `SettingsRepository` 持久化。
-- 历史对话：移除标题单行与摘要两行强制截断；时间信息放入次级行并使用 `onSurfaceVariant`；保留恢复会话 ID、多选和删除逻辑。
-- 自动化：新增收藏分类/移动/删除、402dp/200% 字号、775dp/零宽 fold 主从预览；新增设置页 402dp/200% 字号及主题持久化测试；新增历史对话 402/775dp/200% 字号换行测试。
+**已合并批次**
 
-**Phase 3.1 实施前只读审计（历史基线：Phase 2 master）**
+- **Phase 3.1：收藏、设置与历史对话**。PR #214 已合并，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；全量 Flutter、Android arm64 和专项测试均通过。保留收藏筛选/移动/删除/导出、设置持久化、历史会话恢复与批量删除。
+- **Phase 3.2：命盘库与诊断历史**。PR #217 已合并，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；全量 Flutter、Android arm64 和专项测试均通过。保留排盘入口、出生数据、左滑删除、六经趋势与历史记录。
+- 工具入口 `tools_screen.dart` 已使用 `ZoneSection`、`AppSpacing`、`AppRadius`、`AppType`；每个工具入口为单层主题 `Material + InkWell`，并非多层 Card，不能为了视觉一致而整体重绘。
 
-- `tools_screen.dart` 已使用 `ZoneSection`、`AppSpacing`、`AppRadius`、`AppType`；工具入口卡片是带边界的 `Material + InkWell`，不是堆叠的 `Card`。不为统一而重写；需继续验证各工具入口与路由覆盖。
-- `bookmarks_screen.dart` 已使用 `AdaptiveMasterDetail` 和部分 `AppType`，列表项目前由 `Card + ListTile` 承载；预览区仍有多处间距字面值。现有测试覆盖新建文件夹弹窗，但未发现完整收藏列表、筛选/移动/删除/主从布局的页面级回归测试，Phase 3 应先补这些行为测试再调整表面。
-- `settings_screen.dart` 通过 `SettingsRepository` 与 `ColorScheme` 维护现有设置；仍有局部字号/间距字面值，且未发现设置页整体的页面级测试。改动必须保留设置持久化及开关双向同步。
-- `assistant_history_screen.dart` 采用列表和 `outlineVariant` 分隔线；已有列表、多选删除、恢复和持久化相关测试。尚缺少该页的折叠窗口与 200% 字号视觉覆盖。
-- `tool_foldable_layout_test.dart` 已覆盖注册工具的展开内屏零宽 fold 与半折叠物理 hinge 路由边界；不得删除或缩小现有覆盖范围。
+**当前独立批次**
 
-该只读审计先于 Phase 3 实施，用于确定小批量边界。Phase 3.1 已在独立分支落地并通过定向测试；其 PR 全量验收完成前不合并。不得把“已有共享组件/局部 Token”误报为需要重做。
+- **Phase 3.3：闭门课重症临床列表**。PR #219；文件 `critical_illness_list_screen.dart` 和对应布局/交互测试。移除连续列表不必要的高 elevation Card，保留七条内容、Markdown 原文、药材精确匹配优先于方剂匹配的跳转。原 HEAD 的分支与 PR CI 曾通过；因主线推进到 `b0bf9815`，已将最新 master 合入分支，新的 HEAD 必须重新通过完整 Flutter regression 与 Android arm64，旧结果不继承。
+- **Phase 3.5：农历节日与神诞检索**。PR #220；文件 `festival_lookup_screen.dart` 和对应布局/检索测试。用轻分隔线替代重复 Card，元数据采用可换行布局；保留双来源合并、农历月日排序、名称过滤和公历换算。原 HEAD 的分支与 PR CI 曾通过；因主线推进到 `b0bf9815`，已将最新 master 合入分支，新的 HEAD 必须重新通过完整 Flutter regression 与 Android arm64，旧结果不继承。
 
-**主要文件族**
-- `lib/screens/tools_screen.dart` 及其实际存在的工具页面。
-- `lib/screens/bookmarks_screen.dart`。
-- `lib/screens/settings_screen.dart`。
-- `lib/screens/assistant_history_screen.dart`。
-- 其他经典、易学、医案和辅助详情页面。
+**下一批工具页面审计**
 
-**实施重点**
-- 先核对共享 Theme 是否已覆盖；只修正直接写死且与主题冲突的局部颜色/表面。
-- 工具页面保留各领域语义色与参数关系，不把不同工具做成同一种大卡片。
-- 收藏、设置和历史记录保留现有管理流程、筛选、导出、恢复和设置持久化行为。
-- 对复杂表单优先保证标签、输入控件、错误提示、键盘和大字号下可用，不追求装饰统一。
+- `tools_screen.dart` 的入口表面已足够轻，不做整体重绘；但工具标题单行省略、摘要两行省略会在大字号下隐藏信息。下一批只调整文字自然换行与可滚动性，并增加 402/775dp、浅深主题、200% 字号测试，保留分区、入口顺序、图标语义和导航路由。
+- `yijing_screen.dart`、`yunqi_screen.dart`、`ziwei_chart_screen.dart` 存在 Card 和固定字号；逐页区分必要的参数/结果/领域分组与纯装饰边界，先写测试再做局部替换，不批量删除 Card。
+- `tool_foldable_layout_test.dart` 已覆盖注册工具的内屏零宽 fold 与半折叠物理 hinge 路由边界；不得删除或缩小现有覆盖范围。
+- 收藏、设置、历史页面已在 Phase 3.1 完成；除发现可复现缺陷外不重复改造。
 
-**完成门槛**
-- 工具页面既有单侧面板与折痕测试通过；收藏主从布局和设置功能测试通过。
-- 200% 字号下，表单项可换行、操作可触达，不通过裁切隐藏选项。
-- 不发生功能入口丢失、筛选状态重置或持久化回归。
+**实施与合并门槛**
+
+- 保留工具参数、计算结果、领域语义色、诊断/排盘业务逻辑、数据库及导航路由。
+- 200% 字号不截断重要标题、摘要、表单标签或操作；文字自然换行，操作仍可触达。
+- 按页面覆盖 402dp、775dp、浅深主题；涉及折叠布局的页面继续覆盖 840dp、物理 hinge、零宽 fold 和半折叠场景。
+- 先定向测试与静态分析，再完整 Flutter regression、Android arm64；CI 未完成或失败不合并。
+- 每批从最新主线建立独立分支，合并时保留依赖关系；未取得真机证据不得声称 Find N2 实机通过。
 
 ### Phase 4：跨页面一致性与最终验收
 
@@ -286,20 +278,15 @@
 
 | 项目 | 状态 | 证据 / 说明 |
 |---|---|---|
-| 设计规范初版 | `PASS` | 本文档已写入仓库分支 |
-| 浅色/深色主题 Token | `PASS`（分支内） | `lib/theme/app_colors.dart` |
-| Token 对比度自动测试 | `PASS`（CI） | PR #211 的 Flutter regression 与 Android arm64 CI success；Run `43839568819`，Android job `133207359364` |
-| Token 已进入 master | `PASS` | PR #211 已合并，集成提交 `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4` |
-| Phase 1 首页主题一致性 | `PASS` | PR #211 合并；Run `43839560908` 静态分析/改动测试 success，Run `43839568819` Flutter regression 与 Android arm64 success；合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4` |
-| Phase 2 知识与详情改造 | `PASS`（代码与自动化门禁） | PR #212，最终 HEAD `8f997362eb9574d02ab2b541a75a526428e45b66`；Flutter 全量回归 Run `43851588625` success；push 分支校验 Run `43851581819` success |
-| Phase 2 集成状态 | `PASS` | PR #212 已于 2026-11-16 squash 合并；master 集成 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749` |
-| Phase 2 合并后主线 CI | `PASS` | master SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`：Flutter tests Run `43855518336` success；Android arm64 job `133261664292` success；Flutter Quality Gate Run `43855518261` success |
-| Phase 3.1 收藏/设置/历史改造 | `PASS`（代码与自动化门禁） | PR #214；HEAD `b29b09b3fb6d61cad11d99dd52f6cc6a607678f3`；Flutter 全量回归 Run `43864106649` success；Android arm64 job `133290336254` success；分支静态分析及 6 个 Widget tests Run `43863636922` success |
-
-| Phase 3.1 集成状态 | `PASS` | PR #214 于 2026-11-16 squash 合并；master 集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205` |
-| Phase 3.1 合并后主线 CI | `UNKNOWN`（运行中） | Flutter tests Run `43865416982`、Flutter Quality Gate Run `43865416976` 正在执行；完成后补记结果 |
-| Phase 3.2 命盘库与诊断历史 | `IN_PROGRESS`（定向测试 PASS） | 独立分支 `work/yanji-editorial-phase3-aux-v2`，基于 master SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；最新代码/测试 HEAD `98c1755c3a4efc969843b3b9300e6530e62b93b3`；Run `43865637995` 静态分析及 3 个 Widget tests success；PR 全量回归/Android arm64 尚待验收 |
-| Phase 3.2 集成状态 | `MISSING` | 尚未合并；必须通过 PR 全量 Flutter regression、Android arm64 及合并后主线 CI |
-| Phase 3.3 其他工具与辅助页面 | `MISSING`（只读审计） | 工具入口现有轻表面与 Fold 测试保留；其他工具详情、易学/命盘深层页面、医案/经典辅助页面继续逐批审查，不扩大本批范围 |
-| Find N2 实机阅读 | `MISSING` | 需要 OPPO Find N2 真实设备截图、系统/窗口参数和连续阅读记录 |
+| 设计规范与浅深主题 Token | `PASS` | PR #211 已合并；浅深主题 Token 和自动对比度回归进入 master。 |
+| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211 合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4`；Flutter regression Run `43839568819` 与 Android arm64 job `133207359364` success。首页入口/hinge、根导航 200% 与 fold、AI 首屏外屏/内屏 200% 和半折叠 hinge 测试均有覆盖。 |
+| Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后 master Flutter / Android arm64 / Quality Gate 均 success。 |
+| Phase 2 补充：古籍原文库 | `PASS`（已合并及主线复验） | PR #222 最终 HEAD `7974d16f1e64b25b8bce9b5ac5d9cfd47e2c87de`，合并 SHA `68896b3179b49271522957a7877d08268c8cbdbd`。早期 Run `43884852042` 因测试直接读取大型真实古籍资产并重复调用 `runAsync` 而失败；最终改为测试专用内存 AssetBundle，并向 Repository 注入可选 AssetBundle。合并后 master Flutter Run `43901866825`、Android arm64 job 及 Quality Gate Run `43901867004` 均 success。 |
+| Phase 3.1：收藏、设置、历史对话 | `PASS`（已合并） | PR #214，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；全量 Flutter、Android arm64、专项布局/行为测试与合并后主线 CI success。 |
+| Phase 3.2：命盘库、诊断历史 | `PASS`（已合并） | PR #217，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；全量 Flutter、Android arm64、专项测试和合并后 Quality Gate success。 |
+| Phase 3.3：闭门课重症临床列表 | `IN_PROGRESS` | PR #219；已将最新 master `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7` 合入原工作分支并保留旧提交 ancestry；新 merge HEAD 的 Flutter、Android arm64 CI 待重新验收。旧 HEAD 的成功结果不继承。 |
+| Phase 3.5：农历节日与神诞 | `IN_PROGRESS` | PR #220；已将最新 master `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7` 合入原工作分支并保留旧提交 ancestry；新 merge HEAD 的 Flutter、Android arm64 CI 待重新验收。旧 HEAD 的成功结果不继承。 |
+| 工具入口 200% 字号截断问题 | `IN_PROGRESS`（审计已确认） | `tools_screen.dart` 标题单行、摘要两行省略；计划单独建立小批次，只调整自然换行并补窗口/主题/字号测试。 |
+| 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
+| Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录；CI/Widget 不替代真机。 |
 
