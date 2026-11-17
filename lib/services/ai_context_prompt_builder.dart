@@ -9,9 +9,16 @@ class AiContextPromptBuilder {
 
   static String buildClassicSelection({
     required AiContextRef ref,
-    required String selectedText,
     required String fullPassage,
   }) {
+    final selectedText = ref.selectedText;
+    if (selectedText == null) {
+      throw ArgumentError.value(
+        ref.selectedText,
+        'ref.selectedText',
+        'A classic selection context must retain the exact selected text.',
+      );
+    }
     final source = <String, String>{
       'title': ref.title ?? '',
       'sourceId': ref.sourceId,

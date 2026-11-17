@@ -204,10 +204,10 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       anchorVersion: version,
       sourceId: 'shanghan:$sourcePath',
       title: widget.title,
+      selectedText: selectedText,
     );
     final prompt = AiContextPromptBuilder.buildClassicSelection(
       ref: ref,
-      selectedText: selectedText,
       fullPassage: fullPassage,
     );
     unawaited(showContextualAiSheet(

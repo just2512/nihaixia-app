@@ -22,6 +22,7 @@ void main() {
         'anchorId': 'shanghan:clause:002',
         'anchorVersion': 'sha256:abc123',
         'sourceId': 'asset:assets/shanghan/clause_001.md',
+        'selectedText': '发热，汗出，恶风',
       },
     );
     final restored = AssistantMessageMetadata.decode(original.encode());
@@ -43,6 +44,7 @@ void main() {
       'anchorId': 'shanghan:clause:002',
       'anchorVersion': 'sha256:abc123',
       'sourceId': 'asset:assets/shanghan/clause_001.md',
+      'selectedText': '发热，汗出，恶风',
     });
   });
 

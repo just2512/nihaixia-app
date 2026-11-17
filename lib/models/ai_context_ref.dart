@@ -8,6 +8,7 @@ class AiContextRef {
     this.snapshotId,
     this.ruleVersion,
     this.title,
+    this.selectedText,
   });
 
   final String kind;
@@ -19,6 +20,9 @@ class AiContextRef {
   final String? ruleVersion;
   final String? title;
 
+  /// Exact raw selection for classic reading; participates in session identity.
+  final String? selectedText;
+
   Map<String, String> toMetadata() => Map.unmodifiable({
         'kind': kind,
         'moduleId': moduleId,
@@ -28,6 +32,7 @@ class AiContextRef {
         if (snapshotId != null) 'snapshotId': snapshotId!,
         if (ruleVersion != null) 'ruleVersion': ruleVersion!,
         if (title != null) 'title': title!,
+        if (selectedText != null) 'selectedText': selectedText!,
       });
 
   static Map<String, String> normalizeMetadata(Map<String, String>? value) {
