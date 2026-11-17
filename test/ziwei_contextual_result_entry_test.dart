@@ -104,6 +104,9 @@ void main() {
           of: askAi,
           matching: find.byType(Scrollable),
         ).first;
+        final sourcePageScrollableWidget =
+            tester.widget<Scrollable>(sourcePageScrollable);
+        final sourcePageController = sourcePageScrollableWidget.controller;
         final sourcePagePosition =
             tester.state<ScrollableState>(sourcePageScrollable).position;
         final pageOffsetBeforeOpen = sourcePagePosition.pixels;
@@ -135,9 +138,16 @@ void main() {
           of: askAi,
           matching: find.byType(Scrollable),
         ).first;
+        final restoredScrollableWidget =
+            tester.widget<Scrollable>(restoredScrollable);
+        final restoredController = restoredScrollableWidget.controller;
         final restoredPosition =
             tester.state<ScrollableState>(restoredScrollable).position;
         final pageOffsetAfterClose = restoredPosition.pixels;
+        final sameScrollController =
+            identical(sourcePageController, restoredController);
+        final sameScrollPosition =
+            identical(sourcePagePosition, restoredPosition);
         final pageViewInsets =
             MediaQuery.viewInsetsOf(tester.element(find.byType(ZiweiChartScreen)));
         expect(
@@ -147,7 +157,10 @@ void main() {
               'before=${pageOffsetBeforeOpen}, after=${pageOffsetAfterClose}, '
               'max=${restoredPosition.maxScrollExtent}, '
               'viewport=${restoredPosition.viewportDimension}, '
-              'viewInsets=$pageViewInsets',
+              'viewInsets=$pageViewInsets, '
+              'sameController=$sameScrollController, '
+              'samePosition=$sameScrollPosition, '
+              'controllerOffset=${restoredController is ScrollController ? restoredController.offset : "none"}',
         );
         return snapshotId!;
       }
