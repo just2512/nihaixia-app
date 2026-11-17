@@ -3214,6 +3214,162 @@ void main() {
   });
 
 
+  testWidgets('情境助手仅复用完整锚点一致的历史会话，并将追问继续绑定同一锚点', (tester) async {
+    const contextRef = {
+      'kind': 'classic',
+      'moduleId': 'shanghan',
+      'anchorId': 'shanghan:clause:002',
+      'anchorVersion': 'sha256:passage-v1',
+      'sourceId': 'shanghan:assets/shanghan/clause_001.md',
+    };
+    final metadata = AssistantMessageMetadata(
+      mode: 'learning',
+      selectedMode: 'learning',
+      contextRef: contextRef,
+    ).encode();
+    final conversationId = await _store.createAssistantConversation(
+      title: '伤寒论条文2的情境会话',
+      mode: 'unified',
+    );
+    await _store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'user',
+      content: '请解释条文中的脉缓。',
+      metadata: metadata,
+    );
+    await _store.saveAssistantMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: '历史情境回答：脉缓。',
+      metadata: metadata,
+    );
+    final service = _TextSendService();
+
+    await tester.pumpWidget(MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialPrompt: '继续解释脉缓与恶风的关系。',
+        contextRef: contextRef,
+        contextualExplanationOnly: true,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    for (var attempt = 0;
+        attempt < 50 && service.restoredTranscripts.isEmpty;
+        attempt++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    expect(_store.createConversationCalls, 1,
+        reason: '完整 contextRef 一致时应复用历史会话，不新建会话');
+    expect(service.restoredTranscripts, hasLength(1));
+    expect(service.restoredTranscripts.single, contains('请解释条文中的脉缓。'));
+    expect(service.restoredTranscripts.single, contains('历史情境回答：脉缓。'));
+    expect(tester.widget<TextField>(find.byType(TextField).first).controller?.text, '');
+
+    const followUp = '请进一步说明脉缓与恶风之间的联系。';
+    await tester.enterText(find.byType(TextField).first, followUp);
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+    for (var attempt = 0; attempt < 50; attempt++) {
+      final rows = await _store.getAssistantMessages(
+        conversationId: conversationId,
+      );
+      if (rows.length >= 4) break;
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    final rows = await _store.getAssistantMessages(
+      conversationId: conversationId,
+    );
+    expect(rows, hasLength(4));
+    expect(service.sentTexts, [followUp]);
+    expect(service.intentQueries, isEmpty,
+        reason: '解释专用会话不得再进入工具意图分发');
+    for (final row in rows.skip(2)) {
+      final savedRef = AssistantMessageMetadata.decode(
+        row['metadata'] as String? ?? '',
+      ).contextRef;
+      expect(savedRef, contextRef,
+          reason: '追问的 user/assistant 两条记录都必须保留原始情境锚点');
+    }
+  });
+
+  testWidgets('情境助手遇到不同结果快照时新建会话，不恢复旧快照历史', (tester) async {
+    const oldContextRef = {
+      'kind': 'toolResult',
+      'moduleId': 'ziwei',
+      'anchorId': 'ziwei:result:snapshot-a',
+      'anchorVersion': 'snapshot-a',
+      'snapshotId': 'snapshot-a',
+      'ruleVersion': 'ziwei_core@0.13.0',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
+    };
+    const newContextRef = {
+      'kind': 'toolResult',
+      'moduleId': 'ziwei',
+      'anchorId': 'ziwei:result:snapshot-b',
+      'anchorVersion': 'snapshot-b',
+      'snapshotId': 'snapshot-b',
+      'ruleVersion': 'ziwei_core@0.13.0',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
+    };
+    final oldMetadata = AssistantMessageMetadata(
+      mode: 'metaphysics',
+      selectedMode: 'metaphysics',
+      contextRef: oldContextRef,
+    ).encode();
+    final oldConversationId = await _store.createAssistantConversation(
+      title: '旧紫微排盘快照',
+      mode: 'unified',
+    );
+    await _store.saveAssistantMessage(
+      conversationId: oldConversationId,
+      role: 'user',
+      content: '解释旧排盘结果。',
+      metadata: oldMetadata,
+    );
+    await _store.saveAssistantMessage(
+      conversationId: oldConversationId,
+      role: 'assistant',
+      content: '旧快照专属历史回答，不应进入新会话。',
+      metadata: oldMetadata,
+    );
+    final service = _TextSendService();
+
+    await tester.pumpWidget(MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialPrompt: '解释刚刚重新计算的新排盘结果。',
+        contextRef: newContextRef,
+        contextualExplanationOnly: true,
+        initialMode: null,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    for (var attempt = 0;
+        attempt < 50 && _store.createConversationCalls < 2;
+        attempt++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    expect(_store.createConversationCalls, 2,
+        reason: 'snapshotId 不同必须新建会话，不能复用旧结果历史');
+    expect(service.restoredTranscripts, isEmpty);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      '解释刚刚重新计算的新排盘结果。',
+    );
+    expect(find.text('旧快照专属历史回答，不应进入新会话。'), findsNothing);
+  });
+
   testWidgets('统一助手恢复结构化诊断结果后保留收藏、分享和复制处方操作', (tester) async {
     final store = _MemoryConversationStore();
     const resultText = '辨证结果\n【六经】少阳\n【证型】少阳证\n【方剂】小柴胡汤';
