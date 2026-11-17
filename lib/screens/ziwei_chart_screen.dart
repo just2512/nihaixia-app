@@ -333,12 +333,6 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                 () => _showPlateFullscreen = !_showPlateFullscreen,
               ),
             ),
-          if (_chart != null && !_calculating && _error == null)
-            IconButton(
-              tooltip: '问 AI 解读当前排盘',
-              icon: const Icon(Icons.auto_awesome_outlined),
-              onPressed: _askAiAboutCurrentResult,
-            ),
           if (widget.returnResultOnComplete && _chart != null && !_calculating)
             IconButton(
               tooltip: '返回 AI 助手',
@@ -444,6 +438,16 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           if (_chart != null && !_calculating) ...[
             if (!isExpanded) _buildSummaryCard(cs, _chart!),
             const SizedBox(height: 12),
+            if (_error == null)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _askAiAboutCurrentResult,
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  label: const Text('问 AI 解读当前排盘'),
+                ),
+              ),
+            if (_error == null) const SizedBox(height: 12),
             // 添加到命盘库（Material 图标，无 emoji）
             SizedBox(
               width: double.infinity,
