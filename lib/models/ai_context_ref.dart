@@ -6,7 +6,7 @@ enum AiContextKind {
   herb('herb'),
   caseRecord('case'),
   toolResult('toolResult'),
-  field('field');
+  fieldValue('field');
 
   const AiContextKind(this.metadataValue);
 
