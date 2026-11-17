@@ -1155,7 +1155,12 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 4,
                   crossAxisSpacing: 4,
-                  childAspectRatio: 0.72,
+                  // 大字号下宫位文字自然换行会增加纵向行数；
+                  // 窄外屏需要更多高度，宽内屏则保持较紧凑比例。
+                  childAspectRatio:
+                      MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                      ? (plateWidth < 420 ? 0.36 : 0.52)
+                      : 0.72,
                   children: [
                     for (int slot = 0; slot < 16; slot++)
                       slotToBranch[slot] == -1
@@ -1235,6 +1240,19 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final flowLabel = flowStarsHere.isEmpty
         ? null
         : '流 ${flowStarsHere.join(' ')}';
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final roleStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: cs.onSurface,
+    );
+    final palaceBadges = <Widget>[
+      if (isFlowMing) _badge('流年命', cs.primary),
+      if (isFlowMonthMing) _badge('流月命', cs.tertiary),
+      if (isFlowDayMing) _badge('流日命', cs.secondary),
+      if (isLife) _badge('命', cs.error),
+      if (isBody) _badge('身', cs.tertiary),
+    ];
     return GestureDetector(
       onTap: () => _showPalaceDetail(p, flow),
       child: Container(
@@ -1273,26 +1291,27 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 宫名 + 命/身/流命标记
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    p.roleLabel,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            if (largeText) ...[
+              Text(p.roleLabel, style: roleStyle),
+              if (palaceBadges.isNotEmpty)
+                Wrap(
+                  spacing: 2,
+                  runSpacing: 2,
+                  children: palaceBadges,
                 ),
-                if (isFlowMing) _badge('流年命', cs.primary),
-                if (isFlowMonthMing) _badge('流月命', cs.tertiary),
-                if (isFlowDayMing) _badge('流日命', cs.secondary),
-                if (isLife) _badge('命', cs.error),
-                if (isBody) _badge('身', cs.tertiary),
-              ],
-            ),
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      p.roleLabel,
+                      style: roleStyle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ...palaceBadges,
+                ],
+              ),
             Text(
               p.ganzhiLabel,
               style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
@@ -1536,37 +1555,64 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             ...chart.decades.map(
               (d) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 64,
-                      child: Text(
-                        '第${d.index}大限',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                child: MediaQuery.textScalerOf(context).scale(1) >= 1.5
+                    ? Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            '第${d.index}大限',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: cs.primary,
+                            ),
+                          ),
+                          Text(
+                            d.rangeLabel,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            '${d.roleLabel} ${d.ganzhiLabel}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          SizedBox(
+                            width: 64,
+                            child: Text(
+                              '第${d.index}大限',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 84,
+                            child: Text(
+                              d.rangeLabel,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              '${d.roleLabel} ${d.ganzhiLabel}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(
-                      width: 84,
-                      child: Text(
-                        d.rangeLabel,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        '${d.roleLabel} ${d.ganzhiLabel}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
