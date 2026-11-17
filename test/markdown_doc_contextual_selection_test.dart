@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
-import '../lib/theme/app_colors.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   testWidgets('contextual selection is enabled only for a fully anchored reading block',
