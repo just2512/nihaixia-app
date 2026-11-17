@@ -556,6 +556,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final pageScrollOffset = _pageScrollController.hasClients
         ? _pageScrollController.position.pixels
         : null;
+    final sourcePageRoute = ModalRoute.of(context);
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
@@ -565,10 +566,15 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       contextualExplanationOnly: true,
     );
 
-    // Wait for the source page's viewport and scroll extents to be laid out
-    // again after the contextual route is removed. Reading maxScrollExtent
-    // immediately after the route future completes can observe the transient
-    // shorter extent and clamp a valid saved offset too early.
+    // The dialog future resolves when it is popped, before its reverse
+    // transition has necessarily removed the route from the Navigator. Wait
+    // until this source page is current again so its Scrollable is attached
+    // and its viewport metrics are stable before restoring the offset.
+    while (mounted &&
+        sourcePageRoute != null &&
+        !sourcePageRoute.isCurrent) {
+      await WidgetsBinding.instance.endOfFrame;
+    }
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted ||
         pageScrollOffset == null ||
