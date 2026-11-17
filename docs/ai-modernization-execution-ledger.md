@@ -2519,8 +2519,8 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 | Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
 |---|---|---|---|---|
 | CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | IN_PROGRESS | `docs/contextual-ask-ai-protocol`；base `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` | 协议文档与台账进入 PR；文档链接、Markdown 结构及约束一致性检查通过；合并后记录 merge SHA |
-| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS（新基线分支修复中；PR CI 待执行） | `work/ai-contextual-read-sample-v2`；base `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`；当前代码 head `822f5555e2d17dc7f0a014f8f4954e8b9f243f98` | 单条文来源锚点只作用于唯一原文块；同锚点/同版本会话复用；changed tests、PR 全量 Flutter 回归及 Android CI 通过；Find N2 真机单独验收 |
-| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS（修复后的完整 Flutter 回归待复验） | `work/ai-contextual-read-sample-v2`；base `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`；当前代码 head `7141b1453e48e80f65c9a24cde161555370a774e`；master 后续仅在不冲突的 editorial plan 路径前进到 `e58d6035fb29843ca419069191683198a17aa3f4` | 单条文来源锚点只作用于唯一原文块；同锚点/同版本会话复用；changed tests、PR 全量 Flutter 回归及 Android CI 通过；Find N2 真机单独验收 |
+| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | IN_PROGRESS（与 CAI-READ-01 堆叠；待上游合并后 retarget 最新 master） | `work/ai-contextual-ziwei-result-sample-v4`；base `work/ai-contextual-read-sample-v2` @ `7141b1453e48e80f65c9a24cde161555370a774e` | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
 
 ### 57.3 实施顺序与边界
 
@@ -2559,3 +2559,32 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 根因是测试通过 `package:nihaisha_app/screens/markdown_doc_screen.dart` 加载页面，而页面以相对 URI 加载 `state_view.dart` / `app_colors.dart`；测试却以另一个 URI 加载 AppColors，导致 Dart 运行时把同一源文件识别成两个 library identity，ThemeData 注册的 AppColors 与 StateView 查找的类型不是同一类型。
 - 修复：该 widget test 的 MarkdownDocScreen 和 AppColors 均以 `../lib/...` 相对 URI 导入，确保测试 ThemeExtension 和页面传递依赖使用同一规范化文件 URI；紫微情境入口 widget test 同样改为相对 URI，提前消除相同风险。未修改生产主题系统，也未屏蔽 StateView。
 - 本次修复已推送到 CAI-READ-01 分支；新 CI 运行结果尚未取得。之前失败的 run 不继承为 PASS。
+
+
+### 57.7 CAI-RESULT-01 基线与结果快照校验
+
+- 替代工作分支：`work/ai-contextual-ziwei-result-sample-v4`，从 CAI-READ-01 当前工作分支 head `7141b1453e48e80f65c9a24cde161555370a774e` 派生；本分支不得在 CAI-READ-01 未集成前以 master 为 base 合并。
+- 旧 PR #224 继承旧 PR #223 的过期分支关系，不直接集成；新分支只承接紫微结果页面和快照身份切片，待 CAI-READ-01 合并后 retarget 到届时最新 master 并重新运行 CI。
+- 代码复核发现原快照只记录地点显示名，没有记录实际传给 `calculateZiweiChart` 的经纬度。所选城市会传入真实经纬度；未选城市时，计算使用手动经度或默认东经 120°、纬度 30°。显示名不能替代这些实际参数，原实现可能把使用不同坐标计算的结果错误判为相同输入。
+- 新实现把真实计算经度/纬度在排盘成功时与命盘一起捕获；问 AI 时从这组已执行输入构建快照，不读取用户可能已修改但尚未重新排盘的表单值。输入摘要包含公历时间、性别、地点说明、经纬度、真太阳时和早晚子时口径；内容身份同时纳入规则版本及完整 App formatter 输出（包含当前流年/流月/流日结果）。
+- 新增 `AiToolResultSnapshot` 纯函数，对输入键排序后生成 SHA-256；定向测试覆盖键顺序不影响 ID、经纬度变化、规则版本变化、结果内容变化均改变 ID。
+- 仍须由 CAI-READ-01 提供并验证 `AiContextRef`、情境面板及 explanation-only 会话能力。AI 不重算；新结果快照不能改写旧会话引用。
+- 当前代码 head（快照工具与紫微页面已实现）：`e54d270c26f88f4df9b8064d8dd821e6d2a4051b`。新切片的 branch validation/PR CI 尚未取得结果；Find N2 真机内外屏和真实模型问答仍为 UNKNOWN。
+
+
+
+### 57.8 CAI-RESULT-01 页面入口与针对性测试
+
+- 将结果提问入口放在命盘结果摘要下方，显示明确的“问 AI 解读当前排盘”按钮，不仅依赖 AppBar 隐藏的 tooltip。入口只在实际排盘成功、未计算中且无错误时展示。
+- 新增 `test/ziwei_contextual_result_entry_test.dart`：覆盖真实成功排盘显示入口、无效经度输入不显示入口，并检查 widget 无异常。
+- 新增快照身份测试覆盖：输入 Map 键顺序无关；经度、纬度、规则版本和 formatter 结果变化均改变 snapshotId。
+- 当前分支的代码与测试已写入独立堆叠分支；新 PR head 在本次台账提交后更新。分支静态分析和定向测试仍待 GitHub Actions 实际结果，不以文件存在推断 PASS。
+
+
+
+### 57.10 CAI-RESULT-01 堆叠分支刷新记录
+
+- 原堆叠分支 `work/ai-contextual-ziwei-result-sample-v3` / PR #229 因 CAI-READ-01 上游分支在 CI 修复时新增提交而产生分叉；为确保依赖关系清晰，不采用旧 head 继续集成。
+- 已从刷新后的 CAI-READ-01 head `7141b1453e48e80f65c9a24cde161555370a774e` 创建 `work/ai-contextual-ziwei-result-sample-v4`。本分支包含最新划词样板及其测试 URI 修复，再独立叠加紫微结果快照功能。
+- v4 的紫微业务代码与快照测试来自 v3 的已审阅切片，未更改排盘算法；新分支将单独触发自动验收。不得继承 v3 的空 CI 记录或旧分支状态。
+- PR #229 应关闭为 SUPERSEDED，由 v4 替代；v4 PR 以 CAI-READ-01 为 base，待上游合并后再 retarget 最新 master。
