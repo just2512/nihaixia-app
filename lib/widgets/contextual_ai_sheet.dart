@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/ai_context_ref.dart';
 import '../screens/assistant_tool_router.dart';
 import '../screens/local_ai_interview_screen.dart';
+import '../utils/fold_aware_routes.dart';
 
 /// Selects the contextual assistant presentation from the available window width.
 bool usesContextualSidePanel(double availableWidth) => availableWidth >= 720;
@@ -38,20 +39,15 @@ Future<void> showContextualAiSheet({
       );
 
   final windowSize = MediaQuery.sizeOf(context);
-  final renderObject = context.findRenderObject();
-  final anchorPoint = renderObject is RenderBox && renderObject.hasSize
-      ? renderObject.localToGlobal(renderObject.size.center(Offset.zero))
-      : null;
-  if (usesContextualSidePanel(windowSize.width)) {
+    if (usesContextualSidePanel(windowSize.width)) {
     // Wide windows retain the reading/result page as the main surface and
     // present the assistant as a right-side panel. Dialog's anchor follows
     // Flutter's fold-aware sub-screen selection for the invoking context.
     final panelWidth = contextualSidePanelWidth(windowSize.width);
     final panelHeight = (windowSize.height - 24).clamp(320.0, 2000.0).toDouble();
-    return showDialog<void>(
+    return showFoldAwareDialog<void>(
       context: context,
       barrierDismissible: true,
-      anchorPoint: anchorPoint,
       builder: (_) => Dialog(
         alignment: Alignment.centerRight,
         insetPadding: const EdgeInsets.all(12),
