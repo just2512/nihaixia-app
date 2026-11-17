@@ -1138,9 +1138,11 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                   // 200% 字号下宫位文字自然换行会增加纵向行数。
                 // 在保持四列地支盘位不变的前提下，为每宫增加纵向空间；
                 // 整张命盘随外层 ListView 滚动，不缩小文字或隐藏条目。
+                // 外屏盘面更窄，200%文字换行更多，需要更大的宫位纵向空间；
+                // 内屏盘面较宽，保持相对紧凑。盘位仍固定为4列，外层页面负责滚动。
                 childAspectRatio:
                     MediaQuery.textScalerOf(context).scale(1) >= 1.5
-                    ? 0.52
+                    ? (plateWidth < 420 ? 0.36 : 0.52)
                     : 0.72,
                   children: [
                     for (int slot = 0; slot < 16; slot++)
