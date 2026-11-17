@@ -3349,7 +3349,6 @@ void main() {
         initialPrompt: '解释刚刚重新计算的新排盘结果。',
         contextRef: newContextRef,
         contextualExplanationOnly: true,
-        initialMode: AssistantMode.metaphysics,
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
