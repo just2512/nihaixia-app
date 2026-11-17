@@ -2519,7 +2519,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 | Task ID | 切片 | 状态 | 分支 / 基线 | 完成定义 |
 |---|---|---|---|---|
 | CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | IN_PROGRESS | `docs/contextual-ask-ai-protocol`；base `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915` | 协议文档与台账进入 PR；文档链接、Markdown 结构及约束一致性检查通过；合并后记录 merge SHA |
-| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 选择来源可靠地绑定唯一条文锚点；调用既有助手会话/模型链路；针对性测试与 CI 通过 |
+| CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | IN_PROGRESS（新基线分支修复中；PR CI 待执行） | `work/ai-contextual-read-sample-v2`；base `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`；当前代码 head `822f5555e2d17dc7f0a014f8f4954e8b9f243f98` | 单条文来源锚点只作用于唯一原文块；同锚点/同版本会话复用；changed tests、PR 全量 Flutter 回归及 Android CI 通过；Find N2 真机单独验收 |
 | CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | NOT_STARTED | 从届时最新 master 创建独立分支 | 只解释 App 已生成并校验的结果快照；绑定稳定 resultId / snapshotId；重算不改变旧会话上下文；针对性测试与 CI 通过 |
 
 ### 57.3 实施顺序与边界
@@ -2537,3 +2537,17 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前仅完成远端文档读取与协议固化；尚未实施划词组件、结果问 AI 入口或会话锚点代码。
 - 本次文档工作没有执行 Flutter 测试、Android 构建或 Find N2 实机测试；这些结果不适用，不能记为 PASS。
 - 本节状态应在 PR 创建、CI 结束和合并后按实际证据更新。
+
+
+### 57.6 CAI-READ-01 基线刷新、失败证据与修复
+
+- 旧 PR #223（`work/ai-contextual-read-sample`）基于 `5c50605724e9a27ad03df700f5e4aa5aa0766d92`，落后当时最新 master 两个提交；不得直接把旧分支整支并入主线。
+- 旧 PR Flutter workflow run `43890014986`：Flutter regression job `133378352310` 失败，实际记录为 1659 passed / 4 failed / 15 skipped；Android arm64 job `133381711763` 成功。4 个失败分为：
+  1. 提示词测试把本地来源 ID 错写成 `asset:assets/...`，而当前代码及 ClassicSearchService 的正式 ID 形式为 `shanghan:assets/...`；
+  2. 3 个 Markdown widget 测试因测试导入 AppColors 的 URI 与 StateView 导入 URI 不一致，导致 ThemeExtension 实例无法解析。修复测试导入路径，不改变生产主题实现。
+- 新分支 `work/ai-contextual-read-sample-v2` 从最新 master `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7` 独立创建；仅复制该切片的相关实现文件，并重新处理测试/台账，不复用旧分支过期的台账版本。
+- 修复还收紧了首批划词边界：只对唯一 Markdown blockquote 原文块建立 SelectionArea 和“问 AI”菜单；条文标题、讲解/注释等其他内容保留普通文本选择；同页存在多个引用块、来源映射不唯一或原始与渲染块行范围不一致时，关闭情境入口并回退普通 Markdown 选择。上下文只发送该原文块，不把整篇讲义误当作条文。
+- 增加情境锚点的严格匹配：复用会话必须对所有持久化 user/assistant 消息验证完整 contextRef；条文版本或工具结果 snapshot 不一致时不复用。命中时沿用现有历史恢复流程和 Native transcript restore；不新增聊天表或会话引擎。
+- 当前新分支 head：`822f5555e2d17dc7f0a014f8f4954e8b9f243f98`。本次修改尚未取得新的 CI 运行结果；不能将旧分支 changed-tests PASS 或旧 Android job 迁移为新 head 的验收证据。
+- Find N2 真机划词/底部面板、外屏/内屏、键盘与滚动状态测试仍为 UNKNOWN，必须单独取得实际设备 TRACE。
+
