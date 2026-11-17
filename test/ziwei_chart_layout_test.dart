@@ -637,4 +637,72 @@ void main() {
   });
 
 
+  testWidgets('紫微排盘在402/775dp、浅深主题和200%字号下表单及盘面可滚动阅读',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final brightness in Brightness.values) {
+      for (final width in [402.0, 775.0]) {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, 900);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            key: ValueKey('ziwei-200-${width.toInt()}-${brightness.name}'),
+            theme: ThemeData(
+              colorScheme: AppColors.colorSchemeFor(brightness),
+              useMaterial3: true,
+              extensions: [
+                brightness == Brightness.dark ? AppColors.dark : AppColors.light,
+              ],
+            ),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(2),
+              ),
+              child: child!,
+            ),
+            home: ZiweiChartScreen(
+              initialSolar: DateTime(2000, 8, 16, 10),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final pageContext = tester.element(find.byType(ZiweiChartScreen));
+        expect(
+          MediaQuery.textScalerOf(pageContext).scale(1),
+          2,
+          reason: '紫微排盘必须真实运行在200%字号',
+        );
+        expect(find.text('生辰信息'), findsOneWidget);
+
+        final inputCard = tester.getRect(find.byType(Card).first);
+        expect(inputCard.left, greaterThanOrEqualTo(0));
+        expect(inputCard.right, lessThanOrEqualTo(width));
+        expect(tester.takeException(), isNull,
+            reason: '${width.toInt()}dp / ${brightness.name} / 200% 输入表单不得溢出');
+
+        final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
+        await tester.scrollUntilVisible(
+          plate,
+          320,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(plate, findsOneWidget);
+        final plateRect = tester.getRect(plate);
+        expect(plateRect.left, greaterThanOrEqualTo(0));
+        expect(plateRect.right, lessThanOrEqualTo(width));
+        expect(tester.takeException(), isNull,
+            reason: '${width.toInt()}dp / ${brightness.name} / 200% 命盘盘面不得溢出');
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    }
+  });
+
 }
