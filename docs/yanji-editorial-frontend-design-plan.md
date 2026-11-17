@@ -288,15 +288,13 @@
 | Phase 3.1：收藏、设置、历史对话 | `PASS`（已合并） | PR #214，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；全量 Flutter、Android arm64、专项布局/行为测试与合并后主线 CI success。 |
 | Phase 3.2：命盘库、诊断历史 | `PASS`（已合并） | PR #217，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；全量 Flutter、Android arm64、专项测试和合并后 Quality Gate success。 |
 | Phase 3.3：闭门课重症临床列表 | `PASS`（已合并） | PR #219，集成 SHA `e58d6035fb29843ca419069191683198a17aa3f4`；Flutter Run `43991748328`、Android arm64 job `133735808445` SUCCESS；Branch validation `SKIPPED`。 |
-| Phase 3.5：农历节日与神诞 | `PASS`（已合并） | PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`；Flutter Run `43993000618`、Android arm64 job `133740441503` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.4：工具入口 200% 字号显示 | `PASS`（已合并） | PR #226，集成 SHA `45a11103406a6912452b861c2bd45bb75216eb57`；Flutter Run `43994364804`、Android arm64 job `133745179275` SUCCESS；Branch validation `SKIPPED`。 |
-| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Flutter Run `44014531870` 运行中，Branch validation `SKIPPED`，Android arm64 尚无终态。 |
+| Phase 3.5：农历节日与神诞 | `PASS`（已合并） | PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`；Flutter Run `43993000618`、Android arm64 job `133740441503` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.6：易经起卦与六十四卦布局 | `PASS`（已合并） | PR #227，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；Flutter Run `43995775982`、Android arm64 job `133749132339` SUCCESS；Branch validation `SKIPPED`。 |
 | Phase 3.7：五运六气布局 | `MISSING`（待补矩阵测试） | 当前仅冒烟/数据一致性/深色构建测试；402/775dp、浅深主题、200% 字号及逐段滚动可达性均未覆盖。固定宽列是待验证风险，不是已复现缺陷。 |
+| Phase 3.8：紫微排盘 200% 字号布局 | `IN_PROGRESS` | 新 PR #240，基线 `a405d22fe183ad8c9a59256634c5e9551bb060bc`，HEAD `144e8b0f56299a4dc7e9154b2266517fe6c00a31`；Flutter Run `44014531870` 仍在运行，Branch validation `SKIPPED`，Android arm64 尚未取得终态。旧 PR #230 的 Run 不继承。 |
 | 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录；CI/Widget 不替代真机。 |
-
-
 
 ### 2026-11-17 当前主线复核补充
 
