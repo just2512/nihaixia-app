@@ -226,7 +226,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     final ends = <int>[];
     int? activeStart;
     for (var index = 0; index < lines.length; index++) {
-      final isQuoteLine = RegExp(r'^\\s*>\\s?').hasMatch(lines[index]);
+      final isQuoteLine = RegExp(r'^\s*>\s?').hasMatch(lines[index]);
       if (isQuoteLine) {
         activeStart ??= index;
       } else if (activeStart != null) {
@@ -246,7 +246,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     final end = ends.single;
     final blockLines = lines.sublist(start, end);
     final plainText = blockLines
-        .map((line) => line.replaceFirst(RegExp(r'^\\s*>\\s?'), ''))
+        .map((line) => line.replaceFirst(RegExp(r'^\s*>\s?'), ''))
         .join('\n')
         .trim();
     if (plainText.isEmpty) return null;
