@@ -184,7 +184,7 @@
 **当前独立批次**
 
 - **Phase 3.7：易经工具表面与六十四卦网格**。PR #227 已合并，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；当前 HEAD `f4bcfcaa0f06d527346e8b23d81a821913143235` 的 Flutter regression 与 Android arm64 APK/ABI/manifest/unit tests 均 PASS。仅移除 `_MethodCard` 额外 elevation；窄屏 200% 字号时六十四卦网格改为两列，保留 64 卦、四个起卦入口和现有 Tab。
-- **Phase 3.8：紫微排盘 200% 折叠布局**。PR #230 当前 HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d` 的 Flutter regression Run `43996950054` 与 Android arm64 CI 均为 SUCCESS（Branch validation job 按 workflow 条件 SKIPPED，不计 PASS）。但该分支基于 `2219b29949b1a8aabfdfe4651c821fdf929075db`；相对最新 master `c34986daecdead6d73e017a4aa15c883669306d3` 比较为 ahead 11 / behind 34、DIVERGED。旧 HEAD 的 CI 不能作为最新 master 合并树的验收证据，当前状态为“代码测试 PASS、集成 MISSING”；必须先把两处改动正确移植到最新 master，再重跑完整 Flutter regression 与 Android arm64。四项修复包括宫位格高度、宫名/徽标 Wrap、大限列表 Wrap 和摘要八字 Wrap。
+- **Phase 3.8：紫微排盘 200% 折叠布局**。PR #230 当前 HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d` 的 Flutter regression Run `43996950054` 与 Android arm64 CI 均为 SUCCESS（Branch validation job 按 workflow 条件 SKIPPED，不计 PASS）。但该分支基于 `2219b29949b1a8aabfdfe4651c821fdf929075db`；相对最新 master `c34986daecdead6d73e017a4aa15c883669306d3` 比较为 ahead 11 / behind 34、DIVERGED。旧 HEAD 的 CI 不能作为最新 master 合并树的验收证据，当前状态为“代码测试 PASS、集成 MISSING”。另有 PR #237（情境问 AI）同时修改 `lib/screens/ziwei_chart_screen.dart`；必须先完成 #237 的主线集成，再把本 PR 两处改动正确移植到其合并后的最新 master，避免覆盖情境问 AI 入口，随后重跑完整 Flutter regression 与 Android arm64。四项修复包括宫位格高度、宫名/徽标 Wrap、大限列表 Wrap 和摘要八字 Wrap。
 
 **下一批只读审计**
 
