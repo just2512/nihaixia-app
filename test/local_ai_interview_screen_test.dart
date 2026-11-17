@@ -6799,8 +6799,17 @@ void mainRedFlagEntrypointOrderingTests() {
     await tester.tap(sourceChip);
     await tester.pumpAndSettle();
 
-    expect(find.byType(MarkdownDocScreen), findsOneWidget);
-    expect(find.text(indexedHit.title), findsWidgets);
+    final openedDocument = tester.widget<MarkdownDocScreen>(
+      find.byType(MarkdownDocScreen),
+    );
+    expect(openedDocument.title, indexedHit.title);
+    expect(openedDocument.asset, indexedHit.asset,
+        reason: '来源回链必须打开索引精确匹配的 Markdown asset');
+    expect(
+      find.textContaining('名为「中风」', findRichText: true),
+      findsOneWidget,
+      reason: '目标资产正文必须实际加载，而不只是创建了一个同名页面',
+    );
     expect(tester.takeException(), isNull);
   });
 
