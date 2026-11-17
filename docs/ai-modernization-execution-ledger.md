@@ -2561,5 +2561,14 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 新实现把真实计算经度/纬度在排盘成功时与命盘一起捕获；问 AI 时从这组已执行输入构建快照，不读取用户可能已修改但尚未重新排盘的表单值。输入摘要包含公历时间、性别、地点说明、经纬度、真太阳时和早晚子时口径；内容身份同时纳入规则版本及完整 App formatter 输出（包含当前流年/流月/流日结果）。
 - 新增 `AiToolResultSnapshot` 纯函数，对输入键排序后生成 SHA-256；定向测试覆盖键顺序不影响 ID、经纬度变化、规则版本变化、结果内容变化均改变 ID。
 - 仍须由 CAI-READ-01 提供并验证 `AiContextRef`、情境面板及 explanation-only 会话能力。AI 不重算；新结果快照不能改写旧会话引用。
-- 当前代码 head：`9e1992c3526b63518413215acf0e82300477b77c`（随后台账更新会产生新的 head）。新切片的 branch validation/PR CI 尚未取得结果；Find N2 真机内外屏和真实模型问答仍为 UNKNOWN。
+- 当前代码 head（快照工具与紫微页面已实现）：`e506aabdf17beb4e5a5d71590ab5b9052d9eb002`。新切片的 branch validation/PR CI 尚未取得结果；Find N2 真机内外屏和真实模型问答仍为 UNKNOWN。
+
+
+
+### 57.8 CAI-RESULT-01 页面入口与针对性测试
+
+- 将结果提问入口放在命盘结果摘要下方，显示明确的“问 AI 解读当前排盘”按钮，不仅依赖 AppBar 隐藏的 tooltip。入口只在实际排盘成功、未计算中且无错误时展示。
+- 新增 `test/ziwei_contextual_result_entry_test.dart`：覆盖真实成功排盘显示入口、无效经度输入不显示入口，并检查 widget 无异常。
+- 新增快照身份测试覆盖：输入 Map 键顺序无关；经度、纬度、规则版本和 formatter 结果变化均改变 snapshotId。
+- 当前分支的代码与测试已写入独立堆叠分支；新 PR head 在本次台账提交后更新。分支静态分析和定向测试仍待 GitHub Actions 实际结果，不以文件存在推断 PASS。
 
