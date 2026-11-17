@@ -3,7 +3,7 @@
 > 版本：v1.0  
 > 建立日期：2026-11-16  
 > 执行原则：保留现有杂志式风格，以最小改动完成统一；本文件是后续前端视觉改造的执行基线。  
-> 当前阶段：设计规范已固化；页面分批实施尚未全部完成。未完成的真机项目必须标记为 `MISSING`，不得以模拟器或 CI 结果替代。
+> 当前阶段：Phase 1–4 自动化验收已完成并合并；OPPO Find N2 真实设备阅读仍为 `MISSING`，不得以模拟器、Widget 或 CI 结果替代。
 
 ## 1. 改造目标
 
@@ -171,40 +171,41 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前主线基线**：`b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7`。工作分支必须从该基线或其后续主线创建；旧 Phase 1 分支 `work/yanji-editorial-phase1` 已分叉，不得继续作为实施基线。
+**当前主线基线**：`6103dfba234f0b4a5477632f2b4c6b400ab829eb`（PR #265 合并后）。本阶段已完成既定页面批次；后续只处理有明确复现证据的问题，不为制造改动而重做页面。
 
-**已合并批次**
+**已合并批次与边界**
 
-- **Phase 3.1：收藏、设置与历史对话**。PR #214 已合并，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；全量 Flutter、Android arm64 和专项测试均通过。保留收藏筛选/移动/删除/导出、设置持久化、历史会话恢复与批量删除。
-- **Phase 3.2：命盘库与诊断历史**。PR #217 已合并，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；全量 Flutter、Android arm64 和专项测试均通过。保留排盘入口、出生数据、左滑删除、六经趋势与历史记录。
-- 工具入口 `tools_screen.dart` 已使用 `ZoneSection`、`AppSpacing`、`AppRadius`、`AppType`；每个工具入口为单层主题 `Material + InkWell`，并非多层 Card，不能为了视觉一致而整体重绘。
+- **收藏、设置、历史对话**：PR #214，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`。保留收藏筛选/移动/删除/导出、设置持久化、历史会话恢复与批量删除。
+- **命盘库、诊断历史**：PR #217，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`。保留排盘入口、出生数据、左滑删除、六经趋势和历史记录。
+- **闭门课重症列表**：PR #219，集成 SHA `e58d6035fb29843ca419069191683198a17aa3f4`。压平连续列表中的不必要 Card，保留七条内容、Markdown 原文和药材/方剂精确匹配跳转。
+- **农历节日与神诞**：PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`。用轻分隔线替代重复 Card，保留双来源合并、农历排序、名称过滤和公历换算。
+- **工具入口大字号**：PR #226，集成 SHA `45a11103406a6912452b861c2bd45bb75216eb57`。修复标题/摘要在 200% 字号下的信息截断，保留入口顺序、分区与路由。
+- **易经工具卡片**：PR #227，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`。移除不必要的卡片阴影，不改变工具内容和操作。
+- **紫微斗数折叠布局**：PR #240，集成 SHA `3dc7fb793848fcd92f11c21ba970e7b1837d8126`。补充 200% 字号与折叠窗口布局覆盖。
+- **五运六气**：PR #247、#248、#255、#264 分别以 SHA `baa74865650f8bba0835051ada224df6941cf374`、`f1fb3afdf80b241548d524ba9746ff108acd223f`、`3f8f4bee141b6c1614e479d66cac4749b50346f3`、`4136bc616fa382cc7196e277c99f67f7f3e23007` 合并。覆盖图表文字对比度、标题换行、CustomPainter 的 TextScaler，以及五行徽章背景随实际文字高度增长；未降低字号或裁切文字。
+- **剂量换算器**：PR #262，集成 SHA `65849447e99e3349e58c62db1639ee18d2789cbd`，补充 200% 字号布局回归。
+- **浅深主题补充覆盖**：PR #266，集成 SHA `21dbee152e4df941a80bc0467ccfcb3edcadac9e`，为收藏、诊断历史、设置等页面补齐深色主题与 200% 字号测试。
+- **命盘库深色主题**：PR #267，集成 SHA `ead5a676aa508d54f5a392f3545625dce76b7622`，补齐 775dp expanded、深色主题、200% 字号、长命盘名称/出生地点和排盘入口可达性测试。
 
-**当前独立批次**
+**阶段结论**
 
-- **Phase 3.3：闭门课重症临床列表**。PR #219；文件 `critical_illness_list_screen.dart` 和对应布局/交互测试。移除连续列表不必要的高 elevation Card，保留七条内容、Markdown 原文、药材精确匹配优先于方剂匹配的跳转。原 HEAD 的分支与 PR CI 曾通过；因主线推进到 `b0bf9815`，已将最新 master 合入分支，新的 HEAD 必须重新通过完整 Flutter regression 与 Android arm64，旧结果不继承。
-- **Phase 3.5：农历节日与神诞检索**。PR #220；文件 `festival_lookup_screen.dart` 和对应布局/检索测试。用轻分隔线替代重复 Card，元数据采用可换行布局；保留双来源合并、农历月日排序、名称过滤和公历换算。原 HEAD 的分支与 PR CI 曾通过；因主线推进到 `b0bf9815`，已将最新 master 合入分支，新的 HEAD 必须重新通过完整 Flutter regression 与 Android arm64，旧结果不继承。
-
-**下一批工具页面审计**
-
-- `tools_screen.dart` 的入口表面已足够轻，不做整体重绘；但工具标题单行省略、摘要两行省略会在大字号下隐藏信息。下一批只调整文字自然换行与可滚动性，并增加 402/775dp、浅深主题、200% 字号测试，保留分区、入口顺序、图标语义和导航路由。
-- `yijing_screen.dart`、`yunqi_screen.dart`、`ziwei_chart_screen.dart` 存在 Card 和固定字号；逐页区分必要的参数/结果/领域分组与纯装饰边界，先写测试再做局部替换，不批量删除 Card。
-- `tool_foldable_layout_test.dart` 已覆盖注册工具的内屏零宽 fold 与半折叠物理 hinge 路由边界；不得删除或缩小现有覆盖范围。
-- 收藏、设置、历史页面已在 Phase 3.1 完成；除发现可复现缺陷外不重复改造。
-
-**实施与合并门槛**
-
-- 保留工具参数、计算结果、领域语义色、诊断/排盘业务逻辑、数据库及导航路由。
-- 200% 字号不截断重要标题、摘要、表单标签或操作；文字自然换行，操作仍可触达。
-- 按页面覆盖 402dp、775dp、浅深主题；涉及折叠布局的页面继续覆盖 840dp、物理 hinge、零宽 fold 和半折叠场景。
-- 先定向测试与静态分析，再完整 Flutter regression、Android arm64；CI 未完成或失败不合并。
-- 每批从最新主线建立独立分支，合并时保留依赖关系；未取得真机证据不得声称 Find N2 实机通过。
+- 上述 Phase 3 批次均已合并，PR #267 的 Flutter regression 与 Android arm64 均为 success。
+- 工具入口、收藏、设置、历史、命盘库、诊断历史、易经、紫微、五运六气和辅助列表不再有本阶段待合并项。
+- 保留所有工具参数、计算结果、领域语义色、诊断/排盘业务逻辑、数据库、持久化键与导航路由。
+- 后续发现问题时按页面独立建分支、先复现再最小修复；不开展全仓 UI 重写。
 
 ### Phase 4：跨页面一致性与最终验收
 
-- 审查实际改动页面是否存在旧色值、纯白大面积表面、过重阴影或重复容器。
-- 仅修复有证据的偏差，不开启无边界的全仓 UI 重写。
-- 汇总对比度自动测试、CI、模拟窗口测试和 Find N2 实机报告。
-- 分开记录自动化 `PASS`、实机 `PASS`、`REJECT`、`MISSING`、`UNKNOWN`；不以平均分掩盖单项失败。
+**自动化状态**：`PASS`。**真实 Find N2 阅读验收**：`MISSING`。
+
+- 原有 PR #211 已对主题主文字、辅助文字在背景/表面层级，以及主色/主色容器建立自动对比度断言。
+- PR #265 已合并，集成 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；PR HEAD 为 `f903bb15a9da98f84c2673bcc03b30b26d93f83d`，仅新增 `test/editorial_semantic_contrast_test.dart`，不修改颜色 Token 或生产页面。
+- PR #265 覆盖浅/深主题下 danger、warning、success、info 对页面背景，onDanger 对 danger，onSurface 对四类状态容器，以及六经前景色对各自语义容器；正常文字阈值为 4.5:1。
+- PR #265 Flutter regression Run `44103235167` success；Android arm64 job `134112303183` success。Branch validation 为条件性 skipped，不计作通过或失败。
+- PR #265 合并前，基线 `ead5a676aa508d54f5a392f3545625dce76b7622` 的 Flutter regression Run `44103069300` 与 Android arm64 job `134112172642` 均 success。
+- PR #265 合并后的最新 master 为 `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；Flutter Run `44105085769` 与 Quality Gate Run `44105085816` 已触发，终态需以对应 workflow 结果更新。
+- 自动化 `PASS`、实机 `PASS`、`REJECT`、`MISSING`、`UNKNOWN` 分开记录；不以平均分掩盖单项失败。
+- Find N2 的外屏/内屏/半折叠、浅深主题、100%/150%/200% 字号及连续阅读检查，按第 7.2 节执行。未取得真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录前，保持 `MISSING`。
 
 ## 6. Find N2 与大字号不可退化项
 
@@ -278,15 +279,13 @@
 
 | 项目 | 状态 | 证据 / 说明 |
 |---|---|---|
-| 设计规范与浅深主题 Token | `PASS` | PR #211 已合并；浅深主题 Token 和自动对比度回归进入 master。 |
-| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211 合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4`；Flutter regression Run `43839568819` 与 Android arm64 job `133207359364` success。首页入口/hinge、根导航 200% 与 fold、AI 首屏外屏/内屏 200% 和半折叠 hinge 测试均有覆盖。 |
-| Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后 master Flutter / Android arm64 / Quality Gate 均 success。 |
-| Phase 2 补充：古籍原文库 | `PASS`（已合并及主线复验） | PR #222 最终 HEAD `7974d16f1e64b25b8bce9b5ac5d9cfd47e2c87de`，合并 SHA `68896b3179b49271522957a7877d08268c8cbdbd`。早期 Run `43884852042` 因测试直接读取大型真实古籍资产并重复调用 `runAsync` 而失败；最终改为测试专用内存 AssetBundle，并向 Repository 注入可选 AssetBundle。合并后 master Flutter Run `43901866825`、Android arm64 job 及 Quality Gate Run `43901867004` 均 success。 |
-| Phase 3.1：收藏、设置、历史对话 | `PASS`（已合并） | PR #214，集成 SHA `7d1dfec8cb4dcfa831177a86082fbc165e01d205`；全量 Flutter、Android arm64、专项布局/行为测试与合并后主线 CI success。 |
-| Phase 3.2：命盘库、诊断历史 | `PASS`（已合并） | PR #217，集成 SHA `68b2b2d8869daf4f9f6a60e61a3c50cbd624c915`；全量 Flutter、Android arm64、专项测试和合并后 Quality Gate success。 |
-| Phase 3.3：闭门课重症临床列表 | `IN_PROGRESS` | PR #219；已将最新 master `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7` 合入原工作分支并保留旧提交 ancestry；新 merge HEAD 的 Flutter、Android arm64 CI 待重新验收。旧 HEAD 的成功结果不继承。 |
-| Phase 3.5：农历节日与神诞 | `IN_PROGRESS` | PR #220；已将最新 master `b0bf9815efd7ed8ab8f958a470cb537e1f1c8fd7` 合入原工作分支并保留旧提交 ancestry；新 merge HEAD 的 Flutter、Android arm64 CI 待重新验收。旧 HEAD 的成功结果不继承。 |
-| 工具入口 200% 字号截断问题 | `IN_PROGRESS`（审计已确认） | `tools_screen.dart` 标题单行、摘要两行省略；计划单独建立小批次，只调整自然换行并补窗口/主题/字号测试。 |
-| 全局自动对比度 | `PASS`（已覆盖组合） | PR #211 对主题 Token 建立自动对比度断言；跨页面实际组合仍需随新增组件/页面继续扩展测试。 |
-| Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录；CI/Widget 不替代真机。 |
+| 设计规范与浅深主题 Token | `PASS`（自动化） | PR #211 已合并；主题 Token、主文字/辅助文字与表面层级、主色和主色容器的自动对比度断言进入 master。 |
+| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211 合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4`；Flutter regression Run `43839568819` 与 Android arm64 job `133207359364` success。覆盖首页入口/hinge、根导航 200% 与 fold、AI 首屏外屏/内屏 200% 和半折叠 hinge。 |
+| Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后主线 Flutter / Android arm64 / Quality Gate success。 |
+| Phase 2 补充：古籍原文库 | `PASS`（自动化） | PR #222 合并 SHA `68896b3179b49271522957a7877d08268c8cbdbd`；最终 HEAD `7974d16f1e64b25b8bce9b5ac5d9cfd47e2c87de`。测试改用测试专用内存 AssetBundle，避免重复读取大型真实古籍资产；合并后 master Flutter Run `43901866825`、Android arm64 与 Quality Gate Run `43901867004` success。 |
+| Phase 3：工具、收藏、设置、历史与辅助页面 | `PASS`（自动化） | PR #214/#217/#219/#220/#226/#227/#240/#247/#248/#255/#262/#264/#266/#267 均已合并；集成 SHA 见第 5 节。覆盖列表减阴影/细分隔、工具标签 200% 换行、紫微折叠布局、五运六气对比度/文本缩放/徽章高度、剂量换算器 200%，以及收藏/设置/历史/命盘库浅深主题。 |
+| 五行徽章文字与背景高度 | `PASS` | PR #264 合并 SHA `4136bc616fa382cc7196e277c99f67f7f3e23007`；背景高度改为依据实际 TextPainter.height 计算，200% 几何断言进入 master。 |
+| Phase 4：跨页面语义色对比度 | `PASS`（自动化） | PR #265 合并 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；当前 HEAD Flutter regression Run `44103235167` success、Android arm64 job `134112303183` success。覆盖浅深主题状态色、容器和六经文字/容器配对。 |
+| PR #265 合并后的主线 CI | `IN_PROGRESS` | master HEAD `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；Flutter Run `44105085769`、Quality Gate Run `44105085816` 已触发，必须以终态更新本记录。 |
+| Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需 OPPO Find N2 真实设备截图、系统版本、实际窗口 dp、字号档位及浅深主题连续阅读记录。CI/Widget/模拟器不替代实机。 |
 
