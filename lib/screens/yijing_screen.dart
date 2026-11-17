@@ -542,7 +542,6 @@ class _MethodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
