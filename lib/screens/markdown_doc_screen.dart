@@ -207,7 +207,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     );
     final prompt = AiContextPromptBuilder.buildClassicSelection(
       ref: ref,
-      selectedText: selectedText.trim(),
+      selectedText: selectedText,
       fullPassage: fullPassage,
     );
     unawaited(showContextualAiSheet(
