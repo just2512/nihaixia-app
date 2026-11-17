@@ -58,15 +58,19 @@ void main() {
         reason: '命盘库异步加载后应显示记录');
   }
 
-  Future<void> pumpAtWidth(WidgetTester tester, double width) async {
+  Future<void> pumpAtWidth(
+    WidgetTester tester,
+    double width, {
+    Brightness brightness = Brightness.light,
+  }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = Size(width, 900);
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: AppColors.colorSchemeFor(Brightness.light),
-          extensions: [AppColors.light],
+          colorScheme: AppColors.colorSchemeFor(brightness),
+          extensions: [brightness == Brightness.dark ? AppColors.dark : AppColors.light],
         ),
         home: MediaQuery(
           data: MediaQueryData(
@@ -138,5 +142,29 @@ void main() {
     }
     expect(remaining.map((chart) => chart.name), ['短名称命盘']);
     expect(tester.takeException(), isNull);
+  });
+
+
+  testWidgets('命盘库在775dp深色主题与200%字号下保持内容和排盘入口可用',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.runAsync(seedCharts);
+
+    const longName = '用于验证大字号自然换行的较长命盘名称与家庭备注';
+    await pumpAtWidth(tester, 775, brightness: Brightness.dark);
+    await waitForChart(tester, longName);
+
+    expect(find.textContaining('北京市朝阳区一个较长的出生地点名称'), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
+    expect(tester.takeException(), isNull,
+        reason: '深色主题下命盘列表在775dp与200%字号下不应溢出');
+
+    await tester.tap(find.text(longName));
+    await tester.pumpAndSettle();
+    expect(find.text('紫微斗数排盘'), findsOneWidget);
+    expect(find.text('八字排盘'), findsOneWidget);
+    expect(tester.takeException(), isNull,
+        reason: '深色主题下排盘方式选择弹窗在200%字号下不应溢出');
   });
 }
