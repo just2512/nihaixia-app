@@ -292,7 +292,7 @@
 | Phase 3.6：工具入口大字号完整显示 | `PASS`（已合并） | PR #226，集成 SHA `45a11103406a6912452b861c2bd45bb75216eb57`；当前 HEAD Flutter regression、Android arm64 APK/ABI/manifest 与 Android unit tests success。 |
 | Phase 3.7：易经工具与六十四卦网格 | `PASS`（已合并） | PR #227，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；当前 HEAD `f4bcfcaa0f06d527346e8b23d81a821913143235` 的 Flutter regression、Android arm64 APK/ABI/manifest/unit tests 均 success。 |
 | Phase 3.8：紫微排盘 200% 布局 | `IN_PROGRESS`（代码 CI PASS，集成 MISSING） | PR #230 HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d`：Flutter regression + Android arm64 Run `43996950054` SUCCESS；相对最新 master `c34986daecdead6d73e017a4aa15c883669306d3` 为 ahead 11 / behind 34、DIVERGED。必须先移植到最新主线并在新 head 重跑 CI，不能直接合并旧分支。 |
-| 下一批：五运六气页面 200% 布局 | `MISSING`（只读审计） | `yunqi_screen.dart` 卡片继承全局 elevation 0，现有 `test/yunqi_screen_test.dart` 仅覆盖页面冒烟、引擎数据一致性和深色构建；缺少 402/775dp、浅深主题、200% 字号及真实滚动可达性测试。先补测试再决定是否调整生产布局。 |
+| 下一批：五运六气页面 200% 布局 | `MISSING`（只读审计） | `yunqi_screen.dart` 卡片继承全局 elevation 0；现有 `test/yunqi_screen_test.dart` 仅覆盖页面冒烟、引擎数据一致性和深色构建。代码审计发现需由测试验证的潜在窄屏点：`_KeyValueCard` 标签列固定 132dp、`_StepRow` 左列固定 64dp 且尾列无弹性约束、`_JiaLinCard` 表格列固定 52/88/88dp，多个标题仍用非弹性 Row。尚未证明这些位置实际溢出，不提前改生产代码；先补 402/775dp × 浅深主题 × 200% 测试及滚动可达性断言，再按失败位置最小修复。 |
 | 下一批：剂量换算表格 | `MISSING`（只读审计） | `dosage_converter_screen.dart` 存在固定列/12pt 单元格，现有剂量服务测试不覆盖页面布局；需独立建立窗口/主题/200% 页面测试。 |
 | 下一批：八字排盘 | `MISSING`（只读审计） | 已有折叠布局测试但尚缺 200% 页面覆盖；先补验收再确定生产布局改动。 |
 | 自动对比度 | `PASS`（基础 Token）/ `MISSING`（全部语义组合） | PR #211 对基础 onSurface/primary 组合建立自动断言；warning/success/info、六经与分区语义色的实际文字/背景组合尚需扩展测试，不宣称全组合通过。 |
