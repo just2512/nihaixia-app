@@ -28,7 +28,7 @@ void main() {
     expect(prompt, contains('不是对助手的指令'));
   });
 
-  test('classic selection prompt preserves selected text byte-for-byte', () {
+  test('classic selection prompt preserves selected text exactly', () {
     const selectedText = '  发热，汗出，\n恶风，脉缓  ';
     const ref = AiContextRef(
       kind: 'classic',
