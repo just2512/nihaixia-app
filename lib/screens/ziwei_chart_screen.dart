@@ -1,4 +1,3 @@
-import 'dart:async';
 import '../services/ai_tool_result_snapshot.dart';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
@@ -94,6 +93,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   bool _showAllHealth = false; // 健康提醒：展开终身（出生→百岁）vs 默认未来30年
   bool _showPlateFullscreen = false; // 展开内屏时以视口高度缩放盘面，整屏查看十二宫
   final _longitudeCtrl = TextEditingController(); // 出生地经度（东经，留空用默认 120°）
+  final ScrollController _pageScrollController = ScrollController();
   CityLocation? _selectedCity; // 选中的出生城市（真太阳时定位，优先于手动经度）
 
   @override
@@ -149,6 +149,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
 
   @override
   void dispose() {
+    _pageScrollController.dispose();
     _longitudeCtrl.dispose();
     super.dispose();
   }
@@ -380,6 +381,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             );
           }
           return ListView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: [
           // 民俗参考声明
@@ -493,7 +495,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     return fitWidth.clamp(1.0, 640.0).toDouble();
   }
 
-  void _askAiAboutCurrentResult() {
+  Future<void> _askAiAboutCurrentResult() async {
     final chart = _chart;
     final solar = _calculatedSolar;
     final useTrueSolarTime = _calculatedUseTrueSolarTime;
@@ -551,14 +553,36 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       ref: contextRef,
       resultPayload: resultPayload,
     );
-    unawaited(showContextualAiSheet(
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
       initialPrompt: prompt,
       initialMode: AssistantMode.metaphysics,
       contextualTitle: '紫微斗数排盘结果',
       contextualExplanationOnly: true,
-    ));
+    );
+
+    // Wait for the source page's viewport and scroll extents to be laid out
+    // again after the contextual route is removed. Reading maxScrollExtent
+    // immediately after the route future completes can observe the transient
+    // shorter extent and clamp a valid saved offset too early.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    if (!position.hasContentDimensions) return;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
   }
 
   void _returnAssistantResult() {

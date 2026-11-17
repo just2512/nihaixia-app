@@ -95,6 +95,17 @@ void main() {
 
       Future<String> readAskAiSnapshot() async {
         await tester.ensureVisible(askAi);
+        await tester.pumpAndSettle();
+
+        final sourcePageScrollable = find.descendant(
+          of: find.byType(ZiweiChartScreen),
+          matching: find.byType(Scrollable),
+        ).first;
+        final pageOffsetBeforeOpen =
+            tester.state<ScrollableState>(sourcePageScrollable)
+                .position
+                .pixels;
+
         await tester.tap(askAi);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
@@ -117,6 +128,15 @@ void main() {
           find.byType(ZiweiChartScreen),
           findsOneWidget,
           reason: '关闭情境助手必须返回原排盘页，不能退出排盘路由',
+        );
+        final pageOffsetAfterClose =
+            tester.state<ScrollableState>(sourcePageScrollable)
+                .position
+                .pixels;
+        expect(
+          pageOffsetAfterClose,
+          closeTo(pageOffsetBeforeOpen, 0.5),
+          reason: '情境助手关闭后必须保留原排盘页的滚动位置',
         );
         return snapshotId!;
       }
