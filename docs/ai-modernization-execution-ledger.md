@@ -2821,3 +2821,33 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 按协议 Phase 3 的明文前置条件，在 Phase 1/2 真机验收证据补齐前，不扩展本草、方剂、医案、其他排盘页或字段级入口；不得以云端 Widget、模拟结果或 CI 替代实机验收。
 - 本轮云端继续推进的下一项是：等待当前 master `36fa1f758c833cde8972791b236f0d7b259b440c` 两条质量流水线终态；如主线 SHA 发生变化，刷新基线并对文档切片做小批量同步。除此之外，不制造绕过设备门槛的 Phase 3 工作。
 
+---
+
+### 57.27 2026-11-17 情境上下文来源类型受控枚举修复
+
+#### 协议缺口与实现范围
+
+- 对照 `docs/contextual-ask-ai-spec.md` §3.2：上下文引用的来源类型 `sourceType/kind` 必须是受控枚举。复核原实现 `lib/models/ai_context_ref.dart` 时发现 `kind` 仍为任意 `String`，`normalizeMetadata` 只检查非空，未知类型也可继续进入情境面板和消息 metadata。
+- 已核对当前正式构造入口：`lib/screens/markdown_doc_screen.dart` 的经典阅读 `classic`，以及 `lib/screens/ziwei_chart_screen.dart` 的工具结果 `toolResult`。两处以外未发现需要迁移的运行时构造点。
+- 本次将 `AiContextRef.kind` 改为 `AiContextKind`，受控 wire values 为 `classic / formula / herb / case / toolResult / field`。为避开 Dart 保留/关键字命名，Dart 枚举成员 `caseRecord` 与 `fieldValue` 分别映射回稳定持久化值 `case` 与 `field`。
+- `toMetadata()` 继续写入既有字符串值；`normalizeMetadata()` 只接受枚举登记值，未知 `kind` 返回空引用并 fail closed。已有 `classic`、`toolResult` 等历史 metadata 不改变格式；不改数据库 schema，不需要数据迁移。
+- 新增/调整契约测试：全部枚举值可往返映射到既有 metadata wire value；未知类型被拒绝；`caseRecord` 仍保持 `case` wire value；既有选中文字原样保存、同锚点/快照匹配和工具结果上下文测试继续保留。
+
+#### 切片记录
+
+- 基线：当前 master `590e17054faea259bd3c23e360daafd0500d5fed`（PR #271 合并后）。
+- 独立分支：`fix/ai-context-kind-enum-mainline-20261117`。
+- 本记录生成时工作分支 head：`4bf588918a8adbae6a48d520b7844cffd09af62d`；相对 master：ahead 4 / behind 0。
+- 文件所有权（仅本切片）：`lib/models/ai_context_ref.dart`、`lib/screens/markdown_doc_screen.dart`、`lib/screens/ziwei_chart_screen.dart`、`test/ai_context_prompt_builder_test.dart`，以及本台账。
+- 本地运行环境没有 Flutter/Dart 工具链；本切片尚未创建 PR，故 format/analyze/targeted test/full regression/Android arm64 的新 head 结果均为 `UNKNOWN / NOT RUN`。不得继承旧分支或其他 SHA 的 CI 结果；必须以本切片最终 PR head 的完整 CI 判定。
+- 当前状态：`IN_PROGRESS`。PR 创建后需核对 Flutter regression 与 Android arm64；合并后需在最终 master SHA 复核 Flutter tests、Android arm64 和 Flutter Quality Gate。
+
+#### PR #271 集成、旧 PR 清理与主线 CI 刷新
+
+- PR [#271](https://github.com/just2512/nihaixia-app/pull/271) 已基于 master `36fa1f758c833cde8972791b236f0d7b259b440c` 以普通 merge 方式合并；merge SHA：`590e17054faea259bd3c23e360daafd0500d5fed`。其变更仅为本台账 §57.26，无生产代码、测试或数据变更。
+- PR #271 最终 head `35031ba526feac8b49cc00c445d3442f008bc813` 的 run `44109909344`：Flutter regression tests `SUCCESS`，Android arm64 CI verification APK + unit tests `SUCCESS`；Branch validation 按 workflow 条件 `SKIPPED`，不计 PASS，也不作为失败。
+- 旧 PR [#269](https://github.com/just2512/nihaixia-app/pull/269) 已关闭（未合并），由 #271 替代；旧分支、提交及其 head run `44103431651`（Flutter regression SUCCESS）保留作历史证据，不删除、不把旧 SHA 的结果迁移为当前主线验收。
+- master `36fa1f758c833cde8972791b236f0d7b259b440c` 的 Flutter regression run `44109707310`：Flutter regression 与 Android arm64 CI 均 `SUCCESS`；Branch validation `SKIPPED`。同 SHA Flutter Quality Gate run `44109707100` 在本次台账更新时仍为 `IN_PROGRESS`，不能记录为 PASS。
+- 当前最新 master 已推进至 `590e17054faea259bd3c23e360daafd0500d5fed`。合并后 Flutter tests run `44111834811` 与 Flutter Quality Gate run `44111834831` 均已启动、当前仍 `IN_PROGRESS`；必须以这两个 run 的终态更新最新主线状态，不得用前一 SHA 的通过结果替代。
+- Phase 1/2 Find N2 实机交互、本地 E4B 多轮问答及历史恢复 TRACE 继续为 `UNKNOWN / LOCAL ONLY`；CAI-READ-01 与 CAI-RESULT-01 保持 `PARTIAL`。在设备验收证据补齐前不启动 Phase 3 页面扩展。
+
