@@ -574,16 +574,25 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     // The dialog normally completes its reverse transition within 200 ms.
     // Bound the frame wait so an unrelated route left above this page cannot
     // hold this action open indefinitely.
+    var stablePageFrames = 0;
     var pagePositionReady = false;
-    for (var frame = 0; frame < 30 && mounted; frame++) {
+    for (var frame = 0; frame < 60 && mounted; frame++) {
       final routeIsCurrent =
           sourcePageRoute == null || sourcePageRoute.isCurrent;
       final hasScrollPosition = _pageScrollController.hasClients;
       final hasScrollMetrics = hasScrollPosition &&
           _pageScrollController.position.hasContentDimensions;
       if (routeIsCurrent && hasScrollMetrics) {
-        pagePositionReady = true;
-        break;
+        // The route becomes current as soon as pop starts, not when the
+        // modal reverse transition has finished. Keep the page stable for
+        // several frames so the sheet cannot overwrite the restored offset.
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
       }
       await WidgetsBinding.instance.endOfFrame;
     }
