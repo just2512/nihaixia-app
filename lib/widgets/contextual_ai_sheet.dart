@@ -31,17 +31,22 @@ Future<void> showContextualAiSheet({
       );
 
   final windowSize = MediaQuery.sizeOf(context);
-  if (windowSize.width >= 760) {
+  final renderObject = context.findRenderObject();
+  final anchorPoint = renderObject is RenderBox && renderObject.hasSize
+      ? renderObject.localToGlobal(renderObject.size.center(Offset.zero))
+      : null;
+  if (windowSize.width >= 840) {
     // Wide windows retain the reading/result page as the main surface and
     // present the assistant as a right-side panel. Dialog's anchor follows
     // Flutter's fold-aware sub-screen selection for the invoking context.
-    final panelWidth = (windowSize.width * 0.46)
-        .clamp(400.0, 560.0)
+    final panelWidth = (windowSize.width * 0.4)
+        .clamp(340.0, 520.0)
         .toDouble();
     final panelHeight = (windowSize.height - 24).clamp(320.0, 2000.0).toDouble();
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
+      anchorPoint: anchorPoint,
       builder: (_) => Dialog(
         alignment: Alignment.centerRight,
         insetPadding: const EdgeInsets.all(12),
