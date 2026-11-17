@@ -359,8 +359,6 @@ class _ToolCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: AppType.title,
                         fontWeight: FontWeight.w600,
@@ -370,8 +368,6 @@ class _ToolCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: AppType.caption,
                         height: 1.35,
