@@ -56,6 +56,7 @@ void main() {
     required Size size,
     required ValueChanged<List<Bookmark>> onDataLoaded,
     double textScale = 1,
+    Brightness brightness = Brightness.light,
     List<DisplayFeature> displayFeatures = const [],
   }) async {
     tester.view.devicePixelRatio = 1;
@@ -65,8 +66,8 @@ void main() {
       MaterialApp(
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: AppColors.colorSchemeFor(Brightness.light),
-          extensions: [AppColors.light],
+          colorScheme: AppColors.colorSchemeFor(brightness),
+          extensions: [brightness == Brightness.dark ? AppColors.dark : AppColors.light],
         ),
         home: MediaQuery(
           data: MediaQueryData(
@@ -204,7 +205,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('内屏零宽折痕与200%字号下收藏主从预览保持可读',
+  testWidgets('内屏零宽折痕、浅深主题与200%字号下收藏主从预览保持可读',
       (tester) async {
     addTearDown(tester.view.resetDisplayFeatures);
     addTearDown(tester.view.resetPhysicalSize);
@@ -214,35 +215,39 @@ void main() {
       expect((await DatabaseHelper.instance.getAllBookmarks()).length, 2);
     });
 
-    final initialLoad = Completer<List<Bookmark>>();
-    await pumpBookmarks(
-      tester,
-      size: const Size(775, 900),
-      textScale: 2,
-      displayFeatures: [
-        DisplayFeature(
-          bounds: const Rect.fromLTWH(387.5, 0, 0, 900),
-          type: DisplayFeatureType.fold,
-          state: DisplayFeatureState.postureFlat,
-        ),
-      ],
-      onDataLoaded: (rows) {
-        if (!initialLoad.isCompleted) initialLoad.complete(rows);
-      },
-    );
-    final rows = await waitForLoad(tester, initialLoad);
-    expect(rows.length, 2);
-    expect(find.text('桂枝汤'), findsOneWidget);
-    expect(tester.takeException(), isNull,
-        reason: '展开主从列表在选择收藏之前不应横向溢出');
+    for (final brightness in Brightness.values) {
+      final initialLoad = Completer<List<Bookmark>>();
+      await pumpBookmarks(
+        tester,
+        size: const Size(775, 900),
+        textScale: 2,
+        brightness: brightness,
+        displayFeatures: [
+          DisplayFeature(
+            bounds: const Rect.fromLTWH(387.5, 0, 0, 900),
+            type: DisplayFeatureType.fold,
+            state: DisplayFeatureState.postureFlat,
+          ),
+        ],
+        onDataLoaded: (rows) {
+          if (!initialLoad.isCompleted) initialLoad.complete(rows);
+        },
+      );
+      final rows = await waitForLoad(tester, initialLoad);
+      expect(rows.length, 2);
+      expect(find.text('桂枝汤'), findsOneWidget);
+      expect(tester.takeException(), isNull,
+          reason: '${brightness.name} 主题下展开主从列表不应横向溢出');
 
-    await tester.tap(find.text('桂枝汤'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('桂枝汤'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('来源：伤寒论'), findsOneWidget);
-    expect(find.text('打开完整详情'), findsOneWidget);
-    expect(tester.takeException(), isNull,
-        reason: '展开主从详情在200%字号下不应横向溢出');
+      expect(find.text('来源：伤寒论'), findsOneWidget);
+      expect(find.text('打开完整详情'), findsOneWidget);
+      expect(tester.takeException(), isNull,
+          reason: '${brightness.name} 主题下展开主从详情在200%字号下不应横向溢出');
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
   });
 
 }

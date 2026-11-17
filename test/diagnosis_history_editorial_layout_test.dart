@@ -57,44 +57,48 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.runAsync(seedHistory);
 
-    for (final width in [402.0, 775.0]) {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = Size(width, 900);
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: AppColors.colorSchemeFor(Brightness.light),
-            extensions: [AppColors.light],
-          ),
-          home: MediaQuery(
-            data: MediaQueryData(
-              size: Size(width, 900),
-              textScaler: const TextScaler.linear(2),
+    for (final brightness in Brightness.values) {
+      for (final width in [402.0, 775.0]) {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, 900);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: AppColors.colorSchemeFor(brightness),
+              extensions: [
+                brightness == Brightness.dark ? AppColors.dark : AppColors.light,
+              ],
             ),
-            child: const DiagnosisHistoryScreen(),
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: Size(width, 900),
+                textScaler: const TextScaler.linear(2),
+              ),
+              child: const DiagnosisHistoryScreen(),
+            ),
           ),
-        ),
-      );
-      await tester.pump();
-      await waitForHistory(tester);
+        );
+        await tester.pump();
+        await waitForHistory(tester);
 
-      expect(find.textContaining('桂枝汤：桂枝、芍药、生姜'), findsOneWidget);
-      expect(find.textContaining('大承气汤：大黄、厚朴'), findsOneWidget);
-      expect(find.byTooltip('清空历史'), findsOneWidget);
+        expect(find.textContaining('桂枝汤：桂枝、芍药、生姜'), findsOneWidget);
+        expect(find.textContaining('大承气汤：大黄、厚朴'), findsOneWidget);
+        expect(find.byTooltip('清空历史'), findsOneWidget);
 
-      final firstTile = tester.widget<ListTile>(
-        find.ancestor(
-          of: find.text('太阳 · 太阳中风'),
-          matching: find.byType(ListTile),
-        ).first,
-      );
-      expect(firstTile.trailing, isNull,
-          reason: '日期应进入次级信息行，不应作为 trailing 挤压正文');
-      expect(tester.takeException(), isNull,
-          reason: '诊断历史在${width.toInt()}dp与200%字号下不应溢出');
+        final firstTile = tester.widget<ListTile>(
+          find.ancestor(
+            of: find.text('太阳 · 太阳中风'),
+            matching: find.byType(ListTile),
+          ).first,
+        );
+        expect(firstTile.trailing, isNull,
+            reason: '日期应进入次级信息行，不应作为 trailing 挤压正文');
+        expect(tester.takeException(), isNull,
+            reason: '${brightness.name} / ${width.toInt()}dp / 200% 诊断历史不应溢出');
 
-      await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
     }
   });
 }

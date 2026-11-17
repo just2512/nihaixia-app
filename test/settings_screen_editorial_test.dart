@@ -81,4 +81,48 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+
+  testWidgets('设置页在775dp深色主题与200%字号下保持可读', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(775, 900);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.runAsync(() async {
+      await SettingsRepository.instance.load();
+      await SettingsRepository.instance.setThemeMode(ThemeMode.dark);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: AppColors.colorSchemeFor(Brightness.dark),
+          extensions: [AppColors.dark],
+        ),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(775, 900),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: const SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 1));
+    });
+    for (var frame = 0; frame < 8; frame++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
+    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('字体大小'), findsOneWidget);
+    expect(find.text('深色'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
