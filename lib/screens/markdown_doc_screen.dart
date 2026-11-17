@@ -198,7 +198,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     final sourcePath = widget.contextualAskSourceId!;
     final version = sha256.convert(utf8.encode(fullPassage)).toString();
     final ref = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: moduleId,
       anchorId: anchorId,
       anchorVersion: version,
