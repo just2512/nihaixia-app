@@ -274,12 +274,19 @@ List<WuxingBadge> buildWuxingBadges(YunQiChartData data) {
 
 // ==================== 通用绘制工具 ====================
 
+/// 比较常用字号区间的缩放结果，兼容非线性 TextScaler。
+bool _textScalersDiffer(TextScaler a, TextScaler b) {
+  const sizes = <double>[8, 9, 10, 11, 12, 14, 16, 18];
+  return sizes.any((size) => a.scale(size) != b.scale(size));
+}
+
 /// 构造一个已指定字号/颜色的 [TextPainter]（**必带 ltr**，避免断言崩溃）。
 TextPainter _tp(
   String text,
   double fontSize,
   Color? color, {
   FontWeight weight = FontWeight.normal,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
   return TextPainter(
     text: TextSpan(
@@ -292,6 +299,7 @@ TextPainter _tp(
       ),
     ),
     textDirection: TextDirection.ltr,
+    textScaler: textScaler,
     maxLines: 1,
     ellipsis: '…',
   );
@@ -306,11 +314,18 @@ double _fitFont(
   double base, {
   FontWeight weight = FontWeight.normal,
   double min = 7.0,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
   double fs = base;
   while (fs > min) {
     // 量宽度与颜色无关，故不传 color（避免为量测引入任何字面颜色）。
-    final TextPainter tp = _tp(text, fs, null, weight: weight)..layout();
+    final TextPainter tp = _tp(
+      text,
+      fs,
+      null,
+      weight: weight,
+      textScaler: textScaler,
+    )..layout();
     final double w = tp.width;
     tp.dispose();
     if (w <= maxWidth) return fs;
@@ -327,8 +342,15 @@ void _drawCentered(
   double fontSize,
   Color color, {
   FontWeight weight = FontWeight.normal,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
-  final TextPainter tp = _tp(text, fontSize, color, weight: weight)..layout();
+  final TextPainter tp = _tp(
+    text,
+    fontSize,
+    color,
+    weight: weight,
+    textScaler: textScaler,
+  )..layout();
   tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
   tp.dispose();
 }
@@ -349,8 +371,15 @@ void _drawTangential(
   double fontSize,
   Color color, {
   FontWeight weight = FontWeight.normal,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
-  final TextPainter tp = _tp(text, fontSize, color, weight: weight)..layout();
+  final TextPainter tp = _tp(
+    text,
+    fontSize,
+    color,
+    weight: weight,
+    textScaler: textScaler,
+  )..layout();
   canvas.save();
   canvas.translate(
     c.dx + radius * math.cos(angle),
@@ -428,8 +457,9 @@ class WuxingChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final TextScaler textScaler = MediaQuery.textScalerOf(context);
     return CustomPaint(
-      painter: _WuxingPainter(data: data, colors: cs),
+      painter: _WuxingPainter(data: data, colors: cs, textScaler: textScaler),
       child: const SizedBox.expand(),
     );
   }
@@ -439,8 +469,13 @@ class WuxingChart extends StatelessWidget {
 class _WuxingPainter extends CustomPainter {
   final YunQiChartData data;
   final ColorScheme colors;
+  final TextScaler textScaler;
 
-  const _WuxingPainter({required this.data, required this.colors});
+  const _WuxingPainter({
+    required this.data,
+    required this.colors,
+    required this.textScaler,
+  });
 
   /// 五宫相对圆心的偏移（宫序同 [wuxingPalaces]：木火土金水）。
   static const List<Offset> _offsets = <Offset>[
@@ -506,6 +541,7 @@ class _WuxingPainter extends CustomPainter {
         r * 0.66,
         chartLabelColorOn(wxColor),
         weight: FontWeight.bold,
+        textScaler: textScaler,
       );
 
       // 该宫徽章：在五行字下方依次下叠，字号逐枚按「宫圆内接宽度」收敛。
@@ -517,11 +553,22 @@ class _WuxingPainter extends CustomPainter {
       ];
       double y = pc.dy + r * 0.02;
       for (final WuxingBadge g in mine) {
-        final double bf = _fitFont(g.text, badgeMaxW - 10, 8.5, min: 7.2);
+        final double bf = _fitFont(
+          g.text,
+          badgeMaxW - 10,
+          8.5,
+          min: 7.2,
+          textScaler: textScaler,
+        );
         final double h = bf + 4.2;
         final TextPainter tp =
-            _tp(g.text, bf, chartLabelColorOn(wxColor), weight: FontWeight.w600)
-              ..layout();
+            _tp(
+              g.text,
+              bf,
+              chartLabelColorOn(wxColor),
+              weight: FontWeight.w600,
+              textScaler: textScaler,
+            )..layout();
         final double w = tp.width + 10;
         final Rect rect = Rect.fromLTWH(pc.dx - w / 2, y, w, h);
         final RRect rr = RRect.fromRectAndRadius(rect, const Radius.circular(4));
@@ -546,7 +593,8 @@ class _WuxingPainter extends CustomPainter {
       old.data.year != data.year ||
       old.data.qiStep != data.qiStep ||
       old.data.yunStep != data.yunStep ||
-      old.data.selectedDate != data.selectedDate;
+      old.data.selectedDate != data.selectedDate ||
+      _textScalersDiffer(old.textScaler, textScaler);
 }
 
 // ==================== 图 2 · 五运图 ====================
@@ -564,8 +612,9 @@ class WuyunChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final TextScaler textScaler = MediaQuery.textScalerOf(context);
     return CustomPaint(
-      painter: _WuyunPainter(data: data, colors: cs),
+      painter: _WuyunPainter(data: data, colors: cs, textScaler: textScaler),
       child: const SizedBox.expand(),
     );
   }
@@ -575,8 +624,13 @@ class WuyunChart extends StatelessWidget {
 class _WuyunPainter extends CustomPainter {
   final YunQiChartData data;
   final ColorScheme colors;
+  final TextScaler textScaler;
 
-  const _WuyunPainter({required this.data, required this.colors});
+  const _WuyunPainter({
+    required this.data,
+    required this.colors,
+    required this.textScaler,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -612,7 +666,12 @@ class _WuyunPainter extends CustomPainter {
       canvas.drawPath(_pieSector(c, rDisc, a0, sweep), strokeBase);
       final double discTextR = rDisc * 0.56;
       final double discMaxW = 2 * discTextR * math.sin(sweep / 2) * 0.92;
-      final double discFont = _fitFont(yunStepNames[i], discMaxW, 11.0);
+      final double discFont = _fitFont(
+        yunStepNames[i],
+        discMaxW,
+        11.0,
+        textScaler: textScaler,
+      );
       _drawCentered(
         canvas,
         yunStepNames[i],
@@ -623,6 +682,7 @@ class _WuyunPainter extends CustomPainter {
         discFont,
         hi ? colors.onPrimaryContainer : colors.onSurface,
         weight: hi ? FontWeight.bold : FontWeight.w500,
+        textScaler: textScaler,
       );
 
       // —— 主运 / 客运两个半扇区 ——
@@ -641,7 +701,12 @@ class _WuyunPainter extends CustomPainter {
         final double midR = (rIn + rOut) / 2;
         final double mid = s0 + sweep / 4;
         final double maxW = 2 * midR * math.sin(sweep / 4) * 0.92;
-        final double font = _fitFont(label, maxW, 11.0);
+        final double font = _fitFont(
+          label,
+          maxW,
+          11.0,
+          textScaler: textScaler,
+        );
         _drawCentered(
           canvas,
           label,
@@ -649,6 +714,7 @@ class _WuyunPainter extends CustomPainter {
           font,
           hi ? colors.onPrimaryContainer : chartLabelColorOn(wx),
           weight: hi ? FontWeight.bold : FontWeight.w600,
+          textScaler: textScaler,
         );
       }
 
@@ -672,13 +738,21 @@ class _WuyunPainter extends CustomPainter {
       canvas.drawLine(p0, p1, strokeBase);
       final Offset lp =
           c + Offset((rOut + 15) * math.cos(a), (rOut + 15) * math.sin(a));
-      _drawCentered(canvas, _mmdd(data.yunBounds[i]), lp, 9.0, colors.onSurfaceVariant);
+      _drawCentered(
+        canvas,
+        _mmdd(data.yunBounds[i]),
+        lp,
+        9.0,
+        colors.onSurfaceVariant,
+        textScaler: textScaler,
+      );
       _drawCentered(
         canvas,
         YunQiEngine.yunStepBoundTerms[i],
         lp + const Offset(0, 11),
         9.0,
         colors.onSurfaceVariant,
+        textScaler: textScaler,
       );
     }
 
@@ -696,7 +770,8 @@ class _WuyunPainter extends CustomPainter {
       old.colors != colors ||
       old.data.year != data.year ||
       old.data.yunStep != data.yunStep ||
-      old.data.selectedDate != data.selectedDate;
+      old.data.selectedDate != data.selectedDate ||
+      _textScalersDiffer(old.textScaler, textScaler);
 }
 
 // ==================== 图 3 · 六气图 ====================
@@ -714,8 +789,9 @@ class LiuqiChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme cs = Theme.of(context).colorScheme;
+    final TextScaler textScaler = MediaQuery.textScalerOf(context);
     return CustomPaint(
-      painter: _LiuqiPainter(data: data, colors: cs),
+      painter: _LiuqiPainter(data: data, colors: cs, textScaler: textScaler),
       child: const SizedBox.expand(),
     );
   }
@@ -725,8 +801,13 @@ class LiuqiChart extends StatelessWidget {
 class _LiuqiPainter extends CustomPainter {
   final YunQiChartData data;
   final ColorScheme colors;
+  final TextScaler textScaler;
 
-  const _LiuqiPainter({required this.data, required this.colors});
+  const _LiuqiPainter({
+    required this.data,
+    required this.colors,
+    required this.textScaler,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -765,8 +846,12 @@ class _LiuqiPainter extends CustomPainter {
       canvas.drawPath(_annulusSector(c, outerIn, rOut, a0, sweep), strokeBase);
       final double keR = (outerIn + rOut) / 2;
       final String keLabel = '客 $ke';
-      final double keFont =
-          _fitFont(keLabel, 2 * keR * math.sin(sweep / 2) * 0.92, 10.5);
+      final double keFont = _fitFont(
+        keLabel,
+        2 * keR * math.sin(sweep / 2) * 0.92,
+        10.5,
+        textScaler: textScaler,
+      );
       _drawTangential(
         canvas,
         keLabel,
@@ -776,6 +861,7 @@ class _LiuqiPainter extends CustomPainter {
         keFont,
         hi ? colors.onPrimaryContainer : chartLabelColorOn(keWx),
         weight: hi ? FontWeight.bold : FontWeight.w600,
+        textScaler: textScaler,
       );
 
       // —— 内环：主气（两行：气名 + 步名小字）——
@@ -790,8 +876,12 @@ class _LiuqiPainter extends CustomPainter {
       final double line1R = innerIn + (innerOut - innerIn) * 0.68;
       final double line2R = innerIn + (innerOut - innerIn) * 0.28;
       final String zhuLabel = '主 ${zq.qi}';
-      final double zhuFont =
-          _fitFont(zhuLabel, 2 * line1R * math.sin(sweep / 2) * 0.92, 10.0);
+      final double zhuFont = _fitFont(
+        zhuLabel,
+        2 * line1R * math.sin(sweep / 2) * 0.92,
+        10.0,
+        textScaler: textScaler,
+      );
       _drawTangential(
         canvas,
         zhuLabel,
@@ -801,6 +891,7 @@ class _LiuqiPainter extends CustomPainter {
         zhuFont,
         hi ? colors.onPrimaryContainer : chartLabelColorOn(zhuWx),
         weight: hi ? FontWeight.bold : FontWeight.w600,
+        textScaler: textScaler,
       );
       _drawTangential(
         canvas,
@@ -810,6 +901,7 @@ class _LiuqiPainter extends CustomPainter {
         mid,
         8.5,
         hi ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+        textScaler: textScaler,
       );
 
       if (hi) {
@@ -833,6 +925,7 @@ class _LiuqiPainter extends CustomPainter {
         math.min(hole * 0.62, 18.0),
         colors.onSurface,
         weight: FontWeight.bold,
+        textScaler: textScaler,
       );
     }
 
@@ -846,13 +939,21 @@ class _LiuqiPainter extends CustomPainter {
       );
       final Offset lp =
           c + Offset((rOut + 15) * math.cos(a), (rOut + 15) * math.sin(a));
-      _drawCentered(canvas, _mmdd(data.qiBounds[i]), lp, 9.0, colors.onSurfaceVariant);
+      _drawCentered(
+        canvas,
+        _mmdd(data.qiBounds[i]),
+        lp,
+        9.0,
+        colors.onSurfaceVariant,
+        textScaler: textScaler,
+      );
       _drawCentered(
         canvas,
         zhuQiSteps[i].from,
         lp + const Offset(0, 11),
         9.0,
         colors.onSurfaceVariant,
+        textScaler: textScaler,
       );
     }
 
@@ -870,5 +971,6 @@ class _LiuqiPainter extends CustomPainter {
       old.colors != colors ||
       old.data.year != data.year ||
       old.data.qiStep != data.qiStep ||
-      old.data.selectedDate != data.selectedDate;
+      old.data.selectedDate != data.selectedDate ||
+      _textScalersDiffer(old.textScaler, textScaler);
 }
