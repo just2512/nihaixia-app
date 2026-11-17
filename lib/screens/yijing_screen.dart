@@ -416,10 +416,14 @@ class _YiJingScreenState extends State<YiJingScreen> {
 
   // ---------- Tab 2：六十四卦总览 ----------
   Widget _buildBrowseTab(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final compactAtLargeText =
+        MediaQuery.sizeOf(context).width < 600 && textScale >= 1.5;
+    final crossAxisCount = compactAtLargeText ? 2 : 4;
     return GridView.builder(
       padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
         childAspectRatio: 0.92,

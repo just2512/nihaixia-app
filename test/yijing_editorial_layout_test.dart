@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:nihaisha_app/data/yijing_data.dart';
 import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
@@ -121,4 +122,46 @@ void main() {
     expect(find.text('铜钱摇卦（六爻）'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('六十四卦网格在200%字号的窄屏自动增加单元格高度',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final brightness in Brightness.values) {
+      for (final width in [402.0, 775.0]) {
+        await pumpYiJing(
+          tester,
+          width: width,
+          brightness: brightness,
+        );
+
+        await tester.tap(find.text('六十四卦').first);
+        await tester.pumpAndSettle();
+
+        final grid = tester.widget<GridView>(find.byType(GridView));
+        final delegate =
+            grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(
+          delegate.crossAxisCount,
+          width < 600 ? 2 : 4,
+          reason: '200%字号下窄屏应使用两列，其余窗口维持四列',
+        );
+
+        final lastHexagram = kHexagrams.last;
+        final lastTitle = find.text(lastHexagram.name);
+        await tester.scrollUntilVisible(
+          lastTitle,
+          320,
+          scrollable: find.byType(Scrollable).last,
+          maxScrolls: 24,
+        );
+        expect(lastTitle, findsOneWidget);
+        expect(tester.takeException(), isNull,
+            reason: '${width.toInt()}dp / ${brightness.name} / 200% 的64卦网格不得溢出');
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    }
+  });
+
 }
