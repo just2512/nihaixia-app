@@ -6091,13 +6091,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       return created;
     } catch (error) {
+      // Failure to inspect old history must not bind a different context. It is
+      // safe to start a fresh conversation with the requested immutable ref.
+      final created = await _createNewConversation();
       if (mounted) {
         setState(() {
           _contextualInitializationPending = false;
-          _error = '无法检查当前情境的历史会话：$error。为避免错接其他上下文，本次未复用旧会话。';
+          _error = '无法检查当前情境的历史会话：$error。已新建独立会话，不会接入其他上下文。';
         });
       }
-      return null;
+      return created;
     }
   }
 
