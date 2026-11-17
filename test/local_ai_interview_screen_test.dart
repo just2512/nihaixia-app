@@ -3216,31 +3216,33 @@ void main() {
 
   testWidgets('情境助手仅复用完整锚点一致的历史会话，并将追问继续绑定同一锚点', (tester) async {
     const contextRef = {
-      'kind': 'classic',
-      'moduleId': 'shanghan',
-      'anchorId': 'shanghan:clause:002',
-      'anchorVersion': 'sha256:passage-v1',
-      'sourceId': 'shanghan:assets/shanghan/clause_001.md',
+      'kind': 'toolResult',
+      'moduleId': 'ziwei',
+      'anchorId': 'ziwei:result:snapshot-a',
+      'anchorVersion': 'snapshot-a',
+      'snapshotId': 'snapshot-a',
+      'ruleVersion': 'ziwei_core@0.13.0',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
     };
     final metadata = AssistantMessageMetadata(
-      mode: 'learning',
-      selectedMode: 'learning',
+      mode: 'metaphysics',
+      selectedMode: 'metaphysics',
       contextRef: contextRef,
     ).encode();
     final conversationId = await _store.createAssistantConversation(
-      title: '伤寒论条文2的情境会话',
+      title: '紫微排盘快照A的情境会话',
       mode: 'unified',
     );
     await _store.saveAssistantMessage(
       conversationId: conversationId,
       role: 'user',
-      content: '请解释条文中的脉缓。',
+      content: '请解释当前排盘结果中的命宫。',
       metadata: metadata,
     );
     await _store.saveAssistantMessage(
       conversationId: conversationId,
       role: 'assistant',
-      content: '历史情境回答：脉缓。',
+      content: '历史情境回答：当前快照的命宫信息。',
       metadata: metadata,
     );
     final service = _TextSendService();
@@ -3248,7 +3250,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: LocalAiInterviewScreen(
         redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
-        initialPrompt: '继续解释脉缓与恶风的关系。',
+        initialPrompt: '继续解释当前快照中的命宫与身宫关系。',
         contextRef: contextRef,
         contextualExplanationOnly: true,
         conversationStore: _store,
@@ -3266,11 +3268,11 @@ void main() {
     expect(_store.createConversationCalls, 1,
         reason: '完整 contextRef 一致时应复用历史会话，不新建会话');
     expect(service.restoredTranscripts, hasLength(1));
-    expect(service.restoredTranscripts.single, contains('请解释条文中的脉缓。'));
-    expect(service.restoredTranscripts.single, contains('历史情境回答：脉缓。'));
+    expect(service.restoredTranscripts.single, contains('请解释当前排盘结果中的命宫。'));
+    expect(service.restoredTranscripts.single, contains('历史情境回答：当前快照的命宫信息。'));
     expect(tester.widget<TextField>(find.byType(TextField).first).controller?.text, '');
 
-    const followUp = '请进一步说明脉缓与恶风之间的联系。';
+    const followUp = '请基于当前快照重新排盘并核对命宫。';
     await tester.enterText(find.byType(TextField).first, followUp);
     await tester.pump();
     await tester.tap(find.byTooltip('发送'));
@@ -3347,7 +3349,7 @@ void main() {
         initialPrompt: '解释刚刚重新计算的新排盘结果。',
         contextRef: newContextRef,
         contextualExplanationOnly: true,
-        initialMode: null,
+        initialMode: AssistantMode.metaphysics,
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
@@ -3367,7 +3369,7 @@ void main() {
       tester.widget<TextField>(find.byType(TextField).first).controller?.text,
       '解释刚刚重新计算的新排盘结果。',
     );
-    expect(find.text('旧快照专属历史回答，不应进入新会话。'), findsNothing);
+    expect(find.byWidgetPredicate((widget) => widget is SelectableText && widget.data == '旧快照专属历史回答，不应进入新会话。'), findsNothing);
   });
 
   testWidgets('统一助手恢复结构化诊断结果后保留收藏、分享和复制处方操作', (tester) async {
