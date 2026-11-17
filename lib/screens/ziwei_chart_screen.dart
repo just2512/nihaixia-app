@@ -1223,6 +1223,19 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final flowLabel = flowStarsHere.isEmpty
         ? null
         : '流 ${flowStarsHere.join(' ')}';
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+    final roleStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: cs.onSurface,
+    );
+    final palaceBadges = <Widget>[
+      if (isFlowMing) _badge('流年命', cs.primary),
+      if (isFlowMonthMing) _badge('流月命', cs.tertiary),
+      if (isFlowDayMing) _badge('流日命', cs.secondary),
+      if (isLife) _badge('命', cs.error),
+      if (isBody) _badge('身', cs.tertiary),
+    ];
     return GestureDetector(
       onTap: () => _showPalaceDetail(p, flow),
       child: Container(
@@ -1261,26 +1274,30 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 宫名 + 命/身/流命标记
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    p.roleLabel,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            if (largeText) ...[
+              Text(
+                p.roleLabel,
+                style: roleStyle,
+              ),
+              if (palaceBadges.isNotEmpty)
+                Wrap(
+                  spacing: 2,
+                  runSpacing: 2,
+                  children: palaceBadges,
                 ),
-                if (isFlowMing) _badge('流年命', cs.primary),
-                if (isFlowMonthMing) _badge('流月命', cs.tertiary),
-                if (isFlowDayMing) _badge('流日命', cs.secondary),
-                if (isLife) _badge('命', cs.error),
-                if (isBody) _badge('身', cs.tertiary),
-              ],
-            ),
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      p.roleLabel,
+                      style: roleStyle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ...palaceBadges,
+                ],
+              ),
             Text(
               p.ganzhiLabel,
               style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
