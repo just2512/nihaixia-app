@@ -108,21 +108,31 @@ void main() {
         expect(snapshotId, isNotNull);
         expect(snapshotId, hasLength(64));
 
-        Navigator.of(tester.element(assistant)).pop();
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump();
+        Navigator.of(
+          tester.element(assistant),
+          rootNavigator: true,
+        ).pop();
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(ZiweiChartScreen),
+          findsOneWidget,
+          reason: '关闭情境助手必须返回原排盘页，不能退出排盘路由',
+        );
         return snapshotId!;
       }
 
       final originalSnapshot = await readAskAiSnapshot();
 
-      final longitudeField = find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.labelText?.startsWith('出生地经度') == true,
+      final longitudeField = find.descendant(
+        of: find.byType(ZiweiChartScreen),
+        matching: find.byType(TextField),
       );
       expect(longitudeField, findsOneWidget);
+      expect(
+        tester.widget<TextField>(longitudeField).decoration?.labelText,
+        startsWith('出生地经度'),
+      );
+      expect(tester.widget<TextField>(longitudeField).enabled, isTrue);
       await tester.ensureVisible(longitudeField);
       await tester.enterText(longitudeField, '118.00');
       await tester.pump();
