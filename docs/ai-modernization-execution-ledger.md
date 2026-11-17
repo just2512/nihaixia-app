@@ -2520,7 +2520,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 |---|---|---|---|---|
 | CAI-DOC-01 | 固化情境问 AI 功能协议，并将本任务登记入台账 | PASS | PR #221；merge `5c50605724e9a27ad03df700f5e4aa5aa0766d92` | `docs/contextual-ask-ai-spec.md` 已进入 master；PR run `43887125112` Flutter regression 与 Android arm64 SUCCESS，Quality Gate run `43887125122` SUCCESS |
 | CAI-READ-01 | 《伤寒论》单条文详情页划词问 AI 样板接入 | PARTIAL（云端代码与 CI 已通过；Find N2 真机和 E4B 多轮 TRACE 为 LOCAL ONLY / UNKNOWN） | PR #228；merge `c34986daecdead6d73e017a4aa15c883669306d3`；head `7f1274095415fee2832cc199bb32826fc45b82b7` | PR run `43996471384`、合并后 master run `43998754518`、最终 master run `44000016916` 的 Flutter regression / Android arm64 均 SUCCESS；实机证据仍缺 |
-| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | PARTIAL（PR 已合并；PR 级及合并后 Flutter / Android arm64 CI 已通过；Find N2 / E4B 真机 TRACE UNKNOWN） | PR #237；merge `8b928ffdbd2e9e9b7402c99ee8f3a63e1566059b`；head `0c708919cd2d06dc312846a00dabe609b1fcb4fc`；base `c34986daecdead6d73e017a4aa15c883669306d3` | PR run `43998948700` Flutter regression 与 Android arm64 SUCCESS；最终 master run `44000016916` Flutter regression / Android arm64 SUCCESS；Quality Gate run `44000016895` 在本次台账更新时仍 IN_PROGRESS；实机 TRACE 独立 |
+| CAI-RESULT-01 | 一个真实排盘结果页的整体结果问 AI 样板接入 | PARTIAL（PR 已合并；PR 级及合并后 Flutter / Android arm64 CI 已通过；Find N2 / E4B 真机 TRACE UNKNOWN） | PR #237；merge `8b928ffdbd2e9e9b7402c99ee8f3a63e1566059b`；head `0c708919cd2d06dc312846a00dabe609b1fcb4fc`；base `c34986daecdead6d73e017a4aa15c883669306d3` | PR run `43998948700` Flutter regression 与 Android arm64 SUCCESS；最终 master run `44000016916` Flutter regression / Android arm64 SUCCESS；Quality Gate run `44000016895` 已终态 SUCCESS（Analyze and test：静态分析、助手历史恢复、Dart 全量测试、Android Native unit tests、Find N2 arm64 Debug APK 均 SUCCESS）；实机 TRACE 仍为 UNKNOWN / LOCAL ONLY |
 
 ### 57.3 实施顺序与边界
 
@@ -2711,3 +2711,14 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 5. 本地 E4B：记录设备型号、Android 版本、App SHA、模型版本、backend、轮次及 trace_id；检查多轮回复、空响应、Native 状态和历史恢复。没有真实日志的项保持 UNKNOWN。
 
 后续只执行上述设备验收与任何被实测证据指出的最小修复；在这两个样板的设备验收没有完成前，不扩大至本草、方剂、医案或其他排盘页面。
+
+
+---
+
+### 57.23 2026-11-17 最终主线 Flutter Quality Gate 终态复核
+
+- 被验收代码主线 SHA：`8b928ffdbd2e9e9b7402c99ee8f3a63e1566059b`；最终 Flutter Quality Gate run `44000016895` 已由 GitHub Actions 回读为 `completed / success`。
+- `Analyze and test` job 的静态分析、助手历史恢复回归、Dart 全量测试、Android Native unit tests、Find N2 arm64 Debug APK 构建及收尾步骤全部 `completed / success`。
+- 同一主线 SHA 的 Flutter regression 与 Android arm64 CI run `44000016916` 均 `SUCCESS`。其中 Branch validation job 按 workflow 条件为 `SKIPPED`，不计为 PASS，也不视为失败。
+- 本次只修正此前“Quality Gate 仍 IN_PROGRESS”的过期台账状态；没有更改功能代码、测试内容或验收门槛。文档记录提交基于当时 master `a405d22fe183ad8c9a59256634c5e9551bb060bc`。
+- CI 通过不等于真实设备通过：Find N2 外屏/内屏/半折叠交互和本地 E4B 多轮 TRACE 仍为 `UNKNOWN / LOCAL ONLY`；在这些证据补齐前，CAI-READ-01 与 CAI-RESULT-01 维持 `PARTIAL`，不启动 Phase 3 页面扩展。
