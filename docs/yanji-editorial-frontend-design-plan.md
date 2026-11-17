@@ -171,7 +171,7 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前主线基线（2026-11-17）**：`f1fb3afdf80b241548d524ba9746ff108acd223f`。后续每一批仍须以执行时最新 `master` 为基线；本节 SHA 是本次文档更新时的状态快照，不是永久基线。旧 Phase 1 分支 `work/yanji-editorial-phase1` 已分叉，不得继续作为实施基线。
+**当前主线基线（2026-11-17）**：`3f8f4bee141b6c1614e479d66cac4749b50346f3`。后续每一批仍须以执行时最新 `master` 为基线；本节 SHA 是本次文档更新时的状态快照，不是永久基线。旧 Phase 1 分支 `work/yanji-editorial-phase1` 已分叉，不得继续作为实施基线。
 
 **已合并批次**
 
@@ -187,7 +187,7 @@
 
 **当前独立批次**
 
-- **五运六气三张图的 CustomPainter 字号适配**。PR #255 当前开放；分支 `work/yanji-yunqi-chart-text-scale-20261117`，HEAD `01c1ed57469bfb4cc764e85a806552b87a9cd54e`，基线 `f1fb3afdf80b241548d524ba9746ff108acd223f`，ahead 6 / behind 0。根因已由测试复现：系统 TextScaler 从 100% 改为 200% 时，五行图、五运图、六气图三个 painter 原先均未请求重绘。当前实现将系统 TextScaler 传到 painter、TextPainter 和字号宽度测量，并纳入 shouldRepaint；Push branch validation 和新增变更测试已 SUCCESS。PR 全量 Flutter regression 尚在执行；Android arm64 需按工作流依赖等待启动并取得终态。不得把重绘状态测试表述成完整视觉无重叠或真机可读性通过。
+- **五运六气三张图的 CustomPainter 字号适配**。PR #255 已合并，集成 SHA `3f8f4bee141b6c1614e479d66cac4749b50346f3`。分支 `work/yanji-yunqi-chart-text-scale-20261117` 的最终 HEAD 为 `01c1ed57469bfb4cc764e85a806552b87a9cd54e`，合并前基线为 `f1fb3afdf80b241548d524ba9746ff108acd223f`。根因由测试复现：系统 TextScaler 从 100% 改为 200% 时，五行图、五运图、六气图三个 painter 原先均未请求重绘。修复将系统 TextScaler 传到 painter、TextPainter 和字号宽度测量，并纳入 shouldRepaint。合并前 Push branch validation Run `44060140912`、PR Flutter 全量回归 Run `44060482065`、Android arm64 APK/ABI/native unit tests 均 SUCCESS。该批证明图表绘制层能接收系统缩放并触发重绘；尚未证明 200% 下各标签完全无重叠或边缘裁切，后续仍需独立做图表空间适配及真实设备阅读验收。
 - **其余工具详情页逐页审计**。继续对尚未有专项证据的工具详情页检查 Card 是否承担参数/结果分组、固定高度、固定字号、标签省略和内容滚动。按实际缺陷逐页 test-first；不得仅因存在 Card 或固定字号就批量删除/放大。
 - 收藏、设置、历史页面已完成；除新发现可复现缺陷外不重复改造。
 - `tools_screen.dart` 入口标题/摘要自然换行已由 PR #226 完成，不再列为待修复项。
@@ -257,7 +257,7 @@
 | Phase 3.6：紫微排盘布局 | `PASS`（已合并） | PR #240，集成 SHA `3dc7fb793848fcd92f11c21ba970e7b1837d8126`；专项测试覆盖 200% 字号和外屏/内屏/物理 hinge 布局。 |
 | Phase 3.7：五运六气图表文字对比度 | `PASS`（自动化） | PR #247，集成 SHA `baa74865650f8bba0835051ada224df6941cf374`；浅深主题 × 五行五色自动对比度达到正文 AA 门槛。 |
 | Phase 3.7：五运六气页面标题换行 | `PASS`（已合并） | PR #248，集成 SHA `f1fb3afdf80b241548d524ba9746ff108acd223f`；402dp 深色主题 200% 和半折叠窄面板的标题溢出有针对性回归测试。 |
-| 五运六气 CustomPainter 200% 字号适配 | `IN_PROGRESS` | PR #255，HEAD `01c1ed57469bfb4cc764e85a806552b87a9cd54e`，基线 `f1fb3afdf80b241548d524ba9746ff108acd223f`。Push branch validation（静态分析 + 新增变更测试）Run `44060140912` SUCCESS；PR 全量 Flutter Run `44060482065` 正在执行，Android arm64 尚待 Flutter 主测试通过后启动。 |
+| 五运六气 CustomPainter 200% 字号适配 | `PASS`（缩放传递与重绘自动化） | PR #255 已合并，集成 SHA `3f8f4bee141b6c1614e479d66cac4749b50346f3`；最终 HEAD `01c1ed57469bfb4cc764e85a806552b87a9cd54e`。Push branch validation Run `44060140912`、PR Flutter 全量 regression Run `44060482065`、Android arm64 APK/ABI/native unit tests 均 SUCCESS。当前证据证明 TextScaler 传入三张图并在 100%→200% 时触发重绘；标签空间是否完全无重叠/裁切仍需后续专测。 |
 | 全局自动对比度 | `PASS`（已有组合） | PR #211 对主题 Token 建立自动对比度断言；PR #247 补充五运六气实际语义底色组合。跨页面实际组合仍应随新组件/页面增量扩展。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 需要真实设备截图、系统版本、实际窗口 dp、字号档位和阅读记录；CI/Widget 不替代真机。 |
 
