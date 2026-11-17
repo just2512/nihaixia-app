@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_history_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -124,33 +125,42 @@ void main() {
       },
     ];
 
-    for (final width in [402.0, 775.0]) {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = Size(width, 900);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MediaQuery(
-            data: MediaQueryData(
-              size: Size(width, 900),
-              textScaler: const TextScaler.linear(2),
+    for (final brightness in Brightness.values) {
+      for (final width in [402.0, 775.0]) {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, 900);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: AppColors.colorSchemeFor(brightness),
+              extensions: [
+                brightness == Brightness.dark ? AppColors.dark : AppColors.light,
+              ],
             ),
-            child: AssistantHistoryScreen(
-              loadConversations: () async =>
-                  List<Map<String, Object?>>.from(rows),
-              deleteConversations: (_) async {},
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: Size(width, 900),
+                textScaler: const TextScaler.linear(2),
+              ),
+              child: AssistantHistoryScreen(
+                loadConversations: () async =>
+                    List<Map<String, Object?>>.from(rows),
+                deleteConversations: (_) async {},
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      final title = tester.widget<Text>(find.text(longTitle));
-      expect(title.maxLines, isNull,
-          reason: '历史标题应自然换行，而不是固定单行截断');
-      expect(find.text(longPreview), findsOneWidget);
-      expect(tester.takeException(), isNull,
-          reason: '历史列表在${width.toInt()}dp与200%字号下不应溢出');
-      await tester.pumpWidget(const SizedBox.shrink());
+        final title = tester.widget<Text>(find.text(longTitle));
+        expect(title.maxLines, isNull,
+            reason: '历史标题应自然换行，而不是固定单行截断');
+        expect(find.text(longPreview), findsOneWidget);
+        expect(tester.takeException(), isNull,
+            reason: '${brightness.name} / ${width.toInt()}dp / 200% 历史列表不应溢出');
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
     }
 
     addTearDown(tester.view.resetPhysicalSize);
