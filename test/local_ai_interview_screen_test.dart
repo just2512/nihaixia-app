@@ -3381,6 +3381,83 @@ void main() {
     );
   });
 
+  testWidgets('同一经典条文内更换选中文字时不复用旧选区会话', (tester) async {
+    const oldContextRef = {
+      'kind': 'classic',
+      'moduleId': 'shanghan',
+      'anchorId': 'shanghan:clause:002',
+      'anchorVersion': 'sha256:passage-v1',
+      'sourceId': 'shanghan:assets/shanghan/clause_001.md',
+      'title': '伤寒论条文2',
+      'selectedText': '发热，汗出',
+    };
+    const newContextRef = {
+      'kind': 'classic',
+      'moduleId': 'shanghan',
+      'anchorId': 'shanghan:clause:002',
+      'anchorVersion': 'sha256:passage-v1',
+      'sourceId': 'shanghan:assets/shanghan/clause_001.md',
+      'title': '伤寒论条文2',
+      'selectedText': '脉缓',
+    };
+    final oldMetadata = AssistantMessageMetadata(
+      mode: 'learning',
+      selectedMode: 'learning',
+      contextRef: oldContextRef,
+    ).encode();
+    final oldConversationId = await _store.createAssistantConversation(
+      title: '伤寒论条文2：发热汗出',
+      mode: 'unified',
+    );
+    await _store.saveAssistantMessage(
+      conversationId: oldConversationId,
+      role: 'user',
+      content: '请解释发热、汗出。',
+      metadata: oldMetadata,
+    );
+    await _store.saveAssistantMessage(
+      conversationId: oldConversationId,
+      role: 'assistant',
+      content: '旧选区专属解释，不应进入新选区。',
+      metadata: oldMetadata,
+    );
+    final service = _TextSendService();
+
+    await tester.pumpWidget(MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialPrompt: '请解释脉缓在本条文中的意义。',
+        contextRef: newContextRef,
+        contextualExplanationOnly: true,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    for (var attempt = 0;
+        attempt < 50 && _store.createConversationCalls < 2;
+        attempt++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    expect(_store.createConversationCalls, 2,
+        reason: 'selectedText 不同，即使 passageId 和版本相同，也必须创建隔离会话');
+    expect(service.restoredTranscripts, isEmpty);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      '请解释脉缓在本条文中的意义。',
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText &&
+            widget.data == '旧选区专属解释，不应进入新选区。',
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('统一助手恢复结构化诊断结果后保留收藏、分享和复制处方操作', (tester) async {
     final store = _MemoryConversationStore();
     const resultText = '辨证结果\n【六经】少阳\n【证型】少阳证\n【方剂】小柴胡汤';
