@@ -5,7 +5,7 @@ import '../screens/assistant_tool_router.dart';
 import '../screens/local_ai_interview_screen.dart';
 
 /// Selects the contextual assistant presentation from the available window width.
-bool usesContextualSidePanel(double availableWidth) => availableWidth >= 840;
+bool usesContextualSidePanel(double availableWidth) => availableWidth >= 720;
 
 /// Width of the side panel, bounded to remain useful on split/foldable layouts.
 double contextualSidePanelWidth(double availableWidth) =>
