@@ -2790,3 +2790,34 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 原滚动 offset 断言在首次打开和编辑未重算后的第二次打开均已通过；失败发生在随后重新排盘步骤，测试在页面保留于问 AI 按钮附近时，直接查找顶部的懒加载“开始排盘”按钮，导致 `StateError: No element`。这是测试导航未适配正确的滚动保留行为，不是滚动断言失败。
 - 已在第三次快照计算前显式将同一页面 ListView 滚回顶部，并断言“开始排盘”按钮重新构建后再点击；原三次打开/关闭 offset 断言均保留。
 - 本次测试流程修正提交：`420fd3b7c2b59a248f983b2bf95df5339431ba9b`。新 head 必须重新跑全量 Flutter 与 Android arm64 CI。
+
+---
+
+### 57.26 2026-11-17 情境面板滚动保持修复合并与主线复核（最新基线刷新）
+
+#### PR #268 合并与功能验收
+
+- 情境面板关闭后紫微结果页滚动位置恢复修复已通过 PR [#268](https://github.com/just2512/nihaixia-app/pull/268) 合并；merge commit：`d62053afce9f21dd6fc7c469148ff50c6bc0a160`，最终 PR head：`07135e86a3bf2616f2a23bdef24b80be39964c1c`。
+- 最终 PR head Flutter workflow run `44097780731)：Flutter regression tests `SUCCESS`；Android arm64 CI verification APK + unit tests `SUCCESS`；Branch validation 按 PR workflow 条件 `SKIPPED`，不计为 PASS，也不作为失败。
+- 三次情境面板打开/关闭的滚动位置断言均保留在既有紫微快照集成测试中，容差仍为 0.5 logical px；第三次重新排盘前显式返回列表顶部，避免懒加载测试定位失效。生产改动未触及排盘输入、计算引擎、结果快照 ID、上下文内容、会话及 AI 路由。
+- 旧 PR #261 已关闭，明确由 PR #268 替代；旧分支未删除。旧分支相对最新主线已 diverged，其失败/取消 CI 记录不继承为 PASS，也不覆盖 PR #268 的验收证据。
+
+#### 旧 PR #269 文档切片的基线刷新
+
+- 旧 PR [#269](https://github.com/just2512/nihaixia-app/pull/269) 的单文件台账变更已通过其自身 head `ce2674e1ca4579647f1b914739b36f53f6442286` 的 Flutter regression run `44103431651`（SUCCESS）。
+- 随后 master 继续合并 PR #265（merge `6103dfba234f0b4a5477632f2b4c6b400ab829eb`）和 PR #258（merge `36fa1f758c833cde8972791b236f0d7b259b440c`）。旧 PR #269 因此相对最新 master 已落后，不直接合并旧 head；本记录从新的 master 基线重新创建，避免把旧分支的 ancestry 当作最新基线。
+- PR #269 保留为历史证据，待本次最新基线文档切片完成集成后关闭；不删除分支或提交历史。
+
+#### 主线 CI 终态与当前最新 SHA
+
+- master `ead5a676aa508d54f5a392f3545625dce76b7622`：Flutter tests run `44103069300` 与 Flutter Quality Gate run `44103069028` 均已终态 SUCCESS。
+- master `6103dfba234f0b4a5477632f2b4c6b400ab829eb`：Flutter tests run `44105085769` 与 Flutter Quality Gate run `44105085816` 均已终态 SUCCESS。
+- PR #258 合并后当前 master 基线为 `36fa1f758c833cde8972791b236f0d7b259b440c`。该 SHA 的 Flutter tests run `44109707310` 与 Flutter Quality Gate run `44109707100` 在本条记录编写时仍为 `IN_PROGRESS`；必须待两条 run 均为 `completed / success` 后才能标记最新主线 CI PASS。此前 SHA 的通过结果不得替代当前最新 SHA 的验收。
+
+#### 阶段边界与后续动作
+
+- 情境面板滚动保持自动化缺口已修复；CAI-READ-01 与 CAI-RESULT-01 的云端实现和自动化检查有证据支持，但真实设备验收仍未完成，两个任务状态继续为 `PARTIAL`。
+- Find N2 外屏、展开内屏、半折叠/分屏、键盘弹出，以及本地 E4B 多轮问答、空响应/Native 状态和历史恢复 TRACE 仍为 `UNKNOWN / LOCAL ONLY`。必须由维护者使用真实设备和本地模型环境完成，并记录设备型号、Android/App/模型版本、backend、轮次及 trace_id。
+- 按协议 Phase 3 的明文前置条件，在 Phase 1/2 真机验收证据补齐前，不扩展本草、方剂、医案、其他排盘页或字段级入口；不得以云端 Widget、模拟结果或 CI 替代实机验收。
+- 本轮云端继续推进的下一项是：等待当前 master `36fa1f758c833cde8972791b236f0d7b259b440c` 两条质量流水线终态；如主线 SHA 发生变化，刷新基线并对文档切片做小批量同步。除此之外，不制造绕过设备门槛的 Phase 3 工作。
+
