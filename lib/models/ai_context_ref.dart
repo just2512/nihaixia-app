@@ -19,6 +19,8 @@ class AiContextRef {
   final String? snapshotId;
   final String? ruleVersion;
   final String? title;
+
+  /// Exact raw selection for classic reading; participates in session identity.
   final String? selectedText;
 
   Map<String, String> toMetadata() => Map.unmodifiable({
