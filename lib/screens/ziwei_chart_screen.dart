@@ -573,22 +573,25 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     // The dialog normally completes its reverse transition within 200 ms.
     // Bound the frame wait so an unrelated route left above this page cannot
     // hold this action open indefinitely.
-    for (var frame = 0;
-        frame < 30 &&
-            mounted &&
-            sourcePageRoute != null &&
-            !sourcePageRoute.isCurrent;
-        frame++) {
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 30 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollPosition = _pageScrollController.hasClients;
+      final hasScrollMetrics = hasScrollPosition &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        pagePositionReady = true;
+        break;
+      }
       await WidgetsBinding.instance.endOfFrame;
     }
     if (!mounted ||
-        (sourcePageRoute != null && !sourcePageRoute.isCurrent) ||
+        !pagePositionReady ||
         pageScrollOffset == null ||
         !_pageScrollController.hasClients) {
       return;
     }
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || !_pageScrollController.hasClients) return;
     final position = _pageScrollController.position;
     if (!position.hasContentDimensions) return;
     final targetOffset = pageScrollOffset
