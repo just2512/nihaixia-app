@@ -818,21 +818,41 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                const Text(
-                  '八字 ',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  chart.baziFull,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            if (MediaQuery.textScalerOf(context).scale(1) >= 1.5)
+              Wrap(
+                spacing: 4,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    '八字',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
-                ),
-              ],
-            ),
+                  Text(
+                    chart.baziFull,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  const Text(
+                    '八字 ',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    chart.baziFull,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
