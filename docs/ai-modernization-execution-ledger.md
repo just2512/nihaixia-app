@@ -2566,3 +2566,31 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 对情境历史进行精确匹配时，如果 SQLite 查询/历史解析失败，不得将 `_conversationIdFuture` 置为 null 后仍允许用户发送，造成回复无法持久化。
 - 新处理为：记录明确错误提示，不复用任何历史会话，并创建一个绑定当前 contextRef 的全新会话。该回退不会把未知历史误配为当前条文或结果，同时保留消息持久化能力。
 - 本修复属于 CAI-READ-01 会话生命周期边界，需随当前 head 的 Flutter 全量回归重新验收；旧 run 不可继承。
+
+
+### 57.7 CAI-RESULT-01 基线与结果快照校验
+
+- 替代工作分支：`work/ai-contextual-ziwei-result-sample-v6`，从 CAI-READ-01 当前工作分支 head `039b0f0bbe98ebc729e7ae00d07f69de757a5486` 派生；本分支不得在 CAI-READ-01 未集成前以 master 为 base 合并。
+- 旧 PR #224 继承旧 PR #223 的过期分支关系，不直接集成；新分支只承接紫微结果页面和快照身份切片，待 CAI-READ-01 合并后 retarget 到届时最新 master 并重新运行 CI。
+- 代码复核发现原快照只记录地点显示名，没有记录实际传给 `calculateZiweiChart` 的经纬度。所选城市会传入真实经纬度；未选城市时，计算使用手动经度或默认东经 120°、纬度 30°。显示名不能替代这些实际参数，原实现可能把使用不同坐标计算的结果错误判为相同输入。
+- 新实现把真实计算经度/纬度在排盘成功时与命盘一起捕获；问 AI 时从这组已执行输入构建快照，不读取用户可能已修改但尚未重新排盘的表单值。输入摘要包含公历时间、性别、地点说明、经纬度、真太阳时和早晚子时口径；内容身份同时纳入规则版本及完整 App formatter 输出（包含当前流年/流月/流日结果）。
+- 新增 `AiToolResultSnapshot` 纯函数，对输入键排序后生成 SHA-256；定向测试覆盖键顺序不影响 ID、经纬度变化、规则版本变化、结果内容变化均改变 ID。
+- 仍须由 CAI-READ-01 提供并验证 `AiContextRef`、情境面板及 explanation-only 会话能力。AI 不重算；新结果快照不能改写旧会话引用。
+- 当前代码 head（快照工具与紫微页面已实现）：`e506aabdf17beb4e5a5d71590ab5b9052d9eb002`。新切片的 branch validation/PR CI 尚未取得结果；Find N2 真机内外屏和真实模型问答仍为 UNKNOWN。
+
+
+
+### 57.8 CAI-RESULT-01 页面入口与针对性测试
+
+- 将结果提问入口放在命盘结果摘要下方，显示明确的“问 AI 解读当前排盘”按钮，不仅依赖 AppBar 隐藏的 tooltip。入口只在实际排盘成功、未计算中且无错误时展示。
+- 新增 `test/ziwei_contextual_result_entry_test.dart`：覆盖真实成功排盘显示入口、无效经度输入不显示入口，并检查 widget 无异常。
+- 新增快照身份测试覆盖：输入 Map 键顺序无关；经度、纬度、规则版本和 formatter 结果变化均改变 snapshotId。
+- 当前分支的代码与测试已写入独立堆叠分支；新 PR head 在本次台账提交后更新。分支静态分析和定向测试仍待 GitHub Actions 实际结果，不以文件存在推断 PASS。
+
+
+### 57.14 CAI-RESULT-01 第三次依赖刷新
+
+- v5 从父分支 head `5caedc20a64f33049581b317f8bba6dd208bbfa9` 创建；CAI-READ-01 后续又补充“历史查询失败时建立新隔离会话”的持久化兜底，v5 不含该修复，因此不直接合并。
+- v6 已从当前 CAI-READ-01 head `039b0f0bbe98ebc729e7ae00d07f69de757a5486` 创建；紫微结果实现只修改 Ziwei screen、独立快照身份函数、两组针对性测试和本台账，不覆盖父分支助手/面板实现。
+- PR #232 由本分支替代并关闭；本 PR 必须先等待 PR #228 合并，再 retarget master 和重新执行完整 CI。
+
