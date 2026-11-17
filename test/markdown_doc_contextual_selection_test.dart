@@ -96,4 +96,33 @@ void main() {
 
     expect(find.byType(SelectionArea), findsNothing);
   });
+
+  testWidgets('contextual ask menu retains platform copy and select-all actions',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        platform: TargetPlatform.android,
+        extensions: [AppColors.light],
+      ),
+      home: MarkdownDocScreen(
+        title: '伤寒论条文样板',
+        content: '#### 条文2\\n\\n> 太阳病，发热，汗出，恶风，脉缓者，名为中风。',
+        contextualAskModuleId: 'shanghan',
+        contextualAskAnchorId: 'shanghan:clause:002',
+        contextualAskSourceId: 'assets/shanghan/clause_001.md',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final passageText = find.textContaining('太阳病', findRichText: true);
+    await tester.longPress(passageText);
+    await tester.pumpAndSettle();
+
+    expect(find.text('问 AI'), findsOneWidget);
+    expect(find.text('Copy'), findsOneWidget,
+        reason: 'Adding contextual ask must not remove the platform copy action');
+    expect(find.text('Select all'), findsOneWidget,
+        reason: 'Adding contextual ask must preserve select-all behavior');
+  });
+
 }
