@@ -2722,3 +2722,24 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 同一主线 SHA 的 Flutter regression 与 Android arm64 CI run `44000016916` 均 `SUCCESS`。其中 Branch validation job 按 workflow 条件为 `SKIPPED`，不计为 PASS，也不视为失败。
 - 本次只修正此前“Quality Gate 仍 IN_PROGRESS”的过期台账状态；没有更改功能代码、测试内容或验收门槛。文档记录提交基于当时 master `a405d22fe183ad8c9a59256634c5e9551bb060bc`。
 - CI 通过不等于真实设备通过：Find N2 外屏/内屏/半折叠交互和本地 E4B 多轮 TRACE 仍为 `UNKNOWN / LOCAL ONLY`；在这些证据补齐前，CAI-READ-01 与 CAI-RESULT-01 维持 `PARTIAL`，不启动 Phase 3 页面扩展。
+
+
+### 57.24 2026-11-17 情境面板布局与页面滚动保持增量复核
+
+#### 面板布局自动化
+
+- PR [#251](https://github.com/just2512/nihaixia-app/pull/251) 已普通 merge，merge SHA：`7b65baa8a327b494131e5711f0f345488041e835`；保留两项面板抽象/测试提交历史。
+- PR head：`0daf682ebf89449609ab8e6f7f117343eabb9ea3`；Flutter tests run `44024764992`：Flutter regression SUCCESS、Android arm64 CI SUCCESS；Branch validation 按 PR workflow 条件 SKIPPED，不计为 PASS。
+- 合并后 master 已推进至 `932f0a7e67492ed8602d7285b3b3939792c95060`；master push workflow runs `44072612789`（Flutter tests）与 `44072612738`（Flutter Quality Gate）均 SUCCESS。
+- 自动化覆盖 Find N2 外屏 402dp 底部可拖动面板、展开内屏 775dp 侧栏、两种亮度与 200% 字号。该覆盖不等同于实机铰链/键盘 TRACE。
+
+#### 面板关闭后的页面滚动保持
+
+- PR [#261](https://github.com/just2512/nihaixia-app/pull/261) 首轮全量 Flutter regression run `44073436041`：1711 passed、1 failed、15 skipped；Android arm64 CI SUCCESS。失败定位为 `test/ziwei_contextual_result_entry_test.dart` 的滚动保持断言：打开前 offset 736.0，关闭后 558.0，证明当前实现没有满足协议 §9 / §12.1 的滚动位置保持要求。
+- 未降低断言、未删除测试。基于同一 master `932f0a7e67492ed8602d7285b3b3939792c95060`，在 PR #261 分支加入 Ziwei 页面显式 ScrollController；打开情境面板前记录 offset，面板 Future 完成关闭后恢复到当前合法滚动范围；同时释放 controller。改动仅涉及 `lib/screens/ziwei_chart_screen.dart` 与 `test/ziwei_contextual_result_entry_test.dart`。
+- 修复 head：`2f263421e8706b7100f316d993501f2912de9cee`。Flutter regression run `44080902253` 已启动；本台账提交时仍 IN_PROGRESS，不能记录 PASS。PR 合并前必须等待完整 regression 终态；合并后再检查 master Flutter Quality Gate 与 Android arm64 CI。
+
+#### 当前阶段边界
+
+- Phase 1/2 云端样板与自动化验收继续按各自证据状态记录；Find N2 实机外屏/内屏/半折叠、键盘和真实 E4B 多轮 TRACE 仍为 `UNKNOWN / LOCAL ONLY`。
+- 未取得真实设备证据前，不启动 Phase 3 的本草、方剂、医案及其他排盘页面扩展。下一项动作是关闭 PR #261 的全量回归缺口，并继续保留本地验收阻塞项。
