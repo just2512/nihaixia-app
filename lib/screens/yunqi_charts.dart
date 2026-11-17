@@ -21,6 +21,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'package:flutter/material.dart';
 
 import '../services/yunqi_engine.dart';
@@ -334,6 +336,10 @@ double _fitFont(
   return min;
 }
 
+/// 五行徽章背景高度。测试通过独立 TextPainter 度量验证缩放后的留白。
+@visibleForTesting
+double wuxingBadgeBackgroundHeight(double textPainterHeight) => textPainterHeight + 4.2;
+
 /// 以 [center] 为中心绘制单行文本。
 void _drawCentered(
   Canvas canvas,
@@ -560,7 +566,6 @@ class _WuxingPainter extends CustomPainter {
           min: 7.2,
           textScaler: textScaler,
         );
-        final double h = bf + 4.2;
         final TextPainter tp =
             _tp(
               g.text,
@@ -569,6 +574,8 @@ class _WuxingPainter extends CustomPainter {
               weight: FontWeight.w600,
               textScaler: textScaler,
             )..layout();
+        // TextPainter.height 已包含 TextScaler；背景必须跟随实际绘制字高。
+        final double h = wuxingBadgeBackgroundHeight(tp.height);
         final double w = tp.width + 10;
         final Rect rect = Rect.fromLTWH(pc.dx - w / 2, y, w, h);
         final RRect rr = RRect.fromRectAndRadius(rect, const Radius.circular(4));
