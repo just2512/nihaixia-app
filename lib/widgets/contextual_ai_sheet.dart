@@ -8,9 +8,58 @@ import '../utils/fold_aware_routes.dart';
 /// Selects the contextual assistant presentation from the available window width.
 bool usesContextualSidePanel(double availableWidth) => availableWidth >= 720;
 
-/// Width of the side panel, bounded to remain useful on split/foldable layouts.
+/// Width of the side panel, bounded to remain useful on foldable and desktop windows.
 double contextualSidePanelWidth(double availableWidth) =>
     (availableWidth * 0.4).clamp(340.0, 520.0).toDouble();
+
+typedef ContextualAiAssistantBuilder = Widget Function(
+  ScrollController? scrollController,
+);
+
+/// Shared content shell for the contextual assistant's two window presentations.
+///
+/// Kept separate from route creation so the actual bottom-sheet and side-panel
+/// layouts can be widget-tested at the Find N2 outer/inner window sizes.
+class ContextualAiPanel extends StatelessWidget {
+  const ContextualAiPanel({
+    super.key,
+    required this.sidePanel,
+    required this.panelWidth,
+    required this.panelHeight,
+    required this.assistantBuilder,
+  });
+
+  final bool sidePanel;
+  final double panelWidth;
+  final double panelHeight;
+  final ContextualAiAssistantBuilder assistantBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    if (sidePanel) {
+      return Dialog(
+        alignment: Alignment.centerRight,
+        insetPadding: const EdgeInsets.all(12),
+        child: SizedBox(
+          width: panelWidth,
+          height: panelHeight,
+          child: assistantBuilder(null),
+        ),
+      );
+    }
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.82,
+      minChildSize: 0.55,
+      maxChildSize: 0.95,
+      builder: (sheetContext, scrollController) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+        child: assistantBuilder(scrollController),
+      ),
+    );
+  }
+}
 
 /// Presents the existing assistant inside a foldable, in-page contextual sheet.
 /// The assistant screen owns model execution and conversation persistence.
@@ -27,7 +76,7 @@ Future<void> showContextualAiSheet({
     throw ArgumentError('A contextual AI sheet requires a stable context reference.');
   }
 
-  Widget buildAssistant({ScrollController? scrollController}) =>
+  Widget buildAssistant(ScrollController? scrollController) =>
       LocalAiInterviewScreen(
         key: ValueKey(contextRef.snapshotId ?? contextRef.anchorId),
         initialPrompt: initialPrompt,
@@ -39,23 +88,19 @@ Future<void> showContextualAiSheet({
       );
 
   final windowSize = MediaQuery.sizeOf(context);
-    if (usesContextualSidePanel(windowSize.width)) {
-    // Wide windows retain the reading/result page as the main surface and
-    // present the assistant as a right-side panel. Dialog's anchor follows
-    // Flutter's fold-aware sub-screen selection for the invoking context.
-    final panelWidth = contextualSidePanelWidth(windowSize.width);
-    final panelHeight = (windowSize.height - 24).clamp(320.0, 2000.0).toDouble();
+  final sidePanel = usesContextualSidePanel(windowSize.width);
+  final panelWidth = contextualSidePanelWidth(windowSize.width);
+  final panelHeight = (windowSize.height - 24).clamp(320.0, 2000.0).toDouble();
+
+  if (sidePanel) {
     return showFoldAwareDialog<void>(
       context: context,
       barrierDismissible: true,
-      builder: (_) => Dialog(
-        alignment: Alignment.centerRight,
-        insetPadding: const EdgeInsets.all(12),
-        child: SizedBox(
-          width: panelWidth,
-          height: panelHeight,
-          child: buildAssistant(),
-        ),
+      builder: (_) => ContextualAiPanel(
+        sidePanel: true,
+        panelWidth: panelWidth,
+        panelHeight: panelHeight,
+        assistantBuilder: buildAssistant,
       ),
     );
   }
@@ -68,15 +113,11 @@ Future<void> showContextualAiSheet({
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
     ),
-    builder: (_) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.82,
-      minChildSize: 0.55,
-      maxChildSize: 0.95,
-      builder: (sheetContext, scrollController) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-        child: buildAssistant(scrollController: scrollController),
-      ),
+    builder: (_) => ContextualAiPanel(
+      sidePanel: false,
+      panelWidth: panelWidth,
+      panelHeight: panelHeight,
+      assistantBuilder: buildAssistant,
     ),
   );
 }
