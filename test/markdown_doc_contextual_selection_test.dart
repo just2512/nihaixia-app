@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/screens/markdown_doc_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import '../lib/theme/app_colors.dart';
 
 void main() {
