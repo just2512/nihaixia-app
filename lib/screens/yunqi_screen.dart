@@ -652,9 +652,15 @@ class _KeyValueCard extends StatelessWidget {
               children: <Widget>[
                 Icon(icon, size: 20, color: color.primary),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 14, color: color.onSurfaceVariant),
+                Expanded(
+                  child: Text(
+                    title,
+                    softWrap: true,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: color.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ],
             ),
