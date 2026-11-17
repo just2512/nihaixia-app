@@ -686,30 +686,35 @@ void main() {
         expect(tester.takeException(), isNull,
             reason: '${width.toInt()}dp / ${brightness.name} / 200% 输入表单不得溢出');
 
+        final scrollable = find.byType(Scrollable).first;
+        Future<void> revealAndCheck(String segment, Finder target) async {
+          await tester.scrollUntilVisible(
+            target,
+            260,
+            scrollable: scrollable,
+          );
+          await tester.pumpAndSettle();
+          expect(target, findsWidgets, reason: '$segment 必须保持可达');
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '${width.toInt()}dp / ${brightness.name} / 200% $segment 不得溢出',
+          );
+        }
+
+        await revealAndCheck('摘要卡片', find.textContaining('出生农历：'));
+        await revealAndCheck('倪师案例参考', find.text('倪师案例参考'));
+        await revealAndCheck('流年工具栏', find.text('流年').first);
+        await revealAndCheck('流月/流日工具栏', find.text('流月/流日'));
         final plate = find.byKey(const ValueKey('ziwei-chart-plate-width'));
-        await tester.scrollUntilVisible(
-          plate,
-          320,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.pumpAndSettle();
-        expect(plate, findsOneWidget);
+        await revealAndCheck('命盘盘面', plate);
         final plateRect = tester.getRect(plate);
         expect(plateRect.left, greaterThanOrEqualTo(0));
         expect(plateRect.right, lessThanOrEqualTo(width));
-        expect(tester.takeException(), isNull,
-            reason: '${width.toInt()}dp / ${brightness.name} / 200% 命盘盘面不得溢出');
 
-        final decadeTitle = find.text('十二大限（十年运）');
-        await tester.scrollUntilVisible(
-          decadeTitle,
-          320,
-          scrollable: find.byType(Scrollable).first,
-        );
-        expect(decadeTitle, findsOneWidget);
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull,
-            reason: '${width.toInt()}dp / ${brightness.name} / 200% 大限列表不得横向溢出');
+        await revealAndCheck('大限列表', find.text('十二大限（十年运）'));
+        await revealAndCheck('整体运势', find.text('整体运势'));
+        await revealAndCheck('健康提醒', find.text('健康提醒'));
 
         await tester.pumpWidget(const SizedBox.shrink());
       }
