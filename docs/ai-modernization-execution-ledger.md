@@ -2566,3 +2566,14 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 对情境历史进行精确匹配时，如果 SQLite 查询/历史解析失败，不得将 `_conversationIdFuture` 置为 null 后仍允许用户发送，造成回复无法持久化。
 - 新处理为：记录明确错误提示，不复用任何历史会话，并创建一个绑定当前 contextRef 的全新会话。该回退不会把未知历史误配为当前条文或结果，同时保留消息持久化能力。
 - 本修复属于 CAI-READ-01 会话生命周期边界，需随当前 head 的 Flutter 全量回归重新验收；旧 run 不可继承。
+
+
+### 57.15 CAI-READ-01 第二轮全量回归失败：测试导入 URI 重复
+
+- Flutter regression run `43994486374`：
+  - Dart/Flutter 静态分析、AI 合同测试、工具参数/重试、知识引用、检索黄金快照、既有专项回归与 legacy ChatScreen audit 步骤均 SUCCESS。
+  - Full regression FAILED。失败集中在 `markdown_doc_contextual_selection_test.dart` 编译阶段，出现 60 条同源类型不兼容：`Herb`、`TwelveStageMode`、`BaZiPaipan`、`AlmanacDay`、`ZiweiChart`、`Hexagram` 分别被 Dart 识别为相同文件的 package URI 与 file URI 两个 library 类型。
+- 根因：测试用相对文件 URI 导入 `MarkdownDocScreen`，同时其依赖树和仓库其他测试使用 package URI；同一 Dart 文件被加载为两个 library identity，导致跨模块参数类型不一致。为解决 StateView 的 ThemeExtension lookup，AppColors 测试仍需与 StateView 的相对导入保持相同 file URI，但页面/大型依赖树本身必须统一使用 package URI。
+- 修复：`markdown_doc_contextual_selection_test.dart` 改回 package URI 导入 MarkdownDocScreen，保留与 StateView 一致的相对 AppColors URI；`contextual_ai_panel_layout_test.dart` 改用 package URI 导入 contextual sheet，避免把 LocalAiInterviewScreen/AssistantToolRouter 整个依赖树再次复制为 file URI。
+- 未修改业务代码、引擎模型、服务和测试断言；没有删除测试或缩小全量测试范围。新提交必须重新运行完整 Flutter 回归及 Android arm64 CI，旧 run 的失败与 Android pending 均不作为新 head 证据。
+
