@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
@@ -11,6 +15,10 @@ import '../data/zhenjiu_lecture_index.dart';
 import 'formula_detail_screen.dart';
 import 'herb_detail_screen.dart';
 import 'acupoint_detail_screen.dart';
+import '../models/ai_context_ref.dart';
+import '../screens/assistant_tool_router.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 /// 解码 flutter_markdown 传给 `onTapLink` 的 href。
 ///
@@ -45,6 +53,11 @@ class MarkdownDocScreen extends StatefulWidget {
   final String? footer;
   final bool linkFormulas;
 
+  /// Stable source anchor; enabled only for the first Shanghan clause sample.
+  final String? contextualAskModuleId;
+  final String? contextualAskAnchorId;
+  final String? contextualAskSourceId;
+
   const MarkdownDocScreen({
     super.key,
     required this.title,
@@ -52,6 +65,9 @@ class MarkdownDocScreen extends StatefulWidget {
     this.content,
     this.footer,
     this.linkFormulas = false,
+    this.contextualAskModuleId,
+    this.contextualAskAnchorId,
+    this.contextualAskSourceId,
   }) : assert(asset != '' || content != null, 'asset 与 content 至少要提供一个');
 
   @override
@@ -147,8 +163,199 @@ class MarkdownDocScreen extends StatefulWidget {
       styleSheetFor(Theme.of(context));
 }
 
+class _ContextualMarkdownPassage {
+  const _ContextualMarkdownPassage({
+    required this.before,
+    required this.block,
+    required this.after,
+    required this.plainText,
+    required this.startLine,
+    required this.endLine,
+  });
+
+  final String before;
+  final String block;
+  final String after;
+  final String plainText;
+  final int startLine;
+  final int endLine;
+}
+
 class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
   late Future<String> _future;
+  String? _rawDocumentContent;
+  String _selectedText = '';
+
+  bool get _contextualAskEnabled =>
+      widget.contextualAskModuleId?.trim().isNotEmpty == true &&
+      widget.contextualAskAnchorId?.trim().isNotEmpty == true &&
+      widget.contextualAskSourceId?.trim().isNotEmpty == true;
+
+  void _askAiAboutSelection(String selectedText, String fullPassage) {
+    if (!_contextualAskEnabled || selectedText.trim().isEmpty) return;
+    final moduleId = widget.contextualAskModuleId!;
+    final anchorId = widget.contextualAskAnchorId!;
+    final sourcePath = widget.contextualAskSourceId!;
+    final version = sha256.convert(utf8.encode(fullPassage)).toString();
+    final ref = AiContextRef(
+      kind: 'classic',
+      moduleId: moduleId,
+      anchorId: anchorId,
+      anchorVersion: version,
+      sourceId: 'shanghan:$sourcePath',
+      title: widget.title,
+    );
+    final prompt = AiContextPromptBuilder.buildClassicSelection(
+      ref: ref,
+      selectedText: selectedText.trim(),
+      fullPassage: fullPassage,
+    );
+    unawaited(showContextualAiSheet(
+      context: context,
+      contextRef: ref,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.learning,
+      contextualTitle: widget.title,
+      contextualExplanationOnly: true,
+    ));
+  }
+
+  _ContextualMarkdownPassage? _findUniqueContextualPassage(String markdown) {
+    final lines = markdown.split('\n');
+    final starts = <int>[];
+    final ends = <int>[];
+    int? activeStart;
+    for (var index = 0; index < lines.length; index++) {
+      final isQuoteLine = RegExp(r'^\\s*>\\s?').hasMatch(lines[index]);
+      if (isQuoteLine) {
+        activeStart ??= index;
+      } else if (activeStart != null) {
+        starts.add(activeStart);
+        ends.add(index);
+        activeStart = null;
+      }
+    }
+    if (activeStart != null) {
+      starts.add(activeStart);
+      ends.add(lines.length);
+    }
+    // More than one quote block cannot be tied to a single clause anchor.
+    if (starts.length != 1) return null;
+
+    final start = starts.single;
+    final end = ends.single;
+    final blockLines = lines.sublist(start, end);
+    final plainText = blockLines
+        .map((line) => line.replaceFirst(RegExp(r'^\\s*>\\s?'), ''))
+        .join('\n')
+        .trim();
+    if (plainText.isEmpty) return null;
+    return _ContextualMarkdownPassage(
+      before: lines.take(start).join('\n'),
+      block: blockLines.join('\n'),
+      after: lines.skip(end).join('\n'),
+      plainText: plainText,
+      startLine: start,
+      endLine: end,
+    );
+  }
+
+  Widget _buildPlainMarkdownBody(
+    String data, {
+    required bool selectable,
+    required EdgeInsets padding,
+  }) {
+    if (data.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: padding,
+      child: MarkdownBody(
+        data: data,
+        selectable: selectable,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      ),
+    );
+  }
+
+  Widget _buildMarkdownBody(String data) {
+    if (!_contextualAskEnabled) {
+      return Markdown(
+        data: data,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        selectable: true,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      );
+    }
+
+    final raw = _rawDocumentContent ?? data;
+    final rawPassage = _findUniqueContextualPassage(raw);
+    final displayedPassage = _findUniqueContextualPassage(data);
+    if (rawPassage == null ||
+        displayedPassage == null ||
+        rawPassage.startLine != displayedPassage.startLine ||
+        rawPassage.endLine != displayedPassage.endLine) {
+      // Fail closed: preserve ordinary Markdown selection without exposing
+      // a contextual action whose source passage cannot be uniquely resolved.
+      return Markdown(
+        data: data,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        selectable: true,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildPlainMarkdownBody(
+            displayedPassage.before,
+            selectable: true,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          ),
+          SelectionArea(
+            onSelectionChanged: (selection) {
+              final selected = selection?.plainText ?? '';
+              if (selected != _selectedText) {
+                setState(() => _selectedText = selected);
+              }
+            },
+            contextMenuBuilder: (context, state) {
+              final items = List<ContextMenuButtonItem>.of(
+                state.contextMenuButtonItems,
+              );
+              if (_selectedText.trim().isNotEmpty) {
+                items.add(ContextMenuButtonItem(
+                  label: '问 AI',
+                  onPressed: () {
+                    final selected = _selectedText;
+                    state.hideToolbar();
+                    _askAiAboutSelection(selected, rawPassage.plainText);
+                  },
+                ));
+              }
+              return AdaptiveTextSelectionToolbar.buttonItems(
+                anchors: state.contextMenuAnchors,
+                buttonItems: items,
+              );
+            },
+            child: _buildPlainMarkdownBody(
+              displayedPassage.block,
+              selectable: false,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+          _buildPlainMarkdownBody(
+            displayedPassage.after,
+            selectable: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -158,6 +365,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
 
   Future<String> _load() async {
     final raw = widget.content ?? await rootBundle.loadString(widget.asset);
+    _rawDocumentContent = raw;
     return widget.linkFormulas ? _injectLinks(raw) : raw;
   }
 
@@ -269,13 +477,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           return Column(
             children: [
               Expanded(
-                child: Markdown(
-                  data: snapshot.data ?? '',
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                  selectable: true,
-                  onTapLink: (text, href, title) => _onTapLink(href),
-                  styleSheet: MarkdownDocScreen.buildStyleSheet(context),
-                ),
+                child: _buildMarkdownBody(snapshot.data ?? ''),
               ),
               SafeArea(
                 child: Padding(
