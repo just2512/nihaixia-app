@@ -45,9 +45,9 @@ void main() {
       fullPassage: '太阳病，发热，汗出，恶风，脉缓者，名为中风。',
     );
     final encoded = prompt
-        .split('【选中文字与原文】\\n')
+        .split('【选中文字与原文】\n')
         .last
-        .split('\\n\\n【回答要求】')
+        .split('\n\n【回答要求】')
         .first;
     final payload = jsonDecode(encoded) as Map<String, dynamic>;
 
