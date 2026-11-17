@@ -171,7 +171,7 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前主线基线**：`45a11103406a6912452b861c2bd45bb75216eb57`。所有新工作分支必须以该提交或其后续 master 为基线；不得复用已分叉的旧 Phase 1 分支。
+**当前主线基线**：`2219b29949b1a8aabfdfe4651c821fdf929075db`。所有新工作分支必须以该提交或其后续 master 为基线；不得复用已分叉的旧 Phase 1 分支。
 
 **已合并批次**
 
@@ -183,8 +183,8 @@
 
 **当前独立批次**
 
-- **易经工具表面与六十四卦网格**。PR #227；当前分支 `work/yanji-editorial-phase3-yijing-surfaces`，HEAD `f4bcfcaa0f06d527346e8b23d81a821913143235`，基线 master `45a11103406a6912452b861c2bd45bb75216eb57`，ahead 5 / behind 0。仅移除 `_MethodCard` 额外 elevation；窄屏 200% 字号时六十四卦网格改为两列，保留 64 卦、四个起卦入口和现有 Tab。新 HEAD Push / PR CI 正在执行，旧 HEAD 的成功结果不继承。
-- **紫微排盘 200% 折叠布局**。PR #230；当前分支 `work/yanji-editorial-phase3-ziwei-large-text`，HEAD `3407512324346cc0671b81e7bb52d88cc67ad43a`，基线 master `45a11103406a6912452b861c2bd45bb75216eb57`，ahead 10 / behind 0。新增 402/775dp × 浅/深主题 × 200% 测试，逐段检查输入、摘要、案例、流年、流月/流日、命盘、大限、运势和健康区。已经定位的宫位高度、宫名徽标、固定列宽和摘要八字换行修复已统一落在当前生产文件；当前 HEAD Push / PR CI 正在执行，不能继承早期 HEAD 的失败或成功结果。
+- **Phase 3.7：易经工具表面与六十四卦网格**。PR #227 已合并，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；当前 HEAD `f4bcfcaa0f06d527346e8b23d81a821913143235` 的 Flutter regression 与 Android arm64 APK/ABI/manifest/unit tests 均 PASS。仅移除 `_MethodCard` 额外 elevation；窄屏 200% 字号时六十四卦网格改为两列，保留 64 卦、四个起卦入口和现有 Tab。
+- **Phase 3.8：紫微排盘 200% 折叠布局**。PR #230；原分支 `work/yanji-editorial-phase3-ziwei-large-text` 已合入最新 master 并保留 ancestry；当前新 HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d`，基线 master `2219b29949b1a8aabfdfe4651c821fdf929075db`，等待新 HEAD 重新验收。新增 402/775dp × 浅/深主题 × 200% 测试，逐段检查输入、摘要、案例、流年、流月/流日、命盘、大限、运势和健康区。历史失败曾定位宫位高度、宫名徽标、固定列宽及摘要八字 Row；所有四项修复现已重新整合到当前生产文件，旧 HEAD 结果不继承。
 
 **下一批只读审计**
 
@@ -290,8 +290,8 @@
 | Phase 3.3：闭门课重症临床列表 | `PASS`（已合并） | PR #219，集成 SHA `e58d6035fb29843ca419069191683198a17aa3f4`；合并前当前 HEAD Flutter regression 与 Android arm64 success；合并后 master Flutter / Android arm64 / Quality Gate success。 |
 | Phase 3.5：农历节日与神诞 | `PASS`（已合并） | PR #220，集成 SHA `5d9326c30707fee7503adaaafdbb1f094852eb53`；当前 HEAD Flutter regression 与 Android arm64 success；合并后主线后续 CI通过。 |
 | Phase 3.6：工具入口大字号完整显示 | `PASS`（已合并） | PR #226，集成 SHA `45a11103406a6912452b861c2bd45bb75216eb57`；当前 HEAD Flutter regression、Android arm64 APK/ABI/manifest 与 Android unit tests success。 |
-| Phase 3.7：易经工具与六十四卦网格 | `IN_PROGRESS` | PR #227；当前 HEAD `f4bcfcaa0f06d527346e8b23d81a821913143235`，基线 master `45a11103406a6912452b861c2bd45bb75216eb57`，ahead 5 / behind 0；当前 HEAD Push/PR Flutter 与 Android 验收重新运行，旧 HEAD 成功结果不继承。 |
-| Phase 3.8：紫微排盘 200% 布局 | `IN_PROGRESS` | PR #230；当前 HEAD `3407512324346cc0671b81e7bb52d88cc67ad43a`，基线 master `45a11103406a6912452b861c2bd45bb75216eb57`，ahead 10 / behind 0；当前 HEAD 新增逐段布局断言，Push/PR CI 正在运行。早期 HEAD 曾暴露宫位高度、徽标行、固定列宽、摘要八字行等问题；对应修复已统一重落在当前生产文件，须以当前 HEAD CI 终态为准。 |
+| Phase 3.7：易经工具与六十四卦网格 | `PASS`（已合并） | PR #227，集成 SHA `2219b29949b1a8aabfdfe4651c821fdf929075db`；当前 HEAD `f4bcfcaa0f06d527346e8b23d81a821913143235` 的 Flutter regression、Android arm64 APK/ABI/manifest/unit tests 均 success。 |
+| Phase 3.8：紫微排盘 200% 布局 | `IN_PROGRESS` | PR #230；当前 HEAD `7808425ac35e30f2903c921b69ae5cdadf75ef9d`，基线 master `2219b29949b1a8aabfdfe4651c821fdf929075db`，ahead 11 / behind 0；新 HEAD 已吸收 #227 合并提交，Push/PR CI 待重新验收。当前生产文件已统一包含宫位格高度、徽标 Wrap、大限列表 Wrap 和摘要八字 Wrap 四项修复。 |
 | 下一批：五运六气页面 200% 布局 | `MISSING`（只读审计） | `yunqi_screen.dart` 卡片继承全局 elevation 0，当前主要缺失 200% 与折叠窗口页面测试；不为装饰而批量拆卡。 |
 | 下一批：剂量换算表格 | `MISSING`（只读审计） | `dosage_converter_screen.dart` 存在固定列/12pt 单元格，现有剂量服务测试不覆盖页面布局；需独立建立窗口/主题/200% 页面测试。 |
 | 下一批：八字排盘 | `MISSING`（只读审计） | 已有折叠布局测试但尚缺 200% 页面覆盖；先补验收再确定生产布局改动。 |
