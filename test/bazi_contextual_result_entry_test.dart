@@ -96,7 +96,7 @@ void main() {
     expect(pillars['hour'], isA<String>());
     expect(pillars['gans'], hasLength(4));
     expect(pillars['zhis'], hasLength(4));
-    expect((pillars['nayin']! as Map<String, String>).keys,
+    expect((pillars['nayin']! as Map).keys,
         containsAll(['year', 'month', 'day', 'hour']));
     expect(result['tenGods'], hasLength(4));
     expect(result['hiddenTenGods'], hasLength(4));
