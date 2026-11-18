@@ -2880,7 +2880,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 - PR #284 的原分支基于旧 master `9339231426cba38578f656b3453b267abacecaf8`，不直接集成。其最新完整回归 run `44248340713` 为 FAILURE：全量 1732 passed / 4 failed / 15 skipped；Android arm64 SUCCESS。失败证据保留：半折叠方剂详情右边界 445.5649dp，超过 388dp 物理面板；古籍章节目录 3 项测试的来源 textScaler=200%，路由后实际读数为 100%。未放宽断言、未删除测试。
 - 已基于最新 master `a3212f0ea08daa766384272c89287303d08d34a2` 建立替代独立分支 `fix/fold-aware-root-route-context-20261118`。
-- PR [#289](https://github.com/just2512/nihaixia-app/pull/289) 当前 head：`f846e84accb799f275fc8b9e931e696ad8b14cfd`；当前 head Flutter regression run `44255635434` PENDING。首轮 head `879a33669b5444b72d7837808d8b5bda35a44061` 的 run `44255289345` 暴露 8 处 Navigator.push 参数替换编译错误，已修复；该失败 head 不计 PASS。当前实现将知识页详情导航提升到 root Navigator，并由 `FoldAwareMaterialPageRoute` 保留发起页面的 TextScaler；保留原 388dp 几何断言并增加通用 textScaler 回归测试。不得将旧 PR #284 的 CI 结果迁移给新 head。
+- PR [#286](https://github.com/just2512/nihaixia-app/pull/286) 当前 head：`37f0a792a73de650e325088f415303df2c994cdf`；新 head Flutter regression run `44256063311` IN_PROGRESS。首轮 head `45b9f4c992abc048975e87da3a69c27bc794c6b4` 的 run `44254837472` 静态分析 PASS，但完整回归的半折叠方剂详情几何断言仍为 445.56dp > 388dp；已在当前 head 将八处知识详情路由改为 root Navigator，同时保留完整 MediaQueryData 和 AdaptiveSinglePane 局部坐标几何修复。旧 head 结果不继承为 PASS。PR #289 已关闭为 SUPERSEDED，其 root Navigator 思路已吸收到 #286；只验收 #286 当前 head。不得将旧 PR #284 的 CI 结果迁移给新 head。
 
 #### 设备门禁与执行顺序
 
