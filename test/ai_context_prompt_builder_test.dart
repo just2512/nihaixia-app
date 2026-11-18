@@ -299,6 +299,19 @@ void main() {
       isEmpty,
       reason: 'Field context must identify the rules that produced its snapshot',
     );
+    expect(
+      AiContextRef.matchesSameAnchor(
+        valid,
+        {
+          ...valid,
+          'fieldPath': 'palacesByPhysicalBranch.1.stars',
+          'anchorId':
+              'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.1.stars',
+        },
+      ),
+      isFalse,
+      reason: 'Two fields in one result snapshot are distinct conversation anchors',
+    );
   });
 
   test('field prompt includes field path, value, scope and parent snapshot', () {
