@@ -19,6 +19,7 @@ import '../data/settings_repository.dart';
 import '../theme/app_colors.dart';
 import '../utils/ziwei_plate_layout.dart';
 import '../models/ai_context_ref.dart';
+import '../services/ai_context_resolver.dart';
 import 'assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../widgets/contextual_ai_sheet.dart';
@@ -629,50 +630,50 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         .firstOrNull;
     if (palace == null) return;
 
-    const sourceId = 'local-engine:ziwei-core@0.13.0';
     final fieldPath = 'palacesByPhysicalBranch.${palace.index}.stars';
-    final fieldValue = palace.stars
-        .map((star) => <String, Object?>{
-              'starKey': star.key,
-              'name': star.label,
-              'category': _starKindLabel(star),
-              'brightness': star.brightness,
-              'transformation': star.sihuaText.isEmpty ? null : star.sihuaText,
-              'displayText': starDisplayText(star),
-            })
-        .toList(growable: false);
+    final snapshotId = snapshot['snapshotId']!;
+    final ruleVersion = snapshot['ruleVersion']!;
     final contextRef = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
-      anchorId:
-          'ziwei:result:${snapshot['snapshotId']}:field:$fieldPath',
-      anchorVersion: snapshot['snapshotId']!,
-      snapshotId: snapshot['snapshotId']!,
-      ruleVersion: snapshot['ruleVersion']!,
+      anchorId: 'ziwei:result:$snapshotId:field:$fieldPath',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
       fieldPath: fieldPath,
-      sourceId: sourceId,
-      title: '${palace.roleLabel}宫位星曜',
+      sourceId: AiContextResolver.ziweiSourceId,
+      title: '${palace.roleLabel}星曜',
     );
-    final prompt = AiContextPromptBuilder.buildToolResultField(
+    final resolution = AiContextResolver.resolveZiweiPalaceStars(
       ref: contextRef,
-      fieldLabel: '${palace.roleLabel}宫本命星曜',
-      fieldScope: {
-        'palaceIndex': palace.index,
-        'palaceRole': palace.roleLabel,
-        'earthlyBranch': palace.branchLabel,
-        'ganzhi': palace.ganzhiLabel,
-        'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
-      },
-      fieldValue: fieldValue,
-      fieldUnit: '不适用（离散星曜条目）',
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
       resultPayload: snapshot['resultPayload']!,
+    );
+    final resolvedField = resolution.value;
+    if (!resolution.isResolved || resolvedField == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '本宫星曜上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final prompt = AiContextPromptBuilder.buildToolResultField(
+      resolvedField: resolvedField,
     );
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
       initialPrompt: prompt,
       initialMode: AssistantMode.metaphysics,
-      contextualTitle: '${palace.roleLabel}宫位星曜',
+      contextualTitle: resolvedField.fieldLabel,
       contextualExplanationOnly: true,
     );
   }
