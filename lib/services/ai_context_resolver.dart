@@ -1,5 +1,6 @@
 import '../models/ai_context_ref.dart';
 import '../models/formula.dart';
+import '../data/formula_repository.dart';
 import 'ziwei_engine.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
@@ -82,18 +83,32 @@ class AiContextResolver {
 
   static AiContextResolution<AiResolvedKnowledgeEntry> resolveFormula({
     required AiContextRef ref,
-    required Formula formula,
   }) {
     final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
     if (ref.kind != AiContextKind.formula ||
         normalized.isEmpty ||
         ref.moduleId != formulaModuleId ||
-        ref.sourceId != 'formula:${formula.id}' ||
-        ref.anchorId != 'formula:${formula.id}' ||
         ref.anchorVersion != formulaAssetVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The formula reference is incomplete or does not match the bundled formula source.',
+      );
+    }
+
+    final formulaId = ref.anchorId.startsWith('formula:')
+        ? ref.anchorId.substring('formula:'.length)
+        : '';
+    if (formulaId.isEmpty || ref.sourceId != 'formula:$formulaId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula anchor and source ID do not agree.',
+      );
+    }
+    final formula = FormulaRepository.getById(formulaId);
+    if (formula == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced formula is not present in the bundled formula repository.',
       );
     }
 
