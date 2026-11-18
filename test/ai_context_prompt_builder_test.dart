@@ -335,7 +335,7 @@ void main() {
 
     final alteredMissingFields = {
       ...snapshot,
-      'missingFields': const <String>[],
+      'missingFields': const ['tampered.field'],
     };
     expect(
       () => AiContextPromptBuilder.buildToolResult(
