@@ -120,9 +120,8 @@ class _MeridianTab extends StatelessWidget {
           child: Builder(
             builder: (itemContext) => InkWell(
             onTap: () {
-              Navigator.push(
-                itemContext,
-                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+              Navigator.of(itemContext, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                   builder: (_) => MeridianDetailScreen(meridian: name),
                 ),
               );
@@ -205,9 +204,8 @@ class _MeridianTab extends StatelessWidget {
                                     onPressed: () {
                                       final formula = FormulaRepository.getByName(f);
                                       if (formula != null) {
-                                        Navigator.push(
-                                          itemContext,
-                                          FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+                                        Navigator.of(itemContext, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                             builder: (_) => FormulaDetailScreen(formula: formula),
                                           ),
                                         );
@@ -222,9 +220,8 @@ class _MeridianTab extends StatelessWidget {
                           alignment: Alignment.centerRight,
                           child: TextButton.icon(
                             onPressed: () {
-                              Navigator.push(
-                                itemContext,
-                                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+                              Navigator.of(itemContext, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                   builder: (_) => MeridianDetailScreen(meridian: name),
                                 ),
                               );
@@ -391,9 +388,8 @@ class _FormulaTabState extends State<_FormulaTab> {
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+              onPressed: () => Navigator.of(context, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => FormulaDetailScreen(formula: formula),
                 ),
               ),
@@ -545,9 +541,8 @@ class _FormulaTabState extends State<_FormulaTab> {
                           if (useMasterDetail) {
                             setState(() => _selectedFormulaId = formula.id);
                           } else {
-                            Navigator.push(
-                              itemContext,
-                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+                            Navigator.of(itemContext, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => FormulaDetailScreen(formula: formula),
                               ),
                             );
@@ -695,9 +690,8 @@ class _HerbTabState extends State<_HerbTab> {
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+              onPressed: () => Navigator.of(context, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => HerbDetailScreen(herb: herb),
                 ),
               ),
@@ -848,9 +842,8 @@ class _HerbTabState extends State<_HerbTab> {
                 ),
                 icon: const Icon(Icons.menu_book_outlined, size: 16),
                 label: const Text('讲稿', style: TextStyle(fontSize: AppType.caption)),
-                onPressed: () => Navigator.push(
-                  context,
-                  FoldAwareMaterialPageRoute(
+                onPressed: () => Navigator.of(context, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(
                     sourceContext: context,
                     builder: (_) => const BenCaoLibraryScreen(),
                   ),
@@ -914,9 +907,8 @@ class _HerbTabState extends State<_HerbTab> {
                           if (useMasterDetail) {
                             setState(() => _selectedHerbName = herb.name);
                           } else {
-                            Navigator.push(
-                              itemContext,
-                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+                            Navigator.of(itemContext, rootNavigator: true).push(
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => HerbDetailScreen(herb: herb),
                               ),
                             );
