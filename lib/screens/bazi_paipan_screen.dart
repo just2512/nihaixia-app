@@ -261,14 +261,18 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
   }
 
 
-  Future<void> _askAiAboutCurrentResult() async {
+  ({
+    AiContextRef contextRef,
+    Map<String, Object?> snapshot,
+  }) _buildCurrentBaziContext() {
     final result = _result;
     final executedInput = _lastComputedInput;
-    if (result == null || executedInput == null) return;
+    if (result == null || executedInput == null) {
+      throw StateError('No successful Bazi result is available.');
+    }
 
-    // The form can be edited without pressing "排八字". Bind the context to
-    // the exact input tuple that produced the visible result, never to newer
-    // unsaved controls.
+    // This tuple is captured only when the visible result is successfully
+    // calculated. Unsaved form edits never become the source of a snapshot.
     final solar = executedInput.solar;
     final cityName = executedInput.cityName;
     final hasCityLabel = cityName != null && cityName.isNotEmpty;
@@ -279,9 +283,6 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
             ? 'city-directory'
             : 'provided-coordinates';
     final longitude = executedInput.longitude ?? 120.0;
-    // Match _compute(): when longitude is absent, the engine receives null
-    // and uses both default coordinates (120E, 30N); when longitude is
-    // present but latitude absent, only latitude falls back to 30N.
     final latitude =
         hasExplicitCoordinates ? (executedInput.latitude ?? 30.0) : 30.0;
     final birthplace = locationMode == 'city-directory'
@@ -297,57 +298,99 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
       'gender': executedInput.isMale ? 'male' : 'female',
       'birthplace': birthplace,
     };
-
-    late final Map<String, Object?> snapshot;
-    late final AiContextRef contextRef;
-    try {
-      snapshot = BaziContextSnapshot.createFromCurrentResult(
-        arguments: arguments,
-        result: result,
-        fortune: _fortune,
-        locationMode: locationMode,
-        locationLabel:
-            locationMode == 'city-directory' ? cityName : null,
-        longitude: longitude,
-        latitude: latitude,
-        useTrueSolarTime: executedInput.useTrueSolarTime,
-        distinguishZiShi: executedInput.distinguishZiShi,
-        twelveStageMode: executedInput.fireEarthSame
-            ? TwelveStageMode.fireEarthSame
-            : TwelveStageMode.waterEarthSame,
-      );
-      contextRef = AiContextResolver.buildBaziResultContextRef(
-        structuredSnapshot: snapshot,
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('八字结果上下文校验失败：UNKNOWN，已取消提问。'),
-          ),
-        );
-      }
-      return;
-    }
-
-    final resolution = AiContextResolver.resolveBaziToolResult(
-      ref: contextRef,
+    final snapshot = BaziContextSnapshot.createFromCurrentResult(
+      arguments: arguments,
+      result: result,
+      fortune: _fortune,
+      locationMode: locationMode,
+      locationLabel: locationMode == 'city-directory' ? cityName : null,
+      longitude: longitude,
+      latitude: latitude,
+      useTrueSolarTime: executedInput.useTrueSolarTime,
+      distinguishZiShi: executedInput.distinguishZiShi,
+      twelveStageMode: executedInput.fireEarthSame
+          ? TwelveStageMode.fireEarthSame
+          : TwelveStageMode.waterEarthSame,
+    );
+    final contextRef = AiContextResolver.buildBaziResultContextRef(
       structuredSnapshot: snapshot,
     );
-    final resolved = resolution.value;
-    if (!resolution.isResolved || resolved == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '八字结果上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
-            ),
-          ),
-        );
-      }
-      return;
-    }
+    return (contextRef: contextRef, snapshot: snapshot);
+  }
 
+  Future<void> _askAiAboutCurrentResult() async {
+    if (_result == null || _lastComputedInput == null) return;
+    try {
+      final baziContext = _buildCurrentBaziContext();
+      final resolution = AiContextResolver.resolveBaziToolResult(
+        ref: baziContext.contextRef,
+        structuredSnapshot: baziContext.snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        _showBaziContextError(resolution.status.name.toUpperCase());
+        return;
+      }
+      await _openBaziContextSheet(
+        contextRef: baziContext.contextRef,
+        initialPrompt: AiContextPromptBuilder.buildBaziToolResult(
+          resolvedResult: resolved,
+        ),
+      );
+    } catch (_) {
+      _showBaziContextError('UNKNOWN');
+    }
+  }
+
+  Future<void> _askAiAboutField(String fieldPath) async {
+    if (_result == null || _lastComputedInput == null) return;
+    try {
+      final baziContext = _buildCurrentBaziContext();
+      final fieldLabel = switch (fieldPath) {
+        'result.analysis.pattern' => '八字格局',
+        'result.analysis.strengthScore' => '日主强弱分值',
+        _ when fieldPath.startsWith('result.analysis.fiveElements.') =>
+          '五行分布字段',
+        _ => fieldPath,
+      };
+      final fieldRef = AiContextResolver.buildBaziFieldContextRef(
+        resultRef: baziContext.contextRef,
+        fieldPath: fieldPath,
+        fieldLabel: fieldLabel,
+      );
+      final resolution = AiContextResolver.resolveBaziResultField(
+        ref: fieldRef,
+        structuredSnapshot: baziContext.snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        _showBaziContextError(resolution.status.name.toUpperCase());
+        return;
+      }
+      await _openBaziContextSheet(
+        contextRef: fieldRef,
+        initialPrompt: AiContextPromptBuilder.buildBaziToolField(
+          resolvedField: resolved,
+        ),
+      );
+    } catch (_) {
+      _showBaziContextError('UNKNOWN');
+    }
+  }
+
+  void _showBaziContextError(String status) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('八字结果上下文解析失败：$status，已取消提问。'),
+      ),
+    );
+  }
+
+  Future<void> _openBaziContextSheet({
+    required AiContextRef contextRef,
+    required String initialPrompt,
+  }) async {
     final sourcePageRoute = ModalRoute.of(context);
     final pageScrollOffset = _pageScrollController.hasClients
         ? _pageScrollController.position.pixels
@@ -355,9 +398,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: AiContextPromptBuilder.buildBaziToolResult(
-        resolvedResult: resolved,
-      ),
+      initialPrompt: initialPrompt,
       initialMode: AssistantMode.tools,
       contextualTitle: contextRef.title ?? '八字排盘结果',
       contextualExplanationOnly: true,
@@ -581,7 +622,10 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
             const SizedBox(height: 12),
             BaZiTwelveStagesCard(result: _result!),
             const SizedBox(height: 12),
-            BaZiAnalysisCard(analysis: _result!.analysis),
+            BaZiAnalysisCard(
+              analysis: _result!.analysis,
+              onAskField: _askAiAboutField,
+            ),
           ],
           if (_error != null)
             Padding(
