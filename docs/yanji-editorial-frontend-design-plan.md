@@ -149,6 +149,13 @@
 - 切换内外屏、导航 Tab 和主题后，不丢失当前会话/输入草稿/选中 Tab/滚动状态。
 - 既有首页导航和 AI 入口测试通过。
 
+**集成补充（PR #272）**
+
+- PR [#272](https://github.com/just2512/nihaixia-app/pull/272) 已普通 merge，集成 SHA：`5bb248f94d3e7a94bb827c78ad12ed461c828af6`；PR HEAD：`70925814f63d96cda50a0bdc227669db51401e95`。仅修改 `test/home_screen_entry_test.dart`，新增 92 行集成测试，不改生产代码。
+- 补齐完整 `HomeScreen`（AI 内容 + 根导航）在 402/775dp、浅/深主题、200% 字号下的组合覆盖，以及半折叠物理 hinge × 浅/深主题 × 200% 覆盖。
+- PR #272 当前 HEAD Flutter regression Run `44210565030`：`SUCCESS`；Android arm64 job `134489972009`：`SUCCESS`。完整 Flutter 回归报告为 1,725 passed、15 skipped。
+- 15 项 skipped 均来自 `test/yunqi_engine_test.dart` 对外部 `D:\tools\yunqi_ref.json` 的依赖；仓库未包含该文件，CI 未设置 `YUNQI_REF_PATH`。这些对拍断言保持 `MISSING`，不计为 PASS，也未删除或降低测试。Branch validation 按 workflow 条件 skipped，不计 PASS/失败。
+
 ### Phase 2：知识浏览与核心详情
 
 **主要文件**
@@ -171,7 +178,7 @@
 
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前主线基线**：`6103dfba234f0b4a5477632f2b4c6b400ab829eb`（PR #265 合并后）。本阶段已完成既定页面批次；后续只处理有明确复现证据的问题，不为制造改动而重做页面。
+**当前主线基线**：`5bb248f94d3e7a94bb827c78ad12ed461c828af6`（PR #272 合并后）。本阶段已完成既定页面批次；后续只处理有明确复现证据的问题，不为制造改动而重做页面。
 
 **已合并批次与边界**
 
@@ -203,8 +210,9 @@
 - PR #265 覆盖浅/深主题下 danger、warning、success、info 对页面背景，onDanger 对 danger，onSurface 对四类状态容器，以及六经前景色对各自语义容器；正常文字阈值为 4.5:1。
 - PR #265 Flutter regression Run `44103235167` success；Android arm64 job `134112303183` success。Branch validation 为条件性 skipped，不计作通过或失败。
 - PR #265 合并前，基线 `ead5a676aa508d54f5a392f3545625dce76b7622` 的 Flutter regression Run `44103069300` 与 Android arm64 job `134112172642` 均 success。
-- PR #265 合并后的最新 master 为 `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；Flutter Run `44105085769` 与 Quality Gate Run `44105085816` 已触发，终态需以对应 workflow 结果更新。
+- PR #265 合并后的 master `6103dfba234f0b4a5477632f2b4c6b400ab829eb` 已复核：Flutter regression Run `44105085769` 与 Quality Gate Run `44105085816` 均 `SUCCESS`。
 - 自动化 `PASS`、实机 `PASS`、`REJECT`、`MISSING`、`UNKNOWN` 分开记录；不以平均分掩盖单项失败。
+- PR #272 合并后的最新 master 为 `5bb248f94d3e7a94bb827c78ad12ed461c828af6`；合并后 Flutter tests Run `44211890081`、Android arm64 job `134493862255`、Flutter Quality Gate Run `44211890175` 均 `SUCCESS`。
 - Find N2 的外屏/内屏/半折叠、浅深主题、100%/150%/200% 字号及连续阅读检查，按第 7.2 节执行。未取得真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录前，保持 `MISSING`。
 
 ## 6. Find N2 与大字号不可退化项
@@ -280,12 +288,13 @@
 | 项目 | 状态 | 证据 / 说明 |
 |---|---|---|
 | 设计规范与浅深主题 Token | `PASS`（自动化） | PR #211 已合并；主题 Token、主文字/辅助文字与表面层级、主色和主色容器的自动对比度断言进入 master。 |
-| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211 合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4`；Flutter regression Run `43839568819` 与 Android arm64 job `133207359364` success。覆盖首页入口/hinge、根导航 200% 与 fold、AI 首屏外屏/内屏 200% 和半折叠 hinge。 |
+| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211 合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4`；PR #272 补充 HomeScreen 集成态 200% 浅深主题/外屏内屏/半折叠测试，合并 SHA `5bb248f94d3e7a94bb827c78ad12ed461c828af6`。PR #272 HEAD Flutter Run `44210565030` + Android arm64 job `134489972009` 均 success；合并后 master Flutter Run `44211890081`、Android arm64 job `134493862255` success。 |
+| 五运六气外部对拍夹具 | `MISSING` | PR #272 完整 Flutter regression 中 15 项 `test/yunqi_engine_test.dart` 测试因外部 `D:\tools\yunqi_ref.json` 不在仓库且 CI 未设置 `YUNQI_REF_PATH` 而按原测试逻辑 skipped；未删除、跳过代码或降低断言。 |
 | Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后主线 Flutter / Android arm64 / Quality Gate success。 |
 | Phase 2 补充：古籍原文库 | `PASS`（自动化） | PR #222 合并 SHA `68896b3179b49271522957a7877d08268c8cbdbd`；最终 HEAD `7974d16f1e64b25b8bce9b5ac5d9cfd47e2c87de`。测试改用测试专用内存 AssetBundle，避免重复读取大型真实古籍资产；合并后 master Flutter Run `43901866825`、Android arm64 与 Quality Gate Run `43901867004` success。 |
 | Phase 3：工具、收藏、设置、历史与辅助页面 | `PASS`（自动化） | PR #214/#217/#219/#220/#226/#227/#240/#247/#248/#255/#262/#264/#266/#267 均已合并；集成 SHA 见第 5 节。覆盖列表减阴影/细分隔、工具标签 200% 换行、紫微折叠布局、五运六气对比度/文本缩放/徽章高度、剂量换算器 200%，以及收藏/设置/历史/命盘库浅深主题。 |
 | 五行徽章文字与背景高度 | `PASS` | PR #264 合并 SHA `4136bc616fa382cc7196e277c99f67f7f3e23007`；背景高度改为依据实际 TextPainter.height 计算，200% 几何断言进入 master。 |
 | Phase 4：跨页面语义色对比度 | `PASS`（自动化） | PR #265 合并 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；当前 HEAD Flutter regression Run `44103235167` success、Android arm64 job `134112303183` success。覆盖浅深主题状态色、容器和六经文字/容器配对。 |
-| PR #265 合并后的主线 CI | `IN_PROGRESS` | master HEAD `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；Flutter Run `44105085769`、Quality Gate Run `44105085816` 已触发，必须以终态更新本记录。 |
+| PR #265 合并后的主线 CI | `PASS` | master HEAD `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；Flutter regression Run `44105085769` 与 Quality Gate Run `44105085816` 均 success。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需 OPPO Find N2 真实设备截图、系统版本、实际窗口 dp、字号档位及浅深主题连续阅读记录。CI/Widget/模拟器不替代实机。 |
 
