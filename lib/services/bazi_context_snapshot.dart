@@ -50,9 +50,15 @@ class BaziContextSnapshot {
     required BaZiPaipan chart,
     required BaZiFortune fortune,
   }) {
-    final selectedLocation = longitude != null;
+    final selectedCoordinates = longitude != null;
+    final hasDirectoryLabel = birthplaceLabel?.trim().isNotEmpty == true;
+    final locationMode = !selectedCoordinates
+        ? 'ENGINE_DEFAULT'
+        : hasDirectoryLabel
+            ? 'CITY_DIRECTORY'
+            : 'EXPLICIT_COORDINATES';
     final actualLongitude = longitude ?? 120.0;
-    final actualLatitude = selectedLocation ? (latitude ?? 30.0) : 30.0;
+    final actualLatitude = selectedCoordinates ? (latitude ?? 30.0) : 30.0;
     if (!actualLongitude.isFinite ||
         actualLongitude < -180 ||
         actualLongitude > 180 ||
@@ -61,15 +67,12 @@ class BaziContextSnapshot {
         actualLatitude > 90) {
       throw ArgumentError('BaZi snapshot coordinates are outside WGS-84 bounds.');
     }
-    if (selectedLocation && (birthplaceLabel == null || birthplaceLabel.trim().isEmpty)) {
-      throw ArgumentError('A selected birthplace requires its local directory label.');
-    }
-
+    final resolvedLocationLabel = switch (locationMode) {
+      'CITY_DIRECTORY' => birthplaceLabel!.trim(),
+      'EXPLICIT_COORDINATES' => 'MISSING（仅提供明确经纬度）',
+      _ => '未指定（引擎默认地点）',
+    };
     final solarLocal = _formatSolar(solar);
-    final locationMode = selectedLocation ? 'CITY_DIRECTORY' : 'ENGINE_DEFAULT';
-    final resolvedLocationLabel = selectedLocation
-        ? birthplaceLabel!.trim()
-        : '未指定（引擎默认地点）';
     final location = Location(actualLongitude, actualLatitude);
     final stageMode =
         fireEarthSame ? TwelveStageMode.fireEarthSame : TwelveStageMode.waterEarthSame;
@@ -148,10 +151,13 @@ class BaziContextSnapshot {
       },
     };
 
-    final locationDescription = selectedLocation
+    final locationDescription = locationMode == 'CITY_DIRECTORY'
         ? '$resolvedLocationLabel（东经：${actualLongitude.toStringAsFixed(4)}，'
             '北纬：${actualLatitude.toStringAsFixed(4)}）'
-        : '未指定；引擎默认地点为东经120°、北纬30°';
+        : locationMode == 'EXPLICIT_COORDINATES'
+            ? '地点名称 MISSING；明确坐标：东经/西经 ${actualLongitude.toStringAsFixed(4)}，'
+                '北纬/南纬 ${actualLatitude.toStringAsFixed(4)}'
+            : '未指定；引擎默认地点为东经120°、北纬30°';
     final summary = formatBaZiChartForAssistant(
       solar: solar,
       isMale: isMale,
@@ -169,7 +175,7 @@ class BaziContextSnapshot {
       'ruleVersion': ruleVersion,
       'sourceIds': [
         sourceId,
-        if (selectedLocation) locationSourceId,
+        if (locationMode == 'CITY_DIRECTORY') locationSourceId,
       ],
       'input': <String, Object?>{
         'solarDateTimeLocal': solarLocal,
@@ -183,7 +189,11 @@ class BaziContextSnapshot {
           'longitude': actualLongitude,
           'latitude': actualLatitude,
           'coordinateDatum': 'WGS-84',
-          'sourceId': selectedLocation ? locationSourceId : 'ENGINE_DEFAULT',
+          'sourceId': locationMode == 'CITY_DIRECTORY'
+              ? locationSourceId
+              : locationMode == 'EXPLICIT_COORDINATES'
+                  ? 'USER_INPUT'
+                  : 'ENGINE_DEFAULT',
         },
         'settings': <String, Object?>{
           'useTrueSolarTime': useTrueSolarTime,
@@ -242,13 +252,20 @@ class BaziContextSnapshot {
         (mode != 'CITY_DIRECTORY' && mode != 'ENGINE_DEFAULT')) {
       throw ArgumentError('BaZi snapshot birthplace is invalid.');
     }
-    final selectedLocation = mode == 'CITY_DIRECTORY';
-    if (selectedLocation &&
+    final cityDirectoryLocation = mode == 'CITY_DIRECTORY';
+    final explicitCoordinates = mode == 'EXPLICIT_COORDINATES';
+    final defaultLocation = mode == 'ENGINE_DEFAULT';
+    if (cityDirectoryLocation &&
         (label.trim().isEmpty ||
             birthplace['sourceId'] != locationSourceId)) {
-      throw ArgumentError('A selected BaZi birthplace requires a local city source.');
+      throw ArgumentError('A city-directory birthplace requires its local city source.');
     }
-    if (!selectedLocation && birthplace['sourceId'] != 'ENGINE_DEFAULT') {
+    if (explicitCoordinates &&
+        (label != 'MISSING' && !label.startsWith('MISSING') ||
+            birthplace['sourceId'] != 'USER_INPUT')) {
+      throw ArgumentError('Explicit coordinates must not claim a city-directory record.');
+    }
+    if (defaultLocation && birthplace['sourceId'] != 'ENGINE_DEFAULT') {
       throw ArgumentError('An engine-default birthplace cannot claim a city source.');
     }
     final useTrueSolarTime = settings['useTrueSolarTime'];
@@ -286,9 +303,9 @@ class BaziContextSnapshot {
       useTrueSolarTime: useTrueSolarTime,
       distinguishZiShi: distinguishZiShi,
       fireEarthSame: fireEarthSame,
-      birthplaceLabel: selectedLocation ? label : null,
-      longitude: selectedLocation ? longitude.toDouble() : null,
-      latitude: selectedLocation ? latitude.toDouble() : null,
+      birthplaceLabel: cityDirectoryLocation ? label : null,
+      longitude: defaultLocation ? null : longitude.toDouble(),
+      latitude: defaultLocation ? null : latitude.toDouble(),
       chart: chart,
       fortune: fortune,
     );
