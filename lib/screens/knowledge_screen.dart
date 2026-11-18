@@ -393,7 +393,7 @@ class _FormulaTabState extends State<_FormulaTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => FormulaDetailScreen(formula: formula),
                 ),
               ),
@@ -697,7 +697,7 @@ class _HerbTabState extends State<_HerbTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+                FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => HerbDetailScreen(herb: herb),
                 ),
               ),
@@ -851,7 +851,7 @@ class _HerbTabState extends State<_HerbTab> {
                 onPressed: () => Navigator.push(
                   context,
                   FoldAwareMaterialPageRoute(
-                    sourceContext: itemContext,
+                    sourceContext: context,
                     builder: (_) => const BenCaoLibraryScreen(),
                   ),
                 ),
