@@ -136,7 +136,7 @@ class AiContextResolver {
       );
     }
     final anchorMatch = RegExp(
-      r'^yunqi:result:([0-9a-f]{64}):date=(\d{4}-\d{2}-\d{2})
+      r'^yunqi:result:([0-9a-f]{64}):date=(\d{4}-\d{2}-\d{2})$',
     ).firstMatch(ref.anchorId);
     final snapshotId = ref.snapshotId;
     if (anchorMatch == null ||
