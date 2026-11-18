@@ -141,20 +141,24 @@ void main() {
             // Wait for the real ear-point asset load to finish. While the
             // FutureBuilder is loading it intentionally shows an indeterminate
             // spinner, so pumpAndSettle cannot be used as a readiness signal.
+            final earSearchField = find.descendant(
+              of: find.byType(AcupunctureScreen),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is TextField &&
+                    widget.decoration?.hintText == '搜索穴名 / 拼音 / 代码...',
+              ),
+            );
+            // Wait for the ear-specific UI, not for a global spinner count:
+            // unrelated retained root-navigation pages may still animate.
             for (var attempt = 0;
-                attempt < 20 &&
-                    find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
+                attempt < 30 && earSearchField.evaluate().isEmpty;
                 attempt++) {
               await tester.runAsync(
                 () => Future<void>.delayed(const Duration(milliseconds: 100)),
               );
               await tester.pump();
             }
-            expect(
-              find.byType(CircularProgressIndicator),
-              findsNothing,
-              reason: '耳穴资产应在限定等待内完成加载',
-            );
             final acupunctureTabBar = tester.widget<TabBar>(
               find
                   .descendant(
@@ -180,11 +184,7 @@ void main() {
               reason: '耳穴资产 FutureBuilder 返回错误：$visibleText',
             );
             expect(
-              find.byWidgetPredicate(
-                (widget) =>
-                    widget is TextField &&
-                    widget.decoration?.hintText == '搜索穴名 / 拼音 / 代码...',
-              ),
+              earSearchField,
               findsOneWidget,
               reason: '耳穴列表应在资产加载后显示搜索框；可见文本：$visibleText',
             );
