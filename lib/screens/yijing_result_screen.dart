@@ -53,7 +53,10 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
       return;
     }
 
-    final resolution = AiContextResolver.resolveYiJingToolResult(ref: contextRef);
+    final resolution = AiContextResolver.resolveYiJingToolResult(
+      ref: contextRef,
+      structuredSnapshot: snapshot,
+    );
     final resolved = resolution.value;
     if (!resolution.isResolved || resolved == null) {
       if (mounted) {
@@ -153,7 +156,7 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
               icon: const Icon(Icons.auto_awesome),
               onPressed: _askAiAboutResult,
             ),
-          if (returnResultOnComplete)
+          if (widget.returnResultOnComplete)
             IconButton(
               tooltip: '返回 AI 助手',
               icon: const Icon(Icons.reply),

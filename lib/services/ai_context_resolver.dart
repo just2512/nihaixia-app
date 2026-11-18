@@ -9,6 +9,7 @@ import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
 import 'yunqi_tool_executor.dart';
+import 'yijing_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -193,6 +194,156 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YunQi result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
+
+  static const yijingModuleId = 'yijing';
+
+  static AiContextRef buildYiJingResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        snapshotId.isEmpty ||
+        ruleVersion != YiJingToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != yijingModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YiJingToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] is! String ||
+        sourceIds is! List ||
+        !sourceIds.contains(YiJingToolExecutor.sourceId) ||
+        !sourceIds.contains(YiJingToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A YiJing context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    final method = input['method'] as String;
+    if (!const {'number', 'time', 'manual', 'coins'}.contains(method)) {
+      throw ArgumentError('The YiJing snapshot has an unsupported cast method.');
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: yijingModuleId,
+      anchorId: 'yijing:result:$snapshotId:method=$method',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: YiJingToolExecutor.sourceId,
+      title: '易经起卦结果（$method）',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult> resolveYiJingToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != yijingModuleId ||
+        ref.sourceId != YiJingToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YiJing reference is incomplete or does not identify the local YiJing engine.',
+      );
+    }
+    if (ref.ruleVersion != YiJingToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The YiJing engine or hexagram data version no longer matches this result.',
+      );
+    }
+    final anchorMatch = RegExp(
+      r'^yijing:result:([0-9a-f]{64}):method=(number|time|manual|coins)$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (anchorMatch == null ||
+        snapshotId == null ||
+        ref.anchorVersion != snapshotId ||
+        anchorMatch.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YiJing result anchor and snapshot identity do not agree.',
+      );
+    }
+    final method = anchorMatch.group(2)!;
+    if (ref.title != null && ref.title != '易经起卦结果（$method）') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YiJing result title does not match its cast method anchor.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final argumentsValue = input is Map ? input['arguments'] : null;
+    if (input is! Map ||
+        input['method'] != method ||
+        argumentsValue is! Map ||
+        argumentsValue.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['ruleVersion'] != YiJingToolExecutor.ruleVersion ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YiJingToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != yijingModuleId ||
+        structuredSnapshot['sourceIds'] is! List ||
+        !(structuredSnapshot['sourceIds'] as List)
+            .contains(YiJingToolExecutor.sourceId) ||
+        !(structuredSnapshot['sourceIds'] as List)
+            .contains(YiJingToolExecutor.dataSourceId)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YiJing reference is not bound to a complete recorded execution input.',
+      );
+    }
+    final arguments = <String, String>{
+      for (final entry in argumentsValue.entries)
+        entry.key as String: entry.value as String,
+    };
+    if (arguments['method'] != method) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The recorded YiJing method does not match its context anchor.',
+      );
+    }
+    try {
+      final suppliedDigest =
+          AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
+      if (suppliedDigest != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The supplied YiJing result no longer matches its immutable snapshot digest.',
+        );
+      }
+      final reconstructed =
+          YiJingToolExecutor.createStructuredSnapshot(arguments);
+      if (reconstructed['snapshotId'] != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The local YiJing engine reconstruction no longer matches this result.',
+        );
+      }
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: reconstructed,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YiJing result could not be reconstructed and verified from the local engine.',
       );
     }
   }

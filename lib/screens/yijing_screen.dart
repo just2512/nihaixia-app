@@ -6,6 +6,7 @@ import '../data/yijing_data.dart';
 import '../engine/yijing_engine.dart';
 import 'yijing_detail_screen.dart';
 import 'yijing_result_screen.dart';
+import '../services/yijing_tool_executor.dart';
 import 'minggua_calculator_screen.dart';
 import 'minggua_library_screen.dart';
 
@@ -62,7 +63,11 @@ class _YiJingScreenState extends State<YiJingScreen> {
     });
     if (_coinStep == 6) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _openResult(YiJingEngine.castByCoins(_coinResults.cast<int>().toList()));
+        final rolls = _coinResults.cast<int>().toList(growable: false);
+        _openResult(
+          YiJingEngine.castByCoins(rolls),
+          {'method': 'coins', 'coins': rolls.join(',')},
+        );
         setState(() {
           _coinStep = 0;
           _coinResults.fillRange(0, 6, null);
@@ -164,13 +169,17 @@ class _YiJingScreenState extends State<YiJingScreen> {
     );
   }
 
-  Future<void> _openResult(CastResult cast) async {
+  Future<void> _openResult(
+    CastResult cast,
+    Map<String, String> executionArguments,
+  ) async {
     final result = await Navigator.push<String>(
       context,
       FoldAwareMaterialPageRoute(
         sourceContext: context,
         builder: (_) => YiJingResultScreen(
           cast: cast,
+          executionArguments: Map<String, String>.unmodifiable(executionArguments),
           returnResultOnComplete: widget.returnResultOnComplete,
         ),
       ),
@@ -189,7 +198,10 @@ class _YiJingScreenState extends State<YiJingScreen> {
       ).showSnackBar(const SnackBar(content: Text('请输入两个非负整数')));
       return;
     }
-    _openResult(YiJingEngine.castByNumbers(a, b));
+    _openResult(
+      YiJingEngine.castByNumbers(a, b),
+      {'method': 'number', 'first': '$a', 'second': '$b'},
+    );
   }
 
   @override
@@ -243,8 +255,13 @@ class _YiJingScreenState extends State<YiJingScreen> {
                 ),
               ),
               FilledButton.icon(
-                onPressed: () =>
-                    _openResult(YiJingEngine.castByTime(DateTime.now())),
+                onPressed: () {
+                  final at = DateTime.now();
+                  _openResult(
+                    YiJingEngine.castByTime(at),
+                    {'method': 'time', 'at': at.toIso8601String()},
+                  );
+                },
                 icon: const Icon(Icons.casino_outlined),
                 label: const Text('起卦'),
               ),
@@ -392,6 +409,12 @@ class _YiJingScreenState extends State<YiJingScreen> {
                       _manualLower,
                       _manualMoving,
                     ),
+                    {
+                      'method': 'manual',
+                      'upper': '$_manualUpper',
+                      'lower': '$_manualLower',
+                      'moving': '$_manualMoving',
+                    },
                   ),
                   icon: const Icon(Icons.casino_outlined),
                   label: const Text('起卦'),
