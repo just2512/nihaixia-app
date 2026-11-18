@@ -383,6 +383,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
             );
           }
           return ListView(
+        key: const ValueKey('ziwei-chart-page-scroll'),
         controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: [
@@ -568,6 +569,18 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       ref: contextRef,
       resultPayload: resultPayload,
     );
+    await _showContextualAssistant(
+      contextRef: contextRef,
+      initialPrompt: prompt,
+      contextualTitle: '紫微斗数排盘结果',
+    );
+  }
+
+  Future<void> _showContextualAssistant({
+    required AiContextRef contextRef,
+    required String initialPrompt,
+    required String contextualTitle,
+  }) async {
     final pageScrollOffset = _pageScrollController.hasClients
         ? _pageScrollController.position.pixels
         : null;
@@ -575,23 +588,20 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: prompt,
+      initialPrompt: initialPrompt,
       initialMode: AssistantMode.metaphysics,
-      contextualTitle: '紫微斗数排盘结果',
+      contextualTitle: contextualTitle,
       contextualExplanationOnly: true,
     );
 
-    // The dialog future resolves when it is popped, before its reverse
-    // transition has necessarily removed the route from the Navigator. Wait
-    // until this source page is current again so its Scrollable is attached
-    // and its viewport metrics are stable before restoring the offset.
+    // The modal future resolves before its reverse transition necessarily
+    // finishes. Wait until the source page and its viewport are stable.
     var stablePageFrames = 0;
     var pagePositionReady = false;
     for (var frame = 0; frame < 60 && mounted; frame++) {
       final routeIsCurrent =
           sourcePageRoute == null || sourcePageRoute.isCurrent;
-      final hasScrollPosition = _pageScrollController.hasClients;
-      final hasScrollMetrics = hasScrollPosition &&
+      final hasScrollMetrics = _pageScrollController.hasClients &&
           _pageScrollController.position.hasContentDimensions;
       if (routeIsCurrent && hasScrollMetrics) {
         stablePageFrames++;
@@ -668,13 +678,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final prompt = AiContextPromptBuilder.buildToolResultField(
       resolvedField: resolvedField,
     );
-    await showContextualAiSheet(
-      context: context,
+    await _showContextualAssistant(
       contextRef: contextRef,
       initialPrompt: prompt,
-      initialMode: AssistantMode.metaphysics,
       contextualTitle: resolvedField.fieldLabel,
-      contextualExplanationOnly: true,
     );
   }
 
