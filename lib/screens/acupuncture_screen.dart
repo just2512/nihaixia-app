@@ -10,6 +10,7 @@ import '../models/acupoint_detail.dart';
 import 'acupoint_detail_screen.dart';
 import 'zhenjiu_library_screen.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/ear_points_map.dart';
 import '../widgets/keep_alive_tab.dart';
 import '../widgets/meridian_map.dart';
@@ -249,7 +250,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
               child: Text(
                 entry.sourceLabel,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: AppType.micro,
                   color: entry.source == 'nihaisha'
                       ? context.colors.warning
                       : context.colors.info,
@@ -262,7 +263,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
           entry.acupointsText,
           style: TextStyle(
             color: Theme.of(context).colorScheme.primary,
-            fontSize: 12,
+            fontSize: AppType.caption,
           ),
         ),
         trailing: entry.hasCase
@@ -323,7 +324,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                     backgroundColor: a.method != null
                         ? context.colors.warningContainer
                         : context.colors.infoContainer,
-                    labelStyle: const TextStyle(fontSize: 12),
+                    labelStyle: const TextStyle(fontSize: AppType.caption),
                     visualDensity: VisualDensity.compact,
                   ),
                 );
@@ -345,7 +346,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 ),
                 child: Text(
                   entry.medicalCase,
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: AppType.caption),
                 ),
               ),
             ),
@@ -430,7 +431,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                         }
                       },
                       child: Chip(
-                        label: Text(name, style: const TextStyle(fontSize: 10)),
+                        label: Text(name, style: const TextStyle(fontSize: AppType.micro)),
                         backgroundColor: context.colors.infoContainer,
                         visualDensity: VisualDensity.compact,
                       ),
@@ -444,7 +445,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
               runSpacing: 4,
               children: entry.indications.map((ind) {
                 return Chip(
-                  label: Text(ind, style: const TextStyle(fontSize: 10)),
+                  label: Text(ind, style: const TextStyle(fontSize: AppType.micro)),
                   backgroundColor: context.colors.successContainer,
                   visualDensity: VisualDensity.compact,
                 );
@@ -587,14 +588,19 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.only(left: 12, right: 4),
-          child: Row(
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               Text(
                 '共 ${acupoints.length} 个穴位',
-                style:
-                    TextStyle(fontSize: 12, color: context.colors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: AppType.caption,
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
-              const Spacer(),
               // 针灸讲稿（倪师人纪）：系统学习入口，与讲解 tab 逐穴速查互补。
               TextButton.icon(
                 style: TextButton.styleFrom(
@@ -603,11 +609,13 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: const Icon(Icons.menu_book_outlined, size: 16),
-                label: const Text('讲稿', style: TextStyle(fontSize: 12)),
+                label: const Text('讲稿', style: TextStyle(fontSize: AppType.caption)),
                 onPressed: () => Navigator.push(
                   context,
-                  FoldAwareMaterialPageRoute(sourceContext: context,
-                      builder: (_) => const ZhenjiuLibraryScreen()),
+                  FoldAwareMaterialPageRoute(
+                    sourceContext: context,
+                    builder: (_) => const ZhenjiuLibraryScreen(),
+                  ),
                 ),
               ),
               // 选中具体经络 → 直接开该经的循行图；「全部」→ 开图后在对话框内切换经络。
@@ -618,7 +626,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: const Icon(Icons.account_tree_outlined, size: 16),
-                label: const Text('经络图', style: TextStyle(fontSize: 12)),
+                label: const Text('经络图', style: TextStyle(fontSize: AppType.caption)),
                 onPressed: () => showMeridianMapDialog(
                   context,
                   initial:
@@ -652,16 +660,18 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
     return Card(
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
-        title: Row(
+        title: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               acupoint.name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: AppType.body),
             ),
-            const SizedBox(width: 8),
             if (acupoint.meridian.isNotEmpty)
               Chip(
-                label: Text(acupoint.meridian, style: const TextStyle(fontSize: 10)),
+                label: Text(acupoint.meridian, style: const TextStyle(fontSize: AppType.micro)),
                 backgroundColor: colorScheme.primaryContainer,
                 labelStyle: TextStyle(color: colorScheme.onPrimaryContainer),
                 visualDensity: VisualDensity.compact,
@@ -674,7 +684,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 acupoint.location,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: AppType.caption),
               )
             : null,
         trailing: const Icon(Icons.chevron_right),
@@ -703,7 +713,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
             '备注',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: AppType.caption,
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
@@ -726,7 +736,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                     b,
                     style: TextStyle(
                       color: context.colors.onSurfaceVariant,
-                      fontSize: 12,
+                      fontSize: AppType.caption,
                     ),
                   ))
               .toList(),
@@ -748,7 +758,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
             child: Text(
               '【${s.tag}】',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: AppType.micro,
                 fontWeight: FontWeight.bold,
                 color: cs.onPrimaryContainer,
               ),
@@ -761,7 +771,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 b,
                 style: TextStyle(
                   color: context.colors.onSurfaceVariant,
-                  fontSize: 12,
+                  fontSize: AppType.caption,
                 ),
               ),
             ),
@@ -895,7 +905,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                   Text(
                     '共 ${shown.length} 穴',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: AppType.caption,
                       color: context.colors.onSurfaceVariant,
                     ),
                   ),
@@ -954,11 +964,11 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
           children: [
             Text(
               p.name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: AppType.body),
             ),
             const SizedBox(width: 6),
             Chip(
-              label: Text(p.code, style: const TextStyle(fontSize: 10)),
+              label: Text(p.code, style: const TextStyle(fontSize: AppType.micro)),
               backgroundColor: cs.primaryContainer,
               labelStyle: TextStyle(color: cs.onPrimaryContainer),
               visualDensity: VisualDensity.compact,
@@ -970,7 +980,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
           p.location,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          style: TextStyle(fontSize: AppType.caption, color: cs.onSurfaceVariant),
         ),
         children: [
           Padding(
@@ -989,7 +999,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 const SizedBox(height: 6),
                 Text(
                   '定位依据 GB/T 13734-2008《耳穴名称与定位》',
-                  style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                  style: TextStyle(fontSize: AppType.micro, color: cs.onSurfaceVariant),
                 ),
               ],
             ),
@@ -1008,13 +1018,13 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
           Text(
             '$label：',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: AppType.caption,
               fontWeight: FontWeight.bold,
               color: cs.primary,
             ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 12)),
+            child: Text(value, style: const TextStyle(fontSize: AppType.caption)),
           ),
         ],
       ),
