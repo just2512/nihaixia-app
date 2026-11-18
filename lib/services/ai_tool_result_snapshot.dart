@@ -40,11 +40,9 @@ class AiToolResultSnapshot {
     }
     final payload = Map<String, Object?>.from(snapshot)
       ..remove('snapshotId');
-    return createId(
-      input: Map<String, Object?>.from(inputValue),
-      ruleVersion: ruleVersion,
-      resultPayload: payload,
-    );
+    return sha256.convert(
+      utf8.encode(canonicalJson(payload)),
+    ).toString();
   }
 
   /// Public so resolvers can compare a structured result field with the
