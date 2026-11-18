@@ -154,3 +154,198 @@ String formatZiweiChartForAssistant({
   ];
   return lines.join('\n');
 }
+
+/// Returns a complete, structured Ziwei result snapshot payload.
+///
+/// This is the deterministic engine output, not a rendering of UI text.
+/// [displaySummary] is kept as a separate optional reading aid and is not used
+/// as the authoritative result data.
+const ziweiStructuredResultRuleVersion =
+    'ziwei_core@0.13.0;app-formatter=ziwei-result-v1;structured-result=v1';
+
+Map<String, Object?> serializeZiweiStarForAssistant(ZiweiStar star) =>
+    Map<String, Object?>.unmodifiable({
+      'starKey': star.key,
+      'name': star.label,
+      'category': star.isMajor
+          ? '主星'
+          : star.isLucky
+              ? '吉星'
+              : star.isBad
+                  ? '煞星'
+                  : '杂曜',
+      'starType': star.type.name,
+      'brightness': star.brightness,
+      'transformation':
+          star.sihua == null ? null : star.sihuaText,
+      'displayText': starDisplayText(star),
+    });
+
+Map<String, Object?> buildZiweiStructuredResultForAssistant({
+  required DateTime solar,
+  required bool useTrueSolarTime,
+  required bool distinguishZiShi,
+  required String locationDescription,
+  required double longitude,
+  required double latitude,
+  required ZiweiChart chart,
+  FlowYearMark? flowYear,
+  FlowMonthMark? flowMonth,
+  FlowDayMark? flowDay,
+}) {
+  final life = chart.palaces.firstWhere((palace) => palace.isLife);
+  final body = chart.palaces.firstWhere((palace) => palace.isBody);
+  final palaces = chart.palaces
+      .toList(growable: false)
+    ..sort((a, b) => a.index.compareTo(b.index));
+  final palaceRecords = palaces
+      .map((palace) => Map<String, Object?>.unmodifiable({
+            'physicalBranchIndex': palace.index,
+            'roleLabel': palace.roleLabel,
+            'branchLabel': palace.branchLabel,
+            'stemLabel': palace.stemLabel,
+            'ganzhiLabel': palace.ganzhiLabel,
+            'isLife': palace.isLife,
+            'isBody': palace.isBody,
+            'stars': palace.stars
+                .map(serializeZiweiStarForAssistant)
+                .toList(growable: false),
+          }))
+      .toList(growable: false);
+  final decadeRecords = chart.decades
+      .map((decade) => Map<String, Object?>.unmodifiable({
+            'index': decade.index,
+            'startAge': decade.startTime,
+            'endAge': decade.endTime,
+            'roleLabel': decade.roleLabel,
+            'ganzhiLabel': decade.ganzhiLabel,
+          }))
+      .toList(growable: false);
+  final sihuaRecords = chart.sihua
+      .map((item) => Map<String, Object?>.unmodifiable({
+            'type': item.type.name,
+            'typeLabel': item.typeLabel,
+            'starKey': item.starKey,
+            'starLabel': item.starLabelName,
+          }))
+      .toList(growable: false);
+  final flow = <String, Object?>{
+    'year': flowYear == null
+        ? null
+        : {
+            'year': flowYear.year,
+            'ganzhi': flowYear.ganzhi,
+            'mingPhysicalBranchIndex': flowYear.mingIndex,
+            'taiSuiPhysicalBranchIndex': flowYear.taiSuiIndex,
+            'starsByPhysicalBranch': {
+              for (final entry in flowYear.flowStars.entries)
+                entry.key.toString(): List<String>.unmodifiable(entry.value),
+            },
+          },
+    'month': flowMonth == null
+        ? null
+        : {
+            'date': flowMonth.date.toIso8601String(),
+            'year': flowMonth.year,
+            'lunarMonth': flowMonth.month,
+            'isLeapMonth': flowMonth.isLeap,
+            'ganzhi': flowMonth.ganzhi,
+            'mingPhysicalBranchIndex': flowMonth.mingIndex,
+            'illnessPhysicalBranchIndex': flowMonth.illnessIndex,
+            'mingPalaceRole': flowMonth.roleLabel,
+          },
+    'day': flowDay == null
+        ? null
+        : {
+            'date': flowDay.date.toIso8601String(),
+            'ganzhi': flowDay.ganzhi,
+            'mingPhysicalBranchIndex': flowDay.mingIndex,
+            'illnessPhysicalBranchIndex': flowDay.illnessIndex,
+            'mingPalaceRole': flowDay.roleLabel,
+          },
+  };
+  final result = <String, Object?>{
+    'bazi': {
+      'yearPillar': chart.baziYear,
+      'monthPillar': chart.baziMonth,
+      'dayPillar': chart.baziDay,
+      'hourPillar': chart.baziTime,
+      'full': chart.baziFull,
+    },
+    'lunar': {
+      'text': chart.lunarText,
+      'month': chart.lunarMonth,
+      'isLeapMonth': chart.lunarIsLeap,
+      'monthDisplay': chart.lunarMonthDisplay,
+    },
+    'elementBureau': chart.elementBureauLabel,
+    'lifePalace': {
+      'physicalBranchIndex': life.index,
+      'roleLabel': life.roleLabel,
+      'branchLabel': life.branchLabel,
+    },
+    'bodyPalace': {
+      'physicalBranchIndex': body.index,
+      'roleLabel': body.roleLabel,
+      'branchLabel': body.branchLabel,
+    },
+    'mingZhu': chart.mingZhuLabel,
+    'shenZhu': chart.shenZhuLabel,
+    'sihua': sihuaRecords,
+    'palacesByPhysicalBranch': palaceRecords,
+    'decades': decadeRecords,
+    'selectedFlow': flow,
+    'interpretationTemplates': {
+      'overall': summarizeOverall(chart),
+      'decades': summarizeDecades(chart),
+    },
+  };
+  final input = <String, Object?>{
+    'solar': solar.toIso8601String(),
+    'gender': chart.genderLabel,
+    'location': {
+      'description': locationDescription,
+      'longitude': longitude,
+      'latitude': latitude,
+    },
+    'useTrueSolarTime': useTrueSolarTime,
+    'distinguishZiShi': distinguishZiShi,
+  };
+  final missingFields = <String>[
+    if (chart.mingZhuLabel == null) 'result.mingZhu',
+    if (chart.shenZhuLabel == null) 'result.shenZhu',
+    if (chart.sihua.isEmpty) 'result.sihua',
+  ];
+  return Map<String, Object?>.unmodifiable({
+    'capabilityId': 'ziwei',
+    'sourceIds': const ['local-engine:ziwei-core@0.13.0'],
+    'executionStatus': 'SUCCESS',
+    'ruleVersion': ziweiStructuredResultRuleVersion,
+    'resultSchemaVersion': 'ziwei-structured-result-v1',
+    'input': input,
+    'result': result,
+    'units': const {
+      'result.decades.startAge': '虚岁',
+      'result.decades.endAge': '虚岁',
+      'input.location.longitude': '度',
+      'input.location.latitude': '度',
+      'result.lunar.month': '农历月',
+      'result.palacesByPhysicalBranch[].stars[].brightness':
+          '星曜亮度等级（离散标签）',
+      'result.palacesByPhysicalBranch[].stars[].transformation':
+          '生年四化类别（离散标签）',
+      'result.sihua[].typeLabel': '四化类别（离散标签）',
+    },
+    'missingFields': missingFields,
+    'displaySummary': formatZiweiChartForAssistant(
+      solar: solar,
+      useTrueSolarTime: useTrueSolarTime,
+      distinguishZiShi: distinguishZiShi,
+      locationDescription: locationDescription,
+      chart: chart,
+      flowYear: flowYear,
+      flowMonth: flowMonth,
+      flowDay: flowDay,
+    ),
+  });
+}

@@ -5,7 +5,27 @@ import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/services/ai_tool_result_snapshot.dart';
+import 'package:nihaisha_app/services/assistant_chart_result_formatter.dart';
 import 'package:nihaisha_app/services/ziwei_engine.dart';
+
+Map<String, Object?> _buildStructuredZiweiSnapshot(ZiweiChart chart) {
+  final base = buildZiweiStructuredResultForAssistant(
+    solar: DateTime(2000, 8, 16, 10),
+    useTrueSolarTime: true,
+    distinguishZiShi: false,
+    locationDescription: '上海',
+    longitude: 121.47,
+    latitude: 31.23,
+    chart: chart,
+  );
+  final snapshotId =
+      AiToolResultSnapshot.createStructuredId(snapshot: base);
+  return Map<String, Object?>.unmodifiable({
+    ...base,
+    'snapshotId': snapshotId,
+  });
+}
 
 void main() {
   test('classic selection prompt retains selected text and stable source anchor', () {
@@ -172,26 +192,159 @@ void main() {
     );
   });
 
-  test('tool result prompt binds one immutable result snapshot', () {
-    const ref = AiContextRef(
+  test('tool result prompt sends a verified complete structured snapshot', () {
+    final chart = calculateZiweiChart(
+      solar: DateTime(2000, 8, 16, 10),
+      gender: Gender.male,
+      location: Location(121.47, 31.23),
+      useTrueSolarTime: true,
+    );
+    final snapshot = _buildStructuredZiweiSnapshot(chart);
+    final snapshotId = snapshot['snapshotId']! as String;
+    final ruleVersion = snapshot['ruleVersion']! as String;
+    final ref = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
-      anchorId: 'ziwei:result:abc',
-      anchorVersion: 'abc',
-      snapshotId: 'abc',
-      ruleVersion: 'ziwei_core@0.13.0',
+      anchorId: 'ziwei:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
       sourceId: 'local-engine:ziwei-core@0.13.0',
       title: '紫微斗数排盘结果',
     );
     final prompt = AiContextPromptBuilder.buildToolResult(
       ref: ref,
-      resultPayload: '十二宫星曜：命宫……',
+      structuredSnapshot: snapshot,
     );
 
-    expect(prompt, contains('ziwei:result:abc'));
-    expect(prompt, contains('ziwei_core@0.13.0'));
-    expect(prompt, contains('十二宫星曜'));
+    const structuredMarker = '【App 实际计算结果（结构化快照）】\n';
+    final structuredStart =
+        prompt.indexOf(structuredMarker) + structuredMarker.length;
+    final structuredEnd = prompt.indexOf('\n\n【回答要求】', structuredStart);
+    final structured = jsonDecode(
+      prompt.substring(structuredStart, structuredEnd),
+    ) as Map<String, dynamic>;
+    expect(prompt, contains('ziwei:result:$snapshotId'));
+    expect(prompt, contains(ruleVersion));
+    expect(prompt, contains('palacesByPhysicalBranch'));
+    expect(prompt, contains('interpretationTemplates'));
     expect(prompt, contains('不得重新排盘'));
+    expect(
+      (snapshot['result']! as Map)['palacesByPhysicalBranch'],
+      hasLength(12),
+    );
+    expect(structured, isA<Map<String, dynamic>>());
+    expect(structured['capabilityId'], 'ziwei');
+    expect(structured['executionStatus'], 'SUCCESS');
+    expect(
+      structured['sourceIds'],
+      contains('local-engine:ziwei-core@0.13.0'),
+    );
+    expect(structured['resultSchemaVersion'], 'ziwei-structured-result-v1');
+    expect(
+      (structured['input'] as Map)['location'],
+      containsPair('longitude', 121.47),
+    );
+    expect(
+      (structured['result'] as Map)['palacesByPhysicalBranch'],
+      hasLength(12),
+    );
+    final structuredResult = structured['result'] as Map;
+    expect(structuredResult['bazi'], isA<Map>());
+    expect(structuredResult['lunar'], isA<Map>());
+    expect(structuredResult['elementBureau'], isNotNull);
+    expect(structuredResult['lifePalace'], isA<Map>());
+    expect(structuredResult['bodyPalace'], isA<Map>());
+    expect(structuredResult['sihua'], isA<List>());
+    expect(structuredResult['decades'], isA<List>());
+    expect(structuredResult['decades'], isNotEmpty);
+    expect(structuredResult['selectedFlow'], isA<Map>());
+    expect(
+      structuredResult['interpretationTemplates'],
+      isA<Map>(),
+    );
+    expect(structured['units'], isA<Map>());
+    expect(structured['missingFields'], isA<List>());
+    expect(structured['displaySummary'], isA<String>());
+  });
+
+  test('tool result prompt rejects a tampered structured result', () {
+    final chart = calculateZiweiChart(
+      solar: DateTime(2000, 8, 16, 10),
+      gender: Gender.male,
+      location: Location(121.47, 31.23),
+      useTrueSolarTime: true,
+    );
+    final snapshot = _buildStructuredZiweiSnapshot(chart);
+    final snapshotId = snapshot['snapshotId']! as String;
+    final ref = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: snapshot['ruleVersion']! as String,
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+      title: '紫微斗数排盘结果',
+    );
+    final result = Map<String, Object?>.from(snapshot['result']! as Map);
+    result['elementBureau'] = 'tampered';
+    final tampered = {...snapshot, 'result': result};
+    expect(
+      AiToolResultSnapshot.createStructuredId(snapshot: tampered),
+      isNot(snapshotId),
+      reason: 'Any mutation inside the structured result must change its snapshot digest',
+    );
+
+    expect(
+      () => AiContextPromptBuilder.buildToolResult(
+        ref: ref,
+        structuredSnapshot: tampered,
+      ),
+      throwsArgumentError,
+    );
+
+    final alteredUnits = {
+      ...snapshot,
+      'units': {
+        ...Map<String, Object?>.from(snapshot['units']! as Map),
+        'result.decades.startAge': 'tampered-unit',
+      },
+    };
+    expect(
+      () => AiContextPromptBuilder.buildToolResult(
+        ref: ref,
+        structuredSnapshot: alteredUnits,
+      ),
+      throwsArgumentError,
+      reason: 'Units and measurement semantics are part of snapshot identity',
+    );
+
+    final alteredProvenance = {
+      ...snapshot,
+      'sourceIds': const ['unverified:source'],
+    };
+    expect(
+      () => AiContextPromptBuilder.buildToolResult(
+        ref: ref,
+        structuredSnapshot: alteredProvenance,
+      ),
+      throwsArgumentError,
+      reason: 'Source provenance is part of snapshot identity',
+    );
+
+    final alteredMissingFields = {
+      ...snapshot,
+      'missingFields': const ['tampered.field'],
+    };
+    expect(
+      () => AiContextPromptBuilder.buildToolResult(
+        ref: ref,
+        structuredSnapshot: alteredMissingFields,
+      ),
+      throwsArgumentError,
+      reason: 'Missing-field declarations are part of snapshot identity',
+    );
   });
 
   test('context kind uses a closed enum and preserves persisted wire values', () {
@@ -317,34 +470,34 @@ void main() {
     );
   });
 
-  test('field prompt is built only from a resolved engine field', () {
+  test('field prompt is built only from a resolved structured engine field', () {
     final chart = calculateZiweiChart(
       solar: DateTime(2000, 8, 16, 10),
       gender: Gender.male,
       location: Location(121.47, 31.23),
       useTrueSolarTime: true,
     );
-    const snapshotId = 'snapshot-a';
-    const ruleVersion =
-        'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
+    final snapshot = _buildStructuredZiweiSnapshot(chart);
+    final snapshotId = snapshot['snapshotId']! as String;
+    final ruleVersion = snapshot['ruleVersion']! as String;
     const fieldPath = 'palacesByPhysicalBranch.0.stars';
-    const ref = AiContextRef(
+    final ref = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
-      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      anchorId: 'ziwei:result:$snapshotId:field:$fieldPath',
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion,
       fieldPath: fieldPath,
       sourceId: 'local-engine:ziwei-core@0.13.0',
-      title: '命宫星曜',
+      title: '宫位星曜',
     );
     final resolution = AiContextResolver.resolveZiweiPalaceStars(
       ref: ref,
       chart: chart,
       expectedSnapshotId: snapshotId,
       expectedRuleVersion: ruleVersion,
-      resultPayload: '【紫微斗数排盘完整结果】',
+      structuredSnapshot: snapshot,
     );
 
     expect(resolution.status, AiContextResolutionStatus.resolved);
@@ -359,9 +512,9 @@ void main() {
     expect(prompt, contains('fieldValue'));
     expect(prompt, contains('starKey'));
     expect(prompt, contains('palaceIndex'));
-    expect(prompt, contains('【紫微斗数排盘完整结果】'));
+    expect(prompt, contains('fullStructuredSnapshot'));
+    expect(prompt, contains('interpretationTemplates'));
   });
-
 
   test('field resolver rejects a generic whole-result reference', () {
     final chart = calculateZiweiChart(
@@ -370,43 +523,45 @@ void main() {
       location: Location(121.47, 31.23),
       useTrueSolarTime: true,
     );
-    const ref = AiContextRef(
+    final snapshot = _buildStructuredZiweiSnapshot(chart);
+    final snapshotId = snapshot['snapshotId']! as String;
+    final ruleVersion = snapshot['ruleVersion']! as String;
+    final ref = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
-      anchorId: 'ziwei:result:snapshot-a',
-      anchorVersion: 'snapshot-a',
-      snapshotId: 'snapshot-a',
-      ruleVersion: 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      anchorId: 'ziwei:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
       sourceId: 'local-engine:ziwei-core@0.13.0',
     );
     final resolution = AiContextResolver.resolveZiweiPalaceStars(
       ref: ref,
       chart: chart,
-      expectedSnapshotId: 'snapshot-a',
-      expectedRuleVersion:
-          'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
-      resultPayload: '完整结果',
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      structuredSnapshot: snapshot,
     );
 
     expect(resolution.status, AiContextResolutionStatus.unknown);
     expect(resolution.value, isNull);
   });
 
-  test('field resolver refuses stale snapshots and missing paths', () {
+  test('field resolver refuses stale snapshots, modified data and missing paths', () {
     final chart = calculateZiweiChart(
       solar: DateTime(2000, 8, 16, 10),
       gender: Gender.male,
       location: Location(121.47, 31.23),
       useTrueSolarTime: true,
     );
-    const ruleVersion =
-        'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
-    const snapshotId = 'snapshot-a';
+    final snapshot = _buildStructuredZiweiSnapshot(chart);
+    final snapshotId = snapshot['snapshotId']! as String;
+    final ruleVersion = snapshot['ruleVersion']! as String;
     const fieldPath = 'palacesByPhysicalBranch.0.stars';
-    const ref = AiContextRef(
+    final ref = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
-      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      anchorId: 'ziwei:result:$snapshotId:field:$fieldPath',
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion,
@@ -417,17 +572,17 @@ void main() {
     final stale = AiContextResolver.resolveZiweiPalaceStars(
       ref: ref,
       chart: chart,
-      expectedSnapshotId: 'snapshot-b',
+      expectedSnapshotId: 'snapshot-other',
       expectedRuleVersion: ruleVersion,
-      resultPayload: '完整结果',
+      structuredSnapshot: snapshot,
     );
     expect(stale.status, AiContextResolutionStatus.stale);
 
     const missingPath = 'palacesByPhysicalBranch.99.stars';
-    const missingRef = AiContextRef(
+    final missingRef = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
-      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.99.stars',
+      anchorId: 'ziwei:result:$snapshotId:field:$missingPath',
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion,
@@ -439,17 +594,16 @@ void main() {
       chart: chart,
       expectedSnapshotId: snapshotId,
       expectedRuleVersion: ruleVersion,
-      resultPayload: '完整结果',
+      structuredSnapshot: snapshot,
     );
     expect(missing.status, AiContextResolutionStatus.missing);
     expect(missing.value, isNull);
 
     const unsupportedPath = 'palacesByPhysicalBranch.0.ganzhi';
-    const unsupportedRef = AiContextRef(
+    final unsupportedRef = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
-      anchorId:
-          'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.ganzhi',
+      anchorId: 'ziwei:result:$snapshotId:field:$unsupportedPath',
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion,
@@ -461,14 +615,14 @@ void main() {
       chart: chart,
       expectedSnapshotId: snapshotId,
       expectedRuleVersion: ruleVersion,
-      resultPayload: '完整结果',
+      structuredSnapshot: snapshot,
     );
     expect(unsupported.status, AiContextResolutionStatus.unknown);
 
-    const foreignSourceRef = AiContextRef(
+    final foreignSourceRef = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
-      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      anchorId: 'ziwei:result:$snapshotId:field:$fieldPath',
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion,
@@ -480,12 +634,96 @@ void main() {
       chart: chart,
       expectedSnapshotId: snapshotId,
       expectedRuleVersion: ruleVersion,
-      resultPayload: '完整结果',
+      structuredSnapshot: snapshot,
     );
     expect(foreignSource.status, AiContextResolutionStatus.unknown);
     expect(foreignSource.value, isNull);
-  });
 
+    final result = Map<String, Object?>.from(snapshot['result']! as Map);
+    result['elementBureau'] = 'tampered';
+    final tampered = {...snapshot, 'result': result};
+    final modified = AiContextResolver.resolveZiweiPalaceStars(
+      ref: ref,
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      structuredSnapshot: tampered,
+    );
+    expect(modified.status, AiContextResolutionStatus.stale);
+    expect(modified.value, isNull);
+
+    // Recompute a valid digest after altering only the palace role metadata.
+    // The resolver must still compare that field scope with the live engine
+    // result rather than trusting a self-consistent but semantically foreign
+    // snapshot.
+    final scopeAlteredResult =
+        Map<String, Object?>.from(snapshot['result']! as Map);
+    final originalPalaces =
+        scopeAlteredResult['palacesByPhysicalBranch']! as List;
+    final alteredPalaces = originalPalaces
+        .map((item) => Map<String, Object?>.from(item as Map))
+        .toList();
+    alteredPalaces[0]['roleLabel'] = '迁移宫';
+    scopeAlteredResult['palacesByPhysicalBranch'] = alteredPalaces;
+    final scopeAlteredBase = {
+      ...snapshot,
+      'result': scopeAlteredResult,
+    };
+    final scopeAlteredId = AiToolResultSnapshot.createStructuredId(
+      snapshot: scopeAlteredBase,
+    );
+    final scopeAlteredSnapshot = {
+      ...scopeAlteredBase,
+      'snapshotId': scopeAlteredId,
+    };
+    final scopeAlteredRef = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:$scopeAlteredId:field:$fieldPath',
+      anchorVersion: scopeAlteredId,
+      snapshotId: scopeAlteredId,
+      ruleVersion: ruleVersion,
+      fieldPath: fieldPath,
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+    );
+    final scopeAltered = AiContextResolver.resolveZiweiPalaceStars(
+      ref: scopeAlteredRef,
+      chart: chart,
+      expectedSnapshotId: scopeAlteredId,
+      expectedRuleVersion: ruleVersion,
+      structuredSnapshot: scopeAlteredSnapshot,
+    );
+    expect(scopeAltered.status, AiContextResolutionStatus.stale);
+    expect(scopeAltered.value, isNull);
+
+    final failedExecution = {
+      ...snapshot,
+      'executionStatus': 'FAILED',
+    };
+    final failed = AiContextResolver.resolveZiweiPalaceStars(
+      ref: ref,
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      structuredSnapshot: failedExecution,
+    );
+    expect(failed.status, AiContextResolutionStatus.unknown);
+    expect(failed.value, isNull);
+
+    final unsupportedSchema = {
+      ...snapshot,
+      'resultSchemaVersion': 'unregistered-schema',
+    };
+    final unknownSchema = AiContextResolver.resolveZiweiPalaceStars(
+      ref: ref,
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      structuredSnapshot: unsupportedSchema,
+    );
+    expect(unknownSchema.status, AiContextResolutionStatus.unknown);
+    expect(unknownSchema.value, isNull);
+  });
 
   test('invalid contextual metadata is rejected rather than guessed', () {
     expect(
