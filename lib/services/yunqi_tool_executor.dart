@@ -1,10 +1,56 @@
 import '../models/assistant_tool_result.dart';
+import 'ai_tool_result_snapshot.dart';
 import 'yunqi_engine.dart';
 
 /// Synchronous, side-effect-free Headless adapter for the existing YunQiEngine.
 /// It deliberately reuses the page's year/date convention and result wording.
 class YunQiToolExecutor {
   static const String sourceId = 'local-engine:yunqi';
+  static const String resultSchemaVersion = 'yunqi-structured-result-v1';
+  static const String ruleVersion =
+      'yunqi-engine@f8ba8f7e48c492567a28fb5735d9187d2bdbb91e;'
+      'yunqi-literature@97e628d79f28a70a5468a34e0e80e8f60130ef52;'
+      'schema=$resultSchemaVersion';
+
+  static Map<String, Object?> createStructuredSnapshot(DateTime selectedDate) {
+    final date = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final dateText = _formatDate(date);
+    final toolResult = execute({'date': dateText});
+    if (toolResult.status != AssistantToolExecutionStatus.succeeded ||
+        toolResult.toolId != 'yunqi' ||
+        !toolResult.sourceIds.contains(sourceId)) {
+      throw StateError('The selected YunQi date did not produce a verified successful tool result.');
+    }
+    final result = <String, Object?>{
+      for (final entry in toolResult.values.entries)
+        entry.key: entry.value.trim().isEmpty ? 'MISSING' : entry.value,
+    };
+    final missingFields = <String>[
+      for (final entry in toolResult.values.entries)
+        if (entry.value.trim().isEmpty) entry.key,
+    ];
+    final base = <String, Object?>{
+      'capabilityId': 'yunqi',
+      'resultSchemaVersion': resultSchemaVersion,
+      'executionStatus': 'SUCCESS',
+      'sourceIds': List<String>.unmodifiable(toolResult.sourceIds),
+      'input': Map<String, Object?>.unmodifiable({
+        'date': dateText,
+        'calendarYear': YunQiEngine.calendarYearOf(date),
+        'yearConvention': '当前 App 页面采用公历年口径',
+      }),
+      'result': Map<String, Object?>.unmodifiable(result),
+      'units': const <String, Object?>{
+        'date': '公历日期，YYYY-MM-DD',
+        'calendarYear': '公历年；不等同于立春口径的运气年',
+      },
+      'missingFields': List<String>.unmodifiable(missingFields),
+      'displaySummary': toolResult.toConversationText(),
+      'ruleVersion': ruleVersion,
+    };
+    final snapshotId = AiToolResultSnapshot.createStructuredId(snapshot: base);
+    return Map<String, Object?>.unmodifiable({...base, 'snapshotId': snapshotId});
+  }
 
   static AssistantToolResult execute(
     Map<String, String> arguments, {

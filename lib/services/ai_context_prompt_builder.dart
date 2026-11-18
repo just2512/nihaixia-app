@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../models/ai_context_ref.dart';
 import 'ai_context_resolver.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'yunqi_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -258,6 +259,38 @@ class AiContextPromptBuilder {
     ].join('\n');
   }
 
+  static bool _matchesSupportedToolResultSchema({
+    required AiContextRef ref,
+    required String snapshotId,
+    required Object? schemaVersion,
+    required Map input,
+  }) {
+    if (ref.moduleId == 'ziwei') {
+      return schemaVersion == 'ziwei-structured-result-v1' &&
+          ref.anchorId == 'ziwei:result:$snapshotId';
+    }
+    if (ref.moduleId == 'yunqi') {
+      final date = input['date'];
+      return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
+          date is String &&
+          ref.anchorId == 'yunqi:result:$snapshotId:date=$date';
+    }
+    return false;
+  }
+
+  static String buildYunqiToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != 'yunqi' ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError('A YunQi prompt requires a resolved YunQi tool result.');
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
   static String buildToolResult({
     required AiContextRef ref,
     required Map<String, Object?> structuredSnapshot,
@@ -277,10 +310,14 @@ class AiContextPromptBuilder {
         !sourceIds.contains(ref.sourceId) ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         structuredSnapshot['capabilityId'] != ref.moduleId ||
-        structuredSnapshot['resultSchemaVersion'] != 'ziwei-structured-result-v1' ||
-        ref.anchorId != '${ref.moduleId}:result:$snapshotId' ||
         inputValue is! Map ||
-        resultValue is! Map<String, Object?>) {
+        resultValue is! Map<String, Object?> ||
+        !_matchesSupportedToolResultSchema(
+          ref: ref,
+          snapshotId: snapshotId,
+          schemaVersion: structuredSnapshot['resultSchemaVersion'],
+          input: inputValue,
+        )) {
       throw ArgumentError(
         'A tool-result prompt requires a complete, successful, source-bound structured snapshot.',
       );
