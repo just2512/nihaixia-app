@@ -145,7 +145,7 @@ void main() {
             theme: ThemeData(extensions: [AppColors.light]),
             home: MarkdownDocScreen(
               title: '伤寒论条文样板',
-              content: '#### 条文2\\n\\n> $passage',
+              content: '#### 条文2\n\n> $passage',
               contextualAskModuleId: 'shanghan',
               contextualAskAnchorId: 'shanghan:clause:002',
               contextualAskSourceId: 'assets/shanghan/clause_001.md',
