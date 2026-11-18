@@ -82,7 +82,10 @@ void main() {
       'package:bazi_core@0.6.7',
       'package:sxwnl_spa_dart@0.18.5',
     ]));
-    expect((input['arguments']! as Map<String, String>)['birth_date'], '1990-01-02');
+    final argumentsSnapshot = Map<String, Object?>.from(
+      input['arguments']! as Map,
+    );
+    expect(argumentsSnapshot['birth_date'], '1990-01-02');
     expect(location['mode'], 'city-directory');
     expect(location['label'], '上海市');
     expect(location['longitude'], 121.47);
@@ -295,6 +298,8 @@ void main() {
     await tester.tap(find.text('女').last);
     await tester.pump();
 
+    await tester.ensureVisible(ask);
+    await tester.pumpAndSettle();
     await tester.tap(ask);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
