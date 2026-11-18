@@ -426,6 +426,11 @@ void main() {
                   MaterialPageRoute(
                     builder: (_) => YiJingResultScreen(
                       cast: cast,
+                      executionArguments: const {
+                        'method': 'number',
+                        'first': '3',
+                        'second': '7',
+                      },
                       returnResultOnComplete: true,
                     ),
                   ),
