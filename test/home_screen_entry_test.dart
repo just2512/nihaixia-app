@@ -2,17 +2,79 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/assistant_conversation_store.dart';
+import 'package:nihaisha_app/models/tcm_interview_task_state.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
-List<Widget> _homeShellScreens() => const [
-  Scaffold(body: Center(child: Text('汉唐 AI 助手'))),
+List<Widget> _homeShellScreens() => [
+  LocalAiInterviewScreen(
+    service: _ReadyLocalAiService(),
+    conversationStore: _NoopAssistantConversationStore(),
+  ),
   Scaffold(body: Center(child: Text('工具测试页'))),
   Scaffold(body: Center(child: Text('知识测试页'))),
   Scaffold(body: Center(child: Text('收藏测试页'))),
   Scaffold(body: Center(child: Text('设置测试页'))),
 ];
+
+class _ReadyLocalAiService extends LocalAiService {
+  static const status = LocalAiModelStatus(
+    installed: true,
+    fileExists: true,
+    ready: true,
+    modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+    sizeBytes: 3659530240,
+    expectedSizeBytes: 3659530240,
+    backend: 'cpu',
+  );
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => status;
+}
+
+class _NoopAssistantConversationStore implements AssistantConversationStore {
+  @override
+  Future<int> createAssistantConversation({String title = '新对话', String mode = 'general'}) async => 1;
+
+  @override
+  Future<int> saveAssistantMessage({required int conversationId, required String role, required String content, String? metadata}) async => 1;
+
+  @override
+  Future<int> saveAssistantTurn({required int conversationId, String? userContent, String? userMetadata, required String assistantContent, String? assistantMetadata}) async {
+    if (userContent != null && userContent.trim().isNotEmpty) {
+      await saveAssistantMessage(conversationId: conversationId, role: 'user', content: userContent, metadata: userMetadata);
+    }
+    return saveAssistantMessage(conversationId: conversationId, role: 'assistant', content: assistantContent, metadata: assistantMetadata);
+  }
+
+  @override
+  Future<List<int>> saveAssistantMessagesAtomically({required int conversationId, required List<AssistantMessageDraft> messages}) async {
+    final ids = <int>[];
+    for (final message in messages) {
+      ids.add(await saveAssistantMessage(conversationId: conversationId, role: message.role, content: message.content, metadata: message.metadata));
+    }
+    return ids;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantConversations({int? limit}) async => const [];
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({required int conversationId}) async => const [];
+
+  @override
+  Future<void> saveTcmInterviewTaskState({required int conversationId, required TcmInterviewTaskState state}) async {}
+
+  @override
+  Future<TcmInterviewTaskState?> getTcmInterviewTaskState({required int conversationId}) async => null;
+
+  @override
+  Future<void> deleteAssistantConversations(List<int> conversationIds) async {}
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
