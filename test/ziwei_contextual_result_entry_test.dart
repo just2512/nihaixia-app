@@ -107,8 +107,12 @@ void main() {
 
       final assistant = find.byType(LocalAiInterviewScreen);
       expect(assistant, findsOneWidget);
-      final contextRef =
-          tester.widget<LocalAiInterviewScreen>(assistant).contextRef;
+      final assistantWidget =
+          tester.widget<LocalAiInterviewScreen>(assistant);
+      final contextRef = assistantWidget.contextRef;
+      expect(assistantWidget.initialPrompt, contains('fieldValue'));
+      expect(assistantWidget.initialPrompt, contains('starKey'));
+      expect(assistantWidget.initialPrompt, contains('palaceIndex'));
       expect(contextRef['kind'], 'field');
       expect(contextRef['fieldPath'], 'palacesByPhysicalBranch.0.stars');
       expect(contextRef['snapshotId'], isNotNull);
