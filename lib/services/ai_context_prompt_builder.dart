@@ -7,6 +7,7 @@ import 'yunqi_tool_executor.dart';
 import 'almanac_tool_executor.dart';
 import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
+import 'meihua_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -284,6 +285,16 @@ class AiContextPromptBuilder {
           date is String &&
           ref.anchorId == 'almanac:result:$snapshotId:date=$date';
     }
+    if (ref.moduleId == 'meihua') {
+      final method = input['method'];
+      final arguments = input['arguments'];
+      return schemaVersion == MeihuaToolExecutor.resultSchemaVersion &&
+          method is String &&
+          const {'time', 'number', 'random'}.contains(method) &&
+          arguments is Map &&
+          arguments['method'] == method &&
+          ref.anchorId == 'meihua:result:$snapshotId:method=$method';
+    }
     if (ref.moduleId == 'yijing') {
       final method = input['method'];
       final arguments = input['arguments'];
@@ -325,6 +336,21 @@ class AiContextPromptBuilder {
     if (resolvedResult.ref.moduleId != 'yunqi' ||
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError('A YunQi prompt requires a resolved YunQi tool result.');
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildMeihuaToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != 'meihua' ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A Meihua prompt requires a resolved Meihua tool result.',
+      );
     }
     return buildToolResult(
       ref: resolvedResult.ref,
@@ -443,6 +469,8 @@ class AiContextPromptBuilder {
         '快照明确排除了页面可能展示的本命生肖个性化提示；不得推测用户生肖、读取或补入最近保存命盘等未传入的个人资料。',
       if (ref.moduleId == 'bazi')
         '八字排盘是传统子平命理文化模型，不是科学预测。请把四柱、十神、格局、日主强弱、五行分布、神煞与大运作为 App 引擎按当前规则计算出的文化解释对象；strengthScore 与五行 score 是内部规则分值，不是概率、统计置信度或人生结果保证。不得把命理字段转成疾病诊断、治疗建议、投资/法律结论或重大行为指令。',
+      if (ref.moduleId == 'meihua')
+        '梅花易数属于传统术数与民俗文化学习，不是科学预测或确定性行动指令。请解释本次快照中实际生成的主卦、互卦、变卦、动爻、体用关系、月令旺衰和三阶段推演；随机起卦必须解释已保存的本次随机结果，不得重新随机或重新计算。不得将其转成医疗、法律、投资或其他重要行动建议。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
