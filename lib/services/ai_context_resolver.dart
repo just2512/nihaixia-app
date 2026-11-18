@@ -1,6 +1,8 @@
 import '../models/ai_context_ref.dart';
 import '../models/formula.dart';
 import '../data/formula_repository.dart';
+import 'ai_tool_result_snapshot.dart';
+import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
@@ -27,8 +29,7 @@ class AiContextResolution<T> {
       status == AiContextResolutionStatus.resolved && value != null;
 }
 
-/// Verified field data resolved from the current deterministic engine result.
-/// The reference itself carries identity only; business values live here.
+/// Verified field data resolved from one immutable structured tool snapshot.
 class AiResolvedToolField {
   const AiResolvedToolField._({
     required this.ref,
@@ -36,7 +37,7 @@ class AiResolvedToolField {
     required this.fieldScope,
     required this.fieldValue,
     required this.fieldUnit,
-    required this.resultPayload,
+    required this.structuredSnapshot,
   });
 
   final AiContextRef ref;
@@ -44,117 +45,23 @@ class AiResolvedToolField {
   final Map<String, Object?> fieldScope;
   final List<Map<String, Object?>> fieldValue;
   final String fieldUnit;
-  final String resultPayload;
+  final Map<String, Object?> structuredSnapshot;
 }
 
-
-/// Verified local knowledge entry resolved from the bundled deterministic data.
-class AiResolvedKnowledgeEntry {
-  const AiResolvedKnowledgeEntry._({
-    required this.ref,
-    required this.title,
-    required this.content,
-  });
-
-  final AiContextRef ref;
-  final String title;
-  final Map<String, Object?> content;
-}
-
-/// Resolves app-controlled field paths against a real in-memory engine result.
+/// Resolves app-controlled field paths against a real engine result and
+/// verifies that the full structured snapshot digest still matches its data.
 class AiContextResolver {
   const AiContextResolver._();
-
-
-  static const formulaModuleId = 'formula';
-  static const formulaAssetVersion =
-      'assets/data/formulas.json@58b299e95c47fd54fc1bca18c6762c544b8d87bc';
-
-  static AiContextRef buildFormulaContextRef(Formula formula) {
-    return AiContextRef(
-      kind: AiContextKind.formula,
-      moduleId: formulaModuleId,
-      anchorId: 'formula:${formula.id}',
-      anchorVersion: formulaAssetVersion,
-      sourceId: 'formula:${formula.id}',
-      title: formula.name,
-    );
-  }
-
-  static AiContextResolution<AiResolvedKnowledgeEntry> resolveFormula({
-    required AiContextRef ref,
-  }) {
-    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
-    if (ref.kind != AiContextKind.formula ||
-        normalized.isEmpty ||
-        ref.moduleId != formulaModuleId ||
-        ref.anchorVersion != formulaAssetVersion) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The formula reference is incomplete or does not match the bundled formula source.',
-      );
-    }
-
-    final formulaId = ref.anchorId.startsWith('formula:')
-        ? ref.anchorId.substring('formula:'.length)
-        : '';
-    if (formulaId.isEmpty || ref.sourceId != 'formula:$formulaId') {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The formula anchor and source ID do not agree.',
-      );
-    }
-    final formula = FormulaRepository.getById(formulaId);
-    if (formula == null) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.missing,
-        reason: 'The referenced formula is not present in the bundled formula repository.',
-      );
-    }
-
-    final content = <String, Object?>{
-      'id': formula.id,
-      'name': formula.name,
-      'alias': formula.alias,
-      'meridian': formula.meridian,
-      'category': formula.category,
-      'components': formula.components
-          .map((component) => <String, Object?>{
-                'name': component.name,
-                'dosage': component.dosage,
-                'role': component.role,
-              })
-          .toList(growable: false),
-      'indication': formula.indication,
-      'contraindication': formula.contraindication,
-      'dosage': formula.dosage,
-      'preparation': formula.preparation,
-      'explanation': formula.explanation,
-      'keywords': formula.keywords,
-    };
-
-    return AiContextResolution(
-      status: AiContextResolutionStatus.resolved,
-      value: AiResolvedKnowledgeEntry._(
-        ref: ref,
-        title: formula.name,
-        content: Map<String, Object?>.unmodifiable(content),
-      ),
-    );
-  }
 
   static const ziweiModuleId = 'ziwei';
   static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';
 
-  /// Resolves palacesByPhysicalBranch.{index}.stars against the chart that
-  /// produced [expectedSnapshotId]. The physical branch index is fixed 0–11,
-  /// so the path does not depend on display text or UI coordinates.
   static AiContextResolution<AiResolvedToolField> resolveZiweiPalaceStars({
     required AiContextRef ref,
     required ZiweiChart chart,
     required String expectedSnapshotId,
     required String expectedRuleVersion,
-    required String resultPayload,
+    required Map<String, Object?> structuredSnapshot,
   }) {
     final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
     if (ref.kind != AiContextKind.fieldValue ||
@@ -181,6 +88,44 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The field anchor does not match its snapshot and field path.',
+      );
+    }
+
+    if (structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != ziweiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            'ziwei-structured-result-v1') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is not a successful Ziwei execution.',
+      );
+    }
+
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final inputValue = structuredSnapshot['input'];
+    final resultValue = structuredSnapshot['result'];
+    if (snapshotId is! String ||
+        ruleVersion is! String ||
+        ruleVersion != expectedRuleVersion ||
+        snapshotId != expectedSnapshotId ||
+        sourceIds is! List ||
+        !sourceIds.contains(ziweiSourceId) ||
+        inputValue is! Map ||
+        resultValue is! Map<String, Object?>) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is missing a required identity or payload field.',
+      );
+    }
+
+    final actualSnapshotId =
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
+    if (actualSnapshotId != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The structured result content no longer matches its immutable snapshot digest.',
       );
     }
 
@@ -215,51 +160,74 @@ class AiContextResolver {
         reason: 'The requested palace field is not present in the resolved chart.',
       );
     }
-    if (resultPayload.trim().isEmpty) {
+
+    final palacesValue = resultValue['palacesByPhysicalBranch'];
+    if (palacesValue is! List) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.missing,
-        reason: 'The parent result payload is unavailable.',
+        reason: 'The structured snapshot does not contain the palace result collection.',
+      );
+    }
+    Map<String, Object?>? palaceRecord;
+    for (final candidate in palacesValue) {
+      if (candidate is Map<String, Object?> &&
+          candidate['physicalBranchIndex'] == palaceIndex) {
+        palaceRecord = candidate;
+        break;
+      }
+    }
+    if (palaceRecord == null || palaceRecord['stars'] is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the structured snapshot.',
+      );
+    }
+    if (palaceRecord['roleLabel'] != palace.roleLabel ||
+        palaceRecord['branchLabel'] != palace.branchLabel ||
+        palaceRecord['ganzhiLabel'] != palace.ganzhiLabel ||
+        palaceRecord['isLife'] != palace.isLife ||
+        palaceRecord['isBody'] != palace.isBody) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The palace identity and scope do not match the structured snapshot.',
       );
     }
 
-    final value = palace.stars
-        .map((star) => Map<String, Object?>.unmodifiable({
-              'starKey': star.key,
-              'name': star.label,
-              'category': star.isMajor
-                  ? '主星'
-                  : star.isLucky
-                      ? '吉星'
-                      : star.isBad
-                          ? '煞星'
-                          : '杂曜',
-              'starType': star.type.name,
-              'brightness': star.brightness,
-              'transformation':
-                  star.sihuaText.isEmpty ? null : star.sihuaText,
-              'displayText': [
-                star.label,
-                if (star.brightness != null && star.brightness!.isNotEmpty) star.brightness,
-                if (star.sihuaText.isNotEmpty) star.sihuaText,
-              ].whereType<String>().where((part) => part.isNotEmpty).join(' '),
-            }))
+    final snapshotStars = (palaceRecord['stars'] as List)
+        .whereType<Map<String, Object?>>()
         .toList(growable: false);
+    final engineStars = palace.stars
+        .map(serializeZiweiStarForAssistant)
+        .toList(growable: false);
+    if (snapshotStars.length != (palaceRecord['stars'] as List).length ||
+        AiToolResultSnapshot.canonicalJson(snapshotStars) !=
+            AiToolResultSnapshot.canonicalJson(engineStars)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field values do not match the current deterministic engine result.',
+      );
+    }
+
+    final resolvedSnapshot = Map<String, Object?>.unmodifiable({
+      ...structuredSnapshot,
+    });
+    final resolvedScope = Map<String, Object?>.unmodifiable({
+      'palaceIndex': palace.index,
+      'palaceRole': palace.roleLabel,
+      'earthlyBranch': palace.branchLabel,
+      'ganzhi': palace.ganzhiLabel,
+      'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
+    });
 
     return AiContextResolution(
       status: AiContextResolutionStatus.resolved,
       value: AiResolvedToolField._(
         ref: ref,
         fieldLabel: '${palace.roleLabel}星曜',
-        fieldScope: Map<String, Object?>.unmodifiable({
-          'palaceIndex': palace.index,
-          'palaceRole': palace.roleLabel,
-          'earthlyBranch': palace.branchLabel,
-          'ganzhi': palace.ganzhiLabel,
-          'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
-        }),
-        fieldValue: value,
+        fieldScope: resolvedScope,
+        fieldValue: snapshotStars,
         fieldUnit: '不适用（离散星曜条目）',
-        resultPayload: resultPayload,
+        structuredSnapshot: resolvedSnapshot,
       ),
     );
   }

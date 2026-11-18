@@ -72,4 +72,59 @@ void main() {
     expect(changedRule, isNot(original));
     expect(changedResult, isNot(original));
   });
+
+  test('structured result snapshots canonicalize nested map key order', () {
+    final first = AiToolResultSnapshot.createId(
+      input: const {
+        'solar': '2000-08-16T10:00:00.000',
+        'options': {'trueSolarTime': true, 'location': {'lat': 31.23, 'lng': 121.47}},
+      },
+      ruleVersion: 'ziwei_structured_v1',
+      resultPayload: const {
+        'palaces': [
+          {'index': 0, 'stars': [{'key': 'ziwei', 'brightness': '庙'}]},
+        ],
+        'lunar': {'month': 7, 'leap': false},
+      },
+    );
+    final reordered = AiToolResultSnapshot.createId(
+      input: const {
+        'options': {'location': {'lng': 121.47, 'lat': 31.23}, 'trueSolarTime': true},
+        'solar': '2000-08-16T10:00:00.000',
+      },
+      ruleVersion: 'ziwei_structured_v1',
+      resultPayload: const {
+        'lunar': {'leap': false, 'month': 7},
+        'palaces': [
+          {'stars': [{'brightness': '庙', 'key': 'ziwei'}], 'index': 0},
+        ],
+      },
+    );
+    final changedField = AiToolResultSnapshot.createId(
+      input: const {
+        'options': {'location': {'lng': 121.47, 'lat': 31.23}, 'trueSolarTime': true},
+        'solar': '2000-08-16T10:00:00.000',
+      },
+      ruleVersion: 'ziwei_structured_v1',
+      resultPayload: const {
+        'lunar': {'leap': false, 'month': 7},
+        'palaces': [
+          {'stars': [{'brightness': '旺', 'key': 'ziwei'}], 'index': 0},
+        ],
+      },
+    );
+
+    expect(reordered, first);
+    expect(changedField, isNot(first));
+  });
+
+  test('legacy string result payload remains content-addressed', () {
+    final id = AiToolResultSnapshot.createId(
+      input: const {'solar': '2000-08-16T10:00:00.000'},
+      ruleVersion: 'ziwei_core@0.13.0',
+      resultPayload: '命宫：紫微',
+    );
+
+    expect(id, hasLength(64));
+  });
 }

@@ -498,7 +498,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     return fitWidth.clamp(1.0, 640.0).toDouble();
   }
 
-  Map<String, String>? _buildCurrentContextSnapshot() {
+  Map<String, Object?>? _buildCurrentContextSnapshot() {
     final chart = _chart;
     final solar = _calculatedSolar;
     final useTrueSolarTime = _calculatedUseTrueSolarTime;
@@ -518,35 +518,25 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       return null;
     }
 
-    final resultPayload = formatZiweiChartForAssistant(
+    final structuredBase = buildZiweiStructuredResultForAssistant(
       solar: solar,
       useTrueSolarTime: useTrueSolarTime,
       distinguishZiShi: distinguishZiShi,
       locationDescription: locationDescription,
+      longitude: longitude,
+      latitude: latitude,
       chart: chart,
       flowYear: _flowMark,
       flowMonth: _flowMonthMark,
       flowDay: _flowDayMark,
     );
-    const ruleVersion = 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
-    final snapshotId = AiToolResultSnapshot.createId(
-      input: {
-        'solar': solar.toIso8601String(),
-        'gender': chart.genderLabel,
-        'locationDescription': locationDescription,
-        'longitude': longitude,
-        'latitude': latitude,
-        'useTrueSolarTime': useTrueSolarTime,
-        'distinguishZiShi': distinguishZiShi,
-      },
-      ruleVersion: ruleVersion,
-      resultPayload: resultPayload,
+    final snapshotId = AiToolResultSnapshot.createStructuredId(
+      snapshot: structuredBase,
     );
-    return {
-      'resultPayload': resultPayload,
-      'ruleVersion': ruleVersion,
+    return Map<String, Object?>.unmodifiable({
+      ...structuredBase,
       'snapshotId': snapshotId,
-    };
+    });
   }
 
   Future<void> _askAiAboutCurrentResult() async {
@@ -554,7 +544,6 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     if (snapshot == null) return;
     final snapshotId = snapshot['snapshotId']!;
     final ruleVersion = snapshot['ruleVersion']!;
-    final resultPayload = snapshot['resultPayload']!;
     final contextRef = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
@@ -567,7 +556,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     );
     final prompt = AiContextPromptBuilder.buildToolResult(
       ref: contextRef,
-      resultPayload: resultPayload,
+      structuredSnapshot: snapshot,
     );
     await _showContextualAssistant(
       contextRef: contextRef,
@@ -659,7 +648,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       chart: chart,
       expectedSnapshotId: snapshotId,
       expectedRuleVersion: ruleVersion,
-      resultPayload: snapshot['resultPayload']!,
+      structuredSnapshot: snapshot,
     );
     final resolvedField = resolution.value;
     if (!resolution.isResolved || resolvedField == null) {
