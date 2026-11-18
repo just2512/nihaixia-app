@@ -1,6 +1,7 @@
 import '../models/ai_context_ref.dart';
 import '../models/formula.dart';
 import '../data/formula_repository.dart';
+import '../data/neijing_entries.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
@@ -143,6 +144,86 @@ class AiContextResolver {
     );
   }
 
+
+  static const neijingModuleId = 'neijing-entries';
+  static const neijingEntriesAssetVersion =
+      'lib/data/neijing_entries.dart@7f76c837e89829b44d9fc3830cdbd1d31abfd8f9';
+
+  static AiContextRef buildNeijingEntryContextRef(NeijingEntry entry) {
+    return AiContextRef(
+      kind: AiContextKind.classic,
+      moduleId: neijingModuleId,
+      anchorId: 'neijing:${entry.id}',
+      anchorVersion: neijingEntriesAssetVersion,
+      sourceId: 'app-data:lib/data/neijing_entries.dart#${entry.id}',
+      title: entry.title,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveNeijingEntry({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.classic ||
+        normalized.isEmpty ||
+        ref.moduleId != neijingModuleId ||
+        ref.anchorVersion != neijingEntriesAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing reference is incomplete or does not match the bundled entry source.',
+      );
+    }
+
+    final entryId = ref.anchorId.startsWith('neijing:')
+        ? ref.anchorId.substring('neijing:'.length)
+        : '';
+    if (entryId.isEmpty ||
+        ref.sourceId != 'app-data:lib/data/neijing_entries.dart#$entryId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing anchor and source ID do not agree.',
+      );
+    }
+
+    NeijingEntry? entry;
+    for (final candidate in kNeijingEntries) {
+      if (candidate.id == entryId) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced Neijing entry is not present in the bundled entry set.',
+      );
+    }
+    if (ref.title != null && ref.title != entry.title) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing title does not match the stable entry ID.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': entry.id,
+      'dimension': entry.dimension,
+      'title': entry.title,
+      'original': entry.original,
+      'source': entry.source,
+      'vernacular': entry.vernacular,
+      'nishi': entry.nishi,
+      'tags': entry.tags,
+    };
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: entry.title,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
 
   static const ziweiModuleId = 'ziwei';
   static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';

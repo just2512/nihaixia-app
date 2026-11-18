@@ -13,6 +13,11 @@ library;
 import 'package:flutter/material.dart';
 
 import '../data/neijing_entries.dart';
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 /// 「全部维度」的筛选键（不等于任何 [NeijingDimension.key]）。
 const String kNeijingAllDimensionKey = '__all__';
@@ -541,6 +546,36 @@ class _NeijingEntryCardState extends State<_NeijingEntryCard> {
     _expanded = widget.initiallyExpanded;
   }
 
+  Future<void> _askAiAboutEntry() async {
+    final entry = widget.entry;
+    final contextRef = AiContextResolver.buildNeijingEntryContextRef(entry);
+    final resolution = AiContextResolver.resolveNeijingEntry(ref: contextRef);
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '内经条目上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildNeijingKnowledgeEntry(
+        entry: resolved,
+      ),
+      initialMode: AssistantMode.learning,
+      contextualTitle: entry.title,
+      contextualExplanationOnly: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -707,6 +742,15 @@ class _NeijingEntryCardState extends State<_NeijingEntryCard> {
                                 cs.error,
                               ),
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: FilledButton.icon(
+                            onPressed: _askAiAboutEntry,
+                            icon: const Icon(Icons.auto_awesome, size: 18),
+                            label: const Text('问 AI 解读当前内经条目'),
                           ),
                         ),
                       ],
