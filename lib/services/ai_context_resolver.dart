@@ -117,7 +117,7 @@ class AiContextResolver {
       moduleId: almanacModuleId,
       anchorId: 'almanac:result:$snapshotId:date=$date',
       anchorVersion: snapshotId,
-      snapshotId: snapshotId,
+      snapshotId: snapshotId as String,
       ruleVersion: ruleVersion as String,
       sourceId: AlmanacToolExecutor.sourceId,
       title: '每日黄历结果（$date）',
