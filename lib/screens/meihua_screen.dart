@@ -122,19 +122,28 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
       if (_method == MeihuaMethod.time)
         'hour_branch': MeihuaToolExecutor.earthlyBranches[_shiChen],
     };
-    final execution = MeihuaToolExecutor.executeWithSnapshot(arguments);
-    final chart = execution.chart;
-    final snapshot = execution.structuredSnapshot;
-    if (!execution.succeeded || chart == null || snapshot == null) {
+    try {
+      final execution = MeihuaToolExecutor.executeWithSnapshot(arguments);
+      final chart = execution.chart;
+      final snapshot = execution.structuredSnapshot;
+      if (!execution.succeeded || chart == null || snapshot == null) {
+        setState(() {
+          _error = execution.result.values['未执行原因'] ??
+              '梅花易数起卦失败，结果状态 UNKNOWN。';
+        });
+        return;
+      }
       setState(() {
-        _error = execution.result.values['未执行原因'] ?? '梅花易数起卦失败，结果状态 UNKNOWN。';
+        _chart = chart;
+        _contextSnapshot = snapshot;
       });
-      return;
+    } catch (error) {
+      setState(() {
+        _error = '梅花易数起卦异常：$error';
+        _chart = null;
+        _contextSnapshot = null;
+      });
     }
-    setState(() {
-      _chart = chart;
-      _contextSnapshot = snapshot;
-    });
   }
 
   Future<void> _askAiAboutCurrentResult() async {
