@@ -143,7 +143,11 @@ class AiContextResolver {
               'brightness': star.brightness,
               'transformation':
                   star.sihuaText.isEmpty ? null : star.sihuaText,
-              'displayText': starDisplayText(star),
+              'displayText': [
+                star.label,
+                if (star.brightness != null && star.brightness!.isNotEmpty) star.brightness,
+                if (star.sihuaText.isNotEmpty) star.sihuaText,
+              ].whereType<String>().where((part) => part.isNotEmpty).join(' '),
             }))
         .toList(growable: false);
 
