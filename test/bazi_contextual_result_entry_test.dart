@@ -7,6 +7,7 @@ import 'package:nihaisha_app/engine/bazi_twelve_stages.dart'
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/bazi_paipan_screen.dart';
+import 'package:nihaisha_app/widgets/bazi_paipan_widgets.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
@@ -260,6 +261,152 @@ void main() {
       ).isResolved,
       isTrue,
     );
+  });
+
+  test('Bazi field resolver binds one exact field to the immutable full-result snapshot', () {
+    final snapshot = buildShanghaiSnapshot();
+    final resultRef = AiContextResolver.buildBaziResultContextRef(
+      structuredSnapshot: snapshot,
+    );
+    final fieldRef = AiContextResolver.buildBaziFieldContextRef(
+      resultRef: resultRef,
+      fieldPath: 'result.analysis.strengthScore',
+      fieldLabel: '日主强弱分值',
+    );
+    final resolved = AiContextResolver.resolveBaziResultField(
+      ref: fieldRef,
+      structuredSnapshot: snapshot,
+    );
+    expect(resolved.isResolved, isTrue);
+    expect(fieldRef.kind, AiContextKind.fieldValue);
+    expect(fieldRef.moduleId, 'bazi');
+    expect(fieldRef.snapshotId, snapshot['snapshotId']);
+    expect(fieldRef.fieldPath, 'result.analysis.strengthScore');
+    expect(resolved.value?.fieldValue.single['fieldPath'], fieldRef.fieldPath);
+    expect(
+      resolved.value?.fieldValue.single['value'],
+      ((snapshot['result']! as Map<String, Object?>)['analysis']!
+          as Map<String, Object?>)['strengthScore'],
+    );
+    expect(resolved.value?.fieldUnit, contains('不是概率'));
+
+    final prompt = AiContextPromptBuilder.buildBaziToolField(
+      resolvedField: resolved.value!,
+    );
+    expect(prompt, contains('result.analysis.strengthScore'));
+    expect(prompt, contains('所属结果快照'));
+    expect(prompt, contains('不是概率'));
+    expect(prompt, contains('不用于医疗诊断'));
+
+    final elementRef = AiContextResolver.buildBaziFieldContextRef(
+      resultRef: resultRef,
+      fieldPath: 'result.analysis.fiveElements.0.score',
+      fieldLabel: '五行首项分值',
+    );
+    final elementResolved = AiContextResolver.resolveBaziResultField(
+      ref: elementRef,
+      structuredSnapshot: snapshot,
+    );
+    expect(elementResolved.isResolved, isTrue);
+    expect(elementResolved.value?.ref.fieldPath, elementRef.fieldPath);
+
+    final stale = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: fieldRef.moduleId,
+      anchorId: fieldRef.anchorId,
+      anchorVersion: fieldRef.anchorVersion,
+      snapshotId: fieldRef.snapshotId,
+      ruleVersion: 'bazi-v1;STALE',
+      sourceId: fieldRef.sourceId,
+      fieldPath: fieldRef.fieldPath,
+      title: fieldRef.title,
+    );
+    expect(
+      AiContextResolver.resolveBaziResultField(
+        ref: stale,
+        structuredSnapshot: snapshot,
+      ).status,
+      AiContextResolutionStatus.stale,
+    );
+
+    final tampered = Map<String, Object?>.from(snapshot);
+    final result = Map<String, Object?>.from(
+      snapshot['result']! as Map<String, Object?>,
+    );
+    final analysis = Map<String, Object?>.from(
+      result['analysis']! as Map<String, Object?>,
+    )..['strengthScore'] = -999.0;
+    result['analysis'] = analysis;
+    tampered['result'] = result;
+    expect(
+      AiContextResolver.resolveBaziResultField(
+        ref: fieldRef,
+        structuredSnapshot: tampered,
+      ).status,
+      AiContextResolutionStatus.stale,
+    );
+    expect(
+      () => AiContextResolver.buildBaziFieldContextRef(
+        resultRef: resultRef,
+        fieldPath: 'result.analysis.untrustedField',
+        fieldLabel: '不支持字段',
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  testWidgets('Bazi strength field opens a field-bound contextual assistant', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 1400);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ContextualAiConversationStoreScope(
+        conversationStore: InMemoryAssistantConversationStore(),
+        child: MaterialApp(
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: AppColors.colorSchemeFor(Brightness.light),
+            extensions: [AppColors.light],
+          ),
+          home: BaZiPaipanScreen(
+            initialSolar: DateTime(1990, 1, 2, 8, 30),
+            initialIsMale: true,
+            initialCityName: '上海市',
+            initialLng: 121.47,
+            initialLat: 31.23,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final analysisCard = find.byType(BaZiAnalysisCard);
+    await tester.ensureVisible(analysisCard);
+    await tester.pumpAndSettle();
+
+    final fieldAsk = find.byKey(const ValueKey('bazi-field-strength'));
+    expect(fieldAsk, findsOneWidget);
+    await tester.tap(fieldAsk);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final assistant = find.byType(LocalAiInterviewScreen);
+    expect(assistant, findsOneWidget);
+    final widget = tester.widget<LocalAiInterviewScreen>(assistant);
+    expect(widget.initialMode, AssistantMode.tools);
+    expect(widget.contextualExplanationOnly, isTrue);
+    expect(widget.contextRef['kind'], 'field');
+    expect(widget.contextRef['moduleId'], 'bazi');
+    expect(
+      widget.contextRef['fieldPath'],
+      'result.analysis.strengthScore',
+    );
+    expect(widget.contextRef['snapshotId'], hasLength(64));
+    expect(widget.initialPrompt, contains('strengthScore'));
+    expect(widget.initialPrompt, contains('不是概率'));
+    expect(widget.initialPrompt, contains('日主强弱分值'));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Bazi result exposes contextual Ask AI and opens the tools assistant', (tester) async {

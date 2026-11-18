@@ -621,6 +621,173 @@ class AiContextResolver {
     }
   }
 
+  static const _supportedBaziFieldPath =
+      r'^result\.analysis\.(?:pattern|dayMaster|strengthLevel|strengthScore|fiveElements\.\d+\.(?:element|score|status))$';
+
+  static AiContextRef buildBaziFieldContextRef({
+    required AiContextRef resultRef,
+    required String fieldPath,
+    required String fieldLabel,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(resultRef.toMetadata());
+    if (normalized.isEmpty ||
+        resultRef.kind != AiContextKind.toolResult ||
+        resultRef.moduleId != baziModuleId ||
+        resultRef.snapshotId == null ||
+        resultRef.snapshotId != resultRef.anchorVersion ||
+        resultRef.ruleVersion != BaziContextSnapshot.ruleVersion ||
+        resultRef.sourceId != BaziContextSnapshot.sourceId ||
+        !RegExp(_supportedBaziFieldPath).hasMatch(fieldPath)) {
+      throw ArgumentError(
+        'A Bazi field reference requires a verified result identity and a supported field path.',
+      );
+    }
+    final snapshotId = resultRef.snapshotId!;
+    return AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: baziModuleId,
+      anchorId: 'bazi:result:$snapshotId:field:$fieldPath',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: resultRef.ruleVersion,
+      sourceId: BaziContextSnapshot.sourceId,
+      fieldPath: fieldPath,
+      title: fieldLabel,
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolField> resolveBaziResultField({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (normalized.isEmpty ||
+        ref.kind != AiContextKind.fieldValue ||
+        ref.moduleId != baziModuleId ||
+        ref.sourceId != BaziContextSnapshot.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Bazi field reference is incomplete or does not identify the local Bazi engine.',
+      );
+    }
+    if (ref.ruleVersion != BaziContextSnapshot.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Bazi engine or calculation rule version no longer matches this field.',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    final fieldPath = ref.fieldPath;
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        fieldPath == null ||
+        !RegExp(_supportedBaziFieldPath).hasMatch(fieldPath) ||
+        ref.anchorId != 'bazi:result:$snapshotId:field:$fieldPath') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Bazi field path, anchor and result snapshot identity do not agree.',
+      );
+    }
+
+    final resultRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: baziModuleId,
+      anchorId: 'bazi:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: BaziContextSnapshot.sourceId,
+      title: '八字排盘结果',
+    );
+    final resultResolution = resolveBaziToolResult(
+      ref: resultRef,
+      structuredSnapshot: structuredSnapshot,
+    );
+    final resolvedResult = resultResolution.value;
+    if (!resultResolution.isResolved || resolvedResult == null) {
+      return AiContextResolution(
+        status: resultResolution.status,
+        reason: resultResolution.reason,
+      );
+    }
+
+    Object? value = resolvedResult.structuredSnapshot;
+    for (final segment in fieldPath.split('.')) {
+      if (value is Map) {
+        value = value[segment];
+      } else if (value is List) {
+        final index = int.tryParse(segment);
+        if (index == null || index < 0 || index >= value.length) {
+          value = null;
+          break;
+        }
+        value = value[index];
+      } else {
+        value = null;
+        break;
+      }
+    }
+    if (value == null || (value is String && value.trim().isEmpty)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested Bazi field is missing from the verified result snapshot.',
+      );
+    }
+    if (value is! String && value is! num && value is! bool) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested Bazi field is not a supported scalar field value.',
+      );
+    }
+
+    final result = resolvedResult.structuredSnapshot['result'];
+    final analysis = result is Map ? result['analysis'] : null;
+    if (analysis is! Map) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The verified Bazi result does not contain its analysis scope.',
+      );
+    }
+
+    final unit = fieldPath == 'result.analysis.strengthScore'
+        ? 'App 内部日主强弱规则分值；不是概率或统计置信度'
+        : fieldPath.endsWith('.score')
+            ? 'App 内部五行分布规则分值；不是人口频率或概率'
+            : 'App 本地八字引擎返回的文本/枚举字段';
+    final fieldLabel = ref.title?.trim().isNotEmpty == true
+        ? ref.title!
+        : fieldPath;
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: fieldLabel,
+        fieldScope: Map<String, Object?>.unmodifiable({
+          'dayMaster': analysis['dayMaster'],
+          'pattern': analysis['pattern'],
+          'patternDescription': analysis['patternDescription'],
+          'strengthLevel': analysis['strengthLevel'],
+          'strengthScore': analysis['strengthScore'],
+          'strengthFactors': analysis['strengthFactors'],
+          'fiveElements': analysis['fiveElements'],
+          'favorable': analysis['favorable'],
+          'unfavorable': analysis['unfavorable'],
+        }),
+        fieldValue: [
+          Map<String, Object?>.unmodifiable({
+            'fieldPath': fieldPath,
+            'value': value,
+            'unit': unit,
+          }),
+        ],
+        fieldUnit: unit,
+        structuredSnapshot: resolvedResult.structuredSnapshot,
+      ),
+    );
+  }
+
   static const formulaModuleId = 'formula';
   static const formulaAssetVersion =
       'assets/data/formulas.json@58b299e95c47fd54fc1bca18c6762c544b8d87bc';
