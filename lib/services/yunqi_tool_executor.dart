@@ -6,8 +6,9 @@ import 'yunqi_engine.dart';
 /// It deliberately reuses the page's year/date convention and result wording.
 class YunQiToolExecutor {
   static const String sourceId = 'local-engine:yunqi';
-  static const String resultSchemaVersion = 'yunqi-structured-result-v1';
+  static const String resultSchemaVersion = 'yunqi-structured-result-v2';
   static const String ruleVersion =
+      'yunqi-snapshot-contract=v2;'
       'yunqi-engine@f8ba8f7e48c492567a28fb5735d9187d2bdbb91e;'
       'yunqi-literature@97e628d79f28a70a5468a34e0e80e8f60130ef52;'
       'schema=$resultSchemaVersion';
