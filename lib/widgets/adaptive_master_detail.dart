@@ -202,9 +202,17 @@ class AdaptiveSinglePane extends StatelessWidget {
       color: scheme.surface,
       child: LayoutBuilder(
         builder: (context, constraints) {
-        final screenSize = MediaQuery.sizeOf(context);
+        final view = View.of(context);
+        final screenSize = Size(
+          view.physicalSize.width / view.devicePixelRatio,
+          view.physicalSize.height / view.devicePixelRatio,
+        );
+        final mediaDisplayFeatures = MediaQuery.displayFeaturesOf(context);
+        final displayFeatures = mediaDisplayFeatures.isNotEmpty
+            ? mediaDisplayFeatures
+            : view.displayFeatures;
         final feature = _findSinglePaneBlockingFeature(
-          MediaQuery.displayFeaturesOf(context),
+          displayFeatures,
           screenSize,
         );
         final contentWidth = maxWidth < constraints.maxWidth
