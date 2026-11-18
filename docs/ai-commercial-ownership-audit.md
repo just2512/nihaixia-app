@@ -78,6 +78,31 @@
 
 其中 `assistant_knowledge_context.dart` 的商业授权对象仅是维护者新增的检索、上下文组织、来源引用和结果解释代码；知识库条目、古籍文本、医案内容及其他资料本身明确排除在本次商业授权之外。
 
+### B2. AI 工具执行适配层
+
+主线当前有以下 18 个由 `just2512` 的提交记录引入的助手工具执行适配文件：
+
+- `lib/services/almanac_tool_executor.dart`
+- `lib/services/bazi_tool_executor.dart`
+- `lib/services/chenggu_tool_executor.dart`
+- `lib/services/dosage_tool_executor.dart`
+- `lib/services/dream_tool_executor.dart`
+- `lib/services/guansha_tool_executor.dart`
+- `lib/services/huangdi_siji_tool_executor.dart`
+- `lib/services/meihua_tool_executor.dart`
+- `lib/services/sanshan_lingqian_tool_executor.dart`
+- `lib/services/saved_chart_tool_executor.dart`
+- `lib/services/shousheng_debt_tool_executor.dart`
+- `lib/services/solar_term_tool_executor.dart`
+- `lib/services/xiaoliuren_tool_executor.dart`
+- `lib/services/yijing_tool_executor.dart`
+- `lib/services/yunqi_tool_executor.dart`
+- `lib/services/yuxiaji_omen_tool_executor.dart`
+- `lib/services/ziwei_tool_executor.dart`
+- `lib/services/ziwuliuzhu_tool_executor.dart`
+
+这些文件纳入 AI 商业功能候选范围的部分，仅限助手侧的参数接收/校验、任务执行适配、调用既有业务能力和结果交接。它们调用的既有排盘、历法、剂量换算、择时等确定性算法及原始数据不因此转为商业专有模块。若某个适配文件中包含独立于 AI 的可复用业务算法，应按代码差异单独拆分或标注，不能把算法整体打包进 AI 授权范围。
+
 ### C. 与上游或原有页面混合的文件：不得把整个文件认定为独占代码
 
 例如：

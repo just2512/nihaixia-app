@@ -65,9 +65,34 @@
 - `lib/widgets/local_ai_data_clear_tile.dart`
 - `lib/widgets/local_ai_trace_debug_tile.dart`
 
+### AI 工具执行适配器
+
+以下 18 个执行器文件由维护者提交引入 AI 助手工具链，列入 AI 增值功能适配层：
+
+- `lib/services/almanac_tool_executor.dart`
+- `lib/services/bazi_tool_executor.dart`
+- `lib/services/chenggu_tool_executor.dart`
+- `lib/services/dosage_tool_executor.dart`
+- `lib/services/dream_tool_executor.dart`
+- `lib/services/guansha_tool_executor.dart`
+- `lib/services/huangdi_siji_tool_executor.dart`
+- `lib/services/meihua_tool_executor.dart`
+- `lib/services/sanshan_lingqian_tool_executor.dart`
+- `lib/services/saved_chart_tool_executor.dart`
+- `lib/services/shousheng_debt_tool_executor.dart`
+- `lib/services/solar_term_tool_executor.dart`
+- `lib/services/xiaoliuren_tool_executor.dart`
+- `lib/services/yijing_tool_executor.dart`
+- `lib/services/yunqi_tool_executor.dart`
+- `lib/services/yuxiaji_omen_tool_executor.dart`
+- `lib/services/ziwei_tool_executor.dart`
+- `lib/services/ziwuliuzhu_tool_executor.dart`
+
+授权边界只覆盖 AI 助手的参数映射、输入校验、既有业务模块调用和结果回传/解释适配。执行器所调用的底层确定性算法、数据表和原有独立业务入口仍属于免费基础功能；不可因为它们被 AI 调用，就将其一并变成收费模块。
+
 ### Android 本地 AI 原生适配
 
-- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAi*.kt` 中由维护者新建的 AI 策略、生命周期和输入校验类。
+- `android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAi*.kt` 中由维护者新建的 AI 策略、生命周期和输入校验类，以及 `NativeRedFlagExecutionBoundary.kt`、`UserReportedInputPolicy.kt` 中由维护者新增的本地 AI 输入与安全边界代码。
 
 `MainActivity.kt` 是上游已有文件，不能作为整体商业专有文件；仅可识别和授权维护者新增的本地 AI 调用桥接代码。
 
