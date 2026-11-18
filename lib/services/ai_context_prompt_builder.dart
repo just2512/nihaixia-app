@@ -5,6 +5,7 @@ import 'ai_context_resolver.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'yunqi_tool_executor.dart';
 import 'almanac_tool_executor.dart';
+import 'bazi_context_snapshot.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -266,6 +267,12 @@ class AiContextPromptBuilder {
     required Object? schemaVersion,
     required Map input,
   }) {
+    if (ref.moduleId == 'bazi') {
+      final birthDate = input['birthDate'];
+      return schemaVersion == BaziContextSnapshot.resultSchemaVersion &&
+          birthDate is String &&
+          ref.anchorId == 'bazi:result:$snapshotId:date=$birthDate';
+    }
     if (ref.moduleId == 'ziwei') {
       return schemaVersion == 'ziwei-structured-result-v1' &&
           ref.anchorId == 'ziwei:result:$snapshotId';
@@ -283,6 +290,27 @@ class AiContextPromptBuilder {
           ref.anchorId == 'almanac:result:$snapshotId:date=$date';
     }
     return false;
+  }
+
+  static String buildBaziToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != 'bazi' ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError('A BaZi prompt requires a resolved BaZi tool result.');
+    }
+    final prompt = buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+    return [
+      prompt,
+      '',
+      '【八字文化学习边界】',
+      '八字结果是 App 按所选传统子平规则计算的文化学习材料，不是科学预测或客观命运结论。解释时说明实际采用的出生钟表时间、地点坐标、真太阳时开关、早晚子时口径和长生十二神口径。',
+      '不得自行重排四柱、改写大运、补造缺失字段或把流派解释说成唯一事实；可说明不同传统口径的差异，但必须标明本次 App 实际采用的口径。',
+      '不得将命理内容转化为医疗诊断、健康结论、法律意见、投资建议或其他重大决策依据。出生地标记 ENGINE_DEFAULT 时，必须明确说明使用的是引擎默认坐标，不能称为用户真实出生地。',
+    ].join('\\n');
   }
 
   static String buildAlmanacToolResult({
