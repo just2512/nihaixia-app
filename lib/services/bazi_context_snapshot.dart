@@ -249,7 +249,9 @@ class BaziContextSnapshot {
         label is! String ||
         longitude is! num ||
         latitude is! num ||
-        (mode != 'CITY_DIRECTORY' && mode != 'ENGINE_DEFAULT')) {
+        (mode != 'CITY_DIRECTORY' &&
+            mode != 'EXPLICIT_COORDINATES' &&
+            mode != 'ENGINE_DEFAULT')) {
       throw ArgumentError('BaZi snapshot birthplace is invalid.');
     }
     final cityDirectoryLocation = mode == 'CITY_DIRECTORY';
