@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -11,13 +10,12 @@ import '../screens/assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/meihua_tool_executor.dart';
-import '../widgets/contextual_ai_sheet.dart';
 import '../utils/chart_export.dart';
+import '../utils/fold_aware_routes.dart';
 import '../utils/shake_detector.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 const _kZhiNames = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-int _zhiIndex(String zhi) => _kZhiNames.indexOf(zhi) + 1;
 
 int _shiChenIndexOfHour(int hour) => ((hour.clamp(0, 23) + 1) ~/ 2) % 12;
 
