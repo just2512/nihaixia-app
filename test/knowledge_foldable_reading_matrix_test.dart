@@ -107,22 +107,26 @@ Future<void> _pumpUntilRouteAnimationCompletes(
   WidgetTester tester,
   Finder pageFinder,
 ) async {
-  // A route's slide transition temporarily translates the whole page. Do not
-  // assert physical hinge geometry until the route itself is fully on-screen.
-  await tester.pump();
-  final route = ModalRoute.of(tester.element(pageFinder));
-  expect(route, isNotNull);
-  final animation = route!.animation;
-  expect(animation, isNotNull);
-
-  for (var frame = 0;
-      frame < 120 && animation!.status != AnimationStatus.completed;
-      frame++) {
+  // The pushed route may not be mounted in the first frame after the tap.
+  // Wait for its page widget before asking the widget tree for its ModalRoute.
+  ModalRoute<dynamic>? route;
+  var animationCompleted = false;
+  for (var frame = 0; frame < 120; frame++) {
     await tester.pump(const Duration(milliseconds: 16));
+    if (pageFinder.evaluate().isEmpty) continue;
+
+    route = ModalRoute.of(tester.element(pageFinder));
+    if (route?.animation?.status == AnimationStatus.completed) {
+      animationCompleted = true;
+      break;
+    }
   }
+
+  expect(pageFinder, findsOneWidget);
+  expect(route, isNotNull);
   expect(
-    animation!.status,
-    AnimationStatus.completed,
+    animationCompleted,
+    isTrue,
     reason: '详情路由必须完成进入动画后再验收物理面板边界',
   );
   // Allow bookmark / classic-source async work to reach a stable frame; the
