@@ -273,7 +273,8 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
         result: result,
         fortune: _fortune,
         locationMode: locationMode,
-        locationLabel: hasCityLabel ? cityName : null,
+        locationLabel:
+            locationMode == 'city-directory' ? cityName : null,
         longitude: longitude,
         latitude: latitude,
         useTrueSolarTime: _useTrueSolarTime,

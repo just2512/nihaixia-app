@@ -363,6 +363,13 @@ class BaziContextSnapshot {
     if (mode == 'city-directory' && (label == null || label.trim().isEmpty)) {
       throw ArgumentError('A city-directory location requires its exact label.');
     }
+    if (mode != 'city-directory' &&
+        label != null &&
+        label.trim().isNotEmpty) {
+      throw ArgumentError(
+        'Only a city-directory location may carry a city label.',
+      );
+    }
     final normalizedLabel = label?.trim();
     return Map<String, Object?>.unmodifiable({
       'mode': mode,

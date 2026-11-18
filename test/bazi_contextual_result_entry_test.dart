@@ -224,6 +224,27 @@ void main() {
 
     expect(location['mode'], 'engine-default');
     expect(location['label'], 'MISSING');
+    expect(
+      () => BaziContextSnapshot.createFromCurrentResult(
+        arguments: const {
+          'birth_date': '1990-01-02',
+          'birth_time': '08:30',
+          'gender': 'male',
+          'birthplace': 'MISSING',
+        },
+        result: chart,
+        fortune: fortune,
+        locationMode: 'engine-default',
+        locationLabel: '旧城市标签',
+        longitude: 120,
+        latitude: 30,
+        useTrueSolarTime: true,
+        distinguishZiShi: false,
+        twelveStageMode: TwelveStageMode.fireEarthSame,
+      ),
+      throwsArgumentError,
+      reason: '未提供坐标时，旧城市名不得冒充本次排盘地点来源',
+    );
     expect(snapshot['sourceIds'], contains(BaziContextSnapshot.defaultLocationSourceId));
     expect(snapshot['sourceIds'], isNot(contains(BaziContextSnapshot.citySourceId)));
     final ref = AiContextResolver.buildBaziResultContextRef(
