@@ -5,12 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import 'package:nihaisha_app/models/ai_context_ref.dart';
+import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/meihua_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
-import 'package:nihaisha_app/services/ai_tool_result_snapshot.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/services/ai_tool_result_snapshot.dart';
 import 'package:nihaisha_app/services/meihua_tool_executor.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
