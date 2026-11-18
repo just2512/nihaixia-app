@@ -551,8 +551,8 @@ flowchart LR
 本仓库采用分层授权，根目录 [LICENSE](LICENSE) 继续保留 Apache License 2.0，不整体改成专有许可证。
 
 - **免费基础部分**：原 Fork 功能、确定性业务引擎及知识库内容继续按原许可证执行，不纳入 AI 商业授权。
-- **已公开的 AI 源码**：按其公开版本已经授予的 Apache 2.0 权利继续执行，不追溯要求下载者购买，也不要求既有使用者改成商业授权。
-- **官方 AI 商业版**：维护者可对自己拥有权利的 AI 增值功能，在明确标注的官方发行版本中另行提供商业授权。具体代码和功能边界见 [AI 增值模块边界清单](docs/ai-commercial-module-boundary.md)，授权政策见 [AI 商业授权政策](docs/ai-commercial-licensing-policy.md)。
+- **自研 AI 增值代码**：采用双重授权设计。公开版本已经授予的 Apache 2.0 权利继续有效；维护者同时可就自己拥有权利的 AI 模块提供商业授权。
+- **官方 AI 商业版**：官方发行包中的指定 AI 增值功能按商业许可收费；这不要求任何人因为下载或自行构建已按 Apache 2.0 发布的源码而购买授权。具体范围见 [AI 增值模块边界清单](docs/ai-commercial-module-boundary.md)，政策见 [AI 商业授权政策](docs/ai-commercial-licensing-policy.md)，协议草案见 [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)。
 - 商业授权不覆盖知识库、经典资料、本草、穴位、医案、讲稿、第三方模型/运行库或用户本地数据。
 
 本软件是中医学习工具；AI 推理及用户学习数据遵循本地处理原则，不以商业化为由转为云端推理。
