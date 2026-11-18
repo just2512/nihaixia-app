@@ -2,6 +2,9 @@ import 'dart:ui' show DisplayFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
@@ -11,6 +14,8 @@ import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
 var _databaseSequence = 0;
+
+import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +90,25 @@ void main() {
       expect(find.byType(DraggableScrollableSheet), findsNothing);
       expect(find.byType(Dialog), findsNothing);
       expect(tester.takeException(), isNull);
+      final ask = find.text('问 AI 解读当前方剂');
+      await tester.ensureVisible(ask);
+      await tester.pumpAndSettle();
+      await tester.tap(ask);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final assistant = find.byType(LocalAiInterviewScreen);
+      expect(assistant, findsOneWidget);
+      final widget = tester.widget<LocalAiInterviewScreen>(assistant);
+      expect(widget.initialMode, AssistantMode.learning);
+      expect(widget.contextualExplanationOnly, isTrue);
+      expect(widget.contextRef['kind'], 'formula');
+      expect(widget.contextRef['moduleId'], 'formula');
+      expect(widget.contextRef['anchorId'], 'formula:${formula.id}');
+      expect(widget.contextRef['sourceId'], 'formula:${formula.id}');
+      expect(widget.initialPrompt, contains(formula.name));
+      expect(tester.takeException(), isNull);
+
     },
   );
 }

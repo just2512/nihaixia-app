@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 import 'package:nihaisha_app/data/neijing_entries.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/neijing_entries_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
+
+import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
   test('Neijing context resolves only by exact entry ID and source version', () {
@@ -71,11 +76,17 @@ void main() {
   testWidgets(
     'expanded Neijing entry exposes a contextual Ask AI action without auto-opening',
     (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 1200);
+      addTearDown(tester.view.reset);
       const entryId = 'zx-01';
       final entry = kNeijingEntries.singleWhere((item) => item.id == entryId);
       await tester.pumpWidget(
-        const MaterialApp(
-          home: NeijingEntriesScreen(initialEntryId: entryId),
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: const MaterialApp(
+            home: NeijingEntriesScreen(initialEntryId: entryId),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -86,6 +97,27 @@ void main() {
       expect(find.byType(DraggableScrollableSheet), findsNothing);
       expect(find.byType(Dialog), findsNothing);
       expect(tester.takeException(), isNull);
+      final ask = find.text('问 AI 解读当前内经条目');
+      await tester.ensureVisible(ask);
+      await tester.pumpAndSettle();
+      await tester.tap(ask);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final assistant = find.byType(LocalAiInterviewScreen);
+      expect(assistant, findsOneWidget);
+      final widget = tester.widget<LocalAiInterviewScreen>(assistant);
+      expect(widget.initialMode, AssistantMode.learning);
+      expect(widget.contextualExplanationOnly, isTrue);
+      expect(widget.contextRef['kind'], 'classic');
+      expect(widget.contextRef['moduleId'], 'neijing-entries');
+      expect(widget.contextRef['anchorId'], 'neijing:${entry.id}');
+      expect(widget.contextRef['sourceId'],
+          'app-data:lib/data/neijing_entries.dart#${entry.id}');
+      expect(widget.initialPrompt, contains(entry.original));
+      expect(widget.initialPrompt, contains('【推断】'));
+      expect(tester.takeException(), isNull);
+
     },
   );
 }
