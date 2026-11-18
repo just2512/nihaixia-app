@@ -48,6 +48,101 @@ class AiResolvedToolField {
   final Map<String, Object?> structuredSnapshot;
 }
 
+/// Verified local knowledge entry resolved from the bundled deterministic data.
+class AiResolvedKnowledgeEntry {
+  const AiResolvedKnowledgeEntry._({
+    required this.ref,
+    required this.title,
+    required this.content,
+  });
+
+  final AiContextRef ref;
+  final String title;
+  final Map<String, Object?> content;
+}
+
+/// Resolves app-controlled field paths against a real in-memory engine result.
+class AiContextResolver {
+  const AiContextResolver._();
+
+
+  static const formulaModuleId = 'formula';
+  static const formulaAssetVersion =
+      'assets/data/formulas.json@58b299e95c47fd54fc1bca18c6762c544b8d87bc';
+
+  static AiContextRef buildFormulaContextRef(Formula formula) {
+    return AiContextRef(
+      kind: AiContextKind.formula,
+      moduleId: formulaModuleId,
+      anchorId: 'formula:${formula.id}',
+      anchorVersion: formulaAssetVersion,
+      sourceId: 'formula:${formula.id}',
+      title: formula.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveFormula({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.formula ||
+        normalized.isEmpty ||
+        ref.moduleId != formulaModuleId ||
+        ref.anchorVersion != formulaAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula reference is incomplete or does not match the bundled formula source.',
+      );
+    }
+
+    final formulaId = ref.anchorId.startsWith('formula:')
+        ? ref.anchorId.substring('formula:'.length)
+        : '';
+    if (formulaId.isEmpty || ref.sourceId != 'formula:$formulaId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula anchor and source ID do not agree.',
+      );
+    }
+    final formula = FormulaRepository.getById(formulaId);
+    if (formula == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced formula is not present in the bundled formula repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': formula.id,
+      'name': formula.name,
+      'alias': formula.alias,
+      'meridian': formula.meridian,
+      'category': formula.category,
+      'components': formula.components
+          .map((component) => <String, Object?>{
+                'name': component.name,
+                'dosage': component.dosage,
+                'role': component.role,
+              })
+          .toList(growable: false),
+      'indication': formula.indication,
+      'contraindication': formula.contraindication,
+      'dosage': formula.dosage,
+      'preparation': formula.preparation,
+      'explanation': formula.explanation,
+      'keywords': formula.keywords,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: formula.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
 /// Resolves app-controlled field paths against a real engine result and
 /// verifies that the full structured snapshot digest still matches its data.
 class AiContextResolver {
