@@ -381,4 +381,50 @@ void main() {
     expect(page.width, 388);
   });
 
+  testWidgets('full-page route preserves the source text scaler', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 790);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: const TextScaler.linear(2),
+          ),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: Builder(
+            builder: (sourceContext) => TextButton(
+              onPressed: () => Navigator.of(sourceContext).push<void>(
+                FoldAwareMaterialPageRoute<void>(
+                  sourceContext: sourceContext,
+                  builder: (_) => Scaffold(
+                    body: Builder(
+                      builder: (routeContext) => Text(
+                        'scaled route',
+                        key: ValueKey(
+                          MediaQuery.textScalerOf(routeContext).scale(1),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              child: const Text('open scaled route'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open scaled route'));
+    await tester.pumpAndSettle();
+
+    final routeText = tester.element(find.text('scaled route'));
+    expect(MediaQuery.textScalerOf(routeText).scale(1), 2);
+  });
+
 }
