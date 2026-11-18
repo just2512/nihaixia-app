@@ -32,6 +32,7 @@ class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
     bool fullscreenDialog = false,
     bool allowSnapshotting = true,
   })  : _anchorPoint = foldAwareRouteAnchorPoint(sourceContext),
+        _originalMediaQuery = MediaQuery.of(sourceContext),
         super(
           builder: builder,
           settings: settings,
@@ -41,12 +42,21 @@ class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
         );
 
   final Offset? _anchorPoint;
+  final MediaQueryData _originalMediaQuery;
 
   @override
   Widget buildContent(BuildContext context) {
-    return AdaptiveSinglePane(
-      preferredAnchorPoint: _anchorPoint,
-      child: super.buildContent(context),
+    // MaterialPageRoute does not automatically partition its page around
+    // foldable display features. Use Flutter's platform sub-screen primitive
+    // so the route receives the selected physical panel's constraints and
+    // adjusted MediaQuery. This avoids calculating a window-space hinge
+    // width inside an already inset Navigator layout.
+    return MediaQuery(
+      data: _originalMediaQuery,
+      child: DisplayFeatureSubScreen(
+        anchorPoint: _anchorPoint,
+        child: super.buildContent(context),
+      ),
     );
   }
 }
