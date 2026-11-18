@@ -140,14 +140,6 @@ void main() {
             // Wait for the real ear-point asset load to finish. While the
             // FutureBuilder is loading it intentionally shows an indeterminate
             // spinner, so pumpAndSettle cannot be used as a readiness signal.
-            final earSearchField = find.descendant(
-              of: find.byType(AcupunctureScreen),
-              matching: find.byWidgetPredicate(
-                (widget) =>
-                    widget is TextField &&
-                    widget.decoration?.hintText == '搜索穴名 / 拼音 / 代码...',
-              ),
-            );
             // Reuse the same asynchronous asset-wait strategy as the
             // standalone four-tab layout regression. This root-navigation
             // test focuses on physical-panel geometry; data completeness is
