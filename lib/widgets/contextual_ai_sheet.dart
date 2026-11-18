@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../data/assistant_conversation_store.dart';
 import '../models/ai_context_ref.dart';
 import '../screens/assistant_tool_router.dart';
 import '../screens/local_ai_interview_screen.dart';
 import '../utils/fold_aware_routes.dart';
+
+/// Optional persistence boundary for contextual assistant hosts. The app
+/// defaults to its normal SQLite-backed conversation store; a host may provide
+/// a scoped store for deterministic tests or an alternate app shell.
+class ContextualAiConversationStoreScope extends InheritedWidget {
+  const ContextualAiConversationStoreScope({
+    super.key,
+    required this.conversationStore,
+    required super.child,
+  });
+
+  final AssistantConversationStore conversationStore;
+
+  static AssistantConversationStore? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<
+          ContextualAiConversationStoreScope>()?.conversationStore;
+
+  @override
+  bool updateShouldNotify(ContextualAiConversationStoreScope oldWidget) =>
+      !identical(conversationStore, oldWidget.conversationStore);
+}
 
 /// Selects the contextual assistant presentation from the available window width.
 bool usesContextualSidePanel(double availableWidth) => availableWidth >= 720;
@@ -88,6 +110,8 @@ Future<void> showContextualAiSheet({
         initialMode: initialMode,
         contextualTitle: contextualTitle,
         contextualExplanationOnly: contextualExplanationOnly,
+        conversationStore:
+            ContextualAiConversationStoreScope.maybeOf(context),
         contextRef: normalizedRef,
         sheetScrollController: scrollController,
       );

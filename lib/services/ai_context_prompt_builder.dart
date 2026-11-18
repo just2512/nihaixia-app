@@ -4,6 +4,7 @@ import '../models/ai_context_ref.dart';
 import 'ai_context_resolver.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'yunqi_tool_executor.dart';
+import 'almanac_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -275,7 +276,26 @@ class AiContextPromptBuilder {
           date is String &&
           ref.anchorId == 'yunqi:result:$snapshotId:date=$date';
     }
+    if (ref.moduleId == 'almanac') {
+      final date = input['date'];
+      return schemaVersion == AlmanacToolExecutor.resultSchemaVersion &&
+          date is String &&
+          ref.anchorId == 'almanac:result:$snapshotId:date=$date';
+    }
     return false;
+  }
+
+  static String buildAlmanacToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != 'almanac' ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError('An almanac prompt requires a resolved almanac tool result.');
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
   }
 
   static String buildYunqiToolResult({
@@ -366,6 +386,10 @@ class AiContextPromptBuilder {
       'displaySummary 仅供阅读，不是权威数据；事实以 input、result、units、sourceId、ruleVersion、executionStatus 为准。',
       if (ref.moduleId == 'yunqi')
         '五运六气快照包含全年主客运、主客气、客主加临与所选日期对应的步骤区间；页面“当前之气”高亮依赖 DateTime.now()，属于动态显示层，不包含在这份不可变年度结果快照中。',
+      if (ref.moduleId == 'almanac')
+        '每日黄历属于 App 本地历法与传统通胜规则的文化参考，不是科学预测或行为指令。宜忌、冲煞、吉时与方位应解释其规则语境，不得包装为确定性事实，也不得据此生成医疗、法律、投资或其他重要行为建议。',
+      if (ref.moduleId == 'almanac')
+        '快照明确排除了页面可能展示的本命生肖个性化提示；不得推测用户生肖、读取或补入最近保存命盘等未传入的个人资料。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
     ].join('\n');
   }

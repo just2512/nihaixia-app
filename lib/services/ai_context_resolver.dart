@@ -9,6 +9,7 @@ import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
 import 'yunqi_tool_executor.dart';
+import 'almanac_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -81,6 +82,131 @@ class AiResolvedKnowledgeEntry {
 
 class AiContextResolver {
   const AiContextResolver._();
+
+  static const almanacModuleId = 'almanac';
+
+  static AiContextRef buildAlmanacResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        snapshotId.isEmpty ||
+        ruleVersion != AlmanacToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != almanacModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            AlmanacToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['date'] is! String ||
+        sourceIds is! List ||
+        !sourceIds.contains(AlmanacToolExecutor.sourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'An almanac context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    final date = input['date'] as String;
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: almanacModuleId,
+      anchorId: 'almanac:result:$snapshotId:date=$date',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: AlmanacToolExecutor.sourceId,
+      title: '每日黄历结果（$date）',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult> resolveAlmanacToolResult({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != almanacModuleId ||
+        ref.sourceId != AlmanacToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac reference is incomplete or does not identify the local almanac engine.',
+      );
+    }
+    if (ref.ruleVersion != AlmanacToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The almanac engine, calendar package or local festival data version no longer matches this result.',
+      );
+    }
+
+    const anchorPrefix = 'almanac:result:';
+    final anchorRest = ref.anchorId.startsWith(anchorPrefix)
+        ? ref.anchorId.substring(anchorPrefix.length)
+        : '';
+    final anchorParts = anchorRest.split(':date=');
+    final snapshotId = ref.snapshotId;
+    const hexDigits = '0123456789abcdef';
+    if (anchorParts.length != 2 ||
+        snapshotId == null ||
+        snapshotId.length != 64 ||
+        !snapshotId.split('').every(hexDigits.contains) ||
+        ref.anchorVersion != snapshotId ||
+        anchorParts[0] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result anchor and snapshot identity do not agree.',
+      );
+    }
+
+    final rawDate = anchorParts[1];
+    final date = DateTime.tryParse(rawDate);
+    final normalizedDate = date == null
+        ? ''
+        : [
+            date.year.toString().padLeft(4, '0'),
+            date.month.toString().padLeft(2, '0'),
+            date.day.toString().padLeft(2, '0'),
+          ].join('-');
+    if (normalizedDate != rawDate) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result anchor does not contain a valid calendar date.',
+      );
+    }
+
+    final expectedTitle = '每日黄历结果（$rawDate）';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result title does not match its date anchor.',
+      );
+    }
+
+    try {
+      final snapshot = AlmanacToolExecutor.createStructuredSnapshot(date!);
+      if (snapshot['snapshotId'] != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The reconstructed almanac result no longer matches its immutable snapshot digest.',
+        );
+      }
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: snapshot,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
 
   static const yunqiModuleId = 'yunqi';
 

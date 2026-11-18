@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/almanac_tool_executor.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:nihaisha_app/services/lunar_almanac_service.dart';
 import '../widgets/almanac_cards.dart';
 import '../data/saved_chart_repository.dart';
 import 'festival_lookup_screen.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 /// 滑动手势方向（纯函数 [resolveSwipe] 的判定结果）。
 enum SwipeDir { dayNext, dayPrev }
@@ -39,6 +45,7 @@ class DailyAlmanacScreen extends StatefulWidget {
 }
 
 class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
+  final ScrollController _pageScrollController = ScrollController();
   DateTime _date = DateTime.now();
   AlmanacDay? _almanac;
   bool _loading = true;
@@ -49,6 +56,12 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
     super.initState();
     _compute();
     _loadUserZodiac();
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   /// 由最近一条已存命盘推导本命生肖，供「今日相冲」个性化预警。
@@ -107,6 +120,12 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
       appBar: AppBar(
         title: const Text('每日黄历'),
         actions: [
+          if (_almanac != null)
+            IconButton(
+              tooltip: '问 AI 解读本日黄历',
+              icon: const Icon(Icons.auto_awesome),
+              onPressed: _askAiAboutResult,
+            ),
           if (widget.returnResultOnComplete && _almanac != null)
             IconButton(
               tooltip: '返回 AI 助手',
@@ -138,6 +157,7 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
           if (dir != null) _applySwipe(dir);
         },
         child: ListView(
+          controller: _pageScrollController,
           // 不禁用滚动：内容较长时可滚到底部完整查看。
           padding: const EdgeInsets.all(16),
           children: [
@@ -159,6 +179,90 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
     );
   }
 
+
+  Future<void> _askAiAboutResult() async {
+    final almanac = _almanac;
+    if (almanac == null || _loading) return;
+
+    late final Map<String, Object?> snapshot;
+    late final AiContextRef contextRef;
+    try {
+      snapshot = AlmanacToolExecutor.createStructuredSnapshot(almanac.solar);
+      contextRef = AiContextResolver.buildAlmanacResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('本日黄历快照创建失败：UNKNOWN，已取消提问。')),
+        );
+      }
+      return;
+    }
+
+    final resolution =
+        AiContextResolver.resolveAlmanacToolResult(ref: contextRef);
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '本日黄历上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildAlmanacToolResult(
+        resolvedResult: resolved,
+      ),
+      initialMode: AssistantMode.tools,
+      contextualTitle: contextRef.title ?? '每日黄历结果',
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
 
   void _returnAssistantResult() {
     final a = _almanac;
