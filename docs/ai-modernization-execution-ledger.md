@@ -2851,3 +2851,88 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前最新 master 已推进至 `590e17054faea259bd3c23e360daafd0500d5fed`。合并后 Flutter tests run `44111834811` 与 Flutter Quality Gate run `44111834831` 均已启动、当前仍 `IN_PROGRESS`；必须以这两个 run 的终态更新最新主线状态，不得用前一 SHA 的通过结果替代。
 - Phase 1/2 Find N2 实机交互、本地 E4B 多轮问答及历史恢复 TRACE 继续为 `UNKNOWN / LOCAL ONLY`；CAI-READ-01 与 CAI-RESULT-01 保持 `PARTIAL`。在设备验收证据补齐前不启动 Phase 3 页面扩展。
 
+---
+
+### 57.28 2026-11-18 情境问 AI 云端扩展恢复与当前执行基线
+
+#### 最新主线与已集成切片
+
+- 当前 master：`a3212f0ea08daa766384272c89287303d08d34a2`。
+- PR [#279](https://github.com/just2512/nihaixia-app/pull/279) 已合并，merge SHA：`9339231426cba38578f656b3453b267abacecaf8`；紫微单宫星曜字段级情境入口绑定稳定 `fieldPath`、不可变 snapshotId/ruleVersion，并以实时引擎字段与结构化快照双重校验。最终 head `5950cd7bf9bebb629263c23b0bd03d9c370004a5` 的 Flutter workflow run `44239998784` 为 SUCCESS；Android arm64 job 需以该 run 的 job 终态记录。
+- PR [#285](https://github.com/just2512/nihaixia-app/pull/285) 已合并，merge SHA：`e9658c9f98ee0651c170a784fcaa154bdca4057b`；方剂详情页新增知识条目级情境提问，使用公式数据资产版本、稳定条目锚点、Resolver 精确解析和 explanation-only 学习助手。最终 head `0e8e89f3c0d61fc989391b970bf006836f996ae8` 的 Flutter workflow run `44241463173` 为 SUCCESS；Android arm64 job 需以该 run 的 job 终态记录。
+- PR [#280](https://github.com/just2512/nihaixia-app/pull/280) 已合并，merge SHA：`a3212f0ea08daa766384272c89287303d08d34a2`；紫微结果整体问 AI 改为完整结构化快照，覆盖真实输入、实际经纬度、规则版本、完整 App 结果和 source IDs，展示摘要不再作为权威事实。最终 head `7d7723d5e26f0f49574eeee7e423f7990f9fe7fd` 的 Flutter workflow run `44247435585`：Flutter regression SUCCESS、Android arm64 CI SUCCESS；Branch validation 按 PR 条件 SKIPPED，不计 PASS，也不视为失败。
+- PR #279/#280/#285 的 Find N2 真机交互与本地 E4B 多轮 TRACE 均未由云端 CI 覆盖；不得把云端 PASS 扩写为端到端 PASS。
+
+#### 当前主线 CI
+
+- master `a3212f0ea08daa766384272c89287303d08d34a2` 的 Flutter tests run `44254692807` 与 Flutter Quality Gate run `44254692897` 当前均为 IN_PROGRESS；此前 master `e9658c9f98ee0651c170a784fcaa154bdca4057b` 的 Flutter tests `44242753430` 与 Quality Gate `44242753459` 均 SUCCESS，但不得替代新 SHA 的终态。
+
+#### Phase 3 云端扩展切片
+
+**CAI-HERB-01：本草详情情境提问**
+
+- 独立分支：`feat/ai-context-herb-detail-entry-20261118`；基线 master：`a3212f0ea08daa766384272c89287303d08d34a2`。
+- PR [#288](https://github.com/just2512/nihaixia-app/pull/288) 当前 head：`fa85b231f100061ff538170588ffb5e869a6ca63`；Flutter regression run `44255018162` SUCCESS，Android arm64 CI 仍 IN_PROGRESS。初始 head `53413873000721875a18d6e982638b2eb1f6b024` 的 run `44254984772` 已 CANCELLED，不继承为 PASS。
+- 变更范围：本草详情页“问 AI 解读当前本草”入口；以 `herbs.json` blob SHA 固定资料版本；Resolver 只做 `getExactByName` 精确解析，禁止别名/模糊匹配静默切换条目；传递本经原文、性味、主治、注释、剂量、禁忌、临床口述等结构化字段；采用 learning + explanation-only，关闭面板后恢复原滚动位置。
+- 新增正/负向 Resolver 测试与入口 widget test。未修改本草资产、剂量、诊断规则或处方行为。必须以当前 head 的 Flutter regression 与 Android arm64 均 SUCCESS 为合并门槛。
+
+**CAI-FOLD-ROUTE-01：折叠屏知识详情路由**
+
+- PR #284 的原分支基于旧 master `9339231426cba38578f656b3453b267abacecaf8`，不直接集成。其最新完整回归 run `44248340713` 为 FAILURE：全量 1732 passed / 4 failed / 15 skipped；Android arm64 SUCCESS。失败证据保留：半折叠方剂详情右边界 445.5649dp，超过 388dp 物理面板；古籍章节目录 3 项测试的来源 textScaler=200%，路由后实际读数为 100%。未放宽断言、未删除测试。
+- 已基于最新 master `a3212f0ea08daa766384272c89287303d08d34a2` 建立替代独立分支 `fix/fold-aware-root-route-context-20261118`。
+- PR [#286](https://github.com/just2512/nihaixia-app/pull/286) 当前 head：`37f0a792a73de650e325088f415303df2c994cdf`；新 head Flutter regression run `44256063311` IN_PROGRESS。首轮 head `45b9f4c992abc048975e87da3a69c27bc794c6b4` 的 run `44254837472` 静态分析 PASS，但完整回归的半折叠方剂详情几何断言仍为 445.56dp > 388dp；已在当前 head 将八处知识详情路由改为 root Navigator，同时保留完整 MediaQueryData 和 AdaptiveSinglePane 局部坐标几何修复。旧 head 结果不继承为 PASS。PR #289 已关闭为 SUPERSEDED，其 root Navigator 思路已吸收到 #286；只验收 #286 当前 head。不得将旧 PR #284 的 CI 结果迁移给新 head。
+
+#### 设备门禁与执行顺序
+
+- 依 `docs/contextual-ask-ai-spec.md` Phase 3 新版条款，云端工程门禁与最终设备门禁分离。设备验收不阻止继续实施本草、方剂、经典、医案及其他工具上下文切片；每个切片仍需独立分支、稳定来源契约、负向测试、真实调用链自动化和最新 head CI。
+- Find N2 外屏/内屏/半折叠/分屏/键盘 TRACE，以及本地 E4B 多轮回复、Native 状态、空响应与历史恢复 TRACE，集中留到所有云端工作完成后的最终本地验收。未取得真实 TRACE 的项目继续标记 `UNKNOWN / LOCAL ONLY`；CAI-READ-01 / CAI-RESULT-01 不得因云端扩展完成而自动改为端到端 PASS。
+- 当前下一步：先收敛 #288、#289 最新 head CI；通过后小批量合并并刷新 master CI/Quality Gate，再继续下一类阅读入口。禁止用旧 SHA、SKIPPED 或 CANCELLED 代替 PASS。
+
+**CAI-NEIJING-01：内经十维度条目情境提问**
+
+- 独立分支：`feat/ai-context-neijing-entry-20261118`；基线 master：`a3212f0ea08daa766384272c89287303d08d34a2`。
+- PR [#291](https://github.com/just2512/nihaixia-app/pull/291) 当前 head：`e528d7f06ede42651c33162aa34f33f640146f38`；Flutter regression run `44255568657` IN_PROGRESS。
+- 以稳定条目 ID `neijing:<id>`、`neijing_entries.dart` blob SHA、source ID 构成上下文身份；Resolver 精确查找 `kNeijingEntries`，校验标题/版本/来源，未知身份 fail closed。
+- 结构化传递经典原文、出处、白话译解、倪师解读、维度与标签；Prompt 保留【推断】标记，允许讨论辨证思路与临床判断，但不将单条条目冒充完整诊断证据。
+- 新增 Resolver 正/负向测试与展开条目入口 widget test。未修改经典内容或诊断规则。
+
+**执行台账刷新 PR**
+
+- PR [#290](https://github.com/just2512/nihaixia-app/pull/290) 仅更新本台账；head `b1fc23693cfc29833762ff938169eef56b0bcd4c`，Flutter workflow run `44255371474` IN_PROGRESS。文档 PR 未合并前，master 台账仍保持旧版本。
+
+---
+
+### 57.30 2026-11-18 本草合并、内经入口修正与折叠屏修复集成基线
+
+#### 主线更新
+
+- PR [#288](https://github.com/just2512/nihaixia-app/pull/288) 已合并，merge SHA：`d15420883e724258f50509e9d85bd9fc3a51c0a7`。其最终 head `fa85b231f100061ff538170588ffb5e869a6ca63` 的 Flutter regression run `44255018162` SUCCESS、Android arm64 CI SUCCESS。
+- 新 master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` 与 Flutter Quality Gate run `44256197344` 当前 IN_PROGRESS；此前 `a3212f0e` 的 Flutter tests SUCCESS，但 Quality Gate 尚未终态。不得以父 SHA 的结果替代新 master 的结果。
+
+#### 内经条目入口：旧 PR 与重建 PR
+
+- 旧 PR #291 分支基于 `a3212f0e`，最终 head `e528d7f06ede42651c33162aa34f33f640146f38` 的 Flutter 全量回归为 **1739 passed / 15 skipped**，新增内经 Resolver 与入口 widget test 均通过；静态分析因 `lib/screens/neijing_entries_screen.dart:16:8` 一条未使用的 `ai_context_ref.dart` import warning 失败。该 warning 已定位，不是测试失败；旧 PR #291 已关闭为 SUPERSEDED。
+- 新 PR [#292](https://github.com/just2512/nihaixia-app/pull/292) 基于已包含 PR #288 本草上下文的 master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 重建，分支 `feat/ai-context-neijing-entry-post-herb-20261118`，head `67a3c787d94aee069f9c9e483b633e0582d5bb50`，Flutter regression run `44256501312` IN_PROGRESS。已移除未使用 import，并保留本草 Resolver / Prompt 代码，不覆盖 #288。仅以新 head 的 Flutter regression 与 Android arm64 SUCCESS 为合并条件。
+
+#### 折叠屏知识详情路由
+
+- 旧 PR #284 已关闭为 SUPERSEDED，失败 run `44248340713` 保留为根因证据。
+- PR #289 已关闭为 SUPERSEDED；其 root Navigator 方案已吸收到 PR #286。
+- PR [#286](https://github.com/just2512/nihaixia-app/pull/286) 当前分支 head `37f0a792a73de650e325088f415303df2c994cdf`，基于旧 master `a3212f0e`；最新 head Flutter regression run `44256063311` IN_PROGRESS。实现同时包含来源完整 MediaQueryData、AdaptiveSinglePane 局部坐标几何修复和 root Navigator，保留 388dp 原始边界断言。
+- PR #288 已先合并，因此 #286 需要在其 CI 终态确认后重建到最新 master `d1542088`，不能直接把旧 base 分支视为可合并。重建后的 head 必须重新运行完整 CI。
+
+#### 台账 PR
+
+- 旧 PR #290 的分支基于 `a3212f0e`，其最新 head CI 被后续提交取消；本节及 §57.28–57.29 已复制到以最新 master `d1542088` 为基线的新台账分支 `docs/ai-modernization-ledger-post-herb-20261118`。旧 PR #290 不作为最新主线台账合并入口。
+- Find N2 实机和本地 E4B 多轮 TRACE 继续保持 UNKNOWN / LOCAL ONLY，留到云端工作全部收尾后的最终本地验收；云端 Phase 3 不等待设备门禁。
+
+---
+
+### 57.31 2026-11-18 最新 head 重建状态
+
+- PR #286 已关闭为 SUPERSEDED；其最新实现已重建为 PR [#294](https://github.com/just2512/nihaixia-app/pull/294)，基于 master `d15420883e724258f50509e9d85bd9fc3a51c0a7`，head `5b12a3b925804132c3e3b815399c6c3598fcd338`，Flutter regression run `44256707358` IN_PROGRESS，静态分析 SUCCESS；完整回归仍在运行，Android arm64 尚未进入终态。
+- PR [#292](https://github.com/just2512/nihaixia-app/pull/292) 当前 head `67a3c787d94aee069f9c9e483b633e0582d5bb50`，Flutter regression run `44256501312` IN_PROGRESS，静态分析 SUCCESS；完整回归仍在运行，Android arm64 尚未进入终态。
+- PR #291 旧 head 的唯一 analyzer failure 已定位为未使用 import；其全量回归 1739 passed / 15 skipped。新 PR #292 已在最新 master 重建并移除该 import。
+- master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` SUCCESS；Flutter Quality Gate run `44256197344` 仍 IN_PROGRESS（Android native unit tests）。
+- PR [#293](https://github.com/just2512/nihaixia-app/pull/293) 的台账内容已更新到本节；最新提交会触发新 head CI，旧 head run 不作为当前 head 验收证据。
+- #284/#286/#289/#290/#291 已关闭为 SUPERSEDED；当前有效集成入口为 #292、#294、#293。设备验收仍为最终本地门禁，不阻止继续云端 Phase 3。
