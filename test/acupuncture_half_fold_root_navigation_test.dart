@@ -1,4 +1,5 @@
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +35,6 @@ void main() {
     await FormulaRepository.load();
     await HerbRepository.load();
     await AcupunctureRepository.load();
-    await AcupointRepository.load();
     await AcupointRepository.load();
   });
 
@@ -72,6 +72,15 @@ void main() {
         final tokens = brightness == Brightness.dark
             ? AppColors.dark
             : AppColors.light;
+        // Prime the bundled ear-point asset before AcupunctureScreen creates
+        // its FutureBuilder future. In the half-fold root shell the fourth
+        // retained TabBarView child may otherwise stay in its loading frame
+        // while the test's fake clock advances independently of asset IO.
+        final earAsset = await tester.runAsync(
+          () => rootBundle.loadString('assets/data/ear_points.json'),
+        );
+        expect(earAsset, isNotEmpty);
+
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData(
@@ -149,16 +158,9 @@ void main() {
                     widget.decoration?.hintText == '搜索穴名 / 拼音 / 代码...',
               ),
             );
-            // Wait for the ear-specific UI, not for a global spinner count:
-            // unrelated retained root-navigation pages may still animate.
-            for (var attempt = 0;
-                attempt < 30 && earSearchField.evaluate().isEmpty;
-                attempt++) {
-              await tester.runAsync(
-                () => Future<void>.delayed(const Duration(milliseconds: 100)),
-              );
-              await tester.pump();
-            }
+            // The ear asset was primed before mount. Advance one build frame
+            // after the tab animation so FutureBuilder exposes its loaded UI.
+            await tester.pump(const Duration(milliseconds: 50));
             final acupunctureTabBar = tester.widget<TabBar>(
               find
                   .descendant(
