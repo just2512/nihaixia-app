@@ -542,8 +542,9 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   Future<void> _askAiAboutCurrentResult() async {
     final snapshot = _buildCurrentContextSnapshot();
     if (snapshot == null) return;
-    final snapshotId = snapshot['snapshotId']!;
-    final ruleVersion = snapshot['ruleVersion']!;
+    final snapshotId = snapshot['snapshotId'];
+    final ruleVersion = snapshot['ruleVersion'];
+    if (snapshotId is! String || ruleVersion is! String) return;
     final contextRef = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
@@ -630,8 +631,9 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     if (palace == null) return;
 
     final fieldPath = 'palacesByPhysicalBranch.${palace.index}.stars';
-    final snapshotId = snapshot['snapshotId']!;
-    final ruleVersion = snapshot['ruleVersion']!;
+    final snapshotId = snapshot['snapshotId'];
+    final ruleVersion = snapshot['ruleVersion'];
+    if (snapshotId is! String || ruleVersion is! String) return;
     final contextRef = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
