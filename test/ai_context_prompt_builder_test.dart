@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ziwei_core/ziwei_core.dart';
+import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
@@ -28,6 +29,34 @@ Map<String, Object?> _buildStructuredZiweiSnapshot(ZiweiChart chart) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('formula knowledge entry prompt separates context sections with real newlines', () async {
+    await FormulaRepository.load();
+    expect(FormulaRepository.getAll(), isNotEmpty);
+    final formula = FormulaRepository.getAll().first;
+    final ref = AiContextResolver.buildFormulaContextRef(formula);
+    final resolution = AiContextResolver.resolveFormula(ref: ref);
+    expect(resolution.isResolved, isTrue);
+
+    final prompt = AiContextPromptBuilder.buildKnowledgeEntry(
+      entry: resolution.value!,
+    );
+    expect(
+      prompt,
+      contains('【当前知识条目情境】\n知识模块：'),
+    );
+    expect(
+      prompt,
+      contains('\n【App 实际知识条目】\n'),
+    );
+    expect(
+      prompt,
+      contains('\n【回答要求】\n'),
+    );
+  });
+
+
   test('classic selection prompt retains selected text and stable source anchor', () {
     const selectedText = '发热，汗出，恶风，脉缓';
     const ref = AiContextRef(
