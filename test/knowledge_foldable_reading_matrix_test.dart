@@ -2,6 +2,8 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/screens/formula_detail_screen.dart';
@@ -10,10 +12,28 @@ import 'package:nihaisha_app/screens/knowledge_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/adaptive_master_detail.dart';
 
+var _databaseSequence = 0;
+
 void main() {
   setUpAll(() async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
     await FormulaRepository.load();
     await HerbRepository.load();
+  });
+
+  setUp(() async {
+    DatabaseHelper.configureTestDatabase(
+      'knowledge_foldable_reading_${_databaseSequence++}.db',
+      factory: databaseFactoryFfi,
+    );
+    // Detail screens query bookmark state in initState. Open the test DB
+    // before the first route is mounted, avoiding a lazy-open race.
+    await DatabaseHelper.instance.database;
+  });
+
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
   });
 
   Future<void> pumpKnowledge(
@@ -166,7 +186,10 @@ void main() {
         final formulaRow = find.text(formula.name).first;
         await tester.ensureVisible(formulaRow);
         await tester.tap(formulaRow);
-        await tester.pumpAndSettle();
+        // FormulaDetailScreen intentionally retains an indeterminate classic-source
+        // index indicator; wait for route animation and bookmark IO without settling it.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.byType(FormulaDetailScreen), findsOneWidget);
         expect(find.text('组成'), findsOneWidget);
@@ -190,7 +213,8 @@ void main() {
         final herbRow = find.text(herb.name).first;
         await tester.ensureVisible(herbRow);
         await tester.tap(herbRow);
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.byType(HerbDetailScreen), findsOneWidget);
         expect(find.text(herb.category), findsOneWidget);
