@@ -285,7 +285,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     final latitude =
         hasExplicitCoordinates ? (executedInput.latitude ?? 30.0) : 30.0;
     final birthplace = locationMode == 'city-directory'
-        ? cityName
+        ? cityName!
         : locationMode == 'provided-coordinates'
             ? '用户提供坐标'
             : 'MISSING';
