@@ -48,6 +48,8 @@ class AiResolvedToolField {
   final Map<String, Object?> structuredSnapshot;
 }
 
+/// Resolves app-controlled field paths against a real engine result and
+/// verifies that the full structured snapshot digest still matches its data.
 /// Verified local knowledge entry resolved from the bundled deterministic data.
 class AiResolvedKnowledgeEntry {
   const AiResolvedKnowledgeEntry._({
@@ -61,10 +63,8 @@ class AiResolvedKnowledgeEntry {
   final Map<String, Object?> content;
 }
 
-/// Resolves app-controlled field paths against a real in-memory engine result.
 class AiContextResolver {
   const AiContextResolver._();
-
 
   static const formulaModuleId = 'formula';
   static const formulaAssetVersion =
@@ -143,10 +143,6 @@ class AiContextResolver {
     );
   }
 
-/// Resolves app-controlled field paths against a real engine result and
-/// verifies that the full structured snapshot digest still matches its data.
-class AiContextResolver {
-  const AiContextResolver._();
 
   static const ziweiModuleId = 'ziwei';
   static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';
