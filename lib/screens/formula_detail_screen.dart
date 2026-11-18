@@ -3,6 +3,10 @@ import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import '../models/formula.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../screens/assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 import '../theme/app_colors.dart';
 import '../models/bookmark.dart';
 import '../data/database_helper.dart';
@@ -68,6 +72,7 @@ class FormulaDetailScreen extends StatefulWidget {
 }
 
 class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
+  final ScrollController _pageScrollController = ScrollController();
   bool _isBookmarked = false;
   bool _loadingMentions = true;
   List<ClassicLecture> _shanghanHits = [];
@@ -87,6 +92,74 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
     final bookmarked = await db.isBookmarked(widget.formula.name);
     if (!mounted) return;
     setState(() => _isBookmarked = bookmarked);
+  }
+
+  Future<void> _askAiAboutFormula() async {
+    final formula = widget.formula;
+    final contextRef = AiContextResolver.buildFormulaContextRef(formula);
+    final resolution = AiContextResolver.resolveFormula(
+      ref: contextRef,
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '方剂知识上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    final prompt = AiContextPromptBuilder.buildKnowledgeEntry(
+      entry: resolved,
+    );
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.learning,
+      contextualTitle: formula.name,
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
   }
 
   void _toggleBookmark() async {
@@ -209,6 +282,12 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
   }
 
   @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final f = widget.formula;
     final cs = Theme.of(context).colorScheme;
@@ -226,6 +305,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
         ],
       ),
       body: SingleChildScrollView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,6 +346,15 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
                       const SizedBox(width: 8),
                       _Tag(label: f.category, color: cs.secondary),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      onPressed: _askAiAboutFormula,
+                      icon: const Icon(Icons.auto_awesome, size: 18),
+                      label: const Text('问 AI 解读当前方剂'),
+                    ),
                   ),
                 ],
               ),
