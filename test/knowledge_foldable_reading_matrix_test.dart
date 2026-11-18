@@ -9,10 +9,18 @@ import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/screens/formula_detail_screen.dart';
 import 'package:nihaisha_app/screens/herb_detail_screen.dart';
 import 'package:nihaisha_app/screens/knowledge_screen.dart';
+import 'package:nihaisha_app/screens/home_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
-import 'package:nihaisha_app/widgets/adaptive_master_detail.dart';
 
 var _databaseSequence = 0;
+
+List<Widget> _foldableHomeScreens() => const [
+      Scaffold(body: Center(child: Text('AI 测试页'))),
+      Scaffold(body: Center(child: Text('工具测试页'))),
+      KnowledgeScreen(),
+      Scaffold(body: Center(child: Text('收藏测试页'))),
+      Scaffold(body: Center(child: Text('设置测试页'))),
+    ];
 
 void main() {
   setUpAll(() async {
@@ -70,14 +78,21 @@ void main() {
           ),
           child: child!,
         ),
-        // A half-open Find N2 root keeps the page on one physical panel.
-        // This mirrors AdaptiveHomeNavigation's single-pane shell behavior.
+        // Exercise the production root-navigation fold path, not a standalone
+        // AdaptiveSinglePane wrapper. The test-only page fixtures keep unrelated
+        // SQLite/native screens from participating in this route-layout check.
         home: halfFolded
-            ? const AdaptiveSinglePane(child: KnowledgeScreen())
+            ? HomeScreen(testScreens: _foldableHomeScreens())
             : const KnowledgeScreen(),
       ),
     );
     await tester.pumpAndSettle();
+    if (halfFolded) {
+      // In half-open posture the root shell keeps navigation and content on
+      // the selected physical panel. Select the real Knowledge tab first.
+      await tester.tap(find.text('知识').last);
+      await tester.pumpAndSettle();
+    }
 
     final pageContext = tester.element(find.byType(KnowledgeScreen));
     expect(
@@ -105,6 +120,16 @@ void main() {
         final formula = FormulaRepository.getAll().first;
         final formulaRow = find.text(formula.name).first;
         await tester.ensureVisible(formulaRow);
+        final formulaSource = find.ancestor(
+          of: formulaRow,
+          matching: find.byType(ListTile),
+        ).first;
+        final formulaSourceRect = tester.getRect(formulaSource);
+        expect(
+          formulaSourceRect.right,
+          lessThanOrEqualTo(388),
+          reason: '方剂列表触发行必须位于左侧安全面板：$formulaSourceRect',
+        );
         await tester.tap(formulaRow);
         await tester.pumpAndSettle();
 
@@ -136,6 +161,16 @@ void main() {
         final herb = HerbRepository.getAll().first;
         final herbRow = find.text(herb.name).first;
         await tester.ensureVisible(herbRow);
+        final herbSource = find.ancestor(
+          of: herbRow,
+          matching: find.byType(ListTile),
+        ).first;
+        final herbSourceRect = tester.getRect(herbSource);
+        expect(
+          herbSourceRect.right,
+          lessThanOrEqualTo(388),
+          reason: '本草列表触发行必须位于左侧安全面板：$herbSourceRect',
+        );
         await tester.tap(herbRow);
         await tester.pumpAndSettle();
 
@@ -194,12 +229,21 @@ void main() {
         expect(find.byType(FormulaDetailScreen), findsOneWidget);
         expect(find.text('组成'), findsOneWidget);
         expect(find.text('适应证'), findsOneWidget);
-        final formulaPage = tester.getRect(find.byType(Scaffold).last);
-        expect(formulaPage.left, greaterThanOrEqualTo(0));
+        final formulaScaffold = find.descendant(
+          of: find.byType(FormulaDetailScreen),
+          matching: find.byType(Scaffold),
+        ).first;
+        final formulaPage = tester.getRect(formulaScaffold);
+        expect(
+          formulaPage.left,
+          greaterThanOrEqualTo(0),
+          reason: '方剂详情页面左边界异常：$formulaPage',
+        );
         expect(
           formulaPage.right,
           lessThanOrEqualTo(388),
-          reason: '半折叠方剂详情必须留在左侧物理面板',
+          reason:
+              '半折叠方剂详情必须留在左侧物理面板；详情=$formulaPage，触发行=$formulaSourceRect',
         );
         final formulaContext = tester.element(find.byType(FormulaDetailScreen));
         expect(MediaQuery.textScalerOf(formulaContext).scale(1), 2);
@@ -218,12 +262,21 @@ void main() {
 
         expect(find.byType(HerbDetailScreen), findsOneWidget);
         expect(find.text(herb.category), findsOneWidget);
-        final herbPage = tester.getRect(find.byType(Scaffold).last);
-        expect(herbPage.left, greaterThanOrEqualTo(0));
+        final herbScaffold = find.descendant(
+          of: find.byType(HerbDetailScreen),
+          matching: find.byType(Scaffold),
+        ).first;
+        final herbPage = tester.getRect(herbScaffold);
+        expect(
+          herbPage.left,
+          greaterThanOrEqualTo(0),
+          reason: '本草详情页面左边界异常：$herbPage',
+        );
         expect(
           herbPage.right,
           lessThanOrEqualTo(388),
-          reason: '半折叠本草详情必须留在左侧物理面板',
+          reason:
+              '半折叠本草详情必须留在左侧物理面板；详情=$herbPage，触发行=$herbSourceRect',
         );
         final herbContext = tester.element(find.byType(HerbDetailScreen));
         expect(MediaQuery.textScalerOf(herbContext).scale(1), 2);
