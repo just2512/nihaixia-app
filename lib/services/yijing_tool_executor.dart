@@ -367,6 +367,14 @@ class YiJingToolExecutor {
     CastResult cast, {
     required String method,
   }) {
+    // The legacy engine keeps movingLines empty for number/time/manual
+    // methods even when its primary moving field is non-zero. The legacy
+    // executor handles that distinction explicitly; the structured snapshot
+    // must preserve the same visible result rather than treating it as static.
+    final movingTitles =
+        method == 'coins' ? cast.movingTitles : [cast.movingTitle];
+    final movingTexts =
+        method == 'coins' ? cast.movingTexts : [cast.movingText];
     return <String, Object?>{
       'method': method,
       'methodDescription': cast.method,
@@ -374,8 +382,8 @@ class YiJingToolExecutor {
       'primaryLines': List<int>.unmodifiable(cast.primaryLines),
       'moving': cast.moving,
       'movingLines': List<int>.unmodifiable(cast.movingLines),
-      'movingTitles': List<String>.unmodifiable(cast.movingTitles),
-      'movingTexts': List<String>.unmodifiable(cast.movingTexts),
+      'movingTitles': List<String>.unmodifiable(movingTitles),
+      'movingTexts': List<String>.unmodifiable(movingTexts),
       'changed': cast.changed == null
           ? null
           : _serializeHexagram(cast.changed!),
