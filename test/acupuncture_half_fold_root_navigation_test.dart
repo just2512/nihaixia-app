@@ -132,15 +132,38 @@ void main() {
 
         for (final tab in ['穴位处方', '透针透穴', '穴位讲解', '耳穴']) {
           await tester.tap(find.text(tab).last);
-          await tester.pump();
+          // TabBarView transition is finite (~300 ms). Advance that duration
+          // directly rather than waiting for every ticker in the retained
+          // HomeScreen tree to become idle.
+          await tester.pump(const Duration(milliseconds: 350));
           if (tab == '耳穴') {
-            // Ear-point data is loaded asynchronously from the bundled asset.
-            await tester.runAsync(
-              () => Future<void>.delayed(const Duration(seconds: 1)),
+            // Wait for the real ear-point asset load to finish. While the
+            // FutureBuilder is loading it intentionally shows an indeterminate
+            // spinner, so pumpAndSettle cannot be used as a readiness signal.
+            for (var attempt = 0;
+                attempt < 20 &&
+                    find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
+                attempt++) {
+              await tester.runAsync(
+                () => Future<void>.delayed(const Duration(milliseconds: 100)),
+              );
+              await tester.pump();
+            }
+            expect(
+              find.byType(CircularProgressIndicator),
+              findsNothing,
+              reason: '耳穴资产应在限定等待内完成加载',
             );
-            await tester.pump();
+            expect(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is TextField &&
+                    widget.decoration?.hintText == '搜索穴名 / 拼音 / 代码...',
+              ),
+              findsOneWidget,
+              reason: '耳穴列表应在资产加载后显示搜索框',
+            );
           }
-          await tester.pumpAndSettle();
 
           expect(find.byType(AcupunctureScreen), findsOneWidget);
           expect(
@@ -158,12 +181,15 @@ void main() {
         // Also traverse the real list-to-detail route. The page-only matrix
         // must not be the sole evidence for an acupoint detail on a half-fold.
         await tester.tap(find.text('穴位讲解').last);
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 350));
         final acupoint = AcupointRepository.getAll().first;
         final acupointRow = find.text(acupoint.name).first;
         await tester.ensureVisible(acupointRow);
         await tester.tap(acupointRow);
-        await tester.pumpAndSettle();
+        // MaterialPageRoute's transition is finite; avoid waiting on unrelated
+        // offstage tickers retained by the root IndexedStack.
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.byType(AcupointDetailScreen), findsOneWidget);
         final detailScaffold = find.descendant(
