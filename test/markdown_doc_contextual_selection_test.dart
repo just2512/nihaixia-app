@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
-import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
-import 'support/in_memory_assistant_conversation_store.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+
+import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
   testWidgets('contextual selection is enabled only for a fully anchored reading block',
