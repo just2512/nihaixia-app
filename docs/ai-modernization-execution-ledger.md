@@ -2936,3 +2936,42 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` SUCCESS；Flutter Quality Gate run `44256197344` 仍 IN_PROGRESS（Android native unit tests）。
 - PR [#293](https://github.com/just2512/nihaixia-app/pull/293) 的台账内容已更新到本节；最新提交会触发新 head CI，旧 head run 不作为当前 head 验收证据。
 - #284/#286/#289/#290/#291 已关闭为 SUPERSEDED；当前有效集成入口为 #292、#294、#293。设备验收仍为最终本地门禁，不阻止继续云端 Phase 3。
+
+---
+
+### 57.32 2026-11-19 Phase 3 云端执行状态刷新（基于 Meihua 合并后的主线）
+
+#### 当前主线与 CI
+
+- 当前 master：`1bf4fde66eb42ca8a76d20d9b0a510ef5372e21a`，由 PR #325 普通 merge 得到。
+- 前一主线 `c7cd8b9b4b16e60d962a4e1a38447cac47e2c72c` 的 Flutter tests run `44332022418` 与 Flutter Quality Gate run `44332022620` 均 SUCCESS。
+- 当前 master `1bf4fde66eb42ca8a76d20d9b0a510ef5372e21a`：Flutter tests run `44415787400` 的 Flutter regression SUCCESS；Android arm64 job仍 IN_PROGRESS。Flutter Quality Gate run `44415787390` 的 Analyze and test job仍 IN_PROGRESS（Android Native unit tests）。不得将 Flutter regression 的 SUCCESS 扩写为 Android 或 Quality Gate 全部 PASS。
+
+#### 已合并：梅花易数结果情境入口
+
+- PR [#325](https://github.com/just2512/nihaixia-app/pull/325) 已合并，merge SHA：`1bf4fde66eb42ca8a76d20d9b0a510ef5372e21a`；最终 PR head：`ab060b40bcb86153e5346f8946083cf91afb73ee`。
+- Flutter regression run `44330709221` SUCCESS，Android arm64 CI SUCCESS；Branch validation 按 PR workflow 条件 SKIPPED，不计 PASS，也不计失败。
+- 复用现有 `MeihuaToolExecutor` 三种起卦算法（时间/数字/随机），新增一次执行返回实际 `MeihuaChart` 与不可变结构化快照；旧 `execute()` API 保留。快照记录实际起卦方式、输入、派生农历月日/年时支、卦象、动爻、体用、月令旺衰、三阶段推演与 trace；随机起卦的实际抽取结果固定在本次快照中，打开 AI 不重新随机。
+- Resolver 校验完整快照摘要、真实 source IDs、模块、规则/数据版本、方法、参数、锚点和结果结构；失配/篡改/过期拒绝交给模型。结果页复用 metaphysics + explanation-only 助手，不重算、不覆盖 App 结果。
+- Prompt 明确传统术数/民俗文化边界，不把卦象转成医疗、法律、投资或重大行动建议。
+
+#### 已合并：Phase 1/知识入口真实调用链自动化
+
+- PR [#321](https://github.com/just2512/nihaixia-app/pull/321) 已合并，merge SHA：`5f4bfe40bfecabc4270d0e75d545dbc92d089fe7`。为《伤寒论》真实 Markdown 条文选择菜单补充点击后的调用链测试：验证进入学习助手、learning / explanation-only、稳定 passage anchor/source、选中文字与完整条文均进入上下文；保留复制/全选、来源不完整及多引用块拒绝用例。该 PR 为测试切片，不更改经典原文或生产行为。
+- PR [#324](https://github.com/just2512/nihaixia-app/pull/324) 已合并，merge SHA：`31629f7c92249ff918c189a992f83ae36af57e91`。为方剂、本草、内经三个知识入口增加实际点击至学习助手的调用链测试，验证上下文 kind/module/anchor/source、explanation-only 和来源正文；不新增会话存储。
+- 合并后的 master `31629f7c` 与 `c7cd8b9` 的 Flutter tests、Flutter Quality Gate 均有 SUCCESS 记录；本节不把这些父 SHA 结果迁移为后续 master 的验收结果。
+- 当前 master 已具备医案入口：`MedicalCaseDetailScreen` 的“问 AI 解读当前医案”调用精确医案 Resolver 和来源账本 Prompt；测试 `test/medical_case_contextual_entry_test.dart` 覆盖精确内部记录、过期版本、错误 source、MISSING 记录，以及点击真实入口后打开学习助手。来源原文核验与纸本书目卷页定位分开记录；内部序号不冒充原始文献编号。
+
+#### 当前开放：八字字段级情境提问
+
+- 原 PR #327 使用旧 master `31629f7c92249ff918c189a992f83ae36af57e91`，head `71ae3f6be4d3c658f1d6308dfe2e762d7fb166fd` 的 Flutter regression 与 Android arm64 CI 均 SUCCESS；但 PR #325 后，Meihua 同时修改共享 `ai_context_resolver.dart` / `ai_context_prompt_builder.dart`，旧分支与新主线分叉，因此不直接合并、不迁移旧 SHA 的验收结果。PR #327 已关闭为 SUPERSEDED，历史提交与 CI 证据保留。
+- 已基于最新 master `1bf4fde66eb42ca8a76d20d9b0a510ef5372e21a` 独立重建 PR [#329](https://github.com/just2512/nihaixia-app/pull/329)，分支 `feat/bazi-contextual-fields-post-meihua-mainline-20261119`，当前 head：`c2d298def5ef72286e5f183f04262ccb4773f046`。
+- 重建时保留 master 中的 Meihua Resolver / Prompt 方法，只抽取八字字段专属白名单、解析和 Prompt 构建逻辑；八字页与组件提供格局、日主强弱分值、五行分值入口。字段解析先重建/验证完整成功快照，再绑定 fieldPath、snapshotId、ruleVersion、sourceId 并取单一标量；篡改、未知路径和失配状态 fail closed。
+- 当前 PR workflow run `44416512869`：Flutter regression 正在运行；Branch validation 按 PR workflow 条件 SKIPPED，不计 PASS。必须以当前 head 的完整 Flutter regression 与 Android arm64 CI 均 SUCCESS 后才能合并；合并后需复核 master Flutter tests 与 Flutter Quality Gate。
+
+#### 下一批候选与协议边界
+
+- 医案入口已落地，不重复建设。梅花当前已有整体结果快照入口；其快照结果包含主卦/互卦/变卦、动爻、体用、月令、旺衰、三阶段推演、卦辞/爻辞等实际结构字段，但目前尚无独立 fieldPath 入口。待 #329 集成后，可基于真实快照字段结构单独评估梅花字段级入口；不得使用 UI 文案或模型猜测构造字段路径。
+- 每个新增字段必须使用闭合白名单、稳定 fieldPath、所属结果快照、来源/规则版本及标量值校验；仅解释既有 App 结果，不重新计算。应至少覆盖未知路径、过期规则、篡改快照、缺失字段和真实页面点击调用链。
+- 当前协议 §11 Phase 3 将“云端工程门禁”与“最终设备门禁”分离；云端工作达到每个切片的来源/快照契约、负向测试、真实调用链自动化、窗口宽度布局自动化和最新 head Flutter/Android CI 门槛后，可继续小批量扩展。历史 §57.26 中“设备验收未完成前不启动 Phase 3”的旧说明已被协议后续修订取代；保留历史，不再作为当前云端工作的串行阻塞条件。
+- Find N2 外屏/内屏/半折叠/分屏/键盘交互，以及本地 E4B 多轮问答、空响应、Native 状态和历史恢复 TRACE，继续为 `UNKNOWN / LOCAL ONLY`；统一留到云端计划完成后的最终本地验收。CI 与模拟布局不能替代真机证据，相关工作流未补齐 TRACE 前保持 PARTIAL，不得标记端到端 PASS。
