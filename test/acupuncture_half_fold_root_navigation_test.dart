@@ -154,6 +154,30 @@ void main() {
               findsNothing,
               reason: '耳穴资产应在限定等待内完成加载',
             );
+            final acupunctureTabBar = tester.widget<TabBar>(
+              find
+                  .descendant(
+                    of: find.byType(AcupunctureScreen),
+                    matching: find.byType(TabBar),
+                  )
+                  .first,
+            );
+            expect(
+              acupunctureTabBar.controller?.index,
+              3,
+              reason: '耳穴 Tab 必须真实选中，当前 index=${acupunctureTabBar.controller?.index}',
+            );
+            final visibleText = tester
+                .widgetList<Text>(find.byType(Text))
+                .map((widget) =>
+                    widget.data ?? widget.textSpan?.toPlainText() ?? '')
+                .where((text) => text.isNotEmpty)
+                .join(' | ');
+            expect(
+              find.textContaining('耳穴库加载失败'),
+              findsNothing,
+              reason: '耳穴资产 FutureBuilder 返回错误：$visibleText',
+            );
             expect(
               find.byWidgetPredicate(
                 (widget) =>
@@ -161,7 +185,7 @@ void main() {
                     widget.decoration?.hintText == '搜索穴名 / 拼音 / 代码...',
               ),
               findsOneWidget,
-              reason: '耳穴列表应在资产加载后显示搜索框',
+              reason: '耳穴列表应在资产加载后显示搜索框；可见文本：$visibleText',
             );
           }
 
