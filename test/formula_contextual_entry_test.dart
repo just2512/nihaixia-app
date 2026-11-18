@@ -2,20 +2,23 @@ import 'dart:ui' show DisplayFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/screens/assistant_tool_router.dart';
-import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
-import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/formula_detail_screen.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'support/in_memory_assistant_conversation_store.dart';
+import 'support/in_memory_assistant_conversation_store.dart';
+
 
 var _databaseSequence = 0;
 
-import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -74,13 +77,16 @@ void main() {
       tester.view.displayFeatures = const <DisplayFeature>[];
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: AppColors.colorSchemeFor(Brightness.light),
-            extensions: [AppColors.light],
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: AppColors.colorSchemeFor(Brightness.light),
+              extensions: [AppColors.light],
+            ),
+            home: FormulaDetailScreen(formula: formula),
           ),
-          home: FormulaDetailScreen(formula: formula),
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
