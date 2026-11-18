@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 import '../models/herb.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 import '../theme/app_colors.dart';
 import '../models/bookmark.dart';
 import '../data/formula_repository.dart';
@@ -23,6 +27,7 @@ class HerbDetailScreen extends StatefulWidget {
 }
 
 class _HerbDetailScreenState extends State<HerbDetailScreen> {
+  final ScrollController _pageScrollController = ScrollController();
   bool _isBookmarked = false;
   List<MedicalCase> _relatedCases = const [];
   bool _casesReady = false;
@@ -42,6 +47,79 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
     final bookmarked = await db.isBookmarked(widget.herb.name);
     if (!mounted) return;
     setState(() => _isBookmarked = bookmarked);
+  }
+
+  Future<void> _askAiAboutHerb() async {
+    final herb = widget.herb;
+    final contextRef = AiContextResolver.buildHerbContextRef(herb);
+    final resolution = AiContextResolver.resolveHerb(ref: contextRef);
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '本草知识上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final prompt = AiContextPromptBuilder.buildHerbKnowledgeEntry(
+      entry: resolved,
+    );
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.learning,
+      contextualTitle: herb.name,
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   /// 计算后向关联：含此药的闭门课（静态 const，同步即可）+ 含此药的医案（全量解析较重，异步避免首帧卡顿）。
@@ -138,6 +216,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
         ],
       ),
       body: ListView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: [
           // Header: name + category + flavor
@@ -186,6 +265,15 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                           visualDensity: VisualDensity.compact,
                         ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      onPressed: _askAiAboutHerb,
+                      icon: const Icon(Icons.auto_awesome, size: 18),
+                      label: const Text('问 AI 解读当前本草'),
+                    ),
                   ),
                 ],
               ),

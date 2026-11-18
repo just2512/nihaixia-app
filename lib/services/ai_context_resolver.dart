@@ -1,6 +1,8 @@
 import '../models/ai_context_ref.dart';
 import '../models/formula.dart';
+import '../models/herb.dart';
 import '../data/formula_repository.dart';
+import '../data/herb_repository.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
@@ -143,6 +145,85 @@ class AiContextResolver {
     );
   }
 
+
+  static const herbModuleId = 'herb';
+  static const herbAssetVersion =
+      'assets/data/herbs.json@73fb43ff3e0456ca8404a42059dc37769a511dee';
+
+  static AiContextRef buildHerbContextRef(Herb herb) {
+    return AiContextRef(
+      kind: AiContextKind.herb,
+      moduleId: herbModuleId,
+      anchorId: 'herb:${herb.name}',
+      anchorVersion: herbAssetVersion,
+      sourceId: 'assets/data/herbs.json#${herb.name}',
+      title: herb.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveHerb({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.herb ||
+        normalized.isEmpty ||
+        ref.moduleId != herbModuleId ||
+        ref.anchorVersion != herbAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb reference is incomplete or does not match the bundled herb source.',
+      );
+    }
+
+    final herbName = ref.anchorId.startsWith('herb:')
+        ? ref.anchorId.substring('herb:'.length)
+        : '';
+    if (herbName.isEmpty ||
+        ref.sourceId != 'assets/data/herbs.json#$herbName' ||
+        (ref.title != null && ref.title != herbName)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb anchor, title and source reference do not agree.',
+      );
+    }
+
+    // Exact lookup only: aliases and fuzzy matches must not silently change
+    // the knowledge entry the user opened.
+    final herb = HerbRepository.getExactByName(herbName);
+    if (herb == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced herb is not present in the bundled herb repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'name': herb.name,
+      'original': herb.original,
+      'nature': herb.nature,
+      'action': herb.action,
+      'rongchuan': herb.rongchuan,
+      'niNote': herb.niNote,
+      'dosage': herb.dosage,
+      'contraindication': herb.contraindication,
+      'clinicalNotes': herb.clinicalNotes,
+      'historicalNotes': herb.historicalNotes,
+      'herbComparisons': herb.herbComparisons,
+      'natureCategory': herb.natureCategory,
+      'flavor': herb.flavor,
+      'meridians': herb.meridians,
+      'category': herb.category,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: herb.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
 
   static const ziweiModuleId = 'ziwei';
   static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';
