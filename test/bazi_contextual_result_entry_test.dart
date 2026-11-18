@@ -381,8 +381,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final analysisCard = find.byType(BaZiAnalysisCard);
-    await tester.ensureVisible(analysisCard);
+    await tester.scrollUntilVisible(
+      find.text('八字详批'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
 
     final fieldAsk = find.byKey(const ValueKey('bazi-field-strength'));
