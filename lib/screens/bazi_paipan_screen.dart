@@ -251,9 +251,9 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     // and uses both default coordinates (120E, 30N); when longitude is
     // present but latitude absent, only latitude falls back to 30N.
     final latitude = hasExplicitCoordinates ? (_locLat ?? 30.0) : 30.0;
-    final birthplace = hasCityLabel
-        ? cityName
-        : hasExplicitCoordinates
+    final birthplace = locationMode == 'city-directory'
+        ? cityName!
+        : locationMode == 'provided-coordinates'
             ? '用户提供坐标'
             : 'MISSING';
     final arguments = <String, String>{
