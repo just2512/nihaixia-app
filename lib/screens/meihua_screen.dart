@@ -1,20 +1,21 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import '../data/meihua_data.dart';
 import '../data/yijing_data.dart';
-import '../services/bazi_service.dart' show computeBaZiPaipan;
+import '../screens/assistant_tool_router.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/meihua_tool_executor.dart';
 import '../utils/chart_export.dart';
+import '../utils/fold_aware_routes.dart';
 import '../utils/shake_detector.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 const _kZhiNames = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-int _zhiIndex(String zhi) => _kZhiNames.indexOf(zhi) + 1;
 
 int _shiChenIndexOfHour(int hour) => ((hour.clamp(0, 23) + 1) ~/ 2) % 12;
 
@@ -46,6 +47,7 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
   final _firstC = TextEditingController(text: '3');
   final _secondC = TextEditingController(text: '7');
   MeihuaChart? _chart;
+  Map<String, Object?>? _contextSnapshot;
   String? _error;
   bool _shakeEnabled = true;
   late final ShakeDetector _shake;
@@ -108,48 +110,83 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
     setState(() {
       _error = null;
       _chart = null;
+      _contextSnapshot = null;
     });
+    final arguments = <String, String>{
+      'method': _method.name,
+      'date': _formatMeihuaDate(_date),
+      if (_method == MeihuaMethod.number) ...{
+        'first': _firstC.text.trim(),
+        'second': _secondC.text.trim(),
+      },
+      if (_method == MeihuaMethod.time)
+        'hour_branch': MeihuaToolExecutor.earthlyBranches[_shiChen],
+    };
     try {
-      final solar = DateTime(_date.year, _date.month, _date.day, 12, 0, 0);
-      // 农历取当日正午，与八字/称骨口径一致（避免子时跨日争议）。
-      final lunar = LunarDate.fromSolar(
-          AstroDateTime(solar.year, solar.month, solar.day, 12, 0, 0));
-      final c = switch (_method) {
-        MeihuaMethod.time => _byTime(lunar.month, lunar.day),
-        MeihuaMethod.number => _byNumber(lunar.month),
-        MeihuaMethod.random => computeMeihuaByRandom(lunarMonth: lunar.month),
-      };
-      setState(() => _chart = c);
-    } catch (e) {
-      setState(() => _error = '$e');
+      final execution = MeihuaToolExecutor.executeWithSnapshot(arguments);
+      final chart = execution.chart;
+      final snapshot = execution.structuredSnapshot;
+      if (!execution.succeeded || chart == null || snapshot == null) {
+        setState(() {
+          _error = execution.result.values['未执行原因'] ??
+              '梅花易数起卦失败，结果状态 UNKNOWN。';
+        });
+        return;
+      }
+      setState(() {
+        _chart = chart;
+        _contextSnapshot = snapshot;
+      });
+    } catch (error) {
+      setState(() {
+        _error = '梅花易数起卦异常：$error';
+        _chart = null;
+        _contextSnapshot = null;
+      });
     }
   }
 
-  MeihuaChart _byTime(int lunarMonth, int lunarDay) {
-    final p = computeBaZiPaipan(
-      DateTime(_date.year, _date.month, _date.day, _shiChen * 2, 0),
-      useTrueSolarTime: false,
-      ratHourMode: false,
-    );
-    return computeMeihuaByTime(
-      yearZhiIndex: _zhiIndex(p.zhis[0]),
-      lunarMonth: lunarMonth,
-      lunarDay: lunarDay,
-      hourZhiIndex: _zhiIndex(p.zhis[3]),
-    );
-  }
-
-  MeihuaChart _byNumber(int lunarMonth) {
-    final a = int.tryParse(_firstC.text.trim());
-    final b = int.tryParse(_secondC.text.trim());
-    if (a == null || b == null || a < 1 || b < 1) {
-      throw const FormatException('请输入两个正整数');
+  Future<void> _askAiAboutCurrentResult() async {
+    final snapshot = _contextSnapshot;
+    if (snapshot == null || _chart == null) return;
+    try {
+      final contextRef = AiContextResolver.buildMeihuaResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+      final resolution = AiContextResolver.resolveMeihuaToolResult(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '梅花易数结果上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildMeihuaToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: contextRef.title ?? '梅花易数结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('梅花易数结果上下文校验失败：UNKNOWN，已取消提问。')),
+        );
+      }
     }
-    return computeMeihuaByNumber(
-      first: a,
-      second: b,
-      lunarMonth: lunarMonth,
-    );
   }
 
 
@@ -269,6 +306,12 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
             _xiangCard(cs, _chart!),
             const SizedBox(height: 12),
             _traceCard(cs, _chart!),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _contextSnapshot == null ? null : _askAiAboutCurrentResult,
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('问 AI 解读当前梅花易数结果'),
+            ),
           ],
         ],
       ),
@@ -654,6 +697,11 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
     );
   }
 }
+
+String _formatMeihuaDate(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-'
+    '${date.month.toString().padLeft(2, '0')}-'
+    '${date.day.toString().padLeft(2, '0')}';
 
 String _zhiWuxing(String zhi) => switch (zhi) {
       '子' || '亥' => '水',

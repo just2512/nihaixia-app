@@ -12,6 +12,7 @@ import 'yunqi_tool_executor.dart';
 import 'almanac_tool_executor.dart';
 import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
+import 'meihua_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -471,6 +472,215 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YiJing result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
+
+  static const meihuaModuleId = 'meihua';
+
+  static String _meihuaMethodLabel(String method) => switch (method) {
+        'time' => '时间起卦',
+        'number' => '数字起卦',
+        'random' => '随机起卦',
+        _ => 'MISSING',
+      };
+
+  static AiContextRef buildMeihuaResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final method = input is Map ? input['method'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ruleVersion != MeihuaToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != meihuaModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            MeihuaToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        method is! String ||
+        !const {'time', 'number', 'random'}.contains(method) ||
+        arguments is! Map ||
+        arguments.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        arguments['method'] != method ||
+        sourceIds is! List ||
+        !sourceIds.contains(MeihuaToolExecutor.sourceId) ||
+        !sourceIds.contains(MeihuaToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Meihua context reference requires a complete, source-bound successful execution snapshot.',
+      );
+    }
+
+    final result = structuredSnapshot['result'];
+    if (result is! Map ||
+        result['method'] != method ||
+        result['main'] is! Map ||
+        result['mutual'] is! Map ||
+        result['changed'] is! Map ||
+        result['movingYao'] is! int ||
+        result['stages'] is! List ||
+        result['trace'] is! List) {
+      throw ArgumentError(
+        'The Meihua snapshot does not contain a complete structured hexagram result.',
+      );
+    }
+
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: meihuaModuleId,
+      anchorId: 'meihua:result:$snapshotId:method=$method',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: MeihuaToolExecutor.sourceId,
+      title: '梅花易数${_meihuaMethodLabel(method)}',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult> resolveMeihuaToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != meihuaModuleId ||
+        ref.sourceId != MeihuaToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua reference is incomplete or does not identify the local Meihua engine.',
+      );
+    }
+    if (ref.ruleVersion != MeihuaToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Meihua engine or hexagram data version no longer matches this result.',
+      );
+    }
+
+    final match = RegExp(
+      r'^meihua:result:([0-9a-f]{64}):method=(time|number|random)$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua result anchor and snapshot identity do not agree.',
+      );
+    }
+    final method = match.group(2)!;
+    if (ref.title != null &&
+        ref.title != '梅花易数${_meihuaMethodLabel(method)}') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua result title does not match its method anchor.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final result = structuredSnapshot['result'];
+    if (input is! Map ||
+        input['method'] != method ||
+        arguments is! Map ||
+        arguments.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        arguments['method'] != method ||
+        arguments['date'] is! String ||
+        DateTime.tryParse(arguments['date'] as String) == null ||
+        DateTime.tryParse(arguments['date'] as String)!.toIso8601String()
+            .substring(0, 10) != arguments['date'] ||
+        (method == 'number' &&
+            (int.tryParse(arguments['first'] ?? '') == null ||
+                int.tryParse(arguments['second'] ?? '') == null ||
+                arguments.containsKey('hour_branch'))) ||
+        (method == 'time' &&
+            (!MeihuaToolExecutor.earthlyBranches.contains(
+              arguments['hour_branch'],
+            ) ||
+                arguments.containsKey('first') ||
+                arguments.containsKey('second'))) ||
+        (method == 'random' &&
+            (arguments.containsKey('first') ||
+                arguments.containsKey('second') ||
+                arguments.containsKey('hour_branch'))) ||
+        structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['ruleVersion'] != MeihuaToolExecutor.ruleVersion ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            MeihuaToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != meihuaModuleId ||
+        sourceIds is! List ||
+        !sourceIds.contains(MeihuaToolExecutor.sourceId) ||
+        !sourceIds.contains(MeihuaToolExecutor.dataSourceId) ||
+        result is! Map ||
+        result['method'] != method ||
+        result['main'] is! Map ||
+        result['mutual'] is! Map ||
+        result['changed'] is! Map ||
+        result['movingYao'] is! int ||
+        result['stages'] is! List ||
+        result['trace'] is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua reference is not bound to a complete recorded successful execution.',
+      );
+    }
+
+    try {
+      if (AiToolResultSnapshot.createStructuredId(
+            snapshot: structuredSnapshot,
+          ) !=
+          snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The supplied Meihua result no longer matches its immutable snapshot digest.',
+        );
+      }
+      final derived = input['derived'];
+      if (derived is! Map ||
+          derived['lunarMonth'] is! int ||
+          derived['lunarDay'] is! int ||
+          (method == 'time' &&
+              (derived['yearZhiIndex'] is! int ||
+                  derived['hourZhiIndex'] is! int))) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.unknown,
+          reason: 'The Meihua snapshot does not preserve the exact derived inputs used by the calculation.',
+        );
+      }
+      final displaySummary = structuredSnapshot['displaySummary'];
+      if (displaySummary is! Map ||
+          displaySummary['values'] is! Map ||
+          displaySummary['title'] is! String) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.unknown,
+          reason: 'The Meihua snapshot does not contain a valid display summary.',
+        );
+      }
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: structuredSnapshot,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua result could not be verified from its immutable local snapshot.',
       );
     }
   }

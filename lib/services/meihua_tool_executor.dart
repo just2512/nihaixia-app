@@ -4,8 +4,27 @@ import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart'
     show AstroDateTime, LunarDate;
 
 import '../data/meihua_data.dart';
+import '../data/yijing_data.dart';
 import '../models/assistant_tool_result.dart';
+import 'ai_tool_result_snapshot.dart';
 import 'bazi_service.dart' show computeBaZiPaipan;
+
+class MeihuaToolExecution {
+  const MeihuaToolExecution({
+    required this.result,
+    this.chart,
+    this.structuredSnapshot,
+  });
+
+  final AssistantToolResult result;
+  final MeihuaChart? chart;
+  final Map<String, Object?>? structuredSnapshot;
+
+  bool get succeeded =>
+      result.status == AssistantToolExecutionStatus.succeeded &&
+      chart != null &&
+      structuredSnapshot != null;
+}
 
 /// Headless adapter for the three calculation methods already implemented by
 /// MeihuaScreen. It shares the page's deterministic algorithms and does not
@@ -13,12 +32,24 @@ import 'bazi_service.dart' show computeBaZiPaipan;
 class MeihuaToolExecutor {
   static const String sourceId = 'local-engine:meihua';
   static const String dataSourceId = 'local-data:yijing-hexagrams';
+  static const String resultSchemaVersion = 'meihua-structured-result-v1';
+  static const String ruleVersion =
+      'meihua-engine@1;meihua-data@f326a966c10eded2975b7afb3f669308dc5d9863;'
+      'yijing-data@f36a804903fa6b85235398999a47f2586a7f1573;'
+      'bazi-service@724e5dcf4c32c22d62c5f2a1db50e81f8a0f8ffe';
   static const List<String> earthlyBranches = [
     '子', '丑', '寅', '卯', '辰', '巳',
     '午', '未', '申', '酉', '戌', '亥',
   ];
 
   static AssistantToolResult execute(
+    Map<String, String> arguments, {
+    DateTime? now,
+    Random? rng,
+  }) =>
+      executeWithSnapshot(arguments, now: now, rng: rng).result;
+
+  static MeihuaToolExecution executeWithSnapshot(
     Map<String, String> arguments, {
     DateTime? now,
     Random? rng,
@@ -31,12 +62,12 @@ class MeihuaToolExecutor {
       'hour_branch',
     };
     if (arguments.keys.any((key) => !allowedKeys.contains(key))) {
-      return _failure(arguments, '包含未声明的起卦参数，未执行计算。');
+      return _failedExecution(arguments, '包含未声明的起卦参数，未执行计算。');
     }
 
     final method = arguments['method'];
     if (!const {'number', 'time', 'random'}.contains(method)) {
-      return _failure(arguments, '缺少或不支持起卦方式；请选择数字、时间或随机起卦，未执行计算。');
+      return _failedExecution(arguments, '缺少或不支持起卦方式；请选择数字、时间或随机起卦，未执行计算。');
     }
 
     final clock = now ?? DateTime.now();
@@ -45,12 +76,12 @@ class MeihuaToolExecutor {
         ? DateTime(clock.year, clock.month, clock.day)
         : _parseDate(rawDate);
     if (date == null) {
-      return _failure(arguments, '起卦日期无效；请使用公历 YYYY-MM-DD，未执行起卦。');
+      return _failedExecution(arguments, '起卦日期无效；请使用公历 YYYY-MM-DD，未执行起卦。');
     }
     final lastAllowedDate = DateTime(clock.year, clock.month, clock.day)
         .add(const Duration(days: 365));
     if (date.year < 1920 || date.isAfter(lastAllowedDate)) {
-      return _failure(arguments, '起卦日期须在 1920 年至本地今天之后一年内，未执行起卦。');
+      return _failedExecution(arguments, '起卦日期须在 1920 年至本地今天之后一年内，未执行起卦。');
     }
 
     // Match MeihuaScreen._compute(): convert the Gregorian date at local noon
@@ -74,20 +105,22 @@ class MeihuaToolExecutor {
     String? executedHourBranch;
     String? normalizedFirst;
     String? normalizedSecond;
+    int? executedYearZhiIndex;
+    int? executedHourZhiIndex;
 
     switch (method) {
       case 'number':
         if (arguments.containsKey('hour_branch')) {
-          return _failure(arguments, '数字起卦不接受时辰参数；未执行计算。');
+          return _failedExecution(arguments, '数字起卦不接受时辰参数；未执行计算。');
         }
         final first = int.tryParse(arguments['first'] ?? '');
         final second = int.tryParse(arguments['second'] ?? '');
         if (first == null || second == null) {
-          return _failure(arguments, '数字起卦缺少两个有效数字；未执行计算。');
+          return _failedExecution(arguments, '数字起卦缺少两个有效数字；未执行计算。');
         }
         if (first < 1 || first > (1 << 31) ||
             second < 1 || second > (1 << 31)) {
-          return _failure(arguments, '两个起卦数字均须为 1 至 ${1 << 31} 的正整数；未执行计算。');
+          return _failedExecution(arguments, '两个起卦数字均须为 1 至 ${1 << 31} 的正整数；未执行计算。');
         }
         chart = computeMeihuaByNumber(
           first: first,
@@ -105,7 +138,7 @@ class MeihuaToolExecutor {
 
       case 'time':
         if (arguments.containsKey('first') || arguments.containsKey('second')) {
-          return _failure(arguments, '时间起卦不接受数字起卦参数；未执行计算。');
+          return _failedExecution(arguments, '时间起卦不接受数字起卦参数；未执行计算。');
         }
         // The original page defaults to the device's current local shichen.
         // A supplied branch is validated against the same 12-branch selector.
@@ -113,7 +146,7 @@ class MeihuaToolExecutor {
             ? _shiChenIndexOfHour(clock.hour)
             : earthlyBranches.indexOf(arguments['hour_branch']!);
         if (branchIndex < 0 || branchIndex >= earthlyBranches.length) {
-          return _failure(arguments, '时间起卦时辰无效；请选择十二地支时辰，未执行计算。');
+          return _failedExecution(arguments, '时间起卦时辰无效；请选择十二地支时辰，未执行计算。');
         }
         executedHourBranch = earthlyBranches[branchIndex];
         final pageCompatibleSolar = DateTime(
@@ -131,8 +164,10 @@ class MeihuaToolExecutor {
         final yearZhiIndex = _zhiIndex(bazi.zhis[0]);
         final hourZhiIndex = _zhiIndex(bazi.zhis[3]);
         if (yearZhiIndex == null || hourZhiIndex == null) {
-          return _failure(arguments, '无法从 App 既有排盘结果读取年月时支；未执行起卦。');
+          return _failedExecution(arguments, '无法从 App 既有排盘结果读取年月时支；未执行起卦。');
         }
+        executedYearZhiIndex = yearZhiIndex;
+        executedHourZhiIndex = hourZhiIndex;
         chart = computeMeihuaByTime(
           yearZhiIndex: yearZhiIndex,
           lunarMonth: lunar.month,
@@ -146,7 +181,7 @@ class MeihuaToolExecutor {
         if (arguments.containsKey('first') ||
             arguments.containsKey('second') ||
             arguments.containsKey('hour_branch')) {
-          return _failure(arguments, '随机起卦不接受数字或指定时辰参数；未执行计算。');
+          return _failedExecution(arguments, '随机起卦不接受数字或指定时辰参数；未执行计算。');
         }
         chart = computeMeihuaByRandom(
           lunarMonth: lunar.month,
@@ -155,7 +190,7 @@ class MeihuaToolExecutor {
         break;
     }
 
-    return AssistantToolResult(
+    final assistantResult = AssistantToolResult(
       toolId: 'meihua',
       title: '梅花易数${chart.methodLabel}',
       values: {
@@ -178,7 +213,7 @@ class MeihuaToolExecutor {
         '体卦旺衰': chart.tiWangShuai.label,
         '三阶段推演': chart.stages
             .map((stage) => '${stage.name}：${stage.hexName}；${stage.detail}')
-            .join('\\n'),
+            .join('\n'),
         '主断': chart.verdict,
         '推算过程': chart.trace.join('；'),
       },
@@ -186,7 +221,128 @@ class MeihuaToolExecutor {
       arguments: Map<String, String>.unmodifiable(executionArguments),
       disclaimer: '依据 App 本地梅花易数既有算法及易经卦爻数据生成；仅供传统民俗文化学习参考，不是科学预测或行动指令，不用于医疗、法律或投资决策。',
     );
+
+    final snapshotBase = <String, Object?>{
+      'capabilityId': 'meihua',
+      'resultSchemaVersion': resultSchemaVersion,
+      'executionStatus': 'SUCCESS',
+      'sourceIds': const [sourceId, dataSourceId],
+      'input': <String, Object?>{
+        'method': method,
+        'arguments': Map<String, String>.unmodifiable(executionArguments),
+        'inputConvention': switch (method) {
+          'time' => '公历日期正午换算农历；年月时支由 App 本地八字引擎按已记录日期及时辰计算。',
+          'number' => '用户输入的两个数字原样保留，计算按解析后的正整数执行。',
+          'random' => '本次随机生成的上卦、下卦和动爻以实际结果与推算过程固化；打开 AI 时不重新随机。',
+          _ => 'MISSING',
+        },
+        'derived': <String, Object?>{
+          'lunarMonth': lunar.month,
+          'lunarDay': lunar.day,
+          if (executedYearZhiIndex != null)
+            'yearZhiIndex': executedYearZhiIndex,
+          if (executedHourZhiIndex != null)
+            'hourZhiIndex': executedHourZhiIndex,
+        },
+      },
+      'result': _serializeChart(chart),
+      'units': const <String, Object?>{
+        'hexagram.seq': '通行本《周易》King Wen 卦序，1–64。',
+        'trigram.xiantian': '先天八卦数，1–8。',
+        'movingYao': '动爻位置，1–6，自下而上。',
+        'tiWuxing': '体卦五行。',
+        'yongWuxing': '用卦五行。',
+        'monthBranch': '农历月份对应的月建地支。',
+      },
+      'missingFields': const <String>[],
+      'displaySummary': <String, Object?>{
+        'title': assistantResult.title,
+        'values': Map<String, String>.unmodifiable(assistantResult.values),
+        'disclaimer': assistantResult.disclaimer,
+      },
+      'ruleVersion': ruleVersion,
+    };
+    final snapshotId =
+        AiToolResultSnapshot.createStructuredId(snapshot: snapshotBase);
+    final snapshot = Map<String, Object?>.unmodifiable({
+      ...snapshotBase,
+      'snapshotId': snapshotId,
+    });
+    return MeihuaToolExecution(
+      result: assistantResult,
+      chart: chart,
+      structuredSnapshot: snapshot,
+    );
   }
+
+  static MeihuaToolExecution _failedExecution(
+    Map<String, String> arguments,
+    String reason,
+  ) =>
+      MeihuaToolExecution(
+        result: _failure(arguments, reason),
+      );
+
+  static Map<String, Object?> _serializeTrigram(Trigram trigram) =>
+      <String, Object?>{
+        'xiantian': trigram.xiantian,
+        'name': trigram.name,
+        'nature': trigram.nature,
+        'symbol': trigram.symbol,
+        'lines': List<int>.unmodifiable(trigram.lines),
+      };
+
+  static Map<String, Object?> _serializeHexagram(Hexagram hexagram) =>
+      <String, Object?>{
+        'seq': hexagram.seq,
+        'name': hexagram.name,
+        'upper': _serializeTrigram(kTrigrams[hexagram.upper]),
+        'lower': _serializeTrigram(kTrigrams[hexagram.lower]),
+        'judgement': hexagram.judgement,
+        'lines': List<String>.unmodifiable(hexagram.lines),
+        'renjian': hexagram.renjian,
+      };
+
+  static Map<String, Object?> _serializeChart(MeihuaChart chart) =>
+      <String, Object?>{
+        'method': chart.method.name,
+        'methodLabel': chart.methodLabel,
+        'trace': List<String>.unmodifiable(chart.trace),
+        'main': _serializeHexagram(chart.main),
+        'mutual': _serializeHexagram(chart.mutual),
+        'changed': _serializeHexagram(chart.changed),
+        'movingYao': chart.movingYao,
+        'movingYaoCi': chart.movingYaoCi,
+        'ti': _serializeTrigram(chart.ti),
+        'yong': _serializeTrigram(chart.yong),
+        'interTi': _serializeTrigram(chart.interTi),
+        'interYong': _serializeTrigram(chart.interYong),
+        'changedTi': _serializeTrigram(chart.changedTi),
+        'changedYong': _serializeTrigram(chart.changedYong),
+        'tiWuxing': chart.tiWuxing,
+        'yongWuxing': chart.yongWuxing,
+        'mainRelation': <String, Object?>{
+          'name': chart.mainRelation.name,
+          'label': chart.mainRelation.label,
+          'verdict': chart.mainRelation.verdict,
+        },
+        'tiWangShuai': <String, Object?>{
+          'name': chart.tiWangShuai.name,
+          'label': chart.tiWangShuai.label,
+        },
+        'monthBranch': chart.monthBranch,
+        'verdict': chart.verdict,
+        'stages': [
+          for (final stage in chart.stages)
+            <String, Object?>{
+              'name': stage.name,
+              'hexName': stage.hexName,
+              'relation': stage.relation.name,
+              'relationLabel': stage.relation.label,
+              'detail': stage.detail,
+            },
+        ],
+      };
 
   static AssistantToolResult _failure(
     Map<String, String> arguments,
