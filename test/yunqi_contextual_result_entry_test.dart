@@ -68,6 +68,22 @@ void main() {
     );
     expect(AiContextResolver.resolveYunqiToolResult(ref: changedDateAnchor).status, AiContextResolutionStatus.unknown);
 
+    const tamperedDigest = '0000000000000000000000000000000000000000000000000000000000000000';
+    final tamperedSnapshotRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ref.moduleId,
+      anchorId: 'yunqi:result:$tamperedDigest:date=$selectedDateText',
+      anchorVersion: tamperedDigest,
+      snapshotId: tamperedDigest,
+      ruleVersion: ref.ruleVersion,
+      sourceId: ref.sourceId,
+      title: ref.title,
+    );
+    expect(
+      AiContextResolver.resolveYunqiToolResult(ref: tamperedSnapshotRef).status,
+      AiContextResolutionStatus.stale,
+    );
+
     final wrongSource = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: ref.moduleId,
