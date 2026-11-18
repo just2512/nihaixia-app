@@ -97,6 +97,9 @@ void main() {
         scrollable: pageScrollable,
       );
       await tester.pumpAndSettle();
+      final pagePositionBeforeOpen =
+          tester.state<ScrollableState>(pageScrollable).position;
+      final pageOffsetBeforeOpen = pagePositionBeforeOpen.pixels;
       await tester.tap(palaceCell);
       await tester.pumpAndSettle();
 
@@ -119,7 +122,24 @@ void main() {
       expect(contextRef['snapshotId'], hasLength(64));
       expect(contextRef['anchorVersion'], contextRef['snapshotId']);
       expect(tester.takeException(), isNull);
-      await tester.binding.setSurfaceSize(null);
+
+      Navigator.of(
+        tester.element(assistant),
+        rootNavigator: true,
+      ).pop();
+      await tester.pumpAndSettle();
+      final restoredPageScrollable = find.descendant(
+        of: find.byKey(const ValueKey('ziwei-chart-page-scroll')),
+        matching: find.byType(Scrollable),
+      ).first;
+      final restoredPosition =
+          tester.state<ScrollableState>(restoredPageScrollable).position;
+      expect(
+        restoredPosition.pixels,
+        closeTo(pageOffsetBeforeOpen, 0.5),
+        reason: '关闭字段级助手后应恢复原排盘页滚动位置',
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 
