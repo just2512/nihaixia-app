@@ -29,9 +29,11 @@ Map<String, Object?> _buildStructuredZiweiSnapshot(ZiweiChart chart) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('formula knowledge entry prompt separates context sections with real newlines', (tester) async {
+  test('formula knowledge entry prompt separates context sections with real newlines', () async {
     await FormulaRepository.load();
+    expect(FormulaRepository.getAll(), isNotEmpty);
     final formula = FormulaRepository.getAll().first;
     final ref = AiContextResolver.buildFormulaContextRef(formula);
     final resolution = AiContextResolver.resolveFormula(ref: ref);
