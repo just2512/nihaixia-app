@@ -32,7 +32,7 @@ class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
     bool fullscreenDialog = false,
     bool allowSnapshotting = true,
   })  : _anchorPoint = foldAwareRouteAnchorPoint(sourceContext),
-        _originalMediaQuery = MediaQueryData.fromView(View.of(sourceContext)),
+        _originalMediaQuery = MediaQuery.of(sourceContext),
         super(
           builder: builder,
           settings: settings,
