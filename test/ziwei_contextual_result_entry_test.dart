@@ -88,7 +88,7 @@ void main() {
 
       final palaceCell = find.byKey(const ValueKey('ziwei-palace-cell-0'));
       final pageScrollable = find.descendant(
-        of: find.byType(ZiweiChartScreen),
+        of: find.byKey(const ValueKey('ziwei-chart-page-scroll')),
         matching: find.byType(Scrollable),
       ).first;
       await tester.scrollUntilVisible(
