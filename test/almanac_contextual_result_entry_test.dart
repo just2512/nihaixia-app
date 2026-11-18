@@ -13,6 +13,7 @@ import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/services/ai_tool_result_snapshot.dart';
 import 'package:nihaisha_app/services/almanac_tool_executor.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -193,7 +194,14 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      const MaterialApp(home: DailyAlmanacScreen()),
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          extensions: [AppColors.light],
+        ),
+        home: const DailyAlmanacScreen(),
+      ),
     );
     await tester.pumpAndSettle();
 
