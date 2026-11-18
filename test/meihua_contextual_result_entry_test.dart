@@ -21,7 +21,7 @@ import 'support/in_memory_assistant_conversation_store.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const fixedNow = DateTime(2026, 11, 18, 12);
+  final fixedNow = DateTime(2026, 11, 18, 12);
 
   test('Meihua number, time and random methods create immutable result snapshots', () {
     final executions = [

@@ -34,7 +34,7 @@ class MeihuaToolExecutor {
   static const String resultSchemaVersion = 'meihua-structured-result-v1';
   static const String ruleVersion =
       'meihua-engine@1;meihua-data@f326a966c10eded2975b7afb3f669308dc5d9863;'
-      'yijing-data@99cbae8872cc5524b94196c81c463feb95c7245c;'
+      'yijing-data@f36a804903fa6b85235398999a47f2586a7f1573;'
       'bazi-service@724e5dcf4c32c22d62c5f2a1db50e81f8a0f8ffe';
   static const List<String> earthlyBranches = [
     '子', '丑', '寅', '卯', '辰', '巳',
