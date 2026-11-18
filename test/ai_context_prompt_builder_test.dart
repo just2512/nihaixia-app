@@ -443,6 +443,47 @@ void main() {
     );
     expect(missing.status, AiContextResolutionStatus.missing);
     expect(missing.value, isNull);
+
+    const unsupportedPath = 'palacesByPhysicalBranch.0.ganzhi';
+    const unsupportedRef = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId:
+          'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.ganzhi',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
+      fieldPath: unsupportedPath,
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+    );
+    final unsupported = AiContextResolver.resolveZiweiPalaceStars(
+      ref: unsupportedRef,
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      resultPayload: '完整结果',
+    );
+    expect(unsupported.status, AiContextResolutionStatus.unknown);
+
+    const foreignSourceRef = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
+      fieldPath: fieldPath,
+      sourceId: 'unverified:source',
+    );
+    final foreignSource = AiContextResolver.resolveZiweiPalaceStars(
+      ref: foreignSourceRef,
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      resultPayload: '完整结果',
+    );
+    expect(foreignSource.status, AiContextResolutionStatus.unknown);
+    expect(foreignSource.value, isNull);
   });
 
 
