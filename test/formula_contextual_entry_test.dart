@@ -38,7 +38,6 @@ void main() {
     final ref = AiContextResolver.buildFormulaContextRef(formula);
     final resolved = AiContextResolver.resolveFormula(
       ref: ref,
-      formula: formula,
     );
 
     expect(ref.kind, AiContextKind.formula);
@@ -56,7 +55,7 @@ void main() {
       title: formula.name,
     );
     expect(
-      AiContextResolver.resolveFormula(ref: staleRef, formula: formula).isResolved,
+      AiContextResolver.resolveFormula(ref: staleRef).isResolved,
       isFalse,
     );
   });
