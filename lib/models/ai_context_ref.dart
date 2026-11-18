@@ -29,6 +29,7 @@ class AiContextRef {
     required this.sourceId,
     this.snapshotId,
     this.ruleVersion,
+    this.fieldPath,
     this.title,
     this.selectedText,
   });
@@ -40,6 +41,8 @@ class AiContextRef {
   final String sourceId;
   final String? snapshotId;
   final String? ruleVersion;
+  /// Stable path into an immutable tool-result snapshot; required for `field` refs.
+  final String? fieldPath;
   final String? title;
 
   /// Exact raw selection for classic reading; participates in session identity.
@@ -53,6 +56,7 @@ class AiContextRef {
         'sourceId': sourceId,
         if (snapshotId != null) 'snapshotId': snapshotId!,
         if (ruleVersion != null) 'ruleVersion': ruleVersion!,
+        if (fieldPath != null) 'fieldPath': fieldPath!,
         if (title != null) 'title': title!,
         if (selectedText != null) 'selectedText': selectedText!,
       });
@@ -72,18 +76,19 @@ class AiContextRef {
     final kind = AiContextKind.fromMetadata(value['kind']?.trim());
     if (kind == null) return const {};
 
-    // Tool-result references are immutable result identities, not generic
-    // anchors. Refuse incomplete or internally inconsistent snapshots before
-    // they can enter the assistant session/history metadata.
-    if (kind == AiContextKind.toolResult) {
+    if (kind == AiContextKind.toolResult ||
+        kind == AiContextKind.fieldValue) {
       final snapshotId = value['snapshotId']?.trim();
       final ruleVersion = value['ruleVersion']?.trim();
       final anchorVersion = value['anchorVersion']?.trim();
+      final fieldPath = value['fieldPath']?.trim();
       if (snapshotId == null ||
           snapshotId.isEmpty ||
           ruleVersion == null ||
           ruleVersion.isEmpty ||
-          snapshotId != anchorVersion) {
+          snapshotId != anchorVersion ||
+          (kind == AiContextKind.fieldValue &&
+              (fieldPath == null || fieldPath.isEmpty))) {
         return const {};
       }
     }

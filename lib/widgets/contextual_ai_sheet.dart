@@ -79,7 +79,11 @@ Future<void> showContextualAiSheet({
 
   Widget buildAssistant(ScrollController? scrollController) =>
       LocalAiInterviewScreen(
-        key: ValueKey(contextRef.snapshotId ?? contextRef.anchorId),
+        key: ValueKey(
+          contextRef.fieldPath == null
+              ? (contextRef.snapshotId ?? contextRef.anchorId)
+              : '${contextRef.snapshotId ?? contextRef.anchorId}:${contextRef.fieldPath}',
+        ),
         initialPrompt: initialPrompt,
         initialMode: initialMode,
         contextualTitle: contextualTitle,
