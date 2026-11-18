@@ -19,6 +19,19 @@ void main() {
     expect(snapshot['executionStatus'], 'SUCCESS');
     expect(input['date'], selectedDateText);
     expect(input['yearConvention'], '当前 App 页面采用公历年口径');
+    final result = snapshot['result']! as Map<String, Object?>;
+    final annualData = result['annualData']! as Map<String, Object?>;
+    final selectedDateContext =
+        result['selectedDateContext']! as Map<String, Object?>;
+    expect(annualData['mainYun'], hasLength(5));
+    expect(annualData['guestYun'], hasLength(5));
+    expect(annualData['mainQi'], hasLength(6));
+    expect(annualData['guestQi'], hasLength(6));
+    expect(annualData['hostGuestRelations'], hasLength(6));
+    expect(selectedDateContext['date'], selectedDateText);
+    expect(selectedDateContext['qiStepIndex'], isA<int>());
+    expect(selectedDateContext['yunStepIndex'], isA<int>());
+    expect(result['dynamicCurrentTimeOverlay'], 'NOT_INCLUDED');
     expect(snapshot['ruleVersion'], YunQiToolExecutor.ruleVersion);
     expect(snapshot['sourceIds'], contains(YunQiToolExecutor.sourceId));
     expect(snapshot['snapshotId'], hasLength(64));
@@ -110,6 +123,9 @@ void main() {
   });
 
   testWidgets('YunQi result screen exposes contextual Ask AI without auto-opening the panel', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 8000);
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(home: YunQiScreen(initialDate: selectedDate)),
     );
