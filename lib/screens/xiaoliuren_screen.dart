@@ -60,10 +60,10 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
   Future<void> _compute() async {
     final revision = ++_computeRevision;
     final arguments = <String, String>{
-      'date': '\${_date.year.toString().padLeft(4, '0')}-'
-          '\${_date.month.toString().padLeft(2, '0')}-'
-          '\${_date.day.toString().padLeft(2, '0')}',
-      'hour': '\${_kShiChenNames[_shiChen]}时',
+      'date': '${_date.year.toString().padLeft(4, '0')}-'
+          '${_date.month.toString().padLeft(2, '0')}-'
+          '${_date.day.toString().padLeft(2, '0')}',
+      'hour': '${_kShiChenNames[_shiChen]}时',
       'rule': _rule.name,
     };
     final execution =
@@ -92,7 +92,7 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '小六壬结果上下文解析失败：\${resolution.status.name.toUpperCase()}，已取消提问。',
+                '小六壬结果上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
               ),
             ),
           );
