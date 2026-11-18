@@ -91,7 +91,7 @@ class XiaoliurenToolExecutor {
     final lastSupportedDate =
         DateTime(today.year, today.month, today.day).add(const Duration(days: 365));
     if (date.isBefore(firstSupportedDate) || date.isAfter(lastSupportedDate)) {
-      return _failure(
+      return _failedExecution(
         arguments,
         '公历日期超出页面支持范围（1920 年至今天后 365 天），本次未执行。',
       );
@@ -193,9 +193,9 @@ class XiaoliurenToolExecutor {
               },
           ],
           'trace': <String>[
-            '月宫顺数步数=\${chart.month.steps}，落\${chart.month.palace.name}',
-            '日宫顺数步数=\${chart.day.steps}，落\${chart.day.palace.name}',
-            '时宫顺数步数=\${chart.hour.steps}，落\${chart.hour.palace.name}',
+            '月宫顺数步数=${chart.month.steps}，落${chart.month.palace.name}',
+            '日宫顺数步数=${chart.day.steps}，落${chart.day.palace.name}',
+            '时宫顺数步数=${chart.hour.steps}，落${chart.hour.palace.name}',
           ],
         },
         'units': const <String, Object?>{
