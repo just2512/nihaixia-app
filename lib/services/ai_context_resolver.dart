@@ -598,6 +598,24 @@ class AiContextResolver {
           (entry) => entry.key is! String || entry.value is! String,
         ) ||
         arguments['method'] != method ||
+        arguments['date'] is! String ||
+        DateTime.tryParse(arguments['date'] as String) == null ||
+        DateTime.tryParse(arguments['date'] as String)!.toIso8601String()
+            .substring(0, 10) != arguments['date'] ||
+        (method == 'number' &&
+            (int.tryParse(arguments['first'] ?? '') == null ||
+                int.tryParse(arguments['second'] ?? '') == null ||
+                arguments.containsKey('hour_branch'))) ||
+        (method == 'time' &&
+            (!MeihuaToolExecutor.earthlyBranches.contains(
+              arguments['hour_branch'],
+            ) ||
+                arguments.containsKey('first') ||
+                arguments.containsKey('second'))) ||
+        (method == 'random' &&
+            (arguments.containsKey('first') ||
+                arguments.containsKey('second') ||
+                arguments.containsKey('hour_branch'))) ||
         structuredSnapshot['snapshotId'] != snapshotId ||
         structuredSnapshot['ruleVersion'] != MeihuaToolExecutor.ruleVersion ||
         structuredSnapshot['resultSchemaVersion'] !=
