@@ -296,5 +296,6 @@
 | 五行徽章文字与背景高度 | `PASS` | PR #264 合并 SHA `4136bc616fa382cc7196e277c99f67f7f3e23007`；背景高度改为依据实际 TextPainter.height 计算，200% 几何断言进入 master。 |
 | Phase 4：跨页面语义色对比度 | `PASS`（自动化） | PR #265 合并 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；当前 HEAD Flutter regression Run `44103235167` success、Android arm64 job `134112303183` success。覆盖浅深主题状态色、容器和六经文字/容器配对。 |
 | PR #265 合并后的主线 CI | `PASS` | master HEAD `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；Flutter regression Run `44105085769` 与 Quality Gate Run `44105085816` 均 success。 |
+| PR #270 合并后的最新主线 CI | `PASS` | master HEAD `455b02eb8bf3ae720aaa23d04a9a67b2dcec3317`；Flutter tests Run `44215078356`：Flutter regression job `134502768818` 与 Android arm64 job `134505508843` 均 `SUCCESS`；Flutter Quality Gate Run `44215078364` 的 Analyze and test job `134502769211` 为 `SUCCESS`。条件性 Branch validation job `134502771117` 为 `SKIPPED`，不计 PASS，也不计失败。 |
 | Find N2 外屏/内屏/半折叠真实阅读 | `MISSING` | 仍需 OPPO Find N2 真实设备截图、系统版本、实际窗口 dp、字号档位及浅深主题连续阅读记录。CI/Widget/模拟器不替代实机。 |
 
