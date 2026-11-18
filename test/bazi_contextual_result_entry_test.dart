@@ -380,10 +380,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final analysisCard = find.byType(BaZiAnalysisCard);
+    await tester.ensureVisible(analysisCard);
+    await tester.pumpAndSettle();
+
     final fieldAsk = find.byKey(const ValueKey('bazi-field-strength'));
     expect(fieldAsk, findsOneWidget);
-    await tester.ensureVisible(fieldAsk);
-    await tester.pumpAndSettle();
     await tester.tap(fieldAsk);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
