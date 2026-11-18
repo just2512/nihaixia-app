@@ -653,13 +653,15 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
     return Card(
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
-        title: Row(
+        title: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               acupoint.name,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: AppType.body),
             ),
-            const SizedBox(width: 8),
             if (acupoint.meridian.isNotEmpty)
               Chip(
                 label: Text(acupoint.meridian, style: const TextStyle(fontSize: AppType.micro)),
