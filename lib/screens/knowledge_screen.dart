@@ -114,11 +114,11 @@ class _MeridianTab extends StatelessWidget {
         final healingTime = DiagnosticRules.meridianHealingTime[name] ?? '';
         final formulas = details['formulas'] as List<String>;
 
-        return Builder(
-          builder: (itemContext) => Card(
+        return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
+          child: Builder(
+            builder: (itemContext) => InkWell(
             onTap: () {
               Navigator.push(
                 itemContext,
@@ -525,10 +525,10 @@ class _FormulaTabState extends State<_FormulaTab> {
                   itemCount: formulas.length,
                   itemBuilder: (context, index) {
                     final formula = formulas[index];
-                    return Builder(
-                      builder: (itemContext) => Card(
+                    return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
+                      child: Builder(
+                        builder: (itemContext) => ListTile(
                         selected: useMasterDetail &&
                             formula.id == _selectedFormulaId,
                         title: Text(
@@ -875,10 +875,10 @@ class _HerbTabState extends State<_HerbTab> {
                     final actionShort = action.length > 40
                         ? '${action.substring(0, 40)}...'
                         : action;
-                    return Builder(
-                      builder: (itemContext) => Card(
+                    return Card(
                       margin: const EdgeInsets.symmetric(vertical: 3),
-                      child: ListTile(
+                      child: Builder(
+                        builder: (itemContext) => ListTile(
                         selected: useMasterDetail &&
                             herb.name == _selectedHerbName,
                         leading: CircleAvatar(
