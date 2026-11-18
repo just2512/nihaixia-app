@@ -205,10 +205,10 @@ class BaziContextSnapshot {
       'missingFields': const <String>[],
       'displaySummary': summary,
     };
-    return Map<String, Object?>.unmodifiable({
+    return _freeze({
       ...payload,
       'snapshotId': AiToolResultSnapshot.createStructuredId(snapshot: payload),
-    });
+    }) as Map<String, Object?>;
   }
 
   /// Rebuilds the deterministic result from the immutable input stored inside
@@ -292,6 +292,19 @@ class BaziContextSnapshot {
       chart: chart,
       fortune: fortune,
     );
+  }
+
+  static Object? _freeze(Object? value) {
+    if (value is Map) {
+      return Map<String, Object?>.unmodifiable({
+        for (final entry in value.entries)
+          entry.key.toString(): _freeze(entry.value),
+      });
+    }
+    if (value is Iterable) {
+      return List<Object?>.unmodifiable(value.map(_freeze));
+    }
+    return value;
   }
 
   static String _formatSolar(DateTime value) =>
