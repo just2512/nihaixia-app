@@ -1602,7 +1602,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     final cs = Theme.of(context).colorScheme;
     final meaning = ZiweiReferenceScreen.palaceMeanings[p.roleLabel];
     final flowStarsHere = flow?.flowStars[p.index] ?? const <String>[];
-    showModalBottomSheet<bool>(
+    final askAi = await showModalBottomSheet<bool>(
       context: context,
       anchorPoint: foldAwareRouteAnchorPoint(context),
       backgroundColor: cs.surface,
