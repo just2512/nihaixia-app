@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'support/in_memory_assistant_conversation_store.dart';
+
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
@@ -195,13 +197,16 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      MaterialApp(
+      ContextualAiConversationStoreScope(
+        conversationStore: InMemoryAssistantConversationStore(),
+        child: MaterialApp(
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: AppColors.colorSchemeFor(Brightness.light),
           extensions: [AppColors.light],
         ),
-        home: const DailyAlmanacScreen(),
+          home: const DailyAlmanacScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
