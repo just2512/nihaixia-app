@@ -81,6 +81,7 @@ void main() {
       'anchorId': 'ziwei:result:abc',
       'anchorVersion': 'abc',
       'snapshotId': 'abc',
+      'ruleVersion': 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
       'sourceId': 'local-engine:ziwei-core@0.13.0',
     };
     const same = {
@@ -89,6 +90,7 @@ void main() {
       'anchorId': 'ziwei:result:abc',
       'anchorVersion': 'abc',
       'snapshotId': 'abc',
+      'ruleVersion': 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
       'sourceId': 'local-engine:ziwei-core@0.13.0',
     };
     const differentSnapshot = {
@@ -97,6 +99,7 @@ void main() {
       'anchorId': 'ziwei:result:def',
       'anchorVersion': 'def',
       'snapshotId': 'def',
+      'ruleVersion': 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
       'sourceId': 'local-engine:ziwei-core@0.13.0',
     };
     expect(AiContextRef.matchesSameAnchor(original, same), isTrue);
@@ -218,6 +221,44 @@ void main() {
       })['kind'],
       'case',
       reason: 'The reserved word case remains a stable wire value',
+    );
+  });
+
+  test('tool-result context requires a complete immutable snapshot identity', () {
+    const base = {
+      'kind': 'toolResult',
+      'moduleId': 'ziwei',
+      'anchorId': 'ziwei:result:snapshot-a',
+      'anchorVersion': 'snapshot-a',
+      'snapshotId': 'snapshot-a',
+      'ruleVersion': 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
+    };
+
+    expect(AiContextRef.normalizeMetadata(base), isNotEmpty);
+    expect(
+      AiContextRef.normalizeMetadata({
+        ...base,
+        'snapshotId': '',
+      }),
+      isEmpty,
+      reason: 'Tool-result references cannot omit their immutable snapshot ID',
+    );
+    expect(
+      AiContextRef.normalizeMetadata({
+        ...base,
+        'ruleVersion': '',
+      }),
+      isEmpty,
+      reason: 'Tool-result references must identify the rules that produced them',
+    );
+    expect(
+      AiContextRef.normalizeMetadata({
+        ...base,
+        'snapshotId': 'snapshot-b',
+      }),
+      isEmpty,
+      reason: 'Snapshot identity must agree with the anchor version',
     );
   });
 
