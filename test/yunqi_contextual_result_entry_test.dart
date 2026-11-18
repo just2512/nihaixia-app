@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+import 'support/in_memory_assistant_conversation_store.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/services/ai_tool_result_snapshot.dart';
@@ -127,13 +131,35 @@ void main() {
     tester.view.physicalSize = const Size(1200, 8000);
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      MaterialApp(home: YunQiScreen(initialDate: selectedDate)),
+      ContextualAiConversationStoreScope(
+        conversationStore: InMemoryAssistantConversationStore(),
+        child: MaterialApp(home: YunQiScreen(initialDate: selectedDate)),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.byType(YunQiScreen), findsOneWidget);
-    expect(find.text('问 AI 解读本年度推算结果'), findsOneWidget);
+    final ask = find.text('问 AI 解读本年度推算结果');
+    expect(ask, findsOneWidget);
     expect(find.byType(DraggableScrollableSheet), findsNothing);
     expect(find.byType(Dialog), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    await tester.ensureVisible(ask);
+    await tester.pumpAndSettle();
+    await tester.tap(ask);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final assistant = find.byType(LocalAiInterviewScreen);
+    expect(assistant, findsOneWidget);
+    final assistantWidget = tester.widget<LocalAiInterviewScreen>(assistant);
+    expect(assistantWidget.initialMode, AssistantMode.tools);
+    expect(assistantWidget.contextualExplanationOnly, isTrue);
+    expect(assistantWidget.contextRef['kind'], 'toolResult');
+    expect(assistantWidget.contextRef['moduleId'], 'yunqi');
+    expect(assistantWidget.contextRef['snapshotId'], hasLength(64));
+    expect(assistantWidget.initialPrompt, contains(selectedDateText));
+    expect(assistantWidget.initialPrompt, contains('不得重新排盘、推算'));
     expect(tester.takeException(), isNull);
   });
 }
