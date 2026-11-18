@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import '../utils/fold_aware_routes.dart';
-import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import '../data/xiaoliuren_data.dart';
+import '../screens/assistant_tool_router.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/xiaoliuren_tool_executor.dart';
+import '../utils/fold_aware_routes.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 /// 时辰索引（0=子 … 11=亥）→ 时辰数（子=1 … 亥=12）。
 int _hourNumberOfIndex(int i) => i + 1;
@@ -29,6 +33,8 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
   int _shiChen = _shiChenIndexOfHour(DateTime.now().hour);
   XiaoliurenRule _rule = XiaoliurenRule.common;
   XiaoliurenChart? _chart;
+  Map<String, Object?>? _contextSnapshot;
+  int _computeRevision = 0;
 
   @override
   void initState() {
@@ -50,18 +56,66 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
     }
   }
 
-  /// 农历取当日正午，与八字/称骨口径一致（避免子时跨日争议）。
-  void _compute() {
-    final lunar = LunarDate.fromSolar(
-        AstroDateTime(_date.year, _date.month, _date.day, 12, 0, 0));
+  /// 复用现有 headless 执行器，并固化当前页面本次实际起课结果。
+  Future<void> _compute() async {
+    final revision = ++_computeRevision;
+    final arguments = <String, String>{
+      'date': '\${_date.year.toString().padLeft(4, '0')}-'
+          '\${_date.month.toString().padLeft(2, '0')}-'
+          '\${_date.day.toString().padLeft(2, '0')}',
+      'hour': '\${_kShiChenNames[_shiChen]}时',
+      'rule': _rule.name,
+    };
+    final execution =
+        await XiaoliurenToolExecutor.executeWithSnapshot(arguments);
+    if (!mounted || revision != _computeRevision) return;
     setState(() {
-      _chart = computeXiaoliuren(
-        lunarMonth: lunar.month,
-        lunarDay: lunar.day,
-        hourNumber: _hourNumberOfIndex(_shiChen),
-        rule: _rule,
-      );
+      _chart = execution.chart;
+      _contextSnapshot = execution.structuredSnapshot;
     });
+  }
+
+  Future<void> _askAiAboutCurrentResult() async {
+    final snapshot = _contextSnapshot;
+    if (snapshot == null || _chart == null) return;
+    try {
+      final contextRef = AiContextResolver.buildXiaoliurenResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+      final resolution = AiContextResolver.resolveXiaoliurenToolResult(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '小六壬结果上下文解析失败：\${resolution.status.name.toUpperCase()}，已取消提问。',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildXiaoliurenToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: contextRef.title ?? '小六壬起课结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('小六壬结果上下文校验失败：UNKNOWN，已取消提问。')),
+        );
+      }
+    }
   }
 
   @override
@@ -177,6 +231,12 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
             _palaceStrip(cs, c),
             const SizedBox(height: 12),
             _trace(cs, c),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _contextSnapshot == null ? null : _askAiAboutCurrentResult,
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('问 AI 解读当前小六壬结果'),
+            ),
           ],
         ],
       ),
