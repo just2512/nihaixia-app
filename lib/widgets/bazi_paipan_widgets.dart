@@ -255,7 +255,12 @@ class BaZiTwelveStagesCard extends StatelessWidget {
 /// 八字详批卡：格局 / 日主强弱 / 神煞 / 五行 / 用神忌神。
 class BaZiAnalysisCard extends StatelessWidget {
   final BaZiAnalysis analysis;
-  const BaZiAnalysisCard({super.key, required this.analysis});
+  final ValueChanged<String>? onAskField;
+  const BaZiAnalysisCard({
+    super.key,
+    required this.analysis,
+    this.onAskField,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +294,15 @@ class BaZiAnalysisCard extends StatelessWidget {
                   color: cs.primary,
                 ),
               ),
+              if (onAskField != null)
+                IconButton(
+                  key: const ValueKey('bazi-field-pattern'),
+                  tooltip: '问 AI 解读当前格局',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () =>
+                      onAskField!('result.analysis.pattern'),
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                ),
             ],
           ),
           const SizedBox(height: 6),
@@ -305,6 +319,17 @@ class BaZiAnalysisCard extends StatelessWidget {
               _chip(cs, a.strengthLevel, _strengthColor(context, level: a.strengthLevel)),
             ],
           ),
+          if (onAskField != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('bazi-field-strength'),
+                onPressed: () =>
+                    onAskField!('result.analysis.strengthScore'),
+                icon: const Icon(Icons.auto_awesome, size: 14),
+                label: const Text('问 AI 解读日主强弱'),
+              ),
+            ),
           if (a.shensha.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
@@ -337,34 +362,48 @@ class BaZiAnalysisCard extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              for (final e in a.fiveElements)
+              for (var index = 0; index < a.fiveElements.length; index++)
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 4),
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: e.status == '缺'
-                          ? cs.surfaceContainerHighest
-                          : cs.primaryContainer.withValues(alpha: 0.5),
+                  child: Tooltip(
+                    message: onAskField == null
+                        ? '${a.fiveElements[index].element}：${a.fiveElements[index].status}'
+                        : '问 AI 解读${a.fiveElements[index].element}分值',
+                    child: InkWell(
+                      key: ValueKey('bazi-field-five-element-$index'),
                       borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          e.element,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      onTap: onAskField == null
+                          ? null
+                          : () => onAskField!(
+                                'result.analysis.fiveElements.$index.score',
+                              ),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        decoration: BoxDecoration(
+                          color: a.fiveElements[index].status == '缺'
+                              ? cs.surfaceContainerHighest
+                              : cs.primaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        Text(
-                          e.status,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: cs.onSurfaceVariant,
-                          ),
+                        child: Column(
+                          children: [
+                            Text(
+                              a.fiveElements[index].element,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              a.fiveElements[index].status,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
