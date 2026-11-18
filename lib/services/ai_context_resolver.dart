@@ -1220,7 +1220,7 @@ class AiContextResolver {
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
       sourceId: XiaoliurenToolExecutor.sourceId,
-      title: '小六壬起课（\${_xiaoliurenRuleLabel(rule)}）',
+      title: '小六壬起课（${_xiaoliurenRuleLabel(rule)}）',
     );
   }
 
@@ -1942,7 +1942,7 @@ class AiContextResolver {
     }
     final ruleId = match.group(2)!;
     if (ref.title != null &&
-        ref.title != '小六壬起课（\${_xiaoliurenRuleLabel(ruleId)}）') {
+        ref.title != '小六壬起课（${_xiaoliurenRuleLabel(ruleId)}）') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Xiaoliuren title does not match its recorded rule anchor.',
