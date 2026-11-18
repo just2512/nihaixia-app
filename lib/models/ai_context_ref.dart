@@ -41,6 +41,7 @@ class AiContextRef {
   final String sourceId;
   final String? snapshotId;
   final String? ruleVersion;
+  /// Stable path into an immutable tool-result snapshot; required for `field` refs.
   final String? fieldPath;
   final String? title;
 
