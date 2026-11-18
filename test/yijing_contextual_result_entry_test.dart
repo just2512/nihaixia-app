@@ -82,6 +82,40 @@ void main() {
       expect(result['movingTitles'], isA<List<String>>());
       expect(result['movingTexts'], isA<List<String>>());
       expect(recordedInput['arguments'], input);
+
+      final cast = switch (input['method']) {
+        'number' => YiJingEngine.castByNumbers(3, 7),
+        'time' => YiJingEngine.castByTime(
+            DateTime.parse(input['at'] as String),
+          ),
+        'manual' => YiJingEngine.castManual(
+            int.parse(input['upper'] as String),
+            int.parse(input['lower'] as String),
+            int.parse(input['moving'] as String),
+          ),
+        'coins' => YiJingEngine.castByCoins(
+            (input['coins'] as String)
+                .split(',')
+                .map(int.parse)
+                .toList(growable: false),
+          ),
+        _ => throw StateError('Unsupported test method'),
+      };
+      expect(
+        YiJingToolExecutor.matchesCast(snapshot: snapshot, cast: cast),
+        isTrue,
+      );
+      if (input['method'] != 'coins') {
+        expect(
+          result['movingTitles'],
+          [cast.movingTitle],
+          reason: '数字/时间/手动起卦应保留 legacy executor 的单动爻表示',
+        );
+        expect(
+          result['movingTexts'],
+          [cast.movingText],
+        );
+      }
     }
   });
 
