@@ -290,6 +290,11 @@ void main() {
     final result = Map<String, Object?>.from(snapshot['result']! as Map);
     result['elementBureau'] = 'tampered';
     final tampered = {...snapshot, 'result': result};
+    expect(
+      AiToolResultSnapshot.createStructuredId(snapshot: tampered),
+      isNot(snapshotId),
+      reason: 'Any mutation inside the structured result must change its snapshot digest',
+    );
 
     expect(
       () => AiContextPromptBuilder.buildToolResult(
