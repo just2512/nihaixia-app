@@ -621,6 +621,1245 @@ class AiContextResolver {
     }
   }
 
+
+  static const _supportedBaziFieldPath =
+      r'^result\.analysis\.(?:pattern|dayMaster|strengthLevel|strengthScore|fiveElements\.\d+\.(?:element|score|status))
+  static const formulaAssetVersion =
+      'assets/data/formulas.json@58b299e95c47fd54fc1bca18c6762c544b8d87bc';
+
+  static AiContextRef buildFormulaContextRef(Formula formula) {
+    return AiContextRef(
+      kind: AiContextKind.formula,
+      moduleId: formulaModuleId,
+      anchorId: 'formula:${formula.id}',
+      anchorVersion: formulaAssetVersion,
+      sourceId: 'formula:${formula.id}',
+      title: formula.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveFormula({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.formula ||
+        normalized.isEmpty ||
+        ref.moduleId != formulaModuleId ||
+        ref.anchorVersion != formulaAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula reference is incomplete or does not match the bundled formula source.',
+      );
+    }
+
+    final formulaId = ref.anchorId.startsWith('formula:')
+        ? ref.anchorId.substring('formula:'.length)
+        : '';
+    if (formulaId.isEmpty || ref.sourceId != 'formula:$formulaId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula anchor and source ID do not agree.',
+      );
+    }
+    final formula = FormulaRepository.getById(formulaId);
+    if (formula == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced formula is not present in the bundled formula repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': formula.id,
+      'name': formula.name,
+      'alias': formula.alias,
+      'meridian': formula.meridian,
+      'category': formula.category,
+      'components': formula.components
+          .map((component) => <String, Object?>{
+                'name': component.name,
+                'dosage': component.dosage,
+                'role': component.role,
+              })
+          .toList(growable: false),
+      'indication': formula.indication,
+      'contraindication': formula.contraindication,
+      'dosage': formula.dosage,
+      'preparation': formula.preparation,
+      'explanation': formula.explanation,
+      'keywords': formula.keywords,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: formula.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+
+  static const herbModuleId = 'herb';
+  static const herbAssetVersion =
+      'assets/data/herbs.json@73fb43ff3e0456ca8404a42059dc37769a511dee';
+
+  static AiContextRef buildHerbContextRef(Herb herb) {
+    return AiContextRef(
+      kind: AiContextKind.herb,
+      moduleId: herbModuleId,
+      anchorId: 'herb:${herb.name}',
+      anchorVersion: herbAssetVersion,
+      sourceId: 'assets/data/herbs.json#${herb.name}',
+      title: herb.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveHerb({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.herb ||
+        normalized.isEmpty ||
+        ref.moduleId != herbModuleId ||
+        ref.anchorVersion != herbAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb reference is incomplete or does not match the bundled herb source.',
+      );
+    }
+
+    final herbName = ref.anchorId.startsWith('herb:')
+        ? ref.anchorId.substring('herb:'.length)
+        : '';
+    if (herbName.isEmpty ||
+        ref.sourceId != 'assets/data/herbs.json#$herbName' ||
+        (ref.title != null && ref.title != herbName)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb anchor, title and source reference do not agree.',
+      );
+    }
+
+    // Exact lookup only: aliases and fuzzy matches must not silently change
+    // the knowledge entry the user opened.
+    final herb = HerbRepository.getExactByName(herbName);
+    if (herb == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced herb is not present in the bundled herb repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'name': herb.name,
+      'original': herb.original,
+      'nature': herb.nature,
+      'action': herb.action,
+      'rongchuan': herb.rongchuan,
+      'niNote': herb.niNote,
+      'dosage': herb.dosage,
+      'contraindication': herb.contraindication,
+      'clinicalNotes': herb.clinicalNotes,
+      'historicalNotes': herb.historicalNotes,
+      'herbComparisons': herb.herbComparisons,
+      'natureCategory': herb.natureCategory,
+      'flavor': herb.flavor,
+      'meridians': herb.meridians,
+      'category': herb.category,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: herb.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const neijingModuleId = 'neijing-entries';
+  static const neijingEntriesAssetVersion =
+      'lib/data/neijing_entries.dart@7f76c837e89829b44d9fc3830cdbd1d31abfd8f9';
+
+  static AiContextRef buildNeijingEntryContextRef(NeijingEntry entry) {
+    return AiContextRef(
+      kind: AiContextKind.classic,
+      moduleId: neijingModuleId,
+      anchorId: 'neijing:${entry.id}',
+      anchorVersion: neijingEntriesAssetVersion,
+      sourceId: 'app-data:lib/data/neijing_entries.dart#${entry.id}',
+      title: entry.title,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveNeijingEntry({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.classic ||
+        normalized.isEmpty ||
+        ref.moduleId != neijingModuleId ||
+        ref.anchorVersion != neijingEntriesAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing reference is incomplete or does not match the bundled entry source.',
+      );
+    }
+
+    final entryId = ref.anchorId.startsWith('neijing:')
+        ? ref.anchorId.substring('neijing:'.length)
+        : '';
+    if (entryId.isEmpty ||
+        ref.sourceId != 'app-data:lib/data/neijing_entries.dart#$entryId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing anchor and source ID do not agree.',
+      );
+    }
+
+    NeijingEntry? entry;
+    for (final candidate in kNeijingEntries) {
+      if (candidate.id == entryId) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced Neijing entry is not present in the bundled entry set.',
+      );
+    }
+    if (ref.title != null && ref.title != entry.title) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing title does not match the stable entry ID.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': entry.id,
+      'dimension': entry.dimension,
+      'title': entry.title,
+      'original': entry.original,
+      'source': entry.source,
+      'vernacular': entry.vernacular,
+      'nishi': entry.nishi,
+      'tags': entry.tags,
+    };
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: entry.title,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const medicalCaseModuleId = 'medical-cases';
+  static const medicalCaseAssetVersion =
+      'cases_table.md@eafd79148c7aeea2f9891738e153cd3009bd1670;'
+      'source_ledger.json@a61bd55f256adc620b7983fe2dd07a5d46721f89';
+
+  static AiContextRef buildMedicalCaseContextRef(MedicalCase medicalCase) {
+    return AiContextRef(
+      kind: AiContextKind.caseRecord,
+      moduleId: medicalCaseModuleId,
+      anchorId: 'medical-case:${medicalCase.seq}',
+      anchorVersion: medicalCaseAssetVersion,
+      sourceId:
+          'app-data:assets/medical_cases/cases_table.md#seq=${medicalCase.seq}',
+      title: '#${medicalCase.seq} ${medicalCase.displayName}',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedKnowledgeEntry>>
+      resolveMedicalCase({required AiContextRef ref}) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.caseRecord ||
+        normalized.isEmpty ||
+        ref.moduleId != medicalCaseModuleId ||
+        ref.anchorVersion != medicalCaseAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case reference is incomplete or does not match the bundled case assets.',
+      );
+    }
+
+    final seqText = ref.anchorId.startsWith('medical-case:')
+        ? ref.anchorId.substring('medical-case:'.length)
+        : '';
+    final seq = int.tryParse(seqText);
+    if (seq == null ||
+        seq < 2 ||
+        ref.sourceId !=
+            'app-data:assets/medical_cases/cases_table.md#seq=$seq') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case anchor and source reference do not agree.',
+      );
+    }
+
+    // getAllMedicalCases retains the existing in-process cache used by the
+    // medical-case library/detail screens. An empty result is UNKNOWN because
+    // this helper intentionally swallows an asset-load failure as an empty set.
+    final cases = await getAllMedicalCases();
+    if (cases.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case asset set could not be confirmed as loaded.',
+      );
+    }
+
+    MedicalCase? medicalCase;
+    for (final candidate in cases) {
+      if (candidate.seq == seq) {
+        medicalCase = candidate;
+        break;
+      }
+    }
+    if (medicalCase == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced internal medical-case record is not present in the bundled case table.',
+      );
+    }
+
+    final expectedTitle =
+        '#${medicalCase.seq} ${medicalCase.displayName}';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case title does not match the resolved internal record.',
+      );
+    }
+
+    final rawFields = <String, String>{
+      'date': medicalCase.date,
+      'patient': medicalCase.patient,
+      'diagnosis': medicalCase.diagnosis,
+      'mechanism': medicalCase.mechanism,
+      'western': medicalCase.western,
+      'formula': medicalCase.formula,
+      'acupuncture': medicalCase.acupuncture,
+      'method': medicalCase.method,
+      'result': medicalCase.result,
+      'advice': medicalCase.advice,
+      'view': medicalCase.view,
+    };
+    final missingFields = rawFields.entries
+        .where((entry) => entry.value.trim().isEmpty)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    final content = <String, Object?>{
+      'internalSequence': medicalCase.seq,
+      'internalSequenceMeaning':
+          '仅为 App 医案表内部主键，不是原始病例编号、文献页码或独立病例身份。',
+      'displayName': medicalCase.displayName,
+      for (final entry in rawFields.entries)
+        entry.key:
+            entry.value.trim().isEmpty ? 'MISSING' : entry.value,
+      'missingFields': missingFields,
+      'sourceLedger': medicalCase.sourceLedger.toJson(),
+      'sourceTextVerificationStatus':
+          medicalCase.sourceLedger.sourceStatus,
+      'bibliographicLocatorStatus': medicalCase.sourceLedger.status,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: expectedTitle,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const ziweiModuleId = 'ziwei';
+  static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';
+
+  static AiContextResolution<AiResolvedToolField> resolveZiweiPalaceStars({
+    required AiContextRef ref,
+    required ZiweiChart chart,
+    required String expectedSnapshotId,
+    required String expectedRuleVersion,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != ziweiModuleId ||
+        ref.sourceId != ziweiSourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The field reference is incomplete or does not identify a Ziwei source.',
+      );
+    }
+
+    if (ref.snapshotId != expectedSnapshotId ||
+        ref.anchorVersion != expectedSnapshotId ||
+        ref.ruleVersion != expectedRuleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field reference does not match the current result snapshot and rule version.',
+      );
+    }
+
+    if (ref.anchorId !=
+        'ziwei:result:$expectedSnapshotId:field:${ref.fieldPath}') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The field anchor does not match its snapshot and field path.',
+      );
+    }
+
+    if (structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != ziweiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            'ziwei-structured-result-v1') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is not a successful Ziwei execution.',
+      );
+    }
+
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final inputValue = structuredSnapshot['input'];
+    final resultValue = structuredSnapshot['result'];
+    if (snapshotId is! String ||
+        ruleVersion is! String ||
+        ruleVersion != expectedRuleVersion ||
+        snapshotId != expectedSnapshotId ||
+        sourceIds is! List ||
+        !sourceIds.contains(ziweiSourceId) ||
+        inputValue is! Map ||
+        resultValue is! Map<String, Object?>) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is missing a required identity or payload field.',
+      );
+    }
+
+    final actualSnapshotId =
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
+    if (actualSnapshotId != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The structured result content no longer matches its immutable snapshot digest.',
+      );
+    }
+
+    final pathMatch = RegExp(
+      r'^palacesByPhysicalBranch\.(\d+)\.stars$',
+    ).firstMatch(ref.fieldPath!);
+    if (pathMatch == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested field path is not a supported Ziwei result field.',
+      );
+    }
+
+    final palaceIndex = int.tryParse(pathMatch.group(1)!);
+    if (palaceIndex == null || palaceIndex < 0 || palaceIndex > 11) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested physical palace index is outside the 12-palace result.',
+      );
+    }
+
+    ZiweiPalace? palace;
+    for (final candidate in chart.palaces) {
+      if (candidate.index == palaceIndex) {
+        palace = candidate;
+        break;
+      }
+    }
+    if (palace == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the resolved chart.',
+      );
+    }
+
+    final palacesValue = resultValue['palacesByPhysicalBranch'];
+    if (palacesValue is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The structured snapshot does not contain the palace result collection.',
+      );
+    }
+    Map<String, Object?>? palaceRecord;
+    for (final candidate in palacesValue) {
+      if (candidate is Map<String, Object?> &&
+          candidate['physicalBranchIndex'] == palaceIndex) {
+        palaceRecord = candidate;
+        break;
+      }
+    }
+    if (palaceRecord == null || palaceRecord['stars'] is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the structured snapshot.',
+      );
+    }
+    if (palaceRecord['roleLabel'] != palace.roleLabel ||
+        palaceRecord['branchLabel'] != palace.branchLabel ||
+        palaceRecord['ganzhiLabel'] != palace.ganzhiLabel ||
+        palaceRecord['isLife'] != palace.isLife ||
+        palaceRecord['isBody'] != palace.isBody) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The palace identity and scope do not match the structured snapshot.',
+      );
+    }
+
+    final snapshotStars = (palaceRecord['stars'] as List)
+        .whereType<Map<String, Object?>>()
+        .toList(growable: false);
+    final engineStars = palace.stars
+        .map(serializeZiweiStarForAssistant)
+        .toList(growable: false);
+    if (snapshotStars.length != (palaceRecord['stars'] as List).length ||
+        AiToolResultSnapshot.canonicalJson(snapshotStars) !=
+            AiToolResultSnapshot.canonicalJson(engineStars)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field values do not match the current deterministic engine result.',
+      );
+    }
+
+    final resolvedSnapshot = Map<String, Object?>.unmodifiable({
+      ...structuredSnapshot,
+    });
+    final resolvedScope = Map<String, Object?>.unmodifiable({
+      'palaceIndex': palace.index,
+      'palaceRole': palace.roleLabel,
+      'earthlyBranch': palace.branchLabel,
+      'ganzhi': palace.ganzhiLabel,
+      'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
+    });
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: '${palace.roleLabel}星曜',
+        fieldScope: resolvedScope,
+        fieldValue: snapshotStars,
+        fieldUnit: '不适用（离散星曜条目）',
+        structuredSnapshot: resolvedSnapshot,
+      ),
+    );
+  }
+}
+;
+
+  static AiContextRef buildBaziFieldContextRef({
+    required AiContextRef resultRef,
+    required String fieldPath,
+    required String fieldLabel,
+  }) {
+    if (resultRef.kind != AiContextKind.toolResult ||
+        resultRef.moduleId != baziModuleId ||
+        resultRef.snapshotId == null ||
+        resultRef.snapshotId != resultRef.anchorVersion ||
+        resultRef.ruleVersion != BaziContextSnapshot.ruleVersion ||
+        resultRef.sourceId != BaziContextSnapshot.sourceId ||
+        !RegExp(_supportedBaziFieldPath).hasMatch(fieldPath)) {
+      throw ArgumentError(
+        'A Bazi field reference requires a verified result identity and a supported field path.',
+      );
+    }
+    final snapshotId = resultRef.snapshotId!;
+    return AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: baziModuleId,
+      anchorId: 'bazi:result:$snapshotId:field:$fieldPath',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: resultRef.ruleVersion,
+      sourceId: BaziContextSnapshot.sourceId,
+      fieldPath: fieldPath,
+      title: fieldLabel,
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolField> resolveBaziResultField({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != baziModuleId ||
+        ref.sourceId != BaziContextSnapshot.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Bazi field reference is incomplete or does not identify the local Bazi engine.',
+      );
+    }
+    if (ref.ruleVersion != BaziContextSnapshot.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Bazi engine or calculation rule version no longer matches this field.',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    final fieldPath = ref.fieldPath;
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}
+  static const formulaAssetVersion =
+      'assets/data/formulas.json@58b299e95c47fd54fc1bca18c6762c544b8d87bc';
+
+  static AiContextRef buildFormulaContextRef(Formula formula) {
+    return AiContextRef(
+      kind: AiContextKind.formula,
+      moduleId: formulaModuleId,
+      anchorId: 'formula:${formula.id}',
+      anchorVersion: formulaAssetVersion,
+      sourceId: 'formula:${formula.id}',
+      title: formula.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveFormula({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.formula ||
+        normalized.isEmpty ||
+        ref.moduleId != formulaModuleId ||
+        ref.anchorVersion != formulaAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula reference is incomplete or does not match the bundled formula source.',
+      );
+    }
+
+    final formulaId = ref.anchorId.startsWith('formula:')
+        ? ref.anchorId.substring('formula:'.length)
+        : '';
+    if (formulaId.isEmpty || ref.sourceId != 'formula:$formulaId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The formula anchor and source ID do not agree.',
+      );
+    }
+    final formula = FormulaRepository.getById(formulaId);
+    if (formula == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced formula is not present in the bundled formula repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': formula.id,
+      'name': formula.name,
+      'alias': formula.alias,
+      'meridian': formula.meridian,
+      'category': formula.category,
+      'components': formula.components
+          .map((component) => <String, Object?>{
+                'name': component.name,
+                'dosage': component.dosage,
+                'role': component.role,
+              })
+          .toList(growable: false),
+      'indication': formula.indication,
+      'contraindication': formula.contraindication,
+      'dosage': formula.dosage,
+      'preparation': formula.preparation,
+      'explanation': formula.explanation,
+      'keywords': formula.keywords,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: formula.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+
+  static const herbModuleId = 'herb';
+  static const herbAssetVersion =
+      'assets/data/herbs.json@73fb43ff3e0456ca8404a42059dc37769a511dee';
+
+  static AiContextRef buildHerbContextRef(Herb herb) {
+    return AiContextRef(
+      kind: AiContextKind.herb,
+      moduleId: herbModuleId,
+      anchorId: 'herb:${herb.name}',
+      anchorVersion: herbAssetVersion,
+      sourceId: 'assets/data/herbs.json#${herb.name}',
+      title: herb.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveHerb({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.herb ||
+        normalized.isEmpty ||
+        ref.moduleId != herbModuleId ||
+        ref.anchorVersion != herbAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb reference is incomplete or does not match the bundled herb source.',
+      );
+    }
+
+    final herbName = ref.anchorId.startsWith('herb:')
+        ? ref.anchorId.substring('herb:'.length)
+        : '';
+    if (herbName.isEmpty ||
+        ref.sourceId != 'assets/data/herbs.json#$herbName' ||
+        (ref.title != null && ref.title != herbName)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb anchor, title and source reference do not agree.',
+      );
+    }
+
+    // Exact lookup only: aliases and fuzzy matches must not silently change
+    // the knowledge entry the user opened.
+    final herb = HerbRepository.getExactByName(herbName);
+    if (herb == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced herb is not present in the bundled herb repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'name': herb.name,
+      'original': herb.original,
+      'nature': herb.nature,
+      'action': herb.action,
+      'rongchuan': herb.rongchuan,
+      'niNote': herb.niNote,
+      'dosage': herb.dosage,
+      'contraindication': herb.contraindication,
+      'clinicalNotes': herb.clinicalNotes,
+      'historicalNotes': herb.historicalNotes,
+      'herbComparisons': herb.herbComparisons,
+      'natureCategory': herb.natureCategory,
+      'flavor': herb.flavor,
+      'meridians': herb.meridians,
+      'category': herb.category,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: herb.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const neijingModuleId = 'neijing-entries';
+  static const neijingEntriesAssetVersion =
+      'lib/data/neijing_entries.dart@7f76c837e89829b44d9fc3830cdbd1d31abfd8f9';
+
+  static AiContextRef buildNeijingEntryContextRef(NeijingEntry entry) {
+    return AiContextRef(
+      kind: AiContextKind.classic,
+      moduleId: neijingModuleId,
+      anchorId: 'neijing:${entry.id}',
+      anchorVersion: neijingEntriesAssetVersion,
+      sourceId: 'app-data:lib/data/neijing_entries.dart#${entry.id}',
+      title: entry.title,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveNeijingEntry({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.classic ||
+        normalized.isEmpty ||
+        ref.moduleId != neijingModuleId ||
+        ref.anchorVersion != neijingEntriesAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing reference is incomplete or does not match the bundled entry source.',
+      );
+    }
+
+    final entryId = ref.anchorId.startsWith('neijing:')
+        ? ref.anchorId.substring('neijing:'.length)
+        : '';
+    if (entryId.isEmpty ||
+        ref.sourceId != 'app-data:lib/data/neijing_entries.dart#$entryId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing anchor and source ID do not agree.',
+      );
+    }
+
+    NeijingEntry? entry;
+    for (final candidate in kNeijingEntries) {
+      if (candidate.id == entryId) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced Neijing entry is not present in the bundled entry set.',
+      );
+    }
+    if (ref.title != null && ref.title != entry.title) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing title does not match the stable entry ID.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': entry.id,
+      'dimension': entry.dimension,
+      'title': entry.title,
+      'original': entry.original,
+      'source': entry.source,
+      'vernacular': entry.vernacular,
+      'nishi': entry.nishi,
+      'tags': entry.tags,
+    };
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: entry.title,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const medicalCaseModuleId = 'medical-cases';
+  static const medicalCaseAssetVersion =
+      'cases_table.md@eafd79148c7aeea2f9891738e153cd3009bd1670;'
+      'source_ledger.json@a61bd55f256adc620b7983fe2dd07a5d46721f89';
+
+  static AiContextRef buildMedicalCaseContextRef(MedicalCase medicalCase) {
+    return AiContextRef(
+      kind: AiContextKind.caseRecord,
+      moduleId: medicalCaseModuleId,
+      anchorId: 'medical-case:${medicalCase.seq}',
+      anchorVersion: medicalCaseAssetVersion,
+      sourceId:
+          'app-data:assets/medical_cases/cases_table.md#seq=${medicalCase.seq}',
+      title: '#${medicalCase.seq} ${medicalCase.displayName}',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedKnowledgeEntry>>
+      resolveMedicalCase({required AiContextRef ref}) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.caseRecord ||
+        normalized.isEmpty ||
+        ref.moduleId != medicalCaseModuleId ||
+        ref.anchorVersion != medicalCaseAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case reference is incomplete or does not match the bundled case assets.',
+      );
+    }
+
+    final seqText = ref.anchorId.startsWith('medical-case:')
+        ? ref.anchorId.substring('medical-case:'.length)
+        : '';
+    final seq = int.tryParse(seqText);
+    if (seq == null ||
+        seq < 2 ||
+        ref.sourceId !=
+            'app-data:assets/medical_cases/cases_table.md#seq=$seq') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case anchor and source reference do not agree.',
+      );
+    }
+
+    // getAllMedicalCases retains the existing in-process cache used by the
+    // medical-case library/detail screens. An empty result is UNKNOWN because
+    // this helper intentionally swallows an asset-load failure as an empty set.
+    final cases = await getAllMedicalCases();
+    if (cases.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case asset set could not be confirmed as loaded.',
+      );
+    }
+
+    MedicalCase? medicalCase;
+    for (final candidate in cases) {
+      if (candidate.seq == seq) {
+        medicalCase = candidate;
+        break;
+      }
+    }
+    if (medicalCase == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced internal medical-case record is not present in the bundled case table.',
+      );
+    }
+
+    final expectedTitle =
+        '#${medicalCase.seq} ${medicalCase.displayName}';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case title does not match the resolved internal record.',
+      );
+    }
+
+    final rawFields = <String, String>{
+      'date': medicalCase.date,
+      'patient': medicalCase.patient,
+      'diagnosis': medicalCase.diagnosis,
+      'mechanism': medicalCase.mechanism,
+      'western': medicalCase.western,
+      'formula': medicalCase.formula,
+      'acupuncture': medicalCase.acupuncture,
+      'method': medicalCase.method,
+      'result': medicalCase.result,
+      'advice': medicalCase.advice,
+      'view': medicalCase.view,
+    };
+    final missingFields = rawFields.entries
+        .where((entry) => entry.value.trim().isEmpty)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    final content = <String, Object?>{
+      'internalSequence': medicalCase.seq,
+      'internalSequenceMeaning':
+          '仅为 App 医案表内部主键，不是原始病例编号、文献页码或独立病例身份。',
+      'displayName': medicalCase.displayName,
+      for (final entry in rawFields.entries)
+        entry.key:
+            entry.value.trim().isEmpty ? 'MISSING' : entry.value,
+      'missingFields': missingFields,
+      'sourceLedger': medicalCase.sourceLedger.toJson(),
+      'sourceTextVerificationStatus':
+          medicalCase.sourceLedger.sourceStatus,
+      'bibliographicLocatorStatus': medicalCase.sourceLedger.status,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: expectedTitle,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const ziweiModuleId = 'ziwei';
+  static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';
+
+  static AiContextResolution<AiResolvedToolField> resolveZiweiPalaceStars({
+    required AiContextRef ref,
+    required ZiweiChart chart,
+    required String expectedSnapshotId,
+    required String expectedRuleVersion,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != ziweiModuleId ||
+        ref.sourceId != ziweiSourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The field reference is incomplete or does not identify a Ziwei source.',
+      );
+    }
+
+    if (ref.snapshotId != expectedSnapshotId ||
+        ref.anchorVersion != expectedSnapshotId ||
+        ref.ruleVersion != expectedRuleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field reference does not match the current result snapshot and rule version.',
+      );
+    }
+
+    if (ref.anchorId !=
+        'ziwei:result:$expectedSnapshotId:field:${ref.fieldPath}') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The field anchor does not match its snapshot and field path.',
+      );
+    }
+
+    if (structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != ziweiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            'ziwei-structured-result-v1') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is not a successful Ziwei execution.',
+      );
+    }
+
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final inputValue = structuredSnapshot['input'];
+    final resultValue = structuredSnapshot['result'];
+    if (snapshotId is! String ||
+        ruleVersion is! String ||
+        ruleVersion != expectedRuleVersion ||
+        snapshotId != expectedSnapshotId ||
+        sourceIds is! List ||
+        !sourceIds.contains(ziweiSourceId) ||
+        inputValue is! Map ||
+        resultValue is! Map<String, Object?>) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is missing a required identity or payload field.',
+      );
+    }
+
+    final actualSnapshotId =
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
+    if (actualSnapshotId != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The structured result content no longer matches its immutable snapshot digest.',
+      );
+    }
+
+    final pathMatch = RegExp(
+      r'^palacesByPhysicalBranch\.(\d+)\.stars$',
+    ).firstMatch(ref.fieldPath!);
+    if (pathMatch == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested field path is not a supported Ziwei result field.',
+      );
+    }
+
+    final palaceIndex = int.tryParse(pathMatch.group(1)!);
+    if (palaceIndex == null || palaceIndex < 0 || palaceIndex > 11) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested physical palace index is outside the 12-palace result.',
+      );
+    }
+
+    ZiweiPalace? palace;
+    for (final candidate in chart.palaces) {
+      if (candidate.index == palaceIndex) {
+        palace = candidate;
+        break;
+      }
+    }
+    if (palace == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the resolved chart.',
+      );
+    }
+
+    final palacesValue = resultValue['palacesByPhysicalBranch'];
+    if (palacesValue is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The structured snapshot does not contain the palace result collection.',
+      );
+    }
+    Map<String, Object?>? palaceRecord;
+    for (final candidate in palacesValue) {
+      if (candidate is Map<String, Object?> &&
+          candidate['physicalBranchIndex'] == palaceIndex) {
+        palaceRecord = candidate;
+        break;
+      }
+    }
+    if (palaceRecord == null || palaceRecord['stars'] is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the structured snapshot.',
+      );
+    }
+    if (palaceRecord['roleLabel'] != palace.roleLabel ||
+        palaceRecord['branchLabel'] != palace.branchLabel ||
+        palaceRecord['ganzhiLabel'] != palace.ganzhiLabel ||
+        palaceRecord['isLife'] != palace.isLife ||
+        palaceRecord['isBody'] != palace.isBody) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The palace identity and scope do not match the structured snapshot.',
+      );
+    }
+
+    final snapshotStars = (palaceRecord['stars'] as List)
+        .whereType<Map<String, Object?>>()
+        .toList(growable: false);
+    final engineStars = palace.stars
+        .map(serializeZiweiStarForAssistant)
+        .toList(growable: false);
+    if (snapshotStars.length != (palaceRecord['stars'] as List).length ||
+        AiToolResultSnapshot.canonicalJson(snapshotStars) !=
+            AiToolResultSnapshot.canonicalJson(engineStars)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field values do not match the current deterministic engine result.',
+      );
+    }
+
+    final resolvedSnapshot = Map<String, Object?>.unmodifiable({
+      ...structuredSnapshot,
+    });
+    final resolvedScope = Map<String, Object?>.unmodifiable({
+      'palaceIndex': palace.index,
+      'palaceRole': palace.roleLabel,
+      'earthlyBranch': palace.branchLabel,
+      'ganzhi': palace.ganzhiLabel,
+      'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
+    });
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: '${palace.roleLabel}星曜',
+        fieldScope: resolvedScope,
+        fieldValue: snapshotStars,
+        fieldUnit: '不适用（离散星曜条目）',
+        structuredSnapshot: resolvedSnapshot,
+      ),
+    );
+  }
+}
+).hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        fieldPath == null ||
+        !RegExp(_supportedBaziFieldPath).hasMatch(fieldPath) ||
+        ref.anchorId != 'bazi:result:$snapshotId:field:$fieldPath') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Bazi field path, anchor and result snapshot identity do not agree.',
+      );
+    }
+
+    final resultRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: baziModuleId,
+      anchorId: 'bazi:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: BaziContextSnapshot.sourceId,
+      title: '八字排盘结果',
+    );
+    final resultResolution = resolveBaziToolResult(
+      ref: resultRef,
+      structuredSnapshot: structuredSnapshot,
+    );
+    final resolvedResult = resultResolution.value;
+    if (!resultResolution.isResolved || resolvedResult == null) {
+      return AiContextResolution(
+        status: resultResolution.status,
+        reason: resultResolution.reason,
+      );
+    }
+
+    Object? value = resolvedResult.structuredSnapshot;
+    for (final segment in fieldPath.split('.')) {
+      if (value is Map) {
+        value = value[segment];
+      } else if (value is List) {
+        final index = int.tryParse(segment);
+        if (index == null || index < 0 || index >= value.length) {
+          value = null;
+          break;
+        }
+        value = value[index];
+      } else {
+        value = null;
+        break;
+      }
+    }
+    if (value == null || (value is String && value.trim().isEmpty)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested Bazi field is missing from the verified result snapshot.',
+      );
+    }
+    if (value is! String && value is! num && value is! bool) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested Bazi field is not a supported scalar field value.',
+      );
+    }
+
+    final result = resolvedResult.structuredSnapshot['result'];
+    final analysis = result is Map ? result['analysis'] : null;
+    if (analysis is! Map) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The verified Bazi result does not contain its analysis scope.',
+      );
+    }
+
+    final unit = fieldPath == 'result.analysis.strengthScore'
+        ? 'App 内部日主强弱规则分值；不是概率或统计置信度'
+        : fieldPath.endsWith('.score')
+            ? 'App 内部五行分布规则分值；不是人口频率或概率'
+            : 'App 本地八字引擎返回的文本/枚举字段';
+    final fieldLabel = ref.title?.trim().isNotEmpty == true
+        ? ref.title!
+        : fieldPath;
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: fieldLabel,
+        fieldScope: Map<String, Object?>.unmodifiable({
+          'dayMaster': analysis['dayMaster'],
+          'pattern': analysis['pattern'],
+          'patternDescription': analysis['patternDescription'],
+          'strengthLevel': analysis['strengthLevel'],
+          'strengthScore': analysis['strengthScore'],
+          'strengthFactors': analysis['strengthFactors'],
+          'fiveElements': analysis['fiveElements'],
+          'favorable': analysis['favorable'],
+          'unfavorable': analysis['unfavorable'],
+        }),
+        fieldValue: [
+          Map<String, Object?>.unmodifiable({
+            'fieldPath': fieldPath,
+            'value': value,
+            'unit': unit,
+          }),
+        ],
+        fieldUnit: unit,
+        structuredSnapshot: resolvedResult.structuredSnapshot,
+      ),
+    );
+  }
+
   static const formulaModuleId = 'formula';
   static const formulaAssetVersion =
       'assets/data/formulas.json@58b299e95c47fd54fc1bca18c6762c544b8d87bc';
