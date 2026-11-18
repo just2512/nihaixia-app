@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+
+import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
   testWidgets('contextual selection is enabled only for a fully anchored reading block',
@@ -124,5 +129,57 @@ void main() {
     expect(find.text('Select all'), findsOneWidget,
         reason: 'Adding contextual ask must preserve select-all behavior');
   });
+
+  testWidgets(
+    'Shanghan selection opens the existing learning assistant with exact passage provenance',
+    (tester) async {
+      const passage =
+          '太阳病，发热，汗出，恶风，脉缓者，名为中风。';
+      await tester.pumpWidget(
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            theme: ThemeData(extensions: [AppColors.light]),
+            home: MarkdownDocScreen(
+              title: '伤寒论条文样板',
+              content: '#### 条文2\n\n> $passage',
+              contextualAskModuleId: 'shanghan',
+              contextualAskAnchorId: 'shanghan:clause:002',
+              contextualAskSourceId: 'assets/shanghan/clause_001.md',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final passageText = find.textContaining('太阳病', findRichText: true);
+      await tester.longPress(passageText);
+      await tester.pumpAndSettle();
+      final ask = find.text('问 AI');
+      expect(ask, findsOneWidget);
+      await tester.tap(ask);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final assistant = find.byType(LocalAiInterviewScreen);
+      expect(assistant, findsOneWidget);
+      final widget = tester.widget<LocalAiInterviewScreen>(assistant);
+      expect(widget.initialMode, AssistantMode.learning);
+      expect(widget.contextualExplanationOnly, isTrue);
+      expect(widget.contextRef['kind'], 'classic');
+      expect(widget.contextRef['moduleId'], 'shanghan');
+      expect(widget.contextRef['anchorId'], 'shanghan:clause:002');
+      expect(widget.contextRef['sourceId'],
+          'shanghan:assets/shanghan/clause_001.md');
+      expect(widget.contextRef['anchorVersion'], hasLength(64));
+      final selected = widget.contextRef['selectedText'];
+      expect(selected, isNotNull);
+      expect(selected, isNotEmpty);
+      expect(widget.initialPrompt, contains(selected!));
+      expect(widget.initialPrompt, contains(passage));
+      expect(widget.initialPrompt, contains('shanghan:clause:002'));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
 }
