@@ -202,9 +202,17 @@ class AdaptiveSinglePane extends StatelessWidget {
       color: scheme.surface,
       child: LayoutBuilder(
         builder: (context, constraints) {
-        final screenSize = MediaQuery.sizeOf(context);
+        final view = View.of(context);
+        final screenSize = Size(
+          view.physicalSize.width / view.devicePixelRatio,
+          view.physicalSize.height / view.devicePixelRatio,
+        );
+        final mediaDisplayFeatures = MediaQuery.displayFeaturesOf(context);
+        final displayFeatures = mediaDisplayFeatures.isNotEmpty
+            ? mediaDisplayFeatures
+            : view.displayFeatures;
         final feature = _findSinglePaneBlockingFeature(
-          MediaQuery.displayFeaturesOf(context),
+          displayFeatures,
           screenSize,
         );
         final contentWidth = maxWidth < constraints.maxWidth
@@ -230,38 +238,34 @@ class AdaptiveSinglePane extends StatelessWidget {
           if (preferredAnchorPoint != null) {
             final creaseInset =
                 feature.bounds.width > 0 ? 0.0 : foldedCreaseClearance / 2;
-            final leftPanelWidth = (feature.bounds.left - creaseInset)
-                .clamp(0.0, screenSize.width)
+            // Route constraints can begin inside the window (for example, a
+            // platform-selected sub-screen with an inset route origin). Work
+            // in this LayoutBuilder's local coordinate space instead of
+            // assuming its left edge is the FlutterView's x=0.
+            final localOriginX = _safeLayoutOriginX(context);
+            final leftPanelWidth = (feature.bounds.left -
+                    creaseInset -
+                    localOriginX)
+                .clamp(0.0, constraints.maxWidth)
                 .toDouble();
-            final rightPanelStart = (feature.bounds.right + creaseInset)
-                .clamp(0.0, screenSize.width)
+            final rightPanelStart = (feature.bounds.right +
+                    creaseInset -
+                    localOriginX)
+                .clamp(0.0, constraints.maxWidth)
                 .toDouble();
-            final rightPanelWidth = (screenSize.width - rightPanelStart)
-                .clamp(0.0, screenSize.width)
+            final rightPanelWidth = (constraints.maxWidth - rightPanelStart)
+                .clamp(0.0, constraints.maxWidth)
                 .toDouble();
-            final largestPanelWidth = leftPanelWidth > rightPanelWidth
-                ? leftPanelWidth
-                : rightPanelWidth;
-
-            // A platform route may already be constrained to one sub-screen.
-            if (constraints.maxWidth <= largestPanelWidth + 1) {
-              return Center(
-                child: SizedBox(
-                  width: contentWidth,
-                  child: ConstrainedBox(
-                    key: contentKey,
-                    constraints: BoxConstraints(maxWidth: contentWidth),
-                    child: child,
-                  ),
-                ),
-              );
-            }
 
             final useLeftPanel =
                 preferredAnchorPoint!.dx < feature.bounds.center.dx;
-            final panelWidth = useLeftPanel
-                ? leftPanelWidth
-                : rightPanelWidth;
+            final availablePanelWidth =
+                useLeftPanel ? leftPanelWidth : rightPanelWidth;
+            // If the selected route is already wholly inside its source panel,
+            // the hinge lies outside these local constraints.
+            final panelWidth = availablePanelWidth > 0
+                ? availablePanelWidth
+                : constraints.maxWidth;
             final panelMaxWidth =
                 maxWidth < panelWidth ? maxWidth : panelWidth;
             return Align(
