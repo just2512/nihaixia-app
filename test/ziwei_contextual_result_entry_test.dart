@@ -73,6 +73,53 @@ void main() {
   });
 
   testWidgets(
+    'a palace detail opens a field-bound contextual assistant',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1200));
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(extensions: [AppColors.light]),
+        home: ZiweiChartScreen(
+          initialSolar: DateTime(2000, 8, 16, 10),
+          initialGender: true,
+          initialLng: 121.47,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final palaceCell = find.byKey(const ValueKey('ziwei-palace-cell-0'));
+      final pageScrollable = find.descendant(
+        of: find.byType(ZiweiChartScreen),
+        matching: find.byType(Scrollable),
+      ).first;
+      await tester.scrollUntilVisible(
+        palaceCell,
+        400,
+        scrollable: pageScrollable,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(palaceCell);
+      await tester.pumpAndSettle();
+
+      final fieldAsk = find.text('问 AI 解读本宫星曜');
+      expect(fieldAsk, findsOneWidget);
+      await tester.tap(fieldAsk);
+      await tester.pumpAndSettle();
+
+      final assistant = find.byType(LocalAiInterviewScreen);
+      expect(assistant, findsOneWidget);
+      final contextRef =
+          tester.widget<LocalAiInterviewScreen>(assistant).contextRef;
+      expect(contextRef['kind'], 'field');
+      expect(contextRef['fieldPath'], 'palacesByPhysicalBranch.0.stars');
+      expect(contextRef['snapshotId'], isNotNull);
+      expect(contextRef['snapshotId'], hasLength(64));
+      expect(contextRef['anchorVersion'], contextRef['snapshotId']);
+      expect(tester.takeException(), isNull);
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
+
+  testWidgets(
     'Ask AI keeps the last successful chart snapshot until recalculation',
     (tester) async {
       tester.view.devicePixelRatio = 1;
