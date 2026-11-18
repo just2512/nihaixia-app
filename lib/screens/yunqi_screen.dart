@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/assistant_tool_result.dart';
+import '../models/ai_context_ref.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../services/yunqi_engine.dart';
