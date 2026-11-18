@@ -32,6 +32,7 @@ class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
     bool fullscreenDialog = false,
     bool allowSnapshotting = true,
   })  : _anchorPoint = foldAwareRouteAnchorPoint(sourceContext),
+        _originalMediaQuery = MediaQuery.of(sourceContext),
         super(
           builder: builder,
           settings: settings,
@@ -41,12 +42,16 @@ class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
         );
 
   final Offset? _anchorPoint;
+  final MediaQueryData _originalMediaQuery;
 
   @override
   Widget buildContent(BuildContext context) {
-    return AdaptiveSinglePane(
-      preferredAnchorPoint: _anchorPoint,
-      child: super.buildContent(context),
+    return MediaQuery(
+      data: _originalMediaQuery,
+      child: AdaptiveSinglePane(
+        preferredAnchorPoint: _anchorPoint,
+        child: super.buildContent(context),
+      ),
     );
   }
 }
