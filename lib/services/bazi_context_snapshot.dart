@@ -97,6 +97,18 @@ class BaziContextSnapshot {
     final normalizedArguments = _validateArguments(arguments);
     final location = _validateLocationMap(locationValue);
     final settings = _validateSettings(settingsValue);
+    final mode = location['mode'];
+    final expectedBirthplace = switch (mode) {
+      'city-directory' => location['label'],
+      'provided-coordinates' => '用户提供坐标',
+      'engine-default' => 'MISSING',
+      _ => null,
+    };
+    if (normalizedArguments['birthplace'] != expectedBirthplace) {
+      throw ArgumentError(
+        'Bazi birthplace argument does not match the recorded location provenance.',
+      );
+    }
 
     final date = _parseDate(normalizedArguments['birth_date']!);
     final time = _parseTime(normalizedArguments['birth_time']!);
@@ -401,7 +413,7 @@ class BaziContextSnapshot {
   }
 
   static DateTime _parseDate(String raw) {
-    final match = RegExp(r'^(\\d{4})-(\\d{2})-(\\d{2})$').firstMatch(raw);
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(raw);
     if (match == null) throw ArgumentError('Bazi date must use YYYY-MM-DD.');
     final year = int.parse(match.group(1)!);
     final month = int.parse(match.group(2)!);
@@ -414,7 +426,7 @@ class BaziContextSnapshot {
   }
 
   static (int, int) _parseTime(String raw) {
-    final match = RegExp(r'^(\\d{2}):(\\d{2})$').firstMatch(raw);
+    final match = RegExp(r'^(\d{2}):(\d{2})$').firstMatch(raw);
     if (match == null) throw ArgumentError('Bazi time must use HH:mm.');
     final hour = int.parse(match.group(1)!);
     final minute = int.parse(match.group(2)!);
