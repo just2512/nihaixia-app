@@ -132,9 +132,10 @@ void main() {
 
         for (final tab in ['穴位处方', '透针透穴', '穴位讲解', '耳穴']) {
           await tester.tap(find.text(tab).last);
-          // TabBarView transition is finite (~300 ms). Advance that duration
-          // directly rather than waiting for every ticker in the retained
-          // HomeScreen tree to become idle.
+          // Start the TabController animation on its own frame, then advance
+          // the finite TabBarView transition (~300 ms). A single long pump
+          // would update the controller index before the page transition starts.
+          await tester.pump();
           await tester.pump(const Duration(milliseconds: 350));
           if (tab == '耳穴') {
             // Wait for the real ear-point asset load to finish. While the
@@ -205,13 +206,14 @@ void main() {
         // Also traverse the real list-to-detail route. The page-only matrix
         // must not be the sole evidence for an acupoint detail on a half-fold.
         await tester.tap(find.text('穴位讲解').last);
+        await tester.pump();
         await tester.pump(const Duration(milliseconds: 350));
         final acupoint = AcupointRepository.getAll().first;
         final acupointRow = find.text(acupoint.name).first;
         await tester.ensureVisible(acupointRow);
         await tester.tap(acupointRow);
-        // MaterialPageRoute's transition is finite; avoid waiting on unrelated
-        // offstage tickers retained by the root IndexedStack.
+        // Start the route animation, then advance its finite transition.
+        await tester.pump();
         await tester.pump(const Duration(milliseconds: 350));
         await tester.pump(const Duration(milliseconds: 100));
 
