@@ -609,10 +609,6 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text('
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
                   Text(
                     '月建${c.monthBranch}（${_zhiWuxing(c.monthBranch)}），体卦${c.tiWangShuai.label}。${c.verdict}',
                     style: const TextStyle(fontSize: 13, height: 1.5),
