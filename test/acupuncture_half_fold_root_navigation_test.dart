@@ -6,10 +6,12 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
+import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/screens/acupuncture_screen.dart';
+import 'package:nihaisha_app/screens/acupoint_detail_screen.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 import 'package:nihaisha_app/screens/knowledge_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
@@ -33,6 +35,7 @@ void main() {
     await FormulaRepository.load();
     await HerbRepository.load();
     await AcupunctureRepository.load();
+    await AcupointRepository.load();
     await AcupointRepository.load();
   });
 
@@ -152,6 +155,40 @@ void main() {
             reason: '$tab / 388dp / ${brightness.name} / 200% 不应出现布局异常',
           );
         }
+
+        // Also traverse the real list-to-detail route. The page-only matrix
+        // must not be the sole evidence for an acupoint detail on a half-fold.
+        await tester.tap(find.text('穴位讲解').last);
+        await tester.pumpAndSettle();
+        final acupoint = AcupointRepository.getAll().first;
+        final acupointRow = find.text(acupoint.name).first;
+        await tester.ensureVisible(acupointRow);
+        await tester.tap(acupointRow);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AcupointDetailScreen), findsOneWidget);
+        final detailScaffold = find.descendant(
+          of: find.byType(AcupointDetailScreen),
+          matching: find.byType(Scaffold),
+        ).first;
+        final detailRect = tester.getRect(detailScaffold);
+        expect(
+          detailRect.left,
+          greaterThanOrEqualTo(0),
+          reason: '穴位详情左边界异常：$detailRect',
+        );
+        expect(
+          detailRect.right,
+          lessThanOrEqualTo(388),
+          reason: '半折叠穴位详情必须留在左侧物理面板：$detailRect',
+        );
+        final detailContext = tester.element(find.byType(AcupointDetailScreen));
+        expect(
+          MediaQuery.textScalerOf(detailContext).scale(1),
+          2,
+          reason: '穴位详情必须从针灸页继承200%字号',
+        );
+        expect(tester.takeException(), isNull);
       },
     );
   }
