@@ -99,7 +99,6 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
     final contextRef = AiContextResolver.buildFormulaContextRef(formula);
     final resolution = AiContextResolver.resolveFormula(
       ref: contextRef,
-      formula: formula,
     );
     final resolved = resolution.value;
     if (!resolution.isResolved || resolved == null) {
