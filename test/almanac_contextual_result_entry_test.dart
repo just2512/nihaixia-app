@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
+import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/daily_almanac_screen.dart';
@@ -204,6 +205,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    // DailyAlmanacScreen reads the optional saved-chart zodiac overlay while
+    // the contextual assistant initializes its SQLite conversation lookup.
+    // Drain that first read outside fake-async before opening the assistant so
+    // sqflite's transaction wait timer cannot be stranded at widget teardown.
+    await tester.runAsync(() => SavedChartRepository.getAll());
+    await tester.pump();
 
     expect(find.byType(DailyAlmanacScreen), findsOneWidget);
     final ask = find.byTooltip('问 AI 解读本日黄历');
