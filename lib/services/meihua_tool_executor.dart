@@ -191,27 +191,27 @@ class MeihuaToolExecutor {
 
     final assistantResult = AssistantToolResult(
       toolId: 'meihua',
-      title: '梅花易数\${chart.methodLabel}',
+      title: '梅花易数${chart.methodLabel}',
       values: {
         '起卦方式': chart.methodLabel,
         '公历日期': _formatDate(date),
-        '农历月份': '\${lunar.month}月',
-        if (executedHourBranch != null) '起卦时辰': '\${executedHourBranch}时',
+        '农历月份': '${lunar.month}月',
+        if (executedHourBranch != null) '起卦时辰': '${executedHourBranch}时',
         if (method == 'number') '第一数（上卦）': normalizedFirst!,
         if (method == 'number') '第二数（下卦）': normalizedSecond!,
-        '主卦': '第\${chart.main.seq}卦 \${chart.main.name}',
+        '主卦': '第${chart.main.seq}卦 ${chart.main.name}',
         '主卦卦辞': chart.main.judgement,
-        '互卦': '第\${chart.mutual.seq}卦 \${chart.mutual.name}',
-        '变卦': '第\${chart.changed.seq}卦 \${chart.changed.name}',
-        '动爻': '第\${chart.movingYao}爻',
+        '互卦': '第${chart.mutual.seq}卦 ${chart.mutual.name}',
+        '变卦': '第${chart.changed.seq}卦 ${chart.changed.name}',
+        '动爻': '第${chart.movingYao}爻',
         '动爻爻辞': chart.movingYaoCi,
-        '体卦': '\${chart.ti.name}（\${chart.tiWuxing}）',
-        '用卦': '\${chart.yong.name}（\${chart.yongWuxing}）',
+        '体卦': '${chart.ti.name}（${chart.tiWuxing}）',
+        '用卦': '${chart.yong.name}（${chart.yongWuxing}）',
         '体用关系': chart.mainRelation.label,
         '月令': chart.monthBranch,
         '体卦旺衰': chart.tiWangShuai.label,
         '三阶段推演': chart.stages
-            .map((stage) => '\${stage.name}：\${stage.hexName}；\${stage.detail}')
+            .map((stage) => '${stage.name}：${stage.hexName}；${stage.detail}')
             .join('\n'),
         '主断': chart.verdict,
         '推算过程': chart.trace.join('；'),
