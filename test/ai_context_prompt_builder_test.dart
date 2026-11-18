@@ -262,6 +262,109 @@ void main() {
     );
   });
 
+  test('field context requires a stable path and an immutable snapshot', () {
+    const valid = {
+      'kind': 'field',
+      'moduleId': 'ziwei',
+      'anchorId': 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      'anchorVersion': 'snapshot-a',
+      'snapshotId': 'snapshot-a',
+      'ruleVersion': 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      'fieldPath': 'palacesByPhysicalBranch.0.stars',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
+    };
+
+    expect(AiContextRef.normalizeMetadata(valid), isNotEmpty);
+    expect(
+      AiContextRef.normalizeMetadata({
+        ...valid,
+        'fieldPath': '',
+      }),
+      isEmpty,
+      reason: 'A field context must identify one stable field path',
+    );
+    expect(
+      AiContextRef.normalizeMetadata({
+        ...valid,
+        'snapshotId': 'snapshot-b',
+      }),
+      isEmpty,
+      reason: 'Field context must remain bound to the result anchor version',
+    );
+    expect(
+      AiContextRef.normalizeMetadata({
+        ...valid,
+        'ruleVersion': '',
+      }),
+      isEmpty,
+      reason: 'Field context must identify the rules that produced its snapshot',
+    );
+  });
+
+  test('field prompt includes field path, value, scope and parent snapshot', () {
+    const ref = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      anchorVersion: 'snapshot-a',
+      snapshotId: 'snapshot-a',
+      ruleVersion: 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      fieldPath: 'palacesByPhysicalBranch.0.stars',
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+      title: '命宫星曜',
+    );
+    final prompt = AiContextPromptBuilder.buildToolResultField(
+      ref: ref,
+      fieldLabel: '命宫本命星曜',
+      fieldScope: const {
+        'palaceIndex': 0,
+        'palaceRole': '命宫',
+        'earthlyBranch': '子',
+      },
+      fieldValue: const [
+        {
+          'starKey': 'ziwei',
+          'name': '紫微',
+          'category': '主星',
+          'brightness': '庙',
+        },
+      ],
+      fieldUnit: '不适用（离散星曜条目）',
+      resultPayload: '【紫微斗数排盘完整结果】',
+    );
+
+    expect(prompt, contains('palacesByPhysicalBranch.0.stars'));
+    expect(prompt, contains('snapshot-a'));
+    expect(prompt, contains('ziwei_core@0.13.0;app-formatter=ziwei-result-v1'));
+    expect(prompt, contains('紫微'));
+    expect(prompt, contains('earthlyBranch'));
+    expect(prompt, contains('【紫微斗数排盘完整结果】'));
+  });
+
+  test('field prompt rejects a generic whole-result reference', () {
+    const ref = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:snapshot-a',
+      anchorVersion: 'snapshot-a',
+      snapshotId: 'snapshot-a',
+      ruleVersion: 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+    );
+
+    expect(
+      () => AiContextPromptBuilder.buildToolResultField(
+        ref: ref,
+        fieldLabel: '命宫本命星曜',
+        fieldScope: const {'palaceIndex': 0},
+        fieldValue: const [],
+        fieldUnit: '不适用',
+        resultPayload: '完整结果',
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('invalid contextual metadata is rejected rather than guessed', () {
     expect(
       AiContextRef.normalizeMetadata({
