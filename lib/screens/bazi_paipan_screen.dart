@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/bazi_context_snapshot.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 import '../utils/fold_aware_routes.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:share_plus/share_plus.dart';
@@ -49,6 +56,17 @@ class BaZiPaipanScreen extends StatefulWidget {
 }
 
 class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
+  final ScrollController _pageScrollController = ScrollController();
+  ({
+    DateTime solar,
+    bool isMale,
+    String? cityName,
+    double? longitude,
+    double? latitude,
+    bool useTrueSolarTime,
+    bool distinguishZiShi,
+    bool fireEarthSame,
+  })? _lastComputedInput;
   static const _shiChen = [
     ('子时', 0, '23:00–01:00'),
     ('丑时', 2, '01:00–03:00'),
@@ -117,34 +135,52 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
   int _shiChenIndexOfHour(int hour) => ((hour.clamp(0, 23) + 1) ~/ 2) % 12;
 
   void _compute() {
+    final cityName = _locName?.trim();
+    final executedInput = (
+      solar: DateTime(_year, _month, _day, _birthHour, _birthMinute),
+      isMale: _isMale,
+      cityName: cityName == null || cityName.isEmpty ? null : cityName,
+      longitude: _locLng,
+      latitude: _locLng == null ? null : (_locLat ?? 30.0),
+      useTrueSolarTime: _useTrueSolarTime,
+      distinguishZiShi: _distinguishZiShi,
+      fireEarthSame: _fireEarthSame,
+    );
     setState(() {
       _result = null;
+      _fortune = null;
+      _lastComputedInput = null;
       _error = null;
     });
     try {
-      final solar = DateTime(_year, _month, _day, _birthHour, _birthMinute);
-      final location =
-          (_locLng != null) ? Location(_locLng!, _locLat ?? 30) : null;
+      final location = executedInput.longitude != null
+          ? Location(
+              executedInput.longitude!,
+              executedInput.latitude ?? 30,
+            )
+          : null;
       final r = computeBaZiPaipan(
-        solar,
-        isMale: _isMale,
-        useTrueSolarTime: _useTrueSolarTime,
-        twelveStageMode: _fireEarthSame
+        executedInput.solar,
+        isMale: executedInput.isMale,
+        useTrueSolarTime: executedInput.useTrueSolarTime,
+        twelveStageMode: executedInput.fireEarthSame
             ? TwelveStageMode.fireEarthSame
             : TwelveStageMode.waterEarthSame,
-        ratHourMode: _distinguishZiShi,
+        ratHourMode: executedInput.distinguishZiShi,
         location: location,
+      );
+      final fortune = computeBaZiFortune(
+        executedInput.solar,
+        isMale: executedInput.isMale,
+        location: location,
+        ratHourMode: executedInput.distinguishZiShi,
+        useTrueSolarTime: executedInput.useTrueSolarTime,
       );
       if (!mounted) return;
       setState(() {
         _result = r;
-        _fortune = computeBaZiFortune(
-          solar,
-          isMale: _isMale,
-          location: location,
-          ratHourMode: _distinguishZiShi,
-          useTrueSolarTime: _useTrueSolarTime,
-        );
+        _fortune = fortune;
+        _lastComputedInput = executedInput;
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
@@ -222,6 +258,148 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
         fortune: _fortune,
       ),
     );
+  }
+
+
+  Future<void> _askAiAboutCurrentResult() async {
+    final result = _result;
+    final executedInput = _lastComputedInput;
+    if (result == null || executedInput == null) return;
+
+    // The form can be edited without pressing "排八字". Bind the context to
+    // the exact input tuple that produced the visible result, never to newer
+    // unsaved controls.
+    final solar = executedInput.solar;
+    final cityName = executedInput.cityName;
+    final hasCityLabel = cityName != null && cityName.isNotEmpty;
+    final hasExplicitCoordinates = executedInput.longitude != null;
+    final locationMode = !hasExplicitCoordinates
+        ? 'engine-default'
+        : hasCityLabel
+            ? 'city-directory'
+            : 'provided-coordinates';
+    final longitude = executedInput.longitude ?? 120.0;
+    // Match _compute(): when longitude is absent, the engine receives null
+    // and uses both default coordinates (120E, 30N); when longitude is
+    // present but latitude absent, only latitude falls back to 30N.
+    final latitude =
+        hasExplicitCoordinates ? (executedInput.latitude ?? 30.0) : 30.0;
+    final birthplace = locationMode == 'city-directory'
+        ? cityName!
+        : locationMode == 'provided-coordinates'
+            ? '用户提供坐标'
+            : 'MISSING';
+    final arguments = <String, String>{
+      'birth_date':
+          '${solar.year}-${solar.month.toString().padLeft(2, '0')}-${solar.day.toString().padLeft(2, '0')}',
+      'birth_time':
+          '${solar.hour.toString().padLeft(2, '0')}:${solar.minute.toString().padLeft(2, '0')}',
+      'gender': executedInput.isMale ? 'male' : 'female',
+      'birthplace': birthplace,
+    };
+
+    late final Map<String, Object?> snapshot;
+    late final AiContextRef contextRef;
+    try {
+      snapshot = BaziContextSnapshot.createFromCurrentResult(
+        arguments: arguments,
+        result: result,
+        fortune: _fortune,
+        locationMode: locationMode,
+        locationLabel:
+            locationMode == 'city-directory' ? cityName : null,
+        longitude: longitude,
+        latitude: latitude,
+        useTrueSolarTime: executedInput.useTrueSolarTime,
+        distinguishZiShi: executedInput.distinguishZiShi,
+        twelveStageMode: executedInput.fireEarthSame
+            ? TwelveStageMode.fireEarthSame
+            : TwelveStageMode.waterEarthSame,
+      );
+      contextRef = AiContextResolver.buildBaziResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('八字结果上下文校验失败：UNKNOWN，已取消提问。'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final resolution = AiContextResolver.resolveBaziToolResult(
+      ref: contextRef,
+      structuredSnapshot: snapshot,
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '八字结果上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildBaziToolResult(
+        resolvedResult: resolved,
+      ),
+      initialMode: AssistantMode.tools,
+      contextualTitle: contextRef.title ?? '八字排盘结果',
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   String _buildShareText() {
@@ -346,6 +524,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     ],
   ]),
       body: ListView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: [
           _narrowContent(_disclaimer(cs)),
@@ -382,6 +561,15 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
                 onPressed: _saveToLibrary,
                 icon: const Icon(Icons.bookmark_add_outlined),
                 label: const Text('添加到命盘库'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _askAiAboutCurrentResult,
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text('问 AI 解读当前八字排盘'),
               ),
             ),
             const SizedBox(height: 12),
