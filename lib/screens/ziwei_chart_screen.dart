@@ -496,7 +496,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     return fitWidth.clamp(1.0, 640.0).toDouble();
   }
 
-  Future<void> _askAiAboutCurrentResult() async {
+  Map<String, String>? _buildCurrentContextSnapshot() {
     final chart = _chart;
     final solar = _calculatedSolar;
     final useTrueSolarTime = _calculatedUseTrueSolarTime;
@@ -513,7 +513,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         latitude == null ||
         _calculating ||
         _error != null) {
-      return;
+      return null;
     }
 
     final resultPayload = formatZiweiChartForAssistant(
@@ -540,6 +540,19 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       ruleVersion: ruleVersion,
       resultPayload: resultPayload,
     );
+    return {
+      'resultPayload': resultPayload,
+      'ruleVersion': ruleVersion,
+      'snapshotId': snapshotId,
+    };
+  }
+
+  Future<void> _askAiAboutCurrentResult() async {
+    final snapshot = _buildCurrentContextSnapshot();
+    if (snapshot == null) return;
+    final snapshotId = snapshot['snapshotId']!;
+    final ruleVersion = snapshot['ruleVersion']!;
+    final resultPayload = snapshot['resultPayload']!;
     final contextRef = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
@@ -571,9 +584,6 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
     // transition has necessarily removed the route from the Navigator. Wait
     // until this source page is current again so its Scrollable is attached
     // and its viewport metrics are stable before restoring the offset.
-    // The dialog normally completes its reverse transition within 200 ms.
-    // Bound the frame wait so an unrelated route left above this page cannot
-    // hold this action open indefinitely.
     var stablePageFrames = 0;
     var pagePositionReady = false;
     for (var frame = 0; frame < 60 && mounted; frame++) {
@@ -583,9 +593,6 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       final hasScrollMetrics = hasScrollPosition &&
           _pageScrollController.position.hasContentDimensions;
       if (routeIsCurrent && hasScrollMetrics) {
-        // The route becomes current as soon as pop starts, not when the
-        // modal reverse transition has finished. Keep the page stable for
-        // several frames so the sheet cannot overwrite the restored offset.
         stablePageFrames++;
         if (stablePageFrames >= 18) {
           pagePositionReady = true;
@@ -611,6 +618,65 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       _pageScrollController.jumpTo(targetOffset);
     }
   }
+
+  Future<void> _askAiAboutPalaceField(ZiweiPalace requestedPalace) async {
+    final snapshot = _buildCurrentContextSnapshot();
+    final chart = _chart;
+    if (snapshot == null || chart == null) return;
+
+    final palace = chart.palaces
+        .where((candidate) => candidate.index == requestedPalace.index)
+        .firstOrNull;
+    if (palace == null) return;
+
+    const sourceId = 'local-engine:ziwei-core@0.13.0';
+    final fieldPath = 'palacesByPhysicalBranch.${palace.index}.stars';
+    final fieldValue = palace.stars
+        .map((star) => <String, Object?>{
+              'starKey': star.key,
+              'name': star.label,
+              'category': _starKindLabel(star),
+              'brightness': star.brightness,
+              'transformation': star.sihuaText.isEmpty ? null : star.sihuaText,
+              'displayText': starDisplayText(star),
+            })
+        .toList(growable: false);
+    final contextRef = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId:
+          'ziwei:result:${snapshot['snapshotId']}:field:$fieldPath',
+      anchorVersion: snapshot['snapshotId']!,
+      snapshotId: snapshot['snapshotId']!,
+      ruleVersion: snapshot['ruleVersion']!,
+      fieldPath: fieldPath,
+      sourceId: sourceId,
+      title: '${palace.roleLabel}宫位星曜',
+    );
+    final prompt = AiContextPromptBuilder.buildToolResultField(
+      ref: contextRef,
+      fieldLabel: '${palace.roleLabel}宫本命星曜',
+      fieldScope: {
+        'palaceIndex': palace.index,
+        'palaceRole': palace.roleLabel,
+        'earthlyBranch': palace.branchLabel,
+        'ganzhi': palace.ganzhiLabel,
+        'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
+      },
+      fieldValue: fieldValue,
+      fieldUnit: '不适用（离散星曜条目）',
+      resultPayload: snapshot['resultPayload']!,
+    );
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.metaphysics,
+      contextualTitle: '${palace.roleLabel}宫位星曜',
+      contextualExplanationOnly: true,
+    );
+  }
+
 
   void _returnAssistantResult() {
     final chart = _chart;
@@ -1412,7 +1478,8 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       if (isBody) _badge('身', cs.tertiary),
     ];
     return GestureDetector(
-      onTap: () => _showPalaceDetail(p, flow),
+      key: ValueKey('ziwei-palace-cell-${p.index}'),
+      onTap: () => unawaited(_showPalaceDetail(p, flow)),
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(
@@ -1531,11 +1598,11 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
   }
 
   /// 点按宫格：展示该宫主管（倪师天机道）与宫内星曜（含流年流曜）。
-  void _showPalaceDetail(ZiweiPalace p, FlowYearMark? flow) {
+  Future<void> _showPalaceDetail(ZiweiPalace p, FlowYearMark? flow) async {
     final cs = Theme.of(context).colorScheme;
     final meaning = ZiweiReferenceScreen.palaceMeanings[p.roleLabel];
     final flowStarsHere = flow?.flowStars[p.index] ?? const <String>[];
-    showModalBottomSheet<void>(
+    showModalBottomSheet<bool>(
       context: context,
       anchorPoint: foldAwareRouteAnchorPoint(context),
       backgroundColor: cs.surface,
@@ -1666,6 +1733,15 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
                         ],
                       ),
                     ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      icon: const Icon(Icons.auto_awesome_outlined),
+                      label: const Text('问 AI 解读本宫星曜'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Text(
                     '宫位主管出自倪师《天纪·天机道》· 民俗文化参考',
                     style: TextStyle(fontSize: 10, color: cs.outline),
@@ -1677,8 +1753,10 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
         ),
       ),
     );
+    if (askAi == true && mounted) {
+      await _askAiAboutPalaceField(p);
+    }
   }
-
   String _starKindLabel(ZiweiStar s) {
     if (s.isMajor) return '主星';
     if (s.isLucky) return '吉星';
