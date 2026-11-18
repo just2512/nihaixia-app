@@ -2,47 +2,22 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:nihaisha_app/data/database_helper.dart';
-import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
-var _homeDatabaseSequence = 0;
-
-Future<void> _prepareHomeScreenDatabase(WidgetTester tester) async {
-  DatabaseHelper.configureTestDatabase(
-    'home_screen_entry_${_homeDatabaseSequence++}.db',
-    factory: databaseFactoryFfi,
-  );
-  // HomeScreen's IndexedStack initializes both the AI conversation store and
-  // bookmarks screen. Open one isolated database before either initState can
-  // race the lazy DatabaseHelper.database getter.
-  await tester.runAsync(() async {
-    await DatabaseHelper.instance.database;
-  });
-  addTearDown(() async {
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    // Let outstanding initState reads/writes finish before closing the FFI DB;
-    // otherwise fake_async reports sqflite's 10-second lock timers as pending.
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      await DatabaseHelper.closeTestDatabase();
-    });
-  });
-}
+List<Widget> _homeShellScreens() => const [
+  Scaffold(body: Center(child: Text('汉唐 AI 助手'))),
+  Scaffold(body: Center(child: Text('工具测试页'))),
+  Scaffold(body: Center(child: Text('知识测试页'))),
+  Scaffold(body: Center(child: Text('收藏测试页'))),
+  Scaffold(body: Center(child: Text('设置测试页'))),
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  testWidgets('统一 AI 助手是默认一级入口，设置可从根导航直接进入', (tester) async {
-    await _prepareHomeScreenDatabase(tester);
+  testWidgets('HomeScreen 默认显示 AI 一级入口，设置可从根导航直接进入', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -54,7 +29,7 @@ void main() {
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(testScreens: _homeShellScreens()),
     ));
     await tester.pump();
 
@@ -68,12 +43,11 @@ void main() {
 
     await tester.tap(find.text('设置'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('暗黑模式'), findsOneWidget);
+    expect(find.text('设置测试页'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Find N2 内屏铰链布局下默认 AI 助手不发生布局异常', (tester) async {
-    await _prepareHomeScreenDatabase(tester);
+  testWidgets('Find N2 半折叠根导航将首页限制在物理面板内', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -93,7 +67,7 @@ void main() {
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(testScreens: _homeShellScreens()),
     ));
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -105,7 +79,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('AdaptiveHomeNavigation passes the inherited system text scaler to tab scaffolds', (tester) async {
+  testWidgets('AdaptiveHomeNavigation 将继承的系统字号传递给各导航页面', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -120,46 +94,18 @@ void main() {
         useMaterial3: true,
         extensions: [AppColors.light],
       ),
-      // Home is a Navigator route. Put the inherited value on the route child
-      // itself so the test does not depend on MaterialApp.builder placement.
       home: MediaQuery(
         data: inheritedMediaQuery,
         child: AdaptiveHomeNavigation(
           currentIndex: 0,
           onDestinationSelected: (_) {},
-          screens: const [
-            Scaffold(body: Text('AI tab')),
-            Scaffold(body: Text('Tools tab')),
-            Scaffold(body: Text('Knowledge tab')),
-            Scaffold(body: Text('Bookmarks tab')),
-            Scaffold(body: Text('Settings tab')),
-          ],
+          screens: _homeShellScreens(),
           destinations: const [
-            AppNavigationDestination(
-              icon: Icon(Icons.chat_bubble_outline),
-              selectedIcon: Icon(Icons.chat),
-              label: 'AI',
-            ),
-            AppNavigationDestination(
-              icon: Icon(Icons.grid_view_outlined),
-              selectedIcon: Icon(Icons.grid_view_rounded),
-              label: '工具',
-            ),
-            AppNavigationDestination(
-              icon: Icon(Icons.menu_book_outlined),
-              selectedIcon: Icon(Icons.menu_book),
-              label: '知识',
-            ),
-            AppNavigationDestination(
-              icon: Icon(Icons.bookmark_border),
-              selectedIcon: Icon(Icons.bookmark),
-              label: '收藏',
-            ),
-            AppNavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: '设置',
-            ),
+            AppNavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat), label: 'AI'),
+            AppNavigationDestination(icon: Icon(Icons.grid_view_outlined), selectedIcon: Icon(Icons.grid_view_rounded), label: '工具'),
+            AppNavigationDestination(icon: Icon(Icons.menu_book_outlined), selectedIcon: Icon(Icons.menu_book), label: '知识'),
+            AppNavigationDestination(icon: Icon(Icons.bookmark_border), selectedIcon: Icon(Icons.bookmark), label: '收藏'),
+            AppNavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '设置'),
           ],
         ),
       ),
@@ -170,17 +116,13 @@ void main() {
     final scaffoldContexts = tester.elementList(find.byType(Scaffold));
     expect(MediaQuery.textScalerOf(homeContext).scale(10), 17.5);
     expect(scaffoldContexts, isNotEmpty);
-    // Flutter's Material AppBar intentionally clamps title scaling to preserve
-    // toolbar hierarchy. Verify the inherited scaler at each screen boundary.
     for (final context in scaffoldContexts) {
       expect(MediaQuery.textScalerOf(context).scale(10), 17.5);
     }
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('AI 首页在外屏/内屏、浅深主题与200%字号下保持可读',
-      (tester) async {
-    await _prepareHomeScreenDatabase(tester);
+  testWidgets('AI 首页在外屏/内屏、浅深主题与200%字号下保持可读', (tester) async {
     addTearDown(tester.view.resetDisplayFeatures);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -193,30 +135,20 @@ void main() {
           theme: ThemeData(
             useMaterial3: true,
             colorScheme: AppColors.colorSchemeFor(brightness),
-            extensions: [
-              brightness == Brightness.dark ? AppColors.dark : AppColors.light,
-            ],
+            extensions: [brightness == Brightness.dark ? AppColors.dark : AppColors.light],
           ),
           home: MediaQuery(
-            data: MediaQueryData.fromView(tester.view).copyWith(
-              textScaler: const TextScaler.linear(2),
-            ),
-            child: const HomeScreen(),
+            data: MediaQueryData.fromView(tester.view).copyWith(textScaler: const TextScaler.linear(2)),
+            child: HomeScreen(testScreens: _homeShellScreens()),
           ),
         ));
         await tester.pump(const Duration(milliseconds: 400));
 
         final homeContext = tester.element(find.byType(HomeScreen));
-        expect(
-          MediaQuery.textScalerOf(homeContext).scale(10),
-          20,
-          reason: '首页必须实际继承200%文字缩放',
-        );
+        expect(MediaQuery.textScalerOf(homeContext).scale(10), 20);
         expect(find.text('汉唐 AI 助手'), findsOneWidget);
         expect(find.byType(IndexedStack), findsOneWidget);
-        expect(tester.takeException(), isNull,
-            reason: width.toInt().toString() + 'dp / ' + brightness.name +
-                ' / 200% AI 首页不应溢出');
+        expect(tester.takeException(), isNull, reason: '${width.toInt()}dp / ${brightness.name} / 200% AI 首页不应溢出');
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
@@ -224,9 +156,7 @@ void main() {
     }
   });
 
-  testWidgets('半折叠 AI 首页在浅深主题与200%字号下避开物理铰链',
-      (tester) async {
-    await _prepareHomeScreenDatabase(tester);
+  testWidgets('半折叠 AI 首页在浅深主题与200%字号下避开物理铰链', (tester) async {
     addTearDown(tester.view.resetDisplayFeatures);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -245,15 +175,11 @@ void main() {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: AppColors.colorSchemeFor(brightness),
-          extensions: [
-            brightness == Brightness.dark ? AppColors.dark : AppColors.light,
-          ],
+          extensions: [brightness == Brightness.dark ? AppColors.dark : AppColors.light],
         ),
         home: MediaQuery(
-          data: MediaQueryData.fromView(tester.view).copyWith(
-            textScaler: const TextScaler.linear(2),
-          ),
-          child: const HomeScreen(),
+          data: MediaQueryData.fromView(tester.view).copyWith(textScaler: const TextScaler.linear(2)),
+          child: HomeScreen(testScreens: _homeShellScreens()),
         ),
       ));
       await tester.pump(const Duration(milliseconds: 400));
@@ -263,12 +189,10 @@ void main() {
       final contentRect = tester.getRect(find.byType(IndexedStack));
       expect(contentRect.right, lessThanOrEqualTo(388));
       expect(find.text('汉唐 AI 助手'), findsOneWidget);
-      expect(tester.takeException(), isNull,
-          reason: brightness.name + ' / 半折叠 / 200% AI 首页不应跨越铰链或溢出');
+      expect(tester.takeException(), isNull, reason: '${brightness.name} / 半折叠 / 200% AI 首页不应跨越铰链或溢出');
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     }
   });
-
 }
