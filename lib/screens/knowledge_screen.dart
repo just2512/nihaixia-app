@@ -121,8 +121,7 @@ class _MeridianTab extends StatelessWidget {
             builder: (itemContext) => InkWell(
             onTap: () {
               Navigator.of(context, rootNavigator: true).push(
-                itemContext,
-                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                   builder: (_) => MeridianDetailScreen(meridian: name),
                 ),
               );
@@ -206,8 +205,7 @@ class _MeridianTab extends StatelessWidget {
                                       final formula = FormulaRepository.getByName(f);
                                       if (formula != null) {
                                         Navigator.of(context, rootNavigator: true).push(
-                                          itemContext,
-                                          FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                             builder: (_) => FormulaDetailScreen(formula: formula),
                                           ),
                                         );
@@ -223,8 +221,7 @@ class _MeridianTab extends StatelessWidget {
                           child: TextButton.icon(
                             onPressed: () {
                               Navigator.of(context, rootNavigator: true).push(
-                                itemContext,
-                                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                   builder: (_) => MeridianDetailScreen(meridian: name),
                                 ),
                               );
@@ -392,8 +389,7 @@ class _FormulaTabState extends State<_FormulaTab> {
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
               onPressed: () => Navigator.of(context, rootNavigator: true).push(
-                context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => FormulaDetailScreen(formula: formula),
                 ),
               ),
@@ -546,8 +542,7 @@ class _FormulaTabState extends State<_FormulaTab> {
                             setState(() => _selectedFormulaId = formula.id);
                           } else {
                             Navigator.of(context, rootNavigator: true).push(
-                              itemContext,
-                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => FormulaDetailScreen(formula: formula),
                               ),
                             );
@@ -696,8 +691,7 @@ class _HerbTabState extends State<_HerbTab> {
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
               onPressed: () => Navigator.of(context, rootNavigator: true).push(
-                context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+FoldAwareMaterialPageRoute(sourceContext: context, 
                   builder: (_) => HerbDetailScreen(herb: herb),
                 ),
               ),
@@ -849,8 +843,7 @@ class _HerbTabState extends State<_HerbTab> {
                 icon: const Icon(Icons.menu_book_outlined, size: 16),
                 label: const Text('讲稿', style: TextStyle(fontSize: AppType.caption)),
                 onPressed: () => Navigator.of(context, rootNavigator: true).push(
-                  context,
-                  FoldAwareMaterialPageRoute(
+FoldAwareMaterialPageRoute(
                     sourceContext: context,
                     builder: (_) => const BenCaoLibraryScreen(),
                   ),
@@ -915,8 +908,7 @@ class _HerbTabState extends State<_HerbTab> {
                             setState(() => _selectedHerbName = herb.name);
                           } else {
                             Navigator.of(context, rootNavigator: true).push(
-                              itemContext,
-                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
+FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => HerbDetailScreen(herb: herb),
                               ),
                             );
