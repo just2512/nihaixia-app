@@ -588,14 +588,19 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.only(left: 12, right: 4),
-          child: Row(
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               Text(
                 '共 ${acupoints.length} 个穴位',
-                style:
-                    TextStyle(fontSize: AppType.caption, color: context.colors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: AppType.caption,
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
-              const Spacer(),
               // 针灸讲稿（倪师人纪）：系统学习入口，与讲解 tab 逐穴速查互补。
               TextButton.icon(
                 style: TextButton.styleFrom(
@@ -607,8 +612,10 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 label: const Text('讲稿', style: TextStyle(fontSize: AppType.caption)),
                 onPressed: () => Navigator.push(
                   context,
-                  FoldAwareMaterialPageRoute(sourceContext: context,
-                      builder: (_) => const ZhenjiuLibraryScreen()),
+                  FoldAwareMaterialPageRoute(
+                    sourceContext: context,
+                    builder: (_) => const ZhenjiuLibraryScreen(),
+                  ),
                 ),
               ),
               // 选中具体经络 → 直接开该经的循行图；「全部」→ 开图后在对话框内切换经络。
