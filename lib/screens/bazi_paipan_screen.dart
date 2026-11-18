@@ -5,6 +5,12 @@ import 'package:share_plus/share_plus.dart';
 import '../utils/chart_export.dart';
 
 import 'package:nihaisha_app/services/bazi_service.dart';
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/bazi_context_snapshot.dart';
+import 'assistant_tool_router.dart' show AssistantMode;
+import '../widgets/contextual_ai_sheet.dart';
 import 'package:nihaisha_app/services/assistant_chart_result_formatter.dart';
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
@@ -80,6 +86,20 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
   BaZiPaipan? _result;
   BaZiFortune? _fortune;
   String? _error;
+  final ScrollController _pageScrollController = ScrollController();
+
+  /// Inputs captured for the last successful calculation. Editing the form
+  /// does not silently change the immutable result currently being explained.
+  ({
+    DateTime solar,
+    bool isMale,
+    bool useTrueSolarTime,
+    bool distinguishZiShi,
+    bool fireEarthSame,
+    String? birthplaceLabel,
+    double? longitude,
+    double? latitude,
+  })? _calculatedInput;
 
   @override
   void initState() {
@@ -119,31 +139,51 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
   void _compute() {
     setState(() {
       _result = null;
+      _fortune = null;
+      _calculatedInput = null;
       _error = null;
     });
     try {
       final solar = DateTime(_year, _month, _day, _birthHour, _birthMinute);
+      final isMale = _isMale;
+      final useTrueSolarTime = _useTrueSolarTime;
+      final distinguishZiShi = _distinguishZiShi;
+      final fireEarthSame = _fireEarthSame;
+      final birthplaceLabel = _locLng != null ? _locName : null;
+      final longitude = _locLng;
+      final latitude = longitude != null ? (_locLat ?? 30.0) : null;
       final location =
-          (_locLng != null) ? Location(_locLng!, _locLat ?? 30) : null;
-      final r = computeBaZiPaipan(
+          (longitude != null) ? Location(longitude, latitude ?? 30) : null;
+      final chart = computeBaZiPaipan(
         solar,
-        isMale: _isMale,
-        useTrueSolarTime: _useTrueSolarTime,
-        twelveStageMode: _fireEarthSame
+        isMale: isMale,
+        useTrueSolarTime: useTrueSolarTime,
+        twelveStageMode: fireEarthSame
             ? TwelveStageMode.fireEarthSame
             : TwelveStageMode.waterEarthSame,
-        ratHourMode: _distinguishZiShi,
+        ratHourMode: distinguishZiShi,
         location: location,
+      );
+      final fortune = computeBaZiFortune(
+        solar,
+        isMale: isMale,
+        location: location,
+        ratHourMode: distinguishZiShi,
+        useTrueSolarTime: useTrueSolarTime,
       );
       if (!mounted) return;
       setState(() {
-        _result = r;
-        _fortune = computeBaZiFortune(
-          solar,
-          isMale: _isMale,
-          location: location,
-          ratHourMode: _distinguishZiShi,
-          useTrueSolarTime: _useTrueSolarTime,
+        _result = chart;
+        _fortune = fortune;
+        _calculatedInput = (
+          solar: solar,
+          isMale: isMale,
+          useTrueSolarTime: useTrueSolarTime,
+          distinguishZiShi: distinguishZiShi,
+          fireEarthSame: fireEarthSame,
+          birthplaceLabel: birthplaceLabel,
+          longitude: longitude,
+          latitude: latitude,
         );
       });
     } catch (e) {
@@ -299,6 +339,107 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     }
   }
 
+  Future<void> _askAiAboutResult() async {
+    final chart = _result;
+    final fortune = _fortune;
+    final captured = _calculatedInput;
+    if (chart == null || fortune == null || captured == null) return;
+
+    try {
+      final snapshot = BaziContextSnapshot.createStructuredSnapshot(
+        solar: captured.solar,
+        isMale: captured.isMale,
+        useTrueSolarTime: captured.useTrueSolarTime,
+        distinguishZiShi: captured.distinguishZiShi,
+        fireEarthSame: captured.fireEarthSame,
+        birthplaceLabel: captured.birthplaceLabel,
+        longitude: captured.longitude,
+        latitude: captured.latitude,
+        chart: chart,
+        fortune: fortune,
+      );
+      final contextRef = AiContextResolver.buildBaziResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+      final resolution = AiContextResolver.resolveBaziToolResult(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '八字结果上下文校验失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final sourcePageRoute = ModalRoute.of(context);
+      final pageScrollOffset = _pageScrollController.hasClients &&
+              _pageScrollController.position.hasContentDimensions
+          ? _pageScrollController.position.pixels
+          : null;
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildBaziToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: '八字排盘结果',
+        contextualExplanationOnly: true,
+      );
+
+      var stableFrames = 0;
+      var pagePositionReady = false;
+      for (var frame = 0; frame < 60 && mounted; frame++) {
+        final routeIsCurrent =
+            sourcePageRoute == null || sourcePageRoute.isCurrent;
+        final hasScrollMetrics = _pageScrollController.hasClients &&
+            _pageScrollController.position.hasContentDimensions;
+        if (routeIsCurrent && hasScrollMetrics) {
+          stableFrames++;
+          if (stableFrames >= 18) {
+            pagePositionReady = true;
+            break;
+          }
+        } else {
+          stableFrames = 0;
+        }
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      if (!mounted ||
+          !pagePositionReady ||
+          pageScrollOffset == null ||
+          !_pageScrollController.hasClients) {
+        return;
+      }
+      final position = _pageScrollController.position;
+      final targetOffset = pageScrollOffset
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      if ((position.pixels - targetOffset).abs() > 0.5) {
+        _pageScrollController.jumpTo(targetOffset);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('八字结果未能通过来源校验，已取消提问')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
+  }
+
   int _daysInMonth(int year, int month) {
     if (month < 1 || month > 12) return 31;
     if (month == 2) {
@@ -346,6 +487,8 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     ],
   ]),
       body: ListView(
+        controller: _pageScrollController,
+        key: const ValueKey('bazi-result-page-scroll'),
         padding: const EdgeInsets.all(16),
         children: [
           _narrowContent(_disclaimer(cs)),
@@ -374,6 +517,18 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
             ),
             const SizedBox(height: 8),
             BaZiFourPillarsCard(result: _result!),
+            if (_fortune != null && _calculatedInput != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: const ValueKey('bazi-contextual-ask-ai'),
+                  onPressed: _askAiAboutResult,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('问 AI 解读本次八字'),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             // 添加到命盘库（与紫微排盘共用命盘库；Material 图标，无 emoji）
             SizedBox(
