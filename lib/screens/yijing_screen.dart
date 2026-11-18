@@ -6,7 +6,6 @@ import '../data/yijing_data.dart';
 import '../engine/yijing_engine.dart';
 import 'yijing_detail_screen.dart';
 import 'yijing_result_screen.dart';
-import '../services/yijing_tool_executor.dart';
 import 'minggua_calculator_screen.dart';
 import 'minggua_library_screen.dart';
 
