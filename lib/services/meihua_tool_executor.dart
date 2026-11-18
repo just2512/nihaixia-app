@@ -4,6 +4,7 @@ import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart'
     show AstroDateTime, LunarDate;
 
 import '../data/meihua_data.dart';
+import '../data/yijing_data.dart';
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'bazi_service.dart' show computeBaZiPaipan;
