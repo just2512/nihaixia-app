@@ -10,6 +10,7 @@ import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
 import 'yunqi_tool_executor.dart';
 import 'almanac_tool_executor.dart';
+import 'bazi_context_snapshot.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -204,6 +205,165 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The almanac result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
+
+  static const baziModuleId = BaziContextSnapshot.capabilityId;
+
+  static AiContextRef buildBaziResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        snapshotId.isEmpty ||
+        ruleVersion != BaziContextSnapshot.ruleVersion ||
+        structuredSnapshot['capabilityId'] != baziModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            BaziContextSnapshot.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map<String, Object?> ||
+        sourceIds is! List ||
+        !sourceIds.contains(BaziContextSnapshot.sourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A BaZi context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+
+    final recomputed = BaziContextSnapshot.recomputeFromInput(input);
+    if (recomputed['snapshotId'] != snapshotId ||
+        AiToolResultSnapshot.canonicalJson(recomputed) !=
+            AiToolResultSnapshot.canonicalJson(structuredSnapshot)) {
+      throw ArgumentError(
+        'The BaZi result does not match the deterministic local engine output.',
+      );
+    }
+    final birthDate = input['birthDate'];
+    if (birthDate is! String ||
+        !RegExp(r'^\\d{4}-\\d{2}-\\d{2}$').hasMatch(birthDate)) {
+      throw ArgumentError('The BaZi snapshot birth date is invalid.');
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: baziModuleId,
+      anchorId: 'bazi:result:$snapshotId:date=$birthDate',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: BaziContextSnapshot.sourceId,
+      title: '八字排盘结果（$birthDate）',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult> resolveBaziToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != baziModuleId ||
+        ref.sourceId != BaziContextSnapshot.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The BaZi reference is incomplete or does not identify the local BaZi engine.',
+      );
+    }
+    if (ref.ruleVersion != BaziContextSnapshot.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The BaZi engine, dependent algorithm or local city-data version no longer matches this result.',
+      );
+    }
+
+    final anchorMatch = RegExp(
+      r'^bazi:result:([0-9a-f]{64}):date=(\\d{4}-\\d{2}-\\d{2})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (anchorMatch == null ||
+        snapshotId == null ||
+        snapshotId.isEmpty ||
+        ref.anchorVersion != snapshotId ||
+        anchorMatch.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The BaZi result anchor and snapshot identity do not agree.',
+      );
+    }
+
+    final rawDate = anchorMatch.group(2)!;
+    final birthDate = structuredSnapshot['input'] is Map
+        ? (structuredSnapshot['input'] as Map)['birthDate']
+        : null;
+    if (birthDate != rawDate) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The BaZi result date anchor does not match its captured birth date.',
+      );
+    }
+    final expectedTitle = '八字排盘结果（$rawDate）';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The BaZi result title does not match its date anchor.',
+      );
+    }
+
+    if (structuredSnapshot['capabilityId'] != baziModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            BaziContextSnapshot.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['ruleVersion'] != BaziContextSnapshot.ruleVersion ||
+        structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['sourceIds'] is! List ||
+        !(structuredSnapshot['sourceIds'] as List)
+            .contains(BaziContextSnapshot.sourceId)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The BaZi structured snapshot is incomplete or not source-bound.',
+      );
+    }
+
+    try {
+      if (AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+          snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The BaZi snapshot digest does not match its structured content.',
+        );
+      }
+      final input = structuredSnapshot['input'];
+      if (input is! Map<String, Object?>) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.unknown,
+          reason: 'The BaZi snapshot input is missing or malformed.',
+        );
+      }
+      final recomputed = BaziContextSnapshot.recomputeFromInput(input);
+      if (recomputed['snapshotId'] != snapshotId ||
+          AiToolResultSnapshot.canonicalJson(recomputed) !=
+              AiToolResultSnapshot.canonicalJson(structuredSnapshot)) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The captured BaZi result no longer matches the deterministic local engine output.',
+        );
+      }
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: recomputed,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The BaZi result could not be reconstructed and verified from the local engine.',
       );
     }
   }
