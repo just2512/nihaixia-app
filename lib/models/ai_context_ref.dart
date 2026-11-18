@@ -71,6 +71,23 @@ class AiContextRef {
     }
     final kind = AiContextKind.fromMetadata(value['kind']?.trim());
     if (kind == null) return const {};
+
+    // Tool-result references are immutable result identities, not generic
+    // anchors. Refuse incomplete or internally inconsistent snapshots before
+    // they can enter the assistant session/history metadata.
+    if (kind == AiContextKind.toolResult) {
+      final snapshotId = value['snapshotId']?.trim();
+      final ruleVersion = value['ruleVersion']?.trim();
+      final anchorVersion = value['anchorVersion']?.trim();
+      if (snapshotId == null ||
+          snapshotId.isEmpty ||
+          ruleVersion == null ||
+          ruleVersion.isEmpty ||
+          snapshotId != anchorVersion) {
+        return const {};
+      }
+    }
+
     return Map.unmodifiable({
       for (final entry in value.entries)
         if (entry.key.trim().isNotEmpty && entry.value.trim().isNotEmpty)
