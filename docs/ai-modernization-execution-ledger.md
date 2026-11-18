@@ -2975,3 +2975,30 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 每个新增字段必须使用闭合白名单、稳定 fieldPath、所属结果快照、来源/规则版本及标量值校验；仅解释既有 App 结果，不重新计算。应至少覆盖未知路径、过期规则、篡改快照、缺失字段和真实页面点击调用链。
 - 当前协议 §11 Phase 3 将“云端工程门禁”与“最终设备门禁”分离；云端工作达到每个切片的来源/快照契约、负向测试、真实调用链自动化、窗口宽度布局自动化和最新 head Flutter/Android CI 门槛后，可继续小批量扩展。历史 §57.26 中“设备验收未完成前不启动 Phase 3”的旧说明已被协议后续修订取代；保留历史，不再作为当前云端工作的串行阻塞条件。
 - Find N2 外屏/内屏/半折叠/分屏/键盘交互，以及本地 E4B 多轮问答、空响应、Native 状态和历史恢复 TRACE，继续为 `UNKNOWN / LOCAL ONLY`；统一留到云端计划完成后的最终本地验收。CI 与模拟布局不能替代真机证据，相关工作流未补齐 TRACE 前保持 PARTIAL，不得标记端到端 PASS。
+
+---
+
+### 57.33 2026-11-19 八字字段切片合并与梅花字段级切片启动
+
+#### PR #329 八字字段级入口已集成
+
+- PR [#329](https://github.com/just2512/nihaixia-app/pull/329) 已普通 merge，merge SHA：`c368f37cb18f0447ce2271eaa9f88711778853db`；最终 head：`c2d298def5ef72286e5f183f04262ccb4773f046`。
+- 最终 head Flutter regression run `44416512869` SUCCESS；Android arm64 CI SUCCESS；Branch validation 按 PR workflow 条件 SKIPPED，不计 PASS。
+- 集成字段路径：八字格局、日主强弱分值、五行元素分值。字段入口复用排盘成功时捕获的真实输入/结果；Resolver 重建验证完整八字结果快照后，才按闭合 fieldPath 白名单解析单个标量，并绑定 snapshotId、ruleVersion、sourceId。篡改、过期或不支持路径 fail closed。
+- Prompt 同时提供字段值、完整分析范围、原始计算输入、地点来源和设置；明确规则分值不是概率或统计置信度，不重算 App 结果。保留原整体八字结果问 AI 入口。
+
+#### PR #331 梅花字段级入口
+
+- 新独立切片基于 #329 已合并后的 master `c368f37cb18f0447ce2271eaa9f88711778853db`，分支：`feat/ai-context-meihua-fields-post-bazi-20261119`。
+- PR [#331](https://github.com/just2512/nihaixia-app/pull/331) 当前 head：`3df0670174cb05ffbca082aa4306214b9731a7d9`；Flutter workflow run `44418312094` IN_PROGRESS，尚未取得 Flutter regression 或 Android arm64 终态。
+- 基于现有梅花结构化快照建立闭合字段路径白名单：主/互/变卦的卦序、名称与卦辞；动爻与爻辞；体用关系、体卦旺衰；三阶段推演条目。字段 Resolver 先调用整体结果 Resolver 校验真实执行方法、参数、派生历法数据、来源、规则版本和 snapshot digest，再抽取单个标量；Prompt 携带完整卦象/体用/阶段范围和实际起卦输入。
+- UI 增加主卦、体用关系和阶段推演的字段级提问入口，复用 metaphysics + explanation-only 助手；不重新起卦、不重新随机、不修改算法或易经数据。新测试覆盖真实快照绑定、未知路径、过期规则、篡改摘要以及真实页面点击后助手上下文。
+- 必须以 #331 当前 head 的 Flutter regression 与 Android arm64 CI 均 SUCCESS 为合并条件；合并后复核主线 Flutter tests 与 Flutter Quality Gate。
+
+#### 当前主线 CI
+
+- master `c368f37cb18f0447ce2271eaa9f88711778853db` 的 Flutter tests run `44418146788` 与 Flutter Quality Gate run `44418146848` 在本节更新时均为 IN_PROGRESS；#329 的 PR head PASS 不替代合并后主线门禁终态。
+
+#### 设备门禁
+
+- Find N2 外屏/内屏/半折叠/分屏/键盘，以及本地 E4B 多轮、空响应、Native 状态和历史恢复 TRACE，继续标记 `UNKNOWN / LOCAL ONLY`。本节的云端 CI 与 widget tests 不代表真实设备通过；按现行 spec §11，设备门禁集中留到云端 Phase 3 全部完成后的最终本地验收。
