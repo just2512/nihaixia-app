@@ -103,6 +103,20 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
+Future<void> _waitForBookmarkLookup(
+  WidgetTester tester,
+  String title,
+) async {
+  // Detail screens start this lookup in initState. Run a second lookup outside
+  // FakeAsync so sqflite_ffi's real isolate work and serialized DB queue finish
+  // before the test disposes the route and closes its database.
+  final result = await tester.runAsync<bool>(
+    () => DatabaseHelper.instance.isBookmarked(title),
+  );
+  expect(result, isNotNull);
+  await tester.pump();
+}
+
 Future<void> _pumpUntilRouteAnimationCompletes(
   WidgetTester tester,
   Finder pageFinder,
@@ -267,6 +281,7 @@ Future<void> _pumpUntilRouteAnimationCompletes(
           tester,
           find.byType(FormulaDetailScreen),
         );
+        await _waitForBookmarkLookup(tester, formula.name);
 
         expect(find.byType(FormulaDetailScreen), findsOneWidget);
         expect(find.text('组成'), findsOneWidget);
@@ -313,6 +328,7 @@ Future<void> _pumpUntilRouteAnimationCompletes(
           tester,
           find.byType(HerbDetailScreen),
         );
+        await _waitForBookmarkLookup(tester, herb.name);
 
         expect(find.byType(HerbDetailScreen), findsOneWidget);
         expect(find.text(herb.category), findsOneWidget);
