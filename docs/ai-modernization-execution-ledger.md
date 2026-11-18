@@ -2851,3 +2851,16 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前最新 master 已推进至 `590e17054faea259bd3c23e360daafd0500d5fed`。合并后 Flutter tests run `44111834811` 与 Flutter Quality Gate run `44111834831` 均已启动、当前仍 `IN_PROGRESS`；必须以这两个 run 的终态更新最新主线状态，不得用前一 SHA 的通过结果替代。
 - Phase 1/2 Find N2 实机交互、本地 E4B 多轮问答及历史恢复 TRACE 继续为 `UNKNOWN / LOCAL ONLY`；CAI-READ-01 与 CAI-RESULT-01 保持 `PARTIAL`。在设备验收证据补齐前不启动 Phase 3 页面扩展。
 
+
+
+---
+
+### 57.28 2026-11-18 情境来源类型枚举修复合并与主线 CI 复核
+
+- PR [#273](https://github.com/just2512/nihaixia-app/pull/273) 已以普通 merge 方式合并，merge SHA：`8652562083ccfff4313027a6fdedbea77200c2e2`；最终 PR head：`2257a7eb0d0270b0ecfb4b765b013807af60a967`。
+- PR head Flutter tests run `44112171534`：Flutter regression tests `SUCCESS`；Android arm64 CI verification APK + unit tests job `134143898598`：`SUCCESS`；Branch validation job `134140416252`：`SKIPPED`，不计 PASS，也不作为失败。
+- PR #273 只完成 §57.27 已定义的封闭来源类型枚举、两个正式构造入口迁移及契约测试；未改变持久化 wire values、数据库 schema、模型执行链路或业务结果。
+- 合并前 master 基线为 `590e17054faea259bd3c23e360daafd0500d5fed`；该 SHA 的 Flutter tests run `44111834811` 与 Flutter Quality Gate run `44111834831` 均已终态 `SUCCESS`。
+- 合并后最新 master 为 `8652562083ccfff4313027a6fdedbea77200c2e2`。其 Flutter tests run `44209981060` 与 Flutter Quality Gate run `44209981040` 已触发；本条记录生成时两者均为 `IN_PROGRESS`，不得继承前一 SHA 的 PASS。须在该 SHA 上分别确认 Flutter regression、Android arm64 与 Quality Gate 终态。
+- PR #273 分支 `fix/ai-context-kind-enum-mainline-20261117` 与 head 保留为历史证据；合并方式为 merge，未 squash。
+- Phase 1/2 真实设备 TRACE 不再作为云端代码工作的前置阻塞。云端继续完成可独立验证的协议缺口与代码/自动化工作；Find N2 外屏/内屏/半折叠/键盘和本地 E4B 多轮/历史恢复 TRACE 统一留到最后本地验收。设备未验收仍不得标记端到端 PASS；Phase 3 页面扩展仍须遵守协议定义的样板验收门槛，不能把自动化 CI 等同于实机验收。
