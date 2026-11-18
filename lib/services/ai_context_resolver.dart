@@ -5,11 +5,11 @@ import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../data/medical_case_data.dart';
 import '../data/neijing_entries.dart';
-import 'almanac_tool_executor.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
 import 'yunqi_tool_executor.dart';
+import 'almanac_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -153,59 +153,7 @@ class AiContextResolver {
         snapshotId.isEmpty ||
         ref.anchorVersion != snapshotId ||
         anchorParts[0] != snapshotId ||
-        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId)) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The almanac result anchor and snapshot identity do not agree.',
-      );
-    }
-
-    final rawDate = anchorParts[1];
-    final date = DateTime.tryParse(rawDate);
-    final normalizedDate = date == null
-        ? ''
-        : [
-            date.year.toString().padLeft(4, '0'),
-            date.month.toString().padLeft(2, '0'),
-            date.day.toString().padLeft(2, '0'),
-          ].join('-');
-    if (normalizedDate != rawDate) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The almanac result anchor does not contain a valid calendar date.',
-      );
-    }
-
-    final expectedTitle = '每日黄历结果（$rawDate）';
-    if (ref.title != null && ref.title != expectedTitle) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The almanac result title does not match its date anchor.',
-      );
-    }
-
-    try {
-      final snapshot = AlmanacToolExecutor.createStructuredSnapshot(date!);
-      if (snapshot['snapshotId'] != snapshotId) {
-        return const AiContextResolution(
-          status: AiContextResolutionStatus.stale,
-          reason: 'The reconstructed almanac result no longer matches its immutable snapshot digest.',
-        );
-      }
-      return AiContextResolution(
-        status: AiContextResolutionStatus.resolved,
-        value: AiResolvedToolResult._(
-          ref: ref,
-          structuredSnapshot: snapshot,
-        ),
-      );
-    } catch (_) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The almanac result could not be reconstructed and verified from the local engine.',
-      );
-    }
-  }
+        !RegExp(r'^[0-9a-f]{64}
 
   static AiContextRef buildYunqiResultContextRef({
     required Map<String, Object?> structuredSnapshot,
@@ -856,27 +804,22 @@ class AiContextResolver {
     );
   }
 }
-,
-    ).firstMatch(ref.anchorId);
-    final snapshotId = ref.snapshotId;
-    if (anchorMatch == null ||
-        snapshotId == null ||
-        snapshotId.isEmpty ||
-        ref.anchorVersion != snapshotId ||
-        anchorMatch.group(1) != snapshotId) {
+).hasMatch(snapshotId)) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The almanac result anchor and snapshot identity do not agree.',
       );
     }
 
-    final rawDate = anchorMatch.group(2)!;
+    final rawDate = anchorParts[1];
     final date = DateTime.tryParse(rawDate);
     final normalizedDate = date == null
         ? ''
-        : '\${date.year.toString().padLeft(4, '0')}-'
-            '\${date.month.toString().padLeft(2, '0')}-'
-            '\${date.day.toString().padLeft(2, '0')}';
+        : [
+            date.year.toString().padLeft(4, '0'),
+            date.month.toString().padLeft(2, '0'),
+            date.day.toString().padLeft(2, '0'),
+          ].join('-');
     if (normalizedDate != rawDate) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
@@ -914,7 +857,6 @@ class AiContextResolver {
       );
     }
   }
-
   static const yunqiModuleId = 'yunqi';
 
   static AiContextRef buildYunqiResultContextRef({
