@@ -106,7 +106,8 @@ void main() {
       final fieldAsk = find.text('问 AI 解读本宫星曜');
       expect(fieldAsk, findsOneWidget);
       await tester.tap(fieldAsk);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       final assistant = find.byType(LocalAiInterviewScreen);
       expect(assistant, findsOneWidget);
