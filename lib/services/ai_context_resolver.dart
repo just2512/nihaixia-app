@@ -208,6 +208,8 @@ class AiContextResolver {
     }
   }
 
+  static const yunqiModuleId = 'yunqi';
+
   static AiContextRef buildYunqiResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {
