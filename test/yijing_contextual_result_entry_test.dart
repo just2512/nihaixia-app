@@ -15,6 +15,7 @@ import 'package:nihaisha_app/screens/yijing_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/services/yijing_tool_executor.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -83,18 +84,23 @@ void main() {
       expect(result['movingTexts'], isA<List<String>>());
       expect(recordedInput['arguments'], input);
 
-      final cast = switch (input['method']) {
-        'number' => YiJingEngine.castByNumbers(3, 7),
+      final recordedArguments =
+          Map<String, String>.from(recordedInput['arguments']! as Map);
+      final cast = switch (recordedArguments['method']) {
+        'number' => YiJingEngine.castByNumbers(
+            int.parse(recordedArguments['first']!),
+            int.parse(recordedArguments['second']!),
+          ),
         'time' => YiJingEngine.castByTime(
-            DateTime.parse(input['at'] as String),
+            DateTime.parse(recordedArguments['at']!),
           ),
         'manual' => YiJingEngine.castManual(
-            int.parse(input['upper'] as String),
-            int.parse(input['lower'] as String),
-            int.parse(input['moving'] as String),
+            int.parse(recordedArguments['upper']!),
+            int.parse(recordedArguments['lower']!),
+            int.parse(recordedArguments['moving']!),
           ),
         'coins' => YiJingEngine.castByCoins(
-            (input['coins'] as String)
+            recordedArguments['coins']!
                 .split(',')
                 .map(int.parse)
                 .toList(growable: false),
@@ -226,7 +232,16 @@ void main() {
       tester.view.physicalSize = const Size(402, 1000);
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(const MaterialApp(home: YiJingScreen()));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: AppColors.colorSchemeFor(Brightness.light),
+            extensions: [AppColors.light],
+          ),
+          home: const YiJingScreen(),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final fields = find.byType(TextField);
