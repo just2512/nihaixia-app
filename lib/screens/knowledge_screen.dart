@@ -114,14 +114,15 @@ class _MeridianTab extends StatelessWidget {
         final healingTime = DiagnosticRules.meridianHealingTime[name] ?? '';
         final formulas = details['formulas'] as List<String>;
 
-        return Card(
+        return Builder(
+          builder: (itemContext) => Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () {
               Navigator.push(
-                context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+                itemContext,
+                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                   builder: (_) => MeridianDetailScreen(meridian: name),
                 ),
               );
@@ -205,8 +206,8 @@ class _MeridianTab extends StatelessWidget {
                                       final formula = FormulaRepository.getByName(f);
                                       if (formula != null) {
                                         Navigator.push(
-                                          context,
-                                          FoldAwareMaterialPageRoute(sourceContext: context, 
+                                          itemContext,
+                                          FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                             builder: (_) => FormulaDetailScreen(formula: formula),
                                           ),
                                         );
@@ -222,8 +223,8 @@ class _MeridianTab extends StatelessWidget {
                           child: TextButton.icon(
                             onPressed: () {
                               Navigator.push(
-                                context,
-                                FoldAwareMaterialPageRoute(sourceContext: context, 
+                                itemContext,
+                                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                   builder: (_) => MeridianDetailScreen(meridian: name),
                                 ),
                               );
@@ -238,6 +239,7 @@ class _MeridianTab extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ),
         );
       },
@@ -391,7 +393,7 @@ class _FormulaTabState extends State<_FormulaTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                   builder: (_) => FormulaDetailScreen(formula: formula),
                 ),
               ),
@@ -523,7 +525,8 @@ class _FormulaTabState extends State<_FormulaTab> {
                   itemCount: formulas.length,
                   itemBuilder: (context, index) {
                     final formula = formulas[index];
-                    return Card(
+                    return Builder(
+                      builder: (itemContext) => Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
                         selected: useMasterDetail &&
@@ -543,13 +546,14 @@ class _FormulaTabState extends State<_FormulaTab> {
                             setState(() => _selectedFormulaId = formula.id);
                           } else {
                             Navigator.push(
-                              context,
-                              FoldAwareMaterialPageRoute(sourceContext: context, 
+                              itemContext,
+                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => FormulaDetailScreen(formula: formula),
                               ),
                             );
                           }
                         },
+                      ),
                       ),
                     );
                   },
@@ -693,7 +697,7 @@ class _HerbTabState extends State<_HerbTab> {
             child: FilledButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                   builder: (_) => HerbDetailScreen(herb: herb),
                 ),
               ),
@@ -847,7 +851,7 @@ class _HerbTabState extends State<_HerbTab> {
                 onPressed: () => Navigator.push(
                   context,
                   FoldAwareMaterialPageRoute(
-                    sourceContext: context,
+                    sourceContext: itemContext,
                     builder: (_) => const BenCaoLibraryScreen(),
                   ),
                 ),
@@ -871,7 +875,8 @@ class _HerbTabState extends State<_HerbTab> {
                     final actionShort = action.length > 40
                         ? '${action.substring(0, 40)}...'
                         : action;
-                    return Card(
+                    return Builder(
+                      builder: (itemContext) => Card(
                       margin: const EdgeInsets.symmetric(vertical: 3),
                       child: ListTile(
                         selected: useMasterDetail &&
@@ -910,13 +915,14 @@ class _HerbTabState extends State<_HerbTab> {
                             setState(() => _selectedHerbName = herb.name);
                           } else {
                             Navigator.push(
-                              context,
-                              FoldAwareMaterialPageRoute(sourceContext: context, 
+                              itemContext,
+                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => HerbDetailScreen(herb: herb),
                               ),
                             );
                           }
                         },
+                      ),
                       ),
                     );
                   },
