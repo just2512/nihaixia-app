@@ -540,7 +540,7 @@ class AiContextResolver {
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
       sourceId: MeihuaToolExecutor.sourceId,
-      title: '梅花易数\${_meihuaMethodLabel(method)}',
+      title: '梅花易数${_meihuaMethodLabel(method)}',
     );
   }
 
@@ -580,7 +580,7 @@ class AiContextResolver {
     }
     final method = match.group(2)!;
     if (ref.title != null &&
-        ref.title != '梅花易数\${_meihuaMethodLabel(method)}') {
+        ref.title != '梅花易数${_meihuaMethodLabel(method)}') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Meihua result title does not match its method anchor.',
