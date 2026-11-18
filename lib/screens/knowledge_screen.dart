@@ -117,11 +117,12 @@ class _MeridianTab extends StatelessWidget {
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
+          child: Builder(
+            builder: (itemContext) => InkWell(
             onTap: () {
               Navigator.push(
-                context,
-                FoldAwareMaterialPageRoute(sourceContext: context, 
+                itemContext,
+                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                   builder: (_) => MeridianDetailScreen(meridian: name),
                 ),
               );
@@ -205,8 +206,8 @@ class _MeridianTab extends StatelessWidget {
                                       final formula = FormulaRepository.getByName(f);
                                       if (formula != null) {
                                         Navigator.push(
-                                          context,
-                                          FoldAwareMaterialPageRoute(sourceContext: context, 
+                                          itemContext,
+                                          FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                             builder: (_) => FormulaDetailScreen(formula: formula),
                                           ),
                                         );
@@ -222,8 +223,8 @@ class _MeridianTab extends StatelessWidget {
                           child: TextButton.icon(
                             onPressed: () {
                               Navigator.push(
-                                context,
-                                FoldAwareMaterialPageRoute(sourceContext: context, 
+                                itemContext,
+                                FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                   builder: (_) => MeridianDetailScreen(meridian: name),
                                 ),
                               );
@@ -238,6 +239,7 @@ class _MeridianTab extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ),
         );
       },
@@ -525,7 +527,8 @@ class _FormulaTabState extends State<_FormulaTab> {
                     final formula = formulas[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      child: ListTile(
+                      child: Builder(
+                        builder: (itemContext) => ListTile(
                         selected: useMasterDetail &&
                             formula.id == _selectedFormulaId,
                         title: Text(
@@ -543,13 +546,14 @@ class _FormulaTabState extends State<_FormulaTab> {
                             setState(() => _selectedFormulaId = formula.id);
                           } else {
                             Navigator.push(
-                              context,
-                              FoldAwareMaterialPageRoute(sourceContext: context, 
+                              itemContext,
+                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => FormulaDetailScreen(formula: formula),
                               ),
                             );
                           }
                         },
+                      ),
                       ),
                     );
                   },
@@ -873,7 +877,8 @@ class _HerbTabState extends State<_HerbTab> {
                         : action;
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 3),
-                      child: ListTile(
+                      child: Builder(
+                        builder: (itemContext) => ListTile(
                         selected: useMasterDetail &&
                             herb.name == _selectedHerbName,
                         leading: CircleAvatar(
@@ -910,13 +915,14 @@ class _HerbTabState extends State<_HerbTab> {
                             setState(() => _selectedHerbName = herb.name);
                           } else {
                             Navigator.push(
-                              context,
-                              FoldAwareMaterialPageRoute(sourceContext: context, 
+                              itemContext,
+                              FoldAwareMaterialPageRoute(sourceContext: itemContext, 
                                 builder: (_) => HerbDetailScreen(herb: herb),
                               ),
                             );
                           }
                         },
+                      ),
                       ),
                     );
                   },
