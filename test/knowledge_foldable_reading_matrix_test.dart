@@ -220,6 +220,16 @@ void main() {
         final formula = FormulaRepository.getAll().first;
         final formulaRow = find.text(formula.name).first;
         await tester.ensureVisible(formulaRow);
+        final formulaSource = find.ancestor(
+          of: formulaRow,
+          matching: find.byType(ListTile),
+        ).first;
+        final formulaSourceRect = tester.getRect(formulaSource);
+        expect(
+          formulaSourceRect.right,
+          lessThanOrEqualTo(388),
+          reason: '方剂列表触发行必须位于左侧安全面板：$formulaSourceRect',
+        );
         await tester.tap(formulaRow);
         // FormulaDetailScreen intentionally retains an indeterminate classic-source
         // index indicator; wait for route animation and bookmark IO without settling it.
@@ -256,6 +266,16 @@ void main() {
         final herb = HerbRepository.getAll().first;
         final herbRow = find.text(herb.name).first;
         await tester.ensureVisible(herbRow);
+        final herbSource = find.ancestor(
+          of: herbRow,
+          matching: find.byType(ListTile),
+        ).first;
+        final herbSourceRect = tester.getRect(herbSource);
+        expect(
+          herbSourceRect.right,
+          lessThanOrEqualTo(388),
+          reason: '本草列表触发行必须位于左侧安全面板：$herbSourceRect',
+        );
         await tester.tap(herbRow);
         await tester.pump(const Duration(milliseconds: 400));
         await tester.pump(const Duration(milliseconds: 100));
