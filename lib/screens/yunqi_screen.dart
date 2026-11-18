@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/assistant_tool_result.dart';
+import '../models/ai_context_ref.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../services/yunqi_engine.dart';
+import '../services/yunqi_tool_executor.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 import 'yunqi_charts.dart';
 import '../utils/chart_export.dart';
 
@@ -34,6 +40,7 @@ class YunQiScreen extends StatefulWidget {
 }
 
 class _YunQiScreenState extends State<YunQiScreen> {
+  final ScrollController _pageScrollController = ScrollController();
   /// 用户所选日期，默认今天。取日期部分即可（运气以日为单位）。
   late DateTime _selectedDate;
 
@@ -63,6 +70,86 @@ class _YunQiScreenState extends State<YunQiScreen> {
 
   void _resetToday() {
     setState(() => _selectedDate = DateTime.now());
+  }
+
+  Future<void> _askAiAboutResult() async {
+    AiContextRef contextRef;
+    try {
+      final snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
+      contextRef = AiContextResolver.buildYunqiResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前五运六气结果无法建立可信快照，已取消提问（UNKNOWN）。')),
+        );
+      }
+      return;
+    }
+
+    final resolution = AiContextResolver.resolveYunqiToolResult(ref: contextRef);
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('五运六气结果上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。')),
+        );
+      }
+      return;
+    }
+
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildYunqiToolResult(
+        resolvedResult: resolved,
+      ),
+      initialMode: AssistantMode.tools,
+      contextualTitle: contextRef.title ?? '五运六气推算结果',
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent = sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   void _returnResultToAssistant(YunQiYearData data) {
@@ -181,6 +268,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
         ],
       ),
       body: ListView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: <Widget>[
           _DateHeader(
@@ -318,6 +406,15 @@ class _YunQiScreenState extends State<YunQiScreen> {
           _JiaLinCard(data: data, color: cs, highlightIndex: isCurrentYear ? currentStep : null),
           const SizedBox(height: 12),
           const _DisclaimerCard(),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _askAiAboutResult,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('问 AI 解读本年度推算结果'),
+            ),
+          ),
           if (widget.returnResultOnComplete) ...[
             const SizedBox(height: 12),
             SizedBox(

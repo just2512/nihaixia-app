@@ -8,6 +8,7 @@ import '../data/neijing_entries.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
+import 'yunqi_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -31,6 +32,17 @@ class AiContextResolution<T> {
 
   bool get isResolved =>
       status == AiContextResolutionStatus.resolved && value != null;
+}
+
+/// Verified full tool result resolved from an immutable structured snapshot.
+class AiResolvedToolResult {
+  const AiResolvedToolResult._({
+    required this.ref,
+    required this.structuredSnapshot,
+  });
+
+  final AiContextRef ref;
+  final Map<String, Object?> structuredSnapshot;
 }
 
 /// Verified field data resolved from one immutable structured tool snapshot.
@@ -69,6 +81,121 @@ class AiResolvedKnowledgeEntry {
 
 class AiContextResolver {
   const AiContextResolver._();
+
+  static const yunqiModuleId = 'yunqi';
+
+  static AiContextRef buildYunqiResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        snapshotId.isEmpty ||
+        ruleVersion != YunQiToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != yunqiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YunQiToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['date'] is! String ||
+        sourceIds is! List ||
+        !sourceIds.contains(YunQiToolExecutor.sourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A YunQi context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    final date = input['date'] as String;
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: yunqiModuleId,
+      anchorId: 'yunqi:result:$snapshotId:date=$date',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: YunQiToolExecutor.sourceId,
+      title: '五运六气年度推算结果（$date）',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult> resolveYunqiToolResult({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != yunqiModuleId ||
+        ref.sourceId != YunQiToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi reference is incomplete or does not identify the local YunQi engine.',
+      );
+    }
+    if (ref.ruleVersion != YunQiToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The YunQi engine or literature version no longer matches this result reference.',
+      );
+    }
+    final anchorMatch = RegExp(
+      r'^yunqi:result:([0-9a-f]{64}):date=(\d{4}-\d{2}-\d{2})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (anchorMatch == null ||
+        snapshotId == null ||
+        snapshotId.isEmpty ||
+        ref.anchorVersion != snapshotId ||
+        anchorMatch.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi result anchor and snapshot identity do not agree.',
+      );
+    }
+    final rawDate = anchorMatch.group(2)!;
+    final date = DateTime.tryParse(rawDate);
+    final normalizedDate = date == null
+        ? ''
+        : '${date.year.toString().padLeft(4, '0')}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}';
+    if (normalizedDate != rawDate) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi result anchor does not contain a valid calendar date.',
+      );
+    }
+    final expectedTitle = '五运六气年度推算结果（$rawDate）';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi result title does not match its date anchor.',
+      );
+    }
+    try {
+      final snapshot = YunQiToolExecutor.createStructuredSnapshot(date!);
+      if (snapshot['snapshotId'] != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The reconstructed YunQi result no longer matches its immutable snapshot digest.',
+        );
+      }
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: snapshot,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
 
   static const formulaModuleId = 'formula';
   static const formulaAssetVersion =
