@@ -288,7 +288,7 @@
 | 项目 | 状态 | 证据 / 说明 |
 |---|---|---|
 | 设计规范与浅深主题 Token | `PASS`（自动化） | PR #211 已合并；主题 Token、主文字/辅助文字与表面层级、主色和主色容器的自动对比度断言进入 master。 |
-| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211 合并 SHA `ceb4c54c5ee8440b8fa0578058b2434d7fe046c4`；PR #272 补充 HomeScreen 集成态 200% 浅深主题/外屏内屏/半折叠测试，合并 SHA `5bb248f94d3e7a94bb827c78ad12ed461c828af6`。PR #272 HEAD Flutter Run `44210565030` + Android arm64 job `134489972009` 均 success；合并后 master Flutter Run `44211890081`、Android arm64 job `134493862255` success。 |
+| Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211/#272 的首页与主题基础验收继续有效；PR #282 在最新主线补齐真实 `HomeScreen` 根导航、AI 首屏、402/775dp、浅深主题、200% 字号及半折叠铰链集成验证，合并 SHA `f25d96f03d8ac6c2a80521baf1edc71384fc0482`。PR #282 HEAD Flutter regression Run `44236524275` 与 Android arm64 均 success；合并后 master HEAD `e9658c9f98ee0651c170a784fcaa154bdca4057b` 的 Flutter Run `44242753459`、Quality Gate Run `44242753430` 均 success。Phase 1 云端自动化验收收口；Find N2 实机阅读仍单独保持 `MISSING`。 |
 | 五运六气外部对拍夹具 | `MISSING` | PR #272 完整 Flutter regression 中 15 项 `test/yunqi_engine_test.dart` 测试因外部 `D:\tools\yunqi_ref.json` 不在仓库且 CI 未设置 `YUNQI_REF_PATH` 而按原测试逻辑 skipped；未删除、跳过代码或降低断言。 |
 | Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后主线 Flutter / Android arm64 / Quality Gate success。 |
 | Phase 2 补充：古籍原文库 | `PASS`（自动化） | PR #222 合并 SHA `68896b3179b49271522957a7877d08268c8cbdbd`；最终 HEAD `7974d16f1e64b25b8bce9b5ac5d9cfd47e2c87de`。测试改用测试专用内存 AssetBundle，避免重复读取大型真实古籍资产；合并后 master Flutter Run `43901866825`、Android arm64 与 Quality Gate Run `43901867004` success。 |
