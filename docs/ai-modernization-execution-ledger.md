@@ -2851,3 +2851,45 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前最新 master 已推进至 `590e17054faea259bd3c23e360daafd0500d5fed`。合并后 Flutter tests run `44111834811` 与 Flutter Quality Gate run `44111834831` 均已启动、当前仍 `IN_PROGRESS`；必须以这两个 run 的终态更新最新主线状态，不得用前一 SHA 的通过结果替代。
 - Phase 1/2 Find N2 实机交互、本地 E4B 多轮问答及历史恢复 TRACE 继续为 `UNKNOWN / LOCAL ONLY`；CAI-READ-01 与 CAI-RESULT-01 保持 `PARTIAL`。在设备验收证据补齐前不启动 Phase 3 页面扩展。
 
+---
+
+### 57.28 2026-11-18 工具结果快照 fail-closed 与云端/设备验收门禁拆分
+
+#### 已合并的协议与执行门禁修正
+
+- PR [#277](https://github.com/just2512/nihaixia-app/pull/277) 已以普通 merge 合并；最终 head：`b5054af706b37a9790daa7b8f3f4a11d77ff4dfa`，merge SHA：`c64109bc9d37f35d95bf58d4e442bd694b0b3884`。
+- #277 将 `toolResult` metadata 的 `snapshotId`、`ruleVersion` 设为非空必需字段，并要求 `snapshotId == anchorVersion`；缺失或不一致时 fail closed。既有有效快照测试夹具补齐规则版本，未改变持久化 wire value 或数据库 schema。
+- PR #277 最终 head workflow run `44217795981`：Flutter regression `SUCCESS`；Android arm64 CI verification APK + unit tests `SUCCESS`；Branch validation `SKIPPED`（条件性工作流，不计 PASS，也不计失败）。
+- PR [#278](https://github.com/just2512/nihaixia-app/pull/278) 已以普通 merge 合并；最终 head：`de35ed07d3a4444ac33935c7440893762ecb26ac`，merge SHA：`14956efa6018e602b915dabdb15da52cef4fc21f`。
+- #278 更新 `docs/contextual-ask-ai-spec.md` Phase 3 门禁：云端工程门禁与最终 Find N2/E4B 设备门禁分离。Phase 3 云端实现依据样板的来源/快照契约、关键负向测试、真实调用链自动化、Find N2 宽度布局自动化，以及最新 PR head Flutter regression + Android arm64 均 SUCCESS 后启动；设备 TRACE 仍在所有云端工作完成后集中本地验收。旧 SHA、SKIPPED、CANCELLED 均不计 PASS。
+- PR #278 最终 head workflow run `44217950781`：Flutter regression `SUCCESS`；Android arm64 CI verification APK + unit tests `SUCCESS`；Branch validation `SKIPPED`。
+
+#### 合并后主线复核
+
+- 当前 master：`14956efa6018e602b915dabdb15da52cef4fc21f`。
+- 该 master SHA 的 Flutter tests run `44219239685`：Flutter regression `SUCCESS`，Android arm64 CI verification APK + unit tests `SUCCESS`；Branch validation `SKIPPED`。
+- 同 SHA Flutter Quality Gate run `44219239784`：`SUCCESS`（Analyze and test job 完成）。以上为当前 master 的合并后验收证据。
+
+#### Phase 2 紫微字段级情境入口：云端实施状态
+
+- PR [#279](https://github.com/just2512/nihaixia-app/pull/279) 当前仍为 `OPEN / IN_PROGRESS`；当前 head：`2375925a2267407f2bdd7a0727705c10aef3ca58`，独立分支：`feat/ai-context-ziwei-palace-field-entry-20261118`。
+- 已实现受控 `fieldPath`、完整快照身份校验、真实 `ZiweiChart` 宫位星曜 resolver、UNKNOWN/STALE/MISSING fail-closed、字段级提示结构、现有情境助手入口、同一结果不同字段的会话锚点隔离，以及原排盘页滚动位置恢复。
+- 自动化覆盖字段契约、负向解析、metadata 历史往返、紫微结果页真实入口、外屏约 402 logical dp 与展开内屏约 775 logical dp 两种宽度下的入口/滚动恢复；弹层本身的 Dialog/DraggableScrollableSheet 布局由既有 `test/contextual_ai_panel_layout_test.dart` 独立验证。
+- 前一 head `6c5bc4ff3471c2792cb8df4362283ea2de2ed17d` 的 Flutter regression 首轮失败，日志显示字段入口测试使用了不适用于父 PR 版本的结构快照断言，并在宽度集成测试中重复断言弹层内部 widget 类型；已修正为父切片的 `fullResult` 契约及调用宽度决策断言，保留既有独立弹层布局测试。
+- 同一失败 run 的半折叠首页用例还出现 FFI SQLite 异步打开/磁盘 I/O 与测试结束后 pending timer；为该首页布局测试增加每测试独立临时数据库并在 teardown 等待数据库打开完成后关闭。该修正仍须由最新 CI 证实，不把推测根因写作 PASS。
+- 当前 head workflow run `44222147076`：`IN_PROGRESS`，Flutter regression tests job 正在执行；本 head 的 Android arm64 job 尚未取得终态。之前 head 的失败或取消结果不向当前 head 继承。
+- 因最新 head 尚未取得 Flutter regression 与 Android arm64 双 SUCCESS，PR #279 不得合并，Phase 2 云端样板门禁暂记 `IN_PROGRESS`。
+
+#### Phase 2 结构化结果快照切片
+
+- PR [#280](https://github.com/just2512/nihaixia-app/pull/280) 当前仍为 `OPEN`，分支：`feat/ai-ziwei-structured-result-snapshot-20261118`，head：`e7db88a7e716b80b939d82bfea8e9029c4016c44`；目标基线暂为父分支 `feat/ai-context-ziwei-palace-field-entry-20261118`，依赖 PR #279 先合并。
+- 子切片将完整排盘结果序列化为带 capability/source、SUCCESS execution status、schema/rule version、输入、结构化结果、units、missingFields 与非权威 displaySummary 的不可变快照；摘要不作为事实源。SHA-256 身份覆盖完整 envelope（排除其自身 snapshotId），resolver 与 prompt builder 在发送前重新校验 digest、source、schema、规则版本、字段路径以及字段值与实时引擎结果的一致性。
+- 子 PR 尚未基于合并后的最新 master 重建，也尚无可计入的 PR head Flutter regression / Android arm64 终态；不得把父 PR 的 CI 结果视为子切片验收。#279 合并后需将该切片的 7 个文件以新分支移植到最新 master，保留父 PR 已合并的测试文件，再创建面向 master 的新 PR 并独立跑完整 CI。
+- 目前未启动本草、方剂、内经、医案等 Phase 3 页面扩展；待 #279 与结构化结果快照样板达到云端门禁后再按独立切片继续。设备验收不构成云端实施阻塞。
+
+#### 最终本地设备验收（未执行，不得标记 PASS）
+
+- Find N2：外屏、展开内屏、半折叠铰链、分屏、键盘弹出；重点核对真实布局、宫位字段入口、面板开合与滚动位置恢复。
+- 本地 E4B：多轮问答、Native 状态读取/失败、空响应、会话与历史恢复 TRACE；需记录真实模型/backend、App/Android 版本、trace_id 和异常状态。
+- 上述项目继续记为 `UNKNOWN / LOCAL ONLY`。Flutter Widget、CI arm64 构建、模拟布局均不能替代真机/本地模型证据。
+
