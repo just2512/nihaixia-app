@@ -2925,3 +2925,14 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 - 旧 PR #290 的分支基于 `a3212f0e`，其最新 head CI 被后续提交取消；本节及 §57.28–57.29 已复制到以最新 master `d1542088` 为基线的新台账分支 `docs/ai-modernization-ledger-post-herb-20261118`。旧 PR #290 不作为最新主线台账合并入口。
 - Find N2 实机和本地 E4B 多轮 TRACE 继续保持 UNKNOWN / LOCAL ONLY，留到云端工作全部收尾后的最终本地验收；云端 Phase 3 不等待设备门禁。
+
+---
+
+### 57.31 2026-11-18 最新 head 重建状态
+
+- PR #286 已关闭为 SUPERSEDED；其最新实现已重建为 PR [#294](https://github.com/just2512/nihaixia-app/pull/294)，基于 master `d15420883e724258f50509e9d85bd9fc3a51c0a7`，head `5b12a3b925804132c3e3b815399c6c3598fcd338`，Flutter regression run `44256707358` IN_PROGRESS，静态分析 SUCCESS；完整回归仍在运行，Android arm64 尚未进入终态。
+- PR [#292](https://github.com/just2512/nihaixia-app/pull/292) 当前 head `67a3c787d94aee069f9c9e483b633e0582d5bb50`，Flutter regression run `44256501312` IN_PROGRESS，静态分析 SUCCESS；完整回归仍在运行，Android arm64 尚未进入终态。
+- PR #291 旧 head 的唯一 analyzer failure 已定位为未使用 import；其全量回归 1739 passed / 15 skipped。新 PR #292 已在最新 master 重建并移除该 import。
+- master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` SUCCESS；Flutter Quality Gate run `44256197344` 仍 IN_PROGRESS（Android native unit tests）。
+- PR [#293](https://github.com/just2512/nihaixia-app/pull/293) 的台账内容已更新到本节；最新提交会触发新 head CI，旧 head run 不作为当前 head 验收证据。
+- #284/#286/#289/#290/#291 已关闭为 SUPERSEDED；当前有效集成入口为 #292、#294、#293。设备验收仍为最终本地门禁，不阻止继续云端 Phase 3。
