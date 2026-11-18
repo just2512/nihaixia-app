@@ -5,6 +5,7 @@ import 'ai_context_resolver.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'yunqi_tool_executor.dart';
 import 'almanac_tool_executor.dart';
+import 'yijing_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -282,6 +283,15 @@ class AiContextPromptBuilder {
           date is String &&
           ref.anchorId == 'almanac:result:$snapshotId:date=$date';
     }
+    if (ref.moduleId == 'yijing') {
+      final method = input['method'];
+      final arguments = input['arguments'];
+      return schemaVersion == YiJingToolExecutor.resultSchemaVersion &&
+          method is String &&
+          arguments is Map &&
+          arguments['method'] == method &&
+          ref.anchorId == 'yijing:result:$snapshotId:method=$method';
+    }
     return false;
   }
 
@@ -304,6 +314,21 @@ class AiContextPromptBuilder {
     if (resolvedResult.ref.moduleId != 'yunqi' ||
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError('A YunQi prompt requires a resolved YunQi tool result.');
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildYiJingToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != 'yijing' ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A YiJing prompt requires a resolved YiJing tool result.',
+      );
     }
     return buildToolResult(
       ref: resolvedResult.ref,
@@ -390,6 +415,8 @@ class AiContextPromptBuilder {
         '每日黄历属于 App 本地历法与传统通胜规则的文化参考，不是科学预测或行为指令。宜忌、冲煞、吉时与方位应解释其规则语境，不得包装为确定性事实，也不得据此生成医疗、法律、投资或其他重要行为建议。',
       if (ref.moduleId == 'almanac')
         '快照明确排除了页面可能展示的本命生肖个性化提示；不得推测用户生肖、读取或补入最近保存命盘等未传入的个人资料。',
+      if (ref.moduleId == 'yijing')
+        '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
     ].join('\n');
   }

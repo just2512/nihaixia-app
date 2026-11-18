@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import '../data/yijing_data.dart';
 import '../engine/yijing_engine.dart';
 import '../models/assistant_tool_result.dart';
+import 'ai_tool_result_snapshot.dart';
 
 /// Headless adapter for the four existing YiJingScreen casting methods.
 /// All hexagram math remains in YiJingEngine; this class only validates inputs,
@@ -9,6 +11,10 @@ import '../models/assistant_tool_result.dart';
 class YiJingToolExecutor {
   static const String sourceId = 'local-engine:yijing';
   static const String dataSourceId = 'local-data:yijing-hexagrams';
+  static const String resultSchemaVersion = 'yijing-structured-result-v1';
+  static const String ruleVersion =
+      'yijing-engine@78300a5185134ab4d4a4e4ff30e26d9da49fb6b1;'
+      'yijing-data@f36a804903fa6b85235398999a47f2586a7f1573';
 
   static const Map<String, int> trigramNumbers = {
     '乾': 1,
@@ -174,6 +180,217 @@ class YiJingToolExecutor {
       arguments: Map<String, String>.unmodifiable(arguments),
       disclaimer: '结果由 App 原有 YiJingEngine 和本地六十四卦资料生成，仅供传统文化学习参考，不是科学预测或确定性结论，不用于医疗、法律、投资等重要决策。',
     );
+  }
+
+  /// Build an immutable full-result snapshot from the exact inputs the app
+  /// actually used. This never regenerates timestamps or coin tosses.
+  static Map<String, Object?> createStructuredSnapshot(
+    Map<String, String> arguments,
+  ) {
+    final execution = execute(arguments);
+    if (execution.status != AssistantToolExecutionStatus.succeeded ||
+        execution.toolId != 'yijing' ||
+        !execution.sourceIds.contains(sourceId) ||
+        !execution.sourceIds.contains(dataSourceId)) {
+      throw ArgumentError(
+        'A structured YiJing snapshot requires a successful source-bound local execution.',
+      );
+    }
+    final cast = _castFromArguments(arguments);
+    if (cast == null) {
+      throw ArgumentError('The YiJing inputs cannot be reconstructed exactly.');
+    }
+    final method = arguments['method']!;
+    final base = <String, Object?>{
+      'capabilityId': 'yijing',
+      'resultSchemaVersion': resultSchemaVersion,
+      'executionStatus': 'SUCCESS',
+      'sourceIds': const [sourceId, dataSourceId],
+      'input': <String, Object?>{
+        'method': method,
+        'arguments': Map<String, String>.unmodifiable(arguments),
+        'inputConvention': switch (method) {
+          'number' => '用户输入的两个非负整数；原样保留。',
+          'time' => 'App 生成并保存的本地 ISO-8601 时间；不重新读取当前时间。',
+          'manual' => '用户选定的上卦、下卦先天数及动爻位置。',
+          'coins' => 'App 实际生成并保存的六次铜钱值，顺序为初爻至上爻。',
+          _ => 'MISSING',
+        },
+      },
+      'result': _serializeCast(cast, method: method),
+      'units': const <String, Object?>{
+        'hexagram.seq': '通行本《周易》King Wen 卦序，1–64。',
+        'trigram.index': 'kTrigrams 中的零基数组索引；xiantian 是先天数 1–8。',
+        'primaryLines': '六爻，自下而上；1=阳，0=阴。',
+        'moving': '单动爻位置 1–6；0=静卦。铜钱方式以 movingLines 记录全部动爻。',
+        'movingLines': '全部动爻位置，按初爻至上爻升序。',
+      },
+      'missingFields': const <String>[],
+      'displaySummary': <String, Object?>{
+        'title': execution.title,
+        'values': execution.values,
+        'disclaimer': execution.disclaimer,
+      },
+      'ruleVersion': ruleVersion,
+    };
+    final snapshotId =
+        AiToolResultSnapshot.createStructuredId(snapshot: base);
+    return Map<String, Object?>.unmodifiable({
+      ...base,
+      'snapshotId': snapshotId,
+    });
+  }
+
+  static bool matchesCast({
+    required Map<String, Object?> snapshot,
+    required CastResult cast,
+  }) {
+    final input = snapshot['input'];
+    if (input is! Map || input['method'] is! String) return false;
+    try {
+      return AiToolResultSnapshot.canonicalJson(snapshot['result']) ==
+          AiToolResultSnapshot.canonicalJson(
+            _serializeCast(cast, method: input['method'] as String),
+          );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static CastResult? _castFromArguments(Map<String, String> arguments) {
+    const allowedKeys = {
+      'method',
+      'first',
+      'second',
+      'upper',
+      'lower',
+      'moving',
+      'at',
+      'coins',
+    };
+    if (arguments.keys.any((key) => !allowedKeys.contains(key))) return null;
+    switch (arguments['method']) {
+      case 'number':
+        if (const ['at', 'coins', 'upper', 'lower', 'moving']
+            .any(arguments.containsKey)) {
+          return null;
+        }
+        final first = int.tryParse(arguments['first'] ?? '');
+        final second = int.tryParse(arguments['second'] ?? '');
+        if (first == null || second == null || first < 0 || second < 0) {
+          return null;
+        }
+        return YiJingEngine.castByNumbers(first, second);
+      case 'time':
+        if (const ['first', 'second', 'upper', 'lower', 'moving', 'coins']
+            .any(arguments.containsKey)) {
+          return null;
+        }
+        final rawAt = arguments['at'];
+        final at = rawAt == null ? null : DateTime.tryParse(rawAt);
+        if (at == null || at.toIso8601String() != rawAt) return null;
+        return YiJingEngine.castByTime(at);
+      case 'manual':
+        if (const ['first', 'second', 'at', 'coins']
+            .any(arguments.containsKey)) {
+          return null;
+        }
+        final upper = int.tryParse(arguments['upper'] ?? '');
+        final lower = int.tryParse(arguments['lower'] ?? '');
+        final moving = int.tryParse(arguments['moving'] ?? '');
+        if (upper == null ||
+            lower == null ||
+            moving == null ||
+            upper < 1 ||
+            upper > 8 ||
+            lower < 1 ||
+            lower > 8 ||
+            moving < 0 ||
+            moving > 6) {
+          return null;
+        }
+        return YiJingEngine.castManual(upper, lower, moving);
+      case 'coins':
+        if (const ['first', 'second', 'upper', 'lower', 'moving', 'at']
+            .any(arguments.containsKey)) {
+          return null;
+        }
+        final rolls = arguments['coins']
+            ?.split(',')
+            .map(int.tryParse)
+            .toList(growable: false);
+        if (rolls == null ||
+            rolls.length != 6 ||
+            rolls.any(
+              (value) => value == null || !const {6, 7, 8, 9}.contains(value),
+            )) {
+          return null;
+        }
+        return YiJingEngine.castByCoins(
+          rolls.cast<int>().toList(growable: false),
+        );
+      default:
+        return null;
+    }
+  }
+
+  static Map<String, Object?> _serializeHexagram(Hexagram hexagram) {
+    final upper = kTrigrams[hexagram.upper];
+    final lower = kTrigrams[hexagram.lower];
+    return <String, Object?>{
+      'seq': hexagram.seq,
+      'name': hexagram.name,
+      'symbol': YiJingEngine.symbol(hexagram.seq),
+      'upper': <String, Object?>{
+        'index': hexagram.upper,
+        'xiantian': upper.xiantian,
+        'name': upper.name,
+        'nature': upper.nature,
+        'symbol': upper.symbol,
+        'lines': List<int>.unmodifiable(upper.lines),
+      },
+      'lower': <String, Object?>{
+        'index': hexagram.lower,
+        'xiantian': lower.xiantian,
+        'name': lower.name,
+        'nature': lower.nature,
+        'symbol': lower.symbol,
+        'lines': List<int>.unmodifiable(lower.lines),
+      },
+      'judgement': hexagram.judgement,
+      'lines': List<String>.unmodifiable(hexagram.lines),
+      'renjian': hexagram.renjian,
+    };
+  }
+
+  static Map<String, Object?> _serializeCast(
+    CastResult cast, {
+    required String method,
+  }) {
+    // The legacy engine keeps movingLines empty for number/time/manual
+    // methods even when its primary moving field is non-zero. The legacy
+    // executor handles that distinction explicitly; the structured snapshot
+    // must preserve the same visible result rather than treating it as static.
+    final movingTitles =
+        method == 'coins' ? cast.movingTitles : [cast.movingTitle];
+    final movingTexts =
+        method == 'coins' ? cast.movingTexts : [cast.movingText];
+    return <String, Object?>{
+      'method': method,
+      'methodDescription': cast.method,
+      'primary': _serializeHexagram(cast.primary),
+      'primaryLines': List<int>.unmodifiable(cast.primaryLines),
+      'moving': cast.moving,
+      'movingLines': List<int>.unmodifiable(cast.movingLines),
+      'movingTitles': List<String>.unmodifiable(movingTitles),
+      'movingTexts': List<String>.unmodifiable(movingTexts),
+      'changed': cast.changed == null
+          ? null
+          : _serializeHexagram(cast.changed!),
+      'nuclear': cast.nuclear == null
+          ? null
+          : _serializeHexagram(cast.nuclear!),
+    };
   }
 
   static AssistantToolResult _failure(
