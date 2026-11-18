@@ -3,6 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/medical_case_data.dart';
+import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+import 'support/in_memory_assistant_conversation_store.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/medical_case_detail_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
@@ -116,10 +120,13 @@ void main() {
       final medicalCase =
           _medicalCases.singleWhere((item) => item.seq == 2);
       await tester.pumpWidget(
-        MaterialApp(
-          home: MedicalCaseDetailScreen(
-            c: medicalCase,
-            allCases: [medicalCase],
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            home: MedicalCaseDetailScreen(
+              c: medicalCase,
+              allCases: [medicalCase],
+            ),
           ),
         ),
       );
@@ -129,6 +136,24 @@ void main() {
       expect(find.text('问 AI 解读当前医案'), findsOneWidget);
       expect(find.byType(DraggableScrollableSheet), findsNothing);
       expect(find.byType(Dialog), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('问 AI 解读当前医案'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final assistant = find.byType(LocalAiInterviewScreen);
+      expect(assistant, findsOneWidget);
+      final assistantWidget = tester.widget<LocalAiInterviewScreen>(assistant);
+      expect(assistantWidget.initialMode, AssistantMode.learning);
+      expect(assistantWidget.contextualExplanationOnly, isTrue);
+      expect(assistantWidget.contextRef['kind'], 'case');
+      expect(assistantWidget.contextRef['moduleId'], 'medical-cases');
+      expect(assistantWidget.contextRef['anchorId'], 'medical-case:2');
+      expect(assistantWidget.initialPrompt, contains('source_ledger.json'));
+      expect(assistantWidget.initialPrompt, contains('原文来源核验状态：VERIFIED'));
+      expect(assistantWidget.initialPrompt, contains('纸本/影印本定位状态：MISSING'));
+      expect(assistantWidget.initialPrompt, contains('不得依据该历史病例为用户生成个人诊断'));
       expect(tester.takeException(), isNull);
     },
   );
