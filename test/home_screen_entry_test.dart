@@ -3,9 +3,35 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/home_screen.dart';
 import 'package:nihaisha_app/widgets/adaptive_home_navigation.dart';
+
+var _homeDatabaseSequence = 0;
+
+Future<void> _prepareHomeScreenDatabase(WidgetTester tester) async {
+  DatabaseHelper.configureTestDatabase(
+    'home_screen_entry_\${_homeDatabaseSequence++}.db',
+    factory: databaseFactoryFfi,
+  );
+  // HomeScreen's IndexedStack initializes both the AI conversation store and
+  // bookmarks screen. Open one isolated database before either initState can
+  // race the lazy DatabaseHelper.database getter.
+  await tester.runAsync(() async {
+    await DatabaseHelper.instance.database;
+  });
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    // Let outstanding initState reads/writes finish before closing the FFI DB;
+    // otherwise fake_async reports sqflite's 10-second lock timers as pending.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await DatabaseHelper.closeTestDatabase();
+    });
+  });
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +42,7 @@ void main() {
   });
 
   testWidgets('统一 AI 助手是默认一级入口，设置可从根导航直接进入', (tester) async {
+    await _prepareHomeScreenDatabase(tester);
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
     addTearDown(tester.view.resetPhysicalSize);
@@ -46,6 +73,7 @@ void main() {
   });
 
   testWidgets('Find N2 内屏铰链布局下默认 AI 助手不发生布局异常', (tester) async {
+    await _prepareHomeScreenDatabase(tester);
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
     tester.view.displayFeatures = [
@@ -152,6 +180,7 @@ void main() {
 
   testWidgets('AI 首页在外屏/内屏、浅深主题与200%字号下保持可读',
       (tester) async {
+    await _prepareHomeScreenDatabase(tester);
     addTearDown(tester.view.resetDisplayFeatures);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -197,6 +226,7 @@ void main() {
 
   testWidgets('半折叠 AI 首页在浅深主题与200%字号下避开物理铰链',
       (tester) async {
+    await _prepareHomeScreenDatabase(tester);
     addTearDown(tester.view.resetDisplayFeatures);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
