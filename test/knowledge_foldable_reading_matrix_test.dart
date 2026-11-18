@@ -103,6 +103,33 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
+Future<void> _pumpUntilRouteAnimationCompletes(
+  WidgetTester tester,
+  Finder pageFinder,
+) async {
+  // A route's slide transition temporarily translates the whole page. Do not
+  // assert physical hinge geometry until the route itself is fully on-screen.
+  await tester.pump();
+  final route = ModalRoute.of(tester.element(pageFinder));
+  expect(route, isNotNull);
+  final animation = route!.animation;
+  expect(animation, isNotNull);
+
+  for (var frame = 0;
+      frame < 120 && animation!.status != AnimationStatus.completed;
+      frame++) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  expect(
+    animation!.status,
+    AnimationStatus.completed,
+    reason: '详情路由必须完成进入动画后再验收物理面板边界',
+  );
+  // Allow bookmark / classic-source async work to reach a stable frame; the
+  // detail page intentionally contains an indeterminate loading indicator.
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
   testWidgets(
     '知识页方剂与本草主从预览在775dp浅深主题及200%字号下保持分区',
     (tester) async {
@@ -231,10 +258,11 @@ void main() {
           reason: '方剂列表触发行必须位于左侧安全面板：$formulaSourceRect',
         );
         await tester.tap(formulaRow);
-        // FormulaDetailScreen intentionally retains an indeterminate classic-source
-        // index indicator; wait for route animation and bookmark IO without settling it.
-        await tester.pump(const Duration(milliseconds: 400));
-        await tester.pump(const Duration(milliseconds: 100));
+        // Do not measure the Scaffold while MaterialPageRoute is still sliding in.
+        await _pumpUntilRouteAnimationCompletes(
+          tester,
+          find.byType(FormulaDetailScreen),
+        );
 
         expect(find.byType(FormulaDetailScreen), findsOneWidget);
         expect(find.text('组成'), findsOneWidget);
@@ -277,8 +305,10 @@ void main() {
           reason: '本草列表触发行必须位于左侧安全面板：$herbSourceRect',
         );
         await tester.tap(herbRow);
-        await tester.pump(const Duration(milliseconds: 400));
-        await tester.pump(const Duration(milliseconds: 100));
+        await _pumpUntilRouteAnimationCompletes(
+          tester,
+          find.byType(HerbDetailScreen),
+        );
 
         expect(find.byType(HerbDetailScreen), findsOneWidget);
         expect(find.text(herb.category), findsOneWidget);
