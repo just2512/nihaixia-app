@@ -290,6 +290,11 @@ void main() {
     expect(find.byType(DraggableScrollableSheet), findsNothing);
     expect(find.byType(Dialog), findsNothing);
 
+    // Editing the form alone does not change the chart already rendered above.
+    // The contextual prompt must stay bound to the previously executed result.
+    await tester.tap(find.text('女').last);
+    await tester.pump();
+
     await tester.tap(ask);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -304,6 +309,8 @@ void main() {
     expect(widget.contextRef['snapshotId'], hasLength(64));
     expect(widget.initialPrompt, contains('八字排盘'));
     expect(widget.initialPrompt, contains('strengthScore'));
+    expect(widget.initialPrompt, contains('"gender":"male"'));
+    expect(widget.initialPrompt, isNot(contains('"gender":"female"')));
     expect(tester.takeException(), isNull);
   });
 }
