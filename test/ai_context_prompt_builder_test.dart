@@ -1,8 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ziwei_core/ziwei_core.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
+import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/services/ziwei_engine.dart';
 
 void main() {
   test('classic selection prompt retains selected text and stable source anchor', () {
@@ -314,47 +317,59 @@ void main() {
     );
   });
 
-  test('field prompt includes field path, value, scope and parent snapshot', () {
+  test('field prompt is built only from a resolved engine field', () {
+    final chart = calculateZiweiChart(
+      solar: DateTime(2000, 8, 16, 10),
+      gender: Gender.male,
+      location: Location(121.47, 31.23),
+      useTrueSolarTime: true,
+    );
+    const snapshotId = 'snapshot-a';
+    const ruleVersion =
+        'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
+    const fieldPath = 'palacesByPhysicalBranch.0.stars';
     const ref = AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: 'ziwei',
       anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
-      anchorVersion: 'snapshot-a',
-      snapshotId: 'snapshot-a',
-      ruleVersion: 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
-      fieldPath: 'palacesByPhysicalBranch.0.stars',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
+      fieldPath: fieldPath,
       sourceId: 'local-engine:ziwei-core@0.13.0',
       title: '命宫星曜',
     );
-    final prompt = AiContextPromptBuilder.buildToolResultField(
+    final resolution = AiContextResolver.resolveZiweiPalaceStars(
       ref: ref,
-      fieldLabel: '命宫本命星曜',
-      fieldScope: const {
-        'palaceIndex': 0,
-        'palaceRole': '命宫',
-        'earthlyBranch': '子',
-      },
-      fieldValue: const [
-        {
-          'starKey': 'ziwei',
-          'name': '紫微',
-          'category': '主星',
-          'brightness': '庙',
-        },
-      ],
-      fieldUnit: '不适用（离散星曜条目）',
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
       resultPayload: '【紫微斗数排盘完整结果】',
     );
 
-    expect(prompt, contains('palacesByPhysicalBranch.0.stars'));
-    expect(prompt, contains('snapshot-a'));
-    expect(prompt, contains('ziwei_core@0.13.0;app-formatter=ziwei-result-v1'));
-    expect(prompt, contains('紫微'));
-    expect(prompt, contains('earthlyBranch'));
+    expect(resolution.status, AiContextResolutionStatus.resolved);
+    expect(resolution.isResolved, isTrue);
+    final prompt = AiContextPromptBuilder.buildToolResultField(
+      resolvedField: resolution.value!,
+    );
+
+    expect(prompt, contains(fieldPath));
+    expect(prompt, contains(snapshotId));
+    expect(prompt, contains(ruleVersion));
+    expect(prompt, contains('fieldValue'));
+    expect(prompt, contains('starKey'));
+    expect(prompt, contains('palaceIndex'));
     expect(prompt, contains('【紫微斗数排盘完整结果】'));
   });
 
-  test('field prompt rejects a generic whole-result reference', () {
+
+  test('field resolver rejects a generic whole-result reference', () {
+    final chart = calculateZiweiChart(
+      solar: DateTime(2000, 8, 16, 10),
+      gender: Gender.male,
+      location: Location(121.47, 31.23),
+      useTrueSolarTime: true,
+    );
     const ref = AiContextRef(
       kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
@@ -364,19 +379,72 @@ void main() {
       ruleVersion: 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
       sourceId: 'local-engine:ziwei-core@0.13.0',
     );
-
-    expect(
-      () => AiContextPromptBuilder.buildToolResultField(
-        ref: ref,
-        fieldLabel: '命宫本命星曜',
-        fieldScope: const {'palaceIndex': 0},
-        fieldValue: const [],
-        fieldUnit: '不适用',
-        resultPayload: '完整结果',
-      ),
-      throwsArgumentError,
+    final resolution = AiContextResolver.resolveZiweiPalaceStars(
+      ref: ref,
+      chart: chart,
+      expectedSnapshotId: 'snapshot-a',
+      expectedRuleVersion:
+          'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      resultPayload: '完整结果',
     );
+
+    expect(resolution.status, AiContextResolutionStatus.unknown);
+    expect(resolution.value, isNull);
   });
+
+  test('field resolver refuses stale snapshots and missing paths', () {
+    final chart = calculateZiweiChart(
+      solar: DateTime(2000, 8, 16, 10),
+      gender: Gender.male,
+      location: Location(121.47, 31.23),
+      useTrueSolarTime: true,
+    );
+    const ruleVersion =
+        'ziwei_core@0.13.0;app-formatter=ziwei-result-v1';
+    const snapshotId = 'snapshot-a';
+    const fieldPath = 'palacesByPhysicalBranch.0.stars';
+    const ref = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
+      fieldPath: fieldPath,
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+    );
+
+    final stale = AiContextResolver.resolveZiweiPalaceStars(
+      ref: ref,
+      chart: chart,
+      expectedSnapshotId: 'snapshot-b',
+      expectedRuleVersion: ruleVersion,
+      resultPayload: '完整结果',
+    );
+    expect(stale.status, AiContextResolutionStatus.stale);
+
+    const missingPath = 'palacesByPhysicalBranch.99.stars';
+    const missingRef = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: 'ziwei',
+      anchorId: 'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.99.stars',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion,
+      fieldPath: missingPath,
+      sourceId: 'local-engine:ziwei-core@0.13.0',
+    );
+    final missing = AiContextResolver.resolveZiweiPalaceStars(
+      ref: missingRef,
+      chart: chart,
+      expectedSnapshotId: snapshotId,
+      expectedRuleVersion: ruleVersion,
+      resultPayload: '完整结果',
+    );
+    expect(missing.status, AiContextResolutionStatus.missing);
+    expect(missing.value, isNull);
+  });
+
 
   test('invalid contextual metadata is rejected rather than guessed', () {
     expect(
