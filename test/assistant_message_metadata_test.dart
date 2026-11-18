@@ -48,6 +48,24 @@ void main() {
     });
   });
 
+  test('field context path and snapshot survive message history metadata', () {
+    const contextRef = {
+      'kind': 'field',
+      'moduleId': 'ziwei',
+      'anchorId':
+          'ziwei:result:snapshot-a:field:palacesByPhysicalBranch.0.stars',
+      'anchorVersion': 'snapshot-a',
+      'snapshotId': 'snapshot-a',
+      'ruleVersion': 'ziwei_core@0.13.0;app-formatter=ziwei-result-v1',
+      'fieldPath': 'palacesByPhysicalBranch.0.stars',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
+    };
+    const original = AssistantMessageMetadata(contextRef: contextRef);
+
+    final restored = AssistantMessageMetadata.decode(original.encode());
+    expect(restored.contextRef, contextRef);
+  });
+
   test('legacy semicolon metadata remains readable', () {
     final restored = AssistantMessageMetadata.decode(
       'mode=consultation;selectedMode=learning;tool=yunqi;'
