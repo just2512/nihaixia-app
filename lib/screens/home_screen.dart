@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'local_ai_interview_screen.dart';
 import 'tools_screen.dart';
 import 'knowledge_screen.dart';
@@ -7,7 +8,12 @@ import 'settings_screen.dart';
 import '../widgets/adaptive_home_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, @visibleForTesting this.testScreens});
+
+  /// Optional page fixtures for root-shell widget tests; production keeps the
+  /// real feature pages below and never supplies this override.
+  @visibleForTesting
+  final List<Widget>? testScreens;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -31,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onDestinationSelected: (index) {
         setState(() => _currentIndex = index);
       },
-      screens: _screens,
+      screens: widget.testScreens ?? _screens,
       destinations: const [
           AppNavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),
