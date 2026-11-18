@@ -3,6 +3,7 @@ import '../models/formula.dart';
 import '../models/herb.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
+import '../data/medical_case_data.dart';
 import '../data/neijing_entries.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
@@ -301,6 +302,126 @@ class AiContextResolver {
       value: AiResolvedKnowledgeEntry._(
         ref: ref,
         title: entry.title,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const medicalCaseModuleId = 'medical-cases';
+  static const medicalCaseAssetVersion =
+      'cases_table.md@eafd79148c7aeea2f9891738e153cd3009bd1670;'
+      'source_ledger.json@a61bd55f256adc620b7983fe2dd07a5d46721f89';
+
+  static AiContextRef buildMedicalCaseContextRef(MedicalCase medicalCase) {
+    return AiContextRef(
+      kind: AiContextKind.caseRecord,
+      moduleId: medicalCaseModuleId,
+      anchorId: 'medical-case:${medicalCase.seq}',
+      anchorVersion: medicalCaseAssetVersion,
+      sourceId:
+          'app-data:assets/medical_cases/cases_table.md#seq=${medicalCase.seq}',
+      title: '#${medicalCase.seq} ${medicalCase.displayName}',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedKnowledgeEntry>>
+      resolveMedicalCase({required AiContextRef ref}) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.caseRecord ||
+        normalized.isEmpty ||
+        ref.moduleId != medicalCaseModuleId ||
+        ref.anchorVersion != medicalCaseAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case reference is incomplete or does not match the bundled case assets.',
+      );
+    }
+
+    final seqText = ref.anchorId.startsWith('medical-case:')
+        ? ref.anchorId.substring('medical-case:'.length)
+        : '';
+    final seq = int.tryParse(seqText);
+    if (seq == null ||
+        seq < 2 ||
+        ref.sourceId !=
+            'app-data:assets/medical_cases/cases_table.md#seq=$seq') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case anchor and source reference do not agree.',
+      );
+    }
+
+    // getAllMedicalCases retains the existing in-process cache used by the
+    // medical-case library/detail screens. An empty result is UNKNOWN because
+    // this helper intentionally swallows an asset-load failure as an empty set.
+    final cases = await getAllMedicalCases();
+    if (cases.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case asset set could not be confirmed as loaded.',
+      );
+    }
+
+    MedicalCase? medicalCase;
+    for (final candidate in cases) {
+      if (candidate.seq == seq) {
+        medicalCase = candidate;
+        break;
+      }
+    }
+    if (medicalCase == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced internal medical-case record is not present in the bundled case table.',
+      );
+    }
+
+    final expectedTitle =
+        '#${medicalCase.seq} ${medicalCase.displayName}';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case title does not match the resolved internal record.',
+      );
+    }
+
+    final rawFields = <String, String>{
+      'date': medicalCase.date,
+      'patient': medicalCase.patient,
+      'diagnosis': medicalCase.diagnosis,
+      'mechanism': medicalCase.mechanism,
+      'western': medicalCase.western,
+      'formula': medicalCase.formula,
+      'acupuncture': medicalCase.acupuncture,
+      'method': medicalCase.method,
+      'result': medicalCase.result,
+      'advice': medicalCase.advice,
+      'view': medicalCase.view,
+    };
+    final missingFields = rawFields.entries
+        .where((entry) => entry.value.trim().isEmpty)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    final content = <String, Object?>{
+      'internalSequence': medicalCase.seq,
+      'internalSequenceMeaning':
+          '仅为 App 医案表内部主键，不是原始病例编号、文献页码或独立病例身份。',
+      'displayName': medicalCase.displayName,
+      for (final entry in rawFields.entries)
+        entry.key:
+            entry.value.trim().isEmpty ? 'MISSING' : entry.value,
+      'missingFields': missingFields,
+      'sourceLedger': medicalCase.sourceLedger.toJson(),
+      'sourceTextVerificationStatus':
+          medicalCase.sourceLedger.sourceStatus,
+      'bibliographicLocatorStatus': medicalCase.sourceLedger.status,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: expectedTitle,
         content: Map<String, Object?>.unmodifiable(content),
       ),
     );

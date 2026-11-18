@@ -6,6 +6,10 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/database_helper.dart';
 import '../data/medical_case_data.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import 'assistant_tool_router.dart';
+import '../widgets/contextual_ai_sheet.dart';
 import '../widgets/formula_rich_text.dart';
 import '../widgets/acupoint_rich_text.dart';
 import 'formula_detail_screen.dart';
@@ -25,6 +29,7 @@ class MedicalCaseDetailScreen extends StatefulWidget {
 }
 
 class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
+  final ScrollController _pageScrollController = ScrollController();
   bool _isBookmarked = false;
 
   /// 相关医案：首帧后异步计算，避免详情首屏因全量扫描方剂索引而卡顿；
@@ -37,9 +42,16 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _recordRecent();
-    _checkBookmark();
+    _initializeCaseState();
     _loadRelated();
+  }
+
+  Future<void> _initializeCaseState() async {
+    // Serialize the two SQLite operations. Running recent-history upsert and
+    // bookmark lookup concurrently can leave sqflite's fake-async transaction
+    // lock timer pending in widget tests, and needlessly contends on one DB.
+    await _recordRecent();
+    await _checkBookmark();
   }
 
   Future<void> _loadRelated() async {
@@ -62,6 +74,78 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
   Future<void> _checkBookmark() async {
     final ok = await DatabaseHelper.instance.isMedicalCaseBookmarked(c.seq);
     if (mounted) setState(() => _isBookmarked = ok);
+  }
+
+  Future<void> _askAiAboutCase() async {
+    final contextRef = AiContextResolver.buildMedicalCaseContextRef(c);
+    final resolution =
+        await AiContextResolver.resolveMedicalCase(ref: contextRef);
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '医案上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildMedicalCaseKnowledgeEntry(
+        entry: resolved,
+      ),
+      initialMode: AssistantMode.learning,
+      contextualTitle: '#${c.seq} ${c.displayName}',
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _toggleBookmark() async {
@@ -197,6 +281,31 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
       );
     }
 
+    children.insert(
+      0,
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FilledButton.icon(
+              onPressed: _askAiAboutCase,
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('问 AI 解读当前医案'),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '解释当前记录及其来源；未核验的原文、疗效和纸本定位不会被视为已证实事实。',
+              style: TextStyle(
+                fontSize: AppType.caption,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     final related = _relatedReady ? _related : const <MedicalCase>[];
     if (related.isNotEmpty) {
       children.add(
@@ -252,6 +361,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
         ],
       ),
       body: ListView.separated(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(14),
         itemCount: children.length,
         separatorBuilder: (_, _) => const Divider(height: 1),
