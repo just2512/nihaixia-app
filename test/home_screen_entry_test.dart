@@ -12,7 +12,7 @@ var _homeDatabaseSequence = 0;
 
 Future<void> _prepareHomeScreenDatabase(WidgetTester tester) async {
   DatabaseHelper.configureTestDatabase(
-    'home_screen_entry_\${_homeDatabaseSequence++}.db',
+    'home_screen_entry_${_homeDatabaseSequence++}.db',
     factory: databaseFactoryFfi,
   );
   // HomeScreen's IndexedStack initializes both the AI conversation store and
