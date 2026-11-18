@@ -133,10 +133,6 @@ void main() {
   testWidgets(
     'Shanghan selection opens the existing learning assistant with exact passage provenance',
     (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(402, 1400);
-      addTearDown(tester.view.reset);
-
       const passage =
           '太阳病，发热，汗出，恶风，脉缓者，名为中风。';
       await tester.pumpWidget(
@@ -176,7 +172,7 @@ void main() {
       expect(widget.contextRef['sourceId'],
           'shanghan:assets/shanghan/clause_001.md');
       expect(widget.contextRef['anchorVersion'], hasLength(64));
-      final selected = widget.contextRef['selectedText'] as String?;
+      final selected = widget.contextRef['selectedText'];
       expect(selected, isNotNull);
       expect(selected, isNotEmpty);
       expect(widget.initialPrompt, contains(selected!));
