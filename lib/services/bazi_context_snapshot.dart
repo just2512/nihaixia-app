@@ -300,7 +300,7 @@ class BaziContextSnapshot {
       }),
     };
     final snapshotId = AiToolResultSnapshot.createStructuredId(snapshot: base);
-    return Map<String, Object?>.unmodifiable({
+    return _freezeMap({
       ...base,
       'snapshotId': snapshotId,
     });
@@ -435,29 +435,23 @@ class BaziContextSnapshot {
     }
     return '用户提供坐标（东经：${(location['longitude']! as double).toStringAsFixed(4)}，北纬：${(location['latitude']! as double).toStringAsFixed(4)}）';
   }
-
-  static String get sourceSummary => '八字本地引擎与四柱/格局/神煞/五行/大运资料';
 }
 
-Map<String, Object?> _freezeJson(Object? value) {
-  if (value is Map) {
-    return Map<String, Object?>.unmodifiable({
+Map<String, Object?> _freezeMap(Map<String, Object?> value) =>
+    Map<String, Object?>.unmodifiable({
       for (final entry in value.entries)
-        entry.key as String: _freezeJsonValue(entry.value),
+        entry.key: _freezeValue(entry.value),
     });
-  }
-  throw ArgumentError('Expected a JSON map.');
-}
 
-Object? _freezeJsonValue(Object? value) {
+Object? _freezeValue(Object? value) {
   if (value is Map) {
     return Map<String, Object?>.unmodifiable({
       for (final entry in value.entries)
-        entry.key as String: _freezeJsonValue(entry.value),
+        entry.key as String: _freezeValue(entry.value),
     });
   }
   if (value is List) {
-    return List<Object?>.unmodifiable(value.map(_freezeJsonValue));
+    return List<Object?>.unmodifiable(value.map(_freezeValue));
   }
   return value;
 }
