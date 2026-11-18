@@ -1,3 +1,25 @@
+/// Closed set of contextual source kinds. Persisted metadata remains the
+/// stable wire string (for example "classic" and "toolResult").
+enum AiContextKind {
+  classic('classic'),
+  formula('formula'),
+  herb('herb'),
+  caseRecord('case'),
+  toolResult('toolResult'),
+  fieldValue('field');
+
+  const AiContextKind(this.metadataValue);
+
+  final String metadataValue;
+
+  static AiContextKind? fromMetadata(String? value) {
+    for (final kind in values) {
+      if (kind.metadataValue == value) return kind;
+    }
+    return null;
+  }
+}
+
 class AiContextRef {
   const AiContextRef({
     required this.kind,
@@ -11,7 +33,7 @@ class AiContextRef {
     this.selectedText,
   });
 
-  final String kind;
+  final AiContextKind kind;
   final String moduleId;
   final String anchorId;
   final String anchorVersion;
@@ -24,7 +46,7 @@ class AiContextRef {
   final String? selectedText;
 
   Map<String, String> toMetadata() => Map.unmodifiable({
-        'kind': kind,
+        'kind': kind.metadataValue,
         'moduleId': moduleId,
         'anchorId': anchorId,
         'anchorVersion': anchorVersion,
@@ -47,10 +69,13 @@ class AiContextRef {
     if (requiredKeys.any((key) => value[key]?.trim().isNotEmpty != true)) {
       return const {};
     }
+    final kind = AiContextKind.fromMetadata(value['kind']?.trim());
+    if (kind == null) return const {};
     return Map.unmodifiable({
       for (final entry in value.entries)
         if (entry.key.trim().isNotEmpty && entry.value.trim().isNotEmpty)
-          entry.key: entry.value,
+          entry.key:
+              entry.key == 'kind' ? kind.metadataValue : entry.value,
     });
   }
   

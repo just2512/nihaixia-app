@@ -8,7 +8,7 @@ void main() {
   test('classic selection prompt retains selected text and stable source anchor', () {
     const selectedText = '发热，汗出，恶风，脉缓';
     const ref = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
@@ -32,7 +32,7 @@ void main() {
   test('classic selection prompt preserves selected text exactly', () {
     const selectedText = '  发热，汗出，\n恶风，脉缓  ';
     const ref = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
@@ -58,7 +58,7 @@ void main() {
 
   test('classic prompt rejects a context reference without selected text', () {
     const ref = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
@@ -106,7 +106,7 @@ void main() {
 
   test('classic session identity distinguishes selections within one passage', () {
     const first = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
@@ -115,7 +115,7 @@ void main() {
       selectedText: '发热，汗出',
     );
     const sameSelection = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
@@ -124,7 +124,7 @@ void main() {
       selectedText: '发热，汗出',
     );
     const differentSelection = AiContextRef(
-      kind: 'classic',
+      kind: AiContextKind.classic,
       moduleId: 'shanghan',
       anchorId: 'shanghan:clause:002',
       anchorVersion: 'sha256:content-version',
@@ -168,7 +168,7 @@ void main() {
 
   test('tool result prompt binds one immutable result snapshot', () {
     const ref = AiContextRef(
-      kind: 'toolResult',
+      kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
       anchorId: 'ziwei:result:abc',
       anchorVersion: 'abc',
@@ -186,6 +186,39 @@ void main() {
     expect(prompt, contains('ziwei_core@0.13.0'));
     expect(prompt, contains('十二宫星曜'));
     expect(prompt, contains('不得重新排盘'));
+  });
+
+  test('context kind uses a closed enum and preserves persisted wire values', () {
+    for (final kind in AiContextKind.values) {
+      expect(
+        AiContextKind.fromMetadata(kind.metadataValue),
+        kind,
+        reason: 'Every supported context kind must round-trip through metadata',
+      );
+    }
+    expect(AiContextKind.fromMetadata('unregisteredKind'), isNull);
+    expect(
+      AiContextRef.normalizeMetadata({
+        'kind': 'unregisteredKind',
+        'moduleId': 'test',
+        'anchorId': 'test:anchor',
+        'anchorVersion': 'v1',
+        'sourceId': 'test:source',
+      }),
+      isEmpty,
+      reason: 'Unknown source types must fail closed instead of being trusted',
+    );
+    expect(
+      AiContextRef.normalizeMetadata({
+        'kind': 'case',
+        'moduleId': 'case-library',
+        'anchorId': 'case:001',
+        'anchorVersion': 'v1',
+        'sourceId': 'case:assets/001',
+      })['kind'],
+      'case',
+      reason: 'The reserved word case remains a stable wire value',
+    );
   });
 
   test('invalid contextual metadata is rejected rather than guessed', () {

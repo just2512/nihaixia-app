@@ -541,7 +541,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       resultPayload: resultPayload,
     );
     final contextRef = AiContextRef(
-      kind: 'toolResult',
+      kind: AiContextKind.toolResult,
       moduleId: 'ziwei',
       anchorId: 'ziwei:result:$snapshotId',
       anchorVersion: snapshotId,
