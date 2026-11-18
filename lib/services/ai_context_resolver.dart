@@ -142,8 +142,70 @@ class AiContextResolver {
       );
     }
 
-    final anchorMatch = RegExp(
-      r'^almanac:result:([0-9a-f]{64}):date=(\\d{4}-\\d{2}-\\d{2})
+    const anchorPrefix = 'almanac:result:';
+    final anchorRest = ref.anchorId.startsWith(anchorPrefix)
+        ? ref.anchorId.substring(anchorPrefix.length)
+        : '';
+    final anchorParts = anchorRest.split(':date=');
+    final snapshotId = ref.snapshotId;
+    if (anchorParts.length != 2 ||
+        snapshotId == null ||
+        snapshotId.isEmpty ||
+        ref.anchorVersion != snapshotId ||
+        anchorParts[0] != snapshotId ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result anchor and snapshot identity do not agree.',
+      );
+    }
+
+    final rawDate = anchorParts[1];
+    final date = DateTime.tryParse(rawDate);
+    final normalizedDate = date == null
+        ? ''
+        : [
+            date.year.toString().padLeft(4, '0'),
+            date.month.toString().padLeft(2, '0'),
+            date.day.toString().padLeft(2, '0'),
+          ].join('-');
+    if (normalizedDate != rawDate) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result anchor does not contain a valid calendar date.',
+      );
+    }
+
+    final expectedTitle = '每日黄历结果（$rawDate）';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result title does not match its date anchor.',
+      );
+    }
+
+    try {
+      final snapshot = AlmanacToolExecutor.createStructuredSnapshot(date!);
+      if (snapshot['snapshotId'] != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The reconstructed almanac result no longer matches its immutable snapshot digest.',
+        );
+      }
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: snapshot,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The almanac result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
 
   static AiContextRef buildYunqiResultContextRef({
     required Map<String, Object?> structuredSnapshot,
