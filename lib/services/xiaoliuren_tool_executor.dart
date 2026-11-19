@@ -176,6 +176,7 @@ class XiaoliurenToolExecutor {
         'sourceIds': const [sourceId, ruleDataSourceId],
         'input': <String, Object?>{
           'method': 'time',
+          'executionDate': _formatDate(DateTime(clock.year, clock.month, clock.day)),
           'arguments': executionArguments,
           'inputConvention':
               '公历日期按本地正午换算农历；用户明确选择子时至亥时及一种既有起课口径；'
@@ -263,7 +264,7 @@ class XiaoliurenToolExecutor {
         'index': hit.index,
         'steps': hit.steps,
         'palace': <String, Object?>{
-          'id': hit.palace.name,
+          'id': hit.palace.index.toString(),
           'name': hit.palace.name,
           'deity': hit.palace.deity,
         },
@@ -273,7 +274,43 @@ class XiaoliurenToolExecutor {
   static DateTime? _parseDate(String? raw) {
     if (raw == null) return null;
     final normalized = raw.trim();
-    final match = RegExp(r'^(\\d{4})-(\\d{2})-(\\d{2})$')
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2}))
+        .firstMatch(normalized);
+    if (match == null) return null;
+    final year = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    final day = int.parse(match.group(3)!);
+    final parsed = DateTime(year, month, day);
+    if (parsed.year != year ||
+        parsed.month != month ||
+        parsed.day != day) {
+      return null;
+    }
+    return parsed;
+  }
+
+  static String _formatDate(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+
+  static XiaoliurenToolExecution _failedExecution(
+    Map<String, String> arguments,
+    String reason,
+  ) {
+    final result = AssistantToolResult(
+      toolId: 'xiaoliuren',
+      title: '小六壬起课',
+      status: AssistantToolExecutionStatus.failed,
+      values: {'未执行原因': reason},
+      arguments: Map<String, String>.unmodifiable(arguments),
+      disclaimer: '参数或日期范围校验未通过；本次未执行小六壬起课。',
+    );
+    return XiaoliurenToolExecution(result: result);
+  }
+
+}
+)
         .firstMatch(normalized);
     if (match == null) return null;
     final year = int.parse(match.group(1)!);
