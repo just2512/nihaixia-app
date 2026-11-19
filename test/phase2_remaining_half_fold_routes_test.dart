@@ -160,7 +160,10 @@ void main() {
           pageType: ClassicLibraryScreen,
           label: '经典篇目目录',
         );
-        final firstLecture = find.byType(ListTile).first;
+        final firstLecture = find.descendant(
+          of: find.byType(ClassicLibraryScreen),
+          matching: find.byType(ListTile),
+        ).first;
         await tester.ensureVisible(firstLecture);
         await tester.tap(firstLecture);
         await _advanceRoute(tester);
