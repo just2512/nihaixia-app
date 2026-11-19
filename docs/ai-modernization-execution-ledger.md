@@ -2936,3 +2936,42 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` SUCCESS；Flutter Quality Gate run `44256197344` 仍 IN_PROGRESS（Android native unit tests）。
 - PR [#293](https://github.com/just2512/nihaixia-app/pull/293) 的台账内容已更新到本节；最新提交会触发新 head CI，旧 head run 不作为当前 head 验收证据。
 - #284/#286/#289/#290/#291 已关闭为 SUPERSEDED；当前有效集成入口为 #292、#294、#293。设备验收仍为最终本地门禁，不阻止继续云端 Phase 3。
+
+
+---
+
+
+---
+
+### 57.32 2026-11-19 情境问 AI Phase 3 集成基线（主线复核）
+
+#### 主线与已集成能力
+
+- 本节前置主线基线：`82d38c9d77ccac55555d18a943e204e9a6886531`。随后 PR #336 合入研纪前端设计台账更新，master 为 `ff0e0963029f2434f0134c3fcf3066daadd8cb4a`；PR #334 再按普通 merge 合入小六壬情境结果入口，当前 master 为 `5fbb32bceb5701138b0812eb809338ec8917a0db`。
+- PR [#331](https://github.com/just2512/nihaixia-app/pull/331) 梅花字段级入口已普通 merge，merge SHA：`cc1d3c6c7800b9a9cc17603d38768cfdcd2c6ca3`；最终 head `b810d83bff831a9164f7bec7b83c7b1e761417b3`，workflow run `44466925600` SUCCESS。
+- PR [#333](https://github.com/just2512/nihaixia-app/pull/333) 易经字段级入口已普通 merge，merge SHA：`82d38c9d77ccac55555d18a943e204e9a6886531`；最终 head `96065c7aa62bdef52e14f4d41090686ff154f6c8`，workflow run `44469526498` SUCCESS。
+- master `ff0e0963029f2434f0134c3fcf3066daadd8cb4a` 的 Flutter tests run `44487318453` SUCCESS（Flutter regression、静态分析、AI 契约/检索黄金快照及 Android arm64 CI 均 SUCCESS）；同 SHA Flutter Quality Gate run `44487318513` 在本节更新时仍 IN_PROGRESS，不得计为 PASS。
+- PR [#325](https://github.com/just2512/nihaixia-app/pull/325) 已提供梅花易数整体结果情境入口；PR [#321](https://github.com/just2512/nihaixia-app/pull/321) 提供《伤寒论》条文选择至学习助手的真实调用链测试；PR [#324](https://github.com/just2512/nihaixia-app/pull/324) 提供方剂、本草、内经真实入口调用链测试。
+- 医案入口使用精确记录 Resolver 与来源账本 Prompt；八字字段入口由 PR #329 合入，梅花/易经字段入口分别由 #331/#333 合入。字段解释均要求先验证所属完整快照，再从白名单字段路径取值；不重新排盘、不修改确定性算法或既有结果。
+- 上述情境入口复用现有助手会话、模式路由、来源回链和 explanation-only 面板；没有另建聊天/会话/模型执行体系或数据库 schema。
+
+### 57.33 2026-11-19 小六壬结果情境入口（PR #334，已合入）
+
+#### 切片定义与集成证据
+
+- 独立分支：`feat/ai-context-xiaoliuren-result-20261119`；PR [#334](https://github.com/just2512/nihaixia-app/pull/334)。
+- 最终 PR head：`5341c783f6cb07ae24e5199fad9ace0d9a8a7787`；PR head workflow run `44486715901` 的 Flutter regression tests 与 Android arm64 CI verification APK + unit tests 均 SUCCESS。Branch validation 按 workflow 条件 SKIPPED，不计为 PASS；本次合并门槛按情境协议 §11 的 Flutter regression 与 Android arm64 两项核验。
+- PR #334 已于 2026-11-19 以普通 merge 合入；merge commit：`5fbb32bceb5701138b0812eb809338ec8917a0db`。不使用 squash，保留该独立工作分支的提交 ancestry。
+- 该 PR 初始 head 的 workflow run `44484657588` 曾出现 `1778 passed / 2 failed / 15 skipped`；两项失败均来自新增页面 Widget 测试：窄屏列表入口尚未滚动进入视口，以及测试将实际运行时辰写死。修复后 head `5341c783` 的完整 Flutter regression 与 Android arm64 均 SUCCESS；未删除失败测试、未降低断言标准。
+- 文件范围：`lib/services/xiaoliuren_tool_executor.dart`、`lib/services/ai_context_resolver.dart`、`lib/services/ai_context_prompt_builder.dart`、`lib/screens/xiaoliuren_screen.dart`、`test/xiaoliuren_contextual_result_entry_test.dart`。
+- 页面通过单次 `executeWithSnapshot` 同时获取显示用 `XiaoliurenChart` 与 AI 上下文快照；只有确定性执行成功且存在完整快照时才启用入口。Resolver 校验真实输入、执行日期、时辰、双口径选择、规则/数据版本、source IDs 和 SHA-256 快照摘要，并重建本地引擎结果；只有 `RESOLVED` 才允许构建 Prompt。
+- 快照明确保留“通行掌诀”或“《多能鄙事》”口径；不把任一口径宣称为唯一传统或事实预测。缺参、错源、过期规则、内容篡改、摘要不符或重建不一致均 fail closed，不生成模型上下文。
+- 页面入口复用 `showContextualAiSheet`、`AssistantMode.metaphysics` 与 explanation-only；新增真实页面 Widget 测试覆盖 402dp 底部弹层、775dp 侧栏、实际页面时辰上下文和关闭后的滚动位置恢复。未修改小六壬原有纯函数、宫位顺序、歌诀数据或既有口径。
+- 回滚只需撤回小六壬页面入口及对应快照/Resolver/Prompt 适配；保留原页面和既有确定性计算。
+
+#### 合并后主线 CI 与云端后续
+
+- master `5fbb32bceb5701138b0812eb809338ec8917a0db` 的 post-merge Flutter tests run `44488879209` 与 Flutter Quality Gate run `44488879213` 均已触发；本节生成时两者均 IN_PROGRESS。不得用父 SHA `ff0e096` 的结果替代合并后主线终态。
+- PR #334 的设备外屏/内屏/半折叠/分屏/键盘交互，以及本地 E4B GPU/CPU 多轮、Native 生命周期、进程恢复和完整 TRACE 仍为 `UNKNOWN / LOCAL ONLY`，统一留到所有云端 Phase 3 工作收尾后的最终 Find N2 本地验收。
+- 旧分支 `feat/ai-context-almanac-result-20261118`、`feat/ai-context-yunqi-result-20261118` 不直接继承旧 head 的实现或 CI 结论；后续若继续，应先比较当前 master 并从最新 `5fbb32b` 重建独立工作分支，重新核验文件所有权、真实调用链、负向测试、布局测试和最新 head CI。
+- 下一步云端工作应继续检查已合入 Phase 3 入口的调用链覆盖与未集成工具/知识入口；没有设备依赖的代码、测试、CI、文档事项继续推进。设备门禁仅作为最终端到端证据，不得写成云端工作的 BLOCKED 原因。
