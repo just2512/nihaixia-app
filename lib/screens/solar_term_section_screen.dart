@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../widgets/state_view.dart';
 import 'package:nihaisha_app/services/solar_term_service.dart';
 import 'package:nihaisha_app/widgets/solar_term_widgets.dart';
+import 'package:nihaisha_app/services/solar_term_result_context_executor.dart';
+import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
+import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+import 'assistant_tool_router.dart';
 
 /// 节气养生独立板块。
 ///
@@ -79,13 +84,61 @@ class _SolarTermSectionScreenState extends State<SolarTermSectionScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            ..._all.map((k) => _TermCard(k: k)),
+            ..._all.map((k) => _TermCard(k: k, onAskAi: () => _askAiAboutTerm(k.term))),
             const SizedBox(height: 12),
             _disclaimer(cs),
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _askAiAboutTerm(String term) async {
+    try {
+      final execution =
+          await SolarTermResultContextExecutor.executeWithSnapshot({
+        'term': term,
+      });
+      if (!mounted) return;
+      if (!execution.succeeded || execution.structuredSnapshot == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('「$term」节气资料不可用，已取消 AI 提问。')),
+        );
+        return;
+      }
+
+      final contextRef = AiContextResolver.buildSolarTermResultContextRef(
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolution = await AiContextResolver.resolveSolarTermToolResult(
+        ref: contextRef,
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolved = resolution.value;
+      if (!mounted) return;
+      if (!resolution.isResolved || resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('节气上下文核验失败：${resolution.status.name}，已取消提问。')),
+        );
+        return;
+      }
+
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildSolarTermToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.learning,
+        contextualTitle: contextRef.title ?? '$term 节气知识条目',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('「$term」节气上下文无法核验，已取消 AI 提问。')),
+      );
+    }
   }
 
   Widget _currentCard(ColorScheme cs, SolarTermInfo info) {
@@ -176,8 +229,9 @@ class _SolarTermSectionScreenState extends State<SolarTermSectionScreen> {
 
 /// 单个节气卡片：节气名 + 三候 + 健康知识常驻，展开后显示倪师解析、起居调摄、食疗建议。
 class _TermCard extends StatefulWidget {
+  final VoidCallback? onAskAi;
   final SolarTermKnowledge k;
-  const _TermCard({required this.k});
+  const _TermCard({required this.k, this.onAskAi});
 
   @override
   State<_TermCard> createState() => _TermCardState();
@@ -213,6 +267,13 @@ class _TermCardState extends State<_TermCard> {
                           ),
                         ),
                       ),
+                      if (widget.onAskAi != null)
+                        IconButton(
+                          tooltip: '问 AI 解读${k.term}节气',
+                          icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: widget.onAskAi,
+                        ),
                       if (k.phenology.isNotEmpty)
                         Expanded(
                           child: Text(
