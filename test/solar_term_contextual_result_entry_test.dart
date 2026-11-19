@@ -87,7 +87,7 @@ void main() {
     );
     expect(prompt, contains('立春'));
     expect(prompt, contains('节气三候'));
-    expect(prompt, contains('不得补造节气日期'));
+    expect(prompt, contains('不自行补造节气日期'));
     expect(prompt, contains('不是个体体质评估或诊断'));
   });
 
