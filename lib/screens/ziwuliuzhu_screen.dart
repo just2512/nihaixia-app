@@ -5,6 +5,7 @@ import '../services/ai_context_resolver.dart';
 import '../services/ziwuliuzhu_tool_executor.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'local_ai_interview_screen.dart';
+import 'assistant_tool_router.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
 import 'package:nihaisha_app/services/ziwuliuzhu_calculation_service.dart';
 
@@ -150,7 +151,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
               icon: const Icon(Icons.reply),
               onPressed: () => Navigator.pop(context, _buildAssistantSummary()),
             ),
-          else if (_execution.succeeded)
+          if (!widget.returnResultOnComplete && _execution.succeeded)
             IconButton(
               tooltip: '问 AI 解读当前子午流注结果',
               icon: const Icon(Icons.auto_awesome),

@@ -15,6 +15,7 @@ import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
+import 'ziwuliuzhu_calculation_service.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
