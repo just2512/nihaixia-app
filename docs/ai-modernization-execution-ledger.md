@@ -2975,3 +2975,28 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - PR #334 的设备外屏/内屏/半折叠/分屏/键盘交互，以及本地 E4B GPU/CPU 多轮、Native 生命周期、进程恢复和完整 TRACE 仍为 `UNKNOWN / LOCAL ONLY`，统一留到所有云端 Phase 3 工作收尾后的最终 Find N2 本地验收。
 - 旧分支 `feat/ai-context-almanac-result-20261118`、`feat/ai-context-yunqi-result-20261118` 不直接继承旧 head 的实现或 CI 结论；后续若继续，应先比较当前 master 并从最新 `5fbb32b` 重建独立工作分支，重新核验文件所有权、真实调用链、负向测试、布局测试和最新 head CI。
 - 下一步云端工作应继续检查已合入 Phase 3 入口的调用链覆盖与未集成工具/知识入口；没有设备依赖的代码、测试、CI、文档事项继续推进。设备门禁仅作为最终端到端证据，不得写成云端工作的 BLOCKED 原因。
+
+### 57.34 2026-11-19 AI 文件级许可映射
+
+- 新增 `.reuse/dep5`，将 AI 核心服务、模型、上下文、工具适配器、助手页面、Native AI 策略逐文件登记为 `LicenseRef-Nihaixia-Fork-Commercial`。
+- 将 Android MainActivity/Manifest 与经典、本草、方剂、医案、内经、排盘、易经、黄历等 AI 接入页面登记为 `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial`：上游原始部分保留 Apache 2.0，Fork 自有新增/修改部分适用商业授权。
+- 新增 `LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`，作为自定义 SPDX 标识的完整许可文本；根目录 `LICENSE` 继续保留上游 Apache 2.0。
+- 历史复核基线为 `82d38c9d77ccac55555d18a943e204e9a6886531`，已包含 PR #333 的易经字段级情境提问；其涉及的 `yijing_result_screen.dart` 与 `meihua_screen.dart` 均在混合文件许可映射中。
+- 当前版本授权覆盖以 Fork 权属和功能清单为准，不按文件创建时间区分已存在 AI 模块与未来 AI 模块。知识库数据和第三方内容继续排除。
+
+
+### 57.35 2026-11-19 全仓库授权文件清单与精确许可门禁（更新到最新主线）
+
+- 共同上游比较基线：`c0f14e77a7fb721fc332576d21fef5f100392d0b`。机器可读清单按该基线至 CI 检出的实际 PR HEAD 重算；不再把旧的 `79f847e` 快照 SHA 写死在清单中，精确 HEAD SHA 由工作流记录。
+- 全量新增/修改路径：796 个（新增 680、修改 116），另有 10 个删除路径。类别为 321 个 Fork 商业授权候选、110 个 Apache 2.0 + Fork 商业双层许可、364 个知识库排除、1 个第三方排除。
+- 每条清单记录包含路径、Git 状态、分类、SPDX 表达式、分类理由及权属/来源状态。321 个纯 Fork 新增文件和 110 个混合文件均标记 `OWNERSHIP_EVIDENCE_REQUIRED`；364 个知识库文件与 1 个第三方依赖锁定文件标记 `SOURCE_LICENSE_REVIEW`，不授予新的商业许可。
+- `.reuse/dep5` 按 796 个变更路径逐项登记，混合文件为 `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial`，纯 Fork 新增文件为 `LicenseRef-Nihaixia-Fork-Commercial`，知识库与第三方排除项为 `NOASSERTION`；不采用会把整个 `lib/data` 或 `assets` 误纳入商业授权的宽泛目录规则。
+- `tool/check_fork_license_inventory.py` 增强为校验共同基线、运行时 HEAD 标记、路径及状态完整性、删除清单、分类白名单、分类/状态/SPDX 对应关系、分类计数、权属状态、DEP5 精确路径集、两份许可正文一致、Apache 许可证副本与根 `LICENSE` 字节一致，以及根 `LICENSE` 未改变。
+- `.github/workflows/fork-license-compliance.yml` 明确检出 PR head SHA 而不是合并模拟 ref，避免拿到错误的清单快照。自动门禁验证工程映射，不证明代码作者身份或版权链。
+- Fork 商业授权文本更新为 1.2：个人非商业使用仅限个人设备或非商业研究环境；对 Fork 自有修改内容的公开再分发及商业用途须事先取得书面许可；上游 Apache 2.0 权利和知识库/第三方原许可不改变。两份商业许可正文必须逐字节一致，Apache 许可副本必须与根 `LICENSE` 一致。
+- 新增 GitHub 公开仓库平台许可说明：本仓库当前为 Public，GitHub 服务条款 D.5 独立允许 GitHub 用户查看及 Fork 公开仓库内容。当前自定义许可不能阻止这一平台授权；若要求禁止 GitHub 平台内 Fork，必须由权利人明确决定将仓库改为 Private。改变可见性不会自动删除既有 Fork 或本地副本。
+- 权属证据仍未关闭：`OWNERSHIP_EVIDENCE_REQUIRED` 必须后续核对贡献者版权、职务作品/雇佣关系、第三方来源及再许可授权；不能仅以 Git 作者字段或仓库管理员身份推定。该状态是明确的 MISSING，不得标记为已完成。
+- PR #332 保持 Ready for review。合并后最新主线的许可工作流、Flutter regression/quality gate、Android arm64 验收必须针对最终 HEAD 重新通过；旧 SHA 的 CI 不可替代。
+- **合并阻断项**：当前仓库仍是 Public，且用户要求禁止任何未经书面许可的公开再分发。两者与 GitHub 的平台级 Fork 授权存在冲突；在权利人明确决定可接受平台 Fork，或明确批准转为 Private 之前，不得把本 PR 合并并宣称严格再分发限制已经生效。
+- 本台账记录工程状态，不构成法律意见；正式商业发行前仍须由法律专业人士审查版权链、平台条款和具体商业合同文本。
+
