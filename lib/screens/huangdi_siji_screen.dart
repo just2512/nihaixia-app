@@ -181,7 +181,7 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
     }
   }
 
-  void _returnResultToAssistant() {  void _returnResultToAssistant() {
+  void _returnResultToAssistant() {
     final result = _result;
     if (result == null) return;
     final solar = DateTime(
