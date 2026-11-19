@@ -9,6 +9,7 @@ import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
+import 'solar_term_result_context_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -274,6 +275,17 @@ class AiContextPromptBuilder {
       return schemaVersion == 'ziwei-structured-result-v1' &&
           ref.anchorId == 'ziwei:result:$snapshotId';
     }
+    if (ref.moduleId == SolarTermResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      final term = arguments is Map ? arguments['term'] : null;
+      return schemaVersion == SolarTermResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitSolarTerm' &&
+          arguments is Map &&
+          arguments.length == 1 &&
+          term is String &&
+          SolarTermToolExecutor.termNames.contains(term) &&
+          ref.anchorId == 'solar-term:knowledge:$snapshotId:term=$term';
+    }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
       return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
@@ -339,6 +351,22 @@ class AiContextPromptBuilder {
     if (resolvedResult.ref.moduleId != 'almanac' ||
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError('An almanac prompt requires a resolved almanac tool result.');
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildSolarTermToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId !=
+            SolarTermResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A solar-term prompt requires a resolved solar-term tool result.',
+      );
     }
     return buildToolResult(
       ref: resolvedResult.ref,
@@ -689,6 +717,10 @@ class AiContextPromptBuilder {
         '梅花易数属于传统术数与民俗文化学习，不是科学预测或确定性行动指令。请解释本次快照中实际生成的主卦、互卦、变卦、动爻、体用关系、月令旺衰和三阶段推演；随机起卦必须解释已保存的本次随机结果，不得重新随机或重新计算。不得将其转成医疗、法律、投资或其他重要行动建议。',
       if (ref.moduleId == 'xiaoliuren')
         '小六壬属于传统民俗文化参考；本次计算明确使用用户选择的通行掌诀或《多能鄙事》口径。只按快照中记录的口径解释，不把任一口径说成唯一传统、事实预测或确定性吉凶。不得据此提供医疗、法律、投资或其他重大决策指令。',
+      if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
+        '节气内容必须严格区分 App 本地知识资产中的通用养生常识、倪师讲座相关整理和【推断】内容；不得把整理或推断伪称为倪师逐字原话。只解释所选节气快照中已有的字段，不自行补造节气日期、物候或出处。',
+      if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
+        '节气养生文本是中医文化与一般健康知识参考，不是个体体质评估或诊断；不得据此提供个体治疗、用药、针灸、艾灸或疾病预防方案。若用户描述症状，应建议其寻求合格医疗人员评估。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
