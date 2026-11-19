@@ -118,6 +118,7 @@ Comment: Mixed upstream-derived files. Apache-2.0 remains applicable to upstream
 Files:
  .github/workflows/flutter-quality.yml
  .github/workflows/flutter-tests.yml
+ .github/workflows/fork-license-compliance.yml
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/ConversationResetPolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/ConversationResourceReleasePolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/FirstTurnGpuFallbackPolicy.kt
@@ -164,6 +165,7 @@ Files:
  docs/ai-capability-audit-report.md
  docs/ai-capability-audit.md
  docs/ai-capability-inventory.md
+ docs/ai-commercial-license.md
  docs/ai-data-clear-scope-audit.md
  docs/ai-modernization-execution-ledger.md
  docs/ai-p0-transcript-rehydration.md
@@ -192,6 +194,9 @@ Files:
  docs/find-n2-test-results-final.md
  docs/find-n2-test-results-round3.md
  docs/find-n2-text-scaling-fix.md
+ docs/fork-license-boundary.md
+ docs/fork-license-file-inventory.json
+ docs/fork-license-file-inventory.md
  docs/fork-maintenance-policy.md
  docs/images/find-n2-round3/AI_keyboard_off.png
  docs/images/find-n2-round3/AI_keyboard_on.png
@@ -428,6 +433,7 @@ Files:
  test/zone_section_responsive_test.dart
  tool/capture_find_n2_metrics.ps1
  tool/check_design_tokens.dart
+ tool/check_fork_license_inventory.py
  tool/check_version_source.sh
  tool/fix_launcher_png.py
  tool/reindex_zhenjiu_index.py

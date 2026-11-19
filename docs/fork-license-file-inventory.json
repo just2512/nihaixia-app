@@ -3,16 +3,22 @@
   "upstream_repository": "jangviktor-web/nihaixia-app",
   "fork_repository": "just2512/nihaixia-app",
   "comparison_base": "c0f14e77a7fb721fc332576d21fef5f100392d0b",
-  "comparison_head": "82d38c9d77ccac55555d18a943e204e9a6886531",
-  "generated_from": "Git tree comparison; exact path-level inventory",
+  "comparison_head": "79f847e1c62c43b2bad2943518956abb4e2ee45e",
+  "excluded_metadata_paths": [
+    ".reuse/dep5",
+    "LICENSE-FORK-COMMERCIAL.md",
+    "LICENSE-AI-COMMERCIAL.md",
+    "LICENSES/**"
+  ],
+  "generated_from": "Git tree comparison; exact path-level inventory excluding license metadata artifacts",
   "counts": {
-    "changed": 790,
-    "added": 674,
+    "changed": 796,
+    "added": 680,
     "modified": 116,
     "deleted": 10,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 110,
-      "FORK_COMMERCIAL": 315,
+      "FORK_COMMERCIAL": 321,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -36,6 +42,14 @@
     },
     {
       "path": ".github/workflows/flutter-tests.yml",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": ".github/workflows/fork-license-compliance.yml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -3363,6 +3377,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "docs/ai-commercial-license.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "docs/ai-data-clear-scope-audit.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -3580,6 +3602,30 @@
     },
     {
       "path": "docs/find-n2-text-scaling-fix.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "docs/fork-license-boundary.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "docs/fork-license-file-inventory.json",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "docs/fork-license-file-inventory.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -6300,6 +6346,14 @@
     },
     {
       "path": "tool/check_design_tokens.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/check_fork_license_inventory.py",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",

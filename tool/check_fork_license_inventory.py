@@ -12,6 +12,7 @@ INVENTORY = ROOT / "docs/fork-license-file-inventory.json"
 DEP5 = ROOT / ".reuse/dep5"
 LICENSE = ROOT / "LICENSE-FORK-COMMERCIAL.md"
 LICENSE_COPY = ROOT / "LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md"
+EXCLUDED_PREFIXES = ("LICENSES/",)
 
 
 def git(*args: str) -> str:
@@ -21,6 +22,10 @@ def git(*args: str) -> str:
 def fail(message: str) -> None:
     print(f"LICENSE CHECK: FAIL: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def is_metadata(path: str) -> bool:
+    return path in {".reuse/dep5", "LICENSE-FORK-COMMERCIAL.md", "LICENSE-AI-COMMERCIAL.md"} or path.startswith(EXCLUDED_PREFIXES)
 
 
 def main() -> None:
@@ -34,11 +39,15 @@ def main() -> None:
     for line in raw.splitlines():
         fields = line.split("\t")
         if fields[0].startswith(("R", "C")):
-            actual[fields[2]] = "added"
+            path, status = fields[2], "added"
         elif fields[0] == "A":
-            actual[fields[1]] = "added"
+            path, status = fields[1], "added"
         elif fields[0] == "M" or fields[0].startswith("T"):
-            actual[fields[1]] = "modified"
+            path, status = fields[1], "modified"
+        else:
+            continue
+        if not is_metadata(path):
+            actual[path] = status
 
     data = json.loads(INVENTORY.read_text(encoding="utf-8"))
     entries = data["files"]
@@ -53,15 +62,15 @@ def main() -> None:
 
     dep5_text = DEP5.read_text(encoding="utf-8")
     dep5_paths: set[str] = set()
-    current_files = False
+    in_files = False
     for line in dep5_text.splitlines():
         if line.startswith("Files:"):
-            current_files = True
+            in_files = True
             dep5_paths.update(line[6:].split())
-        elif line.startswith(" ") and current_files:
+        elif line.startswith(" ") and in_files:
             dep5_paths.update(line.split())
-        elif not line.startswith(" ") and line.strip():
-            current_files = False
+        elif line.strip() and not line.startswith(" "):
+            in_files = False
     for path, entry in by_path.items():
         if path not in dep5_paths:
             fail(f"changed path missing from .reuse/dep5: {path}")

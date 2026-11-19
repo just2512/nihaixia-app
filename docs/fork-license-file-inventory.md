@@ -1,15 +1,15 @@
 # Fork 修改文件全量清单
 
-基线：共同上游 c0f14e77a7fb721fc332576d21fef5f100392d0b；Fork 主线快照：82d38c9d77ccac55555d18a943e204e9a6886531。本清单按 Git tree SHA 差异生成，逐路径列出全部新增/修改文件；机器可读源为 docs/fork-license-file-inventory.json。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；当前授权 PR 分支快照：79f847e1c62c43b2bad2943518956abb4e2ee45e。逐路径差异机器可读版本见 docs/fork-license-file-inventory.json。
 
 ## 分类规则
 
-- FORK_COMMERCIAL：相对共同上游新增的 Fork 实现/文档/工程资源；仅在权利人拥有版权或取得充分再许可权时适用商业许可。
+- FORK_COMMERCIAL：Fork 新增实现/文档/工程资源；仅在权利人拥有版权或取得充分再许可权时适用商业许可。
 - APACHE_2_0_AND_FORK_COMMERCIAL：修改过的上游文件；上游原始部分仍为 Apache 2.0，Fork 原创修改部分按商业许可。
 - KNOWLEDGE_BASE_EXCLUDED：知识库正文、索引、资料与资源；不转为商业授权，按来源许可/声明执行。
 - THIRD_PARTY_EXCLUDED：第三方依赖元数据或第三方材料；继续按其自身条款执行。
 
-rights_status 为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，不能仅凭提交者或仓库管理员身份推定版权，需保留作者/贡献者授权记录。SOURCE_LICENSE_REVIEW 表示知识库/第三方的来源许可应独立维护。
+授权文件本身（LICENSE、LICENSES、.reuse/dep5）不作为受许可对象重复列入清单。rights_status=OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，需保留作者/贡献者版权或再许可权证明；不能仅凭提交者或仓库管理员身份推定版权。
 
 ## 全量新增与修改文件
 
@@ -18,6 +18,7 @@ rights_status 为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，不能仅凭提�
 | .github/workflows/build-apk.yml | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/flutter-quality.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/flutter-tests.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| .github/workflows/fork-license-compliance.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .gitignore | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/build.gradle.kts | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/proguard-rules.pro | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -433,6 +434,7 @@ rights_status 为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，不能仅凭提�
 | docs/ai-capability-audit-report.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-capability-audit.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-capability-inventory.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| docs/ai-commercial-license.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-data-clear-scope-audit.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-modernization-execution-ledger.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/ai-p0-transcript-rehydration.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -461,6 +463,9 @@ rights_status 为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，不能仅凭提�
 | docs/find-n2-test-results-final.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/find-n2-test-results-round3.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/find-n2-text-scaling-fix.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| docs/fork-license-boundary.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| docs/fork-license-file-inventory.json | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| docs/fork-license-file-inventory.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/fork-maintenance-policy.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/images/find-n2-round3/AI_keyboard_off.png | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | docs/images/find-n2-round3/AI_keyboard_on.png | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -801,6 +806,7 @@ rights_status 为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，不能仅凭提�
 | tool/build_classic_search_index.py | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/capture_find_n2_metrics.ps1 | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/check_design_tokens.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| tool/check_fork_license_inventory.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/check_version_source.sh | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/fix_launcher_png.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/import_renji_zhenjiu.py | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -821,7 +827,7 @@ rights_status 为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件，不能仅凭提�
 
 ## 验收说明
 
-- 新增/修改路径共 790 个（新增 674，修改 116）；删除路径 10 个。
-- .reuse/dep5 对全部变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
-- 自动检查以共同上游基线为比较点；后续路径变更若未更新清单和 DEP5，CI 失败。
+- 新增/修改路径共 796 个（新增 680，修改 116）；删除路径 10 个。
+- .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
+- 自动检查以共同上游基线为比较点，排除许可元数据自身；未来业务代码/文档新增、修改、删除若未同步更新清单和 DEP5，CI 失败。
 - 清单与 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
