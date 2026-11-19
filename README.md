@@ -551,13 +551,15 @@ flowchart LR
 本仓库采用上游原始代码与 Fork 自有修改分层授权：
 
 - **上游原始代码**：继续遵循根目录 [LICENSE](LICENSE) 中的 Apache License 2.0。Apache 2.0 允许商业使用，不是非商业许可证。
-- **本 Fork 自有修改**：由 `just2512` 拥有版权或已取得充分授权的新增与修改代码，统一按 [LICENSE-FORK-COMMERCIAL.md](LICENSE-FORK-COMMERCIAL.md) 执行；个人非商业使用按该许可，商业用途须另行取得书面授权。
+- **本 Fork 自有修改**：由 `just2512` 拥有版权或已取得充分授权的新增与修改代码，统一按 [LICENSE-FORK-COMMERCIAL.md](LICENSE-FORK-COMMERCIAL.md) 执行；个人非商业使用仅限个人范围内使用；公开再分发（无论是否收费）和商业用途均须事先取得书面授权。
 - **AI 功能**：本 Fork 的本地模型、统一助手、上下文检索、工具适配、情境提问、结果解释、Native 生命周期、AI 数据和 TRACE 等 Fork 自有实现全部纳入上述商业授权。无论此前已实现还是今后新增，不按时间拆分。具体功能见 [AI 功能商业授权清单](docs/ai-commercial-license.md)。
 - **混合文件**：保留上游原始代码 Apache 2.0 权利；本 Fork 在其中新增或修改的部分按商业授权。详细边界见 [docs/fork-license-boundary.md](docs/fork-license-boundary.md)。
 - **知识库与资料**：经典、讲义、医案、本草、方剂、穴位、易学等内容继续适用各自原有许可证、来源声明或授权条件，不纳入本次商业授权。
 - **第三方依赖与模型**：继续遵循各自许可证或服务条款。
 
 根目录 `LICENSE` 保留上游 Apache 2.0 原文；它不单独授予本 Fork 自有修改部分的商业使用权。此前已合法取得的历史版本许可不追溯撤销。
+
+全仓库逐文件授权映射见 [Fork 修改文件清单](docs/fork-license-file-inventory.md) 和 [机器可读清单](docs/fork-license-file-inventory.json)。
 ---
 
 ## 📚 参考资料
@@ -594,11 +596,3 @@ flowchart LR
 **⭐ 如果这个项目对你有帮助，请给个 Star！**
 
 </div>
-
-
-## Fork 修改授权
-
-- 上游原始代码继续遵循 Apache 2.0；本 Fork 自有新增/修改内容按 [Fork 商业授权](LICENSE-FORK-COMMERCIAL.md) 执行。
-- 个人非商业使用限个人范围内使用；公开再分发（无论是否收费）和商业使用均须事先取得书面授权。
-- 知识库与第三方内容不纳入 Fork 商业授权，继续遵循各自来源许可/条款。
-- 全仓库逐文件映射见 [授权边界说明](docs/fork-license-boundary.md) 与 [文件清单](docs/fork-license-file-inventory.md)。
