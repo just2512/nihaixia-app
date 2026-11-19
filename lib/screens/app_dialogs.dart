@@ -205,7 +205,7 @@ Future<void> exportBookmarks(BuildContext context) async {
     return;
   }
 
-  String text = '【汉唐中医·收藏导出】\n\n';
+  String text = '【研纪·收藏导出】\n\n';
   for (final b in bookmarks) {
     text += '━━━━━━━━━━━━━━\n';
     text += '${b.title}\n';
@@ -213,7 +213,7 @@ Future<void> exportBookmarks(BuildContext context) async {
     text += '${b.createdAt}\n\n';
     text += '${b.content}\n\n';
   }
-  text += '—— 来自「汉唐中医」App';
+  text += '—— 来自「研纪」App';
 
   await Share.share(text);
 }
@@ -273,10 +273,10 @@ Future<void> showAboutPage(BuildContext context) async {
             Center(
               child: Column(
                 children: [
-                  Icon(Icons.menu_book_rounded, size: 64,
+                  Icon(Icons.hub_outlined, size: 64,
                       color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 8),
-                  const Text('汉唐中医', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('研纪', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text('v${info.version}', style: TextStyle(color: context.colors.onSurfaceVariant)),
                   const SizedBox(height: 2),
@@ -288,11 +288,11 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('中医诊疗全过程辅助学习软件',
+            const Text('单机离线个人知识库与传统经典研习系统',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '围绕四诊问诊、信息整理与补问，帮助用户理解辨病、辨证、病机、治法、方剂配伍、针灸取穴，以及经典依据和医案复盘。'
+              '以倪海厦老师讲授的《人纪》《天纪》《地纪》及相关传统经典为重要学习来源，以中医为主要学习主线，组织四诊问诊、辨病辨证、病机、治法、方剂配伍、针灸思路和医案复盘；同时兼顾易学义理与现有传统术数工具。导引修习作为延伸方向，按资料来源和实际交付情况逐步建设。知识资料与个人学习数据以本地管理为核心；'
               '辨病辨证结论由 App 既有确定性业务规则执行，并应关联可追溯的本地知识依据；AI 负责理解、引导和解释，不凭自身推断生成或覆盖业务结论。',
               style: TextStyle(color: context.colors.onSurfaceVariant),
             ),
@@ -363,14 +363,14 @@ Future<void> showAboutPage(BuildContext context) async {
             const SizedBox(height: 16),
             const Text('致谢', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('感谢倪海厦老师的经方医学讲授与传承，感谢仲景先师留下《伤寒论》等经典。\n'
+            Text('感谢倪海厦老师的经典讲授及相关学习资料，为本项目研习、整理和实践探索提供重要参考；本项目不以此宣称身份师承或官方授权。，感谢仲景先师留下《伤寒论》等经典。\n'
                 '感谢 jangviktor-web/nihaixia-app 原作者提供原始开源项目与代码基础，也感谢其他开源组件作者和社区贡献者。',
                 style: TextStyle(color: context.colors.onSurfaceVariant)),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
             Center(
-              child: Text('© 2026 just2512 · 汉唐中医',
+              child: Text('© 2026 just2512 · 研纪',
                   style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
             ),
           ],

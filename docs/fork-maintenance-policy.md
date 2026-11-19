@@ -1,12 +1,12 @@
 # Fork 独立维护与上游同步策略
 
-更新日期：2026-11-15  
+更新日期：2026-11-16  
 维护仓库：`just2512/nihaixia-app`  
 上游仓库：`jangviktor-web/nihaixia-app`
 
 ## 项目身份与上游关系
 
-- 对外产品名称：**汉唐中医**；产品定位以 `docs/product-positioning-and-boundaries.md` 为准。
+- 当前产品名称：**研纪**（暂定工作名称，后续可优化）；产品定位以 `docs/product-positioning-and-boundaries.md` 为准。
 - 维护仓库：`just2512/nihaixia-app`；产品文档、应用版本、更新记录与正式发行均以本仓库为准。
 - 本仓库继续保留 GitHub Fork 关系及原始上游 `jangviktor-web/nihaixia-app`，不执行脱离 Fork 网络或删除上游来源的操作。
 - 上游提交不会自动合入本仓库；需要引入时按本文件规定逐项评估、人工审查、独立分支验证和小批量集成。
