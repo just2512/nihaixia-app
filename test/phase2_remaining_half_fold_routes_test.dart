@@ -231,7 +231,23 @@ void main() {
         await tester.tap(find.text('工具').last);
         await tester.pumpAndSettle();
         final caseEntry = find.textContaining('倪师医案库').last;
-        await tester.ensureVisible(caseEntry);
+        final toolsScrollable = find.descendant(
+          of: find.byType(ToolsScreen),
+          matching: find.byType(Scrollable),
+        ).first;
+        await tester.scrollUntilVisible(
+          caseEntry,
+          240,
+          scrollable: toolsScrollable,
+          maxScrolls: 20,
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        final caseEntryRect = tester.getRect(caseEntry);
+        expect(
+          caseEntryRect.bottom,
+          lessThanOrEqualTo(900),
+          reason: '医案库入口必须先滚动进入视口：$caseEntryRect',
+        );
         await tester.tap(caseEntry);
         await _advanceRoute(tester);
         expect(find.byType(MedicalCaseLibraryScreen), findsOneWidget);
