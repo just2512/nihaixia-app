@@ -227,8 +227,12 @@ def main() -> None:
     missing_clauses = [phrase for phrase in required_clauses if phrase not in license_text]
     if missing_clauses:
         fail(f"commercial license is missing required clauses: {missing_clauses}")
-    if git("diff", "--quiet", BASE, "HEAD", "--", "LICENSE") != "":
-        # git diff --quiet returns an empty string on success; a change exits nonzero.
+    license_diff = subprocess.run(
+        ["git", "diff", "--quiet", BASE, "HEAD", "--", "LICENSE"],
+        cwd=ROOT,
+        check=False,
+    )
+    if license_diff.returncode != 0:
         fail("root LICENSE changed; upstream Apache 2.0 text must remain intact")
 
     print(

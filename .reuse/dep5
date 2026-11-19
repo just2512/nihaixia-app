@@ -437,6 +437,8 @@ Files:
  tool/check_version_source.sh
  tool/fix_launcher_png.py
  tool/reindex_zhenjiu_index.py
+ test/phase2_remaining_half_fold_routes_test.dart
+ test/xiaoliuren_contextual_result_entry_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-added implementation/documentation/resources. Applies only to content whose copyright is owned by just2512 or for which sufficient sublicensing rights exist. Full terms: LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md.
@@ -810,4 +812,3 @@ Files:
 Copyright: NOASSERTION
 License: NOASSERTION
 Comment: Excluded from this Fork commercial grant. Knowledge-base materials and third-party dependency metadata retain their respective source licenses/terms; this entry makes no new license grant.
-

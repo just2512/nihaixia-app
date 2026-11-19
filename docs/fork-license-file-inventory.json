@@ -12,13 +12,13 @@
   ],
   "generated_from": "Git tree comparison from the common upstream baseline. CI recomputes the exact path/status set against the checked-out PR HEAD; comparison_head is a runtime marker, not a pinned commit SHA.",
   "counts": {
-    "changed": 796,
-    "added": 680,
+    "changed": 798,
+    "added": 682,
     "modified": 116,
     "deleted": 10,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 110,
-      "FORK_COMMERCIAL": 321,
+      "FORK_COMMERCIAL": 323,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -5921,6 +5921,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "test/phase2_remaining_half_fold_routes_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "合并后主线新增的 Fork 回归测试；仅在权利人拥有版权或取得充分再许可权时适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "test/quality_score_bc.dart",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
@@ -6086,6 +6094,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/xiaoliuren_contextual_result_entry_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "合并后主线新增的小六壬情境 AI 入口回归测试；仅在权利人拥有版权或取得充分再许可权时适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
