@@ -2936,3 +2936,47 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` SUCCESS；Flutter Quality Gate run `44256197344` 仍 IN_PROGRESS（Android native unit tests）。
 - PR [#293](https://github.com/just2512/nihaixia-app/pull/293) 的台账内容已更新到本节；最新提交会触发新 head CI，旧 head run 不作为当前 head 验收证据。
 - #284/#286/#289/#290/#291 已关闭为 SUPERSEDED；当前有效集成入口为 #292、#294、#293。设备验收仍为最终本地门禁，不阻止继续云端 Phase 3。
+
+
+---
+
+### 57.32 2026-11-19 当前主线基线与已集成的情境问 AI 扩展
+
+#### 主线及合并后自动验收
+
+- 当前 master：`82d38c9d77ccac55555d18a943e204e9a6886531`。
+- PR [#331](https://github.com/just2512/nihaixia-app/pull/331) 梅花字段级入口已普通 merge，merge SHA：`cc1d3c6c7800b9a9cc17603d38768cfdcd2c6ca3`；最终 head `b810d83bff831a9164f7bec7b83c7b1e761417b3`，workflow run `44466925600` SUCCESS（Flutter regression 1773 passed / 15 skipped；Android arm64 SUCCESS）。
+- PR [#333](https://github.com/just2512/nihaixia-app/pull/333) 易经字段级入口已普通 merge，merge SHA：`82d38c9d77ccac55555d18a943e204e9a6886531`；最终 head `96065c7aa62bdef52e14f4d41090686ff154f6c8`，workflow run `44469526498` SUCCESS（Flutter regression 1775 passed / 15 skipped；Android arm64 SUCCESS）。
+- 当前 master SHA `82d38c9d77ccac55555d18a943e204e9a6886531` 的 Flutter tests run `44470735725` SUCCESS：静态分析、AI 契约/检索黄金快照、完整 Flutter 回归和 Android arm64 CI 均 SUCCESS；Flutter Quality Gate run `44470735746` SUCCESS：Analyze and test、Dart 全量测试、Android Native unit tests 与 Find N2 arm64 Debug APK 构建均 SUCCESS。两个 run 的 head SHA 均为当前 master。Branch validation 在 Flutter tests workflow 中按条件 SKIPPED，不计 PASS，也不作为失败。
+- 以上为 CODE/TEST/CI 证据；不代表 Find N2 真机交互或本地 E4B 多轮 TRACE 通过。
+
+#### 已进入主线的 Phase 3 覆盖
+
+- PR [#325](https://github.com/just2512/nihaixia-app/pull/325)：梅花易数整体结果情境入口，复用实际执行快照、输入参数、随机起卦实际结果和规则/数据版本。
+- PR [#321](https://github.com/just2512/nihaixia-app/pull/321)：《伤寒论》条文选择菜单进入学习助手的真实调用链自动化。
+- PR [#324](https://github.com/just2512/nihaixia-app/pull/324)：方剂、本草、内经入口点击至学习助手的真实调用链自动化。
+- 医案入口在主线使用精确记录 Resolver 与来源账本 Prompt；测试覆盖正确记录、过期版本、错误来源及 MISSING 记录。
+- PR [#329](https://github.com/just2512/nihaixia-app/pull/329)：八字字段级入口，绑定真实排盘快照、ruleVersion、sourceId 和闭合 fieldPath 白名单；merge SHA `c368f37cb18f0447ce2271eaa9f88711778853db`。
+- PR #331/#333 分别补齐梅花、易经字段级入口。字段解释均以所属完整快照验证后抽取，不触发重新起卦，不修改算法、随机数或既有结果。
+- 以上均复用现有助手会话、情境面板和 explanation-only；没有新增第二套聊天体系或数据库 schema。
+
+### 57.33 2026-11-19 小六壬结果情境入口（PR #334，云端验收中）
+
+#### 切片定义
+
+- 基线 master：`82d38c9d77ccac55555d18a943e204e9a6886531`。
+- 独立分支：`feat/ai-context-xiaoliuren-result-20261119`。
+- PR [#334](https://github.com/just2512/nihaixia-app/pull/334)，当前 head：`db2ef7ec939a003dfb7a31cbb2d290b8d8297f42`。
+- 文件所有权：`lib/services/xiaoliuren_tool_executor.dart`、`lib/services/ai_context_resolver.dart`、`lib/services/ai_context_prompt_builder.dart`、`lib/screens/xiaoliuren_screen.dart`、`test/xiaoliuren_contextual_result_entry_test.dart`；其中前三个文件的快照/Resolver/Prompt 代码先于本记录提交到该独立分支，页面入口与调用链测试在本轮补齐。
+- 页面现在由单次 `executeWithSnapshot` 同时取得显示用 `XiaoliurenChart` 和 AI 上下文快照，防止第二次计算产生输入或结果漂移。只有成功快照可启用“问 AI 解读当前小六壬结果”；入口通过 Resolver 重建本地引擎结果并校验执行参数、日期、时辰、起课口径、规则/数据版本、source IDs 和 SHA 摘要，随后复用 metaphysics / explanation-only 情境面板。
+- 快照保留用户选择的“通行掌诀”或“《多能鄙事》”口径，不将其中一种表述为唯一传统；缺参、错源、过期规则、摘要不一致或重建不一致时 fail closed，不生成模型上下文。
+- 新增测试覆盖两种口径的快照/重建、错源、过期规则、篡改结果、失败执行无快照，以及 402dp 底部弹层、775dp 侧栏的真实页面点击、助手上下文和关闭后滚动位置保持。
+- PR workflow run `44484657588`，head `db2ef7ec939a003dfb7a31cbb2d290b8d8297f42`：记录时 `IN_PROGRESS`。Flutter regression 与 Android arm64 CI 尚未取得终态；不合并、不记录 PASS。任何新 head 均需完整重跑，合并后再对新 master SHA 复核 Flutter tests 与 Flutter Quality Gate。
+- 风险/回滚：只撤回小六壬页面情境入口和对应快照/解析/Prompt 适配；保留原小六壬页面、纯函数、双口径数据及旧工具 API。未更改计算算法或知识资产。
+
+#### 阶段门禁与下一项动作
+
+- `docs/contextual-ask-ai-spec.md` §11 已将云端实施门禁与最终设备门禁分离。PR #334 及其后续云端切片应按稳定快照契约、负向测试、真实调用链、窗口布局自动化和当前 head Flutter/Android CI 验收，不等待 Find N2 实机。
+- 旧分支 `feat/ai-context-almanac-result-20261118` 与 `feat/ai-context-yunqi-result-20261118` 相对当前 master 已分别落后 58 / 90 个提交，不能直接集成，也不能继承旧 SHA 的 CI；如继续实施，必须从最新 master 重建并重新审查依赖、文件所有权、测试和 CI。
+- Find N2 外屏/内屏/半折叠/分屏/键盘与本地 E4B GPU/CPU 多轮、Native 生命周期、恢复和完整 TRACE，继续为 `UNKNOWN / LOCAL ONLY`；这些只影响最终设备验收，不阻止云端 Phase 3 继续推进。
+- PR #330 原台账分支基于旧 master `c368f37cb18f0447ce2271eaa9f88711778853db`，在当前主线已合并 #331/#333 后存在分叉，不能直接合并。当前记录以本 PR 的 master 基线和本节为准；关闭旧 PR #330 时保留其提交和历史 CI 作为历史证据。
