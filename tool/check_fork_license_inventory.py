@@ -16,7 +16,7 @@ EXCLUDED_PREFIXES = ("LICENSES/",)
 
 
 def git(*args: str) -> str:
-    return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+    return subprocess.check_output(["git", "-c", "core.quotepath=false", *args], cwd=ROOT, text=True).strip()
 
 
 def fail(message: str) -> None:
@@ -36,14 +36,20 @@ def main() -> None:
 
     raw = git("diff", "--name-status", "--find-renames", BASE, "HEAD")
     actual: dict[str, str] = {}
+    deleted: set[str] = set()
     for line in raw.splitlines():
         fields = line.split("\t")
-        if fields[0].startswith(("R", "C")):
+        code = fields[0]
+        if code.startswith(("R", "C")):
+            deleted.add(fields[1])
             path, status = fields[2], "added"
-        elif fields[0] == "A":
+        elif code == "A":
             path, status = fields[1], "added"
-        elif fields[0] == "M" or fields[0].startswith("T"):
+        elif code == "M" or code.startswith("T"):
             path, status = fields[1], "modified"
+        elif code == "D":
+            deleted.add(fields[1])
+            continue
         else:
             continue
         if not is_metadata(path):
@@ -57,24 +63,41 @@ def main() -> None:
     missing = sorted(set(actual) - set(by_path))
     stale = sorted(set(by_path) - set(actual))
     status_changed = sorted(p for p in set(actual) & set(by_path) if actual[p] != by_path[p]["status"])
-    if missing or stale or status_changed:
-        fail(f"inventory mismatch; missing={missing[:20]}, stale={stale[:20]}, status_changed={status_changed[:20]}")
+    listed_deleted = set(data["deleted_paths"])
+    deleted_missing = sorted(deleted - listed_deleted)
+    deleted_stale = sorted(listed_deleted - deleted)
+    if missing or stale or status_changed or deleted_missing or deleted_stale:
+        fail(f"inventory mismatch; missing={missing[:20]}, stale={stale[:20]}, status_changed={status_changed[:20]}, deleted_missing={deleted_missing[:20]}, deleted_stale={deleted_stale[:20]}")
 
     dep5_text = DEP5.read_text(encoding="utf-8")
-    dep5_paths: set[str] = set()
-    in_files = False
-    for line in dep5_text.splitlines():
-        if line.startswith("Files:"):
-            in_files = True
-            dep5_paths.update(line[6:].split())
-        elif line.startswith(" ") and in_files:
-            dep5_paths.update(line.split())
-        elif line.strip() and not line.startswith(" "):
-            in_files = False
+    dep5_map: dict[str, str] = {}
+    for paragraph in dep5_text.split("\n\n"):
+        lines = paragraph.splitlines()
+        if not lines or not lines[0].startswith("Files:"):
+            continue
+        paths = []
+        in_files = True
+        for line in lines[1:]:
+            if in_files and line.startswith(" "):
+                paths.extend(line.split())
+            else:
+                in_files = False
+        license_lines = [line for line in lines if line.startswith("License:")]
+        if len(license_lines) != 1:
+            fail("each DEP5 paragraph must have exactly one License field")
+        expression = license_lines[0].split(":", 1)[1].strip()
+        for path in paths:
+            if path in dep5_map:
+                fail(f"duplicate DEP5 mapping: {path}")
+            dep5_map[path] = expression
+
+    expected_dep5 = set(by_path)
+    if set(dep5_map) != expected_dep5:
+        fail(f"DEP5 path set mismatch; missing={sorted(expected_dep5-set(dep5_map))[:20]}, extra={sorted(set(dep5_map)-expected_dep5)[:20]}")
     for path, entry in by_path.items():
-        if path not in dep5_paths:
-            fail(f"changed path missing from .reuse/dep5: {path}")
         cls, lic, status = entry["classification"], entry["license"], entry["status"]
+        if dep5_map[path] != lic:
+            fail(f"DEP5 expression mismatch for {path}: inventory={lic}, DEP5={dep5_map[path]}")
         if cls in ("KNOWLEDGE_BASE_EXCLUDED", "THIRD_PARTY_EXCLUDED") and lic != "NOASSERTION":
             fail(f"excluded path must use NOASSERTION: {path}")
         if status == "modified" and cls not in ("KNOWLEDGE_BASE_EXCLUDED", "THIRD_PARTY_EXCLUDED") and lic != "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial":
@@ -94,7 +117,7 @@ def main() -> None:
     except subprocess.CalledProcessError:
         fail("root LICENSE changed; upstream Apache 2.0 text must remain intact")
 
-    print(f"LICENSE CHECK: PASS — {len(entries)} changed paths inventoried; {len(data['deleted_paths'])} deleted paths recorded; DEP5 coverage complete; exclusions preserved; license copies identical.")
+    print(f"LICENSE CHECK: PASS — {len(entries)} changed paths inventoried; {len(deleted)} deletions verified; DEP5 exact path/expression coverage complete; exclusions preserved; license copies identical.")
 
 
 if __name__ == "__main__":
