@@ -71,6 +71,79 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
       return;
     }
 
+    await _openContextualAiSheet(
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildYiJingToolResult(
+        resolvedResult: resolved,
+      ),
+      contextualTitle: contextRef.title ?? '易经起卦结果',
+    );
+  }
+
+  Future<void> _askAiAboutField({
+    required String fieldPath,
+    required String fieldLabel,
+  }) async {
+    late final Map<String, Object?> snapshot;
+    late final AiContextRef resultRef;
+    late final AiContextRef fieldRef;
+    try {
+      snapshot = YiJingToolExecutor.createStructuredSnapshot(
+        widget.executionArguments,
+      );
+      if (!YiJingToolExecutor.matchesCast(snapshot: snapshot, cast: widget.cast)) {
+        throw StateError('The visible cast does not match the recorded inputs.');
+      }
+      resultRef = AiContextResolver.buildYiJingResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+      fieldRef = AiContextResolver.buildYiJingFieldContextRef(
+        resultRef: resultRef,
+        fieldPath: fieldPath,
+        fieldLabel: fieldLabel,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('易经字段上下文校验失败：UNKNOWN，已取消提问。'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final resolution = AiContextResolver.resolveYiJingResultField(
+      ref: fieldRef,
+      structuredSnapshot: snapshot,
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '易经字段上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    await _openContextualAiSheet(
+      contextRef: fieldRef,
+      initialPrompt: AiContextPromptBuilder.buildYiJingToolField(
+        resolvedField: resolved,
+      ),
+      contextualTitle: fieldLabel,
+    );
+  }
+
+  Future<void> _openContextualAiSheet({
+    required AiContextRef contextRef,
+    required String initialPrompt,
+    required String contextualTitle,
+  }) async {
     final sourcePageRoute = ModalRoute.of(context);
     final pageScrollOffset = _pageScrollController.hasClients
         ? _pageScrollController.position.pixels
@@ -78,11 +151,9 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: AiContextPromptBuilder.buildYiJingToolResult(
-        resolvedResult: resolved,
-      ),
+      initialPrompt: initialPrompt,
       initialMode: AssistantMode.tools,
-      contextualTitle: contextRef.title ?? '易经起卦结果',
+      contextualTitle: contextualTitle,
       contextualExplanationOnly: true,
     );
 
@@ -188,6 +259,32 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
               ),
             ),
           ),
+          if (widget.executionArguments.isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const ValueKey('yijing-field-primary-name'),
+                onPressed: () => _askAiAboutField(
+                  fieldPath: 'result.primary.name',
+                  fieldLabel: '本卦名称',
+                ),
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('问 AI 解读本卦名称'),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const ValueKey('yijing-field-primary-judgement'),
+                onPressed: () => _askAiAboutField(
+                  fieldPath: 'result.primary.judgement',
+                  fieldLabel: '本卦卦辞',
+                ),
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('问 AI 解读本卦卦辞'),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           // 动爻
           Card(
@@ -209,13 +306,26 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  if (widget.cast.movingLines.isEmpty)
+                  if (widget.cast.movingLines.isEmpty) ...[
                     Text('「${widget.cast.movingText}」',
                         style: TextStyle(
                             fontSize: 14,
                             height: 1.6,
-                            color: colorScheme.onPrimaryContainer))
-                  else
+                            color: colorScheme.onPrimaryContainer)),
+                    if (widget.executionArguments.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          key: const ValueKey('yijing-field-moving-0'),
+                          onPressed: () => _askAiAboutField(
+                            fieldPath: 'result.movingTexts.0',
+                            fieldLabel: widget.cast.moving == 0 ? '静卦卦辞' : '${widget.cast.movingTitle}爻辞',
+                          ),
+                          icon: const Icon(Icons.auto_awesome, size: 16),
+                          label: const Text('问 AI 解读当前爻辞/卦辞'),
+                        ),
+                      ),
+                  ] else
                     for (var i = 0; i < widget.cast.movingLines.length; i++) ...[
                       if (i > 0) const SizedBox(height: 6),
                       Text(
@@ -225,6 +335,19 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
                             height: 1.6,
                             color: colorScheme.onPrimaryContainer),
                       ),
+                      if (widget.executionArguments.isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            key: ValueKey('yijing-field-moving-$i'),
+                            onPressed: () => _askAiAboutField(
+                              fieldPath: 'result.movingTexts.$i',
+                              fieldLabel: '${widget.cast.movingTitles[i]}爻辞',
+                            ),
+                            icon: const Icon(Icons.auto_awesome, size: 16),
+                            label: Text('问 AI 解读${widget.cast.movingTitles[i]}爻辞'),
+                          ),
+                        ),
                     ],
                 ],
               ),
@@ -244,6 +367,19 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
                 ),
               ),
             ),
+            if (widget.executionArguments.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: const ValueKey('yijing-field-changed-judgement'),
+                  onPressed: () => _askAiAboutField(
+                    fieldPath: 'result.changed.judgement',
+                    fieldLabel: '变卦卦辞',
+                  ),
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('问 AI 解读变卦卦辞'),
+                ),
+              ),
           ],
           if (widget.cast.nuclear != null) ...[
             const SizedBox(height: 12),
@@ -259,6 +395,19 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
                 ),
               ),
             ),
+            if (widget.executionArguments.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: const ValueKey('yijing-field-nuclear-judgement'),
+                  onPressed: () => _askAiAboutField(
+                    fieldPath: 'result.nuclear.judgement',
+                    fieldLabel: '互卦卦辞',
+                  ),
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('问 AI 解读互卦卦辞'),
+                ),
+              ),
           ],
           const SizedBox(height: 16),
           Text(
