@@ -141,7 +141,7 @@ class _SolarTermSectionScreenState extends State<SolarTermSectionScreen> {
     }
   }
 
-  Widget _currentCard(ColorScheme cs, SolarTermInfo info) {  Widget _currentCard(ColorScheme cs, SolarTermInfo info) {
+  Widget _currentCard(ColorScheme cs, SolarTermInfo info) {
     final knowledge = _all.where((k) => k.term == info.currentTerm).firstOrNull;
     final healthText = knowledge?.health ?? info.healthTip;
     return Card(

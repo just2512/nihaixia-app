@@ -10,6 +10,7 @@ import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
+import 'solar_term_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.

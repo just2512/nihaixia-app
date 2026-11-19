@@ -88,7 +88,7 @@ void main() {
     expect(prompt, contains('立春'));
     expect(prompt, contains('节气三候'));
     expect(prompt, contains('不得补造节气日期'));
-    expect(prompt, contains('不构成个体'));
+    expect(prompt, contains('不是个体体质评估或诊断'));
   });
 
   test('Resolver 拒绝错源、过期版本和被篡改的节气资料', () async {
