@@ -118,7 +118,7 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
     final birthTime =
         '${_birthHour.toString().padLeft(2, '0')}:'
         '${_birthMinute.toString().padLeft(2, '0')}';
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showFoldAwareDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('确认本次受生债查询输入'),
