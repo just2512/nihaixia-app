@@ -695,6 +695,23 @@ class AiContextPromptBuilder {
       );
     }
 
+    if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
+      final method = inputValue['method'];
+      final expectedDataSource = method == 'luku'
+          ? ShoushengDebtToolExecutor.lukuDataSourceId
+          : method == 'wudou'
+              ? ShoushengDebtToolExecutor.wudouDataSourceId
+              : null;
+      if (ref.sourceId != ShoushengDebtToolExecutor.sourceId ||
+          sourceIds.length != 2 ||
+          sourceIds[0] != ShoushengDebtToolExecutor.sourceId ||
+          sourceIds[1] != expectedDataSource) {
+        throw ArgumentError(
+          'A Shousheng prompt requires the exact selected local source pair.',
+        );
+      }
+    }
+
     final actualSnapshotId =
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
     if (actualSnapshotId != snapshotId) {
