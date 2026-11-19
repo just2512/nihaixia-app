@@ -14,6 +14,8 @@ import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
+import 'solar_term_result_context_executor.dart';
+import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 import 'ziwuliuzhu_calculation_service.dart';
 
@@ -558,6 +560,149 @@ class AiContextResolver {
       value: AiResolvedToolResult._(
         ref: ref,
         structuredSnapshot: execution.structuredSnapshot!,
+      ),
+    );
+  }
+
+  static AiContextRef buildSolarTermResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final term = arguments is Map ? arguments['term'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            SolarTermResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            SolarTermResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            SolarTermResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitSolarTerm' ||
+        arguments is! Map ||
+        arguments.length != 1 ||
+        term is! String ||
+        !SolarTermToolExecutor.termNames.contains(term) ||
+        sourceIds is! List ||
+        sourceIds.length != 2 ||
+        !sourceIds.contains(SolarTermToolExecutor.sourceId) ||
+        !sourceIds.contains(SolarTermToolExecutor.knowledgeSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A solar-term context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: SolarTermResultContextExecutor.moduleId,
+      anchorId: 'solar-term:knowledge:$snapshotId:term=$term',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: SolarTermResultContextExecutor.ruleVersion,
+      sourceId: SolarTermToolExecutor.sourceId,
+      title: '$term 节气知识条目',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveSolarTermToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != SolarTermResultContextExecutor.moduleId ||
+        ref.sourceId != SolarTermToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The solar-term reference is incomplete or does not identify the local solar-term service.',
+      );
+    }
+    if (ref.ruleVersion != SolarTermResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The solar-term service, knowledge asset or locked calendar package version no longer matches this result.',
+      );
+    }
+
+    final match = RegExp(
+      r'^solar-term:knowledge:([0-9a-f]{64}):term=(.+)$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The solar-term anchor and immutable snapshot identity do not agree.',
+      );
+    }
+    final term = match.group(2)!;
+    if (!SolarTermToolExecutor.termNames.contains(term) ||
+        ref.title != '$term 节气知识条目') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The solar-term anchor does not identify a supported knowledge entry.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            SolarTermResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            SolarTermResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            SolarTermResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitSolarTerm' ||
+        arguments is! Map ||
+        arguments.length != 1 ||
+        arguments['term'] != term ||
+        sources is! List ||
+        sources.length != 2 ||
+        !sources.contains(SolarTermToolExecutor.sourceId) ||
+        !sources.contains(SolarTermToolExecutor.knowledgeSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The solar-term knowledge snapshot or its provenance no longer matches its immutable digest.',
+      );
+    }
+
+    final rebuilt = await SolarTermResultContextExecutor.executeWithSnapshot({
+      'term': term,
+    });
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local solar-term entry is no longer available for verification.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local solar-term entry no longer matches this immutable snapshot.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
       ),
     );
   }
