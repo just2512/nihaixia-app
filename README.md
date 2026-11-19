@@ -196,8 +196,10 @@
 > 核心知识库可离线｜本地 AI 模型需单独下载｜无需注册｜Android 7.0+
 > 通用版 APK 约 77MB，分架构版 31–35MB
 > 本项目 APK 由本仓库 GitHub Actions 构建；当前尚未发布本仓库独立 APK Release
-> **最后维护：2026-11-15（汉唐中医独立维护；上游同步采用人工审核）**
+> **最后维护：2026-11-16（汉唐中医独立维护；上游同步采用人工审核）**
 
+> **当前源码版本：`2.0.0+8047`**（首个独立主版本基线；尚未创建对应 tag 或 APK Release）。
+> 
 > 当前仓库尚未发布独立 APK Release。请勿将上游 `jangviktor-web/nihaixia-app` 的安装包或版本号当作汉唐中医的发行版。后续安装包只从[本仓库 Releases](https://github.com/just2512/nihaixia-app/releases)获取；上游更新仅按维护策略人工评估和同步。
 
 > **V1.11.28 字号 200% · 古籍原文（灵枢/针灸大成）· 经典全文搜索 · 流畅度优化**：字号上限由 150% 提到 200%，并修复「只有首页跟随字号」——详情页、设置页与弹窗现在都跟随；新增「古籍原文」书库：《灵枢》82 章 + 明·杨继洲《针灸大成》339 章，章节目录可读可搜，正文方剂/药名可点跳详情；全局搜索新增「经典」分组，贯通伤寒/金匮/内经讲稿与古书原文共 1327 条，点击直达篇章；修掉浅色模式下搜索结果标题几乎看不清的对比度问题；知识库切 tab 与长列表滚动做了保活与过滤缓存优化。详见 [Release Notes](release_notes/v1.11.28.md)。
@@ -312,7 +314,8 @@ flutter analyze
 
 | 文件 | 作用 |
 |:---|:---|
-| `pubspec.yaml` | 依赖与资源清单，版本号 `X.Y.Z+N` 的单一来源（`+N` 即 Android `versionCode`） |
+| `pubspec.yaml` | 依赖与资源清单；应用版本 `X.Y.Z+N` 的唯一来源（`+N` 即 Android `versionCode`） |
+| `docs/versioning-policy.md` | 独立产品 SemVer、Android 构建号递增、上游版本隔离与发布规则 |
 | `android/gradle.properties` | Gradle 堆内存等构建参数（Windows 上已设为 `-Xmx1024M` + `org.gradle.daemon=false` 以规避本机 OOM；CI 内由 workflow 临时覆盖为 `-Xmx4g` + G1GC，不影响本地） |
 | `android/settings.gradle.kts` | 仓库源配置，已做 CI 感知：CI 直连 `google()`/`mavenCentral()`，本地保持阿里云镜像优先 |
 | `.github/workflows/build-apk.yml` | 本仓库独立构建：推送本仓库 `v*` tag 后构建并发布四个 APK 到本仓库 Release |
@@ -321,7 +324,7 @@ flutter analyze
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
 | `lib/theme/app_colors.dart` | 39 个语义色 Token（品牌棕/暖调中性/状态色/六经六色），全站硬编码颜色清零 |
 
-**版本号规则**：`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一来源；发布时按实际变更递增版本号和 build 号，`+N` 对应 Android `versionCode`。当前仓库版本为 `1.11.30+8039`。
+**版本号规则**：遵循独立产品 SemVer：`MAJOR.MINOR.PATCH+BUILD`。`pubspec.yaml` 是唯一版本源；当前仓库版本为 `2.0.0+8047`，其中 `2.0.0` 是产品版本，`+8047` 是 Android `versionCode`。旧 `1.11.x` 序列仅保留历史记录，不再递增；版本决策、构建号和升级兼容规则见 [独立版本管理规范](docs/versioning-policy.md)。
 
 **发版方式**：推送与 `pubspec.yaml` 版本一致的 `v*` tag，`.github/workflows/build-apk.yml` 自动构建通用版与三个 ABI 分架构 APK，并发布到同名 GitHub Release。
 
@@ -523,7 +526,7 @@ flowchart LR
 - 关键辨证路径、筛选逻辑、渲染布局的改动**必须**补充/更新回归测试；
 - UI 功能图标统一使用 **Material Icons**（唯一例外：八卦符 ☰☱☲☳☴☵☶☷ 为《周易》语义符号，予以保留）；
 - 颜色一律通过 `lib/theme/app_colors.dart` 的语义 Token（`context.colors`）引用，禁止硬编码；
-- 版本号规则：以 `pubspec.yaml` 的 `version: X.Y.Z+N` 为单一来源，每次发布自增 patch 与 build 号。
+- 版本号规则：严格遵守 `docs/versioning-policy.md`；产品版本按 MAJOR/MINOR/PATCH 的变更性质递增，Android build/versionCode 单调递增；上游版本号不参与本项目版本决策。
 
 ### 提交流程
 
