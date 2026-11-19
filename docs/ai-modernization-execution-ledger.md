@@ -2971,7 +2971,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 页面现在由单次 `executeWithSnapshot` 同时取得显示用 `XiaoliurenChart` 和 AI 上下文快照，防止第二次计算产生输入或结果漂移。只有成功快照可启用“问 AI 解读当前小六壬结果”；入口通过 Resolver 重建本地引擎结果并校验执行参数、日期、时辰、起课口径、规则/数据版本、source IDs 和 SHA 摘要，随后复用 metaphysics / explanation-only 情境面板。
 - 快照保留用户选择的“通行掌诀”或“《多能鄙事》”口径，不将其中一种表述为唯一传统；缺参、错源、过期规则、摘要不一致或重建不一致时 fail closed，不生成模型上下文。
 - 新增测试覆盖两种口径的快照/重建、错源、过期规则、篡改结果、失败执行无快照，以及 402dp 底部弹层、775dp 侧栏的真实页面点击、助手上下文和关闭后滚动位置保持。
-- PR workflow run `44484657588`，head `db2ef7ec939a003dfb7a31cbb2d290b8d8297f42`：记录时 `IN_PROGRESS`。Flutter regression 与 Android arm64 CI 尚未取得终态；不合并、不记录 PASS。任何新 head 均需完整重跑，合并后再对新 master SHA 复核 Flutter tests 与 Flutter Quality Gate。
+- 初始 head `db2ef7ec939a003dfb7a31cbb2d290b8d8297f42` 的 workflow run `44484657588`：Flutter regression `1778 passed / 2 failed / 15 skipped`，两项失败均为本次新增页面 Widget 测试断言问题（402dp 懒加载列表未先滚动到按钮；775dp 测试把运行时当前时辰写死为“午时”，实际快照为“辰时”）；Android arm64 job `135428468123` SUCCESS。未删测试、未放宽断言。修正提交 `5341c783f6cb07ae24e5199fad9ace0d9a8a7787` 将窄屏测试改为滚动至实际入口，并断言 Prompt 包含实际快照的 hour 输入字段。当前 PR #334 最新 head 对应 workflow run `44486715901`，记录时 Flutter regression `IN_PROGRESS`；该 head 的 Android arm64 终态尚待取得。新 head 不继承旧 run 的 Flutter 结果；只有当前 head 的 Flutter regression 与 Android arm64 均 SUCCESS 才可合并。合并后仍须复核新 master SHA 的 Flutter tests 与 Flutter Quality Gate。
 - 风险/回滚：只撤回小六壬页面情境入口和对应快照/解析/Prompt 适配；保留原小六壬页面、纯函数、双口径数据及旧工具 API。未更改计算算法或知识资产。
 
 #### 阶段门禁与下一项动作
