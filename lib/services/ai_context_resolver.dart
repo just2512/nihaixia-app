@@ -478,7 +478,7 @@ class AiContextResolver {
 
 
   static const _supportedYiJingFieldPath =
-      r'^result\.(?:primary\.(?:seq|name|judgement)|moving|movingTexts\.[0-5]|changed\.(?:seq|name|judgement)|nuclear\.(?:seq|name|judgement))
+      r'^result\.(?:primary\.(?:seq|name|judgement)|moving|movingTexts\.[0-5]|changed\.(?:seq|name|judgement)|nuclear\.(?:seq|name|judgement))$';
 
   static AiContextRef buildYiJingFieldContextRef({
     required AiContextRef resultRef,
