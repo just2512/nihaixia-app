@@ -74,9 +74,9 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 
 ## 4. 应用名称与图标方案
 
-### 名称建议
+### 已确定名称
 
-- **桌面短名称：保留「研纪」**。现有 Manifest 与 MaterialApp 已统一为这个名称，四字长度适合桌面图标下方显示；不建议在短名称里追加副标题。
+- **桌面短名称：保留「研纪」**。现有 Manifest 与 MaterialApp 已统一为这个名称，两字长度适合桌面图标下方显示；不建议在短名称里追加副标题。
 - 应用商店/介绍副标题建议统一为：**「中医经典 · 知识工具 · 本地健康信息」**。
 - 项目描述不再使用“中医诊断助手”作为总定位；中医规则辨证、传统文化工具和 E4B 健康信息整理应在功能说明里分别描述。
 - Android applicationId `com.nihaisha.nihaisha_app`、Kotlin namespace `com.nihaisha.nihaisha_app` 与 Dart package name `nihaisha_app` 均保持不变，避免影响旧 APK 覆盖升级、应用私有数据目录、本地模型路径与既有代码导入。
