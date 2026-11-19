@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../utils/fold_aware_routes.dart';
-import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTime;
 
 import '../data/xiaoliuren_data.dart';
-
-/// 时辰索引（0=子 … 11=亥）→ 时辰数（子=1 … 亥=12）。
-int _hourNumberOfIndex(int i) => i + 1;
+import '../screens/assistant_tool_router.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/xiaoliuren_tool_executor.dart';
+import '../utils/fold_aware_routes.dart';
+import '../widgets/contextual_ai_sheet.dart';
 
 int _shiChenIndexOfHour(int hour) => ((hour.clamp(0, 23) + 1) ~/ 2) % 12;
 
@@ -29,11 +30,20 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
   int _shiChen = _shiChenIndexOfHour(DateTime.now().hour);
   XiaoliurenRule _rule = XiaoliurenRule.common;
   XiaoliurenChart? _chart;
+  Map<String, Object?>? _contextSnapshot;
+  String? _error;
+  final ScrollController _pageScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _compute();
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickDate() async {
@@ -50,18 +60,83 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
     }
   }
 
-  /// 农历取当日正午，与八字/称骨口径一致（避免子时跨日争议）。
+  /// 使用同一次确定性执行返回页面结果与 AI 上下文快照，避免二次计算漂移。
   void _compute() {
-    final lunar = LunarDate.fromSolar(
-        AstroDateTime(_date.year, _date.month, _date.day, 12, 0, 0));
-    setState(() {
-      _chart = computeXiaoliuren(
-        lunarMonth: lunar.month,
-        lunarDay: lunar.day,
-        hourNumber: _hourNumberOfIndex(_shiChen),
-        rule: _rule,
+    final arguments = <String, String>{
+      'date': _formatDate(_date),
+      'hour': '${_kShiChenNames[_shiChen]}时',
+      'rule': _rule == XiaoliurenRule.common ? 'common' : 'duoneng',
+    };
+    try {
+      final execution = XiaoliurenToolExecutor.executeWithSnapshot(arguments);
+      final chart = execution.chart;
+      final snapshot = execution.structuredSnapshot;
+      if (!execution.succeeded || chart == null || snapshot == null) {
+        setState(() {
+          _chart = null;
+          _contextSnapshot = null;
+          _error = execution.result.values['未执行原因'] ??
+              '小六壬起课失败，结果状态 UNKNOWN。';
+        });
+        return;
+      }
+      setState(() {
+        _chart = chart;
+        _contextSnapshot = snapshot;
+        _error = null;
+      });
+    } catch (error) {
+      setState(() {
+        _chart = null;
+        _contextSnapshot = null;
+        _error = '小六壬起课异常：$error';
+      });
+    }
+  }
+
+  String _formatDate(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+
+  Future<void> _askAiAboutCurrentResult() async {
+    final snapshot = _contextSnapshot;
+    if (snapshot == null || _chart == null) return;
+    try {
+      final contextRef = AiContextResolver.buildXiaoliurenResultContextRef(
+        structuredSnapshot: snapshot,
       );
-    });
+      final resolution = AiContextResolver.resolveXiaoliurenToolResult(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        _showContextError(resolution.status.name.toUpperCase());
+        return;
+      }
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildXiaoliurenToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: contextRef.title ?? '小六壬起课结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      _showContextError('UNKNOWN');
+    }
+  }
+
+  void _showContextError(String status) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('小六壬结果上下文校验失败：$status，已取消提问。'),
+      ),
+    );
   }
 
   @override
@@ -92,6 +167,7 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
         ],
       ),
       body: ListView(
+        controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: [
           _disclaimer(cs),
@@ -177,6 +253,21 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
             _palaceStrip(cs, c),
             const SizedBox(height: 12),
             _trace(cs, c),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              key: const ValueKey('xiaoliuren-ask-ai-result'),
+              onPressed: _contextSnapshot == null ? null : _askAiAboutCurrentResult,
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: const Text('问 AI 解读当前小六壬结果'),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              key: const ValueKey('xiaoliuren-execution-error'),
+              style: TextStyle(color: cs.error),
+            ),
           ],
         ],
       ),
