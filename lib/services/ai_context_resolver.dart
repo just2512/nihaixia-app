@@ -14,6 +14,8 @@ import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
+import 'ziwuliuzhu_tool_executor.dart';
+import 'ziwuliuzhu_calculation_service.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -403,6 +405,161 @@ class AiContextResolver {
         reason: 'The almanac result could not be reconstructed and verified from the local engine.',
       );
     }
+  }
+
+  static const ziWuLiuZhuModuleId = 'ziwu_liuzhu';
+
+  static AiContextRef buildZiWuLiuZhuResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final at = arguments is Map ? arguments['at'] : null;
+
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != ziWuLiuZhuModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ZiWuLiuZhuToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'deviceLocalDateTime' ||
+        arguments is! Map ||
+        arguments.length != 1 ||
+        at is! String ||
+        sourceIds is! List ||
+        !sourceIds.contains(ZiWuLiuZhuToolExecutor.sourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolExecutor.referenceSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A ZiWuLiuZhu context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+
+    final execution = ZiWuLiuZhuToolExecutor.executeWithSnapshot({'at': at});
+    if (!execution.succeeded ||
+        execution.structuredSnapshot?['snapshotId'] != snapshotId) {
+      throw ArgumentError(
+        'The ZiWuLiuZhu snapshot cannot be reproduced from its recorded local timestamp.',
+      );
+    }
+
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ziWuLiuZhuModuleId,
+      anchorId: 'ziwuliuzhu:result:$snapshotId:at=$at',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: ZiWuLiuZhuToolExecutor.sourceId,
+      title: '子午流注时辰开穴结果（$at）',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult>
+      resolveZiWuLiuZhuToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != ziWuLiuZhuModuleId ||
+        ref.sourceId != ZiWuLiuZhuToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu reference is incomplete or does not identify the local calculation engine.',
+      );
+    }
+    if (ref.ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The ZiWuLiuZhu engine, calculation tables or locked calendar dependency version no longer matches this result.',
+      );
+    }
+
+    final match = RegExp(
+      r'^ziwuliuzhu:result:([0-9a-f]{64}):at=(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu result anchor and snapshot identity do not agree.',
+      );
+    }
+
+    final at = match.group(2)!;
+    if (ZiWuLiuZhuCalculationService.parseLocalAt(at) == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu anchor does not contain a valid local wall-clock time.',
+      );
+    }
+    final expectedTitle = '子午流注时辰开穴结果（$at）';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu result title does not match its local timestamp anchor.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['ruleVersion'] != ZiWuLiuZhuToolExecutor.ruleVersion ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ZiWuLiuZhuToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['capabilityId'] != ziWuLiuZhuModuleId ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'deviceLocalDateTime' ||
+        arguments is! Map ||
+        arguments.length != 1 ||
+        arguments['at'] != at ||
+        sourceIds is! List ||
+        !sourceIds.contains(ZiWuLiuZhuToolExecutor.sourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolExecutor.referenceSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied ZiWuLiuZhu result or its provenance no longer matches the immutable snapshot digest.',
+      );
+    }
+
+    final execution =
+        ZiWuLiuZhuToolExecutor.executeWithSnapshot({'at': at});
+    if (!execution.succeeded || execution.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu result could not be reconstructed from its recorded local timestamp.',
+      );
+    }
+    if (execution.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local ZiWuLiuZhu calculation no longer matches this immutable result snapshot.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: execution.structuredSnapshot!,
+      ),
+    );
   }
 
   static const yunqiModuleId = 'yunqi';
