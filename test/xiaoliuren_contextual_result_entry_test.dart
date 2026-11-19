@@ -67,7 +67,7 @@ void main() {
       expect(prompt, contains('小六壬'));
       expect(prompt, contains('农历'));
       expect(prompt, contains(ref.snapshotId!));
-      expect(prompt, contains('不得重新计算'));
+      expect(prompt, contains('不得重新排盘、推算'));
       expect(prompt, contains('民俗文化参考'));
     }
   });
