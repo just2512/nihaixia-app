@@ -778,7 +778,7 @@ void main() {
 
     await tester.tap(find.text('分享辨证结果'));
     await _pumpFrames(tester);
-    expect(sharedText, contains('【汉唐中医辨证结果】'));
+    expect(sharedText, contains('【研纪辨证结果】'));
     expect(sharedText, contains('少阳证'));
     expect(sharedText, contains('小柴胡汤'));
 
