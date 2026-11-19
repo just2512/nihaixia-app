@@ -271,7 +271,8 @@ void main() {
 
         expect(find.text('确认本次受生债查询输入'), findsOneWidget);
         await tester.tap(find.text('确认并解读'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
         final assistant = find.byType(LocalAiInterviewScreen);
         expect(assistant, findsOneWidget);
