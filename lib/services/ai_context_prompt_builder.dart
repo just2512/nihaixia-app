@@ -11,6 +11,8 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'huangdi_siji_result_context_executor.dart';
 import 'solar_term_result_context_executor.dart';
+import 'chenggu_result_context_executor.dart';
+import 'chenggu_tool_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 
@@ -285,6 +287,14 @@ class AiContextPromptBuilder {
           input['method'] == 'deviceLocalDateTime' &&
           at is String &&
           ref.anchorId == 'ziwuliuzhu:result:$snapshotId:at=$at';
+    }
+    if (ref.moduleId == ChengguResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      return schemaVersion == ChengguResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitBirthDateTime' && arguments is Map &&
+          arguments.length == 2 && arguments['birth_date'] is String &&
+          arguments['birth_time'] is String &&
+          ref.anchorId == 'chenggu:result:$snapshotId';
     }
     if (ref.moduleId == SolarTermResultContextExecutor.moduleId) {
       final arguments = input['arguments'];
@@ -724,7 +734,14 @@ class AiContextPromptBuilder {
       );
     }
 
-    final promptInput = ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
+    final promptInput = ref.moduleId == ChengguResultContextExecutor.moduleId
+        ? <String, Object?>{
+            for (final entry in inputValue.entries)
+              if (entry.key != 'arguments') entry.key: entry.value,
+            'arguments': const <String, String>{'birth_date': 'REDACTED_LOCAL_ONLY', 'birth_time': 'REDACTED_LOCAL_ONLY'},
+            'privacyNote': 'Exact birth date and clock time are retained only in the local verification snapshot and omitted from model context.',
+          }
+        : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in inputValue.entries)
               if (entry.key is String && entry.key != 'arguments')
@@ -737,7 +754,18 @@ class AiContextPromptBuilder {
                 'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
           }
         : inputValue;
-    final promptResult = ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
+    final promptResult = ref.moduleId == ChengguResultContextExecutor.moduleId
+        ? <String, Object?>{
+            for (final entry in resultValue.entries)
+              if (entry.key != 'values') entry.key: entry.value,
+            'values': <String, Object?>{
+              if (resultValue['values'] is Map)
+                for (final entry in (resultValue['values'] as Map).entries)
+                  if (entry.key != '出生公历') entry.key as String: entry.value,
+              '出生公历': 'REDACTED_LOCAL_ONLY',
+            },
+          }
+        : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in resultValue.entries)
               if (entry.key != 'values')
@@ -804,6 +832,10 @@ class AiContextPromptBuilder {
         '节气内容必须严格区分 App 本地知识资产中的通用养生常识、倪师讲座相关整理和【推断】内容；不得把整理或推断伪称为倪师逐字原话。只解释所选节气快照中已有的字段，不自行补造节气日期、物候或出处。',
       if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
         '节气养生文本是中医文化与一般健康知识参考，不是个体体质评估或诊断；不得据此提供个体治疗、用药、针灸、艾灸或疾病预防方案。若用户描述症状，应建议其寻求合格医疗人员评估。',
+      if (ref.moduleId == ChengguResultContextExecutor.moduleId)
+        '袁天罡称骨属于传统民俗文化文本，不是科学预测或个人命运事实。请只解释 App 本次实际计算出的骨重、歌诀和数据口径，不得将其表述为必然人生结论或确定性吉凶。',
+      if (ref.moduleId == ChengguResultContextExecutor.moduleId)
+        '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得反推或索要未传入的生辰信息。称骨内容不得转化为医疗、法律、投资或其他专业建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '轩辕黄帝四季歌属于托名轩辕黄帝的传统民俗通胜文本，不是科学预测，也不代表个人命运事实。请区分 App 已查得的农历月份/时辰/部位/诗文与现有释义；只在原文和口径范围内解释，不作确定性人生判断或重大决策建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)

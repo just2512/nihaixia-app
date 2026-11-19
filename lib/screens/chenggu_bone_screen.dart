@@ -5,6 +5,12 @@ import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTim
 
 import 'package:nihaisha_app/data/chenggu_data.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/models/ai_context_ref.dart';
+import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
+import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/services/chenggu_result_context_executor.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 
@@ -97,7 +103,7 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
     }
   }
 
-  void _returnResultToAssistant() {
+  Future<void> _askAiAboutResult() async {\n    final current = _result;\n    if (current == null) {\n      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请先完成称骨测算，再解读当前结果。')));\n      return;\n    }\n    final birthDate = '\${_birthDate.year.toString().padLeft(4, '0')}-\${_birthDate.month.toString().padLeft(2, '0')}-\${_birthDate.day.toString().padLeft(2, '0')}';\n    final birthTime = '\${_birthHour.toString().padLeft(2, '0')}:\${_birthMinute.toString().padLeft(2, '0')}';\n    try {\n      final execution = await ChengguResultContextExecutor.executeWithSnapshot({'birth_date': birthDate, 'birth_time': birthTime});\n      if (!mounted) return;\n      if (!execution.succeeded || execution.structuredSnapshot == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('称骨结果无法核验，已取消 AI 提问。'))); return; }\n      final values = execution.result.values;\n      if (values['总骨重'] != '\${current.liang}两\${current.qian}钱（\${current.totalQian}钱）' || values['称骨歌诀标题'] != current.title || values['称骨歌诀'] != current.poem || values['称骨说明'] != current.detail || values['真太阳时校正'] != (_useTrueSolarTime ? '开启' : '关闭') || values['早晚子时区分'] != (_distinguishZiShi ? '开启' : '关闭')) {\n        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('当前页面结果与本地重建结果不一致，已取消 AI 提问。'))); return;\n      }\n      final ref = AiContextResolver.buildChengguResultContextRef(structuredSnapshot: execution.structuredSnapshot!);\n      final resolution = await AiContextResolver.resolveChengguToolResult(ref: ref, structuredSnapshot: execution.structuredSnapshot!);\n      if (!mounted) return;\n      if (!resolution.isResolved || resolution.value == null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('称骨上下文核验失败：\${resolution.status.name}'))); return; }\n      await showContextualAiSheet(context: context, contextRef: ref, initialPrompt: AiContextPromptBuilder.buildToolResult(ref: ref, structuredSnapshot: resolution.value!.structuredSnapshot), initialMode: AssistantMode.metaphysics, contextualTitle: '袁天罡称骨结果', contextualExplanationOnly: true);\n    } catch (_) {\n      if (!mounted) return;\n      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('称骨上下文无法核验，已取消 AI 提问。')));\n    }\n  }\n\n  void _returnResultToAssistant() {
     final result = _result;
     if (result == null) return;
     final solar = DateTime(
@@ -281,7 +287,7 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
                 ),
               ),
             ),
-            if (widget.returnResultOnComplete) ...[
+            if (_result != null) ...[\n              const SizedBox(height: 8),\n              SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _askAiAboutResult, icon: const Icon(Icons.auto_awesome), label: const Text('问 AI 解读当前称骨结果'))),\n            ],\n            if (widget.returnResultOnComplete) ...[
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
