@@ -11,6 +11,8 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
+import 'chenggu_result_context_executor.dart';
+import 'chenggu_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
@@ -296,6 +298,16 @@ class AiContextPromptBuilder {
           SolarTermToolExecutor.termNames.contains(term) &&
           ref.anchorId == 'solar-term:knowledge:$snapshotId:term=$term';
     }
+    if (ref.moduleId == ChengguResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      return schemaVersion == ChengguResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitBirthDateTime' &&
+          arguments is Map &&
+          arguments.length == 2 &&
+          arguments['birth_date'] is String &&
+          arguments['birth_time'] is String &&
+          ref.anchorId == 'chenggu:result:' + snapshotId;
+    }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
       return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
@@ -391,6 +403,21 @@ class AiContextPromptBuilder {
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError(
         'A solar-term prompt requires a resolved solar-term tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildChengguToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != ChengguResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A Chenggu prompt requires a resolved Chenggu tool result.',
       );
     }
     return buildToolResult(
@@ -697,6 +724,33 @@ class AiContextPromptBuilder {
       );
     }
 
+    final promptInput = ref.moduleId == ChengguResultContextExecutor.moduleId
+        ? <String, Object?>{
+            for (final entry in inputValue.entries)
+              if (entry.key != 'arguments')
+                entry.key: entry.value,
+            'arguments': const <String, String>{
+              'birth_date': 'REDACTED_LOCAL_ONLY',
+              'birth_time': 'REDACTED_LOCAL_ONLY',
+            },
+            'privacyNote':
+                'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
+          }
+        : inputValue;
+    final promptResult = ref.moduleId == ChengguResultContextExecutor.moduleId
+        ? <String, Object?>{
+            for (final entry in resultValue.entries)
+              if (entry.key != 'values')
+                entry.key: entry.value,
+            'values': <String, Object?>{
+              if (resultValue['values'] is Map)
+                for (final entry in (resultValue['values'] as Map).entries)
+                  if (entry.key != '出生公历')
+                    entry.key: entry.value,
+              '出生公历': 'REDACTED_LOCAL_ONLY',
+            },
+          }
+        : resultValue;
     final source = <String, Object?>{
       'title': ref.title ?? '',
       'toolId': ref.moduleId,
@@ -709,8 +763,8 @@ class AiContextPromptBuilder {
       'resultSchemaVersion': structuredSnapshot['resultSchemaVersion'],
       'executionStatus': structuredSnapshot['executionStatus'],
       'sourceIds': structuredSnapshot['sourceIds'],
-      'input': structuredSnapshot['input'],
-      'result': structuredSnapshot['result'],
+      'input': promptInput,
+      'result': promptResult,
       'units': structuredSnapshot['units'],
       'missingFields': structuredSnapshot['missingFields'],
       'displaySummary': structuredSnapshot['displaySummary'],
@@ -750,6 +804,12 @@ class AiContextPromptBuilder {
         '节气内容必须严格区分 App 本地知识资产中的通用养生常识、倪师讲座相关整理和【推断】内容；不得把整理或推断伪称为倪师逐字原话。只解释所选节气快照中已有的字段，不自行补造节气日期、物候或出处。',
       if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
         '节气养生文本是中医文化与一般健康知识参考，不是个体体质评估或诊断；不得据此提供个体治疗、用药、针灸、艾灸或疾病预防方案。若用户描述症状，应建议其寻求合格医疗人员评估。',
+      if (ref.moduleId == ChengguResultContextExecutor.moduleId)
+        '袁天罡称骨属于传统命理民俗文化文本，不是科学预测，也不代表个人命运事实。请只解释 App 实际计算出的年干支、农历月日、时辰、骨重和对应歌诀；不得把歌诀转述为必然人生结论或保证。',
+      if (ref.moduleId == ChengguResultContextExecutor.moduleId)
+        '不得把称骨结果转换为疾病诊断、治疗或用药建议，也不得作为投资、法律、婚姻或其他重大决策依据。不得补造未提供的性别版本或其他流派规则；本地资产注明不分性别时必须保持该口径。',
+      if (ref.moduleId == ChengguResultContextExecutor.moduleId)
+        '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要精确生辰。只解释快照已有字段，不自行重排四柱、重算骨重或替换 App 结果。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',

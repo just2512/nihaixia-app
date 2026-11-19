@@ -118,7 +118,8 @@ class ChengguResultContextExecutor {
       },
       'missingFields': missingFields,
       'displaySummary':
-          '\${values['总骨重'] ?? 'MISSING'} · \${values['称骨歌诀标题'] ?? 'MISSING'}',
+          (values['总骨重'] ?? 'MISSING').toString() + ' · ' +
+          (values['称骨歌诀标题'] ?? 'MISSING').toString(),
       'privacy': const <String, Object?>{
         'exactBirthDateAndTime': 'LOCAL_VERIFICATION_ONLY',
         'modelPromptPolicy': 'REDACT_EXACT_BIRTH_DATE_AND_TIME',
