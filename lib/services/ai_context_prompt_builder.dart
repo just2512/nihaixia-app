@@ -11,6 +11,9 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'shousheng_debt_result_context_executor.dart';
 import 'shousheng_debt_tool_executor.dart';
+import 'huangdi_siji_result_context_executor.dart';
+import 'solar_term_result_context_executor.dart';
+import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
@@ -285,6 +288,27 @@ class AiContextPromptBuilder {
           at is String &&
           ref.anchorId == 'ziwuliuzhu:result:$snapshotId:at=$at';
     }
+    if (ref.moduleId == SolarTermResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      final term = arguments is Map ? arguments['term'] : null;
+      return schemaVersion == SolarTermResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitSolarTerm' &&
+          arguments is Map &&
+          arguments.length == 1 &&
+          term is String &&
+          SolarTermToolExecutor.termNames.contains(term) &&
+          ref.anchorId == 'solar-term:knowledge:$snapshotId:term=$term';
+    }
+    if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      return schemaVersion == HuangdiSijiResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitBirthDateTime' &&
+          arguments is Map &&
+          arguments.length == 2 &&
+          arguments['birth_date'] is String &&
+          arguments['birth_time'] is String &&
+          ref.anchorId == 'huangdi-siji:result:$snapshotId';
+    }
     if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
       final method = input['method'];
       final arguments = input['arguments'];
@@ -377,6 +401,38 @@ class AiContextPromptBuilder {
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError(
         'A ZiWuLiuZhu prompt requires a resolved ZiWuLiuZhu tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildSolarTermToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId !=
+            SolarTermResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A solar-term prompt requires a resolved solar-term tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildHuangdiSijiToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId !=
+            HuangdiSijiResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A Huangdi Siji prompt requires a resolved Huangdi Siji tool result.',
       );
     }
     return buildToolResult(
@@ -695,6 +751,7 @@ class AiContextPromptBuilder {
       );
     }
 
+
     if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
       final method = inputValue['method'];
       final expectedDataSource = method == 'luku'
@@ -720,6 +777,7 @@ class AiContextPromptBuilder {
       );
     }
 
+
     final promptInput = ref.moduleId == ShoushengDebtResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in inputValue.entries)
@@ -733,7 +791,19 @@ class AiContextPromptBuilder {
             'privacyNote':
                 'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
           }
-        : inputValue;
+        : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in inputValue.entries)
+                  if (entry.key != 'arguments')
+                    entry.key: entry.value,
+                'arguments': const <String, String>{
+                  'birth_date': 'REDACTED_LOCAL_ONLY',
+                  'birth_time': 'REDACTED_LOCAL_ONLY',
+                },
+                'privacyNote':
+                    'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
+              }
+            : inputValue;
     final promptResult = ref.moduleId == ShoushengDebtResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in resultValue.entries)
@@ -747,7 +817,20 @@ class AiContextPromptBuilder {
               '出生公历': 'REDACTED_LOCAL_ONLY',
             },
           }
-        : resultValue;
+        : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in resultValue.entries)
+                  if (entry.key != 'values')
+                    entry.key: entry.value,
+                'values': <String, Object?>{
+                  if (resultValue['values'] is Map)
+                    for (final entry in (resultValue['values'] as Map).entries)
+                      if (entry.key != '出生公历')
+                        entry.key: entry.value,
+                  '出生公历': 'REDACTED_LOCAL_ONLY',
+                },
+              }
+            : resultValue;
     final source = <String, Object?>{
       'title': ref.title ?? '',
       'toolId': ref.moduleId,
@@ -797,6 +880,14 @@ class AiContextPromptBuilder {
         '子午流注快照是 App 原有经络时辰计算引擎的结果，固定采用设备本地墙钟时间、默认经度 120E/纬度 30N、子时 23:00 换日且未启用真太阳时。请分别解释纳子法、纳甲法、灵龟八法和飞腾八法的字段；状态为 NOT_APPLICABLE 表示该方法在本次输入下没有对应结果，不得补造穴位。',
       if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId)
         '这些内容仅用于解释传统子午流注计算口径和 App 返回值，不代表穴位对当前个人适用，不构成针刺、艾灸、治疗时机、刺激强度/频次或处方建议；不得据此推断疾病或替代临床评估。',
+      if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
+        '节气内容必须严格区分 App 本地知识资产中的通用养生常识、倪师讲座相关整理和【推断】内容；不得把整理或推断伪称为倪师逐字原话。只解释所选节气快照中已有的字段，不自行补造节气日期、物候或出处。',
+      if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
+        '节气养生文本是中医文化与一般健康知识参考，不是个体体质评估或诊断；不得据此提供个体治疗、用药、针灸、艾灸或疾病预防方案。若用户描述症状，应建议其寻求合格医疗人员评估。',
+      if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
+        '轩辕黄帝四季歌属于托名轩辕黄帝的传统民俗通胜文本，不是科学预测，也不代表个人命运事实。请区分 App 已查得的农历月份/时辰/部位/诗文与现有释义；只在原文和口径范围内解释，不作确定性人生判断或重大决策建议。',
+      if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
+        '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把民俗文本转化为医疗、法律、投资或其他专业建议。',
       if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
         '受生债查询依据 App 本地整理的两类道教受生经文与相关民俗资料，只能作为文献和民俗文化研究对象。不得把“受生债”表述为已经证实的现实债务、用户必须偿还的义务或可验证的命运因果。',
       if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
