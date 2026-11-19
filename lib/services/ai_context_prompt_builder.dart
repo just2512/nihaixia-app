@@ -9,6 +9,8 @@ import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
+import 'shousheng_debt_result_context_executor.dart';
+import 'shousheng_debt_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
@@ -283,6 +285,19 @@ class AiContextPromptBuilder {
           at is String &&
           ref.anchorId == 'ziwuliuzhu:result:$snapshotId:at=$at';
     }
+    if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
+      final method = input['method'];
+      final arguments = input['arguments'];
+      return schemaVersion == ShoushengDebtResultContextExecutor.resultSchemaVersion &&
+          method is String &&
+          ShoushengDebtToolExecutor.methods.contains(method) &&
+          arguments is Map &&
+          arguments.length == 3 &&
+          arguments['method'] == method &&
+          arguments['birth_date'] is String &&
+          arguments['birth_time'] is String &&
+          ref.anchorId == 'shousheng-debt:result:$snapshotId:method=$method';
+    }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
       return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
@@ -362,6 +377,26 @@ class AiContextPromptBuilder {
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError(
         'A ZiWuLiuZhu prompt requires a resolved ZiWuLiuZhu tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildShoushengDebtToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    final method = resolvedResult.structuredSnapshot['input'] is Map
+        ? (resolvedResult.structuredSnapshot['input'] as Map)['method']
+        : null;
+    if (resolvedResult.ref.moduleId !=
+            ShoushengDebtResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult ||
+        !ShoushengDebtToolExecutor.methods.contains(method)) {
+      throw ArgumentError(
+        'A Shousheng prompt requires a resolved Shousheng tool result.',
       );
     }
     return buildToolResult(
@@ -668,6 +703,34 @@ class AiContextPromptBuilder {
       );
     }
 
+    final promptInput = ref.moduleId == ShoushengDebtResultContextExecutor.moduleId
+        ? <String, Object?>{
+            for (final entry in inputValue.entries)
+              if (entry.key != 'arguments')
+                entry.key: entry.value,
+            'arguments': <String, String>{
+              'birth_date': 'REDACTED_LOCAL_ONLY',
+              'birth_time': 'REDACTED_LOCAL_ONLY',
+              'method': inputValue['method'] as String,
+            },
+            'privacyNote':
+                'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
+          }
+        : inputValue;
+    final promptResult = ref.moduleId == ShoushengDebtResultContextExecutor.moduleId
+        ? <String, Object?>{
+            for (final entry in resultValue.entries)
+              if (entry.key != 'values')
+                entry.key: entry.value,
+            'values': <String, Object?>{
+              if (resultValue['values'] is Map)
+                for (final entry in (resultValue['values'] as Map).entries)
+                  if (entry.key != '出生公历')
+                    entry.key: entry.value,
+              '出生公历': 'REDACTED_LOCAL_ONLY',
+            },
+          }
+        : resultValue;
     final source = <String, Object?>{
       'title': ref.title ?? '',
       'toolId': ref.moduleId,
@@ -680,8 +743,8 @@ class AiContextPromptBuilder {
       'resultSchemaVersion': structuredSnapshot['resultSchemaVersion'],
       'executionStatus': structuredSnapshot['executionStatus'],
       'sourceIds': structuredSnapshot['sourceIds'],
-      'input': structuredSnapshot['input'],
-      'result': structuredSnapshot['result'],
+       'input': promptInput,
+       'result': promptResult,
       'units': structuredSnapshot['units'],
       'missingFields': structuredSnapshot['missingFields'],
       'displaySummary': structuredSnapshot['displaySummary'],
@@ -717,6 +780,14 @@ class AiContextPromptBuilder {
         '子午流注快照是 App 原有经络时辰计算引擎的结果，固定采用设备本地墙钟时间、默认经度 120E/纬度 30N、子时 23:00 换日且未启用真太阳时。请分别解释纳子法、纳甲法、灵龟八法和飞腾八法的字段；状态为 NOT_APPLICABLE 表示该方法在本次输入下没有对应结果，不得补造穴位。',
       if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId)
         '这些内容仅用于解释传统子午流注计算口径和 App 返回值，不代表穴位对当前个人适用，不构成针刺、艾灸、治疗时机、刺激强度/频次或处方建议；不得据此推断疾病或替代临床评估。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '受生债查询依据 App 本地整理的两类道教受生经文与相关民俗资料，只能作为文献和民俗文化研究对象。不得把“受生债”表述为已经证实的现实债务、用户必须偿还的义务或可验证的命运因果。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '必须保持用户明确选择的经文体系：禄库受生经按年支查询；五斗金章受生经按出生日日干与时支查询，并保留快照中的经文/民间口径说明。不得将两套表格拼接、替换或推断未提供的流派字段。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '不得建议用户购买法事、纸钱、符箓或付费服务，不得要求转账或提供收款渠道，也不得用恐吓、灾祸或“欠债必须还”促成消费。不得给出金额换算或现实偿还指令；古代“贯”等计量只按来源文本解释。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '出生日期与钟点只用于 App 本地结果重建校验，已从模型上下文脱敏；不得尝试反推或索要精确生辰。只解释快照已有字段，不自行排盘、补造结果或把民俗材料当作科学预测。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
