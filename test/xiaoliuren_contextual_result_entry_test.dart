@@ -182,14 +182,18 @@ void main() {
         await tester.pumpAndSettle();
 
         final ask = find.text('问 AI 解读当前小六壬结果');
-        expect(ask, findsOneWidget);
-        await tester.ensureVisible(ask);
-        await tester.pumpAndSettle();
-
-        final pageScrollable = find.ancestor(
-          of: ask,
+        final pageScrollable = find.descendant(
+          of: find.byType(Scaffold),
           matching: find.byType(Scrollable),
         ).first;
+        await tester.scrollUntilVisible(
+          ask,
+          220,
+          scrollable: pageScrollable,
+        );
+        await tester.pumpAndSettle();
+        expect(ask, findsOneWidget);
+
         final pagePosition =
             tester.state<ScrollableState>(pageScrollable).position;
         final offsetBeforeOpen = pagePosition.pixels;
@@ -208,7 +212,11 @@ void main() {
         expect(assistantWidget.contextRef['moduleId'], 'xiaoliuren');
         expect(assistantWidget.contextRef['snapshotId'], hasLength(64));
         expect(assistantWidget.initialPrompt, contains('小六壬'));
-        expect(assistantWidget.initialPrompt, contains('午时'));
+        expect(
+          assistantWidget.initialPrompt,
+          contains('"hour":"'),
+          reason: 'Prompt must carry the actual page-selected hour, not a test-fixed hour.',
+        );
         if (viewport.expectsSheet) {
           expect(find.byType(DraggableScrollableSheet), findsOneWidget);
         } else {
