@@ -280,4 +280,175 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  test('YiJing field resolver binds scalar paths to the exact immutable result', () {
+    const arguments = {'method': 'number', 'first': '3', 'second': '7'};
+    final snapshot = YiJingToolExecutor.createStructuredSnapshot(arguments);
+    final result = snapshot['result']! as Map<String, Object?>;
+    final primary = result['primary']! as Map<String, Object?>;
+    final parentRef = AiContextResolver.buildYiJingResultContextRef(
+      structuredSnapshot: snapshot,
+    );
+    final fieldRef = AiContextResolver.buildYiJingFieldContextRef(
+      resultRef: parentRef,
+      fieldPath: 'result.primary.judgement',
+      fieldLabel: '本卦卦辞',
+    );
+    final resolved = AiContextResolver.resolveYiJingResultField(
+      ref: fieldRef,
+      structuredSnapshot: snapshot,
+    );
+
+    expect(resolved.isResolved, isTrue);
+    expect(fieldRef.kind, AiContextKind.fieldValue);
+    expect(fieldRef.moduleId, 'yijing');
+    expect(fieldRef.fieldPath, 'result.primary.judgement');
+    expect(fieldRef.snapshotId, snapshot['snapshotId']);
+    expect(resolved.value?.fieldValue.single['value'], primary['judgement']);
+    expect(
+      resolved.value?.structuredSnapshot['snapshotId'],
+      snapshot['snapshotId'],
+    );
+
+    final prompt = AiContextPromptBuilder.buildYiJingToolField(
+      resolvedField: resolved.value!,
+    );
+    expect(prompt, contains('result.primary.judgement'));
+    expect(prompt, contains('本卦卦辞'));
+    expect(prompt, contains('不得重新起卦'));
+    expect(prompt, contains('不是科学预测'));
+
+    final movingRef = AiContextResolver.buildYiJingFieldContextRef(
+      resultRef: parentRef,
+      fieldPath: 'result.movingTexts.0',
+      fieldLabel: '当前动爻/卦辞',
+    );
+    final moving = AiContextResolver.resolveYiJingResultField(
+      ref: movingRef,
+      structuredSnapshot: snapshot,
+    );
+    expect(moving.isResolved, isTrue);
+    expect(
+      moving.value?.fieldValue.single['value'],
+      (result['movingTexts']! as List).first,
+    );
+
+    expect(
+      () => AiContextResolver.buildYiJingFieldContextRef(
+        resultRef: parentRef,
+        fieldPath: 'result.input.untrusted',
+        fieldLabel: '不支持路径',
+      ),
+      throwsArgumentError,
+    );
+
+    final stale = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: fieldRef.moduleId,
+      anchorId: fieldRef.anchorId,
+      anchorVersion: fieldRef.anchorVersion,
+      snapshotId: fieldRef.snapshotId,
+      ruleVersion: 'yijing-engine@STALE',
+      sourceId: fieldRef.sourceId,
+      fieldPath: fieldRef.fieldPath,
+      title: fieldRef.title,
+    );
+    expect(
+      AiContextResolver.resolveYiJingResultField(
+        ref: stale,
+        structuredSnapshot: snapshot,
+      ).status,
+      AiContextResolutionStatus.stale,
+    );
+
+    final tampered = Map<String, Object?>.from(snapshot);
+    final tamperedResult = Map<String, Object?>.from(result);
+    final tamperedPrimary = Map<String, Object?>.from(primary)
+      ..['judgement'] = '被篡改的卦辞';
+    tamperedResult['primary'] = tamperedPrimary;
+    tampered['result'] = tamperedResult;
+    expect(
+      AiContextResolver.resolveYiJingResultField(
+        ref: fieldRef,
+        structuredSnapshot: tampered,
+      ).status,
+      AiContextResolutionStatus.stale,
+    );
+
+    final missingArguments = const {
+      'method': 'manual',
+      'upper': '1',
+      'lower': '8',
+      'moving': '0',
+    };
+    final missingSnapshot =
+        YiJingToolExecutor.createStructuredSnapshot(missingArguments);
+    final missingParent = AiContextResolver.buildYiJingResultContextRef(
+      structuredSnapshot: missingSnapshot,
+    );
+    final absentField = AiContextResolver.buildYiJingFieldContextRef(
+      resultRef: missingParent,
+      fieldPath: 'result.changed.judgement',
+      fieldLabel: '变卦卦辞',
+    );
+    expect(
+      AiContextResolver.resolveYiJingResultField(
+        ref: absentField,
+        structuredSnapshot: missingSnapshot,
+      ).status,
+      AiContextResolutionStatus.missing,
+    );
+  });
+
+  testWidgets(
+    'YiJing result exposes a real field-bound explanation-only assistant entry',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(402, 1100);
+      addTearDown(tester.view.reset);
+
+      const arguments = {'method': 'number', 'first': '3', 'second': '7'};
+      final cast = YiJingEngine.castByNumbers(3, 7);
+      await tester.pumpWidget(
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: AppColors.colorSchemeFor(Brightness.light),
+              extensions: [AppColors.light],
+            ),
+            home: YiJingResultScreen(
+              cast: cast,
+              executionArguments: arguments,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final fieldAsk = find.byKey(
+        const ValueKey('yijing-field-primary-judgement'),
+      );
+      expect(fieldAsk, findsOneWidget);
+      expect(find.byTooltip('问 AI 解读当前卦象'), findsOneWidget);
+
+      await tester.tap(fieldAsk);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final assistant = find.byType(LocalAiInterviewScreen);
+      expect(assistant, findsOneWidget);
+      final widget = tester.widget<LocalAiInterviewScreen>(assistant);
+      expect(widget.initialMode, AssistantMode.tools);
+      expect(widget.contextualExplanationOnly, isTrue);
+      expect(widget.contextRef['kind'], 'field');
+      expect(widget.contextRef['moduleId'], 'yijing');
+      expect(widget.contextRef['fieldPath'], 'result.primary.judgement');
+      expect(widget.contextRef['snapshotId'], hasLength(64));
+      expect(widget.initialPrompt, contains('本卦卦辞'));
+      expect(widget.initialPrompt, contains('不得重新起卦'));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
 }
