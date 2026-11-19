@@ -1899,7 +1899,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   void _shareDiagnosisResult(DiagnosisResult result) {
     final formula = FormulaRepository.getByName(result.formula);
     final lines = <String>[
-      '【汉唐中医辨证结果】',
+      '【研纪辨证结果】',
       '六经：${result.displayMeridian}病',
       if (result.isCombined)
         '合病：${result.meridian}与${result.combinedMeridian}同病',
@@ -1926,7 +1926,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (result.prescription != null) result.prescription!.toCopyText(),
       if (result.recommendConsult || result.formula.isEmpty)
         '证据不足，不自动推荐方剂；请由执业中医师结合四诊面诊核实。',
-      '—— 来自「汉唐中医」App',
+      '—— 来自「研纪」App',
     ];
     final text = lines.where((line) => line.trim().isNotEmpty).join('\n\n');
     final testShare = widget.shareDiagnosisText;
@@ -9207,7 +9207,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: Text(widget.contextualTitle == null
-            ? '汉唐 AI 助手'
+            ? '研纪 AI 助手'
             : '问 AI · ${widget.contextualTitle}'),
         actions: [
           if (_tcmInterviewController != null)

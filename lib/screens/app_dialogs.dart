@@ -205,7 +205,7 @@ Future<void> exportBookmarks(BuildContext context) async {
     return;
   }
 
-  String text = '【汉唐中医·收藏导出】\n\n';
+  String text = '【研纪·收藏导出】\n\n';
   for (final b in bookmarks) {
     text += '━━━━━━━━━━━━━━\n';
     text += '${b.title}\n';
@@ -213,7 +213,7 @@ Future<void> exportBookmarks(BuildContext context) async {
     text += '${b.createdAt}\n\n';
     text += '${b.content}\n\n';
   }
-  text += '—— 来自「汉唐中医」App';
+  text += '—— 来自「研纪」App';
 
   await Share.share(text);
 }
@@ -276,7 +276,7 @@ Future<void> showAboutPage(BuildContext context) async {
                   Icon(Icons.menu_book_rounded, size: 64,
                       color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 8),
-                  const Text('汉唐中医', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('研纪', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text('v${info.version}', style: TextStyle(color: context.colors.onSurfaceVariant)),
                   const SizedBox(height: 2),
@@ -370,7 +370,7 @@ Future<void> showAboutPage(BuildContext context) async {
             const Divider(),
             const SizedBox(height: 8),
             Center(
-              child: Text('© 2026 just2512 · 汉唐中医',
+              child: Text('© 2026 just2512 · 研纪',
                   style: TextStyle(color: context.colors.onSurfaceVariant, fontSize: 12)),
             ),
           ],

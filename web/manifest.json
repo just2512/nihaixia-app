@@ -1,11 +1,11 @@
 {
-    "name": "nihaisha_app",
-    "short_name": "nihaisha_app",
+    "name": "研纪",
+    "short_name": "研纪",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "研纪：中医诊疗全过程辅助学习工具，涵盖中医经典、方剂、本草、针灸、医案与传统文化工具。离线优先，结合本地确定性规则与 AI 辅助理解。",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -17,12 +17,12 @@ OPPO 官方规格页列出 Find N2（入网型号 **PGU110**）的显示参数�
 
 ### 当前代码审计
 
-- Android Manifest 的应用名为「汉唐中医」，Flutter 的 MaterialApp 标题也是「汉唐中医」；没有发现强制锁定竖屏的配置，Activity 已声明处理屏幕尺寸和最小尺寸变化。
+- Android Manifest 的应用名为「研纪」，Flutter 的 MaterialApp 标题也是「研纪」；没有发现强制锁定竖屏的配置，Activity 已声明处理屏幕尺寸和最小尺寸变化。
 - 首页之前无条件使用底部 NavigationBar。外屏合适，但展开内屏仍把四个主入口压在底部，未利用可用宽度。
 - Flutter 根入口未统一建立窗口尺寸类别；各业务页面仍有各自的 Scaffold 和内容布局，需要按页面类型继续适配，不能认为首页导航改造已代表全应用通过。
 - Android 已配置 Android 8.0+ adaptive icon foreground/background，并为当前 minSdk 24 提供 anydpi 矢量兼容资源；原有多密度 PNG 保留在仓库中作为旧资源。
 - 原有多密度 PNG 已保留作回退；Manifest 现已指向简化书页自适应矢量图标，不含小字或“中医大师”表述。
-- `pubspec.yaml` 描述已统一为“汉唐中医 - 中医经典知识与本地健康信息工具”，与知识、工具和本地健康信息整理的实际范围一致。
+- `pubspec.yaml` 描述已统一为“研纪 - 中医经典知识与本地健康信息工具”，与知识、工具和本地健康信息整理的实际范围一致。
 
 ## 2. 已落地的基础导航规则
 
@@ -76,22 +76,22 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 
 ### 名称建议
 
-- **桌面短名称：保留「汉唐中医」**。现有 Manifest 与 MaterialApp 已统一为这个名称，四字长度适合桌面图标下方显示；不建议在短名称里追加副标题。
+- **桌面短名称：保留「研纪」**。现有 Manifest 与 MaterialApp 已统一为这个名称，四字长度适合桌面图标下方显示；不建议在短名称里追加副标题。
 - 应用商店/介绍副标题建议统一为：**「中医经典 · 知识工具 · 本地健康信息」**。
 - 项目描述不再使用“中医诊断助手”作为总定位；中医规则辨证、传统文化工具和 E4B 健康信息整理应在功能说明里分别描述。
-- Android applicationId `com.nihaisha.nihaisha_app` 不改，避免影响升级覆盖安装、数据目录及本地模型路径。
+- Android applicationId `com.nihaisha.nihaisha_app`、Kotlin namespace `com.nihaisha.nihaisha_app` 与 Dart package name `nihaisha_app` 均保持不变，避免影响旧 APK 覆盖升级、应用私有数据目录、本地模型路径与既有代码导入。
 
 ### 图标方向
 
 **方向：朱砂印记 + 经典书页的现代简化符号。**
 
 - 主色：朱砂红（约 `#A93226`）；辅色：墨黑（约 `#24211F`）、米纸白（约 `#F3EBDD`）、少量古金（约 `#B89453`）。
-- 主图形只保留一个清晰主体：打开的书页与圆形阴阳/经络线的抽象组合，或单字「汉」的简化印记。两者择一，不把所有传统元素堆进同一图标。
+- 主图形只保留一个清晰主体：打开的书页与圆形阴阳/经络线的抽象组合，或单字「研」的简化印记。两者择一，不把所有传统元素堆进同一图标。
 - 禁止在图标里放小字、四角印章、长副标题和“中医大师”字样；桌面图标不承担说明书功能。
 - Android 8.0+ 使用 `mipmap-anydpi-v26/ic_launcher.xml`，分离 foreground 与 background，主体置于系统安全区；同时提供旧版 launcher PNG，确保旧系统和第三方桌面显示一致。
 - 交付源文件优先使用 SVG/矢量母版，再导出各密度资源；图形在圆形、方圆形和水滴形遮罩下都要可识别。
 
-本轮已按上述方向落实首版矢量资源：打开书页作为唯一主体、朱砂红页面、米纸白底、墨色书页线条与古金色中缝；不放小字或“中医大师”字样。Android 8.0+ 使用独立 foreground/background 自适应图层；API 24–25 使用 anydpi vector 图标。桌面短名称仍统一为“汉唐中医”，MaterialApp.title 与 Manifest label 保持一致，applicationId 不变。
+本轮已按上述方向落实首版矢量资源：打开书页作为唯一主体、朱砂红页面、米纸白底、墨色书页线条与古金色中缝；不放小字或“中医大师”字样。Android 8.0+ 使用独立 foreground/background 自适应图层；API 24–25 使用 anydpi vector 图标。桌面短名称仍统一为“研纪”，MaterialApp.title 与 Manifest label 保持一致，applicationId 不变。
 
 ## 5. 实机与 CI 验收标准
 
