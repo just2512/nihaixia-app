@@ -2988,9 +2988,9 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 ### 57.35 2026-11-19 全仓库授权文件清单与精确许可门禁（更新到最新主线）
 
 - 共同上游比较基线：`c0f14e77a7fb721fc332576d21fef5f100392d0b`。机器可读清单按该基线至 CI 检出的实际 PR HEAD 重算；不再把旧的 `79f847e` 快照 SHA 写死在清单中，精确 HEAD SHA 由工作流记录。
-- 全量新增/修改路径：796 个（新增 680、修改 116），另有 10 个删除路径。类别为 321 个 Fork 商业授权候选、110 个 Apache 2.0 + Fork 商业双层许可、364 个知识库排除、1 个第三方排除。
+- 全量新增/修改路径：798 个（新增 682、修改 116），另有 10 个删除路径。类别为 323 个 Fork 商业授权候选、110 个 Apache 2.0 + Fork 商业双层许可、364 个知识库排除、1 个第三方排除。
 - 每条清单记录包含路径、Git 状态、分类、SPDX 表达式、分类理由及权属/来源状态。321 个纯 Fork 新增文件和 110 个混合文件均标记 `OWNERSHIP_EVIDENCE_REQUIRED`；364 个知识库文件与 1 个第三方依赖锁定文件标记 `SOURCE_LICENSE_REVIEW`，不授予新的商业许可。
-- `.reuse/dep5` 按 796 个变更路径逐项登记，混合文件为 `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial`，纯 Fork 新增文件为 `LicenseRef-Nihaixia-Fork-Commercial`，知识库与第三方排除项为 `NOASSERTION`；不采用会把整个 `lib/data` 或 `assets` 误纳入商业授权的宽泛目录规则。
+- `.reuse/dep5` 按 798 个变更路径逐项登记，混合文件为 `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial`，纯 Fork 新增文件为 `LicenseRef-Nihaixia-Fork-Commercial`，知识库与第三方排除项为 `NOASSERTION`；不采用会把整个 `lib/data` 或 `assets` 误纳入商业授权的宽泛目录规则。
 - `tool/check_fork_license_inventory.py` 增强为校验共同基线、运行时 HEAD 标记、路径及状态完整性、删除清单、分类白名单、分类/状态/SPDX 对应关系、分类计数、权属状态、DEP5 精确路径集、两份许可正文一致、Apache 许可证副本与根 `LICENSE` 字节一致，以及根 `LICENSE` 未改变。
 - `.github/workflows/fork-license-compliance.yml` 明确检出 PR head SHA 而不是合并模拟 ref，避免拿到错误的清单快照。自动门禁验证工程映射，不证明代码作者身份或版权链。
 - Fork 商业授权文本更新为 1.2：个人非商业使用仅限个人设备或非商业研究环境；对 Fork 自有修改内容的公开再分发及商业用途须事先取得书面许可；上游 Apache 2.0 权利和知识库/第三方原许可不改变。两份商业许可正文必须逐字节一致，Apache 许可副本必须与根 `LICENSE` 一致。
@@ -3000,3 +3000,15 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - **合并阻断项**：当前仓库仍是 Public，且用户要求禁止任何未经书面许可的公开再分发。两者与 GitHub 的平台级 Fork 授权存在冲突；在权利人明确决定可接受平台 Fork，或明确批准转为 Private 之前，不得把本 PR 合并并宣称严格再分发限制已经生效。
 - 本台账记录工程状态，不构成法律意见；正式商业发行前仍须由法律专业人士审查版权链、平台条款和具体商业合同文本。
 
+
+
+### 57.36 2026-11-20 Fork 商业授权 PR 最新复核
+
+- PR [#332](https://github.com/just2512/nihaixia-app/pull/332) 当前分支 `work/ai-commercial-license-20261119`，HEAD `265bff0dbe5b72195ca0267e0de87655d6269ee7`；PR 已为 Ready for review（非 Draft），尚未合并。
+- 全量清单已纳入最近合入主线的两个新增回归测试：`test/phase2_remaining_half_fold_routes_test.dart` 与 `test/xiaoliuren_contextual_result_entry_test.dart`。最新统计：798 个新增/修改路径（682 added、116 modified），10 个删除；分类 323 个 Fork 商业授权候选、110 个双层许可、364 个知识库排除、1 个第三方排除。
+- PR HEAD 的 Fork license workflow run [44542929774](https://github.com/just2512/nihaixia-app/actions/runs/44542929774) SUCCESS；Flutter tests run [44542929406](https://github.com/just2512/nihaixia-app/actions/runs/44542929406) SUCCESS，其中 Flutter regression、Android arm64 APK/ABI/unit tests 均 SUCCESS；Branch validation 按条件 SKIPPED，不计为 PASS。
+- 自动许可检查覆盖基线至实际 HEAD 的变更/删除集合、精确 DEP5 路径与 SPDX 表达式、分类和计数、知识库/第三方排除、商业许可正文副本一致、Apache LICENSE 副本一致及根 LICENSE 不变。该工作流验证工程映射，不验证作者版权链。
+- PR 分支相对最新 master 已发生分叉：比较结果为 master 相对 PR 分支 ahead 27、behind 8，merge base `7eedfcbb82efb3f48b46704d67a1dc880c90975f`。因此上述 CI 是 PR 当前 HEAD 的结果，不是最新 master 合入后的结果；必须先同步最新 master、重算清单并对新 HEAD 重跑 CI。
+- `OWNERSHIP_EVIDENCE_REQUIRED` 仍未关闭，不能宣称 433 个 Fork 商业授权候选文件已完成版权确权。贡献者/第三方版权及再许可权需有证据；Git 作者字段和仓库管理员权限均不足以单独证明权属。
+- 仓库仍为 Public。GitHub 平台条款 D.5 对公开仓库内容的查看/Fork 授权独立于本仓库自定义许可。用户要求禁止未经书面许可的公开再分发，但尚未授权改变仓库可见性；在此平台边界未解决前，不得宣称该限制能阻止 GitHub 平台内 Fork，也不应合并并声称限制已全面生效。
+- **当前结论：工程清单、DEP5 与自动检查在 PR HEAD 上 PASS；商业许可文本已按“个人非商业使用、不授予再分发权、商业使用需书面授权”校核；最新主线同步、权属证据、公开仓库平台边界及同步后的 CI 仍为 BLOCKED/MISSING。PR 保持 Ready for review，不合并。**
