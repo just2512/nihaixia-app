@@ -271,11 +271,19 @@ void main() {
         );
         final firstCaseCard = caseCards.first;
         await tester.ensureVisible(firstCaseCard);
+        final selectedCase = tester.widget<MedicalCaseListCard>(firstCaseCard).c;
         await tester.tap(firstCaseCard);
         await _advanceRoute(tester);
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 120)),
+        // MedicalCaseDetailScreen serializes recent-history upsert followed
+        // by bookmark lookup. Mirror the established detail-layout regression:
+        // execute a bookmark read in real async time so the sqflite FFI lock
+        // timer and the page's queued read finish before test DB teardown.
+        final bookmarkState = await tester.runAsync<bool>(
+          () => DatabaseHelper.instance.isMedicalCaseBookmarked(
+            selectedCase.seq,
+          ),
         );
+        expect(bookmarkState, isNotNull);
         await tester.pump();
         _expectPageInsideLeftPanel(
           tester,
