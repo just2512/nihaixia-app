@@ -1718,8 +1718,6 @@ class AiContextResolver {
       ),
     );
   }
-}
-;
 
   static AiContextRef buildMeihuaFieldContextRef({
     required AiContextRef resultRef,
