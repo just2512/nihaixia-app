@@ -345,9 +345,4 @@ class XiaoliurenToolExecutor {
     return XiaoliurenToolExecution(result: result);
   }
 
-  static AssistantToolResult _failure(
-    Map<String, String> arguments,
-    String reason,
-  ) =>
-      _failedExecution(arguments, reason).result;
 }
