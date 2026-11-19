@@ -4,7 +4,6 @@ import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/ziwuliuzhu_tool_executor.dart';
 import '../widgets/contextual_ai_sheet.dart';
-import 'local_ai_interview_screen.dart';
 import 'assistant_tool_router.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
 import 'package:nihaisha_app/services/ziwuliuzhu_calculation_service.dart';
