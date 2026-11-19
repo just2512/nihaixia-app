@@ -9,7 +9,6 @@
 离线可用 · 数据全本地 · 无需注册 · 开箱即用
 
 
-[![Release](https://img.shields.io/github/v/release/just2512/nihaixia-app?style=for-the-badge&color=green&label=📥%20Download)](https://github.com/just2512/nihaixia-app/releases/latest)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)]()
@@ -18,7 +17,7 @@
 
 <br/>
 
-**[📥 下载 APK](#-下载安装)** · **[📖 快速上手](#-快速上手)** · **[🏗️ 技术架构](#️-技术架构)** · **[🗺️ Roadmap](#️-roadmap)** · **[🤝 贡献指南](#️-贡献指南)** · **[📄 开源许可](#-开源许可)**
+**[📦 版本获取与本地安装](#-版本获取与本地安装)** · **[📖 快速上手](#-快速上手)** · **[🏗️ 技术架构](#️-技术架构)** · **[🗺️ Roadmap](#️-roadmap)** · **[🤝 贡献指南](#️-贡献指南)** · **[📄 开源许可](#-开源许可)**
 
 </div>
 
@@ -190,21 +189,26 @@
 
 ---
 
-## 📱 下载安装
+## 📦 版本获取与本地安装
 
-> **汉唐中医 nihaixia‑app**
-> 核心知识库可离线｜本地 AI 模型需单独下载｜无需注册｜Android 7.0+
-> 通用版 APK 约 77MB，分架构版 31–35MB
-> 本项目 APK 由本仓库 GitHub Actions 构建；当前尚未发布本仓库独立 APK Release
-> **最后维护：2026-11-15（汉唐中医独立维护；上游同步采用人工审核）**
-
-> 当前仓库尚未发布独立 APK Release。请勿将上游 `jangviktor-web/nihaixia-app` 的安装包或版本号当作汉唐中医的发行版。后续安装包只从[本仓库 Releases](https://github.com/just2512/nihaixia-app/releases)获取；上游更新仅按维护策略人工评估和同步。
-
-> **V1.11.28 字号 200% · 古籍原文（灵枢/针灸大成）· 经典全文搜索 · 流畅度优化**：字号上限由 150% 提到 200%，并修复「只有首页跟随字号」——详情页、设置页与弹窗现在都跟随；新增「古籍原文」书库：《灵枢》82 章 + 明·杨继洲《针灸大成》339 章，章节目录可读可搜，正文方剂/药名可点跳详情；全局搜索新增「经典」分组，贯通伤寒/金匮/内经讲稿与古书原文共 1327 条，点击直达篇章；修掉浅色模式下搜索结果标题几乎看不清的对比度问题；知识库切 tab 与长列表滚动做了保活与过滤缓存优化。详见 [Release Notes](release_notes/v1.11.28.md)。
+> 当前源码版本：`1.11.30+8039`（`versionName=1.11.30`，`versionCode=8039`）。本次为本地发布准备，不代表 APK 已完成签名、覆盖安装或正式发布。
 > 
-> **V1.11.26 十四经循行穴位图 · 耳穴国标库 · 五运六气三图排版修复**：针灸页新增「经络图」——十二正经 + 任督二脉共 14 张循行穴位图，双指放大 6 倍看清穴名；耳穴全面接入 GB/T 13734-2008《耳穴名称与定位》——93 穴国标库（10 分区筛选 + 穴名/拼音/代码搜索，18 条旧称自动归并国标名）+ 附录 A 标准定位图（正面 84 穴 / 背面 9 穴）直接嵌包；针灸处方数据扩容至 384 条（合并倪师 BBXX 病症配穴 +127 条）；五运六气三图排版修复（六气图三层文字切向排布不再叠压、五行图宫圆重新配比）与引擎经典裁决修正 7 年。详见 [Release Notes](release_notes/v1.11.26.md)。
+> **分发方式已调整为本地构建、原签名、本地交付。** 本仓库只维护源代码和版本记录；不创建版本 Tag、不发布 GitHub Release、不上传正式 APK。不要从上游仓库下载 APK，也不要把本仓库 Releases 页面当作下载渠道。
 > 
-> **V1.11.25 易经 64 卦卦象插画 · 中医时辰开穴四法 · 五运六气三图**：易经每卦详情页新增传统卦象典故插画（64 卦全覆盖，与卦名一一对应，缺图静默收起）；「中医时辰开穴综合计算器」四法并排（纳子法 / 纳甲法 / 灵龟八法 / 飞腾八法），即时给出日干支、时干支与开穴，附返本还原与推算步骤；新增五运六气三张可视化图（运气五行图 / 五运图 / 六气图），任选日期三图重绘、当前步高亮，并带出岁运病候、司天在泉与《内经》大论原文。详见 [Release Notes](release_notes/v1.11.25.md)。
+> 当前状态：`NOT RELEASED`。正式 APK 必须由维护者在本地使用原有 HanTang 签名密钥构建，再通过线下或双方约定的私下渠道交付。
+
+### V1.11.30 更新内容
+
+> **Find N2 折叠屏适配 · 本草讲稿与经典资料扩展 · 助手对话内工具执行 · 编辑型阅读界面**：补齐 335 篇本草讲稿及药材详情回链，保留伤寒上游板书为独立资料项；助手可在同一对话中查询本机时辰资料；修复 Find N2 展开/半折叠工具布局、紫微命盘整屏查看和易经/剂量换算窄屏溢出；统一知识浏览、经典阅读与核心详情页的排版 Token。详情见 [V1.11.30 发布准备说明](release_notes/v1.11.30.md)。Find N2 真机验收仍待本地完成。
+
+### 本地构建与升级验收
+
+正式 Release 构建必须配置 `android/key.properties` 并使用**与设备上已安装版本相同的原始签名证书**。Gradle 已设置为 fail-closed：缺少签名配置或密钥文件时，Release 构建应直接失败，不再回退到 Debug 签名。
+
+本地构建、证书比对、`adb install -r` 覆盖升级和 OPPO Find N2 实机验收步骤见 [本地 Android 构建与升级检查清单](docs/local-android-release-checklist.md)。签名不一致时必须停止，**不得先卸载旧版或清除应用数据**。
+
+### 历史更新日志
+
 
 <details>
 <summary><b>历史更新日志</b></summary>
@@ -231,10 +235,9 @@
 > **含 V1.11.8 健康人基线判定**、寒热真假八维法、六经公式分型速查等全部历史修复。
 > 历史版本：V1.11.8 属于上游项目的历史发行版，不属于汉唐中医在本仓库维护的独立发行记录。
 </details>
-   
-### 🔨 方式二：本地从源码构建
+### 本地从源码构建
 
-需预先配置好 Flutter 开发环境（见[快速上手](#-快速上手)）。
+需预先配置好 Flutter / Android 开发环境（见[快速上手](#-快速上手)），并先阅读[本地 Android 构建与升级检查清单](docs/local-android-release-checklist.md)。没有原签名密钥时，Release 构建会按设计失败。
 
 ```bash
 git clone https://github.com/just2512/nihaixia-app.git
@@ -315,15 +318,16 @@ flutter analyze
 | `pubspec.yaml` | 依赖与资源清单，版本号 `X.Y.Z+N` 的单一来源（`+N` 即 Android `versionCode`） |
 | `android/gradle.properties` | Gradle 堆内存等构建参数（Windows 上已设为 `-Xmx1024M` + `org.gradle.daemon=false` 以规避本机 OOM；CI 内由 workflow 临时覆盖为 `-Xmx4g` + G1GC，不影响本地） |
 | `android/settings.gradle.kts` | 仓库源配置，已做 CI 感知：CI 直连 `google()`/`mavenCentral()`，本地保持阿里云镜像优先 |
-| `.github/workflows/build-apk.yml` | 本仓库独立构建：推送本仓库 `v*` tag 后构建并发布四个 APK 到本仓库 Release |
-| `android/key.properties` | 发布签名配置（不入库，参考 template） |
+| `android/app/build.gradle.kts` | Android 包标识、版本号和 Release 签名门禁；缺少原签名材料时阻止 Release 构建 |
+| `android/key.properties` | 本地 Release 签名配置（不入库，必须使用既有签名密钥；参考 template） |
+| `docs/local-android-release-checklist.md` | 本地构建、签名证书比对、覆盖升级和 Find N2 实机验收流程 |
 | `assets/data/changelog.json` | 结构化更新日志，驱动「关于」页与更新弹窗 |
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
 | `lib/theme/app_colors.dart` | 39 个语义色 Token（品牌棕/暖调中性/状态色/六经六色），全站硬编码颜色清零 |
 
 **版本号规则**：`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一来源；发布时按实际变更递增版本号和 build 号，`+N` 对应 Android `versionCode`。当前仓库版本为 `1.11.30+8039`。
 
-**发版方式**：推送与 `pubspec.yaml` 版本一致的 `v*` tag，`.github/workflows/build-apk.yml` 自动构建通用版与三个 ABI 分架构 APK，并发布到同名 GitHub Release。
+**发版方式**：由维护者在本地使用原签名密钥构建正式 APK，并在完成证书、版本、覆盖安装与实机验收后线下交付。本仓库不创建发行 Tag、不使用 GitHub Release 分发正式 APK。
 
 ---
 
@@ -362,7 +366,6 @@ lib/
 │   └── database_helper.dart         #   SQLite 持久化
 ├── services/                        # 第三方引擎封装 / 服务
 │   ├── ziwei_engine.dart            #   紫微斗数排盘引擎封装（ziwei_core）
-│   ├── update_service.dart          #   GitHub 版本更新检测
 │   └── whats_new_service.dart       #   更新弹窗服务
 ├── theme/                           # 设计系统
 │   └── app_colors.dart              #   39 个语义色 Token
@@ -403,7 +406,7 @@ lib/
 | 引擎 | 自研 DiagnosticEngine | 六经辨证状态机 + 双轨鉴别树 |
 | 方剂匹配 | 自研 FormulaMatcher | 基线字面匹配 + 口语/指针加权（非劣化） |
 | 命理 | ziwei_core (Dart) | 紫微斗数排盘（纯离线，MIT） |
-| 构建发布 | GitHub Actions | 推送 `v*` tag 自动编译并发布四个 APK 到 Release |
+| 构建发布 | 维护者本地 Flutter / Android SDK | 使用原签名密钥构建 APK，验证后本地交付；GitHub Actions 仅运行代码质量与 Debug 验证，不发布正式 APK |
 
 ```mermaid
 flowchart LR
@@ -468,7 +471,7 @@ flowchart LR
 - [x] 七步问诊十问模块 v3.1（脉象/疼痛/呕吐类型追问）
 - [x] 健康人基线判定 + 寒热真假八维法 + 六经公式分型（V1.11.8）
 - [x] 患者口语语料接入：170 首方「患者会怎么说」+ 现代症状词召回（V1.11.9）
-- [x] 本仓库 APK 构建发布工作流（本仓库 tag 触发）
+- [x] 本地 Android Release 构建与签名门禁；正式 APK 本地签名、验收后线下交付（不在线上发布）
 - [x] Gemma 4 E4B 本地多模态输入接入（文字 / 音频 / 图像；Find N2 实机验收仍待完成）
 - [ ] 舌象清晰度、曝光与色温质量检查（需在 Find N2 真机校准后实施）
 - [ ] 脉诊辅助（脉象分类）
@@ -480,16 +483,16 @@ flowchart LR
 ## ❓ 常见问题解答（FAQ）
 
 **Q1：App 需要联网吗？**
-核心知识库（方剂、本草、穴位、医案、经典著作）均打包在本地，可离线查阅。下载本仓库新版本或使用其他在线服务时需要联网；App 不会自动检查或安装上游版本。
+核心知识库（方剂、本草、穴位、医案、经典著作）均打包在本地，可离线查阅。正式 APK 由维护者本地构建并交付；App 不会自动检查或安装上游版本，也不依赖 GitHub Release 更新。
 
 **Q2：我的诊断数据安全吗？**
 诊断历史、收藏等数据全部存储于本机 SQLite，不上传任何服务器，隐私不出设备。
 
-**Q3：应该下载哪个 APK？**
-绝大多数现代手机选 **arm64-v8a**（33.3MB，体积最小）；拿不准就选 **通用版**（77.4MB，兼容所有架构）；老旧 32 位设备选 armeabi-v7a（31.5MB）；模拟器选 x86_64（34.8MB）。
+**Q3：应该使用哪个 APK？**
+本仓库不提供在线 APK 下载。OPPO Find N2 等现代 ARM64 设备使用本地构建产物中的 `app-arm64-v8a-release.apk`；只有在确有兼容需求时才使用通用包。构建与校验步骤见[本地 Android 构建与升级检查清单](docs/local-android-release-checklist.md)。
 
 **Q4：安装时提示「应用未安装」/「安装失败」怎么办？**
-多半是**签名不一致**导致的覆盖安装被拒。V1.11.9 的云端构建已与本地 V1.11.8 共用同一套签名（已配置为 GitHub Secrets），正常情况下可直接覆盖安装。若仍被拒绝，通常是您手上的是签名密钥配置完成**之前**下载的早期 V1.11.9 调试签名版——解决办法：**先卸载旧版本，再安装新版本**（卸载前记得在「设置」中导出收藏与诊断历史）。详见上方「⚠️ 升级须知」。
+如果提示签名不一致，**立即停止安装，不要卸载旧版、不要清除数据，也不要尝试换一把新密钥重新签名**。必须先从设备上旧版 APK（或你保存的旧 APK）读取证书指纹，再与新 APK 的证书指纹逐字比对；只有证书一致、`applicationId` 一致且新 `versionCode` 更高时，才执行覆盖安装。原签名密钥无法确认或指纹不一致时，保持旧版和数据不动，先恢复原密钥。操作见[本地 Android 构建与升级检查清单](docs/local-android-release-checklist.md)。
 
 **Q5：紫微/易经/四柱模块是医疗功能吗？**
 不是。这些模块为**中国传统民俗文化参考**，与经方医疗模块在界面与文案上明确分隔，不构成任何医疗诊断或建议。
