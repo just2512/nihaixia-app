@@ -136,6 +136,16 @@ void main() {
         final meridianRow = find.text('太阳病').first;
         await tester.ensureVisible(meridianRow);
         await tester.tap(meridianRow);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+        // The knowledge card first expands to reveal its explicit detail
+        // action; use that actual UI affordance instead of assuming the
+        // ExpansionTile header also dispatches the outer InkWell route.
+        if (find.byType(MeridianDetailScreen).evaluate().isEmpty) {
+          final detailAction = find.text('查看详情').first;
+          await tester.ensureVisible(detailAction);
+          await tester.tap(detailAction);
+        }
         await _advanceRoute(tester);
         _expectPageInsideLeftPanel(
           tester,
