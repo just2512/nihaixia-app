@@ -14,6 +14,8 @@ import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
+import 'huangdi_siji_result_context_executor.dart';
+import 'huangdi_siji_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -403,6 +405,143 @@ class AiContextResolver {
         reason: 'The almanac result could not be reconstructed and verified from the local engine.',
       );
     }
+  }
+
+  static AiContextRef buildHuangdiSijiResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            HuangdiSijiResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            HuangdiSijiResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            HuangdiSijiResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDateTime' ||
+        arguments is! Map ||
+        arguments.length != 2 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        sourceIds is! List ||
+        sourceIds.length != 2 ||
+        !sourceIds.contains(HuangdiSijiToolExecutor.sourceId) ||
+        !sourceIds.contains(HuangdiSijiToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Huangdi Siji context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: HuangdiSijiResultContextExecutor.moduleId,
+      anchorId: 'huangdi-siji:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: HuangdiSijiResultContextExecutor.ruleVersion,
+      sourceId: HuangdiSijiToolExecutor.sourceId,
+      title: '轩辕黄帝四季歌结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveHuangdiSijiToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != HuangdiSijiResultContextExecutor.moduleId ||
+        ref.sourceId != HuangdiSijiToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Huangdi Siji reference is incomplete or does not identify the local calculation source.',
+      );
+    }
+    if (ref.ruleVersion != HuangdiSijiResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Huangdi Siji executor, data asset or locked calendar package version no longer matches this result.',
+      );
+    }
+
+    final match = RegExp(
+      r'^huangdi-siji:result:([0-9a-f]{64})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        ref.title != '轩辕黄帝四季歌结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Huangdi Siji anchor and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            HuangdiSijiResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            HuangdiSijiResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            HuangdiSijiResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDateTime' ||
+        arguments is! Map ||
+        arguments.length != 2 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        sources is! List ||
+        sources.length != 2 ||
+        !sources.contains(HuangdiSijiToolExecutor.sourceId) ||
+        !sources.contains(HuangdiSijiToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Huangdi Siji result or its provenance no longer matches the immutable digest.',
+      );
+    }
+
+    final rebuilt = await HuangdiSijiResultContextExecutor.executeWithSnapshot({
+      'birth_date': arguments['birth_date'] as String,
+      'birth_time': arguments['birth_time'] as String,
+    });
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Huangdi Siji result could not be reconstructed from its recorded input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Huangdi Siji calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
   }
 
   static const yunqiModuleId = 'yunqi';

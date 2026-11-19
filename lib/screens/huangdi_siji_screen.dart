@@ -5,6 +5,11 @@ import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTim
 
 import 'package:nihaisha_app/data/huangdi_siji_data.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
+import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/services/huangdi_siji_result_context_executor.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+import 'assistant_tool_router.dart';
 
 /// 轩辕黄帝四季歌（四季诗）查询。
 ///
@@ -91,7 +96,92 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
     }
   }
 
-  void _returnResultToAssistant() {
+  Future<void> _askAiAboutResult() async {
+    final current = _result;
+    final lunarMonth = _computedLunarMonth;
+    final season = _season;
+    final shichen = _shiChen;
+    if (current == null ||
+        lunarMonth == null ||
+        season == null ||
+        shichen == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先完成四季歌查询，再解读当前结果。')),
+      );
+      return;
+    }
+
+    final birthDate =
+        '${_birthDate.year.toString().padLeft(4, '0')}-'
+        '${_birthDate.month.toString().padLeft(2, '0')}-'
+        '${_birthDate.day.toString().padLeft(2, '0')}';
+    final birthTime =
+        '${_birthHour.toString().padLeft(2, '0')}:'
+        '${_birthMinute.toString().padLeft(2, '0')}';
+
+    try {
+      final execution =
+          await HuangdiSijiResultContextExecutor.executeWithSnapshot({
+        'birth_date': birthDate,
+        'birth_time': birthTime,
+      });
+      if (!mounted) return;
+      if (!execution.succeeded || execution.structuredSnapshot == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('四季歌结果无法核验，已取消 AI 提问。')),
+        );
+        return;
+      }
+
+      final values = execution.result.values;
+      if (values['农历月份'] != lunarMonth.toString() ||
+          values['季节口径'] != season ||
+          values['出生时辰'] != '$shichen时' ||
+          values['对应部位'] != current.part ||
+          values['命格标题'] != current.title ||
+          values['部位诗'] != current.poem ||
+          values['现有释义'] != current.interpretation) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前页面结果与本地重建结果不一致，已取消 AI 提问。')),
+        );
+        return;
+      }
+
+      final contextRef = AiContextResolver.buildHuangdiSijiResultContextRef(
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolution = await AiContextResolver.resolveHuangdiSijiToolResult(
+        ref: contextRef,
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolved = resolution.value;
+      if (!mounted) return;
+      if (!resolution.isResolved || resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('四季歌上下文核验失败：${resolution.status.name}')),
+        );
+        return;
+      }
+
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildHuangdiSijiToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: '轩辕黄帝四季歌结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('四季歌上下文无法核验，已取消 AI 提问。')),
+      );
+    }
+  }
+
+  void _returnResultToAssistant() {  void _returnResultToAssistant() {
     final result = _result;
     if (result == null) return;
     final solar = DateTime(
@@ -310,6 +400,15 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
                 ),
               ),
             ],
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _askAiAboutResult,
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('问 AI 解读当前四季歌结果'),
+              ),
+            ),
           ],
         ],
       ),
