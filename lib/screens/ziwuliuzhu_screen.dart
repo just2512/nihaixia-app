@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/ziwuliuzhu_tool_executor.dart';
+import '../widgets/contextual_ai_sheet.dart';
+import 'local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
 import 'package:nihaisha_app/services/ziwuliuzhu_calculation_service.dart';
 
@@ -22,6 +27,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
   DateTime _selectedDate = DateTime.now();
 
   late final TabController _tabController;
+  late ZiWuLiuZhuToolExecution _execution;
 
   static const _tianGan = ZiWuLiuZhuCalculationService.tianGan;
   static const _diZhi = ZiWuLiuZhuCalculationService.diZhi;
@@ -35,11 +41,57 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate ?? DateTime.now();
+    _updateExecution();
     _tabController = TabController(length: 4, vsync: this);
   }
 
+  void _updateExecution() {
+    // UTC instants are not silently reinterpreted as device-local wall-clock
+    // input; the executor rejects an offset-bearing timestamp.
+    final at = _selectedDate.isUtc
+        ? _selectedDate.toIso8601String()
+        : ZiWuLiuZhuCalculationService.formatLocalAt(_selectedDate);
+    _execution = ZiWuLiuZhuToolExecutor.executeWithSnapshot({'at': at});
+  }
+
   String _buildAssistantSummary() =>
-      ZiWuLiuZhuCalculationService.calculate(_selectedDate).summary;
+      _execution.calculationResult?.summary ?? '本次子午流注计算未成功。';
+
+  Future<void> _askAiAboutResult() async {
+    final snapshot = _execution.structuredSnapshot;
+    if (!_execution.succeeded || snapshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前计算没有可核验的成功结果，无法建立 AI 上下文。')),
+      );
+      return;
+    }
+
+    final contextRef = AiContextResolver.buildZiWuLiuZhuResultContextRef(
+      structuredSnapshot: snapshot,
+    );
+    final resolution = AiContextResolver.resolveZiWuLiuZhuToolResult(
+      ref: contextRef,
+      structuredSnapshot: snapshot,
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('子午流注结果核验失败：${resolution.status.name}')),
+      );
+      return;
+    }
+
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildZiWuLiuZhuToolResult(
+        resolvedResult: resolved,
+      ),
+      initialMode: AssistantMode.tools,
+      contextualTitle: '子午流注时辰开穴结果',
+      contextualExplanationOnly: true,
+    );
+  }
 
   @override
   void dispose() {
@@ -61,7 +113,12 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
       firstDate: DateTime(1900),
       lastDate: DateTime(2100),
     );
-    if (picked != null) setState(() => _selectedDate = picked);
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _updateExecution();
+      });
+    }
   }
 
   Future<void> _pickTime() async {
@@ -76,6 +133,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
           _selectedDate.year, _selectedDate.month, _selectedDate.day,
           picked.hour, picked.minute,
         );
+        _updateExecution();
       });
     }
   }
@@ -91,6 +149,12 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
               tooltip: '返回 AI 助手',
               icon: const Icon(Icons.reply),
               onPressed: () => Navigator.pop(context, _buildAssistantSummary()),
+            ),
+          else if (_execution.succeeded)
+            IconButton(
+              tooltip: '问 AI 解读当前子午流注结果',
+              icon: const Icon(Icons.auto_awesome),
+              onPressed: _askAiAboutResult,
             ),
         ],
         // controller 必须显式传入：否则 TabBar 自建内部 controller，与
@@ -113,7 +177,10 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
             selectedDate: _selectedDate,
             onPickDate: _pickDate,
             onPickTime: _pickTime,
-            onResetNow: () => setState(() => _selectedDate = DateTime.now()),
+            onResetNow: () => setState(() {
+              _selectedDate = DateTime.now();
+              _updateExecution();
+            }),
             tianGan: _tianGan,
             diZhi: _diZhi,
             ganToOrgan: _ganToOrgan,
