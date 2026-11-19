@@ -13,6 +13,7 @@ import 'almanac_tool_executor.dart';
 import 'bazi_context_snapshot.dart';
 import 'yijing_tool_executor.dart';
 import 'meihua_tool_executor.dart';
+import 'xiaoliuren_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -85,6 +86,199 @@ class AiResolvedKnowledgeEntry {
 
 class AiContextResolver {
   const AiContextResolver._();
+
+
+  static const xiaoliurenModuleId = 'xiaoliuren';
+
+  static AiContextRef buildXiaoliurenResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final date = arguments is Map ? arguments['date'] : null;
+    final hour = arguments is Map ? arguments['hour'] : null;
+    final rule = arguments is Map ? arguments['rule'] : null;
+
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ruleVersion != XiaoliurenToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != xiaoliurenModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            XiaoliurenToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'time' ||
+        input['executionDate'] is! String ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        date is! String ||
+        hour is! String ||
+        rule is! String ||
+        !XiaoliurenToolExecutor.hourBranches.contains(hour) ||
+        !const {'common', 'duoneng'}.contains(rule) ||
+        sourceIds is! List ||
+        !sourceIds.contains(XiaoliurenToolExecutor.sourceId) ||
+        !sourceIds.contains(XiaoliurenToolExecutor.ruleDataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Xiaoliuren context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: xiaoliurenModuleId,
+      anchorId:
+          'xiaoliuren:result:$snapshotId:date=$date:hour=$hour:rule=$rule',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: XiaoliurenToolExecutor.sourceId,
+      title: '小六壬起课结果（$rule）',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolResult> resolveXiaoliurenToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != xiaoliurenModuleId ||
+        ref.sourceId != XiaoliurenToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Xiaoliuren reference is incomplete or does not identify the local Xiaoliuren engine.',
+      );
+    }
+    if (ref.ruleVersion != XiaoliurenToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Xiaoliuren engine, rule data or calendar conversion version no longer matches this result.',
+      );
+    }
+
+    final anchorMatch = RegExp(
+      r'^xiaoliuren:result:([0-9a-f]{64}):date=(\d{4}-\d{2}-\d{2}):hour=([^:]+):rule=(common|duoneng)$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (anchorMatch == null ||
+        snapshotId == null ||
+        ref.anchorVersion != snapshotId ||
+        anchorMatch.group(1) != snapshotId ||
+        !XiaoliurenToolExecutor.hourBranches.contains(anchorMatch.group(3))) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Xiaoliuren result anchor and snapshot identity do not agree.',
+      );
+    }
+
+    final date = anchorMatch.group(2)!;
+    final hour = anchorMatch.group(3)!;
+    final rule = anchorMatch.group(4)!;
+    if (ref.title != null && ref.title != '小六壬起课结果（$rule）') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Xiaoliuren result title does not match its selected rule.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final argumentsValue = input is Map ? input['arguments'] : null;
+    final executionDateValue = input is Map ? input['executionDate'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (input is! Map ||
+        input['method'] != 'time' ||
+        argumentsValue is! Map ||
+        argumentsValue.length != 3 ||
+        argumentsValue.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        executionDateValue is! String ||
+        structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['ruleVersion'] != XiaoliurenToolExecutor.ruleVersion ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            XiaoliurenToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != xiaoliurenModuleId ||
+        sourceIds is! List ||
+        !sourceIds.contains(XiaoliurenToolExecutor.sourceId) ||
+        !sourceIds.contains(XiaoliurenToolExecutor.ruleDataSourceId)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Xiaoliuren reference is not bound to a complete recorded execution input.',
+      );
+    }
+
+    final arguments = <String, String>{
+      for (final entry in argumentsValue.entries)
+        entry.key as String: entry.value as String,
+    };
+    if (arguments['date'] != date ||
+        arguments['hour'] != hour ||
+        arguments['rule'] != rule) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The recorded Xiaoliuren arguments do not match the immutable result anchor.',
+      );
+    }
+
+    final executionDate = DateTime.tryParse(executionDateValue);
+    final normalizedExecutionDate = executionDate == null
+        ? ''
+        : '${executionDate.year.toString().padLeft(4, '0')}-'
+            '${executionDate.month.toString().padLeft(2, '0')}-'
+            '${executionDate.day.toString().padLeft(2, '0')}';
+    if (normalizedExecutionDate != executionDateValue) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Xiaoliuren snapshot does not preserve a valid execution date.',
+      );
+    }
+
+    try {
+      final suppliedDigest =
+          AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
+      if (suppliedDigest != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The supplied Xiaoliuren result no longer matches its immutable snapshot digest.',
+        );
+      }
+
+      final reconstructed = XiaoliurenToolExecutor.executeWithSnapshot(
+        arguments,
+        now: executionDate,
+      );
+      final reconstructedSnapshot = reconstructed.structuredSnapshot;
+      if (!reconstructed.succeeded ||
+          reconstructedSnapshot == null ||
+          reconstructedSnapshot['snapshotId'] != snapshotId) {
+        return const AiContextResolution(
+          status: AiContextResolutionStatus.stale,
+          reason: 'The local Xiaoliuren engine reconstruction no longer matches this result.',
+        );
+      }
+
+      return AiContextResolution(
+        status: AiContextResolutionStatus.resolved,
+        value: AiResolvedToolResult._(
+          ref: ref,
+          structuredSnapshot: reconstructedSnapshot,
+        ),
+      );
+    } catch (_) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Xiaoliuren result could not be reconstructed and verified from the local engine.',
+      );
+    }
+  }
 
   static const almanacModuleId = 'almanac';
 
