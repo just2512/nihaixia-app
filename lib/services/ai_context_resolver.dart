@@ -687,7 +687,7 @@ class AiContextResolver {
 
 
   static const _supportedMeihuaFieldPath =
-      r'^result\.(?:(?:main|mutual|changed)\.(?:seq|name|judgement)|movingYao|movingYaoCi|tiWuxing|yongWuxing|mainRelation\.(?:label|verdict)|tiWangShuai\.label|stages\.[0-2]\.(?:name|hexName|relationLabel|detail));
+      r'^result\.(?:(?:main|mutual|changed)\.(?:seq|name|judgement)|movingYao|movingYaoCi|tiWuxing|yongWuxing|mainRelation\.(?:label|verdict)|tiWangShuai\.label|stages\.[0-2]\.(?:name|hexName|relationLabel|detail))$';
 
   static AiContextRef buildMeihuaFieldContextRef({
     required AiContextRef resultRef,
