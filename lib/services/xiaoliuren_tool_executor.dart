@@ -22,11 +22,10 @@ class XiaoliurenToolExecution {
       structuredSnapshot != null;
 }
 
-/// Headless adapter for the existing Xiaoliuren deterministic rule function.
+/// Headless adapter for the existing deterministic Xiaoliuren rule function.
 ///
-/// The snapshot binds the actual Gregorian date, selected shichen, chosen
-/// traditional rule, derived lunar date, all three palace hits and the
-/// corresponding local verse data. It never recomputes from display text.
+/// It preserves both existing rule traditions and records the exact input,
+/// lunar conversion, palace hits, rule data and verses in an immutable digest.
 class XiaoliurenToolExecutor {
   static const String sourceId = 'local-engine:xiaoliuren';
   static const String ruleDataSourceId = 'local-data:xiaoliuren-rule-data';
@@ -54,12 +53,17 @@ class XiaoliurenToolExecutor {
 
   static const Set<String> _allowedArguments = {'date', 'hour', 'rule'};
 
+  /// Backward-compatible result-only API.
   static Future<AssistantToolResult> execute(
     Map<String, String> arguments,
   ) async {
     return executeWithSnapshot(arguments).result;
   }
 
+  /// Executes the same page calculation and returns its immutable context.
+  ///
+  /// [now] is injectable for deterministic tests and is stored as the
+  /// execution date so a historical snapshot can later be revalidated.
   static XiaoliurenToolExecution executeWithSnapshot(
     Map<String, String> arguments, {
     DateTime? now,
@@ -95,12 +99,10 @@ class XiaoliurenToolExecutor {
     }
 
     final clock = now ?? DateTime.now();
+    final executionDate = DateTime(clock.year, clock.month, clock.day);
     final firstSupportedDate = DateTime(1920);
-    final lastSupportedDate = DateTime(
-      clock.year,
-      clock.month,
-      clock.day,
-    ).add(const Duration(days: 365));
+    final lastSupportedDate =
+        executionDate.add(const Duration(days: 365));
     if (date.isBefore(firstSupportedDate) || date.isAfter(lastSupportedDate)) {
       return _failedExecution(
         arguments,
@@ -109,8 +111,8 @@ class XiaoliurenToolExecutor {
     }
 
     try {
-      // Match XiaoliurenScreen: convert the selected Gregorian date at local
-      // noon, then run the exact existing pure function and selected rule.
+      // Match XiaoliurenScreen exactly: convert the selected Gregorian date
+      // at local noon, then call the one existing pure calculation function.
       final dateText = _formatDate(date);
       final lunar = LunarDate.fromSolar(
         AstroDateTime(date.year, date.month, date.day, 12, 0, 0),
@@ -176,7 +178,7 @@ class XiaoliurenToolExecutor {
         'sourceIds': const [sourceId, ruleDataSourceId],
         'input': <String, Object?>{
           'method': 'time',
-          'executionDate': _formatDate(DateTime(clock.year, clock.month, clock.day)),
+          'executionDate': _formatDate(executionDate),
           'arguments': executionArguments,
           'inputConvention':
               '公历日期按本地正午换算农历；用户明确选择子时至亥时及一种既有起课口径；'
@@ -199,22 +201,13 @@ class XiaoliurenToolExecutor {
             'source': rule.source,
             'dayStartOffset': rule.dayStartOffset,
           },
-          'month': _serializeHit(
-            chart.month,
-            verse: monthVerse,
-          ),
-          'day': _serializeHit(
-            chart.day,
-            verse: dayVerse,
-          ),
-          'hour': _serializeHit(
-            chart.hour,
-            verse: hourVerse,
-          ),
+          'month': _serializeHit(chart.month, verse: monthVerse),
+          'day': _serializeHit(chart.day, verse: dayVerse),
+          'hour': _serializeHit(chart.hour, verse: hourVerse),
           'palaceOrder': [
             for (final palace in kXiaoliurenPalaceOrder)
               <String, Object?>{
-                'id': palace.name,
+                'id': palace.index.toString(),
                 'name': palace.name,
                 'deity': palace.deity,
                 'verse': xiaoliurenVerse(palace, rule),
@@ -228,7 +221,7 @@ class XiaoliurenToolExecutor {
         },
         'units': const <String, Object?>{
           'hourNumber': '时辰数：子=1，丑=2，…，亥=12。',
-          'steps': '从既定起算宫开始的顺数步数，未换算为概率。',
+          'steps': '从既定起算宫开始的顺数步数，不换算为概率。',
           'palaceOrder': 'App 内置六宫固定顺序：大安、留连、速喜、赤口、小吉、空亡。',
         },
         'missingFields': const <String>[],
@@ -274,7 +267,7 @@ class XiaoliurenToolExecutor {
   static DateTime? _parseDate(String? raw) {
     if (raw == null) return null;
     final normalized = raw.trim();
-    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2}))
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$')
         .firstMatch(normalized);
     if (match == null) return null;
     final year = int.parse(match.group(1)!);
@@ -308,41 +301,4 @@ class XiaoliurenToolExecutor {
     );
     return XiaoliurenToolExecution(result: result);
   }
-
-}
-)
-        .firstMatch(normalized);
-    if (match == null) return null;
-    final year = int.parse(match.group(1)!);
-    final month = int.parse(match.group(2)!);
-    final day = int.parse(match.group(3)!);
-    final parsed = DateTime(year, month, day);
-    if (parsed.year != year ||
-        parsed.month != month ||
-        parsed.day != day) {
-      return null;
-    }
-    return parsed;
-  }
-
-  static String _formatDate(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')}';
-
-  static XiaoliurenToolExecution _failedExecution(
-    Map<String, String> arguments,
-    String reason,
-  ) {
-    final result = AssistantToolResult(
-      toolId: 'xiaoliuren',
-      title: '小六壬起课',
-      status: AssistantToolExecutionStatus.failed,
-      values: {'未执行原因': reason},
-      arguments: Map<String, String>.unmodifiable(arguments),
-      disclaimer: '参数或日期范围校验未通过；本次未执行小六壬起课。',
-    );
-    return XiaoliurenToolExecution(result: result);
-  }
-
 }
