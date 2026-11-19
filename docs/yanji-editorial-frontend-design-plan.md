@@ -223,8 +223,8 @@
 - PR #272 合并后的最新 master 为 `5bb248f94d3e7a94bb827c78ad12ed461c828af6`；合并后 Flutter tests Run `44211890081`、Android arm64 job `134493862255`、Flutter Quality Gate Run `44211890175` 均 `SUCCESS`。
 - Find N2 的外屏/内屏/半折叠、浅深主题、100%/150%/200% 字号及连续阅读检查，按第 7.2 节执行。未取得真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录前，保持 `MISSING`。
 - 2026-11-19 PR #337 合并后主线 `69c2b3d191e12f6cf2916650f673afcf8e5ffc2a`：Flutter regression Run `44491439429` 与 Android arm64 job `135450312683` 均 `SUCCESS`；同 SHA 的 Flutter Quality Gate Run `44491439602` 仍在执行 Find N2 arm64 Debug APK 构建，未取得终态，不计为 `PASS`。
-- 随后 PR #335 仅更新 AI 执行台账并合入，当前 master 前进到 `469ce8379072dc4a77351aa23926b869d34ea4be`；最新 Flutter tests Run `44493105228` 和 Flutter Quality Gate Run `44493105336` 均处于 `IN_PROGRESS`，需以该 HEAD 的终态为准。
-- 2026-11-19 主线最新复核：HEAD `82d38c9d77ccac55555d18a943e204e9a6886531`；Flutter regression Run `44470735725` 为 `SUCCESS`，Android arm64 CI job `135381277649` 为 `SUCCESS`，Flutter Quality Gate Run `44470735746`（job `135379277558`）为 `SUCCESS`。这组结果覆盖 PR #304/#306 合并后的当前主线，不使用旧 SHA 的 CI 结果替代。
+- 随后 PR #335 仅更新 AI 执行台账并合入，当前 master 前进到 `469ce8379072dc4a77351aa23926b869d34ea4be`；该 HEAD 的 Flutter regression Run `44493105228` 已 `SUCCESS`，Android arm64 job `135456947589` 的 APK 构建、Manifest/ABI/SHA-256、Android local unit tests、XML 校验及报告上传均 `SUCCESS`。Quality Gate Run `44493105336` 的静态分析、Dart suite 与 Android native unit tests 均 `SUCCESS`，Find N2 arm64 Debug APK 构建仍 `IN_PROGRESS`。
+- 2026-11-19 PR #304/#306 合并后的阶段性主线复核（历史基线）：HEAD `82d38c9d77ccac55555d18a943e204e9a6886531`；Flutter regression Run `44470735725`、Android arm64 CI job `135381277649`、Flutter Quality Gate Run `44470735746` 均 `SUCCESS`。随后已继续合入 PR #337 与文档更新 PR #335；当前证据以 `469ce837` 对应的最新 CI 行为准。
 
 ## 6. Find N2 与大字号不可退化项
 
@@ -306,7 +306,8 @@
 | Phase 2 补充：针灸排版与半折叠详情 | `PASS`（自动化） | PR #304 合并 SHA `be0db216d277ff755eb0f0d5f02541a0c7f6f921`，以 AppType Token 统一针灸字号并修复窄屏换行；PR #306 合并 SHA `4b0e12e7ab159ef6e2a70963dc793dfb0a27ce88`，新增真实根导航下半折叠针灸四 Tab/穴位详情验收，覆盖浅深主题和 200% 字号。 |
 | Phase 2 补充：六经、经典正文与医案半折叠详情 | `PASS`（自动化） | PR #337 合并 SHA `69c2b3d191e12f6cf2916650f673afcf8e5ffc2a`；新增 `test/phase2_remaining_half_fold_routes_test.dart`，从真实根导航进入六经详情、伤寒论篇目正文、倪师医案详情；覆盖 800×900 dp、x=388..412 dp 物理 hinge、浅深主题、200% 字号及 SQLite FFI 异步收尾。分支静态分析与定向 Flutter 测试 2/2 SUCCESS，PR 全量 Flutter regression 与 Android arm64 CI 均 SUCCESS。 |
 | PR #337 合并后 Flutter / Android CI | `PASS` | 合并后 HEAD `69c2b3d191e12f6cf2916650f673afcf8e5ffc2a`；Flutter regression Run `44491439429` 与 Android arm64 job `135450312683` 均为 `SUCCESS`，包括 arm64 APK、Manifest/ABI/SHA-256 校验及 Android local unit tests。 |
-| 当前最新 master CI | `IN_PROGRESS` | HEAD `469ce8379072dc4a77351aa23926b869d34ea4be`（PR #335 文档台账更新合并后）；Flutter tests Run `44493105228` 与 Flutter Quality Gate Run `44493105336` 正在执行，尚未取得终态，不计为 `PASS`。 |
+| 当前 master Flutter / Android CI | `PASS` | HEAD `469ce8379072dc4a77351aa23926b869d34ea4be`；Flutter regression Run `44493105228` 与 Android arm64 job `135456947589` 均 `SUCCESS`，包括 arm64 Debug APK、Manifest、ABI/SHA-256、Android local unit tests、XML 验证及报告上传。 |
+| 当前 master Flutter Quality Gate | `IN_PROGRESS` | 同一 HEAD 的 Quality Gate Run `44493105336`：静态分析、Dart suite、Android native unit tests 均 `SUCCESS`；Find N2 arm64 Debug APK 构建仍在执行，不计为 `PASS`。 |
 | Phase 3：工具、收藏、设置、历史与辅助页面 | `PASS`（自动化） | PR #214/#217/#219/#220/#226/#227/#240/#247/#248/#255/#262/#264/#266/#267 均已合并；集成 SHA 见第 5 节。覆盖列表减阴影/细分隔、工具标签 200% 换行、紫微折叠布局、五运六气对比度/文本缩放/徽章高度、剂量换算器 200%，以及收藏/设置/历史/命盘库浅深主题。 |
 | 五行徽章文字与背景高度 | `PASS` | PR #264 合并 SHA `4136bc616fa382cc7196e277c99f67f7f3e23007`；背景高度改为依据实际 TextPainter.height 计算，200% 几何断言进入 master。 |
 | Phase 4：跨页面语义色对比度 | `PASS`（自动化） | PR #265 合并 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；当前 HEAD Flutter regression Run `44103235167` success、Android arm64 job `134112303183` success。覆盖浅深主题状态色、容器和六经文字/容器配对。 |
