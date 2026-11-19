@@ -210,9 +210,20 @@ void main() {
           label: '经典原文正文',
         );
         expect(tester.takeException(), isNull);
-        await tester.pageBack();
+        final markdownBack = find.descendant(
+          of: find.byType(MarkdownDocScreen),
+          matching: find.byTooltip('Back'),
+        );
+        expect(markdownBack, findsOneWidget);
+        await tester.tap(markdownBack);
         await tester.pumpAndSettle();
-        await tester.pageBack();
+
+        final classicBack = find.descendant(
+          of: find.byType(ClassicLibraryScreen),
+          matching: find.byTooltip('Back'),
+        );
+        expect(classicBack, findsOneWidget);
+        await tester.tap(classicBack);
         await tester.pumpAndSettle();
 
         // Real root navigation -> ToolsScreen -> MedicalCaseLibraryScreen
@@ -225,7 +236,10 @@ void main() {
         await _advanceRoute(tester);
         expect(find.byType(MedicalCaseLibraryScreen), findsOneWidget);
 
-        final caseCards = find.byType(MedicalCaseListCard);
+        final caseCards = find.descendant(
+          of: find.byType(MedicalCaseLibraryScreen),
+          matching: find.byType(MedicalCaseListCard),
+        );
         for (var attempt = 0;
             attempt < 60 && caseCards.evaluate().isEmpty;
             attempt++) {
