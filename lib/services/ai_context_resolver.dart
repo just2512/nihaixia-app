@@ -685,6 +685,189 @@ class AiContextResolver {
     }
   }
 
+  static const _supportedMeihuaFieldPath =
+      r'^result\.(?:(?:main|mutual|changed)\.(?:seq|name|judgement)|movingYao|movingYaoCi|tiWuxing|yongWuxing|mainRelation\.(?:label|verdict)|tiWangShuai\.label|stages\.[0-2]\.(?:name|hexName|relationLabel|detail))$';
+
+  static AiContextRef buildMeihuaFieldContextRef({
+    required AiContextRef resultRef,
+    required String fieldPath,
+    required String fieldLabel,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(resultRef.toMetadata());
+    final resultMatch = RegExp(
+      r'^meihua:result:([0-9a-f]{64}):method=(time|number|random)$',
+    ).firstMatch(resultRef.anchorId);
+    if (normalized.isEmpty ||
+        resultRef.kind != AiContextKind.toolResult ||
+        resultRef.moduleId != meihuaModuleId ||
+        resultRef.snapshotId == null ||
+        resultRef.snapshotId != resultRef.anchorVersion ||
+        resultRef.ruleVersion != MeihuaToolExecutor.ruleVersion ||
+        resultRef.sourceId != MeihuaToolExecutor.sourceId ||
+        resultMatch == null ||
+        resultMatch.group(1) != resultRef.snapshotId ||
+        !RegExp(_supportedMeihuaFieldPath).hasMatch(fieldPath)) {
+      throw ArgumentError(
+        'A Meihua field reference requires a verified result identity and a supported scalar field path.',
+      );
+    }
+    final snapshotId = resultRef.snapshotId!;
+    final method = resultMatch.group(2)!;
+    return AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: meihuaModuleId,
+      anchorId:
+          'meihua:result:$snapshotId:method=$method:field=$fieldPath',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: resultRef.ruleVersion,
+      sourceId: MeihuaToolExecutor.sourceId,
+      fieldPath: fieldPath,
+      title: fieldLabel,
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolField> resolveMeihuaResultField({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != meihuaModuleId ||
+        ref.sourceId != MeihuaToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua field reference is incomplete or does not identify the local Meihua engine.',
+      );
+    }
+    if (ref.ruleVersion != MeihuaToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Meihua engine or hexagram data version no longer matches this field.',
+      );
+    }
+
+    final match = RegExp(
+      r'^meihua:result:([0-9a-f]{64}):method=(time|number|random):field=(.+)$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    final fieldPath = ref.fieldPath;
+    if (match == null ||
+        snapshotId == null ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        fieldPath == null ||
+        match.group(3) != fieldPath ||
+        !RegExp(_supportedMeihuaFieldPath).hasMatch(fieldPath)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Meihua field path, anchor and result snapshot identity do not agree.',
+      );
+    }
+    final method = match.group(2)!;
+    final resultRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: meihuaModuleId,
+      anchorId: 'meihua:result:$snapshotId:method=$method',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: MeihuaToolExecutor.sourceId,
+      title: '梅花易数${_meihuaMethodLabel(method)}',
+    );
+    final resultResolution = resolveMeihuaToolResult(
+      ref: resultRef,
+      structuredSnapshot: structuredSnapshot,
+    );
+    final resolvedResult = resultResolution.value;
+    if (!resultResolution.isResolved || resolvedResult == null) {
+      return AiContextResolution(
+        status: resultResolution.status,
+        reason: resultResolution.reason,
+      );
+    }
+
+    Object? value = resolvedResult.structuredSnapshot;
+    for (final segment in fieldPath.split('.')) {
+      if (value is Map) {
+        value = value[segment];
+      } else if (value is List) {
+        final index = int.tryParse(segment);
+        if (index == null || index < 0 || index >= value.length) {
+          value = null;
+          break;
+        }
+        value = value[index];
+      } else {
+        value = null;
+        break;
+      }
+    }
+    if (value == null || (value is String && value.trim().isEmpty)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested Meihua field is missing from the verified result snapshot.',
+      );
+    }
+    if (value is! String && value is! num && value is! bool) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested Meihua field is not a supported scalar field value.',
+      );
+    }
+
+    final result = resolvedResult.structuredSnapshot['result'];
+    if (result is! Map) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The verified Meihua result does not contain its structured result scope.',
+      );
+    }
+    final fieldUnit = fieldPath.endsWith('.seq')
+        ? '通行本《周易》King Wen 卦序，1–64'
+        : fieldPath == 'result.movingYao'
+            ? '动爻位置，1–6，自下而上'
+            : 'App 本地梅花快照中的原始结构字段；不作概率或科学预测解释';
+    final fieldLabel = ref.title?.trim().isNotEmpty == true
+        ? ref.title!
+        : fieldPath;
+    final scope = <String, Object?>{
+      'method': result['method'],
+      'main': result['main'],
+      'mutual': result['mutual'],
+      'changed': result['changed'],
+      'movingYao': result['movingYao'],
+      'movingYaoCi': result['movingYaoCi'],
+      'ti': result['ti'],
+      'yong': result['yong'],
+      'tiWuxing': result['tiWuxing'],
+      'yongWuxing': result['yongWuxing'],
+      'mainRelation': result['mainRelation'],
+      'tiWangShuai': result['tiWangShuai'],
+      'monthBranch': result['monthBranch'],
+      'stages': result['stages'],
+      'verdict': result['verdict'],
+    };
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: fieldLabel,
+        fieldScope: Map<String, Object?>.unmodifiable(scope),
+        fieldValue: [
+          Map<String, Object?>.unmodifiable({
+            'fieldPath': fieldPath,
+            'value': value,
+            'unit': fieldUnit,
+          }),
+        ],
+        fieldUnit: fieldUnit,
+        structuredSnapshot: resolvedResult.structuredSnapshot,
+      ),
+    );
+  }
+
   static const baziModuleId = 'bazi';
 
   static AiContextRef buildBaziResultContextRef({

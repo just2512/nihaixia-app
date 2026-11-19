@@ -190,6 +190,62 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
   }
 
 
+
+  Future<void> _askAiAboutField(String fieldPath) async {
+    final snapshot = _contextSnapshot;
+    if (snapshot == null || _chart == null) return;
+    try {
+      final resultRef = AiContextResolver.buildMeihuaResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+      final fieldLabel = switch (fieldPath) {
+        'result.main.name' => '主卦名称',
+        'result.main.judgement' => '主卦卦辞',
+        'result.movingYao' => '动爻位置',
+        'result.movingYaoCi' => '动爻爻辞',
+        'result.mainRelation.label' => '体用关系',
+        'result.tiWangShuai.label' => '体卦旺衰',
+        _ when fieldPath.startsWith('result.stages.') => '阶段推演内容',
+        _ => fieldPath,
+      };
+      final fieldRef = AiContextResolver.buildMeihuaFieldContextRef(
+        resultRef: resultRef,
+        fieldPath: fieldPath,
+        fieldLabel: fieldLabel,
+      );
+      final resolution = AiContextResolver.resolveMeihuaResultField(
+        ref: fieldRef,
+        structuredSnapshot: snapshot,
+      );
+      final resolved = resolution.value;
+      if (!resolution.isResolved || resolved == null) {
+        _showMeihuaContextError(resolution.status.name.toUpperCase());
+        return;
+      }
+      await showContextualAiSheet(
+        context: context,
+        contextRef: fieldRef,
+        initialPrompt: AiContextPromptBuilder.buildMeihuaToolField(
+          resolvedField: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: fieldLabel,
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      _showMeihuaContextError('UNKNOWN');
+    }
+  }
+
+  void _showMeihuaContextError(String status) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('梅花易数字段上下文解析失败：$status，已取消提问。'),
+      ),
+    );
+  }
+
   void _returnAssistantResult() {
     final chart = _chart;
     if (chart == null) return;
@@ -478,6 +534,15 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
             const SizedBox(height: 10),
             Text(c.main.name,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('meihua-field-main'),
+                onPressed: () => _askAiAboutField('result.main.name'),
+                icon: const Icon(Icons.auto_awesome, size: 14),
+                label: const Text('问 AI 解读主卦'),
+              ),
+            ),
             const SizedBox(height: 2),
             Text(
               '上${kTrigrams[c.main.upper].name}${kTrigrams[c.main.upper].symbol}'
@@ -533,6 +598,16 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
                   Text('${c.tiWuxing} 体 · ${c.yongWuxing} 用 → ${c.mainRelation.label}',
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.bold)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const ValueKey('meihua-field-relation'),
+                      onPressed: () =>
+                          _askAiAboutField('result.mainRelation.label'),
+                      icon: const Icon(Icons.auto_awesome, size: 14),
+                      label: const Text('问 AI 解读体用关系'),
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     '月建${c.monthBranch}（${_zhiWuxing(c.monthBranch)}），体卦${c.tiWangShuai.label}。${c.verdict}',
@@ -560,24 +635,41 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
                     fontWeight: FontWeight.bold,
                     color: cs.primary)),
             const SizedBox(height: 8),
-            ...c.stages.map((s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 92,
-                        child: Text('${s.name} · ${s.hexName}',
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600)),
+            ...c.stages.asMap().entries.map((entry) {
+              final index = entry.key;
+              final stage = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 92,
+                          child: Text('${stage.name} · ${stage.hexName}',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600)),
+                        ),
+                        Expanded(
+                          child: Text(stage.detail,
+                              style: const TextStyle(fontSize: 12, height: 1.4)),
+                        ),
+                      ],
+                    ),
+                    TextButton.icon(
+                      key: ValueKey('meihua-field-stage-$index'),
+                      onPressed: () => _askAiAboutField(
+                        'result.stages.$index.detail',
                       ),
-                      Expanded(
-                        child: Text(s.detail,
-                            style: const TextStyle(fontSize: 12, height: 1.4)),
-                      ),
-                    ],
-                  ),
-                )),
+                      icon: const Icon(Icons.auto_awesome, size: 13),
+                      label: const Text('问 AI 解读本阶段'),
+                    ),
+                  ],
+                ),
+              );
+            }),
             const Divider(height: 20),
             Text('互卦 ${c.mutual.name} · 变卦 ${c.changed.name}',
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
