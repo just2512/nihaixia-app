@@ -2936,3 +2936,24 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master `d15420883e724258f50509e9d85bd9fc3a51c0a7` 的 Flutter tests run `44256197363` SUCCESS；Flutter Quality Gate run `44256197344` 仍 IN_PROGRESS（Android native unit tests）。
 - PR [#293](https://github.com/just2512/nihaixia-app/pull/293) 的台账内容已更新到本节；最新提交会触发新 head CI，旧 head run 不作为当前 head 验收证据。
 - #284/#286/#289/#290/#291 已关闭为 SUPERSEDED；当前有效集成入口为 #292、#294、#293。设备验收仍为最终本地门禁，不阻止继续云端 Phase 3。
+
+
+---
+
+### 57.33 2026-11-19 授权边界修正：按 Fork 权属和功能统一划分
+
+- 本节正式替代此前“仅授权切换后新增 AI 文件”的时间边界；历史台账条目仅作为当时方案记录，不再作为当前授权规则。
+- 新规则：上游原始代码继续遵循上游 Apache 2.0；本 Fork 中由 `just2512` 拥有版权或已取得充分授权的原创新增/修改内容，统一适用 `LICENSE-FORK-COMMERCIAL.md`。不再按代码产生时间区分既有 AI 与未来 AI，也不只限制 AI 而放过其他 Fork 自有修改。
+- 所有 Fork 自有 AI 实现纳入：本地模型运行时、Native AI bridge、统一助手、会话/路由、知识上下文、Prompt/Resolver、Headless 工具适配、情境提问、结果解释、AI 数据/附件清理、TRACE 与安全边界。页面原有上游内容不整体改许可，仅 Fork 新增/修改部分商业授权。
+- 混合文件保留 Apache 上游部分并对 Fork 修改部分增加商业授权条件；纯 Fork 新增文件使用 `LicenseRef-Nihaixia-Fork-Commercial`；混合文件采用 `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial`。
+- 知识库和资料内容仍按各自原许可证/来源声明，不纳入商业授权；第三方依赖、模型权重和外部服务继续按各自许可。读取知识库的 Fork 自有检索/上下文代码仍属于商业授权代码。
+- 根目录 `LICENSE` 保持 Apache 2.0 原文，不修改上游作者的版权和许可权利。Apache 2.0 不是非商业许可证，允许商业使用；对 Fork 自有修改增加商业条件依据 Apache 2.0 §4，不撤销此前已授予的许可。
+- README、`LICENSE-FORK-COMMERCIAL.md`、`docs/fork-license-boundary.md` 和 `docs/ai-commercial-license.md` 已按统一规则更新。历史版本已授予许可不追溯撤销；本规则适用于当前修订版本及后续发布。
+
+### 57.34 2026-11-19 AI 文件级许可映射
+
+- 新增 `.reuse/dep5`，将 AI 核心服务、模型、上下文、工具适配器、助手页面、Native AI 策略逐文件登记为 `LicenseRef-Nihaixia-Fork-Commercial`。
+- 将 Android MainActivity/Manifest 与经典、本草、方剂、医案、内经、排盘、易经、黄历等 AI 接入页面登记为 `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial`：上游原始部分保留 Apache 2.0，Fork 自有新增/修改部分适用商业授权。
+- 新增 `LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`，作为自定义 SPDX 标识的完整许可文本；根目录 `LICENSE` 继续保留上游 Apache 2.0。
+- 最新 master 复核基线为 `82d38c9d77ccac55555d18a943e204e9a6886531`，已包含 PR #333 的易经字段级情境提问；其涉及的 `yijing_result_screen.dart` 与 `meihua_screen.dart` 均在混合文件许可映射中。
+- 当前版本授权覆盖以 Fork 权属和功能清单为准，不按文件创建时间区分已存在 AI 模块与未来 AI 模块。知识库数据和第三方内容继续排除。
