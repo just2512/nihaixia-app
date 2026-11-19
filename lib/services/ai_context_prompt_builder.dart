@@ -11,6 +11,7 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
+import 'ziwuliuzhu_tool_executor.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -276,6 +277,14 @@ class AiContextPromptBuilder {
       return schemaVersion == 'ziwei-structured-result-v1' &&
           ref.anchorId == 'ziwei:result:$snapshotId';
     }
+    if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId) {
+      final arguments = input['arguments'];
+      final at = arguments is Map ? arguments['at'] : null;
+      return schemaVersion == ZiWuLiuZhuToolExecutor.resultSchemaVersion &&
+          input['method'] == 'deviceLocalDateTime' &&
+          at is String &&
+          ref.anchorId == 'ziwuliuzhu:result:$snapshotId:at=$at';
+    }
     if (ref.moduleId == SolarTermResultContextExecutor.moduleId) {
       final arguments = input['arguments'];
       final term = arguments is Map ? arguments['term'] : null;
@@ -352,6 +361,21 @@ class AiContextPromptBuilder {
     if (resolvedResult.ref.moduleId != 'almanac' ||
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError('An almanac prompt requires a resolved almanac tool result.');
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildZiWuLiuZhuToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId != ZiWuLiuZhuToolExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A ZiWuLiuZhu prompt requires a resolved ZiWuLiuZhu tool result.',
+      );
     }
     return buildToolResult(
       ref: resolvedResult.ref,
@@ -718,6 +742,10 @@ class AiContextPromptBuilder {
         '梅花易数属于传统术数与民俗文化学习，不是科学预测或确定性行动指令。请解释本次快照中实际生成的主卦、互卦、变卦、动爻、体用关系、月令旺衰和三阶段推演；随机起卦必须解释已保存的本次随机结果，不得重新随机或重新计算。不得将其转成医疗、法律、投资或其他重要行动建议。',
       if (ref.moduleId == 'xiaoliuren')
         '小六壬属于传统民俗文化参考；本次计算明确使用用户选择的通行掌诀或《多能鄙事》口径。只按快照中记录的口径解释，不把任一口径说成唯一传统、事实预测或确定性吉凶。不得据此提供医疗、法律、投资或其他重大决策指令。',
+      if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId)
+        '子午流注快照是 App 原有经络时辰计算引擎的结果，固定采用设备本地墙钟时间、默认经度 120E/纬度 30N、子时 23:00 换日且未启用真太阳时。请分别解释纳子法、纳甲法、灵龟八法和飞腾八法的字段；状态为 NOT_APPLICABLE 表示该方法在本次输入下没有对应结果，不得补造穴位。',
+      if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId)
+        '这些内容仅用于解释传统子午流注计算口径和 App 返回值，不代表穴位对当前个人适用，不构成针刺、艾灸、治疗时机、刺激强度/频次或处方建议；不得据此推断疾病或替代临床评估。',
       if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
         '节气内容必须严格区分 App 本地知识资产中的通用养生常识、倪师讲座相关整理和【推断】内容；不得把整理或推断伪称为倪师逐字原话。只解释所选节气快照中已有的字段，不自行补造节气日期、物候或出处。',
       if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
