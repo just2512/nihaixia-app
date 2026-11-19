@@ -162,6 +162,8 @@
 - 知识入口：`lib/screens/knowledge_screen.dart`、`lib/screens/search_tab.dart`。
 - 经典阅读：`lib/screens/classic_library_screen.dart`、`lib/screens/shanghan_jingui_screen.dart`、`lib/screens/neijing_knowledge_screen.dart`。
 - 核心详情：`lib/screens/formula_detail_screen.dart`、`lib/screens/herb_detail_screen.dart`、`lib/screens/acupoint_detail_screen.dart`、`lib/screens/meridian_detail_screen.dart`、`lib/screens/medical_case_detail_screen.dart`。
+- 针灸浏览与详情入口：`lib/screens/acupuncture_screen.dart`、`lib/screens/acupoint_detail_screen.dart`。
+- 相关回归：`test/acupuncture_editorial_typography_test.dart`、`test/acupuncture_half_fold_root_navigation_test.dart`。
 - 共享布局：`lib/widgets/adaptive_master_detail.dart`（仅在发现与主题或阅读布局直接相关的问题时修改）。
 
 **实施重点**
@@ -176,9 +178,15 @@
 - 200% 字号时长标题、原文、表格/列表、按钮可访问且不横向溢出。
 - 知识入口、主从预览、核心详情与来源展示相关回归测试通过。
 
+**集成补充（PR #304 / #306）**
+
+- **针灸排版与窄屏换行**：PR [#304](https://github.com/just2512/nihaixia-app/pull/304) 已合并，merge SHA `be0db216d277ff755eb0f0d5f02541a0c7f6f921`。针灸页字号改用 `AppType` Token；窄屏条目标题与来源操作区改用可换行布局；保留针灸资料、搜索筛选、讲稿入口、经络图入口和详情路由。
+- **真实根导航半折叠验收**：PR [#306](https://github.com/just2512/nihaixia-app/pull/306) 已合并，merge SHA `4b0e12e7ab159ef6e2a70963dc793dfb0a27ce88`。新增 `test/acupuncture_half_fold_root_navigation_test.dart`，通过真实 `HomeScreen → AdaptiveHomeNavigation → KnowledgeScreen → 针灸 Tab` 进入页面；覆盖浅/深主题、200% 字号、800×900 dp 与 x=388..412 dp 物理 hinge，检查知识页和针灸内容不越过 388 dp 安全面板，并实际进入穴位详情检查详情页边界及字号继承。
+- **针灸四 Tab 专项矩阵**：PR #304 同时加入 `test/acupuncture_editorial_typography_test.dart`，覆盖 402/775 dp、浅/深主题、200% 字号、四个子 Tab 和可展开内容；针灸半折叠集成测试补充覆盖真实根导航和穴位详情，不以独立挂载页面替代导航链路验收。
+
 ### Phase 3：工具、收藏、设置与辅助页面
 
-**当前主线基线**：`5bb248f94d3e7a94bb827c78ad12ed461c828af6`（PR #272 合并后）。本阶段已完成既定页面批次；后续只处理有明确复现证据的问题，不为制造改动而重做页面。
+**当前主线复核基线**：`82d38c9d77ccac55555d18a943e204e9a6886531`（2026-11-19）。本阶段已完成既定页面批次；后续只处理有明确复现证据的问题，不为制造改动而重做页面。
 
 **已合并批次与边界**
 
@@ -214,6 +222,7 @@
 - 自动化 `PASS`、实机 `PASS`、`REJECT`、`MISSING`、`UNKNOWN` 分开记录；不以平均分掩盖单项失败。
 - PR #272 合并后的最新 master 为 `5bb248f94d3e7a94bb827c78ad12ed461c828af6`；合并后 Flutter tests Run `44211890081`、Android arm64 job `134493862255`、Flutter Quality Gate Run `44211890175` 均 `SUCCESS`。
 - Find N2 的外屏/内屏/半折叠、浅深主题、100%/150%/200% 字号及连续阅读检查，按第 7.2 节执行。未取得真实设备截图、系统版本、窗口 dp、字号档位及连续阅读记录前，保持 `MISSING`。
+- 2026-11-19 主线最新复核：HEAD `82d38c9d77ccac55555d18a943e204e9a6886531`；Flutter regression Run `44470735725` 为 `SUCCESS`，Android arm64 CI job `135381277649` 为 `SUCCESS`，Flutter Quality Gate Run `44470735746`（job `135379277558`）为 `SUCCESS`。这组结果覆盖 PR #304/#306 合并后的当前主线，不使用旧 SHA 的 CI 结果替代。
 
 ## 6. Find N2 与大字号不可退化项
 
@@ -292,6 +301,8 @@
 | 五运六气外部对拍夹具 | `MISSING` | PR #272 完整 Flutter regression 中 15 项 `test/yunqi_engine_test.dart` 测试因外部 `D:\tools\yunqi_ref.json` 不在仓库且 CI 未设置 `YUNQI_REF_PATH` 而按原测试逻辑 skipped；未删除、跳过代码或降低断言。 |
 | Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后主线 Flutter / Android arm64 / Quality Gate success。 |
 | Phase 2 补充：古籍原文库 | `PASS`（自动化） | PR #222 合并 SHA `68896b3179b49271522957a7877d08268c8cbdbd`；最终 HEAD `7974d16f1e64b25b8bce9b5ac5d9cfd47e2c87de`。测试改用测试专用内存 AssetBundle，避免重复读取大型真实古籍资产；合并后 master Flutter Run `43901866825`、Android arm64 与 Quality Gate Run `43901867004` success。 |
+| Phase 2 补充：针灸排版与半折叠详情 | `PASS`（自动化） | PR #304 合并 SHA `be0db216d277ff755eb0f0d5f02541a0c7f6f921`，以 AppType Token 统一针灸字号并修复窄屏换行；PR #306 合并 SHA `4b0e12e7ab159ef6e2a70963dc793dfb0a27ce88`，新增真实根导航下半折叠针灸四 Tab/穴位详情验收，覆盖浅深主题和 200% 字号。 |
+| 当前主线完整 CI | `PASS` | HEAD `82d38c9d77ccac55555d18a943e204e9a6886531`；Flutter regression Run `44470735725`、Android arm64 job `135381277649`、Flutter Quality Gate Run `44470735746` 均为 `SUCCESS`。 |
 | Phase 3：工具、收藏、设置、历史与辅助页面 | `PASS`（自动化） | PR #214/#217/#219/#220/#226/#227/#240/#247/#248/#255/#262/#264/#266/#267 均已合并；集成 SHA 见第 5 节。覆盖列表减阴影/细分隔、工具标签 200% 换行、紫微折叠布局、五运六气对比度/文本缩放/徽章高度、剂量换算器 200%，以及收藏/设置/历史/命盘库浅深主题。 |
 | 五行徽章文字与背景高度 | `PASS` | PR #264 合并 SHA `4136bc616fa382cc7196e277c99f67f7f3e23007`；背景高度改为依据实际 TextPainter.height 计算，200% 几何断言进入 master。 |
 | Phase 4：跨页面语义色对比度 | `PASS`（自动化） | PR #265 合并 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；当前 HEAD Flutter regression Run `44103235167` success、Android arm64 job `134112303183` success。覆盖浅深主题状态色、容器和六经文字/容器配对。 |
