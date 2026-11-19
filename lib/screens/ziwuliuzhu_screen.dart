@@ -151,7 +151,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
               icon: const Icon(Icons.reply),
               onPressed: () => Navigator.pop(context, _buildAssistantSummary()),
             ),
-          if (!widget.returnResultOnComplete && _execution.succeeded)
+          if (_execution.succeeded)
             IconButton(
               tooltip: '问 AI 解读当前子午流注结果',
               icon: const Icon(Icons.auto_awesome),

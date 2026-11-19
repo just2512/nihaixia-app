@@ -228,6 +228,7 @@ void main() {
               ),
               home: ZiWuLiuZhuScreen(
                 initialDate: DateTime(2026, 10, 8, 12),
+                returnResultOnComplete: true,
               ),
             ),
           ),
@@ -235,6 +236,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final ask = find.byTooltip('问 AI 解读当前子午流注结果');
+        expect(find.byTooltip('返回 AI 助手'), findsOneWidget);
         expect(ask, findsOneWidget);
 
         final tabPage = find.byType(TabBarView);
