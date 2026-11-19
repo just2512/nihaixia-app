@@ -269,6 +269,15 @@ void main() {
           findsWidgets,
           reason: '医案库必须完成真实数据加载后才能进入详情',
         );
+        // MedicalCaseLibraryScreen refreshes favorites and recent history in
+        // the background after its data Future completes. Drain those queued
+        // FFI reads in real async time before the detail page starts its own
+        // serialized recent-history write followed by bookmark lookup.
+        await tester.runAsync(() async {
+          await DatabaseHelper.instance.getBookmarkedMedicalCaseSeqs();
+          await DatabaseHelper.instance.getRecentMedicalCaseSeqs(limit: 20);
+        });
+        await tester.pump();
         final firstCaseCard = caseCards.first;
         await tester.ensureVisible(firstCaseCard);
         final selectedCase = tester.widget<MedicalCaseListCard>(firstCaseCard).c;
