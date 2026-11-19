@@ -22,7 +22,7 @@ OPPO 官方规格页列出 Find N2（入网型号 **PGU110**）的显示参数�
 - Flutter 根入口未统一建立窗口尺寸类别；各业务页面仍有各自的 Scaffold 和内容布局，需要按页面类型继续适配，不能认为首页导航改造已代表全应用通过。
 - Android 已配置 Android 8.0+ adaptive icon foreground/background，并为当前 minSdk 24 提供 anydpi 矢量兼容资源；原有多密度 PNG 保留在仓库中作为旧资源。
 - 原有多密度 PNG 已保留作回退；Manifest 现已指向简化书页自适应矢量图标，不含小字或“中医大师”表述。
-- `pubspec.yaml` 描述已统一为“研纪 - 中医经典知识与本地健康信息工具”，与知识、工具和本地健康信息整理的实际范围一致。
+- `pubspec.yaml` 描述已统一为“研纪 - 中医诊疗全过程辅助学习工具”，与知识、工具和本地健康信息整理的实际范围一致。
 
 ## 2. 已落地的基础导航规则
 
@@ -77,7 +77,7 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 ### 已确定名称
 
 - **桌面短名称：保留「研纪」**。现有 Manifest 与 MaterialApp 已统一为这个名称，两字长度适合桌面图标下方显示；不建议在短名称里追加副标题。
-- 应用商店/介绍副标题建议统一为：**「中医经典 · 知识工具 · 本地健康信息」**。
+- 应用商店/介绍副标题建议统一为：**「中医诊疗学习 · 经典研习 · 传统文化工具」**。
 - 项目描述不再使用“中医诊断助手”作为总定位；中医规则辨证、传统文化工具和 E4B 健康信息整理应在功能说明里分别描述。
 - Android applicationId `com.nihaisha.nihaisha_app`、Kotlin namespace `com.nihaisha.nihaisha_app` 与 Dart package name `nihaisha_app` 均保持不变，避免影响旧 APK 覆盖升级、应用私有数据目录、本地模型路径与既有代码导入。
 
