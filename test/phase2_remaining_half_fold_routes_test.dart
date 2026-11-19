@@ -142,8 +142,35 @@ void main() {
         // action; use that actual UI affordance instead of assuming the
         // ExpansionTile header also dispatches the outer InkWell route.
         if (find.byType(MeridianDetailScreen).evaluate().isEmpty) {
-          final detailAction = find.text('查看详情').first;
-          await tester.ensureVisible(detailAction);
+          final meridianCard = find.ancestor(
+            of: meridianRow,
+            matching: find.byType(Card),
+          ).first;
+          final detailAction = find.descendant(
+            of: meridianCard,
+            matching: find.text('查看详情'),
+          );
+          expect(detailAction, findsOneWidget);
+          final knowledgeScrollable = find.descendant(
+            of: find.byType(KnowledgeScreen),
+            matching: find.byType(Scrollable),
+          ).first;
+          // At 200% the expanded card's detail action can be below the
+          // viewport. Scroll the active KnowledgeScreen list, rather than
+          // relying on ensureVisible across the nested TabBarView tree.
+          await tester.scrollUntilVisible(
+            detailAction,
+            220,
+            scrollable: knowledgeScrollable,
+            maxScrolls: 12,
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+          final actionRect = tester.getRect(detailAction);
+          expect(
+            actionRect.bottom,
+            lessThanOrEqualTo(900),
+            reason: '六经详情操作应先进入视口：$actionRect',
+          );
           await tester.tap(detailAction);
         }
         await _advanceRoute(tester);
