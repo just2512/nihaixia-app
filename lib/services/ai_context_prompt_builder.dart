@@ -432,7 +432,7 @@ class AiContextPromptBuilder {
         ref.moduleId != 'yijing' ||
         ref.fieldPath == null ||
         !RegExp(
-          r'^result\.(?:primary\.(?:seq|name|judgement)|moving|movingTexts\.[0-5]|changed\.(?:seq|name|judgement)|nuclear\.(?:seq|name|judgement))
+          r'^result\.(?:primary\.(?:seq|name|judgement)|moving|movingTexts\.[0-5]|changed\.(?:seq|name|judgement)|nuclear\.(?:seq|name|judgement))$',
         ).hasMatch(ref.fieldPath!) ||
         snapshotId is! String ||
         snapshotId != ref.snapshotId ||
