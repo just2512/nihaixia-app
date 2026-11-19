@@ -687,8 +687,8 @@ class AiContextPromptBuilder {
     final promptResult = ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in resultValue.entries)
-              if (entry.key is String && entry.key != 'values')
-                entry.key as String: entry.value,
+              if (entry.key != 'values')
+                entry.key: entry.value,
             'values': <String, Object?>{
               if (resultValue['values'] is Map)
                 for (final entry in (resultValue['values'] as Map).entries)
