@@ -2957,3 +2957,14 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 新增 `LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`，作为自定义 SPDX 标识的完整许可文本；根目录 `LICENSE` 继续保留上游 Apache 2.0。
 - 最新 master 复核基线为 `82d38c9d77ccac55555d18a943e204e9a6886531`，已包含 PR #333 的易经字段级情境提问；其涉及的 `yijing_result_screen.dart` 与 `meihua_screen.dart` 均在混合文件许可映射中。
 - 当前版本授权覆盖以 Fork 权属和功能清单为准，不按文件创建时间区分已存在 AI 模块与未来 AI 模块。知识库数据和第三方内容继续排除。
+
+
+### 57.35 2026-11-19 全仓库授权文件清单与许可门禁
+
+- 以共同上游基线 c0f14e77a7fb721fc332576d21fef5f100392d0b 和 Fork 主线快照 82d38c9d77ccac55555d18a943e204e9a6886531 逐树比较：新增/修改文件共 790 个（新增 674、修改 116），另有 10 个删除路径。
+- 新增全量逐路径清单 docs/fork-license-file-inventory.md / .json。逐项标注 Git 状态、授权类别、SPDX 表达式和权属证据状态；知识库文件与第三方锁定文件不纳入 Fork 商业授权。
+- 重建 .reuse/dep5 为精确路径映射，覆盖全部 790 个新增/修改路径；避免目录级通配符误覆盖知识库内容、上游未修改文件或第三方内容。
+- 商业授权版本更新至 1.1：个人非商业使用仅限个人设备/研究环境内使用，不授予公开或向第三方再分发权；无论是否收费，公开再分发均须事先取得书面许可。商业用途另须书面授权。该规则不改变 Apache 2.0 上游部分依法已授予的权利。
+- 新增 tool/check_fork_license_inventory.py 和 .github/workflows/fork-license-compliance.yml：校验完整差异清单、逐路径 DEP5 覆盖、修改文件双层许可、新文件商业许可、知识库/第三方排除、许可正文副本一致及根目录 Apache LICENSE 不变。CI 失败时不得合并。
+- 权属状态为 OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件仍需核对贡献者版权/再许可权；Git 提交者或仓库管理权限不能代替权属证明。此项需以贡献记录、授权声明或法律审核关闭，不能由路径映射自动推定。
+- 本次自动门禁验证工程映射和文本一致性，不构成法律意见；正式商业发行前仍应进行法律专业审查。

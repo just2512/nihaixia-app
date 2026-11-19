@@ -105,3 +105,11 @@ AI 核心代码的目录和功能清单见 [AI 功能商业授权清单](ai-comm
 ## 9. 机器可读的文件映射
 
 AI 核心文件与混合页面的文件级许可映射记录在 `.reuse/dep5`，使用 `LicenseRef-Nihaixia-Fork-Commercial` 指向 `LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`。该映射是功能清单的机器可读补充：纯 Fork AI 文件为商业授权；混合文件为 Apache 2.0 与商业授权并存。其他 Fork 自有修改仍依第 3 节的权属规则，不因未出现在 AI 清单中而变成 Apache 原始代码。
+
+
+## 10. 全仓库 Fork 修改文件清单与自动门禁
+
+- 完整新增/修改文件清单见 [fork-license-file-inventory.md](fork-license-file-inventory.md)，机器可读清单见 [fork-license-file-inventory.json](fork-license-file-inventory.json)。清单以共同上游基线 c0f14e77a7fb721fc332576d21fef5f100392d0b 为比较点，逐文件区分 Fork 商业授权、Apache 2.0 + Fork 商业双层许可、知识库排除和第三方排除。
+- .reuse/dep5 对清单中的每个变更路径使用精确路径登记，不使用 lib/**、assets/** 等会误覆盖知识库或上游文件的宽泛通配符。
+- 知识库与第三方排除项采用 NOASSERTION，仅表示本 Fork 不作新的许可声明；其来源许可、版权和服务条款继续独立适用。
+- tool/check_fork_license_inventory.py 比对基线至当前 HEAD 的全部路径变化，检查清单是否缺项/过期、DEP5 是否逐项覆盖、修改文件是否双层许可、新增文件是否 Fork 商业许可、知识库/第三方是否排除、商业许可文本副本是否一致，以及根目录 Apache LICENSE 是否未改动。

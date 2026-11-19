@@ -131,6 +131,7 @@ AI 功能属于本 Fork 自有修改层，**现有 AI 实现和未来 AI 实现�
 原有上游 AI 代码（若在后续同步时重新引入）仍按上游许可证；本 Fork 对其所作的原创扩展和替换实现按商业授权。
 
 
-## 6. 文件级许可登记
 
-本清单对应的 AI 核心文件与混合页面已登记在根目录 `.reuse/dep5`。自定义 SPDX 标识 `LicenseRef-Nihaixia-Fork-Commercial` 的完整许可文本位于 `LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`。
+## 6. 全仓库边界与清单
+
+AI 文件不是独立于全仓库清单之外的第二套授权。现有及未来 AI 代码均按 Fork 自有实现统一进入商业授权；AI 代码所在的混合页面仅对 Fork 原创修改部分适用商业许可。全量文件级分类以 [Fork 修改文件清单](fork-license-file-inventory.md) 和机器可读 JSON 为准。

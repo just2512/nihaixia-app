@@ -594,3 +594,11 @@ flowchart LR
 **⭐ 如果这个项目对你有帮助，请给个 Star！**
 
 </div>
+
+
+## Fork 修改授权
+
+- 上游原始代码继续遵循 Apache 2.0；本 Fork 自有新增/修改内容按 [Fork 商业授权](LICENSE-FORK-COMMERCIAL.md) 执行。
+- 个人非商业使用限个人范围内使用；公开再分发（无论是否收费）和商业使用均须事先取得书面授权。
+- 知识库与第三方内容不纳入 Fork 商业授权，继续遵循各自来源许可/条款。
+- 全仓库逐文件映射见 [授权边界说明](docs/fork-license-boundary.md) 与 [文件清单](docs/fork-license-file-inventory.md)。
