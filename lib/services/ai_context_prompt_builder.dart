@@ -767,9 +767,10 @@ class AiContextPromptBuilder {
             'values': <String, Object?>{
               if (resultValue['values'] is Map)
                 for (final entry in (resultValue['values'] as Map).entries)
-                  if (entry.key != '出生公历')
+                  if (entry.key != '出生公历' && entry.key != '出生农历口径')
                     entry.key as String: entry.value,
               '出生公历': 'REDACTED_LOCAL_ONLY',
+              '出生农历口径': 'REDACTED_LOCAL_ONLY',
             },
           }
         : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
