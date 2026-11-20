@@ -192,6 +192,26 @@ void main() {
     );
   });
 
+  test('本地 92 签目录的每个签号均可确定性重建且来源严格绑定', () async {
+    expect(kSanShanLingqian, hasLength(92));
+    for (final sign in kSanShanLingqian) {
+      final execution =
+          await SanshanLingqianResultContextExecutor.executeForSignId(sign.id);
+      expect(execution.succeeded, isTrue, reason: 'sign ${sign.id}');
+      expect(execution.sign?.id, sign.id);
+      expect(execution.structuredSnapshot!['sourceIds'], [
+        '${SanshanLingqianToolExecutor.dataSourcePrefix}${sign.id}',
+      ]);
+      final result =
+          execution.structuredSnapshot!['result']! as Map<String, Object?>;
+      final values = result['values']! as Map<String, Object?>;
+      expect(values['签号'], sign.id.toString());
+      expect(values['签题'], sign.title);
+      expect(values['签诗'], sign.verse);
+      expect(values['签级'], sign.luck.label);
+    }
+  });
+
   for (final viewport in [
     (width: 402.0, height: 880.0, isSidePanel: false),
     (width: 775.0, height: 1100.0, isSidePanel: true),
