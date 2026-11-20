@@ -242,6 +242,7 @@ void main() {
 
       await tester.ensureVisible(ask);
       expect(ask, findsOneWidget);
+      expect(find.text('将本次关煞结果带回助手对话'), findsOneWidget);
       final askButton = tester.widget<FilledButton>(
         find.ancestor(of: ask, matching: find.byType(FilledButton)).first,
       );
