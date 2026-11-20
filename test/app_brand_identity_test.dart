@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 String _read(String path) => File(path).readAsStringSync();
 
+const retiredBrandName = String.fromCharCodes([0x6c49, 0x5510, 0x4e2d, 0x533b]);
+
 void main() {
   group('研纪产品品牌身份', () {
     test('Android 与 Flutter 显示名称统一，旧安装身份保持不变', () {
@@ -58,6 +60,7 @@ void main() {
       final adaptive = _read('docs/find-n2-adaptive-layout.md');
       final brandPlan = _read('docs/yanji-editorial-frontend-design-plan.md');
       final positioning = _read('docs/product-positioning-and-boundaries.md');
+      final brandIdentity = _read('docs/brand-identity.md');
       final logo = _read('docs/images/logo.svg');
       final banner = _read('docs/images/readme_banner.svg');
       final features = _read('docs/images/readme_features.svg');
@@ -69,15 +72,18 @@ void main() {
         adaptive,
         brandPlan,
         positioning,
+        brandIdentity,
         logo,
         banner,
         features,
       ]) {
         expect(content, contains('研纪'));
-        expect(content, isNot(contains('汉唐中医')));
+        expect(content, isNot(contains(retiredBrandName)));
       }
       expect(banner, contains('>研</text>'));
       expect(banner, contains('>研纪</text>'));
+      expect(brandIdentity, contains('唯一对外产品名称：研纪'));
+      expect(brandIdentity, contains('Android `applicationId`：`com.nihaisha.nihaisha_app`'));
       expect(changelog.split('\n').first, '# 研纪 App 更新日志（Changelog）');
     });
   });

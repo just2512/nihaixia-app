@@ -37,6 +37,8 @@
 
 ### 项目身份与上游关系
 
+当前对外名称及包身份边界以[研纪品牌与应用身份规范](docs/brand-identity.md)为准。
+
 研纪由 **just2512** 基于上游开源项目发展并持续独立维护。当前仓库拥有自己的产品定位、功能规划、代码改进、版本号、更新记录和发布渠道；对外产品名称与应用版本均以本仓库为准。
 
 本仓库继续保留 GitHub Fork 关系及上游来源：感谢 [jangviktor-web/nihaixia-app](https://github.com/jangviktor-web/nihaixia-app) 原作者提供的开源基础。上游代码更新不会自动合入；需要引入时，按 [Fork 独立维护与上游同步策略](docs/fork-maintenance-policy.md) 逐项评估、人工审查和测试。保留上游关系不代表使用上游版本号、Release 或 APK。

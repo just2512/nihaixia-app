@@ -1,8 +1,10 @@
-# 汉唐中医 App 开发详细文档
+# 研纪 App 开发详细文档（早期版本开发记录）
 
 > 最后更新：2026-05-26
 > 当前版本：v1.2.0+1 (pubspec) / v1.0.4 (APK)
 > 总计：23个 Dart 源文件，5个 JSON 数据文件，257条穴位处方+31条透针透穴+379个穴位详情+271个方剂+440味本草
+>
+> 本文档为早期开发及历史版本记录；当前产品对外名称统一为「研纪」。历史 APK 文件名仅作原始发布记录，不能作为当前应用显示名称。
 
 ---
 
@@ -62,8 +64,8 @@ nihaisha_app/
 
 ## 2. 依赖配置 (pubspec.yaml)
 
-- **App 名称:** `nihaisha_app`
-- **描述:** 汉唐中医 - 倪海厦六经辨证中医诊断助手
+- **Dart package 名称（内部）:** `nihaisha_app`；**对外显示名称：** `研纪`
+- **描述:** 研纪 - 中医诊疗全过程辅助学习工具
 - **版本:** `1.2.0+1`
 - **publish_to:** `'none'`
 - **SDK 约束:** `^3.12.0`
@@ -588,7 +590,7 @@ AppBar 标题："知识库"，共 **5 个 Tab**：
 6. `runApp(const NiHaishaApp())` — 启动应用
 
 **MaterialApp 配置：**
-- Title: '汉唐中医'
+- 当前 Flutter `MaterialApp.title`: `研纪`
 - debugShowCheckedModeBanner: false
 - Theme: Material 3, seedColor = Color(0xFF8B4513)（马鞍棕）
 - 支持明暗主题切换
