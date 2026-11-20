@@ -235,7 +235,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).last, '上海市');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('上海市').last);
+      await tester.tap(find.textContaining('上海市').last);
       await tester.pumpAndSettle();
 
       final calculate = find.text('测算关煞');
