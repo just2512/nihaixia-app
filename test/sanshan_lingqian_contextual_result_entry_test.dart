@@ -276,7 +276,7 @@ void main() {
         expect(widget.contextRef['moduleId'], 'sanshan_lingqian');
         expect(widget.contextRef['snapshotId'], hasLength(64));
         expect(widget.contextRef['sourceId'], startsWith('local-data:sanshan-lingqian:'));
-        expect(widget.initialPrompt, contains(poem.replaceAll('\n', r'\n')));
+        expect(widget.initialPrompt, contains(poem!.replaceAll('\n', r'\n')));
         expect(widget.initialPrompt, contains('不得重抽、换签'));
         if (viewport.isSidePanel) {
           expect(find.byType(Dialog), findsWidgets);
