@@ -71,6 +71,7 @@ void main() {
     expect(prompt, contains('面热、眼跳、耳鸣、心惊'));
     expect(prompt, contains('LOCAL_VERIFICATION_ONLY'));
     expect(prompt, isNot(contains(observedAt.toIso8601String())));
+    expect(prompt, isNot(contains('本机 UTC 偏移分钟')));
     expect(prompt, contains('不得推断用户存在相应症状'));
   });
 
