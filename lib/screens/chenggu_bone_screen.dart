@@ -196,7 +196,8 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
           values['真太阳时校正'] == (_computedUseTrueSolarTime! ? '开启' : '关闭') &&
           values['早晚子时区分'] == (_computedDistinguishZiShi! ? '开启' : '关闭') &&
           values['总骨重'] == expectedWeight &&
-          values['称骨歌诀标题'] == current.title &&
+          values['称骨歌诀标题'] ==
+              (current.title.isEmpty ? 'MISSING' : current.title) &&
           values['称骨歌诀'] == current.poem &&
           values['称骨说明'] == (current.detail.isEmpty ? 'MISSING' : current.detail);
       if (!pageMatches) {
