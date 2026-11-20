@@ -101,7 +101,7 @@ void main() {
     );
     expect(prompt, contains('三山国王灵签'));
     expect(prompt, contains(execution.sign!.title));
-    expect(prompt, contains(execution.sign!.verse));
+    expect(prompt, contains(execution.sign!.verse.replaceAll('\n', r'\n')));
     expect(prompt, contains('不是科学预测'));
     expect(prompt, contains('不得重抽、换签'));
     expect(prompt, contains('不得恐吓用户'));
@@ -276,7 +276,7 @@ void main() {
         expect(widget.contextRef['moduleId'], 'sanshan_lingqian');
         expect(widget.contextRef['snapshotId'], hasLength(64));
         expect(widget.contextRef['sourceId'], startsWith('local-data:sanshan-lingqian:'));
-        expect(widget.initialPrompt, contains(poem));
+        expect(widget.initialPrompt, contains(poem.replaceAll('\n', r'\n')));
         expect(widget.initialPrompt, contains('不得重抽、换签'));
         if (viewport.isSidePanel) {
           expect(find.byType(Dialog), findsWidgets);
