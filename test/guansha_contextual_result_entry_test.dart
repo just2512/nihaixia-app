@@ -261,7 +261,8 @@ void main() {
       expect(ai.contextualExplanationOnly, isTrue);
       expect(ai.initialPrompt, contains('REDACTED_LOCAL_ONLY'));
       expect(ai.initialPrompt, isNot(contains('上海市')));
-      expect(ai.initialPrompt, isNot(contains('出生地点')));
+      expect(ai.initialPrompt, contains('出生地点'));
+      expect(ai.initialPrompt, isNot(contains('上海市')));
       await tester.pageBack();
       await tester.pumpAndSettle();
     }
