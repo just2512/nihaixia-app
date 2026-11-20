@@ -7,6 +7,7 @@ institution/teacher references there are source content, not the app brand.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -38,6 +39,30 @@ def is_scannable(path: str) -> bool:
     return suffix in TEXT_SUFFIXES or Path(path).name in TEXT_FILENAMES
 
 def historical_artifact_only(path: str, line: str) -> bool:
+    # Old filenames listed only as deleted paths in the license inventory are
+    # historical source identifiers, not current product-facing brand text.
+    if path == "docs/fork-license-file-inventory.json":
+        try:
+            deleted_paths = set(
+                json.loads(Path(path).read_text(encoding="utf-8")).get("deleted_paths", [])
+            )
+            candidate = line.strip().rstrip(",").strip('"')
+            if candidate in deleted_paths:
+                return True
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            pass
+    if path == "docs/fork-license-file-inventory.md":
+        try:
+            deleted_paths = set(
+                json.loads(
+                    Path("docs/fork-license-file-inventory.json").read_text(encoding="utf-8")
+                ).get("deleted_paths", [])
+            )
+            candidate = line.strip()
+            if candidate.startswith("- ") and candidate[2:] in deleted_paths:
+                return True
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            pass
     # Preserve exact historical APK names and a source-document keyword used
     # by the herb parser; neither is a current app-facing product label.
     if path == "tools/parse_herbs.py" and OLD_BRAND + "诊疗" in line:

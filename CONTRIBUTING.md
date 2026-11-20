@@ -49,7 +49,9 @@ flutter build apk --release   # 需要 APK 时才跑，约 5-10 分钟
 - 提交信息用 Conventional Commits：`feat:` / `fix:` / `docs:` / `ci:` / `refactor:` / `test:`，一句话说清「为什么」。
 - PR 请从自己的 fork 开分支，**不要**带 `android/release-key.jks`、`key.properties`、`*.mobileprovision` 等签名相关文件。
 - PR 描述里写清楚：改了什么、为什么改、怎么验证的（测试 / 截图 / 真机机型）。
-- 提交即表示同意以 [Apache-2.0](LICENSE) 协议授权你的贡献；合并后会在提交记录里保留你的署名。
+- 本仓库采用逐文件分层许可，不是所有贡献都统一采用根目录 Apache 2.0：上游原始部分为 Apache 2.0，混合文件中的 Fork 原创修改部分为 Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial，纯 Fork 新增文件为 LicenseRef-Nihaixia-Fork-Commercial；知识库和第三方文件按来源许可排除。
+- 提交 PR 前，贡献者必须核实自己拥有该贡献的版权或具有充分授权，并能够按目标文件的 SPDX 许可表达式授权该贡献。对于 Fork 商业许可范围内的代码/文档，提交即表示按相应文件许可授权；若不能授予该许可，请勿直接提交，先与维护者确认隔离方案。
+- 不得提交无权再许可的第三方代码、非公版资料或来源不清的知识库内容。贡献者署名仍保留在 Git 提交记录中。
 
 ## 关于医疗内容
 
