@@ -58,6 +58,7 @@ Files:
  lib/screens/settings_screen.dart
  lib/screens/shanghan_jingui_screen.dart
  lib/screens/shousheng_debt_screen.dart
+ lib/screens/solar_term_section_screen.dart
  lib/screens/tools_screen.dart
  lib/screens/xiaoliuren_screen.dart
  lib/screens/yijing_detail_screen.dart

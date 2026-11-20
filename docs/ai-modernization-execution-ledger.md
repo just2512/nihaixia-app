@@ -3001,15 +3001,19 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 ---
 
-### 57.36 2026-11-20 Fork 商业授权 PR #332：最新主线集成与验收门禁
 
-- PR：[ #332 ](https://github.com/just2512/nihaixia-app/pull/332)；工作分支 `work/ai-commercial-license-20261119`。本次以最新 master `90ea79d2c89701e137c384506a65c1a65bb0b7ff` 为第一父提交、原 PR HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 为第二父提交，保留双方提交 ancestry；不采用 squash，不覆盖主线已合入的内容。
-- 同步复核发现最新主线在共同基线之后增加了 5 个文件，已纳入清单：`lib/services/huangdi_siji_result_context_executor.dart`、`lib/services/solar_term_result_context_executor.dart`、`test/huangdi_siji_contextual_result_entry_test.dart`、`test/solar_term_contextual_result_entry_test.dart`、`test/ziwuliuzhu_contextual_result_entry_test.dart`。这些均为新增 Fork 代码/测试候选，标记 `FORK_COMMERCIAL` 与 `OWNERSHIP_EVIDENCE_REQUIRED`；对应页面及 resolver 的后续修改沿用原分类。
-- 全仓库清单以共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b` 对合并树重算：新增/修改 803 个（新增 687、修改 116），另有 10 个删除路径；类别为 Fork 商业授权候选 328、Apache 2.0 + Fork 双层许可 110、知识库排除 364、第三方排除 1。
-- 机器可读清单 `docs/fork-license-file-inventory.json` 与逐路径表 `docs/fork-license-file-inventory.md` 已同步；`.reuse/dep5` 按确切路径映射，知识库和第三方内容为 `NOASSERTION`，未使用 `lib/**`、`assets/**` 等可能误授权的宽泛匹配。
-- `tool/check_fork_license_inventory.py` 检查共同基线到实际 HEAD 的新增/修改/删除路径、路径状态、分类和 SPDX 对应、清单计数、DEP5 精确路径与许可证表达式、商业许可正文副本一致、Apache 副本与根 `LICENSE` 字节一致，并阻止根目录 Apache 原文被修改。该自动门禁不验证版权链。
-- 商业授权文本 1.2：个人学习/研究/非商业评估仅限个人设备或非商业研究环境；不授予 Fork 自有修改的公开或第三方再分发权；公开发布、镜像、转发、下载分发或交付均须事先书面许可，不论是否收费；商业用途另须书面授权。上游 Apache 2.0、知识库和第三方内容继续按各自许可执行。两份商业许可正文一致，Apache 副本与根 `LICENSE` 一致。
-- 权属/来源门槛：本次分类中 `OWNERSHIP_EVIDENCE_REQUIRED` 共 438 项，仍须保留作者、雇佣/职务作品或有效再许可证明；`SOURCE_LICENSE_REVIEW` 共 365 项，知识库/第三方来源许可仍应按各自来源复核。自动清单不能将这些 MISSING 转为版权确权 PASS。
-- 许可 CI 以最终合并树的实际 PR HEAD 为准；旧 HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 的 Push 触发结果中，Fork license 检查 SUCCESS，但 Flutter regression 与 Android arm64 作业被 SKIPPED，不能计为通过。新 HEAD 必须在 PR 事件下重新取得许可检查、Flutter regression、Android arm64 验证的 SUCCESS；Branch validation 的 SUCCESS 或任何 SKIPPED 均不能替代这两项。
-- 平台边界仍未解决：仓库当前为 Public。GitHub 条款 D.5 授予平台内查看/Fork 公开仓库内容的权限，D.6/D.8 另有向含许可声明的仓库提交内容及公开内容可用性的约定。自定义许可不能保证阻止 GitHub 平台内 Fork，也不能覆盖其他贡献者未明确转授的权利。用户要求任何公开再分发均须事先书面许可；在仓库保持 Public 的情况下，该要求与平台授权存在冲突。未经权利人明确决定是否接受该平台内 Fork 或批准改变仓库可见性，不得宣称限制已经完全生效。
-- **合并门槛**：工程清单与许可 CI 通过后，仍须关闭权属/来源证据和公开仓库平台授权冲突。PR 保持 Ready for review；未得到明确授权前不合并主线。正式商业发行前仍须专业法律审查。
+---
+
+### 57.36 2026-11-20 Fork 商业授权 PR #332：主线同步与许可清单修复
+
+- PR [#332](https://github.com/just2512/nihaixia-app/pull/332)，分支 `work/ai-commercial-license-20261119`。本分支已以最新 master `90ea79d2c89701e137c384506a65c1a65bb0b7ff` 为第一父提交、旧 PR HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 为第二父提交完成合并式同步，提交历史保留；GitHub compare 当前 `ahead 11 / behind 0`，PR mergeable=true。
+- 全仓库清单以共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b` 重算：新增/修改 804 个（新增 687、修改 117），另有 10 个删除路径；分类为 Fork 商业授权候选 328、Apache 2.0 + Fork 双层许可 111、知识库排除 364、第三方排除 1。
+- 同步后的第一轮许可 CI 检出遗漏 `lib/screens/solar_term_section_screen.dart`：该文件已在新 master 修改，但旧清单未登记。已按混合文件而非纯 Fork 新文件处理，纳入 `APACHE_2_0_AND_FORK_COMMERCIAL`，保留上游原始部分 Apache-2.0，Fork 原创修改部分按 LicenseRef 处理；DEP5 精确路径同步补录。新 HEAD 必须重新运行该检查，不能沿用失败或先前 SHA 的结果。
+- 最新主线新增加的 5 个路径已纳入清单，分别为 `lib/services/huangdi_siji_result_context_executor.dart`、`lib/services/solar_term_result_context_executor.dart`、`test/huangdi_siji_contextual_result_entry_test.dart`、`test/solar_term_contextual_result_entry_test.dart`、`test/ziwuliuzhu_contextual_result_entry_test.dart`。均按新增 Fork 实现/测试候选登记，权属状态保持 MISSING。
+- `docs/fork-license-file-inventory.json`、`docs/fork-license-file-inventory.md` 和 `.reuse/dep5` 已按 804 个非许可元数据路径同步；DEP5 逐路径列出 SPDX，不使用 `lib/**` 或 `assets/**` 宽泛规则。知识库及第三方共 365 项继续使用 `NOASSERTION`，不授予新权利。
+- 自动检查 `tool/check_fork_license_inventory.py` 检查基线至实际 HEAD 的文件/删除集合、状态、分类、SPDX、DEP5 精确路径集、计数、商业许可副本一致、Apache 副本与根 `LICENSE` 字节一致及根 Apache 原文未修改。它只证明工程映射完整性，不证明权属。
+- 商业许可版本 1.2 最终核对：个人非商业使用限定为个人设备或非商业研究环境；Fork 自有修改不得公开或向第三方再分发，除非事先取得书面许可（无论是否收费）；商业利用另须书面授权。Apache 2.0 原始内容、知识库和第三方内容按各自许可继续处理。
+- 权属/来源仍未关闭：`OWNERSHIP_EVIDENCE_REQUIRED` 439 项，必须有作者/职务作品/雇佣关系或有效再许可证明；`SOURCE_LICENSE_REVIEW` 365 项，需按知识库和第三方实际来源复核。Git 作者、提交历史和仓库管理员权限不能代替证据。
+- 最终 CI 必须针对 PR 实际 HEAD。旧 SHA 的 push 工作流中 Flutter regression 与 Android arm64 为 SKIPPED，不能视作通过；新 HEAD 的 PR 事件应分别取得 Fork license boundary、Flutter regression、Android arm64 的 SUCCESS。Branch validation 的 SKIPPED 或 SUCCESS 不能替代全量测试。
+- 仓库仍是 Public。GitHub 条款 D.5 允许通过服务查看和 Fork 公开仓库，D.6/D.8 另规定了向带有许可声明的仓库提交内容及公开内容可用性。自定义 LicenseRef 无法单方面撤销平台授予的权利，也不能覆盖没有取得再许可权的贡献者内容。用户要求任何公开再分发均事先书面许可；与当前 Public 状态下 GitHub 平台内 Fork 授权存在冲突。未经权利人明确决定接受该平台内 Fork 或批准改变可见性，不得宣称限制已完全生效。
+- PR 已为 Ready for review。工程检查通过并不等于版权确权；在权属/来源证据和平台授权冲突未解决前，不合并主线。正式商业发行前仍须专业法律审查。

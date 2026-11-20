@@ -563,6 +563,7 @@
 | `lib/screens/settings_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
 | `lib/screens/shanghan_jingui_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
 | `lib/screens/shousheng_debt_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
+| `lib/screens/solar_term_section_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
 | `lib/screens/tools_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
 | `lib/screens/xiaoliuren_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
 | `lib/screens/yijing_detail_screen.dart` | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | `Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial` | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -834,8 +835,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 803 个（新增 687，修改 116）；删除路径 10 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 110；Fork 商业授权候选 328；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 804 个（新增 687，修改 117）；删除路径 10 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 111；Fork 商业授权候选 328；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合中排除。未来业务代码/文档新增、修改、删除若未同步更新清单和 DEP5，CI 失败。
 - 清单与 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。

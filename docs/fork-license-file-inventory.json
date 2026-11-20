@@ -12,12 +12,12 @@
   ],
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The merged PR tree includes master 90ea79d2c89701e137c384506a65c1a65bb0b7ff plus PR #332 licensing changes. CI recomputes the exact path/status set against the checked-out PR HEAD; comparison_head is a runtime marker, not a pinned commit SHA.",
   "counts": {
-    "changed": 803,
+    "changed": 804,
     "added": 687,
-    "modified": 116,
+    "modified": 117,
     "deleted": 10,
     "by_classification": {
-      "APACHE_2_0_AND_FORK_COMMERCIAL": 110,
+      "APACHE_2_0_AND_FORK_COMMERCIAL": 111,
       "FORK_COMMERCIAL": 328,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
@@ -4402,6 +4402,14 @@
     },
     {
       "path": "lib/screens/shousheng_debt_screen.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/screens/solar_term_section_screen.dart",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
