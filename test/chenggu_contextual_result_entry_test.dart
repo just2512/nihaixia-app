@@ -71,6 +71,11 @@ void main() {
     expect(input['settings'], isA<Map<String, Object?>>());
     expect(values['总骨重'], isNotEmpty);
     expect(values['称骨歌诀'], isNotEmpty);
+    final rawTitle = execution.result.values['称骨歌诀标题'];
+    expect(rawTitle, isNotNull);
+    expect(values['称骨歌诀标题'], rawTitle!.isEmpty ? 'MISSING' : rawTitle);
+    final missingFields = snapshot['missingFields']! as List<Object?>;
+    expect(missingFields.contains('称骨歌诀标题'), rawTitle.isEmpty);
     expect(values['称骨说明'], isNotEmpty);
     expect(snapshot['privacy'], {
       'exactBirthDateAndTime': 'LOCAL_VERIFICATION_ONLY',
