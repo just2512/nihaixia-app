@@ -3,6 +3,11 @@ import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
 import '../services/sanshan_lingqian_tool_executor.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/sanshan_lingqian_result_context_executor.dart';
+import '../widgets/contextual_ai_sheet.dart';
+import 'assistant_tool_router.dart';
 
 /// 三山国王灵签 —— 广东揭西三山国王祖庙传承 92 签。
 ///
@@ -76,9 +81,73 @@ class _DrawTab extends StatefulWidget {
 
 class _DrawTabState extends State<_DrawTab> {
   LingqianSign? _sign;
+  Map<String, Object?>? _structuredSnapshot;
 
-  void _draw() {
-    setState(() => _sign = SanshanLingqianToolExecutor.draw());
+  Future<void> _draw() async {
+    final execution =
+        await SanshanLingqianResultContextExecutor.drawWithSnapshot();
+    if (!mounted) return;
+    if (!execution.succeeded || execution.sign == null) {
+      setState(() {
+        _sign = null;
+        _structuredSnapshot = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('本次抽签结果未能通过本地签谱校验。')),
+      );
+      return;
+    }
+    setState(() {
+      _sign = execution.sign;
+      _structuredSnapshot = execution.structuredSnapshot;
+    });
+  }
+
+  Future<void> _askAiAboutResult() async {
+    final sign = _sign;
+    final snapshot = _structuredSnapshot;
+    if (sign == null || snapshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先摇签，再解读本次灵签结果。')),
+      );
+      return;
+    }
+
+    try {
+      final contextRef = AiContextResolver.buildSanshanLingqianResultContextRef(
+        structuredSnapshot: snapshot,
+      );
+      final resolution =
+          await AiContextResolver.resolveSanshanLingqianToolResult(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      );
+      final resolved = resolution.value;
+      if (!mounted) return;
+      if (!resolution.isResolved || resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('灵签结果上下文核验失败：${resolution.status.name}')),
+        );
+        return;
+      }
+
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildToolResult(
+          ref: contextRef,
+          structuredSnapshot: resolved.structuredSnapshot,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: '三山国王灵签结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('灵签结果无法核验，已取消 AI 提问。')),
+      );
+    }
   }
 
   void _returnResultToAssistant() {
@@ -107,6 +176,12 @@ class _DrawTabState extends State<_DrawTab> {
           )
         else ...[
           _SignCard(sign: s, cs: cs),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _askAiAboutResult,
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: const Text('问 AI 解读当前灵签结果'),
+          ),
           if (widget.returnResultOnComplete) ...[
             const SizedBox(height: 12),
             OutlinedButton.icon(
