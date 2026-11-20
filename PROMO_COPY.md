@@ -1,6 +1,6 @@
 # 研纪 · 让经典经方，回到每个人的指尖
 
-> 一款离线优先、完全免费的中医经方诊断助手，忠实还原倪海厦人纪体系。
+> 一款离线优先的中医诊疗全过程辅助学习工具，融合中医经典研习、确定性业务规则与本地 AI 辅助理解。
 
 ---
 
@@ -68,6 +68,6 @@
 
 ### 📥 立即体验
 
-前往 [GitHub Releases](https://github.com/jangviktor-web/nihaixia-app/releases/latest) 下载预编译 APK（Android 6.0+），或 `git clone` 后本地构建。
+前往本仓库 [GitHub Releases](https://github.com/just2512/nihaixia-app/releases) 查看研纪的发行记录与可用安装包（Android 7.0+），或 `git clone` 后按构建文档自行构建。
 
 *本 App 为中医经方学习与辅助参考工具，所有结果不可替代执业医师的诊断与治疗。急重症请立即就医。*
