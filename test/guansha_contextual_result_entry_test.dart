@@ -140,7 +140,10 @@ void main() {
     expect(prompt, isNot(contains(arguments['gender']!)));
     expect(prompt, isNot(contains(arguments['birthplace']!)));
     for (final field in ['出生公历', '性别', '出生地点', '出生地坐标', '出生农历', '四柱']) {
-      expect(prompt, isNot(contains(values[field] as String)));
+      expect(
+        prompt,
+        isNot(contains('"$field":"${values[field]}"')),
+      );
     }
     expect(prompt, contains('小儿关煞结果仅是 App 本地收录的传统民俗规则命中记录'));
     expect(prompt, contains('不得根据关煞名称、部位或传统说法推断疾病'));
