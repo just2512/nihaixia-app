@@ -3004,17 +3004,17 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 ### 58.1 已合并并在当前主线复核的结果入口
 
-- PR #345 袁天罡称骨整体结果情境入口已合并，merge SHA：430e97dd5afb362d6d33cc36d01244e2048b409a；最终 head 5ed5e0ac004b19d5a8af509903da1b69d5ed5f43 的 Flutter regression run 44749799434 SUCCESS。该 head 之前的失败 run 44749135702 已定位为 Resolver 文件写入截断/解析错误；修复后新 head 完整回归通过。Android arm64 及其余质量门禁以该 PR 实际 run job 记录为准，不将 Flutter SUCCESS 扩大为端到端 PASS。
+- PR #345 袁天罡称骨整体结果情境入口已合并，merge SHA：430e97dd5afb362d6d33cc36d01244e2048b409a；最终 head 5ed5e0ac004b19d5a8af509903da1b69d5ed5f43 的 Flutter regression run 44749799434 SUCCESS、Android arm64 CI verification APK + unit tests SUCCESS；Branch validation 按 workflow 条件 SKIPPED，不计 PASS。该 head 之前的失败 run 44749135702 已定位为 Resolver 文件写入截断/解析错误；修复后新 head 完整回归通过。
 - PR #347 受生债整体结果情境入口已合并，merge SHA：80e135519d19939c3b0a921ded6db5fd0e8b4767；最终 head dc13342e88491af14680eb00235d2668ed2d21f2 的 Flutter regression run 44751619930 SUCCESS、Android arm64 SUCCESS。入口保留用户选择的经文体系、原始本地结果与旧版“带回助手”行为；精确生辰仅用于本地重建校验并在 Prompt 中脱敏。
-- 当前 master 为 80e135519d19939c3b0a921ded6db5fd0e8b4767。该 SHA 的 Flutter tests run 44753647096 与 Flutter Quality Gate run 44753647071 在本节登记时均为 IN_PROGRESS；必须等待终态，不能沿用父 SHA 430e97d 的 SUCCESS。
+- 当前 master 为 80e135519d19939c3b0a921ded6db5fd0e8b4767。该 SHA 的 Flutter tests run 44753647096 与 Flutter Quality Gate run 44753647071 均已 SUCCESS；post-merge 主线验收已完成，不沿用父 SHA 430e97d 的结果。
 
 ### 58.2 当前独立工作切片
 
 | 切片 | PR / head | 文件范围与验收目标 | 当前证据状态 |
 |---|---|---|---|
-| 三山国王灵签结果 | PR #354，head c88adbbb43e0496b248c02c4ff6948e4b1e06f9b | sanshan_lingqian_screen.dart、专用结果执行器、Resolver/Prompt、页面集成测试；App 本地抽签只执行一次，快照绑定选中签号、92 签目录来源和摘要；重建只按签号精确读取，不再次随机；保留“带回助手”；Prompt 禁止换签、恐吓和诱导付费法事 | Flutter regression run 44754155157 IN_PROGRESS；Android arm64 尚未取得终态；不得合并 |
-| 称骨派生农历隐私修正 | PR #357，head ec1201b902c4c76eb127ab79b810d0f7f6ca3767 | Prompt 除公历生日与原始生辰参数外，进一步将派生的“出生农历口径”替换为 REDACTED_LOCAL_ONLY；不可变快照保留原值供本地校验；新增断言验证真实农历值不进入模型上下文 | Flutter regression run 44754511613 IN_PROGRESS；Android arm64 尚未取得终态；不得合并 |
-| 玉匣灵兆当前时辰文本 | PR #358，head a274febb9fa6b701811367c0100c32b709762260 | 固定一次 App 设备本地时钟读取；绑定本地《玉匣记》文本 source ID、时间偏移和快照摘要；模型上下文将精确日期时间及 UTC 偏移替换为 LOCAL_VERIFICATION_ONLY；禁止把民俗文本推断为用户症状或诊断 | Flutter regression run 44754886091 IN_PROGRESS；Android arm64 尚未取得终态；不得合并 |
+| 三山国王灵签结果 | PR #354，最新 head 2c60d207ee91360c8038ccb5ec635ad7ac0e7aa4 | sanshan_lingqian_screen.dart、专用结果执行器、Resolver/Prompt、页面集成测试；App 本地抽签只执行一次，快照绑定选中签号、92 签目录来源和摘要；重建只按签号精确读取，不再次随机；保留“带回助手”；Prompt 禁止换签、恐吓和诱导付费法事 | 旧 head run 44754155157 的 Flutter regression FAILED（3 项新增断言把 JSON 中转义换行误按真实换行匹配）；测试已修正为验证 JSON 转义后的签诗原文，不降低断言；最新 head run 44756019536 IN_PROGRESS，Android arm64 待该 head 的 CI 终态；不得合并 |
+| 称骨派生农历隐私修正 | PR #357，head ec1201b902c4c76eb127ab79b810d0f7f6ca3767 | Prompt 除公历生日与原始生辰参数外，进一步将派生的“出生农历口径”替换为 REDACTED_LOCAL_ONLY；不可变快照保留原值供本地校验；新增断言验证真实农历值不进入模型上下文 | Flutter regression run 44754511613 SUCCESS；Android arm64 job IN_PROGRESS；Branch validation SKIPPED；不得合并 |
+| 玉匣灵兆当前时辰文本 | PR #358，head a274febb9fa6b701811367c0100c32b709762260 | 固定一次 App 设备本地时钟读取；绑定本地《玉匣记》文本 source ID、时间偏移和快照摘要；模型上下文将精确日期时间及 UTC 偏移替换为 LOCAL_VERIFICATION_ONLY；禁止把民俗文本推断为用户症状或诊断 | Flutter regression run 44754886091 SUCCESS；Android arm64 job IN_PROGRESS；Branch validation SKIPPED；不得合并 |
 
 上述三个 PR 均以当前 master 为 base，文件所有权互不重叠（Resolver/Prompt 的公共文件由各切片分别小批量修改，集成时必须重新检查最终树和完整回归）。设备外/内屏、半折叠、分屏、键盘及本地 E4B TRACE 仍为 UNKNOWN / LOCAL ONLY，统一留到云端工作收尾后的最终 Find N2 验收；设备门禁不阻止云端修复、测试和文档工作。
 
