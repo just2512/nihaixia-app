@@ -2997,3 +2997,19 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master 已有 Headless 执行器和基础单测，但页面仍自行计算并返回旧版 `AssistantToolResult`，只带 `local-engine:chenggu`，未携带数据 source ID、规范化 arguments 和可重建快照；尚未接入统一 Resolver/Prompt 的情境问 AI 入口。
 - 下一分支从当前 master `2e8cb9d9f1e2b53f257985675901ee2ba755b125` 创建。实施时须让页面展示结果与 AI 上下文来自同一次 Headless 执行；保留原“带回助手”操作；快照校验八字设置（真太阳时、早晚子时）、历法口径、称骨数据来源、规则/数据版本和结果摘要。Prompt 不得发送精确出生日期/钟点；称骨文案作为传统民俗文化参考，不能表述为事实命运判断。
 - 自动验收至少覆盖成功/缺参/非法日期时间/多余参数/来源错配/规则过期/结果篡改/摘要不符/重建不一致，以及页面 402dp/775dp、旧入口并存、关闭后滚动恢复和 Prompt 脱敏。Find N2 真机验收留到云端工作全部完成后统一执行。
+
+
+---
+
+### 57.36 2026-11-20 Fork 商业授权 PR #332：最新主线集成与验收门禁
+
+- PR：[ #332 ](https://github.com/just2512/nihaixia-app/pull/332)；工作分支 `work/ai-commercial-license-20261119`。本次以最新 master `90ea79d2c89701e137c384506a65c1a65bb0b7ff` 为第一父提交、原 PR HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 为第二父提交，保留双方提交 ancestry；不采用 squash，不覆盖主线已合入的内容。
+- 同步复核发现最新主线在共同基线之后增加了 5 个文件，已纳入清单：`lib/services/huangdi_siji_result_context_executor.dart`、`lib/services/solar_term_result_context_executor.dart`、`test/huangdi_siji_contextual_result_entry_test.dart`、`test/solar_term_contextual_result_entry_test.dart`、`test/ziwuliuzhu_contextual_result_entry_test.dart`。这些均为新增 Fork 代码/测试候选，标记 `FORK_COMMERCIAL` 与 `OWNERSHIP_EVIDENCE_REQUIRED`；对应页面及 resolver 的后续修改沿用原分类。
+- 全仓库清单以共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b` 对合并树重算：新增/修改 803 个（新增 687、修改 116），另有 10 个删除路径；类别为 Fork 商业授权候选 328、Apache 2.0 + Fork 双层许可 110、知识库排除 364、第三方排除 1。
+- 机器可读清单 `docs/fork-license-file-inventory.json` 与逐路径表 `docs/fork-license-file-inventory.md` 已同步；`.reuse/dep5` 按确切路径映射，知识库和第三方内容为 `NOASSERTION`，未使用 `lib/**`、`assets/**` 等可能误授权的宽泛匹配。
+- `tool/check_fork_license_inventory.py` 检查共同基线到实际 HEAD 的新增/修改/删除路径、路径状态、分类和 SPDX 对应、清单计数、DEP5 精确路径与许可证表达式、商业许可正文副本一致、Apache 副本与根 `LICENSE` 字节一致，并阻止根目录 Apache 原文被修改。该自动门禁不验证版权链。
+- 商业授权文本 1.2：个人学习/研究/非商业评估仅限个人设备或非商业研究环境；不授予 Fork 自有修改的公开或第三方再分发权；公开发布、镜像、转发、下载分发或交付均须事先书面许可，不论是否收费；商业用途另须书面授权。上游 Apache 2.0、知识库和第三方内容继续按各自许可执行。两份商业许可正文一致，Apache 副本与根 `LICENSE` 一致。
+- 权属/来源门槛：本次分类中 `OWNERSHIP_EVIDENCE_REQUIRED` 共 438 项，仍须保留作者、雇佣/职务作品或有效再许可证明；`SOURCE_LICENSE_REVIEW` 共 365 项，知识库/第三方来源许可仍应按各自来源复核。自动清单不能将这些 MISSING 转为版权确权 PASS。
+- 许可 CI 以最终合并树的实际 PR HEAD 为准；旧 HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 的 Push 触发结果中，Fork license 检查 SUCCESS，但 Flutter regression 与 Android arm64 作业被 SKIPPED，不能计为通过。新 HEAD 必须在 PR 事件下重新取得许可检查、Flutter regression、Android arm64 验证的 SUCCESS；Branch validation 的 SUCCESS 或任何 SKIPPED 均不能替代这两项。
+- 平台边界仍未解决：仓库当前为 Public。GitHub 条款 D.5 授予平台内查看/Fork 公开仓库内容的权限，D.6/D.8 另有向含许可声明的仓库提交内容及公开内容可用性的约定。自定义许可不能保证阻止 GitHub 平台内 Fork，也不能覆盖其他贡献者未明确转授的权利。用户要求任何公开再分发均须事先书面许可；在仓库保持 Public 的情况下，该要求与平台授权存在冲突。未经权利人明确决定是否接受该平台内 Fork 或批准改变仓库可见性，不得宣称限制已经完全生效。
+- **合并门槛**：工程清单与许可 CI 通过后，仍须关闭权属/来源证据和公开仓库平台授权冲突。PR 保持 Ready for review；未得到明确授权前不合并主线。正式商业发行前仍须专业法律审查。

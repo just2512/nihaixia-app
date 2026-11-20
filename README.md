@@ -13,12 +13,12 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-Mixed-blue?style=for-the-badge)](docs/fork-license-boundary.md)
 [![Stars](https://img.shields.io/github/stars/just2512/nihaixia-app?style=for-the-badge&color=yellow)](https://github.com/just2512/nihaixia-app/stargazers)
 
 <br/>
 
-**[📥 下载 APK](#-下载安装)** · **[📖 快速上手](#-快速上手)** · **[🏗️ 技术架构](#️-技术架构)** · **[🗺️ Roadmap](#️-roadmap)** · **[🤝 贡献指南](#️-贡献指南)** · **[📄 开源许可](#-开源许可)**
+**[📥 下载 APK](#-下载安装)** · **[📖 快速上手](#-快速上手)** · **[🏗️ 技术架构](#️-技术架构)** · **[🗺️ Roadmap](#️-roadmap)** · **[🤝 贡献指南](#️-贡献指南)** · **[📄 许可与 AI 授权](#-许可与-ai-功能授权)**
 
 </div>
 
@@ -48,7 +48,7 @@
 | 🔒 **离线优先** | 所有知识库打包进 App，无网络也能用，隐私数据不出本机 |
 | 📚 **经典还原** | 严格遵循倪师"生附子、炮附子不可取代"等口径，附子按体系拆分，方剂组成零死链 |
 | 🧠 **规则与 AI 协作** | App 确定性模块负责问诊、辨病辨证与计算；AI 负责理解、引导、解释和知识串讲，不覆盖业务结果 |
-| 🆓 **完全免费** | Apache 2.0 开源协议，无广告、无内购、无追踪 |
+| 🧩 **分层授权** | 上游原始代码继续适用 Apache 2.0；本 Fork 自有修改按商业授权，知识库资料保持原许可 |
 | 🧪 **测试守护** | 关键辨证路径与筛选逻辑均有回归测试，修复即写测试，防止复发 |
 
 
@@ -546,14 +546,21 @@ flowchart LR
 
 ---
 
-## 📄 开源许可
+## 📄 许可与 AI 功能授权
 
-本项目以 **Apache License 2.0** 发布。
+本仓库采用上游原始代码与 Fork 自有修改分层授权：
 
-- 许可证全文见 [LICENSE](LICENSE)；
-- 你可以自由使用、修改、分发本软件，包括商业用途，但须保留版权声明与许可声明，并遵循 Apache 2.0 的条款（含变更说明、通告文件等要求）。
+- **上游原始代码**：继续遵循根目录 [LICENSE](LICENSE) 中的 Apache License 2.0。Apache 2.0 允许商业使用，不是非商业许可证。
+- **本 Fork 自有修改**：由 `just2512` 拥有版权或已取得充分授权的新增与修改代码，统一按 [LICENSE-FORK-COMMERCIAL.md](LICENSE-FORK-COMMERCIAL.md) 执行；个人非商业使用仅限个人设备或非商业研究环境；公开再分发（无论是否收费）和商业用途均须事先取得书面授权。
+- **AI 功能**：本 Fork 的本地模型、统一助手、上下文检索、工具适配、情境提问、结果解释、Native 生命周期、AI 数据和 TRACE 等 Fork 自有实现全部纳入上述商业授权。无论此前已实现还是今后新增，不按时间拆分。具体功能见 [AI 功能商业授权清单](docs/ai-commercial-license.md)。
+- **混合文件**：保留上游原始代码 Apache 2.0 权利；本 Fork 在其中新增或修改的部分按商业授权。详细边界见 [docs/fork-license-boundary.md](docs/fork-license-boundary.md)。
+- **知识库与资料**：经典、讲义、医案、本草、方剂、穴位、易学等内容继续适用各自原有许可证、来源声明或授权条件，不纳入本次商业授权。
+- **第三方依赖与模型**：继续遵循各自许可证或服务条款。
 
-© 2026 just2512
+根目录 `LICENSE` 保留上游 Apache 2.0 原文；它不单独授予本 Fork 自有修改部分的商业使用权。此前已合法取得的历史版本许可不追溯撤销。
+
+全仓库逐文件授权映射见 [Fork 修改文件清单](docs/fork-license-file-inventory.md) 和 [机器可读清单](docs/fork-license-file-inventory.json)。
+**GitHub 平台许可限制**：本仓库目前为公开仓库。GitHub 服务条款 D.5 对公开仓库的内容另授予 GitHub 用户通过平台查看和 Fork 的权利；本仓库自定义许可不能撤销这项平台许可。因此，当前公开状态下，不能声称本条款能够阻止 GitHub 内的 Fork。若要阻止新的平台内 Fork，须由权利人另行决定先将仓库设为 Private；转为私有不会自动删除此前已产生的 Fork 或本地副本。详见 [GitHub 服务条款 D.5](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#d-github-additional-product-terms) 与 [GitHub 许可说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-licenses)。
 
 ---
 
