@@ -11,6 +11,8 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'huangdi_siji_result_context_executor.dart';
 import 'chenggu_result_context_executor.dart';
+import 'yuxiaji_omen_result_context_executor.dart';
+import 'yuxiaji_omen_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -318,6 +320,21 @@ class AiContextPromptBuilder {
           arguments['birth_time'] is String &&
           ref.anchorId == 'chenggu:result:$snapshotId';
     }
+    if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId) {
+      final at = input['at'];
+      final offset = input['utcOffsetMinutes'];
+      final arguments = input['arguments'];
+      return schemaVersion == YuxiajiOmenResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'deviceLocalDateTime' &&
+          input['clockOwner'] == 'APP_DEVICE_LOCAL' &&
+          at is String &&
+          DateTime.tryParse(at) != null &&
+          !DateTime.parse(at).isUtc &&
+          offset is int &&
+          arguments is Map &&
+          arguments.isEmpty &&
+          ref.anchorId == 'yuxiaji-omen:result:$snapshotId';
+    }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
       return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
@@ -429,6 +446,22 @@ class AiContextPromptBuilder {
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError(
         'A Huangdi Siji prompt requires a resolved Huangdi Siji tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildYuxiajiOmenToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId !=
+            YuxiajiOmenResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A Yuxiaji Omen prompt requires a resolved Yuxiaji tool result.',
       );
     }
     return buildToolResult(
@@ -727,6 +760,16 @@ class AiContextPromptBuilder {
       );
     }
 
+    if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId) {
+      if (ref.sourceId != YuxiajiOmenToolExecutor.sourceId ||
+          sourceIds.length != 1 ||
+          sourceIds.single != YuxiajiOmenToolExecutor.sourceId) {
+        throw ArgumentError(
+          'A Yuxiaji prompt requires the exact local omen text source.',
+        );
+      }
+    }
+
     final actualSnapshotId =
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
     if (actualSnapshotId != snapshotId) {
@@ -735,7 +778,18 @@ class AiContextPromptBuilder {
       );
     }
 
-    final promptInput = ref.moduleId == ChengguResultContextExecutor.moduleId
+    final promptInput =
+        ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in inputValue.entries)
+                  if (entry.key != 'at' && entry.key != 'utcOffsetMinutes')
+                    entry.key: entry.value,
+                'at': 'LOCAL_VERIFICATION_ONLY',
+                'utcOffsetMinutes': 'LOCAL_VERIFICATION_ONLY',
+                'privacyNote':
+                    'The exact device-local date, time and UTC offset are retained only for local snapshot verification and are omitted from model context.',
+              }
+            : ref.moduleId == ChengguResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in inputValue.entries)
               if (entry.key is String && entry.key != 'arguments')
@@ -847,6 +901,12 @@ class AiContextPromptBuilder {
         '精确出生日期和钟点仅用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。称骨内容不得转化为医疗、法律、投资或其他专业建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把民俗文本转化为医疗、法律、投资或其他专业建议。',
+      if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId)
+        '《玉匣记》十二时辰身兆属于传统民俗文献，不是科学预测、现实事件保证或吉凶指令。本次快照只包含 App 本机时辰对应的原始文本，不包含用户是否出现任何身体征兆的观察记录；不得推断用户存在相应症状。',
+      if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId)
+        '不得把面热、眼跳、耳鸣、心惊等民俗条目转化为病因判断、疾病诊断、健康风险评估或治疗建议，也不得据此延误就医。若用户描述真实或持续不适，应建议其寻求合格医疗人员评估。不得把时辰文本转化为医疗、法律、投资或其他重大决策依据。',
+      if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId)
+        '只解释快照中当前时辰和本地数据资产明确返回的内容；不得补造特殊占法、推测用户实际观察到的现象，或将数据中的吉凶文字表述为确定性事实。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
