@@ -22,6 +22,8 @@ import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 import 'ziwuliuzhu_calculation_service.dart';
+import 'yuxiaji_omen_result_context_executor.dart';
+import 'yuxiaji_omen_tool_executor.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
 enum AiContextResolutionStatus {
@@ -981,6 +983,158 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The local Chenggu calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+  static AiContextRef buildYuxiajiOmenResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final result = structuredSnapshot['result'];
+    final at = input is Map ? input['at'] : null;
+    final offset = input is Map ? input['utcOffsetMinutes'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    final title = result is Map ? result['title'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            YuxiajiOmenResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YuxiajiOmenResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            YuxiajiOmenResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'deviceLocalDateTime' ||
+        input['clockOwner'] != 'APP_DEVICE_LOCAL' ||
+        at is! String ||
+        DateTime.tryParse(at) == null ||
+        DateTime.parse(at).isUtc ||
+        offset is! int ||
+        DateTime.parse(at).timeZoneOffset.inMinutes != offset ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != YuxiajiOmenToolExecutor.sourceId ||
+        title is! String ||
+        title.isEmpty ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Yuxiaji context reference requires a complete device-local time snapshot with verified source provenance.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: YuxiajiOmenResultContextExecutor.moduleId,
+      anchorId: 'yuxiaji-omen:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: YuxiajiOmenResultContextExecutor.ruleVersion,
+      sourceId: YuxiajiOmenToolExecutor.sourceId,
+      title: title,
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveYuxiajiOmenToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != YuxiajiOmenResultContextExecutor.moduleId ||
+        ref.sourceId != YuxiajiOmenToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '玉匣灵兆引用不完整或不属于本地时辰文本来源。',
+      );
+    }
+    if (ref.ruleVersion != YuxiajiOmenResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '玉匣灵兆执行器、数据资产或时辰计算规则版本已变化。',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorId != 'yuxiaji-omen:result:$snapshotId' ||
+        ref.anchorVersion != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '玉匣灵兆锚点与不可变快照身份不一致。',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final at = input is Map ? input['at'] : null;
+    final offset = input is Map ? input['utcOffsetMinutes'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            YuxiajiOmenResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YuxiajiOmenResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            YuxiajiOmenResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'deviceLocalDateTime' ||
+        input['clockOwner'] != 'APP_DEVICE_LOCAL' ||
+        at is! String ||
+        DateTime.tryParse(at) == null ||
+        DateTime.parse(at).isUtc ||
+        offset is! int ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != YuxiajiOmenToolExecutor.sourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '玉匣灵兆输入、来源或摘要与不可变快照不匹配。',
+      );
+    }
+
+    final observedAt = DateTime.parse(at);
+    if (observedAt.timeZoneOffset.inMinutes != offset) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '设备时区偏移已变化，不能把历史本地时辰解释为当前时区结果。',
+      );
+    }
+    final rebuilt = YuxiajiOmenResultContextExecutor.executeWithSnapshot(
+      observedAt: observedAt,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '无法按记录的设备本地时间重建玉匣灵兆文本。',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId ||
+        rebuilt.result.title != ref.title) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '本地时辰重建结果与原始玉匣灵兆快照不一致。',
       );
     }
 
