@@ -59,7 +59,7 @@ class SanshanLingqianResultContextExecutor {
         result.values['签题'] != sign.title ||
         result.values['签诗'] != sign.verse ||
         result.values['签级'] != sign.luck.label) {
-      return SanshanLingqianResultContextExecution(result: result);
+      return SanshanLingqianResultContextExecution(sign: sign, result: result);
     }
 
     final values = <String, Object?>{
