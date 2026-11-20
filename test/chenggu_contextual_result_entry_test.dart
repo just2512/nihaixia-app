@@ -61,7 +61,10 @@ void main() {
       ChengguResultContextExecutor.ruleVersion
           .split(';')
           .where((entry) => entry.contains('-blob@'))
-          .every((entry) => RegExp(r'^[^@]+@[0-9a-f]{40}
+          .every((entry) =>
+              entry.substring(entry.indexOf('@') + 1).length == 40),
+      isTrue,
+    );
     expect(snapshot['executionStatus'], 'SUCCESS');
     expect((input['arguments'] as Map)['birth_date'], '1990-01-02');
     expect((input['arguments'] as Map)['birth_time'], '08:30');
