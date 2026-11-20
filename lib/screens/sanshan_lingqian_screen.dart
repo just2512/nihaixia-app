@@ -126,7 +126,7 @@ class _DrawTabState extends State<_DrawTab> {
       if (!mounted) return;
       if (!resolution.isResolved || resolved == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('灵签结果上下文核验失败：\${resolution.status.name}')),
+          SnackBar(content: Text('灵签结果上下文核验失败：${resolution.status.name}')),
         );
         return;
       }
