@@ -37,7 +37,7 @@ void main() {
   test('称骨真实 Headless 结果生成稳定的来源绑定快照', () async {
     final execution =
         await ChengguResultContextExecutor.executeWithSnapshot(arguments);
-    expect(execution.succeeded, isTrue);
+    expect(execution.succeeded, isTrue, reason: execution.result.toConversationText());
     expect(execution.result.validateFor('chenggu'), isEmpty);
     expect(execution.result.validateArgumentsMatch(arguments), isEmpty);
     expect(execution.result.sourceIds, const [
@@ -116,7 +116,6 @@ void main() {
     expect(prompt, isNot(contains('08:30')));
     expect(prompt, contains('不是科学预测'));
     expect(prompt, contains('称骨内容不得转化为医疗、法律、投资或其他专业建议'));
-    expect(prompt, contains('不得自行重排四柱'));
     expect(prompt, contains('不得自行重排四柱'));
   });
 
