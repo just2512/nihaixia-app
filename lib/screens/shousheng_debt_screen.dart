@@ -41,7 +41,27 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
   String? _computedYearZhi;
   String? _computedDayGan;
   String? _computedTimeZhi;
+  DateTime? _computedBirthDate;
+  int? _computedBirthHour;
+  int? _computedBirthMinute;
+  bool? _computedUseTrueSolarTime;
+  bool? _computedDistinguishZiShi;
+  bool? _computedIsLuku;
   String? _error;
+
+  void _invalidateComputedResult() {
+    _luku = null;
+    _wudou = null;
+    _computedYearZhi = null;
+    _computedDayGan = null;
+    _computedTimeZhi = null;
+    _computedBirthDate = null;
+    _computedBirthHour = null;
+    _computedBirthMinute = null;
+    _computedUseTrueSolarTime = null;
+    _computedDistinguishZiShi = null;
+    _computedIsLuku = null;
+  }
 
   @override
   void initState() {
@@ -61,7 +81,12 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
     );
-    if (picked != null) setState(() => _birthDate = picked);
+    if (picked != null) {
+      setState(() {
+        _birthDate = picked;
+        _invalidateComputedResult();
+      });
+    }
   }
 
   void _compute() {
@@ -90,6 +115,16 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
         _computedYearZhi = yearZhi;
         _computedDayGan = dayGan;
         _computedTimeZhi = timeZhi;
+        _computedBirthDate = DateTime(
+          _birthDate.year,
+          _birthDate.month,
+          _birthDate.day,
+        );
+        _computedBirthHour = _birthHour;
+        _computedBirthMinute = _birthMinute;
+        _computedUseTrueSolarTime = _useTrueSolarTime;
+        _computedDistinguishZiShi = _distinguishZiShi;
+        _computedIsLuku = _isLuku;
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
@@ -101,7 +136,19 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
     final currentResultMatches = _isLuku
         ? _luku != null && _wudou == null
         : _wudou != null && _luku == null;
+    final computedDate = _computedBirthDate;
+    final inputsMatchLastQuery =
+        computedDate != null &&
+        computedDate.year == _birthDate.year &&
+        computedDate.month == _birthDate.month &&
+        computedDate.day == _birthDate.day &&
+        _computedBirthHour == _birthHour &&
+        _computedBirthMinute == _birthMinute &&
+        _computedUseTrueSolarTime == _useTrueSolarTime &&
+        _computedDistinguishZiShi == _distinguishZiShi &&
+        _computedIsLuku == _isLuku;
     if (!currentResultMatches ||
+        !inputsMatchLastQuery ||
         _computedYearZhi == null ||
         _computedDayGan == null ||
         _computedTimeZhi == null) {
@@ -293,8 +340,10 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
               ButtonSegment(value: false, label: Text('五斗金章受生经')),
             ],
             selected: {_isLuku},
-            onSelectionChanged: (s) =>
-                setState(() => _isLuku = s.first),
+            onSelectionChanged: (s) => setState(() {
+              _isLuku = s.first;
+              _invalidateComputedResult();
+            }),
           ),
           const SizedBox(height: 12),
           Card(
@@ -315,7 +364,10 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
                   Row(
                     children: [
                       Expanded(child: _intDropdown('时', _birthHour, 0, 23,
-                          (v) => setState(() => _birthHour = v), (h) {
+                          (v) => setState(() {
+                            _birthHour = v;
+                            _invalidateComputedResult();
+                          }), (h) {
                         if (h == 23) {
                           return _distinguishZiShi ? '23(晚子时)' : '23(子时)';
                         }
@@ -323,7 +375,10 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
                       })),
                       const SizedBox(width: 8),
                       Expanded(child: _intDropdown('分', _birthMinute, 0, 59,
-                          (v) => setState(() => _birthMinute = v),
+                          (v) => setState(() {
+                            _birthMinute = v;
+                            _invalidateComputedResult();
+                          }),
                           (m) => m.toString().padLeft(2, '0'))),
                     ],
                   ),
@@ -334,7 +389,10 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
                     title: const Text('真太阳时校准', style: TextStyle(fontSize: 12)),
                     value: _useTrueSolarTime,
                     onChanged: (v) {
-                      setState(() => _useTrueSolarTime = v);
+                      setState(() {
+                        _useTrueSolarTime = v;
+                        _invalidateComputedResult();
+                      });
                       SettingsRepository.instance.setUseTrueSolarTime(v);
                     },
                   ),
@@ -345,7 +403,10 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
                         const Text('区分早晚子时', style: TextStyle(fontSize: 12)),
                     value: _distinguishZiShi,
                     onChanged: (v) {
-                      setState(() => _distinguishZiShi = v);
+                      setState(() {
+                        _distinguishZiShi = v;
+                        _invalidateComputedResult();
+                      });
                       SettingsRepository.instance.setDistinguishZiShiEnabled(v);
                     },
                   ),
