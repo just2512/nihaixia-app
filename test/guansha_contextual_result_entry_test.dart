@@ -215,6 +215,7 @@ void main() {
 
   testWidgets('窄屏和宽屏：选择唯一城市、测算后才开放已脱敏的情境问 AI',
       (tester) async {
+    addTearDown(tester.view.reset);
     for (final viewport in [const Size(402, 880), const Size(775, 1024)]) {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = viewport;
@@ -269,6 +270,5 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
     }
-    addTearDown(tester.view.reset);
   });
 }
