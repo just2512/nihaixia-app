@@ -32,6 +32,12 @@ GitHub About/Description 建议设置为：
 
 仓库 slug 与 package id 可继续保留旧技术标识；不得把它们当作对外应用名称。
 
+### GitHub 仓库 Settings 元数据（需仓库管理员手动更新）
+
+- 当前仓库 About/Description 仍保留更名前的旧产品描述，应替换为上面的建议描述。
+- 当前 Homepage 字段仍指向原作者的上游 GitHub Pages 站点，不应继续作为本 Fork 的官方网站入口。待确认本仓库 GitHub Pages 的实际部署 URL 后再填入；在确认前应清空该字段，不要猜测网址。
+- 本次代码 PR 不会修改仓库 Description/Homepage：GitHub 连接仅提供这些元数据的读取能力，没有仓库设置写入操作。
+
 ## 自动化验收
 
 `tool/audit_product_brand.py --strict` 扫描 Git 跟踪的文本文件，检查旧产品名称是否重新进入当前产品文案。中医原始知识库不参与品牌扫描；历史 APK 原始文件名可在明确的历史记录中保留。CI 必须运行该检查。
