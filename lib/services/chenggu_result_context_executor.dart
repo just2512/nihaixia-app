@@ -21,7 +21,7 @@ class ChengguResultContextExecution {
 /// from the model prompt.
 class ChengguResultContextExecutor {
   static const moduleId = 'chenggu';
-  static const resultSchemaVersion = 'chenggu-structured-result-v1';
+  static const resultSchemaVersion = 'chenggu-structured-result-v2';
   static const ruleVersion =
       'tool-executor-blob@150a932f16fef1d5802254b0c1d3d5b7d507c77b;'
       'data-access-blob@c4d1d4f3d35cb5c6ae559d7a7f2d7c615f583de8;'
@@ -57,14 +57,17 @@ class ChengguResultContextExecutor {
       '真太阳时校正',
       '早晚子时区分',
       '总骨重',
-      '称骨歌诀标题',
       '称骨歌诀',
     ];
-    if (requiredFields.any((field) =>
+    final missingRequiredFields = requiredFields.where((field) =>
         result.values[field] == null ||
         result.values[field]!.isEmpty ||
-        result.values[field] == 'MISSING')) {
-      return _failure(arguments, '称骨结果缺少完整的原始字段；本次不生成 AI 快照。');
+        result.values[field] == 'MISSING').toList(growable: false);
+    if (missingRequiredFields.isNotEmpty) {
+      return _failure(
+        arguments,
+        '称骨结果缺少必需原始字段（${missingRequiredFields.join('、')}）；本次不生成 AI 快照。',
+      );
     }
     if (!{'开启', '关闭'}.contains(result.values['真太阳时校正']) ||
         !{'开启', '关闭'}.contains(result.values['早晚子时区分'])) {
@@ -75,9 +78,7 @@ class ChengguResultContextExecutor {
         Map<String, String>.unmodifiable(result.arguments);
     final values = <String, Object?>{
       for (final entry in result.values.entries)
-        entry.key: entry.key == '称骨说明' && entry.value.isEmpty
-            ? 'MISSING'
-            : entry.value,
+        entry.key: entry.value.isEmpty ? 'MISSING' : entry.value,
     };
     final missingFields = values.entries
         .where((entry) =>
