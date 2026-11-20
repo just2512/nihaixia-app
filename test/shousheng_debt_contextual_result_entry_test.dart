@@ -215,6 +215,54 @@ void main() {
     expect(extra.structuredSnapshot, isNull);
   });
 
+  testWidgets('查询后修改出生分钟会废弃旧结果，不再开放情境问 AI', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 880);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ContextualAiConversationStoreScope(
+        conversationStore: InMemoryAssistantConversationStore(),
+        child: MaterialApp(
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: AppColors.colorSchemeFor(Brightness.light),
+            extensions: [AppColors.light],
+          ),
+          home: const ShoushengDebtScreen(returnResultOnComplete: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final query = find.text('查询受生债');
+    await tester.ensureVisible(query);
+    await tester.tap(query);
+    await tester.pumpAndSettle();
+
+    final pageScrollable = find.descendant(
+      of: find.byType(Scaffold),
+      matching: find.byType(Scrollable),
+    ).first;
+    final ask = find.text('问 AI 解读当前受生债结果');
+    await tester.scrollUntilVisible(ask, 180, scrollable: pageScrollable);
+    await tester.pumpAndSettle();
+    expect(ask, findsOneWidget);
+    expect(find.text('将本次受生债查询结果带回助手对话'), findsOneWidget);
+
+    final minuteDropdown = find.byType(DropdownButton<int>).last;
+    await tester.tap(minuteDropdown);
+    await tester.pumpAndSettle();
+    final minuteOne = find.text('01').last;
+    await tester.tap(minuteOne);
+    await tester.pumpAndSettle();
+
+    expect(find.text('问 AI 解读当前受生债结果'), findsNothing);
+    expect(find.text('将本次受生债查询结果带回助手对话'), findsNothing);
+    expect(find.text('确认本次受生债查询输入'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final viewport in [
     (width: 402.0, height: 880.0, method: 'luku'),
     (width: 775.0, height: 1100.0, method: 'wudou'),
