@@ -232,7 +232,9 @@ void main() {
       final ask = find.text('问 AI 解读本次关煞结果');
       expect(ask, findsNothing);
 
-      await tester.tap(find.byType(BaZiLocationRow));
+      final locationRow = find.byType(BaZiLocationRow);
+      await tester.ensureVisible(locationRow);
+      await tester.tap(locationRow);
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).last, '上海市');
       await tester.pumpAndSettle();
