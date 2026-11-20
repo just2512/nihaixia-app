@@ -58,7 +58,8 @@ class SanshanLingqianResultContextExecutor {
         result.values['签号'] != sign.id.toString() ||
         result.values['签题'] != sign.title ||
         result.values['签诗'] != sign.verse ||
-        result.values['签级'] != sign.luck.label) {
+        result.values['签级'] != sign.luck.label ||
+        result.values['签谱范围'] != '本地三山国王祖庙传承 92 签签谱') {
       return SanshanLingqianResultContextExecution(sign: sign, result: result);
     }
 
