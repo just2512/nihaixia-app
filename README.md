@@ -13,7 +13,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-Mixed-blue?style=for-the-badge)](docs/fork-license-boundary.md)
 [![Stars](https://img.shields.io/github/stars/just2512/nihaixia-app?style=for-the-badge&color=yellow)](https://github.com/just2512/nihaixia-app/stargazers)
 
 <br/>
@@ -550,12 +550,22 @@ flowchart LR
 
 ## 📄 开源许可
 
-本项目以 **Apache License 2.0** 发布。
+本仓库采用按内容来源、文件状态和权属划分的分层许可，并非整个项目统一适用 Apache 2.0：
 
-- 许可证全文见 [LICENSE](LICENSE)；
-- 你可以自由使用、修改、分发本软件，包括商业用途，但须保留版权声明与许可声明，并遵循 Apache 2.0 的条款（含变更说明、通告文件等要求）。
+- **上游原始代码及未修改部分**：继续遵循根目录 [LICENSE](LICENSE) 中的 Apache License 2.0。Apache 2.0 允许商业使用；本 Fork 不撤销上游作者已经授予的权利。
+- **Fork 自有新增内容**：仅对 just2512 实际拥有版权或取得充分再许可权的新增实现、品牌、工程和文档内容适用 [Fork 商业授权许可](LICENSE-FORK-COMMERCIAL.md)。个人可以在个人设备或非商业研究环境中使用、修改和编译；对本 Fork 自有修改的 GitHub 服务外公开再分发，须事先取得权利人书面许可；商业或经营性用途另须书面商业授权。
+- **混合文件**：上游原始部分保留 Apache 2.0；Fork 自有修改部分适用商业授权。逐文件表达式为 Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial。
+- **AI 功能**：本地模型、统一助手、上下文检索、工具适配、情境提问、结果解释、Native 生命周期、AI 数据和 TRACE 等属于 Fork 自有实现的部分，均按同一商业授权边界处理，不按 AI 功能写入时间区分；详情见 [AI 功能商业授权清单](docs/ai-commercial-license.md)。
+- **知识库与资料**：经典原文、讲义、医案、本草、方剂、穴位、针灸和易学资料继续遵循各自原许可证、来源声明或授权条件，不纳入本次商业授权。
+- **第三方组件和服务**：Flutter、Dart、Android、插件、SDK、依赖、模型/权重、外部 API 和第三方资源继续遵循各自许可证或服务条款。
 
-© 2026 just2512
+完整逐文件映射见 [Fork 修改文件清单](docs/fork-license-file-inventory.md)、[机器可读清单](docs/fork-license-file-inventory.json) 和 [.reuse/dep5](.reuse/dep5)。根目录 LICENSE 保持上游 Apache 2.0 原文。
+
+**GitHub 平台许可边界**：GitHub 服务条款 D.5 对公开仓库授予其他用户在 GitHub 服务内查看和 Fork 的平台权利；该权利不等同于允许在 GitHub 服务以外镜像、重托管、打包发布或向第三方再分发。D.6 规定向带有许可证声明的仓库添加内容时，贡献者按仓库适用许可证授权该贡献，并确认有权如此授权；因此贡献者必须遵循逐文件许可映射。D.8 规定公开仓库内容可被互联网访问，并对第三方合法访问/使用作出平台层面的约定。本仓库的书面许可要求不能撤销 D.5 明确授予的服务内 Fork 权利；GitHub 服务外的公开再分发仍按本 Fork 商业许可执行。详情见 [GitHub Terms of Service D.5–D.8](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#d-user-generated-content)。
+
+本仓库是上游项目的 Public Fork，Fork 不能单独改为 Private；可见性取决于上游。GitHub 的 Leave fork network 功能有明确适用条件；仓库在设置界面复核前，不应假定一定符合。离开 Fork network 是永久操作，独立仓库不会保留原仓库的 Issues、Pull Requests、Wiki、Stars、Watchers、评论、子 Fork 或其他元数据。本仓库当前有 9 个开放 PR（包括 #332）。本次不执行离网或可见性变更；既有公共副本和本地克隆也不会因本仓库离网而自动删除。
+
+本授权说明与文件清单用于明确工程许可边界，不替代版权权属证明或法律意见。
 
 ---
 

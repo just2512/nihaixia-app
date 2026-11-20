@@ -2997,3 +2997,38 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master 已有 Headless 执行器和基础单测，但页面仍自行计算并返回旧版 `AssistantToolResult`，只带 `local-engine:chenggu`，未携带数据 source ID、规范化 arguments 和可重建快照；尚未接入统一 Resolver/Prompt 的情境问 AI 入口。
 - 下一分支从当前 master `2e8cb9d9f1e2b53f257985675901ee2ba755b125` 创建。实施时须让页面展示结果与 AI 上下文来自同一次 Headless 执行；保留原“带回助手”操作；快照校验八字设置（真太阳时、早晚子时）、历法口径、称骨数据来源、规则/数据版本和结果摘要。Prompt 不得发送精确出生日期/钟点；称骨文案作为传统民俗文化参考，不能表述为事实命运判断。
 - 自动验收至少覆盖成功/缺参/非法日期时间/多余参数/来源错配/规则过期/结果篡改/摘要不符/重建不一致，以及页面 402dp/775dp、旧入口并存、关闭后滚动恢复和 Prompt 脱敏。Find N2 真机验收留到云端工作全部完成后统一执行。
+
+
+---
+
+
+---
+
+### 57.36 2026-11-20 Fork 商业授权 PR #332：最新主线、许可清单及平台限制复核
+
+- PR [#332](https://github.com/just2512/nihaixia-app/pull/332)，分支 `work/ai-commercial-license-20261119`。分支以 master `90ea79d2c89701e137c384506a65c1a65bb0b7ff` 为第一父提交、原 PR HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 为第二父提交同步，保留两侧提交 ancestry；当前比较为 ahead 12 / behind 0，mergeable=true。
+- 全仓库清单以共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b` 重算：新增/修改 804 个（新增 687、修改 117），另有 10 个删除路径；类别：Fork 商业授权候选 328、Apache 2.0 + Fork 双层许可 111、知识库排除 364、第三方排除 1。
+- 已纳入最新主线新增的 5 个路径：`lib/services/huangdi_siji_result_context_executor.dart`、`lib/services/solar_term_result_context_executor.dart`、`test/huangdi_siji_contextual_result_entry_test.dart`、`test/solar_term_contextual_result_entry_test.dart`、`test/ziwuliuzhu_contextual_result_entry_test.dart`。第一轮检查发现并修复混合文件 `lib/screens/solar_term_section_screen.dart` 漏项，按 Apache 2.0 + Fork 商业双层许可处理。
+- `docs/fork-license-file-inventory.json`、`docs/fork-license-file-inventory.md` 和 `.reuse/dep5` 按 804 个路径逐项同步；知识库及第三方 365 项继续使用 NOASSERTION，不授予新权利。未使用 `lib/**`、`assets/**` 宽泛匹配。
+- 自动门禁 `tool/check_fork_license_inventory.py` 核验共同基线至实际 HEAD 的新增/修改/删除集合、路径状态、分类、SPDX、DEP5 精确路径、计数、商业许可副本字节一致、Apache 副本与根 LICENSE 字节一致及根 LICENSE 未修改。
+- 商业许可文本已更新至版本 1.3，纠正旧版中“Fork 可直接改为 Private”的不准确说明：GitHub 规定 Fork 继承上游可见性，不能单独更改为 Private。若要消除平台内 Fork，需先永久脱离 Fork network、变为独立仓库，或先向 GitHub Support 确认其他可行路径，之后才能评估设为 Private。
+- 手动 Leave network 为永久操作，可能丢失该仓库的 Pull Requests、Issues、Wiki、Stars、Watchers、评论等元数据。当前仓库有 9 个开放 Issue 和 PR #332，不能在没有备份、评估和权利人明确批准时执行。既有 public forks 和本地 clones 不会自动删除或变成 private。本次未执行 detach、visibility change 或其他不可逆管理操作。
+- GitHub Terms of Service D.5 对公开仓库内容授予平台内查看/Fork 权利；D.6 涉及向含许可声明的仓库提交内容时的授权条件；D.8 涉及公开仓库内容在互联网上的可访问性。当前 Public Fork 状态下，自定义 LicenseRef 无法撤销这些独立平台条款，也不能替代贡献者将其版权有效转授的证据。
+- 权属/来源状态仍是 MISSING：`OWNERSHIP_EVIDENCE_REQUIRED` 439 项，须有作者、职务作品/雇佣关系或有效再许可证明；`SOURCE_LICENSE_REVIEW` 365 项，继续按知识库/第三方来源复核。自动文件分类及 CI 不构成版权确权。
+- CI 必须绑定 PR 最终 HEAD。上一 HEAD `7233331325cf94d11ee616bc3153e767f10dd325` 的 Fork license PR workflow run `44724624180` SUCCESS；Flutter regression run `44724624301` 当时仍 IN_PROGRESS，Android arm64 尚未运行到终态。由于本次修改许可说明/README/台账会产生新 HEAD，以上旧 SHA 结果不作为最终验收；应以新 HEAD 的 PR 事件 Fork license、Flutter regression、Android arm64 三项最终状态为准。Branch validation 的 SKIPPED 不是 PASS。
+- PR #332 当前为 Ready for review（非 Draft），保持 open。工程文件清单和自动许可映射可以验收，但权属证据及 GitHub 平台许可冲突尚未关闭；未经权利人决定平台 Fork 处理方式及证据补齐，不合并主线。正式商业发行前仍须专业法律审核。
+
+
+---
+
+### 57.37 2026-11-20 PR #332 再同步最新「研纪」主线与全量授权清单
+
+- 最新主线 master：911725c3b8ae8888d45601e1481c9235431b28fd；上一许可分支 HEAD：f542f06d21a574c232bf266b1134930caa8e05cd。主线新增「研纪」品牌统一提交后，PR #332 曾落后 1 个提交并出现 mergeable=false。本次以 master 为第一父提交、旧 PR HEAD 为第二父提交重新同步；保留品牌更新和许可分支两侧提交历史，不覆盖最新主线。
+- 主线品牌提交带来 44 个此前清单未登记的变更路径：新增 6 个（docs/brand-identity.md、release/研纪_历史版本_v1.10.0+7_发布说明.md、release/研纪_历史版本_v1.10.1_发布说明.md、test/app_brand_identity_test.dart、tool/audit_product_brand.py、企划书_研纪_v2.0.md）；修改 38 个现有路径。6 个新增文件按 Fork 商业授权候选登记；38 个被修改的上游文件按 Apache 2.0 + Fork 商业双层许可登记。旧品牌的 3 个已删除路径保留在删除清单。
+- 共同上游基线仍为 c0f14e77a7fb721fc332576d21fef5f100392d0b。预期最终清单：新增/修改 848 个（新增 693、修改 155），删除 13 个；类别为 Fork 商业授权候选 334、Apache 2.0 + Fork 商业双层许可 149、知识库排除 364、第三方排除 1。机器可读清单、逐文件 Markdown 清单和 .reuse/dep5 必须按实际最终 tree 重新核算后保持一致。
+- 预期新增/修改文件权属状态：OWNERSHIP_EVIDENCE_REQUIRED 483 项；SOURCE_LICENSE_REVIEW 365 项。这些状态仍是 MISSING，不能用 Git 提交者身份或自动许可检查改为 PASS。知识库/第三方内容继续按来源许可，不纳入 Fork 商业授权。
+- README 已保留最新「研纪」品牌内容，并将旧版“整个项目 Apache 2.0、允许商业分发”的错误摘要替换为按文件分层许可；开源许可徽章改为 Mixed。CONTRIBUTING 已由 Apache-only 声明改为逐文件许可与贡献者版权/再许可权确认。商业授权版本 1.4：个人非商业使用可在个人设备/非商业研究环境中进行；GitHub 服务外公开再分发需事先书面许可，商业用途另需书面商业授权；GitHub D.5 平台内 Fork 是明确的平台授权例外，不能由自定义许可证撤销。
+- GitHub D.6 要求贡献者向含许可证声明的仓库添加内容时按仓库适用许可授权并声明有权如此授权；D.8 规定公开仓库内容可公开访问。许可证、README、边界文档和 CONTRIBUTING 均已补充这三节的区分，禁止将 D.5 的服务内 Fork 许可扩大解释为服务外镜像/重托管/转交许可。
+- Fork 可见性：GitHub 官方规则是 Fork 继承上游可见性、不能单独改为 Private。离网是永久操作并丢失原仓库 Issues/PR/Wiki/Stars/Watchers/评论等元数据；本仓库当前有 9 个开放 PR（#332 在其中）。本次未离网、未改可见性，亦未删除任何既有分支或 PR。
+- 前一许可 HEAD f542f06d21a574c232bf266b1134930caa8e05cd 的全量工程验收已完成：PR Fork license run 44725302073 SUCCESS；PR Flutter regression run 44725302065 SUCCESS；同一 run 中 Android arm64 verification job 136254716588 SUCCESS。Branch validation 按条件 SKIPPED，不计为全量 PASS。以上结果仅属于旧 HEAD，不能替代本次新 HEAD CI。
+- 本次新 HEAD 的最终门槛：Fork license inventory/boundary、PR Flutter regression、Android arm64 CI verification 均须对新 HEAD 得到 SUCCESS；如任何一步失败，保留失败证据并修复后重跑，不删除测试、不降低断言。PR #332 保持 Ready for review；工程 CI 通过后，版权权属证据和 GitHub D.5 平台内 Fork 限制仍须作为独立法律/治理门槛，不把未授权的离网操作或平台例外虚报为已解决。
