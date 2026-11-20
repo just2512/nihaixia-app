@@ -266,7 +266,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
           _computedSignature == _calculationSignature() &&
           values['出生公历'] == expectedDateTime &&
           values['性别'] == genderText &&
-          values['出生地点'] == birthplace &&
+          (values['出生地点'] as String? ?? '').startsWith(birthplace) &&
           values['出生地坐标'] == expectedCoordinates &&
           values['出生农历'] == paipan.lunarText &&
           values['四柱'] == pillars &&
