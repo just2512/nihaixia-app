@@ -876,7 +876,7 @@ class AiContextResolver {
         sourceIds is! List ||
         sourceIds.length != 1 ||
         sourceIds.single !=
-            '\${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId' ||
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId' ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -890,7 +890,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: SanshanLingqianResultContextExecutor.ruleVersion,
-      sourceId: '\${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId',
+      sourceId: '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId',
       title: '三山国王灵签结果（第$selectedSignId签）',
     );
   }
@@ -931,7 +931,7 @@ class AiContextResolver {
         signId < 1 ||
         signId > 92 ||
         ref.sourceId !=
-            '\${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
         ref.title != '三山国王灵签结果（第$signId签）') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
@@ -960,7 +960,7 @@ class AiContextResolver {
         sourceIds is! List ||
         sourceIds.length != 1 ||
         sourceIds.single !=
-            '\${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
