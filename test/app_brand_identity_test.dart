@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 String _read(String path) => File(path).readAsStringSync();
 
-const retiredBrandName = String.fromCharCodes([0x6c49, 0x5510, 0x4e2d, 0x533b]);
+final retiredBrandName = String.fromCharCodes([0x6c49, 0x5510, 0x4e2d, 0x533b]);
 
 void main() {
   group('研纪产品品牌身份', () {
