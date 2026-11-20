@@ -117,7 +117,6 @@ void main() {
     expect(prompt, contains('不是科学预测'));
     expect(prompt, contains('称骨内容不得转化为医疗、法律、投资或其他专业建议'));
     expect(prompt, contains('不得自行重排四柱'));
-    expect(prompt, contains('不得自行重排四柱'));
   });
 
   test('Resolver fail closed：错源、过期规则与结果篡改不进入 Prompt', () async {
@@ -292,9 +291,6 @@ void main() {
     );
   }
 }
-).hasMatch(entry)),
-      isTrue,
-    );
     expect(snapshot['executionStatus'], 'SUCCESS');
     expect((input['arguments'] as Map)['birth_date'], '1990-01-02');
     expect((input['arguments'] as Map)['birth_time'], '08:30');
