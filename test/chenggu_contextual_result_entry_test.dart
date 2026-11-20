@@ -119,6 +119,10 @@ void main() {
     expect(prompt, contains('REDACTED_LOCAL_ONLY'));
     expect(prompt, isNot(contains('1990-01-02')));
     expect(prompt, isNot(contains('08:30')));
+    final snapshotResult = snapshot['result']! as Map<String, Object?>;
+    final snapshotValues = snapshotResult['values']! as Map<String, Object?>;
+    expect(snapshotValues['出生农历口径'], isNotEmpty);
+    expect(prompt, isNot(contains(snapshotValues['出生农历口径'] as String)));
     expect(prompt, contains('不是科学预测'));
     expect(prompt, contains('称骨内容不得转化为医疗、法律、投资或其他专业建议'));
     expect(prompt, contains('不得自行重排四柱'));
