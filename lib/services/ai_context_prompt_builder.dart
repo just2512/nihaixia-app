@@ -736,7 +736,7 @@ class AiContextPromptBuilder {
     if (ref.moduleId == SanshanLingqianResultContextExecutor.moduleId) {
       final selectedSignId = inputValue['selectedSignId'];
       final expectedSource = selectedSignId is int
-          ? '\${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId'
+          ? '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId'
           : null;
       if (selectedSignId is! int ||
           selectedSignId < 1 ||
