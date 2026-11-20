@@ -844,7 +844,7 @@ class AiContextPromptBuilder {
       if (ref.moduleId == ChengguResultContextExecutor.moduleId)
         '袁天罡称骨属于传统命理民俗文化文本，不是科学预测，也不代表个人命运事实。只解释 App 本次本地计算返回的骨重、歌诀与字段，不得自行重排四柱、重新计算或把缺失字段补成推断。',
       if (ref.moduleId == ChengguResultContextExecutor.moduleId)
-        '精确出生日期和钟点仅用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把称骨内容转化为医疗、法律、投资或其他专业建议。',
+        '精确出生日期和钟点仅用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。称骨内容不得转化为医疗、法律、投资或其他专业建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把民俗文本转化为医疗、法律、投资或其他专业建议。',
       if (ref.moduleId == 'yijing')
