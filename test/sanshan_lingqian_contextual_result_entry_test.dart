@@ -56,6 +56,7 @@ void main() {
     expect(values['签题'], execution.sign!.title);
     expect(values['签诗'], execution.sign!.verse);
     expect(values['签级'], execution.sign!.luck.label);
+    expect(values['签谱范围'], '本地三山国王祖庙传承 92 签签谱');
     expect(
       snapshot['sourceIds'],
       ['${SanshanLingqianToolExecutor.dataSourcePrefix}${execution.sign!.id}'],
