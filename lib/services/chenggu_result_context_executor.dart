@@ -26,7 +26,7 @@ class ChengguResultContextExecutor {
       'tool-executor-blob@150a932f16fef1d5802254b0c1d3d5b7d507c77b;'
       'data-access-blob@c4d1d4f3d35cb5c6ae559d7a7f2d7c615f583de8;'
       'data-asset-blob@7b6e22ea51cb387b040ea248d50a1b24e81aeb1e;'
-      'bazi-service-blob@724e5dcf4c32c22d62c5f2a1db50e81f8f8ffe;'
+      'bazi-service-blob@724e5dcf4c32c22d62c5f2a1db50e81f8a0f8ffe;'
       'settings-blob@2b1b4739e58d463d91037961886f71403e1551f4;'
       'bazi_core@0.6.7;sxwnl_spa_dart@0.18.5;ziwei_core@0.13.0';
 
