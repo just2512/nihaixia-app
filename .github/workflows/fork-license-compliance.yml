@@ -1,0 +1,33 @@
+name: Fork license boundary
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master, 'work/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-license-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  license-boundary:
+    name: Fork license inventory and boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify complete Fork divergence inventory
+        run: python tool/check_fork_license_inventory.py
