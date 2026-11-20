@@ -489,6 +489,22 @@ class AiContextPromptBuilder {
     );
   }
 
+  static String buildYuxiajiOmenToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    if (resolvedResult.ref.moduleId !=
+            YuxiajiOmenResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult) {
+      throw ArgumentError(
+        'A Yuxiaji Omen prompt requires a resolved Yuxiaji tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
   static String buildYunqiToolResult({
     required AiResolvedToolResult resolvedResult,
   }) {
