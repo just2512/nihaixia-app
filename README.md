@@ -560,7 +560,7 @@ flowchart LR
 根目录 `LICENSE` 保留上游 Apache 2.0 原文；它不单独授予本 Fork 自有修改部分的商业使用权。此前已合法取得的历史版本许可不追溯撤销。
 
 全仓库逐文件授权映射见 [Fork 修改文件清单](docs/fork-license-file-inventory.md) 和 [机器可读清单](docs/fork-license-file-inventory.json)。
-**GitHub 平台许可限制**：本仓库目前为公开仓库。GitHub 服务条款 D.5 对公开仓库的内容另授予 GitHub 用户通过平台查看和 Fork 的权利；本仓库自定义许可不能撤销这项平台许可。因此，当前公开状态下，不能声称本条款能够阻止 GitHub 内的 Fork。若要阻止新的平台内 Fork，须由权利人另行决定先将仓库设为 Private；转为私有不会自动删除此前已产生的 Fork 或本地副本。详见 [GitHub 服务条款 D.5](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#d-github-additional-product-terms) 与 [GitHub 许可说明](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-licenses)。
+**GitHub 平台许可限制**：本仓库目前为公开仓库。GitHub 服务条款 D.5 允许其他用户在 GitHub 服务内查看和 Fork 公开仓库内容，本仓库自定义许可不能撤销该平台许可。由于本仓库本身是一个 Fork，GitHub 规定 Fork 继承上游可见性，不能单独改为 Private。若要阻止新的平台内 Fork，必须先解决 Fork network 约束：按官方流程将仓库永久脱离 Fork network、转为独立仓库（或先向 GitHub Support 确认其他可行路径），之后才能讨论设为 Private。手动离网可能丢失 PR、Issue、Wiki、评论、Star、Watcher 等元数据；本仓库当前有 9 个开放 Issue 和 PR #332，不能在未备份和未经权利人批准前执行。既有 public forks 和本地 clones 不会自动删除或变为私有。详见 [GitHub Terms of Service D.5](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#d-github-additional-product-terms)、[Fork 可见性规则](https://docs.github.com/en/pull-requests/reference/forks) 与[脱离 Fork network 的影响](https://docs.github.com/en/pull-requests/how-tos/work-with-forks/detaching-a-fork)。
 
 ---
 

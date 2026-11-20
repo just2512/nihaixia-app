@@ -1,6 +1,6 @@
 # 汉唐中医 Fork 修改内容商业授权许可
 
-版本：1.2  
+版本：1.3  
 适用仓库：just2512/nihaixia-app  
 权利人：just2512，仅限其实际拥有版权或已取得充分再许可权的内容。
 
@@ -38,7 +38,7 @@ Apache 2.0 允许商业使用，并非非商业许可证。使用、复制、修
 
 本条不改变上游 Apache 2.0 部分依法已授予的使用和再分发权利；限制仅适用于 Fork 自有修改部分。
 
-**GitHub 平台许可的独立限制**：如果本仓库在 GitHub 上保持公开，GitHub 服务条款 D.5 可能独立授予 GitHub 用户通过平台查看和 Fork 公开仓库内容的权利。本许可不撤销该平台许可，也不能单独阻止 GitHub 平台内的 Fork。权利人如不接受该平台许可，须先将仓库设为 Private；改变可见性不会自动删除此前已经产生的 Fork 或已下载的副本。该平台许可不构成对本许可范围内其他公开再分发方式的普遍授权。
+**GitHub 平台许可的独立限制**：本仓库目前为公开仓库。GitHub 服务条款 D.5 允许其他用户在 GitHub 服务内查看并 Fork 公开仓库内容；本许可不撤销、不覆盖该平台许可。本仓库本身是上游项目的 Fork，GitHub 官方文档规定 Fork 的可见性承继上游，不能单独将 Fork 改为 Private。若权利人不接受平台内 Fork，需要先按 GitHub 官方流程脱离 Fork network 并转换为独立仓库，或先联系 GitHub Support 确认可行路径，再决定是否设为 Private。手动 Leave network 为永久操作，可能丢失本仓库 PR、Issue、Wiki、Star、Watcher、评论等元数据；本仓库目前有 9 个开放 Issue 和 PR #332，执行前必须评估并备份。既有 public forks 或本地 clones 不会自动被删除或变为 private。本条款不构成对 GitHub 平台独立授权的撤销。
 
 
 ## 5. 商业使用须另行取得书面授权

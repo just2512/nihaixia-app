@@ -119,7 +119,7 @@ AI 核心文件与混合页面的文件级许可映射记录在 `.reuse/dep5`，
 
 本仓库当前为 GitHub 公开仓库。GitHub 服务条款 D.5 对公开仓库的内容授予 GitHub 用户通过平台查看和 Fork 的权利；GitHub 的许可说明也明确提醒，公开仓库可以被其他用户 Fork。该平台许可独立于本仓库自定义许可，不能仅通过本许可撤销。
 
-因此，在仓库维持 Public 时，不能宣称“未经书面许可不得公开再分发”能够阻止 GitHub 平台内的 Fork。若权利人要求连平台内 Fork 也必须事先书面许可，需要先将仓库转为 Private。转为 Private 不会自动删除此前已经存在的 Fork、克隆或本地副本。该事项属于仓库可见性和商业授权策略决策，不由文件映射或 CI 自动改变。
+因此，在仓库维持 Public 时，不能宣称“未经书面许可不得公开再分发”能够阻止 GitHub 平台内的 Fork。本仓库本身是上游项目的 Fork；GitHub 规定 Fork 继承上游可见性，不能单独将 Fork 改为 Private。若权利人要求阻止新的平台内 Fork，须先按 GitHub 官方流程永久脱离 Fork network、转为独立仓库，或先向 GitHub Support 确认其他可行路径，再决定是否设为 Private。手动离网可能丢失 PR、Issue、Wiki、评论、Star、Watcher 等仓库元数据；本仓库当前有 9 个开放 Issue 和 PR #332，执行前必须备份并评估。既有 public forks 和本地 clones 不会自动删除或变为 private。该操作不可逆，未获权利人明确批准不得执行。平台许可问题不能通过文件映射或 CI 自动改变。
 
 参考：
 - [GitHub Terms of Service, Section D.5](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service#d-github-additional-product-terms)
