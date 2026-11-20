@@ -802,10 +802,12 @@ class AiContextPromptBuilder {
       }
       final arguments = inputValue['arguments'];
       if (arguments is! Map ||
+          arguments.length != 3 ||
+          arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
+          arguments.values.any((value) => value is! String) ||
           DosageToolExecutor.validateArguments(
             arguments.cast<String, String>(),
-          ).isNotEmpty ||
-          arguments.length != 3) {
+          ).isNotEmpty) {
         throw ArgumentError(
           'A dosage prompt requires the exact, validated App conversion arguments.',
         );
