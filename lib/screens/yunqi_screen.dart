@@ -202,7 +202,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text('汉唐中医 · 五运六气推算',
+        Text('研纪 · 五运六气推算',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Text(

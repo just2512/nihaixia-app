@@ -53,7 +53,7 @@ class ChartExport {
     await f.writeAsBytes(bytes, flush: true);
     await Share.shareXFiles(
       [XFile(f.path, mimeType: 'image/png')],
-      subject: '汉唐中医',
+      subject: '研纪',
     );
   }
 

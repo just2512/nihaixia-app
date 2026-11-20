@@ -1,4 +1,6 @@
-# 汉唐中医 · 发布说明与更新日志（Release Notes & Changelog）
+# 研纪 · 发布说明与更新日志（Release Notes & Changelog）
+
+> 本文件包含项目历史发布记录；项目现阶段唯一对外产品名称为「研纪」。更名前的历史 APK 文件名和版本信息保留原始记录。
 
 > 本文件为项目对外发布的规范发布说明（Release Notes）与完整更新日志（Changelog）。
 > 版本号遵循语义化版本规范 `主版本.次版本.修订号`（如 `1.11.8`），内部 `build` 号 `+N` 作为 Android `versionCode` 单调递增。

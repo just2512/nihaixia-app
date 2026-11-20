@@ -289,7 +289,7 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('汉唐中医 · 梅花易数',
+        Text('研纪 · 梅花易数',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Text('${c.methodLabel} · ${_date.year}-${_date.month.toString().padLeft(2, '0')}'

@@ -18,6 +18,13 @@
 
 ## 2. 当前代码基线
 
+### 产品名称与包身份边界
+
+- 现阶段唯一对外产品名称为 **研纪**；Android 桌面名称、Flutter 应用标题、关于页、导出文本、AI 助手自称、Web/PWA 元数据和项目介绍必须统一。
+- Android `applicationId` 与 Kotlin `namespace` 保持 `com.nihaisha.nihaisha_app`，Dart package name 保持 `nihaisha_app`。这些是既有安装身份和代码标识，不是对外产品名称；不得为品牌更名而改变，以免破坏旧 APK 覆盖升级、应用私有数据及本地模型路径。
+- GitHub 仓库 slug `just2512/nihaixia-app` 保留 Fork 来源与工程地址属性，不作为用户端显示名称。
+
+
 当前仓库已有设计系统，不从零重建：
 
 - `lib/theme/app_colors.dart`：`AppColors` 是颜色 Token 唯一来源，并通过 `ThemeExtension` 和 `context.colors` 访问。

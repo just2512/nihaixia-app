@@ -725,7 +725,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('汉唐中医 · 紫微斗数排盘',
+        Text('研纪 · 紫微斗数排盘',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         _buildSummaryCard(cs, chart),

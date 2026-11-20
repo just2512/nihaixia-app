@@ -418,7 +418,7 @@ class MedicalCase {
     section('观点', view);
     section('原始来源账本', sourceLedger.toDisplayText());
     buf.writeln('\n─────────────────');
-    buf.write('汉唐中医 · 倪海厦六经辨证（传统文化参考，非医疗建议）');
+    buf.write('研纪 · 中医诊疗学习（传统文化参考，非医疗建议）');
     return buf.toString();
   }
 }

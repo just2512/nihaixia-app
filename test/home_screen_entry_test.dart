@@ -95,7 +95,7 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.text('汉唐 AI 助手'), findsOneWidget);
+    expect(find.text('研纪 AI 助手'), findsOneWidget);
     final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(navigation.selectedIndex, 0);
     expect(find.text('设置'), findsOneWidget);
@@ -137,7 +137,7 @@ void main() {
     final contentRect = tester.getRect(find.byType(IndexedStack));
     expect(contentRect.width, lessThanOrEqualTo(388));
     expect(contentRect.right, lessThanOrEqualTo(388));
-    expect(find.text('汉唐 AI 助手'), findsOneWidget);
+    expect(find.text('研纪 AI 助手'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -208,7 +208,7 @@ void main() {
 
         final homeContext = tester.element(find.byType(HomeScreen));
         expect(MediaQuery.textScalerOf(homeContext).scale(10), 20);
-        expect(find.text('汉唐 AI 助手'), findsOneWidget);
+        expect(find.text('研纪 AI 助手'), findsOneWidget);
         expect(find.byType(IndexedStack), findsOneWidget);
         expect(tester.takeException(), isNull, reason: '${width.toInt()}dp / ${brightness.name} / 200% AI 首页不应溢出');
 
@@ -250,7 +250,7 @@ void main() {
       expect(MediaQuery.textScalerOf(homeContext).scale(10), 20);
       final contentRect = tester.getRect(find.byType(IndexedStack));
       expect(contentRect.right, lessThanOrEqualTo(388));
-      expect(find.text('汉唐 AI 助手'), findsOneWidget);
+      expect(find.text('研纪 AI 助手'), findsOneWidget);
       expect(tester.takeException(), isNull, reason: '${brightness.name} / 半折叠 / 200% AI 首页不应跨越铰链或溢出');
 
       await tester.pumpWidget(const SizedBox.shrink());

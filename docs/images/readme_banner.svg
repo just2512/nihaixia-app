@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-label="汉唐中医 · 六经辨证经方助手">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-label="研纪 · 中医诊疗全过程辅助学习工具">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1a1007"/>
@@ -33,16 +33,16 @@
   <!-- 印 -->
   <rect x="744" y="70" width="112" height="112" rx="28" fill="#2b1a0c" stroke="#c99353" stroke-opacity="0.55"/>
   <rect x="758" y="84" width="84" height="84" rx="18" fill="none" stroke="#c99353" stroke-opacity="0.35"/>
-  <text x="800" y="151" text-anchor="middle" font-family="'KaiTi','STKaiti','SimSun',serif" font-size="58" fill="#f3c680">汉</text>
+  <text x="800" y="151" text-anchor="middle" font-family="'KaiTi','STKaiti','SimSun',serif" font-size="58" fill="#f3c680">研</text>
 
   <!-- eyebrow -->
   <rect x="588" y="212" width="424" height="46" rx="23" fill="#ffffff" fill-opacity="0.04" stroke="#e5c08d" stroke-opacity="0.32"/>
   <text x="800" y="242" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="19" letter-spacing="5" fill="#e5c08d">基于倪海厦《人纪》体系</text>
 
   <!-- title -->
-  <text x="800" y="382" text-anchor="middle" font-family="'KaiTi','STKaiti','SimSun',serif" font-size="96" letter-spacing="16" fill="#f7ecdd">汉唐中医</text>
+  <text x="800" y="382" text-anchor="middle" font-family="'KaiTi','STKaiti','SimSun',serif" font-size="96" letter-spacing="22" fill="#f7ecdd">研纪</text>
 
-  <line x1="762" y1="418" x2="838" y2="418" stroke="#c99353" stroke-width="2" stroke-opacity="0.7"/>
+  <line x1="742" y1="418" x2="858" y2="418" stroke="#c99353" stroke-width="2" stroke-opacity="0.7"/>
 
   <text x="800" y="472" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="26" letter-spacing="3" fill="#dcc7a8">六经辨证 · 经方本草 · 针灸取穴 · 经典原文</text>
 
