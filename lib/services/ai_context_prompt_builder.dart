@@ -15,6 +15,8 @@ import 'yuxiaji_omen_tool_executor.dart';
 import 'chenggu_result_context_executor.dart';
 import 'shousheng_debt_result_context_executor.dart';
 import 'shousheng_debt_tool_executor.dart';
+import 'dosage_result_context_executor.dart';
+import 'dosage_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -349,6 +351,16 @@ class AiContextPromptBuilder {
           arguments is Map &&
           arguments.isEmpty &&
           ref.anchorId == 'yuxiaji-omen:result:$snapshotId';
+    }
+    if (ref.moduleId == DosageResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      return schemaVersion == DosageResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitUnitConversion' &&
+          arguments is Map &&
+          arguments.length == 3 &&
+          arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isEmpty &&
+          arguments.values.every((value) => value is String) &&
+          ref.anchorId == 'dosage:result:$snapshotId';
     }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
@@ -822,6 +834,29 @@ class AiContextPromptBuilder {
       }
     }
 
+    if (ref.moduleId == DosageResultContextExecutor.moduleId) {
+      if (ref.sourceId != DosageToolExecutor.sourceId ||
+          sourceIds.length != 2 ||
+          sourceIds[0] != DosageToolExecutor.sourceId ||
+          sourceIds[1] != DosageToolExecutor.factorsSourceId) {
+        throw ArgumentError(
+          'A dosage prompt requires the exact unit-conversion engine and factor sources.',
+        );
+      }
+      final arguments = inputValue['arguments'];
+      if (arguments is! Map ||
+          arguments.length != 3 ||
+          arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
+          arguments.values.any((value) => value is! String) ||
+          DosageToolExecutor.validateArguments(
+            arguments.cast<String, String>(),
+          ).isNotEmpty) {
+        throw ArgumentError(
+          'A dosage prompt requires the exact, validated App conversion arguments.',
+        );
+      }
+    }
+
     final actualSnapshotId =
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
     if (actualSnapshotId != snapshotId) {
@@ -1009,6 +1044,12 @@ class AiContextPromptBuilder {
         '不得把面热、眼跳、耳鸣、心惊等民俗条目转化为病因判断、疾病诊断、健康风险评估或治疗建议，也不得据此延误就医。若用户描述真实或持续不适，应建议其寻求合格医疗人员评估。不得把时辰文本转化为医疗、法律、投资或其他重大决策依据。',
       if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId)
         '只解释快照中当前时辰和本地数据资产明确返回的内容；不得补造特殊占法、推测用户实际观察到的现象，或将数据中的吉凶文字表述为确定性事实。',
+      if (ref.moduleId == DosageResultContextExecutor.moduleId)
+        '本次上下文只包含 App 已执行的度量衡单位换算结果。请解释用户输入的数值、原始单位、所选度量标准、App 返回的换算结果与目标单位；所有数值必须以快照原样为准，不得重新换算、修正、插值或补造结果。',
+      if (ref.moduleId == DosageResultContextExecutor.moduleId)
+        '此工具不是处方剂量计算器。不得根据体重、病情、年龄或任何其他条件推导药物用量、服药频次、煎服量或治疗方案；不得把单位换算结果说成推荐剂量。页面中的药物特殊换算表和剂量参考未包含在本次快照中，不得假设已读取或引用。',
+      if (ref.moduleId == DosageResultContextExecutor.moduleId)
+        '汉制、台制、唐制等口径应按 App 标注的本地换算常数解释为历史度量衡参考，不把近似历史换算包装为唯一、精确或临床标准。不得据此提供医疗建议或替代专业处方审核。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',
