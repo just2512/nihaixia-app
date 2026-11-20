@@ -835,6 +835,8 @@ class AiContextPromptBuilder {
         '袁天罡称骨属于传统民俗文化文本，不是科学预测或个人命运事实。请只解释 App 本次实际计算出的骨重、歌诀和数据口径，不得将其表述为必然人生结论或确定性吉凶。',
       if (ref.moduleId == ChengguResultContextExecutor.moduleId)
         '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得反推或索要未传入的生辰信息。称骨内容不得转化为医疗、法律、投资或其他专业建议。',
+      if (ref.moduleId == ChengguResultContextExecutor.moduleId)
+        '称骨四柱、骨重、歌诀和说明必须严格使用本次已验证快照；不得自行重排四柱、重新计算骨重、替换歌诀或把缺失说明补写成事实。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '轩辕黄帝四季歌属于托名轩辕黄帝的传统民俗通胜文本，不是科学预测，也不代表个人命运事实。请区分 App 已查得的农历月份/时辰/部位/诗文与现有释义；只在原文和口径范围内解释，不作确定性人生判断或重大决策建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
