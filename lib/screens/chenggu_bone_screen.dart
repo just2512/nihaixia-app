@@ -5,13 +5,12 @@ import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart' show LunarDate, AstroDateTim
 
 import 'package:nihaisha_app/data/chenggu_data.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
-import 'package:nihaisha_app/models/ai_context_ref.dart';
-import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/services/chenggu_result_context_executor.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
-import 'package:nihaisha_app/data/settings_repository.dart';
+import 'assistant_tool_router.dart';
 import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 
 /// 袁天罡称骨算命。
@@ -45,6 +44,11 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
   int? _computedLunarDay;
   String? _computedShiChen;
   String? _error;
+  DateTime? _computedBirthDate;
+  int? _computedBirthHour;
+  int? _computedBirthMinute;
+  bool? _computedUseTrueSolarTime;
+  bool? _computedDistinguishZiShi;
 
   @override
   void initState() {
@@ -97,28 +101,72 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
         _computedLunarMonth = lunarMonth;
         _computedLunarDay = lunarDay;
         _computedShiChen = _shiChenNames[_shiChenIndexOfHour(_birthHour)];
+        _computedBirthDate = DateTime(_birthDate.year, _birthDate.month, _birthDate.day);
+        _computedBirthHour = _birthHour;
+        _computedBirthMinute = _birthMinute;
+        _computedUseTrueSolarTime = _useTrueSolarTime;
+        _computedDistinguishZiShi = _distinguishZiShi;
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
     }
   }
 
-
   Future<void> _askAiAboutResult() async {
     final current = _result;
-    if (current == null) {
+    final computedDate = _computedBirthDate;
+    final computedHour = _computedBirthHour;
+    final computedMinute = _computedBirthMinute;
+    if (current == null ||
+        computedDate == null ||
+        computedHour == null ||
+        computedMinute == null ||
+        _computedUseTrueSolarTime == null ||
+        _computedDistinguishZiShi == null ||
+        computedDate.year != _birthDate.year ||
+        computedDate.month != _birthDate.month ||
+        computedDate.day != _birthDate.day ||
+        computedHour != _birthHour ||
+        computedMinute != _birthMinute ||
+        _computedUseTrueSolarTime != _useTrueSolarTime ||
+        _computedDistinguishZiShi != _distinguishZiShi) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先完成称骨测算，再解读当前结果。')),
+        const SnackBar(content: Text('输入或历法设置已在上次计算后变化，请重新查询再解读。')),
       );
       return;
     }
+
     final birthDate =
-        '${_birthDate.year.toString().padLeft(4, '0')}-'
-        '${_birthDate.month.toString().padLeft(2, '0')}-'
-        '${_birthDate.day.toString().padLeft(2, '0')}';
+        computedDate.year.toString().padLeft(4, '0') + '-' +
+        computedDate.month.toString().padLeft(2, '0') + '-' +
+        computedDate.day.toString().padLeft(2, '0');
     final birthTime =
-        '${_birthHour.toString().padLeft(2, '0')}:'
-        '${_birthMinute.toString().padLeft(2, '0')}';
+        computedHour.toString().padLeft(2, '0') + ':' +
+        computedMinute.toString().padLeft(2, '0');
+    final confirmed = await showFoldAwareDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('确认本次称骨查询输入'),
+        content: Text(
+          '本次 App 结果使用公历出生日期 ' + birthDate +
+          '、当地钟表时间 ' + birthTime +
+          '。精确生辰仅用于 App 本地重建校验，提交给 AI 的上下文会先脱敏。'
+          '称骨内容仅作传统民俗文化研究，不代表科学预测或个人命运事实。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('确认并解读'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
     try {
       final execution = await ChengguResultContextExecutor.executeWithSnapshot({
         'birth_date': birthDate,
@@ -127,44 +175,59 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
       if (!mounted) return;
       if (!execution.succeeded || execution.structuredSnapshot == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('称骨结果无法核验，已取消 AI 提问。')),
+          const SnackBar(content: Text('当前称骨结果无法核验，已取消 AI 提问。')),
         );
         return;
       }
+
       final values = execution.result.values;
+      final expectedLunar =
+          (_computedYearGanZhi ?? 'MISSING') + '年农历' +
+          (_computedLunarMonth?.toString() ?? 'MISSING') + '月' +
+          (_computedLunarDay?.toString() ?? 'MISSING') + '日';
       final expectedWeight =
-          '${current.liang}两${current.qian}钱（${current.totalQian}钱）';
-      if (values['总骨重'] != expectedWeight ||
-          values['称骨歌诀标题'] != current.title ||
-          values['称骨歌诀'] != current.poem ||
-          values['称骨说明'] != current.detail ||
-          values['真太阳时校正'] != (_useTrueSolarTime ? '开启' : '关闭') ||
-          values['早晚子时区分'] != (_distinguishZiShi ? '开启' : '关闭')) {
+          current.liang.toString() + '两' + current.qian.toString() +
+          '钱（' + current.totalQian.toString() + '钱）';
+      final expectedWallClockBranch =
+          _shiChenNames[_shiChenIndexOfHour(computedHour)];
+      final pageMatches =
+          values['出生农历口径'] == expectedLunar &&
+          values['出生钟表时辰'] == expectedWallClockBranch + '时' &&
+          values['真太阳时校正'] == (_computedUseTrueSolarTime! ? '开启' : '关闭') &&
+          values['早晚子时区分'] == (_computedDistinguishZiShi! ? '开启' : '关闭') &&
+          values['总骨重'] == expectedWeight &&
+          values['称骨歌诀标题'] == current.title &&
+          values['称骨歌诀'] == current.poem &&
+          values['称骨说明'] == (current.detail.isEmpty ? 'MISSING' : current.detail);
+      if (!pageMatches) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('当前页面结果与本地重建结果不一致，已取消 AI 提问。')),
+          const SnackBar(content: Text('当前页面显示结果与本地重建不一致；请重新查询后再提问。')),
         );
         return;
       }
-      final ref = AiContextResolver.buildChengguResultContextRef(
+
+      final contextRef = AiContextResolver.buildChengguResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
       final resolution = await AiContextResolver.resolveChengguToolResult(
-        ref: ref,
+        ref: contextRef,
         structuredSnapshot: execution.structuredSnapshot!,
       );
+      final resolved = resolution.value;
       if (!mounted) return;
-      if (!resolution.isResolved || resolution.value == null) {
+      if (!resolution.isResolved || resolved == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('称骨上下文核验失败：${resolution.status.name}')),
+          SnackBar(content: Text('称骨上下文核验失败：' + resolution.status.name)),
         );
         return;
       }
+
       await showContextualAiSheet(
         context: context,
-        contextRef: ref,
+        contextRef: contextRef,
         initialPrompt: AiContextPromptBuilder.buildToolResult(
-          ref: ref,
-          structuredSnapshot: resolution.value!.structuredSnapshot,
+          ref: contextRef,
+          structuredSnapshot: resolved.structuredSnapshot,
         ),
         initialMode: AssistantMode.metaphysics,
         contextualTitle: '袁天罡称骨结果',
@@ -362,17 +425,15 @@ class _ChengguBoneScreenState extends State<ChengguBoneScreen> {
                 ),
               ),
             ),
-            if (_result != null) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _askAiAboutResult,
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('问 AI 解读当前称骨结果'),
-                ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _askAiAboutResult,
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('问 AI 解读当前称骨结果'),
               ),
-            ],
+            ),
             if (widget.returnResultOnComplete) ...[
               const SizedBox(height: 8),
               SizedBox(
