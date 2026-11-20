@@ -54,7 +54,7 @@ class SanshanLingqianResultContextExecutor {
         result.arguments.isNotEmpty ||
         result.sourceIds.length != 1 ||
         result.sourceIds.single !=
-            '\${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
         result.values['签号'] != sign.id.toString() ||
         result.values['签题'] != sign.title ||
         result.values['签诗'] != sign.verse ||
@@ -77,7 +77,7 @@ class SanshanLingqianResultContextExecutor {
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
       'sourceIds': <String>[
-        '\${SanshanLingqianToolExecutor.dataSourcePrefix}$signId',
+        '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId',
       ],
       'input': <String, Object?>{
         'method': 'appRandomDraw',
@@ -97,8 +97,8 @@ class SanshanLingqianResultContextExecutor {
         'result.values.签级': '签谱所载传统等级，不是现实预测',
       },
       'missingFields': missingFields,
-      'displaySummary': '\${values['签号'] ?? 'MISSING'} · '
-          '\${values['签题'] ?? 'MISSING'} · \${values['签级'] ?? 'MISSING'}',
+      'displaySummary': '${values['签号'] ?? 'MISSING'} · '
+          '${values['签题'] ?? 'MISSING'} · ${values['签级'] ?? 'MISSING'}',
       'provenance': <String, Object?>{
         'catalogue': '广东揭西三山国王祖庙传承 92 签签谱',
         'selection': '签号由 App 本地随机抽取；模型不得指定、替换或重抽',
