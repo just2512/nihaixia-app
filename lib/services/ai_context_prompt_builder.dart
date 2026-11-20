@@ -12,6 +12,8 @@ import 'xiaoliuren_tool_executor.dart';
 import 'huangdi_siji_result_context_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'chenggu_result_context_executor.dart';
+import 'shousheng_debt_result_context_executor.dart';
+import 'shousheng_debt_tool_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 
@@ -316,6 +318,19 @@ class AiContextPromptBuilder {
           arguments['birth_time'] is String &&
           ref.anchorId == 'huangdi-siji:result:$snapshotId';
     }
+    if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
+      final method = input['method'];
+      final arguments = input['arguments'];
+      return schemaVersion == ShoushengDebtResultContextExecutor.resultSchemaVersion &&
+          method is String &&
+          ShoushengDebtToolExecutor.methods.contains(method) &&
+          arguments is Map &&
+          arguments.length == 3 &&
+          arguments['method'] == method &&
+          arguments['birth_date'] is String &&
+          arguments['birth_time'] is String &&
+          ref.anchorId == 'shousheng-debt:result:$snapshotId:method=$method';
+    }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
       return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
@@ -427,6 +442,26 @@ class AiContextPromptBuilder {
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError(
         'A Huangdi Siji prompt requires a resolved Huangdi Siji tool result.',
+      );
+    }
+    return buildToolResult(
+      ref: resolvedResult.ref,
+      structuredSnapshot: resolvedResult.structuredSnapshot,
+    );
+  }
+
+  static String buildShoushengDebtToolResult({
+    required AiResolvedToolResult resolvedResult,
+  }) {
+    final method = resolvedResult.structuredSnapshot['input'] is Map
+        ? (resolvedResult.structuredSnapshot['input'] as Map)['method']
+        : null;
+    if (resolvedResult.ref.moduleId !=
+            ShoushengDebtResultContextExecutor.moduleId ||
+        resolvedResult.ref.kind != AiContextKind.toolResult ||
+        !ShoushengDebtToolExecutor.methods.contains(method)) {
+      throw ArgumentError(
+        'A Shousheng prompt requires a resolved Shousheng tool result.',
       );
     }
     return buildToolResult(
@@ -725,6 +760,24 @@ class AiContextPromptBuilder {
       );
     }
 
+
+    if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
+      final method = inputValue['method'];
+      final expectedDataSource = method == 'luku'
+          ? ShoushengDebtToolExecutor.lukuDataSourceId
+          : method == 'wudou'
+              ? ShoushengDebtToolExecutor.wudouDataSourceId
+              : null;
+      if (ref.sourceId != ShoushengDebtToolExecutor.sourceId ||
+          sourceIds.length != 2 ||
+          sourceIds[0] != ShoushengDebtToolExecutor.sourceId ||
+          sourceIds[1] != expectedDataSource) {
+        throw ArgumentError(
+          'A Shousheng prompt requires the exact selected local source pair.',
+        );
+      }
+    }
+
     final actualSnapshotId =
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
     if (actualSnapshotId != snapshotId) {
@@ -733,51 +786,81 @@ class AiContextPromptBuilder {
       );
     }
 
-    final promptInput = ref.moduleId == ChengguResultContextExecutor.moduleId
-        ? <String, Object?>{
-            for (final entry in inputValue.entries)
-              if (entry.key != 'arguments') entry.key: entry.value,
-            'arguments': const <String, String>{'birth_date': 'REDACTED_LOCAL_ONLY', 'birth_time': 'REDACTED_LOCAL_ONLY'},
-            'privacyNote': 'Exact birth date and clock time are retained only in the local verification snapshot and omitted from model context.',
-          }
-        : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
-        ? <String, Object?>{
-            for (final entry in inputValue.entries)
-              if (entry.key is String && entry.key != 'arguments')
-                entry.key as String: entry.value,
-            'arguments': const <String, String>{
-              'birth_date': 'REDACTED_LOCAL_ONLY',
-              'birth_time': 'REDACTED_LOCAL_ONLY',
-            },
-            'privacyNote':
-                'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
-          }
-        : inputValue;
-    final promptResult = ref.moduleId == ChengguResultContextExecutor.moduleId
-        ? <String, Object?>{
-            for (final entry in resultValue.entries)
-              if (entry.key != 'values') entry.key: entry.value,
-            'values': <String, Object?>{
-              if (resultValue['values'] is Map)
-                for (final entry in (resultValue['values'] as Map).entries)
-                  if (entry.key != '出生公历') entry.key as String: entry.value,
-              '出生公历': 'REDACTED_LOCAL_ONLY',
-            },
-          }
-        : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
-        ? <String, Object?>{
-            for (final entry in resultValue.entries)
-              if (entry.key != 'values')
-                entry.key: entry.value,
-            'values': <String, Object?>{
-              if (resultValue['values'] is Map)
-                for (final entry in (resultValue['values'] as Map).entries)
-                  if (entry.key != '出生公历')
-                    entry.key as String: entry.value,
-              '出生公历': 'REDACTED_LOCAL_ONLY',
-            },
-          }
-        : resultValue;
+    final promptInput =
+        ref.moduleId == ShoushengDebtResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in inputValue.entries)
+                  if (entry.key != 'arguments') entry.key: entry.value,
+                'arguments': <String, String>{
+                  'birth_date': 'REDACTED_LOCAL_ONLY',
+                  'birth_time': 'REDACTED_LOCAL_ONLY',
+                  'method': inputValue['method'] as String,
+                },
+                'privacyNote':
+                    'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
+              }
+            : ref.moduleId == ChengguResultContextExecutor.moduleId
+                ? <String, Object?>{
+                    for (final entry in inputValue.entries)
+                      if (entry.key != 'arguments') entry.key: entry.value,
+                    'arguments': const <String, String>{
+                      'birth_date': 'REDACTED_LOCAL_ONLY',
+                      'birth_time': 'REDACTED_LOCAL_ONLY',
+                    },
+                    'privacyNote':
+                        'Exact birth date and clock time are retained only in the local verification snapshot and omitted from model context.',
+                  }
+                : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
+                    ? <String, Object?>{
+                        for (final entry in inputValue.entries)
+                          if (entry.key is String && entry.key != 'arguments')
+                            entry.key as String: entry.value,
+                        'arguments': const <String, String>{
+                          'birth_date': 'REDACTED_LOCAL_ONLY',
+                          'birth_time': 'REDACTED_LOCAL_ONLY',
+                        },
+                        'privacyNote':
+                            'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
+                      }
+                    : inputValue;
+    final promptResult =
+        ref.moduleId == ShoushengDebtResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in resultValue.entries)
+                  if (entry.key != 'values') entry.key: entry.value,
+                'values': <String, Object?>{
+                  if (resultValue['values'] is Map)
+                    for (final entry in (resultValue['values'] as Map).entries)
+                      if (entry.key != '出生公历')
+                        entry.key as String: entry.value,
+                  '出生公历': 'REDACTED_LOCAL_ONLY',
+                },
+              }
+            : ref.moduleId == ChengguResultContextExecutor.moduleId
+                ? <String, Object?>{
+                    for (final entry in resultValue.entries)
+                      if (entry.key != 'values') entry.key: entry.value,
+                    'values': <String, Object?>{
+                      if (resultValue['values'] is Map)
+                        for (final entry in (resultValue['values'] as Map).entries)
+                          if (entry.key != '出生公历')
+                            entry.key as String: entry.value,
+                      '出生公历': 'REDACTED_LOCAL_ONLY',
+                    },
+                  }
+                : ref.moduleId == HuangdiSijiResultContextExecutor.moduleId
+                    ? <String, Object?>{
+                        for (final entry in resultValue.entries)
+                          if (entry.key != 'values') entry.key: entry.value,
+                        'values': <String, Object?>{
+                          if (resultValue['values'] is Map)
+                            for (final entry in (resultValue['values'] as Map).entries)
+                              if (entry.key != '出生公历')
+                                entry.key as String: entry.value,
+                          '出生公历': 'REDACTED_LOCAL_ONLY',
+                        },
+                      }
+                    : resultValue;
     final source = <String, Object?>{
       'title': ref.title ?? '',
       'toolId': ref.moduleId,
@@ -841,6 +924,14 @@ class AiContextPromptBuilder {
         '轩辕黄帝四季歌属于托名轩辕黄帝的传统民俗通胜文本，不是科学预测，也不代表个人命运事实。请区分 App 已查得的农历月份/时辰/部位/诗文与现有释义；只在原文和口径范围内解释，不作确定性人生判断或重大决策建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把民俗文本转化为医疗、法律、投资或其他专业建议。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '受生债查询依据 App 本地整理的两类道教受生经文与相关民俗资料，只能作为文献和民俗文化研究对象。不得把“受生债”表述为已经证实的现实债务、用户必须偿还的义务或可验证的命运因果。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '必须保持用户明确选择的经文体系：禄库受生经按年支查询；五斗金章受生经按出生日日干与时支查询，并保留快照中的经文/民间口径说明。不得将两套表格拼接、替换或推断未提供的流派字段。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '不得建议用户购买法事、纸钱、符箓或付费服务，不得要求转账或提供收款渠道，也不得用恐吓、灾祸或“欠债必须还”促成消费。不得给出金额换算或现实偿还指令；古代“贯”等计量只按来源文本解释。',
+      if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId)
+        '出生日期与钟点只用于 App 本地结果重建校验，已从模型上下文脱敏；不得尝试反推或索要精确生辰。只解释快照已有字段，不自行排盘、补造结果或把民俗材料当作科学预测。',
       if (ref.moduleId == 'yijing')
         '易经卦象与卦爻辞属于传统经典文化资料；请解释引擎实际计算的本卦、动爻、变卦与互卦，不把结果表述为科学预测或必然事件，不将其作为医疗、法律、投资或其他重大决定的确定性依据。',
       '请在输入框补充你希望重点了解的部分；发送后将连同这份结构化结果快照一起提交。',

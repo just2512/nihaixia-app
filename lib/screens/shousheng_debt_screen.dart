@@ -6,6 +6,11 @@ import '../utils/fold_aware_routes.dart';
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/data/shousheng_data.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
+import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/services/shousheng_debt_result_context_executor.dart';
+import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
+import 'assistant_tool_router.dart';
 import 'package:nihaisha_app/services/bazi_service.dart' show computeBaZiPaipan;
 
 /// 受生债查询（禄库受生经 / 五斗金章受生经）。
@@ -88,6 +93,129 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
       });
     } catch (e) {
       if (mounted) setState(() => _error = '计算失败：$e');
+    }
+  }
+
+  Future<void> _askAiAboutResult() async {
+    final method = _isLuku ? 'luku' : 'wudou';
+    final currentResultMatches = _isLuku
+        ? _luku != null && _wudou == null
+        : _wudou != null && _luku == null;
+    if (!currentResultMatches ||
+        _computedYearZhi == null ||
+        _computedDayGan == null ||
+        _computedTimeZhi == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先按当前选定的经文体系完成查询，再解读当前结果。')),
+      );
+      return;
+    }
+
+    final birthDate =
+        '${_birthDate.year.toString().padLeft(4, '0')}-'
+        '${_birthDate.month.toString().padLeft(2, '0')}-'
+        '${_birthDate.day.toString().padLeft(2, '0')}';
+    final birthTime =
+        '${_birthHour.toString().padLeft(2, '0')}:'
+        '${_birthMinute.toString().padLeft(2, '0')}';
+    final confirmed = await showFoldAwareDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('确认本次受生债查询输入'),
+        content: Text(
+          '当前结果使用公历出生日期 $birthDate、当地钟表时间 $birthTime，'
+          '以及“${method == 'luku' ? '禄库受生经' : '五斗金章受生经'}”体系。\n'
+          '精确出生日期和钟点仅用于 App 本地重建校验，提交给 AI 的上下文会先脱敏。'
+          '本内容仅作道教文献与民俗文化解读，不构成现实债务或偿还建议。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('确认并解读'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    try {
+      final execution =
+          await ShoushengDebtResultContextExecutor.executeWithSnapshot({
+        'birth_date': birthDate,
+        'birth_time': birthTime,
+        'method': method,
+      });
+      if (!mounted) return;
+      if (!execution.succeeded || execution.structuredSnapshot == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前受生债结果无法核验，已取消 AI 提问。')),
+        );
+        return;
+      }
+
+      final values = execution.result.values;
+      final pageSettingsMatch =
+          values['真太阳时校正'] == (_useTrueSolarTime ? '开启' : '关闭') &&
+          values['早晚子时区分'] == (_distinguishZiShi ? '开启' : '关闭');
+      final pageChartMatch =
+          values['年支'] == _computedYearZhi &&
+          values['日干'] == _computedDayGan &&
+          values['时支'] == _computedTimeZhi;
+      final pageMethodMatch = values['查询体系'] ==
+          (_isLuku ? '禄库受生经' : '五斗金章受生经');
+      final pageResultMatch = _isLuku
+          ? _luku != null &&
+              values['禄库曹官数据'] == jsonEncode(_luku!.warehouse) &&
+              values['本命元辰数据'] == jsonEncode(_luku!.yuanchen)
+          : _wudou != null &&
+              values['五斗本命钱数据'] == jsonEncode(_wudou!.fiveDou) &&
+              values['十二库神数据'] == jsonEncode(_wudou!.kushen) &&
+              values['口径说明'] == ShoushengData.wudouNote;
+      if (!pageSettingsMatch ||
+          !pageChartMatch ||
+          !pageMethodMatch ||
+          !pageResultMatch) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前页面显示结果与本地重建不一致；请重新查询后再提问。')),
+        );
+        return;
+      }
+
+      final contextRef = AiContextResolver.buildShoushengDebtResultContextRef(
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolution = await AiContextResolver.resolveShoushengDebtToolResult(
+        ref: contextRef,
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolved = resolution.value;
+      if (!mounted) return;
+      if (!resolution.isResolved || resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('受生债上下文核验失败：${resolution.status.name}')),
+        );
+        return;
+      }
+
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildShoushengDebtToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: contextRef.title ?? '受生债查询结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('受生债上下文无法核验，已取消 AI 提问。')),
+      );
     }
   }
 
@@ -241,6 +369,17 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
             ),
           if (_luku != null) _buildLuku(cs),
           if (_wudou != null) _buildWudou(cs),
+          if (_luku != null || _wudou != null) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _askAiAboutResult,
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('问 AI 解读当前受生债结果'),
+              ),
+            ),
+          ],
           if (widget.returnResultOnComplete && (_luku != null || _wudou != null)) ...[
             const SizedBox(height: 8),
             SizedBox(

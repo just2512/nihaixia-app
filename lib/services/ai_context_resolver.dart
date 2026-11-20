@@ -19,6 +19,8 @@ import 'huangdi_siji_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'chenggu_result_context_executor.dart';
 import 'chenggu_tool_executor.dart';
+import 'shousheng_debt_result_context_executor.dart';
+import 'shousheng_debt_tool_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 import 'ziwuliuzhu_calculation_service.dart';
@@ -901,6 +903,165 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The local Huangdi Siji calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+  static AiContextRef buildShoushengDebtResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    final method = input is Map ? input['method'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            ShoushengDebtResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ShoushengDebtResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            ShoushengDebtResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        method is! String ||
+        !ShoushengDebtToolExecutor.methods.contains(method) ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        arguments['method'] != method ||
+        input['settings'] is! Map ||
+        sources is! List ||
+        sources.length != 2 ||
+        sources[0] != ShoushengDebtToolExecutor.sourceId ||
+        sources[1] != (method == 'luku'
+            ? ShoushengDebtToolExecutor.lukuDataSourceId
+            : ShoushengDebtToolExecutor.wudouDataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Shousheng context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ShoushengDebtResultContextExecutor.moduleId,
+      anchorId: 'shousheng-debt:result:$snapshotId:method=$method',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ShoushengDebtResultContextExecutor.ruleVersion,
+      sourceId: ShoushengDebtToolExecutor.sourceId,
+      title: method == 'luku' ? '禄库受生经查询结果' : '五斗金章受生经查询结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveShoushengDebtToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != ShoushengDebtResultContextExecutor.moduleId ||
+        ref.sourceId != ShoushengDebtToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Shousheng reference is incomplete or does not identify the local lookup engine.',
+      );
+    }
+    if (ref.ruleVersion != ShoushengDebtResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Shousheng executor, source assets, Bazi engine, settings repository or locked package versions changed.',
+      );
+    }
+
+    final match = RegExp(
+      r'^shousheng-debt:result:([0-9a-f]{64}):method=(luku|wudou)$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Shousheng anchor and immutable snapshot identity do not agree.',
+      );
+    }
+    final method = match.group(2)!;
+    final expectedTitle =
+        method == 'luku' ? '禄库受生经查询结果' : '五斗金章受生经查询结果';
+    if (ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Shousheng title does not match its selected source system.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            ShoushengDebtResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ShoushengDebtResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            ShoushengDebtResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != method ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments['method'] != method ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 2 ||
+        sources[0] != ShoushengDebtToolExecutor.sourceId ||
+        sources[1] != (method == 'luku'
+            ? ShoushengDebtToolExecutor.lukuDataSourceId
+            : ShoushengDebtToolExecutor.wudouDataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Shousheng result, settings or provenance no longer matches the immutable digest.',
+      );
+    }
+
+    final rebuilt = await ShoushengDebtResultContextExecutor.executeWithSnapshot({
+      'birth_date': arguments['birth_date'] as String,
+      'birth_time': arguments['birth_time'] as String,
+      'method': method,
+    });
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Shousheng lookup could not be reconstructed from its recorded input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Shousheng lookup no longer matches this immutable result.',
       );
     }
 
