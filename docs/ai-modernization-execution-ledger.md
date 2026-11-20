@@ -2997,3 +2997,38 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master 已有 Headless 执行器和基础单测，但页面仍自行计算并返回旧版 `AssistantToolResult`，只带 `local-engine:chenggu`，未携带数据 source ID、规范化 arguments 和可重建快照；尚未接入统一 Resolver/Prompt 的情境问 AI 入口。
 - 下一分支从当前 master `2e8cb9d9f1e2b53f257985675901ee2ba755b125` 创建。实施时须让页面展示结果与 AI 上下文来自同一次 Headless 执行；保留原“带回助手”操作；快照校验八字设置（真太阳时、早晚子时）、历法口径、称骨数据来源、规则/数据版本和结果摘要。Prompt 不得发送精确出生日期/钟点；称骨文案作为传统民俗文化参考，不能表述为事实命运判断。
 - 自动验收至少覆盖成功/缺参/非法日期时间/多余参数/来源错配/规则过期/结果篡改/摘要不符/重建不一致，以及页面 402dp/775dp、旧入口并存、关闭后滚动恢复和 Prompt 脱敏。Find N2 真机验收留到云端工作全部完成后统一执行。
+
+---
+
+## 58. 2026-11-20 Phase 3 工具结果情境入口续接（master 基线：80e135519d19939c3b0a921ded6db5fd0e8b4767）
+
+### 58.1 已合并并在当前主线复核的结果入口
+
+- PR #345 袁天罡称骨整体结果情境入口已合并，merge SHA：430e97dd5afb362d6d33cc36d01244e2048b409a；最终 head 5ed5e0ac004b19d5a8af509903da1b69d5ed5f43 的 Flutter regression run 44749799434 SUCCESS。该 head 之前的失败 run 44749135702 已定位为 Resolver 文件写入截断/解析错误；修复后新 head 完整回归通过。Android arm64 及其余质量门禁以该 PR 实际 run job 记录为准，不将 Flutter SUCCESS 扩大为端到端 PASS。
+- PR #347 受生债整体结果情境入口已合并，merge SHA：80e135519d19939c3b0a921ded6db5fd0e8b4767；最终 head dc13342e88491af14680eb00235d2668ed2d21f2 的 Flutter regression run 44751619930 SUCCESS、Android arm64 SUCCESS。入口保留用户选择的经文体系、原始本地结果与旧版“带回助手”行为；精确生辰仅用于本地重建校验并在 Prompt 中脱敏。
+- 当前 master 为 80e135519d19939c3b0a921ded6db5fd0e8b4767。该 SHA 的 Flutter tests run 44753647096 与 Flutter Quality Gate run 44753647071 在本节登记时均为 IN_PROGRESS；必须等待终态，不能沿用父 SHA 430e97d 的 SUCCESS。
+
+### 58.2 当前独立工作切片
+
+| 切片 | PR / head | 文件范围与验收目标 | 当前证据状态 |
+|---|---|---|---|
+| 三山国王灵签结果 | PR #354，head c88adbbb43e0496b248c02c4ff6948e4b1e06f9b | sanshan_lingqian_screen.dart、专用结果执行器、Resolver/Prompt、页面集成测试；App 本地抽签只执行一次，快照绑定选中签号、92 签目录来源和摘要；重建只按签号精确读取，不再次随机；保留“带回助手”；Prompt 禁止换签、恐吓和诱导付费法事 | Flutter regression run 44754155157 IN_PROGRESS；Android arm64 尚未取得终态；不得合并 |
+| 称骨派生农历隐私修正 | PR #357，head ec1201b902c4c76eb127ab79b810d0f7f6ca3767 | Prompt 除公历生日与原始生辰参数外，进一步将派生的“出生农历口径”替换为 REDACTED_LOCAL_ONLY；不可变快照保留原值供本地校验；新增断言验证真实农历值不进入模型上下文 | Flutter regression run 44754511613 IN_PROGRESS；Android arm64 尚未取得终态；不得合并 |
+| 玉匣灵兆当前时辰文本 | PR #358，head a274febb9fa6b701811367c0100c32b709762260 | 固定一次 App 设备本地时钟读取；绑定本地《玉匣记》文本 source ID、时间偏移和快照摘要；模型上下文将精确日期时间及 UTC 偏移替换为 LOCAL_VERIFICATION_ONLY；禁止把民俗文本推断为用户症状或诊断 | Flutter regression run 44754886091 IN_PROGRESS；Android arm64 尚未取得终态；不得合并 |
+
+上述三个 PR 均以当前 master 为 base，文件所有权互不重叠（Resolver/Prompt 的公共文件由各切片分别小批量修改，集成时必须重新检查最终树和完整回归）。设备外/内屏、半折叠、分屏、键盘及本地 E4B TRACE 仍为 UNKNOWN / LOCAL ONLY，统一留到云端工作收尾后的最终 Find N2 验收；设备门禁不阻止云端修复、测试和文档工作。
+
+### 58.3 过期分支与重复 PR 处置
+
+- PR #351（旧 Sanshan head，base 430e97d）已关闭，由 #354 的最新 master 切片替代；旧 head CI 失败原因为旧版本 SanshanLingqianResultContextExecution 构造调用缺少必需的 sign 参数。该问题在新 head 中已补齐；旧 run 不继承为 PASS。
+- PR #352（旧 Yuxiaji head，base 430e97d）已关闭，由 #358 的最新 master 切片替代；旧 head Flutter regression run 44753333466 SUCCESS，但 Android arm64 尚未终态，且旧 base 不作为新 head 验收依据。
+- PR #353（旧称骨派生农历隐私分支，base 430e97d）已关闭，由 #357 最新 master 切片替代；旧 SHA CI 不继承。
+- PR #355/#359 为本轮重复建立的 Sanshan/Yuxiaji 分支，已分别关闭并指向 #354/#358；其旧 CI 不继承。
+- PR #343/#344 的早期受生债/称骨分支已关闭：其实现已分别由 PR #347/#345 合并进入 master；旧分支分别落后 29/38 commits 且 diverged，不再作为集成入口。
+
+### 58.4 下一步执行顺序
+
+1. 继续监测 #354、#357、#358 最新 head 的 Flutter regression 与 Android arm64；任一失败必须读取失败 job/log，按实际断言修复，不删除测试、不降低验收条件。
+2. 三个切片分别通过最新 head 的 Flutter regression 与 Android arm64 后，小批量普通 merge；每次合并后刷新 master SHA，并分别等待 Flutter tests、Flutter Quality Gate 终态。
+3. 在当前 master 上复核情境结果入口目录，逐项区分已执行 Headless 能力、仅页面工具和已有整体/字段级 Ask AI 入口；只为有真实结构化结果、稳定来源和可重建契约的缺口建立后续切片，不为覆盖数量新增空壳入口。
+4. 云端工作完成前持续修复可自动化的来源校验、快照、Prompt 隐私、窄/宽窗口和滚动恢复问题；Find N2 真机及本地模型 TRACE 保留为最终本地验收，不把其记为云端 BLOCKED。
