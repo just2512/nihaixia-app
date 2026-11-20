@@ -34,7 +34,7 @@ void main() {
     expect(execution.result.validateFor('sanshan_lingqian'), isEmpty);
     expect(execution.result.arguments, isEmpty);
     expect(execution.result.sourceIds, [
-      '\${SanshanLingqianToolExecutor.dataSourcePrefix}\${execution.sign!.id}',
+      '${SanshanLingqianToolExecutor.dataSourcePrefix}${execution.sign!.id}',
     ]);
 
     final snapshot = execution.structuredSnapshot!;
@@ -58,7 +58,7 @@ void main() {
     expect(values['签级'], execution.sign!.luck.label);
     expect(
       snapshot['sourceIds'],
-      ['\${SanshanLingqianToolExecutor.dataSourcePrefix}\${execution.sign!.id}'],
+      ['${SanshanLingqianToolExecutor.dataSourcePrefix}${execution.sign!.id}'],
     );
     expect(
       AiToolResultSnapshot.createStructuredId(snapshot: snapshot),
@@ -196,7 +196,7 @@ void main() {
     (width: 775.0, height: 1100.0, isSidePanel: true),
   ]) {
     testWidgets(
-      '三山灵签页面在 \${viewport.width.toInt()}dp 将当前签文带入情境助手并保留滚动',
+      '三山灵签页面在 ${viewport.width.toInt()}dp 将当前签文带入情境助手并保留滚动',
       (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(viewport.width, viewport.height);
