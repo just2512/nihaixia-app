@@ -38,7 +38,10 @@ def is_scannable(path: str) -> bool:
     return suffix in TEXT_SUFFIXES or Path(path).name in TEXT_FILENAMES
 
 def historical_artifact_only(path: str, line: str) -> bool:
-    # Keep the exact historical APK artifact name, not the former app label.
+    # Preserve exact historical APK names and a source-document keyword used
+    # by the herb parser; neither is a current app-facing product label.
+    if path == "tools/parse_herbs.py" and OLD_BRAND + "诊疗" in line:
+        return True
     artifact = re.search(re.escape(OLD_BRAND) + r"_v[0-9][^\s|)]*\.apk", line)
     if not artifact:
         return False
@@ -73,7 +76,11 @@ def main() -> int:
     if findings:
         print("Brand audit matches:")
         for path, number, line, historical in findings:
-            status = "HISTORICAL-ARTIFACT-ALLOWLIST" if historical else "REJECT"
+            status = (
+                "HISTORICAL-SOURCE-ALLOWLIST" if path == "tools/parse_herbs.py"
+                else "HISTORICAL-ARTIFACT-ALLOWLIST" if historical
+                else "REJECT"
+            )
             print(f"{status} {path}:{number}: {line}")
     else:
         print("Brand audit: no retired product-name references found.")

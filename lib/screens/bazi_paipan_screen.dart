@@ -213,7 +213,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('汉唐中医 · 八字排盘',
+        Text('研纪 · 八字排盘',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         Text('出生农历：${r.lunarText}',
@@ -460,7 +460,7 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
           '起运：${f.startAge.toStringAsFixed(1)} 岁（${f.qiYunTime.year} 年交运）');
       b.writeln('大运：${f.decades.map((d) => d.ganZhi).join(' → ')}');
     }
-    b.writeln('—— 来自汉唐中医（民俗文化参考，非医疗建议）');
+    b.writeln('—— 来自研纪（民俗文化参考，非医疗建议）');
     return b.toString();
   }
 
