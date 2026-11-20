@@ -6,6 +6,11 @@ import '../models/bookmark.dart';
 import '../data/yuxiaji_omen_data.dart';
 
 import '../services/yuxiaji_omen_time.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/yuxiaji_omen_result_context_executor.dart';
+import '../widgets/contextual_ai_sheet.dart';
+import 'assistant_tool_router.dart';
 
 /// 玉匣灵兆 —— 《玉匣记》杂占篇·身体兆占。
 ///
@@ -19,7 +24,56 @@ class YuxiajiOmenScreen extends StatefulWidget {
 }
 
 class _YuxiajiOmenScreenState extends State<YuxiajiOmenScreen> {
-  final int _hourIndex = shiChenIndexOf(DateTime.now());
+  final DateTime _observedAt = DateTime.now();
+
+  int get _hourIndex => shiChenIndexOf(_observedAt);
+
+  Future<void> _askAiAboutCurrentOmen() async {
+    final execution =
+        YuxiajiOmenResultContextExecutor.executeWithSnapshot(
+      observedAt: _observedAt,
+    );
+    if (!execution.succeeded || execution.structuredSnapshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('本次时辰文本未能通过本地来源校验。')),
+      );
+      return;
+    }
+
+    try {
+      final contextRef = AiContextResolver.buildYuxiajiOmenResultContextRef(
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolution =
+          await AiContextResolver.resolveYuxiajiOmenToolResult(
+        ref: contextRef,
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolved = resolution.value;
+      if (!mounted) return;
+      if (!resolution.isResolved || resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('玉匣灵兆结果核验失败：${resolution.status.name}')),
+        );
+        return;
+      }
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildYuxiajiOmenToolResult(
+          resolvedResult: resolved,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: '玉匣灵兆当前时辰文本',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('玉匣灵兆结果无法核验，已取消 AI 提问。')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +108,12 @@ class _YuxiajiOmenScreenState extends State<YuxiajiOmenScreen> {
                 style: TextStyle(fontSize: 12, color: cs.primary),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _askAiAboutCurrentOmen,
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: const Text('问 AI 解读当前时辰身兆文本'),
           ),
           const SizedBox(height: 8),
           ...kYuXiaJiShiChenOmens.map(_buildOmenCard),
