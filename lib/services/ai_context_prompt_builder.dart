@@ -814,7 +814,22 @@ class AiContextPromptBuilder {
                 'Exact birth date and clock time are retained only in the local verification snapshot and are intentionally omitted from the model context.',
           }
         : inputValue;
-    final promptResult = ref.moduleId == ChengguResultContextExecutor.moduleId
+    final promptResult =
+        ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in resultValue.entries)
+                  if (entry.key != 'values') entry.key: entry.value,
+                'values': <String, Object?>{
+                  if (resultValue['values'] is Map)
+                    for (final entry in (resultValue['values'] as Map).entries)
+                      if (entry.key != 'App 本机日期时间' &&
+                          entry.key != '本机 UTC 偏移分钟')
+                        entry.key as String: entry.value,
+                  'App 本机日期时间': 'LOCAL_VERIFICATION_ONLY',
+                  '本机 UTC 偏移分钟': 'LOCAL_VERIFICATION_ONLY',
+                },
+              }
+            : ref.moduleId == ChengguResultContextExecutor.moduleId
         ? <String, Object?>{
             for (final entry in resultValue.entries)
               if (entry.key != 'values') entry.key: entry.value,
