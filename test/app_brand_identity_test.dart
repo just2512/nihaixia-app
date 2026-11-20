@@ -86,5 +86,24 @@ void main() {
       expect(brandIdentity, contains('Android `applicationId`：`com.nihaisha.nihaisha_app`'));
       expect(changelog.split('\n').first, '# 研纪 App 更新日志（Changelog）');
     });
+
+    test('外部品牌入口、推广文案与官网归属统一', () {
+      final privacy = _read('docs/privacy.html');
+      final promo = _read('PROMO_COPY.md');
+      final landingPage = _read('docs/index.html');
+
+      expect(privacy, contains('<p>研纪 · 中医诊疗全过程辅助学习工具</p>'));
+      expect(privacy, isNot(contains('github.com/jangviktor-web/nihaixia-app</a>')));
+      expect(privacy, contains('github.com/just2512/nihaixia-app</a>'));
+
+      expect(promo, contains('https://github.com/just2512/nihaixia-app/releases'));
+      expect(promo, isNot(contains('jangviktor-web/nihaixia-app/releases')));
+      expect(promo, contains('Android 7.0+'));
+
+      expect(landingPage, contains('研纪：离线优先的中医诊疗全过程辅助学习工具'));
+      expect(landingPage, isNot(contains('jangviktor-web.github.io/nihaixia-app/')));
+      expect(landingPage, isNot(contains('property="og:url"')));
+      expect(landingPage, isNot(contains('rel="canonical"')));
+    });
   });
 }
