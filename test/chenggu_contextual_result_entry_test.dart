@@ -95,8 +95,9 @@ void main() {
     expect(ref.snapshotId, hasLength(64));
     expect(resolution.isResolved, isTrue);
 
-    final prompt = AiContextPromptBuilder.buildChengguToolResult(
-      resolvedResult: resolution.value!,
+    final prompt = AiContextPromptBuilder.buildToolResult(
+      ref: ref,
+      structuredSnapshot: resolution.value!.structuredSnapshot,
     );
     expect(prompt, contains('REDACTED_LOCAL_ONLY'));
     expect(prompt, isNot(contains('1990-01-02')));
