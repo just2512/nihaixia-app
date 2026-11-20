@@ -16,6 +16,8 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'huangdi_siji_result_context_executor.dart';
 import 'huangdi_siji_tool_executor.dart';
+import 'chenggu_result_context_executor.dart';
+import 'chenggu_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -834,6 +836,151 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The local Huangdi Siji calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+  static AiContextRef buildChengguResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final settings = input is Map ? input['settings'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            ChengguResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ChengguResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            ChengguResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDateTime' ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        arguments is! Map ||
+        arguments.length != 2 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        sourceIds is! List ||
+        sourceIds.length != 2 ||
+        !sourceIds.contains(ChengguToolExecutor.sourceId) ||
+        !sourceIds.contains(ChengguToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Chenggu context reference requires a complete, source-bound successful snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ChengguResultContextExecutor.moduleId,
+      anchorId: 'chenggu:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ChengguResultContextExecutor.ruleVersion,
+      sourceId: ChengguToolExecutor.sourceId,
+      title: '袁天罡称骨结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveChengguToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != ChengguResultContextExecutor.moduleId ||
+        ref.sourceId != ChengguToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Chenggu reference is incomplete or does not identify the local calculation source.',
+      );
+    }
+    if (ref.ruleVersion != ChengguResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Chenggu executor, data asset or locked calendar package version no longer matches this result.',
+      );
+    }
+
+    final match = RegExp(
+      r'^chenggu:result:([0-9a-f]{64})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        ref.title != '袁天罡称骨结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Chenggu anchor and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    final settings = input is Map ? input['settings'] : null;
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            ChengguResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ChengguResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            ChengguResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDateTime' ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        arguments is! Map ||
+        arguments.length != 2 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        sources is! List ||
+        sources.length != 2 ||
+        !sources.contains(ChengguToolExecutor.sourceId) ||
+        !sources.contains(ChengguToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Chenggu result or its provenance no longer matches the immutable digest.',
+      );
+    }
+
+    final rebuilt = await ChengguResultContextExecutor.executeWithSnapshot({
+      'birth_date': arguments['birth_date'] as String,
+      'birth_time': arguments['birth_time'] as String,
+    });
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Chenggu result could not be reconstructed from its recorded input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Chenggu calculation no longer matches this immutable result.',
       );
     }
 
