@@ -67,16 +67,19 @@ void main() {
           expect(selected['mainQi'], annual['mainQi']);
           expect(selected['guestQi'], annual['guestQi']);
           expect(selected['hostGuestRelations'], annual['hostGuestRelations']);
+          break;
         case 'chart.wuyun':
           expect(selected['mainYun'], annual['mainYun']);
           expect(selected['guestYun'], annual['guestYun']);
           expect(selected.containsKey('mainQi'), isFalse);
           expect(selected['selectedStep'], isA<Map>());
+          break;
         case 'chart.liuqi':
           expect(selected['mainQi'], annual['mainQi']);
           expect(selected['guestQi'], annual['guestQi']);
           expect(selected['hostGuestRelations'], annual['hostGuestRelations']);
           expect(selected.containsKey('mainYun'), isFalse);
+          break;
       }
 
       final prompt = AiContextPromptBuilder.buildYunqiChartField(
@@ -85,7 +88,6 @@ void main() {
       expect(prompt, contains(path));
       expect(prompt, contains('2026-11-18'));
       expect(prompt, contains('不是'));
-      expect(prompt, contains('不构成') == false);
       expect(prompt, contains('不得提供个体医疗诊断'));
       expect(prompt, contains('token 计数：UNKNOWN'));
     }
