@@ -371,6 +371,27 @@ class AiContextPromptBuilder {
           ref.anchorId ==
               'sanshan-lingqian:result:$snapshotId:sign=$selectedSignId';
     }
+    if (ref.moduleId == GuanshaResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      final settings = input['settings'];
+      return schemaVersion == GuanshaResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitBirthDetails' &&
+          arguments is Map &&
+          arguments.length == 4 &&
+          arguments.keys.toSet().difference({
+            'birth_date',
+            'birth_time',
+            'gender',
+            'birthplace',
+          }).isEmpty &&
+          arguments.values.every((value) => value is String) &&
+          const {'male', 'female'}.contains(arguments['gender']) &&
+          (arguments['birthplace'] as String).trim().isNotEmpty &&
+          settings is Map &&
+          settings['useTrueSolarTime'] is bool &&
+          settings['distinguishZiShi'] is bool &&
+          ref.anchorId == 'guansha:result:$snapshotId';
+    }
     if (ref.moduleId == DosageResultContextExecutor.moduleId) {
       final arguments = input['arguments'];
       return schemaVersion == DosageResultContextExecutor.resultSchemaVersion &&
