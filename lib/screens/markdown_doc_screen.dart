@@ -332,11 +332,14 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       children.add(SelectionArea(
         onSelectionChanged: (selection) {
           final selected = selection?.plainText ?? '';
-          if (selected.isEmpty) {
-            _selectedTextByPassage.remove(passageIndex);
-          } else {
-            _selectedTextByPassage[passageIndex] = selected;
-          }
+          if (_selectedTextByPassage[passageIndex] == selected) return;
+          setState(() {
+            if (selected.isEmpty) {
+              _selectedTextByPassage.remove(passageIndex);
+            } else {
+              _selectedTextByPassage[passageIndex] = selected;
+            }
+          });
         },
         contextMenuBuilder: (context, state) {
           final items = List<ContextMenuButtonItem>.of(state.contextMenuButtonItems);
