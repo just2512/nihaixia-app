@@ -148,8 +148,9 @@ class _YunQiScreenState extends State<YunQiScreen> {
 
   Future<void> _askAiAboutChartField(String fieldPath) async {
     AiContextRef contextRef;
+    late final Map<String, Object?> snapshot;
     try {
-      final snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
+      snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
       contextRef = AiContextResolver.buildYunqiChartFieldContextRef(
         structuredSnapshot: snapshot,
         fieldPath: fieldPath,
@@ -167,7 +168,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
 
     final resolution = AiContextResolver.resolveYunqiChartField(
       ref: contextRef,
-      structuredSnapshot: YunQiToolExecutor.createStructuredSnapshot(_selectedDate),
+      structuredSnapshot: snapshot,
     );
     final resolved = resolution.value;
     if (!resolution.isResolved || resolved == null) {
