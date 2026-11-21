@@ -356,6 +356,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
         ],
       ),
       body: ListView(
+        key: const ValueKey('yunqi-page-scroll'),
         controller: _pageScrollController,
         padding: const EdgeInsets.all(16),
         children: <Widget>[
@@ -711,6 +712,7 @@ class _ChartsTabsState extends State<_ChartsTabs>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             TabBar(
+              key: const ValueKey('yunqi-chart-tabs'),
               controller: _tabController,
               labelPadding: const EdgeInsets.symmetric(horizontal: 6),
               labelStyle:
