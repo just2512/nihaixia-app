@@ -28,6 +28,8 @@ import 'dosage_result_context_executor.dart';
 import 'dosage_tool_executor.dart';
 import 'guansha_result_context_executor.dart';
 import 'guansha_tool_executor.dart';
+import 'dream_result_context_executor.dart';
+import 'dream_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -3432,6 +3434,149 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The local Guansha calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+
+  static AiContextRef buildDreamEntryContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final selectedEntryId =
+        input is Map ? input['selectedEntryId'] : null;
+    final result = structuredSnapshot['result'];
+    final values = result is Map ? result['values'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            DreamResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DreamResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DreamResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input.length != 2 ||
+        input['method'] != 'explicitEntrySelection' ||
+        selectedEntryId is! String ||
+        !RegExp(r'^[a-z0-9_-]{1,80}$').hasMatch(selectedEntryId) ||
+        values is! Map ||
+        values['词条 ID'] != selectedEntryId ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != DreamToolExecutor.sourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Dream reference requires one explicitly selected, successful local entry snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: DreamResultContextExecutor.moduleId,
+      anchorId: 'dream:entry:$selectedEntryId:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: DreamResultContextExecutor.ruleVersion,
+      sourceId: DreamToolExecutor.sourceId,
+      title: '周公解梦词条',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveDreamEntryToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != DreamResultContextExecutor.moduleId ||
+        ref.sourceId != DreamToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Dream reference is incomplete or does not identify the local dream dataset.',
+      );
+    }
+    if (ref.ruleVersion != DreamResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local dream dataset or selection contract has changed.',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    final anchorMatch = RegExp(
+      r'^dream:entry:([a-z0-9_-]{1,80}):result:([0-9a-f]{64})$',
+    ).firstMatch(ref.anchorId);
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        anchorMatch == null ||
+        anchorMatch.group(2) != snapshotId ||
+        ref.title != '周公解梦词条') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Dream entry anchor, title and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final selectedEntryId = anchorMatch.group(1)!;
+    final input = structuredSnapshot['input'];
+    final result = structuredSnapshot['result'];
+    final values = result is Map ? result['values'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            DreamResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DreamResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DreamResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input.length != 2 ||
+        input['method'] != 'explicitEntrySelection' ||
+        input['selectedEntryId'] != selectedEntryId ||
+        values is! Map ||
+        values['词条 ID'] != selectedEntryId ||
+        result is! Map ||
+        result['title'] != '周公解梦' ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != DreamToolExecutor.sourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Dream entry identity, source or structured result no longer matches its immutable digest.',
+      );
+    }
+
+    final rebuilt = DreamResultContextExecutor.executeWithSnapshot(
+      selectedEntryId: selectedEntryId,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The selected Dream entry could not be reconstructed from the current local dataset.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The selected local Dream entry no longer matches this immutable snapshot.',
       );
     }
 
