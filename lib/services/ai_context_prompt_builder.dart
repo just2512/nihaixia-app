@@ -891,7 +891,8 @@ class AiContextPromptBuilder {
           ? inputValue['selectedEntryId']
           : null;
       final values = resultValue is Map ? resultValue['values'] : null;
-      if (ref.sourceId != DreamToolExecutor.sourceId ||
+      if (ruleVersion != DreamResultContextExecutor.ruleVersion ||
+          ref.sourceId != DreamToolExecutor.sourceId ||
           sourceIds.length != 1 ||
           sourceIds.single != DreamToolExecutor.sourceId ||
           inputValue is! Map ||
