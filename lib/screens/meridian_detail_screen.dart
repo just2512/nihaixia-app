@@ -4,10 +4,58 @@ import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import '../engine/diagnostic_rules.dart';
 import '../data/formula_repository.dart';
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import 'assistant_tool_router.dart' show AssistantMode;
+import '../widgets/contextual_ai_sheet.dart';
 import '../widgets/meridian_icons.dart';
 import '../theme/app_colors.dart';
 import 'formula_detail_screen.dart';
-import 'local_ai_interview_screen.dart';
+
+Future<void> _askAiAboutMeridian(
+  BuildContext context,
+  String meridian,
+) async {
+  late final AiContextRef contextRef;
+  try {
+    contextRef = AiContextResolver.buildMeridianContextRef(
+      meridian: meridian,
+    );
+  } catch (_) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('当前六经详情无法建立可信上下文，已取消提问（UNKNOWN）。'),
+      ),
+    );
+    return;
+  }
+
+  final resolution =
+      AiContextResolver.resolveMeridianKnowledgeEntry(ref: contextRef);
+  final entry = resolution.value;
+  if (!resolution.isResolved || entry == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '六经详情上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+        ),
+      ),
+    );
+    return;
+  }
+
+  await showContextualAiSheet(
+    context: context,
+    contextRef: contextRef,
+    initialPrompt: AiContextPromptBuilder.buildMeridianKnowledgeEntry(
+      entry: entry,
+    ),
+    initialMode: AssistantMode.learning,
+    contextualTitle: contextRef.title ?? '$meridian病',
+    contextualExplanationOnly: true,
+  );
+}
 
 class MeridianDetailScreen extends StatelessWidget {
   final String meridian;
@@ -35,18 +83,7 @@ class MeridianDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                FoldAwareMaterialPageRoute(
-                  sourceContext: context,
-                  builder: (_) => LocalAiInterviewScreen(
-                    initialPrompt:
-                        '请介绍一下$meridian病的核心脉证、传变规律与经典条文；区分 App 整理内容和已核验原文，缺少版本、卷页或原文出处时明确标记 MISSING。',
-                  ),
-                ),
-              );
-            },
+            onPressed: () => _askAiAboutMeridian(context, meridian),
             tooltip: '在统一助手中继续',
           ),
         ],
