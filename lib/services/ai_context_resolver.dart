@@ -3391,6 +3391,7 @@ class AiContextResolver {
   ) {
     return <String, Object?>{
       'capabilityId': acupointModuleId,
+      'input': <String, Object?>{'entryId': point.name},
       'resultSchemaVersion': _acupointResultSchemaVersion,
       'ruleVersion': acupointAssetVersion,
       'sourceId': 'assets/data/acupoints.json#${point.name}',
