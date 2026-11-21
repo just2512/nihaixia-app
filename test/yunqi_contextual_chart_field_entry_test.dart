@@ -251,24 +251,20 @@ void main() {
       await tester.pumpAndSettle();
 
       final pageList = tester.widget<ListView>(
-        find.descendant(
-          of: find.byType(YunQiScreen),
-          matching: find.byType(ListView),
-        ).first,
+        find.byKey(const ValueKey('yunqi-page-scroll')),
       );
       final pageController = pageList.controller!;
       final pagePosition = pageController.position;
+      final tabBar = find.byKey(const ValueKey('yunqi-chart-tabs'));
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
-        if (pagePosition.pixels > pagePosition.minScrollExtent) {
-          pageController.jumpTo(pagePosition.minScrollExtent);
-          await tester.pumpAndSettle();
-        }
+        await tester.ensureVisible(tabBar);
+        await tester.pumpAndSettle();
         final tab = find.text(tabLabels[tabIndex]).first;
         expect(
           tab.hitTestable(),
           findsOneWidget,
-          reason: 'The page ListView must expose ${tabLabels[tabIndex]} before tapping it.',
+          reason: 'The keyed YunQi TabBar must be visible before tapping ${tabLabels[tabIndex]}.',
         );
         await tester.tap(tab);
         await tester.pumpAndSettle();
@@ -276,12 +272,7 @@ void main() {
         final ask = find.byKey(const ValueKey('yunqi-chart-field-ask'));
         await tester.ensureVisible(ask);
         await tester.pumpAndSettle();
-        final scrollable = find.descendant(
-          of: find.byType(YunQiScreen),
-          matching: find.byType(Scrollable),
-        ).first;
-        final position = tester.state<ScrollableState>(scrollable).position;
-        final beforeOpen = position.pixels;
+        final beforeOpen = pagePosition.pixels;
 
         await tester.tap(ask);
         await tester.pump();
@@ -309,7 +300,7 @@ void main() {
         await tester.pump();
 
         expect(find.byType(YunQiScreen), findsOneWidget);
-        expect(position.pixels, closeTo(beforeOpen, 0.5));
+        expect(pagePosition.pixels, closeTo(beforeOpen, 0.5));
         expect(tester.takeException(), isNull);
       }
       await tester.pumpWidget(const SizedBox.shrink());
