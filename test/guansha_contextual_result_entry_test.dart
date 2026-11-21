@@ -257,6 +257,12 @@ void main() {
       expect(ask, findsNothing);
 
       final locationRow = find.byType(BaZiLocationRow);
+      final calculationScrollable = find
+          .ancestor(
+            of: locationRow,
+            matching: find.byType(Scrollable),
+          )
+          .first;
       await tester.ensureVisible(locationRow);
       await tester.tap(locationRow);
       await tester.pumpAndSettle();
@@ -270,7 +276,11 @@ void main() {
       await tester.tap(calculate);
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(ask);
+      await tester.scrollUntilVisible(
+        ask,
+        180,
+        scrollable: calculationScrollable,
+      );
       expect(ask, findsOneWidget);
       expect(find.text('将本次关煞结果带回助手对话'), findsOneWidget);
       final askButton = tester.widget<FilledButton>(
