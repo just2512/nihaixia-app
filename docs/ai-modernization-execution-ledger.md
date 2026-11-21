@@ -3164,9 +3164,10 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 - 初始 head `6732c78d91785fe7d78b241f819fbe857f9ad752` 的 Fork license boundary SUCCESS、Android arm64 SUCCESS；Flutter 全量回归为 1852 passed / 1 failed / 15 skipped。
 - 唯一失败定位为新增 Widget 测试在图表 Tab 尚未进入视口时，对 `find.text(...).first` 调用 hit-test，触发 `StateError: Bad state: No element`。失败来自测试 Finder 的空集合处理，不是产品逻辑；没有删除测试或降低断言。
-- 已提交修复 `ef6f83abee99ac665d5620986c8ab54a84c97023`：去除对可能尚未进入视口的文本 Finder 的 `.first` 强制取值，保留滚动至可见后再 hit-test 的断言。
-- 修复后 head 的 Fork license boundary run `44898320556` SUCCESS。Flutter tests run `44898320557` 正在执行；截至本节记录时，Dart/Flutter 静态分析、local AI contract tests、recorder retry、native status-unknown、post-send native status readback 等步骤 SUCCESS，完整回归尚未取得终态。Android arm64 对此最终 head 尚未取得终态。
-- 必须等待最终 head `ef6f83a` 的 Flutter regression 与 Android arm64 均 SUCCESS 后，才可合并 PR #375；条件性 SKIPPED 不计 PASS。合并后另行核验 master post-merge Flutter tests 与 Flutter Quality Gate 终态，不以 PR head 结果替代。
+- 第一轮修复提交 `ef6f83abee99ac665d5620986c8ab54a84c97023` 去除了视口外 Finder 的 `.first` 强制取值；该 head 的全量回归仍失败，原因是测试选取了 TabBar 内部 Scrollable，未实际滚动外层页面。
+- 第二轮修复提交 `ee728b9cb6658c02cf4dcd3447bc49c9f69a3b77` 改为直接使用 YunQi 页面 ListView 的 pageController 滚动，再从带稳定 key 的 TabBar 内定位当前标签并 hit-test；不再猜测页面中的第一个 Scrollable。
+- 最新 head 的 Fork license boundary run `44899694660` SUCCESS；Flutter tests run `44899694651` 正在执行 `Run full regression suite`，终态尚未取得；Android arm64 job 尚未触发，等待 Flutter job 终态。
+- 必须等待最终 head `ee728b9` 的 Flutter regression 与 Android arm64 均 SUCCESS 后，才可合并 PR #375；条件性 SKIPPED 不计 PASS。合并后另行核验 master post-merge Flutter tests 与 Flutter Quality Gate 终态，不以 PR head 结果替代。
 - Find N2 外屏/内屏/半折叠、键盘、分屏，以及本地 E4B 多轮/Native 状态/历史恢复/完整 TRACE 继续标记 `UNKNOWN / LOCAL ONLY`，集中留到云端切片全部收尾后的最终本地验收；不阻止本节所列云端工作。
 
 ### 62.4 后续执行顺序
