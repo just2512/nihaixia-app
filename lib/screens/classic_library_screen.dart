@@ -25,6 +25,9 @@ class ClassicLibraryScreen extends StatefulWidget {
   /// 副标题，默认不显示。
   final String Function(int seq)? seqSubtitle;
 
+  /// Enables passage-level Ask AI for this library's stable local source group.
+  final String? contextualAskModuleId;
+
   const ClassicLibraryScreen({
     super.key,
     required this.title,
@@ -33,6 +36,7 @@ class ClassicLibraryScreen extends StatefulWidget {
     this.footer,
     this.seqLabel,
     this.seqSubtitle,
+    this.contextualAskModuleId,
   });
 
   @override
@@ -181,18 +185,19 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                             asset: lecture.asset,
                             footer: widget.footer,
                             linkFormulas: true,
-                            contextualAskModuleId:
-                                lecture.asset == 'assets/shanghan/clause_001.md'
-                                    ? 'shanghan'
-                                    : null,
+                            contextualAskModuleId: widget.contextualAskModuleId,
                             contextualAskAnchorId:
-                                lecture.asset == 'assets/shanghan/clause_001.md'
-                                    ? 'shanghan:clause:002'
-                                    : null,
-                            contextualAskSourceId:
-                                lecture.asset == 'assets/shanghan/clause_001.md'
-                                    ? lecture.asset
-                                    : null,
+                                widget.contextualAskModuleId == null
+                                    ? null
+                                    : widget.contextualAskModuleId == 'shanghan' &&
+                                            lecture.asset == 'assets/shanghan/clause_001.md'
+                                        ? 'shanghan:clause:002'
+                                        : widget.contextualAskModuleId! +
+                                            ':passage:' +
+                                            lecture.asset,
+                            contextualAskSourceId: widget.contextualAskModuleId == null
+                                ? null
+                                : lecture.asset,
                           ),
                         ),
                       );
