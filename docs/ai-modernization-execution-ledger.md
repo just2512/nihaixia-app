@@ -3227,3 +3227,42 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - **历史扫描范围：** 情境初始化最多检查最近 500 条会话。超过范围的旧会话可能不被复用，但系统会创建新会话并保留正确锚点，不会回退为跨快照复用；这是检索范围边界，不是来源隔离缺陷。
 
 **审计结论：** 按当前 master 代码和自动化测试目录，协议 §12.3 的同锚点复用、锚点隔离、metadata 可追溯、token UNKNOWN、折叠窗口自动化，以及 §8 的 AI / 非 AI 数据清理边界均有实现与测试覆盖。本轮没有证据支持新增第二套会话协调器、数据库表或重复页面入口。PR #375 的专项三图 Widget 测试及最终 HEAD CI 仍是当前云端剩余门禁；Find N2 实机折叠/键盘行为与本地 E4B 多轮、Native 状态和 TRACE 保持 `UNKNOWN / LOCAL ONLY`。
+
+
+### 62.7 2026-11-21 云端验收收口（以本节状态覆盖旧记录）
+
+本节以 GitHub 实际合并提交与对应 HEAD 的 Actions 结果为准。旧小节中标注为“等待 CI/待合并”的历史状态，不再代表当前状态。
+
+#### 已合并并完成云端验收
+
+| PR | 合并提交 | 对应 PR HEAD | Fork 许可门禁 | Flutter 全量回归 | Android arm64 |
+|---|---|---|---|---|---|
+| #375 | `6114ff22babe188b6ef82a1dbf9974d5be44620a` | 合并前 PR HEAD | `44903981710` PASS | `44903981702` PASS：1,853 passed / 15 skipped | `136847295993` PASS；APK SHA-256 `2d1ed03d6f6ed50a0a0e660a2e83ddff16a5a3976af40d87273f3e394e5b8473` |
+| #384 | `f9b0a0da7ee1a7a40976f018d8947584f27061d8` | `8b82e112e843744b3ff78271eee2610aacb1a901` | `44910820792` PASS | `44910820797` PASS：1,858 passed / 15 skipped | `136868069766` PASS |
+| #385 | `7cf512b8c159f48112564b2135b67e90638bacc7` | `19df99bfd9d26bf9ea027584b812693bc16df17b` | `44910237264` PASS | `44910237183` PASS：1,858 passed / 15 skipped | `136866873368` PASS；仅包含 `arm64-v8a`；原生单测 87 passed / 0 failed / 0 errors；APK SHA-256 `5bceb2cba50641ca3488ef4c3d2ffa00ed900d5bb3bf692673f3e394e5b8473e` |
+
+#384 提供经典 Markdown 引用块的 passage 级情境入口；#385 提供穴位知识详情的情境入口，并补齐快照输入字段及 SQLite 测试隔离。两项都已进入当前主线。
+
+#### 主线合并后验收
+
+基线提交：`7cf512b8c159f48112564b2135b67e90638bacc7`。
+
+- Fork 许可门禁：`44912225587` PASS。
+- Flutter 全量回归：`44912225598` PASS，1,860 passed / 15 skipped。
+- Android arm64 构建与校验：同一 Flutter workflow 的 arm64 job `136872261005` PASS。
+- Flutter Quality Gate：`44912225599` 首次因 Maven Central HTTP 429 依赖限流失败；仅重跑失败 job（attempt 2），未更改依赖版本或降低门禁。重跑最终状态应以 Actions run 的最终 conclusion 为准；本节写入时仍在执行。
+
+#### PR #386：内经与本草讲稿正文段落入口
+
+- 分支：`feat/ai-neijing-bencao-paragraph-context-2026-11-21`。
+- 当前记录 HEAD：`63bdbe608f3f9b9c69d83a5200f19847a9655d56`。
+- 目标：补足现有结构化内经/本草条目与完整讲稿正文之间的覆盖缺口；对纯正文段落提供来源可追溯的上下文选择，不改变既有 Markdown 引用块默认路径。
+- 已加入段落解析和 fail-closed 规则：只允许普通正文段落；排除 ATX/Setext 标题、列表、引用块、表格、代码围栏、HTML、图片、链接定义、数学块等结构；以原 Markdown 的 1-based 起止行生成稳定 anchor，并绑定模块 ID 与本地 asset sourceId；正文边界无法映射或来源身份缺失时不开放情境入口。
+- 已增加正常段落、重复相同文本段落、跨段落隔离、结构块排除、内经/本草页面来源传递及来源缺失回归测试。
+- 当前 HEAD 的 Fork 许可门禁：`44914041549` PASS。
+- 当前 HEAD 的 Flutter 全量回归：`44914041606`；本节记录时为 IN_PROGRESS，未形成 PASS 结论。全量回归 PASS 后还必须完成对应 Android arm64 构建校验，才能进入合并。
+- PR #386 未合并前，不得把上述段落入口标记为主线已交付。
+
+#### 本地设备验收边界
+
+云端验收不等待 Find N2 真机。剩余本地项仅包括：安装/覆盖升级、内外屏及半折叠布局、实际划词与系统文本菜单、从内经/本草/经典/穴位页面打开情境 AI、E4B 多轮 TRACE 与真实本地模型输出。所有未在实体设备执行的项目保持 `PENDING_LOCAL`，不得写成 PASS；这些项目不阻断本节所列云端代码、测试、许可及构建收尾。
