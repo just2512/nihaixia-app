@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/ai_context_ref.dart';
@@ -753,7 +755,7 @@ class _ChartsTabsState extends State<_ChartsTabs>
                     2 => 'chart.liuqi',
                     _ => null,
                   };
-                  if (fieldPath != null) widget.onAskField(fieldPath);
+                  if (fieldPath != null) unawaited(widget.onAskField(fieldPath));
                 },
                 icon: const Icon(Icons.auto_awesome, size: 18),
                 label: const Text('问 AI 解读当前图'),
