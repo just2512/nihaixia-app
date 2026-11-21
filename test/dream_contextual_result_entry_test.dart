@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:nihaisha_app/data/dream_data.dart';
+import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/dream_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
