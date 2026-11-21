@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The Guansha integration was merged to master at 05e8f1e40023f589ff72bc1de3165214644b7ebc; the Dream contextual-entry branch is based on that exact master HEAD. The prior Dream executor draft is used only as a reviewed implementation reference, not as branch ancestry. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. PR #373 (Guansha) and PR #374 (Dream) are merged to master; this YunQi chart-field contextual slice is based on current master 86dbac6c3714f593cffdb31400a25d74e581f8e7. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 862,
-    "added": 707,
+    "changed": 863,
+    "added": 708,
     "modified": 155,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 149,
-      "FORK_COMMERCIAL": 348,
+      "FORK_COMMERCIAL": 349,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -6594,6 +6594,14 @@
     },
     {
       "path": "test/yunqi_charts_contrast_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/yunqi_contextual_chart_field_entry_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",

@@ -1719,6 +1719,361 @@ class AiContextResolver {
     }
   }
 
+
+  static const _yunqiChartFieldTitles = <String, String>{
+    'chart.wuxing': '运气五行图',
+    'chart.wuyun': '五运图',
+    'chart.liuqi': '六气图',
+  };
+
+  static const _yunqiChartFieldPaths = <String>{
+    'chart.wuxing',
+    'chart.wuyun',
+    'chart.liuqi',
+  };
+
+  static AiContextRef buildYunqiChartFieldContextRef({
+    required Map<String, Object?> structuredSnapshot,
+    required String fieldPath,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final result = structuredSnapshot['result'];
+    final annualData = result is Map ? result['annualData'] : null;
+    final selectedDateContext =
+        result is Map ? result['selectedDateContext'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ruleVersion != YunQiToolExecutor.ruleVersion ||
+        structuredSnapshot['capabilityId'] != yunqiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YunQiToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['date'] is! String ||
+        sourceIds is! List ||
+        !sourceIds.contains(YunQiToolExecutor.sourceId) ||
+        annualData is! Map ||
+        selectedDateContext is! Map ||
+        !_yunqiChartFieldPaths.contains(fieldPath) ||
+        _yunqiChartFieldValue(
+              fieldPath: fieldPath,
+              annualData: annualData,
+              selectedDateContext: selectedDateContext,
+            ) ==
+            null ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A YunQi chart field reference requires a complete successful annual snapshot and an allowlisted chart path.',
+      );
+    }
+
+    final date = input['date'] as String;
+    return AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: yunqiModuleId,
+      anchorId: 'yunqi:result:' +
+          snapshotId +
+          ':date=' +
+          date +
+          ':field:' +
+          fieldPath,
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ruleVersion as String,
+      sourceId: YunQiToolExecutor.sourceId,
+      fieldPath: fieldPath,
+      title: _yunqiChartFieldTitles[fieldPath],
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolField> resolveYunqiChartField({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != yunqiModuleId ||
+        ref.sourceId != YunQiToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi chart field reference is incomplete or does not identify the local YunQi engine.',
+      );
+    }
+    if (ref.ruleVersion != YunQiToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The YunQi engine or literature version no longer matches this chart field.',
+      );
+    }
+
+    final fieldPath = ref.fieldPath;
+    final snapshotId = ref.snapshotId;
+    if (fieldPath == null ||
+        !_yunqiChartFieldPaths.contains(fieldPath) ||
+        snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        ref.anchorId !=
+            'yunqi:result:' +
+                snapshotId +
+                ':date=' +
+                ((structuredSnapshot['input'] is Map)
+                    ? ((structuredSnapshot['input'] as Map)['date']?.toString() ?? '')
+                    : '') +
+                ':field:' +
+                fieldPath ||
+        ref.title != _yunqiChartFieldTitles[fieldPath]) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The YunQi chart field path, title, anchor and immutable snapshot identity do not agree.',
+      );
+    }
+
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] != yunqiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YunQiToolExecutor.resultSchemaVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['ruleVersion'] != YunQiToolExecutor.ruleVersion ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied YunQi annual snapshot is stale, incomplete or has been modified.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final result = structuredSnapshot['result'];
+    final annualData = result is Map ? result['annualData'] : null;
+    final selectedDateContext =
+        result is Map ? result['selectedDateContext'] : null;
+    if (input is! Map ||
+        input['date'] is! String ||
+        result is! Map ||
+        annualData is! Map ||
+        selectedDateContext is! Map ||
+        sourceIds is! List ||
+        !sourceIds.contains(YunQiToolExecutor.sourceId)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The verified YunQi snapshot does not contain the required chart data or source.',
+      );
+    }
+
+    final parentRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: yunqiModuleId,
+      anchorId: 'yunqi:result:' +
+          snapshotId +
+          ':date=' +
+          (input['date'] as String),
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: ref.sourceId,
+      title: '五运六气年度推算结果（' + (input['date'] as String) + '）',
+    );
+    final parentResolution = resolveYunqiToolResult(ref: parentRef);
+    final parent = parentResolution.value;
+    if (!parentResolution.isResolved || parent == null) {
+      return AiContextResolution(
+        status: parentResolution.status,
+        reason: parentResolution.reason,
+      );
+    }
+    if (parent.structuredSnapshot['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The locally reconstructed YunQi annual result no longer matches this chart field snapshot.',
+      );
+    }
+
+    final verifiedResult = parent.structuredSnapshot['result'];
+    final verifiedAnnualData =
+        verifiedResult is Map ? verifiedResult['annualData'] : null;
+    final verifiedSelectedDateContext =
+        verifiedResult is Map ? verifiedResult['selectedDateContext'] : null;
+    if (verifiedAnnualData is! Map ||
+        verifiedSelectedDateContext is! Map) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The reconstructed YunQi result does not contain its annual chart data.',
+      );
+    }
+    final fieldValue = _yunqiChartFieldValue(
+      fieldPath: fieldPath,
+      annualData: verifiedAnnualData,
+      selectedDateContext: verifiedSelectedDateContext,
+    );
+    if (fieldValue == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested YunQi chart group is missing from the verified annual result.',
+      );
+    }
+
+    final fieldScope = Map<String, Object?>.unmodifiable({
+      'year': verifiedAnnualData['year'] ?? 'MISSING',
+      'ganZhi': verifiedAnnualData['ganZhi'] ?? 'MISSING',
+      'calendarYear': verifiedSelectedDateContext['calendarYear'] ?? 'MISSING',
+      'selectedDate': verifiedSelectedDateContext['date'] ?? 'MISSING',
+      'yearConvention': '当前 App 页面采用公历年口径',
+    });
+    final fieldUnit = switch (fieldPath) {
+      'chart.wuxing' => '五行关系与运气结构图数据；按 App 快照原值解释',
+      'chart.wuyun' => '五运主运/客运五步结构；步骤索引从 0 开始',
+      'chart.liuqi' => '六气主气/客气六步与主客加临关系；步骤索引从 0 开始',
+      _ => 'MISSING',
+    };
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: _yunqiChartFieldTitles[fieldPath]!,
+        fieldScope: fieldScope,
+        fieldValue: [
+          Map<String, Object?>.unmodifiable({
+            'fieldPath': fieldPath,
+            'value': fieldValue,
+            'unit': fieldUnit,
+          }),
+        ],
+        fieldUnit: fieldUnit,
+        structuredSnapshot: parent.structuredSnapshot,
+      ),
+    );
+  }
+
+  static Map<String, Object?>? _yunqiChartFieldValue({
+    required String fieldPath,
+    required Map annualData,
+    required Map selectedDateContext,
+  }) {
+    final mainYun = annualData['mainYun'];
+    final guestYun = annualData['guestYun'];
+    final mainQi = annualData['mainQi'];
+    final guestQi = annualData['guestQi'];
+    final relations = annualData['hostGuestRelations'];
+    switch (fieldPath) {
+      case 'chart.wuxing':
+        final yearProperties = <String, Object?>{
+          'yun': annualData['yun'],
+          'taiGuo': annualData['taiGuo'],
+          'siTian': annualData['siTian'],
+          'siTianWx': annualData['siTianWx'],
+          'zaiQuan': annualData['zaiQuan'],
+          'shengXiao': annualData['shengXiao'],
+        };
+        final selectedMainYun = selectedDateContext['mainYun'];
+        final selectedGuestYun = selectedDateContext['guestYun'];
+        final selectedMainQi = selectedDateContext['mainQi'];
+        final selectedGuestQi = selectedDateContext['guestQi'];
+        if (yearProperties.values.any((value) => value == null) ||
+            mainYun is! List ||
+            mainYun.length != 5 ||
+            guestYun is! List ||
+            guestYun.length != 5 ||
+            mainQi is! List ||
+            mainQi.length != 6 ||
+            guestQi is! List ||
+            guestQi.length != 6 ||
+            relations is! List ||
+            relations.length != 6 ||
+            selectedDateContext['yunStepIndex'] is! int ||
+            selectedDateContext['qiStepIndex'] is! int ||
+            selectedMainYun is! Map ||
+            selectedGuestYun is! Map ||
+            selectedMainQi is! Map ||
+            selectedGuestQi is! String) {
+          return null;
+        }
+        return <String, Object?>{
+          'yearProperties': yearProperties,
+          'mainYun': mainYun,
+          'guestYun': guestYun,
+          'mainQi': mainQi,
+          'guestQi': guestQi,
+          'hostGuestRelations': relations,
+          'selectedStep': {
+            'yunStepIndex': selectedDateContext['yunStepIndex'],
+            'qiStepIndex': selectedDateContext['qiStepIndex'],
+            'mainYun': selectedMainYun,
+            'guestYun': selectedGuestYun,
+            'mainQi': selectedMainQi,
+            'guestQi': selectedGuestQi,
+          },
+        };
+      case 'chart.wuyun':
+        final yunStep = selectedDateContext['yunStepIndex'];
+        final selectedMainYun = selectedDateContext['mainYun'];
+        final selectedGuestYun = selectedDateContext['guestYun'];
+        final yunBounds = selectedDateContext['yunStepBounds'];
+        if (mainYun is! List ||
+            mainYun.length != 5 ||
+            guestYun is! List ||
+            guestYun.length != 5 ||
+            yunStep is! int ||
+            yunStep < 0 ||
+            yunStep >= 5 ||
+            selectedMainYun is! Map ||
+            selectedGuestYun is! Map ||
+            yunBounds is! List ||
+            yunBounds.length != 5) {
+          return null;
+        }
+        return <String, Object?>{
+          'mainYun': mainYun,
+          'guestYun': guestYun,
+          'selectedStep': {
+            'index': yunStep,
+            'mainYun': selectedMainYun,
+            'guestYun': selectedGuestYun,
+            'bounds': yunBounds,
+          },
+        };
+      case 'chart.liuqi':
+        final qiStep = selectedDateContext['qiStepIndex'];
+        final selectedMainQi = selectedDateContext['mainQi'];
+        final selectedGuestQi = selectedDateContext['guestQi'];
+        final qiBounds = selectedDateContext['qiStepBounds'];
+        if (mainQi is! List ||
+            mainQi.length != 6 ||
+            guestQi is! List ||
+            guestQi.length != 6 ||
+            relations is! List ||
+            relations.length != 6 ||
+            qiStep is! int ||
+            qiStep < 0 ||
+            qiStep >= 6 ||
+            selectedMainQi is! Map ||
+            selectedGuestQi is! String ||
+            qiBounds is! List ||
+            qiBounds.length != 6) {
+          return null;
+        }
+        return <String, Object?>{
+          'mainQi': mainQi,
+          'guestQi': guestQi,
+          'hostGuestRelations': relations,
+          'selectedStep': {
+            'index': qiStep,
+            'mainQi': selectedMainQi,
+            'guestQi': selectedGuestQi,
+            'bounds': qiBounds,
+          },
+        };
+      default:
+        return null;
+    }
+  }
+
   static const yijingModuleId = 'yijing';
 
   static AiContextRef buildYiJingResultContextRef({
