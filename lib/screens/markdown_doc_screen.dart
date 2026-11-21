@@ -325,9 +325,11 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           return false;
         }
       }
-      if (blockLines.length > 1 &&
-          RegExp(r'^\s*=+\s*        return false;
-      }
+      final trailingHeadingLine = blockLines.last.trim();
+      final isSetextHeading = blockLines.length > 1 &&
+          trailingHeadingLine.isNotEmpty &&
+          trailingHeadingLine.codeUnits.every((unit) => unit == 0x3D);
+      if (isSetextHeading) return false;
       return blockLines.join('\n').trim().isNotEmpty;
     }
 
