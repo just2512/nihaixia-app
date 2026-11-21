@@ -1,6 +1,6 @@
 # Fork 修改文件全量清单
 
-共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单纳入 PR #373（小儿关煞）和 PR #374（周公解梦）合并后的 master `86dbac6c3714f593cffdb31400a25d74e581f8e7` 及当前五运六气图表字段切片。CI 对实际 PR HEAD 重新计算路径与 Git 状态；机器可读清单的 comparison_head 使用运行时标记。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单纳入 PR #373（小儿关煞）和 PR #374（周公解梦）合并后的 master `86dbac6c3714f593cffdb31400a25d74e581f8e7` 及当前五运六气图表字段切片；子午流注四种方法字段切片基于 PR #375 候选提交 6732c78d91785fe7d78b241f819fbe857f9ad752。CI 对实际 PR HEAD 重新计算路径与 Git 状态；机器可读清单的 comparison_head 使用运行时标记。
 
 ## 分类规则
 
@@ -857,6 +857,7 @@
 | test/ziwei_tool_executor_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_assistant_handoff_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_calculation_service_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/ziwuliuzhu_contextual_method_field_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_contextual_result_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_nazi_benxue_test.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_tool_executor_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
