@@ -263,8 +263,10 @@ void main() {
       ).first;
       await tester.scrollUntilVisible(
         ask,
-        500,
+        600,
         scrollable: scrollable,
+        maxScrolls: 250,
+        duration: const Duration(milliseconds: 10),
       );
       await tester.pumpAndSettle();
       final position = tester.state<ScrollableState>(scrollable).position;
