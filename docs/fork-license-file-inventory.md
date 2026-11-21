@@ -1,6 +1,6 @@
 # Fork 修改文件全量清单
 
-共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单纳入最新 master 79e69c73928ae82b3b45913de92746c140962d9f 与 PR #332 许可修改。CI 对实际 PR HEAD 重新计算路径与 Git 状态；机器可读清单的 comparison_head 使用运行时标记。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单纳入当前 master 代码基线 9c91d2d84086ab74b25979a424875134405cdde2（其后 d6f6b19b85c8e12621da7f07c10600fefbb1aad6 仅追加许可关闭台账）及 PR #373 Guansha 切片。CI 对实际 PR HEAD 重新计算路径与 Git 状态；机器可读清单的 comparison_head 使用运行时标记。
 
 ## 分类规则
 
@@ -873,6 +873,8 @@
 | zhenjiu_audit_report.md | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | zweiwei_doushu_integration_assessment.md | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | 企划书_研纪_v2.0.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/services/guansha_result_context_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/guansha_contextual_result_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 ## 删除路径
 
 - .github/scripts/gitee_release.py
@@ -891,8 +893,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 858 个（新增 703，修改 155）；删除路径 13 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 149；Fork 商业授权候选 344；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 860 个（新增 705，修改 155）；删除路径 13 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 149；Fork 商业授权候选 346；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
