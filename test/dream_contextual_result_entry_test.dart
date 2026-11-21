@@ -177,7 +177,9 @@ void main() {
     expect(find.text('梦见考试不及格'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('ask-dream-ai-action_028')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
 
     final ai = tester.widget<LocalAiInterviewScreen>(
       find.byType(LocalAiInterviewScreen),
@@ -232,7 +234,9 @@ void main() {
       expect(beforeOpen, greaterThan(0));
 
       await tester.tap(ask);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
       expect(find.byType(LocalAiInterviewScreen), findsOneWidget);
 
       Navigator.of(
