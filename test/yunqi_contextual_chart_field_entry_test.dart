@@ -255,21 +255,28 @@ void main() {
       );
       final pageController = pageList.controller!;
       final pagePosition = pageController.position;
-      final pageScrollable = find
-          .descendant(
-            of: find.byType(YunQiScreen),
-            matching: find.byType(Scrollable),
-          )
-          .first;
+      final tabBar = find.byKey(const ValueKey('yunqi-chart-tabs'));
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
-        final tab = find.text(tabLabels[tabIndex]);
-        var revealAttempts = 0;
-        while (tab.hitTestable().evaluate().isEmpty && revealAttempts < 80) {
-          await tester.drag(pageScrollable, const Offset(0, -220));
-          await tester.pumpAndSettle();
-          revealAttempts++;
-        }
+        // Scroll the owning page ListView directly. The TabBar also contains
+        // an internal horizontal Scrollable; selecting the first descendant
+        // Scrollable can accidentally drag that child instead of the page.
+        await pageController.animateTo(
+          pagePosition.maxScrollExtent,
+          duration: const Duration(milliseconds: 1),
+          curve: Curves.linear,
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(tabBar);
+        await tester.pumpAndSettle();
+
+        final tab = find.descendant(
+          of: tabBar,
+          matching: find.text(tabLabels[tabIndex]),
+        );
+        expect(tab, findsOneWidget);
+        await tester.ensureVisible(tab);
+        await tester.pumpAndSettle();
         expect(
           tab.hitTestable(),
           findsOneWidget,
