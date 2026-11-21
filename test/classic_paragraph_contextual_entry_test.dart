@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/bencao_library_screen.dart';
+import 'package:nihaisha_app/screens/classic_library_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/screens/neijing_library_screen.dart';
@@ -159,7 +160,15 @@ $second
       await tester.pumpAndSettle();
 
       final neijingEntry = find.text('上古天真论');
-      await tester.ensureVisible(neijingEntry);
+      await tester.scrollUntilVisible(
+        neijingEntry,
+        240,
+        scrollable: find.descendant(
+          of: find.byType(ClassicLibraryScreen),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
+      expect(neijingEntry, findsOneWidget);
       await tester.tap(neijingEntry);
       // The reader keeps an indeterminate loading animation alive; advance the
       // route transition and asset load without waiting for global settlement.
@@ -184,7 +193,15 @@ $second
       await tester.pump(const Duration(milliseconds: 100));
 
       final bencaoEntry = find.text('上经·人参');
-      await tester.ensureVisible(bencaoEntry);
+      await tester.scrollUntilVisible(
+        bencaoEntry,
+        240,
+        scrollable: find.descendant(
+          of: find.byType(ClassicLibraryScreen),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
+      expect(bencaoEntry, findsOneWidget);
       await tester.tap(bencaoEntry);
       // Match the Neijing route's bounded transition/asset-load pumping.
       await tester.pump(const Duration(milliseconds: 400));
