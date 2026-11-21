@@ -26,17 +26,18 @@
 
 ## 仓库公开信息
 
-GitHub About/Description 建议设置为：
+GitHub About/Description 使用以下描述：
 
 > 研纪：中医诊疗全过程辅助学习工具，离线优先，提供中医经典、方剂、本草、针灸、医案研习与本地 AI 辅助理解。
 
 仓库 slug 与 package id 可继续保留旧技术标识；不得把它们当作对外应用名称。
 
-### GitHub 仓库 Settings 元数据（需仓库管理员手动更新）
+### GitHub 仓库 Settings 元数据（已完成，2026-11-21 复核）
 
-- 当前仓库 About/Description 仍保留更名前的旧产品描述，应替换为上面的建议描述。
-- 当前 Homepage 字段仍指向原作者的上游 GitHub Pages 站点，不应继续作为本 Fork 的官方网站入口。待确认本仓库 GitHub Pages 的实际部署 URL 后再填入；在确认前应清空该字段，不要猜测网址。
-- 本次代码 PR 不会修改仓库 Description/Homepage：GitHub 连接仅提供这些元数据的读取能力，没有仓库设置写入操作。
+- **Description 已设置为上面的建议描述。** 通过 GitHub 仓库元数据接口实时读取，字段值与建议描述完全一致。
+- **Homepage 已清空原上游 GitHub Pages 地址。** 本仓库当前 GitHub Pages 未启用（仓库元数据 `has_pages=false`），因此保持空白，不填写未经部署验证的网址。
+- 以上状态以 2026-11-21 的仓库元数据复核结果为准。后续若启用本仓库 Pages，应先确认实际部署 URL，再更新 Homepage。
+- GitHub About/Description 与 Homepage 属于仓库 Settings 元数据，不随普通代码提交自动变化；代码文档记录当前状态，仓库元数据本身以 GitHub 设置为准。
 
 ## 自动化验收
 
