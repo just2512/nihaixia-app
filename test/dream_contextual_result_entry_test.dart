@@ -106,6 +106,24 @@ void main() {
     expect(prompt, contains('不是科学结论、现实事件预测或必然结果'));
     expect(prompt, contains('本次快照不包含用户自由梦境描述或搜索输入'));
     expect(prompt, contains('不得从词条推断用户的心理状态'));
+
+    final wrongSourceRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ref.moduleId,
+      anchorId: ref.anchorId,
+      anchorVersion: ref.anchorVersion,
+      snapshotId: ref.snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: 'unverified:dream',
+      title: ref.title,
+    );
+    expect(
+      () => AiContextPromptBuilder.buildToolResult(
+        ref: wrongSourceRef,
+        structuredSnapshot: snapshot,
+      ),
+      throwsArgumentError,
+    );
   });
 
   test('快照篡改和规则版本变化均拒绝解析', () async {
