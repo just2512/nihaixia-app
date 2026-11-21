@@ -3136,3 +3136,43 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - **权属与来源待办仍须如实保留：** `OWNERSHIP_EVIDENCE_REQUIRED` 493 项尚待版权/职务作品/有效再许可权证据；`SOURCE_LICENSE_REVIEW` 365 项尚待来源许可人工复核。CI 通过及文件分类不等于版权确权，不得对外宣称这两项已完成。
 - 仓库仍为 Public Fork；GitHub Terms D.5 的平台内 Fork 权利不受自定义 LicenseRef 撤销。本次没有执行永久 Leave network 或可见性变更。
 - **关闭结论：** PR #332 的主线同步、清单/DEP5 更新、许可原文核验、自动许可门禁、Flutter 全量回归、Android arm64 ABI 与单测、同一最终 HEAD 的三项 CI 及 GitHub 合并均已完成。后续只跟进权属证据和来源许可人工复核，不回开本 PR 的工程合并任务。
+
+
+---
+
+## 62. 2026-11-21 Phase 3 云端续接：小儿关煞、周公解梦与五运六气图表字段
+
+### 62.1 主线状态与已完成切片
+
+- 当前 master 基线：`86dbac6c3714f593cffdb31400a25d74e581f8e7`，为 PR #374 合并提交；仓库默认分支仍为 `master`。
+- PR [#373](https://github.com/just2512/nihaixia-app/pull/373)「小儿关煞结果情境入口」已合并，merge commit：`05e8f1e40023f589ff72bc1de3165214644b7ebc`；最终 PR head：`7d1ee1ac98ffef228371a01de1d956e4fdc217f6`。该 head 的 Fork license boundary run `44865376628` SUCCESS，Flutter regression run `44865376672` SUCCESS，Android arm64 verification APK + unit tests SUCCESS；条件性 Branch validation SKIPPED，不计 PASS。
+- PR [#374](https://github.com/just2512/nihaixia-app/pull/374)「周公解梦单条 DreamEntry 情境解释」已合并，merge commit：`86dbac6c3714f593cffdb31400a25d74e581f8e7`；最终 PR head：`124d6c2a549acc89160fe933fcb39917eeb7d949`。该 head 的 Fork license boundary run `44886677963` SUCCESS，Flutter regression run `44886677964` SUCCESS，Android arm64 verification APK + unit tests SUCCESS；条件性 Branch validation SKIPPED，不计 PASS。
+- Guansha 与 Dream 均已从“待实施缺口”转为主线已集成；旧台账 §59.3、§59.5、§60.3 中“下一步先 Guansha、再 Dream”的历史计划不再是当前待办，以本节和后续增量记录为准。
+- 本轮没有同步上游仓库，也没有改变 master 的 Fork 边界。
+
+### 62.2 五运六气三图字段级情境入口（PR #375）
+
+- Task ID：`CAI-YUNQI-CHART-FIELD-01`。
+- 独立分支：`feat/ai-context-yunqi-chart-field-20261121`；基线 `86dbac6c3714f593cffdb31400a25d74e581f8e7`；当前最终 head：`ef6f83abee99ac665d5620986c8ab54a84c97023`，相对 master ahead 29 / behind 0。
+- PR [#375](https://github.com/just2512/nihaixia-app/pull/375) 保持 Open，尚未合并。范围限定为五运六气页面的运气五行图、五运图、六气图三个字段入口；不修改确定性运算引擎、年度数据、图表绘制算法或既有整年结果入口。
+- 入口由当前 Tab 映射到固定白名单路径 `chart.wuxing`、`chart.wuyun`、`chart.liuqi`；单次 `YunQiToolExecutor.createStructuredSnapshot(_selectedDate)` 为引用、Resolver 与 Prompt 提供同一 snapshotId、规则版本、选中日期和本地来源。Resolver 校验成功执行状态、快照摘要、锚点、标题、来源、字段白名单，并通过现有年度结果 Resolver 本地重建；仅 RESOLVED 字段可构建 Prompt。
+- Prompt 只解释当前选中的图表字段，明确 token 数 UNKNOWN、传统理论文化属性和个体医疗边界；页面保留原整年“问 AI”与“带回助手”入口。关闭情境面板后恢复页面滚动位置。
+- 新增 `test/yunqi_contextual_chart_field_entry_test.dart`，覆盖三种字段数据、来源/标题/版本/路径/摘要负向校验、402dp 与 775dp 页面入口及滚动恢复。
+- PR 的许可库存同步到共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b`：新增/修改 863 项（新增 708、修改 155），删除 13 项；Fork 商业授权候选 349、Apache 2.0 + Fork 双层许可 149、知识库排除 364、第三方排除 1。新增测试按 `LicenseRef-Nihaixia-Fork-Commercial` 登记，权属仍为 `OWNERSHIP_EVIDENCE_REQUIRED`；不把知识库或第三方材料纳入 Fork 商业授权。
+
+### 62.3 PR #375 当前 head 自动验收
+
+- 初始 head `6732c78d91785fe7d78b241f819fbe857f9ad752` 的 Fork license boundary SUCCESS、Android arm64 SUCCESS；Flutter 全量回归为 1852 passed / 1 failed / 15 skipped。
+- 唯一失败定位为新增 Widget 测试在图表 Tab 尚未进入视口时，对 `find.text(...).first` 调用 hit-test，触发 `StateError: Bad state: No element`。失败来自测试 Finder 的空集合处理，不是产品逻辑；没有删除测试或降低断言。
+- 已提交修复 `ef6f83abee99ac665d5620986c8ab54a84c97023`：去除对可能尚未进入视口的文本 Finder 的 `.first` 强制取值，保留滚动至可见后再 hit-test 的断言。
+- 修复后 head 的 Fork license boundary run `44898320556` SUCCESS。Flutter tests run `44898320557` 正在执行；截至本节记录时，Dart/Flutter 静态分析、local AI contract tests、recorder retry、native status-unknown、post-send native status readback 等步骤 SUCCESS，完整回归尚未取得终态。Android arm64 对此最终 head 尚未取得终态。
+- 必须等待最终 head `ef6f83a` 的 Flutter regression 与 Android arm64 均 SUCCESS 后，才可合并 PR #375；条件性 SKIPPED 不计 PASS。合并后另行核验 master post-merge Flutter tests 与 Flutter Quality Gate 终态，不以 PR head 结果替代。
+- Find N2 外屏/内屏/半折叠、键盘、分屏，以及本地 E4B 多轮/Native 状态/历史恢复/完整 TRACE 继续标记 `UNKNOWN / LOCAL ONLY`，集中留到云端切片全部收尾后的最终本地验收；不阻止本节所列云端工作。
+
+### 62.4 后续执行顺序
+
+1. 完成 PR #375 最终 head 的 Flutter 全量 regression 与 Android arm64；按同一 SHA 核验 Fork license boundary；通过后普通 merge。
+2. 以合并后的最新 master 更新本台账，并核验 post-merge master Flutter tests / Flutter Quality Gate。
+3. 进行全仓库情境入口目录复核：逐页核验“真实结果/字段入口是否存在、Resolver 是否可重建、sourceId/版本是否绑定、旧会话是否锚定、负向测试和 402dp/775dp 布局是否覆盖”；只补实际缺口，不为数量新建空壳入口。
+4. 对协议 §12 共通场景与 §8 数据生命周期做云端测试覆盖审计，特别核验同锚点会话复用、切换锚点不串线、消息 metadata 可追溯、清除 AI 数据不影响非 AI 数据；只对证据确认的缺口建立独立小切片。
+5. 云端代码、自动化、文档和 CI 全部收尾后，再交付 Find N2 最终本地验收清单；真机与本地 E4B 结果不得预先标记 PASS。
