@@ -183,7 +183,7 @@ class _ContextualMarkdownPassage {
 class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
   late Future<String> _future;
   String? _rawDocumentContent;
-  String _selectedText = '';
+  final Map<int, String> _selectedTextByPassage = <int, String>{};
 
   bool get _contextualAskEnabled =>
       widget.contextualAskModuleId?.trim().isNotEmpty == true &&
@@ -332,17 +332,19 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       children.add(SelectionArea(
         onSelectionChanged: (selection) {
           final selected = selection?.plainText ?? '';
-          if (selected != _selectedText) {
-            setState(() => _selectedText = selected);
+          if (selected.isEmpty) {
+            _selectedTextByPassage.remove(passageIndex);
+          } else {
+            _selectedTextByPassage[passageIndex] = selected;
           }
         },
         contextMenuBuilder: (context, state) {
           final items = List<ContextMenuButtonItem>.of(state.contextMenuButtonItems);
-          if (_selectedText.trim().isNotEmpty) {
+          final selected = _selectedTextByPassage[passageIndex] ?? '';
+          if (selected.trim().isNotEmpty) {
             items.add(ContextMenuButtonItem(
               label: '问 AI',
               onPressed: () {
-                final selected = _selectedText;
                 state.hideToolbar();
                 _askAiAboutSelection(
                   selected,
