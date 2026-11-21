@@ -161,6 +161,8 @@ $second
       final neijingEntry = find.text('上古天真论');
       await tester.ensureVisible(neijingEntry);
       await tester.tap(neijingEntry);
+      // The reader keeps an indeterminate loading animation alive; advance the
+      // route transition and asset load without waiting for global settlement.
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -181,6 +183,7 @@ $second
       final bencaoEntry = find.text('上经·人参');
       await tester.ensureVisible(bencaoEntry);
       await tester.tap(bencaoEntry);
+      // Match the Neijing route's bounded transition/asset-load pumping.
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 300));
 
