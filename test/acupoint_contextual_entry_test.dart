@@ -196,12 +196,14 @@ void main() {
           find.byKey(const ValueKey('acupoint-detail-scroll')),
         );
         final pageController = pageList.controller!;
-        if (pageController.position.maxScrollExtent > 0) {
-          await tester.drag(
-            find.byKey(const ValueKey('acupoint-detail-scroll')),
-            const Offset(0, -360),
-          );
-          await tester.pumpAndSettle();
+        // Keep the top action visible while giving the restoration assertion
+        // a non-zero pre-open scroll position. A large drag removes this
+        // first ListView child from the lazy viewport, so it cannot be tapped.
+        final maxScrollExtent = pageController.position.maxScrollExtent;
+        final testOffset = maxScrollExtent.clamp(0.0, 16.0).toDouble();
+        if (testOffset > 0) {
+          pageController.jumpTo(testOffset);
+          await tester.pump();
         }
         final beforeOpen = pageController.position.pixels;
 
