@@ -24,6 +24,8 @@ import 'shousheng_debt_result_context_executor.dart';
 import 'shousheng_debt_tool_executor.dart';
 import 'sanshan_lingqian_result_context_executor.dart';
 import 'sanshan_lingqian_tool_executor.dart';
+import 'dosage_result_context_executor.dart';
+import 'dosage_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -1443,6 +1445,148 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: '本地签谱重建结果与原始抽签快照不一致。',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+
+  static AiContextRef buildDosageResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final result = structuredSnapshot['result'];
+    final title = result is Map ? result['title'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            DosageResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DosageResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DosageResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitUnitConversion' ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
+        arguments.values.any((value) => value is! String) ||
+        DosageToolExecutor.validateArguments(
+          arguments.cast<String, String>(),
+        ).isNotEmpty ||
+        sourceIds is! List ||
+        sourceIds.length != 2 ||
+        sourceIds[0] != DosageToolExecutor.sourceId ||
+        sourceIds[1] != DosageToolExecutor.factorsSourceId ||
+        title != '经方度量衡单位换算' ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A dosage context reference requires a complete, source-bound successful unit-conversion snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: DosageResultContextExecutor.moduleId,
+      anchorId: 'dosage:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: DosageResultContextExecutor.ruleVersion,
+      sourceId: DosageToolExecutor.sourceId,
+      title: '经方度量衡换算结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveDosageToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != DosageResultContextExecutor.moduleId ||
+        ref.sourceId != DosageToolExecutor.sourceId ||
+        ref.title != '经方度量衡换算结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '剂量单位换算引用不完整或来源不匹配。',
+      );
+    }
+    if (ref.ruleVersion != DosageResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '经方度量衡换算执行器或换算常数版本已变化。',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorId != 'dosage:result:$snapshotId' ||
+        ref.anchorVersion != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '剂量单位换算锚点与不可变快照身份不一致。',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            DosageResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DosageResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DosageResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitUnitConversion' ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
+        arguments.values.any((value) => value is! String) ||
+        sources is! List ||
+        sources.length != 2 ||
+        sources[0] != DosageToolExecutor.sourceId ||
+        sources[1] != DosageToolExecutor.factorsSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '剂量换算输入、来源或结构化摘要与不可变快照不匹配。',
+      );
+    }
+
+    final safeArguments = arguments.cast<String, String>();
+    if (DosageToolExecutor.validateArguments(safeArguments).isNotEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '剂量换算参数不在 App 当前允许范围内。',
+      );
+    }
+    final rebuilt = DosageResultContextExecutor.executeWithSnapshot(
+      arguments: safeArguments,
+    );
+    if (!rebuilt.succeeded ||
+        rebuilt.structuredSnapshot == null ||
+        rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '本地单位换算重建结果与原始快照不一致。',
       );
     }
 
