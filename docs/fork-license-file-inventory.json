@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline 80e135519d19939c3b0a921ded6db5fd0e8b4767. Latest master 79e69c73928ae82b3b45913de92746c140962d9f is merged as second parent with PR #332 HEAD 817d68faa8d6e1dc5db5c34b755344b744dd7dc5 as first parent. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The Guansha integration branch is rebuilt on code baseline 9c91d2d84086ab74b25979a424875134405cdde2; current master d6f6b19b85c8e12621da7f07c10600fefbb1aad6 adds only the subsequent license-closeout ledger update. Guansha files from PR #372 are re-applied file-by-file without importing stale branch ancestry. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 858,
-    "added": 703,
+    "changed": 860,
+    "added": 705,
     "modified": 155,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 149,
-      "FORK_COMMERCIAL": 344,
+      "FORK_COMMERCIAL": 346,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -4793,6 +4793,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/guansha_result_context_executor.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/guansha_tool_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5986,6 +5994,14 @@
     },
     {
       "path": "test/formula_contextual_entry_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/guansha_contextual_result_entry_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",

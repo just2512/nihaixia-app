@@ -872,3 +872,10 @@ Files:
 Copyright: NOASSERTION
 License: NOASSERTION
 Comment: Excluded from this Fork commercial grant. Knowledge-base materials and third-party dependency metadata retain their respective source licenses/terms; this entry makes no new license grant.
+
+Files:
+ lib/services/guansha_result_context_executor.dart
+ test/guansha_contextual_result_entry_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Newly added Fork-owned Guansha execution/context and regression test files; only the portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
