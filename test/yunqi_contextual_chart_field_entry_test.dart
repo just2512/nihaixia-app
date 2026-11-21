@@ -62,6 +62,14 @@ void main() {
       final selected = field.fieldValue.single['value']! as Map<String, Object?>;
       switch (path) {
         case 'chart.wuxing':
+          final yearProperties =
+              selected['yearProperties']! as Map<String, Object?>;
+          expect(yearProperties['yun'], annual['yun']);
+          expect(yearProperties['taiGuo'], annual['taiGuo']);
+          expect(yearProperties['siTian'], annual['siTian']);
+          expect(yearProperties['siTianWx'], annual['siTianWx']);
+          expect(yearProperties['zaiQuan'], annual['zaiQuan']);
+          expect(selected['selectedStep'], isA<Map>());
           expect(selected['mainYun'], annual['mainYun']);
           expect(selected['guestYun'], annual['guestYun']);
           expect(selected['mainQi'], annual['mainQi']);
