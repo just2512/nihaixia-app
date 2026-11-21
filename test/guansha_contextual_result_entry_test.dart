@@ -207,6 +207,31 @@ void main() {
       throwsArgumentError,
     );
 
+    final staleRule = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ref.moduleId,
+      anchorId: ref.anchorId,
+      anchorVersion: ref.anchorVersion,
+      snapshotId: ref.snapshotId,
+      ruleVersion: 'guansha-rule@STALE',
+      sourceId: ref.sourceId,
+      title: ref.title,
+    );
+    expect(
+      (await AiContextResolver.resolveGuanshaToolResult(
+        ref: staleRule,
+        structuredSnapshot: snapshot,
+      )).status,
+      AiContextResolutionStatus.stale,
+    );
+    expect(
+      () => AiContextPromptBuilder.buildToolResult(
+        ref: staleRule,
+        structuredSnapshot: snapshot,
+      ),
+      throwsArgumentError,
+    );
+
     final tampered = <String, Object?>{
       ...snapshot,
       'result': <String, Object?>{
@@ -287,6 +312,71 @@ void main() {
         find.ancestor(of: ask, matching: find.byType(FilledButton)).first,
       );
       expect(askButton.onPressed, isNotNull);
+
+      final pagePosition =
+          tester.state<ScrollableState>(calculationScrollable).position;
+      final genderChoice = find.descendant(
+        of: find.byType(SegmentedButton<bool>),
+        matching: find.text('女'),
+      );
+      await tester.ensureVisible(genderChoice);
+      await tester.tap(genderChoice);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        ask,
+        180,
+        scrollable: calculationScrollable,
+      );
+      final disabledAfterInputChange = tester.widget<FilledButton>(
+        find.ancestor(of: ask, matching: find.byType(FilledButton)).first,
+      );
+      expect(disabledAfterInputChange.onPressed, isNull);
+
+      final calculateAgain = find.text('测算关煞');
+      await tester.ensureVisible(calculateAgain);
+      await tester.tap(calculateAgain);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        ask,
+        180,
+        scrollable: calculationScrollable,
+      );
+      final enabledAfterInputRecalculation = tester.widget<FilledButton>(
+        find.ancestor(of: ask, matching: find.byType(FilledButton)).first,
+      );
+      expect(enabledAfterInputRecalculation.onPressed, isNotNull);
+
+      final trueSolarTile = find.widgetWithText(
+        SwitchListTile,
+        '真太阳时校准',
+      );
+      await tester.ensureVisible(trueSolarTile);
+      await tester.tap(trueSolarTile);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        ask,
+        180,
+        scrollable: calculationScrollable,
+      );
+      final disabledAfterSettingsChange = tester.widget<FilledButton>(
+        find.ancestor(of: ask, matching: find.byType(FilledButton)).first,
+      );
+      expect(disabledAfterSettingsChange.onPressed, isNull);
+
+      await tester.ensureVisible(calculateAgain);
+      await tester.tap(calculateAgain);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        ask,
+        180,
+        scrollable: calculationScrollable,
+      );
+      final enabledAfterSettingsRecalculation = tester.widget<FilledButton>(
+        find.ancestor(of: ask, matching: find.byType(FilledButton)).first,
+      );
+      expect(enabledAfterSettingsRecalculation.onPressed, isNotNull);
+      final pageOffsetBeforeOpen = pagePosition.pixels;
+
       await tester.tap(ask);
       await tester.pumpAndSettle();
 
@@ -303,8 +393,15 @@ void main() {
       expect(ai.initialPrompt, isNot(contains('上海市')));
       expect(ai.initialPrompt, contains('出生地点'));
       expect(ai.initialPrompt, isNot(contains('上海市')));
-      await tester.pageBack();
-      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.byType(LocalAiInterviewScreen)),
+          rootNavigator: true)
+          .pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump();
+      expect(find.byType(GuanshaScreen), findsOneWidget);
+      expect(pagePosition.pixels, closeTo(pageOffsetBeforeOpen, 0.5));
+      expect(tester.takeException(), isNull);
     }
   });
 }
