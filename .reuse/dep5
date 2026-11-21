@@ -879,3 +879,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Newly added Fork-owned Guansha execution/context and regression test files; only the portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ lib/services/dream_result_context_executor.dart
+ test/dream_contextual_result_entry_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Newly added Fork-owned Dream entry snapshot executor and regression tests; only the portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.

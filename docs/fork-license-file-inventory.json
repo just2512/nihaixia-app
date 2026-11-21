@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The Guansha integration branch is rebuilt on code baseline 9c91d2d84086ab74b25979a424875134405cdde2; current master d6f6b19b85c8e12621da7f07c10600fefbb1aad6 adds only the subsequent license-closeout ledger update. Guansha files from PR #372 are re-applied file-by-file without importing stale branch ancestry. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The Guansha integration was merged to master at 05e8f1e40023f589ff72bc1de3165214644b7ebc; the Dream contextual-entry branch is based on that exact master HEAD. The prior Dream executor draft is used only as a reviewed implementation reference, not as branch ancestry. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 860,
-    "added": 705,
+    "changed": 862,
+    "added": 707,
     "modified": 155,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 149,
-      "FORK_COMMERCIAL": 346,
+      "FORK_COMMERCIAL": 348,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -62,62 +62,6 @@
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "APP_DEVELOPMENT_DETAIL.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "CHANGELOG.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "PROMO_COPY.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "README.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "RELEASE_NOTES.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "RELEASE_NOTES_1.11.1-1.11.7.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -289,14 +233,6 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -305,7 +241,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "android/app/src/main/res/mipmap-anydpi/ic_launcher.xml",
+      "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -314,6 +250,14 @@
     },
     {
       "path": "android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-anydpi/ic_launcher.xml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -510,6 +454,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "APP_DEVELOPMENT_DETAIL.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -3393,6 +3345,22 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "docs/2026-11-04-unified-assistant-acceptance-audit.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -3753,7 +3721,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/images/find-n2-round3/F_keyboard.png",
+      "path": "docs/images/find-n2-round3/F_keyboard_text.png",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -3761,7 +3729,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/images/find-n2-round3/F_keyboard_text.png",
+      "path": "docs/images/find-n2-round3/F_keyboard.png",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -3985,7 +3953,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/upstream-sync-ledger.md",
+      "path": "docs/upstream_sync_audit_2026-11-06.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -3993,7 +3961,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/upstream_sync_audit_2026-11-06.md",
+      "path": "docs/upstream-sync-ledger.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -4137,19 +4105,19 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "lib/models/diagnosis.dart",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "lib/models/diagnosis_result_codec.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/models/diagnosis.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -4665,14 +4633,6 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "lib/services/ai_trace.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "lib/services/ai_trace_runtime.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -4682,6 +4642,14 @@
     },
     {
       "path": "lib/services/ai_trace_store.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/ai_trace.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -4778,6 +4746,14 @@
     },
     {
       "path": "lib/services/dosage_tool_executor.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/dream_result_context_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -5193,6 +5169,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "PROMO_COPY.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "pubspec.lock",
       "status": "modified",
       "classification": "THIRD_PARTY_EXCLUDED",
@@ -5209,7 +5193,15 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "release/download-page/index.html",
+      "path": "README.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "RELEASE_NOTES_1.11.1-1.11.7.md",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
@@ -5217,19 +5209,11 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "release/研纪_历史版本_v1.10.0+7_发布说明.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "release/研纪_历史版本_v1.10.1_发布说明.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "path": "RELEASE_NOTES.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5390,6 +5374,30 @@
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "release/download-page/index.html",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "release/研纪_历史版本_v1.10.0+7_发布说明.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "release/研纪_历史版本_v1.10.1_发布说明.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5858,6 +5866,14 @@
     },
     {
       "path": "test/dosage_tool_executor_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/dream_contextual_result_entry_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",

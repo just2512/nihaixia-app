@@ -19,6 +19,8 @@ import 'sanshan_lingqian_result_context_executor.dart';
 import 'sanshan_lingqian_tool_executor.dart';
 import 'dosage_result_context_executor.dart';
 import 'dosage_tool_executor.dart';
+import 'dream_result_context_executor.dart';
+import 'dream_tool_executor.dart';
 import 'guansha_result_context_executor.dart';
 import 'guansha_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
@@ -370,6 +372,16 @@ class AiContextPromptBuilder {
           arguments.isEmpty &&
           ref.anchorId ==
               'sanshan-lingqian:result:$snapshotId:sign=$selectedSignId';
+    }
+    if (ref.moduleId == DreamResultContextExecutor.moduleId) {
+      final selectedEntryId = input['selectedEntryId'];
+      return schemaVersion == DreamResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitEntrySelection' &&
+          input.length == 2 &&
+          selectedEntryId is String &&
+          RegExp(r'^[a-z0-9_-]{1,80}$').hasMatch(selectedEntryId) &&
+          ref.anchorId ==
+              'dream:entry:$selectedEntryId:result:$snapshotId';
     }
     if (ref.moduleId == GuanshaResultContextExecutor.moduleId) {
       final arguments = input['arguments'];
@@ -874,6 +886,37 @@ class AiContextPromptBuilder {
       }
     }
 
+    if (ref.moduleId == DreamResultContextExecutor.moduleId) {
+      final selectedEntryId = inputValue['selectedEntryId'];
+      final values = resultValue['values'];
+      if (ruleVersion != DreamResultContextExecutor.ruleVersion ||
+          ref.sourceId != DreamToolExecutor.sourceId ||
+          sourceIds.length != 1 ||
+          sourceIds.single != DreamToolExecutor.sourceId ||
+          inputValue.length != 2 ||
+          inputValue['method'] != 'explicitEntrySelection' ||
+          selectedEntryId is! String ||
+          !RegExp(r'^[a-z0-9_-]{1,80}$').hasMatch(selectedEntryId) ||
+          ref.anchorId !=
+              'dream:entry:$selectedEntryId:result:$snapshotId' ||
+          values is! Map ||
+          values['词条 ID'] != selectedEntryId ||
+          const [
+            '分类',
+            '子分类',
+            '关键词',
+            '梦境词条原文',
+            '词条释义原文',
+            '原始吉凶标签（民俗文本）',
+            '词条来源字段',
+          ].any((key) => values[key] is! String ||
+              (values[key] as String).trim().isEmpty)) {
+        throw ArgumentError(
+          'A Dream prompt requires exactly one explicitly selected and complete local entry.',
+        );
+      }
+    }
+
     if (ref.moduleId == GuanshaResultContextExecutor.moduleId) {
       final arguments = inputValue['arguments'];
       final settings = inputValue['settings'];
@@ -1169,6 +1212,16 @@ class AiContextPromptBuilder {
         '轩辕黄帝四季歌属于托名轩辕黄帝的传统民俗通胜文本，不是科学预测，也不代表个人命运事实。请区分 App 已查得的农历月份/时辰/部位/诗文与现有释义；只在原文和口径范围内解释，不作确定性人生判断或重大决策建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把民俗文本转化为医疗、法律、投资或其他专业建议。',
+      if (ref.moduleId == DreamResultContextExecutor.moduleId)
+        '周公解梦情境只绑定用户明确点击的单条本地词条；只解释该词条原文、释义和数据集民俗标签，不得自行选择其他候选、拼接多条词条或重新检索。',
+      if (ref.moduleId == DreamResultContextExecutor.moduleId)
+        '吉凶标签与释义仅代表本地数据集中的传统民俗文本，不是科学结论、现实事件预测或必然结果；必须明确区分原文、数据集标签和 AI 解释。',
+      if (ref.moduleId == DreamResultContextExecutor.moduleId)
+        '本次快照不包含用户自由梦境描述或搜索输入；不得假设用户亲身经历了所选梦境，不得从词条推断用户的心理状态、人格、精神疾病、身体疾病、健康风险或现实事件。',
+      if (ref.moduleId == DreamResultContextExecutor.moduleId)
+        '不得提供心理/精神/医学诊断、治疗建议、投资或法律建议，不得把梦境解释转化为重大决策指令；不得恐吓用户或诱导购买法事、符箓及任何付费服务。',
+      if (ref.moduleId == DreamResultContextExecutor.moduleId)
+        '词条来源字段是本地数据集原样保存的来源元数据，不代表已完成历史文献版本、作者或原始出处鉴定；没有提供的文献证据标记 MISSING 或 UNKNOWN，不得补造。',
       if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
         '小儿关煞结果仅是 App 本地收录的传统民俗规则命中记录。只解释本次快照中已经核验的规则、命中依据与数据范围，不把关煞名称或严重程度表述为事实判断。',
       if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
