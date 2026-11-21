@@ -272,7 +272,10 @@ void main() {
         ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: const MaterialApp(
-            home: GuanshaScreen(returnResultOnComplete: true),
+            home: GuanshaScreen(
+               key: ValueKey('guansha-${viewport.width}'),
+               returnResultOnComplete: true,
+             ),
           ),
         ),
       );
