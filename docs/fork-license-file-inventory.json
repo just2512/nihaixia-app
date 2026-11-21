@@ -10,7 +10,7 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. PR #373 and PR #374 are merged; PR #383 six-meridian contextual entry is merged to master at 0458da83a1458a321f7eb63247a5ef3508c6499d. The acupoint contextual knowledge-entry slice is built on this post-merge master. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The current master base for this slice is 7cf512b8c159f48112564b2135b67e90638bacc7 and includes merged PRs #373, #374, #375, #383, #384 and #385 (including the classic passage and acupoint contextual-entry work). This PR adds paragraph-level contextual selection for the Neijing and Bencao lecture libraries. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
     "changed": 867,
     "added": 711,
