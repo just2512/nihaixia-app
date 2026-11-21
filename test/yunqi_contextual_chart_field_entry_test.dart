@@ -250,22 +250,29 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final pageList = tester.widget<ListView>(
-        find.byKey(const ValueKey('yunqi-page-scroll')),
-      );
+      final pageScrollKey = find.byKey(const ValueKey('yunqi-page-scroll'));
+      final pageList = tester.widget<ListView>(pageScrollKey);
       final pageController = pageList.controller!;
       final pagePosition = pageController.position;
+      final pageScrollable = find
+          .ancestor(
+            of: pageScrollKey,
+            matching: find.byType(Scrollable),
+          )
+          .first;
       final tabBar = find.byKey(const ValueKey('yunqi-chart-tabs'));
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
-        // Scroll the owning page ListView directly. The TabBar also contains
-        // an internal horizontal Scrollable; selecting the first descendant
-        // Scrollable can accidentally drag that child instead of the page.
-        // A direct jump keeps the test deterministic and avoids awaiting
-        // an animation future before the tester has pumped its frames.
-        pageController.jumpTo(pagePosition.maxScrollExtent);
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(tabBar);
+        // Use the owning page Scrollable and scroll in layout-sized steps.
+        // Jumping straight to a lazily estimated maxScrollExtent can land
+        // before the off-screen chart child has been built, so ensureVisible
+        // then receives a Finder with no Element.
+        await tester.scrollUntilVisible(
+          tabBar,
+          280,
+          scrollable: pageScrollable,
+          maxScrolls: 40,
+        );
         await tester.pumpAndSettle();
 
         final tab = find.descendant(
