@@ -1,4 +1,5 @@
 import '../models/assistant_tool_result.dart';
+import '../engine/guansha_engine.dart' show GuanshaHit;
 import 'ai_tool_result_snapshot.dart';
 import 'guansha_tool_executor.dart';
 
