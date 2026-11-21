@@ -184,6 +184,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 350));
 
         expect(find.byType(AcupointDetailScreen), findsOneWidget);
+        expect(find.text('问 AI 解读当前穴位'), findsOneWidget);
         expect(find.byKey(const ValueKey('acupoint-contextual-ask')), findsOneWidget);
         expect(find.byType(DraggableScrollableSheet), findsNothing);
         expect(find.byType(Dialog), findsNothing);
