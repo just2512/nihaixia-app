@@ -78,7 +78,8 @@ class AiContextRef {
     if (kind == null) return const {};
 
     if (kind == AiContextKind.toolResult ||
-        kind == AiContextKind.fieldValue) {
+        kind == AiContextKind.fieldValue ||
+        kind == AiContextKind.knowledgeEntry) {
       final snapshotId = value['snapshotId']?.trim();
       final ruleVersion = value['ruleVersion']?.trim();
       final anchorVersion = value['anchorVersion']?.trim();
