@@ -10,7 +10,7 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master 9c91d2d84086ab74b25979a424875134405cdde2 is the integration base; Guansha implementation from PR #372 is re-applied file-by-file onto that master without importing stale branch ancestry. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The Guansha integration branch is rebuilt on code baseline 9c91d2d84086ab74b25979a424875134405cdde2; current master d6f6b19b85c8e12621da7f07c10600fefbb1aad6 adds only the subsequent license-closeout ledger update. Guansha files from PR #372 are re-applied file-by-file without importing stale branch ancestry. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
     "changed": 860,
     "added": 705,
