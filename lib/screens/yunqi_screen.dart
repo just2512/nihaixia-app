@@ -146,6 +146,91 @@ class _YunQiScreenState extends State<YunQiScreen> {
     }
   }
 
+  Future<void> _askAiAboutChartField(String fieldPath) async {
+    AiContextRef contextRef;
+    try {
+      final snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
+      contextRef = AiContextResolver.buildYunqiChartFieldContextRef(
+        structuredSnapshot: snapshot,
+        fieldPath: fieldPath,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('当前图表字段无法建立可信上下文，已取消提问（UNKNOWN）。'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final resolution = AiContextResolver.resolveYunqiChartField(
+      ref: contextRef,
+      structuredSnapshot: YunQiToolExecutor.createStructuredSnapshot(_selectedDate),
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '图表字段上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildYunqiChartField(
+        resolvedField: resolved,
+      ),
+      initialMode: AssistantMode.tools,
+      contextualTitle: contextRef.title ?? '五运六气图表字段',
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
   @override
   void dispose() {
     _pageScrollController.dispose();
@@ -279,7 +364,10 @@ class _YunQiScreenState extends State<YunQiScreen> {
           const SizedBox(height: 12),
           _YearSummaryCard(data: data, color: cs),
           const SizedBox(height: 12),
-          _ChartsTabs(selectedDate: _selectedDate),
+          _ChartsTabs(
+            selectedDate: _selectedDate,
+            onAskField: _askAiAboutChartField,
+          ),
           const SizedBox(height: 12),
           _InfoCard(
             icon: Icons.wb_sunny_outlined,
@@ -581,8 +669,12 @@ class _YearSummaryCard extends StatelessWidget {
 class _ChartsTabs extends StatefulWidget {
   /// 用户所选日期（决定三图的高亮步）。
   final DateTime selectedDate;
+  final Future<void> Function(String fieldPath) onAskField;
 
-  const _ChartsTabs({required this.selectedDate});
+  const _ChartsTabs({
+    required this.selectedDate,
+    required this.onAskField,
+  });
 
   @override
   State<_ChartsTabs> createState() => _ChartsTabsState();
@@ -647,6 +739,24 @@ class _ChartsTabsState extends State<_ChartsTabs>
               '　${yunStepNames[chart.yunStep]}·客运${chart.currentKeYun.label}',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                key: const ValueKey('yunqi-chart-field-ask'),
+                onPressed: () {
+                  final fieldPath = switch (_tabController.index) {
+                    0 => 'chart.wuxing',
+                    1 => 'chart.wuyun',
+                    2 => 'chart.liuqi',
+                    _ => null,
+                  };
+                  if (fieldPath != null) widget.onAskField(fieldPath);
+                },
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: const Text('问 AI 解读当前图'),
+              ),
             ),
           ],
         ),
