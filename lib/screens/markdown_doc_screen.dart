@@ -53,7 +53,8 @@ class MarkdownDocScreen extends StatefulWidget {
   final String? footer;
   final bool linkFormulas;
 
-  /// Stable source anchor; enabled only for the first Shanghan clause sample.
+  /// Stable local entry identity. The contextual action is shown only when
+  /// the raw document contains exactly one uniquely locatable blockquote.
   final String? contextualAskModuleId;
   final String? contextualAskAnchorId;
   final String? contextualAskSourceId;
@@ -202,7 +203,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       moduleId: moduleId,
       anchorId: anchorId,
       anchorVersion: version,
-      sourceId: 'shanghan:$sourcePath',
+      sourceId: moduleId + ':' + sourcePath,
       title: widget.title,
       selectedText: selectedText,
     );
