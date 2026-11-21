@@ -333,11 +333,9 @@ void main() {
       expect(disabledAfterInputChange.onPressed, isNull);
 
       final calculateAgain = find.byKey(const ValueKey('guansha-calculate-button'));
-      await tester.scrollUntilVisible(
-        calculateAgain,
-        180,
-        scrollable: calculationScrollable,
-      );
+      pagePosition.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(calculateAgain, findsOneWidget);
       await tester.tap(calculateAgain);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
@@ -369,11 +367,9 @@ void main() {
       );
       expect(disabledAfterSettingsChange.onPressed, isNull);
 
-      await tester.scrollUntilVisible(
-        calculateAgain,
-        180,
-        scrollable: calculationScrollable,
-      );
+      pagePosition.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(calculateAgain, findsOneWidget);
       await tester.tap(calculateAgain);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
