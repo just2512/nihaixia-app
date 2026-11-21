@@ -178,7 +178,10 @@ $second
         theme: ThemeData(extensions: [AppColors.light]),
         home: const BenCaoLibraryScreen(),
       ));
-      await tester.pumpAndSettle();
+      // The library contains an indeterminate loading indicator, so use
+      // bounded frame pumping instead of waiting for global settlement.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       final bencaoEntry = find.text('上经·人参');
       await tester.ensureVisible(bencaoEntry);
