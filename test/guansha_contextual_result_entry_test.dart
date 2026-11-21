@@ -332,7 +332,7 @@ void main() {
       );
       expect(disabledAfterInputChange.onPressed, isNull);
 
-      final calculateAgain = find.text('测算关煞');
+      final calculateAgain = find.byKey(const ValueKey('guansha-calculate-button'));
       await tester.ensureVisible(calculateAgain);
       await tester.tap(calculateAgain);
       await tester.pumpAndSettle();

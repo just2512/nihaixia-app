@@ -661,6 +661,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
+                    key: const ValueKey('guansha-calculate-button'),
                     onPressed: _computing ? null : _compute,
                     icon: _computing
                         ? const SizedBox(
