@@ -5,12 +5,16 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/screens/classic_library_screen.dart';
 import 'package:nihaisha_app/data/classic_lecture_data.dart';
+import 'package:nihaisha_app/data/zhenjiu_lecture_index.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
+  setUpAll(() async {
+    await ZhenJiuLectureIndex.load();
+  });
   testWidgets('contextual selection is enabled only for a fully anchored reading block',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -65,7 +69,7 @@ void main() {
           theme: ThemeData(extensions: [AppColors.light]),
           home: MarkdownDocScreen(
             title: '多条文阅读页',
-            content: '> 第一条原文。\n\n解释文字。\n\n> 第二条原文。',
+            content: '> 第一条 原文。\n\n解释文字。\n\n> 第二条 释义。',
             contextualAskModuleId: 'shanghan',
             contextualAskAnchorId: 'shanghan:document:multi',
             contextualAskSourceId: 'assets/shanghan/multi.md',
@@ -79,7 +83,7 @@ void main() {
     expect(find.textContaining('解释文字'), findsOneWidget);
 
     await tester.longPress(
-      find.textContaining('第一条原文', findRichText: true),
+      find.textContaining('第一条 原文', findRichText: true),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('问 AI'));
@@ -89,13 +93,16 @@ void main() {
     expect(assistantFinder, findsOneWidget);
     var assistant = tester.widget<LocalAiInterviewScreen>(assistantFinder);
     expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:0');
-    expect(assistant.contextRef['selectedText'], contains('第一条原文'));
+    final firstSelected = assistant.contextRef['selectedText']!;
+    expect(firstSelected, isNotEmpty);
+    expect('第一条 原文。', contains(firstSelected));
+    expect('第二条 释义。', isNot(contains(firstSelected)));
     Navigator.of(tester.element(assistantFinder), rootNavigator: true).pop();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.longPress(
-      find.textContaining('第二条原文', findRichText: true),
+      find.textContaining('第二条 释义', findRichText: true),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('问 AI'));
@@ -105,7 +112,10 @@ void main() {
     expect(assistantFinder, findsOneWidget);
     assistant = tester.widget<LocalAiInterviewScreen>(assistantFinder);
     expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:1');
-    expect(assistant.contextRef['selectedText'], contains('第二条原文'));
+    final secondSelected = assistant.contextRef['selectedText']!;
+    expect(secondSelected, isNotEmpty);
+    expect('第二条 释义。', contains(secondSelected));
+    expect('第一条 原文。', isNot(contains(secondSelected)));
     expect(tester.takeException(), isNull);
   });
 
@@ -138,22 +148,27 @@ void main() {
     expect(find.byType(SelectionArea), findsOneWidget);
   });
 
-  testWidgets('a two-quote Jingui asset enables one scoped action per local quote',
+  testWidgets('a two-quote Jingui asset opens each quote with its own anchored context',
       (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: ThemeData(extensions: [AppColors.light]),
-      home: ClassicLibraryScreen(
-        title: '金匮要略阅读库',
-        lectures: const [
-          ClassicLecture(
-            seq: 450,
-            name: '大病差复',
-            asset: 'assets/jingui/clause_450.md',
+    await tester.pumpWidget(
+      ContextualAiConversationStoreScope(
+        conversationStore: InMemoryAssistantConversationStore(),
+        child: MaterialApp(
+          theme: ThemeData(extensions: [AppColors.light]),
+          home: ClassicLibraryScreen(
+            title: '金匮要略阅读库',
+            lectures: const [
+              ClassicLecture(
+                seq: 450,
+                name: '大病差复',
+                asset: 'assets/jingui/clause_450.md',
+              ),
+            ],
+            contextualAskModuleId: 'jingui',
           ),
-        ],
-        contextualAskModuleId: 'jingui',
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('大病差复'));
@@ -165,6 +180,54 @@ void main() {
     expect(doc.contextualAskAnchorId, 'jingui:passage:assets/jingui/clause_450.md');
     expect(doc.contextualAskSourceId, 'assets/jingui/clause_450.md');
     expect(find.byType(SelectionArea), findsNWidgets(2));
+
+    await tester.longPress(
+      find.textContaining('胃家有寒证', findRichText: true),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('问 AI'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    var assistantFinder = find.byType(LocalAiInterviewScreen);
+    expect(assistantFinder, findsOneWidget);
+    var assistant = tester.widget<LocalAiInterviewScreen>(assistantFinder);
+    expect(assistant.contextRef['moduleId'], 'jingui');
+    expect(
+      assistant.contextRef['anchorId'],
+      'jingui:passage:assets/jingui/clause_450.md:passage:0',
+    );
+    final firstSelected = assistant.contextRef['selectedText']!;
+    const firstPassage =
+        '胃家有寒证的时候，一定会吐涎沫。胃有寒，心火下来，到胃以后，挡到了没办法，又回去了，带着肺里面的津液就从嘴巴里出来了。';
+    expect(firstSelected, isNotEmpty);
+    expect(firstPassage, contains(firstSelected));
+    Navigator.of(tester.element(assistantFinder), rootNavigator: true).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.longPress(
+      find.textContaining('嘴巴里的口水', findRichText: true),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('问 AI'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    assistantFinder = find.byType(LocalAiInterviewScreen);
+    expect(assistantFinder, findsOneWidget);
+    assistant = tester.widget<LocalAiInterviewScreen>(assistantFinder);
+    expect(assistant.contextRef['moduleId'], 'jingui');
+    expect(
+      assistant.contextRef['anchorId'],
+      'jingui:passage:assets/jingui/clause_450.md:passage:1',
+    );
+    final secondSelected = assistant.contextRef['selectedText']!;
+    const secondPassage = '嘴巴里的口水怎么这么多，吐掉了又来，都是胃上，就是心周围有寒证。';
+    expect(secondSelected, isNotEmpty);
+    expect(secondPassage, contains(secondSelected));
+    expect(firstPassage, isNot(contains(secondSelected)));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('ordinary markdown reading keeps its existing selectable behavior',
