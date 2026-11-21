@@ -3062,3 +3062,19 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 前一 HEAD 2c3794965baf03a79c7c7f11343a1b8d69529d35 的 PR Flutter 全量 regression run 44753528453 已 SUCCESS；同一 PR run 的 Android arm64 job 136350969104 仍在运行，且最新主线已再合入 PR #347。以上旧 HEAD 结果不替代将寿生债入口加入后的最终 HEAD 验收。
 - 最新 HEAD 必须重新通过 PR 事件 Fork license boundary、Flutter regression 和 Android arm64 verification，均为 SUCCESS 才构成工程验收；Branch validation 的 SKIPPED 不计 PASS。PR #332 已为 Ready for review。
 - 版权证据和平台许可边界仍是独立门槛：487 项 OWNERSHIP_EVIDENCE_REQUIRED 尚须权属/再许可证据；当前 Public Fork 的 D.5 平台内 Fork 例外仍不能由自定义 LicenseRef 消除。未获权利人明确授权，不执行永久 Fork network detach 或可见性变更；不把服务内 Fork 的平台例外虚报为已满足绝对书面再分发限制。
+
+
+---
+
+## 60. 2026-11-21 PR #332 授权清单、CI 与主线同步状态（增量复核）
+
+- 本次复核的 PR HEAD：`f2d738ca29819fe1960be29c86e6fe4950ed26e3`；当前 master：`79e69c73928ae82b3b45913de92746c140962d9f`。PR #332 已是 Ready for review（非 Draft），但 GitHub 当前返回 `mergeable=false`。
+- PR HEAD 相对当前 master 的比较结果为 `ahead 16 / behind 22`，状态 `diverged`。此前 PR 描述中的 `ahead 15 / behind 0` 已过期；本次不将该旧状态作为合并依据。
+- PR HEAD 上已核验的工程结果：新增/修改文件清单 852 项（新增 697、修改 155），删除 13 项；分类为 Fork 商业授权候选 338、Apache 2.0 + Fork 双层许可 149、知识库排除 364、第三方排除 1。`.reuse/dep5` 对 852 个路径逐项精确映射，无宽泛目录通配符；知识库/第三方排除使用 `NOASSERTION`。
+- 自动门禁 `tool/check_fork_license_inventory.py` 已在 PR HEAD 的完整历史 checkout 上通过，检查基线到实际 HEAD 的路径状态、清单数量/分类、DEP5 路径与 SPDX 表达式、商业许可副本一致性、Apache 副本与根 LICENSE 一致性及根 LICENSE 未修改。该门禁证明清单内部一致和路径覆盖完整，不代替人工判断每个内容的真实版权归属。
+- 商业许可版本 1.4 已核验：个人非商业使用可在个人设备/非商业研究环境中进行；Fork 自有修改的 GitHub 服务外公开再分发须事先取得书面许可，无论是否收费；商业/经营性使用另须书面商业授权。商业许可正文与 SPDX LicenseRef 副本字节一致；`LICENSES/Apache-2.0.txt` 与根目录 `LICENSE` 保持一致。知识库和第三方内容继续遵循各自原许可。
+- PR HEAD 的 PR 事件 CI：Fork license boundary run `44756009481` SUCCESS；Flutter regression run `44756009158` SUCCESS；同一 Flutter run 中 Android arm64 APK ABI verification + unit tests job `136359580904` SUCCESS。Branch validation job 为条件性 SKIPPED，不计 PASS。
+- **主线增量阻塞：** 当前 master 自 inventory 基线 `80e135519d19939c3b0a921ded6db5fd0e8b4767` 后又前进 22 个提交，涉及 `docs/ai-modernization-execution-ledger.md`、`lib/screens/dosage_converter_screen.dart`、`lib/screens/sanshan_lingqian_screen.dart`、`lib/screens/yuxiaji_omen_screen.dart`、`lib/services/ai_context_prompt_builder.dart`、`lib/services/ai_context_resolver.dart`、`test/chenggu_contextual_result_entry_test.dart`，并新增 6 个文件：`lib/services/dosage_result_context_executor.dart`、`lib/services/sanshan_lingqian_result_context_executor.dart`、`lib/services/yuxiaji_omen_result_context_executor.dart`、`test/dosage_contextual_result_entry_test.dart`、`test/sanshan_lingqian_contextual_result_entry_test.dart`、`test/yuxiaji_omen_contextual_result_entry_test.dart`。当前 PR HEAD 尚未包含这些主线增量，因此 852 项清单和对应 DEP5 不能作为最新 master 合并后的最终清单。
+- 同步后的预期清单增量为新增 6 项；在其他路径状态不变的前提下，新增/修改合计将为 858（新增 703、修改 155），Fork 商业授权候选 344、双层许可 149、知识库排除 364、第三方排除 1；`OWNERSHIP_EVIDENCE_REQUIRED` 将从 487 增至 493，`SOURCE_LICENSE_REVIEW` 仍为 365。必须在合并最新 master 到 PR 分支后，以实际 Git tree 重新计算并更新 JSON、Markdown、DEP5，再运行自动门禁；这些预期数字不能代替实际验收。
+- 权属/来源状态仍为 MISSING：487 项 Fork 商业授权候选及双层许可文件需要权属或充分再许可权证据；365 项知识库/第三方排除继续按来源复核。自动 CI 不构成版权确权。GitHub D.5 的平台内 Fork 授权不能由自定义许可撤销；本仓库未执行永久 Leave network 或可见性变更。
+- **当前结论：工程文件与 PR HEAD CI 已通过，但 PR 尚未达到可合并条件。** 先同步当前 master，更新新增 6 项的文件清单/DEP5/Markdown 和计数，再对同步后的同一 HEAD 重跑 Fork license boundary、Flutter regression、Android arm64；全部 SUCCESS 且 GitHub 确认 mergeable 后，才进入 PR #332 合并。不得用旧 HEAD 的 CI 或旧的 ahead/behind 描述替代最终验收。
