@@ -315,10 +315,8 @@ void main() {
 
       final pagePosition =
           tester.state<ScrollableState>(calculationScrollable).position;
-      final genderChoice = find.descendant(
-        of: find.byType(SegmentedButton<bool>),
-        matching: find.text('女'),
-      );
+      final genderChoice = find.text('女');
+      expect(genderChoice, findsOneWidget);
       await tester.ensureVisible(genderChoice);
       await tester.tap(genderChoice);
       await tester.pumpAndSettle();
