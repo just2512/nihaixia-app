@@ -250,19 +250,26 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final pageScrollable = find.descendant(
-        of: find.byType(YunQiScreen),
-        matching: find.byType(Scrollable),
-      ).first;
-      final pagePosition =
-          tester.state<ScrollableState>(pageScrollable).position;
+      final pageList = tester.widget<ListView>(
+        find.descendant(
+          of: find.byType(YunQiScreen),
+          matching: find.byType(ListView),
+        ).first,
+      );
+      final pageController = pageList.controller!;
+      final pagePosition = pageController.position;
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
         if (pagePosition.pixels > pagePosition.minScrollExtent) {
-          pagePosition.jumpTo(pagePosition.minScrollExtent);
+          pageController.jumpTo(pagePosition.minScrollExtent);
           await tester.pumpAndSettle();
         }
         final tab = find.text(tabLabels[tabIndex]).first;
+        expect(
+          tab.hitTestable(),
+          findsOneWidget,
+          reason: 'The page ListView must expose ${tabLabels[tabIndex]} before tapping it.',
+        );
         await tester.tap(tab);
         await tester.pumpAndSettle();
 
