@@ -3174,7 +3174,11 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
   - Android arm64 verification APK + unit tests：同一 workflow run 的 job `136844653497` SUCCESS。APK 文件大小 132,508,021 bytes；APK 仅包含 `arm64-v8a` native ABI，所需 Flutter/JNI 库存在；合并 Manifest 检查 SUCCESS；APK SHA-256：`d85db56f7828029334467f1f9cab8c9241ac97843e37d4c857c5cb232309f452`；`:app:testDebugUnitTest` Gradle 构建 SUCCESS，JUnit XML 校验 SUCCESS。APK/ABI 证据工件 ID `14707007874`，Android unit-test 报告工件 ID `14706634104`。
   - Branch validation 为 workflow 条件性 SKIPPED，不计 PASS；不影响以上三项门禁。
 - PR #375 已在 GitHub 显示 mergeable=true 的条件下，以普通 merge 合并；merge commit `6114ff22babe188b6ef82a1dbf9974d5be44620a`，合并时间 2026-11-21 12:27:18Z。
-- 合并后 master 的 push workflow 已触发，必须以 merge SHA `6114ff22` 的结果单独记录：Flutter tests run `44903981702` 和 Flutter Quality Gate run `44903981699` 在本节更新时均 IN_PROGRESS；Fork license boundary run `44903981710` 已 SUCCESS。父 SHA 或 PR head 结果不能替代 post-merge master 终态。
+- 合并后 master 的 push workflows 已在 merge SHA `6114ff22babe188b6ef82a1dbf9974d5be44620a` 上全部取得终态 SUCCESS：
+  - Fork license boundary：run `44903981710` SUCCESS。
+  - Flutter tests：run `44903981702` 的 Flutter regression job `136845563449` SUCCESS，完整回归日志 `1853 tests passed, 15 skipped`；同一 workflow 的 Android arm64 job `136847295993` SUCCESS。APK 只包含 `arm64-v8a`，SHA-256 `2d1ed03d6f6ed50a0a0e660a2e83ddff16a5a3976af40d87273f3e394e5b8473`；`:app:testDebugUnitTest -Ptarget-platform=android-arm64` 与 JUnit XML 校验 SUCCESS。APK/ABI 工件 ID `14707522142`，Android unit-test 报告工件 ID `14707925503`。
+  - Flutter Quality Gate：run `44903981699` 的 `Analyze and test` job `136845563472` SUCCESS；Dart/Flutter 静态分析、助手历史恢复测试、完整 Dart 测试套件、Android native unit tests、Find N2 arm64 Debug APK 构建均 SUCCESS。
+- 以上为合并后 master 自身的 post-merge 证据；PR head 的成功结果没有替代这些主线检查。Branch validation 是 workflow 条件性 SKIPPED，不计 PASS，也不影响三项必需门禁。
 - Find N2 外屏/内屏/半折叠、键盘、分屏，以及本地 E4B 多轮/Native 状态/历史恢复/完整 TRACE 继续标记 `UNKNOWN / LOCAL ONLY`，集中留到云端切片全部收尾后的最终本地验收；不阻止云端工作。
 
 ### 62.4 后续执行顺序
@@ -3183,7 +3187,12 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 2. **进行中：** 已触发 merge SHA 的 post-merge Flutter tests（run `44903981702`）与 Flutter Quality Gate（run `44903981699`）；两者在本节记录时尚未取得终态。Fork license boundary post-merge run `44903981710` 已 SUCCESS。必须等两个 post-merge workflows 终态后更新为最终状态。
 3. 已完成全仓库情境入口目录静态复核，结果见 §62.5；按当前 master 的实际页面调用链、Resolver / Prompt Builder 与相应测试文件交叉核对，没有发现需新增另一套运行时架构或空壳入口的已证实缺口。
 4. 已完成协议 §12 共通场景与 §8 数据生命周期的代码/测试覆盖复核，结果见 §62.6；同锚点会话复用、锚点隔离、消息 metadata、折叠窗口自动化及 AI/非 AI 数据清理均有现有实现与相应测试。真实 CI 终态仍以对应 HEAD 的 workflow 记录为准。
-5. 云端代码、自动化、文档和 CI 全部收尾后，再交付 Find N2 最终本地验收清单；真机与本地 E4B 结果不得预先标记 PASS。
+5. 云端代码、自动化、文档和 CI 全部收尾后，按仓库现有本地验收文件执行 Find N2 最终设备验收；这些文件是执行方案而非 PASS 报告：
+   - `docs/find-n2-local-ai-acceptance-checklist.md`：GPU / CPU 后端切换、分别至少 20 轮文字推理、多媒体、Activity / force-stop 恢复、AI 数据清除和 TRACE；
+   - `docs/find-n2-real-device-acceptance.md`：外屏、展开内屏、半折叠、系统窗口 Insets、键盘、弹窗、系统文件选择器及业务页面矩阵；
+   - `docs/find-n2-ai-trace-acceptance-plan.md`：端到端 TRACE 证据要求；
+   - `docs/local-ai-e4b.md`：模型导入、校验、运行时配置及已知 Native 行为边界。
+   真机与本地 E4B 结果在执行前保持 `UNKNOWN / LOCAL ONLY`，不得预先标记 PASS。
 
 
 ### 62.5 全仓库情境入口目录复核（代码基线 `86dbac6c3714f593cffdb31400a25d74e581f8e7`）
