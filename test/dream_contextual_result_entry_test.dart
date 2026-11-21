@@ -28,10 +28,10 @@ void main() {
     expect(execution.succeeded, isTrue);
     expect(execution.result.validateFor('dream'), isEmpty);
     expect(
-      execution.result.validateArgumentsMatch({'entry_id': selectedId}),
+      execution.result.validateArgumentsMatch(const {'entry_id': selectedId}),
       isEmpty,
     );
-    expect(execution.result.sourceIds, [DreamToolExecutor.sourceId]);
+    expect(execution.result.sourceIds, const [DreamToolExecutor.sourceId]);
 
     final snapshot = execution.structuredSnapshot!;
     final input = snapshot['input']! as Map<String, Object?>;
@@ -44,7 +44,7 @@ void main() {
     );
     expect(snapshot['ruleVersion'], DreamResultContextExecutor.ruleVersion);
     expect(snapshot['executionStatus'], 'SUCCESS');
-    expect(input, {
+    expect(input, const {
       'method': 'explicitEntrySelection',
       'selectedEntryId': selectedId,
     });
@@ -56,7 +56,7 @@ void main() {
     expect(values['词条释义原文'], entry.interpretation);
     expect(values['原始吉凶标签（民俗文本）'], entry.auspicious);
     expect(values['词条来源字段'], entry.source);
-    expect(snapshot['sourceIds'], [DreamToolExecutor.sourceId]);
+    expect(snapshot['sourceIds'], const [DreamToolExecutor.sourceId]);
     expect(
       AiToolResultSnapshot.createStructuredId(snapshot: snapshot),
       snapshot['snapshotId'],
@@ -64,7 +64,7 @@ void main() {
   });
 
   test('空 ID、不存在 ID 和带空白的 ID 均 fail closed', () {
-    for (final id in ['', 'not-a-real-dream-entry', ' action_028 ']) {
+    for (final id in const ['', 'not-a-real-dream-entry', ' action_028 ']) {
       final execution = DreamResultContextExecutor.executeWithSnapshot(
         selectedEntryId: id,
       );
@@ -190,11 +190,28 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '考试');
     await tester.pumpAndSettle();
 
+    final list = find.byKey(const ValueKey('dream-results-list'));
+    final listScrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    ).first;
     expect(find.text('梦见考试'), findsOneWidget);
     expect(find.text('梦见考试通过'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('梦见考试不及格'),
+      350,
+      scrollable: listScrollable,
+    );
     expect(find.text('梦见考试不及格'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('ask-dream-ai-action_028')));
+    final selectedAction =
+        find.byKey(const ValueKey('ask-dream-ai-action_028'));
+    await tester.scrollUntilVisible(
+      selectedAction,
+      350,
+      scrollable: listScrollable,
+    );
+    await tester.tap(selectedAction);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();
@@ -225,7 +242,7 @@ void main() {
     addTearDown(tester.view.reset);
     final lastEntryId = kDreamEntries.last.id;
 
-    for (final viewport in [const Size(402, 880), const Size(775, 1024)]) {
+    for (final viewport in const [Size(402, 880), Size(775, 1024)]) {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = viewport;
       await tester.pumpWidget(
@@ -240,13 +257,16 @@ void main() {
 
       final list = find.byKey(const ValueKey('dream-results-list'));
       final ask = find.byKey(ValueKey('ask-dream-ai-$lastEntryId'));
-      await tester.ensureVisible(ask);
-      await tester.pumpAndSettle();
-
       final scrollable = find.descendant(
         of: list,
         matching: find.byType(Scrollable),
       ).first;
+      await tester.scrollUntilVisible(
+        ask,
+        500,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
       final position = tester.state<ScrollableState>(scrollable).position;
       final beforeOpen = position.pixels;
       expect(beforeOpen, greaterThan(0));
