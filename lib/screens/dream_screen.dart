@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
-import '../services/dream_result_context_executor.dart';
-import '../services/ai_context_resolver.dart';
-import '../services/ai_context_prompt_builder.dart';
-import '../screens/assistant_tool_router.dart' show AssistantMode;
-import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 
 import '../data/database_helper.dart';
 import '../models/bookmark.dart';
@@ -25,79 +20,6 @@ class _DreamScreenState extends State<DreamScreen> {
   final TextEditingController _queryController = TextEditingController();
   String _query = '';
   String? _category; // null = 全部
-  String? _askingEntryId;
-
-  Future<void> _askAiAboutEntry(DreamEntry entry) async {
-    if (_askingEntryId != null) return;
-    final execution = DreamResultContextExecutor.executeWithSnapshot(
-      selectedEntryId: entry.id,
-    );
-    if (!execution.succeeded || execution.structuredSnapshot == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('所选梦境词条无法通过本地数据校验。')),
-      );
-      return;
-    }
-
-    final confirmed = await showFoldAwareDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('确认解释这条梦境词条'),
-        content: Text(
-          '将只解释你明确选择的本地词条「${entry.dream}」（ID：${entry.id}）。'
-          '不会提交你的自由梦境描述，也不会由 AI 从多个候选中代替选择。'
-          '\n\n吉凶标签与释义仅为本地传统民俗文本，不是事实预测或心理、医学结论。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('确认并解读'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || confirmed != true) return;
-
-    setState(() => _askingEntryId = entry.id);
-    try {
-      final contextRef = AiContextResolver.buildDreamEntryResultContextRef(
-        structuredSnapshot: execution.structuredSnapshot!,
-      );
-      final resolution = await AiContextResolver.resolveDreamEntryToolResult(
-        ref: contextRef,
-        structuredSnapshot: execution.structuredSnapshot!,
-      );
-      final resolved = resolution.value;
-      if (!mounted) return;
-      if (!resolution.isResolved || resolved == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('梦境词条核验失败：${resolution.status.name}')),
-        );
-        return;
-      }
-      await showContextualAiSheet(
-        context: context,
-        contextRef: contextRef,
-        initialPrompt: AiContextPromptBuilder.buildDreamEntryToolResult(
-          resolvedResult: resolved,
-        ),
-        initialMode: AssistantMode.metaphysics,
-        contextualTitle: '周公解梦：${entry.keyword}',
-        contextualExplanationOnly: true,
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('梦境词条上下文无法核验，已取消 AI 提问。')),
-      );
-    } finally {
-      if (mounted) setState(() => _askingEntryId = null);
-    }
-  }
 
   /// 吉凶等级 → 基准色（绿系吉、蓝灰系平、橙红系凶）。
   Color _auspiciousColor(String level) {
@@ -297,7 +219,6 @@ class _DreamScreenState extends State<DreamScreen> {
     final cs = Theme.of(context).colorScheme;
     final accent = _auspiciousColor(e.auspicious);
     return Card(
-      key: ValueKey('dream-entry-${e.id}'),
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -343,23 +264,6 @@ class _DreamScreenState extends State<DreamScreen> {
             Text(
               '出处：${e.source}',
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: ValueKey('dream-ask-ai-${e.id}'),
-              onPressed: _askingEntryId == null
-                  ? () => _askAiAboutEntry(e)
-                  : null,
-              icon: _askingEntryId == e.id
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.auto_awesome_outlined),
-              label: Text(
-                _askingEntryId == e.id ? '正在核验…' : '问 AI 解读此词条',
-              ),
             ),
           ],
         ),
