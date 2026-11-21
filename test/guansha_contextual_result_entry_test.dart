@@ -315,6 +315,8 @@ void main() {
 
       final pagePosition =
           tester.state<ScrollableState>(calculationScrollable).position;
+      pagePosition.jumpTo(0);
+      await tester.pumpAndSettle();
       final genderChoice = find.text('女');
       expect(genderChoice, findsOneWidget);
       await tester.ensureVisible(genderChoice);
@@ -344,6 +346,8 @@ void main() {
       );
       expect(enabledAfterInputRecalculation.onPressed, isNotNull);
 
+      pagePosition.jumpTo(0);
+      await tester.pumpAndSettle();
       final trueSolarTile = find.widgetWithText(
         SwitchListTile,
         '真太阳时校准',
