@@ -887,15 +887,12 @@ class AiContextPromptBuilder {
     }
 
     if (ref.moduleId == DreamResultContextExecutor.moduleId) {
-      final selectedEntryId = inputValue is Map
-          ? inputValue['selectedEntryId']
-          : null;
-      final values = resultValue is Map ? resultValue['values'] : null;
+      final selectedEntryId = inputValue['selectedEntryId'];
+      final values = resultValue['values'];
       if (ruleVersion != DreamResultContextExecutor.ruleVersion ||
           ref.sourceId != DreamToolExecutor.sourceId ||
           sourceIds.length != 1 ||
           sourceIds.single != DreamToolExecutor.sourceId ||
-          inputValue is! Map ||
           inputValue.length != 2 ||
           inputValue['method'] != 'explicitEntrySelection' ||
           selectedEntryId is! String ||
