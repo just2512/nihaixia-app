@@ -798,6 +798,7 @@ class AiContextResolver {
       ),
     );
   }
+
   static AiContextRef buildSolarTermResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {
