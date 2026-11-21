@@ -141,7 +141,7 @@ $second
       );
       expect(
         assistant.contextRef['sourceId'],
-        'assets/neijing/repeated.md',
+        'neijing-reading:assets/neijing/repeated.md',
       );
       expect(assistant.contextRef['selectedText'], isNotEmpty);
       expect(assistant.initialPrompt, contains(repeated));
