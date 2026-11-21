@@ -54,13 +54,12 @@ class MarkdownDocScreen extends StatefulWidget {
   final bool linkFormulas;
 
   /// Stable local entry identity. The contextual action is shown only when
-  /// the raw document contains uniquely locatable Markdown passage blocks.
+  /// the raw document contains exactly one uniquely locatable blockquote.
   final String? contextualAskModuleId;
   final String? contextualAskAnchorId;
   final String? contextualAskSourceId;
 
-  /// Enables safe paragraph-level context for plain-prose lecture documents.
-  /// Headings, lists, blockquotes, tables, code, images and HTML are excluded.
+  /// Enables safe paragraph-level contextual selection for prose lecture documents.
   final bool contextualAskParagraphs;
 
   const MarkdownDocScreen({
@@ -276,27 +275,9 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     return passages;
   }
 
-  Widget _buildPlainMarkdownBody(
-    String data, {
-    required bool selectable,
-    required EdgeInsets padding,
-  }) {
-    if (data.trim().isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: padding,
-      child: MarkdownBody(
-        data: data,
-        selectable: selectable,
-        onTapLink: (text, href, title) => _onTapLink(href),
-        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
-      ),
-    );
-  }
-
-  /// Extracts ordinary prose paragraphs. Structural Markdown blocks are
-  /// excluded so the contextual action cannot bind to headings, lists,
-  /// blockquotes, tables, code, images or HTML. Raw/displayed line ranges must
-  /// match before an action is exposed.
+  /// Splits safe prose into source-addressable paragraphs. Markdown structures
+  /// are deliberately excluded: headings, lists, quotes, tables, code, HTML,
+  /// images and link definitions must never expose the contextual action.
   List<_ContextualMarkdownPassage> _findContextualParagraphs(String markdown) {
     final lines = markdown.split('\n');
     final passages = <_ContextualMarkdownPassage>[];
@@ -313,168 +294,18 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
             RegExp(r'^\s{0,3}#{1,6}\s+').hasMatch(line) ||
             RegExp(r'^\s*>').hasMatch(line) ||
             RegExp(r'^\s*(?:[-*+]\s+|\d+[.)]\s+)').hasMatch(line) ||
-            RegExp(r'^\s*(?:-{3,}|_{3,}|\*{3,})\s*$').hasMatch(line) ||
-            RegExp(r'^\s{4,}\S').hasMatch(line) ||
-            RegExp(r'^\s*<').hasMatch(line) ||
-            RegExp(r'<\/?[A-Za-z][^>]*>').hasMatch(line) ||
-            RegExp(r'^\s*\$\$').hasMatch(line) ||
-            RegExp(r'^\s*\[[^\]]+\]:\s').hasMatch(line) ||
-            RegExp(r'!\[[^\]]*\]\(').hasMatch(line) ||
-            trimmed.startsWith('|') ||
-            trimmed.startsWith('<!--')) {
-          return false;
-        }
-      }
-      final trailingHeadingLine = blockLines.last.trim();
-      final isSetextHeading = blockLines.length > 1 &&
-          trailingHeadingLine.isNotEmpty &&
-          trailingHeadingLine.codeUnits.every((unit) => unit == 0x3D);
-      if (isSetextHeading) return false;
-      return blockLines.join('\n').trim().isNotEmpty;
-    }
-
-    void flush(int endLine) {
-      final startLine = activeStart;
-      if (startLine == null) return;
-      final blockLines = lines.sublist(startLine, endLine);
-      if (!activeContainsFence && isSafeParagraph(blockLines)) {
-        final block = blockLines.join('\n');
-        passages.add(_ContextualMarkdownPassage(
-          before: '',
-          block: block,
-          plainText: block.trim(),
-          startLine: startLine,
-          endLine: endLine,
-        ));
-      }
-      activeStart = null;
-      activeContainsFence = false;
-    }
-
-    for (var index = 0; index < lines.length; index++) {
-      final line = lines[index];
-      final fence = RegExp(r'^\s*(\x60{3,}|~{3,})').firstMatch(line);
-      if (fence != null) {
-        final marker = fence.group(1)!;
-        if (!insideFence) {
-          insideFence = true;
-          fenceCharacter = marker[0];
-        } else if (marker[0] == fenceCharacter) {
-          insideFence = false;
-          fenceCharacter = null;
-        }
-        activeContainsFence = true;
-      }
-      if (line.trim().isEmpty) {
-        if (!insideFence) flush(index);
-        continue;
-      }
-      activeStart ??= index;
-      if (insideFence) activeContainsFence = true;
-    }
-    flush(lines.length);
-    return passages;
-  }
-
-  Widget _buildContextualParagraphBody(String data) {
-    final raw = _rawDocumentContent ?? data;
-    final rawPassages = _findContextualParagraphs(raw);
-    final displayedPassages = _findContextualParagraphs(data);
-    var passagesMatch = rawPassages.isNotEmpty &&
-        rawPassages.length == displayedPassages.length;
-    for (var index = 0; passagesMatch && index < rawPassages.length; index++) {
-      passagesMatch = rawPassages[index].startLine ==
-              displayedPassages[index].startLine &&
-          rawPassages[index].endLine == displayedPassages[index].endLine;
-    }
-    if (!passagesMatch) {
-      return Markdown(
+            RegExp(r'^\s*(?:-{3,}|_{3,}|\*{3,})\s*    String data, {
+    required bool selectable,
+    required EdgeInsets padding,
+  }) {
+    if (data.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: padding,
+      child: MarkdownBody(
         data: data,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        selectable: true,
+        selectable: selectable,
         onTapLink: (text, href, title) => _onTapLink(href),
         styleSheet: MarkdownDocScreen.buildStyleSheet(context),
-      );
-    }
-
-    final lines = data.split('\n');
-    final children = <Widget>[];
-    var previousEnd = 0;
-    final baseAnchorId = widget.contextualAskAnchorId!;
-    for (var passageIndex = 0;
-        passageIndex < displayedPassages.length;
-        passageIndex++) {
-      final passage = displayedPassages[passageIndex];
-      final before = lines.sublist(previousEnd, passage.startLine).join('\n');
-      if (before.trim().isNotEmpty || passageIndex == 0) {
-        children.add(_buildPlainMarkdownBody(
-          before,
-          selectable: true,
-          padding: EdgeInsets.fromLTRB(16, passageIndex == 0 ? 12 : 0, 16, 0),
-        ));
-      }
-      final stableAnchorId = baseAnchorId +
-          ':paragraph:' +
-          (passage.startLine + 1).toString() +
-          '-' +
-          passage.endLine.toString();
-      children.add(SelectionArea(
-        onSelectionChanged: (selection) {
-          final selected = selection?.plainText ?? '';
-          if (_selectedTextByPassage[passageIndex] == selected) return;
-          setState(() {
-            if (selected.isEmpty) {
-              _selectedTextByPassage.remove(passageIndex);
-            } else {
-              _selectedTextByPassage[passageIndex] = selected;
-            }
-          });
-        },
-        contextMenuBuilder: (context, state) {
-          final items =
-              List<ContextMenuButtonItem>.of(state.contextMenuButtonItems);
-          final selected = _selectedTextByPassage[passageIndex] ?? '';
-          if (selected.trim().isNotEmpty) {
-            items.add(ContextMenuButtonItem(
-              label: '问 AI',
-              onPressed: () {
-                state.hideToolbar();
-                _askAiAboutSelection(
-                  selected,
-                  rawPassages[passageIndex].plainText,
-                  passageIndex: passageIndex,
-                  passageCount: rawPassages.length,
-                  stableAnchorId: stableAnchorId,
-                );
-              },
-            ));
-          }
-          return AdaptiveTextSelectionToolbar.buttonItems(
-            anchors: state.contextMenuAnchors,
-            buttonItems: items,
-          );
-        },
-        child: _buildPlainMarkdownBody(
-          passage.block,
-          selectable: false,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-      ));
-      previousEnd = passage.endLine;
-    }
-
-    final trailing = lines.skip(previousEnd).join('\n');
-    if (trailing.trim().isNotEmpty) {
-      children.add(_buildPlainMarkdownBody(
-        trailing,
-        selectable: true,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      ));
-    }
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
       ),
     );
   }
@@ -721,7 +552,280 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     );
   }
 }
-).hasMatch(blockLines.last)) {
+).hasMatch(line) ||
+            RegExp(r'^\s{4,}\S').hasMatch(line) ||
+            RegExp(r'^\s*<').hasMatch(line) ||
+            RegExp(r'<\/?[A-Za-z][^>]*>').hasMatch(line) ||
+            RegExp(r'^\s*\$\    String data, {
+    required bool selectable,
+    required EdgeInsets padding,
+  }) {
+    if (data.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: padding,
+      child: MarkdownBody(
+        data: data,
+        selectable: selectable,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      ),
+    );
+  }
+
+  Widget _buildMarkdownBody(String data) {
+    if (!_contextualAskEnabled) {
+      return Markdown(
+        data: data,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        selectable: true,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      );
+    }
+    final raw = _rawDocumentContent ?? data;
+    final rawPassages = _findContextualPassages(raw);
+    final displayedPassages = _findContextualPassages(data);
+    var passagesMatch = rawPassages.isNotEmpty &&
+        rawPassages.length == displayedPassages.length;
+    for (var index = 0; passagesMatch && index < rawPassages.length; index++) {
+      passagesMatch = rawPassages[index].startLine == displayedPassages[index].startLine &&
+          rawPassages[index].endLine == displayedPassages[index].endLine;
+    }
+    if (!passagesMatch) {
+      // Fail closed if raw and displayed quote blocks cannot be mapped one-to-one.
+      return Markdown(
+        data: data,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        selectable: true,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      );
+    }
+
+    final lines = data.split('\n');
+    final children = <Widget>[];
+    var previousEnd = 0;
+    for (var passageIndex = 0; passageIndex < displayedPassages.length; passageIndex++) {
+      final passage = displayedPassages[passageIndex];
+      final before = lines.sublist(previousEnd, passage.startLine).join('\n');
+      if (before.trim().isNotEmpty || passageIndex == 0) {
+        children.add(_buildPlainMarkdownBody(
+          before,
+          selectable: true,
+          padding: EdgeInsets.fromLTRB(16, passageIndex == 0 ? 12 : 0, 16, 0),
+        ));
+      }
+      children.add(SelectionArea(
+        onSelectionChanged: (selection) {
+          final selected = selection?.plainText ?? '';
+          if (_selectedTextByPassage[passageIndex] == selected) return;
+          setState(() {
+            if (selected.isEmpty) {
+              _selectedTextByPassage.remove(passageIndex);
+            } else {
+              _selectedTextByPassage[passageIndex] = selected;
+            }
+          });
+        },
+        contextMenuBuilder: (context, state) {
+          final items = List<ContextMenuButtonItem>.of(state.contextMenuButtonItems);
+          final selected = _selectedTextByPassage[passageIndex] ?? '';
+          if (selected.trim().isNotEmpty) {
+            items.add(ContextMenuButtonItem(
+              label: '问 AI',
+              onPressed: () {
+                state.hideToolbar();
+                _askAiAboutSelection(
+                  selected,
+                  rawPassages[passageIndex].plainText,
+                  passageIndex: passageIndex,
+                  passageCount: rawPassages.length,
+                );
+              },
+            ));
+          }
+          return AdaptiveTextSelectionToolbar.buttonItems(
+            anchors: state.contextMenuAnchors,
+            buttonItems: items,
+          );
+        },
+        child: _buildPlainMarkdownBody(
+          passage.block,
+          selectable: false,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ));
+      previousEnd = passage.endLine;
+    }
+    final trailing = lines.skip(previousEnd).join('\n');
+    if (trailing.trim().isNotEmpty) {
+      children.add(_buildPlainMarkdownBody(
+        trailing,
+        selectable: true,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      ));
+    }
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<String> _load() async {
+    final raw = widget.content ?? await rootBundle.loadString(widget.asset);
+    _rawDocumentContent = raw;
+    return widget.linkFormulas ? _injectLinks(raw) : raw;
+  }
+
+  void _reload() {
+    setState(() => _future = _load());
+  }
+
+  /// 将正文中的已知方剂名、药材名（含别名）、穴位名（含排除名单）包成链接，
+  /// 点击分别跳方剂 / 药材 / 穴位详情。
+  /// 三类合并为单一候选集、长度降序、单次非重叠扫描，避免嵌套/二次包裹。
+  String _injectLinks(String md) {
+    final formulaNames = FormulaRepository.getAll()
+        .map((f) => f.name)
+        .where((n) => n.length >= 2)
+        .toList();
+    final herbCandidates = <String>{
+      ...HerbRepository.getAll().map((h) => h.name),
+      ...HerbRepository.aliasNames,
+    }.where((n) => n.length >= 2).toList();
+
+    // 穴位候选：仓库正名去「穴」后缀 + 短名映射（子宫→子宫穴），
+    // 应用讲稿排除名单（太阳/光明——详见 zhenjiu_lecture_index）。
+    final shortForm = AcupointRepository.kShortNameLinkForm;
+    final excluded = ZhenJiuLectureIndex.cachedExcluded ??
+        ZhenJiuLectureIndex.kFallbackExcluded.toSet();
+    final acupointCandidates = AcupointRepository.allNames
+        .map((n) => shortForm[n] ?? n)
+        .where((n) => n.length >= 2 && !excluded.contains(n.replaceAll('穴', '')))
+        .toList();
+
+    // 名称 → 链接类型；方剂优先（同名时 formula 生效，herb/acupoint 的 putIfAbsent 不覆盖）。
+    final targetOf = <String, String>{};
+    for (final n in formulaNames) {
+      targetOf.putIfAbsent(n, () => 'formula');
+    }
+    for (final n in herbCandidates) {
+      targetOf.putIfAbsent(n, () => 'herb');
+    }
+    for (final n in acupointCandidates) {
+      targetOf.putIfAbsent(n, () => 'acupoint');
+    }
+    if (targetOf.isEmpty) return md;
+
+    final sorted = targetOf.keys.toList()
+      ..sort((a, b) => b.length.compareTo(a.length));
+    final re = RegExp(sorted.map(RegExp.escape).join('|'));
+    return md.replaceAllMapped(re, (m) {
+      final name = m.group(0)!;
+      final type = targetOf[name]!;
+      return '[$name]($type://$name)';
+    });
+  }
+
+  void _onTapLink(String? href) {
+    if (href == null) return;
+    if (href.startsWith('formula://')) {
+      final name = decodeMarkdownHref(href.substring('formula://'.length));
+      final formula = FormulaRepository.getByName(name);
+      if (formula != null && mounted) {
+        Navigator.push(
+          context,
+          FoldAwareMaterialPageRoute(sourceContext: context, 
+              builder: (_) => FormulaDetailScreen(formula: formula)),
+        );
+      }
+    } else if (href.startsWith('acupoint://')) {
+      final name = decodeMarkdownHref(href.substring('acupoint://'.length));
+      final acupoint = AcupointRepository.findByName(name);
+      if (acupoint != null && mounted) {
+        Navigator.push(
+          context,
+          FoldAwareMaterialPageRoute(sourceContext: context,
+              builder: (_) => AcupointDetailScreen(acupoint: acupoint)),
+        );
+      }
+    } else if (href.startsWith('herb://')) {
+      final name = decodeMarkdownHref(href.substring('herb://'.length));
+      // 精确 + 别名归一（无模糊兜底），避免「柴胡」误跳到含柴胡的方剂。
+      final herb = HerbRepository.getExactByName(name);
+      if (herb != null && mounted) {
+        Navigator.push(
+          context,
+          FoldAwareMaterialPageRoute(sourceContext: context, builder: (_) => HerbDetailScreen(herb: herb)),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: FutureBuilder<String>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: StateView.loading());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: StateView.error(
+                title: '原文加载失败',
+                message: snapshot.error.toString(),
+                onRetry: _reload,
+              ),
+            );
+          }
+          return Column(
+            children: [
+              Expanded(
+                child: _buildMarkdownBody(snapshot.data ?? ''),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: Text(
+                    widget.footer ?? '倪师《天纪》原文 · 传统文化参考 · 非医疗建议',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+).hasMatch(line) ||
+            RegExp(r'^\s*\\\[').hasMatch(line) ||
+            RegExp(r'^\s*\\begin\{').hasMatch(line) ||
+            RegExp(r'^\s*\[[^\]]+\]:\s').hasMatch(line) ||
+            RegExp(r'^\s*\[\^[^\]]+\]:\s').hasMatch(line) ||
+            RegExp(r'!\[[^\]]*\]\(').hasMatch(line) ||
+            trimmed.startsWith('|') ||
+            trimmed.startsWith('<!--')) {
+          return false;
+        }
+      }
+      final trailing = blockLines.last.trim();
+      if (blockLines.length > 1 &&
+          trailing.isNotEmpty &&
+          trailing.codeUnits.every((unit) => unit == 0x3D)) {
         return false;
       }
       if (blockLines.length > 1 &&
@@ -786,6 +890,8 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           rawPassages[index].endLine == displayedPassages[index].endLine;
     }
     if (!passagesMatch) {
+      // Inline link injection or Markdown transformation changed the mapping:
+      // keep ordinary selection but do not attach a contextual AI action.
       return Markdown(
         data: data,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -860,7 +966,6 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       ));
       previousEnd = passage.endLine;
     }
-
     final trailing = lines.skip(previousEnd).join('\n');
     if (trailing.trim().isNotEmpty) {
       children.add(_buildPlainMarkdownBody(
@@ -877,6 +982,23 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     );
   }
 
+  Widget _buildPlainMarkdownBody(
+    String data, {
+    required bool selectable,
+    required EdgeInsets padding,
+  }) {
+    if (data.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: padding,
+      child: MarkdownBody(
+        data: data,
+        selectable: selectable,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      ),
+    );
+  }
+
   Widget _buildMarkdownBody(String data) {
     if (!_contextualAskEnabled) {
       return Markdown(
@@ -886,9 +1008,6 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
         onTapLink: (text, href, title) => _onTapLink(href),
         styleSheet: MarkdownDocScreen.buildStyleSheet(context),
       );
-    }
-    if (widget.contextualAskParagraphs) {
-      return _buildContextualParagraphBody(data);
     }
     final raw = _rawDocumentContent ?? data;
     final rawPassages = _findContextualPassages(raw);
