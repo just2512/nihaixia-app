@@ -598,9 +598,9 @@ class AiContextPromptBuilder {
       'chart.liuqi': '六气图',
     };
     const chartUnits = <String, String>{
-      'chart.wuxing': '五行关系与岁运、司天、在泉及当前主客运气结构',
-      'chart.wuyun': '主运/客运五步结构；步骤索引从 0 开始',
-      'chart.liuqi': '主气/客气六步及主客加临关系；步骤索引从 0 开始',
+      'chart.wuxing': '五行关系与运气结构图数据；按 App 快照原值解释',
+      'chart.wuyun': '五运主运/客运五步结构；步骤索引从 0 开始',
+      'chart.liuqi': '六气主气/客气六步与主客加临关系；步骤索引从 0 开始',
     };
     final fieldPath = ref.fieldPath;
     final date = input is Map ? input['date'] : null;
