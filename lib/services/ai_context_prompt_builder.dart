@@ -1153,7 +1153,11 @@ class AiContextPromptBuilder {
       if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
         '儿童出生日期、钟点、性别、出生地点、坐标、派生农历和四柱已从模型上下文脱敏；不得尝试反推、询问或重建这些未提供的个人资料。',
       if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
-        '不得根据关煞名称、部位、口诀或民俗化解推断儿童疾病、发育问题、健康风险或未来伤害；不得提供诊断、治疗、用药、预防或付费法事/符箓建议，不得恐吓用户，也不得据此延误正规医疗评估。',
+        '不得根据关煞名称、部位或传统说法推断疾病、发育问题、健康风险或未来伤害；不得将民俗文字当作儿童身体状况证据。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '不得建议或暗示购买法事、符箓或任何付费服务；不得恐吓用户，也不得据此延误正规医疗评估。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '不得提供诊断、治疗、用药或预防建议；儿童健康问题应由正规医疗机构评估。',
       if (ref.moduleId == DosageResultContextExecutor.moduleId)
         '本次上下文只包含 App 已执行的度量衡单位换算结果。请解释用户输入的数值、原始单位、所选度量标准、App 返回的换算结果与目标单位；所有数值必须以快照原样为准，不得重新换算、修正、插值或补造结果。',
       if (ref.moduleId == DosageResultContextExecutor.moduleId)
