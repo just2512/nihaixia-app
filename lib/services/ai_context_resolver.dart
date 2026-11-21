@@ -789,7 +789,7 @@ class AiContextResolver {
         fieldValue: [
           Map<String, Object?>.unmodifiable({
             'fieldPath': fieldPath,
-            'value': Map<String, Object?>.from(methodValue),
+            'value': methodValue,
             'unit': unit,
           }),
         ],
