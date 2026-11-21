@@ -170,19 +170,25 @@ void main() {
       for (final width in [402.0, 775.0]) {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(width, 900);
-        await tester.pumpWidget(
-          ContextualAiConversationStoreScope(
-            conversationStore: InMemoryAssistantConversationStore(),
-            child: MaterialApp(
-              theme: ThemeData(
-                useMaterial3: true,
-                colorScheme: AppColors.colorSchemeFor(Brightness.light),
-                extensions: [AppColors.light],
+        // The bookmark button performs a real SQLite read in initState.
+        // Create the widget in the real async zone so sqflite's transaction
+        // timeout does not become a never-advancing fake-async timer.
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            ContextualAiConversationStoreScope(
+              conversationStore: InMemoryAssistantConversationStore(),
+              child: MaterialApp(
+                theme: ThemeData(
+                  useMaterial3: true,
+                  colorScheme: AppColors.colorSchemeFor(Brightness.light),
+                  extensions: [AppColors.light],
+                ),
+                home: AcupointDetailScreen(acupoint: point),
               ),
-              home: AcupointDetailScreen(acupoint: point),
             ),
-          ),
-        );
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        });
         await tester.pump(const Duration(milliseconds: 350));
 
         expect(find.byType(AcupointDetailScreen), findsOneWidget);
