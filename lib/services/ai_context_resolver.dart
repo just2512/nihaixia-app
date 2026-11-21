@@ -1,8 +1,10 @@
 import '../models/ai_context_ref.dart';
+import '../models/acupoint_detail.dart';
 import '../models/formula.dart';
 import '../models/herb.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
+import '../data/acupoint_repository.dart';
 import '../data/medical_case_data.dart';
 import '../data/neijing_entries.dart';
 import '../engine/diagnostic_rules.dart';
@@ -3374,6 +3376,133 @@ class AiContextResolver {
         ref: ref,
         title: herb.name,
         content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+
+  static const acupointModuleId = 'acupoint';
+  static const acupointAssetVersion =
+      'assets/data/acupoints.json@cf955d1e5485b6b4fcef15dc7711469b4b941d88';
+  static const _acupointResultSchemaVersion = 1;
+
+  static Map<String, Object?> _acupointKnowledgeSnapshot(
+    AcupointDetail point,
+  ) {
+    return <String, Object?>{
+      'capabilityId': acupointModuleId,
+      'input': <String, Object?>{'entryId': point.name},
+      'resultSchemaVersion': _acupointResultSchemaVersion,
+      'ruleVersion': acupointAssetVersion,
+      'sourceId': 'assets/data/acupoints.json#${point.name}',
+      'entryId': point.name,
+      'entry': Map<String, Object?>.unmodifiable(
+        Map<String, Object?>.from(point.toJson()),
+      ),
+    };
+  }
+
+  static AiContextRef buildAcupointContextRef({
+    required AcupointDetail acupoint,
+  }) {
+    final matches = AcupointRepository.getAll()
+        .where((item) => item.name == acupoint.name)
+        .toList(growable: false);
+    if (acupoint.name.trim().isEmpty ||
+        matches.length != 1 ||
+        AiToolResultSnapshot.canonicalJson(
+              _acupointKnowledgeSnapshot(matches.single),
+            ) !=
+            AiToolResultSnapshot.canonicalJson(
+              _acupointKnowledgeSnapshot(acupoint),
+            )) {
+      throw ArgumentError(
+        'An acupoint context requires one exact entry from the bundled acupoints dataset.',
+      );
+    }
+
+    final sourceId = 'assets/data/acupoints.json#${acupoint.name}';
+    final snapshotId = AiToolResultSnapshot.createStructuredId(
+      snapshot: _acupointKnowledgeSnapshot(matches.single),
+    );
+    return AiContextRef(
+      kind: AiContextKind.knowledgeEntry,
+      moduleId: acupointModuleId,
+      anchorId: 'acupoint:${acupoint.name}',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: acupointAssetVersion,
+      sourceId: sourceId,
+      title: acupoint.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveAcupoint({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.knowledgeEntry ||
+        normalized.isEmpty ||
+        ref.moduleId != acupointModuleId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupoint reference is incomplete or does not identify the local acupoint knowledge module.',
+      );
+    }
+    if (ref.ruleVersion != acupointAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The bundled acupoints dataset version no longer matches this reference.',
+      );
+    }
+
+    const prefix = 'acupoint:';
+    final pointName =
+        ref.anchorId.startsWith(prefix) ? ref.anchorId.substring(prefix.length) : '';
+    final snapshotId = ref.snapshotId;
+    if (pointName.isEmpty ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        ref.sourceId != 'assets/data/acupoints.json#$pointName' ||
+        (ref.title != null && ref.title != pointName)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupoint anchor, title, source and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final matches = AcupointRepository.getAll()
+        .where((item) => item.name == pointName)
+        .toList(growable: false);
+    if (matches.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The exact acupoint entry is not present in the bundled dataset.',
+      );
+    }
+    if (matches.length != 1) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupoint name is not unique in the bundled dataset.',
+      );
+    }
+
+    final snapshot = _acupointKnowledgeSnapshot(matches.single);
+    if (AiToolResultSnapshot.createStructuredId(snapshot: snapshot) !=
+        snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The current local acupoint record no longer matches the immutable snapshot.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: matches.single.name,
+        content: Map<String, Object?>.unmodifiable(snapshot),
       ),
     );
   }

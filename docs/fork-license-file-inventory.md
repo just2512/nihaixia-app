@@ -1,6 +1,6 @@
 # Fork 修改文件全量清单
 
-共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单纳入 PR #373、PR #374 合并后的主线 `1752b238185960fa1d4742f29bc1cb389028ec12`、PR #375 五运六气三图字段切片及六经详情情境入口。CI 对实际 PR HEAD 重新计算路径与 Git 状态；机器可读清单的 comparison_head 使用运行时标记。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单纳入 PR #373、PR #374、PR #383 合并后的主线 `0458da83a1458a321f7eb63247a5ef3508c6499d`、PR #375 五运六气三图字段切片及穴位情境入口。CI 对实际 PR HEAD 重新计算路径与 Git 状态；机器可读清单的 comparison_head 使用运行时标记。
 
 ## 分类规则
 
@@ -687,6 +687,7 @@
 | release/download-page/index.html | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | release/研纪_历史版本_v1.10.0+7_发布说明.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | release/研纪_历史版本_v1.10.1_发布说明.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/acupoint_contextual_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/acupoint_detail_layout_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/acupoint_index_cross_meridian_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/acupoint_sparse_detail_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -897,8 +898,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 864 个（新增 709，修改 155）；删除路径 13 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 149；Fork 商业授权候选 350；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 865 个（新增 710，修改 155）；删除路径 13 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 149；Fork 商业授权候选 351；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。

@@ -10,6 +10,11 @@ import '../data/acupuncture_repository.dart';
 import '../data/zhenjiu_lecture_index.dart';
 import '../models/acupuncture.dart';
 import '../theme/app_colors.dart';
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/ai_context_prompt_builder.dart';
+import 'assistant_tool_router.dart' show AssistantMode;
+import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import 'guji_library_screen.dart';
 import 'markdown_doc_screen.dart';
 
@@ -82,6 +87,7 @@ class AcupointDetailScreen extends StatefulWidget {
 }
 
 class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
+  final ScrollController _pageScrollController = ScrollController();
   late List<AcupointDetail> _siblings = _buildSiblings();
   late int _index = _indexOf(widget.acupoint.name);
 
@@ -99,6 +105,95 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
       sameMeridian.add(widget.acupoint);
     }
     return sameMeridian;
+  }
+
+
+  Future<void> _askAiAboutAcupoint() async {
+    final selected = acupoint;
+    late final AiContextRef contextRef;
+    try {
+      contextRef = AiContextResolver.buildAcupointContextRef(
+        acupoint: selected,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('当前穴位无法建立可信的本地知识快照，已取消提问（UNKNOWN）。'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final resolution = AiContextResolver.resolveAcupoint(ref: contextRef);
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '穴位知识上下文解析失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final prompt = AiContextPromptBuilder.buildAcupointKnowledgeEntry(
+      entry: resolved,
+    );
+    final sourcePageRoute = ModalRoute.of(context);
+    final pageScrollOffset = _pageScrollController.hasClients
+        ? _pageScrollController.position.pixels
+        : null;
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: prompt,
+      initialMode: AssistantMode.learning,
+      contextualTitle: selected.name,
+      contextualExplanationOnly: true,
+    );
+
+    var stablePageFrames = 0;
+    var pagePositionReady = false;
+    for (var frame = 0; frame < 60 && mounted; frame++) {
+      final routeIsCurrent =
+          sourcePageRoute == null || sourcePageRoute.isCurrent;
+      final hasScrollMetrics = _pageScrollController.hasClients &&
+          _pageScrollController.position.hasContentDimensions;
+      if (routeIsCurrent && hasScrollMetrics) {
+        stablePageFrames++;
+        if (stablePageFrames >= 18) {
+          pagePositionReady = true;
+          break;
+        }
+      } else {
+        stablePageFrames = 0;
+      }
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (!mounted ||
+        !pagePositionReady ||
+        pageScrollOffset == null ||
+        !_pageScrollController.hasClients) {
+      return;
+    }
+    final position = _pageScrollController.position;
+    final targetOffset = pageScrollOffset
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+    if ((position.pixels - targetOffset).abs() > 0.5) {
+      _pageScrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -159,7 +254,9 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           if (velocity < -200) _swipe(1);
         },
         child: ListView(
-          key: ValueKey(acupoint.name),
+          key: const ValueKey('acupoint-detail-scroll'),
+          controller: _pageScrollController,
+
           padding: const EdgeInsets.all(16),
           children: [
           if (_siblings.length > 1)
@@ -173,6 +270,19 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                 ),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const ValueKey('acupoint-contextual-ask'),
+                onPressed: _askAiAboutAcupoint,
+                icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                label: const Text('问 AI 解读当前穴位'),
+              ),
+            ),
+          ),
+
           // 属性标签
           if (acupoint.attribute.isNotEmpty)
             Padding(
