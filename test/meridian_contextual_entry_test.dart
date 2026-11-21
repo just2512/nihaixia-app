@@ -180,7 +180,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
 
       for (final width in [402.0, 775.0]) {
-        tester.view.physicalSize = Size(width, 1500);
+        tester.view.physicalSize = Size(width, 700);
         await tester.pumpWidget(
           ContextualAiConversationStoreScope(
             conversationStore: InMemoryAssistantConversationStore(),
@@ -195,6 +195,17 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+
+        final pageScrollable = find.descendant(
+          of: find.byType(MeridianDetailScreen),
+          matching: find.byType(Scrollable),
+        ).first;
+        await tester.ensureVisible(find.textContaining('常用方剂').first);
+        await tester.pumpAndSettle();
+        final pagePosition =
+            tester.state<ScrollableState>(pageScrollable).position;
+        final pageOffsetBeforeOpen = pagePosition.pixels;
+        expect(pageOffsetBeforeOpen, greaterThan(0));
 
         await tester.tap(find.byTooltip('在统一助手中继续'));
         await tester.pump();
@@ -225,6 +236,11 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
         expect(find.byType(MeridianDetailScreen), findsOneWidget);
+        expect(
+          pagePosition.pixels,
+          closeTo(pageOffsetBeforeOpen, 0.5),
+          reason: '关闭情境助手后应恢复六经详情页原滚动位置',
+        );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       }
