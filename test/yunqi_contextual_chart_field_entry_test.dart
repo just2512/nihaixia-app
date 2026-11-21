@@ -255,16 +255,25 @@ void main() {
       );
       final pageController = pageList.controller!;
       final pagePosition = pageController.position;
-      final tabBar = find.byKey(const ValueKey('yunqi-chart-tabs'));
+      final pageScrollable = find
+          .descendant(
+            of: find.byType(YunQiScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first;
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
-        await tester.ensureVisible(tabBar);
-        await tester.pumpAndSettle();
         final tab = find.text(tabLabels[tabIndex]).first;
+        var revealAttempts = 0;
+        while (tab.hitTestable().evaluate().isEmpty && revealAttempts < 80) {
+          await tester.drag(pageScrollable, const Offset(0, -220));
+          await tester.pumpAndSettle();
+          revealAttempts++;
+        }
         expect(
           tab.hitTestable(),
           findsOneWidget,
-          reason: 'The keyed YunQi TabBar must be visible before tapping ${tabLabels[tabIndex]}.',
+          reason: 'The outer YunQi page scroll must expose ${tabLabels[tabIndex]} before tapping it.',
         );
         await tester.tap(tab);
         await tester.pumpAndSettle();
