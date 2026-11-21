@@ -332,6 +332,7 @@ void main() {
       );
       expect(disabledAfterInputChange.onPressed, isNull);
 
+      // Reuse the mounted list position after input changes; avoid a detached descendant Scrollable finder.
       final calculateAgain = find.byKey(const ValueKey('guansha-calculate-button'));
       pagePosition.jumpTo(0);
       await tester.pumpAndSettle();
