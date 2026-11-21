@@ -22,6 +22,8 @@ import 'chenggu_result_context_executor.dart';
 import 'chenggu_tool_executor.dart';
 import 'shousheng_debt_result_context_executor.dart';
 import 'shousheng_debt_tool_executor.dart';
+import 'sanshan_lingqian_result_context_executor.dart';
+import 'sanshan_lingqian_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -1307,6 +1309,152 @@ class AiContextResolver {
       ),
     );
   }
+
+  static AiContextRef buildSanshanLingqianResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final selectedSignId = input is Map ? input['selectedSignId'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            SanshanLingqianResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            SanshanLingqianResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            SanshanLingqianResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'appRandomDraw' ||
+        input['selectionOwner'] != 'APP_LOCAL_ONLY' ||
+        selectedSignId is! int ||
+        selectedSignId < 1 ||
+        selectedSignId > 92 ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sourceIds is! List ||
+        sourceIds.length != 1 ||
+        sourceIds.single !=
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId' ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Sanshan Lingqian context reference requires a complete, source-bound App draw snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: SanshanLingqianResultContextExecutor.moduleId,
+      anchorId: 'sanshan-lingqian:result:$snapshotId:sign=$selectedSignId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: SanshanLingqianResultContextExecutor.ruleVersion,
+      sourceId: '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId',
+      title: '三山国王灵签结果（第$selectedSignId签）',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveSanshanLingqianToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != SanshanLingqianResultContextExecutor.moduleId ||
+        !ref.sourceId.startsWith(SanshanLingqianToolExecutor.dataSourcePrefix)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '三山灵签引用不完整或不属于本地签谱来源。',
+      );
+    }
+    if (ref.ruleVersion != SanshanLingqianResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '三山灵签抽签执行器或本地签谱数据版本已变化。',
+      );
+    }
+
+    final match = RegExp(
+      r'^sanshan-lingqian:result:([0-9a-f]{64}):sign=(\d{1,2})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    final signId = match == null ? null : int.tryParse(match.group(2)!);
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        signId == null ||
+        signId < 1 ||
+        signId > 92 ||
+        ref.sourceId !=
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+        ref.title != '三山国王灵签结果（第$signId签）') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '三山灵签锚点、签号、来源与快照身份不一致。',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final selectedSignId = input is Map ? input['selectedSignId'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            SanshanLingqianResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            SanshanLingqianResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            SanshanLingqianResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'appRandomDraw' ||
+        input['selectionOwner'] != 'APP_LOCAL_ONLY' ||
+        selectedSignId != signId ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sourceIds is! List ||
+        sourceIds.length != 1 ||
+        sourceIds.single !=
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '三山灵签结果、签号、来源或结构化摘要与不可变快照不匹配。',
+      );
+    }
+
+    final rebuilt =
+        await SanshanLingqianResultContextExecutor.executeForSignId(signId);
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '无法从本地 92 签签谱重建已抽取签文。',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '本地签谱重建结果与原始抽签快照不一致。',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
 
   static const yunqiModuleId = 'yunqi';
 
