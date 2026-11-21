@@ -2025,7 +2025,7 @@ class AiContextResolver {
             selectedMainYun is! Map ||
             selectedGuestYun is! Map ||
             yunBounds is! List ||
-            yunBounds.length != 6) {
+            yunBounds.length != 5) {
           return null;
         }
         return <String, Object?>{
@@ -2055,7 +2055,7 @@ class AiContextResolver {
             selectedMainQi is! Map ||
             selectedGuestQi is! String ||
             qiBounds is! List ||
-            qiBounds.length != 7) {
+            qiBounds.length != 6) {
           return null;
         }
         return <String, Object?>{
