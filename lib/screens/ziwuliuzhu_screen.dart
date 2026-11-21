@@ -560,7 +560,7 @@ class _NaZiTab extends StatelessWidget {
 
 class _NajiaTab extends StatelessWidget {
   final DateTime selectedDate;
-  final VoidCallback onAskAi;
+  final VoidCallback? onAskAi;
   const _NajiaTab({required this.selectedDate, required this.onAskAi});
 
   @override
@@ -656,7 +656,7 @@ class _NajiaTab extends StatelessWidget {
 
 class _LingGuiTab extends StatelessWidget {
   final DateTime selectedDate;
-  final VoidCallback onAskAi;
+  final VoidCallback? onAskAi;
   const _LingGuiTab({required this.selectedDate, required this.onAskAi});
 
   @override
@@ -734,7 +734,7 @@ class _LingGuiTab extends StatelessWidget {
 
 class _FeiTengTab extends StatelessWidget {
   final DateTime selectedDate;
-  final VoidCallback onAskAi;
+  final VoidCallback? onAskAi;
   const _FeiTengTab({required this.selectedDate, required this.onAskAi});
 
   @override
