@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../utils/fold_aware_routes.dart';
 
 import '../data/database_helper.dart';
-import '../models/bookmark.dart';
 import '../data/dream_data.dart';
+import '../models/bookmark.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/dream_result_context_executor.dart';
-import '../screens/assistant_tool_router.dart' show AssistantMode;
+import '../utils/fold_aware_routes.dart';
 import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
+import 'assistant_tool_router.dart' show AssistantMode;
 
 /// 周公解梦 —— 《周公解梦大全》结构化数据集民俗占梦查询。
 ///
