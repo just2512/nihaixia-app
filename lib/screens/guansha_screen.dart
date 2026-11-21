@@ -498,6 +498,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
 
   Widget _buildCalcTab(ColorScheme cs) {
     return ListView(
+      key: const ValueKey('guansha-calculation-list'),
       padding: const EdgeInsets.all(16),
       children: [
         Card(

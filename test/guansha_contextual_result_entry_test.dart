@@ -283,8 +283,8 @@ void main() {
 
       final locationRow = find.byType(BaZiLocationRow);
       final calculationScrollable = find
-          .ancestor(
-            of: locationRow,
+          .descendant(
+            of: find.byKey(const ValueKey('guansha-calculation-list')),
             matching: find.byType(Scrollable),
           )
           .first;
