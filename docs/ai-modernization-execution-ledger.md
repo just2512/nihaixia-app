@@ -3163,17 +3163,52 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 ### 62.3 PR #375 当前 head 自动验收
 
 - 初始 head `6732c78d91785fe7d78b241f819fbe857f9ad752` 的 Fork license boundary SUCCESS、Android arm64 SUCCESS；Flutter 全量回归为 1852 passed / 1 failed / 15 skipped。
-- 唯一失败定位为新增 Widget 测试在图表 Tab 尚未进入视口时，对 `find.text(...).first` 调用 hit-test，触发 `StateError: Bad state: No element`。失败来自测试 Finder 的空集合处理，不是产品逻辑；没有删除测试或降低断言。
-- 第一轮修复提交 `ef6f83abee99ac665d5620986c8ab54a84c97023` 去除了视口外 Finder 的 `.first` 强制取值；该 head 的全量回归仍失败，原因是测试选取了 TabBar 内部 Scrollable，未实际滚动外层页面。
-- 第二轮修复提交 `ee728b9cb6658c02cf4dcd3447bc49c9f69a3b77` 改为直接使用 YunQi 页面 ListView 的 pageController 滚动，再从带稳定 key 的 TabBar 内定位当前标签并 hit-test；不再猜测页面中的第一个 Scrollable。
-- 最新 head 的 Fork license boundary run `44899694660` SUCCESS；Flutter tests run `44899694651` 正在执行 `Run full regression suite`，终态尚未取得；Android arm64 job 尚未触发，等待 Flutter job 终态。
-- 必须等待最终 head `ee728b9` 的 Flutter regression 与 Android arm64 均 SUCCESS 后，才可合并 PR #375；条件性 SKIPPED 不计 PASS。合并后另行核验 master post-merge Flutter tests 与 Flutter Quality Gate 终态，不以 PR head 结果替代。
+- 首次失败定位为新增 Widget 测试在图表 Tab 尚未进入视口时，对 `find.text(...).first` 做 hit-test，触发 `StateError: Bad state: No element`。这是测试 Finder 的空集合处理问题，不是产品逻辑失败；没有删除测试或降低断言。
+- 随后修复经历三次：
+  - `ef6f83abee99ac665d5620986c8ab54a84c97023`：移除视口外 Finder 的 `.first` 强制取值。
+  - `96c4316d5882b74a8fa95c5767627dd7ac453e6a`：改为滚动页面后定位 Tab；再次回归仍发现 TabBar 内部水平 Scrollable / lazy child 构建问题。
+  - 当前 head `f01b80181057cf497a0770d315032bc1cb059479`：Finder 明确从带 `yunqi-page-scroll` key 的页面 ListView 内取其子 Scrollable，并用 `scrollUntilVisible` 分步滚动到 TabBar 已挂载后再定位和点击标签。此次修复只调整测试定位/滚动方式，保留三个图表入口、字段白名单和布局断言。
+- 当前最终 head 相对 master ahead 33 / behind 0，GitHub 报告 mergeable=true。Fork license boundary run `44903054377` SUCCESS；Flutter tests run `44903054441` 当前仍 IN_PROGRESS，最近一次复核时已完成静态分析、AI 契约、会话恢复、统一助手分发、SQLite persistence 等前置步骤，正在运行 AI knowledge citation contract regression；完整 Flutter 回归尚未取得终态，Android arm64 job 尚未触发。
+- 旧 SHA 的成功/失败结果不转移到当前 head。必须等待 `f01b801` 的 Flutter regression 与 Android arm64 verification APK + unit tests 均终态 SUCCESS，且同 SHA 的 Fork license boundary SUCCESS 后才可普通 merge。条件性 Branch validation SKIPPED 不计 PASS。
+- 合并后另行核验 master post-merge Flutter tests 与 Flutter Quality Gate 终态，不以 PR head 结果替代。
 - Find N2 外屏/内屏/半折叠、键盘、分屏，以及本地 E4B 多轮/Native 状态/历史恢复/完整 TRACE 继续标记 `UNKNOWN / LOCAL ONLY`，集中留到云端切片全部收尾后的最终本地验收；不阻止本节所列云端工作。
 
 ### 62.4 后续执行顺序
 
 1. 完成 PR #375 最终 head 的 Flutter 全量 regression 与 Android arm64；按同一 SHA 核验 Fork license boundary；通过后普通 merge。
 2. 以合并后的最新 master 更新本台账，并核验 post-merge master Flutter tests / Flutter Quality Gate。
-3. 进行全仓库情境入口目录复核：逐页核验“真实结果/字段入口是否存在、Resolver 是否可重建、sourceId/版本是否绑定、旧会话是否锚定、负向测试和 402dp/775dp 布局是否覆盖”；只补实际缺口，不为数量新建空壳入口。
-4. 对协议 §12 共通场景与 §8 数据生命周期做云端测试覆盖审计，特别核验同锚点会话复用、切换锚点不串线、消息 metadata 可追溯、清除 AI 数据不影响非 AI 数据；只对证据确认的缺口建立独立小切片。
+3. 已完成全仓库情境入口目录静态复核，结果见 §62.5；按当前 master 的实际页面调用链、Resolver / Prompt Builder 与相应测试文件交叉核对，没有发现需新增另一套运行时架构或空壳入口的已证实缺口。
+4. 已完成协议 §12 共通场景与 §8 数据生命周期的代码/测试覆盖复核，结果见 §62.6；同锚点会话复用、锚点隔离、消息 metadata、折叠窗口自动化及 AI/非 AI 数据清理均有现有实现与相应测试。真实 CI 终态仍以对应 HEAD 的 workflow 记录为准。
 5. 云端代码、自动化、文档和 CI 全部收尾后，再交付 Find N2 最终本地验收清单；真机与本地 E4B 结果不得预先标记 PASS。
+
+
+### 62.5 全仓库情境入口目录复核（代码基线 `86dbac6c3714f593cffdb31400a25d74e581f8e7`）
+
+本节以 master Git tree、页面实际调用链、Resolver / Prompt Builder 方法和测试目录交叉核对。仅有工具注册、Headless executor 或普通页面跳转不算已接入；必须能从真实页面结果/知识条目建立稳定引用，经本地解析校验后才允许构建 Prompt。
+
+| 场景组 | 已核验主线入口与调用链 | 对应测试文件 |
+|---|---|---|
+| 整体工具结果 | 黄历、八字、紫微、易经、梅花、小六壬、五运六气、子午流注、节气、黄帝四季歌、称骨、受生债、玉匣灵兆、三山灵签、经方单位换算、小儿关煞、周公解梦 | `almanac_contextual_result_entry_test.dart`、`bazi_contextual_result_entry_test.dart`、`ziwei_contextual_result_entry_test.dart`、`yijing_contextual_result_entry_test.dart`、`meihua_contextual_result_entry_test.dart`、`xiaoliuren_contextual_result_entry_test.dart`、`yunqi_contextual_result_entry_test.dart`、`ziwuliuzhu_contextual_result_entry_test.dart`、`solar_term_contextual_result_entry_test.dart`、`huangdi_siji_contextual_result_entry_test.dart`、`chenggu_contextual_result_entry_test.dart`、`shousheng_debt_contextual_result_entry_test.dart`、`yuxiaji_omen_contextual_result_entry_test.dart`、`sanshan_lingqian_contextual_result_entry_test.dart`、`dosage_contextual_result_entry_test.dart`、`guansha_contextual_result_entry_test.dart`、`dream_contextual_result_entry_test.dart` |
+| 字段 / 局部结果 | 八字字段、紫微本宫星曜、易经字段、梅花字段；五运六气三图字段由 PR #375 承接 | `bazi_contextual_result_entry_test.dart`、`ziwei_contextual_result_entry_test.dart`、`yijing_contextual_result_entry_test.dart`、`meihua_contextual_field_entry_test.dart`、PR #375 的 `yunqi_contextual_chart_field_entry_test.dart` |
+| 知识条目 | 方剂、本草、内经条目、单条医案 | `formula_contextual_entry_test.dart`、`herb_contextual_entry_test.dart`、`neijing_contextual_entry_test.dart`、`medical_case_contextual_entry_test.dart` |
+| 经典划词 | Markdown 单一引用段；需有明确 moduleId / anchorId / sourceId，且选区绑定当前 passage 文本版本和 selectedText | `markdown_doc_contextual_selection_test.dart` |
+
+- 结果型页面可见入口通过对应的 `AiContextResolver.build*ContextRef` / `resolve*ToolResult`（或字段级 Resolver）及 `AiContextPromptBuilder` 构建上下文；当前 Tab / 宫位 / 字段等 UI 选择映射到受控路径，模型不选择或重算结果。
+- 知识入口由本地条目身份建立上下文。解梦入口绑定用户确认的单条 `DreamEntry.id`；小儿关煞入口绑定一次明确的城市/生辰/规则执行，并对 Prompt 中可识别生辰信息脱敏。
+- Markdown 划词仅在唯一 passage / 单一引用块范围可确认时启用；多块引用或身份不唯一时拒绝情境提问，不用全篇 `indexOf` 猜测来源。
+- 不新增“我的命盘库”列表级重复入口；问诊历史/危急提示也不被包装成缺少独立来源与权限契约的工具结果。旧台账 §59.5 的排除决策继续有效。
+- 本节是代码树/调用链/测试目录的静态复核记录，不把测试文件存在本身冒充 CI PASS；CI 终态仍必须按其准确 head SHA 核验。
+
+### 62.6 共通会话、metadata、布局与数据清理审计
+
+- **同锚点会话复用：** `AiContextRef.matchesSameAnchor` 比较完整规范化 metadata。情境助手初始化时仅在会话 transcript 中每条有效 user/assistant 消息均携带完整且相同的 contextRef 时复用；缺失、不同版本或不同 selectedText 均新建独立会话。
+- **锚点隔离自动化：** `test/local_ai_interview_screen_test.dart` 已覆盖同锚点复用并把追问继续绑定原锚点、不同结果 snapshotId 新建会话、不恢复旧快照回答，以及同条经典段落更换 selectedText 后不复用旧选区会话。追问的 user / assistant 两条消息均断言保留原 contextRef。
+- **消息 metadata：** `AssistantMessageMetadata` 使用版本化 JSON 保存 contextRef；`test/assistant_message_metadata_test.dart` 覆盖一般 contextRef、fieldPath/snapshotId 往返和旧格式兼容。正常成功对话 turn 将同一 activeContextRef 写入 user 与 assistant metadata；情境助手使用 `contextualExplanationOnly=true`，不会再把锚定内容送入工具意图分发。
+- **token 预算：** Prompt Builder 对未接入对应模型 tokenizer 的场景明确标记 `UNKNOWN`，没有用中文字符数冒充 token 数；来源、版本和关键结构化字段随 Prompt 保留。
+- **折叠窗口自动化：** `ContextualAiPanel` 以 720dp 为侧栏阈值；窄屏通过 `DraggableScrollableSheet`（initial 0.82、min 0.55、max 0.95），宽屏侧栏宽度限制在 340–520dp。`test/contextual_ai_panel_layout_test.dart` 覆盖 402dp / 775dp、浅深主题及 200% 字号；各页面测试分别覆盖对应入口的窗口场景。该模拟布局不能代替 Find N2 真机 TRACE。
+- **AI 数据清理：** `LocalAiDataClearCoordinator` 在停止并 flush TRACE 后调用 Native runtime release；只有确认 runtime released 才清除 AI 附件；清除 TRACE 与数据库后恢复原 TRACE 开关状态。并发清理请求共用同一 in-flight Future，失败域逐项报告，Native 调用异常不谎称已保留模型。
+- **数据库边界：** `clearAllAiConversationData` 在同一事务删除 assistant_messages、tcm_interview_tasks、assistant_conversations 与 legacy chat_history。对应 `test/local_ai_data_clear_coordinator_test.dart`、`test/local_ai_data_clear_database_boundary_test.dart` 覆盖执行顺序、Native 未释放不删除附件、失败与并发、事务回滚、数据库重开，以及书签、诊断历史、搜索历史和 user_settings 等非 AI 数据保留。
+- **清理限制已向用户披露：** 旧版共享临时目录中不能可靠归属的文件、系统备份副本及外部导出副本不属于当前可证明清理范围；AI 与非 AI 数据共用 SQLite，备份副本可能仍保留。不能把“清理范围内 complete”解释为所有存储介质均不可恢复。
+- **历史扫描范围：** 情境初始化最多检查最近 500 条会话。超过范围的旧会话可能不被复用，但系统会创建新会话并保留正确锚点，不会回退为跨快照复用；这是检索范围边界，不是来源隔离缺陷。
+
+**审计结论：** 按当前 master 代码和自动化测试目录，协议 §12.3 的同锚点复用、锚点隔离、metadata 可追溯、token UNKNOWN、折叠窗口自动化，以及 §8 的 AI / 非 AI 数据清理边界均有实现与测试覆盖。本轮没有证据支持新增第二套会话协调器、数据库表或重复页面入口。PR #375 的专项三图 Widget 测试及最终 HEAD CI 仍是当前云端剩余门禁；Find N2 实机折叠/键盘行为与本地 E4B 多轮、Native 状态和 TRACE 保持 `UNKNOWN / LOCAL ONLY`。
