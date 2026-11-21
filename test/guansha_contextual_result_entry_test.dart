@@ -363,8 +363,11 @@ void main() {
       // runAsync so its fire-and-forget preference write does not leave a
       // FakeAsync transaction timeout pending when the viewport test ends.
       await tester.runAsync(() async {
-        trueSolarSwitch.onChanged!(!trueSolarSwitch.value);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+        final nextValue = !trueSolarSwitch.value;
+        trueSolarSwitch.onChanged!(nextValue);
+        // Await a serialized write of the same value so the callback's
+        // fire-and-forget SQLite write is drained before widget teardown.
+        await SettingsRepository.instance.setUseTrueSolarTime(nextValue);
       });
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
