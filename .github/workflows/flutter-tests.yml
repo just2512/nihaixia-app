@@ -219,7 +219,11 @@ jobs:
 
       - name: Run Dart and Flutter static analysis
         if: steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
-        run: flutter analyze --no-pub --no-fatal-infos
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter analyze --no-pub --no-fatal-infos 2>&1 | tee build/ci-diagnostics/flutter-analyze.log
 
       - name: Run local AI contract tests
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
@@ -228,7 +232,11 @@ jobs:
       - name: Run recorder retry widget regression
         id: recorder_retry
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
-        run: flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "re-enables stop after a recorder stop failure and accepts a successful retry"
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter test --no-pub test/local_ai_interview_screen_test.dart --plain-name "re-enables stop after a recorder stop failure and accepts a successful retry" 2>&1 | tee build/ci-diagnostics/recorder-retry.log
 
       - name: Run native status-unknown widget regression
         id: model_status_unknown
@@ -282,7 +290,11 @@ jobs:
       - name: Run unified assistant dispatch regression
         id: assistant_dispatch
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
-        run: flutter test --no-pub test/assistant_conversation_orchestrator_test.dart test/assistant_tool_router_test.dart
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter test --no-pub test/assistant_conversation_orchestrator_test.dart test/assistant_tool_router_test.dart 2>&1 | tee build/ci-diagnostics/assistant-dispatch.log
 
       - name: Run SQLite persistence and reopen regression
         id: sqlite_persistence
@@ -334,6 +346,15 @@ jobs:
           path: test/failures/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: Upload Flutter CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-ci-diagnostics
+          path: build/ci-diagnostics/*.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   build-apk:
     name: Android arm64 CI verification APK + unit tests
@@ -425,7 +446,11 @@ jobs:
 
       - name: Build Android arm64 CI Debug APK (ABI verification only)
         id: build_apk
-        run: flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build/ci-diagnostics
+          flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true 2>&1 | tee build/ci-diagnostics/android-arm64-build.log
 
       - name: Verify merged Android backup manifest
         id: verify_backup_manifest
@@ -524,5 +549,14 @@ jobs:
           path: |
             build/app/test-results/testDebugUnitTest/
             build/app/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Android CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-ci-diagnostics
+          path: build/ci-diagnostics/*.log
           if-no-files-found: ignore
           retention-days: 7
