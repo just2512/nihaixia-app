@@ -1,9 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/services/guansha_tool_executor.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final settings = SettingsRepository.instance;
+    if (!settings.isLoaded) await settings.load();
+  });
 
   const validArguments = {
     'birth_date': '1990-01-02',
