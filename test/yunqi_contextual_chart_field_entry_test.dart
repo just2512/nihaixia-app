@@ -250,10 +250,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final pageScrollable = find.descendant(
+        of: find.byType(YunQiScreen),
+        matching: find.byType(Scrollable),
+      ).first;
+      final pagePosition =
+          tester.state<ScrollableState>(pageScrollable).position;
+
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
+        if (pagePosition.pixels > pagePosition.minScrollExtent) {
+          pagePosition.jumpTo(pagePosition.minScrollExtent);
+          await tester.pumpAndSettle();
+        }
         final tab = find.text(tabLabels[tabIndex]).first;
-        await tester.ensureVisible(tab);
-        await tester.pumpAndSettle();
         await tester.tap(tab);
         await tester.pumpAndSettle();
 
