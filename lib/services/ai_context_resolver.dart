@@ -5,6 +5,7 @@ import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../data/medical_case_data.dart';
 import '../data/neijing_entries.dart';
+import '../engine/diagnostic_rules.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
@@ -3187,6 +3188,116 @@ class AiContextResolver {
     );
   }
 
+
+  static const meridianModuleId = 'meridian';
+  static const meridianRuleVersion = 'diagnostic-rules-meridian-details-v1';
+  static const meridianResultSchemaVersion = 'meridian-knowledge-v1';
+  static const meridianSourceId = 'local-data:diagnostic-rules:meridianDetails';
+
+  static AiContextRef buildMeridianContextRef({
+    required String meridian,
+  }) {
+    final snapshot = _createMeridianKnowledgeSnapshot(meridian);
+    if (snapshot == null) {
+      throw ArgumentError.value(meridian, 'meridian', 'A known, complete six-meridian entry is required.');
+    }
+    final snapshotId = snapshot['snapshotId'] as String;
+    return AiContextRef(
+      kind: AiContextKind.knowledgeEntry,
+      moduleId: meridianModuleId,
+      anchorId: 'meridian:detail:' + meridian,
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: meridianRuleVersion,
+      sourceId: meridianSourceId,
+      title: meridian + '病',
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveMeridianKnowledgeEntry({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.knowledgeEntry || normalized.isEmpty ||
+        ref.moduleId != meridianModuleId || ref.sourceId != meridianSourceId) {
+      return const AiContextResolution(status: AiContextResolutionStatus.unknown, reason: 'The six-meridian reference is incomplete or has an unverified source.');
+    }
+    if (ref.ruleVersion != meridianRuleVersion) {
+      return const AiContextResolution(status: AiContextResolutionStatus.stale, reason: 'The six-meridian rule data version no longer matches this context.');
+    }
+    final match = RegExp(r'^meridian:detail:(太阳|阳明|少阳|太阴|少阴|厥阴)$').firstMatch(ref.anchorId);
+    if (match == null) {
+      return const AiContextResolution(status: AiContextResolutionStatus.unknown, reason: 'The six-meridian anchor does not identify one exact local record.');
+    }
+    final meridian = match.group(1)!;
+    if (ref.title != meridian + '病') {
+      return const AiContextResolution(status: AiContextResolutionStatus.unknown, reason: 'The six-meridian title does not match the selected local record.');
+    }
+    final snapshot = _createMeridianKnowledgeSnapshot(meridian);
+    if (snapshot == null) {
+      return const AiContextResolution(status: AiContextResolutionStatus.missing, reason: 'The selected six-meridian record is not available in the local rules data.');
+    }
+    final snapshotId = snapshot['snapshotId'];
+    if (snapshotId is! String || ref.snapshotId != snapshotId || ref.anchorVersion != snapshotId) {
+      return const AiContextResolution(status: AiContextResolutionStatus.stale, reason: 'The six-meridian record has changed since this context was created.');
+    }
+    final result = snapshot['result'];
+    if (result is! Map<String, Object?>) {
+      return const AiContextResolution(status: AiContextResolutionStatus.missing, reason: 'The six-meridian snapshot has no structured local record.');
+    }
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(ref: ref, title: meridian + '病', content: Map<String, Object?>.unmodifiable(result)),
+    );
+  }
+
+  static Map<String, Object?>? _createMeridianKnowledgeSnapshot(String meridian) {
+    final details = DiagnosticRules.meridianDetails[meridian];
+    if (details == null) return null;
+    final nature = details['nature'];
+    final organ = details['organ'];
+    final keyPulse = details['keyPulse'];
+    final coreSymptoms = details['coreSymptoms'];
+    final transmissionIn = details['transmissionIn'];
+    final transmissionOut = details['transmissionOut'];
+    final classicText = details['classicText'];
+    final niNote = details['niNote'];
+    final healingTime = DiagnosticRules.meridianHealingTime[meridian];
+    if (nature is! String || nature.isEmpty || organ is! String || organ.isEmpty ||
+        keyPulse is! String || keyPulse.isEmpty || coreSymptoms is! List || coreSymptoms.isEmpty ||
+        coreSymptoms.any((value) => value is! String || value.isEmpty) ||
+        transmissionOut is! List || transmissionOut.isEmpty ||
+        transmissionOut.any((value) => value is! String || value.isEmpty) ||
+        classicText is! String || classicText.isEmpty || niNote is! String || niNote.isEmpty ||
+        healingTime is! String || healingTime.isEmpty ||
+        !(transmissionIn is String && transmissionIn.isNotEmpty ||
+          transmissionIn is List && transmissionIn.every((value) => value is String && value.isNotEmpty))) {
+      return null;
+    }
+    final result = <String, Object?>{
+      'meridian': meridian,
+      'nature': nature,
+      'organ': organ,
+      'keyPulse': keyPulse,
+      'coreSymptoms': List<String>.unmodifiable(coreSymptoms.cast<String>()),
+      'healingTime': healingTime,
+      'transmissionIn': transmissionIn is List ? List<String>.unmodifiable(transmissionIn.cast<String>()) : transmissionIn,
+      'transmissionOut': List<String>.unmodifiable(transmissionOut.cast<String>()),
+      'classicText': classicText,
+      'niNote': niNote,
+    };
+    final snapshot = <String, Object?>{
+      'capabilityId': meridianModuleId,
+      'resultSchemaVersion': meridianResultSchemaVersion,
+      'executionStatus': 'SUCCESS',
+      'ruleVersion': meridianRuleVersion,
+      'sourceIds': const <String>[meridianSourceId],
+      'input': <String, Object?>{'meridian': meridian},
+      'result': result,
+    };
+    snapshot['snapshotId'] = AiToolResultSnapshot.createStructuredId(snapshot: snapshot);
+    return Map<String, Object?>.unmodifiable(snapshot);
+  }
 
   static const herbModuleId = 'herb';
   static const herbAssetVersion =
