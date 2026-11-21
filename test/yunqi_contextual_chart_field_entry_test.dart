@@ -154,6 +154,25 @@ void main() {
       AiContextResolutionStatus.unknown,
     );
 
+    final wrongTitle = AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: ref.moduleId,
+      anchorId: ref.anchorId,
+      anchorVersion: ref.anchorVersion,
+      snapshotId: ref.snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: ref.sourceId,
+      fieldPath: ref.fieldPath,
+      title: '六气图',
+    );
+    expect(
+      AiContextResolver.resolveYunqiChartField(
+        ref: wrongTitle,
+        structuredSnapshot: snapshot,
+      ).status,
+      AiContextResolutionStatus.unknown,
+    );
+
     final alteredResult = Map<String, Object?>.from(
       snapshot['result']! as Map<String, Object?>,
     );
