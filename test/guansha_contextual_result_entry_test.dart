@@ -358,7 +358,14 @@ void main() {
         '真太阳时校准',
       );
       await tester.ensureVisible(trueSolarTile);
-      await tester.tap(trueSolarTile);
+      final trueSolarSwitch = tester.widget<SwitchListTile>(trueSolarTile);
+      // SQLite FFI uses real asynchronous I/O; invoke the widget callback in
+      // runAsync so its fire-and-forget preference write does not leave a
+      // FakeAsync transaction timeout pending when the viewport test ends.
+      await tester.runAsync(() async {
+        trueSolarSwitch.onChanged!(!trueSolarSwitch.value);
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         ask,
