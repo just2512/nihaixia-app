@@ -86,6 +86,59 @@ $second
   );
 
   testWidgets(
+    'repeated identical lecture paragraphs retain the selected line-range anchor',
+    (tester) async {
+      const repeated = '同一句话在这份讲稿里重复出现，用于验证来源锚点。';
+      const markdown = '# 重复文本样板\n\n$repeated\n\n$repeated';
+      await tester.pumpWidget(
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            theme: ThemeData(extensions: [AppColors.light]),
+            home: const MarkdownDocScreen(
+              title: '重复段落阅读',
+              content: markdown,
+              contextualAskModuleId: 'neijing-reading',
+              contextualAskAnchorId:
+                  'neijing-reading:passage:assets/neijing/repeated.md',
+              contextualAskSourceId: 'assets/neijing/repeated.md',
+              contextualAskParagraphs: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final repeatedParagraphs = find.text(repeated, findRichText: true);
+      expect(repeatedParagraphs, findsNWidgets(2));
+      expect(find.byType(SelectionArea), findsNWidgets(2));
+      final secondParagraph = repeatedParagraphs.last;
+      await tester.ensureVisible(secondParagraph);
+      await tester.longPress(secondParagraph);
+      await tester.pumpAndSettle();
+      expect(find.text('问 AI'), findsOneWidget);
+      await tester.tap(find.text('问 AI'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final assistant = tester.widget<LocalAiInterviewScreen>(
+        find.byType(LocalAiInterviewScreen),
+      );
+      expect(
+        assistant.contextRef['anchorId'],
+        'neijing-reading:passage:assets/neijing/repeated.md:paragraph:5-5',
+      );
+      expect(
+        assistant.contextRef['sourceId'],
+        'assets/neijing/repeated.md',
+      );
+      expect(assistant.contextRef['selectedText'], isNotEmpty);
+      expect(assistant.initialPrompt, contains(repeated));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Neijing and Bencao lecture libraries pass paragraph-mode source identities',
     (tester) async {
       await tester.pumpWidget(MaterialApp(
