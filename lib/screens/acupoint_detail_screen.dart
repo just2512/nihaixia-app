@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import '../theme/app_tokens.dart';
 import '../models/bookmark.dart';
 import '../utils/fold_aware_routes.dart';
@@ -261,8 +260,9 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
           if (velocity < -200) _swipe(1);
         },
         child: ListView(
+          key: const ValueKey('acupoint-detail-scroll'),
           controller: _pageScrollController,
-          key: ValueKey(acupoint.name),
+
           padding: const EdgeInsets.all(16),
           children: [
           if (_siblings.length > 1)
