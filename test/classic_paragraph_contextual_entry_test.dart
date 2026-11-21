@@ -161,7 +161,8 @@ $second
       final neijingEntry = find.text('上古天真论');
       await tester.ensureVisible(neijingEntry);
       await tester.tap(neijingEntry);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 300));
 
       final neijingReader = tester.widget<MarkdownDocScreen>(
         find.byType(MarkdownDocScreen),
@@ -180,7 +181,8 @@ $second
       final bencaoEntry = find.text('上经·人参');
       await tester.ensureVisible(bencaoEntry);
       await tester.tap(bencaoEntry);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 300));
 
       final bencaoReader = tester.widget<MarkdownDocScreen>(
         find.byType(MarkdownDocScreen),
