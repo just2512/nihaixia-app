@@ -235,7 +235,9 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
         children: [
           _NaZiTab(
             selectedDate: _selectedDate,
-            onAskAi: () => unawaited(_askAiAboutMethod('methods.naZi')),
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.naZi'))
+                : null,
             onPickDate: _pickDate,
             onPickTime: _pickTime,
             onResetNow: () => setState(() {
@@ -254,15 +256,21 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
           ),
           _NajiaTab(
             selectedDate: _selectedDate,
-            onAskAi: () => unawaited(_askAiAboutMethod('methods.naJia')),
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.naJia'))
+                : null,
           ),
           _LingGuiTab(
             selectedDate: _selectedDate,
-            onAskAi: () => unawaited(_askAiAboutMethod('methods.lingGui')),
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.lingGui'))
+                : null,
           ),
           _FeiTengTab(
             selectedDate: _selectedDate,
-            onAskAi: () => unawaited(_askAiAboutMethod('methods.feiTeng')),
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.feiTeng'))
+                : null,
           ),
         ],
       ),
@@ -278,7 +286,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
 
 class _NaZiTab extends StatelessWidget {
   final DateTime selectedDate;
-  final VoidCallback onAskAi;
+  final VoidCallback? onAskAi;
   final Future<void> Function() onPickDate;
   final Future<void> Function() onPickTime;
   final VoidCallback onResetNow;
