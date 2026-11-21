@@ -255,7 +255,7 @@ void main() {
       final pageController = pageList.controller!;
       final pagePosition = pageController.position;
       final pageScrollable = find
-          .ancestor(
+          .descendant(
             of: pageScrollKey,
             matching: find.byType(Scrollable),
           )
