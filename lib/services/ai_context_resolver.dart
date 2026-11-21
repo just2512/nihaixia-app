@@ -26,6 +26,8 @@ import 'sanshan_lingqian_result_context_executor.dart';
 import 'sanshan_lingqian_tool_executor.dart';
 import 'dosage_result_context_executor.dart';
 import 'dosage_tool_executor.dart';
+import 'guansha_result_context_executor.dart';
+import 'guansha_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -3286,4 +3288,160 @@ class AiContextResolver {
       ),
     );
   }
+
+  static AiContextRef buildGuanshaResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            GuanshaResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            GuanshaResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            GuanshaResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDetails' ||
+        arguments is! Map ||
+        arguments.length != 4 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        !const {'male', 'female'}.contains(arguments['gender']) ||
+        arguments['birthplace'] is! String ||
+        (arguments['birthplace'] as String).trim().isEmpty ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 3 ||
+        sources[0] != GuanshaToolExecutor.sourceId ||
+        sources[1] != GuanshaToolExecutor.dataSourceId ||
+        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Guansha reference requires a complete successful child-safety snapshot bound to the local engine and source assets.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: GuanshaResultContextExecutor.moduleId,
+      anchorId: 'guansha:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: GuanshaResultContextExecutor.ruleVersion,
+      sourceId: GuanshaToolExecutor.sourceId,
+      title: '小儿关煞结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveGuanshaToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != GuanshaResultContextExecutor.moduleId ||
+        ref.sourceId != GuanshaToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Guansha reference is incomplete or does not identify the local Guansha engine.',
+      );
+    }
+    if (ref.ruleVersion != GuanshaResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Guansha data, rule engine, city directory, Bazi engine, settings or locked packages changed.',
+      );
+    }
+
+    final match = RegExp(r'^guansha:result:([0-9a-f]{64})$')
+        .firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        ref.title != '小儿关煞结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Guansha anchor, title and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final argumentsValue = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            GuanshaResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            GuanshaResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            GuanshaResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDetails' ||
+        argumentsValue is! Map ||
+        argumentsValue.length != 4 ||
+        argumentsValue.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        !const {'male', 'female'}.contains(argumentsValue['gender']) ||
+        (argumentsValue['birthplace'] as String? ?? '').trim().isEmpty ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 3 ||
+        sources[0] != GuanshaToolExecutor.sourceId ||
+        sources[1] != GuanshaToolExecutor.dataSourceId ||
+        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Guansha input, settings, sources or structured result no longer match its immutable digest.',
+      );
+    }
+
+    final arguments = <String, String>{
+      for (final entry in argumentsValue.entries)
+        entry.key as String: entry.value as String,
+    };
+    final rebuilt = await GuanshaResultContextExecutor.executeWithSnapshot(
+      arguments,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Guansha result could not be reconstructed from its recorded child birth input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Guansha calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
 }
