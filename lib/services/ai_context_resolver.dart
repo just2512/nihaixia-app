@@ -5,6 +5,7 @@ import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../data/medical_case_data.dart';
 import '../data/neijing_entries.dart';
+import '../engine/diagnostic_rules.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
@@ -3187,6 +3188,943 @@ class AiContextResolver {
     );
   }
 
+
+  static const meridianModuleId = 'meridian';
+  static const meridianRuleVersion = 'diagnostic-rules-meridian-details-v1';
+  static const meridianResultSchemaVersion = 'meridian-knowledge-v1';
+  static const meridianSourceId =
+      'local-data:diagnostic-rules:meridianDetails';
+
+  /// Builds an immutable reference to the exact six-meridian detail record
+  /// currently rendered by MeridianDetailScreen. The digest binds all fields
+  /// copied from the same local rules map.
+  static AiContextRef buildMeridianContextRef({
+    required String meridian,
+  }) {
+    final snapshot = _createMeridianKnowledgeSnapshot(meridian);
+    if (snapshot == null) {
+      throw ArgumentError.value(
+        meridian,
+        'meridian',
+        'A known, complete six-meridian entry is required.',
+      );
+    }
+    final snapshotId = snapshot['snapshotId'] as String;
+    return AiContextRef(
+      kind: AiContextKind.knowledgeEntry,
+      moduleId: meridianModuleId,
+      anchorId: 'meridian:detail:$meridian',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: meridianRuleVersion,
+      sourceId: meridianSourceId,
+      title: '$meridian病',
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry>
+      resolveMeridianKnowledgeEntry({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.knowledgeEntry ||
+        normalized.isEmpty ||
+        ref.moduleId != meridianModuleId ||
+        ref.sourceId != meridianSourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The six-meridian knowledge reference is incomplete or does not identify the local meridian source.',
+      );
+    }
+    if (ref.ruleVersion != meridianRuleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The six-meridian rule data version no longer matches this context.',
+      );
+    }
+
+    final match = RegExp(
+      r'^meridian:detail:(太阳|阳明|少阳|太阴|少阴|厥阴)
+  static const herbAssetVersion =
+      'assets/data/herbs.json@73fb43ff3e0456ca8404a42059dc37769a511dee';
+
+  static AiContextRef buildHerbContextRef(Herb herb) {
+    return AiContextRef(
+      kind: AiContextKind.herb,
+      moduleId: herbModuleId,
+      anchorId: 'herb:${herb.name}',
+      anchorVersion: herbAssetVersion,
+      sourceId: 'assets/data/herbs.json#${herb.name}',
+      title: herb.name,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveHerb({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.herb ||
+        normalized.isEmpty ||
+        ref.moduleId != herbModuleId ||
+        ref.anchorVersion != herbAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb reference is incomplete or does not match the bundled herb source.',
+      );
+    }
+
+    final herbName = ref.anchorId.startsWith('herb:')
+        ? ref.anchorId.substring('herb:'.length)
+        : '';
+    if (herbName.isEmpty ||
+        ref.sourceId != 'assets/data/herbs.json#$herbName' ||
+        (ref.title != null && ref.title != herbName)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The herb anchor, title and source reference do not agree.',
+      );
+    }
+
+    // Exact lookup only: aliases and fuzzy matches must not silently change
+    // the knowledge entry the user opened.
+    final herb = HerbRepository.getExactByName(herbName);
+    if (herb == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced herb is not present in the bundled herb repository.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'name': herb.name,
+      'original': herb.original,
+      'nature': herb.nature,
+      'action': herb.action,
+      'rongchuan': herb.rongchuan,
+      'niNote': herb.niNote,
+      'dosage': herb.dosage,
+      'contraindication': herb.contraindication,
+      'clinicalNotes': herb.clinicalNotes,
+      'historicalNotes': herb.historicalNotes,
+      'herbComparisons': herb.herbComparisons,
+      'natureCategory': herb.natureCategory,
+      'flavor': herb.flavor,
+      'meridians': herb.meridians,
+      'category': herb.category,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: herb.name,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const neijingModuleId = 'neijing-entries';
+  static const neijingEntriesAssetVersion =
+      'lib/data/neijing_entries.dart@7f76c837e89829b44d9fc3830cdbd1d31abfd8f9';
+
+  static AiContextRef buildNeijingEntryContextRef(NeijingEntry entry) {
+    return AiContextRef(
+      kind: AiContextKind.classic,
+      moduleId: neijingModuleId,
+      anchorId: 'neijing:${entry.id}',
+      anchorVersion: neijingEntriesAssetVersion,
+      sourceId: 'app-data:lib/data/neijing_entries.dart#${entry.id}',
+      title: entry.title,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry> resolveNeijingEntry({
+    required AiContextRef ref,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.classic ||
+        normalized.isEmpty ||
+        ref.moduleId != neijingModuleId ||
+        ref.anchorVersion != neijingEntriesAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing reference is incomplete or does not match the bundled entry source.',
+      );
+    }
+
+    final entryId = ref.anchorId.startsWith('neijing:')
+        ? ref.anchorId.substring('neijing:'.length)
+        : '';
+    if (entryId.isEmpty ||
+        ref.sourceId != 'app-data:lib/data/neijing_entries.dart#$entryId') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing anchor and source ID do not agree.',
+      );
+    }
+
+    NeijingEntry? entry;
+    for (final candidate in kNeijingEntries) {
+      if (candidate.id == entryId) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced Neijing entry is not present in the bundled entry set.',
+      );
+    }
+    if (ref.title != null && ref.title != entry.title) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Neijing title does not match the stable entry ID.',
+      );
+    }
+
+    final content = <String, Object?>{
+      'id': entry.id,
+      'dimension': entry.dimension,
+      'title': entry.title,
+      'original': entry.original,
+      'source': entry.source,
+      'vernacular': entry.vernacular,
+      'nishi': entry.nishi,
+      'tags': entry.tags,
+    };
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: entry.title,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const medicalCaseModuleId = 'medical-cases';
+  static const medicalCaseAssetVersion =
+      'cases_table.md@eafd79148c7aeea2f9891738e153cd3009bd1670;'
+      'source_ledger.json@a61bd55f256adc620b7983fe2dd07a5d46721f89';
+
+  static AiContextRef buildMedicalCaseContextRef(MedicalCase medicalCase) {
+    return AiContextRef(
+      kind: AiContextKind.caseRecord,
+      moduleId: medicalCaseModuleId,
+      anchorId: 'medical-case:${medicalCase.seq}',
+      anchorVersion: medicalCaseAssetVersion,
+      sourceId:
+          'app-data:assets/medical_cases/cases_table.md#seq=${medicalCase.seq}',
+      title: '#${medicalCase.seq} ${medicalCase.displayName}',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedKnowledgeEntry>>
+      resolveMedicalCase({required AiContextRef ref}) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.caseRecord ||
+        normalized.isEmpty ||
+        ref.moduleId != medicalCaseModuleId ||
+        ref.anchorVersion != medicalCaseAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case reference is incomplete or does not match the bundled case assets.',
+      );
+    }
+
+    final seqText = ref.anchorId.startsWith('medical-case:')
+        ? ref.anchorId.substring('medical-case:'.length)
+        : '';
+    final seq = int.tryParse(seqText);
+    if (seq == null ||
+        seq < 2 ||
+        ref.sourceId !=
+            'app-data:assets/medical_cases/cases_table.md#seq=$seq') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case anchor and source reference do not agree.',
+      );
+    }
+
+    // getAllMedicalCases retains the existing in-process cache used by the
+    // medical-case library/detail screens. An empty result is UNKNOWN because
+    // this helper intentionally swallows an asset-load failure as an empty set.
+    final cases = await getAllMedicalCases();
+    if (cases.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case asset set could not be confirmed as loaded.',
+      );
+    }
+
+    MedicalCase? medicalCase;
+    for (final candidate in cases) {
+      if (candidate.seq == seq) {
+        medicalCase = candidate;
+        break;
+      }
+    }
+    if (medicalCase == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The referenced internal medical-case record is not present in the bundled case table.',
+      );
+    }
+
+    final expectedTitle =
+        '#${medicalCase.seq} ${medicalCase.displayName}';
+    if (ref.title != null && ref.title != expectedTitle) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The medical-case title does not match the resolved internal record.',
+      );
+    }
+
+    final rawFields = <String, String>{
+      'date': medicalCase.date,
+      'patient': medicalCase.patient,
+      'diagnosis': medicalCase.diagnosis,
+      'mechanism': medicalCase.mechanism,
+      'western': medicalCase.western,
+      'formula': medicalCase.formula,
+      'acupuncture': medicalCase.acupuncture,
+      'method': medicalCase.method,
+      'result': medicalCase.result,
+      'advice': medicalCase.advice,
+      'view': medicalCase.view,
+    };
+    final missingFields = rawFields.entries
+        .where((entry) => entry.value.trim().isEmpty)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    final content = <String, Object?>{
+      'internalSequence': medicalCase.seq,
+      'internalSequenceMeaning':
+          '仅为 App 医案表内部主键，不是原始病例编号、文献页码或独立病例身份。',
+      'displayName': medicalCase.displayName,
+      for (final entry in rawFields.entries)
+        entry.key:
+            entry.value.trim().isEmpty ? 'MISSING' : entry.value,
+      'missingFields': missingFields,
+      'sourceLedger': medicalCase.sourceLedger.toJson(),
+      'sourceTextVerificationStatus':
+          medicalCase.sourceLedger.sourceStatus,
+      'bibliographicLocatorStatus': medicalCase.sourceLedger.status,
+    };
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: expectedTitle,
+        content: Map<String, Object?>.unmodifiable(content),
+      ),
+    );
+  }
+
+  static const ziweiModuleId = 'ziwei';
+  static const ziweiSourceId = 'local-engine:ziwei-core@0.13.0';
+
+  static AiContextResolution<AiResolvedToolField> resolveZiweiPalaceStars({
+    required AiContextRef ref,
+    required ZiweiChart chart,
+    required String expectedSnapshotId,
+    required String expectedRuleVersion,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != ziweiModuleId ||
+        ref.sourceId != ziweiSourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The field reference is incomplete or does not identify a Ziwei source.',
+      );
+    }
+
+    if (ref.snapshotId != expectedSnapshotId ||
+        ref.anchorVersion != expectedSnapshotId ||
+        ref.ruleVersion != expectedRuleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field reference does not match the current result snapshot and rule version.',
+      );
+    }
+
+    if (ref.anchorId !=
+        'ziwei:result:$expectedSnapshotId:field:${ref.fieldPath}') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The field anchor does not match its snapshot and field path.',
+      );
+    }
+
+    if (structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        structuredSnapshot['capabilityId'] != ziweiModuleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            'ziwei-structured-result-v1') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is not a successful Ziwei execution.',
+      );
+    }
+
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final ruleVersion = structuredSnapshot['ruleVersion'];
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final inputValue = structuredSnapshot['input'];
+    final resultValue = structuredSnapshot['result'];
+    if (snapshotId is! String ||
+        ruleVersion is! String ||
+        ruleVersion != expectedRuleVersion ||
+        snapshotId != expectedSnapshotId ||
+        sourceIds is! List ||
+        !sourceIds.contains(ziweiSourceId) ||
+        inputValue is! Map ||
+        resultValue is! Map<String, Object?>) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The structured result is missing a required identity or payload field.',
+      );
+    }
+
+    final actualSnapshotId =
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot);
+    if (actualSnapshotId != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The structured result content no longer matches its immutable snapshot digest.',
+      );
+    }
+
+    final pathMatch = RegExp(
+      r'^palacesByPhysicalBranch\.(\d+)\.stars$',
+    ).firstMatch(ref.fieldPath!);
+    if (pathMatch == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested field path is not a supported Ziwei result field.',
+      );
+    }
+
+    final palaceIndex = int.tryParse(pathMatch.group(1)!);
+    if (palaceIndex == null || palaceIndex < 0 || palaceIndex > 11) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested physical palace index is outside the 12-palace result.',
+      );
+    }
+
+    ZiweiPalace? palace;
+    for (final candidate in chart.palaces) {
+      if (candidate.index == palaceIndex) {
+        palace = candidate;
+        break;
+      }
+    }
+    if (palace == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the resolved chart.',
+      );
+    }
+
+    final palacesValue = resultValue['palacesByPhysicalBranch'];
+    if (palacesValue is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The structured snapshot does not contain the palace result collection.',
+      );
+    }
+    Map<String, Object?>? palaceRecord;
+    for (final candidate in palacesValue) {
+      if (candidate is Map<String, Object?> &&
+          candidate['physicalBranchIndex'] == palaceIndex) {
+        palaceRecord = candidate;
+        break;
+      }
+    }
+    if (palaceRecord == null || palaceRecord['stars'] is! List) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The requested palace field is not present in the structured snapshot.',
+      );
+    }
+    if (palaceRecord['roleLabel'] != palace.roleLabel ||
+        palaceRecord['branchLabel'] != palace.branchLabel ||
+        palaceRecord['ganzhiLabel'] != palace.ganzhiLabel ||
+        palaceRecord['isLife'] != palace.isLife ||
+        palaceRecord['isBody'] != palace.isBody) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The palace identity and scope do not match the structured snapshot.',
+      );
+    }
+
+    final snapshotStars = (palaceRecord['stars'] as List)
+        .whereType<Map<String, Object?>>()
+        .toList(growable: false);
+    final engineStars = palace.stars
+        .map(serializeZiweiStarForAssistant)
+        .toList(growable: false);
+    if (snapshotStars.length != (palaceRecord['stars'] as List).length ||
+        AiToolResultSnapshot.canonicalJson(snapshotStars) !=
+            AiToolResultSnapshot.canonicalJson(engineStars)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The field values do not match the current deterministic engine result.',
+      );
+    }
+
+    final resolvedSnapshot = Map<String, Object?>.unmodifiable({
+      ...structuredSnapshot,
+    });
+    final resolvedScope = Map<String, Object?>.unmodifiable({
+      'palaceIndex': palace.index,
+      'palaceRole': palace.roleLabel,
+      'earthlyBranch': palace.branchLabel,
+      'ganzhi': palace.ganzhiLabel,
+      'scope': '仅本宫原局星曜；不包含流年流曜、其他宫位或大限解读',
+    });
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: '${palace.roleLabel}星曜',
+        fieldScope: resolvedScope,
+        fieldValue: snapshotStars,
+        fieldUnit: '不适用（离散星曜条目）',
+        structuredSnapshot: resolvedSnapshot,
+      ),
+    );
+  }
+
+  static AiContextRef buildGuanshaResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            GuanshaResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            GuanshaResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            GuanshaResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDetails' ||
+        arguments is! Map ||
+        arguments.length != 4 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        !const {'male', 'female'}.contains(arguments['gender']) ||
+        arguments['birthplace'] is! String ||
+        (arguments['birthplace'] as String).trim().isEmpty ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 3 ||
+        sources[0] != GuanshaToolExecutor.sourceId ||
+        sources[1] != GuanshaToolExecutor.dataSourceId ||
+        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Guansha reference requires a complete successful child-safety snapshot bound to the local engine and source assets.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: GuanshaResultContextExecutor.moduleId,
+      anchorId: 'guansha:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: GuanshaResultContextExecutor.ruleVersion,
+      sourceId: GuanshaToolExecutor.sourceId,
+      title: '小儿关煞结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveGuanshaToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != GuanshaResultContextExecutor.moduleId ||
+        ref.sourceId != GuanshaToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Guansha reference is incomplete or does not identify the local Guansha engine.',
+      );
+    }
+    if (ref.ruleVersion != GuanshaResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Guansha data, rule engine, city directory, Bazi engine, settings or locked packages changed.',
+      );
+    }
+
+    final match = RegExp(r'^guansha:result:([0-9a-f]{64})$')
+        .firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        ref.title != '小儿关煞结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Guansha anchor, title and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final argumentsValue = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            GuanshaResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            GuanshaResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            GuanshaResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDetails' ||
+        argumentsValue is! Map ||
+        argumentsValue.length != 4 ||
+        argumentsValue.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        !const {'male', 'female'}.contains(argumentsValue['gender']) ||
+        (argumentsValue['birthplace'] as String? ?? '').trim().isEmpty ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 3 ||
+        sources[0] != GuanshaToolExecutor.sourceId ||
+        sources[1] != GuanshaToolExecutor.dataSourceId ||
+        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Guansha input, settings, sources or structured result no longer match its immutable digest.',
+      );
+    }
+
+    final arguments = <String, String>{
+      for (final entry in argumentsValue.entries)
+        entry.key as String: entry.value as String,
+    };
+    final rebuilt = await GuanshaResultContextExecutor.executeWithSnapshot(
+      arguments,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Guansha result could not be reconstructed from its recorded child birth input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Guansha calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+
+  static AiContextRef buildDreamEntryContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final selectedEntryId =
+        input is Map ? input['selectedEntryId'] : null;
+    final result = structuredSnapshot['result'];
+    final values = result is Map ? result['values'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            DreamResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DreamResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DreamResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input.length != 2 ||
+        input['method'] != 'explicitEntrySelection' ||
+        selectedEntryId is! String ||
+        !RegExp(r'^[a-z0-9_-]{1,80}$').hasMatch(selectedEntryId) ||
+        values is! Map ||
+        values['词条 ID'] != selectedEntryId ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != DreamToolExecutor.sourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Dream reference requires one explicitly selected, successful local entry snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: DreamResultContextExecutor.moduleId,
+      anchorId: 'dream:entry:$selectedEntryId:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: DreamResultContextExecutor.ruleVersion,
+      sourceId: DreamToolExecutor.sourceId,
+      title: '周公解梦词条',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveDreamEntryToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != DreamResultContextExecutor.moduleId ||
+        ref.sourceId != DreamToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Dream reference is incomplete or does not identify the local dream dataset.',
+      );
+    }
+    if (ref.ruleVersion != DreamResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local dream dataset or selection contract has changed.',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    final anchorMatch = RegExp(
+      r'^dream:entry:([a-z0-9_-]{1,80}):result:([0-9a-f]{64})$',
+    ).firstMatch(ref.anchorId);
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        anchorMatch == null ||
+        anchorMatch.group(2) != snapshotId ||
+        ref.title != '周公解梦词条') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Dream entry anchor, title and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final selectedEntryId = anchorMatch.group(1)!;
+    final input = structuredSnapshot['input'];
+    final result = structuredSnapshot['result'];
+    final values = result is Map ? result['values'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            DreamResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DreamResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DreamResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input.length != 2 ||
+        input['method'] != 'explicitEntrySelection' ||
+        input['selectedEntryId'] != selectedEntryId ||
+        values is! Map ||
+        values['词条 ID'] != selectedEntryId ||
+        result is! Map ||
+        result['title'] != '周公解梦' ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != DreamToolExecutor.sourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Dream entry identity, source or structured result no longer matches its immutable digest.',
+      );
+    }
+
+    final rebuilt = DreamResultContextExecutor.executeWithSnapshot(
+      selectedEntryId: selectedEntryId,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The selected Dream entry could not be reconstructed from the current local dataset.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The selected local Dream entry no longer matches this immutable snapshot.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+}
+,
+    ).firstMatch(ref.anchorId);
+    if (match == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The six-meridian anchor does not identify one exact local record.',
+      );
+    }
+    final meridian = match.group(1)!;
+    if (ref.title != '$meridian病') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The six-meridian title does not match the selected local record.',
+      );
+    }
+
+    final snapshot = _createMeridianKnowledgeSnapshot(meridian);
+    if (snapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The selected six-meridian record is not present or is incomplete in the current local rules data.',
+      );
+    }
+    final snapshotId = snapshot['snapshotId'];
+    if (snapshotId is! String ||
+        ref.snapshotId != snapshotId ||
+        ref.anchorVersion != snapshotId ||
+        ref.anchorId != 'meridian:detail:$meridian') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The six-meridian record has changed since this context was created.',
+      );
+    }
+
+    final result = snapshot['result'];
+    if (result is! Map<String, Object?>) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The six-meridian snapshot does not contain a structured local record.',
+      );
+    }
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: '$meridian病',
+        content: Map<String, Object?>.unmodifiable(result),
+      ),
+    );
+  }
+
+  static Map<String, Object?>? _createMeridianKnowledgeSnapshot(
+    String meridian,
+  ) {
+    final details = DiagnosticRules.meridianDetails[meridian];
+    if (details == null) return null;
+
+    final nature = details['nature'];
+    final organ = details['organ'];
+    final keyPulse = details['keyPulse'];
+    final coreSymptoms = details['coreSymptoms'];
+    final transmissionIn = details['transmissionIn'];
+    final transmissionOut = details['transmissionOut'];
+    final classicText = details['classicText'];
+    final niNote = details['niNote'];
+    final healingTime = DiagnosticRules.meridianHealingTime[meridian];
+
+    if (nature is! String ||
+        nature.isEmpty ||
+        organ is! String ||
+        organ.isEmpty ||
+        keyPulse is! String ||
+        keyPulse.isEmpty ||
+        coreSymptoms is! List ||
+        coreSymptoms.isEmpty ||
+        coreSymptoms.any((value) => value is! String || value.isEmpty) ||
+        transmissionOut is! List ||
+        transmissionOut.isEmpty ||
+        transmissionOut.any((value) => value is! String || value.isEmpty) ||
+        classicText is! String ||
+        classicText.isEmpty ||
+        niNote is! String ||
+        niNote.isEmpty ||
+        healingTime is! String ||
+        healingTime.isEmpty ||
+        !(transmissionIn is String ||
+            (transmissionIn is List &&
+                transmissionIn.every(
+                  (value) => value is String && value.isNotEmpty,
+                )))) {
+      return null;
+    }
+
+    final result = <String, Object?>{
+      'meridian': meridian,
+      'nature': nature,
+      'organ': organ,
+      'keyPulse': keyPulse,
+      'coreSymptoms': List<String>.unmodifiable(
+        coreSymptoms.cast<String>(),
+      ),
+      'healingTime': healingTime,
+      'transmissionIn': transmissionIn is List
+          ? List<String>.unmodifiable(transmissionIn.cast<String>())
+          : transmissionIn,
+      'transmissionOut': List<String>.unmodifiable(
+        transmissionOut.cast<String>(),
+      ),
+      'classicText': classicText,
+      'niNote': niNote,
+    };
+    final snapshot = <String, Object?>{
+      'capabilityId': meridianModuleId,
+      'resultSchemaVersion': meridianResultSchemaVersion,
+      'executionStatus': 'SUCCESS',
+      'ruleVersion': meridianRuleVersion,
+      'sourceIds': const <String>[meridianSourceId],
+      'input': <String, Object?>{'meridian': meridian},
+      'result': result,
+    };
+    snapshot['snapshotId'] =
+        AiToolResultSnapshot.createStructuredId(snapshot: snapshot);
+    return Map<String, Object?>.unmodifiable(snapshot);
+  }
 
   static const herbModuleId = 'herb';
   static const herbAssetVersion =
