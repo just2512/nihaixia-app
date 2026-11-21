@@ -175,10 +175,10 @@ Files:
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundary.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicy.kt
  android/app/src/main/res/drawable/ic_launcher_foreground.xml
- android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
  android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
- android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+ android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
  android/app/src/main/res/mipmap-anydpi/ic_launcher.xml
+ android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml
  android/app/src/main/res/values/ic_launcher_background.xml
  android/app/src/main/res/xml/backup_rules.xml
  android/app/src/main/res/xml/data_extraction_rules.xml
@@ -242,8 +242,8 @@ Files:
  docs/images/find-n2-round3/AI_keyboard_on.png
  docs/images/find-n2-round3/D_ziwei_result.png
  docs/images/find-n2-round3/E_font200.png
- docs/images/find-n2-round3/F_keyboard_text.png
  docs/images/find-n2-round3/F_keyboard.png
+ docs/images/find-n2-round3/F_keyboard_text.png
  docs/images/find-n2-round3/v_展开态两列全屏.png
  docs/images/find-n2-round3/v_折叠态全屏.png
  docs/images/find-n2-test-round2/01_tab_ai.png
@@ -266,8 +266,8 @@ Files:
  docs/tcm-diagnosis-zangfu-source-audit.md
  docs/tcm-hebing-reachability-matrix.md
  docs/unified-conversation-orchestration-architecture.md
- docs/upstream_sync_audit_2026-11-06.md
  docs/upstream-sync-ledger.md
+ docs/upstream_sync_audit_2026-11-06.md
  docs/yanji-editorial-frontend-design-plan.md
  lib/data/assistant_conversation_store.dart
  lib/engine/zangfu_evidence_builder.dart
@@ -286,9 +286,9 @@ Files:
  lib/services/ai_context_prompt_builder.dart
  lib/services/ai_context_resolver.dart
  lib/services/ai_tool_result_snapshot.dart
+ lib/services/ai_trace.dart
  lib/services/ai_trace_runtime.dart
  lib/services/ai_trace_store.dart
- lib/services/ai_trace.dart
  lib/services/almanac_tool_executor.dart
  lib/services/assistant_chart_result_formatter.dart
  lib/services/assistant_conversation_orchestrator.dart
@@ -298,6 +298,7 @@ Files:
  lib/services/chenggu_result_context_executor.dart
  lib/services/chenggu_tool_executor.dart
  lib/services/dosage_conversion_service.dart
+ lib/services/dosage_result_context_executor.dart
  lib/services/dosage_tool_executor.dart
  lib/services/dream_tool_executor.dart
  lib/services/guansha_tool_executor.dart
@@ -309,6 +310,7 @@ Files:
  lib/services/meihua_tool_executor.dart
  lib/services/red_flag_gate.dart
  lib/services/red_flag_preflight.dart
+ lib/services/sanshan_lingqian_result_context_executor.dart
  lib/services/sanshan_lingqian_tool_executor.dart
  lib/services/saved_chart_tool_executor.dart
  lib/services/shousheng_debt_result_context_executor.dart
@@ -320,6 +322,7 @@ Files:
  lib/services/xiaoliuren_tool_executor.dart
  lib/services/yijing_tool_executor.dart
  lib/services/yunqi_tool_executor.dart
+ lib/services/yuxiaji_omen_result_context_executor.dart
  lib/services/yuxiaji_omen_time.dart
  lib/services/yuxiaji_omen_tool_executor.dart
  lib/services/ziwei_tool_executor.dart
@@ -388,6 +391,7 @@ Files:
  test/contextual_ai_panel_layout_test.dart
  test/critical_illness_list_layout_test.dart
  test/diagnosis_history_editorial_layout_test.dart
+ test/dosage_contextual_result_entry_test.dart
  test/dosage_conversion_service_test.dart
  test/dosage_converter_layout_test.dart
  test/dosage_tool_executor_test.dart
@@ -446,6 +450,7 @@ Files:
  test/red_flag_gate_test.dart
  test/red_flag_preflight_test.dart
  test/repository_version_consistency_test.dart
+ test/sanshan_lingqian_contextual_result_entry_test.dart
  test/sanshan_lingqian_tool_executor_test.dart
  test/saved_chart_tool_executor_test.dart
  test/saved_charts_editorial_layout_test.dart
@@ -475,6 +480,7 @@ Files:
  test/yunqi_screen_editorial_layout_test.dart
  test/yunqi_tool_executor_test.dart
  test/yunqi_wuxing_badge_geometry_test.dart
+ test/yuxiaji_omen_contextual_result_entry_test.dart
  test/yuxiaji_omen_tool_executor_test.dart
  test/ziwei_chart_layout_test.dart
  test/ziwei_contextual_result_entry_test.dart

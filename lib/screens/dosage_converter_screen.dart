@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/dosage_conversion_service.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/dosage_result_context_executor.dart';
+import '../services/dosage_tool_executor.dart';
+import '../widgets/contextual_ai_sheet.dart';
+import 'assistant_tool_router.dart';
 
 class DosageConverterScreen extends StatefulWidget {
   const DosageConverterScreen({super.key, this.returnResultOnComplete = false});
@@ -53,6 +59,58 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
         standard: DosageConversionService.standardIds[_standard],
       );
 
+  Map<String, String> _conversionArguments() => <String, String>{
+        'value': _inputController.text,
+        'unit': _unit,
+        'standard': DosageConversionService.standardIds[_standard],
+      };
+
+  Future<void> _askAiAboutConversion() async {
+    final execution = DosageResultContextExecutor.executeWithSnapshot(
+      arguments: _conversionArguments(),
+    );
+    if (!execution.succeeded || execution.structuredSnapshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前换算结果未通过本地来源校验。')),
+      );
+      return;
+    }
+    try {
+      final contextRef = AiContextResolver.buildDosageResultContextRef(
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolution = await AiContextResolver.resolveDosageToolResult(
+        ref: contextRef,
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolved = resolution.value;
+      if (!mounted) return;
+      if (!resolution.isResolved || resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('单位换算结果核验失败：${resolution.status.name}')),
+        );
+        return;
+      }
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildToolResult(
+          ref: contextRef,
+          structuredSnapshot: resolved.structuredSnapshot,
+        ),
+        initialMode: AssistantMode.tools,
+        contextualTitle: '经方度量衡换算结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('换算结果无法核验，已取消 AI 提问。')),
+      );
+    }
+  }
+
+
   @override
   void dispose() {
     _inputController.dispose();
@@ -63,6 +121,7 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final result = _convert();
+    final canAskAi = DosageToolExecutor.validateArguments(_conversionArguments()).isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -220,6 +279,12 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: canAskAi ? _askAiAboutConversion : null,
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: const Text('问 AI 解释当前换算'),
           ),
           const SizedBox(height: 16),
 

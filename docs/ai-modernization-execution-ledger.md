@@ -2998,83 +2998,121 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 下一分支从当前 master `2e8cb9d9f1e2b53f257985675901ee2ba755b125` 创建。实施时须让页面展示结果与 AI 上下文来自同一次 Headless 执行；保留原“带回助手”操作；快照校验八字设置（真太阳时、早晚子时）、历法口径、称骨数据来源、规则/数据版本和结果摘要。Prompt 不得发送精确出生日期/钟点；称骨文案作为传统民俗文化参考，不能表述为事实命运判断。
 - 自动验收至少覆盖成功/缺参/非法日期时间/多余参数/来源错配/规则过期/结果篡改/摘要不符/重建不一致，以及页面 402dp/775dp、旧入口并存、关闭后滚动恢复和 Prompt 脱敏。Find N2 真机验收留到云端工作全部完成后统一执行。
 
+---
+
+## 59. 2026-11-21 主线增量复核与云端续接（当前基线：`f07ea4530df995d6e21be0556195b816a4761c61`）
+
+> 本节为当前有效状态的增量覆盖记录。此前各节保留历史决策和当时证据；如历史“下一步”与本节冲突，以本节最新主线复核为准。设备 TRACE 仍是最终本地验收项，不构成云端 Phase 3 阻塞。
+
+### 59.1 最新 master 与近期集成
+
+- 当前主线：`master`，HEAD `f07ea4530df995d6e21be0556195b816a4761c61`；Fork 默认分支仍为 `master`，本轮没有从上游同步或改动上游仓库。
+- PR #362「三山国王灵签结果情境入口」已于 2026-11-21 合并，merge commit 即当前 HEAD `f07ea4530df995d6e21be0556195b816a4761c61`；最终 head `0a2a04172e9c74977323d812dc2083d50d5fb842` 的 Flutter regression 与 Android arm64 verification 均 SUCCESS（run `44759096411`）。Branch validation 为条件性 SKIPPED，不计 PASS。
+- PR #358 玉匣灵兆当前时辰文本入口已合并至父主线 `d397dc568a0981e7f19ff6caa62e7c7ccd7b46f2`；PR #357 称骨派生农历隐私修正亦已合并。称骨、受生债和玉匣灵兆结果上下文继续保留既有来源校验、不可变快照与 Prompt 脱敏规则。
+- 当前 master SHA `f07ea4530df995d6e21be0556195b816a4761c61` 的 Flutter tests run `44846954598` 与 Flutter Quality Gate run `44846954627` 已触发；本次记录时两者均为 IN_PROGRESS。不得使用父 SHA `d397dc5` 的成功结果替代当前 HEAD 的 post-merge 验收。
+
+### 59.2 经方度量衡单位换算入口：重建与当前状态
+
+- 旧 PR #363 基于父主线 `d397dc568a0981e7f19ff6caa62e7c7ccd7b46f2`，其 head `e815abf108d748f4901bdb0d8a8f6f2a6ffd90c1` 的 Flutter 全量 regression 与 Android arm64 verification 均 SUCCESS（run `44758876514`）。但该分支相对最新 master 已落后 3 个提交，且 Resolver/Prompt Builder 与 #358/#362 在相同扩展点新增逻辑；旧 PR 已关闭为 SUPERSEDED，旧 SHA 的 CI 不转移给新 head。
+- 已从当前 master `f07ea4530df995d6e21be0556195b816a4761c61` 新建独立分支 `feat/ai-context-dosage-conversion-mainline-20261121`，只将单位换算切片三方合并到当前树；未覆盖 Yuxiaji 与 Sanshan 已合并逻辑。提交：`b7e29593f05a704f66282dbe17f15ca5d2574e15`；PR #364 当前 head 即此 SHA。
+- 文件范围仅为：
+  - `lib/screens/dosage_converter_screen.dart`
+  - `lib/services/dosage_result_context_executor.dart`
+  - `lib/services/ai_context_resolver.dart`
+  - `lib/services/ai_context_prompt_builder.dart`
+  - `test/dosage_contextual_result_entry_test.dart`
+- 快照只包含本次显式单位换算参数、App 确定性输出、单位、双来源及规则版本；不读取页面特殊药物换算表、剂量参考和体质剂量提示。Resolver 对来源、参数、规则版本、快照摘要和本地重建结果执行 fail-closed 校验。Prompt 仅解释 App 已执行的单位换算，不重新计算、不推导药物剂量、不提供处方或个体用药建议。原“带回助手”入口保留。
+- PR #364 以 `f07ea4530df995d6e21be0556195b816a4761c61` 为 base，最终 head `b7e29593f05a704f66282dbe17f15ca5d2574e15`；当前 head workflow run `44847499606` 的 Flutter regression `SUCCESS`（1838 passed / 15 skipped），Android arm64 CI verification APK + unit tests `SUCCESS`，包含 APK 构建、备份 Manifest、ABI/SHA-256、Android 单测、JUnit XML 和工件上传。Branch validation 按 workflow 条件 `SKIPPED`，不计 PASS。PR #364 已于 2026-11-21 以普通 merge 合并，merge commit `aba2493edfc7be429de18fd3313a884bc4d7dc5c`。旧 PR #363 的成功结果不作本 PR 验收。
+- PR #364 已满足最新 head 的 Flutter regression 与 Android arm64 门禁并合并；当前 post-merge master 为 `aba2493edfc7be429de18fd3313a884bc4d7dc5c`，Flutter tests run `44848636868` 与 Flutter Quality Gate run `44848636881` 已触发，记录更新时均为 `IN_PROGRESS`，必须等待两者终态 SUCCESS 后才能将 post-merge 主线标记 PASS。
+
+### 59.3 剩余云端 Phase 3 切片与文件所有权
+
+- 本轮重新确认的明确页面缺口以本节 §59.5 的当前主线差异审计为依据：小儿关煞、周公解梦；单位换算由 PR #364 承接，不再重复建立切片。
+- 下一优先切片为小儿关煞（Guansha），随后周公解梦（Dream）。两者都必须在当时最新 master 上独立建分支；不得复用已落后且 diverged 的旧 Guansha 分支作为集成基线。
+- Guansha 必须复用页面现有 Headless/确定性执行能力，确保页面展示结果与 AI 快照来自同一次执行；稳定绑定城市来源、规则/数据版本、执行结果及摘要。发送给模型的数据只允许解释已核验的四柱/关煞命中，并严格脱敏出生日期、钟点、性别、出生地、坐标及派生农历信息；不得生成儿童健康诊断、风险判断或治疗建议。
+- Dream 只对一个已确认的本地词条构建上下文；多候选必须先澄清，不得把自由描述直接交给模型或让模型代替本地数据检索。模型只解释已验证词条，不作现实吉凶、心理或医学诊断。
+- `lib/services/ai_context_resolver.dart` 与 `lib/services/ai_context_prompt_builder.dart` 当前有多个 Phase 3 功能共享扩展点。单位换算 PR #364 已合入当前主线；Guansha 可从 `aba2493edfc7be429de18fd3313a884bc4d7dc5c` 及其之后的最新 master 建立独立分支，并拥有这两个共享文件的本切片修改权。Guansha 合并后再创建 Dream 分支，禁止两个切片并行改写共享文件。每个活跃分支仍须明确文件所有权，避免并行覆盖。
+
+### 59.4 云端与最终本地验收边界
+
+- 云端继续完成所有没有设备依赖的 Resolver/Prompt、页面入口、稳定快照、来源回链、隐私负向测试、402dp/775dp 布局自动化、滚动恢复、文档和 CI 工作。
+- Find N2 外屏/内屏/半折叠/分屏/键盘交互，以及本地 E4B GPU/CPU 多轮、Native 状态、空响应、历史恢复与完整 TRACE，统一留到所有云端切片完成后的最终本地验收。
+- 未取得真实设备证据的项目继续标记 `UNKNOWN / LOCAL ONLY`；云端 CI 或模拟布局不得扩写为设备 PASS，也不得以设备 TRACE 缺失为由停止云端工作。
+- 下一项自动执行任务：当前主线 post-merge Flutter tests / Quality Gate 取得终态；随后从最新 master 启动 Guansha 独立实现切片，完成后再启动 Dream。
+
+
+### 59.5 工具/页面情境入口差异审计（按当前 master 代码复核）
+
+本节恢复此前未进入 master 的旧台账 §58.5 差异清单，并按 `f07ea453` 当前文件树重新核实；不把工具注册、Headless 执行能力或旧页面“带回助手”误判为已具备结构化结果情境入口。
+
+| 模块 / 页面 | 当前代码证据 | 结论 |
+|---|---|---|
+| 八字、紫微、易经、梅花、小六壬 | 已有整体结果入口；八字/紫微/易经/梅花具备字段级入口 | 已覆盖；后续只处理真实缺陷，不重复造入口 |
+| 黄历、五运六气、子午流注、节气、轩辕黄帝四季歌 | 已有整体结果入口及专用 Resolver/Prompt | 已覆盖 |
+| 袁天罡称骨、受生债 | 整体结果入口已合并；称骨派生农历字段由 PR #357 合入的 Prompt 脱敏规则处理 | 已覆盖；后续只修真实回归 |
+| 三山国王灵签、玉匣灵兆 | 原 PR #354/#358 实现已先后集成；#362 完成三山灵签入口主线合并 | 已覆盖；以当前 master 实际代码为准 |
+| 经方度量衡单位换算 | Headless `DosageToolExecutor` 原已存在，旧页面无结果情境入口；PR #363 基线过期，已由最新 master 重建为 PR #364 | 已合并，见 §60.1 |
+| 小儿关煞 | 现有 `GuanshaToolExecutor` 是 Headless，但主线页面仍直接调用八字引擎与关煞引擎，尚无不可变快照/Resolver/Prompt 页面入口 | 下一实施切片；旧分支已具备可复用实现参考，但已 diverged（ahead 13 / behind 34），不得直接合并或继承其 CI |
+| 周公解梦 | 有 412 条本地词条及 `DreamToolExecutor`；页面当前只在本地搜索、展示卡片，尚无结果情境入口 | 后续实施切片；只对用户明确点击的单条词条建立上下文；候选列表、多匹配或自由文本检索不得自动生成解释 Prompt |
+| 我的命盘库 | 只是保存记录列表，打开记录后进入已有八字/紫微结果页 | 不新增列表级重复入口 |
+| 问诊历史、危急提示 | 属会话历史与安全流程，并非独立确定性工具结果页 | 不为覆盖数量创建空壳结果入口；若后续需要解释单条历史，先定义精确记录身份、来源和权限 |
+
+#### Guansha 实施约束
+
+- 当前主线已具备确定性 Headless `GuanshaToolExecutor`，其输入为 `birth_date`、`birth_time`、`gender`、`birthplace`，拒绝模糊城市，不回退默认经纬度；来源为 `local-engine:guansha`、`local-data:guansha`、`local-data:city-locations`。
+- 新入口必须统一页面展示与 AI 快照的数据路径。用户未选择唯一出生城市时仍允许原页面测算，但必须禁用情境 AI；如页面先后执行两次确定性运算，必须比对所有用户输入、实际经纬度、排盘设置和完整命中结果，任何不一致均 fail closed。优先使页面显示数据与 AI 快照取自同一个 Headless execution object。
+- 快照需绑定引擎、规则数据、城市目录、锁定包版本、真太阳时/早晚子时设置和 SHA-256 内容身份；精确儿童公历生日、当地钟点、性别、出生地、经纬度及派生农历不得进入模型 Prompt。四柱/命中结果是否提供给模型，以最小化可识别信息且能解释已确认结果为限；不得把出生资料或关煞文字推断成儿童疾病、发育/伤害风险、治疗或预防建议。
+- 入口须明确用户再次确认本次输入、使用 explanation-only；保留原“带回助手”功能。负向测试覆盖错源、缺参、模糊城市、输入改变、设置改变、快照篡改、规则过期与重建不一致；页面覆盖 402dp/775dp、结果更新后入口失效、关闭后滚动恢复。
+- Resolver 与 Prompt Builder 由 #364 后续共享扩展点；Guansha 分支只能从 #364 合并后的最新 master 创建，不与 #364 平行编辑相同文件。
+
+#### Dream 实施约束
+
+- 当前 `DreamToolExecutor` 已能检索 412 条本地数据，但自由文本检索可能产生多个候选；其候选列表只是按数据集原始顺序展示，不代表相关度，不得由模型选第一条或合成多条。
+- 页面新入口应绑定用户明确选择的 `DreamEntry.id`，由 App 本地数据集精确读取该条目；快照只传入稳定 ID、分类/关键词、条目原文、释义、原始民俗标签、source 字段及数据文件 blob SHA，不传入用户自由描述或不必要的敏感梦境叙述。若选择流程涉及多候选，必须先让用户确认具体条目。
+- Prompt 只归纳所选本地文本，明确吉凶标签是数据集民俗原文，不是事实预测；禁止现实事件保证、心理/精神疾病或医学诊断、投资/法律建议。Resolver 校验 ID、数据版本、来源、摘要并从本地数据精确重建。
+- 页面测试需覆盖单条选中、多候选拒绝、不存在 ID、词条数据变化/过期、摘要篡改、窄/宽屏、滚动恢复和原搜索/收藏行为不回归。
+
+#### 优先级与状态
+
+- 仅剩的明确页面级结果情境缺口：Guansha、Dream；Dosage 已由 PR #364 接续，不应重复实现。
+- 执行顺序：先完成 #364（含最新 head CI 与 master post-merge CI）→ Guansha 独立切片 → Dream 独立切片 → 再做全仓库情境入口目录复核与文档收口。
+- 不新增“我的命盘库”或“问诊历史”空壳入口，不改动底层诊断、排盘、关煞、梦境检索和剂量换算的确定性业务规则。
+
 
 ---
 
+## 60. 2026-11-21 经方度量衡情境入口合入与后续云端阶段
 
----
+### 60.1 PR #364 合并事实与验收
 
-### 57.36 2026-11-20 Fork 商业授权 PR #332：最新主线、许可清单及平台限制复核
+- 合并前主线：`f07ea4530df995d6e21be0556195b816a4761c61`；PR #364 最终 head：`b7e29593f05a704f66282dbe17f15ca5d2574e15`；普通 merge commit：`aba2493edfc7be429de18fd3313a884bc4d7dc5c`。
+- PR #364 Workflow run `44847499606`：Flutter regression tests `SUCCESS`，日志末尾为 `1838 tests passed, 15 skipped`；Android arm64 CI verification APK + unit tests `SUCCESS`。Android 步骤中 APK 构建、合并 Manifest 检查、ABI/SHA-256、Android 本地单测、JUnit XML 校验、APK 与测试工件上传均通过。
+- Branch validation 按工作流的 `work/**` 条件被 `SKIPPED`，不计为 PASS，也不构成门禁失败；本次 PR 合并门槛的两个必需项 Flutter regression 与 Android arm64 均 SUCCESS。
+- PR #364 保留原“带回助手”操作；新情境入口只传入本次显式单位换算参数、App 确定性输出、单位、规则和来源，不读取特殊药物换算表、体质剂量提示或临床剂量参考；模型只解释已经算出的换算，不重新换算、不推导药物剂量、不提供处方或个体用药建议。
 
-- PR [#332](https://github.com/just2512/nihaixia-app/pull/332)，分支 `work/ai-commercial-license-20261119`。分支以 master `90ea79d2c89701e137c384506a65c1a65bb0b7ff` 为第一父提交、原 PR HEAD `becadf9cc8d13e578e5b6159a20c766c2c9dd559` 为第二父提交同步，保留两侧提交 ancestry；当前比较为 ahead 12 / behind 0，mergeable=true。
-- 全仓库清单以共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b` 重算：新增/修改 804 个（新增 687、修改 117），另有 10 个删除路径；类别：Fork 商业授权候选 328、Apache 2.0 + Fork 双层许可 111、知识库排除 364、第三方排除 1。
-- 已纳入最新主线新增的 5 个路径：`lib/services/huangdi_siji_result_context_executor.dart`、`lib/services/solar_term_result_context_executor.dart`、`test/huangdi_siji_contextual_result_entry_test.dart`、`test/solar_term_contextual_result_entry_test.dart`、`test/ziwuliuzhu_contextual_result_entry_test.dart`。第一轮检查发现并修复混合文件 `lib/screens/solar_term_section_screen.dart` 漏项，按 Apache 2.0 + Fork 商业双层许可处理。
-- `docs/fork-license-file-inventory.json`、`docs/fork-license-file-inventory.md` 和 `.reuse/dep5` 按 804 个路径逐项同步；知识库及第三方 365 项继续使用 NOASSERTION，不授予新权利。未使用 `lib/**`、`assets/**` 宽泛匹配。
-- 自动门禁 `tool/check_fork_license_inventory.py` 核验共同基线至实际 HEAD 的新增/修改/删除集合、路径状态、分类、SPDX、DEP5 精确路径、计数、商业许可副本字节一致、Apache 副本与根 LICENSE 字节一致及根 LICENSE 未修改。
-- 商业许可文本已更新至版本 1.3，纠正旧版中“Fork 可直接改为 Private”的不准确说明：GitHub 规定 Fork 继承上游可见性，不能单独更改为 Private。若要消除平台内 Fork，需先永久脱离 Fork network、变为独立仓库，或先向 GitHub Support 确认其他可行路径，之后才能评估设为 Private。
-- 手动 Leave network 为永久操作，可能丢失该仓库的 Pull Requests、Issues、Wiki、Stars、Watchers、评论等元数据。当前仓库有 9 个开放 Issue 和 PR #332，不能在没有备份、评估和权利人明确批准时执行。既有 public forks 和本地 clones 不会自动删除或变成 private。本次未执行 detach、visibility change 或其他不可逆管理操作。
-- GitHub Terms of Service D.5 对公开仓库内容授予平台内查看/Fork 权利；D.6 涉及向含许可声明的仓库提交内容时的授权条件；D.8 涉及公开仓库内容在互联网上的可访问性。当前 Public Fork 状态下，自定义 LicenseRef 无法撤销这些独立平台条款，也不能替代贡献者将其版权有效转授的证据。
-- 权属/来源状态仍是 MISSING：`OWNERSHIP_EVIDENCE_REQUIRED` 439 项，须有作者、职务作品/雇佣关系或有效再许可证明；`SOURCE_LICENSE_REVIEW` 365 项，继续按知识库/第三方来源复核。自动文件分类及 CI 不构成版权确权。
-- CI 必须绑定 PR 最终 HEAD。上一 HEAD `7233331325cf94d11ee616bc3153e767f10dd325` 的 Fork license PR workflow run `44724624180` SUCCESS；Flutter regression run `44724624301` 当时仍 IN_PROGRESS，Android arm64 尚未运行到终态。由于本次修改许可说明/README/台账会产生新 HEAD，以上旧 SHA 结果不作为最终验收；应以新 HEAD 的 PR 事件 Fork license、Flutter regression、Android arm64 三项最终状态为准。Branch validation 的 SKIPPED 不是 PASS。
-- PR #332 当前为 Ready for review（非 Draft），保持 open。工程文件清单和自动许可映射可以验收，但权属证据及 GitHub 平台许可冲突尚未关闭；未经权利人决定平台 Fork 处理方式及证据补齐，不合并主线。正式商业发行前仍须专业法律审核。
+### 60.2 合并后主线验收状态
 
+- 当前 master：`aba2493edfc7be429de18fd3313a884bc4d7dc5c`。
+- 此 SHA 的 post-merge Flutter tests run `44848636868` 与 Flutter Quality Gate run `44848636881` 均已触发；本节记录时状态为 `IN_PROGRESS`。两者均取得终态 SUCCESS 后，才可记录当前主线回归与质量门禁 PASS。
+- 父 SHA `f07ea453` 的 Flutter tests / Quality Gate 均 SUCCESS，但不替代新 merge SHA 的 post-merge 验收。
 
----
+### 60.3 下一云端切片与文件所有权
 
-### 57.37 2026-11-20 PR #332 再同步最新「研纪」主线与全量授权清单
-
-- 最新主线 master：911725c3b8ae8888d45601e1481c9235431b28fd；上一许可分支 HEAD：f542f06d21a574c232bf266b1134930caa8e05cd。主线新增「研纪」品牌统一提交后，PR #332 曾落后 1 个提交并出现 mergeable=false。本次以 master 为第一父提交、旧 PR HEAD 为第二父提交重新同步；保留品牌更新和许可分支两侧提交历史，不覆盖最新主线。
-- 主线品牌提交带来 44 个此前清单未登记的变更路径：新增 6 个（docs/brand-identity.md、release/研纪_历史版本_v1.10.0+7_发布说明.md、release/研纪_历史版本_v1.10.1_发布说明.md、test/app_brand_identity_test.dart、tool/audit_product_brand.py、企划书_研纪_v2.0.md）；修改 38 个现有路径。6 个新增文件按 Fork 商业授权候选登记；38 个被修改的上游文件按 Apache 2.0 + Fork 商业双层许可登记。旧品牌的 3 个已删除路径保留在删除清单。
-- 共同上游基线仍为 c0f14e77a7fb721fc332576d21fef5f100392d0b。预期最终清单：新增/修改 848 个（新增 693、修改 155），删除 13 个；类别为 Fork 商业授权候选 334、Apache 2.0 + Fork 商业双层许可 149、知识库排除 364、第三方排除 1。机器可读清单、逐文件 Markdown 清单和 .reuse/dep5 必须按实际最终 tree 重新核算后保持一致。
-- 预期新增/修改文件权属状态：OWNERSHIP_EVIDENCE_REQUIRED 483 项；SOURCE_LICENSE_REVIEW 365 项。这些状态仍是 MISSING，不能用 Git 提交者身份或自动许可检查改为 PASS。知识库/第三方内容继续按来源许可，不纳入 Fork 商业授权。
-- README 已保留最新「研纪」品牌内容，并将旧版“整个项目 Apache 2.0、允许商业分发”的错误摘要替换为按文件分层许可；开源许可徽章改为 Mixed。CONTRIBUTING 已由 Apache-only 声明改为逐文件许可与贡献者版权/再许可权确认。商业授权版本 1.4：个人非商业使用可在个人设备/非商业研究环境中进行；GitHub 服务外公开再分发需事先书面许可，商业用途另需书面商业授权；GitHub D.5 平台内 Fork 是明确的平台授权例外，不能由自定义许可证撤销。
-- GitHub D.6 要求贡献者向含许可证声明的仓库添加内容时按仓库适用许可授权并声明有权如此授权；D.8 规定公开仓库内容可公开访问。许可证、README、边界文档和 CONTRIBUTING 均已补充这三节的区分，禁止将 D.5 的服务内 Fork 许可扩大解释为服务外镜像/重托管/转交许可。
-- Fork 可见性：GitHub 官方规则是 Fork 继承上游可见性、不能单独改为 Private。离网是永久操作并丢失原仓库 Issues/PR/Wiki/Stars/Watchers/评论等元数据；本仓库当前有 9 个开放 PR（#332 在其中）。本次未离网、未改可见性，亦未删除任何既有分支或 PR。
-- 前一许可 HEAD f542f06d21a574c232bf266b1134930caa8e05cd 的全量工程验收已完成：PR Fork license run 44725302073 SUCCESS；PR Flutter regression run 44725302065 SUCCESS；同一 run 中 Android arm64 verification job 136254716588 SUCCESS。Branch validation 按条件 SKIPPED，不计为全量 PASS。以上结果仅属于旧 HEAD，不能替代本次新 HEAD CI。
-- 本次新 HEAD 的最终门槛：Fork license inventory/boundary、PR Flutter regression、Android arm64 CI verification 均须对新 HEAD 得到 SUCCESS；如任何一步失败，保留失败证据并修复后重跑，不删除测试、不降低断言。PR #332 保持 Ready for review；工程 CI 通过后，版权权属证据和 GitHub D.5 平台内 Fork 限制仍须作为独立法律/治理门槛，不把未授权的离网操作或平台例外虚报为已解决。
+- 目前显式页面级结果情境入口只剩 Guansha、Dream；Dosage 已由 #364 合入。优先执行 Guansha，因其涉及儿童生辰、城市坐标、历法设置与传统民俗/健康边界；随后 Dream，因其需要单条本地词条身份与多候选澄清。
+- Guansha 分支必须从最新 master 创建。当前已有 Headless `GuanshaToolExecutor`，但页面仍自行计算并回传旧结果。实现需让页面展示结果与 AI 快照共享同一个 Headless execution object；用户没有选择唯一城市时仍保留原测算能力，但不能启用 AI。快照本地保存原始出生资料、实际坐标、设置、规则/数据版本与摘要；Prompt 对精确生日、钟点、性别、地点、坐标和派生农历脱敏；不推断儿童疾病、健康风险、诊断或治疗。保留原“带回助手”入口。
+- Dream 必须以用户明确选择的单条 `DreamEntry.id` 建立快照，不得把自由梦境描述发给模型或将检索候选列表自动当作唯一结果；多候选必须先由用户确认一条。Resolver 对 ID、数据源 blob SHA、来源、内容摘要执行精确回链；Prompt 只解释选中的本地民俗条目，不作现实吉凶保证、心理/医学诊断。
+- `ai_context_resolver.dart` 与 `ai_context_prompt_builder.dart` 是这两个切片的共享扩展点，必须串行所有权：Guansha 完整集成与合并后，Dream 才能编辑这两个文件。每个切片均须覆盖错源、缺参、快照篡改/过期、重建不一致、Prompt 隐私和 402dp/775dp 页面自动化。
+- Find N2 外屏/内屏/半折叠/分屏/键盘，以及本地 E4B 多轮、Native 状态、空响应、历史恢复与完整 TRACE 继续留到云端代码、文档和 CI 全部收尾后的最终本地验收；这些项目保持 `UNKNOWN / LOCAL ONLY`，不作为云端 Phase 3 的阻塞项。
 
 
 ---
 
-### 57.38 2026-11-20 PR #332：最新主线称骨集成同步、品牌审计与最终许可复核
+## 60. 2026-11-21 PR #332 同步最新主线并重算许可库存
 
-- 最新 master：430e97dd5afb362d6d33cc36d01244e2048b409a，合入 PR #345（袁天罡称骨情境问 AI）。上一许可同步基线为 911725c3b8ae8888d45601e1481c9235431b28fd；PR #332 前一 HEAD 为 f686b3ec126bc1cda58b5a7334c1ed4fe7b14bdf。本轮以当前 master 为第一父提交、旧许可 HEAD 为第二父提交，保留主线和许可分支历史。
-- 最新主线相对共同上游基线 c0f14e77a7fb721fc332576d21fef5f100392d0b 的变更已重算。最终清单为新增/修改 **850** 个（新增 **695**、修改 **155**），删除 **13** 个；分类为 Fork 商业授权候选 **336**、Apache 2.0 + Fork 双层许可 **149**、知识库排除 **364**、第三方排除 **1**。新增加的称骨执行器和对应测试已纳入商业授权候选；其余新增/修改路径均按最终 Git tree 分类。
-- 权属/来源状态：OWNERSHIP_EVIDENCE_REQUIRED **485** 项；SOURCE_LICENSE_REVIEW **365** 项。均保持 MISSING，不得把文件分类或 CI 通过解释为版权确权。知识库与第三方继续按来源许可，不纳入 Fork 商业授权。
-- 商业许可版本 1.4：个人非商业使用可在个人设备/非商业研究环境中进行；对本 Fork 自有修改的 GitHub 服务外公开再分发须事先书面许可，商业用途另须书面商业授权。商业授权副本与 SPDX LicenseRef 副本必须字节一致，根 Apache LICENSE 保持原文。
-- GitHub D.5 的服务内 Fork 授权、D.6 的贡献者按仓库适用许可授权、D.8 的公开仓库可访问性分别表述。D.5 平台授权不能由自定义许可证撤销，但不扩展为服务外镜像、重托管或向第三方交付的普遍许可。CONTRIBUTING 已由 Apache-only 声明改为逐文件许可和贡献者权属确认。
-- 新 HEAD 第一轮 CI 捕获许可证正文缺少完整字符串“GitHub 服务条款 D.8”；已在商业许可正文和自动检查要求中补齐。Flutter regression 还捕获品牌审计误判：许可证标题仍用旧产品名称，以及文件清单中 deleted_paths 的历史文件名。已将许可证标题改为“研纪”，并使品牌审计仅把清单 deleted_paths 中逐项匹配的历史文件路径列为历史来源；其他文档行、代码和用户可见品牌仍严格扫描。
-- 最新 master 增加的称骨入口和测试、之前已合入的情境功能及当前品牌一致性检查均须在新 HEAD 的 PR CI 重新通过。旧 HEAD 的成功结果不得替代本次 CI。
-- Fork 可见性：仓库当前为 Public Fork，Fork 不能单独改为 Private。离网为永久操作且可能丢失 Issues/PR/Wiki/Stars/Watchers/评论等元数据；当前有 9 个开放 PR（包括 #332）。本次未执行离网或可见性变更。
-- 最终验收：许可库存及边界工作流、PR Flutter regression、Android arm64 CI verification 对同一最终 HEAD 均须 SUCCESS；Branch validation 的 SKIPPED 不计 PASS。PR #332 已为 Ready for review。权属证据和 GitHub D.5 平台内 Fork 例外仍是独立门槛，未获授权不会执行不可逆 detach，也不会把服务内 Fork 例外表述为已消除。
-
-
----
-
-### 57.39 2026-11-20 PR #332：最新主线寿生债入口同步与清单最终更新
-
-- 最新 master：80e135519d19939c3b0a921ded6db5fd0e8b4767，合入 PR #347（寿生债结果情境问 AI）。前一许可 HEAD：2c3794965baf03a79c7c7f11343a1b8d69529d35，其第一父提交为 430e97dd5afb362d6d33cc36d01244e2048b409a。本轮以最新 master 为第一父提交、当前 PR HEAD 为第二父提交同步，保留双方提交历史。
-- PR #347 新增两个 Fork 自有文件：`lib/services/shousheng_debt_result_context_executor.dart`、`test/shousheng_debt_contextual_result_entry_test.dart`；修改三个既有路径：`lib/screens/shousheng_debt_screen.dart`、`lib/services/ai_context_prompt_builder.dart`、`lib/services/ai_context_resolver.dart`。三个修改路径已在原清单中，保留原有分类；两个新增路径纳入 FORK_COMMERCIAL。
-- 共同上游基线 c0f14e77a7fb721fc332576d21fef5f100392d0b 的最终 inventory：新增/修改 **852** 个（新增 **697**、修改 **155**），删除 **13** 个；分类：Fork 商业授权候选 **338**，Apache 2.0 + Fork 双层许可 **149**，知识库排除 **364**，第三方排除 **1**。
-- 权属/来源状态：OWNERSHIP_EVIDENCE_REQUIRED **487** 项；SOURCE_LICENSE_REVIEW **365** 项。两种状态均保持 MISSING，不得由 Git 作者、提交记录、仓库管理权限或自动 CI 代替权属证明。知识库资料和第三方依赖仍按各自原许可/声明执行。
-- .reuse/dep5 对 852 个路径精确登记；知识库及第三方排除路径为 NOASSERTION；没有使用会覆盖整个目录的宽泛 globs。自动检查会按 CI 实际 HEAD 重算共同基线的新增/修改/删除集合、状态、类别、SPDX、DEP5 路径集及许可证副本一致性。
-- 商业许可证 1.4：个人非商业使用仅限个人设备/非商业研究环境；本 Fork 自有修改在 GitHub 服务外的公开再分发需要事先书面许可，商业利用另需书面商业授权。GitHub D.5 的服务内 Fork 授权无法由自定义许可证撤销；D.6 贡献者按仓库适用许可授权；D.8 公开仓库可访问性分别说明。两份商业许可证正文一致，根 Apache LICENSE 与副本字节一致。
-- 前一 HEAD 2c3794965baf03a79c7c7f11343a1b8d69529d35 的 PR Flutter 全量 regression run 44753528453 已 SUCCESS；同一 PR run 的 Android arm64 job 136350969104 仍在运行，且最新主线已再合入 PR #347。以上旧 HEAD 结果不替代将寿生债入口加入后的最终 HEAD 验收。
-- 最新 HEAD 必须重新通过 PR 事件 Fork license boundary、Flutter regression 和 Android arm64 verification，均为 SUCCESS 才构成工程验收；Branch validation 的 SKIPPED 不计 PASS。PR #332 已为 Ready for review。
-- 版权证据和平台许可边界仍是独立门槛：487 项 OWNERSHIP_EVIDENCE_REQUIRED 尚须权属/再许可证据；当前 Public Fork 的 D.5 平台内 Fork 例外仍不能由自定义 LicenseRef 消除。未获权利人明确授权，不执行永久 Fork network detach 或可见性变更；不把服务内 Fork 的平台例外虚报为已满足绝对书面再分发限制。
-
-
----
-
-## 60. 2026-11-21 PR #332 授权清单、CI 与主线同步状态（增量复核）
-
-- 本次复核的 PR HEAD：`f2d738ca29819fe1960be29c86e6fe4950ed26e3`；当前 master：`79e69c73928ae82b3b45913de92746c140962d9f`。PR #332 已是 Ready for review（非 Draft），但 GitHub 当前返回 `mergeable=false`。
-- PR HEAD 相对当前 master 的比较结果为 `ahead 16 / behind 22`，状态 `diverged`。此前 PR 描述中的 `ahead 15 / behind 0` 已过期；本次不将该旧状态作为合并依据。
-- PR HEAD 上已核验的工程结果：新增/修改文件清单 852 项（新增 697、修改 155），删除 13 项；分类为 Fork 商业授权候选 338、Apache 2.0 + Fork 双层许可 149、知识库排除 364、第三方排除 1。`.reuse/dep5` 对 852 个路径逐项精确映射，无宽泛目录通配符；知识库/第三方排除使用 `NOASSERTION`。
-- 自动门禁 `tool/check_fork_license_inventory.py` 已在 PR HEAD 的完整历史 checkout 上通过，检查基线到实际 HEAD 的路径状态、清单数量/分类、DEP5 路径与 SPDX 表达式、商业许可副本一致性、Apache 副本与根 LICENSE 一致性及根 LICENSE 未修改。该门禁证明清单内部一致和路径覆盖完整，不代替人工判断每个内容的真实版权归属。
-- 商业许可版本 1.4 已核验：个人非商业使用可在个人设备/非商业研究环境中进行；Fork 自有修改的 GitHub 服务外公开再分发须事先取得书面许可，无论是否收费；商业/经营性使用另须书面商业授权。商业许可正文与 SPDX LicenseRef 副本字节一致；`LICENSES/Apache-2.0.txt` 与根目录 `LICENSE` 保持一致。知识库和第三方内容继续遵循各自原许可。
-- PR HEAD 的 PR 事件 CI：Fork license boundary run `44756009481` SUCCESS；Flutter regression run `44756009158` SUCCESS；同一 Flutter run 中 Android arm64 APK ABI verification + unit tests job `136359580904` SUCCESS。Branch validation job 为条件性 SKIPPED，不计 PASS。
-- **主线增量阻塞：** 当前 master 自 inventory 基线 `80e135519d19939c3b0a921ded6db5fd0e8b4767` 后又前进 22 个提交，涉及 `docs/ai-modernization-execution-ledger.md`、`lib/screens/dosage_converter_screen.dart`、`lib/screens/sanshan_lingqian_screen.dart`、`lib/screens/yuxiaji_omen_screen.dart`、`lib/services/ai_context_prompt_builder.dart`、`lib/services/ai_context_resolver.dart`、`test/chenggu_contextual_result_entry_test.dart`，并新增 6 个文件：`lib/services/dosage_result_context_executor.dart`、`lib/services/sanshan_lingqian_result_context_executor.dart`、`lib/services/yuxiaji_omen_result_context_executor.dart`、`test/dosage_contextual_result_entry_test.dart`、`test/sanshan_lingqian_contextual_result_entry_test.dart`、`test/yuxiaji_omen_contextual_result_entry_test.dart`。当前 PR HEAD 尚未包含这些主线增量，因此 852 项清单和对应 DEP5 不能作为最新 master 合并后的最终清单。
-- 同步后的预期清单增量为新增 6 项；在其他路径状态不变的前提下，新增/修改合计将为 858（新增 703、修改 155），Fork 商业授权候选 344、双层许可 149、知识库排除 364、第三方排除 1；`OWNERSHIP_EVIDENCE_REQUIRED` 将从 487 增至 493，`SOURCE_LICENSE_REVIEW` 仍为 365。必须在合并最新 master 到 PR 分支后，以实际 Git tree 重新计算并更新 JSON、Markdown、DEP5，再运行自动门禁；这些预期数字不能代替实际验收。
-- 权属/来源状态仍为 MISSING：487 项 Fork 商业授权候选及双层许可文件需要权属或充分再许可权证据；365 项知识库/第三方排除继续按来源复核。自动 CI 不构成版权确权。GitHub D.5 的平台内 Fork 授权不能由自定义许可撤销；本仓库未执行永久 Leave network 或可见性变更。
-- **当前结论：工程文件与 PR HEAD CI 已通过，但 PR 尚未达到可合并条件。** 先同步当前 master，更新新增 6 项的文件清单/DEP5/Markdown 和计数，再对同步后的同一 HEAD 重跑 Fork license boundary、Flutter regression、Android arm64；全部 SUCCESS 且 GitHub 确认 mergeable 后，才进入 PR #332 合并。不得用旧 HEAD 的 CI 或旧的 ahead/behind 描述替代最终验收。
+- 按三方关系将最新 `master`（`79e69c73928ae82b3b45913de92746c140962d9f`）合并到 PR #332 原 HEAD（`817d68faa8d6e1dc5db5c34b755344b744dd7dc5`）之上；PR 分支作为第一父提交，最新 master 作为第二父提交，保留两侧提交历史。主线相对共同基点的 13 个文件差异中，台账以“最新主线内容 + 本节许可验收记录”合并，其余 12 个文件确认 PR 分支与共同基线一致后采用主线版本；未覆盖 PR 侧既有代码。
+- 共同上游基线仍为 `c0f14e77a7fb721fc332576d21fef5f100392d0b`。重新生成的文件库存：新增/修改 **858** 项（新增 **703**、修改 **155**），删除 **13** 项；分类为 Fork 商业授权候选 **344**、Apache 2.0 + Fork 双层许可 **149**、知识库排除 **364**、第三方排除 **1**。
+- 新增 6 项均为主线最新增加的 Fork 自有情境执行器及回归测试：`lib/services/dosage_result_context_executor.dart`、`lib/services/sanshan_lingqian_result_context_executor.dart`、`lib/services/yuxiaji_omen_result_context_executor.dart`、`test/dosage_contextual_result_entry_test.dart`、`test/sanshan_lingqian_contextual_result_entry_test.dart`、`test/yuxiaji_omen_contextual_result_entry_test.dart`。其许可映射为 `LicenseRef-Nihaixia-Fork-Commercial`，权属状态保持 `OWNERSHIP_EVIDENCE_REQUIRED`；没有将知识库或第三方资料纳入商业授权。
+- `.reuse/dep5` 已对 858 个路径逐项登记；无宽泛目录通配符；知识库/第三方排除继续使用 `NOASSERTION`。JSON、Markdown 和 DEP5 由同一文件分类数据重建/校对。
+- 权属/来源状态：`OWNERSHIP_EVIDENCE_REQUIRED` **493** 项；`SOURCE_LICENSE_REVIEW` **365** 项。仍为待举证/待来源核验状态，自动门禁不构成版权确权。
+- 商业授权文本保持版本 1.4：个人非商业使用限个人设备或非商业研究环境；对 Fork 自有修改在 GitHub 服务外公开再分发须事先书面许可，无论是否收费；商业或经营性使用另须书面商业授权。上游原始部分维持 Apache 2.0，知识库和第三方依各自来源许可。
+- 本次合并后须以同一最终 PR HEAD 重新通过 Fork license boundary、Flutter 全量 regression、Android arm64 APK ABI verification + unit tests。旧 HEAD CI 成功结果不转移为新 HEAD 验收；Branch validation 的条件性 SKIPPED 不计 PASS。全部检查成功且 GitHub 显示 mergeable 后，方可合并 PR #332。

@@ -16,10 +16,16 @@ import 'meihua_tool_executor.dart';
 import 'xiaoliuren_tool_executor.dart';
 import 'huangdi_siji_result_context_executor.dart';
 import 'huangdi_siji_tool_executor.dart';
+import 'yuxiaji_omen_result_context_executor.dart';
+import 'yuxiaji_omen_tool_executor.dart';
 import 'chenggu_result_context_executor.dart';
 import 'chenggu_tool_executor.dart';
 import 'shousheng_debt_result_context_executor.dart';
 import 'shousheng_debt_tool_executor.dart';
+import 'sanshan_lingqian_result_context_executor.dart';
+import 'sanshan_lingqian_tool_executor.dart';
+import 'dosage_result_context_executor.dart';
+import 'dosage_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -1153,6 +1159,446 @@ class AiContextResolver {
       ),
     );
   }
+
+  static AiContextRef buildYuxiajiOmenResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final result = structuredSnapshot['result'];
+    final at = input is Map ? input['at'] : null;
+    final offset = input is Map ? input['utcOffsetMinutes'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    final title = result is Map ? result['title'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            YuxiajiOmenResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YuxiajiOmenResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            YuxiajiOmenResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'deviceLocalDateTime' ||
+        input['clockOwner'] != 'APP_DEVICE_LOCAL' ||
+        at is! String ||
+        DateTime.tryParse(at) == null ||
+        DateTime.parse(at).isUtc ||
+        offset is! int ||
+        DateTime.parse(at).timeZoneOffset.inMinutes != offset ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != YuxiajiOmenToolExecutor.sourceId ||
+        title is! String ||
+        title.isEmpty ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Yuxiaji context reference requires a complete device-local time snapshot with verified source provenance.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: YuxiajiOmenResultContextExecutor.moduleId,
+      anchorId: 'yuxiaji-omen:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: YuxiajiOmenResultContextExecutor.ruleVersion,
+      sourceId: YuxiajiOmenToolExecutor.sourceId,
+      title: title,
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveYuxiajiOmenToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != YuxiajiOmenResultContextExecutor.moduleId ||
+        ref.sourceId != YuxiajiOmenToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '玉匣灵兆引用不完整或不属于本地时辰文本来源。',
+      );
+    }
+    if (ref.ruleVersion != YuxiajiOmenResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '玉匣灵兆执行器、数据资产或时辰计算规则版本已变化。',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorId != 'yuxiaji-omen:result:$snapshotId' ||
+        ref.anchorVersion != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '玉匣灵兆锚点与不可变快照身份不一致。',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final at = input is Map ? input['at'] : null;
+    final offset = input is Map ? input['utcOffsetMinutes'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            YuxiajiOmenResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            YuxiajiOmenResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            YuxiajiOmenResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'deviceLocalDateTime' ||
+        input['clockOwner'] != 'APP_DEVICE_LOCAL' ||
+        at is! String ||
+        DateTime.tryParse(at) == null ||
+        DateTime.parse(at).isUtc ||
+        offset is! int ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sources is! List ||
+        sources.length != 1 ||
+        sources.single != YuxiajiOmenToolExecutor.sourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '玉匣灵兆输入、来源或摘要与不可变快照不匹配。',
+      );
+    }
+
+    final observedAt = DateTime.parse(at);
+    if (observedAt.timeZoneOffset.inMinutes != offset) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '设备时区偏移已变化，不能把历史本地时辰解释为当前时区结果。',
+      );
+    }
+    final rebuilt = YuxiajiOmenResultContextExecutor.executeWithSnapshot(
+      observedAt: observedAt,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '无法按记录的设备本地时间重建玉匣灵兆文本。',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId ||
+        rebuilt.result.title != ref.title) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '本地时辰重建结果与原始玉匣灵兆快照不一致。',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+  static AiContextRef buildSanshanLingqianResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final selectedSignId = input is Map ? input['selectedSignId'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            SanshanLingqianResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            SanshanLingqianResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            SanshanLingqianResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'appRandomDraw' ||
+        input['selectionOwner'] != 'APP_LOCAL_ONLY' ||
+        selectedSignId is! int ||
+        selectedSignId < 1 ||
+        selectedSignId > 92 ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sourceIds is! List ||
+        sourceIds.length != 1 ||
+        sourceIds.single !=
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId' ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Sanshan Lingqian context reference requires a complete, source-bound App draw snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: SanshanLingqianResultContextExecutor.moduleId,
+      anchorId: 'sanshan-lingqian:result:$snapshotId:sign=$selectedSignId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: SanshanLingqianResultContextExecutor.ruleVersion,
+      sourceId: '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId',
+      title: '三山国王灵签结果（第$selectedSignId签）',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveSanshanLingqianToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != SanshanLingqianResultContextExecutor.moduleId ||
+        !ref.sourceId.startsWith(SanshanLingqianToolExecutor.dataSourcePrefix)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '三山灵签引用不完整或不属于本地签谱来源。',
+      );
+    }
+    if (ref.ruleVersion != SanshanLingqianResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '三山灵签抽签执行器或本地签谱数据版本已变化。',
+      );
+    }
+
+    final match = RegExp(
+      r'^sanshan-lingqian:result:([0-9a-f]{64}):sign=(\d{1,2})$',
+    ).firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    final signId = match == null ? null : int.tryParse(match.group(2)!);
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        signId == null ||
+        signId < 1 ||
+        signId > 92 ||
+        ref.sourceId !=
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+        ref.title != '三山国王灵签结果（第$signId签）') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '三山灵签锚点、签号、来源与快照身份不一致。',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final selectedSignId = input is Map ? input['selectedSignId'] : null;
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            SanshanLingqianResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            SanshanLingqianResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            SanshanLingqianResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'appRandomDraw' ||
+        input['selectionOwner'] != 'APP_LOCAL_ONLY' ||
+        selectedSignId != signId ||
+        arguments is! Map ||
+        arguments.isNotEmpty ||
+        sourceIds is! List ||
+        sourceIds.length != 1 ||
+        sourceIds.single !=
+            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '三山灵签结果、签号、来源或结构化摘要与不可变快照不匹配。',
+      );
+    }
+
+    final rebuilt =
+        await SanshanLingqianResultContextExecutor.executeForSignId(signId);
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '无法从本地 92 签签谱重建已抽取签文。',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '本地签谱重建结果与原始抽签快照不一致。',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
+
+  static AiContextRef buildDosageResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sourceIds = structuredSnapshot['sourceIds'];
+    final result = structuredSnapshot['result'];
+    final title = result is Map ? result['title'] : null;
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            DosageResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DosageResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DosageResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitUnitConversion' ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
+        arguments.values.any((value) => value is! String) ||
+        DosageToolExecutor.validateArguments(
+          arguments.cast<String, String>(),
+        ).isNotEmpty ||
+        sourceIds is! List ||
+        sourceIds.length != 2 ||
+        sourceIds[0] != DosageToolExecutor.sourceId ||
+        sourceIds[1] != DosageToolExecutor.factorsSourceId ||
+        title != '经方度量衡单位换算' ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A dosage context reference requires a complete, source-bound successful unit-conversion snapshot.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: DosageResultContextExecutor.moduleId,
+      anchorId: 'dosage:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: DosageResultContextExecutor.ruleVersion,
+      sourceId: DosageToolExecutor.sourceId,
+      title: '经方度量衡换算结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveDosageToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != DosageResultContextExecutor.moduleId ||
+        ref.sourceId != DosageToolExecutor.sourceId ||
+        ref.title != '经方度量衡换算结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '剂量单位换算引用不完整或来源不匹配。',
+      );
+    }
+    if (ref.ruleVersion != DosageResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '经方度量衡换算执行器或换算常数版本已变化。',
+      );
+    }
+
+    final snapshotId = ref.snapshotId;
+    if (snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorId != 'dosage:result:$snapshotId' ||
+        ref.anchorVersion != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: '剂量单位换算锚点与不可变快照身份不一致。',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            DosageResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            DosageResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            DosageResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitUnitConversion' ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
+        arguments.values.any((value) => value is! String) ||
+        sources is! List ||
+        sources.length != 2 ||
+        sources[0] != DosageToolExecutor.sourceId ||
+        sources[1] != DosageToolExecutor.factorsSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '剂量换算输入、来源或结构化摘要与不可变快照不匹配。',
+      );
+    }
+
+    final safeArguments = arguments.cast<String, String>();
+    if (DosageToolExecutor.validateArguments(safeArguments).isNotEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '剂量换算参数不在 App 当前允许范围内。',
+      );
+    }
+    final rebuilt = DosageResultContextExecutor.executeWithSnapshot(
+      arguments: safeArguments,
+    );
+    if (!rebuilt.succeeded ||
+        rebuilt.structuredSnapshot == null ||
+        rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: '本地单位换算重建结果与原始快照不一致。',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
 
   static const yunqiModuleId = 'yunqi';
 
