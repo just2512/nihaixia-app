@@ -333,7 +333,11 @@ void main() {
       expect(disabledAfterInputChange.onPressed, isNull);
 
       final calculateAgain = find.byKey(const ValueKey('guansha-calculate-button'));
-      await tester.ensureVisible(calculateAgain);
+      await tester.scrollUntilVisible(
+        calculateAgain,
+        180,
+        scrollable: calculationScrollable,
+      );
       await tester.tap(calculateAgain);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
@@ -365,7 +369,11 @@ void main() {
       );
       expect(disabledAfterSettingsChange.onPressed, isNull);
 
-      await tester.ensureVisible(calculateAgain);
+      await tester.scrollUntilVisible(
+        calculateAgain,
+        180,
+        scrollable: calculationScrollable,
+      );
       await tester.tap(calculateAgain);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
