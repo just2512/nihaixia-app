@@ -149,7 +149,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
   }
 
   Future<void> _askAiAboutChartField(String fieldPath) async {
-    AiContextRef contextRef;
+    late final AiContextRef contextRef;
     late final Map<String, Object?> snapshot;
     try {
       snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
