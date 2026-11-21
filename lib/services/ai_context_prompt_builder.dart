@@ -19,6 +19,8 @@ import 'sanshan_lingqian_result_context_executor.dart';
 import 'sanshan_lingqian_tool_executor.dart';
 import 'dosage_result_context_executor.dart';
 import 'dosage_tool_executor.dart';
+import 'guansha_result_context_executor.dart';
+import 'guansha_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
@@ -368,6 +370,27 @@ class AiContextPromptBuilder {
           arguments.isEmpty &&
           ref.anchorId ==
               'sanshan-lingqian:result:$snapshotId:sign=$selectedSignId';
+    }
+    if (ref.moduleId == GuanshaResultContextExecutor.moduleId) {
+      final arguments = input['arguments'];
+      final settings = input['settings'];
+      return schemaVersion == GuanshaResultContextExecutor.resultSchemaVersion &&
+          input['method'] == 'explicitBirthDetails' &&
+          arguments is Map &&
+          arguments.length == 4 &&
+          arguments.keys.toSet().difference({
+            'birth_date',
+            'birth_time',
+            'gender',
+            'birthplace',
+          }).isEmpty &&
+          arguments.values.every((value) => value is String) &&
+          const {'male', 'female'}.contains(arguments['gender']) &&
+          (arguments['birthplace'] as String).trim().isNotEmpty &&
+          settings is Map &&
+          settings['useTrueSolarTime'] is bool &&
+          settings['distinguishZiShi'] is bool &&
+          ref.anchorId == 'guansha:result:$snapshotId';
     }
     if (ref.moduleId == DosageResultContextExecutor.moduleId) {
       final arguments = input['arguments'];
@@ -851,6 +874,29 @@ class AiContextPromptBuilder {
       }
     }
 
+    if (ref.moduleId == GuanshaResultContextExecutor.moduleId) {
+      final arguments = inputValue['arguments'];
+      final settings = inputValue['settings'];
+      if (ref.sourceId != GuanshaToolExecutor.sourceId ||
+          sourceIds.length != 3 ||
+          sourceIds[0] != GuanshaToolExecutor.sourceId ||
+          sourceIds[1] != GuanshaToolExecutor.dataSourceId ||
+          sourceIds[2] != GuanshaToolExecutor.locationSourceId ||
+          arguments is! Map ||
+          arguments.length != 4 ||
+          arguments.entries.any((entry) =>
+              entry.key is! String || entry.value is! String) ||
+          !const {'male', 'female'}.contains(arguments['gender']) ||
+          (arguments['birthplace'] as String? ?? '').trim().isEmpty ||
+          settings is! Map ||
+          settings['useTrueSolarTime'] is! bool ||
+          settings['distinguishZiShi'] is! bool) {
+        throw ArgumentError(
+          'A Guansha prompt requires the exact local engine, rule, city source pair, explicit child inputs and calculation settings.',
+        );
+      }
+    }
+
     if (ref.moduleId == SanshanLingqianResultContextExecutor.moduleId) {
       final selectedSignId = inputValue['selectedSignId'];
       final expectedSource = selectedSignId is int
@@ -900,7 +946,20 @@ class AiContextPromptBuilder {
     }
 
     final promptInput =
-        ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId
+        ref.moduleId == GuanshaResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in inputValue.entries)
+                  if (entry.key != 'arguments') entry.key: entry.value,
+                'arguments': const <String, String>{
+                  'birth_date': 'REDACTED_LOCAL_ONLY',
+                  'birth_time': 'REDACTED_LOCAL_ONLY',
+                  'gender': 'REDACTED_LOCAL_ONLY',
+                  'birthplace': 'REDACTED_LOCAL_ONLY',
+                },
+                'privacyNote':
+                    'Exact child birth date, clock time, gender and birthplace are retained only in the local verification snapshot and are intentionally omitted from the model context.',
+              }
+            : ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId
             ? <String, Object?>{
                 for (final entry in inputValue.entries)
                   if (entry.key != 'at' && entry.key != 'utcOffsetMinutes')
@@ -949,7 +1008,31 @@ class AiContextPromptBuilder {
           }
         : inputValue;
     final promptResult =
-        ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId
+        ref.moduleId == GuanshaResultContextExecutor.moduleId
+            ? <String, Object?>{
+                for (final entry in resultValue.entries)
+                  if (entry.key != 'values') entry.key: entry.value,
+                'values': <String, Object?>{
+                  if (resultValue['values'] is Map)
+                    for (final entry in (resultValue['values'] as Map).entries)
+                      if (!const {
+                        '出生公历',
+                        '性别',
+                        '出生地点',
+                        '出生地坐标',
+                        '出生农历',
+                        '四柱',
+                      }.contains(entry.key))
+                        entry.key as String: entry.value,
+                  '出生公历': 'REDACTED_LOCAL_ONLY',
+                  '性别': 'REDACTED_LOCAL_ONLY',
+                  '出生地点': 'REDACTED_LOCAL_ONLY',
+                  '出生地坐标': 'REDACTED_LOCAL_ONLY',
+                  '出生农历': 'REDACTED_LOCAL_ONLY',
+                  '四柱': 'REDACTED_LOCAL_ONLY',
+                },
+              }
+            : ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId
             ? <String, Object?>{
                 for (final entry in resultValue.entries)
                   if (entry.key != 'values') entry.key: entry.value,
@@ -1086,6 +1169,16 @@ class AiContextPromptBuilder {
         '轩辕黄帝四季歌属于托名轩辕黄帝的传统民俗通胜文本，不是科学预测，也不代表个人命运事实。请区分 App 已查得的农历月份/时辰/部位/诗文与现有释义；只在原文和口径范围内解释，不作确定性人生判断或重大决策建议。',
       if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId)
         '精确出生日期和钟点只用于 App 本地重建校验，已从模型上下文脱敏；不得尝试反推或索要未传入的生辰信息。不得把民俗文本转化为医疗、法律、投资或其他专业建议。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '小儿关煞结果仅是 App 本地收录的传统民俗规则命中记录。只解释本次快照中已经核验的规则、命中依据与数据范围，不把关煞名称或严重程度表述为事实判断。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '儿童出生日期、钟点、性别、出生地点、坐标、派生农历和四柱已从模型上下文脱敏；不得尝试反推、询问或重建这些未提供的个人资料。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '不得根据关煞名称、部位或传统说法推断疾病、发育问题、健康风险或未来伤害；不得将民俗文字当作儿童身体状况证据。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '不得建议或暗示购买法事、符箓或任何付费服务；不得恐吓用户，也不得据此延误正规医疗评估。',
+      if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
+        '不得提供诊断、治疗、用药或预防建议；儿童健康问题应由正规医疗机构评估。',
       if (ref.moduleId == DosageResultContextExecutor.moduleId)
         '本次上下文只包含 App 已执行的度量衡单位换算结果。请解释用户输入的数值、原始单位、所选度量标准、App 返回的换算结果与目标单位；所有数值必须以快照原样为准，不得重新换算、修正、插值或补造结果。',
       if (ref.moduleId == DosageResultContextExecutor.moduleId)
