@@ -3103,3 +3103,16 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - Dream 必须以用户明确选择的单条 `DreamEntry.id` 建立快照，不得把自由梦境描述发给模型或将检索候选列表自动当作唯一结果；多候选必须先由用户确认一条。Resolver 对 ID、数据源 blob SHA、来源、内容摘要执行精确回链；Prompt 只解释选中的本地民俗条目，不作现实吉凶保证、心理/医学诊断。
 - `ai_context_resolver.dart` 与 `ai_context_prompt_builder.dart` 是这两个切片的共享扩展点，必须串行所有权：Guansha 完整集成与合并后，Dream 才能编辑这两个文件。每个切片均须覆盖错源、缺参、快照篡改/过期、重建不一致、Prompt 隐私和 402dp/775dp 页面自动化。
 - Find N2 外屏/内屏/半折叠/分屏/键盘，以及本地 E4B 多轮、Native 状态、空响应、历史恢复与完整 TRACE 继续留到云端代码、文档和 CI 全部收尾后的最终本地验收；这些项目保持 `UNKNOWN / LOCAL ONLY`，不作为云端 Phase 3 的阻塞项。
+
+
+---
+
+## 60. 2026-11-21 PR #332 同步最新主线并重算许可库存
+
+- 按三方关系将最新 `master`（`79e69c73928ae82b3b45913de92746c140962d9f`）合并到 PR #332 原 HEAD（`817d68faa8d6e1dc5db5c34b755344b744dd7dc5`）之上；PR 分支作为第一父提交，最新 master 作为第二父提交，保留两侧提交历史。主线相对共同基点的 13 个文件差异中，台账以“最新主线内容 + 本节许可验收记录”合并，其余 12 个文件确认 PR 分支与共同基线一致后采用主线版本；未覆盖 PR 侧既有代码。
+- 共同上游基线仍为 `c0f14e77a7fb721fc332576d21fef5f100392d0b`。重新生成的文件库存：新增/修改 **858** 项（新增 **703**、修改 **155**），删除 **13** 项；分类为 Fork 商业授权候选 **344**、Apache 2.0 + Fork 双层许可 **149**、知识库排除 **364**、第三方排除 **1**。
+- 新增 6 项均为主线最新增加的 Fork 自有情境执行器及回归测试：`lib/services/dosage_result_context_executor.dart`、`lib/services/sanshan_lingqian_result_context_executor.dart`、`lib/services/yuxiaji_omen_result_context_executor.dart`、`test/dosage_contextual_result_entry_test.dart`、`test/sanshan_lingqian_contextual_result_entry_test.dart`、`test/yuxiaji_omen_contextual_result_entry_test.dart`。其许可映射为 `LicenseRef-Nihaixia-Fork-Commercial`，权属状态保持 `OWNERSHIP_EVIDENCE_REQUIRED`；没有将知识库或第三方资料纳入商业授权。
+- `.reuse/dep5` 已对 858 个路径逐项登记；无宽泛目录通配符；知识库/第三方排除继续使用 `NOASSERTION`。JSON、Markdown 和 DEP5 由同一文件分类数据重建/校对。
+- 权属/来源状态：`OWNERSHIP_EVIDENCE_REQUIRED` **493** 项；`SOURCE_LICENSE_REVIEW` **365** 项。仍为待举证/待来源核验状态，自动门禁不构成版权确权。
+- 商业授权文本保持版本 1.4：个人非商业使用限个人设备或非商业研究环境；对 Fork 自有修改在 GitHub 服务外公开再分发须事先书面许可，无论是否收费；商业或经营性使用另须书面商业授权。上游原始部分维持 Apache 2.0，知识库和第三方依各自来源许可。
+- 本次合并后须以同一最终 PR HEAD 重新通过 Fork license boundary、Flutter 全量 regression、Android arm64 APK ABI verification + unit tests。旧 HEAD CI 成功结果不转移为新 HEAD 验收；Branch validation 的条件性 SKIPPED 不计 PASS。全部检查成功且 GitHub 显示 mergeable 后，方可合并 PR #332。
