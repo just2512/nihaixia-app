@@ -69,7 +69,7 @@ void main() {
           theme: ThemeData(extensions: [AppColors.light]),
           home: MarkdownDocScreen(
             title: '多条文阅读页',
-            content: '> 第一条原文段落包含足够长的内容，用于验证独立 passage 的上下文锚点。\n\n解释文字。\n\n> 第二条释义段落也包含足够长的内容，用于验证第二个独立 passage 的上下文锚点。',
+            content: '> 甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲\n\n解释文字。\n\n> 乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙',
             contextualAskModuleId: 'shanghan',
             contextualAskAnchorId: 'shanghan:document:multi',
             contextualAskSourceId: 'assets/shanghan/multi.md',
@@ -83,7 +83,7 @@ void main() {
     expect(find.textContaining('解释文字'), findsOneWidget);
 
     final firstQuote = find
-        .textContaining('第一条原文段落包含', findRichText: true)
+        .textContaining('甲甲甲', findRichText: true)
         .hitTestable();
     expect(firstQuote, findsOneWidget);
     await tester.ensureVisible(firstQuote);
@@ -99,14 +99,14 @@ void main() {
     expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:0');
     final firstSelected = assistant.contextRef['selectedText']!;
     expect(firstSelected, isNotEmpty);
-    expect('第一条原文段落包含足够长的内容，用于验证独立 passage 的上下文锚点。', contains(firstSelected));
-    expect('第二条释义段落也包含足够长的内容，用于验证第二个独立 passage 的上下文锚点。', isNot(contains(firstSelected)));
+    expect('甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲', contains(firstSelected));
+    expect('乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙', isNot(contains(firstSelected)));
     Navigator.of(tester.element(assistantFinder), rootNavigator: true).pop();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.longPress(
-      find.textContaining('第二条释义段落也包含', findRichText: true),
+      find.textContaining('乙乙乙', findRichText: true),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('问 AI'));
@@ -118,8 +118,8 @@ void main() {
     expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:1');
     final secondSelected = assistant.contextRef['selectedText']!;
     expect(secondSelected, isNotEmpty);
-    expect('第二条释义段落也包含足够长的内容，用于验证第二个独立 passage 的上下文锚点。', contains(secondSelected));
-    expect('第一条原文段落包含足够长的内容，用于验证独立 passage 的上下文锚点。', isNot(contains(secondSelected)));
+    expect('乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙乙', contains(secondSelected));
+    expect('甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲甲', isNot(contains(secondSelected)));
     expect(tester.takeException(), isNull);
   });
 
