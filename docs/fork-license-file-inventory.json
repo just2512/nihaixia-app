@@ -12,12 +12,12 @@
   ],
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. PR #373 and PR #374 are merged; PR #383 six-meridian contextual entry is merged to master at 0458da83a1458a321f7eb63247a5ef3508c6499d. The acupoint contextual knowledge-entry slice is built on this post-merge master. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 866,
+    "changed": 867,
     "added": 711,
-    "modified": 155,
+    "modified": 156,
     "deleted": 13,
     "by_classification": {
-      "APACHE_2_0_AND_FORK_COMMERCIAL": 149,
+      "APACHE_2_0_AND_FORK_COMMERCIAL": 150,
       "FORK_COMMERCIAL": 352,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
@@ -4434,6 +4434,14 @@
     },
     {
       "path": "lib/screens/neijing_knowledge_screen.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/screens/neijing_library_screen.dart",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",

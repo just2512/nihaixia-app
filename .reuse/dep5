@@ -60,6 +60,7 @@ Files:
  lib/screens/minggua_calculator_screen.dart
  lib/screens/minggua_library_screen.dart
  lib/screens/neijing_entries_screen.dart
+ lib/screens/neijing_library_screen.dart
  lib/screens/neijing_knowledge_screen.dart
  lib/screens/neijing_search_screen.dart
  lib/screens/sanshan_lingqian_screen.dart
