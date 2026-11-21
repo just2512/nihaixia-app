@@ -271,11 +271,11 @@ void main() {
       await tester.pumpWidget(
         ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
-          child: const MaterialApp(
+          child: MaterialApp(
             home: GuanshaScreen(
-               key: ValueKey('guansha-${viewport.width}'),
-               returnResultOnComplete: true,
-             ),
+              key: ValueKey('guansha-${viewport.width}'),
+              returnResultOnComplete: true,
+            ),
           ),
         ),
       );
