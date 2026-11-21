@@ -251,7 +251,10 @@ void main() {
       await tester.pumpAndSettle();
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
-        await tester.tap(find.text(tabLabels[tabIndex]).first);
+        final tab = find.text(tabLabels[tabIndex]).first;
+        await tester.ensureVisible(tab);
+        await tester.pumpAndSettle();
+        await tester.tap(tab);
         await tester.pumpAndSettle();
 
         final ask = find.byKey(const ValueKey('yunqi-chart-field-ask'));
