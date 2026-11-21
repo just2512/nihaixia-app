@@ -263,7 +263,7 @@ void main() {
           .first;
 
       for (var tabIndex = 0; tabIndex < paths.length; tabIndex++) {
-        final tab = find.text(tabLabels[tabIndex]).first;
+        final tab = find.text(tabLabels[tabIndex]);
         var revealAttempts = 0;
         while (tab.hitTestable().evaluate().isEmpty && revealAttempts < 80) {
           await tester.drag(pageScrollable, const Offset(0, -220));
