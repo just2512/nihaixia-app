@@ -247,15 +247,7 @@ void main() {
         await tester.ensureVisible(ask);
         await tester.pumpAndSettle();
 
-        final pageList = find.descendant(
-          of: find.byType(TabBarView),
-          matching: find.byType(ListView),
-        ).first;
-        final scrollable = find.descendant(
-          of: pageList,
-          matching: find.byType(Scrollable),
-        ).first;
-        final position = tester.state<ScrollableState>(scrollable).position;
+        final position = Scrollable.of(tester.element(ask)).position;
         final offsetBeforeOpen = position.pixels;
 
         await tester.tap(ask);
