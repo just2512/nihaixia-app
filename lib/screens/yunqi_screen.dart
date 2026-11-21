@@ -672,11 +672,11 @@ class _YearSummaryCard extends StatelessWidget {
 class _ChartsTabs extends StatefulWidget {
   /// 用户所选日期（决定三图的高亮步）。
   final DateTime selectedDate;
-  final Future<void> Function(String fieldPath) onAskField;
+  final Future<void> Function(String fieldPath)? onAskField;
 
   const _ChartsTabs({
     required this.selectedDate,
-    required this.onAskField,
+    this.onAskField,
   });
 
   @override
@@ -743,24 +743,29 @@ class _ChartsTabsState extends State<_ChartsTabs>
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                key: const ValueKey('yunqi-chart-field-ask'),
-                onPressed: () {
-                  final fieldPath = switch (_tabController.index) {
-                    0 => 'chart.wuxing',
-                    1 => 'chart.wuyun',
-                    2 => 'chart.liuqi',
-                    _ => null,
-                  };
-                  if (fieldPath != null) unawaited(widget.onAskField(fieldPath));
-                },
-                icon: const Icon(Icons.auto_awesome, size: 18),
-                label: const Text('问 AI 解读当前图'),
+            if (widget.onAskField != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.tonalIcon(
+                  key: const ValueKey('yunqi-chart-field-ask'),
+                  onPressed: () {
+                    final fieldPath = switch (_tabController.index) {
+                      0 => 'chart.wuxing',
+                      1 => 'chart.wuyun',
+                      2 => 'chart.liuqi',
+                      _ => null,
+                    };
+                    final onAskField = widget.onAskField;
+                    if (fieldPath != null && onAskField != null) {
+                      unawaited(onAskField(fieldPath));
+                    }
+                  },
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('问 AI 解读当前图'),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
