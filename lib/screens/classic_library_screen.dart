@@ -27,6 +27,7 @@ class ClassicLibraryScreen extends StatefulWidget {
 
   /// Enables passage-level Ask AI for this library's stable local source group.
   final String? contextualAskModuleId;
+  final bool contextualAskParagraphs;
 
   const ClassicLibraryScreen({
     super.key,
@@ -37,6 +38,7 @@ class ClassicLibraryScreen extends StatefulWidget {
     this.seqLabel,
     this.seqSubtitle,
     this.contextualAskModuleId,
+    this.contextualAskParagraphs = false,
   });
 
   @override
@@ -198,6 +200,8 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                             contextualAskSourceId: widget.contextualAskModuleId == null
                                 ? null
                                 : lecture.asset,
+                            contextualAskParagraphs:
+                                widget.contextualAskParagraphs,
                           ),
                         ),
                       );

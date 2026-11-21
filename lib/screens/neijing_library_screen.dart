@@ -15,6 +15,8 @@ class NeijingLibraryScreen extends StatelessWidget {
       infoText: '《素问》72 篇 + 前言（倪师讲稿书面整理版）。原文第 25、66-74 篇原稿未收录。',
       footer: '出处：《人纪·黄帝内经》倪师讲稿 · 传统文化参考',
       lectures: kNeiJingLectures,
+      contextualAskModuleId: 'neijing-reading',
+      contextualAskParagraphs: true,
       seqLabel: (s) => s == 0 ? '序' : '$s',
       seqSubtitle: (s) => s == 0 ? '全书导读' : '第$s篇',
     );

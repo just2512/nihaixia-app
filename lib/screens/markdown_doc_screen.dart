@@ -54,10 +54,14 @@ class MarkdownDocScreen extends StatefulWidget {
   final bool linkFormulas;
 
   /// Stable local entry identity. The contextual action is shown only when
-  /// the raw document contains exactly one uniquely locatable blockquote.
+  /// the raw document contains uniquely locatable Markdown passage blocks.
   final String? contextualAskModuleId;
   final String? contextualAskAnchorId;
   final String? contextualAskSourceId;
+
+  /// Enables safe paragraph-level context for plain-prose lecture documents.
+  /// Headings, lists, blockquotes, tables, code, images and HTML are excluded.
+  final bool contextualAskParagraphs;
 
   const MarkdownDocScreen({
     super.key,
@@ -69,6 +73,7 @@ class MarkdownDocScreen extends StatefulWidget {
     this.contextualAskModuleId,
     this.contextualAskAnchorId,
     this.contextualAskSourceId,
+    this.contextualAskParagraphs = false,
   }) : assert(asset != '' || content != null, 'asset 与 content 至少要提供一个');
 
   @override
@@ -195,13 +200,15 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     String fullPassage, {
     required int passageIndex,
     required int passageCount,
+    String? stableAnchorId,
   }) {
     if (!_contextualAskEnabled || selectedText.trim().isEmpty) return;
     final moduleId = widget.contextualAskModuleId!;
     final baseAnchorId = widget.contextualAskAnchorId!;
-    final anchorId = passageCount == 1
-        ? baseAnchorId
-        : baseAnchorId + ':passage:' + passageIndex.toString();
+    final anchorId = stableAnchorId ??
+        (passageCount == 1
+            ? baseAnchorId
+            : baseAnchorId + ':passage:' + passageIndex.toString());
     final sourcePath = widget.contextualAskSourceId!;
     final version = sha256.convert(utf8.encode(fullPassage)).toString();
     final ref = AiContextRef(
@@ -286,6 +293,190 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     );
   }
 
+  /// Extracts ordinary prose paragraphs. Structural Markdown blocks are
+  /// excluded so the contextual action cannot bind to headings, lists,
+  /// blockquotes, tables, code, images or HTML. Raw/displayed line ranges must
+  /// match before an action is exposed.
+  List<_ContextualMarkdownPassage> _findContextualParagraphs(String markdown) {
+    final lines = markdown.split('\n');
+    final passages = <_ContextualMarkdownPassage>[];
+    int? activeStart;
+    var activeContainsFence = false;
+    var insideFence = false;
+    String? fenceCharacter;
+
+    bool isSafeParagraph(List<String> blockLines) {
+      if (blockLines.isEmpty) return false;
+      for (final line in blockLines) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty ||
+            RegExp(r'^\s{0,3}#{1,6}\s+').hasMatch(line) ||
+            RegExp(r'^\s*>').hasMatch(line) ||
+            RegExp(r'^\s*(?:[-*+]\s+|\d+[.)]\s+)').hasMatch(line) ||
+            RegExp(r'^\s*(?:-{3,}|_{3,}|\*{3,})\s*$').hasMatch(line) ||
+            RegExp(r'^\s{4,}\S').hasMatch(line) ||
+            RegExp(r'^\s*<').hasMatch(line) ||
+            RegExp(r'^\s*\$\$').hasMatch(line) ||
+            RegExp(r'^\s*\[[^\]]+\]:\s').hasMatch(line) ||
+            RegExp(r'!\[[^\]]*\]\(').hasMatch(line) ||
+            trimmed.startsWith('|') ||
+            trimmed.startsWith('<!--')) {
+          return false;
+        }
+      }
+      if (blockLines.length > 1 &&
+          blockLines.any((line) => line.contains('|'))) {
+        return false;
+      }
+      return blockLines.join('\n').trim().isNotEmpty;
+    }
+
+    void flush(int endLine) {
+      final startLine = activeStart;
+      if (startLine == null) return;
+      final blockLines = lines.sublist(startLine, endLine);
+      if (!activeContainsFence && isSafeParagraph(blockLines)) {
+        final block = blockLines.join('\n');
+        passages.add(_ContextualMarkdownPassage(
+          before: '',
+          block: block,
+          plainText: block.trim(),
+          startLine: startLine,
+          endLine: endLine,
+        ));
+      }
+      activeStart = null;
+      activeContainsFence = false;
+    }
+
+    for (var index = 0; index < lines.length; index++) {
+      final line = lines[index];
+      final fence = RegExp(r'^\s*(\x60{3,}|~{3,})').firstMatch(line);
+      if (fence != null) {
+        final marker = fence.group(1)!;
+        if (!insideFence) {
+          insideFence = true;
+          fenceCharacter = marker[0];
+        } else if (marker[0] == fenceCharacter) {
+          insideFence = false;
+          fenceCharacter = null;
+        }
+        activeContainsFence = true;
+      }
+      if (line.trim().isEmpty) {
+        if (!insideFence) flush(index);
+        continue;
+      }
+      activeStart ??= index;
+      if (insideFence) activeContainsFence = true;
+    }
+    flush(lines.length);
+    return passages;
+  }
+
+  Widget _buildContextualParagraphBody(String data) {
+    final raw = _rawDocumentContent ?? data;
+    final rawPassages = _findContextualParagraphs(raw);
+    final displayedPassages = _findContextualParagraphs(data);
+    var passagesMatch = rawPassages.isNotEmpty &&
+        rawPassages.length == displayedPassages.length;
+    for (var index = 0; passagesMatch && index < rawPassages.length; index++) {
+      passagesMatch = rawPassages[index].startLine ==
+              displayedPassages[index].startLine &&
+          rawPassages[index].endLine == displayedPassages[index].endLine;
+    }
+    if (!passagesMatch) {
+      return Markdown(
+        data: data,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        selectable: true,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      );
+    }
+
+    final lines = data.split('\n');
+    final children = <Widget>[];
+    var previousEnd = 0;
+    final baseAnchorId = widget.contextualAskAnchorId!;
+    for (var passageIndex = 0;
+        passageIndex < displayedPassages.length;
+        passageIndex++) {
+      final passage = displayedPassages[passageIndex];
+      final before = lines.sublist(previousEnd, passage.startLine).join('\n');
+      if (before.trim().isNotEmpty || passageIndex == 0) {
+        children.add(_buildPlainMarkdownBody(
+          before,
+          selectable: true,
+          padding: EdgeInsets.fromLTRB(16, passageIndex == 0 ? 12 : 0, 16, 0),
+        ));
+      }
+      final stableAnchorId = baseAnchorId +
+          ':paragraph:' +
+          (passage.startLine + 1).toString() +
+          '-' +
+          passage.endLine.toString();
+      children.add(SelectionArea(
+        onSelectionChanged: (selection) {
+          final selected = selection?.plainText ?? '';
+          if (_selectedTextByPassage[passageIndex] == selected) return;
+          setState(() {
+            if (selected.isEmpty) {
+              _selectedTextByPassage.remove(passageIndex);
+            } else {
+              _selectedTextByPassage[passageIndex] = selected;
+            }
+          });
+        },
+        contextMenuBuilder: (context, state) {
+          final items =
+              List<ContextMenuButtonItem>.of(state.contextMenuButtonItems);
+          final selected = _selectedTextByPassage[passageIndex] ?? '';
+          if (selected.trim().isNotEmpty) {
+            items.add(ContextMenuButtonItem(
+              label: '问 AI',
+              onPressed: () {
+                state.hideToolbar();
+                _askAiAboutSelection(
+                  selected,
+                  rawPassages[passageIndex].plainText,
+                  passageIndex: passageIndex,
+                  passageCount: rawPassages.length,
+                  stableAnchorId: stableAnchorId,
+                );
+              },
+            ));
+          }
+          return AdaptiveTextSelectionToolbar.buttonItems(
+            anchors: state.contextMenuAnchors,
+            buttonItems: items,
+          );
+        },
+        child: _buildPlainMarkdownBody(
+          passage.block,
+          selectable: false,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ));
+      previousEnd = passage.endLine;
+    }
+
+    final trailing = lines.skip(previousEnd).join('\n');
+    if (trailing.trim().isNotEmpty) {
+      children.add(_buildPlainMarkdownBody(
+        trailing,
+        selectable: true,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      ));
+    }
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+
   Widget _buildMarkdownBody(String data) {
     if (!_contextualAskEnabled) {
       return Markdown(
@@ -295,6 +486,9 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
         onTapLink: (text, href, title) => _onTapLink(href),
         styleSheet: MarkdownDocScreen.buildStyleSheet(context),
       );
+    }
+    if (widget.contextualAskParagraphs) {
+      return _buildContextualParagraphBody(data);
     }
     final raw = _rawDocumentContent ?? data;
     final rawPassages = _findContextualPassages(raw);

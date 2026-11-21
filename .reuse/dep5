@@ -376,6 +376,7 @@ Files:
  test/assistant_tool_result_test.dart
  test/assistant_tool_router_test.dart
  test/bazi_contextual_result_entry_test.dart
+ test/classic_paragraph_contextual_entry_test.dart
  test/bazi_foldable_layout_test.dart
  test/bazi_tool_executor_test.dart
  test/bencao_lecture_index_test.dart
