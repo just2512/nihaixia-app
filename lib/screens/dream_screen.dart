@@ -4,6 +4,11 @@ import '../utils/fold_aware_routes.dart';
 import '../data/database_helper.dart';
 import '../models/bookmark.dart';
 import '../data/dream_data.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/dream_result_context_executor.dart';
+import '../screens/assistant_tool_router.dart' show AssistantMode;
+import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 
 /// 周公解梦 —— 《周公解梦大全》结构化数据集民俗占梦查询。
 ///
@@ -18,6 +23,8 @@ class DreamScreen extends StatefulWidget {
 
 class _DreamScreenState extends State<DreamScreen> {
   final TextEditingController _queryController = TextEditingController();
+  final ScrollController _resultsScrollController = ScrollController();
+  String? _openingDreamEntryId;
   String _query = '';
   String? _category; // null = 全部
 
@@ -42,6 +49,7 @@ class _DreamScreenState extends State<DreamScreen> {
   @override
   void dispose() {
     _queryController.dispose();
+    _resultsScrollController.dispose();
     super.dispose();
   }
 
@@ -124,6 +132,8 @@ class _DreamScreenState extends State<DreamScreen> {
                     ),
                   )
                 : ListView(
+                    key: const ValueKey('dream-results-list'),
+                    controller: _resultsScrollController,
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                     children: results.map(_buildDreamCard).toList(),
                   ),
@@ -215,10 +225,60 @@ class _DreamScreenState extends State<DreamScreen> {
     );
   }
 
+  Future<void> _askAiAboutEntry(DreamEntry entry) async {
+    if (_openingDreamEntryId != null) return;
+    setState(() => _openingDreamEntryId = entry.id);
+    try {
+      // Only the explicitly tapped local entry ID crosses this boundary.
+      // Search text and the candidate list are deliberately not included.
+      final execution = DreamResultContextExecutor.executeWithSnapshot(
+        selectedEntryId: entry.id,
+      );
+      final snapshot = execution.structuredSnapshot;
+      if (!execution.succeeded || snapshot == null) {
+        throw StateError('所选本地词条不完整或无法建立唯一快照。');
+      }
+
+      final ref = AiContextResolver.buildDreamEntryContextRef(
+        structuredSnapshot: snapshot,
+      );
+      final resolution = await AiContextResolver.resolveDreamEntryToolResult(
+        ref: ref,
+        structuredSnapshot: snapshot,
+      );
+      if (!mounted) return;
+      if (!resolution.isResolved || resolution.value == null) {
+        throw StateError(
+          '本地词条核验失败：${resolution.status.name}',
+        );
+      }
+
+      await showContextualAiSheet(
+        context: context,
+        contextRef: ref,
+        initialPrompt: AiContextPromptBuilder.buildToolResult(
+          ref: ref,
+          structuredSnapshot: resolution.value!.structuredSnapshot,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: '周公解梦 · ${entry.keyword}',
+        contextualExplanationOnly: true,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('当前词条无法建立情境解读：$error')),
+      );
+    } finally {
+      if (mounted) setState(() => _openingDreamEntryId = null);
+    }
+  }
+
   Widget _buildDreamCard(DreamEntry e) {
     final cs = Theme.of(context).colorScheme;
     final accent = _auspiciousColor(e.auspicious);
     return Card(
+      key: ValueKey('dream-entry-${e.id}'),
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -264,6 +324,20 @@ class _DreamScreenState extends State<DreamScreen> {
             Text(
               '出处：${e.source}',
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                key: ValueKey('ask-dream-ai-${e.id}'),
+                onPressed: _openingDreamEntryId == null
+                    ? () => _askAiAboutEntry(e)
+                    : null,
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: Text(
+                  _openingDreamEntryId == e.id ? '正在核验…' : '问 AI 解读此条',
+                ),
+              ),
             ),
           ],
         ),
