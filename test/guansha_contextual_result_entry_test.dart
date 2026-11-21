@@ -388,7 +388,11 @@ void main() {
 
       expect(find.text('确认本次小儿关煞结果输入'), findsOneWidget);
       await tester.tap(find.text('确认并解读'));
-      await tester.pumpAndSettle();
+      // The assistant text field keeps a blinking cursor active; wait for the
+      // route transition without requiring the entire screen to become idle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
 
       final ai = tester.widget<LocalAiInterviewScreen>(
         find.byType(LocalAiInterviewScreen),
