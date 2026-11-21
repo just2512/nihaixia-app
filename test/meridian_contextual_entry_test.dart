@@ -9,6 +9,7 @@ import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/meridian_detail_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
@@ -145,8 +146,8 @@ void main() {
       kind: ref.kind,
       moduleId: ref.moduleId,
       anchorId: ref.anchorId,
-      anchorVersion: '0' * 64,
-      snapshotId: '0' * 64,
+      anchorVersion: List.filled(64, '0').join(),
+      snapshotId: List.filled(64, '0').join(),
       ruleVersion: ref.ruleVersion,
       sourceId: ref.sourceId,
       title: ref.title,
