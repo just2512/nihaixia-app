@@ -407,6 +407,29 @@ void main() {
       'case',
       reason: 'The reserved word case remains a stable wire value',
     );
+    expect(
+      AiContextRef.normalizeMetadata({
+        'kind': 'knowledgeEntry',
+        'moduleId': 'meridian',
+        'anchorId': 'meridian:detail:少阳',
+        'anchorVersion': 'snapshot-v1',
+        'sourceId': 'local-data:diagnostic-rules:meridianDetails',
+      }),
+      isEmpty,
+      reason: 'Knowledge entry references must carry an immutable content snapshot identity',
+    );
+    expect(
+      AiContextRef.normalizeMetadata({
+        'kind': 'knowledgeEntry',
+        'moduleId': 'meridian',
+        'anchorId': 'meridian:detail:少阳',
+        'anchorVersion': 'snapshot-v1',
+        'snapshotId': 'snapshot-v1',
+        'ruleVersion': 'diagnostic-rules-meridian-details-v1',
+        'sourceId': 'local-data:diagnostic-rules:meridianDetails',
+      })['kind'],
+      'knowledgeEntry',
+    );
   });
 
   test('tool-result context requires a complete immutable snapshot identity', () {
