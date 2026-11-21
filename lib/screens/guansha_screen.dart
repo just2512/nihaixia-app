@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../utils/fold_aware_routes.dart';
+import '../models/ai_context_ref.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import '../services/guansha_result_context_executor.dart';
+import '../services/guansha_tool_executor.dart';
+import '../screens/assistant_tool_router.dart' show AssistantMode;
+import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import 'package:ziwei_core/ziwei_core.dart' show Location;
 
 import 'package:nihaisha_app/services/bazi_service.dart'
@@ -62,6 +69,10 @@ class _GuanshaScreenState extends State<GuanshaScreen>
   BaZiPaipan? _paipan;
   List<GuanshaHit>? _hits;
   String? _error;
+  String? _computedSignature;
+  GuanshaToolExecution? _toolExecution;
+  bool _computing = false;
+  bool _askingAi = false;
 
   // 百科
   final TextEditingController _queryController = TextEditingController();
@@ -99,31 +110,276 @@ class _GuanshaScreenState extends State<GuanshaScreen>
   /// 由出生小时（0-23）推导时辰索引（子=0，丑=1，…；23 点归子时）。
   int _shiChenIndexOfHour(int hour) => ((hour.clamp(0, 23) + 1) ~/ 2) % 12;
 
-  void _compute() {
+  String _calculationSignature() => [
+        _birthDate.year,
+        _birthDate.month,
+        _birthDate.day,
+        _birthHour,
+        _birthMinute,
+        _isMale,
+        _locName ?? 'MISSING',
+        _locLng?.toStringAsFixed(8) ?? 'MISSING',
+        _locLat?.toStringAsFixed(8) ?? 'MISSING',
+        _useTrueSolarTime,
+        _distinguishZiShi,
+      ].join('|');
+
+  bool get _canAskAi =>
+      !_askingAi &&
+      !_computing &&
+      _paipan != null &&
+      _hits != null &&
+      _toolExecution?.succeeded == true &&
+      _locName != null &&
+      _locLng != null &&
+      _locLat != null &&
+      _computedSignature != null &&
+      _computedSignature == _calculationSignature();
+
+  Future<void> _compute() async {
+    if (_computing) return;
+    final signature = _calculationSignature();
     setState(() {
       _paipan = null;
       _hits = null;
+      _toolExecution = null;
       _error = null;
+      _computedSignature = null;
+      _computing = true;
     });
     try {
-      final solar = DateTime(_birthDate.year, _birthDate.month, _birthDate.day,
-          _birthHour, _birthMinute);
+      // A uniquely selected city uses the shared Headless execution. The chart
+      // and hit list returned here are exactly what the page renders and what
+      // the contextual snapshot later verifies.
+      if (_locName != null && _locLng != null && _locLat != null) {
+        final birthDate =
+            '${_birthDate.year.toString().padLeft(4, '0')}-'
+            '${_birthDate.month.toString().padLeft(2, '0')}-'
+            '${_birthDate.day.toString().padLeft(2, '0')}';
+        final birthTime =
+            '${_birthHour.toString().padLeft(2, '0')}:'
+            '${_birthMinute.toString().padLeft(2, '0')}';
+        final execution = await GuanshaToolExecutor.executeWithDetails({
+          'birth_date': birthDate,
+          'birth_time': birthTime,
+          'gender': _isMale ? 'male' : 'female',
+          'birthplace': _locName!,
+        });
+        if (!mounted) return;
+        if (!execution.succeeded ||
+            execution.chart == null ||
+            execution.hits == null ||
+            execution.settings == null) {
+          throw StateError(
+            execution.result.values['未执行原因'] ?? 'Headless 关煞测算失败',
+          );
+        }
+        final expectedCoordinates =
+            '东经 ${_locLng!.toStringAsFixed(4)}，北纬 ${_locLat!.toStringAsFixed(4)}';
+        final values = execution.result.values;
+        if (values['出生地坐标'] != expectedCoordinates ||
+            execution.settings!['useTrueSolarTime'] != _useTrueSolarTime ||
+            execution.settings!['distinguishZiShi'] != _distinguishZiShi ||
+            _calculationSignature() != signature) {
+          throw StateError('页面输入、所选城市、历法设置与 Headless 结果不一致');
+        }
+        setState(() {
+          _paipan = execution.chart;
+          _hits = execution.hits;
+          _toolExecution = execution;
+          _computedSignature = signature;
+        });
+        return;
+      }
+
+      // Keep the existing non-AI calculation path when no unique birthplace
+      // has been selected. It deliberately does not create an AI context.
+      final solar = DateTime(
+        _birthDate.year,
+        _birthDate.month,
+        _birthDate.day,
+        _birthHour,
+        _birthMinute,
+      );
       final location =
           (_locLng != null) ? Location(_locLng!, _locLat ?? 30) : null;
-      final p = computeBaZiPaipan(
+      final chart = computeBaZiPaipan(
         solar,
         isMale: _isMale,
         useTrueSolarTime: _useTrueSolarTime,
         ratHourMode: _distinguishZiShi,
         location: location,
       );
-      if (!mounted) return;
+      if (!mounted || _calculationSignature() != signature) return;
       setState(() {
-        _paipan = p;
-        _hits = matchGuansha(p, _isMale);
+        _paipan = chart;
+        _hits = matchGuansha(chart, _isMale);
+        _toolExecution = null;
+        _computedSignature = signature;
       });
-    } catch (e) {
-      if (mounted) setState(() => _error = '计算失败：$e');
+    } catch (error) {
+      if (mounted) setState(() => _error = '计算失败：$error');
+    } finally {
+      if (mounted) setState(() => _computing = false);
+    }
+  }
+
+  Future<void> _askAiAboutResult() async {
+    final paipan = _paipan;
+    final hits = _hits;
+    final headlessExecution = _toolExecution;
+    final calculationSignature = _computedSignature;
+    if (!_canAskAi ||
+        paipan == null ||
+        hits == null ||
+        headlessExecution == null ||
+        calculationSignature == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('请先选择唯一可识别的出生城市并测算；输入或历法设置变化后需重新测算。'),
+        ),
+      );
+      return;
+    }
+
+    final birthDate =
+        '${_birthDate.year.toString().padLeft(4, '0')}-'
+        '${_birthDate.month.toString().padLeft(2, '0')}-'
+        '${_birthDate.day.toString().padLeft(2, '0')}';
+    final birthTime =
+        '${_birthHour.toString().padLeft(2, '0')}:'
+        '${_birthMinute.toString().padLeft(2, '0')}';
+    final genderText = _isMale ? '男' : '女';
+    final birthplace = _locName!;
+    final confirmed = await showFoldAwareDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('确认本次小儿关煞结果输入'),
+        content: Text(
+          '本次测算使用儿童公历出生日期 $birthDate、当地钟表时间 $birthTime、'
+          '性别 $genderText、出生地点 $birthplace。\n'
+          '精确出生资料仅用于 App 本地重建校验，提交给 AI 的上下文会对日期、时间、性别、地点、坐标、农历和四柱脱敏。\n'
+          '关煞属于传统民俗资料，不是儿童健康评估或医学结论；不构成诊断、治疗或化解建议。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('确认并解读'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted ||
+        confirmed != true ||
+        !_canAskAi ||
+        !identical(_toolExecution, headlessExecution) ||
+        _computedSignature != calculationSignature) return;
+
+    setState(() => _askingAi = true);
+    try {
+      final execution =
+          GuanshaResultContextExecutor.fromExecution(headlessExecution);
+      if (!mounted) return;
+      if (!execution.succeeded || execution.structuredSnapshot == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('本地关煞结果无法核验，已取消 AI 提问。')),
+        );
+        return;
+      }
+
+      final solar = DateTime(
+        _birthDate.year,
+        _birthDate.month,
+        _birthDate.day,
+        _birthHour,
+        _birthMinute,
+      );
+      final pillars = [
+        paipan.bazi.year,
+        paipan.bazi.month,
+        paipan.bazi.day,
+        paipan.bazi.time,
+      ].join(' ');
+      final hitText = hits.isEmpty
+          ? '未命中本地规则库收录的关煞。'
+          : hits.map((hit) {
+              final entry = hit.entry;
+              return [
+                '${entry.name}（${entry.severity}；${entry.category}）',
+                '判定原因：${hit.reason}',
+                if (entry.jue.isNotEmpty) '口诀：${entry.jue}',
+                if (entry.fanZheJi.isNotEmpty)
+                  '条目所载犯者忌：${entry.fanZheJi.join('；')}',
+                if (entry.huaJie.isNotEmpty)
+                  '条目所载民俗化解：${entry.huaJie.join('；')}',
+              ].join('\n');
+            }).join('\n\n');
+      final values = execution.result.values;
+      final expectedDateTime =
+          '${solar.year}-${solar.month.toString().padLeft(2, '0')}-'
+          '${solar.day.toString().padLeft(2, '0')} '
+          '${solar.hour.toString().padLeft(2, '0')}:'
+          '${solar.minute.toString().padLeft(2, '0')}';
+      final expectedCoordinates =
+          '东经 ${_locLng!.toStringAsFixed(4)}，北纬 ${_locLat!.toStringAsFixed(4)}';
+      final pageMatches =
+          _computedSignature == _calculationSignature() &&
+          values['出生公历'] == expectedDateTime &&
+          values['性别'] == genderText &&
+          (values['出生地点'] as String? ?? '').startsWith(birthplace) &&
+          values['出生地坐标'] == expectedCoordinates &&
+          values['出生农历'] == paipan.lunarText &&
+          values['四柱'] == pillars &&
+          values['真太阳时校正'] == (_useTrueSolarTime ? '开启' : '关闭') &&
+          values['早晚子时区分'] == (_distinguishZiShi ? '开启' : '关闭') &&
+          values['关煞命中数量'] == hits.length.toString() &&
+          values['本地规则结果'] == hitText &&
+          values['规则库范围'] ==
+              '本地数据集收录的 36 关与 18 条扩展煞；不代表所有民俗流派。';
+      if (!pageMatches) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('页面结果与本地确定性重建不一致，已取消 AI 提问。')),
+        );
+        return;
+      }
+
+      final contextRef = AiContextResolver.buildGuanshaResultContextRef(
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      final resolution = await AiContextResolver.resolveGuanshaToolResult(
+        ref: contextRef,
+        structuredSnapshot: execution.structuredSnapshot!,
+      );
+      if (!mounted) return;
+      if (!resolution.isResolved || resolution.value == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('关煞上下文核验失败：${resolution.status.name}')),
+        );
+        return;
+      }
+
+      await showContextualAiSheet(
+        context: context,
+        contextRef: contextRef,
+        initialPrompt: AiContextPromptBuilder.buildToolResult(
+          ref: contextRef,
+          structuredSnapshot: resolution.value!.structuredSnapshot,
+        ),
+        initialMode: AssistantMode.metaphysics,
+        contextualTitle: contextRef.title ?? '小儿关煞结果',
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('关煞上下文无法核验，已取消 AI 提问。')),
+      );
+    } finally {
+      if (mounted) setState(() => _askingAi = false);
     }
   }
 
@@ -405,9 +661,15 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: _compute,
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('测算关煞'),
+                    onPressed: _computing ? null : _compute,
+                    icon: _computing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(_computing ? '正在测算…' : '测算关煞'),
                   ),
                 ),
               ],
@@ -426,6 +688,32 @@ class _GuanshaScreenState extends State<GuanshaScreen>
         if (_hits != null) ...[
           const SizedBox(height: 12),
           _buildResultList(cs),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _canAskAi ? _askAiAboutResult : null,
+              icon: _askingAi
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              label: const Text('问 AI 解读本次关煞结果'),
+            ),
+          ),
+          if (!_canAskAi && !_askingAi)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '需先选择唯一可识别的出生城市并完成测算；资料变化后请重新测算。',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
           if (widget.returnResultOnComplete) ...[
             const SizedBox(height: 8),
             SizedBox(

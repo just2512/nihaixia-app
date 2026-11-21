@@ -21,12 +21,14 @@ import 'yuxiaji_omen_tool_executor.dart';
 import 'chenggu_result_context_executor.dart';
 import 'chenggu_tool_executor.dart';
 import 'shousheng_debt_result_context_executor.dart';
-import 'shousheng_debt_tool_executor.dart';
 import 'sanshan_lingqian_result_context_executor.dart';
 import 'sanshan_lingqian_tool_executor.dart';
 import 'dosage_result_context_executor.dart';
 import 'dosage_tool_executor.dart';
 import 'solar_term_result_context_executor.dart';
+import 'shousheng_debt_tool_executor.dart';
+import 'guansha_result_context_executor.dart';
+import 'guansha_tool_executor.dart';
 import 'solar_term_tool_executor.dart';
 import 'ziwuliuzhu_tool_executor.dart';
 import 'ziwuliuzhu_calculation_service.dart';
@@ -790,72 +792,6 @@ class AiContextResolver {
     ).firstMatch(ref.anchorId);
     final snapshotId = ref.snapshotId;
     if (match == null ||
-        snapshotId == null ||
-        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
-        ref.anchorVersion != snapshotId ||
-        match.group(1) != snapshotId ||
-        ref.title != '轩辕黄帝四季歌结果') {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The Huangdi Siji anchor and immutable snapshot identity do not agree.',
-      );
-    }
-
-    final input = structuredSnapshot['input'];
-    final arguments = input is Map ? input['arguments'] : null;
-    final sources = structuredSnapshot['sourceIds'];
-    if (structuredSnapshot['snapshotId'] != snapshotId ||
-        structuredSnapshot['capabilityId'] !=
-            HuangdiSijiResultContextExecutor.moduleId ||
-        structuredSnapshot['resultSchemaVersion'] !=
-            HuangdiSijiResultContextExecutor.resultSchemaVersion ||
-        structuredSnapshot['ruleVersion'] !=
-            HuangdiSijiResultContextExecutor.ruleVersion ||
-        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
-        input is! Map ||
-        input['method'] != 'explicitBirthDateTime' ||
-        arguments is! Map ||
-        arguments.length != 2 ||
-        arguments['birth_date'] is! String ||
-        arguments['birth_time'] is! String ||
-        sources is! List ||
-        sources.length != 2 ||
-        !sources.contains(HuangdiSijiToolExecutor.sourceId) ||
-        !sources.contains(HuangdiSijiToolExecutor.dataSourceId) ||
-        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
-            snapshotId) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.stale,
-        reason: 'The supplied Huangdi Siji result or its provenance no longer matches the immutable digest.',
-      );
-    }
-
-    final rebuilt = await HuangdiSijiResultContextExecutor.executeWithSnapshot({
-      'birth_date': arguments['birth_date'] as String,
-      'birth_time': arguments['birth_time'] as String,
-    });
-    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The local Huangdi Siji result could not be reconstructed from its recorded input.',
-      );
-    }
-    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.stale,
-        reason: 'The local Huangdi Siji calculation no longer matches this immutable result.',
-      );
-    }
-
-    return AiContextResolution(
-      status: AiContextResolutionStatus.resolved,
-      value: AiResolvedToolResult._(
-        ref: ref,
-        structuredSnapshot: rebuilt.structuredSnapshot!,
-      ),
-    );
-  }
-
   static AiContextRef buildChengguResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {
@@ -1001,6 +937,72 @@ class AiContextResolver {
     );
   }
 
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        ref.title != '轩辕黄帝四季歌结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Huangdi Siji anchor and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            HuangdiSijiResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            HuangdiSijiResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            HuangdiSijiResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDateTime' ||
+        arguments is! Map ||
+        arguments.length != 2 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        sources is! List ||
+        sources.length != 2 ||
+        !sources.contains(HuangdiSijiToolExecutor.sourceId) ||
+        !sources.contains(HuangdiSijiToolExecutor.dataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Huangdi Siji result or its provenance no longer matches the immutable digest.',
+      );
+    }
+
+    final rebuilt = await HuangdiSijiResultContextExecutor.executeWithSnapshot({
+      'birth_date': arguments['birth_date'] as String,
+      'birth_time': arguments['birth_time'] as String,
+    });
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Huangdi Siji result could not be reconstructed from its recorded input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Huangdi Siji calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
   static AiContextRef buildShoushengDebtResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {
@@ -1094,72 +1096,6 @@ class AiContextResolver {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Shousheng title does not match its selected source system.',
-      );
-    }
-
-    final input = structuredSnapshot['input'];
-    final arguments = input is Map ? input['arguments'] : null;
-    final settings = input is Map ? input['settings'] : null;
-    final sources = structuredSnapshot['sourceIds'];
-    if (structuredSnapshot['snapshotId'] != snapshotId ||
-        structuredSnapshot['capabilityId'] !=
-            ShoushengDebtResultContextExecutor.moduleId ||
-        structuredSnapshot['resultSchemaVersion'] !=
-            ShoushengDebtResultContextExecutor.resultSchemaVersion ||
-        structuredSnapshot['ruleVersion'] !=
-            ShoushengDebtResultContextExecutor.ruleVersion ||
-        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
-        input is! Map ||
-        input['method'] != method ||
-        arguments is! Map ||
-        arguments.length != 3 ||
-        arguments['method'] != method ||
-        arguments['birth_date'] is! String ||
-        arguments['birth_time'] is! String ||
-        settings is! Map ||
-        settings['useTrueSolarTime'] is! bool ||
-        settings['distinguishZiShi'] is! bool ||
-        sources is! List ||
-        sources.length != 2 ||
-        sources[0] != ShoushengDebtToolExecutor.sourceId ||
-        sources[1] != (method == 'luku'
-            ? ShoushengDebtToolExecutor.lukuDataSourceId
-            : ShoushengDebtToolExecutor.wudouDataSourceId) ||
-        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
-            snapshotId) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.stale,
-        reason: 'The supplied Shousheng result, settings or provenance no longer matches the immutable digest.',
-      );
-    }
-
-    final rebuilt = await ShoushengDebtResultContextExecutor.executeWithSnapshot({
-      'birth_date': arguments['birth_date'] as String,
-      'birth_time': arguments['birth_time'] as String,
-      'method': method,
-    });
-    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.unknown,
-        reason: 'The local Shousheng lookup could not be reconstructed from its recorded input.',
-      );
-    }
-    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
-      return const AiContextResolution(
-        status: AiContextResolutionStatus.stale,
-        reason: 'The local Shousheng lookup no longer matches this immutable result.',
-      );
-    }
-
-    return AiContextResolution(
-      status: AiContextResolutionStatus.resolved,
-      value: AiResolvedToolResult._(
-        ref: ref,
-        structuredSnapshot: rebuilt.structuredSnapshot!,
-      ),
-    );
-  }
-
   static AiContextRef buildYuxiajiOmenResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {
@@ -1599,6 +1535,72 @@ class AiContextResolver {
     );
   }
 
+
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            ShoushengDebtResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            ShoushengDebtResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            ShoushengDebtResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != method ||
+        arguments is! Map ||
+        arguments.length != 3 ||
+        arguments['method'] != method ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 2 ||
+        sources[0] != ShoushengDebtToolExecutor.sourceId ||
+        sources[1] != (method == 'luku'
+            ? ShoushengDebtToolExecutor.lukuDataSourceId
+            : ShoushengDebtToolExecutor.wudouDataSourceId) ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Shousheng result, settings or provenance no longer matches the immutable digest.',
+      );
+    }
+
+    final rebuilt = await ShoushengDebtResultContextExecutor.executeWithSnapshot({
+      'birth_date': arguments['birth_date'] as String,
+      'birth_time': arguments['birth_time'] as String,
+      'method': method,
+    });
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Shousheng lookup could not be reconstructed from its recorded input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Shousheng lookup no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
 
   static const yunqiModuleId = 'yunqi';
 
@@ -3286,4 +3288,160 @@ class AiContextResolver {
       ),
     );
   }
+
+  static AiContextRef buildGuanshaResultContextRef({
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        structuredSnapshot['capabilityId'] !=
+            GuanshaResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            GuanshaResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            GuanshaResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDetails' ||
+        arguments is! Map ||
+        arguments.length != 4 ||
+        arguments['birth_date'] is! String ||
+        arguments['birth_time'] is! String ||
+        !const {'male', 'female'}.contains(arguments['gender']) ||
+        arguments['birthplace'] is! String ||
+        (arguments['birthplace'] as String).trim().isEmpty ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 3 ||
+        sources[0] != GuanshaToolExecutor.sourceId ||
+        sources[1] != GuanshaToolExecutor.dataSourceId ||
+        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      throw ArgumentError(
+        'A Guansha reference requires a complete successful child-safety snapshot bound to the local engine and source assets.',
+      );
+    }
+    return AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: GuanshaResultContextExecutor.moduleId,
+      anchorId: 'guansha:result:$snapshotId',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: GuanshaResultContextExecutor.ruleVersion,
+      sourceId: GuanshaToolExecutor.sourceId,
+      title: '小儿关煞结果',
+    );
+  }
+
+  static Future<AiContextResolution<AiResolvedToolResult>>
+      resolveGuanshaToolResult({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) async {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.toolResult ||
+        normalized.isEmpty ||
+        ref.moduleId != GuanshaResultContextExecutor.moduleId ||
+        ref.sourceId != GuanshaToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Guansha reference is incomplete or does not identify the local Guansha engine.',
+      );
+    }
+    if (ref.ruleVersion != GuanshaResultContextExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The Guansha data, rule engine, city directory, Bazi engine, settings or locked packages changed.',
+      );
+    }
+
+    final match = RegExp(r'^guansha:result:([0-9a-f]{64})$')
+        .firstMatch(ref.anchorId);
+    final snapshotId = ref.snapshotId;
+    if (match == null ||
+        snapshotId == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.anchorVersion != snapshotId ||
+        match.group(1) != snapshotId ||
+        ref.title != '小儿关煞结果') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The Guansha anchor, title and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final input = structuredSnapshot['input'];
+    final argumentsValue = input is Map ? input['arguments'] : null;
+    final settings = input is Map ? input['settings'] : null;
+    final sources = structuredSnapshot['sourceIds'];
+    if (structuredSnapshot['snapshotId'] != snapshotId ||
+        structuredSnapshot['capabilityId'] !=
+            GuanshaResultContextExecutor.moduleId ||
+        structuredSnapshot['resultSchemaVersion'] !=
+            GuanshaResultContextExecutor.resultSchemaVersion ||
+        structuredSnapshot['ruleVersion'] !=
+            GuanshaResultContextExecutor.ruleVersion ||
+        structuredSnapshot['executionStatus'] != 'SUCCESS' ||
+        input is! Map ||
+        input['method'] != 'explicitBirthDetails' ||
+        argumentsValue is! Map ||
+        argumentsValue.length != 4 ||
+        argumentsValue.entries.any(
+          (entry) => entry.key is! String || entry.value is! String,
+        ) ||
+        !const {'male', 'female'}.contains(argumentsValue['gender']) ||
+        (argumentsValue['birthplace'] as String? ?? '').trim().isEmpty ||
+        settings is! Map ||
+        settings['useTrueSolarTime'] is! bool ||
+        settings['distinguishZiShi'] is! bool ||
+        sources is! List ||
+        sources.length != 3 ||
+        sources[0] != GuanshaToolExecutor.sourceId ||
+        sources[1] != GuanshaToolExecutor.dataSourceId ||
+        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
+            snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The supplied Guansha input, settings, sources or structured result no longer match its immutable digest.',
+      );
+    }
+
+    final arguments = <String, String>{
+      for (final entry in (argumentsValue as Map).entries)
+        entry.key as String: entry.value as String,
+    };
+    final rebuilt = await GuanshaResultContextExecutor.executeWithSnapshot(
+      arguments,
+    );
+    if (!rebuilt.succeeded || rebuilt.structuredSnapshot == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The local Guansha result could not be reconstructed from its recorded child birth input.',
+      );
+    }
+    if (rebuilt.structuredSnapshot!['snapshotId'] != snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The local Guansha calculation no longer matches this immutable result.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolResult._(
+        ref: ref,
+        structuredSnapshot: rebuilt.structuredSnapshot!,
+      ),
+    );
+  }
+
 }

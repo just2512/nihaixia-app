@@ -3,7 +3,7 @@ import 'package:ziwei_core/ziwei_core.dart' show Location;
 import '../data/settings_repository.dart';
 import '../engine/guansha_engine.dart' show GuanshaHit, matchGuansha;
 import '../models/assistant_tool_result.dart';
-import 'bazi_service.dart' show computeBaZiPaipan;
+import 'bazi_service.dart' show BaZiPaipan, computeBaZiPaipan;
 import 'bazi_tool_executor.dart' show BaziToolExecutor;
 
 /// Headless adapter for the existing Guansha calculation.
@@ -11,6 +11,27 @@ import 'bazi_tool_executor.dart' show BaziToolExecutor;
 /// The adapter uses the same Bazi chart engine, saved solar-time settings and
 /// strict city resolver as the existing page. It never uses the page's sample
 /// birth date, time, gender or fallback location.
+/// One deterministic calculation result shared by the page and AI snapshot.
+class GuanshaToolExecution {
+  const GuanshaToolExecution({
+    required this.result,
+    this.chart,
+    this.hits,
+    this.settings,
+  });
+
+  final AssistantToolResult result;
+  final BaZiPaipan? chart;
+  final List<GuanshaHit>? hits;
+  final Map<String, bool>? settings;
+
+  bool get succeeded =>
+      result.status == AssistantToolExecutionStatus.succeeded &&
+      chart != null &&
+      hits != null &&
+      settings != null;
+}
+
 class GuanshaToolExecutor {
   static const String sourceId = 'local-engine:guansha';
   static const String dataSourceId = 'local-data:guansha';
@@ -23,9 +44,36 @@ class GuanshaToolExecutor {
     'birthplace',
   };
 
-  static Future<AssistantToolResult> execute(
+  static Future<GuanshaToolExecution> executeWithDetails(
     Map<String, String> arguments,
   ) async {
+    BaZiPaipan? chart;
+    List<GuanshaHit>? hits;
+    Map<String, bool>? settings;
+    final result = await execute(
+      arguments,
+      onCalculated: (calculatedChart, calculatedHits, actualSettings) {
+        chart = calculatedChart;
+        hits = List<GuanshaHit>.unmodifiable(calculatedHits);
+        settings = Map<String, bool>.unmodifiable(actualSettings);
+      },
+    );
+    return GuanshaToolExecution(
+      result: result,
+      chart: chart,
+      hits: hits,
+      settings: settings,
+    );
+  }
+
+  static Future<AssistantToolResult> execute(
+    Map<String, String> arguments, {
+    void Function(
+      BaZiPaipan chart,
+      List<GuanshaHit> hits,
+      Map<String, bool> settings,
+    )? onCalculated,
+  }) async {
     if (arguments.keys.any((key) => !_allowedArguments.contains(key))) {
       return _failure(arguments, '包含未声明的参数；本次没有执行测算。');
     }
@@ -65,6 +113,7 @@ class GuanshaToolExecutor {
 
     try {
       final settings = SettingsRepository.instance;
+      if (!settings.isLoaded) await settings.load();
       final isMale = gender == 'male';
       final solar = DateTime(date.year, date.month, date.day, time.$1, time.$2);
       final location = Location(place.lng, place.lat);
@@ -80,6 +129,14 @@ class GuanshaToolExecutor {
         location: location,
       );
       final hits = matchGuansha(chart, isMale);
+      onCalculated?.call(
+        chart,
+        hits,
+        Map<String, bool>.unmodifiable({
+          'useTrueSolarTime': useTrueSolarTime,
+          'distinguishZiShi': distinguishZiShi,
+        }),
+      );
       final pillars = [
         chart.bazi.year,
         chart.bazi.month,
