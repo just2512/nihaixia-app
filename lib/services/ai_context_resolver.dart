@@ -3195,9 +3195,6 @@ class AiContextResolver {
   static const meridianSourceId =
       'local-data:diagnostic-rules:meridianDetails';
 
-  /// Builds an immutable reference to the exact six-meridian detail record
-  /// currently rendered by MeridianDetailScreen. The digest binds all fields
-  /// copied from the same local rules map.
   static AiContextRef buildMeridianContextRef({
     required String meridian,
   }) {
@@ -3233,7 +3230,7 @@ class AiContextResolver {
         ref.sourceId != meridianSourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
-        reason: 'The six-meridian knowledge reference is incomplete or does not identify the local meridian source.',
+        reason: 'The six-meridian reference is incomplete or has an unverified source.',
       );
     }
     if (ref.ruleVersion != meridianRuleVersion) {
@@ -4021,25 +4018,23 @@ class AiContextResolver {
     if (snapshot == null) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.missing,
-        reason: 'The selected six-meridian record is not present or is incomplete in the current local rules data.',
+        reason: 'The selected six-meridian record is not available in the local rules data.',
       );
     }
     final snapshotId = snapshot['snapshotId'];
     if (snapshotId is! String ||
         ref.snapshotId != snapshotId ||
-        ref.anchorVersion != snapshotId ||
-        ref.anchorId != 'meridian:detail:' + meridian) {
+        ref.anchorVersion != snapshotId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The six-meridian record has changed since this context was created.',
       );
     }
-
     final result = snapshot['result'];
     if (result is! Map<String, Object?>) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.missing,
-        reason: 'The six-meridian snapshot does not contain a structured local record.',
+        reason: 'The six-meridian snapshot has no structured local record.',
       );
     }
     return AiContextResolution(
@@ -4057,7 +4052,6 @@ class AiContextResolver {
   ) {
     final details = DiagnosticRules.meridianDetails[meridian];
     if (details == null) return null;
-
     final nature = details['nature'];
     final organ = details['organ'];
     final keyPulse = details['keyPulse'];
@@ -4067,48 +4061,33 @@ class AiContextResolver {
     final classicText = details['classicText'];
     final niNote = details['niNote'];
     final healingTime = DiagnosticRules.meridianHealingTime[meridian];
-
-    if (nature is! String ||
-        nature.isEmpty ||
-        organ is! String ||
-        organ.isEmpty ||
-        keyPulse is! String ||
-        keyPulse.isEmpty ||
-        coreSymptoms is! List ||
-        coreSymptoms.isEmpty ||
+    if (nature is! String || nature.isEmpty ||
+        organ is! String || organ.isEmpty ||
+        keyPulse is! String || keyPulse.isEmpty ||
+        coreSymptoms is! List || coreSymptoms.isEmpty ||
         coreSymptoms.any((value) => value is! String || value.isEmpty) ||
-        transmissionOut is! List ||
-        transmissionOut.isEmpty ||
+        transmissionOut is! List || transmissionOut.isEmpty ||
         transmissionOut.any((value) => value is! String || value.isEmpty) ||
-        classicText is! String ||
-        classicText.isEmpty ||
-        niNote is! String ||
-        niNote.isEmpty ||
-        healingTime is! String ||
-        healingTime.isEmpty ||
+        classicText is! String || classicText.isEmpty ||
+        niNote is! String || niNote.isEmpty ||
+        healingTime is! String || healingTime.isEmpty ||
         !(transmissionIn is String && transmissionIn.isNotEmpty ||
-            transmissionIn is List &&
-                transmissionIn.every(
-                  (value) => value is String && value.isNotEmpty,
-                ))) {
+            transmissionIn is List && transmissionIn.every(
+              (value) => value is String && value.isNotEmpty,
+            ))) {
       return null;
     }
-
     final result = <String, Object?>{
       'meridian': meridian,
       'nature': nature,
       'organ': organ,
       'keyPulse': keyPulse,
-      'coreSymptoms': List<String>.unmodifiable(
-        coreSymptoms.cast<String>(),
-      ),
+      'coreSymptoms': List<String>.unmodifiable(coreSymptoms.cast<String>()),
       'healingTime': healingTime,
       'transmissionIn': transmissionIn is List
           ? List<String>.unmodifiable(transmissionIn.cast<String>())
           : transmissionIn,
-      'transmissionOut': List<String>.unmodifiable(
-        transmissionOut.cast<String>(),
-      ),
+      'transmissionOut': List<String>.unmodifiable(transmissionOut.cast<String>()),
       'classicText': classicText,
       'niNote': niNote,
     };
@@ -4125,7 +4104,6 @@ class AiContextResolver {
         AiToolResultSnapshot.createStructuredId(snapshot: snapshot);
     return Map<String, Object?>.unmodifiable(snapshot);
   }
-
   static const herbModuleId = 'herb';
   static const herbAssetVersion =
       'assets/data/herbs.json@73fb43ff3e0456ca8404a42059dc37769a511dee';
