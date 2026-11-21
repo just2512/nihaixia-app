@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
+import 'package:nihaisha_app/screens/classic_library_screen.dart';
+import 'package:nihaisha_app/data/classic_lecture_data.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
@@ -54,21 +56,115 @@ void main() {
     expect(find.text('问 AI'), findsNothing);
   });
 
-  testWidgets('multiple independent blockquotes disable the single-clause contextual action',
+  testWidgets('multiple quote blocks expose separate contextual passages and distinct anchors',
+      (tester) async {
+    await tester.pumpWidget(
+      ContextualAiConversationStoreScope(
+        conversationStore: InMemoryAssistantConversationStore(),
+        child: MaterialApp(
+          theme: ThemeData(extensions: [AppColors.light]),
+          home: MarkdownDocScreen(
+            title: '多条文阅读页',
+            content: '> 第一条原文。\n\n解释文字。\n\n> 第二条原文。',
+            contextualAskModuleId: 'shanghan',
+            contextualAskAnchorId: 'shanghan:document:multi',
+            contextualAskSourceId: 'assets/shanghan/multi.md',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SelectionArea), findsNWidgets(2));
+    expect(find.textContaining('解释文字'), findsOneWidget);
+
+    await tester.longPress(
+      find.textContaining('第一条原文', findRichText: true),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('问 AI'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    var assistantFinder = find.byType(LocalAiInterviewScreen);
+    expect(assistantFinder, findsOneWidget);
+    var assistant = tester.widget<LocalAiInterviewScreen>(assistantFinder);
+    expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:0');
+    expect(assistant.contextRef['selectedText'], contains('第一条原文'));
+    Navigator.of(tester.element(assistantFinder), rootNavigator: true).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.longPress(
+      find.textContaining('第二条原文', findRichText: true),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('问 AI'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    assistantFinder = find.byType(LocalAiInterviewScreen);
+    expect(assistantFinder, findsOneWidget);
+    assistant = tester.widget<LocalAiInterviewScreen>(assistantFinder);
+    expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:1');
+    expect(assistant.contextRef['selectedText'], contains('第二条原文'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('classic library passes the stable asset path to its contextual document reader',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: ThemeData(extensions: [AppColors.light]),
-      home: MarkdownDocScreen(
-        title: '多条文阅读页',
-        content: '> 第一条原文。\n\n解释文字。\n\n> 第二条原文。',
+      home: ClassicLibraryScreen(
+        title: '伤寒论阅读库',
+        lectures: const [
+          ClassicLecture(
+            seq: 1,
+            name: '太阳病中风',
+            asset: 'assets/shanghan/clause_001.md',
+          ),
+        ],
         contextualAskModuleId: 'shanghan',
-        contextualAskAnchorId: 'shanghan:clause:002',
-        contextualAskSourceId: 'assets/shanghan/clause_001.md',
       ),
     ));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SelectionArea), findsNothing);
+    await tester.tap(find.text('太阳病中风'));
+    await tester.pumpAndSettle();
+    final docFinder = find.byType(MarkdownDocScreen);
+    expect(docFinder, findsOneWidget);
+    final doc = tester.widget<MarkdownDocScreen>(docFinder);
+    expect(doc.contextualAskModuleId, 'shanghan');
+    expect(doc.contextualAskAnchorId, 'shanghan:clause:002');
+    expect(doc.contextualAskSourceId, 'assets/shanghan/clause_001.md');
+    expect(find.byType(SelectionArea), findsOneWidget);
+  });
+
+  testWidgets('a two-quote Jingui asset enables one scoped action per local quote',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(extensions: [AppColors.light]),
+      home: ClassicLibraryScreen(
+        title: '金匮要略阅读库',
+        lectures: const [
+          ClassicLecture(
+            seq: 450,
+            name: '大病差复',
+            asset: 'assets/jingui/clause_450.md',
+          ),
+        ],
+        contextualAskModuleId: 'jingui',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('大病差复'));
+    await tester.pumpAndSettle();
+    final docFinder = find.byType(MarkdownDocScreen);
+    expect(docFinder, findsOneWidget);
+    final doc = tester.widget<MarkdownDocScreen>(docFinder);
+    expect(doc.contextualAskModuleId, 'jingui');
+    expect(doc.contextualAskAnchorId, 'jingui:passage:assets/jingui/clause_450.md');
+    expect(doc.contextualAskSourceId, 'assets/jingui/clause_450.md');
+    expect(find.byType(SelectionArea), findsNWidgets(2));
   });
 
   testWidgets('ordinary markdown reading keeps its existing selectable behavior',
