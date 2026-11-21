@@ -3116,3 +3116,23 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 权属/来源状态：`OWNERSHIP_EVIDENCE_REQUIRED` **493** 项；`SOURCE_LICENSE_REVIEW` **365** 项。仍为待举证/待来源核验状态，自动门禁不构成版权确权。
 - 商业授权文本保持版本 1.4：个人非商业使用限个人设备或非商业研究环境；对 Fork 自有修改在 GitHub 服务外公开再分发须事先书面许可，无论是否收费；商业或经营性使用另须书面商业授权。上游原始部分维持 Apache 2.0，知识库和第三方依各自来源许可。
 - 本次合并后须以同一最终 PR HEAD 重新通过 Fork license boundary、Flutter 全量 regression、Android arm64 APK ABI verification + unit tests。旧 HEAD CI 成功结果不转移为新 HEAD 验收；Branch validation 的条件性 SKIPPED 不计 PASS。全部检查成功且 GitHub 显示 mergeable 后，方可合并 PR #332。
+
+
+---
+
+## 61. 2026-11-21 PR #332 Fork 商业授权最终验收与合并关闭
+
+- **状态：已完成并合并。** PR #332：`https://github.com/just2512/nihaixia-app/pull/332`；PR 状态 `closed`、`merged=true`；GitHub merge commit：`9c91d2d84086ab74b25979a424875134405cdde2`。当前 `master` HEAD 与该 merge commit 一致。
+- 最新 master `79e69c73928ae82b3b45913de92746c140962d9f` 已同步到 PR 分支；同步提交 `4f637f37e9113784d74f79286330fe5335293a07` 以 PR 原分支为第一父提交、最新 master 为第二父提交，保留双方 ancestry。同步后 GitHub mergeable 检查通过并执行普通 merge。
+- 全仓库库存以共同上游基线 `c0f14e77a7fb721fc332576d21fef5f100392d0b` 重新核算：新增/修改 858 项（新增 703、修改 155），删除 13 项；Fork 商业授权候选 344、Apache 2.0 + Fork 双层许可 149、知识库排除 364、第三方排除 1。
+- 主线新增六个文件均已写入 JSON、Markdown、DEP5；六个路径在 JSON 中分类为 `FORK_COMMERCIAL`，SPDX 为 `LicenseRef-Nihaixia-Fork-Commercial`，DEP5 逐项映射相同。DEP5 对 858 个路径逐项登记，无宽泛目录通配符；知识库及第三方排除使用 `NOASSERTION`。
+- 商业许可版本 1.4：允许个人非商业使用；对 Fork 自有修改在 GitHub 服务外公开再分发，须事先取得书面许可，无论是否收费；商业/经营性使用另须书面商业授权。上游原始部分保留 Apache 2.0；知识库及第三方材料继续遵循各自来源许可。
+- 原文核验：`LICENSE-FORK-COMMERCIAL.md` 与 `LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md` 字节一致；`LICENSES/Apache-2.0.txt` 与根目录 `LICENSE` 字节一致。根目录 `LICENSE` 未改写。
+- 同一最终 PR HEAD `4f637f37e9113784d74f79286330fe5335293a07` 的三项门禁均已取得终态 SUCCESS：
+  - Fork license boundary：run `44858966668`，job `136707668177`，执行完整历史 checkout 后运行 `python tool/check_fork_license_inventory.py`，SUCCESS。
+  - Flutter regression：run `44858966793`，job `136707668581`，Dart/Flutter 静态分析及完整回归套件 SUCCESS。
+  - Android arm64：同一 Flutter run 的 job `136709446646`，arm64 CI Debug APK 构建、ABI/SHA-256、Manifest、Android unit tests 与 JUnit XML 校验均 SUCCESS。
+  - Branch validation job `136707669983` 为条件性 SKIPPED，不计 PASS，也不影响上述三项必需门禁。
+- **权属与来源待办仍须如实保留：** `OWNERSHIP_EVIDENCE_REQUIRED` 493 项尚待版权/职务作品/有效再许可权证据；`SOURCE_LICENSE_REVIEW` 365 项尚待来源许可人工复核。CI 通过及文件分类不等于版权确权，不得对外宣称这两项已完成。
+- 仓库仍为 Public Fork；GitHub Terms D.5 的平台内 Fork 权利不受自定义 LicenseRef 撤销。本次没有执行永久 Leave network 或可见性变更。
+- **关闭结论：** PR #332 的主线同步、清单/DEP5 更新、许可原文核验、自动许可门禁、Flutter 全量回归、Android arm64 ABI 与单测、同一最终 HEAD 的三项 CI 及 GitHub 合并均已完成。后续只跟进权属证据和来源许可人工复核，不回开本 PR 的工程合并任务。
