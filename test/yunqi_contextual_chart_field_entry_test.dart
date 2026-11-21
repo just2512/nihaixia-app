@@ -261,11 +261,9 @@ void main() {
         // Scroll the owning page ListView directly. The TabBar also contains
         // an internal horizontal Scrollable; selecting the first descendant
         // Scrollable can accidentally drag that child instead of the page.
-        await pageController.animateTo(
-          pagePosition.maxScrollExtent,
-          duration: const Duration(milliseconds: 1),
-          curve: Curves.linear,
-        );
+        // A direct jump keeps the test deterministic and avoids awaiting
+        // an animation future before the tester has pumped its frames.
+        pageController.jumpTo(pagePosition.maxScrollExtent);
         await tester.pumpAndSettle();
         await tester.ensureVisible(tabBar);
         await tester.pumpAndSettle();
