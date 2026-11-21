@@ -84,7 +84,10 @@ void main() {
       expect(banner, contains('>研纪</text>'));
       expect(brandIdentity, contains('唯一对外产品名称：研纪'));
       expect(brandIdentity, contains('Android `applicationId`：`com.nihaisha.nihaisha_app`'));
-      expect(changelog.split('\n').first, '# 研纪 App 更新日志（Changelog）');
+      expect(brandIdentity, contains('Description 已设置为上面的建议描述'));
+      expect(brandIdentity, contains('Homepage 已清空原上游 GitHub Pages 地址'));
+      expect(brandIdentity, contains('has_pages=false'));
+      expect(changelog.split('\\n').first, '# 研纪 App 更新日志（Changelog）');
     });
 
     test('外部品牌入口、推广文案与官网归属统一', () {
