@@ -118,10 +118,11 @@ class AiContextPromptBuilder {
     }
 
     final current = AiContextResolver.resolveMeridianKnowledgeEntry(ref: ref);
+    final currentEntry = current.value;
     if (!current.isResolved ||
-        current.value == null ||
-        current.value.title != entry.title ||
-        AiToolResultSnapshot.canonicalJson(current.value.content) !=
+        currentEntry == null ||
+        currentEntry.title != entry.title ||
+        AiToolResultSnapshot.canonicalJson(currentEntry.content) !=
             AiToolResultSnapshot.canonicalJson(entry.content)) {
       throw ArgumentError(
         'The six-meridian local record has changed or no longer resolves to the supplied content.',
