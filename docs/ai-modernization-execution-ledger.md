@@ -2997,3 +2997,45 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - master 已有 Headless 执行器和基础单测，但页面仍自行计算并返回旧版 `AssistantToolResult`，只带 `local-engine:chenggu`，未携带数据 source ID、规范化 arguments 和可重建快照；尚未接入统一 Resolver/Prompt 的情境问 AI 入口。
 - 下一分支从当前 master `2e8cb9d9f1e2b53f257985675901ee2ba755b125` 创建。实施时须让页面展示结果与 AI 上下文来自同一次 Headless 执行；保留原“带回助手”操作；快照校验八字设置（真太阳时、早晚子时）、历法口径、称骨数据来源、规则/数据版本和结果摘要。Prompt 不得发送精确出生日期/钟点；称骨文案作为传统民俗文化参考，不能表述为事实命运判断。
 - 自动验收至少覆盖成功/缺参/非法日期时间/多余参数/来源错配/规则过期/结果篡改/摘要不符/重建不一致，以及页面 402dp/775dp、旧入口并存、关闭后滚动恢复和 Prompt 脱敏。Find N2 真机验收留到云端工作全部完成后统一执行。
+
+---
+
+## 59. 2026-11-21 主线增量复核与云端续接（当前基线：`f07ea4530df995d6e21be0556195b816a4761c61`）
+
+> 本节为当前有效状态的增量覆盖记录。此前各节保留历史决策和当时证据；如历史“下一步”与本节冲突，以本节最新主线复核为准。设备 TRACE 仍是最终本地验收项，不构成云端 Phase 3 阻塞。
+
+### 59.1 最新 master 与近期集成
+
+- 当前主线：`master`，HEAD `f07ea4530df995d6e21be0556195b816a4761c61`；Fork 默认分支仍为 `master`，本轮没有从上游同步或改动上游仓库。
+- PR #362「三山国王灵签结果情境入口」已于 2026-11-21 合并，merge commit 即当前 HEAD `f07ea4530df995d6e21be0556195b816a4761c61`；最终 head `0a2a04172e9c74977323d812dc2083d50d5fb842` 的 Flutter regression 与 Android arm64 verification 均 SUCCESS（run `44759096411`）。Branch validation 为条件性 SKIPPED，不计 PASS。
+- PR #358 玉匣灵兆当前时辰文本入口已合并至父主线 `d397dc568a0981e7f19ff6caa62e7c7ccd7b46f2`；PR #357 称骨派生农历隐私修正亦已合并。称骨、受生债和玉匣灵兆结果上下文继续保留既有来源校验、不可变快照与 Prompt 脱敏规则。
+- 当前 master SHA `f07ea4530df995d6e21be0556195b816a4761c61` 的 Flutter tests run `44846954598` 与 Flutter Quality Gate run `44846954627` 已触发；本次记录时两者均为 IN_PROGRESS。不得使用父 SHA `d397dc5` 的成功结果替代当前 HEAD 的 post-merge 验收。
+
+### 59.2 经方度量衡单位换算入口：重建与当前状态
+
+- 旧 PR #363 基于父主线 `d397dc568a0981e7f19ff6caa62e7c7ccd7b46f2`，其 head `e815abf108d748f4901bdb0d8a8f6f2a6ffd90c1` 的 Flutter 全量 regression 与 Android arm64 verification 均 SUCCESS（run `44758876514`）。但该分支相对最新 master 已落后 3 个提交，且 Resolver/Prompt Builder 与 #358/#362 在相同扩展点新增逻辑；旧 PR 已关闭为 SUPERSEDED，旧 SHA 的 CI 不转移给新 head。
+- 已从当前 master `f07ea4530df995d6e21be0556195b816a4761c61` 新建独立分支 `feat/ai-context-dosage-conversion-mainline-20261121`，只将单位换算切片三方合并到当前树；未覆盖 Yuxiaji 与 Sanshan 已合并逻辑。提交：`b7e29593f05a704f66282dbe17f15ca5d2574e15`；PR #364 当前 head 即此 SHA。
+- 文件范围仅为：
+  - `lib/screens/dosage_converter_screen.dart`
+  - `lib/services/dosage_result_context_executor.dart`
+  - `lib/services/ai_context_resolver.dart`
+  - `lib/services/ai_context_prompt_builder.dart`
+  - `test/dosage_contextual_result_entry_test.dart`
+- 快照只包含本次显式单位换算参数、App 确定性输出、单位、双来源及规则版本；不读取页面特殊药物换算表、剂量参考和体质剂量提示。Resolver 对来源、参数、规则版本、快照摘要和本地重建结果执行 fail-closed 校验。Prompt 仅解释 App 已执行的单位换算，不重新计算、不推导药物剂量、不提供处方或个体用药建议。原“带回助手”入口保留。
+- PR #364 以 `f07ea4530df995d6e21be0556195b816a4761c61` 为 base，当前 head `b7e29593f05a704f66282dbe17f15ca5d2574e15`；新 head Workflow run `44847499606` 已触发，待 Flutter regression 与 Android arm64 两项分别取得 SUCCESS。旧 PR #363 的成功结果不作本 PR 验收。
+- PR #364 未通过最新 head 的完整门禁前不得合并。合并后须刷新 master SHA，并等待该 SHA 的 Flutter tests 与 Flutter Quality Gate 均 SUCCESS。
+
+### 59.3 剩余云端 Phase 3 切片与文件所有权
+
+- 本轮重新确认的明确页面缺口仍以 §58.5 为依据：小儿关煞、周公解梦；单位换算已由 PR #364 承接，不再重复建立切片。
+- 下一优先切片为小儿关煞（Guansha），随后周公解梦（Dream）。两者都必须在当时最新 master 上独立建分支；不得复用已落后且 diverged 的旧 Guansha 分支作为集成基线。
+- Guansha 必须复用页面现有 Headless/确定性执行能力，确保页面展示结果与 AI 快照来自同一次执行；稳定绑定城市来源、规则/数据版本、执行结果及摘要。发送给模型的数据只允许解释已核验的四柱/关煞命中，并严格脱敏出生日期、钟点、性别、出生地、坐标及派生农历信息；不得生成儿童健康诊断、风险判断或治疗建议。
+- Dream 只对一个已确认的本地词条构建上下文；多候选必须先澄清，不得把自由描述直接交给模型或让模型代替本地数据检索。模型只解释已验证词条，不作现实吉凶、心理或医学诊断。
+- `lib/services/ai_context_resolver.dart` 与 `lib/services/ai_context_prompt_builder.dart` 当前有多个 Phase 3 功能共享扩展点。单位换算 PR #364 尚未完成集成前，不允许另一分支同时编辑这两个文件；可并行进行只读审计和独立文件测试设计，待 #364 合并并刷新 master 后再创建 Guansha 实现分支。每个活跃分支仍须明确文件所有权，避免并行覆盖。
+
+### 59.4 云端与最终本地验收边界
+
+- 云端继续完成所有没有设备依赖的 Resolver/Prompt、页面入口、稳定快照、来源回链、隐私负向测试、402dp/775dp 布局自动化、滚动恢复、文档和 CI 工作。
+- Find N2 外屏/内屏/半折叠/分屏/键盘交互，以及本地 E4B GPU/CPU 多轮、Native 状态、空响应、历史恢复与完整 TRACE，统一留到所有云端切片完成后的最终本地验收。
+- 未取得真实设备证据的项目继续标记 `UNKNOWN / LOCAL ONLY`；云端 CI 或模拟布局不得扩写为设备 PASS，也不得以设备 TRACE 缺失为由停止云端工作。
+- 下一项自动执行任务：完成 PR #364 最新 head Flutter regression 与 Android arm64 验收；期间并行只读审计 Guansha/Dream 的当前 master 调用链、输入/输出 schema、稳定来源、隐私边界和页面布局测试条件。#364 集成后再按本节 §59.3 文件所有权启动 Guansha 独立切片。
