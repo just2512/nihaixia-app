@@ -229,12 +229,6 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
       appBar: AppBar(
         title: Text(acupoint.name),
         actions: [
-          IconButton(
-            key: const ValueKey('acupoint-contextual-ask'),
-            tooltip: '问 AI 解读当前穴位',
-            onPressed: _askAiAboutAcupoint,
-            icon: const Icon(Icons.auto_awesome_outlined),
-          ),
           _AcupointBookmarkButton(
             key: ValueKey(acupoint.name),
             acupoint: acupoint,
@@ -276,6 +270,19 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                 ),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const ValueKey('acupoint-contextual-ask'),
+                onPressed: _askAiAboutAcupoint,
+                icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                label: const Text('问 AI 解读当前穴位'),
+              ),
+            ),
+          ),
+
           // 属性标签
           if (acupoint.attribute.isNotEmpty)
             Padding(
