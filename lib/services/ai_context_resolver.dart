@@ -3416,7 +3416,7 @@ class AiContextResolver {
     }
 
     final arguments = <String, String>{
-      for (final entry in (argumentsValue as Map).entries)
+      for (final entry in argumentsValue.entries)
         entry.key as String: entry.value as String,
     };
     final rebuilt = await GuanshaResultContextExecutor.executeWithSnapshot(

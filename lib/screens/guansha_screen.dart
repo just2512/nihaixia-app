@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../utils/fold_aware_routes.dart';
-import '../models/ai_context_ref.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/guansha_result_context_executor.dart';
@@ -330,7 +329,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
           _computedSignature == _calculationSignature() &&
           values['出生公历'] == expectedDateTime &&
           values['性别'] == genderText &&
-          (values['出生地点'] as String? ?? '').startsWith(birthplace) &&
+          (values['出生地点'] ?? '').startsWith(birthplace) &&
           values['出生地坐标'] == expectedCoordinates &&
           values['出生农历'] == paipan.lunarText &&
           values['四柱'] == pillars &&

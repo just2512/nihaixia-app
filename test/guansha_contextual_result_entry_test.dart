@@ -5,7 +5,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/settings_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
-import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/guansha_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
