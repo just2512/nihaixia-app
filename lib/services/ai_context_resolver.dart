@@ -3213,12 +3213,12 @@ class AiContextResolver {
     return AiContextRef(
       kind: AiContextKind.knowledgeEntry,
       moduleId: meridianModuleId,
-      anchorId: 'meridian:detail:$meridian',
+      anchorId: 'meridian:detail:' + meridian,
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: meridianRuleVersion,
       sourceId: meridianSourceId,
-      title: '$meridian病',
+      title: meridian + '病',
     );
   }
 
@@ -4010,7 +4010,7 @@ class AiContextResolver {
       );
     }
     final meridian = match.group(1)!;
-    if (ref.title != '$meridian病') {
+    if (ref.title != meridian + '病') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The six-meridian title does not match the selected local record.',
@@ -4028,7 +4028,7 @@ class AiContextResolver {
     if (snapshotId is! String ||
         ref.snapshotId != snapshotId ||
         ref.anchorVersion != snapshotId ||
-        ref.anchorId != 'meridian:detail:$meridian') {
+        ref.anchorId != 'meridian:detail:' + meridian) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The six-meridian record has changed since this context was created.',
@@ -4046,7 +4046,7 @@ class AiContextResolver {
       status: AiContextResolutionStatus.resolved,
       value: AiResolvedKnowledgeEntry._(
         ref: ref,
-        title: '$meridian病',
+        title: meridian + '病',
         content: Map<String, Object?>.unmodifiable(result),
       ),
     );
@@ -4086,11 +4086,11 @@ class AiContextResolver {
         niNote.isEmpty ||
         healingTime is! String ||
         healingTime.isEmpty ||
-        !(transmissionIn is String ||
-            (transmissionIn is List &&
+        !(transmissionIn is String && transmissionIn.isNotEmpty ||
+            transmissionIn is List &&
                 transmissionIn.every(
                   (value) => value is String && value.isNotEmpty,
-                )))) {
+                ))) {
       return null;
     }
 
