@@ -12,13 +12,13 @@
   ],
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. PR #373 and PR #374 are merged; the six-meridian contextual knowledge-entry slice is rebuilt directly on current master 1752b238185960fa1d4742f29bc1cb389028ec12. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 864,
-    "added": 709,
+    "changed": 865,
+    "added": 710,
     "modified": 155,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 149,
-      "FORK_COMMERCIAL": 350,
+      "FORK_COMMERCIAL": 351,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -5398,6 +5398,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/acupoint_contextual_entry_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
