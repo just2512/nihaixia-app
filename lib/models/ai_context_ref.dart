@@ -2,6 +2,7 @@
 /// stable wire string (for example "classic" and "toolResult").
 enum AiContextKind {
   classic('classic'),
+  knowledgeEntry('knowledgeEntry'),
   formula('formula'),
   herb('herb'),
   caseRecord('case'),
