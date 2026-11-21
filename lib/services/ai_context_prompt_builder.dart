@@ -140,7 +140,7 @@ class AiContextPromptBuilder {
     };
     return [
       '【当前六经详情情境】',
-      '页面选中：${entry.title}',
+      '六经：${entry.title}',
       '本地记录锚点：${ref.anchorId}',
       '本地数据版本：${ref.ruleVersion}',
       '快照身份：${ref.snapshotId}',
