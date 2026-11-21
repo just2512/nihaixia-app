@@ -1815,7 +1815,7 @@ class AiContextResolver {
     final snapshotId = ref.snapshotId;
     if (fieldPath == null ||
         !_yunqiChartFieldPaths.contains(fieldPath) ||
-        snapshotId == null ||
+        snapshotId is! String ||
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
         ref.anchorVersion != snapshotId ||
         ref.anchorId !=
