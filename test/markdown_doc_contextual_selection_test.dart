@@ -69,7 +69,7 @@ void main() {
           theme: ThemeData(extensions: [AppColors.light]),
           home: MarkdownDocScreen(
             title: '多条文阅读页',
-            content: '> 第一条 原文。\n\n解释文字。\n\n> 第二条 释义。',
+            content: '> 第一条原文段落包含足够长的内容，用于验证独立 passage 的上下文锚点。\n\n解释文字。\n\n> 第二条释义段落也包含足够长的内容，用于验证第二个独立 passage 的上下文锚点。',
             contextualAskModuleId: 'shanghan',
             contextualAskAnchorId: 'shanghan:document:multi',
             contextualAskSourceId: 'assets/shanghan/multi.md',
@@ -99,14 +99,14 @@ void main() {
     expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:0');
     final firstSelected = assistant.contextRef['selectedText']!;
     expect(firstSelected, isNotEmpty);
-    expect('第一条 原文。', contains(firstSelected));
-    expect('第二条 释义。', isNot(contains(firstSelected)));
+    expect('第一条原文段落包含足够长的内容，用于验证独立 passage 的上下文锚点。', contains(firstSelected));
+    expect('第二条释义段落也包含足够长的内容，用于验证第二个独立 passage 的上下文锚点。', isNot(contains(firstSelected)));
     Navigator.of(tester.element(assistantFinder), rootNavigator: true).pop();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.longPress(
-      find.textContaining('第二条 释义', findRichText: true),
+      find.textContaining('第二条释义段落也包含', findRichText: true),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('问 AI'));
@@ -118,8 +118,8 @@ void main() {
     expect(assistant.contextRef['anchorId'], 'shanghan:document:multi:passage:1');
     final secondSelected = assistant.contextRef['selectedText']!;
     expect(secondSelected, isNotEmpty);
-    expect('第二条 释义。', contains(secondSelected));
-    expect('第一条 原文。', isNot(contains(secondSelected)));
+    expect('第二条释义段落也包含足够长的内容，用于验证第二个独立 passage 的上下文锚点。', contains(secondSelected));
+    expect('第一条原文段落包含足够长的内容，用于验证独立 passage 的上下文锚点。', isNot(contains(secondSelected)));
     expect(tester.takeException(), isNull);
   });
 
