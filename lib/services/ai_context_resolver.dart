@@ -1963,7 +1963,20 @@ class AiContextResolver {
     final relations = annualData['hostGuestRelations'];
     switch (fieldPath) {
       case 'chart.wuxing':
-        if (mainYun is! List ||
+        final yearProperties = <String, Object?>{
+          'yun': annualData['yun'],
+          'taiGuo': annualData['taiGuo'],
+          'siTian': annualData['siTian'],
+          'siTianWx': annualData['siTianWx'],
+          'zaiQuan': annualData['zaiQuan'],
+          'shengXiao': annualData['shengXiao'],
+        };
+        final selectedMainYun = selectedDateContext['mainYun'];
+        final selectedGuestYun = selectedDateContext['guestYun'];
+        final selectedMainQi = selectedDateContext['mainQi'];
+        final selectedGuestQi = selectedDateContext['guestQi'];
+        if (yearProperties.values.any((value) => value == null) ||
+            mainYun is! List ||
             mainYun.length != 5 ||
             guestYun is! List ||
             guestYun.length != 5 ||
@@ -1972,15 +1985,30 @@ class AiContextResolver {
             guestQi is! List ||
             guestQi.length != 6 ||
             relations is! List ||
-            relations.length != 6) {
+            relations.length != 6 ||
+            selectedDateContext['yunStepIndex'] is! int ||
+            selectedDateContext['qiStepIndex'] is! int ||
+            selectedMainYun is! Map ||
+            selectedGuestYun is! Map ||
+            selectedMainQi is! Map ||
+            selectedGuestQi is! String) {
           return null;
         }
         return <String, Object?>{
+          'yearProperties': yearProperties,
           'mainYun': mainYun,
           'guestYun': guestYun,
           'mainQi': mainQi,
           'guestQi': guestQi,
           'hostGuestRelations': relations,
+          'selectedStep': {
+            'yunStepIndex': selectedDateContext['yunStepIndex'],
+            'qiStepIndex': selectedDateContext['qiStepIndex'],
+            'mainYun': selectedMainYun,
+            'guestYun': selectedGuestYun,
+            'mainQi': selectedMainQi,
+            'guestQi': selectedGuestQi,
+          },
         };
       case 'chart.wuyun':
         final yunStep = selectedDateContext['yunStepIndex'];
