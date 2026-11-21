@@ -83,7 +83,7 @@ void main() {
     expect(find.textContaining('解释文字'), findsOneWidget);
 
     final firstQuote = find
-        .textContaining('第一条 原文', findRichText: true)
+        .textContaining('第一条原文段落包含', findRichText: true)
         .hitTestable();
     expect(firstQuote, findsOneWidget);
     await tester.ensureVisible(firstQuote);
