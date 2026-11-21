@@ -3535,7 +3535,6 @@ class AiContextResolver {
     final selectedEntryId = anchorMatch.group(1)!;
     final input = structuredSnapshot['input'];
     final result = structuredSnapshot['result'];
-    final values = result is Map ? result['values'] : null;
     final sources = structuredSnapshot['sourceIds'];
     if (structuredSnapshot['snapshotId'] != snapshotId ||
         structuredSnapshot['capabilityId'] !=
