@@ -2,13 +2,25 @@
 
 > **维护约定**：本文件为项目根目录的官方变更记录。**每次发布 / 打包更新项目，必须在此追加对应版本条目**（版本号 + 变更要点 + 验证结果 + 发布信息）。
 >
-> **版本号规则**：以 `pubspec.yaml` 的 `version: X.Y.Z+N` 为单一来源。**对外展示版本号采用 `1.10.1` / `1.10.2` / `1.10.3` … 格式，每次发布自增第三位（patch）**；内部 `build` 号 `+N` 同时自增以作为 Android `versionCode`（必须单调递增）。Android `build.gradle.kts` 引用 `flutter.versionCode/versionName` 自动跟随，无需手改。
+> **版本号规则**：遵循 [研纪独立版本管理规范](docs/versioning-policy.md)，采用 `MAJOR.MINOR.PATCH+BUILD`；`pubspec.yaml` 是唯一可编辑版本源，Android `versionName/versionCode` 从 Flutter 构建字段映射，`tool/check_version_source.sh` 校验 README、pubspec、规范和共享 applicationId 版本码上限。
 >
 > **App 内更新日志**：每次发布须同步更新 `assets/data/changelog.json`（结构化条目：version/date/title/changes），它同时驱动「关于」页的更新日志展示与「更新后弹窗」。本 CHANGELOG.md 为项目根目录的人类可读备份。
 >
 > **验证基线**：全量 `flutter test` 182/182 通过；`flutter analyze` 0 新增 error；APK 经 `aapt2`（D:/sdk/build-tools/36.0.0/aapt2.exe）校验 `versionCode`/`versionName`。
 >
 > **发布方式**：正式 APK 仅由维护者在本地使用原签名密钥构建与签名，完成覆盖升级和真机验收后线下/私下交付。本仓库不推送发行 Tag、不创建 GitHub Release、不上传正式 APK。GitHub Actions 仅用于代码回归、Android Debug ABI 与签名门禁负向验证。
+
+---
+
+## [2.0.0+8048] - 2026-11-22 — 研纪独立产品主版本基线
+
+> **状态：PREPARATION / NOT RELEASED。** 本条记录的是独立版本源码基线，不代表正式 APK 已构建、签名、覆盖升级或完成 Find N2 真机验收。
+
+- **版本治理**：产品版本从历史 `1.11.x` 编号序列切换为独立 SemVer `2.0.0`；Android `versionCode=8048`。
+- **共享包名兼容**：保持 `applicationId=com.nihaisha.nihaisha_app`、既有签名身份、数据目录和数据库结构不变。已核验上游版本源 `1.11.34+8047`，新构建号 `8048` 高于当前已知共享 applicationId 构建号 `8047`。
+- **自动校验**：新增独立版本规范与 `tool/check_version_source.sh`，检查 pubspec、README、版本规范一致性和 versionCode 上限。
+- **分发边界**：正式 APK 仍仅允许本地使用原签名密钥构建与交付；不创建发行 Tag、不发布 GitHub Release、不上传正式 APK。
+- **⏳ 本地待验**：Find N2 现有安装包的实际 versionCode 与证书指纹、原位覆盖升级和数据保留仍须从目标设备实测；不得因 versionCode 8048 高于已知上游构建号就推定真机已可升级。
 
 ---
 
