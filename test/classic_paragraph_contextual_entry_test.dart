@@ -230,14 +230,16 @@ $second
       expect(neijingReader.contextualAskParagraphs, isTrue);
       expect(neijingReader.contextualAskSourceId,
           'assets/neijing/01_上古天真论.md');
+      final neijingParagraph =
+          find.textContaining('今天开始第一堂课这个', findRichText: true);
+      // Asset loading is asynchronous; wait for the real paragraph widget before
+      // asserting the contextual SelectionArea has been mounted.
+      await pumpUntilFound(tester, neijingParagraph);
       expect(
         find.byType(SelectionArea),
         findsWidgets,
         reason: 'Real Neijing asset and injected links must retain paragraph mapping',
       );
-      final neijingParagraph =
-          find.textContaining('今天开始第一堂课这个', findRichText: true);
-      await pumpUntilFound(tester, neijingParagraph);
       expect(find.text('原文加载失败'), findsNothing);
       expect(neijingParagraph, findsOneWidget);
       await tester.scrollUntilVisible(
@@ -319,14 +321,14 @@ $second
       expect(bencaoReader.contextualAskParagraphs, isTrue);
       expect(bencaoReader.contextualAskSourceId,
           'assets/bencao_lecture/023_上经人参.md');
+      final bencaoParagraph =
+          find.textContaining('人参顾名思义，因为他这个根长的象人的形状', findRichText: true);
+      await pumpUntilFound(tester, bencaoParagraph);
       expect(
         find.byType(SelectionArea),
         findsWidgets,
         reason: 'Real Bencao asset and injected links must retain paragraph mapping',
       );
-      final bencaoParagraph =
-          find.textContaining('人参顾名思义，因为他这个根长的象人的形状', findRichText: true);
-      await pumpUntilFound(tester, bencaoParagraph);
       expect(find.text('原文加载失败'), findsNothing);
       expect(bencaoParagraph, findsOneWidget);
       await tester.scrollUntilVisible(
