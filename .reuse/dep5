@@ -933,6 +933,7 @@ Comment: Newly added Fork-owned Guji contextual-entry source-anchor regression t
 
 Files:
  docs/local-android-release-checklist.md
+ test/android_release_signing_gate_contract_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
-Comment: Original Fork-maintained local Android signing, upgrade, and device handoff instructions.
+Comment: Original Fork-maintained local Release signing handoff and its automated guard contract test.
