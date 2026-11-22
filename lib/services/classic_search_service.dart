@@ -402,25 +402,39 @@ class ClassicSearchService {
     return null;
   }
 
-  /// Exact current IDs are preferred. Older IDs included title and MISSING
-  /// locator tokens; accept those legacy prefixes by stable asset/chapter key.
-  /// Never resolve by title alone or by fuzzy search.
+  /// Accept canonical IDs and the one persisted legacy shape:
+  /// source:asset-or-bookId:chapterIndex-or-MISSING:title.
+  ///
+  /// Legacy title text is ignored as identity, but its position and field count
+  /// are fixed. Do not accept arbitrary trailing segments: a citation with a
+  /// forged paragraph/asset suffix must not be rebound to an indexed entry.
+  /// Reader-module aliases are accepted only through the explicit allowlist.
   static bool _matchesSourceId(ClassicHit hit, String candidate) {
     if (hit.sourceId == candidate) return true;
     final parts = candidate.split(':');
+
     if (hit.asset != null && hit.asset!.trim().isNotEmpty) {
       final source = _indexedSourceForReaderModule(parts.first) ?? parts.first;
-      return parts.length >= 2 &&
-          source == hit.source &&
-          parts[1] == hit.asset;
+      if (parts.length == 2) {
+        // The only current reader-module alias form is <moduleId>:<asset>.
+        return source == hit.source && parts[1] == hit.asset;
+      }
+      if (parts.length != 4) return false;
+      final legacyChapterIndex = hit.chapterIndex?.toString() ?? 'MISSING';
+      return source == hit.source &&
+          parts[1] == hit.asset &&
+          parts[2] == legacyChapterIndex &&
+          parts[3].trim().isNotEmpty;
     }
+
     if (hit.bookId != null &&
         hit.chapterIndex != null &&
         hit.chapterIndex! >= 0) {
-      return parts.length >= 3 &&
+      return parts.length == 4 &&
           parts[0] == hit.source &&
           parts[1] == hit.bookId &&
-          parts[2] == hit.chapterIndex.toString();
+          parts[2] == hit.chapterIndex.toString() &&
+          parts[3].trim().isNotEmpty;
     }
     return false;
   }

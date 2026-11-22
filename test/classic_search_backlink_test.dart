@@ -109,6 +109,53 @@ void main() {
     expect(resolved.localBacklink, original.localBacklink);
   });
 
+  test('source backlinks reject unrecognized trailing segments', () async {
+    final result = await ClassicSearchService.search('太阳');
+    expect(result.hits, isNotEmpty);
+    final original = result.hits.first;
+    final legacyId = [
+      original.source,
+      original.asset ?? original.bookId ?? 'MISSING',
+      original.chapterIndex?.toString() ?? 'MISSING',
+      original.title,
+    ].join(':');
+
+    expect(
+      await ClassicSearchService.findBySourceId(
+        '${original.sourceId}:paragraph:1-1',
+      ),
+      isNull,
+    );
+    expect(
+      await ClassicSearchService.findBySourceId(
+        '$legacyId:paragraph:1-1',
+      ),
+      isNull,
+    );
+    expect(
+      await ClassicSearchService.findBySourceId(
+        legacyId.substring(0, legacyId.lastIndexOf(':') + 1),
+      ),
+      isNull,
+    );
+  });
+
+  test('reader-module aliases resolve only their exact asset source', () async {
+    final result = await ClassicSearchService.search('上古天真');
+    final original = result.hits.firstWhere(
+      (hit) => hit.source == 'neijing' && hit.asset != null,
+    );
+    final aliasId = 'neijing-reading:${original.asset}';
+
+    final resolved = await ClassicSearchService.findBySourceId(aliasId);
+    expect(resolved, isNotNull);
+    expect(resolved!.sourceId, original.sourceId);
+    expect(
+      await ClassicSearchService.findBySourceId('$aliasId:paragraph:1-1'),
+      isNull,
+    );
+  });
+
   test('classic search sources map to one explicit reader contract', () {
     expect(
       ClassicSearchService.contextualModuleIdForSource('shanghan'),
