@@ -3288,3 +3288,10 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 最新提交 \`fd37d9ff23873661d4dbda2dcd3d37d88c954e6c\` 给 Bencao 测试应用增加独立 \`ValueKey('bencao-library-test-app')\`，强制替换旧 Navigator 后再定位 Bencao ListView；保留原滚动和来源断言。该 head 的 Fork license boundary run \`44971279083\` SUCCESS；Flutter tests run \`44971279061\` 在本节更新时仍为 PENDING，Android arm64 对应 job 尚未创建/取得终态。
 - 对 a55846f 的 Android job 曾在 Flutter 失败后继续运行，不能转用为 fd37d9f 的 Android 验收。当前 fd37d9f 必须重新通过 Flutter 全量 regression 与 Android arm64 APK/Manifest/ABI/Android unit tests；license 已 SUCCESS。所有未取得终态的检查继续记为 IN_PROGRESS / UNKNOWN，禁止合并。
 - Stateful parser 的新增边界包括：多行嵌套 HTML、HTML comment、CDATA、\`$$...$$\`、\`\\[...\\]\`、\`\\begin{...}\\end{...}\` 数学块；相应测试 fixture 含内部空行，仍要求仅两段普通正文创建 SelectionArea。任何块边界未闭合时按 fail-closed 处理。
+
+### 63.9 真实资产端到端测试与语法修复（2026-11-22）
+
+- 在 head ab7560f731cd3fa2f1b58956cf8a3a723be9e2ab 扩展 Neijing and Bencao lecture libraries pass paragraph-mode source identities：不再只检查 MarkdownDocScreen 参数，而是从真实 assets/neijing/01_上古天真论.md 与 assets/bencao_lecture/023_上经人参.md 加载页面，断言实际创建段落 SelectionArea，长按普通正文触发“问 AI”，并验证学习模式、explanation-only、真实 sourceId、行范围 anchor 和 Prompt 原文。为离屏段落增加 scrollUntilVisible，不绕过选择菜单或来源解析。
+- 该 head 的 CI static analysis 失败根因是整段替换时遗漏后续 paragraph mode fails closed without complete source provenance 前面的 testWidgets( 声明，导致测试文件 355/370 行语法错误；不是新功能代码或来源映射断言失败。完整回归因此报告 1860 passed / 1 failed / 15 skipped，失败测试文件在加载阶段编译失败。
+- 已在 head def4a95207050fd8b3de17547d6f4c988a54281c 恢复 testWidgets( 声明；没有删除测试、关闭断言或改产品逻辑。该 HEAD Fork license boundary run 44972049063 SUCCESS；Flutter tests run 44972049061 在本节记录时仍为 PENDING；Android arm64 当前 HEAD job 尚无终态。此前 head 的 CI 结果均不转移到 def4。
+- 后续必须以 def4 的最新 head CI 验证：Dart/Flutter static analysis、完整 Flutter regression（包括真实 Neijing/Bencao 端到端段落选择）、Android arm64 verification APK / Manifest / ABI / unit tests。若新测试暴露真实选择/滚动缺陷，继续按实际错误修正；仅 CI 全部必需项 SUCCESS 且 PR mergeable 才能合并。
