@@ -531,6 +531,13 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     final raw = _rawDocumentContent ?? data;
     final rawPassages = _findContextualParagraphs(raw);
     final lines = data.split('\n');
+    debugPrint(
+      '[ContextualParagraph] module=${widget.contextualAskModuleId} '
+      'enabled=$_contextualAskEnabled paragraphs=${widget.contextualAskParagraphs} '
+      'anchor=${widget.contextualAskAnchorId} source=${widget.contextualAskSourceId} '
+      'rawReady=${_rawDocumentContent != null} rawLines=${raw.split('\n').length} '
+      'displayLines=${lines.length} rawPassages=${rawPassages.length}',
+    );
 
     // _injectLinks only wraps matched text inline and never inserts line breaks.
     // Therefore the original Markdown source line numbers remain the stable
