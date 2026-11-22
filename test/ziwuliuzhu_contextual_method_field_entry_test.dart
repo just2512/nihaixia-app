@@ -250,11 +250,20 @@ void main() {
         final ask = find.byKey(
           ValueKey('ziwuliuzhu-method-ask-${method.key}'),
         );
-        final methodScrollables = find.descendant(
-          of: find.byType(TabBarView),
-          matching: find.byType(Scrollable),
+        final methodList = find.byKey(
+          PageStorageKey<String>(
+            'ziwuliuzhu-method-ask-${method.key}-list',
+          ),
         );
-        final methodListScrollable = methodScrollables.last;
+        expect(
+          methodList,
+          findsOneWidget,
+          reason: '${method.label} 当前 Tab 的 ListView 必须已挂载',
+        );
+        final methodListScrollable = find.descendant(
+          of: methodList,
+          matching: find.byType(Scrollable),
+        ).first;
         await tester.scrollUntilVisible(
           ask,
           220,
