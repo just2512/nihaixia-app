@@ -154,16 +154,19 @@ void main() {
 
     // Every asset-backed reader screen must use the same canonical anchor
     // builder. Only the explicit reader-module allowlist is accepted.
-    const asset = 'assets/reader/sample.md';
-    for (final moduleId in [
-      'shanghan',
-      'jingui',
-      'neijing-reading',
-      'zhenjiu-reading',
-      'bencao-reading',
-      'yijing-reading',
-      'minggua-reading',
-    ]) {
+    const moduleAssets = <String, String>{
+      'shanghan': 'assets/shanghan/clause_002.md',
+      'jingui': 'assets/jingui/clause_001.md',
+      'neijing-reading': 'assets/neijing/01_上古天真论.md',
+      'zhenjiu-reading':
+          'assets/zhenjiu_lecture/00_第一章针灸的使用时机.md',
+      'bencao-reading': 'assets/bencao_lecture/sample.md',
+      'yijing-reading': 'assets/yijing/1.乾为天䷀.md',
+      'minggua-reading': 'assets/yijing_minggua/0.八字的排列方法.md',
+    };
+    for (final entry in moduleAssets.entries) {
+      final moduleId = entry.key;
+      final asset = entry.value;
       final expected = moduleId == 'shanghan'
           ? 'shanghan:passage:$asset'
           : '$moduleId:passage:$asset';
@@ -173,15 +176,23 @@ void main() {
           asset: asset,
         ),
         expected,
-        reason: 'Reader module $moduleId must use the canonical asset anchor',
+        reason: 'Reader module $moduleId must use its canonical asset prefix',
       );
     }
     expect(
       ClassicSearchService.contextualAnchorIdForReaderAsset(
         moduleId: 'unknown-reader',
-        asset: asset,
+        asset: 'assets/neijing/01_上古天真论.md',
       ),
       isNull,
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'bencao-reading',
+        asset: 'assets/neijing/01_上古天真论.md',
+      ),
+      isNull,
+      reason: 'A valid asset from another module must not be rebound.',
     );
     expect(
       ClassicSearchService.contextualAnchorIdForReaderAsset(
