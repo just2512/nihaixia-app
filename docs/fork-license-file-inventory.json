@@ -17,8 +17,8 @@
     "modified": 160,
     "deleted": 13,
     "by_classification": {
-      "APACHE_2_0_AND_FORK_COMMERCIAL": 154,
-      "FORK_COMMERCIAL": 356,
+      "APACHE_2_0_AND_FORK_COMMERCIAL": 153,
+      "FORK_COMMERCIAL": 357,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -6491,9 +6491,9 @@
     {
       "path": "test/search_tab_classic_test.dart",
       "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 原创测试文件；本次仅增补经典搜索到阅读器的来源锚点回归。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
