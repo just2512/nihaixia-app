@@ -91,8 +91,8 @@ void main() {
     await tester.tap(find.text('排四柱命卦'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('山雷颐'), 300);
-    final result = find.text('山雷颐').first;
+    await tester.scrollUntilVisible(find.textContaining('山雷颐'), 300);
+    final result = find.textContaining('山雷颐').first;
     final resultTap = find.ancestor(
       of: result,
       matching: find.byType(InkWell),
