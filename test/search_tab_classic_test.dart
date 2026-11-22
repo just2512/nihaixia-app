@@ -13,6 +13,7 @@ import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/screens/search_tab.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,14 @@ void main() {
 
   testWidgets('输入「标幽赋」后出现经典分组并命中针灸大成', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: SearchTab())),
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          extensions: [AppColors.light],
+        ),
+        home: const Scaffold(body: SearchTab()),
+      ),
     );
     await tester.pump();
 
@@ -50,7 +58,14 @@ void main() {
 
   testWidgets('全局经典搜索打开本草命中时绑定本草讲稿来源', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: SearchTab())),
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          extensions: [AppColors.light],
+        ),
+        home: const Scaffold(body: SearchTab()),
+      ),
     );
     await tester.pump();
 
