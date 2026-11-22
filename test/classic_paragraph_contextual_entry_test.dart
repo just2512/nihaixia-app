@@ -164,7 +164,7 @@ $second
         neijingEntry,
         240,
         scrollable: find.descendant(
-          of: find.byType(ClassicLibraryScreen),
+          of: find.byType(ListView),
           matching: find.byType(Scrollable),
         ).first,
       );
@@ -197,7 +197,7 @@ $second
         bencaoEntry,
         240,
         scrollable: find.descendant(
-          of: find.byType(ClassicLibraryScreen),
+          of: find.byType(ListView),
           matching: find.byType(Scrollable),
         ).first,
       );
