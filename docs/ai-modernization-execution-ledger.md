@@ -3519,6 +3519,9 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 
 安装升级必须使用本地原签名 keystore 构建的 Release APK，核对 applicationId、versionCode、签名证书和 APK SHA-256；禁止卸载旧版、清除数据或使用 CI Debug APK 覆盖旧版。上述设备项统一保持 UNKNOWN / LOCAL ONLY，待本地实测后逐项填写证据。
 
+- 最新 master 还提供本地专用 Release 签名 Debug TRACE 构建：`flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true`。它要求本机原 `android/key.properties`/Release keystore，CI 明确拒绝该属性；仅用于采集 Debug TRACE，不代替正式 Release APK 交付。默认 Debug/Release 行为不变。
+
+
 ### 67.6 云端关闭门槛与下一步
 
 - 情境入口代码及专项自动化：PASS（以 `26d924b894b3301a8f46b2db120407cc344e41af` 的实际 CI 为证）。
