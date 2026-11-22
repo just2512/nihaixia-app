@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 6ed53bf15f9c8aa5f21403094258a8e47d6d47be includes merged PRs #386 and #388, including Neijing/Bencao and Shanghan/Jingui lecture paragraph contextual entry points. This slice adds paragraph-level contextual selection to the Zhenjiu lecture library. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 8394dfffc11e64ee493e90039b0b0892eab1eddd includes merged PRs #386, #388 and #390, including Neijing/Bencao, Shanghan/Jingui and Zhenjiu lecture paragraph contextual entry points. This slice adds source-line-preserving paragraph contextual selection to the public-domain Guji TXT reader; ancient text assets remain excluded from the Fork commercial grant and retain their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 870,
-    "added": 713,
+    "changed": 872,
+    "added": 715,
     "modified": 157,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 151,
-      "FORK_COMMERCIAL": 354,
+      "FORK_COMMERCIAL": 356,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -4801,6 +4801,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/guji_source_anchor_resolver.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增古籍原文段落来源行解析器；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/huangdi_siji_result_context_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -6062,6 +6070,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/guji_contextual_paragraph_entry_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增古籍原文段落情境入口与真实 Asset 来源锚点回归测试；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {

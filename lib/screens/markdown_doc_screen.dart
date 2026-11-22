@@ -61,6 +61,9 @@ class MarkdownDocScreen extends StatefulWidget {
 
   /// Enables safe paragraph-level contextual selection for prose lecture documents.
   final bool contextualAskParagraphs;
+  /// Maps rendered Markdown line indices to original source line numbers.
+  /// A value of -1 marks a synthetic separator line; invalid maps fail closed.
+  final List<int>? contextualAskSourceLineMap;
 
   const MarkdownDocScreen({
     super.key,
@@ -73,6 +76,7 @@ class MarkdownDocScreen extends StatefulWidget {
     this.contextualAskAnchorId,
     this.contextualAskSourceId,
     this.contextualAskParagraphs = false,
+    this.contextualAskSourceLineMap,
   }) : assert(asset != '' || content != null, 'asset 与 content 至少要提供一个');
 
   @override
@@ -543,8 +547,37 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     // Therefore the original Markdown source line numbers remain the stable
     // mapping even when injected links change how a rendered paragraph would
     // be classified by a second Markdown-structure scan.
-    final passagesMatch =
-        rawPassages.isNotEmpty && raw.split('\n').length == lines.length;
+    final sourceLineMap = widget.contextualAskSourceLineMap;
+    var sourceLineMapValid = true;
+    if (sourceLineMap != null) {
+      sourceLineMapValid = sourceLineMap.length == lines.length;
+      var previousSourceLine = 0;
+      if (sourceLineMapValid) {
+        for (final sourceLine in sourceLineMap) {
+          if (sourceLine == -1) continue;
+          if (sourceLine <= previousSourceLine) {
+            sourceLineMapValid = false;
+            break;
+          }
+          previousSourceLine = sourceLine;
+        }
+      }
+      if (sourceLineMapValid) {
+        for (final passage in rawPassages) {
+          if (passage.startLine < 0 ||
+              passage.endLine <= passage.startLine ||
+              passage.endLine > sourceLineMap.length ||
+              sourceLineMap[passage.startLine] <= 0 ||
+              sourceLineMap[passage.endLine - 1] <= 0) {
+            sourceLineMapValid = false;
+            break;
+          }
+        }
+      }
+    }
+    final passagesMatch = rawPassages.isNotEmpty &&
+        raw.split('\n').length == lines.length &&
+        sourceLineMapValid;
     if (!passagesMatch) {
       // If any transformation changes the source line count, keep ordinary
       // selection only and fail closed for contextual AI.
@@ -572,11 +605,19 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           padding: EdgeInsets.fromLTRB(16, passageIndex == 0 ? 12 : 0, 16, 0),
         ));
       }
+      final sourceStartLine =
+          sourceLineMap == null
+              ? passage.startLine + 1
+              : sourceLineMap[passage.startLine];
+      final sourceEndLine =
+          sourceLineMap == null
+              ? passage.endLine
+              : sourceLineMap[passage.endLine - 1];
       final stableAnchorId = baseAnchorId +
           ':paragraph:' +
-          (passage.startLine + 1).toString() +
+          sourceStartLine.toString() +
           '-' +
-          passage.endLine.toString();
+          sourceEndLine.toString();
       final displayedBlock =
           lines.sublist(passage.startLine, passage.endLine).join('\n');
       children.add(SelectionArea(
