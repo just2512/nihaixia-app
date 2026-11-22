@@ -12,7 +12,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新核验基线 | `09293c55b7c3069e3118291e871ef96d087b5a17` | PR #206 已合并；合并后主线 CI 见第 56 节 |
+| 本轮最新应用代码核验基线 | `39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 已合并；情境入口、代码/测试与合并后 master CI 证据见第 65 节；后续 docs-only 提交不改变本应用代码基线 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -20,7 +20,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表所列为当前台账最新核验的代码主线基线；历史任务范围与历次核验仍以各节记录为准。PR #206 的合并和 post-merge CI 见第 56 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
+**核验基线说明：** 本表所列为本轮最新应用代码核验基线；历史任务范围与历次核验仍以各节记录为准。PR #392 的合并与主线独立 CI 见第 65 节。后续若仅合并文档更新，应将文档提交 SHA 与应用代码基线分开记录。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
 
 ## 2. 状态定义
 
@@ -46,7 +46,7 @@
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS`（剩余项为 LOCAL ONLY；云端代码/CI 已收口） | 与 B/C/E 并行 | 多轮审计报告和自动化回归已交付；Find N2 GPU/CPU 各至少 20 轮实测由本地执行 |
-| B | 问诊助手结果解释 | `IN_PROGRESS`（代码仍残留“仅模拟/禁止诊疗解释”提示，按第 51 节处理） | 与 A/C/D 并行 | 既有规则执行结果可追溯到知识库；AI 完整解释辨病辨证、病机、治法、方剂和针灸并支持追问 |
+| B | 问诊助手结果解释 | `IN_PROGRESS`（按审计 §14.2 / §16 区分 App 确定性规则结果与 AI 教学解释；完整问诊闭环仍须按对应代码、自动化和本地场景证据判定） | 与 A/C/D 并行 | 既有规则执行结果可追溯到知识库；AI 完整解释辨病辨证、病机、治法、方剂和针灸并支持追问 |
 | C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
@@ -3269,7 +3269,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 上述缺口已由 PR #393（https://github.com/just2512/nihaixia-app/pull/393）修复：精确匹配 kYiJingLectures / kMingGuaEntries manifest asset；未知路径、标题冒充、段落尾缀均拒绝。最终候选 HEAD d2eb870bc5fa29227fb3a9e0b8e2ece7a8b54383 的 Flutter regression 1880 passed / 15 skipped，Fork license boundary SUCCESS，Android arm64 APK / Manifest / ABI / Native unit tests / JUnit XML SUCCESS（Flutter workflow run 45004729631，Android job 137155273102；APK 132,543,921 bytes，arm64-v8a only）。Branch validation 条件性 SKIPPED，不计 PASS。
 - 当前没有证据支持增加第二套会话协调器、数据库或搜索架构。已覆盖入口继续复用 MarkdownDocScreen → AiContextRef → PromptBuilder → ContextualAiSheet。
 
-### 63.3 云端收尾状态与 Find N2 最终本地验收（由 §64 更新）
+### 63.3 云端收尾状态与 Find N2 最终本地验收（由 §65 更新）
 
 - PR #391 与后续来源回链修复 PR #393 均已合并；PR #391 验收及其合并后主线证据见 §63.1，PR #393 与最新 master 复核见 §64。
 - 易经/命卦助手引用回链缺口已由 PR #393 修复并在最新 master 复核。当前唯一明确未启用的入口边界是针灸多 Tab：缺少专用来源等级、适用范围和安全 Prompt 契约。此项是有意不启用，不是已接入缺陷。
@@ -3279,7 +3279,9 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 ---
 
-## 64. 2026-11-22 PR #393 合并后全仓库复核与云端收尾基线
+## 64. 2026-11-22 PR #393 合并后全仓库复核与云端收尾基线（历史快照；由 §65 更新）
+
+> 状态说明：本节记录 PR #393 合并后、PR #392 合并前的历史主线。PR #392 已启用针灸页面首个「穴位处方」Tab 的单条处方情境入口；本节中针灸处方多 Tab 整体 `NOT_ENABLED` 的表述仅作为当时状态保留，不再代表首个 Tab 的当前状态。最新入口矩阵与 CI 以 §65 为准。
 
 ### 64.1 最新主线与独立 CI 证据
 
@@ -3327,3 +3329,70 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 最新 master b966f0538483aecce28fb5a71ea2bdcfc2991dee：Flutter / Android arm64 + Native unit tests / Fork license boundary / Flutter Quality Gate 均 SUCCESS；条件性 Branch validation SKIPPED。
 - 全仓库情境入口审计：除明确 NOT_ENABLED 的针灸多 Tab 外，已接入入口与双向来源回链均有代码/测试覆盖；未发现需继续实施的云端情境入口缺口。
 - 本轮云端交付收尾：PASS。最终设备与本地模型验收：UNKNOWN / LOCAL ONLY。
+
+
+## 65. 2026-11-22 PR #392 针灸处方入口合并后全仓库复核与云端收尾
+
+### 65.1 最新应用代码、PR 合并与自动验收
+
+- 本轮最新应用代码基线：`39da7c0522a47cd227a617167badcf116d0152b3`。PR #392 从 master 基线 `e355745515decbe6a8538aa34160990533d4ac9c` 重建为单提交分支，最终 PR head 为 `6f5ef1a3de68696627db52ad342b6628d169c332`，于 2026-11-22 10:42Z 以 Squash merge 合并；merge commit 即当前应用代码基线 `39da7c0522a47cd227a617167badcf116d0152b3`。应用版本未变，仍为 `1.11.30+8039`。
+- 本次功能切片只修改五个文件：本规范、针灸处方页面、情境 Prompt Builder、Context Resolver 和 `test/assistant_acupuncture_source_navigation_test.dart`。旧功能分支曾落后于主线；合并前已用 master 当前基线重新构建，仅保留这五个文件的真实功能差异，没有把旧分支的过期提交带入主线。
+- PR 最终 HEAD 的独立门禁：
+  - Flutter regression：run `45012815405` / job `137178645314`：SUCCESS；全量 Flutter 回归完成。
+  - Fork license boundary：run `45012815382`：SUCCESS。
+  - Android arm64 CI verification：run `45012815405` / job `137180530187`：SUCCESS；Debug APK 构建、合并 Manifest 校验、APK ABI 与 SHA-256 校验、Native/Gradle unit tests、JUnit XML 校验及证据工件上传均成功；APK 仅包含 `arm64-v8a`。
+  - 条件性 Branch validation：SKIPPED（该 Job 只在符合条件的 `work/**` push 触发）；不计 PASS，也不是本 PR 的必需门禁。
+- 合并后 master 独立 CI（全部绑定 master SHA `39da7c0522a47cd227a617167badcf116d0152b3`）最终结果：
+  - Flutter tests run `45013726358`：SUCCESS；Flutter regression job `137181432283` SUCCESS。
+  - Android arm64 CI verification APK + unit tests：同一 run 的 job `137182973973`：SUCCESS（20/20 steps）；APK 构建、Manifest、ABI / SHA-256、Native/Gradle unit tests 和 JUnit XML 均通过。
+  - Flutter Quality Gate run `45013726391` / job `137181432309`：SUCCESS（19/19 steps；Dart test、Native unit tests 与 arm64 Debug APK 构建均通过）。
+  - Fork license boundary run `45013726437` / job `137181432506`：SUCCESS（7/7 steps）。
+  - 条件性 Branch validation：SKIPPED，不计 PASS；不影响以上必需门禁。
+- 合并后 master 的 Branch validation 为条件性 SKIPPED，不计为通过项。CI arm64 Debug APK 是 ABI / 构建验证工件，绝不是 Find N2 保留数据升级用 Release APK。
+
+### 65.2 全仓库情境入口覆盖与重复入口审计
+
+按当前 master Git tree、页面真实调用点、ContextRef 构建、Resolver、Prompt Builder、助手引用回链及测试交叉复核：
+
+| 入口类别 | 当前结论 | 复核边界 |
+|---|---|---|
+| 确定性工具整体结果 | PASS（云端代码/自动化） | 黄历、八字、紫微、易经、梅花、小六壬、五运六气、子午流注、节气、黄帝四季歌、称骨、受生债、玉匣灵兆、三山灵签、经方度量衡、小儿关煞、周公解梦，均使用各自真实结果快照和 Resolver |
+| 字段/局部结果 | PASS（云端代码/自动化） | 八字、紫微、易经、梅花、五运六气图表按 UI 显式选中的固定字段路径建引用；模型不选择字段、不重新计算结果 |
+| 方剂/本草/医案/内经知识条目 | PASS（云端代码/自动化） | 通过稳定条目身份、来源/版本/快照与本地 Resolver 回链；单条医案使用记录身份，不按标题猜测 |
+| 经典阅读及助手来源双向回链 | PASS（云端代码/自动化） | source key 与 reader module ID 走显式白名单映射；asset-backed 阅读按完整 manifest asset 反查，古籍按独立行映射；未知、歧义和伪造 asset 拒绝跳转 |
+| 针灸「穴位处方」Tab 单条记录 | PASS（云端代码/自动化） | PR #392 新增唯一条目 CTA、category/entry 复合锚点、结构化快照校验、学习模式解释 Prompt 和来源/安全负向约束 |
+| 针灸「透针透穴」「穴位讲解」「耳穴」Tab | NOT_ENABLED（本切片范围外） | 没有复用处方 Resolver 或套用本条目的 Prompt；如需启用，必须先分别定义数据来源合同和安全边界 |
+| 导航列表、问诊历史、危急提示、已保存命盘列表 | NO_DUPLICATE_ENTRY | 属于导航/历史/安全流程，不是需要重复建立来源锚点的独立结果；进入具体条目/结果后使用既有入口 |
+
+- 本地针灸数据共有多个分类，数字 `entryId` 可跨分类重复；本轮复核以 `(categoryId, entryId)` 作为唯一身份。页面先按完整条目签名反查分类：只有能唯一确定分类的卡片显示 CTA；重复或歧义记录不显示入口，不按症状名、穴位名或列表序号回退猜测。
+- 当前 CTA 位于 `AcupunctureScreen._buildEntryCard`，即首个「穴位处方」Tab。其它 Tab 使用独立 builder，不出现该 CTA。此为页面真实调用路径复核；测试覆盖正向入口与 402dp / 775dp 两种窗口尺寸，未把其它 Tab 的缺席伪称为专项负向 Widget 测试。
+- 无证据支持新增第二套情境会话协调器、消息表、搜索引擎或模型调用链；继续使用既有 `AiContextRef → Resolver → PromptBuilder → ContextualAiSheet`。
+
+### 65.3 针灸单条入口的来源锚点、快照和安全边界
+
+- 入口只在「针灸 → 穴位处方」Tab 的单条 `AcupointEntry` 展开卡片出现，用户显式点击「问 AI 解读当前处方条目」后进入现有学习助手；不在目录列表、透针/耳穴 Tab 或未选中条目上生成入口。
+- 规范身份为 `kind=knowledgeEntry`、`moduleId=acupuncture-prescriptions`、`anchorId=acupuncture-prescriptions:{categoryId}:{entryId}`、`sourceId=acupuncture:{categoryId}:{entryId}`。Resolver 核验分类唯一性、分类内条目唯一性、canonical anchor、sourceId、标题、资料版本和完整结构化快照摘要；不一致返回 MISSING / UNKNOWN / STALE 并停止发送。
+- `snapshotId` 由完整条目快照计算，快照包括分类 ID/名称、条目 ID、原始字段及原始 `source` 标记。当前资料规则版本绑定 `assets/data/acupuncture.json@ccf4419e37e2f67af58d71a86592b295bd88d5b`；资料变更时旧快照不可被静默替换。
+- Prompt 只包含当前一条记录，并将原始来源值原样保留。比如 `nihaisha+bbxx` 代表 App 数据中的混合来源标签，不是独立文献考证、纸本页码或临床证据认证；无实际字段支持时标记 UNKNOWN / MISSING，不补造出处。
+- Assistant mode 为 learning，且 `contextualExplanationOnly=true`；不产生第二套路由，不触发工具执行或重新计算。AI 只解释当前条目已有字段，不可推断用户个人诊断、病因、体质、风险或预后，也不可给出个人治疗、配穴、针刺深度/角度/方向/手法/频次或自行施治步骤。
+- 自动化：`test/assistant_acupuncture_source_navigation_test.dart` 覆盖精确条目解析、来源和 Prompt 契约、跨分类相同数字 ID 的不同锚点/摘要、跨分类快照拒绝、非 canonical 前导零锚点拒绝、缺失条目/分类负向路径，以及 402dp / 775dp 页面入口打开学习助手的 Widget 路径。
+
+### 65.4 Find N2 / E4B 最终本地交接
+
+以下文件已按本轮应用代码基线补入 AI-CTX-ACU-01 设备步骤；它们是执行方案，不是测试报告：
+
+- `docs/find-n2-real-device-acceptance.md`：外屏、内屏 flat、半折叠、键盘/Insets、来源面板、针灸处方单条入口和原位覆盖升级矩阵。升级仍要求本地原签名 keystore、Release APK、applicationId/versionCode/证书核对；禁止卸载旧版、清除数据或使用 Debug APK 覆盖旧版。
+- `docs/find-n2-local-ai-acceptance-checklist.md`：保留 GPU / CPU 各至少 20 轮、多媒体、Activity/进程恢复、AI 数据清除和 TRACE；新增针灸条目来源锚点、会话隔离、实际 backend 和安全边界验收。
+- `docs/find-n2-ai-trace-acceptance-plan.md`：基线更新至本轮代码 SHA，新增针灸 ContextRef 与跨轮 TRACE 关联核验。
+- `docs/local-ai-e4b.md`：继续作为 E4B 模型导入、运行时配置及已知 Native 行为的补充说明。
+
+Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外屏/内屏/半折叠、分屏、键盘 Insets、原位覆盖升级、GPU/CPU 后端实际切换、多轮推理、多媒体、第二/第三轮响应、Native 生命周期、Activity/force-stop 恢复、AI 数据清理及端到端 TRACE 均须按本地清单实测。云端 CI、模拟器或静态代码不得替代设备结果；这些设备项不阻塞本轮云端工作收尾。
+
+### 65.5 当前阶段结论与后续门槛
+
+- PR #392：MERGED；应用代码合并 SHA `39da7c0522a47cd227a617167badcf116d0152b3`。
+- PR-head 的 Flutter regression、Fork license boundary、Android arm64 APK / Manifest / ABI / Native unit tests / JUnit XML：全部 SUCCESS。
+- 合并后 master 的 Flutter tests、Android arm64 / Native / JUnit、Flutter Quality Gate 与 Fork license boundary 均 SUCCESS，且全部绑定应用代码 SHA `39da7c0522a47cd227a617167badcf116d0152b3`；条件性 Branch validation SKIPPED，不计 PASS。
+- 全仓库已接入情境入口未发现新的云端缺口；针灸入口当前只覆盖「穴位处方」单条记录。其它针灸 Tab 按规范保持 NOT_ENABLED，而非扩大为临床混合来源 Prompt。
+- 本轮云端代码、PR-head 自动验收和合并后 master 独立 CI 均 PASS；Find N2 / E4B 本地验收继续 UNKNOWN / LOCAL ONLY。
+
