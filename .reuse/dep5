@@ -83,6 +83,7 @@ Files:
  lib/screens/ziwei_doc_screen.dart
  lib/screens/ziwei_reference_screen.dart
  lib/screens/ziwuliuzhu_screen.dart
+ lib/screens/zhenjiu_library_screen.dart
  lib/services/classic_search_service.dart
  lib/services/native_files_io.dart
  lib/services/native_files_stub.dart
@@ -907,3 +908,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Newly added Fork-owned acupoint contextual-entry resolver, prompt and widget regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ test/zhenjiu_lecture_paragraph_context_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Newly added Fork-owned Zhenjiu lecture contextual-entry regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.

@@ -17,6 +17,8 @@ class ZhenjiuLibraryScreen extends StatelessWidget {
           '经络穴位到从头到脚治症。与「穴位讲解」并列：讲解是逐穴速查，这里是系统学习。',
       footer: '出处：倪海厦《人纪·针灸》讲稿 · 传统文化参考，非医疗建议',
       lectures: kZhenJiuLectures,
+      contextualAskModuleId: 'zhenjiu-reading',
+      contextualAskParagraphs: true,
       seqLabel: (s) => '${s + 1}',
     );
   }
