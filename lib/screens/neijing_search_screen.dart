@@ -236,6 +236,11 @@ class _NeijingSearchScreenState extends State<NeijingSearchScreen> {
                               asset: r.doc.asset,
                               footer: '出处：《人纪·黄帝内经》倪师讲稿 · 传统文化参考',
                               linkFormulas: true,
+                              contextualAskModuleId: 'neijing-reading',
+                              contextualAskAnchorId:
+                                  'neijing-reading:passage:${r.doc.asset}',
+                              contextualAskSourceId: r.doc.asset,
+                              contextualAskParagraphs: true,
                             ),
                           ),
                         );

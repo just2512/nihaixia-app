@@ -11,6 +11,7 @@ import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/screens/search_tab.dart';
 
 void main() {
@@ -44,5 +45,23 @@ void main() {
         reason: '命中经典后应出现「经典 (n)」分组标题');
     expect(find.textContaining('针灸大成'), findsWidgets,
         reason: '「标幽赋」应命中针灸大成章节');
+
+    final sourceLabel = find.text('针灸大成').first;
+    final resultTile = find.ancestor(
+      of: sourceLabel,
+      matching: find.byType(ListTile),
+    ).first;
+    await tester.tap(resultTile);
+    await tester.pumpAndSettle();
+
+    final reader = tester.widget<MarkdownDocScreen>(
+      find.byType(MarkdownDocScreen),
+    );
+    expect(reader.contextualAskModuleId, 'zhenjiu-reading');
+    expect(reader.contextualAskSourceId, reader.asset);
+    expect(reader.contextualAskAnchorId,
+        'zhenjiu-reading:passage:${reader.asset}');
+    expect(reader.contextualAskParagraphs, isTrue);
+    expect(tester.takeException(), isNull);
   });
 }

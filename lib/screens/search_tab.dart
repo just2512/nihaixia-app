@@ -168,6 +168,25 @@ class _SearchTabState extends State<SearchTab> {
     }
   }
 
+  /// Only sources with an explicit reader-module contract may enable
+  /// paragraph Ask AI. Unknown source types remain ordinary read-only pages.
+  String? _classicContextualModuleId(String source) {
+    switch (source) {
+      case 'shanghan':
+        return 'shanghan';
+      case 'jingui':
+        return 'jingui';
+      case 'neijing':
+        return 'neijing-reading';
+      case 'zhenjiu':
+        return 'zhenjiu-reading';
+      case 'bencao':
+        return 'bencao-reading';
+      default:
+        return null;
+    }
+  }
+
   /// 打开经典命中：讲稿 → 原文阅读页；古籍 → 对应章节。
   Future<void> _openClassicHit(ClassicHit hit) async {
     if (hit.source == 'guji') {
@@ -189,6 +208,12 @@ class _SearchTabState extends State<SearchTab> {
     }
     final asset = hit.asset;
     if (asset == null || !mounted) return;
+    final moduleId = _classicContextualModuleId(hit.source);
+    final anchorId = moduleId == null
+        ? null
+        : moduleId == 'shanghan' && asset == 'assets/shanghan/clause_001.md'
+            ? 'shanghan:clause:002'
+            : '$moduleId:passage:$asset';
     await Navigator.push(
       context,
       FoldAwareMaterialPageRoute(sourceContext: context, 
@@ -196,6 +221,10 @@ class _SearchTabState extends State<SearchTab> {
           title: hit.title,
           asset: asset,
           linkFormulas: true,
+          contextualAskModuleId: moduleId,
+          contextualAskAnchorId: anchorId,
+          contextualAskSourceId: moduleId == null ? null : asset,
+          contextualAskParagraphs: moduleId != null,
         ),
       ),
     );
