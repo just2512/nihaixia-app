@@ -1,7 +1,7 @@
 # OPPO Find N2 真机折叠屏验收方案
 
 > 状态：待真机执行（MISSING）。本文是执行方案，不是设备通过报告。Widget 测试、模拟器截图和 CI 通过均不能替代 Find N2 实机验收。
-> 本轮应用代码基线：`master @ 39da7c0522a47cd227a617167badcf116d0152b3`（PR #392 已合并），应用版本 `1.11.30+8039`。本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
+> 本轮应用代码基线：`master @ 26d924b894b3301a8f46b2db120407cc344e41af`（PR #392 与 PR #399 已合并；PR #399 收紧经典来源反查的精确匹配，不改变应用版本、数据库结构或 Android 签名配置），应用版本 `1.11.30+8039`。本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
 
 ## 1. 验收目标与边界
 
