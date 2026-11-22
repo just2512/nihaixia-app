@@ -1,7 +1,7 @@
 # Find N2 本地 AI 后端切换与端侧验收清单
 
 > 本文件是本地执行清单，不是测试结果或 PASS 报告。GPU/CPU 推理、多媒体、进程恢复、清除数据与 TRACE 必须由实体 OPPO Find N2 执行；云端 CI 和 APK 构建不能代替真机证据。
-> 本轮应用代码基线：`39da7c0522a47cd227a617167badcf116d0152b3`（PR #392 合并后），应用版本 `1.11.30+8039`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为该设备验收安装包。
+> 本轮应用代码基线：`d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`（PR #392 合并后），应用版本 `1.11.30+8039`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为该设备验收安装包。为本地 TRACE 开启 Debug 控件时，可使用本地专用的 Release 签名 Debug 构建（见第 2.1 节）；该构建只用于调试，不作为最终 Release 交付包。
 
 ## 0. 本轮实现目标
 
@@ -48,6 +48,16 @@
 - PASS：设置偏好持久化；切换运行中后端会安全重建；完成历史仍可用；实际 backend 明确；失败后可切换另一后端。
 - FAIL：UI 显示已切换但 Native 实际 backend 未改变；历史串线/丢失；未完成请求被自动重放；选择无法持久化或错误不可见。
 - UNKNOWN：无法读取 Native 实际 backend 或没有执行对应场景。
+
+### 2.1 本地 TRACE Debug 构建
+
+最新 master 的 `android/app/build.gradle.kts` 提供显式本地开关 `-PlocalDebugUsesReleaseSigning=true`。它只在本机使用现有 `android/key.properties` 和原 Release keystore，将 Debug 构建改为使用原 Release 签名，使 Debug-only TRACE 控件可见，同时保持包签名身份。默认 Debug 构建不变；CI 会明确拒绝该属性。
+
+```bash
+flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true
+```
+
+执行前确认本地原签名配置完整且 keystore 存在；不得新建密钥替代原密钥。安装前核对 APK 的 applicationId、versionCode 和签名证书 SHA-256。该 Debug APK 仅用于本地 TRACE 调试，不作为 Release 发布包；不得使用 CI Debug APK 代替，也不得卸载旧版或清除数据。正式交付仍须使用原签名 Release APK。
 
 ## 3. GPU 连续多轮（G-01）
 
