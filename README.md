@@ -413,7 +413,7 @@ lib/
 | 引擎 | 自研 DiagnosticEngine | 六经辨证状态机 + 双轨鉴别树 |
 | 方剂匹配 | 自研 FormulaMatcher | 基线字面匹配 + 口语/指针加权（非劣化） |
 | 命理 | ziwei_core (Dart) | 紫微斗数排盘（纯离线，MIT） |
-| 构建发布 | GitHub Actions | 推送 `v*` tag 自动编译并发布四个 APK 到 Release |
+| 正式包交付 | 本地签名 Release | 使用原签名密钥在本地构建、签名并验收；GitHub Actions 只运行 CI，不生成或发布正式 APK |
 
 ```mermaid
 flowchart LR
