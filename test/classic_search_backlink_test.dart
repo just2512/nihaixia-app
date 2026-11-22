@@ -109,6 +109,81 @@ void main() {
     expect(resolved.localBacklink, original.localBacklink);
   });
 
+  test('classic search sources map to one explicit reader contract', () {
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('shanghan'),
+      'shanghan',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('jingui'),
+      'jingui',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('neijing'),
+      'neijing-reading',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('zhenjiu'),
+      'zhenjiu-reading',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('bencao'),
+      'bencao-reading',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('guji'),
+      isNull,
+      reason: 'Ancient-book chapters require their independent source-line map.',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('unknown'),
+      isNull,
+    );
+
+    const shanghanClause = ClassicHit(
+      source: 'shanghan',
+      sourceLabel: '伤寒论讲稿',
+      title: '伤寒论条文2',
+      asset: 'assets/shanghan/clause_001.md',
+      snippet: '发热，汗出',
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForHit(shanghanClause),
+      'shanghan:clause:002',
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForHit(const ClassicHit(
+        source: 'guji',
+        sourceLabel: '古籍原文',
+        title: '古籍章节',
+        bookId: 'shanghan_lun',
+        chapterIndex: 1,
+        snippet: '原文',
+      )),
+      isNull,
+    );
+  });
+
+  test('reader module source IDs reverse-resolve to the exact indexed asset', () async {
+    final result = await ClassicSearchService.search('丹砂');
+    final original = result.hits.firstWhere(
+      (hit) =>
+          hit.source == 'bencao' &&
+          (hit.asset ?? '').startsWith('assets/bencao_lecture/'),
+    );
+    final moduleId =
+        ClassicSearchService.contextualModuleIdForSource(original.source);
+    expect(moduleId, 'bencao-reading');
+
+    final resolved = await ClassicSearchService.findBySourceId(
+      '$moduleId:${original.asset}',
+    );
+    expect(resolved, isNotNull);
+    expect(resolved!.source, 'bencao');
+    expect(resolved.sourceId, original.sourceId);
+    expect(resolved.asset, original.asset);
+  });
+
   test('entries without a stable local key do not use title as identity', () {
     const unbacked = ClassicHit(
       source: 'unknown',
