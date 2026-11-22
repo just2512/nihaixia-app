@@ -952,3 +952,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-maintained Find N2 launcher brand acceptance handoff and Android icon resource regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ test/ziwuliuzhu_contextual_method_field_entry_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Newly added Fork-owned ZiWuLiuZhu method-field contextual regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
