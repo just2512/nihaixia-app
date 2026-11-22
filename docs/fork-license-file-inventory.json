@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. The current master base for this slice is 3a6f68ca256407ecb012873ca32dac959095f367 and includes merged PRs #373, #374, #375, #383, #384, #385 and #386 (including Neijing and Bencao paragraph contextual entry). This PR adds paragraph-level contextual selection for the Shanghan and Jingui lecture libraries. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 6ed53bf15f9c8aa5f21403094258a8e47d6d47be includes merged PRs #386 and #388, including Neijing/Bencao and Shanghan/Jingui lecture paragraph contextual entry points. This slice adds paragraph-level contextual selection to the Zhenjiu lecture library. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 868,
-    "added": 712,
+    "changed": 869,
+    "added": 713,
     "modified": 156,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 150,
-      "FORK_COMMERCIAL": 353,
+      "FORK_COMMERCIAL": 354,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -6702,6 +6702,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/zhenjiu_lecture_paragraph_context_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增《人纪·针灸》讲稿段落情境入口回归测试；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {

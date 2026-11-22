@@ -907,3 +907,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Newly added Fork-owned acupoint contextual-entry resolver, prompt and widget regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ test/zhenjiu_lecture_paragraph_context_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Newly added Fork-owned Zhenjiu lecture contextual-entry regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
