@@ -4,6 +4,7 @@ import '../theme/app_tokens.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/guji_data.dart';
+import '../services/guji_source_anchor_resolver.dart';
 import 'markdown_doc_screen.dart';
 
 /// 古籍原文书库：书 → 章节目录（可搜索）→ 章节阅读。
@@ -291,7 +292,7 @@ class _GujiBookScreenState extends State<GujiBookScreen> {
 }
 
 /// 单章阅读页：正文以 Markdown 渲染，方剂 / 药材名仍可点击跳转。
-class GujiChapterScreen extends StatelessWidget {
+class GujiChapterScreen extends StatefulWidget {
   final GujiBook book;
   final GujiChapter chapter;
 
@@ -302,18 +303,71 @@ class GujiChapterScreen extends StatelessWidget {
   });
 
   @override
+  State<GujiChapterScreen> createState() => _GujiChapterScreenState();
+}
+
+class _GujiChapterScreenState extends State<GujiChapterScreen> {
+  late Future<List<int>?> _sourceLineMapFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadSourceLineMap();
+  }
+
+  @override
+  void didUpdateWidget(covariant GujiChapterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.book.id != widget.book.id ||
+        oldWidget.chapter.index != widget.chapter.index) {
+      _loadSourceLineMap();
+    }
+  }
+
+  void _loadSourceLineMap() {
+    _sourceLineMapFuture = GujiSourceAnchorResolver.loadSourceLineMap(
+      bundle: DefaultAssetBundle.of(context),
+      book: widget.book,
+      chapter: widget.chapter,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 原文按行分段，Markdown 需要空行隔开段落
-    final content = chapter.body
+    // Keep the existing visual paragraph separation while retaining a map
+    // from each rendered text line to its original TXT source line.
+    final contentLines = widget.chapter.body
         .split('\n')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .join('\n\n');
-    return MarkdownDocScreen(
-      title: chapter.title,
-      content: content,
-      linkFormulas: true,
-      footer: '原文出自《${book.title}》（公版古籍），仅供学习参考，非医疗建议。',
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList(growable: false);
+    final content = contentLines.join('\n\n');
+
+    return FutureBuilder<List<int>?>(
+      future: _sourceLineMapFuture,
+      builder: (context, snapshot) {
+        final sourceLineMap =
+            snapshot.connectionState == ConnectionState.done
+                ? snapshot.data
+                : null;
+        final sourceMappingAvailable = sourceLineMap != null;
+        return MarkdownDocScreen(
+          title: widget.chapter.title,
+          content: content,
+          linkFormulas: true,
+          footer:
+              '原文出自《${widget.book.title}》（公版古籍），仅供学习参考，非医疗建议。',
+          contextualAskModuleId:
+              sourceMappingAvailable ? 'guji-reading' : null,
+          contextualAskAnchorId: sourceMappingAvailable
+              ? 'guji-reading:${widget.book.id}:chapter:${widget.chapter.index}'
+              : null,
+          contextualAskSourceId:
+              sourceMappingAvailable ? widget.book.asset : null,
+          contextualAskParagraphs: sourceMappingAvailable,
+          contextualAskSourceLineMap: sourceLineMap,
+        );
+      },
     );
   }
 }
