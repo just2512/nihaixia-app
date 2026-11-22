@@ -4,7 +4,7 @@
 
 ## 0. 当前前置条件与实现基线
 
-云端代码复核基线：`master @ 26d924b894b3301a8f46b2db120407cc344e41af`（2026-11-22，PR #392 与 PR #399 合并后；应用版本 `1.11.30+8039`）。PR #399 仅收紧经典来源 ID 反查尾段校验，不改变 TRACE 字段、事件阶段或 Native 推理实现。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。本基线的 PR-head CI 已通过；合并后 master 的独立 CI 状态以执行台账 §65 的准确 run/SHA 记录为准。本文件所列 Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测。
+云端代码复核基线：`master @ 26d924b894b3301a8f46b2db120407cc344e41af`（2026-11-22，PR #392 与 PR #399 合并后；应用版本 `1.11.30+8039`）。PR #399 仅收紧经典来源 ID 反查尾段校验，不改变 TRACE 字段、事件阶段或 Native 推理实现。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。本代码基线的 master post-merge CI 状态以执行台账 §67 的 run/SHA 记录为准。本文件所列 Find N2 端到端 TRACE 仍须在实体设备实测；普通多轮/升级验收使用本地原签名 Release APK，Debug-only TRACE 使用同一原 Release signer 签名的本地 Debug APK，见 `docs/local-android-release-checklist.md §6`。CI Debug APK 仅用于 ABI/构建证据，不得用于原位升级或 TRACE 数据保留验证。
 
 当前已有实现：
 
@@ -22,7 +22,7 @@
 - 尚无 OPPO Find N2 本地真实设备验收记录。GPU/CPU 多轮、图片/语音、Activity/进程恢复、数据清除后强停/重启仍需在设备执行；CI/模拟器不能替代。
 - E 的应用内清除代码与自动化测试已落地，但混合 `nihaisha.db` 的系统备份/设备迁移边界仍未决；旧共享图片归属 UNKNOWN，不能扩大删除范围。清除本地设备数据不代表远端备份或用户导出副本被删除。
 
-因此现在可以在 Debug 构建中显式开启并采集本地 TRACE，但不得将本地开关、CI 或静态代码证据表述为 Find N2 验收完成或 F/A/E 整体 PASS。
+因此现在可以在 Debug 构建中显式开启并采集本地 TRACE。Find N2 必须使用 `localDebugUsesReleaseSigning=true` 在本地构建原 Release signer 签名的 Debug APK（密钥留在本地），核对签名后 `adb install -r` 原位切换；采集后再安装同一 signer 的正常 Release。若本地签名密钥不可用，TRACE 标记 BLOCKED/MISSING，不得改用 CI Debug APK、卸载 App 或清除数据。不得将本地开关、CI 或静态代码证据表述为 Find N2 验收完成或 F/A/E 整体 PASS。
 
 ## 1. 设备 / 构建信息
 
@@ -37,7 +37,7 @@
 | 模型文件版本 / SHA-256 | 本地核验值，不上传模型文件 |
 | 实际 backend | 每次会话记录 Native 返回的 GPU 或 CPU；禁止按设置推断 |
 | 屏幕姿态 | 外屏 / 内屏展开 / 半折叠（仅在影响场景时记录） |
-| TRACE 开关 | 仅 Debug 构建设置页显式启用；Release/Profile 不显示；只在当前进程有效，重启后默认关闭 |
+| TRACE 开关 | 仅 Debug 构建设置页显式启用；Release/Profile 不显示；只在当前进程有效，重启后默认关闭；真机上通过本地原 Release signer 签名的 Debug APK 原位切换，不使用 CI Debug signer |
 | 测试数据 | 合成数据，不使用真实健康信息 |
 
 ## 2. TRACE 事件完整性
