@@ -450,6 +450,11 @@ class _MingGuaCalculatorScreenState extends State<MingGuaCalculatorScreen> {
                               title: '四柱命卦·${hex.name}',
                               asset: asset,
                               footer: '倪师《天纪·四柱命卦》讲义 · 传统文化参考',
+                              contextualAskModuleId: 'minggua-reading',
+                              contextualAskAnchorId:
+                                  'minggua-reading:passage:$asset',
+                              contextualAskSourceId: asset,
+                              contextualAskParagraphs: true,
                             ),
                           ),
                         );

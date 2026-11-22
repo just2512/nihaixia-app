@@ -67,6 +67,11 @@ class MingGuaLibraryScreen extends StatelessWidget {
               title: e.seq == 0 ? '八字的排列方法' : '四柱命卦·${e.title}',
               asset: e.asset,
               footer: '倪师《天纪·四柱命卦》讲义 · 传统文化参考',
+              contextualAskModuleId: 'minggua-reading',
+              contextualAskAnchorId:
+                  'minggua-reading:passage:${e.asset}',
+              contextualAskSourceId: e.asset,
+              contextualAskParagraphs: true,
             ),
           ),
         ),

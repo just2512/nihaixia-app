@@ -2,12 +2,14 @@ import 'dart:ui' show DisplayFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/bencao_lecture_index.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/herb_detail_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
@@ -148,6 +150,66 @@ void main() {
       expect(widget.initialPrompt, contains('不得补造剂量'));
       expect(tester.takeException(), isNull);
 
+    },
+  );
+
+  testWidgets(
+    'herb reverse lecture link preserves Bencao source and enables contextual paragraphs',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      late final BenCaoLectureIndex index;
+      await tester.runAsync(() async {
+        index = await BenCaoLectureIndex.load();
+      });
+      final herb = HerbRepository.getAll().firstWhere(
+        (item) => index.hitsFor(item.name).isNotEmpty,
+      );
+      final hits = index.hitsFor(herb.name);
+      expect(hits, isNotEmpty);
+      final hit = hits.first;
+      final sourceAsset = BenCaoLectureIndex.assetOf(hit.seq);
+      final lectureName = BenCaoLectureIndex.nameOf(hit.seq);
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          ContextualAiConversationStoreScope(
+            conversationStore: InMemoryAssistantConversationStore(),
+            child: MaterialApp(
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: AppColors.colorSchemeFor(Brightness.light),
+                extensions: [AppColors.light],
+              ),
+              home: HerbDetailScreen(herb: herb),
+            ),
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 350));
+
+      final lectureEntry = find.text('讲义讲解');
+      expect(lectureEntry, findsOneWidget);
+      await tester.ensureVisible(lectureEntry);
+      await tester.tap(lectureEntry);
+      await tester.pumpAndSettle();
+
+      final lecture = find.text(lectureName);
+      expect(lecture, findsOneWidget);
+      await tester.tap(lecture);
+      await tester.pumpAndSettle();
+
+      final reader = tester.widget<MarkdownDocScreen>(
+        find.byType(MarkdownDocScreen),
+      );
+      expect(reader.asset, sourceAsset);
+      expect(reader.contextualAskModuleId, 'bencao-reading');
+      expect(reader.contextualAskAnchorId,
+          'bencao-reading:passage:$sourceAsset');
+      expect(reader.contextualAskSourceId, sourceAsset);
+      expect(reader.contextualAskParagraphs, isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 }

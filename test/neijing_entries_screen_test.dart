@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/neijing_entries.dart';
 import 'package:nihaisha_app/screens/neijing_entries_screen.dart';
+import 'package:nihaisha_app/screens/neijing_search_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 
 /// 《黄帝内经》结构化条目检索页：过滤纯函数 + 页面交互冒烟（浅色 / 深色）。
 void main() {
@@ -388,4 +390,38 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  testWidgets('内经全文搜索结果进入后绑定内经讲稿来源与段落锚点',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: NeijingSearchScreen()),
+    );
+    await tester.pump();
+
+    final search = find.byType(TextField);
+    await tester.tap(search);
+    await tester.enterText(search, '阴阳');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 2));
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final firstResult = find.byType(ListTile).first;
+    expect(firstResult, findsOneWidget);
+    await tester.tap(firstResult);
+    await tester.pumpAndSettle();
+
+    final reader = tester.widget<MarkdownDocScreen>(
+      find.byType(MarkdownDocScreen),
+    );
+    expect(reader.contextualAskModuleId, 'neijing-reading');
+    expect(reader.contextualAskSourceId, reader.asset);
+    expect(reader.contextualAskAnchorId,
+        'neijing-reading:passage:${reader.asset}');
+    expect(reader.contextualAskParagraphs, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
 }

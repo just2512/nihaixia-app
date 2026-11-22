@@ -9,6 +9,7 @@ import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/acupoint_detail_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
@@ -248,6 +249,66 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       }
+    },
+  );
+
+  testWidgets(
+    'acupoint lecture backlink opens a source-addressable contextual reader',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      late final ZhenJiuLectureIndex index;
+      await tester.runAsync(() async {
+        index = await ZhenJiuLectureIndex.load();
+      });
+
+      final point = AcupointRepository.getAll().singleWhere(
+        (item) => item.name == '内关穴',
+      );
+      final hits = index.hitsFor(point.name);
+      expect(hits, isNotEmpty);
+      final hit = hits.first;
+      final sourceAsset = ZhenJiuLectureIndex.assetOf(hit.seq);
+      final lectureName = ZhenJiuLectureIndex.nameOf(hit.seq);
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          ContextualAiConversationStoreScope(
+            conversationStore: InMemoryAssistantConversationStore(),
+            child: MaterialApp(
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: AppColors.colorSchemeFor(Brightness.light),
+                extensions: [AppColors.light],
+              ),
+              home: AcupointDetailScreen(acupoint: point),
+            ),
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      });
+      await tester.pump(const Duration(milliseconds: 350));
+
+      final lectureEntry = find.text('讲义讲解');
+      await tester.ensureVisible(lectureEntry);
+      await tester.tap(lectureEntry);
+      await tester.pumpAndSettle();
+
+      final lecture = find.text(lectureName);
+      expect(lecture, findsOneWidget);
+      await tester.tap(lecture);
+      await tester.pumpAndSettle();
+
+      final reader = tester.widget<MarkdownDocScreen>(
+        find.byType(MarkdownDocScreen),
+      );
+      expect(reader.asset, sourceAsset);
+      expect(reader.contextualAskModuleId, 'zhenjiu-reading');
+      expect(reader.contextualAskAnchorId,
+          'zhenjiu-reading:passage:$sourceAsset');
+      expect(reader.contextualAskSourceId, sourceAsset);
+      expect(reader.contextualAskParagraphs, isTrue);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 }

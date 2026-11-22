@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/minggua_calculator_screen.dart';
 import 'package:nihaisha_app/screens/minggua_library_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
 /// 与真实 App 一致：MaterialApp 须注册 AppColors 主题扩展，
@@ -62,5 +63,56 @@ void main() {
     await tester.scrollUntilVisible(
         find.text('64 卦 · 先天/后天/值年卦批解'), 400);
     expect(find.text('64 卦 · 先天/后天/值年卦批解'), findsOneWidget);
+  });
+
+  testWidgets('四柱命卦讲义库的条目链接启用来源段落问 AI', (tester) async {
+    await tester.pumpWidget(_app(const MingGuaLibraryScreen()));
+    final entry = find.text('八字排列方法（四柱命卦算法）');
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
+    await tester.pumpAndSettle();
+
+    final reader = tester.widget<MarkdownDocScreen>(
+      find.byType(MarkdownDocScreen),
+    );
+    expect(reader.contextualAskModuleId, 'minggua-reading');
+    expect(reader.contextualAskAnchorId,
+        'minggua-reading:passage:assets/yijing_minggua/0.八字的排列方法.md');
+    expect(reader.contextualAskSourceId,
+        'assets/yijing_minggua/0.八字的排列方法.md');
+    expect(reader.contextualAskParagraphs, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('命卦计算结果的讲义快捷入口启用来源段落问 AI',
+      (tester) async {
+    await tester.pumpWidget(_app(const MingGuaCalculatorScreen()));
+    await tester.ensureVisible(find.text('排四柱命卦'));
+    await tester.tap(find.text('排四柱命卦'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.textContaining('山雷颐'), 300);
+    final result = find.textContaining('山雷颐').first;
+    final resultTap = find.ancestor(
+      of: result,
+      matching: find.byType(InkWell),
+    ).first;
+    await tester.tap(resultTap);
+    await tester.pumpAndSettle();
+
+    final lectureButton = find.text('倪师四柱命卦讲义');
+    expect(lectureButton, findsOneWidget);
+    await tester.tap(lectureButton);
+    await tester.pumpAndSettle();
+
+    final reader = tester.widget<MarkdownDocScreen>(
+      find.byType(MarkdownDocScreen),
+    );
+    expect(reader.contextualAskModuleId, 'minggua-reading');
+    expect(reader.contextualAskSourceId, startsWith('assets/yijing_minggua/'));
+    expect(reader.contextualAskAnchorId,
+        'minggua-reading:passage:${reader.asset}');
+    expect(reader.contextualAskParagraphs, isTrue);
+    expect(tester.takeException(), isNull);
   });
 }
