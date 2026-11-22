@@ -1,6 +1,6 @@
 # Find N2 本地 AI 后端切换与端侧验收清单
 
-> 本文件是本地执行清单，不是测试结果或 PASS 报告。GPU/CPU 推理、多媒体、进程恢复、清除数据与 TRACE 必须由实体 OPPO Find N2 执行；云端 CI 和 APK 构建不能代替真机证据。
+> 本文件是本地执行清单，不是测试结果或 PASS 报告。GPU/CPU 推理、多媒体、进程恢复、清除数据与 TRACE 必须由实体 OPPO Find N2 执行；云端 CI 和 APK 构建不能代替真机证据。总执行顺序和验收证据目录见[Find N2 / E4B 本地验收交接总清单](find-n2-e4b-local-handover.md)。
 > 本轮应用代码基线：`master @ 26d924b894b3301a8f46b2db120407cc344e41af`（PR #392 与 PR #399 已合并；PR #399 仅收紧经典来源 ID 反查和回归测试，不改变 E4B Native 生命周期及 Release 签名），应用版本 `1.11.30+8039`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为设备验收安装包。普通验收与保留数据升级使用本地原签名 Release APK；仅为 Debug-only TRACE 临时切换时，按 `docs/local-android-release-checklist.md §6` 构建由同一原 Release signer 签名的本地 Debug APK，并在签名核对后用 `adb install -r` 原位切换，完成后恢复正常 Release。不得卸载 App 或清除数据。
 
 ## 0. 本轮实现目标
