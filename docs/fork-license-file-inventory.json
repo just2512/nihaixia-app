@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current candidate includes contextual Ask AI cloud closeout, local-only Release signing hardening (PR #397), and the independent SemVer 2.0.0+8048 baseline. The version policy, release preparation note and version guard contract test are Fork-authored engineering resources; knowledge-base and third-party assets remain excluded from Fork commercial licensing and retain their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master baseline includes contextual Ask AI cloud closeout, local-only Release signing hardening and independent SemVer 2.0.0+8048. This change adds the approved Yanji Android launcher icon resources, Find N2 brand/device acceptance handoff and resource regression test; knowledge-base and third-party assets remain excluded under their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 881,
-    "added": 720,
+    "changed": 883,
+    "added": 722,
     "modified": 161,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
-      "FORK_COMMERCIAL": 361,
+      "FORK_COMMERCIAL": 363,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -446,6 +446,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "android/key.properties.template",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "沿用上游签名配置模板并增加原签名/禁止新建密钥的 Fork 维护说明；上游原始部分保留 Apache-2.0。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -3145,6 +3153,14 @@
       "rights_status": "SOURCE_LICENSE_REVIEW"
     },
     {
+      "path": "assets/data/changelog.json",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "应用内版本说明与 UI 元数据，不是知识库内容；上游原始部分保留 Apache-2.0，Fork 新增版本说明按双层许可记录。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "assets/guji/upstream_increment_index.json.gz",
       "status": "added",
       "classification": "KNOWLEDGE_BASE_EXCLUDED",
@@ -3617,6 +3633,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "docs/find-n2-real-device-brand-acceptance.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增品牌视觉与 Find N2 真机验收交接文档；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "docs/find-n2-test-results-ak-round4.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -3873,6 +3897,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "docs/local-android-release-checklist.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的本地 Android 原签名、覆盖升级与 Find N2 交付流程文档。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "docs/privacy.html",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
@@ -3958,6 +3990,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "docs/versioning-policy.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的产品独立版本管理规范，定义版本来源、构建号与本地发布边界。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5393,6 +5433,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "release_notes/v2.0.0.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的 2.0.0+8048 版本基线和未发布状态记录。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "release/download-page/index.html",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
@@ -5550,6 +5598,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/android_release_signing_gate_contract_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的 Android Release 原签名 fail-closed 与 CI 负向验收合同测试。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -6609,6 +6665,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "test/version_source_policy_contract_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的 pubspec/README/版本规范一致性及 Android 构建号边界自动化测试。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "test/window_metrics_diagnostics_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -6630,6 +6694,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/yanji_android_icon_resource_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增 Android Launcher 品牌资源一致性自动化测试；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -7014,62 +7086,6 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "android/key.properties.template",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "沿用上游签名配置模板并增加原签名/禁止新建密钥的 Fork 维护说明；上游原始部分保留 Apache-2.0。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "assets/data/changelog.json",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "应用内版本说明与 UI 元数据，不是知识库内容；上游原始部分保留 Apache-2.0，Fork 新增版本说明按双层许可记录。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "docs/local-android-release-checklist.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增的本地 Android 原签名、覆盖升级与 Find N2 交付流程文档。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "test/android_release_signing_gate_contract_test.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增的 Android Release 原签名 fail-closed 与 CI 负向验收合同测试。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "docs/versioning-policy.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增的产品独立版本管理规范，定义版本来源、构建号与本地发布边界。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "release_notes/v2.0.0.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增的 2.0.0+8048 版本基线和未发布状态记录。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "test/version_source_policy_contract_test.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增的 pubspec/README/版本规范一致性及 Android 构建号边界自动化测试。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     }
   ],
