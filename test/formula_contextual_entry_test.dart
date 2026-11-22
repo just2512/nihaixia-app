@@ -70,7 +70,7 @@ void main() {
   testWidgets(
     'formula detail exposes a contextual Ask AI entry without opening it automatically',
     (tester) async {
-      final formula = FormulaRepository.getByName('桂枝汤');
+      final formula = FormulaRepository.getByName('桂枝汤')!;
       expect(formula, isNotNull);
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(775, 900);
