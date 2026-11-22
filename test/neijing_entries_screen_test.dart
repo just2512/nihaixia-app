@@ -4,6 +4,7 @@ import 'package:nihaisha_app/data/neijing_entries.dart';
 import 'package:nihaisha_app/screens/neijing_entries_screen.dart';
 import 'package:nihaisha_app/screens/neijing_search_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 /// 《黄帝内经》结构化条目检索页：过滤纯函数 + 页面交互冒烟（浅色 / 深色）。
 void main() {
@@ -394,7 +395,14 @@ void main() {
   testWidgets('内经全文搜索结果进入后绑定内经讲稿来源与段落锚点',
       (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: NeijingSearchScreen()),
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          extensions: [AppColors.light],
+        ),
+        home: const NeijingSearchScreen(),
+      ),
     );
     await tester.pump();
 
