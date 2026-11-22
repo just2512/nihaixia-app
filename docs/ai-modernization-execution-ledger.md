@@ -13,6 +13,7 @@
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | 本轮最新应用代码核验基线 | `39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 已合并；情境入口、代码/测试与合并后 master CI 证据见第 65 节；后续 docs-only 提交不改变本应用代码基线 |
+| 本轮最新文档核验基线（本次同步前） | `b0743662f13d7156a146501a357530e976547e6c` | PR #395 已合并；Find N2 / E4B 交接文件和 §65 台账更新已进入 master；本行记录本次文档校准前的文档提交 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -20,7 +21,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表所列为本轮最新应用代码核验基线；历史任务范围与历次核验仍以各节记录为准。PR #392 的合并与主线独立 CI 见第 65 节。后续若仅合并文档更新，应将文档提交 SHA 与应用代码基线分开记录。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
+**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线仍为 PR #392 合并后的 `39da7c0522a47cd227a617167badcf116d0152b3`；PR #395 后的文档基线为 `b0743662f13d7156a146501a357530e976547e6c`。PR #395 及本轮后续文档校准不改变应用代码和 CI 对应的代码 SHA。历史任务范围与历次核验仍以各节记录为准；情境入口覆盖、主线独立 CI 见第 65、66 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -45,7 +46,7 @@
 
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
-| A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS`（剩余项为 LOCAL ONLY；云端代码/CI 已收口） | 与 B/C/E 并行 | 多轮审计报告和自动化回归已交付；Find N2 GPU/CPU 各至少 20 轮实测由本地执行 |
+| A | P0 本地模型多轮稳定性与生命周期 | `PARTIAL`（云端代码/自动化/CI 已收口；剩余 GPU/CPU 多轮、多媒体、Native 生命周期与进程恢复均为 `UNKNOWN / LOCAL ONLY`） | 与 B/C/E 并行 | 多轮审计报告和自动化回归已交付；Find N2 GPU/CPU 各至少 20 轮实测由本地执行 |
 | B | 问诊助手结果解释 | `IN_PROGRESS`（按审计 §14.2 / §16 区分 App 确定性规则结果与 AI 教学解释；完整问诊闭环仍须按对应代码、自动化和本地场景证据判定） | 与 A/C/D 并行 | 既有规则执行结果可追溯到知识库；AI 完整解释辨病辨证、病机、治法、方剂和针灸并支持追问 |
 | C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
@@ -53,7 +54,7 @@
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
 
-> A 的问题不能冻结 B/C/E。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
+> A 的云端工作已完成，当前剩余项仅为 Find N2 / E4B 本地实测，因此总状态从 `IN_PROGRESS` 校准为 `PARTIAL`，不得把设备未测记作云端阻塞。B/C/D/E/F/G 是全局 AI 改造的独立工作流，其状态不等同于本协议“情境问 AI”云端收尾状态；本轮不擅自把它们升级为 PASS，也不将其扩大为本次情境入口收尾的阻塞项。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
 
 ## 4. 分工作流任务与验收清单
 
@@ -3395,4 +3396,63 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - 合并后 master 的 Flutter tests、Android arm64 / Native / JUnit、Flutter Quality Gate 与 Fork license boundary 均 SUCCESS，且全部绑定应用代码 SHA `39da7c0522a47cd227a617167badcf116d0152b3`；条件性 Branch validation SKIPPED，不计 PASS。
 - 全仓库已接入情境入口未发现新的云端缺口；针灸入口当前只覆盖「穴位处方」单条记录。其它针灸 Tab 按规范保持 NOT_ENABLED，而非扩大为临床混合来源 Prompt。
 - 本轮云端代码、PR-head 自动验收和合并后 master 独立 CI 均 PASS；Find N2 / E4B 本地验收继续 UNKNOWN / LOCAL ONLY。
+
+---
+
+## 66. 2026-11-22 最终全仓库复核、规范索引同步与云端关闭
+
+### 66.1 当前主线与文档基线
+
+- 当前应用代码基线仍为 `39da7c0522a47cd227a617167badcf116d0152b3`，即 PR #392 的 squash merge SHA；应用版本仍为 `1.11.30+8039`。
+- PR #395 已合并至 master，merge SHA `b0743662f13d7156a146501a357530e976547e6c`。对 `39da7c0...b074366` 的比较为 ahead 1 / behind 0，仅变更四份文档：本台账、Find N2 真机清单、Find N2 本地 AI 清单、E4B TRACE 计划；没有改变应用源码、测试或应用版本。
+- PR #395 之后重新检查规范文件，确认 `docs/contextual-ask-ai-spec.md §12.4.1` 当前已指向 §65；本轮将索引升级为指向本节 §66，§65 保留 PR #392 针灸处方入口的详细合并和自动验收记录。该调整只更新证据导航，不改变 §12.4 的强制来源映射要求。
+- PR #395 已更新的四份文件继续作为最终本地交接依据；清单存在不等于设备已通过。
+
+### 66.2 全仓库情境入口覆盖复核
+
+复核基线为应用代码 SHA `39da7c0522a47cd227a617167badcf116d0152b3`。PR #395 之后没有应用代码变化；本次按已合入 PR 的实际文件范围、页面调用入口、Resolver / Prompt Builder 和相应回归测试重新核对 §65 矩阵，结论如下：
+
+| 覆盖类别 | 当前结论 | 复核要点 |
+|---|---|---|
+| 确定性工具整体结果 | PASS（云端代码/自动化） | 已接入结果按 App 实际成功执行生成不可变快照；Resolver 校验输入、结果、规则版本、source ID 与摘要；AI 只解释，不重算或覆盖结果 |
+| 字段 / 图表局部结果 | PASS（云端代码/自动化） | 八字、紫微、易经、梅花及五运六气图表使用用户当前显式选择映射到白名单 fieldPath；模型不能自行选字段 |
+| 方剂 / 本草 / 医案 / 内经知识条目 | PASS（云端代码/自动化） | 使用稳定本地条目身份、来源/版本和 Resolver；医案内部 seq 不冒充原始病例编号或页码 |
+| 经典讲稿与古籍段落 | PASS（云端代码/自动化） | 内经、本草、伤寒、金匮、针灸、易经/命卦讲义按显式 module/source 映射和完整 asset manifest 回链；古籍使用独立 book/chapter/原始行映射 |
+| 针灸「穴位处方」单条记录 | PASS（云端代码/自动化） | 仅首个处方 Tab 的单条记录入口；`(categoryId, entryId)` 复合身份、结构化快照摘要、资产版本和原始 source 字段均由 Resolver 校验 |
+| 针灸「透针透穴」「穴位讲解」「耳穴」 | NOT_ENABLED（有意保留） | 数据结构/来源口径不同；没有独立来源合同与安全 Prompt 前不开放，不视为遗漏或已通过 |
+| 导航列表、问诊历史、危急提示、已保存命盘列表 | NO_DUPLICATE_ENTRY | 这些是导航、历史或安全流程；进入具体知识条目/成功结果后使用唯一既有入口，不新增列表级重复入口 |
+
+- **入口去重：** 所有已接入情境入口复用 `AiContextRef → AiContextResolver → AiContextPromptBuilder → ContextualAiSheet` 和既有会话持久化；没有第二套聊天页面、会话表、模型执行链或工具路由。列表页与历史/安全流程不重复建立内容锚点。
+- **来源锚点：** 工具结果锚定成功执行快照及 `snapshotId / ruleVersion / sourceId`；知识条目锚定本地稳定 ID 和数据版本；经典阅读正向入口与助手回链共用显式白名单；asset-backed reader 只接受 manifest 完整路径；古籍只接受独立原始行映射；穴位处方使用分类与条目联合身份。来源缺失、歧义、过期、篡改或不匹配时保持 `MISSING / UNKNOWN / STALE` 并停止构建 Prompt / 跳转。
+- **PR 集成核对：** 情境阅读及来源回链相关 PR #383、#384、#385、#386、#388、#389、#390、#391、#392、#393 均为已合并；PR #387 为被后续独立修复 PR #388 取代的关闭分支，不作为单独合入功能或 CI 证据。PR #394、#395 为文档收尾，不改变应用代码。
+- 本轮没有发现一个已定义且应启用、却遗漏于当前主线的情境入口；未发现需要再添加同一来源的列表级重复入口；未发现来源锚点需要标题/关键词模糊兜底的情形。三个未启用针灸 Tab 是明确范围边界，不得为了覆盖数量而复制处方 Resolver。
+
+### 66.3 主线 CI 证据与状态清理
+
+所有应用 CI 证据绑定应用代码 SHA `39da7c0522a47cd227a617167badcf116d0152b3`，不把 docs-only SHA 冒充为重新运行过的应用代码：
+
+- Flutter regression：run `45013726358`，job `137181432283`，SUCCESS。
+- Android arm64 CI verification APK + unit tests：run `45013726358`，job `137182973973`，SUCCESS；包含 arm64 构建、合并 Manifest、ABI / SHA-256、Android Native / Gradle 单测及 JUnit XML 校验。
+- Flutter Quality Gate：run `45013726391`，job `137181432309`，SUCCESS。
+- Fork license inventory / boundary：run `45013726437`，job `137181432506`，SUCCESS。
+- Branch validation：job `137181433666` 为 workflow 条件性 SKIPPED，不计 PASS，也不影响以上必需门禁。
+- PR #392 最终 head 的独立验收见 §65.1；PR-head PASS 不替代以上 master post-merge 证据。§65 所列主线结果已通过本轮 GitHub job 详情再次确认。
+- 顶层工作流 A 的状态已由 `IN_PROGRESS` 校准为 `PARTIAL`：云端代码、自动化和 CI 已关闭，剩余只有本地 GPU/CPU 多轮、Native 生命周期、进程恢复和完整 TRACE。B/C/D/E/F/G 保持各自全局 AI 改造范围的原状态；不为关闭情境 AI 云端工作而误报为 PASS。
+
+### 66.4 Find N2 与 E4B 最终本地交接
+
+云端情境 AI 范围当前没有待做的代码/测试/文档/CI 切片。以下现场项目统一保留 `UNKNOWN / LOCAL ONLY`，由本地设备实测，不阻塞云端关闭：
+
+- `docs/find-n2-real-device-acceptance.md`：Find N2 外屏、内屏、半折叠、键盘/Insets、弹层滚动恢复、来源回链、针灸处方单条入口，以及沿用原签名证书的保留数据覆盖升级。
+- `docs/find-n2-local-ai-acceptance-checklist.md`：E4B GPU / CPU 实际 backend 分别至少 20 轮、多媒体、第二/第三轮响应、Activity/force-stop 恢复、Native 状态、AI 数据清理。
+- `docs/find-n2-ai-trace-acceptance-plan.md`：端到端 trace_id 贯穿安全、路由、上下文、模型、Native backend、结果、持久化和清理的证据。
+- `docs/local-ai-e4b.md`：模型导入、运行时配置及已知 Native 行为边界。
+
+真机/本地安装必须使用原签名 keystore 构建的 Release APK，并核对 applicationId、versionCode、签名证书和 APK SHA-256；不得使用 CI Debug APK 覆盖旧版，不得卸载旧版或清除数据来绕过签名/升级问题。设备执行前的所有结果维持 `MISSING / UNKNOWN`，不得记录为 PASS。
+
+### 66.5 最终关闭判断
+
+- 情境问 AI：当前已定义且应启用的云端入口、来源双向映射、自动化、文档索引和主线 CI：PASS。
+- Find N2 / E4B 真机与本地验收：UNKNOWN / LOCAL ONLY；这是明确后置交付，不是云端阻塞。
+- 全局 AI 改造台账 B/C/D/E/F/G 的剩余项按 §3 原范围继续独立管理；本节只关闭情境问 AI 这一交付范围，不把其他工作流状态混并或虚报完成。
 
