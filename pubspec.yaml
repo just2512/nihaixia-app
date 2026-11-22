@@ -1,7 +1,7 @@
 name: nihaisha_app
 description: "研纪 - 中医诊疗全过程辅助学习工具"
 publish_to: 'none'
-version: 1.11.30+8039
+version: 2.0.0+8048
 
 environment:
   sdk: ^3.13.0
