@@ -3266,6 +3266,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 资产反查 ClassicSearchService.findBySourceId 按稳定 source + 完整 asset key 匹配；未知 ID 返回 null，标题变更不影响 identity。古籍使用 bookId + chapterIndex 与逐行映射，打印版页码仍为 MISSING/PARTIAL，不虚构书目页码。
 - 已核验测试目录包括 classic_search_backlink_test.dart、classic_paragraph_contextual_entry_test.dart、guji_contextual_paragraph_entry_test.dart、neijing_entries_screen_test.dart、search_tab_classic_test.dart、minggua_screen_test.dart、yijing_detail_screen_test.dart、acupoint_contextual_entry_test.dart、formula_contextual_entry_test.dart、herb_contextual_entry_test.dart、medical_case_contextual_entry_test.dart 及既有工具/字段专项测试。
 - PR #391 合并后又发现易经/命卦 reader module ID 没有进入助手引用 chip 白名单，且没有通过讲义 manifest 做精确反向解析。已从新 master 建立独立修复分支 fix/classic-reader-citation-backlinks-20261122，实现与测试完成后必须重新跑该分支最新 HEAD CI；不得将 PR #391 的成功结果转移给该修复分支。
+- 上述缺口已由 PR #393（https://github.com/just2512/nihaixia-app/pull/393）修复：精确匹配 kYiJingLectures / kMingGuaEntries manifest asset；未知路径、标题冒充、段落尾缀均拒绝。最终候选 HEAD d2eb870bc5fa29227fb3a9e0b8e2ece7a8b54383 的 Flutter regression 1880 passed / 15 skipped，Fork license boundary SUCCESS，Android arm64 APK / Manifest / ABI / Native unit tests / JUnit XML SUCCESS（Flutter workflow run 45004729631，Android job 137155273102；APK 132,543,921 bytes，arm64-v8a only）。Branch validation 条件性 SKIPPED，不计 PASS。
 - 当前没有证据支持增加第二套会话协调器、数据库或搜索架构。已覆盖入口继续复用 MarkdownDocScreen → AiContextRef → PromptBuilder → ContextualAiSheet。
 
 ### 63.3 云端收尾状态与 Find N2 最终本地验收
