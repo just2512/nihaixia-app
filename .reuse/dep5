@@ -136,7 +136,6 @@ Files:
  test/minggua_screen_test.dart
  test/neijing_entries_screen_test.dart
  test/quality_score_bc.dart
- test/search_tab_classic_test.dart
  test/yijing_detail_screen_test.dart
  test/yunqi_engine_test.dart
  test/zhenjiu_lecture_test.dart
@@ -460,6 +459,7 @@ Files:
  test/sanshan_lingqian_tool_executor_test.dart
  test/saved_chart_tool_executor_test.dart
  test/saved_charts_editorial_layout_test.dart
+ test/search_tab_classic_test.dart
  test/services/tcm_interview_conversation_controller_test.dart
  test/settings_screen_editorial_test.dart
  test/shanghan_jingui_paragraph_context_test.dart
