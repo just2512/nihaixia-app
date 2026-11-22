@@ -182,12 +182,17 @@ $second
   );
 
   testWidgets(
-    'Neijing and Bencao lecture libraries pass paragraph-mode source identities',
+    'Neijing and Bencao lecture libraries pass real paragraph contexts',
     (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(extensions: [AppColors.light]),
-        home: const NeijingLibraryScreen(),
-      ));
+      await tester.pumpWidget(
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            theme: ThemeData(extensions: [AppColors.light]),
+            home: const NeijingLibraryScreen(),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       final neijingEntry = find.text('上古天真论');
@@ -213,12 +218,58 @@ $second
       expect(neijingReader.contextualAskParagraphs, isTrue);
       expect(neijingReader.contextualAskSourceId,
           'assets/neijing/01_上古天真论.md');
+      expect(
+        find.byType(SelectionArea),
+        findsWidgets,
+        reason: 'Real Neijing asset and injected links must retain paragraph mapping',
+      );
+      final neijingParagraph =
+          find.textContaining('今天开始第一堂课这个', findRichText: true);
+      expect(neijingParagraph, findsOneWidget);
+      await tester.longPress(neijingParagraph);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('问 AI'), findsOneWidget);
+      await tester.tap(find.text('问 AI'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-      await tester.pumpWidget(MaterialApp(
-        key: const ValueKey('bencao-library-test-app'),
-        theme: ThemeData(extensions: [AppColors.light]),
-        home: const BenCaoLibraryScreen(),
-      ));
+      final neijingAssistantFinder =
+          find.byType(LocalAiInterviewScreen);
+      expect(neijingAssistantFinder, findsOneWidget);
+      final neijingAssistant =
+          tester.widget<LocalAiInterviewScreen>(neijingAssistantFinder);
+      expect(neijingAssistant.initialMode, AssistantMode.learning);
+      expect(neijingAssistant.contextualExplanationOnly, isTrue);
+      expect(
+        neijingAssistant.contextRef['sourceId'],
+        'neijing-reading:assets/neijing/01_上古天真论.md',
+      );
+      expect(
+        neijingAssistant.contextRef['anchorId'],
+        startsWith(
+          'neijing-reading:passage:assets/neijing/01_上古天真论.md:paragraph:',
+        ),
+      );
+      expect(neijingAssistant.contextRef['selectedText'], isNotEmpty);
+      expect(neijingAssistant.initialPrompt, contains('今天开始第一堂课这个'));
+      Navigator.of(
+        tester.element(neijingAssistantFinder),
+        rootNavigator: true,
+      ).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.pumpWidget(
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            key: const ValueKey('bencao-library-test-app'),
+            theme: ThemeData(extensions: [AppColors.light]),
+            home: const BenCaoLibraryScreen(),
+          ),
+        ),
+      );
       // The library contains an indeterminate loading indicator, so use
       // bounded frame pumping instead of waiting for global settlement.
       await tester.pump();
@@ -246,11 +297,45 @@ $second
       expect(bencaoReader.contextualAskParagraphs, isTrue);
       expect(bencaoReader.contextualAskSourceId,
           'assets/bencao_lecture/023_上经人参.md');
+      expect(
+        find.byType(SelectionArea),
+        findsWidgets,
+        reason: 'Real Bencao asset and injected links must retain paragraph mapping',
+      );
+      final bencaoParagraph =
+          find.textContaining('人参顾名思义，因为他这个根长的象人的形状', findRichText: true);
+      expect(bencaoParagraph, findsOneWidget);
+      await tester.longPress(bencaoParagraph);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('问 AI'), findsOneWidget);
+      await tester.tap(find.text('问 AI'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final bencaoAssistantFinder =
+          find.byType(LocalAiInterviewScreen);
+      expect(bencaoAssistantFinder, findsOneWidget);
+      final bencaoAssistant =
+          tester.widget<LocalAiInterviewScreen>(bencaoAssistantFinder);
+      expect(bencaoAssistant.initialMode, AssistantMode.learning);
+      expect(bencaoAssistant.contextualExplanationOnly, isTrue);
+      expect(
+        bencaoAssistant.contextRef['sourceId'],
+        'bencao-reading:assets/bencao_lecture/023_上经人参.md',
+      );
+      expect(
+        bencaoAssistant.contextRef['anchorId'],
+        startsWith(
+          'bencao-reading:passage:assets/bencao_lecture/023_上经人参.md:paragraph:',
+        ),
+      );
+      expect(bencaoAssistant.contextRef['selectedText'], isNotEmpty);
+      expect(bencaoAssistant.initialPrompt, contains('人参顾名思义'));
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets(
     'paragraph mode fails closed without complete source provenance',
     (tester) async {
       await tester.pumpWidget(MaterialApp(
