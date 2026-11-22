@@ -97,6 +97,8 @@ void main() {
       of: result,
       matching: find.byType(InkWell),
     ).first;
+    await tester.ensureVisible(resultTap);
+    await tester.pumpAndSettle();
     await tester.tap(resultTap);
     await tester.pumpAndSettle();
 
