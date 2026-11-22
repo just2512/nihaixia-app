@@ -232,6 +232,11 @@ void main() {
     final moduleId =
         ClassicSearchService.contextualModuleIdForSource(original.source);
     expect(moduleId, 'bencao-reading');
+    expect(
+      ClassicSearchService.contextualAnchorIdForHit(original),
+      'bencao-reading:passage:${original.asset}',
+      reason: 'A real indexed Bencao asset must resolve to its canonical reader anchor.',
+    );
 
     final resolved = await ClassicSearchService.findBySourceId(
       '$moduleId:${original.asset}',
