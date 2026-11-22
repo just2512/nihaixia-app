@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../data/guji_data.dart';
+import '../data/yijing_lecture_data.dart';
+import '../data/minggua_data.dart';
 import 'gzip_codec_stub.dart' if (dart.library.io) 'gzip_codec_io.dart';
 
 /// 经典（讲稿 + 古籍原文）全文检索。
@@ -82,6 +84,22 @@ class ClassicHit {
 
   /// No current index record proves a printed edition/page locator.
   bool get hasVerifiedBibliographicLocator => false;
+}
+
+
+/// Exact asset-backed reader destination for assistant citations. The source ID
+/// is a reader module ID plus an exact asset path; display titles are never
+/// used as lookup keys.
+class ClassicReaderAsset {
+  final String moduleId;
+  final String title;
+  final String asset;
+
+  const ClassicReaderAsset({
+    required this.moduleId,
+    required this.title,
+    required this.asset,
+  });
 }
 
 class ClassicSearchResult {
@@ -201,6 +219,34 @@ class ClassicSearchService {
       moduleId: moduleId,
       asset: asset,
     );
+  }
+
+  /// Resolve Yijing and Minggua reader citations through their source
+  /// manifests. These module IDs intentionally differ from classic index
+  /// source keys and are not part of the compressed Guji search index.
+  /// Exact asset membership is required; titles and fuzzy matching are banned.
+  static ClassicReaderAsset? findReaderAssetBySourceId(String sourceId) {
+    for (final lecture in kYiJingLectures) {
+      final expected = 'yijing-reading:${lecture.asset}';
+      if (sourceId == expected) {
+        return ClassicReaderAsset(
+          moduleId: 'yijing-reading',
+          title: '倪师《天纪·人间道》·${lecture.name}',
+          asset: lecture.asset,
+        );
+      }
+    }
+    for (final entry in kMingGuaEntries) {
+      final expected = 'minggua-reading:${entry.asset}';
+      if (sourceId == expected) {
+        return ClassicReaderAsset(
+          moduleId: 'minggua-reading',
+          title: '倪师《天纪·四柱命卦》·${entry.title}',
+          asset: entry.asset,
+        );
+      }
+    }
+    return null;
   }
 
   static String? _indexedSourceForReaderModule(String moduleId) {
