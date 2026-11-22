@@ -3553,7 +3553,7 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 
 ### 68.2 情境 AI 收尾范围内的 PR / 分支状态
 
-- 当前没有仍处于 OPEN 状态的情境 Ask AI 专项 PR。
+- PR #401 收尾时的分支快照没有 OPEN 情境 Ask AI PR；2026-11-22 全仓历史分支复核随后重新发现两条当时未进入最终主线的独立功能分支，已分别建立 PR #403、#404。两者与 master 存在历史分叉，当前不得计为已合并。
 - 已合入的近期关键分支：
   - PR #392：针灸穴位处方单条情境入口，MERGED。
   - PR #393：易经/命卦来源回链修复，MERGED。
@@ -3563,21 +3563,21 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
   - PR #401：最终台账、规范索引和四份设备/E4B 交接文档更新，MERGED。
   - PR #383/#384/#385/#386/#388/#389/#390/#391：六经/经典阅读/医案/针灸知识来源及深链切片，均 MERGED。
 - 历史迭代 PR #380/#381/#382/#387 已 CLOSED、未合并；其中 #387 明确由后续 PR #388 的当前主线重建版本取代。它们不是待审查的 OPEN PR，也不应把旧分支整支合并回主线；当前应交付的对应功能已通过后续 PR 集成。
-- 结论：本轮情境 Ask AI 交付涉及的有效实现、修复、文档与支持性 Android 构建变更均已进入 master；没有遗漏的活动情境 AI PR。
+- 修正后的结论：PR #401 关闭的是当时已识别的情境 AI 范围；全仓历史复核发现 #403（跨模块经典/讲稿段落入口）和 #404（子午流注四种方法字段级入口）两项需要单独完成当前主线重整与验收的功能。它们尚未集成，不能把所有历史情境 AI 分支都视为已关闭。
 
 ### 68.3 “所有分支是否合并”的准确结论
 
 **不是所有 Git 分支都已合并或删除。** 需要区分代码集成状态和远端分支引用：
 
 - 仓库设置 `delete_branch_on_merge=false`，所以 PR 合并后 GitHub 默认保留 head branch；分支仍出现在列表中不代表代码没有合入。
-- 本次分页核对远端 branches：前四页各 100 个引用，第五页 60 个，第六页为空，共 460 个远端分支引用。它们包含历史试验、过期重建、已合并 PR head、其他产品/版本/设计工作分支，不能等同于 460 个待合并任务。
-- 当前 OPEN PR 共 6 个，均不属于本轮情境 Ask AI 收尾：
-  - #328：AI 商业许可边界文档，DRAFT / OPEN。它属于独立 AI 商业许可议题；若后续“全局 AI 改造”范围包含商业授权条款，仍需单独收尾，但不阻断本轮情境 AI 代码交付。
-  - #398、#218：产品 2.0.0 版本线工作。
-  - #213：Android 1.11.30 本地 Release 准备。
-  - #207：研纪品牌身份工作。
-  - #366：GitHub About 元数据记录。
-- 不因本轮情境 AI 关闭而自动合并上述 PR，也不批量删除历史分支。分支删除属于不可逆的远端引用清理，应先逐条确认是否有未提交差异、是否被其他 PR/工作流引用，再单独执行。
+- PR #406 创建及历史分支状态更新后的最新分页核对：远端共 462 个 branch refs（含 master），其中 461 个非 master。按分支名映射 PR head 后：277 个分支引用关联已合并 PR，122 个关联 CLOSED/未合并 PR，4 个关联 OPEN PR，58 个没有精确同名 PR 关联。PR 记录本身为 278 MERGED、124 CLOSED/未合并、4 OPEN。分支引用与 PR 不严格一一对应，不能混用两组计数。它们包含历史试验、过期重建、已合并 PR head、其他产品/版本/设计工作分支，不能等同于 461 个待合并任务。
+- 当前 OPEN PR 共 4 个（2026-11-22 创建 PR #407 时的历史快照，非本次修订时的实时数量）：
+  - #406：当时主线之上的研纪 Launcher 图标与 Find N2 真机验收交接，PR HEAD `439677ff25ead8beea8d3251437f20a1cd995226`；创建 PR #407 时 Flutter regression 仍 IN_PROGRESS。其后该 HEAD 的 Flutter、Android arm64 与 Fork license 门禁均 SUCCESS，并已合并，详见 §69.5。
+  - #403：跨针灸/本草/方剂经典/命卦/内经/易经/统一搜索的段落级情境 Ask AI 深链入口；与当前 master 冲突（dirty），需选择性移植并重跑当前许可/回归门禁。
+  - #404：子午流注纳子、纳甲、灵龟八法、飞腾八法的方法字段级情境解释；DRAFT，旧分支落后 master 178 个提交且存在冲突，需当前主线重整后审查。
+  - #328：AI 商业许可边界政策/协议草案，DRAFT。需完成权属清单、贡献者再许可证据、法律文本和商业发布条件审查，不能因为可合并就直接启用收费条款。
+- 已明确标记为 SUPERSEDED 并 CLOSED（分支引用保留）：#405（旧图标分支由 #406 选择性移植替代）、#213（旧 1.11.30 Release 方案由本地原签名 Release 规范替代）、#218（旧 2.0.0+8047 被当前 2.0.0+8048 取代）、#207（旧品牌草案被当前 `docs/brand-identity.md` 与 #366 品牌元数据记录取代）。
+- 不因本轮情境 AI 关闭而自动合并上述 PR，也不批量删除历史分支。分支删除属于远端引用清理，应先逐条确认是否有未提交差异、是否被其他 PR/工作流引用，再单独执行。
 
 ### 68.4 Find N2 / E4B 本地验收交接是否完成
 
@@ -3596,7 +3596,83 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 
 - 情境 Ask AI 云端代码、专项回归、来源回链、入口覆盖审计、规范索引、执行台账、Find N2/E4B 本地交接文档：PASS。
 - PR #401 与本轮情境 AI 有效代码/文档 PR：均已合并；历史 superseded PR 已关闭，不再进入集成队列。
-- PR #401 合并后的 master 必需 CI：全部 SUCCESS；条件性 Branch validation SKIPPED 不计 PASS。
+- PR #401 合并后的 master 必需 CI：全部 SUCCESS；PR #398 后当前 master `f89b0a4b5f91dfdb879a6678b459566a5efb9b29` 的 Flutter regression、Analyze and test、Fork license inventory/boundary、Android arm64 verification 亦全部 SUCCESS；条件性 Branch validation SKIPPED 不计 PASS。
 - 情境 Ask AI 云端工作：**CLOSED / PASS**。
 - Find N2 / E4B：**LOCAL ONLY / UNKNOWN**，后续按本节 68.4 四份清单执行；不阻塞云端关闭。
-- 其他全局 AI A-G 未完成项、AI 商业许可 PR #328，以及版本/品牌/Release 等独立工作继续按各自范围管理，不混入本轮情境 AI 完成声明。
+- PR #403/#404 为历史复核发现的额外情境入口差异，必须以当前 master 为基线单独审查；PR #328 商业许可草案及 Find N2 真机/E4B 本地验收继续按各自门槛管理。
+
+
+---
+
+## 69. 2026-11-22 全仓历史分支复核与集成处置
+
+### 69.1 当前分支与 PR 统计
+
+统计基线：`master @ f89b0a4b5f91dfdb879a6678b459566a5efb9b29`；统计在创建当前图标集成 PR #406 及关闭过期 PR #405/#213/#218/#207 后执行。以下计数是创建 PR #407 时的历史快照；#406 后续合并后，OPEN PR 数量已变化，当前处置见 §69.3 与 §69.5。
+
+| 项目 | 数量 | 解释 |
+|---|---:|---|
+| 远端 branch refs（含 master） | 462 | GitHub 分支引用总数 |
+| 非 master 分支引用 | 461 | 不是 461 个待合并功能 |
+| 对应 MERGED PR 的分支引用 | 277 | 内容已通过 PR 集成；默认保留 branch ref |
+| 对应 CLOSED / 未合并 PR 的分支引用 | 122 | 可能是替代实现、旧试验或未纳入当前产品的工作 |
+| 对应 OPEN PR 的分支引用 | 4 | 当前审查/阻塞队列 |
+| 无精确同名 PR head 的分支引用 | 58 | 需要看提交差异与文件内容，不能仅凭分支名判定是否应合并 |
+| PR 记录总量 | 406 | 与 branch ref 不是一一对应 |
+| PR 状态 | 278 MERGED / 124 CLOSED 未合并 / 4 OPEN | GitHub PR 状态统计 |
+
+仓库设置 `delete_branch_on_merge=false`。因此 PR 合并后保留 head branch 是仓库当前配置的正常行为，不代表变更仍未集成。本轮没有批量删除远端分支，避免删除仍被工作流、PR、审计或用户本地工作依赖的引用。
+
+### 69.2 已执行的历史分支处置
+
+本次新增并实际合并：
+- PR #402：PR #401 合并后 master CI 终态、历史分支清点与交接状态记录。
+- PR #366：GitHub About 元数据及品牌身份自动化记录。
+- PR #398：独立产品版本治理，当前版本推进到 `2.0.0+8048`。
+
+本次选择性重建而非整支合并：
+- 历史图标分支 `feat/yanji-findn2-icon-acceptance-20261121` 落后旧主线 267 个提交，原 Fork license job 因缺少当前许可证检查脚本而失败，且文档仍写旧版本 `1.11.30+8039`、设备型号错误。其有效图标资源与真机交接内容已移植至当前 master 基线的 PR #406；原 PR #405 已 CLOSED / SUPERSEDED，不合并旧分支。
+- PR #406 更新 Android foreground、API 24–25 vector fallback、SVG、Find N2 品牌验收、自动化资源测试和 883 项当前差异许可证清单。当前 HEAD `439677ff25ead8beea8d3251437f20a1cd995226` 的 Flutter 静态分析与全量回归、Android arm64 CI verification APK / unit tests、Fork license inventory 均为 `SUCCESS`；Branch validation 条件性 `SKIPPED`，未计为 `PASS`。随后 PR #406 以 squash 方式合并到 master，merge commit `dbcbec6a07a98c129e1a1b64212feab01a0c0c15`。Find N2 真机 Launcher 显示、覆盖安装与数据保留仍为 `LOCAL ONLY`，没有用云端 CI 代替设备验收。
+- 历史分支 `sync/upstream-bencao-20261116` 的 336 个 `assets/bencao_lecture` 文件与当前 master 的文件名及 Git blob SHA 全部一致，重复合并无内容收益。
+- 部分八字、关煞、小六壬、易经结果入口的旧分支对应能力已在当前 master 实现；不得仅凭 branch ref 存在而重复合并。
+- 旧问诊“仅模拟学习”边界与当前 `docs/ai-capability-audit.md` 的有效规范冲突，不能回灌已废止限制。
+- PR #207/#213/#218/#405 已关闭并标记为 SUPERSEDED；原始 branch refs 保留。
+
+### 69.3 当前 OPEN PR 与集成阻塞（2026-11-22 复核）
+
+- #408：本台账与本次历史分支处置文档的当前主线版本；由 #407 的两份文档选择性重建，基于 master `dbcbec6a07a98c129e1a1b64212feab01a0c0c15`。Fork license 与 Flutter 全量回归已通过；Android arm64 CI verification job仍在执行。由于本节更新会生成新的 PR head，必须以更新后 head 的新 CI 结果为最终门禁。
+- #409：从 #404 选择性移植的子午流注四种方法字段级情境解释。只移植当前主线缺失的功能代码、专属测试及当前基线下的许可证映射，不带入旧分支 179 个落后提交。初始 CI 中 Fork license boundary 已 `SUCCESS`，Flutter 全量 regression 仍在执行；Android arm64 job需确认是否触发及最终状态。不得在所有必需门禁完成前合并。
+- #404：旧字段级功能候选，保持 `DRAFT`，作为 #409 的历史来源；不再作为独立集成目标。待 #409 完成验收并合并后，将 #404 标记为 `SUPERSEDED`，保留原分支。
+- #328：AI 商业许可草案仍为 `DRAFT`；权属证据、贡献者再许可、协议主体及销售/消费者条款未完成，不能按普通功能 PR 直接视作可发布许可，不合并。
+
+#403 已于 2026-11-22 关闭并标记为 `SUPERSEDED`：对应 18 个文件的段落级 Ask AI 入口与回归测试已逐项在当前 master 找到；当前主线使用规范锚点构造，不回灌旧分支已过时的字面锚点实现。
+
+以上 PR 不可通过降低 CI 门槛、跳过许可证检查或整支 merge 解决。
+
+### 69.4 全仓分支处置结论
+
+**全仓历史分支未全部合并，也没有全部删除。** 已经进入主线的分支无需重复 merge；已被替代的分支保持 CLOSED/SUPERSEDED；存在新代码的历史分支必须当前 master 重整、通过许可检查和全量回归后才可合并。58 条无精确 PR 关联的 refs 与 122 条 CLOSED/未合并 PR 相关 refs 不应被自动视为“可直接合并”。
+
+后续动作必须遵循：逐支 compare 当前 master、辨别唯一提交与文件级内容、确认是否被后续实现覆盖、重整冲突、更新许可证映射、通过当前主线所有必需 CI，再合并。未完成这些门槛的分支保留为 OPEN/DRAFT、CLOSED/SUPERSEDED 或待人工确认，不伪报为 MERGED。
+
+本轮不执行批量删除分支。删除远端 refs 应作为独立清理任务，在逐条确认无 PR/工作流/用户工作依赖后再执行。
+
+### 69.5 PR #406 合并验收记录
+
+- PR：[#406](https://github.com/just2512/nihaixia-app/pull/406)，当前 HEAD：`439677ff25ead8beea8d3251437f20a1cd995226`。
+- 合并方式：squash；master merge commit：`dbcbec6a07a98c129e1a1b64212feab01a0c0c15`。
+- Flutter 回归工作流：`SUCCESS`，包含 Dart / Flutter 静态分析、全量 regression suite。
+- Android arm64 CI：`SUCCESS`，包含 ABI verification Debug APK 构建、Manifest/ABI 检查及 Android unit tests。
+- Fork license inventory / boundary：`SUCCESS`，883 项差异清单门禁通过。
+- Branch validation：`SKIPPED`，不计为 PASS；其必需覆盖由上述 Flutter 静态分析、全量回归与 Android arm64 任务分别提供，不将跳过状态冒充通过。
+- Review threads：复核时无未解决 inline review thread。
+- Find N2 真机 Launcher 显示、原签名覆盖安装和数据保留：`LOCAL ONLY / UNKNOWN`，由本地设备验收清单继续执行；本次合并不声称设备验收已完成。
+
+
+### 69.6 2026-11-22 情境 Ask AI 历史分支复核补充
+
+- #403：已关闭为 `SUPERSEDED`。当前 master 的针灸穴位、本草、方剂、命卦、内经、易经与统一搜索入口均已包含段落级情境入口和对应测试；旧分支部分固定拼接 anchor 不如主线的 `ClassicSearchService.contextualAnchorIdForReaderAsset` 规范，不能重复合并。
+- #404：保留的唯一新功能是子午流注四种方法（纳子、纳甲、灵龟八法、飞腾八法）的字段级解释入口。其旧 head 相对当前 master 落后约 179 个提交，已改为 #409 当前基线选择性移植。#409 以同一设备本地成功快照绑定单一方法字段，Resolver 校验来源、规则版本、snapshot ID、时间和字段白名单；Prompt 不混入其他方法字段，明确保留 `NOT_APPLICABLE`，禁止模型补造穴位或临床建议。
+- 已抽查的经脉详情、针灸处方及经典讲稿段落入口历史分支：当前 master 对应页面、Resolver/Prompt 与专属测试已存在；经典阅读旧分支缺少当前主线的 paragraph 模式/规范 anchor 处理。它们是已吸收或被更新实现替代的历史 refs，不再重复合并。
+- 对未逐支完成代码差异审查的远端 refs，仍标记为 `NOT_REVIEWED`；本节的抽查结论不能外推为全仓所有非默认分支均已逐文件审计。分支 refs 暂不批量删除。
+- #406 的 Find N2 真机 Launcher 显示、原签名覆盖安装与数据保留仍为 `LOCAL ONLY / UNKNOWN`；云端合并不代替 OPPO Find N2 实机验收。
