@@ -213,6 +213,15 @@ void main() {
     testWidgets(
       '子午流注真实页面在${viewport.name}打开绑定当前结果的情境助手并恢复滚动位置',
       (tester) async {
+        final frameworkErrors = <FlutterErrorDetails>[];
+        final previousFlutterErrorHandler = FlutterError.onError;
+        FlutterError.onError = (details) {
+          frameworkErrors.add(details);
+          previousFlutterErrorHandler?.call(details);
+        };
+        addTearDown(() {
+          FlutterError.onError = previousFlutterErrorHandler;
+        });
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(viewport.width, viewport.height);
         addTearDown(tester.view.reset);
@@ -280,7 +289,17 @@ void main() {
         } else {
           expect(find.byType(DraggableScrollableSheet), findsOneWidget);
         }
-        expect(tester.takeException(), isNull);
+        final unexpectedException = tester.takeException();
+        expect(
+          unexpectedException,
+          isNull,
+          reason: frameworkErrors.isEmpty
+              ? '未预期 Flutter 异常：$unexpectedException'
+              : frameworkErrors
+                  .map((details) =>
+                      '${details.exceptionAsString()}\\n${details.stack}')
+                  .join('\\n---\\n'),
+        );
 
         Navigator.of(
           tester.element(assistant),
