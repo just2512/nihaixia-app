@@ -6,9 +6,10 @@
 
 | 项目 | 当前值 | 核对要求 |
 |---|---|---|
-| App version | `1.11.30+8039` | `versionName=1.11.30`，`versionCode=8039` |
+| App version | `2.0.0+8048` | `versionName=2.0.0`，`versionCode=8048` |
 | Android applicationId | `com.nihaisha.nihaisha_app` | 必须与设备现有安装包一致 |
-| 当前应用代码基线 | `master @ 39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 应用代码合并后；纯文档提交不改变应用代码 |
+| 共享 applicationId 已知最高构建号 | `8047` | 已核验上游 `pubspec.yaml@92ef759` 为 `1.11.34+8047`；本版本 `8048` 仍须高于设备实际读取的 versionCode |
+| 当前应用代码基线 | 本地构建时检出的最新 `master` HEAD | 执行构建前记录 `git rev-parse HEAD`；最终 merge SHA 以执行台账 §67 的交接记录为准 |
 | 分发渠道 | 本地构建 / 原签名 / 本地交付 | 不创建发行 Tag，不发布 GitHub Release，不上传正式 APK |
 
 ## 2. 原签名密钥：硬门槛
@@ -68,7 +69,7 @@ Get-FileHash .\\build\\app\\outputs\\flutter-apk\\app-arm64-v8a-release.apk -Alg
 逐项核对：
 
 - package / applicationId 精确为 `com.nihaisha.nihaisha_app`。
-- `versionName=1.11.30`、`versionCode=8039`，且新版 versionCode 必须严格大于设备当前版本。
+- `versionName=2.0.0`、`versionCode=8048`，且新版 versionCode 必须严格大于设备当前版本。
 - 新 APK signer certificate SHA-256 与当前安装包证书完全一致；如果签名轮换，必须有 Android 平台认可的 signing lineage 证据。
 - `apksigner verify` 成功，APK 非空，ABI 包含 `arm64-v8a`。
 - 记录本地 Release APK SHA-256、versionName、versionCode、applicationId、ABI 和证书 SHA-256。

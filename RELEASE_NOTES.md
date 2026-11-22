@@ -8,6 +8,23 @@
 
 ---
 
+## [2.0.0+8048] · 2026-11-22 — 研纪独立产品主版本基线
+
+> **状态：PREPARATION / NOT RELEASED。** 本记录是独立版本源码准备说明，不是正式 APK 发布或设备验收报告。
+
+### 版本治理
+- 产品版本切换到独立序列 `2.0.0`，Android `versionCode=8048`。
+- 版本唯一来源为 `pubspec.yaml`；README、独立版本规范和版本 guard 必须一致。
+- 已核验上游 `pubspec.yaml` 当前为 `1.11.34+8047`，故本版本号使用 `8048` 作为高于已知共享 applicationId 构建号的下一序号。
+- 保持 `applicationId=com.nihaisha.nihaisha_app`、原签名身份、数据目录和数据库结构身份不变。
+
+### 发布与验收边界
+- 正式 APK 本地使用原签名密钥构建、签名和交付；无 GitHub Release、无在线 APK 上传。
+- 真机已安装版本的真实 versionCode 和证书 SHA-256 必须本地读取；只有证书一致、包名一致且新版构建号严格更高，才可执行 `adb install -r`。
+- 完成 Find N2 覆盖升级、数据保留、折叠布局与 E4B 本地验收前，版本保持 `PREPARATION / NOT RELEASED`。
+
+---
+
 ## [1.11.30+8039] · 2026-11-16 — Find N2 折叠屏适配 · 本草与经典资料扩展 · 编辑型阅读界面
 
 > **状态：PREPARATION / NOT RELEASED。** 本条是当前源码版本的发布说明草稿；正式 APK 不由 GitHub Actions 构建或发布。

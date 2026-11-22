@@ -14,8 +14,8 @@
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
 | 本轮最新应用代码核验基线 | `39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 已合并；情境入口、代码/测试与合并后 master CI 证据见第 65 节；后续 docs-only 提交不改变本应用代码基线 |
 | 本轮最新文档核验基线（本次同步前） | `b0743662f13d7156a146501a357530e976547e6c` | PR #395 已合并；Find N2 / E4B 交接文件和 §65 台账更新已进入 master；本行记录本次文档校准前的文档提交 |
-| 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
-| README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
+| 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
+| README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
 | AI 能力盘点 | `docs/ai-capability-inventory.md` | 现状材料；其中部分内容早于最新审计，必须按新证据更新 |
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
