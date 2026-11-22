@@ -3318,6 +3318,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 针灸多 Tab 的独立情境入口保持 NOT_ENABLED；如后续立项，必须先定义来源等级、资料类型、适用边界、Prompt 隔离和负向测试，不属于本轮云端收尾缺陷。
 - Find N2 真机与 E4B 本地验收仍为 UNKNOWN / LOCAL ONLY：外屏/内屏/半折叠、分屏、键盘 Insets、系统文件选择器、弹窗滚动恢复；GPU/CPU 后端、多轮至少 20 轮、第二/第三轮响应、Native 状态、Activity/force-stop 恢复、AI 数据清除和端到端 TRACE。不得用云端模拟布局或 CI Debug APK 替代真机证据。
 - 本地验收清单：docs/find-n2-real-device-acceptance.md、docs/find-n2-local-ai-acceptance-checklist.md、docs/find-n2-ai-trace-acceptance-plan.md、docs/local-ai-e4b.md。设备验收安排在云端收尾之后，不阻止其他云端工作。
+- docs/find-n2-ai-trace-acceptance-plan.md 的代码复核基线已同步为本节最新 master SHA；TRACE 事件契约与本地步骤保留，明确当前 CI 不代表 Find N2 端到端 TRACE 已完成。
 
 ### 64.4 最终状态
 
