@@ -530,17 +530,17 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
   Widget _buildContextualParagraphBody(String data) {
     final raw = _rawDocumentContent ?? data;
     final rawPassages = _findContextualParagraphs(raw);
-    final displayedPassages = _findContextualParagraphs(data);
-    var passagesMatch = rawPassages.isNotEmpty &&
-        rawPassages.length == displayedPassages.length;
-    for (var index = 0; passagesMatch && index < rawPassages.length; index++) {
-      passagesMatch = rawPassages[index].startLine ==
-              displayedPassages[index].startLine &&
-          rawPassages[index].endLine == displayedPassages[index].endLine;
-    }
+    final lines = data.split('\n');
+
+    // _injectLinks only wraps matched text inline and never inserts line breaks.
+    // Therefore the original Markdown source line numbers remain the stable
+    // mapping even when injected links change how a rendered paragraph would
+    // be classified by a second Markdown-structure scan.
+    final passagesMatch =
+        rawPassages.isNotEmpty && raw.split('\n').length == lines.length;
     if (!passagesMatch) {
-      // Inline link injection or Markdown transformation changed the mapping:
-      // keep ordinary selection but do not attach a contextual AI action.
+      // If any transformation changes the source line count, keep ordinary
+      // selection only and fail closed for contextual AI.
       return Markdown(
         data: data,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -550,14 +550,13 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       );
     }
 
-    final lines = data.split('\n');
     final children = <Widget>[];
     var previousEnd = 0;
     final baseAnchorId = widget.contextualAskAnchorId!;
     for (var passageIndex = 0;
-        passageIndex < displayedPassages.length;
+        passageIndex < rawPassages.length;
         passageIndex++) {
-      final passage = displayedPassages[passageIndex];
+      final passage = rawPassages[passageIndex];
       final before = lines.sublist(previousEnd, passage.startLine).join('\n');
       if (before.trim().isNotEmpty || passageIndex == 0) {
         children.add(_buildPlainMarkdownBody(
@@ -571,6 +570,8 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           (passage.startLine + 1).toString() +
           '-' +
           passage.endLine.toString();
+      final displayedBlock =
+          lines.sublist(passage.startLine, passage.endLine).join('\n');
       children.add(SelectionArea(
         onSelectionChanged: (selection) {
           final selected = selection?.plainText ?? '';
@@ -594,7 +595,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
                 state.hideToolbar();
                 _askAiAboutSelection(
                   selected,
-                  rawPassages[passageIndex].plainText,
+                  passage.plainText,
                   passageIndex: passageIndex,
                   passageCount: rawPassages.length,
                   stableAnchorId: stableAnchorId,
@@ -608,7 +609,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
           );
         },
         child: _buildPlainMarkdownBody(
-          passage.block,
+          displayedBlock,
           selectable: false,
           padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
@@ -803,7 +804,10 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     }
     if (targetOf.isEmpty) return md;
 
-    final sorted = targetOf.keys.toList()
+    // Inline replacement must preserve Markdown source line boundaries.
+    final sorted = targetOf.keys
+        .where((name) => !name.contains('\n') && !name.contains('\r'))
+        .toList()
       ..sort((a, b) => b.length.compareTo(a.length));
     final re = RegExp(sorted.map(RegExp.escape).join('|'));
     return md.replaceAllMapped(re, (m) {
