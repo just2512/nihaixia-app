@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../data/minggua_data.dart';
+import '../services/classic_search_service.dart';
 import 'markdown_doc_screen.dart';
 
 /// 倪师《天纪·四柱命卦》讲义库浏览页。
@@ -69,7 +70,10 @@ class MingGuaLibraryScreen extends StatelessWidget {
               footer: '倪师《天纪·四柱命卦》讲义 · 传统文化参考',
               contextualAskModuleId: 'minggua-reading',
               contextualAskAnchorId:
-                  'minggua-reading:passage:${e.asset}',
+                  ClassicSearchService.contextualAnchorIdForReaderAsset(
+                moduleId: 'minggua-reading',
+                asset: e.asset,
+              ),
               contextualAskSourceId: e.asset,
               contextualAskParagraphs: true,
             ),
