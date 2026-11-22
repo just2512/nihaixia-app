@@ -133,6 +133,52 @@ class ClassicSearchService {
     'bencao': '本草讲稿',
   };
 
+  /// Maps a classic index source to the module ID used by reader selections.
+  /// Keep this allowlist beside reverse source resolution so search and
+  /// assistant citation navigation cannot drift independently.
+  static String? contextualModuleIdForSource(String source) {
+    switch (source) {
+      case 'shanghan':
+        return 'shanghan';
+      case 'jingui':
+        return 'jingui';
+      case 'neijing':
+        return 'neijing-reading';
+      case 'zhenjiu':
+        return 'zhenjiu-reading';
+      case 'bencao':
+        return 'bencao-reading';
+      default:
+        return null;
+    }
+  }
+
+  /// Returns the stable reader passage anchor for one indexed lecture.
+  /// Sources without an explicit reader contract remain non-contextual.
+  static String? contextualAnchorIdForHit(ClassicHit hit) {
+    final moduleId = contextualModuleIdForSource(hit.source);
+    final asset = hit.asset?.trim();
+    if (moduleId == null || asset == null || asset.isEmpty) return null;
+    if (moduleId == 'shanghan' &&
+        asset == 'assets/shanghan/clause_001.md') {
+      return 'shanghan:clause:002';
+    }
+    return '$moduleId:passage:$asset';
+  }
+
+  static String? _indexedSourceForReaderModule(String moduleId) {
+    switch (moduleId) {
+      case 'neijing-reading':
+        return 'neijing';
+      case 'zhenjiu-reading':
+        return 'zhenjiu';
+      case 'bencao-reading':
+        return 'bencao';
+      default:
+        return null;
+    }
+  }
+
   static String _labelOf(String source, String? bookId) {
     if (source == 'guji') {
       for (final b in kGujiBooks) {
@@ -280,8 +326,9 @@ class ClassicSearchService {
     if (hit.sourceId == candidate) return true;
     final parts = candidate.split(':');
     if (hit.asset != null && hit.asset!.trim().isNotEmpty) {
+      final source = _indexedSourceForReaderModule(parts.first) ?? parts.first;
       return parts.length >= 2 &&
-          parts[0] == hit.source &&
+          source == hit.source &&
           parts[1] == hit.asset;
     }
     if (hit.bookId != null &&
