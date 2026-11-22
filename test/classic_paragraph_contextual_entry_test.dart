@@ -10,6 +10,18 @@ import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
 
+Future<void> pumpUntilFound(
+  WidgetTester tester,
+  Finder finder, {
+  int maxAttempts = 30,
+}) async {
+  for (var attempt = 0;
+      attempt < maxAttempts && finder.evaluate().isEmpty;
+      attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   testWidgets(
     'lecture paragraphs open Ask AI with exact source, passage and line-range anchor',
@@ -225,6 +237,8 @@ $second
       );
       final neijingParagraph =
           find.textContaining('今天开始第一堂课这个', findRichText: true);
+      await pumpUntilFound(tester, neijingParagraph);
+      expect(find.text('原文加载失败'), findsNothing);
       expect(neijingParagraph, findsOneWidget);
       await tester.scrollUntilVisible(
         neijingParagraph,
@@ -312,6 +326,8 @@ $second
       );
       final bencaoParagraph =
           find.textContaining('人参顾名思义，因为他这个根长的象人的形状', findRichText: true);
+      await pumpUntilFound(tester, bencaoParagraph);
+      expect(find.text('原文加载失败'), findsNothing);
       expect(bencaoParagraph, findsOneWidget);
       await tester.scrollUntilVisible(
         bencaoParagraph,
