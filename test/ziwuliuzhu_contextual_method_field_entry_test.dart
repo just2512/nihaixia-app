@@ -250,13 +250,22 @@ void main() {
         final ask = find.byKey(
           ValueKey('ziwuliuzhu-method-ask-${method.key}'),
         );
+        final methodScrollables = find.descendant(
+          of: find.byType(TabBarView),
+          matching: find.byType(Scrollable),
+        );
+        final methodListScrollable = methodScrollables.last;
+        await tester.scrollUntilVisible(
+          ask,
+          220,
+          scrollable: methodListScrollable,
+        );
+        await tester.pumpAndSettle();
         expect(
           ask,
           findsOneWidget,
           reason: '${method.label} 当前 Tab 必须展示独立字段级入口',
         );
-        await tester.ensureVisible(ask);
-        await tester.pumpAndSettle();
 
         final position = Scrollable.of(tester.element(ask)).position;
         final offsetBeforeOpen = position.pixels;
