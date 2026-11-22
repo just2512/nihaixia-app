@@ -1,6 +1,6 @@
 # 本地 Android 构建与升级检查清单
 
-> 本文是本地构建、签名和设备验收清单，不是测试结果或 PASS 报告。正式 Release APK 只在维护者本地构建和签名，不进入 GitHub Actions artifact、GitHub Release 或仓库。
+> 本文是本地构建、签名和设备验收清单，不是测试结果或 PASS 报告。正式 Release APK 只在维护者本地构建和签名，不进入 GitHub Actions artifact、GitHub Release 或仓库。Find N2 / E4B 设备端完整执行顺序见[本地验收交接总清单](find-n2-e4b-local-handover.md)。
 
 ## 1. 当前源码版本基线
 
