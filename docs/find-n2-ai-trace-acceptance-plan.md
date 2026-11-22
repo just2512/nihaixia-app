@@ -4,7 +4,7 @@
 
 ## 0. 当前前置条件与实现基线
 
-云端代码复核基线：`master @ 39da7c0522a47cd227a617167badcf116d0152b3`（2026-11-22，PR #392 合并后；应用版本 `1.11.30+8039`）。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。本基线的 PR-head CI 已通过；合并后 master 的独立 CI 状态以执行台账 §65 的准确 run/SHA 记录为准。本文件所列 Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测。
+云端代码复核基线：`master @ d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`（2026-11-22，PR #392 合并后；应用版本 `1.11.30+8039`）。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。情境来源回链最新代码提交为 `26d924b894b3301a8f46b2db120407cc344e41af`，其 Flutter regression、Android arm64、Flutter Quality Gate 与 Fork license boundary 均 SUCCESS；最新 master 的独立 CI 状态以执行台账 §67 的准确 run/SHA 记录为准。本文件所列 Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测。
 
 当前已有实现：
 
@@ -180,3 +180,17 @@ output/find-n2-ai/<run-id>/
 5. TRACE 只保存 allowlist 元数据，不收录处方正文、prompt/response、真实症状、个人资料、图片/音频内容或模型文件。来源字符串（例如 `nihaisha+bbxx`）保持原值；它不是临床证据认证。
 6. 对每一项分别记录 PASS / FAIL / BLOCKED / UNKNOWN；未执行场景保持 MISSING。此项必须由 Find N2 实测，本段是操作规范而非完成报告。
 
+
+## 10. 本地 Release 签名 Debug TRACE 构建（master d61ada6）
+
+为在 Find N2 上启用仅 Debug 可见的 TRACE 控件，同时避免 Debug 签名与设备当前 Release 安装包不一致，最新 master 增加本地显式构建属性：
+
+```bash
+flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true
+```
+
+- 必须使用本机既有 `android/key.properties` 和原 Release keystore；缺少任一必需字段或密钥文件时构建应失败，不得临时生成新密钥。
+- 该属性只对显式 opt-in 的本地 Debug 构建生效；默认 Debug 与 Release 行为不变。
+- 若检测到 `CI=true` 或 `GITHUB_ACTIONS=true`，Gradle 必须拒绝该属性；CI 负向门禁验证失败原因必须是该安全保护。
+- 本地 TRACE Debug APK 与正式 Release APK 用途不同：前者用于采集 Debug TRACE，后者用于正式交付/升级验收。安装前仍需核对 applicationId、versionCode、签名证书和 APK SHA-256；不卸载、不清数据。
+- 完成 TRACE 后，保留原始日志与 APK/model SHA 记录；不得将 Debug TRACE 结果表述为 Release 运行表现，也不得将 CI ABI 构建结果表述为 Find N2 实测。
