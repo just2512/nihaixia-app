@@ -8,7 +8,20 @@
 >
 > **验证基线**：全量 `flutter test` 182/182 通过；`flutter analyze` 0 新增 error；APK 经 `aapt2`（D:/sdk/build-tools/36.0.0/aapt2.exe）校验 `versionCode`/`versionName`。
 >
-> **发布方式**：推送 `v*` tag 即由 **GitHub Actions** 自动编译并发布四个 APK 到同名 Release（配置见 `.github/workflows/build-apk.yml`，全程约 6 分钟），无需手动打包上传。如需国内加速分发，可另用 CloudStudio 部署下载页（`deploy_vXXXX/index.html` + APK）。
+> **发布方式**：正式 APK 仅由维护者在本地使用原签名密钥构建与签名，完成覆盖升级和真机验收后线下/私下交付。本仓库不推送发行 Tag、不创建 GitHub Release、不上传正式 APK。GitHub Actions 仅用于代码回归、Android Debug ABI 与签名门禁负向验证。
+
+---
+
+## [1.11.30+8039] - 2026-11-16 — Find N2 折叠屏适配 · 本草与经典资料扩展 · 编辑型阅读界面
+
+> **发布状态：PREPARATION / NOT RELEASED。** 本条记录描述当前源码，不代表正式 APK 已完成本地签名、覆盖升级或 Find N2 真机验收。
+
+- **✨ 新增**：本草讲稿阅读库新增 335 篇 Markdown，提供本草入口、药材详情反向回链和经典搜索；本地 465 味药材数据保持原样，无法确切匹配的名称不强行关联。
+- **📜 资料**：伤寒上游宋本第 176 条与板书图作为独立阅读项保存，不覆盖本地同路径条文，来源和 sourceId 保持区分。
+- **🤖 助手工具**：玉匣灵兆当前本机时辰查询可在同一助手对话中执行，结果来自本机时间与本地数据并保留来源标识。
+- **📱 Find N2**：紫微命盘增加展开屏整屏查看，宫位详情面板改为不透明且支持换行；易经下拉与剂量换算控件修复窄屏布局；工具页增加展开屏/半折叠布局回归覆盖。
+- **🎨 阅读体验**：知识浏览、经典阅读和核心详情页统一排版 Token，不改辨证、排盘和剂量计算算法。
+- **⏳ 本地待验**：旧版与新版 APK 签名证书比对、正式 Release 本地构建、versionCode/applicationId 核验、`adb install -r` 数据保留和 Find N2 真机验收均未执行；完成前不得标记 RELEASED。
 
 ---
 
