@@ -12,26 +12,18 @@
   ],
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 8394dfffc11e64ee493e90039b0b0892eab1eddd includes merged PRs #386, #388 and #390, including Neijing/Bencao, Shanghan/Jingui and Zhenjiu lecture paragraph contextual entry points. This slice adds source-line-preserving paragraph contextual selection to the public-domain Guji TXT reader; ancient text assets remain excluded from the Fork commercial grant and retain their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 875,
-    "added": 715,
-    "modified": 160,
-    "deleted": 13,
+    "changed": 877,
+    "added": 716,
+    "modified": 161,
+    "deleted": 15,
     "by_classification": {
-      "APACHE_2_0_AND_FORK_COMMERCIAL": 154,
-      "FORK_COMMERCIAL": 356,
+      "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
+      "FORK_COMMERCIAL": 357,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
   },
   "files": [
-    {
-      "path": ".github/workflows/build-apk.yml",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
     {
       "path": ".github/workflows/flutter-quality.yml",
       "status": "added",
@@ -7023,11 +7015,37 @@
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "android/key.properties.template",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "沿用上游签名配置模板并增加原签名/禁止新建密钥的 Fork 维护说明；上游原始部分保留 Apache-2.0。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "assets/data/changelog.json",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "应用内版本说明与 UI 元数据，不是知识库内容；上游原始部分保留 Apache-2.0，Fork 新增版本说明按双层许可记录。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "docs/local-android-release-checklist.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的本地 Android 原签名、覆盖升级与 Find N2 交付流程文档。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     }
   ],
   "deleted_paths": [
     ".github/scripts/gitee_release.py",
+    ".github/workflows/build-apk.yml",
     ".github/workflows/gitee-sync.yml",
+    ".github/workflows/release.yml",
     "docs/images/logo.jpg",
     "docs/images/logo.webp",
     "lib/services/update_service.dart",
