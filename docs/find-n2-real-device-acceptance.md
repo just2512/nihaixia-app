@@ -1,6 +1,7 @@
 # OPPO Find N2 真机折叠屏验收方案
 
 > 状态：待真机执行（MISSING）。本文是执行方案，不是设备通过报告。Widget 测试、模拟器截图和 CI 通过均不能替代 Find N2 实机验收。
+> 本轮应用代码基线：`master @ 39da7c0522a47cd227a617167badcf116d0152b3`（PR #392 已合并），应用版本 `1.11.30+8039`。本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
 
 ## 1. 验收目标与边界
 
@@ -71,6 +72,9 @@ output/find-n2/<run-id>/
     08-keyboard-visible.png
     09-system-file-picker.png
     10-after-return.png
+    11-acupuncture-context-outer.png
+    12-acupuncture-context-inner.png
+    13-acupuncture-context-half-fold.png
   test-results.md
 ```
 
@@ -221,6 +225,24 @@ output/find-n2/<run-id>/
 - 工具失败应保留真实失败状态和参数，不能把失败显示成成功。
 - 任一功能闪退、ANR、结果丢失、处方内容错乱或状态无法恢复，均判 FAIL。
 
+### L. 针灸处方条目情境解读（AI-CTX-ACU-01）
+
+本项只验收当前已接入的「穴位处方」Tab 单条记录入口。不要把普通针灸讲稿、透针或耳穴资料当成这次同一入口。
+
+1. 在「穴位处方」Tab 选择一条记录，展开详情，确认仅在来源身份可唯一确认时显示「问 AI 解读当前处方条目」；点击后进入现有学习助手。
+2. 使用分类 `01` / 条目 `1` 与分类 `08` / 条目 `1` 两组数据分别执行。两者数字 entryId 相同但属于不同分类，必须生成不同的 `anchorId`、`sourceId` 和快照，不得跨分类混用。
+3. 检查对话上下文只包含当前选中的一条本地记录；其中 `kind=knowledgeEntry`、`moduleId=acupuncture-prescriptions`，锚点格式为 `acupuncture-prescriptions:{categoryId}:{entryId}`，来源 ID 格式为 `acupuncture:{categoryId}:{entryId}`。
+4. 在同一条目内追问并关闭/重开会话，确认 user/assistant 消息均保留相同 ContextRef；切换另一分类或另一条目时不得复用旧锚点会话。
+5. 确认此流程只解释现有结构化条目，不触发排盘、问诊或其他工具执行，不重算处方、不改写本地资料。
+6. 在外屏、内屏完全展开和半折叠姿态各执行一次；检查按钮、上下文面板、输入框、键盘和滚动区域无裁切、遮挡、跨铰链或失效点击区域，并分别保存截图。
+7. 当前 `透针透穴`、`穴位讲解`、`耳穴` Tab 不属于本次接入范围；这些 Tab 没有此情境 CTA，记录为 `NOT_ENABLED`，不要误报为首个 Tab 的入口故障。
+
+来源与安全核对：
+
+- `source=nihaisha+bbxx` 只是本地数据保存的原始来源标记，表示混合来源标签，不代表纸本出处、独立验证或临床证据。没有本地字段支持的版本、页码或依据记录为 `UNKNOWN / MISSING`，不得补造。
+- AI 只解释条目原文中已有的穴位、操作文字、备注和案例字段；不得生成针对个人的诊断、治疗方案、配穴、针刺深度/角度/方向/手法/留针时间、针刺频次或自行施治指导。
+- 使用合成测试资料，不输入真实患者信息。任一跨分类内容串入、错误锚点、工具误执行、来源伪造或个人施治指导均判 `FAIL`。
+
 ### K. 原位覆盖升级与数据保留
 
 本项严格禁止卸载旧版、清除应用数据或删除 SQLite 文件。先按第 9.2 节只读提取手机当前 APK，并核对 applicationId、versionCode 和签名证书；再按第 9.3 节在本地使用既有签名密钥构建并核验 Release APK。只有包名一致、签名兼容且新版 versionCode 严格更高时，才允许执行 `adb install -r`。
@@ -275,6 +297,7 @@ output/find-n2/<run-id>/
 | J3 | 收藏/分享/复制处方 | 各姿态 |  |  |  | MISSING |  |
 | J4 | 诊断历史/会话恢复 | 强制停止重启 |  |  |  | MISSING |  |
 | J5 | 知识引用/工具结果回传 | 各姿态 |  |  |  | MISSING |  |
+| L1 | 针灸处方单条情境入口 | 外屏/内屏/半折叠 |  |  |  | MISSING |  |
 | K1 | 原位覆盖升级与数据保留 | 旧版安装状态保留 |  |  |  | MISSING |  |
 
 本轮结论只能是：

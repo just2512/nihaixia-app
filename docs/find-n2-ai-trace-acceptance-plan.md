@@ -4,7 +4,7 @@
 
 ## 0. 当前前置条件与实现基线
 
-云端代码复核基线：`master @ b966f0538483aecce28fb5a71ea2bdcfc2991dee`（2026-11-22，PR #393 合并后）。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。当前 master 的云端 CI 已通过，但本文件所列 Find N2 端到端 TRACE 仍须按本次安装包 SHA 和模型版本在实体设备实测。
+云端代码复核基线：`master @ 39da7c0522a47cd227a617167badcf116d0152b3`（2026-11-22，PR #392 合并后；应用版本 `1.11.30+8039`）。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。本基线的 PR-head CI 已通过；合并后 master 的独立 CI 状态以执行台账 §65 的准确 run/SHA 记录为准。本文件所列 Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测。
 
 当前已有实现：
 
@@ -168,3 +168,15 @@ output/find-n2-ai/<run-id>/
 6. GPU 仍沿用当前配置：语言模型/视觉 backend GPU，audioBackend CPU；CPU 模式语言/视觉/音频均为 CPU。媒体场景按实际 Native backend 和对应子后端记录。
 
 本地完整执行步骤见 docs/find-n2-local-ai-acceptance-checklist.md。B-01 / G-01 / C-01 / ATT-01 / REC-01 / CLR-01 / F-01 均由 OPPO Find N2 实测；CI 不替代真机证据。
+
+## 10. 针灸处方单条来源情境 TRACE（AI-CTX-ACU-01）
+
+本场景对应 `docs/contextual-ask-ai-spec.md §4.4` 与执行台账 §65。当前入口位于「穴位处方」Tab 的单条记录详情，不代表「透针透穴」「穴位讲解」或「耳穴」Tab 已接入。
+
+1. 分类 `01` / 条目 `1` 和分类 `08` / 条目 `1` 分别新建会话，确认两个不同的 `anchorId`、`sourceId`、`snapshotId`；相同数字 entryId 不得造成跨分类复用。
+2. 同一条目内追问时，conversation 内 user/assistant 消息 metadata 应保留相同 ContextRef；每轮推理可使用独立 turn `trace_id`，但不得改变该会话的锚点。
+3. 检查当前条目的本地快照是否进入 `CONTEXT_ASSEMBLY` / `MODEL_INPUT`；若本流程没有执行检索、工具或业务计算，相应阶段标记 `NOT_APPLICABLE`，不得伪造检索命中或工具执行事件。
+4. 按真实运行阶段检查 `NATIVE_INFERENCE`、`MODEL_OUTPUT`、`PERSISTENCE`、`PERSISTED_STATE`、`PRESENTATION`、`FINAL_RENDER` 及跨层关联 ID。事件缺失但该阶段应发生时，记录 UNKNOWN/缺失，不按计划流程推定存在。
+5. TRACE 只保存 allowlist 元数据，不收录处方正文、prompt/response、真实症状、个人资料、图片/音频内容或模型文件。来源字符串（例如 `nihaisha+bbxx`）保持原值；它不是临床证据认证。
+6. 对每一项分别记录 PASS / FAIL / BLOCKED / UNKNOWN；未执行场景保持 MISSING。此项必须由 Find N2 实测，本段是操作规范而非完成报告。
+

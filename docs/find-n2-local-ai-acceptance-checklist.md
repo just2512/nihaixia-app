@@ -1,6 +1,7 @@
 # Find N2 本地 AI 后端切换与端侧验收清单
 
 > 本文件是本地执行清单，不是测试结果或 PASS 报告。GPU/CPU 推理、多媒体、进程恢复、清除数据与 TRACE 必须由实体 OPPO Find N2 执行；云端 CI 和 APK 构建不能代替真机证据。
+> 本轮应用代码基线：`39da7c0522a47cd227a617167badcf116d0152b3`（PR #392 合并后），应用版本 `1.11.30+8039`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为该设备验收安装包。
 
 ## 0. 本轮实现目标
 
@@ -111,7 +112,26 @@ GPU 与 CPU 两种实际 backend 分别执行：
 
 TRACE 关闭后确认普通业务路径不受影响；关闭 TRACE 不应改变后端选择或业务执行。
 
-## 9. 单场景结果记录模板
+## 9. 针灸处方单条来源情境解读（AI-CTX-ACU-01）
+
+本场景在 GPU 与 CPU 实际 backend 下分别执行；每次均记录 Native 返回的实际 backend，不能把设置页选择当成实际运行事实。使用合成内容，不输入真实患者资料。
+
+1. 打开「穴位处方」Tab，选择分类 `01` / 条目 `1`，展开后点击「问 AI 解读当前处方条目」。确认助手以学习模式打开，并且只传入该条目的结构化快照。
+2. 新建另一会话，选择分类 `08` / 条目 `1`。这两个记录的数字 entryId 相同，但必须保持分类复合身份：`acupuncture-prescriptions:01:1` 与 `acupuncture-prescriptions:08:1` 是不同锚点；`sourceId` 分别为 `acupuncture:01:1` 与 `acupuncture:08:1`。
+3. 在同一个锚点会话连续追问并重开历史。检查本轮 user/assistant 消息的 metadata 都保留完全相同的 ContextRef：`kind=knowledgeEntry`、`moduleId=acupuncture-prescriptions`、对应 `anchorId`、`sourceId`、`snapshotId=anchorVersion` 和资料 `ruleVersion`。
+4. 切换到不同分类或不同条目后，应新建独立情境会话，不得把上一个条目的快照或回答带入新会话。
+5. 当前 `透针透穴`、`穴位讲解`、`耳穴` Tab 未启用本次 CTA，记录为 `NOT_ENABLED`；不要将其误记为已通过的功能。
+6. 检查 `nihaisha+bbxx` 等 source 字段按原值保留。该字段只是 App 本地来源标签，不等于可核验的独立出处；缺少版本、页码、依据记录时必须标记 `UNKNOWN / MISSING`，不得让模型补造。
+7. 核对 Prompt 的限制：只解释当前一条记录；不执行工具或重新计算；不推断用户诊断；不输出个人治疗方案、配穴、针刺深度、角度、方向、手法、频次或自行施治步骤。
+8. 分别检查实际 backend、每轮独立 trace_id、上下文锚点与消息持久化。对本场景未发生的检索、工具执行或业务执行阶段标记 `NOT_APPLICABLE`，不得为了填满 TRACE 阶段而制造伪事件。
+
+判定：
+- PASS：锚点、快照、会话隔离、数据来源、安全边界和本机实际 backend/TRACE 证据全部一致。
+- FAIL：发生跨分类/跨条目串线、快照不匹配仍继续、工具误执行、来源伪造或越界个人施治指导。
+- UNKNOWN：无法读取消息 metadata、Native 实际 backend 或关键 TRACE 证据。
+- 未执行项保持 MISSING，不得计入 PASS。
+
+## 10. 单场景结果记录模板
 
 每个场景复制一份：
 

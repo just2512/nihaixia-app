@@ -12,7 +12,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新核验基线 | `09293c55b7c3069e3118291e871ef96d087b5a17` | PR #206 已合并；合并后主线 CI 见第 56 节 |
+| 本轮最新应用代码核验基线 | `39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 已合并；情境入口、代码/测试与合并后 master CI 证据见第 65 节；后续 docs-only 提交不改变本应用代码基线 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -20,7 +20,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表所列为当前台账最新核验的代码主线基线；历史任务范围与历次核验仍以各节记录为准。PR #206 的合并和 post-merge CI 见第 56 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
+**核验基线说明：** 本表所列为本轮最新应用代码核验基线；历史任务范围与历次核验仍以各节记录为准。PR #392 的合并与主线独立 CI 见第 65 节。后续若仅合并文档更新，应将文档提交 SHA 与应用代码基线分开记录。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；历史审计没有在最近一轮全部重跑的部分，仍以原记录和证据为准。
 
 ## 2. 状态定义
 
@@ -46,7 +46,7 @@
 | ID | 工作流 | 当前状态 | 允许并行关系 | 完成定义 |
 |---|---|---|---|---|
 | A | P0 本地模型多轮稳定性与生命周期 | `IN_PROGRESS`（剩余项为 LOCAL ONLY；云端代码/CI 已收口） | 与 B/C/E 并行 | 多轮审计报告和自动化回归已交付；Find N2 GPU/CPU 各至少 20 轮实测由本地执行 |
-| B | 问诊助手结果解释 | `IN_PROGRESS`（代码仍残留“仅模拟/禁止诊疗解释”提示，按第 51 节处理） | 与 A/C/D 并行 | 既有规则执行结果可追溯到知识库；AI 完整解释辨病辨证、病机、治法、方剂和针灸并支持追问 |
+| B | 问诊助手结果解释 | `IN_PROGRESS`（按审计 §14.2 / §16 区分 App 确定性规则结果与 AI 教学解释；完整问诊闭环仍须按对应代码、自动化和本地场景证据判定） | 与 A/C/D 并行 | 既有规则执行结果可追溯到知识库；AI 完整解释辨病辨证、病机、治法、方剂和针灸并支持追问 |
 | C | 知识检索与本地条目引用 | `PARTIAL`（sourceId、本地条目定位与直接打开链路已接通；检索覆盖/相关性仍按黄金集核验） | 与 A/B/E 并行 | 桂枝汤组成 + 《伤寒论》条文黄金用例保留 query、召回顺序、来源 ID、App 内条目定位及展示；不要求普通学习资料外部卷页考证 |
 | D | Headless Capability 盘点与最小适配器 | `PARTIAL`（17/23 项 Headless；6 项 Page-only；结构化问诊独立内联） | 已接入 `yunqi/ziwei/bazi/yijing/xiaoliuren/meihua/dosage/ziwu_liuzhu/almanac/solar_terms/dream/guansha/sanshan_lingqian/chenggu/shousheng_debt/huangdi_siji/saved_charts`；保留各自 Page builder | 每项能力有输入/输出 schema、校验、权限、取消/错误语义及真实执行证据；不以覆盖数量为目标 |
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
@@ -3269,7 +3269,7 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 上述缺口已由 PR #393（https://github.com/just2512/nihaixia-app/pull/393）修复：精确匹配 kYiJingLectures / kMingGuaEntries manifest asset；未知路径、标题冒充、段落尾缀均拒绝。最终候选 HEAD d2eb870bc5fa29227fb3a9e0b8e2ece7a8b54383 的 Flutter regression 1880 passed / 15 skipped，Fork license boundary SUCCESS，Android arm64 APK / Manifest / ABI / Native unit tests / JUnit XML SUCCESS（Flutter workflow run 45004729631，Android job 137155273102；APK 132,543,921 bytes，arm64-v8a only）。Branch validation 条件性 SKIPPED，不计 PASS。
 - 当前没有证据支持增加第二套会话协调器、数据库或搜索架构。已覆盖入口继续复用 MarkdownDocScreen → AiContextRef → PromptBuilder → ContextualAiSheet。
 
-### 63.3 云端收尾状态与 Find N2 最终本地验收（由 §64 更新）
+### 63.3 云端收尾状态与 Find N2 最终本地验收（由 §65 更新）
 
 - PR #391 与后续来源回链修复 PR #393 均已合并；PR #391 验收及其合并后主线证据见 §63.1，PR #393 与最新 master 复核见 §64。
 - 易经/命卦助手引用回链缺口已由 PR #393 修复并在最新 master 复核。当前唯一明确未启用的入口边界是针灸多 Tab：缺少专用来源等级、适用范围和安全 Prompt 契约。此项是有意不启用，不是已接入缺陷。
@@ -3279,7 +3279,9 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 
 ---
 
-## 64. 2026-11-22 PR #393 合并后全仓库复核与云端收尾基线
+## 64. 2026-11-22 PR #393 合并后全仓库复核与云端收尾基线（历史快照；由 §65 更新）
+
+> 状态说明：本节记录 PR #393 合并后、PR #392 合并前的历史主线。PR #392 已启用针灸页面首个「穴位处方」Tab 的单条处方情境入口；本节中针灸处方多 Tab 整体 `NOT_ENABLED` 的表述仅作为当时状态保留，不再代表首个 Tab 的当前状态。最新入口矩阵与 CI 以 §65 为准。
 
 ### 64.1 最新主线与独立 CI 证据
 
