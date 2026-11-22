@@ -207,3 +207,13 @@ GitHub CI 当前覆盖依赖锁文件校验、Dart/Flutter 静态分析、本地
 
 ## CI Debug APK 架构
 GitHub Actions 的 Find N2 验证构建固定生成一个普通的 `arm64-v8a` APK：命令为 `flutter build apk --debug --no-pub --target-platform android-arm64 -P disable-abi-filtering=true`，工件路径为 `build/app/outputs/flutter-apk/app-debug.apk`。`--target-platform` 限定 Flutter 引擎目标架构，`-P disable-abi-filtering=true` 关闭 Flutter Gradle 插件默认注入的多 ABI NDK 过滤器；CI 的 Gradle `defaultConfig.ndk.abiFilters` 只保留 `arm64-v8a`，并禁用 ABI splits，避免 Flutter CLI 将 split APK 误判为缺少预期的 `app-debug.apk`。该限制只由 CI 环境属性 `ciArm64Only=true` 启用；本地构建和正式发行仍按 Gradle 默认配置生成 `armeabi-v7a`、`arm64-v8a`、`x86_64` 分包及通用 APK。
+
+## 本地 TRACE Debug 构建签名（master d61ada6）
+
+最新 master 支持显式使用原 Release keystore 对本地 Debug 构建签名，以便启用 Debug-only TRACE 控件：
+
+```bash
+flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true
+```
+
+该属性只用于本地设备 TRACE，不是新的发布模式。构建要求现有 `android/key.properties` 和原 keystore 完整；CI 环境会 fail closed 拒绝此属性。默认 Debug 与 Release 签名行为不变。不得把 keystore 或密码上传仓库/CI，不得新建密钥替代原签名。Debug TRACE APK 和正式 Release APK 应分别记录 SHA-256、包名、版本与证书指纹，不能互相冒充验收工件。
