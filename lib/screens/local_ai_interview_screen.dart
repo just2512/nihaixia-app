@@ -5368,7 +5368,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   ) async {
     final asset = hit.asset?.trim();
     if (asset != null && asset.isNotEmpty) {
-      return MarkdownDocScreen(title: hit.title, asset: asset);
+      final moduleId =
+          ClassicSearchService.contextualModuleIdForSource(hit.source);
+      return MarkdownDocScreen(
+        title: hit.title,
+        asset: asset,
+        contextualAskModuleId: moduleId,
+        contextualAskAnchorId:
+            ClassicSearchService.contextualAnchorIdForHit(hit),
+        contextualAskSourceId: moduleId == null ? null : asset,
+        contextualAskParagraphs: moduleId != null,
+      );
     }
     final bookId = hit.bookId;
     final chapterIndex = hit.chapterIndex;
@@ -5471,10 +5481,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             }
           }
           break;
+        case 'neijing-reading':
+        case 'bencao':
+        case 'bencao-reading':
         case 'shanghan':
         case 'jingui':
         case 'guji':
         case 'zhenjiu':
+        case 'zhenjiu-reading':
           final hit = await ClassicSearchService.findBySourceId(sourceId);
           if (hit != null) {
             destination = await _resolveClassicKnowledgeDestination(hit);
