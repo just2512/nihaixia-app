@@ -151,6 +151,53 @@ void main() {
       ClassicSearchService.contextualAnchorIdForHit(shanghanClause),
       'shanghan:clause:002',
     );
+
+    // Every asset-backed reader screen must use the same canonical anchor
+    // builder. Only the explicit reader-module allowlist is accepted.
+    const asset = 'assets/reader/sample.md';
+    for (final moduleId in [
+      'shanghan',
+      'jingui',
+      'neijing-reading',
+      'zhenjiu-reading',
+      'bencao-reading',
+      'yijing-reading',
+      'minggua-reading',
+    ]) {
+      final expected = moduleId == 'shanghan'
+          ? 'shanghan:passage:$asset'
+          : '$moduleId:passage:$asset';
+      expect(
+        ClassicSearchService.contextualAnchorIdForReaderAsset(
+          moduleId: moduleId,
+          asset: asset,
+        ),
+        expected,
+        reason: 'Reader module $moduleId must use the canonical asset anchor',
+      );
+    }
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'unknown-reader',
+        asset: asset,
+      ),
+      isNull,
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'neijing-reading',
+        asset: '   ',
+      ),
+      isNull,
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'shanghan',
+        asset: 'assets/shanghan/clause_001.md',
+      ),
+      'shanghan:clause:002',
+    );
+
     expect(
       ClassicSearchService.contextualAnchorIdForHit(const ClassicHit(
         source: 'guji',
