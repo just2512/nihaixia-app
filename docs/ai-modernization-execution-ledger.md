@@ -3280,3 +3280,11 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 在独立文档分支 docs/ai-contextual-closeout-2026-11-22 更新 docs/find-n2-real-device-acceptance.md，新增第 12 节“情境问 AI：内经与本草讲稿段落选择”。提交：cb2ccfccd700c572dd9fae0d74b4bbbd563fa2c9。
 - 第 12 节以 PR #386 合并为执行前置条件，覆盖内经/本草真实讲稿入口、段落选择与来源核对、多轮追问、同锚点续接、不同段落隔离、标题/列表/引用/表格/代码/HTML/数学块 fail-closed、复制/全选、已有方剂/本草/穴位链接、402dp/775dp 与半折叠面板、键盘/返回键/关闭恢复，以及脱敏证据要求。
 - 该提交只是补齐最终本地执行方案，不构成设备已验收；所有设备场景在执行前仍是 MISSING / UNKNOWN。
+
+### 63.8 最新段落来源测试修正（2026-11-22）
+
+- 在 head 2cfb67add603b4e2fea015e277e6631684f43814 上，static analysis 再次报告 \`unnecessary_non_null_assertion\`（\`markdown_doc_screen.dart\` math environment parser 中 \`mathEnvironment!\`）。已把局部非空值赋给 \`activeMathEnvironment\` 并使用 Dart flow promotion 修正；当前 head 为 a55846f86675ac5437d6d19fe888c7d4277d3c34。该 head analyzer 已通过，完整回归为 1863 passed / 1 failed / 15 skipped。
+- 该次唯一失败定位在 \`Neijing and Bencao lecture libraries pass paragraph-mode source identities\` 的 Bencao 目录定位测试。第二次 \`pumpWidget(MaterialApp(home: BenCaoLibraryScreen()))\` 沿用了旧 MaterialApp/Navigator 的初始路由栈，仍处于 Neijing reader 页面，导致 \`find.byType(ListView)\` 无匹配项；不是生产页面没有 ListView，也不是入口功能缺陷。
+- 最新提交 \`fd37d9ff23873661d4dbda2dcd3d37d88c954e6c\` 给 Bencao 测试应用增加独立 \`ValueKey('bencao-library-test-app')\`，强制替换旧 Navigator 后再定位 Bencao ListView；保留原滚动和来源断言。该 head 的 Fork license boundary run \`44971279083\` SUCCESS；Flutter tests run \`44971279061\` 在本节更新时仍为 PENDING，Android arm64 对应 job 尚未创建/取得终态。
+- 对 a55846f 的 Android job 曾在 Flutter 失败后继续运行，不能转用为 fd37d9f 的 Android 验收。当前 fd37d9f 必须重新通过 Flutter 全量 regression 与 Android arm64 APK/Manifest/ABI/Android unit tests；license 已 SUCCESS。所有未取得终态的检查继续记为 IN_PROGRESS / UNKNOWN，禁止合并。
+- Stateful parser 的新增边界包括：多行嵌套 HTML、HTML comment、CDATA、\`$$...$$\`、\`\\[...\\]\`、\`\\begin{...}\\end{...}\` 数学块；相应测试 fixture 含内部空行，仍要求仅两段普通正文创建 SelectionArea。任何块边界未闭合时按 fail-closed 处理。
