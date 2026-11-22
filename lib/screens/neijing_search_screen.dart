@@ -6,6 +6,7 @@ import '../widgets/state_view.dart';
 import 'package:flutter/services.dart';
 
 import '../data/neijing_lecture_data.dart';
+import '../services/classic_search_service.dart';
 import 'markdown_doc_screen.dart';
 
 /// 《人纪·黄帝内经》全文搜索：关键词 → 命中篇目 + 上下文片段。
@@ -238,7 +239,10 @@ class _NeijingSearchScreenState extends State<NeijingSearchScreen> {
                               linkFormulas: true,
                               contextualAskModuleId: 'neijing-reading',
                               contextualAskAnchorId:
-                                  'neijing-reading:passage:${r.doc.asset}',
+                                  ClassicSearchService.contextualAnchorIdForReaderAsset(
+                                moduleId: 'neijing-reading',
+                                asset: r.doc.asset,
+                              ),
                               contextualAskSourceId: r.doc.asset,
                               contextualAskParagraphs: true,
                             ),
