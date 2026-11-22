@@ -12,8 +12,8 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 已合并；情境入口、代码/测试与合并后 master CI 证据见第 65 节；后续 docs-only 提交不改变本应用代码基线 |
-| 本轮最新文档核验基线（本次同步前） | `b0743662f13d7156a146501a357530e976547e6c` | PR #395 已合并；Find N2 / E4B 交接文件和 §65 台账更新已进入 master；本行记录本次文档校准前的文档提交 |
+| 本轮最新应用代码核验基线 | `26d924b894b3301a8f46b2db120407cc344e41af` | PR #392 与 PR #399 已合并；情境入口、来源反查修复、最新代码与主线 CI 证据见第 67 节；后续 docs-only 提交不改变本应用代码基线 |
+| 本轮文档校准前基线 | `26d924b894b3301a8f46b2db120407cc344e41af` | PR #395 后续文档与 PR #399 代码修复均已在此主线；本次 Find N2 / E4B 与规范索引校准另由文档 PR 交付 |
 | 应用版本 | `1.11.30+8039` | 以 `pubspec.yaml` 为准 |
 | README 版本说明 | `1.11.30+8039` | 已与 `pubspec.yaml` 同步；由版本源 guard 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -21,7 +21,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线仍为 PR #392 合并后的 `39da7c0522a47cd227a617167badcf116d0152b3`；PR #395 后的文档基线为 `b0743662f13d7156a146501a357530e976547e6c`。PR #395 及本轮后续文档校准不改变应用代码和 CI 对应的代码 SHA。历史任务范围与历次核验仍以各节记录为准；情境入口覆盖、主线独立 CI 见第 65、66 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 本表分开记录应用代码与文档校准基线。当前应用代码基线为 PR #399 合并后的 `26d924b894b3301a8f46b2db120407cc344e41af`；继承的 PR #395 文档收尾基线为 `b0743662f13d7156a146501a357530e976547e6c`。本轮规范索引、真机交接与 E4B 步骤修订只改文档，不改变应用代码 SHA。历史 PR 与历史 CI 仍按原节保留；最新入口覆盖、来源回链修复和 `master` post-merge CI 见第 67 节。Find N2 / E4B 实测仍按本地清单取得独立设备证据，未实测项不得因代码、自动化或 CI 通过改写为 PASS。
 
 ## 2. 状态定义
 
@@ -3455,4 +3455,73 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - 情境问 AI：当前已定义且应启用的云端入口、来源双向映射、自动化、文档索引和主线 CI：PASS。
 - Find N2 / E4B 真机与本地验收：UNKNOWN / LOCAL ONLY；这是明确后置交付，不是云端阻塞。
 - 全局 AI 改造台账 B/C/D/E/F/G 的剩余项按 §3 原范围继续独立管理；本节只关闭情境问 AI 这一交付范围，不把其他工作流状态混并或虚报完成。
+
+
+
+<a id="contextual-ask-ai-final-audit-2026-11-22"></a>
+## 67. 2026-11-22 全仓库情境入口复核、来源回链修复与云端收尾
+
+### 67.1 本轮核验基线与范围
+
+- 仓库：`just2512/nihaixia-app`；核验分支：`master`；最新应用代码 SHA：`26d924b894b3301a8f46b2db120407cc344e41af`。
+- 版本仍为 `1.11.30+8039`；PR #392 完成针灸「穴位处方」单条入口，PR #399 修复经典来源反查的前缀误匹配。PR #399 只改 `lib/services/classic_search_service.dart` 与 `test/classic_search_backlink_test.dart`，不改会话 schema、数据库、Native 模型生命周期、Android applicationId、版本或 Release 签名配置。
+- 当前 Git tree 包含 2,401 个 tracked blobs、229 个 `lib/**/*.dart` 文件及 38 个情境入口 / 来源上下文专项测试文件。以下结论仅按主线现存 resolver、页面入口、索引合同和列明的自动化测试给证；设备行为不由此推断。
+
+### 67.2 情境入口覆盖、去重与来源合同
+
+| 覆盖类别 | 当前状态 | 审计结论 |
+|---|---|---|
+| 确定性工具完整结果 | PASS（云端代码/自动化） | 结果只从成功执行生成不可变快照；Resolver 校验结果 ID、规则版本、source ID 和摘要；AI 只解释，不重算、不修改业务结果 |
+| 工具局部字段 / 图表字段 | PASS（云端代码/自动化） | 八字、紫微、易经、梅花、五运六气等字段入口由用户显式选择白名单 fieldPath；禁止模型自行选字段 |
+| 方剂 / 本草 / 医案 / 内经条目 | PASS（云端代码/自动化） | 使用本地稳定身份、数据版本、来源与 snapshot；医案内部 seq 不冒充原始卷页/病例编号；缺失或版本变化不回退到相似条目 |
+| 经典讲稿与选中文段 | PASS（云端代码/自动化） | 伤寒、金匮、内经、针灸、本草及易经/命卦 reader module 与搜索 source key 显式映射；仅可选合法正文段落；助手回链反查同一 indexed asset |
+| 古籍章节 | PASS（云端代码/自动化） | 使用独立 book/chapter 与原始 TXT 行号映射；来源行映射缺失、标题/正文不一致时不生成伪锚点，保持 MISSING |
+| 针灸「穴位处方」 | PASS（云端代码/自动化） | 仅处方 Tab 单条记录启用；身份是 `(categoryId, entryId)`，snapshot 包含分类、条目和资产版本；同数字 entryId 不跨分类复用 |
+| 针灸「透针透穴」「穴位讲解」「耳穴」 | NOT_ENABLED（有意保留） | 没有同等来源合同 / 快照 / 安全 Prompt 前不开放；这是明示产品边界，不属于漏接入口 |
+| 导航列表、历史列表、危急提示、已保存命盘列表 | NO_DUPLICATE_ENTRY | 不从导航/历史/提示列表重复建立内容锚点；进入具体知识条目或成功工具结果后再走唯一情境入口 |
+
+- **唯一会话链：** 已接入入口统一走 `AiContextRef → AiContextResolver → AiContextPromptBuilder → ContextualAiSheet →` 既有 `LocalAiInterviewScreen` / 会话存储。没有平行聊天页面、第二套 session 表、第二条模型推理链或旁路工具路由。
+- **上下文稳定性：** `AiContextRef` 中的 kind、moduleId、anchorId、sourceId、snapshotId、anchorVersion、ruleVersion、fieldPath 等元数据必须共同通过 Resolver。解析状态只有 `RESOLVED` 可转入 Prompt；`MISSING / UNKNOWN / STALE / DENIED` 不应模糊补齐。
+- **reader 映射：** 搜索 source key 与 reader module 的对应关系显式维护：`shanghan`、`jingui`、`neijing → neijing-reading`、`zhenjiu → zhenjiu-reading`、`bencao → bencao-reading`。asset-backed 阅读仅接受白名单路径：`assets/shanghan/`、`assets/jingui/`、`assets/neijing/`、`assets/zhenjiu_lecture/`、`assets/bencao_lecture/`、`assets/yijing/`、`assets/yijing_minggua/`；完整资产路径必须在当前 manifest 中。Shanghan 的条文号经统一 builder 归一为 canonical clause anchor，不由页面临时拼接。
+- **段落选择：** 仅接受可定位的普通正文区间；标题、列表、引用块、表格、代码、HTML、图片、链接定义和数学块不作为可选正文。重复相同段落仍以原始行范围区分。古籍段落用原文 TXT 行映射，不把合成分隔符当作原文行。
+- **来源反查：** 助手引用不得按标题、关键词、相似度或文件名前缀兜底；当前 `findBySourceId` 只接受精确规范 ID、显式 reader-module 别名，或固定四字段历史格式。
+- **入口测试索引（38 项）：** `acupoint_contextual_entry_test`、`ai_context_prompt_builder_test`、`almanac_contextual_result_entry_test`、`assistant_acupuncture_source_navigation_test`、`assistant_knowledge_context_test`、`bazi_contextual_result_entry_test`、`chat_screen_initial_context_test`、`chenggu_contextual_result_entry_test`、`classic_paragraph_contextual_entry_test`、`classic_search_backlink_test`、`contextual_ai_panel_layout_test`、`dosage_contextual_entry_test`、`dream_contextual_result_entry_test`、`formula_contextual_entry_test`、`guansha_contextual_result_entry_test`、`guji_contextual_paragraph_entry_test`、`herb_backlinks_test`、`herb_contextual_entry_test`、`huangdi_siji_contextual_result_entry_test`、`markdown_doc_contextual_selection_test`、`medical_case_contextual_entry_test`、`meihua_contextual_field_entry_test`、`meihua_contextual_result_entry_test`、`meridian_contextual_entry_test`、`neijing_contextual_entry_test`、`qa_herb_backlinks_test`、`sanshan_lingqian_contextual_result_entry_test`、`shanghan_jingui_paragraph_context_test`、`shousheng_debt_contextual_result_entry_test`、`solar_term_contextual_result_entry_test`、`xiaoliuren_contextual_result_entry_test`、`yijing_contextual_entry_test`、`yunqi_contextual_chart_field_entry_test`、`yunqi_contextual_result_entry_test`、`yuxiaji_omen_contextual_result_entry_test`、`zhenjiu_lecture_paragraph_context_test`、`ziwei_contextual_result_entry_test`、`ziwuliuzhu_contextual_result_entry_test`。该清单按 Git tree 的文件路径计数；同一测试文件中的多个断言不重复计为多份覆盖文件。
+
+### 67.3 PR #399：来源回链前缀误匹配的修复
+
+- **发现：** 旧版 `ClassicSearchService._matchesSourceId()` 对 asset / book chapter 使用 `parts.length >= 2/3` 前缀比较。一个带有伪造 `:paragraph:...` 等尾段的 candidate，可能仍绑定到前缀对应的真实索引条目。这不符合本规范 §12.4 的“精确反查、不得按文件名片段兜底”要求。
+- **修复：** PR #399 将可接受形状收紧为：(1) 规范 `sourceId` 完全相等；(2) 显式 reader-module allowlist 下精确的 `<moduleId>:<asset>` alias；(3) 固定四字段历史格式 `source:asset-or-bookId:chapterIndex-or-MISSING:title`。不符合字段数、缺少历史 title 字段或附加任意尾段时返回 null；不引入 title/fuzzy fallback。
+- **回归：** `classic_search_backlink_test.dart` 覆盖当前规范 ID、稳定 asset key、四字段旧格式、额外尾段拒绝、缺失字段拒绝和 Neijing reader alias 精确反查。
+- PR #399：`https://github.com/just2512/nihaixia-app/pull/399`，squash merge commit `26d924b894b3301a8f46b2db120407cc344e41af`；合并前 PR-head Flutter regression、Android arm64 / Native unit tests、Fork License Boundary 均通过，详细记录见 67.4。
+
+### 67.4 最新主线 CI 证据与阶段状态
+
+以下 CI 均对应 `master @ 26d924b894b3301a8f46b2db120407cc344e41af`，不使用 PR-head 的成功记录替代 master post-merge 证据：
+
+- Flutter regression：run `45024833552`，job `137215478267`，SUCCESS；日志明确为 **1,887 tests passed, 15 skipped**，0 failure。
+- Android arm64 CI verification APK + Native unit tests：run `45024833552`，job `137217373016`，当前状态待最终结果回填；该 job 依赖 Flutter test job，负责 ABI Debug APK、合并 Manifest、APK SHA-256、Native unit tests 与 Release signing fail-closed 检查。
+- Flutter Quality Gate：run `45024833501`，job `137215478301`，当前状态待最终结果回填；已完成静态分析与前序检查，Native unit tests / 后续步骤尚待最终结论。
+- Fork license inventory / boundary：run `45024833507`，job `137215478451`，SUCCESS。
+- Branch validation：job `137215479426` 为 workflow 条件性 SKIPPED；不记为 PASS，也不视为失败。
+- PR #399 head：Flutter regression run `45024298249` / job `137213809344` SUCCESS，Android arm64 job `137215409235` SUCCESS，Fork license run `45024298267` / job `137213811...` SUCCESS。PR-head Flutter 日志同为 1,887 passed / 15 skipped。主线 post-merge 证据以上一组 SHA/Run 为准。
+
+**阶段判断：** 情境问 AI 的代码、专项回归、全量 Flutter regression 与许可边界已通过；云端最终门禁仍待 master Android arm64 job 和 Flutter Quality Gate 结束后更新。本节未通过前，不将 master 的 Android / Quality 状态写为 PASS。
+
+### 67.5 Find N2 / E4B 后置本地验收交接
+
+下列交接文件已按当前 master 基线校准。它们是可执行操作规范，不代表实体设备已验收：
+
+- `docs/find-n2-real-device-acceptance.md`：外屏、内屏、半折叠、Insets / 键盘、弹层、来源回链与升级后冒烟；安装前必须核对原签名证书、applicationId、versionCode 和 APK SHA-256。
+- `docs/local-android-release-checklist.md`：在本地使用原 keystore 构建 Release APK；签名私钥及凭据不得进仓库、CI artifact 或聊天内容。
+- `docs/find-n2-local-ai-acceptance-checklist.md`：GPU / CPU 各至少 20 轮、Native 实际 backend、图片/音频、Activity / force-stop 恢复、AI 清理及状态记录。
+- `docs/find-n2-ai-trace-acceptance-plan.md`：按实际场景核对 trace_id、阶段、消息 metadata、Native backend、持久化、presentation / final render 和清理。
+- `docs/local-ai-e4b.md`：Gemma 4 E4B 模型文件校验、导入、当前 GPU / CPU 设置页操作、已知 fallback 与资源边界。
+
+Find N2 安装验收只能使用由现有原签名密钥签署的本地 Release APK。CI Debug APK 只证明 Debug 构建 / ABI，不是旧版本保留数据升级包。禁止卸载旧 App、清除 App 数据或改 applicationId 绕过签名不一致；若旧签名私钥不可用，应明确报告无法满足无卸载保留数据升级。E4B 模型文件仍固定为 `gemma-4-E4B-it.litertlm`、3,659,530,240 bytes、SHA-256 `0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0`；GPU / CPU 的实际执行后端必须使用 Native 返回值，不按设置偏好推断。真机、模型加载、多轮、多媒体、发热/内存与端到端 TRACE 尚未在本轮云端执行，保持 `MISSING / UNKNOWN / LOCAL ONLY`。
+
+### 67.6 云端关闭判定及全局台账边界
+
+- 情境问 AI 云端范围：入口覆盖与去重、Resolver / snapshot / source anchor、助手引用回链、专项与全量回归、许可检查、规范索引及本地验收文件校准已完成；master Android arm64 和 Flutter Quality Gate 以 67.4 的最终 job 结论为准。
+- Find N2 / E4B 本地执行：保持 `UNKNOWN / LOCAL ONLY`，交由设备持有人按 67.5 执行；不阻止已完成的云端工作，也不把设备未测写成 PASS。
+- §3 的全局 AI 工作流 A-G 仍各自按照原定义的范围和状态管理，不因本情境 Ask AI 子项目收尾而改写为 PASS。§65、§66 保留历史核验记录，不回写伪装成当时已知道 PR #399 或 26d924b。
 
