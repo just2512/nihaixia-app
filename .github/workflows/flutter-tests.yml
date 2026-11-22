@@ -449,7 +449,7 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          output="$(cd android && ./gradlew :app:assembleDebug --dry-run --no-daemon -PlocalDebugUsesReleaseSigning=true 2>&1)"
+          output="$(flutter build apk --debug --no-pub --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true 2>&1)"
           status=$?
           set -e
           if [[ "$status" -eq 0 ]]; then
