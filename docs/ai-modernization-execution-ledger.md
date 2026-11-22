@@ -3295,3 +3295,10 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 该 head 的 CI static analysis 失败根因是整段替换时遗漏后续 paragraph mode fails closed without complete source provenance 前面的 testWidgets( 声明，导致测试文件 355/370 行语法错误；不是新功能代码或来源映射断言失败。完整回归因此报告 1860 passed / 1 failed / 15 skipped，失败测试文件在加载阶段编译失败。
 - 已在 head def4a95207050fd8b3de17547d6f4c988a54281c 恢复 testWidgets( 声明；没有删除测试、关闭断言或改产品逻辑。该 HEAD Fork license boundary run 44972049063 SUCCESS；Flutter tests run 44972049061 在本节记录时仍为 PENDING；Android arm64 当前 HEAD job 尚无终态。此前 head 的 CI 结果均不转移到 def4。
 - 后续必须以 def4 的最新 head CI 验证：Dart/Flutter static analysis、完整 Flutter regression（包括真实 Neijing/Bencao 端到端段落选择）、Android arm64 verification APK / Manifest / ABI / unit tests。若新测试暴露真实选择/滚动缺陷，继续按实际错误修正；仅 CI 全部必需项 SUCCESS 且 PR mergeable 才能合并。
+
+### 63.10 真实讲稿段落映射失败与修复（2026-11-22）
+
+- 最新修复前 head def4a95207050fd8b3de17547d6f4c988a54281c 的 Fork license boundary 44972049063 为 SUCCESS；Dart/Flutter static analysis 为 SUCCESS；完整 Flutter regression 44972049061 为 FAIL（1863 passed / 1 failed / 15 skipped）。失败测试为真实内经/本草讲稿端到端样板，在 Neijing 实际 Markdown 资产中找不到 SelectionArea。
+- 根因在 MarkdownDocScreen._buildContextualParagraphBody：实现同时对原始 Markdown 与 _injectLinks 后的展示 Markdown 各跑一次段落分类，并要求两组段落数量和行范围完全相同。真实讲稿中的自动链接转换可能改变 Markdown 结构扫描结果；虽然 _injectLinks 只替换段落内文本，但第二次扫描导致对合法原始段落错误 fail-closed。此处不是 source asset 不存在、入口未传参数或 AI sheet 调用失败。
+- 已在 head 9bd6dd4fcb05956058e180169640e4d0e67055a5 修正：仅以原始 Markdown 扫描建立权威段落和原始行范围；展示内容按相同行号切片保留自动链接，不再对转换后的文本重复推断 passage。为保证映射成立，自动链接候选显式排除 CR/LF，且仅当原始/展示文本行数一致时开放情境入口；行数变化则保持 fail-closed。此修复保留原文链接，不使用文本 indexOf 定位，也不放宽来源身份要求。
+- 最新 head 9bd6dd4 的 Fork license boundary run 44972858228 SUCCESS；Flutter tests run 44972858236 在本节记录时为 PENDING；尚无该 SHA Android arm64 当前 head 终态。此前 def4 的 Android job 137056014088 是旧 SHA，不能代替 9bd6dd4 验收。当前 PR 仍 OPEN，只有最新 SHA 的 Flutter full regression 与 Android arm64 APK/Manifest/ABI/unit tests 均 SUCCESS 后才允许合并。
