@@ -452,10 +452,11 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
         continue;
       }
 
-      if (mathEnvironment != null) {
+      final activeMathEnvironment = mathEnvironment;
+      if (activeMathEnvironment != null) {
         activeStart ??= index;
         activeContainsUnsafeBlock = true;
-        if (line.contains(r'\end{' + mathEnvironment! + '}')) {
+        if (line.contains(r'\end{' + activeMathEnvironment + '}')) {
           mathEnvironment = null;
         }
         continue;
