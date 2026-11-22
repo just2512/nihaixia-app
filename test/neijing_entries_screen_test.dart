@@ -415,11 +415,14 @@ void main() {
     await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(seconds: 6));
     });
-    await tester.pumpAndSettle();
+    // The reader's empty/loading artwork may keep a ticker active; use bounded
+    // pumps and assert the observable result instead of waiting for global idle.
+    await tester.pump();
     expect(find.text('加载失败'), findsNothing);
 
     await tester.enterText(search, '黄帝曰');
-    await tester.pumpAndSettle();
+    // NeijingSearchScreen debounces text input by 250ms.
+    await tester.pump(const Duration(milliseconds: 300));
 
     final results = find.byType(ListTile);
     expect(results, findsWidgets);
