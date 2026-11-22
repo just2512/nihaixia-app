@@ -43,10 +43,10 @@ void main() {
       r'^version:\s*\d+\.\d+\.\d+\+(\d+)$',
       multiLine: true,
     ).firstMatch(pubspec)?.group(1);
-    final maximum = RegExp(
-      r'^\*\*同 applicationId 已知最高 Android versionCode\*\*：(\d+)$',
-      multiLine: true,
-    ).firstMatch(policy)?.group(1);
+    final maximum = valueAfterBacktick(
+      policy,
+      '**同 applicationId 已知最高 Android versionCode**：',
+    );
 
     expect(version, isNotNull);
     expect(maximum, isNotNull);
