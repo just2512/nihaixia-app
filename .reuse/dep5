@@ -83,6 +83,7 @@ Files:
  lib/screens/ziwei_doc_screen.dart
  lib/screens/ziwei_reference_screen.dart
  lib/screens/ziwuliuzhu_screen.dart
+ lib/screens/zhenjiu_library_screen.dart
  lib/services/classic_search_service.dart
  lib/services/native_files_io.dart
  lib/services/native_files_stub.dart
