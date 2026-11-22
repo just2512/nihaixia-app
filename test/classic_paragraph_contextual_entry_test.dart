@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/bencao_library_screen.dart';
-import 'package:nihaisha_app/screens/classic_library_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
 import 'package:nihaisha_app/screens/neijing_library_screen.dart';
