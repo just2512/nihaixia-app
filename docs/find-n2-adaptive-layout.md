@@ -81,17 +81,29 @@ Flutter Android 的 `MediaQuery.displayFeatures` 可提供折痕/铰链位置和
 - 项目描述不再使用“中医诊断助手”作为总定位；中医规则辨证、传统文化工具和 E4B 健康信息整理应在功能说明里分别描述。
 - Android applicationId `com.nihaisha.nihaisha_app`、Kotlin namespace `com.nihaisha.nihaisha_app` 与 Dart package name `nihaisha_app` 均保持不变，避免影响旧 APK 覆盖升级、应用私有数据目录、本地模型路径与既有代码导入。
 
-### 图标方向
+### Android Launcher 图标（当前采用方案）
 
-**方向：朱砂印记 + 经典书页的现代简化符号。**
+**图形：** 采用用户确认的抽象开卷图形，保留左侧圆弧书页、中央上扬页片、右侧竖向书页边和连续弧形书底的不对称轮廓；不添加文字、拼音、印章或副标题。
 
-- 主色：朱砂红（约 `#A93226`）；辅色：墨黑（约 `#24211F`）、米纸白（约 `#F3EBDD`）、少量古金（约 `#B89453`）。
-- 主图形只保留一个清晰主体：打开的书页与圆形阴阳/经络线的抽象组合，或单字「研」的简化印记。两者择一，不把所有传统元素堆进同一图标。
-- 禁止在图标里放小字、四角印章、长副标题和“中医大师”字样；桌面图标不承担说明书功能。
-- Android 8.0+ 使用 `mipmap-anydpi-v26/ic_launcher.xml`，分离 foreground 与 background，主体置于系统安全区；同时提供旧版 launcher PNG，确保旧系统和第三方桌面显示一致。
-- 交付源文件优先使用 SVG/矢量母版，再导出各密度资源；图形在圆形、方圆形和水滴形遮罩下都要可识别。
+**配色与 App 主题 Token 一致：**
+- 主体松墨绿：`#43594D`，对应 `AppColors.light.primary`。
+- 背景灰绿：`#E7E9E4`，对应 `AppColors.light.background`。
+- Launcher 图标为静态资源，不随 App 内浅色/深色模式变化；两种系统主题下均需保持辨识度。
 
-本轮已按上述方向落实首版矢量资源：打开书页作为唯一主体、朱砂红页面、米纸白底、墨色书页线条与古金色中缝；不放小字或“中医大师”字样。Android 8.0+ 使用独立 foreground/background 自适应图层；API 24–25 使用 anydpi vector 图标。桌面短名称仍统一为“研纪”，MaterialApp.title 与 Manifest label 保持一致，applicationId 不变。
+**资源约定：**
+- `android/app/src/main/res/drawable/ic_launcher_foreground.xml`：透明前景，仅绘制松墨绿开卷轮廓。
+- `android/app/src/main/res/values/ic_launcher_background.xml`：统一灰绿底色。
+- `mipmap-anydpi-v26/ic_launcher.xml` 与 `ic_launcher_round.xml`：Android Adaptive Icon，引用同一套前景和背景。
+- `mipmap-anydpi/ic_launcher.xml` 与 `ic_launcher_round.xml`：API 24–25 矢量兼容版本，背景和图形使用相同颜色。
+- 多密度 PNG 回退资源保留；SVG 品牌标识与 Android 矢量资源同步，不得残留旧朱红色图标。
+- 系统 Launcher 负责圆形、圆角方形等遮罩；关键图形需位于自适应图标安全区。
+
+图标资源已按 App 当前主题色统一。自动化测试核对前景、背景、旧 API 矢量回退、Adaptive Icon 引用、应用名称与 package identity；Find N2 的真实 Launcher 遮罩、图标缓存和覆盖升级仍须按本地验收文档执行。
+
+真机验收交接：
+[研纪 Android 真实设备安装与图标显示验收](find-n2-real-device-brand-acceptance.md)
+
+未提交 OPPO Find N2 实机截图和验收记录前，状态保持 `MISSING`；CI 构建或 Widget 测试不能替代设备验收。
 
 ## 5. 实机与 CI 验收标准
 
