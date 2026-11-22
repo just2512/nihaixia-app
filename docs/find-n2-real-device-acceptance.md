@@ -1,7 +1,7 @@
 # OPPO Find N2 真机折叠屏验收方案
 
 > 状态：待真机执行（MISSING）。本文是执行方案，不是设备通过报告。Widget 测试、模拟器截图和 CI 通过均不能替代 Find N2 实机验收。
-> 本轮应用代码基线：`master @ d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`（PR #392 已合并），应用版本 `1.11.30+8039`。情境来源回链修复提交 `26d924b894b3301a8f46b2db120407cc344e41af` 已通过 Flutter/Android/许可 CI；本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
+> 本轮应用代码基线：`master @ f89b0a4b5f91dfdb879a6678b459566a5efb9b29`（PR #392 已合并），应用版本 `2.0.0+8048`。情境来源回链修复提交 `26d924b894b3301a8f46b2db120407cc344e41af` 已通过 Flutter/Android/许可 CI；本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
 
 ## 1. 验收目标与边界
 
