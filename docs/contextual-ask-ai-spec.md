@@ -334,6 +334,17 @@ Phase 1/2 的“样板通过”拆分为云端工程门禁与最终设备门禁�
 - Find N2 外屏/内屏布局分别有自动化布局覆盖；真机验收单独记录 TRACE。
 - 新增测试只覆盖本协议定义的真实调用链和边界，不为追求数量扩张无关测试。
 
+
+### 12.4 经典阅读来源双向映射
+
+经典阅读的 reader module ID 与检索索引 source key 可以不同，但正向入口和助手引用回链必须共用明确的双向白名单：
+
+- 正向入口只能由受控 source key / reader module 映射生成 canonical anchor；模块 ID 与索引 source key 不要求字面相同，但映射必须显式登记并有测试。
+- 助手引用回链必须按稳定 source ID 精确反查同一条本地资料。asset-backed 阅读仅接受 manifest/白名单中的完整 asset 路径；古籍章节仅接受 book ID、chapter index 与独立原始 TXT 行号映射。
+- 不得按标题、关键词、相似度、文件名片段或 indexOf 兜底定位；未知、歧义、缺少来源映射均返回 MISSING / UNKNOWN 并拒绝跳转。
+- reader module ID、检索 source key、ContextRef.sourceId、anchorId 的转换必须集中维护，不能由搜索页、详情页和助手页各自拼接。
+- 自动化需覆盖正向入口、助手引用回链、重复标题、未知 ID、篡改 asset、额外尾缀、模块/source key 不同、古籍行号缺失等正负向场景。
+
 ## 13. 风险、取舍与回滚
 
 | 风险 | 影响 | 控制与回滚 |
