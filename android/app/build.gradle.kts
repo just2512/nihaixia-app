@@ -45,9 +45,12 @@ if (localDebugUsesReleaseSigning && runningInCi) {
 if (releaseTaskRequested || localDebugUsesReleaseSigning) {
     val signingBuildLabel = if (releaseTaskRequested) "Release" else "local Debug with Release signing"
     if (!releaseKeyPropertiesFile.isFile) {
-        throw GradleException(
-            "$signingBuildLabel signing is required. Configure android/key.properties with the existing local signing key before building."
-        )
+        val missingKeyMessage = if (releaseTaskRequested) {
+            "Release signing is required. Configure android/key.properties with the existing signing key before building."
+        } else {
+            "Local Debug with Release signing is required. Configure android/key.properties with the existing local signing key before building."
+        }
+        throw GradleException(missingKeyMessage)
     }
     val requiredSigningFields = listOf("storePassword", "keyPassword", "keyAlias")
     val missingSigningFields = requiredSigningFields.filter {
