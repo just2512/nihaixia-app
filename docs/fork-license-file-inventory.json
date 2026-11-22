@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master baseline includes contextual Ask AI cloud closeout, local-only Release signing hardening and independent SemVer 2.0.0+8048. This change adds the approved Yanji Android launcher icon resources, Find N2 brand/device acceptance handoff and resource regression test; knowledge-base and third-party assets remain excluded under their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes contextual Ask AI cloud closeout, local-only Release signing hardening, product version 2.0.0+8048 and the approved Yanji launcher icon. This change adds four Zi Wu Liu Zhu method-level contextual Ask AI entry points bound to the exact verified device-local snapshot, preserves NOT_APPLICABLE without inventing acupoints, and adds isolated prompt/resolver and responsive UI regression coverage. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 883,
-    "added": 722,
+    "changed": 884,
+    "added": 723,
     "modified": 161,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
-      "FORK_COMMERCIAL": 363,
+      "FORK_COMMERCIAL": 364,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -6914,6 +6914,14 @@
     },
     {
       "path": "test/ziwuliuzhu_calculation_service_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/ziwuliuzhu_contextual_method_field_entry_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
