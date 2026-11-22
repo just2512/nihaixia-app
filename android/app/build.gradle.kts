@@ -25,11 +25,32 @@ val releaseKeystoreFile = releaseStoreFilePath
 val releaseTaskRequested = gradle.startParameter.taskNames.any { requestedTask ->
     requestedTask.substringAfterLast(":").contains("release", ignoreCase = true)
 }
-if (releaseTaskRequested) {
+
+// This opt-in build is only for local Find N2 TRACE runs: it keeps the Release
+// signer while compiling Flutter in Debug mode, so kDebugMode TRACE controls are
+// available without changing the installed package signature or app data.
+// Never enable it in CI; the signing key must remain local and untracked.
+val localDebugUsesReleaseSigning =
+    providers.gradleProperty("localDebugUsesReleaseSigning").orNull == "true"
+val runningInCi =
+    providers.environmentVariable("CI").orNull.equals("true", ignoreCase = true) ||
+        providers.environmentVariable("GITHUB_ACTIONS").orNull.equals("true", ignoreCase = true)
+
+if (localDebugUsesReleaseSigning && runningInCi) {
+    throw GradleException(
+        "localDebugUsesReleaseSigning is local-only and is forbidden in CI."
+    )
+}
+
+if (releaseTaskRequested || localDebugUsesReleaseSigning) {
+    val signingBuildLabel = if (releaseTaskRequested) "Release" else "local Debug with Release signing"
     if (!releaseKeyPropertiesFile.isFile) {
-        throw GradleException(
+        val missingKeyMessage = if (releaseTaskRequested) {
             "Release signing is required. Configure android/key.properties with the existing signing key before building."
-        )
+        } else {
+            "Local Debug with Release signing is required. Configure android/key.properties with the existing local signing key before building."
+        }
+        throw GradleException(missingKeyMessage)
     }
     val requiredSigningFields = listOf("storePassword", "keyPassword", "keyAlias")
     val missingSigningFields = requiredSigningFields.filter {
@@ -37,12 +58,12 @@ if (releaseTaskRequested) {
     }
     if (releaseStoreFilePath.isBlank() || missingSigningFields.isNotEmpty()) {
         throw GradleException(
-            "Release signing configuration is incomplete. Check storeFile, storePassword, keyAlias and keyPassword in android/key.properties."
+            "$signingBuildLabel signing configuration is incomplete. Check storeFile, storePassword, keyAlias and keyPassword in android/key.properties."
         )
     }
     if (releaseKeystoreFile?.isFile != true) {
         throw GradleException(
-            "Release signing keystore file configured in android/key.properties was not found."
+            "$signingBuildLabel keystore configured in android/key.properties was not found."
         )
     }
 }
@@ -87,6 +108,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Explicit opt-in for local TRACE runs only. Default Debug builds
+            // continue using the standard Android Debug signing identity.
+            if (localDebugUsesReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
