@@ -1,5 +1,7 @@
 # Gemma 4 E4B 本地多模态问诊（Android）
 
+> **验收状态与使用边界：** 本文件说明 Gemma 4 E4B 模型文件、导入和运行配置，不是设备 PASS 报告。Find N2 的折叠屏、覆盖升级、GPU/CPU 多轮、多媒体、恢复及 TRACE 验收，分别按 [Find N2 真机验收方案](find-n2-real-device-acceptance.md)、[Find N2 本地 AI 验收清单](find-n2-local-ai-acceptance-checklist.md) 和 [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md) 执行；所有未实测项保持 `MISSING / UNKNOWN / LOCAL ONLY`。
+
 ## 模型文件
 
 使用 LiteRT Community 提供的标准 Android .litertlm 文件：
@@ -55,7 +57,7 @@ https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/28299f3
 
 ## 安装到 OPPO Find N2
 
-先安装本项目生成的 Debug APK，并将模型文件下载到手机可访问的位置（例如“下载”目录）。打开应用「问诊」页，点右上角本地 AI 入口：
+**Find N2 正式验收不得以 CI Debug APK 覆盖旧安装。** 先按 [本地 Android 构建与升级检查清单](local-android-release-checklist.md) 使用本地原签名密钥构建 Release APK，并按 [Find N2 真机验收方案 §9](find-n2-real-device-acceptance.md) 核对 applicationId、versionName/versionCode、签名证书 SHA-256 和 APK SHA-256。只能在签名一致且 versionCode 满足升级条件后执行覆盖安装；不得卸载旧版或清除数据。CI Debug APK 仅用于 arm64 ABI / 构建链路验证，不作为保留旧数据的设备升级包。完成安装前核验后，将模型文件下载到手机可访问的位置（例如“下载”目录），打开应用「问诊」页，点右上角本地 AI 入口：
 
 1. 点击「选择并导入模型文件」。
 2. 在 Android 系统文件选择器中找到 `gemma-4-E4B-it.litertlm`。
@@ -84,20 +86,17 @@ adb shell run-as com.nihaisha.nihaisha_app ls -l files/ai_models/
 
 注意：ADB 方式不经过应用内导入流程的校验，但 App 会在首次加载前再次流式计算 SHA-256，匹配后才创建 LiteRT-LM Engine；哈希不匹配时拒绝加载。电脑端手动核对仍建议保留，作为导入前检查。模型加载优先尝试 GPU；GPU Engine.initialize() 失败时会在加载阶段尝试 CPU。若 GPU 初始化成功但首轮推理出现 LiteRT-LM 明确的 `Can not find OpenCL library on this device` 错误，应用会先关闭旧 Conversation 和 Engine，再重建 CPU Engine/Conversation，并只重试该首轮一次。其他运行时错误、CPU 重试失败及已有成功对话轮次后的 GPU 故障不会自动重放。界面显示实际后端，所有回退路径仍需 Find N2 实机验证。
 
-## Debug 构建：强制 CPU 后端验收
+## GPU / CPU 后端手动选择（当前实现）
 
-Find N2 的 GPU 与 CPU 后端需要分别实测。应用默认优先 GPU；为避免 GPU 正常时无法独立验证 CPU，Debug APK 提供一个仅调试构建有效的启动参数。该入口没有用户设置界面，不改变 Release 构建的 GPU 优先和原有 CPU fallback。
+当前 Debug 与 Release 均通过 App「设置 → 本地 AI → E4B 推理后端」选择 GPU 或 CPU；首次未保存偏好时按当前默认值使用 GPU。该设置才是 Find N2 本地验收入口，不再使用旧版 `DEBUG_FORCE_CPU_BACKEND` Intent 作为验收步骤。
 
-强制 CPU 启动（先停止现有进程，确保冷启动 Intent 生效）：
+1. 在设置页分别选择 GPU、CPU，退出并重新进入设置页，确认用户偏好持久化。
+2. 模型未加载时切换后端，再加载模型；模型运行时切换后端，确认 Native 串行控制流程完成当前已排队操作、释放旧 Engine / Conversation 并按新偏好重建。
+3. 每次加载后同时记录「用户选择的后端」和 Native 返回的「实际运行后端」。GPU 初始化或首轮运行发生 CPU fallback 时，必须按实际值记录 CPU，不得将用户选择 GPU 计作 GPU 通过。
+4. 所选后端初始化失败时，记录错误并验证可选择另一后端重试；失败或状态未知的请求不得自动重放。
+5. GPU 和 CPU 分别执行的多轮、附件、恢复、TRACE 场景与结果模板，统一按 [Find N2 本地 AI 后端切换与端侧验收清单](find-n2-local-ai-acceptance-checklist.md) 记录。具体实测未完成前，均为 `MISSING / UNKNOWN`。
 
-```powershell
-adb shell am force-stop com.nihaisha.nihaisha_app
-adb shell am start -n com.nihaisha.nihaisha_app/.MainActivity --ez com.nihaisha.app.DEBUG_FORCE_CPU_BACKEND true
-```
-
-启动后在本地 AI 状态中核对实际 `backend=cpu`，再执行 CPU 多轮场景并记录 TRACE。验证 GPU 时再次 force-stop，然后从桌面正常启动 App（不带该 extra），加载后必须核对实际 `backend=gpu`；若设备无法初始化 GPU，则按真实回退结果记录 `cpu`，不能将请求 GPU 视作 GPU 已通过。
-
-此参数只在 Android `ApplicationInfo.FLAG_DEBUGGABLE` 标记为启用时生效；Release 包即使收到同名 Intent extra，也必须忽略并保持默认后端选择策略。不要通过修改生产数据或业务规则来触发 CPU 测试。
+旧版 Debug Intent 仅是早期临时测试方案；它不能证明 Release 设置入口、偏好持久化或 Native 实际后端切换已通过，禁止继续用它替代当前验收清单。
 
 ## 当前实现范围
 
