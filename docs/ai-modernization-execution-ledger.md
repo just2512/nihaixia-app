@@ -3342,7 +3342,12 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
   - Fork license boundary：run `45012815382`：SUCCESS。
   - Android arm64 CI verification：run `45012815405` / job `137180530187`：SUCCESS；Debug APK 构建、合并 Manifest 校验、APK ABI 与 SHA-256 校验、Native/Gradle unit tests、JUnit XML 校验及证据工件上传均成功；APK 仅包含 `arm64-v8a`。
   - 条件性 Branch validation：SKIPPED（该 Job 只在符合条件的 `work/**` push 触发）；不计 PASS，也不是本 PR 的必需门禁。
-- 合并后 master 独立 CI（均绑定 master SHA `39da7c0522a47cd227a617167badcf116d0152b3`）：Flutter tests run `45013726358`、Flutter Quality Gate run `45013726391`、Fork license boundary run `45013726437`。本节写入时 Fork license 已 SUCCESS；另两项仍 IN_PROGRESS，必须以各自最终 run 结论更新本节，不得用 PR-head 成功替代合并后主线检查。
+- 合并后 master 独立 CI（全部绑定 master SHA `39da7c0522a47cd227a617167badcf116d0152b3`）最终结果：
+  - Flutter tests run `45013726358`：SUCCESS；Flutter regression job `137181432283` SUCCESS。
+  - Android arm64 CI verification APK + unit tests：同一 run 的 job `137182973973`：SUCCESS（20/20 steps）；APK 构建、Manifest、ABI / SHA-256、Native/Gradle unit tests 和 JUnit XML 均通过。
+  - Flutter Quality Gate run `45013726391` / job `137181432309`：SUCCESS（19/19 steps；Dart test、Native unit tests 与 arm64 Debug APK 构建均通过）。
+  - Fork license boundary run `45013726437` / job `137181432506`：SUCCESS（7/7 steps）。
+  - 条件性 Branch validation：SKIPPED，不计 PASS；不影响以上必需门禁。
 - 合并后 master 的 Branch validation 为条件性 SKIPPED，不计为通过项。CI arm64 Debug APK 是 ABI / 构建验证工件，绝不是 Find N2 保留数据升级用 Release APK。
 
 ### 65.2 全仓库情境入口覆盖与重复入口审计
@@ -3387,7 +3392,7 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 
 - PR #392：MERGED；应用代码合并 SHA `39da7c0522a47cd227a617167badcf116d0152b3`。
 - PR-head 的 Flutter regression、Fork license boundary、Android arm64 APK / Manifest / ABI / Native unit tests / JUnit XML：全部 SUCCESS。
-- 合并后 master 的 Fork license boundary 已 SUCCESS；Flutter tests 与 Flutter Quality Gate 在本节写入时仍 IN_PROGRESS，最终结果需在本台账下一次更新中按 SHA/run ID 记实。
+- 合并后 master 的 Flutter tests、Android arm64 / Native / JUnit、Flutter Quality Gate 与 Fork license boundary 均 SUCCESS，且全部绑定应用代码 SHA `39da7c0522a47cd227a617167badcf116d0152b3`；条件性 Branch validation SKIPPED，不计 PASS。
 - 全仓库已接入情境入口未发现新的云端缺口；针灸入口当前只覆盖「穴位处方」单条记录。其它针灸 Tab 按规范保持 NOT_ENABLED，而非扩大为临床混合来源 Prompt。
-- 本轮云端代码和 PR-head 自动验收已 PASS；主线 post-merge CI 最终结论待补；Find N2 / E4B 本地验收继续 UNKNOWN / LOCAL ONLY。
+- 本轮云端代码、PR-head 自动验收和合并后 master 独立 CI 均 PASS；Find N2 / E4B 本地验收继续 UNKNOWN / LOCAL ONLY。
 
