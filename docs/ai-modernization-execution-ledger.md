@@ -3456,3 +3456,76 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - Find N2 / E4B 真机与本地验收：UNKNOWN / LOCAL ONLY；这是明确后置交付，不是云端阻塞。
 - 全局 AI 改造台账 B/C/D/E/F/G 的剩余项按 §3 原范围继续独立管理；本节只关闭情境问 AI 这一交付范围，不把其他工作流状态混并或虚报完成。
 
+
+
+---
+
+## 67. 2026-11-22 最新主线复核：来源回链严格匹配、台账状态清理与云端收尾续接
+
+### 67.1 基线与证据边界
+
+- 本节复核时 master HEAD：`d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`（2026-11-22 13:35:23Z）。该提交只涉及 Android 本地 TRACE Debug 签名构建，不改变情境入口、ContextRef、Resolver、Prompt Builder 或经典来源回链。
+- 本轮情境来源回链最新应用代码变更：`26d924b894b3301a8f46b2db120407cc344e41af`，父提交 `f21ae5efbb54c4aee5fc9a9c3d9746f4e3e76b79`。只修改 `lib/services/classic_search_service.dart` 与 `test/classic_search_backlink_test.dart`。
+- 该来源回链提交对应 CI：
+  - Flutter regression run `45024833552`：SUCCESS；job `137215478267`。
+  - Android arm64 CI verification APK + unit tests：同一 run，job `137217373016`：SUCCESS。
+  - Flutter Quality Gate run `45024833501`：SUCCESS；job `137215478301`。
+  - Fork license boundary run `45024833507`：SUCCESS。
+  - 条件性 Branch validation job `137215479426`：SKIPPED，不计 PASS。
+- 当前 master 最新提交的 CI 仍在执行：Flutter regression run `45028286401`、Flutter Quality Gate run `45028286420` 为 IN_PROGRESS；Fork license boundary run `45028286456` 为 SUCCESS。以上运行均绑定 master SHA `d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`。因此本节不提前宣称最新 master 全部 CI 已 PASS；待其终态后补记。
+- 当前没有未合并的情境问 AI 专项 PR。PR #398 是独立版本线工作，不属于本轮情境 AI 集成范围，不将其状态混入本节。
+
+### 67.2 全仓库情境入口覆盖复核
+
+以当前 master Git tree、既有 §65/§66 的页面入口矩阵和 Resolver/Prompt Builder 证据为基础，重新核对当前树中的情境入口及专项测试。当前仓库可识别的专项测试覆盖包括：
+
+- 经典阅读与来源回链：`classic_paragraph_contextual_entry_test.dart`、`guji_contextual_paragraph_entry_test.dart`、`shanghan_jingui_paragraph_context_test.dart`、`zhenjiu_lecture_paragraph_context_test.dart`、`neijing_contextual_entry_test.dart`、`yijing_contextual_result_entry_test.dart`、`classic_search_backlink_test.dart`。
+- 知识条目：方剂、本草、医案、针灸处方分别有独立入口/来源测试；针灸仅「穴位处方」单条记录已启用，透针透穴、穴位讲解、耳穴仍按既定来源与安全边界保持 NOT_ENABLED。
+- 确定性工具整体结果及字段：黄历、八字、紫微、易经、梅花、小六壬、五运六气、子午流注、节气、黄帝四季歌、称骨、受生债、玉匣灵兆、三山灵签、经方度量衡、小儿关煞、周公解梦等入口继续由各自结果快照/Resolver 承载；图表/局部字段由页面显式 fieldPath 白名单承载。
+- 去重：导航列表、历史列表、危急提示和已保存命盘列表仍属于导航/状态/安全流程，不增加第二个同源入口；所有已启用入口继续复用 `AiContextRef → AiContextResolver → AiContextPromptBuilder → ContextualAiSheet` 和现有会话链路。
+- 来源锚点：经典讲稿采用显式 source/module 映射和完整 asset manifest；易经/命卦讲义按完整 manifest asset 精确反查；古籍原文按独立 book/chapter/原始 TXT 行映射；知识条目与工具结果采用稳定 ID、版本和不可变快照。没有新增标题、关键词、相似度或文件名片段兜底。
+- 审计结论：当前已定义且应启用的入口未发现新增遗漏；未发现需要再建的同源重复入口；已启用入口的来源身份仍可回到本地条目/资产/结果。三个未启用针灸 Tab 是明确范围边界，不计为遗漏，也不伪称已通过。
+
+### 67.3 本轮修复：经典来源 ID 不再接受任意前缀/尾缀
+
+`26d924b894b3301a8f46b2db120407cc344e41af` 修复了经典来源反向解析的前缀接受缺口：
+
+- canonical `sourceId` 仍只允许精确相等。
+- 当前 reader-module alias 只允许 `<moduleId>:<完整asset路径>` 两段形式，并通过显式 module/source allowlist 归一化。
+- 兼容历史 title-bearing ID，但字段数量和位置固定为四段：`source:asset-or-bookId:chapterIndex-or-MISSING:title`；标题仅兼容旧格式，不作为身份依据。
+- 对任意额外段、伪造 paragraph/asset 后缀、缺失标题段、错误模块 alias 均拒绝解析；不按标题或模糊检索回退。
+- 新增回归覆盖：canonical/legacy 精确回查、任意尾缀拒绝、reader-module alias 精确资产解析及其伪造尾缀拒绝。
+- 风险控制：保留唯一已知历史四段格式；不迁移会话、不改 sourceId canonical 生成、不改变检索排序和模型上下文。若发现其他真实持久化旧格式，先取得样本再显式加入兼容合同，不放宽为任意前缀匹配。
+
+### 67.4 A-G 阶段状态清理（仅情境问 AI 交付范围）
+
+| 工作项 | 当前状态 | 本节结论 |
+|---|---|---|
+| 情境入口覆盖/去重 | PASS（云端代码与自动化） | §66 矩阵在当前树复核；本轮无新增入口遗漏或同源重复 |
+| 经典来源正反向锚点 | PASS（云端代码与自动化） | 新严格匹配修复已合入 master，专项 Flutter/Android/许可 CI 在 `26d924b` 通过 |
+| ContextRef / Resolver / Prompt Builder / 会话复用 | PASS（情境入口范围） | 继续使用既有链路；无第二套会话、模型执行或工具路由 |
+| 规范索引与执行台账 | IN_PROGRESS | 本节更新执行台账，规范 §12.4.1 索引同步指向 §67；文档 PR 的 CI/合并后 master CI 待验收 |
+| Find N2 / E4B 本地验收 | UNKNOWN / LOCAL ONLY | 仍由用户本地按交接清单实测，不阻塞云端代码和文档工作 |
+| 全局 AI 改造 A-G | 维持各自原状态 | 本节不把全局多轮、医学审核、检索黄金集、Headless、数据清理或 TRACE 的 PARTIAL/UNKNOWN 错写成 PASS |
+
+### 67.5 Find N2 / E4B 最终交接
+
+本地交接文件仍为以下四份，不用云端模拟器或 CI Debug APK 代替设备结果：
+
+1. `docs/find-n2-real-device-acceptance.md`：外屏、内屏、半折叠、窗口/键盘 Insets、情境面板滚动恢复、来源回链、针灸处方单条入口，以及原签名 Release APK 保留数据覆盖升级。
+2. `docs/find-n2-local-ai-acceptance-checklist.md`：E4B GPU/CPU 实际 backend、多轮至少 20 轮、多媒体、第二/第三轮响应、Activity/force-stop 恢复、Native 状态与 AI 数据清理。
+3. `docs/find-n2-ai-trace-acceptance-plan.md`：trace_id 从输入、安全、路由、上下文、模型、Native backend 到结果展示、持久化和清理的端到端证据。
+4. `docs/local-ai-e4b.md`：模型导入、运行时配置及已知 Native 行为边界。
+
+安装升级必须使用本地原签名 keystore 构建的 Release APK，核对 applicationId、versionCode、签名证书和 APK SHA-256；禁止卸载旧版、清除数据或使用 CI Debug APK 覆盖旧版。上述设备项统一保持 UNKNOWN / LOCAL ONLY，待本地实测后逐项填写证据。
+
+- 最新 master 还提供本地专用 Release 签名 Debug TRACE 构建：`flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true`。它要求本机原 `android/key.properties`/Release keystore，CI 明确拒绝该属性；仅用于采集 Debug TRACE，不代替正式 Release APK 交付。默认 Debug/Release 行为不变。
+
+
+### 67.6 云端关闭门槛与下一步
+
+- 情境入口代码及专项自动化：PASS（以 `26d924b894b3301a8f46b2db120407cc344e41af` 的实际 CI 为证）。
+- 最新 master `d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`：Fork license boundary 已 PASS；Flutter regression 与 Flutter Quality Gate 尚 IN_PROGRESS，不能提前标记主线全绿。
+- 文档收尾 PR 合并前，必须通过对应分支 CI；合并后重新读取 master SHA，并确认文档索引和台账未被后续提交覆盖。
+- 最新 master 必需 CI 全部终态后，将本节 67.1 的 IN_PROGRESS 更新为真实终态；若有失败，先读取 job 日志并修复，不删除测试、不降门槛。
+- 完成以上云端门禁后，情境问 AI 云端交付关闭；Find N2 / E4B 本地验收保持后置，不阻塞云端收尾。全局 AI 改造台账中与本范围无关的 A-G 工作继续按原门槛独立管理。
