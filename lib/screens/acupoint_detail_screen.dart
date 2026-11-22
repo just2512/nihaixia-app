@@ -13,6 +13,7 @@ import '../theme/app_colors.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/ai_context_prompt_builder.dart';
+import '../services/classic_search_service.dart';
 import 'assistant_tool_router.dart' show AssistantMode;
 import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import 'guji_library_screen.dart';
@@ -515,7 +516,10 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                         linkFormulas: true,
                         contextualAskModuleId: 'zhenjiu-reading',
                         contextualAskAnchorId:
-                            'zhenjiu-reading:passage:$asset',
+                            ClassicSearchService.contextualAnchorIdForReaderAsset(
+                          moduleId: 'zhenjiu-reading',
+                          asset: asset,
+                        ),
                         contextualAskSourceId: asset,
                         contextualAskParagraphs: true,
                       ),
