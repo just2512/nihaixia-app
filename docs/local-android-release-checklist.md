@@ -68,7 +68,7 @@ Get-FileHash .\\build\\app\\outputs\\flutter-apk\\app-arm64-v8a-release.apk -Alg
 逐项核对：
 
 - package / applicationId 精确为 `com.nihaisha.nihaisha_app`。
-- `versionName=1.11.30`、`versionCode=8039)，且新版 versionCode 必须严格大于设备当前版本。
+- `versionName=1.11.30`、`versionCode=8039`，且新版 versionCode 必须严格大于设备当前版本。
 - 新 APK signer certificate SHA-256 与当前安装包证书完全一致；如果签名轮换，必须有 Android 平台认可的 signing lineage 证据。
 - `apksigner verify` 成功，APK 非空，ABI 包含 `arm64-v8a`。
 - 记录本地 Release APK SHA-256、versionName、versionCode、applicationId、ABI 和证书 SHA-256。
