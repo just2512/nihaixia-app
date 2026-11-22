@@ -282,9 +282,32 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     final lines = markdown.split('\n');
     final passages = <_ContextualMarkdownPassage>[];
     int? activeStart;
-    var activeContainsFence = false;
+    var activeContainsUnsafeBlock = false;
     var insideFence = false;
     String? fenceCharacter;
+    var fenceLength = 0;
+    final htmlBlockStack = <String>[];
+    var insideHtmlComment = false;
+    var insideCdata = false;
+    String? mathClosingDelimiter;
+    String? mathEnvironment;
+
+    const voidHtmlTags = <String>{
+      'area',
+      'base',
+      'br',
+      'col',
+      'embed',
+      'hr',
+      'img',
+      'input',
+      'link',
+      'meta',
+      'param',
+      'source',
+      'track',
+      'wbr',
+    };
 
     bool isSafeParagraph(List<String> blockLines) {
       if (blockLines.isEmpty) return false;
@@ -326,7 +349,7 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
       final startLine = activeStart;
       if (startLine == null) return;
       final blockLines = lines.sublist(startLine, endLine);
-      if (!activeContainsFence && isSafeParagraph(blockLines)) {
+      if (!activeContainsUnsafeBlock && isSafeParagraph(blockLines)) {
         final block = blockLines.join('\n');
         passages.add(_ContextualMarkdownPassage(
           before: '',
@@ -337,30 +360,168 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
         ));
       }
       activeStart = null;
-      activeContainsFence = false;
+      activeContainsUnsafeBlock = false;
+    }
+
+    void consumeHtmlTags(String line) {
+      final tags = RegExp(r'<(/?)([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>');
+      for (final match in tags.allMatches(line)) {
+        final closing = match.group(1) == '/';
+        final name = match.group(2)!.toLowerCase();
+        final token = match.group(0)!.trimRight();
+        final selfClosing =
+            token.endsWith('/>') || voidHtmlTags.contains(name);
+        if (closing) {
+          final matchingIndex = htmlBlockStack.lastIndexOf(name);
+          if (matchingIndex >= 0) {
+            htmlBlockStack.removeRange(
+              matchingIndex,
+              htmlBlockStack.length,
+            );
+          }
+        } else if (!selfClosing) {
+          htmlBlockStack.add(name);
+        }
+      }
+    }
+
+    void beginUnsafeBlock(int lineIndex) {
+      if (activeStart != null) flush(lineIndex);
+      activeStart = lineIndex;
+      activeContainsUnsafeBlock = true;
     }
 
     for (var index = 0; index < lines.length; index++) {
       final line = lines[index];
-      final fence = RegExp(r'^\s*(\x60{3,}|~{3,})').firstMatch(line);
-      if (fence != null) {
-        final marker = fence.group(1)!;
-        if (!insideFence) {
-          insideFence = true;
-          fenceCharacter = marker[0];
-        } else if (marker[0] == fenceCharacter) {
-          insideFence = false;
-          fenceCharacter = null;
+      final trimmed = line.trim();
+
+      if (insideFence) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        final closingFence =
+            RegExp(r'^\s*(\x60{3,}|~{3,})\s*$').firstMatch(line);
+        if (closingFence != null) {
+          final marker = closingFence.group(1)!;
+          if (marker[0] == fenceCharacter && marker.length >= fenceLength) {
+            insideFence = false;
+            fenceCharacter = null;
+            fenceLength = 0;
+          }
         }
-        activeContainsFence = true;
-      }
-      if (line.trim().isEmpty) {
-        if (!insideFence) flush(index);
         continue;
       }
+
+      final openingFence =
+          RegExp(r'^\s*(\x60{3,}|~{3,})').firstMatch(line);
+      if (openingFence != null) {
+        beginUnsafeBlock(index);
+        final marker = openingFence.group(1)!;
+        insideFence = true;
+        fenceCharacter = marker[0];
+        fenceLength = marker.length;
+        continue;
+      }
+
+      if (insideHtmlComment) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (line.contains('-->')) insideHtmlComment = false;
+        continue;
+      }
+
+      if (insideCdata) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (line.contains(']]>')) insideCdata = false;
+        continue;
+      }
+
+      if (htmlBlockStack.isNotEmpty) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        consumeHtmlTags(line);
+        continue;
+      }
+
+      if (mathClosingDelimiter != null) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (trimmed.contains(mathClosingDelimiter)) {
+          mathClosingDelimiter = null;
+        }
+        continue;
+      }
+
+      if (mathEnvironment != null) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (line.contains(r'\end{' + mathEnvironment! + '}')) {
+          mathEnvironment = null;
+        }
+        continue;
+      }
+
+      final commentStart = line.indexOf('<!--');
+      if (commentStart >= 0) {
+        beginUnsafeBlock(index);
+        if (!line.substring(commentStart + 4).contains('-->')) {
+          insideHtmlComment = true;
+        }
+        continue;
+      }
+
+      final cdataStart = line.indexOf('<![CDATA[');
+      if (cdataStart >= 0) {
+        beginUnsafeBlock(index);
+        if (!line.substring(cdataStart + 9).contains(']]>')) {
+          insideCdata = true;
+        }
+        continue;
+      }
+
+      if (trimmed.startsWith(r'$$')) {
+        beginUnsafeBlock(index);
+        if (trimmed.indexOf(r'$$', 2) < 0) {
+          mathClosingDelimiter = r'$$';
+        }
+        continue;
+      }
+
+      if (trimmed.startsWith(r'\[')) {
+        beginUnsafeBlock(index);
+        if (trimmed.indexOf(r'\]', 2) < 0) {
+          mathClosingDelimiter = r'\]';
+        }
+        continue;
+      }
+
+      final environmentStart =
+          RegExp(r'^\s*\\begin\{([^}]+)\}').firstMatch(line);
+      if (environmentStart != null) {
+        beginUnsafeBlock(index);
+        final environment = environmentStart.group(1)!;
+        if (!line.contains(r'\end{' + environment + '}')) {
+          mathEnvironment = environment;
+        }
+        continue;
+      }
+
+      final htmlTagAtStart =
+          RegExp(r'^\s*</?([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>').hasMatch(line);
+      if (htmlTagAtStart) {
+        beginUnsafeBlock(index);
+        consumeHtmlTags(line);
+        continue;
+      }
+
+      if (trimmed.isEmpty) {
+        flush(index);
+        continue;
+      }
+
       activeStart ??= index;
-      if (insideFence) activeContainsFence = true;
     }
+
     flush(lines.length);
     return passages;
   }
