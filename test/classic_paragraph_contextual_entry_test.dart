@@ -226,6 +226,14 @@ $second
       final neijingParagraph =
           find.textContaining('今天开始第一堂课这个', findRichText: true);
       expect(neijingParagraph, findsOneWidget);
+      await tester.scrollUntilVisible(
+        neijingParagraph,
+        200,
+        scrollable: find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
       await tester.longPress(neijingParagraph);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -305,6 +313,14 @@ $second
       final bencaoParagraph =
           find.textContaining('人参顾名思义，因为他这个根长的象人的形状', findRichText: true);
       expect(bencaoParagraph, findsOneWidget);
+      await tester.scrollUntilVisible(
+        bencaoParagraph,
+        200,
+        scrollable: find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
       await tester.longPress(bencaoParagraph);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
