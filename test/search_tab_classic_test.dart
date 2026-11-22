@@ -46,7 +46,24 @@ void main() {
     expect(find.textContaining('针灸大成'), findsWidgets,
         reason: '「标幽赋」应命中针灸大成章节');
 
-    final sourceLabel = find.text('针灸大成').first;
+  });
+
+  testWidgets('全局经典搜索打开本草命中时绑定本草讲稿来源', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SearchTab())),
+    );
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField).first, '丹砂');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 2));
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final sourceLabel = find.text('本草讲稿').first;
+    expect(sourceLabel, findsOneWidget);
     final resultTile = find.ancestor(
       of: sourceLabel,
       matching: find.byType(ListTile),
@@ -57,11 +74,12 @@ void main() {
     final reader = tester.widget<MarkdownDocScreen>(
       find.byType(MarkdownDocScreen),
     );
-    expect(reader.contextualAskModuleId, 'zhenjiu-reading');
+    expect(reader.contextualAskModuleId, 'bencao-reading');
     expect(reader.contextualAskSourceId, reader.asset);
     expect(reader.contextualAskAnchorId,
-        'zhenjiu-reading:passage:${reader.asset}');
+        'bencao-reading:passage:${reader.asset}');
     expect(reader.contextualAskParagraphs, isTrue);
     expect(tester.takeException(), isNull);
   });
+
 }
