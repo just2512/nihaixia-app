@@ -4,6 +4,7 @@ import '../data/yijing_data.dart';
 import '../data/yijing_lecture_data.dart';
 import '../data/minggua_data.dart';
 import '../engine/yijing_engine.dart';
+import '../services/classic_search_service.dart';
 import 'markdown_doc_screen.dart';
 
 /// 单卦详情页：卦符 / 卦辞 / 倪师人间道 / 六爻爻辞
@@ -143,7 +144,10 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                       asset: asset,
                       contextualAskModuleId: 'yijing-reading',
                       contextualAskAnchorId:
-                          'yijing-reading:passage:$asset',
+                          ClassicSearchService.contextualAnchorIdForReaderAsset(
+                        moduleId: 'yijing-reading',
+                        asset: asset,
+                      ),
                       contextualAskSourceId: asset,
                       contextualAskParagraphs: true,
                     ),
@@ -177,7 +181,10 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                       footer: '倪师《天纪·四柱命卦》讲义 · 传统文化参考',
                       contextualAskModuleId: 'minggua-reading',
                       contextualAskAnchorId:
-                          'minggua-reading:passage:$mgAsset',
+                          ClassicSearchService.contextualAnchorIdForReaderAsset(
+                        moduleId: 'minggua-reading',
+                        asset: mgAsset,
+                      ),
                       contextualAskSourceId: mgAsset,
                       contextualAskParagraphs: true,
                     ),
