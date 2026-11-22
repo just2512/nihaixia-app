@@ -5481,6 +5481,28 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             }
           }
           break;
+        case 'yijing-reading':
+        case 'minggua-reading':
+          final readerAsset =
+              ClassicSearchService.findReaderAssetBySourceId(sourceId);
+          if (readerAsset != null) {
+            final anchorId =
+                ClassicSearchService.contextualAnchorIdForReaderAsset(
+              moduleId: readerAsset.moduleId,
+              asset: readerAsset.asset,
+            );
+            if (anchorId != null) {
+              destination = MarkdownDocScreen(
+                title: readerAsset.title,
+                asset: readerAsset.asset,
+                contextualAskModuleId: readerAsset.moduleId,
+                contextualAskAnchorId: anchorId,
+                contextualAskSourceId: readerAsset.asset,
+                contextualAskParagraphs: true,
+              );
+            }
+          }
+          break;
         case 'neijing-reading':
         case 'bencao':
         case 'bencao-reading':
@@ -9861,10 +9883,16 @@ bool _isNavigableKnowledgeSourceId(String sourceId) {
     'acupuncture',
     'medical_case',
     'neijing',
+    'neijing-reading',
+    'bencao',
+    'bencao-reading',
     'shanghan',
     'jingui',
     'guji',
     'zhenjiu',
+    'zhenjiu-reading',
+    'yijing-reading',
+    'minggua-reading',
   }.contains(kind);
 }
 
@@ -9883,6 +9911,11 @@ String _knowledgeSourceLabel(String sourceId) {
     'jingui' => '金匮要略：$value',
     'guji' => '古籍原文：$value',
     'zhenjiu' => '针灸讲稿：$value',
+    'neijing-reading' => '内经讲稿：$value',
+    'bencao' || 'bencao-reading' => '本草讲稿：$value',
+    'zhenjiu-reading' => '针灸讲稿：$value',
+    'yijing-reading' => '易经讲稿：$value',
+    'minggua-reading' => '命卦讲稿：$value',
     _ => '来源：$sourceId',
   };
 }
