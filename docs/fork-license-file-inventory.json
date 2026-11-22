@@ -13,8 +13,8 @@
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 8394dfffc11e64ee493e90039b0b0892eab1eddd includes merged PRs #386, #388 and #390, including Neijing/Bencao, Shanghan/Jingui and Zhenjiu lecture paragraph contextual entry points. This slice adds source-line-preserving paragraph contextual selection to the public-domain Guji TXT reader; ancient text assets remain excluded from the Fork commercial grant and retain their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
   "counts": {
     "changed": 875,
-    "added": 715,
-    "modified": 160,
+    "added": 716,
+    "modified": 159,
     "deleted": 13,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 153,
@@ -6490,10 +6490,10 @@
     },
     {
       "path": "test/search_tab_classic_test.dart",
-      "status": "modified",
+      "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 原创测试文件；本次仅增补经典搜索到阅读器的来源锚点回归。",
+      "reason": "Fork 原创测试文件；在许可审计基线中作为新增文件登记，本次补充经典搜索到阅读器的来源锚点回归。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
