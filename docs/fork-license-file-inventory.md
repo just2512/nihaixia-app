@@ -1,6 +1,6 @@
 # Fork 修改文件全量清单
 
-共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单以共同上游基线与当前 PR HEAD 的实际 diff 重算；当前候选还包括本地 Android Release 安全门禁及 2.0.0+8048 独立版本规范；知识库与第三方内容仍按原来源许可排除。CI 对实际 PR HEAD 重新计算路径与 Git 状态。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；当前 master 已包含情境 Ask AI 云端收尾、本地 Android Release 安全门禁、产品版本 2.0.0+8048 与研纪 Launcher 图标。本分支新增子午流注纳子、纳甲、灵龟八法、飞腾八法四种方法的字段级情境解释入口，绑定同一设备本地计算快照，保留 NOT_APPLICABLE，并增加 resolver、prompt 与 402dp / 775dp 布局回归。CI 对实际 PR HEAD 重新计算路径与 Git 状态。
 
 ## 分类规则
 
@@ -869,8 +869,8 @@
 | test/ziwei_tool_executor_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_assistant_handoff_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_calculation_service_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
-| test/ziwuliuzhu_contextual_result_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_contextual_method_field_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/ziwuliuzhu_contextual_result_entry_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_nazi_benxue_test.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_tool_executor_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/ziwuliuzhu_wumen_test.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
