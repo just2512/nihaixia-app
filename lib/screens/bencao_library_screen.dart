@@ -17,6 +17,8 @@ class BenCaoLibraryScreen extends StatelessWidget {
           '与「本草」tab 逐药速查互补：这里是系统学习。',
       footer: '出处：倪海厦《人纪·神农本草经》讲稿 · 传统文化参考，非医疗建议',
       lectures: kBenCaoLectures,
+      contextualAskModuleId: 'bencao-reading',
+      contextualAskParagraphs: true,
       seqLabel: (s) => '${s + 1}',
     );
   }

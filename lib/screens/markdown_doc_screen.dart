@@ -59,6 +59,9 @@ class MarkdownDocScreen extends StatefulWidget {
   final String? contextualAskAnchorId;
   final String? contextualAskSourceId;
 
+  /// Enables safe paragraph-level contextual selection for prose lecture documents.
+  final bool contextualAskParagraphs;
+
   const MarkdownDocScreen({
     super.key,
     required this.title,
@@ -69,6 +72,7 @@ class MarkdownDocScreen extends StatefulWidget {
     this.contextualAskModuleId,
     this.contextualAskAnchorId,
     this.contextualAskSourceId,
+    this.contextualAskParagraphs = false,
   }) : assert(asset != '' || content != null, 'asset 与 content 至少要提供一个');
 
   @override
@@ -195,13 +199,15 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     String fullPassage, {
     required int passageIndex,
     required int passageCount,
+    String? stableAnchorId,
   }) {
     if (!_contextualAskEnabled || selectedText.trim().isEmpty) return;
     final moduleId = widget.contextualAskModuleId!;
     final baseAnchorId = widget.contextualAskAnchorId!;
-    final anchorId = passageCount == 1
-        ? baseAnchorId
-        : baseAnchorId + ':passage:' + passageIndex.toString();
+    final anchorId = stableAnchorId ??
+        (passageCount == 1
+            ? baseAnchorId
+            : baseAnchorId + ':passage:' + passageIndex.toString());
     final sourcePath = widget.contextualAskSourceId!;
     final version = sha256.convert(utf8.encode(fullPassage)).toString();
     final ref = AiContextRef(
@@ -269,6 +275,370 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     return passages;
   }
 
+  /// Splits safe prose into source-addressable paragraphs. Markdown structures
+  /// are deliberately excluded: headings, lists, quotes, tables, code, HTML,
+  /// images and link definitions must never expose the contextual action.
+  List<_ContextualMarkdownPassage> _findContextualParagraphs(String markdown) {
+    final lines = markdown.split('\n');
+    final passages = <_ContextualMarkdownPassage>[];
+    int? activeStart;
+    var activeContainsUnsafeBlock = false;
+    var insideFence = false;
+    String? fenceCharacter;
+    var fenceLength = 0;
+    final htmlBlockStack = <String>[];
+    var insideHtmlComment = false;
+    var insideCdata = false;
+    String? mathClosingDelimiter;
+    String? mathEnvironment;
+
+    const voidHtmlTags = <String>{
+      'area',
+      'base',
+      'br',
+      'col',
+      'embed',
+      'hr',
+      'img',
+      'input',
+      'link',
+      'meta',
+      'param',
+      'source',
+      'track',
+      'wbr',
+    };
+
+    bool isSafeParagraph(List<String> blockLines) {
+      if (blockLines.isEmpty) return false;
+      for (final line in blockLines) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty ||
+            RegExp(r'^\s{0,3}#{1,6}\s+').hasMatch(line) ||
+            RegExp(r'^\s*>').hasMatch(line) ||
+            RegExp(r'^\s*(?:[-*+]\s+|\d+[.)]\s+)').hasMatch(line) ||
+            RegExp(r'^\s*(?:-{3,}|_{3,}|\*{3,})\s*$').hasMatch(line) ||
+            RegExp(r'^\s{4,}\S').hasMatch(line) ||
+            RegExp(r'^\s*<').hasMatch(line) ||
+            RegExp(r'<\/?[A-Za-z][^>]*>').hasMatch(line) ||
+            RegExp(r'^\s*\$\$').hasMatch(line) ||
+            RegExp(r'^\s*\\\[').hasMatch(line) ||
+            RegExp(r'^\s*\\begin\{').hasMatch(line) ||
+            RegExp(r'^\s*\[[^\]]+\]:\s').hasMatch(line) ||
+            RegExp(r'^\s*\[\^[^\]]+\]:\s').hasMatch(line) ||
+            RegExp(r'!\[[^\]]*\]\(').hasMatch(line) ||
+            trimmed.startsWith('|') ||
+            trimmed.startsWith('<!--')) {
+          return false;
+        }
+      }
+      final trailing = blockLines.last.trim();
+      if (blockLines.length > 1 &&
+          trailing.isNotEmpty &&
+          trailing.codeUnits.every((unit) => unit == 0x3D)) {
+        return false;
+      }
+      if (blockLines.length > 1 &&
+          blockLines.any((line) => line.contains('|'))) {
+        return false;
+      }
+      return blockLines.join('\n').trim().isNotEmpty;
+    }
+
+    void flush(int endLine) {
+      final startLine = activeStart;
+      if (startLine == null) return;
+      final blockLines = lines.sublist(startLine, endLine);
+      if (!activeContainsUnsafeBlock && isSafeParagraph(blockLines)) {
+        final block = blockLines.join('\n');
+        passages.add(_ContextualMarkdownPassage(
+          before: '',
+          block: block,
+          plainText: block.trim(),
+          startLine: startLine,
+          endLine: endLine,
+        ));
+      }
+      activeStart = null;
+      activeContainsUnsafeBlock = false;
+    }
+
+    void consumeHtmlTags(String line) {
+      final tags = RegExp(r'<(/?)([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>');
+      for (final match in tags.allMatches(line)) {
+        final closing = match.group(1) == '/';
+        final name = match.group(2)!.toLowerCase();
+        final token = match.group(0)!.trimRight();
+        final selfClosing =
+            token.endsWith('/>') || voidHtmlTags.contains(name);
+        if (closing) {
+          final matchingIndex = htmlBlockStack.lastIndexOf(name);
+          if (matchingIndex >= 0) {
+            htmlBlockStack.removeRange(
+              matchingIndex,
+              htmlBlockStack.length,
+            );
+          }
+        } else if (!selfClosing) {
+          htmlBlockStack.add(name);
+        }
+      }
+    }
+
+    void beginUnsafeBlock(int lineIndex) {
+      if (activeStart != null) flush(lineIndex);
+      activeStart = lineIndex;
+      activeContainsUnsafeBlock = true;
+    }
+
+    for (var index = 0; index < lines.length; index++) {
+      final line = lines[index];
+      final trimmed = line.trim();
+
+      if (insideFence) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        final closingFence =
+            RegExp(r'^\s*(\x60{3,}|~{3,})\s*$').firstMatch(line);
+        if (closingFence != null) {
+          final marker = closingFence.group(1)!;
+          if (marker[0] == fenceCharacter && marker.length >= fenceLength) {
+            insideFence = false;
+            fenceCharacter = null;
+            fenceLength = 0;
+          }
+        }
+        continue;
+      }
+
+      final openingFence =
+          RegExp(r'^\s*(\x60{3,}|~{3,})').firstMatch(line);
+      if (openingFence != null) {
+        beginUnsafeBlock(index);
+        final marker = openingFence.group(1)!;
+        insideFence = true;
+        fenceCharacter = marker[0];
+        fenceLength = marker.length;
+        continue;
+      }
+
+      if (insideHtmlComment) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (line.contains('-->')) insideHtmlComment = false;
+        continue;
+      }
+
+      if (insideCdata) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (line.contains(']]>')) insideCdata = false;
+        continue;
+      }
+
+      if (htmlBlockStack.isNotEmpty) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        consumeHtmlTags(line);
+        continue;
+      }
+
+      if (mathClosingDelimiter != null) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (trimmed.contains(mathClosingDelimiter)) {
+          mathClosingDelimiter = null;
+        }
+        continue;
+      }
+
+      final activeMathEnvironment = mathEnvironment;
+      if (activeMathEnvironment != null) {
+        activeStart ??= index;
+        activeContainsUnsafeBlock = true;
+        if (line.contains(r'\end{' + activeMathEnvironment + '}')) {
+          mathEnvironment = null;
+        }
+        continue;
+      }
+
+      final commentStart = line.indexOf('<!--');
+      if (commentStart >= 0) {
+        beginUnsafeBlock(index);
+        if (!line.substring(commentStart + 4).contains('-->')) {
+          insideHtmlComment = true;
+        }
+        continue;
+      }
+
+      final cdataStart = line.indexOf('<![CDATA[');
+      if (cdataStart >= 0) {
+        beginUnsafeBlock(index);
+        if (!line.substring(cdataStart + 9).contains(']]>')) {
+          insideCdata = true;
+        }
+        continue;
+      }
+
+      if (trimmed.startsWith(r'$$')) {
+        beginUnsafeBlock(index);
+        if (trimmed.indexOf(r'$$', 2) < 0) {
+          mathClosingDelimiter = r'$$';
+        }
+        continue;
+      }
+
+      if (trimmed.startsWith(r'\[')) {
+        beginUnsafeBlock(index);
+        if (trimmed.indexOf(r'\]', 2) < 0) {
+          mathClosingDelimiter = r'\]';
+        }
+        continue;
+      }
+
+      final environmentStart =
+          RegExp(r'^\s*\\begin\{([^}]+)\}').firstMatch(line);
+      if (environmentStart != null) {
+        beginUnsafeBlock(index);
+        final environment = environmentStart.group(1)!;
+        if (!line.contains(r'\end{' + environment + '}')) {
+          mathEnvironment = environment;
+        }
+        continue;
+      }
+
+      final htmlTagAtStart =
+          RegExp(r'^\s*</?([A-Za-z][A-Za-z0-9:-]*)\b[^>]*>').hasMatch(line);
+      if (htmlTagAtStart) {
+        beginUnsafeBlock(index);
+        consumeHtmlTags(line);
+        continue;
+      }
+
+      if (trimmed.isEmpty) {
+        flush(index);
+        continue;
+      }
+
+      activeStart ??= index;
+    }
+
+    flush(lines.length);
+    return passages;
+  }
+
+  Widget _buildContextualParagraphBody(String data) {
+    final raw = _rawDocumentContent ?? data;
+    final rawPassages = _findContextualParagraphs(raw);
+    final lines = data.split('\n');
+    debugPrint(
+      '[ContextualParagraph] module=${widget.contextualAskModuleId} '
+      'enabled=$_contextualAskEnabled paragraphs=${widget.contextualAskParagraphs} '
+      'anchor=${widget.contextualAskAnchorId} source=${widget.contextualAskSourceId} '
+      'rawReady=${_rawDocumentContent != null} rawLines=${raw.split('\n').length} '
+      'displayLines=${lines.length} rawPassages=${rawPassages.length}',
+    );
+
+    // _injectLinks only wraps matched text inline and never inserts line breaks.
+    // Therefore the original Markdown source line numbers remain the stable
+    // mapping even when injected links change how a rendered paragraph would
+    // be classified by a second Markdown-structure scan.
+    final passagesMatch =
+        rawPassages.isNotEmpty && raw.split('\n').length == lines.length;
+    if (!passagesMatch) {
+      // If any transformation changes the source line count, keep ordinary
+      // selection only and fail closed for contextual AI.
+      return Markdown(
+        data: data,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        selectable: true,
+        onTapLink: (text, href, title) => _onTapLink(href),
+        styleSheet: MarkdownDocScreen.buildStyleSheet(context),
+      );
+    }
+
+    final children = <Widget>[];
+    var previousEnd = 0;
+    final baseAnchorId = widget.contextualAskAnchorId!;
+    for (var passageIndex = 0;
+        passageIndex < rawPassages.length;
+        passageIndex++) {
+      final passage = rawPassages[passageIndex];
+      final before = lines.sublist(previousEnd, passage.startLine).join('\n');
+      if (before.trim().isNotEmpty || passageIndex == 0) {
+        children.add(_buildPlainMarkdownBody(
+          before,
+          selectable: true,
+          padding: EdgeInsets.fromLTRB(16, passageIndex == 0 ? 12 : 0, 16, 0),
+        ));
+      }
+      final stableAnchorId = baseAnchorId +
+          ':paragraph:' +
+          (passage.startLine + 1).toString() +
+          '-' +
+          passage.endLine.toString();
+      final displayedBlock =
+          lines.sublist(passage.startLine, passage.endLine).join('\n');
+      children.add(SelectionArea(
+        onSelectionChanged: (selection) {
+          final selected = selection?.plainText ?? '';
+          if (_selectedTextByPassage[passageIndex] == selected) return;
+          setState(() {
+            if (selected.isEmpty) {
+              _selectedTextByPassage.remove(passageIndex);
+            } else {
+              _selectedTextByPassage[passageIndex] = selected;
+            }
+          });
+        },
+        contextMenuBuilder: (context, state) {
+          final items =
+              List<ContextMenuButtonItem>.of(state.contextMenuButtonItems);
+          final selected = _selectedTextByPassage[passageIndex] ?? '';
+          if (selected.trim().isNotEmpty) {
+            items.add(ContextMenuButtonItem(
+              label: '问 AI',
+              onPressed: () {
+                state.hideToolbar();
+                _askAiAboutSelection(
+                  selected,
+                  passage.plainText,
+                  passageIndex: passageIndex,
+                  passageCount: rawPassages.length,
+                  stableAnchorId: stableAnchorId,
+                );
+              },
+            ));
+          }
+          return AdaptiveTextSelectionToolbar.buttonItems(
+            anchors: state.contextMenuAnchors,
+            buttonItems: items,
+          );
+        },
+        child: _buildPlainMarkdownBody(
+          displayedBlock,
+          selectable: false,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ));
+      previousEnd = passage.endLine;
+    }
+    final trailing = lines.skip(previousEnd).join('\n');
+    if (trailing.trim().isNotEmpty) {
+      children.add(_buildPlainMarkdownBody(
+        trailing,
+        selectable: true,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      ));
+    }
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+
   Widget _buildPlainMarkdownBody(
     String data, {
     required bool selectable,
@@ -295,6 +665,9 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
         onTapLink: (text, href, title) => _onTapLink(href),
         styleSheet: MarkdownDocScreen.buildStyleSheet(context),
       );
+    }
+    if (widget.contextualAskParagraphs) {
+      return _buildContextualParagraphBody(data);
     }
     final raw = _rawDocumentContent ?? data;
     final rawPassages = _findContextualPassages(raw);
@@ -438,7 +811,10 @@ class _MarkdownDocScreenState extends State<MarkdownDocScreen> {
     }
     if (targetOf.isEmpty) return md;
 
-    final sorted = targetOf.keys.toList()
+    // Inline replacement must preserve Markdown source line boundaries.
+    final sorted = targetOf.keys
+        .where((name) => !name.contains('\n') && !name.contains('\r'))
+        .toList()
       ..sort((a, b) => b.length.compareTo(a.length));
     final re = RegExp(sorted.map(RegExp.escape).join('|'));
     return md.replaceAllMapped(re, (m) {
