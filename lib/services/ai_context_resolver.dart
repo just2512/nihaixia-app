@@ -585,6 +585,225 @@ class AiContextResolver {
     );
   }
 
+
+  static const ziWuLiuZhuMethodFields = <String, String>{
+    'methods.naZi': 'naZi',
+    'methods.naJia': 'naJia',
+    'methods.lingGui': 'lingGui',
+    'methods.feiTeng': 'feiTeng',
+  };
+
+  static const ziWuLiuZhuMethodLabels = <String, String>{
+    'methods.naZi': '纳子法',
+    'methods.naJia': '纳甲法',
+    'methods.lingGui': '灵龟八法',
+    'methods.feiTeng': '飞腾八法',
+  };
+
+  static const ziWuLiuZhuMethodUnits = <String, String>{
+    'methods.naZi': '当前设备本地日期时间对应的纳子法 App 原始计算结果',
+    'methods.naJia': '当前设备本地日期时间对应的纳甲法 App 原始计算结果；无适用开穴时保留 NOT_APPLICABLE',
+    'methods.lingGui': '当前设备本地日期时间对应的灵龟八法 App 原始计算结果',
+    'methods.feiTeng': '当前设备本地日期时间对应的飞腾八法 App 原始计算结果；无适用开穴时保留 NOT_APPLICABLE',
+  };
+
+  static AiContextRef buildZiWuLiuZhuResultFieldContextRef({
+    required Map<String, Object?> structuredSnapshot,
+    required String fieldPath,
+  }) {
+    final methodKey = ziWuLiuZhuMethodFields[fieldPath];
+    final label = ziWuLiuZhuMethodLabels[fieldPath];
+    if (methodKey == null || label == null) {
+      throw ArgumentError.value(
+        fieldPath,
+        'fieldPath',
+        'The requested ZiWuLiuZhu method field is not allowlisted.',
+      );
+    }
+
+    final parentRef = buildZiWuLiuZhuResultContextRef(
+      structuredSnapshot: structuredSnapshot,
+    );
+    final parentResolution = resolveZiWuLiuZhuToolResult(
+      ref: parentRef,
+      structuredSnapshot: structuredSnapshot,
+    );
+    final resolvedParent = parentResolution.value;
+    if (!parentResolution.isResolved || resolvedParent == null) {
+      throw ArgumentError(
+        'The ZiWuLiuZhu parent result cannot be verified for a method field.',
+      );
+    }
+
+    final result = resolvedParent.structuredSnapshot['result'];
+    final methods = result is Map ? result['methods'] : null;
+    final methodValue = methods is Map ? methods[methodKey] : null;
+    if (methodValue is! Map) {
+      throw ArgumentError(
+        'The selected ZiWuLiuZhu method is missing from the verified result.',
+      );
+    }
+
+    final snapshotId = resolvedParent.structuredSnapshot['snapshotId'] as String;
+    final input = resolvedParent.structuredSnapshot['input'] as Map;
+    final arguments = input['arguments'] as Map;
+    final at = arguments['at'] as String;
+    return AiContextRef(
+      kind: AiContextKind.fieldValue,
+      moduleId: ziWuLiuZhuModuleId,
+      anchorId: 'ziwuliuzhu:result:$snapshotId:at=$at:field=$fieldPath',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ZiWuLiuZhuToolExecutor.ruleVersion,
+      sourceId: ZiWuLiuZhuToolExecutor.sourceId,
+      fieldPath: fieldPath,
+      title: '子午流注 · $label',
+    );
+  }
+
+  static AiContextResolution<AiResolvedToolField>
+      resolveZiWuLiuZhuResultField({
+    required AiContextRef ref,
+    required Map<String, Object?> structuredSnapshot,
+  }) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    if (ref.kind != AiContextKind.fieldValue ||
+        normalized.isEmpty ||
+        ref.moduleId != ziWuLiuZhuModuleId ||
+        ref.sourceId != ZiWuLiuZhuToolExecutor.sourceId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu field reference is incomplete or does not identify the local calculation engine.',
+      );
+    }
+    if (ref.ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The ZiWuLiuZhu engine or reference-table version no longer matches this method field.',
+      );
+    }
+
+    final fieldPath = ref.fieldPath;
+    final methodKey = fieldPath == null
+        ? null
+        : ziWuLiuZhuMethodFields[fieldPath];
+    final label = fieldPath == null
+        ? null
+        : ziWuLiuZhuMethodLabels[fieldPath];
+    final unit = fieldPath == null
+        ? null
+        : ziWuLiuZhuMethodUnits[fieldPath];
+    if (fieldPath == null ||
+        methodKey == null ||
+        label == null ||
+        unit == null) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The requested ZiWuLiuZhu method field is not allowlisted.',
+      );
+    }
+
+    const anchorPrefix = 'ziwuliuzhu:result:';
+    const timestampMarker = ':at=';
+    const fieldMarker = ':field=';
+    if (!ref.anchorId.startsWith(anchorPrefix) ||
+        !ref.anchorId.contains(timestampMarker) ||
+        !ref.anchorId.endsWith('$fieldMarker$fieldPath')) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu method field anchor is malformed or does not match its allowlisted field path.',
+      );
+    }
+    final timestampStart = ref.anchorId.indexOf(timestampMarker);
+    final snapshotId = ref.anchorId.substring(
+      anchorPrefix.length,
+      timestampStart,
+    );
+    final at = ref.anchorId.substring(
+      timestampStart + timestampMarker.length,
+      ref.anchorId.length - fieldMarker.length - fieldPath.length,
+    );
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        ref.snapshotId != snapshotId ||
+        ref.anchorVersion != snapshotId ||
+        ref.title != '子午流注 · $label' ||
+        ZiWuLiuZhuCalculationService.parseLocalAt(at) == null ||
+        ref.anchorId !=
+            'ziwuliuzhu:result:$snapshotId:at=$at:field=$fieldPath') {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The ZiWuLiuZhu method field anchor, title, timestamp or snapshot identity do not agree.',
+      );
+    }
+
+    final parentRef = AiContextRef(
+      kind: AiContextKind.toolResult,
+      moduleId: ziWuLiuZhuModuleId,
+      anchorId: 'ziwuliuzhu:result:$snapshotId:at=$at',
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: ref.ruleVersion,
+      sourceId: ZiWuLiuZhuToolExecutor.sourceId,
+      title: '子午流注时辰开穴结果（$at）',
+    );
+    final parentResolution = resolveZiWuLiuZhuToolResult(
+      ref: parentRef,
+      structuredSnapshot: structuredSnapshot,
+    );
+    final parent = parentResolution.value;
+    if (!parentResolution.isResolved || parent == null) {
+      return AiContextResolution(
+        status: parentResolution.status,
+        reason: parentResolution.reason ??
+            'The parent ZiWuLiuZhu snapshot could not be verified.',
+      );
+    }
+
+    final result = parent.structuredSnapshot['result'];
+    final methods = result is Map ? result['methods'] : null;
+    final methodValue = methods is Map ? methods[methodKey] : null;
+    if (methodValue is! Map) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The verified ZiWuLiuZhu result does not contain the requested method data.',
+      );
+    }
+    final input = parent.structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final executionDate = input is Map ? input['executionDate'] : null;
+    if (arguments is! Map ||
+        arguments['at'] != at ||
+        executionDate != at.substring(0, 10)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The ZiWuLiuZhu method field timestamp no longer matches the verified execution input.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedToolField._(
+        ref: ref,
+        fieldLabel: label,
+        fieldScope: Map<String, Object?>.unmodifiable({
+          'at': at,
+          'executionDate': executionDate,
+          'timeBasis': input is Map ? input['timeBasis'] : 'MISSING',
+          'calculationRules': input is Map ? input['rules'] : 'MISSING',
+        }),
+        fieldValue: [
+          Map<String, Object?>.unmodifiable({
+            'fieldPath': fieldPath,
+            'value': methodValue,
+            'unit': unit,
+          }),
+        ],
+        fieldUnit: unit,
+        structuredSnapshot: parent.structuredSnapshot,
+      ),
+    );
+  }
+
   static AiContextRef buildSolarTermResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {
