@@ -3529,3 +3529,74 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - 文档收尾 PR 合并前，必须通过对应分支 CI；合并后重新读取 master SHA，并确认文档索引和台账未被后续提交覆盖。
 - 最新 master 必需 CI 全部终态后，将本节 67.1 的 IN_PROGRESS 更新为真实终态；若有失败，先读取 job 日志并修复，不删除测试、不降门槛。
 - 完成以上云端门禁后，情境问 AI 云端交付关闭；Find N2 / E4B 本地验收保持后置，不阻塞云端收尾。全局 AI 改造台账中与本范围无关的 A-G 工作继续按原门槛独立管理。
+
+
+---
+
+## 68. 2026-11-22 PR #401 合并后云端验收与分支清点收尾判定
+
+### 68.1 最终 master 与合并后 CI
+
+- 最终云端收尾主线：`master @ 4c57420a2d1f9f83dd6468394fa6e7ae2ed546ba`，由 PR #401 squash merge 产生，父提交为 `d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`。PR #401 只修改六份规范/验收交接文档，不改变应用源码。
+- PR #401：MERGED，head `702466dcdb35f3a6625b89ba524186c16ce521a9`，merge commit `4c57420a2d1f9f83dd6468394fa6e7ae2ed546ba`。
+- PR-head 验收：
+  - Flutter regression run `45029037432`：SUCCESS；Flutter regression job `137228325494` SUCCESS，Android arm64 CI verification job `137229808685` SUCCESS。
+  - Fork license boundary run `45029037431`：SUCCESS。
+  - 条件性 Branch validation：SKIPPED，不计 PASS。
+- 合并后 master 独立验收，全部绑定 SHA `4c57420a2d1f9f83dd6468394fa6e7ae2ed546ba`：
+  - Flutter regression run `45030077830`：SUCCESS；job `137231514575` SUCCESS。
+  - Android arm64 CI verification APK + Native/Gradle unit tests：同一 run 的 job `137233262052` SUCCESS。
+  - Flutter Quality Gate run `45030077775`：SUCCESS；job `137231514633` SUCCESS。
+  - Fork license inventory/boundary run `45030077743`：SUCCESS；job `137231514351` SUCCESS。
+  - 条件性 Branch validation job `137231515724`：SKIPPED，不计 PASS，也不是以上必需门禁。
+- 前一应用基线 `d61ada63ea46a0c5d7d33dc732531041dbdc3dcc` 的 Flutter regression、Android arm64 与 Flutter Quality Gate / Fork license boundary 亦均 SUCCESS（runs `45028286401`、`45028286420`、`45028286456`）。最新 master 没有待完成的云端必需 CI。
+
+### 68.2 情境 AI 收尾范围内的 PR / 分支状态
+
+- 当前没有仍处于 OPEN 状态的情境 Ask AI 专项 PR。
+- 已合入的近期关键分支：
+  - PR #392：针灸穴位处方单条情境入口，MERGED。
+  - PR #393：易经/命卦来源回链修复，MERGED。
+  - PR #394/#395/#396：情境 AI 审计、Find N2 交接与文档索引收尾，MERGED。
+  - PR #397/#400：本地 Release 签名、Release 交付保护及 TRACE Debug 构建支持，MERGED。
+  - PR #399：经典来源 ID 精确匹配与伪造尾缀拒绝，MERGED。
+  - PR #401：最终台账、规范索引和四份设备/E4B 交接文档更新，MERGED。
+  - PR #383/#384/#385/#386/#388/#389/#390/#391：六经/经典阅读/医案/针灸知识来源及深链切片，均 MERGED。
+- 历史迭代 PR #380/#381/#382/#387 已 CLOSED、未合并；其中 #387 明确由后续 PR #388 的当前主线重建版本取代。它们不是待审查的 OPEN PR，也不应把旧分支整支合并回主线；当前应交付的对应功能已通过后续 PR 集成。
+- 结论：本轮情境 Ask AI 交付涉及的有效实现、修复、文档与支持性 Android 构建变更均已进入 master；没有遗漏的活动情境 AI PR。
+
+### 68.3 “所有分支是否合并”的准确结论
+
+**不是所有 Git 分支都已合并或删除。** 需要区分代码集成状态和远端分支引用：
+
+- 仓库设置 `delete_branch_on_merge=false`，所以 PR 合并后 GitHub 默认保留 head branch；分支仍出现在列表中不代表代码没有合入。
+- 本次分页核对远端 branches：前四页各 100 个引用，第五页 60 个，第六页为空，共 460 个远端分支引用。它们包含历史试验、过期重建、已合并 PR head、其他产品/版本/设计工作分支，不能等同于 460 个待合并任务。
+- 当前 OPEN PR 共 6 个，均不属于本轮情境 Ask AI 收尾：
+  - #328：AI 商业许可边界文档，DRAFT / OPEN。它属于独立 AI 商业许可议题；若后续“全局 AI 改造”范围包含商业授权条款，仍需单独收尾，但不阻断本轮情境 AI 代码交付。
+  - #398、#218：产品 2.0.0 版本线工作。
+  - #213：Android 1.11.30 本地 Release 准备。
+  - #207：研纪品牌身份工作。
+  - #366：GitHub About 元数据记录。
+- 不因本轮情境 AI 关闭而自动合并上述 PR，也不批量删除历史分支。分支删除属于不可逆的远端引用清理，应先逐条确认是否有未提交差异、是否被其他 PR/工作流引用，再单独执行。
+
+### 68.4 Find N2 / E4B 本地验收交接是否完成
+
+以下四份文件均已进入 master，并明确设备/模型验证不得由 CI 或模拟器替代：
+
+1. `docs/find-n2-real-device-acceptance.md`：Find N2 外屏、内屏、半折叠、窗口/键盘 Insets、面板滚动恢复、来源回链、针灸处方入口，以及使用原签名 Release APK 原位覆盖升级并保留既有数据的检查步骤。
+2. `docs/find-n2-local-ai-acceptance-checklist.md`：E4B GPU/CPU 实际 backend 各至少 20 轮、多媒体、第二/第三轮响应、Activity/force-stop 恢复、Native 状态和 AI 数据清理。
+3. `docs/find-n2-ai-trace-acceptance-plan.md`：端到端 trace_id 传播、事件关联、敏感信息约束、GPU/CPU 与跨层 TRACE 采集。
+4. `docs/local-ai-e4b.md`：模型导入、SHA-256 校验、运行时配置、GPU/CPU fallback 与已知 Native 行为。
+
+本地构建说明已补充：可使用 `flutter build apk --debug --target-platform android-arm64 -PlocalDebugUsesReleaseSigning=true` 生成使用本机原 Release keystore 的 Debug TRACE 包；仅本地允许，CI fail closed。它只用于采集 Debug TRACE，不替代正式 Release APK；本地安装前仍须核对包名、版本、签名证书与 SHA-256，不得卸载旧版或清除数据。
+
+**交接文档：PASS；设备验收执行：UNKNOWN / LOCAL ONLY。** 目前没有 Find N2 实测 TRACE 或 E4B 本地 GPU/CPU 多轮结果证据，故不得宣称设备验收已完成；这不阻止云端收尾。
+
+### 68.5 最终收尾判定
+
+- 情境 Ask AI 云端代码、专项回归、来源回链、入口覆盖审计、规范索引、执行台账、Find N2/E4B 本地交接文档：PASS。
+- PR #401 与本轮情境 AI 有效代码/文档 PR：均已合并；历史 superseded PR 已关闭，不再进入集成队列。
+- PR #401 合并后的 master 必需 CI：全部 SUCCESS；条件性 Branch validation SKIPPED 不计 PASS。
+- 情境 Ask AI 云端工作：**CLOSED / PASS**。
+- Find N2 / E4B：**LOCAL ONLY / UNKNOWN**，后续按本节 68.4 四份清单执行；不阻塞云端关闭。
+- 其他全局 AI A-G 未完成项、AI 商业许可 PR #328，以及版本/品牌/Release 等独立工作继续按各自范围管理，不混入本轮情境 AI 完成声明。
