@@ -1,10 +1,12 @@
 import '../models/ai_context_ref.dart';
 import '../models/acupoint_detail.dart';
+import '../models/acupuncture.dart';
 import '../models/formula.dart';
 import '../models/herb.dart';
 import '../data/formula_repository.dart';
 import '../data/herb_repository.dart';
 import '../data/acupoint_repository.dart';
+import '../data/acupuncture_repository.dart';
 import '../data/medical_case_data.dart';
 import '../data/neijing_entries.dart';
 import '../engine/diagnostic_rules.dart';
@@ -3502,6 +3504,207 @@ class AiContextResolver {
       value: AiResolvedKnowledgeEntry._(
         ref: ref,
         title: matches.single.name,
+        content: Map<String, Object?>.unmodifiable(snapshot),
+      ),
+    );
+  }
+
+  static const acupunctureModuleId = 'acupuncture-prescriptions';
+  static const acupunctureAssetVersion =
+      'assets/data/acupuncture.json@ccf4419e37e2f67afc58d71a86592b295bd88d5b';
+  static const _acupunctureEntryResultSchemaVersion = 1;
+
+  static String _acupunctureEntrySourceId(String categoryId, int entryId) =>
+      'acupuncture:' + categoryId + ':' + entryId.toString();
+
+  static String _acupunctureEntryAnchorId(String categoryId, int entryId) =>
+      acupunctureModuleId + ':' + categoryId + ':' + entryId.toString();
+
+  static Map<String, Object?> _acupunctureEntryKnowledgeSnapshot({
+    required AcupunctureCategory category,
+    required AcupointEntry entry,
+  }) {
+    return <String, Object?>{
+      'capabilityId': acupunctureModuleId,
+      'input': <String, Object?>{
+        'categoryId': category.id,
+        'entryId': entry.id,
+      },
+      'resultSchemaVersion': _acupunctureEntryResultSchemaVersion,
+      'ruleVersion': acupunctureAssetVersion,
+      'sourceId': _acupunctureEntrySourceId(category.id, entry.id),
+      'category': <String, Object?>{
+        'id': category.id,
+        'name': category.name,
+      },
+      'entryId': entry.id,
+      'entry': Map<String, Object?>.unmodifiable(
+        Map<String, Object?>.from(entry.toJson()),
+      ),
+    };
+  }
+
+  static AiContextRef buildAcupunctureEntryContextRef({
+    required String categoryId,
+    required AcupointEntry entry,
+  }) {
+    final normalizedCategoryId = categoryId.trim();
+    final categoryMatches = AcupunctureRepository.getAll()
+        .where((category) => category.id == normalizedCategoryId)
+        .toList(growable: false);
+    if (normalizedCategoryId.isEmpty ||
+        categoryMatches.length != 1 ||
+        entry.id <= 0 ||
+        entry.symptom.trim().isEmpty) {
+      throw ArgumentError(
+        'An acupuncture context requires one exact category and positive entry ID from the bundled dataset.',
+      );
+    }
+
+    final category = categoryMatches.single;
+    final entryMatches = category.entries
+        .where((item) => item.id == entry.id)
+        .toList(growable: false);
+    if (entryMatches.length != 1 ||
+        AiToolResultSnapshot.canonicalJson(
+              _acupunctureEntryKnowledgeSnapshot(
+                category: category,
+                entry: entryMatches.single,
+              ),
+            ) !=
+            AiToolResultSnapshot.canonicalJson(
+              _acupunctureEntryKnowledgeSnapshot(
+                category: category,
+                entry: entry,
+              ),
+            )) {
+      throw ArgumentError(
+        'An acupuncture context requires one exact, unchanged entry within the selected category.',
+      );
+    }
+
+    final snapshot = _acupunctureEntryKnowledgeSnapshot(
+      category: category,
+      entry: entryMatches.single,
+    );
+    final snapshotId = AiToolResultSnapshot.createStructuredId(
+      snapshot: snapshot,
+    );
+    return AiContextRef(
+      kind: AiContextKind.knowledgeEntry,
+      moduleId: acupunctureModuleId,
+      anchorId: _acupunctureEntryAnchorId(category.id, entry.id),
+      anchorVersion: snapshotId,
+      snapshotId: snapshotId,
+      ruleVersion: acupunctureAssetVersion,
+      sourceId: _acupunctureEntrySourceId(category.id, entry.id),
+      title: entry.symptom,
+    );
+  }
+
+  static AiContextResolution<AiResolvedKnowledgeEntry>
+      resolveAcupunctureEntry({required AiContextRef ref}) {
+    final normalized = AiContextRef.normalizeMetadata(ref.toMetadata());
+    final parts = ref.anchorId.split(':');
+    if (ref.kind != AiContextKind.knowledgeEntry ||
+        normalized.isEmpty ||
+        ref.moduleId != acupunctureModuleId ||
+        parts.length != 3 ||
+        parts[0] != acupunctureModuleId ||
+        parts[1].trim().isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupuncture prescription reference is incomplete or does not identify the local prescription dataset.',
+      );
+    }
+    if (ref.ruleVersion != acupunctureAssetVersion) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The bundled acupuncture dataset version no longer matches this reference.',
+      );
+    }
+
+    final categoryId = parts[1];
+    final entryId = int.tryParse(parts[2]);
+    final snapshotId = ref.snapshotId;
+    final sourceId = entryId == null
+        ? ''
+        : _acupunctureEntrySourceId(categoryId, entryId);
+    final hasValidDigest = snapshotId != null &&
+        snapshotId.length == 64 &&
+        snapshotId
+            .split('')
+            .every((character) => '0123456789abcdef'.contains(character));
+    if (entryId == null ||
+        entryId <= 0 ||
+        !hasValidDigest ||
+        ref.anchorVersion != snapshotId ||
+        ref.anchorId != _acupunctureEntryAnchorId(categoryId, entryId) ||
+        ref.sourceId != sourceId ||
+        (ref.title != null && ref.title!.trim().isEmpty)) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupuncture category, entry ID, source and immutable snapshot identity do not agree.',
+      );
+    }
+
+    final categoryMatches = AcupunctureRepository.getAll()
+        .where((category) => category.id == categoryId)
+        .toList(growable: false);
+    if (categoryMatches.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The exact acupuncture category is not present in the bundled dataset.',
+      );
+    }
+    if (categoryMatches.length != 1) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupuncture category ID is not unique in the bundled dataset.',
+      );
+    }
+
+    final category = categoryMatches.single;
+    final entryMatches = category.entries
+        .where((entry) => entry.id == entryId)
+        .toList(growable: false);
+    if (entryMatches.isEmpty) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.missing,
+        reason: 'The exact acupuncture prescription entry is not present in the selected category.',
+      );
+    }
+    if (entryMatches.length != 1) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupuncture entry ID is not unique within the selected category.',
+      );
+    }
+
+    final entry = entryMatches.single;
+    if (ref.title != null && ref.title != entry.symptom) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.unknown,
+        reason: 'The acupuncture entry title does not match the selected local record.',
+      );
+    }
+    final snapshot = _acupunctureEntryKnowledgeSnapshot(
+      category: category,
+      entry: entry,
+    );
+    if (AiToolResultSnapshot.createStructuredId(snapshot: snapshot) !=
+        snapshotId) {
+      return const AiContextResolution(
+        status: AiContextResolutionStatus.stale,
+        reason: 'The current local acupuncture entry no longer matches the immutable snapshot.',
+      );
+    }
+
+    return AiContextResolution(
+      status: AiContextResolutionStatus.resolved,
+      value: AiResolvedKnowledgeEntry._(
+        ref: ref,
+        title: entry.symptom,
         content: Map<String, Object?>.unmodifiable(snapshot),
       ),
     );

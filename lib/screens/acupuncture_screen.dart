@@ -6,6 +6,10 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
 import '../models/acupuncture.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
+import 'assistant_tool_router.dart' show AssistantMode;
+import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import '../models/acupoint_detail.dart';
 import 'acupoint_detail_screen.dart';
 import 'zhenjiu_library_screen.dart';
@@ -48,6 +52,27 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
 
   // ===== 「耳穴」tab：GB/T 13734-2008，93 穴结构化库 =====
   String _earRegion = '全部';
+  // Resolve filtered/search result objects back to one unique bundled category.
+  // The search layer may return equivalent entry instances; reference identity
+  // is therefore not a stable category key. Ambiguous duplicate records fail closed.
+  final Map<String, String> _entryCategoryBySignature = {};
+  final Set<String> _ambiguousEntrySignatures = {};
+
+  String _entrySignature(AcupointEntry entry) => jsonEncode(entry.toJson());
+
+  void _indexPrescriptionEntryCategories() {
+    for (final category in AcupunctureRepository.getAll()) {
+      for (final entry in category.entries) {
+        final signature = _entrySignature(entry);
+        if (_entryCategoryBySignature.containsKey(signature)) {
+          _entryCategoryBySignature.remove(signature);
+          _ambiguousEntrySignatures.add(signature);
+        } else if (!_ambiguousEntrySignatures.contains(signature)) {
+          _entryCategoryBySignature[signature] = category.id;
+        }
+      }
+    }
+  }
   String _earQuery = '';
   /// 深链定位后要默认展开的穴名（null = 无深链，所有卡保持折叠）。
   String? _earExpandedName;
@@ -59,6 +84,7 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
   @override
   void initState() {
     super.initState();
+    _indexPrescriptionEntryCategories();
     _tabController = TabController(length: 4, vsync: this);
     _entrySearchCtrl = TextEditingController();
     final categoryId = widget.initialCategoryId;
@@ -151,6 +177,57 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
     );
   }
 
+  /// Rebind a filtered entry only when its complete canonical record maps to
+  /// one unique category. Equal numeric IDs or identical duplicate records in
+  /// different categories remain ambiguous and do not expose an AI action.
+  String? _categoryIdForEntry(AcupointEntry entry) {
+    final signature = _entrySignature(entry);
+    if (_ambiguousEntrySignatures.contains(signature)) return null;
+    final categoryId = _entryCategoryBySignature[signature];
+    return categoryId?.trim().isNotEmpty == true ? categoryId : null;
+  }
+
+  Future<void> _askAiAboutPrescriptionEntry(
+    AcupointEntry entry,
+    String categoryId,
+  ) async {
+    if (!mounted) return;
+    try {
+      final ref = AiContextResolver.buildAcupunctureEntryContextRef(
+        categoryId: categoryId,
+        entry: entry,
+      );
+      final resolution =
+          AiContextResolver.resolveAcupunctureEntry(ref: ref);
+      if (!resolution.isResolved || resolution.value == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('该针灸处方条目的本地来源无法确认，暂不开放 AI 解读。'),
+          ),
+        );
+        return;
+      }
+      final prompt = AiContextPromptBuilder.buildAcupunctureKnowledgeEntry(
+        entry: resolution.value!,
+      );
+      await showContextualAiSheet(
+        context: context,
+        contextRef: ref,
+        initialPrompt: prompt,
+        initialMode: AssistantMode.learning,
+        contextualTitle: '针灸处方条目：' + entry.symptom,
+        contextualExplanationOnly: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('针灸处方来源校验失败，未向 AI 发送该条目。'),
+        ),
+      );
+    }
+  }
+
   Widget _buildEntriesTab() {
     final categories = AcupunctureRepository.getCategories();
     final entries = _getEntries();
@@ -227,10 +304,13 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
   }
 
   Widget _buildEntryCard(AcupointEntry entry) {
+    final categoryId = _categoryIdForEntry(entry);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
-        initiallyExpanded: widget.initialEntryId == entry.id,
+        initiallyExpanded: widget.initialEntryId == entry.id &&
+            (widget.initialCategoryId == null ||
+                categoryId == widget.initialCategoryId),
         title: Row(
           children: [
             Expanded(
@@ -347,6 +427,25 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
                 child: Text(
                   entry.medicalCase,
                   style: const TextStyle(fontSize: AppType.caption),
+                ),
+              ),
+            ),
+          if (categoryId != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  key: ValueKey(
+                    'acupuncture-prescription-context-' +
+                        categoryId +
+                        '-' +
+                        entry.id.toString(),
+                  ),
+                  onPressed: () =>
+                      _askAiAboutPrescriptionEntry(entry, categoryId),
+                  icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                  label: const Text('问 AI 解读当前处方条目'),
                 ),
               ),
             ),
