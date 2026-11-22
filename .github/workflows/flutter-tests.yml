@@ -444,6 +444,25 @@ jobs:
           df -h /
           df -h "$GITHUB_WORKSPACE"
 
+      - name: Verify Release-signed Debug mode is forbidden in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(cd android && ./gradlew :app:assembleDebug --dry-run --no-daemon -PlocalDebugUsesReleaseSigning=true 2>&1)"
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            echo "A Release-signed Debug build unexpectedly configured in CI." >&2
+            exit 1
+          fi
+          if ! grep -Fq "localDebugUsesReleaseSigning is local-only and is forbidden in CI." <<< "$output"; then
+            printf '%s\\n' "$output"
+            echo "Gradle failed for a reason other than the CI signing guard." >&2
+            exit 1
+          fi
+          echo "PASS: local Release-signed Debug mode is rejected in CI."
+
       - name: Build Android arm64 CI Debug APK (ABI verification only)
         id: build_apk
         shell: bash
