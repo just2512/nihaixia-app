@@ -505,13 +505,19 @@ class _AcupointDetailScreenState extends State<AcupointDetailScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(sheetCtx);
+                  final asset = ZhenJiuLectureIndex.assetOf(h.seq);
                   Navigator.push(
                     context,
                     FoldAwareMaterialPageRoute(sourceContext: context,
                       builder: (_) => MarkdownDocScreen(
                         title: ZhenJiuLectureIndex.nameOf(h.seq),
-                        asset: ZhenJiuLectureIndex.assetOf(h.seq),
+                        asset: asset,
                         linkFormulas: true,
+                        contextualAskModuleId: 'zhenjiu-reading',
+                        contextualAskAnchorId:
+                            'zhenjiu-reading:passage:$asset',
+                        contextualAskSourceId: asset,
+                        contextualAskParagraphs: true,
                       ),
                     ),
                   );

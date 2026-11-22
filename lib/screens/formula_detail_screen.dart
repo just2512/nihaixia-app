@@ -249,7 +249,11 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
     }();
   }
 
-  Widget _buildClauseCard(ClassicLecture lec) {
+  Widget _buildClauseCard(ClassicLecture lec, String moduleId) {
+    final anchorId = moduleId == 'shanghan' &&
+            lec.asset == 'assets/shanghan/clause_001.md'
+        ? 'shanghan:clause:002'
+        : '$moduleId:passage:${lec.asset}';
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
@@ -262,6 +266,10 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
               title: lec.name,
               asset: lec.asset,
               linkFormulas: true,
+              contextualAskModuleId: moduleId,
+              contextualAskAnchorId: anchorId,
+              contextualAskSourceId: lec.asset,
+              contextualAskParagraphs: true,
             ),
           ),
         ),
@@ -269,7 +277,11 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
     );
   }
 
-  List<Widget> _buildBookGroup(String bookName, List<ClassicLecture> hits) {
+  List<Widget> _buildBookGroup(
+    String bookName,
+    List<ClassicLecture> hits,
+    String moduleId,
+  ) {
     final color = Theme.of(context).colorScheme.primary;
     return [
       Padding(
@@ -277,7 +289,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
         child: Text(bookName,
             style: TextStyle(fontSize: AppType.body, fontWeight: FontWeight.w600, color: color)),
       ),
-      ...hits.map(_buildClauseCard),
+      ...hits.map((lecture) => _buildClauseCard(lecture, moduleId)),
     ];
   }
 
@@ -511,8 +523,10 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
               Text('暂未在该模块经典中找到出处',
                   style: TextStyle(fontSize: AppType.body, color: context.colors.onSurfaceVariant))
             else ...[
-              if (_shanghanHits.isNotEmpty) ..._buildBookGroup('伤寒论', _shanghanHits),
-              if (_jinguiHits.isNotEmpty) ..._buildBookGroup('金匮要略', _jinguiHits),
+              if (_shanghanHits.isNotEmpty)
+                ..._buildBookGroup('伤寒论', _shanghanHits, 'shanghan'),
+              if (_jinguiHits.isNotEmpty)
+                ..._buildBookGroup('金匮要略', _jinguiHits, 'jingui'),
             ],
           ],
         ),

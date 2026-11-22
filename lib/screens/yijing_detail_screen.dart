@@ -141,6 +141,11 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                     builder: (_) => MarkdownDocScreen(
                       title: '第${hex.seq}卦 · ${hex.name} · 倪师《人间道》',
                       asset: asset,
+                      contextualAskModuleId: 'yijing-reading',
+                      contextualAskAnchorId:
+                          'yijing-reading:passage:$asset',
+                      contextualAskSourceId: asset,
+                      contextualAskParagraphs: true,
                     ),
                   ),
                 ),
@@ -170,6 +175,11 @@ class YiJingHexagramDetailScreen extends StatelessWidget {
                       title: '四柱命卦·${hex.name}',
                       asset: mgAsset,
                       footer: '倪师《天纪·四柱命卦》讲义 · 传统文化参考',
+                      contextualAskModuleId: 'minggua-reading',
+                      contextualAskAnchorId:
+                          'minggua-reading:passage:$mgAsset',
+                      contextualAskSourceId: mgAsset,
+                      contextualAskParagraphs: true,
                     ),
                   ),
                 ),
