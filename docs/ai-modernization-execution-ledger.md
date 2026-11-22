@@ -3501,13 +3501,13 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 以下 CI 均对应 `master @ 26d924b894b3301a8f46b2db120407cc344e41af`，不使用 PR-head 的成功记录替代 master post-merge 证据：
 
 - Flutter regression：run `45024833552`，job `137215478267`，SUCCESS；日志明确为 **1,887 tests passed, 15 skipped**，0 failure。
-- Android arm64 CI verification APK + Native unit tests：run `45024833552`，job `137217373016`，当前状态待最终结果回填；该 job 依赖 Flutter test job，负责 ABI Debug APK、合并 Manifest、APK SHA-256、Native unit tests 与 Release signing fail-closed 检查。
+- Android arm64 CI verification APK + Native unit tests：run `45024833552`，job `137217373016`，SUCCESS；arm64 Debug APK 构建、merged Manifest、ABI / SHA-256 校验、Android Native / Gradle 单测、Release 缺少本地签名材料时 fail-closed、JUnit XML 校验及证据工件上传均通过。
 - Flutter Quality Gate：run `45024833501`，job `137215478301`，SUCCESS；已完成静态分析、Dart 测试、Android Native unit tests 与 arm64 Debug APK 构建检查。
 - Fork license inventory / boundary：run `45024833507`，job `137215478451`，SUCCESS。
 - Branch validation：job `137215479426` 为 workflow 条件性 SKIPPED；不记为 PASS，也不视为失败。
 - PR #399 head：Flutter regression run `45024298249` / job `137213809344` SUCCESS，Android arm64 job `137215409235` SUCCESS，Fork license run `45024298267` / job `137213809314` SUCCESS。PR-head Flutter 日志同为 1,887 passed / 15 skipped。主线 post-merge 证据以上一组 SHA/Run 为准。
 
-**阶段判断：** 情境问 AI 的代码、专项回归、全量 Flutter regression、Flutter Quality Gate 与许可边界已通过；master Android arm64 CI verification APK + Native unit tests 仍在执行，完成后再将本轮云端门禁全部关闭。
+**阶段判断：** 当前 `master @ 26d924b` 的必需云端门禁全部 PASS：Flutter regression（1,887 passed / 15 skipped）、Flutter Quality Gate、Android arm64 CI verification APK + Native unit tests、Fork License Boundary。条件性 Branch Validation 为 SKIPPED，不计 PASS、不构成失败。情境问 AI 云端代码、测试、文档索引、许可与构建验收已关闭；唯一保留的 MISSING / UNKNOWN 项是 Find N2 / E4B 本地设备实测。
 
 ### 67.5 Find N2 / E4B 后置本地验收交接
 
