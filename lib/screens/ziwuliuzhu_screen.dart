@@ -460,98 +460,101 @@ class _NaZiTab extends StatelessWidget {
           color: colorScheme,
         ),
         const SizedBox(height: 16),
+        // ExpansionTile stores a bool while the surrounding ListView stores a
+        // double scroll offset. Isolate the tile states from the list bucket;
+        // keep the outer PageStorageKey so each Tab still restores its scroll.
         PageStorage(
           bucket: expansionStorageBucket,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-          Card(
-            child: ExpansionTile(
-              leading: const Icon(Icons.table_chart),
-              key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-tianGan'),
-              title: const Text('天干→脏腑表'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Wrap(
-                    spacing: 12,
-                    runSpacing: 6,
-                    children: tianGan.map((g) {
-                      final organ = ganToOrgan[g]!;
-                      final isCurrent = g == dayGan;
-                      return Chip(
-                        label: Text('$g→$organ',
-                            style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal)),
-                        backgroundColor: isCurrent ? colorScheme.primaryContainer : null,
-                      );
-                    }).toList(),
-                  ),
+              Card(
+                child: ExpansionTile(
+                  leading: const Icon(Icons.table_chart),
+                  key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-tianGan'),
+                  title: const Text('天干→脏腑表'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        children: tianGan.map((g) {
+                          final organ = ganToOrgan[g]!;
+                          final isCurrent = g == dayGan;
+                          return Chip(
+                            label: Text('$g→$organ',
+                                style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal)),
+                            backgroundColor: isCurrent ? colorScheme.primaryContainer : null,
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: ExpansionTile(
-              leading: const Icon(Icons.table_chart),
-              key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-diZhi'),
-              title: const Text('地支→时辰→经络表'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Column(
-                    children: diZhi.map((z) {
-                      final (m, t) = zhiToMeridian[z]!;
-                      final isCurrent = z == zhi;
-                      return Container(
-                        color: isCurrent ? colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 30, child: Text(z, style: TextStyle(fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
-                            SizedBox(width: 100, child: Text(t, style: const TextStyle(fontSize: 12))),
-                            Expanded(child: Text(m, style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ExpansionTile(
+                  leading: const Icon(Icons.table_chart),
+                  key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-diZhi'),
+                  title: const Text('地支→时辰→经络表'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        children: diZhi.map((z) {
+                          final (m, t) = zhiToMeridian[z]!;
+                          final isCurrent = z == zhi;
+                          return Container(
+                            color: isCurrent ? colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 30, child: Text(z, style: TextStyle(fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
+                                SizedBox(width: 100, child: Text(t, style: const TextStyle(fontSize: 12))),
+                                Expanded(child: Text(m, style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: ExpansionTile(
-              leading: const Icon(Icons.table_chart),
-              key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-wuMen'),
-              title: const Text('五门十变表'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Column(
-                    children: ZiWuLiuZhuCalculationService.wuMen.map(
-                      (entry) {
-                        final (first, second, element, acupoints) = entry;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 8,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(child: Text('$first$second合化$element')),
-                              Text(acupoints),
-                            ],
-                          ),
-                        );
-                      },
-                    ).toList(growable: false),
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ExpansionTile(
+                  leading: const Icon(Icons.table_chart),
+                  key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-wuMen'),
+                  title: const Text('五门十变表'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        children: ZiWuLiuZhuCalculationService.wuMen.map(
+                          (entry) {
+                            final (first, second, element, acupoints) = entry;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 8,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(child: Text('$first$second合化$element')),
+                                  Text(acupoints),
+                                ],
+                              ),
+                            );
+                          },
+                        ).toList(growable: false),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
             ],
           ),
         ),
