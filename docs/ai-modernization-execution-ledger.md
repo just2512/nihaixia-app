@@ -3259,3 +3259,24 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - 当前明确的最后一项页面级情境入口切片为 PR #386：内经/本草普通讲稿段落。已有的工具结果、字段/图表、方剂/本草/内经条目、医案、经典条文及穴位等入口不应重复建设。
 - PR #386 未通过当前 head 的 Flutter regression 前，状态为 IN_PROGRESS，不能合并；合并后主线 CI 和总覆盖矩阵复核完成前，整个云端情境问 AI 阶段仍不能标记 PASS。
 - 本地设备门禁是后置交接，不是云端工作阻塞项。
+
+### 63.5 基线 master 的 post-merge CI 复核
+
+- 对当前 PR #386 的基线 master SHA 7cf512b8c159f48112564b2135b67e90638bacc7 直接查询 GitHub Actions push runs，确认基线主线自身的三项工作流均为终态 SUCCESS：
+  - Fork license boundary：run 44912225587，job 136870258392 SUCCESS。
+  - Flutter tests：run 44912225598；Flutter regression job 136870277690 SUCCESS，完整回归 1860 tests passed, 15 skipped；Android arm64 job 136872261005 SUCCESS。
+  - Flutter Quality Gate：run 44912225599，job 136872092378 SUCCESS；Dart/Flutter 分析、完整 Dart 测试及 Android 构建路径成功。
+- 基线 Android arm64 验收：APK 132520133 bytes；native ABI 集合只有 arm64-v8a；APK SHA-256 32c1a0a450350953a3b861c1dea97d099db0eca830bbe72af5c227f4b6e3c0d4；合并 Manifest 的 backup/data-extraction 规则检查、:app:testDebugUnitTest -Ptarget-platform=android-arm64、JUnit XML 报告校验及工件上传均成功。该 APK 明确标注为 CI ABI 验证包，不得作为本地 Release 覆盖安装包。
+- Flutter tests 中 Branch validation 为条件性 SKIPPED，不计 PASS；不影响上述必需 job 的 SUCCESS。以上基线主线证据不替代 PR #386 最新 head 验收。
+
+### 63.6 当前 head 的静态分析修正与最新 CI
+
+- 对 head 4d7d1f169f440a09bf5fce4715275c4a99f1ff29 的 run 44970122910 检查发现：Dart/Flutter static analysis step 因 test/classic_paragraph_contextual_entry_test.dart:5 存在未使用的 classic_library_screen.dart import 而失败；该问题由滚动 Finder 更新后遗留的无用 import 导致，不是产品运行时代码问题。随后该 run 被后续 head push 取消，未取得该 HEAD 的 Flutter/Android 全量终态。
+- 已在最新 head 9b0f2aa437f588b6d9c84ba4ceb3858eb1881d9a 删除该未使用 import；没有改变测试断言或产品代码。当前 head 的 Fork license boundary run 44970321425 SUCCESS；Flutter tests run 44970321490 在本节记录时 IN_PROGRESS；Android arm64 job 尚未取得当前 HEAD 的结果。只有此 SHA 的 Flutter 全量回归与 Android arm64 verification APK/Manifest/ABI/unit tests 均 SUCCESS，才允许 PR #386 进入合并步骤。
+- 当前 head 的 Branch validation 条件性 SKIPPED，不计 PASS；不得把基线 master 的 Android 证据或此前 PR head 结果转移给 9b0f2aa。
+
+### 63.7 最终真机交接文档补充
+
+- 在独立文档分支 docs/ai-contextual-closeout-2026-11-22 更新 docs/find-n2-real-device-acceptance.md，新增第 12 节“情境问 AI：内经与本草讲稿段落选择”。提交：cb2ccfccd700c572dd9fae0d74b4bbbd563fa2c9。
+- 第 12 节以 PR #386 合并为执行前置条件，覆盖内经/本草真实讲稿入口、段落选择与来源核对、多轮追问、同锚点续接、不同段落隔离、标题/列表/引用/表格/代码/HTML/数学块 fail-closed、复制/全选、已有方剂/本草/穴位链接、402dp/775dp 与半折叠面板、键盘/返回键/关闭恢复，以及脱敏证据要求。
+- 该提交只是补齐最终本地执行方案，不构成设备已验收；所有设备场景在执行前仍是 MISSING / UNKNOWN。
