@@ -215,6 +215,7 @@ $second
           'assets/neijing/01_上古天真论.md');
 
       await tester.pumpWidget(MaterialApp(
+        key: const ValueKey('bencao-library-test-app'),
         theme: ThemeData(extensions: [AppColors.light]),
         home: const BenCaoLibraryScreen(),
       ));
