@@ -1,6 +1,6 @@
 # Gemma 4 E4B 本地多模态问诊（Android）
 
-> **验收状态与使用边界：** 本文件说明 Gemma 4 E4B 模型文件、导入和运行配置，不是设备 PASS 报告。Find N2 的折叠屏、覆盖升级、GPU/CPU 多轮、多媒体、恢复及 TRACE 验收，分别按 [Find N2 真机验收方案](find-n2-real-device-acceptance.md)、[Find N2 本地 AI 验收清单](find-n2-local-ai-acceptance-checklist.md) 和 [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md) 执行；所有未实测项保持 `MISSING / UNKNOWN / LOCAL ONLY`。
+> **验收状态与使用边界：** 本文件说明 Gemma 4 E4B 模型文件、导入和运行配置，不是设备 PASS 报告。Find N2 的折叠屏、覆盖升级、GPU/CPU 多轮、多媒体、恢复及 TRACE 验收，统一从[Find N2 / E4B 本地验收交接总清单](find-n2-e4b-local-handover.md)进入，再按 [Find N2 真机验收方案](find-n2-real-device-acceptance.md)、[Find N2 本地 AI 验收清单](find-n2-local-ai-acceptance-checklist.md) 和 [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md)执行；所有未实测项保持 `MISSING / UNKNOWN / LOCAL ONLY`。
 
 ## 模型文件
 
