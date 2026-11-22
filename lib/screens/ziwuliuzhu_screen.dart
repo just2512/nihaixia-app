@@ -459,6 +459,7 @@ class _NaZiTab extends StatelessWidget {
         Card(
           child: ExpansionTile(
             leading: const Icon(Icons.table_chart),
+            key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-tianGan'),
             title: const Text('天干→脏腑表'),
             children: [
               Padding(
@@ -484,6 +485,7 @@ class _NaZiTab extends StatelessWidget {
         Card(
           child: ExpansionTile(
             leading: const Icon(Icons.table_chart),
+            key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-diZhi'),
             title: const Text('地支→时辰→经络表'),
             children: [
               Padding(
@@ -513,6 +515,7 @@ class _NaZiTab extends StatelessWidget {
         Card(
           child: ExpansionTile(
             leading: const Icon(Icons.table_chart),
+            key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-wuMen'),
             title: const Text('五门十变表'),
             children: [
               Padding(
