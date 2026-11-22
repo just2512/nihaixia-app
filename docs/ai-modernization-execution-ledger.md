@@ -3638,12 +3638,14 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - 旧问诊“仅模拟学习”边界与当前 `docs/ai-capability-audit.md` 的有效规范冲突，不能回灌已废止限制。
 - PR #207/#213/#218/#405 已关闭并标记为 SUPERSEDED；原始 branch refs 保留。
 
-### 69.3 修订时仍需独立处理的 OPEN PR
+### 69.3 当前 OPEN PR 与集成阻塞（2026-11-22 复核）
 
-截至本次台账修订，#406 已 `MERGED`；以下仅列仍处于 `OPEN` 的 PR。
-- #403：历史经典/讲稿段落级情境 Ask AI 入口，需将旧分支的 9 个提交选择性移植到最新 master，解决冲突并重新生成当前 Fork 许可清单。
-- #404：子午流注四种方法字段级情境解释，需从落后 178 个提交的旧分支重整；保持规则计算结果为唯一事实源，AI 不得补造穴位/临床结论。
-- #328：AI 商业许可草案仍为 DRAFT；权属证据、贡献者再许可、协议主体及销售/消费者条款未完成，不能按普通功能 PR 直接视作可发布许可。
+- #408：本台账与本次历史分支处置文档的当前主线版本；由 #407 的两份文档选择性重建，基于 master `dbcbec6a07a98c129e1a1b64212feab01a0c0c15`。Fork license 与 Flutter 全量回归已通过；Android arm64 CI verification job仍在执行。由于本节更新会生成新的 PR head，必须以更新后 head 的新 CI 结果为最终门禁。
+- #409：从 #404 选择性移植的子午流注四种方法字段级情境解释。只移植当前主线缺失的功能代码、专属测试及当前基线下的许可证映射，不带入旧分支 179 个落后提交。初始 CI 中 Fork license boundary 已 `SUCCESS`，Flutter 全量 regression 仍在执行；Android arm64 job需确认是否触发及最终状态。不得在所有必需门禁完成前合并。
+- #404：旧字段级功能候选，保持 `DRAFT`，作为 #409 的历史来源；不再作为独立集成目标。待 #409 完成验收并合并后，将 #404 标记为 `SUPERSEDED`，保留原分支。
+- #328：AI 商业许可草案仍为 `DRAFT`；权属证据、贡献者再许可、协议主体及销售/消费者条款未完成，不能按普通功能 PR 直接视作可发布许可，不合并。
+
+#403 已于 2026-11-22 关闭并标记为 `SUPERSEDED`：对应 18 个文件的段落级 Ask AI 入口与回归测试已逐项在当前 master 找到；当前主线使用规范锚点构造，不回灌旧分支已过时的字面锚点实现。
 
 以上 PR 不可通过降低 CI 门槛、跳过许可证检查或整支 merge 解决。
 
@@ -3665,3 +3667,12 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - Branch validation：`SKIPPED`，不计为 PASS；其必需覆盖由上述 Flutter 静态分析、全量回归与 Android arm64 任务分别提供，不将跳过状态冒充通过。
 - Review threads：复核时无未解决 inline review thread。
 - Find N2 真机 Launcher 显示、原签名覆盖安装和数据保留：`LOCAL ONLY / UNKNOWN`，由本地设备验收清单继续执行；本次合并不声称设备验收已完成。
+
+
+### 69.6 2026-11-22 情境 Ask AI 历史分支复核补充
+
+- #403：已关闭为 `SUPERSEDED`。当前 master 的针灸穴位、本草、方剂、命卦、内经、易经与统一搜索入口均已包含段落级情境入口和对应测试；旧分支部分固定拼接 anchor 不如主线的 `ClassicSearchService.contextualAnchorIdForReaderAsset` 规范，不能重复合并。
+- #404：保留的唯一新功能是子午流注四种方法（纳子、纳甲、灵龟八法、飞腾八法）的字段级解释入口。其旧 head 相对当前 master 落后约 179 个提交，已改为 #409 当前基线选择性移植。#409 以同一设备本地成功快照绑定单一方法字段，Resolver 校验来源、规则版本、snapshot ID、时间和字段白名单；Prompt 不混入其他方法字段，明确保留 `NOT_APPLICABLE`，禁止模型补造穴位或临床建议。
+- 已抽查的经脉详情、针灸处方及经典讲稿段落入口历史分支：当前 master 对应页面、Resolver/Prompt 与专属测试已存在；经典阅读旧分支缺少当前主线的 paragraph 模式/规范 anchor 处理。它们是已吸收或被更新实现替代的历史 refs，不再重复合并。
+- 对未逐支完成代码差异审查的远端 refs，仍标记为 `NOT_REVIEWED`；本节的抽查结论不能外推为全仓所有非默认分支均已逐文件审计。分支 refs 暂不批量删除。
+- #406 的 Find N2 真机 Launcher 显示、原签名覆盖安装与数据保留仍为 `LOCAL ONLY / UNKNOWN`；云端合并不代替 OPPO Find N2 实机验收。
