@@ -1,6 +1,6 @@
 # Fork 独立维护与上游同步策略
 
-更新日期：2026-11-15  
+更新日期：2026-11-22  
 维护仓库：`just2512/nihaixia-app`  
 上游仓库：`jangviktor-web/nihaixia-app`
 
@@ -31,7 +31,7 @@
 
 1. `master` 是本 Fork 唯一产品维护分支；禁止使用 GitHub 的 Sync fork / Update branch 直接合并上游。
 2. 禁止 App 启动时查询上游 Release、提示安装上游 APK、从上游下载 APK 或通过上游 Gitee 镜像更新。
-3. Fork 的正式发行版只能由本仓库的 tag 与 GitHub Actions 生成；当前尚无独立 Fork Release 时，不提供上游 APK 作为替代下载。
+3. 正式 APK 由维护者在本地使用原签名密钥构建、签名并验收后本地或私下交付；不创建发行 Tag、不发布 GitHub Release、不上传正式 APK。GitHub Actions 只做 CI 验收（含 Debug ABI / Manifest / Native 单测和 Release 签名缺失负向门禁）。
 4. 上游新增内容只有在明确提出引入需求后才逐项评估。优先考虑独立数据文件；诊断引擎、医案数据、依赖和 UI 重叠路径必须先做三方差异审查。
 5. 每次候选移植必须记录：来源提交、涉及文件、Fork 本地改动、数据结构兼容性、测试影响、回滚方式。禁止合并整个上游分支来“补齐落后提交”。
 6. CI 以 Fork 当前提交 SHA 为验收对象。取消、排队和旧 SHA 的绿色结果都不能替代当前提交的通过结果。

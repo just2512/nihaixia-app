@@ -1,6 +1,6 @@
 # Fork 修改文件全量清单
 
-共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单以 master `8394dfffc11e64ee493e90039b0b0892eab1eddd` 为基线，已纳入 PR #386、#388、#390；本 PR 为《灵枢》《针灸大成》古籍 TXT 阅读新增来源行可追溯的段落情境入口。古籍内容资产继续排除于 Fork 商业授权范围，保留来源许可。CI 对实际 PR HEAD 重新计算路径与 Git 状态。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；本次清单以共同上游基线与当前 PR HEAD 的实际 diff 重算；本 PR 同步本地 Android Release 安全门禁及交接文档，知识库与第三方内容仍按原来源许可排除。CI 对实际 PR HEAD 重新计算路径与 Git 状态。
 
 ## 分类规则
 
@@ -890,9 +890,15 @@
 | zhenjiu_audit_report.md | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | zweiwei_doushu_integration_assessment.md | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | 企划书_研纪_v2.0.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| android/key.properties.template | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| assets/data/changelog.json | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| docs/local-android-release-checklist.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/android_release_signing_gate_contract_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 ## 删除路径
 
 - .github/scripts/gitee_release.py
+- .github/workflows/build-apk.yml
+- .github/workflows/release.yml
 - .github/workflows/gitee-sync.yml
 - docs/images/logo.jpg
 - docs/images/logo.webp
@@ -908,8 +914,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 872 个（新增 715，修改 157）；删除路径 13 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 151；Fork 商业授权候选 356；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 878 个（新增 717，修改 161）；删除路径 15 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 155；Fork 商业授权候选 358；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。

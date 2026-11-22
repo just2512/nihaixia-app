@@ -504,6 +504,25 @@ jobs:
         id: android_unit_tests
         run: cd android && ./gradlew :app:testDebugUnitTest -Ptarget-platform=android-arm64
 
+      - name: Verify Release build is blocked without local signing material
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          output="$(cd android && ./gradlew :app:assembleRelease --dry-run --no-daemon 2>&1)"
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            echo "Release task unexpectedly configured without a signing key." >&2
+            exit 1
+          fi
+          if ! grep -Fq "Release signing is required" <<< "$output"; then
+            printf '%s\\n' "$output"
+            echo "Release task failed for a reason other than the expected signing guard." >&2
+            exit 1
+          fi
+          echo "PASS: Release configuration is blocked without the local signing key; no Release APK was built."
+
       - name: Verify Android unit test result XML
         id: verify_android_unit_tests
         if: always()
