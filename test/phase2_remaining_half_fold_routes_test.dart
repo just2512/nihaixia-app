@@ -186,10 +186,17 @@ void main() {
         // Real knowledge tab -> classical library -> actual Markdown article.
         final classicsTab = find.text('伤寒金匮').last;
         await tester.ensureVisible(classicsTab);
+        await tester.pumpAndSettle();
         await tester.tap(classicsTab);
         await tester.pumpAndSettle();
         final shanghanBook = find.text('伤寒论').last;
         await tester.ensureVisible(shanghanBook);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(shanghanBook).bottom,
+          lessThanOrEqualTo(tester.view.physicalSize.height),
+          reason: '伤寒论入口必须先完整进入可点击视口',
+        );
         await tester.tap(shanghanBook);
         await _advanceRoute(tester);
         _expectPageInsideLeftPanel(
