@@ -258,4 +258,40 @@ void main() {
     expect(unbacked.sourceId, 'MISSING');
   });
 
+
+  test('Yijing and Minggua reader citations resolve by exact manifest asset', () {
+    final yijing = ClassicSearchService.findReaderAssetBySourceId(
+      'yijing-reading:assets/yijing/1.乾为天䷀.md',
+    );
+    expect(yijing, isNotNull);
+    expect(yijing!.moduleId, 'yijing-reading');
+    expect(yijing.asset, 'assets/yijing/1.乾为天䷀.md');
+
+    final minggua = ClassicSearchService.findReaderAssetBySourceId(
+      'minggua-reading:assets/yijing_minggua/0.八字的排列方法.md',
+    );
+    expect(minggua, isNotNull);
+    expect(minggua!.moduleId, 'minggua-reading');
+    expect(minggua.asset, 'assets/yijing_minggua/0.八字的排列方法.md');
+
+    expect(
+      ClassicSearchService.findReaderAssetBySourceId(
+        'yijing-reading:assets/yijing/not-in-manifest.md',
+      ),
+      isNull,
+    );
+    expect(
+      ClassicSearchService.findReaderAssetBySourceId(
+        'minggua-reading:assets/yijing_minggua/0.八字的排列方法.md:paragraph:1-1',
+      ),
+      isNull,
+    );
+    expect(
+      ClassicSearchService.findReaderAssetBySourceId(
+        'yijing-reading:乾为天',
+      ),
+      isNull,
+    );
+  });
+
 }
