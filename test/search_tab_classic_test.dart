@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:nihaisha_app/data/database_helper.dart';
+
 import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
@@ -20,10 +22,19 @@ void main() {
 
   setUpAll(() async {
     databaseFactory = databaseFactoryFfi;
+    DatabaseHelper.configureTestDatabase(
+      'search_tab_classic_test.db',
+      factory: databaseFactoryFfi,
+    );
+    await DatabaseHelper.instance.database;
     await FormulaRepository.load();
     await HerbRepository.load();
     await AcupunctureRepository.load();
     await AcupointRepository.load();
+  });
+
+  tearDownAll(() async {
+    await DatabaseHelper.closeTestDatabase();
   });
 
   testWidgets('输入「标幽赋」后出现经典分组并命中针灸大成', (tester) async {
