@@ -12,12 +12,12 @@
   ],
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 6ed53bf15f9c8aa5f21403094258a8e47d6d47be includes merged PRs #386 and #388, including Neijing/Bencao and Shanghan/Jingui lecture paragraph contextual entry points. This slice adds paragraph-level contextual selection to the Zhenjiu lecture library. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 871,
+    "changed": 872,
     "added": 713,
-    "modified": 158,
+    "modified": 159,
     "deleted": 13,
     "by_classification": {
-      "APACHE_2_0_AND_FORK_COMMERCIAL": 152,
+      "APACHE_2_0_AND_FORK_COMMERCIAL": 153,
       "FORK_COMMERCIAL": 354,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
@@ -6342,6 +6342,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/minggua_screen_test.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {

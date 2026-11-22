@@ -133,6 +133,7 @@ Files:
  test/herb_backlinks_test.dart
  test/medical_case_filter_bar_test.dart
  test/medical_case_list_light.png
+ test/minggua_screen_test.dart
  test/neijing_entries_screen_test.dart
  test/quality_score_bc.dart
  test/yijing_detail_screen_test.dart
