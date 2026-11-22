@@ -150,7 +150,7 @@ Find N2 外屏和内屏必须分别测试，不能只在外屏完成 AI 模型�
 
 ### 1. 安装与离线条件
 
-- 安装本轮 CI 生成的 Debug APK，确认 Android 包名为 `com.nihaisha.nihaisha_app`。
+- 正式设备验收先安装通过原签名核验的本地 Release APK，并记录 applicationId、versionName/versionCode、签名证书 SHA-256 与 APK SHA-256；不要将 CI Debug APK 安装到保留旧数据的设备。需要采集 Debug-only TRACE 时，按 [本地 Android 构建与升级检查清单 §6](local-android-release-checklist.md) 使用 `localDebugUsesReleaseSigning=true` 构建本地 Debug APK，确认与当前安装包签名证书一致后才可 `adb install -r`；TRACE 完成后再用同一原签名构建的正常 Release APK `adb install -r` 恢复。该 Debug APK 含调试功能，必须留在本地，不得上传或分发。
 - 将模型复制到应用私有目录，核对文件大小为 `3,659,530,240` bytes，SHA-256 与上文一致。
 - 开启飞行模式，并确认 Wi-Fi、移动数据均关闭后再启动应用。
 - **PASS**：模型文件状态正确；离线状态下可加载模型、连续发送文字并收到回复；抓取日志没有模型网络请求。
