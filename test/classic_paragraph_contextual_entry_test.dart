@@ -217,10 +217,14 @@ $second
         ).first,
       );
       expect(neijingEntry, findsOneWidget);
-      await tester.tap(neijingEntry);
-      // The reader keeps an indeterminate loading animation alive; advance the
-      // route transition and asset load without waiting for global settlement.
-      await tester.pump(const Duration(milliseconds: 400));
+      // rootBundle.loadString must start inside runAsync's real zone; otherwise
+      // the asset future can remain pending in the widget-test fake async zone.
+      await tester.runAsync(() async {
+        await tester.tap(neijingEntry);
+        await tester.pump();
+        await Future.delayed(const Duration(milliseconds: 1200));
+      });
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       final neijingReader = tester.widget<MarkdownDocScreen>(
@@ -309,9 +313,12 @@ $second
         ).first,
       );
       expect(bencaoEntry, findsOneWidget);
-      await tester.tap(bencaoEntry);
-      // Match the Neijing route's bounded transition/asset-load pumping.
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.runAsync(() async {
+        await tester.tap(bencaoEntry);
+        await tester.pump();
+        await Future.delayed(const Duration(milliseconds: 1200));
+      });
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       final bencaoReader = tester.widget<MarkdownDocScreen>(
