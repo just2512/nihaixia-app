@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../models/formula.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../services/classic_search_service.dart';
 import '../screens/assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import '../theme/app_colors.dart';
@@ -250,10 +251,10 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
   }
 
   Widget _buildClauseCard(ClassicLecture lec, String moduleId) {
-    final anchorId = moduleId == 'shanghan' &&
-            lec.asset == 'assets/shanghan/clause_001.md'
-        ? 'shanghan:clause:002'
-        : '$moduleId:passage:${lec.asset}';
+    final anchorId = ClassicSearchService.contextualAnchorIdForReaderAsset(
+      moduleId: moduleId,
+      asset: lec.asset,
+    );
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
