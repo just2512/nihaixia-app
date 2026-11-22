@@ -133,6 +133,89 @@ class ClassicSearchService {
     'bencao': '本草讲稿',
   };
 
+  /// Maps a classic index source to the module ID used by reader selections.
+  /// Keep this allowlist beside reverse source resolution so search and
+  /// assistant citation navigation cannot drift independently.
+  static String? contextualModuleIdForSource(String source) {
+    switch (source) {
+      case 'shanghan':
+        return 'shanghan';
+      case 'jingui':
+        return 'jingui';
+      case 'neijing':
+        return 'neijing-reading';
+      case 'zhenjiu':
+        return 'zhenjiu-reading';
+      case 'bencao':
+        return 'bencao-reading';
+      default:
+        return null;
+    }
+  }
+
+  /// Reader modules whose Markdown asset IDs have a verified paragraph
+  /// source contract. Guji is deliberately excluded because it uses an
+  /// independently verified original-TXT line map.
+  static const Map<String, String> _assetReaderModulePrefixes = {
+    'shanghan': 'assets/shanghan/',
+    'jingui': 'assets/jingui/',
+    'neijing-reading': 'assets/neijing/',
+    'zhenjiu-reading': 'assets/zhenjiu_lecture/',
+    'bencao-reading': 'assets/bencao_lecture/',
+    'yijing-reading': 'assets/yijing/',
+    'minggua-reading': 'assets/yijing_minggua/',
+  };
+
+  /// The single canonical anchor builder for asset-backed reader modules.
+  /// Search results, library pages and assistant backlinks must all call this
+  /// method rather than concatenate module/asset strings independently.
+  static String? contextualAnchorIdForReaderAsset({
+    required String moduleId,
+    required String asset,
+  }) {
+    final normalizedModuleId = moduleId.trim();
+    final normalizedAsset = asset.trim();
+    final requiredPrefix = _assetReaderModulePrefixes[normalizedModuleId];
+    if (requiredPrefix == null ||
+        !normalizedAsset.startsWith(requiredPrefix) ||
+        !normalizedAsset.endsWith('.md') ||
+        normalizedAsset.contains('..')) {
+      return null;
+    }
+    // The local first asset represents the second numbered clause in the
+    // lecture's established source contract. Keep this exception centralized.
+    if (normalizedModuleId == 'shanghan' &&
+        normalizedAsset == 'assets/shanghan/clause_001.md') {
+      return 'shanghan:clause:002';
+    }
+    return '$normalizedModuleId:passage:$normalizedAsset';
+  }
+
+  /// Returns the stable reader passage anchor for one indexed lecture.
+  /// Sources without an explicit reader contract remain non-contextual.
+  static String? contextualAnchorIdForHit(ClassicHit hit) {
+    final moduleId = contextualModuleIdForSource(hit.source);
+    final asset = hit.asset?.trim();
+    if (moduleId == null || asset == null || asset.isEmpty) return null;
+    return contextualAnchorIdForReaderAsset(
+      moduleId: moduleId,
+      asset: asset,
+    );
+  }
+
+  static String? _indexedSourceForReaderModule(String moduleId) {
+    switch (moduleId) {
+      case 'neijing-reading':
+        return 'neijing';
+      case 'zhenjiu-reading':
+        return 'zhenjiu';
+      case 'bencao-reading':
+        return 'bencao';
+      default:
+        return null;
+    }
+  }
+
   static String _labelOf(String source, String? bookId) {
     if (source == 'guji') {
       for (final b in kGujiBooks) {
@@ -280,8 +363,9 @@ class ClassicSearchService {
     if (hit.sourceId == candidate) return true;
     final parts = candidate.split(':');
     if (hit.asset != null && hit.asset!.trim().isNotEmpty) {
+      final source = _indexedSourceForReaderModule(parts.first) ?? parts.first;
       return parts.length >= 2 &&
-          parts[0] == hit.source &&
+          source == hit.source &&
           parts[1] == hit.asset;
     }
     if (hit.bookId != null &&

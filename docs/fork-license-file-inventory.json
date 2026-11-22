@@ -12,12 +12,12 @@
   ],
   "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master base 8394dfffc11e64ee493e90039b0b0892eab1eddd includes merged PRs #386, #388 and #390, including Neijing/Bencao, Shanghan/Jingui and Zhenjiu lecture paragraph contextual entry points. This slice adds source-line-preserving paragraph contextual selection to the public-domain Guji TXT reader; ancient text assets remain excluded from the Fork commercial grant and retain their source terms. CI recomputes path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 872,
+    "changed": 875,
     "added": 715,
-    "modified": 157,
+    "modified": 160,
     "deleted": 13,
     "by_classification": {
-      "APACHE_2_0_AND_FORK_COMMERCIAL": 151,
+      "APACHE_2_0_AND_FORK_COMMERCIAL": 154,
       "FORK_COMMERCIAL": 356,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
@@ -6361,6 +6361,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "test/minggua_screen_test.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "test/models/tcm_interview_task_state_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -6478,6 +6486,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/search_tab_classic_test.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "既有经典搜索测试文件相对许可审计基线为修改状态；上游原始部分保留 Apache-2.0，新增来源锚点回归由 Fork 商业许可覆盖。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -6630,6 +6646,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/yijing_detail_screen_test.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {

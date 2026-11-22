@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/neijing_entries.dart';
 import 'package:nihaisha_app/screens/neijing_entries_screen.dart';
+import 'package:nihaisha_app/screens/neijing_search_screen.dart';
+import 'package:nihaisha_app/screens/markdown_doc_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 
 /// 《黄帝内经》结构化条目检索页：过滤纯函数 + 页面交互冒烟（浅色 / 深色）。
 void main() {
@@ -388,4 +391,69 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  testWidgets('内经全文搜索结果进入后绑定内经讲稿来源与段落锚点',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: AppColors.colorSchemeFor(Brightness.light),
+          extensions: [AppColors.light],
+        ),
+        home: const NeijingSearchScreen(),
+      ),
+    );
+    await tester.pump();
+
+    final search = find.byType(TextField);
+    await tester.tap(search);
+
+    // Start the asynchronous asset index load, then enter the query while it
+    // is loading. NeijingSearchScreen must re-run the query after all 73 assets
+    // are available; a fixed wall-clock sleep is not a reliable readiness gate.
+    await tester.pump();
+    expect(find.text('加载失败'), findsNothing);
+
+    await tester.enterText(search, '黄帝曰');
+    // NeijingSearchScreen debounces text input by 250ms.
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final results = find.byType(ListTile);
+    // Wait for an observable search result, not global widget-tree idleness:
+    // the reader/loading artwork can keep tickers active. The bounded wait
+    // also makes a missing asset/result fail instead of hanging the suite.
+    for (var attempt = 0;
+        attempt < 80 && results.evaluate().isEmpty;
+        attempt++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      });
+      await tester.pump();
+    }
+    expect(results, findsWidgets);
+    final firstResult = results.first;
+    await tester.ensureVisible(firstResult);
+    await tester.pump();
+    await tester.tap(firstResult);
+
+    final readerFinder = find.byType(MarkdownDocScreen);
+    // Wait for the pushed route itself to mount. A single long pump can race
+    // the route transition in CI; do not require global idle because the
+    // reader page may keep selection/loading tickers active.
+    for (var attempt = 0;
+        attempt < 20 && readerFinder.evaluate().isEmpty;
+        attempt++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(readerFinder, findsOneWidget);
+    final reader = tester.widget<MarkdownDocScreen>(readerFinder);
+    expect(reader.contextualAskModuleId, 'neijing-reading');
+    expect(reader.contextualAskSourceId, reader.asset);
+    expect(reader.contextualAskAnchorId,
+        'neijing-reading:passage:${reader.asset}');
+    expect(reader.contextualAskParagraphs, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
 }

@@ -4,6 +4,7 @@ import '../utils/fold_aware_routes.dart';
 
 import '../data/zhenjiu_lecture_index.dart';
 import '../data/classic_lecture_data.dart';
+import '../services/classic_search_service.dart';
 import 'markdown_doc_screen.dart';
 
 /// 通用「经典讲稿阅读库」屏：按条目列篇目，点按进入 [MarkdownDocScreen] 渲染原文。
@@ -188,15 +189,12 @@ class _ClassicLibraryScreenState extends State<ClassicLibraryScreen> {
                             footer: widget.footer,
                             linkFormulas: true,
                             contextualAskModuleId: widget.contextualAskModuleId,
-                            contextualAskAnchorId:
-                                widget.contextualAskModuleId == null
-                                    ? null
-                                    : widget.contextualAskModuleId == 'shanghan' &&
-                                            lecture.asset == 'assets/shanghan/clause_001.md'
-                                        ? 'shanghan:clause:002'
-                                        : widget.contextualAskModuleId! +
-                                            ':passage:' +
-                                            lecture.asset,
+                            contextualAskAnchorId: widget.contextualAskModuleId == null
+                                ? null
+                                : ClassicSearchService.contextualAnchorIdForReaderAsset(
+                                    moduleId: widget.contextualAskModuleId!,
+                                    asset: lecture.asset,
+                                  ),
                             contextualAskSourceId: widget.contextualAskModuleId == null
                                 ? null
                                 : lecture.asset,

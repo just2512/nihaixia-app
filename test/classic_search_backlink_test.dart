@@ -109,6 +109,144 @@ void main() {
     expect(resolved.localBacklink, original.localBacklink);
   });
 
+  test('classic search sources map to one explicit reader contract', () {
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('shanghan'),
+      'shanghan',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('jingui'),
+      'jingui',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('neijing'),
+      'neijing-reading',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('zhenjiu'),
+      'zhenjiu-reading',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('bencao'),
+      'bencao-reading',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('guji'),
+      isNull,
+      reason: 'Ancient-book chapters require their independent source-line map.',
+    );
+    expect(
+      ClassicSearchService.contextualModuleIdForSource('unknown'),
+      isNull,
+    );
+
+    const shanghanClause = ClassicHit(
+      source: 'shanghan',
+      sourceLabel: '伤寒论讲稿',
+      title: '伤寒论条文2',
+      asset: 'assets/shanghan/clause_001.md',
+      snippet: '发热，汗出',
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForHit(shanghanClause),
+      'shanghan:clause:002',
+    );
+
+    // Every asset-backed reader screen must use the same canonical anchor
+    // builder. Only the explicit reader-module allowlist is accepted.
+    const moduleAssets = <String, String>{
+      'shanghan': 'assets/shanghan/clause_002.md',
+      'jingui': 'assets/jingui/clause_001.md',
+      'neijing-reading': 'assets/neijing/01_上古天真论.md',
+      'zhenjiu-reading':
+          'assets/zhenjiu_lecture/00_第一章针灸的使用时机.md',
+      'bencao-reading': 'assets/bencao_lecture/sample.md',
+      'yijing-reading': 'assets/yijing/1.乾为天䷀.md',
+      'minggua-reading': 'assets/yijing_minggua/0.八字的排列方法.md',
+    };
+    for (final entry in moduleAssets.entries) {
+      final moduleId = entry.key;
+      final asset = entry.value;
+      final expected = moduleId == 'shanghan'
+          ? 'shanghan:passage:$asset'
+          : '$moduleId:passage:$asset';
+      expect(
+        ClassicSearchService.contextualAnchorIdForReaderAsset(
+          moduleId: moduleId,
+          asset: asset,
+        ),
+        expected,
+        reason: 'Reader module $moduleId must use its canonical asset prefix',
+      );
+    }
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'unknown-reader',
+        asset: 'assets/neijing/01_上古天真论.md',
+      ),
+      isNull,
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'bencao-reading',
+        asset: 'assets/neijing/01_上古天真论.md',
+      ),
+      isNull,
+      reason: 'A valid asset from another module must not be rebound.',
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'neijing-reading',
+        asset: '   ',
+      ),
+      isNull,
+    );
+    expect(
+      ClassicSearchService.contextualAnchorIdForReaderAsset(
+        moduleId: 'shanghan',
+        asset: 'assets/shanghan/clause_001.md',
+      ),
+      'shanghan:clause:002',
+    );
+
+    expect(
+      ClassicSearchService.contextualAnchorIdForHit(const ClassicHit(
+        source: 'guji',
+        sourceLabel: '古籍原文',
+        title: '古籍章节',
+        bookId: 'shanghan_lun',
+        chapterIndex: 1,
+        snippet: '原文',
+      )),
+      isNull,
+    );
+  });
+
+  test('reader module source IDs reverse-resolve to the exact indexed asset', () async {
+    final result = await ClassicSearchService.search('丹砂');
+    final original = result.hits.firstWhere(
+      (hit) =>
+          hit.source == 'bencao' &&
+          (hit.asset ?? '').startsWith('assets/bencao_lecture/'),
+    );
+    final moduleId =
+        ClassicSearchService.contextualModuleIdForSource(original.source);
+    expect(moduleId, 'bencao-reading');
+    expect(
+      ClassicSearchService.contextualAnchorIdForHit(original),
+      'bencao-reading:passage:${original.asset}',
+      reason: 'A real indexed Bencao asset must resolve to its canonical reader anchor.',
+    );
+
+    final resolved = await ClassicSearchService.findBySourceId(
+      '$moduleId:${original.asset}',
+    );
+    expect(resolved, isNotNull);
+    expect(resolved!.source, 'bencao');
+    expect(resolved.sourceId, original.sourceId);
+    expect(resolved.asset, original.asset);
+  });
+
   test('entries without a stable local key do not use title as identity', () {
     const unbacked = ClassicHit(
       source: 'unknown',

@@ -189,6 +189,9 @@ class _SearchTabState extends State<SearchTab> {
     }
     final asset = hit.asset;
     if (asset == null || !mounted) return;
+    final moduleId =
+        ClassicSearchService.contextualModuleIdForSource(hit.source);
+    final anchorId = ClassicSearchService.contextualAnchorIdForHit(hit);
     await Navigator.push(
       context,
       FoldAwareMaterialPageRoute(sourceContext: context, 
@@ -196,6 +199,10 @@ class _SearchTabState extends State<SearchTab> {
           title: hit.title,
           asset: asset,
           linkFormulas: true,
+          contextualAskModuleId: moduleId,
+          contextualAskAnchorId: anchorId,
+          contextualAskSourceId: moduleId == null ? null : asset,
+          contextualAskParagraphs: moduleId != null,
         ),
       ),
     );

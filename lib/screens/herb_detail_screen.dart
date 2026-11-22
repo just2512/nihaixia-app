@@ -4,6 +4,7 @@ import '../utils/fold_aware_routes.dart';
 import '../models/herb.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../services/classic_search_service.dart';
 import 'assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import '../theme/app_colors.dart';
@@ -617,14 +618,23 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
+                  final asset = BenCaoLectureIndex.assetOf(hit.seq);
                   Navigator.push(
                     context,
                     FoldAwareMaterialPageRoute(
                       sourceContext: context,
                       builder: (_) => MarkdownDocScreen(
                         title: BenCaoLectureIndex.nameOf(hit.seq),
-                        asset: BenCaoLectureIndex.assetOf(hit.seq),
+                        asset: asset,
                         linkFormulas: true,
+                        contextualAskModuleId: 'bencao-reading',
+                        contextualAskAnchorId:
+                            ClassicSearchService.contextualAnchorIdForReaderAsset(
+                          moduleId: 'bencao-reading',
+                          asset: asset,
+                        ),
+                        contextualAskSourceId: asset,
+                        contextualAskParagraphs: true,
                       ),
                     ),
                   );
