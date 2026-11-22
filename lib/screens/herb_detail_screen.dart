@@ -4,6 +4,7 @@ import '../utils/fold_aware_routes.dart';
 import '../models/herb.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../services/classic_search_service.dart';
 import 'assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import '../theme/app_colors.dart';
@@ -628,7 +629,10 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                         linkFormulas: true,
                         contextualAskModuleId: 'bencao-reading',
                         contextualAskAnchorId:
-                            'bencao-reading:passage:$asset',
+                            ClassicSearchService.contextualAnchorIdForReaderAsset(
+                          moduleId: 'bencao-reading',
+                          asset: asset,
+                        ),
                         contextualAskSourceId: asset,
                         contextualAskParagraphs: true,
                       ),
