@@ -156,14 +156,14 @@ class ClassicSearchService {
   /// Reader modules whose Markdown asset IDs have a verified paragraph
   /// source contract. Guji is deliberately excluded because it uses an
   /// independently verified original-TXT line map.
-  static const Set<String> _assetReaderModuleIds = {
-    'shanghan',
-    'jingui',
-    'neijing-reading',
-    'zhenjiu-reading',
-    'bencao-reading',
-    'yijing-reading',
-    'minggua-reading',
+  static const Map<String, String> _assetReaderModulePrefixes = {
+    'shanghan': 'assets/shanghan/',
+    'jingui': 'assets/jingui/',
+    'neijing-reading': 'assets/neijing/',
+    'zhenjiu-reading': 'assets/zhenjiu_lecture/',
+    'bencao-reading': 'assets/bencao_lecture/',
+    'yijing-reading': 'assets/yijing/',
+    'minggua-reading': 'assets/yijing_minggua/',
   };
 
   /// The single canonical anchor builder for asset-backed reader modules.
@@ -175,8 +175,12 @@ class ClassicSearchService {
   }) {
     final normalizedModuleId = moduleId.trim();
     final normalizedAsset = asset.trim();
-    if (!_assetReaderModuleIds.contains(normalizedModuleId) ||
-        normalizedAsset.isEmpty) {
+    final requiredPrefix = _assetReaderModulePrefixes[normalizedModuleId];
+    if (requiredPrefix == null ||
+        !normalizedAsset.startsWith(requiredPrefix) ||
+        !normalizedAsset.endsWith('.md') ||
+        normalizedAsset.contains('..') ||
+        normalizedAsset.contains(r'\\')) {
       return null;
     }
     // The local first asset represents the second numbered clause in the
