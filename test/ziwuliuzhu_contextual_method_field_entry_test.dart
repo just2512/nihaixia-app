@@ -238,11 +238,22 @@ void main() {
 
       for (var index = 0; index < methodCases.length; index++) {
         final method = methodCases[index];
-        await tester.tap(find.text(method.label).first);
+        final tab = find.descendant(
+          of: find.byType(TabBar),
+          matching: find.text(method.label),
+        ).first;
+        await tester.ensureVisible(tab);
+        await tester.pumpAndSettle();
+        await tester.tap(tab);
         await tester.pumpAndSettle();
 
         final ask = find.byKey(
           ValueKey('ziwuliuzhu-method-ask-${method.key}'),
+        );
+        expect(
+          ask,
+          findsOneWidget,
+          reason: '${method.label} 当前 Tab 必须展示独立字段级入口',
         );
         await tester.ensureVisible(ask);
         await tester.pumpAndSettle();
