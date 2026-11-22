@@ -153,17 +153,51 @@ class ClassicSearchService {
     }
   }
 
+  /// Reader modules whose Markdown asset IDs have a verified paragraph
+  /// source contract. Guji is deliberately excluded because it uses an
+  /// independently verified original-TXT line map.
+  static const Set<String> _assetReaderModuleIds = {
+    'shanghan',
+    'jingui',
+    'neijing-reading',
+    'zhenjiu-reading',
+    'bencao-reading',
+    'yijing-reading',
+    'minggua-reading',
+  };
+
+  /// The single canonical anchor builder for asset-backed reader modules.
+  /// Search results, library pages and assistant backlinks must all call this
+  /// method rather than concatenate module/asset strings independently.
+  static String? contextualAnchorIdForReaderAsset({
+    required String moduleId,
+    required String asset,
+  }) {
+    final normalizedModuleId = moduleId.trim();
+    final normalizedAsset = asset.trim();
+    if (!_assetReaderModuleIds.contains(normalizedModuleId) ||
+        normalizedAsset.isEmpty) {
+      return null;
+    }
+    // The local first asset represents the second numbered clause in the
+    // lecture's established source contract. Keep this exception centralized.
+    if (normalizedModuleId == 'shanghan' &&
+        normalizedAsset == 'assets/shanghan/clause_001.md') {
+      return 'shanghan:clause:002';
+    }
+    return '$normalizedModuleId:passage:$normalizedAsset';
+  }
+
   /// Returns the stable reader passage anchor for one indexed lecture.
   /// Sources without an explicit reader contract remain non-contextual.
   static String? contextualAnchorIdForHit(ClassicHit hit) {
     final moduleId = contextualModuleIdForSource(hit.source);
     final asset = hit.asset?.trim();
     if (moduleId == null || asset == null || asset.isEmpty) return null;
-    if (moduleId == 'shanghan' &&
-        asset == 'assets/shanghan/clause_001.md') {
-      return 'shanghan:clause:002';
-    }
-    return '$moduleId:passage:$asset';
+    return contextualAnchorIdForReaderAsset(
+      moduleId: moduleId,
+      asset: asset,
+    );
   }
 
   static String? _indexedSourceForReaderModule(String moduleId) {
