@@ -457,7 +457,7 @@ jobs:
             exit 1
           fi
           if ! grep -Fq "localDebugUsesReleaseSigning is local-only and is forbidden in CI." <<< "$output"; then
-            printf '%s\\n' "$output"
+            printf '%s\n' "$output"
             echo "Gradle failed for a reason other than the CI signing guard." >&2
             exit 1
           fi
