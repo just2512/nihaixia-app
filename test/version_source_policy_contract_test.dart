@@ -10,7 +10,9 @@ void main() {
     final line = source
         .split('\n')
         .firstWhere((item) => item.contains(prefix), orElse: () => '');
-    final first = line.indexOf(backtick);
+    final prefixStart = line.indexOf(prefix);
+    if (prefixStart < 0) return null;
+    final first = line.indexOf(backtick, prefixStart + prefix.length);
     if (first < 0) return null;
     final second = line.indexOf(backtick, first + 1);
     if (second <= first) return null;
