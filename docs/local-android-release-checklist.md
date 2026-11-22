@@ -8,7 +8,7 @@
 |---|---|---|
 | App version | `1.11.30+8039` | `versionName=1.11.30`，`versionCode=8039` |
 | Android applicationId | `com.nihaisha.nihaisha_app` | 必须与设备现有安装包一致 |
-| 当前应用代码基线 | `master @ 39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 应用代码合并后；纯文档提交不改变应用代码 |
+| 当前应用代码基线 | `master @ 26d924b894b3301a8f46b2db120407cc344e41af` | PR #392 与 PR #399 合并后；PR #399 不改变应用版本、applicationId、数据库或签名约束 |
 | 分发渠道 | 本地构建 / 原签名 / 本地交付 | 不创建发行 Tag，不发布 GitHub Release，不上传正式 APK |
 
 ## 2. 原签名密钥：硬门槛
