@@ -4,8 +4,8 @@
 > 生效日期：2026-11-22
 > 维护仓库：just2512/nihaixia-app
 
-**当前项目版本**：2.0.0+8048  
-**同 applicationId 已知最高 Android versionCode**：8047
+**当前项目版本**：`2.0.0+8048`  
+**同 applicationId 已知最高 Android versionCode**：`8047`
 
 本文件是研纪产品版本治理的权威规范。README、pubspec.yaml、App 更新日志与 CI guard 必须与本文件保持一致。
 
