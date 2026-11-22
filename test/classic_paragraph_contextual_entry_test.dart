@@ -352,6 +352,7 @@ $second
     },
   );
 
+  testWidgets(
     'paragraph mode fails closed without complete source provenance',
     (tester) async {
       await tester.pumpWidget(MaterialApp(
