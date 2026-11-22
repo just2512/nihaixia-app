@@ -433,14 +433,21 @@ void main() {
     }
     expect(results, findsWidgets);
     final firstResult = results.first;
+    await tester.ensureVisible(firstResult);
+    await tester.pump();
     await tester.tap(firstResult);
-    // MarkdownDocScreen contains ongoing selection/reader animations; wait for
-    // the route transition without requiring the entire tree to become idle.
-    await tester.pump(const Duration(milliseconds: 500));
 
-    final reader = tester.widget<MarkdownDocScreen>(
-      find.byType(MarkdownDocScreen),
-    );
+    final readerFinder = find.byType(MarkdownDocScreen);
+    // Wait for the pushed route itself to mount. A single long pump can race
+    // the route transition in CI; do not require global idle because the
+    // reader page may keep selection/loading tickers active.
+    for (var attempt = 0;
+        attempt < 20 && readerFinder.evaluate().isEmpty;
+        attempt++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(readerFinder, findsOneWidget);
+    final reader = tester.widget<MarkdownDocScreen>(readerFinder);
     expect(reader.contextualAskModuleId, 'neijing-reading');
     expect(reader.contextualAskSourceId, reader.asset);
     expect(reader.contextualAskAnchorId,
