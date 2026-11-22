@@ -1,7 +1,7 @@
 # Find N2 本地 AI 后端切换与端侧验收清单
 
 > 本文件是本地执行清单，不是测试结果或 PASS 报告。GPU/CPU 推理、多媒体、进程恢复、清除数据与 TRACE 必须由实体 OPPO Find N2 执行；云端 CI 和 APK 构建不能代替真机证据。
-> 本轮应用代码基线：`master @ 26d924b894b3301a8f46b2db120407cc344e41af`（PR #392 与 PR #399 已合并；PR #399 仅收紧经典来源 ID 反查和回归测试，不改变 E4B Native 生命周期及 Release 签名），应用版本 `1.11.30+8039`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为该设备验收安装包。
+> 本轮应用代码基线：`master @ 26d924b894b3301a8f46b2db120407cc344e41af`（PR #392 与 PR #399 已合并；PR #399 仅收紧经典来源 ID 反查和回归测试，不改变 E4B Native 生命周期及 Release 签名），应用版本 `1.11.30+8039`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为设备验收安装包。普通验收与保留数据升级使用本地原签名 Release APK；仅为 Debug-only TRACE 临时切换时，按 `docs/local-android-release-checklist.md §6` 构建由同一原 Release signer 签名的本地 Debug APK，并在签名核对后用 `adb install -r` 原位切换，完成后恢复正常 Release。不得卸载 App 或清除数据。
 
 ## 0. 本轮实现目标
 
@@ -101,7 +101,7 @@ GPU 与 CPU 两种实际 backend 分别执行：
 
 ## 8. TRACE 完整性（F-01）
 
-在 Debug 设置页开启「本地 AI 调试 TRACE」，GPU 和 CPU 两种 backend 分别执行一轮工具请求、一轮知识检索、一轮普通文本对话和一轮附件对话。
+先确认 Find N2 已安装本地原签名 Release。按 `docs/local-android-release-checklist.md §6` 设置 `ORG_GRADLE_PROJECT_localDebugUsesReleaseSigning=true`，仅在本地构建同版本 Debug APK；核对 package/version 与已安装包一致且 signer certificate SHA-256 完全相同后，使用 `adb install -r` 原位切换。进入 Debug 设置页开启「本地 AI 调试 TRACE」，GPU 和 CPU 两种 backend 分别执行一轮工具请求、一轮知识检索、一轮普通文本对话和一轮附件对话。完成后关闭 TRACE，使用同一原签名密钥构建正常 Release 并 `adb install -r` 恢复。不得使用 CI Debug APK、不得卸载 App / 清除数据、不得上传或分发带 Release 签名的 Debug APK。
 
 每轮核对：
 - 同一个 trace_id 能关联 INPUT、ROUTE、RETRIEVAL（适用时）、CONTEXT_ASSEMBLY、MODEL/NATIVE_INFERENCE、TOOL_EXECUTION（适用时）、RESULT_VALIDATION（适用时）、PERSISTENCE、PRESENTATION 和 FINAL_RENDER。
