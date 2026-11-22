@@ -617,14 +617,20 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
+                  final asset = BenCaoLectureIndex.assetOf(hit.seq);
                   Navigator.push(
                     context,
                     FoldAwareMaterialPageRoute(
                       sourceContext: context,
                       builder: (_) => MarkdownDocScreen(
                         title: BenCaoLectureIndex.nameOf(hit.seq),
-                        asset: BenCaoLectureIndex.assetOf(hit.seq),
+                        asset: asset,
                         linkFormulas: true,
+                        contextualAskModuleId: 'bencao-reading',
+                        contextualAskAnchorId:
+                            'bencao-reading:passage:$asset',
+                        contextualAskSourceId: asset,
+                        contextualAskParagraphs: true,
                       ),
                     ),
                   );
