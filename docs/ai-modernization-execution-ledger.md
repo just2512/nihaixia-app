@@ -3518,12 +3518,13 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - `docs/find-n2-local-ai-acceptance-checklist.md`：GPU / CPU 各至少 20 轮、Native 实际 backend、图片/音频、Activity / force-stop 恢复、AI 清理及状态记录。
 - `docs/find-n2-ai-trace-acceptance-plan.md`：按实际场景核对 trace_id、阶段、消息 metadata、Native backend、持久化、presentation / final render 和清理。
 - `docs/local-ai-e4b.md`：Gemma 4 E4B 模型文件校验、导入、当前 GPU / CPU 设置页操作、已知 fallback 与资源边界。
+- `docs/find-n2-e4b-local-handover.md`：单一执行入口，串联原签名 Release 升级、折叠屏、模型 SHA 校验、GPU/CPU 多轮、多媒体、恢复、清理、原签名 Debug TRACE 切换和证据包格式。
 
 Find N2 安装验收只能使用由现有原签名密钥签署的本地 Release APK。CI Debug APK 只证明 Debug 构建 / ABI，不是旧版本保留数据升级包。禁止卸载旧 App、清除 App 数据或改 applicationId 绕过签名不一致；若旧签名私钥不可用，应明确报告无法满足无卸载保留数据升级。E4B 模型文件仍固定为 `gemma-4-E4B-it.litertlm`、3,659,530,240 bytes、SHA-256 `0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0`；GPU / CPU 的实际执行后端必须使用 Native 返回值，不按设置偏好推断。真机、模型加载、多轮、多媒体、发热/内存与端到端 TRACE 尚未在本轮云端执行，保持 `MISSING / UNKNOWN / LOCAL ONLY`。
 
 ### 67.6 云端关闭判定及全局台账边界
 
-- 情境问 AI 云端范围：入口覆盖与去重、Resolver / snapshot / source anchor、助手引用回链、专项与全量回归、许可检查、规范索引及本地验收文件校准已完成；master Android arm64 和 Flutter Quality Gate 以 67.4 的最终 job 结论为准。
+- 情境问 AI 云端范围：入口覆盖与去重、Resolver / snapshot / source anchor、助手引用回链、专项与全量回归、许可检查、规范索引及本地验收文件校准已完成；当前 master 的 Flutter、Android arm64 / Native、Quality Gate 与许可门禁均已通过，证据见 67.4。
 - Find N2 / E4B 本地执行：保持 `UNKNOWN / LOCAL ONLY`，交由设备持有人按 67.5 执行；不阻止已完成的云端工作，也不把设备未测写成 PASS。
 - §3 的全局 AI 工作流 A-G 仍各自按照原定义的范围和状态管理，不因本情境 Ask AI 子项目收尾而改写为 PASS。§65、§66 保留历史核验记录，不回写伪装成当时已知道 PR #399 或 26d924b。
 
