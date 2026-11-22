@@ -3227,3 +3227,35 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - **历史扫描范围：** 情境初始化最多检查最近 500 条会话。超过范围的旧会话可能不被复用，但系统会创建新会话并保留正确锚点，不会回退为跨快照复用；这是检索范围边界，不是来源隔离缺陷。
 
 **审计结论：** 按当前 master 代码和自动化测试目录，协议 §12.3 的同锚点复用、锚点隔离、metadata 可追溯、token UNKNOWN、折叠窗口自动化，以及 §8 的 AI / 非 AI 数据清理边界均有实现与测试覆盖。本轮没有证据支持新增第二套会话协调器、数据库表或重复页面入口。PR #375 的专项三图 Widget 测试及最终 HEAD CI 仍是当前云端剩余门禁；Find N2 实机折叠/键盘行为与本地 E4B 多轮、Native 状态和 TRACE 保持 `UNKNOWN / LOCAL ONLY`。
+
+---
+
+## 63. 2026-11-22 内经/本草讲稿段落情境入口与云端收尾
+
+### 63.1 当前基线与 PR #386
+
+- 本节基线为 master：7cf512b8c159f48112564b2135b67e90638bacc7。该基线已包含 PR #373、#374、#375、#383、#384、#385 的合并结果；没有同步上游仓库。
+- PR [#386](https://github.com/just2512/nihaixia-app/pull/386)「内经/本草讲稿段落情境选择」仍为 OPEN，目标分支为 master，当前工作分支为 feat/ai-neijing-bencao-paragraph-context-2026-11-21，当前 head：4d7d1f169f440a09bf5fce4715275c4a99f1ff29，相对基线 ahead 16 / behind 0。此状态不代表已合并。
+- 功能范围：仅给内经与本草讲稿中的可唯一定位普通正文段落开放“问 AI”；以本地 Markdown asset、原始行范围和段落内容生成稳定 anchor/version/source；标题、列表、引用、表格、代码、图片、HTML、数学块及无法证明 raw/display 一一映射的内容不开放情境入口。继续复用既有学习助手、情境面板、Resolver、Prompt Builder、会话持久化和 explanation-only 边界，不新增会话架构或确定性业务逻辑。
+- 许可边界仍由仓库现有 Fork 清单与 DEP5 管理；本切片仅把新增测试按 Fork 自有测试资源登记，不把知识库正文或第三方资料转为商业授权。
+
+### 63.2 CI 失败定位与修复记录
+
+- 初始 head 78c9d45298b22f49f891471712d467dafbd5313a：Fork license boundary run 44916578454 SUCCESS；Flutter regression run 44916578333 FAIL，1863 passed / 1 failed / 15 skipped；Android arm64 verification job 136885355315 SUCCESS。失败测试为 test/classic_paragraph_contextual_entry_test.dart 中目录入口测试，对尚未挂载的懒加载列表项调用 ensureVisible，抛出 Bad state: No element。
+- 修复 head 7d76366148822807c7a7a23f90e9f610c2cdcce3：将目录条目滚动改为 scrollUntilVisible。Fork license boundary run 44918449637 SUCCESS；Flutter regression run 44918449628 再次 FAIL，1863 passed / 1 failed / 15 skipped；Android arm64 verification job 136890921499 SUCCESS。第二次失败不是产品代码失败，而是测试滚动 Finder 选中了 ClassicLibraryScreen 内的横向文本输入 Scrollable（offset range 0..0），未选中目录 ListView 的纵向 Scrollable。
+- 当前 head 4d7d1f169f440a09bf5fce4715275c4a99f1ff29：把滚动 Finder 限定为 ListView 的后代 Scrollable，只修复测试定位，不改变功能断言。Fork license boundary run 44970122991 已 SUCCESS；Flutter tests run 44970122910 在本节更新时为 IN_PROGRESS，尚无 Android arm64 当前 head 终态。旧 head 的 Android SUCCESS 不转移到当前 head。当前 head 必须重新取得 Fork license boundary、Flutter full regression、Android arm64 APK/Manifest/ABI/unit tests 的有效终态；条件性 SKIPPED 不计 PASS。
+- 不删除测试、不屏蔽回归、不降低断言；若当前 head 仍失败，继续读取完整失败日志并按真实失败根因修复，不能仅凭专项测试或静态分析通过合并。
+
+### 63.3 云端收尾顺序与设备边界
+
+1. 完成 PR #386 当前 head 的三项云端门禁，并核实 GitHub mergeable 状态；只在全部必需项 SUCCESS 后普通 merge。
+2. 对 merge commit 单独检查 Fork license boundary、Flutter regression、Flutter Quality Gate 和 Android arm64 post-merge 工作流；不得沿用 PR head 或父提交结果代替主线结果。
+3. 以合并后的最新 master 重新核对本协议 §12 的阅读划词、工具结果/字段、跨锚点隔离、消息 metadata、402dp/775dp 布局、滚动恢复和 AI 数据清理覆盖；逐项使用真实页面调用链、Resolver/Prompt Builder 与回归测试作为证据，不以测试文件名存在冒充 PASS。
+4. 更新本台账的总覆盖矩阵、最新 master SHA、PR/merge SHA、CI run/job ID 和仍待处理项；不得保留已过期的“下一云端切片”计划。
+5. 云端代码、自动化、文档和 CI 完成后，再把 Find N2 外屏/内屏/半折叠/分屏/键盘、系统选择菜单、E4B GPU/CPU 多轮、Native 状态、空响应、历史恢复及完整 TRACE 汇总为本地验收交接。未取得设备证据前保持 UNKNOWN / LOCAL ONLY；这不阻止云端修复与集成。
+
+### 63.4 当前关闭判断
+
+- 当前明确的最后一项页面级情境入口切片为 PR #386：内经/本草普通讲稿段落。已有的工具结果、字段/图表、方剂/本草/内经条目、医案、经典条文及穴位等入口不应重复建设。
+- PR #386 未通过当前 head 的 Flutter regression 前，状态为 IN_PROGRESS，不能合并；合并后主线 CI 和总覆盖矩阵复核完成前，整个云端情境问 AI 阶段仍不能标记 PASS。
+- 本地设备门禁是后置交接，不是云端工作阻塞项。
