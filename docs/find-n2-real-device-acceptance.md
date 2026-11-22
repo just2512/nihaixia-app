@@ -398,7 +398,7 @@ apkanalyzer manifest version-name .\installed-old.apk
 先确认本地原签名配置存在。仓库中的模板仅供字段参考，不可用新生成的密钥覆盖原密钥：
 
 - `android/key.properties` 必须存在，且包含原 keystore 对应的 `storeFile`、`storePassword`、`keyAlias`、`keyPassword`。
-- `android/app/build.gradle.kts` 的 Release signing config 从 `android/key.properties` 读取配置；如果文件不存在会 fallback 到 Debug 签名，因此必须先检查文件，不能盲目构建。
+- `android/app/build.gradle.kts` 的 Release signing config 从 `android/key.properties` 读取配置；当前 Gradle 对 Release task 已 fail-closed：缺少 `key.properties`、必需字段或 keystore 文件会直接失败，不会 fallback 到 Debug 签名。CI 已验证这一阻断行为；不得以 Debug 签名包代替原签名升级包。
 - 若 keystore 放在 `android/` 目录，`storeFile` 路径应按 Gradle app module 的相对路径正确指向它，例如 `../nihaisha.jks`；以实际 keystore 文件位置为准。
 
 在仓库根目录 PowerShell 执行：
