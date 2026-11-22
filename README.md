@@ -193,7 +193,7 @@
 
 ## 📦 版本获取与本地安装
 
-> 当前源码版本：`1.11.30+8039`（`versionName=1.11.30`，`versionCode=8039`）。
+> 当前源码版本：`2.0.0+8048`（`versionName=2.0.0`，`versionCode=8048`）。
 > 本版本处于 `PREPARATION / NOT RELEASED`，不代表正式 APK 已构建、签名或完成真机验收。
 >
 > **分发方式：本地构建、原签名、本地交付。** 本仓库不创建发行 Tag、不发布 GitHub Release、不上传正式 APK。不要从上游仓库下载 APK，也不要把本仓库 Releases 页面当作下载渠道。
@@ -331,7 +331,7 @@ flutter analyze
 | `assets/data/formula_oral_hints.json` | 患者口语语料库（170 首方：口语 / 辨证指针 / 治法 / 原文条文） |
 | `lib/theme/app_colors.dart` | 39 个语义色 Token（品牌棕/暖调中性/状态色/六经六色），全站硬编码颜色清零 |
 
-**版本号规则**：`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一来源；发布时按实际变更递增版本号和 build 号，`+N` 对应 Android `versionCode`。当前仓库版本为 `1.11.30+8039`。
+**版本管理规范**：[研纪独立版本管理规范](docs/versioning-policy.md) 是产品版本治理的权威文件；`pubspec.yaml` 的 `version: X.Y.Z+N` 是唯一可编辑来源，`+N` 对应 Android `versionCode`。当前仓库版本为 `2.0.0+8048`，由 `tool/check_version_source.sh` 校验 README / pubspec / 规范一致性及共享 applicationId 版本码上限。
 
 **发版方式**：维护者在本地使用原签名密钥构建正式 APK，并在完成证书、版本、覆盖安装与真机验收后线下或私下交付。本仓库不创建发行 Tag、不使用 GitHub Release 分发正式 APK。
 
@@ -478,7 +478,7 @@ flowchart LR
 - [x] 七步问诊十问模块 v3.1（脉象/疼痛/呕吐类型追问）
 - [x] 健康人基线判定 + 寒热真假八维法 + 六经公式分型（V1.11.8）
 - [x] 患者口语语料接入：170 首方「患者会怎么说」+ 现代症状词召回（V1.11.9）
-- [x] 本仓库 APK 构建发布工作流（本仓库 tag 触发）
+- [x] 本地原签名 Release 门禁与覆盖升级交接（正式 APK 本地构建，不启用在线发布）
 - [x] Gemma 4 E4B 本地多模态输入接入（文字 / 音频 / 图像；Find N2 实机验收仍待完成）
 - [ ] 舌象清晰度、曝光与色温质量检查（需在 Find N2 真机校准后实施）
 - [ ] 脉诊辅助（脉象分类）
@@ -533,7 +533,7 @@ flowchart LR
 - 关键辨证路径、筛选逻辑、渲染布局的改动**必须**补充/更新回归测试；
 - UI 功能图标统一使用 **Material Icons**（唯一例外：八卦符 ☰☱☲☳☴☵☶☷ 为《周易》语义符号，予以保留）；
 - 颜色一律通过 `lib/theme/app_colors.dart` 的语义 Token（`context.colors`）引用，禁止硬编码；
-- 版本号规则：以 `pubspec.yaml` 的 `version: X.Y.Z+N` 为单一来源，每次发布自增 patch 与 build 号。
+- 版本号规则：遵循 [研纪独立版本管理规范](docs/versioning-policy.md)，采用 `MAJOR.MINOR.PATCH+BUILD`；构建号必须高于同 applicationId 的已知最高构建号。
 
 ### 提交流程
 

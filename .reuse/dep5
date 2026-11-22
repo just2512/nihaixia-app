@@ -937,3 +937,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Original Fork-maintained local Release signing handoff and its automated guard contract test.
+
+Files:
+ docs/versioning-policy.md
+ release_notes/v2.0.0.md
+ test/version_source_policy_contract_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Original Fork-maintained independent product version policy, 2.0.0+8048 preparation note, and version-source contract test.

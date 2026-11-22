@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "2.0.0",
+      "date": "2026-11-22",
+      "title": "研纪独立产品主版本基线",
+      "changes": [
+        "产品版本切换为独立 SemVer 2.0.0；Android versionCode=8048，高于已核验共享 applicationId 最新上游版本源 1.11.34+8047",
+        "新增独立版本管理规范与自动版本 guard，校验 pubspec、README、规范版本一致及共享 applicationId versionCode 上限",
+        "保持 Android applicationId、既有 Release 签名身份、本地数据目录和数据库 schema 不变",
+        "正式 APK 继续本地使用原签名密钥构建与交付；本条 PREPARATION / NOT RELEASED，不表示已完成 Find N2 原位升级或真机验收"
+      ]
+    },
+    {
       "version": "1.11.30",
       "date": "2026-11-16",
       "title": "Find N2 折叠屏适配 · 本草与经典资料扩展 · 编辑型阅读界面",
