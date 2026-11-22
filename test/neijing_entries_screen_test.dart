@@ -425,7 +425,9 @@ void main() {
     expect(results, findsWidgets);
     final firstResult = results.first;
     await tester.tap(firstResult);
-    await tester.pumpAndSettle();
+    // MarkdownDocScreen contains ongoing selection/reader animations; wait for
+    // the route transition without requiring the entire tree to become idle.
+    await tester.pump(const Duration(milliseconds: 500));
 
     final reader = tester.widget<MarkdownDocScreen>(
       find.byType(MarkdownDocScreen),
