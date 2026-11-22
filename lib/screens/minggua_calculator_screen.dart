@@ -7,6 +7,7 @@ import 'package:nihaisha_app/engine/bazi_analysis.dart';
 import 'package:nihaisha_app/data/minggua_data.dart';
 import 'package:nihaisha_app/engine/yijing_engine.dart';
 import 'yijing_detail_screen.dart';
+import '../services/classic_search_service.dart';
 import 'markdown_doc_screen.dart';
 import '../theme/app_colors.dart';
 
@@ -452,7 +453,10 @@ class _MingGuaCalculatorScreenState extends State<MingGuaCalculatorScreen> {
                               footer: '倪师《天纪·四柱命卦》讲义 · 传统文化参考',
                               contextualAskModuleId: 'minggua-reading',
                               contextualAskAnchorId:
-                                  'minggua-reading:passage:$asset',
+                                  ClassicSearchService.contextualAnchorIdForReaderAsset(
+                                moduleId: 'minggua-reading',
+                                asset: asset,
+                              ),
                               contextualAskSourceId: asset,
                               contextualAskParagraphs: true,
                             ),
