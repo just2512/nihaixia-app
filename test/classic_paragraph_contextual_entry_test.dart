@@ -35,6 +35,38 @@ $first
 
 <div>块级 HTML 不应获得情境入口</div>
 
+<div class="note">
+
+多行 HTML 块中的普通文本不应获得情境入口。
+
+<section>
+嵌套 HTML 块中的文本同样不应获得情境入口。
+</section>
+</div>
+
+<!--
+
+HTML 注释块中的普通文本不应获得情境入口。
+
+-->
+
+$
+x = 1
+
+y = 2
+$
+
+\\[
+x + y = 3
+
+x - y = 1
+\\]
+
+\\begin{aligned}
+a &= 1 \\
+b &= 2
+\\end{aligned}
+
 本句包含 <em>行内 HTML</em>，也不应获得情境入口。
 
 ```text
