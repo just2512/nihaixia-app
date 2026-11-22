@@ -945,3 +945,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Original Fork-maintained independent product version policy, 2.0.0+8048 preparation note, and version-source contract test.
+
+Files:
+ docs/find-n2-real-device-brand-acceptance.md
+ test/yanji_android_icon_resource_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-maintained Find N2 launcher brand acceptance handoff and Android icon resource regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
