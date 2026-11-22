@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../models/ai_context_ref.dart';
 import '../utils/fold_aware_routes.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
@@ -28,6 +31,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
 
   late final TabController _tabController;
   late ZiWuLiuZhuToolExecution _execution;
+  final PageStorageBucket _naZiExpansionBucket = PageStorageBucket();
 
   static const _tianGan = ZiWuLiuZhuCalculationService.tianGan;
   static const _diZhi = ZiWuLiuZhuCalculationService.diZhi;
@@ -56,6 +60,63 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
 
   String _buildAssistantSummary() =>
       _execution.calculationResult?.summary ?? '本次子午流注计算未成功。';
+
+
+  Future<void> _askAiAboutMethod(String fieldPath) async {
+    final snapshot = _execution.structuredSnapshot;
+    if (!_execution.succeeded || snapshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('当前计算没有可核验的成功结果，无法建立方法级 AI 上下文。'),
+        ),
+      );
+      return;
+    }
+
+    late final AiContextRef contextRef;
+    try {
+      contextRef =
+          AiContextResolver.buildZiWuLiuZhuResultFieldContextRef(
+        structuredSnapshot: snapshot,
+        fieldPath: fieldPath,
+      );
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('当前方法字段无法建立可信上下文，已取消提问（UNKNOWN）。'),
+        ),
+      );
+      return;
+    }
+
+    final resolution =
+        AiContextResolver.resolveZiWuLiuZhuResultField(
+      ref: contextRef,
+      structuredSnapshot: snapshot,
+    );
+    final resolved = resolution.value;
+    if (!resolution.isResolved || resolved == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '当前方法字段核验失败：${resolution.status.name.toUpperCase()}，已取消提问。',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await showContextualAiSheet(
+      context: context,
+      contextRef: contextRef,
+      initialPrompt: AiContextPromptBuilder.buildZiWuLiuZhuToolField(
+        resolvedField: resolved,
+      ),
+      initialMode: AssistantMode.tools,
+      contextualTitle: contextRef.title ?? '子午流注方法字段',
+      contextualExplanationOnly: true,
+    );
+  }
 
   Future<void> _askAiAboutResult() async {
     final snapshot = _execution.structuredSnapshot;
@@ -175,6 +236,10 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
         children: [
           _NaZiTab(
             selectedDate: _selectedDate,
+            expansionStorageBucket: _naZiExpansionBucket,
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.naZi'))
+                : null,
             onPickDate: _pickDate,
             onPickTime: _pickTime,
             onResetNow: () => setState(() {
@@ -191,9 +256,24 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
             getDiZhiSong: _getDiZhiSong,
             shichenIndex: _getShichenIndex(_selectedDate),
           ),
-          _NajiaTab(selectedDate: _selectedDate),
-          _LingGuiTab(selectedDate: _selectedDate),
-          _FeiTengTab(selectedDate: _selectedDate),
+          _NajiaTab(
+            selectedDate: _selectedDate,
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.naJia'))
+                : null,
+          ),
+          _LingGuiTab(
+            selectedDate: _selectedDate,
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.lingGui'))
+                : null,
+          ),
+          _FeiTengTab(
+            selectedDate: _selectedDate,
+            onAskAi: _execution.succeeded
+                ? () => unawaited(_askAiAboutMethod('methods.feiTeng'))
+                : null,
+          ),
         ],
       ),
     );
@@ -208,6 +288,8 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
 
 class _NaZiTab extends StatelessWidget {
   final DateTime selectedDate;
+  final PageStorageBucket expansionStorageBucket;
+  final VoidCallback? onAskAi;
   final Future<void> Function() onPickDate;
   final Future<void> Function() onPickTime;
   final VoidCallback onResetNow;
@@ -223,6 +305,8 @@ class _NaZiTab extends StatelessWidget {
 
   const _NaZiTab({
     required this.selectedDate,
+    required this.expansionStorageBucket,
+    required this.onAskAi,
     required this.onPickDate,
     required this.onPickTime,
     required this.onResetNow,
@@ -250,6 +334,7 @@ class _NaZiTab extends StatelessWidget {
     final wuMenInfo = getWuMenInfo(dayGan);
 
     return ListView(
+      key: const PageStorageKey<String>('ziwuliuzhu-method-ask-naZi-list'),
       padding: const EdgeInsets.all(16),
       children: [
         Card(
@@ -375,88 +460,113 @@ class _NaZiTab extends StatelessWidget {
           color: colorScheme,
         ),
         const SizedBox(height: 16),
-        Card(
-          child: ExpansionTile(
-            leading: const Icon(Icons.table_chart),
-            title: const Text('天干→脏腑表'),
+        // ExpansionTile stores a bool while the surrounding ListView stores a
+        // double scroll offset. Isolate the tile states from the list bucket;
+        // keep the outer PageStorageKey so each Tab still restores its scroll.
+        PageStorage(
+          bucket: expansionStorageBucket,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 6,
-                  children: tianGan.map((g) {
-                    final organ = ganToOrgan[g]!;
-                    final isCurrent = g == dayGan;
-                    return Chip(
-                      label: Text('$g→$organ',
-                          style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal)),
-                      backgroundColor: isCurrent ? colorScheme.primaryContainer : null,
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: ExpansionTile(
-            leading: const Icon(Icons.table_chart),
-            title: const Text('地支→时辰→经络表'),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
-                  children: diZhi.map((z) {
-                    final (m, t) = zhiToMeridian[z]!;
-                    final isCurrent = z == zhi;
-                    return Container(
-                      color: isCurrent ? colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 30, child: Text(z, style: TextStyle(fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
-                          SizedBox(width: 100, child: Text(t, style: const TextStyle(fontSize: 12))),
-                          Expanded(child: Text(m, style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
-                        ],
+              Card(
+                child: ExpansionTile(
+                  leading: const Icon(Icons.table_chart),
+                  key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-tianGan'),
+                  title: const Text('天干→脏腑表'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        children: tianGan.map((g) {
+                          final organ = ganToOrgan[g]!;
+                          final isCurrent = g == dayGan;
+                          return Chip(
+                            label: Text('$g→$organ',
+                                style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal)),
+                            backgroundColor: isCurrent ? colorScheme.primaryContainer : null,
+                          );
+                        }).toList(),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ExpansionTile(
+                  leading: const Icon(Icons.table_chart),
+                  key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-diZhi'),
+                  title: const Text('地支→时辰→经络表'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        children: diZhi.map((z) {
+                          final (m, t) = zhiToMeridian[z]!;
+                          final isCurrent = z == zhi;
+                          return Container(
+                            color: isCurrent ? colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 30, child: Text(z, style: TextStyle(fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
+                                SizedBox(width: 100, child: Text(t, style: const TextStyle(fontSize: 12))),
+                                Expanded(child: Text(m, style: TextStyle(fontSize: 12, fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal))),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ExpansionTile(
+                  leading: const Icon(Icons.table_chart),
+                  key: const PageStorageKey<String>('ziwuliuzhu-naZi-expansion-wuMen'),
+                  title: const Text('五门十变表'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
+                        children: ZiWuLiuZhuCalculationService.wuMen.map(
+                          (entry) {
+                            final (first, second, element, acupoints) = entry;
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 8,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(child: Text('$first$second合化$element')),
+                                  Text(acupoints),
+                                ],
+                              ),
+                            );
+                          },
+                        ).toList(growable: false),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        Card(
-          child: ExpansionTile(
-            leading: const Icon(Icons.table_chart),
-            title: const Text('五门十变表'),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
-                  children: ZiWuLiuZhuCalculationService.wuMen.map(
-                    (entry) {
-                      final (first, second, element, acupoints) = entry;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(child: Text('$first$second合化$element')),
-                            Text(acupoints),
-                          ],
-                        ),
-                      );
-                    },
-                  ).toList(growable: false),
-                ),
-              ),
-            ],
+
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            key: const ValueKey('ziwuliuzhu-method-ask-naZi'),
+            onPressed: onAskAi,
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('问 AI 解读纳子法'),
           ),
         ),
       ],
@@ -468,7 +578,8 @@ class _NaZiTab extends StatelessWidget {
 
 class _NajiaTab extends StatelessWidget {
   final DateTime selectedDate;
-  const _NajiaTab({required this.selectedDate});
+  final VoidCallback? onAskAi;
+  const _NajiaTab({required this.selectedDate, required this.onAskAi});
 
   @override
   Widget build(BuildContext context) {
@@ -490,6 +601,7 @@ class _NajiaTab extends StatelessWidget {
     };
 
     return ListView(
+      key: const PageStorageKey<String>('ziwuliuzhu-method-ask-naJia-list'),
       padding: const EdgeInsets.all(16),
       children: [
         _TimeHeader(selectedDate: selectedDate, gz: gz, hour: hour),
@@ -542,6 +654,17 @@ class _NajiaTab extends StatelessWidget {
             color: colorScheme,
           ),
         ],
+
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            key: const ValueKey('ziwuliuzhu-method-ask-naJia'),
+            onPressed: onAskAi,
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('问 AI 解读纳甲法'),
+          ),
+        ),
       ],
     );
   }
@@ -551,7 +674,8 @@ class _NajiaTab extends StatelessWidget {
 
 class _LingGuiTab extends StatelessWidget {
   final DateTime selectedDate;
-  const _LingGuiTab({required this.selectedDate});
+  final VoidCallback? onAskAi;
+  const _LingGuiTab({required this.selectedDate, required this.onAskAi});
 
   @override
   Widget build(BuildContext context) {
@@ -562,6 +686,7 @@ class _LingGuiTab extends StatelessWidget {
     final gua = r['gua'] as List<String>;
 
     return ListView(
+      key: const PageStorageKey<String>('ziwuliuzhu-method-ask-lingGui-list'),
       padding: const EdgeInsets.all(16),
       children: [
         _TimeHeader(selectedDate: selectedDate, gz: gz, hour: hour),
@@ -607,6 +732,17 @@ class _LingGuiTab extends StatelessWidget {
           content: '灵龟八法以日干支、时干支基数相加，阳日÷9、阴日÷6 取余数定卦穴；主穴与配穴相配，同调八脉交会。',
           color: colorScheme,
         ),
+
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            key: const ValueKey('ziwuliuzhu-method-ask-lingGui'),
+            onPressed: onAskAi,
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('问 AI 解读灵龟八法'),
+          ),
+        ),
       ],
     );
   }
@@ -616,7 +752,8 @@ class _LingGuiTab extends StatelessWidget {
 
 class _FeiTengTab extends StatelessWidget {
   final DateTime selectedDate;
-  const _FeiTengTab({required this.selectedDate});
+  final VoidCallback? onAskAi;
+  const _FeiTengTab({required this.selectedDate, required this.onAskAi});
 
   @override
   Widget build(BuildContext context) {
@@ -626,6 +763,7 @@ class _FeiTengTab extends StatelessWidget {
     final ft = eng.feitengOpen(hour.hourGan);
 
     return ListView(
+      key: const PageStorageKey<String>('ziwuliuzhu-method-ask-feiTeng-list'),
       padding: const EdgeInsets.all(16),
       children: [
         _TimeHeader(selectedDate: selectedDate, gz: gz, hour: hour),
@@ -661,6 +799,17 @@ class _FeiTengTab extends StatelessWidget {
           title: '说明',
           content: '飞腾八法按时干直接查卦取单穴，较灵龟八法更简，二者同属八法流派，临床常参酌并用。',
           color: colorScheme,
+        ),
+
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            key: const ValueKey('ziwuliuzhu-method-ask-feiTeng'),
+            onPressed: onAskAi,
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('问 AI 解读飞腾八法'),
+          ),
         ),
       ],
     );
