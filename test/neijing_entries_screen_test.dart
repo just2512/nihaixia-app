@@ -408,16 +408,22 @@ void main() {
 
     final search = find.byType(TextField);
     await tester.tap(search);
-    await tester.enterText(search, '阴阳');
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(seconds: 2));
-    });
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
 
-    final firstResult = find.byType(ListTile).first;
-    expect(firstResult, findsOneWidget);
+    // _ensureLoaded reads all Neijing lecture assets sequentially. Wait for
+    // that asynchronous index load to finish before entering the query;
+    // otherwise the debounce can search an empty cache and show no results.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 6));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('加载失败'), findsNothing);
+
+    await tester.enterText(search, '黄帝曰');
+    await tester.pumpAndSettle();
+
+    final results = find.byType(ListTile);
+    expect(results, findsWidgets);
+    final firstResult = results.first;
     await tester.tap(firstResult);
     await tester.pumpAndSettle();
 
