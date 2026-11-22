@@ -161,36 +161,40 @@ void main() {
       await tester.runAsync(() async {
         index = await BenCaoLectureIndex.load();
       });
-      final herb = HerbRepository.getAll().firstWhere(
-        (item) => index.hitsFor(item.name).isNotEmpty,
-      );
+      final herb = HerbRepository.getByName('丹砂')!;
+      expect(index.hitsFor(herb.name), isNotEmpty);
       final hits = index.hitsFor(herb.name);
       expect(hits, isNotEmpty);
       final hit = hits.first;
       final sourceAsset = BenCaoLectureIndex.assetOf(hit.seq);
       final lectureName = BenCaoLectureIndex.nameOf(hit.seq);
 
-      await tester.runAsync(() async {
-        await tester.pumpWidget(
-          ContextualAiConversationStoreScope(
-            conversationStore: InMemoryAssistantConversationStore(),
-            child: MaterialApp(
-              theme: ThemeData(
-                useMaterial3: true,
-                colorScheme: AppColors.colorSchemeFor(Brightness.light),
-                extensions: [AppColors.light],
-              ),
-              home: HerbDetailScreen(herb: herb),
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(775, 900);
+      tester.view.displayFeatures = const <DisplayFeature>[];
+      await tester.pumpWidget(
+        ContextualAiConversationStoreScope(
+          conversationStore: InMemoryAssistantConversationStore(),
+          child: MaterialApp(
+            theme: ThemeData(
+              useMaterial3: true,
+              colorScheme: AppColors.colorSchemeFor(Brightness.light),
+              extensions: [AppColors.light],
             ),
+            home: HerbDetailScreen(herb: herb),
           ),
-        );
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        ),
+      );
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(seconds: 1));
       });
-      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
 
       final lectureEntry = find.text('讲义讲解');
-      expect(lectureEntry, findsOneWidget);
+      await tester.scrollUntilVisible(lectureEntry, 350);
       await tester.ensureVisible(lectureEntry);
+      await tester.pumpAndSettle();
+      expect(lectureEntry, findsOneWidget);
       await tester.tap(lectureEntry);
       await tester.pumpAndSettle();
 
