@@ -409,14 +409,9 @@ void main() {
     final search = find.byType(TextField);
     await tester.tap(search);
 
-    // _ensureLoaded reads all Neijing lecture assets sequentially. Wait for
-    // that asynchronous index load to finish before entering the query;
-    // otherwise the debounce can search an empty cache and show no results.
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(seconds: 6));
-    });
-    // The reader's empty/loading artwork may keep a ticker active; use bounded
-    // pumps and assert the observable result instead of waiting for global idle.
+    // Start the asynchronous asset index load, then enter the query while it
+    // is loading. NeijingSearchScreen must re-run the query after all 73 assets
+    // are available; a fixed wall-clock sleep is not a reliable readiness gate.
     await tester.pump();
     expect(find.text('加载失败'), findsNothing);
 
@@ -425,6 +420,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     final results = find.byType(ListTile);
+    // Wait for an observable search result, not global widget-tree idleness:
+    // the reader/loading artwork can keep tickers active. The bounded wait
+    // also makes a missing asset/result fail instead of hanging the suite.
+    for (var attempt = 0;
+        attempt < 80 && results.evaluate().isEmpty;
+        attempt++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      });
+      await tester.pump();
+    }
     expect(results, findsWidgets);
     final firstResult = results.first;
     await tester.tap(firstResult);
