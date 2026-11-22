@@ -1,6 +1,6 @@
 # Find N2 AI 多轮 / 附件 / 恢复 / 清除真机验收方案
 
-> 本文是执行方案，不是 PASS 报告。测试必须在用户本地 Find N2 上执行；CI、模拟器和静态代码均不能替代真实设备 TRACE。
+> 本文是执行方案，不是 PASS 报告。测试必须在用户本地 Find N2 上执行；CI、模拟器和静态代码均不能替代真实设备 TRACE。安全的 Release / Debug TRACE 切换、执行顺序和证据包见[Find N2 / E4B 本地验收交接总清单](find-n2-e4b-local-handover.md)。
 
 ## 0. 当前前置条件与实现基线
 
