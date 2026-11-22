@@ -3227,3 +3227,51 @@ PR #196 已合入 master，merge commit：`2ab2d9e68d125feb8b0d0ef1b35aef6cc1e97
 - **历史扫描范围：** 情境初始化最多检查最近 500 条会话。超过范围的旧会话可能不被复用，但系统会创建新会话并保留正确锚点，不会回退为跨快照复用；这是检索范围边界，不是来源隔离缺陷。
 
 **审计结论：** 按当前 master 代码和自动化测试目录，协议 §12.3 的同锚点复用、锚点隔离、metadata 可追溯、token UNKNOWN、折叠窗口自动化，以及 §8 的 AI / 非 AI 数据清理边界均有实现与测试覆盖。本轮没有证据支持新增第二套会话协调器、数据库表或重复页面入口。PR #375 的专项三图 Widget 测试及最终 HEAD CI 仍是当前云端剩余门禁；Find N2 实机折叠/键盘行为与本地 E4B 多轮、Native 状态和 TRACE 保持 `UNKNOWN / LOCAL ONLY`。
+
+
+---
+
+## 63. 2026-11-22 PR #391 合并验收与经典阅读双向来源审计
+
+### 63.1 PR #391 最终 HEAD 与合并后主线证据
+
+- PR #391「feat(ai): complete contextual reading deep-link parity」已于 2026-11-22 06:10:03Z 普通 merge，最终 PR head b16cb9964b89d68547c026b59a17ee5b5467d516，merge commit / 当前 master 基线 d0363e8881aae2104d46db471a3263180ed75137。未 squash；合并后 master 父提交为原基线 85e7b187686665f0b40317a7c4d56f66043f3296。
+- PR 最终 HEAD 同 SHA 必需门禁：
+  - Fork license boundary run 44991665039：SUCCESS。
+  - Flutter tests run 44991665034：SUCCESS；Flutter regression job 137113872786，完整日志 1879 tests passed, 15 skipped。
+  - Android arm64 CI verification APK + unit tests job 137115572101：SUCCESS。APK 构建、合并 Manifest、arm64 ABI 检查、SHA-256、Android Native/Gradle 单测、JUnit XML 校验和工件上传全部 SUCCESS；APK 仅包含 arm64-v8a，大小 132,542,817 bytes。证据工件：APK/ABI 14742022668，Android unit-test reports 14741609171，Flutter diagnostics 14741937645，Android diagnostics 14741962966。
+  - Branch validation 因 workflow 条件 SKIPPED，不计 PASS；不影响以上必需门禁。
+- 合并后 master 的独立 post-merge workflows 均在 merge SHA d0363e8881aae2104d46db471a3263180ed75137 取得终态 SUCCESS：
+  - Flutter tests run 44992510922：SUCCESS，包含 Flutter regression 与 Android arm64 job。
+  - Fork license boundary run 44992510868：SUCCESS。
+  - Flutter Quality Gate run 44992510891：Analyze and test job SUCCESS。
+- PR #391 的核心交付包括经典搜索结果进入内经/伤寒/金匮/针灸/本草讲稿阅读、易经与命卦讲义段落入口、方剂/本草/穴位/医案来源阅读入口、古籍原始 TXT 行号映射、助手来源精确反查，以及对应专项测试。最终 CI 的 1879 passed / 15 skipped 不等于设备验收。
+
+### 63.2 全仓库情境入口与来源锚点复核
+
+本轮以合并后的 master tree d0363e8881aae2104d46db471a3263180ed75137 为基线，交叉核对页面调用、ContextRef 构建、Resolver、Prompt Builder、助手引用点击路由和测试文件；不以 router 注册或测试文件存在单独判定覆盖。
+
+| 入口组 | 核验结果 | 证据 / 边界 |
+|---|---|---|
+| 确定性工具整体结果 | 已覆盖 | 黄历、八字、紫微、易经、梅花、小六壬、五运六气、子午流注、节气、黄帝四季歌、称骨、受生债、玉匣灵兆、三山灵签、经方单位换算、小儿关煞、周公解梦；对应各自的 Contextual Result Entry 测试 |
+| 字段/局部结果 | 已覆盖 | 八字、紫微、易经、梅花、五运六气图表；字段路径由用户当前 UI 选择映射，模型不选择、不重算 |
+| 方剂/本草/穴位/医案 | 已覆盖 | 方剂、本草、穴位详情使用稳定条目 ID、数据版本/摘要和精确来源；单条医案按序号回链 |
+| 内经/伤寒/金匮/针灸/本草讲稿 | 已覆盖正向段落入口 | 经典索引 source key 映射 reader module ID；canonical anchor 由统一 helper 生成；助手回链按完整 asset 精确反查，不按标题或关键词兜底 |
+| 易经/命卦讲义 | 正向入口 PASS；助手引用回链发现缺口，已另开修复 PR | reader module ID 分别为 yijing-reading / minggua-reading，与经典索引 source key 不同；PR #391 已补 canonical asset anchor，但助手导航 chip 的可导航 ID 白名单和反向 manifest resolver 未同步，不能标为完整双向覆盖 |
+| 古籍原文 | 已覆盖且独立行映射 | guji 不映射为普通 Markdown 讲稿；必须使用 GujiSourceAnchorResolver 的原始 TXT 行号映射。缺失/无效映射不启用 SelectionArea / 段落问 AI |
+| 针灸处方/透穴/耳穴多 Tab | 未启用独立情境入口 | 助手可精确回到针灸来源条目，但该多 Tab 页面混合临床经验记录与标准资料，尚无独立来源等级、适用边界和安全 Prompt 契约；不将普通讲稿入口直接套用到此页 |
+| 知识导航列表、问诊历史、危急提示、已保存命盘列表 | 明确不新增重复入口 | 进入具体条目/结果页后使用既有来源；安全门禁和历史流程不是独立知识条目 |
+
+- 经典索引的 source key 与 reader module ID 采用显式映射：neijing → neijing-reading、zhenjiu → zhenjiu-reading、bencao → bencao-reading；伤寒/金匮保持对应 key。易经/命卦讲义来自独立讲义 manifest，不属于压缩古籍检索索引。
+- 资产反查 ClassicSearchService.findBySourceId 按稳定 source + 完整 asset key 匹配；未知 ID 返回 null，标题变更不影响 identity。古籍使用 bookId + chapterIndex 与逐行映射，打印版页码仍为 MISSING/PARTIAL，不虚构书目页码。
+- 已核验测试目录包括 classic_search_backlink_test.dart、classic_paragraph_contextual_entry_test.dart、guji_contextual_paragraph_entry_test.dart、neijing_entries_screen_test.dart、search_tab_classic_test.dart、minggua_screen_test.dart、yijing_detail_screen_test.dart、acupoint_contextual_entry_test.dart、formula_contextual_entry_test.dart、herb_contextual_entry_test.dart、medical_case_contextual_entry_test.dart 及既有工具/字段专项测试。
+- PR #391 合并后又发现易经/命卦 reader module ID 没有进入助手引用 chip 白名单，且没有通过讲义 manifest 做精确反向解析。已从新 master 建立独立修复分支 fix/classic-reader-citation-backlinks-20261122，实现与测试完成后必须重新跑该分支最新 HEAD CI；不得将 PR #391 的成功结果转移给该修复分支。
+- 当前没有证据支持增加第二套会话协调器、数据库或搜索架构。已覆盖入口继续复用 MarkdownDocScreen → AiContextRef → PromptBuilder → ContextualAiSheet。
+
+### 63.3 云端收尾状态与 Find N2 最终本地验收
+
+- PR #391 及其合并后 master CI：PASS。
+- 全仓库情境入口/来源锚点复核：PARTIAL；唯一已确认需云端修复项为易经/命卦助手引用回链，已建立独立分支；针灸多 Tab 因缺少专用来源/安全契约明确保持未启用，不作为虚假 PASS。
+- Find N2 外屏/内屏/半折叠、分屏、键盘 Insets、系统文件选择器、弹窗滚动恢复，以及本地 E4B GPU/CPU 多轮、Native 生命周期、第二轮/第三轮响应、Activity/force-stop 恢复、AI 数据清理与完整 TRACE：UNKNOWN / LOCAL ONLY。这些项目不是云端 CI 的 BLOCKED 条件。
+- 设备验收必须使用最终安装包 SHA 和模型版本记录；不得把 CI arm64 Debug APK 当作用户签名发布包，也不得把模拟器布局通过写成 Find N2 真机 PASS。
+- 后续执行：先完成本节提及的易经/命卦来源回链修复及最新 HEAD 自动验收；再按全仓库覆盖表复核一次；云端无设备依赖事项全部关闭后，交付并执行 docs/find-n2-real-device-acceptance.md、docs/find-n2-local-ai-acceptance-checklist.md、docs/find-n2-ai-trace-acceptance-plan.md 与 docs/local-ai-e4b.md。
