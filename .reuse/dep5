@@ -1,9 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 
 Files:
- .github/workflows/build-apk.yml
  .gitignore
  android/app/build.gradle.kts
+ android/key.properties.template
  android/app/proguard-rules.pro
  android/app/src/main/AndroidManifest.xml
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt
@@ -14,6 +14,7 @@ Files:
  android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
  APP_DEVELOPMENT_DETAIL.md
  CHANGELOG.md
+ assets/data/changelog.json
  CONTRIBUTING.md
  docs/cross_platform_solution.md
  docs/diagnostic_engine_optimization_report.md
@@ -929,3 +930,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Newly added Fork-owned Guji contextual-entry source-anchor regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ docs/local-android-release-checklist.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Original Fork-maintained local Android signing, upgrade, and device handoff instructions.
