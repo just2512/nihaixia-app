@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-pub_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]]+).*/\\1/p' pubspec.yaml | head -n 1)"
-readme_version="$(grep -m1 '当前仓库版本为' README.md | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+')"
-readme_source_version="$(grep -m1 '当前源码版本：' README.md | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+')"
-policy_version="$(grep -m1 '当前项目版本' docs/versioning-policy.md | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+')"
-legacy_build_baseline="$(grep -m1 '同 applicationId 已知最高 Android versionCode' docs/versioning-policy.md | grep -oE '[0-9]+')"
+pub_version="$(awk '/^version:/{print $2; exit}' pubspec.yaml)"
+readme_version="$(grep -m1 '当前仓库版本为' README.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+' || true)"
+readme_source_version="$(grep -m1 '当前源码版本：' README.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+' || true)"
+policy_version="$(grep -m1 '当前项目版本' docs/versioning-policy.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+' || true)"
+legacy_build_baseline="$(grep -m1 '同 applicationId 已知最高 Android versionCode' docs/versioning-policy.md | grep -oE '[0-9]+' || true)"
 
-if [[ ! "$pub_version" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+\\+[0-9]+$ ]]; then
+if [[ ! "$pub_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
   echo "pubspec.yaml must contain a version in X.Y.Z+N form; got: $pub_version" >&2
   exit 1
 fi
@@ -37,7 +37,7 @@ if [[ "$policy_version" != "$pub_version" ]]; then
   exit 1
 fi
 
-build_number="${pub_version##*+}"
+build_number="$(awk -F+ '{print $2}' <<< "$pub_version")"
 if (( build_number <= legacy_build_baseline )); then
   echo "Android versionCode $build_number must be greater than the known shared-applicationId maximum $legacy_build_baseline." >&2
   exit 1
