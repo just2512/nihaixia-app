@@ -1,27 +1,6 @@
-import 'dart:async' show FutureOr;
 
 import 'package:flutter/material.dart';
 
-import '../models/assistant_tool_result.dart';
-import '../services/yunqi_tool_executor.dart';
-import '../services/almanac_tool_executor.dart';
-import '../services/bazi_tool_executor.dart';
-import '../services/meihua_tool_executor.dart';
-import '../services/chenggu_tool_executor.dart';
-import '../services/huangdi_siji_tool_executor.dart';
-import '../services/ziwei_tool_executor.dart';
-import '../services/solar_term_tool_executor.dart';
-import '../services/xiaoliuren_tool_executor.dart';
-import '../services/yijing_tool_executor.dart';
-import '../services/dosage_tool_executor.dart';
-import '../services/dosage_conversion_service.dart';
-import '../services/ziwuliuzhu_tool_executor.dart';
-import '../services/dream_tool_executor.dart';
-import '../services/guansha_tool_executor.dart';
-import '../services/shousheng_debt_tool_executor.dart';
-import '../services/sanshan_lingqian_tool_executor.dart';
-import '../services/saved_chart_tool_executor.dart';
-import '../services/yuxiaji_omen_tool_executor.dart';
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
@@ -167,7 +146,6 @@ class AssistantToolDefinition {
   final List<String> actionWords;
   final Widget Function() builder;
   final Widget Function(AssistantToolArguments arguments)? builderWithArguments;
-  final FutureOr<AssistantToolResult> Function(Map<String, String> arguments)? headlessExecutor;
   final List<AssistantToolParameter> parameters;
 
   const AssistantToolDefinition({
@@ -180,7 +158,6 @@ class AssistantToolDefinition {
     required this.actionWords,
     required this.builder,
     this.builderWithArguments,
-    this.headlessExecutor,
     this.parameters = const [],
   });
 }
@@ -189,6 +166,18 @@ class AssistantToolDefinition {
 /// a synchronous Headless executor, or both. Executed results remain typed and
 /// are validated by the caller before they enter the conversation timeline.
 class AssistantToolRouter {
+  static const List<String> xiaoliurenHourBranches = [
+    '子时', '丑时', '寅时', '卯时', '辰时', '巳时',
+    '午时', '未时', '申时', '酉时', '戌时', '亥时',
+  ];
+
+  static const List<String> solarTermNames = [
+    '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
+    '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
+    '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
+    '立冬', '小雪', '大雪', '冬至', '小寒', '大寒',
+  ];
+
   static const structuredDiagnosis = AssistantToolDefinition(
     id: 'structured_diagnosis',
     capabilityId: 'structured_diagnosis',
@@ -218,7 +207,6 @@ class AssistantToolRouter {
     ],
     builder: _buildYunqi,
     builderWithArguments: _buildYunqiWithArguments,
-    headlessExecutor: YunQiToolExecutor.execute,
   );
 
   static const ziwei = AssistantToolDefinition(
@@ -230,7 +218,6 @@ class AssistantToolRouter {
     aliases: ['紫微斗数', '紫微排盘', '紫微命盘'],
     actionWords: ['排盘', '起盘', '命盘', '帮我排'],
     builder: _buildZiwei,
-    headlessExecutor: ZiweiToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'birth_date',
@@ -271,7 +258,6 @@ class AssistantToolRouter {
     aliases: ['八字', '四柱', '生辰八字'],
     actionWords: ['排盘', '起盘', '命盘', '帮我排'],
     builder: _buildBazi,
-    headlessExecutor: BaziToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'birth_date',
@@ -312,7 +298,6 @@ class AssistantToolRouter {
     aliases: ['易经', '六十四卦', '周易'],
     actionWords: ['起卦', '摇卦', '选卦', '占卦', '卜卦', '排卦'],
     builder: _buildYijing,
-    headlessExecutor: YiJingToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'method',
@@ -368,7 +353,6 @@ class AssistantToolRouter {
     aliases: ['小六壬', '小六壬起课', '六壬时课'],
     actionWords: ['起课', '起卦', '推算', '算一下'],
     builder: _buildXiaoliuren,
-    headlessExecutor: XiaoliurenToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'date',
@@ -381,7 +365,7 @@ class AssistantToolRouter {
         label: '时辰',
         type: AssistantToolParameterType.choice,
         isRequired: true,
-        choices: XiaoliurenToolExecutor.hourBranches,
+        choices: xiaoliurenHourBranches,
       ),
       AssistantToolParameter(
         key: 'rule',
@@ -403,7 +387,6 @@ class AssistantToolRouter {
     aliases: ['梅花易数', '梅花'],
     actionWords: ['起卦', '推算', '算一下'],
     builder: _buildMeihua,
-    headlessExecutor: MeihuaToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'method',
@@ -445,7 +428,6 @@ class AssistantToolRouter {
     aliases: ['剂量换算', '经方换算', '两升铢', '古代度量衡', '单位换算', '经方度量衡'],
     actionWords: ['换算', '计算', '转换', '打开'],
     builder: _buildDosage,
-    headlessExecutor: DosageToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'value',
@@ -478,7 +460,6 @@ class AssistantToolRouter {
     aliases: ['时辰开穴', '子午流注', '灵龟八法', '纳子法', '纳甲法'],
     actionWords: ['计算', '开穴', '推算', '查穴', '查询'],
     builder: _buildZiwu,
-    headlessExecutor: ZiWuLiuZhuToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'at',
@@ -549,7 +530,6 @@ class AssistantToolRouter {
       ),
     ],
     builder: _buildAlmanac,
-    headlessExecutor: AlmanacToolExecutor.execute,
   );
 
   // Existing ToolsScreen destinations must be addressable from the unified
@@ -617,7 +597,6 @@ class AssistantToolRouter {
     ],
     actionWords: ['查询', '查看', '学习', '查阅', '打开', '介绍', '解释', '讲解', '比较', '对比'],
     builder: _buildSolarTerms,
-    headlessExecutor: SolarTermToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'term',
@@ -625,7 +604,7 @@ class AssistantToolRouter {
         type: AssistantToolParameterType.choice,
         isRequired: false,
         description: '不指定时读取 App 当前节气；指定时从现有二十四节气知识资产检索。',
-        choices: SolarTermToolExecutor.termNames,
+        choices: solarTermNames,
       ),
     ],
   );
@@ -639,7 +618,6 @@ class AssistantToolRouter {
     aliases: ['玉匣灵兆', '玉匣记', '面热占', '眼跳占', '耳鸣占', '心惊占', '鸦鸣鹊噪方向', '鸦鸣鹊噪', '鸦鸣', '鹊噪', '占灯花法', '灯花占'],
     actionWords: ['查询', '查看', '起占', '打开', '推算'],
     builder: _buildYuxiaji,
-    headlessExecutor: YuxiajiOmenToolExecutor.execute,
   );
 
   static const dream = AssistantToolDefinition(
@@ -651,7 +629,6 @@ class AssistantToolRouter {
     aliases: ['周公解梦', '解梦', '梦境释义', '梦见', '梦到', '梦境', '做梦', '这个梦'],
     actionWords: ['查询', '查看', '解释', '解读', '分析', '是什么意思', '什么意思', '检索', '搜索', '打开', '帮我'],
     builder: _buildDream,
-    headlessExecutor: DreamToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'dream_text',
@@ -672,7 +649,6 @@ class AssistantToolRouter {
     aliases: ['小儿关煞', '关煞', '小孩关煞'],
     actionWords: ['查询', '查看', '测算', '排算', '打开', '帮我算'],
     builder: _buildGuansha,
-    headlessExecutor: GuanshaToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'birth_date',
@@ -713,7 +689,6 @@ class AssistantToolRouter {
     aliases: ['三山国王', '三山灵签', '灵签'],
     actionWords: ['求签', '抽签', '抽', '查看', '查签', '打开'],
     builder: _buildSanshan,
-    headlessExecutor: SanshanLingqianToolExecutor.execute,
   );
 
   static const chenggu = AssistantToolDefinition(
@@ -725,7 +700,6 @@ class AssistantToolRouter {
     aliases: ['称骨', '袁天罡', '称骨算命'],
     actionWords: ['计算', '测算', '查询', '打开', '帮我', '算一下'],
     builder: _buildChenggu,
-    headlessExecutor: ChengguToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'birth_date',
@@ -752,7 +726,6 @@ class AssistantToolRouter {
     aliases: ['受生债', '禄库受生经', '五斗金章'],
     actionWords: ['查询', '计算', '测算', '帮我查', '算一下'],
     builder: _buildShoushengDebt,
-    headlessExecutor: ShoushengDebtToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'birth_date',
@@ -788,7 +761,6 @@ class AssistantToolRouter {
     aliases: ['黄帝四季歌', '轩辕黄帝四季歌', '四季歌'],
     actionWords: ['查询', '查看', '测算', '打开'],
     builder: _buildHuangdiSiji,
-    headlessExecutor: HuangdiSijiToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'birth_date',
@@ -815,7 +787,6 @@ class AssistantToolRouter {
     aliases: ['我的命盘库', '我的命盘', '保存的命盘', '已保存命盘'],
     actionWords: ['查看', '打开', '管理', '回看', '分析', '解读', '看看'],
     builder: _buildSavedCharts,
-    headlessExecutor: SavedChartToolExecutor.execute,
     parameters: [
       AssistantToolParameter(
         key: 'saved_chart_id',
