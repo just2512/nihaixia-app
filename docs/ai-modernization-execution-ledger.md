@@ -3786,8 +3786,8 @@ PR HEAD 门禁证据：
 ### 71.5 全仓 PR 与 branch refs 当前快照
 
 - 当前 OPEN PR 搜索结果为空；本轮未发现可直接进入合并流程的 OPEN PR。PR #411 已 MERGED，PR #328 已 CLOSED / SUPERSEDED。
-- 远端 branch refs 通过分页查询得到 467 个（包含 master；前四页各 100 个，最后一页 67 个，后续 cursor 为空）。这是 branch ref 数量，不是待合并任务数量。
-- 既有 §69–70 对历史分支的限制继续有效：没有逐支完成当前 master compare、文件差异、来源归属和替代实现核验的 refs，仍应标记 `NOT_REVIEWED`；不能把已合并 PR 保留的 head refs、CLOSED PR refs 或无 PR 关联 refs 自动判作待合并功能。
+- 远端 branch refs 通过分页查询得到 468 个（包含 master 和本节审计分支；前四页各 100 个，最后一页 68 个，后续 cursor 为空）。这是 branch ref 数量，不是待合并任务数量。
+- 本轮分支引用审计中，409 个 refs 可与 PR head 精确匹配，另有 59 个未匹配 refs（包含 master，即 58 个非 master refs）；所有非 master 未匹配 refs 均已执行当前 master compare。仅对下文已说明的具体分支完成内容等价核验；其他未逐项读取完整文件或测试证据的 refs 仍为 `NOT_REVIEWED`。不能把已合并 PR 保留的 head refs、CLOSED PR refs 或无 PR 关联 refs 自动判作待合并功能。
 - 本轮不批量删除 branch refs。对已吸收、已替代和实验分支的删除，必须另行核验 PR、工作流及用户工作依赖后处理。
 - 因此当前准确结论是：**云端发现的待合并 OPEN PR 已清空；全仓 467 个 branch refs 并未逐条审计、合并或删除。** 不将“没有 OPEN PR”表述为“所有历史分支均已合并”。
 
