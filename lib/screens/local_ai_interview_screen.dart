@@ -39,7 +39,6 @@ import '../models/tool_execution_plan.dart';
 import '../licensing/feature_authorizer.dart';
 import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
-import '../services/ai_context_resolver.dart';
 import '../models/assistant_message_metadata.dart';
 import '../models/ai_context_ref.dart';
 import '../services/dosage_conversion_service.dart';
