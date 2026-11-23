@@ -3871,3 +3871,17 @@ PR HEAD 门禁证据：
 - 本轮历史分支 compare / 逐文件审计仍不等于 58 个未匹配 refs 全部完成审计；未在 §71–74 中具体列明源码/测试核验的 refs 继续为 `NOT_REVIEWED`。
 - 不批量删除历史 branch refs；不将旧分支 ahead commit 数量直接当作功能缺口。
 - PR #416 专业版永久授权仍为 OPEN / DRAFT，当前处于独立开发批次；按用户要求不合并、不关闭、不修改，不计入本轮其他遗留项的关闭条件。
+
+
+---
+
+## 83. 专业版离线授权协议 v1.2 统一（2026-11-23）
+
+- 在不修改用户仍在编辑的 PR #416 / `feature/pro-license-batch-1` 的前提下，从其当前 head 派生独立分支 `pro/protocol-v12-harmonization`，将早期 v1.1 协议原型统一到 `docs/pro-edition-architecture-constraints.md` v1.2 的协议和安全约束。
+- `docs/pro-edition-license-protocol.md` 已重写为 v1.2：最终 Token 使用 `protocol_revision`、`device_public_key_sha256` 和 `request_id`；不含客户端 pending request nonce/hash、设备安全级别或 `product_revision`。Nonce/hash 留在发行端订单数据库，用于唯一约束、幂等和审计。
+- Dart `LicensePayload` 已拆分 known / protocol-allowed / enforced Feature 集合；最终授予采用四集合交集。未知或保留 Feature 不授予，但不使其他签名有效权益一并失效。首期发行端只允许 `ai_advanced` 与 `contextual_assistant`。
+- Dart Verifier 已使用构造注入的 `LicenseKeyRing`，区分 active / standby / retired / revoked / compromised；签名输入为 `UTF8("YANJI-PRO-LICENSE-V1\\0") || canonicalPayloadBytes`，并拒绝非 JCS canonical payload。客户端不做 request nonce/hash 匹配。
+- Python Issuer 最终 Token 已切换为同一签名域和字段集合；发行端仍校验 YANJIR1 的 P-256 ECDSA 申请签名，并把 request_id、nonce、完整 request hash 留存在发行记录。首期签发 Feature 清单固定为两项，不能通过 CLI/调用参数超发。
+- 跨语言 fixture 已升级为 v1.2，并由独立测试密钥重新签名；本地离线复核确认 payload canonical bytes 与 Ed25519 签名通过。该私钥仅用于测试，不能进入 Release Key Ring。
+- 当前状态：协议文本、Dart 模型/Verifier、Python Issuer 和两端测试仍在独立 PR CI 之前的集成修订阶段；必须以最新 PR HEAD 的 Python 单测、Dart 验签、Flutter regression 和 Fork license 结果为准。无生产发行密钥、Release Key Ring、真实 Android Keystore、Token 原子存储、EntitlementService 或门禁接线完成声明。
+- 此分支是 PR #416 的后续协议统一候选，不改写 #416 分支引用。PR #416 继续保持 OPEN / DRAFT；是否以 v1.2 替换原稿，应在独立 PR 通过自动验收后按仓库集成策略处理。
