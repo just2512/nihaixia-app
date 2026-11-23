@@ -34,6 +34,12 @@ jobs:
       - name: Verify production trust anchors and exclude test key material
         run: python tool/license_issuer/check_release_readiness.py
 
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -43,6 +49,41 @@ jobs:
 
       - name: Install locked Flutter dependencies
         run: flutter pub get --enforce-lockfile
+
+      # This ephemeral key only signs a CI inspection APK; it is never
+      # distributed and is not the product's release signing identity.
+      - name: Create ephemeral CI-only APK signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair \
+            -storetype PKCS12 \
+            -keystore "${RUNNER_TEMP}/release-scan.p12" \
+            -storepass "ci-only-password" \
+            -keypass "ci-only-password" \
+            -alias "release-scan" \
+            -dname "CN=Yanji CI Release Scan" \
+            -keyalg RSA -keysize 2048 -validity 2
+          cat > android/key.properties <<EOF
+          storeFile=${RUNNER_TEMP}/release-scan.p12
+          storePassword=ci-only-password
+          keyAlias=release-scan
+          keyPassword=ci-only-password
+          storeType=PKCS12
+          EOF
+
+      - name: Build arm64 Release APK for artifact inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build apk --release --no-shrink \
+            --target-platform android-arm64 \
+            --dart-define="YANJI_RELEASE_LICENSE_KEY_RING_JSON=${YANJI_RELEASE_LICENSE_KEY_RING_JSON}"
+
+      - name: Scan built Release APK for test issuer key material
+        run: >-
+          python tool/license_issuer/check_release_readiness.py
+          --scan-path build/app/outputs/flutter-apk/app-release.apk
 
       - name: Verify Release composition against configured Key Ring
         shell: bash
