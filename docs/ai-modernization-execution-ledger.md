@@ -4022,8 +4022,8 @@ PR HEAD 门禁证据：
 - `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不作为模型调用 gate。
 - 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
 - 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
-- F0-2a 已形成独立代码切片 PR #442：`AssistantToolRouter` 只保留工具元数据与页面构建器；18 个 Headless Executor 的 tool-id 注册表集中到 `HeadlessToolDispatcher`；Screen 与 Orchestrator 改用 `hasExecutor(tool.id)` 查询能力，相关测试经 Dispatcher 执行。PR #440 因旧测试引用未更新而关闭，由 PR #442 承接修正后的完整代码树；PR #442 CI 待完成。
-- F0-2b 已在独立分支 `work/f0-executor-import-graph-20261123-v2` 形成代码批次：SavedChart、ZiWuLiuZhu、Dosage、YiJing 的纯参数/选择 helper 已迁出 Executor 到 `ToolArgumentSupport`；Screen 与 Orchestrator 不再直接导入 Executor；新增 Analyzer AST import-graph audit，并在 branch-validation 与 PR full regression 两条 CI 路径执行。该分支尚未重基线/合并，CI 尚未验收；UI Result Handler 边界仍未完成。
+- F0-2a 已形成独立代码切片 PR #442：`AssistantToolRouter` 只保留工具元数据与页面构建器；18 个 Headless Executor 的 tool-id 注册表集中到 `HeadlessToolDispatcher`；Screen 与 Orchestrator 改用 `hasExecutor(tool.id)` 查询能力，相关测试经 Dispatcher 执行。PR #440 因旧测试引用未更新而关闭，由 PR #442 承接修正后的完整代码树；PR #442 HEAD `eaa80ca93cec18ae47d59536464abba004e38dd8` 的 Flutter 全量回归仍在执行。
+- F0-2b 已在独立分支 `work/f0-executor-import-graph-20261123-v2` 形成代码批次：SavedChart、ZiWuLiuZhu、Dosage、YiJing 的纯参数/选择 helper 已迁出 Executor 到 `ToolArgumentSupport`；Screen 与 Orchestrator 不再直接导入 Executor；新增 Analyzer AST import/export 图审计，并在 branch-validation 与 PR full regression 两条 CI 路径执行；覆盖相对/包路径、别名和条件 import/export，同时禁止 Dispatcher 直接依赖 Flutter、BuildContext、Navigator、Widget。Dispatcher 仅接收 `toolId`，不再依赖 Router/Widget 元数据。当前分支最新提交 `173266de0f780d86f1d7105384d6028127fb4d86`，尚未重基线/合并，CI 尚未验收；F0-3 UI Result Handler 边界仍未完成。
 - 后续 F0 仍需完成：F0-2b 的 Analyzer AST import/export 图门禁及 helper 抽离尚待 CI 验收；F0-3 的完整执行结果/UI Result Handler 边界和重构前后特征测试仍未完成。未完成前不得把 F0 标记 PASS。
 - `FeatureAuthorizer`、收费门禁、`InvocationOrigin` 生产接线和跨工具执行计划预授权均不属于本 F0-1 切片；本批不改变现有免费行为。
 
