@@ -6,8 +6,8 @@ import json
 import sqlite3
 import tempfile
 import unittest
-from unittest import mock
 import uuid
+from unittest import mock
 from pathlib import Path
 
 from cryptography.hazmat.primitives import hashes, serialization
