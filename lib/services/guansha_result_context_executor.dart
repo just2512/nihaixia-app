@@ -1,7 +1,7 @@
 import '../models/assistant_tool_result.dart';
 import '../engine/guansha_engine.dart' show GuanshaHit;
 import 'ai_tool_result_snapshot.dart';
-import 'guansha_tool_executor.dart';
+import 'guansha_tool_service.dart';
 
 class GuanshaResultContextExecution {
   const GuanshaResultContextExecution({
@@ -41,7 +41,7 @@ class GuanshaResultContextExecutor {
     Map<String, String> arguments,
   ) async {
     final execution =
-        await GuanshaToolExecutor.executeWithDetails(arguments);
+        await GuanshaToolService.executeWithDetails(arguments);
     return fromExecution(execution);
   }
 
@@ -71,9 +71,9 @@ class GuanshaResultContextExecutor {
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
         result.sourceIds.length != 3 ||
-        result.sourceIds[0] != GuanshaToolExecutor.sourceId ||
-        result.sourceIds[1] != GuanshaToolExecutor.dataSourceId ||
-        result.sourceIds[2] != GuanshaToolExecutor.locationSourceId ||
+        result.sourceIds[0] != GuanshaToolService.sourceId ||
+        result.sourceIds[1] != GuanshaToolService.dataSourceId ||
+        result.sourceIds[2] != GuanshaToolService.locationSourceId ||
         settings.length != 2 ||
         settings['useTrueSolarTime'] is! bool ||
         settings['distinguishZiShi'] is! bool) {
