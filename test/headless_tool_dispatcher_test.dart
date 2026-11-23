@@ -82,6 +82,44 @@ void main() {
       );
     });
 
+    test('synchronous dispatch invokes an explicitly allowlisted adapter', () {
+      final result = HeadlessToolDispatcher.executeSync(
+        toolId: 'dosage',
+        arguments: const {},
+      );
+
+      expect(result.toolId, 'dosage');
+      expect(result.status, AssistantToolExecutionStatus.failed);
+    });
+
+    test('synchronous dispatch rejects async tools before invoking them', () {
+      expect(
+        () => HeadlessToolDispatcher.executeSync(
+          toolId: 'chenggu',
+          arguments: const {},
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('synchronous dispatch preserves an explicit device-local clock', () {
+      final observedAt = DateTime(2026, 11, 23, 12, 34);
+      final result = HeadlessToolDispatcher.executeSync(
+        toolId: 'yuxiaji_omen',
+        arguments: const {},
+        clock: () => observedAt,
+      );
+
+      expect(
+        DateTime.parse(result.values['App 本机日期时间']!).hour,
+        observedAt.hour,
+      );
+      expect(
+        DateTime.parse(result.values['App 本机日期时间']!).minute,
+        observedAt.minute,
+      );
+    });
+
     test('propagates the executor error without converting it to a business result', () async {
       final error = StateError('executor failure');
       await expectLater(
