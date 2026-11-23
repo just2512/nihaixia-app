@@ -4011,8 +4011,7 @@ class AiContextResolver {
 
   static const medicalCaseModuleId = 'medical-cases';
   static const medicalCaseAssetVersion =
-      'cases_table.md@eafd79148c7aeea2f9891738e153cd3009bd1670;'
-      'source_ledger.json@a61bd55f256adc620b7983fe2dd07a5d46721f89';
+      'cases_table.md@eafd79148c7aeea2f9891738e153cd3009bd1670';
 
   static AiContextRef buildMedicalCaseContextRef(MedicalCase medicalCase) {
     return AiContextRef(
