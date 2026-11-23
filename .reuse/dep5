@@ -970,3 +970,16 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: New Fork-owned Guansha encyclopedia layout regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ docs/pro-edition-license-protocol.md
+ lib/licensing/license_model.dart
+ lib/licensing/license_verifier.dart
+ test/license_verifier_test.dart
+ tool/license_issuer/issuer.py
+ tool/license_issuer/test_issuer.py
+ tool/license_issuer/README.md
+ tool/license_issuer/requirements.txt
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Yanji Pro lifetime licensing protocol, verifier, tests, and offline issuer. Only rights-holder-owned or sufficiently sublicensed portions are covered.

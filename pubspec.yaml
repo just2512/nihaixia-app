@@ -25,6 +25,7 @@ dependencies:
   open_filex: ^4.7.0
   bazi_core: ^0.6.7
   crypto: ^3.0.0
+  cryptography: ^2.9.0
   sensors_plus: ^7.1.1
   image_picker: ^1.2.4
   record: ^7.1.2

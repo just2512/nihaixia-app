@@ -101,3 +101,10 @@ apk-output/
 *.litertlm
 *.gguf
 /gemma-*.litertlm
+
+# Private Yanji Pro license issuer material (never commit)
+/tool/license_issuer/keys/
+/tool/license_issuer/data/
+/tool/license_issuer/*.private.pem
+/tool/license_issuer/*.sqlite*
+/tool/license_issuer/*.db
