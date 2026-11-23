@@ -20,8 +20,10 @@ internal class LicensePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var channel: MethodChannel? = null
     private var executor: ExecutorService? = null
+    private var tokenStore: LicenseTokenStore? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        tokenStore = LicenseTokenStore(binding.applicationContext)
         channel = MethodChannel(binding.binaryMessenger, CHANNEL_NAME).also {
             it.setMethodCallHandler(this)
         }
@@ -33,6 +35,7 @@ internal class LicensePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel?.setMethodCallHandler(null)
         channel = null
+        tokenStore = null
         executor?.shutdown()
         executor = null
     }
@@ -54,9 +57,30 @@ internal class LicensePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
             "checkPrivateKeyUsability" ->
                 dispatch(result) { keystore.checkPrivateKeyUsability().toChannelMap() }
+            "readLicenseToken" ->
+                dispatch(result) {
+                    mapOf("token" to requireTokenStore().read())
+                }
+            "writeLicenseTokenAfterVerification" -> {
+                val token = call.argument<String>("token")
+                if (token == null) {
+                    result.error("invalidArgument", "缺少 token。", null)
+                } else {
+                    dispatch(result) {
+                        requireTokenStore().writeAfterVerification(token)
+                        mapOf("stored" to true)
+                    }
+                }
+            }
             else -> result.notImplemented()
         }
     }
+
+    private fun requireTokenStore(): LicenseTokenStore =
+        tokenStore ?: throw LicenseTokenStoreException(
+            "storageUnavailable",
+            "授权 Token 存储尚未初始化。"
+        )
 
     private fun dispatch(
         result: MethodChannel.Result,
@@ -74,6 +98,10 @@ internal class LicensePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     val value = operation()
                     mainHandler.post { result.success(value) }
                 } catch (error: LicenseKeystoreException) {
+                    mainHandler.post {
+                        result.error(error.code, error.message, null)
+                    }
+                } catch (error: LicenseTokenStoreException) {
                     mainHandler.post {
                         result.error(error.code, error.message, null)
                     }
