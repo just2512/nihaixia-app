@@ -4,10 +4,12 @@ import '../data/saved_chart_repository.dart';
 import 'dosage_conversion_service.dart';
 import 'ziwuliuzhu_calculation_service.dart';
 
-/// Pure input/selection helpers shared by the UI and Headless executors.
+/// Shared argument, validation, and selection support for UI and Headless flows.
 ///
 /// This library intentionally does not import any *_tool_executor.dart file.
-/// Deterministic execution remains behind HeadlessToolDispatcher.
+/// It may read local selection data or prepare device-owned time/random inputs,
+/// but it never invokes a tool executor. Deterministic tool execution remains
+/// behind HeadlessToolDispatcher.
 class ToolArgumentSupport {
   const ToolArgumentSupport._();
 
