@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. This update adds Batch 1 of Yanji Pro lifetime licensing: compact Ed25519 license protocol, Dart model/verifier, P-256 device request proof validation, and offline Python issuer with idempotent SQLite order records. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Batch 1 adds compact Ed25519 protocol, request-bound device authorization, multi-issuance offline issuer, shared cross-language test vector, and Dart verifier/model. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
-    "changed": 894,
-    "added": 733,
+    "changed": 895,
+    "added": 734,
     "modified": 161,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
-      "FORK_COMMERCIAL": 374,
+      "FORK_COMMERCIAL": 375,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -7174,6 +7174,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/fixtures/pro-license-test-vectors.json",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Python 签发器与 Dart 验签器共用的合成测试向量；不含生产密钥或真实客户数据。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     }
   ],
