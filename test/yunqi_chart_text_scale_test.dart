@@ -75,16 +75,29 @@ Future<_CapturedChart> _pumpChart(
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(const ValueKey('yunqi-chart-area')),
   );
-  final image = await boundary.toImage(pixelRatio: 1);
-  final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-  image.dispose();
-  if (byteData == null) {
-    throw StateError('Unable to capture chart pixels for text-scale regression.');
+
+  // toImage/toByteData are engine-backed asynchronous work. Run them outside
+  // the widget test's FakeAsync zone or the raster future can remain pending
+  // until the test timeout, leaving the next test with a guarded API conflict.
+  final pixels = await tester.runAsync<Uint8List>(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    try {
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteData == null) {
+        throw StateError('Unable to capture chart pixels for text-scale regression.');
+      }
+      return byteData.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  });
+  if (pixels == null) {
+    throw StateError('Chart pixel capture did not complete outside FakeAsync.');
   }
 
   return _CapturedChart(
     painter: chartPainters.single,
-    pixels: byteData.buffer.asUint8List(),
+    pixels: pixels,
   );
 }
 
