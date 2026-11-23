@@ -16,6 +16,7 @@ import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
+import 'support/allow_context_authorizer.dart';
 
 var _databaseSequence = 0;
 
@@ -176,7 +177,7 @@ void main() {
         // timeout does not become a never-advancing fake-async timer.
         await tester.runAsync(() async {
           await tester.pumpWidget(
-            ContextualAiConversationStoreScope(
+            TestAuthorizedFeatureScope(child: ContextualAiConversationStoreScope(
               conversationStore: InMemoryAssistantConversationStore(),
               child: MaterialApp(
                 theme: ThemeData(
@@ -186,7 +187,7 @@ void main() {
                 ),
                 home: AcupointDetailScreen(acupoint: point),
               ),
-            ),
+            )),
           );
           await Future<void>.delayed(const Duration(milliseconds: 100));
         });
