@@ -976,3 +976,17 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Local OPPO Find N2 and Gemma 4 E4B acceptance handover checklist; covers only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights.
+
+Files:
+ docs/pro-edition-license-protocol.md
+ lib/licensing/license_model.dart
+ lib/licensing/license_verifier.dart
+ test/fixtures/pro-license-test-vectors.json
+ test/license_verifier_test.dart
+ tool/license_issuer/README.md
+ tool/license_issuer/issuer.py
+ tool/license_issuer/requirements.txt
+ tool/license_issuer/test_issuer.py
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Yanji Pro lifetime authorization protocol, request-bound verifier, shared synthetic protocol vector, tests, and offline multi-issuance tool. Only rights-holder-owned or sufficiently sublicensed portions are covered.
