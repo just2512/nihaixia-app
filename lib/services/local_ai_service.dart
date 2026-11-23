@@ -659,16 +659,19 @@ class LocalAiIntentCandidate {
     required this.id,
     required this.title,
     required this.description,
+    this.planEligible = false,
   });
 
   final String id;
   final String title;
   final String description;
+  final bool planEligible;
 
-  Map<String, String> toMap() => {
+  Map<String, Object> toMap() => {
         'id': id,
         'title': title,
         'description': description,
+        'plan_eligible': planEligible,
       };
 }
 
