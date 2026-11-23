@@ -4045,3 +4045,12 @@ PR HEAD 门禁证据：
 - 稳定错误原因覆盖初始化超时、存储损坏/不可用、未知发行者、签名无效、修订不支持、设备不匹配、密钥缺失/失效、Keystore 暂不可用和 Provider 错误；`unsupportedFeatureClaim` 只作为诊断项，不因此拒绝整份合法 Token。
 - 当前切片只有接口/数据契约和 Fake 注入测试；尚无 EntitlementService、共享初始化 Future、2 秒有界等待、TokenStore、Android KeyStore Bridge、内存快照或 UI 状态发布。
 - 生产授权接入仍必须遵守 v1.2 §7：超时返回暂时不可用、不持久化临时拒绝，基础免费功能继续可用；不得用全局静态门禁替代依赖注入。
+
+## 83. 专业版 Android Keystore Plugin v1.2 云端实现（2026-11-23）
+
+- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为独立基线，按专业版架构约束 §8.1–§8.4 实现 Android Keystore Plugin，不依赖未合并的授权协议 PR，也不修改 PR #416。
+- 新增独立 `LicensePlugin` / `LicenseKeystore` / `LicenseKeystorePolicy`；MainActivity 只负责注册插件，不承载授权业务逻辑。插件通过独立 MethodChannel 暴露 get-only 读取、用户主动创建、申请签名和本地私钥可用性检查。
+- 设备密钥为 Android Keystore P-256 / secp256r1，ECDSA SHA-256，SPKI DER 输出和 SHA-256 Base64URL 指纹；读取、签名和挑战检查均不自动创建密钥。已存在 alias 时显式拒绝重建，不覆盖现有私钥。
+- API 28+ 优先尝试 StrongBox；仅捕获 `StrongBoxUnavailableException` 时清理本次创建产生的部分 alias 并回退 TEE，不把一般 Provider/Keystore 错误误判为 StrongBox 不可用。API 31+ 按 KeyInfo 安全级别映射；API 24–30 无法区分 TEE/StrongBox 时硬件密钥报告 UNKNOWN。
+- 已新增纯策略单元测试，覆盖 StrongBox API 门槛、安全级别映射和申请 Payload 段格式。Android Keystore Provider 的真实设备行为、StrongBox 是否可用、密钥升级/恢复/失效行为仍是 LOCAL ONLY / MISSING，不能由 JVM/CI 单测宣称通过。
+- 本切片没有实现 TokenStore、EntitlementService、Dart Platform Bridge、FeatureGate、激活 UI、生产发行者 Key Ring；也未证明独立后台 FlutterEngine 已注册此插件。下一批 D 应在当前 FeatureAuthorizer 接口上实现有界 EntitlementService 和原子 TokenStore，并以 Fake Bridge 完成云端回归。
