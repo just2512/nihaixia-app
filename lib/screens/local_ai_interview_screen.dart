@@ -6794,10 +6794,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final authorizationTarget = requestedContextRef.isNotEmpty
         ? requestedContextRef
         : restoredContextRef;
+    // Page entrypoints already resolved the source before opening this
+    // conversation. History restoration must validate the persisted anchor
+    // and re-check entitlement, not re-run a source resolver against a
+    // potentially transient tool-result snapshot.
     final restoredContextAuthorization =
         !contextAnchorMatches || authorizationTarget.isEmpty
             ? null
-            : await _resolveContextMetadata(authorizationTarget);
+            : await _contextResolutionGateway.authorizeMetadata(
+                authorizationTarget,
+              );
     final canRestoreContext = contextAnchorMatches &&
         (authorizationTarget.isEmpty ||
             restoredContextAuthorization?.isAuthorized == true);
