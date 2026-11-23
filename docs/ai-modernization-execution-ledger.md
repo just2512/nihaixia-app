@@ -4022,7 +4022,7 @@ PR HEAD 门禁证据：
 - `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不作为模型调用 gate。
 - 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
 - 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
-- F0-2a 已形成独立代码切片 PR #440：`AssistantToolRouter` 只保留工具元数据与页面构建器；18 个 Headless Executor 的 tool-id 注册表集中到 `HeadlessToolDispatcher`；Screen 改用 `hasExecutor(tool.id)` 查询能力，Router 测试改为经 Dispatcher 执行。PR HEAD `3bd75036efcc9abe99fb4cdab0fde07349a932ab`，CI 待完成；该切片未宣称 F0-2 完成。
+- F0-2a 已形成独立代码切片 PR #440：`AssistantToolRouter` 只保留工具元数据与页面构建器；18 个 Headless Executor 的 tool-id 注册表集中到 `HeadlessToolDispatcher`；Screen 改用 `hasExecutor(tool.id)` 查询能力，Router/Orchestrator 测试改为经 Dispatcher 执行；Orchestrator 只消费 Router 中的节气、时辰、卦象元数据常量，不再导入 Executor。PR HEAD `2c7bc6e2a96a6e8de8451503968cce0a71df64cd`，CI 待完成；该切片未宣称 F0-2 完成。
 - 后续 F0 仍需完成：Screen 对 saved-chart / ZiWuLiuZhu / dosage / YiJing Executor 的纯参数辅助调用迁出执行器库；所有生产 Executor 实现 import 仅由 Dispatcher 持有；增加 Analyzer AST import 图测试；完成执行结果/UI Result Handler 边界和重构前后特征测试。未完成前不得把 F0 标记 PASS。
 - `FeatureAuthorizer`、收费门禁、`InvocationOrigin` 生产接线和跨工具执行计划预授权均不属于本 F0-1 切片；本批不改变现有免费行为。
 
