@@ -10,6 +10,7 @@ import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.nihaisha.nihaisha_app.licensing.LicensePlugin
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
@@ -103,6 +104,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        if (!flutterEngine.plugins.has(LicensePlugin::class.java)) {
+            flutterEngine.plugins.add(LicensePlugin())
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
             .setMethodCallHandler handler@{ call, result ->
