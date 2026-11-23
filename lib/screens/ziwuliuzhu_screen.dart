@@ -5,7 +5,7 @@ import '../models/ai_context_ref.dart';
 import '../utils/fold_aware_routes.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../services/ziwuliuzhu_tool_executor.dart';
+import '../services/ziwuliuzhu_tool_service.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'assistant_tool_router.dart';
 import 'package:nihaisha_app/services/ziwuliuzhu_engine.dart' as eng;
@@ -55,7 +55,7 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
     final at = _selectedDate.isUtc
         ? _selectedDate.toIso8601String()
         : ZiWuLiuZhuCalculationService.formatLocalAt(_selectedDate);
-    _execution = ZiWuLiuZhuToolExecutor.executeWithSnapshot({'at': at});
+    _execution = ZiWuLiuZhuToolService.executeWithSnapshot({'at': at});
   }
 
   String _buildAssistantSummary() =>
