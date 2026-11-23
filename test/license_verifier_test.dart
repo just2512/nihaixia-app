@@ -11,6 +11,7 @@ void main() {
 
   Future<Map<String, Object>> signedFixture({
     String productId = 'yanji_pro_lifetime',
+    int productRevision = 1,
     String appId = 'com.nihaisha.nihaisha_app',
     String deviceKeySha256 = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
     List<String> features = const [
@@ -26,7 +27,7 @@ void main() {
       'license_id': 'LIC-00000001',
       'order_id': 'YJ-20261123-0001',
       'product_id': productId,
-      'product_revision': 1,
+      'product_revision': productRevision,
       'app_id': appId,
       'perpetual': true,
       'features': features,
@@ -167,6 +168,21 @@ void main() {
 
     expect(malformed.status, LicenseVerificationStatus.invalidFormat);
     expect(otherProduct.status, LicenseVerificationStatus.wrongProduct);
+  });
+
+  test('rejects an unsupported product revision', () async {
+    final fixture = await signedFixture(productRevision: 2);
+    final verifier = LicenseVerifier(
+      trustedIssuerPublicKeys: {
+        issuerKeyId: fixture['public_key'] as List<int>,
+      },
+    );
+    final result = await verifier.verify(
+      fixture['token'] as String,
+      expectedDeviceKeySha256:
+          'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    );
+    expect(result.status, LicenseVerificationStatus.wrongProduct);
   });
 
   test('computes a Base64URL SHA-256 fingerprint', () {
