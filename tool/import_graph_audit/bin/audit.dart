@@ -16,9 +16,13 @@ class _ContextResolverGatewayVisitor extends RecursiveAstVisitor<void> {
             named.name.label.name == 'resolver') {
           final arguments = named.parent;
           final invocation = arguments is ArgumentList ? arguments.parent : null;
+          final target = invocation is MethodInvocation
+              ? invocation.target?.toSource().toLowerCase()
+              : null;
           return invocation is MethodInvocation &&
               invocation.methodName.name == 'resolve' &&
-              invocation.target != null;
+              target != null &&
+              target.endsWith('gateway');
         }
       }
       current = current.parent;
