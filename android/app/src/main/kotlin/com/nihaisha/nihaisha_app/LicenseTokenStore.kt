@@ -98,6 +98,21 @@ internal class LicenseTokenStore(context: Context) {
         }
     }
 
+    /**
+     * Removes only the Token file. The device signing key is never deleted here.
+     */
+    fun deleteToken() = synchronized(lock) {
+        try {
+            atomicFile.delete()
+        } catch (error: Exception) {
+            throw LicenseTokenStoreException(
+                "storageUnavailable",
+                "无法删除本地授权 Token 文件。",
+                error
+            )
+        }
+    }
+
     fun writeAfterVerification(token: String) = synchronized(lock) {
         if (!LicenseTokenStorePolicy.isValidStoredToken(token)) {
             throw LicenseTokenStoreException(
