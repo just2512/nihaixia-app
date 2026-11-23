@@ -115,6 +115,45 @@ class AiContextResolver {
 
   static const xiaoliurenModuleId = 'xiaoliuren';
 
+  /// Re-resolves persisted knowledge-page anchors against the currently
+  /// bundled deterministic source. Unsupported context kinds deliberately
+  /// return UNKNOWN; a stored prompt is not treated as proof that its source
+  /// is still current.
+  static Future<AiContextResolution<AiResolvedKnowledgeEntry>>
+      resolveKnowledgeReference({required AiContextRef ref}) async {
+    switch (ref.kind) {
+      case AiContextKind.formula:
+        return resolveFormula(ref: ref);
+      case AiContextKind.herb:
+        return resolveHerb(ref: ref);
+      case AiContextKind.caseRecord:
+        return resolveMedicalCase(ref: ref);
+      case AiContextKind.knowledgeEntry:
+        if (ref.moduleId == meridianModuleId) {
+          return resolveMeridianKnowledgeEntry(ref: ref);
+        }
+        if (ref.moduleId == acupointModuleId) {
+          return resolveAcupoint(ref: ref);
+        }
+        if (ref.moduleId == acupunctureModuleId) {
+          return resolveAcupunctureEntry(ref: ref);
+        }
+        break;
+      case AiContextKind.classic:
+        if (ref.moduleId == neijingModuleId) {
+          return resolveNeijingEntry(ref: ref);
+        }
+        break;
+      case AiContextKind.toolResult:
+      case AiContextKind.fieldValue:
+        break;
+    }
+    return const AiContextResolution<AiResolvedKnowledgeEntry>(
+      status: AiContextResolutionStatus.unknown,
+      reason: 'The persisted context kind or module has no current local source resolver.',
+    );
+  }
+
   static AiContextRef buildXiaoliurenResultContextRef({
     required Map<String, Object?> structuredSnapshot,
   }) {

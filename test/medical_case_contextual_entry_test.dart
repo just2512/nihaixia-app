@@ -7,6 +7,7 @@ import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 import 'support/in_memory_assistant_conversation_store.dart';
+import 'support/allow_context_authorizer.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/medical_case_detail_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
@@ -124,7 +125,7 @@ void main() {
       final medicalCase =
           _medicalCases.singleWhere((item) => item.seq == 2);
       await tester.pumpWidget(
-        ContextualAiConversationStoreScope(
+        TestAuthorizedFeatureScope(child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             home: MedicalCaseDetailScreen(
@@ -132,7 +133,7 @@ void main() {
               allCases: [medicalCase],
             ),
           ),
-        ),
+        )),
       );
       await tester.pumpAndSettle();
 

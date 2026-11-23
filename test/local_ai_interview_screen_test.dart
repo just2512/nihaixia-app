@@ -31,6 +31,7 @@ import 'package:nihaisha_app/services/local_ai_attachment_store.dart';
 import 'package:nihaisha_app/services/red_flag_gate.dart';
 import 'package:nihaisha_app/services/red_flag_preflight.dart';
 import 'support/test_only_red_flag_gate.dart';
+import 'support/allow_context_authorizer.dart';
 import 'package:record/record.dart';
 
 const _readyStatus = LocalAiModelStatus(
@@ -3256,6 +3257,7 @@ void main() {
         initialPrompt: '继续解释当前快照中的命宫与身宫关系。',
         contextRef: contextRef,
         contextualExplanationOnly: true,
+        featureAuthorizer: const TestAllowFeatureAuthorizer(),
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
@@ -3355,6 +3357,7 @@ void main() {
         initialPrompt: '解释刚刚重新计算的新排盘结果。',
         contextRef: newContextRef,
         contextualExplanationOnly: true,
+        featureAuthorizer: const TestAllowFeatureAuthorizer(),
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
@@ -3432,6 +3435,7 @@ void main() {
         initialPrompt: '请解释脉缓在本条文中的意义。',
         contextRef: newContextRef,
         contextualExplanationOnly: true,
+        featureAuthorizer: const TestAllowFeatureAuthorizer(),
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
@@ -6782,6 +6786,7 @@ void mainRedFlagEntrypointOrderingTests() {
         initialPrompt: '继续解释本条文。',
         contextRef: contextRef,
         contextualExplanationOnly: true,
+        featureAuthorizer: const TestAllowFeatureAuthorizer(),
         conversationStore: _store,
         service: _TextSendService(),
         imagePicker: _EmptyLocalAiImagePicker(),
