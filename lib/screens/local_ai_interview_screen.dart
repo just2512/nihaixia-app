@@ -5513,7 +5513,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // bypassed simply by opening a tool from a shortcut.
     final toolArguments =
         arguments ?? AssistantToolArguments(toolId: tool.id);
-    if (!pageOwnsInput) {
+    final navigationIntent = AssistantToolRouter.navigationIntent(
+      tool: tool,
+      arguments: toolArguments,
+      pageOwnsInput: pageOwnsInput,
+    );
+    final routeArguments = AssistantToolArguments(
+      toolId: navigationIntent.toolId,
+      values: navigationIntent.arguments,
+    );
+    if (!navigationIntent.pageOwnsInput) {
       final errors = toolArguments.validateAgainst(tool);
       if (errors.isNotEmpty) {
         await _traceRecorder.record(
@@ -5596,9 +5605,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               status: AssistantToolExecutionStatus.cancelled,
               disclaimer: '用户退出工具页面，未提交执行结果。',
             ),
-            child: widget.testToolRouteBuilder?.call(tool, toolArguments) ??
+            child: widget.testToolRouteBuilder?.call(tool, routeArguments) ??
                 (tool.builderWithArguments != null
-                    ? tool.builderWithArguments!(toolArguments)
+                    ? tool.builderWithArguments!(routeArguments)
                     : tool.builder()),
           ),
         ),
