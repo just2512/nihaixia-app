@@ -143,8 +143,9 @@ Future<void> main(List<String> args) async {
   }
 
   stdout.writeln(
-    'PASS: $executorReferenceCount executor references are owned exclusively '
-    'by lib/services/headless_tool_dispatcher.dart; Dispatcher has no UI '
-    'imports or UI symbols.',
+    'PASS: all 3 Headless UI entrypoints have no direct Executor imports; '
+    'HeadlessToolDispatcher owns $dispatcherExecutorReferenceCount Executor imports '
+    'and has no Flutter UI imports or UI symbols. Page-specific execution and '
+    'result-context consumers remain outside this dispatch-boundary gate.',
   );
 }
