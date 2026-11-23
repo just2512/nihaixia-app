@@ -3,6 +3,7 @@ import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
+import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
 import 'package:nihaisha_app/screens/meihua_screen.dart';
 import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -180,7 +181,7 @@ void main() {
   });
 
   final tools = AssistantToolRouter.all
-      .where((tool) => tool.headlessExecutor != null)
+      .where((tool) => HeadlessToolDispatcher.hasExecutor(tool.id))
       .toList(growable: false);
 
   for (final tool in tools) {
