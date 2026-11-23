@@ -23,7 +23,7 @@
 按以下顺序执行，不要把单份专项清单当成完整验收：
 
 1. [本地 Android 构建、签名和升级](local-android-release-checklist.md)：原签名核对、Release APK 构建与 Debug-only TRACE 安全切换。
-2. [Find N2 真机折叠屏验收](find-n2-real-device-acceptance.md)：外屏、内屏、半折叠、键盘/Insets、弹层、文件选择器和无损升级。
+2. [Find N2 真机折叠屏验收](find-n2-real-device-acceptance.md)：外屏、内屏、半折叠、键盘/Insets、弹层、文件选择器和无损升级。 同时按该文档 §M 完成内经/本草讲稿段落级情境入口的真实设备检查。
 3. [Gemma 4 E4B 本地配置与边界](local-ai-e4b.md)：模型下载、SHA 校验、导入、Native backend 和已知行为。
 4. [Find N2 本地 AI 后端验收](find-n2-local-ai-acceptance-checklist.md)：GPU/CPU、多轮、多媒体、进程恢复、清除和针灸情境条目。
 5. [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md)：各阶段、trace_id、消息 metadata、Native backend 和持久化核对。
