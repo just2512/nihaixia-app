@@ -235,6 +235,15 @@ jobs:
           mkdir -p build/ci-diagnostics
           flutter analyze --no-pub --no-fatal-infos 2>&1 | tee build/ci-diagnostics/flutter-analyze.log
 
+      - name: Upload Flutter static analysis diagnostics
+        if: always() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-static-analysis-diagnostics
+          path: build/ci-diagnostics/flutter-analyze.log
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Run local AI contract tests
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.sqlite_asset.outcome == 'success' }}
         run: flutter test --no-pub test/local_ai_service_test.dart
