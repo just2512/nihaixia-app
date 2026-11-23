@@ -2934,12 +2934,110 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
       try {
-        result = await HeadlessToolDispatcher.execute(
-          toolId: tool.id,
-          arguments: request.values,
+        final plan = ToolExecutionPlan(
+          planId: 'headless-${traceContext.traceId ?? DateTime.now().toUtc().microsecondsSinceEpoch}',
+          origin: origin,
+          steps: [
+            ToolExecutionStep(
+              toolId: tool.id,
+              capabilityId: tool.capabilityId,
+              arguments: request.values,
+            ),
+          ],
+        );
+        final execution = await HeadlessToolDispatcher(
+          featureAuthorizer: FeatureAuthorizerScope.of(context),
+        ).executePlan(
+          plan: plan,
           executorOverride: widget.testHeadlessToolExecutor,
         );
         executionWatch.stop();
+        if (!execution.isCompleted) {
+          final errorCode = switch (execution.status) {
+            HeadlessToolPlanExecutionStatus.authorizationDenied =>
+              'FEATURE_AUTHORIZATION_DENIED',
+            HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
+              'FEATURE_AUTHORIZATION_UNAVAILABLE',
+            HeadlessToolPlanExecutionStatus.invalidPlan =>
+              'EXECUTION_PLAN_INVALID',
+            HeadlessToolPlanExecutionStatus.completed =>
+              'UNEXPECTED_COMPLETED_STATUS',
+          };
+          final refusal = switch (execution.status) {
+            HeadlessToolPlanExecutionStatus.authorizationDenied =>
+              '本次跨能力操作需要专业版能力 ${execution.featureId ?? 'ai_advanced'}。'
+                  '为避免部分执行，整个计划已在启动前拒绝，任何工具都没有运行。'
+                  '你仍可继续普通对话，也可以返回首页，从对应工具页逐项手动操作。',
+            HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
+              '当前无法可靠核验专业版授权状态，本次计划未执行，任何工具都没有运行。'
+                  '请在授权状态恢复后重试；普通对话和单项手动工具仍可使用。',
+            HeadlessToolPlanExecutionStatus.invalidPlan =>
+              '工具计划与当前 Headless 注册能力不一致，本次没有执行任何工具。'
+                  '请重新发起该操作；普通对话仍可继续。',
+            HeadlessToolPlanExecutionStatus.completed =>
+              '执行前状态异常：计划没有返回可用的执行结果，本次未提交工具结果。',
+          };
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.businessExecution,
+            status: AiTraceStatus.notStarted,
+            durationMs: executionWatch.elapsedMilliseconds,
+            toolId: tool.id,
+            errorCode: errorCode,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.notApplicable,
+            toolId: tool.id,
+            errorCode: errorCode,
+          );
+          if (mounted) {
+            setState(() {
+              _lastEffectiveMode = mode;
+              _messages
+                ..add(_InterviewMessage(text: userText, isUser: true))
+                ..add(_InterviewMessage(text: refusal, isUser: false));
+              _sending = false;
+              _error = null;
+            });
+          }
+          _inputController.clear();
+          final persisted = await _persistSuccessfulTurn(
+            userText: userText,
+            assistantText: refusal,
+            mode: mode,
+            traceId: traceContext.traceId,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.persistence,
+            status: persisted
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.failed,
+            toolId: tool.id,
+            errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.finalRender,
+            status: mounted
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.notApplicable,
+            toolId: tool.id,
+            errorCode: errorCode,
+          );
+          _pendingToolOrigin = null;
+          _scrollToBottom();
+          return;
+        }
+        if (execution.results.length != 1) {
+          throw StateError(
+            'The current in-chat result renderer requires exactly one step; '
+            'multi-step plans must supply a plan-level result presenter.',
+          );
+        }
+        result = execution.results.single;
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.businessExecution,
@@ -3019,6 +3117,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = 'Headless 工具结果未通过契约校验：${contractErrors.join('；')}';
         });
       }
+      if (!_hasPendingHeadlessToolArguments()) _pendingToolOrigin = null;
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.finalRender,
@@ -3147,6 +3246,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
       sourceIds: presentation.sourceIds,
     );
+    if (!_hasPendingHeadlessToolArguments()) _pendingToolOrigin = null;
     _scrollToBottom();
     if (autoInterpret && mounted) {
       await _requestAssistantResultInterpretation(
@@ -9163,6 +9263,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
+      _pendingToolOrigin = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
       _pendingGuanshaArguments = null;
