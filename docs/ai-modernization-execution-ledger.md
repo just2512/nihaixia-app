@@ -4073,13 +4073,13 @@ PR HEAD 门禁证据：
 
 ## 85. D：TokenStore 平台桥接与异步 EntitlementService（2026-11-23）
 
-- 当前集成基线为 master @ `a44ca2d7db064ce52d218429e6e59770e9dd6f79`，已包含协议 PR #433 与 Android Keystore/AtomicFile PR #437；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
-- Bridge 使用与 C 分支 PR #435 一致的 Channel `com.nihaisha.nihaisha_app/licensing` 和方法：`readLicenseToken`、`writeLicenseTokenAfterVerification`、`deleteLicenseToken`、`getDeviceKey`、`createDeviceKeyForActivation`、`signActivationRequest`、`checkPrivateKeyUsability`；设备密钥响应字段使用 `publicKeySpkiBase64Url`、`publicKeySha256`、`securityLevel`、`strongBoxFallback`。
+- 当前集成基线为 master @ `8c645a29511a10da319aeb6aad6418371f04a018`，已包含协议 PR #433、Android Keystore/AtomicFile PR #437 与 Dart Bridge/EntitlementService PR #438；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
+- Bridge 使用与 C 批次 PR #437 一致的 Channel `com.nihaisha.nihaisha_app/licensing` 和方法：`readLicenseToken`、`writeLicenseTokenAfterVerification`、`deleteLicenseToken`、`getDeviceKey`、`createDeviceKeyForActivation`、`signActivationRequest`、`checkPrivateKeyUsability`；设备密钥响应字段使用 `publicKeySpkiBase64Url`、`publicKeySha256`、`securityLevel`、`strongBoxFallback`。
 - `EntitlementService` 采用共享初始化 Future、2 秒有界等待和不可变快照；超时为 `temporarilyUnavailable/initializationTimeout`，不将其持久化为永久拒绝；一次初始化完成后使用当前进程快照，显式 `refresh` 才重新读取并验签。
 - 没有 Token 时报告 `unlicensed`，不访问、不创建设备密钥；有 Token 时仅 get-only 读取密钥，并核验本地挑战返回的公钥指纹与读取结果一致，再由注入的 `LicenseVerifier` 验签。密钥缺失/失效不会自动重建。
 - Token 替换在写入前完成验签、设备绑定与权益差异比较；降低 Feature 必须显式传入确认标记，返回即将失去的 Feature 集合；写入后从平台重新读取并验签，失败时恢复原 Token 或删除本次新写入文件。
 - 测试包括真实 v1.2 测试向量、无 Token/缺密钥/未知发行者、存储损坏与暂时不可用、并发初始化、2 秒超时、完成后初始化缓存、挑战指纹不一致、无效 Token 不覆盖、原子替换重读、降低权益二次确认，以及 MethodChannel 字段/方法/错误映射。
-- 当前 PR 仅包含 Dart Bridge/Service 与 Mock Channel 测试；C 批次已由 PR #437 合并；D 的 MethodChannel 契约与原生实现一致。Mock Channel/CI 仍不证明 Find N2 的 KeyStore、StrongBox 或 AtomicFile 真机行为。不得把 Mock Channel、JVM、CI 结果表述为 Find N2 KeyStore / AtomicFile / StrongBox 已验证。激活 UI、Key Ring Release 装配、F1/G 门禁和后台 FlutterEngine 仍是独立批次。显式 refresh 在初始化 Future 未完成时会 supersede 旧请求；新增回归覆盖该竞态。
+- D 批次已由 PR #438 合并至 master（merge SHA `8c645a29511a10da319aeb6aad6418371f04a018`）。PR #438 最终 HEAD `4ac79770ab40c7e0f9a064f0565d3c5e06ee77ce` 的 Fork license boundary、Flutter 全量回归和 Android arm64 CI APK/Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。Mock Channel/CI 仍不证明 Find N2 的 KeyStore、StrongBox 或 AtomicFile 真机行为。不得把 Mock Channel、JVM、CI 结果表述为 Find N2 KeyStore / AtomicFile / StrongBox 已验证。激活 UI、生产 Key Ring Release 装配、F1/G 门禁和后台 FlutterEngine 仍是独立批次。显式 refresh 在初始化 Future 未完成时会 supersede 旧请求；新增回归覆盖该竞态。
 
 ## 86. 2026-11-23 产品范围纠偏与 Find N2 最终本地交接
 
