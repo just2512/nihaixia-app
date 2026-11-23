@@ -3908,6 +3908,7 @@ PR HEAD 门禁证据：
 - `docs/yanji-editorial-phase-status-20261117`、`docs/yanji-editorial-plan-phase2-closeout-20261119`：当前主线 `docs/yanji-editorial-frontend-design-plan.md` 已增加 Phase 1–4 自动化完成状态、PR #337 等后续批次与真机 MISSING 边界；旧稿落后且只含较早阶段记录，不覆盖当前主线。
 - `work/ai-trace-dispatch-headless-2026-11-12`：早期本地助手页面/测试改动已被当前 10,000+ 行生产助手页面、6,800+ 行页面回归及统一 TRACE/Headless 结果链路替代；不整支回灌。
 - `work/ai-guansha-targeted-validation-20261121`：旧测试直接点击 SQLite FFI 偏好开关；当前主线已用 `tester.runAsync` 并等待 `SettingsRepository` 写入完成，稳定性实现更完整，不 cherry-pick。
+- `work/yanji-editorial-phase3-aux`：比较 `lib/screens/diagnosis_history_screen.dart` 与 `lib/screens/saved_charts_screen.dart` 后，两个生产文件 blob 均与当前 master 完全一致；旧分支仅在两份 Widget 测试上有差异。主线 `diagnosis_history_editorial_layout_test.dart` 已覆盖浅/深主题，`saved_charts_editorial_layout_test.dart` 还增加深色主题、更完整的排盘入口及左滑删除验证，覆盖强于旧分支（旧测试分别 101/143 行，主线 105/171 行）。不 cherry-pick 旧测试，不改生产页面。
 - 已核实的其余历史引用继续按 §72 的逐项处置；本节没有把仅执行 `master compare` 的 refs 自动提升为内容审计 PASS。
 
 ### 77.1 当前 PR 收尾边界
