@@ -112,6 +112,8 @@ def _compact_parts(token: str, expected_prefix: str) -> tuple[str, bytes, bytes]
     signature_bytes = _b64url_decode(parts[2], max_bytes=256)
     if not payload_bytes:
         raise IssuerError("Empty token payload.")
+    if _b64url_encode(payload_bytes) != parts[1] or _b64url_encode(signature_bytes) != parts[2]:
+        raise IssuerError("Compact token contains noncanonical base64url.")
     return parts[1], payload_bytes, signature_bytes
 
 
@@ -174,8 +176,27 @@ def verify_device_request(request_token: str) -> dict[str, Any]:
     if len(signature_bytes) < 8 or len(signature_bytes) > 80:
         raise IssuerError("Device request ECDSA signature length is invalid.")
     data = _decode_json_object(payload_bytes)
+    try:
+        canonical_payload = _canonical_json(data)
+    except (TypeError, ValueError) as error:
+        raise IssuerError("Device request payload is not valid canonical JSON.") from error
+    if payload_bytes != canonical_payload:
+        raise IssuerError("Device request payload must use RFC 8785 JCS canonical JSON.")
 
-    if data.get("schema_version") != 1:
+    allowed_fields = {
+        "schema_version",
+        "request_id",
+        "request_nonce",
+        "app_id",
+        "product_id",
+        "issued_at",
+        "device_public_key_spki",
+        "device_key_sha256",
+        "device_key_security_level",
+    }
+    if set(data) != allowed_fields:
+        raise IssuerError("Device request contains missing or unsupported fields.")
+    if type(data.get("schema_version")) is not int or data["schema_version"] != 1:
         raise IssuerError("Unsupported device request schema.")
     if _require_string(data, "app_id", 160) != APP_ID:
         raise IssuerError("Device request belongs to another application.")
@@ -184,15 +205,15 @@ def verify_device_request(request_token: str) -> dict[str, Any]:
 
     request_id = _require_string(data, "request_id", 64)
     try:
-        if str(uuid.UUID(request_id)) != request_id.lower():
+        if str(uuid.UUID(request_id)) != request_id:
             raise ValueError("non-canonical UUID")
     except ValueError as error:
         raise IssuerError("Invalid request_id.") from error
 
     nonce_text = _require_string(data, "request_nonce", 64)
     nonce = _b64url_decode(nonce_text, max_bytes=64)
-    if len(nonce) != 32:
-        raise IssuerError("Device request nonce must contain 32 random bytes.")
+    if len(nonce) != 32 or _b64url_encode(nonce) != nonce_text:
+        raise IssuerError("Device request nonce must contain 32 canonical base64url bytes.")
 
     issued_at = _require_string(data, "issued_at", 64)
     _parse_utc(issued_at, "issued_at")
@@ -201,10 +222,10 @@ def verify_device_request(request_token: str) -> dict[str, Any]:
     if security_level not in DEVICE_SECURITY_LEVELS:
         raise IssuerError("Unsupported reported device security level.")
 
-    spki = _b64url_decode(
-        _require_string(data, "device_public_key_spki", 4096),
-        max_bytes=2048,
-    )
+    spki_text = _require_string(data, "device_public_key_spki", 4096)
+    spki = _b64url_decode(spki_text, max_bytes=2048)
+    if _b64url_encode(spki) != spki_text:
+        raise IssuerError("Device public key must use canonical base64url.")
     supplied_fingerprint = _require_string(data, "device_key_sha256", 64)
     computed_fingerprint = _b64url_encode(hashlib.sha256(spki).digest())
     if supplied_fingerprint != computed_fingerprint:
