@@ -38,13 +38,17 @@ void main() {
         .replaceAll('=', '');
     final signedMessage = utf8.encode('YANJI1.' + payloadSegment);
     final signature = await algorithm.sign(signedMessage, keyPair: keyPair);
+    final publicKey = signature.publicKey;
+    if (publicKey is! SimplePublicKey) {
+      throw StateError('Ed25519 returned a non-simple public key.');
+    }
     final token = 'YANJI1.' +
         payloadSegment +
         '.' +
         base64UrlEncode(signature.bytes).replaceAll('=', '');
     return {
       'token': token,
-      'public_key': signature.publicKey.bytes,
+      'public_key': publicKey.bytes,
     };
   }
 
