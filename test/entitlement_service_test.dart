@@ -13,6 +13,7 @@ class _FakeLicensePlatform implements LicensePlatform {
   _FakeLicensePlatform({
     this.token,
     this.deviceKey,
+    this.challengeDeviceKey,
     this.readCompleter,
     this.failure,
   });
