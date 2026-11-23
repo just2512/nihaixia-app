@@ -1,4 +1,6 @@
 import '../models/assistant_tool_result.dart';
+import '../models/tool_execution_plan.dart';
+import '../licensing/feature_authorizer.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'headless_tool_dispatcher.dart';
 import 'solar_term_tool_service.dart';
@@ -40,7 +42,25 @@ class SolarTermResultContextExecutor {
     }
 
     final normalized = {'term': term};
-    final result = await HeadlessToolDispatcher.execute(toolId: 'solar_terms', arguments: normalized);
+    final dispatch = await HeadlessToolDispatcher(
+      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
+    ).executePlan(
+      plan: ToolExecutionPlan(
+        planId: 'context-rebuild-solar_terms',
+        origin: InvocationOrigin.aiDispatch,
+        steps: [
+          ToolExecutionStep(
+            toolId: moduleId,
+            capabilityId: moduleId,
+            arguments: normalized,
+          ),
+        ],
+      ),
+    );
+    if (!dispatch.isCompleted || dispatch.results.length != 1) {
+      return _failure(arguments, '上下文重建未通过完整执行计划校验；本次不生成 AI 快照。');
+    }
+    final result = dispatch.results.single;
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(normalized).isNotEmpty ||
