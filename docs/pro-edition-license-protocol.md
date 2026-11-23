@@ -1,164 +1,216 @@
-# 研纪专业版永久授权协议规范（第一期）
+# 研纪专业版永久授权技术规范
 
-版本：1.0  
-商品：\`yanji_pro_lifetime\`  
-应用 ID：\`com.nihaisha.nihaisha_app\`  
-发行方式：线下私域销售、人工核单、本地签发、App 离线验签  
-状态：批次 1 协议/签发工具规范；不是商业发行许可，也不代表可以立即对外销售 APK。
+版本：1.1（评审稿）  
+商品 ID：yanji_pro_lifetime  
+Dart package：nihaisha_app  
+Android applicationId：com.nihaisha.nihaisha_app  
+发行模型：人工核单、离线签发、客户端离线验签  
+状态：**协议评审稿；不得据此开展商业发行或收款**
 
-## 1. 商品范围
+## 1. 已核实的仓库基线与设计约束
 
-第一期仅定义一次性永久解锁商品，不包含订阅、自动续费、云端账户、虚拟币或远程设备管理。
+截至本规范编写时，仓库实际配置如下：
 
-| Feature ID | 专业版能力 |
+| 项目 | 已核实值 |
 |---|---|
-| \`ai_advanced\` | 专业版 AI 助手能力 |
-| \`contextual_assistant\` | 跨页面情境提问及上下文能力 |
-| \`advanced_learning\` | 高级学习和资料整理能力 |
-| \`advanced_export\` | 专业资料导出能力 |
+| Android applicationId / namespace | com.nihaisha.nihaisha_app |
+| Dart package name | nihaisha_app |
+| Flutter 版本标记 | 2.0.0+8048 |
+| 当前主数据 SQLite | nihaisha.db |
+| 当前主数据 SQLite schema version | **7** |
+| Android 备份配置 | 同时配置 fullBackupContent 与 dataExtractionRules |
+| 当前备份排除项 | ai_models/、TRACE 文件；尚未有授权库 |
 
-永久授权的定义：凭证没有到期时间，不依赖客户端时钟判断有效性；授权仅覆盖签名凭证中列出的软件功能，不自动覆盖未来独立商品或未列入凭证的新增模块。云端服务、人工服务和外部 API 不属于永久离线承诺。用户个人笔记、会话和资料导出不应被免费版权限门槛锁死。
+主数据库含书签、用户设置、命盘、助手对话/消息、问诊任务等个人数据。Android Auto Backup 规则按文件系统 domain/path 包含或排除，不提供 SQLite 单表/单行过滤。因此，**不能把授权记录混入 nihaisha.db，再声称仅排除授权表**。
 
-正式销售前，功能矩阵必须与代码执行入口和内容权利来源逐项核对。知识库正文、古籍、讲稿、医案、第三方模型权重、SDK、插件及外部 API 不因软件授权而自动成为可商业再授权内容。此前登记的权属证明和来源许可待办仍是发行前置门槛。
+### 第一项架构决策：授权库独立且不参与备份
 
-## 2. 密码学算法和密钥边界
+Android 授权记录使用独立数据库文件，存放在原生 Context.noBackupFilesDir 下，例如 yanji_license.db。该目录由 Android 自动排除备份；设备私钥由 Android Keystore 管理，不进入数据库或备份。
 
-### 2.1 发行者密钥
+- 原有 nihaisha.db 保持 v7，不做本期 v7→v8 迁移，不触碰用户数据表。
+- 授权库有独立 schema version（初版为 1），失败时只影响专业版，不能阻止免费版启动。
+- 不要用主数据库的 license_status、SharedPreferences 或可编辑 Feature 列表决定授权。
+- 清除应用数据、卸载、系统搬家或克隆后，只要原 Keystore 私钥不可用，就重新申请设备授权。不能假设 Keystore 私钥可被系统备份/迁移。
 
-- 算法：Ed25519（RFC 8032）。
-- 公钥：raw 32 字节，Base64URL 无填充编码，编译进 App 的受信任 Key Ring。
-- 私钥：口令加密的 PKCS#8 PEM，只保存在运营方受控设备，绝不进入仓库、APK、日志或 CI。
-- 签名：64 字节 Ed25519。
-- Key ID：例如 \`issuer-2026-01\`，用于轮换和审计。
-- 轮换：旧公钥必须保留，以验证旧的永久授权。密钥泄露时需要单独的换签/恢复计划，不能直接删掉旧公钥导致合法用户失效。
+该设计避免“授权凭证被备份恢复，但设备私钥没有恢复”的半激活状态，同时保留原主库的系统备份和用户数据恢复能力。
 
-Ed25519 用于发行者离线签名，不要求 Android Keystore 支持 Ed25519。
+## 2. 算法与信任边界
+
+### 2.1 发行者签名
+
+- 算法固定为 **Ed25519**，私钥只存在运营方签发环境。
+- 公钥为 raw 32 字节，App 内置多个 issuer_key_id → public_key 项，支持轮换。
+- 签名长度固定 64 字节。
+- Key 状态区分 active（可签发、可验证）、retired（不可签发、仍可验证）、compromised（新版本拒绝该 Key 的全部凭证）。
+- 不能因为“旧公钥要保留”就保留已泄露密钥的信任。密钥泄露后，更新版本必须拒绝该 Key，并按订单证据为真实客户换发新 Key 凭证；旧版本和长期离线设备无法被即时远程撤销。
+
+Dart 使用 cryptography 2.9.0 的 Ed25519。该库包含跨平台实现，平台没有原生实现时会回退纯 Dart；官方 cryptography_flutter 的 Ed25519 原生加速目前列为 Apple 平台能力，不应把它当作 Android Ed25519 的前置依赖。Android 首发仍须通过当前 Flutter/Android CI 与 Find N2 真机耗时验证。客户端验签只处理很短的授权载荷，不需要把发行者私钥带进 App。
 
 ### 2.2 设备密钥
 
-- 算法：ECDSA P-256 / secp256r1。
-- Android Keystore 生成密钥对，私钥不可导出；公钥导出为 X.509 SubjectPublicKeyInfo DER。
-- 设备指纹：\`Base64URL_NoPadding(SHA-256(SPKI_DER))\`，解码固定 32 字节。
-- 设备申请签名：\`SHA256withECDSA\`，签名编码 ASN.1 DER。
-- 启动时原生端生成随机 nonce，用私钥签名并用公钥验证。该自检证明私钥当前可用，不证明它必定位于硬件中。
+- 算法固定为 Android Keystore **ECDSA P-256 / secp256r1 + SHA-256**。
+- 私钥不可导出；公钥以完整 X.509 SubjectPublicKeyInfo DER 传给运营方，不能只发指纹。
+- 设备指纹：Base64URL_NoPadding(SHA-256(SPKI_DER))。
+- ECDSA 签名采用 ASN.1 DER 编码。
+- KeyInfo 可报告 SOFTWARE、TRUSTED_ENVIRONMENT、STRONGBOX 或 UNKNOWN。该值只作为签发记录里的**客户端报告元数据**，不是硬件远程证明，不能仅凭令牌字段证明密钥确实位于 TEE/StrongBox。
+- 无 TEE/StrongBox 的设备不因硬件等级被拒绝；若平台能建立软件 Keystore 密钥，则允许继续激活，同时明确标记保护级别较低。完全无法创建/使用密钥时，专业版保持未激活，免费功能继续运行。
+- 第一版设备绑定只面向 Android；其他平台必须提供各自安全存储实现，不能静默退化为可复制的随机设备 ID。
 
-Android API 31+ 读取 \`KeyInfo.getSecurityLevel()\` 区分 SOFTWARE、TRUSTED_ENVIRONMENT 和 STRONGBOX；较低 API 使用可用的兼容属性并如实记录 UNKNOWN/软件级别。不得把软件密钥宣传成硬件保护。Find N2 真机记录必须保留实际安全级别。硬件级别不参与商品权益判断。
+## 3. 设备授权申请：YANJIR1
 
-## 3. 紧凑令牌格式
+申请码是**完整文本令牌**，微信私聊以复制/粘贴为主，二维码/相册识别为辅助。摄像头扫码不能成为唯一激活方式。
 
-\`\`\`text
-YANJI1.<base64url(payload_utf8_json)>.<base64url(ed25519_signature)>
-YANJIR1.<base64url(request_utf8_json)>.<base64url(ecdsa_p256_der_signature)>
-\`\`\`
+令牌格式：
 
-Base64URL 采用 RFC 4648 URL-safe 字符集且不带 \`=\` 填充。拒绝内部空格、换行、多余分隔段、非法字符及超长输入。用户界面可以对剪贴板输入去除首尾空白，但不能对令牌主体作 Unicode 规范化或重新序列化。
+    YANJIR1.<base64url(request_utf8_json)>.<base64url(ecdsa_p256_der_signature)>
 
-签名采用域分离：
+Base64URL 使用 URL-safe 字符集且不带填充。签名输入为 ASCII 字节 YANJIR1. + 原始 payload 段。验签端必须使用原始段，不得解析后重序列化 JSON 再验签。
 
-- 授权：ASCII 字节 \`YANJI1.\` + 原始 payload Base64URL 段。
-- 设备申请：ASCII 字节 \`YANJIR1.\` + 原始 request Base64URL 段。
+申请 JSON 字段：
 
-签名覆盖协议前缀和完整 Base64URL 段。验签必须使用原始段，不能解析 JSON 后重新序列化再验签。JSON 生成端使用 UTF-8、无 BOM、紧凑分隔符和按键名排序；这是稳定输出约定，不是验签依据。
+| 字段 | 规则 |
+|---|---|
+| schema_version | 固定整数 1 |
+| request_id | UUID，单次申请唯一 |
+| request_nonce | 32 字节 CSPRNG 随机数，Base64URL 无填充 |
+| app_id | 精确等于 com.nihaisha.nihaisha_app |
+| product_id | yanji_pro_lifetime |
+| issued_at | UTC ISO-8601，仅用于审计，不能作为授权期限 |
+| device_public_key_spki | 完整 P-256 SPKI DER，Base64URL 无填充 |
+| device_key_sha256 | SPKI DER 的 SHA-256 指纹 |
+| device_key_security_level | SOFTWARE / TRUSTED_ENVIRONMENT / STRONGBOX / UNKNOWN 的报告值 |
 
-限制：授权令牌总长度 16 KiB，payload 12 KiB；设备申请 payload 8 KiB；Ed25519 签名必须恰好 64 字节。签发端拒绝重复 JSON 键。任一步骤失败均拒绝，不允许宽松恢复。
+App 使用该 Keystore 私钥对原始申请 payload 签名。运营方校验 schema、包名、商品 ID、nonce 长度、UUID、SPKI 曲线、指纹重算及 ECDSA 持有证明。请求中包含完整公钥；仅提供 SHA-256 指纹不足以让签发端验证申请签名。
 
-## 4. 设备授权申请（YANJIR1）
+申请 nonce 由设备端生成，不是服务器在线挑战；它用于唯一申请、凭证关联和审计，不声称具备在线防重放能力。重复签发由运营方订单数据库的唯一约束负责阻止。
 
-App 生成随机 32 字节 nonce 和 UUID request_id，构造 JSON：
+## 4. 永久授权凭证：YANJI1
 
-| 字段 | 类型 | 规则 |
-|---|---|---|
-| \`schema_version\` | integer | 固定 1 |
-| \`request_id\` | string | 唯一 UUID |
-| \`nonce\` | string | 32 字节随机数的 Base64URL 无填充编码 |
-| \`app_id\` | string | \`com.nihaisha.nihaisha_app\` |
-| \`product_id\` | string | \`yanji_pro_lifetime\` |
-| \`issued_at\` | string | ISO-8601 UTC，仅供审计 |
-| \`device_public_key_spki\` | string | P-256 SPKI DER 的 Base64URL 无填充编码 |
-| \`device_key_sha256\` | string | SPKI DER 的 SHA-256 Base64URL 指纹 |
+    YANJI1.<base64url(payload_utf8_json)>.<base64url(ed25519_signature)>
 
-App 使用设备私钥对 \`YANJIR1.<payload_segment>\` 签名。用户通过微信复制完整文本给运营方；二维码、相册识别和摄像头扫码只是后续 UI 输入方式，不是协议依赖。
+保留三段文本格式，避免增加二次封装；复制、粘贴、文件导入和二维码均传输完全相同的令牌。签名输入为 ASCII 字节 YANJI1. + 原始 payload Base64URL 段。验签必须对原始段验签，之后才解析 JSON。JSON 生成端固定 UTF-8、无 BOM、紧凑分隔符、键名排序；这些是签发输出规范，不是验签时的重序列化步骤。
 
-签发器必须验证：令牌结构、schema、应用 ID、商品 ID、UUID、nonce 长度、UTC 时间字段、SPKI 格式、曲线确为 P-256、重新计算的指纹及 ECDSA 签名。签发前还必须人工核对付款状态。
+授权 payload 至少包含：
 
-nonce 是设备端随机生成，不是服务端在线挑战。它主要用于请求唯一性和审计；防止重复签发依赖订单数据库唯一约束。首次激活和后续 App 启动仍需本地执行 Keystore 私钥在位自检。
+| 字段 | 规则 |
+|---|---|
+| schema_version | 固定 1 |
+| license_id | 唯一授权 ID |
+| order_id | 运营方订单编号，不包含客户姓名/手机号 |
+| product_id / product_revision | 商品 ID 和客户端明确支持的修订号 |
+| app_id | 固定 Android applicationId |
+| perpetual | 必须为 true；不依赖客户端时间判断到期 |
+| features | 签名覆盖的功能 ID |
+| device_key_sha256 | 绑定设备公钥指纹 |
+| request_id | 对应设备申请 ID |
+| request_nonce | 回显对应申请随机数 |
+| request_sha256 | 对完整 YANJIR1 紧凑令牌字节计算的 SHA-256 |
+| issuer_key_id | App 内置 Key Ring 可识别的签发 Key ID |
+| issued_at | UTC 审计时间，不是到期时间 |
 
-## 5. 永久授权 payload（YANJI1）
+加入 request_id、request_nonce、request_sha256 后，一份签发凭证只对应一份确切申请；客户端必须与本机保存的 pending request 比较。重装后本地 pending request 和 Keystore 密钥均不可用，旧凭证不能在新设备密钥上激活。
 
-| 字段 | 类型 | 规则 |
-|---|---|---|
-| \`schema_version\` | integer | 固定 1 |
-| \`license_id\` | string | 签发器生成的唯一授权编号 |
-| \`order_id\` | string | 私域订单编号，不含买家身份信息 |
-| \`product_id\` | string | \`yanji_pro_lifetime\` |
-| \`product_revision\` | integer | 当前 1 |
-| \`app_id\` | string | \`com.nihaisha.nihaisha_app\` |
-| \`perpetual\` | boolean | 必须 true |
-| \`features\` | array<string> | 签名覆盖的 Feature ID，不重复 |
-| \`device_key_sha256\` | string | 设备 SPKI DER 的 SHA-256 Base64URL 指纹 |
-| \`issued_at\` | string | ISO-8601 UTC，审计字段，不作到期判断 |
-| \`issuer_key_id\` | string | App Key Ring 中的受信任公钥 ID |
+### Feature 前向兼容
 
-签发端只签发本期固定 Feature allowlist。客户端只解锁自己明确实现的 Feature ID；未知 ID 不映射为其他权限。签名通过不等于客户端已实现全部商品权益，业务门禁仍需独立验收。
+- 格式错误、重复 Feature ID、类型错误必须拒绝。
+- **未知但格式合法的 Feature ID 忽略，不因此拒绝整份凭证。**
+- 只授予当前 App 明确识别的 Feature ID；未知 ID 永远不映射成现有权限。
+- 若凭证只有未知 Feature，状态为 unknown_feature_only，不授予专业权益；若已知/未知混合，授予已知项并记录 valid_with_unknown_features。
+- 客户端只接受明确支持的 product_revision；不能因版本号更高就自动放行。
 
-## 6. App 验证顺序
+## 5. 激活、启动校验与状态
 
-1. 对令牌总长度、段数、前缀和 Base64URL 字符集限长解析。
-2. 只解析必要的 \`issuer_key_id\` 来选择公钥，此时 payload 仍是不可信数据。
-3. 从 App 编译的 Key Ring 取 32 字节 Ed25519 公钥。
-4. 对精确的 \`YANJI1.<payload_segment>\` 原始 ASCII 字节验签。
-5. 验签成功后完整解析 schema、商品修订号、永久标记、字段长度和 Feature 列表。
-6. 精确比较 \`app_id\` 和当前应用包名。
-7. 原生 Keystore 导出 SPKI，重新计算指纹并执行私钥在位自检，与授权指纹比较。
-8. 只有全部通过才构造内存态权益对象。数据库的 \`license_status\` 仅作诊断，不是授权依据。
+### 首次激活
 
-任一步骤失败均 fail-closed，不授予专业权益。客户端应对用户显示简明错误，内部诊断不得记录设备私钥或个人对话。
+1. 读取本地 pending request，验证申请格式和当前 Keystore 公钥指纹。
+2. 对授权令牌限长解析，选择 Key ID，验证 Ed25519 签名。
+3. 签名通过后校验 schema、app_id、product_id、product_revision、license_id 黑名单、device fingerprint。
+4. 比较 request_id、request_nonce、request_sha256 与本地 pending request。
+5. 原生端生成新的本地随机 challenge，以 Keystore 私钥签名，并用当前完整公钥验证；验证失败即拒绝激活。
+6. 在独立 no-backup 授权库保存原始 signed token、pending request 关联、签发元数据和诊断状态；不能仅保存一个 valid=true。
 
-## 7. 离线、备份和设备迁移
+### 后续启动
 
-- 授权凭证保存在 SQLite v8 的 \`app_license\` 表，保留原始签名令牌。
-- 每次启动都重新验签，绝不信任本地 bool、SharedPreferences、SQLite 状态字段或可编辑的功能列表。
-- 正常覆盖升级应保留 SQLite 和 Keystore 密钥。
-- 卸载或清除应用数据后，Keystore 密钥可能被系统删除；重装后必须检测密钥缺失/指纹变化并提示凭订单号申请免费重签。
-- 不导出设备私钥，不将其放入备份或授权码。
-- 恢复数据库但原 Keystore 密钥不存在时，不能沿用旧凭证。
-- 完全离线的已签发凭证无法远程强制撤销；授权转移是运营方重新签发，不等于远程清除旧设备。
+- 不需要每次都重新生成并走完整用户激活流程。
+- 每次启动重新验证发行者签名、商品/应用/Feature 和本机授权记录；从 Keystore 取得当前公钥，重算指纹并与凭证匹配，同时检查私钥 alias 可用。若 Keystore 报 key missing / permanently invalidated，状态降级为免费版。
+- 不信任数据库中的 status 字段。它只能帮助售后排查，不能单独授予权益。
+- 启动初始化不得抛出异常阻塞 App；任何授权库损坏、验签异常或 Keystore 错误均进入免费版状态。
+- EntitlementService 使用可监听状态对象；激活成功立即通知页面，不要求重启。
 
-## 8. 运营方本地签发工具
+建议统一状态枚举：
 
-目录：\`tool/license_issuer/\`；运行环境 Python 3.12+；依赖版本固定在 \`requirements.txt\`。
+| 状态 | 含义/处理 |
+|---|---|
+| unlicensed | 无授权，免费版 |
+| loading | 正在检查；不得短暂错误显示已解锁 |
+| valid | 全部当前支持权益通过 |
+| valid_with_unknown_features | 已知权益通过，未知项忽略 |
+| unknown_feature_only | 签名有效但没有当前 App 支持的 Feature |
+| key_missing | Keystore alias 缺失，提示重新申请 |
+| key_invalidated | 私钥永久失效，提示重新申请 |
+| signature_invalid | 签名错误，拒绝 |
+| app_mismatch | 包名不匹配，拒绝 |
+| product_mismatch | 商品或修订号不受支持 |
+| issuer_unknown / issuer_compromised | Key ID 未知/已泄露禁用 |
+| device_mismatch | 当前设备指纹不匹配 |
+| request_mismatch | 申请 ID/nonce/hash 不匹配 |
+| revoked_in_updated_app | 新版本本地黑名单命中 |
+| store_corrupt | 授权库损坏，免费版并提示恢复/重签 |
 
-生成发行者密钥：
+## 6. 重签、订单记录与离线撤销边界
 
-\`\`\`bash
-python tool/license_issuer/issuer.py keygen --key-id issuer-2026-01
-\`\`\`
+运营方数据库必须采用 **订单 1:N 授权签发记录**，不能用 order_id 主键把一单永久限制为一张凭证。
 
-默认写入仓库外 \`~/.yanji-license-issuer/keys/\`，私钥为口令加密的 PKCS#8 PEM。工具输出 raw 公钥 Base64URL，后续需人工纳入 App Key Ring。私钥必须离线加密备份，并与订单数据库分开保存；不得放入 GitHub、CI 或 APK。
+- orders 保存订单主记录与人工核款状态。
+- issued_licenses 保存每次签发的 license_id、request_id、request_sha256、设备指纹、Key ID、签发时间、原令牌、状态和替代关系。
+- issuer_audit_events 记录 issue、reissue、refund/status-change 等审计事件；不得记录私钥、口令、姓名、手机号、微信号或付款截图。
+- 相同 order_id + request_id + request hash 重复操作，幂等返回原令牌。
+- 同一订单换设备必须显式使用 reissue 操作并记录原因；旧签发记录标记 superseded，新签发生成新的 license_id。订单可关联多次签发历史。
+- 免费重签次数/收费规则目前**未形成产品决策**。签发器不得擅自硬编码次数或收费；正式销售前必须将免费次数、人工核验要求和退款规则写入用户协议。
 
-人工核单并签发：
+**重要限制：** 标记旧授权为 superseded 不会立即关闭已离线设备上的旧版本。可在后续 App 版本中内置经过签名的 license_id denylist，对更新到该版本的设备生效；这属于“随版本更新的本地黑名单”，不是远程撤销。第一期签发数据库预留 license status，不能对外宣称可实时撤销。
 
-\`\`\`bash
-python tool/license_issuer/issuer.py issue \\
-  --request-file request.txt \\
-  --order-id YJ-20261123-0001 \\
-  --key-id issuer-2026-01 \\
-  --private-key ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem \\
-  --payment-confirmed
-\`\`\`
+## 7. 私钥管理、隐私和商业合规
 
-\`--payment-confirmed\` 是操作员确认收款的人工声明，不会向微信、支付宝或银行查询交易。签发器将技术订单记录保存在 \`~/.yanji-license-issuer/data/orders.sqlite3\`，不采集姓名、手机号、微信 ID 或付款截图。
+### 私钥流程
 
-同一 order_id + request_id + 设备指纹重复提交时返回原令牌；同一订单绑定另一设备或同一申请绑定另一订单均拒绝。订单数据库需设置操作系统权限并加密备份。
+- 私钥使用口令加密 PKCS#8，存仓库外、受控运营电脑；不得进入 Git、CI、APK、客服聊天或日志。
+- 至少两份加密离线备份，存放于不同介质/地点；备份口令独立保管。
+- 正式销售前必须演练恢复：从离线备份恢复指定 Key ID，验证公钥一致，并使用固定测试向量完成签名/验签。
+- App Key Ring 支持多个 Key ID；旧 Key 可退休但仍验证。泄露 Key 必须在更新版中标记 compromised，旧客户按订单核验并迁移至新 Key。
+- 订单数据库与私钥备份分离；审计日志只记录操作类型、时间、订单/授权 ID、request hash 和原因，不记录签名私钥、口令或完整授权 token。
 
-## 9. 安全边界和错误处理
+### 隐私
 
-格式错误、未知 Key ID、签名错误、schema 错误、包名/商品/设备不匹配、Keystore 私钥自检失败，全部拒绝授权。未知 Feature 不授予，不可映射成更高权限。
+设备公钥、指纹、request_id 和 nonce 由 App 本地生成，不自动上传服务端。用户通过微信把申请码发给运营方时，这些字段会随申请码传出，属于可关联的设备标识数据；隐私政策应说明用途、保存范围、售后使用、保留期限和删除渠道。不能笼统声明“设备指纹不上传”。
 
-离线永久授权不能在线撤销；客户端权限门禁不能阻止有能力修改/重打包 APK 的攻击者绕过本地校验。签名证明凭证完整性及发行者密钥持有，不证明买家已付款；付款核验由运营方完成。
+### 商业发行阻塞项
 
-## 10. 批次 1 交付边界
+在 Fork 文件权属证据和第三方来源许可没有审查结论之前，不得对外收费或发布收费 APK。还必须完成隐私政策、用户协议、永久授权边界、免费重签次数/退款条款、发票税务处理，以及目标分发渠道的支付政策核对。软件许可清单通过不等于版权确权。
 
-本批次交付：授权数据模型、Ed25519 紧凑令牌验签器、Python 离线签发器、P-256 设备申请签名验证、SQLite 订单幂等记录、Dart/Python 协议测试。
+## 8. 验收门槛
 
-本批次不实现：Android Keystore 桥接、安全级别探测、SQLite v8 授权表、EntitlementService、FeatureGate、启动接线、专业版 UI、剪贴板/相册/二维码交互及生产发行者公钥配置。它们由后续批次完成。正式发行前仍须完成商业授权、内容权属/来源审核、密钥备份及 Find N2 真机验收。
+- 合法固定测试向量在 Python 签发器和 Dart 验签器均通过；两端读取同一 JSON fixture。
+- 对 payload、signature、features、app_id、device fingerprint、request_id、nonce、request hash 任意改动均拒绝。
+- 完整申请包含 P-256 SPKI，错误私钥/签名拒绝；issuer private key 与指定 Key ID 对应公钥不匹配时，签发器拒绝签发。
+- 同一设备请求重复签发幂等；同订单换设备必须显式 reissue；订单历史保留所有签发记录。
+- 原样复制凭证到第二台设备拒绝；本机 Keystore key 丢失/失效时进入 key_missing/key_invalidated。
+- 系统时间前后调整不影响永久授权。
+- 清除应用数据、卸载重装、系统搬家/克隆及备份恢复都不得误报已激活；原 nihaisha.db 用户数据恢复与授权库不恢复应能并存。
+- Android 设备报告 SOFTWARE/TEE/StrongBox/UNKNOWN 级别；没有 TEE/StrongBox 时可按策略降级运行，不得虚报硬件证明。
+- App 启动遇授权库损坏、缺 Key 或验签异常时仍进入免费版，不崩溃；激活后监听状态立即刷新。
+- FeatureGate.require 接在专业版执行器/能力调度边界，失败抛出明确 FeatureNotEntitledException，UI 统一处理；底层确定性引擎保持纯计算，不被权限判断污染。
+- FeatureGate 只能提高正常客户端调用路径的访问控制，不能防止用户补丁/重打包；不以过度混淆代替真正的业务边界。
+
+## 9. 分批落地顺序
+
+1. **协议/测试向量**：固定本规范、共享合法/非法 fixture、Python/Dart 共用验收。
+2. **签发工具**：订单 1:N、审计、重签、密钥 Key ID 配对校验、私钥恢复演练流程。
+3. **Dart 验证库**：Ed25519、Feature 前向兼容、request binding、denylist 接口、状态结果。
+4. **Android Keystore**：P-256 生成、SPKI 导出、P-256 PoP、自检、KeyInfo 安全等级。
+5. **授权 no-backup 存储**：独立库 schema v1、异常恢复、保持主数据库 v7 不变。
+6. **EntitlementService / FeatureGate**：异步初始化、监听更新、执行器边界拦截。
+7. **专业版激活 UI**：申请码复制、授权码粘贴、相册导入/扫码、状态提示。
+8. **Find N2 真机与发行审计**：覆盖升级、离线重启、备份/恢复、重签、设备密钥丢失、费用/隐私/版权审核。
+
+在第 1 项协议评审通过前，当前 PR #416 的代码只作为 Draft 原型；不得合并、打生产发行包或签发真实用户授权。
