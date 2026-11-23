@@ -2973,7 +2973,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return false;
     }
     if (_activeContextRef.isEmpty) return true;
-    final result = await _resolveContextMetadata(_activeContextRef);
+    // The page entrypoint already resolved its source through the gateway.
+    // Each turn re-checks entitlement, but does not re-run a potentially
+    // unsupported tool-result resolver against a transient page snapshot.
+    final result = await _contextResolutionGateway.authorizeMetadata(
+      _activeContextRef,
+    );
     if (result.isAuthorized) return true;
     final errorCode = switch (result.status) {
       ContextResolutionGatewayStatus.authorizationDenied =>
@@ -6314,7 +6319,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       return _createNewConversation();
     }
-    final authorization = await _resolveContextMetadata(expected);
+    final authorization =
+        await _contextResolutionGateway.authorizeMetadata(expected);
     if (!authorization.isAuthorized) {
       if (mounted) {
         setState(() {
