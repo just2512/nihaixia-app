@@ -1,7 +1,7 @@
 # OPPO Find N2 真机折叠屏验收方案
 
 > 状态：待真机执行（MISSING）。本文是执行方案，不是设备通过报告。Widget 测试、模拟器截图和 CI 通过均不能替代 Find N2 实机验收。
-> 本轮应用代码基线：`master @ f89b0a4b5f91dfdb879a6678b459566a5efb9b29`（PR #392 已合并），应用版本 `2.0.0+8048`。情境来源回链修复提交 `26d924b894b3301a8f46b2db120407cc344e41af` 已通过 Flutter/Android/许可 CI；本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
+> 本轮应用代码基线：`master @ 30bcb854ba3f559d0c56329537f68089dd225ab8`（PR #411 已合并；该 PR 仅增加生产阅读入口回归测试，没有修改运行时代码），应用版本 `2.0.0+8048`。本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
 
 ## 1. 验收目标与边界
 
@@ -357,7 +357,7 @@ output/find-n2/<run-id>/
 ### 9.1 当前构建身份
 
 - Android applicationId：`com.nihaisha.nihaisha_app`
-- 本轮仓库版本：`1.11.30+8039`，即 versionName `1.11.30`、versionCode `8039`。
+- 本轮仓库版本：`2.0.0+8048`，即 versionName `2.0.0`、versionCode `8048`。
 - CI 只构建单一 `arm64-v8a` Debug APK，用于 ABI 构建验证和 SHA-256 工件留存；**该 Debug APK 禁止安装到保留旧数据的手机上**。
 - 实际安装包由本地构建 Release APK，使用现有 `android/key.properties` 和原签名 keystore。禁止生成新的 keystore 来替代原密钥。
 - CI Debug APK 与本地 Release APK 是两种不同用途的工件，不能混淆。
@@ -398,7 +398,7 @@ apkanalyzer manifest version-name .\installed-old.apk
 先确认本地原签名配置存在。仓库中的模板仅供字段参考，不可用新生成的密钥覆盖原密钥：
 
 - `android/key.properties` 必须存在，且包含原 keystore 对应的 `storeFile`、`storePassword`、`keyAlias`、`keyPassword`。
-- `android/app/build.gradle.kts` 的 Release signing config 从 `android/key.properties` 读取配置；如果文件不存在会 fallback 到 Debug 签名，因此必须先检查文件，不能盲目构建。
+- `android/app/build.gradle.kts` 的 Release buildType 显式绑定 `release` signingConfig。Release 构建和本地 `localDebugUsesReleaseSigning=true` 构建均执行 fail-closed 检查：缺少 `android/key.properties`、必填字段或 keystore 时抛出 `GradleException`，不会回退到 Debug 签名。普通 Debug 构建默认仍使用标准 Debug 签名；TRACE 专用的 Release 签名 Debug 构建必须显式 opt-in，且 Gradle 会拒绝在 CI 中启用该属性。
 - 若 keystore 放在 `android/` 目录，`storeFile` 路径应按 Gradle app module 的相对路径正确指向它，例如 `../nihaisha.jks`；以实际 keystore 文件位置为准。
 
 在仓库根目录 PowerShell 执行：

@@ -4,7 +4,7 @@
 
 ## 0. 当前前置条件与实现基线
 
-云端代码复核基线：`master @ d61ada63ea46a0c5d7d33dc732531041dbdc3dcc`（2026-11-22，PR #392 合并后；应用版本 `1.11.30+8039`）。PR #127 在早期主线上补齐仅调试构建可见的显式 TRACE 开关；本文件保留其 TRACE 事件契约与本地执行步骤，并非设备 PASS 报告。情境来源回链最新代码提交为 `26d924b894b3301a8f46b2db120407cc344e41af`，其 Flutter regression、Android arm64、Flutter Quality Gate 与 Fork license boundary 均 SUCCESS；最新 master 的独立 CI 状态以执行台账 §67 的准确 run/SHA 记录为准。本文件所列 Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测。
+云端代码复核基线：`master @ 30bcb854ba3f559d0c56329537f68089dd225ab8`（PR #411 合并后；应用版本 `2.0.0+8048`）。PR #411 仅增加生产阅读入口回归测试，没有修改运行时代码。PR #127 早期引入的仅调试构建可见 TRACE 开关及本文件所列 TRACE 事件契约继续适用；本文是本地执行方案，不是设备 PASS 报告。Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测；不能以 PR HEAD 或 CI 结果替代实机验收。
 
 当前已有实现：
 
