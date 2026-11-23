@@ -6164,6 +6164,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
     var restoredPendingToolSelection = false;
+    InvocationOrigin? restoredPendingToolOrigin;
     AssistantToolArguments? restoredPendingBaziArguments;
     AssistantToolArguments? restoredPendingGuanshaArguments;
     AssistantToolArguments? restoredPendingZiweiArguments;
@@ -6203,6 +6204,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final isUser = role == 'user';
       if (isUser) {
         restoredPendingToolSelection = false;
+        restoredPendingToolOrigin = null;
         restoredPendingBaziArguments = null;
         restoredPendingGuanshaArguments = null;
         restoredPendingZiweiArguments = null;
@@ -6218,6 +6220,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingSavedChartsArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
+        restoredPendingToolOrigin = null;
+        if (messageMetadata.toolChoicePending ||
+            messageMetadata.toolStatus == 'AWAITING_PARAMETERS') {
+          for (final candidate in InvocationOrigin.values) {
+            if (candidate.name == messageMetadata.invocationOrigin) {
+              restoredPendingToolOrigin = candidate;
+              break;
+            }
+          }
+        }
       }
       final pendingToolId = isUser ? null : messageMetadata.toolId;
       final pendingTool = pendingToolId == null
@@ -6455,6 +6467,49 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
       }
     }
+    final hasRestoredPendingToolArguments = [
+      restoredPendingBaziArguments,
+      restoredPendingGuanshaArguments,
+      restoredPendingZiweiArguments,
+      restoredPendingMeihuaArguments,
+      restoredPendingChengguArguments,
+      restoredPendingHuangdiSijiArguments,
+      restoredPendingXiaoliurenArguments,
+      restoredPendingYiJingArguments,
+      restoredPendingDosageArguments,
+      restoredPendingZiWuArguments,
+      restoredPendingDreamArguments,
+      restoredPendingShoushengDebtArguments,
+      restoredPendingSavedChartsArguments,
+    ].any((arguments) => arguments != null);
+    if ((restoredPendingToolSelection || hasRestoredPendingToolArguments) &&
+        restoredPendingToolOrigin == null) {
+      // Historical pending requests without a recorded origin cannot be
+      // reclassified as manual or AI-origin. Keep history, but do not resume.
+      restoredPendingToolSelection = false;
+      restoredPendingBaziArguments = null;
+      restoredPendingGuanshaArguments = null;
+      restoredPendingZiweiArguments = null;
+      restoredPendingMeihuaArguments = null;
+      restoredPendingChengguArguments = null;
+      restoredPendingHuangdiSijiArguments = null;
+      restoredPendingXiaoliurenArguments = null;
+      restoredPendingYiJingArguments = null;
+      restoredPendingDosageArguments = null;
+      restoredPendingZiWuArguments = null;
+      restoredPendingDreamArguments = null;
+      restoredPendingShoushengDebtArguments = null;
+      restoredPendingSavedChartsArguments = null;
+      const missingOriginMessage =
+          '历史待续工具任务缺少明确的执行来源记录，已停止自动续跑。'
+          '历史消息仍保留；请从工具页重新发起该操作。';
+      restoredMessages.add(_InterviewMessage(
+        text: missingOriginMessage,
+        isUser: false,
+      ));
+      transcriptLines.add('助手：$missingOriginMessage');
+      restoredPendingToolOrigin = null;
+    }
     if (restoredMessages.isEmpty) return;
 
     final fullTranscript = transcriptLines.join('\n');
@@ -6469,6 +6524,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (preserveContextPrompt) _inputController.clear();
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
+      _pendingToolOrigin = restoredPendingToolOrigin;
       _pendingBaziArguments = restoredPendingBaziArguments;
       _pendingGuanshaArguments = restoredPendingGuanshaArguments;
       _pendingZiweiArguments = restoredPendingZiweiArguments;
