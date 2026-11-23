@@ -1004,17 +1004,3 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored v1.2 license protocol, verifier, issuer, and test assets. Applies only to portions for which sufficient rights exist.
-
-Files:
- docs/pro-edition-license-protocol.md
- lib/licensing/license_model.dart
- lib/licensing/license_verifier.dart
- test/fixtures/pro-license-test-vectors.json
- test/license_verifier_test.dart
- tool/license_issuer/README.md
- tool/license_issuer/issuer.py
- tool/license_issuer/requirements.txt
- tool/license_issuer/test_issuer.py
-Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
-License: LicenseRef-Nihaixia-Fork-Commercial
-Comment: Fork-authored v1.2 license protocol, verifier, issuer, and test assets. Applies only to portions for which sufficient rights exist.
