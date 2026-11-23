@@ -1010,25 +1010,27 @@ License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored v1.2 license protocol, verifier, issuer, and test assets. Applies only to portions for which sufficient rights exist.
 
 Files:
- lib/services/tool_argument_support.dart
- tool/import_graph_audit/bin/audit.dart
- tool/import_graph_audit/pubspec.yaml
  lib/services/almanac_tool_service.dart
  lib/services/bazi_tool_service.dart
  lib/services/chenggu_tool_service.dart
  lib/services/dosage_tool_service.dart
  lib/services/dream_tool_service.dart
  lib/services/guansha_tool_service.dart
+ lib/services/headless_tool_result_handler.dart
  lib/services/huangdi_siji_tool_service.dart
  lib/services/meihua_tool_service.dart
  lib/services/sanshan_lingqian_tool_service.dart
  lib/services/shousheng_debt_tool_service.dart
  lib/services/solar_term_tool_service.dart
+ lib/services/tool_argument_support.dart
  lib/services/xiaoliuren_tool_service.dart
  lib/services/yijing_tool_service.dart
- lib/services/yuxiaji_omen_tool_service.dart
  lib/services/yunqi_tool_service.dart
+ lib/services/yuxiaji_omen_tool_service.dart
  lib/services/ziwuliuzhu_tool_service.dart
+ test/headless_tool_result_handler_test.dart
+ tool/import_graph_audit/bin/audit.dart
+ tool/import_graph_audit/pubspec.yaml
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned Headless ToolService extraction and Analyzer AST import-graph audit; only portions for which sufficient rights exist.
