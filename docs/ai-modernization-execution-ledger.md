@@ -3849,3 +3849,25 @@ PR HEAD 门禁证据：
 - Find N2 设备端 GPU/CPU 多轮、多媒体、Activity/进程恢复、AI 数据清理、原签名无损升级及 TRACE 状态继续保持 `MISSING / UNKNOWN / LOCAL ONLY`；不以云端 CI 或 Widget 测试替代实机证据。
 
 **专业版授权冻结项：** PR #416（`[Batch 1] 研纪专业版永久授权协议与离线签发`，分支 `feature/pro-license-batch-1`）当前为 OPEN / DRAFT，仍在修改。按用户明确要求，本轮只保留其独立工作状态，不合并、不关闭、不修改授权协议、签发器或相关权属清单；不得将其视为本轮其他遗留项的合并前置条件。
+
+
+---
+
+## 74. 2026-11-23 第三轮历史分支逐文件核验
+
+| 历史分支 | 本轮逐文件核验 | 处置 |
+|---|---|---|
+| `work/yanji-editorial-phase3-aux` | `lib/screens/diagnosis_history_screen.dart` 与 `lib/screens/saved_charts_screen.dart` 的 blob SHA 均与当前 master 完全一致；旧分支两个布局测试只覆盖浅色主题，master 版本分别扩展为 105 行和 171 行，覆盖浅/深主题及 402/775dp、200% 字号。 | 页面代码已是主线相同实现，测试由主线更完整覆盖，不移植旧测试。 |
+| `feat/ai-context-yijing-result-20261118` | compare 当前 master 为 0 commits ahead / 472 behind，文件差异为空。 | 已被主线吸收，不合并、不回退。 |
+| `feat/ai-context-bazi-result-20261118` | compare 当前 master 为 0 commits ahead / 461 behind，文件差异为空。 | 已被主线吸收，不合并、不回退。 |
+| `feat/ai-context-bazi-chart-result-post-almanac-20261118` | 旧分支的 `test/bazi_context_snapshot_test.dart` 为 180 行；当前 master 的 `test/bazi_contextual_result_entry_test.dart` 为 471 行，验证真实输入/排盘层/来源、快照摘要与重建、默认地点明确标记、错源/过期/篡改拒绝，并增加字段级 strengthScore 情境入口与 Widget 回归。旧分支页面文件 958 行，当前主线 1035 行。 | 旧快照/页面实现不回灌；以当前整合后的 Snapshot / Resolver / field-level Ask AI 为准。 |
+| `feat/ai-context-bazi-result-post-yijing-20261118` | 旧版 `test/bazi_contextual_result_entry_test.dart` 为 289 行；当前 master 同路径 471 行，新增字段级结果绑定、字段 Prompt 与 field-bound contextual assistant Widget 回归。 | 不合并旧结果入口测试或页面实现。 |
+| `feat/ai-context-ziwuliuzhu-method-fields-post-yunqi-20261121` | 旧页面/测试分别为 906/297 行，当前 master 为 924/318 行；主线测试采用每个方法 Tab 独立 `PageStorageKey` 与当前列表 `Scrollable` 定位，再滚动到真实字段入口，避免旧分支使用跨 Tab 的首个 `ListView` finder。主线保留四种方法、`NOT_APPLICABLE`、错源/过期/篡改/未知路径 fail-closed 和返回滚动位置断言。 | 旧分支核心功能已由主线更严格实现覆盖；不 cherry-pick 旧页面或测试。 |
+| `work/ai-contextual-ziwei-result-sample` | `assistant_message_metadata.dart` 与主线 blob 相同；主线 `ai_context_ref.dart`、Ziwei 页面、Prompt Builder 及相关测试分别扩展至 124、2308、1693、791 行，旧分支同文件更短；旧 Markdown 选择测试 52 行，主线同路径 350 行。 | 不整支合并旧 ContextRef / Prompt / Widget 代码，保留主线当前版本。 |
+| `work/ai-capability-inventory` | 旧分支的 `docs/ai-capability-inventory.md` 与当前 master blob 完全一致；分支额外审计报告以 2026-11-15 旧基线为前提，不能作为当前运行时代码和 CI 的验收报告。 | 已吸收的盘点文档不重复合并；旧审计文件保留历史参考，不回灌旧基线结论。 |
+
+### 74.1 本轮状态约束
+
+- 本轮历史分支 compare / 逐文件审计仍不等于 58 个未匹配 refs 全部完成审计；未在 §71–74 中具体列明源码/测试核验的 refs 继续为 `NOT_REVIEWED`。
+- 不批量删除历史 branch refs；不将旧分支 ahead commit 数量直接当作功能缺口。
+- PR #416 专业版永久授权仍为 OPEN / DRAFT，当前处于独立开发批次；按用户要求不合并、不关闭、不修改，不计入本轮其他遗留项的关闭条件。
