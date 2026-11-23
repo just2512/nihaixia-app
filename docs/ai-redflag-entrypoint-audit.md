@@ -256,3 +256,16 @@
 - PR #169 的 PR/独立分支 CI 及合并后 master CI 已通过 Gate 接线和自动化契约测试。
 - CI 不证明 Find N2 真机的 GPU/CPU、多媒体、Activity/进程恢复或端到端 TRACE；这些设备验收必须在实体设备上进行，不能由云端构建结果代替。
 - 本节更新当前状态；§1-§8 中 PR #169 之前“所有生产入口均 MISSING”的记录保留为历史快照，不再代表当前 master。
+
+
+---
+
+## 2026-11-23 最终产品范围确认：红旗门禁不属于本项目
+
+本报告其余章节中的 detector、医学审核、Flutter/Native 强制拦截、RELEASE BLOCKED 和相应真机覆盖矩阵均为早期临床产品化设想的历史记录。按当前产品定位，这些不是研纪学习辅助工具的功能要求：
+
+- 不建设临床红旗 detector、临床分诊或风险分级系统。
+- 不要求医生/医学专家签字或审核词表，不能据此标记产品 RELEASE BLOCKED。
+- 不把 RedFlagGate / RedFlagPreflight 接入正常问诊、学习、工具、图片或语音入口作为模型调用门槛。
+- 简明免责声明和急重症求助提醒按 docs/product-positioning-and-boundaries.md 保留即可。
+- 本文及对应策略测试仅保留为历史设计档案；其完成状态应视为 SUPERSEDED / NOT IN SCOPE，不得再登记为当前工程缺口。
