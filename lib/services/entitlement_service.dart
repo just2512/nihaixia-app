@@ -103,9 +103,9 @@ class EntitlementService extends ChangeNotifier
     return _startRefresh();
   }
 
-  Future<void> _startRefresh() {
+  Future<void> _startRefresh({bool supersedeInFlight = false}) {
     final inFlight = _initializationFuture;
-    if (inFlight != null) return inFlight;
+    if (inFlight != null && !supersedeInFlight) return inFlight;
 
     final future = _refreshFromPlatform();
     _initializationFuture = future;
@@ -441,7 +441,11 @@ class EntitlementService extends ChangeNotifier
       } else {
         await _platform.writeActiveTokenAtomically(previousToken);
       }
-      await refresh();
+      // Supersede any still-running verification of the rejected replacement.
+      // Generation checks prevent that stale result from publishing after the
+      // old token has been restored.
+      _initialized = false;
+      await _startRefresh(supersedeInFlight: true);
     } on Object {
       _publish(
         _temporarilyUnavailable(
