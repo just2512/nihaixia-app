@@ -104,6 +104,10 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        if (!flutterEngine.plugins.has(LicensePlugin::class.java)) {
+            flutterEngine.plugins.add(LicensePlugin())
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
             .setMethodCallHandler handler@{ call, result ->
                 when (call.method) {
