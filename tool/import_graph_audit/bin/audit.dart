@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 
 class _ForbiddenUiNodeVisitor extends RecursiveAstVisitor<void> {
   final Set<String> found = {};
