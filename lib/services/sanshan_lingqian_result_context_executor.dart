@@ -3,7 +3,7 @@ import 'dart:math';
 import '../data/sanshan_lingqian_data.dart';
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'sanshan_lingqian_tool_executor.dart';
+import 'sanshan_lingqian_tool_service.dart';
 
 class SanshanLingqianResultContextExecution {
   const SanshanLingqianResultContextExecution({
@@ -35,7 +35,7 @@ class SanshanLingqianResultContextExecutor {
   static Future<SanshanLingqianResultContextExecution> drawWithSnapshot({
     Random? random,
   }) async {
-    final sign = SanshanLingqianToolExecutor.draw(random: random);
+    final sign = SanshanLingqianToolService.draw(random: random);
     return executeForSignId(sign.id);
   }
 
@@ -47,14 +47,14 @@ class SanshanLingqianResultContextExecutor {
       return _failure(signId, '签号不属于当前本地 92 签签谱；拒绝生成结果快照。');
     }
     final sign = matches.single;
-    final result = SanshanLingqianToolExecutor.resultForSign(sign);
+    final result = SanshanLingqianToolService.resultForSign(sign);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(const {}).isNotEmpty ||
         result.arguments.isNotEmpty ||
         result.sourceIds.length != 1 ||
         result.sourceIds.single !=
-            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+            '${SanshanLingqianToolService.dataSourcePrefix}$signId' ||
         result.values['签号'] != sign.id.toString() ||
         result.values['签题'] != sign.title ||
         result.values['签诗'] != sign.verse ||
@@ -78,7 +78,7 @@ class SanshanLingqianResultContextExecutor {
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
       'sourceIds': <String>[
-        '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId',
+        '${SanshanLingqianToolService.dataSourcePrefix}$signId',
       ],
       'input': <String, Object?>{
         'method': 'appRandomDraw',
