@@ -1,7 +1,41 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/licensing/feature_authorizer.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/models/tool_execution_plan.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
+
+
+class _FakeFeatureAuthorizer implements FeatureAuthorizer {
+  _FakeFeatureAuthorizer(this.decision);
+
+  FeatureAuthorizationDecision decision;
+  int calls = 0;
+  final List<String> requestedFeatures = [];
+
+  @override
+  Future<FeatureAuthorizationDecision> authorize(String featureId) async {
+    calls += 1;
+    requestedFeatures.add(featureId);
+    return decision;
+  }
+}
+
+ToolExecutionStep _step(String toolId, String capabilityId, String label) =>
+    ToolExecutionStep(
+      toolId: toolId,
+      capabilityId: capabilityId,
+      arguments: {'label': label},
+    );
+
+AssistantToolResult _result(String toolId) => AssistantToolResult(
+      toolId: toolId,
+      title: toolId,
+      values: const {'result': 'ok'},
+      arguments: const {},
+      sourceIds: const ['local-test'],
+    );
+
 
 void main() {
   group('HeadlessToolDispatcher', () {
@@ -131,5 +165,154 @@ void main() {
         throwsA(same(error)),
       );
     });
+
+    test('denies a cross-capability AI plan before any executor side effect', () async {
+      final authorizer = _FakeFeatureAuthorizer(
+        FeatureAuthorizationDecision.denied(
+          featureId: 'ai_advanced',
+          reason: FeatureAuthorizationFailureReason.unlicensed,
+        ),
+      );
+      var executorCalls = 0;
+      final dispatcher = HeadlessToolDispatcher(featureAuthorizer: authorizer);
+      final execution = await dispatcher.executePlan(
+        plan: ToolExecutionPlan(
+          planId: 'plan-denied',
+          origin: InvocationOrigin.aiDispatch,
+          steps: [
+            _step('yunqi', 'yunqi', 'first'),
+            _step('bazi', 'bazi', 'second'),
+          ],
+        ),
+        executorOverride: (_) {
+          executorCalls += 1;
+          return _result('yunqi');
+        },
+      );
+
+      expect(execution.status, HeadlessToolPlanExecutionStatus.authorizationDenied);
+      expect(execution.featureId, 'ai_advanced');
+      expect(authorizer.requestedFeatures, ['ai_advanced']);
+      expect(executorCalls, 0);
+      expect(execution.results, isEmpty);
+    });
+
+    test('keeps a temporarily unavailable authorization fail-closed before execution', () async {
+      final authorizer = _FakeFeatureAuthorizer(
+        FeatureAuthorizationDecision.temporarilyUnavailable(
+          featureId: 'ai_advanced',
+          reason: FeatureAuthorizationFailureReason.initializationTimeout,
+        ),
+      );
+      var executorCalls = 0;
+      final execution = await HeadlessToolDispatcher(
+        featureAuthorizer: authorizer,
+      ).executePlan(
+        plan: ToolExecutionPlan(
+          planId: 'plan-unavailable',
+          origin: InvocationOrigin.aiDispatch,
+          steps: [
+            _step('yunqi', 'yunqi', 'first'),
+            _step('bazi', 'bazi', 'second'),
+          ],
+        ),
+        executorOverride: (_) {
+          executorCalls += 1;
+          return _result('yunqi');
+        },
+      );
+
+      expect(execution.status, HeadlessToolPlanExecutionStatus.authorizationUnavailable);
+      expect(execution.failureReason, FeatureAuthorizationFailureReason.initializationTimeout);
+      expect(executorCalls, 0);
+    });
+
+    test('does not charge manual multi-capability plans', () async {
+      final authorizer = _FakeFeatureAuthorizer(
+        FeatureAuthorizationDecision.denied(
+          featureId: 'ai_advanced',
+          reason: FeatureAuthorizationFailureReason.unlicensed,
+        ),
+      );
+      var executorCalls = 0;
+      final execution = await HeadlessToolDispatcher(
+        featureAuthorizer: authorizer,
+      ).executePlan(
+        plan: ToolExecutionPlan(
+          planId: 'manual-free',
+          origin: InvocationOrigin.userManual,
+          steps: [
+            _step('yunqi', 'yunqi', 'first'),
+            _step('bazi', 'bazi', 'second'),
+          ],
+        ),
+        executorOverride: (_) {
+          executorCalls += 1;
+          return _result('yunqi');
+        },
+      );
+
+      expect(execution.isCompleted, isTrue);
+      expect(authorizer.calls, 0);
+      expect(executorCalls, 2);
+    });
+
+    test('does not charge repeated steps in one AI capability', () async {
+      final authorizer = _FakeFeatureAuthorizer(
+        FeatureAuthorizationDecision.denied(
+          featureId: 'ai_advanced',
+          reason: FeatureAuthorizationFailureReason.unlicensed,
+        ),
+      );
+      var executorCalls = 0;
+      final execution = await HeadlessToolDispatcher(
+        featureAuthorizer: authorizer,
+      ).executePlan(
+        plan: ToolExecutionPlan(
+          planId: 'same-capability-free',
+          origin: InvocationOrigin.aiDispatch,
+          steps: [
+            _step('yunqi', 'yunqi', 'first'),
+            _step('yunqi', 'yunqi', 'second'),
+          ],
+        ),
+        executorOverride: (_) {
+          executorCalls += 1;
+          return _result('yunqi');
+        },
+      );
+
+      expect(execution.isCompleted, isTrue);
+      expect(authorizer.calls, 0);
+      expect(executorCalls, 2);
+    });
+
+    test('rejects capability metadata mismatch before authorization or execution', () async {
+      final authorizer = _FakeFeatureAuthorizer(
+        FeatureAuthorizationDecision.allowed(featureId: 'ai_advanced'),
+      );
+      var executorCalls = 0;
+      final execution = await HeadlessToolDispatcher(
+        featureAuthorizer: authorizer,
+      ).executePlan(
+        plan: ToolExecutionPlan(
+          planId: 'invalid-plan',
+          origin: InvocationOrigin.aiDispatch,
+          steps: [
+            _step('yunqi', 'not-yunqi', 'first'),
+            _step('bazi', 'bazi', 'second'),
+          ],
+        ),
+        executorOverride: (_) {
+          executorCalls += 1;
+          return _result('yunqi');
+        },
+      );
+
+      expect(execution.status, HeadlessToolPlanExecutionStatus.invalidPlan);
+      expect(authorizer.calls, 0);
+      expect(executorCalls, 0);
+    });
+
   });
 }
