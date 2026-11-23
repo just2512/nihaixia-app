@@ -6,6 +6,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from unittest import mock
 import uuid
 from pathlib import Path
 
@@ -124,27 +125,61 @@ class IssuerProtocolTests(unittest.TestCase):
                 prefix + "." + payload_segment + "." + b64url(bytes(signature_bytes))
             )
 
-    def test_valid_request_issues_license_with_full_request_binding(self) -> None:
+    def test_valid_request_issues_v12_device_bound_canonical_token(self) -> None:
         vectors = load_vectors()
-        request = vectors["device_request"]["token"]
-        token = self.issue(request)
+        request_token = vectors["device_request"]["token"]
+        request = issuer.verify_device_request(request_token)
+        token = self.issue(request_token)
         prefix, payload_segment, signature_segment = token.split(".")
         self.assertEqual(prefix, "YANJI1")
-        payload = json.loads(issuer._b64url_decode(payload_segment))
+        payload_bytes = issuer._b64url_decode(payload_segment)
+        payload = json.loads(payload_bytes)
+        self.assertEqual(payload_bytes, issuer._canonical_json(payload))
+        self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["product_id"], issuer.PRODUCT_ID)
+        self.assertEqual(payload["protocol_revision"], issuer.PROTOCOL_REVISION)
         self.assertTrue(payload["perpetual"])
-        self.assertEqual(payload["device_key_sha256"], vectors["device_request"]["device_key_sha256"])
-        self.assertEqual(payload["request_id"], vectors["device_request"]["request_payload"]["request_id"])
-        self.assertEqual(payload["request_nonce"], vectors["device_request"]["request_payload"]["request_nonce"])
-        self.assertEqual(payload["request_sha256"], vectors["device_request"]["request_sha256"])
-        self.assertEqual(payload["device_key_security_level"], "TRUSTED_ENVIRONMENT")
-        self.assertEqual(payload["product_revision"], 1)
-        self.assertEqual(payload["features"], list(issuer.FEATURES))
+        self.assertEqual(
+            payload["device_public_key_sha256"],
+            vectors["device_request"]["device_key_sha256"],
+        )
+        self.assertEqual(payload["request_id"], request["request_id"])
+        self.assertEqual(
+            payload["features"],
+            ["ai_advanced", "contextual_assistant"],
+        )
+        self.assertEqual(
+            set(payload),
+            {
+                "schema_version",
+                "license_id",
+                "order_id",
+                "product_id",
+                "protocol_revision",
+                "app_id",
+                "perpetual",
+                "features",
+                "device_public_key_sha256",
+                "request_id",
+                "issued_at",
+                "issuer_key_id",
+            },
+        )
         signature = issuer._b64url_decode(signature_segment)
         self.issuer_public_key.verify(
             signature,
-            ("YANJI1." + payload_segment).encode("ascii"),
+            issuer.LICENSE_SIGNATURE_DOMAIN + issuer._canonical_json(payload),
         )
+
+    def test_issuer_refuses_reserved_feature_overissuance(self) -> None:
+        request, _, _, _ = make_device_request()
+        with mock.patch.dict(
+            issuer.ISSUABLE_FEATURES_BY_REVISION,
+            {issuer.PROTOCOL_REVISION: ("ai_advanced", "advanced_learning")},
+        ):
+            with self.assertRaises(issuer.IssuerError):
+                self.issue(request)
+
 
     def test_same_order_and_same_request_is_idempotent(self) -> None:
         request, _, _, _ = make_device_request()
