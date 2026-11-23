@@ -731,10 +731,11 @@ def list_orders(database_path: Path) -> list[tuple[Any, ...]]:
     with sqlite3.connect(database_path) as connection:
         return connection.execute(
             """
-            SELECT l.order_id, l.license_id, l.status, l.product_id,
+            SELECT l.order_id, l.license_id, l.status, o.product_id,
                    l.device_key_sha256, l.issuer_key_id, l.issued_at,
                    l.reissue_sequence, l.replaced_by_license_id
             FROM issued_licenses AS l
+            INNER JOIN orders AS o ON o.order_id = l.order_id
             ORDER BY l.issued_at DESC, l.reissue_sequence DESC
             """
         ).fetchall()
