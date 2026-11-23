@@ -1046,3 +1046,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned configuration for the isolated Dart Analyzer import-graph audit package.
+
+Files:
+ lib/licensing/feature_authorizer_scope.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned fail-closed FeatureAuthorizer dependency scope; only portions for which just2512 owns copyright or has sufficient sublicensing rights are covered.
