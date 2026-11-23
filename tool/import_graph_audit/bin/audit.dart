@@ -42,13 +42,26 @@ Future<void> main(List<String> args) async {
 
   final violations = <String>[];
   final parseFailures = <String>[];
-  var executorReferenceCount = 0;
+  var dispatcherExecutorReferenceCount = 0;
+  var headlessEntryImportCount = 0;
+  final scannedHeadlessEntrypoints = <String>{};
+
+  String normalizedPath(File file) => file.absolute.path.replaceAll('\\\\', '/');
+
+  bool isHeadlessUiEntrypoint(File file) {
+    final path = normalizedPath(file);
+    return path.endsWith('/screens/assistant_tool_router.dart') ||
+        path.endsWith('/screens/local_ai_interview_screen.dart') ||
+        path.endsWith('/services/assistant_conversation_orchestrator.dart');
+  }
 
   void inspectExecutorUri(String? uri, File importer) {
     if (uri == null || !uri.endsWith('_tool_executor.dart')) return;
-    executorReferenceCount++;
-    if (importer.absolute.path != dispatcher) {
-      violations.add('${importer.path} references $uri');
+    if (normalizedPath(importer) == dispatcher) {
+      dispatcherExecutorReferenceCount++;
+    } else if (isHeadlessUiEntrypoint(importer)) {
+      headlessEntryImportCount++;
+      violations.add('${importer.path} imports a Headless Executor directly: $uri');
     }
   }
 
@@ -95,7 +108,11 @@ Future<void> main(List<String> args) async {
       }
     }
 
-    if (file.absolute.path == dispatcher) {
+    if (isHeadlessUiEntrypoint(file)) {
+      scannedHeadlessEntrypoints.add(normalizedPath(file));
+    }
+
+    if (normalizedPath(file) == dispatcher) {
       final visitor = _ForbiddenUiNodeVisitor();
       parsed.unit.accept(visitor);
       for (final name in visitor.found) {
@@ -106,8 +123,11 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  if (executorReferenceCount == 0) {
-    violations.add('No *_tool_executor.dart references were found in lib/.');
+  if (dispatcherExecutorReferenceCount == 0) {
+    violations.add('HeadlessToolDispatcher does not import any *_tool_executor.dart implementation.');
+  }
+  if (scannedHeadlessEntrypoints.length != 3) {
+    violations.add('Expected to scan all 3 Headless UI entrypoints; found ${scannedHeadlessEntrypoints.length}.');
   }
 
   if (parseFailures.isNotEmpty || violations.isNotEmpty) {
