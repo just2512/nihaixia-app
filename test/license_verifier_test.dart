@@ -188,9 +188,6 @@ void main() {
   test('unknown feature identifiers are ignored, never granted', () async {
     final keyPair = await Ed25519().newKeyPair();
     final publicKey = await keyPair.extractPublicKey();
-    if (publicKey is! SimplePublicKey) {
-      throw StateError('Expected an Ed25519 simple public key.');
-    }
     final basePayload = Map<String, dynamic>.from(
       licenseFixture['payload'] as Map,
     );
@@ -221,9 +218,6 @@ void main() {
       () async {
     final keyPair = await Ed25519().newKeyPair();
     final publicKey = await keyPair.extractPublicKey();
-    if (publicKey is! SimplePublicKey) {
-      throw StateError('Expected an Ed25519 simple public key.');
-    }
     final basePayload = Map<String, dynamic>.from(
       licenseFixture['payload'] as Map,
     );
@@ -254,9 +248,6 @@ void main() {
       () async {
     final keyPair = await Ed25519().newKeyPair();
     final publicKey = await keyPair.extractPublicKey();
-    if (publicKey is! SimplePublicKey) {
-      throw StateError('Expected an Ed25519 simple public key.');
-    }
     final basePayload = Map<String, dynamic>.from(
       licenseFixture['payload'] as Map,
     );
