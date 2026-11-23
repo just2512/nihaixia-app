@@ -2903,24 +2903,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             widget.featureAuthorizer ?? const UnconfiguredFeatureAuthorizer(),
       );
 
-  Future<ContextResolutionGatewayResult<AiResolvedKnowledgeEntry>>
-      _resolveContextMetadata(Map<String, String> metadata) async {
-    final reference = AiContextRef.fromMetadata(metadata);
-    if (reference == null) {
-      return const ContextResolutionGatewayResult<AiResolvedKnowledgeEntry>(
-        status: ContextResolutionGatewayStatus.invalidReference,
-        reason: 'CONTEXT_METADATA_MISSING_OR_INVALID',
-      );
-    }
-    return _contextResolutionGateway.resolve<AiResolvedKnowledgeEntry>(
-      reference: reference,
-      resolver: () => AiContextResolver.resolveKnowledgeReference(
-        ref: reference,
-      ),
-      referenceOf: (entry) => entry.ref,
-    );
-  }
-
   String _contextAuthorizationMessage(
     ContextResolutionGatewayStatus status,
   ) =>
