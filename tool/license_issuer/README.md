@@ -37,7 +37,7 @@ Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置�
       --private-key ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem \
       --payment-confirmed
 
-签发器验证申请内的完整 P-256 SPKI 公钥、指纹、请求 nonce、request_id 和 ECDSA 私钥持有证明；随后计算完整申请令牌的 SHA-256，并将 request_id、nonce、hash、设备指纹写入 Ed25519 授权 payload。
+签发器验证申请内的完整 P-256 SPKI 公钥、指纹、请求 nonce、request_id 和 ECDSA 私钥持有证明；随后计算完整申请令牌的 SHA-256，并将 request_id、nonce、hash、设备指纹保存在运营方订单数据库用于唯一约束、幂等和审计。最终客户端 Token 仅含 request_id 与设备公钥指纹，不含 nonce/hash/设备安全级别，不要求客户端持久化或匹配 pending request。Token 按协议修订 1 签发，Feature 固定为 `ai_advanced` 与 `contextual_assistant`。
 
 --payment-confirmed 是操作员人工收款确认，不会查询微信、支付宝、银行或支付服务商。签发器不采集客户姓名、手机号、微信 ID 或付款截图。
 
@@ -56,7 +56,7 @@ Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置�
 
 工具在一个 SQLite 事务中将旧签发记录标记为 superseded，追加新 license_id，并记录替代关系和审计事件。旧令牌不会因本地数据库状态变化就从已离线运行的旧 App 自动失效；只有更新版本内置的 license_id denylist 才能在更新后的 App 上拒绝它。
 
-同一 order_id + request_id + request_sha256 重复提交时幂等返回原活动令牌。同一 request_id 不能用于其他订单。存在旧签发记录时，新的请求必须显式 --reissue 并提供 --reason。
+同一 order_id + request_id + request_sha256 重复提交时幂等返回原活动令牌；同一 request_id 不能用于其他订单。request_nonce 和 request_sha256 只在发行端订单数据库留存，用于唯一约束和审计，不写入最终 Token。存在旧签发记录时，新的请求必须显式 --reissue 并提供 --reason。
 
 免费重签次数/收费规则没有被签发器硬编码，必须由产品条款另行确定。正式销售前未完成这项产品决策，不得收费销售。
 
@@ -79,9 +79,13 @@ Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置�
 ## 安全边界
 
 - Ed25519 私钥只存在于运营方签发工具，App 仅内置公钥。
-- 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名。
+- 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名；最终授权 Token 用 Ed25519 对 JCS canonical payload 按 `YANJI-PRO-LICENSE-V1\\0` 域分隔签名。
 - 设备安全级别由客户端报告，不是 Android Key Attestation 远程硬件证明。
 - 签名证明凭证完整性及发行者密钥持有，不证明买家已付款。
 - 离线永久授权不能远程即时撤销；本地状态 superseded 只影响运营记录。
 - 本地 denylist 只能随 App 版本更新生效，不能关闭未更新、长期离线的旧版本。
 - 有能力修改/重打包 APK 的攻击者仍可能绕过客户端门禁。
+
+- 授权 Payload 使用 `protocol_revision`，不是 `product_revision`；revision 1 仅能签发 `ai_advanced` 和 `contextual_assistant`。
+- 客户端用 Token 中的 `device_public_key_sha256` 与当前 Keystore SPKI 指纹匹配；不校验本地 pending request，也不将发行端 nonce/hash 当作授权条件。
+- App 端授权存储为 `noBackupFilesDir/yanji_license/active_license.token` 单 Token 原子文件；不创建 Android 授权 SQLite 库，主数据库保持 schema v7。Issuer 主机端订单 SQLite 是另一套仅供签发运营和审计的数据库。
