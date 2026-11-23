@@ -64,10 +64,19 @@ void main() {
       expect(find.byType(SelectionArea), findsWidgets);
 
       final originalClause =
-          find.textContaining('太阳病', findRichText: true).first;
-      await tester.ensureVisible(originalClause);
+          find.textContaining('脉缓者', findRichText: true);
+      expect(originalClause, findsOneWidget);
+      await tester.scrollUntilVisible(
+        originalClause,
+        180,
+        scrollable: find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
       await tester.longPress(originalClause);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('问 AI'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
