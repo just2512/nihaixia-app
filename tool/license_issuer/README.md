@@ -79,7 +79,7 @@ Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置�
 ## 安全边界
 
 - Ed25519 私钥只存在于运营方签发工具，App 仅内置公钥。
-- 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名；最终授权 Token 用 Ed25519 对 JCS canonical payload 按 `YANJI-PRO-LICENSE-V1\\0` 域分隔签名。
+- 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名；最终授权 Token 用 Ed25519 对 JCS canonical payload 按 `YANJI-PRO-LICENSE-V1\0` 域分隔签名。
 - 设备安全级别由客户端报告，不是 Android Key Attestation 远程硬件证明。
 - 签名证明凭证完整性及发行者密钥持有，不证明买家已付款。
 - 离线永久授权不能远程即时撤销；本地状态 superseded 只影响运营记录。
