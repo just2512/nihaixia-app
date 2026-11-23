@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/assistant_conversation_store.dart';
 import '../models/ai_context_ref.dart';
+import '../licensing/feature_authorizer_scope.dart';
 import '../screens/assistant_tool_router.dart';
 import '../screens/local_ai_interview_screen.dart';
 import '../utils/fold_aware_routes.dart';
@@ -94,8 +95,9 @@ Future<void> showContextualAiSheet({
   String? contextualTitle,
   bool contextualExplanationOnly = true,
 }) {
-  final normalizedRef = AiContextRef.normalizeMetadata(contextRef.toMetadata());
-  if (normalizedRef.isEmpty) {
+  final restoredContextRef = AiContextRef.fromMetadata(contextRef.toMetadata());
+  final normalizedRef = restoredContextRef?.toMetadata() ?? const <String, String>{};
+  if (restoredContextRef == null || normalizedRef.isEmpty) {
     throw ArgumentError('A contextual AI sheet requires a stable context reference.');
   }
 
@@ -112,6 +114,7 @@ Future<void> showContextualAiSheet({
         contextualExplanationOnly: contextualExplanationOnly,
         conversationStore:
             ContextualAiConversationStoreScope.maybeOf(context),
+        featureAuthorizer: FeatureAuthorizerScope.of(context),
         contextRef: normalizedRef,
         sheetScrollController: scrollController,
       );

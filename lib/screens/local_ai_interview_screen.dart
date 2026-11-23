@@ -36,7 +36,10 @@ import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/tool_execution_plan.dart';
+import '../licensing/feature_authorizer.dart';
 import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
+import '../services/ai_context_resolver.dart';
 import '../models/assistant_message_metadata.dart';
 import '../models/ai_context_ref.dart';
 import '../services/dosage_conversion_service.dart';
@@ -180,6 +183,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.testToolRouteBuilder,
     this.testHeadlessToolExecutor,
     this.testSavedChartsLoader,
+    this.featureAuthorizer,
     this.traceRecorder,
   });
 
@@ -203,6 +207,10 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Injectable owner for local AI attachment files.
   final LocalAiAttachmentStore? attachmentStore;
   final AssistantConversationStore? conversationStore;
+
+  /// Authorization provider for anchored contextual assistant sessions.
+  /// Missing providers fail closed whenever a context reference is present.
+  final FeatureAuthorizer? featureAuthorizer;
 
   /// Test seam for verifying the assistant's diagnosis bookmark action.
   @visibleForTesting
@@ -335,6 +343,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   int _historyRestoreGeneration = 0;
   bool _contextualInitializationPending = false;
   bool _restoringPendingHistory = false;
+  bool _contextRefInvalid = false;
   AssistantMode _assistantMode = AssistantMode.automatic;
   Map<String, String> _activeContextRef = const {};
   AssistantMode? _lastEffectiveMode;
@@ -489,6 +498,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   @override
   void initState() {
     super.initState();
+    _contextRefInvalid = widget.contextRef.isNotEmpty &&
+        AiContextRef.fromMetadata(widget.contextRef) == null;
     _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
     if (widget.initialMode != null) _assistantMode = widget.initialMode!;
     _service = widget.service ?? LocalAiService();
@@ -504,7 +515,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         offset: initialPrompt.length,
       );
     }
-    _contextualInitializationPending = _activeContextRef.isNotEmpty;
+    _contextualInitializationPending =
+        _activeContextRef.isNotEmpty || _contextRefInvalid;
     _conversationIdFuture = _contextualInitializationPending
         ? _initializeContextualConversation()
         : _createNewConversation();
@@ -2882,6 +2894,114 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       throw StateError('PENDING_TOOL_INVOCATION_ORIGIN_MISSING');
     }
     return origin;
+  }
+
+  ContextResolutionGateway get _contextResolutionGateway =>
+      ContextResolutionGateway(
+        authorizer:
+            widget.featureAuthorizer ?? const UnconfiguredFeatureAuthorizer(),
+      );
+
+  Future<ContextResolutionGatewayResult<AiResolvedKnowledgeEntry>>
+      _resolveContextMetadata(Map<String, String> metadata) async {
+    final reference = AiContextRef.fromMetadata(metadata);
+    if (reference == null) {
+      return const ContextResolutionGatewayResult<AiResolvedKnowledgeEntry>(
+        status: ContextResolutionGatewayStatus.invalidReference,
+        reason: 'CONTEXT_METADATA_MISSING_OR_INVALID',
+      );
+    }
+    return _contextResolutionGateway.resolve<AiResolvedKnowledgeEntry>(
+      reference: reference,
+      resolver: () => AiContextResolver.resolveKnowledgeReference(
+        ref: reference,
+      ),
+      referenceOf: (entry) => entry.ref,
+    );
+  }
+
+  String _contextAuthorizationMessage(
+    ContextResolutionGatewayStatus status,
+  ) =>
+      switch (status) {
+        ContextResolutionGatewayStatus.authorizationDenied =>
+          '当前设备未获准使用情境助手能力；上下文未提交给本地模型。',
+        ContextResolutionGatewayStatus.authorizationUnavailable =>
+          '当前无法可靠核验情境助手授权；上下文未提交给本地模型，请稍后重试。',
+        ContextResolutionGatewayStatus.invalidReference =>
+          '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。',
+        ContextResolutionGatewayStatus.missing =>
+          '当前情境来源不存在；未提交上下文。',
+        ContextResolutionGatewayStatus.unknown =>
+          '当前情境来源无法核实；未提交上下文。',
+        ContextResolutionGatewayStatus.stale =>
+          '当前情境来源版本已变化；未提交旧上下文。',
+        ContextResolutionGatewayStatus.sourceDenied =>
+          '当前情境来源拒绝解析；未提交上下文。',
+        ContextResolutionGatewayStatus.resolverFailure =>
+          '当前情境来源解析失败；未提交上下文。',
+        ContextResolutionGatewayStatus.authorized ||
+        ContextResolutionGatewayStatus.resolved =>
+          '',
+      };
+
+  Future<bool> _authorizeActiveContext({
+    required AiTraceContext traceContext,
+    required String route,
+  }) async {
+    if (_contextRefInvalid) {
+      const errorCode = 'CONTEXT_REFERENCE_INVALID';
+      if (mounted) {
+        setState(() {
+          _error = '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。';
+        });
+      }
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.dispatch,
+        status: AiTraceStatus.failed,
+        route: route,
+        errorCode: errorCode,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: errorCode,
+      );
+      return false;
+    }
+    if (_activeContextRef.isEmpty) return true;
+    final result = await _resolveContextMetadata(_activeContextRef);
+    if (result.isAuthorized) return true;
+    final errorCode = switch (result.status) {
+      ContextResolutionGatewayStatus.authorizationDenied =>
+        'CONTEXT_AUTHORIZATION_DENIED',
+      ContextResolutionGatewayStatus.authorizationUnavailable =>
+        'CONTEXT_AUTHORIZATION_UNAVAILABLE',
+      ContextResolutionGatewayStatus.invalidReference =>
+        'CONTEXT_REFERENCE_INVALID',
+      _ => 'CONTEXT_RESOLUTION_NOT_AUTHORIZED',
+    };
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.dispatch,
+      status: AiTraceStatus.failed,
+      route: route,
+      errorCode: errorCode,
+    );
+    if (mounted) {
+      setState(() => _error = _contextAuthorizationMessage(result.status));
+    }
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.finalRender,
+      status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+      route: route,
+      errorCode: errorCode,
+    );
+    return false;
   }
 
   bool _hasPendingHeadlessToolArguments() =>
@@ -5288,6 +5408,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       route: 'result_interpretation',
       mode: mode.name,
     );
+    if (!await _authorizeActiveContext(
+      traceContext: traceContext,
+      route: 'result_interpretation',
+    )) {
+      return;
+    }
     final redFlagContext = _boundedRedFlagContext(
       currentText: normalizedPrompt,
     );
@@ -6172,11 +6298,32 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<int?> _initializeContextualConversation() async {
     final expected = AiContextRef.normalizeMetadata(widget.contextRef);
+    if (_contextRefInvalid) {
+      if (mounted) {
+        setState(() {
+          _contextualInitializationPending = false;
+          _inputController.clear();
+          _error = '当前情境引用无效或含有未知字段；未恢复或提交上下文。';
+        });
+      }
+      return null;
+    }
     if (expected.isEmpty) {
       if (mounted) {
         setState(() => _contextualInitializationPending = false);
       }
       return _createNewConversation();
+    }
+    final authorization = await _resolveContextMetadata(expected);
+    if (!authorization.isAuthorized) {
+      if (mounted) {
+        setState(() {
+          _contextualInitializationPending = false;
+          _inputController.clear();
+          _error = _contextAuthorizationMessage(authorization.status);
+        });
+      }
+      return null;
     }
     try {
       final conversations = await _conversationStore.getAssistantConversations(
@@ -6279,6 +6426,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolArguments? restoredPendingShoushengDebtArguments;
     AssistantToolArguments? restoredPendingSavedChartsArguments;
     var restoredContextRef = const <String, String>{};
+    var hasPersistedContextRef = false;
+    var invalidPersistedContextRef = false;
     for (final row in rows) {
       final role = row['role'] as String? ?? '';
       final content = row['content'] as String? ?? '';
@@ -6286,7 +6435,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (content.isEmpty || (role != 'user' && role != 'assistant')) continue;
       final messageMetadata = AssistantMessageMetadata.decode(metadata);
       if (messageMetadata.contextRef.isNotEmpty) {
-        restoredContextRef = AiContextRef.normalizeMetadata(messageMetadata.contextRef);
+        hasPersistedContextRef = true;
+        final typedReference =
+            AiContextRef.fromMetadata(messageMetadata.contextRef);
+        if (typedReference == null) {
+          invalidPersistedContextRef = true;
+        } else {
+          restoredContextRef = typedReference.toMetadata();
+        }
       }
       final selectedModeValue = messageMetadata.selectedMode;
       final effectiveModeValue = messageMetadata.mode;
@@ -6612,6 +6768,37 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     if (restoredMessages.isEmpty) return;
 
+    final requestedContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
+    final contextMetadataValid = !invalidPersistedContextRef &&
+        (!hasPersistedContextRef || restoredContextRef.isNotEmpty);
+    final contextAnchorMatches = contextMetadataValid &&
+        (requestedContextRef.isEmpty
+            ? true
+            : restoredContextRef.isNotEmpty &&
+                AiContextRef.matchesSameAnchor(
+                  restoredContextRef,
+                  requestedContextRef,
+                ));
+    final authorizationTarget = requestedContextRef.isNotEmpty
+        ? requestedContextRef
+        : restoredContextRef;
+    final restoredContextAuthorization =
+        !contextAnchorMatches || authorizationTarget.isEmpty
+            ? null
+            : await _resolveContextMetadata(authorizationTarget);
+    final canRestoreContext = contextAnchorMatches &&
+        (authorizationTarget.isEmpty ||
+            restoredContextAuthorization?.isAuthorized == true);
+    final contextRestoreError = !contextMetadataValid
+        ? '历史会话的情境引用无效或不完整；未恢复模型上下文。'
+        : !contextAnchorMatches
+            ? '历史会话的情境锚点与当前页面不一致；未把历史上下文提交给模型。'
+            : !canRestoreContext
+                ? _contextAuthorizationMessage(
+                    restoredContextAuthorization!.status,
+                  )
+                : null;
+
     final fullTranscript = transcriptLines.join('\n');
     final transcript = fullTranscript.length > 10000
         ? '【较早历史已省略，以下为最近内容】\n'
@@ -6620,7 +6807,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
-      _activeContextRef = Map.unmodifiable(restoredContextRef);
+      _activeContextRef = Map.unmodifiable(authorizationTarget);
+      _contextRefInvalid = !contextMetadataValid || !contextAnchorMatches;
       if (preserveContextPrompt) _inputController.clear();
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
@@ -6642,11 +6830,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ..clear()
         ..addAll(restoredMessages);
       _confirmedDraft = null;
-      _pendingHistoryTranscript = transcript;
-      _pendingHistoryUserMessages = replayableUserMessages;
-      _error = _status?.ready == true
-          ? null
-          : '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。';
+      _pendingHistoryTranscript = canRestoreContext ? transcript : null;
+      _pendingHistoryUserMessages =
+          canRestoreContext ? replayableUserMessages : const [];
+      _error = contextRestoreError ??
+          (_status?.ready == true
+              ? null
+              : '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。');
     });
     if (_status?.ready == true) {
       await _restorePendingHistory();
@@ -6661,6 +6851,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
+    if (!await _authorizeActiveContext(
+      traceContext: AiTraceContext.disabled(),
+      route: 'history_restore',
+    )) {
+      _pendingHistoryTranscript = null;
+      _pendingHistoryUserMessages = const [];
+      return;
+    }
     final redFlagSnapshot = _boundedRedFlagContext();
     final requireMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
@@ -6778,6 +6976,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : _assistantMode.name,
     );
     final traceId = traceContext.traceId;
+    if (!await _authorizeActiveContext(
+      traceContext: traceContext,
+      route: 'assistant_send',
+    )) {
+      return;
+    }
     final activeTcmTask = _tcmInterviewController;
     final redFlagContext = _boundedRedFlagContext(currentText: text);
     final requiresMedicalSafety = AssistantConversationOrchestrator

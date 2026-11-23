@@ -15,6 +15,8 @@ import 'package:flutter/material.dart';
 import '../data/neijing_entries.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import 'assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
 
@@ -548,7 +550,14 @@ class _NeijingEntryCardState extends State<_NeijingEntryCard> {
   Future<void> _askAiAboutEntry() async {
     final entry = widget.entry;
     final contextRef = AiContextResolver.buildNeijingEntryContextRef(entry);
-    final resolution = AiContextResolver.resolveNeijingEntry(ref: contextRef);
+    final gateway = ContextResolutionGateway(
+      authorizer: FeatureAuthorizerScope.of(context),
+    );
+    final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveNeijingEntry(ref: contextRef),
+      referenceOf: (entry) => entry.ref,
+    );
     final resolved = resolution.value;
     if (!resolution.isResolved || resolved == null) {
       if (mounted) {
