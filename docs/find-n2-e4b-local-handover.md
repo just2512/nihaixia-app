@@ -7,7 +7,7 @@
 | 项目 | 当前基线 | 核验要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
-| 当前代码基线 | `master @ 4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 仅修改验收文档；最近一次应用代码改动为 PR #414 `3dd1889ace0d58a6f2332067111d8c000e29be31` |
+| 当前仓库/文档基线 | `master @ 4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 已合并；最近一次应用代码改动为 PR #414 `3dd1889ace0d58a6f2332067111d8c000e29be31` |
 | 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
 | 原签名配置 | 本地 `android/key.properties` + 原 keystore | 仅本地保管；不得提交、上传、粘贴到聊天或放入 CI secret |
