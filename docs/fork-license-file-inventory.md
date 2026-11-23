@@ -943,3 +943,11 @@
 | tool/license_issuer/test_issuer.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/README.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/requirements.txt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+
+### 批次 1.1：跨语言固定测试向量
+
+新增 test/fixtures/pro-license-test-vectors.json，供 Python 签发端与 Dart 验签端读取同一合法申请/授权样本。全部密钥和订单均为合成测试数据，未包含生产私钥或真实用户资料。
+
+| 路径 | Git 状态 | 分类 | SPDX 表达式 | 权属/来源状态 |
+|---|---|---|---|---|
+| test/fixtures/pro-license-test-vectors.json | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
