@@ -4021,6 +4021,17 @@ PR HEAD 门禁证据：
 - 本批从当前 master 的实际 Headless 调用链抽取无 UI 依赖的 `HeadlessToolDispatcher`。此前唯一真实 Executor 调用点位于 `LocalAiInterviewScreen._executeHeadlessTool`；本切片将回调调用集中到 Dispatcher，并由 Dispatcher 负责校验注册 Executor 是否存在和等待同步/异步结果。
 - `LocalAiInterviewScreen` 仍保留原有参数解析/校验、RedFlag preflight、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；本切片不移动这些逻辑，目标是保持 F0 行为不变。
 - 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
-- 当前状态：**F0-1 已实现，待该 PR 的 Flutter 全量回归、架构调用点审计及合并验收。** 这不是 F0 总体完成声明。
+- 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
 - 后续 F0 仍需完成：Executor 实现 import 图收拢到 Dispatcher、Router 与 Screen 的工具元数据/执行注册分离、Analyzer AST import 图测试、完整执行结果/UI Result Handler 边界，以及重构前后特征测试。未完成前不得把 F0 标记 PASS。
 - `FeatureAuthorizer`、收费门禁、`InvocationOrigin` 生产接线和跨工具执行计划预授权均不属于本 F0-1 切片；本批不改变现有免费行为。
+
+
+---
+
+## 81. F1 前置契约：执行计划与业务能力标识（2026-11-23）
+
+- 新增不可变 `ToolExecutionPlan` / `ToolExecutionStep` 模型，明确 `planId`、必填 `InvocationOrigin`、工具 ID、业务能力 `capabilityId` 和参数快照；构造时复制并封闭参数与步骤集合。
+- `requiresAdvancedAi` 仅在 `origin == aiDispatch` 且计划包含至少两个不同 `capabilityId` 时成立；同一能力重复调用不计为跨工具计划；用户手动执行多能力计划不触发 `ai_advanced`；`structured_diagnosis` 单独执行保持免费。
+- `AssistantToolDefinition` 已为当前注册工具明确声明稳定的 `capabilityId`，当前初始映射按工具 ID 一对一建立；将来若多个工具属于同一业务能力，应显式共享同一 capability ID，而不是按工具调用数计费。
+- 本批只建立执行计划和注册元数据契约，**尚未**将所有实际 Headless 调度路径改造成先形成完整计划、再在第一个业务副作用前统一授权。生产计划聚合、调度器接线、授权前无副作用回归仍是 F1 后续必做项。
+- 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 最新 head 的 Fork license 检查已通过，Flutter full regression 正在执行。不得将 Branch validation 的 SKIPPED 计为通过。

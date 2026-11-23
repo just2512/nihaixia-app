@@ -159,6 +159,7 @@ class AssistantToolArguments {
 
 class AssistantToolDefinition {
   final String id;
+  final String capabilityId;
   final String title;
   final String description;
   final Set<AssistantMode> modes;
@@ -171,6 +172,7 @@ class AssistantToolDefinition {
 
   const AssistantToolDefinition({
     required this.id,
+    required this.capabilityId,
     required this.title,
     required this.description,
     required this.modes,
@@ -189,6 +191,7 @@ class AssistantToolDefinition {
 class AssistantToolRouter {
   static const structuredDiagnosis = AssistantToolDefinition(
     id: 'structured_diagnosis',
+    capabilityId: 'structured_diagnosis',
     title: '结构化辨证问诊',
     description: '按现有六经规则逐项问诊；完成后把记录带回助手对话。',
     modes: {AssistantMode.consultation},
@@ -199,6 +202,7 @@ class AssistantToolRouter {
 
   static const yunqi = AssistantToolDefinition(
     id: 'yunqi',
+    capabilityId: 'yunqi',
     title: '五运六气推算',
     description: '使用 App 本地五运六气引擎直接推算；也可打开页面复核。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -219,6 +223,7 @@ class AssistantToolRouter {
 
   static const ziwei = AssistantToolDefinition(
     id: 'ziwei',
+    capabilityId: 'ziwei',
     title: '紫微斗数排盘',
     description: '在当前对话收集明确的出生资料并调用 App 本地确定性紫微引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -259,6 +264,7 @@ class AssistantToolRouter {
 
   static const bazi = AssistantToolDefinition(
     id: 'bazi',
+    capabilityId: 'bazi',
     title: '八字排盘',
     description: '在当前对话收集出生资料并调用 App 本地确定性八字引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -299,6 +305,7 @@ class AssistantToolRouter {
 
   static const yijing = AssistantToolDefinition(
     id: 'yijing',
+    capabilityId: 'yijing',
     title: '易经起卦',
     description: '在当前对话中调用 App 原有易经引擎，支持数字、当前时间、手动选卦和铜钱摇卦；计算结果由 AI 归纳解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -354,6 +361,7 @@ class AssistantToolRouter {
 
   static const xiaoliuren = AssistantToolDefinition(
     id: 'xiaoliuren',
+    capabilityId: 'xiaoliuren',
     title: '小六壬起课',
     description: '在当前对话收集公历日期和时辰，调用 App 原有小六壬纯函数；两种既有起课口径由用户明确选择。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -388,6 +396,7 @@ class AssistantToolRouter {
 
   static const meihua = AssistantToolDefinition(
     id: 'meihua',
+    capabilityId: 'meihua',
     title: '梅花易数起卦',
     description: '时间、数字和随机三种起卦均在当前对话中调用 App 原有本地算法。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -429,6 +438,7 @@ class AssistantToolRouter {
 
   static const dosage = AssistantToolDefinition(
     id: 'dosage',
+    capabilityId: 'dosage',
     title: '经方度量衡单位换算',
     description: '在当前对话中调用 App 原有单位换算函数，支持重量、容量和长度单位。只做单位换算，不提供处方或个体用药剂量建议。',
     modes: {AssistantMode.tools},
@@ -461,6 +471,7 @@ class AssistantToolRouter {
 
   static const ziwu = AssistantToolDefinition(
     id: 'ziwu_liuzhu',
+    capabilityId: 'ziwu_liuzhu',
     title: '时辰开穴计算',
     description: '在当前助手对话中调用 App 原有子午流注引擎，归纳纳子法、纳甲法、灵龟八法和飞腾八法的真实结果。',
     modes: {AssistantMode.tools},
@@ -489,6 +500,7 @@ class AssistantToolRouter {
 
   static const guji = AssistantToolDefinition(
     id: 'guji_library',
+    capabilityId: 'guji_library',
     title: '古籍原文',
     description: '打开 App 内置古籍阅读库。',
     modes: {AssistantMode.tools, AssistantMode.learning},
@@ -499,6 +511,7 @@ class AssistantToolRouter {
 
   static const knowledgeHub = AssistantToolDefinition(
     id: 'knowledge_hub',
+    capabilityId: 'knowledge_hub',
     title: '中医知识库浏览',
     description: '打开 App 知识库浏览页；具体知识问答仍在当前统一会话中进行。',
     modes: {AssistantMode.learning},
@@ -509,6 +522,7 @@ class AssistantToolRouter {
 
   static const medicalCases = AssistantToolDefinition(
     id: 'medical_cases',
+    capabilityId: 'medical_cases',
     title: '医案库检索',
     description: '打开本地医案库进行检索。',
     modes: {AssistantMode.tools, AssistantMode.learning},
@@ -519,6 +533,7 @@ class AssistantToolRouter {
 
   static const almanac = AssistantToolDefinition(
     id: 'almanac',
+    capabilityId: 'almanac',
     title: '每日黄历',
     description: '使用 App 本地黄历引擎计算指定日期；也可打开页面复核。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -542,6 +557,7 @@ class AssistantToolRouter {
   // surface; the model only routes and explains, never fabricates results.
   static const diagnosisHistory = AssistantToolDefinition(
     id: 'diagnosis_history',
+    capabilityId: 'diagnosis_history',
     title: '诊断历史趋势',
     description: '查看既有结构化辨证记录与六经变化趋势。',
     modes: {AssistantMode.tools, AssistantMode.consultation},
@@ -552,6 +568,7 @@ class AssistantToolRouter {
 
   static const criticalIllness = AssistantToolDefinition(
     id: 'critical_illness',
+    capabilityId: 'critical_illness',
     title: '闭门课重症资料',
     description: '查阅 App 内置重症课程资料；不是个体治疗方案。',
     modes: {AssistantMode.tools, AssistantMode.learning},
@@ -562,6 +579,7 @@ class AssistantToolRouter {
 
   static const solarTerms = AssistantToolDefinition(
     id: 'solar_terms',
+    capabilityId: 'solar_terms',
     title: '节气养生',
     description: '在当前对话查询 App 已有节气计算结果及二十四节气知识资产；AI 只负责归纳和解释，不新增养生或个体医学结论。',
     modes: {AssistantMode.tools, AssistantMode.learning},
@@ -614,6 +632,7 @@ class AssistantToolRouter {
 
   static const yuxiaji = AssistantToolDefinition(
     id: 'yuxiaji_omen',
+    capabilityId: 'yuxiaji_omen',
     title: '玉匣灵兆',
     description: '默认在当前对话中按 App 本机时辰查询《玉匣记》身兆文本；需要方向、形态等额外观察时仍可打开原页面。仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -625,6 +644,7 @@ class AssistantToolRouter {
 
   static const dream = AssistantToolDefinition(
     id: 'dream',
+    capabilityId: 'dream',
     title: '周公解梦',
     description: '在当前对话中检索 App 本地梦境民俗资料；多个词条命中时先澄清，不作现实吉凶判断。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -645,6 +665,7 @@ class AssistantToolRouter {
 
   static const guansha = AssistantToolDefinition(
     id: 'guansha',
+    capabilityId: 'guansha',
     title: '小儿关煞',
     description: '在当前对话收集明确的公历出生日期、当地钟表时间、性别和可唯一识别的出生地点，复用 App 原有八字与关煞规则；仅供民俗文化参考，非医学结论。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -685,6 +706,7 @@ class AssistantToolRouter {
 
   static const sanshan = AssistantToolDefinition(
     id: 'sanshan_lingqian',
+    capabilityId: 'sanshan_lingqian',
     title: '三山国王灵签',
     description: '用户明确求签/抽签时，由 App 本地随机选择既有 92 签签谱并在当前对话返回；查阅签谱仍可打开页面。仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -696,6 +718,7 @@ class AssistantToolRouter {
 
   static const chenggu = AssistantToolDefinition(
     id: 'chenggu',
+    capabilityId: 'chenggu',
     title: '袁天罡称骨',
     description: '在当前对话中收集明确的公历出生日期和当地钟表时间，复用 App 原有八字与称骨计算；仅供传统民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -722,6 +745,7 @@ class AssistantToolRouter {
 
   static const shoushengDebt = AssistantToolDefinition(
     id: 'shousheng_debt',
+    capabilityId: 'shousheng_debt',
     title: '受生债查询',
     description: '在当前对话中收集明确的公历出生日期、当地钟表时间和查询体系，复用 App 原有八字设置及本地受生债数据表；仅作道教文献与民俗文化参考，不构成现实债务、宗教或财务建议。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -757,6 +781,7 @@ class AssistantToolRouter {
 
   static const huangdiSiji = AssistantToolDefinition(
     id: 'huangdi_siji',
+    capabilityId: 'huangdi_siji',
     title: '轩辕黄帝四季歌',
     description: '在当前对话中收集明确的公历出生日期和当地钟表时间，复用 App 原有农历月份换算与本地四季歌数据；仅作民俗文化参考。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
@@ -783,6 +808,7 @@ class AssistantToolRouter {
 
   static const savedCharts = AssistantToolDefinition(
     id: 'saved_charts',
+    capabilityId: 'saved_charts',
     title: '我的命盘库',
     description: '用户明确请求后，在当前对话读取其指定的保存记录，并由 App 原有八字或紫微引擎重新计算；不自动读取或注入全部个人记录。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
