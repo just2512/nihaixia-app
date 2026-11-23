@@ -285,6 +285,7 @@ Files:
  lib/models/medical_case_source_ledger.dart
  lib/models/tcm_interview_message.dart
  lib/models/tcm_interview_task_state.dart
+ lib/models/tool_execution_plan.dart
  lib/models/zangfu_evidence.dart
  lib/screens/assistant_history_screen.dart
  lib/screens/assistant_tool_router.dart
@@ -477,6 +478,7 @@ Files:
  test/tcm_interview_adapter_test.dart
  test/tcm_interview_message_test.dart
  test/tcm_interview_task_state_test.dart
+ test/tool_execution_plan_test.dart
  test/tool_foldable_layout_test.dart
  test/tools_screen_editorial_layout_test.dart
  test/window_metrics_diagnostics_test.dart

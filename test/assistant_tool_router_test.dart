@@ -21,6 +21,19 @@ void main() {
     }
   });
 
+  test('每个工具定义都声明显式且稳定的业务 capability ID', () {
+    final tools = AssistantToolRouter.all;
+    expect(tools, isNotEmpty);
+    for (final tool in tools) {
+      expect(tool.capabilityId.trim(), isNotEmpty, reason: tool.id);
+      expect(tool.capabilityId, tool.capabilityId.trim(), reason: tool.id);
+    }
+    expect(AssistantToolRouter.bazi.capabilityId, 'bazi');
+    expect(AssistantToolRouter.yunqi.capabilityId, 'yunqi');
+    expect(AssistantToolRouter.structuredDiagnosis.capabilityId,
+        'structured_diagnosis');
+  });
+
   test('问诊助手允许完整解释 App 规则结果且诊断依据必须来自知识库', () {
     final prompt = AssistantMode.consultation.promptHint;
     expect(prompt, contains('DiagnosticEngine'));
@@ -253,6 +266,7 @@ void main() {
   test('必填参数在没有传参时也会被拒绝', () {
     final tool = AssistantToolDefinition(
       id: 'test_required',
+      capabilityId: 'test_required',
       title: '测试工具',
       description: '测试必填参数。',
       modes: const {AssistantMode.tools},
