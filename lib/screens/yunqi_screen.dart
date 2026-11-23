@@ -6,7 +6,7 @@ import '../models/ai_context_ref.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../services/yunqi_engine.dart';
-import '../services/yunqi_tool_executor.dart';
+import '../services/yunqi_tool_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import 'assistant_tool_router.dart';
@@ -77,7 +77,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
   Future<void> _askAiAboutResult() async {
     AiContextRef contextRef;
     try {
-      final snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
+      final snapshot = YunQiToolService.createStructuredSnapshot(_selectedDate);
       contextRef = AiContextResolver.buildYunqiResultContextRef(
         structuredSnapshot: snapshot,
       );
@@ -152,7 +152,7 @@ class _YunQiScreenState extends State<YunQiScreen> {
     late final AiContextRef contextRef;
     late final Map<String, Object?> snapshot;
     try {
-      snapshot = YunQiToolExecutor.createStructuredSnapshot(_selectedDate);
+      snapshot = YunQiToolService.createStructuredSnapshot(_selectedDate);
       contextRef = AiContextResolver.buildYunqiChartFieldContextRef(
         structuredSnapshot: snapshot,
         fieldPath: fieldPath,
