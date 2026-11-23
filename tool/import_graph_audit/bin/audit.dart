@@ -42,24 +42,16 @@ Future<void> main(List<String> args) async {
 
   final violations = <String>[];
   final parseFailures = <String>[];
-  var dispatcherExecutorReferenceCount = 0;
-    final scannedHeadlessEntrypoints = <String>{};
+  var executorReferenceCount = 0;
 
-  String normalizedPath(File file) => file.absolute.path.replaceAll(Platform.pathSeparator, '/');
-
-  bool isHeadlessUiEntrypoint(File file) {
-    final path = normalizedPath(file);
-    return path.endsWith('/screens/assistant_tool_router.dart') ||
-        path.endsWith('/screens/local_ai_interview_screen.dart') ||
-        path.endsWith('/services/assistant_conversation_orchestrator.dart');
-  }
+  String normalizedPath(File file) =>
+      file.absolute.path.replaceAll(Platform.pathSeparator, '/');
 
   void inspectExecutorUri(String? uri, File importer) {
     if (uri == null || !uri.endsWith('_tool_executor.dart')) return;
-    if (normalizedPath(importer) == dispatcher) {
-      dispatcherExecutorReferenceCount++;
-    } else if (isHeadlessUiEntrypoint(importer)) {
-            violations.add('${importer.path} imports a Headless Executor directly: $uri');
+    executorReferenceCount++;
+    if (normalizedPath(importer) != dispatcher) {
+      violations.add('${importer.path} imports Executor implementation directly: $uri');
     }
   }
 
@@ -106,10 +98,6 @@ Future<void> main(List<String> args) async {
       }
     }
 
-    if (isHeadlessUiEntrypoint(file)) {
-      scannedHeadlessEntrypoints.add(normalizedPath(file));
-    }
-
     if (normalizedPath(file) == dispatcher) {
       final visitor = _ForbiddenUiNodeVisitor();
       parsed.unit.accept(visitor);
@@ -121,11 +109,8 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  if (dispatcherExecutorReferenceCount == 0) {
-    violations.add('HeadlessToolDispatcher does not import any *_tool_executor.dart implementation.');
-  }
-  if (scannedHeadlessEntrypoints.length != 3) {
-    violations.add('Expected to scan all 3 Headless UI entrypoints; found ${scannedHeadlessEntrypoints.length}.');
+  if (executorReferenceCount == 0) {
+    violations.add('No *_tool_executor.dart references were found in lib/.');
   }
 
   if (parseFailures.isNotEmpty || violations.isNotEmpty) {
@@ -141,9 +126,8 @@ Future<void> main(List<String> args) async {
   }
 
   stdout.writeln(
-    'PASS: all 3 Headless UI entrypoints have no direct Executor imports; '
-    'HeadlessToolDispatcher owns $dispatcherExecutorReferenceCount Executor imports '
-    'and has no Flutter UI imports or UI symbols. Page-specific execution and '
-    'result-context consumers remain outside this dispatch-boundary gate.',
+    'PASS: $executorReferenceCount Executor imports are owned exclusively '
+    'by lib/services/headless_tool_dispatcher.dart; Dispatcher has no Flutter UI '
+    'imports or UI symbols.',
   );
 }
