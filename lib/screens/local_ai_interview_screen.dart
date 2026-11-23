@@ -3076,7 +3076,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ..add(_InterviewMessage(
           text: response,
           isUser: false,
-          sourceIds: result.sourceIds,
+          sourceIds: presentation.sourceIds,
           actionLabel: canInterpret && !autoInterpret ? 'AI总结解读' : null,
           onAction: canInterpret && !autoInterpret
               ? () => unawaited(_requestAssistantResultInterpretation(
@@ -3085,7 +3085,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     retrievalQuery: retrievalQuery,
                     toolId: presentation.needsDreamFollowUp ? null : tool.id,
                     toolStatus: presentation.needsDreamFollowUp ? null : presentation.toolStatusForPersistence,
-                    sourceIds: result.sourceIds,
+                    sourceIds: presentation.sourceIds,
                   ))
               : null,
         ));
@@ -3098,7 +3098,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       mode: mode,
       toolId: tool.id,
       toolStatus: presentation.toolStatusForPersistence,
-      sourceIds: result.sourceIds,
+      sourceIds: presentation.sourceIds,
       toolArguments: presentation.argumentsForPersistence,
       traceId: traceContext.traceId,
     );
@@ -3107,7 +3107,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       stage: AiTraceStage.persistence,
       status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
       toolId: tool.id,
-      sourceIds: result.sourceIds,
+      sourceIds: presentation.sourceIds,
       errorCode: persisted ? null : 'PERSISTENCE_FAILED',
     );
     await _traceRecorder.record(
@@ -3115,7 +3115,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       stage: AiTraceStage.finalRender,
       status: AiTraceStatus.succeeded,
       toolId: tool.id,
-      sourceIds: result.sourceIds,
+      sourceIds: presentation.sourceIds,
     );
     _scrollToBottom();
     if (autoInterpret && mounted) {
@@ -3125,7 +3125,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         retrievalQuery: retrievalQuery,
         toolId: presentation.needsDreamFollowUp ? null : tool.id,
         toolStatus: presentation.needsDreamFollowUp ? null : presentation.toolStatusForPersistence,
-        sourceIds: result.sourceIds,
+        sourceIds: presentation.sourceIds,
         showPromptInTimeline: false,
         allowWhileSending: true,
       );
