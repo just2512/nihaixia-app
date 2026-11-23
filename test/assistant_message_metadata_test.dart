@@ -68,6 +68,62 @@ void main() {
     expect(restored.contextRef, contextRef);
   });
 
+  test('multi-tool plan step provenance round-trips in typed metadata', () {
+    const original = AssistantMessageMetadata(
+      traceId: '0123456789abcdef0123456789abcdef',
+      invocationOrigin: 'aiDispatch',
+      toolStatus: 'PLAN_SUCCEEDED',
+      sourceIds: [
+        'local-knowledge:yuxiaji',
+        'local-knowledge:sanshan',
+      ],
+      toolPlanSteps: [
+        AssistantToolPlanStepMetadata(
+          toolId: 'yuxiaji_omen',
+          capabilityId: 'yuxiaji_omen',
+          title: '玉匣灵兆',
+          status: 'SUCCEEDED',
+          arguments: {'time': 'local-device'},
+          sourceIds: ['local-knowledge:yuxiaji'],
+        ),
+        AssistantToolPlanStepMetadata(
+          toolId: 'sanshan_lingqian',
+          capabilityId: 'sanshan_lingqian',
+          title: '三山灵签',
+          status: 'SUCCEEDED',
+          sourceIds: ['local-knowledge:sanshan'],
+        ),
+      ],
+    );
+
+    final restored = AssistantMessageMetadata.decode(original.encode());
+
+    expect(restored.toolPlanSteps, hasLength(2));
+    expect(restored.toolPlanSteps.first.toolId, 'yuxiaji_omen');
+    expect(restored.toolPlanSteps.first.capabilityId, 'yuxiaji_omen');
+    expect(restored.toolPlanSteps.first.arguments, {'time': 'local-device'});
+    expect(restored.toolPlanSteps.first.sourceIds, ['local-knowledge:yuxiaji']);
+    expect(restored.toolPlanSteps.last.status, 'SUCCEEDED');
+    expect(restored.invocationOrigin, 'aiDispatch');
+    expect(restored.toolStatus, 'PLAN_SUCCEEDED');
+  });
+
+  test('malformed plan metadata entries are ignored without breaking history decode', () {
+    final restored = AssistantMessageMetadata.decode('''
+      {
+        "schemaVersion": 1,
+        "toolPlanSteps": [
+          {"toolId":"valid","capabilityId":"valid","title":"有效","status":"SUCCEEDED"},
+          {"toolId":42,"capabilityId":"bad","title":"错误","status":"SUCCEEDED"},
+          "not-an-object"
+        ]
+      }
+    ''');
+
+    expect(restored.toolPlanSteps, hasLength(1));
+    expect(restored.toolPlanSteps.single.toolId, 'valid');
+  });
+
   test('legacy semicolon metadata remains readable', () {
     final restored = AssistantMessageMetadata.decode(
       'mode=consultation;selectedMode=learning;tool=yunqi;'
