@@ -3729,3 +3729,70 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - Find N2 Launcher 显示、原签名 APK 原位覆盖升级、数据库/用户数据保留，以及 E4B GPU/CPU 多轮、第二/第三轮响应和 Activity 恢复仍是 `LOCAL ONLY / UNKNOWN`；CI 和模拟器不能替代设备验收。
 - 当前唯一仍 OPEN 的 PR 是 #328 商业许可草案（DRAFT）；其合并条件未满足，维持冻结，不计为可合并功能。
 - 云端功能集成：PR #408、#409 均 MERGED；PR #404 CLOSED / SUPERSEDED。当前未审计的历史 refs 与设备本地验收继续按各自状态管理，不宣称整个仓库 465 个分支均已合并或删除。
+
+
+---
+
+## 71. 2026-11-23 PR #411 合并后遗留项复核与历史引用处置
+
+### 71.1 当前核验基线与证据边界
+
+- 本节代码核验基线：PR #411 合并后的 `master @ 30bcb854ba3f559d0c56329537f68089dd225ab8`。
+- PR #411：`test(ai): cover production Shanghan contextual Ask AI entry`，已于 2026-11-23 squash merge；合并提交即上述 master SHA。
+- 本节区分 PR HEAD CI 与合并后 master CI。PR HEAD 的门禁成功不自动证明合并后的 master push workflow 成功。
+- 本轮 GitHub 查询未返回该 merge commit 的独立 master push workflow 记录，合并后主线 CI 状态记为 `UNKNOWN / NOT_RETURNED`；不得将 PR HEAD 的 CI 结果复制为 post-merge 结果。
+- Find N2 / E4B 真机运行、多轮、媒体输入、Activity/进程恢复及原签名覆盖安装仍按既有交接文件记录为 `LOCAL ONLY / UNKNOWN`，本轮没有新增设备 TRACE。
+
+### 71.2 PR #411 逐项审计与合并证据
+
+PR #411 以当时 master `a5abfbeaae66eb13164343678091b1972e2ed94a` 为基线，PR head 为 `f0f9e3e284a56f9dd58193ea439b518585244b88`；compare 结果为 ahead 11 / behind 0。实际修改四个文件：
+
+| 文件 | 变更 | 审计结论 |
+|---|---|---|
+| `.reuse/dep5` | 新增测试文件的 Fork Commercial 映射 | 与新增测试路径精确对应 |
+| `docs/fork-license-file-inventory.json` | 新增路径记录并重算清单计数 | 新测试列入 FORK_COMMERCIAL / OWNERSHIP_EVIDENCE_REQUIRED |
+| `docs/fork-license-file-inventory.md` | 同步新增路径和计数 | 与 JSON 清单一致 |
+| `test/classic_library_contextual_ask_entry_test.dart` | 新增 134 行生产 Widget 回归测试 | 覆盖真实伤寒阅读入口、正文选择菜单、学习助手上下文及返回阅读页 |
+
+测试通过真实生产路由 `ShangHanJinguiScreen → ClassicLibraryScreen → MarkdownDocScreen → LocalAiInterviewScreen`，从真实资产选择可进行段落级操作的解释正文，断言学习模式、classic 类型、moduleId、稳定 anchor、sourceId、选中文字、Prompt 和返回状态；另验证相邻篇目不会继承错误锚点。该 PR 没有修改运行时代码、模型调用、来源解析器或知识正文。
+
+PR HEAD 门禁证据：
+
+| 门禁 | Run / Job | 结果 |
+|---|---|---|
+| Fork license inventory / boundary | run `45094151796`；job `137430101034` | SUCCESS |
+| Dart / Flutter 静态分析及全量回归 | run `45094151801`；job `137430183549` | SUCCESS |
+| Android arm64 CI、Manifest、ABI、单元测试 | run `45094151801`；job `137432362320` | SUCCESS |
+| Conditional Branch validation | job `137430184750` | SKIPPED，不计 PASS |
+| 未解决 inline review threads | PR #411 | 0 |
+
+实际 Flutter regression job 已独立执行 Dart/Flutter static analysis 和 full regression suite；条件性 Branch validation 的 SKIPPED 不作为通过证据。PR #411 最终以 squash merge 合入，merge commit：`30bcb854ba3f559d0c56329537f68089dd225ab8`。
+
+### 71.3 原始历史分支的选择性处置
+
+历史来源分支 `work/ai-context-classic-entry-integration-20261118` 相对当前 master 已分叉，比较结果为 2 commits ahead / 542 commits behind；唯一文件差异为同路径旧版测试 `test/classic_library_contextual_ask_entry_test.dart`（86 行），没有发现其他独有文件变更。
+
+已读取旧测试源码，其第二项断言要求相邻 `clause_002.md` 不存在 `SelectionArea`，并在整篇文本中按“太阳病”直接长按；这些假设与当前主线允许相邻资产拥有独立规范锚点、paragraph mode 只对安全解释段落提供选择操作的行为不符。新 PR #411 没有整支合并该旧分支，而是从当前 master 重建更完整测试：选择可交互的真实解释段落，验证精确来源与段落 anchor、版本摘要、Prompt，并验证相邻篇目的规范锚点独立。
+
+**处置：旧分支功能差异已由 PR #411 的当前主线实现选择性替代；不整支合并，不删除历史 branch ref。** 该判断仅覆盖这条具体来源分支，不外推为其他历史分支已完成审计。
+
+### 71.4 商业许可草案 PR #328 状态纠偏
+
+- PR #328 当前为 `CLOSED / SUPERSEDED`，`merged=false`，不是待合并 PR；PR 正文明确写明原草案的许可假设、授权范围和费用条款已不符合当前主线许可体系。
+- 当前主线已有根目录 Apache-2.0、`LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`、`.reuse/dep5`、`docs/fork-license-boundary.md` 与 `docs/ai-commercial-license.md` 等许可边界文件。
+- PR #328 原四份草案不回灌、不整支合并；其关闭不等于商业授权已经完成，也不证明全部文件权属、贡献者再许可和对外合同已获法律确认。
+- 商业发布前仍须完成具体发行版本的文件权属证据、混合文件来源切分、发行 manifest 与法律专业审阅；不得修改根目录 Apache-2.0 LICENSE，也不得把无权再许可的上游、第三方或知识库内容纳入 Fork 商业授权。
+
+### 71.5 全仓 PR 与 branch refs 当前快照
+
+- 当前 OPEN PR 搜索结果为空；本轮未发现可直接进入合并流程的 OPEN PR。PR #411 已 MERGED，PR #328 已 CLOSED / SUPERSEDED。
+- 远端 branch refs 通过分页查询得到 467 个（包含 master；前四页各 100 个，最后一页 67 个，后续 cursor 为空）。这是 branch ref 数量，不是待合并任务数量。
+- 既有 §69–70 对历史分支的限制继续有效：没有逐支完成当前 master compare、文件差异、来源归属和替代实现核验的 refs，仍应标记 `NOT_REVIEWED`；不能把已合并 PR 保留的 head refs、CLOSED PR refs 或无 PR 关联 refs 自动判作待合并功能。
+- 本轮不批量删除 branch refs。对已吸收、已替代和实验分支的删除，必须另行核验 PR、工作流及用户工作依赖后处理。
+- 因此当前准确结论是：**云端发现的待合并 OPEN PR 已清空；全仓 467 个 branch refs 并未逐条审计、合并或删除。** 不将“没有 OPEN PR”表述为“所有历史分支均已合并”。
+
+### 71.6 下一步
+
+1. 取得 `30bcb854ba3f559d0c56329537f68089dd225ab8` 对应的 master push CI 终态证据；未返回前保持 `UNKNOWN / NOT_RETURNED`。
+2. Find N2 / E4B 按 §68.4 及本地清单完成实际设备验收，缺少 TRACE 的场景继续保持 `UNKNOWN / LOCAL ONLY`。
+3. 后续如需处理历史 refs，先按名称/PR 关联和 compare 结果分组，再对有独有文件差异的候选逐支审计；不采用全量 merge 或全量删除。
