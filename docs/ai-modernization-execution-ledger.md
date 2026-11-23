@@ -4035,3 +4035,13 @@ PR HEAD 门禁证据：
 - `AssistantToolDefinition` 已为当前注册工具明确声明稳定的 `capabilityId`，当前初始映射按工具 ID 一对一建立；将来若多个工具属于同一业务能力，应显式共享同一 capability ID，而不是按工具调用数计费。
 - 本批只建立执行计划和注册元数据契约，**尚未**将所有实际 Headless 调度路径改造成先形成完整计划、再在第一个业务副作用前统一授权。生产计划聚合、调度器接线、授权前无副作用回归仍是 F1 后续必做项。
 - 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 最新 head 的 Fork license 检查已通过，Flutter full regression 正在执行。不得将 Branch validation 的 SKIPPED 计为通过。
+
+
+---
+
+## 82. FeatureAuthorizer 异步查询契约（2026-11-23）
+
+- 新增注入式 `FeatureAuthorizer.authorize(featureId)` 异步接口；决策明确区分 `allowed`、`denied`、`temporarilyUnavailable`，避免将初始化超时/存储暂不可用误判为永久未授权。
+- 稳定错误原因覆盖初始化超时、存储损坏/不可用、未知发行者、签名无效、修订不支持、设备不匹配、密钥缺失/失效、Keystore 暂不可用和 Provider 错误；`unsupportedFeatureClaim` 只作为诊断项，不因此拒绝整份合法 Token。
+- 当前切片只有接口/数据契约和 Fake 注入测试；尚无 EntitlementService、共享初始化 Future、2 秒有界等待、TokenStore、Android KeyStore Bridge、内存快照或 UI 状态发布。
+- 生产授权接入仍必须遵守 v1.2 §7：超时返回暂时不可用、不持久化临时拒绝，基础免费功能继续可用；不得用全局静态门禁替代依赖注入。
