@@ -4,6 +4,7 @@ import '../data/yijing_data.dart';
 import '../engine/yijing_engine.dart';
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'tool_argument_support.dart';
 
 /// Headless adapter for the four existing YiJingScreen casting methods.
 /// All hexagram math remains in YiJingEngine; this class only validates inputs,
@@ -36,29 +37,12 @@ class YiJingToolExecutor {
     Map<String, String> arguments, {
     DateTime? now,
     Random? rng,
-  }) {
-    final prepared = <String, String>{...arguments};
-    final method = prepared['method'];
-    if (method == 'time') {
-      prepared['at'] = (now ?? DateTime.now()).toIso8601String();
-    } else if (method == 'coins') {
-      final random = rng ?? Random();
-      final rolls = <String>[];
-      for (var line = 0; line < 6; line++) {
-        final heads = List<bool>.generate(3, (_) => random.nextBool())
-            .where((isHead) => isHead)
-            .length;
-        rolls.add(switch (heads) {
-          3 => '9',
-          2 => '7',
-          1 => '8',
-          _ => '6',
-        });
-      }
-      prepared['coins'] = rolls.join(',');
-    }
-    return Map<String, String>.unmodifiable(prepared);
-  }
+  }) =>
+      ToolArgumentSupport.prepareYiJingArguments(
+        arguments,
+        now: now,
+        rng: rng,
+      );
 
   static AssistantToolResult execute(Map<String, String> arguments) {
     const allowedKeys = {

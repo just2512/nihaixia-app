@@ -1,6 +1,7 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'ziwuliuzhu_calculation_service.dart';
+import 'tool_argument_support.dart';
 
 class ZiWuLiuZhuToolExecution {
   const ZiWuLiuZhuToolExecution({
@@ -35,61 +36,11 @@ class ZiWuLiuZhuToolExecutor {
   static Map<String, String> prepareExecutionArguments(
     Map<String, String> arguments, {
     DateTime? now,
-  }) {
-    final prepared = <String, String>{...arguments};
-    // The App owns the final device-local timestamp. Never trust a caller or
-    // model-supplied "at"; rebuild it only from explicit user date/time slots
-    // or capture the current device time at the execution boundary.
-    prepared.remove('at');
-    final date = prepared['date'];
-    final time = prepared['time'];
-    if (date != null && time != null) {
-      final candidate = '${date}T$time';
-      if (ZiWuLiuZhuCalculationService.parseLocalAt(candidate) != null) {
-        prepared['at'] = candidate;
-      }
-    } else if (date == null && time == null) {
-      prepared['at'] =
-          ZiWuLiuZhuCalculationService.formatLocalAt(now ?? DateTime.now());
-    } else if (date == null && time != null) {
-      final current = now ?? DateTime.now();
-      final candidate = '${current.year.toString().padLeft(4, '0')}-'
-          '${current.month.toString().padLeft(2, '0')}-'
-          '${current.day.toString().padLeft(2, '0')}T$time';
-      if (ZiWuLiuZhuCalculationService.parseLocalAt(candidate) != null) {
-        prepared['date'] = candidate.substring(0, 10);
-        prepared['at'] = candidate;
-      }
-    }
-    return Map.unmodifiable(prepared);
-  }
+  }) =>
+      ToolArgumentSupport.prepareZiWuLiuZhuArguments(arguments, now: now);
 
-  static List<String> validateArguments(Map<String, String> arguments) {
-    const allowed = {'at', 'date', 'time'};
-    if (arguments.keys.any((key) => !allowed.contains(key))) {
-      return const ['包含未声明的子午流注计算参数'];
-    }
-    final at = arguments['at'];
-    if (at == null || at.isEmpty) return const ['缺少完整的设备本地日期和时间'];
-    if (ZiWuLiuZhuCalculationService.parseLocalAt(at) == null) {
-      return const ['计算时间必须为有效的本地时间 YYYY-MM-DDTHH:mm（不含时区偏移）'];
-    }
-    final parsed = ZiWuLiuZhuCalculationService.parseLocalAt(at)!;
-    final date = arguments['date'];
-    if (date != null &&
-        date != '${parsed.year.toString().padLeft(4, '0')}-'
-            '${parsed.month.toString().padLeft(2, '0')}-'
-            '${parsed.day.toString().padLeft(2, '0')}') {
-      return const ['日期与最终计算时间不匹配'];
-    }
-    final time = arguments['time'];
-    if (time != null &&
-        time != '${parsed.hour.toString().padLeft(2, '0')}:'
-            '${parsed.minute.toString().padLeft(2, '0')}') {
-      return const ['时刻与最终计算时间不匹配'];
-    }
-    return const [];
-  }
+  static List<String> validateArguments(Map<String, String> arguments) =>
+      ToolArgumentSupport.validateZiWuLiuZhuArguments(arguments);
 
   static AssistantToolResult execute(Map<String, String> arguments) =>
       executeWithSnapshot(arguments).result;

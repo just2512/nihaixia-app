@@ -22,7 +22,7 @@ void main() {
       Map<String, String>? receivedArguments;
 
       final actual = await HeadlessToolDispatcher.execute(
-        tool: AssistantToolRouter.yunqi,
+        toolId: AssistantToolRouter.yunqi.id,
         arguments: arguments,
         executorOverride: (received) {
           calls += 1;
@@ -39,7 +39,7 @@ void main() {
     test('awaits an asynchronous executor and returns its typed result unchanged', () async {
       var completed = false;
       final actual = await HeadlessToolDispatcher.execute(
-        tool: AssistantToolRouter.yunqi,
+        toolId: AssistantToolRouter.yunqi.id,
         arguments: arguments,
         executorOverride: (received) async {
           await Future<void>.delayed(Duration.zero);
@@ -58,7 +58,7 @@ void main() {
       expect(HeadlessToolDispatcher.hasExecutor(pageOnly.id), isFalse);
 
       final actual = await HeadlessToolDispatcher.execute(
-        tool: pageOnly,
+        toolId: pageOnly.id,
         arguments: const {},
         executorOverride: (_) => AssistantToolResult(
           toolId: pageOnly.id,
@@ -75,7 +75,7 @@ void main() {
       final pageOnly = AssistantToolRouter.byId('guji_library')!;
       await expectLater(
         HeadlessToolDispatcher.execute(
-          tool: pageOnly,
+          toolId: pageOnly.id,
           arguments: const {},
         ),
         throwsA(isA<StateError>()),
@@ -86,7 +86,7 @@ void main() {
       final error = StateError('executor failure');
       await expectLater(
         HeadlessToolDispatcher.execute(
-          tool: AssistantToolRouter.yunqi,
+          toolId: AssistantToolRouter.yunqi.id,
           arguments: arguments,
           executorOverride: (_) => throw error,
         ),

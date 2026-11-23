@@ -1008,3 +1008,12 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored v1.2 license protocol, verifier, issuer, and test assets. Applies only to portions for which sufficient rights exist.
+
+
+Files:
+ lib/services/tool_argument_support.dart
+ tool/import_graph_audit/bin/audit.dart
+ tool/import_graph_audit/pubspec.yaml
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned Headless tool argument support and isolated Analyzer AST import-graph audit; only portions for which sufficient rights exist.

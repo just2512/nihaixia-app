@@ -7,6 +7,7 @@ import '../models/assistant_tool_result.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'bazi_service.dart';
 import 'ziwei_engine.dart';
+import 'tool_argument_support.dart';
 
 /// Recalculates one user-selected saved chart with the App's existing engines.
 ///
@@ -23,86 +24,30 @@ class SavedChartToolExecutor {
   };
 
   static Future<List<SavedChart>> loadSavedCharts() =>
-      SavedChartRepository.getAll();
+      ToolArgumentSupport.loadSavedCharts();
 
   static int? resolveRecordId(
     String text,
     List<SavedChart> charts, {
     Map<String, String> pendingArguments = const {},
-  }) {
-    // Explicit input in the current turn overrides the pending selection.
-    final idMatch = RegExp(
-      r'(?:记录\s*ID|命盘\s*ID|ID|编号|记录号|#)\s*[：:=]?\s*(\d+)',
-      caseSensitive: false,
-    ).firstMatch(text);
-    final rawId = idMatch?.group(1);
-    if (rawId != null) {
-      final parsed = int.tryParse(rawId);
-      return parsed != null && charts.any((chart) => chart.id == parsed)
-          ? parsed
-          : null;
-    }
-
-    final numericOnly = int.tryParse(
-      text.trim().replaceAll(RegExp(r'[，。.!！?？\s]+$'), ''),
-    );
-    if (numericOnly != null) {
-      return charts.any((chart) => chart.id == numericOnly)
-          ? numericOnly
-          : null;
-    }
-
-    final nameMatches = charts
-        .where((chart) => chart.name.isNotEmpty && text.contains(chart.name))
-        .toList(growable: false);
-    if (nameMatches.length == 1) return nameMatches.single.id;
-    if (nameMatches.length > 1) return null;
-
-    if (RegExp(r'最近|最新|刚保存|最后保存').hasMatch(text) &&
-        charts.isNotEmpty) {
-      return charts.first.id;
-    }
-
-    // A short follow-up such as "八字" uses the saved ID from the prior turn.
-    final pending = int.tryParse(
-      pendingArguments['saved_chart_id']?.trim() ?? '',
-    );
-    if (pending != null) {
-      return charts.any((chart) => chart.id == pending) ? pending : null;
-    }
-
-    // Even a one-row library requires an explicit record or "latest" request.
-    return null;
-  }
+  }) =>
+      ToolArgumentSupport.resolveSavedChartRecordId(
+        text,
+        charts,
+        pendingArguments: pendingArguments,
+      );
 
   static String? resolveChartType(
     String text, {
     String? pendingChartType,
-  }) {
-    final hasBazi = RegExp(r'八字|四柱|子平').hasMatch(text);
-    final hasZiwei = RegExp(r'紫微|斗数').hasMatch(text);
-    if (hasBazi == hasZiwei) {
-      return hasBazi ? null : pendingChartType;
-    }
-    return hasBazi ? 'bazi' : 'ziwei';
-  }
+  }) =>
+      ToolArgumentSupport.resolveSavedChartType(
+        text,
+        pendingChartType: pendingChartType,
+      );
 
-  static String formatSavedChartChoices(List<SavedChart> charts) {
-    if (charts.isEmpty) return '当前命盘库没有已保存的记录。';
-    final visible = charts.take(30).toList(growable: false);
-    final lines = visible.asMap().entries.map((entry) {
-      // Saved-chart default names include date and gender. Do not put names,
-      // birth dates, gender, or locations into the assistant transcript before
-      // the user explicitly selects a record.
-      final chart = entry.value;
-      return '${entry.key + 1}. ID ${chart.id ?? 'MISSING'}';
-    }).join('\n');
-    final remaining = charts.length - visible.length;
-    final tail = remaining > 0
-        ? '\n另有 $remaining 条记录；可继续提供记录 ID。'
-        : '';
-    return '已保存命盘（按保存时间从新到旧）：\n$lines$tail';
-  }
+  static String formatSavedChartChoices(List<SavedChart> charts) =>
+      ToolArgumentSupport.formatSavedChartChoices(charts);
 
   static Future<AssistantToolResult> execute(
     Map<String, String> arguments,

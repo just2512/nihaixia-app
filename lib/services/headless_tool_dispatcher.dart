@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import '../models/assistant_tool_result.dart';
-import '../screens/assistant_tool_router.dart';
 import 'yunqi_tool_executor.dart';
 import 'ziwei_tool_executor.dart';
 import 'bazi_tool_executor.dart';
@@ -29,10 +28,7 @@ import 'saved_chart_tool_executor.dart';
 class HeadlessToolDispatcher {
   const HeadlessToolDispatcher._();
 
-  static final Map<
-    String,
-    FutureOr<AssistantToolResult> Function(Map<String, String>)
-  > _executors = {
+  static final Map<String, FutureOr<AssistantToolResult> Function(Map<String, String>)> _executors = {
     'yunqi': YunQiToolExecutor.execute,
     'ziwei': ZiweiToolExecutor.execute,
     'bazi': BaziToolExecutor.execute,
@@ -56,15 +52,15 @@ class HeadlessToolDispatcher {
   static bool hasExecutor(String toolId) => _executors.containsKey(toolId);
 
   static Future<AssistantToolResult> execute({
-    required AssistantToolDefinition tool,
+    required String toolId,
     required Map<String, String> arguments,
     FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
         executorOverride,
   }) async {
-    final executor = executorOverride ?? _executors[tool.id];
+    final executor = executorOverride ?? _executors[toolId];
     if (executor == null) {
       throw StateError(
-        'Tool "${tool.id}" does not register a Headless executor.',
+        'Tool "${toolId}" does not register a Headless executor.',
       );
     }
     return await executor(arguments);
