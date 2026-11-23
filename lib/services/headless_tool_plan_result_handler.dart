@@ -191,8 +191,8 @@ class HeadlessToolPlanResultHandler {
       sourceIds: allSourceIds,
       contractErrors: errors,
       allStepsSucceeded: allSucceeded && errors.isEmpty,
-      canInterpret,
-      autoInterpret,
+      canInterpret: canInterpret,
+      autoInterpret: autoInterpret,
       interpretationPrompt: canInterpret ? prompt : '',
       followUp: followUp,
     );
