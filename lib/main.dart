@@ -8,6 +8,7 @@ import 'data/formula_repository.dart';
 import 'data/herb_repository.dart';
 import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
+import 'licensing/feature_authorizer_scope.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_tokens.dart';
@@ -202,7 +203,9 @@ class NiHaishaApp extends StatelessWidget {
       listenable: SettingsRepository.instance,
       builder: (context, _) {
         final settings = SettingsRepository.instance;
-        return MaterialApp(
+        return FeatureAuthorizerScope(
+          authorizer: const UnconfiguredFeatureAuthorizer(),
+          child: MaterialApp(
           title: '研纪',
           debugShowCheckedModeBanner: false,
           themeMode: settings.themeMode,
@@ -234,6 +237,7 @@ class NiHaishaApp extends StatelessWidget {
             Locale('en', 'US'),
           ],
           locale: const Locale('zh', 'CN'),
+          ),
         );
       },
     );
