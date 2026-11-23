@@ -205,8 +205,6 @@ Files:
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundaryTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicyTest.kt
  build-apk.sh
- Comment: Fork-added implementation/brand/documentation/resources. Applies only to content whose copyright is owned by just2512 or for which sufficient sublicensing rights exist. Full terms: LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md.
- Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
  docs/2026-11-04-unified-assistant-acceptance-audit.md
  docs/2026-11-06-execution-audit.md
  docs/ai-capability-audit-report.md
@@ -349,7 +347,6 @@ Files:
  lib/widgets/local_ai_data_clear_tile.dart
  lib/widgets/local_ai_trace_debug_tile.dart
  lib/widgets/window_metrics_diagnostics.dart
- License: LicenseRef-Nihaixia-Fork-Commercial
  release/研纪_历史版本_v1.10.0+7_发布说明.md
  release/研纪_历史版本_v1.10.1_发布说明.md
  test/acupoint_detail_layout_test.dart
@@ -513,6 +510,9 @@ Files:
  tool/fix_launcher_png.py
  tool/reindex_zhenjiu_index.py
  企划书_研纪_v2.0.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-added implementation/brand/documentation/resources. Applies only to content whose copyright is owned by just2512 or for which sufficient sublicensing rights exist. Full terms: LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md.
 
 Files:
  assets/bencao_lecture/000_总论自序.md
