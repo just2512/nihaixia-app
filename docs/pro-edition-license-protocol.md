@@ -90,7 +90,7 @@ YANJI1.<base64url(canonical_payload)>.<base64url(ed25519_signature)>
 Payload 使用 RFC 8785 JCS 规范化 JSON，UTF-8、无 BOM。签名输入固定为：
 
 ```text
-UTF8("YANJI-PRO-LICENSE-V1\\0") || canonicalPayloadBytes
+UTF8("YANJI-PRO-LICENSE-V1\0") || canonicalPayloadBytes
 ```
 
 Token 外层仍使用 `YANJI1`，但签名域前缀采用独立且固定的 `YANJI-PRO-LICENSE-V1\0`。验签端必须先按 JCS 重新计算 canonical bytes，并确认 Token 内 Payload 段就是该 canonical byte sequence；不得使用 `YANJI1.` + 原始段作为签名输入。
