@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'shousheng_debt_tool_service.dart';
 
 class ShoushengDebtResultContextExecution {
@@ -44,7 +45,7 @@ class ShoushengDebtResultContextExecutor {
       return _failure(arguments, '查询体系必须明确选择 luku 或 wudou。');
     }
 
-    final result = await ShoushengDebtToolService.execute(arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'shousheng_debt', arguments: arguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
