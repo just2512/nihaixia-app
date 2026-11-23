@@ -4016,16 +4016,19 @@ PR HEAD 门禁证据：
 
 ---
 
-## 80. F0：Headless 执行与结果/导航边界（2026-11-23）
+## 80. F0 首个切片：Headless 执行调用集中（2026-11-23）
 
-- 本批从真实 Headless 调用链抽取无 UI 依赖的 `HeadlessToolDispatcher`。Screen 保留确定性参数收集/校验、TRACE、消息/数据库持久化、解释和 UI 状态；Dispatcher 只负责调用注册的确定性 Executor，不持有 BuildContext、导航或持久化职责。
-- **F0-1 PASS / PR #427 已合并**（merge SHA `a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）：Headless 执行调用集中；Exactly-once、参数透传、sync/async、Page-only 拒绝和异常透传测试已加入。
-- **F0-2a PASS / PR #442 已合并**（merge SHA `396a9cc314994a7da813265706d0fb5441b3fd54`）：Router 元数据与执行注册分离；18 个 tool-id → Executor 注册集中到 Dispatcher；Screen/Orchestrator 通过 `hasExecutor(tool.id)` 查询能力。PR #442 最终 HEAD `eaa80ca93cec18ae47d59536464abba004e38dd8` 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK 与 Native JVM 单测 PASS；Branch validation 为 SKIPPED，不计 PASS。PR #440 已由 #442 替代关闭。
-- **F0-2b PASS / PR #444 已合并**（PR merge SHA `049d5c27f75a9a66c4039a04f97775e659720aa2`；最终 PR HEAD `1b711e33da956303396b98bfff90667612e95869`）：16 个 Executor 实现抽取至对应 `*_tool_service.dart`；兼容 Executor 库保留；Screen、Orchestrator、Resolver、PromptBuilder 和结果上下文构建迁移到 Service 或 Dispatcher；Dispatcher 是唯一生产 Executor 库导入边界；两个同步适配器使用 fail-closed sync dispatch，保留玉匣记设备本机时钟输入。Analyzer AST 在整个 `lib/` 上检查相对/包导入、导出、别名和条件 URI，并检查 Dispatcher 不导入 Flutter、不引用 UI 符号。Fork license boundary、Flutter 全量回归、Android arm64 CI APK/Native JVM 均 PASS；Branch validation 为 SKIPPED，不计 PASS。16 个 Service 文件及工具审计配置已登记 DEP5 和 Fork 双份清单，权利证据仍为 `OWNERSHIP_EVIDENCE_REQUIRED`。
-- **F0-3 PASS / PR #446 已合并**（merge SHA `f33731c0c715eaf08a3a7054e15ac58c10925316`；最终 PR HEAD `4b471bc9e33ffe5e084b805a2bbd46ed88d1943b`）：Headless 结果校验、参数匹配、追问意图、结果展示文本和解释提示抽离至无 UI 依赖的 `HeadlessToolResultHandler`；页面结果统一规范化；导航由防御性复制/不可变的 `AssistantToolNavigationIntent` 承载；Screen 继续拥有 Navigator、会话状态、TRACE 和持久化。修复真实换行输出并增加换行与构造器防御性不可变测试。该精确 HEAD 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK/Native JVM 均 PASS；Branch validation 为 SKIPPED，不计 PASS。
-- **F0 总体：PASS / 云端代码切片全部合并。** PR #444/#446 的完整自动验收证据按各自精确 HEAD 记录；不得把 Branch validation 的 SKIPPED 写成 PASS。合并提交 `f33731c0c715eaf08a3a7054e15ac58c10925316` 是当前 F0-3 集成基线。
-- Find N2 / E4B 真实设备验收仍为 **LOCAL ONLY / MISSING**，按 §86 统一留到最终本地交接；CI APK、JVM 单测、Flutter Mock Channel 不能代替设备证据。
-- F0 不包含 `FeatureAuthorizer`、`InvocationOrigin` 生产接线、完整执行计划副作用前预授权或 `ContextResolutionGateway`；这些属于 F1/G 的独立批次。F0 完成不代表专业版收费/激活功能已投入生产。
+- 本批从当前 master 的实际 Headless 调用链抽取无 UI 依赖的 `HeadlessToolDispatcher`。此前唯一真实 Executor 调用点位于 `LocalAiInterviewScreen._executeHeadlessTool`；本切片将回调调用集中到 Dispatcher，并由 Dispatcher 负责校验注册 Executor 是否存在和等待同步/异步结果。
+- `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不得作为模型调用 gate。本切片仍以保持 F0 既有行为为目标。
+- 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
+- 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
+- **F0-2a PASS / PR #442 已合并**（merge SHA `396a9cc314994a7da813265706d0fb5441b3fd54`）。Router 不再持有 Executor 函数引用；18 个 tool-id 执行注册集中到 Dispatcher；Screen/Orchestrator 通过 `hasExecutor(tool.id)` 查询能力。PR #442 最终 HEAD `eaa80ca93cec18ae47d59536464abba004e38dd8` 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK 与 Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。PR #440 已由 #442 替代关闭。
+- **F0-2b 待集成 / CI 未验收**：独立分支 `work/f0-executor-import-graph-20261123-v2` 已迁出 SavedChart、ZiWuLiuZhu、Dosage、YiJing 纯参数辅助函数；Screen/Orchestrator 不再直接导入 Executor；Dispatcher 改为只接收 `toolId`，不依赖 Router/Widget 元数据；Analyzer AST import/export 审计覆盖相对/包路径、别名、条件 import/export，并检查 Dispatcher 不引用 Flutter UI 类型。该分支仍需重基线、跑完整 CI 和修复所有实际 import 图违规，当前不能标记 PASS。
+- **F0-3 仍未完成**：完整执行结果/UI Result Handler 边界、导航意图与 Screen 状态/持久化责任分离，以及重构前后同一特征测试。未完成前不得把 F0 标记 PASS。
+- `FeatureAuthorizer`、收费门禁、`InvocationOrigin` 生产接线和跨工具执行计划预授权均不属于本 F0-1 切片；本批不改变现有免费行为。
+
+
+---
 
 ## 81. F1 前置契约：执行计划与业务能力标识（2026-11-23）
 

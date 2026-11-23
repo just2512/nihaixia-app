@@ -1052,3 +1052,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned fail-closed FeatureAuthorizer dependency scope; only portions for which just2512 owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ lib/services/context_resolution_gateway.dart
+ test/context_resolution_gateway_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned contextual authorization and source-anchor resolution gateway with regression tests; only portions for which sufficient rights exist.
