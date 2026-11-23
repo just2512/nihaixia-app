@@ -181,10 +181,10 @@ Files:
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundary.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicy.kt
  android/app/src/main/res/drawable/ic_launcher_foreground.xml
- android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
  android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
- android/app/src/main/res/mipmap-anydpi/ic_launcher.xml
+ android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
  android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml
+ android/app/src/main/res/mipmap-anydpi/ic_launcher.xml
  android/app/src/main/res/values/ic_launcher_background.xml
  android/app/src/main/res/xml/backup_rules.xml
  android/app/src/main/res/xml/data_extraction_rules.xml
@@ -248,8 +248,8 @@ Files:
  docs/images/find-n2-round3/AI_keyboard_on.png
  docs/images/find-n2-round3/D_ziwei_result.png
  docs/images/find-n2-round3/E_font200.png
- docs/images/find-n2-round3/F_keyboard.png
  docs/images/find-n2-round3/F_keyboard_text.png
+ docs/images/find-n2-round3/F_keyboard.png
  docs/images/find-n2-round3/v_展开态两列全屏.png
  docs/images/find-n2-round3/v_折叠态全屏.png
  docs/images/find-n2-test-round2/01_tab_ai.png
@@ -273,8 +273,8 @@ Files:
  docs/tcm-diagnosis-zangfu-source-audit.md
  docs/tcm-hebing-reachability-matrix.md
  docs/unified-conversation-orchestration-architecture.md
- docs/upstream-sync-ledger.md
  docs/upstream_sync_audit_2026-11-06.md
+ docs/upstream-sync-ledger.md
  docs/yanji-editorial-frontend-design-plan.md
  lib/data/assistant_conversation_store.dart
  lib/engine/zangfu_evidence_builder.dart
@@ -293,9 +293,9 @@ Files:
  lib/services/ai_context_prompt_builder.dart
  lib/services/ai_context_resolver.dart
  lib/services/ai_tool_result_snapshot.dart
- lib/services/ai_trace.dart
  lib/services/ai_trace_runtime.dart
  lib/services/ai_trace_store.dart
+ lib/services/ai_trace.dart
  lib/services/almanac_tool_executor.dart
  lib/services/assistant_chart_result_formatter.dart
  lib/services/assistant_conversation_orchestrator.dart
@@ -309,6 +309,7 @@ Files:
  lib/services/dosage_tool_executor.dart
  lib/services/dream_tool_executor.dart
  lib/services/guansha_tool_executor.dart
+ lib/services/headless_tool_dispatcher.dart
  lib/services/huangdi_siji_result_context_executor.dart
  lib/services/huangdi_siji_tool_executor.dart
  lib/services/local_ai_attachment_store.dart
@@ -383,7 +384,6 @@ Files:
  test/assistant_tool_result_test.dart
  test/assistant_tool_router_test.dart
  test/bazi_contextual_result_entry_test.dart
- test/classic_paragraph_contextual_entry_test.dart
  test/bazi_foldable_layout_test.dart
  test/bazi_tool_executor_test.dart
  test/bencao_lecture_index_test.dart
@@ -394,6 +394,7 @@ Files:
  test/chat_screen_task_resume_test.dart
  test/chenggu_contextual_result_entry_test.dart
  test/chenggu_tool_executor_test.dart
+ test/classic_paragraph_contextual_entry_test.dart
  test/classic_rule_source_manifest_test.dart
  test/classic_search_backlink_test.dart
  test/contextual_ai_panel_layout_test.dart
@@ -421,6 +422,7 @@ Files:
  test/formula_contextual_entry_test.dart
  test/guansha_tool_executor_test.dart
  test/guji_library_editorial_layout_test.dart
+ test/headless_tool_dispatcher_test.dart
  test/herb_contextual_entry_test.dart
  test/home_screen_entry_test.dart
  test/huangdi_siji_contextual_result_entry_test.dart
