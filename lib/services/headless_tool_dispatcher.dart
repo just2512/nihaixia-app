@@ -29,7 +29,10 @@ import 'saved_chart_tool_executor.dart';
 class HeadlessToolDispatcher {
   const HeadlessToolDispatcher._();
 
-  static final Map<String, FutureOr<AssistantToolResult> Function(Map<String, String>)> _executors = {
+  static final Map<
+    String,
+    FutureOr<AssistantToolResult> Function(Map<String, String>)
+  > _executors = {
     'yunqi': YunQiToolExecutor.execute,
     'ziwei': ZiweiToolExecutor.execute,
     'bazi': BaziToolExecutor.execute,
