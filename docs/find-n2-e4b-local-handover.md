@@ -8,7 +8,8 @@
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
 | 当前应用代码基线 | `master @ cbced1d663615a502cfdb98ebcff1a5ddf626ae5` | PR #430 合并医案实际记录字段进入学习助手上下文；PR #431 仅修改产品定位/本地交接文档 |
-| 当前主线整体基线 | `1db1f2e66b8484b47689e2d8d55f2fac07358f07` | PR #431 合并后的 master；设备必须从这一主线构建 |\n| 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
+| 当前主线整体基线 | `1db1f2e66b8484b47689e2d8d55f2fac07358f07` | PR #431 合并后的 master；设备必须从这一主线构建 |
+| 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
 | 原签名配置 | 本地 `android/key.properties` + 原 keystore | 仅本地保管；不得提交、上传、粘贴到聊天或放入 CI secret |
 | E4B 文件 | `gemma-4-E4B-it.litertlm` | 固定修订 `28299f30ee4d43294517a4ac93abd6163412f07f` |
