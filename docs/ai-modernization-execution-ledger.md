@@ -3916,3 +3916,88 @@ PR HEAD 门禁证据：
 - PR #424 已合并，提交 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`；PR #422 已关闭并标记 `SUPERSEDED`。
 - PR #423 为 Find N2 情境结果/字段快照真机矩阵补充；仅修改验收文档，实机状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`。
 - PR #416 专业版授权保持 `OPEN / DRAFT` 且未修改；它仍在用户修改中，不纳入任何本轮合并批次。
+---
+
+## 78. 2026-11-23 无 PR 关联历史分支逐项审计与合并收尾
+
+- 审计基线：`master` @ `63af6e20238767f0704bddea1f7867dcfb9bd40b`（PR #423 合并后）。
+- 统计口径：远端 481 个 branch refs、425 条 PR 记录；按 `branch.name` 是否曾作为 `pull.head.ref` 统计，58 个 branch refs 没有 PR head 关联。按 HEAD SHA 匹配会把 PR 合并后继续前进的分支误计为未关联，因此不采用 SHA 口径。
+- 审计方式：对 58 个 refs 分别执行 `master...branch` compare，逐项核对 ahead/behind、changed files 和候选代码/测试；对可能存在独立覆盖的 Native transcript、RedFlag、AI 数据清除、附件所有权、古籍入口、小六壬、历史恢复、折叠屏测试进一步读取主线和分支文件。没有把 ahead commit 数直接当成功能缺口。
+- 处置结果：58 个历史 refs 均已形成明确处置；没有发现可整支合并的未吸收实现。本节不删除历史 refs、不改写历史分支，也不将旧分支覆盖主线。
+
+| 历史分支 | 审计结论 / 处置 |
+|---|---|
+| `codex/assistant-diagnosis-actions` | 测试已被主线更完整的 assistant_history_resume_test 覆盖；旧测试对失败结果 transcript 的断言与主线脱敏约束冲突。 |
+| `docs/ai-contextual-acceptance-ledger-20261117` | 仅落后于主线，无文件差异。 |
+| `docs/ai-contextual-closeout-2026-11-22` | 历史关闭报告；有效 Find N2 内容已选择性进入当前交接文档及本轮 #423，不回灌旧基线。 |
+| `docs/ai-contextual-final-device-handoff-20261121` | 旧版设备清单已由当前 E4B/Find N2 handover 取代；保留历史参考。 |
+| `docs/ai-interview-slot-bridge-closeout-2026-11-15` | 旧能力审计与执行台账快照，不覆盖当前能力边界。 |
+| `docs/ai-modernization-cloud-acceptance-closeout-2026-11-21` | 仅旧执行台账增量；当前台账已有后续批次和验收边界。 |
+| `docs/ai-modernization-ledger-2026-11-15` | 旧执行台账快照，不回写旧状态。 |
+| `docs/contextual-ai-closeout-20261122-final` | 24 个旧文档提交与当前主线分叉；仅选择性吸收仍有效的交接内容，不整支覆盖当前版本。 |
+| `docs/contextual-ask-ai-closeout-20261122` | 仅落后于主线，无文件差异。 |
+| `docs/yanji-editorial-phase-status-20261117` | 状态已整合进当前 yanji-editorial-frontend-design-plan，不回滚旧阶段状态。 |
+| `docs/yanji-editorial-plan-phase2-closeout-20261119` | 当前设计计划包含后续 Phase 状态，旧稿无新增运行时缺口。 |
+| `feat/ai-consultation-intake-from-chat-2026-11-15` | 旧版助手页面/Orchestrator/Native 调用链，主线后续实现已演进；不回灌旧调用逻辑。 |
+| `feat/ai-context-bazi-chart-result-post-almanac-20261118` | 主线 Bazi Snapshot/Resolver/字段级入口和测试已扩展，旧版不回灌。 |
+| `feat/ai-context-bazi-result-20261118` | 仅落后于主线，无文件差异。 |
+| `feat/ai-context-bazi-result-post-yijing-20261118` | 旧 Bazi 页面、Resolver 与测试被主线更完整的字段快照/来源校验覆盖。 |
+| `feat/ai-context-guansha-result-after-shousheng-20261120` | 关煞页面和结果快照链已在主线演进；旧分支不覆盖当前单次计算、城市及隐私约束。 |
+| `feat/ai-context-xiaoliuren-result-20261118` | 主线已有 431 行页面、4610 行 Resolver 及 250 行情境结果回归；旧版不回灌。 |
+| `feat/ai-context-yijing-result-20261118` | 仅落后于主线，无文件差异。 |
+| `feat/ai-context-ziwuliuzhu-method-fields-post-yunqi-20261121` | 主线方法字段和测试更完整，含独立 Tab 滚动及 fail-closed 检查；不 cherry-pick。 |
+| `feat/ai-context-ziwuliuzhu-method-fields-rebased-20261121` | 同一功能旧版重放，且带旧许可清单快照；不回灌。 |
+| `feat/lixiangji-rebrand` | 旧品牌/产品身份变更与当前研纪身份不一致，不合并。 |
+| `fix/ai-context-kind-enum-20261117` | 主线已采用封闭 AiContextKind 和更完整的 metadata fail-closed 校验。 |
+| `fix/tcm-learning-simulation-boundary-2026-11-15` | 旧学习/模拟边界实现已被当前规则和安全文档演进取代；不能据此宣称红旗生产门禁完成。 |
+| `integration` | 49 个旧集成提交、广泛代码和 Workflow 差异，远落后当前主线；禁止整支合并。 |
+| `sync/upstream-acupoint-20261116` | 只有旧 upstream 同步台账；按手动上游同步政策处理，不自动合并。 |
+| `sync/upstream-bencao-20261116` | 涉及大量本草讲稿资产；缺少逐篇来源、许可、重复和排除范围复核，不批量导入。 |
+| `test/yanji-guansha-wiki-editorial-layout-20261117` | 仅落后于主线，无文件差异。 |
+| `test/yanji-yunqi-chart-text-scale-20261117` | 主线已加入实际 RepaintBoundary 像素差异断言，旧测试不替换现有覆盖。 |
+| `work/ai-capability-inventory` | 审计基线过时；当前 capability audit 和 execution ledger 已吸收后续架构及 Headless 进展。 |
+| `work/ai-context-classic-entry-integration-20261118` | 旧 87 行测试被主线 135 行生产路由测试覆盖，主线验证实际问 AI、字段锚点、所选文本及返回路径。 |
+| `work/ai-contextual-ziwei-result-sample` | 旧 AiContextRef/弹层/紫微整体结果实现已被主线字段级快照、来源校验及宽屏面板取代。 |
+| `work/ai-data-clear-audit` | 清除代码、附件所有权和 Native cache/TRACE 协调已在主线实现；剩余混合 SQLite 备份与 Find N2 强停重启证据，不回灌旧实现。 |
+| `work/ai-guansha-targeted-validation-20261121` | 主线测试已改为 runAsync 并等待 SQLite 偏好写入完成，旧测试可能留下异步事务超时。 |
+| `work/ai-managed-attachments-2026-11-11` | 主线 LocalAiAttachmentStore 测试更完整，明确保留非 AI 临时文件、嵌套旧录音及原始来源文件。 |
+| `work/ai-p0-multiturn` | 旧多轮静态审计快照已被主线 docs/local-ai-multiturn-audit 更新；设备 GPU/CPU 和生命周期仍为 UNKNOWN。 |
+| `work/ai-p0-transcript-rehydration-v2` | Native completed-turn transcript replay、LocalAiConversationHistoryPolicy 和 Kotlin 回归已存在于主线；失败中的请求仍不自动重放。 |
+| `work/ai-redflag-gate` | 2026-11-10 旧 TRACE/红旗审计快照已过时；当前 red-flag entrypoint audit 仍明确标记生产 detector/全入口拦截 MISSING。 |
+| `work/ai-redflag-policy` | 主线 preflight policy/test 更完整；真实 detector、医学审核和 Flutter/Native 全入口接入仍缺，维持 PARTIAL / RELEASE BLOCKED。 |
+| `work/ai-retrieval-golden` | 黄金检索实测数据仍 UNKNOWN；旧规范不含已锁定的真实命中快照，不回灌旧基线。 |
+| `work/ai-retrieval-golden-snapshot` | 测试只比较同一运行内两次结果并输出临时 CI artifact，没有跨提交固定 golden fixture，不能作为回归基线。 |
+| `work/ai-saved-charts-headless-2026-11-14` | 旧 AssistantToolRouter 和助手页面实现已被主线结果快照与统一执行链取代。 |
+| `work/ai-shousheng-headless-contract-2026-11-14` | 受生债执行器/结果来源约束已在主线继续演进，不回灌旧实现。 |
+| `work/ai-trace-audit` | TRACE 隐私审计基于 2026-11-10，结论“无端到端 TRACE”已过时；当前 TRACE 已覆盖多个阶段，但设备全链路仍 MISSING。 |
+| `work/ai-trace-dispatch-headless-2026-11-12` | 旧助手页面/测试已被当前大版本生产调用链及 TRACE 阶段实现取代。 |
+| `work/ai-version-doc-consistency` | 旧 README/版本一致性增量基于旧基线；不覆盖当前应用版本与主线文件。 |
+| `work/ai-yijing-headless-2026-11-14` | 旧易经 Headless 执行器与回传链被当前方法级快照、字段解释和多方法回归取代。 |
+| `work/assistant-result-action-regressions` | 旧历史恢复测试少于主线；其把 FAILED 工具状态/参数放入 Native transcript 的断言与当前脱敏边界冲突。 |
+| `work/bazi-headless-dialog-2026-11-13` | 旧 Bazi Router/Executor 与 Widget 测试已由主线参数校验、实际结果快照和情境入口覆盖。 |
+| `work/dosage-units-headless-2026-11-14` | 旧剂量换算 Headless 链被主线确定性转换及结果来源/快照链取代。 |
+| `work/guansha-headless-in-chat-2026-11-14` | 旧关煞工具与助手路由实现已由主线唯一城市、单次计算和儿童资料脱敏实现取代。 |
+| `work/medical-cases-headless-in-chat-2026-11-14` | 仅落后于主线，无文件差异。 |
+| `work/p4-huangdi-siji-headless-2026-11-13` | huangdi_siji_tool_executor_test.dart 与主线 blob SHA 完全一致，测试已吸收。 |
+| `work/yanji-editorial-phase3-aux` | 旧页面布局/测试已在 §74/§77 核验；主线覆盖浅深主题、不同宽度和更完整交互，不移植旧测试。 |
+| `work/yanji-editorial-phase3-tools` | 新增测试断言旧版 Card 结构；当前生产页已改为 Material + InkWell，不存在相同 Card 树，直接 cherry-pick 会产生过时断言。 |
+| `work/yanji-guansha-wiki-editorial-20261117` | 旧关煞百科页面和版式测试已被主线后续编辑型布局及现有 UI 约束取代。 |
+| `work/yanji-phase2-remaining-half-fold-routes-20261119` | 当前同路径折叠屏测试比该分支更完整；不回灌旧测试。 |
+| `work/yanji-phase2-remaining-half-fold-routes-post-doc-20261119` | 当前同路径测试覆盖更完整；该分支不构成未合并功能。 |
+| `work/ziwei-live-posture-transition` | 当前紫微布局测试比该分支多覆盖屏区锚定、状态恢复及 200% 字号等场景；不回灌旧测试。 |
+
+### 78.1 本轮合并与冻结边界
+
+- PR #423 已于 2026-11-23 合并，方式为 squash，merge commit：`63af6e20238767f0704bddea1f7867dcfb9bd40b`。只增加 Find N2 情境结果/字段快照真机验收矩阵和交接文档，不修改业务代码；真机 N1–N6 仍为 `MISSING / UNKNOWN / LOCAL ONLY`。
+- PR #416（`feature/pro-license-batch-1`）保持 OPEN / DRAFT，head `fa211477171485b4204a3a49dbde775ed3f1daa6`；本轮完全未修改、不合并、不关闭，不把它纳入其他遗留工作的关闭条件。
+- #423 head 对应的 Fork license boundary、Flutter regression、Android arm64 CI 均成功；Branch validation 为 `SKIPPED`，不计 PASS。合并后 master push 的 `Flutter Quality Gate` 与 `Flutter tests` 已触发，结果须以对应 master SHA 的 workflow 完成为准。
+
+### 78.2 仍未关闭的真实验收门槛
+
+- **A Native 多轮：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 completed-turn transcript replay、成功轮次策略及自动化测试；Find N2 GPU/CPU 至少 20 轮、图片/语音、Activity recreation、进程重启、`state:7` 根因仍需设备证据。
+- **B 红旗安全：`PARTIAL / RELEASE BLOCKED`。** RedFlagPreflight 策略和测试已存在，但经医学审核的自然语言 detector、Flutter/Native 生产入口全覆盖及旁路矩阵仍缺。不能用旧 policy 分支宣称完成。
+- **E AI 数据清除：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 SQLite AI 表事务、AI 专属附件目录、Native runtime cache/TRACE coordinator 和 UI；混合 SQLite 备份边界、旧共享图片归属、Find N2 强停/重启后不可恢复仍未证明。
+- **F TRACE：`PARTIAL / DEVICE UNKNOWN`。** 主线已有多阶段 TRACE 和脱敏/默认关闭约束；失败/恢复/持久化完整关联及 Find N2 全场景真实 TRACE 仍需验收。
+- **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
+
+- 本轮没有为了增加合并数量而 cherry-pick 旧测试、旧业务实现或旧上游知识资产。所有未满足的设备/医学/数据边界继续按 `MISSING / UNKNOWN / RELEASE BLOCKED` 记录。
