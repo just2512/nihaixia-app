@@ -138,6 +138,35 @@ void main() {
     expect(candidates.map((tool) => tool.id), containsAll(['ziwei', 'bazi']));
     expect(candidates.length, 2);
   });
+  test('页面路由由不可变的结构化导航意图承载', () {
+    final intent = AssistantToolRouter.navigationIntent(
+      tool: AssistantToolRouter.yunqi,
+      arguments: const AssistantToolArguments(
+        toolId: 'yunqi',
+        values: {'date': '2026-11-23'},
+      ),
+      pageOwnsInput: true,
+    );
+
+    expect(intent.toolId, 'yunqi');
+    expect(intent.arguments, {'date': '2026-11-23'});
+    expect(intent.pageOwnsInput, isTrue);
+    expect(
+      () => intent.arguments['date'] = '2026-11-24',
+      throwsUnsupportedError,
+    );
+  });
+
+  test('页面导航意图拒绝与工具定义不一致的 tool ID', () {
+    expect(
+      () => AssistantToolRouter.navigationIntent(
+        tool: AssistantToolRouter.yunqi,
+        arguments: const AssistantToolArguments(toolId: 'bazi'),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('工具参数契约拒绝非法日期、未声明字段和错误工具标识', () {
     final tool = AssistantToolRouter.yunqi;
     expect(
