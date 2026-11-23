@@ -8881,6 +8881,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     id: tool.id,
                     title: tool.title,
                     description: tool.description,
+                    planEligible:
+                        AssistantToolExecutionPlanBuilder.supportsPlan(tool.id),
                   ),
                 )
                 .toList(growable: false),
