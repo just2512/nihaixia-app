@@ -99,7 +99,7 @@ class EntitlementService extends ChangeNotifier
   /// Explicitly re-reads and re-verifies the active Token from private storage.
   Future<void> refresh() {
     _initialized = false;
-    return _startRefresh();
+    return _startRefresh(supersedeInFlight: true);
   }
 
   Future<void> _startRefresh({bool supersedeInFlight = false}) {
