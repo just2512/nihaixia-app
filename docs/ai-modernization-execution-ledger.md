@@ -3729,3 +3729,111 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - Find N2 Launcher 显示、原签名 APK 原位覆盖升级、数据库/用户数据保留，以及 E4B GPU/CPU 多轮、第二/第三轮响应和 Activity 恢复仍是 `LOCAL ONLY / UNKNOWN`；CI 和模拟器不能替代设备验收。
 - 当前唯一仍 OPEN 的 PR 是 #328 商业许可草案（DRAFT）；其合并条件未满足，维持冻结，不计为可合并功能。
 - 云端功能集成：PR #408、#409 均 MERGED；PR #404 CLOSED / SUPERSEDED。当前未审计的历史 refs 与设备本地验收继续按各自状态管理，不宣称整个仓库 465 个分支均已合并或删除。
+
+
+---
+
+## 71. 2026-11-23 PR #411 合并后遗留项复核与历史引用处置
+
+### 71.1 当前核验基线与证据边界
+
+- 本节代码核验基线：PR #411 合并后的 `master @ 30bcb854ba3f559d0c56329537f68089dd225ab8`。
+- PR #411：`test(ai): cover production Shanghan contextual Ask AI entry`，已于 2026-11-23 squash merge；合并提交即上述 master SHA。
+- 本节区分 PR HEAD CI 与合并后 master CI。PR HEAD 的门禁成功不自动证明合并后的 master push workflow 成功。
+- 本轮 GitHub 查询未返回该 merge commit 的独立 master push workflow 记录，合并后主线 CI 状态记为 `UNKNOWN / NOT_RETURNED`；不得将 PR HEAD 的 CI 结果复制为 post-merge 结果。
+- Find N2 / E4B 真机运行、多轮、媒体输入、Activity/进程恢复及原签名覆盖安装仍按既有交接文件记录为 `LOCAL ONLY / UNKNOWN`，本轮没有新增设备 TRACE。
+
+### 71.2 PR #411 逐项审计与合并证据
+
+PR #411 以当时 master `a5abfbeaae66eb13164343678091b1972e2ed94a` 为基线，PR head 为 `f0f9e3e284a56f9dd58193ea439b518585244b88`；compare 结果为 ahead 11 / behind 0。实际修改四个文件：
+
+| 文件 | 变更 | 审计结论 |
+|---|---|---|
+| `.reuse/dep5` | 新增测试文件的 Fork Commercial 映射 | 与新增测试路径精确对应 |
+| `docs/fork-license-file-inventory.json` | 新增路径记录并重算清单计数 | 新测试列入 FORK_COMMERCIAL / OWNERSHIP_EVIDENCE_REQUIRED |
+| `docs/fork-license-file-inventory.md` | 同步新增路径和计数 | 与 JSON 清单一致 |
+| `test/classic_library_contextual_ask_entry_test.dart` | 新增 134 行生产 Widget 回归测试 | 覆盖真实伤寒阅读入口、正文选择菜单、学习助手上下文及返回阅读页 |
+
+测试通过真实生产路由 `ShangHanJinguiScreen → ClassicLibraryScreen → MarkdownDocScreen → LocalAiInterviewScreen`，从真实资产选择可进行段落级操作的解释正文，断言学习模式、classic 类型、moduleId、稳定 anchor、sourceId、选中文字、Prompt 和返回状态；另验证相邻篇目不会继承错误锚点。该 PR 没有修改运行时代码、模型调用、来源解析器或知识正文。
+
+PR HEAD 门禁证据：
+
+| 门禁 | Run / Job | 结果 |
+|---|---|---|
+| Fork license inventory / boundary | run `45094151796`；job `137430101034` | SUCCESS |
+| Dart / Flutter 静态分析及全量回归 | run `45094151801`；job `137430183549` | SUCCESS |
+| Android arm64 CI、Manifest、ABI、单元测试 | run `45094151801`；job `137432362320` | SUCCESS |
+| Conditional Branch validation | job `137430184750` | SKIPPED，不计 PASS |
+| 未解决 inline review threads | PR #411 | 0 |
+
+实际 Flutter regression job 已独立执行 Dart/Flutter static analysis 和 full regression suite；条件性 Branch validation 的 SKIPPED 不作为通过证据。PR #411 最终以 squash merge 合入，merge commit：`30bcb854ba3f559d0c56329537f68089dd225ab8`。
+
+### 71.3 原始历史分支的选择性处置
+
+历史来源分支 `work/ai-context-classic-entry-integration-20261118` 相对当前 master 已分叉，比较结果为 2 commits ahead / 542 commits behind；唯一文件差异为同路径旧版测试 `test/classic_library_contextual_ask_entry_test.dart`（86 行），没有发现其他独有文件变更。
+
+已读取旧测试源码，其第二项断言要求相邻 `clause_002.md` 不存在 `SelectionArea`，并在整篇文本中按“太阳病”直接长按；这些假设与当前主线允许相邻资产拥有独立规范锚点、paragraph mode 只对安全解释段落提供选择操作的行为不符。新 PR #411 没有整支合并该旧分支，而是从当前 master 重建更完整测试：选择可交互的真实解释段落，验证精确来源与段落 anchor、版本摘要、Prompt，并验证相邻篇目的规范锚点独立。
+
+**处置：旧分支功能差异已由 PR #411 的当前主线实现选择性替代；不整支合并，不删除历史 branch ref。** 该判断仅覆盖这条具体来源分支，不外推为其他历史分支已完成审计。
+
+### 71.4 商业许可草案 PR #328 状态纠偏
+
+- PR #328 当前为 `CLOSED / SUPERSEDED`，`merged=false`，不是待合并 PR；PR 正文明确写明原草案的许可假设、授权范围和费用条款已不符合当前主线许可体系。
+- 当前主线已有根目录 Apache-2.0、`LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md`、`.reuse/dep5`、`docs/fork-license-boundary.md` 与 `docs/ai-commercial-license.md` 等许可边界文件。
+- PR #328 原四份草案不回灌、不整支合并；其关闭不等于商业授权已经完成，也不证明全部文件权属、贡献者再许可和对外合同已获法律确认。
+- 商业发布前仍须完成具体发行版本的文件权属证据、混合文件来源切分、发行 manifest 与法律专业审阅；不得修改根目录 Apache-2.0 LICENSE，也不得把无权再许可的上游、第三方或知识库内容纳入 Fork 商业授权。
+
+### 71.5 全仓 PR 与 branch refs 当前快照
+
+- 首次 OPEN PR 快照发生在 PR #411 合并后、创建跟进 PR #412/#413/#414 之前；当时搜索结果为空，PR #411 已 MERGED、PR #328 已 CLOSED / SUPERSEDED。此句是历史时点记录，不代表后续跟进 PR 创建后的当前状态。
+- 远端 branch refs 通过分页查询得到 468 个（包含 master 和本节审计分支；前四页各 100 个，最后一页 68 个，后续 cursor 为空）。这是 branch ref 数量，不是待合并任务数量。
+- 本轮分支引用审计中，409 个 refs 可与 PR head 精确匹配，另有 59 个未匹配 refs（包含 master，即 58 个非 master refs）；所有非 master 未匹配 refs 均已执行当前 master compare。仅对下文已说明的具体分支完成内容等价核验；其他未逐项读取完整文件或测试证据的 refs 仍为 `NOT_REVIEWED`。不能把已合并 PR 保留的 head refs、CLOSED PR refs 或无 PR 关联 refs 自动判作待合并功能。
+- 本轮不批量删除 branch refs。对已吸收、已替代和实验分支的删除，必须另行核验 PR、工作流及用户工作依赖后处理。
+- 因此该历史快照时点的准确结论是：**云端待合并 OPEN PR 已清空；全仓 468 个 branch refs 并未逐条审计、合并或删除。** 不将“没有 OPEN PR”表述为“所有历史分支均已合并”。
+
+### 71.6 下一步
+
+1. 取得 `30bcb854ba3f559d0c56329537f68089dd225ab8` 对应的 master push CI 终态证据；未返回前保持 `UNKNOWN / NOT_RETURNED`。
+2. Find N2 / E4B 按 §68.4 及本地清单完成实际设备验收，缺少 TRACE 的场景继续保持 `UNKNOWN / LOCAL ONLY`。
+3. 后续如需处理历史 refs，先按名称/PR 关联和 compare 结果分组，再对有独有文件差异的候选逐支审计；不采用全量 merge 或全量删除。
+
+---
+
+## 72. 2026-11-23 第二轮历史分支差异审计
+
+本节只记录已执行当前 master compare，并进一步读取相关源码、测试或文档的候选。分支 ahead/behind 是提交图关系，不代表可直接合入的功能量；没有列出的 refs 继续标为 NOT_REVIEWED。
+
+| 历史分支 | 已核实差异 | 处置 |
+|---|---|---|
+| feat/ai-consultation-intake-from-chat-2026-11-15 | 旧实现按模型文本自动整理结构化症状候选；当前 master 已改为明确问诊请求触发、候选先展示、用户逐项确认后进入原规则问诊，并保留失败回退与来源/TRACE 约束。 | 不合并旧自动映射流程；当前人工确认边界更严格。 |
+| work/ai-data-clear-audit | 旧 Kotlin 清理器与递归附件处理已由 LocalAiRuntimeCacheClearPolicy、LocalAiAttachmentStore、LocalAiDataClearCoordinator 和设置页入口替代；主线测试覆盖 Native 释放顺序、模型保留、附件归属、SQLite 事务/回滚及失败域报告。 | 不回灌旧清理器。 |
+| work/ai-p0-transcript-rehydration-v2 | 旧 LocalAiConversationHistoryPolicy.kt 和测试与 master 同一 blob；主线另有 LocalAiTranscriptRestorePolicy，覆盖截断、代理字符边界、最近消息和省略标记。 | 已吸收并继续演进，不合并。 |
+| work/ai-managed-attachments-2026-11-11 | 主线 LocalAiAttachmentStore 与测试已覆盖唯一文件名、路径校验、仅删除受控目录和 allowlisted 旧录音、保留共享临时文件及源文件；旧分支测试更早。 | 不回灌旧附件存储版本。 |
+| work/ai-redflag-policy、work/ai-redflag-gate | 旧审计报告以 11 月中旬代码为基线，仍声称门禁/TRACE 缺失。当前有效规范已更新产品边界；未经医学审核的临床分诊 detector 不属于当前准入条件。 | 不将旧 MISSING / RELEASE BLOCKED 报告作为当前规范。 |
+| fix/tcm-learning-simulation-boundary-2026-11-15 | 旧分支把问诊固定限定为模拟学习；当前 docs/ai-capability-audit.md §16/§18 已明确问诊输入可来自本人体验、书籍、经典医案或假设病例，由 App 原有确定性规则执行，AI 解释经校验结果。 | 不合并，与当前用户确认的产品边界冲突。 |
+| work/assistant-result-action-regressions、codex/assistant-diagnosis-actions | 旧分支只扩展助手历史恢复测试；当前 master 同名测试已覆盖恢复完成态结构化辨证记录及收藏、分享、复制处方操作，测试范围更完整。 | 不重复合并旧测试。 |
+| work/ai-retrieval-golden、work/ai-retrieval-golden-snapshot | 旧基线文档仍称实测快照未知；当前 master 已有固定 JSON metadata fixture、重复运行一致性、query provenance、source manifest、回链状态及上下文测试，Flutter workflow 已包含快照步骤。 | 不合并过时文档、测试和旧 workflow。 |
+| work/ai-trace-audit、work/ai-p0-multiturn | 旧文档基于旧 master，报告 TRACE 或多轮缺失；当前主线已有默认关闭的 TRACE 生产实现。GPU/CPU、state:7 根因及 Find N2 多轮/进程恢复仍需真机证据。 | 旧报告只保留为历史审计；设备项继续 UNKNOWN / LOCAL ONLY。 |
+| work/ai-version-doc-consistency | 旧分支增加 README/pubspec 一致性测试；主线 tool/check_version_source.sh 同时校验 pubspec、README 两处版本、version policy 和共享 applicationId 历史 versionCode。 | 主线脚本更强，不合并重复测试。 |
+| fix/ai-context-kind-enum-20261117 | 主线 AiContextKind 已包含 knowledgeEntry，并对 snapshotId、ruleVersion、anchorVersion 和字段路径做更严格 fail-closed 校验；主线 Prompt Builder 测试更完整。 | 不合并旧枚举实现。 |
+| work/*-headless 历史分支（SavedChart、ShoushengDebt、YiJing、Bazi、Dosage、Guansha、HuangdiSiji） | 当前 master 已存在对应 Headless executor 与专属测试；本轮逐项核对的执行器/测试文件均已由主线版本承接并继续演进。 | 不整支合并旧 Headless 分支；新缺口另按单切片处理。 |
+| work/yanji-phase2-remaining-half-fold-routes-*、work/ziwei-live-posture-transition、test/yanji-yunqi-chart-text-scale-* | 主线已有更新后的折叠路由、紫微姿态和 200% 字号测试；旧测试较短或使用旧断言。 | 不重复合并旧测试。 |
+| work/yanji-editorial-phase3-tools | 旧重症清单分支使用高阴影 Card，和当前 master 已采用的轻量列表展示冲突。 | 不合并旧 Card 设计。 |
+| work/yanji-guansha-wiki-editorial-20261117 | 旧分支唯一值得保留的视觉差异是关煞百科由厚重 Card 改为轻量列表；其余页面/上下文代码已过时。 | 仅选择性移植到 PR #414；不合并旧分支本身。 |
+| work/ai-guansha-targeted-validation-20261121 | 旧测试直接点击真太阳时设置开关；当前 master 已改为 tester.runAsync 包裹并等待 SettingsRepository 写入完成，避免 SQLite FFI 异步事务遗留在 FakeAsync teardown。 | 当前主线已包含更稳健的测试实现，不 cherry-pick 旧分支。 |
+| work/ai-contextual-ziwei-result-sample、feat/ai-context-bazi-chart-result-*、feat/ai-context-guansha-result-*、feat/ai-context-xiaoliuren-result-*、feat/ai-context-ziwuliuzhu-method-fields-* | 当前 master 已有对应 ContextRef、snapshot/resolver、真实页面入口及负向回归，校验来源、规则/数据版本、锚点稳定性和失效引用。 | 不回灌旧页面或 Resolver。 |
+| integration | 相对当前 master 高度分叉且落后超过千个提交，包含多个历史数据模型、UI、工作流和文档快照；主线已有后续实现。 | 不整支合并；仅对可证明未替代的具体文件另开 PR。 |
+| sync/upstream-acupoint-20261116、sync/upstream-bencao-20261116 | 前者仅旧同步台账；后者抽查的本草资产与 master blob 相同。 | 不合并旧同步快照；继续手动逐项同步。 |
+| feat/lixiangji-rebrand | 旧分支仍使用理想集命名，与当前已确认对外名称研纪冲突。 | 不合并，避免品牌回退。 |
+
+### 72.1 跟进 PR 创建时的分支引用快照
+
+- 本快照采集于 PR #412/#413/#414 创建后、合并前：远端 branch refs 为 470 个，PR 记录 414 条，OPEN PR 为 #412、#413、#414 三项。branch refs 数量不是待合并任务数量；这不是本节之后的实时 OPEN PR 状态。
+- #412 仅更新本执行台账；#413 仅统一 Find N2 验收文档版本基线和 Release 签名描述；#414 仅选择性移植关煞百科轻列表、对应 Widget 测试及三份许可清单。
+- 上述比较与文件核验只覆盖表中列出的分支；其余未匹配 PR head 的历史 refs 仍为 NOT_REVIEWED，不批量合并或删除。
+- Find N2 / E4B 真机多轮、媒体输入、Activity/进程恢复、原签名覆盖安装及数据保留仍为 UNKNOWN / LOCAL ONLY，云端 CI 不替代设备证据。
+### 72.2 #413/#414 合并后的后续状态
+
+- PR #413 已于 2026-11-23 MERGED：`91105e6acb4432d8ffeac12c52c3019ffbf46a44`。
+- PR #414 已于 2026-11-23 MERGED：`3dd1889ace0d58a6f2332067111d8c000e29be31`。
+- 原 PR #412 分支因主线合并 PR #413/#414 后，三份 Find N2 文档基线与主线出现文件级冲突；其台账与文档变更已迁移到以最新 master 为基线的新分支，旧 PR #412 将关闭并标记为 SUPERSEDED。
