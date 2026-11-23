@@ -3837,3 +3837,13 @@ PR HEAD 门禁证据：
 - PR #413 已于 2026-11-23 MERGED：`91105e6acb4432d8ffeac12c52c3019ffbf46a44`。
 - PR #414 已于 2026-11-23 MERGED：`3dd1889ace0d58a6f2332067111d8c000e29be31`。
 - 原 PR #412 分支因主线合并 PR #413/#414 后，三份 Find N2 文档基线与主线出现文件级冲突；其台账与文档变更已迁移到以最新 master 为基线的新分支，旧 PR #412 将关闭并标记为 SUPERSEDED。
+
+---
+
+## 75. 2026-11-23 云气图 200% 字号绘制结果回归补强
+
+- 历史分支 `test/yanji-yunqi-chart-text-scale-20261117` 的旧测试捕获五行图、五运图、六气图的 `RepaintBoundary` RGBA 像素，并断言 100% 与 200% TextScaler 的最终输出不同。
+- 当前 master 同路径测试已改为检查对应 Painter 的 `shouldRepaint(normal)` 为 true；该断言能证明缩放状态变化会请求重绘，但不能单独证明最终像素已按字号变化。
+- 当前生产 `lib/screens/yunqi_charts.dart` 已将 `MediaQuery.textScalerOf(context)` 传入三类 Painter / TextPainter，并在 `shouldRepaint` 比较 TextScaler；本次不修改生产 Painter 或计算数据。
+- PR #418 在主线测试基础上保留 `shouldRepaint` 断言，并增加实际 RepaintBoundary RGBA 像素差异断言，覆盖五行图、五运图、六气图。该改动仅提高测试的最终渲染可观察性。
+- 只有 PR #418 最新 HEAD 的 Flutter regression / 全量测试通过后，才可将该测试加强合入；真实 Find N2 200% 字号屏幕阅读仍为 `MISSING / LOCAL ONLY`，不能由 Widget 像素比较替代。
