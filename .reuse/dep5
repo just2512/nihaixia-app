@@ -1039,7 +1039,6 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial
 Comment: Preserve upstream Apache-2.0 configuration and license; Fork adds the isolated Analyzer audit package exclusion.
 
-
 Files:
  tool/import_graph_audit/analysis_options.yaml
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
