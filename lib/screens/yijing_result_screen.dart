@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../services/yijing_tool_executor.dart';
+import '../services/yijing_tool_service.dart';
 import '../utils/fold_aware_routes.dart';
 import 'assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
@@ -33,10 +33,10 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
     late final Map<String, Object?> snapshot;
     late final AiContextRef contextRef;
     try {
-      snapshot = YiJingToolExecutor.createStructuredSnapshot(
+      snapshot = YiJingToolService.createStructuredSnapshot(
         widget.executionArguments,
       );
-      if (!YiJingToolExecutor.matchesCast(snapshot: snapshot, cast: widget.cast)) {
+      if (!YiJingToolService.matchesCast(snapshot: snapshot, cast: widget.cast)) {
         throw StateError('The visible cast does not match the recorded inputs.');
       }
       contextRef = AiContextResolver.buildYiJingResultContextRef(
@@ -88,10 +88,10 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
     late final AiContextRef resultRef;
     late final AiContextRef fieldRef;
     try {
-      snapshot = YiJingToolExecutor.createStructuredSnapshot(
+      snapshot = YiJingToolService.createStructuredSnapshot(
         widget.executionArguments,
       );
-      if (!YiJingToolExecutor.matchesCast(snapshot: snapshot, cast: widget.cast)) {
+      if (!YiJingToolService.matchesCast(snapshot: snapshot, cast: widget.cast)) {
         throw StateError('The visible cast does not match the recorded inputs.');
       }
       resultRef = AiContextResolver.buildYiJingResultContextRef(
