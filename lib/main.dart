@@ -14,6 +14,7 @@ import 'data/ziwei_rules_repository.dart';
 import 'licensing/app_feature_authorizer_factory.dart';
 import 'licensing/feature_authorizer.dart';
 import 'licensing/feature_authorizer_scope.dart';
+import 'services/entitlement_service.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_tokens.dart';
