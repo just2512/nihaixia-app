@@ -192,6 +192,11 @@ class IssuerProtocolTests(unittest.TestCase):
         self.assertEqual(order[0], 1)
         self.assertEqual([row[0] for row in events], ["license_issued", "license_reissued"])
 
+        listed = issuer.list_orders(self.db)
+        self.assertEqual(len(listed), 2)
+        self.assertTrue(all(row[3] == issuer.PRODUCT_ID for row in listed))
+        self.assertEqual({row[2] for row in listed}, {"active", "superseded"})
+
     def test_request_id_cannot_be_attached_to_another_order(self) -> None:
         request, _, _, _ = make_device_request()
         self.issue(request, "YJ-TEST-0001")
