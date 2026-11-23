@@ -1059,3 +1059,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned contextual authorization and source-anchor resolution gateway with regression tests; only portions for which sufficient rights exist.
+
+Files:
+ test/support/allow_context_authorizer.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored explicit allow authorizer fixture for contextual widget tests; only portions for which sufficient rights exist.
