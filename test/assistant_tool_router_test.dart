@@ -157,6 +157,21 @@ void main() {
     );
   });
 
+  test('导航意图公开构造函数防御复制并冻结参数', () {
+    final source = {'date': '2026-11-23'};
+    final intent = AssistantToolNavigationIntent(
+      toolId: 'yunqi',
+      arguments: source,
+    );
+
+    source['date'] = '2026-11-24';
+    expect(intent.arguments, {'date': '2026-11-23'});
+    expect(
+      () => intent.arguments['date'] = '2026-11-25',
+      throwsUnsupportedError,
+    );
+  });
+
   test('页面导航意图拒绝与工具定义不一致的 tool ID', () {
     expect(
       () => AssistantToolRouter.navigationIntent(
