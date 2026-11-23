@@ -34,15 +34,20 @@ from cryptography.hazmat.primitives.serialization import (
 
 APP_ID = "com.nihaisha.nihaisha_app"
 PRODUCT_ID = "yanji_pro_lifetime"
-PRODUCT_REVISION = 1
+PROTOCOL_REVISION = 1
 LICENSE_PREFIX = "YANJI1"
+LICENSE_SIGNATURE_DOMAIN = b"YANJI-PRO-LICENSE-V1\\x00"
 REQUEST_PREFIX = "YANJIR1"
-FEATURES = (
+KNOWN_FEATURE_IDS = frozenset({
     "advanced_export",
     "advanced_learning",
     "ai_advanced",
     "contextual_assistant",
-)
+})
+DEFAULT_PRO_FEATURES = ("ai_advanced", "contextual_assistant")
+ISSUABLE_FEATURES_BY_REVISION = {
+    1: DEFAULT_PRO_FEATURES,
+}
 DEVICE_SECURITY_LEVELS = {
     "SOFTWARE",
     "TRUSTED_ENVIRONMENT",
@@ -568,25 +573,25 @@ def issue_license(
             reissue_sequence = int(maximum) + 1
             event_type = "license_reissued"
 
+        issuable_features = ISSUABLE_FEATURES_BY_REVISION.get(PROTOCOL_REVISION)
+        if not issuable_features or not set(issuable_features).issubset(KNOWN_FEATURE_IDS):
+            raise IssuerError("No valid issuable feature set is configured for this protocol revision.")
         payload = {
             "schema_version": 1,
             "license_id": "LIC-" + str(uuid.uuid4()),
             "order_id": order_id,
             "product_id": PRODUCT_ID,
-            "product_revision": PRODUCT_REVISION,
+            "protocol_revision": PROTOCOL_REVISION,
             "app_id": APP_ID,
             "perpetual": True,
-            "features": list(FEATURES),
-            "device_key_sha256": request["device_key_sha256"],
+            "features": sorted(issuable_features),
+            "device_public_key_sha256": request["device_key_sha256"],
             "request_id": request["request_id"],
-            "request_nonce": request["request_nonce"],
-            "request_sha256": request["request_sha256"],
-            "device_key_security_level": request["device_key_security_level"],
             "issued_at": issued_at,
             "issuer_key_id": issuer_key_id,
         }
         payload_segment = _b64url_encode(_canonical_json(payload))
-        signed_message = (LICENSE_PREFIX + "." + payload_segment).encode("ascii")
+        signed_message = LICENSE_SIGNATURE_DOMAIN + _canonical_json(payload)
         signature = issuer_private_key.sign(signed_message)
         token = LICENSE_PREFIX + "." + payload_segment + "." + _b64url_encode(signature)
 
