@@ -14,8 +14,6 @@
 ## 全量新增与修改文件
 
 | 路径 | Git 状态 | 分类 | SPDX 表达式 | 权属/来源状态 |
-|---|---|---|---|---|
-| .github/workflows/build-apk.yml | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/flutter-quality.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/flutter-tests.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | .github/workflows/fork-license-compliance.yml | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -531,6 +529,7 @@
 | lib/engine/zangfu_evidence_builder.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/licensing/feature_authorizer.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/licensing/license_model.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/licensing/license_platform.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/licensing/license_verifier.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/main.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/models/ai_context_ref.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -622,6 +621,7 @@
 | lib/services/dosage_tool_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/dream_result_context_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/dream_tool_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/services/entitlement_service.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/guansha_result_context_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/guansha_tool_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/guji_source_anchor_resolver.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -779,6 +779,7 @@
 | test/engine/pulse_tongue_cross_validation_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/engine/three_yang_clause268_gate_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/engine/zangfu_evidence_builder_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/entitlement_service_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/feature_authorizer_contract_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/festival_lookup_editorial_layout_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/fixtures/ai_retrieval_golden_metadata.json | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -803,6 +804,7 @@
 | test/knowledge_adaptive_master_detail_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/knowledge_editorial_layout_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/knowledge_foldable_reading_matrix_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/license_platform_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/license_verifier_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/local_ai_adaptive_content_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/local_ai_atomic_turn_persistence_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -909,8 +911,8 @@
 | tool/check_version_source.sh | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/fix_launcher_png.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/import_renji_zhenjiu.py | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
-| tool/license_issuer/README.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/issuer.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| tool/license_issuer/README.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/requirements.txt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/test_issuer.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/reindex_zhenjiu_index.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -919,7 +921,6 @@
 | zhenjiu_audit_report.md | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | zweiwei_doushu_integration_assessment.md | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | 企划书_研纪_v2.0.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
-
 ## 删除路径
 
 - .github/scripts/gitee_release.py
@@ -940,8 +941,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 885 个（新增 724，修改 161）；删除路径 15 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 155；Fork 商业授权候选 365；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 907 个（新增 746，修改 161）；删除路径 15 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 155；Fork 商业授权候选 387；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
