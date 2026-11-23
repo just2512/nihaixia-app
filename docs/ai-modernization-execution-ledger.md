@@ -3785,14 +3785,49 @@ PR HEAD 门禁证据：
 
 ### 71.5 全仓 PR 与 branch refs 当前快照
 
-- 当前 OPEN PR 搜索结果为空；本轮未发现可直接进入合并流程的 OPEN PR。PR #411 已 MERGED，PR #328 已 CLOSED / SUPERSEDED。
+- 首次 OPEN PR 快照发生在 PR #411 合并后、创建跟进 PR #412/#413/#414 之前；当时搜索结果为空，PR #411 已 MERGED、PR #328 已 CLOSED / SUPERSEDED。此句是历史时点记录，不代表后续跟进 PR 创建后的当前状态。
 - 远端 branch refs 通过分页查询得到 468 个（包含 master 和本节审计分支；前四页各 100 个，最后一页 68 个，后续 cursor 为空）。这是 branch ref 数量，不是待合并任务数量。
 - 本轮分支引用审计中，409 个 refs 可与 PR head 精确匹配，另有 59 个未匹配 refs（包含 master，即 58 个非 master refs）；所有非 master 未匹配 refs 均已执行当前 master compare。仅对下文已说明的具体分支完成内容等价核验；其他未逐项读取完整文件或测试证据的 refs 仍为 `NOT_REVIEWED`。不能把已合并 PR 保留的 head refs、CLOSED PR refs 或无 PR 关联 refs 自动判作待合并功能。
 - 本轮不批量删除 branch refs。对已吸收、已替代和实验分支的删除，必须另行核验 PR、工作流及用户工作依赖后处理。
-- 因此当前准确结论是：**云端发现的待合并 OPEN PR 已清空；全仓 467 个 branch refs 并未逐条审计、合并或删除。** 不将“没有 OPEN PR”表述为“所有历史分支均已合并”。
+- 因此该历史快照时点的准确结论是：**云端待合并 OPEN PR 已清空；全仓 468 个 branch refs 并未逐条审计、合并或删除。** 不将“没有 OPEN PR”表述为“所有历史分支均已合并”。
 
 ### 71.6 下一步
 
 1. 取得 `30bcb854ba3f559d0c56329537f68089dd225ab8` 对应的 master push CI 终态证据；未返回前保持 `UNKNOWN / NOT_RETURNED`。
 2. Find N2 / E4B 按 §68.4 及本地清单完成实际设备验收，缺少 TRACE 的场景继续保持 `UNKNOWN / LOCAL ONLY`。
 3. 后续如需处理历史 refs，先按名称/PR 关联和 compare 结果分组，再对有独有文件差异的候选逐支审计；不采用全量 merge 或全量删除。
+
+---
+
+## 72. 2026-11-23 第二轮历史分支差异审计
+
+本节只记录已执行当前 master compare，并进一步读取相关源码、测试或文档的候选。分支 ahead/behind 是提交图关系，不代表可直接合入的功能量；没有列出的 refs 继续标为 NOT_REVIEWED。
+
+| 历史分支 | 已核实差异 | 处置 |
+|---|---|---|
+| feat/ai-consultation-intake-from-chat-2026-11-15 | 旧实现按模型文本自动整理结构化症状候选；当前 master 已改为明确问诊请求触发、候选先展示、用户逐项确认后进入原规则问诊，并保留失败回退与来源/TRACE 约束。 | 不合并旧自动映射流程；当前人工确认边界更严格。 |
+| work/ai-data-clear-audit | 旧 Kotlin 清理器与递归附件处理已由 LocalAiRuntimeCacheClearPolicy、LocalAiAttachmentStore、LocalAiDataClearCoordinator 和设置页入口替代；主线测试覆盖 Native 释放顺序、模型保留、附件归属、SQLite 事务/回滚及失败域报告。 | 不回灌旧清理器。 |
+| work/ai-p0-transcript-rehydration-v2 | 旧 LocalAiConversationHistoryPolicy.kt 和测试与 master 同一 blob；主线另有 LocalAiTranscriptRestorePolicy，覆盖截断、代理字符边界、最近消息和省略标记。 | 已吸收并继续演进，不合并。 |
+| work/ai-managed-attachments-2026-11-11 | 主线 LocalAiAttachmentStore 与测试已覆盖唯一文件名、路径校验、仅删除受控目录和 allowlisted 旧录音、保留共享临时文件及源文件；旧分支测试更早。 | 不回灌旧附件存储版本。 |
+| work/ai-redflag-policy、work/ai-redflag-gate | 旧审计报告以 11 月中旬代码为基线，仍声称门禁/TRACE 缺失。当前有效规范已更新产品边界；未经医学审核的临床分诊 detector 不属于当前准入条件。 | 不将旧 MISSING / RELEASE BLOCKED 报告作为当前规范。 |
+| fix/tcm-learning-simulation-boundary-2026-11-15 | 旧分支把问诊固定限定为模拟学习；当前 docs/ai-capability-audit.md §16/§18 已明确问诊输入可来自本人体验、书籍、经典医案或假设病例，由 App 原有确定性规则执行，AI 解释经校验结果。 | 不合并，与当前用户确认的产品边界冲突。 |
+| work/assistant-result-action-regressions、codex/assistant-diagnosis-actions | 旧分支只扩展助手历史恢复测试；当前 master 同名测试已覆盖恢复完成态结构化辨证记录及收藏、分享、复制处方操作，测试范围更完整。 | 不重复合并旧测试。 |
+| work/ai-retrieval-golden、work/ai-retrieval-golden-snapshot | 旧基线文档仍称实测快照未知；当前 master 已有固定 JSON metadata fixture、重复运行一致性、query provenance、source manifest、回链状态及上下文测试，Flutter workflow 已包含快照步骤。 | 不合并过时文档、测试和旧 workflow。 |
+| work/ai-trace-audit、work/ai-p0-multiturn | 旧文档基于旧 master，报告 TRACE 或多轮缺失；当前主线已有默认关闭的 TRACE 生产实现。GPU/CPU、state:7 根因及 Find N2 多轮/进程恢复仍需真机证据。 | 旧报告只保留为历史审计；设备项继续 UNKNOWN / LOCAL ONLY。 |
+| work/ai-version-doc-consistency | 旧分支增加 README/pubspec 一致性测试；主线 tool/check_version_source.sh 同时校验 pubspec、README 两处版本、version policy 和共享 applicationId 历史 versionCode。 | 主线脚本更强，不合并重复测试。 |
+| fix/ai-context-kind-enum-20261117 | 主线 AiContextKind 已包含 knowledgeEntry，并对 snapshotId、ruleVersion、anchorVersion 和字段路径做更严格 fail-closed 校验；主线 Prompt Builder 测试更完整。 | 不合并旧枚举实现。 |
+| work/*-headless 历史分支（SavedChart、ShoushengDebt、YiJing、Bazi、Dosage、Guansha、HuangdiSiji） | 当前 master 已存在对应 Headless executor 与专属测试；本轮逐项核对的执行器/测试文件均已由主线版本承接并继续演进。 | 不整支合并旧 Headless 分支；新缺口另按单切片处理。 |
+| work/yanji-phase2-remaining-half-fold-routes-*、work/ziwei-live-posture-transition、test/yanji-yunqi-chart-text-scale-* | 主线已有更新后的折叠路由、紫微姿态和 200% 字号测试；旧测试较短或使用旧断言。 | 不重复合并旧测试。 |
+| work/yanji-editorial-phase3-tools | 旧重症清单分支使用高阴影 Card，和当前 master 已采用的轻量列表展示冲突。 | 不合并旧 Card 设计。 |
+| work/yanji-guansha-wiki-editorial-20261117 | 旧分支唯一值得保留的视觉差异是关煞百科由厚重 Card 改为轻量列表；其余页面/上下文代码已过时。 | 仅选择性移植到 PR #414；不合并旧分支本身。 |
+| work/ai-contextual-ziwei-result-sample、feat/ai-context-bazi-chart-result-*、feat/ai-context-guansha-result-*、feat/ai-context-xiaoliuren-result-*、feat/ai-context-ziwuliuzhu-method-fields-* | 当前 master 已有对应 ContextRef、snapshot/resolver、真实页面入口及负向回归，校验来源、规则/数据版本、锚点稳定性和失效引用。 | 不回灌旧页面或 Resolver。 |
+| integration | 相对当前 master 高度分叉且落后超过千个提交，包含多个历史数据模型、UI、工作流和文档快照；主线已有后续实现。 | 不整支合并；仅对可证明未替代的具体文件另开 PR。 |
+| sync/upstream-acupoint-20261116、sync/upstream-bencao-20261116 | 前者仅旧同步台账；后者抽查的本草资产与 master blob 相同。 | 不合并旧同步快照；继续手动逐项同步。 |
+| feat/lixiangji-rebrand | 旧分支仍使用理想集命名，与当前已确认对外名称研纪冲突。 | 不合并，避免品牌回退。 |
+
+### 72.1 当前跟进 PR 与分支引用
+
+- 当前远端 branch refs 为 470 个，PR 记录 414 条；当前 OPEN PR 为 #412、#413、#414 三项。branch refs 数量不是待合并任务数量。
+- #412 仅更新本执行台账；#413 仅统一 Find N2 验收文档版本基线和 Release 签名描述；#414 仅选择性移植关煞百科轻列表、对应 Widget 测试及三份许可清单。
+- 上述比较与文件核验只覆盖表中列出的分支；其余未匹配 PR head 的历史 refs 仍为 NOT_REVIEWED，不批量合并或删除。
+- Find N2 / E4B 真机多轮、媒体输入、Activity/进程恢复、原签名覆盖安装及数据保留仍为 UNKNOWN / LOCAL ONLY，云端 CI 不替代设备证据。
