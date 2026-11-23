@@ -5643,59 +5643,48 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return;
     }
-    if (result is AssistantToolResult) {
-      final errors = result.validateFor(tool.id);
-      if (errors.isNotEmpty) {
-        await _traceRecorder.record(
-          activeTraceContext,
-          stage: AiTraceStage.toolExecution,
-          status: AiTraceStatus.unknown,
-          toolId: tool.id,
-          errorCode: 'PAGE_TOOL_RESULT_INVALID',
-        );
-        await _traceRecorder.record(
-          activeTraceContext,
-          stage: AiTraceStage.resultValidation,
-          status: AiTraceStatus.failed,
-          toolId: tool.id,
-          errorCode: 'RESULT_CONTRACT_INVALID',
-        );
-        await _traceRecorder.record(
-          activeTraceContext,
-          stage: AiTraceStage.persistence,
-          status: AiTraceStatus.notStarted,
-          toolId: tool.id,
-          errorCode: 'RESULT_CONTRACT_INVALID',
-        );
-        setState(() => _error = '工具返回结果未通过契约校验：' + errors.join('；'));
-        await _traceRecorder.record(
-          activeTraceContext,
-          stage: AiTraceStage.finalRender,
-          status: AiTraceStatus.succeeded,
-          toolId: tool.id,
-          errorCode: 'RESULT_CONTRACT_INVALID',
-        );
-        return;
-      }
+    final presentation = HeadlessToolResultHandler.handlePage(
+      toolId: tool.id,
+      toolTitle: tool.title,
+      rawResult: result,
+      expectedArguments: toolArguments.values,
+      aiReady: _status?.ready == true && !_statusUnknown,
+    );
+    final normalizedResult = presentation.result;
+    if (presentation.resultContractErrors.isNotEmpty) {
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.toolExecution,
+        status: AiTraceStatus.unknown,
+        toolId: tool.id,
+        errorCode: 'PAGE_TOOL_RESULT_INVALID',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.failed,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.persistence,
+        status: AiTraceStatus.notStarted,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
+      setState(() => _error = '工具返回结果未通过契约校验：' +
+          presentation.resultContractErrors.join('；'));
+      await _traceRecorder.record(
+        activeTraceContext,
+        stage: AiTraceStage.finalRender,
+        status: AiTraceStatus.succeeded,
+        toolId: tool.id,
+        errorCode: 'RESULT_CONTRACT_INVALID',
+      );
+      return;
     }
-    final normalizedResult = (switch (result) {
-      AssistantToolResult typed => typed,
-      String legacy when legacy.trim().isNotEmpty => AssistantToolResult(
-          toolId: tool.id,
-          title: tool.title,
-          status: AssistantToolExecutionStatus.unknown,
-          values: {'旧式页面返回文本': legacy.trim()},
-          disclaimer:
-              '页面只返回了未结构化文本，缺少可验证的实际执行参数和业务来源；仅保留查看，不交给 AI 解读。',
-        ),
-      _ => AssistantToolResult(
-          toolId: tool.id,
-          title: tool.title,
-          status: AssistantToolExecutionStatus.noResult,
-          values: const {'返回内容': 'MISSING'},
-          disclaimer: '工具页面退出时未返回结构化结果；无法区分用户取消与旧页面未实现回传。',
-        ),
-    }).withArguments(toolArguments.values);
+
     final executionStatus = switch (normalizedResult.status) {
       AssistantToolExecutionStatus.succeeded => AiTraceStatus.succeeded,
       AssistantToolExecutionStatus.noResult => AiTraceStatus.unknown,
@@ -5717,9 +5706,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
       sourceIds: normalizedResult.sourceIds,
     );
-    final argumentErrors =
-        normalizedResult.validateArgumentsMatch(toolArguments.values);
-    if (argumentErrors.isNotEmpty) {
+
+    if (presentation.argumentErrors.isNotEmpty) {
       await _traceRecorder.record(
         activeTraceContext,
         stage: AiTraceStage.resultValidation,
@@ -5734,7 +5722,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: tool.id,
         errorCode: 'RESULT_ARGUMENTS_MISMATCH',
       );
-      setState(() => _error = '工具返回参数未通过契约校验：' + argumentErrors.join('；'));
+      setState(() => _error = '工具返回参数未通过契约校验：' +
+          presentation.argumentErrors.join('；'));
       await _traceRecorder.record(
         activeTraceContext,
         stage: AiTraceStage.finalRender,
@@ -5752,19 +5741,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
     );
     final resultText = normalizedResult.toConversationText();
-    final response = '【' + tool.title + '执行结果】\\n' + resultText;
-    final canRetry = normalizedResult.status ==
-        AssistantToolExecutionStatus.failed;
-    final canInterpret = normalizedResult.status ==
-            AssistantToolExecutionStatus.succeeded &&
-        normalizedResult.sourceIds.isNotEmpty;
-    final autoInterpret = canInterpret && _status?.ready == true && !_statusUnknown;
+    final response = presentation.responseText;
+    final canRetry = presentation.canRetry;
+    final canInterpret = presentation.canInterpret;
+    final autoInterpret = presentation.autoInterpret;
     final needsTcmKnowledge = _needsTcmKnowledgeForTool(mode, tool.id);
-    final interpretationPrompt = '请总结并解释刚才返回的“${tool.title}”执行结果。'
-        '先概括本次实际输入、关键输出和执行状态，再解释主要字段的含义、字段间关系及结果口径；'
-        '明确区分 App 本地工具计算/数据原文与 AI 的语言化归纳。'
-        '如果本地知识库返回了相关资料，请结合实际命中条目解释；'
-        '未返回或缺失的字段标记 MISSING，不猜算、不改写 App 已返回的结果。';
+    final interpretationPrompt = presentation.interpretationPrompt;
     setState(() {
       _messages.add(_InterviewMessage(
         text: response,
