@@ -3836,7 +3836,7 @@ PR HEAD 门禁证据：
 
 - PR #413 已于 2026-11-23 MERGED：`91105e6acb4432d8ffeac12c52c3019ffbf46a44`。
 - PR #414 已于 2026-11-23 MERGED：`3dd1889ace0d58a6f2332067111d8c000e29be31`。
-- 原 PR #412 分支因主线合并 PR #413/#414 后，三份 Find N2 文档基线与主线出现文件级冲突；其台账与文档变更已迁移到以最新 master 为基线的新分支，旧 PR #412 将关闭并标记为 SUPERSEDED。
+- 原 PR #412 分支因主线合并 PR #413/#414 后出现三份 Find N2 文档文件级冲突；全部有效变更迁移至新 PR #415，原 PR #412 已 CLOSED / SUPERSEDED；新 PR #415 已于 2026-11-23 合并，merge SHA `4e9c8b66ce30d5e7c295ccb1672f817204c53cff`。
  
 ---
 
@@ -3845,7 +3845,7 @@ PR HEAD 门禁证据：
 - 历史分支 `docs/contextual-ai-closeout-20261122-final` 新增 `docs/find-n2-e4b-local-handover.md`，将 Find N2 真机、原签名覆盖安装、E4B 文件、GPU/CPU、多媒体、恢复、AI 数据清除及 TRACE 串成一份本地执行入口。
 - 原稿仍使用应用版本 `1.11.30+8039`，并将 TRACE 本地签名 Debug 构建指向旧的 `local-android-release-checklist.md §6`；当前该文件 §6 已是 Find N2 真机验收章节，引用失配。
 - 同分支 `docs/local-ai-e4b.md` 已改为设置页 GPU/CPU 手动选择，明确旧版 `DEBUG_FORCE_CPU_BACKEND` Intent 不再作为验收路径，并补充本地原签名 Debug TRACE 流程；当前 master 对应 E4B 指南仍保留旧 Intent 验收段和 CI Debug APK 安装操作。
-- 本次仅选择性重建总交接清单与 E4B 指南：版本统一为 `2.0.0+8048)，记录代码基线及最近应用代码提交，修正 TRACE 文档交叉引用；不改模型文件、业务逻辑、签名材料或商业授权。
+- 本次仅选择性重建总交接清单与 E4B 指南：版本统一为 `2.0.0+8048`，记录仓库文档基线及最近应用代码提交，修正 TRACE 文档交叉引用；不改模型文件、业务逻辑、签名材料或商业授权。
 - Find N2 设备端 GPU/CPU 多轮、多媒体、Activity/进程恢复、AI 数据清理、原签名无损升级及 TRACE 状态继续保持 `MISSING / UNKNOWN / LOCAL ONLY`；不以云端 CI 或 Widget 测试替代实机证据。
 
 **专业版授权冻结项：** PR #416（`[Batch 1] 研纪专业版永久授权协议与离线签发`，分支 `feature/pro-license-batch-1`）当前为 OPEN / DRAFT，仍在修改。按用户明确要求，本轮只保留其独立工作状态，不合并、不关闭、不修改授权协议、签发器或相关权属清单；不得将其视为本轮其他遗留项的合并前置条件。
