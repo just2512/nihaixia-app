@@ -6,13 +6,66 @@ import 'package:cryptography/cryptography.dart';
 import 'license_model.dart';
 
 const _licenseTokenPrefix = 'YANJI1';
+const _licenseSignatureDomain = 'YANJI-PRO-LICENSE-V1\u0000';
 const _maxLicenseTokenLength = 16384;
 const _maxLicensePayloadLength = 12288;
 
+enum LicenseIssuerKeyStatus {
+  active,
+  standby,
+  retired,
+  revoked,
+  compromised,
+}
+
+class LicenseIssuerKey {
+  LicenseIssuerKey({
+    required this.keyId,
+    required List<int> publicKey,
+    required this.status,
+  }) : publicKey = List<int>.unmodifiable(publicKey) {
+    if (!RegExp(r'^[a-z0-9][a-z0-9._-]{0,63}$').hasMatch(keyId)) {
+      throw ArgumentError.value(keyId, 'keyId');
+    }
+  }
+
+  final String keyId;
+  final List<int> publicKey;
+  final LicenseIssuerKeyStatus status;
+
+  bool get mayVerify => status == LicenseIssuerKeyStatus.active ||
+      status == LicenseIssuerKeyStatus.standby ||
+      status == LicenseIssuerKeyStatus.retired;
+}
+
+class LicenseKeyRing {
+  LicenseKeyRing({required Iterable<LicenseIssuerKey> keys})
+      : _keys = _buildMap(keys);
+
+  final Map<String, LicenseIssuerKey> _keys;
+
+  LicenseIssuerKey? operator [](String keyId) => _keys[keyId];
+
+  Set<String> get keyIds => Set<String>.unmodifiable(_keys.keys);
+
+  static Map<String, LicenseIssuerKey> _buildMap(
+    Iterable<LicenseIssuerKey> keys,
+  ) {
+    final result = <String, LicenseIssuerKey>{};
+    for (final key in keys) {
+      if (result.containsKey(key.keyId)) {
+        throw ArgumentError('Duplicate issuer key id: ${key.keyId}');
+      }
+      result[key.keyId] = key;
+    }
+    return Map<String, LicenseIssuerKey>.unmodifiable(result);
+  }
+}
+
 enum LicenseVerificationStatus {
   valid,
-  validWithUnknownFeatures,
-  unknownFeatureOnly,
+  validWithUnsupportedFeatures,
+  validWithoutGrantedFeatures,
   invalidFormat,
   invalidPayload,
   unsupportedSchema,
@@ -22,10 +75,9 @@ enum LicenseVerificationStatus {
   invalidSignature,
   revoked,
   wrongProduct,
-  unsupportedProductRevision,
+  unsupportedRevision,
   wrongApplication,
   wrongDevice,
-  requestMismatch,
 }
 
 class LicenseVerificationResult {
@@ -34,39 +86,28 @@ class LicenseVerificationResult {
   final LicenseVerificationStatus status;
   final LicensePayload? payload;
 
-  /// True only when at least one currently supported feature is granted.
+  /// True only when the signed token grants at least one enforced feature.
   bool get isValid =>
       status == LicenseVerificationStatus.valid ||
-      status == LicenseVerificationStatus.validWithUnknownFeatures;
+      status == LicenseVerificationStatus.validWithUnsupportedFeatures;
 }
 
 class LicenseVerifier {
   LicenseVerifier({
-    required Map<String, List<int>> trustedIssuerPublicKeys,
-    Set<String> compromisedIssuerKeyIds = const {},
+    required LicenseKeyRing keyRing,
     Set<String> revokedLicenseIds = const {},
     Ed25519? algorithm,
-  })  : _trustedIssuerPublicKeys = Map.unmodifiable({
-          for (final entry in trustedIssuerPublicKeys.entries)
-            entry.key: List<int>.unmodifiable(entry.value),
-        }),
-        _compromisedIssuerKeyIds = Set.unmodifiable(compromisedIssuerKeyIds),
+  })  : _keyRing = keyRing,
         _revokedLicenseIds = Set.unmodifiable(revokedLicenseIds),
         _algorithm = algorithm ?? Ed25519();
 
-  final Map<String, List<int>> _trustedIssuerPublicKeys;
-  final Set<String> _compromisedIssuerKeyIds;
+  final LicenseKeyRing _keyRing;
   final Set<String> _revokedLicenseIds;
   final Ed25519 _algorithm;
 
-  /// Verifies the exact ASCII bytes "YANJI1." + the original payload segment.
-  /// JSON is never re-serialized for signature verification.
   Future<LicenseVerificationResult> verify(
     String token, {
-    required String expectedDeviceKeySha256,
-    required String expectedRequestId,
-    required String expectedRequestNonce,
-    required String expectedRequestSha256,
+    required String expectedDevicePublicKeySha256,
     String expectedAppId = yanjiLicenseAppId,
   }) async {
     if (token.length > _maxLicenseTokenLength) {
@@ -104,20 +145,36 @@ class LicenseVerifier {
       );
     }
 
+    late final Object? decodedPayload;
     late final Map<String, Object?> untrustedJson;
+    late final List<int> canonicalPayloadBytes;
     try {
-      final decoded = jsonDecode(utf8.decode(payloadBytes));
-      if (decoded is! Map) {
+      decodedPayload = jsonDecode(utf8.decode(payloadBytes));
+      if (decodedPayload is! Map) {
         return const LicenseVerificationResult(
           LicenseVerificationStatus.invalidPayload,
         );
       }
-      untrustedJson = Map<String, Object?>.from(decoded);
+      untrustedJson = Map<String, Object?>.from(decodedPayload);
+      canonicalPayloadBytes = canonicalJsonBytes(decodedPayload);
     } on FormatException {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.invalidPayload,
       );
     } on TypeError {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.invalidPayload,
+      );
+    } on ArgumentError {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.invalidPayload,
+      );
+    }
+
+    // Protocol revision 1 carries exactly one canonical JSON byte sequence.
+    // Reject equivalent-but-noncanonical JSON instead of accepting multiple
+    // textual encodings for the same signed payload.
+    if (!_bytesEqual(payloadBytes, canonicalPayloadBytes)) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.invalidPayload,
       );
@@ -129,28 +186,31 @@ class LicenseVerifier {
         LicenseVerificationStatus.invalidPayload,
       );
     }
-    if (_compromisedIssuerKeyIds.contains(issuerKeyId)) {
-      return const LicenseVerificationResult(
-        LicenseVerificationStatus.issuerCompromised,
-      );
-    }
-    final issuerPublicKey = _trustedIssuerPublicKeys[issuerKeyId];
-    if (issuerPublicKey == null) {
+    final issuerKey = _keyRing[issuerKeyId];
+    if (issuerKey == null) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.unknownIssuer,
       );
     }
-    if (issuerPublicKey.length != 32) {
+    if (!issuerKey.mayVerify) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.issuerCompromised,
+      );
+    }
+    if (issuerKey.publicKey.length != 32) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.invalidIssuerKey,
       );
     }
 
-    final signedMessage = utf8.encode(_licenseTokenPrefix + '.' + parts[1]);
+    final signedMessage = <int>[
+      ...utf8.encode(_licenseSignatureDomain),
+      ...canonicalPayloadBytes,
+    ];
     final signature = Signature(
       signatureBytes,
       publicKey: SimplePublicKey(
-        issuerPublicKey,
+        issuerKey.publicKey,
         type: KeyPairType.ed25519,
       ),
     );
@@ -193,14 +253,18 @@ class LicenseVerifier {
       );
     }
 
-    if (payload.productId != yanjiLifetimeProductId || !payload.perpetual) {
+    if (payload.productId != ProfessionalEditionCatalog.productId ||
+        !payload.perpetual) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.wrongProduct,
       );
     }
-    if (payload.productRevision != ProfessionalEditionCatalog.productRevision) {
+    if (payload.protocolRevision <
+            ProfessionalEditionCatalog.minimumSupportedProtocolRevision ||
+        !ProfessionalEditionCatalog.supportedProtocolRevisions
+            .contains(payload.protocolRevision)) {
       return const LicenseVerificationResult(
-        LicenseVerificationStatus.unsupportedProductRevision,
+        LicenseVerificationStatus.unsupportedRevision,
       );
     }
     if (payload.appId != expectedAppId) {
@@ -208,16 +272,9 @@ class LicenseVerifier {
         LicenseVerificationStatus.wrongApplication,
       );
     }
-    if (payload.deviceKeySha256 != expectedDeviceKeySha256) {
+    if (payload.devicePublicKeySha256 != expectedDevicePublicKeySha256) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.wrongDevice,
-      );
-    }
-    if (payload.requestId != expectedRequestId ||
-        payload.requestNonce != expectedRequestNonce ||
-        payload.requestSha256 != expectedRequestSha256) {
-      return const LicenseVerificationResult(
-        LicenseVerificationStatus.requestMismatch,
       );
     }
     if (_revokedLicenseIds.contains(payload.licenseId)) {
@@ -226,15 +283,15 @@ class LicenseVerifier {
       );
     }
 
-    if (payload.knownFeatureIds.isEmpty) {
+    if (payload.grantedFeatureIds.isEmpty) {
       return LicenseVerificationResult(
-        LicenseVerificationStatus.unknownFeatureOnly,
+        LicenseVerificationStatus.validWithoutGrantedFeatures,
         payload,
       );
     }
-    if (payload.unknownFeatureIds.isNotEmpty) {
+    if (payload.unsupportedFeatureIds.isNotEmpty) {
       return LicenseVerificationResult(
-        LicenseVerificationStatus.validWithUnknownFeatures,
+        LicenseVerificationStatus.validWithUnsupportedFeatures,
         payload,
       );
     }
@@ -242,6 +299,47 @@ class LicenseVerifier {
       LicenseVerificationStatus.valid,
       payload,
     );
+  }
+
+  static List<int> canonicalJsonBytes(Object? value) =>
+      utf8.encode(_canonicalJson(value));
+
+  static String _canonicalJson(Object? value) {
+    if (value == null || value is bool || value is String) {
+      return jsonEncode(value);
+    }
+    if (value is int) return value.toString();
+    if (value is double) {
+      if (!value.isFinite) {
+        throw const FormatException('JCS does not support non-finite numbers.');
+      }
+      // License v1 has no floating-point fields. Reject rather than introduce
+      // an implementation-specific number serializer into the signed schema.
+      throw const FormatException('Floating-point values are not allowed in license v1.');
+    }
+    if (value is List) {
+      return '[${value.map(_canonicalJson).join(',')}]';
+    }
+    if (value is Map) {
+      final map = <String, Object?>{};
+      for (final entry in value.entries) {
+        if (entry.key is! String) {
+          throw const FormatException('JCS object keys must be strings.');
+        }
+        map[entry.key as String] = entry.value;
+      }
+      final keys = map.keys.toList()..sort();
+      return '{${keys.map((key) => '${jsonEncode(key)}:${_canonicalJson(map[key])}').join(',')}}';
+    }
+    throw FormatException('Unsupported JCS value: ${value.runtimeType}');
+  }
+
+  static bool _bytesEqual(List<int> left, List<int> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
   }
 
   static String fingerprintDevicePublicKey(List<int> subjectPublicKeyInfoDer) {
