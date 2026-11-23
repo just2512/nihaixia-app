@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../services/almanac_tool_executor.dart';
+import '../services/almanac_tool_service.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
 import 'package:nihaisha_app/services/lunar_almanac_service.dart';
@@ -187,7 +187,7 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
     late final Map<String, Object?> snapshot;
     late final AiContextRef contextRef;
     try {
-      snapshot = AlmanacToolExecutor.createStructuredSnapshot(almanac.solar);
+      snapshot = AlmanacToolService.createStructuredSnapshot(almanac.solar);
       contextRef = AiContextResolver.buildAlmanacResultContextRef(
         structuredSnapshot: snapshot,
       );
