@@ -3837,3 +3837,13 @@ PR HEAD 门禁证据：
 - PR #413 已于 2026-11-23 MERGED：`91105e6acb4432d8ffeac12c52c3019ffbf46a44`。
 - PR #414 已于 2026-11-23 MERGED：`3dd1889ace0d58a6f2332067111d8c000e29be31`。
 - 原 PR #412 分支因主线合并 PR #413/#414 后，三份 Find N2 文档基线与主线出现文件级冲突；其台账与文档变更已迁移到以最新 master 为基线的新分支，旧 PR #412 将关闭并标记为 SUPERSEDED。
+
+---
+
+## 76. 2026-11-23 八字/紫微/关煞多出生槽位歧义审计
+
+- 历史分支 `work/guansha-headless-in-chat-2026-11-14` 曾在旧版 `GuanshaToolExecutor.validateArguments()` 中对 `AMBIGUOUS_TIME_SELECTION` 与 `AMBIGUOUS_LOCATION_SELECTION` fail closed；该静态接口在当前主线已随工具边界统一而移除，因此不直接回灌旧接口。
+- 逐文件检查当前主线发现：`argumentsFor(bazi/ziwei)` 及 Guansha 对 Bazi 的复用路径原先通过 `firstMatch` 提取出生日期/时间；多个不同日期或时刻可能只留下第一个值，统一 `validateAgainst()` 无法识别已被丢弃的其他候选。这是当前主线实际的歧义缺口，不只是旧测试 API 变化。
+- 本 PR 将日期与时刻抽取改为收集规范化候选集合：同一值的重复书写折叠为一个候选；多个不同候选输出 `AMBIGUOUS_DATE_SELECTION` / `AMBIGUOUS_TIME_SELECTION`，由统一参数校验 fail closed，并给出明确“存在多个候选”的错误信息。
+- Guansha 继续复用 Bazi 的确定性出生槽位解析，不另建规则或模型映射；紫微使用相同多候选保护。没有将自由文本自动转换为问诊规则选项，也不调用 E4B 进行猜选。
+- 新回归覆盖 Bazi、Guansha、Ziwei 三个参数入口；只改对话参数提取、统一参数验证和测试，不改排盘引擎、关煞规则、城市目录或专业版授权。
