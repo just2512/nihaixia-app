@@ -1,0 +1,56 @@
+name: Release trust-anchor gate
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-trust-anchor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-keyring:
+    name: Production Key Ring readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      YANJI_RELEASE_LICENSE_KEY_RING_JSON: ${{ secrets.YANJI_RELEASE_LICENSE_KEY_RING_JSON }}
+    steps:
+      - name: Checkout full source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify production trust anchors and exclude test key material
+        run: python tool/license_issuer/check_release_readiness.py
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install locked Flutter dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Verify Release composition against configured Key Ring
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test \
+            --dart-define="YANJI_RELEASE_LICENSE_KEY_RING_JSON=${YANJI_RELEASE_LICENSE_KEY_RING_JSON}" \
+            test/release_app_authorizer_smoke_test.dart
+
+      - name: Verify protocol, rotation and test-issuer rejection contracts
+        run: flutter test test/release_license_key_ring_test.dart
