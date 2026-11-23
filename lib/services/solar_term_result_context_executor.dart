@@ -1,6 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'solar_term_tool_executor.dart';
+import 'solar_term_tool_service.dart';
 
 class SolarTermResultContextExecution {
   const SolarTermResultContextExecution({
@@ -34,18 +34,18 @@ class SolarTermResultContextExecutor {
     if (arguments.length != 1 ||
         arguments.keys.any((key) => key != 'term') ||
         term == null ||
-        !SolarTermToolExecutor.termNames.contains(term)) {
+        !SolarTermToolService.termNames.contains(term)) {
       return _failure(arguments, '必须明确选择二十四节气之一；不接受自由文本或额外参数。');
     }
 
     final normalized = {'term': term};
-    final result = await SolarTermToolExecutor.execute(normalized);
+    final result = await SolarTermToolService.execute(normalized);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(normalized).isNotEmpty ||
         result.sourceIds.length != 2 ||
-        !result.sourceIds.contains(SolarTermToolExecutor.sourceId) ||
-        !result.sourceIds.contains(SolarTermToolExecutor.knowledgeSourceId) ||
+        !result.sourceIds.contains(SolarTermToolService.sourceId) ||
+        !result.sourceIds.contains(SolarTermToolService.knowledgeSourceId) ||
         result.values['目标节气'] != term) {
       return SolarTermResultContextExecution(result: result);
     }
@@ -63,8 +63,8 @@ class SolarTermResultContextExecutor {
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
       'sourceIds': const [
-        SolarTermToolExecutor.sourceId,
-        SolarTermToolExecutor.knowledgeSourceId,
+        SolarTermToolService.sourceId,
+        SolarTermToolService.knowledgeSourceId,
       ],
       'input': <String, Object?>{
         'method': 'explicitSolarTerm',
