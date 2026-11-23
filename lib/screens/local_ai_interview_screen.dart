@@ -365,6 +365,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   LocalAiSymptomDraft? _confirmedDraft;
   Map<String, String> _confirmedTenAnswers = const {};
   String? _error;
+  String? _contextAuthorizationError;
 
   AssistantConversationStore get _conversationStore =>
       widget.conversationStore ?? DatabaseHelper.instance;
@@ -2953,7 +2954,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       const errorCode = 'CONTEXT_REFERENCE_INVALID';
       if (mounted) {
         setState(() {
-          _error = '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。';
+          _contextAuthorizationError = '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。';
         });
       }
       await _traceRecorder.record(
@@ -2979,7 +2980,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final result = await _contextResolutionGateway.authorizeMetadata(
       _activeContextRef,
     );
-    if (result.isAuthorized) return true;
+    if (result.isAuthorized) {
+      if (mounted && _contextAuthorizationError != null) {
+        setState(() => _contextAuthorizationError = null);
+      }
+      return true;
+    }
     final errorCode = switch (result.status) {
       ContextResolutionGatewayStatus.authorizationDenied =>
         'CONTEXT_AUTHORIZATION_DENIED',
@@ -2997,7 +3003,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       errorCode: errorCode,
     );
     if (mounted) {
-      setState(() => _error = _contextAuthorizationMessage(result.status));
+      setState(() => _contextAuthorizationError = _contextAuthorizationMessage(result.status));
     }
     await _traceRecorder.record(
       traceContext,
@@ -6308,7 +6314,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() {
           _contextualInitializationPending = false;
           _inputController.clear();
-          _error = '当前情境引用无效或含有未知字段；未恢复或提交上下文。';
+          _contextAuthorizationError = '当前情境引用无效或含有未知字段；未恢复或提交上下文。';
         });
       }
       return null;
@@ -6326,7 +6332,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() {
           _contextualInitializationPending = false;
           _inputController.clear();
-          _error = _contextAuthorizationMessage(authorization.status);
+          _contextAuthorizationError = _contextAuthorizationMessage(authorization.status);
         });
       }
       return null;
@@ -6839,10 +6845,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHistoryTranscript = canRestoreContext ? transcript : null;
       _pendingHistoryUserMessages =
           canRestoreContext ? replayableUserMessages : const [];
-      _error = contextRestoreError ??
-          (_status?.ready == true
-              ? null
-              : '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。');
+      _contextAuthorizationError = contextRestoreError;
+      _error = contextRestoreError == null && _status?.ready != true
+          ? '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。'
+          : null;
     });
     if (_status?.ready == true) {
       await _restorePendingHistory();
@@ -9718,13 +9724,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   isUser: false,
                 ),
               ),
-            if (_error != null)
+            if (_contextAuthorizationError != null || _error != null)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                 color: scheme.errorContainer,
                 child: Text(
-                  _error!,
+                  _contextAuthorizationError ?? _error!,
                   style: TextStyle(color: scheme.onErrorContainer, fontSize: AppType.caption),
                 ),
               ),
