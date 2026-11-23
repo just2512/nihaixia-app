@@ -139,11 +139,11 @@ class AssistantToolArguments {
 /// Data-only request for a page-owned tool route. The screen consumes this
 /// intent and performs Navigator operations; the router never navigates.
 class AssistantToolNavigationIntent {
-  const AssistantToolNavigationIntent({
+  AssistantToolNavigationIntent({
     required this.toolId,
-    required this.arguments,
+    required Map<String, String> arguments,
     this.pageOwnsInput = false,
-  });
+  }) : arguments = Map.unmodifiable(arguments);
 
   final String toolId;
   final Map<String, String> arguments;
