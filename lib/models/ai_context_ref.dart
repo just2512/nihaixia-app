@@ -62,6 +62,44 @@ class AiContextRef {
         if (selectedText != null) 'selectedText': selectedText!,
       });
 
+  /// Restores a typed context reference from persisted metadata.
+  ///
+  /// Unknown keys and incomplete/invalid anchors are rejected rather than
+  /// silently dropping data that may affect context identity.
+  static AiContextRef? fromMetadata(Map<String, String>? value) {
+    if (value == null || value.isEmpty) return null;
+    const allowedKeys = {
+      'kind',
+      'moduleId',
+      'anchorId',
+      'anchorVersion',
+      'sourceId',
+      'snapshotId',
+      'ruleVersion',
+      'fieldPath',
+      'title',
+      'selectedText',
+    };
+    if (value.keys.any((key) => !allowedKeys.contains(key))) return null;
+    final normalized = normalizeMetadata(value);
+    if (normalized.isEmpty || normalized.length != value.length) return null;
+    final kind = AiContextKind.fromMetadata(normalized['kind']);
+    if (kind == null) return null;
+
+    return AiContextRef(
+      kind: kind,
+      moduleId: normalized['moduleId']!,
+      anchorId: normalized['anchorId']!,
+      anchorVersion: normalized['anchorVersion']!,
+      sourceId: normalized['sourceId']!,
+      snapshotId: normalized['snapshotId'],
+      ruleVersion: normalized['ruleVersion'],
+      fieldPath: normalized['fieldPath'],
+      title: normalized['title'],
+      selectedText: normalized['selectedText'],
+    );
+  }
+
   static Map<String, String> normalizeMetadata(Map<String, String>? value) {
     if (value == null || value.isEmpty) return const {};
     const requiredKeys = [

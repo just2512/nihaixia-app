@@ -4047,6 +4047,18 @@ PR HEAD 门禁证据：
 - 生产授权接入仍必须遵守 v1.2 §7：超时返回暂时不可用、不持久化临时拒绝，基础免费功能继续可用；不得用全局静态门禁替代依赖注入。
 
 
+### 78.3 本轮专业版授权与情境网关工程状态（2026-11-23）
+
+- **F1 Headless 整计划预授权契约：PASS / REMOTE CI。** PR #448 已 squash 合并，merge commit 5313a0b2e7813760845d85cdd8f3b36b1a2b808e。同一 PR HEAD 的 Flutter 回归、Dart/Flutter 静态分析、Android arm64 CI 与 Fork license boundary 均为 SUCCESS；Branch validation 独立 job 为 SKIPPED，不单独计 PASS。
+- **F1 生产多工具计划聚合：PARTIAL / NOT WIRED。** HeadlessToolDispatcher.executePlan 已实现全计划校验后一次性预授权；当前生产 LocalAiInterviewScreen 仍为单个工具请求构造一个单步骤计划，Orchestrator 仍采用单工具决策/候选选择。尚无自动多动作完整计划生成，也未实现多步骤结果 presenter、统一 TRACE 与持久化。不得据此声明跨能力 AI 自动编排的付费门禁已完整生产启用。
+- **G1 ContextResolutionGateway 契约：PARTIAL / CI PENDING。** PR #449 叠放在 #448 之后，增加 contextual_assistant 授权前置、AiContextRef 持久化校验、拒绝/暂不可用时不调用 resolver，以及解析结果必须匹配精确来源锚点的测试。待该 PR 精确 HEAD 的 Flutter 与许可 CI 全部通过后，才可将契约层改记 PASS。
+- **G1 生产入口与历史/轮次接入：PARTIAL / CI PENDING。** PR #450 将网关接入方剂、本草、医案、腧穴、经络和《内经》情境入口，并对会话复用、历史恢复、结果解释和每轮模型发送重新校验；仍需精确 HEAD 的 Flutter、Android arm64 与许可 CI 证据。工具结果/字段快照历史恢复需要专用快照重建路径，当前不允许将其默认为已核验。
+- **G2 Production Release Key Ring / Trust Anchor：MISSING。** 尚无可核验的正式发行方公钥、密钥轮换/撤销配置及发布时注入证据。不得生成或使用虚构发行密钥，不得把测试私钥或测试签发能力打进 Release。未配置正式公钥时授权保持 fail-closed。
+- **G3 激活、替换与授权状态 UI：MISSING。** 尚未完成签名授权文件导入、替换/撤销状态展示、错误可诊断性及与业务功能隔离的完整闭环。
+- **PR #416：OPEN / DRAFT / UNTOUCHED。** 保持独立，不在本轮合并或改写。
+- **Find N2 设备验收：LOCAL ONLY / UNKNOWN。** Keystore/StrongBox、AtomicFile、真实安装升级、模型多轮 GPU/CPU、进程恢复仍交由本地实机完成，不将其作为继续云端代码/CI工作的阻塞条件。
+
+
 ---
 
 ## 83. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
