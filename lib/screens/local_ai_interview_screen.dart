@@ -2904,7 +2904,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (argumentErrors.isEmpty) {
       try {
         result = await HeadlessToolDispatcher.execute(
-          tool: tool,
+          toolId: tool.id,
           arguments: request.values,
           executorOverride: widget.testHeadlessToolExecutor,
         );

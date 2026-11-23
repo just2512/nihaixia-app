@@ -3,6 +3,24 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
+class _ForbiddenUiNodeVisitor extends RecursiveAstVisitor<void> {
+  final Set<String> found = {};
+
+  static const forbiddenNames = {
+    'BuildContext',
+    'Navigator',
+    'NavigatorState',
+    'Widget',
+    'WidgetBuilder',
+  };
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (forbiddenNames.contains(node.name)) found.add(node.name);
+    super.visitSimpleIdentifier(node);
+  }
+}
+
 Future<void> main(List<String> args) async {
   final root = Directory(args.isEmpty ? '../../lib' : args.single);
   if (!root.existsSync()) {
@@ -23,7 +41,15 @@ Future<void> main(List<String> args) async {
 
   final violations = <String>[];
   final parseFailures = <String>[];
-  var executorImportCount = 0;
+  var executorReferenceCount = 0;
+
+  void inspectExecutorUri(String? uri, File importer) {
+    if (uri == null || !uri.endsWith('_tool_executor.dart')) return;
+    executorReferenceCount++;
+    if (importer.absolute.path != dispatcher) {
+      violations.add('${importer.path} references $uri');
+    }
+  }
 
   for (final file in files) {
     final source = await file.readAsString();
@@ -38,18 +64,49 @@ Future<void> main(List<String> args) async {
       continue;
     }
 
-    for (final directive in parsed.unit.directives.whereType<ImportDirective>()) {
-      final uri = directive.uri.stringValue;
-      if (uri == null || !uri.endsWith('_tool_executor.dart')) continue;
-      executorImportCount++;
-      if (file.absolute.path != dispatcher) {
-        violations.add('${file.path} imports $uri');
+    for (final directive in parsed.unit.directives) {
+      if (directive is ImportDirective) {
+        inspectExecutorUri(directive.uri.stringValue, file);
+        for (final configuration in directive.configurations) {
+          inspectExecutorUri(configuration.uri.stringValue, file);
+        }
+        if (file.absolute.path == dispatcher &&
+            (directive.uri.stringValue?.startsWith('package:flutter/') ??
+                false)) {
+          violations.add(
+            'headless_tool_dispatcher.dart imports Flutter directly',
+          );
+        }
+        for (final configuration in directive.configurations) {
+          if (file.absolute.path == dispatcher &&
+              (configuration.uri.stringValue?.startsWith('package:flutter/') ??
+                  false)) {
+            violations.add(
+              'headless_tool_dispatcher.dart conditionally imports Flutter',
+            );
+          }
+        }
+      } else if (directive is ExportDirective) {
+        inspectExecutorUri(directive.uri.stringValue, file);
+        for (final configuration in directive.configurations) {
+          inspectExecutorUri(configuration.uri.stringValue, file);
+        }
+      }
+    }
+
+    if (file.absolute.path == dispatcher) {
+      final visitor = _ForbiddenUiNodeVisitor();
+      parsed.unit.accept(visitor);
+      for (final name in visitor.found) {
+        violations.add(
+          'headless_tool_dispatcher.dart references UI symbol $name',
+        );
       }
     }
   }
 
-  if (executorImportCount == 0) {
-    violations.add('No *_tool_executor.dart imports were found in lib/.');
+  if (executorReferenceCount == 0) {
+    violations.add('No *_tool_executor.dart references were found in lib/.');
   }
 
   if (parseFailures.isNotEmpty || violations.isNotEmpty) {
@@ -58,14 +115,15 @@ Future<void> main(List<String> args) async {
     }
     stderr.writeln(
       'FAIL: ${parseFailures.length} Dart parse failures, '
-      '${violations.length} import-boundary violations.',
+      '${violations.length} import/UI-boundary violations.',
     );
     exitCode = 1;
     return;
   }
 
   stdout.writeln(
-    'PASS: $executorImportCount executor imports are owned exclusively '
-    'by lib/services/headless_tool_dispatcher.dart.',
+    'PASS: $executorReferenceCount executor references are owned exclusively '
+    'by lib/services/headless_tool_dispatcher.dart; Dispatcher has no UI '
+    'imports or UI symbols.',
   );
 }
