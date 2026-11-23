@@ -1107,7 +1107,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         stage: AiTraceStage.retrieval,
         status: failed ? AiTraceStatus.failed : AiTraceStatus.succeeded,
         durationMs: stopwatch.elapsedMilliseconds,
-        sourceIds: presentation.sourceIds,
+        sourceIds: result.sourceIds,
         errorCode: failed
             ? 'RETRIEVAL_FAILED'
             : result.status == AssistantKnowledgeRetrievalStatus.partial
