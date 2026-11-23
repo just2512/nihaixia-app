@@ -3882,3 +3882,14 @@ PR HEAD 门禁证据：
 - 当前生产 `lib/screens/yunqi_charts.dart` 已将 `MediaQuery.textScalerOf(context)` 传入三类 Painter / TextPainter，并在 `shouldRepaint` 比较 TextScaler；本次不修改生产 Painter 或计算数据。
 - 本次只增强 Widget 回归：保留 `shouldRepaint` 断言，并增加实际 RepaintBoundary RGBA 像素差异断言，覆盖五行图、五运图、六气图。
 - 该测试只能证明 Flutter 渲染输出随 TextScaler 改变；Find N2 真实屏幕阅读、200% 字号无裁切/无重叠仍为 `MISSING / LOCAL ONLY`。
+
+---
+
+## 76. 2026-11-23 Find N2 情境结果与字段快照真机矩阵补齐
+
+- 第三轮清理旧 E4B 本地 AI 验收清单时，发现旧稿 §10.4–§10.7 曾定义 Dream 单条词条、Guansha 单次结果隐私、其他确定性工具结果/字段快照及跨上下文多轮 TRACE；当前主线的通用 GPU/CPU、多媒体、恢复、清除和 TRACE 步骤已保留，但这些情境结果类别此前没有在 Find N2 真机矩阵中各自建立独立场景 ID。
+- 已逐项核对当前 master 生产入口与自动化测试：`dream_screen.dart` + `dream_contextual_result_entry_test.dart`（多候选只解释所选 DreamEntry、来源/快照与滚动恢复）；`guansha_screen.dart` + `guansha_contextual_result_entry_test.dart`（唯一城市、同一 Headless 执行对象、输入/设置变更后入口失效、儿童资料脱敏）；Bazi / Ziwei 结果与字段快照测试；YiJing / Meihua 结果快照与字段路径测试；Dosage 换算结果、ZiWuLiuZhu 四方法字段测试。
+- 在 `docs/find-n2-real-device-acceptance.md` 新增 §N：Dream、Guansha、Bazi/Ziwei、YiJing/Meihua、Dosage/ZiWuLiuZhu 及跨结果多轮 TRACE 的独立设备场景；结果模板增加 N1–N6。只增加验收要求，不修改应用代码或测试门槛。
+- 同步 `docs/find-n2-e4b-local-handover.md`，把 §N 加入真机交接执行顺序；仓库文档基线更新为 PR #420 合并后的 master，最近一次应用运行时代码基线仍记为 PR #414。
+- 本次文档是设备执行规范，不是设备结果。Dream/Guansha/结果字段、GPU/CPU 多轮和跨会话 TRACE 均保持 `MISSING / UNKNOWN / LOCAL ONLY`，不得将 Widget/Resolver 自动化测试替代实体 OPPO Find N2 证据。
+- PR #416 专业版永久授权仍按用户要求保持 OPEN / DRAFT；本节不修改、不合并、不关闭授权协议、离线签发器或相关权属清单。
