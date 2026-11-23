@@ -25,6 +25,7 @@ void main() {
       expect(presentation.resultContractErrors, isEmpty);
       expect(presentation.argumentErrors, isEmpty);
       expect(presentation.responseText, contains('页面返回的本地计算结果'));
+      expect(presentation.responseText, contains('执行结果】\n'));
       expect(presentation.canInterpret, isTrue);
       expect(presentation.autoInterpret, isTrue);
       expect(presentation.canRetry, isFalse);
@@ -58,6 +59,7 @@ void main() {
 
       expect(presentation.result.status, AssistantToolExecutionStatus.unknown);
       expect(presentation.responseText, contains('MISSING'));
+      expect(presentation.responseText, contains('执行结果】\n'));
       expect(presentation.canInterpret, isFalse);
       expect(presentation.autoInterpret, isFalse);
     });
@@ -107,6 +109,7 @@ void main() {
 
       expect(presentation.contractErrors, isEmpty);
       expect(presentation.responseText, contains('五运六气推算执行结果'));
+      expect(presentation.responseText, contains('执行结果】\n'));
       expect(presentation.responseText, contains('已由 App 本地引擎计算'));
       expect(presentation.canInterpret, isTrue);
       expect(presentation.autoInterpret, isFalse);
