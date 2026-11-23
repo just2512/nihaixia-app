@@ -25,6 +25,18 @@ class AssistantToolExecutionPlanBuilder {
 
   static const int maxSteps = 3;
   static const int maxCandidates = 6;
+  // Only tools whose execution is stateless and does not depend on the
+  // LocalAiInterviewScreen's per-tool pending form/follow-up workflow may be
+  // placed in an automated plan. New IDs require an explicit audit here.
+  static const Set<String> planEligibleToolIds = {
+    'dosage',
+    'solar_terms',
+    'yuxiaji_omen',
+    'sanshan_lingqian',
+  };
+
+  static bool supportsPlan(String toolId) =>
+      planEligibleToolIds.contains(toolId);
 
   static AssistantToolPlanBuildResult build({
     required String planId,
@@ -84,6 +96,8 @@ class AssistantToolExecutionPlanBuilder {
       }
       if (!candidatesById.containsKey(id)) {
         errors.add('计划工具不在本轮授权候选集合中：$id');
+      } else if (!supportsPlan(id)) {
+        errors.add('该工具仍依赖单工具页面参数/追问流程，暂不支持自动计划：$id');
       }
     }
 
