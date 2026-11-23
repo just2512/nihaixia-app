@@ -265,6 +265,7 @@ Files:
  docs/images/logo.svg
  docs/local-ai-e4b.md
  docs/local-ai-multiturn-audit.md
+ docs/pro-edition-architecture-constraints.md
  docs/product-positioning-and-boundaries.md
  docs/tcm-diagnosis-code-diff-audit.md
  docs/tcm-diagnosis-system-integration-audit.md

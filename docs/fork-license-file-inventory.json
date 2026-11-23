@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required.",
   "counts": {
-    "changed": 887,
-    "added": 726,
+    "changed": 888,
+    "added": 727,
     "modified": 161,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
-      "FORK_COMMERCIAL": 367,
+      "FORK_COMMERCIAL": 368,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -3926,6 +3926,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "docs/pro-edition-architecture-constraints.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增的专业版架构约束文档；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
