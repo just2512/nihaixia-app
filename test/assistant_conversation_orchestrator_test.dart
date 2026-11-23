@@ -357,6 +357,68 @@ void main() {
       );
     });
 
+    test('八字与关煞的多出生日期和多时刻不默认选取第一个候选', () {
+      const query =
+          '出生日期：1990-01-02 或 1991年2月3日；出生时间：08:30 或 09:30；性别：男；出生地：上海市';
+
+      for (final tool in [
+        AssistantToolRouter.bazi,
+        AssistantToolRouter.guansha,
+      ]) {
+        final parsed = AssistantConversationOrchestrator.argumentsFor(
+          tool,
+          query,
+        );
+        expect(
+          parsed['birth_date'],
+          'AMBIGUOUS_DATE_SELECTION',
+          reason: tool.id,
+        );
+        expect(
+          parsed['birth_time'],
+          'AMBIGUOUS_TIME_SELECTION',
+          reason: tool.id,
+        );
+        final errors = parsed.validateAgainst(tool).join('；');
+        expect(errors, contains('出生日期'));
+        expect(errors, contains('出生时间'));
+        expect(errors, contains('多个候选'));
+      }
+    });
+
+    test('紫微多出生日期和多时刻不默认选取第一个候选', () {
+      final parsed = AssistantConversationOrchestrator.argumentsFor(
+        AssistantToolRouter.ziwei,
+        '出生日期：1990-01-02 或 1991-02-03；出生时间：08:30 或 09:30；性别：男；出生地：上海市',
+      );
+
+      expect(parsed['birth_date'], 'AMBIGUOUS_DATE_SELECTION');
+      expect(parsed['birth_time'], 'AMBIGUOUS_TIME_SELECTION');
+      final errors = parsed.validateAgainst(AssistantToolRouter.ziwei).join('；');
+      expect(errors, contains('出生日期'));
+      expect(errors, contains('出生时间'));
+      expect(errors, contains('多个候选'));
+    });
+
+    test('出生日期和时刻的同值不同格式重复书写不会误判为歧义', () {
+      const query =
+          '出生日期：1990-01-02；另写公历日期1990年1月2日；出生时间：08:30；另写当地钟表时间8:30；性别：男；出生地：上海市';
+
+      for (final tool in [
+        AssistantToolRouter.bazi,
+        AssistantToolRouter.guansha,
+        AssistantToolRouter.ziwei,
+      ]) {
+        final parsed = AssistantConversationOrchestrator.argumentsFor(
+          tool,
+          query,
+        );
+        expect(parsed['birth_date'], '1990-01-02', reason: tool.id);
+        expect(parsed['birth_time'], '08:30', reason: tool.id);
+        expect(parsed.validateAgainst(tool), isEmpty, reason: tool.id);
+      }
+    });
+
     test('八字自然语言中男女信息冲突时不确定性别', () {
       final parsed = AssistantConversationOrchestrator.argumentsFor(
         AssistantToolRouter.bazi,
