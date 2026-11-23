@@ -17,27 +17,43 @@ class ProfessionalEditionCatalog {
   ProfessionalEditionCatalog._();
 
   static const productId = yanjiLifetimeProductId;
-  static const productRevision = 1;
-  static const featureIds = <String>{
+  static const minimumSupportedProtocolRevision = 1;
+  static const supportedProtocolRevisions = <int>{1};
+
+  /// Protocol-known IDs, including reserved IDs not yet available for sale.
+  static const knownFeatureIds = <String>{
     'ai_advanced',
     'contextual_assistant',
     'advanced_learning',
     'advanced_export',
   };
-  static const deviceSecurityLevels = <String>{
-    'SOFTWARE',
-    'TRUSTED_ENVIRONMENT',
-    'STRONGBOX',
-    'UNKNOWN',
+
+  /// The only two features protocol revision 1 is allowed to carry.
+  static const protocolAllowedFeatureIdsByRevision = <int, Set<String>>{
+    1: {'ai_advanced', 'contextual_assistant'},
   };
+
+  /// Features the offline issuer may put into newly generated revision-1 tokens.
+  static const issuableFeatureIdsByRevision = <int, Set<String>>{
+    1: {'ai_advanced', 'contextual_assistant'},
+  };
+
+  /// Feature gates that are actually implemented by this client revision.
+  static const enforcedFeatureIds = <String>{
+    'ai_advanced',
+    'contextual_assistant',
+  };
+
+  static Set<String> allowedFeatureIdsForRevision(int revision) =>
+      protocolAllowedFeatureIdsByRevision[revision] ?? const <String>{};
 }
 
 enum EntitlementStatus {
   unlicensed,
   loading,
   valid,
-  validWithUnknownFeatures,
-  unknownFeatureOnly,
+  validWithUnsupportedFeatures,
+  validWithoutGrantedFeatures,
   keyMissing,
   keyInvalidated,
   signatureInvalid,
@@ -46,7 +62,6 @@ enum EntitlementStatus {
   issuerUnknown,
   issuerCompromised,
   deviceMismatch,
-  requestMismatch,
   revokedInUpdatedApp,
   storeCorrupt,
 }
@@ -57,15 +72,12 @@ class LicensePayload {
     required this.licenseId,
     required this.orderId,
     required this.productId,
-    required this.productRevision,
+    required this.protocolRevision,
     required this.appId,
     required this.perpetual,
     required this.featureIds,
-    required this.deviceKeySha256,
+    required this.devicePublicKeySha256,
     required this.requestId,
-    required this.requestNonce,
-    required this.requestSha256,
-    required this.deviceKeySecurityLevel,
     required this.issuedAt,
     required this.issuerKeyId,
   });
@@ -74,41 +86,104 @@ class LicensePayload {
   final String licenseId;
   final String orderId;
   final String productId;
-  final int productRevision;
+  final int protocolRevision;
   final String appId;
   final bool perpetual;
   final Set<String> featureIds;
 
-  /// Base64URL SHA-256 of the Android Keystore SPKI DER public key.
-  final String deviceKeySha256;
+  /// Base64URL SHA-256 of the device's complete Android Keystore SPKI DER key.
+  final String devicePublicKeySha256;
 
-  /// Identifies the exact YANJIR1 request used for issuance.
+  /// Issuer-side request/ledger correlation only; not a client pending-request match.
   final String requestId;
-  final String requestNonce;
-  final String requestSha256;
 
-  /// Reported device metadata, not hardware attestation.
-  final String deviceKeySecurityLevel;
-
-  /// Informational UTC timestamp, not an expiry or offline clock gate.
+  /// Informational UTC timestamp; never an expiry or offline clock gate.
   final DateTime issuedAt;
   final String issuerKeyId;
 
-  Set<String> get knownFeatureIds =>
-      Set.unmodifiable(featureIds.intersection(ProfessionalEditionCatalog.featureIds));
+  Set<String> get knownFeatureIds => Set<String>.unmodifiable(
+        featureIds.intersection(ProfessionalEditionCatalog.knownFeatureIds),
+      );
 
-  Set<String> get unknownFeatureIds =>
-      Set.unmodifiable(featureIds.difference(ProfessionalEditionCatalog.featureIds));
+  Set<String> get unknownFeatureIds => Set<String>.unmodifiable(
+        featureIds.difference(ProfessionalEditionCatalog.knownFeatureIds),
+      );
+
+  Set<String> get knownButNotAllowedFeatureIds => Set<String>.unmodifiable(
+        knownFeatureIds.difference(
+          ProfessionalEditionCatalog.allowedFeatureIdsForRevision(
+            protocolRevision,
+          ),
+        ),
+      );
+
+  Set<String> get knownButNotEnforcedFeatureIds => Set<String>.unmodifiable(
+        featureIds
+            .intersection(
+              ProfessionalEditionCatalog.allowedFeatureIdsForRevision(
+                protocolRevision,
+              ),
+            )
+            .difference(ProfessionalEditionCatalog.enforcedFeatureIds),
+      );
+
+  Set<String> get unsupportedFeatureIds => Set<String>.unmodifiable({
+        ...unknownFeatureIds,
+        ...knownButNotAllowedFeatureIds,
+        ...knownButNotEnforcedFeatureIds,
+      });
+
+  Set<String> get grantedFeatureIds => Set<String>.unmodifiable(
+        featureIds
+            .intersection(ProfessionalEditionCatalog.knownFeatureIds)
+            .intersection(
+              ProfessionalEditionCatalog.allowedFeatureIdsForRevision(
+                protocolRevision,
+              ),
+            )
+            .intersection(ProfessionalEditionCatalog.enforcedFeatureIds),
+      );
 
   bool grants(LicenseFeature feature) =>
-      ProfessionalEditionCatalog.featureIds.contains(feature.id) &&
-      featureIds.contains(feature.id);
+      grantedFeatureIds.contains(feature.id);
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'schema_version': schemaVersion,
+        'license_id': licenseId,
+        'order_id': orderId,
+        'product_id': productId,
+        'protocol_revision': protocolRevision,
+        'app_id': appId,
+        'perpetual': perpetual,
+        'features': featureIds.toList()..sort(),
+        'device_public_key_sha256': devicePublicKeySha256,
+        'request_id': requestId,
+        'issued_at': issuedAt.toUtc().toIso8601String(),
+        'issuer_key_id': issuerKeyId,
+      };
 
   factory LicensePayload.fromJson(Object? value) {
     if (value is! Map) {
       throw const FormatException('License payload must be a JSON object.');
     }
     final json = Map<String, Object?>.from(value);
+    const allowedFields = <String>{
+      'schema_version',
+      'license_id',
+      'order_id',
+      'product_id',
+      'protocol_revision',
+      'app_id',
+      'perpetual',
+      'features',
+      'device_public_key_sha256',
+      'request_id',
+      'issued_at',
+      'issuer_key_id',
+    };
+    if (json.keys.any((key) => key is! String || !allowedFields.contains(key))) {
+      throw const FormatException('License payload contains unsupported fields.');
+    }
 
     int requiredInt(String key) {
       final result = json[key];
@@ -122,6 +197,7 @@ class LicensePayload {
       final result = json[key];
       if (result is! String ||
           result.trim().isEmpty ||
+          result != result.trim() ||
           result.length > maxLength) {
         throw FormatException('Invalid string field: $key');
       }
@@ -129,13 +205,12 @@ class LicensePayload {
     }
 
     final schemaVersion = requiredInt('schema_version');
-    final licenseId = requiredString('license_id');
+    final licenseId = requiredString('license_id', maxLength: 128);
     final orderId = requiredString('order_id', maxLength: 80);
     final productId = requiredString('product_id', maxLength: 80);
-    final productRevision = requiredInt('product_revision');
+    final protocolRevision = requiredInt('protocol_revision');
     final appId = requiredString('app_id', maxLength: 160);
-    final perpetual = json['perpetual'];
-    if (perpetual != true) {
+    if (json['perpetual'] != true) {
       throw const FormatException('Only perpetual licenses are supported.');
     }
 
@@ -146,35 +221,32 @@ class LicensePayload {
       throw const FormatException('Invalid license feature list.');
     }
     final featureIds = <String>{};
+    var previousFeature = '';
     for (final feature in rawFeatures) {
       if (feature is! String ||
           !RegExp(r'^[a-z][a-z0-9_]{1,63}$').hasMatch(feature) ||
           !featureIds.add(feature)) {
         throw const FormatException('Invalid or duplicate license feature.');
       }
+      if (previousFeature.isNotEmpty && previousFeature.compareTo(feature) >= 0) {
+        throw const FormatException('License features must be sorted.');
+      }
+      previousFeature = feature;
     }
 
-    final deviceKeySha256 =
-        requiredString('device_key_sha256', maxLength: 64);
+    final devicePublicKeySha256 = requiredString(
+      'device_public_key_sha256',
+      maxLength: 64,
+    );
+    if (!_isSha256Base64Url(devicePublicKeySha256)) {
+      throw const FormatException('Invalid device public-key fingerprint.');
+    }
+
     final requestId = requiredString('request_id', maxLength: 64);
-    final requestNonce = requiredString('request_nonce', maxLength: 64);
-    final requestSha256 = requiredString('request_sha256', maxLength: 64);
-    if (!_isSha256Base64Url(deviceKeySha256) ||
-        !_isSha256Base64Url(requestSha256) ||
-        !_isRandomNonceBase64Url(requestNonce)) {
-      throw const FormatException('Invalid device/request binding fields.');
-    }
     if (!RegExp(
-      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
     ).hasMatch(requestId)) {
-      throw const FormatException('Invalid request id.');
-    }
-
-    final deviceKeySecurityLevel =
-        requiredString('device_key_security_level', maxLength: 32);
-    if (!ProfessionalEditionCatalog.deviceSecurityLevels
-        .contains(deviceKeySecurityLevel)) {
-      throw const FormatException('Invalid reported device security level.');
+      throw const FormatException('Invalid canonical request id.');
     }
 
     final issuedAtText = requiredString('issued_at', maxLength: 64);
@@ -197,15 +269,12 @@ class LicensePayload {
       licenseId: licenseId,
       orderId: orderId,
       productId: productId,
-      productRevision: productRevision,
+      protocolRevision: protocolRevision,
       appId: appId,
       perpetual: true,
       featureIds: Set<String>.unmodifiable(featureIds),
-      deviceKeySha256: deviceKeySha256,
+      devicePublicKeySha256: devicePublicKeySha256,
       requestId: requestId,
-      requestNonce: requestNonce,
-      requestSha256: requestSha256,
-      deviceKeySecurityLevel: deviceKeySecurityLevel,
       issuedAt: issuedAt,
       issuerKeyId: issuerKeyId,
     );
@@ -214,26 +283,13 @@ class LicensePayload {
   static bool _isSha256Base64Url(String value) {
     if (!RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value)) return false;
     try {
-      return _decodeBase64Url(value).length == 32;
+      final normalized = value.padRight(
+        value.length + ((4 - value.length % 4) % 4),
+        '=',
+      );
+      return base64Url.decode(normalized).length == 32;
     } on FormatException {
       return false;
     }
-  }
-
-  static bool _isRandomNonceBase64Url(String value) {
-    if (!RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value)) return false;
-    try {
-      return _decodeBase64Url(value).length == 32;
-    } on FormatException {
-      return false;
-    }
-  }
-
-  static List<int> _decodeBase64Url(String value) {
-    final normalized = value.padRight(
-      value.length + ((4 - value.length % 4) % 4),
-      '=',
-    );
-    return base64Url.decode(normalized);
   }
 }
