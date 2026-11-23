@@ -135,7 +135,7 @@ class AssistantToolArguments {
         case AssistantToolParameterType.time:
           if (raw == 'AMBIGUOUS_TIME_SELECTION') {
             errors.add('参数「' + parameter.label + '」存在多个候选，请明确选择一个 HH:mm 时刻');
-          } else if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d).hasMatch(raw)) {
+          } else if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(raw)) {
             errors.add('参数「' + parameter.label + '」必须使用 24 小时制 HH:mm');
           }
           break;
