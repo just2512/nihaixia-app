@@ -149,6 +149,25 @@ Key Ring 由构造注入 `LicenseVerifier`，不得在 Verifier 中写测试专�
 
 测试公钥只能注入 Unit Test；Debug 如需测试激活，应装配独立 Debug Key Ring；Release 只装配生产公钥。Release 不得信任测试 issuer ID 或测试公钥。
 
+Release Key Ring 通过编译期 Dart define `YANJI_RELEASE_LICENSE_KEY_RING_JSON` 注入，配置仅包含公钥，不包含发行私钥。协议配置结构固定为：
+
+```json
+{
+  "schema_version": 1,
+  "keys": [
+    {
+      "issuer_key_id": "issuer-YYYY-MM",
+      "public_key_base64url": "<canonical 32-byte Ed25519 public key>",
+      "status": "active"
+    }
+  ]
+}
+```
+
+`issuer_key_id` 必须符合 `issuer-YYYY-MM`；每个公钥必须是无填充 Base64URL，解码后恰好 32 字节。允许状态为 active、standby、retired、revoked、compromised。Release 至少要有一个 active / standby / retired 信任锚；revoked / compromised 不计入有效信任锚。重复 ID、未知字段、未知状态、测试 issuer ID、空配置和格式错误一律拒绝。生产私钥只能由离线发行端保管。
+
+Debug 的应用组合根继续使用 fail-closed `UnconfiguredFeatureAuthorizer`。Release 的组合根从上述 Key Ring 创建唯一 `EntitlementService`；没有生产 Key Ring 时，Release 启动装配失败，不会回退到允许授权的默认值。
+
 备用 Key 只有在真实备用公钥已经预置于客户端时才有效。吊销某发行者 Key 会影响该 Key 签署的全部 Token；离线客户端只有更新 App 才能执行新 Key Ring 策略，无法实时远程撤销。吊销后必须按订单证据为真实客户重新签发。
 
 ## 6. 客户端 Token 存储与激活
@@ -198,4 +217,8 @@ Verifier 至少区分：
 
 ## 8. 尚未完成的发布条件
 
-本规范及测试向量通过不等于允许生产发行。生产发行仍需：真实发行者 Key Ring 和私钥离线备份/恢复演练、Release fail-closed 行为测试、权属证据、隐私/用户协议和发行渠道审查。所有尚无源码、CI 或设备证据的项目继续保持 MISSING / UNKNOWN。
+本规范及测试向量通过不等于允许生产发行。生产发行至少需要真实发行者 Key Ring、发行私钥离线备份/恢复演练、Release fail-closed 行为测试、权属证据、隐私/用户协议和发行渠道审查。
+
+仓库中的 `.github/workflows/release-trust-anchor.yml` 是发行前置门禁，监听 `v*` 标签和手动触发。正式发布前必须在 GitHub Actions Secret 配置 `YANJI_RELEASE_LICENSE_KEY_RING_JSON`，其值与编译 Release 时传入的 Dart define 完全一致。门禁运行 `tool/license_issuer/check_release_readiness.py`，校验生产 issuer ID、公钥长度和规范编码、可信状态数量，并扫描 `lib/` 与 Android 主源码中的测试公钥原始字节、Base64URL、Base64、Hex 及测试 issuer ID；随后执行 Release 组合根行为测试和协议回归测试。该门禁失败时不得上传或发布任何 Release 产物。
+
+目前仓库不含正式发行者公钥或私钥；因此新门禁在真实生产公钥生成并完成离线保管、配置 GitHub Secret 前应保持失败。不得用测试向量、公用示例或临时生成的密钥替代生产信任锚。所有尚无源码、CI 或设备证据的项目继续保持 MISSING / UNKNOWN。
