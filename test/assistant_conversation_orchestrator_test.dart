@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
+import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
 
 void main() {
   group('统一助手自动调度', () {
@@ -612,7 +613,7 @@ void main() {
         reason: '两种排盘都能在当前对话内确定性执行，候选集允许交给受约束的 E4B 选择',
       );
       expect(
-        decision.candidateTools.every((tool) => tool.headlessExecutor != null),
+        decision.candidateTools.every((tool) => HeadlessToolDispatcher.hasExecutor(tool.id)),
         isTrue,
       );
     });
@@ -643,7 +644,7 @@ void main() {
         ['yunqi', 'almanac'],
       );
       expect(
-        decision.candidateTools.every((tool) => tool.headlessExecutor != null),
+        decision.candidateTools.every((tool) => HeadlessToolDispatcher.hasExecutor(tool.id)),
         isTrue,
       );
     });
