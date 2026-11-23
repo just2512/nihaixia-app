@@ -35,6 +35,8 @@ import '../models/bookmark.dart';
 import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
+import '../models/tool_execution_plan.dart';
+import '../licensing/feature_authorizer_scope.dart';
 import '../models/assistant_message_metadata.dart';
 import '../models/ai_context_ref.dart';
 import '../services/dosage_conversion_service.dart';
@@ -337,6 +339,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Map<String, String> _activeContextRef = const {};
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
+  InvocationOrigin? _pendingToolOrigin;
   AssistantToolArguments? _pendingBaziArguments;
   AssistantToolArguments? _pendingZiweiArguments;
   AssistantToolArguments? _pendingGuanshaArguments;
@@ -1382,6 +1385,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         attachmentType: attachmentType,
         toolArguments: toolArguments,
         traceId: traceId,
+        invocationOrigin: _pendingToolOrigin?.name,
         contextRef: _activeContextRef,
       ).encode();
       final storedUserText = attachmentType == null
@@ -1404,6 +1408,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
           traceId: traceId,
+          invocationOrigin: _pendingToolOrigin?.name,
           contextRef: _activeContextRef,
         ).encode(),
       );
@@ -1725,6 +1730,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _structuredDiagnosisBusy = true;
       _lastEffectiveMode = AssistantMode.consultation;
       _pendingToolSelection = false;
+      _pendingToolOrigin = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
       _pendingGuanshaArguments = null;
@@ -2870,11 +2876,35 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _tcmToolKnowledgeQuery(boundedUserContext, tool);
   }
 
+  InvocationOrigin _requirePendingToolOrigin() {
+    final origin = _pendingToolOrigin;
+    if (origin == null) {
+      throw StateError('PENDING_TOOL_INVOCATION_ORIGIN_MISSING');
+    }
+    return origin;
+  }
+
+  bool _hasPendingHeadlessToolArguments() =>
+      _pendingBaziArguments != null ||
+      _pendingZiweiArguments != null ||
+      _pendingGuanshaArguments != null ||
+      _pendingMeihuaArguments != null ||
+      _pendingChengguArguments != null ||
+      _pendingHuangdiSijiArguments != null ||
+      _pendingXiaoliurenArguments != null ||
+      _pendingYiJingArguments != null ||
+      _pendingDosageArguments != null ||
+      _pendingZiWuArguments != null ||
+      _pendingDreamArguments != null ||
+      _pendingShoushengDebtArguments != null ||
+      _pendingSavedChartsArguments != null;
+
   Future<void> _executeHeadlessTool(
     String userText,
     AssistantToolDefinition tool, {
     required AssistantMode mode,
     required AiTraceContext traceContext,
+    required InvocationOrigin origin,
     AssistantToolArguments? arguments,
   }) async {
     final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
@@ -2904,12 +2934,110 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
       try {
-        result = await HeadlessToolDispatcher.execute(
-          toolId: tool.id,
-          arguments: request.values,
+        final plan = ToolExecutionPlan(
+          planId: 'headless-${traceContext.traceId ?? DateTime.now().toUtc().microsecondsSinceEpoch}',
+          origin: origin,
+          steps: [
+            ToolExecutionStep(
+              toolId: tool.id,
+              capabilityId: tool.capabilityId,
+              arguments: request.values,
+            ),
+          ],
+        );
+        final execution = await HeadlessToolDispatcher(
+          featureAuthorizer: FeatureAuthorizerScope.of(context),
+        ).executePlan(
+          plan: plan,
           executorOverride: widget.testHeadlessToolExecutor,
         );
         executionWatch.stop();
+        if (!execution.isCompleted) {
+          final errorCode = switch (execution.status) {
+            HeadlessToolPlanExecutionStatus.authorizationDenied =>
+              'FEATURE_AUTHORIZATION_DENIED',
+            HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
+              'FEATURE_AUTHORIZATION_UNAVAILABLE',
+            HeadlessToolPlanExecutionStatus.invalidPlan =>
+              'EXECUTION_PLAN_INVALID',
+            HeadlessToolPlanExecutionStatus.completed =>
+              'UNEXPECTED_COMPLETED_STATUS',
+          };
+          final refusal = switch (execution.status) {
+            HeadlessToolPlanExecutionStatus.authorizationDenied =>
+              '本次跨能力操作需要专业版能力 ${execution.featureId ?? 'ai_advanced'}。'
+                  '为避免部分执行，整个计划已在启动前拒绝，任何工具都没有运行。'
+                  '你仍可继续普通对话，也可以返回首页，从对应工具页逐项手动操作。',
+            HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
+              '当前无法可靠核验专业版授权状态，本次计划未执行，任何工具都没有运行。'
+                  '请在授权状态恢复后重试；普通对话和单项手动工具仍可使用。',
+            HeadlessToolPlanExecutionStatus.invalidPlan =>
+              '工具计划与当前 Headless 注册能力不一致，本次没有执行任何工具。'
+                  '请重新发起该操作；普通对话仍可继续。',
+            HeadlessToolPlanExecutionStatus.completed =>
+              '执行前状态异常：计划没有返回可用的执行结果，本次未提交工具结果。',
+          };
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.businessExecution,
+            status: AiTraceStatus.notStarted,
+            durationMs: executionWatch.elapsedMilliseconds,
+            toolId: tool.id,
+            errorCode: errorCode,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.resultValidation,
+            status: AiTraceStatus.notApplicable,
+            toolId: tool.id,
+            errorCode: errorCode,
+          );
+          if (mounted) {
+            setState(() {
+              _lastEffectiveMode = mode;
+              _messages
+                ..add(_InterviewMessage(text: userText, isUser: true))
+                ..add(_InterviewMessage(text: refusal, isUser: false));
+              _sending = false;
+              _error = null;
+            });
+          }
+          _inputController.clear();
+          final persisted = await _persistSuccessfulTurn(
+            userText: userText,
+            assistantText: refusal,
+            mode: mode,
+            traceId: traceContext.traceId,
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.persistence,
+            status: persisted
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.failed,
+            toolId: tool.id,
+            errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+          );
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.finalRender,
+            status: mounted
+                ? AiTraceStatus.succeeded
+                : AiTraceStatus.notApplicable,
+            toolId: tool.id,
+            errorCode: errorCode,
+          );
+          _pendingToolOrigin = null;
+          _scrollToBottom();
+          return;
+        }
+        if (execution.results.length != 1) {
+          throw StateError(
+            'The current in-chat result renderer requires exactly one step; '
+            'multi-step plans must supply a plan-level result presenter.',
+          );
+        }
+        result = execution.results.single;
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.businessExecution,
@@ -2989,6 +3117,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           _error = 'Headless 工具结果未通过契约校验：${contractErrors.join('；')}';
         });
       }
+      if (!_hasPendingHeadlessToolArguments()) _pendingToolOrigin = null;
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.finalRender,
@@ -3117,6 +3246,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
       sourceIds: presentation.sourceIds,
     );
+    if (!_hasPendingHeadlessToolArguments()) _pendingToolOrigin = null;
     _scrollToBottom();
     if (autoInterpret && mounted) {
       await _requestAssistantResultInterpretation(
@@ -3135,6 +3265,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _requestTool(
     String userText,
     AssistantToolDefinition tool, {
+    required InvocationOrigin origin,
     AssistantMode? mode,
     AiTraceContext? traceContext,
     AssistantToolArguments? arguments,
@@ -3181,6 +3312,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return;
     }
+    _pendingToolOrigin = origin;
     _pendingToolSelection = false;
     if (tool.id != 'guansha') _pendingGuanshaArguments = null;
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
@@ -3369,6 +3501,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3573,6 +3706,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3676,6 +3810,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3749,6 +3884,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3895,6 +4031,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4006,6 +4143,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4024,6 +4162,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
       );
       return;
@@ -4132,6 +4271,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4241,6 +4381,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4343,6 +4484,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4529,6 +4671,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4673,6 +4816,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4783,6 +4927,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4929,6 +5074,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4951,6 +5097,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
       );
       return;
@@ -4970,6 +5117,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
       );
       return;
@@ -5003,6 +5151,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: executionArguments,
       );
       return;
@@ -5015,6 +5164,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments,
       );
       return;
@@ -5970,7 +6120,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           PopupMenuButton<AssistantToolDefinition>(
             tooltip: '调用 App 工具',
             enabled: !busy && tools.isNotEmpty,
-            onSelected: (tool) => _requestTool('打开${tool.title}', tool),
+            onSelected: (tool) => _requestTool(
+              '打开${tool.title}',
+              tool,
+              origin: InvocationOrigin.userManual,
+            ),
             itemBuilder: (context) => [
               for (final tool in tools)
                 PopupMenuItem<AssistantToolDefinition>(
@@ -6110,6 +6264,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
     var restoredPendingToolSelection = false;
+    InvocationOrigin? restoredPendingToolOrigin;
     AssistantToolArguments? restoredPendingBaziArguments;
     AssistantToolArguments? restoredPendingGuanshaArguments;
     AssistantToolArguments? restoredPendingZiweiArguments;
@@ -6149,6 +6304,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final isUser = role == 'user';
       if (isUser) {
         restoredPendingToolSelection = false;
+        restoredPendingToolOrigin = null;
         restoredPendingBaziArguments = null;
         restoredPendingGuanshaArguments = null;
         restoredPendingZiweiArguments = null;
@@ -6164,6 +6320,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         restoredPendingSavedChartsArguments = null;
       } else {
         restoredPendingToolSelection = messageMetadata.toolChoicePending;
+        restoredPendingToolOrigin = null;
+        if (messageMetadata.toolChoicePending ||
+            messageMetadata.toolStatus == 'AWAITING_PARAMETERS') {
+          for (final candidate in InvocationOrigin.values) {
+            if (candidate.name == messageMetadata.invocationOrigin) {
+              restoredPendingToolOrigin = candidate;
+              break;
+            }
+          }
+        }
       }
       final pendingToolId = isUser ? null : messageMetadata.toolId;
       final pendingTool = pendingToolId == null
@@ -6401,6 +6567,49 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
       }
     }
+    final hasRestoredPendingToolArguments = [
+      restoredPendingBaziArguments,
+      restoredPendingGuanshaArguments,
+      restoredPendingZiweiArguments,
+      restoredPendingMeihuaArguments,
+      restoredPendingChengguArguments,
+      restoredPendingHuangdiSijiArguments,
+      restoredPendingXiaoliurenArguments,
+      restoredPendingYiJingArguments,
+      restoredPendingDosageArguments,
+      restoredPendingZiWuArguments,
+      restoredPendingDreamArguments,
+      restoredPendingShoushengDebtArguments,
+      restoredPendingSavedChartsArguments,
+    ].any((arguments) => arguments != null);
+    if ((restoredPendingToolSelection || hasRestoredPendingToolArguments) &&
+        restoredPendingToolOrigin == null) {
+      // Historical pending requests without a recorded origin cannot be
+      // reclassified as manual or AI-origin. Keep history, but do not resume.
+      restoredPendingToolSelection = false;
+      restoredPendingBaziArguments = null;
+      restoredPendingGuanshaArguments = null;
+      restoredPendingZiweiArguments = null;
+      restoredPendingMeihuaArguments = null;
+      restoredPendingChengguArguments = null;
+      restoredPendingHuangdiSijiArguments = null;
+      restoredPendingXiaoliurenArguments = null;
+      restoredPendingYiJingArguments = null;
+      restoredPendingDosageArguments = null;
+      restoredPendingZiWuArguments = null;
+      restoredPendingDreamArguments = null;
+      restoredPendingShoushengDebtArguments = null;
+      restoredPendingSavedChartsArguments = null;
+      const missingOriginMessage =
+          '历史待续工具任务缺少明确的执行来源记录，已停止自动续跑。'
+          '历史消息仍保留；请从工具页重新发起该操作。';
+      restoredMessages.add(_InterviewMessage(
+        text: missingOriginMessage,
+        isUser: false,
+      ));
+      transcriptLines.add('助手：$missingOriginMessage');
+      restoredPendingToolOrigin = null;
+    }
     if (restoredMessages.isEmpty) return;
 
     final fullTranscript = transcriptLines.join('\n');
@@ -6415,6 +6624,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (preserveContextPrompt) _inputController.clear();
       _lastEffectiveMode = restoredEffectiveMode;
       _pendingToolSelection = restoredPendingToolSelection;
+      _pendingToolOrigin = restoredPendingToolOrigin;
       _pendingBaziArguments = restoredPendingBaziArguments;
       _pendingGuanshaArguments = restoredPendingGuanshaArguments;
       _pendingZiweiArguments = restoredPendingZiweiArguments;
@@ -6792,6 +7002,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: mode,
         arguments: pendingSavedCharts,
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -6903,6 +7114,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7006,6 +7218,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: {'dream_text': combinedDescription},
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7118,6 +7331,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7218,6 +7432,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7350,6 +7565,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7461,6 +7677,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(merged),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7565,6 +7782,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7664,6 +7882,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7775,6 +7994,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7883,6 +8103,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7990,6 +8211,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -8098,6 +8320,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -8207,6 +8430,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         if (!mounted) return;
       }
+      final wasPendingToolSelection = _pendingToolSelection;
       effectiveMode = decision.mode;
       _pendingToolSelection = decision.expectsToolSelection;
       final resolvedRoute = decision.needsClarification
@@ -8223,6 +8447,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: decision.tool?.id,
       );
       if (decision.needsClarification) {
+        if (decision.expectsToolSelection) {
+          _pendingToolOrigin = InvocationOrigin.aiDispatch;
+        }
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.dispatch,
@@ -8275,6 +8502,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           mode: effectiveMode,
           arguments: decision.toolArguments,
           traceContext: traceContext,
+          origin: wasPendingToolSelection
+              ? _requirePendingToolOrigin()
+              : InvocationOrigin.aiDispatch,
         );
         return;
       }
@@ -9033,6 +9263,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
+      _pendingToolOrigin = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
       _pendingGuanshaArguments = null;

@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import '../licensing/feature_authorizer.dart';
 import '../models/assistant_tool_result.dart';
+import '../models/tool_execution_plan.dart';
 import 'yunqi_tool_executor.dart';
 import 'ziwei_tool_executor.dart';
 import 'bazi_tool_executor.dart';
@@ -20,13 +22,58 @@ import 'shousheng_debt_tool_executor.dart';
 import 'huangdi_siji_tool_executor.dart';
 import 'saved_chart_tool_executor.dart';
 
+enum HeadlessToolPlanExecutionStatus {
+  completed,
+  authorizationDenied,
+  authorizationUnavailable,
+  invalidPlan,
+}
+
+/// Immutable result of the whole-plan preflight and dispatch operation.
+///
+/// Authorization outcomes never contain business results: no step is invoked
+/// until every step has been validated and the one plan-level authorization
+/// decision (when required) has been allowed.
+class HeadlessToolPlanExecutionResult {
+  HeadlessToolPlanExecutionResult({
+    required this.planId,
+    required this.status,
+    required Iterable<String> toolIds,
+    required Iterable<String> capabilityIds,
+    Iterable<AssistantToolResult> results = const [],
+    this.featureId,
+    this.failureReason,
+    this.offendingToolId,
+    this.offendingCapabilityId,
+  })  : toolIds = List<String>.unmodifiable(toolIds),
+        capabilityIds = Set<String>.unmodifiable(capabilityIds),
+        results = List<AssistantToolResult>.unmodifiable(results);
+
+  final String planId;
+  final HeadlessToolPlanExecutionStatus status;
+  final List<String> toolIds;
+  final Set<String> capabilityIds;
+  final List<AssistantToolResult> results;
+  final String? featureId;
+  final FeatureAuthorizationFailureReason? failureReason;
+  final String? offendingToolId;
+  final String? offendingCapabilityId;
+
+  bool get isCompleted =>
+      status == HeadlessToolPlanExecutionStatus.completed;
+}
+
 /// The only application boundary that invokes a registered Headless executor.
 ///
-/// Argument extraction and validation remain in the caller during F0. The
-/// dispatcher deliberately has no BuildContext, navigation, trace, persistence,
-/// or UI responsibilities; it only resolves and invokes the executor once.
+/// Argument collection and validation remain caller responsibilities. The
+/// dispatcher validates the complete immutable plan, authorizes it once before
+/// the first business side effect, and only then invokes steps in order. It has
+/// no BuildContext, navigation, trace, persistence, or UI responsibilities.
 class HeadlessToolDispatcher {
-  const HeadlessToolDispatcher._();
+  HeadlessToolDispatcher({required FeatureAuthorizer featureAuthorizer})
+      : _featureAuthorizer = featureAuthorizer;
+
+  final FeatureAuthorizer _featureAuthorizer;
 
   static final Map<String, FutureOr<AssistantToolResult> Function(Map<String, String>)> _executors = {
     'yunqi': YunQiToolExecutor.execute,
@@ -49,12 +96,42 @@ class HeadlessToolDispatcher {
     'saved_charts': SavedChartToolExecutor.execute,
   };
 
+  /// Stable capability ownership for registered Headless tool IDs.
+  ///
+  /// This is intentionally independent of AssistantToolRouter so the business
+  /// execution boundary does not import Flutter UI metadata. Registry tests
+  /// keep these IDs aligned with AssistantToolDefinition.capabilityId.
+  static const Map<String, String> _capabilityIdsByToolId = {
+    'yunqi': 'yunqi',
+    'ziwei': 'ziwei',
+    'bazi': 'bazi',
+    'yijing': 'yijing',
+    'xiaoliuren': 'xiaoliuren',
+    'meihua': 'meihua',
+    'dosage': 'dosage',
+    'ziwu_liuzhu': 'ziwu_liuzhu',
+    'almanac': 'almanac',
+    'solar_terms': 'solar_terms',
+    'yuxiaji_omen': 'yuxiaji_omen',
+    'dream': 'dream',
+    'guansha': 'guansha',
+    'sanshan_lingqian': 'sanshan_lingqian',
+    'chenggu': 'chenggu',
+    'shousheng_debt': 'shousheng_debt',
+    'huangdi_siji': 'huangdi_siji',
+    'saved_charts': 'saved_charts',
+  };
+
   static bool hasExecutor(String toolId) => _executors.containsKey(toolId);
 
-  /// Synchronous dispatch for explicitly synchronous adapters only.
+  static String? capabilityIdForTool(String toolId) =>
+      _capabilityIdsByToolId[toolId];
+
+  /// Synchronous dispatch for explicitly synchronous context/result adapters.
   ///
-  /// The allowlist prevents an async executor from being started and then
-  /// abandoned by a synchronous caller.
+  /// These adapters rebuild deterministic local result context; they are not
+  /// user tool plans and remain protected separately by ContextResolutionGateway.
+  /// The allowlist prevents an async executor from being started and abandoned.
   static const Set<String> _synchronousExecutorIds = {
     'dosage',
     'yuxiaji_omen',
@@ -90,18 +167,111 @@ class HeadlessToolDispatcher {
     return result;
   }
 
-  static Future<AssistantToolResult> execute({
-    required String toolId,
-    required Map<String, String> arguments,
+  /// Validates and authorizes the entire plan before invoking any executor.
+  ///
+  /// [executorOverride] is a test seam; it cannot make a Page-only/unregistered
+  /// tool executable because the full registry validation happens first.
+  Future<HeadlessToolPlanExecutionResult> executePlan({
+    required ToolExecutionPlan plan,
     FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
         executorOverride,
   }) async {
-    final executor = executorOverride ?? _executors[toolId];
-    if (executor == null) {
-      throw StateError(
-        'Tool "${toolId}" does not register a Headless executor.',
-      );
+    final toolIds = plan.steps.map((step) => step.toolId).toList(growable: false);
+    final capabilityIds = plan.capabilityIds;
+
+    // Validate every step before authorization or business execution.
+    for (final step in plan.steps) {
+      final expectedCapabilityId = _capabilityIdsByToolId[step.toolId];
+      if (expectedCapabilityId == null ||
+          !_executors.containsKey(step.toolId) ||
+          expectedCapabilityId != step.capabilityId) {
+        return HeadlessToolPlanExecutionResult(
+          planId: plan.planId,
+          status: HeadlessToolPlanExecutionStatus.invalidPlan,
+          toolIds: toolIds,
+          capabilityIds: capabilityIds,
+          offendingToolId: step.toolId,
+          offendingCapabilityId: step.capabilityId,
+        );
+      }
     }
-    return await executor(arguments);
+
+    if (plan.requiresAdvancedAi) {
+      FeatureAuthorizationDecision decision;
+      try {
+        decision = await _featureAuthorizer.authorize('ai_advanced');
+      } on Object {
+        return HeadlessToolPlanExecutionResult(
+          planId: plan.planId,
+          status: HeadlessToolPlanExecutionStatus.authorizationUnavailable,
+          toolIds: toolIds,
+          capabilityIds: capabilityIds,
+          featureId: 'ai_advanced',
+          failureReason: FeatureAuthorizationFailureReason.providerError,
+        );
+      }
+      if (decision.featureId != 'ai_advanced') {
+        return HeadlessToolPlanExecutionResult(
+          planId: plan.planId,
+          status: HeadlessToolPlanExecutionStatus.authorizationUnavailable,
+          toolIds: toolIds,
+          capabilityIds: capabilityIds,
+          featureId: 'ai_advanced',
+          failureReason: FeatureAuthorizationFailureReason.providerError,
+        );
+      }
+      if (decision.status == FeatureAuthorizationStatus.denied) {
+        return HeadlessToolPlanExecutionResult(
+          planId: plan.planId,
+          status: HeadlessToolPlanExecutionStatus.authorizationDenied,
+          toolIds: toolIds,
+          capabilityIds: capabilityIds,
+          featureId: 'ai_advanced',
+          failureReason: decision.reason ??
+              FeatureAuthorizationFailureReason.featureNotGranted,
+        );
+      }
+      if (decision.status ==
+          FeatureAuthorizationStatus.temporarilyUnavailable) {
+        return HeadlessToolPlanExecutionResult(
+          planId: plan.planId,
+          status: HeadlessToolPlanExecutionStatus.authorizationUnavailable,
+          toolIds: toolIds,
+          capabilityIds: capabilityIds,
+          featureId: 'ai_advanced',
+          failureReason: decision.reason ??
+              FeatureAuthorizationFailureReason.providerError,
+        );
+      }
+    }
+
+    final results = <AssistantToolResult>[];
+    for (final step in plan.steps) {
+      final executor = executorOverride ?? _executors[step.toolId];
+      if (executor == null) {
+        // Registry validation above makes this unreachable unless the
+        // registry is mutated unexpectedly; fail closed without later steps.
+        return HeadlessToolPlanExecutionResult(
+          planId: plan.planId,
+          status: HeadlessToolPlanExecutionStatus.invalidPlan,
+          toolIds: toolIds,
+          capabilityIds: capabilityIds,
+          results: results,
+          offendingToolId: step.toolId,
+          offendingCapabilityId: step.capabilityId,
+        );
+      }
+      final result = await executor(step.arguments);
+      results.add(result);
+      if (result.status != AssistantToolExecutionStatus.succeeded) break;
+    }
+
+    return HeadlessToolPlanExecutionResult(
+      planId: plan.planId,
+      status: HeadlessToolPlanExecutionStatus.completed,
+      toolIds: toolIds,
+      capabilityIds: capabilityIds,
+      results: results,
+    );
   }
 }

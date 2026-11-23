@@ -10,6 +10,7 @@ import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
+import 'package:nihaisha_app/models/tool_execution_plan.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
 import 'support/test_only_red_flag_gate.dart';
@@ -289,6 +290,7 @@ void main() {
       selectedMode: 'automatic',
       toolId: 'saved_charts',
       toolStatus: 'AWAITING_PARAMETERS',
+      invocationOrigin: InvocationOrigin.aiDispatch.name,
       toolArguments: const {'saved_chart_id': '42'},
     ).encode();
 

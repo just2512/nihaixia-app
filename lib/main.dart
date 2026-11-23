@@ -8,6 +8,7 @@ import 'data/formula_repository.dart';
 import 'data/herb_repository.dart';
 import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
+import 'licensing/feature_authorizer_scope.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_tokens.dart';
@@ -202,38 +203,41 @@ class NiHaishaApp extends StatelessWidget {
       listenable: SettingsRepository.instance,
       builder: (context, _) {
         final settings = SettingsRepository.instance;
-        return MaterialApp(
-          title: '研纪',
-          debugShowCheckedModeBanner: false,
-          themeMode: settings.themeMode,
-          theme: _buildTheme(Brightness.light),
-          darkTheme: _buildTheme(Brightness.dark),
-          home: const HomeScreen(),
-          // 字号缩放必须放在 builder（包住整个 Navigator）：只包 home 的话，
-          // push 出去的详情页/设置页和弹窗都拿不到用户字号，调到 200% 也只有
-          // 首页四个 tab 变大（issue #4 相关反馈的根因）。
-          builder: (context, child) {
-            final mediaQuery = MediaQuery.of(context);
-            return MediaQuery(
-              data: mediaQuery.copyWith(
-                textScaler: AppPreferenceTextScaler(
-                  platformScaler: mediaQuery.textScaler,
-                  preferenceScale: settings.textScaleFactor,
+        return FeatureAuthorizerScope(
+          authorizer: const UnconfiguredFeatureAuthorizer(),
+          child: MaterialApp(
+            title: '研纪',
+            debugShowCheckedModeBanner: false,
+            themeMode: settings.themeMode,
+            theme: _buildTheme(Brightness.light),
+            darkTheme: _buildTheme(Brightness.dark),
+            home: const HomeScreen(),
+            // 字号缩放必须放在 builder（包住整个 Navigator）：只包 home 的话，
+            // push 出去的详情页/设置页和弹窗都拿不到用户字号，调到 200% 也只有
+            // 首页四个 tab 变大（issue #4 相关反馈的根因）。
+            builder: (context, child) {
+              final mediaQuery = MediaQuery.of(context);
+              return MediaQuery(
+                data: mediaQuery.copyWith(
+                  textScaler: AppPreferenceTextScaler(
+                    platformScaler: mediaQuery.textScaler,
+                    preferenceScale: settings.textScaleFactor,
+                  ),
                 ),
-              ),
-              child: WindowMetricsDiagnostics(child: child!),
-            );
-          },
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-            Locale('en', 'US'),
-          ],
-          locale: const Locale('zh', 'CN'),
+                child: WindowMetricsDiagnostics(child: child!),
+              );
+            },
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('zh', 'CN'),
+              Locale('en', 'US'),
+            ],
+            locale: const Locale('zh', 'CN'),
+            ),
         );
       },
     );

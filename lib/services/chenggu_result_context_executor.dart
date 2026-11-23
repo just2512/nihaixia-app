@@ -1,4 +1,6 @@
 import '../models/assistant_tool_result.dart';
+import '../models/tool_execution_plan.dart';
+import '../licensing/feature_authorizer.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'headless_tool_dispatcher.dart';
 import 'chenggu_tool_service.dart';
@@ -40,7 +42,25 @@ class ChengguResultContextExecutor {
       return _failure(arguments, '只接受明确的公历 birth_date 与当地钟表 birth_time。');
     }
 
-    final result = await HeadlessToolDispatcher.execute(toolId: 'chenggu', arguments: arguments);
+    final dispatch = await HeadlessToolDispatcher(
+      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
+    ).executePlan(
+      plan: ToolExecutionPlan(
+        planId: 'context-rebuild-chenggu',
+        origin: InvocationOrigin.aiDispatch,
+        steps: [
+          ToolExecutionStep(
+            toolId: moduleId,
+            capabilityId: moduleId,
+            arguments: arguments,
+          ),
+        ],
+      ),
+    );
+    if (!dispatch.isCompleted || dispatch.results.length != 1) {
+      return _failure(arguments, '上下文重建未通过完整执行计划校验；本次不生成 AI 快照。');
+    }
+    final result = dispatch.results.single;
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
