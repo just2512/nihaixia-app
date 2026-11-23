@@ -72,6 +72,11 @@ internal class LicensePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     }
                 }
             }
+            "deleteLicenseToken" ->
+                dispatch(result) {
+                    requireTokenStore().deleteToken()
+                    mapOf("deleted" to true)
+                }
             else -> result.notImplemented()
         }
     }
