@@ -3676,3 +3676,56 @@ Find N2 实机与 E4B 本地状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`：外�
 - 已抽查的经脉详情、针灸处方及经典讲稿段落入口历史分支：当前 master 对应页面、Resolver/Prompt 与专属测试已存在；经典阅读旧分支缺少当前主线的 paragraph 模式/规范 anchor 处理。它们是已吸收或被更新实现替代的历史 refs，不再重复合并。
 - 对未逐支完成代码差异审查的远端 refs，仍标记为 `NOT_REVIEWED`；本节的抽查结论不能外推为全仓所有非默认分支均已逐文件审计。分支 refs 暂不批量删除。
 - #406 的 Find N2 真机 Launcher 显示、原签名覆盖安装与数据保留仍为 `LOCAL ONLY / UNKNOWN`；云端合并不代替 OPPO Find N2 实机验收。
+
+---
+
+## 70. 2026-11-22 PR #408 / #409 集成收尾与遗留状态复核
+
+### 70.1 当前主线基线
+
+- PR #408 已 squash 合并，master commit：`162439e1912a2819d3392ffbf1294dd8edf6b749`。该 PR 合入历史分支处置台账、情境 Ask AI 规范索引和半折叠导航回归测试修复。
+- PR #409 以原主线 `dbcbec6a07a98c129e1a1b64212feab01a0c0c15` 为基线选择性移植子午流注字段级入口，最终 head：`83dbb71670d364d1f9741a9866c9a8b4fbfe3124`，于 2026-11-22 squash 合并，master commit：`98f52bbdd647d9ac9dde3fec967ddd14a57af98c`。
+- 当前 master：`98f52bbdd647d9ac9dde3fec967ddd14a57af98c`。
+
+### 70.2 PR #409 实际交付
+
+- 纳子、纳甲、灵龟八法、飞腾八法四个 Tab 分别提供单方法字段级情境 AI 入口。
+- 上下文只绑定同一次设备本地确定性计算的成功快照；Resolver 复核来源、规则版本、snapshot ID、时间和字段白名单；Prompt 只包含所选方法字段。
+- 保留 `NOT_APPLICABLE` 原始状态，不补造穴位、经络或临床建议；AI 仅解释已核验的 App 结果，不参与时辰开穴计算。
+- 修复 Flutter 3.47 PageStorage 类型冲突：纳子法 ListView 的滚动偏移仍由原列表 PageStorageKey 保存；三个 ExpansionTile 的展开状态使用独立 PageStorageBucket，避免将 `double` 滚动偏移当作 `bool` 展开状态读取。
+- 方法入口测试精确定位各方法的 ListView 并滚动到入口；半折叠导航测试在 tap 前等待 settle 并断言目标完整进入视口。未删除失败测试、未降低断言。
+
+### 70.3 PR #409 强制门禁证据
+
+| 门禁 | Workflow / Job | 结果 |
+|---|---|---|
+| Fork license inventory / boundary | run `45040511543` | SUCCESS |
+| Dart / Flutter static analysis + full regression | run `45040511545`；job `137263715319` | SUCCESS |
+| Flutter 全量回归 | 同上 | `1,898 passed, 15 skipped, 0 failed` |
+| Android arm64 Debug APK / ABI / SHA-256 / Manifest | run `45040511545`；job `137265523202` | SUCCESS |
+| Android local unit tests / XML report / Release signing guards | 同上 | SUCCESS |
+| Conditional Branch validation | job `137263716334` | SKIPPED，不计 PASS |
+
+- PR #409 merge：`98f52bbdd647d9ac9dde3fec967ddd14a57af98c`。
+- 评审线程：合并前未发现 open review threads。
+- 合并后本轮没有取得独立的 master push workflow run 证据；PR head 的强制门禁已全部通过，合并后 master 专属 CI 仍记为 `UNKNOWN / NOT_RETURNED`，不可将 PR head CI 重述为 post-merge CI。
+
+### 70.4 已关闭的替代实现与未完成许可草案
+
+- PR #404：旧字段级实现分支相对当前主线约落后 179 个提交。唯一尚未集成的功能已由 #409 选择性重建并合入；#404 已关闭并标记 `SUPERSEDED`。保留原始分支引用，不整支合并，不删除分支。
+- PR #328：AI 商业许可草案继续保持 OPEN / DRAFT，不属于本轮功能集成。商业代码权属、贡献者再许可、协议主体及最终用户/商业条款尚需完成证据和法律审查；不修改根目录 Apache 2.0 LICENSE，不将知识资产和确定性业务逻辑纳入商业授权。本轮不合并 #328。
+- PR #403：已按前述记录关闭为 `SUPERSEDED`，当前主线已有对应段落级入口实现，不重复移植。
+
+### 70.5 历史分支引用处置边界
+
+- 本轮分页核对远端共有 465 个 branch refs（含 master）。该数字是引用数量，不是待合并任务数量。
+- 已核实图标分支 `feat/yanji-launcher-icon-current-master-20261122` 的 head `439677ff25ead8beea8d3251437f20a1cd995226` 与已合并 PR #406 的原始 head 完全相同；GitHub squash merge 不保留该 head 的祖先关系，所以 compare 显示 ahead/behind 并不代表图标内容未集成。不得重复合并。
+- 历史计数 §69.1 的 462 refs 是 PR #407 创建时的历史快照；本节 465 refs 是本轮最新分页快照，两个统计时点不同，不覆盖旧快照。
+- 本轮没有逐一审核 465 个 refs 的所有内容；未逐支完成 diff / provenance 审查者仍为 `NOT_REVIEWED`。不能以抽查结论声称全仓每条历史分支均已审计，也不能把 closed PR refs 或无 PR refs 自动合并。
+- 本轮没有批量删除分支。对已合并、替代或历史试验分支，只有在确认无 PR、工作流和用户工作依赖后，才可作为单独的 refs 清理任务处理。
+
+### 70.6 设备验收与剩余工作
+
+- Find N2 Launcher 显示、原签名 APK 原位覆盖升级、数据库/用户数据保留，以及 E4B GPU/CPU 多轮、第二/第三轮响应和 Activity 恢复仍是 `LOCAL ONLY / UNKNOWN`；CI 和模拟器不能替代设备验收。
+- 当前唯一仍 OPEN 的 PR 是 #328 商业许可草案（DRAFT）；其合并条件未满足，维持冻结，不计为可合并功能。
+- 云端功能集成：PR #408、#409 均 MERGED；PR #404 CLOSED / SUPERSEDED。当前未审计的历史 refs 与设备本地验收继续按各自状态管理，不宣称整个仓库 465 个分支均已合并或删除。
