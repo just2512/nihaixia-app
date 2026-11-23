@@ -67,6 +67,22 @@ void main() {
       expect(result.errors.join(' '), contains('尚无 Headless 执行器'));
     });
 
+    test('rejects tools with screen-owned multi-step follow-up state even if Headless exists', () {
+      final result = AssistantToolExecutionPlanBuilder.build(
+        planId: 'plan-screen-owned-tool',
+        query: '同时排八字和查询玉匣灵兆：1990年1月2日，上午8点，男性，上海市出生',
+        candidates: [
+          AssistantToolRouter.bazi,
+          AssistantToolRouter.yuxiaji,
+        ],
+        orderedToolIds: ['bazi', 'yuxiaji_omen'],
+      );
+
+      expect(result.isValid, isFalse);
+      expect(result.plan, isNull);
+      expect(result.errors.join(' '), contains('暂不支持自动计划'));
+    });
+
     test('rejects a plan that selects IDs outside the candidate set', () {
       final result = AssistantToolExecutionPlanBuilder.build(
         planId: 'plan-3',
