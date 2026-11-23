@@ -21,7 +21,7 @@ import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
-import '../services/saved_chart_tool_executor.dart';
+import '../services/tool_argument_support.dart';
 import '../services/tcm_interview_conversation_controller.dart';
 import 'assistant_tool_router.dart';
 import '../data/database_helper.dart';
@@ -36,10 +36,7 @@ import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/assistant_message_metadata.dart';
 import '../models/ai_context_ref.dart';
-import '../services/yijing_tool_executor.dart';
-import '../services/dosage_tool_executor.dart';
 import '../services/dosage_conversion_service.dart';
-import '../services/ziwuliuzhu_tool_executor.dart';
 import 'assistant_history_screen.dart';
 import '../theme/app_tokens.dart';
 import '../data/formula_repository.dart';
@@ -3252,8 +3249,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ...currentArguments.values,
       };
       final charts = await (widget.testSavedChartsLoader ??
-          SavedChartToolExecutor.loadSavedCharts)();
-      final selectedId = SavedChartToolExecutor.resolveRecordId(
+          ToolArgumentSupport.loadSavedCharts)();
+      final selectedId = ToolArgumentSupport.resolveSavedChartRecordId(
         userText,
         charts,
         pendingArguments: mergedValues,
@@ -3262,7 +3259,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final mentionsZiwei = RegExp(r'紫微|斗数').hasMatch(userText);
       final chartType = mentionsBazi && mentionsZiwei
           ? null
-          : SavedChartToolExecutor.resolveChartType(
+          : ToolArgumentSupport.resolveSavedChartType(
               userText,
               pendingChartType: mergedValues['chart_type'],
             );
@@ -3335,7 +3332,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         _pendingSavedChartsArguments = request;
         final selectedLine = selectedChart == null
-            ? SavedChartToolExecutor.formatSavedChartChoices(charts)
+            ? ToolArgumentSupport.formatSavedChartChoices(charts)
             : '已选中：ID ' + selectedChart.id.toString() + '｜' + selectedChart.name + '。';
         final clarification = [
           '我会在当前对话中读取你选择的本地保存记录，并调用 App 原有排盘引擎重新计算；不会把全部个人记录交给模型。',
@@ -3815,14 +3812,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       final request = AssistantToolArguments(
         toolId: 'ziwu_liuzhu',
-        values: ZiWuLiuZhuToolExecutor.prepareExecutionArguments({
+        values: ToolArgumentSupport.prepareZiWuLiuZhuArguments({
           ...carriedSlots,
           ...currentTextSlots.values,
         }),
       );
       final argumentErrors = request.validateAgainst(tool);
       final businessErrors =
-          ZiWuLiuZhuToolExecutor.validateArguments(request.values);
+          ToolArgumentSupport.validateZiWuLiuZhuArguments(request.values);
       final date = request['date'];
       final time = request['time'];
       final missingParameters = <String>[
@@ -3953,7 +3950,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       final businessErrors =
-          DosageToolExecutor.validateArguments(request.values);
+          ToolArgumentSupport.validateDosageArguments(request.values);
       final missingParameters = <String>[
         if (request['value']?.trim().isNotEmpty != true) '换算数值',
         if (request['unit']?.trim().isNotEmpty != true) '原始单位',
@@ -4845,7 +4842,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (method == 'time' || method == 'coins') {
         request = AssistantToolArguments(
           toolId: 'yijing',
-          values: YiJingToolExecutor.prepareExecutionArguments(request.values),
+          values: ToolArgumentSupport.prepareYiJingArguments(request.values),
         );
       }
       final argumentErrors = request.validateAgainst(tool);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/dosage_conversion_service.dart';
+
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
 import 'daily_almanac_screen.dart';
@@ -175,6 +177,18 @@ class AssistantToolRouter {
     '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
     '立冬', '小雪', '大雪', '冬至', '小寒', '大寒',
   ];
+
+  static const Map<String, int> yiJingTrigramNumbers = {
+    '乾': 1,
+    '兑': 2,
+    '離': 3,
+    '离': 3,
+    '震': 4,
+    '巽': 5,
+    '坎': 6,
+    '艮': 7,
+    '坤': 8,
+  };
 
   static const structuredDiagnosis = AssistantToolDefinition(
     id: 'structured_diagnosis',

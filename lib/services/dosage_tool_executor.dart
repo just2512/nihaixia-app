@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'dosage_conversion_service.dart';
+import 'tool_argument_support.dart';
 
 /// Headless adapter over the same pure unit converter used by
 /// DosageConverterScreen. It intentionally excludes drug dose advice.
@@ -7,27 +8,8 @@ class DosageToolExecutor {
   static const sourceId = 'local-engine:dosage-conversion';
   static const factorsSourceId = 'local-data:dosage-conversion-factors';
 
-  static List<String> validateArguments(Map<String, String> arguments) {
-    const allowed = {'value', 'unit', 'standard'};
-    if (arguments.keys.any((key) => !allowed.contains(key))) {
-      return const ['包含未声明的经方换算参数'];
-    }
-    final value = arguments['value']?.trim() ?? '';
-    final unit = arguments['unit']?.trim() ?? '';
-    final standard = arguments['standard']?.trim();
-    final errors = <String>[];
-    if (value.isEmpty) errors.add('缺少换算数值');
-    if (unit.isEmpty) errors.add('缺少原始单位');
-    if (errors.isNotEmpty) return List.unmodifiable(errors);
-    errors.addAll(
-      DosageConversionService.validate(
-        input: value,
-        unit: unit,
-        standard: standard,
-      ),
-    );
-    return List.unmodifiable(errors);
-  }
+  static List<String> validateArguments(Map<String, String> arguments) =>
+      ToolArgumentSupport.validateDosageArguments(arguments);
 
   static AssistantToolResult execute(Map<String, String> arguments) {
     final errors = validateArguments(arguments);
