@@ -126,12 +126,804 @@ class AssistantToolArguments {
               : parsed.year.toString().padLeft(4, '0') + '-' +
                   parsed.month.toString().padLeft(2, '0') + '-' +
                   parsed.day.toString().padLeft(2, '0');
-          if (normalized != raw) {
+          if (raw == 'AMBIGUOUS_DATE_SELECTION') {
+            errors.add('参数「' + parameter.label + '」存在多个候选，请明确选择一个出生公历日期');
+          } else if (normalized != raw) {
             errors.add('参数「' + parameter.label + '」必须是有效日期 YYYY-MM-DD');
           }
           break;
         case AssistantToolParameterType.time:
-          if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(raw)) {
+          if (raw == 'AMBIGUOUS_TIME_SELECTION') {
+            errors.add('参数「' + parameter.label + '」存在多个候选，请明确选择一个 HH:mm 时刻');
+          } else if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d
+          break;
+        case AssistantToolParameterType.integer:
+          if (int.tryParse(raw) == null) {
+            errors.add('参数「${parameter.label}」必须是整数');
+          }
+          break;
+        case AssistantToolParameterType.choice:
+          if (!parameter.choices.contains(raw)) {
+            errors.add('参数「${parameter.label}」不在允许选项内');
+          }
+          break;
+        case AssistantToolParameterType.text:
+          break;
+      }
+    }
+    return List.unmodifiable(errors);
+  }
+}
+
+class AssistantToolDefinition {
+  final String id;
+  final String title;
+  final String description;
+  final Set<AssistantMode> modes;
+  final List<String> aliases;
+  final List<String> actionWords;
+  final Widget Function() builder;
+  final Widget Function(AssistantToolArguments arguments)? builderWithArguments;
+  final FutureOr<AssistantToolResult> Function(Map<String, String> arguments)? headlessExecutor;
+  final List<AssistantToolParameter> parameters;
+
+  const AssistantToolDefinition({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.modes,
+    required this.aliases,
+    required this.actionWords,
+    required this.builder,
+    this.builderWithArguments,
+    this.headlessExecutor,
+    this.parameters = const [],
+  });
+}
+
+/// Deterministic intent-to-tool registry. A definition may expose a Page Tool,
+/// a synchronous Headless executor, or both. Executed results remain typed and
+/// are validated by the caller before they enter the conversation timeline.
+class AssistantToolRouter {
+  static const structuredDiagnosis = AssistantToolDefinition(
+    id: 'structured_diagnosis',
+    title: '结构化辨证问诊',
+    description: '按现有六经规则逐项问诊；完成后把记录带回助手对话。',
+    modes: {AssistantMode.consultation},
+    aliases: ['结构化辨证', '规则辨证', '结构化问诊', '规则问诊', '六经问诊'],
+    actionWords: ['开始', '进入', '进行', '帮我', '我要', '打开'],
+    builder: _buildStructuredDiagnosis,
+  );
+
+  static const yunqi = AssistantToolDefinition(
+    id: 'yunqi',
+    title: '五运六气推算',
+    description: '使用 App 本地五运六气引擎直接推算；也可打开页面复核。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['五运六气', '运气推算', '岁运司天在泉'],
+    actionWords: ['推算', '计算', '算一下', '起算', '帮我算'],
+    parameters: [
+      AssistantToolParameter(
+        key: 'date',
+        label: '推算日期',
+        type: AssistantToolParameterType.date,
+        description: 'YYYY-MM-DD；未提供时使用当前日期。',
+      ),
+    ],
+    builder: _buildYunqi,
+    builderWithArguments: _buildYunqiWithArguments,
+    headlessExecutor: YunQiToolExecutor.execute,
+  );
+
+  static const ziwei = AssistantToolDefinition(
+    id: 'ziwei',
+    title: '紫微斗数排盘',
+    description: '在当前对话收集明确的出生资料并调用 App 本地确定性紫微引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['紫微斗数', '紫微排盘', '紫微命盘'],
+    actionWords: ['排盘', '起盘', '命盘', '帮我排'],
+    builder: _buildZiwei,
+    headlessExecutor: ZiweiToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '出生地当地钟表时间，24 小时制 HH:mm',
+      ),
+      AssistantToolParameter(
+        key: 'gender',
+        label: '性别',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['male', 'female'],
+      ),
+      AssistantToolParameter(
+        key: 'birthplace',
+        label: '出生地点',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '出生城市或区县，用于读取本地经纬度',
+      ),
+    ],
+  );
+
+  static const bazi = AssistantToolDefinition(
+    id: 'bazi',
+    title: '八字排盘',
+    description: '在当前对话收集出生资料并调用 App 本地确定性八字引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['八字', '四柱', '生辰八字'],
+    actionWords: ['排盘', '起盘', '命盘', '帮我排'],
+    builder: _buildBazi,
+    headlessExecutor: BaziToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '出生地当地钟表时间，24 小时制 HH:mm',
+      ),
+      AssistantToolParameter(
+        key: 'gender',
+        label: '性别',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['male', 'female'],
+      ),
+      AssistantToolParameter(
+        key: 'birthplace',
+        label: '出生地点',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '出生城市或区县，用于读取本地经纬度',
+      ),
+    ],
+  );
+
+  static const yijing = AssistantToolDefinition(
+    id: 'yijing',
+    title: '易经起卦',
+    description: '在当前对话中调用 App 原有易经引擎，支持数字、当前时间、手动选卦和铜钱摇卦；计算结果由 AI 归纳解释。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['易经', '六十四卦', '周易'],
+    actionWords: ['起卦', '摇卦', '选卦', '占卦', '卜卦', '排卦'],
+    builder: _buildYijing,
+    headlessExecutor: YiJingToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'method',
+        label: '起卦方式',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['number', 'time', 'manual', 'coins'],
+      ),
+      AssistantToolParameter(
+        key: 'first',
+        label: '第一数',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'second',
+        label: '第二数',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'upper',
+        label: '上卦（先天数 1–8）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'lower',
+        label: '下卦（先天数 1–8）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'moving',
+        label: '动爻（0 为静卦，1–6 为动爻）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'at',
+        label: 'App 记录的本地起卦时刻',
+        type: AssistantToolParameterType.text,
+      ),
+      AssistantToolParameter(
+        key: 'coins',
+        label: 'App 实际生成的六次铜钱结果',
+        type: AssistantToolParameterType.text,
+      ),
+    ],
+  );
+
+  static const xiaoliuren = AssistantToolDefinition(
+    id: 'xiaoliuren',
+    title: '小六壬起课',
+    description: '在当前对话收集公历日期和时辰，调用 App 原有小六壬纯函数；两种既有起课口径由用户明确选择。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['小六壬', '小六壬起课', '六壬时课'],
+    actionWords: ['起课', '起卦', '推算', '算一下'],
+    builder: _buildXiaoliuren,
+    headlessExecutor: XiaoliurenToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'date',
+        label: '公历日期',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'hour',
+        label: '时辰',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: XiaoliurenToolExecutor.hourBranches,
+      ),
+      AssistantToolParameter(
+        key: 'rule',
+        label: '起课口径',
+        type: AssistantToolParameterType.choice,
+        description: '必须由用户明确选择 common（通行掌诀）或 duoneng（《多能鄙事》卷八）；两种口径并列，不把其中一种说成唯一传统。',
+        isRequired: true,
+        choices: ['common', 'duoneng'],
+      ),
+    ],
+  );
+
+  static const meihua = AssistantToolDefinition(
+    id: 'meihua',
+    title: '梅花易数起卦',
+    description: '时间、数字和随机三种起卦均在当前对话中调用 App 原有本地算法。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['梅花易数', '梅花'],
+    actionWords: ['起卦', '推算', '算一下'],
+    builder: _buildMeihua,
+    headlessExecutor: MeihuaToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'method',
+        label: '起卦方式',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['number', 'time', 'random'],
+      ),
+      AssistantToolParameter(
+        key: 'first',
+        label: '第一数（上卦）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'second',
+        label: '第二数（下卦）',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'date',
+        label: '公历起卦日期',
+        type: AssistantToolParameterType.date,
+      ),
+      AssistantToolParameter(
+        key: 'hour_branch',
+        label: '时间起卦时辰',
+        type: AssistantToolParameterType.choice,
+        choices: ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'],
+      ),
+    ],
+  );
+
+  static const dosage = AssistantToolDefinition(
+    id: 'dosage',
+    title: '经方度量衡单位换算',
+    description: '在当前对话中调用 App 原有单位换算函数，支持重量、容量和长度单位。只做单位换算，不提供处方或个体用药剂量建议。',
+    modes: {AssistantMode.tools},
+    aliases: ['剂量换算', '经方换算', '两升铢', '古代度量衡', '单位换算', '经方度量衡'],
+    actionWords: ['换算', '计算', '转换', '打开'],
+    builder: _buildDosage,
+    headlessExecutor: DosageToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'value',
+        label: '换算数值',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'unit',
+        label: '原始单位',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: DosageConversionService.supportedUnits,
+      ),
+      AssistantToolParameter(
+        key: 'standard',
+        label: '度量标准',
+        type: AssistantToolParameterType.choice,
+        choices: DosageConversionService.standardIds,
+      ),
+    ],
+  );
+
+  static const ziwu = AssistantToolDefinition(
+    id: 'ziwu_liuzhu',
+    title: '时辰开穴计算',
+    description: '在当前助手对话中调用 App 原有子午流注引擎，归纳纳子法、纳甲法、灵龟八法和飞腾八法的真实结果。',
+    modes: {AssistantMode.tools},
+    aliases: ['时辰开穴', '子午流注', '灵龟八法', '纳子法', '纳甲法'],
+    actionWords: ['计算', '开穴', '推算', '查穴', '查询'],
+    builder: _buildZiwu,
+    headlessExecutor: ZiWuLiuZhuToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'at',
+        label: 'App 注入的设备本地计算时间',
+        type: AssistantToolParameterType.text,
+      ),
+      AssistantToolParameter(
+        key: 'date',
+        label: '公历日期（YYYY-MM-DD）',
+        type: AssistantToolParameterType.text,
+      ),
+      AssistantToolParameter(
+        key: 'time',
+        label: '设备本地时刻（HH:mm）',
+        type: AssistantToolParameterType.text,
+      ),
+    ],
+  );
+
+  static const guji = AssistantToolDefinition(
+    id: 'guji_library',
+    title: '古籍原文',
+    description: '打开 App 内置古籍阅读库。',
+    modes: {AssistantMode.tools, AssistantMode.learning},
+    aliases: ['古籍', '经典原文', '灵枢', '针灸大成'],
+    actionWords: ['查原文', '查阅', '打开', '阅读'],
+    builder: _buildGuji,
+  );
+
+  static const knowledgeHub = AssistantToolDefinition(
+    id: 'knowledge_hub',
+    title: '中医知识库浏览',
+    description: '打开 App 知识库浏览页；具体知识问答仍在当前统一会话中进行。',
+    modes: {AssistantMode.learning},
+    aliases: ['知识库', '中医知识库', '知识页面'],
+    actionWords: ['打开', '浏览', '查看'],
+    builder: _buildKnowledgeHub,
+  );
+
+  static const medicalCases = AssistantToolDefinition(
+    id: 'medical_cases',
+    title: '医案库检索',
+    description: '打开本地医案库进行检索。',
+    modes: {AssistantMode.tools, AssistantMode.learning},
+    aliases: ['医案库', '医案', '病例库'],
+    actionWords: ['检索', '查找', '查案例', '打开'],
+    builder: _buildMedicalCases,
+  );
+
+  static const almanac = AssistantToolDefinition(
+    id: 'almanac',
+    title: '每日黄历',
+    description: '使用 App 本地黄历引擎计算指定日期；也可打开页面复核。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['黄历', '每日宜忌', '今日宜忌'],
+    actionWords: ['查询', '查看', '打开', '今天'],
+    parameters: [
+      AssistantToolParameter(
+        key: 'date',
+        label: '查询日期',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+        description: 'YYYY-MM-DD；由用户明确日期或“今日”语义解析。',
+      ),
+    ],
+    builder: _buildAlmanac,
+    headlessExecutor: AlmanacToolExecutor.execute,
+  );
+
+  // Existing ToolsScreen destinations must be addressable from the unified
+  // assistant as well. These screens remain the deterministic execution
+  // surface; the model only routes and explains, never fabricates results.
+  static const diagnosisHistory = AssistantToolDefinition(
+    id: 'diagnosis_history',
+    title: '诊断历史趋势',
+    description: '查看既有结构化辨证记录与六经变化趋势。',
+    modes: {AssistantMode.tools, AssistantMode.consultation},
+    aliases: ['诊断历史', '问诊历史', '辨证历史', '历史趋势'],
+    actionWords: ['查看', '打开', '回看', '趋势'],
+    builder: _buildDiagnosisHistory,
+  );
+
+  static const criticalIllness = AssistantToolDefinition(
+    id: 'critical_illness',
+    title: '闭门课重症资料',
+    description: '查阅 App 内置重症课程资料；不是个体治疗方案。',
+    modes: {AssistantMode.tools, AssistantMode.learning},
+    aliases: ['闭门课', '重症临床', '重症资料', '重症课程'],
+    actionWords: ['查阅', '查看', '学习', '打开', '介绍'],
+    builder: _buildCriticalIllness,
+  );
+
+  static const solarTerms = AssistantToolDefinition(
+    id: 'solar_terms',
+    title: '节气养生',
+    description: '在当前对话查询 App 已有节气计算结果及二十四节气知识资产；AI 只负责归纳和解释，不新增养生或个体医学结论。',
+    modes: {AssistantMode.tools, AssistantMode.learning},
+    aliases: [
+      '节气养生',
+      '二十四节气',
+      '节气知识',
+      '当前节气',
+      '今天的节气',
+      '现在的节气',
+      '立春',
+      '雨水',
+      '惊蛰',
+      '春分',
+      '清明',
+      '谷雨',
+      '立夏',
+      '小满',
+      '芒种',
+      '夏至',
+      '小暑',
+      '大暑',
+      '立秋',
+      '处暑',
+      '白露',
+      '秋分',
+      '寒露',
+      '霜降',
+      '立冬',
+      '小雪',
+      '大雪',
+      '冬至',
+      '小寒',
+      '大寒',
+    ],
+    actionWords: ['查询', '查看', '学习', '查阅', '打开', '介绍', '解释', '讲解', '比较', '对比'],
+    builder: _buildSolarTerms,
+    headlessExecutor: SolarTermToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'term',
+        label: '目标节气',
+        type: AssistantToolParameterType.choice,
+        isRequired: false,
+        description: '不指定时读取 App 当前节气；指定时从现有二十四节气知识资产检索。',
+        choices: SolarTermToolExecutor.termNames,
+      ),
+    ],
+  );
+
+  static const yuxiaji = AssistantToolDefinition(
+    id: 'yuxiaji_omen',
+    title: '玉匣灵兆',
+    description: '默认在当前对话中按 App 本机时辰查询《玉匣记》身兆文本；需要方向、形态等额外观察时仍可打开原页面。仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['玉匣灵兆', '玉匣记', '面热占', '眼跳占', '耳鸣占', '心惊占', '鸦鸣鹊噪方向', '鸦鸣鹊噪', '鸦鸣', '鹊噪', '占灯花法', '灯花占'],
+    actionWords: ['查询', '查看', '起占', '打开', '推算'],
+    builder: _buildYuxiaji,
+    headlessExecutor: YuxiajiOmenToolExecutor.execute,
+  );
+
+  static const dream = AssistantToolDefinition(
+    id: 'dream',
+    title: '周公解梦',
+    description: '在当前对话中检索 App 本地梦境民俗资料；多个词条命中时先澄清，不作现实吉凶判断。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['周公解梦', '解梦', '梦境释义', '梦见', '梦到', '梦境', '做梦', '这个梦'],
+    actionWords: ['查询', '查看', '解释', '解读', '分析', '是什么意思', '什么意思', '检索', '搜索', '打开', '帮我'],
+    builder: _buildDream,
+    headlessExecutor: DreamToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'dream_text',
+        label: '梦境描述',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '保留用户原始叙述；没有具体情节时在对话中追问。',
+      ),
+    ],
+  );
+
+  static const guansha = AssistantToolDefinition(
+    id: 'guansha',
+    title: '小儿关煞',
+    description: '在当前对话收集明确的公历出生日期、当地钟表时间、性别和可唯一识别的出生地点，复用 App 原有八字与关煞规则；仅供民俗文化参考，非医学结论。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['小儿关煞', '关煞', '小孩关煞'],
+    actionWords: ['查询', '查看', '测算', '排算', '打开', '帮我算'],
+    builder: _buildGuansha,
+    headlessExecutor: GuanshaToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；缺失时必须追问，不使用页面默认时间。',
+      ),
+      AssistantToolParameter(
+        key: 'gender',
+        label: '性别',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['male', 'female'],
+      ),
+      AssistantToolParameter(
+        key: 'birthplace',
+        label: '出生地点',
+        type: AssistantToolParameterType.text,
+        isRequired: true,
+        description: '必须由本地城市目录唯一识别；不使用默认经纬度。',
+      ),
+    ],
+  );
+
+  static const sanshan = AssistantToolDefinition(
+    id: 'sanshan_lingqian',
+    title: '三山国王灵签',
+    description: '用户明确求签/抽签时，由 App 本地随机选择既有 92 签签谱并在当前对话返回；查阅签谱仍可打开页面。仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['三山国王', '三山灵签', '灵签'],
+    actionWords: ['求签', '抽签', '抽', '查看', '查签', '打开'],
+    builder: _buildSanshan,
+    headlessExecutor: SanshanLingqianToolExecutor.execute,
+  );
+
+  static const chenggu = AssistantToolDefinition(
+    id: 'chenggu',
+    title: '袁天罡称骨',
+    description: '在当前对话中收集明确的公历出生日期和当地钟表时间，复用 App 原有八字与称骨计算；仅供传统民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['称骨', '袁天罡', '称骨算命'],
+    actionWords: ['计算', '测算', '查询', '打开', '帮我', '算一下'],
+    builder: _buildChenggu,
+    headlessExecutor: ChengguToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；缺失时必须向用户追问，不使用默认时间。',
+      ),
+    ],
+  );
+
+  static const shoushengDebt = AssistantToolDefinition(
+    id: 'shousheng_debt',
+    title: '受生债查询',
+    description: '在当前对话中收集明确的公历出生日期、当地钟表时间和查询体系，复用 App 原有八字设置及本地受生债数据表；仅作道教文献与民俗文化参考，不构成现实债务、宗教或财务建议。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['受生债', '禄库受生经', '五斗金章'],
+    actionWords: ['查询', '计算', '测算', '帮我查', '算一下'],
+    builder: _buildShoushengDebt,
+    headlessExecutor: ShoushengDebtToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+        description: '仅接受明确公历日期；农历输入需先澄清，不自动换算。',
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；不使用页面默认时间。',
+      ),
+      AssistantToolParameter(
+        key: 'method',
+        label: '查询体系（禄库受生经 / 五斗金章）',
+        type: AssistantToolParameterType.choice,
+        isRequired: true,
+        choices: ['luku', 'wudou'],
+        description: '两套表格口径不同，必须由用户明确选择，不沿用页面默认选项。',
+      ),
+    ],
+  );
+
+  static const huangdiSiji = AssistantToolDefinition(
+    id: 'huangdi_siji',
+    title: '轩辕黄帝四季歌',
+    description: '在当前对话中收集明确的公历出生日期和当地钟表时间，复用 App 原有农历月份换算与本地四季歌数据；仅作民俗文化参考。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['黄帝四季歌', '轩辕黄帝四季歌', '四季歌'],
+    actionWords: ['查询', '查看', '测算', '打开'],
+    builder: _buildHuangdiSiji,
+    headlessExecutor: HuangdiSijiToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'birth_date',
+        label: '出生日期（公历）',
+        type: AssistantToolParameterType.date,
+        isRequired: true,
+      ),
+      AssistantToolParameter(
+        key: 'birth_time',
+        label: '出生时间（当地钟表时间）',
+        type: AssistantToolParameterType.time,
+        isRequired: true,
+        description: '24 小时制 HH:mm；缺失时必须向用户追问，不使用页面默认时间。',
+      ),
+    ],
+  );
+
+  static const savedCharts = AssistantToolDefinition(
+    id: 'saved_charts',
+    title: '我的命盘库',
+    description: '用户明确请求后，在当前对话读取其指定的保存记录，并由 App 原有八字或紫微引擎重新计算；不自动读取或注入全部个人记录。',
+    modes: {AssistantMode.tools, AssistantMode.metaphysics},
+    aliases: ['我的命盘库', '我的命盘', '保存的命盘', '已保存命盘'],
+    actionWords: ['查看', '打开', '管理', '回看', '分析', '解读', '看看'],
+    builder: _buildSavedCharts,
+    headlessExecutor: SavedChartToolExecutor.execute,
+    parameters: [
+      AssistantToolParameter(
+        key: 'saved_chart_id',
+        label: '保存记录 ID',
+        type: AssistantToolParameterType.integer,
+      ),
+      AssistantToolParameter(
+        key: 'chart_type',
+        label: '排盘类型',
+        type: AssistantToolParameterType.choice,
+        choices: ['bazi', 'ziwei'],
+      ),
+    ],
+  );
+
+  static const List<AssistantToolDefinition> _all = [
+    structuredDiagnosis,
+    yunqi,
+    ziwei,
+    bazi,
+    yijing,
+    xiaoliuren,
+    meihua,
+    dosage,
+    ziwu,
+    guji,
+    knowledgeHub,
+    medicalCases,
+    almanac,
+    diagnosisHistory,
+    criticalIllness,
+    solarTerms,
+    yuxiaji,
+    dream,
+    guansha,
+    sanshan,
+    chenggu,
+    shoushengDebt,
+    huangdiSiji,
+    savedCharts,
+  ];
+
+  static List<AssistantToolDefinition> get all =>
+      List.unmodifiable(_all);
+
+  static List<AssistantToolDefinition> quickActions(AssistantMode mode) =>
+      _all.where((tool) => mode == AssistantMode.automatic || tool.modes.contains(mode)).toList(growable: false);
+
+  /// Resolve a persisted tool action when a conversation is reopened.
+  static AssistantToolDefinition? byId(String id) {
+    for (final tool in _all) {
+      if (tool.id == id) return tool;
+    }
+    return null;
+  }
+
+  /// Match a short answer to a prior tool-type clarification. Unlike [match],
+  /// this does not require an action verb; callers must require exactly one match.
+  static List<AssistantToolDefinition> matchAliases(
+    String query,
+    AssistantMode mode,
+  ) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return const [];
+    return _all.where((tool) =>
+      tool.modes.contains(mode) && tool.aliases.any(normalized.contains)
+    ).toList(growable: false);
+  }
+
+  /// Return every explicit action match. Callers must clarify when more than
+  /// one tool is named; silently selecting the first registry entry is unsafe.
+  static List<AssistantToolDefinition> matchAll(
+    String query,
+    AssistantMode mode,
+  ) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return const [];
+    return _all.where((tool) {
+      if (mode != AssistantMode.automatic && !tool.modes.contains(mode)) {
+        return false;
+      }
+      return tool.aliases.any(normalized.contains) &&
+          tool.actionWords.any(normalized.contains);
+    }).toList(growable: false);
+  }
+
+  static AssistantToolDefinition? match(String query, AssistantMode mode) {
+    final matches = matchAll(query, mode);
+    return matches.length == 1 ? matches.single : null;
+  }
+
+  static Widget _buildStructuredDiagnosis() =>
+      throw StateError(
+        'Structured diagnosis must run inside LocalAiInterviewScreen; '
+        'the legacy diagnosis entry is disabled.',
+      );
+  static Widget _buildYunqi() => const YunQiScreen(returnResultOnComplete: true);
+  static Widget _buildYunqiWithArguments(AssistantToolArguments arguments) {
+    final rawDate = arguments['date'];
+    final date = rawDate == null ? null : DateTime.tryParse(rawDate);
+    return YunQiScreen(
+      returnResultOnComplete: true,
+      initialDate: date,
+    );
+  }
+  static Widget _buildZiwei() =>
+      const ZiweiChartScreen(returnResultOnComplete: true);
+  static Widget _buildBazi() =>
+      const BaZiPaipanScreen(returnResultOnComplete: true);
+  static Widget _buildYijing() =>
+      const YiJingScreen(returnResultOnComplete: true);
+  static Widget _buildXiaoliuren() =>
+      const XiaoliurenScreen(returnResultOnComplete: true);
+  static Widget _buildMeihua() =>
+      const MeihuaScreen(returnResultOnComplete: true);
+  static Widget _buildDosage() =>
+      const DosageConverterScreen(returnResultOnComplete: true);
+  static Widget _buildZiwu() => const ZiWuLiuZhuScreen(returnResultOnComplete: true);
+  static Widget _buildGuji() => const GujiLibraryScreen();
+  static Widget _buildKnowledgeHub() => const KnowledgeScreen();
+  static Widget _buildMedicalCases() => const MedicalCaseLibraryScreen();
+  static Widget _buildAlmanac() =>
+      const DailyAlmanacScreen(returnResultOnComplete: true);
+  static Widget _buildDiagnosisHistory() => const DiagnosisHistoryScreen();
+  static Widget _buildCriticalIllness() => const CriticalIllnessListScreen();
+  static Widget _buildSolarTerms() => const SolarTermSectionScreen();
+  static Widget _buildYuxiaji() => const YuxiajiOmenScreen();
+  static Widget _buildDream() => const DreamScreen();
+  static Widget _buildGuansha() => const GuanshaScreen(returnResultOnComplete: true);
+  static Widget _buildSanshan() => const SanshanLingqianScreen(returnResultOnComplete: true);
+  static Widget _buildChenggu() => const ChengguBoneScreen(returnResultOnComplete: true);
+  static Widget _buildShoushengDebt() => const ShoushengDebtScreen(returnResultOnComplete: true);
+  static Widget _buildHuangdiSiji() => const HuangdiSijiScreen(returnResultOnComplete: true);
+  static Widget _buildSavedCharts() => const SavedChartsScreen();
+}
+).hasMatch(raw)) {
             errors.add('参数「' + parameter.label + '」必须使用 24 小时制 HH:mm');
           }
           break;
