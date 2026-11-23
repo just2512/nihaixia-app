@@ -56,7 +56,7 @@ void main() {
         aiReady: true,
       );
 
-      expect(presentation.result.status, AssistantToolExecutionStatus.noResult);
+      expect(presentation.result.status, AssistantToolExecutionStatus.unknown);
       expect(presentation.responseText, contains('MISSING'));
       expect(presentation.canInterpret, isFalse);
       expect(presentation.autoInterpret, isFalse);
