@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'data/acupuncture_repository.dart';
@@ -8,6 +11,8 @@ import 'data/formula_repository.dart';
 import 'data/herb_repository.dart';
 import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
+import 'licensing/app_feature_authorizer_factory.dart';
+import 'licensing/feature_authorizer.dart';
 import 'licensing/feature_authorizer_scope.dart';
 import 'screens/home_screen.dart';
 import 'theme/app_colors.dart';
@@ -191,11 +196,22 @@ void main() async {
   await SettingsRepository.instance.load();
   // 紫微解读层外置规则；加载失败会在仓库内部静默降级为内建默认值，不影响启动。
   await ZiweiRulesRepository.load();
-  runApp(const NiHaishaApp());
+  final featureAuthorizer = createAppFeatureAuthorizer(
+    release: kReleaseMode,
+  );
+  if (featureAuthorizer is EntitlementService) {
+    unawaited(featureAuthorizer.initialize());
+  }
+  runApp(NiHaishaApp(featureAuthorizer: featureAuthorizer));
 }
 
 class NiHaishaApp extends StatelessWidget {
-  const NiHaishaApp({super.key});
+  const NiHaishaApp({
+    super.key,
+    this.featureAuthorizer = const UnconfiguredFeatureAuthorizer(),
+  });
+
+  final FeatureAuthorizer featureAuthorizer;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +220,7 @@ class NiHaishaApp extends StatelessWidget {
       builder: (context, _) {
         final settings = SettingsRepository.instance;
         return FeatureAuthorizerScope(
-          authorizer: const UnconfiguredFeatureAuthorizer(),
+          authorizer: featureAuthorizer,
           child: MaterialApp(
             title: '研纪',
             debugShowCheckedModeBanner: false,
