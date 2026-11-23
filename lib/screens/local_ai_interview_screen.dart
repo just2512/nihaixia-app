@@ -8907,7 +8907,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             route: 'bounded_intent_selection:${resolution.action.name}',
             mode: decision.mode.name,
           );
-          if (resolution.action == LocalAiIntentAction.plan) {
+          if (resolution.action == LocalAiIntentAction.plan &&
+              _pendingToolSelection) {
+            decision = AssistantDispatchDecision(
+              mode: decision.mode,
+              clarification:
+                  '当前正在确认一个待执行的单工具步骤；多工具计划只能从新的完整请求开始，请重新描述全部操作。',
+            );
+          } else if (resolution.action == LocalAiIntentAction.plan) {
             final planBuild = AssistantToolExecutionPlanBuilder.build(
               planId: traceId!,
               query: text,
