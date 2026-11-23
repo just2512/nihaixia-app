@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds an asynchronous FeatureAuthorizer interface and contract tests. It does not implement EntitlementService, TokenStore, platform KeyStore operations or production FeatureGate wiring. Ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language regression tests. Test keys are not production trust anchors; ownership evidence remains required. This update adds the Android Keystore Plugin, get-only/create device-key lifecycle, and AtomicFile single-token storage with JVM policy tests. Real-device KeyStore/StrongBox/AtomicFile behavior remains LOCAL ONLY / MISSING; ownership evidence remains required. This update adds the Dart LicensePlatform bridge and asynchronous EntitlementService with injected verifier, immutable entitlement snapshots, atomic token replacement orchestration and race-safe refresh tests. Find N2 platform behavior remains LOCAL ONLY / MISSING; production Release Key Ring and FeatureGate wiring remain separate batches. This update additionally adds the shared tool argument support module and isolated Analyzer AST import-graph audit; ownership evidence remains required.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds an asynchronous FeatureAuthorizer interface and contract tests. It does not implement EntitlementService, TokenStore, platform KeyStore operations or production FeatureGate wiring. Ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language regression tests. Test keys are not production trust anchors; ownership evidence remains required. This update adds the Android Keystore Plugin, get-only/create device-key lifecycle, and AtomicFile single-token storage with JVM policy tests. Real-device KeyStore/StrongBox/AtomicFile behavior remains LOCAL ONLY / MISSING; ownership evidence remains required. This update adds the Dart LicensePlatform bridge and asynchronous EntitlementService with injected verifier, immutable entitlement snapshots, atomic token replacement orchestration and race-safe refresh tests. Find N2 platform behavior remains LOCAL ONLY / MISSING; production Release Key Ring and FeatureGate wiring remain separate batches. This update additionally adds the shared tool argument support module and isolated Analyzer AST import-graph audit; ownership evidence remains required. This update extracts existing Headless executor implementations into reusable ToolService libraries while retaining thin compatibility aliases; 16 new service files are classified separately.",
   "counts": {
-    "changed": 917,
-    "added": 756,
+    "changed": 933,
+    "added": 772,
     "modified": 161,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
-      "FORK_COMMERCIAL": 397,
+      "FORK_COMMERCIAL": 413,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -4833,6 +4833,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/almanac_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/assistant_chart_result_formatter.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -4873,6 +4881,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/bazi_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/chenggu_result_context_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -4886,6 +4902,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/chenggu_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -4921,6 +4945,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/dosage_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/dream_result_context_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -4934,6 +4966,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/dream_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -4958,6 +4998,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/guansha_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -4993,6 +5041,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/huangdi_siji_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/local_ai_attachment_store.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5022,6 +5078,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/meihua_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5073,6 +5137,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/sanshan_lingqian_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/saved_chart_tool_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5097,6 +5169,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/shousheng_debt_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/solar_term_result_context_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5110,6 +5190,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/solar_term_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5145,6 +5233,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/xiaoliuren_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/yijing_tool_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5153,11 +5249,27 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/yijing_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/yunqi_tool_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/yunqi_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5185,6 +5297,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/yuxiaji_omen_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/ziwei_tool_executor.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5206,6 +5326,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/ziwuliuzhu_tool_service.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增业务实现/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
