@@ -3,7 +3,6 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Files:
  .gitignore
  android/app/build.gradle.kts
- android/key.properties.template
  android/app/proguard-rules.pro
  android/app/src/main/AndroidManifest.xml
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt
@@ -12,9 +11,10 @@ Files:
  android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
  android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
  android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+ android/key.properties.template
  APP_DEVELOPMENT_DETAIL.md
- CHANGELOG.md
  assets/data/changelog.json
+ CHANGELOG.md
  CONTRIBUTING.md
  docs/cross_platform_solution.md
  docs/diagnostic_engine_optimization_report.md
@@ -61,8 +61,8 @@ Files:
  lib/screens/minggua_calculator_screen.dart
  lib/screens/minggua_library_screen.dart
  lib/screens/neijing_entries_screen.dart
- lib/screens/neijing_library_screen.dart
  lib/screens/neijing_knowledge_screen.dart
+ lib/screens/neijing_library_screen.dart
  lib/screens/neijing_search_screen.dart
  lib/screens/sanshan_lingqian_screen.dart
  lib/screens/saved_charts_screen.dart
@@ -79,12 +79,12 @@ Files:
  lib/screens/yunqi_charts.dart
  lib/screens/yunqi_screen.dart
  lib/screens/yuxiaji_omen_screen.dart
+ lib/screens/zhenjiu_library_screen.dart
  lib/screens/ziwei_cases_list_screen.dart
  lib/screens/ziwei_chart_screen.dart
  lib/screens/ziwei_doc_screen.dart
  lib/screens/ziwei_reference_screen.dart
  lib/screens/ziwuliuzhu_screen.dart
- lib/screens/zhenjiu_library_screen.dart
  lib/services/classic_search_service.dart
  lib/services/native_files_io.dart
  lib/services/native_files_stub.dart
@@ -167,6 +167,11 @@ Files:
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/ConversationResetPolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/ConversationResourceReleasePolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/FirstTurnGpuFallbackPolicy.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseKeystore.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicy.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicensePlugin.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStore.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycle.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiAttachmentPolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiBackendSelectionPolicy.kt
@@ -191,6 +196,8 @@ Files:
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/ConversationResetPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/ConversationResourceReleasePolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/FirstTurnGpuFallbackPolicyTest.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicyTest.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycleTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiAttachmentPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiBackendSelectionPolicyTest.kt
@@ -279,6 +286,7 @@ Files:
  lib/data/assistant_conversation_store.dart
  lib/engine/zangfu_evidence_builder.dart
  lib/licensing/feature_authorizer.dart
+ lib/licensing/license_platform.dart
  lib/models/ai_context_ref.dart
  lib/models/assistant_message_metadata.dart
  lib/models/assistant_tool_result.dart
@@ -310,6 +318,7 @@ Files:
  lib/services/dosage_result_context_executor.dart
  lib/services/dosage_tool_executor.dart
  lib/services/dream_tool_executor.dart
+ lib/services/entitlement_service.dart
  lib/services/guansha_tool_executor.dart
  lib/services/headless_tool_dispatcher.dart
  lib/services/huangdi_siji_result_context_executor.dart
@@ -416,6 +425,7 @@ Files:
  test/engine/pulse_tongue_cross_validation_test.dart
  test/engine/three_yang_clause268_gate_test.dart
  test/engine/zangfu_evidence_builder_test.dart
+ test/entitlement_service_test.dart
  test/feature_authorizer_contract_test.dart
  test/festival_lookup_editorial_layout_test.dart
  test/fixtures/ai_retrieval_golden_metadata.json
@@ -433,6 +443,7 @@ Files:
  test/knowledge_adaptive_master_detail_test.dart
  test/knowledge_editorial_layout_test.dart
  test/knowledge_foldable_reading_matrix_test.dart
+ test/license_platform_test.dart
  test/local_ai_adaptive_content_test.dart
  test/local_ai_atomic_turn_persistence_test.dart
  test/local_ai_attachment_store_test.dart
@@ -514,13 +525,6 @@ Files:
  tool/fix_launcher_png.py
  tool/reindex_zhenjiu_index.py
  企划书_研纪_v2.0.md
- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseKeystore.kt
- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicy.kt
- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicensePlugin.kt
- android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicyTest.kt
- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStore.kt
- android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicy.kt
- android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicyTest.kt
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-added implementation/brand/documentation/resources. Applies only to content whose copyright is owned by just2512 or for which sufficient sublicensing rights exist. Full terms: LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md.
@@ -997,8 +1001,8 @@ Files:
  lib/licensing/license_verifier.dart
  test/fixtures/pro-license-test-vectors.json
  test/license_verifier_test.dart
- tool/license_issuer/README.md
  tool/license_issuer/issuer.py
+ tool/license_issuer/README.md
  tool/license_issuer/requirements.txt
  tool/license_issuer/test_issuer.py
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
