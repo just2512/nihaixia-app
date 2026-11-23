@@ -3964,7 +3964,7 @@ PR HEAD 门禁证据：
 | `work/ai-p0-multiturn` | 旧多轮静态审计快照已被主线 docs/local-ai-multiturn-audit 更新；设备 GPU/CPU 和生命周期仍为 UNKNOWN。 |
 | `work/ai-p0-transcript-rehydration-v2` | Native completed-turn transcript replay、LocalAiConversationHistoryPolicy 和 Kotlin 回归已存在于主线；失败中的请求仍不自动重放。 |
 | `work/ai-redflag-gate` | 2026-11-10 旧 TRACE/红旗审计快照已过时；当前 red-flag entrypoint audit 仍明确标记生产 detector/全入口拦截 MISSING。 |
-| `work/ai-redflag-policy` | 主线 preflight policy/test 更完整；真实 detector、医学审核和 Flutter/Native 全入口接入仍缺，维持 PARTIAL / RELEASE BLOCKED。 |
+| `work/ai-redflag-policy` | 历史临床红旗策略分支；2026-11-15 产品范围已排除临床 detector、医学审核和全入口拦截，状态 SUPERSEDED / NOT IN SCOPE。 |
 | `work/ai-retrieval-golden` | 黄金检索实测数据仍 UNKNOWN；旧规范不含已锁定的真实命中快照，不回灌旧基线。 |
 | `work/ai-retrieval-golden-snapshot` | 测试只比较同一运行内两次结果并输出临时 CI artifact，没有跨提交固定 golden fixture，不能作为回归基线。 |
 | `work/ai-saved-charts-headless-2026-11-14` | 旧 AssistantToolRouter 和助手页面实现已被主线结果快照与统一执行链取代。 |
@@ -3995,7 +3995,7 @@ PR HEAD 门禁证据：
 ### 78.2 仍未关闭的真实验收门槛
 
 - **A Native 多轮：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 completed-turn transcript replay、成功轮次策略及自动化测试；Find N2 GPU/CPU 至少 20 轮、图片/语音、Activity recreation、进程重启、`state:7` 根因仍需设备证据。
-- **B 红旗安全：`PARTIAL / RELEASE BLOCKED`。** RedFlagPreflight 策略和测试已存在，但经医学审核的自然语言 detector、Flutter/Native 生产入口全覆盖及旁路矩阵仍缺。不能用旧 policy 分支宣称完成。
+- **B 临床红旗 detector：`SUPERSEDED / NOT IN SCOPE`。** 研纪是中医学习辅助工具，不建设临床分诊 detector、医学审核门禁或 Flutter/Native 全入口拦截；不再将这些材料列为发布阻塞。一般性急重症求助提示保留，通用输入/参数校验仍须执行。
 - **E AI 数据清除：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 SQLite AI 表事务、AI 专属附件目录、Native runtime cache/TRACE coordinator 和 UI；混合 SQLite 备份边界、旧共享图片归属、Find N2 强停/重启后不可恢复仍未证明。
 - **F TRACE：`PARTIAL / DEVICE UNKNOWN`。** 主线已有多阶段 TRACE 和脱敏/默认关闭约束；失败/恢复/持久化完整关联及 Find N2 全场景真实 TRACE 仍需验收。
 - **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
@@ -4019,11 +4019,12 @@ PR HEAD 门禁证据：
 ## 80. F0 首个切片：Headless 执行调用集中（2026-11-23）
 
 - 本批从当前 master 的实际 Headless 调用链抽取无 UI 依赖的 `HeadlessToolDispatcher`。此前唯一真实 Executor 调用点位于 `LocalAiInterviewScreen._executeHeadlessTool`；本切片将回调调用集中到 Dispatcher，并由 Dispatcher 负责校验注册 Executor 是否存在和等待同步/异步结果。
-- `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不作为模型调用 gate。
+- `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不得作为模型调用 gate。本切片仍以保持 F0 既有行为为目标。
 - 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
 - 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
-- F0-2a 已形成独立代码切片 PR #440：`AssistantToolRouter` 只保留工具元数据与页面构建器；18 个 Headless Executor 的 tool-id 注册表集中到 `HeadlessToolDispatcher`；Screen 改用 `hasExecutor(tool.id)` 查询能力，Router/Orchestrator 测试改为经 Dispatcher 执行；Orchestrator 只消费 Router 中的节气、时辰、卦象元数据常量，不再导入 Executor。上一轮全量回归发现 `test/tool_foldable_layout_test.dart` 仍读取已移除的 `headlessExecutor` 元数据字段；现已改为 `HeadlessToolDispatcher.hasExecutor(tool.id)`，当前 HEAD 需要重新跑完整回归。该切片未宣称 F0-2 完成。
-- 后续 F0 仍需完成：Screen 对 saved-chart / ZiWuLiuZhu / dosage / YiJing Executor 的纯参数辅助调用迁出执行器库；所有生产 Executor 实现 import 仅由 Dispatcher 持有；增加 Analyzer AST import 图测试；完成执行结果/UI Result Handler 边界和重构前后特征测试。未完成前不得把 F0 标记 PASS。
+- **F0-2a PASS / PR #442 已合并**（merge SHA `396a9cc314994a7da813265706d0fb5441b3fd54`）。Router 不再持有 Executor 函数引用；18 个 tool-id 执行注册集中到 Dispatcher；Screen/Orchestrator 通过 `hasExecutor(tool.id)` 查询能力。PR #442 最终 HEAD `eaa80ca93cec18ae47d59536464abba004e38dd8` 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK 与 Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。PR #440 已由 #442 替代关闭。
+- **F0-2b 待集成 / CI 未验收**：独立分支 `work/f0-executor-import-graph-20261123-v2` 已迁出 SavedChart、ZiWuLiuZhu、Dosage、YiJing 纯参数辅助函数；Screen/Orchestrator 不再直接导入 Executor；Dispatcher 改为只接收 `toolId`，不依赖 Router/Widget 元数据；Analyzer AST import/export 审计覆盖相对/包路径、别名、条件 import/export，并检查 Dispatcher 不引用 Flutter UI 类型。该分支仍需重基线、跑完整 CI 和修复所有实际 import 图违规，当前不能标记 PASS。
+- **F0-3 仍未完成**：完整执行结果/UI Result Handler 边界、导航意图与 Screen 状态/持久化责任分离，以及重构前后同一特征测试。未完成前不得把 F0 标记 PASS。
 - `FeatureAuthorizer`、收费门禁、`InvocationOrigin` 生产接线和跨工具执行计划预授权均不属于本 F0-1 切片；本批不改变现有免费行为。
 
 
@@ -4053,31 +4054,41 @@ PR HEAD 门禁证据：
 
 ## 83. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
 
-- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为新集成基线，将离线授权协议、Dart Payload/Verifier、Python Issuer 和跨语言测试向量统一到已合并的架构约束 v1.2；不修改 PR #416 的 Draft 分支。
+- 协议 v1.2 已由 PR #433 合并至 master，merge SHA `604ac9258f479514bb0b9ea1d5cdde18215b103e`；Dart Payload/Verifier、Python Issuer 和跨语言测试向量以架构约束 v1.2 为唯一实现，不修改 PR #416 的 Draft 分支。
 - Token 使用 `protocol_revision`、`device_public_key_sha256`、`request_id` 和 Ed25519 JCS 域签名；客户端不保存 pending request，不匹配 request nonce/hash；Nonce/hash 只用于发行端数据库唯一约束、幂等和审计。
 - 客户端区分 known / protocol-allowed / enforced Feature；发行端按 revision 限定 issuable Feature。首期只有 `ai_advanced` 和 `contextual_assistant` 可签发，不能通过调用参数或 CLI 扩大签发范围。
 - Python Issuer 校验 YANJIR1 的 P-256 ECDSA 设备申请、SPKI 曲线/规范编码和指纹；SQLite 事务记录订单、多次签发、request 唯一约束、reissue 关系和审计事件。私钥加密保存于仓库外，测试向量私钥不进入 Release Key Ring。
 - Issuer 本地 Key Ring 支持 `active`、`standby`、`retired`、`revoked`、`compromised` 五种状态；只有 `active` 可用于新签发，其他状态保留轮换/历史/吊销含义。
-- 本 PR CI 已在上一 head 完成 Fork license、Flutter 全量回归、Python Issuer 单测、Android arm64 APK/Native 单测；因分支重基线和 Key Ring 生命周期补充，必须以重基线后的最新 PR head 重新验收。
+- PR #433 合并前的最终 HEAD `14c2cf226c9591729a568393262e368100939d67` 已通过 Fork license、Flutter 全量回归、Python Issuer 单测和 Android arm64 APK/Native 单测；当前唯一协议实现是 master 上的合并提交 `604ac9258f479514bb0b9ea1d5cdde18215b103e`。
 - 本切片**不代表** Android Keystore Plugin、Dart Platform Bridge、TokenStore、EntitlementService、生产 Key Ring、FeatureAuthorizer 生产接线、Dispatcher 副作用前授权、ContextResolutionGateway、激活 UI 或 Find N2 设备验收已完成。
-- PR #432 是依赖旧 `feature/pro-license-batch-1` 的重复协议候选；以 master 为目标的本 PR 完成合并后，#432 应标记为 SUPERSEDED。PR #416 继续保持 OPEN / DRAFT，不因该切片而修改或合并。
+- PR #432 已按本节标记 SUPERSEDED 并关闭；PR #416 继续保持 OPEN / DRAFT，未修改、未关闭、未合并。
 
 ## 84. 专业版 Android Keystore Plugin v1.2 云端实现（2026-11-23）
 
-- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为独立基线，按专业版架构约束 §8.1–§8.4 实现 Android Keystore Plugin，不依赖未合并的授权协议 PR，也不修改 PR #416。
+- Android 原生批次最初从 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 独立开发；协议 PR #433 合并后重基线为 `604ac9258f479514bb0b9ea1d5cdde18215b103e`，最终由 PR #437 合并（merge SHA `a44ca2d7db064ce52d218429e6e59770e9dd6f79`）。不修改 PR #416。
 - 新增独立 `LicensePlugin` / `LicenseKeystore` / `LicenseKeystorePolicy`；MainActivity 只负责注册插件，不承载授权业务逻辑。插件通过独立 MethodChannel 暴露 get-only 读取、用户主动创建、申请签名和本地私钥可用性检查。
 - 设备密钥为 Android Keystore P-256 / secp256r1，ECDSA SHA-256，SPKI DER 输出和 SHA-256 Base64URL 指纹；读取、签名和挑战检查均不自动创建密钥。已存在 alias 时显式拒绝重建，不覆盖现有私钥。
 - API 28+ 优先尝试 StrongBox；仅捕获 `StrongBoxUnavailableException` 时清理本次创建产生的部分 alias 并回退 TEE，不把一般 Provider/Keystore 错误误判为 StrongBox 不可用。API 31+ 按 KeyInfo 安全级别映射；API 24–30 无法区分 TEE/StrongBox 时硬件密钥报告 UNKNOWN。
 - 已新增纯策略单元测试，覆盖 StrongBox API 门槛、安全级别映射、申请 Payload 段格式和 Token 外层格式/大小限制。Android Keystore Provider 的真实设备行为、StrongBox 是否可用、密钥升级/恢复/失效行为仍是 LOCAL ONLY / MISSING，不能由 JVM/CI 单测宣称通过。
 - 新增 `LicenseTokenStore`，路径固定为 `context.noBackupFilesDir/yanji_license/active_license.token`，使用 Android `AtomicFile`；只保存单份完整 Token，不触碰主数据库 v7，也不保存 is_pro/Feature 快照。MethodChannel 通过 `readLicenseToken` 与 `writeLicenseTokenAfterVerification` 暴露原语；调用者必须先完成签名、协议、Feature 和设备指纹验证。实际原子失败保留旧文件的 Android 运行时行为仍待设备/平台测试。
-- 本切片仍没有实现 Dart Platform Bridge、EntitlementService、FeatureGate、激活 UI、生产发行者 Key Ring；也未证明独立后台 FlutterEngine 已注册此插件。下一批 D 应在当前 FeatureAuthorizer 接口上实现有界 EntitlementService 和 Dart TokenStore 消费层，并以 Fake Bridge 完成云端回归。
+- PR #437 最终 HEAD 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK 和 Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。Find N2 KeyStore/StrongBox/AtomicFile 真机行为仍 LOCAL ONLY / MISSING。D 的 Dart Platform Bridge/EntitlementService 已形成 PR #438，当前 CI 仍在全量回归；FeatureGate、激活 UI、生产发行者 Key Ring、后台 FlutterEngine 注册证明仍未完成。
 
 ## 85. D：TokenStore 平台桥接与异步 EntitlementService（2026-11-23）
 
-- 当前集成基线为 master @ `a44ca2d7db064ce52d218429e6e59770e9dd6f79`，已包含协议 PR #433 与 Android Keystore/AtomicFile PR #437；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
-- Bridge 使用与 C 分支 PR #435 一致的 Channel `com.nihaisha.nihaisha_app/licensing` 和方法：`readLicenseToken`、`writeLicenseTokenAfterVerification`、`deleteLicenseToken`、`getDeviceKey`、`createDeviceKeyForActivation`、`signActivationRequest`、`checkPrivateKeyUsability`；设备密钥响应字段使用 `publicKeySpkiBase64Url`、`publicKeySha256`、`securityLevel`、`strongBoxFallback`。
+- 当前集成基线为 master @ `396a9cc314994a7da813265706d0fb5441b3fd54`，已包含协议 PR #433、Android Keystore/AtomicFile PR #437、Dart Bridge/EntitlementService PR #438 与 F0-2a PR #442；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
+- Bridge 使用与 C 批次 PR #437 一致的 Channel `com.nihaisha.nihaisha_app/licensing` 和方法：`readLicenseToken`、`writeLicenseTokenAfterVerification`、`deleteLicenseToken`、`getDeviceKey`、`createDeviceKeyForActivation`、`signActivationRequest`、`checkPrivateKeyUsability`；设备密钥响应字段使用 `publicKeySpkiBase64Url`、`publicKeySha256`、`securityLevel`、`strongBoxFallback`。
 - `EntitlementService` 采用共享初始化 Future、2 秒有界等待和不可变快照；超时为 `temporarilyUnavailable/initializationTimeout`，不将其持久化为永久拒绝；一次初始化完成后使用当前进程快照，显式 `refresh` 才重新读取并验签。
 - 没有 Token 时报告 `unlicensed`，不访问、不创建设备密钥；有 Token 时仅 get-only 读取密钥，并核验本地挑战返回的公钥指纹与读取结果一致，再由注入的 `LicenseVerifier` 验签。密钥缺失/失效不会自动重建。
 - Token 替换在写入前完成验签、设备绑定与权益差异比较；降低 Feature 必须显式传入确认标记，返回即将失去的 Feature 集合；写入后从平台重新读取并验签，失败时恢复原 Token 或删除本次新写入文件。
 - 测试包括真实 v1.2 测试向量、无 Token/缺密钥/未知发行者、存储损坏与暂时不可用、并发初始化、2 秒超时、完成后初始化缓存、挑战指纹不一致、无效 Token 不覆盖、原子替换重读、降低权益二次确认，以及 MethodChannel 字段/方法/错误映射。
-- 当前 PR 仅包含 Dart Bridge/Service 与 Mock Channel 测试；C 批次已由 PR #437 合并；D 的 MethodChannel 契约与原生实现一致。Mock Channel/CI 仍不证明 Find N2 的 KeyStore、StrongBox 或 AtomicFile 真机行为。不得把 Mock Channel、JVM、CI 结果表述为 Find N2 KeyStore / AtomicFile / StrongBox 已验证。激活 UI、Key Ring Release 装配、F1/G 门禁和后台 FlutterEngine 仍是独立批次。显式 refresh 在初始化 Future 未完成时会 supersede 旧请求；新增回归覆盖该竞态。
+- D 批次已由 PR #438 合并至 master（merge SHA `8c645a29511a10da319aeb6aad6418371f04a018`）。PR #438 最终 HEAD `4ac79770ab40c7e0f9a064f0565d3c5e06ee77ce` 的 Fork license boundary、Flutter 全量回归和 Android arm64 CI APK/Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。Mock Channel/CI 仍不证明 Find N2 的 KeyStore、StrongBox 或 AtomicFile 真机行为。不得把 Mock Channel、JVM、CI 结果表述为 Find N2 KeyStore / AtomicFile / StrongBox 已验证。激活 UI、生产 Key Ring Release 装配、F1/G 门禁和后台 FlutterEngine 仍是独立批次。显式 refresh 在初始化 Future 未完成时会 supersede 旧请求；新增回归覆盖该竞态。
+
+## 86. 2026-11-23 产品范围纠偏与 Find N2 最终本地交接
+
+- 当前产品定位以 `docs/product-positioning-and-boundaries.md` 为准：研纪是中医学习辅助工具，不是临床诊断、分诊或医疗决策系统。
+- §78.2 中临床 RedFlag detector、医学审核、全入口拦截的旧阻塞项已标记 `SUPERSEDED / NOT IN SCOPE`。旧历史审计数据保留为历史记录，不再转成当前待办。
+- 按产品定位 §4.3，可保留固定、简明的急重症求助提示；它只是一般求助提醒，不是临床 detector、风险分级或阻断条件。现有免责声明、输入类型检查、参数校验和确定性业务执行校验不得与临床 detector 混称。
+- 现有 `RedFlagGate` / `RedFlagPreflight` 仅保留为未启用的接口与策略骨架；当前 `requiresMedicalSafetyPreflight()` 固定返回 false，业务入口记录 `NOT_APPLICABLE`，不执行临床 detector。不得把该骨架宣称为临床安全能力已通过；若未来要启用，须另立范围并经过独立审核。
+- Find N2 / E4B 真机验收统一后置到云端代码、文档、许可和 CI 收尾之后。设备未执行项保持 `LOCAL ONLY / MISSING`，不阻塞无关云端 PR。
+- 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
+- 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。

@@ -63,7 +63,7 @@
 
 | 环节 | 责任方 | 允许职责 |
 |---|---|---|
-| 红旗与安全门禁 | Dart/原生确定性代码 | 输入检查、急症红旗、领域权限、拒绝条件；不得只依赖 system prompt |
+| 输入与执行前置校验 | Dart/原生确定性代码 | 校验参数、数据形态、工具权限和执行状态；不包含临床红旗检测、临床分诊或医学审核门禁 |
 | 初步路由 L0 | Dart | 稳定规则、模式约束、缩小候选域 |
 | 候选工具筛选 | Dart + E4B | 代码将候选缩小到最多 5–6 项；模型在受约束结构中选择或请求澄清 |
 | 实体解析与槽位 | 代码优先，模型辅助 | 输出候选实体/槽位；ID、类型、必填项由代码核验 |
@@ -140,7 +140,7 @@
 
 每个场景以同一 `trace_id` 关联以下节点；不适用的节点显式记录 `NOT_APPLICABLE`，不能静默缺失：
 
-`input → redflag → route(L0/L1/L2) → entity_resolution → retrieval → context_assembly → model_input/output → tool_parse → argument_validation → business_execution/result → result_validation → final_render → persisted_state`
+`input → route(L0/L1/L2) → entity_resolution → retrieval → context_assembly → model_input/output → tool_parse → argument_validation → business_execution/result → result_validation → final_render → persisted_state`
 
 至少记录：
 - 场景编号、trace_id、时间戳、App commit/version、设备型号、Android 版本、模型文件版本、实际 GPU/CPU backend；
@@ -215,7 +215,7 @@
 1. 核查并修复 E4B 第二轮及后续 `state:7`、空回复、GPU/CPU fallback、Conversation 重建与 transcript 恢复。
 2. 恢复 Conversation 时必须恢复一致的必要历史上下文；若无法安全恢复，明确停止并要求用户显式重试。
 3. 区分请求未执行、执行状态未知、执行成功但响应丢失；未知状态禁止盲目重放。
-4. 红旗检查必须在模型调用之前确定性执行，并有负向测试。
+4. 请求参数、工具权限和业务输入必须在执行前确定性校验，并有对应负向测试；本项目不建设临床红旗检测器或以其阻断模型调用。
 5. 增加对应 Kotlin/Flutter 自动化回归；Find N2 连续多轮实测单独验收。
 
 ### P1：静态调用链与失败基线审计（不改业务行为）
@@ -312,7 +312,7 @@
 P0 多轮稳定性审计/修复不得成为所有其他确定性工作的串行前置条件。允许并要求在不互相覆盖代码的前提下并行推进：
 
 - **A：P0 多轮稳定性**：Engine/Conversation 生命周期、GPU/CPU fallback、重试、取消、超时、并发发送、消息持久化和历史回放。
-- **B：安全红旗**：全模式入口的确定性安全检查、歧义澄清和负向测试；医学词表必须由具备医学背景的人员审核后才能作为正式门禁。
+- **B：问诊与学习结果解释**：围绕 App 已执行的规则结果和本地知识库内容，验证解释、引用回链、缺项澄清与跨轮追问。临床红旗 detector、医学审核和临床入口阻断不属于当前产品范围。
 - **C：检索行为基线**：先建立黄金用例并记录当前输出，再考虑抽取适配器；重构前后必须证明行为等价或把有意变化逐项列出。
 - **D：业务 Capability**：区分“页面级工具注册”和“可脱离 Widget/BuildContext 调用的业务函数”；不得把打开页面描述成 AI 已执行业务。
 - **E：AI 数据清理**：沿用当前单一 SQLite 数据库和现有“清除 AI 数据”能力；核对 AI 会话/消息、附件缓存与 TRACE 是否清除，以及非 AI 数据是否保留。不得拆分数据库，不新增 SQLCipher、复杂密钥管理或备份策略改造。
@@ -431,3 +431,18 @@ Engine 与 Conversation 生命周期必须分别建模；不得用单一 isReady
 - 自动化仅针对真实调用链断点和上述结果契约，不增加无目标的泛化测试。
 - 简洁急重症求助提醒可保留，不要求临床分诊 detector、复杂分类器或医师签字。
 - Find N2 真机、多轮、多媒体、重启恢复等仍按已有本地清单记录；CI 不替代设备证据。
+
+
+---
+
+## 17. 2026-11-23 产品范围最终校准：临床红旗门禁不适用
+
+本节覆盖本文较早阶段仍然把临床 RedFlag 设计写入架构职责或 P0 工作拆分的旧表述。以当前产品定位文件 `docs/product-positioning-and-boundaries.md` 为准：
+
+- 研纪是中医学习辅助工具，不是临床诊断或分诊系统。
+- 不实现临床红旗 detector、临床风险分级、医学审核、医生签字或 Flutter/Native 全入口红旗拦截；不以这些事项作为 RELEASE BLOCKED 条件。
+- 保留的通用输入校验、工具参数校验、确定性业务执行状态校验，与临床红旗判断完全不同，不应混为一谈。
+- 如旧 TRACE schema 为兼容性仍有 redFlag/preflight 字段，只能标记 `NOT_APPLICABLE`；不能要求收集 detector 证据，也不能把该阶段作为模型调用 gate。
+- 简明的一般性急重症求助提示按产品定位文档执行；不建设检测器或分诊流程。
+- 本文历史章节中“红旗安全门禁”“医学词表审核”等描述均为历史设计记录，状态为 `SUPERSEDED / NOT IN SCOPE`，不得转成当前待办。
+

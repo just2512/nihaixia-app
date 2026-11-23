@@ -7,7 +7,8 @@
 | 项目 | 当前基线 | 核验要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
-| 当前应用代码基线 | `master @ 8f5091c08f10743e7ef3322c86f50fc2e296fd78` | PR #424 已合并出生日期/时刻歧义拒绝保护；PR #414 为此前关煞百科 UI 改动。PR #420/#421 为测试/文档变更 |
+| 当前应用代码基线 | `master @ 396a9cc314994a7da813265706d0fb5441b3fd54` | 已包含 PR #430 医案记录字段、PR #433 离线授权协议、PR #437 Android Keystore/AtomicFile、PR #438 Dart Bridge/EntitlementService、PR #442 F0-2a 执行注册边界 |
+| 当前主线整体基线 | `1db1f2e66b8484b47689e2d8d55f2fac07358f07` | PR #431 合并后的 master；设备必须从这一主线构建 |
 | 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
 | 原签名配置 | 本地 `android/key.properties` + 原 keystore | 仅本地保管；不得提交、上传、粘贴到聊天或放入 CI secret |
@@ -208,3 +209,37 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 知识库和医案验收不是书目考古。设备侧只需验证条目可打开、可从详情进入学习助手、实际本地内容进入上下文、对话可基于内容解释和追问；稳定本地 sourceId/anchor 用于回到 App 条目，不要求纸本卷页或外部来源认证。
 
 未执行的设备场景如实保留 MISSING / LOCAL ONLY；不得将其写成代码缺失、医学安全阻塞或远程 CI 失败。
+
+---
+
+## 11. 2026-11-23 远程收尾后的基线校准
+
+- 当前 master 整体 SHA：`396a9cc314994a7da813265706d0fb5441b3fd54`。
+- 最新应用代码变更：PR #433 离线协议、PR #437 Android Keystore/AtomicFile、PR #438 Dart Bridge/EntitlementService、PR #442 F0-2a 执行注册边界已合并；PR #431 为文档范围修订，无业务代码变更。
+- 产品范围不包含临床红旗 detector、医学审核或全入口拦截；无需在设备上执行相关测试。
+- 医案/经典设备验收围绕本地条目打开、实际字段进入 AI 上下文、AI 解读和追问；不执行纸本卷页考据作为学习功能准入测试。
+- A/E/F 与折叠屏/原签名升级仍是本地设备工作。任何未执行条目保持 `MISSING / LOCAL ONLY`，不影响已通过远程代码/自动化的无关 PR 收尾。
+
+## 12. 专业版离线授权真机验收（云端收尾后执行）
+
+本节只在云端协议、Android 原生、Dart Bridge/EntitlementService、Release Key Ring 与 FeatureGate 集成完成后执行。当前 CI/JVM/Mock Channel 结果不替代本节。
+
+| 场景 | 操作与观察 | PASS 条件 |
+|---|---|---|
+| 无 Token 首次启动 | 清洁安装后启动，检查授权状态和 Android Keystore alias | 状态为未授权；不自动创建设备密钥、不授予 Feature |
+| 显式激活创建密钥 | 从用户明确触发的激活流程创建 P-256 密钥 | 仅激活动作创建；公钥 SPKI 与 SHA-256 指纹可读取 |
+| 日常只读 | 退出并重启 App，多次读取授权状态 | 只读取已有密钥；不自动重建、不轮换、不删除 |
+| StrongBox / TEE | 读取设备实际 securityLevel 和 fallback 标记 | StrongBox 可用则记录 StrongBox；不可用时允许受控 TEE fallback，并记录真实原因；不伪造 StrongBox |
+| 私钥可用性 | 对随机 challenge 签名并用返回公钥验签 | 验签成功，指纹与 KeyStore 公钥一致 |
+| 合法 Token 导入 | 导入与当前 App、产品和设备指纹匹配的离线签名 Token | 先验签再写入；AtomicFile 写入后重读、复验；状态与授权 Feature 一致 |
+| 非法 Token | 导入错误签名、错误设备、错误 App、未知发行者或损坏 Token | 不覆盖原 Token、不授予权益；错误原因可区分 |
+| 权益减少 | 导入权益少于当前 Token 的新凭证 | 明确展示将失去的 Feature；未经用户确认不得替换 |
+| 文件损坏/密钥失效 | 使用专用测试构建或可控夹具验证损坏文件、KeyStore key invalidated | fail closed；不自动重建密钥、不把错误当作未授权后静默覆盖 |
+| 原位升级 | 使用原签名、递增 versionCode 的新 APK 覆盖安装旧版 | 不卸载、不清数据；数据库、学习资料、AI 历史与用户设置保留 |
+
+### 证据要求
+
+- 每项记录设备型号、Android 版本、APK SHA-256、versionName/versionCode、签名证书指纹、测试时间和结果。
+- 提供必要的设置页/状态页截图、脱敏日志和短录屏；不得输出私钥、完整 Token、激活请求签名、密码或用户个人数据。
+- 失败项记录最小复现、预期/实际和原始证据；未执行项保持 `MISSING / LOCAL ONLY`。
+- 生产 Release 必须使用真实 Release Key Ring 和本地签名材料；测试发行公钥/私钥不得混入生产包。
