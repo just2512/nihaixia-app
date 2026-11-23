@@ -3,29 +3,29 @@ import 'dart:convert';
 import '../models/ai_context_ref.dart';
 import 'ai_context_resolver.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'yunqi_tool_executor.dart';
-import 'almanac_tool_executor.dart';
+import 'yunqi_tool_service.dart';
+import 'almanac_tool_service.dart';
 import 'bazi_context_snapshot.dart';
-import 'yijing_tool_executor.dart';
-import 'meihua_tool_executor.dart';
-import 'xiaoliuren_tool_executor.dart';
+import 'yijing_tool_service.dart';
+import 'meihua_tool_service.dart';
+import 'xiaoliuren_tool_service.dart';
 import 'huangdi_siji_result_context_executor.dart';
 import 'yuxiaji_omen_result_context_executor.dart';
-import 'yuxiaji_omen_tool_executor.dart';
+import 'yuxiaji_omen_tool_service.dart';
 import 'chenggu_result_context_executor.dart';
 import 'shousheng_debt_result_context_executor.dart';
-import 'shousheng_debt_tool_executor.dart';
+import 'shousheng_debt_tool_service.dart';
 import 'sanshan_lingqian_result_context_executor.dart';
-import 'sanshan_lingqian_tool_executor.dart';
+import 'sanshan_lingqian_tool_service.dart';
 import 'dosage_result_context_executor.dart';
-import 'dosage_tool_executor.dart';
+import 'dosage_tool_service.dart';
 import 'dream_result_context_executor.dart';
-import 'dream_tool_executor.dart';
+import 'dream_tool_service.dart';
 import 'guansha_result_context_executor.dart';
-import 'guansha_tool_executor.dart';
+import 'guansha_tool_service.dart';
 import 'solar_term_result_context_executor.dart';
-import 'solar_term_tool_executor.dart';
-import 'ziwuliuzhu_tool_executor.dart';
+import 'solar_term_tool_service.dart';
+import 'ziwuliuzhu_tool_service.dart';
 
 /// Builds bounded, source-labelled prompts for contextual entry points.
 /// Token counts are deliberately not inferred from character counts.
@@ -424,10 +424,10 @@ class AiContextPromptBuilder {
       return schemaVersion == 'ziwei-structured-result-v1' &&
           ref.anchorId == 'ziwei:result:$snapshotId';
     }
-    if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId) {
+    if (ref.moduleId == ZiWuLiuZhuToolService.moduleId) {
       final arguments = input['arguments'];
       final at = arguments is Map ? arguments['at'] : null;
-      return schemaVersion == ZiWuLiuZhuToolExecutor.resultSchemaVersion &&
+      return schemaVersion == ZiWuLiuZhuToolService.resultSchemaVersion &&
           input['method'] == 'deviceLocalDateTime' &&
           at is String &&
           ref.anchorId == 'ziwuliuzhu:result:$snapshotId:at=$at';
@@ -440,7 +440,7 @@ class AiContextPromptBuilder {
           arguments is Map &&
           arguments.length == 1 &&
           term is String &&
-          SolarTermToolExecutor.termNames.contains(term) &&
+          SolarTermToolService.termNames.contains(term) &&
           ref.anchorId == 'solar-term:knowledge:$snapshotId:term=$term';
     }
     if (ref.moduleId == HuangdiSijiResultContextExecutor.moduleId) {
@@ -468,7 +468,7 @@ class AiContextPromptBuilder {
       final arguments = input['arguments'];
       return schemaVersion == ShoushengDebtResultContextExecutor.resultSchemaVersion &&
           method is String &&
-          ShoushengDebtToolExecutor.methods.contains(method) &&
+          ShoushengDebtToolService.methods.contains(method) &&
           arguments is Map &&
           arguments.length == 3 &&
           arguments['method'] == method &&
@@ -549,20 +549,20 @@ class AiContextPromptBuilder {
     }
     if (ref.moduleId == 'yunqi') {
       final date = input['date'];
-      return schemaVersion == YunQiToolExecutor.resultSchemaVersion &&
+      return schemaVersion == YunQiToolService.resultSchemaVersion &&
           date is String &&
           ref.anchorId == 'yunqi:result:$snapshotId:date=$date';
     }
     if (ref.moduleId == 'almanac') {
       final date = input['date'];
-      return schemaVersion == AlmanacToolExecutor.resultSchemaVersion &&
+      return schemaVersion == AlmanacToolService.resultSchemaVersion &&
           date is String &&
           ref.anchorId == 'almanac:result:$snapshotId:date=$date';
     }
     if (ref.moduleId == 'meihua') {
       final method = input['method'];
       final arguments = input['arguments'];
-      return schemaVersion == MeihuaToolExecutor.resultSchemaVersion &&
+      return schemaVersion == MeihuaToolService.resultSchemaVersion &&
           method is String &&
           const {'time', 'number', 'random'}.contains(method) &&
           arguments is Map &&
@@ -575,7 +575,7 @@ class AiContextPromptBuilder {
       final date = arguments is Map ? arguments['date'] : null;
       final hour = arguments is Map ? arguments['hour'] : null;
       final rule = arguments is Map ? arguments['rule'] : null;
-      return schemaVersion == XiaoliurenToolExecutor.resultSchemaVersion &&
+      return schemaVersion == XiaoliurenToolService.resultSchemaVersion &&
           method == 'time' &&
           arguments is Map &&
           date is String &&
@@ -587,7 +587,7 @@ class AiContextPromptBuilder {
     if (ref.moduleId == 'yijing') {
       final method = input['method'];
       final arguments = input['arguments'];
-      return schemaVersion == YiJingToolExecutor.resultSchemaVersion &&
+      return schemaVersion == YiJingToolService.resultSchemaVersion &&
           method is String &&
           arguments is Map &&
           arguments['method'] == method &&
@@ -622,7 +622,7 @@ class AiContextPromptBuilder {
   static String buildZiWuLiuZhuToolResult({
     required AiResolvedToolResult resolvedResult,
   }) {
-    if (resolvedResult.ref.moduleId != ZiWuLiuZhuToolExecutor.moduleId ||
+    if (resolvedResult.ref.moduleId != ZiWuLiuZhuToolService.moduleId ||
         resolvedResult.ref.kind != AiContextKind.toolResult) {
       throw ArgumentError(
         'A ZiWuLiuZhu prompt requires a resolved ZiWuLiuZhu tool result.',
@@ -671,8 +671,8 @@ class AiContextPromptBuilder {
         fieldValue.length == 1 ? fieldValue.single['value'] : null;
 
     if (ref.kind != AiContextKind.fieldValue ||
-        ref.moduleId != ZiWuLiuZhuToolExecutor.moduleId ||
-        ref.sourceId != ZiWuLiuZhuToolExecutor.sourceId ||
+        ref.moduleId != ZiWuLiuZhuToolService.moduleId ||
+        ref.sourceId != ZiWuLiuZhuToolService.sourceId ||
         fieldPath == null ||
         methodKey == null ||
         label == null ||
@@ -681,12 +681,12 @@ class AiContextPromptBuilder {
         snapshotId is! String ||
         snapshotId != ref.snapshotId ||
         ref.anchorVersion != snapshotId ||
-        ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion ||
+        ruleVersion != ZiWuLiuZhuToolService.ruleVersion ||
         ref.ruleVersion != ruleVersion ||
         snapshot['executionStatus'] != 'SUCCESS' ||
-        snapshot['capabilityId'] != ZiWuLiuZhuToolExecutor.moduleId ||
+        snapshot['capabilityId'] != ZiWuLiuZhuToolService.moduleId ||
         snapshot['resultSchemaVersion'] !=
-            ZiWuLiuZhuToolExecutor.resultSchemaVersion ||
+            ZiWuLiuZhuToolService.resultSchemaVersion ||
         input is! Map ||
         input['method'] != 'deviceLocalDateTime' ||
         arguments is! Map ||
@@ -695,8 +695,8 @@ class AiContextPromptBuilder {
         ref.anchorId != expectedAnchor ||
         sourceIds is! List ||
         sourceIds.length != 2 ||
-        !sourceIds.contains(ZiWuLiuZhuToolExecutor.sourceId) ||
-        !sourceIds.contains(ZiWuLiuZhuToolExecutor.referenceSourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolService.sourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolService.referenceSourceId) ||
         resolvedField.fieldScope['at'] != at ||
         fieldValue.length != 1 ||
         fieldValue.single['fieldPath'] != fieldPath ||
@@ -796,7 +796,7 @@ class AiContextPromptBuilder {
     if (resolvedResult.ref.moduleId !=
             ShoushengDebtResultContextExecutor.moduleId ||
         resolvedResult.ref.kind != AiContextKind.toolResult ||
-        !ShoushengDebtToolExecutor.methods.contains(method)) {
+        !ShoushengDebtToolService.methods.contains(method)) {
       throw ArgumentError(
         'A Shousheng prompt requires a resolved Shousheng tool result.',
       );
@@ -873,24 +873,24 @@ class AiContextPromptBuilder {
     final fieldValue = resolvedField.fieldValue;
     if (ref.kind != AiContextKind.fieldValue ||
         ref.moduleId != 'yunqi' ||
-        ref.sourceId != YunQiToolExecutor.sourceId ||
+        ref.sourceId != YunQiToolService.sourceId ||
         fieldPath == null ||
         chartTitle == null ||
         snapshotId is! String ||
         snapshotId != ref.snapshotId ||
         ref.anchorVersion != snapshotId ||
-        ruleVersion != YunQiToolExecutor.ruleVersion ||
+        ruleVersion != YunQiToolService.ruleVersion ||
         ref.ruleVersion != ruleVersion ||
         snapshot['executionStatus'] != 'SUCCESS' ||
         snapshot['capabilityId'] != 'yunqi' ||
         snapshot['resultSchemaVersion'] !=
-            YunQiToolExecutor.resultSchemaVersion ||
+            YunQiToolService.resultSchemaVersion ||
         input is! Map ||
         date is! String ||
         ref.anchorId != expectedAnchor ||
         ref.title != chartTitle ||
         sourceIds is! List ||
-        !sourceIds.contains(YunQiToolExecutor.sourceId) ||
+        !sourceIds.contains(YunQiToolService.sourceId) ||
         fieldValue.length != 1 ||
         fieldValue.single['fieldPath'] != fieldPath ||
         fieldValue.single['unit'] != chartUnits[fieldPath] ||
@@ -972,15 +972,15 @@ class AiContextPromptBuilder {
         ref.snapshotId is! String ||
         snapshotId != ref.snapshotId ||
         ref.anchorVersion != snapshotId ||
-        ruleVersion != MeihuaToolExecutor.ruleVersion ||
+        ruleVersion != MeihuaToolService.ruleVersion ||
         ref.ruleVersion != ruleVersion ||
         sourceIds is! List ||
-        !sourceIds.contains(MeihuaToolExecutor.sourceId) ||
-        !sourceIds.contains(MeihuaToolExecutor.dataSourceId) ||
+        !sourceIds.contains(MeihuaToolService.sourceId) ||
+        !sourceIds.contains(MeihuaToolService.dataSourceId) ||
         snapshot['executionStatus'] != 'SUCCESS' ||
         snapshot['capabilityId'] != 'meihua' ||
         snapshot['resultSchemaVersion'] !=
-            MeihuaToolExecutor.resultSchemaVersion ||
+            MeihuaToolService.resultSchemaVersion ||
         AiToolResultSnapshot.createStructuredId(snapshot: snapshot) !=
             snapshotId ||
         resolvedField.fieldValue.length != 1 ||
@@ -1036,15 +1036,15 @@ class AiContextPromptBuilder {
         snapshotId is! String ||
         snapshotId != ref.snapshotId ||
         ref.anchorVersion != snapshotId ||
-        ruleVersion != YiJingToolExecutor.ruleVersion ||
+        ruleVersion != YiJingToolService.ruleVersion ||
         ref.ruleVersion != ruleVersion ||
         sourceIds is! List ||
-        !sourceIds.contains(YiJingToolExecutor.sourceId) ||
-        !sourceIds.contains(YiJingToolExecutor.dataSourceId) ||
+        !sourceIds.contains(YiJingToolService.sourceId) ||
+        !sourceIds.contains(YiJingToolService.dataSourceId) ||
         snapshot['executionStatus'] != 'SUCCESS' ||
         snapshot['capabilityId'] != 'yijing' ||
         snapshot['resultSchemaVersion'] !=
-            YiJingToolExecutor.resultSchemaVersion ||
+            YiJingToolService.resultSchemaVersion ||
         AiToolResultSnapshot.createStructuredId(snapshot: snapshot) !=
             snapshotId ||
         resolvedField.fieldValue.length != 1 ||
@@ -1223,13 +1223,13 @@ class AiContextPromptBuilder {
     if (ref.moduleId == ShoushengDebtResultContextExecutor.moduleId) {
       final method = inputValue['method'];
       final expectedDataSource = method == 'luku'
-          ? ShoushengDebtToolExecutor.lukuDataSourceId
+          ? ShoushengDebtToolService.lukuDataSourceId
           : method == 'wudou'
-              ? ShoushengDebtToolExecutor.wudouDataSourceId
+              ? ShoushengDebtToolService.wudouDataSourceId
               : null;
-      if (ref.sourceId != ShoushengDebtToolExecutor.sourceId ||
+      if (ref.sourceId != ShoushengDebtToolService.sourceId ||
           sourceIds.length != 2 ||
-          sourceIds[0] != ShoushengDebtToolExecutor.sourceId ||
+          sourceIds[0] != ShoushengDebtToolService.sourceId ||
           sourceIds[1] != expectedDataSource) {
         throw ArgumentError(
           'A Shousheng prompt requires the exact selected local source pair.',
@@ -1238,9 +1238,9 @@ class AiContextPromptBuilder {
     }
 
     if (ref.moduleId == YuxiajiOmenResultContextExecutor.moduleId) {
-      if (ref.sourceId != YuxiajiOmenToolExecutor.sourceId ||
+      if (ref.sourceId != YuxiajiOmenToolService.sourceId ||
           sourceIds.length != 1 ||
-          sourceIds.single != YuxiajiOmenToolExecutor.sourceId) {
+          sourceIds.single != YuxiajiOmenToolService.sourceId) {
         throw ArgumentError(
           'A Yuxiaji prompt requires the exact local omen text source.',
         );
@@ -1251,9 +1251,9 @@ class AiContextPromptBuilder {
       final selectedEntryId = inputValue['selectedEntryId'];
       final values = resultValue['values'];
       if (ruleVersion != DreamResultContextExecutor.ruleVersion ||
-          ref.sourceId != DreamToolExecutor.sourceId ||
+          ref.sourceId != DreamToolService.sourceId ||
           sourceIds.length != 1 ||
-          sourceIds.single != DreamToolExecutor.sourceId ||
+          sourceIds.single != DreamToolService.sourceId ||
           inputValue.length != 2 ||
           inputValue['method'] != 'explicitEntrySelection' ||
           selectedEntryId is! String ||
@@ -1281,11 +1281,11 @@ class AiContextPromptBuilder {
     if (ref.moduleId == GuanshaResultContextExecutor.moduleId) {
       final arguments = inputValue['arguments'];
       final settings = inputValue['settings'];
-      if (ref.sourceId != GuanshaToolExecutor.sourceId ||
+      if (ref.sourceId != GuanshaToolService.sourceId ||
           sourceIds.length != 3 ||
-          sourceIds[0] != GuanshaToolExecutor.sourceId ||
-          sourceIds[1] != GuanshaToolExecutor.dataSourceId ||
-          sourceIds[2] != GuanshaToolExecutor.locationSourceId ||
+          sourceIds[0] != GuanshaToolService.sourceId ||
+          sourceIds[1] != GuanshaToolService.dataSourceId ||
+          sourceIds[2] != GuanshaToolService.locationSourceId ||
           arguments is! Map ||
           arguments.length != 4 ||
           arguments.entries.any((entry) =>
@@ -1304,7 +1304,7 @@ class AiContextPromptBuilder {
     if (ref.moduleId == SanshanLingqianResultContextExecutor.moduleId) {
       final selectedSignId = inputValue['selectedSignId'];
       final expectedSource = selectedSignId is int
-          ? '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId'
+          ? '${SanshanLingqianToolService.dataSourcePrefix}$selectedSignId'
           : null;
       if (selectedSignId is! int ||
           selectedSignId < 1 ||
@@ -1319,10 +1319,10 @@ class AiContextPromptBuilder {
     }
 
     if (ref.moduleId == DosageResultContextExecutor.moduleId) {
-      if (ref.sourceId != DosageToolExecutor.sourceId ||
+      if (ref.sourceId != DosageToolService.sourceId ||
           sourceIds.length != 2 ||
-          sourceIds[0] != DosageToolExecutor.sourceId ||
-          sourceIds[1] != DosageToolExecutor.factorsSourceId) {
+          sourceIds[0] != DosageToolService.sourceId ||
+          sourceIds[1] != DosageToolService.factorsSourceId) {
         throw ArgumentError(
           'A dosage prompt requires the exact unit-conversion engine and factor sources.',
         );
@@ -1332,7 +1332,7 @@ class AiContextPromptBuilder {
           arguments.length != 3 ||
           arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
           arguments.values.any((value) => value is! String) ||
-          DosageToolExecutor.validateArguments(
+          DosageToolService.validateArguments(
             arguments.cast<String, String>(),
           ).isNotEmpty) {
         throw ArgumentError(
@@ -1535,9 +1535,9 @@ class AiContextPromptBuilder {
         '梅花易数属于传统术数与民俗文化学习，不是科学预测或确定性行动指令。请解释本次快照中实际生成的主卦、互卦、变卦、动爻、体用关系、月令旺衰和三阶段推演；随机起卦必须解释已保存的本次随机结果，不得重新随机或重新计算。不得将其转成医疗、法律、投资或其他重要行动建议。',
       if (ref.moduleId == 'xiaoliuren')
         '小六壬属于传统民俗文化参考；本次计算明确使用用户选择的通行掌诀或《多能鄙事》口径。只按快照中记录的口径解释，不把任一口径说成唯一传统、事实预测或确定性吉凶。不得据此提供医疗、法律、投资或其他重大决策指令。',
-      if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId)
+      if (ref.moduleId == ZiWuLiuZhuToolService.moduleId)
         '子午流注快照是 App 原有经络时辰计算引擎的结果，固定采用设备本地墙钟时间、默认经度 120E/纬度 30N、子时 23:00 换日且未启用真太阳时。请分别解释纳子法、纳甲法、灵龟八法和飞腾八法的字段；状态为 NOT_APPLICABLE 表示该方法在本次输入下没有对应结果，不得补造穴位。',
-      if (ref.moduleId == ZiWuLiuZhuToolExecutor.moduleId)
+      if (ref.moduleId == ZiWuLiuZhuToolService.moduleId)
         '这些内容仅用于解释传统子午流注计算口径和 App 返回值，不代表穴位对当前个人适用，不构成针刺、艾灸、治疗时机、刺激强度/频次或处方建议；不得据此推断疾病或替代临床评估。',
       if (ref.moduleId == SolarTermResultContextExecutor.moduleId)
         '节气内容必须严格区分 App 本地知识资产中的通用养生常识、倪师讲座相关整理和【推断】内容；不得把整理或推断伪称为倪师逐字原话。只解释所选节气快照中已有的字段，不自行补造节气日期、物候或出处。',
