@@ -4001,3 +4001,14 @@ PR HEAD 门禁证据：
 - **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
 
 - 本轮没有为了增加合并数量而 cherry-pick 旧测试、旧业务实现或旧上游知识资产。所有未满足的设备/医学/数据边界继续按 `MISSING / UNKNOWN / RELEASE BLOCKED` 记录。
+
+
+---
+
+## 79. 研纪专业版授权架构约束登记（2026-11-23）
+
+- 权威设计依据：[研纪专业版架构约束（v1.2）](pro-edition-architecture-constraints.md)。所有后续专业版授权设计、协议修订、实现、测试、PR 评审和发布验收，必须先读取本文并引用对应章节。
+- v1.2 冻结的核心边界包括：跨不同 capability 的 AI 自动编排才受 `ai_advanced` 门禁；单一能力自动调用、重复步骤、`structured_diagnosis` 单独执行及手动工具操作保持免费；F0 行为不变重构与 F1 授权接入分离；唯一 `HeadlessToolDispatcher`；显式 `InvocationOrigin`；完整计划在业务副作用前授权；`ContextResolutionGateway` 统一保护情境上下文新建和后续轮次；异步 `FeatureAuthorizer`；Android Keystore get-only/create 分离；`noBackupFilesDir` 单 Token 原子存储；主数据库保持 v7；Feature 交集授权；显式 `protocolRevision`；Key Ring 注入、轮换及 Release fail-closed。
+- PR #425 是该架构文件和许可清单登记的文档交付 PR。合并前，后续实现只可将其作为待合并规范分支引用；不得把文档存在描述为授权功能已落地。
+- PR #416 的 v1.1 授权协议评审稿与 v1.2 发生冲突时，必须先统一协议文本和测试向量；不能让两套互相矛盾的存储、request nonce、签名输入或修订号规则并存。PR #416 当前 OPEN / DRAFT 状态独立保留；本登记不代表修改、批准或合并该 PR。
+- 本节只建立强制规范入口。授权模块、Android Keystore、Feature 门禁、Find N2 真机运行和 Release 发行信任锚是否完成，分别以实际源码、自动化、CI 和设备/发行证据判断；无证据项继续保持 `MISSING / UNKNOWN`。
