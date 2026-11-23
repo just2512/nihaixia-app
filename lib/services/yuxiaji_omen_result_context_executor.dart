@@ -37,6 +37,7 @@ class YuxiajiOmenResultContextExecutor {
     final result = HeadlessToolDispatcher.executeSync(
       toolId: 'yuxiaji_omen',
       arguments: const {},
+      clock: () => observedAt,
     );
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
