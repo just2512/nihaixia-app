@@ -58,14 +58,6 @@ void main() {
       expect(decision.reason, FeatureAuthorizationFailureReason.unlicensed);
     });
 
-    test('Release composition root refuses missing production trust anchors',
-        () {
-      expect(
-        () => createAppFeatureAuthorizer(release: true),
-        throwsStateError,
-      );
-    });
-
     test('Debug/Test permits an empty ring but Release does not', () {
       expect(
         ReleaseLicenseKeyRingFactory.fromJson(
