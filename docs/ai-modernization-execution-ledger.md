@@ -12,8 +12,8 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `39da7c0522a47cd227a617167badcf116d0152b3` | PR #392 已合并；情境入口、代码/测试与合并后 master CI 证据见第 65 节；后续 docs-only 提交不改变本应用代码基线 |
-| 本轮最新文档核验基线（本次同步前） | `b0743662f13d7156a146501a357530e976547e6c` | PR #395 已合并；Find N2 / E4B 交接文件和 §65 台账更新已进入 master；本行记录本次文档校准前的文档提交 |
+| 本轮最新应用代码核验基线 | `3dd1889ace0d58a6f2332067111d8c000e29be31` | PR #414 已合并，包含关煞百科轻列表与折叠/大字号回归；PR #415 仅改文档，不改变应用代码基线 |
+| 本轮最新文档核验基线 | `4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 已合并，收尾历史分支审计并统一 Find N2 验收文档；本轮 E4B 总交接文档重建另见 §73 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -21,7 +21,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线仍为 PR #392 合并后的 `39da7c0522a47cd227a617167badcf116d0152b3`；PR #395 后的文档基线为 `b0743662f13d7156a146501a357530e976547e6c`。PR #395 及本轮后续文档校准不改变应用代码和 CI 对应的代码 SHA。历史任务范围与历次核验仍以各节记录为准；情境入口覆盖、主线独立 CI 见第 65、66 节。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线为 PR #414 合并后的 `3dd1889ace0d58a6f2332067111d8c000e29be31`；当前文档基线为 PR #415 合并后的 `4e9c8b66ce30d5e7c295ccb1672f817204c53cff`。PR #415 仅更新文档，不改变应用代码。历史任务范围与历次核验仍以各节记录为准；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -3836,4 +3836,38 @@ PR HEAD 门禁证据：
 
 - PR #413 已于 2026-11-23 MERGED：`91105e6acb4432d8ffeac12c52c3019ffbf46a44`。
 - PR #414 已于 2026-11-23 MERGED：`3dd1889ace0d58a6f2332067111d8c000e29be31`。
-- 原 PR #412 分支因主线合并 PR #413/#414 后，三份 Find N2 文档基线与主线出现文件级冲突；其台账与文档变更已迁移到以最新 master 为基线的新分支，旧 PR #412 将关闭并标记为 SUPERSEDED。
+- 原 PR #412 分支因主线合并 PR #413/#414 后出现三份 Find N2 文档文件级冲突；全部有效变更迁移至新 PR #415，原 PR #412 已 CLOSED / SUPERSEDED；新 PR #415 已于 2026-11-23 合并，merge SHA `4e9c8b66ce30d5e7c295ccb1672f817204c53cff`。
+ 
+---
+
+## 73. 2026-11-23 Find N2 / E4B 总交接文档重建
+
+- 历史分支 `docs/contextual-ai-closeout-20261122-final` 新增 `docs/find-n2-e4b-local-handover.md`，将 Find N2 真机、原签名覆盖安装、E4B 文件、GPU/CPU、多媒体、恢复、AI 数据清除及 TRACE 串成一份本地执行入口。
+- 原稿仍使用应用版本 `1.11.30+8039`，并将 TRACE 本地签名 Debug 构建指向旧的 `local-android-release-checklist.md §6`；当前该文件 §6 已是 Find N2 真机验收章节，引用失配。
+- 同分支 `docs/local-ai-e4b.md` 已改为设置页 GPU/CPU 手动选择，明确旧版 `DEBUG_FORCE_CPU_BACKEND` Intent 不再作为验收路径，并补充本地原签名 Debug TRACE 流程；当前 master 对应 E4B 指南仍保留旧 Intent 验收段和 CI Debug APK 安装操作。
+- 本次仅选择性重建总交接清单与 E4B 指南：版本统一为 `2.0.0+8048`，记录仓库文档基线及最近应用代码提交，修正 TRACE 文档交叉引用；不改模型文件、业务逻辑、签名材料或商业授权。
+- Find N2 设备端 GPU/CPU 多轮、多媒体、Activity/进程恢复、AI 数据清理、原签名无损升级及 TRACE 状态继续保持 `MISSING / UNKNOWN / LOCAL ONLY`；不以云端 CI 或 Widget 测试替代实机证据。
+
+**专业版授权冻结项：** PR #416（`[Batch 1] 研纪专业版永久授权协议与离线签发`，分支 `feature/pro-license-batch-1`）当前为 OPEN / DRAFT，仍在修改。按用户明确要求，本轮只保留其独立工作状态，不合并、不关闭、不修改授权协议、签发器或相关权属清单；不得将其视为本轮其他遗留项的合并前置条件。
+
+
+---
+
+## 74. 2026-11-23 第三轮历史分支逐文件核验
+
+| 历史分支 | 本轮逐文件核验 | 处置 |
+|---|---|---|
+| `work/yanji-editorial-phase3-aux` | `lib/screens/diagnosis_history_screen.dart` 与 `lib/screens/saved_charts_screen.dart` 的 blob SHA 均与当前 master 完全一致；旧分支两个布局测试只覆盖浅色主题，master 版本分别扩展为 105 行和 171 行，覆盖浅/深主题及 402/775dp、200% 字号。 | 页面代码已是主线相同实现，测试由主线更完整覆盖，不移植旧测试。 |
+| `feat/ai-context-yijing-result-20261118` | compare 当前 master 为 0 commits ahead / 472 behind，文件差异为空。 | 已被主线吸收，不合并、不回退。 |
+| `feat/ai-context-bazi-result-20261118` | compare 当前 master 为 0 commits ahead / 461 behind，文件差异为空。 | 已被主线吸收，不合并、不回退。 |
+| `feat/ai-context-bazi-chart-result-post-almanac-20261118` | 旧分支的 `test/bazi_context_snapshot_test.dart` 为 180 行；当前 master 的 `test/bazi_contextual_result_entry_test.dart` 为 471 行，验证真实输入/排盘层/来源、快照摘要与重建、默认地点明确标记、错源/过期/篡改拒绝，并增加字段级 strengthScore 情境入口与 Widget 回归。旧分支页面文件 958 行，当前主线 1035 行。 | 旧快照/页面实现不回灌；以当前整合后的 Snapshot / Resolver / field-level Ask AI 为准。 |
+| `feat/ai-context-bazi-result-post-yijing-20261118` | 旧版 `test/bazi_contextual_result_entry_test.dart` 为 289 行；当前 master 同路径 471 行，新增字段级结果绑定、字段 Prompt 与 field-bound contextual assistant Widget 回归。 | 不合并旧结果入口测试或页面实现。 |
+| `feat/ai-context-ziwuliuzhu-method-fields-post-yunqi-20261121` | 旧页面/测试分别为 906/297 行，当前 master 为 924/318 行；主线测试采用每个方法 Tab 独立 `PageStorageKey` 与当前列表 `Scrollable` 定位，再滚动到真实字段入口，避免旧分支使用跨 Tab 的首个 `ListView` finder。主线保留四种方法、`NOT_APPLICABLE`、错源/过期/篡改/未知路径 fail-closed 和返回滚动位置断言。 | 旧分支核心功能已由主线更严格实现覆盖；不 cherry-pick 旧页面或测试。 |
+| `work/ai-contextual-ziwei-result-sample` | `assistant_message_metadata.dart` 与主线 blob 相同；主线 `ai_context_ref.dart`、Ziwei 页面、Prompt Builder 及相关测试分别扩展至 124、2308、1693、791 行，旧分支同文件更短；旧 Markdown 选择测试 52 行，主线同路径 350 行。 | 不整支合并旧 ContextRef / Prompt / Widget 代码，保留主线当前版本。 |
+| `work/ai-capability-inventory` | 旧分支的 `docs/ai-capability-inventory.md` 与当前 master blob 完全一致；分支额外审计报告以 2026-11-15 旧基线为前提，不能作为当前运行时代码和 CI 的验收报告。 | 已吸收的盘点文档不重复合并；旧审计文件保留历史参考，不回灌旧基线结论。 |
+
+### 74.1 本轮状态约束
+
+- 本轮历史分支 compare / 逐文件审计仍不等于 58 个未匹配 refs 全部完成审计；未在 §71–74 中具体列明源码/测试核验的 refs 继续为 `NOT_REVIEWED`。
+- 不批量删除历史 branch refs；不将旧分支 ahead commit 数量直接当作功能缺口。
+- PR #416 专业版永久授权仍为 OPEN / DRAFT，当前处于独立开发批次；按用户要求不合并、不关闭、不修改，不计入本轮其他遗留项的关闭条件。
