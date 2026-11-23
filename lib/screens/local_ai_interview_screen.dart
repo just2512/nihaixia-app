@@ -3401,6 +3401,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3605,6 +3606,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3708,6 +3710,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3781,6 +3784,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -3927,6 +3931,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4038,6 +4043,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4056,6 +4062,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
       );
       return;
@@ -4164,6 +4171,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4273,6 +4281,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4375,6 +4384,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4561,6 +4571,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4705,6 +4716,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4815,6 +4827,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4961,6 +4974,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: request,
       );
       return;
@@ -4983,6 +4997,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
       );
       return;
@@ -5002,6 +5017,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments ?? AssistantToolArguments(toolId: tool.id),
       );
       return;
@@ -5035,6 +5051,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: executionArguments,
       );
       return;
@@ -5047,6 +5064,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         tool,
         mode: activeMode,
         traceContext: activeTraceContext,
+        origin: origin,
         arguments: arguments,
       );
       return;
@@ -6002,7 +6020,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           PopupMenuButton<AssistantToolDefinition>(
             tooltip: '调用 App 工具',
             enabled: !busy && tools.isNotEmpty,
-            onSelected: (tool) => _requestTool('打开${tool.title}', tool),
+            onSelected: (tool) => _requestTool(
+              '打开${tool.title}',
+              tool,
+              origin: InvocationOrigin.userManual,
+            ),
             itemBuilder: (context) => [
               for (final tool in tools)
                 PopupMenuItem<AssistantToolDefinition>(
@@ -6824,6 +6846,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: mode,
         arguments: pendingSavedCharts,
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -6935,6 +6958,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7038,6 +7062,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: {'dream_text': combinedDescription},
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7150,6 +7175,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7250,6 +7276,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7382,6 +7409,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7493,6 +7521,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(merged),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7597,6 +7626,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7696,6 +7726,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7807,6 +7838,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -7915,6 +7947,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -8022,6 +8055,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -8130,6 +8164,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           values: Map<String, String>.unmodifiable(mergedArguments),
         ),
         traceContext: traceContext,
+        origin: _requirePendingToolOrigin(),
       );
       return;
     }
@@ -8239,6 +8274,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         if (!mounted) return;
       }
+      final wasPendingToolSelection = _pendingToolSelection;
       effectiveMode = decision.mode;
       _pendingToolSelection = decision.expectsToolSelection;
       final resolvedRoute = decision.needsClarification
@@ -8255,6 +8291,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: decision.tool?.id,
       );
       if (decision.needsClarification) {
+        if (decision.expectsToolSelection) {
+          _pendingToolOrigin = InvocationOrigin.aiDispatch;
+        }
         await _traceRecorder.record(
           traceContext,
           stage: AiTraceStage.dispatch,
@@ -8307,6 +8346,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           mode: effectiveMode,
           arguments: decision.toolArguments,
           traceContext: traceContext,
+          origin: wasPendingToolSelection
+              ? _requirePendingToolOrigin()
+              : InvocationOrigin.aiDispatch,
         );
         return;
       }
