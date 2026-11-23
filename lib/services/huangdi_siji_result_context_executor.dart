@@ -1,6 +1,7 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'huangdi_siji_tool_executor.dart';
+import 'headless_tool_dispatcher.dart';
+import 'huangdi_siji_tool_service.dart';
 
 class HuangdiSijiResultContextExecution {
   const HuangdiSijiResultContextExecution({
@@ -37,13 +38,13 @@ class HuangdiSijiResultContextExecutor {
       return _failure(arguments, '只接受 birth_date 与 birth_time 两个明确输入字段。');
     }
 
-    final result = await HuangdiSijiToolExecutor.execute(arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'huangdi_siji', arguments: arguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
         result.sourceIds.length != 2 ||
-        !result.sourceIds.contains(HuangdiSijiToolExecutor.sourceId) ||
-        !result.sourceIds.contains(HuangdiSijiToolExecutor.dataSourceId) ||
+        !result.sourceIds.contains(HuangdiSijiToolService.sourceId) ||
+        !result.sourceIds.contains(HuangdiSijiToolService.dataSourceId) ||
         result.arguments.length != 2 ||
         result.arguments['birth_date'] is! String ||
         result.arguments['birth_time'] is! String ||
@@ -70,8 +71,8 @@ class HuangdiSijiResultContextExecutor {
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
       'sourceIds': const [
-        HuangdiSijiToolExecutor.sourceId,
-        HuangdiSijiToolExecutor.dataSourceId,
+        HuangdiSijiToolService.sourceId,
+        HuangdiSijiToolService.dataSourceId,
       ],
       'input': <String, Object?>{
         'method': 'explicitBirthDateTime',

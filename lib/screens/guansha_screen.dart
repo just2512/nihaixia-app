@@ -4,7 +4,7 @@ import '../utils/fold_aware_routes.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/guansha_result_context_executor.dart';
-import '../services/guansha_tool_executor.dart';
+import '../services/guansha_tool_service.dart';
 import '../screens/assistant_tool_router.dart' show AssistantMode;
 import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import 'package:ziwei_core/ziwei_core.dart' show Location;
@@ -158,7 +158,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
         final birthTime =
             '${_birthHour.toString().padLeft(2, '0')}:'
             '${_birthMinute.toString().padLeft(2, '0')}';
-        final execution = await GuanshaToolExecutor.executeWithDetails({
+        final execution = await GuanshaToolService.executeWithDetails({
           'birth_date': birthDate,
           'birth_time': birthTime,
           'gender': _isMale ? 'male' : 'female',

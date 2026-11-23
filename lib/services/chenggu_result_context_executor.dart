@@ -1,6 +1,7 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'chenggu_tool_executor.dart';
+import 'headless_tool_dispatcher.dart';
+import 'chenggu_tool_service.dart';
 
 class ChengguResultContextExecution {
   const ChengguResultContextExecution({
@@ -39,13 +40,13 @@ class ChengguResultContextExecutor {
       return _failure(arguments, '只接受明确的公历 birth_date 与当地钟表 birth_time。');
     }
 
-    final result = await ChengguToolExecutor.execute(arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'chenggu', arguments: arguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
         result.sourceIds.length != 2 ||
-        result.sourceIds[0] != ChengguToolExecutor.sourceId ||
-        result.sourceIds[1] != ChengguToolExecutor.dataSourceId) {
+        result.sourceIds[0] != ChengguToolService.sourceId ||
+        result.sourceIds[1] != ChengguToolService.dataSourceId) {
       return ChengguResultContextExecution(result: result);
     }
 
@@ -92,8 +93,8 @@ class ChengguResultContextExecutor {
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
       'sourceIds': const [
-        ChengguToolExecutor.sourceId,
-        ChengguToolExecutor.dataSourceId,
+        ChengguToolService.sourceId,
+        ChengguToolService.dataSourceId,
       ],
       'input': <String, Object?>{
         'method': 'explicitBirthDateTime',

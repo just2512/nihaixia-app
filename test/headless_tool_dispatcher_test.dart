@@ -22,7 +22,7 @@ void main() {
       Map<String, String>? receivedArguments;
 
       final actual = await HeadlessToolDispatcher.execute(
-        tool: AssistantToolRouter.yunqi,
+        toolId: AssistantToolRouter.yunqi.id,
         arguments: arguments,
         executorOverride: (received) {
           calls += 1;
@@ -39,7 +39,7 @@ void main() {
     test('awaits an asynchronous executor and returns its typed result unchanged', () async {
       var completed = false;
       final actual = await HeadlessToolDispatcher.execute(
-        tool: AssistantToolRouter.yunqi,
+        toolId: AssistantToolRouter.yunqi.id,
         arguments: arguments,
         executorOverride: (received) async {
           await Future<void>.delayed(Duration.zero);
@@ -58,7 +58,7 @@ void main() {
       expect(HeadlessToolDispatcher.hasExecutor(pageOnly.id), isFalse);
 
       final actual = await HeadlessToolDispatcher.execute(
-        tool: pageOnly,
+        toolId: pageOnly.id,
         arguments: const {},
         executorOverride: (_) => AssistantToolResult(
           toolId: pageOnly.id,
@@ -75,10 +75,48 @@ void main() {
       final pageOnly = AssistantToolRouter.byId('guji_library')!;
       await expectLater(
         HeadlessToolDispatcher.execute(
-          tool: pageOnly,
+          toolId: pageOnly.id,
           arguments: const {},
         ),
         throwsA(isA<StateError>()),
+      );
+    });
+
+    test('synchronous dispatch invokes an explicitly allowlisted adapter', () {
+      final result = HeadlessToolDispatcher.executeSync(
+        toolId: 'dosage',
+        arguments: const {},
+      );
+
+      expect(result.toolId, 'dosage');
+      expect(result.status, AssistantToolExecutionStatus.failed);
+    });
+
+    test('synchronous dispatch rejects async tools before invoking them', () {
+      expect(
+        () => HeadlessToolDispatcher.executeSync(
+          toolId: 'chenggu',
+          arguments: const {},
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('synchronous dispatch preserves an explicit device-local clock', () {
+      final observedAt = DateTime(2026, 11, 23, 12, 34);
+      final result = HeadlessToolDispatcher.executeSync(
+        toolId: 'yuxiaji_omen',
+        arguments: const {},
+        clock: () => observedAt,
+      );
+
+      expect(
+        DateTime.parse(result.values['App 本机日期时间']!).hour,
+        observedAt.hour,
+      );
+      expect(
+        DateTime.parse(result.values['App 本机日期时间']!).minute,
+        observedAt.minute,
       );
     });
 
@@ -86,7 +124,7 @@ void main() {
       final error = StateError('executor failure');
       await expectLater(
         HeadlessToolDispatcher.execute(
-          tool: AssistantToolRouter.yunqi,
+          toolId: AssistantToolRouter.yunqi.id,
           arguments: arguments,
           executorOverride: (_) => throw error,
         ),

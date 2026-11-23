@@ -174,7 +174,7 @@ void main() {
     expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final result = await HeadlessToolDispatcher.execute(tool: tool, arguments: arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: tool.id, arguments: arguments);
     expect(result.toolId, 'yunqi');
     expect(result.validateFor('yunqi'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
@@ -188,7 +188,7 @@ void main() {
     expect(tool.parameters.single.isRequired, isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final result = await HeadlessToolDispatcher.execute(tool: tool, arguments: arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: tool.id, arguments: arguments);
     expect(result.toolId, 'almanac');
     expect(result.validateFor('almanac'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import '../models/assistant_tool_result.dart';
-import '../screens/assistant_tool_router.dart';
 import 'yunqi_tool_executor.dart';
 import 'ziwei_tool_executor.dart';
 import 'bazi_tool_executor.dart';
@@ -29,10 +28,7 @@ import 'saved_chart_tool_executor.dart';
 class HeadlessToolDispatcher {
   const HeadlessToolDispatcher._();
 
-  static final Map<
-    String,
-    FutureOr<AssistantToolResult> Function(Map<String, String>)
-  > _executors = {
+  static final Map<String, FutureOr<AssistantToolResult> Function(Map<String, String>)> _executors = {
     'yunqi': YunQiToolExecutor.execute,
     'ziwei': ZiweiToolExecutor.execute,
     'bazi': BaziToolExecutor.execute,
@@ -55,16 +51,55 @@ class HeadlessToolDispatcher {
 
   static bool hasExecutor(String toolId) => _executors.containsKey(toolId);
 
+  /// Synchronous dispatch for explicitly synchronous adapters only.
+  ///
+  /// The allowlist prevents an async executor from being started and then
+  /// abandoned by a synchronous caller.
+  static const Set<String> _synchronousExecutorIds = {
+    'dosage',
+    'yuxiaji_omen',
+  };
+
+  static AssistantToolResult executeSync({
+    required String toolId,
+    required Map<String, String> arguments,
+    DateTime Function()? clock,
+  }) {
+    if (!_synchronousExecutorIds.contains(toolId)) {
+      throw StateError(
+        'Tool "${toolId}" is not registered for synchronous dispatch.',
+      );
+    }
+    final executor = _executors[toolId];
+    if (executor == null) {
+      throw StateError(
+        'Tool "${toolId}" does not register a Headless executor.',
+      );
+    }
+    if (clock != null && toolId != 'yuxiaji_omen') {
+      throw ArgumentError('A clock override is only supported for yuxiaji_omen.');
+    }
+    final result = toolId == 'yuxiaji_omen' && clock != null
+        ? YuxiajiOmenToolExecutor.execute(arguments, clock: clock)
+        : executor(arguments);
+    if (result is Future<AssistantToolResult>) {
+      throw StateError(
+        'Tool "${toolId}" was registered as synchronous but returned a Future.',
+      );
+    }
+    return result;
+  }
+
   static Future<AssistantToolResult> execute({
-    required AssistantToolDefinition tool,
+    required String toolId,
     required Map<String, String> arguments,
     FutureOr<AssistantToolResult> Function(Map<String, String> arguments)?
         executorOverride,
   }) async {
-    final executor = executorOverride ?? _executors[tool.id];
+    final executor = executorOverride ?? _executors[toolId];
     if (executor == null) {
       throw StateError(
-        'Tool "${tool.id}" does not register a Headless executor.',
+        'Tool "${toolId}" does not register a Headless executor.',
       );
     }
     return await executor(arguments);

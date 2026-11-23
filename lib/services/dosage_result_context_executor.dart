@@ -1,6 +1,7 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'dosage_tool_executor.dart';
+import 'headless_tool_dispatcher.dart';
+import 'dosage_tool_service.dart';
 
 class DosageResultContextExecution {
   const DosageResultContextExecution({
@@ -29,7 +30,7 @@ class DosageResultContextExecutor {
     required Map<String, String> arguments,
   }) {
     final safeArguments = Map<String, String>.unmodifiable(arguments);
-    final result = DosageToolExecutor.execute(safeArguments);
+    final result = HeadlessToolDispatcher.executeSync(toolId: 'dosage', arguments: safeArguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(safeArguments).isNotEmpty ||
@@ -38,8 +39,8 @@ class DosageResultContextExecutor {
           (entry) => safeArguments[entry.key] != entry.value,
         ) ||
         result.sourceIds.length != 2 ||
-        result.sourceIds[0] != DosageToolExecutor.sourceId ||
-        result.sourceIds[1] != DosageToolExecutor.factorsSourceId ||
+        result.sourceIds[0] != DosageToolService.sourceId ||
+        result.sourceIds[1] != DosageToolService.factorsSourceId ||
         result.values['业务范围'] != '仅单位换算；不计算药物处方剂量' ||
         result.values['换算结果'] is! String ||
         result.values['目标单位'] is! String) {
@@ -55,8 +56,8 @@ class DosageResultContextExecutor {
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
       'sourceIds': <String>[
-        DosageToolExecutor.sourceId,
-        DosageToolExecutor.factorsSourceId,
+        DosageToolService.sourceId,
+        DosageToolService.factorsSourceId,
       ],
       'input': <String, Object?>{
         'method': 'explicitUnitConversion',
@@ -85,7 +86,7 @@ class DosageResultContextExecutor {
           '${values['目标单位'] ?? 'MISSING'}',
       'provenance': <String, Object?>{
         'calculation': 'DosageConversionService；App 原有纯函数',
-        'factorSource': DosageToolExecutor.factorsSourceId,
+        'factorSource': DosageToolService.factorsSourceId,
         'scope': '只包含重量、容量或长度单位换算；不包含药物特殊换算表或任何剂量建议',
       },
     };

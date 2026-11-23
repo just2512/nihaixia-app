@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
-import '../services/sanshan_lingqian_tool_executor.dart';
+import '../services/sanshan_lingqian_tool_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/sanshan_lingqian_result_context_executor.dart';
@@ -153,7 +153,7 @@ class _DrawTabState extends State<_DrawTab> {
   void _returnResultToAssistant() {
     final sign = _sign;
     if (sign == null) return;
-    Navigator.pop(context, SanshanLingqianToolExecutor.resultForSign(sign));
+    Navigator.pop(context, SanshanLingqianToolService.resultForSign(sign));
   }
 
   @override

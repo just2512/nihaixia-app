@@ -4,7 +4,7 @@ import '../data/xiaoliuren_data.dart';
 import '../screens/assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../services/xiaoliuren_tool_executor.dart';
+import '../services/xiaoliuren_tool_service.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/contextual_ai_sheet.dart';
 
@@ -68,7 +68,7 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
       'rule': _rule == XiaoliurenRule.common ? 'common' : 'duoneng',
     };
     try {
-      final execution = XiaoliurenToolExecutor.executeWithSnapshot(arguments);
+      final execution = XiaoliurenToolService.executeWithSnapshot(arguments);
       final chart = execution.chart;
       final snapshot = execution.structuredSnapshot;
       if (!execution.succeeded || chart == null || snapshot == null) {

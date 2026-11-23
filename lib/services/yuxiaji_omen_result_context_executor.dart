@@ -1,7 +1,8 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'yuxiaji_omen_time.dart';
-import 'yuxiaji_omen_tool_executor.dart';
+import 'yuxiaji_omen_tool_service.dart';
 
 class YuxiajiOmenResultContextExecution {
   const YuxiajiOmenResultContextExecution({
@@ -33,8 +34,9 @@ class YuxiajiOmenResultContextExecutor {
     if (observedAt.isUtc) {
       return _failure('必须使用 App 设备本地时间，不接受 UTC 时间输入。');
     }
-    final result = YuxiajiOmenToolExecutor.execute(
-      const {},
+    final result = HeadlessToolDispatcher.executeSync(
+      toolId: 'yuxiaji_omen',
+      arguments: const {},
       clock: () => observedAt,
     );
     if (result.status != AssistantToolExecutionStatus.succeeded ||
@@ -42,7 +44,7 @@ class YuxiajiOmenResultContextExecutor {
         result.validateArgumentsMatch(const {}).isNotEmpty ||
         result.arguments.isNotEmpty ||
         result.sourceIds.length != 1 ||
-        result.sourceIds.single != YuxiajiOmenToolExecutor.sourceId ||
+        result.sourceIds.single != YuxiajiOmenToolService.sourceId ||
         result.values['App 本机日期时间'] != observedAt.toIso8601String() ||
         result.values['本机 UTC 偏移分钟'] !=
             observedAt.timeZoneOffset.inMinutes.toString() ||
@@ -65,7 +67,7 @@ class YuxiajiOmenResultContextExecutor {
       'resultSchemaVersion': resultSchemaVersion,
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
-      'sourceIds': const [YuxiajiOmenToolExecutor.sourceId],
+      'sourceIds': const [YuxiajiOmenToolService.sourceId],
       'input': <String, Object?>{
         'method': 'deviceLocalDateTime',
         'arguments': const <String, Object?>{},

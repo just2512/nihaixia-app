@@ -1,6 +1,7 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'shousheng_debt_tool_executor.dart';
+import 'headless_tool_dispatcher.dart';
+import 'shousheng_debt_tool_service.dart';
 
 class ShoushengDebtResultContextExecution {
   const ShoushengDebtResultContextExecution({
@@ -40,24 +41,24 @@ class ShoushengDebtResultContextExecutor {
       return _failure(arguments, '只接受 birth_date、birth_time 和 method 三个明确输入字段。');
     }
     final method = arguments['method'];
-    if (!ShoushengDebtToolExecutor.methods.contains(method)) {
+    if (!ShoushengDebtToolService.methods.contains(method)) {
       return _failure(arguments, '查询体系必须明确选择 luku 或 wudou。');
     }
 
-    final result = await ShoushengDebtToolExecutor.execute(arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'shousheng_debt', arguments: arguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
         result.arguments.length != 3 ||
         result.arguments['method'] != method ||
         result.sourceIds.length != 2 ||
-        result.sourceIds[0] != ShoushengDebtToolExecutor.sourceId) {
+        result.sourceIds[0] != ShoushengDebtToolService.sourceId) {
       return ShoushengDebtResultContextExecution(result: result);
     }
 
     final expectedDataSource = method == 'luku'
-        ? ShoushengDebtToolExecutor.lukuDataSourceId
-        : ShoushengDebtToolExecutor.wudouDataSourceId;
+        ? ShoushengDebtToolService.lukuDataSourceId
+        : ShoushengDebtToolService.wudouDataSourceId;
     if (result.sourceIds[1] != expectedDataSource) {
       return ShoushengDebtResultContextExecution(result: result);
     }

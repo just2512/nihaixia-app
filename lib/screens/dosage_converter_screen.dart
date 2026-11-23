@@ -4,7 +4,7 @@ import '../services/dosage_conversion_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../services/dosage_result_context_executor.dart';
-import '../services/dosage_tool_executor.dart';
+import '../services/dosage_tool_service.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'assistant_tool_router.dart';
 
@@ -121,7 +121,7 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final result = _convert();
-    final canAskAi = DosageToolExecutor.validateArguments(_conversionArguments()).isEmpty;
+    final canAskAi = DosageToolService.validateArguments(_conversionArguments()).isEmpty;
 
     return Scaffold(
       appBar: AppBar(

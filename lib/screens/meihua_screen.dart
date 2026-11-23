@@ -9,7 +9,7 @@ import '../data/yijing_data.dart';
 import '../screens/assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../services/meihua_tool_executor.dart';
+import '../services/meihua_tool_service.dart';
 import '../utils/chart_export.dart';
 import '../utils/fold_aware_routes.dart';
 import '../utils/shake_detector.dart';
@@ -120,10 +120,10 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
         'second': _secondC.text.trim(),
       },
       if (_method == MeihuaMethod.time)
-        'hour_branch': MeihuaToolExecutor.earthlyBranches[_shiChen],
+        'hour_branch': MeihuaToolService.earthlyBranches[_shiChen],
     };
     try {
-      final execution = MeihuaToolExecutor.executeWithSnapshot(arguments);
+      final execution = MeihuaToolService.executeWithSnapshot(arguments);
       final chart = execution.chart;
       final snapshot = execution.structuredSnapshot;
       if (!execution.succeeded || chart == null || snapshot == null) {

@@ -1,7 +1,7 @@
 import '../data/dream_data.dart';
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
-import 'dream_tool_executor.dart';
+import 'dream_tool_service.dart';
 
 class DreamResultContextExecution {
   const DreamResultContextExecution({
@@ -66,7 +66,7 @@ class DreamResultContextExecutor {
       toolId: moduleId,
       title: '周公解梦',
       values: Map<String, String>.unmodifiable(entryValues),
-      sourceIds: const [DreamToolExecutor.sourceId],
+      sourceIds: const [DreamToolService.sourceId],
       arguments: Map<String, String>.unmodifiable({
         'entry_id': entry.id,
       }),
@@ -77,7 +77,7 @@ class DreamResultContextExecutor {
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch({'entry_id': entry.id}).isNotEmpty ||
         result.sourceIds.length != 1 ||
-        result.sourceIds.single != DreamToolExecutor.sourceId) {
+        result.sourceIds.single != DreamToolService.sourceId) {
       return _failure(selectedEntryId, '所选词条的结构、状态或本地来源校验失败。');
     }
 
@@ -89,7 +89,7 @@ class DreamResultContextExecutor {
       'resultSchemaVersion': resultSchemaVersion,
       'ruleVersion': ruleVersion,
       'executionStatus': 'SUCCESS',
-      'sourceIds': const [DreamToolExecutor.sourceId],
+      'sourceIds': const [DreamToolService.sourceId],
       'input': <String, Object?>{
         'method': 'explicitEntrySelection',
         'selectedEntryId': entry.id,
@@ -103,7 +103,7 @@ class DreamResultContextExecutor {
       'missingFields': const <String>[],
       'displaySummary': '${entry.dream} · ${entry.category}/${entry.subcategory}',
       'provenance': const <String, Object?>{
-        'dataset': DreamToolExecutor.sourceId,
+        'dataset': DreamToolService.sourceId,
         'selectionOwner': 'USER_EXPLICIT_SELECTION',
         'sourceFieldPolicy':
             'Preserve the dataset source field as metadata; do not assert historical edition authenticity.',

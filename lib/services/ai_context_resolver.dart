@@ -13,31 +13,31 @@ import '../engine/diagnostic_rules.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'assistant_chart_result_formatter.dart';
 import 'ziwei_engine.dart';
-import 'yunqi_tool_executor.dart';
-import 'almanac_tool_executor.dart';
+import 'yunqi_tool_service.dart';
+import 'almanac_tool_service.dart';
 import 'bazi_context_snapshot.dart';
-import 'yijing_tool_executor.dart';
-import 'meihua_tool_executor.dart';
-import 'xiaoliuren_tool_executor.dart';
+import 'yijing_tool_service.dart';
+import 'meihua_tool_service.dart';
+import 'xiaoliuren_tool_service.dart';
 import 'huangdi_siji_result_context_executor.dart';
-import 'huangdi_siji_tool_executor.dart';
+import 'huangdi_siji_tool_service.dart';
 import 'yuxiaji_omen_result_context_executor.dart';
-import 'yuxiaji_omen_tool_executor.dart';
+import 'yuxiaji_omen_tool_service.dart';
 import 'chenggu_result_context_executor.dart';
-import 'chenggu_tool_executor.dart';
+import 'chenggu_tool_service.dart';
 import 'shousheng_debt_result_context_executor.dart';
-import 'shousheng_debt_tool_executor.dart';
+import 'shousheng_debt_tool_service.dart';
 import 'sanshan_lingqian_result_context_executor.dart';
-import 'sanshan_lingqian_tool_executor.dart';
+import 'sanshan_lingqian_tool_service.dart';
 import 'dosage_result_context_executor.dart';
-import 'dosage_tool_executor.dart';
+import 'dosage_tool_service.dart';
 import 'dream_result_context_executor.dart';
-import 'dream_tool_executor.dart';
+import 'dream_tool_service.dart';
 import 'guansha_result_context_executor.dart';
-import 'guansha_tool_executor.dart';
+import 'guansha_tool_service.dart';
 import 'solar_term_result_context_executor.dart';
-import 'solar_term_tool_executor.dart';
-import 'ziwuliuzhu_tool_executor.dart';
+import 'solar_term_tool_service.dart';
+import 'ziwuliuzhu_tool_service.dart';
 import 'ziwuliuzhu_calculation_service.dart';
 
 /// Explicit resolution outcomes; only RESOLVED may be converted into a model prompt.
@@ -129,10 +129,10 @@ class AiContextResolver {
 
     if (snapshotId is! String ||
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
-        ruleVersion != XiaoliurenToolExecutor.ruleVersion ||
+        ruleVersion != XiaoliurenToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != xiaoliurenModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            XiaoliurenToolExecutor.resultSchemaVersion ||
+            XiaoliurenToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         input['method'] != 'time' ||
@@ -142,11 +142,11 @@ class AiContextResolver {
         date is! String ||
         hour is! String ||
         rule is! String ||
-        !XiaoliurenToolExecutor.hourBranches.contains(hour) ||
+        !XiaoliurenToolService.hourBranches.contains(hour) ||
         !const {'common', 'duoneng'}.contains(rule) ||
         sourceIds is! List ||
-        !sourceIds.contains(XiaoliurenToolExecutor.sourceId) ||
-        !sourceIds.contains(XiaoliurenToolExecutor.ruleDataSourceId) ||
+        !sourceIds.contains(XiaoliurenToolService.sourceId) ||
+        !sourceIds.contains(XiaoliurenToolService.ruleDataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -162,7 +162,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: XiaoliurenToolExecutor.sourceId,
+      sourceId: XiaoliurenToolService.sourceId,
       title: '小六壬起课结果（$rule）',
     );
   }
@@ -175,13 +175,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != xiaoliurenModuleId ||
-        ref.sourceId != XiaoliurenToolExecutor.sourceId) {
+        ref.sourceId != XiaoliurenToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Xiaoliuren reference is incomplete or does not identify the local Xiaoliuren engine.',
       );
     }
-    if (ref.ruleVersion != XiaoliurenToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != XiaoliurenToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The Xiaoliuren engine, rule data or calendar conversion version no longer matches this result.',
@@ -196,7 +196,7 @@ class AiContextResolver {
         snapshotId == null ||
         ref.anchorVersion != snapshotId ||
         anchorMatch.group(1) != snapshotId ||
-        !XiaoliurenToolExecutor.hourBranches.contains(anchorMatch.group(3))) {
+        !XiaoliurenToolService.hourBranches.contains(anchorMatch.group(3))) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Xiaoliuren result anchor and snapshot identity do not agree.',
@@ -226,14 +226,14 @@ class AiContextResolver {
         ) ||
         executionDateValue is! String ||
         structuredSnapshot['snapshotId'] != snapshotId ||
-        structuredSnapshot['ruleVersion'] != XiaoliurenToolExecutor.ruleVersion ||
+        structuredSnapshot['ruleVersion'] != XiaoliurenToolService.ruleVersion ||
         structuredSnapshot['resultSchemaVersion'] !=
-            XiaoliurenToolExecutor.resultSchemaVersion ||
+            XiaoliurenToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         structuredSnapshot['capabilityId'] != xiaoliurenModuleId ||
         sourceIds is! List ||
-        !sourceIds.contains(XiaoliurenToolExecutor.sourceId) ||
-        !sourceIds.contains(XiaoliurenToolExecutor.ruleDataSourceId)) {
+        !sourceIds.contains(XiaoliurenToolService.sourceId) ||
+        !sourceIds.contains(XiaoliurenToolService.ruleDataSourceId)) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Xiaoliuren reference is not bound to a complete recorded execution input.',
@@ -276,7 +276,7 @@ class AiContextResolver {
         );
       }
 
-      final reconstructed = XiaoliurenToolExecutor.executeWithSnapshot(
+      final reconstructed = XiaoliurenToolService.executeWithSnapshot(
         arguments,
         now: executionDate,
       );
@@ -316,15 +316,15 @@ class AiContextResolver {
     final sourceIds = structuredSnapshot['sourceIds'];
     if (snapshotId is! String ||
         snapshotId.isEmpty ||
-        ruleVersion != AlmanacToolExecutor.ruleVersion ||
+        ruleVersion != AlmanacToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != almanacModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            AlmanacToolExecutor.resultSchemaVersion ||
+            AlmanacToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         input['date'] is! String ||
         sourceIds is! List ||
-        !sourceIds.contains(AlmanacToolExecutor.sourceId) ||
+        !sourceIds.contains(AlmanacToolService.sourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -339,7 +339,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: AlmanacToolExecutor.sourceId,
+      sourceId: AlmanacToolService.sourceId,
       title: '每日黄历结果（$date）',
     );
   }
@@ -351,13 +351,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != almanacModuleId ||
-        ref.sourceId != AlmanacToolExecutor.sourceId) {
+        ref.sourceId != AlmanacToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The almanac reference is incomplete or does not identify the local almanac engine.',
       );
     }
-    if (ref.ruleVersion != AlmanacToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != AlmanacToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The almanac engine, calendar package or local festival data version no longer matches this result.',
@@ -408,7 +408,7 @@ class AiContextResolver {
     }
 
     try {
-      final snapshot = AlmanacToolExecutor.createStructuredSnapshot(date!);
+      final snapshot = AlmanacToolService.createStructuredSnapshot(date!);
       if (snapshot['snapshotId'] != snapshotId) {
         return const AiContextResolution(
           status: AiContextResolutionStatus.stale,
@@ -444,10 +444,10 @@ class AiContextResolver {
 
     if (snapshotId is! String ||
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
-        ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion ||
+        ruleVersion != ZiWuLiuZhuToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != ziWuLiuZhuModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            ZiWuLiuZhuToolExecutor.resultSchemaVersion ||
+            ZiWuLiuZhuToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         input['method'] != 'deviceLocalDateTime' ||
@@ -455,8 +455,8 @@ class AiContextResolver {
         arguments.length != 1 ||
         at is! String ||
         sourceIds is! List ||
-        !sourceIds.contains(ZiWuLiuZhuToolExecutor.sourceId) ||
-        !sourceIds.contains(ZiWuLiuZhuToolExecutor.referenceSourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolService.sourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolService.referenceSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -464,7 +464,7 @@ class AiContextResolver {
       );
     }
 
-    final execution = ZiWuLiuZhuToolExecutor.executeWithSnapshot({'at': at});
+    final execution = ZiWuLiuZhuToolService.executeWithSnapshot({'at': at});
     if (!execution.succeeded ||
         execution.structuredSnapshot?['snapshotId'] != snapshotId) {
       throw ArgumentError(
@@ -479,7 +479,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: ZiWuLiuZhuToolExecutor.sourceId,
+      sourceId: ZiWuLiuZhuToolService.sourceId,
       title: '子午流注时辰开穴结果（$at）',
     );
   }
@@ -493,13 +493,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != ziWuLiuZhuModuleId ||
-        ref.sourceId != ZiWuLiuZhuToolExecutor.sourceId) {
+        ref.sourceId != ZiWuLiuZhuToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The ZiWuLiuZhu reference is incomplete or does not identify the local calculation engine.',
       );
     }
-    if (ref.ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != ZiWuLiuZhuToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The ZiWuLiuZhu engine, calculation tables or locked calendar dependency version no longer matches this result.',
@@ -540,9 +540,9 @@ class AiContextResolver {
     final arguments = input is Map ? input['arguments'] : null;
     final sourceIds = structuredSnapshot['sourceIds'];
     if (structuredSnapshot['snapshotId'] != snapshotId ||
-        structuredSnapshot['ruleVersion'] != ZiWuLiuZhuToolExecutor.ruleVersion ||
+        structuredSnapshot['ruleVersion'] != ZiWuLiuZhuToolService.ruleVersion ||
         structuredSnapshot['resultSchemaVersion'] !=
-            ZiWuLiuZhuToolExecutor.resultSchemaVersion ||
+            ZiWuLiuZhuToolService.resultSchemaVersion ||
         structuredSnapshot['capabilityId'] != ziWuLiuZhuModuleId ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
@@ -551,8 +551,8 @@ class AiContextResolver {
         arguments.length != 1 ||
         arguments['at'] != at ||
         sourceIds is! List ||
-        !sourceIds.contains(ZiWuLiuZhuToolExecutor.sourceId) ||
-        !sourceIds.contains(ZiWuLiuZhuToolExecutor.referenceSourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolService.sourceId) ||
+        !sourceIds.contains(ZiWuLiuZhuToolService.referenceSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -562,7 +562,7 @@ class AiContextResolver {
     }
 
     final execution =
-        ZiWuLiuZhuToolExecutor.executeWithSnapshot({'at': at});
+        ZiWuLiuZhuToolService.executeWithSnapshot({'at': at});
     if (!execution.succeeded || execution.structuredSnapshot == null) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
@@ -654,8 +654,8 @@ class AiContextResolver {
       anchorId: 'ziwuliuzhu:result:$snapshotId:at=$at:field=$fieldPath',
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
-      ruleVersion: ZiWuLiuZhuToolExecutor.ruleVersion,
-      sourceId: ZiWuLiuZhuToolExecutor.sourceId,
+      ruleVersion: ZiWuLiuZhuToolService.ruleVersion,
+      sourceId: ZiWuLiuZhuToolService.sourceId,
       fieldPath: fieldPath,
       title: '子午流注 · $label',
     );
@@ -670,13 +670,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.fieldValue ||
         normalized.isEmpty ||
         ref.moduleId != ziWuLiuZhuModuleId ||
-        ref.sourceId != ZiWuLiuZhuToolExecutor.sourceId) {
+        ref.sourceId != ZiWuLiuZhuToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The ZiWuLiuZhu field reference is incomplete or does not identify the local calculation engine.',
       );
     }
-    if (ref.ruleVersion != ZiWuLiuZhuToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != ZiWuLiuZhuToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The ZiWuLiuZhu engine or reference-table version no longer matches this method field.',
@@ -743,7 +743,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ref.ruleVersion,
-      sourceId: ZiWuLiuZhuToolExecutor.sourceId,
+      sourceId: ZiWuLiuZhuToolService.sourceId,
       title: '子午流注时辰开穴结果（$at）',
     );
     final parentResolution = resolveZiWuLiuZhuToolResult(
@@ -826,11 +826,11 @@ class AiContextResolver {
         arguments is! Map ||
         arguments.length != 1 ||
         term is! String ||
-        !SolarTermToolExecutor.termNames.contains(term) ||
+        !SolarTermToolService.termNames.contains(term) ||
         sourceIds is! List ||
         sourceIds.length != 2 ||
-        !sourceIds.contains(SolarTermToolExecutor.sourceId) ||
-        !sourceIds.contains(SolarTermToolExecutor.knowledgeSourceId) ||
+        !sourceIds.contains(SolarTermToolService.sourceId) ||
+        !sourceIds.contains(SolarTermToolService.knowledgeSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -844,7 +844,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: SolarTermResultContextExecutor.ruleVersion,
-      sourceId: SolarTermToolExecutor.sourceId,
+      sourceId: SolarTermToolService.sourceId,
       title: '$term 节气知识条目',
     );
   }
@@ -858,7 +858,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != SolarTermResultContextExecutor.moduleId ||
-        ref.sourceId != SolarTermToolExecutor.sourceId) {
+        ref.sourceId != SolarTermToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The solar-term reference is incomplete or does not identify the local solar-term service.',
@@ -886,7 +886,7 @@ class AiContextResolver {
       );
     }
     final term = match.group(2)!;
-    if (!SolarTermToolExecutor.termNames.contains(term) ||
+    if (!SolarTermToolService.termNames.contains(term) ||
         ref.title != '$term 节气知识条目') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
@@ -912,8 +912,8 @@ class AiContextResolver {
         arguments['term'] != term ||
         sources is! List ||
         sources.length != 2 ||
-        !sources.contains(SolarTermToolExecutor.sourceId) ||
-        !sources.contains(SolarTermToolExecutor.knowledgeSourceId) ||
+        !sources.contains(SolarTermToolService.sourceId) ||
+        !sources.contains(SolarTermToolService.knowledgeSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -971,8 +971,8 @@ class AiContextResolver {
         arguments['birth_time'] is! String ||
         sourceIds is! List ||
         sourceIds.length != 2 ||
-        !sourceIds.contains(HuangdiSijiToolExecutor.sourceId) ||
-        !sourceIds.contains(HuangdiSijiToolExecutor.dataSourceId) ||
+        !sourceIds.contains(HuangdiSijiToolService.sourceId) ||
+        !sourceIds.contains(HuangdiSijiToolService.dataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -986,7 +986,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: HuangdiSijiResultContextExecutor.ruleVersion,
-      sourceId: HuangdiSijiToolExecutor.sourceId,
+      sourceId: HuangdiSijiToolService.sourceId,
       title: '轩辕黄帝四季歌结果',
     );
   }
@@ -1000,7 +1000,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != HuangdiSijiResultContextExecutor.moduleId ||
-        ref.sourceId != HuangdiSijiToolExecutor.sourceId) {
+        ref.sourceId != HuangdiSijiToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Huangdi Siji reference is incomplete or does not identify the local calculation source.',
@@ -1048,8 +1048,8 @@ class AiContextResolver {
         arguments['birth_time'] is! String ||
         sources is! List ||
         sources.length != 2 ||
-        !sources.contains(HuangdiSijiToolExecutor.sourceId) ||
-        !sources.contains(HuangdiSijiToolExecutor.dataSourceId) ||
+        !sources.contains(HuangdiSijiToolService.sourceId) ||
+        !sources.contains(HuangdiSijiToolService.dataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -1112,8 +1112,8 @@ class AiContextResolver {
         arguments['birth_time'] is! String ||
         sourceIds is! List ||
         sourceIds.length != 2 ||
-        !sourceIds.contains(ChengguToolExecutor.sourceId) ||
-        !sourceIds.contains(ChengguToolExecutor.dataSourceId) ||
+        !sourceIds.contains(ChengguToolService.sourceId) ||
+        !sourceIds.contains(ChengguToolService.dataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -1127,7 +1127,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ChengguResultContextExecutor.ruleVersion,
-      sourceId: ChengguToolExecutor.sourceId,
+      sourceId: ChengguToolService.sourceId,
       title: '袁天罡称骨结果',
     );
   }
@@ -1141,7 +1141,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != ChengguResultContextExecutor.moduleId ||
-        ref.sourceId != ChengguToolExecutor.sourceId) {
+        ref.sourceId != ChengguToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Chenggu reference is incomplete or does not identify the local calculation source.',
@@ -1193,8 +1193,8 @@ class AiContextResolver {
         arguments['birth_time'] is! String ||
         sources is! List ||
         sources.length != 2 ||
-        !sources.contains(ChengguToolExecutor.sourceId) ||
-        !sources.contains(ChengguToolExecutor.dataSourceId) ||
+        !sources.contains(ChengguToolService.sourceId) ||
+        !sources.contains(ChengguToolService.dataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -1248,7 +1248,7 @@ class AiContextResolver {
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         method is! String ||
-        !ShoushengDebtToolExecutor.methods.contains(method) ||
+        !ShoushengDebtToolService.methods.contains(method) ||
         arguments is! Map ||
         arguments.length != 3 ||
         arguments['birth_date'] is! String ||
@@ -1257,10 +1257,10 @@ class AiContextResolver {
         input['settings'] is! Map ||
         sources is! List ||
         sources.length != 2 ||
-        sources[0] != ShoushengDebtToolExecutor.sourceId ||
+        sources[0] != ShoushengDebtToolService.sourceId ||
         sources[1] != (method == 'luku'
-            ? ShoushengDebtToolExecutor.lukuDataSourceId
-            : ShoushengDebtToolExecutor.wudouDataSourceId) ||
+            ? ShoushengDebtToolService.lukuDataSourceId
+            : ShoushengDebtToolService.wudouDataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -1274,7 +1274,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ShoushengDebtResultContextExecutor.ruleVersion,
-      sourceId: ShoushengDebtToolExecutor.sourceId,
+      sourceId: ShoushengDebtToolService.sourceId,
       title: method == 'luku' ? '禄库受生经查询结果' : '五斗金章受生经查询结果',
     );
   }
@@ -1288,7 +1288,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != ShoushengDebtResultContextExecutor.moduleId ||
-        ref.sourceId != ShoushengDebtToolExecutor.sourceId) {
+        ref.sourceId != ShoushengDebtToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Shousheng reference is incomplete or does not identify the local lookup engine.',
@@ -1349,10 +1349,10 @@ class AiContextResolver {
         settings['distinguishZiShi'] is! bool ||
         sources is! List ||
         sources.length != 2 ||
-        sources[0] != ShoushengDebtToolExecutor.sourceId ||
+        sources[0] != ShoushengDebtToolService.sourceId ||
         sources[1] != (method == 'luku'
-            ? ShoushengDebtToolExecutor.lukuDataSourceId
-            : ShoushengDebtToolExecutor.wudouDataSourceId) ||
+            ? ShoushengDebtToolService.lukuDataSourceId
+            : ShoushengDebtToolService.wudouDataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -1420,7 +1420,7 @@ class AiContextResolver {
         arguments.isNotEmpty ||
         sources is! List ||
         sources.length != 1 ||
-        sources.single != YuxiajiOmenToolExecutor.sourceId ||
+        sources.single != YuxiajiOmenToolService.sourceId ||
         title is! String ||
         title.isEmpty ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
@@ -1436,7 +1436,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: YuxiajiOmenResultContextExecutor.ruleVersion,
-      sourceId: YuxiajiOmenToolExecutor.sourceId,
+      sourceId: YuxiajiOmenToolService.sourceId,
       title: title,
     );
   }
@@ -1450,7 +1450,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != YuxiajiOmenResultContextExecutor.moduleId ||
-        ref.sourceId != YuxiajiOmenToolExecutor.sourceId) {
+        ref.sourceId != YuxiajiOmenToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: '玉匣灵兆引用不完整或不属于本地时辰文本来源。',
@@ -1498,7 +1498,7 @@ class AiContextResolver {
         arguments.isNotEmpty ||
         sources is! List ||
         sources.length != 1 ||
-        sources.single != YuxiajiOmenToolExecutor.sourceId ||
+        sources.single != YuxiajiOmenToolService.sourceId ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -1568,7 +1568,7 @@ class AiContextResolver {
         sourceIds is! List ||
         sourceIds.length != 1 ||
         sourceIds.single !=
-            '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId' ||
+            '${SanshanLingqianToolService.dataSourcePrefix}$selectedSignId' ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -1582,7 +1582,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: SanshanLingqianResultContextExecutor.ruleVersion,
-      sourceId: '${SanshanLingqianToolExecutor.dataSourcePrefix}$selectedSignId',
+      sourceId: '${SanshanLingqianToolService.dataSourcePrefix}$selectedSignId',
       title: '三山国王灵签结果（第$selectedSignId签）',
     );
   }
@@ -1596,7 +1596,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != SanshanLingqianResultContextExecutor.moduleId ||
-        !ref.sourceId.startsWith(SanshanLingqianToolExecutor.dataSourcePrefix)) {
+        !ref.sourceId.startsWith(SanshanLingqianToolService.dataSourcePrefix)) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: '三山灵签引用不完整或不属于本地签谱来源。',
@@ -1623,7 +1623,7 @@ class AiContextResolver {
         signId < 1 ||
         signId > 92 ||
         ref.sourceId !=
-            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+            '${SanshanLingqianToolService.dataSourcePrefix}$signId' ||
         ref.title != '三山国王灵签结果（第$signId签）') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
@@ -1652,7 +1652,7 @@ class AiContextResolver {
         sourceIds is! List ||
         sourceIds.length != 1 ||
         sourceIds.single !=
-            '${SanshanLingqianToolExecutor.dataSourcePrefix}$signId' ||
+            '${SanshanLingqianToolService.dataSourcePrefix}$signId' ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -1710,13 +1710,13 @@ class AiContextResolver {
         arguments.length != 3 ||
         arguments.keys.toSet().difference({'value', 'unit', 'standard'}).isNotEmpty ||
         arguments.values.any((value) => value is! String) ||
-        DosageToolExecutor.validateArguments(
+        DosageToolService.validateArguments(
           arguments.cast<String, String>(),
         ).isNotEmpty ||
         sourceIds is! List ||
         sourceIds.length != 2 ||
-        sourceIds[0] != DosageToolExecutor.sourceId ||
-        sourceIds[1] != DosageToolExecutor.factorsSourceId ||
+        sourceIds[0] != DosageToolService.sourceId ||
+        sourceIds[1] != DosageToolService.factorsSourceId ||
         title != '经方度量衡单位换算' ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
@@ -1731,7 +1731,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: DosageResultContextExecutor.ruleVersion,
-      sourceId: DosageToolExecutor.sourceId,
+      sourceId: DosageToolService.sourceId,
       title: '经方度量衡换算结果',
     );
   }
@@ -1745,7 +1745,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != DosageResultContextExecutor.moduleId ||
-        ref.sourceId != DosageToolExecutor.sourceId ||
+        ref.sourceId != DosageToolService.sourceId ||
         ref.title != '经方度量衡换算结果') {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
@@ -1789,8 +1789,8 @@ class AiContextResolver {
         arguments.values.any((value) => value is! String) ||
         sources is! List ||
         sources.length != 2 ||
-        sources[0] != DosageToolExecutor.sourceId ||
-        sources[1] != DosageToolExecutor.factorsSourceId ||
+        sources[0] != DosageToolService.sourceId ||
+        sources[1] != DosageToolService.factorsSourceId ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -1800,7 +1800,7 @@ class AiContextResolver {
     }
 
     final safeArguments = arguments.cast<String, String>();
-    if (DosageToolExecutor.validateArguments(safeArguments).isNotEmpty) {
+    if (DosageToolService.validateArguments(safeArguments).isNotEmpty) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: '剂量换算参数不在 App 当前允许范围内。',
@@ -1839,15 +1839,15 @@ class AiContextResolver {
     final sourceIds = structuredSnapshot['sourceIds'];
     if (snapshotId is! String ||
         snapshotId.isEmpty ||
-        ruleVersion != YunQiToolExecutor.ruleVersion ||
+        ruleVersion != YunQiToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != yunqiModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            YunQiToolExecutor.resultSchemaVersion ||
+            YunQiToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         input['date'] is! String ||
         sourceIds is! List ||
-        !sourceIds.contains(YunQiToolExecutor.sourceId) ||
+        !sourceIds.contains(YunQiToolService.sourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -1862,7 +1862,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: YunQiToolExecutor.sourceId,
+      sourceId: YunQiToolService.sourceId,
       title: '五运六气年度推算结果（$date）',
     );
   }
@@ -1874,13 +1874,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != yunqiModuleId ||
-        ref.sourceId != YunQiToolExecutor.sourceId) {
+        ref.sourceId != YunQiToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YunQi reference is incomplete or does not identify the local YunQi engine.',
       );
     }
-    if (ref.ruleVersion != YunQiToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != YunQiToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The YunQi engine or literature version no longer matches this result reference.',
@@ -1921,7 +1921,7 @@ class AiContextResolver {
       );
     }
     try {
-      final snapshot = YunQiToolExecutor.createStructuredSnapshot(date!);
+      final snapshot = YunQiToolService.createStructuredSnapshot(date!);
       if (snapshot['snapshotId'] != snapshotId) {
         return const AiContextResolution(
           status: AiContextResolutionStatus.stale,
@@ -1970,15 +1970,15 @@ class AiContextResolver {
         result is Map ? result['selectedDateContext'] : null;
     if (snapshotId is! String ||
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
-        ruleVersion != YunQiToolExecutor.ruleVersion ||
+        ruleVersion != YunQiToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != yunqiModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            YunQiToolExecutor.resultSchemaVersion ||
+            YunQiToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         input['date'] is! String ||
         sourceIds is! List ||
-        !sourceIds.contains(YunQiToolExecutor.sourceId) ||
+        !sourceIds.contains(YunQiToolService.sourceId) ||
         annualData is! Map ||
         selectedDateContext is! Map ||
         !_yunqiChartFieldPaths.contains(fieldPath) ||
@@ -2008,7 +2008,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: YunQiToolExecutor.sourceId,
+      sourceId: YunQiToolService.sourceId,
       fieldPath: fieldPath,
       title: _yunqiChartFieldTitles[fieldPath],
     );
@@ -2022,13 +2022,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.fieldValue ||
         normalized.isEmpty ||
         ref.moduleId != yunqiModuleId ||
-        ref.sourceId != YunQiToolExecutor.sourceId) {
+        ref.sourceId != YunQiToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YunQi chart field reference is incomplete or does not identify the local YunQi engine.',
       );
     }
-    if (ref.ruleVersion != YunQiToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != YunQiToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The YunQi engine or literature version no longer matches this chart field.',
@@ -2061,9 +2061,9 @@ class AiContextResolver {
     if (structuredSnapshot['snapshotId'] != snapshotId ||
         structuredSnapshot['capabilityId'] != yunqiModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            YunQiToolExecutor.resultSchemaVersion ||
+            YunQiToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
-        structuredSnapshot['ruleVersion'] != YunQiToolExecutor.ruleVersion ||
+        structuredSnapshot['ruleVersion'] != YunQiToolService.ruleVersion ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -2084,7 +2084,7 @@ class AiContextResolver {
         annualData is! Map ||
         selectedDateContext is! Map ||
         sourceIds is! List ||
-        !sourceIds.contains(YunQiToolExecutor.sourceId)) {
+        !sourceIds.contains(YunQiToolService.sourceId)) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.missing,
         reason: 'The verified YunQi snapshot does not contain the required chart data or source.',
@@ -2309,16 +2309,16 @@ class AiContextResolver {
     final sourceIds = structuredSnapshot['sourceIds'];
     if (snapshotId is! String ||
         snapshotId.isEmpty ||
-        ruleVersion != YiJingToolExecutor.ruleVersion ||
+        ruleVersion != YiJingToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != yijingModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            YiJingToolExecutor.resultSchemaVersion ||
+            YiJingToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         input is! Map ||
         input['method'] is! String ||
         sourceIds is! List ||
-        !sourceIds.contains(YiJingToolExecutor.sourceId) ||
-        !sourceIds.contains(YiJingToolExecutor.dataSourceId) ||
+        !sourceIds.contains(YiJingToolService.sourceId) ||
+        !sourceIds.contains(YiJingToolService.dataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -2336,7 +2336,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: YiJingToolExecutor.sourceId,
+      sourceId: YiJingToolService.sourceId,
       title: '易经起卦结果（$method）',
     );
   }
@@ -2349,13 +2349,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != yijingModuleId ||
-        ref.sourceId != YiJingToolExecutor.sourceId) {
+        ref.sourceId != YiJingToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YiJing reference is incomplete or does not identify the local YiJing engine.',
       );
     }
-    if (ref.ruleVersion != YiJingToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != YiJingToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The YiJing engine or hexagram data version no longer matches this result.',
@@ -2391,16 +2391,16 @@ class AiContextResolver {
           (entry) => entry.key is! String || entry.value is! String,
         ) ||
         structuredSnapshot['snapshotId'] != snapshotId ||
-        structuredSnapshot['ruleVersion'] != YiJingToolExecutor.ruleVersion ||
+        structuredSnapshot['ruleVersion'] != YiJingToolService.ruleVersion ||
         structuredSnapshot['resultSchemaVersion'] !=
-            YiJingToolExecutor.resultSchemaVersion ||
+            YiJingToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         structuredSnapshot['capabilityId'] != yijingModuleId ||
         structuredSnapshot['sourceIds'] is! List ||
         !(structuredSnapshot['sourceIds'] as List)
-            .contains(YiJingToolExecutor.sourceId) ||
+            .contains(YiJingToolService.sourceId) ||
         !(structuredSnapshot['sourceIds'] as List)
-            .contains(YiJingToolExecutor.dataSourceId)) {
+            .contains(YiJingToolService.dataSourceId)) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YiJing reference is not bound to a complete recorded execution input.',
@@ -2426,7 +2426,7 @@ class AiContextResolver {
         );
       }
       final reconstructed =
-          YiJingToolExecutor.createStructuredSnapshot(arguments);
+          YiJingToolService.createStructuredSnapshot(arguments);
       if (reconstructed['snapshotId'] != snapshotId) {
         return const AiContextResolution(
           status: AiContextResolutionStatus.stale,
@@ -2465,8 +2465,8 @@ class AiContextResolver {
         resultRef.moduleId != yijingModuleId ||
         resultRef.snapshotId == null ||
         resultRef.snapshotId != resultRef.anchorVersion ||
-        resultRef.ruleVersion != YiJingToolExecutor.ruleVersion ||
-        resultRef.sourceId != YiJingToolExecutor.sourceId ||
+        resultRef.ruleVersion != YiJingToolService.ruleVersion ||
+        resultRef.sourceId != YiJingToolService.sourceId ||
         resultMatch == null ||
         resultMatch.group(1) != resultRef.snapshotId ||
         !RegExp(_supportedYiJingFieldPath).hasMatch(fieldPath)) {
@@ -2485,7 +2485,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: resultRef.ruleVersion,
-      sourceId: YiJingToolExecutor.sourceId,
+      sourceId: YiJingToolService.sourceId,
       fieldPath: fieldPath,
       title: fieldLabel,
     );
@@ -2499,13 +2499,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.fieldValue ||
         normalized.isEmpty ||
         ref.moduleId != yijingModuleId ||
-        ref.sourceId != YiJingToolExecutor.sourceId) {
+        ref.sourceId != YiJingToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The YiJing field reference is incomplete or does not identify the local YiJing engine.',
       );
     }
-    if (ref.ruleVersion != YiJingToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != YiJingToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The YiJing engine or hexagram data version no longer matches this field.',
@@ -2538,7 +2538,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ref.ruleVersion,
-      sourceId: YiJingToolExecutor.sourceId,
+      sourceId: YiJingToolService.sourceId,
       title: '易经起卦结果（$method）',
     );
     final resultResolution = resolveYiJingToolResult(
@@ -2648,10 +2648,10 @@ class AiContextResolver {
     final arguments = input is Map ? input['arguments'] : null;
     if (snapshotId is! String ||
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
-        ruleVersion != MeihuaToolExecutor.ruleVersion ||
+        ruleVersion != MeihuaToolService.ruleVersion ||
         structuredSnapshot['capabilityId'] != meihuaModuleId ||
         structuredSnapshot['resultSchemaVersion'] !=
-            MeihuaToolExecutor.resultSchemaVersion ||
+            MeihuaToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         method is! String ||
         !const {'time', 'number', 'random'}.contains(method) ||
@@ -2661,8 +2661,8 @@ class AiContextResolver {
         ) ||
         arguments['method'] != method ||
         sourceIds is! List ||
-        !sourceIds.contains(MeihuaToolExecutor.sourceId) ||
-        !sourceIds.contains(MeihuaToolExecutor.dataSourceId) ||
+        !sourceIds.contains(MeihuaToolService.sourceId) ||
+        !sourceIds.contains(MeihuaToolService.dataSourceId) ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -2691,7 +2691,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ruleVersion as String,
-      sourceId: MeihuaToolExecutor.sourceId,
+      sourceId: MeihuaToolService.sourceId,
       title: '梅花易数${_meihuaMethodLabel(method)}',
     );
   }
@@ -2704,13 +2704,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != meihuaModuleId ||
-        ref.sourceId != MeihuaToolExecutor.sourceId) {
+        ref.sourceId != MeihuaToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Meihua reference is incomplete or does not identify the local Meihua engine.',
       );
     }
-    if (ref.ruleVersion != MeihuaToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != MeihuaToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The Meihua engine or hexagram data version no longer matches this result.',
@@ -2759,7 +2759,7 @@ class AiContextResolver {
                 int.tryParse(arguments['second'] ?? '') == null ||
                 arguments.containsKey('hour_branch'))) ||
         (method == 'time' &&
-            (!MeihuaToolExecutor.earthlyBranches.contains(
+            (!MeihuaToolService.earthlyBranches.contains(
               arguments['hour_branch'],
             ) ||
                 arguments.containsKey('first') ||
@@ -2769,14 +2769,14 @@ class AiContextResolver {
                 arguments.containsKey('second') ||
                 arguments.containsKey('hour_branch'))) ||
         structuredSnapshot['snapshotId'] != snapshotId ||
-        structuredSnapshot['ruleVersion'] != MeihuaToolExecutor.ruleVersion ||
+        structuredSnapshot['ruleVersion'] != MeihuaToolService.ruleVersion ||
         structuredSnapshot['resultSchemaVersion'] !=
-            MeihuaToolExecutor.resultSchemaVersion ||
+            MeihuaToolService.resultSchemaVersion ||
         structuredSnapshot['executionStatus'] != 'SUCCESS' ||
         structuredSnapshot['capabilityId'] != meihuaModuleId ||
         sourceIds is! List ||
-        !sourceIds.contains(MeihuaToolExecutor.sourceId) ||
-        !sourceIds.contains(MeihuaToolExecutor.dataSourceId) ||
+        !sourceIds.contains(MeihuaToolService.sourceId) ||
+        !sourceIds.contains(MeihuaToolService.dataSourceId) ||
         result is! Map ||
         result['method'] != method ||
         result['main'] is! Map ||
@@ -2854,8 +2854,8 @@ class AiContextResolver {
         resultRef.moduleId != meihuaModuleId ||
         resultRef.snapshotId == null ||
         resultRef.snapshotId != resultRef.anchorVersion ||
-        resultRef.ruleVersion != MeihuaToolExecutor.ruleVersion ||
-        resultRef.sourceId != MeihuaToolExecutor.sourceId ||
+        resultRef.ruleVersion != MeihuaToolService.ruleVersion ||
+        resultRef.sourceId != MeihuaToolService.sourceId ||
         resultMatch == null ||
         resultMatch.group(1) != resultRef.snapshotId ||
         !RegExp(_supportedMeihuaFieldPath).hasMatch(fieldPath)) {
@@ -2873,7 +2873,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: resultRef.ruleVersion,
-      sourceId: MeihuaToolExecutor.sourceId,
+      sourceId: MeihuaToolService.sourceId,
       fieldPath: fieldPath,
       title: fieldLabel,
     );
@@ -2887,13 +2887,13 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.fieldValue ||
         normalized.isEmpty ||
         ref.moduleId != meihuaModuleId ||
-        ref.sourceId != MeihuaToolExecutor.sourceId) {
+        ref.sourceId != MeihuaToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Meihua field reference is incomplete or does not identify the local Meihua engine.',
       );
     }
-    if (ref.ruleVersion != MeihuaToolExecutor.ruleVersion) {
+    if (ref.ruleVersion != MeihuaToolService.ruleVersion) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.stale,
         reason: 'The Meihua engine or hexagram data version no longer matches this field.',
@@ -2925,7 +2925,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: ref.ruleVersion,
-      sourceId: MeihuaToolExecutor.sourceId,
+      sourceId: MeihuaToolService.sourceId,
       title: '梅花易数${_meihuaMethodLabel(method)}',
     );
     final resultResolution = resolveMeihuaToolResult(
@@ -4338,9 +4338,9 @@ class AiContextResolver {
         settings['distinguishZiShi'] is! bool ||
         sources is! List ||
         sources.length != 3 ||
-        sources[0] != GuanshaToolExecutor.sourceId ||
-        sources[1] != GuanshaToolExecutor.dataSourceId ||
-        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        sources[0] != GuanshaToolService.sourceId ||
+        sources[1] != GuanshaToolService.dataSourceId ||
+        sources[2] != GuanshaToolService.locationSourceId ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -4354,7 +4354,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: GuanshaResultContextExecutor.ruleVersion,
-      sourceId: GuanshaToolExecutor.sourceId,
+      sourceId: GuanshaToolService.sourceId,
       title: '小儿关煞结果',
     );
   }
@@ -4368,7 +4368,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != GuanshaResultContextExecutor.moduleId ||
-        ref.sourceId != GuanshaToolExecutor.sourceId) {
+        ref.sourceId != GuanshaToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Guansha reference is incomplete or does not identify the local Guansha engine.',
@@ -4422,9 +4422,9 @@ class AiContextResolver {
         settings['distinguishZiShi'] is! bool ||
         sources is! List ||
         sources.length != 3 ||
-        sources[0] != GuanshaToolExecutor.sourceId ||
-        sources[1] != GuanshaToolExecutor.dataSourceId ||
-        sources[2] != GuanshaToolExecutor.locationSourceId ||
+        sources[0] != GuanshaToolService.sourceId ||
+        sources[1] != GuanshaToolService.dataSourceId ||
+        sources[2] != GuanshaToolService.locationSourceId ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
@@ -4491,7 +4491,7 @@ class AiContextResolver {
         values['词条 ID'] != selectedEntryId ||
         sources is! List ||
         sources.length != 1 ||
-        sources.single != DreamToolExecutor.sourceId ||
+        sources.single != DreamToolService.sourceId ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       throw ArgumentError(
@@ -4505,7 +4505,7 @@ class AiContextResolver {
       anchorVersion: snapshotId,
       snapshotId: snapshotId,
       ruleVersion: DreamResultContextExecutor.ruleVersion,
-      sourceId: DreamToolExecutor.sourceId,
+      sourceId: DreamToolService.sourceId,
       title: '周公解梦词条',
     );
   }
@@ -4519,7 +4519,7 @@ class AiContextResolver {
     if (ref.kind != AiContextKind.toolResult ||
         normalized.isEmpty ||
         ref.moduleId != DreamResultContextExecutor.moduleId ||
-        ref.sourceId != DreamToolExecutor.sourceId) {
+        ref.sourceId != DreamToolService.sourceId) {
       return const AiContextResolution(
         status: AiContextResolutionStatus.unknown,
         reason: 'The Dream reference is incomplete or does not identify the local dream dataset.',
@@ -4571,7 +4571,7 @@ class AiContextResolver {
         result['title'] != '周公解梦' ||
         sources is! List ||
         sources.length != 1 ||
-        sources.single != DreamToolExecutor.sourceId ||
+        sources.single != DreamToolService.sourceId ||
         AiToolResultSnapshot.createStructuredId(snapshot: structuredSnapshot) !=
             snapshotId) {
       return const AiContextResolution(
