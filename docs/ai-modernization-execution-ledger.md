@@ -3820,14 +3820,20 @@ PR HEAD 门禁证据：
 | work/yanji-phase2-remaining-half-fold-routes-*、work/ziwei-live-posture-transition、test/yanji-yunqi-chart-text-scale-* | 主线已有更新后的折叠路由、紫微姿态和 200% 字号测试；旧测试较短或使用旧断言。 | 不重复合并旧测试。 |
 | work/yanji-editorial-phase3-tools | 旧重症清单分支使用高阴影 Card，和当前 master 已采用的轻量列表展示冲突。 | 不合并旧 Card 设计。 |
 | work/yanji-guansha-wiki-editorial-20261117 | 旧分支唯一值得保留的视觉差异是关煞百科由厚重 Card 改为轻量列表；其余页面/上下文代码已过时。 | 仅选择性移植到 PR #414；不合并旧分支本身。 |
+| work/ai-guansha-targeted-validation-20261121 | 旧测试直接点击真太阳时设置开关；当前 master 已改为 tester.runAsync 包裹并等待 SettingsRepository 写入完成，避免 SQLite FFI 异步事务遗留在 FakeAsync teardown。 | 当前主线已包含更稳健的测试实现，不 cherry-pick 旧分支。 |
 | work/ai-contextual-ziwei-result-sample、feat/ai-context-bazi-chart-result-*、feat/ai-context-guansha-result-*、feat/ai-context-xiaoliuren-result-*、feat/ai-context-ziwuliuzhu-method-fields-* | 当前 master 已有对应 ContextRef、snapshot/resolver、真实页面入口及负向回归，校验来源、规则/数据版本、锚点稳定性和失效引用。 | 不回灌旧页面或 Resolver。 |
 | integration | 相对当前 master 高度分叉且落后超过千个提交，包含多个历史数据模型、UI、工作流和文档快照；主线已有后续实现。 | 不整支合并；仅对可证明未替代的具体文件另开 PR。 |
 | sync/upstream-acupoint-20261116、sync/upstream-bencao-20261116 | 前者仅旧同步台账；后者抽查的本草资产与 master blob 相同。 | 不合并旧同步快照；继续手动逐项同步。 |
 | feat/lixiangji-rebrand | 旧分支仍使用理想集命名，与当前已确认对外名称研纪冲突。 | 不合并，避免品牌回退。 |
 
-### 72.1 当前跟进 PR 与分支引用
+### 72.1 跟进 PR 创建时的分支引用快照
 
-- 当前远端 branch refs 为 470 个，PR 记录 414 条；当前 OPEN PR 为 #412、#413、#414 三项。branch refs 数量不是待合并任务数量。
+- 本快照采集于 PR #412/#413/#414 创建后、合并前：远端 branch refs 为 470 个，PR 记录 414 条，OPEN PR 为 #412、#413、#414 三项。branch refs 数量不是待合并任务数量；这不是本节之后的实时 OPEN PR 状态。
 - #412 仅更新本执行台账；#413 仅统一 Find N2 验收文档版本基线和 Release 签名描述；#414 仅选择性移植关煞百科轻列表、对应 Widget 测试及三份许可清单。
 - 上述比较与文件核验只覆盖表中列出的分支；其余未匹配 PR head 的历史 refs 仍为 NOT_REVIEWED，不批量合并或删除。
 - Find N2 / E4B 真机多轮、媒体输入、Activity/进程恢复、原签名覆盖安装及数据保留仍为 UNKNOWN / LOCAL ONLY，云端 CI 不替代设备证据。
+### 72.2 #413/#414 合并后的后续状态
+
+- PR #413 已于 2026-11-23 MERGED：`91105e6acb4432d8ffeac12c52c3019ffbf46a44`。
+- PR #414 已于 2026-11-23 MERGED：`3dd1889ace0d58a6f2332067111d8c000e29be31`。
+- PR #412 仍待最新 HEAD 的 Flutter regression 工作流终态后再合并。
