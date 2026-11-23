@@ -3244,7 +3244,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : tool.modes.contains(AssistantMode.tools)
                 ? AssistantMode.tools
                 : AssistantMode.consultation);
-    if (tool.id == 'saved_charts' && tool.headlessExecutor != null) {
+    if (tool.id == 'saved_charts' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
       final mergedValues = <String, String>{
@@ -3423,7 +3423,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'guansha' && tool.headlessExecutor != null) {
+    if (tool.id == 'guansha' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
       var request = AssistantToolArguments(
@@ -3627,7 +3627,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'shousheng_debt' && tool.headlessExecutor != null) {
+    if (tool.id == 'shousheng_debt' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
       final request = AssistantToolArguments(
@@ -3730,7 +3730,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'dream' && tool.headlessExecutor != null) {
+    if (tool.id == 'dream' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final currentArguments = arguments ??
           AssistantConversationOrchestrator.argumentsFor(tool, userText);
       final mergedValues = <String, String>{
@@ -3803,7 +3803,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     if (tool.id == 'ziwu_liuzhu' &&
-        tool.headlessExecutor != null) {
+        HeadlessToolDispatcher.hasExecutor(tool.id)) {
       // Do not trust a model-proposed timestamp or slot value. Re-extract
       // only values visible in the user's current text, and carry forward only
       // the previously persisted AWAITING_PARAMETERS slots.
@@ -3949,7 +3949,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'dosage' && tool.headlessExecutor != null) {
+    if (tool.id == 'dosage' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       final businessErrors =
@@ -4064,7 +4064,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // explicit date argument. Without a date, preserve the existing Page Tool
     // flow so a broad "how is it calculated?" request is not silently run for
     // today's date.
-    if (tool.id == 'solar_terms' && tool.headlessExecutor != null) {
+    if (tool.id == 'solar_terms' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       // A generic current-term request is valid with no slot. A named term is
       // deterministically extracted by AssistantConversationOrchestrator.
       // The executor owns current-term calculation and knowledge-asset lookup.
@@ -4078,7 +4078,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'huangdi_siji' && tool.headlessExecutor != null) {
+    if (tool.id == 'huangdi_siji' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
@@ -4186,7 +4186,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'chenggu' && tool.headlessExecutor != null) {
+    if (tool.id == 'chenggu' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
@@ -4295,7 +4295,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'ziwei' && tool.headlessExecutor != null) {
+    if (tool.id == 'ziwei' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
@@ -4397,7 +4397,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'bazi' && tool.headlessExecutor != null) {
+    if (tool.id == 'bazi' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       var request = arguments ?? AssistantToolArguments(toolId: tool.id);
       var argumentErrors = request.validateAgainst(tool);
       final missingKeys = tool.parameters
@@ -4585,7 +4585,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     // All three existing Meihua methods now use the same in-chat executor.
     // Method-specific values are still collected and validated before execution.
-    if (tool.id == 'meihua' && tool.headlessExecutor != null) {
+    if (tool.id == 'meihua' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final now = DateTime.now();
       var request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final method = request['method'];
@@ -4727,7 +4727,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'xiaoliuren' && tool.headlessExecutor != null) {
+    if (tool.id == 'xiaoliuren' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       final request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final argumentErrors = request.validateAgainst(tool);
       if (argumentErrors.isNotEmpty) {
@@ -4837,7 +4837,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
 
-    if (tool.id == 'yijing' && tool.headlessExecutor != null) {
+    if (tool.id == 'yijing' && HeadlessToolDispatcher.hasExecutor(tool.id)) {
       var request = arguments ?? AssistantToolArguments(toolId: tool.id);
       final method = request['method'];
       // Device time and random coin outcomes are generated only by the App,
@@ -4990,7 +4990,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       r'(?:鸦鸣鹊噪|鸦鸣|鹊噪|占灯花|灯花)',
     ).hasMatch(userText);
     if (tool.id == 'yuxiaji_omen' &&
-        tool.headlessExecutor != null &&
+        HeadlessToolDispatcher.hasExecutor(tool.id) &&
         !explicitlyOpenYuxiajiPage &&
         !requiresObservedYuxiajiInput) {
       // The current local time is generated by the App executor. Keep the
@@ -5012,7 +5012,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       r'(?:抽签|摇签|求签|求一签|抽一签|求个签|抽个签|抽一支|抽一根)',
     ).hasMatch(userText);
     if (tool.id == 'sanshan_lingqian' &&
-        tool.headlessExecutor != null &&
+        HeadlessToolDispatcher.hasExecutor(tool.id) &&
         isSanshanDrawRequest) {
       await _executeHeadlessTool(
         userText,
@@ -5028,7 +5028,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       r'(?:打开|进入|跳转到|去到).{0,16}(?:五运六气|推算|页面|工具页|工具)',
     ).hasMatch(userText);
     if (tool.id == 'yunqi' &&
-        tool.headlessExecutor != null &&
+        HeadlessToolDispatcher.hasExecutor(tool.id) &&
         !explicitlyOpenYunqiPage) {
       // The registered YunQi date slot is optional and explicitly defaults to
       // the device-local calendar day. Resolve that App-owned default before
@@ -5058,7 +5058,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final hasExplicitHeadlessDate = arguments?.values.containsKey('date') == true;
-    if (tool.headlessExecutor != null && hasExplicitHeadlessDate) {
+    if (HeadlessToolDispatcher.hasExecutor(tool.id) && hasExplicitHeadlessDate) {
       await _executeHeadlessTool(
         userText,
         tool,

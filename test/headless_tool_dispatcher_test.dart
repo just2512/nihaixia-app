@@ -55,7 +55,7 @@ void main() {
 
     test('uses the test override for a Page-only definition without changing production metadata', () async {
       final pageOnly = AssistantToolRouter.byId('guji_library')!;
-      expect(pageOnly.headlessExecutor, isNull);
+      expect(HeadlessToolDispatcher.hasExecutor(pageOnly.id), isFalse);
 
       final actual = await HeadlessToolDispatcher.execute(
         tool: pageOnly,
@@ -68,7 +68,7 @@ void main() {
       );
 
       expect(actual.toolId, pageOnly.id);
-      expect(pageOnly.headlessExecutor, isNull);
+      expect(HeadlessToolDispatcher.hasExecutor(pageOnly.id), isFalse);
     });
 
     test('rejects a Page-only tool when no executor is registered', () async {
