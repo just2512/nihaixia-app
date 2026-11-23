@@ -1,5 +1,72 @@
 import 'dart:convert';
 
+/// Per-step execution provenance stored with an AI multi-tool turn.
+class AssistantToolPlanStepMetadata {
+  const AssistantToolPlanStepMetadata({
+    required this.toolId,
+    required this.capabilityId,
+    required this.title,
+    required this.status,
+    this.arguments = const {},
+    this.sourceIds = const [],
+  });
+
+  final String toolId;
+  final String capabilityId;
+  final String title;
+  final String status;
+  final Map<String, String> arguments;
+  final List<String> sourceIds;
+
+  Map<String, dynamic> toJson() => {
+        'toolId': toolId,
+        'capabilityId': capabilityId,
+        'title': title,
+        'status': status,
+        'arguments': arguments,
+        'sourceIds': sourceIds,
+      };
+
+  static AssistantToolPlanStepMetadata? tryDecode(Object? raw) {
+    if (raw is! Map) return null;
+    final toolId = raw['toolId'];
+    final capabilityId = raw['capabilityId'];
+    final title = raw['title'];
+    final status = raw['status'];
+    if (toolId is! String ||
+        capabilityId is! String ||
+        title is! String ||
+        status is! String ||
+        toolId.trim().isEmpty ||
+        capabilityId.trim().isEmpty ||
+        title.trim().isEmpty ||
+        status.trim().isEmpty) {
+      return null;
+    }
+    final rawArguments = raw['arguments'];
+    final arguments = <String, String>{};
+    if (rawArguments is Map) {
+      for (final entry in rawArguments.entries) {
+        if (entry.key is String && entry.value is String) {
+          arguments[entry.key as String] = entry.value as String;
+        }
+      }
+    }
+    final rawSources = raw['sourceIds'];
+    final sourceIds = rawSources is List
+        ? rawSources.whereType<String>().toList(growable: false)
+        : const <String>[];
+    return AssistantToolPlanStepMetadata(
+      toolId: toolId,
+      capabilityId: capabilityId,
+      title: title,
+      status: status,
+      arguments: Map<String, String>.unmodifiable(arguments),
+      sourceIds: List<String>.unmodifiable(sourceIds),
+    );
+  }
+}
+
 /// Typed, versioned metadata persisted with every assistant conversation message.
 /// Decoder remains backward-compatible with the historical semicolon format.
 class AssistantMessageMetadata {
@@ -18,6 +85,7 @@ class AssistantMessageMetadata {
     this.traceId,
     this.invocationOrigin,
     this.contextRef = const {},
+    this.toolPlanSteps = const [],
   });
 
   final String? mode;
@@ -37,6 +105,7 @@ class AssistantMessageMetadata {
   final String? invocationOrigin;
   /// Immutable contextual anchor carried by every message in the anchored turn.
   final Map<String, String> contextRef;
+  final List<AssistantToolPlanStepMetadata> toolPlanSteps;
 
   Map<String, dynamic> toJson() => {
         'schemaVersion': 1,
@@ -54,6 +123,8 @@ class AssistantMessageMetadata {
         if (traceId != null) 'trace_id': traceId,
         if (invocationOrigin != null) 'invocationOrigin': invocationOrigin,
         if (contextRef.isNotEmpty) 'contextRef': contextRef,
+        if (toolPlanSteps.isNotEmpty)
+          'toolPlanSteps': toolPlanSteps.map((step) => step.toJson()).toList(),
       };
 
   String encode() => jsonEncode(toJson());
@@ -79,6 +150,12 @@ class AssistantMessageMetadata {
           knowledgeStatus: readString('knowledgeStatus'),
           traceId: readString('trace_id'),
           invocationOrigin: readString('invocationOrigin'),
+          toolPlanSteps: decoded['toolPlanSteps'] is List
+              ? (decoded['toolPlanSteps'] as List)
+                  .map(AssistantToolPlanStepMetadata.tryDecode)
+                  .whereType<AssistantToolPlanStepMetadata>()
+                  .toList(growable: false)
+              : const [],
           contextRef: decoded['contextRef'] is Map
               ? Map<String, String>.fromEntries(
                   (decoded['contextRef'] as Map).entries.where(
