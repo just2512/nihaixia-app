@@ -5,6 +5,8 @@ import 'package:nihaisha_app/widgets/solar_term_widgets.dart';
 import 'package:nihaisha_app/services/solar_term_result_context_executor.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 import 'assistant_tool_router.dart';
 
@@ -110,9 +112,16 @@ class _SolarTermSectionScreenState extends State<SolarTermSectionScreen> {
       final contextRef = AiContextResolver.buildSolarTermResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final resolution = await AiContextResolver.resolveSolarTermToolResult(
-        ref: contextRef,
-        structuredSnapshot: execution.structuredSnapshot!,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: contextRef,
+        resolver: () => AiContextResolver.resolveSolarTermToolResult(
+          ref: contextRef,
+          structuredSnapshot: execution.structuredSnapshot!,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
       if (!mounted) return;

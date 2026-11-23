@@ -9,6 +9,8 @@ import '../data/yijing_data.dart';
 import '../screens/assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/meihua_tool_service.dart';
 import '../utils/chart_export.dart';
 import '../utils/fold_aware_routes.dart';
@@ -153,11 +155,19 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
       final contextRef = AiContextResolver.buildMeihuaResultContextRef(
         structuredSnapshot: snapshot,
       );
-      final resolution = AiContextResolver.resolveMeihuaToolResult(
-        ref: contextRef,
-        structuredSnapshot: snapshot,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: contextRef,
+        resolver: () => AiContextResolver.resolveMeihuaToolResult(
+          ref: contextRef,
+          structuredSnapshot: snapshot,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
+      if (!mounted) return;
       if (!resolution.isResolved || resolved == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -213,11 +223,19 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
         fieldPath: fieldPath,
         fieldLabel: fieldLabel,
       );
-      final resolution = AiContextResolver.resolveMeihuaResultField(
-        ref: fieldRef,
-        structuredSnapshot: snapshot,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: fieldRef,
+        resolver: () => AiContextResolver.resolveMeihuaResultField(
+          ref: fieldRef,
+          structuredSnapshot: snapshot,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
+      if (!mounted) return;
       if (!resolution.isResolved || resolved == null) {
         _showMeihuaContextError(resolution.status.name.toUpperCase());
         return;

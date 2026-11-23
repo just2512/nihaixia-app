@@ -4,6 +4,42 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
+class _ContextResolverGatewayVisitor extends RecursiveAstVisitor<void> {
+  final List<String> violations = [];
+
+  bool _insideGatewayResolverCallback(AstNode node) {
+    AstNode? current = node.parent;
+    while (current != null) {
+      if (current is FunctionExpression) {
+        final named = current.parent;
+        if (named is NamedExpression &&
+            named.name.label.name == 'resolver') {
+          final arguments = named.parent;
+          final invocation = arguments is ArgumentList ? arguments.parent : null;
+          return invocation is MethodInvocation &&
+              invocation.methodName.name == 'resolve' &&
+              invocation.target != null;
+        }
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.target?.toSource() == 'AiContextResolver' &&
+        node.methodName.name.startsWith('resolve') &&
+        !_insideGatewayResolverCallback(node)) {
+      violations.add(
+        'Direct AiContextResolver.${node.methodName.name} call bypasses '
+        'ContextResolutionGateway at offset ${node.offset}',
+      );
+    }
+    super.visitMethodInvocation(node);
+  }
+}
+
 class _ForbiddenUiNodeVisitor extends RecursiveAstVisitor<void> {
   final Set<String> found = {};
 
@@ -96,6 +132,12 @@ Future<void> main(List<String> args) async {
           inspectExecutorUri(configuration.uri.stringValue, file);
         }
       }
+    }
+
+    final resolverVisitor = _ContextResolverGatewayVisitor();
+    parsed.unit.accept(resolverVisitor);
+    for (final violation in resolverVisitor.violations) {
+      violations.add('${file.path}: $violation');
     }
 
     if (normalizedPath(file) == dispatcher) {
