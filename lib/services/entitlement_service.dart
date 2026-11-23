@@ -39,6 +39,25 @@ class EntitlementSnapshot {
   bool get isActive => status == EntitlementServiceStatus.active;
 }
 
+enum LicenseTokenReplacementStatus {
+  installed,
+  confirmationRequired,
+  rejected,
+  storageFailure,
+}
+
+class LicenseTokenReplacementResult {
+  const LicenseTokenReplacementResult({
+    required this.status,
+    required this.verification,
+  });
+
+  final LicenseTokenReplacementStatus status;
+  final LicenseVerificationResult verification;
+
+  bool get installed => status == LicenseTokenReplacementStatus.installed;
+}
+
 class EntitlementService extends ChangeNotifier
     implements FeatureAuthorizer {
   EntitlementService({
@@ -146,21 +165,25 @@ class EntitlementService extends ChangeNotifier
         );
       case LicenseVerificationStatus.unknownIssuer:
         return _invalid(FeatureAuthorizationFailureReason.issuerUnknown);
+      case LicenseVerificationStatus.issuerCompromised:
+        return _invalid(FeatureAuthorizationFailureReason.issuerCompromised);
       case LicenseVerificationStatus.invalidSignature:
       case LicenseVerificationStatus.invalidIssuerKey:
-      case LicenseVerificationStatus.issuerCompromised:
         return _invalid(FeatureAuthorizationFailureReason.signatureInvalid);
       case LicenseVerificationStatus.unsupportedRevision:
       case LicenseVerificationStatus.unsupportedSchema:
         return _invalid(FeatureAuthorizationFailureReason.unsupportedRevision);
       case LicenseVerificationStatus.wrongDevice:
         return _invalid(FeatureAuthorizationFailureReason.deviceMismatch);
+      case LicenseVerificationStatus.revoked:
+        return _invalid(FeatureAuthorizationFailureReason.licenseRevoked);
       case LicenseVerificationStatus.invalidFormat:
       case LicenseVerificationStatus.invalidPayload:
+        return _invalid(FeatureAuthorizationFailureReason.invalidTokenFormat);
       case LicenseVerificationStatus.wrongProduct:
+        return _invalid(FeatureAuthorizationFailureReason.wrongProduct);
       case LicenseVerificationStatus.wrongApplication:
-      case LicenseVerificationStatus.revoked:
-        return _invalid(FeatureAuthorizationFailureReason.signatureInvalid);
+        return _invalid(FeatureAuthorizationFailureReason.wrongApplication);
     }
   }
 
@@ -264,7 +287,7 @@ class EntitlementService extends ChangeNotifier
 
   /// Validates a replacement before touching disk. A reduction requires an
   /// explicit affirmative parameter supplied by a user-confirmed UI flow.
-  Future<LicenseVerificationResult> replaceToken({
+  Future<LicenseTokenReplacementResult> replaceToken({
     required String token,
     required bool allowFeatureReduction,
   }) async {
@@ -274,19 +297,56 @@ class EntitlementService extends ChangeNotifier
       token,
       expectedDevicePublicKeySha256: deviceKey.sha256Base64Url,
     );
-    if (!next.isValid || next.payload == null) return next;
+    if (!next.isValid || next.payload == null) {
+      return LicenseTokenReplacementResult(
+        status: LicenseTokenReplacementStatus.rejected,
+        verification: next,
+      );
+    }
 
+    final previousToken = await _platform.readActiveToken();
     final oldFeatures = _snapshot.grantedFeatureIds;
     final nextFeatures = next.payload!.grantedFeatureIds;
     final reducesEntitlements = oldFeatures.difference(nextFeatures).isNotEmpty;
     if (reducesEntitlements && !allowFeatureReduction) {
-      return const LicenseVerificationResult(
-        LicenseVerificationStatus.validWithoutGrantedFeatures,
+      return LicenseTokenReplacementResult(
+        status: LicenseTokenReplacementStatus.confirmationRequired,
+        verification: next,
       );
     }
-    await _platform.writeActiveTokenAtomically(token);
+
+    try {
+      await _platform.writeActiveTokenAtomically(token);
+      await refresh();
+      final persisted =
+          _snapshot.isActive && _snapshot.licenseId == next.payload!.licenseId;
+      if (!persisted) {
+        await _restorePreviousToken(previousToken);
+        return LicenseTokenReplacementResult(
+          status: LicenseTokenReplacementStatus.rejected,
+          verification: next,
+        );
+      }
+      return LicenseTokenReplacementResult(
+        status: LicenseTokenReplacementStatus.installed,
+        verification: next,
+      );
+    } on Object {
+      await _restorePreviousToken(previousToken);
+      return LicenseTokenReplacementResult(
+        status: LicenseTokenReplacementStatus.storageFailure,
+        verification: next,
+      );
+    }
+  }
+
+  Future<void> _restorePreviousToken(String? previousToken) async {
+    if (previousToken == null) {
+      await _platform.deleteActiveToken();
+    } else {
+      await _platform.writeActiveTokenAtomically(previousToken);
+    }
     await refresh();
-    return next;
   }
 
   @override
