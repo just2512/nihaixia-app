@@ -4034,7 +4034,7 @@ PR HEAD 门禁证据：
 - `requiresAdvancedAi` 仅在 `origin == aiDispatch` 且计划包含至少两个不同 `capabilityId` 时成立；同一能力重复调用不计为跨工具计划；用户手动执行多能力计划不触发 `ai_advanced`；`structured_diagnosis` 单独执行保持免费。
 - `AssistantToolDefinition` 已为当前注册工具明确声明稳定的 `capabilityId`，当前初始映射按工具 ID 一对一建立；将来若多个工具属于同一业务能力，应显式共享同一 capability ID，而不是按工具调用数计费。
 - 本批只建立执行计划和注册元数据契约，**尚未**将所有实际 Headless 调度路径改造成先形成完整计划、再在第一个业务副作用前统一授权。生产计划聚合、调度器接线、授权前无副作用回归仍是 F1 后续必做项。
-- 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 最新 head 的 Fork license 检查已通过，Flutter full regression 正在执行。不得将 Branch validation 的 SKIPPED 计为通过。
+- 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 已合并至 master（`93940d485ab3e2e6bf81a11fd2a4ff2d05858980`）。该 PR 的条件性 Branch validation 为 SKIPPED，不计 PASS。
 
 
 ---
@@ -4044,4 +4044,19 @@ PR HEAD 门禁证据：
 - 新增注入式 `FeatureAuthorizer.authorize(featureId)` 异步接口；决策明确区分 `allowed`、`denied`、`temporarilyUnavailable`，避免将初始化超时/存储暂不可用误判为永久未授权。
 - 稳定错误原因覆盖初始化超时、存储损坏/不可用、未知发行者、签名无效、修订不支持、设备不匹配、密钥缺失/失效、Keystore 暂不可用和 Provider 错误；`unsupportedFeatureClaim` 只作为诊断项，不因此拒绝整份合法 Token。
 - 当前切片只有接口/数据契约和 Fake 注入测试；尚无 EntitlementService、共享初始化 Future、2 秒有界等待、TokenStore、Android KeyStore Bridge、内存快照或 UI 状态发布。
+- PR #429 已于 2026-11-23 合并至 master（`065189dd135ec1142d10bad1347a1c9ff6a2dd6f`）；当前仍只有异步接口/数据契约，生产 EntitlementService 和门禁接线尚未完成。
 - 生产授权接入仍必须遵守 v1.2 §7：超时返回暂时不可用、不持久化临时拒绝，基础免费功能继续可用；不得用全局静态门禁替代依赖注入。
+
+
+---
+
+## 83. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
+
+- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为新集成基线，将离线授权协议、Dart Payload/Verifier、Python Issuer 和跨语言测试向量统一到已合并的架构约束 v1.2；不修改 PR #416 的 Draft 分支。
+- Token 使用 `protocol_revision`、`device_public_key_sha256`、`request_id` 和 Ed25519 JCS 域签名；客户端不保存 pending request，不匹配 request nonce/hash；Nonce/hash 只用于发行端数据库唯一约束、幂等和审计。
+- 客户端区分 known / protocol-allowed / enforced Feature；发行端按 revision 限定 issuable Feature。首期只有 `ai_advanced` 和 `contextual_assistant` 可签发，不能通过调用参数或 CLI 扩大签发范围。
+- Python Issuer 校验 YANJIR1 的 P-256 ECDSA 设备申请、SPKI 曲线/规范编码和指纹；SQLite 事务记录订单、多次签发、request 唯一约束、reissue 关系和审计事件。私钥加密保存于仓库外，测试向量私钥不进入 Release Key Ring。
+- Issuer 本地 Key Ring 支持 `active`、`standby`、`retired`、`revoked`、`compromised` 五种状态；只有 `active` 可用于新签发，其他状态保留轮换/历史/吊销含义。
+- 本 PR CI 已在上一 head 完成 Fork license、Flutter 全量回归、Python Issuer 单测、Android arm64 APK/Native 单测；因分支重基线和 Key Ring 生命周期补充，必须以重基线后的最新 PR head 重新验收。
+- 本切片**不代表** Android Keystore Plugin、Dart Platform Bridge、TokenStore、EntitlementService、生产 Key Ring、FeatureAuthorizer 生产接线、Dispatcher 副作用前授权、ContextResolutionGateway、激活 UI 或 Find N2 设备验收已完成。
+- PR #432 是依赖旧 `feature/pro-license-batch-1` 的重复协议候选；以 master 为目标的本 PR 完成合并后，#432 应标记为 SUPERSEDED。PR #416 继续保持 OPEN / DRAFT，不因该切片而修改或合并。
