@@ -74,9 +74,10 @@ void main() {
           matching: find.byType(Scrollable),
         ).first,
       );
-      await tester.longPress(originalClause);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      final selectableClause = originalClause.hitTestable();
+      await tester.ensureVisible(selectableClause);
+      await tester.longPress(selectableClause);
+      await tester.pumpAndSettle();
 
       expect(find.text('问 AI'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
