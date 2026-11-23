@@ -1059,3 +1059,14 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned contextual authorization and source-anchor resolution gateway with regression tests; only portions for which sufficient rights exist.
+
+Files:
+ .github/workflows/release-trust-anchor.yml
+ lib/licensing/app_feature_authorizer_factory.dart
+ lib/licensing/release_license_key_ring.dart
+ test/release_app_authorizer_smoke_test.dart
+ test/release_license_key_ring_test.dart
+ tool/license_issuer/check_release_readiness.py
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Release trust-anchor configuration, composition root, source exclusion checks, release gate and regression tests; only portions for which sufficient rights exist.
