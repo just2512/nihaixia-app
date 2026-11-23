@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/licensing/app_feature_authorizer_factory.dart';
+import 'package:nihaisha_app/licensing/feature_authorizer.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/licensing/release_license_key_ring.dart';
 
@@ -27,6 +29,21 @@ Map<String, Object?> _key(
       'status': status,
     };
 
+bool _containsBytes(List<int> haystack, List<int> needle) {
+  if (needle.isEmpty || needle.length > haystack.length) return false;
+  for (var start = 0; start <= haystack.length - needle.length; start++) {
+    var matches = true;
+    for (var offset = 0; offset < needle.length; offset++) {
+      if (haystack[start + offset] != needle[offset]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+  return false;
+}
+
 Future<Map<String, dynamic>> _testVectors() async =>
     jsonDecode(
       await File('test/fixtures/pro-license-test-vectors.json').readAsString(),
@@ -34,6 +51,21 @@ Future<Map<String, dynamic>> _testVectors() async =>
 
 void main() {
   group('ReleaseLicenseKeyRingFactory', () {
+    test('Debug composition root remains fail-closed', () async {
+      final authorizer = createAppFeatureAuthorizer(release: false);
+      final decision = await authorizer.authorize('ai_advanced');
+      expect(decision.status, FeatureAuthorizationStatus.denied);
+      expect(decision.reason, FeatureAuthorizationFailureReason.unlicensed);
+    });
+
+    test('Release composition root refuses missing production trust anchors',
+        () {
+      expect(
+        () => createAppFeatureAuthorizer(release: true),
+        throwsStateError,
+      );
+    });
+
     test('Debug/Test permits an empty ring but Release does not', () {
       expect(
         ReleaseLicenseKeyRingFactory.fromJson(
@@ -179,17 +211,23 @@ void main() {
       final encodedHex = bytes
           .map((value) => value.toRadixString(16).padLeft(2, '0'))
           .join();
-      final sources = [
-        File('lib/main.dart'),
-        File('lib/licensing/release_license_key_ring.dart'),
+      final sourceRoots = [
+        Directory('lib'),
+        Directory('android/app/src/main'),
       ];
-      for (final file in sources) {
-        final source = await file.readAsString();
-        expect(source, isNot(contains(rawBase64Url)), reason: file.path);
-        expect(source, isNot(contains(encodedStandard)), reason: file.path);
-        expect(source.toLowerCase(), isNot(contains(encodedHex)),
-            reason: file.path);
-        expect(source, isNot(contains('test-issuer-01')), reason: file.path);
+      for (final root in sourceRoots) {
+        await for (final entity in root.list(recursive: true)) {
+          if (entity is! File) continue;
+          final fileBytes = await entity.readAsBytes();
+          final source = utf8.decode(fileBytes, allowMalformed: true);
+          expect(_containsBytes(fileBytes, bytes), isFalse,
+              reason: 'raw test public key must not ship in ${entity.path}');
+          expect(source, isNot(contains(rawBase64Url)), reason: entity.path);
+          expect(source, isNot(contains(encodedStandard)), reason: entity.path);
+          expect(source.toLowerCase(), isNot(contains(encodedHex)),
+              reason: entity.path);
+          expect(source, isNot(contains('test-issuer-01')), reason: entity.path);
+        }
       }
     });
   });
