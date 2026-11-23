@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'solar_term_tool_service.dart';
 
 class SolarTermResultContextExecution {
@@ -39,7 +40,7 @@ class SolarTermResultContextExecutor {
     }
 
     final normalized = {'term': term};
-    final result = await SolarTermToolService.execute(normalized);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'solar_terms', arguments: normalized);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(normalized).isNotEmpty ||
