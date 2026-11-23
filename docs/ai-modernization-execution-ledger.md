@@ -4060,3 +4060,13 @@ PR HEAD 门禁证据：
 - 本 PR CI 已在上一 head 完成 Fork license、Flutter 全量回归、Python Issuer 单测、Android arm64 APK/Native 单测；因分支重基线和 Key Ring 生命周期补充，必须以重基线后的最新 PR head 重新验收。
 - 本切片**不代表** Android Keystore Plugin、Dart Platform Bridge、TokenStore、EntitlementService、生产 Key Ring、FeatureAuthorizer 生产接线、Dispatcher 副作用前授权、ContextResolutionGateway、激活 UI 或 Find N2 设备验收已完成。
 - PR #432 是依赖旧 `feature/pro-license-batch-1` 的重复协议候选；以 master 为目标的本 PR 完成合并后，#432 应标记为 SUPERSEDED。PR #416 继续保持 OPEN / DRAFT，不因该切片而修改或合并。
+
+## 84. D：TokenStore 平台桥接与异步 EntitlementService（2026-11-23）
+
+- 当前分支以协议 PR #433 的最新实现 HEAD `14c2cf226c9591729a568393262e368100939d67` 为基线；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
+- Bridge 使用与 C 分支 PR #435 一致的 Channel `com.nihaisha.nihaisha_app/licensing` 和方法：`readLicenseToken`、`writeLicenseTokenAfterVerification`、`deleteLicenseToken`、`getDeviceKey`、`createDeviceKeyForActivation`、`signActivationRequest`、`checkPrivateKeyUsability`；设备密钥响应字段使用 `publicKeySpkiBase64Url`、`publicKeySha256`、`securityLevel`、`strongBoxFallback`。
+- `EntitlementService` 采用共享初始化 Future、2 秒有界等待和不可变快照；超时为 `temporarilyUnavailable/initializationTimeout`，不将其持久化为永久拒绝；一次初始化完成后使用当前进程快照，显式 `refresh` 才重新读取并验签。
+- 没有 Token 时报告 `unlicensed`，不访问、不创建设备密钥；有 Token 时仅 get-only 读取密钥，并核验本地挑战返回的公钥指纹与读取结果一致，再由注入的 `LicenseVerifier` 验签。密钥缺失/失效不会自动重建。
+- Token 替换在写入前完成验签、设备绑定与权益差异比较；降低 Feature 必须显式传入确认标记，返回即将失去的 Feature 集合；写入后从平台重新读取并验签，失败时恢复原 Token 或删除本次新写入文件。
+- 测试包括真实 v1.2 测试向量、无 Token/缺密钥/未知发行者、存储损坏与暂时不可用、并发初始化、2 秒超时、完成后初始化缓存、挑战指纹不一致、无效 Token 不覆盖、原子替换重读、降低权益二次确认，以及 MethodChannel 字段/方法/错误映射。
+- 当前 PR 仅包含 Dart Bridge/Service 与 Mock Channel 测试；C 分支 PR #435 尚未合并，真机原生连接仍待集成。不得把 Mock Channel、JVM、CI 结果表述为 Find N2 KeyStore / AtomicFile / StrongBox 已验证。激活 UI、Key Ring Release 装配、F1/G 门禁和后台 FlutterEngine 仍是独立批次。
