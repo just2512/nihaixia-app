@@ -3871,3 +3871,14 @@ PR HEAD 门禁证据：
 - 本轮历史分支 compare / 逐文件审计仍不等于 58 个未匹配 refs 全部完成审计；未在 §71–74 中具体列明源码/测试核验的 refs 继续为 `NOT_REVIEWED`。
 - 不批量删除历史 branch refs；不将旧分支 ahead commit 数量直接当作功能缺口。
 - PR #416 专业版永久授权仍为 OPEN / DRAFT，当前处于独立开发批次；按用户要求不合并、不关闭、不修改，不计入本轮其他遗留项的关闭条件。
+
+
+---
+
+## 75. 2026-11-23 云气图 200% 字号绘制结果回归补强
+
+- 历史分支 `test/yanji-yunqi-chart-text-scale-20261117` 的旧测试捕获五行图、五运图、六气图的 `RepaintBoundary` RGBA 像素，并断言 100% 与 200% TextScaler 的最终输出不同。
+- 当前 master 同路径测试原先只断言对应 Painter 的 `shouldRepaint(normal)` 为 true；这能证明缩放状态变化会请求重绘，但不能单独证明最终像素已按字号变化。
+- 当前生产 `lib/screens/yunqi_charts.dart` 已将 `MediaQuery.textScalerOf(context)` 传入三类 Painter / TextPainter，并在 `shouldRepaint` 比较 TextScaler；本次不修改生产 Painter 或计算数据。
+- 本次只增强 Widget 回归：保留 `shouldRepaint` 断言，并增加实际 RepaintBoundary RGBA 像素差异断言，覆盖五行图、五运图、六气图。
+- 该测试只能证明 Flutter 渲染输出随 TextScaler 改变；Find N2 真实屏幕阅读、200% 字号无裁切/无重叠仍为 `MISSING / LOCAL ONLY`。
