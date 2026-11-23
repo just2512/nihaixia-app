@@ -7,7 +7,7 @@
 | 项目 | 当前基线 | 核验要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
-| 当前仓库/文档基线 | `master @ 4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 已合并；最近一次应用代码改动为 PR #414 `3dd1889ace0d58a6f2332067111d8c000e29be31` |
+| 当前应用代码基线 | `master @ 8f5091c08f10743e7ef3322c86f50fc2e296fd78` | PR #424 已合并出生日期/时刻歧义拒绝保护；PR #414 为此前关煞百科 UI 改动。PR #420/#421 为测试/文档变更 |
 | 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
 | 原签名配置 | 本地 `android/key.properties` + 原 keystore | 仅本地保管；不得提交、上传、粘贴到聊天或放入 CI secret |
@@ -23,9 +23,9 @@
 按以下顺序执行，不要把单份专项清单当成完整验收：
 
 1. [本地 Android 构建、签名和升级](local-android-release-checklist.md)：原签名核对、Release APK 构建与 Debug-only TRACE 安全切换。
-2. [Find N2 真机折叠屏验收](find-n2-real-device-acceptance.md)：外屏、内屏、半折叠、键盘/Insets、弹层、文件选择器和无损升级。 同时按该文档 §M 完成内经/本草讲稿段落级情境入口的真实设备检查。
+2. [Find N2 真机折叠屏验收](find-n2-real-device-acceptance.md)：外屏、内屏、半折叠、键盘/Insets、弹层、文件选择器和无损升级；按 §M 验收内经/本草讲稿段落级情境入口，并按 §N 验收 Dream、Guansha、确定性工具结果/字段快照及跨结果多轮 TRACE。
 3. [Gemma 4 E4B 本地配置与边界](local-ai-e4b.md)：模型下载、SHA 校验、导入、Native backend 和已知行为。
-4. [Find N2 本地 AI 后端验收](find-n2-local-ai-acceptance-checklist.md)：GPU/CPU、多轮、多媒体、进程恢复、清除和针灸情境条目。
+4. [Find N2 本地 AI 后端验收](find-n2-local-ai-acceptance-checklist.md)：GPU/CPU、多轮、多媒体、进程恢复、清除和针灸情境条目；本地结果与字段快照入口按真机验收方案 §N 执行。
 5. [Find N2 AI TRACE 验收方案](find-n2-ai-trace-acceptance-plan.md)：各阶段、trace_id、消息 metadata、Native backend 和持久化核对。
 
 ## 2. 第一阶段：旧包检查与本地 Release 构建

@@ -12,7 +12,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `3dd1889ace0d58a6f2332067111d8c000e29be31` | PR #414 已合并，包含关煞百科轻列表与折叠/大字号回归；PR #415 仅改文档，不改变应用代码基线 |
+| 本轮最新应用代码核验基线 | `8f5091c08f10743e7ef3322c86f50fc2e296fd78` | PR #424 已合并出生日期/时间歧义拒绝保护；PR #414 为此前最近一次 UI 运行时代码变更。PR #420/#421/#423 仅涉及测试或验收文档 |
 | 本轮最新文档核验基线 | `4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 已合并，收尾历史分支审计并统一 Find N2 验收文档；本轮 E4B 总交接文档重建另见 §73 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
@@ -21,7 +21,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线为 PR #414 合并后的 `3dd1889ace0d58a6f2332067111d8c000e29be31`；当前文档基线为 PR #415 合并后的 `4e9c8b66ce30d5e7c295ccb1672f817204c53cff`。PR #415 仅更新文档，不改变应用代码。历史任务范围与历次核验仍以各节记录为准；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线为 PR #424 合并后的 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`；PR #414 是此前关煞百科 UI 运行时代码变更。当前文档基线在本 PR 合并前为 `fd6db8a84de87bd1da6364315ed5a6529d30b76c`；本 PR 只补充 Find N2 情境结果/字段快照设备验收矩阵及交接台账，不改应用代码。历史任务范围与历次核验仍以各节记录为准；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -3882,3 +3882,37 @@ PR HEAD 门禁证据：
 - 当前生产 `lib/screens/yunqi_charts.dart` 已将 `MediaQuery.textScalerOf(context)` 传入三类 Painter / TextPainter，并在 `shouldRepaint` 比较 TextScaler；本次不修改生产 Painter 或计算数据。
 - 本次只增强 Widget 回归：保留 `shouldRepaint` 断言，并增加实际 RepaintBoundary RGBA 像素差异断言，覆盖五行图、五运图、六气图。
 - 该测试只能证明 Flutter 渲染输出随 TextScaler 改变；Find N2 真实屏幕阅读、200% 字号无裁切/无重叠仍为 `MISSING / LOCAL ONLY`。
+
+---
+
+## 76. 2026-11-23 Find N2 情境结果与字段快照真机矩阵补齐
+
+- 第三轮清理旧 E4B 本地 AI 验收清单时，发现旧稿 §10.4–§10.7 曾定义 Dream 单条词条、Guansha 单次结果隐私、其他确定性工具结果/字段快照及跨上下文多轮 TRACE；当前主线的通用 GPU/CPU、多媒体、恢复、清除和 TRACE 步骤已保留，但这些情境结果类别此前没有在 Find N2 真机矩阵中各自建立独立场景 ID。
+- 已逐项核对当前 master 生产入口与自动化测试：`dream_screen.dart` + `dream_contextual_result_entry_test.dart`（多候选只解释所选 DreamEntry、来源/快照与滚动恢复）；`guansha_screen.dart` + `guansha_contextual_result_entry_test.dart`（唯一城市、同一 Headless 执行对象、输入/设置变更后入口失效、儿童资料脱敏）；Bazi / Ziwei 结果与字段快照测试；YiJing / Meihua 结果快照与字段路径测试；Dosage 换算结果、ZiWuLiuZhu 四方法字段测试。
+- 在 `docs/find-n2-real-device-acceptance.md` 新增 §N：Dream、Guansha、Bazi/Ziwei、YiJing/Meihua、Dosage/ZiWuLiuZhu 及跨结果多轮 TRACE 的独立设备场景；结果模板增加 N1–N6。只增加验收要求，不修改应用代码或测试门槛。
+- 同步 `docs/find-n2-e4b-local-handover.md`，把 §N 加入真机交接执行顺序；期间 PR #424 已合并出生日期/时刻歧义拒绝保护，当前应用代码基线更新为 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`。
+- 本次文档是设备执行规范，不是设备结果。Dream/Guansha/结果字段、GPU/CPU 多轮和跨会话 TRACE 均保持 `MISSING / UNKNOWN / LOCAL ONLY`，不得将 Widget/Resolver 自动化测试替代实体 OPPO Find N2 证据。
+- PR #424 已合并（merge SHA `8f5091c08f10743e7ef3322c86f50fc2e296fd78`）：Bazi、Guansha、Ziwei 自然语言入口现在收集并规范化全部出生日期/时刻候选；不同候选产生歧义标记，统一参数校验在 Headless 确定性引擎执行前拒绝；相同值不同格式去重。#422 因旧分支重复声明和 CI 失败关闭为 SUPERSEDED。PR #424 的 Fork license、Dart/Flutter 静态分析、全量 Flutter 回归、Android arm64 与 Native 单测均成功；条件性 Branch validation 为 SKIPPED，不计 PASS。
+- 专业版授权 PR #416 继续保持 OPEN / DRAFT，仍在修改中；本轮不修改、不合并、不关闭授权协议、离线签发器、相关权属清单或任何 #416 文件。
+
+---
+
+## 77. 2026-11-23 第三轮无 PR 关联历史分支复核
+
+- 本轮远端分支引用 480 个、PR 记录 424 条；按 branch head 对应关系统计，有 58 个非 master refs 没有 PR head 关联。未逐项读取完整文件/测试证据的 refs 仍为 `NOT_REVIEWED`；不批量合并或删除。
+- `work/ai-capability-inventory`：该分支审计基线停留在 2026-11-10，仍记 24 个路由定义、0 个 Headless、端到端 TRACE MISSING；其 `docs/ai-capability-inventory-audit.md` 和 `docs/ai-trace-privacy-audit.md` 不存在于当前 master。当前 master 的 `docs/ai-capability-audit-report.md` 已演进到 2026-11-15 之后并记录 17 个 Headless、6 个 Page-only、结构化问诊内联、typed result/TRACE 进展。旧目录报告与现状相冲突，不回灌；保留旧分支为历史审计证据。
+- `work/ai-contextual-ziwei-result-sample`：旧 `AiContextRef` 只有基础元数据模型，旧 `ContextualAiSheet` 只有简单弹层，旧 Ziwei 页面只覆盖整体结果。当前 master 已扩展为封闭 `AiContextKind`、metadata fail-closed 正规化、结果/字段快照、来源/规则版本/锚点校验、宽屏侧面板和会话存储作用域；Ziwei 已有整体结果及字段级入口。主线 `ai_context_prompt_builder_test.dart` 791 行，旧分支仅 103 行；不合并旧实现。
+- `docs/ai-contextual-acceptance-ledger-20261117` 与 `docs/contextual-ask-ai-closeout-20261122` 相对当前 master 均没有文件差异（仅落后）；不产生新合并。
+- `docs/ai-contextual-closeout-2026-11-22`、`docs/ai-contextual-final-device-handoff-20261121`：保留的 Find N2/E4B 场景已选择性整合到 #417 总交接清单、#413/#415/#423 的版本和设备矩阵文档；旧稿仍含 `1.11.30+8039` 等过期基线，不直接回灌。
+- `docs/ai-interview-slot-bridge-closeout-2026-11-15`、`docs/ai-modernization-cloud-acceptance-closeout-2026-11-21`、`docs/ai-modernization-ledger-2026-11-15`：均为旧基线台账/产品边界增量，没有当前主线缺失的运行时代码；有效约束已在当前能力规范与后续执行台账中重写，不合并旧快照。
+- `docs/yanji-editorial-phase-status-20261117`、`docs/yanji-editorial-plan-phase2-closeout-20261119`：当前主线 `docs/yanji-editorial-frontend-design-plan.md` 已增加 Phase 1–4 自动化完成状态、PR #337 等后续批次与真机 MISSING 边界；旧稿落后且只含较早阶段记录，不覆盖当前主线。
+- `work/ai-trace-dispatch-headless-2026-11-12`：早期本地助手页面/测试改动已被当前 10,000+ 行生产助手页面、6,800+ 行页面回归及统一 TRACE/Headless 结果链路替代；不整支回灌。
+- `work/ai-guansha-targeted-validation-20261121`：旧测试直接点击 SQLite FFI 偏好开关；当前主线已用 `tester.runAsync` 并等待 `SettingsRepository` 写入完成，稳定性实现更完整，不 cherry-pick。
+- `work/yanji-editorial-phase3-aux`：比较 `lib/screens/diagnosis_history_screen.dart` 与 `lib/screens/saved_charts_screen.dart` 后，两个生产文件 blob 均与当前 master 完全一致；旧分支仅在两份 Widget 测试上有差异。主线 `diagnosis_history_editorial_layout_test.dart` 已覆盖浅/深主题，`saved_charts_editorial_layout_test.dart` 还增加深色主题、更完整的排盘入口及左滑删除验证，覆盖强于旧分支（旧测试分别 101/143 行，主线 105/171 行）。不 cherry-pick 旧测试，不改生产页面。
+- 已核实的其余历史引用继续按 §72 的逐项处置；本节没有把仅执行 `master compare` 的 refs 自动提升为内容审计 PASS。
+
+### 77.1 当前 PR 收尾边界
+
+- PR #424 已合并，提交 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`；PR #422 已关闭并标记 `SUPERSEDED`。
+- PR #423 为 Find N2 情境结果/字段快照真机矩阵补充；仅修改验收文档，实机状态仍为 `MISSING / UNKNOWN / LOCAL ONLY`。
+- PR #416 专业版授权保持 `OPEN / DRAFT` 且未修改；它仍在用户修改中，不纳入任何本轮合并批次。
