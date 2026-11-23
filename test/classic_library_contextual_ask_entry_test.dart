@@ -63,20 +63,16 @@ void main() {
       expect(reader.contextualAskParagraphs, isTrue);
       expect(find.byType(SelectionArea), findsWidgets);
 
-      final originalClause =
-          find.textContaining('脉缓者', findRichText: true);
-      expect(originalClause, findsOneWidget);
-      await tester.scrollUntilVisible(
-        originalClause,
-        180,
-        scrollable: find.descendant(
-          of: find.byType(SingleChildScrollView),
-          matching: find.byType(Scrollable),
-        ).first,
-      );
-      final selectableClause = originalClause.hitTestable();
-      await tester.ensureVisible(selectableClause);
-      await tester.longPress(selectableClause);
+      // Paragraph mode deliberately excludes Markdown blockquotes and
+      // lists from contextual selection. Exercise the first safe explanatory
+      // paragraph in the real asset rather than assuming the quoted clause
+      // itself is eligible for the paragraph-level action.
+      final firstExplanationParagraph =
+          find.textContaining('太阳病的中风证', findRichText: true);
+      expect(firstExplanationParagraph, findsOneWidget);
+      final selectableParagraph = firstExplanationParagraph.hitTestable();
+      await tester.ensureVisible(selectableParagraph);
+      await tester.longPress(selectableParagraph);
       await tester.pumpAndSettle();
 
       expect(find.text('问 AI'), findsOneWidget);
@@ -96,17 +92,17 @@ void main() {
       expect(assistant.contextualExplanationOnly, isTrue);
       expect(assistant.contextRef['kind'], 'classic');
       expect(assistant.contextRef['moduleId'], 'shanghan');
-      expect(assistant.contextRef['anchorId'], 'shanghan:clause:002');
+      expect(assistant.contextRef['anchorId'], 'shanghan:clause:002:paragraph:5-5');
       expect(assistant.contextRef['sourceId'], sourceId);
       expect(assistant.contextRef['anchorVersion'], hasLength(64));
 
       final selectedText = assistant.contextRef['selectedText'];
       expect(selectedText, isNotNull);
       expect(selectedText, isNotEmpty);
-      expect('「太阳病」，发热，汗出，恶风，脉缓者，名为「中风」。',
+      expect('太阳病的中风证，有下面的症状：发热、汗出、恶风、脉缓。',
           contains(selectedText!));
       expect(assistant.initialPrompt, contains(selectedText));
-      expect(assistant.initialPrompt, contains('太阳病'));
+      expect(assistant.initialPrompt, contains('太阳病的中风证'));
       expect(assistant.initialPrompt, contains(sourceId));
       expect(tester.takeException(), isNull);
 
