@@ -29,7 +29,11 @@ def b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
-def make_device_request() -> tuple[str, str, str, str]:
+def make_device_request(
+    *,
+    request_id: str | None = None,
+    canonical: bool = True,
+) -> tuple[str, str, str, str]:
     private_key = ec.generate_private_key(ec.SECP256R1())
     spki = private_key.public_key().public_bytes(
         Encoding.DER,
@@ -39,7 +43,7 @@ def make_device_request() -> tuple[str, str, str, str]:
     request_nonce = b64url(b"N" * 32)
     payload = {
         "schema_version": 1,
-        "request_id": str(uuid.uuid4()),
+        "request_id": request_id or str(uuid.uuid4()),
         "request_nonce": request_nonce,
         "app_id": issuer.APP_ID,
         "product_id": issuer.PRODUCT_ID,
@@ -48,7 +52,12 @@ def make_device_request() -> tuple[str, str, str, str]:
         "device_key_sha256": fingerprint,
         "device_key_security_level": "SOFTWARE",
     }
-    payload_segment = b64url(issuer._canonical_json(payload))
+    payload_bytes = (
+        issuer._canonical_json(payload)
+        if canonical
+        else json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )
+    payload_segment = b64url(payload_bytes)
     message = ("YANJIR1." + payload_segment).encode("ascii")
     signature = private_key.sign(message, ec.ECDSA(hashes.SHA256()))
     token = "YANJIR1." + payload_segment + "." + b64url(signature)
@@ -108,6 +117,17 @@ class IssuerProtocolTests(unittest.TestCase):
             issuer._b64url_decode(signature_segment, max_bytes=64),
             issuer.LICENSE_SIGNATURE_DOMAIN + issuer._canonical_json(payload),
         )
+
+    def test_device_request_requires_canonical_jcs_and_lowercase_uuid(self) -> None:
+        noncanonical_request, _, _, _ = make_device_request(canonical=False)
+        with self.assertRaises(issuer.IssuerError):
+            issuer.verify_device_request(noncanonical_request)
+
+        uppercase_request, _, _, _ = make_device_request(
+            request_id=str(uuid.uuid4()).upper()
+        )
+        with self.assertRaises(issuer.IssuerError):
+            issuer.verify_device_request(uppercase_request)
 
     def test_shared_vector_request_tampering_and_signature_tampering_fail(self) -> None:
         token = load_vectors()["device_request"]["token"]
