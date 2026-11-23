@@ -4052,24 +4052,24 @@ PR HEAD 门禁证据：
 
 ## 83. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
 
-- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为新集成基线，将离线授权协议、Dart Payload/Verifier、Python Issuer 和跨语言测试向量统一到已合并的架构约束 v1.2；不修改 PR #416 的 Draft 分支。
+- 协议 v1.2 已由 PR #433 合并至 master，merge SHA `604ac9258f479514bb0b9ea1d5cdde18215b103e`；Dart Payload/Verifier、Python Issuer 和跨语言测试向量以架构约束 v1.2 为唯一实现，不修改 PR #416 的 Draft 分支。
 - Token 使用 `protocol_revision`、`device_public_key_sha256`、`request_id` 和 Ed25519 JCS 域签名；客户端不保存 pending request，不匹配 request nonce/hash；Nonce/hash 只用于发行端数据库唯一约束、幂等和审计。
 - 客户端区分 known / protocol-allowed / enforced Feature；发行端按 revision 限定 issuable Feature。首期只有 `ai_advanced` 和 `contextual_assistant` 可签发，不能通过调用参数或 CLI 扩大签发范围。
 - Python Issuer 校验 YANJIR1 的 P-256 ECDSA 设备申请、SPKI 曲线/规范编码和指纹；SQLite 事务记录订单、多次签发、request 唯一约束、reissue 关系和审计事件。私钥加密保存于仓库外，测试向量私钥不进入 Release Key Ring。
 - Issuer 本地 Key Ring 支持 `active`、`standby`、`retired`、`revoked`、`compromised` 五种状态；只有 `active` 可用于新签发，其他状态保留轮换/历史/吊销含义。
-- 本 PR CI 已在上一 head 完成 Fork license、Flutter 全量回归、Python Issuer 单测、Android arm64 APK/Native 单测；因分支重基线和 Key Ring 生命周期补充，必须以重基线后的最新 PR head 重新验收。
+- PR #433 合并前的最终 HEAD `14c2cf226c9591729a568393262e368100939d67` 已通过 Fork license、Flutter 全量回归、Python Issuer 单测和 Android arm64 APK/Native 单测；当前唯一协议实现是 master 上的合并提交 `604ac9258f479514bb0b9ea1d5cdde18215b103e`。
 - 本切片**不代表** Android Keystore Plugin、Dart Platform Bridge、TokenStore、EntitlementService、生产 Key Ring、FeatureAuthorizer 生产接线、Dispatcher 副作用前授权、ContextResolutionGateway、激活 UI 或 Find N2 设备验收已完成。
-- PR #432 是依赖旧 `feature/pro-license-batch-1` 的重复协议候选；以 master 为目标的本 PR 完成合并后，#432 应标记为 SUPERSEDED。PR #416 继续保持 OPEN / DRAFT，不因该切片而修改或合并。
+- PR #432 已按本节标记 SUPERSEDED 并关闭；PR #416 继续保持 OPEN / DRAFT，未修改、未关闭、未合并。
 
 ## 84. 专业版 Android Keystore Plugin v1.2 云端实现（2026-11-23）
 
-- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为独立基线，按专业版架构约束 §8.1–§8.4 实现 Android Keystore Plugin，不依赖未合并的授权协议 PR，也不修改 PR #416。
+- Android 原生批次最初从 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 独立开发；协议 PR #433 合并后重基线为 `604ac9258f479514bb0b9ea1d5cdde18215b103e`，最终由 PR #437 合并（merge SHA `a44ca2d7db064ce52d218429e6e59770e9dd6f79`）。不修改 PR #416。
 - 新增独立 `LicensePlugin` / `LicenseKeystore` / `LicenseKeystorePolicy`；MainActivity 只负责注册插件，不承载授权业务逻辑。插件通过独立 MethodChannel 暴露 get-only 读取、用户主动创建、申请签名和本地私钥可用性检查。
 - 设备密钥为 Android Keystore P-256 / secp256r1，ECDSA SHA-256，SPKI DER 输出和 SHA-256 Base64URL 指纹；读取、签名和挑战检查均不自动创建密钥。已存在 alias 时显式拒绝重建，不覆盖现有私钥。
 - API 28+ 优先尝试 StrongBox；仅捕获 `StrongBoxUnavailableException` 时清理本次创建产生的部分 alias 并回退 TEE，不把一般 Provider/Keystore 错误误判为 StrongBox 不可用。API 31+ 按 KeyInfo 安全级别映射；API 24–30 无法区分 TEE/StrongBox 时硬件密钥报告 UNKNOWN。
 - 已新增纯策略单元测试，覆盖 StrongBox API 门槛、安全级别映射、申请 Payload 段格式和 Token 外层格式/大小限制。Android Keystore Provider 的真实设备行为、StrongBox 是否可用、密钥升级/恢复/失效行为仍是 LOCAL ONLY / MISSING，不能由 JVM/CI 单测宣称通过。
 - 新增 `LicenseTokenStore`，路径固定为 `context.noBackupFilesDir/yanji_license/active_license.token`，使用 Android `AtomicFile`；只保存单份完整 Token，不触碰主数据库 v7，也不保存 is_pro/Feature 快照。MethodChannel 通过 `readLicenseToken` 与 `writeLicenseTokenAfterVerification` 暴露原语；调用者必须先完成签名、协议、Feature 和设备指纹验证。实际原子失败保留旧文件的 Android 运行时行为仍待设备/平台测试。
-- 本切片仍没有实现 Dart Platform Bridge、EntitlementService、FeatureGate、激活 UI、生产发行者 Key Ring；也未证明独立后台 FlutterEngine 已注册此插件。下一批 D 应在当前 FeatureAuthorizer 接口上实现有界 EntitlementService 和 Dart TokenStore 消费层，并以 Fake Bridge 完成云端回归。
+- PR #437 最终 HEAD 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK 和 Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。Find N2 KeyStore/StrongBox/AtomicFile 真机行为仍 LOCAL ONLY / MISSING。D 的 Dart Platform Bridge/EntitlementService 已形成 PR #438，当前 CI 仍在全量回归；FeatureGate、激活 UI、生产发行者 Key Ring、后台 FlutterEngine 注册证明仍未完成。
 
 ## 85. D：TokenStore 平台桥接与异步 EntitlementService（2026-11-23）
 
