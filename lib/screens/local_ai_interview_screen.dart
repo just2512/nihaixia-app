@@ -35,6 +35,8 @@ import '../models/bookmark.dart';
 import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
+import '../models/tool_execution_plan.dart';
+import '../licensing/feature_authorizer_scope.dart';
 import '../models/assistant_message_metadata.dart';
 import '../models/ai_context_ref.dart';
 import '../services/dosage_conversion_service.dart';
@@ -337,6 +339,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Map<String, String> _activeContextRef = const {};
   AssistantMode? _lastEffectiveMode;
   bool _pendingToolSelection = false;
+  InvocationOrigin? _pendingToolOrigin;
   AssistantToolArguments? _pendingBaziArguments;
   AssistantToolArguments? _pendingZiweiArguments;
   AssistantToolArguments? _pendingGuanshaArguments;
@@ -1382,6 +1385,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         attachmentType: attachmentType,
         toolArguments: toolArguments,
         traceId: traceId,
+        invocationOrigin: _pendingToolOrigin?.name,
         contextRef: _activeContextRef,
       ).encode();
       final storedUserText = attachmentType == null
@@ -1404,6 +1408,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
           traceId: traceId,
+          invocationOrigin: _pendingToolOrigin?.name,
           contextRef: _activeContextRef,
         ).encode(),
       );
@@ -1725,6 +1730,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _structuredDiagnosisBusy = true;
       _lastEffectiveMode = AssistantMode.consultation;
       _pendingToolSelection = false;
+      _pendingToolOrigin = null;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
       _pendingGuanshaArguments = null;
@@ -2870,11 +2876,35 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return _tcmToolKnowledgeQuery(boundedUserContext, tool);
   }
 
+  InvocationOrigin _requirePendingToolOrigin() {
+    final origin = _pendingToolOrigin;
+    if (origin == null) {
+      throw StateError('PENDING_TOOL_INVOCATION_ORIGIN_MISSING');
+    }
+    return origin;
+  }
+
+  bool _hasPendingHeadlessToolArguments() =>
+      _pendingBaziArguments != null ||
+      _pendingZiweiArguments != null ||
+      _pendingGuanshaArguments != null ||
+      _pendingMeihuaArguments != null ||
+      _pendingChengguArguments != null ||
+      _pendingHuangdiSijiArguments != null ||
+      _pendingXiaoliurenArguments != null ||
+      _pendingYiJingArguments != null ||
+      _pendingDosageArguments != null ||
+      _pendingZiWuArguments != null ||
+      _pendingDreamArguments != null ||
+      _pendingShoushengDebtArguments != null ||
+      _pendingSavedChartsArguments != null;
+
   Future<void> _executeHeadlessTool(
     String userText,
     AssistantToolDefinition tool, {
     required AssistantMode mode,
     required AiTraceContext traceContext,
+    required InvocationOrigin origin,
     AssistantToolArguments? arguments,
   }) async {
     final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
@@ -3135,6 +3165,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<void> _requestTool(
     String userText,
     AssistantToolDefinition tool, {
+    required InvocationOrigin origin,
     AssistantMode? mode,
     AiTraceContext? traceContext,
     AssistantToolArguments? arguments,
@@ -3181,6 +3212,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return;
     }
+    _pendingToolOrigin = origin;
     _pendingToolSelection = false;
     if (tool.id != 'guansha') _pendingGuanshaArguments = null;
     if (tool.id != 'yijing') _pendingYiJingArguments = null;
