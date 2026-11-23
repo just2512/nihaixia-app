@@ -518,6 +518,9 @@ Files:
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicensePlugin.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicyTest.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStore.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicy.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicyTest.kt
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-added implementation/brand/documentation/resources. Applies only to content whose copyright is owned by just2512 or for which sufficient sublicensing rights exist. Full terms: LICENSES/LicenseRef-Nihaixia-Fork-Commercial.md.
