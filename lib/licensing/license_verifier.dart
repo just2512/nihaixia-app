@@ -157,7 +157,7 @@ class LicenseVerifier {
     }
 
     if (payload.productId != yanjiLifetimeProductId ||
-        payload.productRevision < 1 ||
+        payload.productRevision != ProfessionalEditionCatalog.productRevision ||
         !payload.perpetual) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.wrongProduct,
