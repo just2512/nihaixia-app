@@ -266,6 +266,7 @@ Files:
  docs/local-ai-e4b.md
  docs/local-ai-multiturn-audit.md
  docs/pro-edition-architecture-constraints.md
+ docs/pro-edition-license-protocol.md
  docs/product-positioning-and-boundaries.md
  docs/tcm-diagnosis-code-diff-audit.md
  docs/tcm-diagnosis-system-integration-audit.md
@@ -278,6 +279,8 @@ Files:
  docs/yanji-editorial-frontend-design-plan.md
  lib/data/assistant_conversation_store.dart
  lib/engine/zangfu_evidence_builder.dart
+ lib/licensing/license_model.dart
+ lib/licensing/license_verifier.dart
  lib/models/ai_context_ref.dart
  lib/models/assistant_message_metadata.dart
  lib/models/assistant_tool_result.dart
@@ -417,6 +420,7 @@ Files:
  test/engine/zangfu_evidence_builder_test.dart
  test/festival_lookup_editorial_layout_test.dart
  test/fixtures/ai_retrieval_golden_metadata.json
+ test/fixtures/pro-license-test-vectors.json
  test/fold_aware_navigation_contract_test.dart
  test/fold_aware_routes_test.dart
  test/fork_update_isolation_policy_test.dart
@@ -431,6 +435,7 @@ Files:
  test/knowledge_adaptive_master_detail_test.dart
  test/knowledge_editorial_layout_test.dart
  test/knowledge_foldable_reading_matrix_test.dart
+ test/license_verifier_test.dart
  test/local_ai_adaptive_content_test.dart
  test/local_ai_atomic_turn_persistence_test.dart
  test/local_ai_attachment_store_test.dart
@@ -510,6 +515,10 @@ Files:
  tool/check_fork_license_inventory.py
  tool/check_version_source.sh
  tool/fix_launcher_png.py
+ tool/license_issuer/issuer.py
+ tool/license_issuer/README.md
+ tool/license_issuer/requirements.txt
+ tool/license_issuer/test_issuer.py
  tool/reindex_zhenjiu_index.py
  企划书_研纪_v2.0.md
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)

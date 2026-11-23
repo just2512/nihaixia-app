@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language tests. Test signing keys are not production trust anchors; production issuance remains disabled.",
   "counts": {
-    "changed": 892,
-    "added": 731,
+    "changed": 901,
+    "added": 740,
     "modified": 161,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 155,
-      "FORK_COMMERCIAL": 372,
+      "FORK_COMMERCIAL": 381,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -3929,6 +3929,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "docs/pro-edition-license-protocol.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "docs/product-positioning-and-boundaries.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -4118,6 +4126,22 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/licensing/license_model.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/licensing/license_verifier.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -6113,6 +6137,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "test/fixtures/pro-license-test-vectors.json",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Python 签发器与 Dart 验签器共用的合成测试向量；不含生产密钥或真实客户数据。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "test/fold_aware_navigation_contract_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -6270,6 +6302,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/license_verifier_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -7110,6 +7150,38 @@
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/license_issuer/issuer.py",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/license_issuer/README.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/license_issuer/requirements.txt",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/license_issuer/test_issuer.py",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "研纪专业版永久授权协议、客户端验签与离线签发工具；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {

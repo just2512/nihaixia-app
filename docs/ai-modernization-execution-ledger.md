@@ -4035,3 +4035,16 @@ PR HEAD 门禁证据：
 - `AssistantToolDefinition` 已为当前注册工具明确声明稳定的 `capabilityId`，当前初始映射按工具 ID 一对一建立；将来若多个工具属于同一业务能力，应显式共享同一 capability ID，而不是按工具调用数计费。
 - 本批只建立执行计划和注册元数据契约，**尚未**将所有实际 Headless 调度路径改造成先形成完整计划、再在第一个业务副作用前统一授权。生产计划聚合、调度器接线、授权前无副作用回归仍是 F1 后续必做项。
 - 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 最新 head 的 Fork license 检查已通过，Flutter full regression 正在执行。不得将 Branch validation 的 SKIPPED 计为通过。
+
+
+---
+
+## 84. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
+
+- 独立实现 PR 以 master `93940d485ab3e2e6bf81a11fd2a4ff2d05858980`（PR #428 合并后）为基线，采用 `pro/v12-license-implementation`，基于 PR #416 的早期原型但不修改其 Draft 分支，按已合并架构约束 v1.2 统一协议和离线签发实现。
+- 涉及协议文档、Dart Payload 模型/Verifier、构造注入的 Key Ring、Ed25519 JCS 签名域、显式 protocol revision 和 Feature 交集、Python 离线 Issuer、发行端 request 去重/签发记录回归、共享跨语言向量。
+- 最终 Token 不含 request nonce/hash 或客户端报告的 Keystore 安全等级；只保留设备 SPKI SHA-256 指纹和 request_id。Nonce/hash 仅留在发行端订单数据库，用于唯一约束、幂等和审计。
+- 首期发行端只允许签发 `ai_advanced` 与 `contextual_assistant`；客户端授予集合还必须同时满足 known、协议修订允许、当前 App 已实施门禁三层交集。
+- CI 增加 Python Issuer 单测；Dart/Flutter 回归和 Android arm64 测试仍执行。测试向量私钥只由确定性测试种子临时派生，不提交私钥，也不能进入 Release Key Ring。
+- **明确未完成**：Android Keystore Plugin、get-only/create 分离、noBackupFilesDir AtomicFile TokenStore、EntitlementService、FeatureAuthorizer 生产接线、FeatureGate、Dispatcher 完整计划副作用前授权、ContextResolutionGateway、激活 UI、生产发行者 Key Ring/私钥和 Find N2 真机验收。设备验收留到所有云端批次完成后本地执行，不阻塞协议/算法自动化。
+- PR #416 保持 OPEN / DRAFT 且未被修改；此 PR 是独立 master 实现交付，不将原 Draft 的未验收状态当作本 PR 证据，也不把测试密钥当作生产信任锚。
