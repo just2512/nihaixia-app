@@ -10,7 +10,7 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes contextual Ask AI cloud closeout, local-only Release signing hardening, product version 2.0.0+8048 and the approved Yanji launcher icon. This change adds four Zi Wu Liu Zhu method-level contextual Ask AI entry points bound to the exact verified device-local snapshot, preserves NOT_APPLICABLE without inventing acupoints, and adds isolated prompt/resolver and responsive UI regression coverage. CI recomputes actual path/status membership against the checked-out PR HEAD. This change adds a production Shanghan reading-library to contextual Ask AI call-chain regression, validating exact local source/anchor binding; no runtime code is changed.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD.",
   "counts": {
     "changed": 885,
     "added": 724,
