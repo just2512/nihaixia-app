@@ -51,6 +51,39 @@ class HeadlessToolDispatcher {
 
   static bool hasExecutor(String toolId) => _executors.containsKey(toolId);
 
+  /// Synchronous dispatch for explicitly synchronous adapters only.
+  ///
+  /// The allowlist prevents an async executor from being started and then
+  /// abandoned by a synchronous caller.
+  static const Set<String> _synchronousExecutorIds = {
+    'dosage',
+    'yuxiaji_omen',
+  };
+
+  static AssistantToolResult executeSync({
+    required String toolId,
+    required Map<String, String> arguments,
+  }) {
+    if (!_synchronousExecutorIds.contains(toolId)) {
+      throw StateError(
+        'Tool "${toolId}" is not registered for synchronous dispatch.',
+      );
+    }
+    final executor = _executors[toolId];
+    if (executor == null) {
+      throw StateError(
+        'Tool "${toolId}" does not register a Headless executor.',
+      );
+    }
+    final result = executor(arguments);
+    if (result is Future<AssistantToolResult>) {
+      throw StateError(
+        'Tool "${toolId}" was registered as synchronous but returned a Future.',
+      );
+    }
+    return result;
+  }
+
   static Future<AssistantToolResult> execute({
     required String toolId,
     required Map<String, String> arguments,
