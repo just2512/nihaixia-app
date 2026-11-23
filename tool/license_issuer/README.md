@@ -1,60 +1,87 @@
 # Yanji Pro Offline License Issuer
 
-本工具用于私域订单人工核验及离线签发，不处理支付。
+本工具用于私域订单人工核验及离线签发，不处理支付。协议固定在 docs/pro-edition-license-protocol.md；Python 签发器与 Dart 验证器共用 test/fixtures/pro-license-test-vectors.json 中的跨语言测试向量。该向量中的密钥和订单均为测试数据，绝不能用于生产。
 
 ## 环境
 
-Python 3.12+，依赖版本见 \`requirements.txt\`。
+Python 3.12+，依赖版本见 requirements.txt。
 
-\`\`\`bash
-python -m pip install -r tool/license_issuer/requirements.txt
-\`\`\`
+    python -m pip install -r tool/license_issuer/requirements.txt
 
 ## 生成发行者密钥
 
-\`\`\`bash
-python tool/license_issuer/issuer.py keygen --key-id issuer-2026-01
-\`\`\`
+    python tool/license_issuer/issuer.py keygen --key-id issuer-2026-01
 
-工具要求输入两次口令（至少 12 个 UTF-8 字节），默认将加密 PKCS#8 私钥和公钥写到仓库外：
+工具要求输入两次口令（至少 12 个 UTF-8 字节），默认写入仓库外：
 
-- \`~/.yanji-license-issuer/keys/issuer-2026-01.private.pem\`
-- \`~/.yanji-license-issuer/keys/issuer-2026-01.public.pem\`
+- ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem
+- ~/.yanji-license-issuer/keys/issuer-2026-01.public.pem
+- ~/.yanji-license-issuer/keys/issuer-keyring.json
 
-raw Ed25519 公钥（32 字节 Base64URL 无填充）会显示在终端，后续需加入 App 的受信任 Key Ring。**私钥不得进入仓库、APK、CI、工单、聊天记录或日志。** 离线加密备份必须与订单数据库分开保存。Windows 操作员还需通过系统 ACL 保护目录。
+私钥为口令加密的 PKCS#8 PEM。keyring.json 记录 Key ID、raw Ed25519 公钥和状态，里面没有私钥。签发时工具会检查指定私钥与该 Key ID 对应的公钥是否匹配；错误私钥、错误 Key ID 或 retired/compromised Key 都不能签发。
 
-## 人工核单与签发
+raw Ed25519 公钥（32 字节 Base64URL 无填充）会在终端显示，后续由受控代码变更加入 App 内置 Key Ring。生产 App 可包含多个 Key ID；retired Key 只验证旧凭证，不可签发；compromised Key 必须在后续 App 版本中拒绝。
 
-用户将完整的 \`YANJIR1\` 设备申请码通过微信文本复制给运营方。人工核对收款后执行：
+**密钥恢复要求：** 正式销售前至少保留两份口令加密离线备份，位于不同介质/地点；备份口令独立保管。必须实际演练一次恢复，核对恢复公钥与 Key ID 的对应关系，并用共享测试向量执行签名/验签。私钥和订单数据库必须分开备份。不要将私钥、口令放入仓库、APK、CI、工单、聊天记录或日志。
 
-\`\`\`bash
-python tool/license_issuer/issuer.py issue \\
-  --request-file request.txt \\
-  --order-id YJ-20261123-0001 \\
-  --key-id issuer-2026-01 \\
-  --private-key ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem \\
-  --payment-confirmed
-\`\`\`
+Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置只是附加保护，不替代离线备份和访问控制。
 
-工具验证 P-256 设备私钥持有证明和设备公钥指纹，再用 Ed25519 签发 \`YANJI1\` 永久授权。签发时会要求输入私钥口令。默认将授权文本输出到终端；可增加 \`--out /secure/path/license.txt\` 写入文件。
+## 首次签发
 
-\`--payment-confirmed\` 是操作员人工收款确认，不会查询微信、支付宝、银行或支付服务商。
+用户将完整 YANJIR1 设备申请码通过微信文本复制给运营方。人工核对收款后执行：
 
-## 订单记录
+    python tool/license_issuer/issuer.py issue \
+      --request-file request.txt \
+      --order-id YJ-20261123-0001 \
+      --key-id issuer-2026-01 \
+      --private-key ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem \
+      --payment-confirmed
 
-默认 SQLite 数据库：\`~/.yanji-license-issuer/data/orders.sqlite3\`。
+签发器验证申请内的完整 P-256 SPKI 公钥、指纹、请求 nonce、request_id 和 ECDSA 私钥持有证明；随后计算完整申请令牌的 SHA-256，并将 request_id、nonce、hash、设备指纹写入 Ed25519 授权 payload。
 
-只记录订单号、request ID、商品、授权 ID、设备指纹、签发者 Key ID、签发时间和签名令牌；不记录买家姓名、手机号、微信 ID、聊天记录或付款截图。
+--payment-confirmed 是操作员人工收款确认，不会查询微信、支付宝、银行或支付服务商。签发器不采集客户姓名、手机号、微信 ID 或付款截图。
 
-- 同一订单号、同一 request ID、同一设备返回原授权令牌。
-- 同一订单号用于另一设备请求会被拒绝。
-- 同一 request ID 不能重复绑定另一个订单。
+## 换机 / 重签
 
-\`list --db PATH\` 可以列出技术授权记录。数据库本身也应设置操作系统访问权限并加密备份。
+同一订单更换设备时，必须产生一份新的设备申请，并显式使用：
+
+    python tool/license_issuer/issuer.py issue \
+      --request-file new-device-request.txt \
+      --order-id YJ-20261123-0001 \
+      --key-id issuer-2026-01 \
+      --private-key ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem \
+      --payment-confirmed \
+      --reissue \
+      --reason "Customer reinstalled after clearing application data"
+
+工具在一个 SQLite 事务中将旧签发记录标记为 superseded，追加新 license_id，并记录替代关系和审计事件。旧令牌不会因本地数据库状态变化就从已离线运行的旧 App 自动失效；只有更新版本内置的 license_id denylist 才能在更新后的 App 上拒绝它。
+
+同一 order_id + request_id + request_sha256 重复提交时幂等返回原活动令牌。同一 request_id 不能用于其他订单。存在旧签发记录时，新的请求必须显式 --reissue 并提供 --reason。
+
+免费重签次数/收费规则没有被签发器硬编码，必须由产品条款另行确定。正式销售前未完成这项产品决策，不得收费销售。
+
+## 订单与审计数据库
+
+默认位置：~/.yanji-license-issuer/data/orders.sqlite3。
+
+数据库采用订单 1:N 授权记录结构：
+
+- orders：订单编号、商品、创建时间、核款状态、重签次数。
+- issued_licenses：每次授权的 license_id、request_id、request_sha256、设备指纹、Key ID、签发时间、令牌、当前状态和替代关系。
+- issuer_audit_events：issue/reissue/迁移事件及脱敏细节。
+
+不记录姓名、手机号、微信 ID、付款截图或聊天内容。审计明细不写入私钥、口令或完整 token。授权 token 本身需要保存在订单库用于幂等补发，故数据库同样必须设置操作系统权限并加密备份。
+
+列出订单和历史签发：
+
+    python tool/license_issuer/issuer.py list
 
 ## 安全边界
 
 - Ed25519 私钥只存在于运营方签发工具，App 仅内置公钥。
 - 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名。
-- 签名证明内容完整性及签发者密钥持有，不证明付款事实。
-- 离线永久授权不能被远程撤销，也不能阻止有能力重打包 APK 的攻击者绕过客户端校验。
+- 设备安全级别由客户端报告，不是 Android Key Attestation 远程硬件证明。
+- 签名证明凭证完整性及发行者密钥持有，不证明买家已付款。
+- 离线永久授权不能远程即时撤销；本地状态 superseded 只影响运营记录。
+- 本地 denylist 只能随 App 版本更新生效，不能关闭未更新、长期离线的旧版本。
+- 有能力修改/重打包 APK 的攻击者仍可能绕过客户端门禁。
