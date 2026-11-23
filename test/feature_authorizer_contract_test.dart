@@ -116,4 +116,20 @@ void main() {
     expect(actual, same(expected));
     expect(authorizer.requestedFeatureIds, [featureId]);
   });
+
+  test('includes stable token, issuer and product failure reasons', () {
+    const expected = {
+      FeatureAuthorizationFailureReason.unlicensed,
+      FeatureAuthorizationFailureReason.featureNotGranted,
+      FeatureAuthorizationFailureReason.licenseRevoked,
+      FeatureAuthorizationFailureReason.issuerCompromised,
+      FeatureAuthorizationFailureReason.invalidTokenFormat,
+      FeatureAuthorizationFailureReason.wrongApplication,
+      FeatureAuthorizationFailureReason.wrongProduct,
+    };
+    expect(
+      FeatureAuthorizationFailureReason.values.toSet(),
+      containsAll(expected),
+    );
+  });
 }
