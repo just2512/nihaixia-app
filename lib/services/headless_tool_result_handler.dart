@@ -126,7 +126,7 @@ class HeadlessToolResultHandler {
       resultContractErrors: List.unmodifiable(resultContractErrors),
       argumentErrors: List.unmodifiable(argumentErrors),
       responseText:
-          '【${toolTitle}执行结果】\\n${normalizedResult.toConversationText()}',
+          '【${toolTitle}执行结果】\n${normalizedResult.toConversationText()}',
       canRetry: canRetry,
       canInterpret: canInterpret,
       autoInterpret: autoInterpret,
@@ -196,7 +196,7 @@ class HeadlessToolResultHandler {
     final responseText = followUp?.kind ==
             HeadlessToolFollowUpKind.birthplaceClarification
         ? followUp!.message
-        : '【${toolTitle}执行结果】\\n${result.toConversationText()}';
+        : '【${toolTitle}执行结果】\n${result.toConversationText()}';
 
     final canInterpret =
         result.status == AssistantToolExecutionStatus.succeeded &&
