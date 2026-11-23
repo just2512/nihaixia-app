@@ -4086,6 +4086,7 @@ PR HEAD 门禁证据：
 - 当前产品定位以 `docs/product-positioning-and-boundaries.md` 为准：研纪是中医学习辅助工具，不是临床诊断、分诊或医疗决策系统。
 - §78.2 中临床 RedFlag detector、医学审核、全入口拦截的旧阻塞项已标记 `SUPERSEDED / NOT IN SCOPE`。旧历史审计数据保留为历史记录，不再转成当前待办。
 - 保留一般性急重症求助提示、免责声明、输入类型检查、参数校验、确定性业务执行校验；这些不能被混称为临床 detector，也不得因产品范围纠偏而删除。
+- 现有 `RedFlagGate` / `RedFlagPreflight` 仅保留为未启用的接口与策略骨架；当前 `requiresMedicalSafetyPreflight()` 固定返回 false，业务入口记录 `NOT_APPLICABLE`，不执行临床 detector。不得把该骨架宣称为临床安全能力已通过；若未来要启用，须另立范围并经过独立审核。
 - Find N2 / E4B 真机验收统一后置到云端代码、文档、许可和 CI 收尾之后。设备未执行项保持 `LOCAL ONLY / MISSING`，不阻塞无关云端 PR。
 - 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
 - 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。
