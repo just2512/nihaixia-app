@@ -48,6 +48,48 @@ void main() {
       expect(unavailable.isAllowed, isFalse);
     });
 
+    test('preserves each stable authorization failure reason', () {
+      const featureId = 'ai_advanced';
+      const reasons = FeatureAuthorizationFailureReason.values;
+
+      for (final reason in reasons) {
+        final denied = FeatureAuthorizationDecision.denied(
+          featureId: featureId,
+          reason: reason,
+        );
+        final unavailable =
+            FeatureAuthorizationDecision.temporarilyUnavailable(
+          featureId: featureId,
+          reason: reason,
+        );
+
+        expect(denied.status, FeatureAuthorizationStatus.denied);
+        expect(denied.reason, reason);
+        expect(unavailable.status,
+            FeatureAuthorizationStatus.temporarilyUnavailable);
+        expect(unavailable.reason, reason);
+      }
+    });
+
+    test('all decision factories reject invalid feature IDs', () {
+      for (final featureId in ['', ' ', ' ai_advanced', 'ai_advanced ']) {
+        expect(
+          () => FeatureAuthorizationDecision.denied(
+            featureId: featureId,
+            reason: FeatureAuthorizationFailureReason.signatureInvalid,
+          ),
+          throwsArgumentError,
+        );
+        expect(
+          () => FeatureAuthorizationDecision.temporarilyUnavailable(
+            featureId: featureId,
+            reason: FeatureAuthorizationFailureReason.initializationTimeout,
+          ),
+          throwsArgumentError,
+        );
+      }
+    });
+
     test('rejects empty, whitespace-padded or blank feature IDs', () {
       for (final featureId in ['', ' ', ' ai_advanced']) {
         expect(
