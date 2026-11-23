@@ -5749,7 +5749,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
       sourceIds: normalizedResult.sourceIds,
     );
-    final resultText = normalizedResult.toConversationText();
     final response = presentation.responseText;
     final canRetry = presentation.canRetry;
     final canInterpret = presentation.canInterpret;
