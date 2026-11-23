@@ -4052,5 +4052,6 @@ PR HEAD 门禁证据：
 - 新增独立 `LicensePlugin` / `LicenseKeystore` / `LicenseKeystorePolicy`；MainActivity 只负责注册插件，不承载授权业务逻辑。插件通过独立 MethodChannel 暴露 get-only 读取、用户主动创建、申请签名和本地私钥可用性检查。
 - 设备密钥为 Android Keystore P-256 / secp256r1，ECDSA SHA-256，SPKI DER 输出和 SHA-256 Base64URL 指纹；读取、签名和挑战检查均不自动创建密钥。已存在 alias 时显式拒绝重建，不覆盖现有私钥。
 - API 28+ 优先尝试 StrongBox；仅捕获 `StrongBoxUnavailableException` 时清理本次创建产生的部分 alias 并回退 TEE，不把一般 Provider/Keystore 错误误判为 StrongBox 不可用。API 31+ 按 KeyInfo 安全级别映射；API 24–30 无法区分 TEE/StrongBox 时硬件密钥报告 UNKNOWN。
-- 已新增纯策略单元测试，覆盖 StrongBox API 门槛、安全级别映射和申请 Payload 段格式。Android Keystore Provider 的真实设备行为、StrongBox 是否可用、密钥升级/恢复/失效行为仍是 LOCAL ONLY / MISSING，不能由 JVM/CI 单测宣称通过。
-- 本切片没有实现 TokenStore、EntitlementService、Dart Platform Bridge、FeatureGate、激活 UI、生产发行者 Key Ring；也未证明独立后台 FlutterEngine 已注册此插件。下一批 D 应在当前 FeatureAuthorizer 接口上实现有界 EntitlementService 和原子 TokenStore，并以 Fake Bridge 完成云端回归。
+- 已新增纯策略单元测试，覆盖 StrongBox API 门槛、安全级别映射、申请 Payload 段格式和 Token 外层格式/大小限制。Android Keystore Provider 的真实设备行为、StrongBox 是否可用、密钥升级/恢复/失效行为仍是 LOCAL ONLY / MISSING，不能由 JVM/CI 单测宣称通过。
+- 新增 `LicenseTokenStore`，路径固定为 `context.noBackupFilesDir/yanji_license/active_license.token`，使用 Android `AtomicFile`；只保存单份完整 Token，不触碰主数据库 v7，也不保存 is_pro/Feature 快照。MethodChannel 通过 `readLicenseToken` 与 `writeLicenseTokenAfterVerification` 暴露原语；调用者必须先完成签名、协议、Feature 和设备指纹验证。实际原子失败保留旧文件的 Android 运行时行为仍待设备/平台测试。
+- 本切片仍没有实现 Dart Platform Bridge、EntitlementService、FeatureGate、激活 UI、生产发行者 Key Ring；也未证明独立后台 FlutterEngine 已注册此插件。下一批 D 应在当前 FeatureAuthorizer 接口上实现有界 EntitlementService 和 Dart TokenStore 消费层，并以 Fake Bridge 完成云端回归。
