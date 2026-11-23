@@ -870,7 +870,18 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  children: results.map((e) => _buildWikiCard(cs, e)).toList(),
+                  children: [
+                    for (var index = 0; index < results.length; index++) ...[
+                      _buildWikiCard(cs, results[index]),
+                      if (index < results.length - 1)
+                        Divider(
+                          height: 1,
+                          indent: 16,
+                          endIndent: 16,
+                          color: cs.outlineVariant,
+                        ),
+                    ],
+                  ],
                 ),
         ),
       ],
@@ -949,44 +960,43 @@ class _GuanshaScreenState extends State<GuanshaScreen>
 
   Widget _buildWikiCard(ColorScheme cs, GuanshaEntry e) {
     final accent = _severityColor(e.severity);
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _showDetail(e),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(e.name,
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(e.category,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                    if (e.isExt)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text('扩展煞',
-                            style: TextStyle(fontSize: 11, color: cs.primary)),
-                      ),
-                  ],
-                ),
+    return InkWell(
+      onTap: () => _showDetail(e),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(e.name,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(e.category,
+                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                  if (e.isExt)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text('扩展煞',
+                          style: TextStyle(fontSize: 11, color: cs.primary)),
+                    ),
+                ],
               ),
-              Chip(
-                label: Text(e.severity,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
-                backgroundColor: accent.withValues(alpha: 0.18),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-              ),
-            ],
-          ),
+            ),
+            Chip(
+              label: Text(e.severity,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: accent)),
+              backgroundColor: accent.withValues(alpha: 0.18),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+            ),
+          ],
         ),
       ),
     );
