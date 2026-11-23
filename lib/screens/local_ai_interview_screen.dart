@@ -22,6 +22,8 @@ import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
 import '../services/headless_tool_result_handler.dart';
+import '../services/headless_tool_plan_result_handler.dart';
+import '../services/assistant_tool_execution_plan_builder.dart';
 import '../services/tool_argument_support.dart';
 import '../services/tcm_interview_conversation_controller.dart';
 import 'assistant_tool_router.dart';
@@ -1384,6 +1386,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     Map<String, String> toolArguments = const {},
     String? knowledgeStatus,
     String? traceId,
+    List<AssistantToolPlanStepMetadata> toolPlanSteps = const [],
   }) async {
     try {
       final id = await _conversationIdFuture;
@@ -1399,6 +1402,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         traceId: traceId,
         invocationOrigin: _pendingToolOrigin?.name,
         contextRef: _activeContextRef,
+        toolPlanSteps: toolPlanSteps,
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
@@ -1422,6 +1426,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           traceId: traceId,
           invocationOrigin: _pendingToolOrigin?.name,
           contextRef: _activeContextRef,
+          toolPlanSteps: toolPlanSteps,
         ).encode(),
       );
       return true;
@@ -3367,6 +3372,306 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         retrievalQuery: retrievalQuery,
         toolId: presentation.needsDreamFollowUp ? null : tool.id,
         toolStatus: presentation.needsDreamFollowUp ? null : presentation.toolStatusForPersistence,
+        sourceIds: presentation.sourceIds,
+        showPromptInTimeline: false,
+        allowWhileSending: true,
+      );
+    }
+  }
+
+  Future<void> _executeHeadlessToolPlan(
+    String userText,
+    ToolExecutionPlan plan,
+    List<AssistantToolDefinition> tools, {
+    required AssistantMode mode,
+    required AiTraceContext traceContext,
+  }) async {
+    _pendingToolOrigin = plan.origin;
+    _pendingToolSelection = false;
+    final route = 'headless_plan:${plan.steps.map((step) => step.toolId).join(',')}';
+    final redFlagSnapshot = _boundedRedFlagContext(currentText: userText);
+    if (await _blockIfRedFlagPreflightDoesNotClear(
+      source: RedFlagInputSource.toolArguments,
+      text: redFlagSnapshot.text,
+      traceContext: traceContext,
+      route: route,
+      requireAssessment: false,
+      sourceTruncated: redFlagSnapshot.sourceTruncated,
+    )) {
+      return;
+    }
+
+    for (final step in plan.steps) {
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.argumentValidation,
+        status: AiTraceStatus.succeeded,
+        toolId: step.toolId,
+      );
+    }
+
+    final watch = Stopwatch()..start();
+    final execution = await HeadlessToolDispatcher(
+      featureAuthorizer: FeatureAuthorizerScope.of(context),
+    ).executePlan(
+      plan: plan,
+      executorOverride: widget.testHeadlessToolExecutor,
+    );
+    watch.stop();
+
+    if (execution.status != HeadlessToolPlanExecutionStatus.completed) {
+      final errorCode = switch (execution.status) {
+        HeadlessToolPlanExecutionStatus.authorizationDenied =>
+          'FEATURE_AUTHORIZATION_DENIED',
+        HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
+          'FEATURE_AUTHORIZATION_UNAVAILABLE',
+        HeadlessToolPlanExecutionStatus.invalidPlan => 'EXECUTION_PLAN_INVALID',
+        HeadlessToolPlanExecutionStatus.completed => 'UNEXPECTED_COMPLETED_STATUS',
+      };
+      final refusal = switch (execution.status) {
+        HeadlessToolPlanExecutionStatus.authorizationDenied =>
+          '本次计划跨越多个业务能力，需要专业版能力 ${execution.featureId ?? 'ai_advanced'}。'
+              '整个计划已在任何工具启动前拒绝，没有产生工具业务副作用。普通对话和单项手动工具仍可使用。',
+        HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
+          '当前无法可靠核验专业版授权状态。整个计划已在任何工具启动前停止，没有产生工具业务副作用；普通对话和单项手动工具仍可使用。',
+        HeadlessToolPlanExecutionStatus.invalidPlan =>
+          '完整计划未通过 Headless 执行器注册校验，没有执行任何工具。请重新发起该操作。',
+        HeadlessToolPlanExecutionStatus.completed =>
+          '计划执行状态异常，未提交工具结果。',
+      };
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.businessExecution,
+        status: AiTraceStatus.notStarted,
+        durationMs: watch.elapsedMilliseconds,
+        route: route,
+        errorCode: errorCode,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: errorCode,
+      );
+      final stepMetadata = [
+        for (final step in plan.steps)
+          AssistantToolPlanStepMetadata(
+            toolId: step.toolId,
+            capabilityId: step.capabilityId,
+            title: tools
+                    .where((tool) => tool.id == step.toolId)
+                    .map((tool) => tool.title)
+                    .firstOrNull ??
+                step.toolId,
+            status: 'NOT_STARTED',
+            arguments: step.arguments,
+          ),
+      ];
+      if (mounted) {
+        setState(() {
+          _lastEffectiveMode = mode;
+          _messages
+            ..add(_InterviewMessage(text: userText, isUser: true))
+            ..add(_InterviewMessage(text: refusal, isUser: false));
+          _sending = false;
+          _error = null;
+        });
+      }
+      _inputController.clear();
+      final persisted = await _persistSuccessfulTurn(
+        userText: userText,
+        assistantText: refusal,
+        mode: mode,
+        toolStatus: errorCode,
+        traceId: traceContext.traceId,
+        toolPlanSteps: stepMetadata,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.persistence,
+        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+        route: route,
+        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.finalRender,
+        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+        route: route,
+        errorCode: errorCode,
+      );
+      _pendingToolOrigin = null;
+      _scrollToBottom();
+      return;
+    }
+
+    final presentation = HeadlessToolPlanResultHandler.handle(
+      userText: userText,
+      plan: plan,
+      tools: tools,
+      execution: execution,
+      aiReady: _status?.ready == true && !_statusUnknown,
+    );
+    for (var index = 0; index < plan.steps.length; index++) {
+      final step = plan.steps[index];
+      final stepPresentation = presentation.steps[index];
+      final result = stepPresentation.result;
+      final errorCode = !stepPresentation.executed
+          ? 'PRIOR_STEP_NOT_SUCCESSFUL'
+          : stepPresentation.contractErrors.isNotEmpty
+              ? 'RESULT_CONTRACT_INVALID'
+              : result?.status == AssistantToolExecutionStatus.failed
+                  ? 'BUSINESS_EXECUTION_FAILED'
+                  : result?.status == AssistantToolExecutionStatus.cancelled
+                      ? 'BUSINESS_EXECUTION_CANCELLED'
+                      : result?.status == AssistantToolExecutionStatus.unknown
+                          ? 'BUSINESS_EXECUTION_UNKNOWN'
+                          : result?.status == AssistantToolExecutionStatus.noResult
+                              ? 'BUSINESS_NO_RESULT'
+                              : null;
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.businessExecution,
+        status: !stepPresentation.executed
+            ? AiTraceStatus.notStarted
+            : switch (result?.status) {
+                AssistantToolExecutionStatus.succeeded ||
+                AssistantToolExecutionStatus.noResult => AiTraceStatus.succeeded,
+                AssistantToolExecutionStatus.failed ||
+                AssistantToolExecutionStatus.cancelled => AiTraceStatus.failed,
+                AssistantToolExecutionStatus.unknown || null => AiTraceStatus.unknown,
+              },
+        toolId: step.toolId,
+        durationMs: watch.elapsedMilliseconds,
+        errorCode: errorCode,
+      );
+      await _traceRecorder.record(
+        traceContext,
+        stage: AiTraceStage.resultValidation,
+        status: !stepPresentation.executed
+            ? AiTraceStatus.notStarted
+            : stepPresentation.contractErrors.isNotEmpty
+                ? AiTraceStatus.failed
+                : AiTraceStatus.succeeded,
+        toolId: step.toolId,
+        errorCode: stepPresentation.contractErrors.isEmpty
+            ? null
+            : 'RESULT_CONTRACT_INVALID',
+      );
+    }
+
+    final followUp = presentation.followUp;
+    if (followUp != null) {
+      final step = plan.steps.firstWhere((item) => item.toolId == followUp.toolId);
+      final request = AssistantToolArguments(
+        toolId: step.toolId,
+        values: step.arguments,
+      );
+      if (followUp.kind == HeadlessToolFollowUpKind.dreamClarification) {
+        _pendingDreamArguments = request;
+      } else if (followUp.kind ==
+          HeadlessToolFollowUpKind.birthplaceClarification) {
+        if (step.toolId == 'bazi') {
+          _pendingBaziArguments = request;
+          _pendingZiweiArguments = null;
+          _pendingGuanshaArguments = null;
+        } else if (step.toolId == 'ziwei') {
+          _pendingZiweiArguments = request;
+          _pendingBaziArguments = null;
+          _pendingGuanshaArguments = null;
+        } else if (step.toolId == 'guansha') {
+          _pendingGuanshaArguments = request;
+          _pendingBaziArguments = null;
+          _pendingZiweiArguments = null;
+        }
+      }
+    }
+
+    final stepMetadata = [
+      for (final step in presentation.steps)
+        AssistantToolPlanStepMetadata(
+          toolId: step.toolId,
+          capabilityId: step.capabilityId,
+          title: tools
+                  .where((tool) => tool.id == step.toolId)
+                  .map((tool) => tool.title)
+                  .firstOrNull ??
+              step.toolId,
+          status: step.presentation?.toolStatusForPersistence ??
+              step.result?.statusLabel ??
+              'NOT_EXECUTED',
+          arguments: step.presentation?.argumentsForPersistence ?? step.arguments,
+          sourceIds: step.presentation?.sourceIds ?? const [],
+        ),
+    ];
+    final planStatus = followUp != null
+        ? 'PLAN_AWAITING_PARAMETERS'
+        : presentation.allStepsSucceeded
+            ? 'PLAN_SUCCEEDED'
+            : 'PLAN_PARTIAL';
+    final response = presentation.responseText;
+    final autoInterpret = presentation.autoInterpret;
+    if (mounted) {
+      setState(() {
+        _lastEffectiveMode = mode;
+        _messages.add(_InterviewMessage(
+          text: response,
+          isUser: false,
+          sourceIds: presentation.sourceIds,
+          actionLabel: presentation.canInterpret && !autoInterpret
+              ? 'AI总结解读'
+              : null,
+          onAction: presentation.canInterpret && !autoInterpret
+              ? () => unawaited(_requestAssistantResultInterpretation(
+                    prompt: presentation.interpretationPrompt,
+                    mode: mode,
+                    toolStatus: planStatus,
+                    sourceIds: presentation.sourceIds,
+                  ))
+              : null,
+        ));
+        _sending = false;
+        _error = presentation.contractErrors.isEmpty
+            ? null
+            : '部分工具结果未通过契约校验；已隐藏无效结果，未交给 AI 解读。';
+      });
+    }
+    _inputController.clear();
+    final persisted = await _persistSuccessfulTurn(
+      userText: userText,
+      assistantText: response,
+      mode: mode,
+      toolStatus: planStatus,
+      sourceIds: presentation.sourceIds,
+      traceId: traceContext.traceId,
+      toolPlanSteps: stepMetadata,
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.persistence,
+      status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+      route: route,
+      sourceIds: presentation.sourceIds,
+      errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+    );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.finalRender,
+      status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
+      route: route,
+      sourceIds: presentation.sourceIds,
+      errorCode:
+          presentation.contractErrors.isEmpty ? null : 'RESULT_CONTRACT_INVALID',
+    );
+    if (followUp == null) _pendingToolOrigin = null;
+    _scrollToBottom();
+
+    if (autoInterpret && mounted) {
+      await _requestAssistantResultInterpretation(
+        prompt: presentation.interpretationPrompt,
+        mode: mode,
+        toolStatus: planStatus,
         sourceIds: presentation.sourceIds,
         showPromptInTimeline: false,
         allowWhileSending: true,
@@ -8533,6 +8838,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         imagePath == null &&
         audioPath == null &&
         !widget.contextualExplanationOnly) {
+      ToolExecutionPlan? pendingExecutionPlan;
       var decision = AssistantConversationOrchestrator.resolve(
         query: text,
         selectedMode: _assistantMode,
@@ -8582,7 +8888,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             route: 'bounded_intent_selection:${resolution.action.name}',
             mode: decision.mode.name,
           );
-          if (resolution.action == LocalAiIntentAction.select) {
+          if (resolution.action == LocalAiIntentAction.plan) {
+            final planBuild = AssistantToolExecutionPlanBuilder.build(
+              planId: traceId!,
+              query: text,
+              candidates: decision.candidateTools,
+              orderedToolIds: resolution.toolIds,
+            );
+            if (planBuild.isValid) {
+              pendingExecutionPlan = planBuild.plan;
+            } else {
+              decision = AssistantDispatchDecision(
+                mode: decision.mode,
+                clarification:
+                    '计划参数预检未通过，尚未执行任何工具：${planBuild.errors.join('；')}。请补充或修正输入后重新发送。',
+              );
+            }
+          } else if (resolution.action == LocalAiIntentAction.select) {
             AssistantToolDefinition? selectedTool;
             for (final candidate in decision.candidateTools) {
               if (candidate.id == resolution.toolId) {
@@ -8688,6 +9010,23 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           status: AiTraceStatus.succeeded,
         );
         _scrollToBottom();
+        return;
+      }
+      if (pendingExecutionPlan != null) {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.dispatch,
+          status: AiTraceStatus.succeeded,
+          route: 'ai_multi_tool_plan',
+          mode: effectiveMode.name,
+        );
+        await _executeHeadlessToolPlan(
+          text,
+          pendingExecutionPlan!,
+          decision.candidateTools,
+          mode: effectiveMode,
+          traceContext: traceContext,
+        );
         return;
       }
       if (decision.tool != null) {
