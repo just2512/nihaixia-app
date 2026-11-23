@@ -63,6 +63,7 @@ class HeadlessToolDispatcher {
   static AssistantToolResult executeSync({
     required String toolId,
     required Map<String, String> arguments,
+    DateTime Function()? clock,
   }) {
     if (!_synchronousExecutorIds.contains(toolId)) {
       throw StateError(
@@ -75,7 +76,12 @@ class HeadlessToolDispatcher {
         'Tool "${toolId}" does not register a Headless executor.',
       );
     }
-    final result = executor(arguments);
+    if (clock != null && toolId != 'yuxiaji_omen') {
+      throw ArgumentError('A clock override is only supported for yuxiaji_omen.');
+    }
+    final result = toolId == 'yuxiaji_omen' && clock != null
+        ? YuxiajiOmenToolExecutor.execute(arguments, clock: clock)
+        : executor(arguments);
     if (result is Future<AssistantToolResult>) {
       throw StateError(
         'Tool "${toolId}" was registered as synchronous but returned a Future.',
