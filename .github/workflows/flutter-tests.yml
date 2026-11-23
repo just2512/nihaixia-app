@@ -49,6 +49,7 @@ jobs:
         working-directory: tool/import_graph_audit
         run: |
           dart pub get
+          dart analyze
           dart run bin/audit.dart ../../lib
 
       - name: Install dependencies
