@@ -75,7 +75,7 @@ void main() {
     Map<String, dynamic> payload,
     KeyPair keyPair,
   ) async {
-    final publicKey = await keyPair.extractPublicKey();
+    final publicKey = await keyPair.extractPublicKey() as SimplePublicKey;
     final token = await _signToken(payload, keyPair);
     final dynamicVerifier = LicenseVerifier(
       keyRing: _keyRing('dynamic-test-key', publicKey.bytes),

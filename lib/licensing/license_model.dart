@@ -181,7 +181,7 @@ class LicensePayload {
       'issued_at',
       'issuer_key_id',
     };
-    if (json.keys.any((key) => key is! String || !allowedFields.contains(key))) {
+    if (json.keys.any((key) => !allowedFields.contains(key))) {
       throw const FormatException('License payload contains unsupported fields.');
     }
 
