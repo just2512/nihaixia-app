@@ -12,8 +12,8 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `8f5091c08f10743e7ef3322c86f50fc2e296fd78` | PR #424 已合并出生日期/时间歧义拒绝保护；PR #414 为此前最近一次 UI 运行时代码变更。PR #420/#421/#423 仅涉及测试或验收文档 |
-| 本轮最新文档核验基线 | `4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 已合并，收尾历史分支审计并统一 Find N2 验收文档；本轮 E4B 总交接文档重建另见 §73 |
+| 本轮最新应用代码核验基线 | `cbced1d663615a502cfdb98ebcff1a5ddf626ae5` | PR #430 已合并医案真实字段进入学习助手上下文的代码与回归测试；PR #431 仅为产品范围/交接文档。 |
+| 本轮最新文档核验基线 | `1db1f2e66b8484b47689e2d8d55f2fac07358f07` | PR #431 已合并产品定位纠偏、医案/知识库学习验收口径及 Find N2 本地交接。 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
 | AI 约束文件 | `docs/ai-capability-audit.md` | 本项目最高优先级 AI 改造约束 |
@@ -21,7 +21,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线为 PR #424 合并后的 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`；PR #414 是此前关煞百科 UI 运行时代码变更。当前文档基线在本 PR 合并前为 `fd6db8a84de87bd1da6364315ed5a6529d30b76c`；本 PR 只补充 Find N2 情境结果/字段快照设备验收矩阵及交接台账，不改应用代码。历史任务范围与历次核验仍以各节记录为准；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 当前 `master` 整体基线为 `1db1f2e66b8484b47689e2d8d55f2fac07358f07`；其中最新应用代码提交为 PR #430 合并提交 `cbced1d663615a502cfdb98ebcff1a5ddf626ae5`，PR #431 是产品定位和设备交接文档更新，不修改业务代码。应用版本仍为 `2.0.0+8048`。Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等只能由本地设备取得证据；未执行前保持 `MISSING / UNKNOWN / LOCAL ONLY`，不得将 CI 或文档当作设备结果。
 
 ## 2. 状态定义
 
@@ -40,7 +40,7 @@
 - `TEST`：测试文件、测试名称、断言内容和实际运行结果。
 - `CI`：workflow、run ID、commit SHA、结论及失败步骤。
 - `TRACE`：设备、系统、App SHA、模型版本、backend、场景 ID、轮次和日志关联。
-- `REVIEW`：医学背景人员对红旗词表、处置文案或其他专业内容的审核记录。
+- `REVIEW`：由相应领域人员对学习内容质量、术语和产品交互进行的人工复核；不代表临床审批，也不是本学习辅助工具的上线门禁。
 
 ## 3. 总体工作流状态
 
@@ -4034,4 +4034,57 @@ PR HEAD 门禁证据：
 - `requiresAdvancedAi` 仅在 `origin == aiDispatch` 且计划包含至少两个不同 `capabilityId` 时成立；同一能力重复调用不计为跨工具计划；用户手动执行多能力计划不触发 `ai_advanced`；`structured_diagnosis` 单独执行保持免费。
 - `AssistantToolDefinition` 已为当前注册工具明确声明稳定的 `capabilityId`，当前初始映射按工具 ID 一对一建立；将来若多个工具属于同一业务能力，应显式共享同一 capability ID，而不是按工具调用数计费。
 - 本批只建立执行计划和注册元数据契约，**尚未**将所有实际 Headless 调度路径改造成先形成完整计划、再在第一个业务副作用前统一授权。生产计划聚合、调度器接线、授权前无副作用回归仍是 F1 后续必做项。
-- 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 最新 head 的 Fork license 检查已通过，Flutter full regression 正在执行。不得将 Branch validation 的 SKIPPED 计为通过。
+- 自动化覆盖计划来源、不同/相同能力计数、手动多能力免费、问诊单能力免费和不可变参数快照；PR #428 已于 2026-11-23 合并至 master（`93940d485ab3e2e6bf81a11fd2a4ff2d05858980`）。历史 Branch validation 的 SKIPPED 不计为 PASS。
+
+
+---
+
+## 82. 2026-11-23 产品范围校准与远程收尾状态
+
+### 82.1 当前唯一有效产品边界
+
+- 研纪是中医学习辅助工具，不是医疗诊断软件或临床分诊系统。
+- 不建设临床红旗 detector、临床风险分级、医生/医学专家审核门禁，也不要求 Flutter/Native 全入口红旗拦截；上述旧 RedFlag 方案是历史设计，状态为 `SUPERSEDED / NOT IN SCOPE`，不得再标记为 `RELEASE BLOCKED`。
+- 允许保留产品定位文档中的简明免责声明/急重症求助提醒；它不是 detector、评估器或模型调用门禁。
+- 当前 `AssistantConversationOrchestrator.requiresMedicalSafetyPreflight()` 固定返回 `false`；生产发送/恢复路径不会要求红旗 assessment。旧 TRACE redFlag/preflight 阶段若为兼容性保留，只能记为 `NOT_APPLICABLE`，不得将其解释为正在运行的安全检测。
+- 历史文档与旧代码符号保留不等于当前产品需要实现该能力；后续不得再创建 detector、医学审核或红旗阻断任务。
+
+### 82.2 知识库与医案学习闭环
+
+当前验收对象是 App 内学习可用性，不是医学文献考据：
+
+1. 本草、方剂、经典、针灸、穴位、讲稿和医案能够正常浏览、检索、打开详情。
+2. 从详情/结果进入统一学习助手时，绑定准确的本地条目 ID、`sourceId`/`anchorId`，并将命中的真实内容字段注入 AI 上下文。
+3. AI 能围绕实际内容解释概念、病例线索、辨病辨证思路、病机、治法、方剂配伍、针灸思路，比较已检索的本地资料并支持多轮追问。
+4. 回答必须区分本地原始记录与 AI 学习性解释；条目中未提供的患者信息、病程、药物剂量、结果等标记缺失，不得编造。
+5. 本地 ID/回链用于 App 内定位；外部纸本版本、卷页、网页认证、病例出处账本、1256/1337 统计对账和经典—医案考据不是学习助手准入条件或发布门槛。
+
+PR #430 已合并医案学习上下文修复：只将医案实际字段送入 prompt，移除对 `source_ledger.json` 与外部书目定位状态的依赖，并补充真实字段注入测试。合并提交：`cbced1d663615a502cfdb98ebcff1a5ddf626ae5`。当前知识库检索覆盖与 AI 解读质量仍按具体学习用例验收，不因外部书目资料缺失而阻止使用。
+
+### 82.3 A / B / E / F / Find N2 的当前口径
+
+| 项目 | 当前状态 | 当前有效工作 | 尚缺证据及执行方 |
+|---|---|---|---|
+| A：本地 AI 多轮稳定性 | `PARTIAL / LOCAL ONLY` | 已有 Native completed-turn history、会话恢复策略、失败请求不自动重放及自动化回归 | Find N2 GPU/CPU 各至少 20 轮、多轮追问、图片/语音、Activity recreation、force-stop/restart 和 transcript 一致性；本地实测 |
+| B：临床红旗安全门禁 | `SUPERSEDED / NOT IN SCOPE` | 不作为本项目功能，不进入发布验收 | 不安排医学审核、detector、红旗全入口拦截或相关设备测试 |
+| B（当前产品工作）：问诊与学习结果解释 | `PARTIAL` | App 确定性规则执行结果由 AI 解释；知识库/医案实际字段进入学习上下文 | 继续以真实学习用例核验解释、来源回链、比较和多轮追问，不创建临床门禁 |
+| E：AI 数据清除 | `PARTIAL / LOCAL ONLY` | 已有单库事务、AI 专属附件目录、Native runtime cache 清除、TRACE 清除协调器和设置入口；沿用当前实现，不新增数据库/备份架构 | Find N2 合成数据实测：清理 AI 会话/任务/附件/TRACE/cache，保留非 AI 数据与模型；force-stop/restart 后复查。旧共享图片只按可证明归 AI 所有的路径处理 |
+| F：TRACE | `PARTIAL / LOCAL ONLY` | 已有默认关闭、分阶段记录、状态脱敏和清除联动 | Find N2 完整关联失败/恢复/持久化，记录 trace_id、实际 backend、阶段和数据状态；本地导出脱敏证据 |
+| Find N2 真机验收 | `MISSING / LOCAL ONLY` | PR #423/#431 已完善场景矩阵和交接文档 | 真实折叠屏、原签名原位升级、E4B、GPU/CPU、多媒体、恢复、清除、TRACE 记录；必须由本地设备执行 |
+
+### 82.4 本轮远程合并与未合并项
+
+- PR #423：Find N2 情境结果/字段快照真机验收矩阵，已合并。
+- PR #426：58 个无 PR head 关联历史分支的逐项审计处置，已合并。
+- PR #427：Headless dispatcher F0-1，已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）。
+- PR #428：ToolExecutionPlan / capability 标识前置契约，已合并（`93940d485ab3e2e6bf81a11fd2a4ff2d05858980`）。
+- PR #430：医案本地内容进入学习 AI 上下文，已合并（`cbced1d663615a502cfdb98ebcff1a5ddf626ae5`）。
+- PR #431：产品定位、知识/医案验收口径、A/E/F 与 Find N2 本地交接，已合并（`1db1f2e66b8484b47689e2d8d55f2fac07358f07`）。
+- 58 个未曾作为 PR head 的历史分支均有逐项处置记录；没有可安全整支回灌的未吸收实现。本次不删除或改写历史 branch refs。
+- 本次复核时仅剩专业版授权工作未合并：PR #416、#429、#432、#433。均保持 OPEN；#416/#429 为 DRAFT，#432/#433 仍在各自授权分支/依赖链上。按用户要求，本轮不合并、不关闭、不改写这些 PR 或分支。
+
+### 82.5 CI 与本地交接入口
+
+- PR #430、#431 的 Fork license boundary、Flutter full regression、Android arm64 CI verification APK 与 Native unit tests 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。
+- 以上是云端代码/自动化证据，不是 OPPO Find N2 真机证据。
+- 本地交接唯一入口：[Find N2 / E4B 本地验收交接总清单](find-n2-e4b-local-handover.md)。所有设备结果须由执行者记录真实设备信息、App SHA、模型 SHA、实际 backend、场景日志和截图；未执行继续保持 `MISSING / LOCAL ONLY`。
