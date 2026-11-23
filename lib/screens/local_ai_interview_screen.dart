@@ -3379,6 +3379,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  String _planToolTitle(
+    List<AssistantToolDefinition> tools,
+    String toolId,
+  ) {
+    for (final tool in tools) {
+      if (tool.id == toolId) return tool.title;
+    }
+    return toolId;
+  }
+
   Future<void> _executeHeadlessToolPlan(
     String userText,
     ToolExecutionPlan plan,
@@ -3459,11 +3469,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           AssistantToolPlanStepMetadata(
             toolId: step.toolId,
             capabilityId: step.capabilityId,
-            title: tools
-                    .where((tool) => tool.id == step.toolId)
-                    .map((tool) => tool.title)
-                    .firstOrNull ??
-                step.toolId,
+            title: _planToolTitle(tools, step.toolId),
             status: 'NOT_STARTED',
             arguments: step.arguments,
           ),
@@ -3513,6 +3519,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       execution: execution,
       aiReady: _status?.ready == true && !_statusUnknown,
     );
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.businessExecution,
+      status: presentation.allStepsSucceeded
+          ? AiTraceStatus.succeeded
+          : AiTraceStatus.failed,
+      route: route,
+      durationMs: watch.elapsedMilliseconds,
+      errorCode: presentation.allStepsSucceeded
+          ? null
+          : 'PLAN_PARTIAL_OR_STEP_FAILED',
+    );
+
     for (var index = 0; index < plan.steps.length; index++) {
       final step = plan.steps[index];
       final stepPresentation = presentation.steps[index];
@@ -3543,7 +3562,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 AssistantToolExecutionStatus.unknown || null => AiTraceStatus.unknown,
               },
         toolId: step.toolId,
-        durationMs: watch.elapsedMilliseconds,
         errorCode: errorCode,
       );
       await _traceRecorder.record(
@@ -3593,11 +3611,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         AssistantToolPlanStepMetadata(
           toolId: step.toolId,
           capabilityId: step.capabilityId,
-          title: tools
-                  .where((tool) => tool.id == step.toolId)
-                  .map((tool) => tool.title)
-                  .firstOrNull ??
-              step.toolId,
+          title: _planToolTitle(tools, step.toolId),
           status: step.presentation?.toolStatusForPersistence ??
               step.result?.statusLabel ??
               'NOT_EXECUTED',
