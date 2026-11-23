@@ -12,7 +12,7 @@
 | 仓库 | `just2512/nihaixia-app` | Fork 独立仓库 |
 | 主分支 | `master` | 集成基线；每个实现切片从 master 派生独立工作分支，按小批量 PR 集成 |
 | 本台账建立时 HEAD | `78f8f2bda9adb3adcb74ff46984c9a06284a2f58` | 约束文件更新提交 |
-| 本轮最新应用代码核验基线 | `3dd1889ace0d58a6f2332067111d8c000e29be31` | PR #414 已合并，包含关煞百科轻列表与折叠/大字号回归；PR #415 仅改文档，不改变应用代码基线 |
+| 本轮最新应用代码核验基线 | `8f5091c08f10743e7ef3322c86f50fc2e296fd78` | PR #424 已合并出生日期/时间歧义拒绝保护；PR #414 为此前最近一次 UI 运行时代码变更。PR #420/#421/#423 仅涉及测试或验收文档 |
 | 本轮最新文档核验基线 | `4e9c8b66ce30d5e7c295ccb1672f817204c53cff` | PR #415 已合并，收尾历史分支审计并统一 Find N2 验收文档；本轮 E4B 总交接文档重建另见 §73 |
 | 应用版本 | `2.0.0+8048` | 以 `pubspec.yaml` 为准；新版本主线与 CI 证据将在 §67 记录 |
 | README 版本说明 | `2.0.0+8048` | 与 `pubspec.yaml` / `docs/versioning-policy.md` 同步；由 `tool/check_version_source.sh` 持续检查 |
@@ -21,7 +21,7 @@
 | 静态/动态审计报告 | `docs/ai-capability-audit-report.md` | 与约束文件分离，不得覆盖约束 |
 | 多轮稳定性审计 | `docs/local-ai-multiturn-audit.md` | 只读审计交付物 |
 
-**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线为 PR #414 合并后的 `3dd1889ace0d58a6f2332067111d8c000e29be31`；当前文档基线为 PR #415 合并后的 `4e9c8b66ce30d5e7c295ccb1672f817204c53cff`。PR #415 仅更新文档，不改变应用代码。历史任务范围与历次核验仍以各节记录为准；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
+**核验基线说明：** 本表分开记录应用代码 SHA 与文档 SHA：当前应用代码基线为 PR #424 合并后的 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`；PR #414 是此前关煞百科 UI 运行时代码变更。当前文档基线在本 PR 合并前为 `fd6db8a84de87bd1da6364315ed5a6529d30b76c`；本 PR 只补充 Find N2 情境结果/字段快照设备验收矩阵及交接台账，不改应用代码。历史任务范围与历次核验仍以各节记录为准；Find N2 实机运行、多轮/多媒体/进程恢复/清除/TRACE 等未由云端执行的项目，仍须按本地清单取得设备证据；未重跑的历史审计不冒充本轮新证据。
 
 ## 2. 状态定义
 
@@ -3890,6 +3890,7 @@ PR HEAD 门禁证据：
 - 第三轮清理旧 E4B 本地 AI 验收清单时，发现旧稿 §10.4–§10.7 曾定义 Dream 单条词条、Guansha 单次结果隐私、其他确定性工具结果/字段快照及跨上下文多轮 TRACE；当前主线的通用 GPU/CPU、多媒体、恢复、清除和 TRACE 步骤已保留，但这些情境结果类别此前没有在 Find N2 真机矩阵中各自建立独立场景 ID。
 - 已逐项核对当前 master 生产入口与自动化测试：`dream_screen.dart` + `dream_contextual_result_entry_test.dart`（多候选只解释所选 DreamEntry、来源/快照与滚动恢复）；`guansha_screen.dart` + `guansha_contextual_result_entry_test.dart`（唯一城市、同一 Headless 执行对象、输入/设置变更后入口失效、儿童资料脱敏）；Bazi / Ziwei 结果与字段快照测试；YiJing / Meihua 结果快照与字段路径测试；Dosage 换算结果、ZiWuLiuZhu 四方法字段测试。
 - 在 `docs/find-n2-real-device-acceptance.md` 新增 §N：Dream、Guansha、Bazi/Ziwei、YiJing/Meihua、Dosage/ZiWuLiuZhu 及跨结果多轮 TRACE 的独立设备场景；结果模板增加 N1–N6。只增加验收要求，不修改应用代码或测试门槛。
-- 同步 `docs/find-n2-e4b-local-handover.md`，把 §N 加入真机交接执行顺序；仓库文档基线更新为 PR #420 合并后的 master，最近一次应用运行时代码基线仍记为 PR #414。
+- 同步 `docs/find-n2-e4b-local-handover.md`，把 §N 加入真机交接执行顺序；期间 PR #424 已合并出生日期/时刻歧义拒绝保护，当前应用代码基线更新为 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`。
 - 本次文档是设备执行规范，不是设备结果。Dream/Guansha/结果字段、GPU/CPU 多轮和跨会话 TRACE 均保持 `MISSING / UNKNOWN / LOCAL ONLY`，不得将 Widget/Resolver 自动化测试替代实体 OPPO Find N2 证据。
-- PR #416 专业版永久授权仍按用户要求保持 OPEN / DRAFT；本节不修改、不合并、不关闭授权协议、离线签发器或相关权属清单。
+- PR #424 已合并（merge SHA `8f5091c08f10743e7ef3322c86f50fc2e296fd78`）：Bazi、Guansha、Ziwei 自然语言入口现在收集并规范化全部出生日期/时刻候选；不同候选产生歧义标记，统一参数校验在 Headless 确定性引擎执行前拒绝；相同值不同格式去重。#422 因旧分支重复声明和 CI 失败关闭为 SUPERSEDED。PR #424 的 Fork license、Dart/Flutter 静态分析、全量 Flutter 回归、Android arm64 与 Native 单测均成功；条件性 Branch validation 为 SKIPPED，不计 PASS。
+- 专业版授权 PR #416 继续保持 OPEN / DRAFT，仍在修改中；本轮不修改、不合并、不关闭授权协议、离线签发器、相关权属清单或任何 #416 文件。
