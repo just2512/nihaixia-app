@@ -983,3 +983,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Yanji Pro lifetime licensing protocol, verifier, tests, and offline issuer. Only rights-holder-owned or sufficiently sublicensed portions are covered.
+
+Files:
+ test/fixtures/pro-license-test-vectors.json
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Synthetic-only shared cross-language licensing protocol test vector. Contains no production issuer key or real customer data.
