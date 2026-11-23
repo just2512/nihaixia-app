@@ -1,8 +1,10 @@
 // 五运六气图表 CustomPainter 的文字缩放回归测试。
-//
-// 图表标签由 TextPainter 绘制。改变 MediaQuery TextScaler 后，绘制器必须持有新的
-// 缩放状态并请求重绘；否则页面即使处于 200% 字号，图内标签仍保持原字号。
+// 同时验证 painter 的重绘决策和最终像素输出，不能只证明 shouldRepaint 被触发。
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/screens/yunqi_charts.dart';
 
@@ -11,7 +13,14 @@ final ColorScheme _lightColorScheme = ColorScheme.fromSeed(
   brightness: Brightness.light,
 );
 
-Future<CustomPainter> _pumpChart(
+class _CapturedChart {
+  const _CapturedChart({required this.painter, required this.pixels});
+
+  final CustomPainter painter;
+  final Uint8List pixels;
+}
+
+Future<_CapturedChart> _pumpChart(
   WidgetTester tester, {
   required double textScale,
   required Widget Function(YunQiChartData data) builder,
@@ -62,7 +71,34 @@ Future<CustomPainter> _pumpChart(
       .whereType<CustomPainter>()
       .toList();
   expect(chartPainters, hasLength(1), reason: '每张图应只读取自身的 CustomPainter');
-  return chartPainters.single;
+
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('yunqi-chart-area')),
+  );
+
+  // toImage/toByteData are engine-backed asynchronous work. Run them outside
+  // the widget test's FakeAsync zone or the raster future can remain pending
+  // until the test timeout, leaving the next test with a guarded API conflict.
+  final pixels = await tester.runAsync<Uint8List>(() async {
+    final image = await boundary.toImage(pixelRatio: 1);
+    try {
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (byteData == null) {
+        throw StateError('Unable to capture chart pixels for text-scale regression.');
+      }
+      return byteData.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  });
+  if (pixels == null) {
+    throw StateError('Chart pixel capture did not complete outside FakeAsync.');
+  }
+
+  return _CapturedChart(
+    painter: chartPainters.single,
+    pixels: pixels,
+  );
 }
 
 Future<void> _expectPainterTracksTextScale(
@@ -82,9 +118,14 @@ Future<void> _expectPainterTracksTextScale(
   );
 
   expect(
-    enlarged.shouldRepaint(normal),
+    enlarged.painter.shouldRepaint(normal.painter),
     isTrue,
     reason: '$chartName 的 painter 必须感知 100% → 200% 字号变化并请求重绘',
+  );
+  expect(
+    enlarged.pixels,
+    isNot(equals(normal.pixels)),
+    reason: '$chartName 的最终 CustomPaint 像素必须随 100% → 200% 字号改变，不能只触发空重绘',
   );
   expect(tester.takeException(), isNull);
 }
