@@ -3408,6 +3408,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       requireAssessment: false,
       sourceTruncated: redFlagSnapshot.sourceTruncated,
     )) {
+      _pendingToolOrigin = null;
       return;
     }
 
@@ -3612,11 +3613,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           toolId: step.toolId,
           capabilityId: step.capabilityId,
           title: _planToolTitle(tools, step.toolId),
-          status: step.presentation?.toolStatusForPersistence ??
-              step.result?.statusLabel ??
-              'NOT_EXECUTED',
+          status: step.contractErrors.isNotEmpty
+              ? 'RESULT_CONTRACT_INVALID'
+              : step.presentation?.toolStatusForPersistence ??
+                  step.result?.statusLabel ??
+                  'NOT_EXECUTED',
           arguments: step.presentation?.argumentsForPersistence ?? step.arguments,
-          sourceIds: step.presentation?.sourceIds ?? const [],
+          sourceIds: step.contractErrors.isEmpty
+              ? step.presentation?.sourceIds ?? const []
+              : const [],
         ),
     ];
     final planStatus = followUp != null
@@ -8971,10 +8976,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
       final wasPendingToolSelection = _pendingToolSelection;
       effectiveMode = decision.mode;
-      _pendingToolSelection = decision.expectsToolSelection;
-      final resolvedRoute = decision.needsClarification
-          ? 'clarification'
-          : decision.tool != null
+      _pendingToolSelection = pendingExecutionPlan == null
+          ? decision.expectsToolSelection
+          : false;
+      final resolvedRoute = pendingExecutionPlan != null
+          ? 'ai_multi_tool_plan'
+          : decision.needsClarification
+              ? 'clarification'
+              : decision.tool != null
               ? 'tool:${decision.tool!.id}'
               : 'model';
       await _traceRecorder.record(
@@ -8985,7 +8994,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         mode: effectiveMode.name,
         toolId: decision.tool?.id,
       );
-      if (decision.needsClarification) {
+      if (decision.needsClarification && pendingExecutionPlan == null) {
         if (decision.expectsToolSelection) {
           _pendingToolOrigin = InvocationOrigin.aiDispatch;
         }
