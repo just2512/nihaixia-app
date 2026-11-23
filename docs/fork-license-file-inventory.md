@@ -1,6 +1,6 @@
 # Fork 修改文件全量清单
 
-共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；当前 master 已包含情境 Ask AI 云端收尾、本地 Android Release 安全门禁、产品版本 2.0.0+8048 与研纪 Launcher 图标。本分支新增子午流注纳子、纳甲、灵龟八法、飞腾八法四种方法的字段级情境解释入口，绑定同一设备本地计算快照，保留 NOT_APPLICABLE，并增加 resolver、prompt 与 402dp / 775dp 布局回归。CI 对实际 PR HEAD 重新计算路径与 Git 状态。本次新增生产经典阅读入口到情境 Ask AI 的端到端 Widget 回归测试，校验真实伤寒篇目来源锚点和所选原文。
+共同上游基线：c0f14e77a7fb721fc332576d21fef5f100392d0b；当前 master 已包含四种子午流注方法字段级情境 Ask AI 入口、本地 Android Release 签名保护、产品版本 2.0.0+8048、研纪 Launcher 资源，以及经典来源/锚点校验协议。本次新增生产伤寒阅读入口到情境 Ask AI 的端到端回归测试，不改变应用运行逻辑。CI 对实际 PR HEAD 重新计算路径与 Git 状态。
 
 ## 分类规则
 
