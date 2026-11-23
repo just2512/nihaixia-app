@@ -11,14 +11,21 @@ const _maxLicensePayloadLength = 12288;
 
 enum LicenseVerificationStatus {
   valid,
+  validWithUnknownFeatures,
+  unknownFeatureOnly,
   invalidFormat,
   invalidPayload,
+  unsupportedSchema,
   unknownIssuer,
+  issuerCompromised,
   invalidIssuerKey,
   invalidSignature,
+  revoked,
   wrongProduct,
+  unsupportedProductRevision,
   wrongApplication,
   wrongDevice,
+  requestMismatch,
 }
 
 class LicenseVerificationResult {
@@ -27,27 +34,39 @@ class LicenseVerificationResult {
   final LicenseVerificationStatus status;
   final LicensePayload? payload;
 
-  bool get isValid => status == LicenseVerificationStatus.valid;
+  /// True only when at least one currently supported feature is granted.
+  bool get isValid =>
+      status == LicenseVerificationStatus.valid ||
+      status == LicenseVerificationStatus.validWithUnknownFeatures;
 }
 
 class LicenseVerifier {
   LicenseVerifier({
     required Map<String, List<int>> trustedIssuerPublicKeys,
+    Set<String> compromisedIssuerKeyIds = const {},
+    Set<String> revokedLicenseIds = const {},
     Ed25519? algorithm,
   })  : _trustedIssuerPublicKeys = Map.unmodifiable({
           for (final entry in trustedIssuerPublicKeys.entries)
             entry.key: List<int>.unmodifiable(entry.value),
         }),
+        _compromisedIssuerKeyIds = Set.unmodifiable(compromisedIssuerKeyIds),
+        _revokedLicenseIds = Set.unmodifiable(revokedLicenseIds),
         _algorithm = algorithm ?? Ed25519();
 
   final Map<String, List<int>> _trustedIssuerPublicKeys;
+  final Set<String> _compromisedIssuerKeyIds;
+  final Set<String> _revokedLicenseIds;
   final Ed25519 _algorithm;
 
   /// Verifies the exact ASCII bytes "YANJI1." + the original payload segment.
-  /// JSON is parsed only after signature verification and is never re-serialized.
+  /// JSON is never re-serialized for signature verification.
   Future<LicenseVerificationResult> verify(
     String token, {
     required String expectedDeviceKeySha256,
+    required String expectedRequestId,
+    required String expectedRequestNonce,
+    required String expectedRequestSha256,
     String expectedAppId = yanjiLicenseAppId,
   }) async {
     if (token.length > _maxLicenseTokenLength) {
@@ -56,7 +75,8 @@ class LicenseVerifier {
       );
     }
 
-    final parts = token.trim().split('.');
+    final normalizedToken = token.trim();
+    final parts = normalizedToken.split('.');
     if (parts.length != 3 ||
         parts[0] != _licenseTokenPrefix ||
         !_isBase64UrlSegment(parts[1]) ||
@@ -109,6 +129,11 @@ class LicenseVerifier {
         LicenseVerificationStatus.invalidPayload,
       );
     }
+    if (_compromisedIssuerKeyIds.contains(issuerKeyId)) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.issuerCompromised,
+      );
+    }
     final issuerPublicKey = _trustedIssuerPublicKeys[issuerKeyId];
     if (issuerPublicKey == null) {
       return const LicenseVerificationResult(
@@ -147,6 +172,18 @@ class LicenseVerifier {
       );
     }
 
+    final schemaVersion = untrustedJson['schema_version'];
+    if (schemaVersion is! int) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.invalidPayload,
+      );
+    }
+    if (schemaVersion != 1) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.unsupportedSchema,
+      );
+    }
+
     late final LicensePayload payload;
     try {
       payload = LicensePayload.fromJson(untrustedJson);
@@ -156,11 +193,14 @@ class LicenseVerifier {
       );
     }
 
-    if (payload.productId != yanjiLifetimeProductId ||
-        payload.productRevision != ProfessionalEditionCatalog.productRevision ||
-        !payload.perpetual) {
+    if (payload.productId != yanjiLifetimeProductId || !payload.perpetual) {
       return const LicenseVerificationResult(
         LicenseVerificationStatus.wrongProduct,
+      );
+    }
+    if (payload.productRevision != ProfessionalEditionCatalog.productRevision) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.unsupportedProductRevision,
       );
     }
     if (payload.appId != expectedAppId) {
@@ -173,7 +213,31 @@ class LicenseVerifier {
         LicenseVerificationStatus.wrongDevice,
       );
     }
+    if (payload.requestId != expectedRequestId ||
+        payload.requestNonce != expectedRequestNonce ||
+        payload.requestSha256 != expectedRequestSha256) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.requestMismatch,
+      );
+    }
+    if (_revokedLicenseIds.contains(payload.licenseId)) {
+      return const LicenseVerificationResult(
+        LicenseVerificationStatus.revoked,
+      );
+    }
 
+    if (payload.knownFeatureIds.isEmpty) {
+      return LicenseVerificationResult(
+        LicenseVerificationStatus.unknownFeatureOnly,
+        payload,
+      );
+    }
+    if (payload.unknownFeatureIds.isNotEmpty) {
+      return LicenseVerificationResult(
+        LicenseVerificationStatus.validWithUnknownFeatures,
+        payload,
+      );
+    }
     return LicenseVerificationResult(
       LicenseVerificationStatus.valid,
       payload,
