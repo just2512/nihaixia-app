@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../services/entitlement_service.dart';
 import 'feature_authorizer.dart';
 import 'feature_authorizer_scope.dart';
