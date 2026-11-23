@@ -28,39 +28,27 @@ void main() {
       expect(plan.requiresAdvancedAi, isTrue);
     });
 
-    test('same-capability steps do not require ai_advanced', () {
-      final first = AssistantToolRouter.yuxiaji;
-      final sameCapability = AssistantToolDefinition(
-        id: first.id,
-        capabilityId: first.capabilityId,
-        title: first.title,
-        description: first.description,
-        modes: first.modes,
-        aliases: first.aliases,
-        actionWords: first.actionWords,
-        builder: first.builder,
-        parameters: first.parameters,
+    test('multiple steps with one capability remain free by plan semantics', () {
+      final plan = ToolExecutionPlan(
+        planId: 'manual-plan-contract',
+        origin: InvocationOrigin.aiDispatch,
+        steps: [
+          ToolExecutionStep(
+            toolId: 'tool_a',
+            capabilityId: 'shared_capability',
+            arguments: const {},
+          ),
+          ToolExecutionStep(
+            toolId: 'tool_b',
+            capabilityId: 'shared_capability',
+            arguments: const {},
+          ),
+        ],
       );
-      // The plan builder rejects repeated tool IDs, so same-capability repeats
-      // remain a dispatcher-level contract rather than an AI duplicate-ID plan.
-      expect(
-        () => AssistantToolExecutionPlanBuilder.build(
-          planId: 'plan-1',
-          query: '查询玉匣灵兆',
-          candidates: [first, sameCapability],
-          orderedToolIds: [first.id, first.id],
-        ),
-        returnsNormally,
-      );
-      final result = AssistantToolExecutionPlanBuilder.build(
-        planId: 'plan-1',
-        query: '查询玉匣灵兆',
-        candidates: [first, sameCapability],
-        orderedToolIds: [first.id, first.id],
-      );
-      expect(result.isValid, isFalse);
-      expect(result.plan, isNull);
-      expect(result.errors, isNotEmpty);
+
+      expect(plan.steps, hasLength(2));
+      expect(plan.capabilityIds, {'shared_capability'});
+      expect(plan.requiresAdvancedAi, isFalse);
     });
 
     test('rejects page-only tools before constructing a plan', () {
