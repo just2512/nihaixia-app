@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'yuxiaji_omen_time.dart';
 import 'yuxiaji_omen_tool_service.dart';
 
@@ -33,9 +34,9 @@ class YuxiajiOmenResultContextExecutor {
     if (observedAt.isUtc) {
       return _failure('必须使用 App 设备本地时间，不接受 UTC 时间输入。');
     }
-    final result = YuxiajiOmenToolService.execute(
-      const {},
-      clock: () => observedAt,
+    final result = HeadlessToolDispatcher.executeSync(
+      toolId: 'yuxiaji_omen',
+      arguments: const {},
     );
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
