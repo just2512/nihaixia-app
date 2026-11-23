@@ -4,6 +4,64 @@ import 'package:nihaisha_app/services/headless_tool_result_handler.dart';
 
 void main() {
   group('HeadlessToolResultHandler', () {
+    test('normalizes a successful page result and keeps persistence outside the handler', () {
+      const arguments = {'date': '2026-11-23'};
+      final result = AssistantToolResult(
+        toolId: 'yunqi',
+        title: '五运六气推算',
+        values: const {'结果': '页面返回的本地计算结果'},
+        arguments: arguments,
+        sourceIds: const ['local-engine:yunqi'],
+      );
+
+      final presentation = HeadlessToolResultHandler.handlePage(
+        toolId: 'yunqi',
+        toolTitle: '五运六气推算',
+        rawResult: result,
+        expectedArguments: arguments,
+        aiReady: true,
+      );
+
+      expect(presentation.resultContractErrors, isEmpty);
+      expect(presentation.argumentErrors, isEmpty);
+      expect(presentation.responseText, contains('页面返回的本地计算结果'));
+      expect(presentation.canInterpret, isTrue);
+      expect(presentation.autoInterpret, isTrue);
+      expect(presentation.canRetry, isFalse);
+      expect(presentation.result.arguments, arguments);
+    });
+
+    test('keeps legacy page text visible but not eligible for AI interpretation', () {
+      final presentation = HeadlessToolResultHandler.handlePage(
+        toolId: 'yunqi',
+        toolTitle: '五运六气推算',
+        rawResult: '旧页面返回的文本',
+        expectedArguments: const {'date': '2026-11-23'},
+        aiReady: true,
+      );
+
+      expect(presentation.resultContractErrors, isEmpty);
+      expect(presentation.responseText, contains('旧页面返回的文本'));
+      expect(presentation.result.status, AssistantToolExecutionStatus.unknown);
+      expect(presentation.canInterpret, isFalse);
+      expect(presentation.autoInterpret, isFalse);
+    });
+
+    test('represents a page exit without a result as no-result, not success', () {
+      final presentation = HeadlessToolResultHandler.handlePage(
+        toolId: 'yunqi',
+        toolTitle: '五运六气推算',
+        rawResult: null,
+        expectedArguments: const {'date': '2026-11-23'},
+        aiReady: true,
+      );
+
+      expect(presentation.result.status, AssistantToolExecutionStatus.noResult);
+      expect(presentation.responseText, contains('MISSING'));
+      expect(presentation.canInterpret, isFalse);
+      expect(presentation.autoInterpret, isFalse);
+    });
+
     test('rejects mismatched result identity and arguments before presentation', () {
       final result = AssistantToolResult(
         toolId: 'bazi',
