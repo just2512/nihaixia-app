@@ -7,7 +7,7 @@
 | 项目 | 当前基线 | 核验要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
-| 当前应用代码基线 | `master @ cbced1d663615a502cfdb98ebcff1a5ddf626ae5` | PR #430 合并医案实际记录字段进入学习助手上下文；PR #431 仅修改产品定位/本地交接文档 |
+| 当前应用代码基线 | `master @ 8c645a29511a10da319aeb6aad6418371f04a018` | 已包含 PR #430 医案记录字段、PR #433 离线授权协议、PR #437 Android Keystore/AtomicFile、PR #438 Dart Bridge/EntitlementService |
 | 当前主线整体基线 | `1db1f2e66b8484b47689e2d8d55f2fac07358f07` | PR #431 合并后的 master；设备必须从这一主线构建 |
 | 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
@@ -214,8 +214,8 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 
 ## 11. 2026-11-23 远程收尾后的基线校准
 
-- 当前 master 整体 SHA：`1db1f2e66b8484b47689e2d8d55f2fac07358f07`。
-- 最新应用代码变更：PR #430 合并 SHA `cbced1d663615a502cfdb98ebcff1a5ddf626ae5`；PR #431 为文档范围修订，无业务代码变更。
+- 当前 master 整体 SHA：`8c645a29511a10da319aeb6aad6418371f04a018`。
+- 最新应用代码变更：PR #433 离线协议、PR #437 Android Keystore/AtomicFile、PR #438 Dart Bridge/EntitlementService 已合并；PR #431 为文档范围修订，无业务代码变更。
 - 产品范围不包含临床红旗 detector、医学审核或全入口拦截；无需在设备上执行相关测试。
 - 医案/经典设备验收围绕本地条目打开、实际字段进入 AI 上下文、AI 解读和追问；不执行纸本卷页考据作为学习功能准入测试。
 - A/E/F 与折叠屏/原签名升级仍是本地设备工作。任何未执行条目保持 `MISSING / LOCAL ONLY`，不影响已通过远程代码/自动化的无关 PR 收尾。
