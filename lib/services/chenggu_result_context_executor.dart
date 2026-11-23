@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'chenggu_tool_service.dart';
 
 class ChengguResultContextExecution {
@@ -39,7 +40,7 @@ class ChengguResultContextExecutor {
       return _failure(arguments, '只接受明确的公历 birth_date 与当地钟表 birth_time。');
     }
 
-    final result = await ChengguToolService.execute(arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'chenggu', arguments: arguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
