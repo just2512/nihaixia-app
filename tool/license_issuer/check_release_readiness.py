@@ -2,7 +2,9 @@
 """Block Release readiness unless a production-only issuer trust anchor is configured."""
 from __future__ import annotations
 
+import argparse
 import base64
+import binascii
 import json
 import os
 import re
@@ -27,23 +29,37 @@ def decode_public_key(value: object, label: str) -> bytes:
         fail(f"{label}: public key must be canonical Base64URL")
     try:
         decoded = base64.urlsafe_b64decode(value + "=")
-    except (ValueError, base64.binascii.Error):
+    except (ValueError, binascii.Error):
         fail(f"{label}: invalid Base64URL")
     if len(decoded) != 32 or base64.urlsafe_b64encode(decoded).decode().rstrip("=") != value:
         fail(f"{label}: public key must encode exactly 32 canonical bytes")
     return decoded
 
 
-def production_files() -> list[Path]:
+def production_files(extra_scan_paths: list[Path]) -> list[Path]:
     files: list[Path] = []
     for root in PRODUCTION_ROOTS:
         if not root.exists():
             fail(f"required production source root is missing: {root.relative_to(ROOT)}")
         files.extend(path for path in root.rglob("*") if path.is_file())
+    for candidate in extra_scan_paths:
+        path = candidate if candidate.is_absolute() else ROOT / candidate
+        if not path.is_file():
+            fail(f"required scan artifact is missing: {path}")
+        files.append(path)
     return files
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--scan-path",
+        action="append",
+        type=Path,
+        default=[],
+        help="additional built artifact to scan, such as a Release APK",
+    )
+    args = parser.parse_args()
     source = os.environ.get(ENV_NAME, "")
     if not source.strip():
         fail(f"{ENV_NAME} is not configured; production Release publication is blocked")
@@ -78,7 +94,7 @@ def main() -> None:
         if key_id in ids:
             fail(f"{label}: duplicate issuer ID {key_id}")
         ids.add(key_id)
-        if status not in ALLOWED_STATUSES:
+        if not isinstance(status, str) or status not in ALLOWED_STATUSES:
             fail(f"{label}: unknown status {status!r}")
         if status in TRUSTED_STATUSES:
             has_trust_anchor = True
@@ -109,7 +125,7 @@ def main() -> None:
         base64.b64encode(test_public_key).decode(),
         test_public_key.hex(),
     }
-    for path in production_files():
+    for path in production_files(args.scan_path):
         try:
             content = path.read_bytes()
         except OSError as error:
