@@ -3964,7 +3964,7 @@ PR HEAD 门禁证据：
 | `work/ai-p0-multiturn` | 旧多轮静态审计快照已被主线 docs/local-ai-multiturn-audit 更新；设备 GPU/CPU 和生命周期仍为 UNKNOWN。 |
 | `work/ai-p0-transcript-rehydration-v2` | Native completed-turn transcript replay、LocalAiConversationHistoryPolicy 和 Kotlin 回归已存在于主线；失败中的请求仍不自动重放。 |
 | `work/ai-redflag-gate` | 2026-11-10 旧 TRACE/红旗审计快照已过时；当前 red-flag entrypoint audit 仍明确标记生产 detector/全入口拦截 MISSING。 |
-| `work/ai-redflag-policy` | 主线 preflight policy/test 更完整；真实 detector、医学审核和 Flutter/Native 全入口接入仍缺，维持 PARTIAL / RELEASE BLOCKED。 |
+| `work/ai-redflag-policy` | 历史临床红旗策略分支；2026-11-15 产品范围已排除临床 detector、医学审核和全入口拦截，状态 SUPERSEDED / NOT IN SCOPE。 |
 | `work/ai-retrieval-golden` | 黄金检索实测数据仍 UNKNOWN；旧规范不含已锁定的真实命中快照，不回灌旧基线。 |
 | `work/ai-retrieval-golden-snapshot` | 测试只比较同一运行内两次结果并输出临时 CI artifact，没有跨提交固定 golden fixture，不能作为回归基线。 |
 | `work/ai-saved-charts-headless-2026-11-14` | 旧 AssistantToolRouter 和助手页面实现已被主线结果快照与统一执行链取代。 |
@@ -3995,7 +3995,7 @@ PR HEAD 门禁证据：
 ### 78.2 仍未关闭的真实验收门槛
 
 - **A Native 多轮：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 completed-turn transcript replay、成功轮次策略及自动化测试；Find N2 GPU/CPU 至少 20 轮、图片/语音、Activity recreation、进程重启、`state:7` 根因仍需设备证据。
-- **B 红旗安全：`PARTIAL / RELEASE BLOCKED`。** RedFlagPreflight 策略和测试已存在，但经医学审核的自然语言 detector、Flutter/Native 生产入口全覆盖及旁路矩阵仍缺。不能用旧 policy 分支宣称完成。
+- **B 临床红旗 detector：`SUPERSEDED / NOT IN SCOPE`。** 研纪是中医学习辅助工具，不建设临床分诊 detector、医学审核门禁或 Flutter/Native 全入口拦截；不再将这些材料列为发布阻塞。一般性急重症求助提示保留，通用输入/参数校验仍须执行。
 - **E AI 数据清除：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 SQLite AI 表事务、AI 专属附件目录、Native runtime cache/TRACE coordinator 和 UI；混合 SQLite 备份边界、旧共享图片归属、Find N2 强停/重启后不可恢复仍未证明。
 - **F TRACE：`PARTIAL / DEVICE UNKNOWN`。** 主线已有多阶段 TRACE 和脱敏/默认关闭约束；失败/恢复/持久化完整关联及 Find N2 全场景真实 TRACE 仍需验收。
 - **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
@@ -4019,7 +4019,7 @@ PR HEAD 门禁证据：
 ## 80. F0 首个切片：Headless 执行调用集中（2026-11-23）
 
 - 本批从当前 master 的实际 Headless 调用链抽取无 UI 依赖的 `HeadlessToolDispatcher`。此前唯一真实 Executor 调用点位于 `LocalAiInterviewScreen._executeHeadlessTool`；本切片将回调调用集中到 Dispatcher，并由 Dispatcher 负责校验注册 Executor 是否存在和等待同步/异步结果。
-- `LocalAiInterviewScreen` 仍保留原有参数解析/校验、RedFlag preflight、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；本切片不移动这些逻辑，目标是保持 F0 行为不变。
+- `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不得作为模型调用 gate。本切片仍以保持 F0 既有行为为目标。
 - 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
 - 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
 - 后续 F0 仍需完成：Executor 实现 import 图收拢到 Dispatcher、Router 与 Screen 的工具元数据/执行注册分离、Analyzer AST import 图测试、完整执行结果/UI Result Handler 边界，以及重构前后特征测试。未完成前不得把 F0 标记 PASS。
@@ -4080,3 +4080,12 @@ PR HEAD 门禁证据：
 - Token 替换在写入前完成验签、设备绑定与权益差异比较；降低 Feature 必须显式传入确认标记，返回即将失去的 Feature 集合；写入后从平台重新读取并验签，失败时恢复原 Token 或删除本次新写入文件。
 - 测试包括真实 v1.2 测试向量、无 Token/缺密钥/未知发行者、存储损坏与暂时不可用、并发初始化、2 秒超时、完成后初始化缓存、挑战指纹不一致、无效 Token 不覆盖、原子替换重读、降低权益二次确认，以及 MethodChannel 字段/方法/错误映射。
 - 当前 PR 仅包含 Dart Bridge/Service 与 Mock Channel 测试；C 批次已由 PR #437 合并；D 的 MethodChannel 契约与原生实现一致。Mock Channel/CI 仍不证明 Find N2 的 KeyStore、StrongBox 或 AtomicFile 真机行为。不得把 Mock Channel、JVM、CI 结果表述为 Find N2 KeyStore / AtomicFile / StrongBox 已验证。激活 UI、Key Ring Release 装配、F1/G 门禁和后台 FlutterEngine 仍是独立批次。显式 refresh 在初始化 Future 未完成时会 supersede 旧请求；新增回归覆盖该竞态。
+
+## 86. 2026-11-23 产品范围纠偏与 Find N2 最终本地交接
+
+- 当前产品定位以 `docs/product-positioning-and-boundaries.md` 为准：研纪是中医学习辅助工具，不是临床诊断、分诊或医疗决策系统。
+- §78.2 中临床 RedFlag detector、医学审核、全入口拦截的旧阻塞项已标记 `SUPERSEDED / NOT IN SCOPE`。旧历史审计数据保留为历史记录，不再转成当前待办。
+- 保留一般性急重症求助提示、免责声明、输入类型检查、参数校验、确定性业务执行校验；这些不能被混称为临床 detector，也不得因产品范围纠偏而删除。
+- Find N2 / E4B 真机验收统一后置到云端代码、文档、许可和 CI 收尾之后。设备未执行项保持 `LOCAL ONLY / MISSING`，不阻塞无关云端 PR。
+- 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
+- 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。
