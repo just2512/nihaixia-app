@@ -4060,3 +4060,13 @@ PR HEAD 门禁证据：
 - 本 PR CI 已在上一 head 完成 Fork license、Flutter 全量回归、Python Issuer 单测、Android arm64 APK/Native 单测；因分支重基线和 Key Ring 生命周期补充，必须以重基线后的最新 PR head 重新验收。
 - 本切片**不代表** Android Keystore Plugin、Dart Platform Bridge、TokenStore、EntitlementService、生产 Key Ring、FeatureAuthorizer 生产接线、Dispatcher 副作用前授权、ContextResolutionGateway、激活 UI 或 Find N2 设备验收已完成。
 - PR #432 是依赖旧 `feature/pro-license-batch-1` 的重复协议候选；以 master 为目标的本 PR 完成合并后，#432 应标记为 SUPERSEDED。PR #416 继续保持 OPEN / DRAFT，不因该切片而修改或合并。
+
+## 84. 专业版 Android Keystore Plugin v1.2 云端实现（2026-11-23）
+
+- 本切片以 master `065189dd135ec1142d10bad1347a1c9ff6a2dd6f` 为独立基线，按专业版架构约束 §8.1–§8.4 实现 Android Keystore Plugin，不依赖未合并的授权协议 PR，也不修改 PR #416。
+- 新增独立 `LicensePlugin` / `LicenseKeystore` / `LicenseKeystorePolicy`；MainActivity 只负责注册插件，不承载授权业务逻辑。插件通过独立 MethodChannel 暴露 get-only 读取、用户主动创建、申请签名和本地私钥可用性检查。
+- 设备密钥为 Android Keystore P-256 / secp256r1，ECDSA SHA-256，SPKI DER 输出和 SHA-256 Base64URL 指纹；读取、签名和挑战检查均不自动创建密钥。已存在 alias 时显式拒绝重建，不覆盖现有私钥。
+- API 28+ 优先尝试 StrongBox；仅捕获 `StrongBoxUnavailableException` 时清理本次创建产生的部分 alias 并回退 TEE，不把一般 Provider/Keystore 错误误判为 StrongBox 不可用。API 31+ 按 KeyInfo 安全级别映射；API 24–30 无法区分 TEE/StrongBox 时硬件密钥报告 UNKNOWN。
+- 已新增纯策略单元测试，覆盖 StrongBox API 门槛、安全级别映射、申请 Payload 段格式和 Token 外层格式/大小限制。Android Keystore Provider 的真实设备行为、StrongBox 是否可用、密钥升级/恢复/失效行为仍是 LOCAL ONLY / MISSING，不能由 JVM/CI 单测宣称通过。
+- 新增 `LicenseTokenStore`，路径固定为 `context.noBackupFilesDir/yanji_license/active_license.token`，使用 Android `AtomicFile`；只保存单份完整 Token，不触碰主数据库 v7，也不保存 is_pro/Feature 快照。MethodChannel 通过 `readLicenseToken` 与 `writeLicenseTokenAfterVerification` 暴露原语；调用者必须先完成签名、协议、Feature 和设备指纹验证。实际原子失败保留旧文件的 Android 运行时行为仍待设备/平台测试。
+- 本切片仍没有实现 Dart Platform Bridge、EntitlementService、FeatureGate、激活 UI、生产发行者 Key Ring；也未证明独立后台 FlutterEngine 已注册此插件。下一批 D 应在当前 FeatureAuthorizer 接口上实现有界 EntitlementService 和 Dart TokenStore 消费层，并以 Fake Bridge 完成云端回归。
