@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'dosage_tool_service.dart';
 
 class DosageResultContextExecution {
@@ -29,7 +30,7 @@ class DosageResultContextExecutor {
     required Map<String, String> arguments,
   }) {
     final safeArguments = Map<String, String>.unmodifiable(arguments);
-    final result = DosageToolService.execute(safeArguments);
+    final result = HeadlessToolDispatcher.executeSync(toolId: 'dosage', arguments: safeArguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(safeArguments).isNotEmpty ||
