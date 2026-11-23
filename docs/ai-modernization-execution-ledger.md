@@ -4022,7 +4022,9 @@ PR HEAD 门禁证据：
 - `LocalAiInterviewScreen` 保留通用参数解析/校验、TRACE、结果契约校验、消息和数据库持久化、AI 解释及 UI 状态处理；临床 RedFlag detector/preflight 不适用，不得作为模型调用 gate。本切片仍以保持 F0 既有行为为目标。
 - 新增 `test/headless_tool_dispatcher_test.dart`：验证注册执行器只调用一次、参数对象不被改写、同步/异步结果透传、Page-only 工具拒绝和 Executor 异常原样传播。
 - 当前状态：**F0-1 PASS / 已合并**。PR #427 已合并（`a8ba02ab4dfc1cf9070043e60dc704b7eb704929`）；最新 PR HEAD 的 Fork license boundary、Flutter full regression 和 Android arm64 CI verification APK/native unit tests 均 PASS。Branch validation 因 workflow 条件为 SKIPPED，不计 PASS。这不是 F0 总体完成声明。
-- 后续 F0 仍需完成：Executor 实现 import 图收拢到 Dispatcher、Router 与 Screen 的工具元数据/执行注册分离、Analyzer AST import 图测试、完整执行结果/UI Result Handler 边界，以及重构前后特征测试。未完成前不得把 F0 标记 PASS。
+- **F0-2a PASS / PR #442 已合并**（merge SHA `396a9cc314994a7da813265706d0fb5441b3fd54`）。Router 不再持有 Executor 函数引用；18 个 tool-id 执行注册集中到 Dispatcher；Screen/Orchestrator 通过 `hasExecutor(tool.id)` 查询能力。PR #442 最终 HEAD `eaa80ca93cec18ae47d59536464abba004e38dd8` 的 Fork license boundary、Flutter 全量回归、Android arm64 CI APK 与 Native JVM 单测均 PASS；Branch validation 为 SKIPPED，不计 PASS。PR #440 已由 #442 替代关闭。
+- **F0-2b 待集成 / CI 未验收**：独立分支 `work/f0-executor-import-graph-20261123-v2` 已迁出 SavedChart、ZiWuLiuZhu、Dosage、YiJing 纯参数辅助函数；Screen/Orchestrator 不再直接导入 Executor；Dispatcher 改为只接收 `toolId`，不依赖 Router/Widget 元数据；Analyzer AST import/export 审计覆盖相对/包路径、别名、条件 import/export，并检查 Dispatcher 不引用 Flutter UI 类型。该分支仍需重基线、跑完整 CI 和修复所有实际 import 图违规，当前不能标记 PASS。
+- **F0-3 仍未完成**：完整执行结果/UI Result Handler 边界、导航意图与 Screen 状态/持久化责任分离，以及重构前后同一特征测试。未完成前不得把 F0 标记 PASS。
 - `FeatureAuthorizer`、收费门禁、`InvocationOrigin` 生产接线和跨工具执行计划预授权均不属于本 F0-1 切片；本批不改变现有免费行为。
 
 
@@ -4073,7 +4075,7 @@ PR HEAD 门禁证据：
 
 ## 85. D：TokenStore 平台桥接与异步 EntitlementService（2026-11-23）
 
-- 当前集成基线为 master @ `8c645a29511a10da319aeb6aad6418371f04a018`，已包含协议 PR #433、Android Keystore/AtomicFile PR #437 与 Dart Bridge/EntitlementService PR #438；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
+- 当前集成基线为 master @ `396a9cc314994a7da813265706d0fb5441b3fd54`，已包含协议 PR #433、Android Keystore/AtomicFile PR #437、Dart Bridge/EntitlementService PR #438 与 F0-2a PR #442；复用 §82 的 `FeatureAuthorizer`，新增 Dart `LicensePlatform` MethodChannel adapter 和可注入 `EntitlementService`，不依赖 UI 或全局静态门禁。
 - Bridge 使用与 C 批次 PR #437 一致的 Channel `com.nihaisha.nihaisha_app/licensing` 和方法：`readLicenseToken`、`writeLicenseTokenAfterVerification`、`deleteLicenseToken`、`getDeviceKey`、`createDeviceKeyForActivation`、`signActivationRequest`、`checkPrivateKeyUsability`；设备密钥响应字段使用 `publicKeySpkiBase64Url`、`publicKeySha256`、`securityLevel`、`strongBoxFallback`。
 - `EntitlementService` 采用共享初始化 Future、2 秒有界等待和不可变快照；超时为 `temporarilyUnavailable/initializationTimeout`，不将其持久化为永久拒绝；一次初始化完成后使用当前进程快照，显式 `refresh` 才重新读取并验签。
 - 没有 Token 时报告 `unlicensed`，不访问、不创建设备密钥；有 Token 时仅 get-only 读取密钥，并核验本地挑战返回的公钥指纹与读取结果一致，再由注入的 `LicenseVerifier` 验签。密钥缺失/失效不会自动重建。
