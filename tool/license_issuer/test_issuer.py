@@ -170,6 +170,25 @@ class IssuerProtocolTests(unittest.TestCase):
             signature,
             issuer.LICENSE_SIGNATURE_DOMAIN + issuer._canonical_json(payload),
         )
+        self.assertNotIn("request_nonce", payload)
+        self.assertNotIn("request_sha256", payload)
+        self.assertNotIn("device_key_security_level", payload)
+        with sqlite3.connect(self.db) as connection:
+            issuer_record = connection.execute(
+                """
+                SELECT request_nonce, request_sha256, device_key_security_level
+                FROM issued_licenses WHERE license_id = ?
+                """,
+                (payload["license_id"],),
+            ).fetchone()
+        self.assertEqual(
+            issuer_record,
+            (
+                vectors["device_request"]["request_payload"]["request_nonce"],
+                vectors["device_request"]["request_sha256"],
+                vectors["device_request"]["request_payload"]["device_key_security_level"],
+            ),
+        )
 
     def test_issuer_refuses_reserved_feature_overissuance(self) -> None:
         request, _, _, _ = make_device_request()
