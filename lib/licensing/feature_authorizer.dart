@@ -104,3 +104,17 @@ class FeatureAuthorizationDecision {
 abstract interface class FeatureAuthorizer {
   Future<FeatureAuthorizationDecision> authorize(String featureId);
 }
+
+/// Fail-closed fallback for internal callers that do not yet have a production
+/// entitlement scope. It never grants a feature and has no Flutter dependency.
+class DenyByDefaultFeatureAuthorizer implements FeatureAuthorizer {
+  const DenyByDefaultFeatureAuthorizer();
+
+  @override
+  Future<FeatureAuthorizationDecision> authorize(String featureId) async {
+    return FeatureAuthorizationDecision.denied(
+      featureId: featureId,
+      reason: FeatureAuthorizationFailureReason.unlicensed,
+    );
+  }
+}
