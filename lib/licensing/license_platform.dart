@@ -80,10 +80,10 @@ class MethodChannelLicensePlatform implements LicensePlatform {
   }
 
   Future<void> _invokeConfirmed(
-    String method, [
+    String method, {
     Map<String, Object?>? arguments,
     required String confirmationField,
-  ]) async {
+  }) async {
     final response = await _invokeMap(method, arguments);
     if (response[confirmationField] != true) {
       throw LicensePlatformFailure(
@@ -108,7 +108,7 @@ class MethodChannelLicensePlatform implements LicensePlatform {
   Future<void> writeActiveTokenAtomically(String token) async {
     await _invokeConfirmed(
       'writeLicenseTokenAfterVerification',
-      {'token': token},
+      arguments: {'token': token},
       confirmationField: 'stored',
     );
   }
