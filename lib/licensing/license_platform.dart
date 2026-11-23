@@ -79,13 +79,27 @@ class MethodChannelLicensePlatform implements LicensePlatform {
   }
 
   @override
+  Future<void> _invokeVoid(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    try {
+      await _channel.invokeMethod<void>(method, arguments);
+    } on PlatformException catch (error) {
+      throw LicensePlatformFailure(error.code, error.message);
+    } on MissingPluginException {
+      throw const LicensePlatformFailure('PLATFORM_UNAVAILABLE');
+    }
+  }
+
+  @override
   Future<void> writeActiveTokenAtomically(String token) async {
-    await _invoke<Object?>('writeActiveTokenAtomically', {'token': token});
+    await _invokeVoid('writeActiveTokenAtomically', {'token': token});
   }
 
   @override
   Future<void> deleteActiveToken() async {
-    await _invoke<Object?>('deleteActiveToken');
+    await _invokeVoid('deleteActiveToken');
   }
 
   @override
@@ -100,7 +114,7 @@ class MethodChannelLicensePlatform implements LicensePlatform {
 
   @override
   Future<void> checkPrivateKeyUsability() async {
-    await _invoke<Object?>('checkPrivateKeyUsability');
+    await _invokeVoid('checkPrivateKeyUsability');
   }
 
   static DeviceKeyInfo _deviceKeyFromMap(Map<Object?, Object?> value) {
