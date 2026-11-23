@@ -369,6 +369,28 @@ void main() {
       expect(service.snapshot.status, EntitlementServiceStatus.active);
       service.dispose();
     });
+    test('explicit refresh supersedes an initialization still in flight', () async {
+      final completer = Completer<String?>();
+      final platform = _FakeLicensePlatform(readCompleter: completer);
+      final service = EntitlementService(
+        platform: platform,
+        verifier: _verifier(vectors),
+      );
+
+      final first = service.initialize();
+      expect(platform.readCount, 1);
+
+      platform.readCompleter = null;
+      await service.refresh();
+      expect(platform.readCount, 2);
+      expect(service.snapshot.status, EntitlementServiceStatus.unlicensed);
+
+      completer.complete(null);
+      await first;
+      expect(service.snapshot.status, EntitlementServiceStatus.unlicensed);
+      service.dispose();
+    });
+
     test('completed initialization is cached until explicit refresh', () async {
       final platform = _FakeLicensePlatform();
       final service = EntitlementService(
