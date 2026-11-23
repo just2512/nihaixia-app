@@ -28,6 +28,11 @@ enum FeatureAuthorizationFailureReason {
   keyInvalidated,
   keystoreUnavailable,
   providerError,
+  licenseRevoked,
+  issuerCompromised,
+  invalidTokenFormat,
+  wrongApplication,
+  wrongProduct,
 }
 
 /// Diagnostic-only protocol condition. This is not a reason to reject an
