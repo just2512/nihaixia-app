@@ -136,6 +136,20 @@ class AssistantToolArguments {
   }
 }
 
+/// Data-only request for a page-owned tool route. The screen consumes this
+/// intent and performs Navigator operations; the router never navigates.
+class AssistantToolNavigationIntent {
+  const AssistantToolNavigationIntent({
+    required this.toolId,
+    required this.arguments,
+    this.pageOwnsInput = false,
+  });
+
+  final String toolId;
+  final Map<String, String> arguments;
+  final bool pageOwnsInput;
+}
+
 class AssistantToolDefinition {
   final String id;
   final String capabilityId;
@@ -853,6 +867,24 @@ class AssistantToolRouter {
       if (tool.id == id) return tool;
     }
     return null;
+  }
+
+  /// Create a structured page-navigation request without performing UI work.
+  static AssistantToolNavigationIntent navigationIntent({
+    required AssistantToolDefinition tool,
+    required AssistantToolArguments arguments,
+    bool pageOwnsInput = false,
+  }) {
+    if (tool.id != arguments.toolId) {
+      throw ArgumentError(
+        'Navigation intent tool ID must match the resolved tool definition.',
+      );
+    }
+    return AssistantToolNavigationIntent(
+      toolId: tool.id,
+      arguments: Map.unmodifiable(arguments.values),
+      pageOwnsInput: pageOwnsInput,
+    );
   }
 
   /// Match a short answer to a prior tool-type clarification. Unlike [match],
