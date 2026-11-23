@@ -4,7 +4,7 @@ import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 import 'package:nihaisha_app/screens/saved_charts_screen.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
-import 'package:nihaisha_app/services/solar_term_tool_executor.dart';
+import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
 
 void main() {
   test('工具注册表 ID 唯一且每个 ID 都能精确恢复同一工具定义', () {
@@ -171,10 +171,10 @@ void main() {
   test('五运六气注册项同时保留页面入口并提供 Headless 执行器', () async {
     final tool = AssistantToolRouter.yunqi;
     expect(tool.builderWithArguments, isNotNull);
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final result = await tool.headlessExecutor!(arguments);
+    final result = await HeadlessToolDispatcher.execute(tool: tool, arguments: arguments);
     expect(result.toolId, 'yunqi');
     expect(result.validateFor('yunqi'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
@@ -183,12 +183,12 @@ void main() {
 
   test('每日黄历注册项提供受日期约束的 Headless 执行器', () async {
     final tool = AssistantToolRouter.almanac;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.single.key, 'date');
     expect(tool.parameters.single.isRequired, isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final result = await tool.headlessExecutor!(arguments);
+    final result = await HeadlessToolDispatcher.execute(tool: tool, arguments: arguments);
     expect(result.toolId, 'almanac');
     expect(result.validateFor('almanac'), isEmpty);
     expect(result.validateArgumentsMatch(arguments), isEmpty);
@@ -198,7 +198,7 @@ void main() {
 
   test('紫微注册项要求四项出生资料并提供 Headless 执行器', () {
     final tool = AssistantToolRouter.ziwei;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((parameter) => parameter.key), [
       'birth_date',
       'birth_time',
@@ -234,7 +234,7 @@ void main() {
 
   test('八字注册项要求四项出生参数并提供 Headless 执行器', () {
     final tool = AssistantToolRouter.bazi;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((parameter) => parameter.key), [
       'birth_date',
       'birth_time',
@@ -343,7 +343,7 @@ void main() {
 
   test('梅花三种起卦方式都声明 Headless 参数契约并按方式约束输入', () {
     final tool = AssistantToolRouter.meihua;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(
       tool.parameters.map((item) => item.key),
       ['method', 'first', 'second', 'date', 'hour_branch'],
@@ -368,7 +368,7 @@ void main() {
 
   test('称骨注册项在助手对话中收集公历日期和出生钟表时间', () {
     final tool = AssistantToolRouter.chenggu;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), [
       'birth_date',
       'birth_time',
@@ -391,13 +391,13 @@ void main() {
 
   test('节气养生注册为 Headless，目标节气可选且来自现有二十四节气目录', () {
     final tool = AssistantToolRouter.solarTerms;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(
       tool.parameters.map((item) => item.key),
       ['term'],
     );
     expect(tool.parameters.single.isRequired, isFalse);
-    expect(tool.parameters.single.choices, SolarTermToolExecutor.termNames);
+    expect(tool.parameters.single.choices, AssistantToolRouter.solarTermNames);
     expect(
       AssistantToolRouter.match('查询立春养生', AssistantMode.automatic)?.id,
       'solar_terms',
@@ -420,7 +420,7 @@ void main() {
 
   test('小六壬注册为 Headless，要求用户明确提供日期、时辰和起课口径', () {
     final tool = AssistantToolRouter.xiaoliuren;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), [
       'date',
       'hour',
@@ -456,7 +456,7 @@ void main() {
 
   test('黄帝四季歌注册为 Headless，必需参数为公历出生日期和当地钟表时间', () {
     final tool = AssistantToolRouter.huangdiSiji;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), [
       'birth_date',
       'birth_time',
@@ -478,7 +478,7 @@ void main() {
 
   test('易经注册为 Headless，并声明四种起卦方式及回放参数', () {
     final tool = AssistantToolRouter.yijing;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), [
       'method',
       'first',
@@ -522,7 +522,7 @@ void main() {
 
   test('经方换算注册为 Headless，并声明最小参数契约', () {
     final tool = AssistantToolRouter.dosage;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(
       tool.parameters.map((item) => item.key),
       ['value', 'unit', 'standard'],
@@ -542,7 +542,7 @@ void main() {
 
   test('子午流注注册为 Headless 并保留设备本地时间槽位', () {
     final tool = AssistantToolRouter.ziwu;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), ['at', 'date', 'time']);
     expect(tool.parameters.every((item) => !item.isRequired), isTrue);
     expect(
@@ -557,7 +557,7 @@ void main() {
 
   test('周公解梦注册为对话内 Headless 工具并声明梦境描述参数', () {
     final tool = AssistantToolRouter.dream;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), ['dream_text']);
     expect(tool.parameters.single.isRequired, isTrue);
     expect(tool.parameters.single.type, AssistantToolParameterType.text);
@@ -574,7 +574,7 @@ void main() {
 
   test('三山国王灵签的抽签动作可 Headless 执行，签谱浏览仍保留页面入口', () {
     final tool = AssistantToolRouter.sanshan;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters, isEmpty);
     expect(
       AssistantToolRouter.match(
@@ -587,7 +587,7 @@ void main() {
 
   test('受生债注册为 Headless 并要求出生日期、时间和明确查询体系', () {
     final tool = AssistantToolRouter.shoushengDebt;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), [
       'birth_date',
       'birth_time',
@@ -621,7 +621,7 @@ void main() {
 
   test('已保存命盘 Headless 支持对话调度，同时保留原页面入口', () {
     final tool = AssistantToolRouter.savedCharts;
-    expect(tool.headlessExecutor, isNotNull);
+    expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
     expect(tool.parameters.map((item) => item.key), [
       'saved_chart_id',
       'chart_type',

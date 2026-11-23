@@ -1,7 +1,5 @@
 import '../screens/assistant_tool_router.dart';
-import 'solar_term_tool_executor.dart';
-import 'xiaoliuren_tool_executor.dart';
-import 'yijing_tool_executor.dart';
+import 'headless_tool_dispatcher.dart';
 
 /// A single-turn dispatch decision. The selected UI mode may remain automatic;
 /// [mode] is the effective domain adapter for this turn.
@@ -46,7 +44,7 @@ class AssistantConversationOrchestrator {
     // E4B may only select capabilities that execute inside this conversation.
     // Page Tools remain deterministic clarifications until they gain a
     // validated Headless executor; never let model routing open another page.
-    if (candidates.any((tool) => tool.headlessExecutor == null)) {
+    if (candidates.any((tool) => !HeadlessToolDispatcher.hasExecutor(tool.id))) {
       return const [];
     }
     return List.unmodifiable(candidates);
@@ -299,7 +297,7 @@ class AssistantConversationOrchestrator {
         values['dream_text'] = query.trim();
       }
     } else if (tool.id == 'solar_terms') {
-      final matches = SolarTermToolExecutor.termNames
+      final matches = AssistantToolRouter.solarTermNames
           .where(query.contains)
           .toList(growable: false);
       if (matches.length == 1) {
@@ -417,7 +415,7 @@ class AssistantConversationOrchestrator {
             '${date.month.toString().padLeft(2, '0')}-'
             '${date.day.toString().padLeft(2, '0')}';
       }
-      final hours = XiaoliurenToolExecutor.hourBranches
+      final hours = AssistantToolRouter.xiaoliurenHourBranches
           .where(query.contains)
           .toList(growable: false);
       if (hours.length > 1) {
@@ -482,7 +480,7 @@ class AssistantConversationOrchestrator {
           final match = expression.firstMatch(query);
           if (match == null) return null;
           final raw = match.group(1)!;
-          return YiJingToolExecutor.trigramNumbers[raw]?.toString() ?? raw;
+          return AssistantToolRouter.yiJingTrigramNumbers[raw]?.toString() ?? raw;
         }
 
         final upper = trigramValue(RegExp(
@@ -806,7 +804,7 @@ class AssistantConversationOrchestrator {
             .where((tool) => tool.id == 'solar_terms')
             .toList(growable: false);
     if (explicitSolarTool.length == 1) {
-      final mentionedTerms = SolarTermToolExecutor.termNames
+      final mentionedTerms = AssistantToolRouter.solarTermNames
           .where(text.contains)
           .toList(growable: false);
       if (mentionedTerms.length > 1) {
@@ -852,7 +850,7 @@ class AssistantConversationOrchestrator {
               '${match.group(3)!.padLeft(2, '0')}')
           .toSet();
       final dateCount = dateValues.length;
-      final hourCount = XiaoliurenToolExecutor.hourBranches
+      final hourCount = AssistantToolRouter.xiaoliurenHourBranches
           .where(text.contains)
           .length;
       final requestsDuoneng = text.contains('多能鄙事');
