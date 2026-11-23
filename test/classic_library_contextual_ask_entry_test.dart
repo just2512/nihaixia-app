@@ -64,7 +64,7 @@ void main() {
       expect(find.byType(SelectionArea), findsWidgets);
 
       final originalClause =
-          find.textContaining('脉缓者', findRichText: true).first;
+          find.textContaining('太阳病', findRichText: true).first;
       await tester.ensureVisible(originalClause);
       await tester.longPress(originalClause);
       await tester.pumpAndSettle();
@@ -90,7 +90,7 @@ void main() {
       expect(assistant.contextRef['sourceId'], sourceId);
       expect(assistant.contextRef['anchorVersion'], hasLength(64));
 
-      final selectedText = assistant.contextRef['selectedText'] as String?;
+      final selectedText = assistant.contextRef['selectedText'];
       expect(selectedText, isNotNull);
       expect(selectedText, isNotEmpty);
       expect('「太阳病」，发热，汗出，恶风，脉缓者，名为「中风」。',
