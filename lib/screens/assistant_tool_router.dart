@@ -1,6 +1,4 @@
-
 import 'package:flutter/material.dart';
-
 
 import 'chenggu_bone_screen.dart';
 import 'critical_illness_list_screen.dart';
