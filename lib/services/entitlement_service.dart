@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../licensing/feature_authorizer.dart';
-import '../licensing/license_model.dart';
 import '../licensing/license_platform.dart';
 import '../licensing/license_verifier.dart';
 
