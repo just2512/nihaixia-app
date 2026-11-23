@@ -32,7 +32,7 @@ Future<void> main(List<String> args) async {
 
   final dispatcher = File(
     '${root.path}/services/headless_tool_dispatcher.dart',
-  ).absolute.path;
+  ).absolute.path.replaceAll(Platform.pathSeparator, '/');
   final files = root
       .listSync(recursive: true, followLinks: false)
       .whereType<File>()
@@ -43,10 +43,9 @@ Future<void> main(List<String> args) async {
   final violations = <String>[];
   final parseFailures = <String>[];
   var dispatcherExecutorReferenceCount = 0;
-  var headlessEntryImportCount = 0;
-  final scannedHeadlessEntrypoints = <String>{};
+    final scannedHeadlessEntrypoints = <String>{};
 
-  String normalizedPath(File file) => file.absolute.path.replaceAll('\\\\', '/');
+  String normalizedPath(File file) => file.absolute.path.replaceAll(Platform.pathSeparator, '/');
 
   bool isHeadlessUiEntrypoint(File file) {
     final path = normalizedPath(file);
@@ -60,8 +59,7 @@ Future<void> main(List<String> args) async {
     if (normalizedPath(importer) == dispatcher) {
       dispatcherExecutorReferenceCount++;
     } else if (isHeadlessUiEntrypoint(importer)) {
-      headlessEntryImportCount++;
-      violations.add('${importer.path} imports a Headless Executor directly: $uri');
+            violations.add('${importer.path} imports a Headless Executor directly: $uri');
     }
   }
 
