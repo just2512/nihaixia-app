@@ -36,7 +36,7 @@ void main() {
     await DatabaseHelper.closeTestDatabase();
   });
 
-  test('medical-case context resolves an exact internal row and retains source-ledger states', () async {
+  test('medical-case context resolves an exact local learning record without bibliographic gates', () async {
     final medicalCase = _medicalCases.singleWhere((item) => item.seq == 2);
     final ref = AiContextResolver.buildMedicalCaseContextRef(medicalCase);
     final resolved =
@@ -54,24 +54,20 @@ void main() {
       resolved.value?.content['diagnosis'],
       medicalCase.diagnosis,
     );
-    expect(
-      resolved.value?.content['sourceTextVerificationStatus'],
-      'VERIFIED',
-    );
-    expect(
-      resolved.value?.content['bibliographicLocatorStatus'],
-      'MISSING',
-      reason: '网页原文匹配不能自动升级为纸本/影印本卷页核验',
-    );
-
     final prompt = AiContextPromptBuilder.buildMedicalCaseKnowledgeEntry(
       entry: resolved.value!,
     );
-    expect(prompt, contains('内部序号只用于定位'));
-    expect(prompt, contains('原文 VERIFIED 只表示'));
-    expect(prompt, contains('不得依据该历史病例为用户生成个人诊断'));
-    expect(prompt, contains('source_ledger.json'));
-    expect(prompt, contains('UNKNOWN'));
+    expect(prompt, contains('当前 App 本地医案记录'));
+    expect(prompt, contains(ref.sourceId));
+    expect(prompt, contains('【医案实际记录字段】'));
+    expect(prompt, contains('【学习分析要求】'));
+    expect(prompt, contains('该案例进行复盘'));
+    expect(prompt, contains('不得把单条历史案例直接套用'));
+    expect(prompt, isNot(contains('source_ledger.json')));
+    expect(prompt, isNot(contains('纸本/影印本')));
+    expect(prompt, isNot(contains('bibliographicLocatorStatus')));
+    expect(prompt, contains(medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis));
+    expect(prompt, contains(medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula));
 
     final stale = AiContextRef(
       kind: AiContextKind.caseRecord,
@@ -150,10 +146,14 @@ void main() {
       expect(assistantWidget.contextRef['kind'], 'case');
       expect(assistantWidget.contextRef['moduleId'], 'medical-cases');
       expect(assistantWidget.contextRef['anchorId'], 'medical-case:2');
-      expect(assistantWidget.initialPrompt, contains('source_ledger.json'));
-      expect(assistantWidget.initialPrompt, contains('原文来源核验状态：VERIFIED'));
-      expect(assistantWidget.initialPrompt, contains('纸本/影印本定位状态：MISSING'));
-      expect(assistantWidget.initialPrompt, contains('不得依据该历史病例为用户生成个人诊断'));
+      expect(assistantWidget.initialPrompt, contains('当前 App 本地医案记录'));
+      expect(assistantWidget.initialPrompt, contains('app-data:assets/medical_cases/cases_table.md#seq=2'));
+      expect(assistantWidget.initialPrompt, contains('【医案实际记录字段】'));
+      expect(assistantWidget.initialPrompt, contains('【学习分析要求】'));
+      expect(assistantWidget.initialPrompt, contains(medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis));
+      expect(assistantWidget.initialPrompt, contains(medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula));
+      expect(assistantWidget.initialPrompt, isNot(contains('source_ledger.json')));
+      expect(assistantWidget.initialPrompt, isNot(contains('纸本/影印本定位状态')));
       expect(tester.takeException(), isNull);
     },
   );
