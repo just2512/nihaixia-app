@@ -1,5 +1,6 @@
 import '../models/assistant_tool_result.dart';
 import 'ai_tool_result_snapshot.dart';
+import 'headless_tool_dispatcher.dart';
 import 'huangdi_siji_tool_service.dart';
 
 class HuangdiSijiResultContextExecution {
@@ -37,7 +38,7 @@ class HuangdiSijiResultContextExecutor {
       return _failure(arguments, '只接受 birth_date 与 birth_time 两个明确输入字段。');
     }
 
-    final result = await HuangdiSijiToolService.execute(arguments);
+    final result = await HeadlessToolDispatcher.execute(toolId: 'huangdi_siji', arguments: arguments);
     if (result.status != AssistantToolExecutionStatus.succeeded ||
         result.validateFor(moduleId).isNotEmpty ||
         result.validateArgumentsMatch(arguments).isNotEmpty ||
