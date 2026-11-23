@@ -20,6 +20,7 @@ import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
 import '../services/assistant_conversation_orchestrator.dart';
+import '../services/headless_tool_dispatcher.dart';
 import '../services/saved_chart_tool_executor.dart';
 import '../services/tcm_interview_conversation_controller.dart';
 import 'assistant_tool_router.dart';
@@ -2901,12 +2902,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       toolId: tool.id,
       errorCode: argumentErrors.isEmpty ? null : 'INVALID_ARGUMENTS',
     );
-    final executor = widget.testHeadlessToolExecutor ?? tool.headlessExecutor!;
     final executionWatch = Stopwatch()..start();
     AssistantToolResult result;
     if (argumentErrors.isEmpty) {
       try {
-        result = await executor(request.values);
+        result = await HeadlessToolDispatcher.execute(
+          tool: tool,
+          arguments: request.values,
+          executorOverride: widget.testHeadlessToolExecutor,
+        );
         executionWatch.stop();
         await _traceRecorder.record(
           traceContext,
