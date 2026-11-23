@@ -76,14 +76,6 @@ class _FakeLicensePlatform implements LicensePlatform {
   }
 }
 
-String _decodeText(String value) {
-  final normalized = value.padRight(
-    value.length + ((4 - value.length % 4) % 4),
-    '=',
-  );
-  return utf8.decode(base64Url.decode(normalized));
-}
-
 List<int> _decodeBase64Url(String value) {
   final normalized = value.padRight(
     value.length + ((4 - value.length % 4) % 4),
@@ -122,14 +114,12 @@ DeviceKeyInfo _deviceKey(String fingerprint) => DeviceKeyInfo(
 void main() {
   late Map<String, dynamic> vectors;
   late Map<String, dynamic> licenseFixture;
-  late Map<String, dynamic> deviceRequest;
   late String fingerprint;
   late String validToken;
 
   setUpAll(() async {
     vectors = await _loadVector();
     licenseFixture = vectors['valid_license'] as Map<String, dynamic>;
-    deviceRequest = vectors['device_request'] as Map<String, dynamic>;
     fingerprint =
         (licenseFixture['payload'] as Map<String, dynamic>)['device_public_key_sha256']
             as String;
@@ -310,7 +300,8 @@ void main() {
       await service.initialize();
 
       final invalid = await service.replaceToken(
-        token: validToken.substring(0, validToken.length - 1) + 'A',
+        token: validToken.substring(0, validToken.length - 1) +
+            (validToken.endsWith('A') ? 'B' : 'A'),
         allowFeatureReduction: true,
       );
 
