@@ -206,38 +206,38 @@ class NiHaishaApp extends StatelessWidget {
         return FeatureAuthorizerScope(
           authorizer: const UnconfiguredFeatureAuthorizer(),
           child: MaterialApp(
-          title: '研纪',
-          debugShowCheckedModeBanner: false,
-          themeMode: settings.themeMode,
-          theme: _buildTheme(Brightness.light),
-          darkTheme: _buildTheme(Brightness.dark),
-          home: const HomeScreen(),
-          // 字号缩放必须放在 builder（包住整个 Navigator）：只包 home 的话，
-          // push 出去的详情页/设置页和弹窗都拿不到用户字号，调到 200% 也只有
-          // 首页四个 tab 变大（issue #4 相关反馈的根因）。
-          builder: (context, child) {
-            final mediaQuery = MediaQuery.of(context);
-            return MediaQuery(
-              data: mediaQuery.copyWith(
-                textScaler: AppPreferenceTextScaler(
-                  platformScaler: mediaQuery.textScaler,
-                  preferenceScale: settings.textScaleFactor,
+            title: '研纪',
+            debugShowCheckedModeBanner: false,
+            themeMode: settings.themeMode,
+            theme: _buildTheme(Brightness.light),
+            darkTheme: _buildTheme(Brightness.dark),
+            home: const HomeScreen(),
+            // 字号缩放必须放在 builder（包住整个 Navigator）：只包 home 的话，
+            // push 出去的详情页/设置页和弹窗都拿不到用户字号，调到 200% 也只有
+            // 首页四个 tab 变大（issue #4 相关反馈的根因）。
+            builder: (context, child) {
+              final mediaQuery = MediaQuery.of(context);
+              return MediaQuery(
+                data: mediaQuery.copyWith(
+                  textScaler: AppPreferenceTextScaler(
+                    platformScaler: mediaQuery.textScaler,
+                    preferenceScale: settings.textScaleFactor,
+                  ),
                 ),
-              ),
-              child: WindowMetricsDiagnostics(child: child!),
-            );
-          },
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('zh', 'CN'),
-            Locale('en', 'US'),
-          ],
-          locale: const Locale('zh', 'CN'),
-          ),
+                child: WindowMetricsDiagnostics(child: child!),
+              );
+            },
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('zh', 'CN'),
+              Locale('en', 'US'),
+            ],
+            locale: const Locale('zh', 'CN'),
+            ),
         );
       },
     );
