@@ -758,8 +758,8 @@ void main() {
   group('LocalAiService bounded plan candidates', () {
     const traceId = '0123456789abcdef0123456789abcdef';
     final candidates = [
-      const LocalAiIntentCandidate(id: 'bazi', title: '八字', description: '八字排盘'),
-      const LocalAiIntentCandidate(id: 'ziwei', title: '紫微', description: '紫微排盘'),
+      const LocalAiIntentCandidate(id: 'bazi', title: '八字', description: '八字排盘', planEligible: true),
+      const LocalAiIntentCandidate(id: 'ziwei', title: '紫微', description: '紫微排盘', planEligible: true),
     ];
 
     test('accepts a plan only when every selected ID belongs to the candidate set', () async {
