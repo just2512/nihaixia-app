@@ -126,12 +126,16 @@ class AssistantToolArguments {
               : parsed.year.toString().padLeft(4, '0') + '-' +
                   parsed.month.toString().padLeft(2, '0') + '-' +
                   parsed.day.toString().padLeft(2, '0');
-          if (normalized != raw) {
+          if (raw == 'AMBIGUOUS_DATE_SELECTION') {
+            errors.add('参数「' + parameter.label + '」存在多个候选，请明确选择一个出生公历日期');
+          } else if (normalized != raw) {
             errors.add('参数「' + parameter.label + '」必须是有效日期 YYYY-MM-DD');
           }
           break;
         case AssistantToolParameterType.time:
-          if (!RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').hasMatch(raw)) {
+          if (raw == 'AMBIGUOUS_TIME_SELECTION') {
+            errors.add('参数「' + parameter.label + '」存在多个候选，请明确选择一个 HH:mm 时刻');
+          } else if (raw.length != 5 || !RegExp(r'^([01][0-9]|2[0-3]):[0-5][0-9]').hasMatch(raw)) {
             errors.add('参数「' + parameter.label + '」必须使用 24 小时制 HH:mm');
           }
           break;

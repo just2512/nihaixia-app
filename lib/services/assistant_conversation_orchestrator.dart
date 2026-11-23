@@ -597,22 +597,32 @@ class AssistantConversationOrchestrator {
       values.addAll(argumentsFor(AssistantToolRouter.bazi, query).values);
     } else if (tool.id == 'bazi') {
 
-      final isoDate =
-          RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(query);
-      final chineseDate =
-          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
-      final dateMatch = isoDate ?? chineseDate;
+      final dateValues = <String>{
+        for (final match in RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})')
+            .allMatches(query))
+          '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}',
+        for (final match in RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?')
+            .allMatches(query))
+          '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}',
+      };
       final dateIsLunar = query.contains('农历') || query.contains('阴历');
-      if (dateMatch != null && !dateIsLunar) {
-        values['birth_date'] =
-            '${dateMatch.group(1)!.padLeft(4, '0')}-'
-            '${dateMatch.group(2)!.padLeft(2, '0')}-'
-            '${dateMatch.group(3)!.padLeft(2, '0')}';
+      if (!dateIsLunar && dateValues.length > 1) {
+        values['birth_date'] = 'AMBIGUOUS_DATE_SELECTION';
+      } else if (!dateIsLunar && dateValues.length == 1) {
+        values['birth_date'] = dateValues.single;
       }
-      final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(query);
-      if (timeMatch != null) {
-        values['birth_time'] =
-            '${timeMatch.group(1)!.padLeft(2, '0')}:${timeMatch.group(2)}';
+      final timeValues = <String>{
+        for (final match in RegExp(r'(\d{1,2}):(\d{2})').allMatches(query))
+          '${match.group(1)!.padLeft(2, '0')}:${match.group(2)}',
+      };
+      if (timeValues.length > 1) {
+        values['birth_time'] = 'AMBIGUOUS_TIME_SELECTION';
+      } else if (timeValues.length == 1) {
+        values['birth_time'] = timeValues.single;
       }
       final hasMale = query.contains('男性') || query.contains('男');
       final hasFemale = query.contains('女性') || query.contains('女');
@@ -625,25 +635,34 @@ class AssistantConversationOrchestrator {
       final place = birthplace?.group(1)?.trim();
       if (place != null && place.isNotEmpty) values['birthplace'] = place;
     } else if (tool.id == 'ziwei') {
-      final isoDate = RegExp(
-        r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',
-      ).firstMatch(query);
-      final chineseDate =
-          RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?').firstMatch(query);
-      final dateMatch = isoDate ?? chineseDate;
+      final dateValues = <String>{
+        for (final match in RegExp(r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})')
+            .allMatches(query))
+          '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}',
+        for (final match in RegExp(r'(\d{4})年(\d{1,2})月(\d{1,2})日?')
+            .allMatches(query))
+          '${match.group(1)!.padLeft(4, '0')}-'
+              '${match.group(2)!.padLeft(2, '0')}-'
+              '${match.group(3)!.padLeft(2, '0')}',
+      };
       final dateIsLunar = query.contains('农历') || query.contains('阴历');
       if (dateIsLunar) {
         values['birth_date'] = 'LUNAR_DATE_NOT_SUPPORTED';
-      } else if (dateMatch != null) {
-        values['birth_date'] =
-            '${dateMatch.group(1)!.padLeft(4, '0')}-'
-            '${dateMatch.group(2)!.padLeft(2, '0')}-'
-            '${dateMatch.group(3)!.padLeft(2, '0')}';
+      } else if (dateValues.length > 1) {
+        values['birth_date'] = 'AMBIGUOUS_DATE_SELECTION';
+      } else if (dateValues.length == 1) {
+        values['birth_date'] = dateValues.single;
       }
-      final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(query);
-      if (timeMatch != null) {
-        values['birth_time'] =
-            '${timeMatch.group(1)!.padLeft(2, '0')}:${timeMatch.group(2)}';
+      final timeValues = <String>{
+        for (final match in RegExp(r'(\d{1,2}):(\d{2})').allMatches(query))
+          '${match.group(1)!.padLeft(2, '0')}:${match.group(2)}',
+      };
+      if (timeValues.length > 1) {
+        values['birth_time'] = 'AMBIGUOUS_TIME_SELECTION';
+      } else if (timeValues.length == 1) {
+        values['birth_time'] = timeValues.single;
       }
       final hasMale = query.contains('男性') || query.contains('男');
       final hasFemale = query.contains('女性') || query.contains('女');
