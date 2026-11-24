@@ -1140,6 +1140,13 @@ License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored accessible shared semantic status badge and its light/dark contrast, screen-reader, narrow-width, and 200-percent text-scaling Widget regression; ownership evidence required.
 
 Files:
+ lib/widgets/license_status_presentation.dart
+ test/license_status_presentation_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored professional edition status presentation mapping and regression tests; UI-only, does not alter authorization policy; ownership evidence required.
+
+Files:
  test/folk_tools_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial

@@ -2,7 +2,7 @@
 
 > **文件属性：** 项目级强制约束（Normative）
 > **约束编号：** YANJI-UI-THEME-001
-> **版本：** v1.4
+> **版本：** v1.5
 > **生效日期：** 2026-11-24
 > **适用范围：** Flutter App 全局主题、共享组件、业务页面、Android Launcher 与品牌图形资源
 > **执行状态：** 当前主题实现基线；页面级迁移按批次推进
@@ -284,11 +284,14 @@ errorContainer 内的正文和图标使用 colorScheme.onErrorContainer；不得
 |---|---|---|
 | checking / temporarilyUnavailable | neutral | 中性进度或说明，不显示错误红条 |
 | unlicensed | neutral | 未授权是可预期产品状态，不等同于程序故障 |
-| keyMissing / deviceMismatch / storeCorrupt | warning | 可恢复问题，给出明确的重新申请/恢复操作 |
-| signatureInvalid / issuerUnknown | danger | 明确错误图标、状态码、说明和处理边界 |
+| keyMissing / keyInvalidated / deviceMismatch / storeCorrupt | warning | 可恢复或可重新签发的问题，给出明确的重新申请/恢复操作 |
+| signatureInvalid / issuerUnknown / issuerCompromised / licenseRevoked | danger | 签名、发行者信任或撤销状态异常；必须显示明确错误图标、状态码、说明和处理边界 |
+| 其他令牌格式、商品/应用不匹配或未授予权益 | warning | 说明需要发行方核对或重新签发，不把配置不匹配误标为签名安全故障 |
 | 已激活 | success | 勾选图标和【已激活】标签；不得只依赖品牌红 |
 
 具体授权业务状态的映射必须服从专业版授权协议；本表只约束用户可见表达，不改变授权判定逻辑。
+
+`lib/widgets/license_status_presentation.dart` 是用户可见状态的唯一映射入口：以既有 `EntitlementServiceStatus` 和 `FeatureAuthorizationFailureReason` 组合决定 tone、图标与短标签；`LicenseActivationSettingsSection` 使用 `YanjiStatusBadge` 展示。该映射只控制颜色、图标和文案，不改变 `EntitlementService` 验签结果、设备绑定、权益集合或任何功能门禁。
 
 ### 5.7 导航、Tab 和选中态
 
@@ -447,6 +450,7 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 | 多表面对比度测试 | 已落地 | test/theme/yanji_contrast_test.dart |
 | 主题接线测试 | 已落地 | test/theme/yanji_theme_wiring_test.dart |
 | 新增硬编码颜色审计 | 已接入 CI | tool/audit_color_tokens.py；历史存量仍需分批迁移 |
+| 专业版授权状态语义映射 | 已实现（CI 待验收） | `LicenseStatusPresentation` 将检查中/未授权/暂不可用映射为 neutral，激活为 success，可恢复设备/存储原因映射为 warning，签名/发行者信任失败映射为 danger；只改变用户可见表达，不修改授权判定。 |
 | 风险提示页面/授权页面全量组件改造 | 待后续批次 | 本文件先锁定组件语义与验收规则 |
 | 所有业务页面旧颜色迁移 | 待后续批次 | 不做无差别一键替换 |
 | OPPO Find N2 真实设备阅读验收 | MISSING | CI/模拟器不能替代实机 |
@@ -459,5 +463,6 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 - v1.3（2026-11-24）：要求状态语义映射以生产数据集的实际标签集合建立覆盖测试；新增或变更标签必须同步更新显式映射和数据覆盖断言，未知值回退不能冒充实际数据覆盖。
 - v1.3（2026-11-24）：将三山灵签的大吉/平/凶/平安色彩映射切换到共享状态语义 Token；保留签文吉凶标签、筛选逻辑和民俗提示原文；移除页面对 Colors.green/red/teal 的直接依赖；补充浅深主题对比度回归。
 - v1.4（2026-11-24）：新增 `YanjiStatusBadge` 统一徽标组件，梦占、关煞和三山灵签状态标签共用同一呈现层；补充浅深主题文字对比度、屏幕阅读器名称、窄屏换行和 200% 字体缩放的 Widget 回归。
+- v1.5（2026-11-24）：按 5.6 将专业版授权用户可见状态统一映射到 success/neutral/warning/danger；根据失败原因区分可恢复设备问题与签名/发行者信任问题，补充映射和双主题对比度测试，不触碰授权判定。
 
 **最终执行口径：** 先读取本文件，再修改主题或页面。颜色不按感觉临时决定，状态不靠颜色单独表达，业务图谱不为统一而改义，任何例外必须可追溯、可测试、可验收。

@@ -6,7 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/services/entitlement_service.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
+import 'package:nihaisha_app/widgets/yanji_status_badge.dart';
 import 'package:nihaisha_app/widgets/license_activation_settings_section.dart';
+
+ThemeData _yanjiTestTheme() => ThemeData(
+  useMaterial3: true,
+  colorScheme: AppColors.colorSchemeFor(Brightness.light),
+  extensions: <ThemeExtension<dynamic>>[AppColors.light],
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +72,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: _yanjiTestTheme(),
         home: Scaffold(
           body: LicenseActivationSettingsSection(entitlementService: service),
         ),
@@ -72,6 +81,8 @@ void main() {
 
     expect(find.text('研纪专业版'), findsOneWidget);
     expect(find.text('未激活 · 免费功能可正常使用'), findsOneWidget);
+    expect(find.byType(YanjiStatusBadge), findsOneWidget);
+    expect(find.text('未授权'), findsOneWidget);
     expect(find.text('生成设备激活申请'), findsOneWidget);
 
     await tester.tap(find.text('生成设备激活申请'));
@@ -82,6 +93,55 @@ void main() {
       calls.map((call) => call.method),
       ['readLicenseToken', 'getDeviceKey', 'createDeviceKeyForActivation', 'signActivationRequest'],
     );
+    expect(tester.takeException(), isNull);
+    service.dispose();
+  });
+
+  testWidgets('200% 字体缩放和窄屏下授权状态仍完整显示且不溢出',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      if (call.method == 'readLicenseToken') {
+        return <String, Object?>{'token': null};
+      }
+      throw PlatformException(code: 'unexpectedMethod', message: call.method);
+    });
+
+    final service = EntitlementService(
+      platform: MethodChannelLicensePlatform(channel: channel),
+      verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
+    );
+    await service.initialize();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _yanjiTestTheme(),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(360, 800),
+            devicePixelRatio: 1,
+            textScaler: TextScaler.linear(2.0),
+          ),
+          child: Scaffold(
+            body: SingleChildScrollView(
+              child: LicenseActivationSettingsSection(
+                entitlementService: service,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.byType(Scaffold)), const Size(360, 800));
+    expect(find.byType(YanjiStatusBadge), findsOneWidget);
+    expect(find.text('未授权'), findsOneWidget);
     expect(tester.takeException(), isNull);
     service.dispose();
   });
@@ -104,6 +164,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: _yanjiTestTheme(),
         home: Scaffold(
           body: LicenseActivationSettingsSection(entitlementService: service),
         ),
