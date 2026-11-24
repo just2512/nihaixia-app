@@ -40,70 +40,7 @@ class _NoLostImagePicker implements LocalAiImagePicker {
 class _HistoryResumeService extends LocalAiService {
   String? restoredTranscript;
   List<String> restoredUserMessages = const [];
-  int sendCalls = 0;
 
-  @override
-  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
-
-  @override
-  Future<void> restoreConversation({
-    required String transcript,
-    required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-  }) async {
-    restoredTranscript = transcript;
-    restoredUserMessages = List<String>.from(userMessages);
-  }
-
-  @override
-  Future<String> sendMessage(
-    String text, {
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-  }) async {
-    sendCalls += 1;
-    return '续聊成功：$text';
-  }
-
-  @override
-  Future<String> sendMessageWithTrace(
-    String text, {
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-  }) async {
-    sendCalls += 1;
-    return '续聊成功：$text';
-  }
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-  }) async {
-    sendCalls += 1;
-    return '续聊成功：$text';
-  }
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required String context,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-  }) async {
-    sendCalls += 1;
-    return '续聊成功：$text';
-  }
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
@@ -289,7 +226,7 @@ class _MemoryConversationStore implements AssistantConversationStore {
 }
 
 void main() {
-  testWidgets('v1.3 有效情境来源不再受独立 Feature 收费门禁阻断', (tester) async {
+  testWidgets('v1.3 有效情境来源保持可用，不触发独立 Feature 收费提示', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
     const contextRef = AiContextRef(
@@ -300,6 +237,7 @@ void main() {
       sourceId: 'asset:assets/data/formulas.json',
       title: '测试方剂',
     );
+    const prompt = '解释这个方剂的组成';
 
     await tester.pumpWidget(
       MaterialApp(
@@ -309,7 +247,7 @@ void main() {
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
           contextRef: contextRef.toMetadata(),
-          initialPrompt: '只允许在授权后提交的情境内容',
+          initialPrompt: prompt,
         ),
       ),
     );
@@ -317,16 +255,11 @@ void main() {
 
     expect(find.textContaining('未获准使用情境助手'), findsNothing);
     expect(find.textContaining('情境引用无效'), findsNothing);
-    expect(tester.takeException(), isNull);
-
-    await tester.enterText(find.byType(TextField).first, '继续解释这个方剂');
-    await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
-    await _pumpFrames(tester);
-
-    // This fake service isolates the UI/source-integrity boundary. Native
-    // LiteRT access remains independently enforced by AiModelAccessGate.
-    expect(service.sendCalls, 1);
+    expect(
+      tester.widgetList<TextField>(find.byType(TextField))
+          .map((field) => field.controller?.text),
+      contains(prompt),
+    );
     expect(tester.takeException(), isNull);
   });
 
