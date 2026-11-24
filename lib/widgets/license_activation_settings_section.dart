@@ -5,11 +5,7 @@ import '../licensing/feature_authorizer.dart';
 import '../licensing/license_platform.dart';
 import '../services/entitlement_service.dart';
 import '../services/license_activation_request_builder.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_tokens.dart';
-import '../theme/yanji_status_semantics.dart';
-import 'license_status_presentation.dart';
-import 'yanji_status_badge.dart';
 import '../utils/fold_aware_routes.dart';
 
 class LicenseActivationSettingsSection extends StatefulWidget {
@@ -31,7 +27,7 @@ class _LicenseActivationSettingsSectionState
   bool _busy = false;
   String? _requestCode;
   String? _message;
-  YanjiStatusTone _messageTone = YanjiStatusTone.neutral;
+  bool _messageIsError = false;
 
   @override
   void dispose() {
@@ -54,19 +50,19 @@ class _LicenseActivationSettingsSectionState
         _message = request.strongBoxFallback
             ? '设备密钥已创建并使用 TEE 回退；此状态仅为本机报告，不是远程硬件证明。'
             : '设备申请已生成。设备级别仅供运营核对，不构成远程硬件证明。';
-        _messageTone = YanjiStatusTone.neutral;
+        _messageIsError = false;
       });
     } on LicensePlatformFailure catch (error) {
       if (!mounted) return;
       setState(() {
         _message = _platformFailureLabel(error);
-        _messageTone = _platformFailureTone(error);
+        _messageIsError = true;
       });
     } on Object {
       if (!mounted) return;
       setState(() {
         _message = '设备申请生成失败。请检查设备密钥状态后重试。';
-        _messageTone = YanjiStatusTone.warning;
+        _messageIsError = true;
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -80,7 +76,7 @@ class _LicenseActivationSettingsSectionState
     if (!mounted) return;
     setState(() {
       _message = '设备申请码已复制，可发送给授权发行方。';
-      _messageTone = YanjiStatusTone.neutral;
+      _messageIsError = false;
     });
   }
 
@@ -89,7 +85,7 @@ class _LicenseActivationSettingsSectionState
     if (token.isEmpty) {
       setState(() {
         _message = '请粘贴完整的 YANJI1 授权令牌。';
-        _messageTone = YanjiStatusTone.warning;
+        _messageIsError = true;
       });
       return;
     }
@@ -110,7 +106,7 @@ class _LicenseActivationSettingsSectionState
         if (confirmed != true) {
           setState(() {
             _message = '已取消替换，当前授权保持不变。';
-            _messageTone = YanjiStatusTone.neutral;
+            _messageIsError = false;
           });
           return;
         }
@@ -125,19 +121,19 @@ class _LicenseActivationSettingsSectionState
         _tokenController.clear();
         setState(() {
           _message = '授权令牌已验证并安装。';
-          _messageTone = YanjiStatusTone.success;
+          _messageIsError = false;
         });
       } else {
         setState(() {
           _message = _replacementFailureLabel(result);
-          _messageTone = licenseTokenReplacementTone(result);
+          _messageIsError = true;
         });
       }
     } on Object {
       if (!mounted) return;
       setState(() {
         _message = '授权替换未完成。旧授权不会因本次失败而被主动删除。';
-        _messageTone = YanjiStatusTone.warning;
+        _messageIsError = true;
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -169,66 +165,36 @@ class _LicenseActivationSettingsSectionState
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: widget.entitlementService,
       builder: (context, _) {
         final snapshot = widget.entitlementService.snapshot;
-        final presentation = licenseStatusPresentation(snapshot);
-        final semanticColors = context.colors;
-        final statusColors = yanjiStatusChipColors(
-          presentation.tone,
-          semanticColors,
-        );
-        final grantedFeatures = snapshot.grantedFeatureIds.toList()..sort();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                presentation.icon,
-                color: licenseStatusToneForeground(
-                  presentation.tone,
-                  semanticColors,
-                ),
-              ),
+              leading: const Icon(Icons.verified_user_outlined),
               title: const Text('研纪专业版'),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_statusLabel(snapshot)),
-                  const SizedBox(height: AppSpacing.xs),
-                  YanjiStatusBadge(
-                    label: presentation.label,
-                    colors: statusColors,
-                  ),
-                ],
-              ),
+              subtitle: Text(_statusLabel(snapshot)),
             ),
-            if (snapshot.status == EntitlementServiceStatus.active) ...[
+            if (snapshot.aiAccess)
+              const Padding(
+                padding: EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
+                child: Text('已授予：全部 Native LiteRT 模型访问'),
+              ),
+            if (snapshot.licenseId != null)
               Padding(
                 padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
-                child: Text(
-                  '已授予：${grantedFeatures.map(_featureLabel).join('、')}',
-                ),
+                child: Text('授权编号：${snapshot.licenseId}'),
               ),
-              if (snapshot.licenseId != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
-                  child: Text('授权编号：${snapshot.licenseId}'),
-                ),
-            ],
             if (snapshot.failureReason != null)
               Padding(
                 padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
                 child: Text(
                   _reasonLabel(snapshot.failureReason),
-                  style: TextStyle(
-                    color: licenseStatusToneForeground(
-                      presentation.tone,
-                      semanticColors,
-                    ),
-                  ),
+                  style: TextStyle(color: colors.error),
                 ),
               ),
             Align(
@@ -287,10 +253,7 @@ class _LicenseActivationSettingsSectionState
                 child: Text(
                   _message!,
                   style: TextStyle(
-                    color: licenseStatusToneForeground(
-                      _messageTone,
-                      semanticColors,
-                    ),
+                    color: _messageIsError ? colors.error : colors.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -311,35 +274,12 @@ class _LicenseActivationSettingsSectionState
       case EntitlementServiceStatus.temporarilyUnavailable:
         return '暂时无法确认授权 · 免费功能继续可用';
       case EntitlementServiceStatus.invalid:
-        return switch (snapshot.failureReason) {
-          FeatureAuthorizationFailureReason.keyMissing ||
-          FeatureAuthorizationFailureReason.keyInvalidated ||
-          FeatureAuthorizationFailureReason.deviceMismatch ||
-          FeatureAuthorizationFailureReason.storeCorrupt =>
-            '授权需要恢复 · 专业能力不会开放',
-          _ => '授权无效 · 专业能力不会开放',
-        };
+        return '授权无效或设备状态不匹配 · 专业能力不会开放';
     }
   }
 
-  static YanjiStatusTone _platformFailureTone(
-    LicensePlatformFailure error,
-  ) {
-    return switch (error.code) {
-      'keyMissing' ||
-      'KEY_MISSING' ||
-      'keyInvalidated' ||
-      'KEY_INVALIDATED' ||
-      'keystoreUnavailable' ||
-      'KEYSTORE_UNAVAILABLE' ||
-      'keyAlreadyExists' ||
-      'KEY_ALREADY_EXISTS' =>
-        YanjiStatusTone.warning,
-      _ => YanjiStatusTone.danger,
-    };
-  }
-
   static String _featureLabel(String id) {
+    if (id == 'ai_access') return '全部本地 AI 模型访问';
     switch (id) {
       case 'ai_advanced':
         return 'AI 跨工具自动编排';
