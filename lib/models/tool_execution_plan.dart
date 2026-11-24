@@ -34,7 +34,7 @@ class ToolExecutionStep {
 
 /// Complete, immutable plan formed before the first business executor starts.
 ///
-/// The plan intentionally does not execute tools or authorize features. It
+/// The plan intentionally does not execute tools or determine paid access. It
 /// provides a deterministic description that a dispatcher can validate as a
 /// whole before any step can produce a business side effect.
 class ToolExecutionPlan {
