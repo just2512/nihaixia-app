@@ -4997,7 +4997,7 @@
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增情境助手授权与来源锚点解析网关及其回归测试；仅限权利人拥有版权或有充分再许可权的部分。",
+      "reason": "新增情境来源引用与锚点完整性网关及回归测试；不承担授权或收费门禁；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {

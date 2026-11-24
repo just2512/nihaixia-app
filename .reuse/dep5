@@ -1052,7 +1052,7 @@ Files:
  test/context_resolution_gateway_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
-Comment: Fork-owned contextual authorization and source-anchor resolution gateway with regression tests; only portions for which sufficient rights exist.
+Comment: Fork-owned contextual source-reference and anchor-integrity gateway with regression tests; it does not perform license or paid-feature authorization; only portions for which sufficient rights exist.
 
 Files:
  lib/services/assistant_tool_execution_plan_builder.dart
