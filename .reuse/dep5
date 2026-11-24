@@ -1082,3 +1082,12 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned production public issuer Key Ring configuration factory, Release trust-anchor build gate documentation, and focused validation tests; only portions for which sufficient rights exist.
+
+Files:
+ .github/workflows/release-trust-anchor.yml
+ test/release_license_key_ring_test.dart
+ tool/license_issuer/check_release_readiness.py
+ tool/license_issuer/test_release_readiness.py
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned Release trust-anchor readiness workflow, schema-matched public Key Ring scanner and source/artifact rejection tests; only portions for which sufficient rights exist.

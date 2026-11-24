@@ -10,15 +10,15 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds an asynchronous FeatureAuthorizer interface and contract tests. It does not implement EntitlementService, TokenStore, platform KeyStore operations or production FeatureGate wiring. Ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language regression tests. Test keys are not production trust anchors; ownership evidence remains required. This update adds the Android Keystore Plugin, get-only/create device-key lifecycle, and AtomicFile single-token storage with JVM policy tests. Real-device KeyStore/StrongBox/AtomicFile behavior remains LOCAL ONLY / MISSING; ownership evidence remains required. This update adds the Dart LicensePlatform bridge and asynchronous EntitlementService with injected verifier, immutable entitlement snapshots, atomic token replacement orchestration and race-safe refresh tests. Find N2 platform behavior remains LOCAL ONLY / MISSING; production Release Key Ring and FeatureGate wiring remain separate batches. This update additionally adds the shared tool argument support module and isolated Analyzer AST import-graph audit; ownership evidence remains required. This update extracts existing Headless executor implementations into reusable ToolService libraries while retaining thin compatibility aliases; 16 new service files are classified separately. This update extracts Headless result validation, follow-up decisions and presentation prompts into a UI-independent handler with focused regression tests. This update separates the standalone Analyzer audit package from Flutter app analysis and adds an independent Dart analysis step. This update registers the fail-closed FeatureAuthorizer dependency scope and its plan-dispatch wiring; it does not activate paid entitlements or production release keys. Ownership evidence remains required. This update adds the fail-closed contextual_assistant authorization and source-anchor verification gateway with regression tests; it does not grant entitlements or enable any paid capability. Ownership evidence remains required. This update adds a test-only allow authorizer fixture so contextual widget tests explicitly inject authorization; production remains fail-closed. Ownership evidence remains required. This update registers the bounded AI multi-tool plan builder, plan-level result presenter and focused regression tests; ownership evidence remains required. This update adds the production public issuer Key Ring factory, Release trust-anchor build gate configuration handoff and focused tests; formal production key material is not included.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds an asynchronous FeatureAuthorizer interface and contract tests. It does not implement EntitlementService, TokenStore, platform KeyStore operations or production FeatureGate wiring. Ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language regression tests. Test keys are not production trust anchors; ownership evidence remains required. This update adds the Android Keystore Plugin, get-only/create device-key lifecycle, and AtomicFile single-token storage with JVM policy tests. Real-device KeyStore/StrongBox/AtomicFile behavior remains LOCAL ONLY / MISSING; ownership evidence remains required. This update adds the Dart LicensePlatform bridge and asynchronous EntitlementService with injected verifier, immutable entitlement snapshots, atomic token replacement orchestration and race-safe refresh tests. Find N2 platform behavior remains LOCAL ONLY / MISSING; production Release Key Ring and FeatureGate wiring remain separate batches. This update additionally adds the shared tool argument support module and isolated Analyzer AST import-graph audit; ownership evidence remains required. This update extracts existing Headless executor implementations into reusable ToolService libraries while retaining thin compatibility aliases; 16 new service files are classified separately. This update extracts Headless result validation, follow-up decisions and presentation prompts into a UI-independent handler with focused regression tests. This update separates the standalone Analyzer audit package from Flutter app analysis and adds an independent Dart analysis step. This update registers the fail-closed FeatureAuthorizer dependency scope and its plan-dispatch wiring; it does not activate paid entitlements or production release keys. Ownership evidence remains required. This update adds the fail-closed contextual_assistant authorization and source-anchor verification gateway with regression tests; it does not grant entitlements or enable any paid capability. Ownership evidence remains required. This update adds a test-only allow authorizer fixture so contextual widget tests explicitly inject authorization; production remains fail-closed. Ownership evidence remains required. This update registers the bounded AI multi-tool plan builder, plan-level result presenter and focused regression tests; ownership evidence remains required. This update adds the production public issuer Key Ring factory, Release trust-anchor build gate configuration handoff and focused tests; formal production key material is not included. This update adds the schema-matched Release trust-anchor scanner, offline scanner tests, Release tag workflow and compiled Key Ring regression test. It does not add production private key material or a real issuer trust anchor.",
   "counts": {
-    "changed": 948,
-    "added": 786,
+    "changed": 952,
+    "added": 790,
     "modified": 162,
     "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 156,
-      "FORK_COMMERCIAL": 427,
+      "FORK_COMMERCIAL": 431,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
     }
@@ -46,6 +46,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": ".github/workflows/release-trust-anchor.yml",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Release tag gate that requires the current production Key Ring, builds an ephemeral CI inspection APK, and scans source and artifact for forbidden test issuer material.",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -6937,6 +6945,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "test/release_license_key_ring_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Flutter Release-define regression verifying configured public trust anchors and safe empty-ring behavior for the free application.",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "test/repository_version_consistency_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -7529,6 +7545,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "tool/license_issuer/check_release_readiness.py",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Release readiness scanner aligned with the production Dart/Gradle Key Ring schema; scans production code and the built Release APK for test issuer material.",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "tool/license_issuer/issuer.py",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -7558,6 +7582,14 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "新增专业版授权协议 v1.2、跨语言验签/离线签发实现与回归测试；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/license_issuer/test_release_readiness.py",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Offline regression tests for Release Key Ring schema parity, test key rejection, and built artifact scanning.",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
