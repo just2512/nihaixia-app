@@ -4224,3 +4224,37 @@ PR HEAD 门禁证据：
 - **真机验收：** OPPO Find N2 的 Keystore/StrongBox/TEE、AtomicFile 实际故障恢复、原签名 Release `adb install -r` 覆盖升级和用户数据保留、GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，均维持 `LOCAL ONLY / MISSING / UNKNOWN`。CI、JVM、Widget、Mock Channel 不能替代。
 - **CI 口径：** 只记录精确 SHA 对应的真实 run/job 结论。任何 `SKIPPED` 不计 PASS；尚未结束的 master Push workflow 不写成 PASS，结束后再按其最终状态补记。
 
+
+---
+
+## 92. 2026-11-24 专业版架构 v1.3 变更冻结与商业许可边界对齐
+
+### 92.1 冻结决策
+
+- v1.3 将 App 运行时 AI 付费权益统一为单一 `ai_access`，唯一权威门禁位于 Android Native LiteRT 模型加载/推理边界。
+- 普通 AI 对话、问诊、学习、情境提问、工具意图/参数理解、结果解释、文本/图片/语音及未来模型模态全部使用同一权益；不再按业务入口、模式、工具数量、调用来源或页面拆分收费。
+- `ai_advanced`、`contextual_assistant` 不再是独立运行时权限。协议修订 1 的历史 Token 若含任一旧 AI Feature，则兼容映射为 `ai_access`；修订 2 新 Token 只签发 `ai_access`。
+- 不调用模型的确定性业务执行继续免费，包括规则问诊/辨证、排盘、历法、剂量换算、纯本地检索和手动确定性工具操作。
+- `HeadlessToolDispatcher` 与 `ContextResolutionGateway` 保留，但分别只负责执行计划安全/结果校验和上下文来源/锚点完整性；移除其 Feature 收费判断。
+- `EntitlementService` 保留签名 Token、Key Ring、设备绑定、协议修订、状态和错误原因验证；运行时快照收敛为一个 `aiAccess` 决策，不再提供多业务 Feature 收费门禁。
+
+### 92.2 Native 统一门禁范围
+
+- 当前 Android 主 AI 通道为 `com.nihaisha.app/local_ai`。模型加载 `loadModel` 和所有推理方法（文本、图片、语音、意图识别、槽位/问诊理解、历史恢复中的推理）必须由同一个 Native Gate 检查。
+- `getModelStatus`、`importModel`、backend 偏好设置、模型释放和 runtime cache 清理等非推理维护操作保留，不应因无 AI 权益而阻止安全释放和诊断；这些操作不得绕过 Gate 加载或执行模型。
+- Gate 默认关闭；完成授权验证后才可开放。授权失效时拒绝新推理并安全释放已加载模型。Dart UI 状态不构成 Native 安全门禁。
+- 所有新 Native LiteRT 推理入口默认受 Gate 约束；通过 AST/源码审计与 Native 回归防止新增旁路。
+
+### 92.3 商业许可范围同步结论
+
+- `LICENSE-FORK-COMMERCIAL.md` 是 Fork 自有修改代码的源代码许可，不是 App 内 AI 功能开关。其现有适用范围不缩小，不改其授予条款。
+- `docs/ai-commercial-license.md` 与 `docs/fork-license-boundary.md` 明确区分运行时 `ai_access` 与源代码商业许可：Fork 原创的 AI 会话、上下文、Prompt、工具适配、页面 AI 接入、测试和 Native 桥接仍在各自权属/混合文件规则范围内。
+- 根目录 Apache LICENSE、第三方/模型权重许可证、知识库排除、`.reuse/dep5` 和 Fork 文件清单不因运行时收费门禁调整而自动改变。
+- App 的永久 `ai_access` Token 不授予 OEM、白标、商业源代码集成或对外再分发权；这些仍依独立书面商业许可。
+
+### 92.4 实施状态与验收
+
+- 本节冻结设计，不代表代码已切换。当前 Dispatcher 的 `ai_advanced` 判断、Gateway 的 `contextual_assistant` 判断和 Native 模型通道 Gate 改造在代码 PR 完成前保持 `MISSING / IN_PROGRESS`。
+- 下一批独立代码工作：协议修订 2/Issuer/Verifier 兼容；EntitlementService 单一 `aiAccess` 状态；Dart→Native 内部授权状态同步；Native `loadModel` 与全部推理方法统一 Gate；删除业务层重复收费判断；补齐 AST 旁路审计与测试。
+- 不删除 F0/F1/G1 已完成的执行安全、来源校验、结果校验、TRACE 和历史数据功能。
+- Find N2 Keystore/StrongBox、AtomicFile、模型真实推理和升级验收仍放在云端代码/CI 收尾之后本地执行。
