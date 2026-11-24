@@ -86,13 +86,13 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: tokens.surface,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: scheme.surfaceTint,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       titleTextStyle: titleTextStyle.merge(const TextStyle(fontSize: AppType.headline)),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
+    bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: scheme.surfaceTint,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
