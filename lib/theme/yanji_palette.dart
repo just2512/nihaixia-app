@@ -120,6 +120,20 @@ abstract final class YanjiPalette {
   static const onMeridianDark = Color(0xFFEFE9E2);
   static const tcmZoneDark = Color(0xFFD7A877);
   static const metaphysicsZoneDark = Color(0xFFB39DDB);
+  // 五运六气图的五行领域语义色。保留既有色相，不与品牌/状态色混用。
+  static const fiveElementWoodLight = Color(0xFF43A047);
+  static const fiveElementFireLight = Color(0xFFE53935);
+  static const fiveElementEarthLight = Color(0xFFFDD835);
+  static const fiveElementMetalLight = Color(0xFFB0BEC5);
+  static const fiveElementWaterLight = Color(0xFF1E88E5);
+  static const fiveElementWoodDark = Color(0xFF66BB6A);
+  static const fiveElementFireDark = Color(0xFFEF5350);
+  static const fiveElementEarthDark = Color(0xFFFFD54F);
+  static const fiveElementMetalDark = Color(0xFFCFD8DC);
+  static const fiveElementWaterDark = Color(0xFF42A5F5);
+  static const fiveElementFallbackLight = Color(0xFF9E9E9E);
+  static const fiveElementFallbackDark = Color(0xFFBDBDBD);
+
   static const meridianContainerTintOpacity = 0.12;
 
   static Color meridianContainer(Color color, {required bool dark}) {
