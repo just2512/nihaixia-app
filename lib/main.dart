@@ -10,6 +10,7 @@ import 'data/formula_repository.dart';
 import 'data/herb_repository.dart';
 import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
+import 'licensing/ai_model_access_platform.dart';
 import 'licensing/feature_authorizer.dart';
 import 'licensing/feature_authorizer_scope.dart';
 import 'licensing/license_key_ring_factory.dart';
@@ -201,6 +202,7 @@ void main() async {
   await ZiweiRulesRepository.load();
   final entitlementService = EntitlementService(
     platform: MethodChannelLicensePlatform(),
+    aiModelAccessPlatform: const MethodChannelAiModelAccessPlatform(),
     verifier: LicenseVerifier(
       keyRing: LicenseKeyRingFactory.fromEnvironment(),
     ),

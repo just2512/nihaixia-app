@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../licensing/ai_model_access_platform.dart';
 import '../licensing/feature_authorizer.dart';
 import '../licensing/license_platform.dart';
 import '../licensing/license_verifier.dart';
@@ -38,6 +39,8 @@ class EntitlementSnapshot {
   final String? issuerKeyId;
 
   bool get isActive => status == EntitlementServiceStatus.active;
+  bool get aiAccess =>
+      isActive && grantedFeatureIds.contains('ai_access');
 }
 
 enum LicenseTokenReplacementStatus {
@@ -70,13 +73,17 @@ class EntitlementService extends ChangeNotifier
   EntitlementService({
     required LicensePlatform platform,
     required LicenseVerifier verifier,
+    required AiModelAccessPlatform aiModelAccessPlatform,
     this.initializationTimeout = const Duration(seconds: 2),
   })  : _platform = platform,
-        _verifier = verifier;
+        _verifier = verifier,
+        _aiModelAccessPlatform = aiModelAccessPlatform;
 
   final LicensePlatform _platform;
   final LicenseVerifier _verifier;
+  final AiModelAccessPlatform _aiModelAccessPlatform;
   final Duration initializationTimeout;
+  Future<void> _nativeGateSyncTail = Future<void>.value();
 
   EntitlementSnapshot _snapshot = EntitlementSnapshot(
     status: EntitlementServiceStatus.checking,
@@ -123,6 +130,20 @@ class EntitlementService extends ChangeNotifier
     );
 
     try {
+      // Close Native admission before reading a replacement Token. Native also
+      // starts closed after process restart; this covers explicit refresh.
+      await _synchronizeNativeAiAccess(generation, false);
+    } on Object {
+      _publishIfCurrent(
+        generation,
+        _temporarilyUnavailable(
+          FeatureAuthorizationFailureReason.providerError,
+        ),
+      );
+      return;
+    }
+
+    try {
       final token = await _platform.readActiveToken();
       if (token == null) {
         _publishIfCurrent(
@@ -151,10 +172,19 @@ class EntitlementService extends ChangeNotifier
         token,
         expectedDevicePublicKeySha256: deviceKey.sha256Base64Url,
       );
-      _publishIfCurrent(generation, _snapshotFromVerification(result));
+      final verifiedSnapshot = _snapshotFromVerification(result);
+      if (verifiedSnapshot.aiAccess) {
+        await _synchronizeNativeAiAccess(generation, true);
+      }
+      _publishIfCurrent(generation, verifiedSnapshot);
     } on LicensePlatformFailure catch (error) {
       _publishIfCurrent(generation, _snapshotForPlatformFailure(error));
     } on Object {
+      try {
+        await _synchronizeNativeAiAccess(generation, false);
+      } on Object {
+        // Retain fail-closed semantics even when the platform bridge is unavailable.
+      }
       _publishIfCurrent(
         generation,
         _temporarilyUnavailable(
@@ -162,6 +192,23 @@ class EntitlementService extends ChangeNotifier
         ),
       );
     }
+  }
+
+  Future<void> _synchronizeNativeAiAccess(
+    int generation,
+    bool allowed,
+  ) {
+    final operation = _nativeGateSyncTail.then((_) async {
+      // Re-evaluate after queued operations: stale verification cannot reopen
+      // the gate after a newer refresh has started.
+      final effectiveAllowed = generation == _generation && allowed;
+      await _aiModelAccessPlatform.setAiAccess(effectiveAllowed);
+      if (effectiveAllowed && generation != _generation) {
+        await _aiModelAccessPlatform.setAiAccess(false);
+      }
+    });
+    _nativeGateSyncTail = operation.catchError((Object _) {});
+    return operation;
   }
 
   bool _sameDeviceKey(DeviceKeyInfo first, DeviceKeyInfo second) =>

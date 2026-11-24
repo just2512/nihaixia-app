@@ -3,11 +3,26 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/licensing/ai_model_access_platform.dart';
 import 'package:nihaisha_app/licensing/feature_authorizer.dart';
 import 'package:nihaisha_app/licensing/license_model.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/services/entitlement_service.dart';
+
+class _FakeAiModelAccessPlatform implements AiModelAccessPlatform {
+  final states = <bool>[];
+  bool failNextCall = false;
+
+  @override
+  Future<void> setAiAccess(bool allowed) async {
+    states.add(allowed);
+    if (failNextCall) {
+      failNextCall = false;
+      throw const AiModelAccessPlatformFailure('testFailure');
+    }
+  }
+}
 
 class _FakeLicensePlatform implements LicensePlatform {
   _FakeLicensePlatform({
@@ -153,6 +168,11 @@ void main() {
   late Map<String, dynamic> licenseFixture;
   late String fingerprint;
   late String validToken;
+  late _FakeAiModelAccessPlatform aiModelAccessPlatform;
+
+  setUp(() {
+    aiModelAccessPlatform = _FakeAiModelAccessPlatform();
+  });
 
   setUpAll(() async {
     vectors = await _loadVector();
@@ -164,11 +184,68 @@ void main() {
   });
 
   group('EntitlementService', () {
+    test('verified historical Token opens the Native gate after verification', () async {
+      final platform = _FakeLicensePlatform(
+        token: validToken,
+        deviceKey: _deviceKey(fingerprint),
+      );
+      final service = EntitlementService(
+        platform: platform,
+        verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
+      );
+
+      await service.initialize();
+
+      expect(aiModelAccessPlatform.states, [false, true]);
+      expect(service.snapshot.aiAccess, isTrue);
+      service.dispose();
+    });
+
+    test('missing Token leaves the Native gate closed', () async {
+      final platform = _FakeLicensePlatform();
+      final service = EntitlementService(
+        platform: platform,
+        verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
+      );
+
+      await service.initialize();
+
+      expect(aiModelAccessPlatform.states, [false]);
+      expect(service.snapshot.aiAccess, isFalse);
+      service.dispose();
+    });
+
+    test('Native bridge failure prevents publishing active entitlement', () async {
+      aiModelAccessPlatform.failNextCall = true;
+      final platform = _FakeLicensePlatform(
+        token: validToken,
+        deviceKey: _deviceKey(fingerprint),
+      );
+      final service = EntitlementService(
+        platform: platform,
+        verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
+      );
+
+      await service.initialize();
+
+      expect(
+        service.snapshot.status,
+        EntitlementServiceStatus.temporarilyUnavailable,
+      );
+      expect(service.snapshot.aiAccess, isFalse);
+      service.dispose();
+    });
+
+
     test('missing Token is unlicensed and never reads or creates a device key', () async {
       final platform = _FakeLicensePlatform();
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       await service.initialize();
@@ -186,6 +263,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       await service.initialize();
@@ -205,6 +283,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       await service.initialize();
@@ -237,6 +316,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors, trustIssuer: false),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       final decision = await service.authorize('ai_advanced');
@@ -255,6 +335,7 @@ void main() {
       final corruptService = EntitlementService(
         platform: corrupt,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
       await corruptService.initialize();
       expect(corruptService.snapshot.status, EntitlementServiceStatus.invalid);
@@ -267,6 +348,7 @@ void main() {
       final unavailableService = EntitlementService(
         platform: unavailable,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
       final decision = await unavailableService.authorize('ai_advanced');
       expect(unavailableService.snapshot.status,
@@ -288,6 +370,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       final first = service.initialize();
@@ -309,6 +392,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
         initializationTimeout: const Duration(milliseconds: 5),
       );
 
@@ -334,6 +418,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
       await service.initialize();
 
@@ -356,6 +441,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       final result = await service.replaceToken(
@@ -376,6 +462,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       final first = service.initialize();
@@ -397,6 +484,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       await service.initialize();
@@ -417,6 +505,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: _verifier(vectors),
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
       await service.initialize();
@@ -452,6 +541,7 @@ void main() {
       final service = EntitlementService(
         platform: platform,
         verifier: verifier,
+        aiModelAccessPlatform: aiModelAccessPlatform,
       );
       await service.initialize();
 
