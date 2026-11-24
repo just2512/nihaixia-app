@@ -36,7 +36,7 @@ $env:YANJI_LICENSE_KEY_RING = '{"keys":[{"key_id":"issuer-2026-01","public_key_b
 flutter build appbundle --release "--dart-define=YANJI_LICENSE_KEY_RING=$env:YANJI_LICENSE_KEY_RING"
 ```
 
-Gradle 会检查实际传给 Flutter 的 `dart-defines`，而不是只检查一个未参与编译的环境变量。缺少、重复、格式错误、无有效 active/standby 条目或含测试发行者/测试向量公钥时，Release 构建必须失败。现有 Android Release signing identity 检查仍独立保留，两项必须同时满足。
+Gradle 会检查实际传给 Flutter 的 `dart-defines`，而不是只检查一个未参与编译的环境变量。Release tag / 手动工作流还会读取 GitHub Actions Secret `YANJI_LICENSE_KEY_RING`，用同一 JSON 构建 arm64 APK，并扫描生产源码与最终 APK。缺少、重复、格式错误、无有效 active/standby 条目或含测试发行者/测试向量公钥时，Release 构建必须失败。现有 Android Release signing identity 检查仍独立保留，两项必须同时满足。
 
 ## 当前仓库状态
 
@@ -44,4 +44,6 @@ Gradle 会检查实际传给 Flutter 的 `dart-defines`，而不是只检查一�
 - 应用主入口注入 `EntitlementService` 和 `LicenseVerifier`。空 Ring 无法验证任何 issuer，付费授权仍 fail-closed。
 - Android Release 构建还要求真实 Key Ring 非空、至少存在 active/standby issuer，并拒绝协议测试向量中的 issuer ID、公钥 Base64URL 和原始公钥字节（Hex）。
 - 仓库当前没有经确认的正式发行方公钥。因此不得用测试向量或临时生成的公钥替代；在正式公钥由发行方交付并通过发行流程核验前，正式 Release 仍保持阻断。
+- Release readiness scanner 与测试必须和 Dart/Gradle 使用完全相同的 `YANJI_LICENSE_KEY_RING`、`keys` 根对象和 `key_id` 字段，不允许沿用旧的 `YANJI_RELEASE_LICENSE_KEY_RING_JSON` / `issuer_key_id` schema。
+- Release workflow 使用临时 CI-only APK 签名身份进行产物扫描，不上传或分发该 APK，也不替代产品正式 Android 签名身份。
 - 该配置批次不包含激活 UI、Token 导入交互、生产私钥保管、密钥轮换操作流程或 Find N2 设备验收；这些状态仍按执行台账记录。
