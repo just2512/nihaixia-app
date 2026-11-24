@@ -1109,7 +1109,6 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Yanji brand and semantic color palette; only portions for which sufficient ownership or sublicensing rights exist.
 
-
 Files:
  docs/yanji-visual-design-system.md
  test/theme/yanji_contrast_test.dart
