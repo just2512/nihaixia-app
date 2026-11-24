@@ -175,6 +175,22 @@ final semantic = context.colors;
 | tertiaryFixed / tertiaryFixedDim | #EBEBED / #D3D3D8 |
 | onTertiaryFixed / onTertiaryFixedVariant | #202126 / #4A4B52 |
 
+### 3.6 浅色/深色主题入口
+
+当前项目已经具备三种主题模式，不属于待设计功能：
+
+- SettingsScreen 的“外观 → 暗黑模式”提供“跟随系统 / 浅色 / 深色”三项选择。
+- SettingsRepository 使用 theme_mode 持久化当前选择，默认值为 ThemeMode.system。
+- MaterialApp 通过 settings.themeMode 接线，并分别提供 theme: _buildTheme(Brightness.light) 与 darkTheme: _buildTheme(Brightness.dark)。
+
+强制约束：
+
+- 后续颜色改造必须同时验证 light、dark 两套 ThemeData；不得只修浅色主题而破坏深色主题。
+- 不得删除、隐藏或改变现有三种模式的语义和持久化行为。
+- 不得在 MaterialApp 中将 themeMode 写死为 ThemeMode.light 或 ThemeMode.dark。
+- 新增配色、容器、状态和图标资源必须在“跟随系统、手动浅色、手动深色”三种入口下保持一致。
+- 本次 Batch 1 只冻结主题色值和视觉规则，不重做主题模式设置交互。
+
 ### 3.5 Material 3 接线强制要求
 
 - 使用 Flutter 3.47.0 基线下的 ColorScheme 显式构造；禁止 ColorScheme.fromSeed 自动生成项目主色和组件容器角色。
