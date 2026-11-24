@@ -287,7 +287,6 @@ Files:
  docs/yanji-editorial-frontend-design-plan.md
  lib/data/assistant_conversation_store.dart
  lib/engine/zangfu_evidence_builder.dart
- lib/licensing/feature_authorizer.dart
  lib/licensing/license_platform.dart
  lib/models/ai_context_ref.dart
  lib/models/assistant_message_metadata.dart
@@ -428,7 +427,6 @@ Files:
  test/engine/three_yang_clause268_gate_test.dart
  test/engine/zangfu_evidence_builder_test.dart
  test/entitlement_service_test.dart
- test/feature_authorizer_contract_test.dart
  test/festival_lookup_editorial_layout_test.dart
  test/fixtures/ai_retrieval_golden_metadata.json
  test/fold_aware_navigation_contract_test.dart
