@@ -5,6 +5,8 @@
 > 执行原则：保留现有杂志式风格，以最小改动完成统一；本文件是后续前端视觉改造的执行基线。  
 > 当前阶段：Phase 1–4 自动化验收已完成并合并；OPPO Find N2 真实设备阅读仍为 `MISSING`，不得以模拟器、Widget 或 CI 结果替代。
 
+> **主题颜色强制约束：** 本计划涉及任何颜色、表面、状态色、品牌图形或 Material 3 主题变更时，必须先执行 [研纪 UI 主题颜色与视觉风格约束 v1.0](yanji-visual-design-system.md)。该文件是颜色和主题的唯一强制依据；本计划继续负责页面布局、排版、间距、折叠屏和实施批次。颜色冲突以主题约束文件为准。
+
 ## 1. 改造目标
 
 在保留项目现有现代杂志式视觉基础上，形成稳定、克制、适合长时间阅读的界面系统：
@@ -27,7 +29,8 @@
 
 当前仓库已有设计系统，不从零重建：
 
-- `lib/theme/app_colors.dart`：`AppColors` 是颜色 Token 唯一来源，并通过 `ThemeExtension` 和 `context.colors` 访问。
+- `lib/theme/yanji_palette.dart`：原始颜色值唯一来源，禁止业务页面直接引用或复制色值。
+- `lib/theme/app_colors.dart`：语义颜色唯一映射层，通过现有 `ThemeExtension` 和 `context.colors` 访问；不再创建第二套颜色扩展。
 - `lib/theme/app_tokens.dart`：已集中管理间距、圆角、字号、字体族和全局文字缩放。
 - `lib/main.dart`：已集中定义 AppBar、Card、NavigationBar、NavigationRail、ListTile、Chip、Divider、输入框和按钮主题。
 - 全局文字缩放由 `AppPreferenceTextScaler` 包裹整个 Navigator；最大值为 200%。
@@ -76,7 +79,7 @@
 
 ## 4. 设计 Token 规范
 
-以下品牌与语义颜色采用统一色板。主色用于品牌交互，浅底链接文字使用独立 link 色，功能灰只用于控件边界而不承担小字号文字；自动对比度测试不替代 Find N2 真机阅读验收。
+本节只保留便于页面计划阅读的 Token 摘要。完整角色定义、容器前景配对、surface 矩阵、例外条件、自动化门禁和变更流程，以 [研纪 UI 主题颜色与视觉风格约束](yanji-visual-design-system.md) 为准；出现不一致时必须按该约束文件修正本计划，不得另立配色口径。
 
 ### 4.1 颜色 Token
 
@@ -127,10 +130,16 @@
 
 ### Phase 0：设计规范与全局 Token 基线
 
+**权威约束文件**
+- `docs/yanji-visual-design-system.md`：研纪 UI 主题颜色与视觉风格约束 v1.0；后续主题和颜色变更必须先引用此文件。
+
 **范围**
 - 本文档。
-- `lib/theme/app_colors.dart`。
-- `test/app_theme_color_scheme_test.dart`。
+- `docs/yanji-visual-design-system.md`。
+- `lib/theme/yanji_palette.dart` 与 `lib/theme/app_colors.dart`。
+- `lib/main.dart` 全局 ThemeData 接线。
+- `test/app_theme_color_scheme_test.dart`、`test/theme/yanji_contrast_test.dart`、`test/theme/yanji_theme_wiring_test.dart`。
+- `tool/audit_color_tokens.py` 与 `tool/color_token_audit_allowlist.json`。
 
 **完成情况**
 - 原低饱和灰绿 Token 曾由 PR #211 合入；本轮品牌规范改为正红主色、独立链接色与中性灰阶，旧值仅保留为历史实现记录，不再作为当前 Token 依据。新色板及 Material 3 角色显式映射由本轮集成批次补齐自动断言。
