@@ -41,6 +41,20 @@ class _HistoryResumeService extends LocalAiService {
   String? restoredTranscript;
   List<String> restoredUserMessages = const [];
 
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+
+  @override
+  Future<void> restoreConversation({
+    required String transcript,
+    required List<String> userMessages,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async {
+    restoredTranscript = transcript;
+    restoredUserMessages = List<String>.from(userMessages);
+  }
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
