@@ -11,7 +11,7 @@ ToolExecutionStep _step(String toolId, String capabilityId) =>
 
 void main() {
   group('ToolExecutionPlan', () {
-    test('AI dispatch across distinct capabilities requires advanced AI', () {
+    test('AI dispatch preserves origin and distinct capability metadata', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-001',
         origin: InvocationOrigin.aiDispatch,
@@ -21,11 +21,12 @@ void main() {
         ],
       );
 
+      expect(plan.origin, InvocationOrigin.aiDispatch);
       expect(plan.capabilityIds, {'bazi_chart', 'yunqi_calculation'});
-      expect(plan.requiresAdvancedAi, isTrue);
+      expect(plan.steps, hasLength(2));
     });
 
-    test('repeated calls within one capability remain a free single-capability plan', () {
+    test('repeated calls within one capability retain a single identity', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-002',
         origin: InvocationOrigin.aiDispatch,
@@ -38,10 +39,10 @@ void main() {
 
       expect(plan.steps, hasLength(3));
       expect(plan.capabilityIds, {'bazi_chart'});
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
-    test('manual multi-capability execution does not require advanced AI', () {
+    test('manual multi-capability execution preserves manual origin', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-003',
         origin: InvocationOrigin.userManual,
@@ -52,19 +53,19 @@ void main() {
       );
 
       expect(plan.capabilityIds, hasLength(2));
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.origin, InvocationOrigin.userManual);
     });
 
-    test('structured diagnosis alone remains a single free capability', () {
+    test('structured diagnosis remains a deterministic single-step plan', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-004',
         origin: InvocationOrigin.aiDispatch,
-        steps: [
-          _step('structured_diagnosis', 'structured_diagnosis'),
-        ],
+        steps: [_step('structured_diagnosis', 'structured_diagnosis')],
       );
 
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.steps, hasLength(1));
+      expect(plan.capabilityIds, {'structured_diagnosis'});
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
     test('complete plan and each argument map are immutable snapshots', () {
@@ -93,14 +94,14 @@ void main() {
       expect(() => plan.steps.add(step), throwsUnsupportedError);
     });
 
-    test('registered tool capability IDs drive the plan boundary', () {
+    test('registered tool capability IDs populate complete plan metadata', () {
       final bazi = AssistantToolRouter.bazi;
       final yunqi = AssistantToolRouter.yunqi;
 
       expect(bazi.capabilityId, 'bazi');
       expect(yunqi.capabilityId, 'yunqi');
 
-      final crossCapabilityAiPlan = ToolExecutionPlan(
+      final plan = ToolExecutionPlan(
         planId: 'plan-registry-001',
         origin: InvocationOrigin.aiDispatch,
         steps: [
@@ -116,7 +117,8 @@ void main() {
           ),
         ],
       );
-      expect(crossCapabilityAiPlan.requiresAdvancedAi, isTrue);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
+      expect(plan.capabilityIds, {'bazi', 'yunqi'});
     });
 
     test('rejects blank plan, tool and capability IDs and empty plans', () {

@@ -1,6 +1,5 @@
 import '../models/assistant_tool_result.dart';
 import '../models/tool_execution_plan.dart';
-import '../licensing/feature_authorizer.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'headless_tool_dispatcher.dart';
 import 'shousheng_debt_tool_service.dart';
@@ -47,9 +46,7 @@ class ShoushengDebtResultContextExecutor {
       return _failure(arguments, '查询体系必须明确选择 luku 或 wudou。');
     }
 
-    final dispatch = await HeadlessToolDispatcher(
-      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
-    ).executePlan(
+    final dispatch = await const HeadlessToolDispatcher().executePlan(
       plan: ToolExecutionPlan(
         planId: 'context-rebuild-shousheng_debt',
         origin: InvocationOrigin.aiDispatch,

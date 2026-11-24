@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
-
 import 'package:nihaisha_app/data/dream_data.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
@@ -189,12 +187,10 @@ void main() {
 
   testWidgets('多候选搜索只解释用户点击的那一条词条', (tester) async {
     await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
         child: MaterialApp(theme: _yanjiTestTheme(), home: const DreamScreen()),
-      )
-          ),
+      ),
         );
     await tester.pumpAndSettle();
 
@@ -257,15 +253,13 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = viewport;
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             theme: _yanjiTestTheme(),
             home: DreamScreen(key: ValueKey('dream-${viewport.width}')),
           ),
-        )
-          ),
+        ),
         );
       await tester.pumpAndSettle();
 
@@ -305,9 +299,7 @@ void main() {
       expect(position.pixels, closeTo(beforeOpen, 0.5));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: const SizedBox.shrink()
-          ),
+          const SizedBox.shrink(),
         );
     }
   });

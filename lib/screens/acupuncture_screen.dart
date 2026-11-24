@@ -8,7 +8,6 @@ import '../data/acupoint_repository.dart';
 import '../models/acupuncture.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import 'assistant_tool_router.dart' show AssistantMode;
 import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
@@ -200,7 +199,6 @@ class _AcupunctureScreenState extends State<AcupunctureScreen>
         entry: entry,
       );
       final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
       );
       final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
         reference: ref,

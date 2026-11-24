@@ -10,8 +10,6 @@ import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
-import 'package:nihaisha_app/models/ai_context_ref.dart';
-import 'package:nihaisha_app/licensing/feature_authorizer.dart';
 import 'package:nihaisha_app/models/tool_execution_plan.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
@@ -41,7 +39,6 @@ class _NoLostImagePicker implements LocalAiImagePicker {
 class _HistoryResumeService extends LocalAiService {
   String? restoredTranscript;
   List<String> restoredUserMessages = const [];
-  int sendCalls = 0;
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
@@ -59,29 +56,40 @@ class _HistoryResumeService extends LocalAiService {
   }
 
   @override
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
+
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
+
+  @override
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
-  }) async {
-    sendCalls += 1;
-    return '续聊成功：$text';
-  }
-}
-
-class _FakeContextAuthorizer implements FeatureAuthorizer {
-  _FakeContextAuthorizer(this.decision);
-
-  final FeatureAuthorizationDecision decision;
-  int calls = 0;
+  }) async => '续聊成功：$text';
 
   @override
-  Future<FeatureAuthorizationDecision> authorize(String featureId) async {
-    calls += 1;
-    return decision;
-  }
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
@@ -267,54 +275,6 @@ class _MemoryConversationStore implements AssistantConversationStore {
 }
 
 void main() {
-  testWidgets('情境助手授权失败时不恢复上下文也不向本地模型发送新轮次', (tester) async {
-    final store = _MemoryConversationStore();
-    final service = _HistoryResumeService();
-    final authorizer = _FakeContextAuthorizer(
-      FeatureAuthorizationDecision.denied(
-        featureId: 'contextual_assistant',
-        reason: FeatureAuthorizationFailureReason.unlicensed,
-      ),
-    );
-    const contextRef = AiContextRef(
-      kind: AiContextKind.formula,
-      moduleId: 'formula',
-      anchorId: 'formula:test-anchor',
-      anchorVersion: 'test-source-version',
-      sourceId: 'asset:assets/data/formulas.json',
-      title: '测试方剂',
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
-          service: service,
-          imagePicker: _NoLostImagePicker(),
-          conversationStore: store,
-          featureAuthorizer: authorizer,
-          contextRef: contextRef.toMetadata(),
-          initialPrompt: '只允许在授权后提交的情境内容',
-        ),
-      ),
-    );
-    await _pumpFrames(tester);
-
-    expect(authorizer.calls, 1);
-    expect(find.textContaining('未获准使用情境助手'), findsOneWidget);
-    expect(store.conversations.length, 2);
-
-    await tester.enterText(find.byType(TextField).first, '继续解释这个方剂');
-    await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
-    await _pumpFrames(tester);
-
-    expect(authorizer.calls, 2);
-    expect(service.sendCalls, 0);
-    expect(service.restoredTranscript, isNull);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('恢复历史会话时保留尚未执行的工具操作入口', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();

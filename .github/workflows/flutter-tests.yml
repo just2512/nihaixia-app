@@ -130,11 +130,15 @@ jobs:
             case "$file" in
               lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
             esac
-            if [[ "$file" =~ ^test/.+_test[.]dart$ ]]; then
+            # Git diff --name-only includes deleted paths; only execute
+            # regression files that still exist in this checkout.
+            if [[ "$file" =~ ^test/.+_test[.]dart$ && -f "$file" ]]; then
               dart_test_files+=("$file")
             fi
             case "$file" in
-              android/app/src/test/**/*.kt|android/app/src/test/*.kt) kotlin_test_files+=("$file") ;;
+              android/app/src/test/**/*.kt|android/app/src/test/*.kt)
+                if [[ -f "$file" ]]; then kotlin_test_files+=("$file"); fi
+                ;;
             esac
           done <<< "$changed_files"
           printf 'Detected changed Dart regression tests (%s):\n' "${#dart_test_files[@]}"

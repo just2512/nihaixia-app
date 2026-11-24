@@ -7,7 +7,6 @@ import '../data/formula_repository.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import 'assistant_tool_router.dart' show AssistantMode;
 import '../widgets/contextual_ai_sheet.dart';
@@ -33,9 +32,7 @@ Future<void> _askAiAboutMeridian(
     return;
   }
 
-  final gateway = ContextResolutionGateway(
-    authorizer: FeatureAuthorizerScope.of(context),
-  );
+  const gateway = ContextResolutionGateway();
   final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
     reference: contextRef,
     resolver: () => AiContextResolver.resolveMeridianKnowledgeEntry(ref: contextRef),

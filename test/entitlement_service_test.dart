@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/licensing/feature_authorizer.dart';
+import 'package:flutter/widgets.dart';
 import 'package:nihaisha_app/licensing/license_model.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
@@ -164,6 +164,33 @@ void main() {
     validToken = licenseFixture['token'] as String;
   });
 
+
+  testWidgets('EntitlementServiceScope exposes the app-wide single entitlement service', (tester) async {
+    final service = EntitlementService(
+      platform: _FakeLicensePlatform(),
+      aiModelAccessPlatform: FakeAiModelAccessPlatform(),
+      verifier: _verifier(vectors),
+    );
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: EntitlementServiceScope(
+          service: service,
+          child: Builder(
+            builder: (context) => Text(
+              identical(EntitlementServiceScope.maybeOf(context), service)
+                  .toString(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('true'), findsOneWidget);
+    service.dispose();
+  });
+
   group('EntitlementService', () {
     test('missing Token is unlicensed and never reads or creates a device key', () async {
       final platform = _FakeLicensePlatform();
@@ -195,19 +222,20 @@ void main() {
 
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(service.snapshot.failureReason,
-          FeatureAuthorizationFailureReason.keyMissing);
+          LicenseFailureReason.keyMissing);
       expect(platform.keyCreateCount, 0);
       service.dispose();
     });
 
-    test('valid shared Token grants only the two enforced first-release features', () async {
+    test('valid revision-1 Token grants the single ai_access entitlement', () async {
       final platform = _FakeLicensePlatform(
         token: validToken,
         deviceKey: _deviceKey(fingerprint),
       );
+      final aiAccessPlatform = FakeAiModelAccessPlatform();
       final service = EntitlementService(
         platform: platform,
-        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
+        aiModelAccessPlatform: aiAccessPlatform,
         verifier: _verifier(vectors),
       );
 
@@ -215,39 +243,31 @@ void main() {
 
       expect(service.snapshot.status, EntitlementServiceStatus.active);
       expect(service.snapshot.aiAccess, isTrue);
+      expect(aiAccessPlatform.enabled, isTrue);
       expect(platform.keyReadCount, 1);
       expect(platform.challengeCount, 1);
       expect(platform.keyCreateCount, 0);
-
-      final ai = await service.authorize('ai_advanced');
-      final contextual = await service.authorize('contextual_assistant');
-      final learning = await service.authorize('advanced_learning');
-
-      expect(ai.status, FeatureAuthorizationStatus.allowed);
-      expect(contextual.status, FeatureAuthorizationStatus.allowed);
-      expect(learning.status, FeatureAuthorizationStatus.denied);
-      expect(learning.reason,
-          FeatureAuthorizationFailureReason.featureNotGranted);
       service.dispose();
     });
 
-    test('unknown issuer is invalid and does not grant a feature', () async {
+    test('unknown issuer is invalid and does not open Native AI access', () async {
       final platform = _FakeLicensePlatform(
         token: validToken,
         deviceKey: _deviceKey(fingerprint),
       );
+      final aiAccessPlatform = FakeAiModelAccessPlatform();
       final service = EntitlementService(
         platform: platform,
-        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
+        aiModelAccessPlatform: aiAccessPlatform,
         verifier: _verifier(vectors, trustIssuer: false),
       );
 
-      final decision = await service.authorize('ai_advanced');
+      await service.initialize();
 
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
-      expect(decision.status, FeatureAuthorizationStatus.denied);
-      expect(decision.reason, FeatureAuthorizationFailureReason.issuerUnknown);
+      expect(service.snapshot.failureReason, LicenseFailureReason.issuerUnknown);
       expect(service.snapshot.aiAccess, isFalse);
+      expect(aiAccessPlatform.enabled, isFalse);
       service.dispose();
     });
 
@@ -263,7 +283,7 @@ void main() {
       await corruptService.initialize();
       expect(corruptService.snapshot.status, EntitlementServiceStatus.invalid);
       expect(corruptService.snapshot.failureReason,
-          FeatureAuthorizationFailureReason.storeCorrupt);
+          LicenseFailureReason.storeCorrupt);
 
       final unavailable = _FakeLicensePlatform(
         failure: const LicensePlatformFailure('STORAGE_UNAVAILABLE'),
@@ -273,13 +293,11 @@ void main() {
         aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
-      final decision = await unavailableService.authorize('ai_advanced');
+      await unavailableService.initialize();
       expect(unavailableService.snapshot.status,
           EntitlementServiceStatus.temporarilyUnavailable);
-      expect(decision.status,
-          FeatureAuthorizationStatus.temporarilyUnavailable);
-      expect(decision.reason,
-          FeatureAuthorizationFailureReason.storageUnavailable);
+      expect(unavailableService.snapshot.failureReason,
+          LicenseFailureReason.storageUnavailable);
       corruptService.dispose();
       unavailableService.dispose();
     });
@@ -298,7 +316,7 @@ void main() {
 
       final first = service.initialize();
       final second = service.initialize();
-      // Native gate revocation is awaited before the Token store is read.
+      // Native gate close is acknowledged asynchronously before Token storage is read.
       await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
@@ -308,29 +326,32 @@ void main() {
       service.dispose();
     });
 
-    test('initialization timeout is temporary and does not persist a denial', () async {
+    test('initialization timeout is bounded and keeps Native access closed', () async {
       final completer = Completer<String?>();
       final platform = _FakeLicensePlatform(
         readCompleter: completer,
         deviceKey: _deviceKey(fingerprint),
       );
+      final aiAccessPlatform = FakeAiModelAccessPlatform();
       final service = EntitlementService(
         platform: platform,
-        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
+        aiModelAccessPlatform: aiAccessPlatform,
         verifier: _verifier(vectors),
         initializationTimeout: const Duration(milliseconds: 5),
       );
 
-      final decision = await service.authorize('ai_advanced');
+      await service.initialize();
 
-      expect(decision.status,
-          FeatureAuthorizationStatus.temporarilyUnavailable);
-      expect(decision.reason,
-          FeatureAuthorizationFailureReason.initializationTimeout);
-      expect(service.snapshot.status, EntitlementServiceStatus.checking);
+      expect(service.snapshot.status,
+          EntitlementServiceStatus.temporarilyUnavailable);
+      expect(service.snapshot.failureReason,
+          LicenseFailureReason.initializationTimeout);
+      expect(service.snapshot.aiAccess, isFalse);
+      expect(aiAccessPlatform.enabled, isFalse);
 
       completer.complete(null);
-      await service.initialize();
+      platform.readCompleter = null;
+      await service.refresh();
       expect(service.snapshot.status, EntitlementServiceStatus.unlicensed);
       service.dispose();
     });
@@ -391,8 +412,8 @@ void main() {
       );
 
       final first = service.initialize();
-      // Allow the fail-closed Native gate acknowledgement before asserting the
-      // first asynchronous Token read has begun.
+      // Let the serialized Native gate-close acknowledgement finish before
+      // asserting that the first Token read is in flight.
       await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
@@ -441,7 +462,7 @@ void main() {
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(
         service.snapshot.failureReason,
-        FeatureAuthorizationFailureReason.keyInvalidated,
+        LicenseFailureReason.keyInvalidated,
       );
       expect(platform.keyCreateCount, 0);
       service.dispose();

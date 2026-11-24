@@ -1,6 +1,5 @@
 import '../models/assistant_tool_result.dart';
 import '../models/tool_execution_plan.dart';
-import '../licensing/feature_authorizer.dart';
 import 'ai_tool_result_snapshot.dart';
 import 'headless_tool_dispatcher.dart';
 import 'huangdi_siji_tool_service.dart';
@@ -40,9 +39,7 @@ class HuangdiSijiResultContextExecutor {
       return _failure(arguments, '只接受 birth_date 与 birth_time 两个明确输入字段。');
     }
 
-    final dispatch = await HeadlessToolDispatcher(
-      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
-    ).executePlan(
+    final dispatch = await const HeadlessToolDispatcher().executePlan(
       plan: ToolExecutionPlan(
         planId: 'context-rebuild-huangdi_siji',
         origin: InvocationOrigin.aiDispatch,

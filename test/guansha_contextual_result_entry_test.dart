@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
@@ -278,8 +277,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = viewport;
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             theme: _yanjiTestTheme(),
@@ -288,8 +286,7 @@ void main() {
               returnResultOnComplete: true,
             ),
           ),
-        )
-          ),
+        ),
         );
       await tester.pumpAndSettle();
 

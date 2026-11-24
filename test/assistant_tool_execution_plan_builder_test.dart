@@ -25,10 +25,10 @@ void main() {
         'sanshan_lingqian',
       ]);
       expect(plan.steps.map((step) => step.capabilityId).toSet().length, 2);
-      expect(plan.requiresAdvancedAi, isTrue);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
-    test('multiple steps with one capability remain free by plan semantics', () {
+    test('multiple steps keep capability metadata without a separate fee rule', () {
       final plan = ToolExecutionPlan(
         planId: 'manual-plan-contract',
         origin: InvocationOrigin.aiDispatch,
@@ -48,7 +48,7 @@ void main() {
 
       expect(plan.steps, hasLength(2));
       expect(plan.capabilityIds, {'shared_capability'});
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
     test('rejects page-only tools before constructing a plan', () {

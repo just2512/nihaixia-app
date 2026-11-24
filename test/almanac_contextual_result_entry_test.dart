@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
@@ -200,8 +199,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
         child: MaterialApp(
         theme: ThemeData(
@@ -211,8 +209,7 @@ void main() {
         ),
           home: const DailyAlmanacScreen(),
         ),
-      )
-          ),
+      ),
         );
     await tester.pumpAndSettle();
 

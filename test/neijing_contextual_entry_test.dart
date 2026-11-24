@@ -10,8 +10,6 @@ import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
-import 'support/allow_context_authorizer.dart';
-
 void main() {
   test('Neijing context resolves only by exact entry ID and source version', () {
     final entry = kNeijingEntries.first;
@@ -83,12 +81,12 @@ void main() {
       const entryId = 'zx-01';
       final entry = kNeijingEntries.singleWhere((item) => item.id == entryId);
       await tester.pumpWidget(
-        TestAuthorizedFeatureScope(child: ContextualAiConversationStoreScope(
+        ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: const MaterialApp(
             home: NeijingEntriesScreen(initialEntryId: entryId),
           ),
-        )),
+        ),
       );
       await tester.pumpAndSettle();
 

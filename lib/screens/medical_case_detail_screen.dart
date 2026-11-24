@@ -8,7 +8,6 @@ import '../data/database_helper.dart';
 import '../data/medical_case_data.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import 'assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
@@ -80,9 +79,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
 
   Future<void> _askAiAboutCase() async {
     final contextRef = AiContextResolver.buildMedicalCaseContextRef(c);
-    final gateway = ContextResolutionGateway(
-      authorizer: FeatureAuthorizerScope.of(context),
-    );
+    const gateway = ContextResolutionGateway();
     final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
       reference: contextRef,
       resolver: () => AiContextResolver.resolveMedicalCase(ref: contextRef),

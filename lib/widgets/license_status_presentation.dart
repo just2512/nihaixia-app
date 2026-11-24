@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../licensing/feature_authorizer.dart';
+import '../licensing/license_model.dart';
 import '../licensing/license_verifier.dart';
 import '../services/entitlement_service.dart';
 import '../theme/app_colors.dart';
@@ -72,23 +72,23 @@ LicenseStatusPresentation licenseStatusPresentation(
   }
 }
 
-bool _isRecoverableLicenseReason(FeatureAuthorizationFailureReason? reason) {
+bool _isRecoverableLicenseReason(LicenseFailureReason? reason) {
   return switch (reason) {
-    FeatureAuthorizationFailureReason.keyMissing ||
-    FeatureAuthorizationFailureReason.keyInvalidated ||
-    FeatureAuthorizationFailureReason.deviceMismatch ||
-    FeatureAuthorizationFailureReason.storeCorrupt =>
+    LicenseFailureReason.keyMissing ||
+    LicenseFailureReason.keyInvalidated ||
+    LicenseFailureReason.deviceMismatch ||
+    LicenseFailureReason.storeCorrupt =>
       true,
     _ => false,
   };
 }
 
-bool _isTrustFailure(FeatureAuthorizationFailureReason? reason) {
+bool _isTrustFailure(LicenseFailureReason? reason) {
   return switch (reason) {
-    FeatureAuthorizationFailureReason.signatureInvalid ||
-    FeatureAuthorizationFailureReason.issuerUnknown ||
-    FeatureAuthorizationFailureReason.issuerCompromised ||
-    FeatureAuthorizationFailureReason.licenseRevoked =>
+    LicenseFailureReason.signatureInvalid ||
+    LicenseFailureReason.issuerUnknown ||
+    LicenseFailureReason.issuerCompromised ||
+    LicenseFailureReason.licenseRevoked =>
       true,
     _ => false,
   };
@@ -104,10 +104,10 @@ YanjiStatusTone licenseTokenReplacementTone(
   }
 
   switch (result.failureReason) {
-    case FeatureAuthorizationFailureReason.signatureInvalid:
-    case FeatureAuthorizationFailureReason.issuerUnknown:
-    case FeatureAuthorizationFailureReason.issuerCompromised:
-    case FeatureAuthorizationFailureReason.licenseRevoked:
+    case LicenseFailureReason.signatureInvalid:
+    case LicenseFailureReason.issuerUnknown:
+    case LicenseFailureReason.issuerCompromised:
+    case LicenseFailureReason.licenseRevoked:
       return YanjiStatusTone.danger;
     default:
       break;

@@ -7,7 +7,6 @@ import 'package:nihaisha_app/data/huangdi_siji_data.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import 'package:nihaisha_app/services/huangdi_siji_result_context_executor.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
@@ -152,9 +151,7 @@ class _HuangdiSijiScreenState extends State<HuangdiSijiScreen> {
       final contextRef = AiContextResolver.buildHuangdiSijiResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: contextRef,
         resolver: () => AiContextResolver.resolveHuangdiSijiToolResult(
