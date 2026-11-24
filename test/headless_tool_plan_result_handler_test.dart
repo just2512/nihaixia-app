@@ -63,7 +63,7 @@ void main() {
       expect(result.allStepsSucceeded, isTrue);
       expect(result.steps, hasLength(2));
       expect(result.responseText, contains('玉匣灵兆执行结果'));
-      expect(result.responseText, contains('三山灵签执行结果'));
+      expect(result.responseText, contains('${tools.last.title}执行结果'));
       expect(result.sourceIds, [
         'local-knowledge:yuxiaji',
         'local-knowledge:sanshan',
