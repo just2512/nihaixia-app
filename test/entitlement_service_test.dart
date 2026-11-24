@@ -197,7 +197,7 @@ void main() {
       service.dispose();
     });
 
-    test('valid shared Token grants only the two enforced first-release features', () async {
+    test('valid historical Token maps both legacy claims to one effective AI entitlement', () async {
       final platform = _FakeLicensePlatform(
         token: validToken,
         deviceKey: _deviceKey(fingerprint),
@@ -210,18 +210,19 @@ void main() {
       await service.initialize();
 
       expect(service.snapshot.status, EntitlementServiceStatus.active);
-      expect(service.snapshot.grantedFeatureIds,
-          {'ai_advanced', 'contextual_assistant'});
+      expect(service.snapshot.grantedFeatureIds, {'ai_access'});
       expect(platform.keyReadCount, 1);
       expect(platform.challengeCount, 1);
       expect(platform.keyCreateCount, 0);
 
-      final ai = await service.authorize('ai_advanced');
-      final contextual = await service.authorize('contextual_assistant');
+      final ai = await service.authorize('ai_access');
+      final legacyAi = await service.authorize('ai_advanced');
+      final legacyContextual = await service.authorize('contextual_assistant');
       final learning = await service.authorize('advanced_learning');
 
       expect(ai.status, FeatureAuthorizationStatus.allowed);
-      expect(contextual.status, FeatureAuthorizationStatus.allowed);
+      expect(legacyAi.status, FeatureAuthorizationStatus.allowed);
+      expect(legacyContextual.status, FeatureAuthorizationStatus.allowed);
       expect(learning.status, FeatureAuthorizationStatus.denied);
       expect(learning.reason,
           FeatureAuthorizationFailureReason.featureNotGranted);
@@ -429,7 +430,7 @@ void main() {
       service.dispose();
     });
 
-    test('feature reduction requires explicit confirmation before writing', () async {
+    test('consolidating legacy AI claims does not trigger an effective entitlement downgrade', () async {
       final platform = _FakeLicensePlatform(
         token: validToken,
         deviceKey: _deviceKey(fingerprint),
@@ -454,26 +455,16 @@ void main() {
       );
       await service.initialize();
 
-      final confirmation = await service.replaceToken(
+      final installed = await service.replaceToken(
         token: reducedToken,
         allowFeatureReduction: false,
       );
-      expect(
-        confirmation.status,
-        LicenseTokenReplacementStatus.confirmationRequired,
-      );
-      expect(confirmation.lostFeatureIds, {'contextual_assistant'});
-      expect(platform.writeCount, 0);
-      expect(platform.token, validToken);
-
-      final installed = await service.replaceToken(
-        token: reducedToken,
-        allowFeatureReduction: true,
-      );
+      expect(installed.status, LicenseTokenReplacementStatus.installed);
+      expect(installed.lostFeatureIds, isEmpty);
       expect(installed.status, LicenseTokenReplacementStatus.installed);
       expect(platform.writeCount, 1);
       expect(platform.token, reducedToken);
-      expect(service.snapshot.grantedFeatureIds, {'ai_advanced'});
+      expect(service.snapshot.grantedFeatureIds, {'ai_access'});
       service.dispose();
     });
 
