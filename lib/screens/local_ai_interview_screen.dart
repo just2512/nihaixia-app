@@ -48,6 +48,7 @@ import '../data/acupuncture_repository.dart';
 import '../data/acupoint_repository.dart';
 import '../data/medical_case_data.dart';
 import '../data/guji_data.dart';
+import '../data/xiaoliuren_data.dart';
 import '../services/classic_search_service.dart';
 import 'formula_detail_screen.dart';
 import 'herb_detail_screen.dart';
@@ -1317,10 +1318,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.metaphysics)
             .map((tool) => tool.title)
             .join('、');
+        // 术数规则数据：仅当本轮问题命中某术数工具的确定性规则数据时才注入。
+        // 小六壬先接入（六宫/六神/歌诀/排课口径）；未传字段（五行/一般方位）禁止推导。
+        final mentionsXiaoliuren = text.contains('小六壬') ||
+            kXiaoliurenPalaceOrder.any((p) => text.contains(p.name));
+        final ruleDataBlock = mentionsXiaoliuren
+            ? '\n\n以下是 App 内置术数规则数据，仅这些字段为 App 已定义（来源为 App 内置规则，非古籍/文献）：\n${describeXiaoliurenRuleData()}'
+            : '';
         final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
             '八字、紫微等排盘结果必须由 App 工具生成；结果返回后，应基于完整回传字段作总结、关联解释和分层归纳。'
-            '明确区分 App 确定性计算、App 规则模板与 AI 解释，不得自行重排、篡改计算字段或补造 MISSING。';
+            '明确区分 App 确定性计算、App 规则模板与 AI 解释，不得自行重排、篡改计算字段或补造 MISSING。'
+            '只有本轮真实传入的“规则数据”或工具回传结果里真实存在的字段才可以引用，且只能标注为 App 内置规则/计算结果来源；'
+            '不得把上述内容说成“本地知识库条目、古籍、医案或外部文献”，没有真实条目 ID 与对应原文时不得编造出处或条目 ID。'
+            '$ruleDataBlock';
         return _AssistantTurnResponse(
           text: await sendWithContext(context),
         );

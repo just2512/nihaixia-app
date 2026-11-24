@@ -111,6 +111,17 @@ class AssistantConversationOrchestrator {
   // 因此把它从纯术数拦截中排除。
   static const _tcmDualDomainMetaphysicsToolIds = {'yunqi'};
 
+  // 小六壬六宫名：即使不带「小六壬」工具词，单提宫名（“大安是什么”）也应视为
+  // 术数问题而不是中医学习问题。这些词在通用语境几乎仅指小六壬宫位。
+  static const _xiaoliurenPalaceCues = [
+    '大安',
+    '留连',
+    '速喜',
+    '赤口',
+    '小吉',
+    '空亡',
+  ];
+
   // These are routing cues only: a match requires a reviewed safety
   // assessment; it does not label urgency or provide a medical conclusion.
   // The red-flag examples below mirror the normative audit boundary.
@@ -1012,7 +1023,8 @@ class AssistantConversationOrchestrator {
           .matchAliases(text, AssistantMode.metaphysics)
           .where((tool) => !_tcmDualDomainMetaphysicsToolIds.contains(tool.id))
           .toList(growable: false);
-      if (pureMetaphysicsAliases.isNotEmpty) {
+      final mentionsXiaoliurenPalace = _xiaoliurenPalaceCues.any(text.contains);
+      if (pureMetaphysicsAliases.isNotEmpty || mentionsXiaoliurenPalace) {
         return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
       }
       return const AssistantDispatchDecision(mode: AssistantMode.learning);

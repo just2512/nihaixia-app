@@ -141,6 +141,15 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('单提小六壬宫名「大安是什么」也进入玄学模式', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '大安是什么',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool, isNull);
+    });
+
     test('工具澄清后补充的日期仍进入五运六气 typed arguments', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '五运六气 2026-11-06',

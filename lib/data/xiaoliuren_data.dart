@@ -92,6 +92,32 @@ String xiaoliurenVerse(XiaoliurenPalace palace, XiaoliurenRule rule) =>
             : kXiaoliurenCommonVerses)[
         kXiaoliurenPalaceOrder.indexOf(palace)];
 
+/// 面向玄学模式 AI 上下文的小六壬确定性规则数据。
+///
+/// 只包含数据层确有定义的字段：六宫顺序、宫名、主事六神、歌诀与起课口径。
+/// 刻意不包含「五行属性」「一般方位」等术数流派口径不一、App 未定义的字段，
+/// 避免把某一流派口径伪装成唯一正解。歌诀中的方位词（如“求财在坤方”）是事项
+/// 方位提示，不得改写为宫位本身的五行或方位属性。
+String describeXiaoliurenRuleData() {
+  final palaceDeities = kXiaoliurenPalaceOrder
+      .map((p) => '${p.name}（主事六神：${p.deity}）')
+      .join('、');
+  final verseLines = [
+    for (final p in kXiaoliurenPalaceOrder)
+      '${p.name}：${xiaoliurenVerse(p, XiaoliurenRule.common)}',
+  ].join('\n');
+  return 'App 内置小六壬规则数据（来源标识：local-data:xiaoliuren-rule-data；属民俗文化参考，非吉凶指令）：\n'
+      '六宫固定顺序：${kXiaoliurenPalaceOrder.map((p) => p.name).join(' → ')}。\n'
+      '各宫主事六神：$palaceDeities。\n'
+      '通行掌诀歌诀：\n$verseLines\n'
+      '起课口径（并存，由使用者自选）：\n'
+      '· ${XiaoliurenRule.common.label}：${XiaoliurenRule.common.source}\n'
+      '· ${XiaoliurenRule.duoneng.label}：${XiaoliurenRule.duoneng.source}\n'
+      '注意：App 数据未定义各宫的五行属性与一般方位；这两项不得推导、不得补造，'
+      '用户询问时应明确说明“App 当前数据未定义”。歌诀中的方位词（如“求财在坤方”）'
+      '只是求财/失物等事项的方位提示，不得改写为宫位本身的五行或方位属性。';
+}
+
 /// 一宫落位结果。
 class XiaoliurenHit {
   /// 该宫在六宫顺序中的下标（0-5）。
