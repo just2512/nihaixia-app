@@ -99,6 +99,10 @@ void main() {
 
   testWidgets('200% 字体缩放和窄屏下授权状态仍完整显示且不溢出',
       (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetPhysicalSize);
+
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
@@ -135,6 +139,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(tester.getSize(find.byType(Scaffold)), const Size(360, 800));
     expect(find.byType(YanjiStatusBadge), findsOneWidget);
     expect(find.text('未授权'), findsOneWidget);
     expect(tester.takeException(), isNull);
