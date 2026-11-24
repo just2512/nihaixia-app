@@ -25,6 +25,11 @@ void main() {
         reason: 'Scaffold 背景不能隐式回退到 ColorScheme.surface。',
       );
       expect(source, contains('colorScheme: scheme'));
+      expect(
+        source,
+        isNot(contains('ColorScheme.fromSeed')),
+        reason: '项目主题不得依赖 SDK fromSeed 自动推导颜色角色。',
+      );
       expect(AppColors.light.background, YanjiPalette.coldWhite);
       expect(AppColors.light.surface, YanjiPalette.white);
       expect(AppColors.dark.background, YanjiPalette.darkBackground);
