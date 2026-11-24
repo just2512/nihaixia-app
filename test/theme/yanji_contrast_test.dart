@@ -406,6 +406,26 @@ void main() {
         }
       }
     });
+    test('未知五行兜底底色上的标签前景也满足普通文字 AA', () {
+      final cases = <({String name, Color background})>[
+        (
+          name: '浅色兜底',
+          background: YanjiPalette.fiveElementFallbackLight,
+        ),
+        (
+          name: '深色兜底',
+          background: YanjiPalette.fiveElementFallbackDark,
+        ),
+      ];
+      for (final item in cases) {
+        final foreground = chartLabelColorOn(item.background);
+        expect(
+          _contrast(foreground, item.background),
+          greaterThanOrEqualTo(4.5),
+          reason: '${item.name}五行兜底底色上的普通文字必须达到 4.5:1。',
+        );
+      }
+    });
   });
 
 }
