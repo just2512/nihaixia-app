@@ -1,8 +1,8 @@
 # OPPO Find N2 真机折叠屏验收方案
-> 应用代码核验基线：`master @ 8f5091c08f10743e7ef3322c86f50fc2e296fd78`（已包含 PR #411、#413、#414、#420、#421、#424）。PR #424 增加 Bazi/Guansha/Ziwei 出生日期与时刻歧义拒绝保护；#420 仅增加云气图像素回归测试，#421 仅补充验收文档。应用版本 `2.0.0+8048`。设备端验收仍是 `MISSING / UNKNOWN / LOCAL ONLY`。
+> 应用运行时代码核验基线：`master @ 1717b36ba0c2359a1526e22d23f75befacd80628`（最近一次运行时代码变更为 PR #455；已包含 v1.2 离线授权协议、Android Keystore/AtomicFile、EntitlementService、Headless F0/F1、ContextResolutionGateway、Release Key Ring 和激活/Token 导入 UI）。之后至当前 `master @ b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b` 的提交只更新台账和验收文档，未改变应用运行时代码。应用版本 `2.0.0+8048`。设备端验收仍是 `MISSING / UNKNOWN / LOCAL ONLY`。
 
 > 状态：待真机执行（MISSING）。本文是执行方案，不是设备通过报告。Widget 测试、模拟器截图和 CI 通过均不能替代 Find N2 实机验收。
-> 最近一次影响应用运行时代码的合并：PR #424，提交 `8f5091c08f10743e7ef3322c86f50fc2e296fd78`；PR #420 仅增加测试，PR #421/#423 仅更新验收文档。应用版本为 `2.0.0+8048`。本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
+> 最近一次影响应用运行时代码的合并：PR #455，提交 `1717b36ba0c2359a1526e22d23f75befacd80628`；后续 PR #460/#461/#462 仅更新台账和验收文档，未改变应用运行时代码。应用版本为 `2.0.0+8048`。本文所有实机项仍为 `MISSING / LOCAL ONLY`；CI arm64 Debug APK 仅作构建/ABI 证据，不得作为保留旧数据的 Release 安装包。
 
 ## 1. 验收目标与边界
 

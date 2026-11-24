@@ -4,7 +4,7 @@
 
 ## 0. 当前前置条件与实现基线
 
-云端代码复核基线：`master @ 8f5091c08f10743e7ef3322c86f50fc2e296fd78`（PR #424 合并后；应用版本 `2.0.0+8048`）。PR #424 仅更新 Bazi/Guansha/Ziwei 出生日期与时刻候选的参数歧义拒绝逻辑，不改变 E4B Native、TRACE recorder 或 Android 签名链路。PR #127 早期引入的仅调试构建可见 TRACE 开关及本文件所列 TRACE 事件契约继续适用；本文是本地执行方案，不是设备 PASS 报告。Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测；不能以 PR HEAD 或 CI 结果替代实机验收。
+云端代码复核基线：应用运行时代码 `master @ 1717b36ba0c2359a1526e22d23f75befacd80628`（最近一次运行时代码变更为 PR #455；后续 PR #460/#461/#462 仅更新文档与台账；App 版本 `2.0.0+8048`）。当前 master 文档基线为 `b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b`。PR #127 早期引入的仅调试构建可见 TRACE 开关及本文件所列 TRACE 事件契约继续适用；本文是本地执行方案，不是设备 PASS 报告。Find N2 端到端 TRACE 仍须按本地 Release 安装包 SHA 和模型版本在实体设备实测；不能以 PR HEAD 或 CI 结果替代实机验收。
 
 当前已有实现：
 

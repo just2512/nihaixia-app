@@ -1,7 +1,7 @@
 # Find N2 本地 AI 后端切换与端侧验收清单
 
 > 本文件是本地执行清单，不是测试结果或 PASS 报告。GPU/CPU 推理、多媒体、进程恢复、清除数据与 TRACE 必须由实体 OPPO Find N2 执行；云端 CI 和 APK 构建不能代替真机证据。
-> 本轮应用代码基线：`master @ 8f5091c08f10743e7ef3322c86f50fc2e296fd78`（PR #424 已合并出生日期/时刻歧义拒绝保护；PR #420/#421/#423 仅为测试或验收文档更新），应用版本 `2.0.0+8048`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为该设备验收安装包。为本地 TRACE 开启 Debug 控件时，可使用本地专用的 Release 签名 Debug 构建（见第 2.1 节）；该构建只用于调试，不作为最终 Release 交付包。
+> 本轮应用运行时代码基线：`master @ 1717b36ba0c2359a1526e22d23f75befacd80628`（最近一次运行时代码变更为 PR #455；已包含 v1.2 授权协议/客户端、Headless F0/F1、ContextResolutionGateway、Release Key Ring 和激活/Token 导入 UI；后续 PR #460/#461/#462 仅更新文档与台账），应用版本 `2.0.0+8048`。设备实测必须记录本地 Release APK 与模型的实际 SHA-256；CI Debug APK 不可作为该设备验收安装包。为本地 TRACE 开启 Debug 控件时，可使用本地专用的 Release 签名 Debug 构建（见第 2.1 节）；该构建只用于调试，不作为最终 Release 交付包。
 
 ## 0. 本轮实现目标
 
