@@ -4175,3 +4175,52 @@ PR HEAD 门禁证据：
 - 当前交接文档版本信息仍以 `pubspec.yaml` 为准；本轮未改 App version、applicationId、签名配置或模型版本。
 - PR #462 合并后的 master commit `b884b0b...` 三条 Push workflow 均 SUCCESS；设备交接文件仍声明 CI Debug APK 不可作为原签名 Release 升级包。
 - 真机 Keystore/StrongBox、AtomicFile 恢复、原签名覆盖升级和用户数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、TRACE 与 AI 数据清除继续为 `LOCAL ONLY / MISSING / UNKNOWN`。本轮无设备 TRACE，未将任何设备项改为 PASS。
+
+---
+
+## 90. 2026-11-24 PR #463/#464 集成收尾与架构 §15 源码复核
+
+### 90.1 当前主线与小批量集成结果
+
+- **当前主线基线：** `master @ af6354dae502fbdc7f0e9016b9acbbd153f921a5`。本节以该 SHA 为复核基线；不把更早的 #462 文档基线误作当前主线。
+- **PR #463 已合并：** `fix(ui): render About feature list with line breaks`，独立提取自历史分支 `fix/baseline-png-and-literal-newlines` 的最小修复，仅修改 `lib/screens/app_dialogs.dart` 和 `test/app_brand_identity_test.dart`，没有整体合并旧分支，也没有带入其旧启动图或旧运行时代码。PR head `473710ab5fe46c9210fc39b1500f6b95e3d42368`，squash merge `5c5790581a4acd29ba011b8bd57da03a2842df84`。
+- **PR #464 已合并：** 仅更新执行台账、Find N2/E4B 交接、AI TRACE 验收和 Android 本地 Release 清单共 6 个文档；没有改动运行时代码、协议字段、收费边界、版本号、包名、签名配置或设备验收结论。PR head `b486a8fd4d0b848f5233979139c7e87b79f42050`，squash merge `af6354dae502fbdc7f0e9016b9acbbd153f921a5`。
+- **未合并授权批次：** PR #416 继续保持 `OPEN / DRAFT / UNTOUCHED`。本轮未改写、未重定向、未关闭或合并，不用它阻塞其他云端收尾。
+
+### 90.2 两个 PR 精确 HEAD 的 CI 证据
+
+| PR / 精确 HEAD | Fork license boundary | Flutter tests | Android arm64 / JVM | Branch validation |
+|---|---|---|---|---|
+| #463 `473710ab5fe46c9210fc39b1500f6b95e3d42368` | run `45352361999` SUCCESS | run `45352361962` SUCCESS；全量 Flutter regression job `138301708619` SUCCESS | job `138305063529` SUCCESS；含 arm64 CI Debug APK、Android Native JVM 单测及无本地签名材料时 Release 阻断检查 | job `138301710813` SKIPPED，不计 PASS |
+| #464 `b486a8fd4d0b848f5233979139c7e87b79f42050` | run `45352973305` SUCCESS | run `45352973179` SUCCESS；全量 Flutter regression job `138303737119` SUCCESS | job `138307468692` SUCCESS；含 arm64 CI Debug APK、Android Native JVM 单测及无本地签名材料时 Release 阻断检查 | job `138303739344` SKIPPED，不计 PASS |
+
+- 两个 PR 的 Flutter tests 均运行 Dart/Flutter 静态分析、离线 Issuer 测试、AI 合同测试、Headless/Resolver Analyzer AST 导入边界审计和完整 Flutter regression；各自精确 HEAD 的上述 job 均成功。
+- CI Debug APK 只证明 arm64 构建/ABI 与 Manifest 检查，不是本地正式签名 Release APK，也不代表 Find N2 真机安装或升级通过。
+
+### 90.3 远程历史分支与 PR 引用复核
+
+- 对 GitHub REST 分页完整枚举：当前远程分支 529 个、PR 记录 464 条；其中 462 个 PR head 使用本仓库分支。68 个没有本仓库 PR head 关联的分支包含 `master` 基线及 67 个历史/工作分支。
+- 67 个历史/工作分支与本台账 §78 的 58 条和 §89 的 9 条处置记录逐项匹配；未发现未登记的孤立分支，也未发现已登记但远程不存在的分支。
+- 历史分支继续保留，不批量删除、不强推、不整体合并。已被 master 后续实现取代、基于旧接口或会回退当前行为的分支，按原台账结论保持 `SUPERSEDED / DO NOT MERGE`；只有已审计的最小切片才独立进入 PR #463。
+
+### 90.4 架构约束 §15：后台 FlutterEngine 与插件注册源码核验
+
+- Android 主 Manifest 仅声明 `.MainActivity` 作为应用 Activity；对 `android/app/src/main` 的 Kotlin 源文件清单核验，唯一引用 Flutter `FlutterEngine` 的应用源文件为 `MainActivity.kt`，未发现应用自行创建的第二个 `FlutterEngine`、`FlutterEngineGroup` 或后台 Service。
+- `MainActivity.configureFlutterEngine(flutterEngine)` 先调用 `super.configureFlutterEngine`，再通过 `flutterEngine.plugins.has(LicensePlugin::class.java)` 防止重复注册，并将 `LicensePlugin` 添加到该 Activity 所持有的 FlutterEngine。
+- 本地 E4B 推理所称的 Native `Engine` 是 LiteRT-LM 推理引擎，不是 Flutter `FlutterEngine`。Activity 退出/重建时，`LocalAiActivityTaskLifecycle` 将模型资源释放排入进程级单线程 `LocalAiProcessExecutor`，新 Activity 的加载排在释放之后；释放失败会将当前进程标记为不可用，阻止新一轮模型操作。Android JVM 测试覆盖释放顺序、释放失败隔离、销毁后拒绝任务和只释放一次。
+- **结论：** “是否存在未注册 LicensePlugin 的第二个应用自建 FlutterEngine”在当前 Android 源码/Manifest 范围内为 `SOURCE AUDIT PASS / NONE FOUND`；无需为不存在的第二个 Engine 另造注册代码。该结论不是设备运行证明，未来如新增 FlutterEngine、EngineGroup、后台 Flutter Service 或独立 Dart runtime，必须同步补齐插件注册和单独验收。
+
+### 90.5 Headless 与情境解析调用边界复核
+
+- 当前 `ToolExecutionPlan` 强制携带不可变步骤与 `InvocationOrigin`；`ai_advanced` 只在 `origin == aiDispatch` 且计划包含至少两个不同 capability 时要求授权。Dispatcher 在任何 Executor 副作用前验证完整计划和工具/能力映射，再执行一次计划级授权；授权拒绝、暂时不可用、异常或 Feature ID 不匹配均不执行步骤。
+- `ContextResolutionGateway` 先验证来源锚点，再调用 `contextual_assistant` 授权，授权通过后才调用 Resolver；返回值必须与本次请求锚点一致。历史恢复与每个后续轮次重新授权，异常、缺失、陈旧、来源拒绝与授权失败保持独立状态。
+- `tool/import_graph_audit/bin/audit.dart` 由 Analyzer AST 遍历整个 `lib/`，检查所有 `*_tool_executor.dart` import/export 只能归属 Headless Dispatcher、Dispatcher 不得引用 Flutter UI 类型，并检查绕过 Gateway 的直接 `AiContextResolver.resolve*` 调用；PR #463/#464 精确 HEAD 的 CI 步骤均 SUCCESS。
+- 本段是当前主线源码和自动审计结果，不代表真实客户授权、Find N2 Keystore Provider 或模型设备行为通过。
+
+### 90.6 仍不得云端伪造的硬门槛
+
+- **正式发行信任锚：** 仓库文档仍明确没有经过来源核验的正式发行者公钥。GitHub Actions Secret 的实际值、私钥离线备份/恢复演练及正式签发流程，无法由仓库源码或本轮可用的 GitHub 只读接口证明；不得生成临时公钥冒充正式信任锚，不得把测试发行者写入 Release。正式产品 Release 继续 `BLOCKED`。
+- **代码权属证据：** 自动 Fork license boundary / REUSE 检查只验证文件清单、SPDX/DEP5 结构和分类，不证明作者或贡献者拥有版权/再许可权。inventory 中的 `OWNERSHIP_EVIDENCE_REQUIRED` 必须由真实作者/权利人材料补证，不得用 Git 作者字段、仓库权限或自动检查结果代替。
+- **真机验收：** OPPO Find N2 的 Keystore/StrongBox/TEE、AtomicFile 实际故障恢复、原签名 Release `adb install -r` 覆盖升级和用户数据保留、GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，均维持 `LOCAL ONLY / MISSING / UNKNOWN`。CI、JVM、Widget、Mock Channel 不能替代。
+- **CI 口径：** 只记录精确 SHA 对应的真实 run/job 结论。任何 `SKIPPED` 不计 PASS；尚未结束的 master Push workflow 不写成 PASS，结束后再按其最终状态补记。
+
