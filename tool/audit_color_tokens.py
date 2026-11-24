@@ -52,7 +52,6 @@ def load_allowlist() -> dict[str, str]:
 def scan_inventory() -> int:
     counts: Counter[str] = Counter()
     file_counts: Counter[str] = Counter()
-    hits_by_file: dict[str, list[str]] = defaultdict(list)
     for path in sorted(LIB.rglob("*.dart")):
         rel = path.relative_to(ROOT).as_posix()
         content = path.read_text(encoding="utf-8", errors="replace")
@@ -62,7 +61,6 @@ def scan_inventory() -> int:
                 if matches:
                     counts[label] += len(matches)
                     file_counts[rel] += len(matches)
-                    hits_by_file[rel].append(f"{line_number}:{label}:{len(matches)}")
     total = sum(counts.values())
     print(f"Color-token inventory: {total} matches across {len(file_counts)} Dart files.")
     for label, count in counts.most_common():
@@ -76,7 +74,7 @@ def scan_inventory() -> int:
 def changed_lines(base_ref: str) -> list[tuple[str, int, str]]:
     command = [
         "git", "diff", "--no-ext-diff", "--unified=0",
-        f"{base_ref}...HEAD", "--", "lib/**/*.dart", "lib/*.dart",
+        f"{base_ref}...HEAD", "--", "lib",
     ]
     result = subprocess.run(
         command, cwd=ROOT, check=False, text=True, capture_output=True
@@ -109,7 +107,7 @@ def check_changed(base_ref: str) -> int:
     ignored_files = TOKEN_FILES | set(allowlist)
     for path, line_number, line in changed_lines(base_ref):
         normalized = path.replace("\\", "/")
-        if normalized in ignored_files:
+        if not normalized.endswith(".dart") or normalized in ignored_files:
             continue
         for label, pattern in PATTERNS:
             match = pattern.search(line)
@@ -140,7 +138,8 @@ def main() -> int:
     args = parser.parse_args()
     if not args.inventory and not args.changed_only:
         parser.error("choose --inventory, --changed-only, or both")
-    total = scan_inventory() if args.inventory else 0
+    if args.inventory:
+        scan_inventory()
     if args.changed_only:
         return check_changed(args.base_ref)
     return 0
