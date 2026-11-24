@@ -271,5 +271,73 @@ void main() {
       expect(light.secondaryFixed, dark.secondaryFixed);
       expect(light.tertiaryFixed, dark.tertiaryFixed);
     });
+    test('语义容器和 Material 3 Fixed 角色使用正确的前景配对', () {
+      final light = AppColors.light;
+      final lightScheme = AppColors.colorSchemeFor(Brightness.light);
+
+      expect(
+        _contrast(light.warning, light.warningContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(light.danger, lightScheme.errorContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(lightScheme.onErrorContainer, lightScheme.errorContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(lightScheme.onSecondaryContainer, lightScheme.secondaryContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(lightScheme.onTertiaryContainer, lightScheme.tertiaryContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+
+      final dark = AppColors.dark;
+      final darkScheme = AppColors.colorSchemeFor(Brightness.dark);
+
+      expect(
+        _contrast(dark.warning, dark.warningContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(darkScheme.onErrorContainer, darkScheme.errorContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(dark.danger, darkScheme.errorContainer),
+        lessThan(4.5),
+        reason: '深色 dangerDark 不得直接作为 darkErrorContainer 的正文前景。',
+      );
+      expect(
+        _contrast(darkScheme.onSecondaryContainer, darkScheme.secondaryContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(darkScheme.onTertiaryContainer, darkScheme.tertiaryContainer),
+        greaterThanOrEqualTo(4.5),
+      );
+
+      for (final pair in [
+        (lightScheme.onPrimaryFixed, lightScheme.primaryFixed),
+        (lightScheme.onPrimaryFixedVariant, lightScheme.primaryFixedDim),
+        (lightScheme.onSecondaryFixed, lightScheme.secondaryFixed),
+        (lightScheme.onSecondaryFixedVariant, lightScheme.secondaryFixedDim),
+        (lightScheme.onTertiaryFixed, lightScheme.tertiaryFixed),
+        (lightScheme.onTertiaryFixedVariant, lightScheme.tertiaryFixedDim),
+        (darkScheme.onPrimaryFixed, darkScheme.primaryFixed),
+        (darkScheme.onPrimaryFixedVariant, darkScheme.primaryFixedDim),
+        (darkScheme.onSecondaryFixed, darkScheme.secondaryFixed),
+        (darkScheme.onSecondaryFixedVariant, darkScheme.secondaryFixedDim),
+        (darkScheme.onTertiaryFixed, darkScheme.tertiaryFixed),
+        (darkScheme.onTertiaryFixedVariant, darkScheme.tertiaryFixedDim),
+      ]) {
+        expect(_contrast(pair.$1, pair.$2), greaterThanOrEqualTo(4.5));
+      }
+    });
+
   });
 }
