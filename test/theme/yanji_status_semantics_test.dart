@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/dream_data.dart';
+import 'package:nihaisha_app/data/guansha_data.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/theme/yanji_status_semantics.dart';
 
@@ -59,6 +61,48 @@ void main() {
         }
       });
     }
+
+    test('生产梦境与关煞数据中的每个等级都被明确覆盖且达到 AA', () {
+      final dreamLevels = kDreamEntries
+          .map((entry) => entry.auspicious)
+          .toSet();
+      expect(
+        dreamLevels,
+        {'大吉', '吉', '平', '凶', '大凶'},
+        reason: '梦境数据新增吉凶等级时，必须同步定义语义映射。',
+      );
+
+      final guanshaLevels = <String>{
+        for (final entry in kGuanshaEntries) entry.severity,
+        for (final entry in kExtShaEntries) entry.severity,
+      };
+      expect(
+        guanshaLevels,
+        {'重关', '中关', '轻关'},
+        reason: '关煞数据新增严重度时，必须同步定义语义映射。',
+      );
+
+      for (final colors in [AppColors.light, AppColors.dark]) {
+        for (final level in dreamLevels) {
+          final pair = dreamAuspiciousChipColors(level, colors);
+          expect(pair.foreground, colors.onSurface);
+          expect(
+            _contrast(pair.foreground, pair.background),
+            greaterThanOrEqualTo(4.5),
+            reason: '梦境等级 $level 的状态文字必须达到 4.5:1。',
+          );
+        }
+        for (final severity in guanshaLevels) {
+          final pair = guanshaSeverityChipColors(severity, colors);
+          expect(pair.foreground, colors.onSurface);
+          expect(
+            _contrast(pair.foreground, pair.background),
+            greaterThanOrEqualTo(4.5),
+            reason: '关煞严重度 $severity 的状态文字必须达到 4.5:1。',
+          );
+        }
+      }
+    });
 
     test('两个页面使用共享语义映射，不再直接调用 Flutter Material 颜色', () {
       final dream = File('lib/screens/dream_screen.dart').readAsStringSync();
