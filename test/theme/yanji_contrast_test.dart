@@ -292,6 +292,16 @@ void main() {
         greaterThanOrEqualTo(4.5),
       );
       expect(
+        _contrast(lightScheme.onSecondary, lightScheme.secondary),
+        greaterThanOrEqualTo(4.5),
+        reason: '浅色 secondary 实心表面不得使用低对比度功能灰。',
+      );
+      expect(
+        _contrast(lightScheme.onTertiary, lightScheme.tertiary),
+        greaterThanOrEqualTo(4.5),
+        reason: '浅色 tertiary 实心表面必须具备普通文字对比度。',
+      );
+      expect(
         _contrast(lightScheme.onTertiaryContainer, lightScheme.tertiaryContainer),
         greaterThanOrEqualTo(4.5),
       );
@@ -315,6 +325,16 @@ void main() {
       expect(
         _contrast(darkScheme.onSecondaryContainer, darkScheme.secondaryContainer),
         greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(darkScheme.onSecondary, darkScheme.secondary),
+        greaterThanOrEqualTo(4.5),
+        reason: '深色 secondary 实心表面必须具备普通文字对比度。',
+      );
+      expect(
+        _contrast(darkScheme.onTertiary, darkScheme.tertiary),
+        greaterThanOrEqualTo(4.5),
+        reason: '深色 tertiary 实心表面必须具备普通文字对比度。',
       );
       expect(
         _contrast(darkScheme.onTertiaryContainer, darkScheme.tertiaryContainer),
