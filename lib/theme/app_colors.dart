@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'yanji_palette.dart';
+
 /// 语义化设计 Token（Design Tokens）——App 内颜色唯一来源（P0-3 根治）。
 ///
-/// 设计方向：低饱和松墨绿作为品牌主色，灰绿中性色降低浅色主题亮度；
-/// 状态系含 container；六经专用色 light 深 shade / dark 亮 shade（对比度≥4.5:1）。
+/// 设计方向：冷白、银灰、正红构成品牌基础色；功能灰、文字红和风险色
+/// 作为语义变体。六经与工具分区色保留独立业务语义。
 ///
 /// 使用方式：`Theme.of(context).extension<AppColors>()!`，或
 /// `context.colors`（见 [AppColorsContext]）。不要在页面内写裸颜色字面量。
@@ -24,12 +26,14 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color onSurfaceVariant;
   final Color outline;
   final Color outlineVariant;
+  final Color link;
 
   // ---- 状态系 ----
   final Color danger;
   final Color onDanger;
   final Color dangerContainer;
   final Color warning;
+  final Color onWarning;
   final Color warningContainer;
   final Color success;
   final Color successContainer;
@@ -73,10 +77,12 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.onSurfaceVariant,
     required this.outline,
     required this.outlineVariant,
+    required this.link,
     required this.danger,
     required this.onDanger,
     required this.dangerContainer,
     required this.warning,
+    required this.onWarning,
     required this.warningContainer,
     required this.success,
     required this.successContainer,
@@ -106,28 +112,30 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// 六经 container = 该色 12% alpha 叠加在对应主题的内容表面上。
   static Color _tint(Color c, {required bool dark}) {
-    final bg = dark ? const Color(0xFF202823) : const Color(0xFFEFF0EB);
+    final bg = dark ? YanjiPalette.darkSurface : YanjiPalette.white;
     return Color.alphaBlend(c.withValues(alpha: 0.12), bg);
   }
 
   static final AppColors light = AppColors(
-    primary: const Color(0xFF43594D),
-    onPrimary: const Color(0xFFFFFFFF),
-    primaryContainer: const Color(0xFFDFE6DF),
-    onPrimaryContainer: const Color(0xFF20342A),
-    background: const Color(0xFFE7E9E4),
-    surface: const Color(0xFFEFF0EB),
-    surfaceContainerHighest: const Color(0xFFD9DDD6),
-    surfaceContainerLow: const Color(0xFFE1E4DE),
-    onSurface: const Color(0xFF262C28),
-    onSurfaceVariant: const Color(0xFF59635C),
-    outline: const Color(0xFF747E76),
-    outlineVariant: const Color(0xFFC8CEC6),
-    danger: const Color(0xFFB3261E),
-    onDanger: const Color(0xFFFFFFFF),
-    dangerContainer: const Color(0xFFF6DAD7),
-    warning: const Color(0xFF896000),
-    warningContainer: const Color(0xFFF3E1C2),
+    primary: YanjiPalette.brandRed,
+    onPrimary: YanjiPalette.white,
+    primaryContainer: YanjiPalette.lightPrimaryContainer,
+    onPrimaryContainer: YanjiPalette.lightOnPrimaryContainer,
+    background: YanjiPalette.coldWhite,
+    surface: YanjiPalette.white,
+    surfaceContainerHighest: YanjiPalette.lightSurfaceContainerHighest,
+    surfaceContainerLow: YanjiPalette.lightSurfaceContainerLow,
+    onSurface: YanjiPalette.charcoal,
+    onSurfaceVariant: YanjiPalette.textSecondaryLight,
+    outline: YanjiPalette.functionalGray,
+    outlineVariant: YanjiPalette.silverGray,
+    link: YanjiPalette.redOnLight,
+    danger: YanjiPalette.dangerLight,
+    onDanger: YanjiPalette.white,
+    dangerContainer: YanjiPalette.lightErrorContainer,
+    warning: YanjiPalette.warningLight,
+    onWarning: YanjiPalette.white,
+    warningContainer: YanjiPalette.lightWarningContainer,
     success: const Color(0xFF2E6B4F),
     successContainer: const Color(0xFFD4E5DB),
     info: const Color(0xFF35638A),
@@ -155,23 +163,25 @@ class AppColors extends ThemeExtension<AppColors> {
   );
 
   static final AppColors dark = AppColors(
-    primary: const Color(0xFFA7B8AA),
-    onPrimary: const Color(0xFF1F3026),
-    primaryContainer: const Color(0xFF34483C),
-    onPrimaryContainer: const Color(0xFFDDE8DE),
-    background: const Color(0xFF181E1B),
-    surface: const Color(0xFF202823),
-    surfaceContainerHighest: const Color(0xFF303B34),
-    surfaceContainerLow: const Color(0xFF252F29),
-    onSurface: const Color(0xFFE4EAE4),
-    onSurfaceVariant: const Color(0xFFB7C1B8),
-    outline: const Color(0xFF879388),
-    outlineVariant: const Color(0xFF465149),
-    danger: const Color(0xFFFFB4AB),
-    onDanger: const Color(0xFF690005),
-    dangerContainer: const Color(0xFF93000A),
-    warning: const Color(0xFFFFB950),
-    warningContainer: const Color(0xFF6B4100),
+    primary: YanjiPalette.darkPrimary,
+    onPrimary: YanjiPalette.darkOnPrimary,
+    primaryContainer: YanjiPalette.darkPrimaryContainer,
+    onPrimaryContainer: YanjiPalette.darkOnPrimaryContainer,
+    background: YanjiPalette.darkBackground,
+    surface: YanjiPalette.darkSurface,
+    surfaceContainerHighest: YanjiPalette.darkSurfaceContainer,
+    surfaceContainerLow: YanjiPalette.darkSurfaceContainerLow,
+    onSurface: YanjiPalette.darkOnSurface,
+    onSurfaceVariant: YanjiPalette.darkTextSecondary,
+    outline: YanjiPalette.darkOutline,
+    outlineVariant: YanjiPalette.darkDivider,
+    link: YanjiPalette.darkLink,
+    danger: YanjiPalette.dangerDark,
+    onDanger: YanjiPalette.onDangerDark,
+    dangerContainer: YanjiPalette.darkErrorContainer,
+    warning: YanjiPalette.warningDark,
+    onWarning: YanjiPalette.onWarningDark,
+    warningContainer: YanjiPalette.darkWarningContainer,
     success: const Color(0xFF81C784),
     successContainer: const Color(0xFF1B5E20),
     info: const Color(0xFF90CAF9),
@@ -198,32 +208,88 @@ class AppColors extends ThemeExtension<AppColors> {
     metaphysicsZone: const Color(0xFFB39DDB),
   );
 
-  /// 由语义色 Token 生成 Material ColorScheme，避免 Theme.colorScheme 与
-  /// AppColors ThemeExtension 各自使用不同色值。
-  ///
-  /// Scaffold 背景采用 background；最低层 surface 保留纯 surface，
-  /// 卡片/输入区域则使用独立的 container token。
+  /// Material 3 ColorScheme 显式绑定所有角色，禁止 fromSeed 自动推导品牌色。
+  /// 页面底色由 ThemeData.scaffoldBackgroundColor 单独绑定 tokens.background；
+  /// surface 与 container 只代表内容表面，避免 Scaffold 被意外改成纯白卡片色。
   static ColorScheme colorSchemeFor(Brightness brightness) {
-    final tokens = brightness == Brightness.dark ? dark : light;
-    return ColorScheme.fromSeed(
-      seedColor: tokens.primary,
+    final isDark = brightness == Brightness.dark;
+    final tokens = isDark ? dark : light;
+    return ColorScheme(
       brightness: brightness,
-    ).copyWith(
       primary: tokens.primary,
       onPrimary: tokens.onPrimary,
       primaryContainer: tokens.primaryContainer,
       onPrimaryContainer: tokens.onPrimaryContainer,
-      surface: tokens.background,
-      surfaceContainerLowest: tokens.surface,
-      surfaceContainerLow: tokens.surfaceContainerLow,
-      surfaceContainerHighest: tokens.surfaceContainerHighest,
+      primaryFixed: YanjiPalette.primaryFixed,
+      primaryFixedDim: YanjiPalette.primaryFixedDim,
+      onPrimaryFixed: YanjiPalette.onPrimaryFixed,
+      onPrimaryFixedVariant: YanjiPalette.onPrimaryFixedVariant,
+      secondary: isDark ? YanjiPalette.darkSecondary : YanjiPalette.lightSecondary,
+      onSecondary: isDark ? YanjiPalette.darkOnSecondary : YanjiPalette.lightOnSecondary,
+      secondaryContainer: isDark
+          ? YanjiPalette.darkSecondaryContainer
+          : YanjiPalette.lightSecondaryContainer,
+      onSecondaryContainer: isDark
+          ? YanjiPalette.darkOnSecondaryContainer
+          : YanjiPalette.lightOnSecondaryContainer,
+      secondaryFixed: YanjiPalette.secondaryFixed,
+      secondaryFixedDim: YanjiPalette.secondaryFixedDim,
+      onSecondaryFixed: YanjiPalette.onSecondaryFixed,
+      onSecondaryFixedVariant: YanjiPalette.onSecondaryFixedVariant,
+      tertiary: isDark ? YanjiPalette.darkSecondary : YanjiPalette.lightSecondary,
+      onTertiary: isDark ? YanjiPalette.darkOnSecondary : YanjiPalette.lightOnSecondary,
+      tertiaryContainer: isDark
+          ? YanjiPalette.darkTertiaryContainer
+          : YanjiPalette.lightTertiaryContainer,
+      onTertiaryContainer: isDark
+          ? YanjiPalette.darkOnTertiaryContainer
+          : YanjiPalette.lightOnTertiaryContainer,
+      tertiaryFixed: YanjiPalette.tertiaryFixed,
+      tertiaryFixedDim: YanjiPalette.tertiaryFixedDim,
+      onTertiaryFixed: YanjiPalette.onTertiaryFixed,
+      onTertiaryFixedVariant: YanjiPalette.onTertiaryFixedVariant,
+      error: tokens.danger,
+      onError: tokens.onDanger,
+      errorContainer: isDark
+          ? YanjiPalette.darkErrorContainer
+          : YanjiPalette.lightErrorContainer,
+      onErrorContainer: isDark
+          ? YanjiPalette.darkOnErrorContainer
+          : YanjiPalette.lightOnErrorContainer,
+      surface: tokens.surface,
       onSurface: tokens.onSurface,
+      surfaceDim: isDark
+          ? YanjiPalette.darkBackground
+          : YanjiPalette.lightSurfaceDim,
+      surfaceBright: isDark
+          ? YanjiPalette.darkSurfaceContainer
+          : YanjiPalette.white,
+      surfaceContainerLowest: isDark
+          ? YanjiPalette.darkBackground
+          : YanjiPalette.white,
+      surfaceContainerLow: tokens.surfaceContainerLow,
+      surfaceContainer: isDark
+          ? YanjiPalette.darkSurface
+          : YanjiPalette.lightSurfaceContainer,
+      surfaceContainerHigh: isDark
+          ? YanjiPalette.darkSurfaceContainerHigh
+          : YanjiPalette.lightSurfaceContainerHigh,
+      surfaceContainerHighest: tokens.surfaceContainerHighest,
       onSurfaceVariant: tokens.onSurfaceVariant,
       outline: tokens.outline,
       outlineVariant: tokens.outlineVariant,
-      error: tokens.danger,
-      onError: tokens.onDanger,
-      errorContainer: tokens.dangerContainer,
+      shadow: YanjiPalette.shadow,
+      scrim: YanjiPalette.scrim,
+      inverseSurface: isDark
+          ? YanjiPalette.darkInverseSurface
+          : YanjiPalette.lightInverseSurface,
+      onInverseSurface: isDark
+          ? YanjiPalette.darkOnInverseSurface
+          : YanjiPalette.lightOnInverseSurface,
+      inversePrimary: isDark
+          ? YanjiPalette.darkInversePrimary
+          : YanjiPalette.lightInversePrimary,
+      surfaceTint: YanjiPalette.transparent,
     );
   }
 
@@ -281,10 +347,12 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? onSurfaceVariant,
     Color? outline,
     Color? outlineVariant,
+    Color? link,
     Color? danger,
     Color? onDanger,
     Color? dangerContainer,
     Color? warning,
+    Color? onWarning,
     Color? warningContainer,
     Color? success,
     Color? successContainer,
@@ -325,10 +393,12 @@ class AppColors extends ThemeExtension<AppColors> {
       onSurfaceVariant: onSurfaceVariant ?? this.onSurfaceVariant,
       outline: outline ?? this.outline,
       outlineVariant: outlineVariant ?? this.outlineVariant,
+      link: link ?? this.link,
       danger: danger ?? this.danger,
       onDanger: onDanger ?? this.onDanger,
       dangerContainer: dangerContainer ?? this.dangerContainer,
       warning: warning ?? this.warning,
+      onWarning: onWarning ?? this.onWarning,
       warningContainer: warningContainer ?? this.warningContainer,
       success: success ?? this.success,
       successContainer: successContainer ?? this.successContainer,
@@ -381,10 +451,12 @@ class AppColors extends ThemeExtension<AppColors> {
       onSurfaceVariant: l(onSurfaceVariant, other.onSurfaceVariant),
       outline: l(outline, other.outline),
       outlineVariant: l(outlineVariant, other.outlineVariant),
+      link: l(link, other.link),
       danger: l(danger, other.danger),
       onDanger: l(onDanger, other.onDanger),
       dangerContainer: l(dangerContainer, other.dangerContainer),
       warning: l(warning, other.warning),
+      onWarning: l(onWarning, other.onWarning),
       warningContainer: l(warningContainer, other.warningContainer),
       success: l(success, other.success),
       successContainer: l(successContainer, other.successContainer),
