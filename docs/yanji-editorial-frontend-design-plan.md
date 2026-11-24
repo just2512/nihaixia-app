@@ -144,10 +144,10 @@
 - `tool/audit_color_tokens.py` 与 `tool/color_token_audit_allowlist.json`。
 
 **完成情况**
-- PR #466 已合入 `master`，合并 SHA：`3aebe1ae235a739c9e96f607fb6aefe81a51719b`。PR HEAD 的 Flutter regression Run `45381758184`、Android arm64 job `138406790623`、Fork license boundary Run `45381758301` 均为 `SUCCESS`。
-- PR #468 已合入 `master`，合并 SHA：`2ae38ebe895de410795c5064e5a3e4bad25ee3e7`。PR HEAD 的 Flutter regression Run `45388840071`、Android arm64 job `138430781980`、Fork license boundary Run `45388840169` 均为 `SUCCESS`；Branch validation 为条件性 `SKIPPED`，未计作 PASS。
-- PR #469（梦占/关煞）已切换到 `master`，HEAD `6b43c26459ea23eb81ef3b3d3280bed3cfd21fe7`，GitHub 返回 `mergeable=true`；Fork license boundary Run `45390886205` 为 `SUCCESS`，Flutter regression Run `45390886194` 正在执行。
-- PR #470（三山灵签/共享状态徽标）仍以 PR #469 分支为 base，完整 PR CI 待父 PR 合并后触发；生产数据标签覆盖、统一徽标、屏幕阅读器、窄屏和 200% 字号回归已写入分支。
+- PR #466 已合入 `master`，合并 SHA：`3aebe1ae235a739c9e96f607fb6aefe81a51719b`。PR HEAD Flutter regression Run `45381758184`、Android arm64 job `138406790623`、Fork license boundary Run `45381758301` 均 `SUCCESS`。
+- PR #468 已合入 `master`，合并 SHA：`2ae38ebe895de410795c5064e5a3e4bad25ee3e7`。PR HEAD Flutter regression Run `45388840071`、Android arm64 job `138430781980`、Fork license boundary Run `45388840169` 均 `SUCCESS`；Branch validation 为条件性 `SKIPPED`，不计为 PASS。
+- PR #469 已合入 `master`，合并 SHA：`4fe10b64a249a14689f9c5dd0d9caaae1f57dc6a`。PR HEAD Flutter regression Run `45393614322`、Android arm64 job `138447145814`、Fork license boundary Run `45393614261` 均 `SUCCESS`；Branch validation 条件性 `SKIPPED`。
+- PR #470 已从最新 master 创建为独立一提交增量，HEAD `f55f49ab816827129d061aa20770700c0e12b4ad`，base `master`。Fork license boundary Run `45395598579` `SUCCESS`；Flutter regression Run `45395598724` 正在执行，Android arm64 将在 Flutter 回归成功后执行。
 - PR #208 已关闭，明确由 PR #211 取代；它不是仍待合并的有效 PR。
 - Find N2 真实屏幕阅读测试仍为 `MISSING`；自动化与 CI 不等同于实机最终验收。
 ### Phase 1：首页与根导航
@@ -322,8 +322,8 @@
 |---|---|---|
 | 设计规范与浅深主题 Token | `PASS`（云端代码/CI） | PR #466 合入 SHA `3aebe1ae235a739c9e96f607fb6aefe81a51719b`；PR HEAD Flutter Run `45381758184`、Android arm64 job `138406790623`、Fork license Run `45381758301` 均 SUCCESS。 |
 | 五运六气五行领域色 Token | `PASS`（云端代码/CI） | PR #468 合入 SHA `2ae38ebe895de410795c5064e5a3e4bad25ee3e7`；PR HEAD Flutter Run `45388840071`、Android arm64 job `138430781980`、Fork license Run `45388840169` 均 SUCCESS；未知五行兜底底色也有 4.5:1 文字回归。 |
-| 梦占与关煞语义状态 | `IN_PROGRESS` | PR #469 HEAD `6b43c26459ea23eb81ef3b3d3280bed3cfd21fe7`，base `master`，mergeable=true；Fork license Run `45390886205` SUCCESS，Flutter regression Run `45390886194` in progress。测试绑定实际 412 条梦境与 54 条关煞数据标签，并验证浅深主题 AA 对比度。 |
-| 三山灵签与共享状态徽标 | `INTEGRATION_PENDING` | PR #470 当前仍以 PR #469 分支为 base；复用 `YanjiStatusBadge`，覆盖 92 条灵签、四种语义状态、双主题对比度、屏幕阅读器、窄屏和 200% 字号。待 #469 合入 master 后执行完整 PR CI。 |
+| 梦占与关煞语义状态 | `PASS`（云端代码/CI） | PR #469 合入 SHA `4fe10b64a249a14689f9c5dd0d9caaae1f57dc6a`；PR HEAD Flutter Run `45393614322`、Android arm64 job `138447145814`、Fork license Run `45393614261` 均 SUCCESS。覆盖生产梦境 412 条与关煞 54 条真实状态集合、浅深主题映射与 4.5:1 前景对比度。 |
+| 三山灵签与共享状态徽标 | `IN_PROGRESS` | PR #470 HEAD `f55f49ab816827129d061aa20770700c0e12b4ad`，base `master`；Fork license Run `45395598579` SUCCESS，Flutter regression Run `45395598724` in progress；Android arm64 待 Flutter 回归完成后执行。覆盖 92 条灵签、共享徽标、屏幕阅读器、窄屏及 200% 字号。 |
 | Phase 1：首页、根导航与 AI 首屏 | `PASS`（自动化） | PR #211/#272 的首页与主题基础验收继续有效；PR #282 在最新主线补齐真实 `HomeScreen` 根导航、AI 首屏、402/775dp、浅深主题、200% 字号及半折叠铰链集成验证，合并 SHA `f25d96f03d8ac6c2a80521baf1edc71384fc0482`。PR #282 HEAD Flutter regression Run `44236524275` 与 Android arm64 均 success；合并后 master HEAD `e9658c9f98ee0651c170a784fcaa154bdca4057b` 的 Flutter Run `44242753459`、Quality Gate Run `44242753430` 均 success。Phase 1 云端自动化验收收口；Find N2 实机阅读仍单独保持 `MISSING`。 |
 | 五运六气外部对拍夹具 | `MISSING` | PR #272 完整 Flutter regression 中 15 项 `test/yunqi_engine_test.dart` 测试因外部 `D:\tools\yunqi_ref.json` 不在仓库且 CI 未设置 `YUNQI_REF_PATH` 而按原测试逻辑 skipped；未删除、跳过代码或降低断言。 |
 | Phase 2：知识浏览、经典和核心详情 | `PASS`（自动化） | PR #212 合并 SHA `7681d6584d3a3667a5f54a19fac0f675774fd749`；PR Flutter regression Run `43851588625` success，合并后主线 Flutter / Android arm64 / Quality Gate success。 |
@@ -332,8 +332,8 @@
 | Phase 2 补充：六经、经典正文与医案半折叠详情 | `PASS`（自动化） | PR #337 合并 SHA `69c2b3d191e12f6cf2916650f673afcf8e5ffc2a`；新增 `test/phase2_remaining_half_fold_routes_test.dart`，从真实根导航进入六经详情、伤寒论篇目正文、倪师医案详情；覆盖 800×900 dp、x=388..412 dp 物理 hinge、浅深主题、200% 字号及 SQLite FFI 异步收尾。分支静态分析与定向 Flutter 测试 2/2 SUCCESS，PR 全量 Flutter regression 与 Android arm64 CI 均 SUCCESS。 |
 | PR #337 合并后 Flutter / Android CI | `PASS` | 合并后 HEAD `69c2b3d191e12f6cf2916650f673afcf8e5ffc2a`；Flutter regression Run `44491439429` 与 Android arm64 job `135450312683` 均为 `SUCCESS`，包括 arm64 APK、Manifest/ABI/SHA-256 校验及 Android local unit tests。 |
 | Phase 2 跨页面折叠阅读验收 | `PASS`（自动化） | 知识页/方剂本草主从预览与半折叠详情：`test/knowledge_foldable_reading_matrix_test.dart`；针灸四 Tab 与穴位详情：`test/acupuncture_half_fold_root_navigation_test.dart`；六经详情、经典正文、医案详情：`test/phase2_remaining_half_fold_routes_test.dart`。均从真实根导航进入，覆盖浅深主题、200% 字号和物理 hinge 安全面板；经典/方剂/本草/医案另有 402/775dp 页面布局测试。 |
-| 当前 master Flutter / Android CI | `MISSING`（合并后待核验） | 当前 master HEAD `2ae38ebe895de410795c5064e5a3e4bad25ee3e7`；PR #468 的 PR-HEAD 检查全部 SUCCESS，但本次合并提交上的 master push CI 尚无可核验记录。 |
-| 当前 master Flutter Quality Gate | `MISSING`（合并后待核验） | 当前 master HEAD `2ae38ebe895de410795c5064e5a3e4bad25ee3e7` 尚无本次合并提交的 Quality Gate 证据；旧 HEAD 的历史 run 不代表当前主线。 |
+| 当前 master Flutter / Android CI | `IN_PROGRESS` | master HEAD `4fe10b64a249a14689f9c5dd0d9caaae1f57dc6a`；合并后 Flutter regression Run `45395376564` 与 Android arm64 后续 job尚未完成，Fork license Run `45395376480` SUCCESS。 |
+| 当前 master Flutter Quality Gate | `IN_PROGRESS` | 同一 master HEAD 的 Quality Gate Run `45395376873` 正在执行；未完成前不标记 PASS。 |
 | Phase 3：工具、收藏、设置、历史与辅助页面 | `PASS`（自动化） | PR #214/#217/#219/#220/#226/#227/#240/#247/#248/#255/#262/#264/#266/#267 均已合并；集成 SHA 见第 5 节。覆盖列表减阴影/细分隔、工具标签 200% 换行、紫微折叠布局、五运六气对比度/文本缩放/徽章高度、剂量换算器 200%，以及收藏/设置/历史/命盘库浅深主题。 |
 | 五行徽章文字与背景高度 | `PASS` | PR #264 合并 SHA `4136bc616fa382cc7196e277c99f67f7f3e23007`；背景高度改为依据实际 TextPainter.height 计算，200% 几何断言进入 master。 |
 | Phase 4：跨页面语义色对比度 | `PASS`（自动化） | PR #265 合并 SHA `6103dfba234f0b4a5477632f2b4c6b400ab829eb`；当前 HEAD Flutter regression Run `44103235167` success、Android arm64 job `134112303183` success。覆盖浅深主题状态色、容器和六经文字/容器配对。 |
