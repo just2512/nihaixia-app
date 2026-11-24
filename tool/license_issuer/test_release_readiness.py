@@ -9,6 +9,7 @@ import os
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -133,6 +134,19 @@ class ReleaseReadinessTests(unittest.TestCase):
         )
         self.assertEqual(code, 1)
         self.assertIn("test issuer ID found", stderr)
+
+    def test_scans_compressed_apk_entries_for_test_issuer_id(self):
+        apk = io.BytesIO()
+        with zipfile.ZipFile(apk, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("assets/payload.bin", b"test-issuer-01")
+        artifact = apk.getvalue()
+        # The string is inside a compressed ZIP member, not searchable in the
+        # APK's raw ZIP bytes or central-directory filename metadata.
+        self.assertNotIn(b"test-issuer-01", artifact)
+        code, _, stderr = self.invoke(ring([key_entry()]), artifact)
+        self.assertEqual(code, 1)
+        self.assertIn("test issuer ID found", stderr)
+        self.assertIn("assets/payload.bin", stderr)
 
     def test_scans_release_artifact_for_raw_test_public_key(self):
         fixture = json.loads(scanner.FIXTURE.read_text(encoding="utf-8"))
