@@ -547,7 +547,7 @@ void main() {
       expect(received?.method, 'resolveAssistantIntent');
       expect(received?.arguments, <String, Object?>{
         'text': '按出生资料看看传统命盘',
-        'candidates': '[{"id":"ziwei","title":"紫微斗数","description":"调用 App 原有紫微排盘。"},{"id":"bazi","title":"八字四柱","description":"调用 App 原有八字排盘。"}]',
+        'candidates': '[{"id":"ziwei","title":"紫微斗数","description":"调用 App 原有紫微排盘。","plan_eligible":false},{"id":"bazi","title":"八字四柱","description":"调用 App 原有八字排盘。","plan_eligible":false}]',
         'trace_id': traceId,
       });
       expect(result.action, LocalAiIntentAction.select);
@@ -692,12 +692,20 @@ void main() {
   });
 
   group('LocalAiIntentResolution schema', () {
-    test('accepts only exact select, clarify, and none actions', () {
+    test('accepts exact single-tool, ordered-plan, clarify and none actions', () {
       final selected = LocalAiIntentResolution.fromModelText(
         '{"action":"select","tool_id":"bazi"}',
       );
       expect(selected.action, LocalAiIntentAction.select);
       expect(selected.toolId, 'bazi');
+      expect(selected.toolIds, isEmpty);
+
+      final plan = LocalAiIntentResolution.fromModelText(
+        '{"action":"plan","tool_ids":["bazi","ziwei","dosage"]}',
+      );
+      expect(plan.action, LocalAiIntentAction.plan);
+      expect(plan.toolId, isNull);
+      expect(plan.toolIds, ['bazi', 'ziwei', 'dosage']);
 
       final clarify = LocalAiIntentResolution.fromModelText(
         '{"action":"clarify","tool_id":null}',
@@ -710,6 +718,24 @@ void main() {
       );
       expect(none.action, LocalAiIntentAction.none);
       expect(none.toolId, isNull);
+    });
+
+    test('rejects malformed or unsafe plan shapes', () {
+      for (final payload in <String>[
+        '{"action":"plan","tool_ids":["bazi"]}',
+        '{"action":"plan","tool_ids":["bazi","ziwei","dosage","meihua"]}',
+        '{"action":"plan","tool_ids":["bazi","bazi"]}',
+        '{"action":"plan","tool_ids":["bazi","invalid id"]}',
+        '{"action":"plan","tool_id":null,"tool_ids":["bazi","ziwei"]}',
+        '{"action":"plan","tool_ids":["bazi","ziwei"],"arguments":{}}',
+        '{"action":"plan","tool_ids":"bazi,ziwei"}',
+      ]) {
+        expect(
+          () => LocalAiIntentResolution.fromModelText(payload),
+          throwsFormatException,
+          reason: payload,
+        );
+      }
     });
 
     test('rejects extra fields, invented IDs, malformed JSON, and oversized output', () {
@@ -726,6 +752,49 @@ void main() {
           reason: payload.length > 80 ? 'oversized payload' : payload,
         );
       }
+    });
+  });
+
+  group('LocalAiService bounded plan candidates', () {
+    const traceId = '0123456789abcdef0123456789abcdef';
+    final candidates = [
+      const LocalAiIntentCandidate(id: 'bazi', title: '八字', description: '八字排盘', planEligible: true),
+      const LocalAiIntentCandidate(id: 'ziwei', title: '紫微', description: '紫微排盘', planEligible: true),
+    ];
+
+    test('accepts a plan only when every selected ID belongs to the candidate set', () async {
+      messenger.setMockMethodCallHandler(channel, (_) async => <String, Object?>{
+        'decision': '{"action":"plan","tool_ids":["bazi","ziwei"]}',
+        'backend': 'cpu',
+        'trace_id': traceId,
+      });
+
+      final result = await LocalAiService().resolveAssistantIntentWithTrace(
+        query: '同时排八字和紫微',
+        candidates: candidates,
+        traceId: traceId,
+      );
+
+      expect(result.action, LocalAiIntentAction.plan);
+      expect(result.toolIds, ['bazi', 'ziwei']);
+      expect(result.backend, 'cpu');
+    });
+
+    test('rejects a plan that invents or escapes a candidate tool ID', () async {
+      messenger.setMockMethodCallHandler(channel, (_) async => <String, Object?>{
+        'decision': '{"action":"plan","tool_ids":["bazi","dosage"]}',
+        'backend': 'cpu',
+        'trace_id': traceId,
+      });
+
+      await expectLater(
+        LocalAiService().resolveAssistantIntentWithTrace(
+          query: '同时排八字并做剂量换算',
+          candidates: candidates,
+          traceId: traceId,
+        ),
+        throwsFormatException,
+      );
     });
   });
 

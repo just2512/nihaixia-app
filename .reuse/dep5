@@ -1065,3 +1065,12 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored explicit allow authorizer fixture for contextual widget tests; only portions for which sufficient rights exist.
+
+Files:
+ lib/services/assistant_tool_execution_plan_builder.dart
+ lib/services/headless_tool_plan_result_handler.dart
+ test/assistant_tool_execution_plan_builder_test.dart
+ test/headless_tool_plan_result_handler_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned deterministic bounded AI plan preflight, plan-level result presentation, and regression tests; only portions for which sufficient rights exist.

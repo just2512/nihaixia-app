@@ -369,6 +369,10 @@ class LocalAiService {
         !ids.contains(resolution.toolId)) {
       throw const FormatException('模型选择了候选集之外的工具');
     }
+    if (resolution.action == LocalAiIntentAction.plan &&
+        resolution.toolIds.any((id) => !ids.contains(id))) {
+      throw const FormatException('模型计划包含候选集之外的工具');
+    }
     return resolution;
   }
 
@@ -648,23 +652,26 @@ class LocalAiService {
 }
 
 
-enum LocalAiIntentAction { select, clarify, none }
+enum LocalAiIntentAction { select, plan, clarify, none }
 
 class LocalAiIntentCandidate {
   const LocalAiIntentCandidate({
     required this.id,
     required this.title,
     required this.description,
+    this.planEligible = false,
   });
 
   final String id;
   final String title;
   final String description;
+  final bool planEligible;
 
-  Map<String, String> toMap() => {
+  Map<String, Object> toMap() => {
         'id': id,
         'title': title,
         'description': description,
+        'plan_eligible': planEligible,
       };
 }
 
@@ -672,14 +679,17 @@ class LocalAiIntentResolution {
   const LocalAiIntentResolution({
     required this.action,
     this.toolId,
+    this.toolIds = const [],
     this.backend,
   });
 
   final LocalAiIntentAction action;
   final String? toolId;
+  final List<String> toolIds;
   final String? backend;
 
   static const int maxModelOutputCharacters = 2000;
+  static const int maxPlanSteps = 3;
 
   factory LocalAiIntentResolution.fromModelText(
     String text, {
@@ -697,7 +707,7 @@ class LocalAiIntentResolution {
       throw const FormatException('意图判别结构无效');
     }
     final map = Map<String, dynamic>.from(decoded);
-    if (map.keys.toSet().difference({'action', 'tool_id'}).isNotEmpty) {
+    if (map.keys.toSet().difference({'action', 'tool_id', 'tool_ids'}).isNotEmpty) {
       throw const FormatException('意图判别包含未声明字段');
     }
     final rawAction = map['action'];
@@ -709,30 +719,58 @@ class LocalAiIntentResolution {
       throw const FormatException('意图判别 tool_id 字段无效');
     }
     final toolId = rawToolId is String ? rawToolId.trim() : null;
+    final hasToolId = map.containsKey('tool_id');
+    final hasToolIds = map.containsKey('tool_ids');
     switch (rawAction) {
       case 'select':
-        if (toolId == null ||
+        if (hasToolIds ||
+            toolId == null ||
             toolId.isEmpty ||
             toolId.length > 64 ||
-            !RegExp(r'^[a-z0-9_]+$').hasMatch(toolId)) {
-          throw const FormatException('意图判别没有返回有效候选 ID');
+            !RegExp(r'^[a-z0-9_]{1,64}$').hasMatch(toolId)) {
+          throw const FormatException('意图判别没有返回有效的单一候选 ID');
         }
         return LocalAiIntentResolution(
           action: LocalAiIntentAction.select,
           toolId: toolId,
           backend: backend,
         );
+      case 'plan':
+        if (hasToolId || !hasToolIds || map['tool_ids'] is! List) {
+          throw const FormatException('计划结果只能包含 tool_ids 数组');
+        }
+        final rawIds = map['tool_ids'] as List;
+        if (rawIds.length < 2 || rawIds.length > maxPlanSteps) {
+          throw const FormatException('计划步骤数必须为 2–3 项');
+        }
+        final ids = <String>[];
+        for (final rawId in rawIds) {
+          if (rawId is! String ||
+              rawId != rawId.trim() ||
+              !RegExp(r'^[a-z0-9_]{1,64}$').hasMatch(rawId)) {
+            throw const FormatException('计划包含无效工具 ID');
+          }
+          ids.add(rawId);
+        }
+        if (ids.toSet().length != ids.length) {
+          throw const FormatException('计划不能重复执行同一工具 ID');
+        }
+        return LocalAiIntentResolution(
+          action: LocalAiIntentAction.plan,
+          toolIds: List<String>.unmodifiable(ids),
+          backend: backend,
+        );
       case 'clarify':
-        if (toolId != null && toolId.isNotEmpty) {
-          throw const FormatException('澄清结果不应包含 tool_id');
+        if (hasToolIds || (toolId != null && toolId.isNotEmpty)) {
+          throw const FormatException('澄清结果不应包含工具 ID');
         }
         return LocalAiIntentResolution(
           action: LocalAiIntentAction.clarify,
           backend: backend,
         );
       case 'none':
-        if (toolId != null && toolId.isNotEmpty) {
-          throw const FormatException('无工具结果不应包含 tool_id');
+        if (hasToolIds || (toolId != null && toolId.isNotEmpty)) {
+          throw const FormatException('无工具结果不应包含工具 ID');
         }
         return LocalAiIntentResolution(
           action: LocalAiIntentAction.none,
@@ -743,6 +781,7 @@ class LocalAiIntentResolution {
     }
   }
 }
+
 /// E4B 提取的八字参数候选。每个值必须有用户原文中的逐字证据，
 /// 并再次通过 Dart 语义校验后才可合并到确定性工具参数。
 class LocalAiBaziSlotDraft {

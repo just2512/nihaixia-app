@@ -4101,3 +4101,15 @@ PR HEAD 门禁证据：
 - Find N2 / E4B 真机验收统一后置到云端代码、文档、许可和 CI 收尾之后。设备未执行项保持 `LOCAL ONLY / MISSING`，不阻塞无关云端 PR。
 - 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
 - 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。
+
+## 87. F1 生产多工具计划聚合与结果持久化（2026-11-23）
+
+- **实现分支：** `feature/f1-multi-tool-plan-intent-20261123`，从主线 `e072f7bcb8918eb6f38437f39808a5a0ce1245d2` 独立建立；本节记录为独立批次，尚未合并。
+- **有界意图协议：** `LocalAiIntentResolution` 增加严格 `plan` 动作，只接受 2–3 个不重复的工具 ID；模型输出不得携带参数、能力 ID 或额外字段。所有工具 ID 必须属于当前 Orchestrator 提供的有界候选集合。
+- **计划参数预检：** 新增 `AssistantToolExecutionPlanBuilder`，将模型返回的有序 ID 映射到 App 注册表；能力 ID 从注册表读取，不信任模型；参数只能由 `AssistantConversationOrchestrator.argumentsFor(tool, 原始用户文本)` 确定性提取，并对全部步骤执行 `validateAgainst`。任一步骤、注册能力或参数校验失败，整个计划不生成、不执行。
+- **生产接线：** E4B 只在原始请求明确要求 2–3 个相互独立的任务且不依赖前一步输出时建议有序计划；依赖、歧义、超过三项或待确认的单工具流程须澄清。Screen 将成功预检的完整 `ToolExecutionPlan(origin: aiDispatch, planId: traceId)` 一次性交给 `HeadlessToolDispatcher.executePlan`，不逐项重新授权；跨至少两个不同 capability 的 AI 计划通过 `ai_advanced` 一次性前置授权，同能力多步骤和用户手动操作按既有契约不收费。Page-only / 未注册 Executor（包括当前没有 Headless adapter 的 structured_diagnosis）在执行前拒绝。
+- **结果与持久化：** 新增 `HeadlessToolPlanResultHandler`，逐步验证结果身份、实际参数、状态和来源；完整成功、部分失败、后续步骤未执行、结果契约失败均分别呈现。部分或无效结果不会进行自动 AI 汇总。新增 `AssistantToolPlanStepMetadata`，为每步保存 toolId、capabilityId、标题、状态、参数快照和来源 ID；Trace 按步骤记录参数校验、业务执行、结果校验，并记录完整计划耗时。
+- **回归测试：** 新增计划构建、越界 ID、重复/超量步骤、Page-only 工具、参数缺失、完整结果/部分结果/无效结果隐藏、多步骤元数据 round-trip；原 #448 的拒绝时 executor side effects 为 0 测试继续保留。
+- **边界：** 模型没有生成参数，不允许将前一步结果注入下一步参数；仅允许从同一原始用户文本独立确定的工具调用。当前不承诺跨工具数据依赖、动态变量绑定或 >3 步工作流；这类请求必须澄清，不得自动执行。
+- **当前状态：PARTIAL / EXACT-HEAD CI PENDING。** 本节代码与许可清单已更新，须以本分支精确 HEAD 的 Fork license boundary、Flutter 全量回归/静态分析、Android arm64 workflow 为最终证据。真机多轮模型行为与 Find N2 设备验收仍为 LOCAL ONLY / UNKNOWN，不计云端 PASS。
+
