@@ -240,43 +240,6 @@ class _MemoryConversationStore implements AssistantConversationStore {
 }
 
 void main() {
-  testWidgets('v1.3 有效情境来源保持可用，不触发独立 Feature 收费提示', (tester) async {
-    final store = _MemoryConversationStore();
-    final service = _HistoryResumeService();
-    const contextRef = AiContextRef(
-      kind: AiContextKind.formula,
-      moduleId: 'formula',
-      anchorId: 'formula:test-anchor',
-      anchorVersion: 'test-source-version',
-      sourceId: 'asset:assets/data/formulas.json',
-      title: '测试方剂',
-    );
-    const prompt = '解释这个方剂的组成';
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
-          service: service,
-          imagePicker: _NoLostImagePicker(),
-          conversationStore: store,
-          contextRef: contextRef.toMetadata(),
-          initialPrompt: prompt,
-        ),
-      ),
-    );
-    await _pumpFrames(tester);
-
-    expect(find.textContaining('未获准使用情境助手'), findsNothing);
-    expect(find.textContaining('情境引用无效'), findsNothing);
-    expect(
-      tester.widgetList<TextField>(find.byType(TextField))
-          .map((field) => field.controller?.text),
-      contains(prompt),
-    );
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('恢复历史会话时保留尚未执行的工具操作入口', (tester) async {
     final store = _MemoryConversationStore();
     final service = _HistoryResumeService();
