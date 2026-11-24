@@ -56,6 +56,7 @@
 ### 本地 AI 与 OPPO Find N2 说明
 
 - [Gemma 4 E4B 下载、SHA-256 校验、运行配置与实机验收](docs/local-ai-e4b.md)：模型文件约 3.66 GB，不打包进 APK；必须从文档中的固定版本链接单独下载并导入。
+- [OPPO Find N2 本地实机验收交接单](docs/local-real-device-acceptance-handoff.md)：涵盖原签名无损覆盖升级、品牌与折叠屏、E4B GPU/CPU 多轮、TRACE、专业版 ai_access Native Gate 及证据回传。
 - [Find N2 内外屏适配与品牌视觉方案](docs/find-n2-adaptive-layout.md)：包含外屏/内屏导航策略、图标资源与真机验收要求。
 - [折痕/铰链布局与窗口指标采集](docs/find-n2-fold-aware-layout.md)：Debug APK 使用 `[WINDOW_METRICS]` 诊断；Windows PowerShell 可运行 `tool/capture_find_n2_metrics.ps1`，仅导出窗口指标，不清空设备 logcat 缓冲。
 
