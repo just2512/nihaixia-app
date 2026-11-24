@@ -198,6 +198,7 @@ Files:
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/FirstTurnGpuFallbackPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseKeystorePolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStorePolicyTest.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LicenseTokenStoreRecoveryTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiActivityTaskLifecycleTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiAttachmentPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiBackendSelectionPolicyTest.kt

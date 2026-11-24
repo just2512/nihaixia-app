@@ -6,10 +6,49 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
+
+/**
+ * Minimal boundary around Android AtomicFile so crash-recovery behavior can be
+ * regression-tested without mocking Android framework classes on the JVM.
+ */
+internal interface LicenseAtomicFile {
+    fun openRead(): InputStream
+    fun hasRecoverableFile(): Boolean
+    fun startWrite(): java.io.FileOutputStream
+    fun finishWrite(output: java.io.FileOutputStream)
+    fun failWrite(output: java.io.FileOutputStream)
+    fun delete()
+}
+
+private class AndroidLicenseAtomicFile(
+    private val baseFile: File
+) : LicenseAtomicFile {
+    private val delegate = AtomicFile(baseFile)
+    // android.util.AtomicFile.openRead() restores this legacy backup before
+    // opening the base file. Keep this check only for distinguishing a truly
+    // absent Token from a backup that failed to recover.
+    private val legacyBackupFile = File(baseFile.path + ".bak")
+
+    override fun openRead(): InputStream = delegate.openRead()
+
+    override fun hasRecoverableFile(): Boolean =
+        baseFile.exists() || legacyBackupFile.exists()
+
+    override fun startWrite(): java.io.FileOutputStream = delegate.startWrite()
+
+    override fun finishWrite(output: java.io.FileOutputStream) =
+        delegate.finishWrite(output)
+
+    override fun failWrite(output: java.io.FileOutputStream) =
+        delegate.failWrite(output)
+
+    override fun delete() = delegate.delete()
+}
 
 internal class LicenseTokenStoreException(
     val code: String,
@@ -24,18 +63,37 @@ internal class LicenseTokenStoreException(
  * fingerprint before calling writeAfterVerification(). This adapter does not
  * grant entitlements and stores no derived is_pro/Feature state.
  */
-internal class LicenseTokenStore(context: Context) {
+internal class LicenseTokenStore internal constructor(
+    noBackupFilesDir: File,
+    atomicFileOverride: LicenseAtomicFile? = null
+) {
+    constructor(context: Context) : this(context.noBackupFilesDir)
+
     private val lock = Any()
-    private val directory = File(context.noBackupFilesDir, "yanji_license")
+    private val directory = File(noBackupFilesDir, "yanji_license")
     private val baseFile = File(directory, "active_license.token")
-    private val atomicFile = AtomicFile(baseFile)
+    private val atomicFile: LicenseAtomicFile =
+        atomicFileOverride ?: AndroidLicenseAtomicFile(baseFile)
 
     fun read(): String? = synchronized(lock) {
-        if (!baseFile.exists()) return@synchronized null
+        // Always enter AtomicFile.openRead(): Android restores a legacy .bak
+        // backup there when a process died between startWrite() and finishWrite().
+        // Checking baseFile.exists() first would bypass that recovery path and
+        // incorrectly report an existing license as absent.
+        val input = try {
+            atomicFile.openRead()
+        } catch (error: FileNotFoundException) {
+            if (!atomicFile.hasRecoverableFile()) return@synchronized null
+            throw LicenseTokenStoreException(
+                "storageUnavailable",
+                "本地授权 Token 及其 AtomicFile 备份无法恢复。",
+                error
+            )
+        }
 
         try {
             val bytes = ByteArrayOutputStream()
-            atomicFile.openRead().use { input ->
+            input.use {
                 val buffer = ByteArray(4096)
                 var total = 0
                 while (true) {
@@ -74,12 +132,12 @@ internal class LicenseTokenStore(context: Context) {
         } catch (error: LicenseTokenStoreException) {
             throw error
         } catch (error: FileNotFoundException) {
-            if (!baseFile.exists()) {
+            if (!atomicFile.hasRecoverableFile()) {
                 null
             } else {
                 throw LicenseTokenStoreException(
                     "storageUnavailable",
-                    "本地授权 Token 文件暂时无法读取。",
+                    "本地授权 Token 文件或其备份暂时无法读取。",
                     error
                 )
             }
