@@ -11,7 +11,7 @@ ToolExecutionStep _step(String toolId, String capabilityId) =>
 
 void main() {
   group('ToolExecutionPlan', () {
-    test('AI dispatch across distinct capabilities requires advanced AI', () {
+    test('AI dispatch preserves origin and distinct capability metadata without a payment decision', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-001',
         origin: InvocationOrigin.aiDispatch,
@@ -22,10 +22,10 @@ void main() {
       );
 
       expect(plan.capabilityIds, {'bazi_chart', 'yunqi_calculation'});
-      expect(plan.requiresAdvancedAi, isTrue);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
-    test('repeated calls within one capability remain a free single-capability plan', () {
+    test('repeated calls retain a single capability identity', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-002',
         origin: InvocationOrigin.aiDispatch,
@@ -38,10 +38,10 @@ void main() {
 
       expect(plan.steps, hasLength(3));
       expect(plan.capabilityIds, {'bazi_chart'});
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
-    test('manual multi-capability execution does not require advanced AI', () {
+    test('manual execution preserves explicit origin', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-003',
         origin: InvocationOrigin.userManual,
@@ -52,10 +52,10 @@ void main() {
       );
 
       expect(plan.capabilityIds, hasLength(2));
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
-    test('structured diagnosis alone remains a single free capability', () {
+    test('structured diagnosis retains deterministic plan metadata', () {
       final plan = ToolExecutionPlan(
         planId: 'plan-004',
         origin: InvocationOrigin.aiDispatch,
@@ -64,7 +64,7 @@ void main() {
         ],
       );
 
-      expect(plan.requiresAdvancedAi, isFalse);
+      expect(plan.origin, InvocationOrigin.aiDispatch);
     });
 
     test('complete plan and each argument map are immutable snapshots', () {
@@ -116,7 +116,7 @@ void main() {
           ),
         ],
       );
-      expect(crossCapabilityAiPlan.requiresAdvancedAi, isTrue);
+      expect(crossCapabilityAiPlan.origin, InvocationOrigin.aiDispatch);
     });
 
     test('rejects blank plan, tool and capability IDs and empty plans', () {
