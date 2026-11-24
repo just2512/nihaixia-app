@@ -125,15 +125,22 @@ jobs:
           code_changed=0
           dart_test_files=()
           kotlin_test_files=()
+          printf 'Changed files relative to origin/master:\n%s\n' "$changed_files"
           while IFS= read -r file; do
             case "$file" in
               lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
             esac
+            if [[ "$file" =~ ^test/.+_test\\.dart$ ]]; then
+              dart_test_files+=("$file")
+            fi
             case "$file" in
-              test/*_test.dart) dart_test_files+=("$file") ;;
               android/app/src/test/**/*.kt|android/app/src/test/*.kt) kotlin_test_files+=("$file") ;;
             esac
           done <<< "$changed_files"
+          printf 'Detected changed Dart regression tests (%s):\n' "${#dart_test_files[@]}"
+          printf '  %s\n' "${dart_test_files[@]}"
+          printf 'Detected changed Kotlin regression tests (%s):\n' "${#kotlin_test_files[@]}"
+          printf '  %s\n' "${kotlin_test_files[@]}"
           if [[ "$code_changed" == "1" && "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
             echo "Production changes require at least one changed Dart or Android Kotlin regression test." >&2
             exit 1
