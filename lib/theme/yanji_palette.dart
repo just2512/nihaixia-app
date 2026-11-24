@@ -91,4 +91,35 @@ abstract final class YanjiPalette {
   static const darkInverseSurface = darkOnSurface;
   static const darkOnInverseSurface = charcoal;
   static const darkInversePrimary = redOnLight;
+
+  // Existing domain and status colors are centralized here as well.
+  static const successLight = Color(0xFF2E6B4F);
+  static const successContainerLight = Color(0xFFD4E5DB);
+  static const infoLight = Color(0xFF35638A);
+  static const infoContainerLight = Color(0xFFD9E6F2);
+  static const meridianTaiyangLight = Color(0xFFC0502A);
+  static const meridianYangmingLight = Color(0xFFA8322C);
+  static const meridianShaoyangLight = Color(0xFFB55B2A);
+  static const meridianTaiyinLight = Color(0xFF35638A);
+  static const meridianShaoyinLight = Color(0xFF6C4A85);
+  static const meridianJueyinLight = Color(0xFF3F5660);
+  static const onMeridianLight = Color(0xFF191C1E);
+  static const tcmZoneLight = Color(0xFF7E4A2E);
+  static const metaphysicsZoneLight = Color(0xFF5C4A7E);
+
+  static const successDark = Color(0xFF81C784);
+  static const successContainerDark = Color(0xFF1B5E20);
+  static const infoDark = Color(0xFF90CAF9);
+  static const infoContainerDark = Color(0xFF1E4E7A);
+  static const meridianTaiyangDark = Color(0xFFFFB74D);
+  static const meridianYangmingDark = Color(0xFFE57373);
+  static const meridianShaoyangDark = Color(0xFFFF8A65);
+  static const meridianTaiyinDark = Color(0xFF64B5F6);
+  static const meridianShaoyinDark = Color(0xFFBA68C8);
+  static const meridianJueyinDark = Color(0xFF90A4AE);
+  static const onMeridianDark = Color(0xFFEFE9E2);
+  static const tcmZoneDark = Color(0xFFD7A877);
+  static const metaphysicsZoneDark = Color(0xFFB39DDB);
+  static const meridianContainerTintOpacity = 0.12;
+
 }
