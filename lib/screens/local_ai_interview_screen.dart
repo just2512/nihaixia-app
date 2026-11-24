@@ -8918,7 +8918,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             );
           } else if (resolution.action == LocalAiIntentAction.plan) {
             final planBuild = AssistantToolExecutionPlanBuilder.build(
-              planId: traceId!,
+              planId: traceId,
               query: text,
               candidates: decision.candidateTools,
               orderedToolIds: resolution.toolIds,
@@ -9054,7 +9054,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         await _executeHeadlessToolPlan(
           text,
-          pendingExecutionPlan!,
+          pendingExecutionPlan,
           decision.candidateTools,
           mode: effectiveMode,
           traceContext: traceContext,
