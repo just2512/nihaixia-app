@@ -130,7 +130,7 @@ jobs:
             case "$file" in
               lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
             esac
-            if [[ "$file" =~ ^test/.+_test\\.dart$ ]]; then
+            if [[ "$file" =~ ^test/.+_test[.]dart$ ]]; then
               dart_test_files+=("$file")
             fi
             case "$file" in
