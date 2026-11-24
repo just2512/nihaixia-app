@@ -4224,3 +4224,50 @@ PR HEAD 门禁证据：
 - **真机验收：** OPPO Find N2 的 Keystore/StrongBox/TEE、AtomicFile 实际故障恢复、原签名 Release `adb install -r` 覆盖升级和用户数据保留、GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，均维持 `LOCAL ONLY / MISSING / UNKNOWN`。CI、JVM、Widget、Mock Channel 不能替代。
 - **CI 口径：** 只记录精确 SHA 对应的真实 run/job 结论。任何 `SKIPPED` 不计 PASS；尚未结束的 master Push workflow 不写成 PASS，结束后再按其最终状态补记。
 
+
+
+---
+
+## 91. 2026-11-24 专业版授权云端收尾复核（基线：master `c17a0f5f0dcf4dba0bb4647fae007f703adfc8cd`）
+
+### 91.1 当前主线与变更范围
+
+- 本轮以最新 `master` `c17a0f5f0dcf4dba0bb4647fae007f703adfc8cd` 为唯一基线。相对 §90 所记录的 `af6354dae502fbdc7f0e9016b9acbbd153f921a5`，新增的 1 个提交为 PR #465，改动仅为本执行台账文档（49 行新增）；未发现该提交包含运行时代码变更。
+- 本节只复核 `docs/pro-edition-architecture-constraints.md` v1.2 及其授权/AI 执行边界；不处理 UI 主题、颜色、视觉规范或无关页面。
+- 当前专业版已合并的云端交付按职责归类：协议/签发与验签（PR #433）；Android Keystore/AtomicFile 与 Dart EntitlementService（#437、#438）；F0 Dispatcher、Executor import 边界与结果/导航分离（#427、#442、#444、#446）；F1 完整计划授权和生产计划聚合（#448、#454）；情境网关及知识页、工具结果/字段入口接入（#449、#450、#456）；Release Key Ring 与产物扫描门禁（#453、#457）；激活/Token 导入（#455）；AtomicFile 备份恢复修复（#458）。以上均已进入 master。
+- PR #435/#436、#451/#452 是较早的堆叠或替代实现分支，已关闭但未合并；对应集成代码已由 #437/#438、#456、#453 等后续 PR 接替。不得把这些 closed/unmerged PR 再作为待合并项。
+- 其中 #416 是明确独立保留的协议/发行端草案：继续保持 `OPEN / DRAFT / UNTOUCHED`，本轮不修改、不重定向、不关闭、不合并，也不作为其他云端工作的依赖。
+
+### 91.2 最新 master 精确 SHA 的 Push CI
+
+| 检查 | Workflow run / job | 结果 |
+|---|---|---|
+| Fork license boundary | run `45370907134` | SUCCESS |
+| Flutter Quality Gate | run `45370907025`；Analyze and test job `138364618055` | SUCCESS |
+| Flutter regression | run `45370906960`；Regression job `138364617448` | SUCCESS |
+| Android arm64 CI APK + Native JVM | job `138369212623` | SUCCESS |
+| Branch validation | job `138364619687` | SKIPPED，不计 PASS |
+
+- 上述运行均绑定 master 精确 HEAD `c17a0f5f0dcf4dba0bb4647fae007f703adfc8cd`。全量 Flutter regression、Android arm64 CI Debug APK、Native JVM 单测和 Fork license boundary 均已有成功结果。
+- CI Debug APK 只证明云端构建、ABI/Manifest 检查及 JVM 测试；不能替代正式签名 Release APK、Find N2 真机 Keystore 或原位升级验收。
+
+### 91.3 未合并 PR 与范围纪律
+
+- 当前开放 PR 快照：#416、#466、#468、#469、#470。
+- #466/#468/#469/#470 均属于品牌主题、调色或视觉语义工作，明确排除在本轮专业版授权分支范围之外；不评论、不修改、不合并。
+- #416 当前 head 为 `fa211477171485b4204a3a49dbde775ed3f1daa6`，base SHA 为 `3dd1889ace0d58a6f2332067111d8c000e29be31`，为旧基线上的独立 Draft。该 head Fork license boundary 为 SUCCESS；Flutter tests 为 FAILURE（全量回归 1,910 passed、3 failed、15 skipped）；Android arm64/JVM job SUCCESS；Branch validation SKIPPED。此失败只描述 #416 该精确旧 head，不外推为当前 master 失败，也不擅自推断三个失败的根因。按 §79/§88 约束，本轮保持该 PR 原状。
+
+### 91.4 云端完成项与剩余硬门槛
+
+- **云端代码切片：** 在 v1.2 架构范围内，F0、F1、G1、G2、G3 的实现均已有合并交付；当前 master 精确 SHA 的 Flutter/Android/Fork CI 全部成功。当前没有仍开放且属于专业版授权实现范围的代码 PR。
+- **正式 Release：BLOCKED。** 仍缺经授权来源核验的正式发行者公钥、可核验的 GitHub Actions Release Secret 配置、发行私钥离线备份/恢复演练、正式 Android 签名身份与正式 Release 产物证据。不得生成或提交临时生产密钥，不得把测试发行者或 CI Debug APK 当成正式发行材料。
+- **代码权属：MISSING。** 自动 Fork license boundary / REUSE 通过仅证明清单与声明结构符合自动规则；`OWNERSHIP_EVIDENCE_REQUIRED` 仍须由真实权利人或充分再许可材料补证。
+- **Find N2 真机：LOCAL ONLY / MISSING / UNKNOWN。** Keystore/StrongBox/TEE、AtomicFile 断电/进程中断恢复、正式签名 APK 原位覆盖升级和用户数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除仍由最终本地设备验收完成；这些项目不阻塞已可完成的云端代码和 CI 工作。
+- **PR #416：** 因 §79 已明确要求独立保留，本轮不得将其 Draft 失败作为专业版其他批次的合并门槛，也不得擅自解决其协议/发行端内容。
+
+### 91.5 本轮结论
+
+- `PRO_EDITION_CLOUD_IMPLEMENTATION = COMPLETE`：仅表示 v1.2 架构要求的云端代码批次、静态/自动化验收与主线集成已有证据，不代表真实生产密钥、商业权属或设备验收通过。
+- `PRODUCTION_RELEASE = BLOCKED`：由正式发行信任锚、签名材料和权属证据缺失所致。
+- `FIND_N2_DEVICE_ACCEPTANCE = LOCAL_ONLY`：按最终本地交接执行，不再作为云端继续开发的阻塞项。
+- 后续如未提供新的正式发行材料、源码缺口证据或 CI 回归，不新增重复授权层、替代协议、UI 主题改动或无明确验收目标的代码切片。
