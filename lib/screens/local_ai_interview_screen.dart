@@ -2947,8 +2947,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     if (_activeContextRef.isEmpty) return true;
     // The page entrypoint already resolved its source through the gateway.
-    // Each turn re-checks entitlement, but does not re-run a potentially
-    // unsupported tool-result resolver against a transient page snapshot.
+    // Each turn re-validates the persisted anchor, but does not re-run a
+    // potentially unsupported tool-result resolver against a transient snapshot.
     final result = await _contextResolutionGateway.validateMetadata(
       _activeContextRef,
     );
@@ -7041,9 +7041,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ? requestedContextRef
         : restoredContextRef;
     // Page entrypoints already resolved the source before opening this
-    // conversation. History restoration must validate the persisted anchor
-    // and re-check entitlement, not re-run a source resolver against a
-    // potentially transient tool-result snapshot.
+    // conversation. History restoration validates the persisted anchor and
+    // does not re-run a resolver against a transient tool-result snapshot.
     final restoredContextAuthorization =
         !contextAnchorMatches || authorizationTarget.isEmpty
             ? null
