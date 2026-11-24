@@ -9,6 +9,8 @@ import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/dream_result_context_executor.dart';
 import '../utils/fold_aware_routes.dart';
+import '../theme/app_colors.dart';
+import '../theme/yanji_status_semantics.dart';
 import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import 'assistant_tool_router.dart' show AssistantMode;
 
@@ -29,24 +31,6 @@ class _DreamScreenState extends State<DreamScreen> {
   String? _openingDreamEntryId;
   String _query = '';
   String? _category; // null = 全部
-
-  /// 吉凶等级 → 基准色（绿系吉、蓝灰系平、橙红系凶）。
-  Color _auspiciousColor(String level) {
-    switch (level) {
-      case '大吉':
-        return Colors.green;
-      case '吉':
-        return Colors.teal;
-      case '平':
-        return Colors.blueGrey;
-      case '凶':
-        return Colors.orange;
-      case '大凶':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
 
   @override
   void dispose() {
@@ -285,7 +269,7 @@ class _DreamScreenState extends State<DreamScreen> {
 
   Widget _buildDreamCard(DreamEntry e) {
     final cs = Theme.of(context).colorScheme;
-    final accent = _auspiciousColor(e.auspicious);
+    final status = dreamAuspiciousChipColors(e.auspicious, context.colors);
     return Card(
       key: ValueKey('dream-entry-${e.id}'),
       elevation: 2,
@@ -312,10 +296,10 @@ class _DreamScreenState extends State<DreamScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: accent,
+                      color: status.foreground,
                     ),
                   ),
-                  backgroundColor: accent.withValues(alpha: 0.18),
+                  backgroundColor: status.background,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 6),
