@@ -2,11 +2,14 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../data/settings_repository.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/entitlement_service.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/text_scale_slider.dart';
 import '../widgets/local_ai_data_clear_tile.dart';
 import '../widgets/local_ai_backend_settings_tile.dart';
 import '../widgets/local_ai_trace_debug_tile.dart';
+import '../widgets/license_activation_settings_section.dart';
 import 'app_dialogs.dart';
 
 /// 独立设置页：集中所有「模块级可自定义」设置，并与各排盘页内的开关双向同步。
@@ -23,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final authorizer = FeatureAuthorizerScope.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       // 监听共享设置变化，开关即时刷新（无需退出重进）。
@@ -43,6 +47,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Divider(height: AppSpacing.xl),
             _sectionTitle('本地 AI'),
             const LocalAiBackendSettingsTile(),
+            if (authorizer is EntitlementService) ...[
+              const Divider(height: AppSpacing.xl),
+              _sectionTitle('专业版授权'),
+              LicenseActivationSettingsSection(entitlementService: authorizer),
+            ],
             const Divider(height: AppSpacing.xl),
             _sectionTitle('紫微斗数排盘'),
             _trueSolarTile(cs),
