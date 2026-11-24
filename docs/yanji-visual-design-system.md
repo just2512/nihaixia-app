@@ -2,7 +2,7 @@
 
 > **文件属性：** 项目级强制约束（Normative）
 > **约束编号：** YANJI-UI-THEME-001
-> **版本：** v1.0
+> **版本：** v1.1
 > **生效日期：** 2026-11-24
 > **适用范围：** Flutter App 全局主题、共享组件、业务页面、Android Launcher 与品牌图形资源
 > **执行状态：** 当前主题实现基线；页面级迁移按批次推进
@@ -94,7 +94,7 @@
 | warningDark | #FFD166 | 深色警告语义 |
 | onWarningDark | #261900 | 深色实心 warning 前景 |
 
-以上基础色板之外的 Material 3 容器色、固定色、反色表面色和透明度辅助值也必须集中在 yanji_palette.dart；不得在页面代码复制十六进制值。
+以上基础色板之外的 Material 3 容器色、固定色、反色表面色、状态色、六经/五行/工具分区等既有领域语义色及透明度辅助值，也必须集中在 yanji_palette.dart；不得在 AppColors 或页面代码复制原始十六进制值。AppColors 只负责将这些 Palette 值映射为应用语义字段。
 
 ## 3. Material 3 语义角色映射
 
@@ -370,6 +370,7 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 - Color.fromARGB(...)。
 - Color.fromRGBO(...)。
 - Colors.* 及 Colors[...]。
+- ColorScheme.fromSeed(...)（禁止重新引入 SDK 自动派生的主题色板）。
 - withOpacity(...) 和 withValues(...)。
 - 页面或组件内新建 ThemeData(...)。
 
@@ -432,6 +433,8 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 | 基础色板 YanjiPalette | 已落地 | lib/theme/yanji_palette.dart |
 | AppColors 语义映射 | 已落地 | lib/theme/app_colors.dart；保留现有单一 ThemeExtension |
 | Material 3 完整显式角色 | 已落地 | AppColors.colorSchemeFor；不使用 fromSeed |
+| 原始颜色值单一来源 | 已落地 | YanjiPalette 集中基础色、状态色、领域色与合成透明度；AppColors 只做语义映射，静态审计只豁免 Palette 文件 |
+| 五运六气图五行领域色 | 已实现（CI 待验收） | `lib/screens/yunqi_charts.dart` 映射木火土金水到 Palette；保留浅深主题既有值，`test/theme/yanji_contrast_test.dart` 覆盖映射与标签 AA 对比度 |
 | Scaffold / surface 分离 | 已落地 | lib/main.dart 显式 scaffoldBackgroundColor |
 | 控件 outline / 装饰 divider 分离 | 已落地 | 全局 InputBorder / Chip / Divider 主题 |
 | NavigationBar / Rail 选中背景 | 已落地 | primaryContainer + onPrimaryContainer |
@@ -445,5 +448,6 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 ## 11. 版本记录
 
 - v1.0（2026-11-24）：冻结研纪正红品牌主色、冷白/深色表面、Material 3 角色、链接/功能灰/危险色/警告色分离、对比度矩阵、状态表达和静态审计要求；后续 UI 执行以本文件作为颜色与主题强制约束。
+- v1.1（2026-11-24）：明确 YanjiPalette 是唯一原始颜色定义层；把 AppColors 中既有状态/六经/工具分区原始色值集中到 Palette；将五运六气五行图映射到 Palette 并保留原有色值；CI 静态审计增加 ColorScheme.fromSeed 禁止项。
 
 **最终执行口径：** 先读取本文件，再修改主题或页面。颜色不按感觉临时决定，状态不靠颜色单独表达，业务图谱不为统一而改义，任何例外必须可追溯、可测试、可验收。
