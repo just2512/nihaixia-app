@@ -7,8 +7,8 @@
 | 项目 | 当前基线 | 核验要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
-| 当前应用代码基线 | `master @ 396a9cc314994a7da813265706d0fb5441b3fd54` | 已包含 PR #430 医案记录字段、PR #433 离线授权协议、PR #437 Android Keystore/AtomicFile、PR #438 Dart Bridge/EntitlementService、PR #442 F0-2a 执行注册边界 |
-| 当前主线整体基线 | `1db1f2e66b8484b47689e2d8d55f2fac07358f07` | PR #431 合并后的 master；设备必须从这一主线构建 |
+| 当前应用代码基线 | `master @ 1717b36ba0c2359a1526e22d23f75befacd80628` | 已包含 v1.2 离线授权协议、Android Keystore/AtomicFile、EntitlementService、Headless F0/F1、ContextResolutionGateway、Release Key Ring、激活/Token 导入 UI 与 AtomicFile 恢复修复（PR #433–#458）；应用运行时代码最后一次变更为 PR #455，PR #459 为测试隔离 |
+| 当前主线整体基线 | `master @ b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b` | PR #462 合并后的最新 master 文档基线；设备构建前再次读取 master HEAD 和对应 CI |
 | 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
 | 原签名配置 | 本地 `android/key.properties` + 原 keystore | 仅本地保管；不得提交、上传、粘贴到聊天或放入 CI secret |
@@ -243,3 +243,12 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 - 提供必要的设置页/状态页截图、脱敏日志和短录屏；不得输出私钥、完整 Token、激活请求签名、密码或用户个人数据。
 - 失败项记录最小复现、预期/实际和原始证据；未执行项保持 `MISSING / LOCAL ONLY`。
 - 生产 Release 必须使用真实 Release Key Ring 和本地签名材料；测试发行公钥/私钥不得混入生产包。
+
+
+## 13. 2026-11-24 云端收尾后的基线刷新
+
+- 当前 master 文档基线：`b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b`（PR #462 合并）。
+- 当前应用运行时代码基线：`1717b36ba0c2359a1526e22d23f75befacd80628`（PR #455 合并）。对比该代码提交与当前 master，后续只有 `.reuse/dep5`、执行台账、真机验收和 Release 配置文档变更；没有新的应用运行时代码差异。
+- 当前 App 版本仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`；构建前必须以 `pubspec.yaml`、设备已安装包和本地签名证书重新核对。
+- PR #462 为执行台账单文件文档变更。该 PR 精确 HEAD 的 Flutter 全量回归、Android arm64/JVM 与 Fork license boundary 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。当前 master merge commit 的 Push CI 结果须以 GitHub 对 `b884b0b` 的实际运行结果为准，不得用 PR HEAD CI 替代。
+- 本节只刷新执行基线，不将任何 Find N2/E4B 设备项目升级为 PASS；全部设备场景仍为 `MISSING / LOCAL ONLY / UNKNOWN`。
