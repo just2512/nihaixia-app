@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,6 +79,61 @@ void main() {
           isTrue,
           reason: '$density launcher PNG must remain available',
         );
+      }
+    });
+
+    test('旧 API 密度回退 PNG 使用当前品牌红与冷白', () async {
+      for (final density in [
+        'mdpi',
+        'hdpi',
+        'xhdpi',
+        'xxhdpi',
+        'xxxhdpi',
+      ]) {
+        final bytes = File(
+          'android/app/src/main/res/mipmap-$density/ic_launcher.png',
+        ).readAsBytesSync();
+        final codec = await ui.instantiateImageCodec(bytes);
+        try {
+          final frame = await codec.getNextFrame();
+          try {
+            final data = await frame.image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            );
+            expect(data, isNotNull, reason: '$density PNG must decode');
+            final rgba = data!.buffer.asUint8List(
+              data.offsetInBytes,
+              data.lengthInBytes,
+            );
+
+            bool containsRgb(int red, int green, int blue) {
+              for (var i = 0; i < rgba.length; i += 4) {
+                if (rgba[i] == red &&
+                    rgba[i + 1] == green &&
+                    rgba[i + 2] == blue &&
+                    rgba[i + 3] == 255) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
+            expect(
+              containsRgb(0xD7, 0x10, 0x19),
+              isTrue,
+              reason: '$density fallback must include brand red #D71019',
+            );
+            expect(
+              containsRgb(0xEB, 0xEC, 0xEE),
+              isTrue,
+              reason: '$density fallback must include cold white #EBECEE',
+            );
+          } finally {
+            frame.image.dispose();
+          }
+        } finally {
+          codec.dispose();
+        }
       }
     });
 
