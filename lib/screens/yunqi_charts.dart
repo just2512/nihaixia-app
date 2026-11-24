@@ -6,11 +6,10 @@
 //
 // ## 配色纪律
 //
-// 五行底色是**语义内容色**（木绿 / 火红 / 土黄 / 金白 / 水蓝），无法用
-// `ColorScheme` token 表达，故本文件内建 [wxColorOf] 私有亮/暗两套映射——
-// 这是全文件**唯一**的硬编码颜色来源。除此之外，所有颜色一律取自
-// `colorScheme.*` 或已有颜色的 `withValues(alpha:)`，深色模式下文字对比度
-// 由 [chartLabelColorOn] 按实际对比度派生（浅底深字 / 深底浅字），不写死黑白。
+// 五行底色是具有固定领域含义的语义色（木绿 / 火红 / 土黄 / 金白 / 水蓝）。
+// 原始色值集中定义在 YanjiPalette；本文件只维护五行名称到浅/深主题 Token
+// 的映射。其他绘制颜色取自 ColorScheme 或按实际背景合成状态层，不新增裸色值。
+// 深色模式下文字对比度由 [chartLabelColorOn] 动态派生，不写死黑白。
 //
 // ## 绘制纪律
 //
@@ -26,30 +25,31 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 
 import '../services/yunqi_engine.dart';
+import '../theme/yanji_palette.dart';
 
-// ==================== 五行语义色（全文件唯一硬编码颜色来源） ====================
+// ==================== 五行语义色映射（原始值统一由 YanjiPalette 定义） ====================
 
 /// 浅色主题下的五行色。
 const Map<String, Color> _wxColorsLight = <String, Color>{
-  '木': Color(0xFF43A047), // 青绿
-  '火': Color(0xFFE53935), // 赤
-  '土': Color(0xFFFDD835), // 黄
-  '金': Color(0xFFB0BEC5), // 白（灰白属金）
-  '水': Color(0xFF1E88E5), // 蓝（玄）
+  '木': YanjiPalette.fiveElementWoodLight,
+  '火': YanjiPalette.fiveElementFireLight,
+  '土': YanjiPalette.fiveElementEarthLight,
+  '金': YanjiPalette.fiveElementMetalLight,
+  '水': YanjiPalette.fiveElementWaterLight,
 };
 
 /// 深色主题下的五行色（整体提亮，保证在深底上仍可辨）。
 const Map<String, Color> _wxColorsDark = <String, Color>{
-  '木': Color(0xFF66BB6A),
-  '火': Color(0xFFEF5350),
-  '土': Color(0xFFFFD54F),
-  '金': Color(0xFFCFD8DC),
-  '水': Color(0xFF42A5F5),
+  '木': YanjiPalette.fiveElementWoodDark,
+  '火': YanjiPalette.fiveElementFireDark,
+  '土': YanjiPalette.fiveElementEarthDark,
+  '金': YanjiPalette.fiveElementMetalDark,
+  '水': YanjiPalette.fiveElementWaterDark,
 };
 
 /// 五行兜底色（未知五行时）。
-const Color _wxFallbackLight = Color(0xFF9E9E9E);
-const Color _wxFallbackDark = Color(0xFFBDBDBD);
+const Color _wxFallbackLight = YanjiPalette.fiveElementFallbackLight;
+const Color _wxFallbackDark = YanjiPalette.fiveElementFallbackDark;
 
 /// 取五行语义色。
 ///
