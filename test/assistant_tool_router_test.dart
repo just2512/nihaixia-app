@@ -5,7 +5,6 @@ import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 import 'package:nihaisha_app/screens/saved_charts_screen.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/tool_execution_plan.dart';
-import 'package:nihaisha_app/licensing/feature_authorizer.dart';
 import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
 
 void main() {
@@ -220,9 +219,7 @@ void main() {
     expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final execution = await HeadlessToolDispatcher(
-      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
-    ).executePlan(
+    final execution = await const HeadlessToolDispatcher().executePlan(
       plan: ToolExecutionPlan(
         planId: 'router-yunqi-smoke',
         origin: InvocationOrigin.userManual,
@@ -250,9 +247,7 @@ void main() {
     expect(tool.parameters.single.isRequired, isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final execution = await HeadlessToolDispatcher(
-      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
-    ).executePlan(
+    final execution = await const HeadlessToolDispatcher().executePlan(
       plan: ToolExecutionPlan(
         planId: 'router-almanac-smoke',
         origin: InvocationOrigin.userManual,

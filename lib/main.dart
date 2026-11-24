@@ -10,8 +10,6 @@ import 'data/formula_repository.dart';
 import 'data/herb_repository.dart';
 import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
-import 'licensing/feature_authorizer.dart';
-import 'licensing/feature_authorizer_scope.dart';
 import 'licensing/license_key_ring_factory.dart';
 import 'licensing/license_verifier.dart';
 import 'licensing/ai_model_access_platform.dart';
@@ -209,16 +207,13 @@ void main() async {
   );
   // Start entitlement verification without delaying the free application shell.
   unawaited(entitlementService.initialize());
-  runApp(NiHaishaApp(authorizer: entitlementService));
+  runApp(NiHaishaApp(entitlementService: entitlementService));
 }
 
 class NiHaishaApp extends StatelessWidget {
-  const NiHaishaApp({
-    super.key,
-    this.authorizer = const UnconfiguredFeatureAuthorizer(),
-  });
+  const NiHaishaApp({super.key, this.entitlementService});
 
-  final FeatureAuthorizer authorizer;
+  final EntitlementService? entitlementService;
 
   @override
   Widget build(BuildContext context) {
@@ -226,9 +221,7 @@ class NiHaishaApp extends StatelessWidget {
       listenable: SettingsRepository.instance,
       builder: (context, _) {
         final settings = SettingsRepository.instance;
-        return FeatureAuthorizerScope(
-          authorizer: authorizer,
-          child: MaterialApp(
+        return MaterialApp(
             title: '研纪',
             debugShowCheckedModeBanner: false,
             themeMode: settings.themeMode,
@@ -247,7 +240,12 @@ class NiHaishaApp extends StatelessWidget {
                     preferenceScale: settings.textScaleFactor,
                   ),
                 ),
-                child: WindowMetricsDiagnostics(child: child!),
+                child: entitlementService == null
+                    ? WindowMetricsDiagnostics(child: child!)
+                    : EntitlementServiceScope(
+                        service: entitlementService!,
+                        child: WindowMetricsDiagnostics(child: child!),
+                      ),
               );
             },
             localizationsDelegates: const [
@@ -260,7 +258,6 @@ class NiHaishaApp extends StatelessWidget {
               Locale('en', 'US'),
             ],
             locale: const Locale('zh', 'CN'),
-            ),
         );
       },
     );

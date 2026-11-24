@@ -3,6 +3,28 @@ import 'dart:convert';
 const yanjiLicenseAppId = 'com.nihaisha.nihaisha_app';
 const yanjiLifetimeProductId = 'yanji_pro_lifetime';
 
+/// Failure causes for local perpetual-license verification and storage.
+enum LicenseFailureReason {
+  initializationTimeout,
+  unlicensed,
+  featureNotGranted,
+  storeCorrupt,
+  storageUnavailable,
+  issuerUnknown,
+  signatureInvalid,
+  unsupportedRevision,
+  deviceMismatch,
+  keyMissing,
+  keyInvalidated,
+  keystoreUnavailable,
+  providerError,
+  licenseRevoked,
+  issuerCompromised,
+  invalidTokenFormat,
+  wrongApplication,
+  wrongProduct,
+}
+
 enum LicenseFeature {
   aiAccess('ai_access'),
 

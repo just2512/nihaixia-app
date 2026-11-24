@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/bazi_context_snapshot.dart';
@@ -325,7 +324,6 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     try {
       final baziContext = _buildCurrentBaziContext();
       final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
       );
       final resolution = await gateway.resolve(
         reference: baziContext.contextRef,
@@ -369,7 +367,6 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
         fieldLabel: fieldLabel,
       );
       final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
       );
       final resolution = await gateway.resolve(
         reference: fieldRef,
