@@ -302,8 +302,17 @@ class EntitlementService extends ChangeNotifier
     }
 
     final current = _snapshot;
+    // Until the business-layer FeatureAuthorizer adapters are removed in the
+    // follow-up batch, both historical AI checks must project to the one
+    // effective ai_access claim. They are compatibility aliases, not rights.
+    const aiAccessAliases = {
+      'ai_access',
+      'ai_advanced',
+      'contextual_assistant',
+    };
     if (current.status == EntitlementServiceStatus.active &&
-        current.grantedFeatureIds.contains(featureId)) {
+        aiAccessAliases.contains(featureId) &&
+        current.grantedFeatureIds.contains('ai_access')) {
       return FeatureAuthorizationDecision.allowed(featureId: featureId);
     }
     if (current.status == EntitlementServiceStatus.temporarilyUnavailable ||
