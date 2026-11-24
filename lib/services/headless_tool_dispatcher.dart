@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import '../licensing/feature_authorizer.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/tool_execution_plan.dart';
 import 'yunqi_tool_executor.dart';
@@ -24,8 +23,6 @@ import 'saved_chart_tool_executor.dart';
 
 enum HeadlessToolPlanExecutionStatus {
   completed,
-  authorizationDenied,
-  authorizationUnavailable,
   invalidPlan,
 }
 
@@ -41,8 +38,6 @@ class HeadlessToolPlanExecutionResult {
     required Iterable<String> toolIds,
     required Iterable<String> capabilityIds,
     Iterable<AssistantToolResult> results = const [],
-    this.featureId,
-    this.failureReason,
     this.offendingToolId,
     this.offendingCapabilityId,
   })  : toolIds = List<String>.unmodifiable(toolIds),
@@ -54,8 +49,6 @@ class HeadlessToolPlanExecutionResult {
   final List<String> toolIds;
   final Set<String> capabilityIds;
   final List<AssistantToolResult> results;
-  final String? featureId;
-  final FeatureAuthorizationFailureReason? failureReason;
   final String? offendingToolId;
   final String? offendingCapabilityId;
 
@@ -66,14 +59,11 @@ class HeadlessToolPlanExecutionResult {
 /// The only application boundary that invokes a registered Headless executor.
 ///
 /// Argument collection and validation remain caller responsibilities. The
-/// dispatcher validates the complete immutable plan, authorizes it once before
-/// the first business side effect, and only then invokes steps in order. It has
-/// no BuildContext, navigation, trace, persistence, or UI responsibilities.
+/// dispatcher validates the complete immutable plan before invoking steps in
+/// order. It has no license, BuildContext, navigation, trace, persistence, or
+/// UI responsibilities.
 class HeadlessToolDispatcher {
-  HeadlessToolDispatcher({required FeatureAuthorizer featureAuthorizer})
-      : _featureAuthorizer = featureAuthorizer;
-
-  final FeatureAuthorizer _featureAuthorizer;
+  const HeadlessToolDispatcher();
 
   static final Map<String, FutureOr<AssistantToolResult> Function(Map<String, String>)> _executors = {
     'yunqi': YunQiToolExecutor.execute,
@@ -167,7 +157,7 @@ class HeadlessToolDispatcher {
     return result;
   }
 
-  /// Validates and authorizes the entire plan before invoking any executor.
+  /// Validates the entire plan before invoking any executor.
   ///
   /// [executorOverride] is a test seam; it cannot make a Page-only/unregistered
   /// tool executable because the full registry validation happens first.
@@ -196,7 +186,7 @@ class HeadlessToolDispatcher {
       }
     }
 
-    if (plan.requiresAdvancedAi) {
+    final results = <AssistantToolResult>[];
       FeatureAuthorizationDecision decision;
       try {
         decision = await _featureAuthorizer.authorize('ai_advanced');
