@@ -26,8 +26,11 @@ void main() {
       expect(scheme.onPrimary, tokens.onPrimary);
       expect(scheme.primaryContainer, tokens.primaryContainer);
       expect(scheme.onPrimaryContainer, tokens.onPrimaryContainer);
-      expect(scheme.surface, tokens.background);
-      expect(scheme.surfaceContainerLowest, tokens.surface);
+      expect(scheme.surface, tokens.surface);
+      expect(
+        scheme.surfaceContainerLowest,
+        brightness == Brightness.dark ? tokens.background : tokens.surface,
+      );
       expect(scheme.surfaceContainerLow, tokens.surfaceContainerLow);
       expect(scheme.surfaceContainerHighest, tokens.surfaceContainerHighest);
       expect(scheme.onSurface, tokens.onSurface);
@@ -105,8 +108,11 @@ void main() {
       expect(scheme.onPrimary, tokens.onPrimary);
       expect(scheme.primaryContainer, tokens.primaryContainer);
       expect(scheme.onPrimaryContainer, tokens.onPrimaryContainer);
-      expect(scheme.surface, tokens.background);
-      expect(scheme.surfaceContainerLowest, tokens.surface);
+      expect(scheme.surface, tokens.surface);
+      expect(
+        scheme.surfaceContainerLowest,
+        brightness == Brightness.dark ? tokens.background : tokens.surface,
+      );
       expect(scheme.surfaceContainerLow, tokens.surfaceContainerLow);
       expect(scheme.surfaceContainerHighest, tokens.surfaceContainerHighest);
       expect(scheme.onSurface, tokens.onSurface);
