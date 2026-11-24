@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../licensing/ai_model_access_platform.dart';
-import '../licensing/feature_authorizer.dart';
+import '../licensing/license_model.dart';
 import '../licensing/license_platform.dart';
 import '../licensing/license_verifier.dart';
 
@@ -33,7 +33,7 @@ class EntitlementSnapshot {
   /// is retained or persisted.
   final bool aiAccess;
   final Set<String> unsupportedFeatureIds;
-  final FeatureAuthorizationFailureReason? failureReason;
+  final LicenseFailureReason? failureReason;
 
   /// Diagnostic only. Never used to decide perpetual-license validity.
   final DateTime? lastCheckedAt;
@@ -62,14 +62,13 @@ class LicenseTokenReplacementResult {
 
   final LicenseTokenReplacementStatus status;
   final LicenseVerificationResult? verification;
-  final FeatureAuthorizationFailureReason? failureReason;
+  final LicenseFailureReason? failureReason;
   final Set<String> lostFeatureIds;
 
   bool get installed => status == LicenseTokenReplacementStatus.installed;
 }
 
-class EntitlementService extends ChangeNotifier
-    implements FeatureAuthorizer {
+class EntitlementService extends ChangeNotifier {
   EntitlementService({
     required LicensePlatform platform,
     required LicenseVerifier verifier,
@@ -155,7 +154,7 @@ class EntitlementService extends ChangeNotifier
       if (!_sameDeviceKey(deviceKey, challengeKey)) {
         _publishIfCurrent(
           generation,
-          _invalid(FeatureAuthorizationFailureReason.keyInvalidated),
+          _invalid(LicenseFailureReason.keyInvalidated),
         );
         return;
       }
@@ -191,7 +190,7 @@ class EntitlementService extends ChangeNotifier
       _publishIfCurrent(
         generation,
         _temporarilyUnavailable(
-          FeatureAuthorizationFailureReason.providerError,
+          LicenseFailureReason.providerError,
         ),
       );
     }
@@ -217,7 +216,7 @@ class EntitlementService extends ChangeNotifier
           aiAccess: aiAccess,
           failureReason: aiAccess
               ? null
-              : FeatureAuthorizationFailureReason.featureNotGranted,
+              : LicenseFailureReason.featureNotGranted,
           unsupportedFeatureIds: payload?.unsupportedFeatureIds ?? const [],
           lastCheckedAt: now,
           licenseId: payload?.licenseId,
@@ -228,37 +227,37 @@ class EntitlementService extends ChangeNotifier
         // It may be installed after explicit confirmation of an AI downgrade.
         return EntitlementSnapshot(
           status: EntitlementServiceStatus.unlicensed,
-          failureReason: FeatureAuthorizationFailureReason.featureNotGranted,
+          failureReason: LicenseFailureReason.featureNotGranted,
           unsupportedFeatureIds: payload?.unsupportedFeatureIds ?? const [],
           lastCheckedAt: now,
           licenseId: payload?.licenseId,
           issuerKeyId: payload?.issuerKeyId,
         );
       case LicenseVerificationStatus.unknownIssuer:
-        return _invalid(FeatureAuthorizationFailureReason.issuerUnknown);
+        return _invalid(LicenseFailureReason.issuerUnknown);
       case LicenseVerificationStatus.issuerCompromised:
-        return _invalid(FeatureAuthorizationFailureReason.issuerCompromised);
+        return _invalid(LicenseFailureReason.issuerCompromised);
       case LicenseVerificationStatus.invalidSignature:
       case LicenseVerificationStatus.invalidIssuerKey:
-        return _invalid(FeatureAuthorizationFailureReason.signatureInvalid);
+        return _invalid(LicenseFailureReason.signatureInvalid);
       case LicenseVerificationStatus.unsupportedRevision:
       case LicenseVerificationStatus.unsupportedSchema:
-        return _invalid(FeatureAuthorizationFailureReason.unsupportedRevision);
+        return _invalid(LicenseFailureReason.unsupportedRevision);
       case LicenseVerificationStatus.wrongDevice:
-        return _invalid(FeatureAuthorizationFailureReason.deviceMismatch);
+        return _invalid(LicenseFailureReason.deviceMismatch);
       case LicenseVerificationStatus.revoked:
-        return _invalid(FeatureAuthorizationFailureReason.licenseRevoked);
+        return _invalid(LicenseFailureReason.licenseRevoked);
       case LicenseVerificationStatus.invalidFormat:
       case LicenseVerificationStatus.invalidPayload:
-        return _invalid(FeatureAuthorizationFailureReason.invalidTokenFormat);
+        return _invalid(LicenseFailureReason.invalidTokenFormat);
       case LicenseVerificationStatus.wrongProduct:
-        return _invalid(FeatureAuthorizationFailureReason.wrongProduct);
+        return _invalid(LicenseFailureReason.wrongProduct);
       case LicenseVerificationStatus.wrongApplication:
-        return _invalid(FeatureAuthorizationFailureReason.wrongApplication);
+        return _invalid(LicenseFailureReason.wrongApplication);
     }
   }
 
-  EntitlementSnapshot _invalid(FeatureAuthorizationFailureReason reason) =>
+  EntitlementSnapshot _invalid(LicenseFailureReason reason) =>
       EntitlementSnapshot(
         status: EntitlementServiceStatus.invalid,
         failureReason: reason,
@@ -266,7 +265,7 @@ class EntitlementService extends ChangeNotifier
       );
 
   EntitlementSnapshot _temporarilyUnavailable(
-    FeatureAuthorizationFailureReason reason,
+    LicenseFailureReason reason,
   ) =>
       EntitlementSnapshot(
         status: EntitlementServiceStatus.temporarilyUnavailable,
@@ -280,34 +279,34 @@ class EntitlementService extends ChangeNotifier
     switch (error.code) {
       case 'keyMissing':
       case 'KEY_MISSING':
-        return _invalid(FeatureAuthorizationFailureReason.keyMissing);
+        return _invalid(LicenseFailureReason.keyMissing);
       case 'keyInvalidated':
       case 'KEY_INVALIDATED':
-        return _invalid(FeatureAuthorizationFailureReason.keyInvalidated);
+        return _invalid(LicenseFailureReason.keyInvalidated);
       case 'storeCorrupt':
       case 'STORE_CORRUPT':
-        return _invalid(FeatureAuthorizationFailureReason.storeCorrupt);
+        return _invalid(LicenseFailureReason.storeCorrupt);
       case 'storageUnavailable':
       case 'STORAGE_UNAVAILABLE':
       case 'TOKEN_READ_FAILED':
         return _temporarilyUnavailable(
-          FeatureAuthorizationFailureReason.storageUnavailable,
+          LicenseFailureReason.storageUnavailable,
         );
       case 'keystoreUnavailable':
       case 'KEYSTORE_UNAVAILABLE':
         return _temporarilyUnavailable(
-          FeatureAuthorizationFailureReason.keystoreUnavailable,
+          LicenseFailureReason.keystoreUnavailable,
         );
       case 'providerError':
       case 'PROVIDER_ERROR':
       case 'platformUnavailable':
       case 'PLATFORM_UNAVAILABLE':
         return _temporarilyUnavailable(
-          FeatureAuthorizationFailureReason.providerError,
+          LicenseFailureReason.providerError,
         );
       default:
         return _temporarilyUnavailable(
-          FeatureAuthorizationFailureReason.providerError,
+          LicenseFailureReason.providerError,
         );
     }
   }
@@ -320,52 +319,6 @@ class EntitlementService extends ChangeNotifier
     if (_disposed) return;
     _snapshot = snapshot;
     notifyListeners();
-  }
-
-  @override
-  Future<FeatureAuthorizationDecision> authorize(String featureId) async {
-    if (featureId.trim().isEmpty || featureId != featureId.trim()) {
-      throw ArgumentError.value(featureId, 'featureId');
-    }
-
-    try {
-      await initialize().timeout(initializationTimeout);
-    } on TimeoutException {
-      return FeatureAuthorizationDecision.temporarilyUnavailable(
-        featureId: featureId,
-        reason: FeatureAuthorizationFailureReason.initializationTimeout,
-      );
-    } on Object {
-      return FeatureAuthorizationDecision.temporarilyUnavailable(
-        featureId: featureId,
-        reason: FeatureAuthorizationFailureReason.providerError,
-      );
-    }
-
-    final current = _snapshot;
-    const legacyAiFeatureIds = {
-      'ai_access',
-      'ai_advanced',
-      'contextual_assistant',
-    };
-    if (legacyAiFeatureIds.contains(featureId) && current.aiAccess) {
-      return FeatureAuthorizationDecision.allowed(featureId: featureId);
-    }
-    if (current.status == EntitlementServiceStatus.temporarilyUnavailable ||
-        current.status == EntitlementServiceStatus.checking) {
-      return FeatureAuthorizationDecision.temporarilyUnavailable(
-        featureId: featureId,
-        reason: current.failureReason ??
-            FeatureAuthorizationFailureReason.providerError,
-      );
-    }
-    return FeatureAuthorizationDecision.denied(
-      featureId: featureId,
-      reason: current.failureReason ??
-          (current.status == EntitlementServiceStatus.unlicensed
-              ? FeatureAuthorizationFailureReason.unlicensed
-              : FeatureAuthorizationFailureReason.featureNotGranted),
-    );
   }
 
   /// Verifies the complete incoming token before storage access. A reduction
@@ -391,7 +344,7 @@ class EntitlementService extends ChangeNotifier
         return LicenseTokenReplacementResult(
           status: LicenseTokenReplacementStatus.temporarilyUnavailable,
           failureReason: _snapshot.failureReason ??
-              FeatureAuthorizationFailureReason.initializationTimeout,
+              LicenseFailureReason.initializationTimeout,
         );
       }
 
@@ -400,7 +353,7 @@ class EntitlementService extends ChangeNotifier
       if (!_sameDeviceKey(deviceKey, challengeKey)) {
         return const LicenseTokenReplacementResult(
           status: LicenseTokenReplacementStatus.rejected,
-          failureReason: FeatureAuthorizationFailureReason.keyInvalidated,
+          failureReason: LicenseFailureReason.keyInvalidated,
         );
       }
 
@@ -451,7 +404,7 @@ class EntitlementService extends ChangeNotifier
       return LicenseTokenReplacementResult(
         status: LicenseTokenReplacementStatus.temporarilyUnavailable,
         verification: verification,
-        failureReason: FeatureAuthorizationFailureReason.initializationTimeout,
+        failureReason: LicenseFailureReason.initializationTimeout,
       );
     } on LicensePlatformFailure catch (error) {
       if (writeAttempted) await _restorePreviousToken(previousToken);
@@ -465,19 +418,19 @@ class EntitlementService extends ChangeNotifier
       return LicenseTokenReplacementResult(
         status: LicenseTokenReplacementStatus.storageFailure,
         verification: verification,
-        failureReason: FeatureAuthorizationFailureReason.providerError,
+        failureReason: LicenseFailureReason.providerError,
       );
     } finally {
       _replacementInProgress = false;
     }
   }
 
-  FeatureAuthorizationFailureReason _reasonForPlatformFailure(
+  LicenseFailureReason _reasonForPlatformFailure(
     LicensePlatformFailure error,
   ) {
     final temporary = _snapshotForPlatformFailure(error);
     return temporary.failureReason ??
-        FeatureAuthorizationFailureReason.providerError;
+        LicenseFailureReason.providerError;
   }
 
   Future<void> _restorePreviousToken(String? previousToken) async {
@@ -495,7 +448,7 @@ class EntitlementService extends ChangeNotifier
     } on Object {
       _publish(
         _temporarilyUnavailable(
-          FeatureAuthorizationFailureReason.storageUnavailable,
+          LicenseFailureReason.storageUnavailable,
         ),
       );
     }
