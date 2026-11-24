@@ -169,7 +169,7 @@ class HeadlessToolDispatcher {
     final toolIds = plan.steps.map((step) => step.toolId).toList(growable: false);
     final capabilityIds = plan.capabilityIds;
 
-    // Validate every step before authorization or business execution.
+    // Validate every step before deterministic business execution.
     for (final step in plan.steps) {
       final expectedCapabilityId = _capabilityIdsByToolId[step.toolId];
       if (expectedCapabilityId == null ||
