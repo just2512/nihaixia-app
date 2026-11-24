@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/guansha_result_context_executor.dart';
 import '../services/guansha_tool_service.dart';
 import '../screens/assistant_tool_router.dart' show AssistantMode;
@@ -349,9 +351,16 @@ class _GuanshaScreenState extends State<GuanshaScreen>
       final contextRef = AiContextResolver.buildGuanshaResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final resolution = await AiContextResolver.resolveGuanshaToolResult(
-        ref: contextRef,
-        structuredSnapshot: execution.structuredSnapshot!,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: contextRef,
+        resolver: () => AiContextResolver.resolveGuanshaToolResult(
+          ref: contextRef,
+          structuredSnapshot: execution.structuredSnapshot!,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       if (!mounted) return;
       if (!resolution.isResolved || resolution.value == null) {

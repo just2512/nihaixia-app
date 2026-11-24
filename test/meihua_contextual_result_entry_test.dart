@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/allow_context_authorizer.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import 'package:nihaisha_app/models/ai_context_ref.dart';
@@ -211,7 +213,8 @@ void main() {
       addTearDown(tester.view.reset);
 
       await tester.pumpWidget(
-        ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             theme: ThemeData(
@@ -226,8 +229,9 @@ void main() {
                   const Stream<AccelerometerEvent>.empty(),
             ),
           ),
-        ),
-      );
+        )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final ask = find.text('问 AI 解读当前梅花易数结果');

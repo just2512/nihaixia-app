@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
@@ -269,7 +271,8 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = viewport;
       await tester.pumpWidget(
-        ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             home: GuanshaScreen(
@@ -277,8 +280,9 @@ void main() {
               returnResultOnComplete: true,
             ),
           ),
-        ),
-      );
+        )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final ask = find.text('问 AI 解读本次关煞结果');

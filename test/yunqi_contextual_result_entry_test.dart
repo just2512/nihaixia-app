@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/allow_context_authorizer.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/yunqi_screen.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
@@ -131,11 +133,13 @@ void main() {
     tester.view.physicalSize = const Size(1200, 8000);
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
         child: MaterialApp(home: YunQiScreen(initialDate: selectedDate)),
-      ),
-    );
+      )
+          ),
+        );
     await tester.pumpAndSettle();
     expect(find.byType(YunQiScreen), findsOneWidget);
     final ask = find.text('问 AI 解读本年度推算结果');

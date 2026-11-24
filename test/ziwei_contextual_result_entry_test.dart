@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
@@ -38,14 +40,18 @@ void main() {
   testWidgets('a successful calculated chart exposes a contextual Ask AI entry',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+          TestAuthorizedFeatureScope(
+            child: MaterialApp(
       theme: ThemeData(extensions: [AppColors.light]),
       home: ZiweiChartScreen(
         initialSolar: DateTime(2000, 8, 16, 10),
         initialGender: true,
         initialLng: 121.47,
       ),
-    ));
+    )
+          ),
+        );
     await tester.pumpAndSettle();
 
     expect(find.text('问 AI 解读当前排盘'), findsOneWidget);
@@ -56,14 +62,18 @@ void main() {
   testWidgets('an invalid chart input does not expose contextual Ask AI',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+          TestAuthorizedFeatureScope(
+            child: MaterialApp(
       theme: ThemeData(extensions: [AppColors.light]),
       home: ZiweiChartScreen(
         initialSolar: DateTime(2000, 8, 16, 10),
         initialGender: true,
         initialLng: 181,
       ),
-    ));
+    )
+          ),
+        );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('经度格式不正确'), findsOneWidget);
@@ -76,14 +86,18 @@ void main() {
     'a palace detail opens a field-bound contextual assistant',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 1200));
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(
+          TestAuthorizedFeatureScope(
+            child: MaterialApp(
         theme: ThemeData(extensions: [AppColors.light]),
         home: ZiweiChartScreen(
           initialSolar: DateTime(2000, 8, 16, 10),
           initialGender: true,
           initialLng: 121.47,
         ),
-      ));
+      )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final palaceCell = find.byKey(const ValueKey('ziwei-palace-cell-0'));
@@ -152,14 +166,18 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(
+          TestAuthorizedFeatureScope(
+            child: MaterialApp(
         theme: ThemeData(extensions: [AppColors.light]),
         home: ZiweiChartScreen(
           initialSolar: DateTime(2000, 8, 16, 10),
           initialGender: true,
           initialLng: 121.47,
         ),
-      ));
+      )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final askAi = find.text('问 AI 解读当前排盘');

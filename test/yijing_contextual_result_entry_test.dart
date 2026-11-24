@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
@@ -236,7 +238,8 @@ void main() {
       addTearDown(tester.view.reset);
 
       await tester.pumpWidget(
-        ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
           theme: ThemeData(
@@ -246,8 +249,9 @@ void main() {
           ),
             home: const YiJingScreen(),
           ),
-        ),
-      );
+        )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final fields = find.byType(TextField);
@@ -409,7 +413,8 @@ void main() {
       const arguments = {'method': 'number', 'first': '3', 'second': '7'};
       final cast = YiJingEngine.castByNumbers(3, 7);
       await tester.pumpWidget(
-        ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             theme: ThemeData(
@@ -422,8 +427,9 @@ void main() {
               executionArguments: arguments,
             ),
           ),
-        ),
-      );
+        )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final fieldAsk = find.byKey(

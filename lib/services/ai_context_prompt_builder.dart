@@ -117,17 +117,9 @@ class AiContextPromptBuilder {
       );
     }
 
-    final current = AiContextResolver.resolveMeridianKnowledgeEntry(ref: ref);
-    final currentEntry = current.value;
-    if (!current.isResolved ||
-        currentEntry == null ||
-        currentEntry.title != entry.title ||
-        AiToolResultSnapshot.canonicalJson(currentEntry.content) !=
-            AiToolResultSnapshot.canonicalJson(entry.content)) {
-      throw ArgumentError(
-        'The six-meridian local record has changed or no longer resolves to the supplied content.',
-      );
-    }
+    // AiResolvedKnowledgeEntry can only be produced by AiContextResolver.
+    // The production caller must obtain it through ContextResolutionGateway;
+    // repeating the resolver here would move source access after the gate.
 
     final source = <String, Object?>{
       'title': entry.title,

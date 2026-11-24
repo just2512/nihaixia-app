@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/chenggu_data.dart';
@@ -228,7 +230,8 @@ void main() {
         addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
-          ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
             conversationStore: InMemoryAssistantConversationStore(),
             child: MaterialApp(
               theme: ThemeData(
@@ -238,6 +241,7 @@ void main() {
               ),
               home: const ChengguBoneScreen(returnResultOnComplete: true),
             ),
+          )
           ),
         );
         await tester.pumpAndSettle();

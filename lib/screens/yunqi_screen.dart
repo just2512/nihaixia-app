@@ -9,6 +9,8 @@ import '../services/yunqi_engine.dart';
 import '../services/yunqi_tool_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import 'assistant_tool_router.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'yunqi_charts.dart';
@@ -90,8 +92,16 @@ class _YunQiScreenState extends State<YunQiScreen> {
       return;
     }
 
-    final resolution = AiContextResolver.resolveYunqiToolResult(ref: contextRef);
+    final gateway = ContextResolutionGateway(
+      authorizer: FeatureAuthorizerScope.of(context),
+    );
+    final resolution = await gateway.resolve(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveYunqiToolResult(ref: contextRef),
+      referenceOf: (resolved) => resolved.ref,
+    );
     final resolved = resolution.value;
+    if (!mounted) return;
     if (!resolution.isResolved || resolved == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -168,11 +178,19 @@ class _YunQiScreenState extends State<YunQiScreen> {
       return;
     }
 
-    final resolution = AiContextResolver.resolveYunqiChartField(
-      ref: contextRef,
-      structuredSnapshot: snapshot,
+    final gateway = ContextResolutionGateway(
+      authorizer: FeatureAuthorizerScope.of(context),
+    );
+    final resolution = await gateway.resolve(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveYunqiChartField(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      ),
+      referenceOf: (resolved) => resolved.ref,
     );
     final resolved = resolution.value;
+    if (!mounted) return;
     if (!resolution.isResolved || resolved == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

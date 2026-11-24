@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/allow_context_authorizer.dart';
+
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
@@ -241,13 +243,15 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = Size(width, 2400);
       await tester.pumpWidget(
-        ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             home: YunQiScreen(key: ValueKey('yunqi-$width'), initialDate: selectedDate),
           ),
-        ),
-      );
+        )
+          ),
+        );
       await tester.pumpAndSettle();
 
       final pageScrollKey = find.byKey(const ValueKey('yunqi-page-scroll'));
@@ -324,7 +328,11 @@ void main() {
         expect(pagePosition.pixels, closeTo(beforeOpen, 0.5));
         expect(tester.takeException(), isNull);
       }
-      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+          TestAuthorizedFeatureScope(
+            child: const SizedBox.shrink()
+          ),
+        );
     }
   });
 }

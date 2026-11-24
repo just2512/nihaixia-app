@@ -4,6 +4,8 @@ import '../data/xiaoliuren_data.dart';
 import '../screens/assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/xiaoliuren_tool_service.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/contextual_ai_sheet.dart';
@@ -106,11 +108,19 @@ class _XiaoliurenScreenState extends State<XiaoliurenScreen> {
       final contextRef = AiContextResolver.buildXiaoliurenResultContextRef(
         structuredSnapshot: snapshot,
       );
-      final resolution = AiContextResolver.resolveXiaoliurenToolResult(
-        ref: contextRef,
-        structuredSnapshot: snapshot,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: contextRef,
+        resolver: () => AiContextResolver.resolveXiaoliurenToolResult(
+          ref: contextRef,
+          structuredSnapshot: snapshot,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
+      if (!mounted) return;
       if (!resolution.isResolved || resolved == null) {
         _showContextError(resolution.status.name.toUpperCase());
         return;
