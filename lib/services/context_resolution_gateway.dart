@@ -126,7 +126,7 @@ class ContextResolutionGateway {
     try {
       final resolvedReference = referenceOf(resolution.value as T);
       if (!_sameReference(resolvedReference, reference)) {
-        return const ContextResolutionGatewayResult<T>(
+        return ContextResolutionGatewayResult<T>(
           status: ContextResolutionGatewayStatus.stale,
           reason: 'RESOLVED_CONTEXT_ANCHOR_MISMATCH',
         );
