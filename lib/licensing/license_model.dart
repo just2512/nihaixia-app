@@ -4,8 +4,15 @@ const yanjiLicenseAppId = 'com.nihaisha.nihaisha_app';
 const yanjiLifetimeProductId = 'yanji_pro_lifetime';
 
 enum LicenseFeature {
+  aiAccess('ai_access'),
+
+  /// Historical revision-1 identifiers. They are not separate entitlements.
+  @Deprecated('Use aiAccess; revision-1 claims map to the single AI entitlement.')
   aiAdvanced('ai_advanced'),
+  @Deprecated('Use aiAccess; revision-1 claims map to the single AI entitlement.')
   contextualAssistant('contextual_assistant'),
+
+  /// Reserved protocol identifiers; not currently granted.
   advancedLearning('advanced_learning'),
   advancedExport('advanced_export');
 
@@ -18,28 +25,33 @@ class ProfessionalEditionCatalog {
 
   static const productId = yanjiLifetimeProductId;
   static const minimumSupportedProtocolRevision = 1;
-  static const supportedProtocolRevisions = <int>{1};
+  static const supportedProtocolRevisions = <int>{1, 2};
 
-  /// Protocol-known IDs, including reserved IDs not yet available for sale.
+  /// Protocol-known IDs. The two revision-1 AI claims remain known only so
+  /// historical signed Tokens can be interpreted without changing their bytes.
   static const knownFeatureIds = <String>{
+    'ai_access',
     'ai_advanced',
     'contextual_assistant',
     'advanced_learning',
     'advanced_export',
   };
 
-  /// The only two features protocol revision 1 is allowed to carry.
+  /// Revision 1 is historical input; revision 2 has one runtime entitlement.
   static const protocolAllowedFeatureIdsByRevision = <int, Set<String>>{
     1: {'ai_advanced', 'contextual_assistant'},
+    2: {'ai_access'},
   };
 
-  /// Features the offline issuer may put into newly generated revision-1 tokens.
+  /// New issuance is revision 2 only and carries exactly one entitlement.
   static const issuableFeatureIdsByRevision = <int, Set<String>>{
-    1: {'ai_advanced', 'contextual_assistant'},
+    2: {'ai_access'},
   };
 
-  /// Feature gates that are actually implemented by this client revision.
-  static const enforcedFeatureIds = <String>{
+  /// The only entitlement enforced by this client.
+  static const enforcedFeatureIds = <String>{'ai_access'};
+
+  static const legacyAiFeatureIds = <String>{
     'ai_advanced',
     'contextual_assistant',
   };
@@ -118,13 +130,15 @@ class LicensePayload {
       );
 
   Set<String> get knownButNotEnforcedFeatureIds => Set<String>.unmodifiable(
-        featureIds
-            .intersection(
-              ProfessionalEditionCatalog.allowedFeatureIdsForRevision(
-                protocolRevision,
-              ),
-            )
-            .difference(ProfessionalEditionCatalog.enforcedFeatureIds),
+        protocolRevision == 1
+            ? const <String>{}
+            : featureIds
+                .intersection(
+                  ProfessionalEditionCatalog.allowedFeatureIdsForRevision(
+                    protocolRevision,
+                  ),
+                )
+                .difference(ProfessionalEditionCatalog.enforcedFeatureIds),
       );
 
   Set<String> get unsupportedFeatureIds => Set<String>.unmodifiable({
@@ -133,19 +147,28 @@ class LicensePayload {
         ...knownButNotEnforcedFeatureIds,
       });
 
-  Set<String> get grantedFeatureIds => Set<String>.unmodifiable(
-        featureIds
-            .intersection(ProfessionalEditionCatalog.knownFeatureIds)
-            .intersection(
-              ProfessionalEditionCatalog.allowedFeatureIdsForRevision(
-                protocolRevision,
-              ),
-            )
-            .intersection(ProfessionalEditionCatalog.enforcedFeatureIds),
-      );
+  /// Effective runtime entitlement. Historical revision-1 claims are OR-mapped
+  /// to this one bit; revision-2 accepts only the canonical ai_access claim.
+  bool get grantsAiAccess {
+    switch (protocolRevision) {
+      case 1:
+        return featureIds
+            .intersection(ProfessionalEditionCatalog.legacyAiFeatureIds)
+            .isNotEmpty;
+      case 2:
+        return featureIds.contains(LicenseFeature.aiAccess.id);
+      default:
+        return false;
+    }
+  }
+
+  /// Kept as a one-element projection for protocol diagnostics only.
+  Set<String> get grantedFeatureIds => grantsAiAccess
+      ? const <String>{'ai_access'}
+      : const <String>{};
 
   bool grants(LicenseFeature feature) =>
-      grantedFeatureIds.contains(feature.id);
+      feature == LicenseFeature.aiAccess && grantsAiAccess;
 
   Map<String, Object?> toJson() => <String, Object?>{
         'schema_version': schemaVersion,

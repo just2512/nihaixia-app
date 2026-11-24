@@ -37,7 +37,7 @@ Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置�
       --private-key ~/.yanji-license-issuer/keys/issuer-2026-01.private.pem \
       --payment-confirmed
 
-签发器验证申请内的完整 P-256 SPKI 公钥、指纹、请求 nonce、request_id 和 ECDSA 私钥持有证明；随后计算完整申请令牌的 SHA-256，并将 request_id、nonce、hash、设备指纹保存在运营方订单数据库用于唯一约束、幂等和审计。最终客户端 Token 仅含 request_id 与设备公钥指纹，不含 nonce/hash/设备安全级别，不要求客户端持久化或匹配 pending request。Token 按协议修订 1 签发，Feature 固定为 `ai_advanced` 与 `contextual_assistant`。
+签发器验证申请内的完整 P-256 SPKI 公钥、指纹、请求 nonce、request_id 和 ECDSA 私钥持有证明；随后计算完整申请令牌的 SHA-256，并将 request_id、nonce、hash、设备指纹保存在运营方订单数据库用于唯一约束、幂等和审计。最终客户端 Token 仅含 request_id 与设备公钥指纹，不含 nonce/hash/设备安全级别，不要求客户端持久化或匹配 pending request。新 Token 按协议修订 2 签发，唯一 AI Feature 为 `ai_access`。历史修订 1 Token 仍由客户端兼容读取：只要签名 claims 含 `ai_advanced` 或 `contextual_assistant` 任一项，即映射为同一个 `ai_access`；发行器不再签发修订 1。
 
 --payment-confirmed 是操作员人工收款确认，不会查询微信、支付宝、银行或支付服务商。签发器不采集客户姓名、手机号、微信 ID 或付款截图。
 
@@ -86,6 +86,6 @@ Windows 操作员还需通过系统 ACL 保护 key 目录；POSIX 权限设置�
 - 本地 denylist 只能随 App 版本更新生效，不能关闭未更新、长期离线的旧版本。
 - 有能力修改/重打包 APK 的攻击者仍可能绕过客户端门禁。
 
-- 授权 Payload 使用 `protocol_revision`，不是 `product_revision`；revision 1 仅能签发 `ai_advanced` 和 `contextual_assistant`。
+- 授权 Payload 使用 `protocol_revision`，不是 `product_revision`；revision 1 仅作为历史凭证兼容验证；revision 2 是当前唯一签发版本，只签发 `ai_access`。
 - 客户端用 Token 中的 `device_public_key_sha256` 与当前 Keystore SPKI 指纹匹配；不校验本地 pending request，也不将发行端 nonce/hash 当作授权条件。
 - App 端授权存储为 `noBackupFilesDir/yanji_license/active_license.token` 单 Token 原子文件；不创建 Android 授权 SQLite 库，主数据库保持 schema v7。Issuer 主机端订单 SQLite 是另一套仅供签发运营和审计的数据库。
