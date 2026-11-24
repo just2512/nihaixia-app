@@ -79,6 +79,7 @@ final semantic = context.colors;
 - 控件边界和有意义的非文本图形：至少 3:1；项目对基础功能灰提高内部门槛为 3.3:1。
 - 银灰装饰分割线低于 3:1 是有意设计，但不得承担控件识别任务。
 - 透明色层必须先与背景合成，再对合成结果计算对比度；禁止直接对 alpha 色值做比率计算。
+- 浅色 brandRed（#D71019）在 coldWhite 上约为 4.47:1，低于普通文字 4.5:1；只用于图形、选中指示和按钮背景，不用于普通小字号文字。小字号链接使用 redOnLight。
 - 对比度计算使用 WCAG 相对亮度公式的 0.04045 分段阈值，测试比较原始 double 数值，不四舍五入。
 
 ### 状态容器前景色约定
@@ -91,6 +92,7 @@ final semantic = context.colors;
 ### 交互状态
 
 - 选中态需同时表达颜色和结构变化（实心图标/字重/指示条或明确形状），不能只变色。
+- NavigationBar 与 NavigationRail 已显式使用 colorScheme.primaryContainer 作为选中指示器，并使用 onPrimaryContainer 绘制选中图标；不要依赖 Material 默认 secondaryContainer。secondaryContainer 保持中性灰，用于次级 Tonal 表面，不应被误当作导航选中色。
 - 正红色调的 hover/pressed 状态层先与具体表面合成；状态层上的文字优先使用炭灰，链接使用加深红并保留下划线。
 - 不要在红色调的选中/悬停容器上继续放置低对比度功能灰图标；该区域使用品牌图形色，其他非选中图标才使用功能灰。
 
