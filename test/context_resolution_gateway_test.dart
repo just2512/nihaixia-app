@@ -97,14 +97,7 @@ void main() {
     test('malformed persisted metadata is rejected before resolver execution', () async {
       var resolverCalls = 0;
       final result = await const ContextResolutionGateway().resolve<_ResolvedValue>(
-        reference: AiContextRef(
-          kind: AiContextKind.formula,
-          moduleId: 'formula',
-          anchorId: 'formula:gui-zhi-tang',
-          anchorVersion: 'asset-sha256:abc123',
-          sourceId: 'asset:assets/data/formulas.json',
-          title: '桂枝汤',
-        ).copyWith(anchorId: ' '),
+        reference: _reference(anchorId: ' '),
         resolver: () {
           resolverCalls += 1;
           return AiContextResolution<_ResolvedValue>(
