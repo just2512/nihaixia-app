@@ -1132,7 +1132,6 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored regression coverage for the UI semantic mapping of Sanshan Lingqian fortune states; ownership evidence required.
 
-
 Files:
  lib/widgets/yanji_status_badge.dart
  test/theme/yanji_status_badge_widget_test.dart
