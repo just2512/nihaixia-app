@@ -33,6 +33,7 @@ class MainActivity : FlutterActivity() {
     private val modelImportRequestCode = 8427
     private var pendingModelImportResult: MethodChannel.Result? = null
     private val localAiChannel = "com.nihaisha.app/local_ai"
+    private val aiModelAccessGate = AiModelAccessGate()
     private val backendPreferences by lazy {
         getSharedPreferences(LOCAL_AI_BACKEND_PREFERENCES, MODE_PRIVATE)
     }
@@ -111,13 +112,32 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localAiChannel)
             .setMethodCallHandler handler@{ call, result ->
                 when (call.method) {
+                    "setAiAccess" -> {
+                        val allowed = call.argument<Boolean>("allowed")
+                        if (allowed == null) {
+                            result.error("INVALID_AI_ACCESS_STATE", "AI 授权状态参数无效", null)
+                        } else if (allowed) {
+                            // Only the verified Dart entitlement service sends this state.
+                            // Native state is deliberately process-memory only.
+                            aiModelAccessGate.setAllowed(true)
+                            result.success(mapOf("aiAccessEnabled" to true))
+                        } else {
+                            // Close admission before queueing teardown. An already-running
+                            // task may finish; queued/new inference tasks will fail closed.
+                            aiModelAccessGate.setAllowed(false)
+                            runAiTask(result) {
+                                releaseLocalModel()
+                                mapOf("aiAccessEnabled" to false)
+                            }
+                        }
+                    }
                     "getModelStatus" -> runAiTask(result) { modelStatus() }
                     "setBackendPreference" -> {
                         val requestedBackend = call.argument<String>("backend")
                         runAiTask(result) { updateBackendPreference(requestedBackend) }
                     }
                     "importModel" -> beginModelImport(result)
-                    "loadModel" -> runAiTask(result) { loadLocalModel() }
+                    "loadModel" -> runAiModelTask(result) { loadLocalModel() }
                     "understandTcmInterviewAnswer" -> {
                         val traceId = try {
                             LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
@@ -144,7 +164,7 @@ class MainActivity : FlutterActivity() {
                         ) {
                             result.error("INVALID_TCM_USER_CONTEXT", "问诊用户上下文为空、不完整或超出长度限制", null)
                         } else {
-                            runAiTask(result) {
+                            runAiModelTask(result) {
                                 LocalAiTraceIdPolicy.attach(
                                     understandTcmInterviewAnswer(
                                         questionId,
@@ -182,7 +202,7 @@ class MainActivity : FlutterActivity() {
                         } else if (explicitSourceText != null && explicitSourceText.length > 10_000) {
                             result.error("INVALID_SYMPTOM_SOURCE_TEXT", "本次问诊原文超出长度限制", null)
                         } else {
-                            runAiTask(result) {
+                            runAiModelTask(result) {
                                 LocalAiTraceIdPolicy.attach(
                                     extractSymptoms(
                                         questionSchema,
@@ -343,7 +363,7 @@ class MainActivity : FlutterActivity() {
                             ) { restoreLocalConversation(transcript, userMessages) }
                         }
                     }
-                    "resetConversation" -> runAiTask(result) { resetLocalConversation() }
+                    "resetConversation" -> runAiModelTask(result) { resetLocalConversation() }
                     "releaseModel" -> runAiTask(result) { releaseLocalModel() }
                     "clearRuntimeCache" -> runAiTask(result) {
                         LocalAiRuntimeCacheClearPolicy.clear(
@@ -377,20 +397,27 @@ class MainActivity : FlutterActivity() {
                     "REDFLAG_GATE_NOT_APPLICABLE: non-clinical request"
                 )
             }
-            runAiTask(result, task)
+            runAiModelTask(result, task)
             return
         }
 
         // Required clinical paths never fall through when the detector is
         // absent, unreviewed, incomplete, or unable to assess the source.
         val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
-            .runBefore(input) { runAiTask(result, task) }
+            .runBefore(input) { runAiModelTask(result, task) }
         if (!execution.executed) {
             result.error(
                 "REDFLAG_${execution.verdict.status.name}",
                 "普通模型调用未通过安全评估：${execution.verdict.reason}",
                 null
             )
+        }
+    }
+
+    private fun runAiModelTask(result: MethodChannel.Result, task: () -> Any?) {
+        runAiTask(result) {
+            aiModelAccessGate.requireAccess()
+            task()
         }
     }
 
@@ -416,6 +443,12 @@ class MainActivity : FlutterActivity() {
                             result.error(
                                 "LOCAL_AI_ACTIVITY_DESTROYED",
                                 "Activity 已销毁，本轮 Native 结果不可再交付",
+                                null
+                            )
+                        } else if (error is AiModelAccessDeniedException) {
+                            result.error(
+                                AiModelAccessGate.ERROR_CODE,
+                                error.message ?: "Native AI 模型访问未授权",
                                 null
                             )
                         } else {
@@ -667,7 +700,7 @@ class MainActivity : FlutterActivity() {
                 .putString(LOCAL_AI_BACKEND_PREFERENCE_KEY, selectedBackend)
                 .commit()
             if (!saved) {
-                if (hasRuntime) {
+                if (hasRuntime && aiModelAccessGate.isAllowed()) {
                     try {
                         loadLocalModel()
                     } catch (restoreError: Exception) {
@@ -685,7 +718,7 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        if (hasRuntime) {
+        if (hasRuntime && aiModelAccessGate.isAllowed()) {
             try {
                 return loadLocalModel()
             } catch (error: Exception) {
@@ -751,6 +784,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun loadLocalModel(): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         LocalAiModelImportRecovery.recover(modelFile)
         if (!modelFile.isFile || modelFile.length() != expectedModelBytes) {
             return modelStatus()
@@ -1509,6 +1543,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun resetLocalConversation(): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
@@ -1552,10 +1587,17 @@ class MainActivity : FlutterActivity() {
         userReportedInputsTruncated = false
         conversationHistoryTurns.clear()
         activeBackend = "not_loaded"
-        ConversationResourceReleasePolicy.closeBoth(
-            closeConversation = { conversation?.close() },
-            closeEngine = { engine?.close() }
-        )
+        try {
+            ConversationResourceReleasePolicy.closeBoth(
+                closeConversation = { conversation?.close() },
+                closeEngine = { engine?.close() }
+            )
+        } catch (error: Throwable) {
+            // A failed teardown leaves native runtime state uncertain. Keep the
+            // process-level admission path closed until process restart.
+            LocalAiProcessExecutor.health.markReleaseFailure(error)
+            throw error
+        }
         return modelStatus()
     }
 
