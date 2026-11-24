@@ -60,8 +60,4 @@ class ToolExecutionPlan {
         steps.map((step) => step.capabilityId),
       );
 
-  /// Only AI-origin plans spanning multiple distinct business capabilities
-  /// require ai_advanced. Repeated calls within one capability stay free.
-  bool get requiresAdvancedAi =>
-      origin == InvocationOrigin.aiDispatch && capabilityIds.length >= 2;
 }

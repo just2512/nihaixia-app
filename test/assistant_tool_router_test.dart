@@ -5,7 +5,6 @@ import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
 import 'package:nihaisha_app/screens/saved_charts_screen.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/tool_execution_plan.dart';
-import 'package:nihaisha_app/licensing/feature_authorizer.dart';
 import 'package:nihaisha_app/services/headless_tool_dispatcher.dart';
 
 void main() {
@@ -221,7 +220,6 @@ void main() {
 
     const arguments = {'date': '2026-11-12'};
     final execution = await HeadlessToolDispatcher(
-      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
     ).executePlan(
       plan: ToolExecutionPlan(
         planId: 'router-yunqi-smoke',
@@ -251,7 +249,6 @@ void main() {
 
     const arguments = {'date': '2026-11-12'};
     final execution = await HeadlessToolDispatcher(
-      featureAuthorizer: const DenyByDefaultFeatureAuthorizer(),
     ).executePlan(
       plan: ToolExecutionPlan(
         planId: 'router-almanac-smoke',
