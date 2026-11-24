@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/theme/yanji_palette.dart';
+import 'package:nihaisha_app/screens/yunqi_charts.dart';
 
 double _linearize(double channel) {
   return channel <= 0.04045
@@ -360,4 +361,71 @@ void main() {
     });
 
   });
+  group('五运六气五行领域色 Token', () {
+    const lightExpected = <String, Color>{
+      '木': YanjiPalette.fiveElementWoodLight,
+      '火': YanjiPalette.fiveElementFireLight,
+      '土': YanjiPalette.fiveElementEarthLight,
+      '金': YanjiPalette.fiveElementMetalLight,
+      '水': YanjiPalette.fiveElementWaterLight,
+    };
+    const darkExpected = <String, Color>{
+      '木': YanjiPalette.fiveElementWoodDark,
+      '火': YanjiPalette.fiveElementFireDark,
+      '土': YanjiPalette.fiveElementEarthDark,
+      '金': YanjiPalette.fiveElementMetalDark,
+      '水': YanjiPalette.fiveElementWaterDark,
+    };
+
+    test('浅深主题保持既有五行映射与未知值兜底', () {
+      for (final entry in lightExpected.entries) {
+        expect(wxColorOf(entry.key, Brightness.light), entry.value);
+      }
+      for (final entry in darkExpected.entries) {
+        expect(wxColorOf(entry.key, Brightness.dark), entry.value);
+      }
+      expect(
+        wxColorOf('未知', Brightness.light),
+        YanjiPalette.fiveElementFallbackLight,
+      );
+      expect(
+        wxColorOf('未知', Brightness.dark),
+        YanjiPalette.fiveElementFallbackDark,
+      );
+    });
+
+    test('五行标签前景对实际领域底色满足普通文字 AA', () {
+      for (final colors in [lightExpected, darkExpected]) {
+        for (final background in colors.values) {
+          final foreground = chartLabelColorOn(background);
+          expect(
+            _contrast(foreground, background),
+            greaterThanOrEqualTo(4.5),
+            reason: '五行图领域色上的普通文字必须达到 4.5:1。',
+          );
+        }
+      }
+    });
+    test('未知五行兜底底色上的标签前景也满足普通文字 AA', () {
+      final cases = <({String name, Color background})>[
+        (
+          name: '浅色兜底',
+          background: YanjiPalette.fiveElementFallbackLight,
+        ),
+        (
+          name: '深色兜底',
+          background: YanjiPalette.fiveElementFallbackDark,
+        ),
+      ];
+      for (final item in cases) {
+        final foreground = chartLabelColorOn(item.background);
+        expect(
+          _contrast(foreground, item.background),
+          greaterThanOrEqualTo(4.5),
+          reason: '${item.name}五行兜底底色上的普通文字必须达到 4.5:1。',
+        );
+      }
+    });
+  });
+
 }
