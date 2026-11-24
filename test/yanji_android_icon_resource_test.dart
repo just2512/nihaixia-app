@@ -93,9 +93,19 @@ void main() {
         final bytes = File(
           'android/app/src/main/res/mipmap-$density/ic_launcher.png',
         ).readAsBytesSync();
-        final codec = await ui.instantiateImageCodec(bytes);
+        late final ui.Codec codec;
         try {
-          final frame = await codec.getNextFrame();
+          codec = await ui.instantiateImageCodec(bytes);
+        } catch (error) {
+          fail('$density PNG decode failed: $error');
+        }
+        try {
+          late final ui.FrameInfo frame;
+          try {
+            frame = await codec.getNextFrame();
+          } catch (error) {
+            fail('$density PNG frame decode failed: $error');
+          }
           try {
             final data = await frame.image.toByteData(
               format: ui.ImageByteFormat.rawRgba,
