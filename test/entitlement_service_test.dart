@@ -298,6 +298,8 @@ void main() {
 
       final first = service.initialize();
       final second = service.initialize();
+      // Native gate revocation is awaited before the Token store is read.
+      await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
       completer.complete(null);
@@ -389,6 +391,9 @@ void main() {
       );
 
       final first = service.initialize();
+      // Allow the fail-closed Native gate acknowledgement before asserting the
+      // first asynchronous Token read has begun.
+      await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
       platform.readCompleter = null;
