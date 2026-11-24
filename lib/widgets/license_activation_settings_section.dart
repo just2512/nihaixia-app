@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../licensing/feature_authorizer.dart';
+import '../licensing/license_model.dart';
 import '../licensing/license_platform.dart';
 import '../services/entitlement_service.dart';
 import '../services/license_activation_request_builder.dart';
@@ -290,45 +290,45 @@ class _LicenseActivationSettingsSectionState
     }
   }
 
-  static String _reasonLabel(FeatureAuthorizationFailureReason? reason) {
+  static String _reasonLabel(LicenseFailureReason? reason) {
     switch (reason) {
       case null:
         return '';
-      case FeatureAuthorizationFailureReason.initializationTimeout:
+      case LicenseFailureReason.initializationTimeout:
         return '授权检查超时。请稍后重试；不会将超时当作永久未授权。';
-      case FeatureAuthorizationFailureReason.unlicensed:
+      case LicenseFailureReason.unlicensed:
         return '当前没有已安装的授权令牌。';
-      case FeatureAuthorizationFailureReason.featureNotGranted:
+      case LicenseFailureReason.featureNotGranted:
         return '当前令牌未授予所需专业权益。';
-      case FeatureAuthorizationFailureReason.storeCorrupt:
+      case LicenseFailureReason.storeCorrupt:
         return '本机授权文件损坏。请使用发行方重新提供的完整令牌。';
-      case FeatureAuthorizationFailureReason.storageUnavailable:
+      case LicenseFailureReason.storageUnavailable:
         return '本机授权存储暂时不可用。';
-      case FeatureAuthorizationFailureReason.issuerUnknown:
+      case LicenseFailureReason.issuerUnknown:
         return '令牌签发者不在本版本信任 Key Ring 中。';
-      case FeatureAuthorizationFailureReason.signatureInvalid:
+      case LicenseFailureReason.signatureInvalid:
         return '令牌签名无效。';
-      case FeatureAuthorizationFailureReason.unsupportedRevision:
+      case LicenseFailureReason.unsupportedRevision:
         return '令牌协议修订版本不受支持。';
-      case FeatureAuthorizationFailureReason.deviceMismatch:
+      case LicenseFailureReason.deviceMismatch:
         return '令牌绑定的设备与当前设备不匹配。';
-      case FeatureAuthorizationFailureReason.keyMissing:
+      case LicenseFailureReason.keyMissing:
         return '当前设备密钥不存在。已有令牌不会自动创建替代密钥。';
-      case FeatureAuthorizationFailureReason.keyInvalidated:
+      case LicenseFailureReason.keyInvalidated:
         return '设备私钥不可用或挑战校验不一致。';
-      case FeatureAuthorizationFailureReason.keystoreUnavailable:
+      case LicenseFailureReason.keystoreUnavailable:
         return 'Android Keystore 暂时不可用。';
-      case FeatureAuthorizationFailureReason.providerError:
+      case LicenseFailureReason.providerError:
         return '授权平台暂时不可用，请稍后重试。';
-      case FeatureAuthorizationFailureReason.licenseRevoked:
+      case LicenseFailureReason.licenseRevoked:
         return '该授权已被当前客户端信任策略撤销。';
-      case FeatureAuthorizationFailureReason.issuerCompromised:
+      case LicenseFailureReason.issuerCompromised:
         return '发行者密钥已被标记为受损，令牌不能使用。';
-      case FeatureAuthorizationFailureReason.invalidTokenFormat:
+      case LicenseFailureReason.invalidTokenFormat:
         return '令牌格式不正确。';
-      case FeatureAuthorizationFailureReason.wrongApplication:
+      case LicenseFailureReason.wrongApplication:
         return '令牌不属于当前应用。';
-      case FeatureAuthorizationFailureReason.wrongProduct:
+      case LicenseFailureReason.wrongProduct:
         return '令牌不属于研纪专业版商品。';
     }
   }

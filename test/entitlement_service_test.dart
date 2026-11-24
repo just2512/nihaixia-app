@@ -195,7 +195,7 @@ void main() {
 
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(service.snapshot.failureReason,
-          FeatureAuthorizationFailureReason.keyMissing);
+          LicenseFailureReason.keyMissing);
       expect(platform.keyCreateCount, 0);
       service.dispose();
     });
@@ -227,7 +227,7 @@ void main() {
       expect(contextual.status, FeatureAuthorizationStatus.allowed);
       expect(learning.status, FeatureAuthorizationStatus.denied);
       expect(learning.reason,
-          FeatureAuthorizationFailureReason.featureNotGranted);
+          LicenseFailureReason.featureNotGranted);
       service.dispose();
     });
 
@@ -246,7 +246,7 @@ void main() {
 
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(decision.status, FeatureAuthorizationStatus.denied);
-      expect(decision.reason, FeatureAuthorizationFailureReason.issuerUnknown);
+      expect(decision.reason, LicenseFailureReason.issuerUnknown);
       expect(service.snapshot.aiAccess, isFalse);
       service.dispose();
     });
@@ -263,7 +263,7 @@ void main() {
       await corruptService.initialize();
       expect(corruptService.snapshot.status, EntitlementServiceStatus.invalid);
       expect(corruptService.snapshot.failureReason,
-          FeatureAuthorizationFailureReason.storeCorrupt);
+          LicenseFailureReason.storeCorrupt);
 
       final unavailable = _FakeLicensePlatform(
         failure: const LicensePlatformFailure('STORAGE_UNAVAILABLE'),
@@ -279,7 +279,7 @@ void main() {
       expect(decision.status,
           FeatureAuthorizationStatus.temporarilyUnavailable);
       expect(decision.reason,
-          FeatureAuthorizationFailureReason.storageUnavailable);
+          LicenseFailureReason.storageUnavailable);
       corruptService.dispose();
       unavailableService.dispose();
     });
@@ -324,7 +324,7 @@ void main() {
       expect(decision.status,
           FeatureAuthorizationStatus.temporarilyUnavailable);
       expect(decision.reason,
-          FeatureAuthorizationFailureReason.initializationTimeout);
+          LicenseFailureReason.initializationTimeout);
       expect(service.snapshot.status, EntitlementServiceStatus.checking);
 
       completer.complete(null);
@@ -436,7 +436,7 @@ void main() {
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(
         service.snapshot.failureReason,
-        FeatureAuthorizationFailureReason.keyInvalidated,
+        LicenseFailureReason.keyInvalidated,
       );
       expect(platform.keyCreateCount, 0);
       service.dispose();
