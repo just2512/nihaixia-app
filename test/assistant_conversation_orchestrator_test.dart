@@ -123,6 +123,24 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('纯术数话题带学习词仍进入玄学模式，不被误路由到学习助手', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '《小六壬》里大安的五行属性、方位、吉凶分别是什么？',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool, isNull);
+    });
+
+    test('梅花易数这类纯术数话题带解释词也进入玄学模式', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '解释一下梅花易数的原理',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool, isNull);
+    });
+
     test('工具澄清后补充的日期仍进入五运六气 typed arguments', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '五运六气 2026-11-06',
@@ -748,14 +766,14 @@ void main() {
       expect(pendingChoice.tool?.id, 'ziwei');
     });
 
-    test('待选工具期间询问历史背景应切换为学习助手', () {
+    test('待选工具期间询问术数话题历史背景进入玄学模式', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '紫微斗数的历史背景',
         selectedMode: AssistantMode.automatic,
         currentMode: AssistantMode.metaphysics,
         pendingToolSelection: true,
       );
-      expect(decision.mode, AssistantMode.learning);
+      expect(decision.mode, AssistantMode.metaphysics);
       expect(decision.tool, isNull);
       expect(decision.expectsToolSelection, isFalse);
     });

@@ -105,6 +105,12 @@ class AssistantConversationOrchestrator {
     '病机',
   ];
 
+  // 五运六气是唯一同时属于「术数工具」与「中医知识库」的玄学模式工具。
+  // 纯术数话题（小六壬/梅花/紫微/八字/易经/解梦/称骨/灵签等）应优先进玄学
+  // 模式回答，但五运六气带「学习/原理」时仍需走学习助手检索中医运气内容，
+  // 因此把它从纯术数拦截中排除。
+  static const _tcmDualDomainMetaphysicsToolIds = {'yunqi'};
+
   // These are routing cues only: a match requires a reviewed safety
   // assessment; it does not label urgency or provide a medical conclusion.
   // The red-flag examples below mirror the normative audit boundary.
@@ -997,7 +1003,18 @@ class AssistantConversationOrchestrator {
 
     // 明确的学习/解释请求优先于工具名和动作词，避免“学习五运六气推算原理”
     // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
+    // 但纯术数话题（小六壬/梅花/紫微/八字/易经/解梦/称骨/灵签等）无中医学习
+    // 库内容，若落进学习助手只会检索空转拒答；这些学习类问题应进玄学模式，用
+    // 模型自有知识回答并附「非科学」免责。五运六气属中医+术数交叉，保留学习
+    // 路由。此判断只在学习词命中时生效，不影响下面的工具派发。
     if (_learningCues.any(text.contains)) {
+      final pureMetaphysicsAliases = AssistantToolRouter
+          .matchAliases(text, AssistantMode.metaphysics)
+          .where((tool) => !_tcmDualDomainMetaphysicsToolIds.contains(tool.id))
+          .toList(growable: false);
+      if (pureMetaphysicsAliases.isNotEmpty) {
+        return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
+      }
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
     if ((text.contains('梅花易数') || text.contains('梅花')) &&
