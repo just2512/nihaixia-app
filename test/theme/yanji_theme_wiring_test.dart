@@ -7,16 +7,14 @@ import 'package:nihaisha_app/theme/yanji_palette.dart';
 
 void main() {
   group('研纪 ThemeData 表面与颜色角色接线', () {
-
     test('YanjiPalette 是应用语义颜色的唯一原始色值定义层', () {
       final source = File('lib/theme/app_colors.dart').readAsStringSync();
       expect(
         source,
-        isNot(matches(RegExp(r'\\bColor\\s*\\(\\s*0x[0-9a-fA-F]{6,8}\\s*\\)'))),
+        isNot(matches(RegExp(r'\bColor\s*\(\s*0x[0-9a-fA-F]{6,8}\s*\)'))),
         reason: 'AppColors 只能映射 YanjiPalette，不得内嵌原始十六进制色值。',
       );
     });
-
 
     test('生产主题显式区分 Scaffold 背景和 ColorScheme.surface', () {
       final source = File('lib/main.dart').readAsStringSync();
