@@ -54,6 +54,42 @@ class _HistoryResumeService extends LocalAiService {
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
+
+  @override
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
+
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required String context,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async => '续聊成功：$text';
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
