@@ -260,6 +260,7 @@ final semantic = context.colors;
 - danger/error 用于真实错误、高风险和禁忌；浅色 #A61B1B，深色 #FF7B72。
 - warning 用于需要注意、慎用、资料缺失或可恢复异常；浅色 #815500，深色 #FFD166。
 - success 只表达已完成或已激活；info 只表达中性信息，不得与 danger/warning 混用。
+- 状态映射必须以生产数据集的实际标签集合建立覆盖测试。新增或变更标签时，测试必须失败并要求同步更新显式映射；不能仅因 helper 对未知字符串返回 neutral 就视为覆盖完成。对每个实际标签，测试还必须验证浅深主题的文字前景对比度达到 4.5:1。
 - 民俗吉凶与关煞标签统一使用语义容器：大吉/吉→successContainer，平/未知→surfaceContainerHighest，凶/中关→warningContainer，大凶/重关→dangerContainer；标签文字统一使用 onSurface，保持浅深主题 4.5:1 普通文字对比度。原始标签文字仍完整显示，颜色不得替代状态名称。
 - brandRed 和 danger 即使视觉接近，也必须通过标签、图标、边框和文案结构区分，不得仅靠色相让用户辨认。
 
