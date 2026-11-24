@@ -173,14 +173,17 @@ void main() {
     );
 
     await tester.pumpWidget(
-      EntitlementServiceScope(
-        service: service,
-        child: Builder(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: EntitlementServiceScope(
+          service: service,
+          child: Builder(
           builder: (context) => Text(
             identical(EntitlementServiceScope.maybeOf(context), service)
                 .toString(),
           ),
         ),
+      ),
       ),
     );
 
@@ -313,6 +316,8 @@ void main() {
 
       final first = service.initialize();
       final second = service.initialize();
+      // Native gate close is acknowledged asynchronously before Token storage is read.
+      await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
       completer.complete(null);
@@ -407,6 +412,9 @@ void main() {
       );
 
       final first = service.initialize();
+      // Let the serialized Native gate-close acknowledgement finish before
+      // asserting that the first Token read is in flight.
+      await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
       platform.readCompleter = null;

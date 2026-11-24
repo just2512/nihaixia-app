@@ -68,6 +68,19 @@ class _HistoryResumeService extends LocalAiService {
     sendCalls += 1;
     return '续聊成功：$text';
   }
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async {
+    sendCalls += 1;
+    return '续聊成功：$text';
+  }
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
