@@ -4183,7 +4183,7 @@ PR HEAD 门禁证据：
 ### 90.1 当前主线与小批量集成结果
 
 - **当前主线基线：** `master @ af6354dae502fbdc7f0e9016b9acbbd153f921a5`。本节以该 SHA 为复核基线；不把更早的 #462 文档基线误作当前主线。
-- **PR #463 已合并：** `fix/ui: About 功能列表换行`，独立提取自历史分支 `fix/baseline-png-and-literal-newlines` 的最小修复，仅修改 `lib/screens/app_dialogs.dart` 和 `test/app_brand_identity_test.dart`，没有整体合并旧分支，也没有带入其旧启动图或旧运行时代码。PR head `473710ab5fe46c9210fc39b1500f6b95e3d42368`，squash merge `5c5790581a4acd29ba011b8bd57da03a2842df84`。
+- **PR #463 已合并：** `fix(ui): render About feature list with line breaks`，独立提取自历史分支 `fix/baseline-png-and-literal-newlines` 的最小修复，仅修改 `lib/screens/app_dialogs.dart` 和 `test/app_brand_identity_test.dart`，没有整体合并旧分支，也没有带入其旧启动图或旧运行时代码。PR head `473710ab5fe46c9210fc39b1500f6b95e3d42368`，squash merge `5c5790581a4acd29ba011b8bd57da03a2842df84`。
 - **PR #464 已合并：** 仅更新执行台账、Find N2/E4B 交接、AI TRACE 验收和 Android 本地 Release 清单共 6 个文档；没有改动运行时代码、协议字段、收费边界、版本号、包名、签名配置或设备验收结论。PR head `b486a8fd4d0b848f5233979139c7e87b79f42050`，squash merge `af6354dae502fbdc7f0e9016b9acbbd153f921a5`。
 - **未合并授权批次：** PR #416 继续保持 `OPEN / DRAFT / UNTOUCHED`。本轮未改写、未重定向、未关闭或合并，不用它阻塞其他云端收尾。
 
