@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 
 import '../data/sanshan_lingqian_data.dart';
+import '../theme/app_colors.dart';
+import '../theme/yanji_status_semantics.dart';
+import '../widgets/yanji_status_badge.dart';
 import '../services/sanshan_lingqian_tool_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
@@ -275,6 +278,14 @@ class _BrowseTabState extends State<_BrowseTab> {
   }
 }
 
+YanjiStatusTone lingqianLuckStatusTone(LingqianLuck luck) =>
+    switch (luck) {
+      LingqianLuck.daJi => YanjiStatusTone.success,
+      LingqianLuck.ping => YanjiStatusTone.neutral,
+      LingqianLuck.xiong => YanjiStatusTone.danger,
+      LingqianLuck.pingAn => YanjiStatusTone.success,
+    };
+
 /// 签文展示卡（求签结果与签谱详情共用）。
 class _SignCard extends StatelessWidget {
   const _SignCard({required this.sign, required this.cs});
@@ -284,6 +295,10 @@ class _SignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final status = yanjiStatusChipColors(
+      lingqianLuckStatusTone(sign.luck),
+      context.colors,
+    );
     return Card(
       elevation: 3,
       child: Padding(
@@ -293,19 +308,13 @@ class _SignCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _luckColor(sign.luck, cs),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    sign.luck.label,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: cs.onPrimary,
-                        fontWeight: FontWeight.w600),
+                YanjiStatusBadge(
+                  label: sign.luck.label,
+                  colors: status,
+                  fontSize: 11,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
                   ),
                 ),
               ],
@@ -342,16 +351,20 @@ class _SignRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final status = yanjiStatusChipColors(
+      lingqianLuckStatusTone(sign.luck),
+      context.colors,
+    );
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: CircleAvatar(
           radius: 16,
-          backgroundColor: _luckColor(sign.luck, cs),
+          backgroundColor: status.background,
           child: Text(
             '${sign.id}',
             style: TextStyle(
-                fontSize: 12, color: cs.onPrimary, fontWeight: FontWeight.bold),
+                fontSize: 12, color: status.foreground, fontWeight: FontWeight.bold),
           ),
         ),
         title: Text(sign.title, style: const TextStyle(fontSize: 13)),
@@ -377,9 +390,3 @@ class _SignRow extends StatelessWidget {
   }
 }
 
-Color _luckColor(LingqianLuck luck, ColorScheme cs) => switch (luck) {
-      LingqianLuck.daJi => Colors.green.shade700,
-      LingqianLuck.ping => cs.primary,
-      LingqianLuck.xiong => Colors.red.shade700,
-      LingqianLuck.pingAn => Colors.teal.shade700,
-    };

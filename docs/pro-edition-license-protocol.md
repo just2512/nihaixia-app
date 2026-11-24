@@ -1,6 +1,6 @@
-# 研纪专业版永久授权协议（v1.2）
+# 研纪专业版永久授权协议（v1.3）
 
-> 状态：协议实现规范；**尚未达到商业发行条件**。本文件与 `docs/pro-edition-architecture-constraints.md` v1.2 配套。若细节与架构约束冲突，以架构约束为准。测试密钥与测试向量不得用于生产。
+> 状态：协议实现规范；**尚未达到商业发行条件**。本文件与 `docs/pro-edition-architecture-constraints.md` v1.3 配套。若细节与架构约束冲突，以架构约束为准。测试密钥与测试向量不得用于生产。
 
 | 项目 | 值 |
 |---|---|
@@ -8,35 +8,43 @@
 | Product ID | `yanji_pro_lifetime` |
 | Token 前缀 | `YANJI1` |
 | 申请前缀 | `YANJIR1` |
-| Protocol revision | `1` |
+| Protocol revision | `2`（兼容读取修订 1） |
 | 签发模型 | 人工核单、离线签发、客户端离线验签 |
 | 设备密钥 | Android Keystore P-256 / ECDSA SHA-256 |
 | 发行者签名 | Ed25519 |
 
-## 1. 产品与 Feature 清单
 
-协议已知 Feature（`knownFeatureIds`）固定为：
+## 1. 产品与唯一 AI Feature
 
-| Feature ID | 首期允许签发 | 首期实际授权 |
-|---|---:|---:|
-| `ai_advanced` | 是 | 是 |
-| `contextual_assistant` | 是 | 是 |
-| `advanced_learning` | 否 | 否 |
-| `advanced_export` | 否 | 否 |
+协议修订 2 的唯一可签发 AI Feature 为：
 
-协议修订 1 允许签发集合（`protocolAllowedFeatureIds`）和发行端首期签发集合（`issuableFeaturesByRevision[1]`）均只有 `ai_advanced`、`contextual_assistant`。当前客户端门禁集合（`enforcedFeatureIds`）同样只有这两项。
+| Feature ID | 含义 | 修订 2 |
+|---|---|---|
+| `ai_access` | 全部 Native LiteRT 模型加载与推理访问权 | 唯一允许签发及授权的 Feature |
 
-客户端最终授予集合：
+协议修订 1 的历史 Feature `ai_advanced`、`contextual_assistant` 仍作为兼容输入识别，不再作为独立权益：
+- 修订 1 Token 只要包含其中任意一个已签名 AI Feature，即映射为单一 `ai_access`；
+- 修订 1 Token 不含两者时不授予 AI 访问；
+- 修订 1 只允许历史验证，不再由当前 Issuer 新签发；
+- 修订 2 只接受 `ai_access`，不得签入旧 ID 或其他保留 Feature。
+
+修订 2 客户端权益计算：
 
 ```text
-GrantedFeatures =
-  ClaimedFeatures
-  ∩ KnownFeatureIds
-  ∩ ProtocolAllowedFeatureIds[protocol_revision]
-  ∩ EnforcedFeatureIds
+GrantedAiAccess =
+  TokenSignatureValid
+  AND TrustedIssuer
+  AND SupportedProtocolRevision
+  AND CorrectProductAndApplication
+  AND DeviceBindingValid
+  AND (
+    protocol_revision == 2 AND features contains "ai_access"
+    OR
+    protocol_revision == 1 AND features contains "ai_advanced" or "contextual_assistant"
+  )
 ```
 
-未知 Feature 或已知但当前修订不允许的 Feature 不授予，并记录诊断；不得因此拒绝整份签名有效 Token。只有结构损坏、Feature 列表类型错误或重复 ID 等格式错误才拒绝 Token。发行端必须严格限制可签发集合，不得把保留 Feature 签入正式凭证。
+未知 Feature 只记录诊断、不授予；签名、字段结构、类型和重复 ID 的格式检查继续执行。协议修订 2 的发行端签发集合固定只有 `ai_access`。
 
 ## 2. 设备授权申请：YANJIR1
 
@@ -129,12 +137,12 @@ Token 外层仍使用 `YANJI1`，但签名域前缀采用独立且固定的 `YAN
 
 ```text
 minimumSupportedProtocolRevision = 1
-supportedProtocolRevisions = {1}
+supportedProtocolRevisions = {1, 2}
 ```
 
 验证必须同时满足：修订号不低于最低支持修订，且属于支持集合。禁止使用 `revision >= currentRevision` 自动放行未来修订。
 
-常规 App 升级不得使仍受支持的旧 Token 失效。只有协议存在明确安全缺陷并经单独决策提高最低支持修订时，才淘汰旧格式。
+修订 1 与修订 2 均必须可验证。修订 1 按第 1 节兼容映射为统一 AI 权益；修订 2 只认 `ai_access`。常规 App 升级不得使仍受支持的旧 Token 失效；不得把修订 1 的签名字段按修订 2 重新解释。只有协议存在明确安全缺陷并经单独决策提高最低支持修订时，才淘汰旧格式。
 
 ## 5. Key Ring 与发行者轮换
 
@@ -194,7 +202,7 @@ Verifier 至少区分：
 - revoked
 - valid / validWithUnsupportedFeatures / validWithoutGrantedFeatures
 
-未知或协议尚未允许的 Feature 只记录诊断、不授予，但不应拒绝其余合法 Feature。未知发行者、错误签名、错误设备指纹和不支持协议修订必须拒绝。
+未知或协议尚未允许的 Feature 只记录诊断、不授予；修订 2 只产生单一 `ai_access` 运行时权益，修订 1 的两个历史 AI Feature 按第 1 节兼容映射。未知发行者、错误签名、错误设备指纹和不支持协议修订必须拒绝。
 
 ## 8. 尚未完成的发布条件
 

@@ -4227,17 +4227,47 @@ PR HEAD 门禁证据：
 
 ---
 
-## 91. 2026-11-24 术数常识问答与知识来源边界修复（PR #473，CI 待验）
+## 92. 2026-11-24 专业版架构 v1.3 变更冻结与商业许可边界对齐
 
-- **基线：** `master @ 4fe10b64a249a14689f9c5dd0d9caaae1f57dc6a`；独立分支 `fix/metaphysics-knowledge-routing-20261124`，PR [#473](https://github.com/just2512/nihaixia-app/pull/473)。
-- **根因：** 自动模式在通用工具分类前先用 `_learningCues` 判断。术数常识问题中的“是什么/解释/区别”等泛化表达因此直接进入 `AssistantMode.learning`；该模式只注入本地中医知识检索结果，未命中时按来源约束拒绝引用。ToolRouter 的 `matchAll()` 要求注册别名与动作词同时命中；只提及“小六壬”不应触发排课，但此前也没有“术数领域知识问答”这一独立分类。
-- **路由修复：** `AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics)` 识别注册术数领域；命中一般知识问答 cue 且未命中明确学习/原理/历史/原文/出处意图时，路由到 `AssistantMode.metaphysics`。该分支不返回 tool、不触发 Headless executor、不打开排课页面。
-- **Prompt 修复：** 玄学模式明确允许模型基于自身知识解释非计算型术数常识；实际排盘、起卦、历法和数值计算仍必须调用 App 确定性工具；不得伪造典籍引文、计算结果或流派口径。
-- **学习边界：** 明确学习、原理、历史背景、原文、出处和条文请求仍进入 learning；中医诊断、医学事实、经典原文、医案事实及规则/计算结果继续要求可追溯资料，不以模型记忆补造。
-- **回归测试：** Orchestrator 覆盖小六壬大安五行/方位/吉凶、梅花易数体用、紫微主星、术数比较问答及显式学习/原理请求；ToolRouter 测试锁定玄学 Prompt 的知识使用与来源边界。
-- **当前验收：** 代码与测试已提交 PR；PR 精确 HEAD 的 Flutter regression、静态分析及 Fork license boundary 尚未取得结果，均不得标记 PASS。Find N2 / E4B 实际模型回答仍为 `LOCAL ONLY / MISSING`，云端路由测试不替代真机输出验收。
+### 92.1 冻结决策
 
+- v1.3 将 App 运行时 AI 付费权益统一为单一 `ai_access`，唯一权威门禁位于 Android Native LiteRT 模型加载/推理边界。
+- 普通 AI 对话、问诊、学习、情境提问、工具意图/参数理解、结果解释、文本/图片/语音及未来模型模态全部使用同一权益；不再按业务入口、模式、工具数量、调用来源或页面拆分收费。
+- `ai_advanced`、`contextual_assistant` 不再是独立运行时权限。协议修订 1 的历史 Token 若含任一旧 AI Feature，则兼容映射为 `ai_access`；修订 2 新 Token 只签发 `ai_access`。
+- 不调用模型的确定性业务执行继续免费，包括规则问诊/辨证、排盘、历法、剂量换算、纯本地检索和手动确定性工具操作。
+- `HeadlessToolDispatcher` 与 `ContextResolutionGateway` 保留，但分别只负责执行计划安全/结果校验和上下文来源/锚点完整性；移除其 Feature 收费判断。
+- `EntitlementService` 保留签名 Token、Key Ring、设备绑定、协议修订、状态和错误原因验证；运行时快照收敛为一个 `aiAccess` 决策，不再提供多业务 Feature 收费门禁。
 
-- PR #473 扩展复核：增加八字、紫微斗数（兼容“紫薇斗数”常见输入）、周公解梦等知识问答/学习/原理场景；这些领域不再因“学习/原理/历史”泛化 cue 被送入中医专属学习检索。保留五运六气明确原理学习仍进入 learning 的既有边界。新增 M-05 和对应 Orchestrator 回归；该扩展与原 §91 同属 PR #473，CI 以更新后的精确 HEAD 重新验收。
+### 92.2 Native 统一门禁范围
 
-- Prompt 同步更新：玄学模式的自有知识范围明确包含非计算型术数学习、原理和历史问题；不得由此放宽实际排盘/起卦计算边界或文献引文真实性约束。
+- 当前 Android 主 AI 通道为 `com.nihaisha.app/local_ai`。模型加载 `loadModel` 和所有推理方法（文本、图片、语音、意图识别、槽位/问诊理解、历史恢复中的推理）必须由同一个 Native Gate 检查。
+- `getModelStatus`、`importModel`、backend 偏好设置、模型释放和 runtime cache 清理等非推理维护操作保留，不应因无 AI 权益而阻止安全释放和诊断；这些操作不得绕过 Gate 加载或执行模型。
+- Gate 默认关闭；完成授权验证后才可开放。授权失效时拒绝新推理并安全释放已加载模型。Dart UI 状态不构成 Native 安全门禁。
+- 所有新 Native LiteRT 推理入口默认受 Gate 约束；通过 AST/源码审计与 Native 回归防止新增旁路。
+
+### 92.3 商业许可范围同步结论
+
+- `LICENSE-FORK-COMMERCIAL.md` 是 Fork 自有修改代码的源代码许可，不是 App 内 AI 功能开关。其现有适用范围不缩小，不改其授予条款。
+- `docs/ai-commercial-license.md` 与 `docs/fork-license-boundary.md` 明确区分运行时 `ai_access` 与源代码商业许可：Fork 原创的 AI 会话、上下文、Prompt、工具适配、页面 AI 接入、测试和 Native 桥接仍在各自权属/混合文件规则范围内。
+- 根目录 Apache LICENSE、第三方/模型权重许可证、知识库排除、`.reuse/dep5` 和 Fork 文件清单不因运行时收费门禁调整而自动改变。
+- App 的永久 `ai_access` Token 不授予 OEM、白标、商业源代码集成或对外再分发权；这些仍依独立书面商业许可。
+
+### 92.4 实施状态与验收
+
+- 本节冻结设计，不代表代码已切换。当前 Dispatcher 的 `ai_advanced` 判断、Gateway 的 `contextual_assistant` 判断和 Native 模型通道 Gate 改造在代码 PR 完成前保持 `MISSING / IN_PROGRESS`。
+- 下一批独立代码工作：协议修订 2/Issuer/Verifier 兼容；EntitlementService 单一 `aiAccess` 状态；Dart→Native 内部授权状态同步；Native `loadModel` 与全部推理方法统一 Gate；删除业务层重复收费判断；补齐 AST 旁路审计与测试。
+- 不删除 F0/F1/G1 已完成的执行安全、来源校验、结果校验、TRACE 和历史数据功能。
+- Find N2 Keystore/StrongBox、AtomicFile、模型真实推理和升级验收仍放在云端代码/CI 收尾之后本地执行。
+
+---
+
+## 93. 2026-11-24 术数常识问答与知识来源边界修复（PR #473）
+
+- **集成基线：** 最新主线 master @ b0f3a17924b152c6e95ca5c6e264352272487472。PR #473 原分支基于较早的 §90 基线；本次将其六文件最小差异重放到最新主线，完整保留已合入的专业版架构 v1.3 §92。独立分支仍为 fix/metaphysics-knowledge-routing-20261124。
+- **根因：** 自动模式此前优先使用泛化学习 cue（“是什么/解释/原理/学习”等）分类；术数知识问题可能被送入只检索中医资料的 learning 分支，知识库未命中后拒答。显式工具路由又要求别名与动作词同时命中，因此普通术数知识问题既不应执行工具，也不能默认依赖中医检索。
+- **领域路由：** 对已注册玄学工具别名先识别非计算型知识、学习、原理、历史、术语及文化解释请求，路由至 AssistantMode.metaphysics。覆盖八字、紫微斗数、易经、小六壬、梅花易数、周公解梦等；紫微斗数兼容“紫薇斗数”常见输入变体。五运六气明确的中医原理/学习请求继续进入 learning。
+- **执行边界：** 常识/学习解释只切换助手模式，不触发排盘、起卦或确定性计算。明确要求实际排盘、起卦、历法或数值计算时仍由 App 确定性工具执行；不得心算、篡改结果或伪造典籍原文、出处和引文。
+- **Prompt 与来源约束：** 玄学模式可用模型自身知识解释非计算型术数知识及学习内容，须说明传统口径与不确定性；中医诊断依据、医学事实、经典原文、医案事实及 App 确定性结果仍须遵守既有可追溯来源约束。
+- **回归覆盖：** Orchestrator 覆盖小六壬大安、梅花易数体用、紫微/紫薇写法、八字定义/十神原理/系统学习、周公解梦，以及五运六气学习路径保留；ToolRouter 测试锁定玄学 Prompt 的知识使用和来源边界。
+- **自动化验收：** 本次新集成 HEAD 必须重新运行 Flutter 静态分析、专项路由测试、全量 Flutter regression 和 Fork license boundary。任何 SKIPPED 不计 PASS。历史旧 HEAD 的 CI 不替代新 HEAD 验收。
+- **设备验收：** Find N2 / E4B 实际模型回答仍为 LOCAL ONLY / MISSING；CI 只能证明路由代码与测试，不证明设备模型输出质量。

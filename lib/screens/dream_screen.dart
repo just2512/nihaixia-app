@@ -11,6 +11,7 @@ import '../services/dream_result_context_executor.dart';
 import '../utils/fold_aware_routes.dart';
 import '../theme/app_colors.dart';
 import '../theme/yanji_status_semantics.dart';
+import '../widgets/yanji_status_badge.dart';
 import '../widgets/contextual_ai_sheet.dart' show showContextualAiSheet;
 import 'assistant_tool_router.dart' show AssistantMode;
 
@@ -290,20 +291,7 @@ class _DreamScreenState extends State<DreamScreen> {
                     ),
                   ),
                 ),
-                Chip(
-                  label: Text(
-                    e.auspicious,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: status.foreground,
-                    ),
-                  ),
-                  backgroundColor: status.background,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                ),
+                YanjiStatusBadge(label: e.auspicious, colors: status),
               ],
             ),
             const SizedBox(height: 6),
