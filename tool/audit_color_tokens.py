@@ -21,7 +21,6 @@ LIB = ROOT / "lib"
 ALLOWLIST_PATH = ROOT / "tool" / "color_token_audit_allowlist.json"
 TOKEN_FILES = {
     "lib/theme/yanji_palette.dart",
-    "lib/theme/app_colors.dart",
 }
 
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
