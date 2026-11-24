@@ -1142,6 +1142,7 @@ class MainActivity : FlutterActivity() {
         userText: String,
         candidatesJson: String
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         require(userText.isNotBlank() && userText.length <= 2000) {
@@ -1225,6 +1226,7 @@ class MainActivity : FlutterActivity() {
         userText: String,
         missingFieldsJson: String
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         require(userText.isNotBlank() && userText.length <= 2000) {
@@ -1303,6 +1305,7 @@ class MainActivity : FlutterActivity() {
         currentText: String,
         userContext: String
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         val normalizedQuestionId = questionId.trim()
@@ -1402,6 +1405,7 @@ class MainActivity : FlutterActivity() {
         explicitSourceText: String? = null,
         explicitSourceTruncated: Boolean = false
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         val sourceEntries = explicitSourceText?.trim()?.takeIf { it.isNotEmpty() }
@@ -1522,6 +1526,7 @@ class MainActivity : FlutterActivity() {
         transcript: String,
         userMessages: List<String>
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         resetLocalConversation()
         val boundedTranscript = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
         val prompt = buildString {

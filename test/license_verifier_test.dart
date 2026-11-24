@@ -240,6 +240,7 @@ void main() {
     expect(reservedOnlyResult.status,
         LicenseVerificationStatus.validWithoutGrantedFeatures);
     expect(reservedOnlyResult.isValid, isFalse);
+    expect(reservedOnlyResult.isAuthenticated, isTrue);
     expect(reservedOnlyResult.payload?.grantedFeatureIds, isEmpty);
   });
 

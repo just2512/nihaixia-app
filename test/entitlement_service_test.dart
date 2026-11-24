@@ -532,5 +532,27 @@ void main() {
       service.dispose();
     });
 
+
+    test('Native enable failure keeps the entitlement fail-closed', () async {
+      final platform = _FakeLicensePlatform(
+        token: validToken,
+        deviceKey: _deviceKey(fingerprint),
+      );
+      final aiAccessPlatform = FakeAiModelAccessPlatform()..failEnable = true;
+      final service = EntitlementService(
+        platform: platform,
+        aiModelAccessPlatform: aiAccessPlatform,
+        verifier: _verifier(vectors),
+      );
+
+      await service.initialize();
+
+      expect(service.snapshot.status, EntitlementServiceStatus.temporarilyUnavailable);
+      expect(service.snapshot.aiAccess, isFalse);
+      expect(aiAccessPlatform.enabled, isFalse);
+      expect(aiAccessPlatform.transitions, [false, false]);
+      service.dispose();
+    });
+
   });
 }
