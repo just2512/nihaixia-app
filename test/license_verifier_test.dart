@@ -89,7 +89,7 @@ void main() {
   Map<String, dynamic> basePayload() =>
       Map<String, dynamic>.from(licenseFixture['payload'] as Map);
 
-  test('accepts the shared Python/Dart protocol v1.2 JCS vector', () async {
+  test('accepts the historical revision-1 Python/Dart JCS vector and maps it to ai_access', () async {
     final token = licenseFixture['token'] as String;
     final parts = token.split('.');
     final payloadBytes = _decodeSegment(parts[1]);
@@ -110,11 +110,14 @@ void main() {
     expect(result.payload?.protocolRevision, 1);
     expect(
       result.payload?.grantedFeatureIds,
-      {'ai_advanced', 'contextual_assistant'},
+      {'ai_access'},
     );
     expect(result.payload?.requestId,
         '8de4e5a0-9db7-4d1d-8a36-610c393f1c22');
-    expect(result.payload?.grants(LicenseFeature.contextualAssistant), isTrue);
+    expect(result.payload?.grantsAiAccess, isTrue);
+    expect(result.payload?.grants(LicenseFeature.aiAccess), isTrue);
+    expect(result.payload?.grants(LicenseFeature.aiAdvanced), isFalse);
+    expect(result.payload?.grants(LicenseFeature.contextualAssistant), isFalse);
     expect(result.payload?.grants(LicenseFeature.advancedLearning), isFalse);
   });
 
@@ -204,9 +207,9 @@ void main() {
     expect(result.status,
         LicenseVerificationStatus.validWithUnsupportedFeatures);
     expect(result.isValid, isTrue);
-    expect(result.payload?.grantedFeatureIds, {'ai_advanced'});
+    expect(result.payload?.grantedFeatureIds, {'ai_access'});
     expect(result.payload?.unknownFeatureIds, {'future_feature_2027'});
-    expect(result.payload?.grants(LicenseFeature.contextualAssistant), isFalse);
+    expect(result.payload?.grantsAiAccess, isTrue);
   });
 
   test('known but reserved Feature is not granted and does not invalidate other claims', () async {
@@ -231,7 +234,7 @@ void main() {
 
     expect(mixedResult.status,
         LicenseVerificationStatus.validWithUnsupportedFeatures);
-    expect(mixedResult.payload?.grantedFeatureIds, {'ai_advanced'});
+    expect(mixedResult.payload?.grantedFeatureIds, {'ai_access'});
     expect(mixedResult.payload?.knownButNotAllowedFeatureIds,
         {'advanced_learning'});
     expect(reservedOnlyResult.status,
@@ -240,13 +243,66 @@ void main() {
     expect(reservedOnlyResult.payload?.grantedFeatureIds, isEmpty);
   });
 
+  test('accepts protocol revision 2 only through the single ai_access claim', () async {
+    final keyPair = await Ed25519().newKeyPair();
+    final payload = {
+      ...basePayload(),
+      'issuer_key_id': 'dynamic-test-key',
+      'license_id': 'LIC-TEST-REVISION-2-AI-ACCESS',
+      'protocol_revision': 2,
+      'features': ['ai_access'],
+    };
+    final result = await verifyDynamicPayload(payload, keyPair);
+
+    expect(result.status, LicenseVerificationStatus.valid);
+    expect(result.isValid, isTrue);
+    expect(result.payload?.grantsAiAccess, isTrue);
+    expect(result.payload?.grantedFeatureIds, {'ai_access'});
+  });
+
+  test('revision 2 does not reinterpret legacy revision-1 claims', () async {
+    final keyPair = await Ed25519().newKeyPair();
+    final payload = {
+      ...basePayload(),
+      'issuer_key_id': 'dynamic-test-key',
+      'license_id': 'LIC-TEST-REVISION-2-LEGACY-CLAIMS',
+      'protocol_revision': 2,
+      'features': ['ai_advanced'],
+    };
+    final result = await verifyDynamicPayload(payload, keyPair);
+
+    expect(result.status, LicenseVerificationStatus.validWithoutGrantedFeatures);
+    expect(result.isValid, isFalse);
+    expect(result.payload?.grantsAiAccess, isFalse);
+    expect(result.payload?.knownButNotAllowedFeatureIds, {'ai_advanced'});
+  });
+
+  test('revision 1 maps either historical AI claim to the same ai_access entitlement', () async {
+    final keyPair = await Ed25519().newKeyPair();
+    for (final legacyFeature in ['ai_advanced', 'contextual_assistant']) {
+      final payload = {
+        ...basePayload(),
+        'issuer_key_id': 'dynamic-test-key',
+        'license_id': 'LIC-TEST-LEGACY-$legacyFeature',
+        'protocol_revision': 1,
+        'features': [legacyFeature],
+      };
+      final result = await verifyDynamicPayload(payload, keyPair);
+
+      expect(result.status, LicenseVerificationStatus.valid);
+      expect(result.payload?.grantsAiAccess, isTrue);
+      expect(result.payload?.grantedFeatureIds, {'ai_access'});
+    }
+  });
+
   test('rejects unsupported protocol revisions after signature verification', () async {
     final keyPair = await Ed25519().newKeyPair();
     final payload = {
       ...basePayload(),
       'issuer_key_id': 'dynamic-test-key',
-      'license_id': 'LIC-TEST-REVISION-2',
-      'protocol_revision': 2,
+      'license_id': 'LIC-TEST-REVISION-3',
+      'protocol_revision': 3,
+      'features': ['ai_access'],
     };
     final result = await verifyDynamicPayload(payload, keyPair);
 

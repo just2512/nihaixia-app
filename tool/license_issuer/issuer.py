@@ -34,22 +34,24 @@ from cryptography.hazmat.primitives.serialization import (
 
 APP_ID = "com.nihaisha.nihaisha_app"
 PRODUCT_ID = "yanji_pro_lifetime"
-PROTOCOL_REVISION = 1
+PROTOCOL_REVISION = 2
 LICENSE_PREFIX = "YANJI1"
 LICENSE_SIGNATURE_DOMAIN = b"YANJI-PRO-LICENSE-V1\x00"
 REQUEST_PREFIX = "YANJIR1"
 KNOWN_FEATURE_IDS = frozenset({
     "advanced_export",
     "advanced_learning",
+    "ai_access",
     "ai_advanced",
     "contextual_assistant",
 })
 PROTOCOL_ALLOWED_FEATURES_BY_REVISION = {
     1: frozenset({"ai_advanced", "contextual_assistant"}),
+    2: frozenset({"ai_access"}),
 }
-DEFAULT_PRO_FEATURES = ("ai_advanced", "contextual_assistant")
+DEFAULT_PRO_FEATURES = ("ai_access",)
 ISSUABLE_FEATURES_BY_REVISION = {
-    1: DEFAULT_PRO_FEATURES,
+    2: DEFAULT_PRO_FEATURES,
 }
 DEVICE_SECURITY_LEVELS = {
     "SOFTWARE",
