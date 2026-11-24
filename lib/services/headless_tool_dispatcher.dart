@@ -28,9 +28,8 @@ enum HeadlessToolPlanExecutionStatus {
 
 /// Immutable result of the whole-plan preflight and dispatch operation.
 ///
-/// Authorization outcomes never contain business results: no step is invoked
-/// until every step has been validated and the one plan-level authorization
-/// decision (when required) has been allowed.
+/// Invalid plans never contain business results: no step is invoked until
+/// every step and tool-to-capability mapping has passed whole-plan validation.
 class HeadlessToolPlanExecutionResult {
   HeadlessToolPlanExecutionResult({
     required this.planId,
