@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/licensing/ai_model_access_platform.dart';
-import 'package:nihaisha_app/licensing/feature_authorizer.dart';
+import 'package:nihaisha_app/licensing/entitlement_failure_reason.dart';
 import 'package:nihaisha_app/licensing/license_model.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
@@ -270,7 +270,7 @@ void main() {
 
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(service.snapshot.failureReason,
-          FeatureAuthorizationFailureReason.keyMissing);
+          EntitlementFailureReason.keyMissing);
       expect(platform.keyCreateCount, 0);
       service.dispose();
     });
@@ -289,22 +289,12 @@ void main() {
       await service.initialize();
 
       expect(service.snapshot.status, EntitlementServiceStatus.active);
-      expect(service.snapshot.grantedFeatureIds, {'ai_access'});
+      expect(service.snapshot.aiAccess, isTrue);
       expect(platform.keyReadCount, 1);
       expect(platform.challengeCount, 1);
       expect(platform.keyCreateCount, 0);
 
-      final ai = await service.authorize('ai_access');
-      final legacyAi = await service.authorize('ai_advanced');
-      final legacyContextual = await service.authorize('contextual_assistant');
-      final learning = await service.authorize('advanced_learning');
-
-      expect(ai.status, FeatureAuthorizationStatus.allowed);
-      expect(legacyAi.status, FeatureAuthorizationStatus.allowed);
-      expect(legacyContextual.status, FeatureAuthorizationStatus.allowed);
-      expect(learning.status, FeatureAuthorizationStatus.denied);
-      expect(learning.reason,
-          FeatureAuthorizationFailureReason.featureNotGranted);
+      expect(service.snapshot.aiAccess, isTrue);
       service.dispose();
     });
 
@@ -319,12 +309,11 @@ void main() {
         aiModelAccessPlatform: aiModelAccessPlatform,
       );
 
-      final decision = await service.authorize('ai_advanced');
+      await service.initialize();
 
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
-      expect(decision.status, FeatureAuthorizationStatus.denied);
-      expect(decision.reason, FeatureAuthorizationFailureReason.issuerUnknown);
-      expect(service.snapshot.grantedFeatureIds, isEmpty);
+      expect(service.snapshot.failureReason, EntitlementFailureReason.issuerUnknown);
+      expect(service.snapshot.aiAccess, isFalse);
       service.dispose();
     });
 
@@ -340,7 +329,7 @@ void main() {
       await corruptService.initialize();
       expect(corruptService.snapshot.status, EntitlementServiceStatus.invalid);
       expect(corruptService.snapshot.failureReason,
-          FeatureAuthorizationFailureReason.storeCorrupt);
+          EntitlementFailureReason.storeCorrupt);
 
       final unavailable = _FakeLicensePlatform(
         failure: const LicensePlatformFailure('STORAGE_UNAVAILABLE'),
@@ -350,13 +339,12 @@ void main() {
         verifier: _verifier(vectors),
         aiModelAccessPlatform: aiModelAccessPlatform,
       );
-      final decision = await unavailableService.authorize('ai_advanced');
+      await unavailableService.initialize();
       expect(unavailableService.snapshot.status,
           EntitlementServiceStatus.temporarilyUnavailable);
-      expect(decision.status,
-          FeatureAuthorizationStatus.temporarilyUnavailable);
-      expect(decision.reason,
-          FeatureAuthorizationFailureReason.storageUnavailable);
+      expect(unavailableService.snapshot.failureReason,
+          EntitlementFailureReason.storageUnavailable);
+      expect(unavailableService.snapshot.aiAccess, isFalse);
       corruptService.dispose();
       unavailableService.dispose();
     });
@@ -396,15 +384,12 @@ void main() {
         initializationTimeout: const Duration(milliseconds: 5),
       );
 
-      final decision = await service.authorize('ai_advanced');
-
-      expect(decision.status,
-          FeatureAuthorizationStatus.temporarilyUnavailable);
-      expect(decision.reason,
-          FeatureAuthorizationFailureReason.initializationTimeout);
+      final initialization = service.initialize();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(service.snapshot.status, EntitlementServiceStatus.checking);
 
       completer.complete(null);
+      await initialization;
       await service.initialize();
       expect(service.snapshot.status, EntitlementServiceStatus.unlicensed);
       service.dispose();
@@ -425,7 +410,7 @@ void main() {
       final invalid = await service.replaceToken(
         token: validToken.substring(0, validToken.length - 1) +
             (validToken.endsWith('A') ? 'B' : 'A'),
-        allowFeatureReduction: true,
+        allowAiAccessDowngrade: true,
       );
 
       expect(invalid.status, LicenseTokenReplacementStatus.rejected);
@@ -446,7 +431,7 @@ void main() {
 
       final result = await service.replaceToken(
         token: validToken,
-        allowFeatureReduction: false,
+        allowAiAccessDowngrade: false,
       );
 
       expect(result.status, LicenseTokenReplacementStatus.installed);
@@ -513,7 +498,7 @@ void main() {
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(
         service.snapshot.failureReason,
-        FeatureAuthorizationFailureReason.keyInvalidated,
+        EntitlementFailureReason.keyInvalidated,
       );
       expect(platform.keyCreateCount, 0);
       service.dispose();
@@ -547,14 +532,14 @@ void main() {
 
       final installed = await service.replaceToken(
         token: reducedToken,
-        allowFeatureReduction: false,
+        allowAiAccessDowngrade: false,
       );
       expect(installed.status, LicenseTokenReplacementStatus.installed);
-      expect(installed.lostFeatureIds, isEmpty);
+      expect(installed.losesAiAccess, isFalse);
       expect(installed.status, LicenseTokenReplacementStatus.installed);
       expect(platform.writeCount, 1);
       expect(platform.token, reducedToken);
-      expect(service.snapshot.grantedFeatureIds, {'ai_access'});
+      expect(service.snapshot.aiAccess, isTrue);
       service.dispose();
     });
 
