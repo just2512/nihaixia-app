@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../utils/fold_aware_routes.dart';
+import '../theme/app_colors.dart';
+import '../theme/yanji_status_semantics.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../licensing/feature_authorizer_scope.dart';
@@ -443,17 +445,6 @@ class _GuanshaScreenState extends State<GuanshaScreen>
     );
   }
 
-  Color _severityColor(String severity) {
-    switch (severity) {
-      case '重关':
-        return Colors.red.shade400;
-      case '中关':
-        return Colors.orange.shade400;
-      default:
-        return Colors.blueGrey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -814,7 +805,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
 
   Widget _buildHitCard(ColorScheme cs, GuanshaHit h) {
     final e = h.entry;
-    final accent = _severityColor(e.severity);
+    final status = guanshaSeverityChipColors(e.severity, context.colors);
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
@@ -834,8 +825,8 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                   ),
                   Chip(
                     label: Text(e.severity,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
-                    backgroundColor: accent.withValues(alpha: 0.18),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: status.foreground)),
+                    backgroundColor: status.background,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                     padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -968,7 +959,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
   }
 
   Widget _buildWikiCard(ColorScheme cs, GuanshaEntry e) {
-    final accent = _severityColor(e.severity);
+    final status = guanshaSeverityChipColors(e.severity, context.colors);
     return InkWell(
       onTap: () => _showDetail(e),
       child: Padding(
@@ -999,8 +990,8 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: accent)),
-              backgroundColor: accent.withValues(alpha: 0.18),
+                      color: status.foreground)),
+              backgroundColor: status.background,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1013,7 +1004,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
 
   void _showDetail(GuanshaEntry e) {
     final cs = Theme.of(context).colorScheme;
-    final accent = _severityColor(e.severity);
+    final status = guanshaSeverityChipColors(e.severity, context.colors);
     showModalBottomSheet(
       context: context,
       anchorPoint: foldAwareRouteAnchorPoint(context),
@@ -1038,8 +1029,8 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                 ),
                 Chip(
                   label: Text(e.severity,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
-                  backgroundColor: accent.withValues(alpha: 0.18),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: status.foreground)),
+                  backgroundColor: status.background,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 6),

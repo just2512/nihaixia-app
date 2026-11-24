@@ -2,7 +2,7 @@
 
 > **文件属性：** 项目级强制约束（Normative）
 > **约束编号：** YANJI-UI-THEME-001
-> **版本：** v1.1
+> **版本：** v1.3
 > **生效日期：** 2026-11-24
 > **适用范围：** Flutter App 全局主题、共享组件、业务页面、Android Launcher 与品牌图形资源
 > **执行状态：** 当前主题实现基线；页面级迁移按批次推进
@@ -260,6 +260,8 @@ final semantic = context.colors;
 - danger/error 用于真实错误、高风险和禁忌；浅色 #A61B1B，深色 #FF7B72。
 - warning 用于需要注意、慎用、资料缺失或可恢复异常；浅色 #815500，深色 #FFD166。
 - success 只表达已完成或已激活；info 只表达中性信息，不得与 danger/warning 混用。
+- 状态映射必须以生产数据集的实际标签集合建立覆盖测试。新增或变更标签时，测试必须失败并要求同步更新显式映射；不能仅因 helper 对未知字符串返回 neutral 就视为覆盖完成。对每个实际标签，测试还必须验证浅深主题的文字前景对比度达到 4.5:1。
+- 民俗吉凶与关煞标签统一使用语义容器：大吉/吉→successContainer，平/未知→surfaceContainerHighest，凶/中关→warningContainer，大凶/重关→dangerContainer；标签文字统一使用 onSurface，保持浅深主题 4.5:1 普通文字对比度。原始标签文字仍完整显示，颜色不得替代状态名称。
 - brandRed 和 danger 即使视觉接近，也必须通过标签、图标、边框和文案结构区分，不得仅靠色相让用户辨认。
 
 ### 5.5 风险提示的非颜色冗余
@@ -435,6 +437,7 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 | Material 3 完整显式角色 | 已落地 | AppColors.colorSchemeFor；不使用 fromSeed |
 | 原始颜色值单一来源 | 已落地 | YanjiPalette 集中基础色、状态色、领域色与合成透明度；AppColors 只做语义映射，静态审计只豁免 Palette 文件 |
 | 五运六气图五行领域色 | 已实现（CI 待验收） | `lib/screens/yunqi_charts.dart` 映射木火土金水到 Palette；保留浅深主题既有值，`test/theme/yanji_contrast_test.dart` 覆盖映射与标签 AA 对比度 |
+| 民俗吉凶/关煞状态标签 | 已实现（CI 待验收） | `yanji_status_semantics.dart` 将梦境吉凶、关煞严重度映射到 success/warning/danger/neutral 容器；正文使用 onSurface；双主题 AA 回归在 `test/theme/yanji_status_semantics_test.dart` |
 | Scaffold / surface 分离 | 已落地 | lib/main.dart 显式 scaffoldBackgroundColor |
 | 控件 outline / 装饰 divider 分离 | 已落地 | 全局 InputBorder / Chip / Divider 主题 |
 | NavigationBar / Rail 选中背景 | 已落地 | primaryContainer + onPrimaryContainer |
@@ -449,5 +452,7 @@ CI PASS 只代表自动化检查通过，不代表 OPPO Find N2 实机视觉验�
 
 - v1.0（2026-11-24）：冻结研纪正红品牌主色、冷白/深色表面、Material 3 角色、链接/功能灰/危险色/警告色分离、对比度矩阵、状态表达和静态审计要求；后续 UI 执行以本文件作为颜色与主题强制约束。
 - v1.1（2026-11-24）：明确 YanjiPalette 是唯一原始颜色定义层；把 AppColors 中既有状态/六经/工具分区原始色值集中到 Palette；将五运六气五行图映射到 Palette 并保留原有色值；CI 静态审计增加 ColorScheme.fromSeed 禁止项。
+- v1.2（2026-11-24）：将周公解梦吉凶和小儿关煞严重度标签改为共享状态语义映射；使用语义容器与 onSurface 前景，不再使用页面内 Colors.green/red/orange 等未受主题控制的颜色或 18% 动态色叠加；新增浅深主题标签对比度测试。
+- v1.3（2026-11-24）：要求状态语义映射以生产数据集的实际标签集合建立覆盖测试；新增或变更标签必须同步更新显式映射和数据覆盖断言，未知值回退不能冒充实际数据覆盖。
 
 **最终执行口径：** 先读取本文件，再修改主题或页面。颜色不按感觉临时决定，状态不靠颜色单独表达，业务图谱不为统一而改义，任何例外必须可追溯、可测试、可验收。

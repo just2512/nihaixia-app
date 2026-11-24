@@ -685,6 +685,7 @@
 | lib/services/ziwuliuzhu_tool_service.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/theme/app_colors.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/theme/yanji_palette.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/theme/yanji_status_semantics.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/theme/app_preference_text_scaler.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/theme/app_tokens.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/utils/chart_export.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -958,6 +959,7 @@
 | docs/yanji-visual-design-system.md | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/theme/yanji_contrast_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/theme/yanji_theme_wiring_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/theme/yanji_status_semantics_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/audit_color_tokens.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/color_token_audit_allowlist.json | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 ## 删除路径

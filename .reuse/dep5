@@ -1118,3 +1118,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Yanji Batch 1 visual specification, semantic color and multi-surface contrast tests, production theme wiring tests, and the non-destructive color inventory/CI audit tooling; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ lib/theme/yanji_status_semantics.dart
+ test/theme/yanji_status_semantics_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored shared folk-status semantic color mapping and light/dark regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
