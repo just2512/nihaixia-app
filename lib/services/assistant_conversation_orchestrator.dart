@@ -124,18 +124,11 @@ class AssistantConversationOrchestrator {
     '区别是什么',
     '想了解',
     '了解一下',
-    '概念',
-    '属性',
-    '五行',
-    '方位',
-    '吉凶',
-  ];
-
-  static const _explicitLearningIntentCues = [
     '学习',
     '系统学习',
     '教学',
     '课程',
+    '概念',
     '原理',
     '历史背景',
     '发展史',
@@ -143,6 +136,10 @@ class AssistantConversationOrchestrator {
     '原文',
     '出处',
     '条文',
+    '属性',
+    '五行',
+    '方位',
+    '吉凶',
   ];
 
   // These are routing cues only: a match requires a reviewed safety
@@ -1040,13 +1037,20 @@ class AssistantConversationOrchestrator {
     // model can use its own domain knowledge instead of failing closed on the
     // TCM-only local knowledge corpus. Explicit study/theory/source requests
     // continue to use the learning adapter.
-    final mentionsMetaphysicsDomain =
-        AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics)
-            .isNotEmpty;
-    final explicitlyRequestsLearning =
-        _explicitLearningIntentCues.any(text.contains);
-    if (mentionsMetaphysicsDomain &&
-        !explicitlyRequestsLearning &&
+    final metaphysicsDomainMatches =
+        AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics);
+    // Five Movements and Six Qi is also a TCM learning domain. Preserve its
+    // established source-backed learning path for explicit study/theory
+    // requests; other registered metaphysics domains have no corresponding
+    // TCM corpus and should stay in the metaphysics model adapter.
+    final isYunqiOnlyLearningRequest =
+        metaphysicsDomainMatches.isNotEmpty &&
+        metaphysicsDomainMatches.every((tool) => tool.id == 'yunqi') &&
+        _metaphysicsKnowledgeCues.any(text.contains) &&
+        ['学习', '系统学习', '教学', '课程', '原理', '历史背景', '发展史', '沿革',
+          '原文', '出处', '条文'].any(text.contains);
+    if (metaphysicsDomainMatches.isNotEmpty &&
+        !isYunqiOnlyLearningRequest &&
         _metaphysicsKnowledgeCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
     }
