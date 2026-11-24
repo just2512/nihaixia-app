@@ -100,7 +100,12 @@ void main() {
           fail('$density PNG decode failed: $error');
         }
         try {
-          final frame = await codec.getNextFrame();
+          late final ui.FrameInfo frame;
+          try {
+            frame = await codec.getNextFrame();
+          } catch (error) {
+            fail('$density PNG frame decode failed: $error');
+          }
           try {
             final data = await frame.image.toByteData(
               format: ui.ImageByteFormat.rawRgba,
