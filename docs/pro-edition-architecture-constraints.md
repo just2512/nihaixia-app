@@ -40,7 +40,7 @@
 
 - 本文件是**专业版授权架构和实施边界的权威约束**。
 - 专业版协议细节文档负责记录具体字段、编码、向量和实现细节；它必须与本文保持一致。
-- PR #416 当前分支中的 `docs/pro-edition-license-protocol.md` v1.1 是早期评审稿，其中的独立 SQLite 授权库、客户端 pending request 匹配、最终 Token 回显 nonce、`product_revision` 等设计，若与本文冲突，以本文 v1.2 决策为准，必须在后续协议整理中修正，不能同时保留两套相反规则。
+- PR #416 当前分支中的 `docs/pro-edition-license-protocol.md` v1.1 是早期评审稿，其中的独立 SQLite 授权库、客户端 pending request 匹配、最终 Token 回显 nonce、`product_revision` 等设计，若与本文冲突，以本文 v1.3 决策为准，必须在后续协议整理中修正，不能同时保留两套相反规则。
 - PR #416 仍是独立实现交付，不因本文保存而自动获得合并许可；其代码、测试和 CI 仍须按本文及项目现行集成流程验收。
 - AI 相关实现仍须遵守项目现有的 AI 能力审计规范、情境提问规范和并行执行协议。本文只补充专业版权益边界，不替代这些文件。
 
@@ -54,7 +54,7 @@
 |---|---|---|
 | `LicenseVerifier` | 验证发行者签名、协议字段、设备绑定和凭证真实性 | 不决定 UI 表现，不执行业务工具 |
 | `LicenseKeyRing` | 根据 `issuer_key_id` 提供受信任公钥和信任状态 | 不包含测试密钥于正式 Release 信任环 |
-| `LicenseTokenStore` | 读取、原子写入和删除单份当前 Token | 不独立决定用户是否拥有 Feature |
+| `LicenseTokenStore` | 读取、原子写入和删除单份当前 Token | 不独立决定 `aiAccess` |
 | Android Keystore Plugin | 设备密钥生成、get-only 读取、签名和密钥可用性检查 | 不处理业务 Feature 权益 |
 | `EntitlementService` | 验证 Token 并发布单一 `aiAccess` 决策快照 | 不持久化 `is_pro`、上次决策或可脱离 Token 的授权状态 |
 | `AiModelAccessGate` | 在 Native LiteRT 模型加载和推理边界统一检查 `ai_access` | 不按业务页面、工具、模式或调用来源拆分收费权限 |
@@ -65,7 +65,7 @@
 ### 1.2 单一授权事实源
 
 - 本地当前授权事实只有一份经过验证的签名 Token。
-- Feature 权益必须从 Token、当前协议支持范围和当前 App 已实施的门禁范围重新推导。
+- `aiAccess` 必须从签名 Token、当前协议修订兼容规则和设备绑定验证结果重新推导。
 - 不保存 `is_pro`、`last_is_pro`、持久化 `granted_features` 或其他可以脱离 Token 独立授予权益的字段。
 - 内存可以缓存当前进程已经验证的不可变 `EntitlementSnapshot`；进程重启后必须重新验证。
 - 设置页面、会话记录、数据库字段或本地缓存都不能独立授予专业权益。
@@ -448,8 +448,9 @@ context.noBackupFilesDir/
   → 格式与长度校验
   → 发行者签名验证
   → 协议修订验证
-  → Feature 结构验证
+  → Feature 字段结构与协议修订兼容映射验证
   → 当前设备公钥指纹验证
+  → 计算单一 `aiAccess`
   → 私钥可用性检查
   → 写临时文件
   → flush / fsync
@@ -471,8 +472,9 @@ context.noBackupFilesDir/
 新 Token 是一份完整授权，验证成功后替换旧 Token；不做 Feature 并集，不通过 `issued_at` 自动判断新旧。
 
 - 新 Token 无效或设备不匹配：拒绝，旧 Token 不变；
-- 新 Token 验证通过且权益不减少：按用户明确导入操作执行原子替换；
-- 新 Token 权益少于旧 Token：显示将失去的 Feature，用户再次确认后替换；
+- 新 Token 验证通过且有效 `aiAccess` 不发生 true→false 降级：按用户明确导入操作执行原子替换；
+- 只有旧 Token 有效映射为 `aiAccess=true`、新 Token 映射为 `aiAccess=false` 时，才显示失去 AI 访问的提示并要求再次确认；
+- 修订 1 的 `ai_advanced` / `contextual_assistant` Token 升级为修订 2 的 `ai_access`，若两者均映射为 `true`，不构成权益降低，也不得仅因 Feature ID 改名要求降级确认；
 - 用户取消：保留旧 Token；
 - 写入失败：保留旧 Token；
 - 旧 Token 与新 Token 的权益永不合并。
@@ -514,7 +516,7 @@ context.noBackupFilesDir/
 客户端采用显式支持集合和最低受支持修订：
 
 ```text
-supportedProtocolRevisions = {1}
+supportedProtocolRevisions = {1, 2}
 minimumSupportedProtocolRevision = 1
 ```
 
@@ -704,8 +706,11 @@ Release CI 必须同时包含：
 - 未知发行者返回 `issuerUnknown`；
 - 错误签名拒绝；
 - 不支持修订拒绝；
+- 修订 1 含 `ai_advanced`、`contextual_assistant` 任一项时，兼容映射为 `aiAccess=true`；两者均无则为 false；
+- 修订 2 只接受 `ai_access`，发行端也只签发该 ID；
+- 修订 2 不得通过旧 ID 自动取得 AI 访问；
 - 未知 Feature 忽略且不授予；
-- 已知但当前协议不允许的 Feature 不授予、记录诊断，不拒绝整份签名有效 Token；
+- 已知但当前协议修订不允许的 Feature 不授予、记录诊断，不拒绝整份签名有效 Token；
 - 格式错误、重复 Feature ID 和字段类型错误拒绝；
 - 不因系统时钟快进、回拨或 `issued_at` 未来值拒绝永久授权；
 - 测试发行者 Token 在 Release Key Ring 工厂中返回 `issuerUnknown`。
@@ -776,12 +781,12 @@ Release CI 必须同时包含：
 | 设计 | 优势 | 风险 / 代价 | 回滚原则 |
 |---|---|---|---|
 | F0 纯重构与 F1 授权分离 | 行为变化与授权变化可独立定位 | 抽取可能暴露 Screen UI 耦合 | F1 出问题只回滚 F1；保留已验证 F0 |
-| 单一 Dispatcher | 工具门禁统一，执行可审计 | 现有直接调用必须先收拢 | 恢复到 F0 之前的可验证执行入口 |
+| 单一 Dispatcher | 执行分发和副作用边界统一，结果可审计 | 现有直接调用必须先收拢 | 恢复到 F0 之前的可验证执行入口 |
 | 完整执行计划校验 | 防止无效计划导致部分业务副作用 | 调度协议需要形成完整可验证计划 | 继续校验工具、参数和结果，不引入收费判断 |
 | 单 Token 原子文件 | 无数据库迁移，状态简单 | 不适合授权历史/多席位查询 | 保留旧 Token，失败不覆盖 |
 | Key Ring 注入与轮换 | 测试/生产信任隔离 | 吊销导致该 Key 全部客户重新签发 | 通过新版信任策略与重新签发恢复 |
 | 异步授权状态 | 不阻塞启动，不误判 checking | 初始化超时期间专业操作暂不可用 | 基础免费功能始终可用 |
-| Resolver Gateway | 新会话和后续轮次边界一致 | 需要收拢所有直接 Resolver 调用 | 保留历史数据，回滚入口而非删除会话 |
+| Resolver Gateway | 来源引用、锚点和解析结果完整性统一 | 需要收拢所有直接 Resolver 调用 | 保留历史数据，回滚入口而非删除会话 |
 
 离线永久授权无法即时远程撤销；客户端门禁不能阻止有能力修改/重打包 APK 的攻击者。不得用过度混淆代替真实业务边界，也不得将本地挑战签名描述为远程硬件证明。
 
