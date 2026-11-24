@@ -4130,7 +4130,7 @@ PR HEAD 门禁证据：
 
 ## 88. 2026-11-24 云端收尾总账与剩余硬门槛
 
-- **当前集成主线：** PR #455 合并后 master 为 `1717b36ba0c2359a1526e22d23f75befacd80628`，其父提交为 #459 合并后的 `5e7083ba18952d86d0a573009e8cca25ab2bdcb2`。本次文档更新自身的 PR/CI 尚未发生；合并后的 master push workflow 必须以最终 HEAD 单独核验。
+- **当前集成主线：** PR #460 已合并，当前文档基线为 master merge commit `9725730d0f0f464c36110dd1c53bc3de92aa6cad`；其 PR 精确 HEAD 为 `a4c3e43d93790aa1d34371ce830d82d78507bff8`。PR #460 的 Fork license boundary run `45343567604` SUCCESS；Flutter tests run `45343567678` SUCCESS，其中 Flutter 全量回归与 Android arm64 APK/Native JVM job 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。PR 级 CI 证明该文档 HEAD 的验收，不替代 merge commit 的 master push workflow；后者须以该 SHA 的实际运行结果另行核验。
 - **云端业务/授权工程：** F0 Headless 拆分、F1 完整计划聚合及副作用前授权、G1 情境授权网关、G2 Key Ring/Release fail-closed 代码、G3 激活/Token 导入 UI 均已进入 master。PR #458 的 AtomicFile 备份恢复修复、PR #459 的临时数据库测试隔离也已合并。
 - **主线 #459 后的基线验收：** master `5e7083ba18952d86d0a573009e8cca25ab2bdcb2` 的 Flutter Quality Gate run `45341112787`、Flutter tests run `45341112826` 和 Fork license boundary run `45341112843` 均 SUCCESS；Flutter workflow 中的 Android arm64/JVM job `138268033239` SUCCESS。Branch validation 为 SKIPPED。
 - **G3 精确 HEAD 验收：** PR #455 head `c17b8bdbad104d3514f164496030e053fce91cf6` 的 Fork license run `45341358814` SUCCESS；Flutter tests run `45341358916` SUCCESS，包含 Flutter 全量回归 job `138265524800` 和 Android arm64/JVM job `138268369369`，两者均 SUCCESS；“无本地签名材料时 Release 构建必须失败”步骤 SUCCESS。Branch validation 为 SKIPPED。
