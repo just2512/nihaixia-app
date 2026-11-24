@@ -184,12 +184,11 @@ class _LicenseActivationSettingsSectionState
                 padding: EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
                 child: Text('已授予：全部 Native LiteRT 模型访问'),
               ),
-              if (snapshot.licenseId != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
-                  child: Text('授权编号：${snapshot.licenseId}'),
-                ),
-            ],
+            if (snapshot.licenseId != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
+                child: Text('授权编号：${snapshot.licenseId}'),
+              ),
             if (snapshot.failureReason != null)
               Padding(
                 padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
