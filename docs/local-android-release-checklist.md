@@ -9,7 +9,7 @@
 | App version | `2.0.0+8048` | `versionName=2.0.0`，`versionCode=8048` |
 | Android applicationId | `com.nihaisha.nihaisha_app` | 必须与设备现有安装包一致 |
 | 共享 applicationId 已知最高构建号 | `8047` | 已核验上游 `pubspec.yaml@92ef759` 为 `1.11.34+8047`；本版本 `8048` 仍须高于设备实际读取的 versionCode |
-| 当前应用代码基线 | 本地构建时检出的最新 `master` HEAD | 执行构建前记录 `git rev-parse HEAD`；最终 merge SHA 以执行台账 §67 的交接记录为准 |
+| 当前应用代码基线 | `master @ 1717b36ba0c2359a1526e22d23f75befacd80628`（PR #455 后最后一次运行时代码基线） | 执行构建前仍须记录 `git rev-parse HEAD`；当前 master 文档基线与设备交接状态见 `docs/find-n2-e4b-local-handover.md` §13 和执行台账 §88 |
 | 分发渠道 | 本地构建 / 原签名 / 本地交付 | 不创建发行 Tag，不发布 GitHub Release，不上传正式 APK |
 
 ## 2. 原签名密钥：硬门槛
