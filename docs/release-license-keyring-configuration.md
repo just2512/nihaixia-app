@@ -46,4 +46,5 @@ Gradle 会检查实际传给 Flutter 的 `dart-defines`，而不是只检查一�
 - 仓库当前没有经确认的正式发行方公钥。因此不得用测试向量或临时生成的公钥替代；在正式公钥由发行方交付并通过发行流程核验前，正式 Release 仍保持阻断。
 - Release readiness scanner 与测试必须和 Dart/Gradle 使用完全相同的 `YANJI_LICENSE_KEY_RING`、`keys` 根对象和 `key_id` 字段，不允许沿用旧的 `YANJI_RELEASE_LICENSE_KEY_RING_JSON` / `issuer_key_id` schema。
 - Release workflow 使用临时 CI-only APK 签名身份进行产物扫描，不上传或分发该 APK，也不替代产品正式 Android 签名身份。
-- 该配置批次不包含激活 UI、Token 导入交互、生产私钥保管、密钥轮换操作流程或 Find N2 设备验收；这些状态仍按执行台账记录。
+- PR #455 已将客户端激活/Token 导入 UI 集成到设置页：用户显式生成 YANJIR1 设备申请，并可粘贴经发行方返回的完整 YANJI1 Token；Token 验证、设备绑定、权益降低确认与原子替换由既有 EntitlementService 完成。该 UI 不包含发行服务器、发行私钥或自动签发服务，不能替代离线发行端流程。
+- 正式发行公钥及其来源仍未获核验，因此正式 Release 仍 BLOCKED。生产私钥离线保管/恢复演练、真实客户签发、密钥轮换操作和 Find N2 设备验收均未因此自动完成；详见执行台账 §88 与本地真机验收 §10。

@@ -597,3 +597,50 @@ adb shell pm path com.nihaisha.nihaisha_app
 ### 9.6 签名不匹配时的处理边界
 
 若旧 APK 与本轮 APK 的签名证书不同，Android 不允许常规覆盖安装。不得通过卸载、清数据或更改 applicationId 让本轮任务“通过”。应停止交付，查明旧包来源并恢复正确的原签名密钥；如果原签名密钥确实无法取得，则“无卸载、保留数据升级”这一要求无法实现，必须明确报告，不得伪称已满足。
+
+
+## 10. 专业版离线授权与设备激活（PRO-LICENSE-01）
+
+本节验证客户端激活 UI、设备密钥生命周期、Token 安装和权益替换。它不能证明发行方身份真实，也不能替代正式发行信任锚核验。开始前先检查：
+
+- 本机 APK 的 applicationId、versionName/versionCode、ABI、Git commit、APK SHA-256 和签名证书 SHA-256 均已记录；如需覆盖升级，必须继续满足 §9 的原签名与 versionCode 条件。
+- 正式 Release 的 `YANJI_LICENSE_KEY_RING` 必须来自发行方确认的 Ed25519 **公钥**，至少存在 active/standby 信任锚；测试 issuer/test vector key 禁止进入 Release。当前正式发行公钥尚未获核验，此条件未满足时将本节真实客户授权流程标记 BLOCKED，不得用测试密钥冒充生产验收。
+- 发行私钥只由发行端离线保管。客户端只生成 YANJIR1 申请、接收发行方返回的 YANJI1 完整 Token；当前 App 不包含发行私钥，也不提供发行服务器或自动签发接口。
+
+### 10.1 未激活启动与密钥只读边界
+
+1. 在没有 Token 的设备状态下启动 App，检查设置页显示“未激活”，免费功能仍可正常使用。
+2. 确认启动、页面浏览、授权状态刷新和历史会话恢复不会触发设备密钥创建。无法从 UI 直接观察 Keystore alias 时，使用本地 Native 测试/调试日志或受控检查手段留证；不得仅凭页面显示推断“未创建”。
+3. 判 PASS 必须有可追溯证据证明无 Token 路径只读且不调用 `createDeviceKeyForActivation`；无法观察密钥生命周期时记 UNKNOWN。
+
+### 10.2 用户显式生成 YANJIR1 申请
+
+1. 在设置页主动点击“生成设备激活申请”。只有该操作允许调用 `createDeviceKeyForActivation`；如果设备已有密钥，应复用既有 key，不得覆盖 alias 或自动重建。
+2. 首次创建后记录本机返回的安全级别（STRONGBOX / TRUSTED_ENVIRONMENT / SOFTWARE / UNKNOWN）及 StrongBox fallback 状态；这些只是客户端本地报告，**不是 Android Key Attestation 或远程硬件证明**。
+3. 检查申请码格式为 `YANJIR1.<payload>.<signature>`；申请签名覆盖 ASCII `YANJIR1.` 加原始规范 Base64URL payload 段。核对申请内 app/product ID、设备公钥 SPKI、指纹、32 字节 nonce、request ID 和 UTC 时间字段。
+4. 连续生成第二次申请，验证使用同一设备公钥/指纹，不创建替代密钥；保存经脱敏的申请摘要和 request ID，不提交完整申请码或签名原文。
+5. 在发行端按协议校验申请签名、SPKI 曲线/编码、指纹重算及 request ID/nonce 幂等约束；发行端未完成或未提供审计证据时，该项保持 MISSING。
+
+### 10.3 Token 验证、安装与权益替换
+
+使用发行端真实签发、绑定当前设备且经正式 Key Ring 信任的 YANJI1 Token；正式公钥未就绪时，不得把测试 Token 的结果记为生产 PASS。
+
+1. 粘贴完整 Token，验证格式、签名、issuer 状态、protocol revision、app/product ID、设备指纹和 Feature 交集；无效 Token 不得改变现有授权。
+2. 首次安装有效 Token 后，退出并重启 App，确认 Token 从 `noBackupFilesDir/yanji_license/active_license.token` 重新读取和验签，权益由当前协议允许且强制启用的 Feature 交集确定；不得存在可独立授予权益的 `is_pro` 或 Feature 快照。
+3. 使用无效签名、未知 issuer、错误设备指纹、错误产品、未知修订或撤销 issuer 的 Token 分别验证 fail-closed；已有有效 Token 应保持不变。
+4. 使用权益少于当前 Token 的有效新 Token，确认 UI 先展示将失去的 Feature；取消时旧 Token/权益不变，明确确认后才进行完整 Token 替换，不做 Feature 并集。
+5. 验证写入后平台重读及再次验签；模拟存储写入中断/备份恢复时，检查 AtomicFile 恢复旧 Token 或返回明确存储错误，不得把损坏/暂不可用状态当成无授权并自动创建设备密钥。
+6. 验证已有设备密钥丢失、失效或 Keystore 暂不可用时不自动创建替代 key；旧 Token 必须保持拒绝/不可用状态，按发行方重签或恢复流程处理。
+
+### 10.4 设备证据和判定
+
+每次记录：Scenario ID、设备型号/Android 版本、窗口姿态、App commit、APK SHA-256、签名证书 SHA-256、applicationId/versionName/versionCode/ABI、issuer key ID（不含公钥以外的秘密）、脱敏 license ID、设备密钥安全级别、StrongBox fallback、Token 安装前后授权状态、存储恢复结果、截图和脱敏日志。
+
+不得提交或截图暴露完整 YANJI1 Token、设备私钥、发行私钥、nonce 原文、真实订单个人信息或用户问诊内容。申请码/Token 应按敏感授权材料处理，交接时仅保留脱敏摘要。
+
+- **PASS：** 正式发行公钥已核验，真实签发 Token 绑定当前设备；未激活启动无密钥副作用；显式申请、验签、权益比较、原子替换、重启后重验和无效 Token 保留旧授权均有实机证据。
+- **FAIL：** 无用户动作创建/替换设备密钥；无效 Token 覆盖旧 Token；权益减少绕过确认；Token 未重验便授予权益；设备不匹配仍放行；日志泄露密钥/Token。
+- **BLOCKED：** 正式发行方公钥、正式 Android 签名身份或发行端签发链尚未具备；不得改用测试密钥绕过。
+- **UNKNOWN / MISSING：** 未执行实机操作、无原生可观察证据或只运行 Widget/JVM/CI 测试。
+
+本节设备验收仍由本地执行者在云端代码/CI 收尾后完成，不作为继续云端修复和文档集成的前置条件。

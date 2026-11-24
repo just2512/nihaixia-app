@@ -4047,29 +4047,31 @@ PR HEAD 门禁证据：
 - 生产授权接入仍必须遵守 v1.2 §7：超时返回暂时不可用、不持久化临时拒绝，基础免费功能继续可用；不得用全局静态门禁替代依赖注入。
 
 
-### 78.3 本轮专业版授权与情境网关工程状态（2026-11-23）
+#
+## 78.3 本轮专业版授权与情境网关工程状态（2026-11-24 已合并）
 
-- **F1 Headless 整计划预授权契约：PASS / REMOTE CI。** PR #448 已 squash 合并，merge commit 5313a0b2e7813760845d85cdd8f3b36b1a2b808e。同一 PR HEAD 的 Flutter 回归、Dart/Flutter 静态分析、Android arm64 CI 与 Fork license boundary 均为 SUCCESS；Branch validation 独立 job 为 SKIPPED，不单独计 PASS。
-- **F1 生产多工具计划聚合：PASS / PR #454 已合并。** PR #454 merge SHA `6cdd78a3d6bf0a2f39d8fa5feb1e9b8b6c42ef9a`；精确 HEAD `73ec01cf539b6472c8cbc9b03375b8a0f101ed65` 的 Flutter 全量回归、Dart/Flutter 静态分析、Android arm64 APK/Native JVM 单测和 Fork license boundary 均 SUCCESS；Branch validation 为 SKIPPED，不单独计 PASS。模型只给出有界工具 ID，参数由 App 确定性提取；计划完整校验后一次性授权，拒绝时无副作用。
-- **G1 ContextResolutionGateway 契约及生产上下文入口：PASS / PR #449、#450 已合并。** #449 merge SHA `1de63c1eed515a484e0f1321ecd3ddeb0eaa178a`；#450 merge SHA `e072f7bcb8918eb6f38437f39808a5a0ce1245d2`，精确 HEAD `08a6cf43adcdf662f1c2c3c367f5c1a9f9de1636` 的 Flutter、静态分析、Android arm64 和 Fork license CI 均 PASS。已覆盖新会话、历史恢复、连续轮次发送前重新解析/授权。工具结果/字段 17 个页面的进一步 Gateway 接线由 PR #456 独立完成中，尚待其精确 HEAD CI。
-- **G2 Production Release Key Ring / Trust Anchor：PARTIAL / PR #453 重基线 CI PENDING。** Key Ring 工厂、主应用 EntitlementService 注入、非阻塞初始化、Release build 的公开密钥配置门禁及验证测试已实现；待当前 master 重基线后的精确 HEAD CI。正式发行方公钥尚未提供或核验，发行 Token 验签和正式 Release 产物仍 BLOCKED；不得生成/使用虚构密钥或把测试私钥、测试签发能力打进 Release。
-- **G3 激活、替换与授权状态 UI：PARTIAL / PR #455 CI IN PROGRESS。** 设置页状态、显式生成 YANJIR1 设备申请、粘贴 YANJI1 Token、权益减少二次确认已实现；首轮 CI 暴露的 Dart 多行字符串和 DEP5 段落结构缺陷已修正，当前 HEAD 正在复验。未通过当前精确 HEAD 全量 CI 前不得宣称 PASS。
-- **PR #416：OPEN / DRAFT / UNTOUCHED。** 保持独立，不在本轮合并或改写。
-- **Find N2 设备验收：LOCAL ONLY / UNKNOWN。** Keystore/StrongBox、AtomicFile、真实安装升级、模型多轮 GPU/CPU、进程恢复仍交由本地实机完成，不将其作为继续云端代码/CI工作的阻塞条件。
-
+- **F1 Headless 整计划预授权契约：PASS / PR #448 已合并。** Merge SHA：`5313a0b2e7813760845d85cdd8f3b36b1a2b808e`。计划级授权在第一个 Executor 副作用之前完成；跨 capability 的 AI 计划拒绝或授权暂不可用时保持零副作用。相同 capability 多步骤和手动多能力操作按 v1.2 规则免费。
+- **F1 生产多工具计划聚合与结果持久化：PASS / PR #454 已合并。** 精确 HEAD：`73ec01cf539b6472c8cbc9b03375b8a0f101ed65`；Merge SHA：`6cdd78a3d6bf0a2f39d8fa5feb1e9b8b6c42ef9a`。模型只提供 2–3 个有界、互不重复的 tool ID；参数由 App 根据原始用户文本确定性提取并逐步预检；计划统一授权后执行，逐步结果、来源、TRACE 和持久化均保留。跨工具依赖、动态变量绑定和超过 3 步的工作流不在当前能力范围内，必须澄清。
+- **G1 ContextResolutionGateway 契约及生产入口：PASS / PR #449、#450、#456 已合并。** #449 merge SHA：`1de63c1eed515a484e0f1321ecd3ddeb0eaa178a`；#450 merge SHA：`e072f7bcb8918eb6f38437f39808a5a0ce1245d2`；#456 精确 HEAD：`7fdfb062d56a619d37cc39d41c48dc7e7dbf22f1`，merge SHA：`3db234669c47ae36487a5c1099edd42af6767b6b`。新会话、历史恢复、连续轮次发送前重新解析/授权，以及 17 个工具结果/字段页面和 7 个知识入口均走统一 Gateway；没有把直接 resolver 调用作为生产旁路。
+- **G2 Production Release Key Ring 与主应用注入：软件实现 PASS / 正式发行 BLOCKED。** PR #453 精确 HEAD：`305731c539886f7306d567340f0ca1fcc493a53e`；merge SHA：`304fd10c03a5fa6c9eabac88d282fa7de3ed76d4`。唯一配置名为 `YANJI_LICENSE_KEY_RING`，Key Ring 只含公开 Ed25519 issuer key；无效/缺失配置 fail-closed，不阻断免费启动。正式发行者公钥仍未获核验，故不能完成真实客户 Token 验签或正式 Release 发布；禁止用测试发行者、公钥或私钥替代。
+- **G3 激活、Token 替换与授权状态 UI：PASS / PR #455 已合并。** 精确 HEAD：`c17b8bdbad104d3514f164496030e053fce91cf6`；merge SHA：`1717b36ba0c2359a1526e22d23f75befacd80628`。设置页提供授权状态、显式生成 YANJIR1 设备申请、粘贴并验证 YANJI1 Token；设备密钥仅在显式激活动作时创建，既有密钥不自动替换；Token 权益减少须二次确认，验证/存储失败不主动删除旧 Token。
+- **Android AtomicFile 崩溃恢复：PASS / PR #458 已合并。** PR #458 精确 HEAD：`caf45ed1a7a7781e93849c6df4c1694dc3daf042`；merge SHA：`041a98e11b56510e9b9286defc54ba6a8ddbb6bd`。修复先由 AtomicFile 恢复备份、再判定主文件缺失的顺序，避免在可恢复备份存在时误报 key/token storage missing。
+- **城市选择器 Widget 测试隔离：PASS / PR #459 已合并。** PR #459 精确 HEAD：`e4778f0551b01df3f77cc9b935054b8e324757ec`；merge SHA：`5e7083ba18952d86d0a573009e8cca25ab2bdcb2`。测试使用独立临时数据库并清理资源；许可清单和 `.reuse/dep5` 同步更新。
+- 上述 #453、#456、#455、#458、#459 的对应精确 HEAD Fork license boundary、Flutter regression、Android arm64/JVM 验收均有 SUCCESS 记录；#455 的 Flutter run 为 `45341358916`、Fork license run 为 `45341358814`。条件性 Branch validation job 为 SKIPPED，不计为 PASS。每一项仍以对应 HEAD 的实际 workflow/job 结果为准。
+- **PR #416：OPEN / DRAFT / UNTOUCHED。** 当前 head `fa211477171485b4204a3a49dbde775ed3f1daa6`；本轮未修改、未重基线、未合并或关闭。
+- **Find N2 设备验收：LOCAL ONLY / MISSING / UNKNOWN。** 真实 Android Keystore/StrongBox、AtomicFile 运行时故障恢复、原签名 APK 原位升级、E4B GPU/CPU 多轮、Activity/进程恢复仍由本地实机完成。JVM、Flutter Mock Channel 和 CI Debug APK 不等于实机 PASS。
 
 ---
 
+### 78.4 G2：Release Key Ring 配置门禁与主应用授权注入（2026-11-24 已合并）
 
-### 78.4 G2：Release Key Ring 配置门禁与主应用授权注入（2026-11-24 重基线）
-
-- 独立分支 `feature/g2-release-keyring-config-20261123` 已重基线至 PR #454 合并后的 master `6cdd78a3d6bf0a2f39d8fa5feb1e9b8b6c42ef9a`，保留原 G2 运行时代码并合并最新 §78.3、REUSE 和 Fork 文件清单。
-- `LicenseKeyRingFactory` 从唯一 Dart define `YANJI_LICENSE_KEY_RING` 读取严格 JSON，仅接受公开 Ed25519 issuer key；校验根对象、条目字段、issuer ID、状态、Base64URL 规范、32 字节长度及重复 ID。配置缺失或无效时产生空 Key Ring，授权结果为 fail-closed，但免费应用仍正常启动。
-- 主应用注入 `EntitlementService` / `LicenseVerifier`，在 `runApp()` 前以 `unawaited(entitlementService.initialize())` 启动异步初始化，不阻塞免费 UI；未授权状态不会自动创建 Android 设备密钥。
-- `android/app/build.gradle.kts` 的 Release 构建门禁从 Flutter 实际 `dart-defines` 读取 `YANJI_LICENSE_KEY_RING`，要求非空有效生产公钥集合，至少包含 active/standby 状态；拒绝测试发行者 ID、已知测试向量公钥、格式错误/重复/未知状态密钥。签名 Keystore 检查独立保留。
-- 新增 Key Ring Factory 正负向 Dart 测试、Release signing gate contract tests 和 `docs/release-license-keyring-configuration.md`。PR #453 旧基线的 Flutter、Android arm64、Fork license 曾全部通过；因 PR #454 合并后重基线并合并台账/许可清单，必须以重基线后的新 HEAD CI 为准。
-- **正式发行信任锚仍 MISSING / RELEASE BLOCKED。** 没有发行方确认的真实生产公钥，不能完成真实 Token 验签和正式 Release 分发。禁止制造假生产密钥、禁止将测试私钥/测试 issuer 编入 Release。PR #452 原 Release scanner 不兼容当前 JSON/define 命名及免费启动原则，不直接合并，需单独适配当前 schema。
-- Find N2 KeyStore / StrongBox / AtomicFile、签名 APK 原位升级和真实设备授权刷新仍为 `LOCAL ONLY / UNKNOWN`；Android arm64 CI 与 JVM 单测不能替代真机验收。
+- PR #453 已合并，精确 HEAD `305731c539886f7306d567340f0ca1fcc493a53e`，merge SHA `304fd10c03a5fa6c9eabac88d282fa7de3ed76d4`。该 HEAD 的 Fork license boundary run `45306182606` 和 Flutter tests run `45306182662` 均 SUCCESS；其中 Flutter workflow 的 Android arm64 CI APK 和 Native JVM job `138153697854` 亦 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。
+- `LicenseKeyRingFactory` 从唯一 Dart define `YANJI_LICENSE_KEY_RING` 严格解析仅含公开 Ed25519 issuer key 的 JSON；校验根对象、字段、issuer ID、状态、规范 Base64URL、32 字节长度及重复 ID。配置缺失/无效时使用空 Key Ring，授权 fail-closed，但免费应用仍可启动。
+- 主应用注入 `EntitlementService` / `LicenseVerifier`，在 `runApp()` 前启动有界异步初始化，不阻塞免费 UI；启动、无 Token、后台授权检查不会自动创建设备密钥。
+- Android Release Gradle 门禁解析实际 Flutter `dart-defines`，要求非空且至少有 active/standby 生产信任锚，并拒绝已知测试 issuer ID/测试向量公钥；正式 Android signing identity 校验独立保留。Release trust workflow 使用 `YANJI_LICENSE_KEY_RING` Secret，构建仅用于扫描的 CI 产物并扫描源码/最终 APK，不把临时 CI 签名 APK 作为产品发布包。
+- **正式发行信任锚：MISSING / RELEASE BLOCKED。** 当前仓库没有可核验的正式发行方公钥来源及交付凭证；本轮工具权限也不能读取 GitHub Actions Secret 的实际值。因此不能断言仓库 Secret 已正确配置，也不能执行真实客户 Token 验签或正式 Release 发布。取得发行方公钥后，须核对其来源、key ID、状态、离线私钥保管/恢复方案，再配置 GitHub Secret 与本地 Release define。禁止生成假生产密钥、禁止使用测试向量替代、禁止把发行私钥打入 App/Release。
+- 激活 UI 已由 PR #455 单独并入；客户端只负责生成设备签名申请和验证/安装发行方返回的完整 Token，不包含发行私钥，也不提供发行服务器或自动签发服务。离线发行仍按 v1.2 协议及发行端流程执行。
+- Find N2 Keystore/StrongBox、AtomicFile 实际故障恢复、原签名 APK 原位升级和设备级授权刷新仍为 LOCAL ONLY / UNKNOWN；Android CI 和 JVM 测试不能替代真机证据。
 
 
 ## 83. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
@@ -4113,14 +4115,28 @@ PR HEAD 门禁证据：
 - 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
 - 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。
 
-## 87. F1 生产多工具计划聚合与结果持久化（2026-11-23）
 
-- **实现分支：** `feature/f1-multi-tool-plan-intent-20261123`，从主线 `e072f7bcb8918eb6f38437f39808a5a0ce1245d2` 独立建立；本节记录为独立批次，尚未合并。
-- **有界意图协议：** `LocalAiIntentResolution` 增加严格 `plan` 动作，只接受 2–3 个不重复的工具 ID；模型输出不得携带参数、能力 ID 或额外字段。所有工具 ID 必须属于当前 Orchestrator 提供的有界候选集合。
-- **计划参数预检：** 新增 `AssistantToolExecutionPlanBuilder`，将模型返回的有序 ID 映射到 App 注册表；能力 ID 从注册表读取，不信任模型；参数只能由 `AssistantConversationOrchestrator.argumentsFor(tool, 原始用户文本)` 确定性提取，并对全部步骤执行 `validateAgainst`。任一步骤、注册能力或参数校验失败，整个计划不生成、不执行。
-- **生产接线：** E4B 只在原始请求明确要求 2–3 个相互独立的任务且不依赖前一步输出时建议有序计划；依赖、歧义、超过三项或待确认的单工具流程须澄清。Screen 将成功预检的完整 `ToolExecutionPlan(origin: aiDispatch, planId: traceId)` 一次性交给 `HeadlessToolDispatcher.executePlan`，不逐项重新授权；跨至少两个不同 capability 的 AI 计划通过 `ai_advanced` 一次性前置授权，同能力多步骤和用户手动操作按既有契约不收费。Page-only / 未注册 Executor（包括当前没有 Headless adapter 的 structured_diagnosis）在执行前拒绝。
-- **结果与持久化：** 新增 `HeadlessToolPlanResultHandler`，逐步验证结果身份、实际参数、状态和来源；完整成功、部分失败、后续步骤未执行、结果契约失败均分别呈现。部分或无效结果不会进行自动 AI 汇总。新增 `AssistantToolPlanStepMetadata`，为每步保存 toolId、capabilityId、标题、状态、参数快照和来源 ID；Trace 按步骤记录参数校验、业务执行、结果校验，并记录完整计划耗时。
-- **回归测试：** 新增计划构建、越界 ID、重复/超量步骤、Page-only 工具、参数缺失、完整结果/部分结果/无效结果隐藏、多步骤元数据 round-trip；原 #448 的拒绝时 executor side effects 为 0 测试继续保留。
-- **边界：** 模型没有生成参数，不允许将前一步结果注入下一步参数；仅允许从同一原始用户文本独立确定的工具调用。当前不承诺跨工具数据依赖、动态变量绑定或 >3 步工作流；这类请求必须澄清，不得自动执行。
-- **当前状态：PARTIAL / EXACT-HEAD CI PENDING。** 本节代码与许可清单已更新，须以本分支精确 HEAD 的 Fork license boundary、Flutter 全量回归/静态分析、Android arm64 workflow 为最终证据。真机多轮模型行为与 Find N2 设备验收仍为 LOCAL ONLY / UNKNOWN，不计云端 PASS。
+## 87. F1 生产多工具计划聚合与结果持久化（2026-11-24 已合并）
 
+- **最终状态：PASS / PR #454 已合并。** 实现从独立分支 `feature/f1-multi-tool-plan-intent-20261123` 完成开发，经 PR #454 集成；精确 HEAD `73ec01cf539b6472c8cbc9b03375b8a0f101ed65`，merge SHA `6cdd78a3d6bf0a2f39d8fa5feb1e9b8b6c42ef9a`。旧分支不再是未合并交付项。
+- **有界意图协议：** `LocalAiIntentResolution` 只接受 2–3 个不重复工具 ID；模型不得提交参数、能力 ID 或额外字段，所有工具 ID 必须来自本轮 Orchestrator 的候选集合。
+- **确定性预检：** `AssistantToolExecutionPlanBuilder` 将工具 ID 映射到 App 注册表；能力 ID 来自注册表；参数由 `AssistantConversationOrchestrator.argumentsFor(tool, 原始用户文本)` 确定性提取。全部步骤需完成注册、来源、参数与 `validateAgainst` 校验后才生成计划。
+- **统一授权和执行：** 完整的 `ToolExecutionPlan(origin: aiDispatch, planId: traceId)` 一次性交给 `HeadlessToolDispatcher.executePlan`；跨至少两个不同 capability 的 AI 计划在任何 Executor 副作用前统一申请 `ai_advanced` 授权。拒绝/暂时不可用/任一步骤预检失败均不得产生业务副作用。相同 capability 多步骤、手动多能力调用保持免费；Page-only 或无 Executor 工具在执行前拒绝。
+- **结果、TRACE 与持久化：** `HeadlessToolPlanResultHandler` 逐步校验结果身份、实际参数、状态和来源；完整成功、部分失败、未执行步骤和结果契约失败分别呈现。部分或无效结果不自动汇总。每步元数据保留 toolId、capabilityId、标题、状态、参数快照和来源 ID；TRACE 记录预检、执行、结果校验和计划耗时。
+- **自动验收：** PR #454 精确 HEAD 的 Flutter 全量回归、Dart/Flutter 静态分析、Android arm64 APK/Native JVM 和 Fork license boundary 均 SUCCESS；Branch validation 独立 job 为 SKIPPED，不单独计 PASS。
+- **能力边界：** 当前仅支持从同一原始用户文本独立确定参数的工具步骤；不支持前一步结果注入下一步、跨工具数据依赖、动态变量绑定或超过 3 步的工作流。遇到依赖或歧义必须澄清，不得自动执行。
+- Find N2 真机模型的多轮行为与真实 TRACE 仍为 LOCAL ONLY / UNKNOWN；云端实现 PASS 不等于设备运行 PASS。
+
+---
+
+## 88. 2026-11-24 云端收尾总账与剩余硬门槛
+
+- **当前集成主线：** PR #455 合并后 master 为 `1717b36ba0c2359a1526e22d23f75befacd80628`，其父提交为 #459 合并后的 `5e7083ba18952d86d0a573009e8cca25ab2bdcb2`。本次文档更新自身的 PR/CI 尚未发生；合并后的 master push workflow 必须以最终 HEAD 单独核验。
+- **云端业务/授权工程：** F0 Headless 拆分、F1 完整计划聚合及副作用前授权、G1 情境授权网关、G2 Key Ring/Release fail-closed 代码、G3 激活/Token 导入 UI 均已进入 master。PR #458 的 AtomicFile 备份恢复修复、PR #459 的临时数据库测试隔离也已合并。
+- **主线 #459 后的基线验收：** master `5e7083ba18952d86d0a573009e8cca25ab2bdcb2` 的 Flutter Quality Gate run `45341112787`、Flutter tests run `45341112826` 和 Fork license boundary run `45341112843` 均 SUCCESS；Flutter workflow 中的 Android arm64/JVM job `138268033239` SUCCESS。Branch validation 为 SKIPPED。
+- **G3 精确 HEAD 验收：** PR #455 head `c17b8bdbad104d3514f164496030e053fce91cf6` 的 Fork license run `45341358814` SUCCESS；Flutter tests run `45341358916` SUCCESS，包含 Flutter 全量回归 job `138265524800` 和 Android arm64/JVM job `138268369369`，两者均 SUCCESS；“无本地签名材料时 Release 构建必须失败”步骤 SUCCESS。Branch validation 为 SKIPPED。
+- **PR #416：** 保持 OPEN / DRAFT / UNTOUCHED；协议与发行端相关工作不作为本轮其他 PR 的合并条件。
+- **正式发布阻断：** 真实生产发行者公钥及来源核验、GitHub Actions Secret 实际值确认、正式发行私钥离线备份/恢复演练、原正式 Android 签名身份与正式 Release 产物尚未形成可核验交付证据。无正式信任锚不得签发或接受真实客户 Token，不得发布带测试信任锚的产品 Release。
+- **许可边界阻断：** 自动 Fork 许可边界和 REUSE 清单检查通过，仅证明文件分类/声明结构符合自动规则；新 Fork 文件的 `OWNERSHIP_EVIDENCE_REQUIRED` 权利证据仍需权属或充分再许可材料，不能将自动许可检查 PASS 等同于法律权属证明。
+- **设备验收后置：** Find N2 Android Keystore/StrongBox、AtomicFile 实机故障恢复、真实签名 APK 原位覆盖升级和用户数据保留、GPU/CPU 各 20 轮及多媒体/Activity/进程恢复、完整 TRACE 与 AI 数据清除均保持 LOCAL ONLY / MISSING / UNKNOWN；详见本地验收交接，不阻塞其他云端工作。
+- **CI 口径：** Fork license boundary、Flutter Quality Gate、Flutter regression、Android arm64/JVM 分别记录；任何 Branch validation 的 SKIPPED 都不是 PASS。任何未运行的设备场景继续标记 MISSING，不得用 CI、Widget 或 JVM 证据替代。
