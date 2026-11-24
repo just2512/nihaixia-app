@@ -46,7 +46,7 @@ AiContextRef _reference({
 
 void main() {
   group('ContextResolutionGateway', () {
-    test('denied entitlement prevents resolver execution', () async {
+    test('business entitlement state does not prevent source resolution', () async {
       final authorizer = _FakeAuthorizer(
         FeatureAuthorizationDecision.denied(
           featureId: ContextResolutionGateway.featureId,
@@ -67,14 +67,14 @@ void main() {
         referenceOf: (value) => value.ref,
       );
 
-      expect(result.status, ContextResolutionGatewayStatus.authorizationDenied);
-      expect(result.authorizationReason, FeatureAuthorizationFailureReason.unlicensed);
-      expect(authorizer.requested, [ContextResolutionGateway.featureId]);
-      expect(resolverCalls, 0);
-      expect(result.value, isNull);
+      expect(result.status, ContextResolutionGatewayStatus.resolved);
+      expect(result.isResolved, isTrue);
+      expect(authorizer.calls, 0);
+      expect(resolverCalls, 1);
+      expect(result.value, isNotNull);
     });
 
-    test('temporarily unavailable entitlement prevents resolver execution', () async {
+    test('temporary entitlement state does not prevent source resolution', () async {
       final authorizer = _FakeAuthorizer(
         FeatureAuthorizationDecision.temporarilyUnavailable(
           featureId: ContextResolutionGateway.featureId,
@@ -94,9 +94,9 @@ void main() {
         referenceOf: (value) => value.ref,
       );
 
-      expect(result.status, ContextResolutionGatewayStatus.authorizationUnavailable);
-      expect(result.authorizationReason, FeatureAuthorizationFailureReason.initializationTimeout);
-      expect(resolverCalls, 0);
+      expect(result.status, ContextResolutionGatewayStatus.unknown);
+      expect(result.reason, 'unknown');
+      expect(resolverCalls, 1);
     });
 
     test('authorized resolver returns only the exact requested anchor', () async {
@@ -123,7 +123,7 @@ void main() {
       expect(result.status, ContextResolutionGatewayStatus.resolved);
       expect(result.isResolved, isTrue);
       expect(identical(result.value!.ref, reference), isTrue);
-      expect(authorizer.calls, 1);
+      expect(authorizer.calls, 0);
       expect(resolverCalls, 1);
     });
 
@@ -175,7 +175,7 @@ void main() {
       expect(await run(AiContextResolutionStatus.unknown), ContextResolutionGatewayStatus.unknown);
       expect(await run(AiContextResolutionStatus.stale), ContextResolutionGatewayStatus.stale);
       expect(await run(AiContextResolutionStatus.denied), ContextResolutionGatewayStatus.sourceDenied);
-      expect(authorizer.calls, 4);
+      expect(authorizer.calls, 0);
     });
 
     test('malformed persisted metadata is rejected before entitlement lookup', () async {
@@ -206,7 +206,7 @@ void main() {
       expect(reference, isNull);
     });
 
-    test('history restore and each subsequent turn re-authorize the reference', () async {
+    test('history restore and subsequent turns validate the reference without licensing checks', () async {
       final authorizer = _FakeAuthorizer(
         FeatureAuthorizationDecision.allowed(
           featureId: ContextResolutionGateway.featureId,
@@ -220,23 +220,23 @@ void main() {
 
       expect(restore.status, ContextResolutionGatewayStatus.authorized);
       expect(nextTurn.status, ContextResolutionGatewayStatus.authorized);
-      expect(authorizer.calls, 2);
+      expect(authorizer.calls, 0);
       expect(authorizer.requested, [
         ContextResolutionGateway.featureId,
         ContextResolutionGateway.featureId,
       ]);
     });
 
-    test('provider exception fails closed', () async {
+    test('legacy authorizer exceptions do not affect source validation', () async {
       final result = await ContextResolutionGateway(
         authorizer: _ThrowingAuthorizer(),
       ).authorizeReference(_reference());
 
-      expect(result.status, ContextResolutionGatewayStatus.authorizationUnavailable);
-      expect(result.authorizationReason, FeatureAuthorizationFailureReason.providerError);
+      expect(result.status, ContextResolutionGatewayStatus.authorized);
+      expect(result.isAuthorized, isTrue);
     });
 
-    test('wrong feature id from provider fails closed', () async {
+    test('legacy feature IDs do not affect source validation', () async {
       final authorizer = _FakeAuthorizer(
         FeatureAuthorizationDecision.denied(
           featureId: 'ai_advanced',
