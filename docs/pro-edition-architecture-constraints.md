@@ -1,7 +1,7 @@
-# 研纪专业版架构约束（v1.2）
+# 研纪专业版架构约束（v1.3）
 
 > **状态：架构冻结稿；后续专业版授权实现必须遵守。**  
-> 冻结日期：2026-11-23  
+> 冻结日期：2026-11-24  
 > 适用仓库：`just2512/nihaixia-app`  
 > 当前文档分支基线：`master@8f5091c08f10743e7ef3322c86f50fc2e296fd78`  
 > 实施时必须重新读取当时的 `master` HEAD；本文记录的 2026-11-23 初始核验基线不替代后续实施分支基线。  
@@ -24,13 +24,13 @@
 
 本文覆盖：
 
-1. Feature 权益及收费边界；
-2. AI 工具执行来源、执行计划和单一门禁；
-3. F0 行为不变重构与 F1 授权接入；
-4. 情境上下文解析门禁；
+1. 单一 `ai_access` 权益与 Native LiteRT 模型访问总门禁；
+2. AI 调用与确定性业务执行的边界；
+3. Headless Dispatcher、完整执行计划及来源/结果校验；
+4. ContextResolutionGateway 的来源与锚点完整性；
 5. Key Ring、发行者密钥与协议兼容；
 6. Android Keystore、设备密钥和原子 Token 存储；
-7. EntitlementService、异步授权判断与降级；
+7. EntitlementService、异步 AI 权益判断与降级；
 8. Token 替换、发行者轮换及撤销影响；
 9. 批次依赖、自动化和设备验收。
 
@@ -56,10 +56,10 @@
 | `LicenseKeyRing` | 根据 `issuer_key_id` 提供受信任公钥和信任状态 | 不包含测试密钥于正式 Release 信任环 |
 | `LicenseTokenStore` | 读取、原子写入和删除单份当前 Token | 不独立决定用户是否拥有 Feature |
 | Android Keystore Plugin | 设备密钥生成、get-only 读取、签名和密钥可用性检查 | 不处理业务 Feature 权益 |
-| `EntitlementService` | 通过 Token 验证结果构造内存权益快照、发布状态变化 | 不持久化 `is_pro` 或上次授权结果 |
-| `FeatureAuthorizer` | 异步回答某个 Feature 是否允许当前操作 | 不使用全局静态单例门禁 |
-| `HeadlessToolDispatcher` | 唯一实际调用 Headless Executor 的执行入口 | 不依赖 `BuildContext` 或直接负责导航 |
-| `ContextResolutionGateway` | 唯一受保护的上下文解析入口，在调用 Resolver 前检查权益 | 不复制或替代现有 Resolver |
+| `EntitlementService` | 验证 Token 并发布单一 `aiAccess` 决策快照 | 不持久化 `is_pro`、上次决策或可脱离 Token 的授权状态 |
+| `AiModelAccessGate` | 在 Native LiteRT 模型加载和推理边界统一检查 `ai_access` | 不按业务页面、工具、模式或调用来源拆分收费权限 |
+| `HeadlessToolDispatcher` | 唯一实际调用 Headless Executor 的执行入口，校验完整计划和工具能力映射 | 不承担 AI 收费判断，不依赖 `BuildContext` 或直接负责导航 |
+| `ContextResolutionGateway` | 唯一受保护的上下文解析入口，校验来源引用、锚点和解析结果完整性 | 不承担付费 Feature 判断，不复制或替代现有 Resolver |
 | UI | 展示授权状态、解释拒绝原因、发起用户明确操作 | 不成为唯一授权安全边界 |
 
 ### 1.2 单一授权事实源
@@ -70,133 +70,94 @@
 - 内存可以缓存当前进程已经验证的不可变 `EntitlementSnapshot`；进程重启后必须重新验证。
 - 设置页面、会话记录、数据库字段或本地缓存都不能独立授予专业权益。
 
-## 2. Feature 清单与免费/专业版边界
 
-### 2.1 Feature 分层
+## 2. 唯一 AI 权益与协议 Feature
 
-必须区分以下集合：
+### 2.1 唯一运行时付费权益
 
-- `knownFeatureIds`：协议能够识别的 Feature ID；
-- `protocolAllowedFeatureIds`：指定协议修订允许出现的 Feature ID；
-- `enforcedFeatureIds`：当前 App 已实现并实际接入门禁的 Feature ID；
-- 签发端另有 `issuableFeaturesByRevision`，负责阻止发行端超范围签发。
+当前及后续版本的运行时收费权益只有：
 
-当前已知 Feature：
+| Feature ID | 含义 | 实施门禁 |
+|---|---|---|
+| `ai_access` | 允许使用全部 Native LiteRT 本地模型能力 | 仅 Native `AiModelAccessGate` |
 
-| Feature ID | 协议已知 | 首期允许签发 | 首期实施门禁 |
-|---|---:|---:|---:|
-| `ai_advanced` | 是 | 是 | 是 |
-| `contextual_assistant` | 是 | 是 | 是 |
-| `advanced_learning` | 是 | 否 | 否 |
-| `advanced_export` | 是 | 否 | 否 |
+以下 ID 是协议修订 1 的历史兼容值，不再作为独立运行时权益，也不得在业务入口分别判断：
 
-首期默认签发集合仅为：
+- `ai_advanced`
+- `contextual_assistant`
 
-```text
-ai_advanced
-contextual_assistant
-```
+`advanced_learning`、`advanced_export` 不属于当前 AI 访问权益，不因本次调整自动开放或收费；纯确定性学习、检索、排盘、辨证、换算和业务执行继续按其原有产品范围处理。
 
-学习模式、基础阅读、搜索、书签、用户数据备份/导出/恢复和既有确定性业务引擎不因本专业版授权设计而收费。
+### 2.2 单一权益判断
 
-### 2.2 客户端权益交集规则
-
-客户端最终授予集合：
+客户端运行时只推导一个结果：
 
 ```text
-GrantedFeatures =
-  ClaimedFeatures
-  ∩ KnownFeatureIds
-  ∩ ProtocolAllowedFeatureIds
-  ∩ EnforcedFeatureIds
+aiAccess =
+  Token 签名有效
+  AND issuer / protocolRevision / appId / productId / deviceBinding 有效
+  AND Token 对应协议修订声明了有效的 AI 权益
 ```
 
-处理规则：
+- 新协议修订 2 只使用 `ai_access`。
+- 修订 1 的历史 Token 按协议兼容表映射：只要签名有效的 Token 声明了 `ai_advanced` 或 `contextual_assistant` 中至少一个，即映射为单一 `ai_access`。这是明确的向前兼容/权益合并规则，不再保留原来的局部功能限制。
+- 未声明任何历史 AI Feature 的修订 1 Token 不授予 AI 访问。
+- 未知 Feature 继续只作诊断，不授予；不因一个额外未知 Feature 拒绝其他合法 Token。
+- 字段类型错误、Feature 列表损坏或重复 ID 仍拒绝 Token。
+- 发行端从协议修订 2 起只签发 `ai_access`，不再签发 `ai_advanced` 或 `contextual_assistant`。
 
-| Token 声明情况 | 客户端处理 |
-|---|---|
-| Feature ID 不在 `knownFeatureIds` | 忽略，不授予，记录诊断；不因此拒绝整份合法 Token |
-| ID 已知，但当前协议修订不允许签发 | 不授予，记录诊断；不因此拒绝整份合法 Token |
-| 协议允许，但当前 App 尚未实施门禁 | 不授予 |
-| 已知、协议允许且当前 App 已实施门禁 | 可以授予，前提是 Token 签名和设备绑定均有效 |
-| 字段类型错误、Feature 列表结构损坏或重复 ID | 拒绝 Token |
+### 2.3 免费与专业版边界
 
-发行端必须严格限制签发范围。客户端对未开放 Feature 不授予权益，但不应因发行端误带一个已知 Feature 而拒绝整份签名有效的授权，导致客户已购权益整体不可用。
+需要专业版授权的是**所有实际调用 Native LiteRT 模型进行推理的行为**，不区分入口、模式、调用来源、调用次数或工具数量：
 
-## 3. `ai_advanced`：跨工具自动编排权益
+- 普通对话、问诊理解、症状整理、问诊选项理解；
+- 学习解释、经典解读、情境提问和结果解释；
+- 工具意图识别、参数语义抽取、AI 自动计划生成；
+- 文本、图片、语音及后续新增的模型推理模态；
+- 用户手动触发但实际调用模型的任何操作。
 
-### 3.1 收费边界
+不需要 AI 权益的确定性操作继续免费，包括规则问诊/辨证、排盘、历法、剂量换算、纯本地查询、书签、阅读、确定性工具手动执行，以及不调用模型的本地数据管理操作。
 
-`ai_advanced` 只覆盖 **AI 自主编排两个或更多不同业务能力的跨工具计划**，不等同于所有 AI 自动工具调用。
+本产品 Token 是永久 AI 使用授权，不是按请求、Token 数或模型耗时计量的在线用量计费系统。
 
-以下行为免费：
 
-- 普通 AI 对话；
-- AI 自动调用一个 Headless Executor；
-- 同一业务能力的多步骤或重复调用；
-- 用户手动执行一个或多个工具；
-- `structured_diagnosis` 单独运行；
-- 既有确定性辨证引擎及其单工具 AI 引导；
-- 普通阅读、搜索、书签和基础学习。
+## 3. Native LiteRT 模型访问统一门禁
 
-以下行为需要 `ai_advanced`：
+### 3.1 唯一收费控制点
 
-- AI 自动计划包含两个或更多不同的业务 `capabilityId`；
-- `structured_diagnosis` 与其他业务能力组合形成跨工具计划；
-- AI 在多个不同业务能力之间自主安排顺序、传递结果或组合执行。
+`AiModelAccessGate` 是应用唯一的 AI 付费控制点，位于 Android Native LiteRT 模型访问边界。Dart UI、Dispatcher、Gateway、Orchestrator、具体工具或具体 AI 模式均不得另行实现收费规则。
 
-计数依据是不同业务能力 `capabilityId`，不是工具调用次数、步骤数或页面数量。同一能力重复调用仍属于单一能力。业务能力 ID 必须稳定、明确，不能通过临时字符串或 UI 页面名推断。
+Native 应用进程中的 AI 权益状态默认是关闭；只有 `EntitlementService` 完成 Token 验证并通过内部授权桥同步有效 `aiAccess` 决策后，Native Gate 才允许模型加载和推理。该状态只保存在当前进程内存，不持久化为 `is_pro` 或其他独立授权事实。
 
-### 3.2 完整执行计划先授权、后副作用
+### 3.2 必须受保护的模型访问
 
-跨工具计划必须在第一个 Executor 产生业务副作用之前形成完整的 `ToolExecutionPlan` 并完成权益判断。
+以下操作必须在 Native 边界经过同一个 Gate：
 
-建议模型：
+1. LiteRT Engine 初始化/模型加载；
+2. 普通文本推理；
+3. 图片和语音推理；
+4. 意图识别、参数理解、症状整理、问诊理解；
+5. 历史会话恢复中实际触发的模型推理；
+6. 后续新增的任何 `Engine`、`Conversation` 或 LiteRT 推理调用。
 
-```dart
-class ToolExecutionPlan {
-  final String planId;
-  final InvocationOrigin origin;
-  final List<ToolExecutionStep> steps;
-}
+当前 MethodChannel 的模型调用包括 `loadModel`、`sendMessage`、`sendImage`、`sendAudio`、`resolveAssistantIntent`、`extractBaziSlots`、`extractSymptoms`、`understandTcmInterviewAnswer` 和会执行推理的 `restoreConversation`。新增加的模型方法默认必须受 Gate 保护，不能依赖开发者自行记住某个 Feature ID。
 
-class ToolExecutionStep {
-  final String toolId;
-  final String capabilityId;
-  final Map<String, dynamic> arguments;
-}
-```
+以下不产生模型推理的维护操作不应被误锁：模型状态读取、模型文件导入、backend 偏好设置、Conversation/Engine 释放、运行时缓存清理。它们不得借此重新加载模型或发起推理。
 
-实际实现可复用现有类型，但语义必须满足：
+### 3.3 状态与失效处理
 
-1. 每个计划有稳定的 `planId`；
-2. 每个 Step 有工具 ID、业务能力 ID 和经过验证的参数；
-3. `InvocationOrigin` 必填；
-4. 所有 Headless Step 只能通过 Dispatcher 执行；
-5. 跨工具计划在开始前一次性完成 Feature 判断；
-6. 未授权时拒绝整个跨工具计划，不能先执行工具 A，再发现工具 B 需要专业版；
-7. 计划开始并通过授权后，不因授权状态随后变化而取消正在执行的计划；新的计划必须重新检查。
+- `checking`、无 Token、签名无效、设备不匹配、Key Ring 不可信、`temporarilyUnavailable` 均不得开放模型加载或推理。
+- Gate 在进程启动时默认关闭；必须先完成授权验证，再开放模型访问。
+- 授权从有效变为无效或暂不可用时，立即拒绝新的模型操作，并按 Native 串行生命周期安全释放 Engine/Conversation；不得遗留可继续接收新推理请求的已加载模型。
+- 已经开始的单次推理可按 Native 串行任务的安全收尾策略完成；状态变化之后发起的新请求必须被拒绝。不得重放状态未知的请求。
+- 授权错误必须以稳定、可识别的状态返回 Flutter；不能伪装成模型推理错误或空回复。
+- UI 可以读取同一权益状态以展示说明，但 UI 禁用按钮不是安全门禁；Native Gate 是最终执行边界。
 
-若现有模型/调度协议逐个动态发出工具请求，无法预先形成完整计划，则 F1 不能用“执行第二个工具时再检查”作为替代方案。必须先补齐计划边界和副作用前授权能力。
+### 3.4 与确定性业务执行的边界
 
-### 3.3 `InvocationOrigin` 必须显式
+模型调用完成后，App 仍按现有确定性业务函数执行排盘、辨证、剂量计算和工具操作。没有模型参与的手动确定性操作不需要 AI 权益。
 
-定义至少包含：
-
-```dart
-enum InvocationOrigin {
-  userManual,
-  aiDispatch,
-}
-```
-
-执行入口参数必须是 required，不允许默认值。禁止根据 `traceContext == null`、线程、页面或调用栈推断来源。
-
-- 用户从工具页主动操作：`userManual`。
-- 用户从其他页面主动发起业务工具操作：`userManual`。
-- AI 自动调度计划：`aiDispatch`。
-- AI 自动调度启动的后台延续任务：继承 `aiDispatch`，不能在恢复后改成手动来源。
-- 与 AI 工具调度无关的后台维护任务不应进入该工具执行路径。
+`ToolExecutionPlan`、必填 `InvocationOrigin`、工具 ID / capabilityId 注册映射、参数校验、结果身份/来源验证和 TRACE 继续保留。这些结构用于执行安全、审计和可追溯性，不再决定是否收费。
 
 ## 4. F0：行为不变的纯重构
 
@@ -260,171 +221,93 @@ F0 合并门槛：
 | Dispatcher 以外业务库 import Executor 实现库 | REJECT |
 | F0 混入授权判断 | REJECT |
 
-## 5. F1：Headless Tool 单一门禁
+
+## 5. F1：Headless Tool 单一执行分发与计划安全
 
 ### 5.1 唯一实际执行入口
 
-所有注册的 Headless Executor 必须只能通过 `HeadlessToolDispatcher` 实际调用。不能只按类名选择门禁位置，也不能把权限检查分散到各个 Executor。
+所有注册的 Headless Executor 必须只能通过 `HeadlessToolDispatcher` 实际调用。Dispatcher 负责工具注册、完整计划校验、参数/能力映射检查、结果回传与异常规范化；它不再调用 `FeatureAuthorizer`，也不按 `InvocationOrigin`、capability 数量或工具调用次数实施收费。
 
-Dispatcher 在以下步骤之后、业务副作用之前执行授权：
+完整计划仍须在第一个业务副作用前形成并完成全部确定性校验，防止部分执行、伪造工具参数或未注册能力绕过。
 
-```text
-收到完整执行计划
-  → 工具与参数校验
-  → 检查 InvocationOrigin
-  → 计算不同 capabilityId 数量
-  → 若为跨工具 aiDispatch，异步检查 ai_advanced
-  → 允许后执行计划
-```
+### 5.2 执行计划与来源
 
-手动工具页调用不受 `ai_advanced` 门禁影响。
+`ToolExecutionPlan` 保留：
 
-### 5.2 结构化拒绝
+- 稳定 `planId`；
+- 必填 `InvocationOrigin`；
+- 每个 Step 的工具 ID、业务 `capabilityId` 和经过验证的参数；
+- 不可变步骤和参数快照；
+- 对全部 Step 的注册、来源、参数与业务前置条件预检。
 
-不能静默失败、抛出未处理异常或伪装成 Executor 业务失败。建议返回结构化结果，至少包含：
+`InvocationOrigin` 继续用于调用来源、审计、TRACE 和执行语义，不用于收费：
+- 用户手动触发确定性操作：`userManual`；
+- AI 产生的计划：`aiDispatch`；
+- AI 启动的后台延续任务继承 `aiDispatch`。
 
-- `featureId`；
-- `planId`；
-- 关联的工具或能力标识；
-- `manualToolRoute`（如果存在）；
-- 可展示的拒绝原因。
+AI 计划生成时已经调用 Native LiteRT，必须在模型入口通过 `ai_access`；计划一旦形成，Dispatcher 只执行安全校验，不重复收费判断。
 
-AI 应向用户说明该跨工具操作需要专业版，并提供：
+### 5.3 结构化拒绝
 
-1. 前往专业版授权设置；
-2. 打开对应工具页手动执行。
+无效计划、未知工具、能力映射不匹配、参数无效、结果来源错误或执行异常，继续返回结构化拒绝/失败结果。不得将这些业务错误伪装成“未购买专业版”。
 
-基础对话必须继续可用，不因一次工具被拒绝而破坏会话。
+### 5.4 其他调用路径审计
 
-### 5.3 其他调用路径审计
+继续审计所有 Headless Executor、Page-only 工具、`structured_diagnosis` 内联执行、深链接、Activity 生命周期、后台任务和直接业务 Executor 调用。架构测试继续保证 Executor 只能经 Dispatcher 访问。收费判断不再出现在这些业务入口。
 
-F1 必须审计：
 
-- 所有注册 Headless Executor；
-- Page-only 工具（不得误标成 Headless）；
-- `structured_diagnosis` 内联执行；
-- 深链接和跨页面工具入口；
-- MainActivity 生命周期相关任务；
-- 后台任务创建、延续、恢复和取消路径；
-- 任何其他直接调用业务 Executor 的路径。
+## 6. 情境上下文：来源与锚点完整性，不承担收费
 
-行为测试必须证明：单一自动能力免费；相同 capability 重复步骤免费；跨不同能力的自动计划受门禁；手动多工具操作免费；拒绝跨工具计划时没有任何 Step 先产生业务副作用。
+### 6.1 保留 Gateway，不重复实现 Resolver
 
-## 6. 情境提问：Resolver 调用边界门禁
+继续复用既有 `AiContextRef` 和 `AiContextResolver`。所有业务代码仍必须经 `ContextResolutionGateway` 调用 Resolver。Gateway 负责：
+- typed/persisted 引用结构和来源类型白名单；
+- 请求锚点与当前页面/结果锚点匹配；
+- stale、malformed、unsupported source 检查；
+- Resolver 返回值与请求来源锚点一致性验证；
+- Resolver 异常与来源缺失的独立分类。
 
-### 6.1 不改造既有 Resolver
+Gateway 不再注入 `FeatureAuthorizer`，不再检查 `contextual_assistant`，也不负责判断用户是否购买专业版。
 
-继续复用既有 `AiContextRef` 和 `AiContextResolver`，不重复建设 ContextRef、Resolver、会话表或聊天体系。
+### 6.2 新建、恢复与后续轮次
 
-新增受保护的 `ContextResolutionGateway`。所有业务代码必须经过 Gateway 才能调用 Resolver。Resolver 自身保持纯解析职责，不内置授权 UI 或 Feature 判断。
+新会话、恢复历史会话和后续轮次需要重新解析上下文时，仍统一通过 Gateway，防止跨页面、跨结果或过期快照污染模型上下文。Gateway 完成数据完整性验证后，是否允许模型使用由 Native `AiModelAccessGate` 在实际模型加载/推理处统一决定。
 
-### 6.2 新会话和后续轮次统一
+无 AI 权益时可以保留本地阅读、历史查看和确定性结果查看；任何模型推理仍会在 Native Gate 被拒绝。不能用 UI 入口、旧会话或直接 Resolver 调用绕过 Native 模型门禁。
 
-`ContextualAskCoordinator` 负责情境业务入口和会话组织，但不能只在首次入口检查。
 
-所有实际调用 Resolver 的位置——新建会话、恢复旧会话、后续每轮需要重新解析上下文——都必须通过 Gateway：
+## 7. EntitlementService 与单一 AI 权益判断
 
-```text
-准备解析 AiContextRef
-  → FeatureAuthorizer.authorize(contextual_assistant)
-  → allowed：调用 AiContextResolver
-  → denied / temporarilyUnavailable：不调用 Resolver
-```
+### 7.1 单一授权接口
 
-约束：
-
-- 轻量引用结构白名单检查可以在授权前执行，但不得提前读取受保护的真实上下文内容。
-- 未授权的新情境提问不得调用 Resolver，也不得创建空会话。
-- 未授权的旧情境会话后续轮次不得重新调用 Resolver，不得获取或注入新上下文。
-- 免费用户继续旧会话时可以阅读历史并进行普通文字对话，但必须跳过上下文重新解析和新上下文注入。
-- 重新激活后，下一次情境解析可以恢复。
-- Resolver 解析失败与授权拒绝必须分别报告，不能混为一类错误。
-- Gateway 是唯一 Resolver 调用边界；架构测试必须约束其他业务库不得直接 import Resolver 实现库。
-
-最低回归场景：
-
-| 场景 | 预期 |
-|---|---|
-| 未授权新建情境会话 | 不调用 Resolver、不创建空会话 |
-| 未授权继续已有情境会话 | 不调用 Resolver |
-| 授权失效后继续旧会话 | 历史可读、普通对话可用 |
-| 授权失效后继续旧会话 | 不注入新上下文 |
-| 重新激活后继续旧会话 | 下一次解析恢复 |
-| Resolver 自身失败 | 返回解析错误，不误报未授权 |
-
-## 7. FeatureAuthorizer 与 EntitlementService
-
-### 7.1 异步授权接口
-
-授权状态包含真实的 `checking` 阶段，故授权接口必须异步：
+不再提供面向多个业务 Feature 的通用收费查询。运行时只需要一个语义明确的异步判断：
 
 ```dart
-abstract interface class FeatureAuthorizer {
-  Future<AuthorizationDecision> authorize(String featureId);
+abstract interface class AiModelAccessAuthorizer {
+  Future<AiModelAccessDecision> authorizeModelAccess();
 }
 ```
 
-生产实现采用共享初始化 Future。若状态为 checking，调用方有界等待；建议统一等待上限为 2 秒：
-
-- 2 秒内初始化完成：按最新状态判断；
-- 超时：返回 `temporarilyUnavailable`，原因记录为 `initializationTimeout`；
-- 超时不得将真实状态改为 `unlicensed`；
-- 超时结果不持久化、不作为永久拒绝缓存；
-- 后续请求可重新读取最新内存状态。
-
-禁止使用磁盘上的上次 `is_pro` 或上次权益集合消除启动等待窗口。
-
-### 7.2 决策结果与失败原因分层
-
-决策结果：
-
+决策状态仍区分：
 - `allowed`
 - `denied`
 - `temporarilyUnavailable`
 
-失败原因至少覆盖：
+生产实现继续使用共享初始化 Future 和有界等待（当前上限 2 秒）。超时返回 `temporarilyUnavailable`，不得伪装为永久未授权，不持久化临时拒绝。
 
-- `initializationTimeout`
-- `storeCorrupt`
-- `storageUnavailable`
-- `issuerUnknown`
-- `signatureInvalid`
-- `unsupportedRevision`
-- `unsupportedFeatureClaim`（仅作诊断时使用，不因此拒绝整份合法 Token）
-- `deviceMismatch`
-- `keyMissing`
-- `keyInvalidated`
-- `keystoreUnavailable`
-- `providerError`
+### 7.2 单一快照
 
-`temporarilyUnavailable` 是决策层结果；`keystoreUnavailable` 是失败原因，不能将二者作为同一层枚举混合。
+`EntitlementService` 验证签名 Token、发行者 Key Ring、协议修订、产品/App ID、设备绑定和旧协议兼容映射，发布不可变快照。快照核心权限只保留 `aiAccess` 布尔决策及授权验证状态/失败原因；历史 Feature ID 可作为协议兼容诊断信息，但不得作为多个业务门禁。
 
-### 7.3 状态快照与免费降级
+不保存 `is_pro`、`last_is_pro` 或可脱离 Token 独立授予权益的持久化状态。
 
-`EntitlementService` 必须可监听，使用 `ChangeNotifier`、`ValueListenable` 或等价机制发布不可变快照。快照至少包含：
+### 7.3 免费降级与生命周期
 
-- 当前授权验证状态；
-- 当前可授予 Feature 集合；
-- 最近检查完成时间（仅诊断，不作为时间有效性依据）；
-- 失败原因。
+授权初始化不得阻塞 `runApp()`。启动时 Native AI Gate 默认关闭，基础确定性功能继续启动。激活或 Token 替换成功后更新内存快照并同步 Native Gate，无需重启。授权失效时关闭新模型访问并安全释放 Native 资源。
 
-建议的服务状态：
+### 7.4 依赖注入与信任边界
 
-- `checking`
-- `active`
-- `unlicensed`
-- `temporarilyUnavailable`
-- `invalid`（具体原因放 failureReason）
-
-授权初始化不得阻塞 `runApp()`。服务内部捕获异常；超时或失败不阻止免费功能启动。专业功能在授权状态未确认时暂不开放，基础功能继续可用。
-
-### 7.4 注入，不使用全局静态门禁
-
-`HeadlessToolDispatcher` 和 `ContextResolutionGateway` 必须注入 `FeatureAuthorizer`。测试使用 Fake，不依赖全局静态 `FeatureGate.require`。
-
-激活成功后更新内存快照并通知 UI，无需重启。授权变化不取消已经开始的普通会话或已开始的执行计划；新的专业操作重新检查。
-
-历史助手会话和情境历史不得因授权失效而删除、隐藏或重置。
+`EntitlementService` 只负责验证凭证与计算 `aiAccess`；内部授权桥将结果同步给唯一 Native Gate。不得让 Screen、Dispatcher、Gateway 各自重复读取 Token 或自行推断权益。测试使用 Fake `AiModelAccessAuthorizer`，Native Gate 默认拒绝。
 
 ## 8. Android Keystore 与平台接口
 
@@ -762,43 +645,32 @@ Release CI 必须同时包含：
 
 仅做字符串扫描不足以验收；仅做行为测试也不能替代对构建产物的检查。
 
+
 ## 12. 状态、错误和用户体验
 
 ### 12.1 关键状态
 
-建议统一服务状态：
+保留授权验证状态：
 
-| 状态 | 说明 | 专业能力 |
+| 状态 | 说明 | Native LiteRT 模型访问 |
 |---|---|---|
-| `checking` | 初始化或重新检查中 | 暂不允许，按有界等待规则处理 |
-| `active` | Token、发行者、修订和设备绑定均通过 | 按 GrantedFeatures 允许 |
-| `unlicensed` | 没有 Token | 拒绝专业能力 |
-| `temporarilyUnavailable` | 检查超时或暂时无法确认 | 暂不允许专业操作，基础功能可用 |
-| `invalid` | 凭证或设备验证失败 | 拒绝专业能力，按原因展示处理建议 |
+| `checking` | 初始化或重新检查中 | 禁止 |
+| `active` 且 `aiAccess=true` | Token、发行者、修订和设备绑定通过 | 允许 |
+| `unlicensed` | 没有 Token 或没有 AI 权益 | 禁止 |
+| `temporarilyUnavailable` | 检查超时或暂时无法确认 | 禁止 |
+| `invalid` | 凭证或设备验证失败 | 禁止 |
 
-失败原因至少区分：
+保留具体失败原因：`storeCorrupt`、`storageUnavailable`、`issuerUnknown`、`signatureInvalid`、`unsupportedRevision`、`deviceMismatch`、`keyMissing`、`keyInvalidated`、`keystoreUnavailable`、`providerError` 等。不能将所有失败混为“未激活”。
 
-- `storeCorrupt`
-- `storageUnavailable`
-- `issuerUnknown`
-- `signatureInvalid`
-- `unsupportedRevision`
-- `deviceMismatch`
-- `keyMissing`
-- `keyInvalidated`
-- `keystoreUnavailable`
-- `providerError`
+### 12.2 UI 与历史数据
 
-不能把所有失败合并成“未激活”。尤其不能把 Keystore 暂时不可用误判为永久未授权。
+- 设置页是激活和状态展示入口，不是收费安全边界。
+- 无有效 `ai_access` 时，所有会触发 Native LiteRT 模型推理的操作统一提示需要专业版。
+- 无授权不影响确定性业务引擎、阅读、查询、书签和既有本地数据。
+- 授权失效不得删除或隐藏助手会话、情境历史、消息或业务结果；历史可以阅读，但不能继续触发模型推理。
+- 不得因 AI 门禁失败而伪造空回复、业务失败结果或删除会话。
+- 已开始的确定性执行计划不因授权刷新而回滚；新发起的模型推理必须重新检查 Native Gate。
 
-### 12.2 UI 和历史数据
-
-- 设置页是激活和状态展示入口，不是门禁唯一位置。
-- 专业操作被拒绝时，提供可理解的原因和可行替代路径。
-- 授权失效不得删除或隐藏助手会话、情境历史、消息或业务结果。
-- 免费状态下普通对话继续可用。
-- 未授权情境会话不再注入新上下文，但既有历史可以阅读。
-- 进行中的普通会话和已获准启动的执行计划不因授权状态变化被强制销毁。
 
 ## 13. 实施批次与依赖关系
 
@@ -806,24 +678,23 @@ Release CI 必须同时包含：
 
 | 批次 | 范围 | 前置条件 | 合并原则 |
 |---|---|---|---|
-| A | 冻结协议字段、Feature、Origin、执行计划、Key Ring、Token 存储、状态和平台 API | 无 | 先冻结接口 |
-| B | Verifier、Issuer、Fixture、协议修订、Release Key Ring 测试 | A | 独立验签与签发测试通过 |
-| C | Android Keystore Plugin、get-only/create 分离、原子 Token 文件 | A | 原生单测和平台接口测试通过 |
-| D | TokenStore、异步 EntitlementService、FeatureAuthorizer | A；可先用 Fake Bridge | 独立服务测试通过 |
-| F0 | 特征测试、执行逻辑纯重构、Dispatcher 和 import 图约束，不含授权 | 当前执行链审计 | 行为不变后独立合并 |
-| F1 | 完整 ToolExecutionPlan、跨工具门禁、结构化拒绝结果 | A、D 接口、F0 | 先授权再副作用 |
-| G | ContextResolutionGateway，新会话和后续轮次共同门禁 | A、D 接口 | 所有 Resolver 调用路径通过 |
-| E | 专业版设置页、激活导入、状态展示 | D 的状态接口 | UI 只消费服务状态 |
-| H | 集成、全量回归、Release 和设备验收 | B、C、D、E、F1、G | 全部硬门槛满足 |
+| A | 冻结协议修订 2、唯一 `ai_access`、旧 Token 映射、Native Gate 状态同步接口 | 无 | 先冻结接口 |
+| B | Verifier、Issuer、Fixture、协议修订 1/2 兼容与 Release Key Ring 测试 | A | 合法/非法向量通过 |
+| C | Android Keystore Plugin、get-only/create 分离、原子 Token 文件 | A | 原生单测和平台接口通过 |
+| D | TokenStore、异步 EntitlementService、单一 AI 权益快照 | A；可先用 Fake Bridge | 独立服务测试通过 |
+| F0 | 特征测试、Headless 纯执行分发和 import 图约束，不含收费逻辑 | 当前执行链审计 | 行为不变后独立合并 |
+| F1 | 完整 ToolExecutionPlan、确定性执行和结果/来源校验 | F0 | 不承担收费判断 |
+| G | ContextResolutionGateway 来源/锚点完整性 | 现有 Resolver | 所有 Resolver 路径通过 |
+| E | 专业版设置页、激活导入、单一 AI 状态展示 | D | UI 只消费服务状态 |
+| I | Native LiteRT 统一访问门禁、所有模型方法覆盖、Gate 状态同步和释放 | B、C、D | Native 默认关闭，逐入口覆盖 |
+| H | 集成、全量回归、Release 和设备验收 | B、C、D、E、F1、G、I | 全部硬门槛满足 |
 
 依赖约束：
-
 - C、D、F0 可并行；
 - D 可先用 Fake Bridge，不必等待真实 Android 插件；
-- F1、G 可先用 Fake FeatureAuthorizer 完成业务测试；
-- F1、G 不需要等待 E 的 UI；
-- F1 必须先确认调度层能形成完整跨工具计划；
-- 后续任务必须先读取最新 master、本文和相关子系统约束，不沿用过期 SHA、PR 状态或旧 CI 结果。
+- F1/G 不再依赖任何 Feature 收费门禁；
+- Native Gate 必须先于所有模型加载/推理，不能只依赖 UI 状态；
+- 后续任务必须先读取最新 master、本文和相关子系统约束。
 
 ## 14. 验收门槛
 
@@ -853,27 +724,26 @@ Release CI 必须同时包含：
 - 授权 Token 位于 `noBackupFilesDir`；
 - Find N2 上记录清除应用数据、卸载重装、Token/KeyStore 两种不一致组合的真实表现。
 
-### 14.3 工具门禁
 
-- 免费基础 AI 对话可用；
-- 单一 Headless 能力自动调用免费；
-- 同一 capability 的多步骤执行免费；
-- `structured_diagnosis` 单独执行免费；
-- 手动单工具和手动多工具执行免费；
-- 两个不同 capability 组成自动计划时受 `ai_advanced` 控制；
-- 未授权时跨工具计划在第一个业务副作用之前整体拒绝；
-- 后台延续任务不能改变原始 InvocationOrigin；
-- 所有实际 Executor 调用只能经 Dispatcher；
-- Page-only 工具不被误标为 Headless。
+### 14.3 Native AI 模型访问门禁
 
-### 14.4 情境上下文门禁
+- 无 Token、无 AI 权益、checking、temporarilyUnavailable、签名/设备/Key Ring 错误时，Native LiteRT Engine 不得加载，任何推理方法不得执行；
+- 有效 `ai_access` 时允许全部 Native LiteRT 模型推理，不按文本/图片/语音、AI 模式、单工具/多工具、手动/自动调用区分；
+- 当前所有 Native 推理方法均通过同一个 `AiModelAccessGate`；
+- 新增 Native 推理方法默认被门禁拒绝，必须纳入 Gate 和测试；
+- 模型状态、模型导入、backend 偏好、Engine 释放和运行时缓存清理不因未授权而被阻断，但不能绕过 Gate 加载或使用模型；
+- 授权失效后拒绝新的推理请求并安全释放模型资源；
+- Headless Dispatcher 只负责执行安全校验，手动确定性工具不收费；
+- UI 按钮状态不作为授权通过证据，Native Gate 测试才是收费边界验收。
+
+
+### 14.4 情境上下文来源完整性
 
 - 所有 Resolver 调用只能经 Gateway；
-- 新建情境会话受 `contextual_assistant` 控制；
-- 已有情境会话每一轮需要重新解析上下文时也受同一门禁；
-- 授权失效后旧会话仍可读、可普通对话，但不得重新解析或注入新上下文；
-- 未授权情境入口不创建空会话；
-- Resolver 错误与授权错误分别报告。
+- Gateway 校验引用结构、来源类型、请求锚点、历史快照和解析结果锚点；
+- Gateway 不再检查 `contextual_assistant` 或任何付费 Feature；
+- 新会话、历史恢复和后续轮次均须验证上下文完整性；
+- 所有模型推理仍统一由 Native Gate 决定是否允许。
 
 ### 14.5 Release 和升级
 
@@ -884,23 +754,22 @@ Release CI 必须同时包含：
 - 用户数据库、知识库和助手历史不受授权模块升级破坏；
 - 授权初始化失败不阻止 App 进入免费功能。
 
-## 15. 当前必须保留为 UNKNOWN 的核验事项
 
-以下问题必须由实际源码、自动化或设备证据解决；本文不把它们预设成 PASS：
+## 15. 当前必须保留为 UNKNOWN 的核验事项
 
 | 事项 | 需要的证据 |
 |---|---|
-| 后台延续任务是否使用独立 Isolate / FlutterEngine | 源码调用链、Engine 创建与任务恢复路径 |
-| 每个独立 Engine 是否注册 LicensePlugin | 注册代码与实际 Engine 测试 |
-| 当前 Screen 执行逻辑能否无行为变化抽取 | F0 前后特征测试 |
-| 当前调度器是否能提前形成完整跨工具计划 | 真实调度协议和副作用前测试 |
-| 除已盘点 Headless Executor 外是否存在其他业务执行路径 | 全部调用点、深链接、生命周期和后台入口审计 |
-| Find N2 清除应用数据/卸载后 Keystore alias 行为 | 真实设备步骤与记录 |
-| StrongBox/TEE 回退及各厂商 Provider 错误 | 目标设备和错误路径测试 |
+| 所有 Native LiteRT Engine/Conversation 创建和推理调用是否都经过统一 Gate | 全部源码调用点、Analyzer/AST 审计和 Native 方法覆盖测试 |
+| Flutter/Dart 是否存在绕过 `LocalAiService` 直接调用 Native AI Channel 的路径 | 全仓 import/channel 搜索及 AST 架构测试 |
+| 授权检查结果能否在启动、激活、替换、刷新、失效时正确同步 Native | Dart/Native 集成测试及状态转换回归 |
+| 授权失效时已加载 Engine/Conversation 的安全释放和并发处理 | 串行队列测试、Activity recreation 和进程恢复证据 |
+| 修订 1 旧 Token 的历史兼容映射 | 固定协议向量、Issuer/Verifier 双向测试 |
+| 后台独立 Isolate / FlutterEngine 是否需要单独 AI Gate 同步 | 源码调用链、Engine 创建与任务恢复路径 |
+| Find N2 Keystore / StrongBox / AtomicFile 与 Gate 状态同步行为 | 真实设备步骤、日志和 TRACE |
 | 生产发行者公钥与真实备用 Key 是否已配置 | Key Ring 内容及发行/备份记录 |
 | Release 是否具备非空生产 Key Ring | Release 工厂测试与产物检查 |
 
-没有证据时保持 `UNKNOWN` 或 `MISSING`。不得将模拟器、Fake Bridge 或设计说明当作 Find N2 真机证据。
+没有证据时保持 `UNKNOWN` 或 `MISSING`。不得把 Fake Bridge、Widget 测试、模拟器或设计说明当作 Find N2 真机证据。
 
 ## 16. 风险、优势与回滚
 
@@ -919,14 +788,14 @@ Release CI 必须同时包含：
 ## 17. 后续执行纪律
 
 1. 每个批次先核对最新 `master`、本文件、相关协议和实际代码调用链。
-2. F0 必须先行为测试、后纯重构、再单独合并；不在 F0 中实现授权。
-3. C、D、F0 可以独立分支并行；F1/G 使用稳定接口和 Fake 先行。
+2. F0 必须先行为测试、后纯重构、再单独合并；不在 F0 中实现收费逻辑。
+3. C、D、F0 可以独立分支并行；F1/G 只实现执行安全和来源完整性；Native Gate 使用 Fake 先行。
 4. 不能因一个 PR 的 CI 通过，就推定 Find N2、后台 Engine、Keystore 或 Release 信任环验收通过。
 5. 不得删除失败测试、降低验收阈值、把 UNKNOWN 改成 PASS 或用模拟数据代替设备实测。
-6. 修改本文已冻结的协议字段、收费边界、门禁位置、存储方案或发行者信任策略，必须先提交单独的设计变更说明，列出兼容影响、风险、替代方案和迁移/回滚方案，并取得明确决策。
+6. 收费边界固定为单一 `ai_access`，门禁只位于 Native LiteRT 模型访问处。若要修改协议字段、旧 Token 兼容映射、门禁位置、存储方案或发行者信任策略，必须先提交设计变更说明，列出兼容影响、风险和回滚方案。
 7. 每个实现 PR 必须引用本文对应章节，记录分支基线 SHA、head SHA、文件范围、测试、CI 和未闭环项目。
 8. 本文件冻结的是设计约束，不是完成声明；只有实现证据满足第 14 节后，才可将对应任务标记为 PASS。
 
 ---
 
-**本文件是研纪专业版授权后续工程实施的架构约束依据。未按本文完成设计变更评审，不得自行改变本文冻结的方案。**
+**v1.3 取代 v1.2 中多 Feature 业务收费门禁的设计；v1.2 仍作为历史决策记录。本文是研纪专业版授权后续工程实施的架构约束依据。**
