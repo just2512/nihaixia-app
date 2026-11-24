@@ -219,8 +219,7 @@ void main() {
     expect(HeadlessToolDispatcher.hasExecutor(tool.id), isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final execution = await HeadlessToolDispatcher(
-          ).executePlan(
+    final execution = await const HeadlessToolDispatcher().executePlan(
       plan: ToolExecutionPlan(
         planId: 'router-yunqi-smoke',
         origin: InvocationOrigin.userManual,
@@ -248,8 +247,7 @@ void main() {
     expect(tool.parameters.single.isRequired, isTrue);
 
     const arguments = {'date': '2026-11-12'};
-    final execution = await HeadlessToolDispatcher(
-          ).executePlan(
+    final execution = await const HeadlessToolDispatcher().executePlan(
       plan: ToolExecutionPlan(
         planId: 'router-almanac-smoke',
         origin: InvocationOrigin.userManual,
