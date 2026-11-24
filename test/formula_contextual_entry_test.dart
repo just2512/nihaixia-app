@@ -16,8 +16,6 @@ import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
-import 'support/allow_context_authorizer.dart';
-
 var _databaseSequence = 0;
 
 void main() {
@@ -78,7 +76,7 @@ void main() {
       tester.view.displayFeatures = const <DisplayFeature>[];
 
       await tester.pumpWidget(
-        TestAuthorizedFeatureScope(child: ContextualAiConversationStoreScope(
+        ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             theme: ThemeData(
@@ -88,7 +86,7 @@ void main() {
             ),
             home: FormulaDetailScreen(formula: formula),
           ),
-        )),
+        ),
       );
       await tester.pump(const Duration(milliseconds: 300));
 
