@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,26 @@ def production_files(extra_scan_paths: list[Path]) -> list[Path]:
             fail(f"required scan artifact is missing: {path}")
         files.append(path)
     return files
+
+
+def scan_payloads(path: Path):
+    """Scan raw file bytes and each uncompressed ZIP entry (e.g. APK contents)."""
+    try:
+        display_path = str(path.relative_to(ROOT))
+    except ValueError:
+        display_path = str(path)
+
+    try:
+        raw = path.read_bytes()
+        yield display_path, raw
+        if zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as archive:
+                for entry in archive.infolist():
+                    if entry.is_dir():
+                        continue
+                    yield f"{display_path}!/{entry.filename}", archive.read(entry)
+    except (OSError, zipfile.BadZipFile, RuntimeError) as error:
+        fail(f"cannot scan {display_path}: {error}")
 
 
 def main() -> None:
@@ -126,19 +147,16 @@ def main() -> None:
         test_public_key.hex(),
     }
     for path in production_files(args.scan_path):
-        try:
-            content = path.read_bytes()
-        except OSError as error:
-            fail(f"cannot scan {path.relative_to(ROOT)}: {error}")
-        lowered = content.lower()
-        if test_public_key in content:
-            fail(f"raw test issuer public key found in {path.relative_to(ROOT)}")
-        if b"test-issuer-01" in lowered:
-            fail(f"test issuer ID found in {path.relative_to(ROOT)}")
-        for encoded in encoded_forms:
-            candidates = (encoded.encode(), encoded.lower().encode())
-            if any(candidate in content or candidate in lowered for candidate in candidates):
-                fail(f"encoded test issuer public key found in {path.relative_to(ROOT)}")
+        for display_path, content in scan_payloads(path):
+            lowered = content.lower()
+            if test_public_key in content:
+                fail(f"raw test issuer public key found in {display_path}")
+            if b"test-issuer-01" in lowered:
+                fail(f"test issuer ID found in {display_path}")
+            for encoded in encoded_forms:
+                candidates = (encoded.encode(), encoded.lower().encode())
+                if any(candidate in content or candidate in lowered for candidate in candidates):
+                    fail(f"encoded test issuer public key found in {display_path}")
 
     print(
         "RELEASE TRUST GATE: PASS — "
