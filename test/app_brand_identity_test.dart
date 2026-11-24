@@ -45,6 +45,10 @@ void main() {
       final navigationTest = _read('test/home_screen_entry_test.dart');
 
       expect(aboutAndExport, contains("const Text('研纪'"));
+      expect(
+        aboutAndExport,
+        contains("'• 六经规则问诊与证候信息整理\\\\n'"),
+      );
       expect(aboutAndExport, contains('【研纪·收藏导出】'));
       expect(aboutAndExport, contains('—— 来自「研纪」App'));
       expect(localAssistant, contains('【研纪辨证结果】'));
