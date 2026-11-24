@@ -1144,3 +1144,14 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork modification adds the production Yanji AppColors ThemeExtension to existing upstream Lingqian widget smoke tests; original upstream test remains Apache-2.0 and Fork-authored modifications require ownership evidence.
+
+Files:
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/AiModelAccessGate.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/AiModelAccessGateTest.kt
+ lib/licensing/ai_model_access_platform.dart
+ test/ai_model_access_platform_test.dart
+ test/native_ai_access_gate_architecture_test.dart
+ test/support/fake_ai_model_access_platform.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored v1.3 unified Native LiteRT ai_access gate, Dart synchronization bridge and focused JVM/Flutter tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
