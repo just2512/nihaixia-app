@@ -5,6 +5,7 @@ import 'support/allow_context_authorizer.dart';
 
 import 'package:nihaisha_app/data/dream_data.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/screens/dream_screen.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
@@ -15,6 +16,12 @@ import 'package:nihaisha_app/services/dream_tool_executor.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
 
 import 'support/in_memory_assistant_conversation_store.dart';
+
+ThemeData _yanjiTestTheme() => ThemeData(
+  useMaterial3: true,
+  colorScheme: AppColors.colorSchemeFor(Brightness.light),
+  extensions: <ThemeExtension<dynamic>>[AppColors.light],
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -185,7 +192,7 @@ void main() {
           TestAuthorizedFeatureScope(
             child: ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
-        child: const MaterialApp(home: DreamScreen()),
+        child: MaterialApp(theme: _yanjiTestTheme(), home: const DreamScreen()),
       )
           ),
         );
@@ -254,6 +261,7 @@ void main() {
             child: ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
+            theme: _yanjiTestTheme(),
             home: DreamScreen(key: ValueKey('dream-${viewport.width}')),
           ),
         )
