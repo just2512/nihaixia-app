@@ -660,33 +660,27 @@ class AiContextResolver {
       );
     }
 
-    final parentRef = buildZiWuLiuZhuResultContextRef(
-      structuredSnapshot: structuredSnapshot,
-    );
-    final parentResolution = resolveZiWuLiuZhuToolResult(
-      ref: parentRef,
-      structuredSnapshot: structuredSnapshot,
-    );
-    final resolvedParent = parentResolution.value;
-    if (!parentResolution.isResolved || resolvedParent == null) {
-      throw ArgumentError(
-        'The ZiWuLiuZhu parent result cannot be verified for a method field.',
-      );
-    }
-
-    final result = resolvedParent.structuredSnapshot['result'];
+    // This factory is intentionally a lightweight anchor builder. The
+    // complete snapshot integrity check belongs to
+    // resolveZiWuLiuZhuResultField(), which the caller must invoke through
+    // ContextResolutionGateway after entitlement authorization.
+    final result = structuredSnapshot['result'];
     final methods = result is Map ? result['methods'] : null;
     final methodValue = methods is Map ? methods[methodKey] : null;
-    if (methodValue is! Map) {
+    final snapshotId = structuredSnapshot['snapshotId'];
+    final input = structuredSnapshot['input'];
+    final arguments = input is Map ? input['arguments'] : null;
+    final at = arguments is Map ? arguments['at'] : null;
+    if (methodValue is! Map ||
+        snapshotId is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(snapshotId) ||
+        arguments is! Map ||
+        at is! String ||
+        at.trim().isEmpty) {
       throw ArgumentError(
-        'The selected ZiWuLiuZhu method is missing from the verified result.',
+        'The ZiWuLiuZhu method anchor is missing its allowlisted field or stable snapshot identifiers.',
       );
     }
-
-    final snapshotId = resolvedParent.structuredSnapshot['snapshotId'] as String;
-    final input = resolvedParent.structuredSnapshot['input'] as Map;
-    final arguments = input['arguments'] as Map;
-    final at = arguments['at'] as String;
     return AiContextRef(
       kind: AiContextKind.fieldValue,
       moduleId: ziWuLiuZhuModuleId,
@@ -699,7 +693,6 @@ class AiContextResolver {
       title: '子午流注 · $label',
     );
   }
-
   static AiContextResolution<AiResolvedToolField>
       resolveZiWuLiuZhuResultField({
     required AiContextRef ref,

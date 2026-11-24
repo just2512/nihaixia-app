@@ -5,6 +5,8 @@ import '../models/ai_context_ref.dart';
 import '../utils/fold_aware_routes.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/ziwuliuzhu_tool_service.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'assistant_tool_router.dart';
@@ -89,10 +91,16 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
       return;
     }
 
-    final resolution =
-        AiContextResolver.resolveZiWuLiuZhuResultField(
-      ref: contextRef,
-      structuredSnapshot: snapshot,
+    final gateway = ContextResolutionGateway(
+      authorizer: FeatureAuthorizerScope.of(context),
+    );
+    final resolution = await gateway.resolve(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveZiWuLiuZhuResultField(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      ),
+      referenceOf: (resolved) => resolved.ref,
     );
     final resolved = resolution.value;
     if (!resolution.isResolved || resolved == null) {
@@ -130,9 +138,16 @@ class _ZiWuLiuZhuScreenState extends State<ZiWuLiuZhuScreen>
     final contextRef = AiContextResolver.buildZiWuLiuZhuResultContextRef(
       structuredSnapshot: snapshot,
     );
-    final resolution = AiContextResolver.resolveZiWuLiuZhuToolResult(
-      ref: contextRef,
-      structuredSnapshot: snapshot,
+    final gateway = ContextResolutionGateway(
+      authorizer: FeatureAuthorizerScope.of(context),
+    );
+    final resolution = await gateway.resolve(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveZiWuLiuZhuToolResult(
+        ref: contextRef,
+        structuredSnapshot: snapshot,
+      ),
+      referenceOf: (resolved) => resolved.ref,
     );
     final resolved = resolution.value;
     if (!resolution.isResolved || resolved == null) {

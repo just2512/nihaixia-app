@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/almanac_tool_service.dart';
 import '../utils/fold_aware_routes.dart';
 import '../widgets/state_view.dart';
@@ -200,9 +202,16 @@ class _DailyAlmanacScreenState extends State<DailyAlmanacScreen> {
       return;
     }
 
-    final resolution =
-        AiContextResolver.resolveAlmanacToolResult(ref: contextRef);
+    final gateway = ContextResolutionGateway(
+      authorizer: FeatureAuthorizerScope.of(context),
+    );
+    final resolution = await gateway.resolve(
+      reference: contextRef,
+      resolver: () => AiContextResolver.resolveAlmanacToolResult(ref: contextRef),
+      referenceOf: (resolved) => resolved.ref,
+    );
     final resolved = resolution.value;
+    if (!mounted) return;
     if (!resolution.isResolved || resolved == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -5,6 +5,8 @@ import '../data/sanshan_lingqian_data.dart';
 import '../services/sanshan_lingqian_tool_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/sanshan_lingqian_result_context_executor.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'assistant_tool_router.dart';
@@ -117,10 +119,16 @@ class _DrawTabState extends State<_DrawTab> {
       final contextRef = AiContextResolver.buildSanshanLingqianResultContextRef(
         structuredSnapshot: snapshot,
       );
-      final resolution =
-          await AiContextResolver.resolveSanshanLingqianToolResult(
-        ref: contextRef,
-        structuredSnapshot: snapshot,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: contextRef,
+        resolver: () => AiContextResolver.resolveSanshanLingqianToolResult(
+          ref: contextRef,
+          structuredSnapshot: snapshot,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
       if (!mounted) return;

@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/allow_context_authorizer.dart';
+
 import 'package:nihaisha_app/data/sanshan_lingqian_data.dart';
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
@@ -224,7 +226,8 @@ void main() {
         addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
-          ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
             conversationStore: InMemoryAssistantConversationStore(),
             child: MaterialApp(
               theme: ThemeData(
@@ -234,6 +237,7 @@ void main() {
               ),
               home: const SanshanLingqianScreen(returnResultOnComplete: true),
             ),
+          )
           ),
         );
         await tester.pumpAndSettle();

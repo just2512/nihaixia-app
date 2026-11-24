@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/allow_context_authorizer.dart';
+
 import 'package:nihaisha_app/engine/bazi_twelve_stages.dart'
     show TwelveStageMode;
 import 'package:nihaisha_app/models/ai_context_ref.dart';
@@ -360,7 +362,8 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
         child: MaterialApp(
           theme: ThemeData(
@@ -376,8 +379,9 @@ void main() {
             initialLat: 31.23,
           ),
         ),
-      ),
-    );
+      )
+          ),
+        );
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
@@ -417,7 +421,8 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-      ContextualAiConversationStoreScope(
+          TestAuthorizedFeatureScope(
+            child: ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
         child: MaterialApp(
           theme: ThemeData(
@@ -433,8 +438,9 @@ void main() {
             initialLat: 31.23,
           ),
         ),
-      ),
-    );
+      )
+          ),
+        );
     await tester.pumpAndSettle();
 
     final ask = find.text('问 AI 解读当前八字排盘');

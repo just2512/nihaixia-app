@@ -8,6 +8,8 @@ import '../data/yuxiaji_omen_data.dart';
 import '../services/yuxiaji_omen_time.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/yuxiaji_omen_result_context_executor.dart';
 import '../widgets/contextual_ai_sheet.dart';
 import 'assistant_tool_router.dart';
@@ -44,10 +46,16 @@ class _YuxiajiOmenScreenState extends State<YuxiajiOmenScreen> {
       final contextRef = AiContextResolver.buildYuxiajiOmenResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final resolution =
-          await AiContextResolver.resolveYuxiajiOmenToolResult(
-        ref: contextRef,
-        structuredSnapshot: execution.structuredSnapshot!,
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: contextRef,
+        resolver: () => AiContextResolver.resolveYuxiajiOmenToolResult(
+          ref: contextRef,
+          structuredSnapshot: execution.structuredSnapshot!,
+        ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
       if (!mounted) return;

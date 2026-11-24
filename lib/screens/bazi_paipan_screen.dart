@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_resolver.dart';
+import '../licensing/feature_authorizer_scope.dart';
+import '../services/context_resolution_gateway.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/bazi_context_snapshot.dart';
 import 'assistant_tool_router.dart';
@@ -322,11 +324,19 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
     if (_result == null || _lastComputedInput == null) return;
     try {
       final baziContext = _buildCurrentBaziContext();
-      final resolution = AiContextResolver.resolveBaziToolResult(
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: baziContext.contextRef,
+        resolver: () => AiContextResolver.resolveBaziToolResult(
         ref: baziContext.contextRef,
         structuredSnapshot: baziContext.snapshot,
+      ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
+      if (!mounted) return;
       if (!resolution.isResolved || resolved == null) {
         _showBaziContextError(resolution.status.name.toUpperCase());
         return;
@@ -358,11 +368,19 @@ class _BaZiPaipanScreenState extends State<BaZiPaipanScreen> {
         fieldPath: fieldPath,
         fieldLabel: fieldLabel,
       );
-      final resolution = AiContextResolver.resolveBaziResultField(
+      final gateway = ContextResolutionGateway(
+        authorizer: FeatureAuthorizerScope.of(context),
+      );
+      final resolution = await gateway.resolve(
+        reference: fieldRef,
+        resolver: () => AiContextResolver.resolveBaziResultField(
         ref: fieldRef,
         structuredSnapshot: baziContext.snapshot,
+      ),
+        referenceOf: (resolved) => resolved.ref,
       );
       final resolved = resolution.value;
+      if (!mounted) return;
       if (!resolution.isResolved || resolved == null) {
         _showBaziContextError(resolution.status.name.toUpperCase());
         return;
