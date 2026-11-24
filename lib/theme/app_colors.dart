@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'yanji_palette.dart';
 
-/// 语义化设计 Token（Design Tokens）——App 内颜色唯一来源（P0-3 根治）。
+/// 语义化颜色唯一映射层；原始色值统一由 [YanjiPalette] 定义。
 ///
 /// 设计方向：冷白、银灰、正红构成品牌基础色；功能灰、文字红和风险色
 /// 作为语义变体。六经与工具分区色保留独立业务语义。
@@ -110,12 +110,6 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.metaphysicsZone,
   });
 
-  /// 六经 container = 该色 12% alpha 叠加在对应主题的内容表面上。
-  static Color _tint(Color c, {required bool dark}) {
-    final bg = dark ? YanjiPalette.darkSurface : YanjiPalette.white;
-    return Color.alphaBlend(c.withValues(alpha: YanjiPalette.meridianContainerTintOpacity), bg);
-  }
-
   static final AppColors light = AppColors(
     primary: YanjiPalette.brandRed,
     onPrimary: YanjiPalette.white,
@@ -141,22 +135,22 @@ class AppColors extends ThemeExtension<AppColors> {
     info: YanjiPalette.infoLight,
     infoContainer: YanjiPalette.infoContainerLight,
     meridianTaiyang: YanjiPalette.meridianTaiyangLight,
-    meridianTaiyangContainer: _tint(YanjiPalette.meridianTaiyangLight, dark: false),
+    meridianTaiyangContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianTaiyangLight, dark: false),
     onMeridianTaiyang: YanjiPalette.onMeridianLight,
     meridianYangming: YanjiPalette.meridianYangmingLight,
-    meridianYangmingContainer: _tint(YanjiPalette.meridianYangmingLight, dark: false),
+    meridianYangmingContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianYangmingLight, dark: false),
     onMeridianYangming: YanjiPalette.onMeridianLight,
     meridianShaoyang: YanjiPalette.meridianShaoyangLight,
-    meridianShaoyangContainer: _tint(YanjiPalette.meridianShaoyangLight, dark: false),
+    meridianShaoyangContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianShaoyangLight, dark: false),
     onMeridianShaoyang: YanjiPalette.onMeridianLight,
     meridianTaiyin: YanjiPalette.meridianTaiyinLight,
-    meridianTaiyinContainer: _tint(YanjiPalette.meridianTaiyinLight, dark: false),
+    meridianTaiyinContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianTaiyinLight, dark: false),
     onMeridianTaiyin: YanjiPalette.onMeridianLight,
     meridianShaoyin: YanjiPalette.meridianShaoyinLight,
-    meridianShaoyinContainer: _tint(YanjiPalette.meridianShaoyinLight, dark: false),
+    meridianShaoyinContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianShaoyinLight, dark: false),
     onMeridianShaoyin: YanjiPalette.onMeridianLight,
     meridianJueyin: YanjiPalette.meridianJueyinLight,
-    meridianJueyinContainer: _tint(YanjiPalette.meridianJueyinLight, dark: false),
+    meridianJueyinContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianJueyinLight, dark: false),
     onMeridianJueyin: YanjiPalette.onMeridianLight,
     tcmZone: YanjiPalette.tcmZoneLight,
     metaphysicsZone: YanjiPalette.metaphysicsZoneLight,
@@ -187,22 +181,22 @@ class AppColors extends ThemeExtension<AppColors> {
     info: YanjiPalette.infoDark,
     infoContainer: YanjiPalette.infoContainerDark,
     meridianTaiyang: YanjiPalette.meridianTaiyangDark,
-    meridianTaiyangContainer: _tint(YanjiPalette.meridianTaiyangDark, dark: true),
+    meridianTaiyangContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianTaiyangDark, dark: true),
     onMeridianTaiyang: YanjiPalette.onMeridianDark,
     meridianYangming: YanjiPalette.meridianYangmingDark,
-    meridianYangmingContainer: _tint(YanjiPalette.meridianYangmingDark, dark: true),
+    meridianYangmingContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianYangmingDark, dark: true),
     onMeridianYangming: YanjiPalette.onMeridianDark,
     meridianShaoyang: YanjiPalette.meridianShaoyangDark,
-    meridianShaoyangContainer: _tint(YanjiPalette.meridianShaoyangDark, dark: true),
+    meridianShaoyangContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianShaoyangDark, dark: true),
     onMeridianShaoyang: YanjiPalette.onMeridianDark,
     meridianTaiyin: YanjiPalette.meridianTaiyinDark,
-    meridianTaiyinContainer: _tint(YanjiPalette.meridianTaiyinDark, dark: true),
+    meridianTaiyinContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianTaiyinDark, dark: true),
     onMeridianTaiyin: YanjiPalette.onMeridianDark,
     meridianShaoyin: YanjiPalette.meridianShaoyinDark,
-    meridianShaoyinContainer: _tint(YanjiPalette.meridianShaoyinDark, dark: true),
+    meridianShaoyinContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianShaoyinDark, dark: true),
     onMeridianShaoyin: YanjiPalette.onMeridianDark,
     meridianJueyin: YanjiPalette.meridianJueyinDark,
-    meridianJueyinContainer: _tint(YanjiPalette.meridianJueyinDark, dark: true),
+    meridianJueyinContainer: YanjiPalette.meridianContainer(YanjiPalette.meridianJueyinDark, dark: true),
     onMeridianJueyin: YanjiPalette.onMeridianDark,
     tcmZone: YanjiPalette.tcmZoneDark,
     metaphysicsZone: YanjiPalette.metaphysicsZoneDark,
