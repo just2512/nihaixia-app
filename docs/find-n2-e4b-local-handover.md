@@ -1,14 +1,16 @@
 # Find N2 / E4B 本地验收交接总清单
 
-> **状态：LOCAL ONLY / MISSING。** 本文件是交接执行入口，不是测试结果。所有设备、模型、安装升级、GPU/CPU 推理、TRACE 和恢复项目必须在真实 OPPO Find N2 上记录证据；云端 CI 不会替代实机验收。
+> **状态：LOCAL ONLY / MISSING。** 本文件是 E4B 专项总清单，不是测试结果。所有设备、模型、安装升级、GPU/CPU 推理、TRACE 和恢复项目必须在真实 OPPO Find N2 上记录证据；云端 CI 不会替代实机验收。
+>
+> 本地操作顺序、覆盖升级、品牌/折叠屏与授权总体验收入口见 [本地实机验收交接单](local-real-device-acceptance-handoff.md)。
 
 ## 0. 当前代码与模型基线
 
 | 项目 | 当前基线 | 核验要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从最终合并后的 `master` 构建 |
-| 当前应用代码基线 | `master @ 1717b36ba0c2359a1526e22d23f75befacd80628` | 已包含 v1.2 离线授权协议、Android Keystore/AtomicFile、EntitlementService、Headless F0/F1、ContextResolutionGateway、Release Key Ring、激活/Token 导入 UI 与 AtomicFile 恢复修复（PR #433–#458）；应用运行时代码最后一次变更为 PR #455，PR #459 为测试隔离 |
-| 当前主线整体基线 | `master @ b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b` | PR #462 合并后的最新 master 文档基线；设备构建前再次读取 master HEAD 和对应 CI |
+| 当前应用代码基线 | `master @ d6db3c9e7093bbe0619abf431199a18f2d6d6593` | 截至 2026-11-24 当前代码快照；最近应用代码提交为协议 v2 单一 `ai_access` 权益及协议 v1 历史 Token 兼容。此 SHA 是本次文档编制快照，执行前必须刷新 |
+| 当前主线整体基线 | `master @ d6db3c9e7093bbe0619abf431199a18f2d6d6593` | 2026-11-24 实际读取到的 master HEAD；设备构建前再次读取 master HEAD、版本和对应 CI |
 | 本轮应用版本 | `2.0.0+8048` | versionName `2.0.0`，versionCode `8048`；升级时仍须严格大于设备旧版本 |
 | 应用包名 | `com.nihaisha.nihaisha_app` | 必须与设备已安装包一致 |
 | 原签名配置 | 本地 `android/key.properties` + 原 keystore | 仅本地保管；不得提交、上传、粘贴到聊天或放入 CI secret |
@@ -252,3 +254,13 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 - 当前 App 版本仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`；构建前必须以 `pubspec.yaml`、设备已安装包和本地签名证书重新核对。
 - PR #462 为执行台账单文件文档变更。该 PR 精确 HEAD 的 Flutter 全量回归、Android arm64/JVM 与 Fork license boundary 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。合并后 master `b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b` 的 Flutter Quality Gate run `45351039842`、Flutter tests run `45351039926` 和 Fork license boundary run `45351039841` 均 SUCCESS；Flutter regression job `138297255914`、Android arm64/JVM job `138300772054` 均 SUCCESS，Branch validation `138297257868` 为 SKIPPED。
 - 本节只刷新执行基线，不将任何 Find N2/E4B 设备项目升级为 PASS；全部设备场景仍为 `MISSING / LOCAL ONLY / UNKNOWN`。
+
+
+## 14. 2026-11-24 当前主线基线刷新
+
+- 本轮实测读取到的 master HEAD：d6db3c9e7093bbe0619abf431199a18f2d6d6593。
+- 该提交修改 lib/licensing/license_model.dart 与 lib/services/entitlement_service.dart，协议修订 2 新签发单一 ai_access；协议修订 1 的历史 Token 中，ai_advanced 或 contextual_assistant 任一有效声明映射到同一个 ai_access。修订 2 不再接受旧 Feature ID 作为权益。
+- pubspec.yaml 当前仍声明 2.0.0+8048，应用包名仍为 com.nihaisha.nihaisha_app。是否可覆盖升级仍以 Find N2 当前已安装 versionCode 和签名证书实测为准。
+- 本节更新覆盖本文件 §0 和历史 §13 中“最新 master”为 b884b0… 的旧快照描述。历史记录保留作为审计轨迹，不得当作本次构建基线。
+- 执行专业版授权实机测试时，必须把协议 v2 单一 ai_access 权益和 Native AiModelAccessGate 纳入范围。UI 显示授权状态、Dart 单测或 Native mock 均不能替代设备 Gate 的实际拒绝/放行证据。
+- 当前仓库远程核验没有连接 OPPO Find N2，也没有读取用户本地签名材料、设备 Token、Keystore、E4B 模型运行状态或真实 backend。上述所有本地测试仍为 MISSING / UNKNOWN / LOCAL ONLY，不得因为文档更新而变更状态。
