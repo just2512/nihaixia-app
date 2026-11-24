@@ -150,6 +150,15 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('不带学习词的术数知识问法「大安对应什么六神」也进入玄学模式', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '大安对应什么六神',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool, isNull);
+    });
+
     test('工具澄清后补充的日期仍进入五运六气 typed arguments', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '五运六气 2026-11-06',
@@ -775,14 +784,14 @@ void main() {
       expect(pendingChoice.tool?.id, 'ziwei');
     });
 
-    test('待选工具期间询问术数话题历史背景进入玄学模式', () {
+    test('待选工具期间询问历史背景应切换为学习助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '紫微斗数的历史背景',
         selectedMode: AssistantMode.automatic,
         currentMode: AssistantMode.metaphysics,
         pendingToolSelection: true,
       );
-      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.mode, AssistantMode.learning);
       expect(decision.tool, isNull);
       expect(decision.expectsToolSelection, isFalse);
     });

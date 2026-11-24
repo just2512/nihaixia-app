@@ -1012,21 +1012,31 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: selectedMode);
     }
 
+    // 纯术数领域词（无关是否带学习词）优先进玄学模式，用模型自有知识回答并附
+    // 「非科学」免责。原因：术数话题无中医学习库内容，落进学习/通用模式会空转或
+    // 自由幻觉。但显式工具动作（“帮我推算八字”）仍交给下面的工具派发；五运六气
+    // 属中医+术数交叉，保留学习路由。
+    final pureMetaphysicsAliases = AssistantToolRouter
+        .matchAliases(text, AssistantMode.metaphysics)
+        .where((tool) => !_tcmDualDomainMetaphysicsToolIds.contains(tool.id))
+        .toList(growable: false);
+    final mentionsPureMetaphysicsKeyword =
+        pureMetaphysicsAliases.isNotEmpty ||
+            _xiaoliurenPalaceCues.any(text.contains);
+    final hasExplicitMetaphysicsAction = AssistantToolRouter
+        .matchAll(text, AssistantMode.metaphysics)
+        .isNotEmpty;
+    // 存在待选工具澄清时，短别名（只答“紫微”）应交给下面的短答案选择逻辑，
+    // 而非被当作术数知识问题拦截。
+    if (mentionsPureMetaphysicsKeyword &&
+        !hasExplicitMetaphysicsAction &&
+        !pendingToolSelection) {
+      return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
+    }
+
     // 明确的学习/解释请求优先于工具名和动作词，避免“学习五运六气推算原理”
     // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
-    // 但纯术数话题（小六壬/梅花/紫微/八字/易经/解梦/称骨/灵签等）无中医学习
-    // 库内容，若落进学习助手只会检索空转拒答；这些学习类问题应进玄学模式，用
-    // 模型自有知识回答并附「非科学」免责。五运六气属中医+术数交叉，保留学习
-    // 路由。此判断只在学习词命中时生效，不影响下面的工具派发。
     if (_learningCues.any(text.contains)) {
-      final pureMetaphysicsAliases = AssistantToolRouter
-          .matchAliases(text, AssistantMode.metaphysics)
-          .where((tool) => !_tcmDualDomainMetaphysicsToolIds.contains(tool.id))
-          .toList(growable: false);
-      final mentionsXiaoliurenPalace = _xiaoliurenPalaceCues.any(text.contains);
-      if (pureMetaphysicsAliases.isNotEmpty || mentionsXiaoliurenPalace) {
-        return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
-      }
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
     if ((text.contains('梅花易数') || text.contains('梅花')) &&
