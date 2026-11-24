@@ -33,9 +33,7 @@ void main() {
         reason: 'CardTheme 必须沿用显式透明 surfaceTint。',
       );
       expect(
-        RegExp(r'surfaceTintColor: scheme\\.surfaceTint')
-            .allMatches(source)
-            .length,
+        source.split('surfaceTintColor: scheme.surfaceTint').length - 1,
         3,
         reason: 'Card / Dialog / BottomSheet 必须统一消费透明 surfaceTint Token。',
       );
