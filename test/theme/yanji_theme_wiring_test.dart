@@ -33,9 +33,15 @@ void main() {
         reason: 'CardTheme 必须沿用显式透明 surfaceTint。',
       );
       expect(
+        RegExp(r'surfaceTintColor: scheme\\.surfaceTint')
+            .allMatches(source)
+            .length,
+        3,
+        reason: 'Card / Dialog / BottomSheet 必须统一消费透明 surfaceTint Token。',
+      );
+      expect(
         source,
-        contains('surfaceTintColor: Colors.transparent'),
-        reason: 'Dialog / BottomSheet 不应额外叠加 elevation tint。',
+        isNot(contains('surfaceTintColor: Colors.transparent')),
       );
     });
 
