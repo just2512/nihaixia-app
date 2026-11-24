@@ -241,7 +241,7 @@ class AssistantToolRouter {
     title: '紫微斗数排盘',
     description: '在当前对话收集明确的出生资料并调用 App 本地确定性紫微引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
-    aliases: ['紫微斗数', '紫微排盘', '紫微命盘'],
+    aliases: ['紫微斗数', '紫薇斗数', '紫微排盘', '紫微命盘'],
     actionWords: ['排盘', '起盘', '命盘', '帮我排'],
     builder: _buildZiwei,
     parameters: [
