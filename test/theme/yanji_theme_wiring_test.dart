@@ -49,6 +49,13 @@ void main() {
         contains('color: scheme.outlineVariant'),
         reason: 'outlineVariant 只保留给装饰性分割线等低语义边界。',
       );
+      expect(
+        source,
+        contains('indicatorColor: scheme.primaryContainer'),
+        reason: 'NavigationBar/NavigationRail 选中指示器必须使用浅红 primaryContainer。',
+      );
+      expect(source, contains('selected ? scheme.onPrimaryContainer'));
+      expect(source, contains('selected ? FontWeight.w700 : FontWeight.w500'));
     });
   });
 }
