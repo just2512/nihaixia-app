@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../licensing/ai_model_access_platform.dart';
 import '../licensing/feature_authorizer.dart';
 import '../licensing/license_platform.dart';
 import '../licensing/license_verifier.dart';
@@ -17,18 +18,20 @@ enum EntitlementServiceStatus {
 class EntitlementSnapshot {
   EntitlementSnapshot({
     required this.status,
-    Iterable<String> grantedFeatureIds = const [],
+    this.aiAccess = false,
     Iterable<String> unsupportedFeatureIds = const [],
     this.failureReason,
     this.lastCheckedAt,
     this.licenseId,
     this.issuerKeyId,
-  })  : grantedFeatureIds = Set<String>.unmodifiable(grantedFeatureIds),
-        unsupportedFeatureIds =
-            Set<String>.unmodifiable(unsupportedFeatureIds);
+  }) : unsupportedFeatureIds =
+           Set<String>.unmodifiable(unsupportedFeatureIds);
 
   final EntitlementServiceStatus status;
-  final Set<String> grantedFeatureIds;
+
+  /// The only effective App runtime entitlement. No per-business Feature set
+  /// is retained or persisted.
+  final bool aiAccess;
   final Set<String> unsupportedFeatureIds;
   final FeatureAuthorizationFailureReason? failureReason;
 
@@ -70,12 +73,15 @@ class EntitlementService extends ChangeNotifier
   EntitlementService({
     required LicensePlatform platform,
     required LicenseVerifier verifier,
+    required AiModelAccessPlatform aiModelAccessPlatform,
     this.initializationTimeout = const Duration(seconds: 2),
   })  : _platform = platform,
-        _verifier = verifier;
+        _verifier = verifier,
+        _aiModelAccessPlatform = aiModelAccessPlatform;
 
   final LicensePlatform _platform;
   final LicenseVerifier _verifier;
+  final AiModelAccessPlatform _aiModelAccessPlatform;
   final Duration initializationTimeout;
 
   EntitlementSnapshot _snapshot = EntitlementSnapshot(
@@ -123,6 +129,13 @@ class EntitlementService extends ChangeNotifier
     );
 
     try {
+      // A refresh closes access before examining the Token. All checking,
+      // invalid, missing and temporarily unavailable states remain fail-closed.
+      await _aiModelAccessPlatform
+          .setEnabled(false)
+          .timeout(initializationTimeout);
+      if (generation != _generation) return;
+
       final token = await _platform.readActiveToken();
       if (token == null) {
         _publishIfCurrent(
@@ -151,7 +164,27 @@ class EntitlementService extends ChangeNotifier
         token,
         expectedDevicePublicKeySha256: deviceKey.sha256Base64Url,
       );
-      _publishIfCurrent(generation, _snapshotFromVerification(result));
+      final verifiedSnapshot = _snapshotFromVerification(result);
+
+      if (generation != _generation) return;
+      if (verifiedSnapshot.aiAccess) {
+        try {
+          await _aiModelAccessPlatform
+              .setEnabled(true)
+              .timeout(initializationTimeout);
+        } on Object {
+          // An uncertain enable acknowledgement must not leave Native open.
+          try {
+            await _aiModelAccessPlatform
+                .setEnabled(false)
+                .timeout(initializationTimeout);
+          } on Object {
+            // The service remains unavailable; Native still owns the hard gate.
+          }
+          rethrow;
+        }
+      }
+      _publishIfCurrent(generation, verifiedSnapshot);
     } on LicensePlatformFailure catch (error) {
       _publishIfCurrent(generation, _snapshotForPlatformFailure(error));
     } on Object {
@@ -176,17 +209,25 @@ class EntitlementService extends ChangeNotifier
     switch (result.status) {
       case LicenseVerificationStatus.valid:
       case LicenseVerificationStatus.validWithUnsupportedFeatures:
+        final aiAccess = payload?.grantsAiAccess == true;
         return EntitlementSnapshot(
-          status: EntitlementServiceStatus.active,
-          grantedFeatureIds: payload?.grantedFeatureIds ?? const [],
+          status: aiAccess
+              ? EntitlementServiceStatus.active
+              : EntitlementServiceStatus.unlicensed,
+          aiAccess: aiAccess,
+          failureReason: aiAccess
+              ? null
+              : FeatureAuthorizationFailureReason.featureNotGranted,
           unsupportedFeatureIds: payload?.unsupportedFeatureIds ?? const [],
           lastCheckedAt: now,
           licenseId: payload?.licenseId,
           issuerKeyId: payload?.issuerKeyId,
         );
       case LicenseVerificationStatus.validWithoutGrantedFeatures:
+        // This is an authenticated, well-formed Token with no AI entitlement.
+        // It may be installed after explicit confirmation of an AI downgrade.
         return EntitlementSnapshot(
-          status: EntitlementServiceStatus.invalid,
+          status: EntitlementServiceStatus.unlicensed,
           failureReason: FeatureAuthorizationFailureReason.featureNotGranted,
           unsupportedFeatureIds: payload?.unsupportedFeatureIds ?? const [],
           lastCheckedAt: now,
@@ -302,17 +343,12 @@ class EntitlementService extends ChangeNotifier
     }
 
     final current = _snapshot;
-    // Until the business-layer FeatureAuthorizer adapters are removed in the
-    // follow-up batch, both historical AI checks must project to the one
-    // effective ai_access claim. They are compatibility aliases, not rights.
-    const aiAccessAliases = {
+    const legacyAiFeatureIds = {
       'ai_access',
       'ai_advanced',
       'contextual_assistant',
     };
-    if (current.status == EntitlementServiceStatus.active &&
-        aiAccessAliases.contains(featureId) &&
-        current.grantedFeatureIds.contains('ai_access')) {
+    if (legacyAiFeatureIds.contains(featureId) && current.aiAccess) {
       return FeatureAuthorizationDecision.allowed(featureId: featureId);
     }
     if (current.status == EntitlementServiceStatus.temporarilyUnavailable ||
@@ -372,7 +408,7 @@ class EntitlementService extends ChangeNotifier
         token,
         expectedDevicePublicKeySha256: deviceKey.sha256Base64Url,
       );
-      if (!verification.isValid || verification.payload == null) {
+      if (!verification.isAuthenticated || verification.payload == null) {
         return LicenseTokenReplacementResult(
           status: LicenseTokenReplacementStatus.rejected,
           verification: verification,
@@ -380,22 +416,24 @@ class EntitlementService extends ChangeNotifier
       }
 
       previousToken = await _platform.readActiveToken();
-      final oldFeatures = _snapshot.grantedFeatureIds;
-      final nextFeatures = verification.payload!.grantedFeatureIds;
-      final lostFeatures = oldFeatures.difference(nextFeatures);
-      if (lostFeatures.isNotEmpty && !allowFeatureReduction) {
+      final losesAiAccess =
+          _snapshot.aiAccess && !verification.payload!.grantsAiAccess;
+      if (losesAiAccess && !allowFeatureReduction) {
         return LicenseTokenReplacementResult(
           status: LicenseTokenReplacementStatus.confirmationRequired,
           verification: verification,
-          lostFeatureIds: Set<String>.unmodifiable(lostFeatures),
+          lostFeatureIds: const {'ai_access'},
         );
       }
 
       writeAttempted = true;
       await _platform.writeActiveTokenAtomically(token);
       await refresh().timeout(initializationTimeout);
-      final persisted = _snapshot.isActive &&
-          _snapshot.licenseId == verification.payload!.licenseId;
+      final persisted =
+          _snapshot.licenseId == verification.payload!.licenseId &&
+          _snapshot.status != EntitlementServiceStatus.invalid &&
+          _snapshot.status != EntitlementServiceStatus.temporarilyUnavailable &&
+          _snapshot.status != EntitlementServiceStatus.checking;
       if (!persisted) {
         await _restorePreviousToken(previousToken);
         return LicenseTokenReplacementResult(

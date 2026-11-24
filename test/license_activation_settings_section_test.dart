@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/services/entitlement_service.dart';
+import 'support/fake_ai_model_access_platform.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/yanji_status_badge.dart';
 import 'package:nihaisha_app/widgets/license_activation_settings_section.dart';
@@ -59,6 +60,7 @@ void main() {
 
     final service = EntitlementService(
       platform: MethodChannelLicensePlatform(channel: channel),
+      aiModelAccessPlatform: FakeAiModelAccessPlatform(),
       verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
     );
     await service.initialize();
@@ -114,6 +116,7 @@ void main() {
 
     final service = EntitlementService(
       platform: MethodChannelLicensePlatform(channel: channel),
+      aiModelAccessPlatform: FakeAiModelAccessPlatform(),
       verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
     );
     await service.initialize();
@@ -158,6 +161,7 @@ void main() {
 
     final service = EntitlementService(
       platform: MethodChannelLicensePlatform(channel: channel),
+      aiModelAccessPlatform: FakeAiModelAccessPlatform(),
       verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
     );
     await service.initialize();

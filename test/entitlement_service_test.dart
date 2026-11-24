@@ -8,6 +8,7 @@ import 'package:nihaisha_app/licensing/license_model.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/services/entitlement_service.dart';
+import 'support/fake_ai_model_access_platform.dart';
 
 class _FakeLicensePlatform implements LicensePlatform {
   _FakeLicensePlatform({
@@ -168,6 +169,7 @@ void main() {
       final platform = _FakeLicensePlatform();
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
@@ -185,6 +187,7 @@ void main() {
       final platform = _FakeLicensePlatform(token: validToken);
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
@@ -197,32 +200,31 @@ void main() {
       service.dispose();
     });
 
-    test('valid historical Token maps both legacy claims to one effective AI entitlement', () async {
+    test('valid shared Token grants only the two enforced first-release features', () async {
       final platform = _FakeLicensePlatform(
         token: validToken,
         deviceKey: _deviceKey(fingerprint),
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
       await service.initialize();
 
       expect(service.snapshot.status, EntitlementServiceStatus.active);
-      expect(service.snapshot.grantedFeatureIds, {'ai_access'});
+      expect(service.snapshot.aiAccess, isTrue);
       expect(platform.keyReadCount, 1);
       expect(platform.challengeCount, 1);
       expect(platform.keyCreateCount, 0);
 
-      final ai = await service.authorize('ai_access');
-      final legacyAi = await service.authorize('ai_advanced');
-      final legacyContextual = await service.authorize('contextual_assistant');
+      final ai = await service.authorize('ai_advanced');
+      final contextual = await service.authorize('contextual_assistant');
       final learning = await service.authorize('advanced_learning');
 
       expect(ai.status, FeatureAuthorizationStatus.allowed);
-      expect(legacyAi.status, FeatureAuthorizationStatus.allowed);
-      expect(legacyContextual.status, FeatureAuthorizationStatus.allowed);
+      expect(contextual.status, FeatureAuthorizationStatus.allowed);
       expect(learning.status, FeatureAuthorizationStatus.denied);
       expect(learning.reason,
           FeatureAuthorizationFailureReason.featureNotGranted);
@@ -236,6 +238,7 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors, trustIssuer: false),
       );
 
@@ -244,7 +247,7 @@ void main() {
       expect(service.snapshot.status, EntitlementServiceStatus.invalid);
       expect(decision.status, FeatureAuthorizationStatus.denied);
       expect(decision.reason, FeatureAuthorizationFailureReason.issuerUnknown);
-      expect(service.snapshot.grantedFeatureIds, isEmpty);
+      expect(service.snapshot.aiAccess, isFalse);
       service.dispose();
     });
 
@@ -254,6 +257,7 @@ void main() {
       );
       final corruptService = EntitlementService(
         platform: corrupt,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
       await corruptService.initialize();
@@ -266,6 +270,7 @@ void main() {
       );
       final unavailableService = EntitlementService(
         platform: unavailable,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
       final decision = await unavailableService.authorize('ai_advanced');
@@ -287,11 +292,14 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
       final first = service.initialize();
       final second = service.initialize();
+      // Native gate revocation is awaited before the Token store is read.
+      await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
       completer.complete(null);
@@ -308,6 +316,7 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
         initializationTimeout: const Duration(milliseconds: 5),
       );
@@ -333,6 +342,7 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
       await service.initialize();
@@ -355,6 +365,7 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
@@ -375,10 +386,14 @@ void main() {
       final platform = _FakeLicensePlatform(readCompleter: completer);
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
       final first = service.initialize();
+      // Allow the fail-closed Native gate acknowledgement before asserting the
+      // first asynchronous Token read has begun.
+      await Future<void>.delayed(Duration.zero);
       expect(platform.readCount, 1);
 
       platform.readCompleter = null;
@@ -396,6 +411,7 @@ void main() {
       final platform = _FakeLicensePlatform();
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
@@ -416,6 +432,7 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: _verifier(vectors),
       );
 
@@ -430,7 +447,7 @@ void main() {
       service.dispose();
     });
 
-    test('consolidating legacy AI claims does not trigger an effective entitlement downgrade', () async {
+    test('revision-1 claim consolidation does not trigger a false AI downgrade', () async {
       final platform = _FakeLicensePlatform(
         token: validToken,
         deviceKey: _deviceKey(fingerprint),
@@ -451,6 +468,7 @@ void main() {
       );
       final service = EntitlementService(
         platform: platform,
+        aiModelAccessPlatform: FakeAiModelAccessPlatform(),
         verifier: verifier,
       );
       await service.initialize();
@@ -460,11 +478,84 @@ void main() {
         allowFeatureReduction: false,
       );
       expect(installed.status, LicenseTokenReplacementStatus.installed);
-      expect(installed.lostFeatureIds, isEmpty);
       expect(installed.status, LicenseTokenReplacementStatus.installed);
       expect(platform.writeCount, 1);
       expect(platform.token, reducedToken);
-      expect(service.snapshot.grantedFeatureIds, {'ai_access'});
+      expect(service.snapshot.aiAccess, isTrue);
+      service.dispose();
+    });
+
+
+    test('effective AI access downgrade requires confirmation and then closes Native gate', () async {
+      final platform = _FakeLicensePlatform(
+        token: validToken,
+        deviceKey: _deviceKey(fingerprint),
+      );
+      final baseVerifier = _verifier(vectors);
+      final payload = LicensePayload.fromJson({
+        ...licenseFixture['payload'] as Map<String, dynamic>,
+        'features': ['advanced_learning'],
+      });
+      const noAccessToken = 'test-no-ai-access-token';
+      final verifier = _SelectiveLicenseVerifier(
+        delegate: baseVerifier,
+        replacementToken: noAccessToken,
+        replacementResult: LicenseVerificationResult(
+          LicenseVerificationStatus.validWithoutGrantedFeatures,
+          payload,
+        ),
+      );
+      final aiAccessPlatform = FakeAiModelAccessPlatform();
+      final service = EntitlementService(
+        platform: platform,
+        aiModelAccessPlatform: aiAccessPlatform,
+        verifier: verifier,
+      );
+      await service.initialize();
+      expect(service.snapshot.aiAccess, isTrue);
+      expect(aiAccessPlatform.enabled, isTrue);
+
+      final confirmation = await service.replaceToken(
+        token: noAccessToken,
+        allowFeatureReduction: false,
+      );
+      expect(confirmation.status, LicenseTokenReplacementStatus.confirmationRequired);
+      expect(confirmation.lostFeatureIds, {'ai_access'});
+      expect(platform.writeCount, 0);
+      expect(platform.token, validToken);
+
+      final installed = await service.replaceToken(
+        token: noAccessToken,
+        allowFeatureReduction: true,
+      );
+      expect(installed.status, LicenseTokenReplacementStatus.installed);
+      expect(platform.token, noAccessToken);
+      expect(service.snapshot.status, EntitlementServiceStatus.unlicensed);
+      expect(service.snapshot.aiAccess, isFalse);
+      expect(aiAccessPlatform.enabled, isFalse);
+      expect(aiAccessPlatform.transitions.last, isFalse);
+      service.dispose();
+    });
+
+
+    test('Native enable failure keeps the entitlement fail-closed', () async {
+      final platform = _FakeLicensePlatform(
+        token: validToken,
+        deviceKey: _deviceKey(fingerprint),
+      );
+      final aiAccessPlatform = FakeAiModelAccessPlatform()..failEnable = true;
+      final service = EntitlementService(
+        platform: platform,
+        aiModelAccessPlatform: aiAccessPlatform,
+        verifier: _verifier(vectors),
+      );
+
+      await service.initialize();
+
+      expect(service.snapshot.status, EntitlementServiceStatus.temporarilyUnavailable);
+      expect(service.snapshot.aiAccess, isFalse);
+      expect(aiAccessPlatform.enabled, isFalse);
+      expect(aiAccessPlatform.transitions, [false, false]);
       service.dispose();
     });
 
