@@ -972,6 +972,12 @@ License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-maintained Find N2 launcher brand acceptance handoff and Android icon resource regression test; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
 
 Files:
+ docs/local-real-device-acceptance-handoff.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Current v1.3 Find N2 real-device acceptance handoff; cloud CI evidence is not represented as device PASS, and all local device acceptance remains LOCAL ONLY / MISSING; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
  test/ziwuliuzhu_contextual_method_field_entry_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
