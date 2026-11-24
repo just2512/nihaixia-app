@@ -38,7 +38,7 @@ void main() {
   group('HeadlessToolDispatcher', () {
     const arguments = <String, String>{'date': '2026-11-23'};
 
-    test('dispatches a registered single-step plan with a defensive argument copy', () async {
+    test('dispatches a registered single-step plan with defensive argument copy', () async {
       var calls = 0;
       Map<String, String>? received;
       final mutableSource = {'date': '2026-11-23'};
@@ -94,7 +94,7 @@ void main() {
       expect(actual.results, hasLength(2));
     });
 
-    test('awaits asynchronous executor completion before returning the plan result', () async {
+    test('awaits asynchronous executor completion before returning plan result', () async {
       var completed = false;
       final actual = await const HeadlessToolDispatcher().executePlan(
         plan: _plan(
@@ -115,7 +115,7 @@ void main() {
       expect(actual.results, hasLength(1));
     });
 
-    test('Page-only tools cannot be executed even through a test override', () async {
+    test('Page-only tools cannot execute even through a test override', () async {
       final pageOnly = AssistantToolRouter.byId('guji_library')!;
       expect(HeadlessToolDispatcher.hasExecutor(pageOnly.id), isFalse);
       var executorCalls = 0;
@@ -138,7 +138,7 @@ void main() {
       expect(HeadlessToolDispatcher.hasExecutor(pageOnly.id), isFalse);
     });
 
-    test('rejects an unregistered tool before execution', () async {
+    test('rejects unregistered tools before execution', () async {
       var executorCalls = 0;
       final actual = await const HeadlessToolDispatcher().executePlan(
         plan: _plan(
@@ -207,7 +207,7 @@ void main() {
       expect(actual.results.single.status, AssistantToolExecutionStatus.failed);
     });
 
-    test('propagates executor errors without converting them to business results', () async {
+    test('propagates executor errors without converting them to results', () async {
       final error = StateError('executor failure');
       await expectLater(
         const HeadlessToolDispatcher().executePlan(
