@@ -1411,7 +1411,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return true;
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+      debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
       if (mounted) {
         setState(() {
           _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
@@ -2071,7 +2071,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       } catch (error, stack) {
         messagesPersisted = false;
-        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\\n$stack');
+        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\n$stack');
       }
     }
 
@@ -5801,7 +5801,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
     );
     final resultText = normalizedResult.toConversationText();
-    final response = '【' + tool.title + '执行结果】\\n' + resultText;
+    final response = '【' + tool.title + '执行结果】\n' + resultText;
     final canRetry = normalizedResult.status ==
         AssistantToolExecutionStatus.failed;
     final canInterpret = normalizedResult.status ==
