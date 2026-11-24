@@ -110,6 +110,8 @@ void main() {
 
       expect(dream, contains('dreamAuspiciousChipColors('));
       expect(guansha, contains('guanshaSeverityChipColors('));
+      expect(dream, contains('YanjiStatusBadge('));
+      expect(guansha, contains('YanjiStatusBadge('));
       expect(dream, isNot(contains('Colors.green')));
       expect(dream, isNot(contains('Colors.red')));
       expect(dream, isNot(contains('Colors.orange')));

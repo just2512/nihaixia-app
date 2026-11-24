@@ -6,6 +6,13 @@ import 'package:nihaisha_app/data/sanshan_lingqian_data.dart';
 import 'package:nihaisha_app/data/xiaoliuren_data.dart';
 import 'package:nihaisha_app/screens/sanshan_lingqian_screen.dart';
 import 'package:nihaisha_app/screens/xiaoliuren_screen.dart';
+import 'package:nihaisha_app/theme/app_colors.dart';
+
+ThemeData _yanjiTestTheme() => ThemeData(
+  useMaterial3: true,
+  colorScheme: AppColors.colorSchemeFor(Brightness.light),
+  extensions: <ThemeExtension<dynamic>>[AppColors.light],
+);
 
 void main() {
   group('小六壬 · 通行掌诀（正月大安起，月初一落月宫）', () {
@@ -207,7 +214,9 @@ void main() {
     });
 
     testWidgets('灵签页渲染：求签/签谱两 tab + 免责声明', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: SanshanLingqianScreen()));
+      await tester.pumpWidget(
+        MaterialApp(theme: _yanjiTestTheme(), home: const SanshanLingqianScreen()),
+      );
       expect(find.text('三山国王灵签'), findsOneWidget);
       expect(find.text('求签'), findsOneWidget);
       expect(find.text('签谱'), findsOneWidget);
@@ -220,7 +229,9 @@ void main() {
     });
 
     testWidgets('灵签页摇签后出现签文卡', (tester) async {
-      await tester.pumpWidget(const MaterialApp(home: SanshanLingqianScreen()));
+      await tester.pumpWidget(
+        MaterialApp(theme: _yanjiTestTheme(), home: const SanshanLingqianScreen()),
+      );
       await tester.tap(find.text('摇签'));
       await tester.pumpAndSettle();
       // 结果卡必含某一签的吉凶标签
