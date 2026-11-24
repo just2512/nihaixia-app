@@ -250,5 +250,5 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 - 当前 master 文档基线：`b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b`（PR #462 合并）。
 - 当前应用运行时代码基线：`1717b36ba0c2359a1526e22d23f75befacd80628`（PR #455 合并）。对比该代码提交与当前 master，后续只有 `.reuse/dep5`、执行台账、真机验收和 Release 配置文档变更；没有新的应用运行时代码差异。
 - 当前 App 版本仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`；构建前必须以 `pubspec.yaml`、设备已安装包和本地签名证书重新核对。
-- PR #462 为执行台账单文件文档变更。该 PR 精确 HEAD 的 Flutter 全量回归、Android arm64/JVM 与 Fork license boundary 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。当前 master merge commit 的 Push CI 结果须以 GitHub 对 `b884b0b` 的实际运行结果为准，不得用 PR HEAD CI 替代。
+- PR #462 为执行台账单文件文档变更。该 PR 精确 HEAD 的 Flutter 全量回归、Android arm64/JVM 与 Fork license boundary 均 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。合并后 master `b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b` 的 Flutter Quality Gate run `45351039842`、Flutter tests run `45351039926` 和 Fork license boundary run `45351039841` 均 SUCCESS；Flutter regression job `138297255914`、Android arm64/JVM job `138300772054` 均 SUCCESS，Branch validation `138297257868` 为 SKIPPED。
 - 本节只刷新执行基线，不将任何 Find N2/E4B 设备项目升级为 PASS；全部设备场景仍为 `MISSING / LOCAL ONLY / UNKNOWN`。
