@@ -145,7 +145,7 @@ class IssuerProtocolTests(unittest.TestCase):
                 prefix + "." + payload_segment + "." + b64url(bytes(signature_bytes))
             )
 
-    def test_valid_request_issues_v12_device_bound_canonical_token(self) -> None:
+    def test_valid_request_issues_v13_device_bound_canonical_token(self) -> None:
         vectors = load_vectors()
         request_token = vectors["device_request"]["token"]
         request = issuer.verify_device_request(request_token)
@@ -157,7 +157,8 @@ class IssuerProtocolTests(unittest.TestCase):
         self.assertEqual(payload_bytes, issuer._canonical_json(payload))
         self.assertEqual(payload["schema_version"], 1)
         self.assertEqual(payload["product_id"], issuer.PRODUCT_ID)
-        self.assertEqual(payload["protocol_revision"], issuer.PROTOCOL_REVISION)
+        self.assertEqual(payload["protocol_revision"], 2)
+        self.assertEqual(issuer.ISSUABLE_FEATURES_BY_REVISION, {2: ("ai_access",)})
         self.assertTrue(payload["perpetual"])
         self.assertEqual(
             payload["device_public_key_sha256"],
@@ -166,7 +167,7 @@ class IssuerProtocolTests(unittest.TestCase):
         self.assertEqual(payload["request_id"], request["request_id"])
         self.assertEqual(
             payload["features"],
-            ["ai_advanced", "contextual_assistant"],
+            ["ai_access"],
         )
         self.assertEqual(
             set(payload),
