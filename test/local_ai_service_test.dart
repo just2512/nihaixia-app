@@ -547,7 +547,7 @@ void main() {
       expect(received?.method, 'resolveAssistantIntent');
       expect(received?.arguments, <String, Object?>{
         'text': '按出生资料看看传统命盘',
-        'candidates': '[{"id":"ziwei","title":"紫微斗数","description":"调用 App 原有紫微排盘。"},{"id":"bazi","title":"八字四柱","description":"调用 App 原有八字排盘。"}]',
+        'candidates': '[{"id":"ziwei","title":"紫微斗数","description":"调用 App 原有紫微排盘。","plan_eligible":false},{"id":"bazi","title":"八字四柱","description":"调用 App 原有八字排盘。","plan_eligible":false}]',
         'trace_id': traceId,
       });
       expect(result.action, LocalAiIntentAction.select);
