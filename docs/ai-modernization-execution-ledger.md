@@ -4130,8 +4130,10 @@ PR HEAD 门禁证据：
 
 ## 88. 2026-11-24 云端收尾总账与剩余硬门槛
 
-- **当前集成主线：** PR #461 已合并，当前 master merge commit 为 `e4f690fe8c7d2d97201544fc613b737a8c5557dc`；PR #461 文档精确 HEAD `09274f2ced12c09c8ae38629f47e240843412fcc` 的 Fork license boundary run `45347415604` SUCCESS，Flutter tests run `45347415563` SUCCESS，其中 Flutter 全量回归和 Android arm64 APK/Native JVM job 均 SUCCESS。Branch validation 为 SKIPPED，不计 PASS。PR 级 CI 验收的是该文档 HEAD；当前 merge commit 的 master push workflow 尚未由本次可读取的 PR-triggered workflow 查询确认，不能据此宣称已通过。
+- **当前集成主线：** PR #462 已合并，当前 master merge commit 为 `b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b`；PR #462 文档精确 HEAD `97fcf8a133a968b71b3652a0b376065e72dc596f` 的 Fork license boundary run `45349124409`、Flutter tests run `45349124349` 均 SUCCESS，其中 Flutter 全量回归 job `138290860837` 和 Android arm64/JVM job `138294326945` 均 SUCCESS；Branch validation job `138290862642` 为 SKIPPED，不计 PASS。
 - **云端业务/授权工程：** F0 Headless 拆分、F1 完整计划聚合及副作用前授权、G1 情境授权网关、G2 Key Ring/Release fail-closed 代码、G3 激活/Token 导入 UI 均已进入 master。PR #458 的 AtomicFile 备份恢复修复、PR #459 的临时数据库测试隔离也已合并。
+- **PR #462 合并后的 master Push CI：** commit `b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b` 对应 Flutter Quality Gate run `45351039842`、Flutter tests run `45351039926`、Fork license boundary run `45351039841` 均 SUCCESS；Flutter tests 中完整回归 job `138297255914`、Android arm64 APK/Native JVM job `138300772054` 均 SUCCESS。Branch validation job `138297257868` 为 SKIPPED，不计 PASS。
+- **PR #461 的合并后 master Push CI：** merge commit `e4f690fe8c7d2d97201544fc613b737a8c5557dc` 对应 Flutter Quality Gate run `45348976111`、Flutter tests run `45348976126`、Fork license boundary run `45348975979` 均 SUCCESS；这与 PR #461 HEAD CI 分开记录。
 - **主线 #459 后的基线验收：** master `5e7083ba18952d86d0a573009e8cca25ab2bdcb2` 的 Flutter Quality Gate run `45341112787`、Flutter tests run `45341112826` 和 Fork license boundary run `45341112843` 均 SUCCESS；Flutter workflow 中的 Android arm64/JVM job `138268033239` SUCCESS。Branch validation 为 SKIPPED。
 - **G3 精确 HEAD 验收：** PR #455 head `c17b8bdbad104d3514f164496030e053fce91cf6` 的 Fork license run `45341358814` SUCCESS；Flutter tests run `45341358916` SUCCESS，包含 Flutter 全量回归 job `138265524800` 和 Android arm64/JVM job `138268369369`，两者均 SUCCESS；“无本地签名材料时 Release 构建必须失败”步骤 SUCCESS。Branch validation 为 SKIPPED。
 - **PR #416：** 保持 OPEN / DRAFT / UNTOUCHED；协议与发行端相关工作不作为本轮其他 PR 的合并条件。
@@ -4139,3 +4141,37 @@ PR HEAD 门禁证据：
 - **许可边界阻断：** 自动 Fork 许可边界和 REUSE 清单检查通过，仅证明文件分类/声明结构符合自动规则；新 Fork 文件的 `OWNERSHIP_EVIDENCE_REQUIRED` 权利证据仍需权属或充分再许可材料，不能将自动许可检查 PASS 等同于法律权属证明。
 - **设备验收后置：** Find N2 Android Keystore/StrongBox、AtomicFile 实机故障恢复、真实签名 APK 原位覆盖升级和用户数据保留、GPU/CPU 各 20 轮及多媒体/Activity/进程恢复、完整 TRACE 与 AI 数据清除均保持 LOCAL ONLY / MISSING / UNKNOWN；详见本地验收交接，不阻塞其他云端工作。
 - **CI 口径：** Fork license boundary、Flutter Quality Gate、Flutter regression、Android arm64/JVM 分别记录；任何 Branch validation 的 SKIPPED 都不是 PASS。任何未运行的设备场景继续标记 MISSING，不得用 CI、Widget 或 JVM 证据替代。
+
+
+---
+
+## 89. 2026-11-24 §78 后续孤立分支复核与设备交接基线刷新
+
+### 89.1 核验基线与统计口径
+
+- 本轮历史分支比较基线为 `master @ b884b0bfc5b4fe94e50fbf1bd1bdc54771b48c1b`。与最近一次运行时代码合并 PR #455 的 `1717b36ba0c2359a1526e22d23f75befacd80628` 比较，后续仅有台账、验收文档和许可清单变更；`pubspec.yaml` 仍为 `2.0.0+8048`，包名仍为 `com.nihaisha.nihaisha_app`。
+- 本轮重新枚举远程 refs 和 PR heads 时，原 §78 已登记的 58 个历史分支仍存在；另识别出 9 个此前未登记的历史分支（列表见下表）。另有本轮设备交接文档工作分支，不计入历史待审分支。
+- 分支比较中的 ahead/behind 仅说明提交图关系，不等于应当合并。所有旧分支均保留，不执行批量删除；只有仍有价值且通过当前 master 重新审计的最小代码切片才进入 PR。
+
+### 89.2 新识别历史分支逐项结论
+
+| 分支 | 相对当前 master | 核验结果与处置 |
+|---|---:|---|
+| `docs/product-scope-local-handover-2026-11-23` | ahead 10 / behind 20 | `EntitlementService`、`LicensePlatform`、授权服务测试及 AI capability audit 与 master 对应文件完全一致；其 `FeatureAuthorizer` 旧版本缺少当前 deny-by-default fallback。已由后续协议/服务集成覆盖，不合并。 |
+| `work/f0-2b-complete-import-export-audit-20261123` | ahead 0 / behind 15 | 完全落后当前 master，compare 无文件差异、无独有提交，不合并。 |
+| `work/f0-executor-boundary-20261123` | ahead 4 / behind 21 | Keystore 与 Plugin 文件已与 master 一致；分支中的旧 TokenStore 早于 AtomicFile backup recovery 修复，不能覆盖 master 当前实现，不合并。 |
+| `work/f0-executor-import-graph-20261123-v3` | ahead 6 / behind 20 | 旧 Dispatcher、AST audit 和 workflow 均落后；master 已包含 F0/F1 执行边界及 Gateway AST 约束，旧审计器覆盖面不足，不合并。 |
+| `work/f0-executor-import-graph-20261123` | ahead 4 / behind 20 | 旧 Dispatcher/Router 与测试属于 #442/#444 之前实现，已被合并后的执行注册边界和 Service 抽取覆盖，不合并。 |
+| `work/f0-ui-result-handler-20261123` | ahead 106 / behind 17 | 大量历史 Service 抽取内容已进入 #444/#446；其 Dispatcher 早于 F1 授权计划，且结果文本仍含字面量 `\\n`，master 当前 handler 已修正换行。整支合并会回退授权和结果处理，不合并。 |
+| `pro/entitlement-service-v12` | ahead 13 / behind 25 | 含早期协议/发行端与旧 EntitlementService 版本；当前 v1.2 Verifier、Issuer、Android Bridge、EntitlementService 已由 #433/#437/#438 等进入 master，不合并。 |
+| `work/pro-entitlement-service-validation` | ahead 18 / behind 22 | `LicensePlatform` 与 Issuer 已和 master 一致；分支 EntitlementService/测试早于当前服务实现，缺少后续 refresh 并发竞态回归，不合并。 |
+| `fix/baseline-png-and-literal-newlines` | ahead 1 / behind 23 | `local_ai_interview_screen.dart` 和启动图资源属于旧基线，未验证的 PNG 不整体导入；仅从其 `app_dialogs.dart` 中选择性提取关于页 5 处换行修正，另加既有品牌测试断言，独立提交为 PR #463。禁止合并该旧分支本身。 |
+
+- 上表分支均不删除、不重置、不整体合并。尤其 `pro/entitlement-service-v12` 与 `work/pro-entitlement-service-validation` 不能绕过 v1.2 冻结规范重新引入旧协议实现。
+
+### 89.3 Find N2 / E4B 交接文件基线刷新
+
+- 已同步更新 `docs/find-n2-real-device-acceptance.md`、`docs/find-n2-e4b-local-handover.md`、`docs/find-n2-local-ai-acceptance-checklist.md`、`docs/find-n2-ai-trace-acceptance-plan.md` 和 `docs/local-android-release-checklist.md`，区分运行时代码基线与当前 master 文档基线，避免设备执行者按旧 SHA 构建。
+- 当前交接文档版本信息仍以 `pubspec.yaml` 为准；本轮未改 App version、applicationId、签名配置或模型版本。
+- PR #462 合并后的 master commit `b884b0b...` 三条 Push workflow 均 SUCCESS；设备交接文件仍声明 CI Debug APK 不可作为原签名 Release 升级包。
+- 真机 Keystore/StrongBox、AtomicFile 恢复、原签名覆盖升级和用户数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、TRACE 与 AI 数据清除继续为 `LOCAL ONLY / MISSING / UNKNOWN`。本轮无设备 TRACE，未将任何设备项改为 PASS。
