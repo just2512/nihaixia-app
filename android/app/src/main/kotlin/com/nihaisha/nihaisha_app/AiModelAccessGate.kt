@@ -26,4 +26,6 @@ internal class AiModelAccessGate {
 }
 
 internal class AiModelAccessDeniedException :
-    IllegalStateException("Native AI model access is not licensed (ai_access required).")
+    IllegalStateException("Native AI model access is not licensed (ai_access required).") {
+    val code: String = AiModelAccessGate.ERROR_CODE
+}

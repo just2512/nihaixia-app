@@ -892,6 +892,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendLocalMessage(text: String, context: String = ""): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
         // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
         // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
@@ -914,6 +915,7 @@ class MainActivity : FlutterActivity() {
         userMessageText: String,
         send: (Conversation) -> String
     ): String {
+        aiModelAccessGate.requireAccess()
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
 
@@ -973,6 +975,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun createConversationWithHistory(engine: Engine): Conversation {
+        aiModelAccessGate.requireAccess()
         val initialMessages = LocalAiConversationHistoryPolicy.initialMessages(
             conversationHistoryTurns
         ).map { transcriptMessage ->
@@ -991,6 +994,7 @@ class MainActivity : FlutterActivity() {
 
     /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
     private fun recreateCpuEngineForRecovery(originalError: Exception) {
+        aiModelAccessGate.requireAccess()
         // The first-turn failure may have fired long after the last hash
         // verification; re-verify before any new Engine can open the file.
         ensureModelFileIntegrity()
@@ -1082,6 +1086,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendLocalImage(path: String, userPrompt: String): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val image = requireCachedInput(path, "照片")
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(image.absolutePath, bounds)
@@ -1109,6 +1114,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun sendLocalAudio(path: String, userPrompt: String): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val audio = requireCachedInput(path, "录音")
         LocalAiWavPolicy.validationError(audio)?.let { error ->
             throw IllegalArgumentException(error)
@@ -1137,6 +1143,7 @@ class MainActivity : FlutterActivity() {
         userText: String,
         candidatesJson: String
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         require(userText.isNotBlank() && userText.length <= 2000) {
@@ -1220,6 +1227,7 @@ class MainActivity : FlutterActivity() {
         userText: String,
         missingFieldsJson: String
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         require(userText.isNotBlank() && userText.length <= 2000) {
@@ -1298,6 +1306,7 @@ class MainActivity : FlutterActivity() {
         currentText: String,
         userContext: String
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         val normalizedQuestionId = questionId.trim()
@@ -1397,6 +1406,7 @@ class MainActivity : FlutterActivity() {
         explicitSourceText: String? = null,
         explicitSourceTruncated: Boolean = false
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         val engine = aiEngine
             ?: throw IllegalStateException("本地模型尚未加载")
         val sourceEntries = explicitSourceText?.trim()?.takeIf { it.isNotEmpty() }
@@ -1517,6 +1527,7 @@ class MainActivity : FlutterActivity() {
         transcript: String,
         userMessages: List<String>
     ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
         resetLocalConversation()
         val boundedTranscript = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
         val prompt = buildString {

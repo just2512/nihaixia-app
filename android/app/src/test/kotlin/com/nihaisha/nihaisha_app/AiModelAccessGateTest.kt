@@ -15,7 +15,7 @@ class AiModelAccessGateTest {
             gate.requireAccess()
             throw AssertionError("closed Native AI gate must reject access")
         } catch (error: AiModelAccessDeniedException) {
-            assertEquals(AiModelAccessGate.ERROR_CODE, error.let { AiModelAccessGate.ERROR_CODE })
+            assertEquals(AiModelAccessGate.ERROR_CODE, error.code)
         }
     }
 
