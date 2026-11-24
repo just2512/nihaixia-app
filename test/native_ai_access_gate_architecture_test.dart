@@ -14,6 +14,8 @@ void main() {
     expect(mainActivity, contains('if (requiresAiAccess) aiModelAccessGate.requireAccess()'));
     expect(mainActivity, contains('if (!enabled) aiModelAccessGate.disable()'));
     expect(gateSource, contains('AiModelAccessGate(initiallyEnabled: Boolean = false)'));
+    expect(gateSource, contains('currentEpoch()'));
+    expect(gateSource, contains('expectedEpoch != epoch'));
     expect(gateSource, contains('@Volatile'));
     expect(gateSource, isNot(contains('SharedPreferences')));
     expect(gateSource, isNot(contains('File(')));
@@ -55,6 +57,7 @@ void main() {
       'loadLocalModel',
       'sendWithFirstTurnGpuFallback',
       'recreateCpuEngineForRecovery',
+      'createConversationWithHistory',
       'resolveAssistantIntent',
       'extractBaziSlots',
       'understandTcmInterviewAnswer',

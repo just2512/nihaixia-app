@@ -123,11 +123,18 @@ class MainActivity : FlutterActivity() {
                             )
                             return@handler
                         }
+                        // Capture the authorization epoch before queueing. A later synchronous
+                        // revoke invalidates this enable even if its task is still queued.
+                        val expectedEpoch = if (enabled) {
+                            aiModelAccessGate.currentEpoch()
+                        } else {
+                            null
+                        }
                         // Closing is synchronous: queued/new inference observes false immediately.
                         if (!enabled) aiModelAccessGate.disable()
                         runAiTask(result) {
                             if (enabled) {
-                                aiModelAccessGate.enable()
+                                aiModelAccessGate.enable(expectedEpoch!!)
                                 mapOf("enabled" to true, "released" to false)
                             } else {
                                 aiModelAccessGate.disable()
@@ -452,10 +459,11 @@ class MainActivity : FlutterActivity() {
                             )
                         } else {
                             result.error(
-                                if (error is AiModelAccessDeniedException) {
-                                    "AI_ACCESS_REQUIRED"
-                                } else {
-                                    "LOCAL_AI_ERROR"
+                                when (error) {
+                                    is AiModelAccessDeniedException -> "AI_ACCESS_REQUIRED"
+                                    is AiModelAccessSyncSupersededException ->
+                                        "AI_ACCESS_SYNC_SUPERSEDED"
+                                    else -> "LOCAL_AI_ERROR"
                                 },
                                 error.message ?: error.javaClass.simpleName,
                                 null
@@ -977,6 +985,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun createConversationWithHistory(engine: Engine): Conversation {
+        aiModelAccessGate.requireAccess()
         val initialMessages = LocalAiConversationHistoryPolicy.initialMessages(
             conversationHistoryTurns
         ).map { transcriptMessage ->

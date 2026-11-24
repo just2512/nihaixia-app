@@ -22,7 +22,7 @@ class AiModelAccessGateTest {
     fun enablingAndDisablingChangesTheOnlyRuntimeDecision() {
         val gate = AiModelAccessGate()
 
-        gate.enable()
+        gate.enable(gate.currentEpoch())
         assertTrue(gate.isEnabled())
         gate.requireAccess()
 
@@ -37,9 +37,25 @@ class AiModelAccessGateTest {
     }
 
     @Test
+    fun revokeInvalidatesAnEnableTaskThatWasAlreadyQueued() {
+        val gate = AiModelAccessGate()
+        val queuedEnableEpoch = gate.currentEpoch()
+
+        gate.disable()
+
+        try {
+            gate.enable(queuedEnableEpoch)
+            throw AssertionError("superseded enable must not reopen the gate")
+        } catch (_: AiModelAccessSyncSupersededException) {
+            // Expected stale task rejection.
+        }
+        assertFalse(gate.isEnabled())
+    }
+
+    @Test
     fun aFreshProcessGateNeverInheritsThePreviousInstanceState() {
         val firstProcess = AiModelAccessGate()
-        firstProcess.enable()
+        firstProcess.enable(firstProcess.currentEpoch())
         val restartedProcess = AiModelAccessGate()
 
         assertTrue(firstProcess.isEnabled())
