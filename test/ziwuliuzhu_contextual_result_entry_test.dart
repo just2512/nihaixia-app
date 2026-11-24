@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
-
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
 import 'package:nihaisha_app/screens/ziwuliuzhu_screen.dart';
@@ -229,8 +227,7 @@ void main() {
         addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
             conversationStore: InMemoryAssistantConversationStore(),
             child: MaterialApp(
               theme: ThemeData(
@@ -243,7 +240,6 @@ void main() {
                 returnResultOnComplete: true,
               ),
             ),
-          )
           ),
         );
         await tester.pumpAndSettle();

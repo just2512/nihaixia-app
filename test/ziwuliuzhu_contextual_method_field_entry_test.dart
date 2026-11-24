@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
-
 import 'package:nihaisha_app/models/ai_context_ref.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/local_ai_interview_screen.dart';
@@ -225,8 +223,7 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = Size(viewport.width, viewport.height);
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
           child: MaterialApp(
             home: ZiWuLiuZhuScreen(
@@ -235,8 +232,7 @@ void main() {
               returnResultOnComplete: true,
             ),
           ),
-        )
-          ),
+        ),
         );
       await tester.pumpAndSettle();
 
@@ -316,9 +312,7 @@ void main() {
       }
 
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: const SizedBox.shrink()
-          ),
+          const SizedBox.shrink(),
         );
     }
   });

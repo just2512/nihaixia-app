@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/database_helper.dart';
@@ -41,16 +40,14 @@ void main() {
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
     await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: MaterialApp(
+          MaterialApp(
       theme: ThemeData(extensions: [AppColors.light]),
       home: ZiweiChartScreen(
         initialSolar: DateTime(2000, 8, 16, 10),
         initialGender: true,
         initialLng: 121.47,
       ),
-    )
-          ),
+    ),
         );
     await tester.pumpAndSettle();
 
@@ -63,16 +60,14 @@ void main() {
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 1200));
     await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: MaterialApp(
+          MaterialApp(
       theme: ThemeData(extensions: [AppColors.light]),
       home: ZiweiChartScreen(
         initialSolar: DateTime(2000, 8, 16, 10),
         initialGender: true,
         initialLng: 181,
       ),
-    )
-          ),
+    ),
         );
     await tester.pumpAndSettle();
 
@@ -87,16 +82,14 @@ void main() {
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(900, 1200));
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: MaterialApp(
+          MaterialApp(
         theme: ThemeData(extensions: [AppColors.light]),
         home: ZiweiChartScreen(
           initialSolar: DateTime(2000, 8, 16, 10),
           initialGender: true,
           initialLng: 121.47,
         ),
-      )
-          ),
+      ),
         );
       await tester.pumpAndSettle();
 
@@ -167,16 +160,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: MaterialApp(
+          MaterialApp(
         theme: ThemeData(extensions: [AppColors.light]),
         home: ZiweiChartScreen(
           initialSolar: DateTime(2000, 8, 16, 10),
           initialGender: true,
           initialLng: 121.47,
         ),
-      )
-          ),
+      ),
         );
       await tester.pumpAndSettle();
 
