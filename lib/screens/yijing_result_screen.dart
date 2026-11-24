@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/yijing_tool_service.dart';
 import '../utils/fold_aware_routes.dart';
@@ -55,9 +54,7 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
       return;
     }
 
-    final gateway = ContextResolutionGateway(
-      authorizer: FeatureAuthorizerScope.of(context),
-    );
+    const gateway = ContextResolutionGateway();
     final resolution = await gateway.resolve(
       reference: contextRef,
       resolver: () => AiContextResolver.resolveYiJingToolResult(
@@ -123,9 +120,7 @@ class _YiJingResultScreenState extends State<YiJingResultScreen> {
       return;
     }
 
-    final gateway = ContextResolutionGateway(
-      authorizer: FeatureAuthorizerScope.of(context),
-    );
+    const gateway = ContextResolutionGateway();
     final resolution = await gateway.resolve(
       reference: fieldRef,
       resolver: () => AiContextResolver.resolveYiJingResultField(

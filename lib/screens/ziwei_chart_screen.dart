@@ -20,7 +20,6 @@ import '../theme/app_colors.dart';
 import '../utils/ziwei_plate_layout.dart';
 import '../models/ai_context_ref.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import 'assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
@@ -647,9 +646,7 @@ class _ZiweiChartScreenState extends State<ZiweiChartScreen> {
       sourceId: AiContextResolver.ziweiSourceId,
       title: '${palace.roleLabel}星曜',
     );
-    final gateway = ContextResolutionGateway(
-      authorizer: FeatureAuthorizerScope.of(context),
-    );
+    const gateway = ContextResolutionGateway();
     final resolution = await gateway.resolve(
       reference: contextRef,
       resolver: () => AiContextResolver.resolveZiweiPalaceStars(
