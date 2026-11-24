@@ -86,7 +86,14 @@ class LicenseVerificationResult {
   final LicenseVerificationStatus status;
   final LicensePayload? payload;
 
-  /// True only when the signed token grants at least one enforced feature.
+  /// True when signature, issuer, payload, protocol, product, application and
+  /// device binding are valid, even when the Token grants no AI access.
+  bool get isAuthenticated =>
+      status == LicenseVerificationStatus.valid ||
+      status == LicenseVerificationStatus.validWithUnsupportedFeatures ||
+      status == LicenseVerificationStatus.validWithoutGrantedFeatures;
+
+  /// True only when the authenticated Token grants the current AI entitlement.
   bool get isValid =>
       status == LicenseVerificationStatus.valid ||
       status == LicenseVerificationStatus.validWithUnsupportedFeatures;

@@ -14,6 +14,7 @@ import 'licensing/feature_authorizer.dart';
 import 'licensing/feature_authorizer_scope.dart';
 import 'licensing/license_key_ring_factory.dart';
 import 'licensing/license_verifier.dart';
+import 'licensing/ai_model_access_platform.dart';
 import 'licensing/license_platform.dart';
 import 'services/entitlement_service.dart';
 import 'screens/home_screen.dart';
@@ -201,6 +202,7 @@ void main() async {
   await ZiweiRulesRepository.load();
   final entitlementService = EntitlementService(
     platform: MethodChannelLicensePlatform(),
+    aiModelAccessPlatform: MethodChannelAiModelAccessPlatform(),
     verifier: LicenseVerifier(
       keyRing: LicenseKeyRingFactory.fromEnvironment(),
     ),

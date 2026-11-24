@@ -170,7 +170,6 @@ class _LicenseActivationSettingsSectionState
       listenable: widget.entitlementService,
       builder: (context, _) {
         final snapshot = widget.entitlementService.snapshot;
-        final grantedFeatures = snapshot.grantedFeatureIds.toList()..sort();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -180,12 +179,10 @@ class _LicenseActivationSettingsSectionState
               title: const Text('研纪专业版'),
               subtitle: Text(_statusLabel(snapshot)),
             ),
-            if (snapshot.status == EntitlementServiceStatus.active) ...[
-              Padding(
-                padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
-                child: Text(
-                  '已授予：${grantedFeatures.map(_featureLabel).join('、')}',
-                ),
+            if (snapshot.aiAccess)
+              const Padding(
+                padding: EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
+                child: Text('已授予：全部 Native LiteRT 模型访问'),
               ),
               if (snapshot.licenseId != null)
                 Padding(
@@ -283,6 +280,7 @@ class _LicenseActivationSettingsSectionState
   }
 
   static String _featureLabel(String id) {
+    if (id == 'ai_access') return '全部本地 AI 模型访问';
     switch (id) {
       case 'ai_advanced':
         return 'AI 跨工具自动编排';
