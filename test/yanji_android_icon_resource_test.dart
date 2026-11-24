@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,6 +9,7 @@ void main() {
   group('研纪 Android Launcher 图标资源', () {
     test('Launcher 颜色与 App 现有主题 Token 完全一致', () {
       final appColors = readText('lib/theme/app_colors.dart');
+      final palette = readText('lib/theme/yanji_palette.dart');
       final foreground = readText(
         'android/app/src/main/res/drawable/ic_launcher_foreground.xml',
       );
@@ -22,16 +24,19 @@ void main() {
       );
       final svg = readText('docs/images/logo.svg');
 
-      expect(appColors, contains('primary: const Color(0xFF43594D)'));
-      expect(appColors, contains('background: const Color(0xFFE7E9E4)'));
-      expect(foreground, contains('android:fillColor="#43594D"'));
-      expect(background, contains('#E7E9E4'));
-      expect(legacy, contains('#43594D'));
-      expect(legacy, contains('#E7E9E4'));
-      expect(legacyRound, contains('#43594D'));
-      expect(legacyRound, contains('#E7E9E4'));
-      expect(svg, contains('fill="#43594D"'));
-      expect(svg, contains('fill="#E7E9E4"'));
+      expect(appColors, contains('primary: YanjiPalette.brandRed'));
+      expect(appColors, contains('background: YanjiPalette.coldWhite'));
+      expect(foreground, contains('android:fillColor="#D71019"'));
+      expect(background, contains('#EBECEE'));
+      expect(legacy, contains('#D71019'));
+      expect(legacy, contains('#EBECEE'));
+      expect(legacyRound, contains('#D71019'));
+      expect(legacyRound, contains('#EBECEE'));
+      expect(svg, contains('fill="#D71019"'));
+      expect(svg, contains('fill="#EBECEE"'));
+      expect(palette, contains('static const brandRed = Color(0xFFD71019)'));
+      expect(palette, contains('static const coldWhite = Color(0xFFEBECEE)'));
+
 
       for (final content in [
         foreground,
@@ -43,6 +48,9 @@ void main() {
         expect(content, isNot(contains('#A93226')));
         expect(content, isNot(contains('#F3EBDD')));
         expect(content, isNot(contains('#B89453')));
+        expect(content, isNot(contains('#43594D')));
+        expect(content, isNot(contains('#E7E9E4')));
+
       }
     });
 
@@ -71,6 +79,71 @@ void main() {
           isTrue,
           reason: '$density launcher PNG must remain available',
         );
+      }
+    });
+
+    test('旧 API 密度回退 PNG 使用当前品牌红与冷白', () async {
+      for (final density in [
+        'mdpi',
+        'hdpi',
+        'xhdpi',
+        'xxhdpi',
+        'xxxhdpi',
+      ]) {
+        final bytes = File(
+          'android/app/src/main/res/mipmap-$density/ic_launcher.png',
+        ).readAsBytesSync();
+        late final ui.Codec codec;
+        try {
+          codec = await ui.instantiateImageCodec(bytes);
+        } catch (error) {
+          fail('$density PNG decode failed: $error');
+        }
+        try {
+          late final ui.FrameInfo frame;
+          try {
+            frame = await codec.getNextFrame();
+          } catch (error) {
+            fail('$density PNG frame decode failed: $error');
+          }
+          try {
+            final data = await frame.image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            );
+            expect(data, isNotNull, reason: '$density PNG must decode');
+            final rgba = data!.buffer.asUint8List(
+              data.offsetInBytes,
+              data.lengthInBytes,
+            );
+
+            bool containsRgb(int red, int green, int blue) {
+              for (var i = 0; i < rgba.length; i += 4) {
+                if (rgba[i] == red &&
+                    rgba[i + 1] == green &&
+                    rgba[i + 2] == blue &&
+                    rgba[i + 3] == 255) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
+            expect(
+              containsRgb(0xD7, 0x10, 0x19),
+              isTrue,
+              reason: '$density fallback must include brand red #D71019',
+            );
+            expect(
+              containsRgb(0xEB, 0xEC, 0xEE),
+              isTrue,
+              reason: '$density fallback must include cold white #EBECEE',
+            );
+          } finally {
+            frame.image.dispose();
+          }
+        } finally {
+          codec.dispose();
+        }
       }
     });
 

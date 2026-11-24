@@ -55,6 +55,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Inventory color usage and reject new hardcoded UI colors
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          python3 tool/audit_color_tokens.py --inventory
+          python3 tool/audit_color_tokens.py --changed-only --base-ref origin/master
+
       # The Android target uses a separate immutable arm64 native asset.
       # Verify it against sqlite3 3.5.2's published digest before the Flutter hook.
       - name: Prewarm verified SQLite Android arm64 asset
@@ -117,15 +125,22 @@ jobs:
           code_changed=0
           dart_test_files=()
           kotlin_test_files=()
+          printf 'Changed files relative to origin/master:\n%s\n' "$changed_files"
           while IFS= read -r file; do
             case "$file" in
               lib/*|android/*|pubspec.yaml|pubspec.lock) code_changed=1 ;;
             esac
+            if [[ "$file" =~ ^test/.+_test[.]dart$ ]]; then
+              dart_test_files+=("$file")
+            fi
             case "$file" in
-              test/*_test.dart) dart_test_files+=("$file") ;;
               android/app/src/test/**/*.kt|android/app/src/test/*.kt) kotlin_test_files+=("$file") ;;
             esac
           done <<< "$changed_files"
+          printf 'Detected changed Dart regression tests (%s):\n' "${#dart_test_files[@]}"
+          printf '  %s\n' "${dart_test_files[@]}"
+          printf 'Detected changed Kotlin regression tests (%s):\n' "${#kotlin_test_files[@]}"
+          printf '  %s\n' "${kotlin_test_files[@]}"
           if [[ "$code_changed" == "1" && "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
             echo "Production changes require at least one changed Dart or Android Kotlin regression test." >&2
             exit 1
@@ -148,6 +163,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Python for offline license issuer tests
         uses: actions/setup-python@v5
@@ -164,6 +181,16 @@ jobs:
 
       - name: Audit product brand identity across tracked text files
         run: python3 tool/audit_product_brand.py --strict
+
+      - name: Inventory color usage and reject new hardcoded UI colors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tool/audit_color_tokens.py --inventory
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            git fetch --no-tags --depth=1 origin "$GITHUB_BASE_REF"
+            python3 tool/audit_color_tokens.py --changed-only --base-ref FETCH_HEAD
+          fi
 
       - name: Set up Java 17
         uses: actions/setup-java@v6

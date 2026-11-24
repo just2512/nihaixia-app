@@ -1102,3 +1102,19 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored professional activation request builder, settings UI and YANJIR1 request tests; only portions for which sufficient rights exist.
+
+Files:
+ lib/theme/yanji_palette.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Yanji brand and semantic color palette; only portions for which sufficient ownership or sublicensing rights exist.
+
+Files:
+ docs/yanji-visual-design-system.md
+ test/theme/yanji_contrast_test.dart
+ test/theme/yanji_theme_wiring_test.dart
+ tool/audit_color_tokens.py
+ tool/color_token_audit_allowlist.json
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Yanji Batch 1 visual specification, semantic color and multi-surface contrast tests, production theme wiring tests, and the non-destructive color inventory/CI audit tooling; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.

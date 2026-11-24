@@ -41,7 +41,7 @@ ThemeData _buildTheme(Brightness brightness) {
 
   final inputBorder = OutlineInputBorder(
     borderRadius: BorderRadius.circular(AppRadius.md),
-    borderSide: BorderSide(color: scheme.outlineVariant),
+    borderSide: BorderSide(color: scheme.outline),
   );
 
   final titleTextStyle = TextStyle(
@@ -78,6 +78,7 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     cardTheme: CardThemeData(
       color: tokens.surface,
+      surfaceTintColor: scheme.surfaceTint,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -85,13 +86,13 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: tokens.surface,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: scheme.surfaceTint,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       titleTextStyle: titleTextStyle.merge(const TextStyle(fontSize: AppType.headline)),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
+    bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: scheme.surfaceTint,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
@@ -136,7 +137,7 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: tokens.surface,
-      side: BorderSide(color: scheme.outlineVariant),
+      side: BorderSide(color: scheme.outline),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
       labelStyle: TextStyle(fontSize: AppType.caption, color: scheme.onSurface),
     ),

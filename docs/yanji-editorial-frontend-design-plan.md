@@ -5,6 +5,8 @@
 > 执行原则：保留现有杂志式风格，以最小改动完成统一；本文件是后续前端视觉改造的执行基线。  
 > 当前阶段：Phase 1–4 自动化验收已完成并合并；OPPO Find N2 真实设备阅读仍为 `MISSING`，不得以模拟器、Widget 或 CI 结果替代。
 
+> **主题颜色强制约束：** 本计划涉及任何颜色、表面、状态色、品牌图形或 Material 3 主题变更时，必须先执行 [研纪 UI 主题颜色与视觉风格约束 v1.0](yanji-visual-design-system.md)。该文件是颜色和主题的唯一强制依据；本计划继续负责页面布局、排版、间距、折叠屏和实施批次。颜色冲突以主题约束文件为准。
+
 ## 1. 改造目标
 
 在保留项目现有现代杂志式视觉基础上，形成稳定、克制、适合长时间阅读的界面系统：
@@ -27,7 +29,8 @@
 
 当前仓库已有设计系统，不从零重建：
 
-- `lib/theme/app_colors.dart`：`AppColors` 是颜色 Token 唯一来源，并通过 `ThemeExtension` 和 `context.colors` 访问。
+- `lib/theme/yanji_palette.dart`：原始颜色值唯一来源，禁止业务页面直接引用或复制色值。
+- `lib/theme/app_colors.dart`：语义颜色唯一映射层，通过现有 `ThemeExtension` 和 `context.colors` 访问；不再创建第二套颜色扩展。
 - `lib/theme/app_tokens.dart`：已集中管理间距、圆角、字号、字体族和全局文字缩放。
 - `lib/main.dart`：已集中定义 AppBar、Card、NavigationBar、NavigationRail、ListTile、Chip、Divider、输入框和按钮主题。
 - 全局文字缩放由 `AppPreferenceTextScaler` 包裹整个 Navigator；最大值为 200%。
@@ -53,12 +56,12 @@
 
 ### 3.2 必须遵守
 
-- 页面底色使用低亮度中性灰绿，不使用纯白或明显泛黄的纸张色作为大面积底色。
+- 页面底色使用中性冷灰（浅色主题 `#EBECEE`），内容表面使用白色或主题深灰；不以大面积纯白或明显泛黄的纸张色作为页面底色。
 - 内容表面与页面背景保持细微但可辨识的层次差，不靠厚阴影和高饱和色制造层级。
 - 主要层级通过标题字号、字重、栏目编号、短说明、细分隔线和适量间距表达。
 - 卡片只用于确实需要分组或承载交互的内容；连续阅读内容优先使用平面布局、列表和轻边界。
 - 保留现有衬线标题气质，但正文、说明、表单和长内容保持系统无衬线字体的可读性。
-- 朱砂、金色、紫色等仅作为有明确语义的局部强调，不承担全局主色。
+- 正红是品牌主色；朱砂、金色、紫色等不再另作全局主色，只在有明确领域语义时局部使用。
 - 六经颜色、状态颜色和领域分区色属于语义色，不为视觉统一而全部染成品牌绿。
 - 不增加水墨背景、卷轴、八卦纹、渐变大底、浮夸插画或无信息价值的装饰。
 - 不为追求整齐而裁切文字、缩小字体、锁死高度或破坏滚动。
@@ -76,29 +79,31 @@
 
 ## 4. 设计 Token 规范
 
-以下颜色是当前候选基线，来自主题 Token 分支。通过自动对比度测试不等于通过真实屏幕阅读验收；实机确认前不得称为最终定稿。
+本节只保留便于页面计划阅读的 Token 摘要。完整角色定义、容器前景配对、surface 矩阵、例外条件、自动化门禁和变更流程，以 [研纪 UI 主题颜色与视觉风格约束](yanji-visual-design-system.md) 为准；出现不一致时必须按该约束文件修正本计划，不得另立配色口径。
 
 ### 4.1 颜色 Token
 
 | 语义 | 浅色主题 | 深色主题 | 用途 |
 |---|---|---|---|
-| `primary` | `#43594D` | `#A7B8AA` | 品牌主操作、选中态 |
-| `onPrimary` | `#FFFFFF` | `#1F3026` | 主色上的文字/图标 |
-| `primaryContainer` | `#DFE6DF` | `#34483C` | 选中背景、主色弱强调 |
-| `onPrimaryContainer` | `#20342A` | `#DDE8DE` | 主色容器上的内容 |
-| `background` | `#E7E9E4` | `#181E1B` | 页面底色 |
-| `surface` | `#EFF0EB` | `#202823` | AppBar、卡片和主要内容表面 |
-| `surfaceContainerLow` | `#E1E4DE` | `#252F29` | 次级分组、轻量区域 |
-| `surfaceContainerHighest` | `#D9DDD6` | `#303B34` | 输入容器、强调分组等 |
-| `onSurface` | `#262C28` | `#E4EAE4` | 正文和主要标题 |
-| `onSurfaceVariant` | `#59635C` | `#B7C1B8` | 辅助说明、次级标签 |
-| `outline` | `#747E76` | `#879388` | 需要清楚可见的控件边界 |
-| `outlineVariant` | `#C8CEC6` | `#465149` | 细分隔线、弱边界 |
+| `primary` | `#D71019` | `#FF5B62` | 品牌主操作、选中态 |
+| `onPrimary` | `#FFFFFF` | `#1F0809` | 主色上的文字/图标 |
+| `primaryContainer` | `#F8DADC` | `#6A252B` | 选中背景、主色弱强调 |
+| `onPrimaryContainer` | `#4D1117` | `#FFE0E2` | 主色容器上的内容 |
+| `background` | `#EBECEE` | `#17181B` | 页面底色 |
+| `surface` | `#FFFFFF` | `#202227` | AppBar、卡片和主要内容表面 |
+| `surfaceContainerLow` | `#FAFAFB` | `#1D2025` | 次级分组、轻量区域 |
+| `surfaceContainerHighest` | `#F0F1F2` | `#292B31` | 输入容器、强调分组等 |
+| `onSurface` | `#252629` | `#F0F1F3` | 正文和主要标题 |
+| `onSurfaceVariant` | `#64646B` | `#B6BAC4` | 辅助说明、次级标签 |
+| `outline` | `#808087` | `#8A8E98` | 控件边界；浅色功能灰不作小字前景 |
+| `outlineVariant` | `#BCBBBF` | `#454951` | 细分隔线、弱边界 |
+| `link` | `#B30D15` | `#FF858A` | 链接/可点击文字，独立于品牌主色 |
 
 ### 4.2 语义色保留规则
 
 - `danger`、`success`、`info` 及其 container 沿用既有语义定义；只有在对比度测试证明存在问题时才单独调整。
-- `warning` 浅色值当前为 `#896000`，用于在新浅色底上保持文字识别度。
+- `warning` 浅色值为 `#815500`、深色值为 `#FFD166`，并分别配置前景色；品牌链接色使用独立 `link` Token。
+- `functionalGray`（`#808087`）只承担控件边界，不作为小字号文字；浅底链接使用 `#B30D15`，深底链接使用 `#FF858A`。
 - 六经颜色与六经容器颜色保留其领域语义；容器底色可随主题 surface 调整。
 - `tcmZone` 和 `metaphysicsZone` 保留现有分区含义。
 - 业务状态、诊断结果或领域颜色不得被用于纯装饰，也不得因品牌色调整而改变含义。
@@ -125,13 +130,19 @@
 
 ### Phase 0：设计规范与全局 Token 基线
 
+**权威约束文件**
+- `docs/yanji-visual-design-system.md`：研纪 UI 主题颜色与视觉风格约束 v1.0；后续主题和颜色变更必须先引用此文件。
+
 **范围**
 - 本文档。
-- `lib/theme/app_colors.dart`。
-- `test/app_theme_color_scheme_test.dart`。
+- `docs/yanji-visual-design-system.md`。
+- `lib/theme/yanji_palette.dart` 与 `lib/theme/app_colors.dart`。
+- `lib/main.dart` 全局 ThemeData 接线。
+- `test/app_theme_color_scheme_test.dart`、`test/theme/yanji_contrast_test.dart`、`test/theme/yanji_theme_wiring_test.dart`。
+- `tool/audit_color_tokens.py` 与 `tool/color_token_audit_allowlist.json`。
 
 **完成情况**
-- 低饱和灰绿 / 墨灰绿浅深主题 Token 与主题对比度断言已纳入 PR #211，并随 Phase 1 合并进入 `master`。
+- 原低饱和灰绿 Token 曾由 PR #211 合入；本轮品牌规范改为正红主色、独立链接色与中性灰阶，旧值仅保留为历史实现记录，不再作为当前 Token 依据。新色板及 Material 3 角色显式映射由本轮集成批次补齐自动断言。
 - PR #208 已关闭，明确由 PR #211 取代；它不是仍待合并的有效 PR。
 - Find N2 真实屏幕阅读测试仍为 `MISSING`；颜色仍是候选基线，不能据自动化结果宣称实机最终定稿。
 
