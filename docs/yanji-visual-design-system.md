@@ -81,6 +81,13 @@ final semantic = context.colors;
 - 透明色层必须先与背景合成，再对合成结果计算对比度；禁止直接对 alpha 色值做比率计算。
 - 对比度计算使用 WCAG 相对亮度公式的 0.04045 分段阈值，测试比较原始 double 数值，不四舍五入。
 
+### 状态容器前景色约定
+
+- 普通品牌红在浅色冷白上的对比度约为 4.47:1，低于普通文字 4.5:1；因此浅色品牌红用于图形、选中指示和按钮背景，不作为普通小字号文字。小字号链接使用 redOnLight。
+- danger/error 容器中的文字必须使用 colorScheme.onErrorContainer。尤其深色主题下，dangerDark 放在 darkErrorContainer 上只有约 4.01:1，不满足正文阈值，不得直接用 dangerDark 作为该容器内文字。
+- 浅色与深色 warningContainer 内部使用 semantic.warning 作为图标和强调文字；onWarning 只用于实心 warning 色背景上的前景，不用于 warningContainer。
+- danger/error 与品牌红的色相接近，不能仅依赖颜色区分；必须保留图标、文字标签、边界容器和可执行的恢复/注意说明。
+
 ### 交互状态
 
 - 选中态需同时表达颜色和结构变化（实心图标/字重/指示条或明确形状），不能只变色。
@@ -88,6 +95,8 @@ final semantic = context.colors;
 - 不要在红色调的选中/悬停容器上继续放置低对比度功能灰图标；该区域使用品牌图形色，其他非选中图标才使用功能灰。
 
 ### 中医风险与专业版授权
+
+容器前景色必须按具体背景匹配：errorContainer 内使用 colorScheme.onErrorContainer；warningContainer 内使用 semantic.warning。AppColors.danger / onDanger 是错误实心色及其前景配对，不能误作 errorContainer 的通用前景。
 
 | 场景/状态 | 语义 | 呈现约束 |
 |---|---|---|
