@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/screens/ziwei_chart_screen.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 
@@ -12,9 +15,26 @@ import 'package:nihaisha_app/theme/app_colors.dart';
 /// 验证：打开 → 默认列出国内城市 → 输入关键字可过滤 → 点选后 `showDialog`
 /// 返回正确的 `CityLocation`（宿主按钮标签随之更新），且开合全程无异常。
 void main() {
-  setUpAll(() {
-    // 选中城市会经 SettingsRepository 落库，需 ffi 版 sqflite 工厂。
+  late Directory testDatabaseDirectory;
+
+  setUpAll(() async {
+    // 每个测试文件使用独立数据库目录。Flutter 测试 runner 会并行运行
+    // 不同文件；共享 .dart_tool/sqflite_common_ffi/databases 会令无关测试
+    // 的写事务互相持锁，造成偶发 SQLITE_BUSY / database is locked。
     databaseFactory = databaseFactoryFfi;
+    testDatabaseDirectory = await Directory.systemTemp.createTemp(
+      'city_search_dialog_test_',
+    );
+    DatabaseHelper.configureTestDatabase(
+      'city_search_dialog_test.db',
+      factory: databaseFactoryFfi,
+      directoryPath: testDatabaseDirectory.path,
+    );
+  });
+
+  tearDownAll(() async {
+    await DatabaseHelper.closeTestDatabase();
+    await testDatabaseDirectory.delete(recursive: true);
   });
 
   testWidgets('城市搜索弹窗：打开→默认国内→过滤→选中返回正确城市', (tester) async {
