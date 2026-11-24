@@ -8,6 +8,7 @@ void main() {
   group('研纪 Android Launcher 图标资源', () {
     test('Launcher 颜色与 App 现有主题 Token 完全一致', () {
       final appColors = readText('lib/theme/app_colors.dart');
+      final palette = readText('lib/theme/yanji_palette.dart');
       final foreground = readText(
         'android/app/src/main/res/drawable/ic_launcher_foreground.xml',
       );
@@ -22,16 +23,19 @@ void main() {
       );
       final svg = readText('docs/images/logo.svg');
 
-      expect(appColors, contains('primary: const Color(0xFF43594D)'));
-      expect(appColors, contains('background: const Color(0xFFE7E9E4)'));
-      expect(foreground, contains('android:fillColor="#43594D"'));
-      expect(background, contains('#E7E9E4'));
-      expect(legacy, contains('#43594D'));
-      expect(legacy, contains('#E7E9E4'));
-      expect(legacyRound, contains('#43594D'));
-      expect(legacyRound, contains('#E7E9E4'));
-      expect(svg, contains('fill="#43594D"'));
-      expect(svg, contains('fill="#E7E9E4"'));
+      expect(appColors, contains('primary: YanjiPalette.brandRed'));
+      expect(appColors, contains('background: YanjiPalette.coldWhite'));
+      expect(foreground, contains('android:fillColor="#D71019"'));
+      expect(background, contains('#EBECEE'));
+      expect(legacy, contains('#D71019'));
+      expect(legacy, contains('#EBECEE'));
+      expect(legacyRound, contains('#D71019'));
+      expect(legacyRound, contains('#EBECEE'));
+      expect(svg, contains('fill="#D71019"'));
+      expect(svg, contains('fill="#EBECEE"'));
+      expect(palette, contains('static const brandRed = Color(0xFFD71019)'));
+      expect(palette, contains('static const coldWhite = Color(0xFFEBECEE)'));
+
 
       for (final content in [
         foreground,
@@ -43,6 +47,9 @@ void main() {
         expect(content, isNot(contains('#A93226')));
         expect(content, isNot(contains('#F3EBDD')));
         expect(content, isNot(contains('#B89453')));
+        expect(content, isNot(contains('#43594D')));
+        expect(content, isNot(contains('#E7E9E4')));
+
       }
     });
 
