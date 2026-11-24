@@ -4,7 +4,6 @@ import '../utils/fold_aware_routes.dart';
 import '../models/herb.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/classic_search_service.dart';
 import 'assistant_tool_router.dart';
@@ -55,9 +54,7 @@ class _HerbDetailScreenState extends State<HerbDetailScreen> {
   Future<void> _askAiAboutHerb() async {
     final herb = widget.herb;
     final contextRef = AiContextResolver.buildHerbContextRef(herb);
-    final gateway = ContextResolutionGateway(
-      authorizer: FeatureAuthorizerScope.of(context),
-    );
+    const gateway = ContextResolutionGateway();
     final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
       reference: contextRef,
       resolver: () => AiContextResolver.resolveHerb(ref: contextRef),

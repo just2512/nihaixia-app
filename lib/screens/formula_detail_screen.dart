@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import '../models/formula.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/classic_search_service.dart';
 import '../screens/assistant_tool_router.dart';
@@ -100,9 +99,7 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
   Future<void> _askAiAboutFormula() async {
     final formula = widget.formula;
     final contextRef = AiContextResolver.buildFormulaContextRef(formula);
-    final gateway = ContextResolutionGateway(
-      authorizer: FeatureAuthorizerScope.of(context),
-    );
+    const gateway = ContextResolutionGateway();
     final resolution = await gateway.resolve<AiResolvedKnowledgeEntry>(
       reference: contextRef,
       resolver: () => AiContextResolver.resolveFormula(ref: contextRef),

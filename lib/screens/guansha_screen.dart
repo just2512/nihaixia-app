@@ -6,7 +6,6 @@ import '../theme/yanji_status_semantics.dart';
 import '../widgets/yanji_status_badge.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/guansha_result_context_executor.dart';
 import '../services/guansha_tool_service.dart';
@@ -354,9 +353,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
       final contextRef = AiContextResolver.buildGuanshaResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: contextRef,
         resolver: () => AiContextResolver.resolveGuanshaToolResult(

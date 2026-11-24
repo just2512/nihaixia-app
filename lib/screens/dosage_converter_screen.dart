@@ -3,7 +3,6 @@ import '../theme/app_colors.dart';
 import '../services/dosage_conversion_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/dosage_result_context_executor.dart';
 import '../services/dosage_tool_service.dart';
@@ -81,9 +80,7 @@ class _DosageConverterScreenState extends State<DosageConverterScreen> {
       final contextRef = AiContextResolver.buildDosageResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: contextRef,
         resolver: () => AiContextResolver.resolveDosageToolResult(

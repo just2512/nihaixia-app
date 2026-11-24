@@ -5,7 +5,6 @@ import '../data/dream_data.dart';
 import '../models/bookmark.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/dream_result_context_executor.dart';
 import '../utils/fold_aware_routes.dart';
@@ -229,9 +228,7 @@ class _DreamScreenState extends State<DreamScreen> {
       final ref = AiContextResolver.buildDreamEntryContextRef(
         structuredSnapshot: snapshot,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: ref,
         resolver: () => AiContextResolver.resolveDreamEntryToolResult(
