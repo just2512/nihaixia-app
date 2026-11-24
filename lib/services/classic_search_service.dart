@@ -197,7 +197,8 @@ class ClassicSearchService {
     if (requiredPrefix == null ||
         !normalizedAsset.startsWith(requiredPrefix) ||
         !normalizedAsset.endsWith('.md') ||
-        normalizedAsset.contains('..')) {
+        normalizedAsset.contains('..') ||
+        normalizedAsset.contains(r'\')) {
       return null;
     }
     // The local first asset represents the second numbered clause in the
