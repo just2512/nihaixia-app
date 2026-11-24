@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nihaisha_app/licensing/feature_authorizer.dart';
+import 'package:nihaisha_app/licensing/entitlement_failure_reason.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/services/entitlement_service.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
@@ -51,17 +51,17 @@ void main() {
         (
           snapshot: EntitlementSnapshot(
             status: EntitlementServiceStatus.temporarilyUnavailable,
-            failureReason: FeatureAuthorizationFailureReason.providerError,
+            failureReason: EntitlementFailureReason.providerError,
           ),
           tone: YanjiStatusTone.neutral,
           label: '暂不可用',
           icon: Icons.sync_problem_outlined,
         ),
-        for (final reason in <FeatureAuthorizationFailureReason>[
-          FeatureAuthorizationFailureReason.keyMissing,
-          FeatureAuthorizationFailureReason.keyInvalidated,
-          FeatureAuthorizationFailureReason.deviceMismatch,
-          FeatureAuthorizationFailureReason.storeCorrupt,
+        for (final reason in <EntitlementFailureReason>[
+          EntitlementFailureReason.keyMissing,
+          EntitlementFailureReason.keyInvalidated,
+          EntitlementFailureReason.deviceMismatch,
+          EntitlementFailureReason.storeCorrupt,
         ])
           (
             snapshot: EntitlementSnapshot(
@@ -72,11 +72,11 @@ void main() {
             label: '待恢复',
             icon: Icons.warning_amber_outlined,
           ),
-        for (final reason in <FeatureAuthorizationFailureReason>[
-          FeatureAuthorizationFailureReason.signatureInvalid,
-          FeatureAuthorizationFailureReason.issuerUnknown,
-          FeatureAuthorizationFailureReason.issuerCompromised,
-          FeatureAuthorizationFailureReason.licenseRevoked,
+        for (final reason in <EntitlementFailureReason>[
+          EntitlementFailureReason.signatureInvalid,
+          EntitlementFailureReason.issuerUnknown,
+          EntitlementFailureReason.issuerCompromised,
+          EntitlementFailureReason.licenseRevoked,
         ])
           (
             snapshot: EntitlementSnapshot(
@@ -90,7 +90,7 @@ void main() {
         (
           snapshot: EntitlementSnapshot(
             status: EntitlementServiceStatus.invalid,
-            failureReason: FeatureAuthorizationFailureReason.wrongProduct,
+            failureReason: EntitlementFailureReason.wrongProduct,
           ),
           tone: YanjiStatusTone.warning,
           label: '需处理',
@@ -119,7 +119,7 @@ void main() {
         licenseTokenReplacementTone(
           const LicenseTokenReplacementResult(
             status: LicenseTokenReplacementStatus.rejected,
-            failureReason: FeatureAuthorizationFailureReason.keyMissing,
+            failureReason: EntitlementFailureReason.keyMissing,
           ),
         ),
         YanjiStatusTone.warning,
@@ -158,11 +158,11 @@ void main() {
         ),
         EntitlementSnapshot(
           status: EntitlementServiceStatus.invalid,
-          failureReason: FeatureAuthorizationFailureReason.keyMissing,
+          failureReason: EntitlementFailureReason.keyMissing,
         ),
         EntitlementSnapshot(
           status: EntitlementServiceStatus.invalid,
-          failureReason: FeatureAuthorizationFailureReason.signatureInvalid,
+          failureReason: EntitlementFailureReason.signatureInvalid,
         ),
       ];
 

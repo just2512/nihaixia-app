@@ -3,12 +3,21 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/licensing/ai_model_access_platform.dart';
 import 'package:nihaisha_app/licensing/license_platform.dart';
 import 'package:nihaisha_app/licensing/license_verifier.dart';
 import 'package:nihaisha_app/services/entitlement_service.dart';
 import 'package:nihaisha_app/theme/app_colors.dart';
 import 'package:nihaisha_app/widgets/yanji_status_badge.dart';
 import 'package:nihaisha_app/widgets/license_activation_settings_section.dart';
+
+class _FakeAiModelAccessPlatform implements AiModelAccessPlatform {
+  bool? currentState;
+  @override
+  Future<void> setAiAccess(bool allowed) async {
+    currentState = allowed;
+  }
+}
 
 ThemeData _yanjiTestTheme() => ThemeData(
   useMaterial3: true,
@@ -60,6 +69,7 @@ void main() {
     final service = EntitlementService(
       platform: MethodChannelLicensePlatform(channel: channel),
       verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
+      aiModelAccessPlatform: _FakeAiModelAccessPlatform(),
     );
     await service.initialize();
 
@@ -115,6 +125,7 @@ void main() {
     final service = EntitlementService(
       platform: MethodChannelLicensePlatform(channel: channel),
       verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
+      aiModelAccessPlatform: _FakeAiModelAccessPlatform(),
     );
     await service.initialize();
 
@@ -159,6 +170,7 @@ void main() {
     final service = EntitlementService(
       platform: MethodChannelLicensePlatform(channel: channel),
       verifier: LicenseVerifier(keyRing: LicenseKeyRing(keys: const [])),
+      aiModelAccessPlatform: _FakeAiModelAccessPlatform(),
     );
     await service.initialize();
 
