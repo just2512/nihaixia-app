@@ -103,6 +103,48 @@ class AssistantConversationOrchestrator {
     '病机',
   ];
 
+  // General factual questions about a registered metaphysics domain should use
+  // the metaphysics model prompt, not the TCM-only local knowledge retriever.
+  // Explicit study, theory, and source-text requests remain in learning mode.
+  static const _metaphysicsKnowledgeCues = [
+    '什么是',
+    '是什么',
+    '分别是什么',
+    '什么含义',
+    '含义',
+    '什么意思',
+    '代表什么',
+    '象征什么',
+    '介绍一下',
+    '讲讲',
+    '解释',
+    '怎么理解',
+    '如何理解',
+    '有什么区别',
+    '区别是什么',
+    '想了解',
+    '了解一下',
+    '概念',
+    '属性',
+    '五行',
+    '方位',
+    '吉凶',
+  ];
+
+  static const _explicitLearningIntentCues = [
+    '学习',
+    '系统学习',
+    '教学',
+    '课程',
+    '原理',
+    '历史背景',
+    '发展史',
+    '沿革',
+    '原文',
+    '出处',
+    '条文',
+  ];
+
   // These are routing cues only: a match requires a reviewed safety
   // assessment; it does not label urgency or provide a medical conclusion.
   // The red-flag examples below mirror the normative audit boundary.
@@ -993,8 +1035,24 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: selectedMode);
     }
 
-    // 明确的学习/解释请求优先于工具名和动作词，避免“学习五运六气推算原理”
-    // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
+    // A factual question about a registered metaphysics subject is explanatory,
+    // not a tool invocation. Route it to the metaphysics model adapter so the
+    // model can use its own domain knowledge instead of failing closed on the
+    // TCM-only local knowledge corpus. Explicit study/theory/source requests
+    // continue to use the learning adapter.
+    final mentionsMetaphysicsDomain =
+        AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics)
+            .isNotEmpty;
+    final explicitlyRequestsLearning =
+        _explicitLearningIntentCues.any(text.contains);
+    if (mentionsMetaphysicsDomain &&
+        !explicitlyRequestsLearning &&
+        _metaphysicsKnowledgeCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.metaphysics);
+    }
+
+    // Explicit learning/interpretation requests still take priority over
+    // action words; this prevents “学习五运六气推算原理” from executing a tool.
     if (_learningCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
