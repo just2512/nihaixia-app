@@ -126,6 +126,7 @@ Files:
  test/bazi_service_location_test.dart
  test/chaoshan_omen_test.dart
  test/chenggu_smoke_test.dart
+ test/city_search_dialog_test.dart
  test/classic_lecture_assets_test.dart
  test/classic_search_test.dart
  test/engine/diagnostic_engine_test.dart
