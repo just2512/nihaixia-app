@@ -38,8 +38,6 @@ import '../models/diagnosis_result_codec.dart';
 import '../models/zangfu_evidence.dart';
 import '../models/assistant_tool_result.dart';
 import '../models/tool_execution_plan.dart';
-import '../licensing/feature_authorizer.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../models/assistant_message_metadata.dart';
 import '../models/ai_context_ref.dart';
@@ -184,7 +182,6 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.testToolRouteBuilder,
     this.testHeadlessToolExecutor,
     this.testSavedChartsLoader,
-    this.featureAuthorizer,
     this.traceRecorder,
   });
 
@@ -208,10 +205,6 @@ class LocalAiInterviewScreen extends StatefulWidget {
   /// Injectable owner for local AI attachment files.
   final LocalAiAttachmentStore? attachmentStore;
   final AssistantConversationStore? conversationStore;
-
-  /// Authorization provider for anchored contextual assistant sessions.
-  /// Missing providers fail closed whenever a context reference is present.
-  final FeatureAuthorizer? featureAuthorizer;
 
   /// Test seam for verifying the assistant's diagnosis bookmark action.
   @visibleForTesting
@@ -366,7 +359,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   LocalAiSymptomDraft? _confirmedDraft;
   Map<String, String> _confirmedTenAnswers = const {};
   String? _error;
-  String? _contextAuthorizationError;
+  String? _contextResolutionError;
 
   AssistantConversationStore get _conversationStore =>
       widget.conversationStore ?? DatabaseHelper.instance;
@@ -2902,19 +2895,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   ContextResolutionGateway get _contextResolutionGateway =>
-      ContextResolutionGateway(
-        authorizer:
-            widget.featureAuthorizer ?? const UnconfiguredFeatureAuthorizer(),
-      );
+      const ContextResolutionGateway();
 
-  String _contextAuthorizationMessage(
+  String _contextResolutionMessage(
     ContextResolutionGatewayStatus status,
   ) =>
       switch (status) {
-        ContextResolutionGatewayStatus.authorizationDenied =>
-          '当前设备未获准使用情境助手能力；上下文未提交给本地模型。',
-        ContextResolutionGatewayStatus.authorizationUnavailable =>
-          '当前无法可靠核验情境助手授权；上下文未提交给本地模型，请稍后重试。',
         ContextResolutionGatewayStatus.invalidReference =>
           '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。',
         ContextResolutionGatewayStatus.missing =>
@@ -2927,12 +2913,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '当前情境来源拒绝解析；未提交上下文。',
         ContextResolutionGatewayStatus.resolverFailure =>
           '当前情境来源解析失败；未提交上下文。',
-        ContextResolutionGatewayStatus.authorized ||
+        ContextResolutionGatewayStatus.referenceValidated ||
         ContextResolutionGatewayStatus.resolved =>
           '',
       };
 
-  Future<bool> _authorizeActiveContext({
+  Future<bool> _validateActiveContext({
     required AiTraceContext traceContext,
     required String route,
   }) async {
@@ -2940,7 +2926,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       const errorCode = 'CONTEXT_REFERENCE_INVALID';
       if (mounted) {
         setState(() {
-          _contextAuthorizationError = '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。';
+          _contextResolutionError = '当前会话的情境引用无效或缺失；未恢复上下文，也未提交给模型。';
         });
       }
       await _traceRecorder.record(
@@ -2963,24 +2949,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     // The page entrypoint already resolved its source through the gateway.
     // Each turn re-checks entitlement, but does not re-run a potentially
     // unsupported tool-result resolver against a transient page snapshot.
-    final result = await _contextResolutionGateway.authorizeMetadata(
+    final result = await _contextResolutionGateway.validateMetadata(
       _activeContextRef,
     );
-    if (result.isAuthorized) {
-      if (mounted && _contextAuthorizationError != null) {
-        setState(() => _contextAuthorizationError = null);
+    if (result.isReferenceValid) {
+      if (mounted && _contextResolutionError != null) {
+        setState(() => _contextResolutionError = null);
       }
       return true;
     }
-    final errorCode = switch (result.status) {
-      ContextResolutionGatewayStatus.authorizationDenied =>
-        'CONTEXT_AUTHORIZATION_DENIED',
-      ContextResolutionGatewayStatus.authorizationUnavailable =>
-        'CONTEXT_AUTHORIZATION_UNAVAILABLE',
-      ContextResolutionGatewayStatus.invalidReference =>
-        'CONTEXT_REFERENCE_INVALID',
-      _ => 'CONTEXT_RESOLUTION_NOT_AUTHORIZED',
-    };
+    final errorCode = result.status ==
+            ContextResolutionGatewayStatus.invalidReference
+        ? 'CONTEXT_REFERENCE_INVALID'
+        : 'CONTEXT_RESOLUTION_FAILED';
     await _traceRecorder.record(
       traceContext,
       stage: AiTraceStage.dispatch,
@@ -2989,7 +2970,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       errorCode: errorCode,
     );
     if (mounted) {
-      setState(() => _contextAuthorizationError = _contextAuthorizationMessage(result.status));
+      setState(() => _contextResolutionError = _contextResolutionMessage(result.status));
     }
     await _traceRecorder.record(
       traceContext,
@@ -3062,38 +3043,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             ),
           ],
         );
-        final execution = await HeadlessToolDispatcher(
-          featureAuthorizer: FeatureAuthorizerScope.of(context),
-        ).executePlan(
+        final execution = await const HeadlessToolDispatcher().executePlan(
           plan: plan,
           executorOverride: widget.testHeadlessToolExecutor,
         );
         executionWatch.stop();
         if (!execution.isCompleted) {
-          final errorCode = switch (execution.status) {
-            HeadlessToolPlanExecutionStatus.authorizationDenied =>
-              'FEATURE_AUTHORIZATION_DENIED',
-            HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
-              'FEATURE_AUTHORIZATION_UNAVAILABLE',
-            HeadlessToolPlanExecutionStatus.invalidPlan =>
-              'EXECUTION_PLAN_INVALID',
-            HeadlessToolPlanExecutionStatus.completed =>
-              'UNEXPECTED_COMPLETED_STATUS',
-          };
-          final refusal = switch (execution.status) {
-            HeadlessToolPlanExecutionStatus.authorizationDenied =>
-              '本次跨能力操作需要专业版能力 ${execution.featureId ?? 'ai_advanced'}。'
-                  '为避免部分执行，整个计划已在启动前拒绝，任何工具都没有运行。'
-                  '你仍可继续普通对话，也可以返回首页，从对应工具页逐项手动操作。',
-            HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
-              '当前无法可靠核验专业版授权状态，本次计划未执行，任何工具都没有运行。'
-                  '请在授权状态恢复后重试；普通对话和单项手动工具仍可使用。',
-            HeadlessToolPlanExecutionStatus.invalidPlan =>
+          const errorCode = 'EXECUTION_PLAN_INVALID';
+          const refusal =
               '工具计划与当前 Headless 注册能力不一致，本次没有执行任何工具。'
-                  '请重新发起该操作；普通对话仍可继续。',
-            HeadlessToolPlanExecutionStatus.completed =>
-              '执行前状态异常：计划没有返回可用的执行结果，本次未提交工具结果。',
-          };
+              '请重新发起该操作；普通对话仍可继续。';
           await _traceRecorder.record(
             traceContext,
             stage: AiTraceStage.businessExecution,
@@ -3422,34 +3381,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final watch = Stopwatch()..start();
-    final execution = await HeadlessToolDispatcher(
-      featureAuthorizer: FeatureAuthorizerScope.of(context),
-    ).executePlan(
+    final execution = await const HeadlessToolDispatcher().executePlan(
       plan: plan,
       executorOverride: widget.testHeadlessToolExecutor,
     );
     watch.stop();
 
     if (execution.status != HeadlessToolPlanExecutionStatus.completed) {
-      final errorCode = switch (execution.status) {
-        HeadlessToolPlanExecutionStatus.authorizationDenied =>
-          'FEATURE_AUTHORIZATION_DENIED',
-        HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
-          'FEATURE_AUTHORIZATION_UNAVAILABLE',
-        HeadlessToolPlanExecutionStatus.invalidPlan => 'EXECUTION_PLAN_INVALID',
-        HeadlessToolPlanExecutionStatus.completed => 'UNEXPECTED_COMPLETED_STATUS',
-      };
-      final refusal = switch (execution.status) {
-        HeadlessToolPlanExecutionStatus.authorizationDenied =>
-          '本次计划跨越多个业务能力，需要专业版能力 ${execution.featureId ?? 'ai_advanced'}。'
-              '整个计划已在任何工具启动前拒绝，没有产生工具业务副作用。普通对话和单项手动工具仍可使用。',
-        HeadlessToolPlanExecutionStatus.authorizationUnavailable =>
-          '当前无法可靠核验专业版授权状态。整个计划已在任何工具启动前停止，没有产生工具业务副作用；普通对话和单项手动工具仍可使用。',
-        HeadlessToolPlanExecutionStatus.invalidPlan =>
-          '完整计划未通过 Headless 执行器注册校验，没有执行任何工具。请重新发起该操作。',
-        HeadlessToolPlanExecutionStatus.completed =>
-          '计划执行状态异常，未提交工具结果。',
-      };
+      const errorCode = 'EXECUTION_PLAN_INVALID';
+      const refusal =
+          '完整计划未通过 Headless 执行器注册校验，没有执行任何工具。请重新发起该操作。';
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.businessExecution,
@@ -5724,7 +5665,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       route: 'result_interpretation',
       mode: mode.name,
     );
-    if (!await _authorizeActiveContext(
+    if (!await _validateActiveContext(
       traceContext: traceContext,
       route: 'result_interpretation',
     )) {
@@ -6619,7 +6560,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         setState(() {
           _contextualInitializationPending = false;
           _inputController.clear();
-          _contextAuthorizationError = '当前情境引用无效或含有未知字段；未恢复或提交上下文。';
+          _contextResolutionError = '当前情境引用无效或含有未知字段；未恢复或提交上下文。';
         });
       }
       return null;
@@ -6631,13 +6572,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return _createNewConversation();
     }
     final authorization =
-        await _contextResolutionGateway.authorizeMetadata(expected);
-    if (!authorization.isAuthorized) {
+        await _contextResolutionGateway.validateMetadata(expected);
+    if (!authorization.isReferenceValid) {
       if (mounted) {
         setState(() {
           _contextualInitializationPending = false;
           _inputController.clear();
-          _contextAuthorizationError = _contextAuthorizationMessage(authorization.status);
+          _contextResolutionError = _contextResolutionMessage(authorization.status);
         });
       }
       return null;
@@ -7106,18 +7047,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final restoredContextAuthorization =
         !contextAnchorMatches || authorizationTarget.isEmpty
             ? null
-            : await _contextResolutionGateway.authorizeMetadata(
+            : await _contextResolutionGateway.validateMetadata(
                 authorizationTarget,
               );
     final canRestoreContext = contextAnchorMatches &&
         (authorizationTarget.isEmpty ||
-            restoredContextAuthorization?.isAuthorized == true);
+            restoredContextAuthorization?.isReferenceValid == true);
     final contextRestoreError = !contextMetadataValid
         ? '历史会话的情境引用无效或不完整；未恢复模型上下文。'
         : !contextAnchorMatches
             ? '历史会话的情境锚点与当前页面不一致；未把历史上下文提交给模型。'
             : !canRestoreContext
-                ? _contextAuthorizationMessage(
+                ? _contextResolutionMessage(
                     restoredContextAuthorization!.status,
                   )
                 : null;
@@ -7156,7 +7097,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHistoryTranscript = canRestoreContext ? transcript : null;
       _pendingHistoryUserMessages =
           canRestoreContext ? replayableUserMessages : const [];
-      _contextAuthorizationError = contextRestoreError;
+      _contextResolutionError = contextRestoreError;
       _error = contextRestoreError == null && _status?.ready != true
           ? '历史消息已载入。模型加载完成后会自动恢复上下文，再继续对话。'
           : null;
@@ -7174,7 +7115,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
     final transcript = _pendingHistoryTranscript;
     if (transcript == null || _status?.ready != true) return;
-    if (!await _authorizeActiveContext(
+    if (!await _validateActiveContext(
       traceContext: AiTraceContext.disabled(),
       route: 'history_restore',
     )) {
@@ -7299,7 +7240,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : _assistantMode.name,
     );
     final traceId = traceContext.traceId;
-    if (!await _authorizeActiveContext(
+    if (!await _validateActiveContext(
       traceContext: traceContext,
       route: 'assistant_send',
     )) {
@@ -10082,13 +10023,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   isUser: false,
                 ),
               ),
-            if (_contextAuthorizationError != null || _error != null)
+            if (_contextResolutionError != null || _error != null)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                 color: scheme.errorContainer,
                 child: Text(
-                  _contextAuthorizationError ?? _error!,
+                  _contextResolutionError ?? _error!,
                   style: TextStyle(color: scheme.onErrorContainer, fontSize: AppType.caption),
                 ),
               ),
