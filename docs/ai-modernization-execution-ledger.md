@@ -4224,3 +4224,15 @@ PR HEAD 门禁证据：
 - **真机验收：** OPPO Find N2 的 Keystore/StrongBox/TEE、AtomicFile 实际故障恢复、原签名 Release `adb install -r` 覆盖升级和用户数据保留、GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，均维持 `LOCAL ONLY / MISSING / UNKNOWN`。CI、JVM、Widget、Mock Channel 不能替代。
 - **CI 口径：** 只记录精确 SHA 对应的真实 run/job 结论。任何 `SKIPPED` 不计 PASS；尚未结束的 master Push workflow 不写成 PASS，结束后再按其最终状态补记。
 
+
+---
+
+## 91. 2026-11-24 术数常识问答与知识来源边界修复（PR #473，CI 待验）
+
+- **基线：** `master @ 4fe10b64a249a14689f9c5dd0d9caaae1f57dc6a`；独立分支 `fix/metaphysics-knowledge-routing-20261124`，PR [#473](https://github.com/just2512/nihaixia-app/pull/473)。
+- **根因：** 自动模式在通用工具分类前先用 `_learningCues` 判断。术数常识问题中的“是什么/解释/区别”等泛化表达因此直接进入 `AssistantMode.learning`；该模式只注入本地中医知识检索结果，未命中时按来源约束拒绝引用。ToolRouter 的 `matchAll()` 要求注册别名与动作词同时命中；只提及“小六壬”不应触发排课，但此前也没有“术数领域知识问答”这一独立分类。
+- **路由修复：** `AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics)` 识别注册术数领域；命中一般知识问答 cue 且未命中明确学习/原理/历史/原文/出处意图时，路由到 `AssistantMode.metaphysics`。该分支不返回 tool、不触发 Headless executor、不打开排课页面。
+- **Prompt 修复：** 玄学模式明确允许模型基于自身知识解释非计算型术数常识；实际排盘、起卦、历法和数值计算仍必须调用 App 确定性工具；不得伪造典籍引文、计算结果或流派口径。
+- **学习边界：** 明确学习、原理、历史背景、原文、出处和条文请求仍进入 learning；中医诊断、医学事实、经典原文、医案事实及规则/计算结果继续要求可追溯资料，不以模型记忆补造。
+- **回归测试：** Orchestrator 覆盖小六壬大安五行/方位/吉凶、梅花易数体用、紫微主星、术数比较问答及显式学习/原理请求；ToolRouter 测试锁定玄学 Prompt 的知识使用与来源边界。
+- **当前验收：** 代码与测试已提交 PR；PR 精确 HEAD 的 Flutter regression、静态分析及 Fork license boundary 尚未取得结果，均不得标记 PASS。Find N2 / E4B 实际模型回答仍为 `LOCAL ONLY / MISSING`，云端路由测试不替代真机输出验收。
