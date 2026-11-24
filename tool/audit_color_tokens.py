@@ -30,7 +30,6 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("Colors.*", re.compile(r"\bColors\s*(?:\.\s*[A-Za-z_]\w*|\s*\[)")),
     ("opacity API", re.compile(r"\.\s*(?:withOpacity|withValues)\s*\(")),
     ("ColorScheme.fromSeed", re.compile(r"\bColorScheme\s*\.\s*fromSeed\s*\(")),
-    ("ColorScheme.fromSeed", re.compile(r"\bColorScheme\s*\.\s*fromSeed\s*\(")),
     ("local ThemeData", re.compile(r"\bThemeData\s*\(")),
 )
 
