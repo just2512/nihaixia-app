@@ -300,11 +300,11 @@ Future<void> showAboutPage(BuildContext context) async {
             const Text('功能特色', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
-              '• 六经规则问诊与证候信息整理\\n'
-              '• 舌象、脉象等问诊参考信息\\n'
-              '• 经方、本草、穴位与经典资料库\\n'
-              '• 医案收藏、分享与离线检索\\n'
-              '• 本地 AI 辅助理解、问诊追问与已验证结果解释（诊断结论由 App 确定性规则产生）\\n'
+              '• 六经规则问诊与证候信息整理\n'
+              '• 舌象、脉象等问诊参考信息\n'
+              '• 经方、本草、穴位与经典资料库\n'
+              '• 医案收藏、分享与离线检索\n'
+              '• 本地 AI 辅助理解、问诊追问与已验证结果解释（诊断结论由 App 确定性规则产生）\n'
               '• 易经、八字、紫微等传统文化工具（非医疗用途）',
             ),
             const SizedBox(height: 16),
