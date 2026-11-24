@@ -1151,3 +1151,9 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork modification adds the production Yanji AppColors ThemeExtension to existing upstream Lingqian widget smoke tests; original upstream test remains Apache-2.0 and Fork-authored modifications require ownership evidence.
+
+Files:
+ docs/local-real-device-acceptance-handoff.md
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored local Find N2 acceptance handoff; applies only to portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights.
