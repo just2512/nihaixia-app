@@ -178,12 +178,12 @@ void main() {
         child: EntitlementServiceScope(
           service: service,
           child: Builder(
-          builder: (context) => Text(
-            identical(EntitlementServiceScope.maybeOf(context), service)
-                .toString(),
+            builder: (context) => Text(
+              identical(EntitlementServiceScope.maybeOf(context), service)
+                  .toString(),
+            ),
           ),
         ),
-      ),
       ),
     );
 

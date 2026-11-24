@@ -58,6 +58,29 @@ class _HistoryResumeService extends LocalAiService {
   }
 
   @override
+  Future<String> sendMessage(
+    String text, {
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async {
+    sendCalls += 1;
+    return '续聊成功：$text';
+  }
+
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async {
+    sendCalls += 1;
+    return '续聊成功：$text';
+  }
+
+  @override
   Future<String> sendMessageWithContext(
     String text, {
     required String context,
