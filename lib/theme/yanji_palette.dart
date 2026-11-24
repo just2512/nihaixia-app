@@ -122,4 +122,12 @@ abstract final class YanjiPalette {
   static const metaphysicsZoneDark = Color(0xFFB39DDB);
   static const meridianContainerTintOpacity = 0.12;
 
+  static Color meridianContainer(Color color, {required bool dark}) {
+    final background = dark ? darkSurface : white;
+    return Color.alphaBlend(
+      color.withValues(alpha: meridianContainerTintOpacity),
+      background,
+    );
+  }
+
 }
