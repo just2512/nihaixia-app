@@ -1074,3 +1074,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-owned deterministic bounded AI plan preflight, plan-level result presentation, and regression tests; only portions for which sufficient rights exist.
+
+Files:
+ docs/release-license-keyring-configuration.md
+ lib/licensing/license_key_ring_factory.dart
+ test/license_key_ring_factory_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-owned production public issuer Key Ring configuration factory, Release trust-anchor build gate documentation, and focused validation tests; only portions for which sufficient rights exist.

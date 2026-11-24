@@ -4050,16 +4050,27 @@ PR HEAD 门禁证据：
 ### 78.3 本轮专业版授权与情境网关工程状态（2026-11-23）
 
 - **F1 Headless 整计划预授权契约：PASS / REMOTE CI。** PR #448 已 squash 合并，merge commit 5313a0b2e7813760845d85cdd8f3b36b1a2b808e。同一 PR HEAD 的 Flutter 回归、Dart/Flutter 静态分析、Android arm64 CI 与 Fork license boundary 均为 SUCCESS；Branch validation 独立 job 为 SKIPPED，不单独计 PASS。
-- **F1 生产多工具计划聚合：PARTIAL / NOT WIRED。** HeadlessToolDispatcher.executePlan 已实现全计划校验后一次性预授权；当前生产 LocalAiInterviewScreen 仍为单个工具请求构造一个单步骤计划，Orchestrator 仍采用单工具决策/候选选择。尚无自动多动作完整计划生成，也未实现多步骤结果 presenter、统一 TRACE 与持久化。不得据此声明跨能力 AI 自动编排的付费门禁已完整生产启用。
-- **G1 ContextResolutionGateway 契约：PARTIAL / CI PENDING。** PR #449 叠放在 #448 之后，增加 contextual_assistant 授权前置、AiContextRef 持久化校验、拒绝/暂不可用时不调用 resolver，以及解析结果必须匹配精确来源锚点的测试。待该 PR 精确 HEAD 的 Flutter 与许可 CI 全部通过后，才可将契约层改记 PASS。
-- **G1 生产入口与历史/轮次接入：PARTIAL / CI PENDING。** PR #450 将网关接入方剂、本草、医案、腧穴、经络和《内经》情境入口，并对会话复用、历史恢复、结果解释和每轮模型发送重新校验；仍需精确 HEAD 的 Flutter、Android arm64 与许可 CI 证据。工具结果/字段快照历史恢复需要专用快照重建路径，当前不允许将其默认为已核验。
-- **G2 Production Release Key Ring / Trust Anchor：MISSING。** 尚无可核验的正式发行方公钥、密钥轮换/撤销配置及发布时注入证据。不得生成或使用虚构发行密钥，不得把测试私钥或测试签发能力打进 Release。未配置正式公钥时授权保持 fail-closed。
-- **G3 激活、替换与授权状态 UI：MISSING。** 尚未完成签名授权文件导入、替换/撤销状态展示、错误可诊断性及与业务功能隔离的完整闭环。
+- **F1 生产多工具计划聚合：PASS / PR #454 已合并。** PR #454 merge SHA `6cdd78a3d6bf0a2f39d8fa5feb1e9b8b6c42ef9a`；精确 HEAD `73ec01cf539b6472c8cbc9b03375b8a0f101ed65` 的 Flutter 全量回归、Dart/Flutter 静态分析、Android arm64 APK/Native JVM 单测和 Fork license boundary 均 SUCCESS；Branch validation 为 SKIPPED，不单独计 PASS。模型只给出有界工具 ID，参数由 App 确定性提取；计划完整校验后一次性授权，拒绝时无副作用。
+- **G1 ContextResolutionGateway 契约及生产上下文入口：PASS / PR #449、#450 已合并。** #449 merge SHA `1de63c1eed515a484e0f1321ecd3ddeb0eaa178a`；#450 merge SHA `e072f7bcb8918eb6f38437f39808a5a0ce1245d2`，精确 HEAD `08a6cf43adcdf662f1c2c3c367f5c1a9f9de1636` 的 Flutter、静态分析、Android arm64 和 Fork license CI 均 PASS。已覆盖新会话、历史恢复、连续轮次发送前重新解析/授权。工具结果/字段 17 个页面的进一步 Gateway 接线由 PR #456 独立完成中，尚待其精确 HEAD CI。
+- **G2 Production Release Key Ring / Trust Anchor：PARTIAL / PR #453 重基线 CI PENDING。** Key Ring 工厂、主应用 EntitlementService 注入、非阻塞初始化、Release build 的公开密钥配置门禁及验证测试已实现；待当前 master 重基线后的精确 HEAD CI。正式发行方公钥尚未提供或核验，发行 Token 验签和正式 Release 产物仍 BLOCKED；不得生成/使用虚构密钥或把测试私钥、测试签发能力打进 Release。
+- **G3 激活、替换与授权状态 UI：PARTIAL / PR #455 CI IN PROGRESS。** 设置页状态、显式生成 YANJIR1 设备申请、粘贴 YANJI1 Token、权益减少二次确认已实现；首轮 CI 暴露的 Dart 多行字符串和 DEP5 段落结构缺陷已修正，当前 HEAD 正在复验。未通过当前精确 HEAD 全量 CI 前不得宣称 PASS。
 - **PR #416：OPEN / DRAFT / UNTOUCHED。** 保持独立，不在本轮合并或改写。
 - **Find N2 设备验收：LOCAL ONLY / UNKNOWN。** Keystore/StrongBox、AtomicFile、真实安装升级、模型多轮 GPU/CPU、进程恢复仍交由本地实机完成，不将其作为继续云端代码/CI工作的阻塞条件。
 
 
 ---
+
+
+### 78.4 G2：Release Key Ring 配置门禁与主应用授权注入（2026-11-24 重基线）
+
+- 独立分支 `feature/g2-release-keyring-config-20261123` 已重基线至 PR #454 合并后的 master `6cdd78a3d6bf0a2f39d8fa5feb1e9b8b6c42ef9a`，保留原 G2 运行时代码并合并最新 §78.3、REUSE 和 Fork 文件清单。
+- `LicenseKeyRingFactory` 从唯一 Dart define `YANJI_LICENSE_KEY_RING` 读取严格 JSON，仅接受公开 Ed25519 issuer key；校验根对象、条目字段、issuer ID、状态、Base64URL 规范、32 字节长度及重复 ID。配置缺失或无效时产生空 Key Ring，授权结果为 fail-closed，但免费应用仍正常启动。
+- 主应用注入 `EntitlementService` / `LicenseVerifier`，在 `runApp()` 前以 `unawaited(entitlementService.initialize())` 启动异步初始化，不阻塞免费 UI；未授权状态不会自动创建 Android 设备密钥。
+- `android/app/build.gradle.kts` 的 Release 构建门禁从 Flutter 实际 `dart-defines` 读取 `YANJI_LICENSE_KEY_RING`，要求非空有效生产公钥集合，至少包含 active/standby 状态；拒绝测试发行者 ID、已知测试向量公钥、格式错误/重复/未知状态密钥。签名 Keystore 检查独立保留。
+- 新增 Key Ring Factory 正负向 Dart 测试、Release signing gate contract tests 和 `docs/release-license-keyring-configuration.md`。PR #453 旧基线的 Flutter、Android arm64、Fork license 曾全部通过；因 PR #454 合并后重基线并合并台账/许可清单，必须以重基线后的新 HEAD CI 为准。
+- **正式发行信任锚仍 MISSING / RELEASE BLOCKED。** 没有发行方确认的真实生产公钥，不能完成真实 Token 验签和正式 Release 分发。禁止制造假生产密钥、禁止将测试私钥/测试 issuer 编入 Release。PR #452 原 Release scanner 不兼容当前 JSON/define 命名及免费启动原则，不直接合并，需单独适配当前 schema。
+- Find N2 KeyStore / StrongBox / AtomicFile、签名 APK 原位升级和真实设备授权刷新仍为 `LOCAL ONLY / UNKNOWN`；Android arm64 CI 与 JVM 单测不能替代真机验收。
+
 
 ## 83. 专业版离线授权协议 v1.2 云端实现（2026-11-23）
 

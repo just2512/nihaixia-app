@@ -1,0 +1,47 @@
+# Release 构建的授权信任锚配置
+
+本文是 v1.2 架构约束 §11.1–§11.4 的工程操作说明，不替代协议规范。
+
+## 配置格式
+
+Release 构建必须通过 `--dart-define=YANJI_LICENSE_KEY_RING=...` 注入发行方**公钥** JSON：
+
+```json
+{
+  "keys": [
+    {
+      "key_id": "issuer-2026-01",
+      "public_key_base64url": "<32-byte Ed25519 public key, unpadded Base64URL>",
+      "status": "active"
+    },
+    {
+      "key_id": "issuer-2026-00",
+      "public_key_base64url": "<previous trusted public key>",
+      "status": "retired"
+    }
+  ]
+}
+```
+
+仅允许 `key_id`、`public_key_base64url`、`status` 三个字段；外层只允许 `keys`。公钥须解码为恰好 32 字节。支持状态为 `active`、`standby`、`retired`、`revoked`、`compromised`。同一 Key Ring 至少需要一个 `active` 或 `standby` 条目。
+
+公钥不是签发秘密，可以随客户端发布；发行私钥不得进入仓库、Dart define、Gradle 属性、APK/AAB 或 CI 日志。私钥应由发行端离线保管，签发工作继续使用 `tool/license_issuer` 的发行流程。
+
+## Release 构建命令
+
+PowerShell 示例（先在本地安全构造只含公钥的 JSON 字符串）：
+
+```powershell
+$env:YANJI_LICENSE_KEY_RING = '{"keys":[{"key_id":"issuer-2026-01","public_key_base64url":"<public-key>","status":"active"}]}'
+flutter build appbundle --release "--dart-define=YANJI_LICENSE_KEY_RING=$env:YANJI_LICENSE_KEY_RING"
+```
+
+Gradle 会检查实际传给 Flutter 的 `dart-defines`，而不是只检查一个未参与编译的环境变量。缺少、重复、格式错误、无有效 active/standby 条目或含测试发行者/测试向量公钥时，Release 构建必须失败。现有 Android Release signing identity 检查仍独立保留，两项必须同时满足。
+
+## 当前仓库状态
+
+- Dart `LicenseKeyRingFactory` 从同一编译期 define 创建只含公钥的 Key Ring；缺少或无效配置产生空 Ring，不阻止免费功能启动。
+- 应用主入口注入 `EntitlementService` 和 `LicenseVerifier`。空 Ring 无法验证任何 issuer，付费授权仍 fail-closed。
+- Android Release 构建还要求真实 Key Ring 非空、至少存在 active/standby issuer，并拒绝协议测试向量中的 issuer ID、公钥 Base64URL 和原始公钥字节（Hex）。
+- 仓库当前没有经确认的正式发行方公钥。因此不得用测试向量或临时生成的公钥替代；在正式公钥由发行方交付并通过发行流程核验前，正式 Release 仍保持阻断。
+- 该配置批次不包含激活 UI、Token 导入交互、生产私钥保管、密钥轮换操作流程或 Find N2 设备验收；这些状态仍按执行台账记录。

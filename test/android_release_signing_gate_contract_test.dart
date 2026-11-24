@@ -17,6 +17,17 @@ void main() {
     expect(gradle, isNot(contains('signingConfigs.getByName("debug")')));
   });
 
+  test('Android Release requires a real non-test production issuer Key Ring', () {
+    final gradle = File('$root/android/app/build.gradle.kts').readAsStringSync();
+
+    expect(gradle, contains('YANJI_LICENSE_KEY_RING='));
+    expect(gradle, contains('providers.gradleProperty("dart-defines")'));
+    expect(gradle, contains('at least one production issuer public key is required'));
+    expect(gradle, contains('test-issuer-01'));
+    expect(gradle, contains('A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg'));
+    expect(gradle, contains('03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8'));
+    expect(gradle, contains('at least one active or standby production issuer is required'));
+  });
   test('the CI workflow verifies the missing-key Release guard without publishing APKs', () {
     final workflow = File('$root/.github/workflows/flutter-tests.yml').readAsStringSync();
 
