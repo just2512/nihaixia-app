@@ -8,7 +8,6 @@ import 'package:nihaisha_app/data/shousheng_data.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/services/ai_context_prompt_builder.dart';
 import 'package:nihaisha_app/services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import 'package:nihaisha_app/services/shousheng_debt_result_context_executor.dart';
 import 'package:nihaisha_app/widgets/contextual_ai_sheet.dart';
@@ -237,9 +236,7 @@ class _ShoushengDebtScreenState extends State<ShoushengDebtScreen> {
       final contextRef = AiContextResolver.buildShoushengDebtResultContextRef(
         structuredSnapshot: execution.structuredSnapshot!,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: contextRef,
         resolver: () => AiContextResolver.resolveShoushengDebtToolResult(

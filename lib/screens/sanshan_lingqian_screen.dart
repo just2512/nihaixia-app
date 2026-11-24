@@ -8,7 +8,6 @@ import '../widgets/yanji_status_badge.dart';
 import '../services/sanshan_lingqian_tool_service.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/sanshan_lingqian_result_context_executor.dart';
 import '../widgets/contextual_ai_sheet.dart';
@@ -122,9 +121,7 @@ class _DrawTabState extends State<_DrawTab> {
       final contextRef = AiContextResolver.buildSanshanLingqianResultContextRef(
         structuredSnapshot: snapshot,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: contextRef,
         resolver: () => AiContextResolver.resolveSanshanLingqianToolResult(

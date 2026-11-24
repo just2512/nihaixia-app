@@ -9,7 +9,6 @@ import '../data/yijing_data.dart';
 import '../screens/assistant_tool_router.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
-import '../licensing/feature_authorizer_scope.dart';
 import '../services/context_resolution_gateway.dart';
 import '../services/meihua_tool_service.dart';
 import '../utils/chart_export.dart';
@@ -155,9 +154,7 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
       final contextRef = AiContextResolver.buildMeihuaResultContextRef(
         structuredSnapshot: snapshot,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: contextRef,
         resolver: () => AiContextResolver.resolveMeihuaToolResult(
@@ -223,9 +220,7 @@ class _MeihuaScreenState extends State<MeihuaScreen> {
         fieldPath: fieldPath,
         fieldLabel: fieldLabel,
       );
-      final gateway = ContextResolutionGateway(
-        authorizer: FeatureAuthorizerScope.of(context),
-      );
+      const gateway = ContextResolutionGateway();
       final resolution = await gateway.resolve(
         reference: fieldRef,
         resolver: () => AiContextResolver.resolveMeihuaResultField(
