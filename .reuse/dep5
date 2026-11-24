@@ -1125,3 +1125,17 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored shared folk-status semantic color mapping and light/dark regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered.
+
+Files:
+ test/theme/yanji_lingqian_status_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored regression coverage for the UI semantic mapping of Sanshan Lingqian fortune states; ownership evidence required.
+
+
+Files:
+ lib/widgets/yanji_status_badge.dart
+ test/theme/yanji_status_badge_widget_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored accessible shared semantic status badge and its light/dark contrast, screen-reader, narrow-width, and 200-percent text-scaling Widget regression; ownership evidence required.

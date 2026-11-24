@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/fold_aware_routes.dart';
 import '../theme/app_colors.dart';
 import '../theme/yanji_status_semantics.dart';
+import '../widgets/yanji_status_badge.dart';
 import '../services/ai_context_prompt_builder.dart';
 import '../services/ai_context_resolver.dart';
 import '../licensing/feature_authorizer_scope.dart';
@@ -823,14 +824,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                  Chip(
-                    label: Text(e.severity,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: status.foreground)),
-                    backgroundColor: status.background,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                  ),
+                  YanjiStatusBadge(label: e.severity, colors: status),
                 ],
               ),
               const SizedBox(height: 8),
@@ -985,17 +979,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                 ],
               ),
             ),
-            Chip(
-              label: Text(e.severity,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: status.foreground)),
-              backgroundColor: status.background,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-            ),
+            YanjiStatusBadge(label: e.severity, colors: status),
           ],
         ),
       ),
@@ -1027,14 +1011,7 @@ class _GuanshaScreenState extends State<GuanshaScreen>
                   child: Text(e.name,
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
-                Chip(
-                  label: Text(e.severity,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: status.foreground)),
-                  backgroundColor: status.background,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                ),
+                YanjiStatusBadge(label: e.severity, colors: status),
               ],
             ),
             if (e.aliases.isNotEmpty)
