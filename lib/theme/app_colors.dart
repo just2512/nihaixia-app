@@ -11,13 +11,13 @@ import 'yanji_palette.dart';
 /// `context.colors`（见 [AppColorsContext]）。不要在页面内写裸颜色字面量。
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
-  // ---- 主色系（低饱和松墨绿） ----
+  // ---- 品牌主色与主色表面 ----
   final Color primary;
   final Color onPrimary;
   final Color primaryContainer;
   final Color onPrimaryContainer;
 
-  // ---- 中性系（低眩光灰绿） ----
+  // ---- 冷白/纯白表面、文字与功能边界 ----
   final Color background;
   final Color surface;
   final Color surfaceContainerHighest;
