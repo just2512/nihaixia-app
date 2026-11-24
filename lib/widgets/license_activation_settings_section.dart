@@ -215,7 +215,6 @@ class _LicenseActivationSettingsSectionState
                   padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
                   child: Text('授权编号：${snapshot.licenseId}'),
                 ),
-            ],
             if (snapshot.failureReason != null)
               Padding(
                 padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
