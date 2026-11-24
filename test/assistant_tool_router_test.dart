@@ -38,7 +38,7 @@ void main() {
 
   test('玄学模式允许回答非计算型术数常识，但禁止伪造出处', () {
     final hint = AssistantMode.metaphysics.promptHint;
-    expect(hint, contains('一般术数常识'));
+    expect(hint, contains('一般术数知识及非计算型学习、原理、历史问题'));
     expect(hint, contains('模型已有知识'));
     expect(hint, contains('不编造典籍原文、出处或引文'));
     expect(hint, contains('必须调用 App 内置工具'));
