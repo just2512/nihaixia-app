@@ -120,12 +120,12 @@ void main() {
     test('preflights required arguments for every step before exposing the plan', () {
       final result = AssistantToolExecutionPlanBuilder.build(
         planId: 'plan-5',
-        query: '帮我排八字并查询玉匣灵兆',
+        query: '查询玉匣灵兆并换算古代单位',
         candidates: [
-          AssistantToolRouter.bazi,
+          AssistantToolRouter.dosage,
           AssistantToolRouter.yuxiaji,
         ],
-        orderedToolIds: ['bazi', 'yuxiaji_omen'],
+        orderedToolIds: ['dosage', 'yuxiaji_omen'],
       );
 
       expect(result.isValid, isFalse);
