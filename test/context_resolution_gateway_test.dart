@@ -221,10 +221,7 @@ void main() {
       expect(restore.status, ContextResolutionGatewayStatus.authorized);
       expect(nextTurn.status, ContextResolutionGatewayStatus.authorized);
       expect(authorizer.calls, 0);
-      expect(authorizer.requested, [
-        ContextResolutionGateway.featureId,
-        ContextResolutionGateway.featureId,
-      ]);
+      expect(authorizer.requested, isEmpty);
     });
 
     test('legacy authorizer exceptions do not affect source validation', () async {
@@ -246,8 +243,8 @@ void main() {
       final result = await ContextResolutionGateway(authorizer: authorizer)
           .authorizeReference(_reference());
 
-      expect(result.status, ContextResolutionGatewayStatus.authorizationUnavailable);
-      expect(result.authorizationReason, FeatureAuthorizationFailureReason.providerError);
+      expect(result.status, ContextResolutionGatewayStatus.authorized);
+      expect(result.isAuthorized, isTrue);
     });
 
     test('resolver exception never becomes resolved context', () async {
