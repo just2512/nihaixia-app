@@ -11,8 +11,7 @@ import 'data/herb_repository.dart';
 import 'data/settings_repository.dart';
 import 'data/ziwei_rules_repository.dart';
 import 'licensing/ai_model_access_platform.dart';
-import 'licensing/feature_authorizer.dart';
-import 'licensing/feature_authorizer_scope.dart';
+import 'licensing/entitlement_service_scope.dart';
 import 'licensing/license_key_ring_factory.dart';
 import 'licensing/license_verifier.dart';
 import 'licensing/license_platform.dart';
@@ -209,16 +208,16 @@ void main() async {
   );
   // Start entitlement verification without delaying the free application shell.
   unawaited(entitlementService.initialize());
-  runApp(NiHaishaApp(authorizer: entitlementService));
+  runApp(NiHaishaApp(entitlementService: entitlementService));
 }
 
 class NiHaishaApp extends StatelessWidget {
   const NiHaishaApp({
     super.key,
-    this.authorizer = const UnconfiguredFeatureAuthorizer(),
+    this.entitlementService,
   });
 
-  final FeatureAuthorizer authorizer;
+  final EntitlementService? entitlementService;
 
   @override
   Widget build(BuildContext context) {
@@ -226,9 +225,7 @@ class NiHaishaApp extends StatelessWidget {
       listenable: SettingsRepository.instance,
       builder: (context, _) {
         final settings = SettingsRepository.instance;
-        return FeatureAuthorizerScope(
-          authorizer: authorizer,
-          child: MaterialApp(
+        final app = MaterialApp(
             title: '研纪',
             debugShowCheckedModeBanner: false,
             themeMode: settings.themeMode,
@@ -262,6 +259,13 @@ class NiHaishaApp extends StatelessWidget {
             locale: const Locale('zh', 'CN'),
             ),
         );
+        final service = entitlementService;
+        return service == null
+            ? app
+            : EntitlementServiceScope(
+                entitlementService: service,
+                child: app,
+              );
       },
     );
   }

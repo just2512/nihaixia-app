@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../licensing/feature_authorizer.dart';
+import '../licensing/entitlement_failure_reason.dart';
 import '../licensing/license_platform.dart';
 import '../services/entitlement_service.dart';
 import '../services/license_activation_request_builder.dart';
@@ -101,11 +101,11 @@ class _LicenseActivationSettingsSectionState
     try {
       var result = await widget.entitlementService.replaceToken(
         token: token,
-        allowFeatureReduction: false,
+        allowAiAccessDowngrade: false,
       );
       if (result.status == LicenseTokenReplacementStatus.confirmationRequired) {
         if (!mounted) return;
-        final confirmed = await _confirmFeatureReduction(result.lostFeatureIds);
+        final confirmed = await _confirmAiAccessDowngrade();
         if (!mounted) return;
         if (confirmed != true) {
           setState(() {
@@ -116,7 +116,7 @@ class _LicenseActivationSettingsSectionState
         }
         result = await widget.entitlementService.replaceToken(
           token: token,
-          allowFeatureReduction: true,
+          allowAiAccessDowngrade: true,
         );
       }
 
@@ -144,15 +144,16 @@ class _LicenseActivationSettingsSectionState
     }
   }
 
-  Future<bool?> _confirmFeatureReduction(Set<String> lostFeatureIds) {
-    final labels = lostFeatureIds.map(_featureLabel).toList()..sort();
+  Future<bool?> _confirmAiAccessDowngrade() {
     return showFoldAwareDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('确认替换较低权益的授权'),
-        content: Text('新令牌将失去以下权益：\n'
-            '${labels.join('、')}\n\n'
-            '确认后才会替换当前授权。'),
+        title: const Text('确认关闭 AI 模型访问'),
+        content: const Text(
+          '新令牌不再授予 ai_access，安装后全部依赖 Native LiteRT 模型的功能将无法使用。'
+          '不调用模型的确定性业务仍可继续使用。\n\n'
+          '确认后才会替换当前授权。',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -179,7 +180,6 @@ class _LicenseActivationSettingsSectionState
           presentation.tone,
           semanticColors,
         );
-        final grantedFeatures = snapshot.grantedFeatureIds.toList()..sort();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -209,7 +209,7 @@ class _LicenseActivationSettingsSectionState
               Padding(
                 padding: const EdgeInsets.only(left: 56, bottom: AppSpacing.sm),
                 child: Text(
-                  '已授予：${grantedFeatures.map(_featureLabel).join('、')}',
+                  '已授予：全部 Native LiteRT 模型访问',
                 ),
               ),
               if (snapshot.licenseId != null)
@@ -312,10 +312,10 @@ class _LicenseActivationSettingsSectionState
         return '暂时无法确认授权 · 免费功能继续可用';
       case EntitlementServiceStatus.invalid:
         return switch (snapshot.failureReason) {
-          FeatureAuthorizationFailureReason.keyMissing ||
-          FeatureAuthorizationFailureReason.keyInvalidated ||
-          FeatureAuthorizationFailureReason.deviceMismatch ||
-          FeatureAuthorizationFailureReason.storeCorrupt =>
+          EntitlementFailureReason.keyMissing ||
+          EntitlementFailureReason.keyInvalidated ||
+          EntitlementFailureReason.deviceMismatch ||
+          EntitlementFailureReason.storeCorrupt =>
             '授权需要恢复 · 专业能力不会开放',
           _ => '授权无效 · 专业能力不会开放',
         };
@@ -339,56 +339,46 @@ class _LicenseActivationSettingsSectionState
     };
   }
 
-  static String _featureLabel(String id) {
-    switch (id) {
-      case 'ai_advanced':
-        return 'AI 跨工具自动编排';
-      case 'contextual_assistant':
-        return '情境问 AI';
-      default:
-        return id;
-    }
-  }
 
-  static String _reasonLabel(FeatureAuthorizationFailureReason? reason) {
+  static String _reasonLabel(EntitlementFailureReason? reason) {
     switch (reason) {
       case null:
         return '';
-      case FeatureAuthorizationFailureReason.initializationTimeout:
+      case EntitlementFailureReason.initializationTimeout:
         return '授权检查超时。请稍后重试；不会将超时当作永久未授权。';
-      case FeatureAuthorizationFailureReason.unlicensed:
+      case EntitlementFailureReason.unlicensed:
         return '当前没有已安装的授权令牌。';
-      case FeatureAuthorizationFailureReason.featureNotGranted:
+      case EntitlementFailureReason.featureNotGranted:
         return '当前令牌未授予所需专业权益。';
-      case FeatureAuthorizationFailureReason.storeCorrupt:
+      case EntitlementFailureReason.storeCorrupt:
         return '本机授权文件损坏。请使用发行方重新提供的完整令牌。';
-      case FeatureAuthorizationFailureReason.storageUnavailable:
+      case EntitlementFailureReason.storageUnavailable:
         return '本机授权存储暂时不可用。';
-      case FeatureAuthorizationFailureReason.issuerUnknown:
+      case EntitlementFailureReason.issuerUnknown:
         return '令牌签发者不在本版本信任 Key Ring 中。';
-      case FeatureAuthorizationFailureReason.signatureInvalid:
+      case EntitlementFailureReason.signatureInvalid:
         return '令牌签名无效。';
-      case FeatureAuthorizationFailureReason.unsupportedRevision:
+      case EntitlementFailureReason.unsupportedRevision:
         return '令牌协议修订版本不受支持。';
-      case FeatureAuthorizationFailureReason.deviceMismatch:
+      case EntitlementFailureReason.deviceMismatch:
         return '令牌绑定的设备与当前设备不匹配。';
-      case FeatureAuthorizationFailureReason.keyMissing:
+      case EntitlementFailureReason.keyMissing:
         return '当前设备密钥不存在。已有令牌不会自动创建替代密钥。';
-      case FeatureAuthorizationFailureReason.keyInvalidated:
+      case EntitlementFailureReason.keyInvalidated:
         return '设备私钥不可用或挑战校验不一致。';
-      case FeatureAuthorizationFailureReason.keystoreUnavailable:
+      case EntitlementFailureReason.keystoreUnavailable:
         return 'Android Keystore 暂时不可用。';
-      case FeatureAuthorizationFailureReason.providerError:
+      case EntitlementFailureReason.providerError:
         return '授权平台暂时不可用，请稍后重试。';
-      case FeatureAuthorizationFailureReason.licenseRevoked:
+      case EntitlementFailureReason.licenseRevoked:
         return '该授权已被当前客户端信任策略撤销。';
-      case FeatureAuthorizationFailureReason.issuerCompromised:
+      case EntitlementFailureReason.issuerCompromised:
         return '发行者密钥已被标记为受损，令牌不能使用。';
-      case FeatureAuthorizationFailureReason.invalidTokenFormat:
+      case EntitlementFailureReason.invalidTokenFormat:
         return '令牌格式不正确。';
-      case FeatureAuthorizationFailureReason.wrongApplication:
+      case EntitlementFailureReason.wrongApplication:
         return '令牌不属于当前应用。';
-      case FeatureAuthorizationFailureReason.wrongProduct:
+      case EntitlementFailureReason.wrongProduct:
         return '令牌不属于研纪专业版商品。';
     }
   }
