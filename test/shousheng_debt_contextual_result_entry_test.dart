@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'support/allow_context_authorizer.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/settings_repository.dart';
@@ -223,8 +222,7 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
         conversationStore: InMemoryAssistantConversationStore(),
         child: MaterialApp(
           theme: ThemeData(
@@ -234,8 +232,7 @@ void main() {
           ),
           home: const ShoushengDebtScreen(returnResultOnComplete: true),
         ),
-      )
-          ),
+      ),
         );
     await tester.pumpAndSettle();
 
@@ -279,8 +276,7 @@ void main() {
         addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
-          TestAuthorizedFeatureScope(
-            child: ContextualAiConversationStoreScope(
+          ContextualAiConversationStoreScope(
             conversationStore: InMemoryAssistantConversationStore(),
             child: MaterialApp(
               theme: ThemeData(
@@ -290,7 +286,6 @@ void main() {
               ),
               home: const ShoushengDebtScreen(returnResultOnComplete: true),
             ),
-          )
           ),
         );
         await tester.pumpAndSettle();
