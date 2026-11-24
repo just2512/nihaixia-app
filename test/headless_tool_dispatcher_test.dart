@@ -227,7 +227,7 @@ void main() {
       );
     });
 
-    test('denies a cross-capability AI plan before any executor side effect', () async {
+    test('cross-capability AI plans are not separately charged by the dispatcher', () async {
       final authorizer = _FakeFeatureAuthorizer(
         FeatureAuthorizationDecision.denied(
           featureId: 'ai_advanced',
@@ -239,7 +239,7 @@ void main() {
         featureAuthorizer: authorizer,
       ).executePlan(
         plan: _plan(
-          id: 'plan-denied',
+          id: 'plan-no-business-gate',
           origin: InvocationOrigin.aiDispatch,
           steps: [
             _step('yunqi', 'yunqi', const {'date': '2026-11-23'}),
@@ -252,14 +252,13 @@ void main() {
         },
       );
 
-      expect(execution.status, HeadlessToolPlanExecutionStatus.authorizationDenied);
-      expect(execution.featureId, 'ai_advanced');
-      expect(authorizer.requestedFeatures, ['ai_advanced']);
-      expect(executorCalls, 0);
-      expect(execution.results, isEmpty);
+      expect(execution.isCompleted, isTrue);
+      expect(authorizer.calls, 0);
+      expect(executorCalls, 2);
+      expect(execution.results, hasLength(2));
     });
 
-    test('keeps temporarily unavailable authorization fail-closed before execution', () async {
+    test('temporary entitlement state does not block deterministic tool execution', () async {
       final authorizer = _FakeFeatureAuthorizer(
         FeatureAuthorizationDecision.temporarilyUnavailable(
           featureId: 'ai_advanced',
@@ -271,7 +270,7 @@ void main() {
         featureAuthorizer: authorizer,
       ).executePlan(
         plan: _plan(
-          id: 'plan-unavailable',
+          id: 'plan-independent-of-entitlement',
           origin: InvocationOrigin.aiDispatch,
           steps: [
             _step('yunqi', 'yunqi', const {'date': '2026-11-23'}),
@@ -284,9 +283,9 @@ void main() {
         },
       );
 
-      expect(execution.status, HeadlessToolPlanExecutionStatus.authorizationUnavailable);
-      expect(execution.failureReason, FeatureAuthorizationFailureReason.initializationTimeout);
-      expect(executorCalls, 0);
+      expect(execution.isCompleted, isTrue);
+      expect(authorizer.calls, 0);
+      expect(executorCalls, 2);
     });
 
     test('does not charge manual multi-capability plans', () async {

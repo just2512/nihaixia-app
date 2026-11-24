@@ -66,14 +66,13 @@ class HeadlessToolPlanExecutionResult {
 /// The only application boundary that invokes a registered Headless executor.
 ///
 /// Argument collection and validation remain caller responsibilities. The
-/// dispatcher validates the complete immutable plan, authorizes it once before
-/// the first business side effect, and only then invokes steps in order. It has
-/// no BuildContext, navigation, trace, persistence, or UI responsibilities.
+/// dispatcher validates the complete immutable plan before invoking steps in
+/// order. AI model access is enforced at the Native LiteRT boundary; deterministic
+/// tool execution is not a separately priced entitlement.
+/// The optional authorizer parameter is retained temporarily for source
+/// compatibility with callers being migrated; it is never consulted.
 class HeadlessToolDispatcher {
-  HeadlessToolDispatcher({required FeatureAuthorizer featureAuthorizer})
-      : _featureAuthorizer = featureAuthorizer;
-
-  final FeatureAuthorizer _featureAuthorizer;
+  HeadlessToolDispatcher({FeatureAuthorizer? featureAuthorizer});
 
   static final Map<String, FutureOr<AssistantToolResult> Function(Map<String, String>)> _executors = {
     'yunqi': YunQiToolExecutor.execute,
@@ -192,55 +191,6 @@ class HeadlessToolDispatcher {
           capabilityIds: capabilityIds,
           offendingToolId: step.toolId,
           offendingCapabilityId: step.capabilityId,
-        );
-      }
-    }
-
-    if (plan.requiresAdvancedAi) {
-      FeatureAuthorizationDecision decision;
-      try {
-        decision = await _featureAuthorizer.authorize('ai_advanced');
-      } on Object {
-        return HeadlessToolPlanExecutionResult(
-          planId: plan.planId,
-          status: HeadlessToolPlanExecutionStatus.authorizationUnavailable,
-          toolIds: toolIds,
-          capabilityIds: capabilityIds,
-          featureId: 'ai_advanced',
-          failureReason: FeatureAuthorizationFailureReason.providerError,
-        );
-      }
-      if (decision.featureId != 'ai_advanced') {
-        return HeadlessToolPlanExecutionResult(
-          planId: plan.planId,
-          status: HeadlessToolPlanExecutionStatus.authorizationUnavailable,
-          toolIds: toolIds,
-          capabilityIds: capabilityIds,
-          featureId: 'ai_advanced',
-          failureReason: FeatureAuthorizationFailureReason.providerError,
-        );
-      }
-      if (decision.status == FeatureAuthorizationStatus.denied) {
-        return HeadlessToolPlanExecutionResult(
-          planId: plan.planId,
-          status: HeadlessToolPlanExecutionStatus.authorizationDenied,
-          toolIds: toolIds,
-          capabilityIds: capabilityIds,
-          featureId: 'ai_advanced',
-          failureReason: decision.reason ??
-              FeatureAuthorizationFailureReason.featureNotGranted,
-        );
-      }
-      if (decision.status ==
-          FeatureAuthorizationStatus.temporarilyUnavailable) {
-        return HeadlessToolPlanExecutionResult(
-          planId: plan.planId,
-          status: HeadlessToolPlanExecutionStatus.authorizationUnavailable,
-          toolIds: toolIds,
-          capabilityIds: capabilityIds,
-          featureId: 'ai_advanced',
-          failureReason: decision.reason ??
-              FeatureAuthorizationFailureReason.providerError,
         );
       }
     }
