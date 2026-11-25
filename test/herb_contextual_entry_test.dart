@@ -145,8 +145,11 @@ void main() {
       expect(widget.contextRef['anchorId'], 'herb:${herb.name}');
       expect(widget.contextRef['sourceId'],
           'assets/data/herbs.json#${herb.name}');
-      expect(widget.initialPrompt, contains(herb.name));
-      expect(widget.initialPrompt, contains('不得补造剂量'));
+      expect(widget.initialPrompt, isNull);
+      expect(widget.initialUserMessage, contains('当前本草条目'));
+      expect(widget.initialUserMessage, isNot(contains(herb.name)));
+      expect(widget.autoSendInitialMessage, isTrue);
+      expect(widget.resolveContextualKnowledgeEntry, isTrue);
       expect(tester.takeException(), isNull);
 
     },
