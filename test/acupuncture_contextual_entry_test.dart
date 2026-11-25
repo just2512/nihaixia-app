@@ -27,7 +27,7 @@ void main() {
 
   setUp(() async {
     DatabaseHelper.configureTestDatabase(
-      'acupuncture_contextual_entry_\${databaseSequence++}.db',
+      'acupuncture_contextual_entry_${databaseSequence++}.db',
       factory: databaseFactoryFfi,
     );
     await DatabaseHelper.instance.database;
