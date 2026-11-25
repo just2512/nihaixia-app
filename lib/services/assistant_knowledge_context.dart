@@ -4,6 +4,7 @@ import '../data/formula_repository.dart';
 import '../data/guji_data.dart';
 import '../data/medical_case_data.dart';
 import '../models/ai_evidence.dart';
+import '../models/evidence_ranking_decision.dart';
 import 'classic_evidence_pipeline.dart';
 import 'multi_source_evidence_pipeline.dart';
 import 'source_aware_legacy_evidence_ranker.dart';
@@ -78,12 +79,17 @@ class AssistantKnowledgeContextBuildResult {
     required this.text,
     required List<String> knownEvidenceIds,
     required List<AssistantKnowledgeEvidenceReference> rankedEvidence,
+    this.rankedEvidenceSet,
   })  : knownEvidenceIds = List.unmodifiable(knownEvidenceIds),
         rankedEvidence = List.unmodifiable(rankedEvidence);
 
   final String text;
   final List<String> knownEvidenceIds;
   final List<AssistantKnowledgeEvidenceReference> rankedEvidence;
+
+  /// Full source-ranking decisions, strategy and final context-budget accounting.
+  /// This is App audit data; model-visible references remain [rankedEvidence].
+  final RankedEvidenceSet? rankedEvidenceSet;
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
@@ -119,6 +125,7 @@ class AssistantKnowledgeContextResult {
     this.failureMessage,
     this.knownEvidenceIds = const [],
     this.rankedEvidence = const [],
+    this.rankedEvidenceSet,
   });
 
   final String text;
@@ -127,6 +134,10 @@ class AssistantKnowledgeContextResult {
   final String? failureMessage;
   final List<String> knownEvidenceIds;
   final List<AssistantKnowledgeEvidenceReference> rankedEvidence;
+
+  /// Original KEEP/DROP decisions plus the final character-bound presentation
+  /// outcome. It never changes source identity or verification state.
+  final RankedEvidenceSet? rankedEvidenceSet;
 
   List<String> get rankedEvidenceIds =>
       List.unmodifiable(rankedEvidence.map((item) => item.evidenceId));
@@ -220,6 +231,7 @@ class AssistantKnowledgeContextBuilder {
         status: AssistantKnowledgeRetrievalStatus.noResults,
         knownEvidenceIds: built.knownEvidenceIds,
         rankedEvidence: built.rankedEvidence,
+        rankedEvidenceSet: built.rankedEvidenceSet,
       );
     }
     final sourceIds = <String>{};
@@ -409,6 +421,7 @@ class AssistantKnowledgeContextBuilder {
       status: status,
       knownEvidenceIds: built.knownEvidenceIds,
       rankedEvidence: List.unmodifiable(resolvedRankedEvidence),
+      rankedEvidenceSet: built.rankedEvidenceSet,
     );
   }
 
@@ -641,6 +654,7 @@ class AssistantKnowledgeContextBuilder {
       for (final candidate in combinedBatch.candidates)
         candidate.evidenceId: candidate,
     };
+    final evidenceStartOffsets = <String, int>{};
     final evidenceEndOffsets = <String, int>{};
 
     // Keep the historical classic-index first-four cap and query/hit order.
@@ -654,6 +668,7 @@ class AssistantKnowledgeContextBuilder {
           ?.group(1);
       final sourcePath =
           hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
+      evidenceStartOffsets[evidenceId] = buffer.length;
       buffer
         ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln(
@@ -698,6 +713,7 @@ class AssistantKnowledgeContextBuilder {
       }
       for (final evidenceId in keptEvidenceIds) {
         final candidate = candidatesById[evidenceId]!;
+        evidenceStartOffsets[evidenceId] = buffer.length;
         buffer
           ..writeln('章节：${candidate.title}')
           ..writeln('知识库条目定位：${candidate.localBacklink}')
@@ -726,6 +742,7 @@ class AssistantKnowledgeContextBuilder {
           final medicalCase = casesBySourceId[candidate.sourceId]!;
           final entryId = candidate.sourceId;
           final entryLocator = candidate.localBacklink;
+          evidenceStartOffsets[evidenceId] = buffer.length;
           buffer
             ..writeln('[App医案库 · 条目 ${medicalCase.seq}]')
             ..writeln('知识库条目定位：$entryLocator')
@@ -766,10 +783,26 @@ class AssistantKnowledgeContextBuilder {
     final boundedResult = result.length <= maxContextCharacters
         ? result
         : result.substring(0, maxContextCharacters);
-    final presentedEvidenceIds = evidenceEndOffsets.entries
-        .where((entry) => entry.value - leadingTrim <= boundedResult.length)
-        .map((entry) => entry.key)
-        .toSet();
+    final presentedEvidenceIds = <String>{};
+    final budgetOmittedEvidenceIds = <String>[];
+    final budgetTruncatedEvidenceIds = <String>[];
+    for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      final startOffset = evidenceStartOffsets[evidenceId];
+      final endOffset = evidenceEndOffsets[evidenceId];
+      if (startOffset == null || endOffset == null) {
+        budgetOmittedEvidenceIds.add(evidenceId);
+        continue;
+      }
+      final visibleStart = startOffset - leadingTrim;
+      final visibleEnd = endOffset - leadingTrim;
+      if (visibleEnd <= boundedResult.length) {
+        presentedEvidenceIds.add(evidenceId);
+      } else if (visibleStart < boundedResult.length) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+      } else {
+        budgetOmittedEvidenceIds.add(evidenceId);
+      }
+    }
     final rankedEvidence = <AssistantKnowledgeEvidenceReference>[
       for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds)
         if (presentedEvidenceIds.contains(evidenceId))
@@ -778,12 +811,46 @@ class AssistantKnowledgeContextBuilder {
             sourceId: candidatesById[evidenceId]!.sourceId,
           ),
     ];
+
+    final hasPresentationOmissions =
+        budgetOmittedEvidenceIds.isNotEmpty ||
+            budgetTruncatedEvidenceIds.isNotEmpty;
+    final presentationRankedEvidenceSet = RankedEvidenceSet(
+      requestId: rankedEvidenceSet.requestId,
+      strategyId: rankedEvidenceSet.strategyId,
+      strategyVersion: rankedEvidenceSet.strategyVersion,
+      decisions: rankedEvidenceSet.decisions,
+      orderedEvidenceIds: rankedEvidenceSet.orderedEvidenceIds,
+      budget: EvidenceBudgetSnapshot(
+        unit: EvidenceBudgetUnit.characters,
+        limit: maxContextCharacters,
+        used: boundedResult.length,
+        applied: true,
+        omittedEvidenceIds: budgetOmittedEvidenceIds,
+        truncatedEvidenceIds: budgetTruncatedEvidenceIds,
+      ),
+      status: rankedEvidenceSet.orderedEvidenceIds.isEmpty
+          ? RankedEvidenceSetStatus.noUsableEvidence
+          : hasPresentationOmissions
+              ? RankedEvidenceSetStatus.budgetTruncated
+              : RankedEvidenceSetStatus.ranked,
+      diagnostics: [
+        ...rankedEvidenceSet.diagnostics,
+        'CONTEXT_PRESENTATION_BUDGET_CHARACTERS_APPLIED',
+        if (budgetOmittedEvidenceIds.isNotEmpty)
+          'CONTEXT_PRESENTATION_EVIDENCE_OMITTED',
+        if (budgetTruncatedEvidenceIds.isNotEmpty)
+          'CONTEXT_PRESENTATION_EVIDENCE_TRUNCATED',
+        'CONTEXT_BUDGET_USED_UTF16_CODE_UNITS',
+      ],
+    );
     return AssistantKnowledgeContextBuildResult(
       text: boundedResult,
       knownEvidenceIds: combinedBatch.candidates
           .map((candidate) => candidate.evidenceId)
           .toList(growable: false),
       rankedEvidence: rankedEvidence,
+      rankedEvidenceSet: presentationRankedEvidenceSet,
     );
   }
 
