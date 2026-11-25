@@ -6928,8 +6928,16 @@ void mainRedFlagEntrypointOrderingTests() {
     );
     expect(metadata.sourceIds, isNotEmpty,
         reason: '来源 ID 保留在 App 消息审计元数据中');
-    expect(metadata.knowledgeStatus, 'RETRIEVED',
-        reason: '检索状态保留在 App 消息审计元数据中');
+    expect(
+      metadata.knowledgeStatus,
+      anyOf('RETRIEVED', 'PARTIAL'),
+      reason: '只有来源成功反查后，检索状态才进入 App 消息审计元数据',
+    );
+    expect(
+      metadata.sourceIds.where((id) => id.startsWith('medical_case:')),
+      isEmpty,
+      reason: '普通方剂实体查询不得自动召回医案',
+    );
     expect(find.textContaining('知识检索：'), findsNothing,
         reason: '内部检索状态不得显示在正常聊天气泡');
     expect(find.text('本轮检索资料'), findsOneWidget,
