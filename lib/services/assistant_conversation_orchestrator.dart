@@ -1037,6 +1037,14 @@ class AssistantConversationOrchestrator {
     // model can use its own domain knowledge instead of failing closed on the
     // TCM-only local knowledge corpus. Explicit study/theory/source requests
     // continue to use the learning adapter.
+    // When a deterministic tool choice is pending, an explicit request for
+    // historical/theory/study context cancels that choice and preserves the
+    // established learning-mode handoff. General metaphysics knowledge queries
+    // outside this pending-choice state use the metaphysics model adapter below.
+    if (pendingToolSelection && _learningCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    }
+
     final metaphysicsDomainMatches =
         AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics);
     // Five Movements and Six Qi is also a TCM learning domain. Preserve its
