@@ -7,6 +7,16 @@ import '../models/ai_evidence.dart';
 /// matching semantics. An internal chapter index is only an App-local
 /// navigation key; it is not an edition, volume or printed-page locator.
 class GujiEvidencePipeline {
+  static const List<String> _classicalQueryPhrases = [
+    '经脉',
+    '经络',
+    '经筋',
+    '腧穴',
+    '针法',
+    '刺法',
+    '九针',
+  ];
+
   static CandidateEvidenceBatch retrieveCandidates({
     required String requestId,
     required String originalQuery,
@@ -18,18 +28,41 @@ class GujiEvidencePipeline {
       throw ArgumentError.value(requestId, 'requestId', 'Must not be empty');
     }
 
+    // Chinese classical-text questions often omit spaces. Keep the caller's
+    // original terms and extract only a bounded set of literal domain phrases
+    // present in the original query; do not infer synonyms or expand semantics.
+    final effectiveTerms = <String>[];
+    final extractedPhrases = <String>{};
+    for (final term in terms) {
+      final value = term.trim();
+      if (value.isNotEmpty && !effectiveTerms.contains(value)) {
+        effectiveTerms.add(value);
+      }
+    }
+    for (final phrase in _classicalQueryPhrases) {
+      if (originalQuery.contains(phrase) && !effectiveTerms.contains(phrase)) {
+        effectiveTerms.add(phrase);
+        extractedPhrases.add(phrase);
+      }
+    }
+
     final derivedQueries = [
-      for (var index = 0; index < terms.length; index++)
+      for (var index = 0; index < effectiveTerms.length; index++)
         DerivedEvidenceQuery(
           queryId: 'guji-q${index + 1}',
-          query: terms[index],
-          reasons: const ['EXPLICIT_GUIJI_BOOK_CHAPTER_MATCH'],
+          query: effectiveTerms[index],
+          reasons: [
+            if (extractedPhrases.contains(effectiveTerms[index]))
+              'CHINESE_CLASSICAL_PHRASE_EXTRACTION'
+            else
+              'EXPLICIT_GUIJI_BOOK_CHAPTER_MATCH',
+          ],
         ),
     ];
     final candidates = <CandidateEvidence>[];
 
     for (final chapter in chapters) {
-      final matchedTermIndex = terms.indexWhere(
+      final matchedTermIndex = effectiveTerms.indexWhere(
         (term) => chapter.title.contains(term) || chapter.body.contains(term),
       );
       if (matchedTermIndex < 0) continue;

@@ -62,6 +62,47 @@ void main() {
     );
   });
 
+  test('extracts literal classical phrases from Chinese queries without spaces', () {
+    final chapters = [
+      const GujiChapter(
+        index: 8,
+        title: '经脉篇',
+        body: '经脉者，所以能决死生，处百病，调虚实，不可不通。',
+      ),
+      const GujiChapter(
+        index: 2,
+        title: '针法篇',
+        body: '针刺九针各有所宜。',
+      ),
+      const GujiChapter(
+        index: 5,
+        title: '无关篇',
+        body: '天地阴阳，四时五行。',
+      ),
+    ];
+
+    final batch = GujiEvidencePipeline.retrieveCandidates(
+      requestId: 'guji-request-no-spaces',
+      originalQuery: '学习灵枢经脉原文',
+      book: book,
+      terms: const ['学习灵枢经脉原文'],
+      chapters: chapters,
+    );
+
+    expect(batch.status, CandidateEvidenceBatchStatus.retrieved);
+    expect(batch.derivedQueries.map((item) => item.query), [
+      '学习灵枢经脉原文',
+      '经脉',
+    ]);
+    expect(
+      batch.derivedQueries.last.reasons,
+      ['CHINESE_CLASSICAL_PHRASE_EXTRACTION'],
+    );
+    expect(batch.candidates.map((item) => item.chapterIndex), [8]);
+    expect(batch.candidates.single.queryId, 'guji-q2');
+    expect(batch.candidates.single.sourceId, 'guji:lingshu-test:8');
+  });
+
   test('keeps the legacy two chapter limit explicit with KEEP and DROP reasons', () {
     final batch = GujiEvidencePipeline.retrieveCandidates(
       requestId: 'guji-request-2',
