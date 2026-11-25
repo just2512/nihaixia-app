@@ -994,6 +994,8 @@
 | test/release_license_key_ring_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/check_release_readiness.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | tool/license_issuer/test_release_readiness.py | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationSessionIdentity.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationSessionIdentityTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 
 ## 删除路径
 
