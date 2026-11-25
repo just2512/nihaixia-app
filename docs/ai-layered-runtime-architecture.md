@@ -238,7 +238,7 @@ E4B 不可以：
 当前已知的主要边界问题和审计方向：
 
 1. 当前知识检索与上下文构建有合并实现；需审计并明确 CandidateEvidence 与 RankedEvidenceSet 的边界，保留现有黄金行为。
-2. Native 成功轮次历史与临时 RAG 输入需要严格隔离；不得把检索正文或完整 modelInput 写入持久化模型历史。
+2. Native Conversation 重建所用的成功轮次 transcript 与临时 RAG 输入需要严格隔离；不得把检索正文或完整 modelInput 写入用于恢复的历史列表。
 3. 当前 UI transcript、Native Conversation history、结构化任务状态和检索证据是不同数据，不得彼此替代。
 4. E4B 是语言推理层；ToolRouter/HeadlessToolDispatcher、ContextResolutionGateway 和 App 既有确定性业务函数承担不同的执行/来源校验职责，不能把它们合并为模型 Agent。
 5. 现有授权、模型加载、Native 单线程队列、GPU/CPU fallback 和保守恢复语义必须保留；任何拆分须证明没有并发、重复执行、资源释放或数据恢复回归。
@@ -252,7 +252,7 @@ E4B 不可以：
 |---|---|---|
 | 知识召回 | lib/services/assistant_knowledge_context.dart:383-534；lib/services/classic_search_service.dart:443-485 | PARTIAL。AssistantKnowledgeContextBuilder.buildAsync 同时派生查询、调用经典索引、筛选若干 hit、读取古籍/医案并直接组装上下文；尚未独立输出可审计的 CandidateEvidence 集合。 |
 | 证据排序 | lib/services/classic_search_service.dart:443-485；lib/services/assistant_knowledge_context.dart:424-448 | PARTIAL / 与召回耦合。ClassicSearchService 将 titleHits 排在 bodyHits 前；ContextBuilder 在多条派生 query 间按遇到顺序去重并最多保留 4 个 classic hit。该行为可作为现状基线，但尚无独立 RankedEvidenceSet、逐项保留/排除理由和独立排序测试。 |
-| 会话记忆 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt:905-1000；LocalAiConversationHistoryPolicy.kt:25-50 | PARTIAL / 存在确认断点。sendLocalMessage 将角色说明与本轮 context 拼成 modelInput，再把 modelInput 传给 sendWithFirstTurnGpuFallback；成功轮次将其作为 userText 写入 conversationHistoryTurns；initialMessages 重建时再次回放。因此临时 RAG context 会污染持久化 Native 历史。Core-1 必须改为保存干净用户原话及必要结构化状态/引用 ID，不得保存 RAG blob。 |
+| 会话记忆 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt:65、905-1000；LocalAiConversationHistoryPolicy.kt:25-50 | PARTIAL / 存在确认断点。MainActivity 的 conversationHistoryTurns 是当前 Activity/进程内存中的 mutableList，不是此处可证明的跨进程持久化存储。sendLocalMessage 将角色说明与本轮 context 拼成 modelInput，再把完整 modelInput 传给 sendWithFirstTurnGpuFallback；成功轮次将其作为 userText 写入该列表；Native Conversation 重建时 initialMessages 再次回放。因此已确认的是 Native 会话重建 transcript 污染，跨进程持久化行为保持 UNKNOWN。Core-1 必须改为保存干净用户原话及必要结构化状态/引用 ID，不得保存 RAG blob。 |
 | 语言推理 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt:905-921 | PARTIAL。E4B 通过 Conversation.sendMessage 执行自然语言推理，但输入仍是上游合并后的 modelInput；独立 ReasoningRequest/ReasoningResponse、证据 ID 和动作提案 schema 需要按失败证据逐步建立。 |
 | 业务执行 | lib/services/headless_tool_dispatcher.dart:64-218；lib/services/context_resolution_gateway.dart:43-177 | PARTIAL。HeadlessToolDispatcher 对已登记工具计划先做 registry/capability 校验再执行确定性 executor；ContextResolutionGateway 校验引用锚点并回链具体 Resolver。仍需逐项核对各工具入口、typed args、权限/结果/UNKNOWN 语义，不能据两个类存在就宣称所有业务能力已完成分层。 |
 

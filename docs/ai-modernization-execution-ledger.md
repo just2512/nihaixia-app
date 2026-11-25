@@ -4407,7 +4407,7 @@ PR HEAD 门禁证据：
 - **本次优先级纠正：** 核心升级是知识召回、证据排序、会话记忆、语言推理、业务执行各自独立协作；不是先做一个用户书架，也不是建设五个自治 Agent。
 - **五层定义：** 召回只产候选；排序只选择和排序证据，不决定真实性；记忆保存有界且会话隔离的用户/任务状态；Gemma 4 E4B 承担语言理解与解释；App 既有确定性代码执行工具和规则。
 - **关键限制：** 五层是逻辑职责边界，不要求五个模型、五套数据库或五个独立服务；优先复用现有 Repository、Builder、Dispatcher、Gateway、SQLite 与 Native 串行队列，按证据拆分接口。
-- **当前已确认断点：** AssistantKnowledgeContextBuilder 仍将召回与证据选择/上下文组装耦合；MainActivity.sendLocalMessage 将本轮 RAG context 拼入 modelInput，而该值进入 conversationHistoryTurns 并在 Native Conversation 重建时回放。该断点已在核心架构文档 §5.1 定位，属于 Core-1 会话记忆隔离的优先修复项。
+- **当前已确认断点：** AssistantKnowledgeContextBuilder 仍将召回与证据选择/上下文组装耦合；MainActivity 的 conversationHistoryTurns 是 Activity/进程内存列表，sendLocalMessage 将本轮 RAG context 拼入 modelInput 后写入该 completed-turn transcript，并在 Native Conversation 重建时回放。已证明的是当前进程内恢复 transcript 污染；跨进程持久化未由此调用链证实，保持 UNKNOWN。该断点已在核心架构文档 §5.1 定位，属于 Core-1 会话记忆隔离的优先修复项。
 - **当前主线：** 继续推进工作流 A 多轮稳定性（属于会话记忆层）；并行完成 Core-0 五层源码映射和数据契约；随后按 Core-1 Memory、Core-2 Recall/Ranking、Core-3 Reasoning、Core-4 Execution、Core-5 E2E 的依赖小批量推进。具体实施范围以核心架构文档 §6 为准。
 - **书架状态：** 工作流 I，DEFERRED / NOT_AUTHORIZED。Markdown 书籍、Embedding 和书架数据库只是未来知识源扩展，不是当前核心架构交付，也不能反向驱动核心层重构。
 - **证据纪律：** 保留现有黄金检索行为；每层用独立契约测试和跨层测试验收；CI 对精确 PR HEAD；Find N2 设备证据独立记录；SKIPPED、UNKNOWN 和设计文件均不计 PASS。
