@@ -139,7 +139,7 @@ void main() {
     expect(ranked.decisions.last.orderIndex, isNull);
   });
 
-  test('provides an app-local link to the selected chapter', () {
+  test('keeps internal navigation as an app-local backlink', () {
     final batch = GujiEvidencePipeline.retrieveCandidates(
       requestId: 'guji-request-3',
       originalQuery: '灵枢',

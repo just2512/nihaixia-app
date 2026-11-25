@@ -11,6 +11,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import com.google.ai.edge.litertlm.ActivationDataType
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
@@ -970,6 +971,11 @@ class MainActivity : FlutterActivity() {
                         backend = Backend.GPU(),
                         visionBackend = Backend.GPU(),
                         audioBackend = Backend.CPU(),
+                        // Gemma 4 E4B + LiteRT-LM 0.18.0 has a reported Adreno FP16
+                        // activation corruption path; FLOAT32 is the upstream-reported
+                        // workaround. The runtime quality gate below remains the fail-closed
+                        // protection if a different GPU failure still produces bad text.
+                        activationDataType = ActivationDataType.FLOAT32,
                         cacheDir = cachePath
                     )
                 )
@@ -1084,16 +1090,36 @@ class MainActivity : FlutterActivity() {
             completedConversation: Conversation
         ): String {
             val cleaned = stripSimpleMarkdown(reply)
-            if (cleaned.isBlank()) throw IllegalStateException("模型没有返回有效文本")
+            val rejectionReason = LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode(cleaned)
+            if (rejectionReason != null) {
+                throw LocalAiGeneratedReplyQualityException(rejectionReason)
+            }
+            // The history object repeats the quality check as a persistence-level
+            // invariant, so no other caller can accidentally store a rejected reply.
             conversationHistory.appendSuccessfulTurn(userMessageText, cleaned)
             observeConversationTokenCount(completedConversation)
             return cleaned
         }
 
+        fun restorePreviousSuccessfulTranscript(originalError: Exception) {
+            try {
+                recreateCpuEngineForRecovery(originalError)
+            } catch (recoveryError: Exception) {
+                recoveryError.addSuppressed(originalError)
+                throw IllegalStateException(
+                    "模型输出未通过质量检查，且此前成功对话恢复失败：${recoveryError.message}",
+                    recoveryError
+                )
+            }
+        }
+
+        var generatedReply: String
+        var generatedConversation = conversation
+        var generatedOnGpu = activeBackend == "gpu"
         try {
-            return commitSuccessfulTurn(send(conversation), conversation)
+            generatedReply = send(conversation)
         } catch (error: Exception) {
-            // 首轮 OpenCL 不可用：首轮前没有历史，保留既有 CPU fallback。
+            // 保留既有首轮 OpenCL 初始化/执行失败 CPU fallback。
             if (FirstTurnGpuFallbackPolicy.shouldFallback(
                     activeBackend,
                     conversationHasSuccessfulTurn,
@@ -1104,31 +1130,75 @@ class MainActivity : FlutterActivity() {
                 val cpuConversation = aiConversation
                     ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
                 try {
-                    return commitSuccessfulTurn(send(cpuConversation), cpuConversation)
+                    generatedReply = send(cpuConversation)
+                    generatedConversation = cpuConversation
+                    generatedOnGpu = false
                 } catch (cpuError: Exception) {
                     throw IllegalStateException(
-                        "GPU 首轮推理报告 OpenCL 不可用；已切换 CPU，但重试仍失败：${cpuError.message}",
+                        "GPU 首轮推理失败；已切换 CPU，但重试仍失败：${cpuError.message}",
                         cpuError
                     ).also { it.addSuppressed(error) }
                 }
-            }
-
-            // Multi-turn execution state is unknown after a Native failure. Restore
-            // only the previously completed transcript; never replay the in-flight
-            // request automatically. Dart keeps the user's input/attachment so the
-            // user can explicitly retry after seeing the recovery error.
-            try {
-                recreateCpuEngineForRecovery(error)
-            } catch (recoveryError: Exception) {
-                recoveryError.addSuppressed(error)
+            } else {
+                // Multi-turn execution state is unknown after a Native failure. Restore
+                // only completed turns; never replay the in-flight request automatically.
+                try {
+                    recreateCpuEngineForRecovery(error)
+                } catch (recoveryError: Exception) {
+                    recoveryError.addSuppressed(error)
+                    throw IllegalStateException(
+                        "多轮推理失败，CPU 引擎/历史恢复未完成；当前请求执行状态未知：${recoveryError.message}",
+                        recoveryError
+                    )
+                }
                 throw IllegalStateException(
-                    "多轮推理失败，CPU 引擎/历史恢复未完成；当前请求执行状态未知：${recoveryError.message}",
-                    recoveryError
+                    "此前成功对话已恢复；当前请求执行状态未知，未自动重放。请确认后重新发送。",
+                    error
                 )
             }
+        }
 
+        try {
+            return commitSuccessfulTurn(generatedReply, generatedConversation)
+        } catch (qualityError: LocalAiGeneratedReplyQualityException) {
+            if (generatedOnGpu && activeBackend == "gpu") {
+                // A generated-but-invalid turn is safe to retry once because this
+                // method performs language generation only; deterministic tools
+                // execute through a separate App-owned capability path.
+                recreateCpuEngineForRecovery(qualityError)
+                val cpuConversation = aiConversation
+                    ?: throw IllegalStateException("GPU 输出被拒绝后，CPU 恢复没有创建有效会话")
+                val cpuReply = try {
+                    send(cpuConversation)
+                } catch (cpuError: Exception) {
+                    restorePreviousSuccessfulTranscript(cpuError)
+                    throw IllegalStateException(
+                        "GPU 回复存在异常重复；已切换 CPU，但本轮重试失败，未保存为成功对话。",
+                        cpuError
+                    ).also { it.addSuppressed(qualityError) }
+                }
+                return try {
+                    commitSuccessfulTurn(cpuReply, cpuConversation)
+                } catch (cpuQualityError: LocalAiGeneratedReplyQualityException) {
+                    restorePreviousSuccessfulTranscript(cpuQualityError)
+                    throw IllegalStateException(
+                        "GPU 回复存在异常重复；CPU 重试仍未通过质量检查，本轮未保存。请重新发送。",
+                        cpuQualityError
+                    ).also { it.addSuppressed(qualityError) }
+                }
+            }
+
+            // CPU-generated invalid text must not poison the Native conversation either.
+            restorePreviousSuccessfulTranscript(qualityError)
             throw IllegalStateException(
-                "此前成功对话已恢复；当前请求执行状态未知，未自动重放。请确认后重新发送。",
+                "模型回复存在明显重复或为空，本轮未保存为成功对话。请重新发送。",
+                qualityError
+            )
+        } catch (error: Exception) {
+            if (error is LocalAiGeneratedReplyQualityException) throw error
+            restorePreviousSuccessfulTranscript(error)
+            throw IllegalStateException(
+                "模型回复未能安全写入成功历史；此前成功对话已恢复，本轮未保存。",
                 error
             )
         }

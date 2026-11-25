@@ -1104,7 +1104,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<AssistantKnowledgeContextResult> _retrieveKnowledgeWithTrace(
     String query, {
     required AiTraceContext traceContext,
-    bool includeMedicalCases = true,
+    bool includeMedicalCases = false,
   }) async {
     final stopwatch = Stopwatch()..start();
     try {
@@ -1204,6 +1204,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final sessionStateContext =
         await _buildSessionStatePromptContext(conversationId);
     Future<String> sendWithContext(String context) async {
+      const evidencePresentationBoundary =
+          '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
+          '只能依据实际提供的资料内容回答；不得声称资料已核验或模型已逐条引用，资料未覆盖的信息应明确说明未知。';
+      final guardedContext = '$evidencePresentationBoundary\n$context';
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.contextAssembly,
@@ -1220,7 +1224,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               conversationId: conversationId,
                   sessionStateContext: sessionStateContext,
                   sessionStateConversationId: conversationId,
-              context: context,
+              context: guardedContext,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
               redFlagContextTruncated: redFlagContextTruncated,
@@ -1230,7 +1234,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               conversationId: conversationId,
                   sessionStateContext: sessionStateContext,
                   sessionStateConversationId: conversationId,
-              context: context,
+              context: guardedContext,
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
@@ -1240,8 +1244,36 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     switch (mode) {
       case AssistantMode.automatic:
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge =
-            await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
+        final knowledge = await _retrieveKnowledgeWithTrace(
+          query,
+          traceContext: traceContext,
+          includeMedicalCases:
+              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+        );
+        final knowledgeIntent = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+          hasStructuredKnowledgeEntity:
+              AssistantKnowledgeContextBuilder.hasStructuredKnowledgeEntity(query),
+          hasKnowledgeRetrievalResult:
+              knowledge.sources.isNotEmpty &&
+              (knowledge.status == AssistantKnowledgeRetrievalStatus.retrieved ||
+                  knowledge.status == AssistantKnowledgeRetrievalStatus.partial),
+        );
+        if (knowledgeIntent.mode == AssistantMode.learning) {
+          final learningContext = '当前角色：学习助手。\n'
+              '${AssistantMode.learning.promptHint}\n'
+              '方剂、本草或穴位实体已匹配，且本轮已有可回查的本地资料。'
+              '先直接围绕用户输入的实体解释基本信息；只使用下方本轮资料支持的内容，'
+              '没有覆盖的组成、主治、条文或出处应明确说明，不得自行补造。\n'
+              '${knowledge.modelContextText}';
+          final reply = await sendWithContext(learningContext);
+          return _AssistantTurnResponse(
+            text: reply,
+            sourceIds: knowledge.sourceIds,
+            knowledgeStatus: knowledge.statusLabel,
+          );
+        }
         // 无命中且无失败时，不注入知识检索框架与角色 context——
         // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
@@ -1288,62 +1320,60 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '先正常回答用户的一般问题；只有识别到明确的个人症状、知识学习或工具执行意图时，'
           '才切换对应领域。不要把普通寒暄或一般聊天强行归入中医学习。\n',
         );
-        context.writeln('本轮知识检索状态：${knowledge.statusLabel}。');
-        if (knowledge.failureMessage != null) {
-          context.writeln('知识检索失败：${knowledge.failureMessage}');
-        }
-        if (knowledge.text.isNotEmpty) {
+        if (knowledge.modelContextText.isNotEmpty) {
           context
-            ..writeln('App 本地知识库相关检索结果（仅作有来源的参考）：')
-            ..write(knowledge.text);
+            ..writeln('以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知：')
+            ..write(knowledge.modelContextText);
         }
         final reply = await sendWithContext(context.toString());
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
+          text: reply,
           sourceIds: knowledge.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.consultation:
-        // Consultation uses the same bundled classical-text, TCM, and local
-        // medical-case sources as learning. Case entries retain their local
-        // record identity and are cited as App-organized case data.
+        // Consultation uses the same bundled classical-text and TCM knowledge
+        // content as learning. Source identity and retrieval audit data stay
+        // in App metadata; they are not inserted into the dialogue prompt.
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
             await _retrieveKnowledgeWithTrace(
           query,
           traceContext: traceContext,
-          includeMedicalCases: RegExp(r'医案|病例|案例').hasMatch(query),
+          includeMedicalCases: AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
-        final knowledgeContext = switch (knowledge.status) {
-          AssistantKnowledgeRetrievalStatus.noResults => 'App 本地知识库本轮未命中可引用条目（NO_RESULTS）。',
-          AssistantKnowledgeRetrievalStatus.failed => 'App 本地知识库检索失败（FAILED）：${knowledge.failureMessage ?? 'MISSING'}。不得将失败说成无命中。',
-          AssistantKnowledgeRetrievalStatus.partial => 'App 本地知识库部分命中；仅引用已反查成功的来源（PARTIAL）：\n${knowledge.text}',
-          AssistantKnowledgeRetrievalStatus.retrieved => 'App 本地知识库检索结果（可用于解释辨病辨证依据、病机、治法、方剂与针灸思路；保留可追溯来源）：\n${knowledge.text}',
-        };
+        final modelKnowledgeContext = knowledge.modelContextText;
+        final knowledgeContext = modelKnowledgeContext.isEmpty
+            ? '本轮没有提供可用的本地知识资料；不得编造原文、出处或诊断依据。'
+            : '以下为本轮可用的本地知识资料摘录。只解释资料明确覆盖的内容；'
+                '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\n'
+                '$modelKnowledgeContext';
         final reply = await sendWithContext(
           '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
               '先理解用户原始描述并保留原话，整理已经确认的信息，指出缺项和歧义并在当前对话追问；模型抽取结果未经用户确认不得当作事实。'
               '用户明确提出辨病辨证需求且参数齐备后，调用 App 现有问诊控制器和 DiagnosticEngine 执行，不由模型代算。'
-              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 医案库并保留整理案例的来源身份。'
-              '诊断性陈述必须有可追溯的知识库 sourceId；必须区分 App 规则结果、知识库内容和 AI 解释，不得自行新增或改写规则结论，不得补造缺失字段。\n'
+              '业务结果返回并通过校验后，结合本轮本地知识库实际命中的条目解释规则结果、诊断依据、病机、治法、方剂组成与配伍、针灸思路及相关经典；用户明确要求医案、病例或案例对照时，再按需检索 App 整理医案；如需提及案例，应说明其为 App 整理记录，不得补造记录中未记载的事实。'
+              '诊断性内容必须对应 App 已校验业务结果与本轮明确提供的知识资料；不得向用户输出 sourceId、evidenceId、路径或内部编号，也不得声称来源已经核验或模型逐条引用。必须区分 App 规则结果、检索资料和 AI 解释；资料未覆盖的结论应明确未知，不得自行新增或改写规则结论。\n'
               '$knowledgeContext',
         );
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
+          text: reply,
           sourceIds: knowledge.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.learning:
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge =
-            await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
+        final knowledge = await _retrieveKnowledgeWithTrace(
+          query,
+          traceContext: traceContext,
+          includeMedicalCases:
+              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+        );
         final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
-            '本轮知识检索状态：${knowledge.statusLabel}。\n'
-            '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
-            '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
+            '${knowledge.modelContextText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n${knowledge.modelContextText}'}';
         final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
+          text: reply,
           sourceIds: knowledge.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
@@ -1366,17 +1396,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 includeMedicalCases: false,
               )
             : null;
-        final knowledgeContext = switch (knowledge?.status) {
-          null => '',
-          AssistantKnowledgeRetrievalStatus.noResults =>
-            '本轮本地知识库未命中可引用条目（NO_RESULTS）。',
-          AssistantKnowledgeRetrievalStatus.failed =>
-            '本轮本地知识库检索失败（FAILED）：${knowledge?.failureMessage ?? 'MISSING'}。不得将失败说成无命中。',
-          AssistantKnowledgeRetrievalStatus.partial =>
-            '本轮本地知识库部分命中；只使用已返回的资料（PARTIAL）：\n${knowledge?.text}',
-          AssistantKnowledgeRetrievalStatus.retrieved =>
-            '本轮本地知识库检索结果：\n${knowledge?.text}',
-        };
+        final modelKnowledgeContext = knowledge?.modelContextText ?? '';
+        final knowledgeContext = modelKnowledgeContext.isEmpty
+            ? ''
+            : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n'
+                '$modelKnowledgeContext';
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
             '新动作优先通过 App 已有 Headless Capability 在当前对话内执行；只有该能力仍为 Page-only 且确需页面交互时，才建议打开工具页。'
@@ -1384,7 +1408,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '$knowledgeContext';
         final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
-          text: reply + (knowledge?.citationFooter ?? ''),
+          text: reply,
           sourceIds: knowledge?.sourceIds ?? const [],
           knowledgeStatus: knowledge?.statusLabel,
         );
@@ -1499,7 +1523,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return true;
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+      debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
       if (mounted) {
         setState(() {
           _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
@@ -1926,7 +1950,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
       '先解释本次 App 实际返回的辨病辨证结果和字段关系，再结合本轮本地知识库实际检索到的条目说明诊断依据。'
       '在知识来源支持的范围内，继续讲解相关病机、治法、方剂组成与配伍、针灸选穴思路和经典依据。'
-      '每个诊断性陈述都必须能够对应本轮 App 规则结果和可追溯知识库 sourceId；知识库无依据的内容标记 MISSING，不得以模型记忆补齐。'
+      '每个诊断性陈述都必须能够对应本轮 App 规则结果和本地资料明确支持的内容；不得向用户输出内部 sourceId、evidenceId 或路径，也不得声称来源已核验或模型逐条引用。知识库无依据的内容应说明未获资料支持，不得以模型记忆补齐。'
       '明确区分 App 规则结果、知识库原文和 AI 归纳；不重新执行辨证，不增加、修改或伪造 App 规则结论，不补造缺失字段。';
 
   _InterviewMessage _diagnosisActionMessage(
@@ -2164,7 +2188,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       } catch (error, stack) {
         messagesPersisted = false;
-        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\\n$stack');
+        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\n$stack');
       }
     }
 
@@ -10756,54 +10780,28 @@ String _knowledgeSourceLabel(String sourceId) {
   final kind = parts.isEmpty ? '' : parts.first;
   final value = parts.length > 1 ? parts.sublist(1).join(':') : '';
   return switch (kind) {
-    'formula' => '方剂：$value',
+    'formula' => _formulaKnowledgeLabel(value),
     'herb' => '本草：$value',
-    'acupoint' => '穴位：$value',
-    'acupuncture' => '针灸来源：$value',
-    'medical_case' => '医案 #$value',
-    'neijing' => '内经条目',
-    'shanghan' => '伤寒论：$value',
-    'jingui' => '金匮要略：$value',
-    'guji' => '古籍原文：$value',
-    'zhenjiu' => '针灸讲稿：$value',
-    'neijing-reading' => '内经讲稿：$value',
-    'bencao' || 'bencao-reading' => '本草讲稿：$value',
-    'zhenjiu-reading' => '针灸讲稿：$value',
-    'yijing-reading' => '易经讲稿：$value',
-    'minggua-reading' => '命卦讲稿：$value',
-    _ => '来源：$sourceId',
+    'acupoint' => '穴位资料',
+    'acupuncture' => '针灸处方资料',
+    'medical_case' => '医案资料（App 整理）',
+    'neijing' || 'neijing-reading' => '《黄帝内经》学习资料',
+    'shanghan' => '《伤寒论》学习资料',
+    'jingui' => '《金匮要略》学习资料',
+    'guji' => '古籍原文资料',
+    'zhenjiu' || 'zhenjiu-reading' => '针灸学习资料',
+    'bencao' || 'bencao-reading' => '本草学习资料',
+    'yijing-reading' => '易学学习资料',
+    'minggua-reading' => '命卦学习资料',
+    _ => '本轮检索资料',
   };
 }
 
-
-class _KnowledgeStatusLabel extends StatelessWidget {
-  const _KnowledgeStatusLabel({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = switch (status) {
-      'RETRIEVED' => '知识检索：已检索到来源',
-      'PARTIAL' => '知识检索：部分结果',
-      'NO_RESULTS' => '知识检索：无匹配结果',
-      'FAILED' => '知识检索：执行失败',
-      _ => '知识检索：状态未知（$status）',
-    };
-    final color = switch (status) {
-      'RETRIEVED' => Theme.of(context).colorScheme.primary,
-      'PARTIAL' => Theme.of(context).colorScheme.tertiary,
-      'FAILED' => Theme.of(context).colorScheme.error,
-      _ => Theme.of(context).colorScheme.onSurfaceVariant,
-    };
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        label,
-        style: TextStyle(fontSize: AppType.micro, color: color),
-      ),
-    );
+String _formulaKnowledgeLabel(String formulaId) {
+  for (final formula in FormulaRepository.getAll()) {
+    if (formula.id == formulaId) return '方剂：${formula.name}';
   }
+  return '方剂资料';
 }
 
 class _InterviewMessageBubble extends StatelessWidget {
@@ -10814,6 +10812,10 @@ class _InterviewMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final retrievedSourceIds = message.sourceIds
+        .where(_isNavigableKnowledgeSourceId)
+        .toSet()
+        .toList(growable: false);
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
@@ -10847,24 +10849,41 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
-                if (message.knowledgeStatus != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  _KnowledgeStatusLabel(status: message.knowledgeStatus!),
-                ],
-                if (message.sourceIds.any(_isNavigableKnowledgeSourceId) &&
+                if (retrievedSourceIds.isNotEmpty &&
                     message.onSourceTap != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: message.sourceIds
-                        .where(_isNavigableKnowledgeSourceId)
-                        .map((sourceId) => ActionChip(
-                              avatar: const Icon(Icons.link, size: 14),
-                              label: Text(_knowledgeSourceLabel(sourceId)),
-                              onPressed: () => message.onSourceTap!(sourceId),
-                            ))
-                        .toList(),
+                  const SizedBox(height: AppSpacing.xs),
+                  Material(
+                    color: scheme.surfaceContainerLow,
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      childrenPadding: const EdgeInsets.only(
+                        left: AppSpacing.xs,
+                        right: AppSpacing.xs,
+                        bottom: AppSpacing.xs,
+                      ),
+                      leading: const Icon(Icons.menu_book_outlined, size: 19),
+                      title: const Text(
+                        '本轮检索资料',
+                        style: TextStyle(fontSize: AppType.caption),
+                      ),
+                      subtitle: const Text(
+                        'App 检索返回的资料入口，不代表模型逐条引用或已核验。',
+                        style: TextStyle(fontSize: AppType.micro),
+                      ),
+                      children: [
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: retrievedSourceIds
+                              .map((sourceId) => ActionChip(
+                                    avatar: const Icon(Icons.open_in_new, size: 14),
+                                    label: Text(_knowledgeSourceLabel(sourceId)),
+                                    onPressed: () => message.onSourceTap!(sourceId),
+                                  ))
+                              .toList(growable: false),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
                 if (message.options.isNotEmpty) ...[
