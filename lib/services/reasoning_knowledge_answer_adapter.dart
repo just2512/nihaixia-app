@@ -117,13 +117,20 @@ class ReasoningKnowledgeAnswerAdapter {
     }
     // Internal evidence/source identifiers and local locators remain App-side
     // metadata; reject a model segment that tries to surface any of them.
-    final internalValues = <String>{
+    final internalIds = <String>{
       ...resolvedSourceIds,
       ...resolvedEvidenceIds,
-      for (final source in sourceById.values)
-        if (source.localBacklink.trim().isNotEmpty) source.localBacklink.trim(),
-    };
-    if (internalValues.any((value) => text.contains(value)) ||
+    }.where((value) => value.length >= 5);
+    final internalBacklinks = sourceById.values
+        .map((source) => source.localBacklink.trim())
+        .where((value) => value.isNotEmpty);
+    final containsInternalId = internalIds.any(
+      (value) => RegExp(
+        '(^|[^A-Za-z0-9_])${RegExp.escape(value)}([^A-Za-z0-9_]|$)',
+      ).hasMatch(text),
+    );
+    if (containsInternalId ||
+        internalBacklinks.any(text.contains) ||
         RegExp(r'\b(?:sourceId|evidenceId)\s*[:=]', caseSensitive: false)
             .hasMatch(text) ||
         RegExp(r'(^|\s)(?:assets/|/data/(?:user|data)/)\S+')

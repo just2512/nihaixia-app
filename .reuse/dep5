@@ -1240,3 +1240,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-1 complete-turn Native history replay policy and UTF-16 boundary regression tests; transcript replay omits incomplete or oversized turns whole and never cuts through message content; ownership evidence required.
+
+Files:
+ lib/services/reasoning_knowledge_answer_adapter.dart
+ test/reasoning_knowledge_answer_adapter_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-3 knowledge answer adapter and evidence/source provenance isolation regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.

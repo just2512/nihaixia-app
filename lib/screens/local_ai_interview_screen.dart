@@ -1277,13 +1277,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final supplementalContext =
           ReasoningRequestPromptFormatter.formatSupplementalContext(request);
       final knowledgeText = knowledge.modelContextText;
-      final roleContext = '当前角色：学习助手。\\n'
-          '${AssistantMode.learning.promptHint}\\n'
-          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\\n$knowledgeText'}';
+      final roleContext = '当前角色：学习助手。\n'
+          '${AssistantMode.learning.promptHint}\n'
+          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
-      final guardedContext = '$evidencePresentationBoundary\\n$roleContext';
+      final guardedContext = '$evidencePresentationBoundary\n$roleContext';
       var nativeInvocationStarted = false;
       var nativeReplyReceived = false;
       var nativeRequestMayBePending = false;
