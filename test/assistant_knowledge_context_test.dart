@@ -154,7 +154,7 @@ void main() {
   });
 
 
-  test('异步检索可访问古籍原文库并保留书目来源', () async {
+  test('异步检索可访问古籍原文库并保留本地书籍信息', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('灵枢');
     expect(context, contains('App古籍库'));
     expect(context, contains('App古籍库 · 黄帝内经·灵枢'));
@@ -320,7 +320,7 @@ void main() {
     }
   });
 
-  test('医案引用回链到知识库条目且不输出外部书目缺失', () async {
+  test('医案引用回链到本地知识库条目', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 肝癌',
     );
@@ -403,7 +403,7 @@ void main() {
     expect(lecture, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
   });
 
-  test('医案关联上下文使用稳定知识库条目编号定位而不显示书目缺失', () async {
+  test('医案关联上下文使用稳定本地条目编号定位', () async {
     final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(cases, contains('[App医案库 · 条目'));
     expect(cases, contains('知识库条目定位：medical_case:'));

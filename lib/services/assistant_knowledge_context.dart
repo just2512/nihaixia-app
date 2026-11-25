@@ -698,7 +698,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
         ..writeln('书籍简介：${book.intro}');
       if (keptEvidenceIds.isEmpty) {
-        buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
+        buffer.writeln('没有匹配到章节正文；以下仅提供该书的基本信息，不作为正文引用。');
       }
       for (final evidenceId in keptEvidenceIds) {
         final candidate = candidatesById[evidenceId]!;

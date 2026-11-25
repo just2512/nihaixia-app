@@ -113,7 +113,7 @@ void main() {
     expect(candidate.sourceId, 'guji:lingshu-test:14');
     expect(candidate.localBacklink, 'guji:lingshu-test#chapter:14');
     expect(candidate.locatorStatus, 'LOCAL_ENTRY');
-    expect(candidate.verificationStatus, 'UNKNOWN');
+    expect(candidate.verificationStatus, 'NOT_ASSESSED');
     expect(candidate.sourceVersion, 'UNKNOWN');
     expect(candidate.origin, CandidateEvidenceOrigin.appData);
     expect(candidate.hasLocalBacklink, isTrue);
@@ -137,7 +137,7 @@ void main() {
 
     expect(candidate.excerpt.length, 1400);
     expect(candidate.completeness, CandidateEvidenceCompleteness.truncated);
-    expect(candidate.verificationStatus, 'UNKNOWN');
+    expect(candidate.verificationStatus, 'NOT_ASSESSED');
     expect(candidate.locatorStatus, 'LOCAL_ENTRY');
   });
 
