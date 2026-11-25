@@ -452,7 +452,6 @@ class AssistantKnowledgeContextBuilder {
     // No relevance score or source-verification promotion is introduced.
     for (final decision in orderedKeptDecisions) {
       final hit = candidatesById[decision.evidenceId]!;
-{
       final isLecture = hit.asset != null;
       final articleNumber = RegExp(r'(?:条文|第)\s*(\d+)').firstMatch(hit.title)?.group(1);
       final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
