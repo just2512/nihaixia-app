@@ -115,6 +115,26 @@ void main() {
       expect(decision.needsClarification, isFalse);
     });
 
+    test('方剂、本草等本地实体命中可单独触发学习意图，但个人症状优先进入问诊', () {
+      for (final query in ['桔梗汤', '桔梗']) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+          hasStructuredKnowledgeEntity: true,
+        );
+        expect(decision.mode, AssistantMode.learning, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+
+      final personalSymptoms = AssistantConversationOrchestrator.resolve(
+        query: '我最近咽痛，想了解桔梗汤',
+        selectedMode: AssistantMode.automatic,
+        hasStructuredKnowledgeEntity: true,
+      );
+      expect(personalSymptoms.mode, AssistantMode.consultation);
+    });
+
     test('中医概念和经典条文问题进入学习助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '《伤寒论》第172条原文和黄芩汤的关系是什么？',

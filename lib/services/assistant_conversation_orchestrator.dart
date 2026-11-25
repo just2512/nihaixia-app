@@ -851,6 +851,7 @@ class AssistantConversationOrchestrator {
     required AssistantMode selectedMode,
     AssistantMode? currentMode,
     bool pendingToolSelection = false,
+    bool hasStructuredKnowledgeEntity = false,
   }) {
     final text = query.trim();
     if (text.isEmpty) {
@@ -1251,6 +1252,13 @@ class AssistantConversationOrchestrator {
     final hasPersonalContext = _personalContextCues.any(text.contains);
     if (hasSymptoms && hasPersonalContext) {
       return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+    }
+
+    // A registered formula/herb/acupoint name is a concrete knowledge intent,
+    // even when the user sends only the entity name (for example, "桔梗汤").
+    // Retrieval still runs separately and must report its own status.
+    if (hasStructuredKnowledgeEntity) {
+      return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
 
     if (_learningCues.any(text.contains)) {
