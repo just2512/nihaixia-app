@@ -20,6 +20,8 @@ import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../services/ai_context_prompt_builder.dart';
+import '../services/ai_context_resolver.dart';
 import '../services/reasoning_knowledge_answer_adapter.dart';
 import '../services/reasoning_request_prompt_formatter.dart';
 import '../services/assistant_conversation_orchestrator.dart';
@@ -200,7 +202,14 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.testHeadlessToolExecutor,
     this.testSavedChartsLoader,
     this.traceRecorder,
-  });
+    this.initialUserMessage,
+    this.autoSendInitialMessage = false,
+    this.resolveContextualKnowledgeEntry = false,
+  }) : assert(
+          !autoSendInitialMessage ||
+              (initialUserMessage?.trim().isNotEmpty ?? false),
+        ),
+       assert(!resolveContextualKnowledgeEntry || contextualExplanationOnly);
 
   /// Optional gate injection for B2 entrypoint-order tests. Production must not
   /// supply this until a medically reviewed detector and rollout policy exist.
@@ -250,9 +259,17 @@ class LocalAiInterviewScreen extends StatefulWidget {
   @visibleForTesting
   final Future<List<SavedChart>> Function()? testSavedChartsLoader;
 
-  /// Optional draft supplied by a knowledge/detail page. It is prefilled but
-  /// never sent automatically; the user remains responsible for submission.
+  /// Legacy editable draft. New contextual interpretation entry points use
+  /// [initialUserMessage] and keep source data out of the composer.
   final String? initialPrompt;
+
+  /// Short, user-visible question submitted once after the local model is ready.
+  final String? initialUserMessage;
+  final bool autoSendInitialMessage;
+
+  /// Re-resolves this exact App knowledge anchor and sends the full entry only
+  /// through the internal model context on every contextual learning turn.
+  final bool resolveContextualKnowledgeEntry;
 
   /// Stable context anchor persisted in message metadata for this conversation.
   final Map<String, String> contextRef;
@@ -383,6 +400,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Map<String, String> _confirmedTenAnswers = const {};
   String? _error;
   String? _contextResolutionError;
+  String? _pendingInitialUserMessage;
+  bool _initialAutoSendStarted = false;
+  bool _initialAutoSendInProgress = false;
 
   AssistantConversationStore get _conversationStore =>
       widget.conversationStore ?? DatabaseHelper.instance;
@@ -533,6 +553,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         offset: initialPrompt.length,
       );
     }
+    _pendingInitialUserMessage = widget.autoSendInitialMessage
+        ? widget.initialUserMessage?.trim()
+        : null;
     _contextualInitializationPending =
         _activeContextRef.isNotEmpty || _contextRefInvalid;
     _conversationIdFuture = _contextualInitializationPending
@@ -596,6 +619,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       if (status.ready && _pendingHistoryTranscript != null) {
         await _restorePendingHistory();
       }
+      if (status.ready) {
+        unawaited(_tryAutoSendInitialMessage());
+      }
     } on PlatformException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -620,6 +646,53 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _checking = false;
         _error = '读取本地模型状态失败：$error。请重新检查后继续。';
       });
+    }
+  }
+
+
+  Future<void> _tryAutoSendInitialMessage() async {
+    final message = _pendingInitialUserMessage;
+    if (message == null ||
+        message.isEmpty ||
+        _initialAutoSendStarted ||
+        _initialAutoSendInProgress ||
+        !mounted ||
+        _status?.ready != true ||
+        _statusUnknown ||
+        _checking ||
+        _sending ||
+        _modelControlBusy) {
+      return;
+    }
+
+    _initialAutoSendInProgress = true;
+    try {
+      // Contextual conversation selection/restoration must finish before the
+      // first turn is submitted, otherwise a new context could bind to old history.
+      await _conversationIdFuture;
+      if (!mounted ||
+          _status?.ready != true ||
+          _contextualInitializationPending ||
+          _contextRefInvalid ||
+          _contextResolutionError != null ||
+          _sending ||
+          _modelControlBusy) {
+        return;
+      }
+
+      _initialAutoSendStarted = true;
+      _pendingInitialUserMessage = null;
+      _inputController.value = TextEditingValue(
+        text: message,
+        selection: TextSelection.collapsed(offset: message.length),
+      );
+      await _send();
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = '无法启动本次知识解读：$error');
+      }
+    } finally {
+      _initialAutoSendInProgress = false;
     }
   }
 
@@ -657,6 +730,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _refreshStatusAfterLoadFailure('模型加载失败：$error');
     } finally {
       if (mounted) setState(() => _modelControlBusy = false);
+    }
+    if (mounted && _status?.ready == true) {
+      unawaited(_tryAutoSendInitialMessage());
     }
   }
 
@@ -1120,6 +1196,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
 
+
+  Future<AiResolvedKnowledgeEntry> _resolveCurrentKnowledgeEntry() async {
+    final reference = AiContextRef.fromMetadata(_activeContextRef);
+    if (reference == null) {
+      throw StateError('当前知识条目引用无效；已阻止提交。');
+    }
+    final resolution =
+        await _contextResolutionGateway.resolve<AiResolvedKnowledgeEntry>(
+      reference: reference,
+      resolver: () =>
+          AiContextResolver.resolveKnowledgeReference(ref: reference),
+      referenceOf: (entry) => entry.ref,
+    );
+    if (!resolution.isResolved || resolution.value == null) {
+      throw StateError(
+        '当前知识条目无法按原始锚点重新解析（' +
+            resolution.status.name.toUpperCase() +
+            '）；未向模型提交过期或不完整资料。',
+      );
+    }
+    return resolution.value!;
+  }
+
   Future<AssistantKnowledgeContextResult> _retrieveKnowledgeWithTrace(
     String query, {
     required AiTraceContext traceContext,
@@ -1224,6 +1323,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sessionStateSnapshot,
       expectedSessionId: conversationId,
     );
+    final contextualEntry = widget.resolveContextualKnowledgeEntry
+        ? await _resolveCurrentKnowledgeEntry()
+        : null;
     Future<String> sendWithContext(String context) async {
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
@@ -1263,9 +1365,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             );
     }
     Future<_AssistantTurnResponse> sendStructuredLearning(
-      AssistantKnowledgeContextResult knowledge,
-    ) async {
-      final requestId = _newReasoningRequestId(traceId);
+      AssistantKnowledgeContextResult knowledge, {
+      String? requestIdOverride,
+    }) async {
+      final requestId = requestIdOverride ?? _newReasoningRequestId(traceId);
       final request = ReasoningKnowledgeAnswerAdapter.createRequest(
         requestId: requestId,
         sessionId: conversationId,
@@ -1510,6 +1613,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.learning:
+        if (contextualEntry != null) {
+          final requestId = _newReasoningRequestId(traceId);
+          final contextualKnowledge =
+              ReasoningKnowledgeAnswerAdapter.createContextualEntryContext(
+            entry: contextualEntry,
+            evidenceId: 'context-entry-$requestId',
+          );
+          return sendStructuredLearning(
+            contextualKnowledge,
+            requestIdOverride: requestId,
+          );
+        }
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge = await _retrieveKnowledgeWithTrace(
           query,
