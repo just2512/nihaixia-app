@@ -1287,6 +1287,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       var nativeInvocationStarted = false;
       var nativeReplyReceived = false;
       var nativeRequestMayBePending = false;
+      var nativeFinalizeStarted = false;
+      var nativeFinalizeConfirmed = false;
+      var nativeTurnRejected = false;
       try {
         await _traceRecorder.record(
           traceContext,
@@ -1338,6 +1341,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             requestId: requestId,
           );
           nativeRequestMayBePending = false;
+          nativeTurnRejected = true;
           return _AssistantTurnResponse(
             text: '本轮学习回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
                 '未写入成功历史。可重新发送问题，或继续普通对话。',
@@ -1346,11 +1350,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             protocolFailureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
           );
         }
+        nativeFinalizeStarted = true;
         await _service.finalizeReasoningTurn(
           conversationId: conversationId,
           requestId: requestId,
           validatedAnswer: decoded.answerText,
         );
+        nativeFinalizeConfirmed = true;
         nativeRequestMayBePending = false;
         return _AssistantTurnResponse(
           text: decoded.answerText,
@@ -1364,20 +1370,27 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               conversationId: conversationId,
               requestId: requestId,
             );
+            nativeTurnRejected = true;
           } catch (_) {
             // Finalize may have reached Native before its MethodChannel
             // acknowledgement was lost. Do not guess or replay that turn.
           }
         }
-        final nativeStatus = nativeReplyReceived
-            ? AiTraceStatus.succeeded
-            : nativeInvocationStarted
-                ? AiTraceStatus.unknown
-                : AiTraceStatus.notStarted;
+        final nativeStatus =
+            nativeFinalizeConfirmed || nativeTurnRejected
+                ? AiTraceStatus.succeeded
+                : nativeInvocationStarted
+                    ? AiTraceStatus.unknown
+                    : AiTraceStatus.notStarted;
+        final failureText = nativeTurnRejected
+            ? '本轮结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。'
+            : nativeFinalizeStarted
+                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。'
+                : nativeReplyReceived
+                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。'
+                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。';
         return _AssistantTurnResponse(
-          text: nativeReplyReceived
-              ? '本轮结构化回答未能完成安全提交，未将原始模型输出写入成功历史。'
-              : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。',
+          text: failureText,
           knowledgeStatus: 'PROTOCOL_REJECTED',
           nativeInferenceStatus: nativeStatus,
           protocolValidated: false,
