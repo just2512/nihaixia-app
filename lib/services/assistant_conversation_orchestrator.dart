@@ -174,6 +174,7 @@ class AssistantConversationOrchestrator {
     '发热',
     '恶寒',
     '咳嗽',
+    '咽痛',
     '胸闷',
     '胸痛',
     '呼吸困难',
@@ -851,6 +852,8 @@ class AssistantConversationOrchestrator {
     required AssistantMode selectedMode,
     AssistantMode? currentMode,
     bool pendingToolSelection = false,
+    bool hasStructuredKnowledgeEntity = false,
+    bool hasKnowledgeRetrievalResult = false,
   }) {
     final text = query.trim();
     if (text.isEmpty) {
@@ -1097,6 +1100,15 @@ class AssistantConversationOrchestrator {
       );
     }
 
+    // Personal symptoms with explicit personal context outrank generic learning
+    // wording in the same sentence (for example, "我最近咽痛，想了解桔梗汤").
+    // Keep the turn in Consultation so the assistant asks whether it is a personal
+    // health concern or a study question before treating it as general learning.
+    if (_personalContextCues.any(text.contains) &&
+        _symptomCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+    }
+
     // A pending tool selection is cancelled by an unrelated explicit learning
     // question; it must not force a non-Yunqi metaphysics topic into TCM retrieval.
     if (pendingToolSelection && _learningCues.any(text.contains)) {
@@ -1251,6 +1263,13 @@ class AssistantConversationOrchestrator {
     final hasPersonalContext = _personalContextCues.any(text.contains);
     if (hasSymptoms && hasPersonalContext) {
       return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+    }
+
+    // A registered formula/herb/acupoint name and an actual source-backed
+    // retrieval result must both be present before routing to Learning. An
+    // entity name alone is not evidence that the local corpus has a usable hit.
+    if (hasStructuredKnowledgeEntity && hasKnowledgeRetrievalResult) {
+      return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
 
     if (_learningCues.any(text.contains)) {

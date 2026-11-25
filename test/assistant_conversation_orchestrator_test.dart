@@ -115,6 +115,37 @@ void main() {
       expect(decision.needsClarification, isFalse);
     });
 
+    test('方剂、本草实体命中与本轮可回查检索结果共同触发学习意图', () {
+      for (final query in ['桔梗汤', '桔梗']) {
+        final entityOnly = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+          hasStructuredKnowledgeEntity: true,
+          hasKnowledgeRetrievalResult: false,
+        );
+        expect(entityOnly.mode, AssistantMode.automatic,
+            reason: '只有实体命中、没有可回查资料时不伪装成知识问答');
+
+        final resolved = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+          hasStructuredKnowledgeEntity: true,
+          hasKnowledgeRetrievalResult: true,
+        );
+        expect(resolved.mode, AssistantMode.learning, reason: query);
+        expect(resolved.tool, isNull, reason: query);
+        expect(resolved.needsClarification, isFalse, reason: query);
+      }
+
+      final personalSymptoms = AssistantConversationOrchestrator.resolve(
+        query: '我最近咽痛，想了解桔梗汤',
+        selectedMode: AssistantMode.automatic,
+        hasStructuredKnowledgeEntity: true,
+        hasKnowledgeRetrievalResult: true,
+      );
+      expect(personalSymptoms.mode, AssistantMode.consultation);
+    });
+
     test('中医概念和经典条文问题进入学习助手', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '《伤寒论》第172条原文和黄芩汤的关系是什么？',

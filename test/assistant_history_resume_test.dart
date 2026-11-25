@@ -12,6 +12,7 @@ import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/models/tool_execution_plan.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
+import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
 import 'support/test_only_red_flag_gate.dart';
 
@@ -467,6 +468,7 @@ void main() {
 
 
   testWidgets('恢复知识检索状态和来源引用后仍可在历史消息中查看', (tester) async {
+    await FormulaRepository.load();
     final store = _MemoryConversationStore();
     store.messages[1]!.add({
       'id': 5,
@@ -476,8 +478,8 @@ void main() {
       'metadata': AssistantMessageMetadata(
         mode: 'learning',
         selectedMode: 'automatic',
-        sourceIds: const ['formula:gui-zhi-tang'],
-        knowledgeStatus: 'PARTIAL',
+        sourceIds: const ['formula:yiqi_tang'],
+        knowledgeStatus: 'PARTIAL:PROTOCOL_REJECTED',
       ).encode(),
     });
     final service = _HistoryResumeService();
@@ -499,7 +501,10 @@ void main() {
     await _pumpFrames(tester);
 
     expect(find.text('知识检索：部分结果'), findsOneWidget);
-    expect(find.text('方剂：gui-zhi-tang'), findsOneWidget);
+    expect(find.text('结构化协议校验：未通过'), findsOneWidget);
+    await tester.tap(find.text('本轮检索资料'));
+    await _pumpFrames(tester);
+    expect(find.text('方剂：一物瓜蒂汤'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
