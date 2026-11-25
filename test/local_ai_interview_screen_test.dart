@@ -309,7 +309,7 @@ Future<void> _warmLearningKnowledgeSources(WidgetTester tester) async {
     await AcupunctureRepository.load();
     await AcupointRepository.load();
     return AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
-      '学习灵枢经脉原文',
+      '灵枢 经脉',
       includeMedicalCases: false,
     );
   });
@@ -1357,7 +1357,7 @@ void main() {
 testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并保留 Native 会话通道',
     (tester) async {
   await _warmLearningKnowledgeSources(tester);
-  const question = '学习灵枢经脉原文';
+  const question = '灵枢 经脉';
   final service = _LearningProtocolTextSendService();
   final traceEvents = <AiTraceEvent>[];
   final traceRecorder = AiTraceRecorder(
@@ -1485,11 +1485,11 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
   );
   await tester.pumpAndSettle();
   expect(find.textContaining('当前角色：学习助手'), findsOneWidget);
-  await tester.enterText(find.byType(TextField), '学习灵枢经脉原文');
+  await tester.enterText(find.byType(TextField), '灵枢 经脉');
   await tester.pump();
   expect(
     tester.widget<TextField>(find.byType(TextField)).controller!.text,
-    '学习灵枢经脉原文',
+    '灵枢 经脉',
     reason: '协议失败场景必须提交原始输入',
   );
   expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
@@ -1521,7 +1521,7 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
         'trace=${traceEvents.map((event) => '${event.stage.name}:${event.status.wireValue}:${event.route ?? ''}:${event.errorCode ?? ''}').join(' | ')}',
   );
 
-  expect(service.sentTexts, ['学习灵枢经脉原文']);
+  expect(service.sentTexts, ['灵枢 经脉']);
   expect(find.textContaining(untrustedRaw), findsNothing);
   final rows = await _store.getAssistantMessages(
     conversationId: service.sentConversationIds.single,
