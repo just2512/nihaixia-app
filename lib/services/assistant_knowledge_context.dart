@@ -80,7 +80,7 @@ class AssistantKnowledgeContextBuildResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已完整注入上下文的证据 ID；模型是否实际使用须由响应协议另行回验】\n' +
+      : '【内部审计证据索引；不得作为普通对话内容展示】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
               .join('\n');
@@ -116,7 +116,14 @@ class AssistantKnowledgeContextResult {
     this.rankedEvidenceSet,
   });
 
+  /// Complete retrieval materialization, retained for App-side audit/tests only.
   final String text;
+
+  /// Sanitized evidence content for the language model. Never contains source
+  /// IDs, backlinks, local paths, internal sequence numbers or retrieval status.
+  String get modelContextText =>
+      AssistantKnowledgeContextBuilder.toModelContextText(text);
+
   final List<AssistantKnowledgeSourceReference> sources;
   final AssistantKnowledgeRetrievalStatus status;
   final String? failureMessage;
@@ -136,7 +143,7 @@ class AssistantKnowledgeContextResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已注入模型上下文的证据 ID；这不代表模型实际使用或引用】\n' +
+      : '【内部审计证据索引；不得作为普通对话内容展示】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
               .join('\n');
@@ -176,6 +183,94 @@ class AssistantKnowledgeContextBuilder {
     '厥阴', '咳嗽', '头痛', '头晕', '腹痛', '腹胀', '失眠', '发热',
     '恶寒', '口苦', '胸闷', '尿频', '便秘', '腹泻', '心悸', '呕吐',
   };
+
+  /// Produces a separate model-facing view from retrieval/audit material.
+  /// Evidence content and readable titles are retained; App identifiers,
+  /// storage locators, ranking metadata and retrieval status are not injected
+  /// into ordinary model conversation context.
+  static String toModelContextText(String auditText) {
+    if (auditText.trim().isEmpty) return '';
+
+    final output = <String>[];
+    for (final rawLine in auditText.split('\\n')) {
+      final line = rawLine.trimRight();
+      final value = line.trim();
+      if (value.isEmpty) {
+        if (output.isNotEmpty && output.last.isNotEmpty) output.add('');
+        continue;
+      }
+
+      if (value.startsWith('来源标识：') ||
+          value.startsWith('知识库条目定位：') ||
+          value.startsWith('知识库条目定位可用：') ||
+          value.startsWith('本地资料路径：') ||
+          value.startsWith('内部章节序号：') ||
+          value.startsWith('纸本版本/卷页核验状态：') ||
+          value.startsWith('章节正文匹配：') ||
+          value.startsWith('evidenceId=') ||
+          value.startsWith('sourceId=')) {
+        continue;
+      }
+
+      if (value.startsWith('以下内容来自 App 内置知识库')) {
+        output.add(
+          '以下是 App 本地知识库检索得到的资料摘录。只根据下方明确记载的内容回答；未覆盖的信息应说明未知。',
+        );
+        continue;
+      }
+      if (value.startsWith('不得补造未返回字段；保留资料类型')) {
+        output.add('不得补造资料未记载的事实；未覆盖的信息应明确说明未知。');
+        continue;
+      }
+
+      if (value.startsWith('[App经典全文索引 · ')) {
+        output.add(value.replaceFirst('[App经典全文索引 · ', '[经典学习资料 · '));
+        continue;
+      }
+      if (value.startsWith('[App古籍库 · ')) {
+        if (value.contains('读取失败')) {
+          output.add('古籍资料正文本轮未能读取。');
+          continue;
+        }
+        final fields = value
+            .replaceFirst('[App古籍库 · ', '')
+            .replaceFirst(']', '')
+            .split(' · ');
+        final title = fields.isEmpty ? '古籍资料' : fields.first;
+        final author = fields.length > 1 ? fields[1] : '';
+        output.add(author.isEmpty ? '[古籍资料 · $title]' : '[古籍资料 · $title · $author]');
+        continue;
+      }
+      if (value.startsWith('[App医案库')) {
+        output.add('[App 整理医案资料]');
+        continue;
+      }
+      if (value.startsWith('[App方剂库')) {
+        output.add('[方剂资料]');
+        continue;
+      }
+      if (value.startsWith('[App本草库')) {
+        output.add('[本草资料]');
+        continue;
+      }
+      if (value.startsWith('[App针灸处方库')) {
+        output.add('[针灸处方资料]');
+        continue;
+      }
+      if (value.startsWith('[App穴位库')) {
+        output.add('[穴位资料]');
+        continue;
+      }
+      if (value.startsWith('[App内经结构化条目')) {
+        output.add('[《黄帝内经》结构化资料]');
+        continue;
+      }
+
+      output.add(line);
+    }
+
+    return output.join('\\n').trim();
+  }
 
   /// Cheap deterministic signal for intent routing. This only checks registered
   /// formula/herb/acupoint entities and their aliases; it does not claim that

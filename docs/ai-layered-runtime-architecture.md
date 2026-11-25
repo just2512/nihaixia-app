@@ -165,6 +165,7 @@ E4B 不可以：
 **正常对话与内部证据审计必须分离：**
 
 - 正常对话正文只保存模型面向用户的自然语言回复；不得拼接 citation footer、sourceId、evidenceId、backlink、文件路径、内部序号或检索状态。
+- 模型上下文只能接收必要的证据正文、可读标题与资料类型；sourceId、evidenceId、backlink、文件路径、内部章节号、召回/排序决策和检索状态留在 App 审计对象/Trace，不注入普通语言对话 prompt。未来若接入结构化引用协议，必须由独立 adapter 提供最小化、请求级证据映射，不能把审计记录拼入自然语言上下文。
 - Candidate retrieval/source resolution 只产生“本轮检索资料”，不能直接称为模型引用，也不能据此推断模型逐条使用了来源。
 - 在结构化响应接线完成前，UI 如需保留回查入口，只能放入默认折叠的“本轮检索资料”面板，并明确提示“App 检索返回，不代表模型逐条引用或来源已核验”；面板显示友好标题，不显示内部标识。
 - “模型引用”只能来自当前请求的结构化响应引用 ID，且经 App 对照 ranked evidence、known candidates 和 source resolver 回验之后才可标记；没有回验结果时状态为 UNKNOWN/MISSING。

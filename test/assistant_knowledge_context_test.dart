@@ -300,6 +300,27 @@ void main() {
     expect(result.text, isNot(contains('本轮引用的知识库条目')));
   });
 
+  test('模型知识上下文与内部证据审计分离：模型只接收资料正文，不接收来源标识和路径', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '葛根加半夏汤',
+      includeMedicalCases: false,
+    );
+
+    expect(result.text, contains('来源标识：'));
+    expect(result.text, contains('assets/data/formulas.json'));
+    expect(result.sources, isNotEmpty);
+
+    final modelContext = result.modelContextText;
+    expect(modelContext, contains('方名：葛根加半夏汤'));
+    expect(modelContext, contains('组成药名：'));
+    expect(modelContext, isNot(contains('来源标识：')));
+    expect(modelContext, isNot(contains('sourceId')));
+    expect(modelContext, isNot(contains('evidenceId')));
+    expect(modelContext, isNot(contains('知识库条目定位')));
+    expect(modelContext, isNot(contains('本地资料路径')));
+    expect(modelContext, isNot(contains('assets/data/')));
+  });
+
   test('App 古籍资料来源对象保留具体知识库章节定位', () {
     const source = AssistantKnowledgeSourceReference(
       sourceId: 'guji:shanghan_lun:1',
@@ -454,6 +475,24 @@ void main() {
     expect(lecture, isNot(contains('纸本版本/卷页')));
     expect(lecture, isNot(contains('纸本版本/卷页：VERIFIED')));
     expect(lecture, isNot(contains('已完成校勘')));
+  });
+
+  test('医案来源编号只保留在审计记录，不进入模型知识上下文', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '医案 肝癌',
+      includeMedicalCases: true,
+    );
+    final medicalSources = result.sources
+        .where((source) => source.sourceKind == 'medical_case')
+        .toList(growable: false);
+    expect(medicalSources, isNotEmpty);
+
+    expect(result.text, contains('medical_case:'));
+    expect(result.text, contains('medical_case:internal-seq:'));
+    expect(result.modelContextText, contains('[App 整理医案资料]'));
+    expect(result.modelContextText, isNot(contains('medical_case:')));
+    expect(result.modelContextText, isNot(contains('internal-seq')));
+    expect(result.modelContextText, isNot(contains('知识库条目定位')));
   });
 
   test('医案关联上下文使用稳定知识库条目编号定位而不显示书目缺失', () async {

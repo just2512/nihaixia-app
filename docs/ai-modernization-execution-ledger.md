@@ -4604,3 +4604,4 @@ PR HEAD 门禁证据：
 - **云端验收状态：** 当前最终 PR HEAD 的 Android arm64/JVM、Flutter regression/analyze、Fork License/REUSE 和 work branch validation 必须以 GitHub Actions 最新精确 HEAD 结果判定；SKIPPED 不计 PASS。当前不能用 CI 替代 OPPO Find N2 实机长短上下文、GPU/CPU 多轮、内存占用和安装升级验证。
 - **设备风险：** FLOAT32 是对外部同 SDK/同模型哈希报告的 GPU workaround，不是对 Adreno 730 Find N2 的实机验证。公开报告显示设备间内存成本不同；Find N2 必须检查峰值内存/系统回收/首 token 与解码速度。若实机出现内存压力，不回退到未加质量闸门的 FP16；先按 TRACE 明确故障边界再做条件化 precision 策略。
 - **未完成边界：** 本批次不声称完成 Core-3 结构化模型引用生产接线、所有证据使用关系验证、医学事实准确性检测或 E2E Find N2 验收。没有经 App 回验的 referencedEvidenceIds 时，普通聊天只显示“本轮检索资料”，不得出现“模型引用”表述。
+  - 模型输入也与审计对象分开：新增 `modelContextText`，保留方剂、本草、古籍/医案等必要资料正文及友好标题，但过滤 sourceId、evidenceId、backlink、路径、内部序号、来源/排序状态和定位状态。完整 `text`、`sources`、`rankedEvidenceSet` 与 KEEP/DROP 仍留在 App 侧审计对象；普通对话 prompt 不再接收这些字段。
