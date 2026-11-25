@@ -124,6 +124,39 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('已注册术数领域的常识、原理与学习问题进入玄学解释，不启动计算工具', () {
+      for (final query in [
+        '《小六壬》大安的五行、方位、吉凶分别是什么？',
+        '解释梅花易数的体用关系',
+        '紫微斗数十四主星分别是什么？',
+        '紫薇斗数的命宫是什么意思？',
+        '八字是什么？',
+        '八字十神的原理是什么？',
+        '系统学习八字基础知识',
+        '小六壬和梅花易数有什么区别？',
+        '周公解梦是什么意思？',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+    });
+
+    test('五运六气的明确中医原理学习仍进入学习助手', () {
+      for (final query in ['学习五运六气推算原理', '五运六气推算原理']) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.learning, reason: query);
+        expect(decision.tool, isNull, reason: query);
+      }
+    });
+
     test('工具澄清后补充的日期仍进入五运六气 typed arguments', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '五运六气 2026-11-06',
