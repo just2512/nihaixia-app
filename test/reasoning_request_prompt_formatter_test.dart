@@ -149,7 +149,32 @@ void main() {
       );
     });
 
-$testAnchor
+    test('accepts valid zero-argument deterministic execution results', () {
+      final noArgumentResult = ReasoningExecutionResult(
+        invocationId: 'invoke-yuxiaji',
+        capabilityId: 'yuxiaji_omen',
+        status: ReasoningExecutionStatus.succeeded,
+        resultValues: const {
+          '当前时辰': '午时',
+          '数据范围': '本地时辰条目',
+        },
+        sourceIds: const ['local-data:yuxiaji-omen'],
+      );
+      final value = request(results: [noArgumentResult]);
+
+      expect(
+        value.executionResults.single.status,
+        ReasoningExecutionStatus.succeeded,
+      );
+      expect(value.executionResults.single.actualArguments, isEmpty);
+      expect(value.executionResults.single.resultValues, isNotEmpty);
+      expect(
+        value.executionResults.single.sourceIds,
+        ['local-data:yuxiaji-omen'],
+      );
+    });
+
+    test('rejects invalid request identity, session scope and schema version', () {
       expect(
         () => ReasoningRequest(
           requestId: ' ',

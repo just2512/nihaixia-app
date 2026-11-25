@@ -54,9 +54,7 @@ class ReasoningExecutionResult {
       throw ArgumentError('REASONING_EXECUTION_CONTAINS_EMPTY_ID_OR_KEY');
     }
     if (status == ReasoningExecutionStatus.succeeded &&
-        (this.actualArguments.isEmpty ||
-            this.resultValues.isEmpty ||
-            this.sourceIds.isEmpty)) {
+        (this.resultValues.isEmpty || this.sourceIds.isEmpty)) {
       throw ArgumentError('REASONING_SUCCEEDED_RESULT_INCOMPLETE');
     }
     if (status == ReasoningExecutionStatus.notStarted &&
