@@ -1100,6 +1100,15 @@ class AssistantConversationOrchestrator {
       );
     }
 
+    // Personal symptoms with explicit personal context outrank generic learning
+    // wording in the same sentence (for example, "我最近咽痛，想了解桔梗汤").
+    // Keep the turn in Consultation so the assistant asks whether it is a personal
+    // health concern or a study question before treating it as general learning.
+    if (_personalContextCues.any(text.contains) &&
+        _symptomCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.consultation);
+    }
+
     // A pending tool selection is cancelled by an unrelated explicit learning
     // question; it must not force a non-Yunqi metaphysics topic into TCM retrieval.
     if (pendingToolSelection && _learningCues.any(text.contains)) {

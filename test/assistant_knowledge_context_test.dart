@@ -271,12 +271,12 @@ void main() {
     expect(context, contains('资料类型：倪师讲稿/整理讲义（学习资料）'));
     expect(context, contains('来源标识：shanghan:assets/'));
     expect(context, contains('知识库条目定位：assets/shanghan/'));
-    expect(context, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
+    expect(context, contains('资料类型说明：当前检索资料为 App 内课程讲稿/整理讲义知识条目.'));
     expect(context, isNot(contains('版本/底本/卷页：MISSING')));
     expect(context, isNot(contains('纸本版本/卷页')));
   });
 
-  test('讲稿引用尾注显示本地学习资料回链而不把纸本卷页当作必填', () async {
+  test('讲稿检索来源保留本地学习资料回链而不把纸本卷页当作必填', () async {
     final result =
         await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '葛根加半夏汤',
@@ -449,7 +449,7 @@ void main() {
     final lecture = await AssistantKnowledgeContextBuilder.buildAsync('葛根加半夏汤');
     expect(lecture, contains('知识库条目定位：assets/shanghan/'));
     expect(lecture, contains('来源标识：shanghan:assets/shanghan/'));
-    expect(lecture, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
+    expect(lecture, contains('资料类型说明：当前检索资料为 App 内课程讲稿/整理讲义知识条目.'));
     expect(lecture, isNot(contains('版本/底本/卷页：MISSING')));
     expect(lecture, isNot(contains('纸本版本/卷页')));
     expect(lecture, isNot(contains('纸本版本/卷页：VERIFIED')));
