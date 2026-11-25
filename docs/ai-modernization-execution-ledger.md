@@ -4356,7 +4356,7 @@ PR HEAD 门禁证据：
 - `LicenseKeyRingFactory` 对缺失/格式错误的 Dart define 返回空 Key Ring，无法验证任何发行者；免费功能可继续启动。Android Release Gradle 门禁要求恰好一个 `YANJI_LICENSE_KEY_RING` define、非空 keys、合法唯一 key_id、32-byte Ed25519 公钥、已知状态及至少一个 active/standby issuer，并拒绝测试 issuer ID/公钥。
 - Release 构建另行要求本地原签名 `android/key.properties` 与 keystore；CI-only 临时签名仅用于扫描构建产物，不是产品 Release 签名身份。
 - `.github/workflows/release-trust-anchor.yml` 从 GitHub Secret `YANJI_LICENSE_KEY_RING` 读取公钥环并执行发行者/产物扫描。当前可见仓库源码和 CI 证据不能读取或证明 Secret 的实际值、正式公钥来源或生产私钥离线托管状态；因此**正式发行信任锚仍 BLOCKED**，不能以 workflow 文件存在或普通 CI 成功推断 Secret 已配置。
-- 当前 Fork inventory 记录 changed 975、added 811、modified 164、deleted 15；分类为 FORK_COMMERCIAL 452、APACHE_2_0_AND_FORK_COMMERCIAL 158、KNOWLEDGE_BASE_EXCLUDED 364、THIRD_PARTY_EXCLUDED 1。自动检查只证明 inventory/DEP5/SPDX 路径与分类结构一致；Fork-owned 与 mixed 条目仍标记 `OWNERSHIP_EVIDENCE_REQUIRED`，不能由 CI 或 Git 作者字段证明权属。
+- 当前 Fork inventory 记录 changed 977、added 813、modified 164、deleted 15；分类为 FORK_COMMERCIAL 454、APACHE_2_0_AND_FORK_COMMERCIAL 158、KNOWLEDGE_BASE_EXCLUDED 364、THIRD_PARTY_EXCLUDED 1。JSON 与 Markdown 均逐路径核对 977 条唯一记录，无缺项、重复或额外项；Fork/混合许可路径仍标记 OWNERSHIP_EVIDENCE_REQUIRED。自动检查只证明 inventory/DEP5/SPDX 路径与分类结构一致；Fork-owned 与 mixed 条目仍标记 `OWNERSHIP_EVIDENCE_REQUIRED`，不能由 CI 或 Git 作者字段证明权属。
 - `LICENSE-FORK-COMMERCIAL.md` 当前为版本 1.4；本轮未修改其授予条款。运行时 Token 与源代码许可保持分离。
 
 ### 94.5 云端完成与外部阻断清单
@@ -4386,10 +4386,10 @@ PR HEAD 门禁证据：
 
 - **约束文档：** docs/user-bookshelf-local-knowledge-architecture.md。
 - **设计状态：** DESIGN_FROZEN / NOT_IMPLEMENTED。本轮只冻结未来架构和执行边界，没有实现书架运行时代码、数据库 schema、模型依赖、Embedding 索引或 UI。
-- **当前 master 基线：** 本次分支从 master 当前 HEAD 07d4c60eabb42f1fb46b903d4336a1b6531f084b 派生；后续每个实现切片仍须重新核验当时 master。
+- **当前 master 基线：** 本次书架/核心架构文档批次从 master `de488a52285db513c4ceb7c77d89c154ac5c1fa4`（PR #490 合并提交）派生；后续每个实现切片仍须重新核验当时 master。
 - **核心决策：** system_knowledge.db 与 user_bookshelf.db 物理隔离；用户多本书共用 user_bookshelf.db 内的统一书籍/片段/向量表；统一 Dart 检索契约，但保留 origin/materialKind/verificationStatus；用户来源默认未核验。
 - **v1.3 授权与存储边界：** 未来任何 Native LiteRT/LiteRT-LM Embedding 模型加载或推理均复用唯一 `ai_access` 与同一个 Native `AiModelAccessGate`，不新增书架/Embedding 独立收费权益；`user_bookshelf.db` 只存用户语料及索引，不迁移会话、消息、问诊任务、Native transcript 或 TRACE。App 永久授权 Token 的 `ai_access` 不等于源代码商业许可。
-- **索引策略：** 关键词先可用，EmbeddingGemma 2 text-only 270M 为 D 阶段首选 PoC，不在当前阶段添加模型权重或运行时依赖；不预先决定最终向量维度、FTS5、ANN、批次大小或 Reranker。
+- **索引策略：** 关键词先可用；EmbeddingGemma 2 text/code 270M 仅为未来 C 阶段 PoC 候选，不在当前阶段添加模型权重或运行时依赖；不预先决定最终向量维度、FTS5、ANN、批次大小或 Reranker。书架当前为 DEFERRED / NOT_AUTHORIZED，须待核心五层 Core-0～Core-2 和多轮/证据边界稳定、用户明确恢复后再启动。
 - **安全与历史：** USER 内容是不可信资料，不得触发工具；引用卡片由本地数据回填；RAG 正文不得进入 Native 持久化历史；删除/修改后历史引用标为 SOURCE_DELETED / SOURCE_CHANGED。
 - **优先级修订：** 本节原登记的书架阶段顺序已由 §96 修订。当前先完成 AI 五层核心职责解耦及多轮/证据边界；书架降为 DEFERRED / NOT_AUTHORIZED 的未来可选知识源扩展，不再与多轮治理并行，也不占用当前实现资源。
 - **当前不做：** 不新增书架页面、SQLite schema、FTS5、Embedding/向量依赖、后台常驻服务；不改当前经典检索排序或黄金快照；不改变 AI 业务权限和许可门禁。
