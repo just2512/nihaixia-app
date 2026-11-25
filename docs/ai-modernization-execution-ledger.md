@@ -4460,3 +4460,21 @@ PR HEAD 门禁证据：
 - **Core-2 剩余：** 经典索引、医案、古籍已有分源 CandidateEvidence 适配，但尚未统一成一个多源 CandidateEvidenceBatch；AssistantKnowledgeContextBuilder 仍负责请求编排与上下文装配。#507/#511 合并后再抽取轻量聚合接口，不改变 query 派生和 golden order。
 - **工作流 I：** Markdown 书架持续 DEFERRED / NOT_AUTHORIZED，不启动。
 - **门禁纪律：** 只认各 PR 精确 HEAD 的适用 CI；SKIPPED 不计 PASS；Find N2 实机证据保持 LOCAL ONLY / UNKNOWN。设备安装升级、Native 长会话 GPU/CPU、Activity/进程恢复和引用点击最后由本地验收。
+
+---
+
+## 100. 2026-11-25 Core-2 / Core-4 基于新主线的状态校准
+
+- **当前 master 基线：** `7751015246aea012e42070562c0cf58e94f023a2`。本节以该提交为最新快照，覆盖历史 §99 的待合并状态描述；§97～§99 保留当时记录，不回写历史。
+- **Core-2 医案候选 / PR #507：** 已合并，merge commit `7751015246aea012e42070562c0cf58e94f023a2`。`MedicalCaseEvidencePipeline` 将既有医案命中投影为 CandidateEvidence，保留医案源序与首次命中 queryId，明确区分来源核验状态和 App 内部序号定位；`LegacyOrderEvidenceRanker` 记录 KEEP/DROP 与旧两条上限，不引入相关性分数。合并前精确 HEAD `0447651f1e89898538ee82e7c4fd6798cc3007c8`：Flutter regression SUCCESS（run `45552591982`），Android arm64/JVM SUCCESS（job `139000178708`），Fork license SUCCESS（run `45552592656`）；Branch validation SKIPPED，不计 PASS。
+- **Core-2 古籍章节 / 旧 PR #511：** 已关闭且未合并。旧分支同时携带 #507 医案实现，#507 squash 合并后出现重叠修改，故没有强行覆盖 master。
+- **Core-2 古籍章节 / 新 PR #512：** 从当前 master `7751015246aea012e42070562c0cf58e94f023a2` 重建，分支 `work/core2-guji-candidates-master-7751015-20261125`，提交 `6d77872c23d484360d7e1a92b1e8b39695ba9e26`。差异收敛为 9 个文件，仅含古籍候选适配、上下文反查集成测试及对应架构/台账/许可证元数据；没有重新提交医案 pipeline、医案测试或排序器。其古籍内部章节定位为 PARTIAL，书目版本/纸本页码保持 UNKNOWN；1,400 字符截断显式标记 TRUNCATED。PR 地址：`https://github.com/just2512/nihaixia-app/pull/512`。
+- **Core-4 旧 PR #510：** 已关闭且未合并。其旧 HEAD 落后新主线；没有直接合并旧分支。
+- **Core-4 新 PR #513：** 从同一 master `7751015246aea012e42070562c0cf58e94f023a2` 重建，分支 `work/core4-unknown-outcomes-master-7751015-20261125`，提交 `0263db7d597afb776dcb6e97944cefccb270f06f`。仅修改 Headless dispatcher、结果处理、问诊页展示及三组定向测试：保留执行器抛异常前已完成步骤，将当前调用结果标为 UNKNOWN 并停止后续步骤；不重试、不重放、不补偿，不把 UNKNOWN 交给模型解释。PR 地址：`https://github.com/just2512/nihaixia-app/pull/513`。
+- **本节记录时的 CI 快照：** #512 精确 HEAD `6d77872c23d484360d7e1a92b1e8b39695ba9e26` 的 Fork license run `45555110815` SUCCESS，Flutter run `45555110900` IN_PROGRESS，Branch validation SKIPPED，Android arm64/JVM 尚未出现；#513 精确 HEAD `0263db7d597afb776dcb6e97944cefccb270f06f` 的 Fork license run `45555188872` SUCCESS，Flutter run `45555188746` IN_PROGRESS，Branch validation SKIPPED，Android arm64/JVM 尚未出现。由于本次文档校准会产生新 HEAD，以上 Flutter 状态仅是旧 HEAD 快照；新 HEAD 必须重新触发并重新验收，不能继承。
+- **Core-1 Native 会话记忆：** 已合并项包括 RAG 不进入 Native recovery transcript（#493）、完整成功轮次/字符上限与整轮淘汰（#496）、按 SQLite conversation ID 隔离（#499）、Native KV Cache 当前 token 观测（#506）、模型文件声明 maxContextTokens 观测（#509）和只读结构化 SessionStateSnapshot builder（#505）。JVM 测试明确验证当前模型输入保留本轮 RAG，而 Native 恢复 transcript 只保留用户原话。Snapshot builder 已有单测和会话归属 fail-closed 检查，但尚未接入生产 Native ReasoningRequest/prompt；KV token 数及模型声明最大上下文长度都不是 App 输入预算。跨进程恢复仍 UNKNOWN。
+- **Core-0/Core-2 剩余：** 五层 DTO 字段合同已冻结，但 ReasoningRequest/Response、BusinessActionProposal/ExecutionResult 尚未构成生产端到端协议；经典索引、医案、古籍已分别有 CandidateEvidence 来源适配（古籍待 #512 验收），但仍未统一成一个多源 CandidateEvidenceBatch。继续保留 retrieval golden order，不引入无证据的语义分数或字符/token 预算。
+- **Core-3/4/5：** Core-3 仍需固定并验证模型响应协议与证据 ID；Core-4 的 UNKNOWN 保留切片待 #513 精确 HEAD CI；Core-5 跨层 E2E 尚未闭环。
+- **工作流 I：** 用户 Markdown 书架仍为 DEFERRED / NOT_AUTHORIZED，不启动。
+- **设备策略：** Find N2 安装升级、GPU/CPU 长轮次、Activity/进程恢复、上下文稳定性及 TRACE 真实证据全部留到最后由本地验收；云端 CI 通过不等于设备 PASS，不以设备验收阻塞云端实现。
+
