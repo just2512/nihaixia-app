@@ -1106,6 +1106,57 @@ class LocalAiRuntimeCacheClearResult {
   }
 }
 
+enum LocalAiConversationTokenMetricsStatus {
+  measured,
+  tokenCountOnly,
+  modelLimitOnly,
+  unknown,
+}
+
+/// Read-only Native LiteRT-LM context token observations.
+///
+/// The current count is the Conversation KV cache (prefill + decode), while
+/// [modelMaxContextTokens] is the model-file-declared maximum context. Neither
+/// value is a compaction threshold or a guarantee of remaining output budget.
+class LocalAiConversationTokenMetrics {
+  const LocalAiConversationTokenMetrics({
+    required this.status,
+    required this.conversationTokenCount,
+    required this.modelMaxContextTokens,
+  });
+
+  static const unknown = LocalAiConversationTokenMetrics(
+    status: LocalAiConversationTokenMetricsStatus.unknown,
+    conversationTokenCount: null,
+    modelMaxContextTokens: null,
+  );
+
+  final LocalAiConversationTokenMetricsStatus status;
+  final int? conversationTokenCount;
+  final int? modelMaxContextTokens;
+
+  factory LocalAiConversationTokenMetrics.fromValue(Object? raw) {
+    if (raw is! Map || raw['unit'] != 'KV_CACHE_TOKENS') {
+      return unknown;
+    }
+    final rawCount = raw['conversationTokenCount'];
+    final rawLimit = raw['modelMaxContextTokens'];
+    final count = rawCount is int && rawCount >= 0 ? rawCount : null;
+    final limit = rawLimit is int && rawLimit > 0 ? rawLimit : null;
+    final status = switch ((count != null, limit != null)) {
+      (true, true) => LocalAiConversationTokenMetricsStatus.measured,
+      (true, false) => LocalAiConversationTokenMetricsStatus.tokenCountOnly,
+      (false, true) => LocalAiConversationTokenMetricsStatus.modelLimitOnly,
+      (false, false) => LocalAiConversationTokenMetricsStatus.unknown,
+    };
+    return LocalAiConversationTokenMetrics(
+      status: status,
+      conversationTokenCount: count,
+      modelMaxContextTokens: limit,
+    );
+  }
+}
+
 class LocalAiModelStatus {
   final bool installed;
   final bool fileExists;
@@ -1116,6 +1167,7 @@ class LocalAiModelStatus {
   final int expectedSizeBytes;
   final String backend;
   final String preferredBackend;
+  final LocalAiConversationTokenMetrics contextTokenMetrics;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -1127,6 +1179,7 @@ class LocalAiModelStatus {
     required this.backend,
     this.preferredBackend = 'gpu',
     this.hashVerified = false,
+    this.contextTokenMetrics = LocalAiConversationTokenMetrics.unknown,
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
@@ -1140,6 +1193,9 @@ class LocalAiModelStatus {
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
       preferredBackend: map['preferredBackend'] as String? ?? 'gpu',
+      contextTokenMetrics: LocalAiConversationTokenMetrics.fromValue(
+        map['nativeContextTokenMetrics'],
+      ),
     );
   }
 
