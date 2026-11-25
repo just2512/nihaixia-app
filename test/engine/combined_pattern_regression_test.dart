@@ -91,8 +91,12 @@ void main() {
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
       // 第146条是太阳表证兼少阳证，不能因使用柴胡桂枝汤而标记为明文合病。
       expect(result.combinedMeridian, isNull);
-      expect(result.pattern, contains('第146条'));
-      expect(result.pattern, contains('非明文合病'));
+      expect(
+        result.pattern,
+        '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去',
+      );
+      expect(result.pattern, isNot(contains('第146条')));
+      expect(result.pattern, isNot(contains('非明文合病')));
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });
   });
@@ -827,9 +831,11 @@ void main() {
       expect(result, isNotNull);
       expect(result!.formula, '柴胡桂枝汤');
       expect(result.recommendedFormulas, ['柴胡桂枝汤']);
-      // 旧六经兜底只验证方证结果传播；第146条不标记为明确合病。
-      expect(result.pattern,
-          '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去（第146条；非明文合病）');
+      // 旧六经兜底只验证原始方证文本传播；不再追加条文考证或来源标签。
+      expect(
+        result.pattern,
+        '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去',
+      );
       expect(result.combinedMeridian, isNull);
       expect(result.prescription?.formulaName, '柴胡桂枝汤');
     });

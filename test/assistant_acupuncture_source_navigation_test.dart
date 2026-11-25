@@ -77,7 +77,9 @@ void main() {
     );
     expect(prompt, contains('冠心病'));
     expect(prompt, contains('nihaisha+bbxx'));
-    expect(prompt, contains('独立核验'));
+    expect(prompt, isNot(contains('独立核验')),
+        reason: '针灸条目保留 App 原始来源标记，不再附加外部独立考证要求');
+    expect(prompt, contains('原始来源标记'));
     expect(prompt, contains('不得提供个人诊断'));
     expect(prompt, contains('不得扩展为针对个人'));
     expect(prompt, contains('token 计数：UNKNOWN'));

@@ -1571,7 +1571,6 @@ class AiContextPromptBuilder {
         '本次快照不包含用户自由梦境描述或搜索输入；不得假设用户亲身经历了所选梦境，不得从词条推断用户的心理状态、人格、精神疾病、身体疾病、健康风险或现实事件。',
       if (ref.moduleId == DreamResultContextExecutor.moduleId)
         '不得提供心理/精神/医学诊断、治疗建议、投资或法律建议，不得把梦境解释转化为重大决策指令；不得恐吓用户或诱导购买法事、符箓及任何付费服务。',
-      if (ref.moduleId == DreamResultContextExecutor.moduleId)
               if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
         '小儿关煞结果仅是 App 本地收录的传统民俗规则命中记录。只解释本次快照中已经核验的规则、命中依据与数据范围，不把关煞名称或严重程度表述为事实判断。',
       if (ref.moduleId == GuanshaResultContextExecutor.moduleId)
