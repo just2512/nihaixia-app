@@ -466,13 +466,13 @@ void main() {
   });
 
 
-  testWidgets('恢复知识检索状态和来源引用后仍可在历史消息中查看', (tester) async {
+  testWidgets('恢复历史消息时将检索来源保留为独立导航而非对话审计文本', (tester) async {
     final store = _MemoryConversationStore();
     store.messages[1]!.add({
       'id': 5,
       'conversation_id': 1,
       'role': 'assistant',
-      'content': '检索到方剂条目。',
+      'content': '检索到相关学习资料。',
       'metadata': AssistantMessageMetadata(
         mode: 'learning',
         selectedMode: 'automatic',
@@ -498,8 +498,16 @@ void main() {
     await tester.tap(find.text('可继续的历史会话'));
     await _pumpFrames(tester);
 
-    expect(find.text('知识检索：部分结果'), findsOneWidget);
-    expect(find.text('结构化协议校验：未通过'), findsOneWidget);
+    // Retrieval status/protocol diagnostics remain in persisted metadata,
+    // not in the normal dialogue bubble.
+    expect(find.textContaining('知识检索：'), findsNothing);
+    expect(find.textContaining('结构化协议校验：'), findsNothing);
+    expect(find.text('本轮检索资料'), findsOneWidget);
+    final restoredMetadata = AssistantMessageMetadata.decode(
+      store.messages[1]!.last['metadata']! as String,
+    );
+    expect(restoredMetadata.knowledgeStatus, 'PARTIAL:PROTOCOL_REJECTED');
+
     await tester.tap(find.text('本轮检索资料'));
     await _pumpFrames(tester);
     expect(find.text('《伤寒论》学习资料'), findsOneWidget);
