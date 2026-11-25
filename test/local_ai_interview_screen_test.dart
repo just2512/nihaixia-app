@@ -1997,7 +1997,7 @@ void main() {
     expect(service.sentContexts.single, contains('诊断性陈述必须能追溯到 App 本地知识库条目'));
     expect(service.sentContexts.single, contains('不得向用户输出 sourceId、evidenceId、路径或内部编号'));
     expect(service.sentContexts.single, contains('结合本轮本地知识库实际命中的条目解释规则结果'));
-    expect(service.sentContexts.single, contains('必须区分 App 规则结果、知识库内容和 AI 解释'));
+    expect(service.sentContexts.single, contains('必须区分 App 规则结果、检索资料和 AI 解释'));
     expect(tester.takeException(), isNull);
   });
 
