@@ -197,7 +197,9 @@ void main() {
     expect(result.sourceIdByEvidenceId.keys.toSet(),
         equals(result.rankedEvidenceIds.toSet()));
     expect(result.rankedEvidence.every((item) =>
-        item.sourceId.isNotEmpty && result.text.contains('来源标识：${item.sourceId}')),
+        item.sourceId.isNotEmpty &&
+        result.text.contains('来源标识：${item.sourceId}') &&
+        result.sources.any((source) => source.sourceId == item.sourceId)),
         isTrue);
     expect(result.evidenceIndexContext, contains('evidenceId='));
 
