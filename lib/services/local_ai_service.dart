@@ -70,6 +70,8 @@ class LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) =>
       _sendTextMessage(
         text,
@@ -77,6 +79,8 @@ class LocalAiService {
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
         redFlagContextTruncated: redFlagContextTruncated,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
       );
 
   Future<String> sendMessageWithTrace(
@@ -86,6 +90,8 @@ class LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) =>
       _sendTextMessage(
         text,
@@ -94,6 +100,8 @@ class LocalAiService {
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
         redFlagContextTruncated: redFlagContextTruncated,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
       );
 
   Future<String> _sendTextMessage(
@@ -103,6 +111,8 @@ class LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async {
     final normalizedTraceId = _normalizeTraceId(traceId);
     final data = await _channel.invokeMapMethod<String, dynamic>(
@@ -117,6 +127,12 @@ class LocalAiService {
           'red_flag_context': redFlagContext.trim(),
         if (requireMedicalSafety && redFlagContextTruncated)
           'red_flag_context_truncated': true,
+        if (sessionStateContext?.trim().isNotEmpty == true) ...{
+          'session_state_context': sessionStateContext!.trim(),
+          'session_state_conversation_id': _requireConversationId(
+            sessionStateConversationId ?? conversationId,
+          ),
+        },
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );
@@ -140,6 +156,8 @@ class LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) =>
       _sendMessageWithContext(
         text,
@@ -148,6 +166,8 @@ class LocalAiService {
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
         redFlagContextTruncated: redFlagContextTruncated,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
       );
 
   Future<String> sendMessageWithContextAndTrace(
@@ -158,6 +178,8 @@ class LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) =>
       _sendMessageWithContext(
         text,
@@ -167,6 +189,8 @@ class LocalAiService {
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
         redFlagContextTruncated: redFlagContextTruncated,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
       );
 
   Future<String> _sendMessageWithContext(
@@ -177,6 +201,8 @@ class LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async {
     final normalized = text.trim();
     if (normalized.isEmpty) {
@@ -196,6 +222,12 @@ class LocalAiService {
           'red_flag_context': redFlagContext.trim(),
         if (requireMedicalSafety && redFlagContextTruncated)
           'red_flag_context_truncated': true,
+        if (sessionStateContext?.trim().isNotEmpty == true) ...{
+          'session_state_context': sessionStateContext!.trim(),
+          'session_state_conversation_id': _requireConversationId(
+            sessionStateConversationId ?? conversationId,
+          ),
+        },
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
       },
     );

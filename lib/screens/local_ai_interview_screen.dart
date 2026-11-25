@@ -32,6 +32,9 @@ import '../data/saved_chart_repository.dart';
 import '../data/assistant_conversation_store.dart';
 import '../data/settings_repository.dart';
 import '../models/tcm_interview_task_state.dart';
+import '../models/session_state_snapshot.dart';
+import '../services/session_state_snapshot_builder.dart';
+import '../services/session_state_snapshot_prompt_formatter.dart';
 import '../models/diagnosis.dart';
 import '../models/bookmark.dart';
 import '../models/diagnosis_result_codec.dart';
@@ -1138,6 +1141,54 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<String> _buildSessionStatePromptContext(int conversationId) async {
+    SessionStateSnapshot snapshot;
+    try {
+      final messages = await _conversationStore.getAssistantMessages(
+        conversationId: conversationId,
+      );
+      TcmInterviewTaskState? taskState;
+      var taskStateReadFailed = false;
+      try {
+        taskState = await _conversationStore.getTcmInterviewTaskState(
+          conversationId: conversationId,
+        );
+      } catch (_) {
+        taskStateReadFailed = true;
+      }
+      final built = SessionStateSnapshotBuilder.build(
+        sessionId: conversationId,
+        messages: messages,
+        taskState: taskState,
+        taskOwnerSessionId: taskState == null ? null : conversationId,
+      );
+      snapshot = taskStateReadFailed
+          ? SessionStateSnapshot(
+              sessionId: built.sessionId,
+              revision: built.revision,
+              status: SessionStateStatus.partial,
+              facts: built.facts,
+              evidenceReferences: built.evidenceReferences,
+              activeTaskId: built.activeTaskId,
+              omittedUserMessageCount: built.omittedUserMessageCount,
+              diagnostics: [...built.diagnostics, 'TCM_TASK_STATE_READ_FAILED'],
+            )
+          : built;
+    } catch (_) {
+      snapshot = SessionStateSnapshot(
+        sessionId: conversationId,
+        revision: 'UNKNOWN',
+        status: SessionStateStatus.unknown,
+        facts: const [],
+        evidenceReferences: const [],
+        diagnostics: const ['SESSION_STATE_READ_FAILED'],
+      );
+    }
+    return SessionStateSnapshotPromptFormatter.format(
+      snapshot, expectedSessionId: conversationId,
+    );
+  }
+
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
     required int conversationId,
@@ -1149,6 +1200,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
+    final sessionStateContext =
+        await _buildSessionStatePromptContext(conversationId);
     Future<String> sendWithContext(String context) async {
       await _traceRecorder.record(
         traceContext,
@@ -1164,6 +1217,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ? _service.sendMessageWithContext(
               text,
               conversationId: conversationId,
+              sessionStateContext: sessionStateContext,
+              sessionStateConversationId: conversationId,
               context: context,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
@@ -1172,6 +1227,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : _service.sendMessageWithContextAndTrace(
               text,
               conversationId: conversationId,
+              sessionStateContext: sessionStateContext,
+              sessionStateConversationId: conversationId,
               context: context,
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
@@ -1203,6 +1260,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ? await _service.sendMessage(
                   text,
                   conversationId: conversationId,
+              sessionStateContext: sessionStateContext,
+              sessionStateConversationId: conversationId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
                   redFlagContextTruncated: redFlagContextTruncated,
@@ -1210,6 +1269,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               : await _service.sendMessageWithTrace(
                   text,
                   conversationId: conversationId,
+              sessionStateContext: sessionStateContext,
+              sessionStateConversationId: conversationId,
                   traceId: traceId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
