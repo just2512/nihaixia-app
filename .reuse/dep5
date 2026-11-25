@@ -1238,3 +1238,17 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-3 immutable ReasoningRequest, deterministic supplemental metadata formatter and session/evidence/execution contract tests; no Native call-path integration or business authorization/execution is included; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
+Files:
+ lib/services/reasoning_knowledge_answer_adapter.dart
+ test/reasoning_knowledge_answer_adapter_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-3 learning-only Request/Response adapter and regression tests; validates request-local evidence IDs, maps citations to resolved App source records, rejects action proposals with an empty capability allowlist and never executes business actions; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
+Files:
+ lib/screens/local_ai_interview_screen.dart
+ test/local_ai_interview_screen_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial
+Comment: Upstream-origin screen and widget test with Fork-authored Core-3 learning-only Request/Response wiring, session snapshot channel preservation, fail-closed rendering and integration regressions; preserve upstream Apache-2.0 notices and apply Fork commercial terms only to original modifications; ownership evidence required.
