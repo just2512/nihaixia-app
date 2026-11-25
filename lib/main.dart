@@ -81,8 +81,8 @@ ThemeData _buildTheme(Brightness brightness) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       titleTextStyle: titleTextStyle.merge(const TextStyle(fontSize: AppType.headline)),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: Colors.transparent,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: tokens.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
