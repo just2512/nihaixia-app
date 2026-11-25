@@ -368,6 +368,36 @@ void main() {
     });
 
 
+    test('persistent Native calls reject non-positive SQLite conversation IDs', () async {
+      var nativeCallCount = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        nativeCallCount += 1;
+        return <String, Object?>{'reply': 'should not be called'};
+      });
+
+      await expectLater(
+        LocalAiService().sendMessage('text', conversationId: 0),
+        throwsArgumentError,
+      );
+      await expectLater(
+        LocalAiService().sendImage(
+          '/app/cache/image.jpg',
+          conversationId: -1,
+        ),
+        throwsArgumentError,
+      );
+      await expectLater(
+        LocalAiService().restoreConversation(
+          conversationId: 0,
+          transcript: '用户：你好\\n助手：你好',
+          userMessages: const ['你好'],
+        ),
+        throwsArgumentError,
+      );
+
+      expect(nativeCallCount, 0);
+    });
+
     test('sendMessageWithContext separates user text from retrieved knowledge context', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
