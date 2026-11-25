@@ -186,7 +186,7 @@ class LocalAiConversationHistoryPolicyTest {
         val snapshot = restored.snapshot()
         assertEquals(listOf(LocalAiCompletedTurn("newer", "answer two")), snapshot.turns)
         assertEquals(1, snapshot.omittedTurnCount)
-        assertEquals(1L, snapshot.successfulTurnCount)
+        assertEquals(2L, snapshot.successfulTurnCount)
         assertTrue(restored.hasSuccessfulTurn())
     }
 
