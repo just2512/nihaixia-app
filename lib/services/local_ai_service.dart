@@ -207,18 +207,32 @@ class LocalAiService {
     );
   }
 
+  Future<Map<String, dynamic>?> _invokeReasoningCompletion(
+    String method,
+    Map<String, Object?> arguments,
+  ) async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>(method, arguments);
+    } on PlatformException {
+      // Native completion is keyed by requestId and idempotent within the
+      // process. Retry only the acknowledgement operation, never inference.
+      return _channel.invokeMapMethod<String, dynamic>(method, arguments);
+    }
+  }
+
   Future<void> finalizeReasoningTurn({
     required int conversationId,
     required String requestId,
     required String validatedAnswer,
   }) async {
-    final data = await _channel.invokeMapMethod<String, dynamic>(
+    final arguments = <String, Object?>{
+      'conversation_id': _requireConversationId(conversationId),
+      'request_id': requestId,
+      'answer_text': validatedAnswer,
+    };
+    final data = await _invokeReasoningCompletion(
       'finalizeReasoningTurn',
-      {
-        'conversation_id': _requireConversationId(conversationId),
-        'request_id': requestId,
-        'answer_text': validatedAnswer,
-      },
+      arguments,
     );
     if (data?['finalized'] != true || data?['request_id'] != requestId) {
       throw PlatformException(
@@ -232,12 +246,13 @@ class LocalAiService {
     required int conversationId,
     required String requestId,
   }) async {
-    final data = await _channel.invokeMapMethod<String, dynamic>(
+    final arguments = <String, Object?>{
+      'conversation_id': _requireConversationId(conversationId),
+      'request_id': requestId,
+    };
+    final data = await _invokeReasoningCompletion(
       'rejectReasoningTurn',
-      {
-        'conversation_id': _requireConversationId(conversationId),
-        'request_id': requestId,
-      },
+      arguments,
     );
     if (data?['rejected'] != true || data?['request_id'] != requestId) {
       throw PlatformException(

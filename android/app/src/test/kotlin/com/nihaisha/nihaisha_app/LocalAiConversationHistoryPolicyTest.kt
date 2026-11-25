@@ -360,6 +360,72 @@ class LocalAiConversationHistoryPolicyTest {
 
 
     @Test
+    fun finalizationCompletionIsIdempotentForTheSameRequestAndSession() {
+        val ledger = LocalAiReasoningTurnCompletionLedger()
+        val requestId = "0123456789abcdef0123456789abcdef"
+
+        assertEquals(null, ledger.status(requestId, 42L))
+        ledger.markCompleted(
+            requestId,
+            42L,
+            LocalAiReasoningTurnCompletionStatus.FINALIZED
+        )
+
+        assertEquals(
+            LocalAiReasoningTurnCompletionStatus.FINALIZED,
+            ledger.status(requestId, 42L)
+        )
+        ledger.markCompleted(
+            requestId,
+            42L,
+            LocalAiReasoningTurnCompletionStatus.FINALIZED
+        )
+    }
+
+    @Test
+    fun completionLedgerRejectsSessionAndTerminalStateConflicts() {
+        val ledger = LocalAiReasoningTurnCompletionLedger()
+        val requestId = "0123456789abcdef0123456789abcdef"
+        ledger.markCompleted(
+            requestId,
+            42L,
+            LocalAiReasoningTurnCompletionStatus.FINALIZED
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ledger.status(requestId, 43L)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ledger.markCompleted(
+                requestId,
+                42L,
+                LocalAiReasoningTurnCompletionStatus.REJECTED
+            )
+        }
+    }
+
+    @Test
+    fun completionLedgerEvictsOldestEntriesWithoutChangingRecentStatuses() {
+        val ledger = LocalAiReasoningTurnCompletionLedger(maxEntries = 2)
+        val first = "00000000000000000000000000000001"
+        val second = "00000000000000000000000000000002"
+        val third = "00000000000000000000000000000003"
+        ledger.markCompleted(first, 42L, LocalAiReasoningTurnCompletionStatus.REJECTED)
+        ledger.markCompleted(second, 42L, LocalAiReasoningTurnCompletionStatus.FINALIZED)
+        ledger.markCompleted(third, 42L, LocalAiReasoningTurnCompletionStatus.REJECTED)
+
+        assertEquals(null, ledger.status(first, 42L))
+        assertEquals(
+            LocalAiReasoningTurnCompletionStatus.FINALIZED,
+            ledger.status(second, 42L)
+        )
+        assertEquals(
+            LocalAiReasoningTurnCompletionStatus.REJECTED,
+            ledger.status(third, 42L)
+        )
+    }
+
+    @Test
     fun keepsReasoningProtocolMetadataInItsOwnUntruncatedInputSection() {
         val metadata = "x".repeat(LocalAiReasoningTurnPolicy.maxSupplementalContextCharacters)
         val prepared = LocalAiMessageInputPolicy.prepare(

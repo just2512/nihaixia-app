@@ -118,6 +118,80 @@ internal data class LocalAiPendingReasoningTurn(
 )
 
 /** Contract checks for the two-phase Native/Dart reasoning handshake. */
+
+/** Result of the Native half of a two-phase Core-3 reasoning turn. */
+internal enum class LocalAiReasoningTurnCompletionStatus {
+    FINALIZED,
+    REJECTED
+}
+
+/**
+ * Bounded process-local idempotency ledger for MethodChannel acknowledgements.
+ *
+ * It lets a retry of finalize/reject receive the original terminal result if
+ * Native committed the turn but the first MethodChannel acknowledgement was
+ * lost. It is not persisted across process death; absence after process death
+ * remains UNKNOWN and must never trigger inference replay.
+ */
+internal class LocalAiReasoningTurnCompletionLedger(
+    private val maxEntries: Int = 64
+) {
+    private data class Entry(
+        val conversationId: Long,
+        val status: LocalAiReasoningTurnCompletionStatus
+    )
+
+    private val completed = LinkedHashMap<String, Entry>()
+
+    init {
+        require(maxEntries > 0) { "maxEntries must be positive" }
+    }
+
+    fun status(
+        requestId: String,
+        conversationId: Long
+    ): LocalAiReasoningTurnCompletionStatus? {
+        validateIdentity(requestId, conversationId)
+        val entry = completed[requestId] ?: return null
+        require(entry.conversationId == conversationId) {
+            "REASONING_COMPLETION_SESSION_ID_MISMATCH"
+        }
+        return entry.status
+    }
+
+    fun markCompleted(
+        requestId: String,
+        conversationId: Long,
+        status: LocalAiReasoningTurnCompletionStatus
+    ) {
+        validateIdentity(requestId, conversationId)
+        val previous = completed[requestId]
+        if (previous != null) {
+            require(previous.conversationId == conversationId) {
+                "REASONING_COMPLETION_SESSION_ID_MISMATCH"
+            }
+            require(previous.status == status) {
+                "REASONING_COMPLETION_STATUS_CONFLICT"
+            }
+            return
+        }
+        completed[requestId] = Entry(conversationId, status)
+        while (completed.size > maxEntries) {
+            val oldest = completed.entries.iterator()
+            if (!oldest.hasNext()) break
+            oldest.next()
+            oldest.remove()
+        }
+    }
+
+    private fun validateIdentity(requestId: String, conversationId: Long) {
+        require(requestId.matches(Regex("^[a-fA-F0-9]{32}$"))) {
+            "REASONING_REQUEST_ID_INVALID"
+        }
+        require(conversationId > 0L) { "REASONING_SESSION_ID_INVALID" }
+    }
+}
+
 internal object LocalAiReasoningTurnPolicy {
     const val maxSupplementalContextCharacters = 24_000
     const val maxValidatedAnswerCharacters = 12_000

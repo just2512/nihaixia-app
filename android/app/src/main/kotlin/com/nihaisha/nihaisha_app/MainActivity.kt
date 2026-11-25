@@ -71,6 +71,7 @@ class MainActivity : FlutterActivity() {
     // Native Conversation state belongs to exactly one SQLite assistant session.
     private var activeConversationId: Long? = null
     private var pendingReasoningTurn: LocalAiPendingReasoningTurn? = null
+    private val reasoningTurnCompletions = LocalAiReasoningTurnCompletionLedger()
     private var activeBackend = "not_loaded"
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
@@ -1225,6 +1226,17 @@ class MainActivity : FlutterActivity() {
         answerText: String
     ): Map<String, Any> {
         aiModelAccessGate.requireAccess()
+        when (reasoningTurnCompletions.status(requestId, conversationId)) {
+            LocalAiReasoningTurnCompletionStatus.FINALIZED ->
+                return mapOf(
+                    "finalized" to true,
+                    "request_id" to requestId,
+                    "already_finalized" to true
+                )
+            LocalAiReasoningTurnCompletionStatus.REJECTED ->
+                throw IllegalStateException("REASONING_TURN_ALREADY_REJECTED")
+            null -> Unit
+        }
         val pending = LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
             pendingReasoningTurn,
             requestId,
@@ -1253,6 +1265,11 @@ class MainActivity : FlutterActivity() {
             )
         }
         recordUserInput("用户文字自述", pending.userText)
+        reasoningTurnCompletions.markCompleted(
+            requestId,
+            conversationId,
+            LocalAiReasoningTurnCompletionStatus.FINALIZED
+        )
         pendingReasoningTurn = null
         return mapOf("finalized" to true, "request_id" to requestId)
     }
@@ -1262,12 +1279,27 @@ class MainActivity : FlutterActivity() {
         requestId: String
     ): Map<String, Any> {
         aiModelAccessGate.requireAccess()
+        when (reasoningTurnCompletions.status(requestId, conversationId)) {
+            LocalAiReasoningTurnCompletionStatus.REJECTED ->
+                return mapOf(
+                    "rejected" to true,
+                    "request_id" to requestId,
+                    "already_rejected" to true
+                )
+            LocalAiReasoningTurnCompletionStatus.FINALIZED ->
+                throw IllegalStateException("REASONING_TURN_ALREADY_FINALIZED")
+            null -> Unit
+        }
         LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
             pendingReasoningTurn,
             requestId,
             conversationId
         )
-        // The raw KV state was already discarded before sendReasoningMessage returned.
+        reasoningTurnCompletions.markCompleted(
+            requestId,
+            conversationId,
+            LocalAiReasoningTurnCompletionStatus.REJECTED
+        )
         pendingReasoningTurn = null
         return mapOf("rejected" to true, "request_id" to requestId)
     }
