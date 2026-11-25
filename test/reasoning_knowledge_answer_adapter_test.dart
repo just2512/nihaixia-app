@@ -96,7 +96,6 @@ void main() {
       expect(result.answerText, contains('基于本地证据的解释'));
       expect(result.answerText, contains('待确认：缺少用户确认'));
       expect(result.answerText, contains('存在冲突：两处资料表述不同'));
-      expect(result.sourceIds, ['source-1']);
       // Source identity is attached to message metadata and the App-local
       // source-navigation affordance, not rendered as raw text in the answer.
       expect(result.sourceIds, ['source-1']);
