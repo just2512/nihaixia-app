@@ -49,7 +49,6 @@ void main() {
 
       expect(received?.method, 'understandTcmInterviewAnswer');
       expect(received?.arguments, {
-        'conversation_id': 42,
         'trace_id': traceId,
         'question_id': questionId,
         'question': question,
@@ -559,7 +558,6 @@ void main() {
 
       expect(received?.method, 'resolveAssistantIntent');
       expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
         'text': '按出生资料看看传统命盘',
         'candidates': '[{"id":"ziwei","title":"紫微斗数","description":"调用 App 原有紫微排盘。","plan_eligible":false},{"id":"bazi","title":"八字四柱","description":"调用 App 原有八字排盘。","plan_eligible":false}]',
         'trace_id': traceId,
@@ -1373,7 +1371,6 @@ void main() {
 
       expect(received?.method, 'extractBaziSlots');
       expect(received?.arguments, <String, Object?>{
-        'conversation_id': 42,
         'text': query,
         'missing_fields': '["birth_time","birthplace"]',
         'trace_id': traceId,
