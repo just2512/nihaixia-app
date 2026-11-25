@@ -19,6 +19,7 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.ModelInfo
 import java.io.File
 import java.security.MessageDigest
 import org.json.JSONArray
@@ -66,6 +67,7 @@ class MainActivity : FlutterActivity() {
     // Native Conversation state belongs to exactly one SQLite assistant session.
     private var activeConversationId: Long? = null
     private var activeBackend = "not_loaded"
+    @Volatile private var modelMaxContextTokens: Int? = null
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
     private val conversationHasSuccessfulTurn: Boolean
@@ -809,6 +811,26 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * Read the maximum context declared by the verified .litertlm model file.
+     * This is model metadata, not the remaining input/output budget.
+     * Unknown metadata must not block an otherwise valid model load.
+     */
+    private fun inspectModelMaxContextTokens(): Int? {
+        return try {
+            ModelInfo.from(modelFile.absolutePath).use { modelInfo ->
+                modelInfo.maxContextTokens().takeIf { it > 0 }
+            }
+        } catch (error: Exception) {
+            android.util.Log.w(
+                "LocalAiContextTokens",
+                "MODEL_CONTEXT_METADATA_UNKNOWN",
+                error
+            )
+            null
+        }
+    }
+
     private fun modelStatus(): Map<String, Any> {
         modelFile.parentFile?.mkdirs()
         // Restore an interrupted import before reporting status; otherwise an
@@ -832,6 +854,9 @@ class MainActivity : FlutterActivity() {
         )
         conversationTokenObservation.tokenCount?.let {
             status["conversationKvCacheTokens"] = it
+        }
+        modelMaxContextTokens?.let {
+            status["modelMaxContextTokens"] = it
         }
         return status.toMap()
     }
@@ -861,6 +886,7 @@ class MainActivity : FlutterActivity() {
         // files are hashed here before any native engine can read them.
         ensureModelFileIntegrity()
         if (aiEngine != null && aiConversation != null) return modelStatus()
+        modelMaxContextTokens = inspectModelMaxContextTokens()
 
         modelFile.parentFile?.mkdirs()
         val cachePath = File(cacheDir, "litertlm").apply { mkdirs() }.absolutePath
@@ -1698,6 +1724,7 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
+        modelMaxContextTokens = null
         activeConversationId = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false
