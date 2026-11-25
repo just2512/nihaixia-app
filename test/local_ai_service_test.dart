@@ -348,6 +348,45 @@ void main() {
       });
 
       expect(status.preferredBackend, 'gpu');
+      expect(status.modelMaxContextTokens, isNull);
+    });
+    test('parses the model-file declared maximum context token count', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'gpu',
+        'modelMaxContextTokens': 32768,
+      });
+
+      expect(status.modelMaxContextTokens, 32768);
+    });
+
+    test('keeps absent or malformed model context metadata unknown', () {
+      final absent = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': false,
+        'backend': 'not_loaded',
+      });
+      final malformed = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'cpu',
+        'modelMaxContextTokens': '32768',
+      });
+      final nonPositive = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'cpu',
+        'modelMaxContextTokens': 0,
+      });
+
+      expect(absent.modelMaxContextTokens, isNull);
+      expect(malformed.modelMaxContextTokens, isNull);
+      expect(nonPositive.modelMaxContextTokens, isNull);
     });
   });
 
