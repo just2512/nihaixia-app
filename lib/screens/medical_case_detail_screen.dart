@@ -106,9 +106,12 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: AiContextPromptBuilder.buildMedicalCaseKnowledgeEntry(
+      initialUserMessage:
+          AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
         entry: resolved,
       ),
+      autoSendInitialMessage: true,
+      resolveContextualKnowledgeEntry: true,
       initialMode: AssistantMode.learning,
       contextualTitle: '#${c.seq} ${c.displayName}',
       contextualExplanationOnly: true,
