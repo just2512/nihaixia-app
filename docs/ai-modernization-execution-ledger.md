@@ -4522,3 +4522,18 @@ PR HEAD 门禁证据：
 - **Core-0 与 Core-5：** Core-0 的源码映射和五层输出责任继续以本架构文档为准；Core-5 的跨层 E2E、真实引用回填、模型提案→权限验证→确定性执行→结果解释闭环仍未形成，状态 PARTIAL/MISSING 按具体证据填写。
 - **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
 - **设备策略：** OPPO Find N2 安装升级、真实 E4B 多轮、GPU/CPU 切换、Activity/进程恢复、会话隔离和 TRACE 真机证据统一留到云端可实现工作全部完成后本地验收；云端 CI 不代替设备 PASS，也不以设备验收阻塞 Core-0～Core-5 云端工程工作。
+
+
+---
+
+## 105. 2026-11-25 Core-2 请求级证据 ID 交接适配
+
+- **基线：** 从 master `61e63c7309787acf0867d9503532b405f5a0e5e9` 派生独立分支 `work/core2-evidence-handoff-master-61e63c7-20261125`，不修改 #520 Core-3 协议分支的文件所有权。
+- **问题证据：** #518 虽已把多源候选与来源感知排序接入 `AssistantKnowledgeContextBuilder.buildAsync`，但 Builder 仍只向上层返回文本；`AssistantKnowledgeContextResult` 只有 sourceIds，没有把当前请求的 ranked evidence IDs 交给推理调用方。故 #520 的 request-local evidence 校验器尚无生产请求证据集合可用。
+- **本批改动：** 新增 `AssistantKnowledgeContextBuildResult` 与 `AssistantKnowledgeEvidenceReference`；保留原 `buildAsync` 的 String API 作为兼容投影，新增 `buildWithEvidenceAsync`；`buildWithSourcesAsync` 通过同一构建结果返回 `knownEvidenceIds`、`rankedEvidenceIds`、`sourceIdByEvidenceId` 与可单独注入的 `evidenceIndexContext`。
+- **严格引用边界：** `knownEvidenceIds` 包含本轮召回的全部候选（包括 DROP）；`rankedEvidence` 只包含 KEEP 且其完整上下文证据块位于既有 6,500 字符上限内的候选。若上下文在某证据块中间被截断，该 evidenceId 不进入允许引用集合。sourceId 映射只针对实际完整提供的 ranked evidence。原上下文文本、classic → Guji → medical 顺序、classic 4 / 每本 Guji 2 / medical 2 上限、6,500 字符截断与检索算法均保持不变。
+- **显式范围：** 本批只交接已实现 CandidateEvidence pipeline 的 classic/Guji/medical 来源；方剂、本草、针灸、穴位、内经等旧结构化条目未被伪装成 CandidateEvidence。该批没有接入 Native prompt/ReasoningRequest，也没有把 `evidenceIndexContext` 自动注入普通对话。
+- **测试：** 扩展 `test/assistant_knowledge_context_test.dart`，验证古籍候选输出 ranked IDs、known IDs 包含关系、evidenceId→sourceId 映射及证据索引文本。需以 PR 精确 HEAD Flutter 全量回归、静态分析、Android arm64/JVM 与 Fork License 结果为准；任何 SKIPPED 不计 PASS。
+- **Core-3 后续：** #520 仍是独立协议契约切片；Core-3 生产接线必须消费本批 ranked IDs 与 source mapping，并在模型响应后由 App 再次校验，不能把模型给出的 sourceId 直接作为可信来源。
+- **Core-5：** 仍未形成跨层 E2E；本批只补齐 Core-2→Core-3 输入边界，不宣称推理、来源回填或业务执行闭环完成。
+- **工作流 I / 设备：** Markdown 书架继续 DEFERRED / NOT_AUTHORIZED；Find N2 实机验收仍放在所有云端可完成工作之后。
