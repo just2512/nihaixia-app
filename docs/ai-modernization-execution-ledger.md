@@ -4575,3 +4575,17 @@ PR HEAD 门禁证据：
 - **Core-3 后续：** 先将 #522 evidence ID/sourceId handoff 和本 DTO 组装到一个独立 learning knowledge path，再把 Native response 交给 #520 decoder；requestId、rankedEvidence、knownEvidenceIds 与当前请求绑定。验证通过后才逐步适配其他模式。
 - **Core-5：** 仍未完成；必须验证模型 JSON 行为、引用回填、空/坏响应 fail-closed、来源点击回查，以及 ACTION_PROPOSAL 到现有 capability/auth/user-confirmation/typed args/executor/ExecutionResult 闭环。设备 TRACE 留到云端完成后本地执行。
 - **工作流 I：** Markdown 书架仍 DEFERRED / NOT_AUTHORIZED，不启动。
+
+---
+
+## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
+
+- **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。
+- **旧 PR #523 处置：** 旧分支基于 #520 合并前 `cb05913...`，在 #522 合并后与 master 落后一个提交，GitHub compare 显示 diverged，`mergeable=false`；不强行合并。旧 HEAD 在 `7cd1f38...` 上静态分析曾暴露一项可空字段访问错误，已修为 `sessionState!.sessionId`；在之后的 `84cb57e...` push Branch validation 中 Static analysis 为 SUCCESS，但 PR 事件的 Flutter regression 与 Android arm64/JVM jobs 为 SKIPPED。分支后来因 stale merge-base / changed-only diff 无法形成可用的完整回归证据而关闭；任何 SKIPPED 均不计 PASS。新分支以 `a439896...` 为父提交，不继承旧 CI。
+- **Core-3 / PR #524：** `ReasoningRequest`、`ReasoningExecutionResult`、`ReasoningEvidenceReference`、`ReasoningRequestPromptFormatter` 已移植到以当前 master 为基线的独立分支。formatter 明确给模型 response schema、required fields、response kinds/status、requestId 和证据/动作边界指令；补充元数据硬上限为 24,000 UTF-16 code units，超限抛错阻断请求；它不是 Native 总输入预算/token预算。原始用户文本与 evidence bodies 沿用现有 Native text / bounded knowledge context 字段。
+- **Core-4 执行路径：** 18 个 Headless executor 与 4 个多步骤 plan-eligible 工具是两个不同集合。当前 E4B 意图分类是受约束 select/plan/clarify/none 分类器，不是 Core-3 ReasoningResponse；模型不产参数，App 从原始文本提取参数并对整计划预检。Dispatcher 按顺序执行、遇非 SUCCEEDED 停止、异常变 UNKNOWN 且不重试；结果 handler 只在全步骤成功、参数/来源有效时允许 AI 汇总。当前执行底座已有，但 BusinessActionProposal→权限确认→typed args→既有 executor→真实 ExecutionResult 回流仍 MISSING。
+- **Core-4 授权风险：** 当前 multi-step flow 依赖用户明确请求、严格候选白名单和全计划参数校验；静态代码未显示模型 plan 解析后的第二次确认 UI。不能因此宣称 ACTION_PROPOSAL 已有单独用户确认。未来 ReasoningResponse proposal 必须新增 App-owned consent/policy gate，不能只因 capability registered 即允许执行。能力参数目前为 text/date/time/integer/choice，缺统一版本化 schema、单位/数值上下限、对象数组、跨字段约束、敏感度/副作用/幂等/取消策略。
+- **测试范围：** 已有 dispatcher、plan builder、result handler 的定向测试覆盖候选外 ID、Page-only、能力 ID 不匹配、计划长度、参数预检、执行失败停止、异常转 UNKNOWN、结果来源校验；本轮静态审计不是对所有既有测试重新执行。PR #524 的新增 request DTO/formatter 测试需以最终 HEAD 全量 CI 证明。
+- **下一切片：** PR #524 只做 Request/formatter contract；其后 Core-3 Adapter 必须先在空 capability allowlist 下完成单一 learning knowledge path 的 Request→Native raw text→Response decoder→evidence ID→sourceId mapping→UI 回填。之后才做 Core-4 proposal gate/typed args，不把 action proposal 提前接入 Dispatcher。
+- **Core-5：** 仍无五层端到端闭环；覆盖模型响应、来源点击、动作授权、真实确定性结果和失败/UNKNOWN 的 E2E 尚未完成。设备实测在云端工作完成后由本地最后执行。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED。
