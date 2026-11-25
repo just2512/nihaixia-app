@@ -24,14 +24,14 @@ AssistantKnowledgeContextResult knowledge({
     ),
   ],
   List<String> known = const ['evidence-1', 'dropped-1'],
-  List<AssistantKnowledgeSourceReference> sources = const [],
+  List<AssistantKnowledgeSourceReference>? sources,
 }) =>
     AssistantKnowledgeContextResult(
       text: '测试证据块',
       status: AssistantKnowledgeRetrievalStatus.retrieved,
       rankedEvidence: ranked,
       knownEvidenceIds: known,
-      sources: sources,
+      sources: sources ?? [source('source-1')],
     );
 
 ReasoningRequest request(AssistantKnowledgeContextResult context) =>
@@ -138,7 +138,7 @@ void main() {
         knowledge: unresolvedContext,
       );
       expect(unresolved.isUsable, isFalse);
-      expect(unresolved.failureCode, 'REASONING_RESPONSE_SOURCE_NOT_RESOLVED');
+      expect(unresolved.failureCode, contains('UNRANKED_EVIDENCE'));
     });
 
     test('rejects action proposals because the learning path has no capabilities', () {
