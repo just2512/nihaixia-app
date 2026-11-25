@@ -54,6 +54,7 @@
 
 - 用户多本书共用 user_bookshelf.db 内的 books、book_versions、chapters、chunks、chunk_vectors、索引任务及关键词索引；按 bookId、source 范围过滤。
 - 不为每本书创建独立数据库。跨书检索、书架筛选和整本删除通过 bookId 完成。
+- user_bookshelf.db 仅保存用户书籍原文件/版本、章节/片段、索引、向量和索引任务等语料资产；不得迁入或取代现有 AI 会话、消息、问诊任务状态、Native transcript 或 TRACE 存储。现有会话/消息与 AI 数据清理边界保持不变。
 - system_knowledge.db 与 user_bookshelf.db 不合并写入，也不将用户上传数据写入系统只读数据库。
 - 统一的是 Dart 层的数据契约和检索/融合策略，不要求把两个数据库强行 ATTACH 成一个物理库。
 - 系统知识库更新不得直接覆盖仍被打开的数据库文件。先写入临时文件，完成文件 SHA、schema/version 和 SQLite 完整性检查，再关闭旧连接并原子切换；失败时保留旧库。
@@ -267,6 +268,9 @@
 ### 7.2 E4B 优先与共享资源门禁
 
 - Embedding Engine 可与 E4B Engine/Conversation 使用独立模型实例和生命周期，但不能拥有绕开现有模型访问门禁、Native 串行队列或资源协调的独立通道。
+- **唯一授权门禁：** 只要 Embedding 模型在 Native 侧使用 LiteRT / LiteRT-LM 加载或推理，就必须与 E4B 一样受 v1.3 唯一 `ai_access` 授权权益及同一个 Native AiModelAccessGate 控制；不得为书架、Embedding 或其他业务场景新增独立收费权益、旁路或第二套授权判定。资源调度队列负责串行与让出，不替代授权 Gate。
+- `HeadlessToolDispatcher` 与 `ContextResolutionGateway` 继续只承担各自的确定性执行安全、引用/来源校验职责，不承担书架或 Embedding 的独立收费门禁。
+- App 永久授权 Token 的 `ai_access` 权益不代表 Fork 源代码商业许可，也不扩大第三方模型/书籍内容的授权范围。
 - 同一时刻不得并发执行 E4B 推理与 Embedding 向量构建。新建索引任务进入统一 Native 资源协调队列。
 - 用户进入 AI 对话并发起推理时，Embedding 任务暂停或在当前安全批次结束后让出资源；E4B 结束后按任务状态恢复。
 - Embedding 模型不应长期与 E4B 同时常驻而未经内存实测；需要时按批次加载、释放或延迟初始化。
