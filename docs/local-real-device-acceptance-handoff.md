@@ -292,7 +292,7 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 - 同一工作流中标记为 `SKIPPED` 的 job 不计 PASS。CI Debug APK artifact 仅用于 arm64 构建/ABI/Manifest 验证，不是 Release 签名包，不能用于旧版覆盖升级。
 - CI 已验证缺少本地签名材料时 Release 构建按预期阻断。正式 Release 必须由维护者在本机使用原签名材料构建和核验。
 - Fork license boundary 自动检查不证明源代码版权/再许可权；`OWNERSHIP_EVIDENCE_REQUIRED` 仍需权利人材料补证。
-- PR #485 精确测试 HEAD `5c1b9c295fa95e0649b47258c2ae4a7c1fb28e52`：完整 Flutter 回归 job `138879302515`、Android arm64 CI job `138882598119`、Fork license boundary job `138879302308` 均 `SUCCESS`；Branch validation job `138879304247` 为 `SKIPPED`，不计 PASS。
+- PR #485 合并后 master push（精确 SHA `f022852678e2f12a334b83e28e2c4d8c8e3a3e99`）：完整 Flutter 回归 job `138879302515`、Android arm64 CI job `138882598119`、Fork license boundary job `138879302308` 均 `SUCCESS`；Branch validation job `138879304247` 为 `SKIPPED`，不计 PASS。以上是合并后 master push CI，不是 PR #485 head 的 PR workflow。
 - PR #486 精确测试 HEAD `3cb3950f51d30a6e0ef2c3029d8fe6531c43c912`：完整 Flutter 回归 job `138879860365`、Android arm64 CI job `138883470922`、Fork license boundary job `138879859601` 均 `SUCCESS`；Branch validation job `138879862409` 为 `SKIPPED`，不计 PASS。两批均未将 `SKIPPED` 当作通过。
 - **设备状态仍为 `PREPARE / LOCAL ONLY / MISSING`。** 本交接单中所有实际设备项目必须在 OPPO Find N2 本地操作后逐项附证据，不能把上述 CI 结果抄成设备 PASS。
 
