@@ -154,7 +154,7 @@ void main() {
   });
 
 
-  test('异步检索可访问古籍原文库并保留书目来源', () async {
+  test('异步检索可访问古籍原文库并保留本地书籍信息', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('灵枢');
     expect(context, contains('App古籍库'));
     expect(context, contains('App古籍库 · 黄帝内经·灵枢'));
@@ -173,16 +173,15 @@ void main() {
     expect(caseSources, isNotEmpty);
     expect(result.text, contains('[App医案库'));
     expect(result.citationFooter, contains('资料类型：App 医案库整理条目'));
-    expect(result.citationFooter, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(result.citationFooter, contains('知识库条目定位：medical_case:'));
     expect(result.citationFooter, contains('来源标识：medical_case:'));
-    expect(result.citationFooter, isNot(contains('MISSING')));
     for (final source in caseSources) {
       expect(source.sourceId, startsWith('medical_case:'));
-      expect(source.localBacklink, startsWith('medical_case:internal-seq:'));
+      expect(source.localBacklink, startsWith('medical_case:'));
     }
   });
 
-  test('古籍章节来源标识可反查到精确内部章节且不提升纸本核验状态', () async {
+  test('古籍章节来源标识可反查到精确本地章节', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '灵枢 经脉',
       includeMedicalCases: false,
@@ -213,14 +212,10 @@ void main() {
     );
 
     expect(result.text, contains('来源标识：guji:lingshu:'));
-    expect(result.text, contains('纸本版本/卷页核验状态：UNKNOWN'));
     for (final source in gujiSources) {
       expect(source.sourceLabel, '黄帝内经·灵枢');
       expect(source.localBacklink, startsWith('guji:lingshu#chapter:'));
-      expect(source.locatorStatus, 'PARTIAL');
       expect(source.sourceKind, 'classic_text');
-      expect(source.sourceVerificationStatus, 'UNKNOWN');
-      expect(source.bibliographicLocatorVerified, isFalse);
     }
     expect(result.citationFooter, contains('黄帝内经·灵枢'));
     expect(result.citationFooter, contains('来源标识：guji:lingshu:'));
@@ -229,10 +224,8 @@ void main() {
   test('异步检索医案时提供可回查的知识库条目定位', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库'));
-    expect(context, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(context, contains('知识库条目定位：medical_case:'));
     expect(context, contains('来源标识：medical_case:'));
-    expect(context, isNot(contains('纸本定位核验状态')));
-    expect(context, isNot(contains('来源定位：MISSING')));
   });
 
   test('异步检索将课程讲稿作为本地知识库资料定位', () async {
@@ -243,11 +236,9 @@ void main() {
     expect(context, contains('来源标识：shanghan:assets/'));
     expect(context, contains('知识库条目定位：assets/shanghan/'));
     expect(context, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
-    expect(context, isNot(contains('版本/底本/卷页：MISSING')));
-    expect(context, isNot(contains('纸本版本/卷页')));
   });
 
-  test('讲稿引用尾注显示本地学习资料回链而不把纸本卷页当作必填', () async {
+  test('讲稿引用尾注显示本地学习资料回链', () async {
     final result =
         await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '葛根加半夏汤',
@@ -261,9 +252,6 @@ void main() {
     expect(result.citationFooter, contains('资料类型：课程讲稿/整理讲义（学习资料）'));
     expect(result.citationFooter, contains('知识库条目定位：assets/shanghan/'));
     expect(result.citationFooter, contains('来源标识：shanghan:assets/'));
-    expect(result.citationFooter, isNot(contains('纸本版本/卷页')));
-    expect(result.citationFooter, isNot(contains('MISSING')));
-    expect(result.sources.every((source) => source.locatorStatus != 'VERIFIED'), isTrue);
   });
 
   test('知识引用尾注使用真实换行而不是字面量转义', () async {
@@ -281,26 +269,20 @@ void main() {
       sourceLabel: '伤寒论',
       title: '卷一',
       localBacklink: 'guji:shanghan_lun#chapter:1',
-      locatorStatus: 'MISSING',
       sourceKind: 'classic_text',
-      sourceVerificationStatus: 'UNKNOWN',
     );
     final citation = source.toCitationText();
     expect(citation, contains('资料类型：App 古籍文本知识条目'));
     expect(citation, contains('知识库条目定位：guji:shanghan_lun#chapter:1'));
     expect(citation, contains('来源标识：guji:shanghan_lun:1'));
-    expect(citation, isNot(contains('MISSING')));
   });
 
   test('本地医案检索注入助手上下文时保留可定位的知识库条目', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('[App医案库 · 条目'));
-    expect(context, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(context, contains('知识库条目定位：medical_case:'));
     expect(context, contains('来源标识：medical_case:'));
     expect(context, contains('资料类型：App 医案库本地整理记录'));
-    expect(context, isNot(contains('纸本定位核验状态')));
-    expect(context, isNot(contains('来源定位：MISSING')));
-    expect(context, isNot(contains('MISSING（原文来源核验状态')));
   });
 
 
@@ -330,13 +312,11 @@ void main() {
         expect(source.sourceId, isNotEmpty);
         expect(source.localBacklink, isNotEmpty);
         expect(source.localBacklink, isNot('MISSING'));
-        expect(source.bibliographicLocatorVerified, isFalse);
-        expect(source.locatorStatus, 'MISSING');
       }
     }
   });
 
-  test('医案引用回链到知识库条目且不输出外部书目缺失', () async {
+  test('医案引用回链到本地知识库条目', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 肝癌',
     );
@@ -344,18 +324,8 @@ void main() {
         .where((source) => source.sourceKind == 'medical_case')
         .toList(growable: false);
     expect(caseSources, isNotEmpty);
-    expect(caseSources.any((source) =>
-        source.sourceVerificationStatus == 'VERIFIED'), isTrue);
-    expect(
-      caseSources.every((source) =>
-          source.locatorStatus == 'MISSING' &&
-          !source.bibliographicLocatorVerified),
-      isTrue,
-    );
     expect(result.citationFooter, contains('资料类型：App 医案库整理条目'));
-    expect(result.citationFooter, contains('知识库条目定位：medical_case:internal-seq:'));
-    expect(result.citationFooter, isNot(contains('书目定位状态')));
-    expect(result.citationFooter, isNot(contains('MISSING')));
+    expect(result.citationFooter, contains('知识库条目定位：medical_case:'));
   });
 
   test('医案来源标识可反查知识库条目并进入结构化引用', () async {
@@ -363,7 +333,7 @@ void main() {
       '桂枝汤',
     );
     expect(result.text, contains('来源标识：medical_case:'));
-    expect(result.text, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(result.text, contains('知识库条目定位：medical_case:'));
 
     final caseSources = result.sources
         .where((source) => source.sourceKind == 'medical_case')
@@ -371,20 +341,16 @@ void main() {
     expect(caseSources, isNotEmpty);
     for (final source in caseSources) {
       expect(source.sourceId, startsWith('medical_case:'));
-      expect(source.localBacklink, startsWith('medical_case:internal-seq:'));
-      expect(source.locatorStatus, 'MISSING');
-      expect(source.bibliographicLocatorVerified, isFalse);
+      expect(source.localBacklink, startsWith('medical_case:'));
     }
     expect(result.citationFooter, contains('资料类型：App 医案库整理条目'));
-    expect(result.citationFooter, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(result.citationFooter, contains('知识库条目定位：medical_case:'));
     expect(result.citationFooter, contains('来源标识：medical_case:'));
-    expect(result.citationFooter, isNot(contains('书目定位状态')));
-    expect(result.citationFooter, isNot(contains('MISSING')));
   });
 
 
 
-  test('经典命中区分本地知识库回链与外部书目元数据', () {
+  test('经典命中提供可打开的本地知识库回链', () {
     const lecture = ClassicHit(
       source: 'shanghan',
       sourceLabel: '伤寒论讲稿',
@@ -394,8 +360,6 @@ void main() {
     );
     expect(lecture.hasLocalBacklink, isTrue);
     expect(lecture.localBacklink, 'assets/shanghan/lecture.md');
-    expect(lecture.hasVerifiedBibliographicLocator, isFalse);
-    expect(lecture.locatorStatus, 'MISSING');
 
     const classic = ClassicHit(
       source: 'guji',
@@ -407,8 +371,6 @@ void main() {
     );
     expect(classic.hasLocalBacklink, isTrue);
     expect(classic.localBacklink, 'guji:lingshu#chapter:5');
-    expect(classic.hasVerifiedBibliographicLocator, isFalse);
-    expect(classic.locatorStatus, 'PARTIAL');
   });
 
   test('缺少可定位字段的经典命中不得伪造本地回链', () {
@@ -420,7 +382,6 @@ void main() {
     );
     expect(missing.hasLocalBacklink, isFalse);
     expect(missing.localBacklink, 'MISSING');
-    expect(missing.hasVerifiedBibliographicLocator, isFalse);
   });
 
 
@@ -429,19 +390,13 @@ void main() {
     expect(lecture, contains('知识库条目定位：assets/shanghan/'));
     expect(lecture, contains('来源标识：shanghan:assets/shanghan/'));
     expect(lecture, contains('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。'));
-    expect(lecture, isNot(contains('版本/底本/卷页：MISSING')));
-    expect(lecture, isNot(contains('纸本版本/卷页')));
-    expect(lecture, isNot(contains('纸本版本/卷页：VERIFIED')));
-    expect(lecture, isNot(contains('已完成校勘')));
   });
 
-  test('医案关联上下文使用稳定知识库条目编号定位而不显示书目缺失', () async {
+  test('医案关联上下文使用稳定本地条目编号定位', () async {
     final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(cases, contains('[App医案库 · 条目'));
-    expect(cases, contains('知识库条目定位：medical_case:internal-seq:'));
+    expect(cases, contains('知识库条目定位：medical_case:'));
     expect(cases, contains('来源标识：medical_case:'));
-    expect(cases, isNot(contains('来源定位：MISSING')));
-    expect(cases, isNot(contains('纸本定位核验状态')));
   });
 
   test('生产检索回传完整排序决策与最终呈现预算且不扩大可引用集合', () async {
@@ -504,7 +459,6 @@ void main() {
       expect(classicIndex, lessThan(gujiIndex));
     }
     expect(RegExp(r'章节：').allMatches(guji).length, lessThanOrEqualTo(2));
-    expect(guji, contains('纸本版本/卷页核验状态：UNKNOWN'));
 
     final medicalResult = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 桂枝汤',

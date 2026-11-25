@@ -139,7 +139,7 @@ void main() {
     expect(ranked.decisions.last.orderIndex, isNull);
   });
 
-  test('keeps internal navigation separate from bibliographic verification', () {
+  test('provides an app-local link to the selected chapter', () {
     final batch = GujiEvidencePipeline.retrieveCandidates(
       requestId: 'guji-request-3',
       originalQuery: '灵枢',
@@ -153,14 +153,11 @@ void main() {
 
     expect(candidate.sourceId, 'guji:lingshu-test:14');
     expect(candidate.localBacklink, 'guji:lingshu-test#chapter:14');
-    expect(candidate.locatorStatus, 'PARTIAL');
-    expect(candidate.verificationStatus, 'UNKNOWN');
-    expect(candidate.sourceVersion, 'UNKNOWN');
     expect(candidate.origin, CandidateEvidenceOrigin.appData);
     expect(candidate.hasLocalBacklink, isTrue);
   });
 
-  test('marks excerpts as truncated without changing the source status', () {
+  test('marks excerpts as truncated', () {
     final batch = GujiEvidencePipeline.retrieveCandidates(
       requestId: 'guji-request-4',
       originalQuery: '灵枢',
@@ -178,8 +175,6 @@ void main() {
 
     expect(candidate.excerpt.length, 1400);
     expect(candidate.completeness, CandidateEvidenceCompleteness.truncated);
-    expect(candidate.verificationStatus, 'UNKNOWN');
-    expect(candidate.locatorStatus, 'PARTIAL');
   });
 
   test('returns MISSING for no matches and does not invent candidates', () {

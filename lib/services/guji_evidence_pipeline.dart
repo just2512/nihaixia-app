@@ -1,11 +1,8 @@
 import '../data/guji_data.dart';
 import '../models/ai_evidence.dart';
 
-/// Adapts explicitly requested bundled Guji chapters into auditable candidates.
-///
-/// This preserves the existing book order, chapter order and substring
-/// matching semantics. An internal chapter index is only an App-local
-/// navigation key; it is not an edition, volume or printed-page locator.
+/// Adapts explicitly requested bundled Guji chapters into retrieval candidates.
+/// Preserves the existing book order, chapter order and substring matching.
 class GujiEvidencePipeline {
   static const List<String> _classicalQueryPhrases = [
     '经脉',
@@ -74,14 +71,10 @@ class GujiEvidencePipeline {
         CandidateEvidence(
           evidenceId: '$requestId:$sourceId',
           sourceId: sourceId,
-          sourceVersion: 'UNKNOWN',
           origin: CandidateEvidenceOrigin.appData,
           materialKind: 'classic_text',
-          verificationStatus: 'UNKNOWN',
           title: chapter.title,
           chapterPath: '${book.id}#chapter=${chapter.index}',
-          locator: localBacklink,
-          locatorStatus: 'PARTIAL',
           excerpt: isTruncated
               ? chapter.body.substring(0, 1400)
               : chapter.body,

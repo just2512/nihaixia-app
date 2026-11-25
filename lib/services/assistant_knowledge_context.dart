@@ -26,20 +26,14 @@ class AssistantKnowledgeSourceReference {
     required this.sourceLabel,
     required this.title,
     required this.localBacklink,
-    required this.locatorStatus,
     this.sourceKind = 'classic_text',
-    this.sourceVerificationStatus = 'UNKNOWN',
-    this.bibliographicLocatorVerified = false,
   });
 
   final String sourceId;
   final String sourceLabel;
   final String title;
   final String localBacklink;
-  final String locatorStatus;
   final String sourceKind;
-  final String sourceVerificationStatus;
-  final bool bibliographicLocatorVerified;
 
   String toCitationText() {
     final locatorLabel =
@@ -59,9 +53,8 @@ class AssistantKnowledgeSourceReference {
 
 enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
 
-/// The exact candidate identity and stable source identity handed from Core-2
-/// to a request-local reasoning adapter. This is a reference only, not a
-/// source-verification claim.
+/// The exact candidate identity and local source identity handed from
+/// Core-2 to a request-local reasoning adapter.
 class AssistantKnowledgeEvidenceReference {
   const AssistantKnowledgeEvidenceReference({
     required this.evidenceId,
@@ -257,7 +250,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 方剂库',
               title: formula.name,
               localBacklink: 'assets/data/formulas.json#id=$id',
-              locatorStatus: 'MISSING',
               sourceKind: 'formula',
             ));
           }
@@ -272,7 +264,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 本草库',
               title: matches.first.name,
               localBacklink: 'assets/data/herbs.json#name=$name',
-              locatorStatus: 'MISSING',
               sourceKind: 'herb',
             ));
           }
@@ -296,7 +287,6 @@ class AssistantKnowledgeContextBuilder {
                 title: entry.symptom,
                 localBacklink:
                     'assets/data/acupuncture.json#category=$categoryId&id=$id',
-                locatorStatus: 'MISSING',
                 sourceKind: 'acupuncture',
               ));
             }
@@ -312,7 +302,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 穴位库',
               title: matches.first.name,
               localBacklink: 'assets/data/acupoints.json#name=$name',
-              locatorStatus: 'MISSING',
               sourceKind: 'acupoint',
             ));
           }
@@ -328,7 +317,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 内经结构化条目',
               title: entry.title,
               localBacklink: 'lib/data/neijing_entries.dart#id=$id',
-              locatorStatus: 'MISSING',
               sourceKind: 'neijing',
             ));
           }
@@ -358,10 +346,7 @@ class AssistantKnowledgeContextBuilder {
             sourceLabel: matchedBook.title,
             title: chapter.title,
             localBacklink: 'guji:$bookId#chapter:$chapterIndex',
-            locatorStatus: 'PARTIAL',
             sourceKind: 'classic_text',
-            sourceVerificationStatus: 'UNKNOWN',
-            bibliographicLocatorVerified: false,
           ));
           continue;
         }
@@ -379,16 +364,12 @@ class AssistantKnowledgeContextBuilder {
             }
           }
           if (matchedCase == null) continue;
-          final ledger = matchedCase.sourceLedger;
           sources.add(AssistantKnowledgeSourceReference(
             sourceId: sourceId,
             sourceLabel: 'App 医案库',
             title: matchedCase.displayName,
-            localBacklink: 'medical_case:internal-seq:$sequence',
-            locatorStatus: ledger.status,
+            localBacklink: 'medical_case:$sequence',
             sourceKind: 'medical_case',
-            sourceVerificationStatus: ledger.sourceStatus,
-            bibliographicLocatorVerified: ledger.isVerified,
           ));
           continue;
         }
@@ -399,9 +380,7 @@ class AssistantKnowledgeContextBuilder {
           sourceLabel: hit.sourceLabel,
           title: hit.title,
           localBacklink: hit.localBacklink,
-          locatorStatus: hit.locatorStatus,
           sourceKind: hit.asset != null ? 'lecture' : 'classic_text',
-          bibliographicLocatorVerified: hit.hasVerifiedBibliographicLocator,
         ));
       } catch (_) {
         // A failed reverse lookup is not a citation. Keep the retrieval text,
@@ -489,9 +468,8 @@ class AssistantKnowledgeContextBuilder {
     ]);
   }
 
-  /// Extends the fast in-memory retrieval with the bundled classical-text and
-  /// medical-case libraries. Case excerpts carry an explicit provenance warning:
-  /// the local table sequence is not a primary-source locator.
+  /// Extends fast in-memory retrieval with bundled classical-text and
+  /// medical-case learning records.
   static Future<String> buildAsync(
     String query, {
     bool includeMedicalCases = true,
@@ -658,7 +636,7 @@ class AssistantKnowledgeContextBuilder {
     final evidenceEndOffsets = <String, int>{};
 
     // Keep the historical classic-index first-four cap and query/hit order.
-    // No relevance score or source-verification promotion is introduced.
+    // Preserve the existing deterministic source order and selection limits.
     for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
       final hit = candidatesById[evidenceId]!;
       if (hit.retrievalMethod != 'CLASSIC_SUBSTRING_INDEX') continue;
@@ -709,7 +687,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
         ..writeln('书籍简介：${book.intro}');
       if (keptEvidenceIds.isEmpty) {
-        buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
+        buffer.writeln('没有匹配到章节正文；以下仅提供该书的基本信息，不作为正文引用。');
       }
       for (final evidenceId in keptEvidenceIds) {
         final candidate = candidatesById[evidenceId]!;
@@ -718,7 +696,6 @@ class AssistantKnowledgeContextBuilder {
           ..writeln('章节：${candidate.title}')
           ..writeln('知识库条目定位：${candidate.localBacklink}')
           ..writeln('来源标识：${candidate.sourceId}')
-          ..writeln('纸本版本/卷页核验状态：UNKNOWN；内部章节序号不等于纸本页码。')
           ..writeln('条目内容摘录：${candidate.excerpt}');
         evidenceEndOffsets[evidenceId] = buffer.length;
       }

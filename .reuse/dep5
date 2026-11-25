@@ -233,7 +233,6 @@ Files:
  docs/app_capability_inventory.md
  docs/assistant-tool-capability-audit.md
  docs/brand-identity.md
- docs/classic-and-medical-case-source-audit.md
  docs/classic-retrieval-golden-review.md
  docs/classic-rule-source-manifest.json
  docs/combined-pattern-reachability-matrix.md
@@ -292,7 +291,6 @@ Files:
  lib/models/assistant_message_metadata.dart
  lib/models/assistant_tool_result.dart
  lib/models/diagnosis_result_codec.dart
- lib/models/medical_case_source_ledger.dart
  lib/models/tcm_interview_message.dart
  lib/models/tcm_interview_task_state.dart
  lib/models/tool_execution_plan.dart
@@ -459,8 +457,6 @@ Files:
  test/medical_case_data_integrity_test.dart
  test/medical_case_detail_editorial_layout_test.dart
  test/medical_case_formula_alias_extract_test.dart
- test/medical_case_source_integrity_test.dart
- test/medical_case_source_ledger_test.dart
  test/meihua_contextual_field_entry_test.dart
  test/meihua_contextual_result_entry_test.dart
  test/meihua_tool_executor_test.dart
@@ -870,7 +866,6 @@ Files:
  assets/jingui/clause_453.md
  assets/jingui/clause_454.md
  assets/medical_cases/cases_table.md
- assets/medical_cases/source_ledger.json
  assets/shanghan/176_board.jpg
  assets/shanghan/appendix_001_六经辨证总结.md
  assets/shanghan/appendix_002_六经传变规律.md
@@ -1196,14 +1191,14 @@ Files:
  test/medical_case_evidence_pipeline_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
-Comment: Fork-authored Core-2 medical-case CandidateEvidence adapter and focused provenance/order regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+Comment: Fork-authored Core-2 medical-case CandidateEvidence retrieval adapter and focused retrieval/order regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
 
 Files:
  lib/services/guji_evidence_pipeline.dart
  test/guji_evidence_pipeline_test.dart
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
-Comment: Fork-authored Core-2 Guji chapter CandidateEvidence adapter and focused order/provenance regression tests; internal chapter coordinates do not assert a verified printed edition or page; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+Comment: Fork-authored Core-2 Guji chapter CandidateEvidence adapter and focused book/chapter order and local-navigation regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
 
 Files:
  lib/services/multi_source_evidence_pipeline.dart

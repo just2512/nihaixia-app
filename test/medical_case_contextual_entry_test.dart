@@ -46,7 +46,6 @@ void main() {
     expect(ref.moduleId, 'medical-cases');
     expect(ref.anchorId, 'medical-case:2');
     expect(ref.anchorVersion, startsWith('cases_table.md@'));
-    expect(ref.anchorVersion, isNot(contains('source_ledger')));
     expect(
       ref.sourceId,
       'app-data:assets/medical_cases/cases_table.md#seq=2',
@@ -65,9 +64,6 @@ void main() {
     expect(prompt, contains('【学习分析要求】'));
     expect(prompt, contains('该案例进行复盘'));
     expect(prompt, contains('不得把单条历史案例直接套用'));
-    expect(prompt, isNot(contains('source_ledger.json')));
-    expect(prompt, isNot(contains('纸本/影印本')));
-    expect(prompt, isNot(contains('bibliographicLocatorStatus')));
     expect(
       prompt,
       contains(medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis),
@@ -166,8 +162,6 @@ void main() {
         assistantWidget.initialPrompt,
         contains(medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula),
       );
-      expect(assistantWidget.initialPrompt, isNot(contains('source_ledger.json')));
-      expect(assistantWidget.initialPrompt, isNot(contains('纸本/影印本定位状态')));
       expect(tester.takeException(), isNull);
     },
   );
