@@ -4589,3 +4589,17 @@ PR HEAD 门禁证据：
 - **下一切片：** PR #524 只做 Request/formatter contract；其后 Core-3 Adapter 必须先在空 capability allowlist 下完成单一 learning knowledge path 的 Request→Native raw text→Response decoder→evidence ID→sourceId mapping→UI 回填。之后才做 Core-4 proposal gate/typed args，不把 action proposal 提前接入 Dispatcher。
 - **Core-5：** 仍无五层端到端闭环；覆盖模型响应、来源点击、动作授权、真实确定性结果和失败/UNKNOWN 的 E2E 尚未完成。设备实测在云端工作完成后由本地最后执行。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED。
+
+---
+
+## 108. 2026-11-25 Core-3 学习助手单路径接线（依赖 PR #524）
+
+- **依赖基线：** PR #524 的请求契约分支 `work/core3-reasoning-request-master-a439896-20261125`，当时 PR #524 HEAD `9934e577b3fcf7ac0b5a8a8327c6d4744cf10f8d`。该 PR 后续继续有新提交；本分支当前仍是该旧 PR HEAD 的子分支，只有在 #524 最终合并后才可干净重基线，不能现在直接合并。
+- **下游工作分支：** `work/core3-learning-answer-adapter-pr524-9934-20261125`。目前为独立工作分支，未创建 PR、未运行自身 CI，不能标记 MERGED/PASS。
+- **唯一接线场景：** 普通文本 `AssistantMode.learning`。其他 consultation/tools/metaphysics、图像/录音入口不改变既有行为。`ReasoningKnowledgeAnswerAdapter.createRequest` 从既有 `AssistantKnowledgeContextResult` 取 ranked evidence；仅保留 `sourceId` 已存在于本轮 `knowledge.sources` 的证据引用，known IDs 仍保留候选集合。原始用户文本沿用当前 `_sendTextWithKnowledgeContext`→`LocalAiService.sendWithContext`→既有 Native `sendMessage(text, context)` 入口。
+- **记忆隔离：** UI 仍调用 `_buildSessionStateSnapshot` 得到结构快照；`LocalAiService` 通过现有 `session_state_context` / `session_state_conversation_id` 专用字段传给 Native；ReasoningRequest formatter 使用 `includeSessionState:false`，仅标识快照已单独提供，不把同一份记忆重复塞入 RAG/推理补充段。未创建新 MethodChannel、新 Native gate、新 Conversation 或第二模型实例。
+- **请求/响应验证：** 在本轮 context 中附加严格 schema 指令和 request-local evidence index；原有 Native 返回 raw string 后由 `ReasoningResponseCodec.decode` 校验 schemaVersion/requestId/fields/status/kind/evidence IDs。解码调用传入 `allowedCapabilityIds: const <String>{}`；ACTION_PROPOSAL 无能力可用，fail-closed。通过后再将每个 referencedEvidenceId 映射到 Request 中的 sourceId，并要求 sourceId 在本轮 sources map 中存在；仅将模型实际引用且本地可解析的来源回填给 UI。
+- **失败语义：** 空回复、JSON 解析失败、requestId 错误、引用 DROP/未知/无 source mapping、来源无法解析、空 rendered answer 均返回 UNKNOWN/协议拒绝，不显示未经验证的模型原始文本，不回填 sources；UI 显示稳定失败码，`modelOutput` 和 `resultValidation` TRACE 标记 FAILED。安全失败文案可作为本轮助手消息持久化；不得被统计成模型内容成功。
+- **测试：** 新增 `test/reasoning_knowledge_answer_adapter_test.dart` 覆盖 request assembly、成功回填仅被引用 source、空/非法响应、requestId mismatch、DROP/未知 evidence、无 sources、ACTION_PROPOSAL 阻断；更新 formatter test 覆盖 snapshot 专用字段不重复序列化。测试代码尚未执行，待依赖合并后在最终 HEAD 跑完整 Flutter regression / Analyze / Fork License。
+- **范围限制：** 没有接入 Core-4 dispatcher；ReasoningExecutionResult 暂不从实际 AssistantToolResult 生产投影；没有统一所有模式的 response adapter；没有图像/录音/多媒体响应协议；没有 Native 层严格 JSON enforcement（由 Dart fail-closed 后处理）；没有跨层 E2E。
+- **下一步：** 等 #524 精确 HEAD 的 Flutter regression 与 Fork License 完成后再合并；随后从最新 master 重建本分支，将 Request contract 依赖视为主线资产，再开独立 PR。先验证新 Adapter 的静态分析/定向测试和全量 Flutter regression；通过后 Core-3 才能进入更广场景。最后再做 Core-4 proposal→authorization→typed args→existing dispatcher→ExecutionResult 映射。
