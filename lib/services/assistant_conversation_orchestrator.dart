@@ -88,6 +88,8 @@ class AssistantConversationOrchestrator {
     '出处',
     '条文',
     '学习',
+    '教学',
+    '课程',
     '想了解',
     '了解一下',
     '概念',
@@ -102,6 +104,59 @@ class AssistantConversationOrchestrator {
     '穴位定位',
     '病机',
   ];
+
+  // General factual questions about a registered metaphysics domain should use
+  // the metaphysics model prompt, not the TCM-only local knowledge retriever.
+  // Explicit study, theory, and source-text requests remain in learning mode.
+  static const _metaphysicsKnowledgeCues = [
+    '什么是',
+    '是什么',
+    '分别是什么',
+    '什么含义',
+    '含义',
+    '什么意思',
+    '代表什么',
+    '象征什么',
+    '介绍一下',
+    '讲讲',
+    '解释',
+    '怎么理解',
+    '如何理解',
+    '有什么区别',
+    '区别是什么',
+    '想了解',
+    '了解一下',
+    '学习',
+    '系统学习',
+    '教学',
+    '课程',
+    '概念',
+    '原理',
+    '历史背景',
+    '发展史',
+    '沿革',
+    '原文',
+    '出处',
+    '条文',
+    '属性',
+    '五行',
+    '方位',
+    '吉凶',
+  ];
+
+  // Require a clear user action before allowing a knowledge question to enter
+  // a deterministic metaphysics tool. Explaining a charting concept alone must
+  // not be mistaken for a request to create a chart.
+  static bool _hasExplicitMetaphysicsExecutionIntent(String text) {
+    return RegExp(
+      r'(?:请帮我|帮我|给我|我要|我想)(?:用.{1,8})?(?:排.{0,8}(?:盘|命盘)|起.{0,8}(?:卦|课)|推算|计算|算一下)',
+    ).hasMatch(text) ||
+        const [
+          '按时间起卦',
+          '根据时间起卦',
+          '按当前时间起卦',
+        ].any(text.contains);
+  }
 
   // These are routing cues only: a match requires a reviewed safety
   // assessment; it does not label urgency or provide a medical conclusion.
@@ -993,8 +1048,60 @@ class AssistantConversationOrchestrator {
       return AssistantDispatchDecision(mode: selectedMode);
     }
 
-    // 明确的学习/解释请求优先于工具名和动作词，避免“学习五运六气推算原理”
-    // 被误路由成实际计算。用户明确选择工具角色时仍尊重手动模式。
+    // Resolve a clear deterministic action before explanatory cues. This keeps
+    // compound requests such as "please chart and explain" on the App tool path.
+    final metaphysicsDomainMatches =
+        AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics);
+    final hasMetaphysicsKnowledgeCue =
+        _metaphysicsKnowledgeCues.any(text.contains);
+    final isYunqiOnlyDomain =
+        metaphysicsDomainMatches.isNotEmpty &&
+        metaphysicsDomainMatches.every((tool) => tool.id == 'yunqi');
+    final hasExplicitMetaphysicsExecutionIntent =
+        _hasExplicitMetaphysicsExecutionIntent(text);
+
+    if (metaphysicsDomainMatches.isNotEmpty &&
+        hasMetaphysicsKnowledgeCue &&
+        hasExplicitMetaphysicsExecutionIntent) {
+      final explicitTools =
+          AssistantToolRouter.matchAliases(text, AssistantMode.metaphysics);
+      if (explicitTools.length == 1) {
+        return AssistantDispatchDecision(
+          mode: AssistantMode.metaphysics,
+          tool: explicitTools.single,
+          toolArguments: argumentsFor(explicitTools.single, text),
+        );
+      }
+      if (explicitTools.length > 1) {
+        return AssistantDispatchDecision(
+          mode: AssistantMode.metaphysics,
+          clarification:
+              '你同时指定了多个术数工具（${explicitTools.map((tool) => tool.title).join('、')}），请先选择一个执行。',
+          expectsToolSelection: true,
+          candidateTools: _boundedCandidates(explicitTools),
+        );
+      }
+    }
+
+    // Five Movements and Six Qi remains in the source-backed TCM learning
+    // adapter. Other registered metaphysics knowledge questions use the
+    // metaphysics model adapter, even when a prior tool choice is pending.
+    if (metaphysicsDomainMatches.isNotEmpty && hasMetaphysicsKnowledgeCue) {
+      return AssistantDispatchDecision(
+        mode: isYunqiOnlyDomain
+            ? AssistantMode.learning
+            : AssistantMode.metaphysics,
+      );
+    }
+
+    // A pending tool selection is cancelled by an unrelated explicit learning
+    // question; it must not force a non-Yunqi metaphysics topic into TCM retrieval.
+    if (pendingToolSelection && _learningCues.any(text.contains)) {
+      return const AssistantDispatchDecision(mode: AssistantMode.learning);
+    }
+
+    // Explicit learning/interpretation requests still take priority over
+    // action words; this prevents “学习五运六气推算原理” from executing a tool.
     if (_learningCues.any(text.contains)) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }
