@@ -146,6 +146,7 @@ class _RecordingAssistantService extends LocalAiService {
   @override
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -159,6 +160,7 @@ class _RecordingAssistantService extends LocalAiService {
 
   @override
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
