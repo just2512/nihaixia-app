@@ -265,6 +265,37 @@ class AssistantKnowledgeContextBuilder {
           }
           continue;
         }
+        if (sourceId.startsWith('guji:')) {
+          final parts = sourceId.split(':');
+          if (parts.length != 3) continue;
+          final bookId = parts[1];
+          final chapterIndex = int.tryParse(parts[2]);
+          if (chapterIndex == null || chapterIndex < 0) continue;
+          GujiBook? matchedBook;
+          for (final book in kGujiBooks) {
+            if (book.id == bookId) {
+              matchedBook = book;
+              break;
+            }
+          }
+          if (matchedBook == null) continue;
+          final chapter = await GujiRepository.chapterAtIndex(
+            matchedBook,
+            chapterIndex,
+          );
+          if (chapter == null) continue;
+          sources.add(AssistantKnowledgeSourceReference(
+            sourceId: sourceId,
+            sourceLabel: matchedBook.title,
+            title: chapter.title,
+            localBacklink: 'guji:$bookId#chapter:$chapterIndex',
+            locatorStatus: 'PARTIAL',
+            sourceKind: 'classic_text',
+            sourceVerificationStatus: 'UNKNOWN',
+            bibliographicLocatorVerified: false,
+          ));
+          continue;
+        }
         if (sourceId.startsWith('medical_case:')) {
           final sequence = int.tryParse(
             sourceId.substring('medical_case:'.length),
