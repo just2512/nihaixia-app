@@ -4578,6 +4578,52 @@ PR HEAD 门禁证据：
 
 ---
 
+## 109. 2026-11-26 P0 知识解读语义重构与当前条目自动上下文传递
+
+- **任务拆分：** P0-A「解读不是复述」与 P0-B「当前条目自动传递」共用同一个 Core-3 学习请求切片；P1 移动端键盘布局另设独立分支/PR，不与本任务混合。
+- **主线基线：** `20ef6ae27cad6732f1cf9d16d8e52f97f0f682d0`。独立分支 `work/ai-knowledge-interpretation-current-master-20261126`，PR #542，最终已提交 HEAD `182501910c3161f8729b84d28c63ed0b6551aded`。PR #542：`https://github.com/just2512/nihaixia-app/pull/542`。
+- **根因确认：** 旧 `formula_detail_screen.dart` 将 `AiContextPromptBuilder.buildKnowledgeEntry()` 生成的完整自然语言包装、JSON、版本/来源内部标识传给 `initialPrompt`；`LocalAiInterviewScreen.initState()` 将它填入 composer，等待用户再次发送。点击行为实际不是解读请求。
+- **解读策略：** `AiContextPromptBuilder` 新增模块感知短意图与独立模型上下文。方剂入口要求围绕整体组方结构、药物角色关系、配伍逻辑展开；禁止逐字段复述页面资料。回答区分条目明确记载、基于条目归纳和 MISSING/UNKNOWN；不得补造药物、剂量、主治、禁忌、出处、临床证据或患者用药建议。分析证据不足时直说不足，不凑字数。
+- **上下文传输：** 详情页只提供短用户消息；点击后在模型就绪且情境会话初始化完成时自动发起一轮，不将内部条目 JSON 预填输入框，也不自动弹键盘。每轮学习发送按稳定 typed `contextRef` 重新读取条目并校验精确锚点/版本；无效或过期时 fail-closed。完整 `module/title/content` 数据通过独立 model-only knowledge context 传入 Core-3 request-local evidence；App `sourceId`/backlink 只用于本地来源映射及回答引用回填，不进入用户消息/模型正文。后续追问使用同一情境锚点重新解析。
+- **代码落点：** `lib/services/ai_context_prompt_builder.dart`、`lib/services/reasoning_knowledge_answer_adapter.dart`、`lib/screens/formula_detail_screen.dart`、`lib/screens/local_ai_interview_screen.dart`、`lib/widgets/contextual_ai_sheet.dart`。
+- **新增测试：** prompt builder 验证短意图不带内部 ID、完整条目内部上下文保留数据并要求关系分析；adapter 验证单条目证据映射和 request-local citation 回填；formula contextual entry 验证不再使用长 `initialPrompt`、传递短消息并请求自动提交。
+- **CI 发现与修复：** 早期 HEAD 首先暴露 const constructor assert 调用 `.trim()` 的编译错误，已改为常量可判定的非空检查。之后 changed-test 门禁发现 adapter 新测试加载 FormulaRepository 前缺少 `TestWidgetsFlutterBinding.ensureInitialized()`，已在 HEAD `1825019...` 补上。此前失败记录不删除、不隐藏；修复后的最新 HEAD 需重新完成 changed tests、Dart analyze、Flutter regression 和 Android arm64/JVM 验证。
+- **当前验收状态：IN_PROGRESS。** Fork License 在先前相邻 HEAD SUCCESS；但最终 HEAD `1825019...` 的 CI 尚需读取并确认。此前 P0 相关的 prompt builder/formula 入口测试已通过，adapter 新增两项测试在修复 binding 前 FAIL，不能记 PASS。Android APK/单测与真机 E4B 质量、多轮追问、完整 TRACE 均未取得最终证据，状态 UNKNOWN。不得在 CI/TRACE 未通过时合并或标记完成。
+- **范围边界：** 旧 `initialPrompt` 保留兼容；本次只替换当前方剂详情页该一键解读入口，并为后续模块提供可复用策略函数。未声称所有其他页面入口已全部完成迁移；需用调用点清单核实后再扩展，不能以通用函数存在冒充已接入。
+- **回滚：** 本 PR 可独立 revert；P1 键盘布局在后续单独 PR，不依赖本 PR 变更其 UI 避让策略。
+
+
+---
+
+## 110. 2026-11-26 P0 单条目证据映射与测试夹具校正
+
+- **对应任务：** §108 P0 知识解读语义重构/上下文传递；PR #542。
+- **发现：** `test/reasoning_knowledge_answer_adapter_test.dart` 的新单条目上下文测试使用 `knownEvidenceIds=[context-entry-request-1]`，但公共测试响应 fixture 默认仍携带 `omittedEvidenceIds=['dropped-1']`。ReasoningResponseCodec 正确将它识别为当前请求未知的 omitted evidence 并 fail-closed；不是生产 adapter/source mapping 缺陷。
+- **处理：** 测试 payload helper 新增可覆盖的 `omittedEvidenceIds` 参数；当前条目成功引用用例明确传 `const []`，使响应中的所有 evidence 状态严格属于同一 request-local 请求。其它既有测试保留默认 dropped-1，未降低既有拒绝测试。
+- **生产逻辑：** 不修改 decoder 的 unknown omitted ID 校验、不扩大 knownEvidenceIds、不允许跨请求引用。
+- **新代码 HEAD：** `08798f187e8fd4f3c18719a4e44d95c78650b73e`。该 HEAD 的 Branch validation / changed tests 重新运行中；之前 HEAD 对应新用例 1 FAIL（27 PASS），不能记 PASS。必须以此 HEAD 最新 CI 结果决定状态。
+- **验收状态：IN_PROGRESS。** 需在 HEAD 08798... 上确认静态分析、新增 adapter/formula/prompt 测试、既有 AI 回归及 Flutter full regression；SKIPPED/CANCELLED 不计 PASS。Find N2 真实模型输出和设备布局仍 UNKNOWN。
+
+
+---
+
+## 111. 2026-11-26 七类知识详情页统一接入解读
+
+- **任务归属：** P0「AI 解读不是资料复述」+「当前条目自动上下文传递」，PR #542。键盘弹层布局继续由独立 P1 PR 处理。
+- **迁移范围审计：** 不以方剂页单点修复代表全项目完成。复核现有知识详情入口后，将明确提供“问 AI 解读当前条目”的 7 个入口统一迁移：方剂 formula、本草 herb、穴位 acupoint、针灸处方 acupuncture-prescriptions、医案 medical-cases、六经 meridian、内经条文 neijing-entries。
+- **调用行为：** 上述详情入口不再把 `build*KnowledgeEntry()` 生成的长自然语言/JSON/内部来源元数据通过 `initialPrompt` 填入 composer。改为调用 `buildKnowledgeEntryInterpretationIntent()` 获取简短用户可见意图，开启 `autoSendInitialMessage=true` 与 `resolveContextualKnowledgeEntry=true`；模型就绪、情境会话初始化完成后自动发送。原有 `initialPrompt` API 保留给其他兼容/自定义文本场景，不作为当前详情页解读入口。
+- **模块策略：** 按实际 resolver moduleId 区分分析重点：formula=组方结构/药物角色/配伍关系；herb=条目特性和功用之间联系；acupoint=经络归属/定位/操作之间联系；acupuncture-prescriptions=穴位安排及其说明关系；medical-cases=症状/诊断/病机/治法/方药与病例证据链关系，不泛化单一医案；meridian=六经条目的病机与概念关系；neijing-entries=经典关键词义、句间关系、上下文与理论逻辑。真实 moduleId 已纳入提示策略，不依赖别名恰好命中。
+- **完整上下文：** 每次学习轮次仍从当前 typed contextRef 按原锚点/版本解析完整条目；模型可见的是条目内容和分析边界，用户消息不含内部 ID/文件路径/JSON；App sourceId/backlink 只用于本地引用映射。条目缺失、过期或引用不一致时 fail-closed。后续追问沿用同一 contextRef，不把数据重新塞回 composer。
+- **新增/调整测试：** formula、herb、acupoint、acupuncture-prescriptions、medical-cases、meridian、neijing-entries 各自的 contextual-entry widget tests 检查 `initialPrompt == null`、短意图、自动提交标志和精确知识引用解析标志；新增 `test/acupuncture_contextual_entry_test.dart` 覆盖针灸处方真实入口。原先 adapter/prompt builder 测试继续覆盖 model-only payload、request-local evidence/citation 和禁止复述规则。
+- **许可证清单：** 新增针灸处方入口测试后，同步更新 `docs/fork-license-file-inventory.json`（1004 changed / 840 added / 164 modified / 15 deleted）与 `.reuse/dep5`，新测试按 Fork-authored 工程/测试文件登记为 `FORK_COMMERCIAL`，rights status 仍为 `OWNERSHIP_EVIDENCE_REQUIRED`。中间 license inventory mismatch 已修正；必须以最终 HEAD license job 结果为准。
+- **明确不迁移的交互：** 经典/古籍段落“选中文本后针对该段提出自定义问题”属于选择文本问答，不是详情页一键解读当前知识条目；保留其原自由提问流程，不强行套用当前条目 resolver。
+- **最终代码 HEAD：** `328fb52f6e1aa2d386be76a2b0b11aab3ecaa4ed`（本节写入前）。重建至最新 master 后需以新 PR #548 的最终 HEAD 和 Actions 为准。
+- **验收状态：IN_PROGRESS。** 之前 HEAD `881115...` 的 analyzer 报告暴露 `ai_context_prompt_builder.dart` 内重复的 `medical-cases` switch 分支（unreachable case）；已删除重复分支。之前 LICENSE 报告的新针灸测试缺失清单已补全。上述历史失败不删除；以最终 HEAD 的静态分析、七类入口定向测试、full Flutter regression、arm64/JVM 和 license job 为准。Find N2 上 E4B 实际分析质量、多轮追问、外屏/内屏实机键盘行为及 TRACE 尚未执行，均为 UNKNOWN。
+- **回滚：** 七个知识入口迁移与 P0 adapter/prompt 变更同属 PR #542，可独立整体 revert；P1 键盘布局只通过后续单独 PR 合入。
+
+
+---
+
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
 - **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。

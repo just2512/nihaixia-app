@@ -231,8 +231,10 @@ void main() {
           assistant.contextRef['sourceId'],
           'assets/data/acupoints.json#内关穴',
         );
-        expect(assistant.initialPrompt, contains('内关穴'));
-        expect(assistant.initialPrompt, contains('不得提供'));
+        expect(assistant.initialPrompt, isNull);
+        expect(assistant.initialUserMessage, contains('当前穴位条目'));
+        expect(assistant.autoSendInitialMessage, isTrue);
+        expect(assistant.resolveContextualKnowledgeEntry, isTrue);
         expect(tester.takeException(), isNull);
 
         Navigator.of(

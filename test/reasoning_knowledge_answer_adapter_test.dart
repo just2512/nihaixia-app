@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/models/reasoning_request.dart';
 import 'package:nihaisha_app/models/session_state_snapshot.dart';
+import 'package:nihaisha_app/services/ai_context_resolver.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/services/reasoning_knowledge_answer_adapter.dart';
 
@@ -55,6 +57,7 @@ String payload({
   String status = 'COMPLETED',
   List<String> references = const ['evidence-1'],
   List<String> segments = const ['基于本地证据的解释'],
+  List<String> omittedEvidenceIds = const ['dropped-1'],
   Object? proposal,
 }) =>
     jsonEncode({
@@ -66,12 +69,76 @@ String payload({
       'referencedEvidenceIds': references,
       'unknowns': ['缺少用户确认'],
       'conflicts': ['两处资料表述不同'],
-      'omittedEvidenceIds': ['dropped-1'],
+      'omittedEvidenceIds': omittedEvidenceIds,
       if (proposal != null) 'actionProposal': proposal,
     });
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ReasoningKnowledgeAnswerAdapter', () {
+
+    test('creates an exact one-entry context and resolves its request-local citation', () async {
+      await FormulaRepository.load();
+      final formula = FormulaRepository.getAll().first;
+      final reference = AiContextResolver.buildFormulaContextRef(formula);
+      final resolution = AiContextResolver.resolveFormula(ref: reference);
+      expect(resolution.isResolved, isTrue);
+
+      const evidenceId = 'context-entry-request-1';
+      final context =
+          ReasoningKnowledgeAnswerAdapter.createContextualEntryContext(
+        entry: resolution.value!,
+        evidenceId: evidenceId,
+      );
+      expect(context.sources, hasLength(1));
+      expect(context.sources.single.sourceId, reference.sourceId);
+      expect(
+        context.sources.single.localBacklink,
+        'assets/data/formulas.json#id=${formula.id}',
+      );
+      expect(context.rankedEvidence, hasLength(1));
+      expect(context.rankedEvidence.single.evidenceId, evidenceId);
+      expect(context.knownEvidenceIds, [evidenceId]);
+      expect(context.modelContextText, contains(formula.name));
+      expect(context.modelContextText, contains(formula.components.first.name));
+      expect(context.modelContextText, isNot(contains(reference.sourceId)));
+      expect(context.modelContextText, isNot(contains(reference.anchorVersion)));
+
+      final requestValue = request(context);
+      expect(requestValue.userText, '用户原始问题');
+      expect(requestValue.rankedEvidenceIds, [evidenceId]);
+      expect(requestValue.knownEvidenceIds, [evidenceId]);
+
+      final answer = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(
+          references: [evidenceId],
+          omittedEvidenceIds: const [],
+        ),
+        request: requestValue,
+        knowledge: context,
+      );
+      expect(answer.isUsable, isTrue);
+      expect(answer.sourceIds, [reference.sourceId]);
+      expect(answer.answerText, isNot(contains(evidenceId)));
+      expect(answer.answerText, isNot(contains(reference.sourceId)));
+    });
+
+    test('rejects a contextual entry without a request-local evidence ID', () async {
+      await FormulaRepository.load();
+      final formula = FormulaRepository.getAll().first;
+      final reference = AiContextResolver.buildFormulaContextRef(formula);
+      final resolution = AiContextResolver.resolveFormula(ref: reference);
+
+      expect(
+        () => ReasoningKnowledgeAnswerAdapter.createContextualEntryContext(
+          entry: resolution.value!,
+          evidenceId: '  ',
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('builds request with exact evidence subset and original user text', () {
       final context = knowledge();
       final value = request(context);

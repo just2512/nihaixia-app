@@ -150,18 +150,12 @@ void main() {
       expect(assistantWidget.contextRef['kind'], 'case');
       expect(assistantWidget.contextRef['moduleId'], 'medical-cases');
       expect(assistantWidget.contextRef['anchorId'], 'medical-case:2');
-      expect(assistantWidget.initialPrompt, contains('当前 App 本地医案记录'));
-      expect(assistantWidget.initialPrompt, contains('app-data:assets/medical_cases/cases_table.md#seq=2'));
-      expect(assistantWidget.initialPrompt, contains('【医案实际记录字段】'));
-      expect(assistantWidget.initialPrompt, contains('【学习分析要求】'));
-      expect(
-        assistantWidget.initialPrompt,
-        contains(medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis),
-      );
-      expect(
-        assistantWidget.initialPrompt,
-        contains(medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula),
-      );
+      expect(assistantWidget.initialPrompt, isNull);
+      expect(assistantWidget.initialUserMessage, contains('当前医案记录'));
+      expect(assistantWidget.initialUserMessage, contains('病机与治法方药'));
+      expect(assistantWidget.initialUserMessage, isNot(contains('cases_table.md')));
+      expect(assistantWidget.autoSendInitialMessage, isTrue);
+      expect(assistantWidget.resolveContextualKnowledgeEntry, isTrue);
       expect(tester.takeException(), isNull);
     },
   );
