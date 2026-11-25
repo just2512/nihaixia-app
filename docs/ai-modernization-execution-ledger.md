@@ -4431,3 +4431,15 @@ PR HEAD 门禁证据：
 - **下一项自动执行：** PR #495 Core-0 文档精确 HEAD Flutter/Fork license CI 通过后，按新 master 校准并集成；PR #496 必须在精确 HEAD Android arm64/JVM、Flutter 与 Fork license 均 PASS 后单独集成。Core-1 有界历史通过后，Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
 - **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
 
+
+
+---
+
+## 99. 2026-11-25 Core-1 Native KV Cache token 只读观测
+
+- **主线基线：** `f08145549a2b271f689edb944194b3ee72c4d246`。本节描述独立分支候选，未合并前不能写成 master 已实现。
+- **SDK 接口核验：** LiteRT-LM v0.18.0 `Conversation.getTokenCount()` 返回当前 Conversation KV Cache token 数（prefill + decode）；`ModelInfo.from(modelPath)` 可读取具体 .litertlm 的 `maxContextTokens()`，静态模型返回固定 context size，动态模型返回最大可设置 context size。源文件：`https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/Conversation.kt` 与 `.../ModelInfo.kt`。
+- **实现范围：** 独立分支 `feature/core1-native-context-token-observability-20261125` 增加 Native 观测策略；token count 只在成功推理提交后的既有串行 Native executor 内读取，模型上限只在模型完整性验证后读取；失败不影响回复成功，状态可为 MEASURED / TOKEN_COUNT_ONLY / MODEL_LIMIT_ONLY / UNKNOWN。Native `modelStatus` 只返回缓存的 primitive 值，不在主线程调用 JNI。
+- **Dart 适配：** `LocalAiModelStatus.contextTokenMetrics` 可读取上述可选字段；旧 Native status 不含该字段时保持 UNKNOWN，异常类型/字符串数字不做强制转换。
+- **严格边界：** 该切片只有只读观测，不设置百分比阈值、不压缩、不重建会话、不自动清空、不重放请求。12 轮/10,000 UTF-16 code units 是 Native recovery transcript 字符预算，不是 token 预算；modelMaxContextTokens 是模型容量上限，不等于可用输入预算。任何后续自动治理必须另行证明 system prompt、RAG、本轮输入、历史、输出预留和运行时开销的完整预算，并在超限/未知状态下保留用户可见错误与显式恢复路径。
+- **验收：** 需要精确 PR HEAD 的 Kotlin/JVM policy tests、Android arm64 APK/JVM、Flutter static/full regression、Fork license boundary 全部 PASS；SKIPPED 不计 PASS。实际 E4B context 元数据、长对话走势、OOM/Native state 错误与 GPU/CPU 行为仍需 Find N2 TRACE，本地最后验收。
