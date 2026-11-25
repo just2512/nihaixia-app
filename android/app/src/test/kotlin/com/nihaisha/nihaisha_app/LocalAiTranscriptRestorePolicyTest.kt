@@ -1,12 +1,11 @@
 package com.nihaisha.nihaisha_app
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocalAiTranscriptRestorePolicyTest {
-    private val marker = "【较早历史已省略，以下为最近内容】\n"
 
     @Test
     fun preservesShortTranscriptExactly() {
@@ -15,41 +14,36 @@ class LocalAiTranscriptRestorePolicyTest {
     }
 
     @Test
-    fun longTranscriptKeepsMarkerAndNewestTailWithinLimit() {
-        val newest = "最新一轮的完整结尾"
-        val transcript = "较早历史".repeat(4_000) + newest
+    fun rejectsOversizedTranscriptInsteadOfCuttingThroughAMessage() {
+        val transcript = "较早历史".repeat(4_000) + "最新一轮的完整结尾"
 
-        val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
+        val error = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
+        }
 
-        assertTrue(bounded.startsWith(marker))
-        assertTrue(bounded.endsWith(newest))
-        assertTrue(bounded.length <= LocalAiTranscriptRestorePolicy.maxTranscriptCharacters)
+        assertTrue(error.message!!.contains("complete-turn boundaries"))
     }
 
     @Test
-    fun alreadyMarkedTranscriptRetainsMarkerAndNewestTail() {
-        val newest = "最近一条助手回复"
-        val transcript = marker + "较早历史".repeat(4_000) + newest
+    fun acceptsExactlyBoundedTranscriptWithoutChangingIt() {
+        val transcript = "😀".repeat(
+            LocalAiTranscriptRestorePolicy.maxTranscriptCharacters / 2
+        )
 
-        val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
-
-        assertTrue(bounded.startsWith(marker))
-        assertTrue(bounded.endsWith(newest))
-        assertTrue(bounded.length <= LocalAiTranscriptRestorePolicy.maxTranscriptCharacters)
+        assertEquals(
+            LocalAiTranscriptRestorePolicy.maxTranscriptCharacters,
+            transcript.length
+        )
+        assertEquals(transcript, LocalAiTranscriptRestorePolicy.boundTranscript(transcript))
     }
 
     @Test
-    fun truncationDoesNotStartWithAnUnpairedLowSurrogate() {
-        val bodyLimit = LocalAiTranscriptRestorePolicy.maxTranscriptCharacters - marker.length
-        val body = "a" + "😀" + "z".repeat(bodyLimit - 1)
-        val transcript = marker + body
+    fun rejectsUnpairedUtf16SurrogatesAtNativeBoundary() {
+        val error = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            LocalAiTranscriptRestorePolicy.boundTranscript("文本" + Char(0xD83D))
+        }
 
-        val bounded = LocalAiTranscriptRestorePolicy.boundTranscript(transcript)
-
-        assertTrue(bounded.startsWith(marker))
-        assertFalse(Character.isLowSurrogate(bounded[marker.length]))
-        assertTrue(bounded.endsWith("z"))
-        assertTrue(bounded.length <= LocalAiTranscriptRestorePolicy.maxTranscriptCharacters)
+        assertTrue(error.message!!.contains("unpaired UTF-16 surrogate"))
     }
 
     @Test
