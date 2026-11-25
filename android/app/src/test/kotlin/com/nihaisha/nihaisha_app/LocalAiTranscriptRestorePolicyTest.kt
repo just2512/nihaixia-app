@@ -1,5 +1,6 @@
 package com.nihaisha.nihaisha_app
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -40,7 +41,7 @@ class LocalAiTranscriptRestorePolicyTest {
     @Test
     fun rejectsUnpairedUtf16SurrogatesAtNativeBoundary() {
         val error = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
-            LocalAiTranscriptRestorePolicy.boundTranscript("文本\\uD83D")
+            LocalAiTranscriptRestorePolicy.boundTranscript("文本" + Char(0xD83D))
         }
 
         assertTrue(error.message!!.contains("unpaired UTF-16 surrogate"))
