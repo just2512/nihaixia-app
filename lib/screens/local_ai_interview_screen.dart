@@ -1217,8 +1217,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           ? _service.sendMessageWithContext(
               text,
               conversationId: conversationId,
-              sessionStateContext: sessionStateContext,
-              sessionStateConversationId: conversationId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
               context: context,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
@@ -1227,8 +1227,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           : _service.sendMessageWithContextAndTrace(
               text,
               conversationId: conversationId,
-              sessionStateContext: sessionStateContext,
-              sessionStateConversationId: conversationId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
               context: context,
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
@@ -1260,8 +1260,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               ? await _service.sendMessage(
                   text,
                   conversationId: conversationId,
-              sessionStateContext: sessionStateContext,
-              sessionStateConversationId: conversationId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
                   redFlagContextTruncated: redFlagContextTruncated,
@@ -1269,8 +1269,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               : await _service.sendMessageWithTrace(
                   text,
                   conversationId: conversationId,
-              sessionStateContext: sessionStateContext,
-              sessionStateConversationId: conversationId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
                   traceId: traceId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
