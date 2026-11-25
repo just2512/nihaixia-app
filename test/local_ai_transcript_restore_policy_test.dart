@@ -43,11 +43,11 @@ void main() {
         messages
           ..add(LocalAiTranscriptMessage(
             role: LocalAiTranscriptRole.user,
-            text: 'USER_TURN_$index ${'旧内容' * 40}',
+            text: 'USER_TURN_$index ${List.filled(40, '旧内容').join()}',
           ))
           ..add(LocalAiTranscriptMessage(
             role: LocalAiTranscriptRole.assistant,
-            text: 'ASSISTANT_TURN_$index ${'答复' * 40}',
+            text: 'ASSISTANT_TURN_$index ${List.filled(40, '答复').join()}',
           ));
       }
 
@@ -79,7 +79,7 @@ void main() {
 
       expect(
         result.transcript,
-        LocalAiTranscriptRestorePolicy.truncationMarker.trimRight(),
+        LocalAiTranscriptRestorePolicy.truncationMarker,
       );
       expect(result.retainedTurnCount, 0);
       expect(result.omittedTurnCount, 1);
@@ -113,11 +113,11 @@ void main() {
         for (var index = 0; index < 100; index++) ...[
           LocalAiTranscriptMessage(
             role: LocalAiTranscriptRole.user,
-            text: '问题😀$index ${'用户' * 80}',
+            text: '问题😀$index ${List.filled(80, '用户').join()}',
           ),
           LocalAiTranscriptMessage(
             role: LocalAiTranscriptRole.assistant,
-            text: '回答😀$index ${'回复' * 80}',
+            text: '回答😀$index ${List.filled(80, '回复').join()}',
           ),
         ],
       ];
@@ -126,7 +126,7 @@ void main() {
 
       expect(result.transcript.length,
           lessThanOrEqualTo(LocalAiTranscriptRestorePolicy.maxTranscriptCharacters));
-      expect(result.transcript, endsWith('回答😀99 ${'回复' * 80}'));
+      expect(result.transcript, endsWith('回答😀99 ${List.filled(80, '回复').join()}'));
     });
 
     test('keeps assistant-only prelude when there is no user turn', () {
