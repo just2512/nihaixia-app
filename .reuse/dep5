@@ -1166,3 +1166,12 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored five-layer AI runtime architecture and responsibility-boundary specification; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
+Files:
+ lib/models/ai_evidence.dart
+ lib/services/classic_evidence_pipeline.dart
+ test/classic_evidence_pipeline_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-2 classic-index CandidateEvidence DTOs, retrieval boundary and focused regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
