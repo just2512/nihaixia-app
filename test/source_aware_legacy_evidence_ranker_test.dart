@@ -73,9 +73,6 @@ void main() {
         EvidenceDecisionDisposition.drop,
         EvidenceDecisionDisposition.keep,
         EvidenceDecisionDisposition.keep,
-        EvidenceDecisionDisposition.drop,
-        EvidenceDecisionDisposition.keep,
-        EvidenceDecisionDisposition.keep,
       ],
     );
     expect(ranked.decisions[4].reasonCode, 'LEGACY_CLASSIC_INDEX_FOUR_HIT_LIMIT');
