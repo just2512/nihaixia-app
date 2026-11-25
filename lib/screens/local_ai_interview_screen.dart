@@ -19,7 +19,6 @@ import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
-import '../models/reasoning_request.dart';
 import '../services/reasoning_request_prompt_formatter.dart';
 import '../services/reasoning_knowledge_answer_adapter.dart';
 import '../services/assistant_conversation_orchestrator.dart';
