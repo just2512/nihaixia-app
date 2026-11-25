@@ -2054,6 +2054,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     final taskState = controller.createTaskState();
+    final conversationGeneration = _historyRestoreGeneration;
+    final conversationFuture = _conversationIdFuture;
     setState(() {
       for (final entry in added) {
         final isPendingPrompt = !entry.isUser &&
@@ -2077,7 +2079,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _error = null;
     });
 
-    final conversationId = await _conversationIdFuture;
+    final conversationId = await conversationFuture;
     var messagesPersisted = conversationId != null;
     if (conversationId != null) {
       final messageBatch = added
@@ -2161,9 +2163,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
 
     var modelContextRestored = false;
-    if (controller.isCompleted) {
+    if (controller.isCompleted &&
+        conversationId != null &&
+        conversationGeneration == _historyRestoreGeneration) {
       try {
-        await _restoreVisibleConversationToModel(requireMedicalSafety: true);
+        await _restoreVisibleConversationToModel(
+          conversationId: conversationId,
+          requireMedicalSafety: true,
+        );
         modelContextRestored = true;
       } catch (error) {
         if (mounted) {
@@ -5614,12 +5621,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _restoreVisibleConversationToModel({
-    int? conversationId,
+    required int conversationId,
     bool requireMedicalSafety = false,
     _RedFlagContextSnapshot? safetyContext,
   }) async {
     if (_status?.ready != true) return;
-    final targetConversationId = conversationId ?? await _requireConversationId();
+    final targetConversationId = conversationId;
     final transcriptLines = _messages
         .where((message) => message.includeInModelContext)
         .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
@@ -5709,11 +5716,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     )) {
       return;
     }
+    final conversationGeneration = _historyRestoreGeneration;
     var inferenceCompleted = false;
     try {
       // Freeze one persisted session ID across restoration and inference. A
       // history switch during an await must not redirect the second operation.
       final conversationId = await _requireConversationId();
+      if (!mounted || conversationGeneration != _historyRestoreGeneration) {
+        return;
+      }
       // Ensure the immediately preceding deterministic result is part of the
       // native model context before adding this explicit user-requested action.
       if (restoreVisibleConversation) {
@@ -5723,7 +5734,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           safetyContext: redFlagContext,
         );
       }
-      if (!mounted) return;
+      if (!mounted || conversationGeneration != _historyRestoreGeneration) {
+        return;
+      }
       setState(() {
         _lastEffectiveMode = mode;
         if (showPromptInTimeline) {
