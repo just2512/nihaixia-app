@@ -75,6 +75,39 @@ class LocalAiConversationHistoryPolicyTest {
     }
 
     @Test
+    fun keepsRetrievedContextOutOfNativeRecoveryTranscript() {
+        val userText = "请解释这条原文。"
+        val retrievedContext = "RAG_PRIVATE_CONTEXT::经典原文摘录"
+
+        val prepared = LocalAiMessageInputPolicy.prepare(userText, retrievedContext)
+
+        assertTrue(prepared.modelInput.contains(retrievedContext))
+        assertTrue(prepared.modelInput.contains(userText))
+        assertEquals(userText, prepared.historyUserText)
+
+        val history = mutableListOf<LocalAiCompletedTurn>()
+        LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
+            history,
+            prepared.historyUserText,
+            "模型解释"
+        )
+        val replayMessages = LocalAiConversationHistoryPolicy.initialMessages(history)
+
+        assertEquals(LocalAiTranscriptRole.USER, replayMessages[0].role)
+        assertEquals(userText, replayMessages[0].text)
+        assertTrue(replayMessages.none { it.text.contains(retrievedContext) })
+    }
+
+    @Test
+    fun preservesPlainUserTextWhenNoRetrievedContextExists() {
+        val userText = "你好"
+        val prepared = LocalAiMessageInputPolicy.prepare(userText, "")
+
+        assertEquals(userText, prepared.modelInput)
+        assertEquals(userText, prepared.historyUserText)
+    }
+
+    @Test
     fun blankUserInputIsRejected() {
         val history = mutableListOf<LocalAiCompletedTurn>()
 

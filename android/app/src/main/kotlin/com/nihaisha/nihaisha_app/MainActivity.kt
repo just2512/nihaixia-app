@@ -907,14 +907,9 @@ class MainActivity : FlutterActivity() {
         // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
         // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
         // 与各角色 context 中给出。
-        val modelInput = if (context.isBlank()) text else buildString {
-            appendLine("【应用提供的角色说明与本地检索资料】")
-            appendLine(context.take(7000))
-            appendLine("【用户原文】")
-            append(text)
-        }
-        val reply = sendWithFirstTurnGpuFallback(modelInput) { conversation ->
-            conversation.sendMessage(modelInput).toString()
+        val preparedMessage = LocalAiMessageInputPolicy.prepare(text, context)
+        val reply = sendWithFirstTurnGpuFallback(preparedMessage.historyUserText) { conversation ->
+            conversation.sendMessage(preparedMessage.modelInput).toString()
         }
         // Only literal user text is eligible for symptom extraction.
         recordUserInput("用户文字自述", text)
