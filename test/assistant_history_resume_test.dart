@@ -500,6 +500,8 @@ void main() {
 
     expect(find.text('知识检索：部分结果'), findsOneWidget);
     expect(find.text('结构化协议校验：未通过'), findsOneWidget);
+    await tester.tap(find.text('本轮检索资料'));
+    await _pumpFrames(tester);
     expect(find.text('方剂：gui-zhi-tang'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
