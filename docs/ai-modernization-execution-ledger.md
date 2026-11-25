@@ -4446,3 +4446,17 @@ PR HEAD 门禁证据：
 - **Core-3/4/5：** ReasoningRequest/Response 生产接线、统一 ACTION_PROPOSAL 解析、逐能力确定性执行审计和跨层 E2E 仍待按 Core-1/Core-2 依赖推进。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED；本轮不添加书架页面、数据库、Embedding、FTS5、ANN 或后台任务。
 - **门禁：** 以本 PR 精确 HEAD 的 Flutter 全量回归/静态分析、Android arm64 APK+JVM 和 Fork license 检查为准；Branch validation 若 SKIPPED 不计 PASS。Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复和 TRACE 保持 LOCAL ONLY / UNKNOWN，最后由本地完成。
+ 
+---
+ 
+## 99. 2026-11-25 Core-1 / Core-2 / Core-4 并行切片状态
+ 
+- **主线基线：** `08108f851fe8d7ed6b829830d8d215ce1346d08c`；PR #505 已合并，结构化 SessionStateSnapshot 只读适配器进入 master。它尚未接入 Native ReasoningRequest/prompt，不增加 SQLite schema 或持久化写路径。
+- **Core-1 / PR #509：** `feature/core1-model-context-limit-observation-20261125`，HEAD `b8718d3f70abb04a9171fe0e2409f08f18c78989`。在 LiteRT-LM v0.18.0 固定 API 下读取 ModelInfo.maxContextTokens()，缓存模型文件声明的上限，向 LocalAiModelStatus 暴露 OBSERVED/UNKNOWN；在 releaseLoadedRuntimeQuietly、releaseLocalModel 等路径清空；元数据读取失败不影响模型主加载。此值不是应用可用输入预算，不推导百分比、不触发压缩/重置。当前 Fork license SUCCESS；Flutter 全量回归 IN_PROGRESS；Android arm64/JVM 待 Flutter 门禁后确认；Branch validation SKIPPED 不计 PASS。
+- **Core-2 / PR #507：** `work/core2-medical-case-candidates-20261125`，HEAD `64d70ec77e58ec46d59b511626d23be88d6ddb99`。把既有医案列表匹配投影为 CandidateEvidence，保留医案源序和首次命中 queryId；source verification 与内部序号定位状态独立；LegacyOrderEvidenceRanker 复刻旧两条上限，不打分。当前 Fork license SUCCESS；Flutter 全量回归 IN_PROGRESS；Android arm64/JVM 待 Flutter 门禁后确认；Branch validation SKIPPED。
+- **Core-2 / PR #511：** `work/core2-guji-candidates-20261125`，HEAD `77b31365b0929a78f7187350c1a0fae37e4fd665`。将显式指定《灵枢》《针灸大成》的章节扫描适配为 CandidateEvidence，按 book/chapter 原顺序召回，通过 KEEP/DROP 保留每本书最多两条；以 `guji:<bookId>:<chapterIndex>` 精确回查章节。内部定位 PARTIAL，来源版本/纸本页码 UNKNOWN，摘录 1,400 字符上限保留并显式 TRUNCATED。当前 Flutter 与 Fork license 工作流均 IN_PROGRESS；Android arm64/JVM 尚待触发或检查。PR #511 的依赖是 #507 先合并；当前 PR diff 同时携带 #507 医案切片，合并 #507 后应复核 diff 收敛再集成。
+- **Core-4 / PR #510：** `fix/core4-headless-unknown-execution-20261125`，HEAD `66187e9bd81522537b4045511ba396723428154f`。执行器调用后抛异常时保留前序成功结果，将当前步骤记录 UNKNOWN 并停止后续步骤；UI 不触发模型解释，Trace 标记 BUSINESS_EXECUTION_UNKNOWN / PLAN_UNKNOWN。当前 Fork license SUCCESS；Flutter 全量回归 IN_PROGRESS；Android arm64/JVM 待 Flutter 门禁后确认；Branch validation SKIPPED。
+- **Core-3：** 当前 Native E4B 主对话仍缺统一 ReasoningRequest/ReasoningResponse 运行时协议和证据引用 ID 确定性回验。现有 LocalAiIntentResolution 只是专用意图解析，不作为全量推理协议。下一窄切片应先固定 responseKind / status / evidence IDs / unknowns / conflicts，再接入一个生产调用路径。
+- **Core-2 剩余：** 当前三条数据源适配属于分源候选切片，尚未统一成一个多源 CandidateEvidenceBatch；AssistantKnowledgeContextBuilder 仍然编排查询、分源检索与上下文装配。合并 #507/#511 后，再提取轻量聚合接口，不改变查询派生和 golden order。
+- **工作流 I：** Markdown 书架持续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **门禁纪律：** 上述 CI 以每条 PR 的精确 HEAD 为唯一依据；SKIPPED 不计 PASS；当前没有 Find N2 实机证据。设备升级、Native 长会话 GPU/CPU、Activity/进程恢复和引用点击仍为 LOCAL ONLY，最后本地验收。
