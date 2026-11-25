@@ -131,6 +131,14 @@ void main() {
       expect(dropped.isUsable, isFalse);
       expect(dropped.failureCode, contains('UNRANKED_EVIDENCE'));
 
+      final unknown = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(references: ['not-known-in-this-request']),
+        request: requestValue,
+        knowledge: context,
+      );
+      expect(unknown.isUsable, isFalse);
+      expect(unknown.answerText, isEmpty);
+
       final unresolvedContext = knowledge(sources: []);
       final unresolved = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
         raw: payload(),
