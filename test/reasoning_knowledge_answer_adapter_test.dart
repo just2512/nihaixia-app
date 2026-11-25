@@ -57,6 +57,7 @@ String payload({
   String status = 'COMPLETED',
   List<String> references = const ['evidence-1'],
   List<String> segments = const ['基于本地证据的解释'],
+  List<String> omittedEvidenceIds = const ['dropped-1'],
   Object? proposal,
 }) =>
     jsonEncode({
@@ -68,7 +69,7 @@ String payload({
       'referencedEvidenceIds': references,
       'unknowns': ['缺少用户确认'],
       'conflicts': ['两处资料表述不同'],
-      'omittedEvidenceIds': ['dropped-1'],
+      'omittedEvidenceIds': omittedEvidenceIds,
       if (proposal != null) 'actionProposal': proposal,
     });
 
@@ -110,7 +111,10 @@ void main() {
       expect(requestValue.knownEvidenceIds, [evidenceId]);
 
       final answer = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
-        raw: payload(references: [evidenceId]),
+        raw: payload(
+          references: [evidenceId],
+          omittedEvidenceIds: const [],
+        ),
         request: requestValue,
         knowledge: context,
       );
