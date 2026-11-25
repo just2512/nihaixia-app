@@ -58,27 +58,52 @@ class ContextualAiPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (sidePanel) {
-      return Dialog(
-        alignment: Alignment.centerRight,
-        insetPadding: const EdgeInsets.all(12),
-        child: SizedBox(
-          key: const ValueKey('contextual-ai-panel-content'),
-          width: panelWidth,
-          height: panelHeight,
-          child: assistantBuilder(null),
-        ),
-      );
-    }
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final keyboardVisible = keyboardInset > 0;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.82,
-      minChildSize: 0.55,
-      maxChildSize: 0.95,
-      builder: (sheetContext, scrollController) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-        child: assistantBuilder(scrollController),
+    // The contextual assistant uses an inner Scaffold with
+    // resizeToAvoidBottomInset=false to avoid ColorOS double-inset behavior.
+    // Move and constrain the entire panel here, at the presentation boundary,
+    // so the composer and send controls stay above the IME on both layouts.
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableHeight = constraints.maxHeight;
+          final dialogHeight = availableHeight.isFinite
+              ? (availableHeight - 24)
+                  .clamp(0.0, panelHeight)
+                  .toDouble()
+              : panelHeight;
+
+          if (sidePanel) {
+            return Dialog(
+              alignment: Alignment.centerRight,
+              insetPadding: const EdgeInsets.all(12),
+              child: SizedBox(
+                key: const ValueKey('contextual-ai-panel-content'),
+                width: panelWidth,
+                height: dialogHeight,
+                child: assistantBuilder(null),
+              ),
+            );
+          }
+
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: keyboardVisible ? 0.95 : 0.82,
+            minChildSize: 0.55,
+            maxChildSize: 0.95,
+            builder: (sheetContext, scrollController) => ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(18),
+              ),
+              child: assistantBuilder(scrollController),
+            ),
+          );
+        },
       ),
     );
   }
