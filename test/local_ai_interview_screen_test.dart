@@ -6881,5 +6881,63 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('自动模式将已命中的方剂实体与可回查资料共同路由为学习助手', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '桔梗汤');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, ['桔梗汤']);
+    expect(service.sentContexts, hasLength(1));
+    final modelContext = service.sentContexts.single;
+    expect(modelContext, contains('当前角色：学习助手'));
+    expect(modelContext, contains('方名：桔梗汤'));
+    expect(modelContext, isNot(contains('sourceId')));
+    expect(modelContext, isNot(contains('evidenceId')));
+    expect(modelContext, isNot(contains('localBacklink')));
+    expect(modelContext, isNot(contains('assets/data/')));
+    expect(modelContext, isNot(contains('KEEP')));
+    expect(modelContext, isNot(contains('DROP')));
+
+    final conversations = await store.getAssistantConversations();
+    expect(conversations, hasLength(1));
+    final rows = await store.getAssistantMessages(
+      conversationId: conversations.single['id'] as int,
+    );
+    final assistantRow = rows.lastWhere(
+      (row) => row['role'] == 'assistant',
+    );
+    final metadata = AssistantMessageMetadata.decode(
+      assistantRow['metadata'] as String,
+    );
+    expect(metadata.sourceIds, isNotEmpty,
+        reason: '来源 ID 保留在 App 消息审计元数据中');
+    expect(metadata.knowledgeStatus, 'RETRIEVED',
+        reason: '检索状态保留在 App 消息审计元数据中');
+    expect(find.textContaining('知识检索：'), findsNothing,
+        reason: '内部检索状态不得显示在正常聊天气泡');
+    expect(find.text('本轮检索资料'), findsOneWidget,
+        reason: '用户仍可按需展开来源入口');
+    expect(find.textContaining('sourceId'), findsNothing);
+    expect(find.textContaining('evidenceId'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
 }
 
