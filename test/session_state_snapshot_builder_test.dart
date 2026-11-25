@@ -46,6 +46,20 @@ void main() {
     expect(() => answer['confirmed'] = false, throwsUnsupportedError);
   });
 
+  test('rejects values that are not JSON-compatible', () {
+    SessionStateFact fact(Object value) => SessionStateFact(
+          factId: 'fact:invalid',
+          key: 'invalid',
+          value: value,
+          provenance: SessionFactProvenance.userConfirmed,
+        );
+
+    expect(() => fact({'value': double.nan}), throwsArgumentError);
+    expect(() => fact({'value': double.infinity}), throwsArgumentError);
+    expect(() => fact({'value': <int>{1, 2}}), throwsArgumentError);
+    expect(() => fact({1: 'non-string key'}), throwsArgumentError);
+  });
+
   test('restores only facts and references belonging to the requested session', () {
     const sessionId = 7;
     final task = TcmInterviewTaskState(

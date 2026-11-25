@@ -90,7 +90,8 @@ Object _freezeSessionValue(Object? value) {
   if (value == null) {
     throw ArgumentError.value(value, 'value', 'Must not be null');
   }
-  if (value is String || value is num || value is bool) return value;
+  if (value is String || value is int || value is bool) return value;
+  if (value is double && value.isFinite) return value;
   if (value is Map) {
     final frozen = <String, Object?>{};
     for (final entry in value.entries) {
@@ -104,9 +105,6 @@ Object _freezeSessionValue(Object? value) {
   }
   if (value is List) {
     return List<Object?>.unmodifiable(value.map(_freezeNullableSessionValue));
-  }
-  if (value is Set) {
-    return Set<Object?>.unmodifiable(value.map(_freezeNullableSessionValue));
   }
   throw ArgumentError.value(value, 'value', 'Must be JSON-compatible');
 }
