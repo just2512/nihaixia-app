@@ -28,7 +28,7 @@ python tool/license_issuer/issuer.py keygen --key-id issuer-2026-01
 
 私钥为口令加密的 PKCS#8 PEM。运营端 `issuer-keyring.json` 使用签发器自己的 schema：`schema_version` 和 `keys` 对象；每个 Key ID 对应 `status` 与 `public_key_raw_base64url`。它与 App Release 的 `YANJI_LICENSE_KEY_RING` JSON 不是同一份配置文件，不能直接混用。签发时工具会检查指定私钥与该 Key ID 的公钥是否匹配；错误私钥、错误 Key ID 或非 `active` Key 均不能签发。
 
-Ed25519 raw 公钥长度必须为 32 字节，以无填充 Base64URL 表示。App Release Key Ring 的字段、状态和注入方式以 `docs/release-license-keyring-configuration.md` 为准；生产 App 可以预置多个发行者公钥。历史 Key 设为 `retired` 后只用于验证历史凭证，不再签发；`revoked` / `compromised` 必须在客户端信任策略更新后拒绝相应 Token。离线客户端不会实时接收撤销消息。
+Ed25519 raw 公钥长度必须为 32 字节，以无填充 Base64URL 表示。keygen 输出的公钥可经来源核验后纳入 App Release 的 `YANJI_LICENSE_KEY_RING`；私钥绝不能随公钥进入客户端。App Release Key Ring 的字段、状态和注入方式以 `docs/release-license-keyring-configuration.md` 为准；生产 App 可以预置多个发行者公钥。历史 Key 设为 `retired` 后只用于验证历史凭证，不再签发；`revoked` / `compromised` 必须在客户端信任策略更新后拒绝相应 Token。离线客户端不会实时接收撤销消息。
 
 **密钥恢复要求：** 正式销售前至少保留两份口令加密的离线备份，位于不同介质/地点；备份口令独立保管。必须实际演练一次恢复，核对恢复公钥与 Key ID 的对应关系，并使用共享测试向量执行签名/验签。私钥与订单数据库分开备份。不要将私钥、口令放入仓库、APK、CI、工单、聊天记录或日志。
 
@@ -96,8 +96,9 @@ python tool/license_issuer/issuer.py list
 
 ## 安全与商业许可边界
 
+- App 侧授权 Token 存储在 `noBackupFilesDir/yanji_license/active_license.token` 单 Token 原子文件中；不创建 Android 授权 SQLite 表，主数据库 schema 保持 v7。发行端 `orders.sqlite3` 是独立运营/审计数据库。
 - Ed25519 私钥只存在于受控发行端，App 仅内置公钥。
-- 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名；最终授权 Token 使用 Ed25519 对 JCS canonical payload 按 `YANJI-PRO-LICENSE-V1\\0` 域分隔签名。
+- 设备申请使用 Android Keystore P-256 和 SHA256withECDSA DER 签名；最终授权 Token 使用 Ed25519 对 JCS canonical payload 按 `YANJI-PRO-LICENSE-V1\0` 域分隔签名。
 - 设备安全级别由客户端报告，不是 Android Key Attestation 远程硬件证明。
 - App 永久 `ai_access` Token 只授予 App 内 Native Gate 管理的 LiteRT 模型访问，不授予 Fork 源代码商业集成、OEM、白标或对外再分发权；源代码商业使用必须依据独立书面许可。
 - 离线永久授权不能远程即时撤销；本地状态 superseded 只影响运营记录，不能关闭未更新、长期离线的旧版本。
