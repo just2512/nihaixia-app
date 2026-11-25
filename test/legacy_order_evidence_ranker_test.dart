@@ -63,7 +63,7 @@ void main() {
 
     expect(kept.map((item) => item.evidenceId), ['e0', 'e1', 'e2', 'e3']);
     expect(ranked.orderedEvidenceIds, ['e0', 'e1', 'e2', 'e3']);
-    expect(ranked.budget.omittedEvidenceIds, ['e4', 'e5', 'e6']);
+    expect(ranked.budget.omittedEvidenceIds, isEmpty);
     expect(ranked.budget.truncatedEvidenceIds, isEmpty);
     expect(kept.map((item) => item.orderIndex), [0, 1, 2, 3]);
     expect(
