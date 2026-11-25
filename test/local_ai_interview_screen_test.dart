@@ -1324,6 +1324,12 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
     (tester) async {
   const question = '学习灵枢经脉原文';
   final service = _LearningProtocolTextSendService();
+  final traceEvents = <AiTraceEvent>[];
+  final traceRecorder = AiTraceRecorder(
+    enabled: true,
+    writer: (event) async => traceEvents.add(event),
+    idFactory: () => 'core3-learning-test-trace',
+  );
   await tester.pumpWidget(
     MaterialApp(
       home: LocalAiInterviewScreen(
@@ -1332,6 +1338,7 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
+        traceRecorder: traceRecorder,
       ),
     ),
   );
@@ -1371,6 +1378,17 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
         'statusCalls=${service.statusCalls}；created=${_store.createConversationCalls}；'
         'conversationIds=${_store._conversations.keys.toList()}',
   );
+  await traceRecorder.disableAndFlush();
+  expect(
+    traceEvents.any((event) =>
+        event.stage == AiTraceStage.route &&
+        event.route == 'model' &&
+        event.status == AiTraceStatus.succeeded),
+    isTrue,
+    reason: '学习模式必须经统一路由进入 Native 模型发送；'
+        'trace=${traceEvents.map((event) => '${event.stage.name}:${event.status.wireValue}:${event.route ?? ''}:${event.errorCode ?? ''}').join(' | ')}',
+  );
+  expect(traceEvents.any((event) => event.stage == AiTraceStage.nativeInference), isTrue);
   final envelope = service.lastRequestEnvelope;
   expect(envelope, isNotNull);
   expect(envelope!['mode'], 'learning');
@@ -1411,6 +1429,12 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
   final service = _LearningProtocolTextSendService(
     rawResponseOverride: untrustedRaw,
   );
+  final traceEvents = <AiTraceEvent>[];
+  final traceRecorder = AiTraceRecorder(
+    enabled: true,
+    writer: (event) async => traceEvents.add(event),
+    idFactory: () => 'core3-learning-test-trace',
+  );
   await tester.pumpWidget(
     MaterialApp(
       home: LocalAiInterviewScreen(
@@ -1419,6 +1443,7 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
         conversationStore: _store,
         service: service,
         imagePicker: _EmptyLocalAiImagePicker(),
+        traceRecorder: traceRecorder,
       ),
     ),
   );
@@ -1445,9 +1470,19 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
       matching: find.byType(IconButton),
     ),
   ).onPressed!.call();
-  await _pumpUntilFound(
-    tester,
+  for (var attempt = 0;
+      attempt < 100 &&
+          find.textContaining('未经验证的模型原始内容未展示。').evaluate().isEmpty;
+      attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  await traceRecorder.disableAndFlush();
+  expect(
     find.textContaining('未经验证的模型原始内容未展示。'),
+    findsOneWidget,
+    reason: '协议失败应走 fail-closed 渲染，不得显示原始输出；'
+        'sentTexts=${service.sentTexts}；'
+        'trace=${traceEvents.map((event) => '${event.stage.name}:${event.status.wireValue}:${event.route ?? ''}:${event.errorCode ?? ''}').join(' | ')}',
   );
 
   expect(service.sentTexts, ['学习灵枢经脉原文']);
