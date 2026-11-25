@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
+import 'package:nihaisha_app/data/herb_repository.dart';
+import 'package:nihaisha_app/data/acupuncture_repository.dart';
+import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
@@ -19,6 +23,8 @@ import 'package:nihaisha_app/services/local_ai_service.dart';
 import 'package:nihaisha_app/services/tcm_interview_conversation_controller.dart';
 import 'package:nihaisha_app/services/ai_trace.dart';
 import 'package:nihaisha_app/services/assistant_conversation_orchestrator.dart';
+import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
+import 'package:nihaisha_app/services/reasoning_request_prompt_formatter.dart';
 import 'package:nihaisha_app/services/tcm_interview_adapter.dart';
 import 'package:nihaisha_app/services/xiaoliuren_tool_executor.dart';
 import 'package:nihaisha_app/services/yunqi_tool_executor.dart';
@@ -1082,6 +1088,36 @@ class _UnexpectedStatusFailureService extends LocalAiService {
   Future<LocalAiModelStatus> getStatus() async {
     throw StateError('status response was malformed');
   }
+}
+
+Future<void> _warmLearningKnowledgeSources(WidgetTester tester) async {
+  // RootBundle-backed repositories and the classic index must be initialized
+  // in the real async zone before this widget test enters fake-async frames.
+  // Otherwise the learning send waits forever before reaching Native inference.
+  final result = await tester.runAsync(() async {
+    await FormulaRepository.load();
+    await HerbRepository.load();
+    await AcupunctureRepository.load();
+    await AcupointRepository.load();
+    return AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '灵枢 经脉',
+      includeMedicalCases: false,
+    );
+  });
+  expect(result, isNotNull);
+  final preparedKnowledge = result!;
+  expect(
+    preparedKnowledge.rankedEvidence,
+    isNotEmpty,
+    reason: '学习助手测试必须预先准备可供 Core-3 验证的本轮证据',
+  );
+  expect(
+    preparedKnowledge.rankedEvidence.any(
+      (item) => item.sourceId.startsWith('guji:lingshu:'),
+    ),
+    isTrue,
+    reason: '本轮灵枢经脉检索必须返回可回链的灵枢条文证据',
+  );
 }
 
 void main() {
@@ -6951,6 +6987,762 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(find.textContaining('evidenceId'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+
+class _LearningProtocolTextSendService extends _TextSendService {
+  _LearningProtocolTextSendService({this.rawResponseOverride});
+
+  final String? rawResponseOverride;
+  Map<String, dynamic>? lastRequestEnvelope;
+  String? lastSessionStateContext;
+  int? lastSessionStateConversationId;
+
+  String _responseFor(String text, int conversationId, String context,
+      String? sessionStateContext, int? sessionStateConversationId,
+      {String? traceId}) {
+    sentTexts.add(text);
+    sentConversationIds.add(conversationId);
+    sentContexts.add(context);
+    if (traceId != null) sentTraceIds.add(traceId);
+    lastSessionStateContext = sessionStateContext;
+    lastSessionStateConversationId = sessionStateConversationId;
+
+    const marker = '【App 本轮推理请求元数据 v1】\n';
+    final markerIndex = context.lastIndexOf(marker);
+    if (markerIndex < 0) {
+      throw StateError('REASONING_REQUEST_METADATA_NOT_FOUND_IN_CONTEXT');
+    }
+    final jsonLine = context.substring(markerIndex + marker.length).split('\n').first;
+    lastRequestEnvelope = jsonDecode(jsonLine) as Map<String, dynamic>;
+    if (rawResponseOverride != null) return rawResponseOverride!;
+
+    final ranked = (lastRequestEnvelope!['rankedEvidence'] as List<dynamic>? ?? const []);
+    final first = ranked.isEmpty
+        ? null
+        : Map<String, dynamic>.from(ranked.first as Map);
+    return jsonEncode({
+      'schemaVersion': 1,
+      'requestId': lastRequestEnvelope!['requestId'],
+      'responseKind': first == null ? 'INSUFFICIENT_EVIDENCE' : 'ANSWER',
+      'status': first == null ? 'INSUFFICIENT_EVIDENCE' : 'COMPLETED',
+      'segments': [
+        first == null ? '本轮没有可引用证据。' : '本轮结构化回答',
+      ],
+      'referencedEvidenceIds':
+          first == null ? <String>[] : <String>[first['evidenceId'] as String],
+      'unknowns': first == null ? <String>['缺少可引用证据'] : <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+    });
+  }
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required int conversationId,
+    required String context,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async =>
+      _responseFor(text, conversationId, context, sessionStateContext,
+          sessionStateConversationId);
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required int conversationId,
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async =>
+      _responseFor(text, conversationId, context, sessionStateContext,
+          sessionStateConversationId, traceId: traceId);
+}
+
+class _FailingIntentSelectionService extends _TextSendService {
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    throw PlatformException(
+      code: 'INTENT_CLASSIFICATION_FAILED',
+      message: 'intent classification unavailable in test',
+    );
+  }
+}
+
+class _FailingTextSendService extends _TextSendService {
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async {
+    throw PlatformException(
+      code: 'NATIVE_SEND_FAILED',
+      message: 'native send failed in test',
+    );
+  }
+}
+
+const _releasedStatus = LocalAiModelStatus(
+  installed: true,
+  fileExists: true,
+  ready: false,
+  modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+  sizeBytes: 3659530240,
+  expectedSizeBytes: 3659530240,
+  backend: 'not_loaded',
+);
+
+class _HashVerificationFailureService extends LocalAiService {
+  var _hashVerified = true;
+  var loadCalls = 0;
+  var statusCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    statusCalls += 1;
+    return LocalAiModelStatus(
+      installed: true,
+      fileExists: true,
+      hashVerified: _hashVerified,
+      ready: false,
+      modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
+      sizeBytes: 3659530240,
+      expectedSizeBytes: 3659530240,
+      backend: 'not_loaded',
+    );
+  }
+
+  @override
+  Future<LocalAiModelStatus> loadModel() async {
+    loadCalls += 1;
+    _hashVerified = false;
+    throw PlatformException(
+      code: 'MODEL_HASH_MISMATCH',
+      message: '模型 SHA-256 校验失败，请重新导入',
+    );
+  }
+}
+
+class _DeferredModelSetupService extends LocalAiService {
+  final loadResult = Completer<LocalAiModelStatus>();
+  final importResult = Completer<LocalAiModelStatus>();
+  var loadCalls = 0;
+  var importCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _releasedStatus;
+
+  @override
+  Future<LocalAiModelStatus> loadModel() {
+    loadCalls += 1;
+    return loadResult.future;
+  }
+
+  @override
+  Future<LocalAiModelStatus> importModel() {
+    importCalls += 1;
+    return importResult.future;
+  }
+}
+
+
+class _ModelControlFailureService extends _TextSendService {
+  var resetCalls = 0;
+  var releaseCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
+    resetCalls += 1;
+    throw PlatformException(
+      code: 'RESET_FAILED',
+      message: '模拟会话重置失败',
+    );
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() async {
+    releaseCalls += 1;
+    throw PlatformException(
+      code: 'RELEASE_FAILED',
+      message: '模拟模型释放失败',
+    );
+  }
+}
+
+class _ModelControlTeardownFailureService extends _TextSendService {
+  var resetCalls = 0;
+  var releaseCalls = 0;
+  var _status = _readyStatus;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _status;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
+    resetCalls += 1;
+    _status = _releasedStatus;
+    throw PlatformException(
+      code: 'RESET_FAILED_AFTER_TEARDOWN',
+      message: '模拟会话重置失败',
+    );
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() async {
+    releaseCalls += 1;
+    _status = _releasedStatus;
+    throw PlatformException(
+      code: 'RELEASE_FAILED_AFTER_TEARDOWN',
+      message: '模拟模型释放失败',
+    );
+  }
+}
+
+class _UnknownStatusAfterResetService extends _TextSendService {
+  var resetCalls = 0;
+  var statusCalls = 0;
+  var _statusUnavailable = false;
+  var _recoveredNotReady = false;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    statusCalls += 1;
+    if (_statusUnavailable) {
+      throw StateError('模拟原生状态接口暂不可用');
+    }
+    return _recoveredNotReady ? _releasedStatus : _readyStatus;
+  }
+
+  @override
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
+    resetCalls += 1;
+    _statusUnavailable = true;
+    throw PlatformException(
+      code: 'RESET_FAILED_STATUS_UNKNOWN',
+      message: '模拟会话重置失败',
+    );
+  }
+
+  void recoverAsNotReady() {
+    _statusUnavailable = false;
+    _recoveredNotReady = true;
+  }
+}
+
+class _PostSendStatusFailureService extends _TextSendService {
+  _PostSendStatusFailureService({this.failSend = false});
+
+  final bool failSend;
+  var _statusUnavailable = false;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    if (_statusUnavailable) {
+      throw StateError('模拟推理后原生状态接口暂不可用');
+    }
+    return _readyStatus;
+  }
+
+  @override
+  Future<String> sendMessage(
+    String text, {
+    required int conversationId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async {
+    sentTexts.add(text);
+    _statusUnavailable = true;
+    if (failSend) {
+      throw PlatformException(
+        code: 'INFERENCE_FAILED',
+        message: '模拟本地推理失败',
+      );
+    }
+    return '本轮回复：$text';
+  }
+
+  void recoverAsReady() {
+    _statusUnavailable = false;
+  }
+}
+
+class _PostSendNotReadyStatusService extends _TextSendService {
+  _PostSendNotReadyStatusService({required this.failOnTrigger});
+
+  final bool failOnTrigger;
+  static const triggerText = '触发原生模型卸载的本轮输入';
+  var _notReady = false;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async =>
+      _notReady ? _releasedStatus : _readyStatus;
+
+  @override
+  Future<LocalAiModelStatus> loadModel() async {
+    _notReady = false;
+    return _readyStatus;
+  }
+
+  @override
+  Future<String> sendMessage(
+    String text, {
+    required int conversationId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async {
+    sentTexts.add(text);
+    if (text == triggerText) {
+      _notReady = true;
+      if (failOnTrigger) {
+        throw PlatformException(
+          code: 'INFERENCE_FAILED_AFTER_TEARDOWN',
+          message: '模拟模型卸载前推理失败',
+        );
+      }
+      return '模型卸载前生成的回复';
+    }
+    return '历史回复：$text';
+  }
+}
+
+class _ModelControlService extends _TextSendService {
+  var resetCalls = 0;
+  var releaseCalls = 0;
+
+  @override
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
+    resetCalls += 1;
+    return _readyStatus;
+  }
+
+  @override
+  Future<LocalAiModelStatus> releaseModel() async {
+    releaseCalls += 1;
+    return _releasedStatus;
+  }
+}
+
+class _DraftTextService extends _TextSendService {
+  var extractionCalls = 0;
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
+    extractionCalls += 1;
+    return const LocalAiSymptomDraft(
+      mainComplaint: '饭后腹胀',
+      duration: '约两周',
+      unknowns: ['是否与某种食物有关'],
+    );
+  }
+}
+
+class _CandidateDraftTextService extends _DraftTextService {
+  _CandidateDraftTextService(this.candidate);
+
+  final LocalAiSymptomQuestionCandidate candidate;
+
+  LocalAiSymptomDraft _candidateDraft({
+    String sourceText = '我饭后腹胀，已经持续约两周。',
+  }) => LocalAiSymptomDraft(
+        mainComplaint: '饭后腹胀',
+        duration: '约两周',
+        unknowns: const ['是否与某种食物有关'],
+        questionCandidates: [candidate],
+        sourceText: sourceText,
+      );
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
+    extractionCalls += 1;
+    return _candidateDraft();
+  }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required int conversationId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) async {
+    extractionCalls += 1;
+    return _candidateDraft();
+  }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required int conversationId,
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+    bool sourceTruncated = false,
+  }) async {
+    extractionCalls += 1;
+    return _candidateDraft();
+  }
+}
+
+class _InterviewHandoffHost extends StatefulWidget {
+  const _InterviewHandoffHost({required this.service});
+
+  final LocalAiService service;
+
+  @override
+  State<_InterviewHandoffHost> createState() => _InterviewHandoffHostState();
+}
+
+class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
+  String? returnedSummary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          TextButton(
+            onPressed: () async {
+              final summary = await Navigator.of(context).push<String>(
+                MaterialPageRoute(
+                  builder: (_) => LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: widget.service),
+                ),
+              );
+              if (!mounted || summary == null) return;
+              setState(() => returnedSummary = summary);
+            },
+            child: const Text('打开本地问诊'),
+          ),
+          if (returnedSummary != null)
+            Text(returnedSummary!, key: const ValueKey('returned-summary')),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+class _DelayedHistoryConversationStore extends _MemoryConversationStore {
+  final Completer<void> firstReadGate = Completer<void>();
+
+  @override
+  Future<List<Map<String, Object?>>> getAssistantMessages({
+    required int conversationId,
+  }) async {
+    if (conversationId == 1) await firstReadGate.future;
+    return super.getAssistantMessages(conversationId: conversationId);
+  }
+}
+
+class _FailOnceTextSendService extends LocalAiService {
+  var sendAttempts = 0;
+
+  @override
+  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
+
+  @override
+  Future<String> sendMessage(
+    String text, {
+    required int conversationId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async {
+    sendAttempts += 1;
+    if (sendAttempts == 1) {
+      throw PlatformException(
+        code: 'NATIVE_ERROR',
+        message: '首次本地推理失败',
+      );
+    }
+    return '重试成功：$text';
+  }
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required int conversationId,
+    required String context,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => sendMessage(text, conversationId: conversationId);
+}
+
+class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
+  final sentTraceIds = <String>[];
+
+  @override
+  Future<String> sendMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) {
+    sentTraceIds.add(traceId);
+    return sendMessage(text, conversationId: conversationId);
+  }
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required int conversationId,
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) {
+    sentTraceIds.add(traceId);
+    return sendMessage(text, conversationId: conversationId);
+  }
+}
+
+class _UnexpectedStatusFailureService extends LocalAiService {
+  @override
+  Future<LocalAiModelStatus> getStatus() async {
+    throw StateError('status response was malformed');
+  }
+}
+
+testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并保留 Native 会话通道',
+    (tester) async {
+  await _warmLearningKnowledgeSources(tester);
+  const question = '灵枢 经脉';
+  final service = _LearningProtocolTextSendService();
+  final traceEvents = <AiTraceEvent>[];
+  final traceRecorder = AiTraceRecorder(
+    enabled: true,
+    writer: (event) async => traceEvents.add(event),
+    idFactory: () => 'core3-learning-test-trace',
+  );
+  await tester.pumpWidget(
+    MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialMode: AssistantMode.learning,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+        traceRecorder: traceRecorder,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  expect(find.textContaining('当前角色：学习助手'), findsOneWidget);
+  await tester.enterText(find.byType(TextField), question);
+  await tester.pump();
+  expect(
+    tester.widget<TextField>(find.byType(TextField)).controller!.text,
+    question,
+    reason: '学习消息必须进入统一输入控制器',
+  );
+  expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+  expect(tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed, isNotNull);
+  await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
+  for (var attempt = 0; attempt < 100 && service.sentTexts.isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+
+  expect(
+    service.sentTexts,
+    [question],
+    reason: '原始问题必须继续通过 Native text 参数传递，不得被检索 query 替换；'
+        '界面错误：${tester.widgetList<Text>(find.byType(Text)).map((widget) => widget.data).whereType<String>().where((value) => value.contains('处理失败') || value.contains('无法') || value.contains('协议')).join(' | ')}；'
+        '全部文本：${tester.widgetList<Text>(find.byType(Text)).map((widget) => widget.data).whereType<String>().join(' / ')}；'
+        'statusCalls=${service.statusCalls}；created=${_store.createConversationCalls}；'
+        'conversationIds=${_store._conversations.keys.toList()}',
+  );
+  await traceRecorder.disableAndFlush();
+  expect(
+    traceEvents.any((event) =>
+        event.stage == AiTraceStage.route &&
+        event.route == 'model' &&
+        event.status == AiTraceStatus.succeeded),
+    isTrue,
+    reason: '学习模式必须经统一路由进入 Native 模型发送；'
+        'trace=${traceEvents.map((event) => '${event.stage.name}:${event.status.wireValue}:${event.route ?? ''}:${event.errorCode ?? ''}').join(' | ')}',
+  );
+  expect(traceEvents.any((event) => event.stage == AiTraceStage.nativeInference), isTrue);
+  final envelope = service.lastRequestEnvelope;
+  expect(envelope, isNotNull);
+  expect(envelope!['mode'], 'learning');
+  expect(envelope['requestId'], isA<String>());
+  final ranked = envelope['rankedEvidence'] as List<dynamic>;
+  expect(ranked, isNotEmpty,
+      reason: '灵枢经脉必须命中有来源回链的本地古籍证据');
+  final first = Map<String, dynamic>.from(ranked.first as Map);
+  final sourceId = first['sourceId'] as String;
+
+  expect(service.lastSessionStateContext, isNotEmpty,
+      reason: 'SessionStateSnapshot 仍走 Native 专用会话上下文通道');
+  expect(service.lastSessionStateConversationId,
+      service.sentConversationIds.single);
+  expect(service.sentContexts.single, contains('NATIVE_SESSION_STATE_CONTEXT'));
+  expect(service.sentContexts.single,
+      isNot(contains('【App 本会话结构化记忆快照】')),
+      reason: '泛知识上下文不得重复注入会话记忆事实');
+  expect(find.textContaining('本轮结构化回答', findRichText: true), findsOneWidget);
+  expect(find.text('本轮检索资料'), findsOneWidget);
+  expect(find.text('本轮检索资料'), findsOneWidget);
+  expect(
+    find.textContaining(sourceId),
+    findsNothing,
+    reason: '来源身份只保存在消息元数据和 App 回链入口，不进入正常对话文本',
+  );
+
+  final rows = await _store.getAssistantMessages(
+    conversationId: service.sentConversationIds.single,
+  );
+  final assistantRow =
+      rows.lastWhere((row) => row['role'] == 'assistant');
+  final metadata = AssistantMessageMetadata.decode(
+    assistantRow['metadata'] as String? ?? '',
+  );
+  expect(metadata.sourceIds, [sourceId]);
+  expect(metadata.knowledgeStatus, 'RETRIEVED');
+  expect(tester.takeException(), isNull);
+});
+
+testWidgets('学习助手结构化协议失败时不展示未经验证的模型原文',
+    (tester) async {
+  await _warmLearningKnowledgeSources(tester);
+  const untrustedRaw = 'UNTRUSTED MODEL TEXT MUST NOT RENDER';
+  final service = _LearningProtocolTextSendService(
+    rawResponseOverride: untrustedRaw,
+  );
+  final traceEvents = <AiTraceEvent>[];
+  final traceRecorder = AiTraceRecorder(
+    enabled: true,
+    writer: (event) async => traceEvents.add(event),
+    idFactory: () => 'core3-learning-test-trace',
+  );
+  await tester.pumpWidget(
+    MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialMode: AssistantMode.learning,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+        traceRecorder: traceRecorder,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  expect(find.textContaining('当前角色：学习助手'), findsOneWidget);
+  await tester.enterText(find.byType(TextField), '灵枢 经脉');
+  await tester.pump();
+  expect(
+    tester.widget<TextField>(find.byType(TextField)).controller!.text,
+    '灵枢 经脉',
+    reason: '协议失败场景必须提交原始输入',
+  );
+  expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+  expect(tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed, isNotNull);
+  await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
+  for (var attempt = 0;
+      attempt < 100 &&
+          find.textContaining('未经验证的模型原始内容未展示。').evaluate().isEmpty;
+      attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  await traceRecorder.disableAndFlush();
+  expect(
+    find.textContaining('未经验证的模型原始内容未展示。'),
+    findsOneWidget,
+    reason: '协议失败应走 fail-closed 渲染，不得显示原始输出；'
+        'sentTexts=${service.sentTexts}；'
+        'trace=${traceEvents.map((event) => '${event.stage.name}:${event.status.wireValue}:${event.route ?? ''}:${event.errorCode ?? ''}').join(' | ')}',
+  );
+
+  expect(service.sentTexts, ['灵枢 经脉']);
+  expect(find.textContaining(untrustedRaw), findsNothing);
+  expect(find.textContaining('sourceId'), findsNothing);
+  expect(find.textContaining('evidenceId'), findsNothing);
+  final rows = await _store.getAssistantMessages(
+    conversationId: service.sentConversationIds.single,
+  );
+  final assistantRow =
+      rows.lastWhere((row) => row['role'] == 'assistant');
+  final metadata = AssistantMessageMetadata.decode(
+    assistantRow['metadata'] as String? ?? '',
+  );
+  expect(metadata.knowledgeStatus, endsWith('PROTOCOL_REJECTED'));
+  expect(metadata.sourceIds, isEmpty);
+  expect(metadata.replayable, isFalse,
+      reason: '协议失败轮次不能作为成功会话上下文恢复或重放');
+  final userRow = rows.lastWhere((row) => row['role'] == 'user');
+  final userMetadata = AssistantMessageMetadata.decode(
+    userRow['metadata'] as String? ?? '',
+  );
+  expect(userMetadata.replayable, isFalse);
+  expect(
+    traceEvents.any((event) =>
+        event.stage == AiTraceStage.resultValidation &&
+        event.status == AiTraceStatus.failed),
+    isTrue,
+    reason: '结构化协议拒绝必须在审计链中记录为失败',
+  );
+  expect(tester.takeException(), isNull);
+});
+
 
 }
 
