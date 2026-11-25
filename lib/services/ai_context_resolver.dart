@@ -4144,10 +4144,10 @@ class AiContextResolver {
         entry.key:
             entry.value.trim().isEmpty ? 'MISSING' : entry.value,
       'missingFields': missingFields,
-      'sourceLedger': medicalCase.sourceLedger.toJson(),
-      'sourceTextVerificationStatus':
-          medicalCase.sourceLedger.sourceStatus,
-      'bibliographicLocatorStatus': medicalCase.sourceLedger.status,
+      // The sequence is only this App table's internal key. It is not a
+      // bibliographic locator or proof of original-source verification.
+      'localEntryId': 'medical_case:${medicalCase.seq}',
+      'localBacklink': 'medical_case:${medicalCase.seq}',
     };
 
     return AiContextResolution(
