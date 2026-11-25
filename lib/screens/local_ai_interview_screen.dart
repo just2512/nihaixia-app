@@ -10806,55 +10806,6 @@ String _formulaKnowledgeLabel(String formulaId) {
   return '方剂资料';
 }
 
-class _KnowledgeStatusLabel extends StatelessWidget {
-  const _KnowledgeStatusLabel({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final segments = status.split(':');
-    final retrievalStatus = segments.first;
-    final protocolRejected = segments.skip(1).contains('PROTOCOL_REJECTED');
-    final label = switch (retrievalStatus) {
-      'RETRIEVED' => '知识检索：已检索到来源',
-      'PARTIAL' => '知识检索：部分结果',
-      'NO_RESULTS' => '知识检索：无匹配结果',
-      'FAILED' => '知识检索：执行失败',
-      _ => '知识检索：状态未知（$retrievalStatus）',
-    };
-    final color = switch (retrievalStatus) {
-      'RETRIEVED' => Theme.of(context).colorScheme.primary,
-      'PARTIAL' => Theme.of(context).colorScheme.tertiary,
-      'FAILED' => Theme.of(context).colorScheme.error,
-      _ => Theme.of(context).colorScheme.onSurfaceVariant,
-    };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            style: TextStyle(fontSize: AppType.micro, color: color),
-          ),
-        ),
-        if (protocolRejected)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              '结构化协议校验：未通过',
-              style: TextStyle(
-                fontSize: AppType.micro,
-                color: Theme.of(context).colorScheme.error,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 class _InterviewMessageBubble extends StatelessWidget {
   final _InterviewMessage message;
 
@@ -10900,10 +10851,6 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
-                if (message.knowledgeStatus != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  _KnowledgeStatusLabel(status: message.knowledgeStatus!),
-                ],
                 if (retrievedSourceIds.isNotEmpty &&
                     message.onSourceTap != null) ...[
                   const SizedBox(height: AppSpacing.xs),
