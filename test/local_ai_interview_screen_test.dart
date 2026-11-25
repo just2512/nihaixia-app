@@ -6843,6 +6843,18 @@ void mainRedFlagEntrypointOrderingTests() {
     ));
     await tester.pumpAndSettle();
 
+    expect(
+      find.textContaining('知识检索：'),
+      findsNothing,
+      reason: '检索状态只保留在消息审计元数据，不进入正常对话气泡',
+    );
+    expect(find.text('本轮检索资料'), findsOneWidget);
+    expect(
+      find.textContaining('本轮引用的知识库条目'),
+      findsNothing,
+      reason: '检索来源不得伪装成模型已实际引用的资料',
+    );
+
     const chipLabel = '伤寒论：assets/shanghan/clause_001.md';
     final sourceChip = find.widgetWithText(ActionChip, chipLabel);
     for (var attempt = 0;
