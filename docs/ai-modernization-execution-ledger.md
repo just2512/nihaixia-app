@@ -4479,3 +4479,30 @@ PR HEAD 门禁证据：
 - **工作流 I：** 用户 Markdown 书架仍为 DEFERRED / NOT_AUTHORIZED，不启动。
 - **设备策略：** Find N2 安装升级、GPU/CPU 长轮次、Activity/进程恢复、上下文稳定性及 TRACE 真实证据全部留到最后由本地验收；云端 CI 通过不等于设备 PASS，不以设备验收阻塞云端实现。
 
+---
+
+## 101. 2026-11-25 Core-2 古籍候选合并与多源聚合、Core-4 新基线重建
+
+- **当前 master 基线：** `cf08e7f65aba4a4196c222475b6b9176a54f620e`。PR #512 已在该提交合并；本节替代 §100 中 #512/#513/#514 仍待合并的旧状态快照，历史章节保留不回写。
+- **Core-2 医案候选 / PR #507：** 已合并于前一基线，当前主线仍保留其候选来源序、首次 queryId 与旧两条上限行为。
+- **Core-2 古籍候选 / PR #512：** 已合并，merge commit `cf08e7f65aba4a4196c222475b6b9176a54f620e`。`GujiEvidencePipeline` 为显式指定书目章节产出稳定 sourceId、query provenance 与 TRUNCATED 标记；每本书两条旧上限不变。书目版本/纸本页码继续 UNKNOWN，App 内部章节回链不等同于文献核验。
+- **Core-2 多源聚合 / 旧 PR #514：** 原始分支基于 #512 合并前的 master，已重建并关闭旧 PR，未把旧许可证清单覆盖回主线。新 PR #516 从当前 master 独立重建：新增 `MultiSourceEvidencePipeline.combine` 和 `SourceAwareLegacyEvidenceRanker.rank`，查询 ID/证据 ID 按来源批次命名空间隔离，保留 sourceId 和调用方候选顺序；混合可用/失败来源为 PARTIAL，全失败为 FAILED，正常无命中为 MISSING；经典索引 4 条、医案 2 条、每本古籍 2 条旧限额仍明确，无分数、无 token/字符预算。当前仅新增可测试的聚合/排序组件，**尚未接入 AssistantKnowledgeContextBuilder 生产路径**，不能标记 Core-2 完成。
+- **Core-4 / 旧 PR #513：** 因 #512 合并导致基线过期已关闭，未合并。新 PR #515 从当前 master `cf08e7f65aba4a4196c222475b6b9176a54f620e` 重建；保留执行器异常前已完成步骤，将当前步骤标 UNKNOWN 并停止，不重试、不重放、不补偿、不把 UNKNOWN 交给模型解释。新 HEAD CI 待验收。
+- **Core-1 Native 会话记忆：** RAG 不写入 Native recovery transcript（#493）、有界完整轮次和淘汰（#496）、按 SQLite conversation ID 隔离（#499）、结构化只读 SessionStateSnapshot Builder（#505）、当前 KV Cache token 观测（#506）、模型声明 maxContextTokens 观测（#509）均已在主线。Snapshot Builder 尚未接入生产 Native ReasoningRequest/prompt；来源引用回查、更新/删除状态与真正的输入预算尚未闭环。模型 KV token 和模型声明 maxContextTokens 不是 App 的输入预算。
+- **Core-0/3/5：** 五层 DTO 与源码映射已冻结；ReasoningRequest/Response、证据 ID 回验、BusinessActionProposal/ExecutionResult 的跨层生产协议和 E2E 仍待实现。不得先把未核验快照内容直接拼入模型上下文。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED，不启动。
+- **CI 与设备：** #516、#515 均须对各自精确新 HEAD 完成 Fork License、Flutter 全量回归、work 分支校验、Android arm64 APK/ABI 与 JVM 单测。旧 HEAD 的 CI 不继承。Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复与 TRACE 仍为最后本地验收项，云端 CI 不代替设备 PASS。
+
+---
+
+## 102. 2026-11-25 Core-4 UNKNOWN 合并与 Core-2 聚合分支重新基线
+
+- **当前 master 基线：** `ff2de215c0ad3841e607ddf9da24ed60b0c5a9d0`。本节承接 §101 的历史快照；不回写 §101 当时正确的待合并状态。
+- **Core-4 / PR #515：** 已于当前 master 合并，squash commit `ff2de215c0ad3841e607ddf9da24ed60b0c5a9d0`；PR 精确 HEAD `eb4fa82549470212e70c7e223795f47ee26a218a`。执行器抛异常时保留此前成功步骤，当前步骤标 UNKNOWN 并停止后续执行；不自动重试/重放，不将未知执行状态交给模型解释。PR Flutter 全量回归 `45557323007` SUCCESS，Android arm64 APK/ABI 与 JVM 单测 job `139015536986` SUCCESS，Fork License `45557322923` SUCCESS；同一精确 HEAD 的 work 分支 Branch validation push job `139012433697` SUCCESS。PR 事件中的 Branch validation 为 SKIPPED，不计作通过；通过依据是对应分支 push job。
+- **Core-4 主线后验证：** squash merge 后 master HEAD 为 `ff2de215c0ad3841e607ddf9da24ed60b0c5a9d0`；该提交触发的 Flutter Quality Gate、Fork License boundary 和 Flutter tests 均已启动，记录时状态以 GitHub Actions 实际结果为准，不继承 PR HEAD 结果。
+- **Core-2 / PR #516：** 原 HEAD `71784d43bffe0002cf6638563bbd67ef09100efe` 的 Flutter 全量回归、Android arm64/JVM、Fork License 及 work 分支 Branch validation 均已 SUCCESS；因 #515 先合入，#516 与 master 形成一前一后分叉，GitHub 将其标记为不可直接合并。当前分支按最新 master `ff2de215c0ad3841e607ddf9da24ed60b0c5a9d0` 重新构建单提交树，避免把旧 master 状态或旧文档台账覆盖回主线。重新基线后的 HEAD 必须重新跑全部适用 CI；此前旧 HEAD 结果不继承。
+- **Core-2 当前未完成点：** #516 只提供统一多源 CandidateEvidenceBatch 和来源感知 KEEP/DROP 旧序策略，尚未接入 `AssistantKnowledgeContextBuilder` 生产路径。接线前需固定当前经典索引 → 显式指定古籍 → 医案的旧呈现顺序，保留每来源旧限额与 retrieval golden snapshot；不引入分数、向量检索或 token/字符预算。
+- **Core-1：** SessionStateSnapshot 已有只读 builder、session ownership 校验与有限来源 ID，但尚未接入 Native ReasoningRequest/prompt；KV Cache token 与模型声明 maxContextTokens 不是 App 输入预算。继续保持 PARTIAL。
+- **Core-3/5：** ReasoningRequest/Response 严格解析、引用 ID 回验、ACTION_PROPOSAL 与跨层 E2E 仍未形成生产闭环。可先做独立协议/负向验证，不接管 Native 调用链、不越过 Gate。
+- **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **设备策略：** Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复与真实 TRACE 统一留到最后本地验收；云端实现和 CI 继续推进，不以设备验收阻塞。
