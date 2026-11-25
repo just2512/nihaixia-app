@@ -57,6 +57,38 @@ void main() {
   });
 
 
+
+  test('knowledge entry intent is short and adds analysis value rather than repeating source data', () async {
+    await FormulaRepository.load();
+    final formula = FormulaRepository.getAll().first;
+    final ref = AiContextResolver.buildFormulaContextRef(formula);
+    final resolution = AiContextResolver.resolveFormula(ref: ref);
+    expect(resolution.isResolved, isTrue);
+
+    final entry = resolution.value!;
+    final intent = AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
+      entry: entry,
+    );
+    final modelContext = AiContextPromptBuilder.buildKnowledgeEntryModelContext(
+      entry: entry,
+    );
+
+    expect(intent, contains('整体组方结构'));
+    expect(intent, contains('配伍逻辑'));
+    expect(intent, isNot(contains('sourceId')));
+    expect(intent, isNot(contains('anchorVersion')));
+    expect(intent, isNot(contains('"components"')));
+    expect(intent.length, lessThan(120));
+
+    expect(modelContext, contains('不要逐项复述字段'));
+    expect(modelContext, contains('条目明确记载'));
+    expect(modelContext, contains('基于条目内容的归纳'));
+    expect(modelContext, contains('MISSING 或 UNKNOWN'));
+    expect(modelContext, contains(jsonEncode(entry.content)));
+    expect(modelContext, isNot(contains(entry.ref.sourceId)));
+    expect(modelContext, isNot(contains(entry.ref.anchorVersion)));
+  });
+
   test('classic selection prompt retains selected text and stable source anchor', () {
     const selectedText = '发热，汗出，恶风，脉缓';
     const ref = AiContextRef(
