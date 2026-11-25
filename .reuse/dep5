@@ -1175,3 +1175,11 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-2 classic-index CandidateEvidence DTOs, retrieval boundary and focused regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
 
+Files:
+ lib/models/evidence_ranking_decision.dart
+ lib/services/legacy_order_evidence_ranker.dart
+ test/legacy_order_evidence_ranker_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-2 explicit legacy-order KEEP/DROP decision DTO, deterministic selector and focused regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
