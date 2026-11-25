@@ -209,6 +209,7 @@ void main() {
             sourceId: 'source-1',
           ),
         ],
+        known: const ['evidence-1', 'evidence-2', 'dropped-1'],
         sources: [source('source-1')],
       );
       final duplicateMapped = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
