@@ -78,7 +78,6 @@ class GujiEvidencePipeline {
           materialKind: 'classic_text',
           title: chapter.title,
           chapterPath: '${book.id}#chapter=${chapter.index}',
-          locator: localBacklink,
           excerpt: isTruncated
               ? chapter.body.substring(0, 1400)
               : chapter.body,
