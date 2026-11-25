@@ -112,7 +112,8 @@ class ContextualAiPanel extends StatelessWidget {
         ),
       ),
     );
-  }}
+  }
+}
 
 /// Presents the existing assistant inside a foldable, in-page contextual sheet.
 /// The assistant screen owns model execution and conversation persistence.
