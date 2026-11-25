@@ -6077,6 +6077,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return;
     }
+    final toolConversationGeneration = _historyRestoreGeneration;
+    final toolConversationFuture = _conversationIdFuture;
     // Every execution path (including quick actions with no extracted args)
     // must pass the same contract. Otherwise required parameters can be
     // bypassed simply by opening a tool from a shortcut.
@@ -6363,7 +6365,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var persistenceStatus = AiTraceStatus.notStarted;
     String? persistenceErrorCode;
     try {
-      conversationId = await _conversationIdFuture;
+      conversationId = await toolConversationFuture;
       if (conversationId != null) {
         persistenceStarted = true;
         await _conversationStore.saveAssistantMessage(
@@ -6415,8 +6417,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     try {
       // Automatic interpretation restores the same verified result in its
       // own traced call. Other result states still synchronize the normal context.
-      if (!autoInterpret) {
-        await _restoreVisibleConversationToModel();
+      if (!autoInterpret &&
+          conversationId != null &&
+          toolConversationGeneration == _historyRestoreGeneration) {
+        await _restoreVisibleConversationToModel(
+          conversationId: conversationId,
+        );
       }
     } catch (error) {
       if (mounted) {
@@ -6436,7 +6442,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       sourceIds: normalizedResult.sourceIds,
       errorCode: finalRenderErrorCode,
     );
-    if (autoInterpret && mounted) {
+    if (autoInterpret &&
+        mounted &&
+        conversationId != null &&
+        toolConversationGeneration == _historyRestoreGeneration) {
       await _requestAssistantResultInterpretation(
         prompt: interpretationPrompt,
         mode: mode,
@@ -7206,7 +7215,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
     }
     } finally {
+      final shouldRestoreLatestSelection =
+          mounted &&
+          generation != _historyRestoreGeneration &&
+          _pendingHistoryTranscript != null;
       _restoringPendingHistory = false;
+      if (shouldRestoreLatestSelection) {
+        await _restorePendingHistory();
+      }
     }
   }
   Future<void> _recordTurnPersistenceNotStarted(
