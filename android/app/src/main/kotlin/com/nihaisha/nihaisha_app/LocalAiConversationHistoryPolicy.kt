@@ -232,3 +232,34 @@ internal object LocalAiConversationIdPolicy {
         return id?.takeIf { it > 0L }
     }
 }
+
+
+/**
+ * A diagnostic sample of the live LiteRT-LM Conversation KV Cache. This is
+ * deliberately separate from the UTF-16 recovery transcript budget.
+ */
+internal data class LocalAiConversationTokenObservation(
+    val tokenCount: Int?,
+    val status: Status
+) {
+    enum class Status {
+        UNKNOWN,
+        OBSERVED
+    }
+}
+
+internal object LocalAiConversationTokenObservationPolicy {
+    fun fromTokenCount(tokenCount: Int?): LocalAiConversationTokenObservation {
+        if (tokenCount == null || tokenCount < 0) return unknown()
+        return LocalAiConversationTokenObservation(
+            tokenCount = tokenCount,
+            status = LocalAiConversationTokenObservation.Status.OBSERVED
+        )
+    }
+
+    fun unknown(): LocalAiConversationTokenObservation =
+        LocalAiConversationTokenObservation(
+            tokenCount = null,
+            status = LocalAiConversationTokenObservation.Status.UNKNOWN
+        )
+}
