@@ -1339,6 +1339,11 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
   expect(find.textContaining('当前角色：学习助手'), findsOneWidget);
   await tester.enterText(find.byType(TextField), question);
   await tester.pump();
+  expect(
+    tester.widget<TextField>(find.byType(TextField)).controller!.text,
+    question,
+    reason: '学习消息必须进入统一输入控制器',
+  );
   expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
   expect(tester.widget<IconButton>(
     find.ancestor(
@@ -1413,6 +1418,11 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
   expect(find.textContaining('当前角色：学习助手'), findsOneWidget);
   await tester.enterText(find.byType(TextField), '学习灵枢经脉原文');
   await tester.pump();
+  expect(
+    tester.widget<TextField>(find.byType(TextField)).controller!.text,
+    '学习灵枢经脉原文',
+    reason: '协议失败场景必须提交原始输入',
+  );
   expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
   expect(tester.widget<IconButton>(
     find.ancestor(
