@@ -142,6 +142,35 @@ void main() {
       expect(presentation.interpretationPrompt, contains('确定性计算/数据'));
     });
 
+    test('presents UNKNOWN executor outcomes without AI interpretation', () {
+      const arguments = {'date': '2026-11-23'};
+      const result = AssistantToolResult(
+        toolId: 'yunqi',
+        title: 'untrusted-executor-title',
+        status: AssistantToolExecutionStatus.unknown,
+        values: {'执行状态': 'UNKNOWN'},
+        arguments: arguments,
+        disclaimer: '执行器未返回可验证结果，不会自动重放。',
+      );
+
+      final presentation = HeadlessToolResultHandler.handle(
+        userText: '推算今天的五运六气',
+        toolId: 'yunqi',
+        toolTitle: '五运六气推算',
+        expectedArguments: arguments,
+        result: result,
+        aiReady: true,
+      );
+
+      expect(presentation.contractErrors, isEmpty);
+      expect(presentation.responseText, contains('工具：五运六气推算'));
+      expect(presentation.responseText, isNot(contains('untrusted-executor-title')));
+      expect(presentation.responseText, contains('UNKNOWN'));
+      expect(presentation.canInterpret, isFalse);
+      expect(presentation.autoInterpret, isFalse);
+      expect(presentation.toolStatusForPersistence, 'UNKNOWN');
+    });
+
     test('returns a dream clarification intent without claiming a completed match', () {
       const arguments = {'dream': '梦见河水'};
       final result = AssistantToolResult(
