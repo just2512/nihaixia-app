@@ -67,7 +67,7 @@ void main() {
   });
 
   testWidgets(
-    'formula detail exposes a contextual Ask AI entry without opening it automatically',
+    'formula detail exposes a contextual one-tap interpretation after an explicit tap',
     (tester) async {
       final formula = FormulaRepository.getByName('桂枝汤')!;
       expect(formula, isNotNull);
@@ -111,7 +111,13 @@ void main() {
       expect(widget.contextRef['moduleId'], 'formula');
       expect(widget.contextRef['anchorId'], 'formula:${formula.id}');
       expect(widget.contextRef['sourceId'], 'formula:${formula.id}');
-      expect(widget.initialPrompt, contains(formula.name));
+      expect(widget.initialPrompt, isNull);
+      expect(widget.initialUserMessage, contains('整体组方结构'));
+      expect(widget.autoSendInitialMessage, isTrue);
+      expect(widget.resolveContextualKnowledgeEntry, isTrue);
+      final composer = tester.widget<TextField>(find.byType(TextField).last);
+      expect(composer.controller?.text, isEmpty,
+          reason: 'The internal knowledge record must never be prefilled into the composer.');
       expect(tester.takeException(), isNull);
 
       Navigator.of(
