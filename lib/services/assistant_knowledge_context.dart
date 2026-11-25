@@ -291,6 +291,33 @@ class AssistantKnowledgeContextBuilder {
           ));
           continue;
         }
+        if (sourceId.startsWith('guji:')) {
+          final parts = sourceId.split(':');
+          if (parts.length == 3) {
+            final bookId = parts[1];
+            final chapterIndex = int.tryParse(parts[2]);
+            final books = kGujiBooks.where((book) => book.id == bookId);
+            if (chapterIndex != null && books.isNotEmpty) {
+              final book = books.first;
+              final chapter =
+                  await GujiRepository.chapterAtIndex(book, chapterIndex);
+              if (chapter != null) {
+                sources.add(AssistantKnowledgeSourceReference(
+                  sourceId: sourceId,
+                  sourceLabel: 'App 古籍库 · ${book.title}',
+                  title: chapter.title,
+                  localBacklink:
+                      'guji:${book.id}#chapter:${chapter.index}',
+                  locatorStatus: 'MISSING',
+                  sourceKind: 'classic_text',
+                  sourceVerificationStatus: 'UNKNOWN',
+                  bibliographicLocatorVerified: false,
+                ));
+              }
+              continue;
+            }
+          }
+        }
         final hit = await ClassicSearchService.findBySourceId(sourceId);
         if (hit == null) continue;
         sources.add(AssistantKnowledgeSourceReference(

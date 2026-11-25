@@ -160,6 +160,22 @@ void main() {
     expect(context, contains('assets/guji/lingshu.txt'));
   });
 
+  test('Guji source IDs resolve to the same app-local chapter without inventing bibliography', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '灵枢',
+      includeMedicalCases: false,
+    );
+    final gujiSources = result.sources
+        .where((source) => source.sourceId.startsWith('guji:lingshu:'))
+        .toList(growable: false);
+
+    expect(gujiSources, isNotEmpty);
+    expect(gujiSources.first.localBacklink, startsWith('guji:lingshu#chapter:'));
+    expect(gujiSources.first.locatorStatus, 'MISSING');
+    expect(gujiSources.first.sourceVerificationStatus, 'UNKNOWN');
+    expect(gujiSources.first.bibliographicLocatorVerified, isFalse);
+  });
+
   test('问诊检索可引用医案库本地条目并保留来源回链', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 桂枝汤',
