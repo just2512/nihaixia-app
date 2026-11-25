@@ -490,7 +490,7 @@ void main() {
       }
     });
 
-    test('有原文方剂依据的合病规则不误关闭一般参考提示', () {
+    test('已配置自动方剂的合病规则不误关闭一般参考提示', () {
       final engine = DiagnosticEngine()
         ..restoreSnapshot(EngineSnapshot(
           stage: DiagnosticStage.meridianLocation,
