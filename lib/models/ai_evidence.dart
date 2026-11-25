@@ -35,6 +35,12 @@ class DerivedEvidenceQuery {
   final String queryId;
   final String query;
   final List<String> reasons;
+
+  DerivedEvidenceQuery copyWith({String? queryId}) => DerivedEvidenceQuery(
+        queryId: queryId ?? this.queryId,
+        query: query,
+        reasons: reasons,
+      );
 }
 
 /// One retrieved candidate, before any evidence-ranking decision.
@@ -101,6 +107,40 @@ class CandidateEvidence {
   String? get asset => assetId;
   String get snippet => excerpt;
   String get source => sourceKey;
+
+  /// Copies a candidate while preserving every source/provenance field.
+  ///
+  /// This narrow copy operation is used only when a candidate is placed into
+  /// a combined request namespace. It does not alter its stable sourceId.
+  CandidateEvidence copyWith({
+    String? evidenceId,
+    String? queryId,
+  }) =>
+      CandidateEvidence(
+        evidenceId: evidenceId ?? this.evidenceId,
+        sourceId: sourceId,
+        sourceVersion: sourceVersion,
+        origin: origin,
+        materialKind: materialKind,
+        verificationStatus: verificationStatus,
+        title: title,
+        locator: locator,
+        locatorStatus: locatorStatus,
+        excerpt: excerpt,
+        queryId: queryId ?? this.queryId,
+        retrievalMethod: retrievalMethod,
+        matchBasis: matchBasis,
+        completeness: completeness,
+        sourceKey: sourceKey,
+        sourceLabel: sourceLabel,
+        localBacklink: localBacklink,
+        hasLocalBacklink: hasLocalBacklink,
+        assetId: assetId,
+        bookId: bookId,
+        chapterIndex: chapterIndex,
+        chunkId: chunkId,
+        chapterPath: chapterPath,
+      );
 }
 
 class CandidateEvidenceBatch {

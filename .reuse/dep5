@@ -1204,3 +1204,13 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-2 Guji chapter CandidateEvidence adapter and focused order/provenance regression tests; internal chapter coordinates do not assert a verified printed edition or page; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
+Files:
+ lib/services/multi_source_evidence_pipeline.dart
+ lib/services/source_aware_legacy_evidence_ranker.dart
+ test/multi_source_evidence_pipeline_test.dart
+ test/source_aware_legacy_evidence_ranker_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-2 unified multi-source candidate aggregation and source-aware legacy-order ranking with focused tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
