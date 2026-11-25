@@ -261,6 +261,35 @@ class LocalAiConversationHistoryPolicyTest {
     }
 
     @Test
+    fun reportsPositiveModelDeclaredContextLimitWithoutCreatingABudget() {
+        val observation =
+            LocalAiModelContextLimitObservationPolicy.fromMaxContextTokens(32_768)
+
+        assertEquals(32_768, observation.maxContextTokens)
+        assertEquals(
+            LocalAiModelContextLimitObservation.Status.OBSERVED,
+            observation.status
+        )
+    }
+
+    @Test
+    fun missingZeroOrNegativeModelContextLimitsRemainUnknown() {
+        listOf(null, 0, -1).forEach { limit ->
+            val observation =
+                LocalAiModelContextLimitObservationPolicy.fromMaxContextTokens(limit)
+            assertEquals(null, observation.maxContextTokens)
+            assertEquals(
+                LocalAiModelContextLimitObservation.Status.UNKNOWN,
+                observation.status
+            )
+        }
+        assertEquals(
+            LocalAiModelContextLimitObservation.Status.UNKNOWN,
+            LocalAiModelContextLimitObservationPolicy.unknown().status
+        )
+    }
+
+    @Test
     fun missingOrNegativeConversationTokenCountsRemainUnknown() {
         listOf(null, -1).forEach { count ->
             val observation = LocalAiConversationTokenObservationPolicy.fromTokenCount(count)
