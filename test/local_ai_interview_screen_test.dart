@@ -1352,7 +1352,9 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
     ),
   ).onPressed, isNotNull);
   await tester.tap(find.byTooltip('发送'));
-  await tester.pumpAndSettle();
+  for (var attempt = 0; attempt < 100 && service.sentTexts.isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 
   expect(
     service.sentTexts,
@@ -1431,9 +1433,12 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
     ),
   ).onPressed, isNotNull);
   await tester.tap(find.byTooltip('发送'));
-  await tester.pumpAndSettle();
+  await _pumpUntilFound(
+    tester,
+    find.textContaining('未经验证的模型原始内容未展示。'),
+  );
 
-  expect(find.textContaining('未经验证的模型原始内容未展示。'), findsOneWidget);
+  expect(service.sentTexts, ['学习灵枢经脉原文']);
   expect(find.textContaining(untrustedRaw), findsNothing);
   final rows = await _store.getAssistantMessages(
     conversationId: service.sentConversationIds.single,
