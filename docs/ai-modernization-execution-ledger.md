@@ -53,6 +53,8 @@
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
+| H | AI 五层核心职责解耦（高优先级） | `IN_PROGRESS`（核心架构规范已冻结；现有代码逐层映射和实现仍待审计/推进） | 当前多轮治理 A 属于会话记忆层并继续优先；Core-0 契约/源码映射可与 A 并行；其余按核心架构依赖小批量推进 | 知识召回、证据排序、会话记忆、语言推理、业务执行五层分别有契约、状态所有权、失败语义、隔离测试和端到端证据；不机械新建五套服务/Agent |
+| I | 用户 Markdown 书架本地知识库（未来能力） | `DEFERRED / NOT_AUTHORIZED`（设计已冻结，当前非优先级） | 等待核心五层 Core-0～Core-2 与多轮/证据边界稳定，之后须用户明确恢复书架事项 | 只有核心架构放行后才按书架专项文档实施；其交付不得阻塞核心主线，Find N2 仍需独立 TRACE |
 
 > A 的云端工作已完成，当前剩余项仅为 Find N2 / E4B 本地实测，因此总状态从 `IN_PROGRESS` 校准为 `PARTIAL`，不得把设备未测记作云端阻塞。B/C/D/E/F/G 是全局 AI 改造的独立工作流，其状态不等同于本协议“情境问 AI”云端收尾状态；本轮不擅自把它们升级为 PASS，也不将其扩大为本次情境入口收尾的阻塞项。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
 
@@ -4354,7 +4356,7 @@ PR HEAD 门禁证据：
 - `LicenseKeyRingFactory` 对缺失/格式错误的 Dart define 返回空 Key Ring，无法验证任何发行者；免费功能可继续启动。Android Release Gradle 门禁要求恰好一个 `YANJI_LICENSE_KEY_RING` define、非空 keys、合法唯一 key_id、32-byte Ed25519 公钥、已知状态及至少一个 active/standby issuer，并拒绝测试 issuer ID/公钥。
 - Release 构建另行要求本地原签名 `android/key.properties` 与 keystore；CI-only 临时签名仅用于扫描构建产物，不是产品 Release 签名身份。
 - `.github/workflows/release-trust-anchor.yml` 从 GitHub Secret `YANJI_LICENSE_KEY_RING` 读取公钥环并执行发行者/产物扫描。当前可见仓库源码和 CI 证据不能读取或证明 Secret 的实际值、正式公钥来源或生产私钥离线托管状态；因此**正式发行信任锚仍 BLOCKED**，不能以 workflow 文件存在或普通 CI 成功推断 Secret 已配置。
-- 当前 Fork inventory 记录 changed 975、added 811、modified 164、deleted 15；分类为 FORK_COMMERCIAL 452、APACHE_2_0_AND_FORK_COMMERCIAL 158、KNOWLEDGE_BASE_EXCLUDED 364、THIRD_PARTY_EXCLUDED 1。自动检查只证明 inventory/DEP5/SPDX 路径与分类结构一致；Fork-owned 与 mixed 条目仍标记 `OWNERSHIP_EVIDENCE_REQUIRED`，不能由 CI 或 Git 作者字段证明权属。
+- 当前 Fork inventory 记录 changed 977、added 813、modified 164、deleted 15；分类为 FORK_COMMERCIAL 454、APACHE_2_0_AND_FORK_COMMERCIAL 158、KNOWLEDGE_BASE_EXCLUDED 364、THIRD_PARTY_EXCLUDED 1。JSON 与 Markdown 均逐路径核对 977 条唯一记录，无缺项、重复或额外项；Fork/混合许可路径仍标记 OWNERSHIP_EVIDENCE_REQUIRED。自动检查只证明 inventory/DEP5/SPDX 路径与分类结构一致；Fork-owned 与 mixed 条目仍标记 `OWNERSHIP_EVIDENCE_REQUIRED`，不能由 CI 或 Git 作者字段证明权属。
 - `LICENSE-FORK-COMMERCIAL.md` 当前为版本 1.4；本轮未修改其授予条款。运行时 Token 与源代码许可保持分离。
 
 ### 94.5 云端完成与外部阻断清单
@@ -4376,3 +4378,38 @@ PR HEAD 门禁证据：
 - **本轮云端结论：** v1.3 运行时实现与协议兼容、授权 UI 单一权益语义、Release fail-closed 规则和 Fork 清单自动边界均已完成源码/CI 复核；正式发行材料、法律权属材料和 Find N2 设备证据仍是外部/本地硬门槛。
 
 ---
+
+
+---
+
+## 95. 2026-11-25 用户 Markdown 书架本地知识库架构冻结
+
+- **约束文档：** docs/user-bookshelf-local-knowledge-architecture.md。
+- **设计状态：** DESIGN_FROZEN / NOT_IMPLEMENTED。本轮只冻结未来架构和执行边界，没有实现书架运行时代码、数据库 schema、模型依赖、Embedding 索引或 UI。
+- **当前 master 基线：** 本次书架/核心架构文档批次从 master `de488a52285db513c4ceb7c77d89c154ac5c1fa4`（PR #490 合并提交）派生；后续每个实现切片仍须重新核验当时 master。
+- **核心决策：** system_knowledge.db 与 user_bookshelf.db 物理隔离；用户多本书共用 user_bookshelf.db 内的统一书籍/片段/向量表；统一 Dart 检索契约，但保留 origin/materialKind/verificationStatus；用户来源默认未核验。
+- **v1.3 授权与存储边界：** 未来任何 Native LiteRT/LiteRT-LM Embedding 模型加载或推理均复用唯一 `ai_access` 与同一个 Native `AiModelAccessGate`，不新增书架/Embedding 独立收费权益；`user_bookshelf.db` 只存用户语料及索引，不迁移会话、消息、问诊任务、Native transcript 或 TRACE。App 永久授权 Token 的 `ai_access` 不等于源代码商业许可。
+- **索引策略：** 关键词先可用；EmbeddingGemma 2 text/code 270M 仅为未来 C 阶段 PoC 候选，不在当前阶段添加模型权重或运行时依赖；不预先决定最终向量维度、FTS5、ANN、批次大小或 Reranker。书架当前为 DEFERRED / NOT_AUTHORIZED，须待核心五层 Core-0～Core-2 和多轮/证据边界稳定、用户明确恢复后再启动。
+- **安全与历史：** USER 内容是不可信资料，不得触发工具；引用卡片由本地数据回填；RAG 正文不得进入 Native 持久化历史；删除/修改后历史引用标为 SOURCE_DELETED / SOURCE_CHANGED。
+- **优先级修订：** 本节原登记的书架阶段顺序已由 §96 修订。当前先完成 AI 五层核心职责解耦及多轮/证据边界；书架降为 DEFERRED / NOT_AUTHORIZED 的未来可选知识源扩展，不再与多轮治理并行，也不占用当前实现资源。
+- **当前不做：** 不新增书架页面、SQLite schema、FTS5、Embedding/向量依赖、后台常驻服务；不改当前经典检索排序或黄金快照；不改变 AI 业务权限和许可门禁。
+- **验收约束：** 专项 BS-01～BS-25 按阶段执行；CI 只证明自动化行为，Find N2 设备能力必须保留真实 TRACE，未测保持 UNKNOWN / LOCAL ONLY。
+
+本节原将书架登记为工作流 H；根据 §96 核心优先级修订，现调整为未来可选工作流 I（DEFERRED / NOT_AUTHORIZED）。本节设计仍作为后续约束保留，但不构成当前优先工作。
+
+
+---
+
+## 96. 2026-11-25 AI 核心五层职责架构优先级修订
+
+- **核心约束文档：** docs/ai-layered-runtime-architecture.md。
+- **规范状态：** CORE_ARCHITECTURE_FROZEN；五层运行时职责、契约边界、数据所有权、失败语义、统一数据流及 CORE-01～CORE-15 验收场景已形成文档约束。当前代码是否满足各层职责仍须逐层审计，不能因规范完成而标 IMPLEMENTED。
+- **本次优先级纠正：** 核心升级是知识召回、证据排序、会话记忆、语言推理、业务执行各自独立协作；不是先做一个用户书架，也不是建设五个自治 Agent。
+- **五层定义：** 召回只产候选；排序只选择和排序证据，不决定真实性；记忆保存有界且会话隔离的用户/任务状态；Gemma 4 E4B 承担语言理解与解释；App 既有确定性代码执行工具和规则。
+- **关键限制：** 五层是逻辑职责边界，不要求五个模型、五套数据库或五个独立服务；优先复用现有 Repository、Builder、Dispatcher、Gateway、SQLite 与 Native 串行队列，按证据拆分接口。
+- **当前已确认断点：** AssistantKnowledgeContextBuilder 仍将召回与证据选择/上下文组装耦合；MainActivity 的 conversationHistoryTurns 是 Activity/进程内存列表，sendLocalMessage 将本轮 RAG context 拼入 modelInput 后写入该 completed-turn transcript，并在 Native Conversation 重建时回放。已证明的是当前进程内恢复 transcript 污染；跨进程持久化未由此调用链证实，保持 UNKNOWN。该断点已在核心架构文档 §5.1 定位，属于 Core-1 会话记忆隔离的优先修复项。
+- **当前主线：** 继续推进工作流 A 多轮稳定性（属于会话记忆层）；并行完成 Core-0 五层源码映射和数据契约；随后按 Core-1 Memory、Core-2 Recall/Ranking、Core-3 Reasoning、Core-4 Execution、Core-5 E2E 的依赖小批量推进。具体实施范围以核心架构文档 §6 为准。
+- **书架状态：** 工作流 I，DEFERRED / NOT_AUTHORIZED。Markdown 书籍、Embedding 和书架数据库只是未来知识源扩展，不是当前核心架构交付，也不能反向驱动核心层重构。
+- **证据纪律：** 保留现有黄金检索行为；每层用独立契约测试和跨层测试验收；CI 对精确 PR HEAD；Find N2 设备证据独立记录；SKIPPED、UNKNOWN 和设计文件均不计 PASS。
+
+本节优先级修订覆盖此前 §95 将书架与多轮治理并行推进的安排；§95 的详细书架设计约束继续有效，但其执行时间后移。
