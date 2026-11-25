@@ -572,9 +572,12 @@ class _NeijingEntryCardState extends State<_NeijingEntryCard> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: AiContextPromptBuilder.buildNeijingKnowledgeEntry(
+      initialUserMessage:
+          AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
         entry: resolved,
       ),
+      autoSendInitialMessage: true,
+      resolveContextualKnowledgeEntry: true,
       initialMode: AssistantMode.learning,
       contextualTitle: entry.title,
       contextualExplanationOnly: true,
