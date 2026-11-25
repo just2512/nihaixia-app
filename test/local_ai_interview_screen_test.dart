@@ -386,6 +386,7 @@ class _PageToolTraceService extends _TextSendService {
 
   @override
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
@@ -523,6 +524,7 @@ class _TextSendService extends LocalAiService {
 
   @override
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
@@ -541,6 +543,7 @@ class _TextSendService extends LocalAiService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -552,30 +555,37 @@ class _TextSendService extends LocalAiService {
   @override
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
     sentContexts.add(context);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
     sentTraceIds.add(traceId);
-    return sendMessage(text, requireMedicalSafety: requireMedicalSafety);
+    return sendMessage(
+      text,
+      conversationId: conversationId,
+      requireMedicalSafety: requireMedicalSafety,
+    );
   }
 
   @override
   Future<String> sendMessageWithContextAndTrace(
     String text, {
+    required int conversationId,
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
@@ -584,7 +594,7 @@ class _TextSendService extends LocalAiService {
   }) async {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 }
 
@@ -609,6 +619,7 @@ class _FailingTextSendService extends _TextSendService {
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -785,6 +796,7 @@ class _PostSendStatusFailureService extends _TextSendService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -825,6 +837,7 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -978,6 +991,7 @@ class _FailOnceTextSendService extends LocalAiService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -995,6 +1009,7 @@ class _FailOnceTextSendService extends LocalAiService {
   @override
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -1008,18 +1023,20 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) {
     sentTraceIds.add(traceId);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 
   @override
   Future<String> sendMessageWithContextAndTrace(
     String text, {
+    required int conversationId,
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
@@ -1027,7 +1044,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     bool redFlagContextTruncated = false,
   }) {
     sentTraceIds.add(traceId);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 }
 
