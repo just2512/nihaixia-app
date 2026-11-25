@@ -229,13 +229,14 @@ void main() {
       });
 
       final reply = await LocalAiService().sendImage(
-        '/app/cache/tongue.jpg',
+        '/app/cache/tongue.jpg', conversationId: 7,
         prompt: '请说明照片是否清晰',
       );
 
       expect(reply, '舌体可见特征描述');
       expect(received?.method, 'sendImage');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'path': '/app/cache/tongue.jpg',
         'prompt': '请说明照片是否清晰',
       });
@@ -249,13 +250,14 @@ void main() {
       });
 
       final reply = await LocalAiService().sendAudio(
-        '/app/cache/interview.wav',
+        '/app/cache/interview.wav', conversationId: 7,
         prompt: '请保留听不清的部分',
       );
 
       expect(reply, '用户语音转写内容');
       expect(received?.method, 'sendAudio');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'path': '/app/cache/interview.wav',
         'prompt': '请保留听不清的部分',
       });
@@ -277,7 +279,7 @@ void main() {
         );
 
         await expectLater(
-          LocalAiService().sendImage('/app/cache/tongue.jpg'),
+          LocalAiService().sendImage('/app/cache/tongue.jpg', conversationId: 7),
           throwsA(
             isA<PlatformException>().having(
               (error) => error.code,
@@ -287,7 +289,7 @@ void main() {
           ),
         );
         await expectLater(
-          LocalAiService().sendAudio('/app/cache/interview.wav'),
+          LocalAiService().sendAudio('/app/cache/interview.wav', conversationId: 7),
           throwsA(
             isA<PlatformException>().having(
               (error) => error.code,
@@ -355,10 +357,11 @@ void main() {
         return <String, Object?>{'reply': '请继续描述不适出现的时间'};
       });
 
-      final reply = await LocalAiService().sendMessage('饭后腹胀，持续两周');
+      final reply = await LocalAiService().sendMessage('饭后腹胀，持续两周', conversationId: 7);
 
       expect(received?.method, 'sendMessage');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'text': '饭后腹胀，持续两周',
       });
       expect(reply, '请继续描述不适出现的时间');
@@ -373,13 +376,14 @@ void main() {
       });
 
       final reply = await LocalAiService().sendMessageWithContext(
-        '柴胡的传统功用是什么？',
+        '柴胡的传统功用是什么？', conversationId: 7,
         context: '[App本草库] 柴胡：原始条目内容',
       );
 
       expect(reply, '依据本地资料整理的回答');
       expect(received?.method, 'sendMessage');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'text': '柴胡的传统功用是什么？',
         'context': '[App本草库] 柴胡：原始条目内容',
       });
@@ -394,7 +398,7 @@ void main() {
       });
 
       await LocalAiService().sendMessageWithContextAndTrace(
-        '最近不舒服，帮我诊断一下什么问题？',
+        '最近不舒服，帮我诊断一下什么问题？', conversationId: 7,
         context: '当前角色：问诊助手',
         traceId: traceId,
         requireMedicalSafety: true,
@@ -404,6 +408,7 @@ void main() {
 
       expect(received?.method, 'sendMessage');
       expect(received?.arguments['require_red_flag'], isTrue);
+      expect(received?.arguments['conversation_id'], 7);
       expect(received?.arguments['red_flag_context'], '我最近胸痛\n那它的原因呢');
       expect(received?.arguments['red_flag_context_truncated'], isTrue);
       expect(received?.arguments['trace_id'], traceId);
@@ -422,7 +427,7 @@ void main() {
           (_) async => response,
         );
         await expectLater(
-          LocalAiService().sendMessage('继续问诊'),
+          LocalAiService().sendMessage('继续问诊', conversationId: 7),
           throwsA(
             isA<PlatformException>().having(
               (error) => error.code,
@@ -441,7 +446,7 @@ void main() {
       );
 
       await expectLater(
-        LocalAiService().sendMessage('继续问诊'),
+        LocalAiService().sendMessage('继续问诊', conversationId: 7),
         throwsA(
           isA<PlatformException>().having(
             (error) => error.code,
@@ -461,12 +466,14 @@ void main() {
       });
 
       await LocalAiService().restoreConversation(
+        conversationId: 7,
         transcript: '用户：饭后腹胀\\n助手：请说明持续时间',
         userMessages: ['饭后腹胀'],
       );
 
       expect(received?.method, 'restoreConversation');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'transcript': '用户：饭后腹胀\\n助手：请说明持续时间',
         'userMessages': ['饭后腹胀'],
       });
@@ -480,6 +487,7 @@ void main() {
       });
 
       await LocalAiService().restoreConversation(
+        conversationId: 7,
         transcript: '用户：我最近胸痛\n助手：这是用户未确认的旧回复',
         userMessages: const ['我最近胸痛'],
         requireMedicalSafety: true,
@@ -489,6 +497,7 @@ void main() {
 
       expect(received?.method, 'restoreConversation');
       expect(received?.arguments['require_red_flag'], isTrue);
+      expect(received?.arguments['conversation_id'], 7);
       expect(received?.arguments['red_flag_context'], '我最近胸痛');
       expect(received?.arguments['red_flag_context_truncated'], isTrue);
     });
@@ -1109,12 +1118,13 @@ void main() {
       });
 
       final reply = await LocalAiService().sendMessageWithTrace(
-        '继续问诊',
+        '继续问诊', conversationId: 7,
         traceId: traceId,
       );
 
       expect(reply, '继续描述');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'text': '继续问诊',
         'trace_id': traceId,
       });
@@ -1131,13 +1141,14 @@ void main() {
       });
 
       final reply = await LocalAiService().sendMessageWithContextAndTrace(
-        '柴胡的传统功用是什么？',
+        '柴胡的传统功用是什么？', conversationId: 7,
         context: '[App本草库] 柴胡：原始条目',
         traceId: traceId,
       );
 
       expect(reply, '依据本地资料整理');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 7,
         'text': '柴胡的传统功用是什么？',
         'context': '[App本草库] 柴胡：原始条目',
         'trace_id': traceId,
@@ -1154,7 +1165,7 @@ void main() {
       );
 
       await expectLater(
-        LocalAiService().sendMessageWithTrace('继续问诊', traceId: traceId),
+        LocalAiService().sendMessageWithTrace('继续问诊', conversationId: 7, traceId: traceId),
         throwsA(
           isA<PlatformException>().having(
             (error) => error.code,
@@ -1176,17 +1187,19 @@ void main() {
       });
 
       await LocalAiService().sendImageWithTrace(
-        '/app/cache/tongue.jpg',
+        '/app/cache/tongue.jpg', conversationId: 7,
         traceId: traceId,
       );
       await LocalAiService().sendAudioWithTrace(
-        '/app/cache/interview.wav',
+        '/app/cache/interview.wav', conversationId: 7,
         traceId: traceId,
       );
 
       expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
       expect(received[0].arguments['trace_id'], traceId);
       expect(received[1].arguments['trace_id'], traceId);
+      expect(received.every((call) => call.arguments['conversation_id'] == 7),
+          isTrue);
     });
 
     test('medical attachments carry the native safety requirement', () async {
@@ -1198,12 +1211,12 @@ void main() {
       });
 
       await LocalAiService().sendImageWithTrace(
-        '/app/cache/medical-image.jpg',
+        '/app/cache/medical-image.jpg', conversationId: 7,
         traceId: traceId,
         requireMedicalSafety: true,
       );
       await LocalAiService().sendAudioWithTrace(
-        '/app/cache/medical-audio.wav',
+        '/app/cache/medical-audio.wav', conversationId: 7,
         traceId: traceId,
         requireMedicalSafety: true,
       );
@@ -1462,7 +1475,7 @@ void main() {
       });
 
       await expectLater(
-        LocalAiService().sendMessageWithTrace('继续问诊', traceId: 'not-a-trace-id'),
+        LocalAiService().sendMessageWithTrace('继续问诊', conversationId: 7, traceId: 'not-a-trace-id'),
         throwsA(isA<ArgumentError>()),
       );
       expect(calls, 0);
