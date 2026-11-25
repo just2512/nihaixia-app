@@ -4431,3 +4431,54 @@ PR HEAD 门禁证据：
 - **下一项自动执行：** PR #495 Core-0 文档精确 HEAD Flutter/Fork license CI 通过后，按新 master 校准并集成；PR #496 必须在精确 HEAD Android arm64/JVM、Flutter 与 Fork license 均 PASS 后单独集成。Core-1 有界历史通过后，Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
 - **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
 
+---
+
+## 98. 2026-11-25 Core-0 合并、Core-1 会话边界与 Core-2 候选召回收尾状态
+
+本节为当前远端状态快照，**覆盖 §97 中仍写作“待集成/进行中”的历史状态**；§97 保留为当时的审计记录，不再作为当前状态依据。
+
+### 主线基线
+
+- 当前审计时的 `master`：`9c7a4c6761a467bb13b0b5381992df2e96cfc3ba`。
+- v1.3 单一 Native AI access gate：以 PR #472 的已合并规范为准。所有 Native LiteRT 模型加载和推理仍只使用 `ai_access`；不按问诊、学习、情境提问、工具调用拆分收费；`HeadlessToolDispatcher` 和 `ContextResolutionGateway` 保留安全职责但不拥有独立收费门禁；App 永久授权 Token 不代表源代码商业许可。
+- 本节后续各 PR 均不得改变上述门禁和许可边界。任何偏离必须先有兼容性、风险和回滚说明，不得在实现中悄然引入。
+
+### 已合并且证据边界明确的工作
+
+- **PR #491：MERGED。** 变更仅为执行台账和本地实机验收交接文档，不包含 Native Runtime 代码。Flutter、Android arm64/JVM、Fork license 检查通过；Branch validation 为 SKIPPED，不计为通过。Find N2 实机、正式 Release 签名材料和相关 TRACE 仍按交接文档标记 LOCAL ONLY / MISSING / UNKNOWN。
+- **PR #496：MERGED，merge commit `b62bc101865612c02503bedce8d05cf11390d56d`。** Native 恢复历史限制为最多 12 个完整成功轮次、累计最多 10,000 个 UTF-16 code units，按完整最旧轮次淘汰，并保留被省略轮次与字符计数。该上限针对可重建的 Native 恢复 transcript，不是模型 Token 数，也不是 LiteRT 活动 KV Cache 上限。其 Flutter、Android arm64/JVM、Fork license 证据均为 SUCCESS；SKIPPED 的 Branch validation 不计 PASS。
+- **PR #495：MERGED，merge commit `9c7a4c6761a467bb13b0b5381992df2e96cfc3ba`。** 仅冻结五层 DTO 字段合同与当前源码/测试映射；没有运行时代码变更。Core-0 文档合同已进入主线，但五层运行时实现不能因此标为全部完成。
+
+### Core-1：持久化会话 ID 与 Native 状态硬隔离
+
+- 原 PR #497：CLOSED / NOT MERGED；其会话隔离实现已迁移至以 #496 合并后主线为基线的 PR #499，避免把无界旧历史实现重新覆盖到主线。
+- **PR #499：OPEN / DRAFT。** 当前分支为 `work/core1-session-isolation-v2-20261125`。最新审计 HEAD 以 GitHub PR 实际值为准；本节初始快照 HEAD 为 `fa4651b67b51cab79f3d0c50fcec46dd1ab462b7`。
+- 本批将单个 Native LiteRT Conversation 绑定到现有 SQLite 持久化 `conversation_id`；文本、图片、音频、症状提取、历史恢复和 reset 均要求正数 ID；切换 ID 时重置 Native Conversation、有界恢复历史和用户症状缓存；同一 ID 保留会话。共享症状状态只在 Native 串行任务中、绑定会话后读取。
+- 明确拒绝非整数/浮点/字符串会话 ID，避免把可转换值截断成另一个 session ID。
+- 保留 #496 的有界恢复历史实现，不以旧列表覆盖；不涉及一次性意图/槽位识别调用，因为它们不消费持久化聊天 transcript。
+- 最新 HEAD 的 Flutter、Android arm64/JVM 和 Fork license CI 必须分别有明确 SUCCESS 后才可合并；SKIPPED 不计 PASS。初始 #499 HEAD 已出现的失败是会话 ID 变量未定义、测试替身签名未同步和旧断言未包含 `conversation_id`；这些已在后续 HEAD 修正，必须以修正后 HEAD 的新 CI 为准。
+
+### Core-2：知识召回与证据排序拆分
+
+- **PR #498：OPEN。** 分支为 `feature/core2-classic-evidence-boundary-20261125`；本节初始快照 HEAD 为 `f004427f24a686e80cf9a85eefb8b0ca6c734c94`。
+- 新增 CandidateEvidence / CandidateEvidenceBatch DTO，并把既有经典索引候选收集移入 `ClassicEvidencePipeline`。本切片保留原派生查询顺序、标题优先/正文其次、既有去重键和前四条上下文投影；没有更改召回算法或排序，没有引入 Embedding、向量检索、FTS5、Reranker、数据库或模型输入变化。
+- `sourceVersion`、`verificationStatus`、`matchBasis`、`completeness` 等未被数据源实际提供的信息保持 UNKNOWN；本地反向链接不等于书目版本/页码核验。
+- 三个新增 Dart 文件已登记到 `docs/fork-license-file-inventory.json` 与 `.reuse/dep5`，分类沿用 `FORK_COMMERCIAL`，并保留 `OWNERSHIP_EVIDENCE_REQUIRED`。该元数据登记不是新增许可授予，也未缩小商业源代码许可范围。
+- 初始 HEAD 的静态分析失败仅为新增测试文件中的 unused import；该 import 已移除。修正 HEAD 的静态分析已 SUCCESS，黄金快照与全量回归仍需在精确 HEAD 完成后才能给出最终判定。Fork license 为 SUCCESS；Branch validation 为 SKIPPED，不计 PASS。此为 Dart-only 切片，不因没有 Android Job 就虚构 Android 验收证据。
+- 即使 #498 合并，也只表示候选召回拥有独立 DTO/调用边界；当前上下文 Builder 仍使用兼容投影。证据排序仍需独立实现 KEEP/DROP 决策、排序策略版本、证据 ID 顺序和预算/遗漏理由，不得将召回输出直接视为已完成排序。
+
+### 明确保持隔离或延期的事项
+
+- **PR #416：保持 OPEN / DRAFT / UNTOUCHED。** 本轮未修改其分支、文件或授权协议。
+- 不重复改造已完成的 #478、#482 Native Gate。
+- 用户书架 / Markdown 书籍扩展继续 DEFERRED / NOT_AUTHORIZED；不是五层核心运行时的先决条件。
+- Find N2 安装升级、真实模型加载、GPU/CPU、多轮、多媒体、进程恢复和性能 TRACE 放在云端工作全部结束后的本地最终验收阶段。云端 CI 不等于实机 PASS，也不以实机验收阻挡其他云端工作。
+
+### 后续依赖顺序
+
+1. #499 精确 HEAD 完成 Flutter 全量回归、Android arm64 APK/ABI 与 JVM 单测、Fork license boundary 后再集成。
+2. #498 精确 HEAD 完成静态分析、黄金快照、全量 Flutter 回归和 Fork license boundary 后再集成。
+3. Core-2 下一切片单独实现可重复的证据排序决策；输入为候选批次，输出为 RankedEvidenceSet，先用显式 `LEGACY_ORDER` 策略复现既有前四条，不改变旧黄金输出，再独立比较任何新排序策略。
+4. 随后按核心架构 §6 推进结构化会话记忆、ReasoningRequest/Response 和业务执行适配；每个切片保持单一边界、独立回归和精确 HEAD 验收。
+
+
