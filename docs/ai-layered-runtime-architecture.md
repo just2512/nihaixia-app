@@ -392,6 +392,8 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 | 语言推理 | Native 路径位于 `MainActivity.sendLocalMessage` / `sendWithFirstTurnGpuFallback`：`Conversation.sendMessage(modelInput)` 返回自由文本，再由 `stripSimpleMarkdown` 清理；Dart 侧按当前模式/上下文组织输入。 | `test/assistant_conversation_orchestrator_test.dart`、`test/assistant_history_resume_test.dart` 覆盖相关编排/恢复行为；尚无五层 ReasoningRequest/ReasoningResponse 独立 schema 回归。 | 当前 Native 主对话路径尚无统一 ReasoningRequest/ReasoningResponse schema；引用 ID、缺证据、冲突和 ACTION_PROPOSAL 尚未成为统一模型输出协议。不能把 Prompt 文本或结构化 JSON 样例当作代码级 schema 校验。 |
 | 业务执行 | `ToolExecutionPlan/ToolExecutionStep` 与 `HeadlessToolDispatcher.executePlan` 对已登记计划预校验并顺序执行；PR #515 已合并 UNKNOWN 语义修复。 | `test/headless_tool_dispatcher_test.dart`、`test/headless_tool_result_handler_test.dart`、`test/headless_tool_plan_result_handler_test.dart`、`test/assistant_tool_execution_plan_builder_test.dart`、`test/context_resolution_gateway_test.dart`。 | PARTIAL：UNKNOWN 执行结果已保留且停止重放；模型输出 ACTION_PROPOSAL 的协议接线、能力级 typed args、显式授权与跨层结果回填仍未形成完整闭环。 |
 
+**Core-2 → Core-3 证据交接（独立适配切片）：** PR #521 新增 `AssistantKnowledgeContextBuildResult` / `AssistantKnowledgeContextResult` 的请求级证据身份输出：`knownEvidenceIds` 包含本轮所有召回候选（KEEP/DROP），`rankedEvidence` / `rankedEvidenceIds` 只包含完整落入既有 6,500 字符上下文的保留证据，并提供 evidenceId → sourceId 映射与可单独注入的 `evidenceIndexContext`。证据块若被 6,500 字符边界截断，不会进入允许引用集合。该适配不改变旧上下文文本、来源顺序、来源限额、排序策略或黄金检索行为；不接入 Native 推理，也不代表 Core-3 生产协议已完成。方剂/本草/针灸/穴位/内经等尚未转为 CandidateEvidence 的结构化资料，不冒充本批 ranked evidence。
+
 **边界澄清**
 
 - `ContextResolutionGateway` 是来源引用锚点校验和 Resolver 回链保护，不是业务工具执行器，也不是授权/收费门禁。
