@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
+import 'package:nihaisha_app/data/database_helper.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/screens/assistant_tool_router.dart';
 import 'package:nihaisha_app/screens/acupuncture_screen.dart';
@@ -14,17 +16,32 @@ import 'support/in_memory_assistant_conversation_store.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  var databaseSequence = 0;
+
   setUpAll(() async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
     await AcupunctureRepository.load();
     await AcupointRepository.load();
+  });
+
+  setUp(() async {
+    DatabaseHelper.configureTestDatabase(
+      'acupuncture_contextual_entry_\${databaseSequence++}.db',
+      factory: databaseFactoryFfi,
+    );
+    await DatabaseHelper.instance.database;
+  });
+
+  tearDown(() async {
+    await DatabaseHelper.closeTestDatabase();
   });
 
   testWidgets(
     'acupuncture prescription entry starts a concise one-tap contextual interpretation',
     (tester) async {
-      addTearDown(tester.view.reset);
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(775, 900);
+      await tester.binding.setSurfaceSize(const Size(775, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
         ContextualAiConversationStoreScope(
