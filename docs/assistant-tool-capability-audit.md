@@ -305,3 +305,64 @@ PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge c
 - 本地 OPPO Find N2 的 E4B GPU/CPU 多轮、权限/取消、Activity recreation、force-stop/restart、AI 数据清除与 TRACE 实测仍为 `UNKNOWN`；GitHub CI 不能替代设备证据。
 - 经典/本草现代讲稿已按 upstream/main 增量集成（PR #198/#199/#202）；来源、许可口径及不设整批考据阻塞的结论见 `docs/upstream-sync-ledger.md` §§17—21。本附录此处旧 HOLD 是历史快照，不代表当前阻塞或待办。
 - 不新增 Agent/DAG、第二套 ToolRouter、第二套知识检索系统或新的 SQLite schema。
+
+
+---
+
+## 12. 2026-11-25 Core-4 业务执行边界源码复核（master 基线）
+
+- **核验基线：** `master a43989636101d267cd2ab96fe6a4eee1a89ba522`。本节只复核代码调用链和已有测试，不把单元测试冒充 Find N2 设备 TRACE。
+- **总判断：** Core-4 的确定性 Headless 执行、候选白名单、整计划预检、顺序执行、真实来源/参数结果校验和 UNKNOWN 停止语义均已有生产代码。状态仍为 **PARTIAL**：不是所有 18 个 Headless 能力都具备统一 typed args/schema、权限确认、幂等/取消/超时契约；尚无 Core-5 五层端到端 TRACE。
+
+### 12.1 E4B 工具意图不是自由执行入口
+
+真实路径：
+
+1. `AssistantConversationOrchestrator.resolve` 先做确定性路由。明确单工具意图直接选定现有 Tool；多个候选或需要选择时，只把 2–6 个候选交给受限意图判别器。个人症状/个人情境不进入该工具意图模型；Page-only 工具不进入 Headless 候选。
+2. `LocalAiInterviewScreen._send` 只有在候选数为 2–6、模式为 tools/metaphysics、原始文本未触发症状/个人情境排除且模型 ready 时，才调用 `LocalAiService.resolveAssistantIntentWithTrace`。发送给模型的候选仅包含 App 给出的 id/title/description/planEligible。
+3. Native `MainActivity.resolveAssistantIntent` 位于现有 AI 串行任务和 `AiModelAccessGate` 边界内，校验用户文本与候选 JSON 长度、候选数量/ID/标题/描述及唯一性。Prompt 明确限定模型只可选择候选 ID；不得创建工具、生成参数、改 capabilityId、执行工具或计算业务结果。模型只有在用户明确要求 2–3 项相互独立、无数据依赖的任务时才可返回 plan；含歧义、依赖、顺序不明或超过 3 项时必须 clarify。
+4. Dart `LocalAiIntentResolution.fromModelText` 要求纯 JSON 对象、输出不超过 2,000 字符、字段白名单仅 `action/tool_id/tool_ids`，动作仅 select/plan/clarify/none；计划为 2–3 个唯一 ID。服务层再次校验 select/plan 的 ID 必须属于当前候选集合。解析或 Native 调用失败时，屏幕退回确定性 L0 澄清，不派发模型自造动作。
+
+### 12.2 自动多工具计划的放行范围
+
+`AssistantToolExecutionPlanBuilder` 当前仅允许以下 4 个工具进入 AI 多工具计划：
+
+- `dosage`：调用 App 原有度量衡单位转换，不是临床处方或药物剂量建议；
+- `solar_terms`：调用 App 节气服务并读取本地节气知识资产；
+- `yuxiaji_omen`：只读取 App 本机时辰与本地民俗条目，不接受模型提供观察输入；
+- `sanshan_lingqian`：由 App 本地随机源从 92 签数据中抽取，模型不得指定签号。
+
+其余 Headless 工具即使已注册执行器，只要依赖页面持有的表单/追问状态或不在 `planEligibleToolIds`，就不能加入自动计划。当前硬限制：候选 2–6 项、计划 2–3 步、工具 ID 唯一、每个步骤均属于候选集且具有 Headless executor，注册表 capabilityId 必须与 Dispatcher 注册一致。
+
+**模型只选 ID，不提供参数或 capabilityId。** Builder 从原始用户文本调用 `AssistantConversationOrchestrator.argumentsFor` 确定性提取参数，再对每个步骤调用 `AssistantToolArguments.validateAgainst`。任一参数预检失败，整个计划不暴露给执行器，不会部分执行。模型不允许补默认值、修改实际参数或指定签号。
+
+### 12.3 执行、结果和失败状态边界
+
+- `ToolExecutionPlan` / `ToolExecutionStep` 是不可变计划，包含 origin、planId、toolId、capabilityId 和字符串参数映射。
+- `HeadlessToolDispatcher.executePlan` 是唯一 Headless 执行器入口。它先对完整计划逐步核验 toolId/capabilityId/执行器注册，再顺序 await 执行；任一步结果非 SUCCEEDED 即停止后续步骤；执行器抛异常则当前步骤记 UNKNOWN，保留先前成功结果并停止，绝不自动重放。
+- `HeadlessToolResultHandler` 校验结果身份、实际参数、结构化字段和 sourceIds。旧式页面 String、来源缺失、参数不匹配和 UNKNOWN 不能成为可解读的成功事实。
+- `HeadlessToolPlanResultHandler` 保留逐步结果，不混并异类业务字段；只有所有步骤都执行且通过结果契约校验时才允许 AI 解读。屏幕单独记录每步 argumentValidation/businessExecution/resultValidation TRACE，并持久化各步状态。
+- Native `AiModelAccessGate` 是模型推理授权 Gate；Headless Dispatcher 不另建一套付费 Gate，也没有独立 license/BuildContext/UI 职责。该 Gate 不等于每项业务能力自己的授权或用户确认规则。
+
+### 12.4 已有测试证据
+
+- `test/assistant_tool_execution_plan_builder_test.dart`：候选 ID 计划构建、Page-only 拒绝、依赖页面追问状态的工具拒绝、候选集外 ID 拒绝、重复/超量步骤拒绝、缺少必填参数拒绝。
+- `test/local_ai_service_test.dart`：受限意图候选转发、选择候选集外工具拒绝、clarify 不派发；`LocalAiIntentResolution` schema 测试覆盖 action/字段/计划结构边界。
+- `test/headless_tool_dispatcher_test.dart`：Page-only 与未注册工具拒绝、capability 不匹配在执行前拒绝、步骤失败后停止、异常转换 UNKNOWN 并停止后续步骤。
+- `test/headless_tool_result_handler_test.dart`：结果身份/参数/sourceId 校验；UNKNOWN、旧页面 String、未执行结果不能交给 AI 解读。
+- `test/headless_tool_plan_result_handler_test.dart` 与 `test/assistant_tool_result_handoff_test.dart`：计划逐步结果呈现、工具结果与对话时间线交接。
+- 上述测试文件的存在和断言说明已有回归覆盖；本节未声称这些测试在本次文档分支上重新运行，也未声称真机 TRACE 已通过。
+
+### 12.5 仍未闭环的 Core-4 边界
+
+| 项目 | 当前状态 | 事实边界 |
+|---|---|---|
+| Headless 执行入口与注册映射 | IMPLEMENTED | Dispatcher 有 18 个确定性 executor 与 toolId→capabilityId 映射；Page-only 不可执行 |
+| AI 计划候选约束与整计划预检 | IMPLEMENTED | 仅当前 4 个 planEligible 工具；2–3 步，参数由 App 从原文提取 |
+| 结果来源/实际参数/UNKNOWN 语义 | PARTIAL | 已有统一结果 DTO 与校验；不同能力的来源粒度和参数覆盖仍不完全一致 |
+| typed args / 版本化能力 schema | PARTIAL | 现有 `Map<String,String>` 和 ParameterType（text/date/time/integer/choice）不能表达所有单位、范围、跨字段和对象约束；部分执行器另有局部校验 |
+| 每项业务授权、二次用户确认 | PARTIAL | 多工具计划依赖用户原始请求明确提出独立任务与确定性 allowlist；未形成覆盖所有 18 项能力的统一权限/确认策略。新添有持久化副作用或不可逆动作前必须独立审计并增加明确确认 |
+| 幂等、取消、超时、并发去重 | MISSING / UNKNOWN | 未见统一 invocation 幂等键、可靠取消或超时后的副作用核验；UNKNOWN 不重放只覆盖已识别的执行异常路径 |
+| Core-5 跨层闭环 | MISSING | 尚无真实模型多工具计划→Dispatcher→ExecutionResult→结构化推理回流的完整 E2E 和设备 TRACE |
+
+**禁止据此扩大自动执行范围：** 不把 18 个 Headless 注册项等同于 18 个可自动规划项；不把 Native AI access Gate 当成业务权限；不因本地计算没有远程 API 就推定未来无副作用。任何新增 planEligible ID 必须同时更新参数/权限审计、正负向测试、结果来源与 UNKNOWN/副作用处理。
