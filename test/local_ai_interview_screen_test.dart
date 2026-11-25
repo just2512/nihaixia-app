@@ -1120,6 +1120,83 @@ Future<void> _warmLearningKnowledgeSources(WidgetTester tester) async {
   );
 }
 
+class _LearningProtocolTextSendService extends _TextSendService {
+  _LearningProtocolTextSendService({this.rawResponseOverride});
+
+  final String? rawResponseOverride;
+  Map<String, dynamic>? lastRequestEnvelope;
+  String? lastSessionStateContext;
+  int? lastSessionStateConversationId;
+
+  String _responseFor(String text, int conversationId, String context,
+      String? sessionStateContext, int? sessionStateConversationId,
+      {String? traceId}) {
+    sentTexts.add(text);
+    sentConversationIds.add(conversationId);
+    sentContexts.add(context);
+    if (traceId != null) sentTraceIds.add(traceId);
+    lastSessionStateContext = sessionStateContext;
+    lastSessionStateConversationId = sessionStateConversationId;
+
+    const marker = '【App 本轮推理请求元数据 v1】\n';
+    final markerIndex = context.lastIndexOf(marker);
+    if (markerIndex < 0) {
+      throw StateError('REASONING_REQUEST_METADATA_NOT_FOUND_IN_CONTEXT');
+    }
+    final jsonLine = context.substring(markerIndex + marker.length).split('\n').first;
+    lastRequestEnvelope = jsonDecode(jsonLine) as Map<String, dynamic>;
+    if (rawResponseOverride != null) return rawResponseOverride!;
+
+    final ranked = (lastRequestEnvelope!['rankedEvidence'] as List<dynamic>? ?? const []);
+    final first = ranked.isEmpty
+        ? null
+        : Map<String, dynamic>.from(ranked.first as Map);
+    return jsonEncode({
+      'schemaVersion': 1,
+      'requestId': lastRequestEnvelope!['requestId'],
+      'responseKind': first == null ? 'INSUFFICIENT_EVIDENCE' : 'ANSWER',
+      'status': first == null ? 'INSUFFICIENT_EVIDENCE' : 'COMPLETED',
+      'segments': [
+        first == null ? '本轮没有可引用证据。' : '本轮结构化回答',
+      ],
+      'referencedEvidenceIds':
+          first == null ? <String>[] : <String>[first['evidenceId'] as String],
+      'unknowns': first == null ? <String>['缺少可引用证据'] : <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+    });
+  }
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required int conversationId,
+    required String context,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async =>
+      _responseFor(text, conversationId, context, sessionStateContext,
+          sessionStateConversationId);
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required int conversationId,
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async =>
+      _responseFor(text, conversationId, context, sessionStateContext,
+          sessionStateConversationId, traceId: traceId);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
@@ -6989,556 +7066,6 @@ void mainRedFlagEntrypointOrderingTests() {
   });
 
 
-class _LearningProtocolTextSendService extends _TextSendService {
-  _LearningProtocolTextSendService({this.rawResponseOverride});
-
-  final String? rawResponseOverride;
-  Map<String, dynamic>? lastRequestEnvelope;
-  String? lastSessionStateContext;
-  int? lastSessionStateConversationId;
-
-  String _responseFor(String text, int conversationId, String context,
-      String? sessionStateContext, int? sessionStateConversationId,
-      {String? traceId}) {
-    sentTexts.add(text);
-    sentConversationIds.add(conversationId);
-    sentContexts.add(context);
-    if (traceId != null) sentTraceIds.add(traceId);
-    lastSessionStateContext = sessionStateContext;
-    lastSessionStateConversationId = sessionStateConversationId;
-
-    const marker = '【App 本轮推理请求元数据 v1】\n';
-    final markerIndex = context.lastIndexOf(marker);
-    if (markerIndex < 0) {
-      throw StateError('REASONING_REQUEST_METADATA_NOT_FOUND_IN_CONTEXT');
-    }
-    final jsonLine = context.substring(markerIndex + marker.length).split('\n').first;
-    lastRequestEnvelope = jsonDecode(jsonLine) as Map<String, dynamic>;
-    if (rawResponseOverride != null) return rawResponseOverride!;
-
-    final ranked = (lastRequestEnvelope!['rankedEvidence'] as List<dynamic>? ?? const []);
-    final first = ranked.isEmpty
-        ? null
-        : Map<String, dynamic>.from(ranked.first as Map);
-    return jsonEncode({
-      'schemaVersion': 1,
-      'requestId': lastRequestEnvelope!['requestId'],
-      'responseKind': first == null ? 'INSUFFICIENT_EVIDENCE' : 'ANSWER',
-      'status': first == null ? 'INSUFFICIENT_EVIDENCE' : 'COMPLETED',
-      'segments': [
-        first == null ? '本轮没有可引用证据。' : '本轮结构化回答',
-      ],
-      'referencedEvidenceIds':
-          first == null ? <String>[] : <String>[first['evidenceId'] as String],
-      'unknowns': first == null ? <String>['缺少可引用证据'] : <String>[],
-      'conflicts': <String>[],
-      'omittedEvidenceIds': <String>[],
-    });
-  }
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async =>
-      _responseFor(text, conversationId, context, sessionStateContext,
-          sessionStateConversationId);
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required int conversationId,
-    required String context,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async =>
-      _responseFor(text, conversationId, context, sessionStateContext,
-          sessionStateConversationId, traceId: traceId);
-}
-
-class _FailingIntentSelectionService extends _TextSendService {
-  @override
-  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
-    required String query,
-    required List<LocalAiIntentCandidate> candidates,
-    required String traceId,
-  }) async {
-    intentQueries.add(query);
-    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
-    intentTraceIds.add(traceId);
-    throw PlatformException(
-      code: 'INTENT_CLASSIFICATION_FAILED',
-      message: 'intent classification unavailable in test',
-    );
-  }
-}
-
-class _FailingTextSendService extends _TextSendService {
-  @override
-  Future<String> sendMessageWithTrace(
-    String text, {
-    required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    throw PlatformException(
-      code: 'NATIVE_SEND_FAILED',
-      message: 'native send failed in test',
-    );
-  }
-}
-
-const _releasedStatus = LocalAiModelStatus(
-  installed: true,
-  fileExists: true,
-  ready: false,
-  modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
-  sizeBytes: 3659530240,
-  expectedSizeBytes: 3659530240,
-  backend: 'not_loaded',
-);
-
-class _HashVerificationFailureService extends LocalAiService {
-  var _hashVerified = true;
-  var loadCalls = 0;
-  var statusCalls = 0;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async {
-    statusCalls += 1;
-    return LocalAiModelStatus(
-      installed: true,
-      fileExists: true,
-      hashVerified: _hashVerified,
-      ready: false,
-      modelPath: '/app/ai_models/gemma-4-E4B-it.litertlm',
-      sizeBytes: 3659530240,
-      expectedSizeBytes: 3659530240,
-      backend: 'not_loaded',
-    );
-  }
-
-  @override
-  Future<LocalAiModelStatus> loadModel() async {
-    loadCalls += 1;
-    _hashVerified = false;
-    throw PlatformException(
-      code: 'MODEL_HASH_MISMATCH',
-      message: '模型 SHA-256 校验失败，请重新导入',
-    );
-  }
-}
-
-class _DeferredModelSetupService extends LocalAiService {
-  final loadResult = Completer<LocalAiModelStatus>();
-  final importResult = Completer<LocalAiModelStatus>();
-  var loadCalls = 0;
-  var importCalls = 0;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async => _releasedStatus;
-
-  @override
-  Future<LocalAiModelStatus> loadModel() {
-    loadCalls += 1;
-    return loadResult.future;
-  }
-
-  @override
-  Future<LocalAiModelStatus> importModel() {
-    importCalls += 1;
-    return importResult.future;
-  }
-}
-
-
-class _ModelControlFailureService extends _TextSendService {
-  var resetCalls = 0;
-  var releaseCalls = 0;
-
-  @override
-  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
-    resetCalls += 1;
-    throw PlatformException(
-      code: 'RESET_FAILED',
-      message: '模拟会话重置失败',
-    );
-  }
-
-  @override
-  Future<LocalAiModelStatus> releaseModel() async {
-    releaseCalls += 1;
-    throw PlatformException(
-      code: 'RELEASE_FAILED',
-      message: '模拟模型释放失败',
-    );
-  }
-}
-
-class _ModelControlTeardownFailureService extends _TextSendService {
-  var resetCalls = 0;
-  var releaseCalls = 0;
-  var _status = _readyStatus;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async => _status;
-
-  @override
-  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
-    resetCalls += 1;
-    _status = _releasedStatus;
-    throw PlatformException(
-      code: 'RESET_FAILED_AFTER_TEARDOWN',
-      message: '模拟会话重置失败',
-    );
-  }
-
-  @override
-  Future<LocalAiModelStatus> releaseModel() async {
-    releaseCalls += 1;
-    _status = _releasedStatus;
-    throw PlatformException(
-      code: 'RELEASE_FAILED_AFTER_TEARDOWN',
-      message: '模拟模型释放失败',
-    );
-  }
-}
-
-class _UnknownStatusAfterResetService extends _TextSendService {
-  var resetCalls = 0;
-  var statusCalls = 0;
-  var _statusUnavailable = false;
-  var _recoveredNotReady = false;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async {
-    statusCalls += 1;
-    if (_statusUnavailable) {
-      throw StateError('模拟原生状态接口暂不可用');
-    }
-    return _recoveredNotReady ? _releasedStatus : _readyStatus;
-  }
-
-  @override
-  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
-    resetCalls += 1;
-    _statusUnavailable = true;
-    throw PlatformException(
-      code: 'RESET_FAILED_STATUS_UNKNOWN',
-      message: '模拟会话重置失败',
-    );
-  }
-
-  void recoverAsNotReady() {
-    _statusUnavailable = false;
-    _recoveredNotReady = true;
-  }
-}
-
-class _PostSendStatusFailureService extends _TextSendService {
-  _PostSendStatusFailureService({this.failSend = false});
-
-  final bool failSend;
-  var _statusUnavailable = false;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async {
-    if (_statusUnavailable) {
-      throw StateError('模拟推理后原生状态接口暂不可用');
-    }
-    return _readyStatus;
-  }
-
-  @override
-  Future<String> sendMessage(
-    String text, {
-    required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    sentTexts.add(text);
-    _statusUnavailable = true;
-    if (failSend) {
-      throw PlatformException(
-        code: 'INFERENCE_FAILED',
-        message: '模拟本地推理失败',
-      );
-    }
-    return '本轮回复：$text';
-  }
-
-  void recoverAsReady() {
-    _statusUnavailable = false;
-  }
-}
-
-class _PostSendNotReadyStatusService extends _TextSendService {
-  _PostSendNotReadyStatusService({required this.failOnTrigger});
-
-  final bool failOnTrigger;
-  static const triggerText = '触发原生模型卸载的本轮输入';
-  var _notReady = false;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async =>
-      _notReady ? _releasedStatus : _readyStatus;
-
-  @override
-  Future<LocalAiModelStatus> loadModel() async {
-    _notReady = false;
-    return _readyStatus;
-  }
-
-  @override
-  Future<String> sendMessage(
-    String text, {
-    required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    sentTexts.add(text);
-    if (text == triggerText) {
-      _notReady = true;
-      if (failOnTrigger) {
-        throw PlatformException(
-          code: 'INFERENCE_FAILED_AFTER_TEARDOWN',
-          message: '模拟模型卸载前推理失败',
-        );
-      }
-      return '模型卸载前生成的回复';
-    }
-    return '历史回复：$text';
-  }
-}
-
-class _ModelControlService extends _TextSendService {
-  var resetCalls = 0;
-  var releaseCalls = 0;
-
-  @override
-  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
-    resetCalls += 1;
-    return _readyStatus;
-  }
-
-  @override
-  Future<LocalAiModelStatus> releaseModel() async {
-    releaseCalls += 1;
-    return _releasedStatus;
-  }
-}
-
-class _DraftTextService extends _TextSendService {
-  var extractionCalls = 0;
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
-    extractionCalls += 1;
-    return const LocalAiSymptomDraft(
-      mainComplaint: '饭后腹胀',
-      duration: '约两周',
-      unknowns: ['是否与某种食物有关'],
-    );
-  }
-}
-
-class _CandidateDraftTextService extends _DraftTextService {
-  _CandidateDraftTextService(this.candidate);
-
-  final LocalAiSymptomQuestionCandidate candidate;
-
-  LocalAiSymptomDraft _candidateDraft({
-    String sourceText = '我饭后腹胀，已经持续约两周。',
-  }) => LocalAiSymptomDraft(
-        mainComplaint: '饭后腹胀',
-        duration: '约两周',
-        unknowns: const ['是否与某种食物有关'],
-        questionCandidates: [candidate],
-        sourceText: sourceText,
-      );
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
-    extractionCalls += 1;
-    return _candidateDraft();
-  }
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
-    required int conversationId,
-    required String sourceText,
-    required List<Map<String, Object?>> questionSchema,
-    bool sourceTruncated = false,
-  }) async {
-    extractionCalls += 1;
-    return _candidateDraft();
-  }
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
-    required int conversationId,
-    required String traceId,
-    required String sourceText,
-    required List<Map<String, Object?>> questionSchema,
-    bool sourceTruncated = false,
-  }) async {
-    extractionCalls += 1;
-    return _candidateDraft();
-  }
-}
-
-class _InterviewHandoffHost extends StatefulWidget {
-  const _InterviewHandoffHost({required this.service});
-
-  final LocalAiService service;
-
-  @override
-  State<_InterviewHandoffHost> createState() => _InterviewHandoffHostState();
-}
-
-class _InterviewHandoffHostState extends State<_InterviewHandoffHost> {
-  String? returnedSummary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          TextButton(
-            onPressed: () async {
-              final summary = await Navigator.of(context).push<String>(
-                MaterialPageRoute(
-                  builder: (_) => LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: widget.service),
-                ),
-              );
-              if (!mounted || summary == null) return;
-              setState(() => returnedSummary = summary);
-            },
-            child: const Text('打开本地问诊'),
-          ),
-          if (returnedSummary != null)
-            Text(returnedSummary!, key: const ValueKey('returned-summary')),
-        ],
-      ),
-    );
-  }
-}
-
-
-
-class _DelayedHistoryConversationStore extends _MemoryConversationStore {
-  final Completer<void> firstReadGate = Completer<void>();
-
-  @override
-  Future<List<Map<String, Object?>>> getAssistantMessages({
-    required int conversationId,
-  }) async {
-    if (conversationId == 1) await firstReadGate.future;
-    return super.getAssistantMessages(conversationId: conversationId);
-  }
-}
-
-class _FailOnceTextSendService extends LocalAiService {
-  var sendAttempts = 0;
-
-  @override
-  Future<LocalAiModelStatus> getStatus() async => _readyStatus;
-
-  @override
-  Future<String> sendMessage(
-    String text, {
-    required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async {
-    sendAttempts += 1;
-    if (sendAttempts == 1) {
-      throw PlatformException(
-        code: 'NATIVE_ERROR',
-        message: '首次本地推理失败',
-      );
-    }
-    return '重试成功：$text';
-  }
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) => sendMessage(text, conversationId: conversationId);
-}
-
-class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
-  final sentTraceIds = <String>[];
-
-  @override
-  Future<String> sendMessageWithTrace(
-    String text, {
-    required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) {
-    sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
-  }
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required int conversationId,
-    required String context,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) {
-    sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
-  }
-}
-
-class _UnexpectedStatusFailureService extends LocalAiService {
-  @override
-  Future<LocalAiModelStatus> getStatus() async {
-    throw StateError('status response was malformed');
-  }
-}
-
 testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并保留 Native 会话通道',
     (tester) async {
   await _warmLearningKnowledgeSources(tester);
@@ -7629,11 +7156,10 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
       reason: '泛知识上下文不得重复注入会话记忆事实');
   expect(find.textContaining('本轮结构化回答', findRichText: true), findsOneWidget);
   expect(find.text('本轮检索资料'), findsOneWidget);
-  expect(find.text('本轮检索资料'), findsOneWidget);
   expect(
     find.textContaining(sourceId),
     findsNothing,
-    reason: '来源身份只保存在消息元数据和 App 回链入口，不进入正常对话文本',
+    reason: '来源身份只保存在消息元数据与 App 回链入口，不进入正常对话文本',
   );
 
   final rows = await _store.getAssistantMessages(
