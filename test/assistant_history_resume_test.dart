@@ -477,7 +477,7 @@ void main() {
         mode: 'learning',
         selectedMode: 'automatic',
         sourceIds: const ['formula:gui-zhi-tang'],
-        knowledgeStatus: 'PARTIAL',
+        knowledgeStatus: 'PARTIAL:PROTOCOL_REJECTED',
       ).encode(),
     });
     final service = _HistoryResumeService();
@@ -499,6 +499,7 @@ void main() {
     await _pumpFrames(tester);
 
     expect(find.text('知识检索：部分结果'), findsOneWidget);
+    expect(find.text('结构化协议校验：未通过'), findsOneWidget);
     expect(find.text('方剂：gui-zhi-tang'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
