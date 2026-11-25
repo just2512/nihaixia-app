@@ -55,6 +55,18 @@ class ReasoningKnowledgeAnswerAdapter {
         'A contextual entry requires a complete resolved App source reference.',
       );
     }
+    final localBacklink = switch (reference.moduleId) {
+      'formula' => () {
+          final formulaId = entry.content['id'];
+          if (formulaId is! String || formulaId.trim().isEmpty) {
+            throw StateError('Resolved formula entry is missing its local asset ID.');
+          }
+          return 'assets/data/formulas.json#id=$formulaId';
+        }(),
+      // Other resolver-backed knowledge entries already store their stable
+      // local locator in sourceId (for example herbs and Neijing records).
+      _ => reference.sourceId,
+    };
     return AssistantKnowledgeContextResult(
       text: AiContextPromptBuilder.buildKnowledgeEntryModelContext(
         entry: entry,
@@ -64,7 +76,7 @@ class ReasoningKnowledgeAnswerAdapter {
           sourceId: reference.sourceId,
           sourceLabel: 'App 当前知识条目',
           title: entry.title,
-          localBacklink: reference.anchorId,
+          localBacklink: localBacklink,
           sourceKind: reference.moduleId,
         ),
       ],
