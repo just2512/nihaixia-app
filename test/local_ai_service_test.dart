@@ -229,7 +229,8 @@ void main() {
       });
 
       final reply = await LocalAiService().sendImage(
-        '/app/cache/tongue.jpg', conversationId: 7,
+        '/app/cache/tongue.jpg',
+        conversationId: 7,
         prompt: '请说明照片是否清晰',
       );
 
@@ -250,7 +251,8 @@ void main() {
       });
 
       final reply = await LocalAiService().sendAudio(
-        '/app/cache/interview.wav', conversationId: 7,
+        '/app/cache/interview.wav',
+        conversationId: 7,
         prompt: '请保留听不清的部分',
       );
 
@@ -406,7 +408,8 @@ void main() {
       });
 
       final reply = await LocalAiService().sendMessageWithContext(
-        '柴胡的传统功用是什么？', conversationId: 7,
+        '柴胡的传统功用是什么？',
+        conversationId: 7,
         context: '[App本草库] 柴胡：原始条目内容',
       );
 
@@ -428,7 +431,8 @@ void main() {
       });
 
       await LocalAiService().sendMessageWithContextAndTrace(
-        '最近不舒服，帮我诊断一下什么问题？', conversationId: 7,
+        '最近不舒服，帮我诊断一下什么问题？',
+        conversationId: 7,
         context: '当前角色：问诊助手',
         traceId: traceId,
         requireMedicalSafety: true,
@@ -1148,7 +1152,8 @@ void main() {
       });
 
       final reply = await LocalAiService().sendMessageWithTrace(
-        '继续问诊', conversationId: 7,
+        '继续问诊',
+        conversationId: 7,
         traceId: traceId,
       );
 
@@ -1171,7 +1176,8 @@ void main() {
       });
 
       final reply = await LocalAiService().sendMessageWithContextAndTrace(
-        '柴胡的传统功用是什么？', conversationId: 7,
+        '柴胡的传统功用是什么？',
+        conversationId: 7,
         context: '[App本草库] 柴胡：原始条目',
         traceId: traceId,
       );
@@ -1217,11 +1223,13 @@ void main() {
       });
 
       await LocalAiService().sendImageWithTrace(
-        '/app/cache/tongue.jpg', conversationId: 7,
+        '/app/cache/tongue.jpg',
+        conversationId: 7,
         traceId: traceId,
       );
       await LocalAiService().sendAudioWithTrace(
-        '/app/cache/interview.wav', conversationId: 7,
+        '/app/cache/interview.wav',
+        conversationId: 7,
         traceId: traceId,
       );
 
@@ -1241,12 +1249,14 @@ void main() {
       });
 
       await LocalAiService().sendImageWithTrace(
-        '/app/cache/medical-image.jpg', conversationId: 7,
+        '/app/cache/medical-image.jpg',
+        conversationId: 7,
         traceId: traceId,
         requireMedicalSafety: true,
       );
       await LocalAiService().sendAudioWithTrace(
-        '/app/cache/medical-audio.wav', conversationId: 7,
+        '/app/cache/medical-audio.wav',
+        conversationId: 7,
         traceId: traceId,
         requireMedicalSafety: true,
       );
@@ -1254,6 +1264,10 @@ void main() {
       expect(received.map((call) => call.method), ['sendImage', 'sendAudio']);
       expect(received.every((call) => call.arguments['require_red_flag'] == true),
           isTrue);
+      expect(
+        received.every((call) => call.arguments['conversation_id'] == 7),
+        isTrue,
+      );
     });
 
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {
