@@ -1,4 +1,3 @@
-import '../models/ai_context_ref.dart';
 import '../models/reasoning_request.dart';
 import '../models/reasoning_response.dart';
 import '../models/session_state_snapshot.dart';
