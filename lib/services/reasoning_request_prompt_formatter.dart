@@ -18,12 +18,14 @@ class ReasoningRequestPromptFormatter {
     ReasoningRequest request, {
     bool includeSessionState = true,
   }) {
-    final sessionStateContext = request.sessionState == null
-        ? '【App 本会话结构化记忆快照】\nstatus=UNKNOWN\n结构化事实：未提供。\n来源引用：未提供。'
-        : SessionStateSnapshotPromptFormatter.format(
-            request.sessionState!,
-            expectedSessionId: request.sessionId,
-          );
+    final sessionStateContext = !includeSessionState
+        ? null
+        : request.sessionState == null
+            ? '【App 本会话结构化记忆快照】\nstatus=UNKNOWN\n结构化事实：未提供。\n来源引用：未提供。'
+            : SessionStateSnapshotPromptFormatter.format(
+                request.sessionState!,
+                expectedSessionId: request.sessionId,
+              );
 
     final envelope = <String, Object?>{
       'schemaVersion': 1,
