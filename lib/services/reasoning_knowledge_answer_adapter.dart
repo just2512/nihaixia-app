@@ -126,11 +126,11 @@ class ReasoningKnowledgeAnswerAdapter {
         .where((value) => value.isNotEmpty);
     final containsInternalId = internalIds.any(
       (value) => RegExp(
-        '(^|[^A-Za-z0-9_])${RegExp.escape(value)}([^A-Za-z0-9_]|$)',
+        '(^|[^A-Za-z0-9_])${RegExp.escape(value)}([^A-Za-z0-9_]|\$)',
       ).hasMatch(text),
     );
     if (containsInternalId ||
-        internalBacklinks.any(text.contains) ||
+        internalBacklinks.any((backlink) => text.contains(backlink)) ||
         RegExp(r'\b(?:sourceId|evidenceId)\s*[:=]', caseSensitive: false)
             .hasMatch(text) ||
         RegExp(r'(^|\s)(?:assets/|/data/(?:user|data)/)\S+')
