@@ -19,7 +19,7 @@ void main() {
 
   test('知识来源、已校验工具参数和执行结果可由统一消息契约恢复', () async {
     final knowledge = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
-      '桂枝汤',
+      '医案 桂枝汤',
     );
 
     expect(knowledge.sources, isNotEmpty);
