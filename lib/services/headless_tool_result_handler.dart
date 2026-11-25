@@ -193,10 +193,20 @@ class HeadlessToolResultHandler {
               )
             : null;
 
+    // The registered tool definition, not an executor result, owns the UI label.
+    final displayResult = AssistantToolResult(
+      toolId: result.toolId,
+      title: toolTitle,
+      values: result.values,
+      disclaimer: result.disclaimer,
+      sourceIds: result.sourceIds,
+      arguments: result.arguments,
+      status: result.status,
+    );
     final responseText = followUp?.kind ==
             HeadlessToolFollowUpKind.birthplaceClarification
         ? followUp!.message
-        : '【${toolTitle}执行结果】\n${result.toConversationText()}';
+        : '【${toolTitle}执行结果】\n${displayResult.toConversationText()}';
 
     final canInterpret =
         result.status == AssistantToolExecutionStatus.succeeded &&
