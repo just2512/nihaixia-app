@@ -196,6 +196,215 @@ void main() {
     });
   });
 
+  group('LocalAiService structured reasoning two-phase contract', () {
+    const requestId = '0123456789abcdef0123456789abcdef';
+    const traceId = 'abcdefabcdefabcdefabcdefabcdefab';
+
+    test('sends the structured context separately and returns an uncommitted reply', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{
+          'request_id': requestId,
+          'reply': '{"schemaVersion":1}',
+          'backend': 'gpu',
+          'trace_id': traceId,
+        };
+      });
+
+      final result = await LocalAiService().sendReasoningMessageWithTrace(
+        '解释桂枝汤',
+        conversationId: 17,
+        requestId: requestId,
+        context: '本轮本地证据正文',
+        reasoningContext: '独立请求协议元数据',
+        traceId: traceId,
+        sessionStateContext: '只读会话快照',
+        sessionStateConversationId: 17,
+      );
+
+      expect(received?.method, 'sendReasoningMessage');
+      expect(received?.arguments, {
+        'conversation_id': 17,
+        'request_id': requestId,
+        'text': '解释桂枝汤',
+        'context': '本轮本地证据正文',
+        'reasoning_context': '独立请求协议元数据',
+        'session_state_context': '只读会话快照',
+        'session_state_conversation_id': 17,
+        'trace_id': traceId,
+      });
+      expect(result.requestId, requestId);
+      expect(result.reply, '{"schemaVersion":1}');
+      expect(result.backend, 'gpu');
+      expect(result.traceId, traceId);
+    });
+
+    test('rejects a Native response bound to another request ID', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async => {
+            'request_id': 'fedcba9876543210fedcba9876543210',
+            'reply': '{"schemaVersion":1}',
+            'backend': 'cpu',
+          });
+
+      await expectLater(
+        LocalAiService().sendReasoningMessage(
+          '问题',
+          conversationId: 17,
+          requestId: requestId,
+          context: '',
+          reasoningContext: '',
+        ),
+        throwsA(isA<PlatformException>().having(
+          (error) => error.code,
+          'code',
+          'REASONING_PENDING_REQUEST_ID_MISMATCH',
+        )),
+      );
+    });
+
+    test('rejects oversized supplemental context before invoking Native', () async {
+      var invoked = false;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        invoked = true;
+        return <String, Object?>{};
+      });
+
+      await expectLater(
+        LocalAiService().sendReasoningMessage(
+          '问题',
+          conversationId: 17,
+          requestId: requestId,
+          context: '',
+          reasoningContext: 'x' * 24001,
+        ),
+        throwsArgumentError,
+      );
+      expect(invoked, isFalse);
+    });
+
+    test('retries only the Native finalize acknowledgement with the same request ID', () async {
+      var invocations = 0;
+      final received = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        invocations += 1;
+        received.add(call);
+        if (invocations == 1) {
+          throw PlatformException(code: 'CHANNEL_ERROR');
+        }
+        return <String, Object?>{
+          'finalized': true,
+          'request_id': requestId,
+          'already_finalized': true,
+        };
+      });
+
+      await LocalAiService().finalizeReasoningTurn(
+        conversationId: 17,
+        requestId: requestId,
+        validatedAnswer: '经过协议校验的自然语言答案',
+      );
+
+      expect(invocations, 2);
+      expect(received.map((call) => call.method), everyElement('finalizeReasoningTurn'));
+      expect(received[0].arguments, received[1].arguments);
+    });
+
+    test('retries only the Native reject acknowledgement with the same request ID', () async {
+      var invocations = 0;
+      final received = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        invocations += 1;
+        received.add(call);
+        if (invocations == 1) {
+          throw PlatformException(code: 'CHANNEL_ERROR');
+        }
+        return <String, Object?>{
+          'rejected': true,
+          'request_id': requestId,
+          'already_rejected': true,
+        };
+      });
+
+      await LocalAiService().rejectReasoningTurn(
+        conversationId: 17,
+        requestId: requestId,
+      );
+
+      expect(invocations, 2);
+      expect(received.map((call) => call.method), everyElement('rejectReasoningTurn'));
+      expect(received[0].arguments, received[1].arguments);
+    });
+
+    test('retries only a failed Native completion acknowledgement, never inference', () async {
+      var calls = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'finalizeReasoningTurn');
+        calls += 1;
+        if (calls == 1) {
+          throw PlatformException(
+            code: 'CHANNEL_ACK_LOST',
+            message: 'simulate a lost first acknowledgement',
+          );
+        }
+        return <String, Object?>{
+          'finalized': true,
+          'request_id': requestId,
+          'already_finalized': true,
+        };
+      });
+
+      await LocalAiService().finalizeReasoningTurn(
+        conversationId: 17,
+        requestId: requestId,
+        validatedAnswer: '经过协议校验的自然语言答案',
+      );
+
+      expect(calls, 2,
+          reason: '只重试幂等 finalize 回执操作，不重放模型生成');
+    });
+
+    test('finalizes only when Native confirms the same request', () async {
+      final received = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received.add(call);
+        return <String, Object?>{'finalized': true, 'request_id': requestId};
+      });
+
+      await LocalAiService().finalizeReasoningTurn(
+        conversationId: 17,
+        requestId: requestId,
+        validatedAnswer: '经过协议校验的自然语言答案',
+      );
+
+      expect(received.single.method, 'finalizeReasoningTurn');
+      expect(received.single.arguments, {
+        'conversation_id': 17,
+        'request_id': requestId,
+        'answer_text': '经过协议校验的自然语言答案',
+      });
+    });
+
+    test('rejects a pending request and verifies Native acknowledgement', () async {
+      final received = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received.add(call);
+        return <String, Object?>{'rejected': true, 'request_id': requestId};
+      });
+
+      await LocalAiService().rejectReasoningTurn(
+        conversationId: 17,
+        requestId: requestId,
+      );
+
+      expect(received.single.method, 'rejectReasoningTurn');
+      expect(received.single.arguments, {
+        'conversation_id': 17,
+        'request_id': requestId,
+      });
+    });
+  });
+
   group('LocalAiService attachment channel contract', () {
     test('importModel returns native model installation status', () async {
       MethodCall? received;

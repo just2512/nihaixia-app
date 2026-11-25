@@ -5,6 +5,21 @@ import 'local_ai_transcript_restore_policy.dart';
 /// Android 本地 Gemma 4 E4B 通道。
 ///
 /// 模型文件存放在应用私有目录，不进入 APK；非 Android 平台明确返回不可用。
+/// Raw structured response held only by the Dart verifier between Native phases.
+class LocalAiReasoningPendingReply {
+  const LocalAiReasoningPendingReply({
+    required this.requestId,
+    required this.reply,
+    required this.backend,
+    this.traceId,
+  });
+
+  final String requestId;
+  final String reply;
+  final String backend;
+  final String? traceId;
+}
+
 class LocalAiService {
   static const MethodChannel _channel =
       MethodChannel('com.nihaisha.app/local_ai');
@@ -63,6 +78,188 @@ class LocalAiService {
       );
     }
     return LocalAiModelStatus.fromMap(data);
+  }
+
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) =>
+      _sendReasoningMessage(
+        text,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
+      );
+
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) =>
+      _sendReasoningMessage(
+        text,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        traceId: traceId,
+        requireMedicalSafety: requireMedicalSafety,
+        redFlagContext: redFlagContext,
+        redFlagContextTruncated: redFlagContextTruncated,
+        sessionStateContext: sessionStateContext,
+        sessionStateConversationId: sessionStateConversationId,
+      );
+
+  Future<LocalAiReasoningPendingReply> _sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async {
+    final normalizedText = text.trim();
+    if (normalizedText.isEmpty) {
+      throw PlatformException(code: 'EMPTY_MESSAGE', message: '请输入内容后再发送');
+    }
+    if (!RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(requestId)) {
+      throw ArgumentError.value(requestId, 'requestId', 'REASONING_REQUEST_ID_INVALID');
+    }
+    if (reasoningContext.length > 24000) {
+      throw ArgumentError.value(
+        reasoningContext.length,
+        'reasoningContext',
+        'REASONING_REQUEST_SUPPLEMENTAL_CONTEXT_EXCEEDS_CHARACTER_BOUND',
+      );
+    }
+    final normalizedTraceId = _normalizeTraceId(traceId);
+    final data = await _channel.invokeMapMethod<String, dynamic>(
+      'sendReasoningMessage',
+      {
+        'conversation_id': _requireConversationId(conversationId),
+        'request_id': requestId,
+        'text': normalizedText,
+        'context': context,
+        'reasoning_context': reasoningContext,
+        if (requireMedicalSafety) 'require_red_flag': true,
+        if (requireMedicalSafety &&
+            redFlagContext != null &&
+            redFlagContext.trim().isNotEmpty)
+          'red_flag_context': redFlagContext.trim(),
+        if (requireMedicalSafety && redFlagContextTruncated)
+          'red_flag_context_truncated': true,
+        if (sessionStateContext?.trim().isNotEmpty == true) ...{
+          'session_state_context': sessionStateContext!.trim(),
+          'session_state_conversation_id': _requireConversationId(
+            sessionStateConversationId ?? conversationId,
+          ),
+        },
+        if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
+      },
+    );
+    _verifyTraceId(data, normalizedTraceId);
+    if (data?['request_id'] != requestId) {
+      throw PlatformException(
+        code: 'REASONING_PENDING_REQUEST_ID_MISMATCH',
+        message: 'Native 返回的待校验请求标识与本轮不一致',
+      );
+    }
+    final reply = data?['reply'];
+    final backend = data?['backend'];
+    if (reply is! String || reply.trim().isEmpty || backend is! String) {
+      throw PlatformException(
+        code: 'EMPTY_REASONING_PENDING_REPLY',
+        message: 'Native 没有返回完整的结构化待校验结果',
+      );
+    }
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      reply: reply,
+      backend: backend,
+      traceId: normalizedTraceId,
+    );
+  }
+
+  Future<Map<String, dynamic>?> _invokeReasoningCompletion(
+    String method,
+    Map<String, Object?> arguments,
+  ) async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>(method, arguments);
+    } on PlatformException {
+      // Native completion is keyed by requestId and idempotent within the
+      // process. Retry only the acknowledgement operation, never inference.
+      return _channel.invokeMapMethod<String, dynamic>(method, arguments);
+    }
+  }
+
+  Future<void> finalizeReasoningTurn({
+    required int conversationId,
+    required String requestId,
+    required String validatedAnswer,
+  }) async {
+    final arguments = <String, Object?>{
+      'conversation_id': _requireConversationId(conversationId),
+      'request_id': requestId,
+      'answer_text': validatedAnswer,
+    };
+    final data = await _invokeReasoningCompletion(
+      'finalizeReasoningTurn',
+      arguments,
+    );
+    if (data?['finalized'] != true || data?['request_id'] != requestId) {
+      throw PlatformException(
+        code: 'REASONING_FINALIZE_NOT_CONFIRMED',
+        message: 'Native 未确认本轮已安全写入成功历史',
+      );
+    }
+  }
+
+  Future<void> rejectReasoningTurn({
+    required int conversationId,
+    required String requestId,
+  }) async {
+    final arguments = <String, Object?>{
+      'conversation_id': _requireConversationId(conversationId),
+      'request_id': requestId,
+    };
+    final data = await _invokeReasoningCompletion(
+      'rejectReasoningTurn',
+      arguments,
+    );
+    if (data?['rejected'] != true || data?['request_id'] != requestId) {
+      throw PlatformException(
+        code: 'REASONING_REJECT_NOT_CONFIRMED',
+        message: 'Native 未确认本轮待处理事务已拒绝',
+      );
+    }
   }
 
   Future<String> sendMessage(
@@ -148,8 +345,6 @@ class LocalAiService {
     return reply;
   }
 
-  /// Sends user text with bounded app-retrieved reference context.
-  /// The native bridge records only [text] for symptom extraction.
   Future<String> sendMessageWithContext(
     String text, {
     required int conversationId,

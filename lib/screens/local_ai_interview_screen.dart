@@ -20,6 +20,8 @@ import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../services/reasoning_knowledge_answer_adapter.dart';
+import '../services/reasoning_request_prompt_formatter.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
 import '../services/headless_tool_result_handler.dart';
@@ -69,6 +71,17 @@ import 'guji_library_screen.dart'; // GujiChapterScreen renders the exact resolv
 const _diagnosticEngineSourceIds = <String>[
   'local-engine:diagnostic-engine',
 ];
+
+String _newReasoningRequestId(String? traceId) {
+  if (traceId != null && RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(traceId)) {
+    return traceId.toLowerCase();
+  }
+  final random = math.Random.secure();
+  return List.generate(
+    16,
+    (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
+}
 
 bool _needsTcmKnowledgeForTool(AssistantMode mode, String toolId) =>
     mode == AssistantMode.tools &&
@@ -269,11 +282,17 @@ class _AssistantTurnResponse {
     required this.text,
     this.sourceIds = const [],
     this.knowledgeStatus,
+    this.nativeInferenceStatus = AiTraceStatus.succeeded,
+    this.protocolValidated = true,
+    this.protocolFailureCode,
   });
 
   final String text;
   final List<String> sourceIds;
   final String? knowledgeStatus;
+  final AiTraceStatus nativeInferenceStatus;
+  final bool protocolValidated;
+  final String? protocolFailureCode;
 }
 
 /// Bounded, user-authored context sent only to the RedFlag safety boundary.
@@ -1142,7 +1161,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<String> _buildSessionStatePromptContext(int conversationId) async {
+  Future<SessionStateSnapshot> _buildSessionStateSnapshot(int conversationId) async {
     SessionStateSnapshot snapshot;
     try {
       final messages = await _conversationStore.getAssistantMessages(
@@ -1185,9 +1204,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         diagnostics: const ['SESSION_STATE_READ_FAILED'],
       );
     }
-    return SessionStateSnapshotPromptFormatter.format(
-      snapshot, expectedSessionId: conversationId,
-    );
+    return snapshot;
   }
 
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
@@ -1201,8 +1218,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
-    final sessionStateContext =
-        await _buildSessionStatePromptContext(conversationId);
+    final sessionStateSnapshot =
+        await _buildSessionStateSnapshot(conversationId);
+    final sessionStateContext = SessionStateSnapshotPromptFormatter.format(
+      sessionStateSnapshot,
+      expectedSessionId: conversationId,
+    );
     Future<String> sendWithContext(String context) async {
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
@@ -1241,6 +1262,144 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               redFlagContextTruncated: redFlagContextTruncated,
             );
     }
+    Future<_AssistantTurnResponse> sendStructuredLearning(
+      AssistantKnowledgeContextResult knowledge,
+    ) async {
+      final requestId = _newReasoningRequestId(traceId);
+      final request = ReasoningKnowledgeAnswerAdapter.createRequest(
+        requestId: requestId,
+        sessionId: conversationId,
+        userText: text.trim(),
+        mode: 'learning',
+        sessionState: sessionStateSnapshot,
+        knowledge: knowledge,
+      );
+      final supplementalContext =
+          ReasoningRequestPromptFormatter.formatSupplementalContext(request);
+      final knowledgeText = knowledge.modelContextText;
+      final roleContext = '当前角色：学习助手。\n'
+          '${AssistantMode.learning.promptHint}\n'
+          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
+      const evidencePresentationBoundary =
+          '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
+          '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
+      final guardedContext = '$evidencePresentationBoundary\n$roleContext';
+      var nativeInvocationStarted = false;
+      var nativeReplyReceived = false;
+      var nativeRequestMayBePending = false;
+      var nativeFinalizeStarted = false;
+      var nativeFinalizeConfirmed = false;
+      var nativeTurnRejected = false;
+      try {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.contextAssembly,
+          status: AiTraceStatus.succeeded,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.modelInput,
+          status: AiTraceStatus.succeeded,
+        );
+        nativeInvocationStarted = true;
+        nativeRequestMayBePending = true;
+        final pending = traceId == null
+            ? await _service.sendReasoningMessage(
+                text.trim(),
+                conversationId: conversationId,
+                requestId: requestId,
+                context: guardedContext,
+                reasoningContext: supplementalContext,
+                sessionStateContext: sessionStateContext,
+                sessionStateConversationId: conversationId,
+                requireMedicalSafety: requireMedicalSafety,
+                redFlagContext: redFlagContext,
+                redFlagContextTruncated: redFlagContextTruncated,
+              )
+            : await _service.sendReasoningMessageWithTrace(
+                text.trim(),
+                conversationId: conversationId,
+                requestId: requestId,
+                context: guardedContext,
+                reasoningContext: supplementalContext,
+                traceId: traceId,
+                sessionStateContext: sessionStateContext,
+                sessionStateConversationId: conversationId,
+                requireMedicalSafety: requireMedicalSafety,
+                redFlagContext: redFlagContext,
+                redFlagContextTruncated: redFlagContextTruncated,
+              );
+        nativeReplyReceived = true;
+        final decoded = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+          raw: pending.reply,
+          request: request,
+          knowledge: knowledge,
+        );
+        if (!decoded.isUsable) {
+          await _service.rejectReasoningTurn(
+            conversationId: conversationId,
+            requestId: requestId,
+          );
+          nativeRequestMayBePending = false;
+          nativeTurnRejected = true;
+          return _AssistantTurnResponse(
+            text: '本轮学习回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
+                '未写入成功历史。可重新发送问题，或继续普通对话。',
+            knowledgeStatus: 'PROTOCOL_REJECTED',
+            protocolValidated: false,
+            protocolFailureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
+          );
+        }
+        nativeFinalizeStarted = true;
+        await _service.finalizeReasoningTurn(
+          conversationId: conversationId,
+          requestId: requestId,
+          validatedAnswer: decoded.answerText,
+        );
+        nativeFinalizeConfirmed = true;
+        nativeRequestMayBePending = false;
+        return _AssistantTurnResponse(
+          text: decoded.answerText,
+          sourceIds: decoded.sourceIds,
+          knowledgeStatus: knowledge.statusLabel,
+        );
+      } catch (error) {
+        if (nativeRequestMayBePending) {
+          try {
+            await _service.rejectReasoningTurn(
+              conversationId: conversationId,
+              requestId: requestId,
+            );
+            nativeTurnRejected = true;
+          } catch (_) {
+            // Finalize may have reached Native before its MethodChannel
+            // acknowledgement was lost. Do not guess or replay that turn.
+          }
+        }
+        final nativeStatus =
+            nativeFinalizeConfirmed || nativeTurnRejected
+                ? AiTraceStatus.succeeded
+                : nativeInvocationStarted
+                    ? AiTraceStatus.unknown
+                    : AiTraceStatus.notStarted;
+        final failureText = nativeTurnRejected
+            ? '本轮结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。'
+            : nativeFinalizeStarted
+                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。'
+                : nativeReplyReceived
+                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。'
+                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。';
+        return _AssistantTurnResponse(
+          text: failureText,
+          knowledgeStatus: 'PROTOCOL_REJECTED',
+          nativeInferenceStatus: nativeStatus,
+          protocolValidated: false,
+          protocolFailureCode: error is PlatformException
+              ? error.code
+              : error.runtimeType.toString(),
+        );
+      }
+    }
     switch (mode) {
       case AssistantMode.automatic:
         final query = _knowledgeQueryForCurrentTurn(text);
@@ -1261,18 +1420,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   knowledge.status == AssistantKnowledgeRetrievalStatus.partial),
         );
         if (knowledgeIntent.mode == AssistantMode.learning) {
-          final learningContext = '当前角色：学习助手。\n'
-              '${AssistantMode.learning.promptHint}\n'
-              '方剂、本草或穴位实体已匹配，且本轮已有可回查的本地资料。'
-              '先直接围绕用户输入的实体解释基本信息；只使用下方本轮资料支持的内容，'
-              '没有覆盖的组成、主治、条文或出处应明确说明，不得自行补造。\n'
-              '${knowledge.modelContextText}';
-          final reply = await sendWithContext(learningContext);
-          return _AssistantTurnResponse(
-            text: reply,
-            sourceIds: knowledge.sourceIds,
-            knowledgeStatus: knowledge.statusLabel,
-          );
+          return sendStructuredLearning(knowledge);
         }
         // 无命中且无失败时，不注入知识检索框架与角色 context——
         // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
@@ -1369,14 +1517,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           includeMedicalCases:
               AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
-        final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
-            '${knowledge.modelContextText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n${knowledge.modelContextText}'}';
-        final reply = await sendWithContext(context);
-        return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge.sourceIds,
-          knowledgeStatus: knowledge.statusLabel,
-        );
+        return sendStructuredLearning(knowledge);
+
       case AssistantMode.tools:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
             .map((tool) => tool.title)
@@ -5874,11 +6016,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         redFlagContextTruncated:
             requiresMedicalSafety && redFlagContext.sourceTruncated,
       );
-      inferenceCompleted = true;
+      inferenceCompleted = response.nativeInferenceStatus == AiTraceStatus.succeeded;
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.succeeded,
+        status: response.nativeInferenceStatus,
         mode: mode.name,
         toolId: toolId,
       );
@@ -5889,18 +6031,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.modelOutput,
-        status: AiTraceStatus.succeeded,
+        status: response.protocolValidated ? AiTraceStatus.succeeded : AiTraceStatus.failed,
         mode: mode.name,
         toolId: toolId,
         sourceIds: mergedSourceIds,
+        errorCode: response.protocolFailureCode,
       );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.resultValidation,
-        status: AiTraceStatus.succeeded,
+        status: response.protocolValidated ? AiTraceStatus.succeeded : AiTraceStatus.failed,
         mode: mode.name,
         toolId: toolId,
         sourceIds: mergedSourceIds,
+        errorCode: response.protocolFailureCode,
       );
       if (!mounted) return;
       setState(() {
@@ -5912,25 +6056,38 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledgeStatus: response.knowledgeStatus,
         ));
       });
-      final persisted = await _persistSuccessfulTurn(
-        userText: showPromptInTimeline ? normalizedPrompt : '',
-        assistantText: response.text,
-        mode: mode,
-        toolId: toolId,
-        toolStatus: toolStatus,
-        sourceIds: mergedSourceIds,
-        knowledgeStatus: response.knowledgeStatus,
-        traceId: traceContext.traceId,
-      );
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.persistence,
-        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
-        mode: mode.name,
-        toolId: toolId,
-        sourceIds: mergedSourceIds,
-        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
-      );
+      if (response.protocolValidated) {
+        final persisted = await _persistSuccessfulTurn(
+          userText: showPromptInTimeline ? normalizedPrompt : '',
+          assistantText: response.text,
+          mode: mode,
+          toolId: toolId,
+          toolStatus: toolStatus,
+          sourceIds: mergedSourceIds,
+          knowledgeStatus: response.knowledgeStatus,
+          traceId: traceContext.traceId,
+        );
+  
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          mode: mode.name,
+          toolId: toolId,
+          sourceIds: mergedSourceIds,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+  
+      } else {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.notApplicable,
+          mode: mode.name,
+          toolId: toolId,
+          errorCode: 'PROTOCOL_REJECTED_NO_SUCCESS_PERSISTENCE',
+        );
+      }
       if (mounted) _scrollToBottom();
       await _traceRecorder.record(
         traceContext,
@@ -9276,46 +9433,66 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                       requiresMedicalSafety && redFlagContext.sourceTruncated,
                 );
       final reply = turnResponse.text;
-      nativeInferenceCompleted = true;
+      nativeInferenceCompleted =
+          turnResponse.nativeInferenceStatus == AiTraceStatus.succeeded;
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.nativeInference,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.nativeInferenceStatus,
         mode: effectiveMode.name,
+        errorCode: turnResponse.nativeInferenceStatus == AiTraceStatus.unknown
+            ? 'NATIVE_REASONING_STATUS_UNKNOWN'
+            : null,
       );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.modelOutput,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.resultValidation,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
       resultValidationCompleted = true;
       persistenceStarted = true;
-      final persisted = await _persistSuccessfulTurn(
-        userText: text,
-        assistantText: reply,
-        mode: effectiveMode,
-        traceId: traceId,
-        attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
-        sourceIds: turnResponse.sourceIds,
-        knowledgeStatus: turnResponse.knowledgeStatus,
-      );
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.persistence,
-        status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
-        mode: effectiveMode.name,
-        sourceIds: turnResponse.sourceIds,
-        errorCode: persisted ? null : 'PERSISTENCE_FAILED',
-      );
+      if (turnResponse.protocolValidated) {
+        final persisted = await _persistSuccessfulTurn(
+          userText: text,
+          assistantText: reply,
+          mode: effectiveMode,
+          traceId: traceId,
+          attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
+          sourceIds: turnResponse.sourceIds,
+          knowledgeStatus: turnResponse.knowledgeStatus,
+        );
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: persisted ? AiTraceStatus.succeeded : AiTraceStatus.failed,
+          mode: effectiveMode.name,
+          sourceIds: turnResponse.sourceIds,
+          errorCode: persisted ? null : 'PERSISTENCE_FAILED',
+        );
+      } else {
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.persistence,
+          status: AiTraceStatus.notApplicable,
+          mode: effectiveMode.name,
+          errorCode: 'PROTOCOL_REJECTED_NO_SUCCESS_PERSISTENCE',
+        );
+      }
       persistenceRecorded = true;
       await _deleteCachedAttachments([imagePath, audioPath]);
       final refreshedStatus = await _readNativeStatus();
@@ -9364,15 +9541,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         _audioPath = null;
         _error = refreshedStatus == null
             ? '本轮回复已生成，但无法确认本地模型状态。请重新检查后继续。'
-            : null;
+            : turnResponse.protocolValidated
+                ? null
+                : '本轮结构化回复已拒绝，未写入成功历史。';
       });
       _scrollToBottom();
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.finalRender,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
     } on PlatformException catch (error) {
       final emptyReply = error.code == 'EMPTY_REPLY';

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -371,7 +372,6 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
 
 class _PageToolTraceService extends _TextSendService {
   final restoredTranscripts = <String>[];
-
   @override
   Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
     required String query,
@@ -458,6 +458,140 @@ class _TextSendService extends LocalAiService {
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
+  final structuredReasoningContexts = <String>[];
+  final finalizedReasoningAnswers = <String>[];
+  final rejectedReasoningRequestIds = <String>[];
+  final Map<String, String> _pendingReasoningReplies = {};
+  bool failReasoningFinalize = false;
+  bool failReasoningReject = false;
+
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
+  }) async {
+    final separator = reasoningContext.indexOf('\n');
+    if (separator < 0) {
+      throw StateError('测试结构化请求缺少元数据 JSON');
+    }
+    final envelope = jsonDecode(
+      reasoningContext.substring(separator + 1),
+    ) as Map<String, dynamic>;
+    final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final references = rankedEvidence
+        .map((item) => item['evidenceId'] as String)
+        .take(1)
+        .toList(growable: false);
+    final hasEvidence = references.isNotEmpty;
+    final reply = jsonEncode({
+      'schemaVersion': 1,
+      'requestId': requestId,
+      'responseKind': hasEvidence ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
+      'status': hasEvidence ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
+      'segments': [
+        hasEvidence ? '基于本轮资料的结构化解释。' : '本轮没有足够资料支持确定回答。',
+      ],
+      'referencedEvidenceIds': references,
+      'unknowns': <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+    });
+    sentConversationIds.add(conversationId);
+    sentTexts.add(text);
+    sentContexts.add(context);
+    structuredReasoningContexts.add(reasoningContext);
+    _pendingReasoningReplies[requestId] = reply;
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      reply: reply,
+      backend: 'cpu',
+      traceId: traceId,
+    );
+  }
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendReasoningReply(
+    text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+  );
+
+  @override
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
+    String text, {
+    required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) => _sendReasoningReply(
+    text,
+    conversationId: conversationId,
+    requestId: requestId,
+    context: context,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
+
+  @override
+  Future<void> finalizeReasoningTurn({
+    required int conversationId,
+    required String requestId,
+    required String validatedAnswer,
+  }) async {
+    if (!_pendingReasoningReplies.containsKey(requestId)) {
+      throw PlatformException(
+        code: 'REASONING_PENDING_TURN_MISSING',
+        message: 'no matching fake pending turn',
+      );
+    }
+    if (failReasoningFinalize) {
+      throw PlatformException(
+        code: 'REASONING_FINALIZE_ACK_UNKNOWN',
+        message: 'simulated lost Native finalize acknowledgement',
+      );
+    }
+    finalizedReasoningAnswers.add(validatedAnswer);
+    _pendingReasoningReplies.remove(requestId);
+  }
+
+  @override
+  Future<void> rejectReasoningTurn({
+    required int conversationId,
+    required String requestId,
+  }) async {
+    if (failReasoningReject) {
+      throw PlatformException(
+        code: 'REASONING_REJECT_ACK_UNKNOWN',
+        message: 'simulated unknown Native reject acknowledgement',
+      );
+    }
+    rejectedReasoningRequestIds.add(requestId);
+    _pendingReasoningReplies.remove(requestId);
+  }
+
 
   @override
   Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async =>
@@ -6910,6 +7044,14 @@ void mainRedFlagEntrypointOrderingTests() {
 
     expect(service.sentTexts, ['桔梗汤']);
     expect(service.sentContexts, hasLength(1));
+    expect(service.structuredReasoningContexts, hasLength(1));
+    expect(service.finalizedReasoningAnswers, hasLength(1),
+        reason: '只有通过结构化协议与证据校验后才提交 Native 成功历史');
+    final reasoningMetadata = jsonDecode(
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
+    ) as Map<String, dynamic>;
+    expect(reasoningMetadata['requestId'], isA<String>());
+    expect(reasoningMetadata['rankedEvidence'], isNotEmpty);
     final modelContext = service.sentContexts.single;
     expect(modelContext, contains('当前角色：学习助手'));
     expect(modelContext, contains('方名：桔梗汤'));
@@ -6951,6 +7093,52 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(find.textContaining('evidenceId'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Native finalize 回执未知时不持久化结构化学习答案也不重放', (tester) async {
+    final store = _MemoryConversationStore();
+    final service = _TextSendService()
+      ..failReasoningFinalize = true
+      ..failReasoningReject = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: store,
+          service: service,
+          imagePicker: _EmptyLocalAiImagePicker(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '桔梗汤');
+    await tester.pump();
+    await tester.tap(find.byTooltip('发送'));
+    await tester.pumpAndSettle();
+
+    expect(service.sentTexts, ['桔梗汤']);
+    expect(service.finalizedReasoningAnswers, isEmpty);
+    expect(service.rejectedReasoningRequestIds, isEmpty);
+    expect(
+      find.textContaining('Native 提交确认状态未知'),
+      findsOneWidget,
+    );
+
+    final conversations = await store.getAssistantConversations();
+    if (conversations.isNotEmpty) {
+      final rows = await store.getAssistantMessages(
+        conversationId: conversations.single['id'] as int,
+      );
+      expect(
+        rows.where((row) => row['role'] == 'assistant'),
+        isEmpty,
+        reason: 'UNKNOWN finalize 状态不能作为成功助手回复写入持久化历史',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
 
 }
 

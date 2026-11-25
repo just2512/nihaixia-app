@@ -59,7 +59,12 @@ class ReasoningRequestPromptFormatter {
         ],
       },
       'sessionStateMetadata': sessionStateMetadata,
-      'rankedEvidence': request.rankedEvidence.map((item) => item.toMap()).toList(),
+      // The model receives evidence IDs only. App source IDs remain in the
+      // adapter's private mapping and are never exposed as natural-language or
+      // prompt-visible provenance.
+      'rankedEvidence': request.rankedEvidence
+          .map((item) => {'evidenceId': item.evidenceId})
+          .toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
       'executionResults':
           request.executionResults.map((item) => item.toMap()).toList(),
