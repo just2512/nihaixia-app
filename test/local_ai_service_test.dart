@@ -1249,6 +1249,7 @@ void main() {
       expect(draft.mainComplaint, '头痛');
       expect(received?.method, 'extractSymptoms');
       expect(received?.arguments, <String, Object?>{
+        'conversation_id': 42,
         'trace_id': traceId,
       });
     });

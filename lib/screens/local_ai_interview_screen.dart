@@ -9506,6 +9506,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         defaultGender: SettingsRepository.instance.defaultGender,
       );
       final questionSchema = schemaController.symptomQuestionSchema;
+      final conversationId = await _requireConversationId();
       final draft = traceId == null
           ? await _service.extractSymptomsWithQuestionSchema(
               conversationId: conversationId,
