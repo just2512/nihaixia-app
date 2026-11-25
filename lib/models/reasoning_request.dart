@@ -188,46 +188,57 @@ class ReasoningRequest {
       };
 }
 
-Map<String, Object?> _sessionStateToMap(SessionStateSnapshot snapshot) => {
-      'sessionId': snapshot.sessionId,
-      'revision': snapshot.revision,
-      'status': switch (snapshot.status) {
-        SessionStateStatus.restored => 'RESTORED',
-        SessionStateStatus.partial => 'PARTIAL',
-        SessionStateStatus.sessionMismatch => 'SESSION_MISMATCH',
-        SessionStateStatus.unknown => 'UNKNOWN',
-      },
-      'facts': snapshot.facts
-          .map(
-            (fact) => {
-              'factId': fact.factId,
-              'key': fact.key,
-              'value': fact.value,
-              'provenance': switch (fact.provenance) {
-                SessionFactProvenance.userOriginal => 'USER_ORIGINAL',
-                SessionFactProvenance.userConfirmed => 'USER_CONFIRMED',
-                SessionFactProvenance.modelInferred => 'MODEL_INFERRED',
-                SessionFactProvenance.appResult => 'APP_RESULT',
-                SessionFactProvenance.sourceReference => 'SOURCE_REFERENCE',
+Map<String, Object?> _sessionStateToMap(SessionStateSnapshot snapshot) {
+  final canExposeFacts = snapshot.status != SessionStateStatus.unknown &&
+      snapshot.status != SessionStateStatus.sessionMismatch;
+  return {
+    'sessionId': snapshot.sessionId,
+    'revision': snapshot.revision,
+    'status': switch (snapshot.status) {
+      SessionStateStatus.restored => 'RESTORED',
+      SessionStateStatus.partial => 'PARTIAL',
+      SessionStateStatus.sessionMismatch => 'SESSION_MISMATCH',
+      SessionStateStatus.unknown => 'UNKNOWN',
+    },
+    // Match SessionStateSnapshotPromptFormatter's fail-closed behavior:
+    // unknown/mismatched memory may not leak attached facts through toMap().
+    'facts': canExposeFacts
+        ? snapshot.facts
+            .map(
+              (fact) => {
+                'factId': fact.factId,
+                'key': fact.key,
+                'value': fact.value,
+                'provenance': switch (fact.provenance) {
+                  SessionFactProvenance.userOriginal => 'USER_ORIGINAL',
+                  SessionFactProvenance.userConfirmed => 'USER_CONFIRMED',
+                  SessionFactProvenance.modelInferred => 'MODEL_INFERRED',
+                  SessionFactProvenance.appResult => 'APP_RESULT',
+                  SessionFactProvenance.sourceReference => 'SOURCE_REFERENCE',
+                },
+                'sourceIds': fact.sourceIds,
               },
-              'sourceIds': fact.sourceIds,
-            },
-          )
-          .toList(),
-      'evidenceReferences': snapshot.evidenceReferences
-          .map(
-            (reference) => {
-              'sourceId': reference.sourceId,
-              'sourceVersion': reference.sourceVersion,
-              'evidenceId': reference.evidenceId,
-              'chunkId': reference.chunkId,
-            },
-          )
-          .toList(),
-      if (snapshot.activeTaskId != null) 'activeTaskId': snapshot.activeTaskId,
-      'omittedUserMessageCount': snapshot.omittedUserMessageCount,
-      'diagnostics': snapshot.diagnostics,
-    };
+            )
+            .toList()
+        : const [],
+    'evidenceReferences': canExposeFacts
+        ? snapshot.evidenceReferences
+            .map(
+              (reference) => {
+                'sourceId': reference.sourceId,
+                'sourceVersion': reference.sourceVersion,
+                'evidenceId': reference.evidenceId,
+                'chunkId': reference.chunkId,
+              },
+            )
+            .toList()
+        : const [],
+    if (canExposeFacts && snapshot.activeTaskId != null)
+      'activeTaskId': snapshot.activeTaskId,
+    'omittedUserMessageCount': snapshot.omittedUserMessageCount,
+    'diagnostics': snapshot.diagnostics,
+  };
+}
 
 String _executionStatusName(ReasoningExecutionStatus status) =>
     switch (status) {
