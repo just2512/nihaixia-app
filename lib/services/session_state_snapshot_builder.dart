@@ -67,6 +67,10 @@ class SessionStateSnapshotBuilder {
       );
     }
 
+    // Database callers may provide rows in either direction. Normalize here so
+    // the bounded tail and evidence-reference order do not depend on query order.
+    validMessages.sort((left, right) => left.id.compareTo(right.id));
+
     final userMessages = validMessages
         .where((message) => message.role == 'user' && message.content.trim().isNotEmpty)
         .toList(growable: false);
