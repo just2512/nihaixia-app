@@ -263,3 +263,36 @@ internal object LocalAiConversationTokenObservationPolicy {
             status = LocalAiConversationTokenObservation.Status.UNKNOWN
         )
 }
+
+/**
+ * Read-only metadata declared by the model file. This is not a request budget:
+ * prompt, output and safety reserves are not inferred from this value.
+ */
+internal data class LocalAiModelContextLimitObservation(
+    val maxContextTokens: Int?,
+    val status: Status
+) {
+    enum class Status {
+        UNKNOWN,
+        OBSERVED
+    }
+}
+
+internal object LocalAiModelContextLimitObservationPolicy {
+    fun fromMaxContextTokens(
+        maxContextTokens: Int?
+    ): LocalAiModelContextLimitObservation {
+        val validLimit = maxContextTokens?.takeIf { it > 0 }
+            ?: return unknown()
+        return LocalAiModelContextLimitObservation(
+            maxContextTokens = validLimit,
+            status = LocalAiModelContextLimitObservation.Status.OBSERVED
+        )
+    }
+
+    fun unknown(): LocalAiModelContextLimitObservation =
+        LocalAiModelContextLimitObservation(
+            maxContextTokens = null,
+            status = LocalAiModelContextLimitObservation.Status.UNKNOWN
+        )
+}
