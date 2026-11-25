@@ -57,10 +57,10 @@ class ReasoningKnowledgeAnswerAdapter {
   static String evidenceIndexContext(ReasoningRequest request) =>
       request.rankedEvidence.isEmpty
           ? ''
-          : '【本轮已完整提供、允许引用的证据 ID】\\n' +
+          : '【本轮已完整提供、允许引用的证据 ID】\n' +
               request.rankedEvidence
                   .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
-                  .join('\\n');
+                  .join('\n');
 
   static ReasoningKnowledgeAnswerResult decodeAndResolve({
     required String raw,
