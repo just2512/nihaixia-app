@@ -1675,12 +1675,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         final draft = traceId == null
             ? await _service.extractSymptomsFromExplicitText(
-                conversationId: conversationId,
+                conversationId: await _requireConversationId(),
                 sourceText: normalizedInitialMessage,
                 questionSchema: extractionController.symptomQuestionSchema,
               )
             : await _service.extractSymptomsFromExplicitTextWithTrace(
-                conversationId: conversationId,
+                conversationId: await _requireConversationId(),
                 traceId: traceId,
                 sourceText: normalizedInitialMessage,
                 questionSchema: extractionController.symptomQuestionSchema,
