@@ -224,8 +224,11 @@ void main() {
           assistant.contextRef['sourceId'],
           AiContextResolver.meridianSourceId,
         );
-        expect(assistant.initialPrompt, contains('少阳病'));
-        expect(assistant.initialPrompt, contains('少阳为半表半里'));
+        expect(assistant.initialPrompt, isNull);
+        expect(assistant.initialUserMessage, contains('当前六经条目'));
+        expect(assistant.initialUserMessage, isNot(contains('少阳为半表半里')));
+        expect(assistant.autoSendInitialMessage, isTrue);
+        expect(assistant.resolveContextualKnowledgeEntry, isTrue);
         expect(tester.takeException(), isNull);
 
         Navigator.of(
