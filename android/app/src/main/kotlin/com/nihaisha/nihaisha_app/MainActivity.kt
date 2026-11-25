@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Content
@@ -63,6 +64,8 @@ class MainActivity : FlutterActivity() {
     private var activeBackend = "not_loaded"
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
+    // Accessed only from the serialized aiTasks queue.
+    private val nativeConversationSession = LocalAiConversationSessionIdentity()
     private val conversationHasSuccessfulTurn: Boolean
         get() = conversationHistory.hasSuccessfulTurn()
 
@@ -277,6 +280,8 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "sendImage" -> {
+                        val conversationId = readNativeConversationId(call, result)
+                            ?: return@handler
                         val traceId = try {
                             LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
@@ -293,11 +298,16 @@ class MainActivity : FlutterActivity() {
                                 NativeRedFlagInput(NativeRedFlagInputSource.IMAGE_ATTACHMENT, prompt),
                                 required = call.argument<Boolean>("require_red_flag") == true
                             ) {
-                                LocalAiTraceIdPolicy.attach(sendLocalImage(path, prompt), traceId)
+                                LocalAiTraceIdPolicy.attach(
+                                    sendLocalImage(conversationId, path, prompt),
+                                    traceId
+                                )
                             }
                         }
                     }
                     "sendAudio" -> {
+                        val conversationId = readNativeConversationId(call, result)
+                            ?: return@handler
                         val traceId = try {
                             LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
@@ -314,11 +324,16 @@ class MainActivity : FlutterActivity() {
                                 NativeRedFlagInput(NativeRedFlagInputSource.AUDIO_ATTACHMENT, prompt),
                                 required = call.argument<Boolean>("require_red_flag") == true
                             ) {
-                                LocalAiTraceIdPolicy.attach(sendLocalAudio(path, prompt), traceId)
+                                LocalAiTraceIdPolicy.attach(
+                                    sendLocalAudio(conversationId, path, prompt),
+                                    traceId
+                                )
                             }
                         }
                     }
                     "sendMessage" -> {
+                        val conversationId = readNativeConversationId(call, result)
+                            ?: return@handler
                         val traceId = try {
                             LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
@@ -346,11 +361,16 @@ class MainActivity : FlutterActivity() {
                                 ),
                                 required = requireMedicalSafety
                             ) {
-                                LocalAiTraceIdPolicy.attach(sendLocalMessage(text, context), traceId)
+                                LocalAiTraceIdPolicy.attach(
+                                    sendLocalMessage(conversationId, text, context),
+                                    traceId
+                                )
                             }
                         }
                     }
                     "restoreConversation" -> {
+                        val conversationId = readNativeConversationId(call, result)
+                            ?: return@handler
                         val transcript = call.argument<String>("transcript")?.trim().orEmpty()
                         val userMessages = call.argument<List<String>>("userMessages") ?: emptyList()
                         val redFlagContext =
@@ -372,10 +392,23 @@ class MainActivity : FlutterActivity() {
                                     sourceTruncated = redFlagContextTruncated
                                 ),
                                 required = call.argument<Boolean>("require_red_flag") == true
-                            ) { restoreLocalConversation(transcript, userMessages) }
+                            ) {
+                                restoreLocalConversation(
+                                    conversationId,
+                                    transcript,
+                                    userMessages
+                                )
+                            }
                         }
                     }
-                    "resetConversation" -> runAiTask(result, requiresAiAccess = true) { resetLocalConversation() }
+                    "resetConversation" -> runAiTask(result, requiresAiAccess = true) {
+                        val activeConversationId = nativeConversationSession.activeId()
+                        val status = resetLocalConversation()
+                        if (activeConversationId != null) {
+                            nativeConversationSession.activate(activeConversationId)
+                        }
+                        status
+                    }
                     "releaseModel" -> runAiTask(result) { releaseLocalModel() }
                     "clearRuntimeCache" -> runAiTask(result) {
                         LocalAiRuntimeCacheClearPolicy.clear(
@@ -396,6 +429,30 @@ class MainActivity : FlutterActivity() {
      * Flutter seam blocks first; this native boundary prevents MethodChannel
      * bypasses and remains closed until a reviewed detector is injected.
      */
+    /**
+     * Every persistent Native message/replay must belong to a positive SQLite
+     * conversation row. Missing, fractional or non-positive IDs fail before
+     * the request is enqueued.
+     */
+    private fun readNativeConversationId(
+        call: MethodCall,
+        result: MethodChannel.Result
+    ): Long? {
+        val rawId = call.argument<Number>("conversation_id")
+        val id = rawId?.toLong()
+        if (rawId == null || id == null || id <= 0L ||
+            rawId.toDouble() != id.toDouble()
+        ) {
+            result.error(
+                "INVALID_CONVERSATION_ID",
+                "Native 请求缺少有效的 SQLite conversation_id",
+                null
+            )
+            return null
+        }
+        return id
+    }
+
     private fun runAiTaskAfterNativeRedFlag(
         result: MethodChannel.Result,
         input: NativeRedFlagInput,
@@ -900,7 +957,22 @@ class MainActivity : FlutterActivity() {
             .replace(Regex("^[ \t]*[-*+][ \t]+", RegexOption.MULTILINE), "• ")
     }
 
-    private fun sendLocalMessage(text: String, context: String = ""): Map<String, Any> {
+    private fun ensureNativeConversationSession(conversationId: Long) {
+        if (!nativeConversationSession.requiresReset(conversationId)) return
+
+        // This function is called inside aiTasks. Reset completes before the
+        // new ID is activated, so a failed close/recreate never inherits the
+        // previous SQLite conversation's in-memory transcript.
+        resetLocalConversation()
+        nativeConversationSession.activate(conversationId)
+    }
+
+    private fun sendLocalMessage(
+        conversationId: Long,
+        text: String,
+        context: String = ""
+    ): Map<String, Any> {
+        ensureNativeConversationSession(conversationId)
         // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
         // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
         // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
@@ -1090,7 +1162,12 @@ class MainActivity : FlutterActivity() {
         return file
     }
 
-    private fun sendLocalImage(path: String, userPrompt: String): Map<String, Any> {
+    private fun sendLocalImage(
+        conversationId: Long,
+        path: String,
+        userPrompt: String
+    ): Map<String, Any> {
+        ensureNativeConversationSession(conversationId)
         val image = requireCachedInput(path, "照片")
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(image.absolutePath, bounds)
@@ -1117,7 +1194,12 @@ class MainActivity : FlutterActivity() {
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
-    private fun sendLocalAudio(path: String, userPrompt: String): Map<String, Any> {
+    private fun sendLocalAudio(
+        conversationId: Long,
+        path: String,
+        userPrompt: String
+    ): Map<String, Any> {
+        ensureNativeConversationSession(conversationId)
         val audio = requireCachedInput(path, "录音")
         LocalAiWavPolicy.validationError(audio)?.let { error ->
             throw IllegalArgumentException(error)
@@ -1527,6 +1609,7 @@ class MainActivity : FlutterActivity() {
 
 
     private fun restoreLocalConversation(
+        conversationId: Long,
         transcript: String,
         userMessages: List<String>
     ): Map<String, Any> {
@@ -1553,6 +1636,9 @@ class MainActivity : FlutterActivity() {
         LocalAiTranscriptRestorePolicy.recentUserMessages(userMessages).forEach { message ->
             recordUserInput("用户文字自述", message)
         }
+        // Bind only after the replay turn completes successfully. If restoration
+        // fails, the next request cannot continue on this partially restored state.
+        nativeConversationSession.activate(conversationId)
         return mapOf("restored" to true, "backend" to activeBackend)
     }
 
@@ -1561,6 +1647,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
+        nativeConversationSession.clear()
         conversationHistory.clear()
 
         return try {
@@ -1597,6 +1684,7 @@ class MainActivity : FlutterActivity() {
         // Clear references before close: LiteRT-LM objects must be closed exactly once.
         aiConversation = null
         aiEngine = null
+        nativeConversationSession.clear()
         userReportedInputs.clear()
         userReportedInputsTruncated = false
         conversationHistory.clear()
