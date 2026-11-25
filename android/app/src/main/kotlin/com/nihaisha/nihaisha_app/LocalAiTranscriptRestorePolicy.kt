@@ -7,7 +7,6 @@ package com.nihaisha.nihaisha_app
 internal object LocalAiTranscriptRestorePolicy {
     const val maxTranscriptCharacters = 10_000
     const val maxUserMessages = 60
-    private const val truncationMarker = "【较早历史已省略，以下为最近内容】\n"
 
     fun boundTranscript(transcript: String): String {
         require(transcript.length <= maxTranscriptCharacters) {
