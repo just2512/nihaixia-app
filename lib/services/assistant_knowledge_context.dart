@@ -486,7 +486,7 @@ class AssistantKnowledgeContextBuilder {
     final sourceBatches = <CandidateEvidenceBatch>[evidenceBatch];
     final failedGujiBookIds = <String>{};
     for (final book in requestedGujiBooks) {
-      final batchRequestId = '\${evidenceBatch.requestId}:\${book.id}';
+      final batchRequestId = '${evidenceBatch.requestId}:${book.id}';
       try {
         final chapters = await GujiRepository.chaptersOf(book);
         sourceBatches.add(
@@ -520,7 +520,7 @@ class AssistantKnowledgeContextBuilder {
         medicalCases = await getAllMedicalCases();
         sourceBatches.add(
           MedicalCaseEvidencePipeline.retrieveCandidates(
-            requestId: '\${evidenceBatch.requestId}:medical-cases',
+            requestId: '${evidenceBatch.requestId}:medical-cases',
             originalQuery: normalized,
             terms: terms.toList(growable: false),
             cases: medicalCases,
@@ -530,7 +530,7 @@ class AssistantKnowledgeContextBuilder {
         medicalCaseReadFailed = true;
         sourceBatches.add(
           CandidateEvidenceBatch(
-            requestId: '\${evidenceBatch.requestId}:medical-cases',
+            requestId: '${evidenceBatch.requestId}:medical-cases',
             originalQuery: normalized,
             derivedQueries: const [],
             status: CandidateEvidenceBatchStatus.failed,
@@ -542,7 +542,7 @@ class AssistantKnowledgeContextBuilder {
     }
 
     final combinedBatch = MultiSourceEvidencePipeline.combine(
-      requestId: '\${evidenceBatch.requestId}:all-sources',
+      requestId: '${evidenceBatch.requestId}:all-sources',
       originalQuery: normalized,
       sourceBatches: sourceBatches,
     );
@@ -565,23 +565,23 @@ class AssistantKnowledgeContextBuilder {
           .firstMatch(hit.title)
           ?.group(1);
       final sourcePath =
-          hit.asset ?? "assets/guji/\${hit.bookId ?? 'unknown'}.txt";
+          hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
       buffer
-        ..writeln('[App经典全文索引 · \${hit.sourceLabel} · \${hit.title}]')
+        ..writeln('[App经典全文索引 · ${hit.sourceLabel} · ${hit.title}]')
         ..writeln(
-          '资料类型：\${isLecture ? '倪师讲稿/整理讲义（学习资料）' : 'App 古籍文本知识条目'}',
+          '资料类型：${isLecture ? '倪师讲稿/整理讲义（学习资料）' : 'App 古籍文本知识条目'}',
         )
-        ..writeln('来源标识：\${hit.sourceId}')
-        ..writeln('知识库条目定位：\${hit.localBacklink}')
-        ..writeln('知识库条目定位可用：\${hit.hasLocalBacklink ? 'YES' : 'NO'}')
+        ..writeln('来源标识：${hit.sourceId}')
+        ..writeln('知识库条目定位：${hit.localBacklink}')
+        ..writeln('知识库条目定位可用：${hit.hasLocalBacklink ? 'YES' : 'NO'}')
         ..writeln('本地资料路径：$sourcePath');
       if (hit.chapterIndex != null) {
-        buffer.writeln('内部章节序号：\${hit.chapterIndex}');
+        buffer.writeln('内部章节序号：${hit.chapterIndex}');
       }
       if (articleNumber != null) {
         buffer.writeln('条文号：$articleNumber');
       }
-      buffer.writeln('检索摘要：\${hit.snippet}');
+      buffer.writeln('检索摘要：${hit.snippet}');
       if (isLecture) {
         buffer.writeln('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。');
       } else {
@@ -593,7 +593,7 @@ class AssistantKnowledgeContextBuilder {
     // the old two-chapter-per-book limit, exactly as the previous projection.
     for (final book in requestedGujiBooks) {
       if (failedGujiBookIds.contains(book.id)) {
-        buffer.writeln('[App古籍库 · \${book.title}] 读取失败，状态 MISSING。');
+        buffer.writeln('[App古籍库 · ${book.title}] 读取失败，状态 MISSING。');
         continue;
       }
       final keptEvidenceIds = rankedEvidenceSet.orderedEvidenceIds.where((id) {
@@ -602,19 +602,19 @@ class AssistantKnowledgeContextBuilder {
             candidate?.bookId == book.id;
       });
       buffer
-        ..writeln('[App古籍库 · \${book.title} · \${book.author} · \${book.asset}]')
-        ..writeln('书籍简介：\${book.intro}');
+        ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
+        ..writeln('书籍简介：${book.intro}');
       if (keptEvidenceIds.isEmpty) {
         buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
       }
       for (final evidenceId in keptEvidenceIds) {
         final candidate = candidatesById[evidenceId]!;
         buffer
-          ..writeln('章节：\${candidate.title}')
-          ..writeln('知识库条目定位：\${candidate.localBacklink}')
-          ..writeln('来源标识：\${candidate.sourceId}')
+          ..writeln('章节：${candidate.title}')
+          ..writeln('知识库条目定位：${candidate.localBacklink}')
+          ..writeln('来源标识：${candidate.sourceId}')
           ..writeln('纸本版本/卷页核验状态：UNKNOWN；内部章节序号不等于纸本页码。')
-          ..writeln('条目内容摘录：\${candidate.excerpt}');
+          ..writeln('条目内容摘录：${candidate.excerpt}');
       }
     }
 
@@ -624,7 +624,7 @@ class AssistantKnowledgeContextBuilder {
       } else {
         final casesBySourceId = {
           for (final medicalCase in medicalCases ?? const <MedicalCase>[])
-            'medical_case:\${medicalCase.seq}': medicalCase,
+            'medical_case:${medicalCase.seq}': medicalCase,
         };
         final keptMedicalEvidenceIds =
             rankedEvidenceSet.orderedEvidenceIds.where((id) {
@@ -637,30 +637,30 @@ class AssistantKnowledgeContextBuilder {
           final entryId = candidate.sourceId;
           final entryLocator = candidate.localBacklink;
           buffer
-            ..writeln('[App医案库 · 条目 \${medicalCase.seq}]')
+            ..writeln('[App医案库 · 条目 ${medicalCase.seq}]')
             ..writeln('知识库条目定位：$entryLocator')
             ..writeln('来源标识：$entryId')
             ..writeln('资料类型：App 医案库本地整理记录')
             ..writeln(
-              '日期字段：\${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}',
+              '日期字段：${medicalCase.date.isEmpty ? 'MISSING' : medicalCase.date}',
             )
             ..writeln(
-              '诊断字段：\${medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis}',
+              '诊断字段：${medicalCase.diagnosis.isEmpty ? 'MISSING' : medicalCase.diagnosis}',
             )
             ..writeln(
-              '病机字段：\${medicalCase.mechanism.isEmpty ? 'MISSING' : medicalCase.mechanism}',
+              '病机字段：${medicalCase.mechanism.isEmpty ? 'MISSING' : medicalCase.mechanism}',
             )
             ..writeln(
-              '方剂字段：\${medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula}',
+              '方剂字段：${medicalCase.formula.isEmpty ? 'MISSING' : medicalCase.formula}',
             )
             ..writeln(
-              '针灸字段：\${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}',
+              '针灸字段：${medicalCase.acupuncture.isEmpty ? 'MISSING' : medicalCase.acupuncture}',
             )
             ..writeln(
-              '治法字段：\${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}',
+              '治法字段：${medicalCase.method.isEmpty ? 'MISSING' : medicalCase.method}',
             )
             ..writeln(
-              '结果字段：\${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}',
+              '结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}',
             )
             ..writeln(
               '使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照，引用时保留条目身份，不把条目未记载的信息补成病例事实。',
