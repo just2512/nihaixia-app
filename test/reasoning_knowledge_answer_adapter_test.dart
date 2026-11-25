@@ -12,7 +12,6 @@ AssistantKnowledgeSourceReference source(String id) =>
       sourceLabel: '本地知识库',
       title: '测试条目',
       localBacklink: 'assets/data/test.json#id=1',
-      locatorStatus: 'RESOLVED',
     );
 
 AssistantKnowledgeContextResult knowledge({
@@ -55,6 +54,7 @@ String payload({
   String responseKind = 'ANSWER',
   String status = 'COMPLETED',
   List<String> references = const ['evidence-1'],
+  List<String> segments = const ['基于本地证据的解释'],
   Object? proposal,
 }) =>
     jsonEncode({
@@ -62,7 +62,7 @@ String payload({
       'requestId': requestId,
       'responseKind': responseKind,
       'status': status,
-      'segments': ['基于本地证据的解释'],
+      'segments': segments,
       'referencedEvidenceIds': references,
       'unknowns': ['缺少用户确认'],
       'conflicts': ['两处资料表述不同'],
@@ -146,6 +146,66 @@ void main() {
       );
       expect(unresolved.isUsable, isFalse);
       expect(unresolved.failureCode, contains('UNRANKED_EVIDENCE'));
+    });
+
+
+    test('rejects internal source IDs, evidence IDs and storage locators in answer text', () {
+      final context = knowledge(sources: [source('source-1')]);
+      final requestValue = request(context);
+      final leakingSegments = [
+        ['source-1 是对应条目。'],
+        ['evidence-1 支持该结论。'],
+        ['来源字段 sourceId: source-1'],
+        ['本地路径 assets/data/test.json#id=1'],
+      ];
+
+      for (final segments in leakingSegments) {
+        final result = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+          raw: payload(segments: segments),
+          request: requestValue,
+          knowledge: context,
+        );
+        expect(result.isUsable, isFalse);
+        expect(
+          result.failureCode,
+          'REASONING_RESPONSE_CONTAINS_INTERNAL_PROVENANCE',
+        );
+        expect(result.answerText, isEmpty);
+        expect(result.sourceIds, isEmpty);
+      }
+    });
+
+    test('rejects empty rendered content and duplicate or unresolvable source mappings', () {
+      final context = knowledge(sources: [source('source-1')]);
+      final requestValue = request(context);
+      final empty = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(segments: const []),
+        request: requestValue,
+        knowledge: context,
+      );
+      expect(empty.isUsable, isFalse);
+      expect(empty.failureCode, 'REASONING_RESPONSE_EMPTY_RENDERED_ANSWER');
+
+      final duplicateEvidenceContext = knowledge(
+        ranked: const [
+          AssistantKnowledgeEvidenceReference(
+            evidenceId: 'evidence-1',
+            sourceId: 'source-1',
+          ),
+          AssistantKnowledgeEvidenceReference(
+            evidenceId: 'evidence-2',
+            sourceId: 'source-1',
+          ),
+        ],
+        sources: [source('source-1')],
+      );
+      final duplicateMapped = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(references: ['evidence-1', 'evidence-2']),
+        request: request(duplicateEvidenceContext),
+        knowledge: duplicateEvidenceContext,
+      );
+      expect(duplicateMapped.isUsable, isTrue);
+      expect(duplicateMapped.sourceIds, ['source-1']);
     });
 
     test('rejects action proposals because the learning path has no capabilities', () {
