@@ -1183,3 +1183,9 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-2 explicit legacy-order KEEP/DROP decision DTO, deterministic selector and focused regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
 
+Files:
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationTokenMetricsPolicy.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationTokenMetricsPolicyTest.kt
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-1 Native LiteRT-LM KV cache token observation status policy and focused JVM regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
