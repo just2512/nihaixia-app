@@ -4431,3 +4431,18 @@ PR HEAD 门禁证据：
 - **下一项自动执行：** PR #495 Core-0 文档精确 HEAD Flutter/Fork license CI 通过后，按新 master 校准并集成；PR #496 必须在精确 HEAD Android arm64/JVM、Flutter 与 Fork license 均 PASS 后单独集成。Core-1 有界历史通过后，Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
 - **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
 
+
+
+---
+
+## 98. 2026-11-25 Core-1 / Core-2 当前主线落地核验与结构化记忆适配器
+
+- **主线基线：** `cae7e12dc34e82853e6df815a90e6b4d8a497ef6`。本节按该 master 源码和已合并 PR 核验；此前 §96/§97 中“尚未实现”的记录是当时快照，若与本节冲突，以本节作为当前状态，历史不删除。
+- **Core-0：PARTIAL。** 五层 DTO 字段合同及源码映射已冻结；CandidateEvidence、EvidenceRankingDecision/RankedEvidenceSet 已有运行时切片；本次结构化 SessionStateSnapshot 只读适配器作为 Core-1 实现切片纳入主线；ReasoningRequest/Response、BusinessActionProposal/ExecutionResult 仍未完整接入生产调用。
+- **Core-1 Native history：** #493 MERGED（RAG 正文不进入 Native completed-turn recovery history）；#496 MERGED（最多 12 个完整成功轮次、最多 10,000 UTF-16 code units，整轮淘汰）；#499 MERGED（Native Conversation 按 SQLite conversation ID 隔离）；#506 MERGED（通过 `Conversation.getTokenCount()` 暴露当前 KV Cache token 只读实测值）。#506 不设置 token budget，也不自动压缩或重置；这些提交不证明跨进程/设备恢复。
+- **Core-1 结构化记忆适配器：** 本次 Core-1 切片新增只读 `SessionStateSnapshot` / `SessionStateSnapshotBuilder`，从现有 session-keyed 消息和 TCM interview task state 提取 USER_ORIGINAL、USER_CONFIRMED、APP_RESULT 与 source/evidence/chunk IDs；逐条校验 message owner；助手自由文本不提升为事实；sourceVersion 缺失保持 UNKNOWN；用户原话最多 8 条、每条 1,200 字符，结构事实最多 64 条、证据引用最多 64 条。构建器按消息 ID 升序归一输入后再选择最新有界记录。无 SQLite schema 变更、无持久化写路径、无 Native prompt 接线。最终验收只认本次修订后精确 HEAD 的 Flutter、Android arm64/JVM 与 Fork license 结果；旧 HEAD 的 CI 不替代新 HEAD。
+- **Core-2 召回：** #498 MERGED，经典索引有 CandidateEvidenceBatch / ClassicEvidencePipeline；PR #507 候选将医案库适配为 CandidateEvidence，仍未进入本节基线；其当前精确 HEAD 的 Flutter、Android arm64/JVM 与 Fork license 检查已 SUCCESS。古籍章节 CandidateEvidence 仍未统一进入主线。所有 pending PR 均不能当作 master 已完成。
+- **Core-2 排序：** #501 MERGED，LegacyOrderEvidenceRanker 显式输出 KEEP/DROP 和原因，严格复刻 LEGACY_QUERY_ORDER 与旧四条上限，不引入相关性分数；#504 MERGED，将经典内置资料 origin 修正为 APP_DATA。医案/古籍候选的来源专属上限仍通过 LegacyOrderEvidenceRanker 的参数复用旧行为。预算仍 UNKNOWN / NOT_APPLIED，排序不是语义排序。
+- **Core-3/4/5：** ReasoningRequest/Response 生产接线、统一 ACTION_PROPOSAL 解析、逐能力确定性执行审计和跨层 E2E 仍待按 Core-1/Core-2 依赖推进。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED；本轮不添加书架页面、数据库、Embedding、FTS5、ANN 或后台任务。
+- **门禁：** 以本 PR 精确 HEAD 的 Flutter 全量回归/静态分析、Android arm64 APK+JVM 和 Fork license 检查为准；Branch validation 若 SKIPPED 不计 PASS。Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复和 TRACE 保持 LOCAL ONLY / UNKNOWN，最后由本地完成。
