@@ -4431,3 +4431,18 @@ PR HEAD 门禁证据：
 - **下一项自动执行：** PR #495 Core-0 文档精确 HEAD Flutter/Fork license CI 通过后，按新 master 校准并集成；PR #496 必须在精确 HEAD Android arm64/JVM、Flutter 与 Fork license 均 PASS 后单独集成。Core-1 有界历史通过后，Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
 - **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
 
+
+
+---
+
+## 98. 2026-11-25 Core-1 / Core-2 当前主线落地核验与结构化记忆适配器
+
+- **主线基线：** `f08145549a2b271f689edb944194b3ee72c4d246`。本节按该 master 源码和已合并 PR 核验；此前 §96/§97 中“尚未实现”的记录是当时快照，若与本节冲突，以本节作为当前状态，历史不删除。
+- **Core-0：PARTIAL。** 五层 DTO 字段合同及源码映射已冻结；CandidateEvidence、EvidenceRankingDecision/RankedEvidenceSet 和 SessionStateSnapshot 现有代码逐步落地；ReasoningRequest/Response、BusinessActionProposal/ExecutionResult 仍未完整接入生产调用。
+- **Core-1 Native history：** #493 MERGED（RAG 正文不进入 Native completed-turn recovery history）；#496 MERGED（最多 12 个完整成功轮次、合计最多 10,000 UTF-16 code units，整轮淘汰）；#499 MERGED（Native Conversation 按正整数 SQLite conversation ID 隔离，切换时序列化重建并清理 transcript/症状输入）。这些不证明 LiteRT-LM KV Cache token 已设上限，也不证明跨进程/设备恢复。
+- **Core-1 结构化记忆适配器：** 本 PR 在最新 master 上修复并集成 `SessionStateSnapshot` / `SessionStateSnapshotBuilder`。它只读既有 session-keyed 消息和 TCM interview task state；校验每条 message owner；只将用户消息归类为 USER_ORIGINAL，把既有确定性问诊选择/答案归类为 USER_CONFIRMED，将已完成诊断结果标记 APP_RESULT；引用仅保存 source/evidence/chunk IDs，sourceVersion 未提供时保持 UNKNOWN；按现有契约限制用户原话 8×1,200 字符、证据引用 64 条、结构事实 64 条。此批不改 SQLite schema、不写入模型 Prompt、不把助手自由文本提升为用户事实，因此快照 builder 是 CODE/TEST PARTIAL，不等同于 Native 结构化记忆链路已闭环。
+- **Core-2 召回：** #498 MERGED，经典索引有 CandidateEvidenceBatch / ClassicEvidencePipeline；当前只覆盖经典索引来源，其它古籍、医案等仍未全部统一。
+- **Core-2 排序：** #501 MERGED，LegacyOrderEvidenceRanker 显式输出 KEEP/DROP 和原因，严格复刻 LEGACY_QUERY_ORDER 与旧四条上限，不引入相关性分数；#504 MERGED，将经典内置资料 origin 修正为 APP_DATA。预算仍 UNKNOWN / NOT_APPLIED，排序仍是兼容策略，不代表语义排序已完成。
+- **Core-3/4/5：** ReasoningRequest/Response 生产接线、统一 ACTION_PROPOSAL 解析、逐能力确定性执行审计和跨层 E2E 仍待按 Core-1/Core-2 依赖推进。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED；本轮不添加书架页面、数据库、Embedding、FTS5、ANN 或后台任务。
+- **门禁：** 以本 PR 精确 HEAD 的 Flutter 全量回归/静态分析、Android arm64 APK+JVM 和 Fork license 检查为准；Branch validation 若 SKIPPED 不计 PASS。Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复和 TRACE 保持 LOCAL ONLY / UNKNOWN，最后由本地完成。
