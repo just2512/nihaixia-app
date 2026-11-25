@@ -20,8 +20,9 @@ class ReasoningKnowledgeAnswerResult {
   final String citationFooter;
 
   bool get isUsable => decodeResult.isUsable;
-  String? get failureCode =>
-      isUsable ? null : decodeResult.diagnostics.firstOrNull;
+  String? get failureCode => isUsable || decodeResult.diagnostics.isEmpty
+      ? null
+      : decodeResult.diagnostics.first;
 }
 
 class ReasoningKnowledgeAnswerAdapter {
@@ -43,6 +44,7 @@ class ReasoningKnowledgeAnswerAdapter {
       responseSchemaVersion: 1,
       sessionState: sessionState,
       rankedEvidence: knowledge.rankedEvidence
+          .where((item) => knowledge.sourceIds.contains(item.sourceId))
           .map((item) => ReasoningEvidenceReference(
                 evidenceId: item.evidenceId,
                 sourceId: item.sourceId,
@@ -51,6 +53,14 @@ class ReasoningKnowledgeAnswerAdapter {
       knownEvidenceIds: knowledge.knownEvidenceIds,
     );
   }
+
+  static String evidenceIndexContext(ReasoningRequest request) =>
+      request.rankedEvidence.isEmpty
+          ? ''
+          : '【本轮已完整提供、允许引用的证据 ID】\\n' +
+              request.rankedEvidence
+                  .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
+                  .join('\\n');
 
   static ReasoningKnowledgeAnswerResult decodeAndResolve({
     required String raw,
