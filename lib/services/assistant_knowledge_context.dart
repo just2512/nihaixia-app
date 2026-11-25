@@ -3,6 +3,8 @@ import '../data/acupoint_repository.dart';
 import '../data/formula_repository.dart';
 import '../data/guji_data.dart';
 import '../data/medical_case_data.dart';
+import '../models/ai_evidence.dart';
+import 'classic_evidence_pipeline.dart';
 import 'classic_search_service.dart';
 import '../data/herb_repository.dart';
 import '../data/neijing_entries.dart';
@@ -414,31 +416,31 @@ class AssistantKnowledgeContextBuilder {
       if (normalized.contains(point.name)) terms.add(point.name);
     }
 
-    final classicQueries = deriveClassicQueries(normalized)
-        .map((provenance) => provenance.query);
-
-    final classicHits = <ClassicHit>[];
-    try {
-      for (final searchQuery in classicQueries) {
-        if (searchQuery.trim().length < 2) continue;
-        final result = await ClassicSearchService.search(searchQuery);
-        for (final hit in result.hits) {
-          final identity = '${hit.source}|${hit.asset ?? hit.bookId}|${hit.chapterIndex}|${hit.title}';
-          if (classicHits.any((item) =>
-              '${item.source}|${item.asset ?? item.bookId}|${item.chapterIndex}|${item.title}' ==
-              identity)) {
-            continue;
-          }
-          classicHits.add(hit);
-          if (classicHits.length >= 4) break;
-        }
-        if (classicHits.length >= 4) break;
-      }
-    } catch (_) {
+    final queryProvenance = deriveClassicQueries(normalized);
+    final evidenceBatch = await ClassicEvidencePipeline.retrieveClassicIndexCandidates(
+      requestId: ClassicEvidencePipeline.nextRequestId(),
+      originalQuery: normalized,
+      derivedQueries: [
+        for (var index = 0; index < queryProvenance.length; index++)
+          DerivedEvidenceQuery(
+            queryId: 'q${index + 1}',
+            query: queryProvenance[index].query,
+            reasons: queryProvenance[index].reasons,
+          ),
+      ],
+    );
+    if (evidenceBatch.diagnostics.any(
+      (diagnostic) => diagnostic.startsWith('CLASSIC_SEARCH_FAILED:'),
+    )) {
       buffer.writeln('[App经典全文索引] 索引读取失败，状态 MISSING。');
     }
 
-    for (final hit in classicHits) {
+    // Keep the historical four-hit context projection unchanged. The batch
+    // now retains the searched query's candidate set for an independent
+    // ranking slice; it does not alter the current order or retrieval method.
+    for (final hit in evidenceBatch.candidates.take(
+      ClassicEvidencePipeline.legacyContextHitLimit,
+    )) {
       final isLecture = hit.asset != null;
       final articleNumber = RegExp(r'(?:条文|第)\s*(\d+)').firstMatch(hit.title)?.group(1);
       final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
