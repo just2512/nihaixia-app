@@ -10,14 +10,14 @@
     "LICENSE-AI-COMMERCIAL.md",
     "LICENSES/**"
   ],
-  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds an asynchronous FeatureAuthorizer interface and contract tests. It does not implement EntitlementService, TokenStore, platform KeyStore operations or production FeatureGate wiring. Ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language regression tests. Test keys are not production trust anchors; ownership evidence remains required. This update adds the Android Keystore Plugin, get-only/create device-key lifecycle, and AtomicFile single-token storage with JVM policy tests. Real-device KeyStore/StrongBox/AtomicFile behavior remains LOCAL ONLY / MISSING; ownership evidence remains required. This update adds the Dart LicensePlatform bridge and asynchronous EntitlementService with injected verifier, immutable entitlement snapshots, atomic token replacement orchestration and race-safe refresh tests. Find N2 platform behavior remains LOCAL ONLY / MISSING; production Release Key Ring and FeatureGate wiring remain separate batches. This update additionally adds the shared tool argument support module and isolated Analyzer AST import-graph audit; ownership evidence remains required. This update extracts existing Headless executor implementations into reusable ToolService libraries while retaining thin compatibility aliases; 16 new service files are classified separately. This update extracts Headless result validation, follow-up decisions and presentation prompts into a UI-independent handler with focused regression tests. This update separates the standalone Analyzer audit package from Flutter app analysis and adds an independent Dart analysis step. This update registers the fail-closed FeatureAuthorizer dependency scope and its plan-dispatch wiring; it does not activate paid entitlements or production release keys. Ownership evidence remains required. This update adds the fail-closed contextual_assistant authorization and source-anchor verification gateway with regression tests; it does not grant entitlements or enable any paid capability. Ownership evidence remains required. This update adds a test-only allow authorizer fixture so contextual widget tests explicitly inject authorization; production remains fail-closed. Ownership evidence remains required. This update registers the bounded AI multi-tool plan builder, plan-level result presenter and focused regression tests; ownership evidence remains required. This update adds the production public issuer Key Ring factory, Release trust-anchor build gate configuration handoff and focused tests; formal production key material is not included. This update adds the schema-matched Release trust-anchor scanner, offline scanner tests, Release tag workflow and compiled Key Ring regression test. It does not add production private key material or a real issuer trust anchor. This update adds an Android AtomicFile recovery regression for a legacy .bak backup, unrecoverable backup fail-closed state and truly absent token state. LicenseTokenStore always enters AtomicFile.openRead before deciding no token exists; framework/device behavior remains subject to local acceptance. This update isolates test/city_search_dialog_test.dart in a unique temporary SQLite FFI directory so parallel widget suites cannot contend on the package-global database path. It changes no production behavior or test acceptance checks. This update adds the Settings activation/import surface and YANJIR1 device request builder, with tests; it does not include issuer private-key handling or hardware device acceptance. This update adds the Fork-authored Yanji brand/semantic palette, and aligns AppColors, global component outlines, the visual plan and Material 3 contrast/role tests. Copyright ownership and sublicensing evidence remain required; this CI inventory does not establish legal title. This update adds the Batch 1 Yanji global visual design specification, multi-surface WCAG contrast regression tests, production theme wiring regression tests, non-destructive legacy color inventory and changed-line static color audit with controlled allowlist. Copyright ownership and sublicensing evidence remain required; automated inventory classification does not establish legal title. This update adds the v1.3 unified Native LiteRT ai_access Gate, its Dart authorization-state bridge, and focused Kotlin/Flutter gate regressions. New Fork-owned files are inventoried with ownership evidence required; runtime commercial-license grant text, Apache upstream coverage, and knowledge-base/third-party exclusions are unchanged. The v1.3 single Native LiteRT ai_access gate supersedes the transitional per-Feature FeatureAuthorizer and scope; those interfaces, their contract test and the allow-authorizer fixture are removed. The Native access Gate remains the sole AI runtime paywall. No source-commercial grant, upstream Apache scope or third-party/knowledge-base license boundary changed. This update adds the current v1.3 Find N2 real-device acceptance handoff with the post-#482 master baseline and cloud CI references; it does not claim device acceptance, and ownership evidence remains required. This update adds the design-only local Markdown bookshelf architecture and source-governance specification; no runtime or database implementation is included, future Native LiteRT/LiteRT-LM Embedding load/inference remains under the single v1.3 ai_access gate, and ownership evidence remains required. This update adds the Core-2 classic-index CandidateEvidence DTO, retrieval pipeline and focused regression test; the files are classified as Fork Commercial with ownership evidence still required. No license grant or source-code commercial-license scope is changed. This update adds the Core-2 explicit legacy-order evidence decision DTO, selector and focused regression tests; the files are classified as Fork Commercial with ownership evidence still required. No license grant or source-code commercial-license scope is changed. This update adds the Core-1 immutable SessionStateSnapshot DTO and read-only session-state builder with focused isolation, provenance, boundedness and deep-immutability tests; no SQLite schema or production reasoning wiring is added. Ownership evidence remains required. This update adds the Core-2 medical-case CandidateEvidence adapter and focused provenance/order tests. It preserves the legacy source order and two-result cap, keeps source verification separate from printed-locator status, and does not change medical-case corpus content. Ownership evidence remains required. This update adds the Core-2 Guji chapter CandidateEvidence adapter and regression tests. It retains the existing book/chapter order and two-chapter per-book limit, uses exact App-local chapter references, and keeps bibliographic verification UNKNOWN. Ownership evidence remains required. This update connects the read-only Core-1 SessionStateSnapshot to normal text-turn Native input as a separately tagged and bounded prompt section. Native validates the snapshot's persisted conversation ID; Native recovery transcript continues to store only literal user text and successful model replies. RAG context remains a separate prompt section, partial or unknown reads remain explicit, and device-side behavior remains pending local acceptance. Ownership evidence remains required. This update adds the Core-3 strict ReasoningResponse v1 DTO, fail-closed decoder and request-local evidence/capability validation tests. It does not wire the Native send path, authorize or execute actions, or change model prompts. Ownership evidence remains required. This update adds the immutable Core-3 ReasoningRequest, App-projected execution-result/evidence-reference DTOs and a deterministic supplemental prompt formatter. Original user text and evidence bodies remain in existing separate Native arguments; UNKNOWN session state is redacted and supplemental metadata has a 24,000 UTF-16 code-unit hard bound. It does not wire the Native send path or authorize/execute actions. Ownership evidence remains required.",
+  "generated_from": "Generated from common upstream baseline c0f14e77a7fb721fc332576d21fef5f100392d0b. Current master includes the four Zi Wu Liu Zhu method-field contextual Ask AI entries, local-only Android Release signing protections, product version 2.0.0+8048, approved Yanji launcher assets, and the contextual AI source/anchor contracts. This update adds an end-to-end production Shanghan reading-library to contextual Ask AI regression test; it does not change runtime behavior. CI recomputes actual path/status membership against the checked-out PR HEAD. This update additionally adds docs/pro-edition-architecture-constraints.md as a Fork-authored architecture document; it does not change application runtime behavior. Ownership evidence remains required. This update adds the F0 HeadlessToolDispatcher boundary and its contract tests; it does not change feature or authorization behavior. Ownership evidence remains required. This update adds the F1 ToolExecutionPlan model and explicit capability metadata contract tests. Production pre-side-effect authorization remains a later slice; ownership evidence remains required. This update adds an asynchronous FeatureAuthorizer interface and contract tests. It does not implement EntitlementService, TokenStore, platform KeyStore operations or production FeatureGate wiring. Ownership evidence remains required. This update adds the v1.2 professional license protocol, Dart payload/verifier, offline Python issuer and cross-language regression tests. Test keys are not production trust anchors; ownership evidence remains required. This update adds the Android Keystore Plugin, get-only/create device-key lifecycle, and AtomicFile single-token storage with JVM policy tests. Real-device KeyStore/StrongBox/AtomicFile behavior remains LOCAL ONLY / MISSING; ownership evidence remains required. This update adds the Dart LicensePlatform bridge and asynchronous EntitlementService with injected verifier, immutable entitlement snapshots, atomic token replacement orchestration and race-safe refresh tests. Find N2 platform behavior remains LOCAL ONLY / MISSING; production Release Key Ring and FeatureGate wiring remain separate batches. This update additionally adds the shared tool argument support module and isolated Analyzer AST import-graph audit; ownership evidence remains required. This update extracts existing Headless executor implementations into reusable ToolService libraries while retaining thin compatibility aliases; 16 new service files are classified separately. This update extracts Headless result validation, follow-up decisions and presentation prompts into a UI-independent handler with focused regression tests. This update separates the standalone Analyzer audit package from Flutter app analysis and adds an independent Dart analysis step. This update registers the fail-closed FeatureAuthorizer dependency scope and its plan-dispatch wiring; it does not activate paid entitlements or production release keys. Ownership evidence remains required. This update adds the fail-closed contextual_assistant authorization and source-anchor verification gateway with regression tests; it does not grant entitlements or enable any paid capability. Ownership evidence remains required. This update adds a test-only allow authorizer fixture so contextual widget tests explicitly inject authorization; production remains fail-closed. Ownership evidence remains required. This update registers the bounded AI multi-tool plan builder, plan-level result presenter and focused regression tests; ownership evidence remains required. This update adds the production public issuer Key Ring factory, Release trust-anchor build gate configuration handoff and focused tests; formal production key material is not included. This update adds the schema-matched Release trust-anchor scanner, offline scanner tests, Release tag workflow and compiled Key Ring regression test. It does not add production private key material or a real issuer trust anchor. This update adds an Android AtomicFile recovery regression for a legacy .bak backup, unrecoverable backup fail-closed state and truly absent token state. LicenseTokenStore always enters AtomicFile.openRead before deciding no token exists; framework/device behavior remains subject to local acceptance. This update isolates test/city_search_dialog_test.dart in a unique temporary SQLite FFI directory so parallel widget suites cannot contend on the package-global database path. It changes no production behavior or test acceptance checks. This update adds the Settings activation/import surface and YANJIR1 device request builder, with tests; it does not include issuer private-key handling or hardware device acceptance. This update adds the Fork-authored Yanji brand/semantic palette, and aligns AppColors, global component outlines, the visual plan and Material 3 contrast/role tests. Copyright ownership and sublicensing evidence remain required; this CI inventory does not establish legal title. This update adds the Batch 1 Yanji global visual design specification, multi-surface WCAG contrast regression tests, production theme wiring regression tests, non-destructive legacy color inventory and changed-line static color audit with controlled allowlist. Copyright ownership and sublicensing evidence remain required; automated inventory classification does not establish legal title. This update adds the v1.3 unified Native LiteRT ai_access Gate, its Dart authorization-state bridge, and focused Kotlin/Flutter gate regressions. New Fork-owned files are inventoried with ownership evidence required; runtime commercial-license grant text, Apache upstream coverage, and knowledge-base/third-party exclusions are unchanged. The v1.3 single Native LiteRT ai_access gate supersedes the transitional per-Feature FeatureAuthorizer and scope; those interfaces, their contract test and the allow-authorizer fixture are removed. The Native access Gate remains the sole AI runtime paywall. No source-commercial grant, upstream Apache scope or third-party/knowledge-base license boundary changed. This update adds the current v1.3 Find N2 real-device acceptance handoff with the post-#482 master baseline and cloud CI references; it does not claim device acceptance, and ownership evidence remains required. This update adds the design-only local Markdown bookshelf architecture and source-governance specification; no runtime or database implementation is included, future Native LiteRT/LiteRT-LM Embedding load/inference remains under the single v1.3 ai_access gate, and ownership evidence remains required. This update adds the Core-2 classic-index CandidateEvidence DTO, retrieval pipeline and focused regression test; the files are classified as Fork Commercial with ownership evidence still required. No license grant or source-code commercial-license scope is changed. This update adds the Core-2 explicit legacy-order evidence decision DTO, selector and focused regression tests; the files are classified as Fork Commercial with ownership evidence still required. No license grant or source-code commercial-license scope is changed. This update adds the Core-1 immutable SessionStateSnapshot DTO and read-only session-state builder with focused isolation, provenance, boundedness and deep-immutability tests; no SQLite schema or production reasoning wiring is added. Ownership evidence remains required. This update adds the Core-2 medical-case CandidateEvidence adapter and focused provenance/order tests. It preserves the legacy source order and two-result cap, keeps source verification separate from printed-locator status, and does not change medical-case corpus content. Ownership evidence remains required. This update adds the Core-2 Guji chapter CandidateEvidence adapter and regression tests. It retains the existing book/chapter order and two-chapter per-book limit, uses exact App-local chapter references, and keeps bibliographic verification UNKNOWN. Ownership evidence remains required. This update connects the read-only Core-1 SessionStateSnapshot to normal text-turn Native input as a separately tagged and bounded prompt section. Native validates the snapshot's persisted conversation ID; Native recovery transcript continues to store only literal user text and successful model replies. RAG context remains a separate prompt section, partial or unknown reads remain explicit, and device-side behavior remains pending local acceptance. Ownership evidence remains required. This update adds the Core-3 strict ReasoningResponse v1 DTO, fail-closed decoder and request-local evidence/capability validation tests. It does not wire the Native send path, authorize or execute actions, or change model prompts. Ownership evidence remains required. This update adds the immutable Core-3 ReasoningRequest, App-projected execution-result/evidence-reference DTOs and a deterministic supplemental prompt formatter. Original user text and evidence bodies remain in existing separate Native arguments; UNKNOWN session state is redacted and supplemental metadata has a 24,000 UTF-16 code-unit hard bound. It does not wire the Native send path or authorize/execute actions. Ownership evidence remains required. This update adds a shared complete-turn Core-1 transcript restore policy and focused UTF-16 boundary tests. Flutter keeps only whole completed user/assistant turns within the 10,000-code-unit budget; Native rejects over-budget or malformed UTF-16 input instead of truncating arbitrary message suffixes. Device behavior remains pending local acceptance; ownership evidence remains required.",
   "counts": {
-    "changed": 1004,
-    "added": 840,
+    "changed": 1006,
+    "added": 842,
     "modified": 164,
     "deleted": 15,
     "by_classification": {
-      "FORK_COMMERCIAL": 481,
+      "FORK_COMMERCIAL": 483,
       "APACHE_2_0_AND_FORK_COMMERCIAL": 158,
       "KNOWLEDGE_BASE_EXCLUDED": 364,
       "THIRD_PARTY_EXCLUDED": 1
@@ -62,62 +62,6 @@
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "APP_DEVELOPMENT_DETAIL.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "CHANGELOG.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "CONTRIBUTING.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "PROMO_COPY.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "README.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "RELEASE_NOTES.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "RELEASE_NOTES_1.11.1-1.11.7.md",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -353,14 +297,6 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -369,7 +305,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "android/app/src/main/res/mipmap-anydpi/ic_launcher.xml",
+      "path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -378,6 +314,14 @@
     },
     {
       "path": "android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "android/app/src/main/res/mipmap-anydpi/ic_launcher.xml",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -622,6 +566,14 @@
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "沿用上游签名配置模板并增加原签名/禁止新建密钥的 Fork 维护说明；上游原始部分保留 Apache-2.0。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "APP_DEVELOPMENT_DETAIL.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -3513,6 +3465,22 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "docs/2026-11-04-unified-assistant-acceptance-audit.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -3897,7 +3865,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/images/find-n2-round3/F_keyboard.png",
+      "path": "docs/images/find-n2-round3/F_keyboard_text.png",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -3905,7 +3873,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/images/find-n2-round3/F_keyboard_text.png",
+      "path": "docs/images/find-n2-round3/F_keyboard.png",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -4169,7 +4137,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/upstream-sync-ledger.md",
+      "path": "docs/upstream_sync_audit_2026-11-06.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -4177,7 +4145,7 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "docs/upstream_sync_audit_2026-11-06.md",
+      "path": "docs/upstream-sync-ledger.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -4393,19 +4361,19 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "lib/models/diagnosis.dart",
-      "status": "modified",
-      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
-      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "lib/models/diagnosis_result_codec.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/models/diagnosis.dart",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -4422,6 +4390,22 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/models/reasoning_request.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-3 不可变 ReasoningRequest / ReasoningExecutionResult / ReasoningEvidenceReference 契约；保留用户原话、会话、证据身份和 App 执行结果边界，不接入 Native 生产调用。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/models/reasoning_response.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-3 ReasoningResponse v1 严格解码与请求级证据/能力 ID 校验；本切片仅提供独立协议资产，不接管 Native 调用链、不执行业务动作。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -4961,14 +4945,6 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "lib/services/ai_trace.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "lib/services/ai_trace_runtime.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -4978,6 +4954,14 @@
     },
     {
       "path": "lib/services/ai_trace_store.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/ai_trace.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -5297,6 +5281,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "lib/services/local_ai_transcript_restore_policy.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-1 Native 会话恢复的整轮边界：仅保留完整 user/assistant turns，在 Dart/Native 双端校验 10,000 UTF-16 code-unit 上限；不改变独立的最近 60 条用户消息安全上下文边界。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "lib/services/medical_case_evidence_pipeline.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -5342,6 +5334,22 @@
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/reasoning_request_prompt_formatter.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-3 补充请求元数据格式化器；复用既有 SessionStateSnapshot formatter，不复制证据正文，不授予工具权限。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "lib/services/reasoning_response_codec.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-3 ReasoningResponse v1 严格解码与请求级证据/能力 ID 校验；本切片仅提供独立协议资产，不接管 Native 调用链、不执行业务动作。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -5801,6 +5809,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "PROMO_COPY.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "pubspec.lock",
       "status": "modified",
       "classification": "THIRD_PARTY_EXCLUDED",
@@ -5817,7 +5833,15 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "release/download-page/index.html",
+      "path": "README.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "RELEASE_NOTES_1.11.1-1.11.7.md",
       "status": "modified",
       "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
       "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
@@ -5825,19 +5849,11 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "release/研纪_历史版本_v1.10.0+7_发布说明.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "release/研纪_历史版本_v1.10.1_发布说明.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "path": "RELEASE_NOTES.md",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -6006,6 +6022,30 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增的 2.0.0+8048 版本基线和未发布状态记录。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "release/download-page/index.html",
+      "status": "modified",
+      "classification": "APACHE_2_0_AND_FORK_COMMERCIAL",
+      "license": "Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "基于上游文件的品牌/工程修改；上游原始部分保留 Apache-2.0，Fork 原创修改部分适用商业许可。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "release/研纪_历史版本_v1.10.0+7_发布说明.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "release/研纪_历史版本_v1.10.1_发布说明.md",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -7009,6 +7049,14 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
+      "path": "test/local_ai_transcript_restore_policy_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-1 Native 会话恢复的整轮边界：仅保留完整 user/assistant turns，在 Dart/Native 双端校验 10,000 UTF-16 code-unit 上限；不改变独立的最近 60 条用户消息安全上下文边界。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
       "path": "test/markdown_doc_contextual_selection_test.dart",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -7214,6 +7262,22 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/reasoning_request_prompt_formatter_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-3 ReasoningRequest 会话归属、证据 ID 子集、不可变集合、UNKNOWN 执行状态和格式化边界回归测试。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/reasoning_response_codec_test.dart",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增 Core-3 ReasoningResponse v1 严格解码与请求级证据/能力 ID 校验；本切片仅提供独立协议资产，不接管 Native 调用链、不执行业务动作。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
@@ -7913,14 +7977,6 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "tool/license_issuer/README.md",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增专业版授权协议 v1.2、跨语言验签/离线签发实现与回归测试；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "tool/license_issuer/check_release_readiness.py",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -7930,6 +7986,14 @@
     },
     {
       "path": "tool/license_issuer/issuer.py",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "新增专业版授权协议 v1.2、跨语言验签/离线签发实现与回归测试；仅限权利人拥有版权或有充分再许可权的部分。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "tool/license_issuer/README.md",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
@@ -8006,54 +8070,6 @@
       "classification": "FORK_COMMERCIAL",
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "lib/models/reasoning_response.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增 Core-3 ReasoningResponse v1 严格解码与请求级证据/能力 ID 校验；本切片仅提供独立协议资产，不接管 Native 调用链、不执行业务动作。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "lib/services/reasoning_response_codec.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增 Core-3 ReasoningResponse v1 严格解码与请求级证据/能力 ID 校验；本切片仅提供独立协议资产，不接管 Native 调用链、不执行业务动作。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "test/reasoning_response_codec_test.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增 Core-3 ReasoningResponse v1 严格解码与请求级证据/能力 ID 校验；本切片仅提供独立协议资产，不接管 Native 调用链、不执行业务动作。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "lib/models/reasoning_request.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增 Core-3 不可变 ReasoningRequest / ReasoningExecutionResult / ReasoningEvidenceReference 契约；保留用户原话、会话、证据身份和 App 执行结果边界，不接入 Native 生产调用。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "lib/services/reasoning_request_prompt_formatter.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增 Core-3 补充请求元数据格式化器；复用既有 SessionStateSnapshot formatter，不复制证据正文，不授予工具权限。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
-      "path": "test/reasoning_request_prompt_formatter_test.dart",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "新增 Core-3 ReasoningRequest 会话归属、证据 ID 子集、不可变集合、UNKNOWN 执行状态和格式化边界回归测试。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     }
   ],
