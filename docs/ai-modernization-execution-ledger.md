@@ -4319,3 +4319,56 @@ PR HEAD 门禁证据：
 - **本轮没有连接或操作 OPPO Find N2。** Keystore / StrongBox / TEE 实际安全级别、设备绑定 Token 正向激活、AtomicFile 故障恢复、原签名 `adb install -r` 覆盖升级及数据保留、GPU/CPU 多轮真实推理、图片/语音、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，继续保持 `LOCAL ONLY / MISSING / UNKNOWN`。
 - 正式 Release 构建仍需要用户本机原签名材料；CI 已验证缺少本地签名材料时 Release 构建被阻断。不得用 Debug artifact 代替 Release 包。
 - **整体验收状态：** `CLOUD IMPLEMENTATION = PASS`；`FIND N2 REAL-DEVICE ACCEPTANCE = MISSING / LOCAL ONLY`。两者必须分开记录，不得用 CI 结果替代设备证据。
+
+---
+
+## 94. 2026-11-25 v1.3 Release Key Ring 文档对齐与本地交接基线收尾
+
+### 94.1 主线基线与文档提交
+
+- **本节基线：** PR #486 合并后 master @ fa1ddc3e4deb4e4e4dcd338e3f4457358c78c6b6。
+- PR #485 已合并，merge SHA f022852678e2f12a334b83e28e2c4d8c8e3a3e99；PR #486 已 squash 合并，merge SHA fa1ddc3e4deb4e4e4dcd338e3f4457358c78c6b6。两者均为文档收尾，不包含 Dart/Kotlin 运行时代码、授权协议实现、生产密钥或 Android 签名材料变化。
+- 最近一笔应用运行时代码提交仍为 PR #482 merge SHA 57f62083590c5619f84da98ff7c5b5f430efeba8。§93.1–§93.3 的 Native Gate/单一 ai_access 实现和精确 CI 结论仍以该运行时代码 HEAD 为准；当前 master HEAD 与运行时代码基线必须分开记录。
+- PR #486 将 docs/release-license-keyring-configuration.md 的旧 v1.2 架构引用改为 v1.3 §11.1–§11.4，并将旧 §88 / 本地验收 §10 引用改为当前执行台账 §93.4–§93.6 与本地验收交接 §6.5。修改范围仅为该文档的两处引用。
+
+### 94.2 当前主线 v1.3 源码复核
+
+- **Native 统一门禁：** AiModelAccessGate 为进程内存状态，默认关闭，不持久化授权；disable() 同步关闭并递增 epoch，阻止旧队列中的 enable 请求在撤权后重新打开 Gate。
+- **MethodChannel 调用边界：** 复核 MainActivity.kt 的全部 when(call.method) 分支。模型加载及推理入口均要求 runAiTask(... requiresAiAccess = true) 或经 runAiTaskAfterNativeRedFlag(...) 进入统一门禁。仅维护型分支豁免该收费检查：setAiModelAccess、getModelStatus、setBackendPreference、importModel、releaseModel、clearRuntimeCache；这些接口用于授权状态同步、诊断、偏好、导入或释放/清理，不得自行加载或推理模型。
+- Native 内部模型访问函数（包括 loadLocalModel、文本/图像/音频消息、历史恢复、意图/槽位/症状/问诊理解及会话重置路径）在函数内部再检查 aiModelAccessGate.requireAccess()，不只依赖 UI 禁用状态。
+- **EntitlementService：** refresh 先关闭 Native Gate，再读取 Token、get-only 读取设备密钥并验证签名/协议/产品/App/设备绑定；只有验证快照产生 aiAccess=true 才请求开启 Gate。开启确认不确定时尝试重新关闭，检查/无 Token/无效/超时状态保持 fail-closed。
+- **协议兼容：** LicensePayload.grantsAiAccess 对修订 1 的 ai_advanced / contextual_assistant 做 OR 映射；修订 2 仅认 ai_access。发行集合 issuableFeatureIdsByRevision 只允许修订 2 的 ai_access；客户端显式支持修订 {1,2}，不自动接受未来版本。
+- **职责边界：** HeadlessToolDispatcher 保留整计划预检和确定性执行安全；ContextResolutionGateway 明确声明不是授权/收费边界，继续校验引用、来源、锚点及 Resolver 回链。GitHub 当前代码搜索未发现 FeatureAuthorizer 与 FeatureAuthorizationDecision 实现。
+- **审计口径说明：** test/native_ai_access_gate_architecture_test.dart 对 MethodChannel 分支和关键内部函数执行源码结构/字符串断言；它不是 Kotlin AST 解析器。此项可作为当前源码结构审计证据，但不能夸大为完整语法树证明。Native Gate 的行为另有 JVM 单测；均不替代 Find N2 实机验证。
+
+### 94.3 PR #485 / #486 精确 HEAD CI 证据
+
+| PR / 精确 HEAD | 验收范围 | Run / Job | 结果 | 口径 |
+|---|---|---|---|---|
+| #485 / 5c1b9c295fa95e0649b47258c2ae4a7c1fb28e52 | Flutter regression | run 45517116757 / job 138879302515 | **SUCCESS** | 全量 Flutter / Dart 回归 |
+| #485 / 同上 | Android arm64 CI | run 45517116757 / job 138882598119 | **SUCCESS** | CI Debug APK ABI/Manifest、JVM 单测、无本地签名时 Release fail-closed |
+| #485 / 同上 | Fork license boundary | run 45517116752 / job 138879302308 | **SUCCESS** | 文件清单 / REUSE 自动检查 |
+| #485 / 同上 | Branch validation | run 45517116757 / job 138879304247 | **SKIPPED** | 不计 PASS |
+| #486 / 3cb3950f51d30a6e0ef2c3029d8fe6531c43c912 | Flutter regression | run 45517279660 / job 138879860365 | **SUCCESS** | 全量 Flutter / Dart 回归 |
+| #486 / 同上 | Android arm64 CI | run 45517279660 / job 138883470922 | **SUCCESS** | CI Debug APK ABI/Manifest、JVM 单测、无本地签名时 Release fail-closed |
+| #486 / 同上 | Fork license boundary | run 45517279581 / job 138879859601 | **SUCCESS** | 文件清单 / REUSE 自动检查 |
+| #486 / 同上 | Branch validation | run 45517279660 / job 138879862409 | **SKIPPED** | 不计 PASS |
+
+- 两批 Flutter job 的全量回归步骤均完成且无失败；两批 Android arm64 CI 证明的是 CI 构建、ABI/Manifest、JVM 与 fail-closed 行为，不是正式签名 Release，也不是 Find N2 安装/覆盖升级。
+- PR #486 已合并。PR #485/#486 的 GitHub PR HEAD CI 为对应精确 HEAD 的自动验收证据；不得将 SKIPPED 转写为成功，也不得把文档 PR 的 CI 当作正式发行或实机通过证明。
+
+### 94.4 正式发行仍未满足的外部条件
+
+- **正式发行者公钥与来源：** 仓库尚无已核验的生产发行者公钥及来源证明。不能使用协议测试向量或临时生成公钥填充生产 Key Ring。
+- **Actions Secret：** 当前工具权限不能读取 GitHub Actions Secret 的实际值；因此 YANJI_LICENSE_KEY_RING 是否已配置正确，不能据此声明 PASS。正式 Release 仍要求 Secret 与本机编译期 Key Ring 一致，并执行实际产物扫描。
+- **生产私钥：** 离线保管、独立备份与恢复演练、签发审计和密钥轮换尚无可核验证据；私钥不得进入仓库、CI、Dart define、Gradle 属性或 APK/AAB。
+- **源码权属：** Fork license boundary 成功仅验证文件清单和许可证标记结构，不证明作者版权或再许可权。inventory 中 OWNERSHIP_EVIDENCE_REQUIRED 项仍须权利人材料补证。
+- **正式 Android 签名：** 原签名身份及本机密钥不由 CI Debug APK 代替。CI 已证明缺少本地签名材料时 Release 构建被阻断；实际正式签名包必须由本机原签名材料构建和验签。
+- **PR #416：** 保持 OPEN / DRAFT / UNMERGED，不合并，不把其历史协议底座 PR 当作当前实现的重复集成入口。
+
+### 94.5 当前交接与验收状态
+
+- docs/local-real-device-acceptance-handoff.md 更新为版本 1.1，记录 PR #486 合并后的 master 基线、最近运行时代码基线、PR #485/#486 的精确 CI job 结果，并继续要求本地执行前重新读取实际 master HEAD 和 APK 元数据。
+- **云端：** v1.3 单一 ai_access 代码与协议兼容实现已有精确 CI 证据；PR #485/#486 文档收尾已合并。云端可完成部分已收尾。
+- **正式 Release：** BLOCKED，原因是生产发行者公钥/来源、Secret 实值核验、私钥保管演练、源码权属证据及正式签名材料尚未齐备。
+- **OPPO Find N2：** LOCAL ONLY / MISSING / UNKNOWN。Keystore/StrongBox、AtomicFile 故障恢复、合法设备 Token 正向激活、原签名覆盖升级和数据保留、GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、TRACE 与 AI 数据清除全部留给本地交接执行；本轮不标记任何实机 PASS。
