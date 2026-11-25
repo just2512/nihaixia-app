@@ -53,6 +53,7 @@
 | E | AI 数据清理 | `PARTIAL`（沿用单库和现有清理实现；只保留针对性清理/非 AI 数据保留验证） | 与 A/B/C 并行 | 清除 AI 会话、任务、附件缓存和 TRACE；保留非 AI 数据与已安装模型；不拆库、不增加加密或备份体系 |
 | F | 统一 TRACE 与审计证据 | `PARTIAL`（代码/CI 有覆盖；完整端到端设备 TRACE 为 LOCAL ONLY） | 与 A-E 按需并行 | Find N2 本地记录 trace_id、实际 backend 和各阶段事件 |
 | G | 文档与版本一致性 | `PARTIAL` | 可独立执行 | README 与 pubspec 一致；审计报告/规范文件分离；文档状态不与代码事实冲突 |
+| H | 用户 Markdown 书架本地知识库（未来能力） | `NOT_STARTED`（专项架构已冻结，尚未实现） | B 纯数据契约可与 A 并行；C→D→E→F 按专项文档依赖推进，不阻塞 A-G | 按专项架构文档完成本地导入、索引、检索、来源治理、增量更新、删除与 Find N2 验收；设计/CI 不替代设备 TRACE |
 
 > A 的云端工作已完成，当前剩余项仅为 Find N2 / E4B 本地实测，因此总状态从 `IN_PROGRESS` 校准为 `PARTIAL`，不得把设备未测记作云端阻塞。B/C/D/E/F/G 是全局 AI 改造的独立工作流，其状态不等同于本协议“情境问 AI”云端收尾状态；本轮不擅自把它们升级为 PASS，也不将其扩大为本次情境入口收尾的阻塞项。D 的适配器实现不得先于对应能力的行为基线，但其目录审计不受此限制。
 
@@ -4376,3 +4377,21 @@ PR HEAD 门禁证据：
 - **本轮云端结论：** v1.3 运行时实现与协议兼容、授权 UI 单一权益语义、Release fail-closed 规则和 Fork 清单自动边界均已完成源码/CI 复核；正式发行材料、法律权属材料和 Find N2 设备证据仍是外部/本地硬门槛。
 
 ---
+
+
+---
+
+## 95. 2026-11-25 用户 Markdown 书架本地知识库架构冻结
+
+- **约束文档：** docs/user-bookshelf-local-knowledge-architecture.md。
+- **设计状态：** DESIGN_FROZEN / NOT_IMPLEMENTED。本轮只冻结未来架构和执行边界，没有实现书架运行时代码、数据库 schema、模型依赖、Embedding 索引或 UI。
+- **当前 master 基线：** 本次分支从 master 当前 HEAD 07d4c60eabb42f1fb46b903d4336a1b6531f084b 派生；后续每个实现切片仍须重新核验当时 master。
+- **核心决策：** system_knowledge.db 与 user_bookshelf.db 物理隔离；用户多本书共用 user_bookshelf.db 内的统一书籍/片段/向量表；统一 Dart 检索契约，但保留 origin/materialKind/verificationStatus；用户来源默认未核验。
+- **v1.3 授权与存储边界：** 未来任何 Native LiteRT/LiteRT-LM Embedding 模型加载或推理均复用唯一 `ai_access` 与同一个 Native `AiModelAccessGate`，不新增书架/Embedding 独立收费权益；`user_bookshelf.db` 只存用户语料及索引，不迁移会话、消息、问诊任务、Native transcript 或 TRACE。App 永久授权 Token 的 `ai_access` 不等于源代码商业许可。
+- **索引策略：** 关键词先可用，EmbeddingGemma 2 text-only 270M 为 D 阶段首选 PoC，不在当前阶段添加模型权重或运行时依赖；不预先决定最终向量维度、FTS5、ANN、批次大小或 Reranker。
+- **安全与历史：** USER 内容是不可信资料，不得触发工具；引用卡片由本地数据回填；RAG 正文不得进入 Native 持久化历史；删除/修改后历史引用标为 SOURCE_DELETED / SOURCE_CHANGED。
+- **执行顺序：** A 多轮治理继续优先；B 只做数据契约与接口设计，可与 A 并行；C Markdown 导入与关键词；D Embedding PoC/向量和后台续传；E 混合检索与引用；F 增量更新/删除/恢复。Reranker/ANN 仅由可复现证据触发。
+- **当前不做：** 不新增书架页面、SQLite schema、FTS5、Embedding/向量依赖、后台常驻服务；不改当前经典检索排序或黄金快照；不改变 AI 业务权限和许可门禁。
+- **验收约束：** 专项 BS-01～BS-25 按阶段执行；CI 只证明自动化行为，Find N2 设备能力必须保留真实 TRACE，未测保持 UNKNOWN / LOCAL ONLY。
+
+本节只建立未来工作流 H 的设计入口，不改变 A-G 已有状态，也不把书架实现变成当前多轮治理的阻塞项。
