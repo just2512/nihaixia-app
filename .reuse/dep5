@@ -177,6 +177,7 @@ Files:
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiAttachmentPolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiBackendSelectionPolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationHistoryPolicy.kt
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationSessionIdentity.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiImagePolicy.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiModelImportRecovery.kt
  android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiModelIntegrityPolicy.kt
@@ -204,6 +205,7 @@ Files:
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiAttachmentPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiBackendSelectionPolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationHistoryPolicyTest.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationSessionIdentityTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiImagePolicyTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiModelImportRecoveryTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiModelIntegrityPolicyTest.kt
