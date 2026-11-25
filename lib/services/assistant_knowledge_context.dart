@@ -399,12 +399,16 @@ class AssistantKnowledgeContextBuilder {
     final status = sources.isEmpty || sources.length < sourceIds.length
         ? AssistantKnowledgeRetrievalStatus.partial
         : AssistantKnowledgeRetrievalStatus.retrieved;
+    final resolvedSourceIds = sources.map((source) => source.sourceId).toSet();
+    final resolvedRankedEvidence = built.rankedEvidence
+        .where((item) => resolvedSourceIds.contains(item.sourceId))
+        .toList(growable: false);
     return AssistantKnowledgeContextResult(
       text: text,
       sources: List.unmodifiable(sources),
       status: status,
       knownEvidenceIds: built.knownEvidenceIds,
-      rankedEvidence: built.rankedEvidence,
+      rankedEvidence: resolvedRankedEvidence,
     );
   }
 
