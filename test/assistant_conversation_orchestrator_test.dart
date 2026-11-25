@@ -124,6 +124,76 @@ void main() {
       expect(decision.tool, isNull);
     });
 
+    test('已注册术数领域的常识、原理与学习问题进入玄学解释，不启动计算工具', () {
+      for (final query in [
+        '《小六壬》大安的五行、方位、吉凶分别是什么？',
+        '解释梅花易数的体用关系',
+        '紫微斗数十四主星分别是什么？',
+        '紫薇斗数的命宫是什么意思？',
+        '紫微斗数的历史背景',
+        '八字是什么？',
+        '八字十神的原理是什么？',
+        '系统学习八字基础知识',
+        '小六壬和梅花易数有什么区别？',
+        '周公解梦是什么意思？',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool, isNull, reason: query);
+        expect(decision.needsClarification, isFalse, reason: query);
+      }
+    });
+
+    test('工具选择待处理时的非五运六气术数知识问题仍进入玄学解释', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '八字十神的原理是什么？',
+        selectedMode: AssistantMode.automatic,
+        currentMode: AssistantMode.metaphysics,
+        pendingToolSelection: true,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isFalse);
+    });
+
+    test('明确要求排盘的复合解释请求仍调用确定性工具', () {
+      for (final query in [
+        '请帮我排紫微斗数盘，并解释十四主星',
+        '紫微斗数排盘并解释十四主星',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool?.id, 'ziwei', reason: query);
+      }
+    });
+
+    test('排盘历史背景问题不得被误识别为实际排盘指令', () {
+      final decision = AssistantConversationOrchestrator.resolve(
+        query: '紫微斗数排盘的历史背景',
+        selectedMode: AssistantMode.automatic,
+      );
+      expect(decision.mode, AssistantMode.metaphysics);
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isFalse);
+    });
+
+    test('五运六气的明确中医原理学习仍进入学习助手', () {
+      for (final query in ['学习五运六气推算原理', '五运六气推算原理', '五运六气课程']) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.learning, reason: query);
+        expect(decision.tool, isNull, reason: query);
+      }
+    });
+
     test('工具澄清后补充的日期仍进入五运六气 typed arguments', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '五运六气 2026-11-06',
@@ -749,14 +819,14 @@ void main() {
       expect(pendingChoice.tool?.id, 'ziwei');
     });
 
-    test('待选工具期间询问历史背景应切换为学习助手', () {
+    test('待选工具期间询问已注册术数领域的历史背景应进入玄学解释', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '紫微斗数的历史背景',
         selectedMode: AssistantMode.automatic,
         currentMode: AssistantMode.metaphysics,
         pendingToolSelection: true,
       );
-      expect(decision.mode, AssistantMode.learning);
+      expect(decision.mode, AssistantMode.metaphysics);
       expect(decision.tool, isNull);
       expect(decision.expectsToolSelection, isFalse);
     });

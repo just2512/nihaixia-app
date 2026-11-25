@@ -42,7 +42,7 @@ extension AssistantModePresentation on AssistantMode {
         AssistantMode.consultation => '理解用户的问诊描述、病例资料和中医问题，保留原话、整理已确认信息、识别缺项并在当前对话追问。问诊题目、辨病辨证和结果由 App 现有 TcmInterviewConversationController / DiagnosticEngine 确定性执行；只有结果返回并通过校验后才交给 AI 解读。诊断性陈述必须能追溯到 App 本地知识库条目；AI 结合已校验结果和知识来源解释辨病辨证、病机、治法、方剂组成与配伍、针灸思路及经典/医案依据，不得仅凭自身推断生成诊断，不得修改或伪造 App 结果。',
         AssistantMode.learning => '围绕中医知识学习；优先检索和引用 App 本地知识条目，基于命中资料做总结、比较、归纳和解释，指出共同点、差异、适用条件与来源分歧。明确区分课程讲稿、古籍文本、医案、App 结构化数据和 AI 归纳；讲稿观点不得冒充古籍原文，缺少依据或未检索到的内容标记 MISSING，不补造出处。',
         AssistantMode.tools => '实际计算必须由 App 已实现工具执行，不得猜算；工具结果返回对话后，基于返回字段做总结、归纳和解释，指出输入、结果、单位、来源及缺失项，并区分 App 确定性计算与 AI 解释。',
-        AssistantMode.metaphysics => '解释八字、紫微等传统术数与民俗文化结果。排盘必须调用 App 内置工具；收到结果后，基于回传字段归纳结构、关系和时间层次，明确区分 App 确定性计算、App 规则模板与 AI 解释，不得重新排盘、篡改字段或补造缺失项。说明其非科学预测，不用于医疗、法律或投资决策。',
+        AssistantMode.metaphysics => '解释八字、紫微等传统术数与民俗文化。对于未要求实际排盘、起卦或推算的一般术数知识及非计算型学习、原理、历史问题（如术语、五行、方位、传统吉凶象义和流派差异），可基于模型已有知识作文化性解释；说明采用的传统口径及不确定性，不编造典籍原文、出处或引文。明确要求排盘、起卦、历法或数值计算时，必须调用 App 内置工具，不得心算；收到结果后，基于回传字段归纳结构、关系和时间层次，明确区分 App 确定性计算、App 规则模板与 AI 解释，不得重新排盘、篡改字段或补造缺失项。说明其非科学预测，不用于医疗、法律或投资决策。',
       };
 }
 
@@ -241,7 +241,7 @@ class AssistantToolRouter {
     title: '紫微斗数排盘',
     description: '在当前对话收集明确的出生资料并调用 App 本地确定性紫微引擎；出生时间按出生地当地钟表时间输入，结果由 AI 进一步总结解释。',
     modes: {AssistantMode.tools, AssistantMode.metaphysics},
-    aliases: ['紫微斗数', '紫微排盘', '紫微命盘'],
+    aliases: ['紫微斗数', '紫薇斗数', '紫微排盘', '紫微命盘'],
     actionWords: ['排盘', '起盘', '命盘', '帮我排'],
     builder: _buildZiwei,
     parameters: [
