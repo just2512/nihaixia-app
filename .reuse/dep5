@@ -1183,3 +1183,11 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-2 explicit legacy-order KEEP/DROP decision DTO, deterministic selector and focused regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
 
+
+Files:
+ lib/models/session_state_snapshot.dart
+ lib/services/session_state_snapshot_builder.dart
+ test/session_state_snapshot_builder_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-1 session-scoped structured memory snapshot DTO, read-only adapter and focused regression tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
