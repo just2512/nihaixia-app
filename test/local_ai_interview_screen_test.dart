@@ -1961,7 +1961,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.sentTexts, ['我最近三天口苦，胸闷']);
-    expect(service.sentConversationIds, [3]);
+    expect(service.sentConversationIds, hasLength(1));
+    final sentConversationId = service.sentConversationIds.single;
+    expect(sentConversationId, greaterThan(0));
+    expect(
+      _store._conversations,
+      contains(sentConversationId),
+      reason: 'Native 发送必须绑定本轮实际创建的持久化会话',
+    );
     expect(service.sentContexts, hasLength(1));
     expect(service.sentContexts.single, contains('当前角色：问诊助手'));
     expect(service.sentContexts.single, contains('App 本地知识库'));
