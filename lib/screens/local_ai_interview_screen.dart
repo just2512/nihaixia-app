@@ -10908,7 +10908,7 @@ class _InterviewMessageBubble extends StatelessWidget {
                     message.onSourceTap != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Material(
-                    color: Colors.transparent,
+                    color: scheme.surfaceContainerLow,
                     child: ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       childrenPadding: const EdgeInsets.only(
