@@ -19,6 +19,10 @@ import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../models/assistant_reasoning_contract.dart';
+import '../models/session_state_snapshot.dart';
+import '../services/assistant_reasoning_response_parser.dart';
+import '../services/session_state_snapshot_builder.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
 import '../services/headless_tool_result_handler.dart';
@@ -265,11 +269,13 @@ class _AssistantTurnResponse {
     required this.text,
     this.sourceIds = const [],
     this.knowledgeStatus,
+    this.reasoningStatus,
   });
 
   final String text;
   final List<String> sourceIds;
   final String? knowledgeStatus;
+  final String? reasoningStatus;
 }
 
 /// Bounded, user-authored context sent only to the RedFlag safety boundary.
@@ -1138,6 +1144,58 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<SessionStateSnapshot> _buildLearningSessionSnapshot({
+    required int conversationId,
+  }) async {
+    List<Map<String, Object?>> messages;
+    try {
+      messages = await _conversationStore.getAssistantMessages(
+        conversationId: conversationId,
+      );
+    } catch (_) {
+      return SessionStateSnapshot(
+        sessionId: conversationId,
+        revision: 'UNKNOWN',
+        status: SessionStateStatus.unknown,
+        facts: const [],
+        evidenceReferences: const [],
+        diagnostics: const ['SESSION_MESSAGES_READ_FAILED'],
+      );
+    }
+
+    TcmInterviewTaskState? taskState;
+    var taskStateReadFailed = false;
+    try {
+      taskState = await _conversationStore.getTcmInterviewTaskState(
+        conversationId: conversationId,
+      );
+    } catch (_) {
+      taskStateReadFailed = true;
+    }
+
+    final snapshot = SessionStateSnapshotBuilder.build(
+      sessionId: conversationId,
+      messages: messages,
+      taskState: taskState,
+      taskOwnerSessionId: taskState == null ? null : conversationId,
+    );
+    if (!taskStateReadFailed) return snapshot;
+
+    return SessionStateSnapshot(
+      sessionId: snapshot.sessionId,
+      revision: snapshot.revision,
+      status: SessionStateStatus.partial,
+      activeTaskId: snapshot.activeTaskId,
+      facts: snapshot.facts,
+      evidenceReferences: snapshot.evidenceReferences,
+      omittedUserMessageCount: snapshot.omittedUserMessageCount,
+      diagnostics: [
+        ...snapshot.diagnostics,
+        'TCM_TASK_STATE_READ_FAILED',
+      ],
+    );
+  }
+
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
     required int conversationId,
@@ -1275,15 +1333,114 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
             await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
+        final sessionState = await _buildLearningSessionSnapshot(
+          conversationId: conversationId,
+        );
+        final evidenceReferences = <AssistantReasoningEvidenceReference>[];
+        final seenSourceIds = <String>{};
+        for (final source in knowledge.sources) {
+          if (!seenSourceIds.add(source.sourceId) || evidenceReferences.length >= 64) {
+            continue;
+          }
+          final evidenceNumber = evidenceReferences.length + 1;
+          evidenceReferences.add(AssistantReasoningEvidenceReference(
+            evidenceId: 'EV-${evidenceNumber.toString().padLeft(3, '0')}',
+            sourceId: source.sourceId,
+            sourceLabel: source.sourceLabel,
+            title: source.title,
+            localBacklink: source.localBacklink,
+            locatorStatus: source.locatorStatus,
+            sourceKind: source.sourceKind,
+            sourceVerificationStatus: source.sourceVerificationStatus,
+            bibliographicLocatorVerified: source.bibliographicLocatorVerified,
+          ));
+        }
+        final request = AssistantReasoningRequest(
+          requestId: traceId ??
+              'learning-${conversationId}-${DateTime.now().toUtc().microsecondsSinceEpoch}',
+          sessionId: conversationId,
+          userText: text,
+          mode: AssistantMode.learning.name,
+          retrievalStatus: knowledge.statusLabel,
+          sessionState: sessionState,
+          evidence: evidenceReferences,
+          allowActionProposal: false,
+        );
         final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
             '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
-            '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
-        final reply = await sendWithContext(context);
+            '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}'
+            '\n\n${request.toPromptInstruction()}';
+        final rawReply = await sendWithContext(context);
+        final reasoning = AssistantReasoningResponseParser.parse(
+          raw: rawReply,
+          request: request,
+        );
+        final citedSourceIds = reasoning.isValid
+            ? reasoning.referencedEvidenceIds
+                .map((id) => evidenceReferences
+                    .firstWhere((reference) => reference.evidenceId == id)
+                    .sourceId)
+                .toList(growable: false)
+            : const <String>[];
+        await _traceRecorder.record(
+          traceContext,
+          stage: AiTraceStage.modelOutput,
+          status: reasoning.isValid
+              ? AiTraceStatus.succeeded
+              : AiTraceStatus.failed,
+          mode: mode.name,
+          sourceIds: citedSourceIds,
+          errorCode: reasoning.diagnostic,
+        );
+        if (!reasoning.isValid) {
+          return _AssistantTurnResponse(
+            text: '【结构化响应校验失败；本轮未验证任何来源引用'
+                '（${reasoning.diagnostic ?? 'UNKNOWN'}）。以下保留模型原始输出，不代表已核验知识结论。】\n'
+                '${rawReply.trim()}',
+            sourceIds: const [],
+            knowledgeStatus: knowledge.statusLabel,
+            reasoningStatus: reasoning.status.wireValue,
+          );
+        }
+
+        final sourcesByEvidenceId = {
+          for (final reference in evidenceReferences)
+            reference.evidenceId: reference,
+        };
+        final citedSources = reasoning.referencedEvidenceIds
+            .map((id) => sourcesByEvidenceId[id]!)
+            .toList(growable: false);
+        final responseText = StringBuffer(
+          reasoning.text.trim().isEmpty ? '本轮没有生成可显示内容。' : reasoning.text.trim(),
+        );
+        if (reasoning.unknowns.isNotEmpty) {
+          responseText
+            ..writeln('\n\n【待确认】')
+            ..writeln(reasoning.unknowns.map((value) => '- $value').join('\n'));
+        }
+        if (reasoning.conflicts.isNotEmpty) {
+          responseText
+            ..writeln('\n\n【资料冲突】')
+            ..writeln(reasoning.conflicts.map((value) => '- $value').join('\n'));
+        }
+        if (citedSources.isNotEmpty) {
+          responseText
+            ..writeln('\n\n本轮引用的知识库条目（仅列出模型引用且 App 已回查的来源）：')
+            ..write(citedSources.map((source) {
+              final resolved = knowledge.sources.firstWhere(
+                (candidate) => candidate.sourceId == source.sourceId,
+              );
+              return resolved.toCitationText();
+            }).join('\n'));
+        }
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
-          sourceIds: knowledge.sourceIds,
+          text: responseText.toString(),
+          sourceIds: citedSources
+              .map((source) => source.sourceId)
+              .toList(growable: false),
           knowledgeStatus: knowledge.statusLabel,
+          reasoningStatus: reasoning.status.wireValue,
         );
       case AssistantMode.tools:
         final availableTools = AssistantToolRouter.quickActions(AssistantMode.tools)
@@ -1391,6 +1548,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     List<String> sourceIds = const [],
     Map<String, String> toolArguments = const {},
     String? knowledgeStatus,
+    String? reasoningStatus,
     String? traceId,
     List<AssistantToolPlanStepMetadata> toolPlanSteps = const [],
   }) async {
@@ -1429,6 +1587,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           sourceIds: sourceIds,
           toolArguments: toolArguments,
           knowledgeStatus: knowledgeStatus,
+          reasoningStatus: reasoningStatus,
           traceId: traceId,
           invocationOrigin: _pendingToolOrigin?.name,
           contextRef: _activeContextRef,
@@ -5823,6 +5982,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolStatus: toolStatus,
         sourceIds: mergedSourceIds,
         knowledgeStatus: response.knowledgeStatus,
+        reasoningStatus: response.reasoningStatus,
         traceId: traceContext.traceId,
       );
       await _traceRecorder.record(
