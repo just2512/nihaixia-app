@@ -4538,3 +4538,41 @@ PR HEAD 门禁证据：
 - **Core-5：** 仍未完成五层跨层 E2E；需覆盖模型输出引用 ID → App 回验 → UI 本地来源回填，以及 ACTION_PROPOSAL → registry/权限/typed args → 确定性 executor → ExecutionResult 回流。不得将单元测试或契约 DTO 存在等同端到端完成。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED，不启动。
 - **设备策略：** Find N2 安装升级、E4B GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离及端到端 TRACE 仍统一留到云端工作全部完成后本地验收；不作为云端 Core-3～Core-5 开发阻塞。
+
+
+
+---
+
+## 105. 2026-11-25 Core-3 响应契约合并与 Core-2 证据交接重新基线
+
+- **当前集成基线：** `cb05913cdc3cf6423f67e25ef4328313c83d2024`。PR #520 已合并；本节不回写 §103/§104 的历史快照。
+- **Core-3 / PR #520：MERGED。** 合并提交 `cb05913cdc3cf6423f67e25ef4328313c83d2024`，精确 HEAD `b2707a11b2d58be6393eefb9732c2495c3f9f309`。新增不可变 `ReasoningResponse` / `BusinessActionProposal` DTO、严格版本化 `ReasoningResponseCodec.decode` 与负向测试；校验 schemaVersion、requestId、字段白名单、responseKind/status、一轮请求内的 ranked/known evidence IDs，以及调用方传入的 capability allowlist。ACTION_PROPOSAL 只是未可信数据，不执行、不授权、不重放。Flutter tests run `45582855425` SUCCESS（Flutter regression 与 Android arm64 APK/JVM job 均 SUCCESS）；Fork License run `45582855461` SUCCESS；PR 事件 Branch validation SKIPPED 不计 PASS。该切片仍为 CONTRACT-ONLY，不代表 Native 生产接线。
+- **旧 Core-2 / PR #521：CLOSED / SUPERSEDED，未合并。** #520 合并后，#521 仍基于旧 master `61e63c7309787acf0867d9503532b405f5a0e5e9`，GitHub 判定文档冲突；旧 HEAD CI 不继承。原代码和不可变返回边界修复已移植到新分支，不强行合并旧文档树。
+- **Core-2 → Core-3 证据交接 / PR #522：OPEN / DRAFT。** 从最新 master `cb05913cdc3cf6423f67e25ef4328313c83d2024` 派生 `work/core2-evidence-handoff-master-cb05913-20261125`。新增 `AssistantKnowledgeContextBuildResult` / `AssistantKnowledgeEvidenceReference` 与 `buildWithEvidenceAsync`，保留旧 `buildAsync` String API；`knownEvidenceIds` 包含本轮全部召回候选（KEEP/DROP），`rankedEvidence` 只包含完整落入既有 6,500 字符上下文的 KEEP 块，并提供 evidenceId → sourceId 映射和独立 `evidenceIndexContext`。返回的证据列表采用不可变包装并有测试；没有变更 query/order/source caps/golden behavior，不接入 Native prompt，不执行工具，不把结构化 formula/herb/acupuncture 等冒充 CandidateEvidence。
+- **PR #522 验收状态：IN_PROGRESS。** 代码与测试已移植并同步本架构源码映射；初始代码 HEAD `ce2b7a2706c7c654b6ceb2b952e0a51f41b380b6` 的 Flutter run `45585881911` 在文档更新前仍 IN_PROGRESS，Fork License run `45585881381` SUCCESS；由于本轮随后更新了架构和台账，以上结果不作为最终 HEAD 验收。最终 HEAD 必须重新完成 Flutter regression/static analysis、Android arm64/JVM 与 Fork License；Branch validation SKIPPED 不计 PASS。
+- **Core-0：** 五层 DTO、责任边界、真实调用入口和失败语义均已有架构映射；本次修正 #518/#519 已合并、#520 已合并及 #522 待合并状态。仍需在后续 Native Request/Response 接线后复核行号与调用链，不能以文档映射代替运行时代码。
+- **Core-1：** #519 云端输入接线已合并；KV Cache token、模型声明 maxContextTokens 和 formatter 字符上限均不是 App 可用 token/input budget；跨进程 Native Conversation 恢复与自动压缩仍 UNKNOWN / NOT IMPLEMENTED。
+- **Core-2：** #518 多源生产召回/排序已合并；#522 只补齐 request-local evidence identity handoff。未完成前，模型不得引用未显式提供的 evidence ID；未接入 Native 推理。
+- **Core-3：** #520 响应 DTO/decoder 已合并；下一切片先实现不可变 ReasoningRequest 与确定性 prompt formatter，再以单条本地知识问答路径接入 Native；空回复、解析失败、错 requestId、未知引用必须 fail-closed。禁止一次性替换全局 prompt。
+- **Core-4：** #515 UNKNOWN 执行状态保留和停止后续步骤已合并；仍需审计能力级参数 schema、权限与用户确认、模型提案到既有 ToolExecutionPlan/Headless executor 的显式适配和结果回流。不改变唯一 ai_access / Native AiModelAccessGate。
+- **Core-5：** 尚无覆盖「请求装配→模型响应解码→证据 ID 回验→本地来源回填」及「动作提案→能力门禁→确定性执行→ExecutionResult→解释」的跨层 E2E。单元/契约测试不计作 E2E 完成。
+- **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **设备策略：** Find N2 安装升级、E4B GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离和端到端 TRACE 仍统一放在云端工作全部完成后本地验收；设备验收不阻塞云端 Core-0～Core-5 继续实现。
+
+
+---
+
+## 106. 2026-11-25 Core-2 证据身份合并、Core-3 Request 契约与 Core-4 执行边界审计
+
+- **当前主线基线：** `a43989636101d267cd2ab96fe6a4eee1a89ba522`。PR #522 已合并；本节覆盖 §105 在合并前的 #522 状态快照，不回写 §103～§105 的历史。
+- **Core-2 / PR #522：MERGED。** squash merge commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`，精确 PR HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5`。`AssistantKnowledgeContextBuilder.buildWithEvidenceAsync` 在不破坏旧 `buildAsync` String API 的前提下返回 request-local `knownEvidenceIds`（所有召回候选，KEEP/DROP）、`rankedEvidence`（完整进入现有上下文的 KEEP 项）、evidenceId → sourceId 引用和 `evidenceIndexContext`。没有改变 query/order/source caps/golden output；没有将未完整呈现块设为可引用 evidence。精确 HEAD Flutter regression run `45586213705` SUCCESS（含 Android arm64 APK/JVM job `139111571236` SUCCESS），Fork License run `45586213548` SUCCESS；PR Branch validation SKIPPED 不计 PASS。Core-2 的候选召回与 request-local identity handoff 已有云端代码/CI，完整策略版本、逐项 KEEP/DROP 预算诊断与结构化 formula/herb/acupuncture 来源统一仍 PARTIAL。
+- **Core-3 / PR #523：OPEN / DRAFT。** 从 #520 合并基线派生独立分支 `work/core3-reasoning-request-master-cb05913-20261125`。新增不可变 `ReasoningRequest`、`ReasoningEvidenceReference`、`ReasoningExecutionResult` DTO 与 `ReasoningRequestPromptFormatter`；原始 userText 与会话记忆、证据身份、App 执行结果分离；按 sessionId 校验快照归属；ranked IDs 必须为本轮 known IDs 子集且唯一；UNKNOWN/SESSION_MISMATCH 的记忆快照不通过 DTO `toMap()` 泄露事实；SUCCEEDED execution projection 必须包含 actualArguments、resultValues 与 sourceIds；formatter 复用既有 16,000 UTF-16 SessionState formatter。没有 Native MethodChannel / MainActivity 改动、没有主 prompt 改动、没有 response decoder 生产接线、没有模型动作授权或执行。该 PR 更新了 REUSE DEP5 和 fork license inventory；权属仍按仓库规则标为 OWNERSHIP_EVIDENCE_REQUIRED。
+- **PR #523 精确 HEAD 验收：** 曾从精确 CI 诊断附件定位到唯一 analyzer error：可空 sessionState field-formal 在构造器体内不可直接提升；已修为显式 null assertion。后续架构映射/执行台账/能力审计文档追加会再次改变 PR HEAD；最终 HEAD 必须重新跑 Flutter static analysis/regression、适用 Android arm64/JVM 与 Fork License，不能继承早期 HEAD 结果。测试失败不删除、门槛不降低。
+- **Core-0：** 本次刷新五层映射，将 #522 的候选 ID 与完整呈现 KEEP ID 区分；将 #523 Request DTO 归为独立契约，不把文档/DTO 视为 Native 运行时完成。生产 Native 输入/响应、实际调用入口和失败状态仍须在单路径接线后再复核。
+- **Core-1：** #519 Native SessionStateSnapshot 输入已合并；16,000 UTF-16 字符上限不是模型 token/input budget；跨进程 Native Conversation 恢复和自动压缩仍 UNKNOWN / NOT IMPLEMENTED。
+- **Core-2：** #518 多源生产召回与 #522 request-local evidence identity handoff 已合并；不能将 DROP 候选或未完整呈现块放进模型允许引用的 ranked evidence；尚未接入 Native ReasoningRequest。
+- **Core-3：** #520 Response DTO/strict decoder 已合并；#523 Request DTO/formatter 仍 Draft/contract-only。下一步在单独分支中先写 Request→Response adapter 测试，再只接入一条无动作权限的本地知识问答路径；decoder 使用空 capability allowlist，引用 ID 仅由 App 本地映射为 sourceId，错误/空回复/错 requestId/未知引用 fail-closed。不得先把 ACTION_PROPOSAL 接到 dispatcher。
+- **Core-4：** 24 个 Router IDs = 18 Headless executor + 5 Page-only + 1 inline deterministic workflow；18 个 executor 不等于全部多步计划可用，多步骤只开放 dosage/solar_terms/yuxiaji_omen/sanshan_lingqian 四项。意图模型仅选本轮候选精确 ID、不生成参数；参数由 App 按用户原文提取并整计划预检；dispatcher 全计划校验、顺序执行、非 SUCCEEDED 停止、异常 UNKNOWN 不重放。#520 BusinessActionProposal 与 #523 ReasoningExecutionResult 尚未接入现有 executor/result handler；能力 schema 缺少统一版本化、数值/单位/嵌套/字段关联/敏感级别/副作用/取消/幂等与确认策略。当前自动计划基于原始用户显式请求和受限候选选择，不是 proposal 后的第二次确认；未来 proposal 路径必须另加 App-owned 授权与确认。
+- **Core-5：** 尚无真实五层端到端集成；必须覆盖 Request assembly → Native model reply → Response decode → evidence ID validation → sourceId backfill → UI，并独立覆盖 proposal → candidate/capability validation → permission/confirmation → deterministic execution → actual ExecutionResult → model explanation。单元/DTO tests 不计 E2E。
+- **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **设备策略：** Find N2 安装升级、E4B GPU/CPU 多轮、Activity/进程恢复、多媒体、会话隔离、取消和完整 TRACE 仍放在云端工作全部结束后本地验收；不作为 Core-3～Core-5 云端代码工作前置条件。
