@@ -1140,6 +1140,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
+    required int conversationId,
     required AssistantMode mode,
     required AiTraceContext traceContext,
     String? retrievalQuery,
@@ -1162,6 +1163,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return traceId == null
           ? _service.sendMessageWithContext(
               text,
+              conversationId: conversationId,
               context: context,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
@@ -1169,6 +1171,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             )
           : _service.sendMessageWithContextAndTrace(
               text,
+              conversationId: conversationId,
               context: context,
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
@@ -1199,12 +1202,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           final reply = traceId == null
               ? await _service.sendMessage(
                   text,
+                  conversationId: conversationId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
                   redFlagContextTruncated: redFlagContextTruncated,
                 )
               : await _service.sendMessageWithTrace(
                   text,
+                  conversationId: conversationId,
                   traceId: traceId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
@@ -1346,6 +1351,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       debugPrint('[AssistantHistory] 无法创建会话：$error\n$stack');
       return null;
     }
+  }
+
+  Future<int> _requireConversationId() async {
+    final id = await _conversationIdFuture;
+    if (id == null || id <= 0) {
+      throw StateError('当前对话没有有效的持久化会话 ID；已阻止发送，避免 Native 历史串线。');
+    }
+    return id;
   }
 
   Future<void> _persistTcmInterviewTaskState(
@@ -1662,10 +1675,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
         final draft = traceId == null
             ? await _service.extractSymptomsFromExplicitText(
+                conversationId: conversationId,
                 sourceText: normalizedInitialMessage,
                 questionSchema: extractionController.symptomQuestionSchema,
               )
             : await _service.extractSymptomsFromExplicitTextWithTrace(
+                conversationId: conversationId,
                 traceId: traceId,
                 sourceText: normalizedInitialMessage,
                 questionSchema: extractionController.symptomQuestionSchema,
@@ -5626,6 +5641,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               _tcmInterviewController?.canAnswer == true ,
         );
     await _service.restoreConversation(
+      conversationId: await _requireConversationId(),
       transcript: transcript,
       userMessages: userMessages,
       requireMedicalSafety: historyRequiresMedicalSafety,
@@ -5733,6 +5749,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
       final response = await _sendTextWithKnowledgeContext(
         normalizedPrompt,
+        conversationId: await _requireConversationId(),
         mode: mode,
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
@@ -7142,6 +7159,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     try {
       await _service.restoreConversation(
+        conversationId: await _requireConversationId(),
         transcript: transcript,
         userMessages: _pendingHistoryUserMessages,
         requireMedicalSafety: requireMedicalSafety,
@@ -7243,6 +7261,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       traceContext: traceContext,
       route: 'assistant_send',
     )) {
+      return;
+    }
+    int conversationId;
+    try {
+      conversationId = await _requireConversationId();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
       return;
     }
     final activeTcmTask = _tcmInterviewController;
@@ -9073,11 +9098,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               text: traceId == null
                   ? await _service.sendAudio(
                       audioPath,
+                      conversationId: conversationId,
                       prompt: text,
                       requireMedicalSafety: requiresMedicalSafety,
                     )
                   : await _service.sendAudioWithTrace(
                       audioPath,
+                      conversationId: conversationId,
                       prompt: text,
                       traceId: traceId,
                       requireMedicalSafety: requiresMedicalSafety,
@@ -9088,11 +9115,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   text: traceId == null
                       ? await _service.sendImage(
                           imagePath,
+                          conversationId: conversationId,
                           prompt: text,
                           requireMedicalSafety: requiresMedicalSafety,
                         )
                       : await _service.sendImageWithTrace(
                           imagePath,
+                          conversationId: conversationId,
                           prompt: text,
                           traceId: traceId,
                           requireMedicalSafety: requiresMedicalSafety,
@@ -9100,6 +9129,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 )
               : await _sendTextWithKnowledgeContext(
                   text,
+                  conversationId: conversationId,
                   mode: effectiveMode,
                   traceContext: traceContext,
                   requireMedicalSafety: requiresMedicalSafety,
@@ -9434,10 +9464,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final questionSchema = schemaController.symptomQuestionSchema;
       final draft = traceId == null
           ? await _service.extractSymptomsWithQuestionSchema(
+              conversationId: conversationId,
               sourceText: redFlagSnapshot.text,
               questionSchema: questionSchema,
             )
           : await _service.extractSymptomsWithQuestionSchemaAndTrace(
+              conversationId: conversationId,
               traceId: traceId,
               sourceText: redFlagSnapshot.text,
               questionSchema: questionSchema,
@@ -9768,12 +9800,21 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     setState(() => _modelControlBusy = true);
+    int? uncommittedConversationId;
     try {
       final paths = <String?>[_imagePath, _audioPath];
-      final status = await _service.resetConversation();
+      final nextConversationId = await _createNewConversation();
+      if (nextConversationId == null || nextConversationId <= 0) {
+        throw StateError('无法创建新的持久化会话；原会话未重置。');
+      }
+      uncommittedConversationId = nextConversationId;
+      final status = await _service.resetConversation(
+        conversationId: nextConversationId,
+      );
+      _conversationIdFuture = Future.value(nextConversationId);
+      uncommittedConversationId = null;
       await _deleteCachedAttachments(paths);
       if (!mounted) return;
-      _conversationIdFuture = _createNewConversation();
       _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
       _lastEffectiveMode = null;
       _pendingToolSelection = false;
@@ -9814,6 +9855,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         unavailableMessage: '会话重置失败，原生会话已关闭。请重新加载模型后重新开始。',
       );
     } finally {
+      if (uncommittedConversationId != null) {
+        try {
+          await _conversationStore.deleteAssistantConversations(
+            [uncommittedConversationId],
+          );
+        } catch (error) {
+          debugPrint('[AssistantHistory] 清理未提交的重置会话失败：$error');
+        }
+      }
       if (mounted) setState(() => _modelControlBusy = false);
     }
   }

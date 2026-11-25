@@ -211,6 +211,7 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "extractSymptoms" -> {
+                        val conversationId = requiredConversationId(call, result) ?: return@handler
                         val traceId = try {
                             LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
                         } catch (error: IllegalArgumentException) {
@@ -235,6 +236,7 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_SYMPTOM_SOURCE_TEXT", "本次问诊原文超出长度限制", null)
                         } else {
                             runAiTask(result, requiresAiAccess = true) {
+                                ensureActiveConversation(conversationId)
                                 LocalAiTraceIdPolicy.attach(
                                     extractSymptoms(
                                         questionSchema,
