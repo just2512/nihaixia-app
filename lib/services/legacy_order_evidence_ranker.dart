@@ -12,10 +12,14 @@ class LegacyOrderEvidenceRanker {
   static const String strategyId = 'LEGACY_QUERY_ORDER';
   static const String strategyVersion = '1';
 
-  static List<EvidenceRankingDecision> rank(
+  static RankedEvidenceSet rank(
     List<CandidateEvidence> candidates, {
+    required String requestId,
     int maxKeptEvidence = ClassicEvidencePipeline.legacyContextHitLimit,
   }) {
+    if (requestId.trim().isEmpty) {
+      throw ArgumentError.value(requestId, 'requestId', 'Must not be empty');
+    }
     if (maxKeptEvidence < 0) {
       throw ArgumentError.value(
         maxKeptEvidence,
@@ -60,6 +64,39 @@ class LegacyOrderEvidenceRanker {
       }
     }
 
-    return List.unmodifiable(decisions);
+    final orderedEvidenceIds = decisions
+        .where((decision) => decision.disposition == EvidenceDecisionDisposition.keep)
+        .toList()
+      ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!));
+
+    final omittedEvidenceIds = decisions
+        .where((decision) => decision.disposition == EvidenceDecisionDisposition.drop)
+        .map((decision) => decision.evidenceId)
+        .toList(growable: false);
+
+    return RankedEvidenceSet(
+      requestId: requestId,
+      strategyId: strategyId,
+      strategyVersion: strategyVersion,
+      decisions: decisions,
+      orderedEvidenceIds: [
+        for (final decision in orderedEvidenceIds) decision.evidenceId,
+      ],
+      budget: EvidenceBudgetSnapshot(
+        unit: EvidenceBudgetUnit.unknown,
+        limit: null,
+        used: null,
+        applied: false,
+        omittedEvidenceIds: omittedEvidenceIds,
+        truncatedEvidenceIds: const [],
+      ),
+      status: orderedEvidenceIds.isEmpty
+          ? RankedEvidenceSetStatus.noUsableEvidence
+          : RankedEvidenceSetStatus.ranked,
+      diagnostics: [
+        'LEGACY_CONTEXT_COUNT_LIMIT:$maxKeptEvidence',
+        'BUDGET_NOT_APPLIED_IN_LEGACY_COMPATIBILITY_SLICE',
+      ],
+    );
   }
 }
