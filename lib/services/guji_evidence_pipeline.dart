@@ -38,14 +38,10 @@ class GujiEvidencePipeline {
         CandidateEvidence(
           evidenceId: '$requestId:$sourceId',
           sourceId: sourceId,
-          sourceVersion: 'UNKNOWN',
           origin: CandidateEvidenceOrigin.appData,
           materialKind: 'classic_text',
-          verificationStatus: 'NOT_ASSESSED',
           title: chapter.title,
           chapterPath: '${book.id}#chapter=${chapter.index}',
-          locator: localBacklink,
-          locatorStatus: 'LOCAL_ENTRY',
           excerpt: isTruncated
               ? chapter.body.substring(0, 1400)
               : chapter.body,

@@ -1,8 +1,5 @@
-/// Runtime evidence DTOs for the five-layer AI pipeline.
-///
-/// The first implementation slice covers bundled classic-index candidates.
-/// Unknown provenance and verification fields remain explicit; local
-/// navigability is not treated as bibliographic verification.
+/// Runtime retrieval DTOs for the five-layer AI pipeline.
+/// Candidates carry the App-local entry identity and retrieved learning content.
 
 enum CandidateEvidenceBatchStatus {
   retrieved,
@@ -52,13 +49,10 @@ class CandidateEvidence {
   const CandidateEvidence({
     required this.evidenceId,
     required this.sourceId,
-    required this.sourceVersion,
     required this.origin,
     required this.materialKind,
-    required this.verificationStatus,
     required this.title,
     required this.locator,
-    required this.locatorStatus,
     required this.excerpt,
     required this.queryId,
     required this.retrievalMethod,
@@ -77,24 +71,20 @@ class CandidateEvidence {
 
   final String evidenceId;
   final String sourceId;
-  final String sourceVersion;
   final CandidateEvidenceOrigin origin;
   final String materialKind;
-  final String verificationStatus;
   final String? assetId;
   final String? chunkId;
   final String title;
   final String? chapterPath;
   final String locator;
-  final String locatorStatus;
   final String excerpt;
   final String queryId;
   final String retrievalMethod;
   final String matchBasis;
   final CandidateEvidenceCompleteness completeness;
 
-  // Classic-index presentation metadata used by the existing context
-  // materializer. These do not expand the source-verification claim.
+  // Local presentation metadata used by the knowledge-context materializer.
   final String sourceKey;
   final String sourceLabel;
   final String localBacklink;
@@ -108,10 +98,8 @@ class CandidateEvidence {
   String get snippet => excerpt;
   String get source => sourceKey;
 
-  /// Copies a candidate while preserving every source/provenance field.
-  ///
-  /// This narrow copy operation is used only when a candidate is placed into
-  /// a combined request namespace. It does not alter its stable sourceId.
+  /// Copies a candidate into a combined request namespace without changing
+  /// its stable source ID or retrieved content.
   CandidateEvidence copyWith({
     String? evidenceId,
     String? queryId,
@@ -119,13 +107,9 @@ class CandidateEvidence {
       CandidateEvidence(
         evidenceId: evidenceId ?? this.evidenceId,
         sourceId: sourceId,
-        sourceVersion: sourceVersion,
         origin: origin,
         materialKind: materialKind,
-        verificationStatus: verificationStatus,
         title: title,
-        locator: locator,
-        locatorStatus: locatorStatus,
         excerpt: excerpt,
         queryId: queryId ?? this.queryId,
         retrievalMethod: retrievalMethod,

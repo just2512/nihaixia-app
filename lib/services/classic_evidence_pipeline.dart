@@ -54,14 +54,12 @@ class ClassicEvidencePipeline {
             CandidateEvidence(
               evidenceId: '$requestId:candidate:$evidenceIndex',
               sourceId: sourceId,
-              sourceVersion: 'UNKNOWN',
               origin: CandidateEvidenceOrigin.appData,
               materialKind: hit.asset != null
                   ? 'lecture'
                   : hit.bookId != null
                       ? 'classic_text'
                       : 'UNKNOWN',
-              verificationStatus: 'UNKNOWN',
               assetId: hit.asset,
               chunkId: hit.bookId == null
                   ? null
@@ -70,8 +68,6 @@ class ClassicEvidencePipeline {
               chapterPath: hit.bookId == null
                   ? null
                   : 'guji:${hit.bookId}#chapter:${hit.chapterIndex ?? 'MISSING'}',
-              locator: hit.localBacklink,
-              locatorStatus: hit.locatorStatus,
               excerpt: hit.snippet,
               queryId: derivedQuery.queryId,
               retrievalMethod: 'CLASSIC_SUBSTRING_INDEX',

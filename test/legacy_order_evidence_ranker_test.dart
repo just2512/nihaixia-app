@@ -7,13 +7,9 @@ CandidateEvidence _candidate(String evidenceId) {
   return CandidateEvidence(
     evidenceId: evidenceId,
     sourceId: 'classic:$evidenceId',
-    sourceVersion: 'UNKNOWN',
     origin: CandidateEvidenceOrigin.system,
     materialKind: 'classic_text',
-    verificationStatus: 'UNKNOWN',
     title: evidenceId,
-    locator: 'MISSING',
-    locatorStatus: 'MISSING',
     excerpt: 'excerpt:$evidenceId',
     queryId: 'q1',
     retrievalMethod: 'CLASSIC_SUBSTRING_INDEX',

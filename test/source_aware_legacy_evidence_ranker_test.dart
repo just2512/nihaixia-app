@@ -11,13 +11,9 @@ CandidateEvidence _candidate({
     CandidateEvidence(
       evidenceId: id,
       sourceId: 'source:$id',
-      sourceVersion: 'UNKNOWN',
       origin: CandidateEvidenceOrigin.appData,
       materialKind: 'test',
-      verificationStatus: 'UNKNOWN',
       title: id,
-      locator: 'MISSING',
-      locatorStatus: 'MISSING',
       excerpt: id,
       queryId: 'q1',
       retrievalMethod: method,

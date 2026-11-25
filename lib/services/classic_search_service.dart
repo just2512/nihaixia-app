@@ -59,7 +59,6 @@ class ClassicHit {
   }
 
   /// Whether this hit can reopen a local App entry.
-  String get locatorStatus => hasLocalBacklink ? 'LOCAL_ENTRY' : 'MISSING';
 
   String get localBacklink => asset != null
       ? asset!

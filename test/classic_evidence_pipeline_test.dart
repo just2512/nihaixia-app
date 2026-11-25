@@ -89,8 +89,6 @@ void main() {
       batch.candidates.every(
         (item) =>
             item.origin == CandidateEvidenceOrigin.appData &&
-            item.sourceVersion == 'UNKNOWN' &&
-            item.verificationStatus == 'UNKNOWN' &&
             item.matchBasis == 'UNKNOWN' &&
             item.completeness == CandidateEvidenceCompleteness.unknown,
       ),

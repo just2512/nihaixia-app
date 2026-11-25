@@ -215,7 +215,6 @@ void main() {
     for (final source in gujiSources) {
       expect(source.sourceLabel, '黄帝内经·灵枢');
       expect(source.localBacklink, startsWith('guji:lingshu#chapter:'));
-      expect(source.locatorStatus, 'LOCAL_ENTRY');
       expect(source.sourceKind, 'classic_text');
     }
     expect(result.citationFooter, contains('黄帝内经·灵枢'));
@@ -253,7 +252,6 @@ void main() {
     expect(result.citationFooter, contains('资料类型：课程讲稿/整理讲义（学习资料）'));
     expect(result.citationFooter, contains('知识库条目定位：assets/shanghan/'));
     expect(result.citationFooter, contains('来源标识：shanghan:assets/'));
-    expect(result.sources.every((source) => source.locatorStatus == 'LOCAL_ENTRY'), isTrue);
   });
 
   test('知识引用尾注使用真实换行而不是字面量转义', () async {
@@ -271,7 +269,6 @@ void main() {
       sourceLabel: '伤寒论',
       title: '卷一',
       localBacklink: 'guji:shanghan_lun#chapter:1',
-      locatorStatus: 'MISSING',
       sourceKind: 'classic_text',
     );
     final citation = source.toCitationText();
@@ -315,7 +312,6 @@ void main() {
         expect(source.sourceId, isNotEmpty);
         expect(source.localBacklink, isNotEmpty);
         expect(source.localBacklink, isNot('MISSING'));
-          expect(source.locatorStatus, 'MISSING');
       }
     }
   });
@@ -328,10 +324,6 @@ void main() {
         .where((source) => source.sourceKind == 'medical_case')
         .toList(growable: false);
     expect(caseSources, isNotEmpty);
-    expect(
-      caseSources.every((source) => source.locatorStatus == 'LOCAL_ENTRY'),
-      isTrue,
-    );
     expect(result.citationFooter, contains('资料类型：App 医案库整理条目'));
     expect(result.citationFooter, contains('知识库条目定位：medical_case:'));
   });
@@ -350,7 +342,6 @@ void main() {
     for (final source in caseSources) {
       expect(source.sourceId, startsWith('medical_case:'));
       expect(source.localBacklink, startsWith('medical_case:'));
-      expect(source.locatorStatus, 'MISSING');
     }
     expect(result.citationFooter, contains('资料类型：App 医案库整理条目'));
     expect(result.citationFooter, contains('知识库条目定位：medical_case:'));
@@ -369,7 +360,6 @@ void main() {
     );
     expect(lecture.hasLocalBacklink, isTrue);
     expect(lecture.localBacklink, 'assets/shanghan/lecture.md');
-    expect(lecture.locatorStatus, 'LOCAL_ENTRY');
 
     const classic = ClassicHit(
       source: 'guji',
@@ -381,7 +371,6 @@ void main() {
     );
     expect(classic.hasLocalBacklink, isTrue);
     expect(classic.localBacklink, 'guji:lingshu#chapter:5');
-    expect(classic.locatorStatus, 'LOCAL_ENTRY');
   });
 
   test('缺少可定位字段的经典命中不得伪造本地回链', () {

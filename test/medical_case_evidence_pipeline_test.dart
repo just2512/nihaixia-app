@@ -56,7 +56,6 @@ void main() {
       isTrue,
     );
     expect(batch.candidates.first.localBacklink, 'medical_case:18');
-    expect(batch.candidates.first.locatorStatus, 'LOCAL_ENTRY');
     expect(batch.candidates.first.excerpt, contains('诊断：头痛'));
     expect(batch.candidates.first.excerpt, contains('方剂：桂枝汤'));
   });

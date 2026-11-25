@@ -26,7 +26,6 @@ class AssistantKnowledgeSourceReference {
     required this.sourceLabel,
     required this.title,
     required this.localBacklink,
-    required this.locatorStatus,
     this.sourceKind = 'classic_text',
   });
 
@@ -34,7 +33,6 @@ class AssistantKnowledgeSourceReference {
   final String sourceLabel;
   final String title;
   final String localBacklink;
-  final String locatorStatus;
   final String sourceKind;
 
   String toCitationText() {
@@ -253,7 +251,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 方剂库',
               title: formula.name,
               localBacklink: 'assets/data/formulas.json#id=$id',
-              locatorStatus: 'MISSING',
               sourceKind: 'formula',
             ));
           }
@@ -268,7 +265,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 本草库',
               title: matches.first.name,
               localBacklink: 'assets/data/herbs.json#name=$name',
-              locatorStatus: 'MISSING',
               sourceKind: 'herb',
             ));
           }
@@ -292,7 +288,6 @@ class AssistantKnowledgeContextBuilder {
                 title: entry.symptom,
                 localBacklink:
                     'assets/data/acupuncture.json#category=$categoryId&id=$id',
-                locatorStatus: 'MISSING',
                 sourceKind: 'acupuncture',
               ));
             }
@@ -308,7 +303,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 穴位库',
               title: matches.first.name,
               localBacklink: 'assets/data/acupoints.json#name=$name',
-              locatorStatus: 'MISSING',
               sourceKind: 'acupoint',
             ));
           }
@@ -324,7 +318,6 @@ class AssistantKnowledgeContextBuilder {
               sourceLabel: 'App 内经结构化条目',
               title: entry.title,
               localBacklink: 'lib/data/neijing_entries.dart#id=$id',
-              locatorStatus: 'MISSING',
               sourceKind: 'neijing',
             ));
           }
@@ -354,7 +347,6 @@ class AssistantKnowledgeContextBuilder {
             sourceLabel: matchedBook.title,
             title: chapter.title,
             localBacklink: 'guji:$bookId#chapter:$chapterIndex',
-            locatorStatus: 'LOCAL_ENTRY',
             sourceKind: 'classic_text',
           ));
           continue;
@@ -378,7 +370,6 @@ class AssistantKnowledgeContextBuilder {
             sourceLabel: 'App 医案库',
             title: matchedCase.displayName,
             localBacklink: 'medical_case:$sequence',
-            locatorStatus: 'LOCAL_ENTRY',
             sourceKind: 'medical_case',
           ));
           continue;
@@ -390,7 +381,6 @@ class AssistantKnowledgeContextBuilder {
           sourceLabel: hit.sourceLabel,
           title: hit.title,
           localBacklink: hit.localBacklink,
-          locatorStatus: hit.locatorStatus,
           sourceKind: hit.asset != null ? 'lecture' : 'classic_text',
         ));
       } catch (_) {

@@ -47,13 +47,9 @@ class MedicalCaseEvidencePipeline {
         CandidateEvidence(
           evidenceId: '$requestId:$sourceId',
           sourceId: sourceId,
-          sourceVersion: 'UNKNOWN',
           origin: CandidateEvidenceOrigin.appData,
           materialKind: 'medical_case',
-          verificationStatus: 'NOT_ASSESSED',
           title: medicalCase.displayName,
-          locator: sourceId,
-          locatorStatus: 'LOCAL_ENTRY',
           excerpt: excerpt,
           queryId: 'medical-q${matchedTermIndex + 1}',
           retrievalMethod: 'MEDICAL_CASE_NORMALIZED_TEXT_MATCH',
