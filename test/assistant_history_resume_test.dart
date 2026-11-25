@@ -563,6 +563,7 @@ void main() {
     await _pumpFrames(tester);
 
     expect(service.restoredTranscript, contains('我最近口苦，睡眠也不好'));
+    expect(service.restoredConversationId, 1);
     expect(service.restoredTranscript, contains('口苦持续多久？'));
     expect(
       service.restoredUserMessages,
@@ -649,6 +650,7 @@ void main() {
     expect(messages[3]['role'], 'assistant');
     expect(messages[3]['content'], resumedState.pendingPromptText);
     expect(service.restoredTranscript, contains('开始规则问诊'));
+    expect(service.restoredConversationId, 1);
     expect(tester.takeException(), isNull);
   });
 

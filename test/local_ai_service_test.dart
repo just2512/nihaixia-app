@@ -49,6 +49,7 @@ void main() {
 
       expect(received?.method, 'understandTcmInterviewAnswer');
       expect(received?.arguments, {
+        'conversation_id': 42,
         'trace_id': traceId,
         'question_id': questionId,
         'question': question,
@@ -99,6 +100,7 @@ void main() {
 
       expect(received?.method, 'extractSymptoms');
       expect(received?.arguments, {
+        'conversation_id': 42,
         'trace_id': traceId,
         'question_schema': jsonEncode(questionSchema),
         'source_text': sourceText,
@@ -1291,6 +1293,7 @@ void main() {
 
       expect(received?.method, 'extractSymptoms');
       expect(received?.arguments, {
+        'conversation_id': 42,
         'trace_id': traceId,
         'question_schema': jsonEncode(questionSchema),
       });
@@ -1335,6 +1338,7 @@ void main() {
 
       expect(received?.method, 'extractSymptoms');
       expect(received?.arguments, {
+        'conversation_id': 42,
         'trace_id': traceId,
         'question_schema': jsonEncode(questionSchema),
       });
