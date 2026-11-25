@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LocalAiTranscriptRestorePolicyTest {
-    private val marker = "【较早历史已省略，以下为最近内容】\n"
 
     @Test
     fun preservesShortTranscriptExactly() {
