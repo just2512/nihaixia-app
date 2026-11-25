@@ -4607,3 +4607,21 @@ PR HEAD 门禁证据：
 - **Core-5：PARTIAL / MISSING。** 尚无覆盖连续多轮、session restore、证据冲突、伪造 evidence ID 阻断、Native 模型空/坏 JSON、提案授权、确定性执行结果回流的完整五层 E2E；独立单测和一条模式接线不可替代。Find N2 安装升级、GPU/CPU、多轮与实际 TRACE 留到云端工程闭环之后本地最后验收。
 - **工作流 I：** 用户 Markdown 书架仍 DEFERRED / NOT_AUTHORIZED，不启动；本批不新增书架页面、数据库、Embedding、FTS5、ANN 或后台任务。
 - **下一执行顺序：** Core-0 维护函数/测试/失败契约映射；Core-1 单独修复 transcript restore 完整轮次裁剪及省略计数；Core-2 保持 golden behavior，后续再考虑结构化知识种类 CandidateEvidence 化；Core-3 先通过 PR #529 精确 HEAD 所有适用门禁，再逐步扩展其他模式；Core-4 设计独立 proposal policy/typed schema，不让模型 proposal 直达 Dispatcher；Core-5 在各层边界独立可测后补跨层自动化。设备验收不阻塞以上云端任务。
+
+
+---
+
+## 109. 2026-11-25 Core-1 完整轮次恢复分支、Core-3 接线回归与 Core-0 当前门禁
+
+- **审计基线：** master `176685722676ebe1d843dcd6db107029525c8cc0`；本节是随后独立工作分支事实，不将未合并代码记为主线能力。
+- **Core-1 / PR #532：IN PROGRESS / DRAFT。** 独立分支 `work/core1-whole-turn-transcript-restore-20261125` 新增 `LocalAiTranscriptRestorePolicy`，两个 Flutter→Native 恢复入口统一按完整 user/assistant turn 组装最近上下文；不完整 user turn、单轮超预算 turn 整体省略；省略标记和轮次间换行共同计入 10,000 UTF-16 code-unit 上限。Flutter service 对超预算输入 fail-closed；Native Kotlin policy 只校验边界并拒绝任意超限/孤立 surrogate，不再二次截取消息中段。最近 60 条用户消息的独立安全上下文限制保持不变。
+- **Core-1 证据边界：** Dart policy 覆盖完整问答轮次、最新轮优先、超大单轮、不完整轮次、assistant prelude 和 supplementary-plane 字符；Kotlin policy 测试覆盖精确预算、超限拒绝和孤立 UTF-16 surrogate。当前精确 HEAD 与 CI 需以 GitHub Actions 最新 run 为准；任何旧 HEAD 结果、SKIPPED 或仍运行的作业都不计 PASS。通过前 CORE-07 仍为 PARTIAL；合并后仍需本地 Find N2 恢复验收。
+- **Core-3 / PR #529：IN PROGRESS / DRAFT。** 最新已核 HEAD `b627a64533bcb284d52b9ab02b4e03b34bcb2d17`，learning knowledge path 将 request-local KEEP evidence IDs 和 source IDs 组装到 ReasoningRequest，原始用户问题仍独立走 Native text 参数；响应仅在 requestId、ranked evidence 引用和空 capability allowlist 校验后回填来源。测试已补充输入控制器值断言及发送路径诊断；PR 对应完整 Flutter regression 的定向本地 AI contract、知识引用、golden retrieval、SQLite 和恢复专项测试已通过，full repository regression 仍运行中。不得将定向专项 PASS 误记为完整回归 PASS；当前没有授权合并。
+- **Core-3 当前排查点：** 两个 Widget 用例此前报告 Native fake 未收到文本。当前 HEAD 的完整 PR 工作流正在执行全回归；输入 controller 断言已增加，后续按真实失败步骤定位，不放宽断言、不以 adapter 单测代替真实界面接线。
+- **证据审计 / PR #531：IN PROGRESS。** 最新已核 HEAD `255d7400734b7a8d57fbd8a68044b1325e47d931`。检索来源入口与模型实际引用来源分离；历史消息的 retrieval status / protocol rejection 状态保留，来源卡片需显式展开后查看；医案检索仅在 query 明确提出医案/病例/案例时启用。Android E4B GPU 输出质量检查与 activation data type 变更需由最新 Android/Flutter CI 复核。最新 Flutter regression 尚在运行，Fork License boundary 已 PASS；旧 HEAD 的失败或取消记录不替代当前 HEAD。
+- **Core-0 文档映射 / PR #530：DRAFT。** 分支 `work/core0-source-contract-map-master-1766857-20261125` 维护本文件 §5.3 与架构文档源码映射；映射是静态证据索引，不宣称 runtime PASS。待 #529/#531/#532 的最终 HEAD 和适用 CI 收敛后再统一更新，不将当前分支的 IN_PROGRESS 写成 master 已完成。
+- **Core-2：MERGED。** PR #527 commit `176685722676ebe1d843dcd6db107029525c8cc0` 仍为本节审计基线；不在本批改动检索排序黄金行为。
+- **Core-4：PARTIAL。** 既有 deterministic executor / UNKNOWN stop-and-no-replay 保持；BusinessActionProposal→独立权限/用户确认→版本化 typed args→既有 executor→真实 ExecutionResult 回流仍未闭环。本轮不将学习路径 adapter 的空 capability allowlist 误记为 Core-4 完成。
+- **Core-5：MISSING / PARTIAL。** 仍缺完整覆盖会话恢复、证据召回/排序、模型响应校验、伪造 evidence ID 阻断、来源回查、动作授权和执行结果回流的五层 E2E。专项测试不等同于端到端闭环。
+- **工作流 I：** Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **本地设备验收：** Find N2 安装升级、多轮/进程恢复、E4B GPU/CPU 多轮与真实 TRACE 留到所有云端变更和 CI 完成后最后执行，不阻塞云端 Core-0～Core-5。
