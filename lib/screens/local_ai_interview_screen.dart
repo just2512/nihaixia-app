@@ -339,6 +339,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantMode _assistantMode = AssistantMode.automatic;
   Map<String, String> _activeContextRef = const {};
   AssistantMode? _lastEffectiveMode;
+  // 术数规则数据只注入一次：数据会随对话历史留在模型上下文里，重复全量注入会
+  // 让多轮术数问答的上下文快速膨胀，触发 Native 推理失败。同会话内命中后不再重复。
+  bool _xiaoliurenRuleDataInjected = false;
   bool _pendingToolSelection = false;
   AssistantToolArguments? _pendingBaziArguments;
   AssistantToolArguments? _pendingZiweiArguments;
@@ -1322,7 +1325,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // 小六壬先接入（六宫/六神/歌诀/排课口径）；未传字段（五行/一般方位）禁止推导。
         final mentionsXiaoliuren = text.contains('小六壬') ||
             kXiaoliurenPalaceOrder.any((p) => text.contains(p.name));
-        final ruleDataBlock = mentionsXiaoliuren
+        final injectRuleData = mentionsXiaoliuren && !_xiaoliurenRuleDataInjected;
+        if (injectRuleData) {
+          _xiaoliurenRuleDataInjected = true;
+        }
+        final ruleDataBlock = injectRuleData
             ? '\n\n以下是 App 内置术数规则数据，仅这些字段为 App 已定义（来源为 App 内置规则，非古籍/文献）：\n${describeXiaoliurenRuleData()}'
             : '';
         final context = '当前角色：玄学大师。\n${AssistantMode.metaphysics.promptHint}\n'
@@ -9101,6 +9108,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _conversationIdFuture = _createNewConversation();
       _activeContextRef = AiContextRef.normalizeMetadata(widget.contextRef);
       _lastEffectiveMode = null;
+      _xiaoliurenRuleDataInjected = false;
       _pendingToolSelection = false;
       _pendingBaziArguments = null;
       _pendingZiweiArguments = null;
