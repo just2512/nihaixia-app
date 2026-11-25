@@ -17,9 +17,10 @@ void main() {
     await AcupointRepository.load();
   });
 
-  test('本地知识条目、工具参数和执行结果可由统一消息契约恢复', () async {
+  test('知识来源、已校验工具参数和执行结果可由统一消息契约恢复', () async {
     final knowledge = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
-      '桂枝汤',
+      '医案 桂枝汤',
+      includeMedicalCases: true,
     );
 
     expect(knowledge.sources, isNotEmpty);

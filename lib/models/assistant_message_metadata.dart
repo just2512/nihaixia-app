@@ -96,6 +96,8 @@ class AssistantMessageMetadata {
   final String? attachmentType;
   final String? tcmTaskId;
   final String? toolStatus;
+  /// Per-turn provenance returned by App retrieval or deterministic execution.
+  /// These IDs do not assert that the model used or cited each retrieved item.
   final List<String> sourceIds;
   final Map<String, String> toolArguments;
   final String? knowledgeStatus;
