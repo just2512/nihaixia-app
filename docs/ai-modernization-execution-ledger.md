@@ -4341,22 +4341,23 @@ PR HEAD 门禁证据：
 - **职责边界：** HeadlessToolDispatcher 保留整计划预检和确定性执行安全；ContextResolutionGateway 明确声明不是授权/收费边界，继续校验引用、来源、锚点及 Resolver 回链。GitHub 当前代码搜索未发现 FeatureAuthorizer 与 FeatureAuthorizationDecision 实现。
 - **审计口径说明：** test/native_ai_access_gate_architecture_test.dart 对 MethodChannel 分支和关键内部函数执行源码结构/字符串断言；它不是 Kotlin AST 解析器。此项可作为当前源码结构审计证据，但不能夸大为完整语法树证明。Native Gate 的行为另有 JVM 单测；均不替代 Find N2 实机验证。
 
-### 94.3 PR #485 / #486 精确 HEAD CI 证据
+### 94.3 PR #485 合并后 master push 与 PR #486 HEAD CI 证据
 
-| PR / 精确 HEAD | 验收范围 | Run / Job | 结果 | 口径 |
+| 事件 / 被测 SHA | 验收范围 | Run / Job | 结果 | 口径 |
 |---|---|---|---|---|
-| #485 / 5c1b9c295fa95e0649b47258c2ae4a7c1fb28e52 | Flutter regression | run 45517116757 / job 138879302515 | **SUCCESS** | 全量 Flutter / Dart 回归 |
-| #485 / 同上 | Android arm64 CI | run 45517116757 / job 138882598119 | **SUCCESS** | CI Debug APK ABI/Manifest、JVM 单测、无本地签名时 Release fail-closed |
-| #485 / 同上 | Fork license boundary | run 45517116752 / job 138879302308 | **SUCCESS** | 文件清单 / REUSE 自动检查 |
-| #485 / 同上 | Branch validation | run 45517116757 / job 138879304247 | **SKIPPED** | 不计 PASS |
-| #486 / 3cb3950f51d30a6e0ef2c3029d8fe6531c43c912 | Flutter regression | run 45517279660 / job 138879860365 | **SUCCESS** | 全量 Flutter / Dart 回归 |
-| #486 / 同上 | Android arm64 CI | run 45517279660 / job 138883470922 | **SUCCESS** | CI Debug APK ABI/Manifest、JVM 单测、无本地签名时 Release fail-closed |
-| #486 / 同上 | Fork license boundary | run 45517279581 / job 138879859601 | **SUCCESS** | 文件清单 / REUSE 自动检查 |
-| #486 / 同上 | Branch validation | run 45517279660 / job 138879862409 | **SKIPPED** | 不计 PASS |
+| PR #485 merge 后 master push / `f022852678e2f12a334b83e28e2c4d8c8e3a3e99` | Flutter regression | run `45517116757` / job `138879302515` | **SUCCESS** | 合并后 master 全量 Flutter / Dart 回归；不是 PR #485 head run |
+| 同上 | Android arm64 CI | run `45517116757` / job `138882598119` | **SUCCESS** | CI Debug APK ABI/Manifest、JVM 单测、无本地签名时 Release fail-closed |
+| 同上 | Fork license boundary | run `45517116752` / job `138879302308` | **SUCCESS** | 文件清单 / REUSE 自动检查 |
+| 同上 | Branch validation | run `45517116757` / job `138879304247` | **SKIPPED** | 不计 PASS |
+| PR #486 pull_request / `3cb3950f51d30a6e0ef2c3029d8fe6531c43c912` | Flutter regression | run `45517279660` / job `138879860365` | **SUCCESS** | PR #486 精确 HEAD 全量 Flutter / Dart 回归 |
+| 同上 | Android arm64 CI | run `45517279660` / job `138883470922` | **SUCCESS** | CI Debug APK ABI/Manifest、JVM 单测、无本地签名时 Release fail-closed |
+| 同上 | Fork license boundary | run `45517279581` / job `138879859601` | **SUCCESS** | 文件清单 / REUSE 自动检查 |
+| 同上 | Branch validation | run `45517279660` / job `138879862409` | **SKIPPED** | 不计 PASS |
 
-- 两批 Flutter job 的全量回归步骤均完成且无失败；两批 Android arm64 CI 证明的是 CI 构建、ABI/Manifest、JVM 与 fail-closed 行为，不是正式签名 Release，也不是 Find N2 安装/覆盖升级。
-- PR #486 已合并。PR #485/#486 的 GitHub PR HEAD CI 为对应精确 HEAD 的自动验收证据；不得将 SKIPPED 转写为成功，也不得把文档 PR 的 CI 当作正式发行或实机通过证明。
-
+- PR #485 合并后的 master push run `45517116757` / `45517116752` 实际对应 `f022852...`，不能标记成 PR #485 head `5c1b9c...` 的 PR workflow；该 PR head SHA 只作为 PR 合并元数据保留。
+- PR #486 的 `45517279660` / `45517279581` 是 pull_request 事件，head 精确为 `3cb3950...`。
+- 两批 Flutter job 的全量回归步骤均完成且无失败；Android arm64 CI 证明的是 CI 构建、ABI/Manifest、JVM 与 fail-closed 行为，不是正式签名 Release，也不是 Find N2 安装/覆盖升级。
+- `SKIPPED` 一律不计 PASS；文档 PR 的 CI 结果不代表正式发行或实机通过证明。
 ### 94.4 正式发行仍未满足的外部条件
 
 - **正式发行者公钥与来源：** 仓库尚无已核验的生产发行者公钥及来源证明。不能使用协议测试向量或临时生成公钥填充生产 Key Ring。
