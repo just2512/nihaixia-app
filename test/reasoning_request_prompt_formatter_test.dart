@@ -317,6 +317,24 @@ void main() {
         () => ReasoningExecutionResult(
           invocationId: 'invoke-invalid',
           capabilityId: 'dosage',
+          status: ReasoningExecutionStatus.failed,
+          failureCode: '   ',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => ReasoningExecutionResult(
+          invocationId: 'invoke-invalid',
+          capabilityId: 'dosage',
+          status: ReasoningExecutionStatus.unknown,
+          failureCode: ' EXECUTION_RESULT_LOST ',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => ReasoningExecutionResult(
+          invocationId: 'invoke-invalid',
+          capabilityId: 'dosage',
           status: ReasoningExecutionStatus.notStarted,
           actualArguments: const {'formulaId': 'formula-1'},
         ),
