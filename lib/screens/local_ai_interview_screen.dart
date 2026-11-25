@@ -5614,10 +5614,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _restoreVisibleConversationToModel({
+    int? conversationId,
     bool requireMedicalSafety = false,
     _RedFlagContextSnapshot? safetyContext,
   }) async {
     if (_status?.ready != true) return;
+    final targetConversationId = conversationId ?? await _requireConversationId();
     final transcriptLines = _messages
         .where((message) => message.includeInModelContext)
         .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
@@ -5641,7 +5643,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               _tcmInterviewController?.canAnswer == true ,
         );
     await _service.restoreConversation(
-      conversationId: await _requireConversationId(),
+      conversationId: targetConversationId,
       transcript: transcript,
       userMessages: userMessages,
       requireMedicalSafety: historyRequiresMedicalSafety,
@@ -5709,10 +5711,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
     var inferenceCompleted = false;
     try {
+      // Freeze one persisted session ID across restoration and inference. A
+      // history switch during an await must not redirect the second operation.
+      final conversationId = await _requireConversationId();
       // Ensure the immediately preceding deterministic result is part of the
       // native model context before adding this explicit user-requested action.
       if (restoreVisibleConversation) {
         await _restoreVisibleConversationToModel(
+          conversationId: conversationId,
           requireMedicalSafety: requiresMedicalSafety,
           safetyContext: redFlagContext,
         );
@@ -5749,7 +5755,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
       final response = await _sendTextWithKnowledgeContext(
         normalizedPrompt,
-        conversationId: await _requireConversationId(),
+        conversationId: conversationId,
         mode: mode,
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
@@ -7128,9 +7134,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     if (_restoringPendingHistory) return;
     _restoringPendingHistory = true;
     final generation = _historyRestoreGeneration;
-    try {
+    final targetConversationFuture = _conversationIdFuture;
     final transcript = _pendingHistoryTranscript;
-    if (transcript == null || _status?.ready != true) return;
+    final userMessages = List<String>.unmodifiable(_pendingHistoryUserMessages);
+    try {
+      if (transcript == null || _status?.ready != true) return;
+      final conversationId = await targetConversationFuture;
+      if (conversationId == null || conversationId <= 0) {
+        throw StateError('历史会话缺少有效的持久化 ID，已阻止 Native 恢复。');
+      }
+      if (!mounted || generation != _historyRestoreGeneration) return;
     if (!await _validateActiveContext(
       traceContext: AiTraceContext.disabled(),
       route: 'history_restore',
@@ -7139,6 +7152,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       _pendingHistoryUserMessages = const [];
       return;
     }
+    if (!mounted || generation != _historyRestoreGeneration) return;
     final redFlagSnapshot = _boundedRedFlagContext();
     final requireMedicalSafety = AssistantConversationOrchestrator
         .requiresMedicalSafetyPreflight(
@@ -7157,11 +7171,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     )) {
       return;
     }
+    if (!mounted || generation != _historyRestoreGeneration) return;
     try {
       await _service.restoreConversation(
-        conversationId: await _requireConversationId(),
+        conversationId: conversationId,
         transcript: transcript,
-        userMessages: _pendingHistoryUserMessages,
+        userMessages: userMessages,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: requireMedicalSafety ? redFlagSnapshot.text : null,
         redFlagContextTruncated:
