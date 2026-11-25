@@ -30,8 +30,19 @@ void main() {
   test('emits an explicit decision for every candidate', () {
     final candidates = List.generate(7, (index) => _candidate('e$index'));
 
-    final decisions = LegacyOrderEvidenceRanker.rank(candidates);
+    final ranked = LegacyOrderEvidenceRanker.rank(candidates, requestId: 'test-request');
+    final decisions = ranked.decisions;
 
+    expect(ranked.requestId, 'test-request');
+    expect(ranked.strategyId, LegacyOrderEvidenceRanker.strategyId);
+    expect(ranked.strategyVersion, LegacyOrderEvidenceRanker.strategyVersion);
+    expect(ranked.status, RankedEvidenceSetStatus.ranked);
+    expect(ranked.budget.unit, EvidenceBudgetUnit.unknown);
+    expect(ranked.budget.applied, isFalse);
+    expect(ranked.budget.limit, isNull);
+    expect(ranked.budget.used, isNull);
+    expect(ranked.diagnostics,
+        contains('BUDGET_NOT_APPLIED_IN_LEGACY_COMPATIBILITY_SLICE'));
     expect(decisions, hasLength(candidates.length));
     expect(decisions.map((item) => item.evidenceId).toSet(),
         candidates.map((item) => item.evidenceId).toSet());
@@ -41,7 +52,8 @@ void main() {
   test('keeps the first four in original order and drops the remainder', () {
     final candidates = List.generate(7, (index) => _candidate('e$index'));
 
-    final decisions = LegacyOrderEvidenceRanker.rank(candidates);
+    final ranked = LegacyOrderEvidenceRanker.rank(candidates, requestId: 'test-request');
+    final decisions = ranked.decisions;
     final kept = decisions
         .where((item) => item.disposition == EvidenceDecisionDisposition.keep)
         .toList()
@@ -50,6 +62,9 @@ void main() {
         .where((item) => item.disposition == EvidenceDecisionDisposition.drop);
 
     expect(kept.map((item) => item.evidenceId), ['e0', 'e1', 'e2', 'e3']);
+    expect(ranked.orderedEvidenceIds, ['e0', 'e1', 'e2', 'e3']);
+    expect(ranked.budget.omittedEvidenceIds, ['e4', 'e5', 'e6']);
+    expect(ranked.budget.truncatedEvidenceIds, isEmpty);
     expect(kept.map((item) => item.orderIndex), [0, 1, 2, 3]);
     expect(
       kept.every((item) =>
@@ -65,14 +80,17 @@ void main() {
   });
 
   test('allows an explicit zero keep budget and rejects a negative limit', () {
-    final decisions = LegacyOrderEvidenceRanker.rank(
+    final ranked = LegacyOrderEvidenceRanker.rank(
       [_candidate('e0')],
+      requestId: 'test-request',
       maxKeptEvidence: 0,
     );
-    expect(decisions.single.disposition, EvidenceDecisionDisposition.drop);
+    expect(ranked.decisions.single.disposition, EvidenceDecisionDisposition.drop);
+    expect(ranked.status, RankedEvidenceSetStatus.noUsableEvidence);
     expect(
       () => LegacyOrderEvidenceRanker.rank(
         [_candidate('e0')],
+        requestId: 'test-request',
         maxKeptEvidence: -1,
       ),
       throwsArgumentError,
@@ -80,22 +98,23 @@ void main() {
   });
 
   test('preserves evidence IDs as opaque unnormalized values', () {
-    final decision = LegacyOrderEvidenceRanker.rank([
-      _candidate(' evidence-id '),
-    ]).single;
+    final decision = LegacyOrderEvidenceRanker.rank(
+      [_candidate(' evidence-id ')],
+      requestId: 'test-request',
+    ).decisions.single;
     expect(decision.evidenceId, ' evidence-id ');
   });
 
   test('rejects duplicate or empty evidence identities', () {
     expect(
-      () => LegacyOrderEvidenceRanker.rank([
-        _candidate('duplicate'),
-        _candidate('duplicate'),
-      ]),
+      () => LegacyOrderEvidenceRanker.rank(
+        [_candidate('duplicate'), _candidate('duplicate')],
+        requestId: 'test-request',
+      ),
       throwsStateError,
     );
     expect(
-      () => LegacyOrderEvidenceRanker.rank([_candidate('  ')]),
+      () => LegacyOrderEvidenceRanker.rank([_candidate('  ')], requestId: 'test-request'),
       throwsStateError,
     );
   });
