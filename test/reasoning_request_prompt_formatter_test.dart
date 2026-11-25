@@ -412,8 +412,10 @@ void main() {
       expect(formatted, isNot(contains('待确认')));
       expect(formatted, isNot(contains('source:existing')));
       expect(envelope['rankedEvidence'], [
-        {'evidenceId': 'evidence-1', 'sourceId': 'source:one'},
+        {'evidenceId': 'evidence-1'},
       ]);
+      expect(formatted, isNot(contains('source:one')),
+          reason: 'sourceId is an App-owned lookup pointer and is not exposed to the model');
       expect(envelope['knownEvidenceIds'], [
         'evidence-1',
         'evidence-dropped',
