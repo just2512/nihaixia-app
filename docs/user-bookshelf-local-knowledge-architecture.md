@@ -214,7 +214,7 @@
 
 ### 6.3 EmbeddingGemma 2 候选方案
 
-当前首选 PoC 为 Google EmbeddingGemma 2 的 text-only 270M 配置，而不是加载多模态完整模型。模型名、权重 revision、文件 SHA 和实际 LiteRT-LM 模型包必须在 PoC 时锁定。
+当前首选 PoC 为 Google EmbeddingGemma 2 的 text/code 270M 配置，而不是加载 740M 多模态完整模型。模型名、权重 revision、文件 SHA 和实际 LiteRT-LM 模型包必须在 PoC 时锁定。
 
 已核对的候选事实和实现边界：
 
@@ -223,8 +223,9 @@
 - MRL 截断后必须重新做 L2 normalization；manifest 必须记录输出维度、归一化方式和量化编码。
 - 文档向量和查询向量使用模型官方对应的不同 retrieval task prefix。当前 LiteRT-LM Embedding Models API 中，实施时应逐字核对 document/query 模板；禁止沿用旧版 EmbeddingGemma v1 的提示格式。当前候选格式为 document: “task: search result | text: ...”，query: “task: search query | text: ...”。
 - 文档 Embedding 输入在正文前加入书名、章节路径等上下文头；上下文头版本纳入 embeddingInputHash。
-- LiteRT-LM v0.18.0 的官方发布说明已包含 EmbeddingGemma 2 支持，但项目依赖是否可直接完成 Android 端运行仍须以 app 内 PoC 为准；不能仅凭发布说明推定 Find N2 已通过。
-- 当前项目 LiteRT-LM 锁定版本和 API 能力以仓库实际依赖/源码复核为准；不为本功能未经兼容测试直接升级运行时。
+- LiteRT-LM 官方 Embedding Models API 已提供 Kotlin `EmbeddingEngine` / `computeEmbedding` 示例，并明确文档索引前缀 `task: search result | text:`、查询前缀 `task: search query | text:`；实际实施时仍须逐字核对所锁定 SDK/API 的模板，不能仅凭文档说明推定项目调用链已兼容。
+- LiteRT-LM v0.18.0 的官方发布说明已包含 EmbeddingGemma 2（文本、视觉、音频 Embedding）支持；v0.18.1 发布说明另注明修复“从源码构建 LiteRT-LM”时运行 EmbeddingGemma 2 的 ABI 不兼容。当前 master 的 Android Gradle 依赖实际锁定为 `com.google.ai.edge.litertlm:litertlm-android:0.18.0`（PoC 执行时重新核验）。源码构建修复不能直接推定为该 Maven AAR 的缺陷，也不能反向证明该 AAR 在 Find N2 可用。
+- 因此 D 阶段必须针对项目实际 Maven AAR、目标模型包、Android arm64、CPU/GPU backend 和 Native Gate/串行资源协调做独立 PoC；不得只凭上游 release/API 文档宣布兼容，不得为本功能未经兼容与回归测试直接升级 LiteRT-LM。若拟升级，先提交版本变更说明、兼容性/风险/回滚方案。
 - 不下载、不提交或自动替换模型权重，直到模型许可、文件来源、哈希、安装/升级路径和设备占用完成核验。
 
 官方参考：
@@ -232,6 +233,7 @@
 - Google Developer Guide（2026-10-06）：https://developers.googleblog.com/en/embeddinggemma-2-the-developer-guide/
 - LiteRT-LM Embedding Models API：https://ai.google.dev/edge/litert-lm/embedding_models
 - LiteRT-LM v0.18.0 release：https://github.com/google-ai-edge/LiteRT-LM/releases/tag/v0.18.0
+- LiteRT-LM releases（含 v0.18.1 源码构建 ABI 修复说明）：https://github.com/google-ai-edge/LiteRT-LM/releases
 
 ### 6.4 向量存储和检索规模
 
