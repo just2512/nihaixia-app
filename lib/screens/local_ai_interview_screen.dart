@@ -1138,8 +1138,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
+  Future<int> _requireNativeConversationId() async {
+    final conversationId = await _conversationIdFuture;
+    if (conversationId == null || conversationId <= 0) {
+      throw StateError(
+        'NATIVE_CONVERSATION_ID_REQUIRED: SQLite 会话尚未建立，拒绝调用 Native 模型。',
+      );
+    }
+    return conversationId;
+  }
+
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
+    required int conversationId,
     required AssistantMode mode,
     required AiTraceContext traceContext,
     String? retrievalQuery,
@@ -1162,6 +1173,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return traceId == null
           ? _service.sendMessageWithContext(
               text,
+              conversationId: conversationId,
               context: context,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
@@ -1169,6 +1181,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             )
           : _service.sendMessageWithContextAndTrace(
               text,
+              conversationId: conversationId,
               context: context,
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
@@ -1199,12 +1212,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           final reply = traceId == null
               ? await _service.sendMessage(
                   text,
+                  conversationId: conversationId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
                   redFlagContextTruncated: redFlagContextTruncated,
                 )
               : await _service.sendMessageWithTrace(
                   text,
+                  conversationId: conversationId,
                   traceId: traceId,
                   requireMedicalSafety: requireMedicalSafety,
                   redFlagContext: redFlagContext,
@@ -5625,7 +5640,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           structuredInterviewActive:
               _tcmInterviewController?.canAnswer == true ,
         );
+    final conversationId = await _requireNativeConversationId();
     await _service.restoreConversation(
+      conversationId: conversationId,
       transcript: transcript,
       userMessages: userMessages,
       requireMedicalSafety: historyRequiresMedicalSafety,
@@ -7141,7 +7158,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       return;
     }
     try {
+      final conversationId = await _requireNativeConversationId();
       await _service.restoreConversation(
+        conversationId: conversationId,
         transcript: transcript,
         userMessages: _pendingHistoryUserMessages,
         requireMedicalSafety: requireMedicalSafety,
@@ -9068,16 +9087,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var persistenceStarted = false;
     var persistenceRecorded = false;
     try {
+      final conversationId = await _requireNativeConversationId();
       final turnResponse = audioPath != null
           ? _AssistantTurnResponse(
               text: traceId == null
                   ? await _service.sendAudio(
                       audioPath,
+                      conversationId: conversationId,
                       prompt: text,
                       requireMedicalSafety: requiresMedicalSafety,
                     )
                   : await _service.sendAudioWithTrace(
                       audioPath,
+                      conversationId: conversationId,
                       prompt: text,
                       traceId: traceId,
                       requireMedicalSafety: requiresMedicalSafety,
@@ -9088,11 +9110,13 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   text: traceId == null
                       ? await _service.sendImage(
                           imagePath,
+                          conversationId: conversationId,
                           prompt: text,
                           requireMedicalSafety: requiresMedicalSafety,
                         )
                       : await _service.sendImageWithTrace(
                           imagePath,
+                          conversationId: conversationId,
                           prompt: text,
                           traceId: traceId,
                           requireMedicalSafety: requiresMedicalSafety,
@@ -9100,6 +9124,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 )
               : await _sendTextWithKnowledgeContext(
                   text,
+                  conversationId: conversationId,
                   mode: effectiveMode,
                   traceContext: traceContext,
                   requireMedicalSafety: requiresMedicalSafety,
