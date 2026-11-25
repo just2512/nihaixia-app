@@ -15,6 +15,7 @@ void main() {
       sourceIds: ['local-engine:yunqi'],
       toolArguments: {'date': '2026-11-06'},
       knowledgeStatus: 'RETRIEVED',
+      reasoningStatus: 'COMPLETED',
       traceId: '0123456789abcdef0123456789abcdef',
       invocationOrigin: 'aiDispatch',
       contextRef: const {
@@ -38,6 +39,7 @@ void main() {
     expect(restored.sourceIds, ['local-engine:yunqi']);
     expect(restored.toolArguments, {'date': '2026-11-06'});
     expect(restored.knowledgeStatus, 'RETRIEVED');
+    expect(restored.reasoningStatus, 'COMPLETED');
     expect(restored.traceId, '0123456789abcdef0123456789abcdef');
     expect(restored.invocationOrigin, 'aiDispatch');
     expect(restored.contextRef, {
@@ -139,6 +141,7 @@ void main() {
     expect(restored.traceId, isNull);
     expect(restored.invocationOrigin, isNull);
     expect(restored.contextRef, isEmpty);
+    expect(restored.reasoningStatus, isNull);
   });
 
   test('empty or unknown metadata safely falls back to default state', () {
