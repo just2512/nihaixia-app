@@ -362,6 +362,7 @@ Files:
  test/acupoint_detail_layout_test.dart
  test/acupoint_index_cross_meridian_test.dart
  test/acupoint_sparse_detail_test.dart
+ test/acupuncture_contextual_entry_test.dart
  test/acupuncture_editorial_typography_test.dart
  test/acupuncture_half_fold_root_navigation_test.dart
  test/adaptive_home_navigation_test.dart
