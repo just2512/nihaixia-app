@@ -13,6 +13,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
+import '../services/local_ai_transcript_restore_policy.dart';
 import '../services/red_flag_gate.dart';
 import '../services/red_flag_preflight.dart';
 import '../services/ai_trace.dart';
@@ -5697,15 +5698,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }) async {
     if (_status?.ready != true) return;
     final targetConversationId = conversationId;
-    final transcriptLines = _messages
-        .where((message) => message.includeInModelContext)
-        .map((message) => '${message.isUser ? '用户' : '助手'}：${message.text}')
-        .toList(growable: false);
-    final fullTranscript = transcriptLines.join('\n');
-    final transcript = fullTranscript.length > 10000
-        ? '【较早历史已省略，以下为最近内容】\n'
-            '${fullTranscript.substring(fullTranscript.length - 10000)}'
-        : fullTranscript;
+    final transcript = LocalAiTranscriptRestorePolicy.fromMessages(
+      _messages
+          .where((message) => message.includeInModelContext)
+          .map((message) => LocalAiTranscriptMessage(
+                role: message.isUser
+                    ? LocalAiTranscriptRole.user
+                    : LocalAiTranscriptRole.assistant,
+                text: message.text,
+              ))
+          .toList(growable: false),
+    ).transcript;
     final userMessages = _messages
         .where((message) => message.isUser)
         .map((message) => message.text)
@@ -6778,8 +6781,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       debugPrint('[AssistantHistory] 结构化问诊状态读取失败：$error\n$stack');
     }
     if (!mounted || generation != _historyRestoreGeneration) return;
-    final transcriptLines = <String>[];
-    final replayableUserMessages = <String>[];
+        final replayableUserMessages = <String>[];
     final restoredMessages = <_InterviewMessage>[];
     var restoredMode = _assistantMode;
     var restoredEffectiveMode = _lastEffectiveMode;
@@ -7005,9 +7007,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                     )
                 : null,
       ));
-      if (includeInModelContext) {
-        transcriptLines.add('${isUser ? '用户' : '助手'}：$content');
-      }
       if (isUser && messageMetadata.replayable) {
         final attachmentNote = content.indexOf('（另附');
         replayableUserMessages.add(
@@ -7030,9 +7029,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             text: taskMessage.text,
             isUser: taskMessage.isUser,
           ));
-          transcriptLines.add(
-            '${taskMessage.isUser ? '用户' : '助手'}：${taskMessage.text}',
-          );
           if (taskMessage.isUser) replayableUserMessages.add(taskMessage.text);
         }
       }
@@ -7063,7 +7059,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           restoredMessages[promptIndex] = prompt;
         } else {
           restoredMessages.add(prompt);
-          transcriptLines.add('助手：${resumableTask.pendingPromptText}');
         }
       } else if (resumableTask.status == 'completed' &&
           resumableTask.completedDiagnosis != null) {
@@ -7091,7 +7086,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             restoredMessages[resultIndex] = resultMessage;
           } else {
             restoredMessages.add(resultMessage);
-            transcriptLines.add('助手：${resultEntry.text}');
           }
         }
       }
@@ -7136,7 +7130,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         text: missingOriginMessage,
         isUser: false,
       ));
-      transcriptLines.add('助手：$missingOriginMessage');
       restoredPendingToolOrigin = null;
     }
     if (restoredMessages.isEmpty) return;
@@ -7177,11 +7170,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   )
                 : null;
 
-    final fullTranscript = transcriptLines.join('\n');
-    final transcript = fullTranscript.length > 10000
-        ? '【较早历史已省略，以下为最近内容】\n'
-            '${fullTranscript.substring(fullTranscript.length - 10000)}'
-        : fullTranscript;
+    final transcript = LocalAiTranscriptRestorePolicy.fromMessages(
+      restoredMessages
+          .where((message) => message.includeInModelContext)
+          .map((message) => LocalAiTranscriptMessage(
+                role: message.isUser
+                    ? LocalAiTranscriptRole.user
+                    : LocalAiTranscriptRole.assistant,
+                text: message.text,
+              ))
+          .toList(growable: false),
+    ).transcript;
     setState(() {
       _conversationIdFuture = Future<int?>.value(selectedId);
       _assistantMode = restoredMode;
