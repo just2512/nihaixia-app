@@ -6,6 +6,7 @@ import '../data/medical_case_data.dart';
 import '../models/ai_evidence.dart';
 import 'classic_evidence_pipeline.dart';
 import 'legacy_order_evidence_ranker.dart';
+import 'medical_case_evidence_pipeline.dart';
 import 'classic_search_service.dart';
 import '../data/herb_repository.dart';
 import '../data/neijing_entries.dart';
@@ -513,14 +514,36 @@ class AssistantKnowledgeContextBuilder {
     if (includeMedicalCases) {
       try {
         final cases = await getAllMedicalCases();
-        final hits = cases
-            .where((medicalCase) => terms.any(medicalCase.matches))
-            .take(2)
-            .toList(growable: false);
-        for (final medicalCase in hits) {
-          final entryId = 'medical_case:${medicalCase.seq}';
-          final entryLocator =
-              'medical_case:internal-seq:${medicalCase.seq}';
+        final medicalEvidenceBatch =
+            MedicalCaseEvidencePipeline.retrieveCandidates(
+          requestId: '${evidenceBatch.requestId}:medical-cases',
+          originalQuery: normalized,
+          terms: terms.toList(growable: false),
+          cases: cases,
+        );
+        final rankedMedicalEvidence = LegacyOrderEvidenceRanker.rank(
+          medicalEvidenceBatch.candidates,
+          requestId: medicalEvidenceBatch.requestId,
+          maxKeptEvidence: 2,
+          keepReasonCode: 'LEGACY_MEDICAL_CASE_SEQUENCE_WITHIN_LIMIT',
+          keepReason:
+              'Preserved the existing medical-case sequence and first matched query term.',
+          dropReasonCode: 'LEGACY_MEDICAL_CASE_TWO_RESULT_LIMIT',
+          dropReason: 'Excluded by the existing two-case context result limit.',
+        );
+        final medicalCandidatesById = {
+          for (final candidate in medicalEvidenceBatch.candidates)
+            candidate.evidenceId: candidate,
+        };
+        final medicalCasesBySourceId = {
+          for (final medicalCase in cases)
+            'medical_case:${medicalCase.seq}': medicalCase,
+        };
+        for (final evidenceId in rankedMedicalEvidence.orderedEvidenceIds) {
+          final candidate = medicalCandidatesById[evidenceId]!;
+          final medicalCase = medicalCasesBySourceId[candidate.sourceId]!;
+          final entryId = candidate.sourceId;
+          final entryLocator = candidate.localBacklink;
           buffer
             ..writeln('[App医案库 · 条目 ${medicalCase.seq}]')
             ..writeln('知识库条目定位：$entryLocator')
