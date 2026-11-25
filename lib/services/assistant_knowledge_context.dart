@@ -58,6 +58,41 @@ class AssistantKnowledgeSourceReference {
 
 enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
 
+/// The exact candidate identity and stable source identity handed from Core-2
+/// to a request-local reasoning adapter. This is a reference only, not a
+/// source-verification claim.
+class AssistantKnowledgeEvidenceReference {
+  const AssistantKnowledgeEvidenceReference({
+    required this.evidenceId,
+    required this.sourceId,
+  });
+
+  final String evidenceId;
+  final String sourceId;
+}
+
+/// Retrieval materialization plus the evidence IDs that were fully included
+/// in the bounded model context. Candidate IDs include KEEP and DROP decisions.
+class AssistantKnowledgeContextBuildResult {
+  AssistantKnowledgeContextBuildResult({
+    required this.text,
+    required List<String> knownEvidenceIds,
+    required List<AssistantKnowledgeEvidenceReference> rankedEvidence,
+  })  : knownEvidenceIds = List.unmodifiable(knownEvidenceIds),
+        rankedEvidence = List.unmodifiable(rankedEvidence);
+
+  final String text;
+  final List<String> knownEvidenceIds;
+  final List<AssistantKnowledgeEvidenceReference> rankedEvidence;
+
+  String get evidenceIndexContext => rankedEvidence.isEmpty
+      ? ''
+      : '【本轮已完整提供、允许引用的证据 ID】\n' +
+          rankedEvidence
+              .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
+              .join('\n');
+}
+
 
 class AssistantKnowledgeQueryProvenance {
   const AssistantKnowledgeQueryProvenance({
@@ -82,12 +117,30 @@ class AssistantKnowledgeContextResult {
     this.sources = const [],
     this.status = AssistantKnowledgeRetrievalStatus.noResults,
     this.failureMessage,
+    this.knownEvidenceIds = const [],
+    this.rankedEvidence = const [],
   });
 
   final String text;
   final List<AssistantKnowledgeSourceReference> sources;
   final AssistantKnowledgeRetrievalStatus status;
   final String? failureMessage;
+  final List<String> knownEvidenceIds;
+  final List<AssistantKnowledgeEvidenceReference> rankedEvidence;
+
+  List<String> get rankedEvidenceIds =>
+      List.unmodifiable(rankedEvidence.map((item) => item.evidenceId));
+
+  Map<String, String> get sourceIdByEvidenceId => Map.unmodifiable({
+        for (final item in rankedEvidence) item.evidenceId: item.sourceId,
+      });
+
+  String get evidenceIndexContext => rankedEvidence.isEmpty
+      ? ''
+      : '【本轮已完整提供、允许引用的证据 ID】\n' +
+          rankedEvidence
+              .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
+              .join('\n');
 
   /// Stable wire/UI value shared with tool execution status metadata.
   String get statusLabel => switch (status) {
@@ -147,9 +200,9 @@ class AssistantKnowledgeContextBuilder {
     String query, {
     bool includeMedicalCases = true,
   }) async {
-    late final String text;
+    late final AssistantKnowledgeContextBuildResult built;
     try {
-      text = await buildAsync(
+      built = await buildWithEvidenceAsync(
         query,
         includeMedicalCases: includeMedicalCases,
       );
@@ -160,10 +213,13 @@ class AssistantKnowledgeContextBuilder {
         failureMessage: error.toString(),
       );
     }
+    final text = built.text;
     if (text.isEmpty) {
-      return const AssistantKnowledgeContextResult(
+      return AssistantKnowledgeContextResult(
         text: '',
         status: AssistantKnowledgeRetrievalStatus.noResults,
+        knownEvidenceIds: built.knownEvidenceIds,
+        rankedEvidence: built.rankedEvidence,
       );
     }
     final sourceIds = <String>{};
@@ -343,10 +399,16 @@ class AssistantKnowledgeContextBuilder {
     final status = sources.isEmpty || sources.length < sourceIds.length
         ? AssistantKnowledgeRetrievalStatus.partial
         : AssistantKnowledgeRetrievalStatus.retrieved;
+    final resolvedSourceIds = sources.map((source) => source.sourceId).toSet();
+    final resolvedRankedEvidence = built.rankedEvidence
+        .where((item) => resolvedSourceIds.contains(item.sourceId))
+        .toList(growable: false);
     return AssistantKnowledgeContextResult(
       text: text,
       sources: List.unmodifiable(sources),
       status: status,
+      knownEvidenceIds: built.knownEvidenceIds,
+      rankedEvidence: List.unmodifiable(resolvedRankedEvidence),
     );
   }
 
@@ -420,11 +482,36 @@ class AssistantKnowledgeContextBuilder {
   static Future<String> buildAsync(
     String query, {
     bool includeMedicalCases = true,
+  }) async =>
+      (await buildWithEvidenceAsync(
+        query,
+        includeMedicalCases: includeMedicalCases,
+      )).text;
+
+  /// Returns the legacy text projection plus request-local evidence identity.
+  /// [rankedEvidence] contains only complete evidence blocks that survived the
+  /// existing 6,500-character context bound; known IDs also include dropped
+  /// candidates so the reasoning layer can validate omittedEvidenceIds.
+  static Future<AssistantKnowledgeContextBuildResult> buildWithEvidenceAsync(
+    String query, {
+    bool includeMedicalCases = true,
   }) async {
     final normalized = query.trim();
-    if (normalized.isEmpty) return '';
+    if (normalized.isEmpty) {
+      return AssistantKnowledgeContextBuildResult(
+        text: '',
+        knownEvidenceIds: const [],
+        rankedEvidence: const [],
+      );
+    }
     final base = build(normalized);
-    if (!shouldRetrieveForQuery(normalized)) return base;
+    if (!shouldRetrieveForQuery(normalized)) {
+      return AssistantKnowledgeContextBuildResult(
+        text: base,
+        knownEvidenceIds: const [],
+        rankedEvidence: const [],
+      );
+    }
     final buffer = StringBuffer();
     if (base.isNotEmpty) {
       buffer.writeln(base.length > 3500 ? base.substring(0, 3500) : base);
@@ -554,6 +641,7 @@ class AssistantKnowledgeContextBuilder {
       for (final candidate in combinedBatch.candidates)
         candidate.evidenceId: candidate,
     };
+    final evidenceEndOffsets = <String, int>{};
 
     // Keep the historical classic-index first-four cap and query/hit order.
     // No relevance score or source-verification promotion is introduced.
@@ -587,6 +675,7 @@ class AssistantKnowledgeContextBuilder {
       } else {
         buffer.writeln('资料类型说明：当前引用对象为 App 内古籍文本知识条目。');
       }
+      evidenceEndOffsets[evidenceId] = buffer.length;
     }
 
     // Keep Guji book metadata blocks even when all candidates are dropped by
@@ -615,6 +704,7 @@ class AssistantKnowledgeContextBuilder {
           ..writeln('来源标识：${candidate.sourceId}')
           ..writeln('纸本版本/卷页核验状态：UNKNOWN；内部章节序号不等于纸本页码。')
           ..writeln('条目内容摘录：${candidate.excerpt}');
+        evidenceEndOffsets[evidenceId] = buffer.length;
       }
     }
 
@@ -665,13 +755,36 @@ class AssistantKnowledgeContextBuilder {
             ..writeln(
               '使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照，引用时保留条目身份，不把条目未记载的信息补成病例事实。',
             );
+          evidenceEndOffsets[evidenceId] = buffer.length;
         }
       }
     }
 
-    final result = buffer.toString().trim();
-    if (result.length <= maxContextCharacters) return result;
-    return result.substring(0, maxContextCharacters);
+    final rawResult = buffer.toString();
+    final leadingTrim = rawResult.length - rawResult.trimLeft().length;
+    final result = rawResult.trim();
+    final boundedResult = result.length <= maxContextCharacters
+        ? result
+        : result.substring(0, maxContextCharacters);
+    final presentedEvidenceIds = evidenceEndOffsets.entries
+        .where((entry) => entry.value - leadingTrim <= boundedResult.length)
+        .map((entry) => entry.key)
+        .toSet();
+    final rankedEvidence = <AssistantKnowledgeEvidenceReference>[
+      for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds)
+        if (presentedEvidenceIds.contains(evidenceId))
+          AssistantKnowledgeEvidenceReference(
+            evidenceId: evidenceId,
+            sourceId: candidatesById[evidenceId]!.sourceId,
+          ),
+    ];
+    return AssistantKnowledgeContextBuildResult(
+      text: boundedResult,
+      knownEvidenceIds: combinedBatch.candidates
+          .map((candidate) => candidate.evidenceId)
+          .toList(growable: false),
+      rankedEvidence: rankedEvidence,
+    );
   }
 
   static String build(String query) {
