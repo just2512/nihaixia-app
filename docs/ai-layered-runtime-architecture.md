@@ -42,7 +42,7 @@
 |---|---|---|---|
 | 知识召回 | 哪些本地资料候选可能匹配查询？ | CandidateEvidence 列表 | 直接认定权威性、医学正确性；把整本书塞给模型 |
 | 证据排序 | 哪些候选应进入本轮证据集？ | RankedEvidenceSet | 伪造证据、篡改来源状态、把分数当真实性 |
-| 会话记忆 | 当前会话/任务已确认什么？ | SessionStateSnapshot | 把 RAG 正文永久写进 Native 历史；跨会话串数据 |
+| 会话记忆 | Native history 由 `LocalAiConversationHistory` 管理，`LocalAiConversationSessionPolicy` 按 conversation ID 隔离；#506 的 `conversationKvCacheTokens` 是当前 KV Cache 实测值。`SessionStateSnapshot` / `SessionStateSnapshotBuilder` 仅在 PR #505，非当前 master。 | `LocalAiConversationHistoryPolicyTest`、`LocalAiConversationSessionPolicyTest`；#506 Native token observation policy regression；PR #505 新增 `test/session_state_snapshot_builder_test.dart`。 | Native transcript 仍是 Activity/进程内状态；跨进程恢复 UNKNOWN。没有模型 max-context metadata、完整请求预算或自动压缩；#505 Snapshot 尚未接入推理请求，也不增加 DB schema。 |
 | 语言推理 | 如何理解、解释、比较和提出下一步？ | ReasoningResponse | 自行补造来源、规则结果、数值；直接执行工具 |
 | 业务执行 | App 是否允许并确实完成指定操作？ | ExecutionResult | 由自由文本决定权限；把模型声称成功当成执行成功 |
 
@@ -368,9 +368,9 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 | 目标职责 | 当前主要代码位置 | 当前状态与断点 |
 |---|---|---|
-| 知识召回 | `ClassicEvidencePipeline.retrieveClassicIndexCandidates`（`lib/services/classic_evidence_pipeline.dart`）已将经典索引命中投影为 CandidateEvidenceBatch；`AssistantKnowledgeContextBuilder.buildAsync` 仍编排派生查询、召回和最终上下文。 | `test/classic_evidence_pipeline_test.dart`、`test/ai_retrieval_golden_snapshot_test.dart`。 | PARTIAL：CandidateEvidenceBatch 当前覆盖经典索引；古籍章节、医案等未全部统一，完整调用编排仍由 ContextBuilder 承担。 |
-| 证据排序 | `LegacyOrderEvidenceRanker.rank`（`lib/services/legacy_order_evidence_ranker.dart`）消费候选并返回 RankedEvidenceSet；ContextBuilder 按 orderedEvidenceIds 组装。 | `test/legacy_order_evidence_ranker_test.dart`、`test/ai_retrieval_golden_snapshot_test.dart`。 | PARTIAL：当前仅显式化旧 query order/四条上限，字符/token 预算未应用，其他来源未全部统一；没有语义相关性评分。 |
-| 会话记忆 | `MainActivity.ensureActiveConversation/sendLocalMessage/createConversationWithHistory`、`LocalAiConversationHistory`、`LocalAiMessageInputPolicy`、`LocalAiConversationSessionPolicy`。结构化 `SessionStateSnapshot` / `SessionStateSnapshotBuilder` 目前仅在 PR #505 分支。 | PARTIAL。master 已实现 RAG 与恢复 transcript 分离、12 轮/10,000 UTF-16 code units 有界历史、SQLite `conversationId` 的 Native 会话隔离。PR #505 的只读结构化快照尚未进入 master，也未接入 ReasoningRequest/Native prompt。跨进程持久化仍 UNKNOWN；KV Cache token 治理未接入。 |
+| 知识召回 | `ClassicEvidencePipeline.retrieveClassicIndexCandidates`（`lib/services/classic_evidence_pipeline.dart`）输出经典索引候选；`AssistantKnowledgeContextBuilder.buildAsync` 仍协调检索与上下文。 | PARTIAL：古籍章节、医案等其它来源的候选契约仍在独立 PR/分支；检索全链路尚未完全解耦。回归：`classic_evidence_pipeline_test.dart`、retrieval golden snapshot。 |
+| 证据排序 | `LegacyOrderEvidenceRanker.rank`（`lib/services/legacy_order_evidence_ranker.dart`）消费候选并返回 KEEP/DROP 与 `RankedEvidenceSet`。 | PARTIAL：当前仅保持旧 query order/四条上限，不是语义相关性排序；字符/token 预算 UNKNOWN / NOT_APPLIED。回归：`legacy_order_evidence_ranker_test.dart`、retrieval golden snapshot。 |
+| 会话记忆 | `MainActivity`、`LocalAiConversationHistory`、`LocalAiConversationSessionPolicy`；PR #506 已将当前 Native Conversation KV Cache token 观测暴露到 `LocalAiModelStatus`。 | PARTIAL：12 个完整成功轮次/10,000 UTF-16 code units transcript 上限与 SQLite conversation ID 隔离已合并；`conversationKvCacheTokens` 是实测值，不是预算。PR #505 的结构化 SessionStateSnapshot 尚未合并；模型最大 context metadata 也仍待接入。跨进程恢复 UNKNOWN。 |
 | 语言推理 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt:905-921 | PARTIAL。E4B 通过 Conversation.sendMessage 执行自然语言推理，但输入仍是上游合并后的 modelInput；独立 ReasoningRequest/ReasoningResponse、证据 ID 和动作提案 schema 需要按失败证据逐步建立。 |
 | 业务执行 | lib/services/headless_tool_dispatcher.dart:64-218；lib/services/context_resolution_gateway.dart:43-177 | PARTIAL。HeadlessToolDispatcher 对已登记工具计划先做 registry/capability 校验再执行确定性 executor；ContextResolutionGateway 校验引用锚点并回链具体 Resolver。仍需逐项核对各工具入口、typed args、权限/结果/UNKNOWN 语义，不能据两个类存在就宣称所有业务能力已完成分层。 |
 
@@ -380,7 +380,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.2 五层当前调用映射、测试与未闭环项（master 基线核验）
 
-本节映射基线为 master `f08145549a2b271f689edb944194b3ee72c4d246`（已包含 PR #493/#496/#499、#498/#501/#504）。文件/函数定位优先于固定行号；后续修改必须按当时 master 重新核对。已合并代码、未合并 PR 和尚无实现的目标接口分开记录。
+本节映射基线为 master `cae7e12dc34e82853e6df815a90e6b4d8a497ef6`（已包含 PR #492/#495/#493/#496/#499/#498/#501/#504/#506）。文件/函数定位优先于固定行号；后续修改必须按当时 master 重新核对。已合并代码、未合并 PR 和尚无实现的目标接口分开记录。
 
 | 层 | 当前生产代码/真实调用路径 | 已有测试证据 | 仍缺少的边界 |
 |---|---|---|---|
