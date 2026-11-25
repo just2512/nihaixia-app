@@ -70,6 +70,7 @@ class MainActivity : FlutterActivity() {
         LocalAiModelContextLimitObservationPolicy.unknown()
     // Native Conversation state belongs to exactly one SQLite assistant session.
     private var activeConversationId: Long? = null
+    private var pendingReasoningTurn: LocalAiPendingReasoningTurn? = null
     private var activeBackend = "not_loaded"
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
@@ -412,6 +413,84 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                     }
+                    "sendReasoningMessage" -> {
+                        val conversationId = requiredConversationId(call, result) ?: return@handler
+                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
+                        val traceId = try {
+                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
+                            return@handler
+                        }
+                        val text = call.argument<String>("text").orEmpty()
+                        val context = call.argument<String>("context").orEmpty()
+                        val reasoningContext = call.argument<String>("reasoning_context").orEmpty()
+                        val sessionStateContext =
+                            call.argument<String>("session_state_context").orEmpty()
+                        val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
+                            call.argument<Any>("session_state_conversation_id")
+                        )
+                        val requireMedicalSafety =
+                            call.argument<Boolean>("require_red_flag") == true
+                        val redFlagContext =
+                            call.argument<String>("red_flag_context")?.trim().orEmpty()
+                        val redFlagContextTruncated =
+                            call.argument<Boolean>("red_flag_context_truncated") == true ||
+                                redFlagContext.length > 10_000
+                        try {
+                            LocalAiReasoningTurnPolicy.validateRequest(requestId, conversationId, text)
+                            LocalAiReasoningTurnPolicy.validateSupplementalContext(reasoningContext)
+                        } catch (error: IllegalArgumentException) {
+                            result.error("INVALID_REASONING_REQUEST", error.message, null)
+                            return@handler
+                        }
+                        val validatedSessionState = try {
+                            LocalAiSessionStateInputPolicy.validate(
+                                sessionStateContext,
+                                sessionStateConversationId,
+                                conversationId
+                            )
+                        } catch (error: IllegalArgumentException) {
+                            result.error("SESSION_STATE_INVALID", error.message, null)
+                            return@handler
+                        }
+                        runAiTaskAfterNativeRedFlag(
+                            result,
+                            NativeRedFlagInput(
+                                NativeRedFlagInputSource.CURRENT_TEXT,
+                                redFlagContext.ifEmpty { text },
+                                sourceTruncated = redFlagContextTruncated
+                            ),
+                            required = requireMedicalSafety
+                        ) {
+                            LocalAiTraceIdPolicy.attach(
+                                sendLocalReasoningMessage(
+                                    conversationId = conversationId,
+                                    requestId = requestId,
+                                    text = text,
+                                    context = context,
+                                    sessionStateContext = validatedSessionState,
+                                    reasoningContext = reasoningContext
+                                ),
+                                traceId
+                            )
+                        }
+                    }
+                    "finalizeReasoningTurn" -> {
+                        val conversationId = requiredConversationId(call, result) ?: return@handler
+                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
+                        val answerText = call.argument<String>("answer_text").orEmpty()
+                        runAiTask(result, requiresAiAccess = true) {
+                            finalizeReasoningTurn(conversationId, requestId, answerText)
+                        }
+                    }
+                    "rejectReasoningTurn" -> {
+                        val conversationId = requiredConversationId(call, result) ?: return@handler
+                        val requestId = call.argument<String>("request_id")?.trim().orEmpty()
+                        runAiTask(result, requiresAiAccess = true) {
+                            rejectReasoningTurn(conversationId, requestId)
+                        }
+                    }
                     "restoreConversation" -> {
                         val conversationId = requiredConversationId(call, result) ?: return@handler
                         val transcript = call.argument<String>("transcript")?.trim().orEmpty()
@@ -745,6 +824,7 @@ class MainActivity : FlutterActivity() {
      * completed-turn transcript; the in-flight request is never replayed.
      */
     private fun updateBackendPreference(requestedBackend: String?): Map<String, Any> {
+        requireNoPendingReasoningTurn()
         val selectedBackend =
             LocalAiBackendSelectionPolicy.parseRequestedBackend(requestedBackend)
                 ?: throw IllegalArgumentException("推理后端只支持 GPU 或 CPU")
@@ -1036,6 +1116,7 @@ class MainActivity : FlutterActivity() {
     private fun ensureActiveConversation(conversationId: Long) {
         require(conversationId > 0L) { "当前会话标识无效" }
         aiModelAccessGate.requireAccess()
+        requireNoPendingReasoningTurn()
         if (aiEngine == null || aiConversation == null) {
             throw IllegalStateException("本地模型尚未加载或 Native 会话不可用")
         }
@@ -1051,6 +1132,144 @@ class MainActivity : FlutterActivity() {
             return
         }
         resetLocalConversation(conversationId)
+    }
+
+    private fun requireNoPendingReasoningTurn() {
+        check(pendingReasoningTurn == null) {
+            "REASONING_PENDING_TURN_MUST_BE_FINALIZED_OR_REJECTED"
+        }
+    }
+
+    private fun recreateCurrentConversationFromHistory() {
+        aiModelAccessGate.requireAccess()
+        val engine = aiEngine ?: throw IllegalStateException("本地模型引擎不可用")
+        val previousConversation = aiConversation
+            ?: throw IllegalStateException("本地模型会话不可用")
+        aiConversation = null
+        try {
+            previousConversation.close()
+        } catch (error: Exception) {
+            try {
+                releaseRuntimePreservingConversationState()
+            } catch (releaseError: Exception) {
+                error.addSuppressed(releaseError)
+            }
+            throw IllegalStateException("旧 Native 会话未能安全释放，已停止继续使用当前运行时", error)
+        }
+
+        try {
+            val replacement = createConversationWithHistory(engine)
+            aiConversation = replacement
+            observeConversationTokenCount(replacement)
+        } catch (error: Exception) {
+            try {
+                releaseRuntimePreservingConversationState()
+            } catch (releaseError: Exception) {
+                error.addSuppressed(releaseError)
+            }
+            throw IllegalStateException("Native 会话无法从已提交历史重建；当前运行时已释放", error)
+        }
+    }
+
+    private fun sendLocalReasoningMessage(
+        conversationId: Long,
+        requestId: String,
+        text: String,
+        context: String,
+        sessionStateContext: String,
+        reasoningContext: String
+    ): Map<String, Any> {
+        ensureActiveConversation(conversationId)
+        check(pendingReasoningTurn == null) {
+            "REASONING_PENDING_TURN_MUST_BE_FINALIZED_OR_REJECTED"
+        }
+        val before = conversationHistory.snapshot()
+        val prepared = LocalAiMessageInputPolicy.prepare(
+            userText = text,
+            context = context,
+            sessionStateContext = sessionStateContext,
+            reasoningContext = reasoningContext
+        )
+        // Generate the structured envelope without committing it to the completed
+        // transcript. The old KV conversation is immediately replaced below.
+        val rawReply = sendWithFirstTurnGpuFallback(
+            userMessageText = text,
+            commitToHistory = false,
+            preserveRawReply = true
+        ) { conversation ->
+            conversation.sendMessage(prepared.modelInput).toString()
+        }
+        check(conversationHistory.snapshot() == before) {
+            "REASONING_PENDING_MUTATED_COMPLETED_HISTORY"
+        }
+        // LiteRT-LM's live KV cache contains the raw JSON after generation.
+        // Rebuild it from the old successful transcript before exposing the
+        // pending response to Dart, so the raw envelope cannot leak into turn N+1.
+        recreateCurrentConversationFromHistory()
+        pendingReasoningTurn = LocalAiReasoningTurnPolicy.createPendingTurn(
+            requestId = requestId,
+            conversationId = conversationId,
+            userText = text,
+            previousHistory = before
+        )
+        return mapOf(
+            "request_id" to requestId,
+            "reply" to rawReply,
+            "backend" to activeBackend
+        )
+    }
+
+    private fun finalizeReasoningTurn(
+        conversationId: Long,
+        requestId: String,
+        answerText: String
+    ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
+        val pending = LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
+            pendingReasoningTurn,
+            requestId,
+            conversationId
+        )
+        val normalizedAnswer = stripSimpleMarkdown(answerText).trim()
+        require(normalizedAnswer.isNotEmpty()) { "REASONING_VALIDATED_ANSWER_EMPTY" }
+        require(normalizedAnswer.length <= LocalAiReasoningTurnPolicy.maxValidatedAnswerCharacters) {
+            "REASONING_VALIDATED_ANSWER_EXCEEDS_CHARACTER_BOUND"
+        }
+        val rejectionReason =
+            LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode(normalizedAnswer)
+        require(rejectionReason == null) {
+            "REASONING_VALIDATED_ANSWER_REJECTED:$rejectionReason"
+        }
+
+        conversationHistory.appendSuccessfulTurn(pending.userText, normalizedAnswer)
+        try {
+            recreateCurrentConversationFromHistory()
+        } catch (error: Exception) {
+            conversationHistory.restore(pending.previousHistory)
+            pendingReasoningTurn = null
+            throw IllegalStateException(
+                "REASONING_FINALIZE_FAILED; completed Native history was rolled back and runtime released",
+                error
+            )
+        }
+        recordUserInput("用户文字自述", pending.userText)
+        pendingReasoningTurn = null
+        return mapOf("finalized" to true, "request_id" to requestId)
+    }
+
+    private fun rejectReasoningTurn(
+        conversationId: Long,
+        requestId: String
+    ): Map<String, Any> {
+        aiModelAccessGate.requireAccess()
+        LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
+            pendingReasoningTurn,
+            requestId,
+            conversationId
+        )
+        // The raw KV state was already discarded before sendReasoningMessage returned.
+        pendingReasoningTurn = null
+        return mapOf("rejected" to true, "request_id" to requestId)
     }
 
     private fun sendLocalMessage(
@@ -1079,6 +1298,8 @@ class MainActivity : FlutterActivity() {
 
     private fun sendWithFirstTurnGpuFallback(
         userMessageText: String,
+        commitToHistory: Boolean = true,
+        preserveRawReply: Boolean = false,
         send: (Conversation) -> String
     ): String {
         aiModelAccessGate.requireAccess()
@@ -1089,14 +1310,16 @@ class MainActivity : FlutterActivity() {
             reply: String,
             completedConversation: Conversation
         ): String {
-            val cleaned = stripSimpleMarkdown(reply)
+            val cleaned = if (preserveRawReply) reply else stripSimpleMarkdown(reply)
             val rejectionReason = LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode(cleaned)
             if (rejectionReason != null) {
                 throw LocalAiGeneratedReplyQualityException(rejectionReason)
             }
             // The history object repeats the quality check as a persistence-level
             // invariant, so no other caller can accidentally store a rejected reply.
-            conversationHistory.appendSuccessfulTurn(userMessageText, cleaned)
+            if (commitToHistory) {
+                conversationHistory.appendSuccessfulTurn(userMessageText, cleaned)
+            }
             observeConversationTokenCount(completedConversation)
             return cleaned
         }
@@ -1795,6 +2018,7 @@ class MainActivity : FlutterActivity() {
     private fun resetLocalConversation(conversationId: Long): Map<String, Any> {
         require(conversationId > 0L) { "当前会话标识无效" }
         aiModelAccessGate.requireAccess()
+        requireNoPendingReasoningTurn()
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
@@ -1834,6 +2058,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun releaseLocalModel(): Map<String, Any> {
+        pendingReasoningTurn = null
         val conversation = aiConversation
         val engine = aiEngine
         // Clear references before close: LiteRT-LM objects must be closed exactly once.

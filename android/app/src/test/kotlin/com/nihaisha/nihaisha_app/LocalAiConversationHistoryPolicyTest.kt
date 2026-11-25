@@ -358,4 +358,90 @@ class LocalAiConversationHistoryPolicyTest {
         )
     }
 
+
+    @Test
+    fun keepsReasoningProtocolMetadataInItsOwnUntruncatedInputSection() {
+        val metadata = "x".repeat(LocalAiReasoningTurnPolicy.maxSupplementalContextCharacters)
+        val prepared = LocalAiMessageInputPolicy.prepare(
+            userText = "原始问题",
+            context = "knowledge".repeat(1_000),
+            reasoningContext = metadata
+        )
+
+        assertTrue(prepared.modelInput.contains(metadata))
+        assertTrue(prepared.modelInput.contains("【App 提供的本轮结构化推理协议元数据（独立受限区）】"))
+        assertTrue(prepared.modelInput.endsWith("【用户原文】\n原始问题"))
+        assertEquals("原始问题", prepared.historyUserText)
+    }
+
+    @Test
+    fun rejectsReasoningProtocolMetadataAboveItsExplicitCharacterBound() {
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiMessageInputPolicy.prepare(
+                userText = "原始问题",
+                context = "",
+                reasoningContext = "x".repeat(
+                    LocalAiReasoningTurnPolicy.maxSupplementalContextCharacters + 1
+                )
+            )
+        }
+    }
+
+    @Test
+    fun bindsPendingReasoningTurnToOneRequestAndOneConversation() {
+        val history = LocalAiConversationHistory().apply {
+            appendSuccessfulTurn("previous", "completed")
+        }
+        val pending = LocalAiReasoningTurnPolicy.createPendingTurn(
+            requestId = "0123456789abcdef0123456789abcdef",
+            conversationId = 42L,
+            userText = "原始问题",
+            previousHistory = history.snapshot()
+        )
+
+        assertEquals(
+            pending,
+            LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
+                pending,
+                "0123456789abcdef0123456789abcdef",
+                42L
+            )
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
+                pending,
+                "fedcba9876543210fedcba9876543210",
+                42L
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiReasoningTurnPolicy.requireMatchingPendingTurn(
+                pending,
+                pending.requestId,
+                43L
+            )
+        }
+    }
+
+    @Test
+    fun rejectsInvalidReasoningRequestIdentityBeforeCreatingPendingTurn() {
+        val history = LocalAiConversationHistory().snapshot()
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiReasoningTurnPolicy.createPendingTurn(
+                requestId = "request-1",
+                conversationId = 42L,
+                userText = "原始问题",
+                previousHistory = history
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiReasoningTurnPolicy.createPendingTurn(
+                requestId = "0123456789abcdef0123456789abcdef",
+                conversationId = 42L,
+                userText = " ",
+                previousHistory = history
+            )
+        }
+    }
+
 }
