@@ -1293,7 +1293,13 @@ void main() {
         '我最近三天偶尔头痛，睡眠后会缓解。',
       );
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(service.sentTexts, ['我最近三天偶尔头痛，睡眠后会缓解。']);
@@ -1351,7 +1357,13 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
       matching: find.byType(IconButton),
     ),
   ).onPressed, isNotNull);
-  await tester.tap(find.byTooltip('发送'));
+  await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
   for (var attempt = 0; attempt < 100 && service.sentTexts.isEmpty; attempt++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
@@ -1432,7 +1444,13 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
       matching: find.byType(IconButton),
     ),
   ).onPressed, isNotNull);
-  await tester.tap(find.byTooltip('发送'));
+  await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
   await _pumpUntilFound(
     tester,
     find.textContaining('未经验证的模型原始内容未展示。'),
@@ -1484,7 +1502,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), query);
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(find.text('先核对你刚才的描述'), findsOneWidget);
@@ -1540,7 +1564,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final state = await _waitForTcmInterviewTaskState(
@@ -1741,7 +1771,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final conversationId = _store._conversations.keys.single;
@@ -1801,7 +1837,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final conversationId = _store._conversations.keys.single;
@@ -1866,7 +1908,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final initial = await _waitForTcmInterviewTaskState(
@@ -1945,7 +1993,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final initialState = await _waitForTcmInterviewTaskState(
@@ -1986,7 +2040,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final initialState = await _waitForTcmInterviewTaskState(
@@ -2085,7 +2145,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '开始规则问诊');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     final initial = await _waitForTcmInterviewTaskState(
@@ -2193,7 +2259,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '我最近三天口苦，胸闷');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.sentTexts, ['我最近三天口苦，胸闷']);
@@ -2225,7 +2297,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '我较早的头痛描述');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
       await tester.tap(find.text('整理本次症状'));
       await tester.pumpAndSettle();
@@ -2252,7 +2330,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '此前描述过的症状');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
       await tester.tap(find.text('整理本次症状'));
       await tester.pumpAndSettle();
@@ -2277,7 +2361,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(
@@ -2332,7 +2422,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('释放模型内存'));
@@ -2371,7 +2467,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('重新开始对话'));
@@ -2402,7 +2504,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('释放模型内存'));
@@ -2432,7 +2540,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
       expect(find.textContaining(userText), findsWidgets);
 
@@ -2463,7 +2577,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
       expect(find.textContaining(userText), findsWidgets);
 
@@ -2510,7 +2630,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
         matching: find.byType(IconButton),
       );
       expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
       // 等待本轮推理、持久化和发送后的原生状态回读完成，避免在异步窗口内
       // 点击被忙碌锁禁用的重置按钮。
@@ -2567,7 +2693,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
         await tester.enterText(find.byType(TextField), userText);
         await tester.pump();
-        await tester.tap(find.byTooltip('发送'));
+        await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
         await tester.pumpAndSettle();
 
         expect(service.sentTexts, [userText]);
@@ -2615,7 +2747,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
         await tester.enterText(find.byType(TextField), userText);
         await tester.pump();
-        await tester.tap(find.byTooltip('发送'));
+        await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
         await tester.pumpAndSettle();
 
         expect(service.sentTexts, [userText]);
@@ -2661,7 +2799,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
         await tester.enterText(find.byType(TextField), oldText);
         await tester.pump();
-        await tester.tap(find.byTooltip('发送'));
+        await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -2669,7 +2813,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
           _PostSendNotReadyStatusService.triggerText,
         );
         await tester.pump();
-        await tester.tap(find.byTooltip('发送'));
+        await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
         await tester.pumpAndSettle();
 
         expect(
@@ -2723,7 +2873,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
         await tester.enterText(find.byType(TextField), oldText);
         await tester.pump();
-        await tester.tap(find.byTooltip('发送'));
+        await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -2731,7 +2887,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
           _PostSendNotReadyStatusService.triggerText,
         );
         await tester.pump();
-        await tester.tap(find.byTooltip('发送'));
+        await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
         await tester.pumpAndSettle();
 
         expect(find.text('模型已放入设备，尚未加载'), findsOneWidget);
@@ -2805,7 +2967,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
       await tester.enterText(find.byType(TextField), '我饭后腹胀，已经持续约两周。');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(service.sentTexts, ['我饭后腹胀，已经持续约两周。']);
@@ -2934,7 +3102,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
       await tester.enterText(find.byType(TextField), userText);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 1);
@@ -2967,7 +3141,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
         userText,
       );
 
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(service.sendAttempts, 2);
@@ -3549,7 +3729,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     const followUp = '请基于当前快照重新排盘并核对命宫。';
     await tester.enterText(find.byType(TextField).first, followUp);
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
     for (var attempt = 0; attempt < 50; attempt++) {
       final rows = await _store.getAssistantMessages(
@@ -3919,7 +4105,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '帮我推算五运六气');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(executedArguments, [
@@ -3977,7 +4169,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       '帮我推算五运六气 2026-11-12',
     );
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.sentTexts, hasLength(1));
@@ -4103,7 +4301,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField).first, query);
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.baziSlotQueries, [query]);
@@ -4172,7 +4376,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String text) async {
       await tester.enterText(find.byType(TextField).first, text);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -4296,7 +4506,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String text) async {
       await tester.enterText(find.byType(TextField).first, text);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -4416,7 +4632,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -4499,7 +4721,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       '帮我推算五运六气 2026-11-12',
     );
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Headless 工具结果未通过契约校验'), findsOneWidget);
@@ -4562,7 +4790,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '你好');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(find.textContaining('native send failed in test'), findsOneWidget);
@@ -4609,7 +4843,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '我间断头痛三天');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('整理本次症状'));
@@ -4688,7 +4928,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
     expect(find.text('打开五运六气推算'), findsOneWidget);
 
@@ -4804,7 +5050,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '打开五运六气推算页面');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
     await tester.tap(find.text('打开五运六气推算'));
     await tester.pumpAndSettle();
@@ -4879,7 +5131,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '你好');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
@@ -4944,7 +5202,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       '推算五运六气，并查询黄历',
     );
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.intentQueries, ['推算五运六气，并查询黄历']);
@@ -4980,7 +5244,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       '我最近三天口苦，帮我排个盘',
     );
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.intentQueries, isEmpty);
@@ -5034,7 +5304,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       '推算五运六气，并查询黄历',
     );
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.intentQueries, ['推算五运六气，并查询黄历']);
@@ -5084,7 +5360,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField), '介绍传统术数文化的历史背景');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
@@ -5128,7 +5410,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '介绍紫微斗数的文化背景');
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.sentTraceIds, [traceId]);
@@ -5204,7 +5492,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
       '梅花易数起卦，用 3 和 7，公历日期 2026-11-13',
     );
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(executionCount, 1);
@@ -5292,7 +5586,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5392,7 +5692,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5478,7 +5784,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5524,7 +5836,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5609,7 +5927,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5682,7 +6006,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5763,7 +6093,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5863,7 +6199,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -5952,7 +6294,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -6088,7 +6436,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -6216,7 +6570,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -6330,7 +6690,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -6398,7 +6764,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -6465,7 +6837,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
     Future<void> send(String value) async {
       await tester.enterText(find.byType(TextField).first, value);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
     }
 
@@ -6638,7 +7016,13 @@ testWidgets('自然语言诊断请求先确认自述候选，再调用同一规�
 
     await tester.enterText(find.byType(TextField).first, query);
     await tester.pump();
-    await tester.tap(find.byTooltip('发送'));
+    await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
     await tester.pumpAndSettle();
 
     expect(service.baziSlotQueries, [query]);
@@ -6778,7 +7162,13 @@ void mainRedFlagEntrypointOrderingTests() {
 
       await tester.enterText(find.byType(TextField), '开始规则问诊');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       final state = await _waitForTcmInterviewTaskState(
@@ -6827,7 +7217,13 @@ void mainRedFlagEntrypointOrderingTests() {
 
       await tester.enterText(find.byType(TextField), '我最近胸痛');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(detector.calls, 0);
@@ -6839,7 +7235,13 @@ void mainRedFlagEntrypointOrderingTests() {
 
       await tester.enterText(find.byType(TextField), '我最近头痛');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(detector.calls, 0,
@@ -6890,7 +7292,13 @@ void mainRedFlagEntrypointOrderingTests() {
         matching: find.byType(IconButton),
       );
       expect(tester.widget<IconButton>(sendButton).onPressed, isNotNull);
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(events, ['intent']);
@@ -6927,7 +7335,13 @@ void mainRedFlagEntrypointOrderingTests() {
 
       await tester.enterText(find.byType(TextField), '我想排盘');
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       expect(intentEvents, ['intent']);
@@ -6975,7 +7389,13 @@ void mainRedFlagEntrypointOrderingTests() {
 
       await tester.enterText(find.byType(TextField), query);
       await tester.pump();
-      await tester.tap(find.byTooltip('发送'));
+      await tester.ensureVisible(find.byTooltip('发送'));
+  tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed!.call();
       await tester.pumpAndSettle();
 
       final state = await _waitForTcmInterviewTaskState(
