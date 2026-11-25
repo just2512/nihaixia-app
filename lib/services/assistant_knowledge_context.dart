@@ -210,7 +210,7 @@ class AssistantKnowledgeContextBuilder {
       return false;
     }
     return RegExp(
-      r'(找|查找|检索|搜索|查询|查看|看一下|看看|列出|列举|提供|给我|举例|对照|比较|分析|有哪些|筛选|想看|要看)',
+      r'(找|查找|检索|搜索|查询|查看|看一下|看看|列出|列举|提供|给我|举|对照|比较|分析|有哪些|筛选|想看|要看)',
     ).hasMatch(normalized);
   }
 

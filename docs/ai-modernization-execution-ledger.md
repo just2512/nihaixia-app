@@ -4589,3 +4589,18 @@ PR HEAD 门禁证据：
 - **下一切片：** PR #524 只做 Request/formatter contract；其后 Core-3 Adapter 必须先在空 capability allowlist 下完成单一 learning knowledge path 的 Request→Native raw text→Response decoder→evidence ID→sourceId mapping→UI 回填。之后才做 Core-4 proposal gate/typed args，不把 action proposal 提前接入 Dispatcher。
 - **Core-5：** 仍无五层端到端闭环；覆盖模型响应、来源点击、动作授权、真实确定性结果和失败/UNKNOWN 的 E2E 尚未完成。设备实测在云端工作完成后由本地最后执行。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED。
+
+
+---
+
+## 108. 2026-11-25 GPU 生成质量闸门、实体与检索共同路由及证据展示分离
+
+- **主线基线：** `176685722676ebe1d843dcd6db107029525c8cc0`。独立工作分支：`work/fix-ai-dialogue-quality-evidence-master-1766857-20261125`。本节只记录本分支实际改动；不修改此前历史记录。
+- **P0 / Native GPU 生成可靠性：** Gemma 4 E4B GPU 配置显式使用 LiteRT-LM 0.18.0 已支持的 `ActivationDataType.FLOAT32`，针对同一模型 SHA 在 Adreno GPU FP16 路径上的公开数值损坏报告采用已报告 workaround；不宣称 Find N2 已实机复现或验证。新增 `LocalAiGeneratedReplyQualityPolicy`，只拒绝空输出、四次及以上重复短语/行的明显循环；在 `sendWithFirstTurnGpuFallback` 提交成功轮次前检查，并由 `LocalAiConversationHistory.appendSuccessfulTurn` 再做持久化级防绕过校验。GPU 已返回但质量不合格时，恢复此前成功 transcript 后最多 CPU 重试一次；CPU 仍失败则保留原成功历史、不持久化失败回复。该闸门不验证事实正确性、医学安全性或完整语义质量。
+- **P1 / 统一助手意图：** 初始实体匹配和检索分成两个阶段。Automatic 模式先通过 `hasStructuredKnowledgeEntity` 识别登记的方剂名称/别名、本草和穴位实体，再实际运行本地检索；只有实体命中且检索结果存在可回查来源、状态为 RETRIEVED/PARTIAL 时，第二次 `AssistantConversationOrchestrator.resolve` 才切换 Learning。单独实体命中但无检索结果不强制进入学习模式；个人症状与个人上下文继续优先进入问诊。该路由只说明本地资料可回查，不代表资料足以支持所有结论。
+- **P1 / 医案检索门禁：** `buildAsync`、`buildWithSourcesAsync`、`buildWithEvidenceAsync` 和对话层 retrieval helper 的默认 `includeMedicalCases` 均改为 false。只有同时出现医案/病例/案例对象与明确查找、列举、提供、举例、对照、比较等动作，且不是询问“如何检索/检索方法”时才启用；自动、学习和问诊路径使用同一策略，工具路径保持 false。显式调用医案检索的现有功能保留，相关测试改为显式 opt-in。
+- **正常对话 / 内部证据审计隔离：** 移除 `citationFooter` 与 source 对象的“引用尾注”格式化；四种对话模式只返回模型自然语言正文。检索状态继续用于内部 prompt/trace/消息元数据，但不显示在聊天气泡。可回查来源改为默认折叠的“本轮检索资料”入口，隐藏 sourceId、文件路径和医案内部序号，并明确“检索返回不等于模型逐条引用或来源已核验”。prompt 也被明确限制不得向用户输出内部证据标识；真正的模型引用仍待结构化响应引用 ID 与 App 回验接线，不能在本批次提前标记为已实现。
+- **新增/调整测试：** Native JVM 测试覆盖重复问候、重复标点/分行文本、正常短答、有效答复和空输出的持久化拒绝；Flutter 测试覆盖“实体+有来源检索结果”共同路由、没有检索命中不强制学习、症状优先级、医案默认关闭与显式查询开关、结构化来源保留且不再生成用户引用尾注。既有工具执行门禁、唯一 `ai_access` / `Native AiModelAccessGate`、Core-2 排序输入和 UNKNOWN 不重放语义不变。
+- **云端验收状态：** 当前最终 PR HEAD 的 Android arm64/JVM、Flutter regression/analyze、Fork License/REUSE 和 work branch validation 必须以 GitHub Actions 最新精确 HEAD 结果判定；SKIPPED 不计 PASS。当前不能用 CI 替代 OPPO Find N2 实机长短上下文、GPU/CPU 多轮、内存占用和安装升级验证。
+- **设备风险：** FLOAT32 是对外部同 SDK/同模型哈希报告的 GPU workaround，不是对 Adreno 730 Find N2 的实机验证。公开报告显示设备间内存成本不同；Find N2 必须检查峰值内存/系统回收/首 token 与解码速度。若实机出现内存压力，不回退到未加质量闸门的 FP16；先按 TRACE 明确故障边界再做条件化 precision 策略。
+- **未完成边界：** 本批次不声称完成 Core-3 结构化模型引用生产接线、所有证据使用关系验证、医学事实准确性检测或 E2E Find N2 验收。没有经 App 回验的 referencedEvidenceIds 时，普通聊天只显示“本轮检索资料”，不得出现“模型引用”表述。

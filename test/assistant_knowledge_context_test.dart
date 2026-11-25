@@ -457,7 +457,10 @@ void main() {
   });
 
   test('医案关联上下文使用稳定知识库条目编号定位而不显示书目缺失', () async {
-    final cases = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
+    final cases = await AssistantKnowledgeContextBuilder.buildAsync(
+      '桂枝汤',
+      includeMedicalCases: true,
+    );
     expect(cases, contains('[App医案库 · 条目'));
     expect(cases, contains('知识库条目定位：medical_case:internal-seq:'));
     expect(cases, contains('来源标识：medical_case:'));

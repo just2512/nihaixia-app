@@ -115,22 +115,33 @@ void main() {
       expect(decision.needsClarification, isFalse);
     });
 
-    test('方剂、本草等本地实体命中可单独触发学习意图，但个人症状优先进入问诊', () {
+    test('方剂、本草实体命中与本轮可回查检索结果共同触发学习意图', () {
       for (final query in ['桔梗汤', '桔梗']) {
-        final decision = AssistantConversationOrchestrator.resolve(
+        final entityOnly = AssistantConversationOrchestrator.resolve(
           query: query,
           selectedMode: AssistantMode.automatic,
           hasStructuredKnowledgeEntity: true,
+          hasKnowledgeRetrievalResult: false,
         );
-        expect(decision.mode, AssistantMode.learning, reason: query);
-        expect(decision.tool, isNull, reason: query);
-        expect(decision.needsClarification, isFalse, reason: query);
+        expect(entityOnly.mode, AssistantMode.automatic,
+            reason: '只有实体命中、没有可回查资料时不伪装成知识问答');
+
+        final resolved = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+          hasStructuredKnowledgeEntity: true,
+          hasKnowledgeRetrievalResult: true,
+        );
+        expect(resolved.mode, AssistantMode.learning, reason: query);
+        expect(resolved.tool, isNull, reason: query);
+        expect(resolved.needsClarification, isFalse, reason: query);
       }
 
       final personalSymptoms = AssistantConversationOrchestrator.resolve(
         query: '我最近咽痛，想了解桔梗汤',
         selectedMode: AssistantMode.automatic,
         hasStructuredKnowledgeEntity: true,
+        hasKnowledgeRetrievalResult: true,
       );
       expect(personalSymptoms.mode, AssistantMode.consultation);
     });

@@ -1250,6 +1250,31 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           includeMedicalCases:
               AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
+        final knowledgeIntent = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+          hasStructuredKnowledgeEntity:
+              AssistantKnowledgeContextBuilder.hasStructuredKnowledgeEntity(query),
+          hasKnowledgeRetrievalResult:
+              knowledge.sources.isNotEmpty &&
+              (knowledge.status == AssistantKnowledgeRetrievalStatus.retrieved ||
+                  knowledge.status == AssistantKnowledgeRetrievalStatus.partial),
+        );
+        if (knowledgeIntent.mode == AssistantMode.learning) {
+          final learningContext = '当前角色：学习助手。\\n'
+              '${AssistantMode.learning.promptHint}\\n'
+              '方剂、本草或穴位实体已匹配，且本轮已有可回查的本地资料。'
+              '先直接围绕用户输入的实体解释基本信息；只使用下方本轮资料支持的内容，'
+              '没有覆盖的组成、主治、条文或出处应明确说明，不得自行补造。\\n'
+              '本轮知识检索状态：${knowledge.statusLabel}。\\n'
+              '${knowledge.text}';
+          final reply = await sendWithContext(learningContext);
+          return _AssistantTurnResponse(
+            text: reply,
+            sourceIds: knowledge.sourceIds,
+            knowledgeStatus: knowledge.statusLabel,
+          );
+        }
         // 无命中且无失败时，不注入知识检索框架与角色 context——
         // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
@@ -8955,8 +8980,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         selectedMode: _assistantMode,
         currentMode: _lastEffectiveMode,
         pendingToolSelection: _pendingToolSelection,
-        hasStructuredKnowledgeEntity:
-            AssistantKnowledgeContextBuilder.hasStructuredKnowledgeEntity(text),
       );
       final mayUseBoundedIntentModel =
           decision.candidateTools.length >= 2 &&
