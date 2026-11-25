@@ -4431,3 +4431,15 @@ PR HEAD 门禁证据：
 - **下一项自动执行：** PR #495 Core-0 文档精确 HEAD Flutter/Fork license CI 通过后，按新 master 校准并集成；PR #496 必须在精确 HEAD Android arm64/JVM、Flutter 与 Fork license 均 PASS 后单独集成。Core-1 有界历史通过后，Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
 - **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
 
+
+
+---
+
+## 99. 2026-11-25 Core-1 模型上下文容量元数据
+
+- **主线事实：** PR #506 已合并 Native Conversation 当前 KV Cache token 只读采样；Dart `LocalAiModelStatus` 暴露 `conversationKvCacheTokens`、`conversationKvCacheObservationStatus` 和 `conversationKvCacheBudgetStatus=NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED`。该字段不是 token 预算。
+- **本窄切片：** 分支 `feature/core1-model-context-limit-metadata-20261125` 基于 master `cae7e12dc34e82853e6df815a90e6b4d8a497ef6`，在模型文件完整性校验后使用 LiteRT-LM v0.18.0 `ModelInfo.from(modelPath).maxContextTokens()` 读取该 .litertlm 文件声明的最大上下文容量，并在 `LocalAiModelStatus.modelMaxContextTokens` 暴露只读值。无法读取或值无效时保持 null/UNKNOWN，不阻止正常模型加载。
+- **SDK 语义：** `ModelInfo.maxContextTokens()` 对静态模型返回固定 context size，对动态模型返回最大可配置 context size；它不是当前会话剩余 token，也不是建议可用输入预算。来源：`https://github.com/google-ai-edge/LiteRT-LM/blob/v0.18.0/kotlin/java/com/google/ai/edge/litertlm/ModelInfo.kt`。
+- **不做事项：** 不设置使用率阈值，不预设输出 reserve，不自动摘要、压缩、close/recreate、清空或重放历史；不把 12 轮/10,000 UTF-16 code units 误作模型 token 上限。任何预算算法必须单独核算 system prompt、RAG、当前用户输入、历史、输出预留及运行时开销，并明确缺失/未知状态。
+- **精确门禁：** 本分支 PR 的 Flutter static/full regression、Android arm64 APK/JVM 和 Fork license boundary 均须在精确 HEAD PASS；SKIPPED 不计 PASS。Find N2 真实模型容量、长对话增长、内存压力、GPU/CPU 和进程恢复留到本地 TRACE。
+- **后续依赖：** 先合并并验证 Core-1 会话快照与 Native 观测，再考虑五层推理协议；不因“有 maxContextTokens”就开始自动记忆摘要或自动清理。
