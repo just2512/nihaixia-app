@@ -11,7 +11,7 @@
 
 授权文件本身（LICENSE、LICENSES、.reuse/dep5）不作为受许可对象重复列入清单。rights_status=OWNERSHIP_EVIDENCE_REQUIRED 的 Fork 文件需保存作者/贡献者版权或有效再许可权证据；不能仅凭 Git 作者字段或仓库管理员身份推定版权。
 
-本次同时纳入 Android Keystore Plugin、AtomicFile TokenStore 与 JVM 策略测试；真机行为仍为 LOCAL ONLY / MISSING。Core-1 增加只读 SessionStateSnapshot 适配器；Core-2 增加医案 CandidateEvidence 召回适配器，不改变医案正文或来源核验结论。
+本次同时纳入 Android Keystore Plugin、AtomicFile TokenStore 与 JVM 策略测试；真机行为仍为 LOCAL ONLY / MISSING。Core-1 增加只读 SessionStateSnapshot 适配器；Core-2 增加医案/古籍 CandidateEvidence 召回适配器，不改变资料正文或来源核验结论。本次同时增加 Core-3 ReasoningResponse v1 严格解码契约与请求级证据/能力校验；当前只交付独立 DTO/解码器/负向回归，不接入 Native 主发送链，也不执行模型提出的业务动作。
 
 ## 全量新增与修改文件
 
@@ -561,6 +561,7 @@
 | lib/models/diagnosis.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/models/evidence_ranking_decision.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/models/medical_case_source_ledger.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/models/reasoning_response.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/models/session_state_snapshot.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/models/tcm_interview_message.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/models/tcm_interview_task_state.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -675,6 +676,7 @@
 | lib/services/meihua_tool_service.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/native_files_io.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/native_files_stub.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/services/reasoning_response_codec.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/red_flag_gate.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/red_flag_preflight.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/sanshan_lingqian_result_context_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -910,6 +912,7 @@
 | test/phase2_remaining_half_fold_routes_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/quality_score_bc.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/readme_version_consistency_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/reasoning_response_codec_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/red_flag_gate_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/red_flag_preflight_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/release_license_key_ring_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -1028,8 +1031,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 990 个（新增 826，修改 164）；删除路径 15 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 467；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 993 个（新增 829，修改 164）；删除路径 15 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 470；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
