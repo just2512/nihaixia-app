@@ -364,7 +364,7 @@ void main() {
     }
   });
 
-  test('医案引用回链到知识库条目且不输出外部书目缺失', () async {
+  test('医案来源回链到知识库条目且不把外部书目缺失冒充已核验', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 肝癌',
       includeMedicalCases: true,
@@ -383,7 +383,7 @@ void main() {
     );
   });
 
-  test('医案来源标识可反查知识库条目并进入结构化引用', () async {
+  test('医案来源标识可反查并保留为结构化来源对象', () async {
     final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '桂枝汤',
       includeMedicalCases: true,

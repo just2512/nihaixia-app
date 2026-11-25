@@ -177,11 +177,9 @@ class AssistantKnowledgeContextBuilder {
     '恶寒', '口苦', '胸闷', '尿频', '便秘', '腹泻', '心悸', '呕吐',
   };
 
-  /// Cheap deterministic gate for deciding whether a user turn needs the
-  /// bundled TCM retrieval path. Ordinary chat and non-TCM metaphysics queries
-  /// do not load/search the classic corpus.
   /// Cheap deterministic signal for intent routing. This only checks registered
-  /// formula/herb/acupoint entities; it does not claim that retrieval found evidence.
+  /// formula/herb/acupoint entities and their aliases; it does not claim that
+  /// retrieval found evidence.
   static bool hasStructuredKnowledgeEntity(String query) {
     final normalized = query.trim();
     if (normalized.isEmpty) return false;
@@ -215,6 +213,8 @@ class AssistantKnowledgeContextBuilder {
     ).hasMatch(normalized);
   }
 
+  /// A turn needs bundled TCM retrieval when it contains a domain cue or a
+  /// registered formula/herb/acupoint entity. Ordinary chat is not searched.
   static bool shouldRetrieveForQuery(String query) {
     final normalized = query.trim();
     if (normalized.isEmpty) return false;

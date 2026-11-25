@@ -33,15 +33,6 @@ internal data class LocalAiConversationHistorySnapshot(
 )
 
 /**
- * Owns the in-memory Native recovery transcript and bounds it independently
- * from the complete Flutter/SQLite conversation history.
- *
- * The retained Native transcript is limited by both complete-turn count and
- * UTF-16 code units. Eviction always removes whole oldest turns; no message is
- * cut mid-sentence or mid-surrogate pair. Omission counters are metadata only
- * and do not retain the removed message contents.
- */
-/**
  * Deterministic guard for obvious empty or degenerate model output.
  *
  * This intentionally detects only high-confidence repetition loops. It is not a
@@ -108,6 +99,15 @@ internal class LocalAiGeneratedReplyQualityException(
     }
 )
 
+/**
+ * Owns the in-memory Native recovery transcript and bounds it independently
+ * from the complete Flutter/SQLite conversation history.
+ *
+ * The retained Native transcript is limited by both complete-turn count and
+ * UTF-16 code units. Eviction always removes whole oldest turns; no message is
+ * cut mid-sentence or mid-surrogate pair. Omission counters are metadata only
+ * and do not retain the removed message contents.
+ */
 internal class LocalAiConversationHistory(
     private val maxRetainedTurns: Int = LocalAiConversationHistoryPolicy.maxRetainedTurns,
     private val maxRetainedCharacters: Int = LocalAiConversationHistoryPolicy.maxRetainedCharacters
