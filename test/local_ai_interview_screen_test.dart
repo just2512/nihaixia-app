@@ -314,13 +314,14 @@ Future<void> _warmLearningKnowledgeSources(WidgetTester tester) async {
     );
   });
   expect(result, isNotNull);
+  final preparedKnowledge = result!;
   expect(
-    result!.rankedEvidence,
+    preparedKnowledge.rankedEvidence,
     isNotEmpty,
     reason: '学习助手测试必须预先准备可供 Core-3 验证的本轮证据',
   );
   expect(
-    result.rankedEvidence.any(
+    preparedKnowledge.rankedEvidence.any(
       (item) => item.sourceId.startsWith('guji:lingshu:'),
     ),
     isTrue,
