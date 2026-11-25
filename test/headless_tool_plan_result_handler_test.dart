@@ -135,7 +135,8 @@ void main() {
       expect(result.steps.first.result?.status, AssistantToolExecutionStatus.unknown);
       expect(result.steps.last.executed, isFalse);
       expect(result.responseText, contains('UNKNOWN'));
-      expect(result.responseText, contains('三山灵签'));
+      expect(result.steps.last.toolId, 'sanshan_lingqian');
+      expect(result.responseText, contains('三山国王灵签'));
       expect(result.responseText, contains('未执行'));
       expect(result.canInterpret, isFalse);
       expect(result.autoInterpret, isFalse);
