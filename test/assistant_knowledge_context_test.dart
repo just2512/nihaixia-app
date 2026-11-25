@@ -443,11 +443,59 @@ void main() {
     expect(cases, isNot(contains('纸本定位核验状态')));
   });
 
-  test('生产检索接入统一多源排序并保留旧呈现顺序与来源限额', () async {
-    final guji = await AssistantKnowledgeContextBuilder.buildAsync(
+  test('生产检索回传完整排序决策与最终呈现预算且不扩大可引用集合', () async {
+    final gujiResult =
+        await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '灵枢 经脉',
       includeMedicalCases: false,
     );
+    final guji = gujiResult.text;
+    final ranking = gujiResult.rankedEvidenceSet;
+
+    expect(ranking, isNotNull);
+    expect(ranking!.requestId, isNotEmpty);
+    expect(ranking.strategyId, isNotEmpty);
+    expect(ranking.strategyVersion, isNotEmpty);
+    expect(ranking.decisions.map((item) => item.evidenceId).toSet(),
+        gujiResult.knownEvidenceIds.toSet());
+    expect(
+      ranking.orderedEvidenceIds,
+      ranking.decisions
+          .where((item) => item.disposition == EvidenceDecisionDisposition.keep)
+          .toList()
+          ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!))
+          ..map((item) => item.evidenceId).toList(),
+    );
+    expect(ranking.budget.unit, EvidenceBudgetUnit.characters);
+    expect(ranking.budget.applied, isTrue);
+    expect(ranking.budget.limit, AssistantKnowledgeContextBuilder.maxContextCharacters);
+    expect(ranking.budget.used, guji.length);
+    expect(
+      ranking.budget.omittedEvidenceIds.toSet().intersection(
+        ranking.orderedEvidenceIds.toSet(),
+      ),
+      ranking.budget.omittedEvidenceIds.toSet(),
+    );
+    expect(
+      ranking.budget.truncatedEvidenceIds.toSet().intersection(
+        ranking.orderedEvidenceIds.toSet(),
+      ),
+      ranking.budget.truncatedEvidenceIds.toSet(),
+    );
+    expect(
+      gujiResult.rankedEvidenceIds.toSet().intersection(
+        {
+          ...ranking.budget.omittedEvidenceIds,
+          ...ranking.budget.truncatedEvidenceIds,
+        },
+      ),
+      isEmpty,
+    );
+    expect(
+      gujiResult.rankedEvidenceIds.every(ranking.orderedEvidenceIds.contains),
+      isTrue,
+    );
+
     final classicIndex = guji.indexOf('[App经典全文索引');
     final gujiIndex = guji.indexOf('[App古籍库');
     expect(gujiIndex, isNonNegative);
@@ -457,14 +505,17 @@ void main() {
     expect(RegExp(r'章节：').allMatches(guji).length, lessThanOrEqualTo(2));
     expect(guji, contains('纸本版本/卷页核验状态：UNKNOWN'));
 
-    final medical = await AssistantKnowledgeContextBuilder.buildAsync(
+    final medicalResult = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
       '医案 桂枝汤',
       includeMedicalCases: true,
     );
+    final medical = medicalResult.text;
     expect(
       RegExp(r'\[App医案库 · 条目').allMatches(medical).length,
       lessThanOrEqualTo(2),
     );
+    expect(medicalResult.rankedEvidenceSet, isNotNull);
+    expect(medicalResult.rankedEvidenceSet!.budget.used, medical.length);
     final classicIndexMedical = medical.indexOf('[App经典全文索引');
     final medicalIndex = medical.indexOf('[App医案库');
     if (classicIndexMedical >= 0 && medicalIndex >= 0) {
