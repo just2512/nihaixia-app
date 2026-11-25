@@ -69,11 +69,6 @@ class LegacyOrderEvidenceRanker {
         .toList()
       ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!));
 
-    final omittedEvidenceIds = decisions
-        .where((decision) => decision.disposition == EvidenceDecisionDisposition.drop)
-        .map((decision) => decision.evidenceId)
-        .toList(growable: false);
-
     return RankedEvidenceSet(
       requestId: requestId,
       strategyId: strategyId,
@@ -87,7 +82,7 @@ class LegacyOrderEvidenceRanker {
         limit: null,
         used: null,
         applied: false,
-        omittedEvidenceIds: omittedEvidenceIds,
+        omittedEvidenceIds: const [],
         truncatedEvidenceIds: const [],
       ),
       status: orderedEvidenceIds.isEmpty
