@@ -372,6 +372,92 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
 
 class _PageToolTraceService extends _TextSendService {
   final restoredTranscripts = <String>[];
+  @override
+  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
+    required String query,
+    required List<LocalAiIntentCandidate> candidates,
+    required String traceId,
+  }) async {
+    intentQueries.add(query);
+    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
+    intentTraceIds.add(traceId);
+    return intentResolution;
+  }
+
+  @override
+  Future<void> restoreConversation({
+    required int conversationId,
+    required String transcript,
+    required List<String> userMessages,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+  }) async {
+    restoredTranscripts.add(transcript);
+  }
+}
+
+class _SequencedSymptomsTraceService extends _TextSendService {
+  final List<LocalAiSymptomDraft> drafts;
+  final extractedTraceIds = <String>[];
+
+  _SequencedSymptomsTraceService(this.drafts);
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
+    required int conversationId,
+    required String traceId,
+  }) async {
+    extractedTraceIds.add(traceId);
+    return drafts.removeAt(0);
+  }
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required int conversationId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) async => drafts.removeAt(0);
+
+  @override
+  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required int conversationId,
+    required String traceId,
+    required String sourceText,
+    required List<Map<String, Object?>> questionSchema,
+  }) async {
+    extractedTraceIds.add(traceId);
+    return drafts.removeAt(0);
+  }
+}
+
+class _TextSendService extends LocalAiService {
+  _TextSendService({
+    this.intentResolution = const LocalAiIntentResolution(
+      action: LocalAiIntentAction.clarify,
+    ),
+    this.baziSlotDraft,
+    this.initialSymptomDraft,
+  });
+
+  final LocalAiIntentResolution intentResolution;
+  final LocalAiBaziSlotDraft? baziSlotDraft;
+  final LocalAiSymptomDraft? initialSymptomDraft;
+  final initialSymptomTexts = <String>[];
+  final initialSymptomTraceIds = <String>[];
+  final initialSymptomSchemas = <List<Map<String, Object?>> >[];
+  int statusCalls = 0;
+  final baziSlotQueries = <String>[];
+  final baziSlotMissingKeys = <Set<String>>[];
+  final baziSlotTraceIds = <String>[];
+  final intentQueries = <String>[];
+  final intentCandidateIds = <List<String>>[];
+  final intentTraceIds = <String>[];
+  final sentTexts = <String>[];
+  final sentConversationIds = <int>[];
+  final sentContexts = <String>[];
+  final sentTraceIds = <String>[];
+  final restoredTranscripts = <String>[];
   final structuredReasoningContexts = <String>[];
   final finalizedReasoningAnswers = <String>[];
   final rejectedReasoningRequestIds = <String>[];
@@ -506,92 +592,6 @@ class _PageToolTraceService extends _TextSendService {
     _pendingReasoningReplies.remove(requestId);
   }
 
-  @override
-  Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
-    required String query,
-    required List<LocalAiIntentCandidate> candidates,
-    required String traceId,
-  }) async {
-    intentQueries.add(query);
-    intentCandidateIds.add(candidates.map((candidate) => candidate.id).toList());
-    intentTraceIds.add(traceId);
-    return intentResolution;
-  }
-
-  @override
-  Future<void> restoreConversation({
-    required int conversationId,
-    required String transcript,
-    required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-  }) async {
-    restoredTranscripts.add(transcript);
-  }
-}
-
-class _SequencedSymptomsTraceService extends _TextSendService {
-  final List<LocalAiSymptomDraft> drafts;
-  final extractedTraceIds = <String>[];
-
-  _SequencedSymptomsTraceService(this.drafts);
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
-    required int conversationId,
-    required String traceId,
-  }) async {
-    extractedTraceIds.add(traceId);
-    return drafts.removeAt(0);
-  }
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
-    required int conversationId,
-    required String sourceText,
-    required List<Map<String, Object?>> questionSchema,
-  }) async => drafts.removeAt(0);
-
-  @override
-  Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
-    required int conversationId,
-    required String traceId,
-    required String sourceText,
-    required List<Map<String, Object?>> questionSchema,
-  }) async {
-    extractedTraceIds.add(traceId);
-    return drafts.removeAt(0);
-  }
-}
-
-class _TextSendService extends LocalAiService {
-  _TextSendService({
-    this.intentResolution = const LocalAiIntentResolution(
-      action: LocalAiIntentAction.clarify,
-    ),
-    this.baziSlotDraft,
-    this.initialSymptomDraft,
-  });
-
-  final LocalAiIntentResolution intentResolution;
-  final LocalAiBaziSlotDraft? baziSlotDraft;
-  final LocalAiSymptomDraft? initialSymptomDraft;
-  final initialSymptomTexts = <String>[];
-  final initialSymptomTraceIds = <String>[];
-  final initialSymptomSchemas = <List<Map<String, Object?>> >[];
-  int statusCalls = 0;
-  final baziSlotQueries = <String>[];
-  final baziSlotMissingKeys = <Set<String>>[];
-  final baziSlotTraceIds = <String>[];
-  final intentQueries = <String>[];
-  final intentCandidateIds = <List<String>>[];
-  final intentTraceIds = <String>[];
-  final sentTexts = <String>[];
-  final sentConversationIds = <int>[];
-  final sentContexts = <String>[];
-  final sentTraceIds = <String>[];
-  final restoredTranscripts = <String>[];
 
   @override
   Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async =>
