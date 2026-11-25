@@ -83,8 +83,13 @@ Future<T?> showFoldAwareDialog<T>({
 
   Widget buildAnchoredDialog(BuildContext dialogContext) {
     final dialog = builder(dialogContext);
+    // Keep the original window geometry and fold features for hinge-aware
+    // placement, but do not freeze dynamic IME metrics at route-open time.
+    final currentRouteMediaQuery = MediaQuery.of(dialogContext);
     return MediaQuery(
-      data: originalMediaQuery,
+      data: originalMediaQuery.copyWith(
+        viewInsets: currentRouteMediaQuery.viewInsets,
+      ),
       child: AdaptiveSinglePane(
         preferredAnchorPoint: anchorPoint,
         child: useSafeArea ? SafeArea(child: dialog) : dialog,
