@@ -540,9 +540,6 @@ class AssistantKnowledgeContextBuilder {
           for (final candidate in gujiEvidenceBatch.candidates)
             candidate.evidenceId: candidate,
         };
-        final chaptersByIndex = {
-          for (final chapter in chapters) chapter.index: chapter,
-        };
         buffer
           ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
           ..writeln('书籍简介：${book.intro}');
@@ -551,7 +548,6 @@ class AssistantKnowledgeContextBuilder {
         }
         for (final evidenceId in rankedGujiEvidence.orderedEvidenceIds) {
           final candidate = gujiCandidatesById[evidenceId]!;
-          final chapter = chaptersByIndex[candidate.chapterIndex]!;
           buffer
             ..writeln('章节：${candidate.title}')
             ..writeln('知识库条目定位：${candidate.localBacklink}')
