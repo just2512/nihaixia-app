@@ -304,7 +304,7 @@ void main() {
   testWidgets('fold-aware dialog receives live keyboard viewInsets', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(402, 790);
-    tester.view.viewInsets = EdgeInsets.zero;
+    tester.view.viewInsets = const FakeViewPadding();
     addTearDown(tester.view.resetViewInsets);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -342,7 +342,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('IME:0.0'), findsOneWidget);
 
-    tester.view.viewInsets = const EdgeInsets.only(bottom: 280);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('IME:280.0'), findsOneWidget);
