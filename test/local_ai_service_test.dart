@@ -336,6 +336,34 @@ void main() {
       expect(received[0].arguments, received[1].arguments);
     });
 
+    test('retries only a failed Native completion acknowledgement, never inference', () async {
+      var calls = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'finalizeReasoningTurn');
+        calls += 1;
+        if (calls == 1) {
+          throw PlatformException(
+            code: 'CHANNEL_ACK_LOST',
+            message: 'simulate a lost first acknowledgement',
+          );
+        }
+        return <String, Object?>{
+          'finalized': true,
+          'request_id': requestId,
+          'already_finalized': true,
+        };
+      });
+
+      await LocalAiService().finalizeReasoningTurn(
+        conversationId: 17,
+        requestId: requestId,
+        validatedAnswer: '经过协议校验的自然语言答案',
+      );
+
+      expect(calls, 2,
+          reason: '只重试幂等 finalize 回执操作，不重放模型生成');
+    });
+
     test('finalizes only when Native confirms the same request', () async {
       final received = <MethodCall>[];
       messenger.setMockMethodCallHandler(channel, (call) async {

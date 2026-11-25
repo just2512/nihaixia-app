@@ -175,6 +175,18 @@ void main() {
       }
     });
 
+    test('rejects an ANSWER with no request-local evidence references', () {
+      final context = knowledge(sources: [source('source-1')]);
+      final result = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(references: []),
+        request: request(context),
+        knowledge: context,
+      );
+      expect(result.isUsable, isFalse);
+      expect(result.failureCode, 'REASONING_RESPONSE_ANSWER_WITHOUT_EVIDENCE');
+      expect(result.answerText, isEmpty);
+    });
+
     test('rejects empty rendered content and duplicate or unresolvable source mappings', () {
       final context = knowledge(sources: [source('source-1')]);
       final requestValue = request(context);

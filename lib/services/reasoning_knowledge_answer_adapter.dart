@@ -82,6 +82,11 @@ class ReasoningKnowledgeAnswerAdapter {
       return _failure('REASONING_KNOWLEDGE_PATH_ACTION_PROPOSAL_FORBIDDEN');
     }
 
+    if (response.responseKind == ReasoningResponseKind.answer &&
+        response.referencedEvidenceIds.isEmpty) {
+      return _failure('REASONING_RESPONSE_ANSWER_WITHOUT_EVIDENCE');
+    }
+
     final sourceIdByEvidenceId = <String, String>{
       for (final item in request.rankedEvidence) item.evidenceId: item.sourceId,
     };
@@ -120,6 +125,9 @@ class ReasoningKnowledgeAnswerAdapter {
     final internalIds = <String>{
       ...resolvedSourceIds,
       ...resolvedEvidenceIds,
+      ...request.knownEvidenceIds,
+      ...request.rankedEvidenceIds,
+      ...sourceById.keys,
     }.where((value) => value.length >= 5);
     final internalBacklinks = sourceById.values
         .map((source) => source.localBacklink.trim())
