@@ -423,4 +423,37 @@ void main() {
     expect(cases, isNot(contains('纸本定位核验状态')));
   });
 
+  test('生产检索接入统一多源排序并保留旧呈现顺序与来源限额', () async {
+    final guji = await AssistantKnowledgeContextBuilder.buildAsync(
+      '灵枢 经脉',
+      includeMedicalCases: false,
+    );
+    final classicIndex = guji.indexOf('[App经典全文索引');
+    final gujiIndex = guji.indexOf('[App古籍库');
+    expect(gujiIndex, isNonNegative);
+    if (classicIndex >= 0) {
+      expect(classicIndex, lessThan(gujiIndex));
+    }
+    expect(RegExp(r'章节：').allMatches(guji).length, lessThanOrEqualTo(2));
+    expect(guji, contains('纸本版本/卷页核验状态：UNKNOWN'));
+
+    final medical = await AssistantKnowledgeContextBuilder.buildAsync(
+      '医案 桂枝汤',
+      includeMedicalCases: true,
+    );
+    expect(
+      RegExp(r'\[App医案库 · 条目').allMatches(medical).length,
+      lessThanOrEqualTo(2),
+    );
+    final classicIndexMedical = medical.indexOf('[App经典全文索引');
+    final medicalIndex = medical.indexOf('[App医案库');
+    if (classicIndexMedical >= 0 && medicalIndex >= 0) {
+      expect(classicIndexMedical, lessThan(medicalIndex));
+    }
+    expect(
+      medical.length,
+      lessThanOrEqualTo(AssistantKnowledgeContextBuilder.maxContextCharacters),
+    );
+  });
+
 }
