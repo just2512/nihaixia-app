@@ -66,9 +66,13 @@ class LocalAiConversationHistoryPolicyTest {
     fun keepsRetrievedContextOutOfNativeRecoveryTranscript() {
         val userText = "请解释这条原文。"
         val retrievedContext = "RAG_PRIVATE_CONTEXT::经典原文摘录"
-        val prepared = LocalAiMessageInputPolicy.prepare(userText, retrievedContext)
+        val sessionMemory = "SESSION_MEMORY_PRIVATE::USER_CONFIRMED"
+        val prepared = LocalAiMessageInputPolicy.prepare(
+            userText, retrievedContext, sessionMemory
+        )
 
         assertTrue(prepared.modelInput.contains(retrievedContext))
+        assertTrue(prepared.modelInput.contains(sessionMemory))
         assertTrue(prepared.modelInput.contains(userText))
         assertEquals(userText, prepared.historyUserText)
 
@@ -80,6 +84,7 @@ class LocalAiConversationHistoryPolicyTest {
         assertEquals(LocalAiTranscriptRole.USER, replayMessages[0].role)
         assertEquals(userText, replayMessages[0].text)
         assertTrue(replayMessages.none { it.text.contains(retrievedContext) })
+        assertTrue(replayMessages.none { it.text.contains(sessionMemory) })
     }
 
     @Test
