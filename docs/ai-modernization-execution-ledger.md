@@ -4446,3 +4446,17 @@ PR HEAD 门禁证据：
 - **Core-3/4/5：** ReasoningRequest/Response 生产接线、统一 ACTION_PROPOSAL 解析、逐能力确定性执行审计和跨层 E2E 仍待按 Core-1/Core-2 依赖推进。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED；本轮不添加书架页面、数据库、Embedding、FTS5、ANN 或后台任务。
 - **门禁：** 以本 PR 精确 HEAD 的 Flutter 全量回归/静态分析、Android arm64 APK+JVM 和 Fork license 检查为准；Branch validation 若 SKIPPED 不计 PASS。Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复和 TRACE 保持 LOCAL ONLY / UNKNOWN，最后由本地完成。
+ 
+---
+ 
+## 99. 2026-11-25 Core-1 / Core-2 / Core-4 并行切片状态（主线基线 2f8a33e）
+ 
+- **主线基线：** `2f8a33eade2abc3b00b867345d1645f6cb5c89c2`；PR #505（只读 SessionStateSnapshot）和 PR #509（模型声明最大上下文元数据）已合并。Snapshot 未增加 SQLite schema/持久化写路径，也尚未接入 Native prompt。
+- **Core-1 / PR #509：** MERGED，`ModelInfo.maxContextTokens()` 已在 LiteRT-LM v0.18.0 Native 串行加载任务中读取，并通过 MethodChannel / `LocalAiModelStatus` 暴露 OBSERVED/UNKNOWN；释放和完整性失败路径清空观测，读取失败不影响模型主加载。该值只代表模型文件声明的最大上下文长度，不是 App 输入预算，不推导百分比，不触发压缩/重置。合并前精确 HEAD `b8718d3f70abb04a9171fe0e2409f08f18c78989` 的 Flutter、Android arm64/JVM、Fork license 均 SUCCESS；Branch validation SKIPPED。
+- **Core-2 / PR #507：** `work/core2-medical-case-candidates-20261125`，同步主线后 HEAD `0447651f1e89898538ee82e7c4fd6798cc3007c8`。将医案列表匹配投影为 CandidateEvidence，保留医案源序和首次命中 queryId；来源核验与内部序号定位状态独立；LegacyOrderEvidenceRanker 复刻旧两条上限，不打分。新 HEAD Fork license SUCCESS；Flutter全量回归 IN_PROGRESS；Android arm64/JVM 待新 HEAD Flutter 门禁后确认；Branch validation SKIPPED。
+- **Core-2 / PR #511：** `work/core2-guji-candidates-20261125`，当前 HEAD `152abdbac5fc5d7ba21192fe5896b04396a44bde`。显式指定《灵枢》《针灸大成》的章节扫描适配为 CandidateEvidence，保留书目/章节顺序和每本书两条上限；`guji:<bookId>:<chapterIndex>` 精确回查章节。内部定位 PARTIAL，来源版本/纸本页码 UNKNOWN，摘录上限 1,400 字符并标记 TRUNCATED。该 PR 含 #507 医案依赖切片；#507 合并后复核 diff 必须收敛为古籍专属增量。上一个同步 HEAD 的 Flutter 被新 push 取消；当前 HEAD 的 Flutter/Fork license 需重新验收，Android arm64/JVM 待确认。
+- **Core-4 / PR #510：** `fix/core4-headless-unknown-execution-20261125`，同步主线后 HEAD `fde64268a4def5dd87644b9ea9d12d4b8ef7fe4a`。执行器调用后抛异常时保留前序成功结果，将当前步骤记录 UNKNOWN 并停止后续步骤；UI 不触发模型解释，Trace 标记 BUSINESS_EXECUTION_UNKNOWN / PLAN_UNKNOWN。先前 HEAD 有一条新增测试错误期待工具显示名，已修正；最新同步 HEAD Fork license SUCCESS，Flutter/Android 仍须对精确新 HEAD 验收；Branch validation SKIPPED。
+- **Core-3：** Native E4B 主对话缺统一 ReasoningRequest/ReasoningResponse 生产协议和 evidence ID 确定性回验。现有 LocalAiIntentResolution 是受限工具候选判别，不等同通用推理协议。下一切片先固定 responseKind、status、segments、evidence IDs、unknowns/conflicts 和 action proposal 的严格校验，再选择一个可回归知识问答路径接入；不先改全局 system prompt。
+- **Core-2 剩余：** 经典索引、医案、古籍已有分源 CandidateEvidence 适配，但尚未统一成一个多源 CandidateEvidenceBatch；AssistantKnowledgeContextBuilder 仍负责请求编排与上下文装配。#507/#511 合并后再抽取轻量聚合接口，不改变 query 派生和 golden order。
+- **工作流 I：** Markdown 书架持续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **门禁纪律：** 只认各 PR 精确 HEAD 的适用 CI；SKIPPED 不计 PASS；Find N2 实机证据保持 LOCAL ONLY / UNKNOWN。设备安装升级、Native 长会话 GPU/CPU、Activity/进程恢复和引用点击最后由本地验收。

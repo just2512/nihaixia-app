@@ -6,6 +6,7 @@ import '../data/medical_case_data.dart';
 import '../models/ai_evidence.dart';
 import 'classic_evidence_pipeline.dart';
 import 'legacy_order_evidence_ranker.dart';
+import 'guji_evidence_pipeline.dart';
 import 'medical_case_evidence_pipeline.dart';
 import 'classic_search_service.dart';
 import '../data/herb_repository.dart';
@@ -264,6 +265,37 @@ class AssistantKnowledgeContextBuilder {
           }
           continue;
         }
+        if (sourceId.startsWith('guji:')) {
+          final parts = sourceId.split(':');
+          if (parts.length != 3) continue;
+          final bookId = parts[1];
+          final chapterIndex = int.tryParse(parts[2]);
+          if (chapterIndex == null || chapterIndex < 0) continue;
+          GujiBook? matchedBook;
+          for (final book in kGujiBooks) {
+            if (book.id == bookId) {
+              matchedBook = book;
+              break;
+            }
+          }
+          if (matchedBook == null) continue;
+          final chapter = await GujiRepository.chapterAtIndex(
+            matchedBook,
+            chapterIndex,
+          );
+          if (chapter == null) continue;
+          sources.add(AssistantKnowledgeSourceReference(
+            sourceId: sourceId,
+            sourceLabel: matchedBook.title,
+            title: chapter.title,
+            localBacklink: 'guji:$bookId#chapter:$chapterIndex',
+            locatorStatus: 'PARTIAL',
+            sourceKind: 'classic_text',
+            sourceVerificationStatus: 'UNKNOWN',
+            bibliographicLocatorVerified: false,
+          ));
+          continue;
+        }
         if (sourceId.startsWith('medical_case:')) {
           final sequence = int.tryParse(
             sourceId.substring('medical_case:'.length),
@@ -487,24 +519,41 @@ class AssistantKnowledgeContextBuilder {
     for (final book in requestedGujiBooks) {
       try {
         final chapters = await GujiRepository.chaptersOf(book);
-        final hits = chapters.where((chapter) {
-          return terms.any((term) =>
-              chapter.title.contains(term) || chapter.body.contains(term));
-        }).take(2).toList(growable: false);
+        final gujiEvidenceBatch = GujiEvidencePipeline.retrieveCandidates(
+          requestId: '${evidenceBatch.requestId}:${book.id}',
+          originalQuery: normalized,
+          book: book,
+          terms: terms.toList(growable: false),
+          chapters: chapters,
+        );
+        final rankedGujiEvidence = LegacyOrderEvidenceRanker.rank(
+          gujiEvidenceBatch.candidates,
+          requestId: gujiEvidenceBatch.requestId,
+          maxKeptEvidence: 2,
+          keepReasonCode: 'LEGACY_GUIJI_CHAPTER_SEQUENCE_WITHIN_BOOK',
+          keepReason:
+              'Preserved the existing chapter sequence and two-chapter book limit.',
+          dropReasonCode: 'LEGACY_GUIJI_TWO_CHAPTER_LIMIT',
+          dropReason: 'Excluded by the existing two-chapter per-book output limit.',
+        );
+        final gujiCandidatesById = {
+          for (final candidate in gujiEvidenceBatch.candidates)
+            candidate.evidenceId: candidate,
+        };
         buffer
           ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
           ..writeln('书籍简介：${book.intro}');
-        if (hits.isEmpty) {
+        if (rankedGujiEvidence.orderedEvidenceIds.isEmpty) {
           buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
         }
-        for (final chapter in hits) {
-          final excerpt = chapter.body.length > 1400
-              ? chapter.body.substring(0, 1400)
-              : chapter.body;
+        for (final evidenceId in rankedGujiEvidence.orderedEvidenceIds) {
+          final candidate = gujiCandidatesById[evidenceId]!;
           buffer
-            ..writeln('章节：${chapter.title}')
-            ..writeln('知识库条目定位：${book.asset}#chapter=${chapter.title}')
-            ..writeln('条目内容摘录：$excerpt');
+            ..writeln('章节：${candidate.title}')
+            ..writeln('知识库条目定位：${candidate.localBacklink}')
+            ..writeln('来源标识：${candidate.sourceId}')
+            ..writeln('纸本版本/卷页核验状态：UNKNOWN；内部章节序号不等于纸本页码。')
+            ..writeln('条目内容摘录：${candidate.excerpt}');
         }
       } catch (_) {
         buffer.writeln('[App古籍库 · ${book.title}] 读取失败，状态 MISSING。');
