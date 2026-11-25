@@ -298,7 +298,7 @@ void main() {
     expect(result.sources, isNotEmpty);
     expect(result.sourceIds, isNotEmpty);
     expect(result.text, isNot(contains('本轮引用的知识库条目')));
-  });;
+  });
 
   test('App 古籍文本引用指向具体知识库章节', () {
     const source = AssistantKnowledgeSourceReference(

@@ -174,6 +174,7 @@ class AssistantConversationOrchestrator {
     '发热',
     '恶寒',
     '咳嗽',
+    '咽痛',
     '胸闷',
     '胸痛',
     '呼吸困难',
@@ -1255,9 +1256,9 @@ class AssistantConversationOrchestrator {
       return const AssistantDispatchDecision(mode: AssistantMode.consultation);
     }
 
-    // A registered formula/herb/acupoint name is a concrete knowledge intent,
-    // even when the user sends only the entity name (for example, "桔梗汤").
-    // Retrieval still runs separately and must report its own status.
+    // A registered formula/herb/acupoint name and an actual source-backed
+    // retrieval result must both be present before routing to Learning. An
+    // entity name alone is not evidence that the local corpus has a usable hit.
     if (hasStructuredKnowledgeEntity && hasKnowledgeRetrievalResult) {
       return const AssistantDispatchDecision(mode: AssistantMode.learning);
     }

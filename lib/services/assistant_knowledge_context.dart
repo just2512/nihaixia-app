@@ -222,7 +222,7 @@ class AssistantKnowledgeContextBuilder {
   }
 
   /// Builds bounded retrieval context and resolves every emitted classic
-  /// source ID back to the bundled index before exposing it as a citation.
+  /// source ID back to the bundled index before returning a navigable source reference.
   /// Unknown IDs are omitted rather than presented as valid references.
   static Future<AssistantKnowledgeContextResult> buildWithSourcesAsync(
     String query, {

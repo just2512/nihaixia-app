@@ -67,7 +67,7 @@ class LocalAiConversationHistoryPolicyTest {
         listOf(
             "您好您好您好您好",
             "您好。您好！您好，您好。",
-            "您好\\n您好\\n您好\\n您好"
+            "您好\n您好\n您好\n您好"
         ).forEach { response ->
             assertEquals(
                 "REPEATED_OUTPUT_LOOP",
@@ -87,7 +87,7 @@ class LocalAiConversationHistoryPolicyTest {
         listOf(
             "您好",
             "您好，我可以介绍桔梗汤的组成和传统应用。",
-            "第一点：桔梗。\\n第二点：甘草。\\n第三点：需要结合具体问题理解。"
+            "第一点：桔梗。\n第二点：甘草。\n第三点：需要结合具体问题理解。"
         ).forEach { response ->
             assertEquals(
                 null,

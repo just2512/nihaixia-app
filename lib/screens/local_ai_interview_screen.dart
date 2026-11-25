@@ -1207,7 +1207,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           '内部边界：检索命中仅表示 App 返回了候选资料，不代表证据充分、结论正确或模型实际引用。'
           'sourceId、evidenceId、localBacklink、文件路径、内部序号和检索状态只供内部审计；'
           '除非当前响应协议明确返回且经 App 回验的引用 ID，否则不得声称“已引用”，也不得把这些内部标识输出给用户。';
-      final guardedContext = '$evidencePresentationBoundary\\n$context';
+      final guardedContext = '$evidencePresentationBoundary\n$context';
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.contextAssembly,
@@ -1261,12 +1261,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                   knowledge.status == AssistantKnowledgeRetrievalStatus.partial),
         );
         if (knowledgeIntent.mode == AssistantMode.learning) {
-          final learningContext = '当前角色：学习助手。\\n'
-              '${AssistantMode.learning.promptHint}\\n'
+          final learningContext = '当前角色：学习助手。\n'
+              '${AssistantMode.learning.promptHint}\n'
               '方剂、本草或穴位实体已匹配，且本轮已有可回查的本地资料。'
               '先直接围绕用户输入的实体解释基本信息；只使用下方本轮资料支持的内容，'
-              '没有覆盖的组成、主治、条文或出处应明确说明，不得自行补造。\\n'
-              '本轮知识检索状态：${knowledge.statusLabel}。\\n'
+              '没有覆盖的组成、主治、条文或出处应明确说明，不得自行补造。\n'
+              '本轮知识检索状态：${knowledge.statusLabel}。\n'
               '${knowledge.text}';
           final reply = await sendWithContext(learningContext);
           return _AssistantTurnResponse(
@@ -1536,7 +1536,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return true;
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+      debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
       if (mounted) {
         setState(() {
           _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
@@ -2201,7 +2201,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       } catch (error, stack) {
         messagesPersisted = false;
-        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\\n$stack');
+        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\n$stack');
       }
     }
 
