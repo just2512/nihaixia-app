@@ -4589,3 +4589,20 @@ PR HEAD 门禁证据：
 - **下一切片：** PR #524 只做 Request/formatter contract；其后 Core-3 Adapter 必须先在空 capability allowlist 下完成单一 learning knowledge path 的 Request→Native raw text→Response decoder→evidence ID→sourceId mapping→UI 回填。之后才做 Core-4 proposal gate/typed args，不把 action proposal 提前接入 Dispatcher。
 - **Core-5：** 仍无五层端到端闭环；覆盖模型响应、来源点击、动作授权、真实确定性结果和失败/UNKNOWN 的 E2E 尚未完成。设备实测在云端工作完成后由本地最后执行。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED。
+
+
+---
+
+## 108. 2026-11-26 Core-3 learning-only 生产接线合并与 Core-4 执行结果投影启动
+
+- 当前 master 基线：e2cdc1c1541eea369a5135d91c1bf9eb0891669a。本节以该 SHA 为准；不把过期 Core-3 分支或旧 SHA 的 CI 当作当前主线证据。
+- Core-3 / PR #540：MERGED。merge commit 与当前 master 均为 e2cdc1c1541eea369a5135d91c1bf9eb0891669a，PR head 为 a91a1f1c7086276edd67eb786b58ead8ed8e2563。仅把显式 learning 与 automatic entity-hit learning 接入 Core-3 结构化路径；普通问答、问诊、工具及术数其他模式继续走既有路径。
+- PR #540 精确 HEAD 验收：push Branch validation run 45640475753 的 Static analysis、changed Dart/Kotlin tests 和 Android arm64 Debug APK 均 SUCCESS；push Fork License run 45640475501 SUCCESS。PR run 45640489331 全量 Flutter regression SUCCESS，Android arm64/JVM verification job SUCCESS；PR Fork License run 45640489382 SUCCESS。PR 事件的 Branch validation 为 SKIPPED，不计 PASS。合并后 master HEAD e2cdc1c 的 Flutter Quality Gate run 45645208230、全量 Flutter regression/Android arm64 run 45645208383、Fork License run 45645208246 均 SUCCESS。
+- Native 两阶段历史边界：Native 生成结构化原文后不直接提交成功 transcript；在把 raw JSON 返回 Dart 前，先由此前已完成 transcript 重建 live Conversation，避免 raw JSON 留在后续 KV 上下文。Dart 校验 schemaVersion、requestId、ranked evidence IDs 与 source 映射；通过后才 finalize 规范化自然语言答案；失败走 reject。finalize/reject acknowledgement 丢失时状态保持 UNKNOWN，不自动重放模型推理。
+- 证据与记忆隔离：原始 userText、SessionStateSnapshot、RAG evidence body 和 Request supplement 分开传输；supplement 上限为 24,000 UTF-16 code units，仅为字符边界，不是模型 token budget。普通答案不暴露 sourceId/evidenceId/本地路径；来源导航保留在 App 内部折叠入口。学习路径 capability allowlist 为空，ACTION_PROPOSAL 被拒绝。
+- Core-3 状态：PARTIAL。learning-only 生产路径已接线；其他模式的统一 Request/Response 接入、ACTION_PROPOSAL 与 Core-4 之间的受控交接，以及 Core-5 跨层 E2E 尚未完成。Find N2 实机 TRACE 仍留到云端工作全部完成后本地验收。
+- Core-4 新切片：从当前 master 派生 work/core4-execution-result-projection-master-e2cdc1-20261126，提交 d725e963dfff706d2b84565704b7fd7e49e95083。新增 ReasoningExecutionResultAdapter.fromAssistantToolResult：只接受已登记 Headless executor 的 AssistantToolResult；SUCCEEDED 必须经过结果/来源/实际参数验证；FAILED 不带结果值/来源；UNKNOWN 原样保留；NO_RESULT 与 CANCELLED 以两个稳定 failureCode 显式表达，适配 v1 冻结状态集合。新增正负向测试，并同步 Fork License inventory / REUSE DEP5。当前尚未将该 adapter 接入 Native tool-explanation 请求，不能声称 Core-4 生产回流已完成。
+- Core-4 后续硬门槛：ACTION_PROPOSAL 必须绑定当前 requestId 和本轮 App-owned capability allowlist；能力参数采用严格 schema，拒绝额外字段、缺参猜值和单位不明；用户必须通过 App 独立确认；确认后才允许转换为现有 ToolExecutionPlan 并由 HeadlessToolDispatcher 执行。执行状态 UNKNOWN 不重放、不由模型提升为成功；Page-only 或未登记能力不允许调用。
+- Core-5：仍缺少从结构化推理输入、实际工具执行、真实 ExecutionResult 回流、来源核验到最终展示/持久化的完整 E2E。合同单测/投影适配器不等同端到端完成。
+- 工作流 I：用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED，不启动。
+- 设备策略：Find N2 安装升级、GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离和 TRACE 仍统一留到云端工作结束后本地验收，不阻塞 Core-4 云端实施。
