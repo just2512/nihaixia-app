@@ -110,9 +110,9 @@ class ReasoningKnowledgeAnswerAdapter {
     final sections = <String>[
       ...response.segments.map((item) => item.trim()).where((item) => item.isNotEmpty),
       if (response.unknowns.isNotEmpty)
-        '待确认：\${response.unknowns.join('；')}',
+        '待确认：${response.unknowns.join('；')}',
       if (response.conflicts.isNotEmpty)
-        '存在冲突：\${response.conflicts.join('；')}',
+        '存在冲突：${response.conflicts.join('；')}',
     ];
     final text = sections.join('\n\n');
     if (text.trim().isEmpty) {
@@ -125,7 +125,7 @@ class ReasoningKnowledgeAnswerAdapter {
       citationFooter: resolvedSources.isEmpty
           ? ''
           : '\n\n本轮引用的知识库条目（可按条目定位和来源标识回查）：\n'
-              '\${resolvedSources.map((source) => source.toCitationText()).join('\n')}',
+              '${resolvedSources.map((source) => source.toCitationText()).join('\n')}',
     );
   }
 
