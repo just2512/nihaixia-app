@@ -305,3 +305,47 @@ PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge c
 - 本地 OPPO Find N2 的 E4B GPU/CPU 多轮、权限/取消、Activity recreation、force-stop/restart、AI 数据清除与 TRACE 实测仍为 `UNKNOWN`；GitHub CI 不能替代设备证据。
 - 经典/本草现代讲稿已按 upstream/main 增量集成（PR #198/#199/#202）；来源、许可口径及不设整批考据阻塞的结论见 `docs/upstream-sync-ledger.md` §§17—21。本附录此处旧 HOLD 是历史快照，不代表当前阻塞或待办。
 - 不新增 Agent/DAG、第二套 ToolRouter、第二套知识检索系统或新的 SQLite schema。
+
+
+---
+
+## 12. 2026-11-25 Core-4 现有执行边界复核（master `a43989636101d267cd2ab96fe6a4eee1a89ba522`）
+
+本节以当前代码路径静态复核，不把“已注册 executor”扩大解释为“模型可自动编排”或“获得跨领域授权”。
+
+### 12.1 当前分层数量与两个不同的白名单
+
+- `AssistantToolRouter` 仍有 24 项：18 个 Headless deterministic/data executor、5 个 Page-only、1 个 inline deterministic workflow（`structured_diagnosis`）。历史章节 §1～§10 是演进记录，当前分类以 §11.1 和本节源码为准。
+- `HeadlessToolDispatcher` 注册的 18 项只能说明 App 有可调用的确定性/本地数据执行器；它不意味着 18 项都允许进入多步骤自动计划。
+- `AssistantToolExecutionPlanBuilder.planEligibleToolIds` 当前仅允许四项：`dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian`；计划最多 3 步，候选最多 6 项。其余 14 个 Headless 工具不得据“有 executor”推定可用于多步骤计划。
+- `structured_diagnosis` 仍走既有 `TcmInterviewConversationController / DiagnosticEngine`，不是 Headless plan step。
+
+### 12.2 当前 E4B 意图选择不是 Core-3 ReasoningResponse 协议
+
+- `AssistantConversationOrchestrator._boundedCandidates` 只保留 2～6 个唯一候选，并要求每个候选均已注册 Headless executor；Page-only 不进入模型候选集合。
+- `LocalAiInterviewScreen` 仅在候选数至少 2、有效模式为 tools/metaphysics、输入未命中症状/个人情境排除规则、Native 模型 ready 且本轮有 TRACE ID 时，调用 `LocalAiService.resolveAssistantIntentWithTrace`。
+- Native `resolveAssistantIntent` 建立独立的短生命周期意图分类 Conversation。提示要求严格 JSON：`select / plan / clarify / none`；只能选择 App 提供的精确 ID；不得新建能力、生成参数、计算业务结果或执行工具；plan 必须是用户明确要求的 2～3 项互相独立步骤、不得跨步骤传递结果，且每项 `plan_eligible=true`。
+- 模型输出仅给出 tool ID / 有序 ID。参数由 `AssistantConversationOrchestrator.argumentsFor` 按用户原文确定性抽取；`AssistantToolExecutionPlanBuilder` 再对候选集合、能力元数据、计划长度、重复 ID、白名单、必填字段及参数格式进行整计划预检。任一错误时不向 Dispatcher 暴露部分计划。
+- 当前代码路径未在模型 plan 解析后增加第二次确认 UI；它依赖用户原始请求的显式执行意图、意图分类提示约束、App 白名单和参数预检。此边界不能被误写成“模型提出动作后已获单独确认”。Core-3 的 `ACTION_PROPOSAL` 未来接线不得继承这个历史假设，必须新增单独的 App 授权/确认决策。
+
+### 12.3 执行与结果终态
+
+- `HeadlessToolDispatcher.executePlan` 对整份计划先校验 tool ID、registered capability ID 和 executor；随后按顺序调用，只有当前步骤 SUCCEEDED 才进入下一步。
+- executor 抛异常时保留先前已验证结果，将当前步骤记为 UNKNOWN 并停止后续步骤；不重试、不重放、不推测补偿。
+- `HeadlessToolResultHandler` / `HeadlessToolPlanResultHandler` 对 tool ID、结构化 values、实际 arguments、真实 sourceIds 做结果契约检查；只有全部步骤 SUCCEEDED 且所有结果合同有效时才允许汇总解释。部分失败、无结果、取消、UNKNOWN 或来源无效时，不把失败输出包装为成功事实。
+- 当前业务结果主载体仍为 `AssistantToolResult` / `HeadlessToolPlanExecutionResult`。PR #520 的 `BusinessActionProposal` 仅为严格解码后的未可信提案；PR #524 的 `ReasoningExecutionResult` 是输入 DTO 形状，尚未由实际执行结果投影，也没有与 dispatcher/result handler 建立映射。
+
+### 12.4 能力级参数/授权缺口
+
+- `AssistantToolParameterType` 目前为 `text / date / time / integer / choice`；验证包含 tool ID 匹配、未声明参数拒绝、必填项、日期/时间格式、整数解析和 choice 白名单。
+- 尚未形成统一、版本化 capability schema：泛化数值上下限/精度、单位类型、嵌套对象/数组、字段间约束、输入来源/敏感级别、可取消/副作用/幂等等级、单独授权确认策略均没有被该参数模型统一表达。个别 executor 的业务校验不能替代通用 schema。
+- `BusinessActionProposal` 不能直接转换成 `ToolExecutionPlan`：必须先验证提案 requestId、capability ID 是否在本轮 App 候选和允许列表中；将模型参数解析为严格 typed args（拒绝额外字段、缺省猜值和单位不明）；对敏感数据/副作用能力执行 App-owned 权限与显式确认；最后才调用现有 `_requestTool` / Dispatcher，禁止让模型直接调用 executor。
+- 唯一 Native 模型访问 Gate、队列和 GPU/CPU fallback 保持原样，不建立第二套模型入口。
+
+### 12.5 测试证据与仍未知项
+
+- `test/headless_tool_dispatcher_test.dart` 覆盖 registered 单步计划、AI origin、Page-only 阻断、未知工具/能力 ID 不匹配、失败后停止、抛异常转 UNKNOWN、同步/异步适配边界。
+- `test/assistant_tool_execution_plan_builder_test.dart` 覆盖仅从候选 ID 构建、Page-only 拒绝、不支持多步的工具拒绝、候选外/重复 ID 拒绝、计划大小和所有步骤参数预检。
+- `test/headless_tool_plan_result_handler_test.dart` 覆盖逐步骤来源隔离、前序非成功步骤后后续未执行、UNKNOWN 不触发聚合解读、错误结果被抑制。
+- 以上是已存在的代码和自动化测试覆盖，不等于本轮重新执行所有测试，也不等于 Find N2 真机执行。真实设备取消、进程恢复、TRACE 和跨轮结果回流继续 UNKNOWN / LOCAL FINAL ACCEPTANCE。
+- **结论：** Core-4 已具备受限的确定性执行底座，但提案协议、能力级 schema、App 授权确认及 `ExecutionResult` 真实回流未闭环，状态 PARTIAL。继续复用当前 Router / Builder / Dispatcher，不为追求架构完整度重建通用执行平台。

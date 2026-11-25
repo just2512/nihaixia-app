@@ -1230,3 +1230,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-3 strict ReasoningResponse v1 DTO, fail-closed decoder and focused schema/evidence/capability validation tests; no Native call-path integration or business execution is included; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
+
+Files:
+ lib/models/reasoning_request.dart
+ lib/services/reasoning_request_prompt_formatter.dart
+ test/reasoning_request_prompt_formatter_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-3 immutable ReasoningRequest, deterministic supplemental metadata formatter and session/evidence/execution contract tests; no Native call-path integration or business authorization/execution is included; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
