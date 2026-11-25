@@ -19,6 +19,8 @@ import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../services/reasoning_request_prompt_formatter.dart';
+import '../services/reasoning_knowledge_answer_adapter.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
 import '../services/headless_tool_result_handler.dart';
@@ -263,16 +265,28 @@ class LocalAiInterviewScreen extends StatefulWidget {
 const _assistantWelcomeMessage =
     '你可以直接描述身体情况、询问中医知识，或提出工具任务。助手会先识别任务类型；意图不清时会先向你确认。';
 
+String _createReasoningRequestId() {
+  final random = math.Random.secure();
+  final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+  return bytes
+      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+      .join();
+}
+
 class _AssistantTurnResponse {
   const _AssistantTurnResponse({
     required this.text,
     this.sourceIds = const [],
     this.knowledgeStatus,
+    this.protocolValidated = true,
+    this.protocolFailureCode,
   });
 
   final String text;
   final List<String> sourceIds;
   final String? knowledgeStatus;
+  final bool protocolValidated;
+  final String? protocolFailureCode;
 }
 
 /// Bounded, user-authored context sent only to the RedFlag safety boundary.
@@ -1141,8 +1155,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<String> _buildSessionStatePromptContext(int conversationId) async {
-    SessionStateSnapshot snapshot;
+  Future<SessionStateSnapshot> _buildSessionStateSnapshot(
+    int conversationId,
+  ) async {
     try {
       final messages = await _conversationStore.getAssistantMessages(
         conversationId: conversationId,
@@ -1162,7 +1177,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         taskState: taskState,
         taskOwnerSessionId: taskState == null ? null : conversationId,
       );
-      snapshot = taskStateReadFailed
+      return taskStateReadFailed
           ? SessionStateSnapshot(
               sessionId: built.sessionId,
               revision: built.revision,
@@ -1175,7 +1190,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             )
           : built;
     } catch (_) {
-      snapshot = SessionStateSnapshot(
+      return SessionStateSnapshot(
         sessionId: conversationId,
         revision: 'UNKNOWN',
         status: SessionStateStatus.unknown,
@@ -1184,9 +1199,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         diagnostics: const ['SESSION_STATE_READ_FAILED'],
       );
     }
-    return SessionStateSnapshotPromptFormatter.format(
-      snapshot, expectedSessionId: conversationId,
-    );
   }
 
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
@@ -1200,8 +1212,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
-    final sessionStateContext =
-        await _buildSessionStatePromptContext(conversationId);
+    final sessionStateSnapshot =
+        await _buildSessionStateSnapshot(conversationId);
+    final sessionStateContext = SessionStateSnapshotPromptFormatter.format(
+      sessionStateSnapshot,
+      expectedSessionId: conversationId,
+    );
     Future<String> sendWithContext(String context) async {
       await _traceRecorder.record(
         traceContext,
@@ -1336,14 +1352,52 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
             await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
-        final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
-            '本轮知识检索状态：${knowledge.statusLabel}。\n'
-            '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
-            '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
-        final reply = await sendWithContext(context);
+        final reasoningRequest = ReasoningKnowledgeAnswerAdapter.createRequest(
+          requestId: traceId ?? _createReasoningRequestId(),
+          sessionId: conversationId,
+          userText: text,
+          mode: mode.name,
+          sessionState: sessionStateSnapshot,
+          knowledge: knowledge,
+        );
+        final supplementalContext =
+            ReasoningRequestPromptFormatter.formatSupplementalContext(
+              reasoningRequest,
+            );
+        final context = [
+          '当前角色：学习助手。',
+          AssistantMode.learning.promptHint,
+          '本轮知识检索状态：${knowledge.statusLabel}。',
+          if (knowledge.failureMessage != null)
+            '检索失败：${knowledge.failureMessage}',
+          knowledge.text.isEmpty
+              ? '未返回可引用条目；不得编造原文或出处。'
+              : knowledge.text,
+          ReasoningKnowledgeAnswerAdapter.evidenceIndexContext(
+            reasoningRequest,
+          ),
+          supplementalContext,
+        ].where((part) => part.trim().isNotEmpty).join('\n\n');
+        final rawReply = await sendWithContext(context);
+        final validated = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+          raw: rawReply,
+          request: reasoningRequest,
+          knowledge: knowledge,
+        );
+        if (!validated.isUsable) {
+          final failureCode =
+              validated.failureCode ?? 'REASONING_RESPONSE_REJECTED';
+          return _AssistantTurnResponse(
+            text: '本轮回复未通过结构化协议校验，未经验证的模型原始内容未展示。'
+                '校验项：$failureCode。请重新发送。',
+            knowledgeStatus: '${knowledge.statusLabel}:PROTOCOL_REJECTED',
+            protocolValidated: false,
+            protocolFailureCode: failureCode,
+          );
+        }
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
-          sourceIds: knowledge.sourceIds,
+          text: validated.answerText + validated.citationFooter,
+          sourceIds: validated.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.tools:
@@ -5862,18 +5916,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.modelOutput,
-        status: AiTraceStatus.succeeded,
+        status: response.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: mode.name,
         toolId: toolId,
         sourceIds: mergedSourceIds,
+        errorCode: response.protocolFailureCode,
       );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.resultValidation,
-        status: AiTraceStatus.succeeded,
+        status: response.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: mode.name,
         toolId: toolId,
         sourceIds: mergedSourceIds,
+        errorCode: response.protocolFailureCode,
       );
       if (!mounted) return;
       setState(() {
@@ -9263,16 +9323,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.modelOutput,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.resultValidation,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
       resultValidationCompleted = true;
       persistenceStarted = true;

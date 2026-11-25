@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -609,6 +610,84 @@ class _TextSendService extends LocalAiService {
     sentContexts.add(context);
     return sendMessage(text, conversationId: conversationId);
   }
+}
+
+
+class _LearningProtocolTextSendService extends _TextSendService {
+  _LearningProtocolTextSendService({this.rawResponseOverride});
+
+  final String? rawResponseOverride;
+  Map<String, dynamic>? lastRequestEnvelope;
+  String? lastSessionStateContext;
+  int? lastSessionStateConversationId;
+
+  String _responseFor(String text, int conversationId, String context,
+      String? sessionStateContext, int? sessionStateConversationId,
+      {String? traceId}) {
+    sentTexts.add(text);
+    sentConversationIds.add(conversationId);
+    sentContexts.add(context);
+    if (traceId != null) sentTraceIds.add(traceId);
+    lastSessionStateContext = sessionStateContext;
+    lastSessionStateConversationId = sessionStateConversationId;
+
+    const marker = '【App 本轮推理请求元数据 v1】\n';
+    final markerIndex = context.lastIndexOf(marker);
+    if (markerIndex < 0) {
+      throw StateError('REASONING_REQUEST_METADATA_NOT_FOUND_IN_CONTEXT');
+    }
+    final jsonLine = context.substring(markerIndex + marker.length).split('\n').first;
+    lastRequestEnvelope = jsonDecode(jsonLine) as Map<String, dynamic>;
+    if (rawResponseOverride != null) return rawResponseOverride!;
+
+    final ranked = (lastRequestEnvelope!['rankedEvidence'] as List<dynamic>? ?? const []);
+    final first = ranked.isEmpty
+        ? null
+        : Map<String, dynamic>.from(ranked.first as Map);
+    return jsonEncode({
+      'schemaVersion': 1,
+      'requestId': lastRequestEnvelope!['requestId'],
+      'responseKind': first == null ? 'INSUFFICIENT_EVIDENCE' : 'ANSWER',
+      'status': first == null ? 'INSUFFICIENT_EVIDENCE' : 'COMPLETED',
+      'segments': [
+        first == null ? '本轮没有可引用证据。' : '本轮结构化回答',
+      ],
+      'referencedEvidenceIds':
+          first == null ? <String>[] : <String>[first['evidenceId'] as String],
+      'unknowns': first == null ? <String>['缺少可引用证据'] : <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+    });
+  }
+
+  @override
+  Future<String> sendMessageWithContext(
+    String text, {
+    required int conversationId,
+    required String context,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async =>
+      _responseFor(text, conversationId, context, sessionStateContext,
+          sessionStateConversationId);
+
+  @override
+  Future<String> sendMessageWithContextAndTrace(
+    String text, {
+    required int conversationId,
+    required String context,
+    required String traceId,
+    bool requireMedicalSafety = false,
+    String? redFlagContext,
+    bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
+  }) async =>
+      _responseFor(text, conversationId, context, sessionStateContext,
+          sessionStateConversationId, traceId: traceId);
 }
 
 class _FailingIntentSelectionService extends _TextSendService {
@@ -1239,7 +1318,103 @@ void main() {
     },
   );
 
-  testWidgets('自然语言诊断请求先确认自述候选，再调用同一规则问诊控制器', (tester) async {
+  
+testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并保留 Native 会话通道',
+    (tester) async {
+  const question = '灵枢 经脉';
+  final service = _LearningProtocolTextSendService();
+  await tester.pumpWidget(
+    MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialMode: AssistantMode.learning,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField), question);
+  await tester.pump();
+  await tester.tap(find.byTooltip('发送'));
+  await tester.pumpAndSettle();
+
+  expect(service.sentTexts, [question],
+      reason: '原始问题必须继续通过 Native text 参数传递，不得被检索 query 替换');
+  final envelope = service.lastRequestEnvelope;
+  expect(envelope, isNotNull);
+  expect(envelope!['mode'], 'learning');
+  expect(envelope['requestId'], isA<String>());
+  final ranked = envelope['rankedEvidence'] as List<dynamic>;
+  expect(ranked, isNotEmpty,
+      reason: '灵枢经脉必须命中有来源回链的本地古籍证据');
+  final first = Map<String, dynamic>.from(ranked.first as Map);
+  final sourceId = first['sourceId'] as String;
+
+  expect(service.lastSessionStateContext, isNotEmpty,
+      reason: 'SessionStateSnapshot 仍走 Native 专用会话上下文通道');
+  expect(service.lastSessionStateConversationId,
+      service.sentConversationIds.single);
+  expect(service.sentContexts.single, contains('NATIVE_SESSION_STATE_CONTEXT'));
+  expect(service.sentContexts.single,
+      isNot(contains('【App 本会话结构化记忆快照】')),
+      reason: '泛知识上下文不得重复注入会话记忆事实');
+  expect(find.textContaining('本轮结构化回答', findRichText: true), findsOneWidget);
+  expect(find.textContaining('来源标识：$sourceId', findRichText: true), findsOneWidget);
+
+  final rows = await _store.getAssistantMessages(
+    conversationId: service.sentConversationIds.single,
+  );
+  final assistantRow =
+      rows.lastWhere((row) => row['role'] == 'assistant');
+  final metadata = AssistantMessageMetadata.decode(
+    assistantRow['metadata'] as String? ?? '',
+  );
+  expect(metadata.sourceIds, [sourceId]);
+  expect(metadata.knowledgeStatus, 'RETRIEVED');
+  expect(tester.takeException(), isNull);
+});
+
+testWidgets('学习助手结构化协议失败时不展示未经验证的模型原文',
+    (tester) async {
+  const untrustedRaw = 'UNTRUSTED MODEL TEXT MUST NOT RENDER';
+  final service = _LearningProtocolTextSendService(
+    rawResponseOverride: untrustedRaw,
+  );
+  await tester.pumpWidget(
+    MaterialApp(
+      home: LocalAiInterviewScreen(
+        redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+        initialMode: AssistantMode.learning,
+        conversationStore: _store,
+        service: service,
+        imagePicker: _EmptyLocalAiImagePicker(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField), '灵枢 经脉');
+  await tester.pump();
+  await tester.tap(find.byTooltip('发送'));
+  await tester.pumpAndSettle();
+
+  expect(find.textContaining('未经验证的模型原始内容未展示。'), findsOneWidget);
+  expect(find.textContaining(untrustedRaw), findsNothing);
+  final rows = await _store.getAssistantMessages(
+    conversationId: service.sentConversationIds.single,
+  );
+  final assistantRow =
+      rows.lastWhere((row) => row['role'] == 'assistant');
+  final metadata = AssistantMessageMetadata.decode(
+    assistantRow['metadata'] as String? ?? '',
+  );
+  expect(metadata.knowledgeStatus, endsWith('PROTOCOL_REJECTED'));
+  expect(metadata.sourceIds, isEmpty);
+  expect(tester.takeException(), isNull);
+});
+
+testWidgets('自然语言诊断请求先确认自述候选，再调用同一规则问诊控制器', (tester) async {
     const query = '最近三天头痛，昨晚睡觉时醒了两次，帮我诊断一下什么问题？';
     const answer = '半夜1-3点醒';
     final service = _TextSendService(
