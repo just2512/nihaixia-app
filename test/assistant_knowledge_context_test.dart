@@ -191,6 +191,16 @@ void main() {
         .toList(growable: false);
 
     expect(gujiSources, isNotEmpty);
+    expect(result.rankedEvidenceIds, isNotEmpty);
+    expect(result.knownEvidenceIds.toSet(),
+        containsAll(result.rankedEvidenceIds));
+    expect(result.sourceIdByEvidenceId.keys.toSet(),
+        equals(result.rankedEvidenceIds.toSet()));
+    expect(result.rankedEvidence.every((item) =>
+        item.sourceId.isNotEmpty && result.text.contains('来源标识：${item.sourceId}')),
+        isTrue);
+    expect(result.evidenceIndexContext, contains('evidenceId='));
+
     expect(result.text, contains('来源标识：guji:lingshu:'));
     expect(result.text, contains('纸本版本/卷页核验状态：UNKNOWN'));
     for (final source in gujiSources) {
