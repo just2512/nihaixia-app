@@ -191,20 +191,21 @@ void main() {
   });
 
   test('oversized and excess user originals are omitted without truncation', () {
+    // Deliberately reverse the DB row order. The builder must normalize by ID.
     final messages = [
-      for (var id = 1; id <= 10; id++)
-        {
-          'id': id,
-          'conversation_id': 7,
-          'role': 'user',
-          'content': 'message-$id',
-        },
       {
         'id': 11,
         'conversation_id': 7,
         'role': 'user',
         'content': List<String>.filled(1201, 'x').join(),
       },
+      for (var id = 10; id >= 1; id--)
+        {
+          'id': id,
+          'conversation_id': 7,
+          'role': 'user',
+          'content': 'message-$id',
+        },
     ];
     final result = SessionStateSnapshotBuilder.build(
       sessionId: 7,
