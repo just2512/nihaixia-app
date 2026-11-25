@@ -3,6 +3,7 @@ import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
 import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
+import 'package:nihaisha_app/models/evidence_ranking_decision.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/services/classic_search_service.dart';
 
@@ -458,13 +459,13 @@ void main() {
     expect(ranking.strategyVersion, isNotEmpty);
     expect(ranking.decisions.map((item) => item.evidenceId).toSet(),
         gujiResult.knownEvidenceIds.toSet());
+    final keptDecisions = ranking.decisions
+        .where((item) => item.disposition == EvidenceDecisionDisposition.keep)
+        .toList()
+      ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!));
     expect(
       ranking.orderedEvidenceIds,
-      ranking.decisions
-          .where((item) => item.disposition == EvidenceDecisionDisposition.keep)
-          .toList()
-          ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!))
-          ..map((item) => item.evidenceId).toList(),
+      keptDecisions.map((item) => item.evidenceId).toList(),
     );
     expect(ranking.budget.unit, EvidenceBudgetUnit.characters);
     expect(ranking.budget.applied, isTrue);
