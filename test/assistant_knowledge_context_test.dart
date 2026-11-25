@@ -202,6 +202,14 @@ void main() {
         result.sources.any((source) => source.sourceId == item.sourceId)),
         isTrue);
     expect(result.evidenceIndexContext, contains('evidenceId='));
+    expect(
+      () => result.rankedEvidence[0] = result.rankedEvidence.first,
+      throwsUnsupportedError,
+    );
+    expect(
+      () => result.knownEvidenceIds[0] = result.knownEvidenceIds.first,
+      throwsUnsupportedError,
+    );
 
     expect(result.text, contains('来源标识：guji:lingshu:'));
     expect(result.text, contains('纸本版本/卷页核验状态：UNKNOWN'));
