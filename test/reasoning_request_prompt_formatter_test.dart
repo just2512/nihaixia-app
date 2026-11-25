@@ -352,9 +352,20 @@ void main() {
       expect(envelope['responseSchemaVersion'], 1);
       expect(envelope.containsKey('userText'), isFalse);
       expect(formatted, isNot(contains('用户原始问题：')));
-      expect(envelope['sessionStateContext'], contains('USER_CONFIRMED'));
-      expect(envelope['sessionStateContext'], contains('MODEL_INFERRED'));
-      expect(envelope['sessionStateContext'], contains('source:existing'));
+      final sessionMetadata =
+          envelope['sessionStateMetadata'] as Map<String, dynamic>;
+      expect(sessionMetadata['sessionId'], 7);
+      expect(sessionMetadata['revision'], 'rev-3');
+      expect(sessionMetadata['status'], 'RESTORED');
+      expect(
+        sessionMetadata['contentTransport'],
+        'NATIVE_SESSION_STATE_CONTEXT',
+      );
+      // Facts/source references are already passed via the Native-owned
+      // session_state_context field and must not be duplicated here.
+      expect(formatted, isNot(contains('用户原话')));
+      expect(formatted, isNot(contains('待确认')));
+      expect(formatted, isNot(contains('source:existing')));
       expect(envelope['rankedEvidence'], [
         {'evidenceId': 'evidence-1', 'sourceId': 'source:one'},
       ]);
@@ -411,8 +422,11 @@ void main() {
       final envelope = jsonDecode(
         formatted.substring(ReasoningRequestPromptFormatter.header.length + 1),
       ) as Map<String, dynamic>;
-      expect(envelope['sessionStateContext'], contains('status=UNKNOWN'));
-      expect(envelope['sessionStateContext'], contains('结构化事实：未提供'));
+      final metadata = envelope['sessionStateMetadata'] as Map<String, dynamic>;
+      expect(metadata['status'], 'UNKNOWN');
+      expect(metadata['revision'], 'UNKNOWN');
+      expect(metadata['contentTransport'], 'NATIVE_SESSION_STATE_CONTEXT');
+      expect(formatted, isNot(contains('结构化事实：未提供')));
     });
   });
 }
