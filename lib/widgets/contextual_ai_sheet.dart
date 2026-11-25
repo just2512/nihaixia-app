@@ -58,56 +58,61 @@ class ContextualAiPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final panelMediaQuery = MediaQuery.of(context);
+    final keyboardInset = panelMediaQuery.viewInsets.bottom;
     final keyboardVisible = keyboardInset > 0;
 
-    // The contextual assistant uses an inner Scaffold with
-    // resizeToAvoidBottomInset=false to avoid ColorOS double-inset behavior.
-    // Move and constrain the entire panel here, at the presentation boundary,
-    // so the composer and send controls stay above the IME on both layouts.
+    if (sidePanel) {
+      // Dialog already animates its own outer padding by viewInsets. Do not
+      // wrap it in a second IME padding layer. Re-expose the original inset to
+      // the assistant after Dialog removes it internally, so the assistant can
+      // hide nonessential header content without resizing its Scaffold again.
+      return Dialog(
+        alignment: Alignment.centerRight,
+        insetPadding: const EdgeInsets.all(12),
+        child: LayoutBuilder(
+          builder: (dialogContext, constraints) {
+            final contentHeight = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                    .clamp(0.0, panelHeight)
+                    .toDouble()
+                : panelHeight;
+            return MediaQuery(
+              data: MediaQuery.of(dialogContext).copyWith(
+                viewInsets: panelMediaQuery.viewInsets,
+              ),
+              child: SizedBox(
+                key: const ValueKey('contextual-ai-panel-content'),
+                width: panelWidth,
+                height: contentHeight,
+                child: assistantBuilder(null),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    // The modal bottom-sheet route itself does not resize this draggable child
+    // for the IME. Move the whole sheet above the keyboard at this boundary.
+    // The inner assistant Scaffold stays resizeToAvoidBottomInset=false, so
+    // this is the only resize operation on the contextual sheet path.
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
       padding: EdgeInsets.only(bottom: keyboardInset),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final availableHeight = constraints.maxHeight;
-          final dialogHeight = availableHeight.isFinite
-              ? (availableHeight - 24)
-                  .clamp(0.0, panelHeight)
-                  .toDouble()
-              : panelHeight;
-
-          if (sidePanel) {
-            return Dialog(
-              alignment: Alignment.centerRight,
-              insetPadding: const EdgeInsets.all(12),
-              child: SizedBox(
-                key: const ValueKey('contextual-ai-panel-content'),
-                width: panelWidth,
-                height: dialogHeight,
-                child: assistantBuilder(null),
-              ),
-            );
-          }
-
-          return DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: keyboardVisible ? 0.95 : 0.82,
-            minChildSize: 0.55,
-            maxChildSize: 0.95,
-            builder: (sheetContext, scrollController) => ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(18),
-              ),
-              child: assistantBuilder(scrollController),
-            ),
-          );
-        },
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: keyboardVisible ? 0.95 : 0.82,
+        minChildSize: 0.55,
+        maxChildSize: 0.95,
+        builder: (sheetContext, scrollController) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+          child: assistantBuilder(scrollController),
+        ),
       ),
     );
-  }
-}
+  }}
 
 /// Presents the existing assistant inside a foldable, in-page contextual sheet.
 /// The assistant screen owns model execution and conversation persistence.
