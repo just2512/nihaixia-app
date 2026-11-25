@@ -4611,6 +4611,27 @@ PR HEAD 门禁证据：
 - **回滚：** 七类入口与 P0 adapter/prompt 属同一个 PR #548；P1 键盘布局仍单独 PR #550。
 ---
 
+## 112. 2026-11-26 P1 情境 AI 输入框 Android IME 避让
+
+- **任务独立性：** P1 键盘布局与 §108 P0 解读/上下文传递分开实现、分开验收。P1 只调整情境 AI 弹层 presentation boundary，不改学习请求、模型 prompt 或普通全屏聊天布局。
+- **基线与依赖：** 直接以 P0 分支最新 HEAD `68282b3be896b570097f85ec18f2830847e763c2` 为父提交；独立分支 `work/ai-contextual-keyboard-20261126-v4`。PR #547 是基于上一版 P0 HEAD 的过期草稿，不作为最终交付；以新的独立 PR/HEAD 验收。
+- **布局根因：** 情境助手窄屏走 `showModalBottomSheet + DraggableScrollableSheet`，宽屏/Find N2 内屏走 `showFoldAwareDialog + Dialog`；AI 页面内部 Scaffold 已显式保持 `resizeToAvoidBottomInset=false` 以避开 ColorOS 双重偏移。旧窄屏路由未消费实时 `viewInsets`，且 `showFoldAwareDialog` 将 route-open 时的 MediaQuery 快照整体固定，键盘出现后的 inset 更新无法传到弹层。
+- **窄屏修复：** bottom-sheet presentation 外层读取实时 `MediaQuery.viewInsets.bottom`，通过 180ms `AnimatedPadding` 将整个 sheet 内容区抬升/缩短；键盘出现时 DraggableScrollableSheet 初始扩展到可用高度上限。内部 AI Scaffold 继续不自行 resize，避免二次扣减 IME。
+- **宽屏修复：** 使用 Dialog 自带的 viewInsets padding 只执行一次避让；不再外包第二层 AnimatedPadding。Dialog 内将 route 外层实时 IME insets 重新提供给助手内容，同时保留宽度/折叠屏布局约束。
+- **折叠路由修复：** `showFoldAwareDialog` 继续使用打开弹窗时的 displayFeatures/窗口几何做铰链定位，但只从当前 route MediaQuery 动态读取并回填 `viewInsets`，不再冻结键盘状态。
+- **测试：** `test/contextual_ai_panel_layout_test.dart` 增加 402dp outer bottom-sheet 与 775dp inner side-panel 的键盘出现/收起测试，断言 composer 和发送按钮均在键盘上方、用户已输入文字保留且无布局异常；`test/fold_aware_routes_test.dart` 增加 fold-aware dialog 实时 viewInsets 更新测试。
+- **最终验收状态：IN_PROGRESS。** 代码与测试已提交；最终 P1 HEAD 的 static analysis、changed tests、完整 Flutter/Android CI 尚未确认。Find N2 实机需分别验证外屏 bottom-sheet、内屏 side-panel、系统输入法、发送后键盘状态、键盘收起恢复及折叠/展开切换；尚无设备 TRACE，均标记 UNKNOWN。自动化测试通过也不能替代实机。
+- **风险与回滚：** Dialog 自身 IME padding 与外层 MediaQuery 需要避免双重扣减；窄屏 sheet 的 availableHeight 需由 widget tests 验证。P1 可独立 revert，不修改全局键盘策略。
+- **依赖说明：** PR #542 P0 必须先通过最终 HEAD CI 与相应代码验收；P1 不得单独合并到 master 以绕过 P0。P0 若新增提交，P1 必须重新确认 ancestry、merge-base、changed tests 和完整 CI。
+
+
+
+
+
+
+
+---
+
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
 - **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。
