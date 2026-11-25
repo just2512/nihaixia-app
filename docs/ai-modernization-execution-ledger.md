@@ -4589,3 +4589,21 @@ PR HEAD 门禁证据：
 - **下一切片：** PR #524 只做 Request/formatter contract；其后 Core-3 Adapter 必须先在空 capability allowlist 下完成单一 learning knowledge path 的 Request→Native raw text→Response decoder→evidence ID→sourceId mapping→UI 回填。之后才做 Core-4 proposal gate/typed args，不把 action proposal 提前接入 Dispatcher。
 - **Core-5：** 仍无五层端到端闭环；覆盖模型响应、来源点击、动作授权、真实确定性结果和失败/UNKNOWN 的 E2E 尚未完成。设备实测在云端工作完成后由本地最后执行。
 - **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED。
+
+
+---
+
+## 108. 2026-11-25 Core-0 当前源码映射校准、Core-2 合并与 Core-3 学习路径接线
+
+- **主线基线：** 176685722676ebe1d843dcd6db107029525c8cc0（PR #527 合并提交）。本节只记录此基线和其后的 PR #529 分支事实；不回写 §103～§107 的历史快照。
+- **Core-0：PARTIAL。** 五层 DTO 字段合同继续以 docs/ai-layered-runtime-architecture.md §2 为准；本次新增 §5.3 当前调用映射，把实际 Native 输入、Flutter snapshot builder、Evidence Pipeline、Ranker、Reasoning Adapter、Headless Dispatcher、专门测试和失败边界逐层对齐。文档映射不是运行时 PASS；尚需在后续代码切片后持续更新函数级入口、失败语义、CI 与 TRACE 证据。
+- **Core-1 已有边界：** SessionStateSnapshotBuilder.build 对 SQLite message owner / task owner 作 fail-closed 校验，保留 USER_ORIGINAL、USER_CONFIRMED、APP_RESULT 与 source/evidence IDs；独立 Native session_state_context 字段按当前 conversation ID 校验，与 RAG 分离。Native completed-turn history 有完整成功轮次与字符上限策略。16,000 UTF-16 字符上限、KV Cache 观测和模型声明 maxContextTokens 均不是 App 输入 token budget；无自动压缩。
+- **Core-1 新发现待核问题：** Flutter UI transcript 向 Native restore 输入的处理存在按拼接字符串字符数裁剪的路径；Native LocalAiTranscriptRestorePolicy 也有有界裁剪逻辑。现阶段尚未证明两处始终以完整 user/model turn 为原子边界，也未确认省略轮次数在两端一致。该问题独立排入 Core-1，不混入 Core-3 PR；在完整轮次裁剪、显式 omitted count 和重启/恢复一致性测试通过前，CORE-07 保持 PARTIAL。
+- **Core-2 / PR #527：MERGED。** squash commit 176685722676ebe1d843dcd6db107029525c8cc0。基于已生产接线的 classic → 显式 Guji → medical 候选，补齐完整排序审计投影：全部候选 KEEP/DROP、排除原因、策略 ID/version、有序 KEEP IDs、6,500 UTF-16 呈现字符预算、omitted/truncated IDs。旧 buildAsync String 接口、query 派生、旧呈现顺序、classic 4 / 每本 Guji 2 / medical 2 上限与 golden behavior 保持。精确 HEAD 454a4000b4c843a091575110ad09f86f89ff8130：Flutter regression PASS、Android arm64 APK verification + JVM PASS、Fork License Boundary PASS、同 HEAD Push Branch Validation PASS；PR Branch validation 为 SKIPPED，不计 PASS。6,500 字符不是 Native 总输入/token预算；formula/herb/acupuncture 仍未统一成 CandidateEvidence。
+- **Core-3 / PR #529：IN_PROGRESS / NOT MERGED。** 从 Core-2 合并后的 master 176685722676ebe1d843dcd6db107029525c8cc0 建立独立分支 work/core3-learning-path-post-core2-20261125。新增 ReasoningKnowledgeAnswerAdapter，将请求级 ranked evidence/known IDs/sourceId 映射输入现有严格 Response decoder；learning path 只允许回答/澄清/拒绝/证据不足，capability allowlist 为空，ACTION_PROPOSAL 不会执行。UI 仍通过现有 Native text String 传原始用户问题，受限知识上下文和 SessionStateSnapshot 继续走既有独立字段；结构化 Request formatter 只携带 supplemental metadata。验证通过的 evidence IDs 仅映射回 App 已解析 sourceId 后持久化/展示；结构化解析失败时隐藏未经验证的原始模型输出。
+- **PR #529 测试与修订事实：** 独立 adapter 契约测试已在前一精确 HEAD 运行通过；Widget 集成测试首次未完成发送路径。检查日志发现测试误将 find.byTooltip('发送') 返回的 RawTooltip 强制转换为 IconButton，属于测试 finder 类型错误，并非生产 Widget 类型。已改用 Tooltip 的 IconButton ancestor finder；随后精确 HEAD 977f09b6fb831ea61fed934ab0d06880400d1fc5 的 Fork License push/PR checks SUCCESS，Flutter push/PR runs 当时 IN_PROGRESS，最终结果以 Actions 对此 SHA 的完成记录为准。之前因测试异常或旧 HEAD 取消/失败的 run 不计为当前 HEAD 通过；本 PR 未通过完整门禁前不得合并。
+- **Core-3 非声明：** #529 即使合并，也仅证明 learning knowledge path 的 App 侧 Request→Native raw text/supplement→Response decoder→request-local evidence ID→sourceId mapping/UI 回填；不代表通用 Native MethodChannel 已成为 typed DTO、不代表所有 AssistantMode 均完成、不接入 ACTION_PROPOSAL/Dispatcher、不代表 Core-4 或 Core-5 完成。
+- **Core-4：PARTIAL。** 18 Headless executor、5 Page-only、1 inline deterministic workflow 是 Router 的 24 个 ID；自动多步骤计划仅白名单 dosage / solar_terms / yuxiaji_omen / sanshan_lingqian。现有 UNKNOWN 保留并停止后续步骤，不重放。BusinessActionProposal 到 capability schema/权限确认/typed args/实际执行/ExecutionResult 的完整适配仍 MISSING。
+- **Core-5：PARTIAL / MISSING。** 尚无覆盖连续多轮、session restore、证据冲突、伪造 evidence ID 阻断、Native 模型空/坏 JSON、提案授权、确定性执行结果回流的完整五层 E2E；独立单测和一条模式接线不可替代。Find N2 安装升级、GPU/CPU、多轮与实际 TRACE 留到云端工程闭环之后本地最后验收。
+- **工作流 I：** 用户 Markdown 书架仍 DEFERRED / NOT_AUTHORIZED，不启动；本批不新增书架页面、数据库、Embedding、FTS5、ANN 或后台任务。
+- **下一执行顺序：** Core-0 维护函数/测试/失败契约映射；Core-1 单独修复 transcript restore 完整轮次裁剪及省略计数；Core-2 保持 golden behavior，后续再考虑结构化知识种类 CandidateEvidence 化；Core-3 先通过 PR #529 精确 HEAD 所有适用门禁，再逐步扩展其他模式；Core-4 设计独立 proposal policy/typed schema，不让模型 proposal 直达 Dispatcher；Core-5 在各层边界独立可测后补跨层自动化。设备验收不阻塞以上云端任务。
