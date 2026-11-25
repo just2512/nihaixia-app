@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import '../models/reasoning_request.dart';
-import 'session_state_snapshot_prompt_formatter.dart';
+import '../models/session_state_snapshot.dart';
 
 /// Renders only the supplemental, request-scoped metadata for Native text input.
 ///
@@ -15,12 +15,22 @@ class ReasoningRequestPromptFormatter {
   static const int maxSupplementalContextCharacters = 24000;
 
   static String formatSupplementalContext(ReasoningRequest request) {
-    final sessionStateContext = request.sessionState == null
-        ? '【App 本会话结构化记忆快照】\nstatus=UNKNOWN\n结构化事实：未提供。\n来源引用：未提供。'
-        : SessionStateSnapshotPromptFormatter.format(
-            request.sessionState!,
-            expectedSessionId: request.sessionId,
-          );
+    // SessionStateSnapshot content already travels through the dedicated
+    // Native session_state_context field, where MainActivity validates the
+    // active SQLite conversation owner. Keep only its bounded metadata here
+    // to avoid sending the same memory facts twice in one model input.
+    final sessionState = request.sessionState;
+    final sessionStateMetadata = <String, Object?>{
+      'sessionId': request.sessionId,
+      'revision': sessionState?.revision ?? 'UNKNOWN',
+      'status': switch (sessionState?.status) {
+        SessionStateStatus.restored => 'RESTORED',
+        SessionStateStatus.partial => 'PARTIAL',
+        SessionStateStatus.sessionMismatch => 'SESSION_MISMATCH',
+        SessionStateStatus.unknown || null => 'UNKNOWN',
+      },
+      'contentTransport': 'NATIVE_SESSION_STATE_CONTEXT',
+    };
 
     final envelope = <String, Object?>{
       'schemaVersion': 1,
@@ -48,13 +58,14 @@ class ReasoningRequestPromptFormatter {
           'Use INSUFFICIENT_EVIDENCE when the supplied evidence cannot support the answer.',
         ],
       },
-      'sessionStateContext': sessionStateContext,
+      'sessionStateMetadata': sessionStateMetadata,
       'rankedEvidence': request.rankedEvidence.map((item) => item.toMap()).toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
       'executionResults':
           request.executionResults.map((item) => item.toMap()).toList(),
       'boundaries': const [
         'userText is supplied separately as the original Native text input; do not rewrite or replace it.',
+        'SessionStateSnapshot facts and source references are supplied once through the Native session_state_context field; use provenance and do not duplicate them.',
         'rankedEvidence contains only evidence IDs whose complete blocks are present in this request context.',
         'knownEvidenceIds may include dropped candidates; they are not allowed citations.',
         'sourceId is an App lookup pointer, not a verification or authority claim.',
