@@ -61,10 +61,10 @@ class MainActivity : FlutterActivity() {
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
     private var activeBackend = "not_loaded"
-    // Keep only completed turns. A failed/blank current turn is never appended.
-    private val conversationHistoryTurns = mutableListOf<LocalAiCompletedTurn>()
+    // Native recovery history is bounded independently from the full UI/SQLite transcript.
+    private val conversationHistory = LocalAiConversationHistory()
     private val conversationHasSuccessfulTurn: Boolean
-        get() = conversationHistoryTurns.isNotEmpty()
+        get() = conversationHistory.hasSuccessfulTurn()
 
     // Only explicit user text and pending audio transcripts enter symptom extraction.
     // Image observations and assistant responses are intentionally excluded.
@@ -693,7 +693,7 @@ class MainActivity : FlutterActivity() {
             return modelStatus()
         }
 
-        val completedTurns = conversationHistoryTurns.toList()
+        val completedHistory = conversationHistory.snapshot()
         val reportedInputs = userReportedInputs.toList()
         val inputsTruncated = userReportedInputsTruncated
 
@@ -715,8 +715,7 @@ class MainActivity : FlutterActivity() {
                     try {
                         loadLocalModel()
                     } catch (restoreError: Exception) {
-                        conversationHistoryTurns.clear()
-                        conversationHistoryTurns.addAll(completedTurns)
+                        conversationHistory.restore(completedHistory)
                         userReportedInputs.clear()
                         userReportedInputs.addAll(reportedInputs)
                         userReportedInputsTruncated = inputsTruncated
@@ -736,8 +735,7 @@ class MainActivity : FlutterActivity() {
                 // loadLocalModel may clear transient state if Conversation
                 // construction fails. Restore only previously completed turns
                 // and explicit user text; never restore/replay the failed turn.
-                conversationHistoryTurns.clear()
-                conversationHistoryTurns.addAll(completedTurns)
+                conversationHistory.restore(completedHistory)
                 userReportedInputs.clear()
                 userReportedInputs.addAll(reportedInputs)
                 userReportedInputsTruncated = inputsTruncated
@@ -927,11 +925,7 @@ class MainActivity : FlutterActivity() {
         fun commitSuccessfulTurn(reply: String): String {
             val cleaned = stripSimpleMarkdown(reply)
             if (cleaned.isBlank()) throw IllegalStateException("模型没有返回有效文本")
-            LocalAiConversationHistoryPolicy.appendSuccessfulTurn(
-                conversationHistoryTurns,
-                userMessageText,
-                cleaned
-            )
+            conversationHistory.appendSuccessfulTurn(userMessageText, cleaned)
             return cleaned
         }
 
@@ -981,8 +975,9 @@ class MainActivity : FlutterActivity() {
 
     private fun createConversationWithHistory(engine: Engine): Conversation {
         aiModelAccessGate.requireAccess()
+        val historySnapshot = conversationHistory.snapshot()
         val initialMessages = LocalAiConversationHistoryPolicy.initialMessages(
-            conversationHistoryTurns
+            historySnapshot
         ).map { transcriptMessage ->
             when (transcriptMessage.role) {
                 LocalAiTranscriptRole.USER -> Message.user(transcriptMessage.text)
@@ -991,7 +986,12 @@ class MainActivity : FlutterActivity() {
         }
         return engine.createConversation(
             ConversationConfig(
-                systemInstruction = Contents.of(systemInstruction),
+                systemInstruction = Contents.of(
+                    LocalAiConversationHistoryPolicy.systemInstruction(
+                        systemInstruction,
+                        historySnapshot
+                    )
+                ),
                 initialMessages = initialMessages
             )
         )
@@ -1561,7 +1561,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
-        conversationHistoryTurns.clear()
+        conversationHistory.clear()
 
         return try {
             val nextConversation = ConversationResetPolicy.recreateConversation(
@@ -1576,7 +1576,7 @@ class MainActivity : FlutterActivity() {
             aiConversation = nextConversation
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-            conversationHistoryTurns.clear()
+            conversationHistory.clear()
                 modelStatus()
         } catch (error: Exception) {
             // Never retain an Engine without a usable Conversation. A later load
@@ -1585,7 +1585,7 @@ class MainActivity : FlutterActivity() {
             aiConversation = null
             userReportedInputs.clear()
             userReportedInputsTruncated = false
-            conversationHistoryTurns.clear()
+            conversationHistory.clear()
             activeBackend = "not_loaded"
                 throw error
         }
@@ -1599,7 +1599,7 @@ class MainActivity : FlutterActivity() {
         aiEngine = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false
-        conversationHistoryTurns.clear()
+        conversationHistory.clear()
         activeBackend = "not_loaded"
         ConversationResourceReleasePolicy.closeBoth(
             closeConversation = { conversation?.close() },
