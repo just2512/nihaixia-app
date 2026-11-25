@@ -38,6 +38,7 @@ class _NoLostImagePicker implements LocalAiImagePicker {
 
 class _HistoryResumeService extends LocalAiService {
   String? restoredTranscript;
+  int? restoredConversationId;
   List<String> restoredUserMessages = const [];
 
   @override
@@ -45,12 +46,14 @@ class _HistoryResumeService extends LocalAiService {
 
   @override
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
+    restoredConversationId = conversationId;
     restoredTranscript = transcript;
     restoredUserMessages = List<String>.from(userMessages);
   }
@@ -58,6 +61,7 @@ class _HistoryResumeService extends LocalAiService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -66,6 +70,7 @@ class _HistoryResumeService extends LocalAiService {
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -75,6 +80,7 @@ class _HistoryResumeService extends LocalAiService {
   @override
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -84,6 +90,7 @@ class _HistoryResumeService extends LocalAiService {
   @override
   Future<String> sendMessageWithContextAndTrace(
     String text, {
+    required int conversationId,
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,

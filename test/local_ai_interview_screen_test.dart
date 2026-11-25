@@ -340,7 +340,7 @@ class _DeferredModelControlService extends _TextSendService {
   var releaseCalls = 0;
 
   @override
-  Future<LocalAiModelStatus> resetConversation() {
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) {
     resetCalls += 1;
     return resetResult.future;
   }
@@ -354,14 +354,14 @@ class _DeferredModelControlService extends _TextSendService {
 
 class _SourceTruncatedEmptySymptomsService extends _TextSendService {
   @override
-  Future<LocalAiSymptomDraft> extractSymptoms() async {
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
     return const LocalAiSymptomDraft(sourceTruncated: true);
   }
 }
 
 class _SourceTruncatedSymptomsService extends _TextSendService {
   @override
-  Future<LocalAiSymptomDraft> extractSymptoms() async {
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
     return const LocalAiSymptomDraft(
       mainComplaint: '间断头痛',
       sourceTruncated: true,
@@ -386,6 +386,7 @@ class _PageToolTraceService extends _TextSendService {
 
   @override
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
@@ -404,6 +405,7 @@ class _SequencedSymptomsTraceService extends _TextSendService {
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
+    required int conversationId,
     required String traceId,
   }) async {
     extractedTraceIds.add(traceId);
@@ -412,12 +414,14 @@ class _SequencedSymptomsTraceService extends _TextSendService {
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required int conversationId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
   }) async => drafts.removeAt(0);
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required int conversationId,
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
@@ -450,31 +454,35 @@ class _TextSendService extends LocalAiService {
   final intentCandidateIds = <List<String>>[];
   final intentTraceIds = <String>[];
   final sentTexts = <String>[];
+  final sentConversationIds = <int>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
 
   @override
-  Future<LocalAiSymptomDraft> extractSymptoms() async =>
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async =>
       const LocalAiSymptomDraft();
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required int conversationId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
   }) =>
-      extractSymptoms();
+      extractSymptoms(conversationId: conversationId);
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required int conversationId,
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
   }) =>
-      extractSymptoms();
+      extractSymptoms(conversationId: conversationId);
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required int conversationId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
     bool sourceTruncated = false,
@@ -486,6 +494,7 @@ class _TextSendService extends LocalAiService {
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required int conversationId,
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
@@ -523,6 +532,7 @@ class _TextSendService extends LocalAiService {
 
   @override
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
@@ -541,10 +551,12 @@ class _TextSendService extends LocalAiService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
+    sentConversationIds.add(conversationId);
     sentTexts.add(text);
     return '已收到你的描述：$text';
   }
@@ -552,30 +564,33 @@ class _TextSendService extends LocalAiService {
   @override
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
     sentContexts.add(context);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
     sentTraceIds.add(traceId);
-    return sendMessage(text, requireMedicalSafety: requireMedicalSafety);
+    return sendMessage(text, conversationId: conversationId, requireMedicalSafety: requireMedicalSafety);
   }
 
   @override
   Future<String> sendMessageWithContextAndTrace(
     String text, {
+    required int conversationId,
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
@@ -584,7 +599,7 @@ class _TextSendService extends LocalAiService {
   }) async {
     sentTraceIds.add(traceId);
     sentContexts.add(context);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 }
 
@@ -609,6 +624,7 @@ class _FailingTextSendService extends _TextSendService {
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -690,7 +706,7 @@ class _ModelControlFailureService extends _TextSendService {
   var releaseCalls = 0;
 
   @override
-  Future<LocalAiModelStatus> resetConversation() async {
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
     resetCalls += 1;
     throw PlatformException(
       code: 'RESET_FAILED',
@@ -717,7 +733,7 @@ class _ModelControlTeardownFailureService extends _TextSendService {
   Future<LocalAiModelStatus> getStatus() async => _status;
 
   @override
-  Future<LocalAiModelStatus> resetConversation() async {
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
     resetCalls += 1;
     _status = _releasedStatus;
     throw PlatformException(
@@ -753,7 +769,7 @@ class _UnknownStatusAfterResetService extends _TextSendService {
   }
 
   @override
-  Future<LocalAiModelStatus> resetConversation() async {
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
     resetCalls += 1;
     _statusUnavailable = true;
     throw PlatformException(
@@ -785,6 +801,7 @@ class _PostSendStatusFailureService extends _TextSendService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -825,6 +842,7 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -849,7 +867,7 @@ class _ModelControlService extends _TextSendService {
   var releaseCalls = 0;
 
   @override
-  Future<LocalAiModelStatus> resetConversation() async {
+  Future<LocalAiModelStatus> resetConversation({required int conversationId}) async {
     resetCalls += 1;
     return _readyStatus;
   }
@@ -865,7 +883,7 @@ class _DraftTextService extends _TextSendService {
   var extractionCalls = 0;
 
   @override
-  Future<LocalAiSymptomDraft> extractSymptoms() async {
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
     extractionCalls += 1;
     return const LocalAiSymptomDraft(
       mainComplaint: '饭后腹胀',
@@ -891,13 +909,14 @@ class _CandidateDraftTextService extends _DraftTextService {
       );
 
   @override
-  Future<LocalAiSymptomDraft> extractSymptoms() async {
+  Future<LocalAiSymptomDraft> extractSymptoms({required int conversationId}) async {
     extractionCalls += 1;
     return _candidateDraft();
   }
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required int conversationId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
     bool sourceTruncated = false,
@@ -908,6 +927,7 @@ class _CandidateDraftTextService extends _DraftTextService {
 
   @override
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required int conversationId,
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
@@ -978,6 +998,7 @@ class _FailOnceTextSendService extends LocalAiService {
   @override
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
@@ -995,11 +1016,12 @@ class _FailOnceTextSendService extends LocalAiService {
   @override
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
-  }) => sendMessage(text);
+  }) => sendMessage(text, conversationId: conversationId);
 }
 
 class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
@@ -1008,18 +1030,20 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
   @override
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) {
     sentTraceIds.add(traceId);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 
   @override
   Future<String> sendMessageWithContextAndTrace(
     String text, {
+    required int conversationId,
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
@@ -1027,7 +1051,7 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     bool redFlagContextTruncated = false,
   }) {
     sentTraceIds.add(traceId);
-    return sendMessage(text);
+    return sendMessage(text, conversationId: conversationId);
   }
 }
 
