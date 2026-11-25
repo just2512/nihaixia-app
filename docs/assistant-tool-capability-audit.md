@@ -333,7 +333,7 @@ PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge c
 - `HeadlessToolDispatcher.executePlan` 对整份计划先校验 tool ID、registered capability ID 和 executor；随后按顺序调用，只有当前步骤 SUCCEEDED 才进入下一步。
 - executor 抛异常时保留先前已验证结果，将当前步骤记为 UNKNOWN 并停止后续步骤；不重试、不重放、不推测补偿。
 - `HeadlessToolResultHandler` / `HeadlessToolPlanResultHandler` 对 tool ID、结构化 values、实际 arguments、真实 sourceIds 做结果契约检查；只有全部步骤 SUCCEEDED 且所有结果合同有效时才允许汇总解释。部分失败、无结果、取消、UNKNOWN 或来源无效时，不把失败输出包装为成功事实。
-- 当前业务结果主载体仍为 `AssistantToolResult` / `HeadlessToolPlanExecutionResult`。PR #520 的 `BusinessActionProposal` 仅为严格解码后的未可信提案；PR #523 的 `ReasoningExecutionResult` 是输入 DTO 形状，尚未由实际执行结果投影，也没有与 dispatcher/result handler 建立映射。
+- 当前业务结果主载体仍为 `AssistantToolResult` / `HeadlessToolPlanExecutionResult`。PR #520 的 `BusinessActionProposal` 仅为严格解码后的未可信提案；PR #524 的 `ReasoningExecutionResult` 是输入 DTO 形状，尚未由实际执行结果投影，也没有与 dispatcher/result handler 建立映射。
 
 ### 12.4 能力级参数/授权缺口
 

@@ -108,7 +108,48 @@ void main() {
       );
     });
 
-    test('rejects invalid request identity, session scope and schema version', () {
+    test('toMap recursively freezes DTO, evidence, session and execution projections', () {
+      final value = request(results: [successResult()]);
+      final projection = value.toMap();
+
+      expect(() => projection['mode'] = 'changed', throwsUnsupportedError);
+      final ranked = projection['rankedEvidence'] as List;
+      expect(() => ranked.add(const {}), throwsUnsupportedError);
+      expect(
+        () => (ranked.single as Map)['sourceId'] = 'changed',
+        throwsUnsupportedError,
+      );
+
+      final execution = projection['executionResults'] as List;
+      expect(() => execution.clear(), throwsUnsupportedError);
+      expect(
+        () => (execution.single as Map)['capabilityId'] = 'changed',
+        throwsUnsupportedError,
+      );
+      final actualArguments =
+          (execution.single as Map)['actualArguments'] as Map;
+      expect(
+        () => actualArguments['formulaId'] = 'changed',
+        throwsUnsupportedError,
+      );
+
+      final session = projection['sessionState'] as Map;
+      expect(() => session['status'] = 'UNKNOWN', throwsUnsupportedError);
+      final facts = session['facts'] as List;
+      expect(() => facts.clear(), throwsUnsupportedError);
+      expect(() => (facts.first as Map)['key'] = 'changed',
+          throwsUnsupportedError);
+      final nestedValue = (facts.first as Map)['value'] as Map;
+      expect(() => nestedValue['text'] = 'changed', throwsUnsupportedError);
+      final evidenceReferences = session['evidenceReferences'] as List;
+      expect(() => evidenceReferences.clear(), throwsUnsupportedError);
+      expect(
+        () => (evidenceReferences.first as Map)['sourceId'] = 'changed',
+        throwsUnsupportedError,
+      );
+    });
+
+$testAnchor
       expect(
         () => ReasoningRequest(
           requestId: ' ',

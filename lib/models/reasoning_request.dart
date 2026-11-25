@@ -21,10 +21,10 @@ class ReasoningEvidenceReference {
   final String evidenceId;
   final String sourceId;
 
-  Map<String, Object?> toMap() => {
+  Map<String, Object?> toMap() => Map.unmodifiable({
         'evidenceId': evidenceId,
         'sourceId': sourceId,
-      };
+      });
 }
 
 /// Immutable, App-projected result from one deterministic business invocation.
@@ -78,7 +78,7 @@ class ReasoningExecutionResult {
   final String? failureCode;
   final String? safetyMessage;
 
-  Map<String, Object?> toMap() => {
+  Map<String, Object?> toMap() => Map.unmodifiable({
         'invocationId': invocationId,
         'capabilityId': capabilityId,
         'status': _executionStatusName(status),
@@ -87,7 +87,7 @@ class ReasoningExecutionResult {
         'sourceIds': sourceIds,
         if (failureCode != null) 'failureCode': failureCode,
         if (safetyMessage != null) 'safetyMessage': safetyMessage,
-      };
+      });
 }
 
 /// Complete immutable input contract for one local E4B reasoning turn.
@@ -172,7 +172,7 @@ class ReasoningRequest {
   ///
   /// Do not persist this as Native recovery transcript: session state and
   /// retrieved evidence are ephemeral request inputs.
-  Map<String, Object?> toMap() => {
+  Map<String, Object?> toMap() => Map.unmodifiable({
         'requestId': requestId,
         'sessionId': sessionId,
         'userText': userText,
@@ -181,17 +181,20 @@ class ReasoningRequest {
         'sessionState': sessionState == null
             ? null
             : _sessionStateToMap(sessionState!),
-        'rankedEvidence': rankedEvidence.map((item) => item.toMap()).toList(),
+        'rankedEvidence': List.unmodifiable(
+          rankedEvidence.map((item) => item.toMap()),
+        ),
         'knownEvidenceIds': knownEvidenceIds,
-        'executionResults':
-            executionResults.map((item) => item.toMap()).toList(),
-      };
+        'executionResults': List.unmodifiable(
+          executionResults.map((item) => item.toMap()),
+        ),
+      });
 }
 
 Map<String, Object?> _sessionStateToMap(SessionStateSnapshot snapshot) {
   final canExposeFacts = snapshot.status != SessionStateStatus.unknown &&
       snapshot.status != SessionStateStatus.sessionMismatch;
-  return {
+  return Map.unmodifiable({
     'sessionId': snapshot.sessionId,
     'revision': snapshot.revision,
     'status': switch (snapshot.status) {
@@ -203,9 +206,8 @@ Map<String, Object?> _sessionStateToMap(SessionStateSnapshot snapshot) {
     // Match SessionStateSnapshotPromptFormatter's fail-closed behavior:
     // unknown/mismatched memory may not leak attached facts through toMap().
     'facts': canExposeFacts
-        ? snapshot.facts
-            .map(
-              (fact) => {
+        ? List.unmodifiable(snapshot.facts.map(
+            (fact) => Map.unmodifiable({
                 'factId': fact.factId,
                 'key': fact.key,
                 'value': fact.value,
@@ -217,27 +219,24 @@ Map<String, Object?> _sessionStateToMap(SessionStateSnapshot snapshot) {
                   SessionFactProvenance.sourceReference => 'SOURCE_REFERENCE',
                 },
                 'sourceIds': fact.sourceIds,
-              },
-            )
-            .toList()
+              }),
+            ))
         : const [],
     'evidenceReferences': canExposeFacts
-        ? snapshot.evidenceReferences
-            .map(
-              (reference) => {
+        ? List.unmodifiable(snapshot.evidenceReferences.map(
+            (reference) => Map.unmodifiable({
                 'sourceId': reference.sourceId,
                 'sourceVersion': reference.sourceVersion,
                 'evidenceId': reference.evidenceId,
                 'chunkId': reference.chunkId,
-              },
-            )
-            .toList()
+              }),
+            ))
         : const [],
     if (canExposeFacts && snapshot.activeTaskId != null)
       'activeTaskId': snapshot.activeTaskId,
     'omittedUserMessageCount': snapshot.omittedUserMessageCount,
-    'diagnostics': snapshot.diagnostics,
-  };
+    'diagnostics': List.unmodifiable(snapshot.diagnostics),
+  });
 }
 
 String _executionStatusName(ReasoningExecutionStatus status) =>
