@@ -88,8 +88,11 @@ internal class LocalAiConversationHistory(
         require(snapshot.omittedCharacterCount >= 0L) {
             "omittedCharacterCount cannot be negative"
         }
-        require(snapshot.successfulTurnCount >= snapshot.omittedTurnCount.toLong()) {
-            "successfulTurnCount cannot be less than omittedTurnCount"
+        require(
+            snapshot.successfulTurnCount ==
+                snapshot.omittedTurnCount.toLong() + snapshot.turns.size.toLong()
+        ) {
+            "successfulTurnCount must equal retained plus omitted completed turns"
         }
         require(snapshot.turns.size <= maxRetainedTurns) {
             "Snapshot contains more turns than the configured limit"
