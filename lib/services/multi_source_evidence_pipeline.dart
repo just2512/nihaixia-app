@@ -99,9 +99,12 @@ class MultiSourceEvidencePipeline {
         );
       }
 
-      hasFailed |= batch.status == CandidateEvidenceBatchStatus.failed;
-      hasUnknown |= batch.status == CandidateEvidenceBatchStatus.unknown;
-      hasPartial |= batch.status == CandidateEvidenceBatchStatus.partial;
+      hasFailed = hasFailed ||
+          batch.status == CandidateEvidenceBatchStatus.failed;
+      hasUnknown = hasUnknown ||
+          batch.status == CandidateEvidenceBatchStatus.unknown;
+      hasPartial = hasPartial ||
+          batch.status == CandidateEvidenceBatchStatus.partial;
       diagnostics.addAll(
         batch.diagnostics.map((item) => '${batch.requestId}:$item'),
       );
