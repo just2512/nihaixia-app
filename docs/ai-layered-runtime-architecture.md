@@ -43,7 +43,7 @@
 | 知识召回 | 哪些本地资料候选可能匹配查询？ | CandidateEvidence 列表 | 直接认定权威性、医学正确性；把整本书塞给模型 |
 | 证据排序 | 哪些候选应进入本轮证据集？ | RankedEvidenceSet | 伪造证据、篡改来源状态、把分数当真实性 |
 | 会话记忆 | Native history 由 `LocalAiConversationHistory` 管理，`LocalAiConversationSessionPolicy` 按 conversation ID 隔离；`SessionStateSnapshotBuilder.build` 投影有界结构事实和证据引用；候选 PR #519 将快照作为独立、只读、16,000 UTF-16 code units 上限的本轮 Native text prompt section，并保持 RAG 分离、恢复 transcript 只保留原始用户文本与成功助手回复。 | `LocalAiConversationHistoryPolicyTest`、`LocalAiConversationSessionPolicyTest`、`test/session_state_snapshot_builder_test.dart`、`test/session_state_snapshot_prompt_formatter_test.dart`、Native session owner 与 transcript isolation JVM 测试。 | PARTIAL：#519 尚待精确 HEAD CI 与合并；没有 ReasoningRequest 统一封装、跨进程 Native Conversation 恢复仍 UNKNOWN，16,000 是字符边界而非模型 token/input budget；KV Cache 当前 token 数与模型声明 maxContextTokens 均不是 App 可用输入预算；无自动压缩。 |
-| 语言推理 | 如何理解、解释、比较和提出下一步？ | ReasoningResponse | 自行补造来源、规则结果、数值；直接执行工具 |
+| 语言推理 | Native 路径仍为 `MainActivity.sendLocalMessage` / `sendWithFirstTurnGpuFallback` → `Conversation.sendMessage(modelInput)`；#520 已合并响应 DTO/decoder；PR #524（待合并）补齐 `ReasoningRequest` / `ReasoningExecutionResult`、证据引用与请求元数据 formatter。 | `test/reasoning_response_codec_test.dart`、`test/reasoning_request_prompt_formatter_test.dart`；既有 `test/assistant_conversation_orchestrator_test.dart`、`test/assistant_history_resume_test.dart`。 | PARTIAL：请求元数据有 24,000 UTF-16 code-unit 硬上限（仅补充段，不是总输入/token预算）；Native 生产接线、结构化响应解码、引用回填仍未完成。 |
 | 业务执行 | App 是否允许并确实完成指定操作？ | ExecutionResult | 由自由文本决定权限；把模型声称成功当成执行成功 |
 
 ### 2.1 知识召回：只负责候选发现
@@ -406,9 +406,11 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 | Core-0 契约/源码映射 | 本架构文档、AI 执行台账 | 不改生产调用顺序；不新增数据库/服务 |
 | Core-1 Memory | `MainActivity.kt`、`LocalAiConversationHistoryPolicy.kt`、`LocalAiSessionStateInputPolicy.kt`、`SessionStateSnapshot`/`SessionStateSnapshotBuilder` 及 Kotlin/Flutter 测试 | #519 已将只读 snapshot 接入普通文本 Native 输入并做 session owner fail-closed；跨进程恢复和真实模型输入 token budget 仍 UNKNOWN |
 | Core-2 Retrieval/Ranking | `assistant_knowledge_context.dart`、`classic_search_service.dart`、多源 Evidence Pipeline、黄金测试/fixture | #518 已完成多源候选生产接线；#522 增加请求级 evidence ID/sourceId 映射（待合并）；不改变当前 golden 输出 |
-| Core-3 Reasoning | `reasoning_response.dart`、`reasoning_response_codec.dart`、后续 `ReasoningRequest`/Native Adapter 与协议测试 | #520 已合并响应 DTO/严格解码器；请求 DTO、Native 主链接线、来源回填和生产 capability registry 仍未完成，不得直接让模型触发工具 |
+| Core-3 Reasoning | `reasoning_response.dart`、`reasoning_response_codec.dart`、`reasoning_request.dart`、`reasoning_request_prompt_formatter.dart`、Native Adapter 与协议测试 | #520 已合并响应 DTO/严格解码器；#524 增加不可变请求/执行结果投影和有界元数据格式化；Native 主链接线、响应解码、来源回填和生产 capability registry 仍未完成，不得直接让模型触发工具 |
 | Core-4 Execution | 工具计划构建、Dispatcher、结果校验和每个 executor | 逐能力核查，不改变 ai_access/AiModelAccessGate |
 | Core-5 E2E | 跨层测试与 TRACE 规范接线 | 依赖前四层可独立观测；设备 TRACE 由本地最后完成 |
+
+**Core-3 当前状态与下一步：** #520 的响应 DTO/decoder 已合并；PR #524 仅补齐不可变请求 DTO、App 执行结果投影、request-local evidence 引用和补充元数据 formatter。formatter 不重新发送用户原话，不复制证据正文，UNKNOWN/SESSION_MISMATCH 记忆不暴露事实，补充元数据设 24,000 UTF-16 code-unit 上限。该切片仍不接入 Native 发送链、不解析模型回复，也不授权/执行动作；下一批只选择单条学习/知识问答链做端到端适配。
 
 ## 6. 当前最高优先级执行顺序
 

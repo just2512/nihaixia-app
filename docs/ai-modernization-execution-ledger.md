@@ -4558,3 +4558,20 @@ PR HEAD 门禁证据：
 - **Core-5：** 尚无覆盖「请求装配→模型响应解码→证据 ID 回验→本地来源回填」及「动作提案→能力门禁→确定性执行→ExecutionResult→解释」的跨层 E2E。单元/契约测试不计作 E2E 完成。
 - **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
 - **设备策略：** Find N2 安装升级、E4B GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离和端到端 TRACE 仍统一放在云端工作全部完成后本地验收；设备验收不阻塞云端 Core-0～Core-5 继续实现。
+
+
+---
+
+## 106. 2026-11-25 Core-3 ReasoningRequest 请求契约与有界格式化
+
+- **主线基线：** `a43989636101d267cd2ab96fe6a4eee1a89ba522`（已包含 PR #522 Core-2 evidence handoff）。旧 PR #523 的分支从 `cb05913...` 派生；其 Flutter 回归被 changed-only color audit 的 `git diff FETCH_HEAD...HEAD` 无 merge-base 错误提前终止，Dart analyze/tests 全部 SKIPPED，不是代码断言失败，也不能记 PASS。该旧分支需要重建，不能强行合并旧文档树。
+- **新切片 / 预期 PR #524：** 从当前 master `a43989636101d267cd2ab96fe6a4eee1a89ba522` 创建独立分支 `work/core3-reasoning-request-master-a439896-20261125`，移植请求 DTO 与定向测试并增加完整元数据字符边界。
+- **新增契约：** `ReasoningRequest` 固定 requestId、sessionId、原始 userText、mode、responseSchemaVersion、可选 SessionStateSnapshot、ranked evidence references、known candidate IDs 和确定性 execution results。构造时 fail-closed 校验请求标识/会话归属/schema v1、ranked IDs 唯一且属于 known IDs、known IDs 无重复、execution invocation ID 无重复。
+- **执行结果边界：** `ReasoningExecutionResult` 仅接受 App 投影值；SUCCEEDED 必须同时具有 actualArguments、resultValues、sourceIds；UNKNOWN 保留原状态，不允许模型将其升级为成功。该 DTO 尚无生产 adapter 从全部 `AssistantToolResult` 自动构造，不宣称 Core-4 完成。
+- **Prompt formatter：** `ReasoningRequestPromptFormatter` 只输出补充元数据；原始用户文本继续通过现有 Native text 参数单独传递，证据正文仍来自既有知识上下文，避免重复；UNKNOWN/SESSION_MISMATCH snapshot 不暴露 facts/evidenceReferences/activeTaskId。补充 response schema required fields/kinds/model statuses 与动作权限边界说明。
+- **有界条件：** 补充元数据上限为 24,000 UTF-16 code units；超限抛出明确错误并阻止请求，不静默截断证据 ID 或执行结果。该值仅是补充元数据字符上限，不是 Native 总输入预算、模型 token 预算或自动压缩机制。
+- **当前边界：** 不修改 MainActivity、LocalAiService 或统一对话发送链；不向 Native 注入新 prompt，不改变 GPU/CPU fallback、Native queue、唯一 ai_access Gate 或工具执行；该 PR 仅完成 Core-3 request contract asset。
+- **验收：** 新分支代码/测试、许可证和架构台账已经按 a439896 基线组成单次集成提交；新 HEAD 的 Flutter static analysis/regression、Fork License、work branch validation、Android arm64/JVM 尚待 GitHub Actions 精确 HEAD 结果。SKIPPED 不计 PASS；任何代码/文档后续提交均需重跑。
+- **Core-3 后续：** 先将 #522 evidence ID/sourceId handoff 和本 DTO 组装到一个独立 learning knowledge path，再把 Native response 交给 #520 decoder；requestId、rankedEvidence、knownEvidenceIds 与当前请求绑定。验证通过后才逐步适配其他模式。
+- **Core-5：** 仍未完成；必须验证模型 JSON 行为、引用回填、空/坏响应 fail-closed、来源点击回查，以及 ACTION_PROPOSAL 到现有 capability/auth/user-confirmation/typed args/executor/ExecutionResult 闭环。设备 TRACE 留到云端完成后本地执行。
+- **工作流 I：** Markdown 书架仍 DEFERRED / NOT_AUTHORIZED，不启动。
