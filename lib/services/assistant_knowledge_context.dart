@@ -408,7 +408,7 @@ class AssistantKnowledgeContextBuilder {
       sources: List.unmodifiable(sources),
       status: status,
       knownEvidenceIds: built.knownEvidenceIds,
-      rankedEvidence: resolvedRankedEvidence,
+      rankedEvidence: List.unmodifiable(resolvedRankedEvidence),
     );
   }
 
