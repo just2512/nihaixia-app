@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/models/reasoning_request.dart';
-import 'package:nihaisha_app/models/reasoning_response.dart';
 import 'package:nihaisha_app/models/session_state_snapshot.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/services/reasoning_knowledge_answer_adapter.dart';
