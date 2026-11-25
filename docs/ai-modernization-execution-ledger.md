@@ -4522,3 +4522,19 @@ PR HEAD 门禁证据：
 - **Core-0 与 Core-5：** Core-0 的源码映射和五层输出责任继续以本架构文档为准；Core-5 的跨层 E2E、真实引用回填、模型提案→权限验证→确定性执行→结果解释闭环仍未形成，状态 PARTIAL/MISSING 按具体证据填写。
 - **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
 - **设备策略：** OPPO Find N2 安装升级、真实 E4B 多轮、GPU/CPU 切换、Activity/进程恢复、会话隔离和 TRACE 真机证据统一留到云端可实现工作全部完成后本地验收；云端 CI 不代替设备 PASS，也不以设备验收阻塞 Core-0～Core-5 云端工程工作。
+
+
+---
+
+## 104. 2026-11-25 Core-1 合并收口、Core-2 生产接线确认与 Core-3 契约切片重建
+
+- **主线基线：** `61e63c7309787acf0867d9503532b405f5a0e5e9`（PR #519 合并提交）。本节只记录该 SHA 及后续 Core-3 独立分支的证据；不回写 §101～§103 的历史状态。
+- **Core-2 生产召回/排序接线 / PR #518：MERGED。** merge commit `dd2d410a3c8b42ae53f3ca8189d54427ba7869da`。`AssistantKnowledgeContextBuilder.buildAsync` 已将 classic → 显式指定 Guji → medical 三类候选统一接入 `MultiSourceEvidencePipeline` 与 `SourceAwareLegacyEvidenceRanker`；保留 classic 4、每本 Guji 2、medical 2 旧上限、既有 sourceId/backlink 和 6,500 字符呈现上限。精确 HEAD `e1dfa77a6543a0f92b942d85fe8e2cf55b942a0a`：Flutter regression SUCCESS（run `45565695850`）、Android arm64/JVM SUCCESS（job `139042569180`）、Fork License SUCCESS（run `45565695728`）；push Branch validation SUCCESS（job `139039776393`）；PR 事件 Branch validation SKIPPED 不计 PASS。
+- **Core-1 Native 结构化记忆输入 / PR #519：MERGED。** merge commit `61e63c7309787acf0867d9503532b405f5a0e5e9`，精确 HEAD `b7f0a2c8e26a9e26ecd32cc0b28e50f7b417c248`。当前会话的结构化 SessionStateSnapshot 已通过独立 MethodChannel 字段接入普通文本 Native 输入，保留 provenance 与来源 ID；16,000 UTF-16 code units 上限；Native 校验当前 SQLite conversation ID、header 与大小；快照与 RAG 分离且不进入恢复 transcript。Flutter regression SUCCESS（run `45567153037`）、Android arm64/JVM SUCCESS（job `139047455663`）、Fork License SUCCESS（run `45567152870`）；push Branch validation SUCCESS（job `139044620328`）；PR 事件 Branch validation SKIPPED 不计 PASS。该切片不声称跨进程恢复、自动压缩或模型 token budget 已完成。
+- **Core-3 / 新 PR #520：** 从上述当前 master 创建独立分支 `work/core3-reasoning-contract-master-61e63c7-20261125`。只新增不可变 `ReasoningResponse` / `BusinessActionProposal` DTO、严格版本化 `ReasoningResponseCodec.decode` 与负向测试；校验 requestId、schemaVersion、字段白名单、responseKind/status 一致性、当前 ranked evidence IDs、known candidate IDs 和调用方传入的 capability allowlist。ACTION_PROPOSAL 仍只是未可信提案，不执行、不授权、不重放；不接入 Native 主发送链，不改变 prompt、数据库或授权 Gate。Fork License/REUSE 清单已同步，权属状态仍为 OWNERSHIP_EVIDENCE_REQUIRED。
+- **Core-3 状态：PARTIAL / CONTRACT-ONLY。** 该协议切片不能标记 Core-3 生产完成。下一步先让精确 HEAD Flutter 静态分析/全量回归、Fork License、work 分支定向验证及 Android arm64/JVM 适用门禁通过；合并后再单独规划 Native 响应封装与一条知识问答路径接线。真实证据解析、来源回填、生产 capability registry 与动作执行仍须由代码侧实现。
+- **Core-0/Core-1/Core-2：** Core-0 五层契约已冻结；Core-1 本轮 prompt 输入边界已合并，但跨进程恢复与真实模型 token/input budget 仍 UNKNOWN；Core-2 生产上下文接线已合并，黄金查询输出仍需持续作为回归门槛。
+- **Core-4：** PR #515 已合并，执行器异常导致的副作用状态未知时保留 UNKNOWN 并停止后续步骤，不自动重试/重放；不得把 UNKNOWN 交给模型解释。
+- **Core-5：** 仍未完成五层跨层 E2E；需覆盖模型输出引用 ID → App 回验 → UI 本地来源回填，以及 ACTION_PROPOSAL → registry/权限/typed args → 确定性 executor → ExecutionResult 回流。不得将单元测试或契约 DTO 存在等同端到端完成。
+- **工作流 I：** 用户 Markdown 书架保持 DEFERRED / NOT_AUTHORIZED，不启动。
+- **设备策略：** Find N2 安装升级、E4B GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离及端到端 TRACE 仍统一留到云端工作全部完成后本地验收；不作为云端 Core-3～Core-5 开发阻塞。
