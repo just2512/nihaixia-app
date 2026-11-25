@@ -79,6 +79,13 @@ void main() {
     );
   });
 
+  test('preserves evidence IDs as opaque unnormalized values', () {
+    final decision = LegacyOrderEvidenceRanker.rank([
+      _candidate(' evidence-id '),
+    ]).single;
+    expect(decision.evidenceId, ' evidence-id ');
+  });
+
   test('rejects duplicate or empty evidence identities', () {
     expect(
       () => LegacyOrderEvidenceRanker.rank([

@@ -30,8 +30,8 @@ class LegacyOrderEvidenceRanker {
 
     for (var index = 0; index < candidates.length; index++) {
       final candidate = candidates[index];
-      final evidenceId = candidate.evidenceId.trim();
-      if (evidenceId.isEmpty) {
+      final evidenceId = candidate.evidenceId;
+      if (evidenceId.trim().isEmpty) {
         throw StateError('Candidate evidenceId must not be empty');
       }
       if (!seenIds.add(evidenceId)) {
