@@ -20,6 +20,8 @@ import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
 import '../services/assistant_knowledge_context.dart';
+import '../services/reasoning_knowledge_answer_adapter.dart';
+import '../services/reasoning_request_prompt_formatter.dart';
 import '../services/assistant_conversation_orchestrator.dart';
 import '../services/headless_tool_dispatcher.dart';
 import '../services/headless_tool_result_handler.dart';
@@ -269,11 +271,15 @@ class _AssistantTurnResponse {
     required this.text,
     this.sourceIds = const [],
     this.knowledgeStatus,
+    this.protocolValidated = true,
+    this.protocolFailureCode,
   });
 
   final String text;
   final List<String> sourceIds;
   final String? knowledgeStatus;
+  final bool protocolValidated;
+  final String? protocolFailureCode;
 }
 
 /// Bounded, user-authored context sent only to the RedFlag safety boundary.
@@ -1142,7 +1148,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     }
   }
 
-  Future<String> _buildSessionStatePromptContext(int conversationId) async {
+  Future<SessionStateSnapshot> _buildSessionStateSnapshot(int conversationId) async {
     SessionStateSnapshot snapshot;
     try {
       final messages = await _conversationStore.getAssistantMessages(
@@ -1185,10 +1191,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         diagnostics: const ['SESSION_STATE_READ_FAILED'],
       );
     }
-    return SessionStateSnapshotPromptFormatter.format(
-      snapshot, expectedSessionId: conversationId,
-    );
+    return snapshot;
   }
+
+  String _createReasoningRequestId(int conversationId) =>
+      'reasoning-$conversationId-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
 
   Future<_AssistantTurnResponse> _sendTextWithKnowledgeContext(
     String text, {
@@ -1201,8 +1208,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
-    final sessionStateContext =
-        await _buildSessionStatePromptContext(conversationId);
+    final sessionStateSnapshot =
+        await _buildSessionStateSnapshot(conversationId);
+    final sessionStateContext = SessionStateSnapshotPromptFormatter.format(
+      sessionStateSnapshot,
+      expectedSessionId: conversationId,
+    );
     Future<String> sendWithContext(String context) async {
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
@@ -1369,12 +1380,47 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           includeMedicalCases:
               AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
-        final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
-            '${knowledge.modelContextText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n${knowledge.modelContextText}'}';
-        final reply = await sendWithContext(context);
+        final reasoningRequest = ReasoningKnowledgeAnswerAdapter.createRequest(
+          requestId: traceId ?? _createReasoningRequestId(conversationId),
+          sessionId: conversationId,
+          userText: text,
+          mode: mode.name,
+          sessionState: sessionStateSnapshot,
+          knowledge: knowledge,
+        );
+        final supplementalContext =
+            ReasoningRequestPromptFormatter.formatSupplementalContext(
+          reasoningRequest,
+        );
+        final learningContext = <String>[
+          '当前角色：学习助手。',
+          AssistantMode.learning.promptHint,
+          knowledge.modelContextText.isEmpty
+              ? '本轮未提供可用的本地检索资料；不得编造原文或出处。'
+              : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n${knowledge.modelContextText}',
+          ReasoningKnowledgeAnswerAdapter.evidenceIndexContext(reasoningRequest),
+          supplementalContext,
+        ].where((part) => part.trim().isNotEmpty).join('\n\n');
+        final rawReply = await sendWithContext(learningContext);
+        final validated = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+          raw: rawReply,
+          request: reasoningRequest,
+          knowledge: knowledge,
+        );
+        if (!validated.isUsable) {
+          final failureCode =
+              validated.failureCode ?? 'REASONING_RESPONSE_REJECTED';
+          return _AssistantTurnResponse(
+            text: '本轮回复未通过结构化协议校验，未经验证的模型原始内容未展示。'
+                '校验项：$failureCode。请重新发送。',
+            knowledgeStatus: '${knowledge.statusLabel}:PROTOCOL_REJECTED',
+            protocolValidated: false,
+            protocolFailureCode: failureCode,
+          );
+        }
         return _AssistantTurnResponse(
-          text: reply,
-          sourceIds: knowledge.sourceIds,
+          text: validated.answerText,
+          sourceIds: validated.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.tools:
@@ -1469,6 +1515,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<bool> _persistSuccessfulTurn({
     required String userText,
     required String assistantText,
+    bool replayable = true,
     AssistantMode? mode,
     String? attachmentType,
     String? toolId,
@@ -1484,11 +1531,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final id = await _conversationIdFuture;
       if (id == null) return false;
       final activeMode = mode ?? _assistantMode;
-      final replayable = userText.trim().isNotEmpty;
+      final shouldReplay = replayable && userText.trim().isNotEmpty;
       final metadata = AssistantMessageMetadata(
         mode: activeMode.name,
         selectedMode: _assistantMode.name,
-        replayable: replayable,
+        replayable: shouldReplay,
         attachmentType: attachmentType,
         toolArguments: toolArguments,
         traceId: traceId,
@@ -1498,7 +1545,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       ).encode();
       final storedUserText = attachmentType == null
           ? userText
-          : replayable
+          : shouldReplay
               ? '$userText（另附$attachmentType；原始附件未持久化）'
               : '已附加$attachmentType（原始附件未持久化）';
       await _conversationStore.saveAssistantTurn(
@@ -1509,6 +1556,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         assistantMetadata: AssistantMessageMetadata(
           mode: activeMode.name,
           selectedMode: _assistantMode.name,
+          replayable: shouldReplay,
           toolId: toolId,
           toolStatus: toolStatus,
           toolChoicePending: expectsToolSelection,
@@ -9286,22 +9334,29 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.modelOutput,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.resultValidation,
-        status: AiTraceStatus.succeeded,
+        status: turnResponse.protocolValidated
+            ? AiTraceStatus.succeeded
+            : AiTraceStatus.failed,
         mode: effectiveMode.name,
         sourceIds: turnResponse.sourceIds,
+        errorCode: turnResponse.protocolFailureCode,
       );
-      resultValidationCompleted = true;
+      resultValidationCompleted = turnResponse.protocolValidated;
       persistenceStarted = true;
       final persisted = await _persistSuccessfulTurn(
         userText: text,
         assistantText: reply,
+        replayable: turnResponse.protocolValidated,
         mode: effectiveMode,
         traceId: traceId,
         attachmentType: audioPath != null ? '录音' : imagePath != null ? '照片' : null,
