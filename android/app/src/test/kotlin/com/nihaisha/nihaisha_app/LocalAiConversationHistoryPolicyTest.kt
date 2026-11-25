@@ -108,6 +108,33 @@ class LocalAiConversationHistoryPolicyTest {
     }
 
     @Test
+    fun bindsFreshEmptyNativeConversationWithoutReset() {
+        assertTrue(!LocalAiConversationSessionPolicy.shouldReset(null, 11L, false))
+    }
+
+    @Test
+    fun preservesHistoryForTheSameConversationId() {
+        assertTrue(!LocalAiConversationSessionPolicy.shouldReset(11L, 11L, true))
+    }
+
+    @Test
+    fun resetsNativeStateWhenSwitchingConversationIds() {
+        assertTrue(LocalAiConversationSessionPolicy.shouldReset(11L, 12L, true))
+    }
+
+    @Test
+    fun resetsUnboundNativeStateWhenItAlreadyContainsConversationData() {
+        assertTrue(LocalAiConversationSessionPolicy.shouldReset(null, 12L, true))
+    }
+
+    @Test
+    fun rejectsMissingOrInvalidConversationIds() {
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiConversationSessionPolicy.shouldReset(null, 0L, false)
+        }
+    }
+
+    @Test
     fun blankUserInputIsRejected() {
         val history = mutableListOf<LocalAiCompletedTurn>()
 

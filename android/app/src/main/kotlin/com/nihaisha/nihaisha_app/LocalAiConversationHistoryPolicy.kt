@@ -74,3 +74,25 @@ internal object LocalAiConversationHistoryPolicy {
             )
         }
 }
+
+/**
+ * Binds the one in-memory LiteRT-LM Conversation to exactly one persisted
+ * assistant conversation. Switching IDs must clear all native transcript and
+ * symptom-input state before another session can send.
+ */
+internal object LocalAiConversationSessionPolicy {
+    fun shouldReset(
+        activeConversationId: Long?,
+        requestedConversationId: Long,
+        hasActiveConversationState: Boolean
+    ): Boolean {
+        require(requestedConversationId > 0L) {
+            "A positive persisted conversation ID is required"
+        }
+        return when {
+            activeConversationId == requestedConversationId -> false
+            activeConversationId == null && !hasActiveConversationState -> false
+            else -> true
+        }
+    }
+}
