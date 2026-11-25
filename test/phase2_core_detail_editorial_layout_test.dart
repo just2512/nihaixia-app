@@ -26,10 +26,9 @@ void main() {
       (item) =>
           item.patient.isNotEmpty &&
           item.diagnosis.isNotEmpty &&
-          item.mechanism.isNotEmpty &&
-          item.sourceLedger.missingFields.isNotEmpty,
+          item.mechanism.isNotEmpty,
       orElse: () => throw StateError(
-        'Expected at least one real medical case with incomplete source ledger data',
+        'Expected at least one real medical case with the core recorded fields',
       ),
     );
   });
@@ -164,22 +163,12 @@ void main() {
         expect(MediaQuery.textScalerOf(context).scale(1), 2);
         expect(find.text('主要诊断'), findsOneWidget);
         expect(find.text('中医病机'), findsOneWidget);
-        final ledgerLabel = find.text('原始来源账本');
-        await tester.scrollUntilVisible(
-          ledgerLabel,
-          420,
-          scrollable: find.byType(Scrollable).first,
-          maxScrolls: 24,
-        );
-        expect(ledgerLabel, findsOneWidget);
-        final renderedRichText = tester
-            .widgetList<RichText>(find.byType(RichText))
-            .map((widget) => widget.text.toPlainText());
         expect(
-          renderedRichText.any((text) => text.contains('MISSING')),
-          isTrue,
-          reason: '来源账本必须在 RichText 渲染树中完整保留缺失状态',
+          find.text('#${_sampleCase.seq}  ${_sampleCase.displayName}'),
+          findsOneWidget,
+          reason: '详情页保留 App 内部医案编号和条目标题作为本地回链',
         );
+        expect(find.textContaining('原始来源账本'), findsNothing);
         expect(tester.takeException(), isNull,
             reason: '医案详情在${width.toInt()}dp / ${brightness.name} / 200% 不应溢出');
         await tester.pumpWidget(const SizedBox.shrink());
