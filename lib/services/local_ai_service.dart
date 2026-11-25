@@ -1119,6 +1119,8 @@ class LocalAiModelStatus {
   final int? conversationKvCacheTokens;
   final String conversationKvCacheObservationStatus;
   final String conversationKvCacheBudgetStatus;
+  final int? modelMaxContextTokens;
+  final String modelMaxContextTokensObservationStatus;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -1134,6 +1136,8 @@ class LocalAiModelStatus {
     this.conversationKvCacheObservationStatus = 'UNKNOWN',
     this.conversationKvCacheBudgetStatus =
         'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
+    this.modelMaxContextTokens,
+    this.modelMaxContextTokensObservationStatus = 'UNKNOWN',
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
@@ -1148,6 +1152,16 @@ class LocalAiModelStatus {
             rawObservationStatus == 'OBSERVED'
         ? 'OBSERVED'
         : 'UNKNOWN';
+    final rawModelMaxContextTokens = map['modelMaxContextTokens'];
+    final modelMaxContextTokens =
+        rawModelMaxContextTokens is int && rawModelMaxContextTokens > 0
+            ? rawModelMaxContextTokens
+            : null;
+    final modelMaxContextObservationStatus =
+        modelMaxContextTokens != null &&
+                map['modelMaxContextTokensObservationStatus'] == 'OBSERVED'
+            ? 'OBSERVED'
+            : 'UNKNOWN';
     return LocalAiModelStatus(
       installed: map['installed'] == true,
       fileExists: map['fileExists'] == true,
@@ -1164,6 +1178,9 @@ class LocalAiModelStatus {
           map['conversationKvCacheBudgetStatus'] is String
               ? map['conversationKvCacheBudgetStatus'] as String
               : 'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
+      modelMaxContextTokens: modelMaxContextTokens,
+      modelMaxContextTokensObservationStatus:
+          modelMaxContextObservationStatus,
     );
   }
 
