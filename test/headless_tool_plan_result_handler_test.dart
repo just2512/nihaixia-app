@@ -105,6 +105,42 @@ void main() {
       expect(result.autoInterpret, isFalse);
     });
 
+    test('retains an UNKNOWN step and marks every later step unexecuted', () {
+      final execution = HeadlessToolPlanExecutionResult(
+        planId: plan.planId,
+        status: HeadlessToolPlanExecutionStatus.completed,
+        toolIds: plan.steps.map((step) => step.toolId),
+        capabilityIds: plan.capabilityIds,
+        results: [
+          const AssistantToolResult(
+            toolId: 'yuxiaji_omen',
+            title: 'yuxiaji_omen',
+            status: AssistantToolExecutionStatus.unknown,
+            values: {'执行状态': 'UNKNOWN'},
+            disclaimer: '执行器未返回可验证结果，不会自动重放。',
+          ),
+        ],
+      );
+
+      final result = HeadlessToolPlanResultHandler.handle(
+        userText: '查询玉匣灵兆并抽取三山灵签',
+        plan: plan,
+        tools: tools,
+        execution: execution,
+        aiReady: true,
+      );
+
+      expect(result.allStepsSucceeded, isFalse);
+      expect(result.steps.first.executed, isTrue);
+      expect(result.steps.first.result?.status, AssistantToolExecutionStatus.unknown);
+      expect(result.steps.last.executed, isFalse);
+      expect(result.responseText, contains('UNKNOWN'));
+      expect(result.responseText, contains('三山灵签'));
+      expect(result.responseText, contains('未执行'));
+      expect(result.canInterpret, isFalse);
+      expect(result.autoInterpret, isFalse);
+    });
+
     test('suppresses invalid result output and refuses aggregate interpretation', () {
       final execution = HeadlessToolPlanExecutionResult(
         planId: plan.planId,
