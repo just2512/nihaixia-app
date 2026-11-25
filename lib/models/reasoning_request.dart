@@ -16,11 +16,7 @@ class ReasoningEvidenceReference {
   const ReasoningEvidenceReference({
     required this.evidenceId,
     required this.sourceId,
-  }) {
-    if (evidenceId.trim().isEmpty || sourceId.trim().isEmpty) {
-      throw ArgumentError('REASONING_EVIDENCE_ID_REQUIRED');
-    }
-  }
+  });
 
   final String evidenceId;
   final String sourceId;
@@ -138,6 +134,13 @@ class ReasoningRequest {
     if (knownIds.length != this.knownEvidenceIds.length ||
         this.knownEvidenceIds.any((id) => id.trim().isEmpty || id != id.trim())) {
       throw ArgumentError('REASONING_KNOWN_EVIDENCE_IDS_INVALID');
+    }
+    if (this.rankedEvidence.any((item) =>
+        item.evidenceId.trim().isEmpty ||
+        item.evidenceId != item.evidenceId.trim() ||
+        item.sourceId.trim().isEmpty ||
+        item.sourceId != item.sourceId.trim())) {
+      throw ArgumentError('REASONING_RANKED_EVIDENCE_REFERENCE_INVALID');
     }
     final rankedIds = this.rankedEvidence.map((item) => item.evidenceId).toSet();
     if (rankedIds.length != this.rankedEvidence.length ||
