@@ -178,6 +178,24 @@ void main() {
       );
     });
 
+    test('does not expose facts from UNKNOWN or mismatched session snapshots', () {
+      final unknown = request(
+        session: snapshot(status: SessionStateStatus.unknown),
+      );
+      final unknownMap = unknown.toMap()['sessionState'] as Map;
+      expect(unknownMap['facts'], isEmpty);
+      expect(unknownMap['evidenceReferences'], isEmpty);
+      expect(unknownMap.containsKey('activeTaskId'), isFalse);
+
+      final mismatched = request(
+        session: snapshot(status: SessionStateStatus.sessionMismatch),
+      );
+      final mismatchedMap = mismatched.toMap()['sessionState'] as Map;
+      expect(mismatchedMap['facts'], isEmpty);
+      expect(mismatchedMap['evidenceReferences'], isEmpty);
+      expect(mismatchedMap.containsKey('activeTaskId'), isFalse);
+    });
+
     test('keeps UNKNOWN execution state and rejects unsubstantiated success', () {
       final unknown = ReasoningExecutionResult(
         invocationId: 'invoke-unknown',
