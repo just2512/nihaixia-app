@@ -126,7 +126,7 @@ class ReasoningRequest {
     if (responseSchemaVersion != 1) {
       throw ArgumentError('REASONING_RESPONSE_SCHEMA_VERSION_UNSUPPORTED');
     }
-    if (sessionState != null && sessionState.sessionId != sessionId) {
+    if (sessionState != null && sessionState!.sessionId != sessionId) {
       throw ArgumentError('REASONING_SESSION_STATE_SESSION_ID_MISMATCH');
     }
 
