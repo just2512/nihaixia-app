@@ -4481,4 +4481,16 @@ PR HEAD 门禁证据：
 3. Core-2 下一切片单独实现可重复的证据排序决策；输入为候选批次，输出为 RankedEvidenceSet，先用显式 `LEGACY_ORDER` 策略复现既有前四条，不改变旧黄金输出，再独立比较任何新排序策略。
 4. 随后按核心架构 §6 推进结构化会话记忆、ReasoningRequest/Response 和业务执行适配；每个切片保持单一边界、独立回归和精确 HEAD 验收。
 
+---
+
+## 99. 2026-11-25 Core-2 显式旧序选择决策启动
+
+- **依赖 PR #498：** `feature/core2-classic-evidence-boundary-20261125`。#501 当前以该分支为 base，属于有明确依赖关系的 stacked PR；#498 合并后必须将 #501 retarget 到 `master`，并在新 base 上重新验收。
+- **PR #501：OPEN / DRAFT。** `feat(ai): make legacy evidence selection decisions explicit`。当前实现新增 `EvidenceRankingDecision` 和 `LegacyOrderEvidenceRanker`，策略标识 `LEGACY_QUERY_ORDER` v1。
+- **实际运行时改变：** `AssistantKnowledgeContextBuilder` 不再直接对候选列表调用 `take(4)`；先由独立选择器为每个候选产生 KEEP/DROP、reasonCode、reason 和 orderIndex，再按 KEEP 的 orderIndex 与 evidenceId 回查候选并装配旧上下文。
+- **兼容性约束：** KEEP 仍为候选批次的前四条，顺序不变；窗口外候选有明确 DROP 原因；没有数值分数、语义重排、来源状态升级、向量/Embedding/FTS5/Reranker 或模型输入变化。候选 ID 作为不透明标识原样保留，空 ID 和重复 ID 会失败关闭。
+- **状态边界：** 这是显式 KEEP/DROP 决策切片，不等于 RankedEvidenceSet 全部完成。字符/Token 预算、预算裁剪与遗漏记录、多源候选整合及语义排序仍未实现；不得将本 PR 报为完整排序层。
+- **许可元数据：** 新增排序决策 DTO、旧序选择器和测试已登记到 Fork inventory 与 `.reuse/dep5`，仍为 `FORK_COMMERCIAL / OWNERSHIP_EVIDENCE_REQUIRED`，不改变商业许可授予范围。
+- **验收：** 因 PR 依赖 #498，当前保持 Draft。重定向至 master 后，必须对精确 HEAD 执行 Flutter 静态分析、检索黄金快照、全量回归和 Fork license 检查；SKIPPED 不计 PASS。Find N2 不构成该云端切片的前置条件。
+
 
