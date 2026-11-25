@@ -87,7 +87,7 @@ void main() {
     (label: 'inner side panel', size: const Size(775, 1000), sidePanel: true),
   ]) {
     testWidgets(
-      '\${scenario.label} keeps the composer and send button above the keyboard',
+      '${scenario.label} keeps the composer and send button above the keyboard',
       (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = scenario.size;
