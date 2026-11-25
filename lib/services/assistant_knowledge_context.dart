@@ -87,10 +87,10 @@ class AssistantKnowledgeContextBuildResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已完整提供、允许引用的证据 ID】\\n' +
+      : '【本轮已完整提供、允许引用的证据 ID】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
-              .join('\\n');
+              .join('\n');
 }
 
 
@@ -137,10 +137,10 @@ class AssistantKnowledgeContextResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已完整提供、允许引用的证据 ID】\\n' +
+      : '【本轮已完整提供、允许引用的证据 ID】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
-              .join('\\n');
+              .join('\n');
 
   /// Stable wire/UI value shared with tool execution status metadata.
   String get statusLabel => switch (status) {
