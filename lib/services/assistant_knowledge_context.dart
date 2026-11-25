@@ -192,7 +192,7 @@ class AssistantKnowledgeContextBuilder {
     if (auditText.trim().isEmpty) return '';
 
     final output = <String>[];
-    for (final rawLine in auditText.split('\\n')) {
+    for (final rawLine in auditText.split('\n')) {
       final line = rawLine.trimRight();
       final value = line.trim();
       if (value.isEmpty) {
@@ -269,7 +269,7 @@ class AssistantKnowledgeContextBuilder {
       output.add(line);
     }
 
-    return output.join('\\n').trim();
+    return output.join('\n').trim();
   }
 
   /// Cheap deterministic signal for intent routing. This only checks registered

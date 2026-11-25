@@ -1347,7 +1347,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final knowledgeContext = modelKnowledgeContext.isEmpty
             ? '本轮没有提供可用的本地知识资料；不得编造原文、出处或诊断依据。'
             : '以下为本轮可用的本地知识资料摘录。只解释资料明确覆盖的内容；'
-                '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\\n'
+                '不得声称来源已经核验或模型逐条引用；未覆盖信息应说明未知。\n'
                 '$modelKnowledgeContext';
         final reply = await sendWithContext(
           '当前角色：问诊助手。\n${AssistantMode.consultation.promptHint}\n'
@@ -1370,8 +1370,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           includeMedicalCases:
               AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
-        final context = '当前角色：学习助手。\\n${AssistantMode.learning.promptHint}\\n'
-            '${knowledge.modelContextText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\\n${knowledge.modelContextText}'}';
+        final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
+            '${knowledge.modelContextText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n${knowledge.modelContextText}'}';
         final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
           text: reply,
@@ -1400,7 +1400,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         final modelKnowledgeContext = knowledge?.modelContextText ?? '';
         final knowledgeContext = modelKnowledgeContext.isEmpty
             ? ''
-            : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\\n'
+            : '以下为本轮可用的本地知识资料摘录；只解释资料明确覆盖的部分，未覆盖信息应说明未知。\n'
                 '$modelKnowledgeContext';
         final context = '当前角色：工具助手。\n${AssistantMode.tools.promptHint}\n'
             '当前 App 已注册工具：$availableTools。'
@@ -1524,7 +1524,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
       return true;
     } catch (error, stack) {
-      debugPrint('[AssistantHistory] 保存对话失败：$error\\n$stack');
+      debugPrint('[AssistantHistory] 保存对话失败：$error\n$stack');
       if (mounted) {
         setState(() {
           _error = '本轮回复已生成，但保存到历史记录失败。请先复制重要内容，再重试或继续。';
@@ -2189,7 +2189,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         );
       } catch (error, stack) {
         messagesPersisted = false;
-        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\\n$stack');
+        debugPrint('[TcmInterviewTask] 问诊消息批量保存失败：$error\n$stack');
       }
     }
 
