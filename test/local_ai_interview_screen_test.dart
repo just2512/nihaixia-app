@@ -1322,7 +1322,7 @@ void main() {
   
 testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并保留 Native 会话通道',
     (tester) async {
-  const question = '灵枢 经脉原文';
+  const question = '学习灵枢经脉原文';
   final service = _LearningProtocolTextSendService();
   await tester.pumpWidget(
     MaterialApp(
@@ -1408,7 +1408,7 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
   );
   await tester.pumpAndSettle();
   expect(find.textContaining('当前角色：学习助手'), findsOneWidget);
-  await tester.enterText(find.byType(TextField), '灵枢 经脉原文');
+  await tester.enterText(find.byType(TextField), '学习灵枢经脉原文');
   await tester.pump();
   expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
   expect(tester.widget<IconButton>(
