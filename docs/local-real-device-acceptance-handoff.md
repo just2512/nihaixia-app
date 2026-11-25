@@ -286,16 +286,20 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 集成证据（不是实机通过证明）
 
-- **最新构建基线：** `master @ bb301852e664328ccdd0900be1383fa76dec8fdb`；`pubspec.yaml` 当前为 `2.0.0+8048`，applicationId 为 `com.nihaisha.nihaisha_app`。本地执行前仍必须重新读取最新 master HEAD、APK 元数据和设备当前安装版本。
-- v1.3 冻结规范 PR #472、Native Gate PR #478、业务收费门禁清理 PR #482 均已合并。后续 PR #485（云端收尾台账/交接刷新）、#486（Release Key Ring 文档 v1.3 引用修正）、#489（旧 Feature ID UI 标签统一）也均已合并；最新主线包含以上变更。
-- **PR #485 master 回归：** run `45517116757` 的 Flutter regression job `138879302515` SUCCESS、Android arm64/JVM job `138882598119` SUCCESS；Fork license run `45517116752` job `138879302308` SUCCESS；Analyze job `138879302365` SUCCESS。
-- **PR #486 master 回归：** run `45519577445` 的 Flutter regression job `138887738888` SUCCESS、Android arm64/JVM job `138890345466` SUCCESS；Analyze run `45519577452` job `138887738286` SUCCESS；Fork license run `45519577456` job `138887737389` SUCCESS。
-- **PR #489 master 回归：** run `45522935965` 的 Flutter regression job `138899138432` SUCCESS、Android arm64/JVM job `138902708306` SUCCESS；Analyze run `45522936035` job `138899065627` SUCCESS；Fork license run `45522936830` job `138899068753` SUCCESS。
-- 上述各轮的 Branch validation job 均为 `SKIPPED`，不计 PASS。CI Debug APK/arm64 artifact 只证明 CI 构建/ABI/Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。
-- Release 源码合同已复核：缺失/格式错误的 Key Ring 在 Dart 侧形成空信任环、不能验证发行者；Gradle Release 门禁要求非空且结构合法的 `YANJI_LICENSE_KEY_RING`，拒绝测试 issuer ID/公钥，并独立要求本地原签名材料。Release workflow 使用 CI-only 临时签名仅供产物扫描。
-- **正式发行仍 BLOCKED：** 当前仓库没有经来源核验的正式发行者公钥；GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值、生产私钥离线保管/恢复演练、真实客户签发和密钥轮换均未取得可核验证据。不得使用测试公钥或临时公钥替代。
-- Fork inventory 当前统计 changed 975 / added 811 / modified 164 / deleted 15；自动 license boundary 只证明 SPDX/DEP5/inventory 结构和分类检查通过，不证明 Fork 自有代码权属。所有 `OWNERSHIP_EVIDENCE_REQUIRED` 仍需真实权利人材料补证。
-- **设备状态仍为 `LOCAL ONLY / MISSING / UNKNOWN`。** Keystore / StrongBox / TEE、AtomicFile 实际故障恢复、原签名覆盖升级和数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除均须在 OPPO Find N2 本地执行并附证据。设备验收放在云端工作之后，不作为云端代码/CI 的阻塞项。
+- **当前构建基线：** `master @ 82b2474202a33d802722e79560f6ae17670aab9a`；`pubspec.yaml = 2.0.0+8048`；Android `applicationId = com.nihaisha.nihaisha_app`。本地执行前仍须重新读取最新 master HEAD、APK 元数据、签名证书及设备当前安装版本。
+- **v1.3 授权链路：** PR #472（冻结单一授权架构）、#478（Native LiteRT `ai_access` 总门禁）、#482（撤销 Dispatcher/Gateway 的独立收费判断）、#491（云端收尾台账及本地交接）均已合并。协议修订 1 的历史 AI 权益兼容映射为同一 `aiAccess`；协议修订 2 只使用 `ai_access`。App 永久 Token 不等于 Fork 源代码商业许可。
+- **PR #491 精确 HEAD：** `feb63195967a5fcca62ffc9c9945cb6b1ad2d28e`。Fork license job `138912318822` SUCCESS；Flutter regression job `138912319129` SUCCESS；Android arm64/JVM job `138915366727` SUCCESS；Branch validation job `138912320094` SKIPPED，不计 PASS。PR #491 只更新执行台账和本交接单。
+- **PR #493：** 已合并（`fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），把瞬时 RAG 正文与 Native 恢复 transcript 分离。Fork job `138939441644`、Flutter job `138939441699`、Android arm64/JVM job `138942270425` 均 SUCCESS；Branch validation `138939443409` SKIPPED。该改动不证明跨进程持久化或完整 session 隔离。
+- **PR #495：** 已合并（`9c7a4c6761a467bb13b0b5381992df2e96cfc3ba`），只冻结 Core-0 五层 DTO 字段合同和源码/测试映射，不代表 DTO 已接入运行时。PR Fork job `138948246934`、Flutter job `138948369724` SUCCESS；Branch validation `138948371713` SKIPPED。
+- **PR #496：** 已合并（`b62bc101865612c02503bedce8d05cf11390d56d`），Native 恢复 transcript 限制为最多 12 个完整成功轮次、user/model 文本合计最多 10,000 UTF-16 code units，仅淘汰最旧完整轮次。精确 PR HEAD `a403a71a4fcddb65d3929f306b4c2c927b9cabed` 的 Fork job `138946470635`、Flutter job `138946470476`、Android arm64/JVM job `138949605374` 均 SUCCESS；Branch validation `138946472646` SKIPPED。该字符上限不等于 LiteRT-LM token 预算，不限制活动 Conversation KV Cache，也不证明完整 session 隔离。
+- **PR #498：** 已合并（`82b2474202a33d802722e79560f6ae17670aab9a`），新增候选证据批次与经典候选收集边界；保留既有查询顺序、去重与上下文前四条投影，不等于证据排序层已完成。精确 PR HEAD `f004427f24a686e80cf9a85eefb8b0ca6c734c94` 的 Fork job `138955502743`、Flutter job `138955626207`、Android arm64/JVM job `138958765875` 均 SUCCESS；Branch validation `138955627515` SKIPPED。
+- **当前 master 合并后回归快照：** Fork license run `45541268760` / job `138960091324` SUCCESS；Flutter regression run `45541268723` / job `138960091330` 在本节更新时仍为 IN_PROGRESS；Flutter Quality Gate run `45541268958` / job `138960091985` 仍为 IN_PROGRESS；Branch validation job `138960093668` SKIPPED。Android arm64/JVM 依赖 Flutter 回归完成后启动，故本快照不将其记为 PASS。执行本地构建前应重新读取这些 workflow 的最终结论。
+- CI Android Debug APK 只证明 CI 构建、ABI、Manifest 和 JVM 自动化；它不是产品正式签名 Release APK，不能用于旧版覆盖升级，也不能证明 Find N2 的 Keystore、StrongBox/TEE、GPU/CPU LiteRT、多媒体或进程恢复行为。
+- Release 源码 fail-closed 规则已有代码/CI 覆盖：缺失或格式错误的 Key Ring 不得验证发行者；Release Gradle 门禁要求合法非空 Key Ring，并独立要求本地原签名材料。**正式发行仍 BLOCKED：** 正式发行者公钥来源、GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值、生产私钥离线托管/恢复演练、真实客户签发与密钥轮换均缺少可核验证据。
+- 当前 Fork inventory：changed 980 / added 816 / modified 164 / deleted 15；分类为 FORK_COMMERCIAL 457、APACHE_2_0_AND_FORK_COMMERCIAL 158、KNOWLEDGE_BASE_EXCLUDED 364、THIRD_PARTY_EXCLUDED 1。JSON 中 980 条路径唯一。自动 license boundary 只证明 inventory/DEP5/SPDX 结构一致，不证明 Fork 自有代码权属；`OWNERSHIP_EVIDENCE_REQUIRED` 仍须真实权利人材料补证。
+- `LICENSE-FORK-COMMERCIAL.md` 当前 blob SHA 与 PR #491 合并时完全相同；其源代码商业许可授予范围未因 `ai_access` Token 或本轮 AI 运行时改动而缩小。
+- **其他远程工作分支不属于当前构建基线：** #416 保持 OPEN / DRAFT / UNTOUCHED；#499（Core-1 session isolation）、#500（执行台账）、#501（显式证据选择）仍为独立 OPEN 分支，不在本轮交接 PR 中修改或合并。#500 负责执行台账更新，本交接单只维护本文件。
+- **设备状态仍为 `LOCAL ONLY / MISSING / UNKNOWN`。** Keystore / StrongBox / TEE、AtomicFile 故障恢复、原签名覆盖升级及数据保留、GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除均须在 OPPO Find N2 本地执行并附证据。云端源码/CI 收尾不以设备验收为前置条件。
 
 ## 7. 证据包、结果记录与回传
 
