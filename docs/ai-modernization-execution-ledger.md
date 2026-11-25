@@ -4362,7 +4362,7 @@ PR HEAD 门禁证据：
 - **正式发行者公钥与来源：** 仓库尚无已核验的生产发行者公钥及来源证明。不能使用协议测试向量或临时生成公钥填充生产 Key Ring。
 - **Actions Secret：** 当前工具权限不能读取 GitHub Actions Secret 的实际值；因此 YANJI_LICENSE_KEY_RING 是否已配置正确，不能据此声明 PASS。正式 Release 仍要求 Secret 与本机编译期 Key Ring 一致，并执行实际产物扫描。
 - **生产私钥：** 离线保管、独立备份与恢复演练、签发审计和密钥轮换尚无可核验证据；私钥不得进入仓库、CI、Dart define、Gradle 属性或 APK/AAB。
-- **源码权属：** Fork license boundary 成功仅验证文件清单和许可证标记结构，不证明作者版权或再许可权。inventory 中 OWNERSHIP_EVIDENCE_REQUIRED 项仍须权利人材料补证。
+- **源码权属：** 当前 Fork inventory 共 975 条文件记录，其中 610 条标记为 OWNERSHIP_EVIDENCE_REQUIRED、365 条标记为 SOURCE_LICENSE_REVIEW。Fork license boundary 成功仅验证清单与许可证标记结构，不证明作者版权或再许可权；610 条权属待证记录及 365 条来源许可复核记录仍须逐项以真实权利人/许可材料闭环，不能以自动检查替代。
 - **正式 Android 签名：** 原签名身份及本机密钥不由 CI Debug APK 代替。CI 已证明缺少本地签名材料时 Release 构建被阻断；实际正式签名包必须由本机原签名材料构建和验签。
 - **PR #416：** 保持 OPEN / DRAFT / UNMERGED，不合并，不把其历史协议底座 PR 当作当前实现的重复集成入口。
 
