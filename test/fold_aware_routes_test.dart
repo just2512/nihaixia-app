@@ -300,6 +300,55 @@ void main() {
     }
   });
 
+
+  testWidgets('fold-aware dialog receives live keyboard viewInsets', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(402, 790);
+    tester.view.viewInsets = const FakeViewPadding();
+    addTearDown(tester.view.resetViewInsets);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (sourceContext) => Center(
+              child: TextButton(
+                onPressed: () => showFoldAwareDialog<void>(
+                  context: sourceContext,
+                  builder: (_) => Builder(
+                    builder: (dialogContext) => SizedBox(
+                      width: 240,
+                      height: 120,
+                      child: Center(
+                        child: Text(
+                          'IME:${MediaQuery.viewInsetsOf(dialogContext).bottom}',
+                          key: const ValueKey('fold-dialog-ime-inset'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                child: const Text('打开键盘适配弹窗'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开键盘适配弹窗'));
+    await tester.pumpAndSettle();
+    expect(find.text('IME:0.0'), findsOneWidget);
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('IME:280.0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('unknown fold posture does not split a full-width dialog', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(800, 900);
