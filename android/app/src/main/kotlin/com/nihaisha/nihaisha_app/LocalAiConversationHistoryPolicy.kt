@@ -41,6 +41,73 @@ internal data class LocalAiConversationHistorySnapshot(
  * cut mid-sentence or mid-surrogate pair. Omission counters are metadata only
  * and do not retain the removed message contents.
  */
+/**
+ * Deterministic guard for obvious empty or degenerate model output.
+ *
+ * This intentionally detects only high-confidence repetition loops. It is not a
+ * semantic correctness, factuality, or clinical-safety validator.
+ */
+internal object LocalAiGeneratedReplyQualityPolicy {
+    fun rejectionReasonCode(text: String): String? {
+        if (text.isBlank()) return "EMPTY_REPLY"
+
+        val normalizedLines = text.lineSequence()
+            .map(::normalizeForComparison)
+            .filter { it.length in 2..64 && it.any(Char::isLetter) }
+            .toList()
+        if (normalizedLines.groupingBy { it }.eachCount().values.maxOrNull()?.let { it >= 4 } == true) {
+            return "REPEATED_OUTPUT_LOOP"
+        }
+
+        val compact = normalizeForComparison(text)
+        if (containsConsecutiveRepeatedPhrase(compact)) {
+            return "REPEATED_OUTPUT_LOOP"
+        }
+        return null
+    }
+
+    private fun normalizeForComparison(value: String): String =
+        buildString(value.length) {
+            value.lowercase().forEach { character ->
+                if (character.isLetterOrDigit()) append(character)
+            }
+        }
+
+    private fun containsConsecutiveRepeatedPhrase(value: String): Boolean {
+        if (value.length < 8) return false
+        val maximumUnitLength = minOf(32, value.length / 4)
+        for (start in 0..(value.length - 8)) {
+            for (unitLength in 2..maximumUnitLength) {
+                if (start + unitLength * 4 > value.length) break
+                val hasLetter = (start until start + unitLength).any { value[it].isLetter() }
+                if (!hasLetter) continue
+
+                var repetitions = 1
+                var offset = start + unitLength
+                while (
+                    offset + unitLength <= value.length &&
+                    value.regionMatches(offset, value, start, unitLength)
+                ) {
+                    repetitions += 1
+                    if (repetitions >= 4) return true
+                    offset += unitLength
+                }
+            }
+        }
+        return false
+    }
+}
+
+internal class LocalAiGeneratedReplyQualityException(
+    val reasonCode: String
+) : IllegalStateException(
+    if (reasonCode == "EMPTY_REPLY") {
+        "模型未返回有效文本。"
+    } else {
+        "模型回复出现明显重复。"
+    }
+)
+
 internal class LocalAiConversationHistory(
     private val maxRetainedTurns: Int = LocalAiConversationHistoryPolicy.maxRetainedTurns,
     private val maxRetainedCharacters: Int = LocalAiConversationHistoryPolicy.maxRetainedCharacters
@@ -61,6 +128,10 @@ internal class LocalAiConversationHistory(
         }
         require(modelText.isNotBlank()) {
             "A blank model response is not a successful conversation turn"
+        }
+        val rejectionReason = LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode(modelText)
+        require(rejectionReason == null) {
+            "A model response rejected by the output quality gate cannot be persisted: $rejectionReason"
         }
 
         successfulTurnCount += 1L
