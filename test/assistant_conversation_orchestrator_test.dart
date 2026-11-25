@@ -160,12 +160,27 @@ void main() {
     });
 
     test('明确要求排盘的复合解释请求仍调用确定性工具', () {
+      for (final query in [
+        '请帮我排紫微斗数盘，并解释十四主星',
+        '紫微斗数排盘并解释十四主星',
+      ]) {
+        final decision = AssistantConversationOrchestrator.resolve(
+          query: query,
+          selectedMode: AssistantMode.automatic,
+        );
+        expect(decision.mode, AssistantMode.metaphysics, reason: query);
+        expect(decision.tool?.id, 'ziwei', reason: query);
+      }
+    });
+
+    test('排盘历史背景问题不得被误识别为实际排盘指令', () {
       final decision = AssistantConversationOrchestrator.resolve(
-        query: '请帮我排紫微斗数盘，并解释十四主星',
+        query: '紫微斗数排盘的历史背景',
         selectedMode: AssistantMode.automatic,
       );
       expect(decision.mode, AssistantMode.metaphysics);
-      expect(decision.tool?.id, 'ziwei');
+      expect(decision.tool, isNull);
+      expect(decision.needsClarification, isFalse);
     });
 
     test('五运六气的明确中医原理学习仍进入学习助手', () {
