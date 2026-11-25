@@ -4605,6 +4605,22 @@ PR HEAD 门禁证据：
 
 ---
 
+## 111. 2026-11-26 全部知识详情页 AI 解读入口迁移
+
+- **任务归属：** P0「AI 解读不是资料复述」+「当前条目自动上下文传递」，PR #542。键盘弹层布局继续由独立 P1 PR 处理。
+- **迁移范围审计：** 不以方剂页单点修复代表全项目完成。复核现有知识详情入口后，将明确提供“问 AI 解读当前条目”的 7 个入口统一迁移：方剂 formula、本草 herb、穴位 acupoint、针灸处方 acupuncture-prescriptions、医案 medical-cases、六经 meridian、内经条文 neijing-entries。
+- **调用行为：** 上述详情入口不再把 `build*KnowledgeEntry()` 生成的长自然语言/JSON/内部来源元数据通过 `initialPrompt` 填入 composer。改为调用 `buildKnowledgeEntryInterpretationIntent()` 获取简短用户可见意图，开启 `autoSendInitialMessage=true` 与 `resolveContextualKnowledgeEntry=true`；模型就绪、情境会话初始化完成后自动发送。原有 `initialPrompt` API 保留给其他兼容/自定义文本场景，不作为当前详情页解读入口。
+- **模块策略：** 按实际 resolver moduleId 区分分析重点：formula=组方结构/药物角色/配伍关系；herb=条目特性和功用之间联系；acupoint=经络归属/定位/操作之间联系；acupuncture-prescriptions=穴位安排及其说明关系；medical-cases=症状/诊断/病机/治法/方药与病例证据链关系，不泛化单一医案；meridian=六经条目的病机与概念关系；neijing-entries=经典关键词义、句间关系、上下文与理论逻辑。真实 moduleId 已纳入提示策略，不依赖别名恰好命中。
+- **完整上下文：** 每次学习轮次仍从当前 typed contextRef 按原锚点/版本解析完整条目；模型可见的是条目内容和分析边界，用户消息不含内部 ID/文件路径/JSON；App sourceId/backlink 只用于本地引用映射。条目缺失、过期或引用不一致时 fail-closed。后续追问沿用同一 contextRef，不把数据重新塞回 composer。
+- **新增/调整测试：** formula、herb、acupoint、acupuncture-prescriptions、medical-cases、meridian、neijing-entries 各自的 contextual-entry widget tests 检查 `initialPrompt == null`、短意图、自动提交标志和精确知识引用解析标志；新增 `test/acupuncture_contextual_entry_test.dart` 覆盖针灸处方真实入口。原先 adapter/prompt builder 测试继续覆盖 model-only payload、request-local evidence/citation 和禁止复述规则。
+- **许可证清单：** 新增针灸处方入口测试后，同步更新 `docs/fork-license-file-inventory.json`（1004 changed / 840 added / 164 modified / 15 deleted）与 `.reuse/dep5`，新测试按 Fork-authored 工程/测试文件登记为 `FORK_COMMERCIAL`，rights status 仍为 `OWNERSHIP_EVIDENCE_REQUIRED`。中间 license inventory mismatch 已修正；必须以最终 HEAD license job 结果为准。
+- **明确不迁移的交互：** 经典/古籍段落“选中文本后针对该段提出自定义问题”属于选择文本问答，不是详情页一键解读当前知识条目；保留其原自由提问流程，不强行套用当前条目 resolver。
+- **最终代码 HEAD：** `328fb52f6e1aa2d386be76a2b0b11aab3ecaa4ed`（本节写入前）。此后新增提交需以分支最新 HEAD 和 Actions 最新 run 为准。
+- **验收状态：IN_PROGRESS。** 之前 HEAD `881115...` 的 analyzer 报告暴露 `ai_context_prompt_builder.dart` 内重复的 `medical-cases` switch 分支（unreachable case）；已删除重复分支。之前 LICENSE 报告的新针灸测试缺失清单已补全。上述历史失败不删除；以最终 HEAD 的静态分析、七类入口定向测试、full Flutter regression、arm64/JVM 和 license job 为准。Find N2 上 E4B 实际分析质量、多轮追问、外屏/内屏实机键盘行为及 TRACE 尚未执行，均为 UNKNOWN。
+- **回滚：** 七个知识入口迁移与 P0 adapter/prompt 变更同属 PR #542，可独立整体 revert；P1 键盘布局只通过后续单独 PR 合入。
+
+---
+
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
 - **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。
