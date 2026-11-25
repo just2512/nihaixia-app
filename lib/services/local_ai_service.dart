@@ -66,12 +66,14 @@ class LocalAiService {
 
   Future<String> sendMessage(
     String text, {
+    required int conversationId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) =>
       _sendTextMessage(
         text,
+        conversationId: conversationId,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
         redFlagContextTruncated: redFlagContextTruncated,
@@ -79,6 +81,7 @@ class LocalAiService {
 
   Future<String> sendMessageWithTrace(
     String text, {
+    required int conversationId,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -86,6 +89,7 @@ class LocalAiService {
   }) =>
       _sendTextMessage(
         text,
+        conversationId: conversationId,
         traceId: traceId,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
@@ -94,6 +98,7 @@ class LocalAiService {
 
   Future<String> _sendTextMessage(
     String text, {
+    required int conversationId,
     String? traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -103,6 +108,7 @@ class LocalAiService {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'sendMessage',
       {
+        'conversation_id': _requireConversationId(conversationId),
         'text': text,
         if (requireMedicalSafety) 'require_red_flag': true,
         if (requireMedicalSafety &&
@@ -129,6 +135,7 @@ class LocalAiService {
   /// The native bridge records only [text] for symptom extraction.
   Future<String> sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -136,6 +143,7 @@ class LocalAiService {
   }) =>
       _sendMessageWithContext(
         text,
+        conversationId: conversationId,
         context: context,
         requireMedicalSafety: requireMedicalSafety,
         redFlagContext: redFlagContext,
@@ -144,6 +152,7 @@ class LocalAiService {
 
   Future<String> sendMessageWithContextAndTrace(
     String text, {
+    required int conversationId,
     required String context,
     required String traceId,
     bool requireMedicalSafety = false,
@@ -152,6 +161,7 @@ class LocalAiService {
   }) =>
       _sendMessageWithContext(
         text,
+        conversationId: conversationId,
         context: context,
         traceId: traceId,
         requireMedicalSafety: requireMedicalSafety,
@@ -161,6 +171,7 @@ class LocalAiService {
 
   Future<String> _sendMessageWithContext(
     String text, {
+    required int conversationId,
     required String context,
     String? traceId,
     bool requireMedicalSafety = false,
@@ -175,6 +186,7 @@ class LocalAiService {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'sendMessage',
       {
+        'conversation_id': _requireConversationId(conversationId),
         'text': normalized,
         'context': context.trim(),
         if (requireMedicalSafety) 'require_red_flag': true,
@@ -197,6 +209,7 @@ class LocalAiService {
 
   Future<String> sendImage(
     String path, {
+    required int conversationId,
     String prompt = '',
     bool requireMedicalSafety = false,
   }) async {
@@ -204,6 +217,7 @@ class LocalAiService {
       'sendImage',
       path,
       '照片',
+      conversationId: conversationId,
       prompt: prompt,
       requireMedicalSafety: requireMedicalSafety,
     );
@@ -211,6 +225,7 @@ class LocalAiService {
 
   Future<String> sendImageWithTrace(
     String path, {
+    required int conversationId,
     String prompt = '',
     required String traceId,
     bool requireMedicalSafety = false,
@@ -219,6 +234,7 @@ class LocalAiService {
       'sendImage',
       path,
       '照片',
+      conversationId: conversationId,
       prompt: prompt,
       traceId: traceId,
       requireMedicalSafety: requireMedicalSafety,
@@ -227,6 +243,7 @@ class LocalAiService {
 
   Future<String> sendAudio(
     String path, {
+    required int conversationId,
     String prompt = '',
     bool requireMedicalSafety = false,
   }) async {
@@ -234,6 +251,7 @@ class LocalAiService {
       'sendAudio',
       path,
       '录音',
+      conversationId: conversationId,
       prompt: prompt,
       requireMedicalSafety: requireMedicalSafety,
     );
@@ -241,6 +259,7 @@ class LocalAiService {
 
   Future<String> sendAudioWithTrace(
     String path, {
+    required int conversationId,
     String prompt = '',
     required String traceId,
     bool requireMedicalSafety = false,
@@ -249,6 +268,7 @@ class LocalAiService {
       'sendAudio',
       path,
       '录音',
+      conversationId: conversationId,
       prompt: prompt,
       traceId: traceId,
       requireMedicalSafety: requireMedicalSafety,
@@ -259,6 +279,7 @@ class LocalAiService {
     String method,
     String path,
     String label, {
+    required int conversationId,
     String prompt = '',
     String? traceId,
     bool requireMedicalSafety = false,
@@ -267,6 +288,7 @@ class LocalAiService {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       method,
       {
+        'conversation_id': _requireConversationId(conversationId),
         'path': path,
         'prompt': prompt,
         if (requireMedicalSafety) 'require_red_flag': true,
@@ -282,6 +304,17 @@ class LocalAiService {
       );
     }
     return reply;
+  }
+
+  int _requireConversationId(int conversationId) {
+    if (conversationId <= 0) {
+      throw ArgumentError.value(
+        conversationId,
+        'conversationId',
+        'Native 会话必须绑定正数的持久化会话 ID',
+      );
+    }
+    return conversationId;
   }
 
   String? _normalizeTraceId(String? traceId) {
@@ -425,7 +458,9 @@ class LocalAiService {
     );
   }
 
-  Future<LocalAiSymptomDraft> extractSymptoms() => _extractSymptoms();
+  Future<LocalAiSymptomDraft> extractSymptoms({
+    required int conversationId,
+  }) => _extractSymptoms(conversationId: conversationId);
 
   Future<LocalAiInterviewAnswer> understandTcmInterviewAnswer({
     required String questionId,
@@ -480,34 +515,44 @@ class LocalAiService {
     );
   }
   Future<LocalAiSymptomDraft> extractSymptomsWithTrace({
+    required int conversationId,
     required String traceId,
   }) =>
-      _extractSymptoms(traceId: traceId);
+      _extractSymptoms(conversationId: conversationId, traceId: traceId);
 
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchema({
+    required int conversationId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
   }) =>
-      _extractSymptoms(questionSchema: questionSchema, sourceText: sourceText);
+      _extractSymptoms(
+        conversationId: conversationId,
+        questionSchema: questionSchema,
+        sourceText: sourceText,
+      );
 
   Future<LocalAiSymptomDraft> extractSymptomsWithQuestionSchemaAndTrace({
+    required int conversationId,
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
   }) =>
       _extractSymptoms(
+        conversationId: conversationId,
         traceId: traceId,
         questionSchema: questionSchema,
         sourceText: sourceText,
       );
 
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitTextWithTrace({
+    required int conversationId,
     required String traceId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
     bool sourceTruncated = false,
   }) =>
       _extractSymptoms(
+        conversationId: conversationId,
         traceId: traceId,
         questionSchema: questionSchema,
         sourceText: sourceText,
@@ -516,11 +561,13 @@ class LocalAiService {
       );
 
   Future<LocalAiSymptomDraft> extractSymptomsFromExplicitText({
+    required int conversationId,
     required String sourceText,
     required List<Map<String, Object?>> questionSchema,
     bool sourceTruncated = false,
   }) =>
       _extractSymptoms(
+        conversationId: conversationId,
         questionSchema: questionSchema,
         sourceText: sourceText,
         sendSourceTextToNative: true,
@@ -529,6 +576,7 @@ class LocalAiService {
 
 
   Future<LocalAiSymptomDraft> _extractSymptoms({
+    required int conversationId,
     String? traceId,
     List<Map<String, Object?>>? questionSchema,
     String sourceText = '',
@@ -539,6 +587,7 @@ class LocalAiService {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'extractSymptoms',
       {
+        'conversation_id': _requireConversationId(conversationId),
         if (normalizedTraceId != null) 'trace_id': normalizedTraceId,
         if (questionSchema != null) 'question_schema': jsonEncode(questionSchema),
         if (sendSourceTextToNative) 'source_text': sourceText.trim(),
@@ -604,6 +653,7 @@ class LocalAiService {
   }
 
   Future<void> restoreConversation({
+    required int conversationId,
     required String transcript,
     required List<String> userMessages,
     bool requireMedicalSafety = false,
@@ -617,6 +667,7 @@ class LocalAiService {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'restoreConversation',
       {
+        'conversation_id': _requireConversationId(conversationId),
         'transcript': normalized,
         'userMessages': userMessages,
         if (requireMedicalSafety) 'require_red_flag': true,
@@ -637,9 +688,12 @@ class LocalAiService {
     }
   }
 
-  Future<LocalAiModelStatus> resetConversation() async {
+  Future<LocalAiModelStatus> resetConversation({
+    required int conversationId,
+  }) async {
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'resetConversation',
+      {'conversation_id': _requireConversationId(conversationId)},
     );
     if (data == null) {
       throw PlatformException(
