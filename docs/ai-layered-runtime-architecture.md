@@ -184,6 +184,124 @@ E4B 不可以：
 - 排盘、历法、问诊规则、剂量换算及其他既有确定性计算继续由 App 既有函数执行，不能迁移给模型。
 - 业务执行与模型授权分开治理；任何 LiteRT/LiteRT-LM 模型加载/推理均遵守项目既有唯一 ai_access 和 Native AiModelAccessGate，不新增第二套门禁或收费权益。
 
+### 2.6 核心 DTO 契约（v1，字段级冻结）
+
+以下是五层之间的逻辑 DTO，不要求立即采用 JSON 序列化、增加数据库表或建立独立服务。第一批实现优先使用不可变 Dart/Kotlin 值对象；只有跨进程、跨语言或持久化确有需要时才定义 wire format。字段缺失、未命中和执行未知必须用状态表达，不能用空字符串统一吞并。
+
+**通用约束**
+
+- ID 均为不透明、非空标识；接收方不得通过解析 ID 推断来源类型、授权或真实性。
+- 来源字段只能原样传递数据层提供的值。任何层均不得把 `UNKNOWN`、`UNVERIFIED` 或 `MISSING` 自动升级为 `VERIFIED`。
+- 集合和快照创建后不可变；层间不得共享任意可修改的全局状态。
+- v1 不定义相关性分数或事实置信度字段。后续若为排序实验引入数值，只能作为诊断信号，不能表达医学正确性、来源真实性或业务成功。
+- 所有预算必须显式记录单位。字符数不能标成 token 数；无法取得 token 数时写 `UNKNOWN`。
+- 原文正文不进入会话记忆；记忆保存稳定引用 ID，引用正文按需回源。
+
+**A. 知识召回契约**
+
+`CandidateEvidence`：
+
+| 字段 | 类型/含义 | 约束 |
+|---|---|---|
+| `evidenceId` | 候选证据实例 ID | 同一来源在不同查询/片段下可有不同实例 ID |
+| `sourceId` | 本地来源稳定 ID | 必须能交给来源 Resolver 回查；不得由模型编造 |
+| `sourceVersion` | 来源版本/内容版本 | 无版本信息时为 UNKNOWN，不用猜测值填充 |
+| `origin` | SYSTEM / USER / APP_DATA / UNKNOWN | 由数据源提供；USER 内容始终是不可信输入 |
+| `materialKind` | 资料类别 | 例如 classic_text、lecture、formula、medical_case；保留真实来源值 |
+| `verificationStatus` | 来源核验状态 | 原样传递；不等于召回质量 |
+| `assetId`、`chunkId` | 资产/片段稳定标识 | 可为空；不得把标题作为唯一身份 |
+| `title`、`chapterPath`、`locator` | 可读标题和定位 | 缺失项显式 MISSING |
+| `excerpt` | 候选原文片段或摘要 | 必须能由 sourceId + locator 回查；标明是否截断 |
+| `queryId` | 命中的查询 ID | 原始 query 与派生 query 分别有 ID |
+| `retrievalMethod`、`matchBasis` | 检索路径和命中依据 | 记录 deterministic/keyword/vector 等实际方式，不推断 |
+| `completeness` | COMPLETE / TRUNCATED / UNKNOWN | 描述候选内容完整度，不描述来源可信度 |
+
+`CandidateEvidenceBatch`：
+
+- `requestId`、`originalQuery`、`derivedQueries[]`（每项含 queryId、query、reason）；
+- `status`：RETRIEVED / MISSING / FAILED / UNKNOWN / PARTIAL；
+- `candidates[]`：CandidateEvidence；
+- `diagnostics[]`：数据源失败、跳过原因和截断记录。
+
+召回层只发现候选；不能自行选出最终上下文，更不能把候选数或相似度当成成功。
+
+**B. 证据排序契约**
+
+`EvidenceRankingDecision`：
+
+- `evidenceId`；
+- `disposition`：KEEP / DROP；
+- `reasonCode` 与可读 `reason`；
+- KEEP 项必须有 `orderIndex`；DROP 项不得伪造排名。
+
+`RankedEvidenceSet`：
+
+- `requestId`、`strategyId`、`strategyVersion`；
+- `decisions[]`：本轮收到的每个候选必须有 KEEP 或 DROP 记录；
+- `orderedEvidenceIds[]`：与 KEEP 决策一一对应、顺序无歧义；
+- `budget`：`unit`（CHARACTERS / TOKENS）、`limit`、`used`、`omittedEvidenceIds[]`、`truncatedEvidenceIds[]`；
+- `status`：RANKED / NO_USABLE_EVIDENCE / BUDGET_TRUNCATED / FAILED。
+
+排序层不负责召回，不改变来源核验状态，不通过静默合并消除不同来源/版本的冲突。v1 不要求打分字段。
+
+**C. 会话记忆契约**
+
+`SessionStateSnapshot`：
+
+- `sessionId`、`revision`、`status`（RESTORED / PARTIAL / SESSION_MISMATCH / UNKNOWN）；
+- `facts[]`：有限的结构化事实；
+- `evidenceReferences[]`：sourceId、sourceVersion、evidenceId/chunkId 等可回查 ID；
+- `activeTaskId`（可选）。
+
+每个 `SessionStateFact` 必须包含 `factId`、`key`、`value`、`provenance` 和必要的 `sourceIds[]`。provenance 固定区分 USER_ORIGINAL、USER_CONFIRMED、MODEL_INFERRED、APP_RESULT、SOURCE_REFERENCE。MODEL_INFERRED 不得被提升为用户确认事实；APP_RESULT 必须能回查实际业务结果。任何 fact 的会话归属不明时不得装入快照。
+
+Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者只承载有界的干净对话轮次；后者承载可压缩、可校验的结构化任务状态。RAG 正文、完整 modelInput 和无界助手长回复均不属于 Native transcript。
+
+**D. 语言推理契约**
+
+`ReasoningRequest`：
+
+- `requestId`、`sessionId`、`userText`（用户原话，不用改写后的提示替代）；
+- `mode`、`sessionState`（有界快照）；
+- `rankedEvidence`（可选；只能包含已排序且可回查的证据）；
+- `executionResults[]`（可选；来自 App 实际执行结果）；
+- `responseSchemaVersion`。
+
+`ReasoningResponse`：
+
+- `requestId`；
+- `responseKind`：ANSWER / CLARIFICATION / ACTION_PROPOSAL / REFUSAL / INSUFFICIENT_EVIDENCE；
+- `status`：COMPLETED / EMPTY / PARSE_FAILED / INSUFFICIENT_EVIDENCE / UNKNOWN；
+- `segments[]`（可读文本片段；引用需以 evidence ID 单独标注）；
+- `referencedEvidenceIds[]`、`unknowns[]`、`conflicts[]`、`omittedEvidenceIds[]`；
+- `actionProposal`（仅 responseKind 为 ACTION_PROPOSAL 时可提供）。
+
+模型生成的 evidence ID 和 action proposal 均为不可信输入，必须由 App 校验。解析失败、空回复和证据不足不能包装成 COMPLETED。
+
+**E. 业务执行契约**
+
+`BusinessActionProposal`：
+
+- `proposalId`、`capabilityId`、`arguments`；
+- v1 arguments 沿用现有工具计划的 key/value 字符串载荷，以便兼容当前执行器；它不是“已校验参数”，各能力必须用自己的确定性 schema 校验类型、单位、范围、必填项和用户确认。
+- 不含模型可控制的 `authorized`、`userConfirmed`、`executed` 或 `success` 字段。提案本身永远不执行操作。
+
+`ExecutionResult`：
+
+- `invocationId`、`capabilityId`；
+- `status`：NOT_STARTED / SUCCEEDED / FAILED / UNKNOWN；
+- `actualArguments`：执行器实际采用并解析的参数；
+- `resultValues`、`sourceIds[]`；
+- `failureCode` / 安全错误说明（失败时）。
+
+只有真实业务函数已执行、返回类型/来源/参数经过 App 校验后，才允许标 SUCCEEDED。执行调用后响应丢失且无法确认副作用时必须标 UNKNOWN；不得重放。
+
+**兼容策略**
+
+- 现有 `AssistantKnowledgeContextResult`、`ToolExecutionPlan`、`AssistantToolResult` 是 v1 的既有实现/适配源，不要求立即废弃或改名。
+- 不创建第二套会话数据库，不迁移业务算法，不新增 ai_access 或 Native `AiModelAccessGate`。
+- 后续代码按“一个边界、一个可验证切片”逐步适配；未被调用路径消费的 DTO 只算契约资产，不算运行时能力已完成。
+
 ## 3. 五层之间的统一数据流
 
 用户输入
@@ -259,6 +377,36 @@ E4B 不可以：
 **Core-1 当前最小修复目标：** 将 Native model history 的 userText 从完整 modelInput 改为干净用户原话；结构化任务状态和 source IDs 单独传递；RAG 只作为本轮 ephemeral context 注入当前推理。保持当前 GPU/CPU fallback、Native 单线程队列、执行状态 UNKNOWN 不自动重放和成功轮次提交语义。修复前后必须用 Kotlin/Flutter 测试证明跨轮恢复不会丢失必要任务状态，也不会重放 RAG 正文。
 
 代码状态必须通过当前 master 的 CODE/TEST/CI/TRACE 审计分别填写 IMPLEMENTED / PARTIAL / MISSING / UNKNOWN。不能凭本设计文件给任何运行时能力标 IMPLEMENTED。
+
+### 5.2 五层当前调用映射、测试与未闭环项（master 基线核验）
+
+本节映射基线为 master `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`（已包含 PR #493）。文件/函数定位优先于固定行号；后续修改必须按当时 master 重新核对。已合并代码、未合并 PR 和尚无实现的目标接口分开记录。
+
+| 层 | 当前生产代码/真实调用路径 | 已有测试证据 | 仍缺少的边界 |
+|---|---|---|---|
+| 知识召回 | `AssistantKnowledgeContextBuilder.shouldRetrieveForQuery`、`deriveClassicQueries`、`buildAsync`（`lib/services/assistant_knowledge_context.dart`）；`ClassicSearchService.ensureLoaded/search`（`lib/services/classic_search_service.dart`）。`buildAsync` 按派生 query 顺序搜索、去重并在 4 条 classic hit 处停止，随后读取古籍/医案等数据。 | `test/assistant_knowledge_context_test.dart`；`test/classic_search_test.dart`；`test/ai_retrieval_golden_snapshot_test.dart`。黄金测试固定原始/派生 query、每条查询前 40 个命中摘要、来源回链、资产 SHA 与上下文元数据。 | `ClassicHit` 是现有检索命中，不是完整 CandidateEvidence；`buildAsync` 尚未输出独立 CandidateEvidenceBatch。检索候选和最终上下文装配仍在同一 Builder。 |
+| 证据排序 | `ClassicSearchService.search` 先收集 titleHits、再收集 bodyHits；`AssistantKnowledgeContextBuilder.buildAsync` 按派生 query 的出现顺序消费命中，按 source/asset-or-book/chapter/title 去重，最多选 4 条。 | `test/ai_retrieval_golden_snapshot_test.dart` 固定当前命中顺序及上下文；`test/assistant_knowledge_context_test.dart` 覆盖一部分实体扩展行为。 | 现状是隐式排序/截选，不是独立 EvidenceRankingDecision/RankedEvidenceSet；没有对每个候选逐项 KEEP/DROP 原因、预算遗漏 ID 和独立排序策略版本的断言。不得先调整现有顺序。 |
+| 会话记忆 | `MainActivity.sendLocalMessage` 使用 `LocalAiMessageInputPolicy.prepare(text, context)`；本轮 modelInput 原样发送给 `Conversation.sendMessage`，但 `historyUserText` 仅保存用户原话。成功轮次进入 `conversationHistoryTurns`，`createConversationWithHistory` 使用 `LocalAiConversationHistoryPolicy.initialMessages` 重建 Native Conversation。该列表仍是 Activity/进程内存状态。 | `android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiConversationHistoryPolicyTest.kt` 覆盖轮次顺序、snapshot、空消息拒绝和 RAG 不进入恢复 transcript；PR #493 已合并（merge commit `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`），对应 Fork license、Flutter regression、Android arm64/JVM job 均 SUCCESS。 | #493 只修复文本消息的 RAG 历史污染；不解决历史轮数/字符/token 预算。Native 历史仍无上限裁剪策略；未发现 SessionStateSnapshot、sessionId 硬隔离和证据引用 ID 独立提交实现。跨进程持久化未由该调用链证实，保持 UNKNOWN。图片/音频附件标记仍走原有独立路径。 |
+| 语言推理 | Native 路径位于 `MainActivity.sendLocalMessage` / `sendWithFirstTurnGpuFallback`：`Conversation.sendMessage(modelInput)` 返回自由文本，再由 `stripSimpleMarkdown` 清理；Dart 侧按当前模式/上下文组织输入。 | `test/assistant_conversation_orchestrator_test.dart`、`test/assistant_history_resume_test.dart` 覆盖相关编排/恢复行为；尚无五层 ReasoningRequest/ReasoningResponse 独立 schema 回归。 | 当前 Native 主对话路径尚无统一 ReasoningRequest/ReasoningResponse schema；引用 ID、缺证据、冲突和 ACTION_PROPOSAL 尚未成为统一模型输出协议。不能把 Prompt 文本或结构化 JSON 样例当作代码级 schema 校验。 |
+| 业务执行 | `ToolExecutionPlan/ToolExecutionStep`（`lib/models/tool_execution_plan.dart`）承载 planId/origin/toolId/capabilityId/string arguments；`HeadlessToolDispatcher.executePlan`（`lib/services/headless_tool_dispatcher.dart`）全计划预校验后按序调用登记 executor；`AssistantToolResult`（`lib/models/assistant_tool_result.dart`）保存状态、实际参数、值和 sourceIds。 | `test/headless_tool_dispatcher_test.dart`、`test/assistant_tool_result_test.dart`、`test/assistant_tool_execution_plan_builder_test.dart`、`test/context_resolution_gateway_test.dart`。 | 现有执行切片已有确定性边界，但模型输出到 ACTION_PROPOSAL 的统一解析协议、能力级 typed schema、执行终态与跨层结果回填仍不完整。必须继续逐能力核查；不能将 Page-only 当作 Headless executor。 |
+
+**边界澄清**
+
+- `ContextResolutionGateway` 是来源引用锚点校验和 Resolver 回链保护，不是业务工具执行器，也不是授权/收费门禁。
+- `HeadlessToolDispatcher` 是已登记 Headless executor 的实际调度边界；`AssistantToolResult` 是现有结果载体，但它们并不证明所有 Router 注册能力都可执行。
+- `AssistantKnowledgeContextResult.text` 是已组装上下文，不是候选集；`sources` 是解析后的来源引用，不等同于逐候选召回/排序审计记录。
+- UI 会话记录、Native Conversation transcript、SessionStateSnapshot 和证据引用必须继续作为不同的数据所有权处理。
+
+**文件所有权（Core-0 后续实现排程）**
+
+| 工作流 | 主改文件 | 当前约束 |
+|---|---|---|
+| Core-0 契约/源码映射 | 本架构文档、AI 执行台账 | 不改生产调用顺序；不新增数据库/服务 |
+| Core-1 Memory | `MainActivity.kt`、`LocalAiConversationHistoryPolicy.kt` 及对应 Kotlin/Flutter 测试 | PR #493 已合并并隔离文本消息 RAG；后续有界历史必须从更新后的 master 独立分支实现，不得与其他 Native 文件所有者冲突 |
+| Core-2 Retrieval/Ranking | `assistant_knowledge_context.dart`、`classic_search_service.dart`、黄金测试/fixture | 一个分支独占 Builder/Search 文件；先保留当前黄金输出，再分离 CandidateEvidence 与 ranking |
+| Core-3 Reasoning | Native 输入/输出 Adapter 与纯协议测试 | 等 Core-0 合同冻结；不得直接让模型触发工具 |
+| Core-4 Execution | 工具计划构建、Dispatcher、结果校验和每个 executor | 逐能力核查，不改变 ai_access/AiModelAccessGate |
+| Core-5 E2E | 跨层测试与 TRACE 规范接线 | 依赖前四层可独立观测；设备 TRACE 由本地最后完成 |
 
 ## 6. 当前最高优先级执行顺序
 

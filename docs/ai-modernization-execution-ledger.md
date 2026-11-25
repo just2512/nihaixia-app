@@ -4413,3 +4413,21 @@ PR HEAD 门禁证据：
 - **证据纪律：** 保留现有黄金检索行为；每层用独立契约测试和跨层测试验收；CI 对精确 PR HEAD；Find N2 设备证据独立记录；SKIPPED、UNKNOWN 和设计文件均不计 PASS。
 
 本节优先级修订覆盖此前 §95 将书架与多轮治理并行推进的安排；§95 的详细书架设计约束继续有效，但其执行时间后移。
+
+
+---
+
+## 97. 2026-11-25 Core-0 契约字段与五层源码映射启动
+
+- **当前 master 基线：** `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`（PR #493 合并提交；已从新主线复核 Native 会话记忆源码）。
+- **Core-0 文档分支：** `docs/core0-contract-source-map-20261125`。本节用于记录 DTO 合同和源码映射；Core-0 在精确 HEAD 文档 CI 通过、与新 master 完成基线复核前保持 `IN_PROGRESS`。
+- **规范推进：** `docs/ai-layered-runtime-architecture.md` 新增核心 DTO 契约 v1，覆盖 CandidateEvidence/CandidateEvidenceBatch、EvidenceRankingDecision/RankedEvidenceSet、SessionStateSnapshot/SessionStateFact、ReasoningRequest/ReasoningResponse、BusinessActionProposal/ExecutionResult 的字段、来源语义、失败状态、预算单位和兼容边界。
+- **源码映射：** 五层生产路径、现有测试、隐式耦合点及文件所有权已写入 §5.2。当前检索顺序继续由黄金快照保护；本批未改运行时检索、业务执行、数据库、模型输入或授权门禁。
+- **Core-0 状态：** `IN_PROGRESS`。字段级契约和源码/测试映射已建立；当前是文档合同，不代表 DTO 已接入运行时。仍需本 PR 精确 HEAD 的 Flutter/Fork license CI 通过，并确认无遗漏的现有模型冲突。
+- **Core-1 第一窄切片 PR #493：** `MERGED`，merge commit `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`。Fork license run `45535035216` SUCCESS；Flutter regression run `45535035231` SUCCESS；Android arm64 APK/ABI、merged manifest 与 JVM 单测 job `138942270425` SUCCESS。Branch validation `138939443409` 为 `SKIPPED`，明确不计 PASS。仅修复文本消息的 Native 恢复 transcript 污染：E4B 仍收到原 modelInput，成功轮次只保存用户原话；不代表历史预算、session 硬隔离或结构化状态已完成。
+- **PR #494：** `CLOSED / NOT MERGED`，head `2637ad8354b8beeb585df8dab286604a077e50ea`。其 Flutter Quality Gate PR trigger 未进入 master；不得把该 CI 触发器变更记为已落地。#493 的 Android arm64/JVM 证据来自实际运行的 Android CI job。
+- **当前确认缺口（在 PR #496 集成前）：** master 的 Native transcript 已不再将文本轮次的 RAG 正文写入历史，但恢复历史仍无轮数/字符预算；当前活动 LiteRT-LM Conversation 的 KV Cache 也没有 App 级 token 上限或自动回收策略，`getTokenCount()` 尚未接入治理；sessionId 隔离、结构化 SessionStateSnapshot 和 evidence references 独立提交尚未接通；跨进程持久化行为仍 UNKNOWN。KnowledgeContextBuilder 仍合并召回、选择与上下文装配；Native 主对话仍无统一 ReasoningRequest/Response schema；业务执行只在已登记 Headless 范围形成确定性闭环。
+- **Core-1 第二窄切片 PR #496：** `OPEN`，base `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`，head `a403a71a4fcddb65d3929f306b4c2c927b9cabed`。目标是 Native 恢复历史上限：最多 12 个完整成功轮次，且 user/model 文本合计不超过 10,000 个 UTF-16 code units；只淘汰最旧完整轮次，不截断消息；保留省略数量元数据并通过 systemInstruction 告知模型历史省略；保留 total successful turn count，避免淘汰后错误触发 first-turn GPU fallback。新增 7 项定向 JVM 断言，覆盖 turn/character cap、超长最新轮、restore、clear 与 fallback 状态。PR 精确 HEAD 的 Fork license 已 SUCCESS；Flutter 全量回归正在执行，push 触发的 Branch validation 正在执行 Kotlin changed tests，Android arm64 APK/JVM job 等待 Flutter 回归完成后触发。以上均未完成前不计运行时 PASS。该切片只限制恢复 transcript/replay buffer，不改变当前活动 Conversation KV Cache；字符上限明确不是 token 预算。
+- **下一项自动执行：** PR #495 Core-0 文档精确 HEAD Flutter/Fork license CI 通过后，按新 master 校准并集成；PR #496 必须在精确 HEAD Android arm64/JVM、Flutter 与 Fork license 均 PASS 后单独集成。Core-1 有界历史通过后，Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
+- **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
+
