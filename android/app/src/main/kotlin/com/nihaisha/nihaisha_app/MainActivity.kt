@@ -19,6 +19,7 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.ModelInfo
 import java.io.File
 import java.security.MessageDigest
 import org.json.JSONArray
@@ -63,6 +64,9 @@ class MainActivity : FlutterActivity() {
     private var aiConversation: Conversation? = null
     private var conversationTokenObservation =
         LocalAiConversationTokenObservationPolicy.unknown()
+    // Cached model-file metadata; modelStatus() must not invoke JNI.
+    private var modelContextLimitObservation =
+        LocalAiModelContextLimitObservationPolicy.unknown()
     // Native Conversation state belongs to exactly one SQLite assistant session.
     private var activeConversationId: Long? = null
     private var activeBackend = "not_loaded"
@@ -828,10 +832,14 @@ class MainActivity : FlutterActivity() {
             "backend" to activeBackend,
             "preferredBackend" to preferredBackend(),
             "conversationKvCacheObservationStatus" to conversationTokenObservation.status.name,
-            "conversationKvCacheBudgetStatus" to "NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED"
+            "conversationKvCacheBudgetStatus" to "NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED",
+            "modelMaxContextTokensObservationStatus" to modelContextLimitObservation.status.name
         )
         conversationTokenObservation.tokenCount?.let {
             status["conversationKvCacheTokens"] = it
+        }
+        modelContextLimitObservation.maxContextTokens?.let {
+            status["modelMaxContextTokens"] = it
         }
         return status.toMap()
     }
@@ -851,6 +859,27 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * Reads only the model-file-declared context limit while the existing AI
+     * task queue owns model loading. Failure is diagnostic and remains UNKNOWN.
+     */
+    private fun inspectModelContextLimit(): LocalAiModelContextLimitObservation {
+        return try {
+            ModelInfo.from(modelFile.absolutePath).use { modelInfo ->
+                LocalAiModelContextLimitObservationPolicy.fromMaxContextTokens(
+                    modelInfo.maxContextTokens()
+                )
+            }
+        } catch (error: Exception) {
+            android.util.Log.w(
+                "LocalAiContextTokens",
+                "MODEL_CONTEXT_METADATA_UNKNOWN",
+                error
+            )
+            LocalAiModelContextLimitObservationPolicy.unknown()
+        }
+    }
+
     private fun loadLocalModel(): Map<String, Any> {
         aiModelAccessGate.requireAccess()
         LocalAiModelImportRecovery.recover(modelFile)
@@ -861,6 +890,7 @@ class MainActivity : FlutterActivity() {
         // files are hashed here before any native engine can read them.
         ensureModelFileIntegrity()
         if (aiEngine != null && aiConversation != null) return modelStatus()
+        modelContextLimitObservation = inspectModelContextLimit()
 
         modelFile.parentFile?.mkdirs()
         val cachePath = File(cacheDir, "litertlm").apply { mkdirs() }.absolutePath
@@ -1698,6 +1728,7 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
+        modelContextLimitObservation = LocalAiModelContextLimitObservationPolicy.unknown()
         activeConversationId = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false
