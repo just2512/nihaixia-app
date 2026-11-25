@@ -100,35 +100,39 @@ class LocalAiTranscriptRestorePolicy {
     }
 
     final serializedTurns = turns.map(_serializeTurn).toList(growable: false);
+
+    int joinedLengthFrom(int start) {
+      if (start >= serializedTurns.length) return 0;
+      var length = serializedTurns.length - start - 1;
+      for (var index = start; index < serializedTurns.length; index++) {
+        length += serializedTurns[index].length;
+      }
+      return length;
+    }
+
     var retainedStart = serializedTurns.length;
-    var retainedCharacters = 0;
     while (retainedStart > 0) {
-      final candidateLength = serializedTurns[retainedStart - 1].length;
-      if (retainedCharacters + candidateLength > maxTranscriptCharacters) {
+      final candidateStart = retainedStart - 1;
+      // The marker is part of the same budget. It is needed either when an
+      // incomplete turn was omitted or when any older complete turn is left
+      // out by retaining only this suffix.
+      final candidateOmittedTurnCount = omittedTurnCount + candidateStart;
+      final markerLength = candidateOmittedTurnCount > 0
+          ? truncationMarker.length
+          : 0;
+      if (joinedLengthFrom(candidateStart) + markerLength >
+          maxTranscriptCharacters) {
         break;
       }
-      retainedCharacters += candidateLength;
-      retainedStart -= 1;
+      retainedStart = candidateStart;
     }
 
-    // Once any turn has been omitted, reserve room for the explicit boundary
-    // marker. Remove oldest retained turns as whole units if necessary.
-    if (retainedStart > 0 || omittedTurnCount > 0) {
-      final bodyBudget = maxTranscriptCharacters - truncationMarker.length;
-      while (retainedStart < serializedTurns.length &&
-          retainedCharacters > bodyBudget) {
-        retainedCharacters -= serializedTurns[retainedStart].length;
-        omittedCharacterCount += serializedTurns[retainedStart].length;
-        omittedTurnCount += 1;
-        retainedStart += 1;
-      }
-      for (var index = 0; index < retainedStart; index++) {
-        omittedCharacterCount += serializedTurns[index].length;
-        omittedTurnCount += 1;
-      }
+    for (var index = 0; index < retainedStart; index++) {
+      omittedCharacterCount += serializedTurns[index].length;
+      omittedTurnCount += 1;
     }
 
-    final retained = serializedTurns.skip(retainedStart).join('\n');
+    final retained = serializedTurns.skip(retainedStart).join('\\n');
     final transcript = omittedTurnCount > 0
         ? '$truncationMarker$retained'
         : retained;
