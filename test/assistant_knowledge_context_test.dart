@@ -181,6 +181,30 @@ void main() {
     }
   });
 
+  test('古籍章节来源标识可反查到精确内部章节且不提升纸本核验状态', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '灵枢 经脉',
+      includeMedicalCases: false,
+    );
+    final gujiSources = result.sources
+        .where((source) => source.sourceId.startsWith('guji:'))
+        .toList(growable: false);
+
+    expect(gujiSources, isNotEmpty);
+    expect(result.text, contains('来源标识：guji:lingshu:'));
+    expect(result.text, contains('纸本版本/卷页核验状态：UNKNOWN'));
+    for (final source in gujiSources) {
+      expect(source.sourceLabel, '黄帝内经·灵枢');
+      expect(source.localBacklink, startsWith('guji:lingshu#chapter:'));
+      expect(source.locatorStatus, 'PARTIAL');
+      expect(source.sourceKind, 'classic_text');
+      expect(source.sourceVerificationStatus, 'UNKNOWN');
+      expect(source.bibliographicLocatorVerified, isFalse);
+    }
+    expect(result.citationFooter, contains('黄帝内经·灵枢'));
+    expect(result.citationFooter, contains('来源标识：guji:lingshu:'));
+  });
+
   test('异步检索医案时提供可回查的知识库条目定位', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('桂枝汤');
     expect(context, contains('App医案库'));
