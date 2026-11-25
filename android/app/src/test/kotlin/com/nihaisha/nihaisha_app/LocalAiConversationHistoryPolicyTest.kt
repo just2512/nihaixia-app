@@ -91,6 +91,34 @@ class LocalAiConversationHistoryPolicyTest {
         assertEquals(userText, prepared.historyUserText)
     }
 
+
+    @Test
+    fun bindsFreshEmptyNativeConversationWithoutReset() {
+        assertTrue(!LocalAiConversationSessionPolicy.shouldReset(null, 11L, false))
+    }
+
+    @Test
+    fun preservesHistoryForTheSameConversationId() {
+        assertTrue(!LocalAiConversationSessionPolicy.shouldReset(11L, 11L, true))
+    }
+
+    @Test
+    fun resetsNativeStateWhenSwitchingConversationIds() {
+        assertTrue(LocalAiConversationSessionPolicy.shouldReset(11L, 12L, true))
+    }
+
+    @Test
+    fun resetsUnboundNativeStateWhenItAlreadyContainsConversationData() {
+        assertTrue(LocalAiConversationSessionPolicy.shouldReset(null, 12L, true))
+    }
+
+    @Test
+    fun rejectsMissingOrInvalidConversationIds() {
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalAiConversationSessionPolicy.shouldReset(null, 0L, false)
+        }
+    }
+
     @Test
     fun blankUserInputIsRejected() {
         val history = LocalAiConversationHistory()
@@ -205,4 +233,20 @@ class LocalAiConversationHistoryPolicyTest {
         assertEquals(0L, snapshot.successfulTurnCount)
         assertFalse(history.hasSuccessfulTurn())
     }
+
+    @Test
+    fun acceptsPositiveIntegerConversationIdsWithoutChangingTheirValue() {
+        assertEquals(42L, LocalAiConversationIdPolicy.parse(42))
+        assertEquals(3_000_000_000L, LocalAiConversationIdPolicy.parse(3_000_000_000L))
+    }
+
+    @Test
+    fun rejectsNonIntegerAndInvalidConversationIdValues() {
+        assertEquals(null, LocalAiConversationIdPolicy.parse(null))
+        assertEquals(null, LocalAiConversationIdPolicy.parse(0))
+        assertEquals(null, LocalAiConversationIdPolicy.parse(-1L))
+        assertEquals(null, LocalAiConversationIdPolicy.parse(1.5))
+        assertEquals(null, LocalAiConversationIdPolicy.parse("42"))
+    }
+
 }
