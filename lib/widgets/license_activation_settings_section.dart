@@ -339,11 +339,11 @@ class _LicenseActivationSettingsSectionState
   static String _featureLabel(String id) {
     switch (id) {
       case 'ai_access':
-        return '全部本地 AI 模型访问';
       case 'ai_advanced':
-        return 'AI 跨工具自动编排';
       case 'contextual_assistant':
-        return '情境问 AI';
+        // Revision-1 names are display-only compatibility aliases. They never
+        // represent separate entitlements or separate feature-reduction prompts.
+        return '全部本地 AI 模型访问';
       default:
         return id;
     }
