@@ -300,7 +300,7 @@ void main() {
     expect(result.text, isNot(contains('本轮引用的知识库条目')));
   });
 
-  test('App 古籍文本引用指向具体知识库章节', () {
+  test('App 古籍资料来源对象保留具体知识库章节定位', () {
     const source = AssistantKnowledgeSourceReference(
       sourceId: 'guji:shanghan_lun:1',
       sourceLabel: '伤寒论',

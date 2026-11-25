@@ -136,7 +136,7 @@ class AssistantKnowledgeContextResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已完整提供、允许引用的证据 ID】\n' +
+      : '【本轮已注入模型上下文的证据 ID；这不代表模型实际使用或引用】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
               .join('\n');
@@ -188,11 +188,12 @@ class AssistantKnowledgeContextBuilder {
     return FormulaRepository.getAll().any((item) =>
             normalized.contains(item.name) ||
             item.alias
-                .split(',')
+                .split(RegExp(r'[,，、;；/|]'))
                 .map((value) => value.trim())
                 .where((value) => value.isNotEmpty)
                 .any(normalized.contains)) ||
         HerbRepository.getAll().any((item) => normalized.contains(item.name)) ||
+        HerbRepository.aliasNames.any(normalized.contains) ||
         AcupointRepository.getAll().any((item) => normalized.contains(item.name));
   }
 
@@ -703,9 +704,9 @@ class AssistantKnowledgeContextBuilder {
       }
       buffer.writeln('检索摘要：${hit.snippet}');
       if (isLecture) {
-        buffer.writeln('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。');
+        buffer.writeln('资料类型说明：当前检索资料为 App 内课程讲稿/整理讲义知识条目。');
       } else {
-        buffer.writeln('资料类型说明：当前引用对象为 App 内古籍文本知识条目。');
+        buffer.writeln('资料类型说明：当前检索资料为 App 内古籍文本知识条目。');
       }
       evidenceEndOffsets[evidenceId] = buffer.length;
     }
@@ -726,7 +727,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
         ..writeln('书籍简介：${book.intro}');
       if (keptEvidenceIds.isEmpty) {
-        buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
+        buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可用章节正文。');
       }
       for (final evidenceId in keptEvidenceIds) {
         final candidate = candidatesById[evidenceId]!;
@@ -787,7 +788,7 @@ class AssistantKnowledgeContextBuilder {
               '结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}',
             )
             ..writeln(
-              '使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照，引用时保留条目身份，不把条目未记载的信息补成病例事实。',
+              '使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照。如需提及该案例，应明确这是 App 整理记录，并且不得把条目未记载的信息补成病例事实。',
             );
           evidenceEndOffsets[evidenceId] = buffer.length;
         }
