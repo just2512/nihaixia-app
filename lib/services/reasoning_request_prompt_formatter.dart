@@ -14,7 +14,10 @@ class ReasoningRequestPromptFormatter {
   /// UTF-16 code-unit bound for supplemental metadata only; not a model-token budget.
   static const int maxSupplementalContextCharacters = 24000;
 
-  static String formatSupplementalContext(ReasoningRequest request) {
+  static String formatSupplementalContext(
+    ReasoningRequest request, {
+    bool includeSessionState = true,
+  }) {
     final sessionStateContext = request.sessionState == null
         ? '【App 本会话结构化记忆快照】\nstatus=UNKNOWN\n结构化事实：未提供。\n来源引用：未提供。'
         : SessionStateSnapshotPromptFormatter.format(
@@ -48,7 +51,9 @@ class ReasoningRequestPromptFormatter {
           'Use INSUFFICIENT_EVIDENCE when the supplied evidence cannot support the answer.',
         ],
       },
-      'sessionStateContext': sessionStateContext,
+      if (includeSessionState) 'sessionStateContext': sessionStateContext,
+      if (!includeSessionState)
+        'sessionStateProvidedSeparately': request.sessionState != null,
       'rankedEvidence': request.rankedEvidence.map((item) => item.toMap()).toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
       'executionResults':
