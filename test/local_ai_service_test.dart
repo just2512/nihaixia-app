@@ -349,6 +349,86 @@ void main() {
 
       expect(status.preferredBackend, 'gpu');
     });
+    test('older Native status exposes unknown context token metrics', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': false,
+        'backend': 'not_loaded',
+      });
+
+      expect(
+        status.contextTokenMetrics.status,
+        LocalAiConversationTokenMetricsStatus.unknown,
+      );
+      expect(status.contextTokenMetrics.conversationTokenCount, isNull);
+      expect(status.contextTokenMetrics.modelMaxContextTokens, isNull);
+    });
+
+    test('parses measured Native KV cache count and model context limit', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'gpu',
+        'nativeContextTokenMetrics': <String, Object?>{
+          'status': 'MEASURED',
+          'unit': 'KV_CACHE_TOKENS',
+          'conversationTokenCount': 4321,
+          'modelMaxContextTokens': 32768,
+        },
+      });
+
+      expect(
+        status.contextTokenMetrics.status,
+        LocalAiConversationTokenMetricsStatus.measured,
+      );
+      expect(status.contextTokenMetrics.conversationTokenCount, 4321);
+      expect(status.contextTokenMetrics.modelMaxContextTokens, 32768);
+    });
+
+    test('keeps invalid token metrics unknown rather than coercing values', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'cpu',
+        'nativeContextTokenMetrics': <String, Object?>{
+          'status': 'MEASURED',
+          'unit': 'KV_CACHE_TOKENS',
+          'conversationTokenCount': '4321',
+          'modelMaxContextTokens': 0,
+        },
+      });
+
+      expect(
+        status.contextTokenMetrics.status,
+        LocalAiConversationTokenMetricsStatus.unknown,
+      );
+      expect(status.contextTokenMetrics.conversationTokenCount, isNull);
+      expect(status.contextTokenMetrics.modelMaxContextTokens, isNull);
+    });
+
+    test('parses a partial Native context token observation without inventing values', () {
+      final status = LocalAiModelStatus.fromMap(<String, dynamic>{
+        'installed': true,
+        'fileExists': true,
+        'ready': true,
+        'backend': 'cpu',
+        'nativeContextTokenMetrics': <String, Object?>{
+          'status': 'MODEL_LIMIT_ONLY',
+          'unit': 'KV_CACHE_TOKENS',
+          'modelMaxContextTokens': 16384,
+        },
+      });
+
+      expect(
+        status.contextTokenMetrics.status,
+        LocalAiConversationTokenMetricsStatus.modelLimitOnly,
+      );
+      expect(status.contextTokenMetrics.conversationTokenCount, isNull);
+      expect(status.contextTokenMetrics.modelMaxContextTokens, 16384);
+    });
   });
 
   group('LocalAiService text conversation contract', () {
