@@ -151,6 +151,8 @@ class _RecordingAssistantService extends LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async {
     modelCalls++;
     sentTexts.add(text);

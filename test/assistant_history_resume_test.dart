@@ -65,6 +65,8 @@ class _HistoryResumeService extends LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async => '续聊成功：$text';
 
   @override
@@ -75,6 +77,8 @@ class _HistoryResumeService extends LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async => '续聊成功：$text';
 
   @override
@@ -85,6 +89,8 @@ class _HistoryResumeService extends LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async => '续聊成功：$text';
 
   @override
@@ -96,6 +102,8 @@ class _HistoryResumeService extends LocalAiService {
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
+    String? sessionStateContext,
+    int? sessionStateConversationId,
   }) async => '续聊成功：$text';
 }
 
