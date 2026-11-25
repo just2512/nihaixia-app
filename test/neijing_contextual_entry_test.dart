@@ -113,8 +113,10 @@ void main() {
       expect(widget.contextRef['anchorId'], 'neijing:${entry.id}');
       expect(widget.contextRef['sourceId'],
           'app-data:lib/data/neijing_entries.dart#${entry.id}');
-      expect(widget.initialPrompt, contains(entry.original));
-      expect(widget.initialPrompt, contains('【推断】'));
+      expect(widget.initialPrompt, isNull);
+      expect(widget.initialUserMessage, contains('经典条文'));
+      expect(widget.autoSendInitialMessage, isTrue);
+      expect(widget.resolveContextualKnowledgeEntry, isTrue);
       expect(tester.takeException(), isNull);
 
     },
