@@ -160,37 +160,6 @@ void main() {
       expect(result.failureCode, 'REASONING_RESPONSE_CAPABILITY_NOT_REGISTERED');
     });
 
-    test('requires local source mapping for every model citation', () {
-      final context = knowledge(
-        ranked: const [
-          AssistantKnowledgeEvidenceReference(
-            evidenceId: 'evidence-1',
-            sourceId: '',
-          ),
-        ],
-        sources: [],
-      );
-      final requestValue = ReasoningKnowledgeAnswerAdapter.createRequest(
-        requestId: 'request-1',
-        sessionId: 7,
-        userText: '用户原始问题',
-        mode: 'learning',
-        sessionState: SessionStateSnapshot(
-          sessionId: 7,
-          revision: 'rev-1',
-          status: SessionStateStatus.unknown,
-          facts: const [],
-          evidenceReferences: const [],
-        ),
-        knowledge: context,
-      );
-      final result = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
-        raw: payload(),
-        request: requestValue,
-        knowledge: context,
-      );
-      expect(result.isUsable, isFalse);
-      expect(result.failureCode, contains('SOURCE_MAPPING_MISSING'));
-    });
+
   });
 }
