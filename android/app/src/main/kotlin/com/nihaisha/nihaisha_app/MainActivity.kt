@@ -222,21 +222,25 @@ class MainActivity : FlutterActivity() {
                         val explicitSourceText = call.argument<String>("source_text")?.trim()
                         val explicitSourceTruncated =
                             call.argument<Boolean>("source_truncated") == true
-                        val extractionSource = explicitSourceText
-                            ?.takeIf { it.isNotEmpty() }
-                            ?: userReportedInputs.joinToString("\n").takeIf { it.isNotBlank() }.orEmpty()
-                        val extractionSourceTruncated = if (explicitSourceText != null) {
-                            explicitSourceTruncated || explicitSourceText.length > 10_000
-                        } else {
-                            userReportedInputsTruncated || extractionSource.length > 10_000
-                        }
                         if (questionSchema.length > 12_000) {
                             result.error("INVALID_SYMPTOM_QUESTION_SCHEMA", "问诊题目 schema 超出长度限制", null)
                         } else if (explicitSourceText != null && explicitSourceText.length > 10_000) {
                             result.error("INVALID_SYMPTOM_SOURCE_TEXT", "本次问诊原文超出长度限制", null)
                         } else {
                             runAiTask(result, requiresAiAccess = true) {
+                                // Session switching clears the shared Native inputs.
+                                // Read them only after this task has serialized and
+                                // bound the requested conversation ID.
                                 ensureActiveConversation(conversationId)
+                                val extractionSource = explicitSourceText
+                                    ?.takeIf { it.isNotEmpty() }
+                                    ?: userReportedInputs.joinToString("\n")
+                                        .takeIf { it.isNotBlank() }.orEmpty()
+                                val extractionSourceTruncated = if (explicitSourceText != null) {
+                                    explicitSourceTruncated || explicitSourceText.length > 10_000
+                                } else {
+                                    userReportedInputsTruncated || extractionSource.length > 10_000
+                                }
                                 LocalAiTraceIdPolicy.attach(
                                     extractSymptoms(
                                         questionSchema,
