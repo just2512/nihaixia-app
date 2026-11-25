@@ -46,8 +46,18 @@ class FoldAwareMaterialPageRoute<T> extends MaterialPageRoute<T> {
 
   @override
   Widget buildContent(BuildContext context) {
+    // Keep only the fold geometry of the opening context. Preserving its full
+    // MediaQuery would also carry its (already-consumed) system-bar padding —
+    // the source screen nests inside an inner Scaffold whose AppBar has eaten
+    // the top status-bar inset, so a pushed route inherited padding.top == 0
+    // and its AppBar overlaid the status bar. Re-derive insets from the route's
+    // own context and only override size/displayFeatures for pane constraint.
+    final current = MediaQuery.of(context);
     return MediaQuery(
-      data: _originalMediaQuery,
+      data: current.copyWith(
+        size: _originalMediaQuery.size,
+        displayFeatures: _originalMediaQuery.displayFeatures,
+      ),
       child: AdaptiveSinglePane(
         preferredAnchorPoint: _anchorPoint,
         child: super.buildContent(context),
