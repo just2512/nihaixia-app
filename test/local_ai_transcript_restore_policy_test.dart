@@ -69,7 +69,7 @@ void main() {
       final result = LocalAiTranscriptRestorePolicy.fromMessages([
         LocalAiTranscriptMessage(
           role: LocalAiTranscriptRole.user,
-          text: 'U' * LocalAiTranscriptRestorePolicy.maxTranscriptCharacters,
+          text: List.filled(LocalAiTranscriptRestorePolicy.maxTranscriptCharacters, 'U').join(),
         ),
         const LocalAiTranscriptMessage(
           role: LocalAiTranscriptRole.assistant,
