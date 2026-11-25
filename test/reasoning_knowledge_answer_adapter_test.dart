@@ -73,6 +73,8 @@ String payload({
     });
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ReasoningKnowledgeAnswerAdapter', () {
 
     test('creates an exact one-entry context and resolves its request-local citation', () async {
