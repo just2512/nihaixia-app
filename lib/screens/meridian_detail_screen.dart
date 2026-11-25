@@ -53,9 +53,12 @@ Future<void> _askAiAboutMeridian(
   await showContextualAiSheet(
     context: context,
     contextRef: contextRef,
-    initialPrompt: AiContextPromptBuilder.buildMeridianKnowledgeEntry(
+    initialUserMessage:
+        AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
       entry: entry,
     ),
+    autoSendInitialMessage: true,
+    resolveContextualKnowledgeEntry: true,
     initialMode: AssistantMode.learning,
     contextualTitle: contextRef.title ?? '$meridian病',
     contextualExplanationOnly: true,
