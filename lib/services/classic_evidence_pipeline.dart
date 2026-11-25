@@ -55,7 +55,7 @@ class ClassicEvidencePipeline {
               evidenceId: '$requestId:candidate:$evidenceIndex',
               sourceId: sourceId,
               sourceVersion: 'UNKNOWN',
-              origin: CandidateEvidenceOrigin.system,
+              origin: CandidateEvidenceOrigin.appData,
               materialKind: hit.asset != null
                   ? 'lecture'
                   : hit.bookId != null

@@ -88,7 +88,7 @@ void main() {
     expect(
       batch.candidates.every(
         (item) =>
-            item.origin == CandidateEvidenceOrigin.system &&
+            item.origin == CandidateEvidenceOrigin.appData &&
             item.sourceVersion == 'UNKNOWN' &&
             item.verificationStatus == 'UNKNOWN' &&
             item.matchBasis == 'UNKNOWN' &&
