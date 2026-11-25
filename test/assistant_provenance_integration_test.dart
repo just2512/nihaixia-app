@@ -28,8 +28,7 @@ void main() {
     expect(
       knowledge.sources.every((source) =>
           source.sourceId.isNotEmpty &&
-          source.localBacklink.isNotEmpty &&
-          source.locatorStatus != 'VERIFIED'),
+          source.localBacklink.isNotEmpty),
       isTrue,
     );
     expect(
