@@ -824,6 +824,8 @@ void main() {
         'conversationKvCacheObservationStatus': 'OBSERVED',
         'conversationKvCacheBudgetStatus':
             'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
+        'modelMaxContextTokens': 32768,
+        'modelMaxContextTokensObservationStatus': 'OBSERVED',
       });
 
       expect(status.installed, isTrue);
@@ -832,6 +834,8 @@ void main() {
       expect(status.backend, 'gpu');
       expect(status.conversationKvCacheTokens, 1234);
       expect(status.conversationKvCacheObservationStatus, 'OBSERVED');
+      expect(status.modelMaxContextTokens, 32768);
+      expect(status.modelMaxContextTokensObservationStatus, 'OBSERVED');
       expect(
         status.conversationKvCacheBudgetStatus,
         'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
@@ -853,11 +857,24 @@ void main() {
       expect(status.backend, 'not_loaded');
       expect(status.conversationKvCacheTokens, isNull);
       expect(status.conversationKvCacheObservationStatus, 'UNKNOWN');
+      expect(status.modelMaxContextTokens, isNull);
+      expect(status.modelMaxContextTokensObservationStatus, 'UNKNOWN');
       expect(
         status.conversationKvCacheBudgetStatus,
         'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
       );
       expect(status.sizeLabel, '尚未安装');
+    });
+
+    test('rejects invalid model-declared context limits', () {
+      for (final value in [0, -1, 12.5, '32768']) {
+        final status = LocalAiModelStatus.fromMap({
+          'modelMaxContextTokens': value,
+          'modelMaxContextTokensObservationStatus': 'OBSERVED',
+        });
+        expect(status.modelMaxContextTokens, isNull);
+        expect(status.modelMaxContextTokensObservationStatus, 'UNKNOWN');
+      }
     });
 
     test('rejects malformed or negative Native KV token observations', () {
