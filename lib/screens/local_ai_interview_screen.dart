@@ -1204,9 +1204,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         await _buildSessionStatePromptContext(conversationId);
     Future<String> sendWithContext(String context) async {
       const evidencePresentationBoundary =
-          '内部边界：检索命中仅表示 App 返回了候选资料，不代表证据充分、结论正确或模型实际引用。'
-          'sourceId、evidenceId、localBacklink、文件路径、内部序号和检索状态只供内部审计；'
-          '除非当前响应协议明确返回且经 App 回验的引用 ID，否则不得声称“已引用”，也不得把这些内部标识输出给用户。';
+          '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
+          '只能依据实际提供的资料内容回答；不得声称资料已核验或模型已逐条引用，资料未覆盖的信息应明确说明未知。';
       final guardedContext = '$evidencePresentationBoundary\n$context';
       await _traceRecorder.record(
         traceContext,
