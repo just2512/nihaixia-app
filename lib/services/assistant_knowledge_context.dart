@@ -5,6 +5,7 @@ import '../data/guji_data.dart';
 import '../data/medical_case_data.dart';
 import '../models/ai_evidence.dart';
 import 'classic_evidence_pipeline.dart';
+import 'legacy_order_evidence_ranker.dart';
 import 'classic_search_service.dart';
 import '../data/herb_repository.dart';
 import '../data/neijing_entries.dart';
@@ -435,12 +436,23 @@ class AssistantKnowledgeContextBuilder {
       buffer.writeln('[App经典全文索引] 索引读取失败，状态 MISSING。');
     }
 
-    // Keep the historical four-hit context projection unchanged. The batch
-    // now retains the searched query's candidate set for an independent
-    // ranking slice; it does not alter the current order or retrieval method.
-    for (final hit in evidenceBatch.candidates.take(
-      ClassicEvidencePipeline.legacyContextHitLimit,
-    )) {
+    final rankingDecisions =
+        LegacyOrderEvidenceRanker.rank(evidenceBatch.candidates);
+    final candidatesById = {
+      for (final candidate in evidenceBatch.candidates)
+        candidate.evidenceId: candidate,
+    };
+    final orderedKeptDecisions = rankingDecisions
+        .where((decision) =>
+            decision.disposition == EvidenceDecisionDisposition.keep)
+        .toList()
+      ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!));
+
+    // This explicit selector reproduces the existing four-hit projection.
+    // No relevance score or source-verification promotion is introduced.
+    for (final decision in orderedKeptDecisions) {
+      final hit = candidatesById[decision.evidenceId]!;
+{
       final isLecture = hit.asset != null;
       final articleNumber = RegExp(r'(?:条文|第)\s*(\d+)').firstMatch(hit.title)?.group(1);
       final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
