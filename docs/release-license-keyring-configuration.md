@@ -1,6 +1,6 @@
 # Release 构建的授权信任锚配置
 
-本文是 v1.2 架构约束 §11.1–§11.4 的工程操作说明，不替代协议规范。
+本文是 `docs/pro-edition-architecture-constraints.md` v1.3 §11.1–§11.4 的工程操作说明，不替代协议规范；协议字段与兼容规则以 v1.3 配套协议文档为准。
 
 ## 配置格式
 
@@ -47,4 +47,4 @@ Gradle 会检查实际传给 Flutter 的 `dart-defines`，而不是只检查一�
 - Release readiness scanner 与测试必须和 Dart/Gradle 使用完全相同的 `YANJI_LICENSE_KEY_RING`、`keys` 根对象和 `key_id` 字段，不允许沿用旧的 `YANJI_RELEASE_LICENSE_KEY_RING_JSON` / `issuer_key_id` schema。
 - Release workflow 使用临时 CI-only APK 签名身份进行产物扫描，不上传或分发该 APK，也不替代产品正式 Android 签名身份。
 - PR #455 已将客户端激活/Token 导入 UI 集成到设置页：用户显式生成 YANJIR1 设备申请，并可粘贴经发行方返回的完整 YANJI1 Token；Token 验证、设备绑定、权益降低确认与原子替换由既有 EntitlementService 完成。该 UI 不包含发行服务器、发行私钥或自动签发服务，不能替代离线发行端流程。
-- 正式发行公钥及其来源仍未获核验，因此正式 Release 仍 BLOCKED。生产私钥离线保管/恢复演练、真实客户签发、密钥轮换操作和 Find N2 设备验收均未因此自动完成；详见执行台账 §88 与本地真机验收 §10。
+- 正式发行公钥及其来源仍未获核验，因此正式 Release 仍 BLOCKED。生产私钥离线保管/恢复演练、真实客户签发、密钥轮换操作和 Find N2 设备验收均未因此自动完成；详见 `docs/ai-modernization-execution-ledger.md` §93.4–§93.6，以及 `docs/local-real-device-acceptance-handoff.md` §6.5。
