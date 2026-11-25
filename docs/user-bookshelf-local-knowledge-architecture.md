@@ -227,7 +227,7 @@
 - 文档 Embedding 输入在正文前加入书名、章节路径等上下文头；上下文头版本纳入 embeddingInputHash。
 - LiteRT-LM 官方 Embedding Models API 已提供 Kotlin `EmbeddingEngine` / `computeEmbedding` 示例，并明确文档索引前缀 `task: search result | text:`、查询前缀 `task: search query | text:`；实际实施时仍须逐字核对所锁定 SDK/API 的模板，不能仅凭文档说明推定项目调用链已兼容。
 - LiteRT-LM v0.18.0 的官方发布说明已包含 EmbeddingGemma 2（文本、视觉、音频 Embedding）支持；v0.18.1 发布说明另注明修复“从源码构建 LiteRT-LM”时运行 EmbeddingGemma 2 的 ABI 不兼容。当前 master 的 Android Gradle 依赖实际锁定为 `com.google.ai.edge.litertlm:litertlm-android:0.18.0`（PoC 执行时重新核验）。源码构建修复不能直接推定为该 Maven AAR 的缺陷，也不能反向证明该 AAR 在 Find N2 可用。
-- 因此 D 阶段必须针对项目实际 Maven AAR、目标模型包、Android arm64、CPU/GPU backend 和 Native Gate/串行资源协调做独立 PoC；不得只凭上游 release/API 文档宣布兼容，不得为本功能未经兼容与回归测试直接升级 LiteRT-LM。若拟升级，先提交版本变更说明、兼容性/风险/回滚方案。
+- 因此 C 阶段必须针对项目实际 Maven AAR、目标模型包、Android arm64、CPU/GPU backend 和 Native Gate/串行资源协调做独立 PoC；不得只凭上游 release/API 文档宣布兼容，不得为本功能未经兼容与回归测试直接升级 LiteRT-LM。若拟升级，先提交版本变更说明、兼容性/风险/回滚方案。
 - 不下载、不提交或自动替换模型权重，直到模型许可、文件来源、哈希、安装/升级路径和设备占用完成核验。
 
 官方参考：
