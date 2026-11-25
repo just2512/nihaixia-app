@@ -19,6 +19,7 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.ModelInfo
 import java.io.File
 import java.security.MessageDigest
 import org.json.JSONArray
@@ -64,6 +65,9 @@ class MainActivity : FlutterActivity() {
     // Native Conversation state belongs to exactly one SQLite assistant session.
     private var activeConversationId: Long? = null
     private var activeBackend = "not_loaded"
+    // Primitive metadata is cached so modelStatus() never invokes JNI off-queue.
+    @Volatile private var modelMaxContextTokens: Int? = null
+    @Volatile private var lastConversationTokenCount: Int? = null
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
     private val conversationHasSuccessfulTurn: Boolean
@@ -805,6 +809,49 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * Reads the model-file-declared maximum context without imposing an
+     * application-selected token cap. Failure is non-fatal and remains UNKNOWN.
+     * LiteRT-LM v0.18.0 exposes this through ModelInfo.maxContextTokens().
+     */
+    private fun inspectModelMaxContextTokens(): Int? {
+        return try {
+            ModelInfo.from(modelFile.absolutePath).use { modelInfo ->
+                modelInfo.maxContextTokens().takeIf { it > 0 }
+            }
+        } catch (error: Exception) {
+            android.util.Log.w(
+                "LocalAiContextTokens",
+                "MODEL_CONTEXT_METADATA_UNKNOWN",
+                error
+            )
+            null
+        }
+    }
+
+    /**
+     * Called only after a completed send, inside the existing serialized AI task.
+     * A telemetry failure must never turn a successful model response into failure.
+     */
+    private fun refreshConversationTokenCount() {
+        lastConversationTokenCount = try {
+            aiConversation?.getTokenCount()?.takeIf { it >= 0 }
+        } catch (error: Exception) {
+            android.util.Log.w(
+                "LocalAiContextTokens",
+                "CONVERSATION_TOKEN_COUNT_UNKNOWN",
+                error
+            )
+            null
+        }
+    }
+
+    private fun nativeContextTokenMetrics(): Map<String, Any> =
+        LocalAiConversationTokenMetricsPolicy.snapshot(
+            conversationTokenCount = lastConversationTokenCount,
+            modelMaxContextTokens = modelMaxContextTokens
+        ).toMethodChannelMap()
+
     private fun modelStatus(): Map<String, Any> {
         modelFile.parentFile?.mkdirs()
         // Restore an interrupted import before reporting status; otherwise an
@@ -822,7 +869,8 @@ class MainActivity : FlutterActivity() {
             "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
             "backend" to activeBackend,
-            "preferredBackend" to preferredBackend()
+            "preferredBackend" to preferredBackend(),
+            "nativeContextTokenMetrics" to nativeContextTokenMetrics()
         )
     }
 
@@ -836,6 +884,8 @@ class MainActivity : FlutterActivity() {
         // files are hashed here before any native engine can read them.
         ensureModelFileIntegrity()
         if (aiEngine != null && aiConversation != null) return modelStatus()
+        modelMaxContextTokens = inspectModelMaxContextTokens()
+        lastConversationTokenCount = null
 
         modelFile.parentFile?.mkdirs()
         val cachePath = File(cacheDir, "litertlm").apply { mkdirs() }.absolutePath
@@ -970,7 +1020,11 @@ class MainActivity : FlutterActivity() {
         }
         // Only literal user text is eligible for symptom extraction.
         recordUserInput("用户文字自述", text)
-        return mapOf("reply" to reply, "backend" to activeBackend)
+        return mapOf(
+            "reply" to reply,
+            "backend" to activeBackend,
+            "nativeContextTokenMetrics" to nativeContextTokenMetrics()
+        )
     }
 
     private fun sendWithFirstTurnGpuFallback(
@@ -985,6 +1039,7 @@ class MainActivity : FlutterActivity() {
             val cleaned = stripSimpleMarkdown(reply)
             if (cleaned.isBlank()) throw IllegalStateException("模型没有返回有效文本")
             conversationHistory.appendSuccessfulTurn(userMessageText, cleaned)
+            refreshConversationTokenCount()
             return cleaned
         }
 
@@ -1068,6 +1123,7 @@ class MainActivity : FlutterActivity() {
         // Detach first so no failed object can be reused or closed twice.
         aiConversation = null
         aiEngine = null
+        lastConversationTokenCount = null
         activeBackend = "not_loaded"
 
         var releaseFailure: Exception? = null
@@ -1624,6 +1680,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
+        lastConversationTokenCount = null
         conversationHistory.clear()
 
         return try {
@@ -1663,6 +1720,8 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         activeConversationId = null
+        lastConversationTokenCount = null
+        modelMaxContextTokens = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false
         conversationHistory.clear()
