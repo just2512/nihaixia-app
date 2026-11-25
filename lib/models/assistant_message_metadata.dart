@@ -82,6 +82,7 @@ class AssistantMessageMetadata {
     this.sourceIds = const [],
     this.toolArguments = const {},
     this.knowledgeStatus,
+    this.reasoningStatus,
     this.traceId,
     this.invocationOrigin,
     this.contextRef = const {},
@@ -99,6 +100,8 @@ class AssistantMessageMetadata {
   final List<String> sourceIds;
   final Map<String, String> toolArguments;
   final String? knowledgeStatus;
+  /// App-validated structured reasoning response status for this turn.
+  final String? reasoningStatus;
   /// Opaque per-turn correlation ID; never user content.
   final String? traceId;
   /// Explicit source of a pending tool plan; null means MISSING, never inferred.
@@ -120,6 +123,7 @@ class AssistantMessageMetadata {
         if (sourceIds.isNotEmpty) 'sourceIds': sourceIds,
         if (toolArguments.isNotEmpty) 'toolArguments': toolArguments,
         if (knowledgeStatus != null) 'knowledgeStatus': knowledgeStatus,
+        if (reasoningStatus != null) 'reasoningStatus': reasoningStatus,
         if (traceId != null) 'trace_id': traceId,
         if (invocationOrigin != null) 'invocationOrigin': invocationOrigin,
         if (contextRef.isNotEmpty) 'contextRef': contextRef,
@@ -148,6 +152,7 @@ class AssistantMessageMetadata {
               ? (decoded['sourceIds'] as List).whereType<String>().toList()
               : const [],
           knowledgeStatus: readString('knowledgeStatus'),
+          reasoningStatus: readString('reasoningStatus'),
           traceId: readString('trace_id'),
           invocationOrigin: readString('invocationOrigin'),
           toolPlanSteps: decoded['toolPlanSteps'] is List
