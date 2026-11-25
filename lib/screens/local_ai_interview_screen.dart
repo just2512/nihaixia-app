@@ -206,7 +206,7 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.resolveContextualKnowledgeEntry = false,
   }) : assert(
           !autoSendInitialMessage ||
-              (initialUserMessage?.trim().isNotEmpty ?? false),
+              (initialUserMessage != null && initialUserMessage != ''),
         ),
        assert(!resolveContextualKnowledgeEntry || contextualExplanationOnly);
 
