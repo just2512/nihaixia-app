@@ -6,6 +6,7 @@ import '../data/medical_case_data.dart';
 import '../models/ai_evidence.dart';
 import 'classic_evidence_pipeline.dart';
 import 'legacy_order_evidence_ranker.dart';
+import 'guji_evidence_pipeline.dart';
 import 'classic_search_service.dart';
 import '../data/herb_repository.dart';
 import '../data/neijing_entries.dart';
@@ -486,23 +487,44 @@ class AssistantKnowledgeContextBuilder {
     for (final book in requestedGujiBooks) {
       try {
         final chapters = await GujiRepository.chaptersOf(book);
-        final hits = chapters.where((chapter) {
-          return terms.any((term) =>
-              chapter.title.contains(term) || chapter.body.contains(term));
-        }).take(2).toList(growable: false);
+        final gujiEvidenceBatch = GujiEvidencePipeline.retrieveCandidates(
+          requestId: '${ClassicEvidencePipeline.nextRequestId()}:guji:${book.id}',
+          originalQuery: normalized,
+          terms: terms.toList(growable: false),
+          book: book,
+          chapters: chapters,
+        );
+        final rankedGujiEvidence = LegacyOrderEvidenceRanker.rank(
+          gujiEvidenceBatch.candidates,
+          requestId: gujiEvidenceBatch.requestId,
+          maxKeptEvidence: 2,
+          keepReasonCode: 'LEGACY_GUIJI_CHAPTER_ORDER_WITHIN_BOOK_LIMIT',
+          keepReason: 'Preserved the existing chapter order and two-chapter per-book limit.',
+          dropReasonCode: 'LEGACY_GUIJI_TWO_CHAPTER_PER_BOOK_LIMIT',
+          dropReason: 'Excluded by the existing two-chapter per-book context limit.',
+        );
+        final gujiCandidatesById = {
+          for (final candidate in gujiEvidenceBatch.candidates)
+            candidate.evidenceId: candidate,
+        };
         buffer
           ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
           ..writeln('书籍简介：${book.intro}');
-        if (hits.isEmpty) {
+        if (rankedGujiEvidence.orderedEvidenceIds.isEmpty) {
           buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
         }
-        for (final chapter in hits) {
-          final excerpt = chapter.body.length > 1400
-              ? chapter.body.substring(0, 1400)
-              : chapter.body;
+        for (final evidenceId in rankedGujiEvidence.orderedEvidenceIds) {
+          final candidate = gujiCandidatesById[evidenceId]!;
+          final excerpt = candidate.excerpt.length > 1400
+              ? candidate.excerpt.substring(0, 1400)
+              : candidate.excerpt;
           buffer
-            ..writeln('章节：${chapter.title}')
-            ..writeln('知识库条目定位：${book.asset}#chapter=${chapter.title}')
+            ..writeln('章节：${candidate.title}')
+            ..writeln('来源标识：${candidate.sourceId}')
+            ..writeln('知识库条目定位：${candidate.locator}')
+            ..writeln('App 内回链：${candidate.localBacklink}')
+            ..writeln('原始卷页定位：${candidate.locatorStatus}')
+            ..writeln('来源版本/原文核验：${candidate.sourceVersion}/${candidate.verificationStatus}')
             ..writeln('条目内容摘录：$excerpt');
         }
       } catch (_) {

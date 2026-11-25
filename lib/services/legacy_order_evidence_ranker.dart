@@ -16,6 +16,10 @@ class LegacyOrderEvidenceRanker {
     List<CandidateEvidence> candidates, {
     required String requestId,
     int maxKeptEvidence = ClassicEvidencePipeline.legacyContextHitLimit,
+    String keepReasonCode = 'LEGACY_QUERY_ORDER_WITHIN_LIMIT',
+    String keepReason = 'Preserved the existing classic-query and hit order.',
+    String dropReasonCode = 'LEGACY_CONTEXT_HIT_LIMIT',
+    String dropReason = 'Excluded by the existing four-hit context limit.',
   }) {
     if (requestId.trim().isEmpty) {
       throw ArgumentError.value(requestId, 'requestId', 'Must not be empty');
@@ -47,8 +51,8 @@ class LegacyOrderEvidenceRanker {
           EvidenceRankingDecision(
             evidenceId: evidenceId,
             disposition: EvidenceDecisionDisposition.keep,
-            reasonCode: 'LEGACY_QUERY_ORDER_WITHIN_LIMIT',
-            reason: 'Preserved the existing classic-query and hit order.',
+            reasonCode: keepReasonCode,
+            reason: keepReason,
             orderIndex: retainedOrder++,
           ),
         );
@@ -57,8 +61,8 @@ class LegacyOrderEvidenceRanker {
           EvidenceRankingDecision(
             evidenceId: evidenceId,
             disposition: EvidenceDecisionDisposition.drop,
-            reasonCode: 'LEGACY_CONTEXT_HIT_LIMIT',
-            reason: 'Excluded by the existing four-hit context limit.',
+            reasonCode: dropReasonCode,
+            reason: dropReason,
           ),
         );
       }
