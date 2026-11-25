@@ -4319,3 +4319,60 @@ PR HEAD 门禁证据：
 - **本轮没有连接或操作 OPPO Find N2。** Keystore / StrongBox / TEE 实际安全级别、设备绑定 Token 正向激活、AtomicFile 故障恢复、原签名 `adb install -r` 覆盖升级及数据保留、GPU/CPU 多轮真实推理、图片/语音、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，继续保持 `LOCAL ONLY / MISSING / UNKNOWN`。
 - 正式 Release 构建仍需要用户本机原签名材料；CI 已验证缺少本地签名材料时 Release 构建被阻断。不得用 Debug artifact 代替 Release 包。
 - **整体验收状态：** `CLOUD IMPLEMENTATION = PASS`；`FIND N2 REAL-DEVICE ACCEPTANCE = MISSING / LOCAL ONLY`。两者必须分开记录，不得用 CI 结果替代设备证据。
+
+
+---
+
+## 94. 2026-11-25 v1.3 后续 PR 收尾、主线回归与最新设备交接基线
+
+### 94.1 最新主线与版本
+
+- **当前核验基线：** `master @ bb301852e664328ccdd0900be1383fa76dec8fdb`。该 SHA 包含 PR #485、#486、#489 的合并结果；本节不把此前 #482 合并 SHA `57f62083590c5619f84da98ff7c5b5f430efeba8` 或 PR #485 合并 SHA `f022852678e2f12a334b83e28e2c4d8c8e3a3e99` 误作最新主线。
+- `pubspec.yaml` 当前版本仍为 `2.0.0+8048`；包名仍为 `com.nihaisha.nihaisha_app`。本轮未变更版本号、applicationId、签名配置或模型文件。
+
+### 94.2 PR #485 / #486 / #489 集成结果
+
+| PR | 合并提交 | 变更范围 | 精确 HEAD / CI 证据 | 结论 |
+|---|---|---|---|---|
+| #485 | `f022852678e2f12a334b83e28e2c4d8c8e3a3e99` | v1.3 云端收尾台账与 Find N2 交接文档刷新 | master Push run `45517116757`：Flutter regression job `138879302515` SUCCESS、Android arm64/JVM job `138882598119` SUCCESS；Fork license run `45517116752` job `138879302308` SUCCESS；Analyze job `138879302365` SUCCESS | 已合并，云端回归通过 |
+| #486 | `fa1ddc3e4deb4e4e4dcd338e3f4457358c78c6b6` | Release Key Ring 指南从 v1.2 旧引用对齐 v1.3，并刷新台账/设备交接章节引用；不改运行时代码或密钥 | PR run `45517279660` Flutter regression SUCCESS、Android arm64/JVM SUCCESS；run `45517279581` Fork license SUCCESS。master Push run `45519577445` Flutter regression SUCCESS、Android arm64/JVM SUCCESS；Analyze run `45519577452` SUCCESS；Fork license run `45519577456` SUCCESS | 已合并，引用已对齐 |
+| #489 | `bb301852e664328ccdd0900be1383fa76dec8fdb` | 仅统一设置页对协议修订 1 历史 AI Feature 的显示名称；`ai_advanced` 与 `contextual_assistant` 仅作为兼容别名显示为单一 `ai_access`，不修改 Token 解析、OR 兼容映射、授权状态、Native Gate 或业务行为 | PR run `45521573859` Flutter regression SUCCESS、Android arm64/JVM SUCCESS；run `45521573835` Fork license SUCCESS。master Push run `45522935965` Flutter regression SUCCESS、Android arm64/JVM SUCCESS；Analyze run `45522936035` SUCCESS；Fork license run `45522936830` SUCCESS | 已合并，单一权益 UI 语义一致 |
+
+- 上表对应 workflow 中的 Branch validation job 均为 `SKIPPED`，不计 PASS；只记录实际执行并成功的 job。
+- #485、#486、#489 的变更均未缩小 `LICENSE-FORK-COMMERCIAL.md` 的适用范围，也未把 App 永久 `ai_access` Token 等同于源代码商业许可。
+
+### 94.3 v1.3 运行时与协议复核
+
+- 单一运行时权益仍为 `ai_access`；协议修订 2 使用该唯一 Feature ID。协议修订 1 的 `ai_advanced` 或 `contextual_assistant` 仅按既有兼容规则映射到同一个 `aiAccess`，不形成独立收费权益。
+- Native `AiModelAccessGate` 仍是 LiteRT 模型加载和推理的权威门禁；默认关闭。Dart UI 标签和状态展示不构成安全边界。
+- `HeadlessToolDispatcher` 继续负责执行计划/能力映射/执行前校验和结果完整性；`ContextResolutionGateway` 继续负责上下文来源、锚点与 Resolver 回链校验。两者不承担独立收费判断。
+- PR #489 只调整历史 Feature ID 的 UI 标签，未更改协议兼容语义；不得因界面统一而删除修订 1 解析兼容。
+- 当前架构测试 `test/native_ai_access_gate_architecture_test.dart` 以源码结构断言检查 MethodChannel handler 和内部模型路径；它是源码审计测试，不是完整 Kotlin AST 解析器，也不替代 Find N2 运行时验证。
+
+### 94.4 Release fail-closed 与 Fork 许可清单复核
+
+- `LicenseKeyRingFactory` 对缺失/格式错误的 Dart define 返回空 Key Ring，无法验证任何发行者；免费功能可继续启动。Android Release Gradle 门禁要求恰好一个 `YANJI_LICENSE_KEY_RING` define、非空 keys、合法唯一 key_id、32-byte Ed25519 公钥、已知状态及至少一个 active/standby issuer，并拒绝测试 issuer ID/公钥。
+- Release 构建另行要求本地原签名 `android/key.properties` 与 keystore；CI-only 临时签名仅用于扫描构建产物，不是产品 Release 签名身份。
+- `.github/workflows/release-trust-anchor.yml` 从 GitHub Secret `YANJI_LICENSE_KEY_RING` 读取公钥环并执行发行者/产物扫描。当前可见仓库源码和 CI 证据不能读取或证明 Secret 的实际值、正式公钥来源或生产私钥离线托管状态；因此**正式发行信任锚仍 BLOCKED**，不能以 workflow 文件存在或普通 CI 成功推断 Secret 已配置。
+- 当前 Fork inventory 记录 changed 975、added 811、modified 164、deleted 15；分类为 FORK_COMMERCIAL 452、APACHE_2_0_AND_FORK_COMMERCIAL 158、KNOWLEDGE_BASE_EXCLUDED 364、THIRD_PARTY_EXCLUDED 1。自动检查只证明 inventory/DEP5/SPDX 路径与分类结构一致；Fork-owned 与 mixed 条目仍标记 `OWNERSHIP_EVIDENCE_REQUIRED`，不能由 CI 或 Git 作者字段证明权属。
+- `LICENSE-FORK-COMMERCIAL.md` 当前为版本 1.4；本轮未修改其授予条款。运行时 Token 与源代码许可保持分离。
+
+### 94.5 云端完成与外部阻断清单
+
+| 项目 | 当前状态 | 证据/解除条件 |
+|---|---|---|
+| v1.3 单一 `ai_access` 运行时门禁与旧协议兼容 | CLOUD IMPLEMENTATION PASS | #478/#482 已合并；#485/#486/#489 及精确 CI 证据见 §93、§94.2 |
+| Release Key Ring 配置/Gradle fail-closed 规则 | SOURCE/CI CONTRACT PASS | 工厂、Gradle、Release trust-anchor workflow 和测试已存在；不代表生产 Secret 已配置 |
+| 正式发行者公钥及来源核验 | BLOCKED / MISSING | 需要发行方交付的正式公钥及可核验来源；不得生成临时生产信任锚 |
+| GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值 | UNKNOWN / EXTERNAL | 需要仓库维护者在 Secret 管理界面核验；只读仓库接口无法读取 Secret 值 |
+| 生产发行私钥离线保管、备份/恢复演练 | BLOCKED / MISSING | 需要真实离线发行端、保管责任人和恢复演练记录；私钥不得进入仓库/CI |
+| 真实客户签发与密钥轮换 | NOT RUN / MISSING | 依赖正式发行公钥、离线私钥和实际签发操作 |
+| Fork 自有代码权属/再许可证明 | BLOCKED / MISSING | 需要真实作者/权利人合同、转让或充分再许可材料；自动 inventory 不构成权属证明 |
+| Find N2 Keystore/StrongBox/TEE、AtomicFile 故障恢复 | LOCAL ONLY / MISSING | 由本地设备证据解除 |
+| 原签名 APK 覆盖升级与用户数据保留 | LOCAL ONLY / MISSING | 需要旧包证书/版本元数据、原签名 Release APK 和 `adb install -r` 结果 |
+| GPU/CPU 各 20 轮、多媒体、Activity/进程恢复、TRACE、AI 数据清除 | LOCAL ONLY / MISSING / UNKNOWN | 按 `docs/local-real-device-acceptance-handoff.md` 逐项记录真实设备结果 |
+
+- **本轮设备验收未执行。** 云端源码/CI 完成不改变设备状态；不以设备未测阻塞云端收尾，也不将其改为 PASS。
+- **本轮云端结论：** v1.3 运行时实现与协议兼容、授权 UI 单一权益语义、Release fail-closed 规则和 Fork 清单自动边界均已完成源码/CI 复核；正式发行材料、法律权属材料和 Find N2 设备证据仍是外部/本地硬门槛。
+
+---
