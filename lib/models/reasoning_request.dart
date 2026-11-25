@@ -57,13 +57,28 @@ class ReasoningExecutionResult {
         (this.resultValues.isEmpty || this.sourceIds.isEmpty)) {
       throw ArgumentError('REASONING_SUCCEEDED_RESULT_INCOMPLETE');
     }
-    if (status == ReasoningExecutionStatus.notStarted &&
-        (this.resultValues.isNotEmpty || this.sourceIds.isNotEmpty)) {
-      throw ArgumentError('REASONING_NOT_STARTED_HAS_RESULT');
-    }
     if (status == ReasoningExecutionStatus.succeeded &&
         failureCode != null) {
       throw ArgumentError('REASONING_SUCCEEDED_HAS_FAILURE_CODE');
+    }
+    if (status == ReasoningExecutionStatus.notStarted &&
+        (this.actualArguments.isNotEmpty ||
+            this.resultValues.isNotEmpty ||
+            this.sourceIds.isNotEmpty ||
+            failureCode != null)) {
+      throw ArgumentError('REASONING_NOT_STARTED_HAS_EXECUTION_DATA');
+    }
+    if ((status == ReasoningExecutionStatus.failed ||
+            status == ReasoningExecutionStatus.unknown) &&
+        (failureCode == null || failureCode.trim().isEmpty)) {
+      throw ArgumentError('REASONING_NON_SUCCESS_FAILURE_CODE_REQUIRED');
+    }
+    if (status != ReasoningExecutionStatus.succeeded &&
+        (this.resultValues.isNotEmpty || this.sourceIds.isNotEmpty)) {
+      throw ArgumentError('REASONING_NON_SUCCESS_CANNOT_CARRY_RESULT');
+    }
+    if (failureCode != null && failureCode != failureCode.trim()) {
+      throw ArgumentError('REASONING_FAILURE_CODE_INVALID');
     }
   }
 
