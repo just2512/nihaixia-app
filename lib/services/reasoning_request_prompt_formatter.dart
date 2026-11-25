@@ -13,14 +13,12 @@ class ReasoningRequestPromptFormatter {
   static const String header = '【App 本轮推理请求元数据 v1】';
 
   static String formatSupplementalContext(ReasoningRequest request) {
-    final sessionState = request.sessionState;
-    final sessionStateMap = sessionState == null
-        ? const <String, Object?>{
-            'status': 'UNKNOWN',
-            'facts': <Object?>[],
-            'evidenceReferences': <Object?>[],
-          }
-        : (request.toMap()['sessionState'] as Map<String, Object?>);
+    final sessionStateContext = request.sessionState == null
+        ? '【App 本会话结构化记忆快照】\nstatus=UNKNOWN\n结构化事实：未提供。\n来源引用：未提供。'
+        : SessionStateSnapshotPromptFormatter.format(
+            request.sessionState!,
+            expectedSessionId: request.sessionId,
+          );
 
     final envelope = <String, Object?>{
       'schemaVersion': 1,
@@ -28,7 +26,7 @@ class ReasoningRequestPromptFormatter {
       'sessionId': request.sessionId,
       'mode': request.mode,
       'responseSchemaVersion': request.responseSchemaVersion,
-      'sessionState': sessionStateMap,
+      'sessionStateContext': sessionStateContext,
       'rankedEvidence': request.rankedEvidence.map((item) => item.toMap()).toList(),
       'knownEvidenceIds': request.knownEvidenceIds,
       'executionResults':
@@ -42,13 +40,6 @@ class ReasoningRequestPromptFormatter {
         'This contract does not grant permission or authorize tool execution.',
       ],
     };
-    final encoded = jsonEncode(envelope);
-    final formatted = '$header\n$encoded';
-    if (sessionState != null &&
-        formatted.length > SessionStateSnapshotPromptFormatter.maxCharacters +
-            encoded.length) {
-      throw StateError('REASONING_REQUEST_FORMATTER_BOUND_VIOLATION');
-    }
-    return formatted;
+    return [header, jsonEncode(envelope)].join('\n');
   }
 }
