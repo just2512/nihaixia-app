@@ -1340,7 +1340,12 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
   await tester.enterText(find.byType(TextField), question);
   await tester.pump();
   expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
-  expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNotNull);
+  expect(tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed, isNotNull);
   await tester.tap(find.byTooltip('发送'));
   await tester.pumpAndSettle();
 
@@ -1402,7 +1407,12 @@ testWidgets('学习助手结构化协议失败时不展示未经验证的模型�
   await tester.enterText(find.byType(TextField), '灵枢 经脉原文');
   await tester.pump();
   expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
-  expect(tester.widget<IconButton>(find.byTooltip('发送')).onPressed, isNotNull);
+  expect(tester.widget<IconButton>(
+    find.ancestor(
+      of: find.byTooltip('发送'),
+      matching: find.byType(IconButton),
+    ),
+  ).onPressed, isNotNull);
   await tester.tap(find.byTooltip('发送'));
   await tester.pumpAndSettle();
 
