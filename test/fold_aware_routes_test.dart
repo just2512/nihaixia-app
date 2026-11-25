@@ -323,7 +323,7 @@ void main() {
                       height: 120,
                       child: Center(
                         child: Text(
-                          'IME:\${MediaQuery.viewInsetsOf(dialogContext).bottom}',
+                          'IME:${MediaQuery.viewInsetsOf(dialogContext).bottom}',
                           key: const ValueKey('fold-dialog-ime-inset'),
                         ),
                       ),
