@@ -4258,3 +4258,64 @@ PR HEAD 门禁证据：
 - 下一批独立代码工作：协议修订 2/Issuer/Verifier 兼容；EntitlementService 单一 `aiAccess` 状态；Dart→Native 内部授权状态同步；Native `loadModel` 与全部推理方法统一 Gate；删除业务层重复收费判断；补齐 AST 旁路审计与测试。
 - 不删除 F0/F1/G1 已完成的执行安全、来源校验、结果校验、TRACE 和历史数据功能。
 - Find N2 Keystore/StrongBox、AtomicFile、模型真实推理和升级验收仍放在云端代码/CI 收尾之后本地执行。
+
+
+---
+
+## 93. 2026-11-24 v1.3 单一 ai_access 云端实现收尾
+
+### 93.1 主线基线与集成提交
+
+- **本节基线：** `master @ 57f62083590c5619f84da98ff7c5b5f430efeba8`。这是 PR #482 合并后的主线；所有当前代码结论均以该 SHA 为准。
+- **冻结规范 PR #472：** 已合并。v1.3 是后续实现唯一依据，不再按 AI 业务场景拆分收费。
+- **Native Gate PR #478：** 已合并，merge SHA `fc951d7a46b9b94a30db961ac7d231aa11d5822d`，head `ac5c659c65f7f2e4d46037bca0f27550bd8704bf`。Native 进程级 Gate 默认关闭，统一约束 LiteRT 模型加载和推理；该提交的 Flutter/Android arm64 CI 记录见 run `45418020379`、`45418387592`，均为 SUCCESS（只把实际成功 job 计为通过）。
+- **业务门禁移除 PR #482：** 已 squash 合并，merge SHA `57f62083590c5619f84da98ff7c5b5f430efeba8`；验收使用精确 head `6619205d07a39d619d7c640da0c8e44c07867a17`。本批完成 Dispatcher/Gateway 业务收费门禁清除、21 个生产来源调用点迁移、旧授权测试 Fixture 清理、Token 单权益状态与协议兼容测试、许可清单描述同步及调用链回归。
+- 历史 §92.4 的 `MISSING / IN_PROGRESS` 是当时冻结设计的时间点记录；其实现状态现由本节和已合并 PR 更新，不应再作为当前主线状态引用。
+
+### 93.2 v1.3 代码落地结论
+
+- **运行时收费权益唯一：** `ai_access`。协议修订 2 新 Token 仅签发该权益；协议修订 1 的 `ai_advanced` 或 `contextual_assistant` 历史签名声明兼容映射到同一个有效 `aiAccess`，不保留独立收费语义。
+- **Native 是模型访问的权威门禁：** Native LiteRT 模型加载和所有推理入口由同一个进程级 Gate 控制；Gate 默认关闭，只有 EntitlementService 完成设备绑定 Token 验证后才同步开放。Dart UI 状态不是安全边界。
+- **Dispatcher 只负责执行安全：** 保留调用来源、计划结构、工具/能力映射、整计划预检、执行顺序与结果校验；移除 `ai_advanced` 等收费判断。
+- **ContextResolutionGateway 只负责来源完整性：** 保留上下文引用、来源锚点、版本及 Resolver 回链校验；移除 `contextual_assistant` 收费判断。21 个生产调用点已不再注入旧授权器。
+- **EntitlementService 单一权益：** 快照以 `aiAccess` 为唯一运行时权限，保留协议验证、设备绑定、状态/错误原因、超时和 Native Gate fail-closed 同步；不因问诊、学习、情境或工具调用生成第二套业务授权。
+- **安全与功能没有被收费清理顺带删除：** Dispatcher 的确定性执行前校验、Gateway 来源/锚点校验、结果完整性、历史恢复、TRACE 和免费确定性业务仍保留。
+- 代码检索复核：当前 master 不再包含 `FeatureAuthorizer`、`FeatureAuthorizationDecision`、`contextual_assistant` 或 `ai_advanced` 运行时收费实现；旧协议 ID 仅作为 `license_model.dart` 中的历史兼容字段存在。
+
+### 93.3 精确 HEAD 的自动验收证据
+
+以下均针对 PR #482 被合并前的精确测试 HEAD `6619205d07a39d619d7c640da0c8e44c07867a17`，合并后 master 只增加 squash 提交元数据，未更改该提交树：
+
+| 验收范围 | GitHub Actions run / job | 结果 | 口径 |
+|---|---|---|---|
+| Push Branch validation（静态分析、Headless AST、变更测试配对） | run `45430348669` / job `138573590528` | **SUCCESS** | 有实际执行 |
+| PR 全量 Flutter 回归（含本地 AI 合同、历史恢复、Dispatcher、SQLite、工具、知识引用、检索黄金快照及全量 Dart suite） | run `45430364276` / job `138575412535` | **SUCCESS** | 完整回归通过 |
+| Android arm64 CI Debug APK、ABI/Manifest、Native JVM 单测、Release 签名缺失 fail-closed 检查 | run `45430364276` / job `138580731592` | **SUCCESS** | ABI/构建验证，不是正式 Release |
+| Push Fork license boundary | run `45430349239` / job `138573592578` | **SUCCESS** | 文件清单/REUSE 自动检查 |
+| PR Fork license boundary | run `45430363688` / job `138573642617` | **SUCCESS** | 文件清单/REUSE 自动检查 |
+
+- 同一 SHA 的部分事件矩阵中，另一些 Branch validation、Flutter 或 Android job 显示 `SKIPPED`；**SKIPPED 不计 PASS**。本表只列出有实际成功执行的 job。
+- 全量 Flutter job 内 34 个步骤均完成且无失败；Android job 22 步骤完成且无失败。相关诊断、检索黄金快照、Android arm64 ABI 证据和 JVM 报告均已生成 workflow artifacts。
+- CI Debug APK 只证明 CI 环境的 arm64 构建/ABI/Manifest 和相关单测，不含用户本机 Release 签名证明，不用于原签名覆盖升级，也不代表 Find N2 实机安装成功。
+
+### 93.4 源码商业许可边界没有随运行时权益缩小
+
+- `LICENSE-FORK-COMMERCIAL.md` 未在 PR #482 修改；其既有适用范围和授予条款没有因 `ai_access` 单一运行时权益而缩小。
+- App 永久 `ai_access` Token 只授予 App 中受 Native Gate 管理的模型访问，不授予 Fork 源代码商业集成、OEM、白标、对外再分发或其他商业使用权；后者仍取决于独立书面源码许可。
+- PR #482 对 `.reuse/dep5` 与 `docs/fork-license-file-inventory.json` 的调整仅更新已删除文件和 Gateway 职责描述，没有把自动扫描结果冒充作者/权利人证明。
+- **源码权属仍需独立证据：** REUSE / Fork license boundary 的 SUCCESS 只证明清单、SPDX/DEP5 结构和分类检查通过，不证明每个作者拥有版权或足够再许可权。清单中标记为 `OWNERSHIP_EVIDENCE_REQUIRED` 的条目仍须由真实权利人材料补证；不得用 Git 作者字段、仓库写权限或 Token 代替。
+
+### 93.5 远程重复 PR 的处置原则
+
+- PR #480 是包含 #478 Native Gate 与 #482 业务门禁移除的旧堆叠实现；其变化已分别由 #478、#482 合并实现取代，不再作为集成入口。
+- PR #483 的 Dispatcher 两个文件和 PR #484 的 Gateway 两个文件均已包含在 #482 的最终集成，不应再次合并。
+- PR #479 的 Native Gate 已由 #478 合并；其旧 `entitlement_failure_reason.dart` / `entitlement_service_scope.dart` 路径未进入当前 master，相关职责由当前 `LicenseFailureReason` 与单一 EntitlementService 集成承接。
+- PR #481 的旧设备交接文件基于合并前 master，需要由当前主线基线刷新后再作为本地执行入口；关闭/替代旧 PR 不删除其远程分支，便于审计追溯。
+- 历史分支保留，不批量删除、不强推、不整体合并。
+
+### 93.6 云端完成范围与本地设备硬门槛
+
+- **云端已完成：** v1.3 单一运行时权益、Native Gate、Dispatcher/Gateway 职责分离、Token 版本兼容、云端自动验收、Fork license 清单一致性复核。
+- **本轮没有连接或操作 OPPO Find N2。** Keystore / StrongBox / TEE 实际安全级别、设备绑定 Token 正向激活、AtomicFile 故障恢复、原签名 `adb install -r` 覆盖升级及数据保留、GPU/CPU 多轮真实推理、图片/语音、Activity/进程恢复、端到端 TRACE 与 AI 数据清除，继续保持 `LOCAL ONLY / MISSING / UNKNOWN`。
+- 正式 Release 构建仍需要用户本机原签名材料；CI 已验证缺少本地签名材料时 Release 构建被阻断。不得用 Debug artifact 代替 Release 包。
+- **整体验收状态：** `CLOUD IMPLEMENTATION = PASS`；`FIND N2 REAL-DEVICE ACCEPTANCE = MISSING / LOCAL ONLY`。两者必须分开记录，不得用 CI 结果替代设备证据。
