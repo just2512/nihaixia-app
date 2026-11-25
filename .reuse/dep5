@@ -1254,7 +1254,7 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 projection adapter from verified AssistantToolResult into immutable ReasoningExecutionResult and focused provenance/state regression tests; UNKNOWN remains UNKNOWN and cancelled/no-result outcomes carry distinct failure codes; ownership evidence required.
- 
+
 Files:
  lib/services/reasoning_action_proposal_gate.dart
  test/reasoning_action_proposal_gate_test.dart
