@@ -132,7 +132,7 @@ class LocalAiTranscriptRestorePolicy {
       omittedTurnCount += 1;
     }
 
-    final retained = serializedTurns.skip(retainedStart).join('\\n');
+    final retained = serializedTurns.skip(retainedStart).join('\n');
     final transcript = omittedTurnCount > 0
         ? '$truncationMarker$retained'
         : retained;
