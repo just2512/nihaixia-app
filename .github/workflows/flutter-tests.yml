@@ -154,15 +154,15 @@ jobs:
           fi
           if [[ "${#kotlin_test_files[@]}" -gt 0 ]]; then
             gradle -p android :app:testDebugUnitTest --no-daemon
+          fi
+          if [[ "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
+            echo "Documentation/workflow-only change: no language regression test required."
+          fi
 
       - name: Build Find N2 arm64 verification APK
         env:
           ORG_GRADLE_PROJECT_ciArm64Only: "true"
         run: flutter build apk --debug --target-platform android-arm64
-          fi
-          if [[ "${#dart_test_files[@]}" -eq 0 && "${#kotlin_test_files[@]}" -eq 0 ]]; then
-            echo "Documentation/workflow-only change: no language regression test required."
-          fi
 
   test:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/integration' || github.event_name == 'pull_request'
