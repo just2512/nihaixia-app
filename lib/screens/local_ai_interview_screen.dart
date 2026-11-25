@@ -3152,9 +3152,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             AssistantToolExecutionStatus.failed => 'BUSINESS_EXECUTION_FAILED',
             AssistantToolExecutionStatus.cancelled =>
               'BUSINESS_EXECUTION_CANCELLED',
+            AssistantToolExecutionStatus.unknown => 'BUSINESS_EXECUTION_UNKNOWN',
             AssistantToolExecutionStatus.succeeded ||
-            AssistantToolExecutionStatus.noResult ||
-            AssistantToolExecutionStatus.unknown => null,
+            AssistantToolExecutionStatus.noResult => null,
           },
         );
       } catch (_) {
@@ -3483,17 +3483,24 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       execution: execution,
       aiReady: _status?.ready == true && !_statusUnknown,
     );
+    final hasUnknownExecution = presentation.steps.any(
+      (step) => step.result?.status == AssistantToolExecutionStatus.unknown,
+    );
     await _traceRecorder.record(
       traceContext,
       stage: AiTraceStage.businessExecution,
       status: presentation.allStepsSucceeded
           ? AiTraceStatus.succeeded
-          : AiTraceStatus.failed,
+          : hasUnknownExecution
+              ? AiTraceStatus.unknown
+              : AiTraceStatus.failed,
       route: route,
       durationMs: watch.elapsedMilliseconds,
       errorCode: presentation.allStepsSucceeded
           ? null
-          : 'PLAN_PARTIAL_OR_STEP_FAILED',
+          : hasUnknownExecution
+              ? 'BUSINESS_EXECUTION_UNKNOWN'
+              : 'PLAN_PARTIAL_OR_STEP_FAILED',
     );
 
     for (var index = 0; index < plan.steps.length; index++) {
@@ -3591,7 +3598,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         ? 'PLAN_AWAITING_PARAMETERS'
         : presentation.allStepsSucceeded
             ? 'PLAN_SUCCEEDED'
-            : 'PLAN_PARTIAL';
+            : hasUnknownExecution
+                ? 'PLAN_UNKNOWN'
+                : 'PLAN_PARTIAL';
     final response = presentation.responseText;
     final autoInterpret = presentation.autoInterpret;
     if (mounted) {
