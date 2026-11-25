@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'local_ai_transcript_restore_policy.dart';
 
 /// Android 本地 Gemma 4 E4B 通道。
 ///
@@ -695,6 +696,12 @@ class LocalAiService {
     final normalized = transcript.trim();
     if (normalized.isEmpty) {
       throw const FormatException('历史对话为空，无法恢复');
+    }
+    if (normalized.length >
+        LocalAiTranscriptRestorePolicy.maxTranscriptCharacters) {
+      throw const FormatException(
+        '历史对话超出 Native 恢复预算；必须先按完整轮次裁剪',
+      );
     }
     final data = await _channel.invokeMapMethod<String, dynamic>(
       'restoreConversation',
