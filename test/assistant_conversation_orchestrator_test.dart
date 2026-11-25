@@ -804,14 +804,14 @@ void main() {
       expect(pendingChoice.tool?.id, 'ziwei');
     });
 
-    test('待选工具期间询问历史背景应切换为学习助手', () {
+    test('待选工具期间询问已注册术数领域的历史背景应进入玄学解释', () {
       final decision = AssistantConversationOrchestrator.resolve(
         query: '紫微斗数的历史背景',
         selectedMode: AssistantMode.automatic,
         currentMode: AssistantMode.metaphysics,
         pendingToolSelection: true,
       );
-      expect(decision.mode, AssistantMode.learning);
+      expect(decision.mode, AssistantMode.metaphysics);
       expect(decision.tool, isNull);
       expect(decision.expectsToolSelection, isFalse);
     });
