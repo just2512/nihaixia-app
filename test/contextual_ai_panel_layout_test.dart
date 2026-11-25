@@ -91,7 +91,7 @@ void main() {
       (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = scenario.size;
-        tester.view.viewInsets = EdgeInsets.zero;
+        tester.view.viewInsets = const FakeViewPadding();
         addTearDown(tester.view.resetViewInsets);
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
@@ -154,7 +154,7 @@ void main() {
         expect(tester.widget<EditableText>(editable).controller.text, '这是一条正在输入的追问');
 
         final keyboardHeight = 300.0;
-        tester.view.viewInsets = EdgeInsets.only(bottom: keyboardHeight);
+        tester.view.viewInsets = FakeViewPadding(bottom: keyboardHeight);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 220));
 
@@ -172,7 +172,7 @@ void main() {
         expect(tester.widget<EditableText>(editable).controller.text, '这是一条正在输入的追问');
         expect(tester.takeException(), isNull);
 
-        tester.view.viewInsets = EdgeInsets.zero;
+        tester.view.viewInsets = const FakeViewPadding();
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 220));
         expect(tester.widget<EditableText>(editable).controller.text, '这是一条正在输入的追问');
