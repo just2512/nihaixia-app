@@ -6,6 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/data/assistant_conversation_store.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
+import 'package:nihaisha_app/data/herb_repository.dart';
+import 'package:nihaisha_app/data/acupuncture_repository.dart';
+import 'package:nihaisha_app/data/acupoint_repository.dart';
+import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/engine/diagnostic_engine.dart';
 import 'package:nihaisha_app/models/assistant_message_metadata.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
@@ -293,6 +297,35 @@ class _FakeRecordingAttachmentStore extends LocalAiAttachmentStore {
   @override
   Future<String> createRecordingPath({String extension = '.wav'}) async =>
       path;
+}
+
+Future<void> _warmLearningKnowledgeSources(WidgetTester tester) async {
+  // RootBundle-backed repositories and the classic index must be initialized
+  // in the real async zone before this widget test enters fake-async frames.
+  // Otherwise the learning send waits forever before reaching Native inference.
+  final result = await tester.runAsync(() async {
+    await FormulaRepository.load();
+    await HerbRepository.load();
+    await AcupunctureRepository.load();
+    await AcupointRepository.load();
+    return AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '学习灵枢经脉原文',
+      includeMedicalCases: false,
+    );
+  });
+  expect(result, isNotNull);
+  expect(
+    result!.rankedEvidence,
+    isNotEmpty,
+    reason: '学习助手测试必须预先准备可供 Core-3 验证的本轮证据',
+  );
+  expect(
+    result.rankedEvidence.any(
+      (item) => item.sourceId.startsWith('guji:lingshu:'),
+    ),
+    isTrue,
+    reason: '本轮灵枢经脉检索必须返回可回链的灵枢条文证据',
+  );
 }
 
 Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
@@ -1322,6 +1355,7 @@ void main() {
   
 testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并保留 Native 会话通道',
     (tester) async {
+  await _warmLearningKnowledgeSources(tester);
   const question = '学习灵枢经脉原文';
   final service = _LearningProtocolTextSendService();
   final traceEvents = <AiTraceEvent>[];
@@ -1425,6 +1459,7 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
 
 testWidgets('学习助手结构化协议失败时不展示未经验证的模型原文',
     (tester) async {
+  await _warmLearningKnowledgeSources(tester);
   const untrustedRaw = 'UNTRUSTED MODEL TEXT MUST NOT RENDER';
   final service = _LearningProtocolTextSendService(
     rawResponseOverride: untrustedRaw,
