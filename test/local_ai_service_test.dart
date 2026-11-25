@@ -416,6 +416,42 @@ void main() {
       expect(received?.arguments['trace_id'], traceId);
     });
 
+
+    test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '继续基于本会话已确认信息回答'};
+      });
+      await LocalAiService().sendMessageWithContext(
+        '继续分析', conversationId: 42, context: 'RAG_CONTEXT_ONLY',
+        sessionStateContext: '【App 本会话结构化记忆快照 v1】\nstatus=RESTORED',
+        sessionStateConversationId: 42,
+      );
+      expect(received?.arguments['context'], 'RAG_CONTEXT_ONLY');
+      expect(received?.arguments['session_state_context'],
+          '【App 本会话结构化记忆快照 v1】\nstatus=RESTORED');
+      expect(received?.arguments['session_state_conversation_id'], 42);
+    });
+
+    test('sendMessageWithTrace forwards session snapshot without RAG context', () async {
+      const traceId = '0123456789abcdef0123456789abcdef';
+      MethodCall? received;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        received = call;
+        return <String, Object?>{'reply': '本会话记忆已注入', 'trace_id': traceId};
+      });
+      await LocalAiService().sendMessageWithTrace(
+        '继续', conversationId: 42, traceId: traceId,
+        sessionStateContext: '【App 本会话结构化记忆快照 v1】\nstatus=PARTIAL',
+        sessionStateConversationId: 42,
+      );
+      expect(received?.arguments['context'], isNull);
+      expect(received?.arguments['session_state_conversation_id'], 42);
+      expect(received?.arguments['session_state_context'], contains('status=PARTIAL'));
+      expect(received?.arguments['trace_id'], traceId);
+    });
+
     test('sendMessage rejects missing, null, and whitespace-only native replies', () async {
       final invalidResponses = <Object?>[
         <String, Object?>{},

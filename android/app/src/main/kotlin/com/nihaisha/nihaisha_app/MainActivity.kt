@@ -361,6 +361,11 @@ class MainActivity : FlutterActivity() {
                         }
                         val text = call.argument<String>("text")?.trim().orEmpty()
                         val context = call.argument<String>("context")?.trim().orEmpty()
+                        val sessionStateContext =
+                            call.argument<String>("session_state_context")?.trim().orEmpty()
+                        val sessionStateConversationId = LocalAiConversationIdPolicy.parse(
+                            call.argument<Any>("session_state_conversation_id")
+                        )
                         val requireMedicalSafety =
                             call.argument<Boolean>("require_red_flag") == true
                         val redFlagContext =
@@ -371,6 +376,20 @@ class MainActivity : FlutterActivity() {
                         if (text.isEmpty()) {
                             result.error("EMPTY_MESSAGE", "请输入内容后再发送", null)
                         } else {
+                            val validatedSessionState = try {
+                                LocalAiSessionStateInputPolicy.validate(
+                                    sessionStateContext,
+                                    sessionStateConversationId,
+                                    conversationId
+                                )
+                            } catch (error: IllegalArgumentException) {
+                                result.error(
+                                    "SESSION_STATE_INVALID",
+                                    error.message,
+                                    null
+                                )
+                                return@handler
+                            }
                             runAiTaskAfterNativeRedFlag(
                                 result,
                                 NativeRedFlagInput(
@@ -380,7 +399,15 @@ class MainActivity : FlutterActivity() {
                                 ),
                                 required = requireMedicalSafety
                             ) {
-                                LocalAiTraceIdPolicy.attach(sendLocalMessage(conversationId, text, context), traceId)
+                                LocalAiTraceIdPolicy.attach(
+                                    sendLocalMessage(
+                                        conversationId,
+                                        text,
+                                        context,
+                                        validatedSessionState
+                                    ),
+                                    traceId
+                                )
                             }
                         }
                     }
@@ -1023,14 +1050,19 @@ class MainActivity : FlutterActivity() {
     private fun sendLocalMessage(
         conversationId: Long,
         text: String,
-        context: String = ""
+        context: String = "",
+        sessionStateContext: String = ""
     ): Map<String, Any> {
         ensureActiveConversation(conversationId)
         // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
         // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
         // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
         // 与各角色 context 中给出。
-        val preparedMessage = LocalAiMessageInputPolicy.prepare(text, context)
+        val preparedMessage = LocalAiMessageInputPolicy.prepare(
+            text,
+            context,
+            sessionStateContext
+        )
         val reply = sendWithFirstTurnGpuFallback(preparedMessage.historyUserText) { conversation ->
             conversation.sendMessage(preparedMessage.modelInput).toString()
         }

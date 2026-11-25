@@ -4506,3 +4506,19 @@ PR HEAD 门禁证据：
 - **Core-3/5：** ReasoningRequest/Response 严格解析、引用 ID 回验、ACTION_PROPOSAL 与跨层 E2E 仍未形成生产闭环。可先做独立协议/负向验证，不接管 Native 调用链、不越过 Gate。
 - **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
 - **设备策略：** Find N2 安装升级、GPU/CPU 多轮、Activity/进程恢复与真实 TRACE 统一留到最后本地验收；云端实现和 CI 继续推进，不以设备验收阻塞。
+
+
+---
+
+## 103. 2026-11-25 Core-1 快照接入、Core-2 生产召回接线与当前 CI 门禁
+
+- **当前 master 基线：** `e960363b7e32da540ecfe9a52da1204c3013c9d6`。本节承接 §102；不回写 §101/§102 当时正确的历史待合并状态。
+- **Core-4 / PR #515：** 已合并于 `ff2de215c0ad3841e607ddf9da24ed60b0c5a9d0`。执行器异常时保留此前完成步骤，当前步骤 UNKNOWN 并停止后续步骤；不自动重试/重放。历史精确 HEAD 的 Flutter、Android arm64/JVM、Fork License 和 work 分支定向校验均通过。
+- **Core-2 聚合/排序 / PR #516：** 已合并于当前基线 `e960363b7e32da540ecfe9a52da1204c3013c9d6`。多源 CandidateEvidenceBatch 命名空间隔离、来源状态聚合、SourceAwareLegacyEvidenceRanker KEEP/DROP 与旧数量上限已进入 master。
+- **Core-2 生产接线 / PR #518：** 分支 `work/core2-production-context-wiring-master-e960363-20261125`，精确 HEAD `e1dfa77a6543a0f92b942d85fe8e2cf55b942a0a`。将经典索引 → 显式指定古籍 → 医案统一送入 MultiSourceEvidencePipeline，再统一 KEEP/DROP；保留既有渲染块、sourceId/backlink、classic 4 条、每本 Guji 2 条、medical 2 条与 6,500 字符呈现上限；单来源读取失败表示为 FAILED batch，不以无命中冒充成功。该精确 HEAD 的 PR Flutter 全量 `45565695850` 已 SUCCESS，Fork License PR `45565695728` 和 push `45565687936` SUCCESS，work 分支定向校验 `139039776393` SUCCESS；Android arm64 APK/ABI/JVM job `139042569180` 在本节记录时仍 IN_PROGRESS，故尚未合并。旧 HEAD 结果不外推至后续修改。
+- **Core-1 会话记忆输入 / PR #519：** 分支 `work/core1-session-snapshot-native-input-master-ff2de-20261125`，本轮文档校准前代码 HEAD `d2b4f78da1a34d7fdde1e32e3a73bb0b576c4928`。将持久化当前 conversation transcript 与该会话 TCM task state 投影为只读 SessionStateSnapshot；以 16,000 UTF-16 code units 上限格式化 USER_ORIGINAL、USER_CONFIRMED、MODEL_INFERRED、APP_RESULT、SOURCE_REFERENCE；snapshot 通过独立 MethodChannel 字段与 RAG 分离传入 Native；Native 校验 active SQLite conversation ID、header 与大小。快照不进入 Native recovery transcript，恢复仍只保留原始 user text 与成功 assistant reply。读失败显式 UNKNOWN，task state 读取不完整为 PARTIAL；无数据库 schema 改动、无自动压缩、无 token budget 推断、无跨进程 Native Conversation 恢复承诺。
+- **Core-1 精确 HEAD CI：** 当前 #519 的 Fork License PR `45566346420` 与 push `45566211108` SUCCESS；Flutter PR 全量 `45566346338` 和 push `45566211119` 在生成该台账快照时仍 IN_PROGRESS；push 分支校验 job `139041525125` 的 Static analysis 已 SUCCESS，changed tests 正在执行，PR 事件 branch-validation 的 SKIPPED 不计作通过；Android arm64/JVM 尚未因完整门禁放行而开始。后续代码/文档提交会改变 HEAD，必须重新核验最终 HEAD 的全套适用 CI。
+- **Core-3 协议 / PR #517：** 已有独立 ReasoningResponse v1 DTO、fail-closed decoder 与请求级 requestId/evidence ID/registered capability 校验测试；不执行 ACTION_PROPOSAL，也未接入 Native 生产发送链。当前分支仍基于旧 `ff2de215...`，与 master `e960363...` 不同，尚待按最新 master 重新基线并重跑 CI；不得标记 Core-3 完成。
+- **Core-0 与 Core-5：** Core-0 的源码映射和五层输出责任继续以本架构文档为准；Core-5 的跨层 E2E、真实引用回填、模型提案→权限验证→确定性执行→结果解释闭环仍未形成，状态 PARTIAL/MISSING 按具体证据填写。
+- **工作流 I：** 用户 Markdown 书架继续 DEFERRED / NOT_AUTHORIZED，不启动。
+- **设备策略：** OPPO Find N2 安装升级、真实 E4B 多轮、GPU/CPU 切换、Activity/进程恢复、会话隔离和 TRACE 真机证据统一留到云端可实现工作全部完成后本地验收；云端 CI 不代替设备 PASS，也不以设备验收阻塞 Core-0～Core-5 云端工程工作。

@@ -1214,3 +1214,11 @@ Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicen
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-2 unified multi-source candidate aggregation and source-aware legacy-order ranking with focused tests; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.
 
+Files:
+ lib/services/session_state_snapshot_prompt_formatter.dart
+ test/session_state_snapshot_prompt_formatter_test.dart
+ android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiSessionStateInputPolicy.kt
+ android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiSessionStateInputPolicyTest.kt
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-1 bounded SessionStateSnapshot prompt formatter, Native session-ownership validation policy and focused memory-isolation tests; snapshot is ephemeral and excluded from Native recovery transcript; only portions for which the Fork maintainer owns copyright or has sufficient sublicensing rights are covered; ownership evidence required.

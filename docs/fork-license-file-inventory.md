@@ -43,6 +43,7 @@
 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiModelImportRecovery.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiModelIntegrityPolicy.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiRuntimeCacheClearPolicy.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiSessionStateInputPolicy.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTraceIdPolicy.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicy.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/LocalAiWavPolicy.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -77,6 +78,7 @@
 | android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiModelImportRecoveryTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiModelIntegrityPolicyTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiRuntimeCacheClearPolicyTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiSessionStateInputPolicyTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiTraceIdPolicyTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiTranscriptRestorePolicyTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | android/app/src/test/kotlin/com/nihaisha/nihaisha_app/LocalAiWavPolicyTest.kt | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -683,6 +685,7 @@
 | lib/services/sanshan_lingqian_tool_service.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/saved_chart_tool_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/session_state_snapshot_builder.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| lib/services/session_state_snapshot_prompt_formatter.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/shousheng_debt_result_context_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/shousheng_debt_tool_executor.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | lib/services/shousheng_debt_tool_service.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -924,6 +927,7 @@
 | test/search_tab_classic_test.dart | 修改 | APACHE_2_0_AND_FORK_COMMERCIAL | Apache-2.0 AND LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/services/tcm_interview_conversation_controller_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/session_state_snapshot_builder_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
+| test/session_state_snapshot_prompt_formatter_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/settings_screen_editorial_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/shanghan_jingui_paragraph_context_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
 | test/shanghan_upstream_board_test.dart | 新增 | FORK_COMMERCIAL | LicenseRef-Nihaixia-Fork-Commercial | OWNERSHIP_EVIDENCE_REQUIRED |
@@ -1031,8 +1035,8 @@
 
 ## 计数与验收说明
 
-- 新增/修改路径共 994 个（新增 830，修改 164）；删除路径 15 个。
-- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 471；知识库排除 364；第三方排除 1。
+- 新增/修改路径共 998 个（新增 834，修改 164）；删除路径 15 个。
+- 分类统计：Apache 2.0 + Fork 双层许可 158；Fork 商业授权候选 475；知识库排除 364；第三方排除 1。
 - .reuse/dep5 对每个非许可元数据的变更路径逐项精确登记；知识库与第三方排除项使用 NOASSERTION，不产生新的授权。
 - 自动检查以共同上游基线为比较点，在实际 PR HEAD 上重算新增、修改、重命名和删除；许可元数据本身从待授权文件集合排除。未来新增、修改或删除文件若未同步更新清单和 DEP5，CI 失败。
 - 清单和 SPDX 映射证明工程分类完整性，不代替贡献者权属/再许可权证明，也不构成法律意见。
