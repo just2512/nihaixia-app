@@ -118,7 +118,8 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
       }
       return;
     }
-    final prompt = AiContextPromptBuilder.buildKnowledgeEntry(
+    final initialUserMessage =
+        AiContextPromptBuilder.buildKnowledgeEntryInterpretationIntent(
       entry: resolved,
     );
     final sourcePageRoute = ModalRoute.of(context);
@@ -128,7 +129,9 @@ class _FormulaDetailScreenState extends State<FormulaDetailScreen> {
     await showContextualAiSheet(
       context: context,
       contextRef: contextRef,
-      initialPrompt: prompt,
+      initialUserMessage: initialUserMessage,
+      autoSendInitialMessage: true,
+      resolveContextualKnowledgeEntry: true,
       initialMode: AssistantMode.learning,
       contextualTitle: formula.name,
       contextualExplanationOnly: true,
