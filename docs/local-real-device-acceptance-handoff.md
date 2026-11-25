@@ -1,7 +1,7 @@
 # 研纪 OPPO Find N2 本地实机验收交接单
 
-> **文档版本：** 1.0  
-> **编制日期：** 2026-11-24  
+> **文档版本：** 1.1  
+> **编制日期：** 2026-11-25  
 > **执行地点：** 用户本地 Windows + OPPO Find N2  
 > **当前状态：** **PREPARE / LOCAL ONLY / MISSING**  
 > **目标：** 将远程已交付代码转为可复核的真实设备验收证据。本文件是执行入口，不是实机通过报告。
@@ -286,12 +286,14 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 集成证据（不是实机通过证明）
 
-- 当前构建基线：`master @ 57f62083590c5619f84da98ff7c5b5f430efeba8`；App 版本仍以 `pubspec.yaml` 为准，本次核对为 `2.0.0+8048`。本地执行前必须重新读取最新 master HEAD 和 APK 元数据。
-- 冻结规范 PR #472、Native Gate PR #478、业务收费门禁清理 PR #482 均已合并；#482 使用精确测试 head `6619205d07a39d619d7c640da0c8e44c07867a17`，merge commit 为当前基线。
+- **本交接单本轮云端更新前的 master HEAD：** `fa1ddc3e4deb4e4e4dcd338e3f4457358c78c6b6`（PR #486 合并后）。PR #485 与 PR #486 均为文档变更，没有修改 Dart/Kotlin 运行时代码；最近一笔运行时代码提交仍为 `57f62083590c5619f84da98ff7c5b5f430efeba8`。本地执行前仍必须重新读取当时最新 master HEAD 和 APK 元数据，不能把本文件中的 SHA 当作永久最新值。App 版本仍以 `pubspec.yaml` 为准，本轮记录为 `2.0.0+8048`。
+- 冻结规范 PR #472、Native Gate PR #478、业务收费门禁清理 PR #482 均已合并；#482 使用精确测试 head `6619205d07a39d619d7c640da0c8e44c07867a17`，merge commit `57f62083590c5619f84da98ff7c5b5f430efeba8` 是最近一笔应用运行时代码基线，不是当前文档 HEAD。文档收尾 PR #485（merge `f022852678e2f12a334b83e28e2c4d8c8e3a3e99`）和 PR #486（merge `fa1ddc3e4deb4e4e4dcd338e3f4457358c78c6b6`）均未改运行时代码。
 - 对应云端成功记录：Branch validation job `138573590528`；完整 Flutter regression job `138575412535`；Android arm64 CI Debug APK/ABI + Android JVM 单测 job `138580731592`；Fork license boundary jobs `138573592578`、`138573642617`。对应 workflow run 分别为 `45430348669`、`45430364276`、`45430349239`、`45430363688`。
 - 同一工作流中标记为 `SKIPPED` 的 job 不计 PASS。CI Debug APK artifact 仅用于 arm64 构建/ABI/Manifest 验证，不是 Release 签名包，不能用于旧版覆盖升级。
 - CI 已验证缺少本地签名材料时 Release 构建按预期阻断。正式 Release 必须由维护者在本机使用原签名材料构建和核验。
 - Fork license boundary 自动检查不证明源代码版权/再许可权；`OWNERSHIP_EVIDENCE_REQUIRED` 仍需权利人材料补证。
+- PR #485 精确测试 HEAD `5c1b9c295fa95e0649b47258c2ae4a7c1fb28e52`：完整 Flutter 回归 job `138879302515`、Android arm64 CI job `138882598119`、Fork license boundary job `138879302308` 均 `SUCCESS`；Branch validation job `138879304247` 为 `SKIPPED`，不计 PASS。
+- PR #486 精确测试 HEAD `3cb3950f51d30a6e0ef2c3029d8fe6531c43c912`：完整 Flutter 回归 job `138879860365`、Android arm64 CI job `138883470922`、Fork license boundary job `138879859601` 均 `SUCCESS`；Branch validation job `138879862409` 为 `SKIPPED`，不计 PASS。两批均未将 `SKIPPED` 当作通过。
 - **设备状态仍为 `PREPARE / LOCAL ONLY / MISSING`。** 本交接单中所有实际设备项目必须在 OPPO Find N2 本地操作后逐项附证据，不能把上述 CI 结果抄成设备 PASS。
 
 ## 7. 证据包、结果记录与回传
