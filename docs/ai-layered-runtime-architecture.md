@@ -184,6 +184,124 @@ E4B 不可以：
 - 排盘、历法、问诊规则、剂量换算及其他既有确定性计算继续由 App 既有函数执行，不能迁移给模型。
 - 业务执行与模型授权分开治理；任何 LiteRT/LiteRT-LM 模型加载/推理均遵守项目既有唯一 ai_access 和 Native AiModelAccessGate，不新增第二套门禁或收费权益。
 
+### 2.6 核心 DTO 契约（v1，字段级冻结）
+
+以下是五层之间的逻辑 DTO，不要求立即采用 JSON 序列化、增加数据库表或建立独立服务。第一批实现优先使用不可变 Dart/Kotlin 值对象；只有跨进程、跨语言或持久化确有需要时才定义 wire format。字段缺失、未命中和执行未知必须用状态表达，不能用空字符串统一吞并。
+
+**通用约束**
+
+- ID 均为不透明、非空标识；接收方不得通过解析 ID 推断来源类型、授权或真实性。
+- 来源字段只能原样传递数据层提供的值。任何层均不得把 `UNKNOWN`、`UNVERIFIED` 或 `MISSING` 自动升级为 `VERIFIED`。
+- 集合和快照创建后不可变；层间不得共享任意可修改的全局状态。
+- v1 不定义相关性分数或事实置信度字段。后续若为排序实验引入数值，只能作为诊断信号，不能表达医学正确性、来源真实性或业务成功。
+- 所有预算必须显式记录单位。字符数不能标成 token 数；无法取得 token 数时写 `UNKNOWN`。
+- 原文正文不进入会话记忆；记忆保存稳定引用 ID，引用正文按需回源。
+
+**A. 知识召回契约**
+
+`CandidateEvidence`：
+
+| 字段 | 类型/含义 | 约束 |
+|---|---|---|
+| `evidenceId` | 候选证据实例 ID | 同一来源在不同查询/片段下可有不同实例 ID |
+| `sourceId` | 本地来源稳定 ID | 必须能交给来源 Resolver 回查；不得由模型编造 |
+| `sourceVersion` | 来源版本/内容版本 | 无版本信息时为 UNKNOWN，不用猜测值填充 |
+| `origin` | SYSTEM / USER / APP_DATA / UNKNOWN | 由数据源提供；USER 内容始终是不可信输入 |
+| `materialKind` | 资料类别 | 例如 classic_text、lecture、formula、medical_case；保留真实来源值 |
+| `verificationStatus` | 来源核验状态 | 原样传递；不等于召回质量 |
+| `assetId`、`chunkId` | 资产/片段稳定标识 | 可为空；不得把标题作为唯一身份 |
+| `title`、`chapterPath`、`locator` | 可读标题和定位 | 缺失项显式 MISSING |
+| `excerpt` | 候选原文片段或摘要 | 必须能由 sourceId + locator 回查；标明是否截断 |
+| `queryId` | 命中的查询 ID | 原始 query 与派生 query 分别有 ID |
+| `retrievalMethod`、`matchBasis` | 检索路径和命中依据 | 记录 deterministic/keyword/vector 等实际方式，不推断 |
+| `completeness` | COMPLETE / TRUNCATED / UNKNOWN | 描述候选内容完整度，不描述来源可信度 |
+
+`CandidateEvidenceBatch`：
+
+- `requestId`、`originalQuery`、`derivedQueries[]`（每项含 queryId、query、reason）；
+- `status`：RETRIEVED / MISSING / FAILED / UNKNOWN / PARTIAL；
+- `candidates[]`：CandidateEvidence；
+- `diagnostics[]`：数据源失败、跳过原因和截断记录。
+
+召回层只发现候选；不能自行选出最终上下文，更不能把候选数或相似度当成成功。
+
+**B. 证据排序契约**
+
+`EvidenceRankingDecision`：
+
+- `evidenceId`；
+- `disposition`：KEEP / DROP；
+- `reasonCode` 与可读 `reason`；
+- KEEP 项必须有 `orderIndex`；DROP 项不得伪造排名。
+
+`RankedEvidenceSet`：
+
+- `requestId`、`strategyId`、`strategyVersion`；
+- `decisions[]`：本轮收到的每个候选必须有 KEEP 或 DROP 记录；
+- `orderedEvidenceIds[]`：与 KEEP 决策一一对应、顺序无歧义；
+- `budget`：`unit`（CHARACTERS / TOKENS）、`limit`、`used`、`omittedEvidenceIds[]`、`truncatedEvidenceIds[]`；
+- `status`：RANKED / NO_USABLE_EVIDENCE / BUDGET_TRUNCATED / FAILED。
+
+排序层不负责召回，不改变来源核验状态，不通过静默合并消除不同来源/版本的冲突。v1 不要求打分字段。
+
+**C. 会话记忆契约**
+
+`SessionStateSnapshot`：
+
+- `sessionId`、`revision`、`status`（RESTORED / PARTIAL / SESSION_MISMATCH / UNKNOWN）；
+- `facts[]`：有限的结构化事实；
+- `evidenceReferences[]`：sourceId、sourceVersion、evidenceId/chunkId 等可回查 ID；
+- `activeTaskId`（可选）。
+
+每个 `SessionStateFact` 必须包含 `factId`、`key`、`value`、`provenance` 和必要的 `sourceIds[]`。provenance 固定区分 USER_ORIGINAL、USER_CONFIRMED、MODEL_INFERRED、APP_RESULT、SOURCE_REFERENCE。MODEL_INFERRED 不得被提升为用户确认事实；APP_RESULT 必须能回查实际业务结果。任何 fact 的会话归属不明时不得装入快照。
+
+Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者只承载有界的干净对话轮次；后者承载可压缩、可校验的结构化任务状态。RAG 正文、完整 modelInput 和无界助手长回复均不属于 Native transcript。
+
+**D. 语言推理契约**
+
+`ReasoningRequest`：
+
+- `requestId`、`sessionId`、`userText`（用户原话，不用改写后的提示替代）；
+- `mode`、`sessionState`（有界快照）；
+- `rankedEvidence`（可选；只能包含已排序且可回查的证据）；
+- `executionResults[]`（可选；来自 App 实际执行结果）；
+- `responseSchemaVersion`。
+
+`ReasoningResponse`：
+
+- `requestId`；
+- `responseKind`：ANSWER / CLARIFICATION / ACTION_PROPOSAL / REFUSAL / INSUFFICIENT_EVIDENCE；
+- `status`：COMPLETED / EMPTY / PARSE_FAILED / INSUFFICIENT_EVIDENCE / UNKNOWN；
+- `segments[]`（可读文本片段；引用需以 evidence ID 单独标注）；
+- `referencedEvidenceIds[]`、`unknowns[]`、`conflicts[]`、`omittedEvidenceIds[]`；
+- `actionProposal`（仅 responseKind 为 ACTION_PROPOSAL 时可提供）。
+
+模型生成的 evidence ID 和 action proposal 均为不可信输入，必须由 App 校验。解析失败、空回复和证据不足不能包装成 COMPLETED。
+
+**E. 业务执行契约**
+
+`BusinessActionProposal`：
+
+- `proposalId`、`capabilityId`、`arguments`；
+- v1 arguments 沿用现有工具计划的 key/value 字符串载荷，以便兼容当前执行器；它不是“已校验参数”，各能力必须用自己的确定性 schema 校验类型、单位、范围、必填项和用户确认。
+- 不含模型可控制的 `authorized`、`userConfirmed`、`executed` 或 `success` 字段。提案本身永远不执行操作。
+
+`ExecutionResult`：
+
+- `invocationId`、`capabilityId`；
+- `status`：NOT_STARTED / SUCCEEDED / FAILED / UNKNOWN；
+- `actualArguments`：执行器实际采用并解析的参数；
+- `resultValues`、`sourceIds[]`；
+- `failureCode` / 安全错误说明（失败时）。
+
+只有真实业务函数已执行、返回类型/来源/参数经过 App 校验后，才允许标 SUCCEEDED。执行调用后响应丢失且无法确认副作用时必须标 UNKNOWN；不得重放。
+
+**兼容策略**
+
+- 现有 `AssistantKnowledgeContextResult`、`ToolExecutionPlan`、`AssistantToolResult` 是 v1 的既有实现/适配源，不要求立即废弃或改名。
+- 不创建第二套会话数据库，不迁移业务算法，不新增 ai_access 或 Native `AiModelAccessGate`。
+- 后续代码按“一个边界、一个可验证切片”逐步适配；未被调用路径消费的 DTO 只算契约资产，不算运行时能力已完成。
+
 ## 3. 五层之间的统一数据流
 
 用户输入
