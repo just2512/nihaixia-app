@@ -5748,8 +5748,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         toolId: toolId,
       );
 
+      final conversationId = await _requireNativeConversationId();
       final response = await _sendTextWithKnowledgeContext(
         normalizedPrompt,
+        conversationId: conversationId,
         mode: mode,
         traceContext: traceContext,
         retrievalQuery: retrievalQuery,
