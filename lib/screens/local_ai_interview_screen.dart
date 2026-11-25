@@ -1103,7 +1103,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   Future<AssistantKnowledgeContextResult> _retrieveKnowledgeWithTrace(
     String query, {
     required AiTraceContext traceContext,
-    bool includeMedicalCases = true,
+    bool includeMedicalCases = false,
   }) async {
     final stopwatch = Stopwatch()..start();
     try {
@@ -1203,6 +1203,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     final sessionStateContext =
         await _buildSessionStatePromptContext(conversationId);
     Future<String> sendWithContext(String context) async {
+      const evidencePresentationBoundary =
+          '内部边界：检索命中仅表示 App 返回了候选资料，不代表证据充分、结论正确或模型实际引用。'
+          'sourceId、evidenceId、localBacklink、文件路径、内部序号和检索状态只供内部审计；'
+          '除非当前响应协议明确返回且经 App 回验的引用 ID，否则不得声称“已引用”，也不得把这些内部标识输出给用户。';
+      final guardedContext = '$evidencePresentationBoundary\\n$context';
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.contextAssembly,
@@ -1219,7 +1224,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               conversationId: conversationId,
                   sessionStateContext: sessionStateContext,
                   sessionStateConversationId: conversationId,
-              context: context,
+              context: guardedContext,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
               redFlagContextTruncated: redFlagContextTruncated,
@@ -1229,7 +1234,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               conversationId: conversationId,
                   sessionStateContext: sessionStateContext,
                   sessionStateConversationId: conversationId,
-              context: context,
+              context: guardedContext,
               traceId: traceId,
               requireMedicalSafety: requireMedicalSafety,
               redFlagContext: redFlagContext,
@@ -1239,8 +1244,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     switch (mode) {
       case AssistantMode.automatic:
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge =
-            await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
+        final knowledge = await _retrieveKnowledgeWithTrace(
+          query,
+          traceContext: traceContext,
+          includeMedicalCases:
+              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+        );
         // 无命中且无失败时，不注入知识检索框架与角色 context——
         // 否则"本轮知识检索状态：NO_RESULTS"会把寒暄(你好/hello)或一般聊天
         // 误导成知识检索问题，模型答非所问。systemInstruction 已足够应对一般对话。
@@ -1298,7 +1307,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         }
         final reply = await sendWithContext(context.toString());
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
+          text: reply,
           sourceIds: knowledge.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
@@ -1311,7 +1320,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             await _retrieveKnowledgeWithTrace(
           query,
           traceContext: traceContext,
-          includeMedicalCases: RegExp(r'医案|病例|案例').hasMatch(query),
+          includeMedicalCases: AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
         );
         final knowledgeContext = switch (knowledge.status) {
           AssistantKnowledgeRetrievalStatus.noResults => 'App 本地知识库本轮未命中可引用条目（NO_RESULTS）。',
@@ -1328,21 +1337,25 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               '$knowledgeContext',
         );
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
+          text: reply,
           sourceIds: knowledge.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.learning:
         final query = _knowledgeQueryForCurrentTurn(text);
-        final knowledge =
-            await _retrieveKnowledgeWithTrace(query, traceContext: traceContext);
+        final knowledge = await _retrieveKnowledgeWithTrace(
+          query,
+          traceContext: traceContext,
+          includeMedicalCases:
+              AssistantKnowledgeContextBuilder.shouldIncludeMedicalCases(query),
+        );
         final context = '当前角色：学习助手。\n${AssistantMode.learning.promptHint}\n'
             '本轮知识检索状态：${knowledge.statusLabel}。\n'
             '${knowledge.failureMessage == null ? '' : '检索失败：${knowledge.failureMessage}\n'}'
-            '${knowledge.text.isEmpty ? '未返回可引用条目；不得编造原文或出处。' : knowledge.text}';
+            '${knowledge.text.isEmpty ? '本轮未返回可用的本地检索资料；不得编造原文或出处。' : knowledge.text}';
         final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
-          text: reply + knowledge.citationFooter,
+          text: reply,
           sourceIds: knowledge.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
@@ -1383,7 +1396,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             '$knowledgeContext';
         final reply = await sendWithContext(context);
         return _AssistantTurnResponse(
-          text: reply + (knowledge?.citationFooter ?? ''),
+          text: reply,
           sourceIds: knowledge?.sourceIds ?? const [],
           knowledgeStatus: knowledge?.statusLabel,
         );
@@ -8942,6 +8955,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         selectedMode: _assistantMode,
         currentMode: _lastEffectiveMode,
         pendingToolSelection: _pendingToolSelection,
+        hasStructuredKnowledgeEntity:
+            AssistantKnowledgeContextBuilder.hasStructuredKnowledgeEntity(text),
       );
       final mayUseBoundedIntentModel =
           decision.candidateTools.length >= 2 &&
@@ -10757,54 +10772,28 @@ String _knowledgeSourceLabel(String sourceId) {
   final kind = parts.isEmpty ? '' : parts.first;
   final value = parts.length > 1 ? parts.sublist(1).join(':') : '';
   return switch (kind) {
-    'formula' => '方剂：$value',
+    'formula' => _formulaKnowledgeLabel(value),
     'herb' => '本草：$value',
-    'acupoint' => '穴位：$value',
-    'acupuncture' => '针灸来源：$value',
-    'medical_case' => '医案 #$value',
-    'neijing' => '内经条目',
-    'shanghan' => '伤寒论：$value',
-    'jingui' => '金匮要略：$value',
-    'guji' => '古籍原文：$value',
-    'zhenjiu' => '针灸讲稿：$value',
-    'neijing-reading' => '内经讲稿：$value',
-    'bencao' || 'bencao-reading' => '本草讲稿：$value',
-    'zhenjiu-reading' => '针灸讲稿：$value',
-    'yijing-reading' => '易经讲稿：$value',
-    'minggua-reading' => '命卦讲稿：$value',
-    _ => '来源：$sourceId',
+    'acupoint' => '穴位资料',
+    'acupuncture' => '针灸处方资料',
+    'medical_case' => '医案资料（App 整理）',
+    'neijing' || 'neijing-reading' => '《黄帝内经》学习资料',
+    'shanghan' => '《伤寒论》学习资料',
+    'jingui' => '《金匮要略》学习资料',
+    'guji' => '古籍原文资料',
+    'zhenjiu' || 'zhenjiu-reading' => '针灸学习资料',
+    'bencao' || 'bencao-reading' => '本草学习资料',
+    'yijing-reading' => '易学学习资料',
+    'minggua-reading' => '命卦学习资料',
+    _ => '本轮检索资料',
   };
 }
 
-
-class _KnowledgeStatusLabel extends StatelessWidget {
-  const _KnowledgeStatusLabel({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = switch (status) {
-      'RETRIEVED' => '知识检索：已检索到来源',
-      'PARTIAL' => '知识检索：部分结果',
-      'NO_RESULTS' => '知识检索：无匹配结果',
-      'FAILED' => '知识检索：执行失败',
-      _ => '知识检索：状态未知（$status）',
-    };
-    final color = switch (status) {
-      'RETRIEVED' => Theme.of(context).colorScheme.primary,
-      'PARTIAL' => Theme.of(context).colorScheme.tertiary,
-      'FAILED' => Theme.of(context).colorScheme.error,
-      _ => Theme.of(context).colorScheme.onSurfaceVariant,
-    };
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        label,
-        style: TextStyle(fontSize: AppType.micro, color: color),
-      ),
-    );
+String _formulaKnowledgeLabel(String formulaId) {
+  for (final formula in FormulaRepository.getAll()) {
+    if (formula.id == formulaId) return '方剂：${formula.name}';
   }
+  return '方剂资料';
 }
 
 class _InterviewMessageBubble extends StatelessWidget {
@@ -10815,6 +10804,10 @@ class _InterviewMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final retrievedSourceIds = message.sourceIds
+        .where(_isNavigableKnowledgeSourceId)
+        .toSet()
+        .toList(growable: false);
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
@@ -10848,24 +10841,38 @@ class _InterviewMessageBubble extends StatelessWidget {
                     height: 1.55,
                   ),
                 ),
-                if (message.knowledgeStatus != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  _KnowledgeStatusLabel(status: message.knowledgeStatus!),
-                ],
-                if (message.sourceIds.any(_isNavigableKnowledgeSourceId) &&
+                if (retrievedSourceIds.isNotEmpty &&
                     message.onSourceTap != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: message.sourceIds
-                        .where(_isNavigableKnowledgeSourceId)
-                        .map((sourceId) => ActionChip(
-                              avatar: const Icon(Icons.link, size: 14),
-                              label: Text(_knowledgeSourceLabel(sourceId)),
-                              onPressed: () => message.onSourceTap!(sourceId),
-                            ))
-                        .toList(),
+                  const SizedBox(height: AppSpacing.xs),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(
+                      left: AppSpacing.xs,
+                      right: AppSpacing.xs,
+                      bottom: AppSpacing.xs,
+                    ),
+                    leading: const Icon(Icons.menu_book_outlined, size: 19),
+                    title: const Text(
+                      '本轮检索资料',
+                      style: TextStyle(fontSize: AppType.caption),
+                    ),
+                    subtitle: const Text(
+                      'App 检索返回的资料入口，不代表模型逐条引用或已核验。',
+                      style: TextStyle(fontSize: AppType.micro),
+                    ),
+                    children: [
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: retrievedSourceIds
+                            .map((sourceId) => ActionChip(
+                                  avatar: const Icon(Icons.open_in_new, size: 14),
+                                  label: Text(_knowledgeSourceLabel(sourceId)),
+                                  onPressed: () => message.onSourceTap!(sourceId),
+                                ))
+                            .toList(growable: false),
+                      ),
+                    ],
                   ),
                 ],
                 if (message.options.isNotEmpty) ...[
