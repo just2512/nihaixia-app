@@ -58,8 +58,7 @@ class ClassicHit {
     return 'MISSING';
   }
 
-  /// Whether this hit can reopen a local App entry.
-
+  /// Local App destination for this hit, or MISSING when unavailable.
   String get localBacklink => asset != null
       ? asset!
       : bookId != null

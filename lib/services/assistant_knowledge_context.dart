@@ -53,9 +53,8 @@ class AssistantKnowledgeSourceReference {
 
 enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
 
-/// The exact candidate identity and stable source identity handed from Core-2
-/// to a request-local reasoning adapter. This is a reference only, not a
-/// source-verification claim.
+/// The exact candidate identity and local source identity handed from
+/// Core-2 to a request-local reasoning adapter.
 class AssistantKnowledgeEvidenceReference {
   const AssistantKnowledgeEvidenceReference({
     required this.evidenceId,

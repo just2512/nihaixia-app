@@ -42,9 +42,8 @@ class DerivedEvidenceQuery {
 
 /// One retrieved candidate, before any evidence-ranking decision.
 ///
-/// [sourceId] is the source resolver's existing stable ID. It may be the
-/// explicit MISSING sentinel when the index row has no resolvable locator;
-/// [evidenceId] is the unique identity of this candidate in [requestId].
+/// [sourceId] identifies the local learning item. [evidenceId] is the unique
+/// identity of this candidate in [requestId].
 class CandidateEvidence {
   const CandidateEvidence({
     required this.evidenceId,
@@ -52,7 +51,6 @@ class CandidateEvidence {
     required this.origin,
     required this.materialKind,
     required this.title,
-    required this.locator,
     required this.excerpt,
     required this.queryId,
     required this.retrievalMethod,
@@ -77,7 +75,6 @@ class CandidateEvidence {
   final String? chunkId;
   final String title;
   final String? chapterPath;
-  final String locator;
   final String excerpt;
   final String queryId;
   final String retrievalMethod;
