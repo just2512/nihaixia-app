@@ -745,7 +745,7 @@ class MainActivity : FlutterActivity() {
             "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
             "backend" to activeBackend,
-            "backendFallbackReason" to backendFallbackReason,
+            "backendFallbackReason" to (backendFallbackReason ?: ""),
             "preferredBackend" to preferredBackend()
         )
     }
