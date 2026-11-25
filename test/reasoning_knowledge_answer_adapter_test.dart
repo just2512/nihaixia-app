@@ -187,7 +187,7 @@ void main() {
       expect(result.answerText, isEmpty);
     });
 
-    test('rejects empty rendered content and duplicate or unresolvable source mappings', () {
+    test('rejects empty response segments and duplicate or unresolvable source mappings', () {
       final context = knowledge(sources: [source('source-1')]);
       final requestValue = request(context);
       final empty = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
@@ -196,7 +196,7 @@ void main() {
         knowledge: context,
       );
       expect(empty.isUsable, isFalse);
-      expect(empty.failureCode, 'REASONING_RESPONSE_EMPTY_RENDERED_ANSWER');
+      expect(empty.failureCode, 'REASONING_RESPONSE_FIELD_INVALID');
 
       final duplicateEvidenceContext = knowledge(
         ranked: const [
