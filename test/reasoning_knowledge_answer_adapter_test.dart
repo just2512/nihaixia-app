@@ -92,6 +92,10 @@ void main() {
       );
       expect(context.sources, hasLength(1));
       expect(context.sources.single.sourceId, reference.sourceId);
+      expect(
+        context.sources.single.localBacklink,
+        'assets/data/formulas.json#id=${formula.id}',
+      );
       expect(context.rankedEvidence, hasLength(1));
       expect(context.rankedEvidence.single.evidenceId, evidenceId);
       expect(context.knownEvidenceIds, [evidenceId]);
