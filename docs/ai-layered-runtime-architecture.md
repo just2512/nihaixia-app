@@ -244,6 +244,20 @@ E4B 不可以：
 5. 现有授权、模型加载、Native 单线程队列、GPU/CPU fallback 和保守恢复语义必须保留；任何拆分须证明没有并发、重复执行、资源释放或数据恢复回归。
 6. 每个候选新 Adapter/DTO 必须指向实际调用链缺口和可复现测试；不因为图上有五层就机械新增五个模块。
 
+### 5.1 当前 master 源码映射与已确认断点
+
+以下是本轮对 master 源码的静态映射快照。它说明当前职责分别落在哪里以及哪里仍然耦合；它不是设备运行证明。修改前必须再次以当时 master 核对行号和调用关系。
+
+| 目标职责 | 当前主要代码位置 | 当前状态与断点 |
+|---|---|---|
+| 知识召回 | lib/services/assistant_knowledge_context.dart:383-534；lib/services/classic_search_service.dart:443-485 | PARTIAL。AssistantKnowledgeContextBuilder.buildAsync 同时派生查询、调用经典索引、筛选若干 hit、读取古籍/医案并直接组装上下文；尚未独立输出可审计的 CandidateEvidence 集合。 |
+| 证据排序 | lib/services/classic_search_service.dart:443-485；lib/services/assistant_knowledge_context.dart:424-448 | PARTIAL / 与召回耦合。ClassicSearchService 将 titleHits 排在 bodyHits 前；ContextBuilder 在多条派生 query 间按遇到顺序去重并最多保留 4 个 classic hit。该行为可作为现状基线，但尚无独立 RankedEvidenceSet、逐项保留/排除理由和独立排序测试。 |
+| 会话记忆 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt:905-1000；LocalAiConversationHistoryPolicy.kt:25-50 | PARTIAL / 存在确认断点。sendLocalMessage 将角色说明与本轮 context 拼成 modelInput，再把 modelInput 传给 sendWithFirstTurnGpuFallback；成功轮次将其作为 userText 写入 conversationHistoryTurns；initialMessages 重建时再次回放。因此临时 RAG context 会污染持久化 Native 历史。Core-1 必须改为保存干净用户原话及必要结构化状态/引用 ID，不得保存 RAG blob。 |
+| 语言推理 | android/app/src/main/kotlin/com/nihaisha/nihaisha_app/MainActivity.kt:905-921 | PARTIAL。E4B 通过 Conversation.sendMessage 执行自然语言推理，但输入仍是上游合并后的 modelInput；独立 ReasoningRequest/ReasoningResponse、证据 ID 和动作提案 schema 需要按失败证据逐步建立。 |
+| 业务执行 | lib/services/headless_tool_dispatcher.dart:64-218；lib/services/context_resolution_gateway.dart:43-177 | PARTIAL。HeadlessToolDispatcher 对已登记工具计划先做 registry/capability 校验再执行确定性 executor；ContextResolutionGateway 校验引用锚点并回链具体 Resolver。仍需逐项核对各工具入口、typed args、权限/结果/UNKNOWN 语义，不能据两个类存在就宣称所有业务能力已完成分层。 |
+
+**Core-1 当前最小修复目标：** 将 Native model history 的 userText 从完整 modelInput 改为干净用户原话；结构化任务状态和 source IDs 单独传递；RAG 只作为本轮 ephemeral context 注入当前推理。保持当前 GPU/CPU fallback、Native 单线程队列、执行状态 UNKNOWN 不自动重放和成功轮次提交语义。修复前后必须用 Kotlin/Flutter 测试证明跨轮恢复不会丢失必要任务状态，也不会重放 RAG 正文。
+
 代码状态必须通过当前 master 的 CODE/TEST/CI/TRACE 审计分别填写 IMPLEMENTED / PARTIAL / MISSING / UNKNOWN。不能凭本设计文件给任何运行时能力标 IMPLEMENTED。
 
 ## 6. 当前最高优先级执行顺序
