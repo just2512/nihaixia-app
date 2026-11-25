@@ -51,6 +51,22 @@ class AssistantReasoningResponse {
     try {
       final decoded = jsonDecode(raw.trim());
       if (decoded is! Map<String, dynamic>) return invalid('ROOT_NOT_OBJECT');
+      const allowedTopLevelKeys = {
+        'schemaVersion',
+        'requestId',
+        'responseKind',
+        'segments',
+        'referencedEvidenceIds',
+        'unknowns',
+        'conflicts',
+        'actionProposal',
+      };
+      if (decoded.keys.any((key) => !allowedTopLevelKeys.contains(key))) {
+        return invalid('UNKNOWN_TOP_LEVEL_FIELD');
+      }
+      if (!decoded.keys.toSet().containsAll(allowedTopLevelKeys)) {
+        return invalid('REQUIRED_TOP_LEVEL_FIELD_MISSING');
+      }
       if (decoded['schemaVersion'] != 1) return invalid('SCHEMA_VERSION_MISMATCH');
       if (decoded['requestId'] != request.requestId) {
         return invalid('REQUEST_ID_MISMATCH');
@@ -74,6 +90,15 @@ class AssistantReasoningResponse {
       final segmentEvidenceIds = <String>{};
       for (final rawSegment in rawSegments) {
         if (rawSegment is! Map) return invalid('SEGMENT_NOT_OBJECT');
+        if (rawSegment.keys.any(
+          (key) => key != 'text' && key != 'evidenceIds',
+        )) {
+          return invalid('UNKNOWN_SEGMENT_FIELD');
+        }
+        if (rawSegment.keys.toSet().length != 2 ||
+            !rawSegment.keys.toSet().containsAll({'text', 'evidenceIds'})) {
+          return invalid('REQUIRED_SEGMENT_FIELD_MISSING');
+        }
         final text = rawSegment['text'];
         final rawIds = rawSegment['evidenceIds'];
         if (text is! String ||
@@ -101,6 +126,9 @@ class AssistantReasoningResponse {
         ));
       }
 
+      if (kind == AssistantReasoningResponseKind.answer && segments.isEmpty) {
+        return invalid('ANSWER_WITHOUT_SEGMENTS');
+      }
       final rawReferenced = decoded['referencedEvidenceIds'];
       if (rawReferenced is! List || rawReferenced.length > 64) {
         return invalid('REFERENCED_EVIDENCE_IDS_INVALID');
