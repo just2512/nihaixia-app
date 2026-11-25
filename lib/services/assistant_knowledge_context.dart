@@ -436,22 +436,19 @@ class AssistantKnowledgeContextBuilder {
       buffer.writeln('[App经典全文索引] 索引读取失败，状态 MISSING。');
     }
 
-    final rankingDecisions =
-        LegacyOrderEvidenceRanker.rank(evidenceBatch.candidates);
+    final rankedEvidenceSet = LegacyOrderEvidenceRanker.rank(
+      evidenceBatch.candidates,
+      requestId: evidenceBatch.requestId,
+    );
     final candidatesById = {
       for (final candidate in evidenceBatch.candidates)
         candidate.evidenceId: candidate,
     };
-    final orderedKeptDecisions = rankingDecisions
-        .where((decision) =>
-            decision.disposition == EvidenceDecisionDisposition.keep)
-        .toList()
-      ..sort((left, right) => left.orderIndex!.compareTo(right.orderIndex!));
 
     // This explicit selector reproduces the existing four-hit projection.
     // No relevance score or source-verification promotion is introduced.
-    for (final decision in orderedKeptDecisions) {
-      final hit = candidatesById[decision.evidenceId]!;
+    for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      final hit = candidatesById[evidenceId]!;
       final isLecture = hit.asset != null;
       final articleNumber = RegExp(r'(?:条文|第)\s*(\d+)').firstMatch(hit.title)?.group(1);
       final sourcePath = hit.asset ?? "assets/guji/${hit.bookId ?? 'unknown'}.txt";
