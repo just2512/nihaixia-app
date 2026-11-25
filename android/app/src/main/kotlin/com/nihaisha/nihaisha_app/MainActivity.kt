@@ -111,8 +111,10 @@ class MainActivity : FlutterActivity() {
         call: MethodCall,
         result: MethodChannel.Result
     ): Long? {
-        val conversationId = call.argument<Number>("conversation_id")?.toLong()
-        if (conversationId == null || conversationId <= 0L) {
+        val conversationId = LocalAiConversationIdPolicy.parse(
+            call.argument<Any>("conversation_id")
+        )
+        if (conversationId == null) {
             result.error(
                 "INVALID_CONVERSATION_ID",
                 "Native AI 会话标识缺失或无效；本轮请求已拒绝",

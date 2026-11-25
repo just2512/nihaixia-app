@@ -233,4 +233,20 @@ class LocalAiConversationHistoryPolicyTest {
         assertEquals(0L, snapshot.successfulTurnCount)
         assertFalse(history.hasSuccessfulTurn())
     }
+
+    @Test
+    fun acceptsPositiveIntegerConversationIdsWithoutChangingTheirValue() {
+        assertEquals(42L, LocalAiConversationIdPolicy.parse(42))
+        assertEquals(3_000_000_000L, LocalAiConversationIdPolicy.parse(3_000_000_000L))
+    }
+
+    @Test
+    fun rejectsNonIntegerAndInvalidConversationIdValues() {
+        assertEquals(null, LocalAiConversationIdPolicy.parse(null))
+        assertEquals(null, LocalAiConversationIdPolicy.parse(0))
+        assertEquals(null, LocalAiConversationIdPolicy.parse(-1L))
+        assertEquals(null, LocalAiConversationIdPolicy.parse(1.5))
+        assertEquals(null, LocalAiConversationIdPolicy.parse("42"))
+    }
+
 }

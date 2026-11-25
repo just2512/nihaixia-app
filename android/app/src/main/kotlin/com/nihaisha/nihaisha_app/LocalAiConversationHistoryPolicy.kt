@@ -216,3 +216,19 @@ internal object LocalAiConversationSessionPolicy {
         }
     }
 }
+
+/**
+ * Validates the StandardMessageCodec integer representation of a persisted
+ * conversation ID. Doubles, strings and other coercible values are rejected
+ * rather than truncated into a different session identifier.
+ */
+internal object LocalAiConversationIdPolicy {
+    fun parse(value: Any?): Long? {
+        val id = when (value) {
+            is Int -> value.toLong()
+            is Long -> value
+            else -> null
+        }
+        return id?.takeIf { it > 0L }
+    }
+}
