@@ -206,7 +206,7 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 
 本轮产品范围明确不包括临床红旗门禁。不需要在 Find N2 上测试医学 detector、医生审核或红旗入口拦截；只保留产品定位文件中的免责声明/一般性求助提示。
 
-知识库和医案验收不是书目考古。设备侧只需验证条目可打开、可从详情进入学习助手、实际本地内容进入上下文、对话可基于内容解释和追问；稳定本地 sourceId/anchor 用于回到 App 条目，不要求纸本卷页或外部来源认证。
+知识库和医案设备验收围绕实际学习流程：条目可打开、可从详情进入学习助手、本地内容进入上下文、对话可基于内容解释和追问；稳定本地 sourceId/anchor 用于回到 App 条目。
 
 未执行的设备场景如实保留 MISSING / LOCAL ONLY；不得将其写成代码缺失、医学安全阻塞或远程 CI 失败。
 
@@ -217,7 +217,7 @@ adb install -r .\\build\\app\\outputs\\flutter-apk\\app-debug.apk
 - 当前 master 整体 SHA：`396a9cc314994a7da813265706d0fb5441b3fd54`。
 - 最新应用代码变更：PR #433 离线协议、PR #437 Android Keystore/AtomicFile、PR #438 Dart Bridge/EntitlementService、PR #442 F0-2a 执行注册边界已合并；PR #431 为文档范围修订，无业务代码变更。
 - 产品范围不包含临床红旗 detector、医学审核或全入口拦截；无需在设备上执行相关测试。
-- 医案/经典设备验收围绕本地条目打开、实际字段进入 AI 上下文、AI 解读和追问；不执行纸本卷页考据作为学习功能准入测试。
+- 医案/经典设备验收围绕本地条目打开、实际字段进入 AI 上下文、AI 解读和追问。
 - A/E/F 与折叠屏/原签名升级仍是本地设备工作。任何未执行条目保持 `MISSING / LOCAL ONLY`，不影响已通过远程代码/自动化的无关 PR 收尾。
 
 ## 12. 专业版离线授权真机验收（云端收尾后执行）

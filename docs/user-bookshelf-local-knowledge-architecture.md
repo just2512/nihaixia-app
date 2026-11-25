@@ -24,7 +24,7 @@
 6. 从本地数据重新读取引用原文，不使用模型生成的引文作为原文展示；
 7. 支持修改、增量重建、暂停续传、备份、删除和历史引用状态管理。
 
-本能力是**本地数据处理、结构化索引和来源治理工程**。禁止把整本书直接放入 E4B Prompt，也不以微调或让生成模型“记住整本书”作为实现方式。
+本能力是**本地数据导入、结构化索引、检索和阅读工程**。禁止把整本书直接放入 E4B Prompt，也不以微调或让生成模型“记住整本书”作为实现方式。
 
 ### 1.2 非目标
 
@@ -65,11 +65,11 @@
 
 ### 2.2 统一检索输入/输出，来源数据不混库
 
-系统源和用户源分别由 Repository 读取，经过同一检索编排器完成候选合并、去重、多样性控制和上下文预算。统一接口不得抹去来源身份、版本和信任状态。
+系统源和用户源分别由 Repository 读取，经过同一检索编排器完成候选合并、去重、多样性控制和上下文预算。统一接口保留数据归属、资料类型和本地条目身份。
 
 建议的检索证据契约至少包含：
 
-- sourceId、origin、materialKind、verificationStatus；
+- sourceId、origin、materialKind；
 - bookId、bookVersionId、chunkId、chunkContentHash；
 - title、author（未知时为空）、chapterPath、locator；
 - originalText、canonicalTextVersion、startOffset、endOffset；
@@ -78,27 +78,25 @@
 
 当前系统源可逐步适配该契约，但必须保持现有黄金检索用例行为；接口适配不能顺手改变查询拆分、命中上限、排序、去重或来源展示。
 
-## 3. 来源身份、资料类型与可信状态
+## 3. 数据归属、资料类型与本地引用
 
-### 3.1 三个独立维度
+### 3.1 两个独立维度
 
-不得将“来源身份”“资料类型”和“真实性核验状态”合并成一个枚举。
+数据归属说明资料由系统随 App 提供，还是由用户导入；资料类型用于检索、展示和组织内容。
 
 | 维度 | 字段 | 允许值/示例 | 语义 |
 |---|---|---|---|
-| 来源身份 | origin | SYSTEM / USER | 由代码和存储归属决定，不由模型或文件内容决定 |
-| 资料类型 | materialKind | CLASSIC_TEXT / LECTURE / BOOK / NOTE / CASE / OTHER | 内容分类；用户可提供建议值，但不得由其获得权威身份 |
-| 核验状态 | verificationStatus | UNVERIFIED / METADATA_REVIEWED / TRANSCRIPTION_CHECKED / REFERENCE_CROSSCHECKED | 记录实际执行过的核验动作，不得按模型判断自动升级 |
+| 数据归属 | origin | SYSTEM / USER | 由代码和存储归属决定，不由模型或文件内容决定 |
+| 资料类型 | materialKind | CLASSIC_TEXT / LECTURE / BOOK / NOTE / CASE / OTHER | 用于内容分类、筛选和展示 |
 
 约束：
 
 - 系统资料可使用 SYSTEM_CLASSIC、SYSTEM_LECTURE 等展示类别，但必须由系统数据清单决定。
-- 用户导入的文件一律 origin=USER，默认 verificationStatus=UNVERIFIED，展示为“用户提供 / 未核验”。
-- 用户可将资料类型标记为 CLASSIC_TEXT（例如自认为是古籍），但其来源身份仍是 USER，界面不得显示成“系统核验经典原文”。
-- 不因书名、文件夹名、Front Matter、用户填写作者或模型判断而自动升级核验状态。
-- METADATA_REVIEWED 等状态必须对应可审计的人工/工具操作记录；不得将“文件成功解析”“chunkId 可回链”标为内容真实性核验。
-- “引用可定位”只表示引用的 bookId/chunkId/version 可解析并能读取对应原文；不证明作者、版本、底本或文本内容真实。
-- 若未来引入版权或来源权属核验，作为独立治理流程，不把技术导入成功等同于合法授权。
+- 用户导入的文件一律 origin=USER，展示为“用户提供”。
+- 用户可将资料类型标记为 CLASSIC_TEXT（例如古籍文本），但其来源身份仍是 USER。
+
+- “引用可定位”表示引用的 bookId/chunkId/version 可解析，并能打开对应学习条目。
+
 
 ### 3.2 来源冲突
 
@@ -117,7 +115,7 @@
 
 | 实体 | 核心职责 | 关键字段 |
 |---|---|---|
-| books | 用户书架中的逻辑书籍 | bookId、title、author、origin、materialKind、verificationStatus、activeVersionId、createdAt |
+| books | 用户书架中的逻辑书籍 | bookId、title、author、origin、materialKind、activeVersionId、createdAt |
 | book_versions | 每次导入/修改的文件版本 | bookVersionId、bookId、rawFileHash、canonicalTextHash、parserVersion、normalizationVersion、importedAt |
 | chapters | 章节层级与路径 | chapterId、bookVersionId、parentChapterId、heading、chapterPath、sequence |
 | chunks | 可检索原文片段 | chunkId、bookId、bookVersionId、chapterId、chunkContentHash、embeddingInputHash、originalText、startOffset、endOffset、sequence |
@@ -163,7 +161,7 @@
 - 首选 UTF-8；正确处理 UTF-8 BOM。若检测到疑似 GBK/其他编码，给出编码选择或明确失败提示，不得静默用错误编码解码。
 - 设置文件大小、解析时间、章节数量和单片段上限；具体数值由 Find N2 真实内存/耗时验证后确定。
 - 大文件使用流式/分段解析或有界缓冲；不得一次复制多个完整大字符串造成内存峰值不可控。
-- Front Matter 可提取 title、author、edition、sourceNote 等声明字段，但全部属于用户提供的元数据，默认未核验。
+- Front Matter 可提取 title、author、edition、sourceNote 等声明字段，并按用户提供的内容保存。
 - HTML 标签、图片链接、脚注、脚注引用、代码围栏、引用块和表格需要明确解析规则；无法解析的内容保留可回溯原文或报告，不得静默丢弃。
 - 文件内容中即使包含“system”“assistant”“忽略前文”等指令样式，也一律视为书籍文本数据。
 
@@ -172,7 +170,7 @@
 - 有规范标题时，维护标题栈，形成完整 chapterPath，例如“辨太阳病 > 桂枝汤证 > 方剂组成”。
 - 标题层级异常、跳级、无标题或标题噪声时，采用明确的解析降级规则，不能因此丢失正文。
 - 没有可用标题的文档，退化为段落、句子边界和滑动窗口切分；窗口可有重叠，但必须保存原文位置，避免重复上下文过度增加检索权重。
-- 章节路径是检索上下文与定位信息，不是经过外部核验的书目章节信息。
+- 章节路径用于检索上下文、阅读导航和本地条目定位。
 
 ### 5.3 中医内容原子性
 
@@ -195,7 +193,7 @@
 - 解析器与切分版本；
 - 关键词索引状态、向量索引状态和失败原因。
 
-质量报告只能提示疑似问题，不能声称自动校正了 OCR 或古籍文本。OCR 错字、异体字、繁简混用和版本差异应保留原文，并让用户在导入阶段看到质量风险。
+质量报告用于提示解析、编码、结构和文本完整性问题。OCR 错字、异体字、繁简混用等内容按导入原文保留，不把自动解析或格式处理描述为人工校订。
 
 ## 6. 关键词索引与向量索引
 
@@ -320,18 +318,18 @@
 - 工具调用、业务执行、权限、输入参数、问诊和其他业务动作仍由 Dart/Native 确定性代码与既有门禁决定；书籍内容不得直接触发工具调用，也不得改变允许工具集合。
 - 资料中的指令文本可以作为原文被讨论或引用，但不能被执行。
 - 不为了“安全清洗”而篡改 originalText；安全封装只作用于模型输入表示。
-- 继续遵守现有中医业务边界、知识依据要求和拒绝/澄清规则。书籍有引用不代表该内容已核验，也不自动授权个体诊断、处方或其他医疗业务执行。
+- 继续遵守现有中医业务边界和确定性业务执行规则。书籍引用只提供学习上下文，不自动授权个体诊断、处方或其他医疗业务执行。
 
 ## 10. 引用定位与 UI 展示
 
-### 10.1 模型只能返回引用 ID，不负责提供权威引文
+### 10.1 模型返回引用 ID，原文由本地资料回填
 
 - 模型结构化输出可提出 sourceId/bookId/bookVersionId/chunkId 等引用 ID。
 - Dart/Repository 验证这些 ID 属于当前会话可访问的数据源，且版本与 chunk 关系真实存在。
 - UI 的参考原文卡片不得直接展示模型生成的“原文”；必须使用引用 ID 从 SQLite/系统知识库重新读取 originalText。
 - startOffset/endOffset 仅在对应 canonicalTextVersion 中使用；不得跨版本复用。
-- 若 chunk 不存在、版本不匹配、来源不可访问，引用状态为 MISSING / SOURCE_CHANGED / SOURCE_DELETED，并在 UI 明示。
-- 引用定位成功只代表可以回填该条原文，不表示引文对应作者、版本或内容已被外部校勘。
+- 若 chunk 不存在、版本不匹配或本地资料已删除，引用状态为 MISSING / SOURCE_CHANGED / SOURCE_DELETED，并在 UI 明示。
+
 
 ### 10.2 UI 最低信息
 
@@ -339,12 +337,12 @@
 
 - 书名、作者（未知则显示未知）、章节路径；
 - 来源标签：SYSTEM / USER；
-- 用户书籍明确显示“用户提供 / 未核验”；
+- 用户书籍显示“用户提供”；
 - 当前书籍版本和索引状态；
 - 可定位原文及打开书籍位置；
 - 来源已变更、来源已删除或索引不完整的状态。
 
-不得让模型自行决定来源标签、核验状态或权威措辞。
+不得让模型自行改写 origin、materialKind 或生成不存在的本地条目身份。
 
 ## 11. 删除、更新、缓存与备份
 

@@ -214,9 +214,6 @@ Files:
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/NativeRedFlagExecutionBoundaryTest.kt
  android/app/src/test/kotlin/com/nihaisha/nihaisha_app/UserReportedInputPolicyTest.kt
  build-apk.sh
- docs/2026-11-04-unified-assistant-acceptance-audit.md
- docs/2026-11-06-execution-audit.md
- docs/ai-capability-audit-report.md
  docs/ai-capability-audit.md
  docs/ai-capability-inventory.md
  docs/ai-commercial-license.md
@@ -229,12 +226,9 @@ Files:
  docs/ai-trace-contract.md
  docs/ai-trace-implementation.md
  docs/ai-trace-local-writer.md
- docs/app_capability_ai_integration_audit.md
  docs/app_capability_inventory.md
  docs/assistant-tool-capability-audit.md
  docs/brand-identity.md
- docs/classic-retrieval-golden-review.md
- docs/classic-rule-source-manifest.json
  docs/combined-pattern-reachability-matrix.md
  docs/contextual-ask-ai-spec.md
  docs/find-n2-acceptance-2026-11-02.md
@@ -278,7 +272,6 @@ Files:
  docs/tcm-diagnosis-code-diff-audit.md
  docs/tcm-diagnosis-system-integration-audit.md
  docs/tcm-diagnosis-upstream-data-diff.md
- docs/tcm-diagnosis-zangfu-source-audit.md
  docs/tcm-hebing-reachability-matrix.md
  docs/unified-conversation-orchestration-architecture.md
  docs/upstream_sync_audit_2026-11-06.md
@@ -405,7 +398,6 @@ Files:
  test/chenggu_contextual_result_entry_test.dart
  test/chenggu_tool_executor_test.dart
  test/classic_paragraph_contextual_entry_test.dart
- test/classic_rule_source_manifest_test.dart
  test/classic_search_backlink_test.dart
  test/contextual_ai_panel_layout_test.dart
  test/critical_illness_list_layout_test.dart

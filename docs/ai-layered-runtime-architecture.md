@@ -21,12 +21,12 @@
 **不允许再把以下内容混成一个“AI 上下文/模型能力”：**
 
 - 候选召回不等于证据判断；
-- 相关性排序不等于来源真实性或医学正确性；
+- 相关性排序不等于医学正确性；
 - 会话记忆不等于知识库，也不等于把所有历史文本重放给模型；
 - 语言推理不等于业务执行；
 - 模型提出工具意图不等于工具已执行；
 - 模型生成引用 ID 不等于引用可定位；
-- 引用可定位不等于作者、版本、底本或内容真实性已核验。
+- 引用可定位只表示能够回到 App 内对应的本地资料条目。
 
 ### 1.1 五层是逻辑边界，不是五套 Agent 平台
 
@@ -40,8 +40,8 @@
 
 | 层 | 核心问题 | 唯一主要输出 | 明确禁止 |
 |---|---|---|---|
-| 知识召回 | 哪些本地资料候选可能匹配查询？ | CandidateEvidence 列表 | 直接认定权威性、医学正确性；把整本书塞给模型 |
-| 证据排序 | 哪些候选应进入本轮证据集？ | RankedEvidenceSet | 伪造证据、篡改来源状态、把分数当真实性 |
+| 知识召回 | 哪些本地资料候选可能匹配查询？ | CandidateEvidence 列表 | 直接认定医学正确性；把整本书塞给模型 |
+| 证据排序 | 哪些候选应进入本轮证据集？ | RankedEvidenceSet | 伪造证据、篡改候选身份、把分数当成事实正确性 |
 | 会话记忆 | Native history 由 `LocalAiConversationHistory` 管理，`LocalAiConversationSessionPolicy` 按 conversation ID 隔离；`SessionStateSnapshotBuilder.build` 投影有界结构事实和证据引用；PR #519 已将快照作为独立、只读、16,000 UTF-16 code units 上限的本轮 Native text prompt section，并保持 RAG 分离、恢复 transcript 只保留原始用户文本与成功助手回复。 | `LocalAiConversationHistoryPolicyTest`、`LocalAiConversationSessionPolicyTest`、`test/session_state_snapshot_builder_test.dart`、`test/session_state_snapshot_prompt_formatter_test.dart`、Native session owner 与 transcript isolation JVM 测试。 | PARTIAL：没有跨进程 Native Conversation 恢复证据，16,000 是字符边界而非模型 token/input budget；KV Cache 当前 token 数与模型声明 maxContextTokens 均不是 App 可用输入预算；无自动压缩。 |
 | 语言推理 | 如何理解、解释、比较和提出下一步？ | ReasoningResponse | 自行补造来源、规则结果、数值；直接执行工具 |
 | 业务执行 | App 是否允许并确实完成指定操作？ | ExecutionResult | 由自由文本决定权限；把模型声称成功当成执行成功 |
@@ -57,7 +57,7 @@
 
 输出每一条候选的稳定身份和可追溯信息，至少包含：
 
-- sourceId、sourceType/origin、materialKind、verificationStatus；
+- sourceId、origin、materialKind、sourceKey、sourceLabel、localBacklink；
 - source version、asset/bookId、chunkId 或现有稳定条目 ID；
 - title、chapterPath、locator、originalText/snippet；
 - queryId、retrievalMethod、命中依据；
@@ -94,7 +94,7 @@
 
 - 排序可组合现有标题/精确匹配、关键词、向量、RRF 或后续 Reranker；但每种策略必须单独可测。
 - 评分只表示当前检索任务的相关性信号，不表示医学正确性、经典权威性、来源真实性或事实置信度。
-- 来源身份和核验状态只能读取数据层提供的元数据，不能由排序模型自行提升。
+- 来源身份和资料类型使用数据层提供的值；排序层不得改写来源身份或资料类别。
 - 不得静默融合版本冲突的方剂组成、剂量、条文和医案记载；冲突证据应分来源保留。
 - 不以候选数量、向量相似度或 RRF 数值代替黄金查询集验收。
 - Reranker 不是必选组件。只有出现可复现错排且对照实验有净收益时，才单独评估。
@@ -144,9 +144,9 @@ E4B 可以：
 
 E4B 不可以：
 
-- 根据预训练记忆补造本地库未命中的医学事实、古籍原文、条文号、书目版本或来源；
-- 自行把 source 标成 SYSTEM/USER、AUTHORITATIVE/VERIFIED 或改变 verificationStatus；
-- 声称自己已核验来源、已执行工具或已保存数据；
+- 根据预训练记忆补造本地库未命中的医学事实、古籍原文、条文号或本地资料内容；
+- 自行把 source 标成 SYSTEM/USER，或改变数据层提供的来源身份与资料类别；
+- 声称自己已执行工具或已保存数据；
 - 自行心算并替代 App 确定性计算；
 - 直接调用任意 Native 方法、SQL、文件系统或未登记业务能力；
 - 通过资料区、书籍内容或用户提示突破现有授权门禁和业务范围。
@@ -190,8 +190,8 @@ E4B 不可以：
 
 **通用约束**
 
-- ID 均为不透明、非空标识；接收方不得通过解析 ID 推断来源类型、授权或真实性。
-- 来源字段只能原样传递数据层提供的值。任何层均不得把 `UNKNOWN`、`UNVERIFIED` 或 `MISSING` 自动升级为 `VERIFIED`。
+- ID 均为不透明、非空标识；接收方不得通过解析 ID 推断权限或业务状态。
+- 来源身份与资料类别只能使用数据层提供的值，不由模型根据内容自行改写。
 - 集合和快照创建后不可变；层间不得共享任意可修改的全局状态。
 - v1 不定义相关性分数或事实置信度字段。后续若为排序实验引入数值，只能作为诊断信号，不能表达医学正确性、来源真实性或业务成功。
 - 所有预算必须显式记录单位。字符数不能标成 token 数；无法取得 token 数时写 `UNKNOWN`。
@@ -205,13 +205,11 @@ E4B 不可以：
 |---|---|---|
 | `evidenceId` | 候选证据实例 ID | 同一来源在不同查询/片段下可有不同实例 ID |
 | `sourceId` | 本地来源稳定 ID | 必须能交给来源 Resolver 回查；不得由模型编造 |
-| `sourceVersion` | 来源版本/内容版本 | 无版本信息时为 UNKNOWN，不用猜测值填充 |
 | `origin` | SYSTEM / USER / APP_DATA / UNKNOWN | 由数据源提供；USER 内容始终是不可信输入 |
 | `materialKind` | 资料类别 | 例如 classic_text、lecture、formula、medical_case；保留真实来源值 |
-| `verificationStatus` | 来源核验状态 | 原样传递；不等于召回质量 |
 | `assetId`、`chunkId` | 资产/片段稳定标识 | 可为空；不得把标题作为唯一身份 |
-| `title`、`chapterPath`、`locator` | 可读标题和定位 | 缺失项显式 MISSING |
-| `excerpt` | 候选原文片段或摘要 | 必须能由 sourceId + locator 回查；标明是否截断 |
+| `title`、`chapterPath`、`localBacklink` | 可读标题和 App 内定位 | 通过本地条目 ID 回到对应资料 |
+| `excerpt` | 候选原文片段或摘要 | 必须能由 sourceId 回查；标明是否截断 |
 | `queryId` | 命中的查询 ID | 原始 query 与派生 query 分别有 ID |
 | `retrievalMethod`、`matchBasis` | 检索路径和命中依据 | 记录 deterministic/keyword/vector 等实际方式，不推断 |
 | `completeness` | COMPLETE / TRUNCATED / UNKNOWN | 描述候选内容完整度，不描述来源可信度 |
@@ -242,7 +240,7 @@ E4B 不可以：
 - `budget`：`unit`（CHARACTERS / TOKENS）、`limit`、`used`、`omittedEvidenceIds[]`、`truncatedEvidenceIds[]`；
 - `status`：RANKED / NO_USABLE_EVIDENCE / BUDGET_TRUNCATED / FAILED。
 
-排序层不负责召回，不改变来源核验状态，不通过静默合并消除不同来源/版本的冲突。v1 不要求打分字段。
+排序层不负责召回，不改写候选的本地条目身份，不通过静默合并消除不同资料条目的内容冲突。v1 不要求打分字段。
 
 **C. 会话记忆契约**
 
@@ -250,7 +248,7 @@ E4B 不可以：
 
 - `sessionId`、`revision`、`status`（RESTORED / PARTIAL / SESSION_MISMATCH / UNKNOWN）；
 - `facts[]`：有限的结构化事实；
-- `evidenceReferences[]`：sourceId、sourceVersion、evidenceId/chunkId 等可回查 ID；
+- `evidenceReferences[]`：sourceId、evidenceId/chunkId 等本地可回查 ID；
 - `activeTaskId`（可选）。
 
 每个 `SessionStateFact` 必须包含 `factId`、`key`、`value`、`provenance` 和必要的 `sourceIds[]`。provenance 固定区分 USER_ORIGINAL、USER_CONFIRMED、MODEL_INFERRED、APP_RESULT、SOURCE_REFERENCE。MODEL_INFERRED 不得被提升为用户确认事实；APP_RESULT 必须能回查实际业务结果。任何 fact 的会话归属不明时不得装入快照。

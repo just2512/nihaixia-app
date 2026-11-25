@@ -36,7 +36,7 @@ void main() {
     await DatabaseHelper.closeTestDatabase();
   });
 
-  test('medical-case context resolves an exact local learning record without bibliographic gates', () async {
+  test('medical-case context resolves an exact local learning record', () async {
     final medicalCase = _medicalCases.singleWhere((item) => item.seq == 2);
     final ref = AiContextResolver.buildMedicalCaseContextRef(medicalCase);
     final resolved =

@@ -11,7 +11,7 @@
 | 2 | 合病调用链修复 | PARTIAL | `CombinedPatternCondition` 集中 canonical 条件键；`DiagnosticEngine` 统一最终结果传播；`ChatScreen` 与 `TcmInterviewAdapter` 调用 `getRequiredCombinedPatternFollowUpQuestions()` | 第32、33、36、146、147、163、172、256条关键前提已有门槛或回归覆盖；追问与最终检测共用证据计算；第172条有正向、阴性及未知回归；第268条新增脉象位置确认追问，三阳证据分支优先于重叠的两经追问；旧杂病胸痛/脉象条件已修复运算优先级。仍需补齐全部旧兜底组合及所有入口的一致性验证。 |
 | 3 | 脉舌交叉验证 | EXISTS（自动化范围内） | `DiagnosticRules.canonicalPulse()`；`test/engine/pulse_tongue_cross_validation_test.dart`；`test/engine/combined_pattern_negative_reachability_test.dart`、`ChatScreen._showTonguePulseDialog()` | 已区分复合脉 canonical 值、单脉与主脉+兼脉；矛盾时追加饮水、小便、四肢等追问。第256条新增单脉拒绝、滑数/数滑双顺序回归；界面禁止无主脉或与主脉重复的兼脉选择，切换/清空主脉时清理失效兼脉。仍需验证真实问诊界面完整路径、用户无法判断脉象时的输入和设备体验。 |
 | 4 | 脏腑独立证据层 | EXISTS（证据采集与展示） | `models/zangfu_evidence.dart`、`engine/zangfu_evidence_builder.dart`、`ChatScreen._showResult()`、`zangfu_evidence_builder_test.dart` | 结果页已展示原始问答、舌脉、来源及未知/未作答状态；不生成脏腑映射、证型或方剂。`organMappingStatus=MISSING` 是预期安全边界；后续只补可追溯证据，不自动诊断。 |
-| 5 | 经典文本、医案条目引用定位 | PARTIAL | `ClassicSearchService`、`AssistantKnowledgeContextBuilder`、`_openKnowledgeSource`；PR #171/#172 | 普通知识引用已带稳定 sourceId 与 App 本地条目定位；古籍章节按 bookId/chapterIndex 直达，医案按内部记录 ID 直达，内经按 entry ID 直达。这里验收的是回到实际知识库记录，不要求纸本版本/卷页考证；未建立的医案—经典自动关系仍不推断、不补造。 |
+| 5 | 经典文本、医案条目引用定位 | PARTIAL | `ClassicSearchService`、`AssistantKnowledgeContextBuilder`、`_openKnowledgeSource`；PR #171/#172 | 普通知识引用已带稳定 sourceId 与 App 本地条目定位；古籍章节按 bookId/chapterIndex 直达，医案按内部记录 ID 直达，内经按 entry ID 直达。这里验收的是回到实际知识库记录；未建立的医案—经典自动关系不自动推断。 |
 | 6 | Find N2 内外屏适配 | PARTIAL（首批排盘表单已响应式调整） | `docs/find-n2-adaptive-layout.md`、`docs/find-n2-fold-aware-layout.md`；`adaptive_home_navigation_test.dart`、`adaptive_master_detail_test.dart`、`local_ai_adaptive_content_test.dart`、`fold_aware_routes_test.dart`；`test/bazi_foldable_layout_test.dart` | 已有窗口断点、导航双面板、折痕/铰链安全区和窄屏换行回归；八字排盘的生辰输入卡与地点行现采用 720dp 最大内容宽度，外屏占满可用宽度、内屏居中限宽，并新增 402dp/840dp widget 测试。其他排盘/知识页面仍需逐页布局审计；Find N2（PUG110）外屏、内屏、半折叠、键盘、相机、文件选择器、模型导入的实机截图与窗口指标仍为 MISSING。 |
 | 7 | 本地 AI 与辨证问诊统一 | PARTIAL（统一消息时间线主路径已实现） | `LocalAiInterviewScreen._requestTool()` / `_openTool()` 对 `structured_diagnosis` 拦截并调用 `_startInlineTcmInterview()`；`_appendTcmInterviewMessages()` 将题目、选项、用户回答和结果写入共用 `_messages` 与 SQLite `assistant_messages`；`TcmInterviewConversationController` 使用 `DiagnosticEngine` | 常规结构化问诊已在本地 AI 主对话内联进行，不再跳转独立 ChatScreen；规则计算仍由确定性引擎负责。仍需清理注册表旧 ChatScreen builder 兼容残留，并补齐跨重启/跨会话恢复一致性、完成态回看与附件生命周期。 |
 | 8 | 本地 AI 调用知识库和工具 | PARTIAL（知识库条目引用/直达已接通；17 项 Headless executor，6 项 Page-only，另有 1 项结构化问诊内联流程） | `AssistantToolRouter` 当前 24 个定义；17 项 Headless：`YunQiToolExecutor`、`ZiweiToolExecutor`、`BaziToolExecutor`、`YiJingToolExecutor`、`XiaoliurenToolExecutor`、`MeihuaToolExecutor`、`DosageToolExecutor`、`ZiWuLiuZhuToolExecutor`、`AlmanacToolExecutor`、`SolarTermToolExecutor`、`DreamToolExecutor`、`GuanshaToolExecutor`、`SanshanLingqianToolExecutor`、`ChengguToolExecutor`、`ShoushengDebtToolExecutor`、`HuangdiSijiToolExecutor`、`SavedChartToolExecutor`；`structured_diagnosis` 由问诊控制器内联执行 | 23 个常规工具中 17 项具备 Headless executor，6 项为 Page-only：`guji_library`、`knowledge_hub`、`medical_cases`、`diagnosis_history`、`critical_illness`、`yuxiaji_omen`。结构化问诊不是通用 Headless 工具。执行结果仍须校验 toolId、arguments、status、sourceIds；打开知识引用不计 Headless。全工具通用语义参数抽取、取消/超时统一协议仍未完成。 |
@@ -37,7 +37,7 @@
 - CI：当前 `master` HEAD 为 `c83993b17749f3380b7164882a88b86175a63fca`。2026-11-06 对应的 Flutter tests run `42153999654` 与 Flutter Quality Gate run `42153999821` 均已完成并为 `success`。Flutter regression tests、Android debug APK、Dart 静态分析、完整 Dart suite、Android native unit tests 和 arm64 Debug APK 构建均通过。CI 结果仅证明该 SHA 的自动化检查通过，不等于 OPPO Find N2 真机验收。
 - 当前 `master` 分支 HEAD 与最新两条工作流的 `head_sha` 一致；旧 SHA 的取消/失败运行不覆盖当前 SHA 的成功结果。
 - Fork 与上游分支关系已更新为 781 ahead / 29 behind；未执行 Sync fork 或合并。完整潜在冲突清单仍需基于完整三方 diff 穷举，不能把 compare API 的截断文件列表当作最终结果。
-- 其余未完成事项仍保持 `PARTIAL` / `UNKNOWN`：自由文本问诊的候选字段确认与缺项追问、Find N2 真机验收、工具统一参数/执行协议、全 App 逐页功能盘点及附件原件持久化。本地知识库来源定位以 2O 的 sourceId + 可打开条目为当前验收口径，不再开展普通学习资料的外部逐条卷页考证。
+- 其余未完成事项仍保持 `PARTIAL` / `UNKNOWN`：自由文本问诊的候选字段确认与缺项追问、Find N2 真机验收、工具统一参数/执行协议、全 App 逐页功能盘点及附件原件持久化。本地知识库来源定位以 2O 的 sourceId + 可打开条目为当前验收口径。
 
 ## 2. 当前统一助手的数据流
 
@@ -96,7 +96,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 1. 完成两条当前 CI 的最终结果；若失败，先定位具体失败步骤，区分代码失败与 runner/依赖基础设施失败。
 2. 合病矩阵逐条转为可执行参数化测试：每个条件至少覆盖“未满足/满足/未知/冲突”，并明确 RuleEngine 主路径、旧六经兜底、旧杂病兜底；`threeYangBase` 保持 UNREACHABLE，除非补足经典依据和用户可回答的必要条件。
-3. 把“合病/并病/兼证/关联方证/来源待核”变成显式来源分类；不得因代码命中而把关联方证升级为仲景原文明确合病。
+3. 把“合病/并病/兼证/关联方证”作为显式规则分类；不得因代码命中而把关联方证直接归类为合病。
 4. 将结构化辨证逐题流程改造成统一助手会话中的可交互任务卡/步骤状态；完成前保留现有独立页面作为受控工具，不做破坏性删除。
 5. 对 AssistantToolRouter 建立完整工具能力清单、实体参数 schema、缺参追问、确认边界、执行结果结构和失败回退；当前关键词匹配只作为第一层路由，不作为最终 Agent 能力。
 6. 补齐知识检索的可追溯来源字段和分域策略；医案没有稳定原始来源 ID 时继续排除自动证据引用。
@@ -254,7 +254,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 - **A 多轮与持久化：** 当前 `DatabaseHelper.saveAssistantTurn` 已通过 SQLite transaction 原子写入一轮 user/assistant 消息；`LocalAiInterviewScreen._persistSuccessfulTurn` 已向用户显示持久化失败状态。PR #77 正在新增 SQLite FFI + trigger 故障注入回归。Native `onDestroy` 仍未等待 teardown 完成；Find N2 GPU/CPU TRACE UNKNOWN。
 - **B 红旗安全：** `RedFlagPreflight` 已有来源、版本和语义范围契约；没有自然语言 detector 或全生产入口接入证据；医学审核未完成，仍 RELEASE BLOCKED。
-- **C 知识检索：** `test/ai_retrieval_golden_snapshot_test.dart` 与 `test/fixtures/ai_retrieval_golden_metadata.json` 已存在并在 CI run `43143105547` 通过。快照原始 query 0 命中，派生 query 有结果；9 个上下文来源的纸本/卷页定位全部 MISSING。方剂组成匹配可能带入未直接点名方剂，需基于黄金集做对照，不先改变排序。
+- **C 知识检索：** `test/ai_retrieval_golden_snapshot_test.dart` 与 `test/fixtures/ai_retrieval_golden_metadata.json` 已存在并在 CI run `43143105547` 通过。快照原始 query 0 命中，派生 query 有结果。方剂组成匹配可能带入未直接点名方剂，需基于黄金集做对照，不先改变排序。
 - **D 工具能力：** `AssistantToolRouter` 24 项注册，其中结构化辨证内联执行，其余 23 项仍为页面 Widget builder；统一 Headless 执行/结果契约缺失。
 - **E 数据清理：** PR #73 已合并清理生命周期协调；PR #76 设置入口、PR #78 附件归属迁移仍在 CI。旧共享 temp 孤儿附件和 Android merged manifest/backup 行为仍未核验。
 - **F TRACE：** writer/recorder 默认关闭，事件 schema 和清理生命周期已存在；trace_id 未贯穿 Dart、Native、模型、工具、UI 和 SQLite 全链路。
@@ -424,7 +424,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 ## 2G. 2026-11-12 PR #93-#96 / #104 主线状态补充
 
 - B：#93 的 fail-closed RedFlagGate 只提供策略契约；detector 缺失/异常/超时/来源不完整时为 REVIEW_REQUIRED。生产入口尚未接入，医学 detector 未审核，不能标为完成。
-- C：#96 真实黄金 artifact 有 120 条 hits / 83 个 distinct sourceId；sourceId 与 asset 一致，但 locator 均 MISSING。sourceId 身份一致不等于古籍底本、卷页和原文出处已验证。
+- C：#96 真实黄金 artifact 有 120 条 hits / 83 个 distinct sourceId；sourceId 与 asset 一致。
 - E：清理 coordinator、AI-owned 附件、Native runtime cache、TRACE 文件和 SQLite AI 表范围有代码/CI 证据；混合数据库备份、旧共享图片归属和 Find N2 重启后不可恢复仍缺证据。
 - F：主线覆盖 retrieval/contextAssembly/modelInput、route/dispatch/Headless、结构化问诊 per-turn、persistedState 和 presentation；失败轮次持久化关联及设备 TRACE 仍未完成。
 - 历史 restoreConversation 是恢复上下文，不是新轮次；不生成新 trace_id，保留原消息 metadata。
@@ -494,7 +494,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 用户要求的自然语言问诊完整闭环尚未实现：用户先用自由文本描述不适，AI 结构化理解问诊十问已覆盖的信息、只追问必要缺项、再后台调用原有确定性规则问诊并解释真实结果。PR #146 只自动解释已完成且已持久化的结构化问诊结果；它没有替换原十问，也没有开放自由文本自动辨证。
 - OPPO Find N2 的 E4B GPU/CPU 多轮、图片/语音输入、Activity/进程恢复、数据清除后重启不可恢复和真实端到端 TRACE，均不能由 CI arm64 APK/Native tests 替代；未取得设备证据的项目保持 DEVICE UNKNOWN/PARTIAL。
 - 其余 15 个 Page-only 工具逐项做函数与数据来源盘点；只在存在可复用的确定性业务函数、行为基线清晰、结果有来源且输入缺项可安全澄清时才增加 Headless adapter，不为扩大数量批量迁移。
-- 不重复审核已经完成医学审核的知识库内容；书目 locator/纸本版本/卷页缺口仍是来源身份治理问题，与临床内容审核分开记录。
+- 不重复审核已经完成医学审核的知识库内容；当前重点是学习资料检索覆盖、命中相关性和引用能否正确打开。
 
 
 ---
@@ -536,7 +536,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 自由文本症状问诊仍 PARTIAL / RELEASE BLOCKED：已审核医学知识库内容不重复审核；但自然语言 RedFlag detector 与所有生产模型入口调用前的 fail-closed 接入仍缺可追溯证据。不得编造 detector 规则，也不得把 `REVIEW_REQUIRED/UNKNOWN` 当作 CLEAR。
 - 用户希望的自由文本问诊闭环尚未交付：AI 理解症状、根据已有问诊十问识别缺项、只追问必要信息、后台调用原确定性规则、再解释真实结果。PR #146 只完成结构化问诊结果自动解释。
 - OPPO Find N2 真机 E4B 多轮、GPU/CPU、图片/语音、Activity/进程恢复、AI 数据清除后重启不可恢复和真实 TRACE 继续标为 DEVICE UNKNOWN/PARTIAL。
-- 书目 locator/纸本底本/卷页来源缺口独立治理；不重复审核已审核知识库。
+- 本地条目身份、稳定 sourceId 和可打开回链按现有能力维护。
 
 
 
@@ -570,7 +570,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 自由文本症状问诊仍 PARTIAL / RELEASE BLOCKED：生产自然语言红旗 detector、医学审核记录、版本/阈值/例外/处置文案，以及 Flutter/Native 全模型入口调用前 fail-closed 覆盖证据未齐。不得自行编造 detector 规则，也不得把 `REVIEW_REQUIRED/UNKNOWN` 当作 CLEAR。已审核知识库内容不重复审核。
 - 自然语言问诊的完整闭环仍未完成：用户自由描述 → 结构化理解已覆盖信息 → 只追问必要缺项 → App 原规则问诊执行 → 解释真实结果。现有结构化十问和结果自动解释继续保留；红旗门禁未满足前不开放自由文本自动辨证。
 - Find N2 真机 A/E/F 验收仍 UNKNOWN/PARTIAL：GPU/CPU、多轮文字/图片/语音、Activity/进程中断恢复、清除 AI 数据后强停/重启不可恢复、端到端 TRACE。
-- 知识来源 C 只补 locator、底本版本、卷页/原文身份缺口；不重复审核已审核医学知识内容。
+- 知识来源 C 聚焦本地学习资料检索、引用与打开体验。
 - D 剩余 13 个 Page-only 能力逐项盘点；只有存在可复用的确定性函数、明确输入/结果契约和来源时才建立最小 adapter，不批量迁移。
 
 ### 不变边界
@@ -607,7 +607,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - B 仍 PARTIAL / RELEASE BLOCKED：没有生产红旗 detector 医学审核版本、审批记录、阈值/例外/处置文案及全 Flutter/Native 模型入口 fail-closed 证据前，不开放自由文本症状自动辨证。
 - 用户要求的自由文本症状描述→受约束结构化理解→只追问缺项→原规则问诊→解释真实结果闭环仍未完成；须先满足 B 门禁。不得修改原十问或辨证规则，不重复审核已医学审核的知识库。
 - OPPO Find N2 E4B 真机多轮/多媒体/GPU-CPU/Activity 与进程恢复/清除数据后不可恢复/端到端 TRACE 继续为 DEVICE UNKNOWN；CI 不替代真机证据。
-- C 来源 locator 仍只允许用可追溯原始材料补充；不猜测书目、底本、卷页或原文，不重复审核已有知识库。
+- C 聚焦已有学习资料的检索覆盖、命中相关性和本地条目回链。
 - 不为扩大 Headless 数量而批量迁移 Page-only，不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
 
 
@@ -633,7 +633,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - `structured_diagnosis` 继续由既有 `TcmInterviewConversationController` / `DiagnosticEngine` 内联执行，不计入通用 Headless。页面导航不等于 Executed Capability。
 - PR #169 已把 fail-closed RedFlagGate/Preflight 接到助手 Flutter 临床入口及 Android Native 模型边界；但自然语言/视觉/语音医学 detector、医学审核和审批证据仍 MISSING，B = `PARTIAL / RELEASE BLOCKED`。
 - PR #170 已让保存命盘在用户明确选择后于助手对话中复用既有八字/紫微计算能力；未选择记录前不暴露出生资料，不自动选择单条记录。
-- PR #171 统一知识回答的本地条目引用尾注；PR #172 修复古籍章节和内经条目的精确直达，引用必须能通过稳定 sourceId 回查具体 App 记录。普通学习资料不要求外部纸本卷页考证。
+- PR #171 统一知识回答的本地条目引用尾注；PR #172 修复古籍章节和内经条目的精确直达，引用必须能通过稳定 sourceId 回查具体 App 记录。
 - 自由文本问诊仍未闭环：控制器尚未按 AI 提取并经用户确认的字段跳过已回答项、只追问缺项；受生产 RedFlag detector 缺失约束，不能开放自动辨证。
 - Find N2 的 GPU/CPU、多轮媒体、进程恢复、数据清除后不可恢复和端到端 TRACE 必须由实体设备完成；CI APK、模拟器/Native 单测不代替真机验收。
 - 不修改 DiagnosticEngine/DiagnosticRules/十问/剂量/排盘算法；不重审已审核知识库；不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
@@ -655,7 +655,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 ### 工具、玄学和学习助手
 
 - 已有 17 项 Headless 工具由 App 原函数执行；缺参在助手对话中澄清，执行结果通过 toolId、实际 arguments、状态、结构和 sourceIds 校验后才交给 AI 总结/解释。模型不得计算或伪造业务结果。
-- 学习和结果追问使用现有知识检索；回答引用必须带稳定 `sourceId` 并能打开 App 内具体条目。古籍章节、内经条目及医案按已有稳定 ID/索引定位；不要求普通知识回答补外部纸本版本、卷页或影印本。
+- 学习和结果追问使用现有知识检索；回答引用必须带稳定 `sourceId` 并能打开 App 内具体条目。古籍章节、内经条目及医案按已有稳定 ID/索引定位。
 - 不重复医学审核知识库，不通过模型记忆补造本地库外医学事实。6 项 Page-only 不因数字目标而迁移。
 
 ### 本地设备与收尾

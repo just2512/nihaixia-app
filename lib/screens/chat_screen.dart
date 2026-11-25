@@ -722,7 +722,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _emitTaskState(status: 'completed');
     setState(() => _showOptions = false);
 
-    // 脏腑证据层当前只展示 App 原始问答；未经经典来源核验的脏腑归属保持 MISSING。
+    // 脏腑证据层只展示 App 原始问答；当前不自动推断脏腑归属。
     final zangFuEvidence = _interview.buildZangFuEvidence();
     if (zangFuEvidence.hasAnsweredEvidence) {
       const questionLabels = <String, String>{
@@ -795,13 +795,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (_engine.suppressReferenceFormulaSuggestions) {
         _addBotMessage(
-          '该条文未直接载明可自动推荐的方剂，或当前方剂关联来源待核。'
-          '为避免用相似度检索绕过来源闸门，本次不显示参考方剂。',
+          '当前规则没有配置自动推荐方剂。'
+          '为避免相似度检索绕过规则条件，本次不显示参考方剂。',
           isWarning: true,
         );
       } else {
-        // 普通证据不足场景仍可显示明确标记的关键词参考；来源待核的
-        // 空方剂规则必须 fail-closed，不能由相似度候选重新引入方剂。
+        // 普通证据不足场景仍可显示明确标记的关键词参考；未配置方剂的
+        // 规则必须 fail-closed，不能由相似度候选重新引入方剂。
         final tableSuggestion = _engine.suggestByTable();
         final ranking = _engine.getSimilarityRanking(topK: 3);
         final refNames = <String>{};

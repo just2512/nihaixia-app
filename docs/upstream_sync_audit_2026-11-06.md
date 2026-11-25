@@ -13,7 +13,7 @@
 
 1. 不执行 GitHub Sync fork / Update branch，不做 29 commits 整体 merge。
 2. 不恢复 `.github/workflows/gitee-sync.yml`、Gitee Release 同步、App 启动时检查上游版本或上游更新公告。
-3. 不覆盖 Fork 的问诊引擎、经典来源 manifest、医案数据口径、知识库、AI 对话、Find N2 适配和项目 README。
+3. 不覆盖 Fork 的问诊引擎、医案数据、知识库、AI 对话、Find N2 适配和项目 README。
 4. 上游内容可以作为候选证据，但不能因其位于 upstream 或标注“高置信”就当作原典校勘结果。
 5. 同步以独立文件或最小代码差异为单位；每次同步后必须有回归测试和 Fork CI。
 
@@ -61,7 +61,7 @@ Fork commits：
 | `6e6374e8` | 条文格式审计报告与脚本 | **HOLD**：需验证脚本对 Fork 当前文件格式的适用性 |
 | `7db994f4` | 统一倪师解读标记 | **HOLD**：属于内容标签调整，待与 Fork 标签规范对照 |
 | `415279c7` | 伤寒论条号标注检查清单 | **HOLD**：可用于对账，但不是条文来源证明 |
-| `516378ee` | 宋本 398 条对照库和全局映射 | **REJECT AS AUTHORITY**：上游使用赵开美本编号口径及微信来源文本；Fork manifest 声明的是 1955 年 398 条编号体系、三芦书屋二次转录，并明确保留底本页码缺失。两套来源不能直接混用 |
+| `516378ee` | 宋本 398 条对照库和全局映射 | **SKIP BULK SYNC**：上游条文编号与 Fork 当前内部资产结构不一致，不按文件名或编号批量覆盖 |
 | `050635c6` | 宋本标注方案预览和幂等标注工具 | **HOLD**：依赖上游映射表；不能直接在 Fork 条文上运行 |
 | `3faa6328` | upstream 内容整备 changelog | **SKIP**：不继承上游版本发布记录 |
 | `bc57dce0` | 抵当丸方剂经典关联 | **HOLD**：需检查 Fork 当前 formula ID/别名和原文载方条件 |
@@ -81,13 +81,7 @@ Fork commits：
 
 上游 `docs/宋本条号对照表.md` 声称以“赵开美本编号体系”398 条为参照，来源标注为微信文章，并用讲义卡首条原文前缀做 Needleman–Wunsch 对齐。其统计为高置信 190、中置信 131、低置信 59、未匹配 35。
 
-Fork 的 `docs/classic-rule-source-manifest.json` 则声明：
-- `numberingScheme`：`1955-chongqing-398`；
-- 当前在线二次转录：三芦书屋《宋版伤寒论》；
-- 声明参校 1991 年刘渡舟主编《伤寒论校注》、1923 年影赵刻宋版及 1955 年《新辑宋本伤寒论》；
-- 纸本具体馆藏、卷页、影像定位仍为 `MISSING`。
-
-因此，上游生成的 398 条映射不能直接写入 Fork manifest，也不能将算法相似度标签当作原典校勘结论。它最多是待核对的候选对照表；在来源统一前不用于运行时诊断、方剂关联或条号替换。
+Fork 的本地条文资产使用独立的内部文件和章节组织。上游 398 条映射不能直接覆盖 Fork 的条文文件、内部 ID 或规则关联；如有需要，只能比较具体内容并做最小差异同步。
 
 ### 条文 381 编号修正：路径和编号语义不兼容
 
@@ -102,7 +96,7 @@ upstream commit `1ac79321` 新增/修改的是 `assets/shanghan/clause_380.md`�
 
 1. 先完成当前 Fork 新提交 CI，确保古名映射修正和 AI 工具结果协议通过。
 2. 对 upstream `ef17b6d7` 方剂索引提交逐文件比较：先核验方剂条目 ID、别名和引用，再决定是否吸收索引生成脚本。
-3. 对 `a0380f2a` / `ffff7ba4` 的条文补原文和校订做逐条差异清单；只吸收能定位到明确底本/条号的内容。
+3. 对 `a0380f2a` / `ffff7ba4` 的条文内容和文件结构做差异比较；只吸收与 Fork 当前资产兼容的最小变更。
 4. 对医案和药材讲稿保持来源缺失标记；没有稳定来源 ID、版本和定位时不提升状态。
 5. 所有数据同步必须增加 Fork 自己的完整性测试；不以 upstream CI 结果替代 Fork CI。
 
@@ -111,4 +105,4 @@ upstream commit `1ac79321` 新增/修改的是 `assets/shanghan/clause_380.md`�
 
 Fork 新增 `AssistantToolParameter`、`AssistantToolArguments` 和工具定义参数 schema。五运六气支持从用户消息中抽取 ISO 日期（YYYY-MM-DD），经调度决策、工具请求和页面构造一路传入 `YunQiScreen.initialDate`；未提供日期时仍使用当前日期。新增调度参数测试和统一对话到五运六气页面的 widget 回归测试。
 
-该实现只覆盖五运六气日期参数，不代表 23 个工具已经具备统一参数协议。当前代码提交已进入 CI；截至本次审计最新 HEAD 为 `d7753e0d7b2b05c5da0b2748cb75ffd89ac9ca62`，后续 Find N2 与来源 manifest 测试还在继续推进，最终验证以更晚 HEAD 的 Flutter Quality Gate 与 Flutter tests 为准。
+该实现只覆盖五运六气日期参数，不代表 23 个工具已经具备统一参数协议。当前代码提交已进入 CI；截至本次审计最新 HEAD 为 `d7753e0d7b2b05c5da0b2748cb75ffd89ac9ca62`，后续 Find N2 与本地知识索引回链测试还在继续推进，最终验证以更晚 HEAD 的 Flutter Quality Gate 与 Flutter tests 为准。

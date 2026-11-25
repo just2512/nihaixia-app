@@ -1360,9 +1360,8 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 query,
                 traceContext: traceContext,
                 // Tool-result explanation uses the bundled formula/herb/classic/
-                // acupoint corpus. Do not load unrelated case records (some
-                // still have MISSING bibliographic locators) for unit or
-                // calendrical tool explanations.
+                // acupoint corpus. Do not load unrelated case records for unit
+                // or calendrical tool explanations.
                 includeMedicalCases: false,
               )
             : null;

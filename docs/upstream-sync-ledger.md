@@ -29,7 +29,7 @@
 5. 不恢复上游 `.github/workflows/gitee-sync.yml`，除非另有明确的镜像同步决策。
 6. 不复制上游 `docs/web/**`、Pages bundle、缓存、打包产物或版本发布文件。源码和资源整合完成后，使用本仓库自己的构建命令生成 Pages。
 7. 不直接继承上游 `pubspec.yaml` 的版本号、README 下载地址、Release Notes、APK 或签名配置。发布版本由本仓库单独管理；升级兼容必须验证 applicationId、签名证书、versionCode 和旧库迁移。
-8. 不以提交说明代替核验。数据文件要校验条目数、主键、引用、来源及原文；生成索引需证明输入、排序、映射与幂等性。
+8. 不以提交说明代替核验。数据文件要校验条目数、主键、资源引用与现有功能兼容性；生成索引需确认输入、排序、映射与幂等性。
 
 权威约束文件：
 - `docs/product-positioning-and-boundaries.md`
@@ -43,7 +43,7 @@
 
 | 上游提交 | 文件范围 | 决策 | 原因 / 验收条件 |
 |---|---|---|---|
-| `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | `assets/bencao_lecture/**`（upstream/main 当前 336 个文件，含 335 篇讲稿及索引/资源） | `ACCEPT_CANDIDATE / IMPLEMENTATION_PENDING` | 上游 main 已有讲稿资产及配套阅读/索引实现。按仓库声明的 Apache-2.0 许可口径同步并保留许可、版权与归属信息；验收文件清单、索引映射、资源引用、搜索/详情跳转和现有功能回归。不要求重新考证纸本底本，不重复审核已有医学资料。导入时保留 fork 自有 `herbs.json`，不整文件覆盖。 |
+| `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | `assets/bencao_lecture/**`（upstream/main 当前 336 个文件，含 335 篇讲稿及索引/资源） | `ACCEPT_CANDIDATE / IMPLEMENTATION_PENDING` | 上游 main 已有讲稿资产及配套阅读/索引实现。按仓库声明的 Apache-2.0 许可口径同步并保留许可、版权与归属信息；验收文件清单、索引映射、资源引用、搜索/详情跳转和现有功能回归。导入时保留 fork 自有 `herbs.json`，不整文件覆盖。 |
 | `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | `lib/data/bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart`、药材双向联动及搜索入口 | `ACCEPT_CANDIDATE / IMPLEMENTATION_PENDING` | 与讲稿资产同一切片集成，避免悬空入口；复用 fork 现有药材详情、路由和搜索基础设施，人工合并映射，不覆盖现有药材记录。 |
 
 备注：上游 `docs/bencao_ingestion_plan.md` 是 2026-11-01 的历史计划，仍写 SHELVED；但当前 main 已存在 336 个本草资产及完整阅读/索引代码。该状态与当前文件树不一致，按过期计划记录，不得作为本仓库暂停同步的依据。
@@ -143,19 +143,19 @@
 
 | 上游提交 | 上游变化 | fork 现状 | 决策 |
 |---|---|---|---|
-| `c241e695b2d63f1096aa4607ed2f1c7100ea336b` | 增加 `answerZhenJia`、`healthyBaselineOk`、寒热真假线索参与真假寒热辨别；并调整十问流程与结果说明 | fork 的 `diagnostic_engine.dart` 已有上述接口与流程；当前 `getSimilarityRanking` 已返回 `List<(String, double)>` | `ALREADY_PRESENT / NO_PORT`。不能按上游版本覆盖；后续如复核，只比较具体规则分支及合病/兼病可达性。 |
+| `c241e695b2d63f1096aa4607ed2f1c7100ea336b` | 增加 `answerZhenJia`、`healthyBaselineOk`、寒热真假线索参与真假寒热辨别；并调整十问流程与结果说明 | fork 的 `diagnostic_engine.dart` 已有上述接口与流程；当前 `getSimilarityRanking` 已返回 `List<(String, double)>` | `ALREADY_PRESENT / NO_PORT`。不能按上游版本覆盖；后续如复核，只比较具体规则分支、问诊条件和合病/兼病可达性。 |
 | `f938728fe70095498abca60b5baf64058ad3d0f8` | 口语语料参与方剂相似度排序，委托 `FormulaMatcher.rank` | fork 已采用浮点相似度返回类型，但需保留本仓库现有规则和评分输入契约 | `PARTIAL / REVIEW_REQUIRED`。不单独替换诊断引擎；任何语料排序变化须用现有黄金用例验证，不得影响确定性诊断结论。 |
 | `be4bf6b31e1630be293443ef12bcc90d927ac111` | 将寒热真假线索表移入 `DiagnosticRules.zhenJiaClueKeys`，新增一页式症状自查入口 | fork 的 `chat_screen.dart` 仍持有局部线索表；fork 不存在 `lib/screens/symptom_check_screen.dart` | `OPTIONAL_REFACTOR / NOT_PORTED`。只提取常量不改变诊断行为；一页式自查是独立交互产品任务，先确认与当前 AI 问诊流程的关系，再实施。 |
 
 硬约束：不得覆盖 fork 的 `diagnostic_engine.dart`、`diagnostic_rules.dart`、`formula_rules.dart`。诊断结论必须仍来自实际规则执行结果；AI 解释与治疗知识讲解遵守现有产品规范。
 
-### 8.2 医案索引与来源
+### 8.2 医案索引与检索
 
 | 上游提交 | 上游变化 | fork 现状 | 决策 |
 |---|---|---|---|
-| `5574ae07bed13bf3f6cdaefd3fc46764ad1b1fe3` | 医案方名异写索引 | `lib/data/medical_case_data.dart`、`test/medical_case_formula_alias_extract_test.dart` | `ACCEPTED / PASS`，PR #195 已合入；只收录唯一映射方名异写，过滤非方名称号并跳过歧义别名；医案原文、序号和 source ledger 未改；CI run `43782949576` Flutter regression 与 Android arm64 均 SUCCESS |
-| `7e02db56686b0e683de9aa19b4135ff10256e167` | 增加穴位名抽取、`diagnosisNorm`、`matchesNormalized`，用于症状→穴位→医案扩展检索 | fork 的 `assistant_knowledge_context.dart` 已存在医案和穴位分开的检索/引用链，医案引用会读取来源账本 | `HOLD / RETRIEVAL_GOLDEN_REQUIRED`。不把新索引字段直接加到 MedicalCase；须先证明它能改善现有 AI 检索黄金集，且每条召回仍携带稳定 sourceId 与来源状态。 |
-| `688d6b30fddc31e0683570bb9029ed38f9666755` | 批量简体化医案、删除占位/不可用记录、修改方药和药材映射、调整条目总量 | fork 保留 1256 条实质病例及原始 seq，并增加逐条 `source_ledger.json` 来源状态 | `REJECT_AS_BULK_DATA_SYNC`。不整表覆盖、不重排 seq、不删除病例。任何内容纠错或删例必须逐条审计原文、身份、来源、引用、AI 检索影响和回归。 |
+| `5574ae07bed13bf3f6cdaefd3fc46764ad1b1fe3` | 医案方名异写索引 | `lib/data/medical_case_data.dart`、`test/medical_case_formula_alias_extract_test.dart` | `ACCEPTED / PASS`，PR #195 已合入；只收录唯一映射方名异写，过滤非方名称号并跳过歧义别名；医案正文和内部序号未改；CI run `43782949576` Flutter regression 与 Android arm64 均 SUCCESS |
+| `7e02db56686b0e683de9aa19b4135ff10256e167` | 增加穴位名抽取、`diagnosisNorm`、`matchesNormalized`，用于症状→穴位→医案扩展检索 | fork 的 `assistant_knowledge_context.dart` 已有医案和穴位分开的检索/引用链 | `HOLD / RETRIEVAL_GOLDEN_REQUIRED`。不把新索引字段直接加到 MedicalCase；须先证明它能改善现有 AI 检索黄金集，且每条召回仍携带稳定本地条目 ID。 |
+| `688d6b30fddc31e0683570bb9029ed38f9666755` | 批量简体化医案、删除占位/不可用记录、修改方药和药材映射、调整条目总量 | fork 保留 1256 条实质病例及原始内部 seq | `REJECT_AS_BULK_DATA_SYNC`。不整表覆盖、不重排 seq、不删除病例。具体内容变更单独比较，并确认本地索引、详情与 AI 检索的影响后再做定向回归。 |
 
 ### 8.3 SQLite / 数据库迁移
 
@@ -193,7 +193,7 @@
 | `assets/shanghan/` | 395 | 380 | `176_board.jpg`、4 篇六经附录、`clause_380.md`—`clause_390.md` | `ACCEPT_CANDIDATE / INTEGRATION_PENDING`；只追加 16 个文件及对应索引项，保留 fork 的 `clause_000.md` 和其他本地内容 |
 | `assets/neijing/` | 无新增路径 | 有既有文件差异 | 需要看具体差异是否造成学习功能缺口 | `REVIEW_ONLY_IF_BEHAVIORAL_GAP`；不重复审核整库 |
 
-这些文件已经存在于 upstream/main 的实际文件树。当前同步不要求补齐纸本版本、卷页、影印本坐标；应保留原始文件、索引语义和仓库许可/归属信息。只有遇到文件本身明确标示的第三方单独许可或排除声明，才对该文件单独处理，不把个别例外扩大成整书阻塞。
+这些文件已经存在于 upstream/main 的实际文件树。同步时保留原始文件、索引语义和仓库许可/归属信息；只有遇到文件本身明确标示的第三方单独许可或排除声明，才对该文件单独处理。
 
 ### 10.2 本草讲稿库
 
@@ -201,16 +201,16 @@
 
 - `assets/bencao_lecture/**`：`ACCEPT_CANDIDATE / INTEGRATION_PENDING`；按原文件导入并检查数量、文件名/序号、Markdown 资产引用。
 - 本草索引、阅读、联动和搜索代码：`ACCEPT_CANDIDATE / INTEGRATION_PENDING`；与资产同一切片集成，避免悬空入口。
-- upstream 与 fork 根目录 `LICENSE` 文件 SHA 均为 `261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64`，声明 Apache-2.0。同步时保留该许可、版权和归属信息；不额外要求纸本底本或独立授权材料作为整批技术同步前置条件。此记录说明仓库声明的许可口径，不对未核实的第三方权属作法律保证。
+- upstream 与 fork 根目录 `LICENSE` 文件 SHA 均为 `261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64`，声明 Apache-2.0。同步时保留该许可、版权和归属信息；此记录说明仓库声明的许可口径，不对未核实的第三方权属作法律保证。
 - fork 已有 `assets/data/herbs.json` 465 味结构化药库，当前 SHA 与 upstream 不同；保留 fork 数据，不整文件覆盖，只合并讲稿必要映射。
 
-工程验收聚焦实际可用性：资产注册、索引映射、药材详情双向跳转、搜索命中及现有药库回归，不重复开展整库医学审核。
+工程验收聚焦实际可用性：资产注册、索引映射、药材详情双向跳转、搜索命中及现有药库回归。
 
 ### 10.3 第一批当前交付边界
 
 - 针灸穴位功能：PR #194 已合入 master；Flutter regression 与 Android arm64 CI 均 PASS；Find N2 真机验收 UNKNOWN。
 - 金匮/伤寒新增条文与附录：待从 upstream/main 小批量追加，保留 fork 原有条目。
-- 本草 335 篇讲稿正文及阅读入口：待集成上游现有 336 文件资产及配套代码；不再受纸本考证或整库权利审查阻塞。
+- 本草 335 篇讲稿正文及阅读入口：待集成上游现有 336 文件资产及配套代码；按文件、索引、阅读、搜索和导航回归验收。
 - 上游 `docs/web/**` 和发版生成文件：REJECT，不复制。
 
 ## 11. 经典/本草内容对应的上游提交 SHA 补录
@@ -218,14 +218,14 @@
 | 内容 | 上游提交 SHA | 说明 |
 |---|---|---|
 | 金匮新增/讲解条文 | `688d6b30fddc31e0683570bb9029ed38f9666755` | 包含 `clause_453.md`、`clause_454.md` 的条文卡讲解更新 |
-| 金匮条文原文引用块 | `a0380f2afd7531e084c61a6db2e758499aab8560` | 为条文卡补原文引用块；现代讲解仍需独立来源核验 |
+| 金匮条文原文引用块 | `a0380f2afd7531e084c61a6db2e758499aab8560` | 为条文卡补内容引用块；现代讲解与条文卡内容分别保留 |
 | 伤寒补录条文 | `ffff7ba46d8906473ac2084736e68dc1c6fd0efb` | 补录条文 380—390 等内容，现代讲稿文本不能整批复制 |
-| 伤寒宋本统一与附录/排版 | `741afaa685c4307afb78dd116eefcab067a1d711` | 涉及 `clause_380.md`、`clause_390.md` 和四篇六经附录；需同时复核版本及讲解来源 |
+| 伤寒宋本统一与附录/排版 | `741afaa685c4307afb78dd116eefcab067a1d711` | 涉及 `clause_380.md`、`clause_390.md` 和四篇六经附录；同步时检查文件组织、索引和阅读引用 |
 | 伤寒条文编号修订 | `1ac793216168031ca0bd204783d64c4535299fa6` | 条文 381 编号/标准条号修订 |
 | 伤寒原文标点统一 | `f9f0d05991e5a0c15934afce6710d33365163d2e` | 全库标点格式调整 |
 | 本草 335 篇讲稿库 | `b120bc04cd6894ac329c94d05401d2c5cb2fd085` | 新增本草讲稿正文、索引和药材双向联动 |
 
-上述 SHA 用于追踪上游具体变更。实际采纳以文件树差异、fork 侧索引/资源引用检查和本仓库 CI 为准；不要求对既有内容重新考古或重复医学审核。
+上述 SHA 用于追踪上游具体变更。实际采纳以文件树差异、fork 侧索引/资源引用检查和本仓库 CI 为准。
 
 
 ## 12. 2026-11-16 CI 增量复核
@@ -366,15 +366,15 @@ PR #197 的结果边界：
 | OPPO Find N2 实机验收 | UNKNOWN | 用户设备实测同经络滑动、收藏持久化、古籍跳转、内外屏/半折叠布局 |
 | Native E4B 实机多轮 | UNKNOWN | Find N2 实测多轮、取消、重建/恢复、强制停止重启与 TRACE；云端 CI 不替代设备证据 |
 
-以上剩余项分别属于代码/资产集成待办和真实设备验收项；不存在以纸本考据或整库权利核验阻塞经典/本草同步的要求。云端 CI 不替代 Find N2 真机证据，也不得为了标记完成而降低验收标准。
+以上剩余项分别属于代码/资产集成待办和真实设备验收项。云端 CI 不替代 Find N2 真机证据，也不得为了标记完成而降低验收标准。
 
 ### 16.6 当前 PR #193
 
 PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必须以该 SHA 为唯一父提交重放，compare 应为 ahead 1 / behind 0。台账 PR 的 CI 只验文档变更，不替代上表四条代码 PR 的验收证据。
 
-## 17. 2026-11-16 同步范围纠偏与当前执行口径（覆盖前述历史 HOLD）
+## 17. 2026-11-16 同步范围与当前执行口径
 
-本节为当前执行口径；前文 §§3、6、10、14—16 中将本草/经典整批内容设为“纸本版本/来源权利链核验完成前不得同步”的 HOLD，均以本节为准撤销。此前该门槛是执行台账自行增加的过度保守条件，不是用户明确提出的产品要求，也不是本仓库产品规范要求。项目目标是诊疗全过程学习，不是古籍考古；不能把上游已经存在的学习资料和功能长期搁置在纸本考据流程中。
+本节汇总第一批经典、本草与共享逻辑增量的实际集成范围、文件保护规则及回归要求。
 
 ### 17.1 已核实的事实
 
@@ -388,18 +388,18 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 
 上游本草源提交：`b120bc04cd6894ac329c94d05401d2c5cb2fd085`。金匮增量：`688d6b30fddc31e0683570bb9029ed38f9666755`、`a0380f2afd7531e084c61a6db2e758499aab8560`。伤寒增量：`ffff7ba46d8906473ac2084736e68dc1c6fd0efb`、`741afaa685c4307afb78dd116eefcab067a1d711`、`1ac793216168031ca0bd204783d64c4535299fa6`、`f9f0d05991e5a0c15934afce6710d33365163d2e`。
 
-### 17.2 许可和来源口径
+### 17.2 许可与文件归属口径
 
 - upstream 与 fork 当前根目录 `LICENSE` 文件 SHA 均为 `261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64`，声明 Apache License 2.0。同步时保留许可证、版权/归属声明及明确的 NOTICE/文件级许可信息。
-- 不再要求纸本底本、版本卷页、影印本坐标或额外书面授权证明作为整批技术同步的前置门槛。上游 `docs/bencao_ingestion_plan.md` 中 2026-11-01 的 SHELVED 记载属于历史计划，已与当前 main 的实际资产/功能状态不一致。
+- 上游 `docs/bencao_ingestion_plan.md` 中 2026-11-01 的 SHELVED 记载属于历史计划，已与当前 main 的实际资产/功能状态不一致。
 - 本台账不对任何未核实的第三方权属作法律保证。若同步时实际发现某个文件含明确的第三方单独许可、版权排除声明或来源冲突，只对该文件单独处理；不得将个别例外扩大成整类资料或整套知识库的阻塞。
-- 既有且可定位的医学知识不重复开展整库医学审核。只检查新增文件本身的结构完整性、资产路径、索引映射和现有 App 引用是否正确；内容问题有具体证据时才按具体条目修复。
+- 只检查新增文件本身的结构完整性、资产路径、索引映射和现有 App 引用是否正确；具体内容调整应有明确变更范围并运行对应回归。
 
 ### 17.3 原定实施顺序与完成状态
 
 1. **经典增量**：已完成。金匮2篇 Markdown；伤寒16个 upstream-only 文件（15篇 Markdown + 1张板书图）。上游宋本第176条与 fork 本地同路径条文冲突，另存 `clause_176_upstream.md` 并建立独立阅读项，未覆盖本地原文。
 2. **本草讲稿**：已完成。336个上游资产（335篇讲稿 + 索引）、阅读清单/页面、药材详情反向关联、搜索索引和 AI sourceId/backlink 已集成；本地465味药库保持原样。
-3. **第二批共享逻辑**：已完成审计并收敛。辨证已有能力标记 `ALREADY_PRESENT`；医案1256条、原始序号与来源账本保护；旧数据库v6不覆盖fork v7；共享页面无已证明的迁移收益，不作代码搬运。
+3. **第二批共享逻辑**：已完成审计并收敛。辨证已有能力标记 `ALREADY_PRESENT`；医案1256条及原始内部序号保持不变；旧数据库v6不覆盖fork v7；共享页面无已证明的迁移收益，不作代码搬运。
 4. **验收**：PR #198、#199、#201、#202 均已独立合并；对应 Flutter regression 与要求的 Android arm64 门禁通过。后续仅剩 Find N2 真机验收，不再安排无目标的云端扩展测试。
 
 
@@ -469,10 +469,10 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 
 ### 19.2A 原仓库资料与许可口径
 
-- 原仓库已完成本草讲稿整理与产品化：`assets/bencao_lecture/` 336个文件、335篇讲稿、`herb_index.json`、`bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart` 及导入脚本均已存在；本次工作是复用上游实现并适配 fork 接口，不是重新考订或重编整套资料。
+- 原仓库已有本草讲稿资产和配套阅读/索引实现：`assets/bencao_lecture/` 336个文件、335篇讲稿、`herb_index.json`、`bencao_lecture_data.dart`、`bencao_lecture_index.dart`、`bencao_library_screen.dart` 及导入脚本。
 - 本轮核验的上游 README 声明项目采用 Apache License 2.0，根目录 LICENSE 与 fork 的 LICENSE blob SHA 相同；讲稿文件头标注为“倪海厦《人纪·神农本草经》讲稿（书面整理）”，生成脚本记录其输入源文件名。同步保留了 LICENSE、原始资料标识与上游资产内容。
-- 这说明仓库声明的许可口径与资料标识，不等同于对原始讲稿著作权作独立法律鉴定；本工程任务不要求额外纸本版本、卷页坐标或书面授权证明作为代码同步前置条件。此前把整批资料置于“来源/权利链核验完成前 HOLD”是执行台账自行加设的过度门槛，不是用户要求或产品规范，已撤销。
-- 资料来源信息的用途是学习引用时区分“经典原文”“倪师课堂讲稿/书面整理”和 App 自行生成的索引；不把现代课堂讲解包装成古籍原文，也不将工程工作扩展成考古项目。
+- 仓库声明的许可口径与资料标识，不等同于对原始讲稿著作权作独立法律鉴定；同步时按仓库许可文件和实际文件声明处理。
+- 资料类型标签用于区分经典文本、课堂讲稿/书面整理和 App 索引，便于学习检索与阅读；不改变资料正文。
 
 ### 19.3 药材索引映射
 
@@ -514,12 +514,11 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 - 上游 `DiagnosticRules.zhenJiaClueKeys` 与 fork `ChatScreen._zhenJiaClueKeys` 的9组 label/key 映射完全一致；差异只是常量归属位置。抽取到规则类属于可选整理，不改变业务输出；没有证据证明能修复当前缺陷，本轮不移植。
 - 合病/兼病、canonical key 和分支遮蔽的后续核验只针对有明确失败场景的规则，不做整文件同步或无目标规则重构。
 
-### 20.2 医案数据库与来源
+### 20.2 医案数据与检索
 
-- fork `assets/medical_cases/cases_table.md` 仍为1256条原始记录；`source_ledger.json` 有1256条对应记录，内部 seq 保持原主键。
-- 来源账本状态中 10 条 `VERIFIED`、1246 条 `MISSING`；此处 `MISSING` 表示相应外部书目/原文定位证据尚未完成，不表示医案记录缺失。不能据此删例或改写内容。
-- PR #195 已只吸收唯一映射的方名异写索引，未改医案正文、序号或来源账本。
-- 上游医案批量简体化、删除记录、改写处方和序号的变更拒绝整批同步；如发现具体文本错误，按单条证据处理。
+- fork `assets/medical_cases/cases_table.md` 当前保留1256条实质医案和原始内部 seq；seq 用于 App 内部检索与详情回链。
+- PR #195 仅吸收唯一映射的方名异写索引，没有改医案正文或原始内部 seq。
+- 上游批量改写、删除病例和调整序号的差异不整批同步；具体内容变更单独比较，并确认本地索引、详情与 AI 检索影响后再做定向回归。
 
 ### 20.3 SQLite 与会话数据
 
@@ -557,7 +556,7 @@ PR #193 仅新增本文件；本节落到当前 master 2a9929fa 后，分支必�
 ### 21.2 第二批：共享业务逻辑
 
 - 辨证规则：FormulaMatcher/FormulaRules 与 upstream/main 完全同 SHA；DiagnosticEngine 方法面没有 upstream-only 入口；真假寒热线索9组键值映射一致。没有实际缺口，标记 `ALREADY_PRESENT / NO_PORT`，不重写规则。
-- 医案：本地1256条记录、原始序号及1256条 source ledger 保持；只保留此前已合并的唯一方名异写检索索引，不做整库覆盖。
+- 医案：本地1256条记录和原始内部序号保持；只保留此前已合并的唯一方名异写检索索引，不做整库覆盖。
 - 数据库：fork schema v7 保留；拒绝上游旧 v6 schema 覆盖。
 - 共享页面：未发现足以抵消回归风险的实际收益，不搬运旧 AI 聊天页、宽屏导航或启动加载写法；Find N2、自有助手会话和手动更新机制保持。
 - 第二批审计完成，无需额外生产代码 PR。只有复现出具体行为缺陷时再开窄范围修复。

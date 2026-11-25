@@ -9,12 +9,12 @@ class CombinedPatternCondition {
   static const sunShaoyangBase = 'combined.sun_shaoyang.clause146';
   static const shaoyangYangmingBase = 'combined.shaoyang_yangming.clause256';
   static const threeYangBase = 'combined.three_yang.base';
-  static const taiyinShaoyinBase = 'combined.taiyin_shaoyin.unverified';
+  static const taiyinShaoyinBase = 'combined.taiyin_shaoyin.no_auto_formula';
   static const sunYangmingVomit = 'combined.sun_yangming.clause33_vomit';
   static const sunYangmingChestFull = 'combined.sun_yangming.clause36_chest_full';
   static const sunShaoyangDiarrhea = 'combined.sun_shaoyang.clause172_diarrhea';
   static const sunShaoyangVomit = 'combined.sun_shaoyang.clause172_vomit';
-  static const jueyinShaoyang = 'combined.jueyin_shaoyang.unverified';
+  static const jueyinShaoyang = 'combined.jueyin_shaoyang.no_auto_formula';
   static const sunYangmingUnresolved = 'combined.sun_yangming.unresolved';
   static const threeYangSleep = 'combined.three_yang.clause268_sleep';
   static const sunShaoyinTwoCold = 'combined.sun_shaoyin.two_cold';
@@ -28,6 +28,7 @@ class CombinedPatternCondition {
     'shao_yang_symptoms + yangming_symptoms': shaoyangYangmingBase,
     'three_yang_symptoms': threeYangBase,
     'taiyin_symptoms + shaoyin_symptoms': taiyinShaoyinBase,
+    'combined.taiyin_shaoyin.unverified': taiyinShaoyinBase,
     'sun+yangming_vomit': sunYangmingVomit,
     'sun+yangming_chest_full': sunYangmingChestFull,
     'sun+shaoyang_diarrhea': sunShaoyangDiarrhea,
@@ -35,6 +36,7 @@ class CombinedPatternCondition {
     // Intermediate canonical spelling persisted by an earlier task-state schema.
     'combined.sun_shaoyang.vomit': sunShaoyangVomit,
     'jueyin+shaoyang': jueyinShaoyang,
+    'combined.jueyin_shaoyang.unverified': jueyinShaoyang,
     'sun+yangming_unresolved': sunYangmingUnresolved,
     'three_yang_sleep': threeYangSleep,
     'sun+shaoyin_two_cold': sunShaoyinTwoCold,
@@ -92,9 +94,8 @@ class CombinedPattern {
   final String condition;
   final String formula;
   final String description;
-  final String source;
 
-  /// 仅当原文明确称为“合病”时为 true；并病、兼证、单经证及来源待核验项均为 false。
+  /// 仅对按当前规则归类为合病的条件设置 true；并病、兼证及单经证为 false。
   final bool isExplicitCombined;
 
   const CombinedPattern({
@@ -102,7 +103,6 @@ class CombinedPattern {
     required this.condition,
     required this.formula,
     required this.description,
-    required this.source,
     this.isExplicitCombined = false,
   });
 }
@@ -206,15 +206,13 @@ class DiagnosticRules {
       condition: CombinedPatternCondition.sunYangmingBase,
       formula: '葛根汤',
       description: '太阳与阳明合病，必自下利',
-      source: '伤寒论第32条',
       isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阳'],
       condition: CombinedPatternCondition.sunShaoyangBase,
       formula: '柴胡桂枝汤',
-      description: '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去（第146条；非明文合病）',
-      source: '《新辑宋本伤寒论》（1955年398条编号）第146条',
+      description: '伤寒六七日，发热微恶寒、支节烦疼、微呕、心下支结、外证未去',
       isExplicitCombined: false,
     ),
     CombinedPattern(
@@ -222,15 +220,13 @@ class DiagnosticRules {
       condition: CombinedPatternCondition.shaoyangYangmingBase,
       formula: '大承气汤',
       description: '阳明少阳合病，下利，脉滑而数，有宿食',
-      source: '伤寒论第256条',
       isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['太阴', '少阴'],
       condition: CombinedPatternCondition.taiyinShaoyinBase,
       formula: '',
-      description: '太阴、少阴相关线索并见（来源待核；暂不自动推荐方剂）',
-      source: '临床经验/MISSING',
+      description: '太阴、少阴相关线索并见（当前不自动推荐方剂）',
     ),
     // ---- 以下为新增7种合病 ----
     CombinedPattern(
@@ -238,7 +234,6 @@ class DiagnosticRules {
       condition: CombinedPatternCondition.sunYangmingVomit,
       formula: '葛根加半夏汤',
       description: '太阳阳明合病，不下利但呕者',
-      source: '伤寒论第33条',
       isExplicitCombined: true,
     ),
     CombinedPattern(
@@ -246,7 +241,6 @@ class DiagnosticRules {
       condition: CombinedPatternCondition.sunYangmingChestFull,
       formula: '麻黄汤',
       description: '太阳阳明合病，喘而胸满',
-      source: '伤寒论第36条',
       isExplicitCombined: true,
     ),
     CombinedPattern(
@@ -254,7 +248,6 @@ class DiagnosticRules {
       condition: CombinedPatternCondition.sunShaoyangDiarrhea,
       formula: '黄芩汤',
       description: '太阳少阳合病，自下利',
-      source: '伤寒论第172条',
       isExplicitCombined: true,
     ),
     CombinedPattern(
@@ -262,22 +255,19 @@ class DiagnosticRules {
       condition: CombinedPatternCondition.sunShaoyangVomit,
       formula: '黄芩加半夏生姜汤',
       description: '太阳少阳合病，呕者',
-      source: '伤寒论第172条',
       isExplicitCombined: true,
     ),
     CombinedPattern(
       meridians: ['厥阴', '少阳'],
       condition: CombinedPatternCondition.jueyinShaoyang,
       formula: '',
-      description: '厥阴与少阳相关线索并见（来源待核；暂不自动推荐方剂）',
-      source: '临床经验/MISSING',
+      description: '厥阴与少阳相关线索并见（当前不自动推荐方剂）',
     ),
     CombinedPattern(
       meridians: ['太阳', '阳明', '少阳'],
       condition: CombinedPatternCondition.threeYangSleep,
       formula: '',
-      description: '三阳合病，脉浮大上关上，但欲眠睡，目合则汗（第268条原文未载方剂；不自动推荐方剂）',
-      source: '伤寒论第268条',
+      description: '三阳证据并见，脉浮大上关上，但欲眠睡，目合则汗（不自动推荐方剂）',
       isExplicitCombined: true,
     ),
     // ---- 补充2种合病（测试发现缺失）----
@@ -286,16 +276,14 @@ class DiagnosticRules {
       meridians: ['少阳'],
       condition: CombinedPatternCondition.shaoyangTaiyin,
       formula: '柴胡桂枝干姜汤',
-      description: '伤寒五六日，已发汗而复下之：胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦（第147条；少阳单经方证）',
-      source: '《新辑宋本伤寒论》（1955年398条编号）第147条',
+      description: '伤寒五六日，已发汗而复下之：胸胁满微结、小便不利、渴而不呕、但头汗出、往来寒热、心烦',
       isExplicitCombined: false,
     ),
     CombinedPattern(
       meridians: ['太阳'],
       condition: CombinedPatternCondition.sunTaiyin,
       formula: '桂枝人参汤',
-      description: '太阳病外证未除，数下后协热而利、利下不止、心下痞硬（第163条；太阳单经误下方证）',
-      source: '《新辑宋本伤寒论》（1955年398条编号）第163条',
+      description: '太阳病外证未除，数下后协热而利、利下不止、心下痞硬',
       isExplicitCombined: false,
     ),
   ];

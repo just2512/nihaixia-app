@@ -469,7 +469,7 @@ void main() {
       }
     });
 
-    test('原文未载方剂或来源待核的项目关闭相似度方剂兜底', () {
+    test('未配置方剂的规则项关闭相似度方剂兜底', () {
       for (final key in [
         CombinedPatternCondition.taiyinShaoyinBase,
         CombinedPatternCondition.jueyinShaoyang,

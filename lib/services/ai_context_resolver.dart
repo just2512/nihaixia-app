@@ -4137,15 +4137,11 @@ class AiContextResolver {
         .toList(growable: false);
     final content = <String, Object?>{
       'internalSequence': medicalCase.seq,
-      'internalSequenceMeaning':
-          '仅为 App 医案表内部主键，不是原始病例编号、文献页码或独立病例身份。',
       'displayName': medicalCase.displayName,
       for (final entry in rawFields.entries)
         entry.key:
             entry.value.trim().isEmpty ? 'MISSING' : entry.value,
       'missingFields': missingFields,
-      // The sequence is only this App table's internal key. It is not a
-      // bibliographic locator or proof of original-source verification.
       'localEntryId': 'medical_case:${medicalCase.seq}',
       'localBacklink': 'medical_case:${medicalCase.seq}',
     };
