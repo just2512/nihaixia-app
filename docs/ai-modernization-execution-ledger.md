@@ -4419,13 +4419,14 @@ PR HEAD 门禁证据：
 
 ## 97. 2026-11-25 Core-0 契约字段与五层源码映射启动
 
-- **基线 master：** `d4cfb8e9862fa36c31cffb4cbbf1e299e48dbb26`（PR #492 合并提交）。
-- **Core-0 分支：** `docs/core0-contract-source-map-20261125`；本节所列提交以该分支最新 HEAD 为准，合入前仍须对照新的 master 重验。
-- **规范推进：** 在 `docs/ai-layered-runtime-architecture.md` 增加“核心 DTO 契约 v1”字段表，明确 CandidateEvidence/CandidateEvidenceBatch、EvidenceRankingDecision/RankedEvidenceSet、SessionStateSnapshot/SessionStateFact、ReasoningRequest/ReasoningResponse、BusinessActionProposal/ExecutionResult 的字段、来源语义、失败状态、预算单位和兼容边界。
-- **源码映射：** 补充五层生产路径、现有测试、隐式耦合点及文件所有权。当前检索排序行为继续由黄金快照保护；本批没有改动运行时检索、业务执行、数据库、模型输入或授权门禁。
-- **Core-0 状态：** `IN_PROGRESS`。字段级契约与源码/测试映射已进入文档；仍需审阅具体字段与既有模型的一致性，并完成本 PR 的文档/许可证 CI。文档冻结不等同于 DTO 已接入运行时。
-- **Core-1 当前切片 PR #493：** `OPEN`，head `1d91d913a26042c5c307042361012287e81c99b3`。Fork license boundary run `45535035216` SUCCESS；Flutter regression run `45535035231` SUCCESS；Android arm64/JVM job `138942270425` 当时仍在执行，尚不能合并。Branch validation 为 SKIPPED，不计 PASS。改动仅将文本消息的 Native historyUserText 改为用户原话，当前 modelInput 保持不变；该切片不解决历史预算。
-- **PR #494：** `OPEN`，head `2637ad8354b8beeb585df8dab286604a077e50ea`。扩展 Flutter Quality Gate 到 master PR；run `45535614817` 当时仍在 Analyze and test / Dart test suite 阶段，未通过前不计完成。此 PR 是后续 Android arm64/JVM 质量门的 CI 基础，不等同于运行时功能交付。
-- **当前确认缺口：** Native transcript 目前无轮数/字符/token 预算；sessionId 隔离、结构化状态快照和证据引用单独提交尚未接通；KnowledgeContextBuilder 仍合并召回、筛选和上下文装配；Native 主对话仍无统一 ReasoningRequest/Response schema；业务执行只在已登记 Headless 范围形成确定性闭环。
-- **下一项自动执行：** 等 #493 精确 HEAD Android arm64/JVM 质量门结束后，若全量 Flutter、Android 构建、JVM、Fork license 均 PASS 且 base/head 未变，则小批量合并；随后从新 master 独立分支实现 Core-1 有界 Native history（不与 #493 同 PR）。并行完成本 Core-0 文档 PR 的精确 HEAD 验收；Core-0 合入后启动 Core-2 候选召回/证据排序最小拆分，先以既有黄金快照为保护条件。
-- **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复均保留 `LOCAL ONLY / UNKNOWN`，云端代码和 CI 不以设备验收为阻塞；最后交付本地验收清单，不把 CI 结果伪装成 TRACE PASS。
+- **当前 master 基线：** `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`（PR #493 合并提交；已从新主线复核 Native 会话记忆源码）。
+- **Core-0 文档分支：** `docs/core0-contract-source-map-20261125`。本节用于记录 DTO 合同和源码映射；Core-0 在精确 HEAD 文档 CI 通过、与新 master 完成基线复核前保持 `IN_PROGRESS`。
+- **规范推进：** `docs/ai-layered-runtime-architecture.md` 新增核心 DTO 契约 v1，覆盖 CandidateEvidence/CandidateEvidenceBatch、EvidenceRankingDecision/RankedEvidenceSet、SessionStateSnapshot/SessionStateFact、ReasoningRequest/ReasoningResponse、BusinessActionProposal/ExecutionResult 的字段、来源语义、失败状态、预算单位和兼容边界。
+- **源码映射：** 五层生产路径、现有测试、隐式耦合点及文件所有权已写入 §5.2。当前检索顺序继续由黄金快照保护；本批未改运行时检索、业务执行、数据库、模型输入或授权门禁。
+- **Core-0 状态：** `IN_PROGRESS`。字段级契约和源码/测试映射已建立；当前是文档合同，不代表 DTO 已接入运行时。仍需本 PR 精确 HEAD 的 Flutter/Fork license CI 通过，并确认无遗漏的现有模型冲突。
+- **Core-1 第一窄切片 PR #493：** `MERGED`，merge commit `fd2c0da989a9d748088b9ef0bbad3f697c6d327d`。Fork license run `45535035216` SUCCESS；Flutter regression run `45535035231` SUCCESS；Android arm64 APK/ABI、merged manifest 与 JVM 单测 job `138942270425` SUCCESS。Branch validation `138939443409` 为 `SKIPPED`，明确不计 PASS。仅修复文本消息的 Native 恢复 transcript 污染：E4B 仍收到原 modelInput，成功轮次只保存用户原话；不代表历史预算、session 硬隔离或结构化状态已完成。
+- **PR #494：** `CLOSED / NOT MERGED`，head `2637ad8354b8beeb585df8dab286604a077e50ea`。其 Flutter Quality Gate PR trigger 未进入 master；不得把该 CI 触发器变更记为已落地。#493 的 Android arm64/JVM 证据来自实际运行的 Android CI job。
+- **当前确认缺口：** Native `conversationHistoryTurns` 仍无轮数/字符/token 预算；sessionId 隔离、结构化 SessionStateSnapshot 和 evidence references 独立提交尚未接通；跨进程持久化行为仍 UNKNOWN。KnowledgeContextBuilder 仍合并召回、选择与上下文装配；Native 主对话仍无统一 ReasoningRequest/Response schema；业务执行只在已登记 Headless 范围形成确定性闭环。
+- **下一项自动执行：** Core-0 文档 CI 通过后按最新 master 更新基线并合并；下一项运行时代码优先从新 master 独立分支推进 Core-1 有界 Native history，限定只修改 Native history policy、MainActivity 对应调用和 JVM 测试，保持 GPU/CPU fallback、成功轮次语义与 UNKNOWN 不自动重放。随后 Core-2 先冻结候选召回快照，再以独立排序策略保持旧黄金输出，不改变检索算法。
+- **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复仍为 `LOCAL ONLY / UNKNOWN`；云端源码和 CI 不以设备验收为前置条件。最终由本地按交接清单完成，不把 CI 伪装成设备 TRACE PASS。
+
