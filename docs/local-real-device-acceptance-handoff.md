@@ -286,13 +286,16 @@ Android 系统清除 App 数据、卸载重装、删除 Token、模拟 KeyStore 
 
 ### 6.5 云端 v1.3 集成证据（不是实机通过证明）
 
-- 当前构建基线：`master @ 57f62083590c5619f84da98ff7c5b5f430efeba8`；App 版本仍以 `pubspec.yaml` 为准，本次核对为 `2.0.0+8048`。本地执行前必须重新读取最新 master HEAD 和 APK 元数据。
-- 冻结规范 PR #472、Native Gate PR #478、业务收费门禁清理 PR #482 均已合并；#482 使用精确测试 head `6619205d07a39d619d7c640da0c8e44c07867a17`，merge commit 为当前基线。
-- 对应云端成功记录：Branch validation job `138573590528`；完整 Flutter regression job `138575412535`；Android arm64 CI Debug APK/ABI + Android JVM 单测 job `138580731592`；Fork license boundary jobs `138573592578`、`138573642617`。对应 workflow run 分别为 `45430348669`、`45430364276`、`45430349239`、`45430363688`。
-- 同一工作流中标记为 `SKIPPED` 的 job 不计 PASS。CI Debug APK artifact 仅用于 arm64 构建/ABI/Manifest 验证，不是 Release 签名包，不能用于旧版覆盖升级。
-- CI 已验证缺少本地签名材料时 Release 构建按预期阻断。正式 Release 必须由维护者在本机使用原签名材料构建和核验。
-- Fork license boundary 自动检查不证明源代码版权/再许可权；`OWNERSHIP_EVIDENCE_REQUIRED` 仍需权利人材料补证。
-- **设备状态仍为 `PREPARE / LOCAL ONLY / MISSING`。** 本交接单中所有实际设备项目必须在 OPPO Find N2 本地操作后逐项附证据，不能把上述 CI 结果抄成设备 PASS。
+- **最新构建基线：** `master @ bb301852e664328ccdd0900be1383fa76dec8fdb`；`pubspec.yaml` 当前为 `2.0.0+8048`，applicationId 为 `com.nihaisha.nihaisha_app`。本地执行前仍必须重新读取最新 master HEAD、APK 元数据和设备当前安装版本。
+- v1.3 冻结规范 PR #472、Native Gate PR #478、业务收费门禁清理 PR #482 均已合并。后续 PR #485（云端收尾台账/交接刷新）、#486（Release Key Ring 文档 v1.3 引用修正）、#489（旧 Feature ID UI 标签统一）也均已合并；最新主线包含以上变更。
+- **PR #485 master 回归：** run `45517116757` 的 Flutter regression job `138879302515` SUCCESS、Android arm64/JVM job `138882598119` SUCCESS；Fork license run `45517116752` job `138879302308` SUCCESS；Analyze job `138879302365` SUCCESS。
+- **PR #486 master 回归：** run `45519577445` 的 Flutter regression job `138887738888` SUCCESS、Android arm64/JVM job `138890345466` SUCCESS；Analyze run `45519577452` job `138887738286` SUCCESS；Fork license run `45519577456` job `138887737389` SUCCESS。
+- **PR #489 master 回归：** run `45522935965` 的 Flutter regression job `138899138432` SUCCESS、Android arm64/JVM job `138902708306` SUCCESS；Analyze run `45522936035` job `138899065627` SUCCESS；Fork license run `45522936830` job `138899068753` SUCCESS。
+- 上述各轮的 Branch validation job 均为 `SKIPPED`，不计 PASS。CI Debug APK/arm64 artifact 只证明 CI 构建/ABI/Manifest 和对应 JVM/Flutter 自动化，不是产品正式签名 Release APK，也不代表 Find N2 真机安装或覆盖升级通过。
+- Release 源码合同已复核：缺失/格式错误的 Key Ring 在 Dart 侧形成空信任环、不能验证发行者；Gradle Release 门禁要求非空且结构合法的 `YANJI_LICENSE_KEY_RING`，拒绝测试 issuer ID/公钥，并独立要求本地原签名材料。Release workflow 使用 CI-only 临时签名仅供产物扫描。
+- **正式发行仍 BLOCKED：** 当前仓库没有经来源核验的正式发行者公钥；GitHub Secret `YANJI_LICENSE_KEY_RING` 实际值、生产私钥离线保管/恢复演练、真实客户签发和密钥轮换均未取得可核验证据。不得使用测试公钥或临时公钥替代。
+- Fork inventory 当前统计 changed 975 / added 811 / modified 164 / deleted 15；自动 license boundary 只证明 SPDX/DEP5/inventory 结构和分类检查通过，不证明 Fork 自有代码权属。所有 `OWNERSHIP_EVIDENCE_REQUIRED` 仍需真实权利人材料补证。
+- **设备状态仍为 `LOCAL ONLY / MISSING / UNKNOWN`。** Keystore / StrongBox / TEE、AtomicFile 实际故障恢复、原签名覆盖升级和数据保留、GPU/CPU 多轮、多媒体、Activity/进程恢复、端到端 TRACE 与 AI 数据清除均须在 OPPO Find N2 本地执行并附证据。设备验收放在云端工作之后，不作为云端代码/CI 的阻塞项。
 
 ## 7. 证据包、结果记录与回传
 
