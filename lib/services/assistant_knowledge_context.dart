@@ -18,8 +18,8 @@ import '../models/acupuncture.dart';
 import '../models/acupoint_detail.dart';
 
 
-/// A source resolved to a concrete entry in the App's local knowledge base.
-/// The source ID and backlink identify the exact entry used for this answer.
+/// A source returned by App retrieval and resolved to a local entry.
+/// Its presence does not mean that the language model used or cited it.
 class AssistantKnowledgeSourceReference {
   const AssistantKnowledgeSourceReference({
     required this.sourceId,
@@ -41,20 +41,7 @@ class AssistantKnowledgeSourceReference {
   final String sourceVerificationStatus;
   final bool bibliographicLocatorVerified;
 
-  String toCitationText() {
-    final locatorLabel =
-        localBacklink == 'MISSING' ? '当前条目不可定位' : '可定位';
-    final sourceType = switch (sourceKind) {
-      'lecture' => '课程讲稿/整理讲义（学习资料）',
-      'classic_text' => 'App 古籍文本知识条目',
-      'medical_case' => 'App 医案库整理条目',
-      _ => 'App 本地知识库数据（$sourceKind）',
-    };
-    return '- $sourceLabel｜$title\n'
-        '  资料类型：$sourceType\n'
-        '  知识库条目定位：$localBacklink（$locatorLabel）\n'
-        '  来源标识：$sourceId';
-  }
+
 }
 
 enum AssistantKnowledgeRetrievalStatus { noResults, retrieved, partial, failed }
@@ -93,7 +80,7 @@ class AssistantKnowledgeContextBuildResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已完整提供、允许引用的证据 ID】\n' +
+      : '【内部审计证据索引；不得作为普通对话内容展示】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
               .join('\n');
@@ -116,7 +103,8 @@ class AssistantKnowledgeQueryProvenance {
 }
 
 
-/// Retrieval text plus status and the exact, resolvable source IDs used for this turn.
+/// Retrieval context and resolvable source IDs returned for this turn.
+/// Returned source IDs are provenance metadata, not model-confirmed citations.
 class AssistantKnowledgeContextResult {
   const AssistantKnowledgeContextResult({
     required this.text,
@@ -128,7 +116,14 @@ class AssistantKnowledgeContextResult {
     this.rankedEvidenceSet,
   });
 
+  /// Complete retrieval materialization, retained for App-side audit/tests only.
   final String text;
+
+  /// Sanitized evidence content for the language model. Never contains source
+  /// IDs, backlinks, local paths, internal sequence numbers or retrieval status.
+  String get modelContextText =>
+      AssistantKnowledgeContextBuilder.toModelContextText(text);
+
   final List<AssistantKnowledgeSourceReference> sources;
   final AssistantKnowledgeRetrievalStatus status;
   final String? failureMessage;
@@ -148,7 +143,7 @@ class AssistantKnowledgeContextResult {
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
-      : '【本轮已完整提供、允许引用的证据 ID】\n' +
+      : '【内部审计证据索引；不得作为普通对话内容展示】\n' +
           rankedEvidence
               .map((item) => '- evidenceId=${item.evidenceId}; sourceId=${item.sourceId}')
               .join('\n');
@@ -164,10 +159,7 @@ class AssistantKnowledgeContextResult {
   List<String> get sourceIds =>
       List.unmodifiable(sources.map((source) => source.sourceId));
 
-  String get citationFooter => sources.isEmpty
-      ? ''
-      : '\n\n本轮引用的知识库条目（可按条目定位和来源标识回查）：\n' +
-          sources.map((source) => source.toCitationText()).join('\n');
+
 }
 
 /// Bounded keyword retrieval from the app's bundled TCM knowledge data.
@@ -192,24 +184,145 @@ class AssistantKnowledgeContextBuilder {
     '恶寒', '口苦', '胸闷', '尿频', '便秘', '腹泻', '心悸', '呕吐',
   };
 
-  /// Cheap deterministic gate for deciding whether a user turn needs the
-  /// bundled TCM retrieval path. Ordinary chat and non-TCM metaphysics queries
-  /// do not load/search the classic corpus.
+  /// Produces a separate model-facing view from retrieval/audit material.
+  /// Evidence content and readable titles are retained; App identifiers,
+  /// storage locators, ranking metadata and retrieval status are not injected
+  /// into ordinary model conversation context.
+  static String toModelContextText(String auditText) {
+    if (auditText.trim().isEmpty) return '';
+
+    final output = <String>[];
+    for (final rawLine in auditText.split('\n')) {
+      final line = rawLine.trimRight();
+      final value = line.trim();
+      if (value.isEmpty) {
+        if (output.isNotEmpty && output.last.isNotEmpty) output.add('');
+        continue;
+      }
+
+      if (value.startsWith('来源标识：') ||
+          value.startsWith('知识库条目定位：') ||
+          value.startsWith('知识库条目定位可用：') ||
+          value.startsWith('本地资料路径：') ||
+          value.startsWith('内部章节序号：') ||
+          value.startsWith('纸本版本/卷页核验状态：') ||
+          value.startsWith('章节正文匹配：') ||
+          value.startsWith('evidenceId=') ||
+          value.startsWith('sourceId=')) {
+        continue;
+      }
+
+      if (value.startsWith('以下内容来自 App 内置知识库')) {
+        output.add(
+          '以下是 App 本地知识库检索得到的资料摘录。只根据下方明确记载的内容回答；未覆盖的信息应说明未知。',
+        );
+        continue;
+      }
+      if (value.startsWith('不得补造未返回字段；保留资料类型')) {
+        output.add('不得补造资料未记载的事实；未覆盖的信息应明确说明未知。');
+        continue;
+      }
+
+      if (value.startsWith('[App经典全文索引 · ')) {
+        output.add(value.replaceFirst('[App经典全文索引 · ', '[经典学习资料 · '));
+        continue;
+      }
+      if (value.startsWith('[App古籍库 · ')) {
+        if (value.contains('读取失败')) {
+          output.add('古籍资料正文本轮未能读取。');
+          continue;
+        }
+        final fields = value
+            .replaceFirst('[App古籍库 · ', '')
+            .replaceFirst(']', '')
+            .split(' · ');
+        final title = fields.isEmpty ? '古籍资料' : fields.first;
+        final author = fields.length > 1 ? fields[1] : '';
+        output.add(author.isEmpty ? '[古籍资料 · $title]' : '[古籍资料 · $title · $author]');
+        continue;
+      }
+      if (value.startsWith('[App医案库')) {
+        output.add('[App 整理医案资料]');
+        continue;
+      }
+      if (value.startsWith('[App方剂库')) {
+        output.add('[方剂资料]');
+        continue;
+      }
+      if (value.startsWith('[App本草库')) {
+        output.add('[本草资料]');
+        continue;
+      }
+      if (value.startsWith('[App针灸处方库')) {
+        output.add('[针灸处方资料]');
+        continue;
+      }
+      if (value.startsWith('[App穴位库')) {
+        output.add('[穴位资料]');
+        continue;
+      }
+      if (value.startsWith('[App内经结构化条目')) {
+        output.add('[《黄帝内经》结构化资料]');
+        continue;
+      }
+
+      output.add(line);
+    }
+
+    return output.join('\n').trim();
+  }
+
+  /// Cheap deterministic signal for intent routing. This only checks registered
+  /// formula/herb/acupoint entities and their aliases; it does not claim that
+  /// retrieval found evidence.
+  static bool hasStructuredKnowledgeEntity(String query) {
+    final normalized = query.trim();
+    if (normalized.isEmpty) return false;
+    return FormulaRepository.getAll().any((item) =>
+            normalized.contains(item.name) ||
+            item.alias
+                .split(RegExp(r'[,，、;；/|]'))
+                .map((value) => value.trim())
+                .where((value) => value.isNotEmpty)
+                .any(normalized.contains)) ||
+        HerbRepository.getAll().any((item) => normalized.contains(item.name)) ||
+        HerbRepository.aliasNames.any(normalized.contains) ||
+        AcupointRepository.getAll().any((item) => normalized.contains(item.name));
+  }
+
+  /// Case retrieval is an explicit opt-in, not a side effect of a formula/herb
+  /// hit or generic substring overlap. Questions about how to search cases are
+  /// learning questions and must not load the case corpus.
+  static bool shouldIncludeMedicalCases(String query) {
+    final normalized = query.trim();
+    if (normalized.isEmpty || !RegExp(r'医案|病例|案例').hasMatch(normalized)) {
+      return false;
+    }
+    if (RegExp(
+      r'(?:怎么|如何|怎样).{0,8}(?:检索|搜索|查找|查询)|(?:检索|搜索|查找|查询)(?:的)?(?:方法|方式|流程|原理|步骤)',
+    ).hasMatch(normalized)) {
+      return false;
+    }
+    return RegExp(
+      r'(找|查找|检索|搜索|查询|查看|看一下|看看|列出|列举|提供|给我|举|对照|比较|分析|有哪些|筛选|想看|要看)',
+    ).hasMatch(normalized);
+  }
+
+  /// A turn needs bundled TCM retrieval when it contains a domain cue or a
+  /// registered formula/herb/acupoint entity. Ordinary chat is not searched.
   static bool shouldRetrieveForQuery(String query) {
     final normalized = query.trim();
     if (normalized.isEmpty) return false;
     return _knowledgeQueryCues.any(normalized.contains) ||
-        FormulaRepository.getAll().any((item) => normalized.contains(item.name)) ||
-        HerbRepository.getAll().any((item) => normalized.contains(item.name)) ||
-        AcupointRepository.getAll().any((item) => normalized.contains(item.name));
+        hasStructuredKnowledgeEntity(normalized);
   }
 
   /// Builds bounded retrieval context and resolves every emitted classic
-  /// source ID back to the bundled index before exposing it as a citation.
+  /// source ID back to the bundled index before returning a navigable source reference.
   /// Unknown IDs are omitted rather than presented as valid references.
   static Future<AssistantKnowledgeContextResult> buildWithSourcesAsync(
     String query, {
-    bool includeMedicalCases = true,
+    bool includeMedicalCases = false,
   }) async {
     late final AssistantKnowledgeContextBuildResult built;
     try {
@@ -494,7 +607,7 @@ class AssistantKnowledgeContextBuilder {
   /// the local table sequence is not a primary-source locator.
   static Future<String> buildAsync(
     String query, {
-    bool includeMedicalCases = true,
+    bool includeMedicalCases = false,
   }) async =>
       (await buildWithEvidenceAsync(
         query,
@@ -507,7 +620,7 @@ class AssistantKnowledgeContextBuilder {
   /// candidates so the reasoning layer can validate omittedEvidenceIds.
   static Future<AssistantKnowledgeContextBuildResult> buildWithEvidenceAsync(
     String query, {
-    bool includeMedicalCases = true,
+    bool includeMedicalCases = false,
   }) async {
     final normalized = query.trim();
     if (normalized.isEmpty) {
@@ -686,9 +799,9 @@ class AssistantKnowledgeContextBuilder {
       }
       buffer.writeln('检索摘要：${hit.snippet}');
       if (isLecture) {
-        buffer.writeln('资料类型说明：当前引用对象为 App 内课程讲稿/整理讲义知识条目。');
+        buffer.writeln('资料类型说明：当前检索资料为 App 内课程讲稿/整理讲义知识条目。');
       } else {
-        buffer.writeln('资料类型说明：当前引用对象为 App 内古籍文本知识条目。');
+        buffer.writeln('资料类型说明：当前检索资料为 App 内古籍文本知识条目。');
       }
       evidenceEndOffsets[evidenceId] = buffer.length;
     }
@@ -709,7 +822,7 @@ class AssistantKnowledgeContextBuilder {
         ..writeln('[App古籍库 · ${book.title} · ${book.author} · ${book.asset}]')
         ..writeln('书籍简介：${book.intro}');
       if (keptEvidenceIds.isEmpty) {
-        buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可引用章节。');
+        buffer.writeln('章节正文匹配：MISSING；仅返回书目元数据，未命中可用章节正文。');
       }
       for (final evidenceId in keptEvidenceIds) {
         final candidate = candidatesById[evidenceId]!;
@@ -770,7 +883,7 @@ class AssistantKnowledgeContextBuilder {
               '结果字段：${medicalCase.result.isEmpty ? 'MISSING' : medicalCase.result}',
             )
             ..writeln(
-              '使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照，引用时保留条目身份，不把条目未记载的信息补成病例事实。',
+              '使用边界：这是 App 知识库中的整理案例；可用于病例复盘和知识对照。如需提及该案例，应明确这是 App 整理记录，并且不得把条目未记载的信息补成病例事实。',
             );
           evidenceEndOffsets[evidenceId] = buffer.length;
         }

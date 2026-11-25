@@ -63,6 +63,54 @@ class LocalAiConversationHistoryPolicyTest {
     }
 
     @Test
+    fun rejectsRepeatedGreetingLoopsBeforeTheyCanEnterConversationHistory() {
+        listOf(
+            "您好您好您好您好",
+            "您好。您好！您好，您好。",
+            "您好\n您好\n您好\n您好"
+        ).forEach { response ->
+            assertEquals(
+                "REPEATED_OUTPUT_LOOP",
+                LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode(response)
+            )
+            val history = LocalAiConversationHistory()
+            assertThrows(IllegalArgumentException::class.java) {
+                history.appendSuccessfulTurn("question", response)
+            }
+            assertTrue(history.snapshot().turns.isEmpty())
+            assertFalse(history.hasSuccessfulTurn())
+        }
+    }
+
+    @Test
+    fun acceptsShortAndSubstantiveRepliesThatAreNotRepetitionLoops() {
+        listOf(
+            "您好",
+            "您好，我可以介绍桔梗汤的组成和传统应用。",
+            "第一点：桔梗。\n第二点：甘草。\n第三点：需要结合具体问题理解。"
+        ).forEach { response ->
+            assertEquals(
+                null,
+                LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode(response)
+            )
+        }
+    }
+
+    @Test
+    fun rejectsEmptyOutputAndKeepsTheHistoryUnchanged() {
+        val history = LocalAiConversationHistory()
+        assertEquals(
+            "EMPTY_REPLY",
+            LocalAiGeneratedReplyQualityPolicy.rejectionReasonCode("   ")
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            history.appendSuccessfulTurn("question", "   ")
+        }
+        assertTrue(history.snapshot().turns.isEmpty())
+        assertEquals(0L, history.snapshot().successfulTurnCount)
+    }
+
+    @Test
     fun keepsRetrievedContextOutOfNativeRecoveryTranscript() {
         val userText = "请解释这条原文。"
         val retrievedContext = "RAG_PRIVATE_CONTEXT::经典原文摘录"
