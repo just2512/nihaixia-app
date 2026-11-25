@@ -1,7 +1,9 @@
 name: Flutter Quality Gate
 
 on:
-  # Run the extended gate for each master change; manual dispatch remains available.
+  # Run the extended gate before integration and again on each master change.
+  pull_request:
+    branches: [master]
   push:
     branches: [master]
   workflow_dispatch:
