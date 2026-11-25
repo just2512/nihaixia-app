@@ -4413,3 +4413,19 @@ PR HEAD 门禁证据：
 - **证据纪律：** 保留现有黄金检索行为；每层用独立契约测试和跨层测试验收；CI 对精确 PR HEAD；Find N2 设备证据独立记录；SKIPPED、UNKNOWN 和设计文件均不计 PASS。
 
 本节优先级修订覆盖此前 §95 将书架与多轮治理并行推进的安排；§95 的详细书架设计约束继续有效，但其执行时间后移。
+
+
+---
+
+## 97. 2026-11-25 Core-0 契约字段与五层源码映射启动
+
+- **基线 master：** `d4cfb8e9862fa36c31cffb4cbbf1e299e48dbb26`（PR #492 合并提交）。
+- **Core-0 分支：** `docs/core0-contract-source-map-20261125`；本节所列提交以该分支最新 HEAD 为准，合入前仍须对照新的 master 重验。
+- **规范推进：** 在 `docs/ai-layered-runtime-architecture.md` 增加“核心 DTO 契约 v1”字段表，明确 CandidateEvidence/CandidateEvidenceBatch、EvidenceRankingDecision/RankedEvidenceSet、SessionStateSnapshot/SessionStateFact、ReasoningRequest/ReasoningResponse、BusinessActionProposal/ExecutionResult 的字段、来源语义、失败状态、预算单位和兼容边界。
+- **源码映射：** 补充五层生产路径、现有测试、隐式耦合点及文件所有权。当前检索排序行为继续由黄金快照保护；本批没有改动运行时检索、业务执行、数据库、模型输入或授权门禁。
+- **Core-0 状态：** `IN_PROGRESS`。字段级契约与源码/测试映射已进入文档；仍需审阅具体字段与既有模型的一致性，并完成本 PR 的文档/许可证 CI。文档冻结不等同于 DTO 已接入运行时。
+- **Core-1 当前切片 PR #493：** `OPEN`，head `1d91d913a26042c5c307042361012287e81c99b3`。Fork license boundary run `45535035216` SUCCESS；Flutter regression run `45535035231` SUCCESS；Android arm64/JVM job `138942270425` 当时仍在执行，尚不能合并。Branch validation 为 SKIPPED，不计 PASS。改动仅将文本消息的 Native historyUserText 改为用户原话，当前 modelInput 保持不变；该切片不解决历史预算。
+- **PR #494：** `OPEN`，head `2637ad8354b8beeb585df8dab286604a077e50ea`。扩展 Flutter Quality Gate 到 master PR；run `45535614817` 当时仍在 Analyze and test / Dart test suite 阶段，未通过前不计完成。此 PR 是后续 Android arm64/JVM 质量门的 CI 基础，不等同于运行时功能交付。
+- **当前确认缺口：** Native transcript 目前无轮数/字符/token 预算；sessionId 隔离、结构化状态快照和证据引用单独提交尚未接通；KnowledgeContextBuilder 仍合并召回、筛选和上下文装配；Native 主对话仍无统一 ReasoningRequest/Response schema；业务执行只在已登记 Headless 范围形成确定性闭环。
+- **下一项自动执行：** 等 #493 精确 HEAD Android arm64/JVM 质量门结束后，若全量 Flutter、Android 构建、JVM、Fork license 均 PASS 且 base/head 未变，则小批量合并；随后从新 master 独立分支实现 Core-1 有界 Native history（不与 #493 同 PR）。并行完成本 Core-0 文档 PR 的精确 HEAD 验收；Core-0 合入后启动 Core-2 候选召回/证据排序最小拆分，先以既有黄金快照为保护条件。
+- **设备安排：** Find N2 多轮、GPU/CPU、多媒体与进程恢复均保留 `LOCAL ONLY / UNKNOWN`，云端代码和 CI 不以设备验收为阻塞；最后交付本地验收清单，不把 CI 结果伪装成 TRACE PASS。
