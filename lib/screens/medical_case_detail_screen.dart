@@ -196,7 +196,6 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
       ('疗程结果', c.result),
       ('生活医嘱', c.advice),
       ('倪师观点', c.view),
-      ('原始来源账本', c.sourceLedger.toDisplayText()),
     ];
 
     final children = <Widget>[];
@@ -300,7 +299,7 @@ class _MedicalCaseDetailScreenState extends State<MedicalCaseDetailScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              '解释当前记录及其来源；未核验的原文、疗效和纸本定位不会被视为已证实事实。',
+              '围绕当前医案的实际记录梳理病机、治法与方剂；没有记载的信息不会补造。',
               style: TextStyle(
                 fontSize: AppType.caption,
                 color: cs.onSurfaceVariant,

@@ -28,8 +28,6 @@ class AssistantKnowledgeSourceReference {
     required this.localBacklink,
     required this.locatorStatus,
     this.sourceKind = 'classic_text',
-    this.sourceVerificationStatus = 'UNKNOWN',
-    this.bibliographicLocatorVerified = false,
   });
 
   final String sourceId;
@@ -38,8 +36,6 @@ class AssistantKnowledgeSourceReference {
   final String localBacklink;
   final String locatorStatus;
   final String sourceKind;
-  final String sourceVerificationStatus;
-  final bool bibliographicLocatorVerified;
 
   String toCitationText() {
     final locatorLabel =
@@ -358,10 +354,8 @@ class AssistantKnowledgeContextBuilder {
             sourceLabel: matchedBook.title,
             title: chapter.title,
             localBacklink: 'guji:$bookId#chapter:$chapterIndex',
-            locatorStatus: 'PARTIAL',
+            locatorStatus: 'LOCAL_ENTRY',
             sourceKind: 'classic_text',
-            sourceVerificationStatus: 'UNKNOWN',
-            bibliographicLocatorVerified: false,
           ));
           continue;
         }
@@ -379,16 +373,13 @@ class AssistantKnowledgeContextBuilder {
             }
           }
           if (matchedCase == null) continue;
-          final ledger = matchedCase.sourceLedger;
           sources.add(AssistantKnowledgeSourceReference(
             sourceId: sourceId,
             sourceLabel: 'App 医案库',
             title: matchedCase.displayName,
-            localBacklink: 'medical_case:internal-seq:$sequence',
-            locatorStatus: ledger.status,
+            localBacklink: 'medical_case:$sequence',
+            locatorStatus: 'LOCAL_ENTRY',
             sourceKind: 'medical_case',
-            sourceVerificationStatus: ledger.sourceStatus,
-            bibliographicLocatorVerified: ledger.isVerified,
           ));
           continue;
         }
@@ -401,7 +392,6 @@ class AssistantKnowledgeContextBuilder {
           localBacklink: hit.localBacklink,
           locatorStatus: hit.locatorStatus,
           sourceKind: hit.asset != null ? 'lecture' : 'classic_text',
-          bibliographicLocatorVerified: hit.hasVerifiedBibliographicLocator,
         ));
       } catch (_) {
         // A failed reverse lookup is not a citation. Keep the retrieval text,
@@ -489,9 +479,8 @@ class AssistantKnowledgeContextBuilder {
     ]);
   }
 
-  /// Extends the fast in-memory retrieval with the bundled classical-text and
-  /// medical-case libraries. Case excerpts carry an explicit provenance warning:
-  /// the local table sequence is not a primary-source locator.
+  /// Extends fast in-memory retrieval with bundled classical-text and
+  /// medical-case learning records.
   static Future<String> buildAsync(
     String query, {
     bool includeMedicalCases = true,
@@ -658,7 +647,7 @@ class AssistantKnowledgeContextBuilder {
     final evidenceEndOffsets = <String, int>{};
 
     // Keep the historical classic-index first-four cap and query/hit order.
-    // No relevance score or source-verification promotion is introduced.
+    // Preserve the existing deterministic source order and selection limits.
     for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
       final hit = candidatesById[evidenceId]!;
       if (hit.retrievalMethod != 'CLASSIC_SUBSTRING_INDEX') continue;
@@ -718,7 +707,6 @@ class AssistantKnowledgeContextBuilder {
           ..writeln('章节：${candidate.title}')
           ..writeln('知识库条目定位：${candidate.localBacklink}')
           ..writeln('来源标识：${candidate.sourceId}')
-          ..writeln('纸本版本/卷页核验状态：UNKNOWN；内部章节序号不等于纸本页码。')
           ..writeln('条目内容摘录：${candidate.excerpt}');
         evidenceEndOffsets[evidenceId] = buffer.length;
       }

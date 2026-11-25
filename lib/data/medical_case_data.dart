@@ -11,8 +11,6 @@
 /// - [extractKnownNames]：箭头分段 + 噪声清洗 + 长度降序非重叠匹配 + 去重。
 library;
 
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 
@@ -20,7 +18,6 @@ import 'chinese_convert.dart';
 import 'disease_repository.dart';
 import 'formula_repository.dart';
 import 'herb_repository.dart';
-import '../models/medical_case_source_ledger.dart';
 
 /// 全局提取缓存：按方剂字段原文 memo，同文本不重算（全量医案提取约数秒，
 /// memo 后重复打开详情/洞察/相关医案命中缓存，避免反复卡顿）。
@@ -334,8 +331,6 @@ class MedicalCase {
   final String result; // 疗程/结果
   final String advice; // 生活医嘱
   final String view; // 倪海厦核心观点/评论
-  /// 原始出处账本；未完成纸本定位核验时保持 MISSING。
-  final MedicalCaseSourceLedger sourceLedger;
 
   MedicalCase({
     required this.seq,
@@ -350,7 +345,6 @@ class MedicalCase {
     this.result = '',
     this.advice = '',
     this.view = '',
-    this.sourceLedger = MedicalCaseSourceLedger.missing,
   });
 
   /// 归一后的全文检索索引（简繁归一 + 小写），懒计算一次，供 [matches] 复用。
@@ -416,7 +410,6 @@ class MedicalCase {
     section('治法', method);
     section('结果', result);
     section('观点', view);
-    section('原始来源账本', sourceLedger.toDisplayText());
     buf.writeln('\n─────────────────');
     buf.write('研纪 · 中医诊疗学习（传统文化参考，非医疗建议）');
     return buf.toString();
@@ -427,10 +420,7 @@ class MedicalCase {
 /// 跳过表头（首格「序号」）与分隔行（含 `---`），仅收录首格为数字的行。
 /// 不按方剂字段过滤医案：方剂缺失本身是需要保留的病例信息，展示/检索时标记 MISSING，
 /// 不得因方剂缺失而从知识库删除整条病例。
-List<MedicalCase> parseMedicalCaseTable(
-  String md, {
-  Map<int, MedicalCaseSourceLedger> sourceLedgers = const {},
-}) {
+List<MedicalCase> parseMedicalCaseTable(String md) {
   final lines = md.split('\n');
   final cases = <MedicalCase>[];
 
@@ -484,44 +474,19 @@ List<MedicalCase> parseMedicalCaseTable(
       result: padded[9],
       advice: padded[10],
       view: padded[11],
-      sourceLedger: sourceLedgers[seq] ?? MedicalCaseSourceLedger.missing,
     ));
   }
 
   return cases;
 }
 
-/// 从 App 原始资产加载医案，并按内部主键注入独立来源账本。
-///
-/// 来源账本读取失败不隐藏医案正文；未能关联的来源统一保持 MISSING。
+/// 从 App 原始资产加载医案。
 /// Markdown 主资产加载失败则向调用方抛出异常，页面可展示明确错误状态。
 Future<List<MedicalCase>> loadMedicalCasesFromAssets() async {
-  final md =
-      await rootBundle.loadString('assets/medical_cases/cases_table.md');
-  var sourceLedgers = <int, MedicalCaseSourceLedger>{};
-  try {
-    final ledgerText = await rootBundle.loadString(
-      'assets/medical_cases/source_ledger.json',
-    );
-    final decoded = jsonDecode(ledgerText) as Map<String, dynamic>;
-    final records = decoded['records'] as Map<String, dynamic>? ?? const {};
-    sourceLedgers = {
-      for (final entry in records.entries)
-        if (int.tryParse(entry.key) != null &&
-            entry.value is Map<String, dynamic>)
-          int.parse(entry.key): MedicalCaseSourceLedger.fromJson(
-            entry.value as Map<String, dynamic>,
-          ),
-    };
-  } catch (e) {
-    // Ledger failure must not hide the underlying case corpus. Every
-    // unlinked record remains explicitly MISSING through the model default.
-    debugPrint('[MedicalCase] 来源账本读取失败，记录来源状态降级为 MISSING：$e');
-  }
-  return parseMedicalCaseTable(
-    md,
-    sourceLedgers: sourceLedgers,
+  final md = await rootBundle.loadString(
+    'assets/medical_cases/cases_table.md',
   );
+  return parseMedicalCaseTable(md);
 }
 
 /// 全量医案（进程内缓存）：供详情页「含此药的医案」后向关联使用。

@@ -44,8 +44,7 @@ class ClassicHit {
     this.chapterIndex,
   });
 
-  /// Stable retrieval identity. This is an app-local backlink key, not a
-  /// claim that the underlying historical text has a verified edition/page.
+  /// Stable retrieval identity for reopening this entry inside the App.
   String get sourceId {
     if (asset != null && asset!.trim().isNotEmpty) {
       return '$source:$asset';
@@ -59,12 +58,8 @@ class ClassicHit {
     return 'MISSING';
   }
 
-  /// PARTIAL means the app can reopen an internal asset/chapter but does not
-  /// have a verified printed page locator. Lecture markdown remains MISSING.
-  String get locatorStatus =>
-      asset == null && bookId != null && chapterIndex != null
-          ? 'PARTIAL'
-          : 'MISSING';
+  /// Whether this hit can reopen a local App entry.
+  String get locatorStatus => hasLocalBacklink ? 'LOCAL_ENTRY' : 'MISSING';
 
   String get localBacklink => asset != null
       ? asset!
@@ -72,18 +67,13 @@ class ClassicHit {
           ? 'guji:$bookId#chapter:${chapterIndex ?? 'MISSING'}'
           : 'MISSING';
 
-  /// Whether the app has enough local coordinates to reopen this hit.
-  /// This is deliberately independent from bibliographic verification:
-  /// a clickable local asset is not proof of edition, volume, or page.
+  /// Whether the App can reopen the selected local entry.
   bool get hasLocalBacklink =>
       (asset != null && asset!.trim().isNotEmpty) ||
       (bookId != null &&
           bookId!.trim().isNotEmpty &&
           chapterIndex != null &&
           chapterIndex! >= 0);
-
-  /// No current index record proves a printed edition/page locator.
-  bool get hasVerifiedBibliographicLocator => false;
 }
 
 
