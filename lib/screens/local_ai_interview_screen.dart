@@ -1266,7 +1266,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
               '方剂、本草或穴位实体已匹配，且本轮已有可回查的本地资料。'
               '先直接围绕用户输入的实体解释基本信息；只使用下方本轮资料支持的内容，'
               '没有覆盖的组成、主治、条文或出处应明确说明，不得自行补造。\n'
-              '本轮知识检索状态：${knowledge.statusLabel}。\n'
               '${knowledge.modelContextText}';
           final reply = await sendWithContext(learningContext);
           return _AssistantTurnResponse(
@@ -1333,9 +1332,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.consultation:
-        // Consultation uses the same bundled classical-text, TCM, and local
-        // medical-case sources as learning. Case entries retain their local
-        // record identity and are cited as App-organized case data.
+        // Consultation uses the same bundled classical-text and TCM knowledge
+        // content as learning. Source identity and retrieval audit data stay
+        // in App metadata; they are not inserted into the dialogue prompt.
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge =
             await _retrieveKnowledgeWithTrace(
@@ -1951,7 +1950,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       '证型 ${result.pattern}；方剂 ${result.formula.isEmpty ? 'MISSING' : result.formula}。'
       '先解释本次 App 实际返回的辨病辨证结果和字段关系，再结合本轮本地知识库实际检索到的条目说明诊断依据。'
       '在知识来源支持的范围内，继续讲解相关病机、治法、方剂组成与配伍、针灸选穴思路和经典依据。'
-      '每个诊断性陈述都必须能够对应本轮 App 规则结果和可追溯知识库 sourceId；知识库无依据的内容标记 MISSING，不得以模型记忆补齐。'
+      '每个诊断性陈述都必须能够对应本轮 App 规则结果和本地资料明确支持的内容；不得向用户输出内部 sourceId、evidenceId 或路径，也不得声称来源已核验或模型逐条引用。知识库无依据的内容应说明未获资料支持，不得以模型记忆补齐。'
       '明确区分 App 规则结果、知识库原文和 AI 归纳；不重新执行辨证，不增加、修改或伪造 App 规则结论，不补造缺失字段。';
 
   _InterviewMessage _diagnosisActionMessage(
