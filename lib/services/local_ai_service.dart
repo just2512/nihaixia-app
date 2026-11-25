@@ -1023,6 +1023,7 @@ class LocalAiModelStatus {
   final int expectedSizeBytes;
   final String backend;
   final String preferredBackend;
+  final String? backendFallbackReason;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -1034,6 +1035,7 @@ class LocalAiModelStatus {
     required this.backend,
     this.preferredBackend = 'gpu',
     this.hashVerified = false,
+    this.backendFallbackReason,
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
@@ -1047,6 +1049,7 @@ class LocalAiModelStatus {
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
       preferredBackend: map['preferredBackend'] as String? ?? 'gpu',
+      backendFallbackReason: map['backendFallbackReason'] as String?,
     );
   }
 

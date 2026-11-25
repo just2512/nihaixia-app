@@ -59,6 +59,9 @@ class MainActivity : FlutterActivity() {
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
     private var activeBackend = "not_loaded"
+    // Surfaced to the UI so a GPU→CPU fallback is not silently blamed on the
+    // toggle. Kept human-readable; only set when a preferred backend fails.
+    private var backendFallbackReason: String? = null
     // Keep only completed turns. A failed/blank current turn is never appended.
     private val conversationHistoryTurns = mutableListOf<LocalAiCompletedTurn>()
     private val conversationHasSuccessfulTurn: Boolean
@@ -742,6 +745,7 @@ class MainActivity : FlutterActivity() {
             "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
             "backend" to activeBackend,
+            "backendFallbackReason" to backendFallbackReason,
             "preferredBackend" to preferredBackend()
         )
     }
@@ -785,6 +789,7 @@ class MainActivity : FlutterActivity() {
             candidate.initialize()
             loadedEngine = candidate
             activeBackend = "cpu"
+            backendFallbackReason = null
         } else {
             // Prefer GPU where the device exposes a compatible OpenCL runtime; retry on CPU.
             // A failed Engine.initialize() instance is intentionally not closed: LiteRT-LM
@@ -803,6 +808,7 @@ class MainActivity : FlutterActivity() {
                 candidate.initialize()
                 loadedEngine = candidate
                 activeBackend = "gpu"
+                backendFallbackReason = null
             } catch (error: Exception) {
                 gpuFailure = error
             }
@@ -821,6 +827,8 @@ class MainActivity : FlutterActivity() {
                     candidate.initialize()
                     loadedEngine = candidate
                     activeBackend = "cpu"
+                    backendFallbackReason =
+                        "GPU 初始化失败：${gpuFailure?.message ?: "未知错误"}"
                 } catch (cpuError: Exception) {
                     activeBackend = "not_loaded"
                     throw IllegalStateException(
