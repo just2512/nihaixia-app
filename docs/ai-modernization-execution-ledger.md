@@ -4594,6 +4594,17 @@ PR HEAD 门禁证据：
 
 ---
 
+## 110. 2026-11-26 P0 单条目证据测试夹具校正
+
+- **对应任务：** §108 P0 知识解读语义重构/上下文传递；PR #542。
+- **发现：** `test/reasoning_knowledge_answer_adapter_test.dart` 的新单条目上下文测试使用 `knownEvidenceIds=[context-entry-request-1]`，但公共测试响应 fixture 默认仍携带 `omittedEvidenceIds=['dropped-1']`。ReasoningResponseCodec 正确将它识别为当前请求未知的 omitted evidence 并 fail-closed；不是生产 adapter/source mapping 缺陷。
+- **处理：** 测试 payload helper 新增可覆盖的 `omittedEvidenceIds` 参数；当前条目成功引用用例明确传 `const []`，使响应中的所有 evidence 状态严格属于同一 request-local 请求。其它既有测试保留默认 dropped-1，未降低既有拒绝测试。
+- **生产逻辑：** 不修改 decoder 的 unknown omitted ID 校验、不扩大 knownEvidenceIds、不允许跨请求引用。
+- **新代码 HEAD：** `08798f187e8fd4f3c18719a4e44d95c78650b73e`。该 HEAD 的 Branch validation / changed tests 重新运行中；之前 HEAD 对应新用例 1 FAIL（27 PASS），不能记 PASS。必须以此 HEAD 最新 CI 结果决定状态。
+- **验收状态：IN_PROGRESS。** 需在 HEAD 08798... 上确认静态分析、新增 adapter/formula/prompt 测试、既有 AI 回归及 Flutter full regression；SKIPPED/CANCELLED 不计 PASS。Find N2 真实模型输出和设备布局仍 UNKNOWN。
+
+---
+
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
 - **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。
