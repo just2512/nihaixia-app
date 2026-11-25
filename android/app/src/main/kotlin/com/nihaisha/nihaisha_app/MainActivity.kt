@@ -61,6 +61,8 @@ class MainActivity : FlutterActivity() {
 
     private var aiEngine: Engine? = null
     private var aiConversation: Conversation? = null
+    private var conversationTokenObservation =
+        LocalAiConversationTokenObservationPolicy.unknown()
     // Native Conversation state belongs to exactly one SQLite assistant session.
     private var activeConversationId: Long? = null
     private var activeBackend = "not_loaded"
@@ -685,6 +687,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine
         aiConversation = null
         aiEngine = null
+        conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         activeBackend = "not_loaded"
         try {
             ConversationResourceReleasePolicy.closeBoth(
@@ -788,6 +791,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine
         aiConversation = null
         aiEngine = null
+        conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         activeBackend = "not_loaded"
         try {
             ConversationResourceReleasePolicy.closeBoth(
@@ -812,7 +816,7 @@ class MainActivity : FlutterActivity() {
         LocalAiModelImportRecovery.recover(modelFile)
         val fileExists = modelFile.isFile && modelFile.length() > 0L
         val exists = fileExists && modelFile.length() == expectedModelBytes
-        return mapOf(
+        val status = mutableMapOf<String, Any>(
             "installed" to exists,
             "fileExists" to fileExists,
             "hashVerified" to (exists &&
@@ -822,8 +826,29 @@ class MainActivity : FlutterActivity() {
             "expectedSizeBytes" to expectedModelBytes,
             "ready" to (aiEngine != null && aiConversation != null),
             "backend" to activeBackend,
-            "preferredBackend" to preferredBackend()
+            "preferredBackend" to preferredBackend(),
+            "conversationKvCacheObservationStatus" to conversationTokenObservation.status.name,
+            "conversationKvCacheBudgetStatus" to "NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED"
         )
+        conversationTokenObservation.tokenCount?.let {
+            status["conversationKvCacheTokens"] = it
+        }
+        return status.toMap()
+    }
+
+    /**
+     * Sample the active Conversation only after its serialized operation has
+     * completed. Token observation is diagnostic: failure must not turn a
+     * successful model response into a failed turn.
+     */
+    private fun observeConversationTokenCount(conversation: Conversation) {
+        conversationTokenObservation = try {
+            LocalAiConversationTokenObservationPolicy.fromTokenCount(
+                conversation.getTokenCount()
+            )
+        } catch (_: Exception) {
+            LocalAiConversationTokenObservationPolicy.unknown()
+        }
     }
 
     private fun loadLocalModel(): Map<String, Any> {
@@ -915,6 +940,7 @@ class MainActivity : FlutterActivity() {
         aiEngine = loadedEngine
         try {
             aiConversation = createConversationWithHistory(loadedEngine!!)
+            observeConversationTokenCount(aiConversation!!)
         } catch (error: Exception) {
             releaseLocalModel()
             throw error
@@ -981,15 +1007,19 @@ class MainActivity : FlutterActivity() {
         val conversation = aiConversation
             ?: throw IllegalStateException("本地模型尚未加载")
 
-        fun commitSuccessfulTurn(reply: String): String {
+        fun commitSuccessfulTurn(
+            reply: String,
+            completedConversation: Conversation
+        ): String {
             val cleaned = stripSimpleMarkdown(reply)
             if (cleaned.isBlank()) throw IllegalStateException("模型没有返回有效文本")
             conversationHistory.appendSuccessfulTurn(userMessageText, cleaned)
+            observeConversationTokenCount(completedConversation)
             return cleaned
         }
 
         try {
-            return commitSuccessfulTurn(send(conversation))
+            return commitSuccessfulTurn(send(conversation), conversation)
         } catch (error: Exception) {
             // 首轮 OpenCL 不可用：首轮前没有历史，保留既有 CPU fallback。
             if (FirstTurnGpuFallbackPolicy.shouldFallback(
@@ -1002,7 +1032,7 @@ class MainActivity : FlutterActivity() {
                 val cpuConversation = aiConversation
                     ?: throw IllegalStateException("CPU 回退后没有创建有效会话")
                 try {
-                    return commitSuccessfulTurn(send(cpuConversation))
+                    return commitSuccessfulTurn(send(cpuConversation), cpuConversation)
                 } catch (cpuError: Exception) {
                     throw IllegalStateException(
                         "GPU 首轮推理报告 OpenCL 不可用；已切换 CPU，但重试仍失败：${cpuError.message}",
@@ -1068,6 +1098,7 @@ class MainActivity : FlutterActivity() {
         // Detach first so no failed object can be reused or closed twice.
         aiConversation = null
         aiEngine = null
+        conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         activeBackend = "not_loaded"
 
         var releaseFailure: Exception? = null
@@ -1133,6 +1164,7 @@ class MainActivity : FlutterActivity() {
         aiEngine = cpuEngine
         aiConversation = cpuConversation
         activeBackend = "cpu"
+        observeConversationTokenCount(cpuConversation)
     }
 
     private fun requireCachedInput(path: String, kind: String): File {
@@ -1624,6 +1656,7 @@ class MainActivity : FlutterActivity() {
         val engine = aiEngine ?: throw IllegalStateException("本地模型尚未加载")
         val previousConversation = aiConversation
         aiConversation = null
+        conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         conversationHistory.clear()
 
         return try {
@@ -1637,6 +1670,7 @@ class MainActivity : FlutterActivity() {
                 closeEngine = { engine.close() }
             )
             aiConversation = nextConversation
+            observeConversationTokenCount(nextConversation)
             activeConversationId = conversationId
             userReportedInputs.clear()
             userReportedInputsTruncated = false
@@ -1647,6 +1681,7 @@ class MainActivity : FlutterActivity() {
             // must start from a clean state rather than overwrite a live engine.
             aiEngine = null
             aiConversation = null
+            conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
             activeConversationId = null
             userReportedInputs.clear()
             userReportedInputsTruncated = false
@@ -1662,6 +1697,7 @@ class MainActivity : FlutterActivity() {
         // Clear references before close: LiteRT-LM objects must be closed exactly once.
         aiConversation = null
         aiEngine = null
+        conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         activeConversationId = null
         userReportedInputs.clear()
         userReportedInputsTruncated = false

@@ -1116,6 +1116,9 @@ class LocalAiModelStatus {
   final int expectedSizeBytes;
   final String backend;
   final String preferredBackend;
+  final int? conversationKvCacheTokens;
+  final String conversationKvCacheObservationStatus;
+  final String conversationKvCacheBudgetStatus;
 
   const LocalAiModelStatus({
     required this.installed,
@@ -1127,9 +1130,24 @@ class LocalAiModelStatus {
     required this.backend,
     this.preferredBackend = 'gpu',
     this.hashVerified = false,
+    this.conversationKvCacheTokens,
+    this.conversationKvCacheObservationStatus = 'UNKNOWN',
+    this.conversationKvCacheBudgetStatus =
+        'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
   });
 
   factory LocalAiModelStatus.fromMap(Map<String, dynamic> map) {
+    final rawConversationTokens = map['conversationKvCacheTokens'];
+    final conversationTokens = rawConversationTokens is int &&
+            rawConversationTokens >= 0
+        ? rawConversationTokens
+        : null;
+    final rawObservationStatus =
+        map['conversationKvCacheObservationStatus'];
+    final observationStatus = conversationTokens != null &&
+            rawObservationStatus == 'OBSERVED'
+        ? 'OBSERVED'
+        : 'UNKNOWN';
     return LocalAiModelStatus(
       installed: map['installed'] == true,
       fileExists: map['fileExists'] == true,
@@ -1140,6 +1158,12 @@ class LocalAiModelStatus {
       expectedSizeBytes: (map['expectedSizeBytes'] as num?)?.toInt() ?? 3659530240,
       backend: map['backend'] as String? ?? 'not_loaded',
       preferredBackend: map['preferredBackend'] as String? ?? 'gpu',
+      conversationKvCacheTokens: conversationTokens,
+      conversationKvCacheObservationStatus: observationStatus,
+      conversationKvCacheBudgetStatus:
+          map['conversationKvCacheBudgetStatus'] is String
+              ? map['conversationKvCacheBudgetStatus'] as String
+              : 'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
     );
   }
 

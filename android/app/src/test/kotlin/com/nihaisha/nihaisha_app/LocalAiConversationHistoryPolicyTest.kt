@@ -249,4 +249,31 @@ class LocalAiConversationHistoryPolicyTest {
         assertEquals(null, LocalAiConversationIdPolicy.parse("42"))
     }
 
+    @Test
+    fun reportsConversationTokenCountWithoutInferringABudget() {
+        val observation = LocalAiConversationTokenObservationPolicy.fromTokenCount(1234)
+
+        assertEquals(1234, observation.tokenCount)
+        assertEquals(
+            LocalAiConversationTokenObservation.Status.OBSERVED,
+            observation.status
+        )
+    }
+
+    @Test
+    fun missingOrNegativeConversationTokenCountsRemainUnknown() {
+        listOf(null, -1).forEach { count ->
+            val observation = LocalAiConversationTokenObservationPolicy.fromTokenCount(count)
+            assertEquals(null, observation.tokenCount)
+            assertEquals(
+                LocalAiConversationTokenObservation.Status.UNKNOWN,
+                observation.status
+            )
+        }
+        assertEquals(
+            LocalAiConversationTokenObservation.Status.UNKNOWN,
+            LocalAiConversationTokenObservationPolicy.unknown().status
+        )
+    }
+
 }

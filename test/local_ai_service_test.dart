@@ -820,12 +820,22 @@ void main() {
         'sizeBytes': 3659530240,
         'expectedSizeBytes': 3659530240,
         'backend': 'gpu',
+        'conversationKvCacheTokens': 1234,
+        'conversationKvCacheObservationStatus': 'OBSERVED',
+        'conversationKvCacheBudgetStatus':
+            'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
       });
 
       expect(status.installed, isTrue);
       expect(status.fileExists, isTrue);
       expect(status.ready, isTrue);
       expect(status.backend, 'gpu');
+      expect(status.conversationKvCacheTokens, 1234);
+      expect(status.conversationKvCacheObservationStatus, 'OBSERVED');
+      expect(
+        status.conversationKvCacheBudgetStatus,
+        'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
+      );
       expect(status.sizeLabel, '3.66 GB');
       expect(status.modelPath, contains('gemma-4-E4B-it.litertlm'));
     });
@@ -841,7 +851,23 @@ void main() {
       expect(status.sizeBytes, 0);
       expect(status.expectedSizeBytes, 3659530240);
       expect(status.backend, 'not_loaded');
+      expect(status.conversationKvCacheTokens, isNull);
+      expect(status.conversationKvCacheObservationStatus, 'UNKNOWN');
+      expect(
+        status.conversationKvCacheBudgetStatus,
+        'NOT_CONFIGURED_DEVICE_CALIBRATION_REQUIRED',
+      );
       expect(status.sizeLabel, '尚未安装');
+    });
+
+    test('rejects malformed or negative Native KV token observations', () {
+      final status = LocalAiModelStatus.fromMap({
+        'conversationKvCacheTokens': 12.5,
+        'conversationKvCacheObservationStatus': 'OBSERVED',
+      });
+
+      expect(status.conversationKvCacheTokens, isNull);
+      expect(status.conversationKvCacheObservationStatus, 'UNKNOWN');
     });
 
     test('parses a user-reported symptom draft and ignores unsupported fields', () {
