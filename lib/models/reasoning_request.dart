@@ -45,6 +45,7 @@ class ReasoningExecutionResult {
   })  : actualArguments = Map.unmodifiable(actualArguments),
         resultValues = Map.unmodifiable(resultValues),
         sourceIds = List.unmodifiable(sourceIds) {
+    final normalizedFailureCode = failureCode?.trim();
     if (invocationId.trim().isEmpty || capabilityId.trim().isEmpty) {
       throw ArgumentError('REASONING_EXECUTION_ID_REQUIRED');
     }
@@ -70,14 +71,14 @@ class ReasoningExecutionResult {
     }
     if ((status == ReasoningExecutionStatus.failed ||
             status == ReasoningExecutionStatus.unknown) &&
-        (failureCode == null || failureCode.trim().isEmpty)) {
+        (normalizedFailureCode == null || normalizedFailureCode.isEmpty)) {
       throw ArgumentError('REASONING_NON_SUCCESS_FAILURE_CODE_REQUIRED');
     }
     if (status != ReasoningExecutionStatus.succeeded &&
         (this.resultValues.isNotEmpty || this.sourceIds.isNotEmpty)) {
       throw ArgumentError('REASONING_NON_SUCCESS_CANNOT_CARRY_RESULT');
     }
-    if (failureCode != null && failureCode != failureCode.trim()) {
+    if (failureCode != normalizedFailureCode) {
       throw ArgumentError('REASONING_FAILURE_CODE_INVALID');
     }
   }
