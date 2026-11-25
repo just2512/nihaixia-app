@@ -201,9 +201,28 @@ class HeadlessToolDispatcher {
           offendingCapabilityId: step.capabilityId,
         );
       }
-      final result = await executor(step.arguments);
-      results.add(result);
-      if (result.status != AssistantToolExecutionStatus.succeeded) break;
+      try {
+        final result = await executor(step.arguments);
+        results.add(result);
+        if (result.status != AssistantToolExecutionStatus.succeeded) break;
+      } catch (_) {
+        // A thrown executor may have performed a side effect before losing its
+        // result. Preserve prior step results, record this step as UNKNOWN, and
+        // stop the plan so a caller cannot silently replay completed work.
+        results.add(
+          AssistantToolResult(
+            toolId: step.toolId,
+            title: step.toolId,
+            status: AssistantToolExecutionStatus.unknown,
+            values: const {'执行状态': 'UNKNOWN'},
+            arguments: step.arguments,
+            disclaimer:
+                '执行器未返回可验证结果，无法判断本次业务动作是否已完成。'
+                '本次不会自动重放，请先核对已有记录。',
+          ),
+        );
+        break;
+      }
     }
 
     return HeadlessToolPlanExecutionResult(

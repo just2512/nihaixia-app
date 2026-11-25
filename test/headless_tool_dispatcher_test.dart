@@ -207,18 +207,46 @@ void main() {
       expect(actual.results.single.status, AssistantToolExecutionStatus.failed);
     });
 
-    test('propagates executor errors without converting them to results', () async {
-      final error = StateError('executor failure');
-      await expectLater(
-        const HeadlessToolDispatcher().executePlan(
-          plan: _plan(
-            id: 'executor-error',
-            origin: InvocationOrigin.userManual,
-            steps: [_step('yunqi', 'yunqi', arguments)],
-          ),
-          executorOverride: (_) => throw error,
+    test('captures a thrown executor as UNKNOWN and stops later steps', () async {
+      final calls = <String>[];
+      final actual = await const HeadlessToolDispatcher().executePlan(
+        plan: _plan(
+          id: 'executor-error-unknown',
+          origin: InvocationOrigin.aiDispatch,
+          steps: [
+            _step('yunqi', 'yunqi', const {'step': 'first'}),
+            _step('bazi', 'bazi', const {'step': 'second'}),
+            _step('yijing', 'yijing', const {'step': 'third'}),
+          ],
         ),
-        throwsA(same(error)),
+        executorOverride: (value) {
+          final step = value['step']!;
+          calls.add(step);
+          if (step == 'second') throw StateError('executor failure');
+          return _result(
+            step == 'first' ? 'yunqi' : 'yijing',
+            arguments: value,
+          );
+        },
+      );
+
+      expect(actual.isCompleted, isTrue);
+      expect(calls, ['first', 'second']);
+      expect(actual.results, hasLength(2));
+      expect(
+        actual.results[0].status,
+        AssistantToolExecutionStatus.succeeded,
+      );
+      expect(
+        actual.results[1].status,
+        AssistantToolExecutionStatus.unknown,
+      );
+      expect(actual.results[1].toolId, 'bazi');
+      expect(actual.results[1].arguments, const {'step': 'second'});
+      expect(actual.results[1].sourceIds, isEmpty);
+      expect(
+        actual.results[1].disclaimer,
+        contains('不会自动重放'),
       );
     });
 
