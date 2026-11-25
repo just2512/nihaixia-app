@@ -371,6 +371,7 @@ class _SourceTruncatedSymptomsService extends _TextSendService {
 
 class _PageToolTraceService extends _TextSendService {
   final restoredTranscripts = <String>[];
+  final restoredConversationIds = <int>[];
 
   @override
   Future<LocalAiIntentResolution> resolveAssistantIntentWithTrace({
@@ -394,6 +395,7 @@ class _PageToolTraceService extends _TextSendService {
     bool redFlagContextTruncated = false,
   }) async {
     restoredTranscripts.add(transcript);
+    restoredConversationIds.add(conversationId);
   }
 }
 
@@ -451,9 +453,11 @@ class _TextSendService extends LocalAiService {
   final intentCandidateIds = <List<String>>[];
   final intentTraceIds = <String>[];
   final sentTexts = <String>[];
+  final sentConversationIds = <int>[];
   final sentContexts = <String>[];
   final sentTraceIds = <String>[];
   final restoredTranscripts = <String>[];
+  final restoredConversationIds = <int>[];
 
   @override
   Future<LocalAiSymptomDraft> extractSymptoms() async =>
@@ -532,6 +536,7 @@ class _TextSendService extends LocalAiService {
     bool redFlagContextTruncated = false,
   }) async {
     restoredTranscripts.add(transcript);
+    restoredConversationIds.add(conversationId);
   }
 
   @override
@@ -549,6 +554,7 @@ class _TextSendService extends LocalAiService {
     bool redFlagContextTruncated = false,
   }) async {
     sentTexts.add(text);
+    sentConversationIds.add(conversationId);
     return '已收到你的描述：$text';
   }
 
@@ -1188,6 +1194,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(service.sentTexts, ['我最近三天偶尔头痛，睡眠后会缓解。']);
+      final savedConversations = await _store.getAssistantConversations();
+      expect(savedConversations, hasLength(1));
+      expect(
+        service.sentConversationIds,
+        [savedConversations.single['id'] as int],
+      );
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
         isEmpty,
@@ -3288,6 +3300,7 @@ void main() {
     expect(_store.createConversationCalls, 1,
         reason: '完整 contextRef 一致时应复用历史会话，不新建会话');
     expect(service.restoredTranscripts, hasLength(1));
+    expect(service.restoredConversationIds, [conversationId]);
     expect(service.restoredTranscripts.single, contains('请解释当前排盘结果中的命宫。'));
     expect(service.restoredTranscripts.single, contains('历史情境回答：当前快照的命宫信息。'));
     expect(
@@ -4450,6 +4463,10 @@ void main() {
     expect(find.textContaining('页面结果已回传'), findsOneWidget);
     expect(service.restoredTranscripts, hasLength(1));
     final conversations = await _store.getAssistantConversations();
+    expect(
+      service.restoredConversationIds,
+      [conversations.single['id'] as int],
+    );
     expect(conversations, hasLength(1));
     final messages = await _store.getAssistantMessages(
       conversationId: conversations.single['id'] as int,
