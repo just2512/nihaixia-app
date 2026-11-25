@@ -10,12 +10,13 @@ internal object LocalAiTranscriptRestorePolicy {
     private const val truncationMarker = "【较早历史已省略，以下为最近内容】\n"
 
     fun boundTranscript(transcript: String): String {
-        if (transcript.length <= maxTranscriptCharacters) return transcript
-
-        val alreadyMarked = transcript.startsWith(truncationMarker)
-        val body = if (alreadyMarked) transcript.removePrefix(truncationMarker) else transcript
-        val availableBodyCharacters = maxTranscriptCharacters - truncationMarker.length
-        return truncationMarker + suffixWithoutSplittingSurrogate(body, availableBodyCharacters)
+        require(transcript.length <= maxTranscriptCharacters) {
+            "Transcript must be bounded at complete-turn boundaries before Native restore"
+        }
+        require(!hasUnpairedSurrogate(transcript)) {
+            "Transcript contains an unpaired UTF-16 surrogate"
+        }
+        return transcript
     }
 
     fun recentUserMessages(messages: List<String>): List<String> =
@@ -24,12 +25,21 @@ internal object LocalAiTranscriptRestorePolicy {
     fun hasOmittedUserMessages(messages: List<String>): Boolean =
         messages.size > maxUserMessages
 
-    private fun suffixWithoutSplittingSurrogate(value: String, maxCharacters: Int): String {
-        if (maxCharacters <= 0) return ""
-        var start = (value.length - maxCharacters).coerceAtLeast(0)
-        if (start > 0 && start < value.length && Character.isLowSurrogate(value[start])) {
-            start += 1
+    private fun hasUnpairedSurrogate(value: String): Boolean {
+        var index = 0
+        while (index < value.length) {
+            val current = value[index]
+            when {
+                Character.isHighSurrogate(current) -> {
+                    if (index + 1 >= value.length ||
+                        !Character.isLowSurrogate(value[index + 1])
+                    ) return true
+                    index += 2
+                }
+                Character.isLowSurrogate(current) -> return true
+                else -> index += 1
+            }
         }
-        return value.substring(start)
+        return false
     }
 }
