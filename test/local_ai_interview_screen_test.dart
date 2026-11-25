@@ -1353,7 +1353,10 @@ testWidgets('学习助手通过 ReasoningRequest/Response 回验知识引用并�
     service.sentTexts,
     [question],
     reason: '原始问题必须继续通过 Native text 参数传递，不得被检索 query 替换；'
-        '界面错误：${tester.widgetList<Text>(find.byType(Text)).map((widget) => widget.data).whereType<String>().where((value) => value.contains('处理失败') || value.contains('无法') || value.contains('协议')).join(' | ')}',
+        '界面错误：${tester.widgetList<Text>(find.byType(Text)).map((widget) => widget.data).whereType<String>().where((value) => value.contains('处理失败') || value.contains('无法') || value.contains('协议')).join(' | ')}；'
+        '全部文本：${tester.widgetList<Text>(find.byType(Text)).map((widget) => widget.data).whereType<String>().join(' / ')}；'
+        'statusCalls=${service.statusCalls}；created=${_store.createConversationCalls}；'
+        'conversationIds=${_store._conversations.keys.toList()}',
   );
   final envelope = service.lastRequestEnvelope;
   expect(envelope, isNotNull);
