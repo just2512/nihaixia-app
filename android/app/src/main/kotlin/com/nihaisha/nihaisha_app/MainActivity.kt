@@ -692,6 +692,7 @@ class MainActivity : FlutterActivity() {
         aiConversation = null
         aiEngine = null
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
+        modelContextLimitObservation = LocalAiModelContextLimitObservationPolicy.unknown()
         activeBackend = "not_loaded"
         try {
             ConversationResourceReleasePolicy.closeBoth(
@@ -871,6 +872,15 @@ class MainActivity : FlutterActivity() {
                 )
             }
         } catch (error: Exception) {
+            android.util.Log.w(
+                "LocalAiContextTokens",
+                "MODEL_CONTEXT_METADATA_UNKNOWN",
+                error
+            )
+            LocalAiModelContextLimitObservationPolicy.unknown()
+        } catch (error: LinkageError) {
+            // Metadata is diagnostic only. Missing or incompatible JNI loading
+            // must not be reported as a model-load failure at this probe stage.
             android.util.Log.w(
                 "LocalAiContextTokens",
                 "MODEL_CONTEXT_METADATA_UNKNOWN",
