@@ -4387,6 +4387,7 @@ PR HEAD 门禁证据：
 - **设计状态：** DESIGN_FROZEN / NOT_IMPLEMENTED。本轮只冻结未来架构和执行边界，没有实现书架运行时代码、数据库 schema、模型依赖、Embedding 索引或 UI。
 - **当前 master 基线：** 本次分支从 master 当前 HEAD 07d4c60eabb42f1fb46b903d4336a1b6531f084b 派生；后续每个实现切片仍须重新核验当时 master。
 - **核心决策：** system_knowledge.db 与 user_bookshelf.db 物理隔离；用户多本书共用 user_bookshelf.db 内的统一书籍/片段/向量表；统一 Dart 检索契约，但保留 origin/materialKind/verificationStatus；用户来源默认未核验。
+- **v1.3 授权与存储边界：** 未来任何 Native LiteRT/LiteRT-LM Embedding 模型加载或推理均复用唯一 `ai_access` 与同一个 Native `AiModelAccessGate`，不新增书架/Embedding 独立收费权益；`user_bookshelf.db` 只存用户语料及索引，不迁移会话、消息、问诊任务、Native transcript 或 TRACE。App 永久授权 Token 的 `ai_access` 不等于源代码商业许可。
 - **索引策略：** 关键词先可用，EmbeddingGemma 2 text-only 270M 为 D 阶段首选 PoC，不在当前阶段添加模型权重或运行时依赖；不预先决定最终向量维度、FTS5、ANN、批次大小或 Reranker。
 - **安全与历史：** USER 内容是不可信资料，不得触发工具；引用卡片由本地数据回填；RAG 正文不得进入 Native 持久化历史；删除/修改后历史引用标为 SOURCE_DELETED / SOURCE_CHANGED。
 - **执行顺序：** A 多轮治理继续优先；B 只做数据契约与接口设计，可与 A 并行；C Markdown 导入与关键词；D Embedding PoC/向量和后台续传；E 混合检索与引用；F 增量更新/删除/恢复。Reranker/ANN 仅由可复现证据触发。
