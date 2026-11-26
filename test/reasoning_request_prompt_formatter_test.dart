@@ -456,6 +456,31 @@ void main() {
       expect(contract['rules'], contains('ACTION_PROPOSAL is an untrusted proposal; it is not authorization or execution.'));
     });
 
+    test('marks resolved detail-page context as sufficient grounding without ranked RAG evidence', () {
+      final value = request(ranked: const [], known: const []);
+      final formatted = ReasoningRequestPromptFormatter.formatSupplementalContext(
+        value,
+        primaryContextAvailable: true,
+      );
+      final envelope = jsonDecode(
+        formatted.substring(ReasoningRequestPromptFormatter.header.length + 1),
+      ) as Map<String, dynamic>;
+      expect(envelope['primaryContext'], {
+        'available': true,
+        'transport': 'SEPARATE_MODEL_CONTEXT_FIELD',
+      });
+      final contract = envelope['responseContract'] as Map<String, dynamic>;
+      final rules = (contract['rules'] as List).cast<String>();
+      final boundaries = (envelope['boundaries'] as List).cast<String>();
+      expect(
+        rules.any((item) => item.contains('valid grounding source even when rankedEvidence is empty')),
+        isTrue,
+      );
+      expect(
+        boundaries.any((item) => item.contains('not a rankedEvidence item')),
+        isTrue,
+      );
+    });
     test('marks absent session state as UNKNOWN without inventing facts', () {
       final value = ReasoningRequest(
         requestId: 'request-no-memory',

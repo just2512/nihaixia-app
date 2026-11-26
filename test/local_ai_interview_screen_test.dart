@@ -486,7 +486,9 @@ class _TextSendService extends LocalAiService {
         .map((item) => item['evidenceId'] as String)
         .take(1)
         .toList(growable: false);
-    final hasEvidence = references.isNotEmpty;
+    final primaryContext = envelope['primaryContext'] is Map &&
+        (envelope['primaryContext'] as Map)['available'] == true;
+    final hasEvidence = references.isNotEmpty || primaryContext;
     final reply = jsonEncode({
       'schemaVersion': 1,
       'requestId': requestId,
@@ -3417,6 +3419,13 @@ void main() {
     expect(service.sentTexts, [userRequest]);
     expect(service.sentContexts.single, contains('PRIVATE_PAGE_MATERIAL'));
     expect(service.sentTexts.single, isNot(contains('PRIVATE_PAGE_MATERIAL')));
+    final requestEnvelope = jsonDecode(
+      service.structuredReasoningContexts.single.substring(
+        ReasoningRequestPromptFormatter.header.length + 1,
+      ),
+    ) as Map<String, dynamic>;
+    expect((requestEnvelope['primaryContext'] as Map)['available'], isTrue);
+    expect(requestEnvelope['rankedEvidence'], isEmpty);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller?.text,
       isEmpty,

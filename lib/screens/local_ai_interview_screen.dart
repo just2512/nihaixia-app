@@ -1327,14 +1327,19 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         knowledge: knowledge,
       );
       final supplementalContext =
-          ReasoningRequestPromptFormatter.formatSupplementalContext(request);
+          ReasoningRequestPromptFormatter.formatSupplementalContext(
+        request,
+        primaryContextAvailable: contextualAnalysisContext.isNotEmpty,
+      );
       final knowledgeText = knowledge.modelContextText;
       final roleContext = [
         '当前角色：学习助手。',
         AssistantMode.learning.promptHint,
         if (contextualAnalysisContext.isNotEmpty) contextualAnalysisContext,
         knowledgeText.isEmpty
-            ? '本轮未提供可用的本地检索资料；不得编造原文或出处。'
+            ? contextualAnalysisContext.isNotEmpty
+                ? '本轮不追加其他知识检索；上方 App 当前详情页资料是本轮唯一知识范围。不得将其缺失内容补造成事实。'
+                : '本轮未提供可用的本地检索资料；不得编造原文或出处。'
             : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText',
       ].join('\n\n');
       const evidencePresentationBoundary =
@@ -1570,6 +1575,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           knowledgeStatus: knowledge.statusLabel,
         );
       case AssistantMode.learning:
+        if (contextualAnalysisContext.isNotEmpty) {
+          // This turn is explicitly scoped to one resolved detail-page source.
+          // Do not add unrelated retrieval candidates to its factual boundary.
+          await _traceRecorder.record(
+            traceContext,
+            stage: AiTraceStage.retrieval,
+            status: AiTraceStatus.notApplicable,
+          );
+          return sendStructuredLearning(
+            const AssistantKnowledgeContextResult(text: ''),
+          );
+        }
         final query = _knowledgeQueryForCurrentTurn(text);
         final knowledge = await _retrieveKnowledgeWithTrace(
           query,

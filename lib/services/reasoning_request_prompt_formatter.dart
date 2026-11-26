@@ -14,7 +14,10 @@ class ReasoningRequestPromptFormatter {
   /// UTF-16 code-unit bound for supplemental metadata only; not a model-token budget.
   static const int maxSupplementalContextCharacters = 24000;
 
-  static String formatSupplementalContext(ReasoningRequest request) {
+  static String formatSupplementalContext(
+    ReasoningRequest request, {
+    bool primaryContextAvailable = false,
+  }) {
     // SessionStateSnapshot content already travels through the dedicated
     // Native session_state_context field, where MainActivity validates the
     // active SQLite conversation owner. Keep only its bounded metadata here
@@ -37,6 +40,10 @@ class ReasoningRequestPromptFormatter {
       'requestId': request.requestId,
       'sessionId': request.sessionId,
       'mode': request.mode,
+      'primaryContext': {
+        'available': primaryContextAvailable,
+        'transport': 'SEPARATE_MODEL_CONTEXT_FIELD',
+      },
       'responseSchemaVersion': request.responseSchemaVersion,
       'responseContract': {
         'schemaVersion': request.responseSchemaVersion,
@@ -48,7 +55,8 @@ class ReasoningRequestPromptFormatter {
           'ANSWER', 'CLARIFICATION', 'ACTION_PROPOSAL', 'REFUSAL', 'INSUFFICIENT_EVIDENCE',
         ],
         'modelStatuses': const ['COMPLETED', 'INSUFFICIENT_EVIDENCE'],
-        'rules': const [
+        'rules': [
+          ...const [
           'Return exactly one JSON object; do not wrap it in Markdown fences.',
           'requestId must exactly equal this requestId.',
           'Every referencedEvidenceId must be present in rankedEvidence.',
@@ -56,6 +64,9 @@ class ReasoningRequestPromptFormatter {
           'ACTION_PROPOSAL is an untrusted proposal; it is not authorization or execution.',
           'Do not claim SUCCEEDED for any action unless the App supplied a SUCCEEDED execution result.',
           'Use INSUFFICIENT_EVIDENCE when the supplied evidence cannot support the answer.',
+          ],
+          if (primaryContextAvailable)
+            'The current resolved detail-page context is supplied separately in the main model context field. It is a valid grounding source even when rankedEvidence is empty; do not return INSUFFICIENT_EVIDENCE only because rankedEvidence is empty.',
         ],
       },
       'sessionStateMetadata': sessionStateMetadata,
@@ -68,7 +79,8 @@ class ReasoningRequestPromptFormatter {
       'knownEvidenceIds': request.knownEvidenceIds,
       'executionResults':
           request.executionResults.map((item) => item.toMap()).toList(),
-      'boundaries': const [
+      'boundaries': [
+        ...const [
         'userText is supplied separately as the original Native text input; do not rewrite or replace it.',
         'SessionStateSnapshot facts and source references are supplied once through the Native session_state_context field; use provenance and do not duplicate them.',
         'rankedEvidence contains only evidence IDs whose complete blocks are present in this request context.',
@@ -76,6 +88,9 @@ class ReasoningRequestPromptFormatter {
         'sourceId is an App lookup pointer, not a verification or authority claim.',
         'executionResults are App-projected results; preserve UNKNOWN and never claim an unverified action succeeded.',
         'This contract does not grant permission or authorize tool execution.',
+        ],
+        if (primaryContextAvailable)
+          'primaryContext is resolved App detail-page material supplied in the separate model context field. Use it for this explanation; it is not a rankedEvidence item and must not be represented by a fabricated evidence ID.',
       ],
     };
     final formatted = [header, jsonEncode(envelope)].join('\n');
