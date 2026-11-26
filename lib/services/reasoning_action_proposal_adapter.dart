@@ -117,19 +117,16 @@ class ReasoningActionProposalAdapter {
   static ReasoningActionProposalGateResult authorizeAfterConfirmation({
     required ReasoningActionProposalPreview preview,
     required ReasoningRequest request,
-    required Set<String> currentRequestCapabilityAllowlist,
     required bool confirmedByUser,
   }) {
-    if (request.mode != 'tools' ||
-        request.requestId != preview.requestId ||
-        request.allowedCapabilityIds.toSet().length !=
-            request.allowedCapabilityIds.length) {
-      return ReasoningActionProposalGateResult._invalidAdapterScope();
-    }
+    final validRequestScope =
+        request.mode == 'tools' && request.requestId == preview.requestId;
     return ReasoningActionProposalGate.authorizeAfterConfirmation(
       preview: preview,
-      expectedRequestId: request.requestId,
-      requestCapabilityAllowlist: currentRequestCapabilityAllowlist,
+      expectedRequestId: validRequestScope ? request.requestId : '',
+      requestCapabilityAllowlist: validRequestScope
+          ? request.allowedCapabilityIds.toSet()
+          : const <String>{},
       confirmedByUser: confirmedByUser,
     );
   }
