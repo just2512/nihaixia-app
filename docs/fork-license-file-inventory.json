@@ -15,7 +15,7 @@
     "changed": 1015,
     "added": 851,
     "modified": 164,
-    "deleted": 16,
+    "deleted": 15,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 158,
       "FORK_COMMERCIAL": 493,
@@ -8157,7 +8157,6 @@
     "lib/widgets/update_dialog.dart",
     "release/汉唐中医_v1.10.0+7_发布说明.md",
     "release/汉唐中医_v1.10.1_发布说明.md",
-    "test/fixtures/ai_retrieval_golden_metadata.json",
     "test/services/update_service_test.dart",
     "test/update_download_sources_test.dart",
     "tool/sync_gitee.sh",
