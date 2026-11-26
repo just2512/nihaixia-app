@@ -578,7 +578,6 @@ void main() {
       expect(reply, '请继续描述不适出现的时间');
     });
 
-
     test('sendMessageWithContext separates user text from retrieved knowledge context', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -599,8 +598,6 @@ void main() {
         'context': '[App本草库] 柴胡：原始条目内容',
       });
     });
-
-    
 
     test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
       MethodCall? received;
@@ -680,7 +677,6 @@ void main() {
       );
     });
 
-
     test('restoreConversation forwards bounded history and user-only turns', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -702,7 +698,6 @@ void main() {
       });
     });
 
-    
     test('resetConversation invokes native reset and returns fresh status', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
@@ -1447,7 +1442,6 @@ void main() {
       expect(received[1].arguments['trace_id'], traceId);
     });
 
-    
     test('extractSymptomsWithTrace forwards and validates trace ID', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
