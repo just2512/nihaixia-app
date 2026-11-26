@@ -25,7 +25,7 @@
 | 项目 | 本交接单核对值 | 执行要求 |
 |---|---|---|
 | 仓库 | `just2512/nihaixia-app` | 只从 fork 的 `master` 构建 |
-| master 基线 | `bcb506a1f11d04cb1c3fbfed5695162894fca3dd` | 执行前记录实际 `git rev-parse HEAD` |
+| master 基线 | `16320493dd3a5b45cd8e500a2e4287eb88fd3e1e` | 执行前记录实际 `git rev-parse HEAD` |
 | P0 合并 | PR #548，merge `35e0cd8d65bb9f1c8d13a3f9489c7c1ffa74b088` | 当前条目解读与自动上下文 |
 | P1 合并 | PR #551，merge `2c5b29b55a6034dd8fd2b03db14f42d4684103fa` | 情境弹层 IME 避让 |
 | App 版本 | `2.0.0+8048` | 以构建时 `pubspec.yaml` 为准；versionCode 必须高于设备现装版本 |
