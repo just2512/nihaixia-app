@@ -124,7 +124,7 @@ class AiContextPromptBuilder {
         if (reference.moduleId == AiContextResolver.meridianModuleId) {
           return '请分析当前六经/经络条目中各项特征之间的关系、整体理论逻辑和关键辨析点。不要重新罗列页面字段。';
         }
-        if (reference.moduleId == 'acupuncture') {
+        if (reference.moduleId == AiContextResolver.acupunctureModuleId) {
           return '请分析当前针灸条目中证候线索、取穴/处方组成及其相互关系，解释条目呈现的思路和边界。不要复述字段清单。';
         }
         return '请分析当前知识条目中各项信息之间的关系、整体逻辑与关键理解点，区分条目记载和基于条目的归纳。避免重复页面内容。';
