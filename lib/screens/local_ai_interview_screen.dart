@@ -15,7 +15,6 @@ import 'package:record/record.dart';
 import '../services/local_ai_service.dart';
 import '../services/local_ai_transcript_restore_policy.dart';
 import '../services/red_flag_gate.dart';
-import '../services/red_flag_preflight.dart';
 import '../services/ai_trace.dart';
 import '../services/ai_trace_runtime.dart';
 import '../services/local_ai_attachment_store.dart';
@@ -411,12 +410,10 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   AssistantConversationStore get _conversationStore =>
       widget.conversationStore ?? DatabaseHelper.instance;
 
-  // One conversation trace can pass through _send -> routing -> tool execution.
-  // Reuse the originating input's assessment decision across those boundaries:
-  // record a non-required stage once, and never rerun a configured detector.
-  final Set<AiTraceContext> _redFlagPreflightedContexts =
-      Set<AiTraceContext>.identity();
-
+  // Clinical red-flag preflight is outside this learning-assistant product scope.
+  // Keep the legacy call seam temporarily for source compatibility, but never
+  // invoke a detector or block learning/business flow here. The general
+  // emergency-help reminder is handled as ordinary user-facing guidance.
   Future<bool> _blockIfRedFlagPreflightDoesNotClear({
     required RedFlagInputSource source,
     required String? text,
@@ -425,118 +422,22 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     required bool requireAssessment,
     bool sourceTruncated = false,
   }) async {
-    // The default-off recorder returns the same const disabled context for
-    // every turn. Only memoize an enabled, per-turn TRACE identity; otherwise
-    // a prior CLEAR could suppress review for a later clinical message.
-    final canMemoizePreflight = traceContext.enabled && traceContext.traceId != null;
-    if (canMemoizePreflight &&
-        _redFlagPreflightedContexts.contains(traceContext)) {
-      return false;
-    }
-
-    final gate = widget.redFlagGate;
-    if (!requireAssessment) {
-      // The current product does not require a clinical detector to enter the
-      // consultation flow. Record both pipeline stages as NOT_APPLICABLE;
-      // that is not a detector CLEAR result or a safety PASS.
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.preflight,
-        status: AiTraceStatus.notApplicable,
-        route: route,
-        errorCode: 'PREFLIGHT_NOT_REQUIRED',
-      );
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.redFlag,
-        status: AiTraceStatus.notApplicable,
-        route: route,
-        errorCode: 'REDFLAG_ASSESSMENT_NOT_REQUIRED',
-      );
-      if (canMemoizePreflight) {
-        if (_redFlagPreflightedContexts.length >= 32) {
-          _redFlagPreflightedContexts.clear();
-        }
-        _redFlagPreflightedContexts.add(traceContext);
-      }
-      return false;
-    }
-
-    if (gate == null) {
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.redFlag,
-        status: AiTraceStatus.unknown,
-        route: route,
-        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
-      );
-      if (mounted) {
-        setState(() {
-          _error = '安全评估器尚未配置，无法确认这段个人健康信息是否可以进入问诊流程。'
-              '本轮已暂停，未调用模型，也未执行规则辨证。';
-        });
-      }
-      await _traceRecorder.record(
-        traceContext,
-        stage: AiTraceStage.finalRender,
-        status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
-        route: route,
-        errorCode: 'REDFLAG_GATE_NOT_CONFIGURED',
-      );
-      return true;
-    }
-
-    final result = await gate.evaluate(
-      RedFlagInput(
-        source: source,
-        text: text,
-        sourceTruncated: sourceTruncated,
-      ),
+    await _traceRecorder.record(
+      traceContext,
+      stage: AiTraceStage.preflight,
+      status: AiTraceStatus.notApplicable,
+      route: route,
+      errorCode: 'CLINICAL_PREFLIGHT_NOT_IN_SCOPE',
     );
-    final traceStatus = switch (result.status) {
-      RedFlagPreflightStatus.clear => AiTraceStatus.succeeded,
-      RedFlagPreflightStatus.blockUrgent => AiTraceStatus.failed,
-      RedFlagPreflightStatus.clarify ||
-      RedFlagPreflightStatus.reviewRequired => AiTraceStatus.unknown,
-    };
     await _traceRecorder.record(
       traceContext,
       stage: AiTraceStage.redFlag,
-      status: traceStatus,
+      status: AiTraceStatus.notApplicable,
       route: route,
-      errorCode: result.reason,
+      errorCode: 'CLINICAL_REDFLAG_NOT_IN_SCOPE',
     );
-
-    if (result.mayContinueOrdinaryFlow) {
-      if (canMemoizePreflight) {
-        if (_redFlagPreflightedContexts.length >= 32) {
-          _redFlagPreflightedContexts.clear();
-        }
-        _redFlagPreflightedContexts.add(traceContext);
-      }
-      return false;
-    }
-
-    final message = switch (result.status) {
-      RedFlagPreflightStatus.blockUrgent =>
-        '安全评估命中阻断条件，普通助手流程已暂停。系统不会在此处生成未经审核的医疗处置建议。',
-      RedFlagPreflightStatus.clarify =>
-        '安全评估无法确认内容范围，普通助手流程已暂停。请先澄清相关信息。',
-      RedFlagPreflightStatus.reviewRequired =>
-        '安全评估尚未完成（${result.reason}），普通助手流程已暂停；未完成评估不能视为无风险。',
-      RedFlagPreflightStatus.clear => '',
-    };
-    if (mounted) setState(() => _error = message);
-    await _traceRecorder.record(
-      traceContext,
-      stage: AiTraceStage.finalRender,
-      status: mounted ? AiTraceStatus.succeeded : AiTraceStatus.notApplicable,
-      route: route,
-      errorCode: 'REDFLAG_${result.status.name.toUpperCase()}',
-    );
-    return true;
+    return false;
   }
-
   @override
   void initState() {
     super.initState();
