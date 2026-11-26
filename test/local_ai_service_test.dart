@@ -600,7 +600,7 @@ void main() {
       });
     });
 
-        test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
+    test('sendMessageWithContext forwards a session snapshot separately from RAG context', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
         received = call;
@@ -700,7 +700,7 @@ void main() {
       });
     });
 
-        test('resetConversation invokes native reset and returns fresh status', () async {
+    test('resetConversation invokes native reset and returns fresh status', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
         received = call;
@@ -1444,7 +1444,7 @@ void main() {
       expect(received[1].arguments['trace_id'], traceId);
     });
 
-        test('extractSymptomsWithTrace forwards and validates trace ID', () async {
+    test('extractSymptomsWithTrace forwards and validates trace ID', () async {
       MethodCall? received;
       messenger.setMockMethodCallHandler(channel, (call) async {
         received = call;
