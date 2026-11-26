@@ -1472,8 +1472,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       );
 
       final knowledgeText = knowledge.modelContextText;
-      final roleContext = '当前角色：工具助手。\n'
+      final attachmentInstructions = switch (attachmentType) {
+        ReasoningAttachmentType.image =>
+          '当前有照片附件。只描述可直接观察到的舌体形态、舌色、舌苔分布和图像质量；不得从照片推断疾病或证型，不推荐方药或剂量。\\n',
+        ReasoningAttachmentType.audio =>
+          '当前有录音附件。必须逐句转写到 attachmentResult.transcriptDraft，保留原话并将听不清处标记为“听不清”；草稿未核对前不是用户事实。\\n',
+        null => '',
+      };
+      final roleContext = '当前角色：工具助手。\\n'
           '${AssistantMode.tools.promptHint}\n'
+          attachmentInstructions
           '只在用户明确要求执行 App 已登记的工具任务时提出一个动作提案；普通解释、比较、学习或闲聊应直接回答或澄清。'
           '模型只负责理解任务和提出参数候选，不运行计算、不生成业务结果、不声称动作已执行。'
           '本轮允许的 capability 只有：'
