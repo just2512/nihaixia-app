@@ -1337,9 +1337,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         AssistantMode.learning.promptHint,
         if (contextualAnalysisContext.isNotEmpty) contextualAnalysisContext,
         knowledgeText.isEmpty
-            ? contextualAnalysisContext.isNotEmpty
+            ? (contextualAnalysisContext.isNotEmpty
                 ? '本轮不追加其他知识检索；上方 App 当前详情页资料是本轮唯一知识范围。不得将其缺失内容补造成事实。'
-                : '本轮未提供可用的本地检索资料；不得编造原文或出处。'
+                : '本轮未提供可用的本地检索资料；不得编造原文或出处。')
             : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText',
       ].join('\n\n');
       const evidencePresentationBoundary =
@@ -1426,7 +1426,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         return _AssistantTurnResponse(
           text: decoded.answerText,
           sourceIds: decoded.sourceIds,
-          knowledgeStatus: knowledge.statusLabel,
+          knowledgeStatus: contextualAnalysisContext.isNotEmpty
+              ? null
+              : knowledge.statusLabel,
         );
       } catch (error) {
         if (nativeRequestMayBePending) {
