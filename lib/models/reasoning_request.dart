@@ -111,6 +111,8 @@ class ReasoningExecutionResult {
 /// memory, evidence identity and deterministic execution results are separate
 /// bounded sections. Evidence bodies remain in the separately assembled
 /// knowledge context and are never copied into session memory.
+enum ReasoningAttachmentType { image, audio }
+
 class ReasoningRequest {
   ReasoningRequest({
     required this.requestId,
@@ -123,6 +125,8 @@ class ReasoningRequest {
     List<String> knownEvidenceIds = const [],
     List<ReasoningExecutionResult> executionResults = const [],
     List<String> allowedCapabilityIds = const [],
+    this.attachmentType,
+    this.attachmentPromptGenerated = false,
   })  : rankedEvidence = List.unmodifiable(rankedEvidence),
         knownEvidenceIds = List.unmodifiable(knownEvidenceIds),
         executionResults = List.unmodifiable(executionResults),
@@ -148,6 +152,9 @@ class ReasoningRequest {
           (id) => id.trim().isEmpty || id != id.trim(),
         )) {
       throw ArgumentError('REASONING_ACTION_CAPABILITY_ALLOWLIST_INVALID');
+    }
+    if (attachmentPromptGenerated && attachmentType == null) {
+      throw ArgumentError('REASONING_ATTACHMENT_PROMPT_WITHOUT_ATTACHMENT');
     }
     if (this.allowedCapabilityIds.isNotEmpty && mode != 'tools') {
       throw ArgumentError('REASONING_ACTION_CAPABILITY_MODE_FORBIDDEN');
@@ -191,6 +198,9 @@ class ReasoningRequest {
   /// App-owned capabilities that this request may propose, not user consent.
   /// The execution gate remains authoritative and learning mode must leave it empty.
   final List<String> allowedCapabilityIds;
+  final ReasoningAttachmentType? attachmentType;
+  /// True when the App supplied a placeholder because the user attached media without accompanying text.
+  final bool attachmentPromptGenerated;
   final int responseSchemaVersion;
 
   List<String> get rankedEvidenceIds => List.unmodifiable(
@@ -218,6 +228,8 @@ class ReasoningRequest {
           executionResults.map((item) => item.toMap()),
         ),
         'allowedCapabilityIds': allowedCapabilityIds,
+        'attachmentType': attachmentType?.name,
+        'attachmentPromptGenerated': attachmentPromptGenerated,
       });
 }
 
