@@ -206,9 +206,13 @@ class AssistantToolInvocationLedger {
     if (claim == null || terminal == null) return null;
 
     final rawStatus = terminal['status'];
-    final status = AssistantToolExecutionStatus.values
-        .where((item) => item.name == rawStatus)
-        .firstOrNull;
+    AssistantToolExecutionStatus? status;
+    for (final candidate in AssistantToolExecutionStatus.values) {
+      if (candidate.name == rawStatus) {
+        status = candidate;
+        break;
+      }
+    }
     final rawArguments = _tryStringMap(terminal['actualArguments']);
     final actualArguments = rawArguments != null &&
             _sameStringMap(rawArguments, claim.arguments)
