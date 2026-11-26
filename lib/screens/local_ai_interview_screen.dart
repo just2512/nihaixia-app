@@ -1343,7 +1343,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText',
       ].join('\n\n');
       const evidencePresentationBoundary =
-          '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
+          '资料边界：以下内容是 App 为本轮明确提供的知识资料，可能包含当前详情页主上下文和本轮检索候选；候选存在不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
       final guardedContext = '$evidencePresentationBoundary\n$roleContext';
       var nativeInvocationStarted = false;
