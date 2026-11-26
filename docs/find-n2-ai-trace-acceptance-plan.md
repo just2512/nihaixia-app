@@ -18,7 +18,7 @@
 尚未完成的事项：
 
 - F 仍为 `PARTIAL`。当前代码已有结构化问诊启动/选项/舌脉输入、澄清路由、Headless/Page 工具、普通文本/图片/语音和症状整理等路径的 TRACE 调用点；但这些调用点不等于每条分支的事件链已完整验收。失败/取消/未完成轮次、跨层状态、持久化与最终展示仍要按实际结果核对。
-- 当前产品准则不建设临床 detector，也不把它作为正常问诊前置阻断。`requireAssessment=false` 的场景应由应用显式记录 `PREFLIGHT`、`RED_FLAG` 为 `NOT_APPLICABLE`（`PREFLIGHT_NOT_REQUIRED` / `REDFLAG_ASSESSMENT_NOT_REQUIRED`）；这不是 detector 已评估或 `CLEAR/PASS`。只有产品明确要求实际评估的路径才记录真实检测结果；这类路径若应评估却未配置 detector，必须为 `UNKNOWN` 并暂停。每个场景仍须检查实际写出的阶段、状态、跨层 ID、SQLite metadata 和最终展示对应关系。
+- 当前产品不建设临床 detector，也不把临床红旗识别作为正常问诊前置阻断。TRACE 只记录实际发生的软件调用链：`PREFLIGHT` 仅表示会话、数据、权限等确定性软件校验；历史 `RED_FLAG` 枚举仅用于读取旧 TRACE，新调用不应再生成该阶段事件。不得通过 `NOT_APPLICABLE`、`CLEAR/PASS` 或 `UNKNOWN` 表示医学风险判定。每个场景仍须检查实际写出的软件阶段、状态、跨层 ID、SQLite metadata 和最终展示对应关系。
 - 尚无 OPPO Find N2 本地真实设备验收记录。GPU/CPU 多轮、图片/语音、Activity/进程恢复、数据清除后强停/重启仍需在设备执行；CI/模拟器不能替代。
 - E 的应用内清除代码与自动化测试已落地，但混合 `nihaisha.db` 的系统备份/设备迁移边界仍未决；旧共享图片归属 UNKNOWN，不能扩大删除范围。清除本地设备数据不代表远端备份或用户导出副本被删除。
 
@@ -46,7 +46,7 @@
 
 至少检查以下阶段：
 
-`INPUT → PREFLIGHT → RED_FLAG → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
+`INPUT → PREFLIGHT → DISPATCH → ROUTE → ENTITY_RESOLUTION → RETRIEVAL → CONTEXT_ASSEMBLY → MODEL_INPUT → NATIVE_INFERENCE → MODEL_OUTPUT → TOOL_EXECUTION → ARGUMENT_VALIDATION → BUSINESS_EXECUTION → RESULT_VALIDATION → PERSISTENCE → PERSISTED_STATE → PRESENTATION → FINAL_RENDER`
 
 以上阶段与 `docs/ai-trace-contract.md` 的 `AiTraceStage` 保持一致。只在该场景确实不涉及某阶段时写 `NOT_APPLICABLE`；某阶段应当发生但当前未产生日志、关联 ID 缺失或没有可核对证据时，应记录为缺失/UNKNOWN，不得用 `NOT_APPLICABLE` 掩盖。包含工具的场景必须核对 TOOL_EXECUTION、ARGUMENT_VALIDATION、BUSINESS_EXECUTION 和 RESULT_VALIDATION。
 
@@ -58,7 +58,7 @@
 - source_ids（适用时）；
 - error_code（失败时）。
 
-关键节点缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。当前正常问诊发送与结果解释入口已有 `PREFLIGHT` / `RED_FLAG` 生产记录：`requireAssessment=false` 时分别为 `NOT_APPLICABLE`（`PREFLIGHT_NOT_REQUIRED` / `REDFLAG_ASSESSMENT_NOT_REQUIRED`），这不表示临床 detector 已评估或风险已清除；只有明确要求实际评估的专门路径才必须记录真实评估结果，应评估但未调用/未配置时记 `UNKNOWN`。其它阶段仍须按当前场景实际记录核验，不能从预期流程反推日志已经存在。
+关键软件阶段缺失、trace_id 中途变化、backend 未记录或最终展示/持久化无法关联，场景不得 PASS。`PREFLIGHT` 按实际发生的会话/数据/权限校验写入；新调用不应生成 `RED_FLAG` 阶段事件，旧记录仅作历史兼容。其它阶段仍须按当前场景实际记录核验，不能从预期流程反推日志已经存在。
 
 ## 3. GPU 多轮稳定性（G-01）
 
