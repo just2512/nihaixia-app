@@ -34,12 +34,15 @@ AssistantKnowledgeContextResult knowledge({
       sources: sources ?? [source('source-1')],
     );
 
-ReasoningRequest request(AssistantKnowledgeContextResult context) =>
+ReasoningRequest request(
+  AssistantKnowledgeContextResult context, {
+  String mode = 'learning',
+}) =>
     ReasoningKnowledgeAnswerAdapter.createRequest(
       requestId: 'request-1',
       sessionId: 7,
       userText: '用户原始问题',
-      mode: 'learning',
+      mode: mode,
       sessionState: SessionStateSnapshot(
         sessionId: 7,
         revision: 'rev-1',
@@ -77,6 +80,173 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ReasoningKnowledgeAnswerAdapter', () {
+
+    test('mode-neutral answer accepts no-evidence responses only when no ranked evidence was supplied', () {
+      final emptyKnowledge = knowledge(
+        ranked: const [],
+        known: const [],
+        sources: const [],
+      );
+      final automaticRequest = ReasoningKnowledgeAnswerAdapter.createRequest(
+        requestId: 'request-1',
+        sessionId: 7,
+        userText: '你好',
+        mode: 'automatic',
+        sessionState: SessionStateSnapshot(
+          sessionId: 7,
+          revision: 'rev-1',
+          status: SessionStateStatus.unknown,
+          facts: const [],
+          evidenceReferences: const [],
+          diagnostics: const ['SESSION_STATE_UNKNOWN'],
+        ),
+        knowledge: emptyKnowledge,
+      );
+
+      final answer = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+        raw: payload(
+          responseKind: 'ANSWER',
+          references: const [],
+          omittedEvidenceIds: const [],
+          segments: const ['你好。'],
+        ),
+        request: automaticRequest,
+        knowledge: emptyKnowledge,
+      );
+
+      expect(answer.isUsable, isTrue);
+      expect(answer.answerText, startsWith('你好。\n'));
+      expect(answer.answerText, contains('待确认：缺少用户确认'));
+      expect(answer.answerText, contains('存在冲突：两处资料表述不同'));
+      expect(answer.sourceIds, isEmpty);
+    });
+
+    test('mode-neutral adapter still requires citation when ranked evidence exists', () {
+      final context = knowledge();
+      final result = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+        raw: payload(
+          references: const [],
+          omittedEvidenceIds: const [],
+        ),
+        request: request(context),
+        knowledge: context,
+      );
+
+      expect(result.isUsable, isFalse);
+      expect(
+        result.failureCode,
+        'REASONING_RESPONSE_ANSWER_WITHOUT_EVIDENCE',
+      );
+    });
+
+    test('mode-neutral adapter rejects capability-bearing requests before decode', () {
+      final emptyKnowledge = knowledge(
+        ranked: const [],
+        known: const [],
+        sources: const [],
+      );
+      final toolsRequest = ReasoningKnowledgeAnswerAdapter.createRequest(
+        requestId: 'request-1',
+        sessionId: 7,
+        userText: '执行工具',
+        mode: 'tools',
+        sessionState: SessionStateSnapshot(
+          sessionId: 7,
+          revision: 'rev-1',
+          status: SessionStateStatus.unknown,
+          facts: const [],
+          evidenceReferences: const [],
+          diagnostics: const ['SESSION_STATE_UNKNOWN'],
+        ),
+        knowledge: emptyKnowledge,
+        allowedCapabilityIds: const ['yuxiaji_omen'],
+      );
+
+      final result = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+        raw: payload(
+          responseKind: 'ANSWER',
+          references: const [],
+          omittedEvidenceIds: const [],
+        ),
+        request: toolsRequest,
+        knowledge: emptyKnowledge,
+      );
+
+      expect(result.isUsable, isFalse);
+      expect(
+        result.failureCode,
+        'REASONING_CONVERSATION_PATH_EXECUTION_MODE_FORBIDDEN',
+      );
+    });
+
+    test('tools mode cannot fall back to ordinary ANSWER even with an empty capability list', () {
+      final emptyKnowledge = knowledge(
+        ranked: const [],
+        known: const [],
+        sources: const [],
+      );
+      final toolsRequest = ReasoningKnowledgeAnswerAdapter.createRequest(
+        requestId: 'request-1',
+        sessionId: 7,
+        userText: '运行一个工具',
+        mode: 'tools',
+        sessionState: SessionStateSnapshot(
+          sessionId: 7,
+          revision: 'rev-1',
+          status: SessionStateStatus.unknown,
+          facts: const [],
+          evidenceReferences: const [],
+          diagnostics: const ['SESSION_STATE_UNKNOWN'],
+        ),
+        knowledge: emptyKnowledge,
+        allowedCapabilityIds: const [],
+      );
+
+      final result = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+        raw: payload(
+          responseKind: 'ANSWER',
+          references: const [],
+          omittedEvidenceIds: const [],
+        ),
+        request: toolsRequest,
+        knowledge: emptyKnowledge,
+      );
+
+      expect(result.isUsable, isFalse);
+      expect(
+        result.failureCode,
+        'REASONING_CONVERSATION_PATH_EXECUTION_MODE_FORBIDDEN',
+      );
+    });
+
+    test('mode-neutral conversation path rejects action proposals in every non-tool mode', () {
+      final context = knowledge(
+        ranked: const [],
+        known: const [],
+        sources: const [],
+      );
+      final actionProposal = payload(
+        responseKind: 'ACTION_PROPOSAL',
+        references: const [],
+        omittedEvidenceIds: const [],
+        proposal: {
+          'proposalId': 'proposal-1',
+          'capabilityId': 'dosage',
+          'arguments': {'value': '1.5', 'unit': '两'},
+        },
+      );
+
+      for (final mode in ['automatic', 'consultation', 'metaphysics']) {
+        final result = ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
+          raw: actionProposal,
+          request: request(context, mode: mode),
+          knowledge: context,
+        );
+        expect(result.isUsable, isFalse, reason: '$mode must never execute tools');
+        expect(result.answerText, isEmpty);
+        expect(result.sourceIds, isEmpty);
+      }
+    });
 
     test('creates an exact one-entry context and resolves its request-local citation', () async {
       await FormulaRepository.load();
