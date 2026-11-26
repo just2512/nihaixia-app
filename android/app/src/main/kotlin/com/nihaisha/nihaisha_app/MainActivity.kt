@@ -476,7 +476,7 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-        private fun runAiTask(
+    private fun runAiTask(
         result: MethodChannel.Result,
         requiresAiAccess: Boolean = false,
         task: () -> Any?
