@@ -1359,12 +1359,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         AssistantMode.tools => '工具助手',
         AssistantMode.metaphysics => '玄学助手',
       };
-      var nativeInvocationStarted = false;
-      var nativeReplyReceived = false;
       var nativeRequestMayBePending = false;
-      var nativeFinalizeStarted = false;
-      var nativeFinalizeConfirmed = false;
-      var nativeTurnRejected = false;
       try {
         await _traceRecorder.record(
           traceContext,
@@ -1380,7 +1375,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           route: modeNeutral ? 'mode_neutral_reasoning_request' : 'learning_reasoning_request',
           mode: answerMode.name,
         );
-        nativeInvocationStarted = true;
         nativeRequestMayBePending = true;
         final pending = traceId == null
             ? await _service.sendReasoningMessage(
@@ -1408,7 +1402,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 redFlagContext: redFlagContext,
                 redFlagContextTruncated: redFlagContextTruncated,
               );
-        nativeReplyReceived = true;
         final decoded = modeNeutral
             ? ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
                 raw: pending.reply,
@@ -1426,7 +1419,6 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             requestId: requestId,
           );
           nativeRequestMayBePending = false;
-          nativeTurnRejected = true;
           return _AssistantTurnResponse(
             text: '本轮$modeLabel回复未通过结构化协议或证据引用校验，已拒绝并丢弃；'
                 '未写入成功历史。可以补充信息后重新发送。',
@@ -1435,13 +1427,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
             protocolFailureCode: decoded.failureCode ?? 'REASONING_RESPONSE_REJECTED',
           );
         }
-        nativeFinalizeStarted = true;
         await _service.finalizeReasoningTurn(
           conversationId: conversationId,
           requestId: requestId,
           validatedAnswer: decoded.answerText,
         );
-        nativeFinalizeConfirmed = true;
         nativeRequestMayBePending = false;
         return _AssistantTurnResponse(
           text: decoded.answerText,
