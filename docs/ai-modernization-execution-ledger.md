@@ -807,7 +807,7 @@ PR #107 修复失败轮次阶段误归因：
 1. B2 继续核对并设计统一可注入 seam，覆盖 `_send`、结构化问诊选项、工具分发、文本/图片/语音、症状整理和 Native MethodChannel；测试必须断言门禁严格早于 route/tool/model side effect。
 2. 不允许把可选 Gate 缺省为空后继续执行作为“已接入”；这会形成安全旁路。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. 当前 Gate 在 detector 缺失时返回 REVIEW_REQUIRED。若直接接入所有生产入口，将阻断现有 AI 流程；在没有医学审核 detector 和明确产品影响决策前，不得擅自全局启用，也不得默认 CLEAR。
-4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。当前该 B2 临床门禁方案已经撤销，不再产生待办或发布阻断。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 5. A/E 真机验收仍依赖 Find N2；C 的普通学习来源回链已有证据，只有指定原文/诊断规则来源需要继续核验；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
 
 
@@ -1731,7 +1731,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 36.5 冻结项
 
 - 不改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、排盘/剂量/民俗确定性算法。
-- 不重复审核已经完成医学审核的知识库内容。
+- 不重做已有知识库条目的整理、迁移或来源定位工作。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 红旗 detector 未经医学审核并覆盖所有生产模型入口前，不启用自由文本症状自动辨证；`REVIEW_REQUIRED/UNKNOWN` 不得当作 CLEAR。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page-only 工具。
 
@@ -1987,7 +1987,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 路由定义共 24 项：23 个常规工具 + 1 个结构化问诊内联控制器。通用 Headless 为 16/23；Page-only 为 7/23。名单见 `docs/ai-capability-inventory.md` 的 §2N。
 - Page-only 保留不是待补任务清单：知识文档入口复用已有学习助手知识检索与解释；医案、经典页面不复制检索器；个人诊断历史/保存排盘只在用户明确选择且授权后使用；玉匣灵兆为易与症状混淆的民俗文本，缺少安全、明确的对话执行契约。没有真实用户场景和确定性输入/结果/来源契约，不创建适配器。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 下一阶段优先级不是扩充 Headless 数量，而是完成自由文本问诊生产安全门禁的证据收敛。B 仍 `PARTIAL / RELEASE BLOCKED`：生产 RedFlag detector 医学审核版本/审批记录/阈值例外/处置文案及所有模型入口 fail-closed 证据未齐。不得自行发明规则、不得开放自由文本自动辨证。
-- B 门禁解除后，按用户目标实现对话式问诊：保留用户原始描述及证据 → 结构化理解已提供字段 → 只追问缺失/歧义项 → 用户确认 → 原有规则问诊执行 → 业务结果/来源校验 → AI 解释。不要让 E4B 取代十问/DiagnosticEngine；不要重复审核已医学审核的知识库。
+- 按当前中医学习辅助定位推进对话式问诊学习流程：保留用户原始描述及其来源 → 结构化理解已提供字段 → 只追问缺失/歧义项 → 用户确认 → 由 App 既有规则问诊执行 → 校验真实业务结果与本地来源 → AI 负责解释。不要让 E4B 取代十问/DiagnosticEngine，不由 AI 自行生成或覆盖规则结论。
 - Find N2 E4B GPU/CPU、多轮、多媒体、Activity/进程恢复、清除数据后不可恢复及真实 TRACE 仍需真实设备证据；CI 构建与 Native tests 不等于设备验收。
 - C 只补可追溯来源定位，MISSING 保持 MISSING；E 的数据删除/备份行为仍需符合既有清除数据边界。G 维持单一版本来源。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API 或向量数据库；不改变排盘、问诊、剂量或现有民俗计算规则；不降低测试门槛。
@@ -2080,7 +2080,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 44.6 收尾原则
 
-- C 的知识库引用定位口径已由 PR #173 落地；不再开展逐册逐页考据或重复医学审核。
+- C 的知识库引用定位口径已由 PR #173 落地；不再开展超出当前需求的逐册逐页考据或重复整理已有知识库。
 - D 的现有 Headless 能力和 in-chat 结果解释以现有执行契约为准；只修具体可复现缺陷，不追求工具数量。
 - G 不增加第二套 Orchestrator、Agent/DAG、云 API 或向量数据库。
 - 剩余云端任务只包括已记录的真实代码缺口和当前 PR/CI 收尾；Find N2 真实设备场景统一移交本地执行，不再列为云端待办。
@@ -2119,7 +2119,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - 结构化问诊仍由现有 `TcmInterviewConversationController` / `DiagnosticEngine` 执行；AI 可以解释已产生且已校验的辨证结果，但不能代替引擎输出证型或改写 `DiagnosticRules`。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 当前 free-text 症状到规范十问字段的“候选提取—原文证据—用户确认—仅追问缺项”适配闭环仍未实现。该功能受 B 的生产 RedFlag detector 医学审核和 fail-closed 证据约束；detector 缺失时 Gate 必须保持 REVIEW_REQUIRED/UNKNOWN，不能绕过或自造医学规则。
-- 已医学审核的知识库不重复审核。经典、医案、讲稿和其他知识解读只要求 AI 回答挂接稳定 `sourceId`，并可打开 App 内实际资产/章节/医案记录。纸本底本、版本、卷页、影印本坐标不再作为普通知识回答验收门槛。
+- 已有知识库条目不因其属于医学主题而增加额外审核前置条件。经典、医案、讲稿和其他知识解读只要求 AI 回答挂接稳定 `sourceId`，并可打开 App 内实际资产/章节/医案记录。纸本底本、版本、卷页、影印本坐标不再作为普通知识回答验收门槛。
 - 只有实际检索未命中、条目不存在、sourceId 无法解析/打开或必需条目字段确实为空时，才说明对应知识项未找到；不能使用模型记忆补造医学内容/来源，也不能因外部书目字段未校验就声称本地知识库无来源。
 
 ### 45.5 云端与本地执行边界
@@ -2265,16 +2265,18 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - ATT-01：GPU/CPU 分别测试图片和语音输入、取消/权限失败、结果持久化。
 - REC-01：Activity recreation、force-stop/restart、原会话恢复；比较 SQLite、Flutter transcript、Native completed-turn history 和问诊 task snapshot。
 - CLR-01：执行“清除全部 AI 数据”后 force-stop/restart，核对 AI 会话、消息、问诊快照、附件缓存、Native runtime cache、TRACE 的清除，同时确认非 AI 数据与已安装模型按契约保留。
-- F-01：Debug TRACE 覆盖输入、路由、检索、Native 模型、参数校验、工具执行、结果校验、持久化和展示；缺少生产 detector 的安全阶段仍记录 UNKNOWN/MISSING。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - F-01：Debug TRACE 覆盖输入、路由、检索、Native 模型、参数校验、工具执行、结果校验、持久化和展示；缺少生产 detector 的安全阶段仍记录 UNKNOWN/MISSING。当前 TRACE 不采集临床 detector 阶段。
 - 本地记录设备/Android/App commit 与 APK SHA-256/模型版本与 SHA-256/Native 实际 backend/轮次/脱敏 trace_id/结果。没有设备证据一律 UNKNOWN，不提交原始症状、会话、媒体或密钥。
 
-### 49.5 原临床检测器阻断记录（已被第 50 节取代）
+### 49.5 历史记录：原临床检测器阻断记录（已废止）
 
-- 本节保留此前把问诊模拟按临床分诊系统设计时的阻断记录，仅作为历史决策轨迹。
+> [SUPERSEDED / NOT IN SCOPE — 历史决策记录，不是当前要求]
+
+- 本节保留此前把问诊模拟按临床分诊系统设计时的阻断记录，仅作为历史决策轨迹；其中任何医学签审、detector 或发布阻断要求均不得恢复。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 2026-11-15 用户明确最终产品定位后，生产临床 RedFlag detector、医学审核版本、临床覆盖证明和医师签字不再属于本学习软件的功能准入条件；不继续按本节建立或等待这些材料。
 - 本节为历史边界记录；当前产品要求以第 50、51 节最新定义为准，不再把问诊限定为仅模拟学习或以固定免责声明限制完整诊疗推理教学。
 - 混合 SQLite 数据库备份范围、旧版本共享临时图片所有权仍属于产品数据保留决策；没有决策与所有权证据，不删除整个数据库/临时目录，也不全局关闭 Android Backup。
-- 不再把 Find N2 真机项目、纸本底本/版本/卷页考证、重复知识库医学审核、无具体缺陷证据的工具迁移或无意义的泛化测试列为云端下一阶段任务。
+- 不再把 Find N2 真机项目、超出具体主张所需的纸本底本/版本/卷页考证、重复整理既有知识库、无具体缺陷证据的工具迁移或无意义的泛化测试列为云端下一阶段任务。
 
 
 ## 50. 2026-11-15 产品定位更新：完整诊疗学习与结果解释
@@ -2318,7 +2320,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 不新增 Agent/DAG、第二套 Orchestrator、ToolRouter、知识检索器或数据库。
 - 不批量迁移 Page-only 工具，不为了覆盖数量增加功能。
 - 不新增双数据库、SQLCipher、复杂备份与密钥恢复体系。
-- 不新增与当前具体缺陷无关的泛化测试、医学 detector 或临床分诊体系。
+- 不新增与当前具体缺陷无关的泛化测试、临床红旗检测器或临床分诊体系；这两项不属于当前产品范围。
 - 不降低现有测试门槛，不删除失败测试，不伪造 CI、设备或知识来源证据。
 
 
