@@ -1109,6 +1109,19 @@ void main() {
       expect(draft.summaryLines.join('、'), isNot(contains('不应接受')));
     });
 
+
+    test('reads legacy red_flags only as user-reported symptom data', () {
+      final draft = LocalAiSymptomDraft.fromModelText(
+        '{"red_flags":["用户自述曾有胸部不适"]}',
+      );
+
+      expect(draft.userReportedUrgentSigns, ['用户自述曾有胸部不适']);
+      expect(
+        draft.summaryLines.join('、'),
+        contains('急重症相关的用户自述'),
+      );
+    });
+
     test('accepts ten-question candidates only with an App option and verbatim user evidence', () {
       const sourceText = '昨晚睡觉时醒了两次，之后很难再睡着';
       final draft = LocalAiSymptomDraft.fromModelText(
