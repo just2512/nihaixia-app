@@ -481,37 +481,7 @@ class _InvocationEvent {
     return null;
   }
 }
-).hasMatch(requestId)) {
-      throw ArgumentError.value(
-        requestId,
-        'requestId',
-        'Expected a 32-character lowercase hex request ID',
-      );
-    }
-    for (final entry in {
-      'invocationId': invocationId,
-      'requestId': requestId,
-      'toolId': toolId,
-      'capabilityId': capabilityId,
-    }.entries) {
-      if (entry.value.trim().isEmpty ||
-          entry.value != entry.value.trim() ||
-          entry.value.length > _maxIdentifierLength) {
-        throw ArgumentError.value(entry.value, entry.key);
-      }
-    }
-    if (arguments.length > 32 ||
-        arguments.entries.any((entry) =>
-            entry.key.trim().isEmpty ||
-            entry.key != entry.key.trim() ||
-            entry.value.length > 2048)) {
-      throw ArgumentError.value(arguments, 'arguments');
-    }
-  }
 
-  String _claimKey(String invocationId) => '$invocationId:claim';
-  String _terminalKey(String invocationId) => '$invocationId:terminal';
-}
 
 class _InvocationEvent {
   const _InvocationEvent({
