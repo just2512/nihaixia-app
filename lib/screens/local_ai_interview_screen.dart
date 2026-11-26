@@ -6590,8 +6590,16 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         sourceIds: mergedSourceIds,
       );
     } catch (error) {
+      final nativeCommitUnknown = error is PlatformException &&
+          (error.code == 'REASONING_FINALIZE_ACK_UNKNOWN' ||
+              error.code == 'REASONING_REJECT_ACK_UNKNOWN');
       if (mounted) {
-        setState(() => _error = 'AI 结果解释未完成：$error');
+        setState(() {
+          _error = nativeCommitUnknown
+              ? 'Native 提交确认状态未知：本轮未自动重放，也未写入成功历史。'
+                  '请先确认会话状态后再继续。'
+              : 'AI 结果解释未完成：$error';
+        });
       }
       await _traceRecorder.record(
         traceContext,
