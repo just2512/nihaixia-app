@@ -146,6 +146,29 @@ class LocalAiConversationHistoryPolicyTest {
 
 
     @Test
+    fun rebuildsBeforeNextTurnWhenLiveConversationContainsEphemeralContext() {
+        assertTrue(
+            LocalAiConversationEphemeralContextPolicy.shouldRebuildBeforeNextTurn(true)
+        )
+    }
+
+    @Test
+    fun doesNotRebuildBeforeNextTurnWhenLiveConversationContainsOnlyCleanHistory() {
+        assertFalse(
+            LocalAiConversationEphemeralContextPolicy.shouldRebuildBeforeNextTurn(false)
+        )
+    }
+
+    @Test
+    fun failedFirstTurnWithEphemeralInputStillRequiresRefreshWithoutSuccessfulHistory() {
+        val history = LocalAiConversationHistory()
+        assertFalse(history.hasSuccessfulTurn())
+        assertTrue(
+            LocalAiConversationEphemeralContextPolicy.shouldRebuildBeforeNextTurn(true)
+        )
+    }
+
+    @Test
     fun bindsFreshEmptyNativeConversationWithoutReset() {
         assertTrue(!LocalAiConversationSessionPolicy.shouldReset(null, 11L, false))
     }

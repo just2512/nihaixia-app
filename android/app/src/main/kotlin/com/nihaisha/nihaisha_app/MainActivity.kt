@@ -75,6 +75,9 @@ class MainActivity : FlutterActivity() {
     private var activeBackend = "not_loaded"
     // Native recovery history is bounded independently from the full UI/SQLite transcript.
     private val conversationHistory = LocalAiConversationHistory()
+    // The active KV cache may contain request-scoped RAG, session memory or
+    // multimodal payloads that are intentionally absent from the clean replay transcript.
+    private var conversationContainsEphemeralContext = false
     private val conversationHasSuccessfulTurn: Boolean
         get() = conversationHistory.hasSuccessfulTurn()
 
@@ -1172,6 +1175,21 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * Drop request-scoped context from the live LiteRT-LM KV cache before the
+     * next request. The bounded transcript retains only the clean completed
+     * user/assistant turn, not RAG, session snapshots or attachment payloads.
+     */
+    private fun refreshConversationBeforeNextTurnIfNeeded() {
+        if (!LocalAiConversationEphemeralContextPolicy.shouldRebuildBeforeNextTurn(
+                conversationContainsEphemeralContext
+            )
+        ) {
+            return
+        }
+        recreateCurrentConversationFromHistory()
+    }
+
     private fun sendLocalReasoningMessage(
         conversationId: Long,
         requestId: String,
@@ -1181,6 +1199,7 @@ class MainActivity : FlutterActivity() {
         reasoningContext: String
     ): Map<String, Any> {
         ensureActiveConversation(conversationId)
+        refreshConversationBeforeNextTurnIfNeeded()
         check(pendingReasoningTurn == null) {
             "REASONING_PENDING_TURN_MUST_BE_FINALIZED_OR_REJECTED"
         }
@@ -1193,12 +1212,20 @@ class MainActivity : FlutterActivity() {
         )
         // Generate the structured envelope without committing it to the completed
         // transcript. The old KV conversation is immediately replaced below.
-        val rawReply = sendWithFirstTurnGpuFallback(
-            userMessageText = text,
-            commitToHistory = false,
-            preserveRawReply = true
-        ) { conversation ->
-            conversation.sendMessage(prepared.modelInput).toString()
+        // This structured request is ephemeral in the live KV cache. Mark
+        // before inference so a failed first-turn retry is also cleaned later.
+        conversationContainsEphemeralContext = true
+        val rawReply = try {
+            sendWithFirstTurnGpuFallback(
+                userMessageText = text,
+                commitToHistory = false,
+                preserveRawReply = true
+            ) { conversation ->
+                conversation.sendMessage(prepared.modelInput).toString()
+            }
+        } catch (error: Exception) {
+            conversationContainsEphemeralContext = true
+            throw error
         }
         check(conversationHistory.snapshot() == before) {
             "REASONING_PENDING_MUTATED_COMPLETED_HISTORY"
@@ -1311,6 +1338,7 @@ class MainActivity : FlutterActivity() {
         sessionStateContext: String = ""
     ): Map<String, Any> {
         ensureActiveConversation(conversationId)
+        refreshConversationBeforeNextTurnIfNeeded()
         // 仅做最小包装：把应用侧角色说明/检索资料与用户原文分节呈现。
         // 不再追加"请区分资料原文与解释"等固定指令——该指令会让模型把寒暄
         // (如"hello")误判为知识检索问题而答非所问；反虚构约束已在 systemInstruction
@@ -1320,9 +1348,20 @@ class MainActivity : FlutterActivity() {
             context,
             sessionStateContext
         )
-        val reply = sendWithFirstTurnGpuFallback(preparedMessage.historyUserText) { conversation ->
-            conversation.sendMessage(preparedMessage.modelInput).toString()
+        val hasEphemeralContext =
+            preparedMessage.modelInput != preparedMessage.historyUserText
+        if (hasEphemeralContext) conversationContainsEphemeralContext = true
+        val reply = try {
+            sendWithFirstTurnGpuFallback(preparedMessage.historyUserText) { conversation ->
+                conversation.sendMessage(preparedMessage.modelInput).toString()
+            }
+        } catch (error: Exception) {
+            if (hasEphemeralContext) conversationContainsEphemeralContext = true
+            throw error
         }
+        // A backend fallback may have rebuilt the Conversation mid-call. Mark
+        // again after success because the retry's new KV cache now holds this payload.
+        if (hasEphemeralContext) conversationContainsEphemeralContext = true
         // Only literal user text is eligible for symptom extraction.
         recordUserInput("用户文字自述", text)
         return mapOf("reply" to reply, "backend" to activeBackend)
@@ -1470,7 +1509,7 @@ class MainActivity : FlutterActivity() {
                 LocalAiTranscriptRole.MODEL -> Message.model(transcriptMessage.text)
             }
         }
-        return engine.createConversation(
+        val conversation = engine.createConversation(
             ConversationConfig(
                 systemInstruction = Contents.of(
                     LocalAiConversationHistoryPolicy.systemInstruction(
@@ -1481,6 +1520,9 @@ class MainActivity : FlutterActivity() {
                 initialMessages = initialMessages
             )
         )
+        // The replacement contains only the clean bounded transcript.
+        conversationContainsEphemeralContext = false
+        return conversation
     }
 
     /// 重建当前引擎上的会话（不重建引擎本身）。用于多轮 state:7 等会话态错误后恢复。
@@ -1580,6 +1622,7 @@ class MainActivity : FlutterActivity() {
 
     private fun sendLocalImage(conversationId: Long, path: String, userPrompt: String): Map<String, Any> {
         ensureActiveConversation(conversationId)
+        refreshConversationBeforeNextTurnIfNeeded()
         val image = requireCachedInput(path, "照片")
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(image.absolutePath, bounds)
@@ -1599,15 +1642,24 @@ class MainActivity : FlutterActivity() {
         // image file may be deleted by Flutter after this call; the live request
         // still receives the actual image bytes through ImageFile.
         val historyMessage = "【此前发送过照片附件】\n$prompt"
-        val reply = sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
-            conversation.sendMessage(imageContents).toString()
+        conversationContainsEphemeralContext = true
+        val reply = try {
+            sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
+                conversation.sendMessage(imageContents).toString()
+            }
+        } catch (error: Exception) {
+            conversationContainsEphemeralContext = true
+            throw error
         }
+        // A first-turn fallback may replace the Conversation during generation.
+        conversationContainsEphemeralContext = true
         recordUserInput("用户随照片输入的文字", userPrompt)
         return mapOf("reply" to reply, "backend" to activeBackend)
     }
 
     private fun sendLocalAudio(conversationId: Long, path: String, userPrompt: String): Map<String, Any> {
         ensureActiveConversation(conversationId)
+        refreshConversationBeforeNextTurnIfNeeded()
         val audio = requireCachedInput(path, "录音")
         LocalAiWavPolicy.validationError(audio)?.let { error ->
             throw IllegalArgumentException(error)
@@ -1624,9 +1676,16 @@ class MainActivity : FlutterActivity() {
         // The temporary recording is deleted after the turn. Preserve the
         // prompt and transcription in replay history, not a stale file path.
         val historyMessage = "【此前发送过语音附件】\n$prompt"
-        val reply = sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
-            conversation.sendMessage(audioContents).toString()
+        conversationContainsEphemeralContext = true
+        val reply = try {
+            sendWithFirstTurnGpuFallback(historyMessage) { conversation ->
+                conversation.sendMessage(audioContents).toString()
+            }
+        } catch (error: Exception) {
+            conversationContainsEphemeralContext = true
+            throw error
         }
+        conversationContainsEphemeralContext = true
         recordUserInput("用户随录音输入的文字", userPrompt)
         recordUserInput("语音识别草稿（模型生成，尚待用户核对）", reply)
         return mapOf("reply" to reply, "backend" to activeBackend)
@@ -2055,6 +2114,7 @@ class MainActivity : FlutterActivity() {
         val previousConversation = aiConversation
         aiConversation = null
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
+        conversationContainsEphemeralContext = false
         conversationHistory.clear()
 
         return try {
@@ -2096,6 +2156,7 @@ class MainActivity : FlutterActivity() {
         // Clear references before close: LiteRT-LM objects must be closed exactly once.
         aiConversation = null
         aiEngine = null
+        conversationContainsEphemeralContext = false
         conversationTokenObservation = LocalAiConversationTokenObservationPolicy.unknown()
         modelContextLimitObservation = LocalAiModelContextLimitObservationPolicy.unknown()
         activeConversationId = null

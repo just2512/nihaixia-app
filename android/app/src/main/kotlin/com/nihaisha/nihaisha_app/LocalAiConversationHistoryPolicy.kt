@@ -419,6 +419,19 @@ internal object LocalAiConversationHistoryPolicy {
 }
 
 /**
+ * Tracks request-scoped prompt or multimodal payloads held only in the live
+ * LiteRT-LM KV cache and intentionally absent from the clean completed transcript.
+ *
+ * A dirty cache must be rebuilt before the next request, even if the failed
+ * or oversized turn left no retained successful turn in the recovery history.
+ */
+internal object LocalAiConversationEphemeralContextPolicy {
+    fun shouldRebuildBeforeNextTurn(
+        conversationContainsEphemeralContext: Boolean
+    ): Boolean = conversationContainsEphemeralContext
+}
+
+/**
  * Binds the one in-memory LiteRT-LM Conversation to exactly one persisted
  * assistant conversation. Switching IDs must clear all native transcript and
  * symptom-input state before another session can send.
