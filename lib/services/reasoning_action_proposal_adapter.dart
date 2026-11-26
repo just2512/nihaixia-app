@@ -47,6 +47,10 @@ class ReasoningActionProposalAdapter {
     if (requestCapabilityAllowlist.isEmpty) {
       throw ArgumentError('REASONING_TOOL_REQUEST_CAPABILITY_ALLOWLIST_EMPTY');
     }
+    if (!ReasoningActionProposalGate.supportedCapabilityIds
+        .containsAll(requestCapabilityAllowlist)) {
+      throw ArgumentError('REASONING_TOOL_REQUEST_CAPABILITY_NOT_SUPPORTED');
+    }
     return ReasoningKnowledgeAnswerAdapter.createRequest(
       requestId: requestId,
       sessionId: sessionId,
@@ -81,6 +85,9 @@ class ReasoningActionProposalAdapter {
     }
 
     if (response.responseKind == ReasoningResponseKind.actionProposal) {
+      if (response.referencedEvidenceIds.isNotEmpty) {
+        return _failure('REASONING_ACTION_PROPOSAL_MUST_NOT_DROP_EVIDENCE_REFERENCES');
+      }
       final gate = ReasoningActionProposalGate.prepareForConfirmation(
         response: response,
         expectedRequestId: request.requestId,
@@ -97,8 +104,13 @@ class ReasoningActionProposalAdapter {
           gateResult: gate,
         );
       }
+      // Action proposal narrative is not an answer and is not displayed.
+      // Only the App-owned immutable preview is surfaced to the confirmation UI.
       return ReasoningActionProposalTurnResult(
-        decodeResult: decoded,
+        decodeResult: ReasoningResponseDecodeResult(
+          status: ReasoningResponseStatus.completed,
+          diagnostics: const ['ACTION_PROPOSAL_AWAITING_APP_CONFIRMATION'],
+        ),
         gateResult: gate,
       );
     }
