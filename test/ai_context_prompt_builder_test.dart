@@ -787,4 +787,38 @@ void main() {
       isEmpty,
     );
   });
+  test('contextual analysis separates page material from the short user request', () {
+    const reference = AiContextRef(
+      kind: AiContextKind.formula,
+      moduleId: 'formula',
+      anchorId: 'formula:test-formula',
+      anchorVersion: 'formula-v1',
+      sourceId: 'formula:test-formula',
+      title: '测试方剂',
+    );
+    const sourcePrompt = '''
+【当前知识条目情境】
+条目标题：测试方剂
+【App 实际知识条目】
+{"title":"测试方剂","content":{"components":[{"name":"甲药","dosage":"三钱"}]}}
+【回答要求】
+请在输入框补充你希望重点了解的部分；发送后将连同该知识条目上下文一起提交。
+''';
+
+    final context = AiContextPromptBuilder.buildContextualAnalysisContext(
+      reference: reference,
+      sourcePrompt: sourcePrompt,
+    );
+    final request = AiContextPromptBuilder.buildContextualAnalysisRequest(
+      reference: reference,
+    );
+
+    expect(context, contains('甲药'));
+    expect(context, contains('整体结构'));
+    expect(context, isNot(contains('请在输入框')));
+    expect(context, isNot(contains('当前上下文 token 计数')));
+    expect(request, contains('整体组方思路'));
+    expect(request, isNot(contains('甲药')));
+    expect(request, isNot(contains('三钱')));
+  });
 }

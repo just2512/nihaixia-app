@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/assistant_conversation_store.dart';
 import '../models/ai_context_ref.dart';
+import '../services/ai_context_prompt_builder.dart';
 import '../screens/assistant_tool_router.dart';
 import '../screens/local_ai_interview_screen.dart';
 import '../utils/fold_aware_routes.dart';
@@ -107,7 +108,14 @@ Future<void> showContextualAiSheet({
               ? (contextRef.snapshotId ?? contextRef.anchorId)
               : '${contextRef.snapshotId ?? contextRef.anchorId}:${contextRef.fieldPath}',
         ),
-        initialPrompt: initialPrompt,
+        initialContextPrompt: AiContextPromptBuilder.buildContextualAnalysisContext(
+          reference: restoredContextRef,
+          sourcePrompt: initialPrompt,
+        ),
+        initialUserRequest: AiContextPromptBuilder.buildContextualAnalysisRequest(
+          reference: restoredContextRef,
+        ),
+        autoSubmitInitialRequest: true,
         initialMode: initialMode,
         contextualTitle: contextualTitle,
         contextualExplanationOnly: contextualExplanationOnly,

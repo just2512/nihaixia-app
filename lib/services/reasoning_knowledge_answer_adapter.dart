@@ -64,7 +64,12 @@ class ReasoningKnowledgeAnswerAdapter {
     required String raw,
     required ReasoningRequest request,
     required AssistantKnowledgeContextResult knowledge,
+    String? primaryContextSourceId,
   }) {
+    final normalizedPrimarySourceId = primaryContextSourceId?.trim();
+    if (normalizedPrimarySourceId != null && normalizedPrimarySourceId.isEmpty) {
+      return _failure('REASONING_RESPONSE_PRIMARY_CONTEXT_SOURCE_INVALID');
+    }
     final decoded = ReasoningResponseCodec.decode(
       raw: raw,
       expectedRequestId: request.requestId,
@@ -83,7 +88,8 @@ class ReasoningKnowledgeAnswerAdapter {
     }
 
     if (response.responseKind == ReasoningResponseKind.answer &&
-        response.referencedEvidenceIds.isEmpty) {
+        response.referencedEvidenceIds.isEmpty &&
+        normalizedPrimarySourceId == null) {
       return _failure('REASONING_RESPONSE_ANSWER_WITHOUT_EVIDENCE');
     }
 
@@ -93,7 +99,11 @@ class ReasoningKnowledgeAnswerAdapter {
     final sourceById = <String, AssistantKnowledgeSourceReference>{
       for (final source in knowledge.sources) source.sourceId: source,
     };
-    final resolvedSourceIds = <String>[];
+    // The exact detail-page anchor is a separate trusted context source, not
+    // a fabricated CandidateEvidence/rankedEvidence item.
+    final resolvedSourceIds = <String>[
+      if (normalizedPrimarySourceId != null) normalizedPrimarySourceId,
+    ];
     final resolvedEvidenceIds = <String>[];
     for (final evidenceId in response.referencedEvidenceIds) {
       final sourceId = sourceIdByEvidenceId[evidenceId];

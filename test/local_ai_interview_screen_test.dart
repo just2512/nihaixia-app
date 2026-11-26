@@ -3383,14 +3383,29 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
-  testWidgets('知识详情传入的初始问题预填统一助手但不会自动发送', (tester) async {
-    const prompt = '请介绍太阳病的核心脉证，并标记缺失出处。';
+  testWidgets('知识详情一键解读自动提交短问题，完整资料只进入模型上下文', (tester) async {
+    const userRequest = '请解读当前条目的整体逻辑，避免重复页面已展示的信息。';
+    const pageContext = '【当前详情页知识上下文】\\n已校验的 App 页面资料：PRIVATE_PAGE_MATERIAL';
+    const contextRef = {
+      'kind': 'toolResult',
+      'moduleId': 'ziwei',
+      'anchorId': 'ziwei:result:snapshot-auto',
+      'anchorVersion': 'snapshot-auto',
+      'snapshotId': 'snapshot-auto',
+      'ruleVersion': 'ziwei_core@0.13.0',
+      'sourceId': 'local-engine:ziwei-core@0.13.0',
+    };
     final service = _TextSendService();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, 
-          initialPrompt: prompt,
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          initialContextPrompt: pageContext,
+          initialUserRequest: userRequest,
+          autoSubmitInitialRequest: true,
+          contextualExplanationOnly: true,
+          contextRef: contextRef,
           conversationStore: _store,
           service: service,
           imagePicker: _EmptyLocalAiImagePicker(),
@@ -3399,10 +3414,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final input = tester.widget<TextField>(find.byType(TextField));
-    expect(input.controller?.text, prompt);
-    expect(service.sentTexts, isEmpty);
-    expect(_store.createConversationCalls, 1);
+    expect(service.sentTexts, [userRequest]);
+    expect(service.sentContexts.single, contains('PRIVATE_PAGE_MATERIAL'));
+    expect(service.sentTexts.single, isNot(contains('PRIVATE_PAGE_MATERIAL')));
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      isEmpty,
+    );
+    final rows = await _store.getAssistantMessages(conversationId: 1);
+    expect(rows.first['content'], userRequest);
+    expect(rows.first['content'], isNot(contains('PRIVATE_PAGE_MATERIAL')));
   });
 
 

@@ -191,6 +191,9 @@ class LocalAiInterviewScreen extends StatefulWidget {
     this.copyPrescriptionText,
     this.preferredAnchorPoint,
     this.initialPrompt,
+    this.initialContextPrompt,
+    this.initialUserRequest,
+    this.autoSubmitInitialRequest = false,
     this.contextRef = const {},
     this.contextualTitle,
     this.initialMode,
@@ -250,9 +253,17 @@ class LocalAiInterviewScreen extends StatefulWidget {
   @visibleForTesting
   final Future<List<SavedChart>> Function()? testSavedChartsLoader;
 
-  /// Optional draft supplied by a knowledge/detail page. It is prefilled but
-  /// never sent automatically; the user remains responsible for submission.
+  /// Legacy editable draft for non-contextual entrypoints.
   final String? initialPrompt;
+
+  /// Resolved detail-page material. It is model context, never composer text.
+  final String? initialContextPrompt;
+
+  /// Short user-facing request for one-tap contextual analysis.
+  final String? initialUserRequest;
+
+  /// Automatically submits [initialUserRequest] once source context and model are ready.
+  final bool autoSubmitInitialRequest;
 
   /// Stable context anchor persisted in message metadata for this conversation.
   final Map<String, String> contextRef;
@@ -359,6 +370,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   List<String> _pendingHistoryUserMessages = const [];
   int _historyRestoreGeneration = 0;
   bool _contextualInitializationPending = false;
+  bool _contextualConversationReused = false;
   bool _restoringPendingHistory = false;
   bool _contextRefInvalid = false;
   AssistantMode _assistantMode = AssistantMode.automatic;
@@ -538,8 +550,40 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     _conversationIdFuture = _contextualInitializationPending
         ? _initializeContextualConversation()
         : _createNewConversation();
-    _refreshStatus();
+    final statusFuture = _refreshStatus();
+    if (widget.autoSubmitInitialRequest) {
+      unawaited(_submitInitialContextualRequest(statusFuture));
+    }
     _recoverLostImage();
+  }
+
+  Future<void> _submitInitialContextualRequest(Future<void> statusFuture) async {
+    final request = widget.initialUserRequest?.trim();
+    if (request == null || request.isEmpty) return;
+    try {
+      // Context/session identity and model readiness are separate prerequisites.
+      await statusFuture;
+      await _conversationIdFuture;
+      if (!mounted || _contextualInitializationPending) return;
+      if (_contextRefInvalid || _contextResolutionError != null) return;
+      if (_status?.ready != true || _statusUnknown) {
+        setState(() {
+          _error = '当前知识条目已载入，但本地模型尚未就绪；请先加载模型后重新打开 AI 解读。';
+        });
+        return;
+      }
+      await _requestAssistantResultInterpretation(
+        prompt: request,
+        mode: widget.initialMode ?? AssistantMode.learning,
+        retrievalQuery: request,
+        showPromptInTimeline: true,
+        restoreVisibleConversation: _contextualConversationReused,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = '当前知识条目自动解读未能启动：$error');
+      }
+    }
   }
 
   Future<void> _refreshStatus({bool showProgress = false}) async {
@@ -1218,6 +1262,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     bool redFlagContextTruncated = false,
   }) async {
     final traceId = traceContext.traceId;
+    final contextualAnalysisContext = widget.initialContextPrompt?.trim() ?? '';
     final sessionStateSnapshot =
         await _buildSessionStateSnapshot(conversationId);
     final sessionStateContext = SessionStateSnapshotPromptFormatter.format(
@@ -1228,7 +1273,11 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分、结论正确或模型已逐条引用。'
           '只能依据实际提供的资料内容回答；不得声称资料已核验或模型已逐条引用，资料未覆盖的信息应明确说明未知。';
-      final guardedContext = '$evidencePresentationBoundary\n$context';
+      final guardedContext = [
+        if (contextualAnalysisContext.isNotEmpty) contextualAnalysisContext,
+        evidencePresentationBoundary,
+        context,
+      ].join('\n\n');
       await _traceRecorder.record(
         traceContext,
         stage: AiTraceStage.contextAssembly,
@@ -1277,9 +1326,14 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final supplementalContext =
           ReasoningRequestPromptFormatter.formatSupplementalContext(request);
       final knowledgeText = knowledge.modelContextText;
-      final roleContext = '当前角色：学习助手。\n'
-          '${AssistantMode.learning.promptHint}\n'
-          '${knowledgeText.isEmpty ? '本轮未提供可用的本地检索资料；不得编造原文或出处。' : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText'}';
+      final roleContext = [
+        '当前角色：学习助手。',
+        AssistantMode.learning.promptHint,
+        if (contextualAnalysisContext.isNotEmpty) contextualAnalysisContext,
+        knowledgeText.isEmpty
+            ? '本轮未提供可用的本地检索资料；不得编造原文或出处。'
+            : '以下为本轮实际提供的本地知识资料摘录；只解释资料明确覆盖的内容，未覆盖信息应说明未知。\n$knowledgeText',
+      ].join('\n\n');
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
@@ -1334,6 +1388,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           raw: pending.reply,
           request: request,
           knowledge: knowledge,
+          primaryContextSourceId: contextualAnalysisContext.isNotEmpty
+              ? _activeContextRef['sourceId']
+              : null,
         );
         if (!decoded.isUsable) {
           await _service.rejectReasoningTurn(
@@ -6920,6 +6977,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         // Reuse only when every persisted turn carries this exact anchor,
         // including the passage/result version and snapshot identity.
         await _restoreConversationById(id, preserveContextPrompt: true);
+        _contextualConversationReused = true;
         if (mounted) {
           setState(() => _contextualInitializationPending = false);
         }

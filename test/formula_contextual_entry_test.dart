@@ -111,7 +111,11 @@ void main() {
       expect(widget.contextRef['moduleId'], 'formula');
       expect(widget.contextRef['anchorId'], 'formula:${formula.id}');
       expect(widget.contextRef['sourceId'], 'formula:${formula.id}');
-      expect(widget.initialPrompt, contains(formula.name));
+      expect(widget.initialPrompt, isNull);
+      expect(widget.initialContextPrompt, contains(formula.name));
+      expect(widget.initialUserRequest, contains('整体组方思路'));
+      expect(widget.initialUserRequest, isNot(contains('柴胡')));
+      expect(widget.autoSubmitInitialRequest, isTrue);
       expect(tester.takeException(), isNull);
 
       Navigator.of(

@@ -187,6 +187,32 @@ void main() {
       expect(result.answerText, isEmpty);
     });
 
+    test('accepts an answer grounded in a resolved page context without fabricating RAG evidence', () {
+      final context = knowledge(ranked: const [], known: const [], sources: []);
+      final result = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(references: []),
+        request: request(context),
+        knowledge: context,
+        primaryContextSourceId: 'formula:ruaimoqiyizhuanfang',
+      );
+
+      expect(result.isUsable, isTrue);
+      expect(result.sourceIds, ['formula:ruaimoqiyizhuanfang']);
+      expect(result.answerText, contains('基于本地证据的解释'));
+      expect(result.answerText, isNot(contains('formula:ruaimoqiyizhuanfang')));
+    });
+
+    test('still rejects evidence-free answers without a resolved page context', () {
+      final context = knowledge(sources: []);
+      final result = ReasoningKnowledgeAnswerAdapter.decodeAndResolve(
+        raw: payload(references: []),
+        request: request(context),
+        knowledge: context,
+      );
+
+      expect(result.isUsable, isFalse);
+      expect(result.failureCode, 'REASONING_RESPONSE_ANSWER_WITHOUT_EVIDENCE');
+    });
     test('rejects empty response segments and duplicate or unresolvable source mappings', () {
       final context = knowledge(sources: [source('source-1')]);
       final requestValue = request(context);
