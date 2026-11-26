@@ -395,7 +395,6 @@ class _PageToolTraceService extends _TextSendService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
@@ -526,7 +525,6 @@ class _TextSendService extends LocalAiService {
     required String requestId,
     required String context,
     required String reasoningContext,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -547,7 +545,6 @@ class _TextSendService extends LocalAiService {
     required String context,
     required String reasoningContext,
     required String traceId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -675,7 +672,6 @@ class _TextSendService extends LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
   }) async {
@@ -692,7 +688,6 @@ class _TextSendService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -708,7 +703,6 @@ class _TextSendService extends LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -723,7 +717,6 @@ class _TextSendService extends LocalAiService {
     String text, {
     required int conversationId,
     required String traceId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -739,7 +732,6 @@ class _TextSendService extends LocalAiService {
     required int conversationId,
     required String context,
     required String traceId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -868,7 +860,6 @@ class _FailingTextSendService extends _TextSendService {
     String text, {
     required int conversationId,
     required String traceId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -1046,7 +1037,6 @@ class _PostSendStatusFailureService extends _TextSendService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -1089,7 +1079,6 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -1247,7 +1236,6 @@ class _FailOnceTextSendService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -1268,7 +1256,6 @@ class _FailOnceTextSendService extends LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -1284,7 +1271,6 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     String text, {
     required int conversationId,
     required String traceId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
@@ -1300,7 +1286,6 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     required int conversationId,
     required String context,
     required String traceId,
-    bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
