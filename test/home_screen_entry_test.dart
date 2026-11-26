@@ -41,7 +41,12 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
   Future<int> createAssistantConversation({String title = '新对话', String mode = 'general'}) async => 1;
 
   @override
-  Future<int> saveAssistantMessage({required int conversationId, required String role, required String content, String? metadata}) async => 1;
+  Future<int> saveAssistantMessage({required int conversationId, required String role, required String content, String? metadata, String? invocationKey}) async {
+    if (invocationKey != null) {
+      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    }
+    return 1;
+  }
 
   @override
   Future<int> saveAssistantTurn({required int conversationId, String? userContent, String? userMetadata, required String assistantContent, String? assistantMetadata}) async {

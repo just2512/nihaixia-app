@@ -82,7 +82,11 @@ class _MemoryConversationStore implements AssistantConversationStore {
     required String role,
     required String content,
     String? metadata,
+    String? invocationKey,
   }) async {
+    if (invocationKey != null) {
+      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    }
     if (failNextSingleMessageSave) {
       failNextSingleMessageSave = false;
       throw StateError('INJECTED_SINGLE_MESSAGE_SAVE_FAILURE');

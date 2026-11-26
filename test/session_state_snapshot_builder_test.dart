@@ -136,6 +136,47 @@ void main() {
         contains('classic:shanghan:2'));
   });
 
+  test('tool-role invocation ledger metadata is excluded from memory evidence', () {
+    final result = SessionStateSnapshotBuilder.build(
+      sessionId: 7,
+      messages: [
+        {
+          'id': 1,
+          'conversation_id': 7,
+          'role': 'assistant',
+          'content': '正常助手回答',
+          'metadata': AssistantMessageMetadata(
+            sourceIds: const ['source:visible-answer'],
+          ).encode(),
+        },
+        {
+          'id': 2,
+          'conversation_id': 7,
+          'role': 'tool',
+          'content': 'TOOL_INVOCATION_TERMINAL',
+          'metadata': AssistantMessageMetadata(
+            sourceIds: const ['private:tool-ledger-source'],
+          ).encode(),
+        },
+      ],
+    );
+
+    expect(
+      result.evidenceReferences.map((item) => item.sourceId).toList(),
+      ['source:visible-answer'],
+    );
+    expect(
+      result.evidenceReferences.any(
+        (item) => item.sourceId == 'private:tool-ledger-source',
+      ),
+      isFalse,
+    );
+    expect(
+      result.facts.any((item) => item.value == 'TOOL_INVOCATION_TERMINAL'),
+      isFalse,
+    );
+  });
+
   test('a message from another conversation fails the entire snapshot closed', () {
     final result = SessionStateSnapshotBuilder.build(
       sessionId: 7,

@@ -1269,3 +1269,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 structured tool-turn adapter and regression tests. It binds App-owned capability allowlist to ReasoningRequest, validates ACTION_PROPOSAL through the Gate, suppresses model proposal narrative and evidence-citation loss, and returns confirmation preview data only; no UI or executor invocation is included; ownership evidence required.
+
+Files:
+ lib/services/assistant_tool_invocation_ledger.dart
+ test/assistant_tool_invocation_ledger_test.dart
+ test/assistant_tool_invocation_ledger_storage_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-4 one-shot invocation ledger, sanitized terminal readback, and lifecycle/SQLite migration tests. It persists claim and terminal events as hidden tool-role transcript rows with a per-conversation partial unique invocation-key index; invalid or interrupted results resolve to UNKNOWN and never replay; tool-role metadata is excluded from session memory; ownership evidence required.

@@ -25,6 +25,7 @@ abstract interface class AssistantConversationStore {
     required String role,
     required String content,
     String? metadata,
+    String? invocationKey,
   });
 
   /// Atomically persists an ordered group of transcript rows. Structured
