@@ -104,23 +104,15 @@ void main() {
         'orderIndex': decision.orderIndex,
       });
     }
-    List<int> candidateOrdinalsFor(List<String> evidenceIds) {
-      final result = <int>[];
-      for (final evidenceId in evidenceIds) {
-        final ordinal = candidateOrdinalByEvidenceId[evidenceId];
-        if (ordinal == null) {
-          throw StateError('Ranking budget references an unknown candidate');
-        }
-        result.add(ordinal);
-      }
-      result.sort();
-      return result;
-    }
-    final orderedDecisions = ranking.decisions.asMap().entries
-        .where((entry) => entry.value.disposition.name == 'keep')
-        .toList()
-      ..sort((left, right) =>
-          left.value.orderIndex!.compareTo(right.value.orderIndex!));
+    final orderedCandidateOrdinals = ranking.orderedEvidenceIds
+        .map((evidenceId) {
+          final ordinal = candidateOrdinalByEvidenceId[evidenceId];
+          if (ordinal == null) {
+            throw StateError('Ordered evidence references an unknown candidate');
+          }
+          return ordinal;
+        })
+        .toList(growable: false);
     final candidateSourceIds =
         context.candidateSnapshot.map((item) => item.sourceId).toSet();
     final contextSourceIds =
@@ -131,26 +123,31 @@ void main() {
       'strategyId': ranking.strategyId,
       'strategyVersion': ranking.strategyVersion,
       'status': ranking.status.name,
-      'orderedCandidateOrdinals':
-          orderedDecisions.map((entry) => entry.key).toList(growable: false),
+      'orderedCandidateOrdinals': orderedCandidateOrdinals,
       'presentedCandidateOrdinals': context.rankedEvidence
           .map((item) => candidateOrdinalByEvidenceId[item.evidenceId]!)
           .toList(growable: false),
-      'candidatePipelineRankedSourceIds':
-          context.rankedEvidence.map((item) => item.sourceId).toList(growable: false),
+      'rankedCandidateSourceIds':
+          ranking.orderedEvidenceIds.map((evidenceId) =>
+              context.candidateSnapshot[
+                  candidateOrdinalByEvidenceId[evidenceId]!].sourceId)
+              .toList(growable: false),
       'contextSourceIds': contextSourceIds,
       'legacyBaseContextSourceIds': contextSourceIds
           .where((sourceId) => !candidateSourceIds.contains(sourceId))
           .toList(growable: false),
-      'budget': {
+      // The ranker deliberately applies no character/token budget. The
+      // 6,500-character presentation cap is enforced later by this builder.
+      'rankerBudget': {
         'unit': ranking.budget.unit.name,
         'limit': ranking.budget.limit,
         'used': ranking.budget.used,
         'applied': ranking.budget.applied,
-        'omittedCandidateOrdinals':
-            candidateOrdinalsFor(ranking.budget.omittedEvidenceIds),
-        'truncatedCandidateOrdinals':
-            candidateOrdinalsFor(ranking.budget.truncatedEvidenceIds),
+      },
+      'presentationBoundary': {
+        'characterLimit': 6500,
+        'contextCharacters': context.text.length,
+        'atCharacterLimit': context.text.length >= 6500,
       },
       'diagnostics': ranking.diagnostics,
     };
@@ -269,11 +266,11 @@ void main() {
       'status': rawCore2['status'],
       'orderedCandidateOrdinals': rawCore2['orderedCandidateOrdinals'],
       'presentedCandidateOrdinals': rawCore2['presentedCandidateOrdinals'],
-      'candidatePipelineRankedSourceIds':
-          rawCore2['candidatePipelineRankedSourceIds'],
+      'rankedCandidateSourceIds': rawCore2['rankedCandidateSourceIds'],
       'contextSourceIds': rawCore2['contextSourceIds'],
       'legacyBaseContextSourceIds': rawCore2['legacyBaseContextSourceIds'],
-      'budget': rawCore2['budget'],
+      'rankerBudget': rawCore2['rankerBudget'],
+      'presentationBoundary': rawCore2['presentationBoundary'],
       'diagnostics': rawCore2['diagnostics'],
     };
     return {
@@ -368,7 +365,15 @@ void main() {
     );
     expect(core2['strategyId'], isNotEmpty);
     expect(core2['strategyVersion'], isNotEmpty);
-    expect((core2['budget']! as Map)['applied'], isTrue);
+    final rankerBudget = core2['rankerBudget']! as Map;
+    expect(rankerBudget['unit'], 'unknown');
+    expect(rankerBudget['limit'], isNull);
+    expect(rankerBudget['used'], isNull);
+    expect(rankerBudget['applied'], isFalse);
+    expect(core2['diagnostics'], contains('BUDGET_NOT_APPLIED'));
+    final presentation = core2['presentationBoundary']! as Map;
+    expect(presentation['characterLimit'], 6500);
+    expect(presentation['contextCharacters'], isA<int>());
     final candidateSources =
         candidateRows.map((row) => row['sourceId'] as String).toSet();
     final contextSources =
