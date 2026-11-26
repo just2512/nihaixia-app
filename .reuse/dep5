@@ -1262,3 +1262,11 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 request-bound ACTION_PROPOSAL policy and regression tests; only four existing plan-eligible Headless capabilities are accepted; proposals require a separate App-owned consent decision before a single-step plan is created; the gate itself never executes tools; ownership evidence required.
+
+Files:
+ lib/services/assistant_tool_invocation_ledger.dart
+ test/assistant_tool_invocation_ledger_test.dart
+ test/assistant_tool_invocation_ledger_storage_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-4 one-shot invocation ledger and lifecycle/migration tests. It records claims and terminal outcomes as hidden tool-role transcript events with a partial unique invocation-key index in the existing assistant_messages table; interrupted claims become UNKNOWN and are never replayed; ownership evidence required.
