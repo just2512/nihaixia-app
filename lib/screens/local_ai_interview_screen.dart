@@ -7312,7 +7312,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     );
   }
 
-  String _boundedUserContextText() {
+  String _boundedUserContextText({String? currentText}) {
     const maxUserMessages = 60;
     const maxContextCharacters = 10000;
     final userTurns = _messages
@@ -7320,9 +7320,15 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         .map((message) => message.text.trim())
         .where((value) => value.isNotEmpty)
         .toList(growable: false);
-    final recentTurns = userTurns.length > maxUserMessages
-        ? userTurns.skip(userTurns.length - maxUserMessages)
-        : userTurns;
+    final current = (currentText ?? _inputController.text).trim();
+    final allTurns = <String>[
+      ...userTurns,
+      if (current.isNotEmpty && (userTurns.isEmpty || userTurns.last != current))
+        current,
+    ];
+    final recentTurns = allTurns.length > maxUserMessages
+        ? allTurns.skip(allTurns.length - maxUserMessages)
+        : allTurns;
     final joined = recentTurns.join('\n');
     return joined.length <= maxContextCharacters
         ? joined
@@ -9161,6 +9167,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
 
     var nativeInferenceCompleted = false;
     var resultValidationCompleted = false;
+    final sourceText = _boundedUserContextText(currentText: _inputController.text);
     var persistenceStarted = false;
     var persistenceRecorded = false;
     try {
