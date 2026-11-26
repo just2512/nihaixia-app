@@ -404,7 +404,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - `almanac` 的执行参数仅为明确日期；日期必须为有效 ISO 日历日期且在 1900-2100 支持范围；结果 source ID 为 `local-engine:almanac`。民俗免责声明随结果返回。
 - `AssistantMessageMetadata.traceId` 复用既有 metadata JSON 字段 `trace_id`。TRACE 默认关闭；打开时普通文本/图片/语音统一助手轮次将同一 ID 传入 traced Native API 并关联 user/assistant 消息。
 - F 仍不是全链路：结构化问诊、澄清、工具执行、检索阶段事件、Native 失败轮次持久化关联和 Find N2 设备 TRACE 未完成。
-- A/B/C/E 的缺口与执行顺序以本文件最新审计章节及 `docs/ai-modernization-execution-ledger.md` 第 14 节为准；未取得医学审核和真实设备证据的能力不得标 IMPLEMENTED。
+- A/B/C/E 的缺口与执行顺序以本文件最新有效审计章节及 `docs/ai-modernization-execution-ledger.md` 为准；设备相关能力没有真实设备证据不得标 IMPLEMENTED。临床红旗检测和医学签审为 NOT_APPLICABLE。
 
 
 ---
@@ -496,7 +496,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 - 用户要求的自然语言问诊完整闭环尚未实现：用户先用自由文本描述不适，AI 结构化理解问诊十问已覆盖的信息、只追问必要缺项、再后台调用原有确定性规则问诊并解释真实结果。PR #146 只自动解释已完成且已持久化的结构化问诊结果；它没有替换原十问，也没有开放自由文本自动辨证。
 - OPPO Find N2 的 E4B GPU/CPU 多轮、图片/语音输入、Activity/进程恢复、数据清除后重启不可恢复和真实端到端 TRACE，均不能由 CI arm64 APK/Native tests 替代；未取得设备证据的项目保持 DEVICE UNKNOWN/PARTIAL。
 - 其余 15 个 Page-only 工具逐项做函数与数据来源盘点；只在存在可复用的确定性业务函数、行为基线清晰、结果有来源且输入缺项可安全澄清时才增加 Headless adapter，不为扩大数量批量迁移。
-- 不重复审核已经完成医学审核的知识库内容；书目 locator/纸本版本/卷页缺口仍是来源身份治理问题，与临床内容审核分开记录。
+- 不改写或重复迁移现有知识库条目；书目 locator/纸本版本/卷页缺口属于来源身份治理问题，与临床检测和医学签审无关。
 
 
 ---
@@ -658,7 +658,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 - 已有 17 项 Headless 工具由 App 原函数执行；缺参在助手对话中澄清，执行结果通过 toolId、实际 arguments、状态、结构和 sourceIds 校验后才交给 AI 总结/解释。模型不得计算或伪造业务结果。
 - 学习和结果追问使用现有知识检索；回答引用必须带稳定 `sourceId` 并能打开 App 内具体条目。古籍章节、内经条目及医案按已有稳定 ID/索引定位；不要求普通知识回答补外部纸本版本、卷页或影印本。
-- 不重复医学审核知识库，不通过模型记忆补造本地库外医学事实。6 项 Page-only 不因数字目标而迁移。
+- 不重复迁移已有知识库条目，不通过模型记忆补造本地库外事实。6 项 Page-only 不因数字目标而迁移。
 
 ### 本地设备与收尾
 
