@@ -459,6 +459,8 @@ class _TextSendService extends LocalAiService {
   final sentTexts = <String>[];
   final sentConversationIds = <int>[];
   final sentContexts = <String>[];
+  final sentSessionStateContexts = <String?>[];
+  final sentSessionStateConversationIds = <int?>[];
   final sentTraceIds = <String>[];
   int legacySendCalls = 0;
   final restoredTranscripts = <String>[];
@@ -538,13 +540,17 @@ class _TextSendService extends LocalAiService {
     required String reasoningContext,
     String? sessionStateContext,
     int? sessionStateConversationId,
-  }) => _sendReasoningReply(
-    text,
-    conversationId: conversationId,
-    requestId: requestId,
-    context: context,
-    reasoningContext: reasoningContext,
-  );
+  }) {
+    sentSessionStateContexts.add(sessionStateContext);
+    sentSessionStateConversationIds.add(sessionStateConversationId);
+    return _sendReasoningReply(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+    );
+  }
 
   @override
   Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
@@ -556,14 +562,18 @@ class _TextSendService extends LocalAiService {
     required String traceId,
     String? sessionStateContext,
     int? sessionStateConversationId,
-  }) => _sendReasoningReply(
-    text,
-    conversationId: conversationId,
-    requestId: requestId,
-    context: context,
-    reasoningContext: reasoningContext,
-    traceId: traceId,
-  );
+  }) {
+    sentSessionStateContexts.add(sessionStateContext);
+    sentSessionStateConversationIds.add(sessionStateConversationId);
+    return _sendReasoningReply(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+    );
+  }
 
   @override
   Future<void> finalizeReasoningTurn({
@@ -807,7 +817,9 @@ class _StructuredToolProposalService extends _TextSendService {
           'arguments': <String, String>{},
         },
       };
-    } else {
+    } else if (rankedEvidence.any(
+      (item) => (item['evidenceId'] as String).startsWith('tool-result-'),
+    )) {
       resultExplanationCalls++;
       final toolEvidence = rankedEvidence
           .map((item) => item['evidenceId'] as String)
@@ -824,6 +836,15 @@ class _StructuredToolProposalService extends _TextSendService {
         'conflicts': <String>[],
         'omittedEvidenceIds': <String>[],
       };
+    } else {
+      return super._sendReasoningReply(
+        text,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        traceId: traceId,
+      );
     }
     final reply = jsonEncode(payload);
     sentConversationIds.add(conversationId);
