@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,53 +60,73 @@ class _HistoryResumeService extends LocalAiService {
     restoredUserMessages = List<String>.from(userMessages);
   }
 
+  Future<LocalAiReasoningPendingReply> _sendStructuredReply(
+    String text, {
+    required String requestId,
+    required String reasoningContext,
+    String? traceId,
+  }) async {
+    final envelope = jsonDecode(
+      reasoningContext.split('\\n').skip(1).join('\\n'),
+    ) as Map<String, dynamic>;
+    final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
+        .map((item) => (item as Map<String, dynamic>)['evidenceId'] as String)
+        .toList(growable: false);
+    return LocalAiReasoningPendingReply(
+      requestId: requestId,
+      backend: 'cpu',
+      traceId: traceId,
+      reply: jsonEncode({
+        'schemaVersion': 1,
+        'requestId': requestId,
+        'responseKind': 'ANSWER',
+        'status': 'COMPLETED',
+        'segments': ['续聊成功：$text'],
+        'referencedEvidenceIds': rankedEvidence,
+        'unknowns': <String>[],
+        'conflicts': <String>[],
+        'omittedEvidenceIds': <String>[],
+      }),
+    );
+  }
+
   @override
-  Future<String> sendMessage(
+  Future<LocalAiReasoningPendingReply> sendReasoningMessage(
     String text, {
     required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
+  }) => _sendStructuredReply(
+    text,
+    requestId: requestId,
+    reasoningContext: reasoningContext,
+  );
 
   @override
-  Future<String> sendMessageWithTrace(
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
     String text, {
     required int conversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
     bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required int conversationId,
-    required String context,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) async => '续聊成功：$text';
+  }) => _sendStructuredReply(
+    text,
+    requestId: requestId,
+    reasoningContext: reasoningContext,
+    traceId: traceId,
+  );
 }
 
 class _MemoryConversationStore implements AssistantConversationStore {
