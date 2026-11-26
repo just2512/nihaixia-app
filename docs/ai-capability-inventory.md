@@ -1,5 +1,7 @@
 # AI、问诊与全应用功能能力盘点
 
+> **当前范围校正（2026-11-26）：** 本清单早期版本包含临床红旗 detector、医学审核和 RELEASE BLOCKED 记录；这些属于历史设计，现已 SUPERSEDED / NOT IN SCOPE。当前不建设临床风险 detector/阈值/处置规则，不要求医生审批或全入口临床拦截。固定求助提示按产品定位文件 §4.3 执行。旧的 B/S2 阻断状态不再代表当前产品状态。
+
 当前复核基线：`master` @ `1370855b3f6a94f4a9cf0bcb235478f753348443`（2026-11-15）。下方早期日期章节保留为历史记录；当前能力数量和结论以本文末尾“2O 当前主线复核”覆盖旧快照。
 本文件只记录源码与测试能证明的现状；文档声明、静态布局测试和真实设备验收分开处理。状态采用 `EXISTS`、`PARTIAL`、`MISSING`、`UNKNOWN`，不以功能名称或 UI 文案代替验收。
 
@@ -155,7 +157,7 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 | 阶段 | 当前状态 | 最新源码证据与判断 |
 |---|---|---|
 | S1 输入 | PARTIAL | 文字/图片/音频通过统一 LocalAiInterviewScreen 和 MainActivity MethodChannel 接入；详情页可传 initialPrompt。见 `local_ai_interview_screen.dart:119-168,245-259`、`MainActivity.kt:82-126`。附件输入主要是音频转写/图片可见特征描述，不等于完整的跨模态任务规划。 |
-| S2 安全前置 | PARTIAL / RELEASE BLOCKED | PR #169 已将 fail-closed RedFlagGate/Preflight 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界；缺 detector、UNKNOWN、超时或来源审核/覆盖不完整时不放行。自然语言/视觉/语音医学 detector 与医学审核仍 MISSING；Gate 接线不代表 detector 准确率。 |
+| S2 临床红旗安全门禁 | SUPERSEDED / NOT IN SCOPE | 不建设临床 detector、医学阈值、医生审批或全入口临床拦截；固定简明求助提示不是临床分诊门禁。
 | S3 意图理解 | PARTIAL | 当前 Orchestrator 是固定 cue/alias/actionWords 匹配；没有模型语义规划。见 `assistant_conversation_orchestrator.dart:24-31,32-119,121-203,206-340`。参数提取目前仅对 yunqi 日期做正则处理，见 102-119 行。 |
 | S4 任务规划 | MISSING（通用任务）；问诊专用状态 EXISTS | 有 `TcmInterviewTaskState` 和 `TcmInterviewConversationController`，但仅服务规则问诊；未发现通用 TaskPlan/ActiveTaskFrame。见 `tcm_interview_task_state.dart:41-83`、`tcm_interview_conversation_controller.dart:9-105`、`database_helper.dart:176-184`。 |
 | S5 业务调用 | PARTIAL | ToolRouter 24 项注册，其中 structured_diagnosis 在对话页内联执行；其余 23 项均注册为 Widget builder。见 `assistant_tool_router.dart:155-435,489-526`。目前没有统一 Headless execute 接口。 |
@@ -662,3 +664,11 @@ ToolsScreen 中原有的业务目的地已纳入 `AssistantToolRouter` 注册表
 
 - Find N2 GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除 AI 数据后的重启复查及 TRACE 均为本地实机验收；云端 CI 只证明构建和自动化，不替代设备证据。清单详见执行台账 §46.3。
 - 本轮无新增运行时代码任务；只有在本地真机或生产 RedFlag detector 审核材料提供后，才根据具体失败证据继续修复。不得重复运行无明确目标的泛化测试或扩张架构。
+
+## 2P. 2026-11-26 临床红旗安全门禁范围纠正
+
+- 当前产品定位为中医学习辅助工具，不是临床诊断、分诊或医疗决策软件。旧清单中的 B/S2 临床 detector、词表/阈值、医学审核记录、REVIEW_REQUIRED 和 RELEASE BLOCKED 结论均为历史数据，不再是当前功能缺口。
+- 不要求医学背景人员审核词表、阈值、提示文案或 detector 版本，不要求医生签字/审批记录，不以缺少这些材料阻断任一学习模式。
+- 不建设对文本、图像、音频、历史续聊、工具结果或 Native 模型调用做临床风险分级的门禁。保留普通输入校验、会话/事实归属、附件解析、工具权限/参数、用户确认、确定性规则和知识来源校验。
+- 固定简明急重症求助提示只作一般性求助提醒，不产生诊断、风险等级、分诊或治疗处置结论。
+- 本节为当前有效状态；此前各节中的临床门禁记录均按历史审计保留，不应被复制回当前执行任务。
