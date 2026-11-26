@@ -36,7 +36,13 @@ class _NoopAssistantConversationStore implements AssistantConversationStore {
     required String role,
     required String content,
     String? metadata,
-  }) async => 1;
+    String? invocationKey,
+  }) async {
+    if (invocationKey != null) {
+      throw UnsupportedError('Invocation ledger is not configured in this test fake');
+    }
+    return 1;
+  }
 
   @override
   Future<int> saveAssistantTurn({
