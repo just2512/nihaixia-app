@@ -1216,10 +1216,12 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       final request = ReasoningKnowledgeAnswerAdapter.createRequest(
         requestId: requestId,
         sessionId: conversationId,
-        userText: text.trim(),
+        userText: requestUserText,
         mode: answerMode.name,
         sessionState: sessionStateSnapshot,
         knowledge: knowledge,
+        attachmentType: attachmentType,
+        attachmentPromptGenerated: attachmentPromptGenerated,
       );
       final supplementalContext =
           ReasoningRequestPromptFormatter.formatSupplementalContext(request);
@@ -1258,7 +1260,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           conversationId: conversationId,
           requestId: requestId,
           mode: answerMode.name,
-          userText: text.trim(),
+          userText: requestUserText,
         );
         if (startStatus != AssistantReasoningTurnStartStatus.started) {
           throw StateError('REASONING_TURN_DUPLICATE_OR_CONFLICT:$startStatus');
