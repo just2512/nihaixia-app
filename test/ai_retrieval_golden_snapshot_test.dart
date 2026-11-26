@@ -119,6 +119,15 @@ void main() {
         .toList()
       ..sort((left, right) =>
           left.value.orderIndex!.compareTo(right.value.orderIndex!));
+    final candidatePipelineSourceIds = {
+      for (final candidate in context.candidateSnapshot) candidate.sourceId,
+    };
+    final contextSourceIds = context.sources
+        .map((source) => source.sourceId)
+        .toList(growable: false);
+    final legacyBaseContextSourceIds = contextSourceIds
+        .where((sourceId) => !candidatePipelineSourceIds.contains(sourceId))
+        .toList(growable: false);
     final core2Snapshot = {
       'knownCandidateCount': context.knownEvidenceIds.length,
       'candidateDecisionRows': candidateDecisionRows,
@@ -130,8 +139,10 @@ void main() {
       'presentedCandidateOrdinals': context.rankedEvidence
           .map((item) => candidateOrdinalByEvidenceId[item.evidenceId]!)
           .toList(growable: false),
-      'modelVisibleSourceIds':
+      'candidatePipelineRankedSourceIds':
           context.rankedEvidence.map((item) => item.sourceId).toList(growable: false),
+      'contextSourceIds': contextSourceIds,
+      'legacyBaseContextSourceIds': legacyBaseContextSourceIds,
       'budget': {
         'unit': ranking.budget.unit.name,
         'limit': ranking.budget.limit,
@@ -168,6 +179,7 @@ void main() {
       'queryProvenance':
           queryProvenance.map((item) => item.toJson()).toList(growable: false),
       'classicQueries': queries,
+      'core2': snapshot['core2'],
       'context': {
         'status': context.statusLabel,
         'text': context.text,
@@ -212,7 +224,7 @@ void main() {
     final rawContext = snapshot['context']! as Map<String, Object?>;
     final sources = (rawContext['sources']! as List).cast<Map>();
     return {
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'request': snapshot['request'],
       'formula': snapshot['formula'],
       'sourceManifest': snapshot['sourceManifest'],
@@ -279,6 +291,23 @@ void main() {
     expect(core2['strategyId'], isNotEmpty);
     expect(core2['strategyVersion'], isNotEmpty);
     expect((core2['budget']! as Map)['applied'], isTrue);
+    final candidatePipelineSourceIds =
+        candidateRows.map((row) => row['sourceId'] as String).toSet();
+    final contextSourceIds =
+        (core2['contextSourceIds']! as List).cast<String>();
+    final legacyBaseContextSourceIds =
+        (core2['legacyBaseContextSourceIds']! as List).cast<String>();
+    expect(
+      legacyBaseContextSourceIds.every(
+        (sourceId) => contextSourceIds.contains(sourceId) &&
+            !candidatePipelineSourceIds.contains(sourceId),
+      ),
+      isTrue,
+      reason: '未进入 CandidateEvidence 的 legacy base 资料必须单独可见',
+    );
+    expect(core2.containsKey('modelVisibleSourceIds'), isFalse,
+        reason: '排名引用不等于模型上下文中的全部资料来源');
+
 
     final expectedFile = File('test/fixtures/ai_retrieval_golden_metadata.json');
     expect(expectedFile.existsSync(), isTrue,
