@@ -1109,10 +1109,9 @@ void main() {
       expect(draft.summaryLines.join('、'), isNot(contains('不应接受')));
     });
 
-
     test('reads legacy red_flags only as user-reported symptom data', () {
       final draft = LocalAiSymptomDraft.fromModelText(
-        '{"user_reported_urgent_signs":["用户自述曾有胸部不适"]}',
+        '{"red_flags":["用户自述曾有胸部不适"]}',
       );
 
       expect(draft.userReportedUrgentSigns, ['用户自述曾有胸部不适']);
