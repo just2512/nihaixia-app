@@ -156,6 +156,69 @@ void main() {
         containsAll(['TOOL_INVOCATION_CLAIMED', 'TOOL_INVOCATION_TERMINAL']));
   });
 
+  test('confirmed yuxiaji proposal passes the real registry preflight and dispatches once', () async {
+    const proposalRequestId = 'fedcba9876543210fedcba9876543210';
+    const proposalPayload = {
+      'schemaVersion': 1,
+      'requestId': proposalRequestId,
+      'responseKind': 'ACTION_PROPOSAL',
+      'status': 'COMPLETED',
+      'segments': ['由 App 生成当前时刻的民俗文化参考结果。'],
+      'referencedEvidenceIds': <String>[],
+      'unknowns': <String>[],
+      'conflicts': <String>[],
+      'omittedEvidenceIds': <String>[],
+      'actionProposal': {
+        'proposalId': 'yuxiaji-confirmed',
+        'capabilityId': 'yuxiaji_omen',
+        'arguments': <String, String>{},
+      },
+    };
+    final yuxiajiRequest = ReasoningActionProposalAdapter.createRequest(
+      requestId: proposalRequestId,
+      sessionId: conversationId,
+      userText: '按 App 当前时刻查询玉匣灵兆',
+      sessionState: snapshot(conversationId),
+      knowledge: const AssistantKnowledgeContextResult(text: ''),
+      requestCapabilityAllowlist: const {'yuxiaji_omen'},
+    );
+    final prepared = ReasoningActionProposalAdapter.decodeAndPrepare(
+      raw: jsonEncode(proposalPayload),
+      request: yuxiajiRequest,
+      knowledge: const AssistantKnowledgeContextResult(text: ''),
+    );
+    expect(prepared.requiresConfirmation, isTrue);
+    final preview = prepared.gateResult!.preview!;
+    var dispatchCount = 0;
+
+    final result = await coordinator.executeConfirmedProposal(
+      conversationId: conversationId,
+      invocationId: 'fedcba9876543210fedcba9876543210',
+      request: yuxiajiRequest,
+      preview: preview,
+      confirmedByUser: true,
+      executorOverride: (arguments) {
+        dispatchCount++;
+        expect(arguments, isEmpty);
+        return AssistantToolResult(
+          toolId: 'yuxiaji_omen',
+          title: '玉匣灵兆',
+          values: const {'民俗参考': '本测试使用 App 注入的模拟数据'},
+          sourceIds: const ['local-engine:yuxiaji-omen:v1'],
+          arguments: arguments,
+        );
+      },
+    );
+
+    expect(result.status,
+        AssistantToolExecutionCoordinatorStatus.claimAcquiredAndDispatched);
+    expect(result.executionResult?.status, ReasoningExecutionStatus.succeeded);
+    expect(result.executionResult?.resultValues, {
+      '民俗参考': '本测试使用 App 注入的模拟数据',
+    });
+    expect(dispatchCount, 1);
+  });
+
   test('same terminal invocation is reused without a second dispatch', () async {
     var dispatchCount = 0;
     Future<AssistantToolResult> execute(Map<String, String> arguments) async {
