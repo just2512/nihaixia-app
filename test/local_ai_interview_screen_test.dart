@@ -5093,7 +5093,11 @@ void main() {
 
     tester.testTextInput.hide();
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byTooltip('切换助手角色'));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('assistant-mode-selector')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('切换助手角色'));
     await tester.pumpAndSettle();
