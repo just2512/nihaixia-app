@@ -1081,6 +1081,7 @@ class _PostSendStatusFailureService extends _TextSendService {
         message: '模拟本地推理失败',
       );
     }
+    responseTextOverride = '本轮回复：$text';
     final pending = traceId == null
         ? await super.sendReasoningMessage(
             text,
