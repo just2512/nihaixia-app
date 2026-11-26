@@ -226,6 +226,25 @@ class AssistantToolInvocationLedger {
     final disclaimer = rawDisclaimer is String && rawDisclaimer.trim().isNotEmpty
         ? rawDisclaimer
         : null;
+    final identityMatches =
+        terminal['invocationId'] == claim.invocationId &&
+        terminal['requestId'] == claim.requestId &&
+        terminal['toolId'] == claim.toolId &&
+        terminal['capabilityId'] == claim.capabilityId &&
+        terminal['interrupted'] is bool;
+    final interrupted = terminal['interrupted'] == true;
+    if (!identityMatches ||
+        (status == AssistantToolExecutionStatus.succeeded && interrupted)) {
+      return AssistantToolResult(
+        toolId: claim.toolId,
+        title: title,
+        values: const <String, String>{},
+        arguments: claim.arguments,
+        sourceIds: const <String>[],
+        status: AssistantToolExecutionStatus.unknown,
+        disclaimer: '持久化终态与 claim 身份不一致或标记为中断；结果按 UNKNOWN 处理，不会重放。',
+      );
+    }
 
     if (status != AssistantToolExecutionStatus.succeeded) {
       return AssistantToolResult(
@@ -299,7 +318,9 @@ class AssistantToolInvocationLedger {
     if (raw is! List) return null;
     final result = <String>[];
     for (final item in raw) {
-      if (item is! String || item.trim().isEmpty) return null;
+      if (item is! String || item.trim().isEmpty || item != item.trim()) {
+        return null;
+      }
       result.add(item);
     }
     return List<String>.unmodifiable(result);
