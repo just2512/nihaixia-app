@@ -490,20 +490,30 @@ class _TextSendService extends LocalAiService {
     final envelope = jsonDecode(
       reasoningContext.substring(separator + 1),
     ) as Map<String, dynamic>;
+    final mode = envelope['mode'] as String;
     final rankedEvidence = (envelope['rankedEvidence'] as List<dynamic>)
         .cast<Map<String, dynamic>>();
+    // The fake model may cite any evidence actually supplied to this request.
+    // Returning the full set keeps source-resolution coverage deterministic.
     final references = rankedEvidence
         .map((item) => item['evidenceId'] as String)
-        .take(1)
         .toList(growable: false);
     final hasEvidence = references.isNotEmpty;
+    final canAnswerWithoutEvidence = const {
+      'automatic',
+      'consultation',
+      'metaphysics',
+    }.contains(mode);
+    final isAnswer = hasEvidence || canAnswerWithoutEvidence;
     final reply = jsonEncode({
       'schemaVersion': 1,
       'requestId': requestId,
-      'responseKind': hasEvidence ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
-      'status': hasEvidence ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
+      'responseKind': isAnswer ? 'ANSWER' : 'INSUFFICIENT_EVIDENCE',
+      'status': isAnswer ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
       'segments': [
-        hasEvidence ? '基于本轮资料的结构化解释。' : '本轮没有足够资料支持确定回答。',
+        isAnswer
+            ? '已收到你的描述：$text；基于本轮可用输入生成结构化回复。'
+            : '本轮没有足够资料支持确定回答。',
       ],
       'referencedEvidenceIds': references,
       'unknowns': <String>[],
@@ -871,16 +881,15 @@ class _FailingIntentSelectionService extends _TextSendService {
 
 class _FailingTextSendService extends _TextSendService {
   @override
-  Future<String> sendMessageWithTrace(
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
     String text, {
     required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
+    sentTexts.add(text);
     throw PlatformException(
       code: 'NATIVE_SEND_FAILED',
       message: 'native send failed in test',
@@ -1150,27 +1159,42 @@ class _PostSendNotReadyStatusService extends _TextSendService {
   }
 
   @override
-  Future<String> sendMessage(
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
-    sentTexts.add(text);
     if (text == triggerText) {
-      _notReady = true;
       if (failOnTrigger) {
+        sentTexts.add(text);
+        _notReady = true;
         throw PlatformException(
           code: 'INFERENCE_FAILED_AFTER_TEARDOWN',
           message: '模拟模型卸载前推理失败',
         );
       }
-      return '模型卸载前生成的回复';
+      final pending = await super._sendReasoningReply(
+        text,
+        conversationId: conversationId,
+        requestId: requestId,
+        context: context,
+        reasoningContext: reasoningContext,
+        traceId: traceId,
+      );
+      _notReady = true;
+      return pending;
     }
-    return '历史回复：$text';
+    return super._sendReasoningReply(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+    );
   }
 }
 
@@ -1301,68 +1325,53 @@ class _DelayedHistoryConversationStore extends _MemoryConversationStore {
   }
 }
 
-class _FailOnceTextSendService extends LocalAiService {
+class _FailOnceTextSendService extends _TextSendService {
   var sendAttempts = 0;
 
   @override
   Future<LocalAiModelStatus> getStatus() async => _readyStatus;
 
   @override
-  Future<String> sendMessage(
+  Future<LocalAiReasoningPendingReply> _sendReasoningReply(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
+    required String requestId,
+    required String context,
+    required String reasoningContext,
+    String? traceId,
   }) async {
     sendAttempts += 1;
     if (sendAttempts == 1) {
+      sentTexts.add(text);
       throw PlatformException(
         code: 'NATIVE_ERROR',
         message: '首次本地推理失败',
       );
     }
-    return '重试成功：$text';
+    final pending = await super._sendReasoningReply(
+      '重试成功：$text',
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+    );
+    // Keep the recorded input faithful to the user's original turn.
+    sentTexts[sentTexts.length - 1] = text;
+    return pending;
   }
-
-  @override
-  Future<String> sendMessageWithContext(
-    String text, {
-    required int conversationId,
-    required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) => sendMessage(text, conversationId: conversationId);
 }
 
 class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
   final sentTraceIds = <String>[];
 
   @override
-  Future<String> sendMessageWithTrace(
+  Future<LocalAiReasoningPendingReply> sendReasoningMessageWithTrace(
     String text, {
     required int conversationId,
-    required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
-    String? sessionStateContext,
-    int? sessionStateConversationId,
-  }) {
-    sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
-  }
-
-  @override
-  Future<String> sendMessageWithContextAndTrace(
-    String text, {
-    required int conversationId,
+    required String requestId,
     required String context,
+    required String reasoningContext,
     required String traceId,
     bool requireMedicalSafety = false,
     String? redFlagContext,
@@ -1371,7 +1380,19 @@ class _TraceFailOnceTextSendService extends _FailOnceTextSendService {
     int? sessionStateConversationId,
   }) {
     sentTraceIds.add(traceId);
-    return sendMessage(text, conversationId: conversationId);
+    return super.sendReasoningMessageWithTrace(
+      text,
+      conversationId: conversationId,
+      requestId: requestId,
+      context: context,
+      reasoningContext: reasoningContext,
+      traceId: traceId,
+      requireMedicalSafety: requireMedicalSafety,
+      redFlagContext: redFlagContext,
+      redFlagContextTruncated: redFlagContextTruncated,
+      sessionStateContext: sessionStateContext,
+      sessionStateConversationId: sessionStateConversationId,
+    );
   }
 }
 
