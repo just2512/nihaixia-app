@@ -21,6 +21,7 @@ enum AiTraceStatus {
 enum AiTraceStage {
   input,
   preflight,
+  /// Legacy wire stage for reading historical traces; new flows must not emit it.
   redFlag,
   dispatch,
   route,
