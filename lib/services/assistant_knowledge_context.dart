@@ -634,8 +634,10 @@ class AssistantKnowledgeContextBuilder {
       );
     }
     final buffer = StringBuffer();
+    final legacyBasePrefix =
+        base.length > 3500 ? base.substring(0, 3500) : base;
     if (base.isNotEmpty) {
-      buffer.writeln(base.length > 3500 ? base.substring(0, 3500) : base);
+      buffer.writeln(legacyBasePrefix);
     }
 
     final terms = <String>{normalized};
@@ -767,12 +769,22 @@ class AssistantKnowledgeContextBuilder {
     };
     final evidenceStartOffsets = <String, int>{};
     final evidenceEndOffsets = <String, int>{};
+    final localTruncatedEvidenceIds = <String>{};
+    final localOmittedEvidenceIds = <String>{};
     for (final block in localExtraction.blocks) {
       final evidenceId = '${combinedBatch.requestId}:'
           '${localExtraction.batch.requestId}:'
           '${block.candidate.evidenceId}';
-      evidenceStartOffsets[evidenceId] = block.startOffset;
-      evidenceEndOffsets[evidenceId] = block.endOffset;
+      if (block.startOffset >= legacyBasePrefix.length) {
+        localOmittedEvidenceIds.add(evidenceId);
+      } else if (block.endOffset > legacyBasePrefix.length) {
+        evidenceStartOffsets[evidenceId] = block.startOffset;
+        evidenceEndOffsets[evidenceId] = legacyBasePrefix.length;
+        localTruncatedEvidenceIds.add(evidenceId);
+      } else {
+        evidenceStartOffsets[evidenceId] = block.startOffset;
+        evidenceEndOffsets[evidenceId] = block.endOffset;
+      }
     }
 
     // Keep the historical classic-index first-four cap and query/hit order.
@@ -905,6 +917,14 @@ class AssistantKnowledgeContextBuilder {
     final budgetOmittedEvidenceIds = <String>[];
     final budgetTruncatedEvidenceIds = <String>[];
     for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      if (localTruncatedEvidenceIds.contains(evidenceId)) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+        continue;
+      }
+      if (localOmittedEvidenceIds.contains(evidenceId)) {
+        budgetOmittedEvidenceIds.add(evidenceId);
+        continue;
+      }
       final startOffset = evidenceStartOffsets[evidenceId];
       final endOffset = evidenceEndOffsets[evidenceId];
       if (startOffset == null || endOffset == null) {
@@ -985,12 +1005,19 @@ class AssistantKnowledgeContextBuilder {
         : result.substring(0, maxContextCharacters);
     final evidenceStartOffsets = <String, int>{};
     final evidenceEndOffsets = <String, int>{};
+    final localTruncatedEvidenceIds = <String>{};
     for (final block in extraction.blocks) {
       final evidenceId = '${combinedBatch.requestId}:'
           '${extraction.batch.requestId}:'
           '${block.candidate.evidenceId}';
       evidenceStartOffsets[evidenceId] = block.startOffset;
       evidenceEndOffsets[evidenceId] = block.endOffset;
+      // build() applies its own 6,500-character cap before this adapter sees
+      // the text. A final block ending exactly at the cap may be partial.
+      if (base.length >= maxContextCharacters &&
+          block.endOffset == base.length) {
+        localTruncatedEvidenceIds.add(evidenceId);
+      }
     }
 
     final presentedEvidenceIds = <String>{};
@@ -1001,6 +1028,10 @@ class AssistantKnowledgeContextBuilder {
         candidate.evidenceId: candidate,
     };
     for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      if (localTruncatedEvidenceIds.contains(evidenceId)) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+        continue;
+      }
       final startOffset = evidenceStartOffsets[evidenceId];
       final endOffset = evidenceEndOffsets[evidenceId];
       if (startOffset == null || endOffset == null) {
