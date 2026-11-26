@@ -43,6 +43,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(775, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
+      final category = AcupunctureRepository.getAll().singleWhere(
+        (item) => item.id == '01',
+      );
+      final entry = category.entries.singleWhere((item) => item.id == 1);
+
       await tester.pumpWidget(
         ContextualAiConversationStoreScope(
           conversationStore: InMemoryAssistantConversationStore(),
@@ -52,7 +57,12 @@ void main() {
               colorScheme: AppColors.colorSchemeFor(Brightness.light),
               extensions: [AppColors.light],
             ),
-            home: const Scaffold(body: AcupunctureScreen()),
+            home: Scaffold(
+              body: AcupunctureScreen(
+                initialCategoryId: category.id,
+                initialEntryId: entry.id,
+              ),
+            ),
           ),
         ),
       );
