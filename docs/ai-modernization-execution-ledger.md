@@ -4785,7 +4785,7 @@ PR HEAD 门禁证据：
 - **分支：** `work/core1-persisted-reasoning-turn-ledger-core3-20261126`，基于当前 master `a7f2672be1f40ba2c4408ac3381046126b9c4167`。
 - **当前 HEAD：** `9fe364df135e42be122259043c408485b78779b7`；PR #575 仍 OPEN，mergeable；不将未合并代码计入 master。
 - **实现范围：** 新增 `AssistantReasoningTurnLedger`，复用现有 `assistant_messages` 隐藏 `role=tool` 行和已有唯一 invocation_key，记录 PENDING / FINALIZED / REJECTED / UNKNOWN / SUPERSEDED；请求身份绑定 conversation、mode 和 userText；Native 进程中断后未完成请求转 UNKNOWN，不自动重放；最终状态与可见 transcript 不一致时可按已验证终态重建。隐藏请求/执行 Ledger 不得进入普通 SessionStateSnapshot 记忆内容。
-- **CI：** 精确 PR HEAD 的 Flutter regression job `139978452194` SUCCESS；Fork License run `45839888050` SUCCESS；Android arm64 CI verification job `139983387397` 在本节记录时仍 IN_PROGRESS。PR Branch validation 为 SKIPPED，不计 PASS；旧 HEAD `b759509...` 的失败/成功结果不替代当前 HEAD。
+- **CI：** 精确 PR HEAD 的 Flutter regression job `139978452194` SUCCESS；Android arm64/JVM CI verification job `139983387397` SUCCESS；Fork License run `45839888050` SUCCESS。PR Branch validation 为 SKIPPED，不计 PASS；旧 HEAD `b759509...` 的失败/成功结果不替代当前 HEAD。适用 PR 全量 Flutter、Android 和 License 门禁已终态通过，可以进入合并；push 事件的 changed-test/Analyze 检查仍需确认终态。
 - **首轮故障修复：** 旧测试 fake `_NoopAssistantConversationStore` 对 invocationKey 抛出 UnsupportedError，且历史读取恒为空，造成跨层 handoff 六处测试未进入模型调用。当前 fake 增加 conversation-scoped 幂等 invocationKey 写入和历史读取；没有改生产失败关闭逻辑，也没有删除测试。
 - **状态：PARTIAL / PR CI 部分通过。** Android arm64 验收完成前不得合并；设备进程恢复、E4B KV 多轮和真实 TRACE 仍 UNKNOWN / LOCAL ONLY。
 
