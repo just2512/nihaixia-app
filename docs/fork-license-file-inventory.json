@@ -15,7 +15,7 @@
     "changed": 1015,
     "added": 851,
     "modified": 164,
-    "deleted": 15,
+    "deleted": 16,
     "by_classification": {
       "APACHE_2_0_AND_FORK_COMMERCIAL": 158,
       "FORK_COMMERCIAL": 493,
@@ -6761,14 +6761,6 @@
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     },
     {
-      "path": "test/fixtures/ai_retrieval_golden_metadata.json",
-      "status": "added",
-      "classification": "FORK_COMMERCIAL",
-      "license": "LicenseRef-Nihaixia-Fork-Commercial",
-      "reason": "Fork 新增实现/文档/工程资源；仅限权利人拥有版权或有充分再许可权的部分。",
-      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
-    },
-    {
       "path": "test/fixtures/pro-license-test-vectors.json",
       "status": "added",
       "classification": "FORK_COMMERCIAL",
@@ -8143,6 +8135,14 @@
       "license": "LicenseRef-Nihaixia-Fork-Commercial",
       "reason": "Fork 新增品牌、工程、文档或测试资源；仅限权利人拥有版权或有充分再许可权的部分。",
       "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
+    },
+    {
+      "path": "test/fixtures/ai_retrieval_golden_metadata.json.gz.base64",
+      "status": "added",
+      "classification": "FORK_COMMERCIAL",
+      "license": "LicenseRef-Nihaixia-Fork-Commercial",
+      "reason": "Fork 新增 AI 检索候选排序元数据黄金测试夹具；仅包含生产 CI 固化的候选身份、决策原因和预算元数据，不包含知识正文；权属证据仍需保留。",
+      "rights_status": "OWNERSHIP_EVIDENCE_REQUIRED"
     }
   ],
   "deleted_paths": [
@@ -8157,6 +8157,7 @@
     "lib/widgets/update_dialog.dart",
     "release/汉唐中医_v1.10.0+7_发布说明.md",
     "release/汉唐中医_v1.10.1_发布说明.md",
+    "test/fixtures/ai_retrieval_golden_metadata.json",
     "test/services/update_service_test.dart",
     "test/update_download_sources_test.dart",
     "tool/sync_gitee.sh",
