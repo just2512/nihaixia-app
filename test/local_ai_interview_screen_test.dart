@@ -2243,7 +2243,7 @@ void main() {
         reason: '问诊文本必须走结构化推理与 Native 双阶段提交');
     expect(service.structuredReasoningContexts, hasLength(1));
     final consultationRequest = jsonDecode(
-      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
     ) as Map<String, dynamic>;
     expect(consultationRequest['mode'], 'consultation');
     expect(tester.takeException(), isNull);
@@ -5127,7 +5127,7 @@ void main() {
     expect(service.sentTraceIds, [traceId]);
     expect(service.legacySendCalls, 0);
     final metaphysicsRequest = jsonDecode(
-      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
     ) as Map<String, dynamic>;
     expect(metaphysicsRequest['mode'], 'metaphysics');
     expect(events.map((event) => event.stage), containsAll([
@@ -5177,7 +5177,7 @@ void main() {
     expect(service.legacySendCalls, 0);
     expect(service.sentContexts.single, contains('玄学大师'));
     final metaphysicsRequest = jsonDecode(
-      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
     ) as Map<String, dynamic>;
     expect(metaphysicsRequest['mode'], 'metaphysics');
     expect(events.map((event) => event.stage), containsAll([
@@ -7432,7 +7432,7 @@ void mainRedFlagEntrypointOrderingTests() {
     expect(service.structuredReasoningContexts, hasLength(1));
     expect(service.finalizedReasoningAnswers, hasLength(1));
     final request = jsonDecode(
-      service.structuredReasoningContexts.single.split('\\n').skip(1).join('\\n'),
+      service.structuredReasoningContexts.single.split('\n').skip(1).join('\n'),
     ) as Map<String, dynamic>;
     expect(request['mode'], 'automatic');
     expect(request['rankedEvidence'], isEmpty);
