@@ -1277,26 +1277,57 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           throw StateError('REASONING_TURN_DUPLICATE_OR_CONFLICT:$startStatus');
         }
         nativeRequestMayBePending = true;
-        final pending = traceId == null
-            ? await _service.sendReasoningMessage(
-                text.trim(),
-                conversationId: conversationId,
-                requestId: requestId,
-                context: guardedContext,
-                reasoningContext: supplementalContext,
-                sessionStateContext: sessionStateContext,
-                sessionStateConversationId: conversationId,
-              )
-            : await _service.sendReasoningMessageWithTrace(
-                text.trim(),
-                conversationId: conversationId,
-                requestId: requestId,
-                context: guardedContext,
-                reasoningContext: supplementalContext,
-                traceId: traceId,
-                sessionStateContext: sessionStateContext,
-                sessionStateConversationId: conversationId,
-              );
+        Future<LocalAiReasoningPendingReply> invokeReasoning() {
+          if (attachmentPath != null) {
+            final selectedAttachmentType = attachmentType!.name;
+            return traceId == null
+                ? _service.sendReasoningAttachmentMessage(
+                    requestUserText,
+                    attachmentType: selectedAttachmentType,
+                    path: attachmentPath,
+                    conversationId: conversationId,
+                    requestId: requestId,
+                    context: guardedContext,
+                    reasoningContext: supplementalContext,
+                    sessionStateContext: sessionStateContext,
+                    sessionStateConversationId: conversationId,
+                  )
+                : _service.sendReasoningAttachmentMessageWithTrace(
+                    requestUserText,
+                    attachmentType: selectedAttachmentType,
+                    path: attachmentPath,
+                    conversationId: conversationId,
+                    requestId: requestId,
+                    context: guardedContext,
+                    reasoningContext: supplementalContext,
+                    traceId: traceId,
+                    sessionStateContext: sessionStateContext,
+                    sessionStateConversationId: conversationId,
+                  );
+          }
+          return traceId == null
+              ? _service.sendReasoningMessage(
+                  requestUserText,
+                  conversationId: conversationId,
+                  requestId: requestId,
+                  context: guardedContext,
+                  reasoningContext: supplementalContext,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                )
+              : _service.sendReasoningMessageWithTrace(
+                  requestUserText,
+                  conversationId: conversationId,
+                  requestId: requestId,
+                  context: guardedContext,
+                  reasoningContext: supplementalContext,
+                  traceId: traceId,
+                  sessionStateContext: sessionStateContext,
+                  sessionStateConversationId: conversationId,
+                );
+        }
+
+        final pending = await invokeReasoning();
         final decoded = modeNeutral
             ? ReasoningKnowledgeAnswerAdapter.decodeConversationAnswer(
                 raw: pending.reply,
