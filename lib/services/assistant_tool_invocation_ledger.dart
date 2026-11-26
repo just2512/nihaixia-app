@@ -187,6 +187,120 @@ class AssistantToolInvocationLedger {
     }
   }
 
+  /// Reads a terminal result back from the durable ledger.
+  ///
+  /// Only a fully revalidated SUCCEEDED record can expose result values or
+  /// source IDs. Any malformed or downgraded terminal is returned as UNKNOWN
+  /// with empty values and provenance, so raw executor output cannot bypass
+  /// the ledger's final validation decision.
+  Future<AssistantToolResult?> loadTerminalResult({
+    required int conversationId,
+    required String invocationId,
+  }) async {
+    final event = await _readInvocation(
+      conversationId: conversationId,
+      invocationId: invocationId,
+    );
+    final claim = event.claim;
+    final terminal = event.terminal;
+    if (claim == null || terminal == null) return null;
+
+    final rawStatus = terminal['status'];
+    final status = AssistantToolExecutionStatus.values
+        .where((item) => item.name == rawStatus)
+        .firstOrNull;
+    final rawArguments = _tryStringMap(terminal['actualArguments']);
+    final actualArguments = rawArguments != null &&
+            _sameStringMap(rawArguments, claim.arguments)
+        ? rawArguments
+        : claim.arguments;
+    final titleValue = terminal['title'];
+    final title = titleValue is String && titleValue.trim().isNotEmpty
+        ? titleValue.trim()
+        : claim.toolId;
+    final rawDisclaimer = terminal['disclaimer'];
+    final disclaimer = rawDisclaimer is String && rawDisclaimer.trim().isNotEmpty
+        ? rawDisclaimer
+        : null;
+
+    if (status != AssistantToolExecutionStatus.succeeded) {
+      return AssistantToolResult(
+        toolId: claim.toolId,
+        title: title,
+        values: const <String, String>{},
+        arguments: actualArguments,
+        sourceIds: const <String>[],
+        status: status ?? AssistantToolExecutionStatus.unknown,
+        disclaimer: disclaimer ??
+            (status == null
+                ? '持久化执行终态无法识别；结果按 UNKNOWN 处理，不会重放。'
+                : null),
+      );
+    }
+
+    final values = _tryStringMap(terminal['resultValues']);
+    final sourceIds = _tryStringList(terminal['sourceIds']);
+    if (rawArguments == null ||
+        !_sameStringMap(rawArguments, claim.arguments) ||
+        values == null ||
+        values.isEmpty ||
+        sourceIds == null ||
+        sourceIds.isEmpty) {
+      return AssistantToolResult(
+        toolId: claim.toolId,
+        title: title,
+        values: const <String, String>{},
+        arguments: claim.arguments,
+        sourceIds: const <String>[],
+        status: AssistantToolExecutionStatus.unknown,
+        disclaimer: '持久化成功记录缺少完整参数、结构化值或来源；结果按 UNKNOWN 处理，不会重放。',
+      );
+    }
+
+    final candidate = AssistantToolResult(
+      toolId: claim.toolId,
+      title: title,
+      values: values,
+      arguments: rawArguments,
+      sourceIds: sourceIds,
+      status: AssistantToolExecutionStatus.succeeded,
+      disclaimer: disclaimer,
+    );
+    if (candidate.validateFor(claim.toolId).isEmpty &&
+        candidate.validateArgumentsMatch(claim.arguments).isEmpty) {
+      return candidate;
+    }
+    return AssistantToolResult(
+      toolId: claim.toolId,
+      title: title,
+      values: const <String, String>{},
+      arguments: claim.arguments,
+      sourceIds: const <String>[],
+      status: AssistantToolExecutionStatus.unknown,
+      disclaimer: '持久化成功记录未通过终态复核；结果按 UNKNOWN 处理，不会重放。',
+    );
+  }
+
+  Map<String, String>? _tryStringMap(Object? raw) {
+    if (raw is! Map) return null;
+    final result = <String, String>{};
+    for (final entry in raw.entries) {
+      if (entry.key is! String || entry.value is! String) return null;
+      result[entry.key as String] = entry.value as String;
+    }
+    return Map<String, String>.unmodifiable(result);
+  }
+
+  List<String>? _tryStringList(Object? raw) {
+    if (raw is! List) return null;
+    final result = <String>[];
+    for (final item in raw) {
+      if (item is! String || item.trim().isEmpty) return null;
+      result.add(item);
+    }
+    return List<String>.unmodifiable(result);
+  }
+
   /// Converts claims left without a terminal result into UNKNOWN.
   ///
   /// Call only when restoring/opening a conversation, not while a live
@@ -320,6 +434,7 @@ class AssistantToolInvocationLedger {
       'requestId': claim.requestId,
       'toolId': claim.toolId,
       'capabilityId': claim.capabilityId,
+      'title': result.title,
       'status': effectiveStatus.name,
       'actualArguments': Map<String, String>.unmodifiable(result.arguments),
       'resultValues': Map<String, String>.unmodifiable(result.values),
