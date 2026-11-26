@@ -75,6 +75,9 @@ void main() {
     for (var index = 0; index < context.candidateSnapshot.length; index++) {
       final candidate = context.candidateSnapshot[index];
       final decision = ranking.decisions[index];
+      if (candidate.evidenceId != decision.evidenceId) {
+        throw StateError('Candidate snapshot identity does not match its rank decision');
+      }
       if (!context.knownEvidenceIds.contains(decision.evidenceId)) {
         throw StateError('Ranking decision references an unknown candidate');
       }
@@ -339,19 +342,11 @@ void main() {
     expect(expectedFile.existsSync(), isTrue,
         reason: '检索行为基线必须有可审查、可版本控制的固定夹具');
     final expected = jsonDecode(expectedFile.readAsStringSync());
-    final pullRequestBranch = Platform.environment['GITHUB_HEAD_REF'];
-    final pushRef = Platform.environment['GITHUB_REF'];
-    final captureOnly = pullRequestBranch ==
-            'work/core2-typed-local-structured-evidence-master-da63baf-20261126' ||
-        pushRef ==
-            'refs/heads/work/core2-typed-local-structured-evidence-master-da63baf-20261126';
-    if (!captureOnly) {
-      expect(
-        jsonEncode(summarize(first)),
-        jsonEncode(expected),
-        reason: '检索命中、候选顺序、KEEP/DROP 原因、预算或上下文组成变化必须显式审查',
-      );
-    }
+    expect(
+      jsonEncode(summarize(first)),
+      jsonEncode(expected),
+      reason: '检索命中、候选顺序、KEEP/DROP 原因、预算或上下文组成变化必须显式审查',
+    );
 
     final core2 = first['core2']! as Map<String, Object?>;
     final rawCore2 = first['core2']! as Map<String, Object?>;
