@@ -570,7 +570,7 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 
 ### 5.5 当前主线运行态复核与 Native 辅助推理入口映射（2026-11-26）
 
-**审计基线：** `master@700d6e87e6e86d25c6e75ab3d602e3fbb0897720`。本节覆盖 §5.2–§5.4 之后已合入主线的 Core-1/2/3/4 实现；此前章节保留为当时的历史状态，不再作为当前生产完成度判断。源码映射以本次读取的 MainActivity、LocalAiService 和 LocalAiInterviewScreen 为准。
+**复核基线：** `master@5dcf91f350996f6f8a9bd215cae482ff8b5dc46a`（已合并 PR #576）。本节覆盖 §5.2–§5.4 之后已合入主线的 Core-1/2/3/4 实现，并按当前主线重新核对 Native 入口；此前章节保留为当时的历史状态，不再作为当前生产完成度判断。当前产品为中医学习辅助工具，不建设临床红旗 detector、不安排医学审核、不恢复原 B 项。
 
 #### 当前五层状态
 
@@ -581,7 +581,7 @@ Native 推理是双阶段提交：`sendReasoningMessage` 返回待校验回复�
 | Core-2 知识召回与排序 | PR #568 已合入：typed CandidateEvidence、跨源合并、query/source provenance、确定性 KEEP/DROP、黄金快照 | 旧顺序与来源条数上限不是语义相关性排序；6,500 UTF-16 字符呈现限制不是 tokenizer Token 预算；没有数值置信分、Embedding 或 Reranker |
 | Core-3 推理协议 | PR #573 已将自动、问诊、学习、工具、玄学五种主文本对话接入 ReasoningRequest/Response v1 与 Native 双阶段提交 | 图片/音频主对话仍走直接自然语言输出；intent/Bazi/symptom/单题问项是独立窄任务协议，不能称为统一 ReasoningRequest；旧 sendMessage 兼容 API 仍存在 |
 | Core-4 业务执行 | PR #561/#566 已合入 Gate、Request allowlist、显式确认、one-shot claim、Headless Dispatcher、Ledger 读回及只读 ExecutionResult 下一轮回流 | 仍只允许既有白名单能力；不代表任意模型输出可执行；异常 UNKNOWN 不自动重放 |
-| Core-5 端到端验收 | PR #579 提交 20 轮知识问答 + 一次工具执行/回流的 Flutter 跨层测试 | 最新 HEAD 的全量 Flutter regression 尚须以精确 HEAD 得到终态；CI 的 Branch validation 若为 SKIPPED 不计 PASS；该测试使用测试替身 Native 服务/工具执行器，不等于真实 E4B 或设备 TRACE |
+| Core-5 端到端验收 | PR #579 提交 20 轮知识问答 + 一次工具执行/回流的 Flutter 跨层测试 | PR #579 仍基于旧 master（5 ahead / 77 behind）；精确旧 HEAD Flutter 与 Fork license 已 SUCCESS，但 Android arm64/JVM 记录缺失；须单独重基线后再验收。测试使用 Native 服务/工具执行器替身，不等于真实 E4B 或设备 TRACE |
 
 #### Native 模型调用入口完整性清单
 
@@ -601,6 +601,7 @@ MainActivity 的 MethodChannel 入口与当前 UI 调用关系如下。所有 in
 
 补充判断：
 
+- PR #576 已从生产 Flutter/Android 调用链删除临床 RedFlag Gate/Preflight、Native boundary 及医学审核专用测试；临床 detector、医学审核和原 B 项不属于当前产品范围或发布条件。
 - `initialPrompt` 在 LocalAiInterviewScreen 初始化时只写入输入框；用户发送后仍进入正常路由，不是绕过 ReasoningRequest 的 Native 入口。
 - 工具结果回流已使用新的 reasoning requestId 和结构化 `executionResults`；执行结果回合的 capability allowlist 为空，不会把解释回合变成二次授权。
 - 图片/音频与文本主对话不同：Native 仍直接执行自由文本生成，且没有 ReasoningTurnLedger 双阶段确认；这是明确的生产旁路，不应被 Core-5 的 20 轮文本/工具测试覆盖结论掩盖。
