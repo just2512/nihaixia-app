@@ -7,6 +7,7 @@ import '../models/ai_evidence.dart';
 import '../models/evidence_ranking_decision.dart';
 import 'classic_evidence_pipeline.dart';
 import 'multi_source_evidence_pipeline.dart';
+import 'local_structured_evidence_pipeline.dart';
 import 'source_aware_legacy_evidence_ranker.dart';
 import 'guji_evidence_pipeline.dart';
 import 'medical_case_evidence_pipeline.dart';
@@ -53,6 +54,48 @@ class AssistantKnowledgeEvidenceReference {
   final String sourceId;
 }
 
+/// Metadata-only projection of a retrieved candidate before source decisions.
+/// Excerpts and local backlink paths remain in their existing bounded owners.
+class AssistantKnowledgeCandidateSnapshot {
+  AssistantKnowledgeCandidateSnapshot({
+    required this.sourceId,
+    required this.origin,
+    required this.materialKind,
+    required this.title,
+    required this.query,
+    required List<String> queryReasons,
+    required this.retrievalMethod,
+    required this.matchBasis,
+    required this.completeness,
+    required this.sourceKey,
+    required this.sourceLabel,
+    required this.hasLocalBacklink,
+    this.assetId,
+    this.bookId,
+    this.chapterIndex,
+    this.chunkId,
+    this.chapterPath,
+  }) : queryReasons = List.unmodifiable(queryReasons);
+
+  final String sourceId;
+  final CandidateEvidenceOrigin origin;
+  final String materialKind;
+  final String title;
+  final String query;
+  final List<String> queryReasons;
+  final String retrievalMethod;
+  final String matchBasis;
+  final CandidateEvidenceCompleteness completeness;
+  final String sourceKey;
+  final String sourceLabel;
+  final bool hasLocalBacklink;
+  final String? assetId;
+  final String? bookId;
+  final int? chapterIndex;
+  final String? chunkId;
+  final String? chapterPath;
+}
+
 /// Retrieval materialization plus the evidence IDs that were fully included
 /// in the bounded model context. Candidate IDs include KEEP and DROP decisions.
 class AssistantKnowledgeContextBuildResult {
@@ -61,8 +104,10 @@ class AssistantKnowledgeContextBuildResult {
     required List<String> knownEvidenceIds,
     required List<AssistantKnowledgeEvidenceReference> rankedEvidence,
     this.rankedEvidenceSet,
+    List<AssistantKnowledgeCandidateSnapshot> candidateSnapshot = const [],
   })  : knownEvidenceIds = List.unmodifiable(knownEvidenceIds),
-        rankedEvidence = List.unmodifiable(rankedEvidence);
+        rankedEvidence = List.unmodifiable(rankedEvidence),
+        candidateSnapshot = List.unmodifiable(candidateSnapshot);
 
   final String text;
   final List<String> knownEvidenceIds;
@@ -71,6 +116,9 @@ class AssistantKnowledgeContextBuildResult {
   /// Full source-ranking decisions, strategy and final context-budget accounting.
   /// This is App audit data; model-visible references remain [rankedEvidence].
   final RankedEvidenceSet? rankedEvidenceSet;
+
+  /// All pre-ranking candidates, retained only as App-side audit metadata.
+  final List<AssistantKnowledgeCandidateSnapshot> candidateSnapshot;
 
   String get evidenceIndexContext => rankedEvidence.isEmpty
       ? ''
@@ -108,6 +156,7 @@ class AssistantKnowledgeContextResult {
     this.knownEvidenceIds = const [],
     this.rankedEvidence = const [],
     this.rankedEvidenceSet,
+    this.candidateSnapshot = const [],
   });
 
   /// Complete retrieval materialization, retained for App-side audit/tests only.
@@ -127,6 +176,9 @@ class AssistantKnowledgeContextResult {
   /// Original KEEP/DROP decisions plus the final character-bound presentation
   /// outcome. It never changes source identity or verification state.
   final RankedEvidenceSet? rankedEvidenceSet;
+
+  /// Metadata-only candidate sequence before KEEP/DROP; never model context.
+  final List<AssistantKnowledgeCandidateSnapshot> candidateSnapshot;
 
   List<String> get rankedEvidenceIds =>
       List.unmodifiable(rankedEvidence.map((item) => item.evidenceId));
@@ -159,6 +211,49 @@ class AssistantKnowledgeContextResult {
 /// Bounded keyword retrieval from the app's bundled TCM knowledge data.
 /// Returns source-labelled excerpts, never a diagnosis or prescription.
 class AssistantKnowledgeContextBuilder {
+  static List<AssistantKnowledgeCandidateSnapshot> _snapshotCandidates(
+    CandidateEvidenceBatch combinedBatch,
+  ) {
+    final queryById = {
+      for (final query in combinedBatch.derivedQueries) query.queryId: query,
+    };
+    return List.unmodifiable([
+      for (final candidate in combinedBatch.candidates)
+        _snapshotCandidate(candidate, queryById),
+    ]);
+  }
+
+  static AssistantKnowledgeCandidateSnapshot _snapshotCandidate(
+    CandidateEvidence candidate,
+    Map<String, DerivedEvidenceQuery> queryById,
+  ) {
+    final query = queryById[candidate.queryId];
+    if (query == null) {
+      throw StateError(
+        'Candidate ${candidate.evidenceId} has no combined query provenance',
+      );
+    }
+    return AssistantKnowledgeCandidateSnapshot(
+      sourceId: candidate.sourceId,
+      origin: candidate.origin,
+      materialKind: candidate.materialKind,
+      title: candidate.title,
+      query: query.query,
+      queryReasons: query.reasons,
+      retrievalMethod: candidate.retrievalMethod,
+      matchBasis: candidate.matchBasis,
+      completeness: candidate.completeness,
+      sourceKey: candidate.sourceKey,
+      sourceLabel: candidate.sourceLabel,
+      hasLocalBacklink: candidate.hasLocalBacklink,
+      assetId: candidate.assetId,
+      bookId: candidate.bookId,
+      chapterIndex: candidate.chapterIndex,
+      chunkId: candidate.chunkId,
+      chapterPath: candidate.chapterPath,
+    );
+  }
+
   static const int maxContextCharacters = 6500;
   static const int maxFormulaEntries = 4;
   static const int maxHerbEntries = 5;
@@ -337,6 +432,7 @@ class AssistantKnowledgeContextBuilder {
         knownEvidenceIds: built.knownEvidenceIds,
         rankedEvidence: built.rankedEvidence,
         rankedEvidenceSet: built.rankedEvidenceSet,
+        candidateSnapshot: built.candidateSnapshot,
       );
     }
     final sourceIds = <String>{};
@@ -513,6 +609,7 @@ class AssistantKnowledgeContextBuilder {
       knownEvidenceIds: built.knownEvidenceIds,
       rankedEvidence: List.unmodifiable(resolvedRankedEvidence),
       rankedEvidenceSet: built.rankedEvidenceSet,
+      candidateSnapshot: built.candidateSnapshot,
     );
   }
 
@@ -609,16 +706,34 @@ class AssistantKnowledgeContextBuilder {
       );
     }
     final base = build(normalized);
+    final requestId = ClassicEvidencePipeline.nextRequestId();
+    final localExtraction = LocalStructuredEvidencePipeline.extract(
+      requestId: '${requestId}:local-structured',
+      originalQuery: normalized,
+      legacyContextText: base,
+    );
     if (!shouldRetrieveForQuery(normalized)) {
-      return AssistantKnowledgeContextBuildResult(
-        text: base,
-        knownEvidenceIds: const [],
-        rankedEvidence: const [],
+      final combinedBatch = MultiSourceEvidencePipeline.combine(
+        requestId: '${requestId}:all-sources',
+        originalQuery: normalized,
+        sourceBatches: [localExtraction.batch],
+      );
+      final rankedEvidenceSet = SourceAwareLegacyEvidenceRanker.rank(
+        combinedBatch.candidates,
+        requestId: combinedBatch.requestId,
+      );
+      return _buildLegacyStructuredOnlyResult(
+        base,
+        localExtraction,
+        combinedBatch,
+        rankedEvidenceSet,
       );
     }
     final buffer = StringBuffer();
+    final legacyBasePrefix =
+        base.length > 3500 ? base.substring(0, 3500) : base;
     if (base.isNotEmpty) {
-      buffer.writeln(base.length > 3500 ? base.substring(0, 3500) : base);
+      buffer.writeln(legacyBasePrefix);
     }
 
     final terms = <String>{normalized};
@@ -644,7 +759,7 @@ class AssistantKnowledgeContextBuilder {
 
     final queryProvenance = deriveClassicQueries(normalized);
     final evidenceBatch = await ClassicEvidencePipeline.retrieveClassicIndexCandidates(
-      requestId: ClassicEvidencePipeline.nextRequestId(),
+      requestId: requestId,
       originalQuery: normalized,
       derivedQueries: [
         for (var index = 0; index < queryProvenance.length; index++)
@@ -672,9 +787,13 @@ class AssistantKnowledgeContextBuilder {
     }).toList(growable: false);
 
     // Build source batches in the established user-visible legacy order:
-    // classic index, each explicitly requested Guji book, then medical cases.
+    // pre-rendered local structured entries, classic index, each explicitly
+    // requested Guji book, then explicitly requested medical cases.
     // Aggregation only namespaces IDs and preserves this caller-supplied order.
-    final sourceBatches = <CandidateEvidenceBatch>[evidenceBatch];
+    final sourceBatches = <CandidateEvidenceBatch>[
+      localExtraction.batch,
+      evidenceBatch,
+    ];
     final failedGujiBookIds = <String>{};
     for (final book in requestedGujiBooks) {
       final batchRequestId = '${evidenceBatch.requestId}:${book.id}';
@@ -733,7 +852,7 @@ class AssistantKnowledgeContextBuilder {
     }
 
     final combinedBatch = MultiSourceEvidencePipeline.combine(
-      requestId: '${evidenceBatch.requestId}:all-sources',
+      requestId: '${requestId}:all-sources',
       originalQuery: normalized,
       sourceBatches: sourceBatches,
     );
@@ -747,6 +866,23 @@ class AssistantKnowledgeContextBuilder {
     };
     final evidenceStartOffsets = <String, int>{};
     final evidenceEndOffsets = <String, int>{};
+    final localTruncatedEvidenceIds = <String>{};
+    final localOmittedEvidenceIds = <String>{};
+    for (final block in localExtraction.blocks) {
+      final evidenceId = '${combinedBatch.requestId}:'
+          '${localExtraction.batch.requestId}:'
+          '${block.candidate.evidenceId}';
+      if (block.startOffset >= legacyBasePrefix.length) {
+        localOmittedEvidenceIds.add(evidenceId);
+      } else if (block.endOffset > legacyBasePrefix.length) {
+        evidenceStartOffsets[evidenceId] = block.startOffset;
+        evidenceEndOffsets[evidenceId] = legacyBasePrefix.length;
+        localTruncatedEvidenceIds.add(evidenceId);
+      } else {
+        evidenceStartOffsets[evidenceId] = block.startOffset;
+        evidenceEndOffsets[evidenceId] = block.endOffset;
+      }
+    }
 
     // Keep the historical classic-index first-four cap and query/hit order.
     // No relevance score or source-verification promotion is introduced.
@@ -878,6 +1014,14 @@ class AssistantKnowledgeContextBuilder {
     final budgetOmittedEvidenceIds = <String>[];
     final budgetTruncatedEvidenceIds = <String>[];
     for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      if (localTruncatedEvidenceIds.contains(evidenceId)) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+        continue;
+      }
+      if (localOmittedEvidenceIds.contains(evidenceId)) {
+        budgetOmittedEvidenceIds.add(evidenceId);
+        continue;
+      }
       final startOffset = evidenceStartOffsets[evidenceId];
       final endOffset = evidenceEndOffsets[evidenceId];
       if (startOffset == null || endOffset == null) {
@@ -942,6 +1086,115 @@ class AssistantKnowledgeContextBuilder {
           .toList(growable: false),
       rankedEvidence: rankedEvidence,
       rankedEvidenceSet: presentationRankedEvidenceSet,
+      candidateSnapshot: _snapshotCandidates(combinedBatch),
+    );
+  }
+
+  static AssistantKnowledgeContextBuildResult _buildLegacyStructuredOnlyResult(
+    String base,
+    LegacyStructuredEvidenceExtraction extraction,
+    CandidateEvidenceBatch combinedBatch,
+    RankedEvidenceSet rankedEvidenceSet,
+  ) {
+    final leadingTrim = base.length - base.trimLeft().length;
+    final result = base.trim();
+    final boundedResult = result.length <= maxContextCharacters
+        ? result
+        : result.substring(0, maxContextCharacters);
+    final evidenceStartOffsets = <String, int>{};
+    final evidenceEndOffsets = <String, int>{};
+    final localTruncatedEvidenceIds = <String>{};
+    for (final block in extraction.blocks) {
+      final evidenceId = '${combinedBatch.requestId}:'
+          '${extraction.batch.requestId}:'
+          '${block.candidate.evidenceId}';
+      evidenceStartOffsets[evidenceId] = block.startOffset;
+      evidenceEndOffsets[evidenceId] = block.endOffset;
+      // build() applies its own 6,500-character cap before this adapter sees
+      // the text. A final block ending exactly at the cap may be partial.
+      if (base.length >= maxContextCharacters &&
+          block.endOffset == base.length) {
+        localTruncatedEvidenceIds.add(evidenceId);
+      }
+    }
+
+    final presentedEvidenceIds = <String>{};
+    final budgetOmittedEvidenceIds = <String>[];
+    final budgetTruncatedEvidenceIds = <String>[];
+    final candidatesById = {
+      for (final candidate in combinedBatch.candidates)
+        candidate.evidenceId: candidate,
+    };
+    for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds) {
+      if (localTruncatedEvidenceIds.contains(evidenceId)) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+        continue;
+      }
+      final startOffset = evidenceStartOffsets[evidenceId];
+      final endOffset = evidenceEndOffsets[evidenceId];
+      if (startOffset == null || endOffset == null) {
+        budgetOmittedEvidenceIds.add(evidenceId);
+        continue;
+      }
+      final visibleStart = startOffset - leadingTrim;
+      final visibleEnd = endOffset - leadingTrim;
+      if (visibleEnd <= boundedResult.length) {
+        presentedEvidenceIds.add(evidenceId);
+      } else if (visibleStart < boundedResult.length) {
+        budgetTruncatedEvidenceIds.add(evidenceId);
+      } else {
+        budgetOmittedEvidenceIds.add(evidenceId);
+      }
+    }
+
+    final rankedEvidence = <AssistantKnowledgeEvidenceReference>[
+      for (final evidenceId in rankedEvidenceSet.orderedEvidenceIds)
+        if (presentedEvidenceIds.contains(evidenceId))
+          AssistantKnowledgeEvidenceReference(
+            evidenceId: evidenceId,
+            sourceId: candidatesById[evidenceId]!.sourceId,
+          ),
+    ];
+    final hasPresentationOmissions =
+        budgetOmittedEvidenceIds.isNotEmpty ||
+            budgetTruncatedEvidenceIds.isNotEmpty;
+    final presentationRankedEvidenceSet = RankedEvidenceSet(
+      requestId: rankedEvidenceSet.requestId,
+      strategyId: rankedEvidenceSet.strategyId,
+      strategyVersion: rankedEvidenceSet.strategyVersion,
+      decisions: rankedEvidenceSet.decisions,
+      orderedEvidenceIds: rankedEvidenceSet.orderedEvidenceIds,
+      budget: EvidenceBudgetSnapshot(
+        unit: EvidenceBudgetUnit.characters,
+        limit: maxContextCharacters,
+        used: boundedResult.length,
+        applied: true,
+        omittedEvidenceIds: budgetOmittedEvidenceIds,
+        truncatedEvidenceIds: budgetTruncatedEvidenceIds,
+      ),
+      status: rankedEvidenceSet.orderedEvidenceIds.isEmpty
+          ? RankedEvidenceSetStatus.noUsableEvidence
+          : hasPresentationOmissions
+              ? RankedEvidenceSetStatus.budgetTruncated
+              : RankedEvidenceSetStatus.ranked,
+      diagnostics: [
+        ...rankedEvidenceSet.diagnostics,
+        'CONTEXT_PRESENTATION_BUDGET_CHARACTERS_APPLIED',
+        if (budgetOmittedEvidenceIds.isNotEmpty)
+          'CONTEXT_PRESENTATION_EVIDENCE_OMITTED',
+        if (budgetTruncatedEvidenceIds.isNotEmpty)
+          'CONTEXT_PRESENTATION_EVIDENCE_TRUNCATED',
+        'CONTEXT_BUDGET_USED_UTF16_CODE_UNITS',
+      ],
+    );
+    return AssistantKnowledgeContextBuildResult(
+      text: boundedResult,
+      knownEvidenceIds: combinedBatch.candidates
+          .map((candidate) => candidate.evidenceId)
+          .toList(growable: false),
+      rankedEvidence: rankedEvidence,
+      rankedEvidenceSet: presentationRankedEvidenceSet,
+      candidateSnapshot: _snapshotCandidates(combinedBatch),
     );
   }
 

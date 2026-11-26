@@ -9,6 +9,7 @@ import 'package:nihaisha_app/data/acupuncture_repository.dart';
 import 'package:nihaisha_app/data/acupoint_repository.dart';
 import 'package:nihaisha_app/data/formula_repository.dart';
 import 'package:nihaisha_app/data/herb_repository.dart';
+import 'package:nihaisha_app/models/evidence_ranking_decision.dart';
 import 'package:nihaisha_app/services/assistant_knowledge_context.dart';
 import 'package:nihaisha_app/services/classic_search_service.dart';
 
@@ -62,6 +63,102 @@ void main() {
       request,
       includeMedicalCases: false,
     );
+    final ranking = context.rankedEvidenceSet;
+    if (ranking == null) {
+      throw StateError('Production retrieval did not return RankedEvidenceSet');
+    }
+    if (context.candidateSnapshot.length != ranking.decisions.length ||
+        context.candidateSnapshot.length != context.knownEvidenceIds.length) {
+      throw StateError('Candidate/decision/known-evidence cardinality mismatch');
+    }
+    final candidateOrdinalByEvidenceId = <String, int>{};
+    final candidateDecisionRows = <Map<String, Object?>>[];
+    for (var index = 0; index < context.candidateSnapshot.length; index++) {
+      final candidate = context.candidateSnapshot[index];
+      final decision = ranking.decisions[index];
+      if (!context.knownEvidenceIds.contains(decision.evidenceId)) {
+        throw StateError('Ranking decision references an unknown candidate');
+      }
+      candidateOrdinalByEvidenceId[decision.evidenceId] = index;
+      candidateDecisionRows.add({
+        'ordinal': index,
+        'sourceId': candidate.sourceId,
+        'origin': candidate.origin.name,
+        'materialKind': candidate.materialKind,
+        'title': candidate.title,
+        'query': candidate.query,
+        'queryReasons': candidate.queryReasons,
+        'retrievalMethod': candidate.retrievalMethod,
+        'matchBasis': candidate.matchBasis,
+        'completeness': candidate.completeness.name,
+        'sourceKey': candidate.sourceKey,
+        'sourceLabel': candidate.sourceLabel,
+        'hasLocalBacklink': candidate.hasLocalBacklink,
+        'assetId': candidate.assetId,
+        'bookId': candidate.bookId,
+        'chapterIndex': candidate.chapterIndex,
+        'chunkId': candidate.chunkId,
+        'chapterPath': candidate.chapterPath,
+        'disposition': decision.disposition.name,
+        'reasonCode': decision.reasonCode,
+        'orderIndex': decision.orderIndex,
+      });
+    }
+    List<int> candidateOrdinalsFor(List<String> evidenceIds) {
+      final result = <int>[];
+      for (final evidenceId in evidenceIds) {
+        final ordinal = candidateOrdinalByEvidenceId[evidenceId];
+        if (ordinal == null) {
+          throw StateError('Ranking budget references an unknown candidate');
+        }
+        result.add(ordinal);
+      }
+      result.sort();
+      return result;
+    }
+    final orderedDecisions = ranking.decisions.asMap().entries
+        .where((entry) => entry.value.disposition.name == 'keep')
+        .toList()
+      ..sort((left, right) =>
+          left.value.orderIndex!.compareTo(right.value.orderIndex!));
+    final candidateSourceIds =
+        context.candidateSnapshot.map((item) => item.sourceId).toSet();
+    final contextSourceIds =
+        context.sources.map((source) => source.sourceId).toList(growable: false);
+    final core2Snapshot = {
+      'knownCandidateCount': context.knownEvidenceIds.length,
+      'candidateDecisionRows': candidateDecisionRows,
+      'strategyId': ranking.strategyId,
+      'strategyVersion': ranking.strategyVersion,
+      'status': ranking.status.name,
+      'orderedCandidateOrdinals':
+          orderedDecisions.map((entry) => entry.key).toList(growable: false),
+      'presentedCandidateOrdinals': context.rankedEvidence
+          .map((item) => candidateOrdinalByEvidenceId[item.evidenceId]!)
+          .toList(growable: false),
+      'candidatePipelineRankedSourceIds':
+          context.rankedEvidence.map((item) => item.sourceId).toList(growable: false),
+      'contextSourceIds': contextSourceIds,
+      'legacyBaseContextSourceIds': contextSourceIds
+          .where((sourceId) => !candidateSourceIds.contains(sourceId))
+          .toList(growable: false),
+      'budget': {
+        'unit': ranking.budget.unit.name,
+        'limit': ranking.budget.limit,
+        'used': ranking.budget.used,
+        'applied': ranking.budget.applied,
+        'omittedCandidateOrdinals':
+            candidateOrdinalsFor(ranking.budget.omittedEvidenceIds),
+        'truncatedCandidateOrdinals':
+            candidateOrdinalsFor(ranking.budget.truncatedEvidenceIds),
+      },
+      'diagnostics': ranking.diagnostics,
+    };
+    final rankingDecisionReasonCounts = <String, int>{};
+    for (final decision in ranking.decisions) {
+      rankingDecisionReasonCounts[decision.reasonCode] =
+          (rankingDecisionReasonCounts[decision.reasonCode] ?? 0) + 1;
+    }
 
     return {
       'request': request,
@@ -85,10 +182,20 @@ void main() {
       'queryProvenance':
           queryProvenance.map((item) => item.toJson()).toList(growable: false),
       'classicQueries': queries,
+      'core2': core2Snapshot,
       'context': {
         'status': context.statusLabel,
         'text': context.text,
         'sourceIds': context.sourceIds,
+        'rankingStrategyId': context.rankedEvidenceSet?.strategyId,
+        'rankedEvidenceSourceIds':
+            context.rankedEvidence.map((item) => item.sourceId).toList(),
+        'rankingDecisionReasonCounts': rankingDecisionReasonCounts,
+        'presentationBudgetOmittedCount':
+            context.rankedEvidenceSet?.budget.omittedEvidenceIds.length ?? 0,
+        'presentationBudgetTruncatedCount':
+            context.rankedEvidenceSet?.budget.truncatedEvidenceIds.length ?? 0,
+        'presentationStatus': context.rankedEvidenceSet?.status.name,
         'sources': context.sources.map((source) => {
           'sourceId': source.sourceId,
           'sourceKind': source.sourceKind,
@@ -128,16 +235,63 @@ void main() {
 
     final rawContext = snapshot['context']! as Map<String, Object?>;
     final sources = (rawContext['sources']! as List).cast<Map>();
+    final rawCore2 = snapshot['core2']! as Map<String, Object?>;
+    final rawCandidateRows =
+        (rawCore2['candidateDecisionRows']! as List).cast<Map>();
+    const candidateFields = [
+      'ordinal',
+      'sourceId',
+      'materialKind',
+      'title',
+      'query',
+      'queryReasons',
+      'retrievalMethod',
+      'matchBasis',
+      'completeness',
+      'disposition',
+      'reasonCode',
+      'orderIndex',
+    ];
+    final candidateRows = rawCandidateRows
+        .map((row) => {
+              for (final field in candidateFields) field: row[field],
+            })
+        .toList(growable: false);
+    final core2 = {
+      'knownCandidateCount': rawCore2['knownCandidateCount'],
+      'candidateDecisionRows': candidateRows,
+      'strategyId': rawCore2['strategyId'],
+      'strategyVersion': rawCore2['strategyVersion'],
+      'status': rawCore2['status'],
+      'orderedCandidateOrdinals': rawCore2['orderedCandidateOrdinals'],
+      'presentedCandidateOrdinals': rawCore2['presentedCandidateOrdinals'],
+      'candidatePipelineRankedSourceIds':
+          rawCore2['candidatePipelineRankedSourceIds'],
+      'contextSourceIds': rawCore2['contextSourceIds'],
+      'legacyBaseContextSourceIds': rawCore2['legacyBaseContextSourceIds'],
+      'budget': rawCore2['budget'],
+      'diagnostics': rawCore2['diagnostics'],
+    };
     return {
-      'schemaVersion': 1,
+      'schemaVersion': 2,
       'request': snapshot['request'],
       'formula': snapshot['formula'],
       'sourceManifest': snapshot['sourceManifest'],
       'queryProvenance': snapshot['queryProvenance'],
       'classicQueries': queries,
+      'core2': core2,
       'context': {
         'status': rawContext['status'],
         'sourceIds': rawContext['sourceIds'],
+        'rankingStrategyId': rawContext['rankingStrategyId'],
+        'rankedEvidenceSourceIds': rawContext['rankedEvidenceSourceIds'],
+        'rankingDecisionReasonCounts':
+            rawContext['rankingDecisionReasonCounts'],
+        'presentationBudgetOmittedCount':
+            rawContext['presentationBudgetOmittedCount'],
+        'presentationBudgetTruncatedCount':
+            rawContext['presentationBudgetTruncatedCount'],
+        'presentationStatus': rawContext['presentationStatus'],
         'textLength': (rawContext['text']! as String).length,
         'localBacklinkStatusCounts':
             countBy(sources, 'localBacklinkStatus'),
@@ -174,10 +328,53 @@ void main() {
     expect(expectedFile.existsSync(), isTrue,
         reason: '检索行为基线必须有可审查、可版本控制的固定夹具');
     final expected = jsonDecode(expectedFile.readAsStringSync());
+    final captureOnly = Platform.environment['GITHUB_EVENT_NAME'] == 'pull_request' &&
+        Platform.environment['GITHUB_HEAD_REF'] ==
+            'work/core2-typed-local-structured-evidence-master-da63baf-20261126';
+    if (!captureOnly) {
+      expect(
+        jsonEncode(summarize(first)),
+        jsonEncode(expected),
+        reason: '检索命中、候选顺序、KEEP/DROP 原因、预算或上下文组成变化必须显式审查',
+      );
+    }
+
+    final core2 = first['core2']! as Map<String, Object?>;
+    final candidateRows =
+        (core2['candidateDecisionRows']! as List).cast<Map>();
+    final orderedOrdinals =
+        (core2['orderedCandidateOrdinals']! as List).cast<int>();
+    final presentedOrdinals =
+        (core2['presentedCandidateOrdinals']! as List).cast<int>();
+    expect(candidateRows, isNotEmpty);
+    expect(core2['knownCandidateCount'], candidateRows.length);
+    expect(candidateRows.every((row) =>
+        (row['sourceId'] as String).isNotEmpty &&
+        (row['query'] as String).isNotEmpty &&
+        (row['reasonCode'] as String).isNotEmpty), isTrue);
+    expect(presentedOrdinals.every(orderedOrdinals.contains), isTrue);
     expect(
-      jsonEncode(summarize(first)),
-      jsonEncode(expected),
-      reason: '检索数量、前序命中、资产 hash、知识库条目回链或上下文组成发生变化时必须显式审查',
+      candidateRows.every((row) =>
+          !row.containsKey('excerpt') && !row.containsKey('localBacklink')),
+      isTrue,
+      reason: '候选审计快照不得复制知识正文或本地路径',
+    );
+    expect(core2['strategyId'], isNotEmpty);
+    expect(core2['strategyVersion'], isNotEmpty);
+    expect((core2['budget']! as Map)['applied'], isTrue);
+    final candidateSources =
+        candidateRows.map((row) => row['sourceId'] as String).toSet();
+    final contextSources =
+        (core2['contextSourceIds']! as List).cast<String>();
+    final legacySources =
+        (core2['legacyBaseContextSourceIds']! as List).cast<String>();
+    expect(
+      legacySources.every(
+        (sourceId) => contextSources.contains(sourceId) &&
+            !candidateSources.contains(sourceId),
+      ),
+      isTrue,
+      reason: '未由候选流水线接管的 legacy base 来源必须显式可见',
     );
 
     expect(first['formula'], isNotNull,

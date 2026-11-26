@@ -10,6 +10,11 @@ class SourceAwareLegacyEvidenceRanker {
   static const String strategyId = 'LEGACY_SOURCE_ORDER_WITH_PER_SOURCE_LIMITS';
   static const String strategyVersion = '1';
 
+  static const int formulaLimit = 4;
+  static const int herbLimit = 5;
+  static const int acupunctureLimit = 3;
+  static const int acupointLimit = 3;
+  static const int neijingLimit = 3;
   static const int classicIndexLimit = 4;
   static const int medicalCaseLimit = 2;
   static const int gujiChapterLimitPerBook = 2;
@@ -117,6 +122,51 @@ class SourceAwareLegacyEvidenceRanker {
 
   static _SourceLimitPolicy? _policyFor(CandidateEvidence candidate) {
     switch (candidate.retrievalMethod) {
+      case 'LOCAL_FORMULA_LEGACY_MATCH':
+        return const _SourceLimitPolicy(
+          groupKey: 'local-formula',
+          limit: formulaLimit,
+          keepReasonCode: 'LEGACY_FORMULA_ORDER_WITHIN_LIMIT',
+          keepReason: 'Preserved the legacy formula candidate order and four-entry cap.',
+          dropReasonCode: 'LEGACY_FORMULA_FOUR_ENTRY_LIMIT',
+          dropReason: 'Excluded by the existing four-formula limit.',
+        );
+      case 'LOCAL_HERB_LEGACY_MATCH':
+        return const _SourceLimitPolicy(
+          groupKey: 'local-herb',
+          limit: herbLimit,
+          keepReasonCode: 'LEGACY_HERB_ORDER_WITHIN_LIMIT',
+          keepReason: 'Preserved the legacy herb candidate order and five-entry cap.',
+          dropReasonCode: 'LEGACY_HERB_FIVE_ENTRY_LIMIT',
+          dropReason: 'Excluded by the existing five-herb limit.',
+        );
+      case 'LOCAL_ACUPUNCTURE_LEGACY_MATCH':
+        return const _SourceLimitPolicy(
+          groupKey: 'local-acupuncture',
+          limit: acupunctureLimit,
+          keepReasonCode: 'LEGACY_ACUPUNCTURE_ORDER_WITHIN_LIMIT',
+          keepReason: 'Preserved the legacy acupuncture candidate order and three-entry cap.',
+          dropReasonCode: 'LEGACY_ACUPUNCTURE_THREE_ENTRY_LIMIT',
+          dropReason: 'Excluded by the existing three-acupuncture-entry limit.',
+        );
+      case 'LOCAL_ACUPOINT_LEGACY_MATCH':
+        return const _SourceLimitPolicy(
+          groupKey: 'local-acupoint',
+          limit: acupointLimit,
+          keepReasonCode: 'LEGACY_ACUPOINT_ORDER_WITHIN_LIMIT',
+          keepReason: 'Preserved the legacy acupoint candidate order and three-entry cap.',
+          dropReasonCode: 'LEGACY_ACUPOINT_THREE_ENTRY_LIMIT',
+          dropReason: 'Excluded by the existing three-acupoint limit.',
+        );
+      case 'LOCAL_NEIJING_LEGACY_MATCH':
+        return const _SourceLimitPolicy(
+          groupKey: 'local-neijing',
+          limit: neijingLimit,
+          keepReasonCode: 'LEGACY_NEIJING_ORDER_WITHIN_LIMIT',
+          keepReason: 'Preserved the legacy Neijing candidate order and three-entry cap.',
+          dropReasonCode: 'LEGACY_NEIJING_THREE_ENTRY_LIMIT',
+          dropReason: 'Excluded by the existing three-Neijing-entry limit.',
+        );
       case 'CLASSIC_SUBSTRING_INDEX':
         return const _SourceLimitPolicy(
           groupKey: 'classic-index',

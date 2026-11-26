@@ -80,6 +80,48 @@ void main() {
     expect(ranked.budget.used, isNull);
   });
 
+  test('registers legacy limits for every local structured evidence family', () {
+    final candidates = [
+      for (var i = 1; i <= 5; i++)
+        _candidate(id: 'formula-$i', method: 'LOCAL_FORMULA_LEGACY_MATCH'),
+      for (var i = 1; i <= 6; i++)
+        _candidate(id: 'herb-$i', method: 'LOCAL_HERB_LEGACY_MATCH'),
+      for (var i = 1; i <= 4; i++)
+        _candidate(id: 'acupuncture-$i', method: 'LOCAL_ACUPUNCTURE_LEGACY_MATCH'),
+      for (var i = 1; i <= 4; i++)
+        _candidate(id: 'acupoint-$i', method: 'LOCAL_ACUPOINT_LEGACY_MATCH'),
+      for (var i = 1; i <= 4; i++)
+        _candidate(id: 'neijing-$i', method: 'LOCAL_NEIJING_LEGACY_MATCH'),
+    ];
+
+    final ranked = SourceAwareLegacyEvidenceRanker.rank(
+      candidates,
+      requestId: 'combined-local',
+    );
+
+    expect(ranked.orderedEvidenceIds, [
+      for (var i = 1; i <= 4; i++) 'formula-$i',
+      for (var i = 1; i <= 5; i++) 'herb-$i',
+      for (var i = 1; i <= 3; i++) 'acupuncture-$i',
+      for (var i = 1; i <= 3; i++) 'acupoint-$i',
+      for (var i = 1; i <= 3; i++) 'neijing-$i',
+    ]);
+    expect(
+      ranked.decisions
+          .where((item) => item.disposition == EvidenceDecisionDisposition.drop)
+          .map((item) => item.reasonCode),
+      [
+        'LEGACY_FORMULA_FOUR_ENTRY_LIMIT',
+        'LEGACY_HERB_FIVE_ENTRY_LIMIT',
+        'LEGACY_ACUPUNCTURE_THREE_ENTRY_LIMIT',
+        'LEGACY_ACUPOINT_THREE_ENTRY_LIMIT',
+        'LEGACY_NEIJING_THREE_ENTRY_LIMIT',
+      ],
+    );
+    expect(ranked.budget.applied, isFalse);
+    expect(ranked.budget.unit, EvidenceBudgetUnit.unknown);
+  });
+
   test('drops unsupported retrieval methods and Guji candidates without book identity', () {
     final ranked = SourceAwareLegacyEvidenceRanker.rank(
       [
