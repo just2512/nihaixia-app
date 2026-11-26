@@ -7771,31 +7771,31 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
         throw StateError('历史会话缺少有效的持久化 ID，已阻止 Native 恢复。');
       }
       if (!mounted || generation != _historyRestoreGeneration) return;
-    if (!await _validateActiveContext(
-      traceContext: AiTraceContext.disabled(),
-      route: 'history_restore',
-    )) {
-      _pendingHistoryTranscript = null;
-      _pendingHistoryUserMessages = const [];
-      return;
-    }
-    if (!mounted || generation != _historyRestoreGeneration) return;
-    try {
-      await _service.restoreConversation(
-        conversationId: conversationId,
-        transcript: transcript,
-        userMessages: userMessages,
-      );
-      if (!mounted || generation != _historyRestoreGeneration) return;
-      setState(() {
+      if (!await _validateActiveContext(
+        traceContext: AiTraceContext.disabled(),
+        route: 'history_restore',
+      )) {
         _pendingHistoryTranscript = null;
         _pendingHistoryUserMessages = const [];
-        _error = null;
-      });
-    } catch (error) {
+        return;
+      }
       if (!mounted || generation != _historyRestoreGeneration) return;
-      setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
-    }
+      try {
+        await _service.restoreConversation(
+          conversationId: conversationId,
+          transcript: transcript,
+          userMessages: userMessages,
+        );
+        if (!mounted || generation != _historyRestoreGeneration) return;
+        setState(() {
+          _pendingHistoryTranscript = null;
+          _pendingHistoryUserMessages = const [];
+          _error = null;
+        });
+      } catch (error) {
+        if (!mounted || generation != _historyRestoreGeneration) return;
+        setState(() => _error = '历史记录已显示，但模型上下文恢复失败：$error。请重新选择历史记录重试。');
+      }
     } finally {
       final shouldRestoreLatestSelection =
           mounted &&
@@ -7807,6 +7807,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       }
     }
   }
+
   Future<void> _recordTurnPersistenceNotStarted(
     AiTraceContext traceContext, {
     required String errorCode,
