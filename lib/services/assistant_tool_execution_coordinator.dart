@@ -43,9 +43,13 @@ class AssistantToolExecutionCoordinatorResult {
   final ToolExecutionPlan? plan;
   final ReasoningExecutionResult? executionResult;
 
+  /// True when a business executor may have been reached.
+  ///
+  /// A dispatcher preflight rejection is definitely pre-execution and returns
+  /// false. An exception after dispatch starts remains true because a side
+  /// effect may have occurred even though its terminal state is UNKNOWN.
   bool get wasDispatched =>
-      status == AssistantToolExecutionCoordinatorStatus.claimAcquiredAndDispatched ||
-      status == AssistantToolExecutionCoordinatorStatus.dispatchRejected;
+      status == AssistantToolExecutionCoordinatorStatus.claimAcquiredAndDispatched;
 
   bool get canContinueReasoning => executionResult != null;
 }
