@@ -41,7 +41,7 @@
 - `TEST`：测试文件、测试名称、断言内容和实际运行结果。
 - `CI`：workflow、run ID、commit SHA、结论及失败步骤。
 - `TRACE`：设备、系统、App SHA、模型版本、backend、场景 ID、轮次和日志关联。
-- `REVIEW`：医学背景人员对红旗词表、处置文案或其他专业内容的审核记录。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - `REVIEW`：医学背景人员对红旗词表、处置文案或其他专业内容的审核记录。
 
 ## 3. 总体工作流状态
 
@@ -75,17 +75,18 @@
 
 **A 验收：** 不允许状态错乱、并发重入导致会话污染、空回复被当作成功、恢复后静默丢失上下文、取消后错误复用旧 Conversation。Native 执行状态未知时不自动重放。真机每轮可追溯；未实测保持 `UNKNOWN`。
 
-### B. 全模式红旗安全门禁
+### B. 全模式红旗安全门禁（历史章节，已废止）
+> [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
 - [ ] 列出自动、问诊、学习、工具、玄学五种模式所有模型调用入口。
 - [ ] 覆盖 initialPrompt、历史续聊、附件转写/图像描述、工具结果回流等旁路。
 - [ ] 对明确红旗在模型调用和普通业务路由之前确定性拦截。
 - [ ] 区分本人、他人、知识性提问、假设句、引用、既往史、否定表达和时间信息。
 - [ ] 歧义输入先澄清；不得让模型 prompt 决定安全放行。
-- [ ] 医学词表、阈值和处置文案经医学背景人员审核并留存版本/审核记录。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - [ ] 医学词表、阈值和处置文案经医学背景人员审核并留存版本/审核记录。
 - [ ] 为每个入口建立红旗正向、否定、他人、历史、知识性提问和歧义测试。
 
-**B 验收：** 所有入口无绕过；明确高危输入在任何模型调用前命中；歧义不误判为安全放行；知识讨论/他人症状不会被静默当作用户本人急症；所有安全测试通过。任何红旗门禁缺口阻断相关发布。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] **B 验收：** 所有入口无绕过；明确高危输入在任何模型调用前命中；歧义不误判为安全放行；知识讨论/他人症状不会被静默当作用户本人急症；所有安全测试通过。任何红旗门禁缺口阻断相关发布。
 
 ### C. 检索黄金行为基线
 
@@ -217,7 +218,7 @@
 | ID | 状态 | 当前已核验事实 | 未闭环 / 下一项 |
 |---|---|---|---|
 | A 多轮稳定性与 Native 生命周期 | PARTIAL | `MainActivity.runAiTask` 使用单线程 `aiExecutor`；Native 多轮失败恢复此前成功轮次，不自动重放当前 UNKNOWN 请求；`DatabaseHelper.saveAssistantTurn` 已用 SQLite transaction 写入 user/assistant pair；`LocalAiInterviewScreen._persistSuccessfulTurn` 对历史持久化失败显示可见错误 | PR #77 故障注入测试待 CI；`onDestroy` 只排队释放并 shutdown executor，未等待 teardown 完成；Find N2 GPU/CPU 各 20 轮和跨层 TRACE UNKNOWN |
-| B 全模式红旗安全门禁 | PARTIAL / RELEASE BLOCKED | `RedFlagPreflight` 已有 source、detector/rule-set version provenance 与 subject/time/polarity 状态契约；PR #71 已合并，测试在 run `43143105547` 通过 | 没有自然语言 detector；尚未接入所有模型调用/普通业务路由入口；没有医学词表、阈值和处置文案审核记录。不得用人工构造的 `RedFlagAssessment` 单测替代真实 detector |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索黄金行为基线 | PARTIAL | `test/ai_retrieval_golden_snapshot_test.dart` 与 `test/fixtures/ai_retrieval_golden_metadata.json` 已形成可版本控制基线；run `43143105547` 的 golden snapshot 步骤成功，artifact `13911060760` 可复核 | 本轮快照：原始自然语言 query 命中 0；派生 query “桂枝汤” 196、“桂枝” 294、“伤寒论” 121；上下文 RETRIEVED、9 个 source IDs、纸本/卷页定位 9 项均 MISSING。上下文含 4 个方剂 ID，其中 3 个并非用户直接点名；当前实现会按组成药名扩展方剂候选，需评估相关性，但在完成对照测试前不改变排序/检索语义 |
 | D Headless Capability | PARTIAL | `AssistantToolRouter` 当前 24 项注册；结构化辨证在统一对话内联执行，其余 23 项仍为 Widget/page builder；参数验证目前为 date/integer/choice/text 基础校验 | 未发现统一 Headless execute/result 协议、统一权限/取消/超时和结果回传证据；先逐项盘点真实业务函数及现有行为基线，再选最小适配器，不以页面打开冒充执行 |
 | E 本地 AI 数据保护 | PARTIAL | PR #73 已提供 TRACE 停止/flush、清理期间生命周期协调；PR #76 增加设置入口；PR #78 将新建图片/录音迁移到 AI-owned 目录。SQLite 清理测试覆盖 AI 会话表清理和非 AI 数据保留 | #76/#78 CI 未通过前不合并；旧共享 temp 孤儿附件没有可靠归属证据；Android Manifest 当前未显式声明 `allowBackup`、`fullBackupContent` 或 `dataExtractionRules`，合并 Manifest/备份行为尚未核验。不得未经独立决策全局禁用 Android backup |
@@ -233,7 +234,7 @@
 5. E：核查旧共享 temp 附件的历史命名和持久化引用；只对可证明属于 AI 的路径制定清理策略。补充 Android merged manifest / backup 行为证据；备份策略变更单独评估。
 6. A：补 Native Activity destroy / executor teardown 可注入测试；继续核对 SQLite、Flutter UI、Native 成功轮次的一致性。真机 GPU/CPU TRACE 必须由 Find N2 实测提供。
 7. F：冻结跨层 trace_id 契约后，再按输入→门禁→路由→检索→模型→工具→展示→持久化逐段接入；TRACE 默认关闭且不记录敏感正文。
-8. B：在没有医学审核记录前，不引入未经审核的词表/阈值/处置文案；先完成 detector 入口清单和 fail-closed 接入设计，避免静默放行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 8. B：在没有医学审核记录前，不引入未经审核的词表/阈值/处置文案；先完成 detector 入口清单和 fail-closed 接入设计，避免静默放行。
 9. C：围绕当前黄金快照中方剂候选扩展行为补相关性对照用例；保持原始基线，任何检索语义变化必须显式更新 golden fixture 并说明影响。
 10. D：按 24 项工具逐项建立输入/输出、参数、权限、取消、错误和执行证据表；只对已有确定性业务函数建立 Headless adapter。
 11. 每个已合并代码切片立即更新本台账；真机未测、merged manifest 未核验、医学审核缺失等项目继续保持 PARTIAL/UNKNOWN。
@@ -265,7 +266,7 @@ PR #78 现在同时包括：
 ### 11.3 A-G 状态更新
 
 - A：原子轮次事务故障注入测试已合并并通过 Flutter/Android CI；Native Activity teardown 与 Find N2 真机一致性仍 PARTIAL/UNKNOWN。
-- B：仍 PARTIAL / RELEASE BLOCKED。已定位所有 Flutter 生产入口：活动结构化问诊答案、工具路由、文本 sendMessage、图片 sendImage、录音 sendAudio、症状整理 extractSymptoms；Native 对应 MethodChannel 入口仍无真实自然语言/多模态 detector。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B：仍 PARTIAL / RELEASE BLOCKED。已定位所有 Flutter 生产入口：活动结构化问诊答案、工具路由、文本 sendMessage、图片 sendImage、录音 sendAudio、症状整理 extractSymptoms；Native 对应 MethodChannel 入口仍无真实自然语言/多模态 detector。
 - C：黄金基线不变；候选相关性问题继续待对照用例，不直接改排序。
 - D：24 项注册表完整清单已追加至能力盘点；23 项仍是页面 builder，Headless 协议缺失。
 - E：#76/#78 当前 head 的 CI 未结束，不合并；旧版精确录音清理已加入 #78。
@@ -278,7 +279,7 @@ PR #78 现在同时包括：
 2. 完成 #78 当前 head 录音重试、图片复制/安全清理、旧录音 allowlist 测试及全量 Flutter/Android CI；成功后合并。
 3. 合并后重新读取 master，更新 #79 文档基线和 PR/CI 状态。
 4. 继续 A Native teardown 矩阵、F trace_id 契约、B detector 入口门禁设计、C 检索相关性对照、D Headless 适配。
-5. 真机、医学审核、Android merged manifest/backup 未取得证据的项目继续保持 UNKNOWN / RELEASE BLOCKED。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 5. 真机、医学审核、Android merged manifest/backup 未取得证据的项目继续保持 UNKNOWN / RELEASE BLOCKED。
 
 
 ## 12. F：trace_id 端到端契约已冻结为文档基线（尚未实现）
@@ -379,7 +380,7 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 ### 9.4 A-G 当前状态与可执行缺口
 
 - A：PARTIAL。SQLite 成功轮次原子写入测试已合并；PR #80 在当前 master 上重新验收。Find N2 GPU/CPU 各至少 20 轮、图片/语音和进程恢复 TRACE 仍 UNKNOWN。
-- B：PARTIAL / RELEASE BLOCKED。结构化 preflight 与 provenance 存在，但当前代码没有经医学审核的自然语言 detector；不能将无 detector 的输入当作 CLEAR，也不能自行编造医学词表/阈值/处置文案。下一步是全入口调用图和 fail-closed 接入设计，正式词表等待医学审核。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B：PARTIAL / RELEASE BLOCKED。结构化 preflight 与 provenance 存在，但当前代码没有经医学审核的自然语言 detector；不能将无 detector 的输入当作 CLEAR，也不能自行编造医学词表/阈值/处置文案。下一步是全入口调用图和 fail-closed 接入设计，正式词表等待医学审核。
 - C：PARTIAL。黄金快照 CI 可执行；PR #81 当前行为变化未通过快照回归，暂停合并。
 - D：PARTIAL。按审计报告，24 项注册能力中 23 项为页面 builder；需继续逐项确认 Page Tool / Headless / Executed，不能将页面打开计作工具执行。
 - E：PARTIAL。设置入口已合并；PR #78 当前基线附件归属迁移正在 CI。旧共享临时目录中无法可靠归属的图片、Android 备份副本及外部导出副本不在可证明清理边界；SQLite 数据库混合 AI 与非 AI 数据，禁止直接排除整个数据库备份或全局关闭备份。
@@ -490,7 +491,7 @@ PR #76 已 squash merge，提交 `eaa83b440ddb1299a7eac58b70067de38ad44ea2`；Fl
 ### 12.3 A-G 主线状态
 
 - A PARTIAL：Native 生命周期和生产附件归属已合并；真机多轮、媒体和进程重启证据 UNKNOWN。
-- B PARTIAL / RELEASE BLOCKED：provenance 契约存在；自然语言 detector 与医学审核缺失。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B PARTIAL / RELEASE BLOCKED：provenance 契约存在；自然语言 detector 与医学审核缺失。
 - C PARTIAL：精确方剂检索与黄金快照已合并；候选身份、来源和原始位置的逐条人工/规则审查继续。
 - D PARTIAL：24 项目录已逐项分类；PR #85 是第一个 Headless 候选，待完整 CI/合并。
 - E PARTIAL：入口、附件、SQLite 范围测试、模型/TRACE 备份排除已合并；混合数据库备份、旧共享临时图片和外部副本未闭环。
@@ -546,7 +547,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 | ID | 当前状态 | 下一步，不等待用户逐项点名 |
 |---|---|---|
 | A Native 多轮与生命周期 | PARTIAL / 真机 UNKNOWN | 复核 Activity teardown 串行队列和任务终态；继续 Find N2 GPU/CPU、图片/语音、多轮、重启实机 TRACE，不能用 CI 替代 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 完成所有调用入口旁路矩阵与 fail-closed 集成设计；自然语言 detector 词表、阈值和处置文案必须有医学审核，未审核不自行编造或放行 |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源与黄金行为 | PARTIAL | 按 subject/object/sourceId/原始位置/来源逐条审查候选身份与谓词分布；保持黄金快照，不为增加数量改排序 |
 | D Headless 工具 | PARTIAL | 先完成 #86；之后只挑一个无敏感数据、已有确定性函数的工具继续，不批量抽象 |
 | E 数据清理与备份 | PARTIAL | 继续审查旧共享 temp 图片无法归属的边界、混合 SQLite 的 AI 行备份影响及清理后进程重启；不误删非 AI 数据、不全局禁用备份 |
@@ -583,7 +584,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 ### 14.3 A-G 状态与下一步
 
 - A PARTIAL：Native teardown 串行化、原子轮次持久化已有 CI；Find N2 GPU/CPU 各 20 轮、图片/语音、进程重启/Activity recreation TRACE UNKNOWN。下一步补 Native teardown 状态矩阵与真实设备验收。
-- B PARTIAL / RELEASE BLOCKED：结构化 provenance 契约存在；自然语言 detector、所有模型/工具入口前置 fail-closed 和医学审核缺失。下一步完成全入口旁路矩阵、无审核规则时不返回 CLEAR 的纯 Dart gate contract；不自造医学词表。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B PARTIAL / RELEASE BLOCKED：结构化 provenance 契约存在；自然语言 detector、所有模型/工具入口前置 fail-closed 和医学审核缺失。下一步完成全入口旁路矩阵、无审核规则时不返回 CLEAR 的纯 Dart gate contract；不自造医学词表。
 - C PARTIAL：精确方剂检索和黄金快照已合并；按候选 subject/object ID、类型、文本、谓词、sourceId、原始位置、来源逐条审查，不以候选数量增加作为目标。
 - D PARTIAL：主线 Headless = 2 / Executed = 2（`yunqi`、`almanac`）；其余 22 项仍 Page-only，结构化问诊为独立内联流程。下一步逐项核实确定性函数后每次只抽取一个 adapter。
 - E PARTIAL：清理入口、AI-owned 附件、SQLite 清理边界与回滚测试、模型/TRACE 备份排除已合并；混合 SQLite 中 AI 行仍可能被备份、旧共享图片无法可靠归属、Android 清理后进程重启不可恢复证据缺失。
@@ -603,7 +604,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 ### 14.5 约束
 
 - 本轮未运行 Find N2 真机；设备相关项目继续 UNKNOWN。
-- B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 医学审核缺失，保持 RELEASE BLOCKED；不得自行生成医学规则。
 - E 混合数据库备份与旧共享临时文件归属仍有风险；不得全局禁用备份或误删非 AI 数据。
 - F 的已合并 per-turn TRACE 不是全链路完成证明。
 
@@ -643,7 +644,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 | ID | 状态 | 已完成证据 | 未闭环项 |
 |---|---|---|---|
 | A Native 多轮与生命周期 | PARTIAL / 设备 UNKNOWN | 既有 teardown/原子轮次保护与 Android arm64 CI | Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程杀死/重启恢复的真实 TRACE |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | fail-closed gate contract；原始 image/audio 即使有 prompt text 也返回 `RAW_ATTACHMENT_NOT_ASSESSED`；必须先有独立 `attachmentTranscript` 来源 | 经医学审核的自然语言 detector/规则集；所有生产模型入口旁路矩阵和模型调用前 fail-closed 集成证据。不得自造词表、阈值或处置文案 |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源 | PARTIAL | 83/83 source asset 存在且已逐项读文件；标题/正文命中层次记录于 `docs/classic-retrieval-golden-review.md` | 83/83 仍为 `bookId/chapterIndex` 缺失、locator MISSING；需逐条建立经人工核验的经典原文/版本/卷页来源 manifest |
 | D Headless | 当前主线 2 项 Headless / 2 项 Executed | `yunqi`、`almanac`；两项均复用既有确定性函数并保留 Page builder | 不以数量为目标；剩余 Page-only 工具逐项审计，未找到满足边界的确定性候选前不新增 adapter |
 | E 数据清理与备份 | PARTIAL | AI 数据清理范围审计、混合数据库边界和 Android backup manifest CI 检查 | 混合 SQLite 中 AI 行备份边界、旧共享临时图片归属、外部导出副本、Find N2 清理后进程重启与不可恢复证据 |
@@ -676,7 +677,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 
 | PR | 合并提交 | 已集成范围 | 自动验收 |
 |---|---|---|---|
-| #93 | `9f995a30b38ecf171295615f10d09b5074836ac6` | fail-closed RedFlagGate contract、detector interface、source types | run `43165576958` Flutter + Android SUCCESS；Branch validation `43165568953` SUCCESS |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | #93 | `9f995a30b38ecf171295615f10d09b5074836ac6` | fail-closed RedFlagGate contract、detector interface、source types | run `43165576958` Flutter + Android SUCCESS；Branch validation `43165568953` SUCCESS |
 | #94 | `ce0d5fa650872559dfe3b15e8cd524e2c6ca3162` | retrieval/contextAssembly/modelInput TRACE；修复玄学普通文本 traced API 旁路 | run `43165512584` Flutter + Android SUCCESS；Branch validation `43165481369` SUCCESS |
 | #95 | `b4cd3a91a10426e9c825188dd5e344e3bb4c48b3` | E 数据清除范围审计刷新 | run `43165925272` Flutter + Android SUCCESS |
 | #96 | `b47397922d9348f89cc7a5586b7ca1b0659a63f5` | C 检索黄金 artifact 与候选身份结构核验 | run `43166311719` Flutter + Android SUCCESS |
@@ -686,7 +687,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 | 工作流 | 状态 | 已落地事实 | 尚未闭环 |
 |---|---|---|---|
 | A 多轮与 Native 生命周期 | PARTIAL / 设备 UNKNOWN | Activity teardown 串行化、SQLite 原子轮次、Native bridge 有自动化证据 | Find N2 GPU/CPU 长轮次、图片/语音、Activity recreation、进程中断/重启 TRACE |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | #93 的 fail-closed gate 在 detector 缺失、异常、超时、assessment/source 不完整时返回 REVIEW_REQUIRED | gate 未接入所有生产入口；无经医学审核的自然语言 detector/词表/阈值/处置文案；不得默认 CLEAR |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源 | PARTIAL | #96 真实 CI artifact：4 个 query、120 条 top-40 hits、83 个 distinct sourceId；sourceId 与 asset 一致；context 2199 字符、6 个 source IDs（formula 1、herb 1、lecture 4） | 120 条 locator 均 MISSING；仍需逐条核验古籍底本/版本/卷页。不得把讲稿资产当作古籍原文 |
 | D Headless | PARTIAL | 主线 Headless/Executed = 2：`yunqi`、`almanac` | 其余 Page-only 能力不计 Headless；没有新的确定性候选前不扩展 |
 | E 数据清理与备份 | PARTIAL | AI 清理 coordinator、AI-owned attachments、Native runtime cache、TRACE 文件、设置 UI、SQLite AI 四表事务及 Android 模型/TRACE 备份排除已有代码/CI 证据 | 混合 SQLite 中 AI 行仍可能备份；旧共享图片/外部导出副本归属未知；Find N2 清理后强制停止/重启不可恢复验收缺失 |
@@ -703,7 +704,7 @@ PR #86 当前 base 仍记录为 `4100f153...`，master 已推进到 `5f7bf738...
 ### 16.5 下一批执行顺序
 
 1. **F：失败轮次关联**：先锁定失败用户消息是否进入历史、`replayable` 语义和 UNKNOWN/FAILED 的持久化表示；只复用现有 metadata，不自动重放，不记录正文到 TRACE。
-2. **B：生产入口门禁**：先完成所有调用入口注入顺序测试；detector 未经医学审核前保持 REVIEW_REQUIRED/RELEASE BLOCKED，不启用自造规则，也不静默阻断全部模式。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 2. **B：生产入口门禁**：先完成所有调用入口注入顺序测试；detector 未经医学审核前保持 REVIEW_REQUIRED/RELEASE BLOCKED，不启用自造规则，也不静默阻断全部模式。
 3. **C：来源 manifest**：仅补可由原始底本证据确认的书目/卷页定位；证据不足继续 MISSING，不改召回和排序。
 4. **A/E：Find N2 设备验收**：GPU/CPU、媒体、多轮、Activity/进程恢复、清理后重启；CI 不能替代设备 TRACE。
 5. **D/G**：Headless 维持 2 项；版本 guard 只维护，不另造系统。
@@ -744,7 +745,7 @@ PR #107 修复失败轮次阶段误归因：
 | ID | 状态 | 当前结论 / 未闭环 |
 |---|---|---|
 | A | PARTIAL / 设备 UNKNOWN | Find N2 GPU/CPU、多轮、媒体、Activity recreation、进程重启真实 TRACE 缺失 |
-| B | PARTIAL / RELEASE BLOCKED | Gate contract/test 已有；无自然语言 detector、医学审核规则集、生产入口调用和 Native 纵深门禁 |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C | PARTIAL | 83/83 lecture assets 存在可读，但 83/83 bibliographic locator MISSING；12 条 combinedPatterns 来源记录与代码中的 12 个 conditionKey 精确一一对应、无重复；其中 7 online text cross-checked、3 conditions cross-checked、2 MISSING；纸本版次/卷页/影像 12/12 缺失 |
 | D | 2 Headless / 2 Executed | yunqi、almanac；不为数量扩展 |
 | E | PARTIAL | 混合 SQLite AI 行备份、旧共享图片归属、外部副本、清理后真机重启不可恢复证据缺失 |
@@ -769,12 +770,13 @@ PR #107 修复失败轮次阶段误归因：
 
 ---
 
-## 18. 2026-11-12 PR #109 红旗门禁调用顺序契约集成
+## 18. 2026-11-12 PR #109 红旗门禁调用顺序契约集成（历史章节，已废止）
+> [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
 ### 18.1 主线与自动验收
 
 - 基线：PR #109 以 master `cf83cf03478ea4fede960d16b903630a466d1253` 为 base。
-- PR #109：`feat(ai): add red-flag gate operation sequencing seam`，已 squash merge。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - PR #109：`feat(ai): add red-flag gate operation sequencing seam`，已 squash merge。
 - 合并提交：`00258671cf87188ac7ef82f5121c6f5bea48ef7e`。
 - PR head：`591d9b9c25d2c62d41e8a0b3b1ffb91180650f50`。
 - Flutter 全量回归与 Android arm64 APK/ABI、merged backup manifest、Native unit tests：run `43200924284`，必要 job 均 SUCCESS。
@@ -784,9 +786,9 @@ PR #107 修复失败轮次阶段误归因：
 
 ### 18.2 本次代码交付与边界
 
-- `lib/services/red_flag_gate.dart` 新增泛型 `RedFlagGateRun<T>`，显式区分 blocked/executed，并提供 `RedFlagGateExecution.runBefore`。
-- `test/red_flag_gate_test.dart` 覆盖 gate 先于副作用、detector 缺失时不执行副作用、原始图片附件不能绕过评估。
-- 本次未增加医学词表、阈值、detector 或急救文案；未接入任何 Flutter/Native 生产入口；未改变现有用户流程。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - `lib/services/red_flag_gate.dart` 新增泛型 `RedFlagGateRun<T>`，显式区分 blocked/executed，并提供 `RedFlagGateExecution.runBefore`。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - `test/red_flag_gate_test.dart` 覆盖 gate 先于副作用、detector 缺失时不执行副作用、原始图片附件不能绕过评估。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 本次未增加医学词表、阈值、detector 或急救文案；未接入任何 Flutter/Native 生产入口；未改变现有用户流程。
 - 该 PR 只证明可复用的调用顺序契约，不证明真实入口已受保护，不证明自然语言红旗识别准确性。
 
 ### 18.3 B 工作流当前状态
@@ -796,13 +798,13 @@ PR #107 修复失败轮次阶段误归因：
 - Flutter 生产入口（普通发送、结构化问诊、工具分发、附件、症状整理）：未接入，MISSING。
 - Native MethodChannel 纵深入口：未接入，MISSING。
 - Find N2 真机入口 TRACE：UNKNOWN。
-- B 继续 PARTIAL / RELEASE BLOCKED。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 继续 PARTIAL / RELEASE BLOCKED。
 
 ### 18.4 下一步与明确阻塞
 
 1. B2 继续核对并设计统一可注入 seam，覆盖 `_send`、结构化问诊选项、工具分发、文本/图片/语音、症状整理和 Native MethodChannel；测试必须断言门禁严格早于 route/tool/model side effect。
 2. 不允许把可选 Gate 缺省为空后继续执行作为“已接入”；这会形成安全旁路。
-3. 当前 Gate 在 detector 缺失时返回 REVIEW_REQUIRED。若直接接入所有生产入口，将阻断现有 AI 流程；在没有医学审核 detector 和明确产品影响决策前，不得擅自全局启用，也不得默认 CLEAR。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. 当前 Gate 在 detector 缺失时返回 REVIEW_REQUIRED。若直接接入所有生产入口，将阻断现有 AI 流程；在没有医学审核 detector 和明确产品影响决策前，不得擅自全局启用，也不得默认 CLEAR。
 4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。
 5. A/E 真机验收仍依赖 Find N2；C 的普通学习来源回链已有证据，只有指定原文/诊断规则来源需要继续核验；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
 
@@ -860,7 +862,7 @@ PR #107 修复失败轮次阶段误归因：
 | ID | 当前状态 | 已有证据 | 未闭环项 |
 |---|---|---|---|
 | A Native 多轮与生命周期 | PARTIAL / 设备 UNKNOWN | teardown、轮次状态、历史恢复与 Native bridge 有自动化回归；当前 master Flutter/Android CI 持续验收 | Find N2 GPU/CPU 多轮、图片/语音、Activity recreation、进程杀死/重启后 transcript 一致性真实 TRACE |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | `RedFlagGate` fail-closed contract、gate-before-operation sequencing contract 与 raw attachment 边界已测试 | 经医学背景人员审核的自然语言 detector/规则集；Flutter/Native 所有生产入口强制调用；真实入口顺序 TRACE。不得默认 CLEAR |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源 | PARTIAL / NOT VERIFIED | 83/83 本地讲稿资产存在且已逐项读取；sourceId 与 asset 一致；12 条 combinedPatterns 来源行与 conditionKey 对应 | 83/83 bibliographic locator 仍 MISSING；12 条规则的纸本底本/版次/卷页/影像仍缺；讲稿不得冒充古籍原文 |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | `yunqi`、`almanac` 复用确定性业务函数 | 保持现状；没有可验证的新确定性业务函数与行为基线前不增加 adapter |
 | E 数据保护 | PARTIAL | AI 数据清除 coordinator、AI-owned attachments、Native runtime cache、TRACE 文件、SQLite AI 表边界和 Android 模型/TRACE backup manifest 有代码/测试证据 | 混合 SQLite AI 行备份、旧共享图片归属、用户外部导出/备份副本及 Find N2 清理后强停/重启不可恢复实测 |
@@ -871,7 +873,7 @@ PR #107 修复失败轮次阶段误归因：
 
 1. **先收尾当前主线 CI**：等待 `bfb518e` 的 run `43221099813` 与 `43221099907` 结束；如失败，只修复失败 job 实际指向的问题，不扩大范围。
 2. **A/E 真机验收**：按 `docs/local-ai-e4b.md` 和数据清除验收约束，在 OPPO Find N2（PGU110，16 GB）执行内外屏、GPU/CPU、连续多轮、图片/语音、Activity/进程恢复、AI 数据清除后强停/重启复查；没有设备记录、模型/backend 版本和 trace_id 的场景标 UNKNOWN。
-3. **B 医学审核阻塞**：继续保持 RELEASE BLOCKED。需要医学审核 detector/规则集和产品对 REVIEW_REQUIRED 影响的明确决策；完成前不接入会默认阻断现有全部 AI 流程的生产 gate，也不允许 optional gate 缺失时跳过。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. **B 医学审核阻塞**：继续保持 RELEASE BLOCKED。需要医学审核 detector/规则集和产品对 REVIEW_REQUIRED 影响的明确决策；完成前不接入会默认阻断现有全部 AI 流程的生产 gate，也不允许 optional gate 缺失时跳过。
 4. **C 原始来源核验**：仅接受可回链到真实底本、版次、卷页或原始影像的证据；证据缺失继续 MISSING，不调整 query 派生、top-40、排序、去重或引入 FTS5。
 5. **D/G 不扩展**：Headless 保持 2 项；版本 guard 仅维护，不另建系统。
 
@@ -914,7 +916,7 @@ PR #107 修复失败轮次阶段误归因：
 | 工作流 | 当前状态 | 已新增证据 | 未关闭项 |
 |---|---|---|---|
 | A 多轮与持久化 | PARTIAL | 结构化问诊 transcript 批次原子写入；assistant user/assistant turn 复用事务；SQLite trigger 回滚测试；PR/Android CI 通过 | Find N2 GPU/CPU 多轮、媒体、Activity recreation、进程终止/恢复后的真实 TRACE；不能用 SQLite FFI 或 CI 替代真机 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | `RedFlagGate`/`RedFlagPreflight` 的纯策略与 fail-closed contract 存在；PR #109 的 `runBefore` 只证明通用 operation 顺序 | 自然语言 detector、医学审核规则/阈值/文案、实际 Flutter/Native 生产入口覆盖均 MISSING |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源 | PARTIAL / NOT VERIFIED | 83 个本地资产可存在性回链；12 条规则来源 manifest 有状态分类 | 83/83 bibliographic locator 仍 MISSING；纸本版本、卷页和原始影像未核验；不得改 query、top-40、排序、去重 |
 | D Headless | 2 Headless / 2 Executed | `yunqi`、`almanac` | 保持 2 项；无独立行为基线前不新增 adapter |
 | E 数据保护 | PARTIAL | AI 数据清理和 Android backup manifest 有自动化证据 | 混合 SQLite AI 行备份边界、旧共享附件归属、外部副本、Find N2 清理后强停/重启不可恢复实测 |
@@ -923,9 +925,9 @@ PR #107 修复失败轮次阶段误归因：
 
 ### 20.4 B2 全入口静态复核（基线 `872a715`）
 
-这部分是源码调用图复核，不代表红旗门禁已接入：
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 这部分是源码调用图复核，不代表红旗门禁已接入：
 
-| 输入/执行入口 | 当前源码定位 | 当前执行顺序 | RedFlagGate/Preflight 生产调用 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | 输入/执行入口 | 当前源码定位 | 当前执行顺序 | RedFlagGate/Preflight 生产调用 |
 |---|---|---|---|
 | `initialPrompt` | `LocalAiInterviewScreen.initState()` 约 286 行 | 只预填输入框；用户提交后进入 `_send()` | 无；它不是自动模型调用入口 |
 | 普通文本/五模式 | `_send()` 约 3079 行 | 活动结构化问诊分支 → `AssistantConversationOrchestrator.resolve()` 约 3202 行 → 澄清/工具/模型 | 无 |
@@ -939,11 +941,11 @@ PR #107 修复失败轮次阶段误归因：
 | 历史恢复 | `_restoreVisibleConversationToModel()` 约 2247 行；`LocalAiService.restoreConversation()` 约 270 行 | 历史 transcript 回放到 Native Conversation；不是新用户轮次 | 无；历史来源/主体/时间必须保持 provenance，不能重标为当前本人症状 |
 
 静态复核同时确认：
-- `local_ai_interview_screen.dart`、`local_ai_service.dart`、`MainActivity.kt` 均没有 `RedFlagGate`、`RedFlagPreflight` 或 `RedFlagDetector` 生产引用。
-- `RedFlagGate.runBefore()` 目前只定义通用 fail-closed operation seam；它不证明上述生产入口已经经过 gate。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - `local_ai_interview_screen.dart`、`local_ai_service.dart`、`MainActivity.kt` 均没有 `RedFlagGate`、`RedFlagPreflight` 或 `RedFlagDetector` 生产引用。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - `RedFlagGate.runBefore()` 目前只定义通用 fail-closed operation seam；它不证明上述生产入口已经经过 gate。
 - Native MethodChannel 是独立模型调用边界；仅在 Flutter 页面层做检查不足以覆盖 Native 直接入口。
 - 原始 image/audio attachment 不能用 prompt 文本冒充已评估；`restoreConversation` 是历史上下文恢复，不应当作新的当前症状输入。
-- 不得在 detector 未配置时把 `REVIEW_REQUIRED` 改成 `CLEAR`，也不得通过可选 gate 缺失静默跳过。医学审核及产品对 REVIEW_REQUIRED 影响的决策完成前，不接入会无差别阻断现有全部模式的生产 Gate。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不得在 detector 未配置时把 `REVIEW_REQUIRED` 改成 `CLEAR`，也不得通过可选 gate 缺失静默跳过。医学审核及产品对 REVIEW_REQUIRED 影响的决策完成前，不接入会无差别阻断现有全部模式的生产 Gate。
 
 ### 20.5 下一阶段执行顺序
 
@@ -1011,7 +1013,7 @@ PR #107 修复失败轮次阶段误归因：
 | 工作流 | 当前状态 | 已有代码/自动化证据 | 未关闭项 |
 |---|---|---|---|
 | A Native 多轮与持久化 | PARTIAL | #117 普通成功轮次和结构化问诊 transcript 使用 SQLite 原子 batch；#119 分离 transcript 与 task snapshot TRACE；#120 Native release failure fail-closed；PR/Android CI 通过 | Find N2 GPU 至少 20 轮、CPU 至少 20 轮、图片/语音、Activity recreation、进程强停/重启、SQLite/UI/Native history 逐轮对照仍无实机 TRACE；state:7 根因 UNKNOWN；context budget 不得凭猜测设阈值 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | RedFlagGate / RedFlagPreflight 策略及 fail-closed contract 有测试；B2 入口调用图已静态盘点 | 自然语言 detector、医学审核后的规则/阈值/文案、所有 Flutter/Native 生产入口强制覆盖、真实入口 TRACE、产品对 REVIEW_REQUIRED 的影响决策均 MISSING |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源 | PARTIAL / NOT VERIFIED | 83 个本地讲稿资产存在并有 sourceId 回链；12 条 combinedPatterns 来源 manifest 已分类 | 83/83 bibliographic locator 仍 MISSING；12 条规则真实底本、版次、卷页/影像仍缺；讲稿不得冒充古籍原文；不改 query/top-40/排序/去重 |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | yunqi、almanac | 保持 2 项；无独立行为基线前不新增 adapter；Page Tool 导航不等于 Headless execution |
 | E 数据保护 | PARTIAL | 本地 AI data clear coordinator、SQLite AI 表清理事务、reopen tests、Android backup manifest contract tests | AI 与非 AI 业务行共用 nihaisha.db；当前不能排除整个 database domain，否则会一并丢失 bookmarks、diagnosis history、settings、search history；系统备份中的 AI 行副本、旧共享附件、孤儿文件和外部导出副本仍未闭环 |
@@ -1020,19 +1022,19 @@ PR #107 修复失败轮次阶段误归因：
 
 ### 21.5 B2 当前结论不变
 
-PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #120 只改变 Native Activity lifecycle，不涉及 red-flag：
-- local_ai_interview_screen.dart、local_ai_service.dart 和 MainActivity.kt 仍没有 RedFlagGate / RedFlagPreflight / reviewed detector 的生产调用。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #120 只改变 Native Activity lifecycle，不涉及 red-flag：
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - local_ai_interview_screen.dart、local_ai_service.dart 和 MainActivity.kt 仍没有 RedFlagGate / RedFlagPreflight / reviewed detector 的生产调用。
 - Native MethodChannel 是独立执行边界；只在 Flutter 页面层检查不足以覆盖 Native 直接入口。
 - 原始图片/音频不能用 prompt 文本冒充已评估；历史恢复必须保留历史主体和时间来源。
 - detector 未配置、超时或覆盖不足时不得 CLEAR；未经医学审核的规则不得成为 production detector。
-- 不把 REVIEW_REQUIRED 静默接入全部现有模式，也不允许 optional gate 缺失后静默旁路。
-- B 继续 PARTIAL / RELEASE BLOCKED。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不把 REVIEW_REQUIRED 静默接入全部现有模式，也不允许 optional gate 缺失后静默旁路。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 继续 PARTIAL / RELEASE BLOCKED。
 
 ### 21.6 下一阶段：只推进剩余硬门槛
 
 1. 等待当前 master 的 43343151516 和 43343151619 两条 post-merge CI；失败时只修复失败 job 实际指向的问题。
 2. A/E 真机验收：按 local-ai-e4b.md、find-n2-ai-trace-acceptance-plan.md 和数据清除约束，在 Find N2 完成 GPU/CPU、至少 20 轮、多媒体、Activity recreation、进程强停/重启和清除后复查。每个场景记录设备、Android、App SHA、模型/backend、轮次和 trace_id；缺记录保持 UNKNOWN。
-3. B 医学审核阻塞：取得医学背景审核记录、detector 覆盖与产品 REVIEW_REQUIRED 影响决策前，不接入 production gate，不生成医学词表、阈值或处置文案。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. B 医学审核阻塞：取得医学背景审核记录、detector 覆盖与产品 REVIEW_REQUIRED 影响决策前，不接入 production gate，不生成医学词表、阈值或处置文案。
 4. C 原始来源核验：只接受真实底本、版次、卷页或原始影像回链；83/83 locator 缺失时不能宣称文献来源闭环。
 5. E 备份边界：评估 AI conversation 数据与非 AI 业务数据分离或可验证的自定义备份方案；不能通过排除整个数据库来解决 AI 行备份问题。
 6. D/G 不扩展：维持 2 项 Headless 和现有版本 guard；不增加无行为基线的新 adapter 或新的治理系统。
@@ -1074,7 +1076,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 | 工作流 | 当前状态 | 已闭环事实 | 仍未闭环的硬门槛 |
 |---|---|---|---|
 | A Native 多轮与持久化 | PARTIAL / DEVICE UNKNOWN | #117 成功轮次与结构化问诊 transcript 原子持久化；#119 transcript 与 task snapshot TRACE 分离；#120 Activity release failure 后进程级 fail-closed；最新 master CI PASS | Find N2 GPU 至少 20 轮、CPU 至少 20 轮；图片/语音；Activity recreation；强制停止/进程重启；SQLite、Flutter UI、Native history 逐轮一致性；`state:7` 根因仍 UNKNOWN |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | Gate fail-closed、来源 provenance、gate-before-operation 顺序契约及测试；B2 全入口静态调用图已有记录 | 经医学背景人员审核的规则/阈值/处置文案；可审计的自然语言 detector；Flutter 与 Native 所有生产入口强制调用；真实入口 TRACE；对 `REVIEW_REQUIRED` 产品影响的明确决策 |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 知识来源 | PARTIAL（学习来源回链已实现；原文/规则来源分层） | 83 个讲稿 sourceId 与 83 个本地 Markdown 资产对应；检索上下文/引用尾注带 sourceLabel、sourceKind、sourceId 和本地回链；12 个 conditionKey 与规则来源 manifest 对应 | 一般学习资料不要求逐本逐页校勘；仍需对明确声称“古籍原文”或被 DiagnosticEngine 使用的规则来源保持核验。12 条规则当前 7 条 ONLINE_TEXT_CROSS_CHECKED、3 条 CONDITIONS_CROSS_CHECKED、2 条 MISSING；不得把讲稿观点当作规则来源。医案仅作为本地整理资料，不作为疗效证据 |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | `yunqi`、`almanac` 复用确定性业务逻辑 | 无新能力的行为基线与实际需求；保持现状，不以数量为目标 |
 | E 数据保护 | PARTIAL | 应用内 AI 数据清除 coordinator、AI 专属新附件目录、Native runtime cache 与 TRACE 清除、SQLite AI 表事务、Android 模型/TRACE backup exclusion 均有代码与测试证据 | AI 与非 AI 业务行仍共用 `nihaisha.db`；Android XML 不能按表/行选择性排除；旧共享图片所有权 UNKNOWN；系统备份/迁移副本、外部导出副本及 Find N2 清除后强停/重启不可恢复证据缺失 |
@@ -1084,7 +1086,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 ### 22.4 下一阶段执行顺序（只处理硬门槛）
 
 1. **A/F 真机验收**：在 OPPO Find N2 按 `docs/local-ai-e4b.md` 与 `docs/find-n2-ai-trace-acceptance-plan.md` 执行 GPU/CPU 各至少 20 轮，覆盖文字、图片、语音、Activity recreation、请求中断、强停/重启和历史恢复。每条记录设备型号、Android 版本、App SHA、模型版本/SHA、backend、轮次和 trace_id；缺任何关键证据的场景保持 UNKNOWN。不得用 CI、模拟器或 arm64 APK 代替。
-2. **B2/B4/B5 安全闭环**：先取得医学审核记录（规则 ID、适用范围、阈值、例外、处置文案、规则版本及审核责任），再确定 detector 覆盖和 `REVIEW_REQUIRED` 对产品流程的影响；之后才允许在独立分支接入 Flutter/Native 门禁并验证每条入口均先 gate、后 route/tool/model side effect。审核前不得生成医学规则、不得把 Gate 接入生产、不得默认 CLEAR，也不得用 optional/null gate 形成旁路。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 2. **B2/B4/B5 安全闭环**：先取得医学审核记录（规则 ID、适用范围、阈值、例外、处置文案、规则版本及审核责任），再确定 detector 覆盖和 `REVIEW_REQUIRED` 对产品流程的影响；之后才允许在独立分支接入 Flutter/Native 门禁并验证每条入口均先 gate、后 route/tool/model side effect。审核前不得生成医学规则、不得把 Gate 接入生产、不得默认 CLEAR，也不得用 optional/null gate 形成旁路。
 3. **C 学习来源与原文分层**：普通学习检索以实际 sourceId、来源类别/标题和本地回链为最低标准；现有83个讲稿资产已具备该回链，不再把83条逐本逐页校勘作为知识库完成条件。只有明确声称引用某版古籍原文、或该来源被用于 DiagnosticEngine 诊断规则时，才逐条核对可用的原文出处、规则适用条件与必要版本定位；缺失项仍标 MISSING，不猜测补齐。
 4. **E 备份边界决策**：先明确是接受当前 Android 系统备份中可能包含 AI 会话，还是批准将 AI 对话迁移至独立数据库文件并制定迁移/回滚/恢复方案。Android XML 不能选择性排除 SQLite 表/行；不得排除整个 `nihaisha.db`，不得全局关闭 backup 来冒充 AI-only exclusion。
 5. **E 真机清除验收**：按合成数据执行模型运行中/空闲、附件存在、TRACE 开关开启/关闭、清除成功/部分失败、强制停止和重启复查；确认 AI 数据不可恢复，同时收藏、设置、诊断历史及模型文件保留。旧共享图片无法证明归属时保留，不扫描清空共享临时目录。
@@ -1178,7 +1180,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 3. **八字/紫微结果解释：** 排盘由 App 确定性引擎执行。AI 接收已计算的结构化结果，再总结关系、分层解释与时间脉络；不得重新排盘、改写四柱/宫位/四化或补造 MISSING。
 4. **职责分层：** App 负责数据检索、来源定位、规则执行和确定性计算；AI 负责理解用户追问、跨字段关联、语言化归纳和解释。输出应区分 App 原始字段、App 规则/模板、AI 归纳。
 
-医学审核不是所有 AI 功能的总门槛。它限于健康风险、红旗识别与规则依据/处置文案；不得以医学审核未完成为由阻断普通中医知识学习或八字/紫微文化结果解释。红旗安全边界仍须保持：没有经审核的 detector 时不得默认 CLEAR，也不得把一般学习提问直接升级为个体诊断。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 医学审核不是所有 AI 功能的总门槛。它限于健康风险、红旗识别与规则依据/处置文案；不得以医学审核未完成为由阻断普通中医知识学习或八字/紫微文化结果解释。红旗安全边界仍须保持：没有经审核的 detector 时不得默认 CLEAR，也不得把一般学习提问直接升级为个体诊断。
 
 ### 25.2 已有链路与本轮代码落地
 
@@ -1197,7 +1199,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 - 若没有选择流年/流月/流日，不为用户自动补选日期；若选择了，回传当前页面实际计算结果。
 - 所有字段如缺失则输出 MISSING/未选择，不由 AI 补造。
 - 普通知识答案仍依来源状态区分课程讲稿、古籍文本、医案与 App 结构化数据；83 个学习讲稿的本地 sourceId 回链口径按第 21、24 节执行，不重新开启逐册逐页考古映射。
-- 不改 DiagnosticEngine 规则、问诊流程、红旗门禁实现、检索排序、数据库 schema、模型下载/配置或 Android backup policy。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不改 DiagnosticEngine 规则、问诊流程、红旗门禁实现、检索排序、数据库 schema、模型下载/配置或 Android backup policy。
 
 ### 25.4 针对性自动化验收
 
@@ -1215,7 +1217,7 @@ PR #118 的全入口静态调用图仍是当前红旗接入边界基线。PR #12
 | 项目 | 状态 | 当前边界 |
 |---|---|---|
 | A Native 稳定性 | PARTIAL / DEVICE UNKNOWN | GPU/CPU 多轮、图片/语音、Activity/进程恢复与真实设备 transcript 一致性仍需 Find N2 验收 |
-| B 健康风险与规则边界 | PARTIAL / 健康风险路径受限 | 只对健康红旗、潜在个体诊疗输出及规则依据实施相应审核；不把医学审核泛化为全部学习/术数解释的前置条件。自然语言 detector 与 Flutter/Native 全入口红旗门禁仍不能默认为已完成 |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 知识来源 | 一般学习资料回链已满足当前口径；规则来源 PARTIAL | 83 条讲稿按本地学习资料回链使用；12 条规则来源仍为 7 ONLINE_TEXT_CROSS_CHECKED、3 CONDITIONS_CROSS_CHECKED、2 MISSING |
 | D Headless Capability | 2 项 Headless / 2 项 Executed | 保持冻结，不为增加数量而扩展 |
 | E 数据保护 | PARTIAL | 混合 SQLite 备份边界决策、旧共享图片归属及 Find N2 清除后强停/重启不可恢复仍未闭环 |
@@ -1253,7 +1255,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - **已具备代码/自动化证据：** 本地知识命中进入上下文并要求总结比较；既有 DiagnosticEngine 问诊结果进入历史恢复 transcript；八字详批、大运/流年和紫微十二宫、四化、大限及页面已选流层可回传本地模型上下文。
 - **未被本轮 CI 证明：** E4B 在 OPPO Find N2 上是否能稳定生成正确、充分、可追溯的自然语言解释。fake/recording service 测试证明的是上下文交付，不是模型语义质量。
 - **真实设备待办：** 使用合成/非敏感数据完成本地知识对照、既有问诊结果追问、八字详批、紫微整体/大限及已选流年/流月/流日解释；记录 App SHA、模型版本、backend、原始输入摘要、真实输出及来源核对。未执行场景保持 UNKNOWN。
-- **其他独立外部边界：** A/F 真机多轮和生命周期 TRACE、B 健康风险红旗 detector/审核、E 混合 SQLite 备份决策及清除后强停/重启验证仍保持 PARTIAL/UNKNOWN；不阻断普通学习与术数解释代码链路，也不被本 PR 宣称完成。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - **其他独立外部边界：** A/F 真机多轮和生命周期 TRACE、B 健康风险红旗 detector/审核、E 混合 SQLite 备份决策及清除后强停/重启验证仍保持 PARTIAL/UNKNOWN；不阻断普通学习与术数解释代码链路，也不被本 PR 宣称完成。
 
 ---
 
@@ -1293,7 +1295,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 1. **P4 结构化意图理解仍待实现：** 当前 L0 主要由确定性关键词/别名路由；Bazi 参数字段抽取也仍是确定性格式解析。下一阶段按审计要求设计有界候选集和参数 schema，由 E4B 只在候选范围内做复杂/歧义意图选择与 slot filling；所有输出经 schema/业务约束校验后才能调用工具。简单请求继续走确定性路径，不允许模型自由指定工具名。
 2. **自然语言问诊前置理解仍待实现：** 当前规则问诊仍沿用既有十问/问诊控制器流程。目标是保留用户原始自由文本，由 AI 提取候选症状事实、标记未确认/缺失项，只追问必要字段；用户确认后再调用既有规则问诊和 DiagnosticEngine；结果继续来自 App 已审核知识库/规则，再由 AI 总结解释。不得重建知识库、修改诊断规则或把 AI 推断标为诊断。
-3. **健康红旗门禁是问诊自然语言入口前置硬门槛：** 当前原始文本 detector、医学审核记录和 Flutter/Native 全入口强制拦截仍未形成完整证据。取得医学审核的 detector 规则、阈值、例外、处置文案和版本记录之前，不得让症状抽取/普通模型路径绕过门禁，不得自行编造医学词表，也不得默认 CLEAR。此限制只针对健康风险/潜在个体诊疗路径，不应扩展到普通学习或非医疗术数解释。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. **健康红旗门禁是问诊自然语言入口前置硬门槛：** 当前原始文本 detector、医学审核记录和 Flutter/Native 全入口强制拦截仍未形成完整证据。取得医学审核的 detector 规则、阈值、例外、处置文案和版本记录之前，不得让症状抽取/普通模型路径绕过门禁，不得自行编造医学词表，也不得默认 CLEAR。此限制只针对健康风险/潜在个体诊疗路径，不应扩展到普通学习或非医疗术数解释。
 4. **结果解释的真实设备语义验收仍待完成：** 自动化证明真实 App 结果与来源上下文进入本地模型调用链，不证明 E4B 已在 OPPO Find N2 上稳定正确回答。需用合成/非敏感样例核对本地知识综合、已有问诊结果追问、八字详批、紫微整体/大限及已选流年/流月/流日解释，并记录模型/设备/backend/App SHA/真实输出/来源一致性；未实测场景保持 UNKNOWN。
 5. **A/F 与 E 的设备级硬门槛未因本 PR 改变：** Find N2 多轮、媒体、Activity/进程中断恢复和完整 TRACE 采证仍待设备执行；SQLite 混合数据库备份产品决策、清除后的强停/重启不可恢复性仍为 PARTIAL/UNKNOWN。
 
@@ -1339,7 +1341,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 |---|---|---|
 | P4 工具意图 | Headless 候选受限选择已落地（CODE + TEST）；Find N2 真实推理仍 DEVICE UNKNOWN | 保持 2–6 个候选、候选 ID 白名单和 TRACE 契约；不扩为模型自由选工具 |
 | P4 参数收集 | 八字具备 L0 确定性解析 + 有界 E4B 自然语言候选抽取（PR #135）；PR #134 已合并 | 槽位结果必须逐字证据、只填当前缺项、Dart 校验后再走 App 参数校验；不推广到症状/诊断参数 |
-| 自由文本问诊 | 尚未形成审计要求的“自述理解—必要澄清—用户确认—既有规则执行”闭环 | 先满足独立红旗门禁；不得以普通模型 Prompt 或事后用户确认代替模型调用前的确定性门禁 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | 自由文本问诊 | 尚未形成审计要求的“自述理解—必要澄清—用户确认—既有规则执行”闭环 | 先满足独立红旗门禁；不得以普通模型 Prompt 或事后用户确认代替模型调用前的确定性门禁 |
 | 问诊规则与知识库 | 既有审核知识库和 DiagnosticEngine 保持原样 | 不重复审核知识库、不重建问诊十问、不修改辨证规则；只改善交互和结果解释链 |
 | 真机语义 | DEVICE UNKNOWN | Find N2 实测知识综合、既有问诊结果解释、八字与紫微结果解释；记录 App SHA、模型、backend、TRACE、真实输入输出 |
 | A/F/E | 仍 PARTIAL / UNKNOWN | Find N2 多轮/生命周期/TRACE，混合 SQLite 备份决策和清除后重启不可恢复证据 |
@@ -1349,7 +1351,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - AI 负责理解、澄清与解释；App 确定性代码负责参数校验、知识检索、排盘/问诊/计算和结果校验。
 - 未通过结果契约验证的执行结果不得交给 AI 当作事实；AI 不得更改辨证、排盘或剂量规则。
 - 不新增 Agent/DAG、第二套 Orchestrator、向量数据库、云 API 或通用工具平台；不为测试数量或 Headless 数量扩展。
-- 医学知识内容审核与红旗入口安全门禁不是同一件事：既有知识库内容不重复审核；但缺少完整、经过审核的红旗 detector 规则与 Flutter/Native 全入口拦截证据时，问诊自然语言抽取链仍不得绕过安全门禁。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 医学知识内容审核与红旗入口安全门禁不是同一件事：既有知识库内容不重复审核；但缺少完整、经过审核的红旗 detector 规则与 Flutter/Native 全入口拦截证据时，问诊自然语言抽取链仍不得绕过安全门禁。
 
 ---
 
@@ -1384,13 +1386,13 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 | PR #135 集成 | Branch validation SUCCESS；PR 全量 Flutter/Android 终态待定 | 只在最终 head 全量 CI 终态成功后合并；复核相同 merge SHA 的 master workflow |
 | 结果自动解释 | 已有结果解释 helper，但八字结果需要用户再点按钮 | 先从成功且契约校验通过的 Headless 结果做自动解释；模型只接收真实结果与 source IDs，不生成/修正业务结果；允许用户继续追问 |
 | Page Tool 对话内执行 | 当前 24 个注册工具中仅 `yunqi / almanac / bazi` 具备 Headless executor | 逐项审计纯业务函数与页面依赖，只挑有真实用户场景且可复用确定性函数的下一项；不批量迁移页面、不以数量为目标 |
-| 自然语言问诊 | 仍 PARTIAL / BLOCKED BY RED-FLAG GATE | 不重复审核既有知识库、不改 DiagnosticEngine/十问；先具备医学审核的红旗规则及所有入口模型调用前拦截，再做“症状事实草稿—必要追问—用户确认—既有规则问诊—AI解释” |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | 自然语言问诊 | 仍 PARTIAL / BLOCKED BY RED-FLAG GATE | 不重复审核既有知识库、不改 DiagnosticEngine/十问；先具备医学审核的红旗规则及所有入口模型调用前拦截，再做“症状事实草稿—必要追问—用户确认—既有规则问诊—AI解释” |
 | Find N2 真实模型 | DEVICE UNKNOWN | 用合成/非敏感数据核实 slot extraction、排盘结果解释、知识检索和 TRACE；CI 不替代设备验证 |
 
 ### 29.5 冻结
 
 - 维持“AI 理解与解释，App 确定性执行与校验”；不新增第二套 Orchestrator、Agent/DAG、向量数据库或云服务。
-- 既有医学知识库的内容审核不重复做；医学红旗门禁是独立的调用前安全约束，不因知识库已审核而自动视为完成。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 既有医学知识库的内容审核不重复做；医学红旗门禁是独立的调用前安全约束，不因知识库已审核而自动视为完成。
 - 只把已校验结构化结果提供给 AI；没有结果、结果状态 UNKNOWN、执行失败或 source ID 缺失时不得生成事实性结果解读。
 
 ---
@@ -1438,8 +1440,8 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 | Headless 结果自动解释 | CODE + TEST + PR CI + master CI PASS | Find N2 实际 E4B 输出语义、速度、来源一致性仍 DEVICE UNKNOWN |
 | Page Tool 回传后自动解释 | CODE + TEST + PR CI + master CI PASS | 页面操作仍由用户完成；未批量转换为 Headless |
 | 学习助手知识综合 | 继续复用现有本地检索和解释链 | 黄金用例设备级语义验收未完成 |
-| 问诊结构化结果解释 | 已有用户主动解释入口；来源标识补齐见第 31 节 | 自由文本问诊自动抽取仍受红旗门禁阻断 |
-| 自由文本问诊 | PARTIAL / BLOCKED BY RED-FLAG GATE | 医学审核的红旗 detector、阈值/例外、处置文案及 Flutter/Native 全入口前置拦截证据未齐 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | 问诊结构化结果解释 | 已有用户主动解释入口；来源标识补齐见第 31 节 | 自由文本问诊自动抽取仍受红旗门禁阻断 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | 自由文本问诊 | PARTIAL / BLOCKED BY RED-FLAG GATE | 医学审核的红旗 detector、阈值/例外、处置文案及 Flutter/Native 全入口前置拦截证据未齐 |
 | 工具覆盖 | 24 项注册工具，3 项 Headless：yunqi/almanac/bazi | 其余工具仅在有纯确定性函数、明确用户场景及独立验收时逐项迁移 |
 
 - 不重复审核已审核知识库，不修改排盘、剂量计算、DiagnosticEngine 或问诊十问。
@@ -1469,7 +1471,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - changed widget test 验证：结果解释消息 metadata 同时保留 `local-engine:diagnostic-engine` 和本轮实际检索到的 `neijing:*` 来源；解释仍处于问诊助手上下文。
 - 上一版测试误将来源断言为“只能有一个引擎来源”，但实际知识检索按设计返回了多条 `neijing:*` 引用；已修正为分别断言引擎来源与知识来源均存在。这不是生产代码失败。
 - 该改动只是来源追溯，不等于自由文本问诊的理解、澄清或后台规则执行已经完成；也不将现有手动解释按钮改为自动模型调用。
-- 自由文本健康叙述仍保持 PARTIAL / BLOCKED BY RED-FLAG GATE；没有经过医学审核的 detector 规则、阈值、例外、处置文案及全入口模型调用前拦截证据，不扩大健康数据进入 E4B 的范围。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 自由文本健康叙述仍保持 PARTIAL / BLOCKED BY RED-FLAG GATE；没有经过医学审核的 detector 规则、阈值、例外、处置文案及全入口模型调用前拦截证据，不扩大健康数据进入 E4B 的范围。
 
 
 
@@ -1481,7 +1483,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 31.5 下一步收尾顺序
 
-1. **B 红旗门禁与自然语言问诊**：唯一允许的下一步是取得医学审核后的 detector 规则、阈值、否定/历史/他人/知识提问处理及处置文案，然后覆盖 Flutter/Native 所有模型入口；完成前不接自由文本症状抽取，不把 REVIEW_REQUIRED 默认放行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 1. **B 红旗门禁与自然语言问诊**：唯一允许的下一步是取得医学审核后的 detector 规则、阈值、否定/历史/他人/知识提问处理及处置文案，然后覆盖 Flutter/Native 所有模型入口；完成前不接自由文本症状抽取，不把 REVIEW_REQUIRED 默认放行。
 2. **A/F Find N2 真机验收**：用合成/非敏感数据跑 GPU 与 CPU、文本/图片/语音、多轮和 Activity/进程恢复；记录设备、Android、App SHA、模型版本、backend、轮次和 TRACE。CI APK 不替代实机验收。
 3. **E 数据清理实机闭环**：复核合并 Manifest 后，在清除全部 AI 数据后重启验证会话、问诊快照、附件原件、缩略图与孤儿文件不可恢复；不把静态测试写成重启验证。
 4. **C 来源缺失保持事实状态**：12 条规则 conditionKey 已与 manifest 一一对应；其中 2 条 UNVERIFIED/MISSING 没有可追溯条文或医案来源，继续保留 MISSING，不补造条号、出处或方剂。83 条普通学习讲稿不重复做纸本校勘。
@@ -1522,7 +1524,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 32.5 未完成项与冻结
 
-1. 自由文本问诊：仍 BLOCKED BY RED-FLAG GATE。医学审核后的 detector、阈值/例外/处置文案和 Flutter/Native 全入口前置拦截未齐之前，不启用症状自由文本抽取，不将 REVIEW_REQUIRED 默认放行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 1. 自由文本问诊：仍 BLOCKED BY RED-FLAG GATE。医学审核后的 detector、阈值/例外/处置文案和 Flutter/Native 全入口前置拦截未齐之前，不启用症状自由文本抽取，不将 REVIEW_REQUIRED 默认放行。
 2. Find N2 真机：E4B 真实语义、GPU/CPU 多轮、图片/语音和 Activity/进程恢复 TRACE 仍 DEVICE UNKNOWN；CI APK 不替代真机。
 3. 数据清理：清除后完全退出/重启并核对数据库、附件、缩略图和孤儿文件是否不可恢复，仍需真机证据；共享 SQLite 备份边界和外部副本不得写成已清除。
 4. 经典来源：两条无可追溯来源的规则继续 MISSING；不补造条号、出处或方剂，普通学习讲稿不重复纸本校勘。
@@ -1573,7 +1575,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 | Headless executor | 4 项：`yunqi / almanac / bazi / meihua` | 其他 Page Tool 仍逐项审计，不批量迁移 |
 | 梅花数字起卦 | CODE + TEST + targeted validation + PR Flutter/Android CI PASS | Find N2 真实 E4B 语义与运行性能仍 DEVICE UNKNOWN |
 | 梅花时间/随机起卦 | 保留 Page Tool | 由原页面采集时间/随机输入，不归类为 Headless |
-| 自由文本问诊 | PARTIAL / BLOCKED BY RED-FLAG GATE | 医学审核 detector、阈值/例外/处置文案和 Flutter/Native 全入口前置拦截未齐 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | 自由文本问诊 | PARTIAL / BLOCKED BY RED-FLAG GATE | 医学审核 detector、阈值/例外/处置文案和 Flutter/Native 全入口前置拦截未齐 |
 | Find N2 真机 | DEVICE UNKNOWN | GPU/CPU、多媒体、多轮、Activity/进程恢复与真实 E4B TRACE 仍需设备证据 |
 | AI 数据清除 | PARTIAL / DEVICE UNKNOWN | 清除后重启，验证会话、问诊快照、附件、缩略图和孤儿文件不可恢复 |
 
@@ -1614,7 +1616,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 | 工作流 | 当前状态 | 下一项最小工作 |
 |---|---|---|
 | A Native 多轮/生命周期 | PARTIAL / DEVICE UNKNOWN | 保持只修复有复现证据的 CI/自动化问题；Find N2 GPU/CPU、多媒体、Activity/进程恢复至少 20 轮记录仍需设备 |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 不编造自然语言 detector；等待医学审核版本、阈值/例外/处置文案和产品决策；在此之前不开放症状自由文本抽取或自动模型诊断 |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 检索来源 | PARTIAL | 保留既有黄金快照；书目 locator/纸本底本缺失独立列出，不重复审核已审核知识库内容 |
 | D 确定性工具 | PARTIAL | 在紫微工具上先做页面行为基线，再抽一个最小 Headless executor；其余 Page-only 不批量迁移 |
 | E 数据保护 | PARTIAL / DEVICE UNKNOWN | 合并 Manifest 与 CI 检查已通过；完成清除全部 AI 数据后的强停/重启不可恢复验证及共享 DB/附件边界核验 |
@@ -1631,7 +1633,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - 不改 DiagnosticEngine、DiagnosticRules、问诊十问、排盘算法、剂量换算和民俗计算规则。
 - 不重复审核已经完成医学审核的知识库。
-- 不在缺少医学审核 detector 时启用自由文本症状抽取；不把 `REVIEW_REQUIRED/UNKNOWN` 视为安全放行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不在缺少医学审核 detector 时启用自由文本症状抽取；不把 `REVIEW_REQUIRED/UNKNOWN` 视为安全放行。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库或批量 Page Tool 迁移。
 
 ---
@@ -1671,7 +1673,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 | 工作流 | 当前状态 | 后续最小任务 / 门槛 |
 |---|---|---|
 | A Native 多轮与生命周期 | PARTIAL / DEVICE UNKNOWN | Find N2 GPU/CPU、多媒体、Activity/进程中断恢复与真实 TRACE；CI APK 不替代真机 |
-| B 全模式红旗安全 | PARTIAL / RELEASE BLOCKED | 等待具备医学背景人员审核的自然语言 detector 版本、规则范围、阈值/例外/处置文案；并验证 Flutter/Native 所有模型入口调用前覆盖。未取得审核材料前不开放自由文本症状抽取，不把 REVIEW_REQUIRED/UNKNOWN 当 CLEAR |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 知识检索与来源身份 | PARTIAL | 已审核知识库不重复审核；继续补书目 locator、底本版本、卷页/原文身份缺失项 |
 | D Headless 能力 | PARTIAL（8 Headless / 15 Page-only） | 逐项建立页面行为基线；下一项只有在能复用原确定性计算、输入边界明确且结果有来源时才实施 |
 | E 数据保护 | PARTIAL / DEVICE UNKNOWN | 在 Find N2 清除全部 AI 数据后强停/重启，验证 DB/附件/缩略图/孤儿文件不可恢复；共享备份副本边界需明确 |
@@ -1681,7 +1683,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 35.6 冻结项
 
 - 不修改 DiagnosticEngine、DiagnosticRules、问诊十问、八字/紫微/梅花/节气确定性算法和剂量换算规则。
-- 不重复审核已经医学审核通过的知识库内容；自然语言红旗 detector 与知识内容审核是不同对象。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不重复审核已经医学审核通过的知识库内容；自然语言红旗 detector 与知识内容审核是不同对象。
 - 不在缺少医学审核 detector 时启用自由文本症状问诊，不以模型自我判断代替红旗前置检查。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page Tool。
 
@@ -1697,7 +1699,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 新增 `XiaoliurenToolExecutor`，复用现有 `LunarDate.fromSolar`、`computeXiaoliuren` 和 `xiaoliurenVerse`；没有修改原页面或小六壬计算规则。
 - 小六壬必须明确收集公历日期、一个地支时辰、以及 `common`（通行掌诀）或 `duoneng`（《多能鄙事》卷八）口径。缺参、多日期/时辰、双口径冲突、农历输入和非法值均先澄清或拒绝执行；不默认算法口径。
 - 对话状态通过现有 assistant message metadata 持久化并可跨轮/历史恢复；支持明确取消。完整参数通过校验并由 App 纯函数成功执行、结果契约及 sourceIds 校验后，才将真实结果交给 AI 解释。用户不需要跳转小六壬页面。
-- 未改问诊引擎、排盘引擎、剂量计算、医学知识库或 RedFlagGate。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 未改问诊引擎、排盘引擎、剂量计算、医学知识库或 RedFlagGate。
 
 ### 36.2 自动化验收证据
 
@@ -1717,7 +1719,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 | 工作流 | 当前状态 | 下一项最小任务 |
 |---|---|---|
 | A 本地模型多轮/生命周期 | PARTIAL / DEVICE UNKNOWN | Find N2 E4B GPU/CPU、图片/语音、Activity/进程恢复实测及真实 TRACE |
-| B 红旗安全 | PARTIAL / RELEASE BLOCKED | 等待医学审核 detector、版本、阈值/例外/处置文案和全生产入口调用前覆盖证据；不重复审核已审核知识库，不自行编造 detector |
+| B 临床红旗门禁 | NOT_APPLICABLE | 旧版临床 detector/医学签审方案已废止；当前不建设、不排期、不阻断模型或发布。 |
 | C 知识来源 | PARTIAL | 补书目 locator、底本版本、卷页/原文身份；不重复审核医学内容 |
 | D Headless 工具 | PARTIAL（9 Headless / 14 Page-only） | 先对 Yijing 四种起卦模式建立行为基线，再选最小实现；不批量迁移 |
 | E 数据保护 | PARTIAL / DEVICE UNKNOWN | Find N2 清除全部 AI 数据后强停/重启，核验 DB/附件/缩略图/孤儿文件不可恢复 |
@@ -1728,7 +1730,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - 不改 `DiagnosticEngine`、`DiagnosticRules`、问诊十问、排盘/剂量/民俗确定性算法。
 - 不重复审核已经完成医学审核的知识库内容。
-- 红旗 detector 未经医学审核并覆盖所有生产模型入口前，不启用自由文本症状自动辨证；`REVIEW_REQUIRED/UNKNOWN` 不得当作 CLEAR。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 红旗 detector 未经医学审核并覆盖所有生产模型入口前，不启用自由文本症状自动辨证；`REVIEW_REQUIRED/UNKNOWN` 不得当作 CLEAR。
 - 不新增第二套 Orchestrator、Agent/DAG、云 API、向量数据库，不批量迁移 Page-only 工具。
 
 
@@ -1769,8 +1771,8 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 37.5 剩余工作与冻结边界
 
-1. B 红旗安全仍 PARTIAL / RELEASE BLOCKED：等待医学审核的自然语言 detector 版本、审核记录、阈值/例外/处置文案，以及 Flutter/Native 所有模型调用入口前的 fail-closed 覆盖证据。不得自行编造 detector 规则；`REVIEW_REQUIRED/UNKNOWN` 不得作为 CLEAR。
-2. 用户要求的自由文本问诊闭环仍未完成：自由描述理解、仅追问十问必要缺项、后台调用原确定性规则、解释真实结果。红旗安全门禁未满足前不得启用自动症状辨证。既有已审核知识库内容不重复审核。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 1. B 红旗安全仍 PARTIAL / RELEASE BLOCKED：等待医学审核的自然语言 detector 版本、审核记录、阈值/例外/处置文案，以及 Flutter/Native 所有模型调用入口前的 fail-closed 覆盖证据。不得自行编造 detector 规则；`REVIEW_REQUIRED/UNKNOWN` 不得作为 CLEAR。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 2. 用户要求的自由文本问诊闭环仍未完成：自由描述理解、仅追问十问必要缺项、后台调用原确定性规则、解释真实结果。红旗安全门禁未满足前不得启用自动症状辨证。既有已审核知识库内容不重复审核。
 3. A/E/F 仍需 OPPO Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程中断恢复、清除全部 AI 数据后强停/重启不可恢复、真实端到端 TRACE。
 4. C 只补书目 locator、底本版本、卷页/原文身份缺口；不重做已审核医学知识库内容审核。
 5. D 剩余 13 个 Page-only 工具先做确定性函数、输入边界、结果来源和行为基线审计；只对具备完整前置条件的单项能力开独立小分支，不批量迁移。
@@ -1817,7 +1819,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 38.5 尚未关闭的用户目标与优先级
 
-1. **B 红旗安全，仍 PARTIAL / RELEASE BLOCKED。** 生产自然语言 detector 尚无可追溯的医学审核版本、审核记录、阈值/例外/处置文案，也没有全部 Flutter/Native 模型调用入口前的 fail-closed 覆盖证据。先完成 B2 注入式门禁接缝和 fake-detector 调用顺序测试；不自行编造红旗词表/阈值/医疗处置文案。已医学审核通过的知识库内容不重复审核。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 1. **B 红旗安全，仍 PARTIAL / RELEASE BLOCKED。** 生产自然语言 detector 尚无可追溯的医学审核版本、审核记录、阈值/例外/处置文案，也没有全部 Flutter/Native 模型调用入口前的 fail-closed 覆盖证据。先完成 B2 注入式门禁接缝和 fake-detector 调用顺序测试；不自行编造红旗词表/阈值/医疗处置文案。已医学审核通过的知识库内容不重复审核。
 2. **自由文本问诊闭环仍未完成。** 当前 `TcmInterviewConversationController.start()` 把初始描述保留在 transcript/context，但实际仍从 `temperature`、`tongue_pulse` 再进入问诊十问的既定顺序；没有把用户自由描述结构化映射为已答字段，也没有只对缺失项进行追问。完成 B 门禁前不得开放自由文本自动症状辨证；门禁具备审核依据后，再以受约束结构化输出抽取候选症状、保留原话、标记待确认，经用户确认后才映射到现有规则问诊输入。不得修改 DiagnosticEngine/DiagnosticRules 或问诊十问。
 3. **D：`dream` 已完成首个 Page-only → Headless 小批量迁移。** 本地梦境数据有 412 条记录、244 个不同 keyword，其中 78 个 keyword 重复对应多条记录；例如“蛇”对应 4 条。PR #159 已按具体情节匹配/重复候选澄清/无匹配状态接入统一助手对话，未改数据源；结果只作为民俗文化资料解释，不作现实吉凶预测。剩余 10 个 Page-only 工具继续逐项审计确定性输入、输出、来源和取消/恢复语义，只有单项契约明确且有用户场景证据才开独立分支，不批量迁移。
 4. **A/E/F 仍需 OPPO Find N2 真机证据。** E4B GPU/CPU、多轮文本/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复及端到端 TRACE，CI APK 不可替代真机验收。
@@ -1843,7 +1845,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 ### 38.8 仍未关闭的边界
 
-- B2 注入式红旗门禁接缝已随 PR #158 合并，但生产自然语言 detector 仍无医学审核版本/审核记录/阈值与例外/处置文案和全部 Flutter/Native 入口 fail-closed 证据；B 继续 PARTIAL / RELEASE BLOCKED。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B2 注入式红旗门禁接缝已随 PR #158 合并，但生产自然语言 detector 仍无医学审核版本/审核记录/阈值与例外/处置文案和全部 Flutter/Native 入口 fail-closed 证据；B 继续 PARTIAL / RELEASE BLOCKED。
 - 用户要求的自由文本症状描述→结构化理解→仅追问缺项→既有规则问诊→真实结果解释，仍受 B 的生产门禁条件约束，当前没有开放，也没有修改问诊十问或辨证规则。
 - A/E/F 继续等待 OPPO Find N2 真机证据；C 继续只补来源定位；其余 10 个 Page-only 工具不批量迁移，逐项做确定性输入/输出/来源审计后再决定。
 
@@ -1891,7 +1893,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - `AssistantToolRouter` 仍为 24 个定义：23 个常规工具入口 + 1 个确定性问诊控制器内联的 `structured_diagnosis`。
 - 常规工具中 13 项具备 Headless executor：`yunqi / almanac / bazi / xiaoliuren / meihua / chenggu / huangdi_siji / ziwei / solar_terms / yijing / dosage / ziwu_liuzhu / dream`；10 项仍为 Page-only：`guji_library / knowledge_hub / medical_cases / diagnosis_history / critical_illness / yuxiaji_omen / guansha / sanshan_lingqian / shousheng_debt / saved_charts`。`structured_diagnosis` 由原规则问诊控制器执行，不计入通用 Headless 数量。
-- B 红旗安全仍 `PARTIAL / RELEASE BLOCKED`：生产自然语言 detector 的医学审核版本、审核记录、阈值/例外/处置文案及全部 Flutter/Native 模型调用入口前的 fail-closed 证据仍未齐备。不得据此开放自由文本自动症状辨证，也不得自行编造医学规则。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 红旗安全仍 `PARTIAL / RELEASE BLOCKED`：生产自然语言 detector 的医学审核版本、审核记录、阈值/例外/处置文案及全部 Flutter/Native 模型调用入口前的 fail-closed 证据仍未齐备。不得据此开放自由文本自动症状辨证，也不得自行编造医学规则。
 - 自由文本问诊目标仍是：理解用户原话 → 结构化候选并保留原话 → 只追问必要缺项/待确认项 → 用户确认 → 调用现有 `DiagnosticEngine` → 解释真实、有来源的结果。须先解除 B 的生产安全门禁；本 PR 不改变既有问诊十问或规则。
 - A/E/F 仍需 OPPO Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复，以及完整 TRACE。CI APK/native 测试不等于真机通过。
 - C 仍只补书目 locator、底本版本、卷页/原文身份缺口；已审核医学知识库内容不重复审核。当前医案账本 1,256 条中 10 条网页/原文来源为 VERIFIED、1,246 条来源为 MISSING，纸本/影印本 locator 1,256 条仍全部 MISSING；不得推测或补造卷页。
@@ -1937,7 +1939,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - AssistantToolRouter 仍为 24 个定义：23 个常规工具入口 + 1 个确定性问诊控制器内联的 structured_diagnosis。
 - 常规工具中 14 项具备 Headless executor：yunqi / almanac / bazi / xiaoliuren / meihua / chenggu / huangdi_siji / ziwei / solar_terms / yijing / dosage / ziwu_liuzhu / dream / guansha；9 项仍为 Page-only：guji_library / knowledge_hub / medical_cases / diagnosis_history / critical_illness / yuxiaji_omen / sanshan_lingqian / shousheng_debt / saved_charts。structured_diagnosis 仍由原规则问诊控制器执行，不计入通用 Headless 数量。
-- B 红旗安全仍 PARTIAL / RELEASE BLOCKED：生产自然语言 detector 的医学审核版本、审核记录、阈值/例外/处置文案和全部 Flutter/Native 模型入口前 fail-closed 证据仍未齐备。不能因此开放自由文本自动症状辨证，也不能自行编造医学规则。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 红旗安全仍 PARTIAL / RELEASE BLOCKED：生产自然语言 detector 的医学审核版本、审核记录、阈值/例外/处置文案和全部 Flutter/Native 模型入口前 fail-closed 证据仍未齐备。不能因此开放自由文本自动症状辨证，也不能自行编造医学规则。
 - 用户要求的自由文本问诊闭环仍未交付：AI 理解症状描述、提取候选字段、仅追问必要缺项、用户确认后调用原 DiagnosticEngine、最后解释真实结果。须先满足 B 的生产安全门禁；当前不改十问顺序或辨证规则。已医学审核的知识库不重复审核。
 - A/E/F 仍需 OPPO Find N2 真机证据：E4B GPU/CPU、多轮文字/图片/语音、Activity/进程恢复、清除全部 AI 数据后强停/重启不可恢复及端到端 TRACE；CI APK/Native 测试不等于真机验收。
 - C 继续只补可追溯的 locator、底本版本、卷页/原文身份缺口；不推测或补造来源，不重复审核已审核医学知识。
@@ -1982,7 +1984,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - 路由定义共 24 项：23 个常规工具 + 1 个结构化问诊内联控制器。通用 Headless 为 16/23；Page-only 为 7/23。名单见 `docs/ai-capability-inventory.md` 的 §2N。
 - Page-only 保留不是待补任务清单：知识文档入口复用已有学习助手知识检索与解释；医案、经典页面不复制检索器；个人诊断历史/保存排盘只在用户明确选择且授权后使用；玉匣灵兆为易与症状混淆的民俗文本，缺少安全、明确的对话执行契约。没有真实用户场景和确定性输入/结果/来源契约，不创建适配器。
-- 下一阶段优先级不是扩充 Headless 数量，而是完成自由文本问诊生产安全门禁的证据收敛。B 仍 `PARTIAL / RELEASE BLOCKED`：生产 RedFlag detector 医学审核版本/审批记录/阈值例外/处置文案及所有模型入口 fail-closed 证据未齐。不得自行发明规则、不得开放自由文本自动辨证。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 下一阶段优先级不是扩充 Headless 数量，而是完成自由文本问诊生产安全门禁的证据收敛。B 仍 `PARTIAL / RELEASE BLOCKED`：生产 RedFlag detector 医学审核版本/审批记录/阈值例外/处置文案及所有模型入口 fail-closed 证据未齐。不得自行发明规则、不得开放自由文本自动辨证。
 - B 门禁解除后，按用户目标实现对话式问诊：保留用户原始描述及证据 → 结构化理解已提供字段 → 只追问缺失/歧义项 → 用户确认 → 原有规则问诊执行 → 业务结果/来源校验 → AI 解释。不要让 E4B 取代十问/DiagnosticEngine；不要重复审核已医学审核的知识库。
 - Find N2 E4B GPU/CPU、多轮、多媒体、Activity/进程恢复、清除数据后不可恢复及真实 TRACE 仍需真实设备证据；CI 构建与 Native tests 不等于设备验收。
 - C 只补可追溯来源定位，MISSING 保持 MISSING；E 的数据删除/备份行为仍需符合既有清除数据边界。G 维持单一版本来源。
@@ -2000,10 +2002,11 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - PR #172 最终 head `03159bc645c6e06ef5062ec5438b1417111bb067`，分支验证 run `43671166718` SUCCESS，PR workflow run `43671170314` SUCCESS，含 Flutter regression、Android arm64 APK/Manifest/ABI/SHA-256、Native unit tests、JUnit XML 和证据工件上传。Squash merge 为当前 master `1370855b3f6a94f4a9cf0bcb235478f753348443`；合并后 Flutter tests run `43671870660` 与 Quality Gate run `43671870662` 均终态 SUCCESS。Flutter regression job `132683481307`、Android arm64 APK/Manifest/ABI/SHA-256/Native tests job `132684675722`、Quality Gate job `132683481181` 均 SUCCESS。
 - 代码范围以 PR 差异为准；不把 PR/CI 成功描述成 Find N2 实机验收。
 
-### 43.2 B：红旗安全门禁实际状态
+### 43.2 B：红旗安全门禁实际状态（历史章节，已废止）
+> [SUPERSEDED / NOT IN SCOPE] 本节仅保留历史审计轨迹；临床 detector、医学词表/阈值/处置文案签审和模型阻断均不是当前要求。
 
-- PR #169 将既有 fail-closed `RedFlagGate/RedFlagPreflight` 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界。缺少 detector、assessment UNKNOWN、规则未审核、覆盖不完整、超时或原始图片/音频没有可信提取时，不得按 CLEAR 放行。
-- 这是门禁调用接线和阻断契约，不是自然语言、视觉或语音医学红旗 detector。detector 的医学审核版本、责任审批、阈值/例外和处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - PR #169 将既有 fail-closed `RedFlagGate/RedFlagPreflight` 接入助手 Flutter 临床相关入口及 Android Native 模型调用边界。缺少 detector、assessment UNKNOWN、规则未审核、覆盖不完整、超时或原始图片/音频没有可信提取时，不得按 CLEAR 放行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 这是门禁调用接线和阻断契约，不是自然语言、视觉或语音医学红旗 detector。detector 的医学审核版本、责任审批、阈值/例外和处置文案仍 MISSING；B 继续 `PARTIAL / RELEASE BLOCKED`。
 - 不修改医学规则、不重审已审核知识库；在合格 detector 与证据完备前，不开放模型抽取自由文本症状并自动执行诊断。
 
 ### 43.3 D：工具/玄学能力盘点
@@ -2061,14 +2064,14 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 - `TcmInterviewConversationController.start()` 仍保留用户自述作为上下文，然后依次进入寒热、舌脉和现有十问；当前没有将自由文本候选答案映射为规范问题 ID/选项并经用户确认后写入既有引擎状态的闭环。
 - 不把用户自述直接转换成规则答案，不调用模型跳过现有引擎顺序，不修改十问、`DiagnosticEngine` 或 `DiagnosticRules`。未来对话闭环应为：保留用户原话及证据 → AI 提取有限候选字段 → 用原始文本证据验证并展示用户确认/修正 → 仅追问缺项/歧义 → 顺序调用现有规则问诊 → 校验真实结果和来源 → AI 解释并回链本地知识条目。
-- B 的 fail-closed Gate 已接入临床相关入口，但生产自然语言/视觉/语音 RedFlag detector、审核版本、责任审批、阈值/例外及处置文案证据仍不齐；B 继续 `PARTIAL / RELEASE BLOCKED`。这是输入安全检测边界，不是要求重复审核知识库。不得绕过 Gate，也不得自行发明医学词表/阈值后开放自由文本自动辨证。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 的 fail-closed Gate 已接入临床相关入口，但生产自然语言/视觉/语音 RedFlag detector、审核版本、责任审批、阈值/例外及处置文案证据仍不齐；B 继续 `PARTIAL / RELEASE BLOCKED`。这是输入安全检测边界，不是要求重复审核知识库。不得绕过 Gate，也不得自行发明医学词表/阈值后开放自由文本自动辨证。
 
 ### 44.5 Find N2 与本地验收边界
 
 - 云端可完成源码审计、Dart/Kotlin 自动化、Android arm64 APK 构建、Manifest/ABI/SHA-256 检查、Native unit tests、文档和 PR 集成；这些只能证明代码和构建链路。
 - 以下必须在 OPPO Find N2 实体设备执行：GPU 默认后端连续至少 20 轮；Debug Intent 显式 CPU 后端连续至少 20 轮；同组场景覆盖文字、图片和语音；Activity/进程强停重启及会话恢复；应用内清除全部 AI 数据后强停/重启复核；启用 Debug TRACE 并检查各轮跨层关联。
 - 每次后端均记录 Native 实际返回的 backend，不得把“请求 GPU/CPU”当作实际 backend。核对 SQLite transcript、Flutter UI、Native successful-turn history 与 task snapshot；未知请求不得自动重放。
-- TRACE 使用独立 `trace_id`，核对输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化和最终展示阶段；不记录用户正文、prompt/response、症状、附件路径或媒体内容。生产 `PREFLIGHT/RED_FLAG` 阶段尚缺完整生产调用证据，设备记录必须标 MISSING/UNKNOWN，不得伪造 NOT_APPLICABLE。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - TRACE 使用独立 `trace_id`，核对输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化和最终展示阶段；不记录用户正文、prompt/response、症状、附件路径或媒体内容。生产 `PREFLIGHT/RED_FLAG` 阶段尚缺完整生产调用证据，设备记录必须标 MISSING/UNKNOWN，不得伪造 NOT_APPLICABLE。
 - AI 数据清除的数据库事务、AI 专属附件目录、Native runtime/cache、内存会话、TRACE 文件及 UI 分项反馈已有代码与自动化证据；真机清除后重启不可恢复仍 UNKNOWN。混合 SQLite 中的 AI 对话行仍可能处于系统备份/设备迁移副本，旧共享图片所有权 UNKNOWN；不得删除整个数据库、整个共享临时目录或全局禁用备份来冒充完成。模型文件及非 AI 数据按既有清除契约保留。
 - A/E/F 继续为 `PARTIAL / DEVICE UNKNOWN`，未取得 Find N2 证据前不得写 PASS。详见 `docs/local-ai-multiturn-audit.md`、`docs/ai-data-clear-scope-audit.md`、`docs/find-n2-ai-trace-acceptance-plan.md`。
 
@@ -2112,7 +2115,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 45.4 问诊助手与知识来源边界
 
 - 结构化问诊仍由现有 `TcmInterviewConversationController` / `DiagnosticEngine` 执行；AI 可以解释已产生且已校验的辨证结果，但不能代替引擎输出证型或改写 `DiagnosticRules`。
-- 当前 free-text 症状到规范十问字段的“候选提取—原文证据—用户确认—仅追问缺项”适配闭环仍未实现。该功能受 B 的生产 RedFlag detector 医学审核和 fail-closed 证据约束；detector 缺失时 Gate 必须保持 REVIEW_REQUIRED/UNKNOWN，不能绕过或自造医学规则。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 当前 free-text 症状到规范十问字段的“候选提取—原文证据—用户确认—仅追问缺项”适配闭环仍未实现。该功能受 B 的生产 RedFlag detector 医学审核和 fail-closed 证据约束；detector 缺失时 Gate 必须保持 REVIEW_REQUIRED/UNKNOWN，不能绕过或自造医学规则。
 - 已医学审核的知识库不重复审核。经典、医案、讲稿和其他知识解读只要求 AI 回答挂接稳定 `sourceId`，并可打开 App 内实际资产/章节/医案记录。纸本底本、版本、卷页、影印本坐标不再作为普通知识回答验收门槛。
 - 只有实际检索未命中、条目不存在、sourceId 无法解析/打开或必需条目字段确实为空时，才说明对应知识项未找到；不能使用模型记忆补造医学内容/来源，也不能因外部书目字段未校验就声称本地知识库无来源。
 
@@ -2148,8 +2151,8 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 - 云端代码和 CI 收尾已完成。没有证据支持再改造其他工具路由；不重复执行已通过的泛化测试，不新增 Agent/DAG、第二套 Orchestrator、云端 API、向量数据库或无明确失败证据的架构。
 - 自然语言问诊的**候选理解与规则问项映射代码已落地**：master commit `5b2c3d8738128a5965e54f807719eb2d6fe16635`（`feat(ai): map confirmed symptom slots into existing rule interview`）把 App 的十问题目 ID/原选项 schema 传给本地 E4B；E4B 仅能提出既有选项候选，并提供用户原文连续证据。Dart 再校验候选 ID、选项白名单、原文证据与题目唯一性；UI 展示题目/答案/证据，由用户逐项确认；确认答案交给 `TcmInterviewConversationController`，控制器二次校验后按 `DiagnosticEngine` 原题目顺序消费已确认项、跳过这些已回答题目并继续追问未回答项。待确认候选随问诊任务快照保存/恢复。未确认候选不会写入引擎，模型不能输出证型、诊断、方剂或剂量。
 - 该 commit 涉及 Native E4B schema 提示、Dart 候选结构/证据验证、用户确认 UI、控制器适配和任务快照 schema v3；针对无效选项、非原文证据、候选 ID/答案、确认/取消、任务保存/恢复已有回归。合并后 master Flutter Tests run `43685797528`（Flutter regression + Android arm64 verification）与 Quality Gate run `43685797546` 均在精确 head `5b2c3d8738128a5965e54f807719eb2d6fe16635` SUCCESS。此为 CODE + TEST + CI 证据，不等于生产临床输入已开放或 E4B 真机语义验收通过。
-- 问诊适配代码仍受独立安全门禁约束：`LocalAiInterviewScreen._extractSymptoms()` 在调用 E4B 前要求 RedFlagGate CLEAR；Android `MainActivity` 的 `extractSymptoms` MethodChannel 也要求 NativeRedFlagExecutionBoundary CLEAR。Flutter 页面 Gate 为测试注入 seam，Native detector 当前仍为 host/test injection only、默认 `null`；测试使用的 `testOnlyReviewedNoMatchRedFlagGate` 明确是合成夹具，不是医学 detector，绝不能进入生产。生产自然语言/视觉/语音 RedFlag detector、审核版本、覆盖证明、责任审批和处置文案仍 MISSING，B 继续 `PARTIAL / RELEASE BLOCKED`。
-- 因此，当前**候选提取—用户确认—规则问项映射代码已完成，但生产自由文本问诊仍 BLOCKED**。下一步不是重写槽位适配器，也不是复审知识库；仅在外部责任方提供经审核 detector 规则/版本/覆盖和处置文案后，再接入生产 Flutter/Native detector，并针对真实 Gate 行为补齐正负向入口回归。此前绝不把 Gate 的 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR，也不使用模型 prompt 或自造规则替代医学审核。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 问诊适配代码仍受独立安全门禁约束：`LocalAiInterviewScreen._extractSymptoms()` 在调用 E4B 前要求 RedFlagGate CLEAR；Android `MainActivity` 的 `extractSymptoms` MethodChannel 也要求 NativeRedFlagExecutionBoundary CLEAR。Flutter 页面 Gate 为测试注入 seam，Native detector 当前仍为 host/test injection only、默认 `null`；测试使用的 `testOnlyReviewedNoMatchRedFlagGate` 明确是合成夹具，不是医学 detector，绝不能进入生产。生产自然语言/视觉/语音 RedFlag detector、审核版本、覆盖证明、责任审批和处置文案仍 MISSING，B 继续 `PARTIAL / RELEASE BLOCKED`。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 因此，当前**候选提取—用户确认—规则问项映射代码已完成，但生产自由文本问诊仍 BLOCKED**。下一步不是重写槽位适配器，也不是复审知识库；仅在外部责任方提供经审核 detector 规则/版本/覆盖和处置文案后，再接入生产 Flutter/Native detector，并针对真实 Gate 行为补齐正负向入口回归。此前绝不把 Gate 的 REVIEW_REQUIRED/UNKNOWN 降级为 CLEAR，也不使用模型 prompt 或自造规则替代医学审核。
 
 ### 46.3 本地设备验收交接（非云端待办）
 
@@ -2161,7 +2164,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 4. GPU/CPU 两组分别覆盖多轮文字、图片、语音；记录空回复、state:7、fallback 和实际 backend。当前 GPU EngineConfig 的 audioBackend 仍为 CPU，不得把音频路径记作 GPU。
 5. Activity recreation、force-stop/restart、原会话恢复；比对 SQLite transcript、Flutter UI、Native successful-turn history 和问诊 task snapshot，未知状态不盲目重放。
 6. 用合成数据执行“清除全部 AI 数据”，随后 force-stop/restart 复查 AI 会话、消息、问诊快照、AI 附件、Native runtime cache、TRACE 已清除；同时确认非 AI 数据和已安装模型保留。
-7. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 7. Debug 开启 TRACE，核对同一轮 trace_id 从输入、路由、检索、模型、参数校验、工具执行、结果校验、持久化到最终展示的实际事件；不得记录正文、prompt/response、症状、附件路径或媒体内容。生产 PREFLIGHT/RED_FLAG 未有 detector 覆盖的节点保持 MISSING/UNKNOWN。
 8. 每条记录附设备型号、Android 版本、App commit/version、APK SHA-256、模型版本/SHA-256、Native 实际 backend、轮次、脱敏 trace_id、结果和必要截图。未实际执行的项目记 UNKNOWN。
 
 ### 46.4 非代码决策边界
@@ -2265,7 +2268,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 49.5 原临床检测器阻断记录（已被第 50 节取代）
 
 - 本节保留此前把问诊模拟按临床分诊系统设计时的阻断记录，仅作为历史决策轨迹。
-- 2026-11-15 用户明确最终产品定位后，生产临床 RedFlag detector、医学审核版本、临床覆盖证明和医师签字不再属于本学习软件的功能准入条件；不继续按本节建立或等待这些材料。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 2026-11-15 用户明确最终产品定位后，生产临床 RedFlag detector、医学审核版本、临床覆盖证明和医师签字不再属于本学习软件的功能准入条件；不继续按本节建立或等待这些材料。
 - 本节为历史边界记录；当前产品要求以第 50、51 节最新定义为准，不再把问诊限定为仅模拟学习或以固定免责声明限制完整诊疗推理教学。
 - 混合 SQLite 数据库备份范围、旧版本共享临时图片所有权仍属于产品数据保留决策；没有决策与所有权证据，不删除整个数据库/临时目录，也不全局关闭 Android Backup。
 - 不再把 Find N2 真机项目、纸本底本/版本/卷页考证、重复知识库医学审核、无具体缺陷证据的工具迁移或无意义的泛化测试列为云端下一阶段任务。
@@ -2303,7 +2306,7 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 
 1. **DONE — 问诊结果解释收敛**：PR #186、#188 已移除残留的“仅模拟学习”限制，问诊助手可处理用户自身体验、经典/医案和假设病例；基于 App 实际规则结果与可追溯知识库来源解释辨病辨证、病机、治法、方剂和针灸，不修改 DiagnosticEngine / DiagnosticRules。
 2. **DONE — 四类助手结果闭环复核**：问诊、工具、学习、玄学已复核现有执行路径、参数/结果校验、sourceId、自动解读和续问。既有 Orchestrator、ToolRouter、KnowledgeContextBuilder 已覆盖所需职责，没有重建或批量迁移。
-3. **DONE — 定向验收**：已有回归覆盖未成功/校验失败不进入事实性解释、成功结果保留来源、参数缺项追问和知识来源状态；本轮新增结果解释入口的 PREFLIGHT/RED_FLAG NOT_APPLICABLE 事件断言。MISSING/UNKNOWN 保持真实缺失语义，不伪造 PASS。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. **DONE — 定向验收**：已有回归覆盖未成功/校验失败不进入事实性解释、成功结果保留来源、参数缺项追问和知识来源状态；本轮新增结果解释入口的 PREFLIGHT/RED_FLAG NOT_APPLICABLE 事件断言。MISSING/UNKNOWN 保持真实缺失语义，不伪造 PASS。
 4. **DONE — CI 与文档收尾**：PR #186/#187/#188 分支验收后小批量合并；最终 master `51276fc` 的 Flutter Tests 与 Flutter Quality Gate 均 SUCCESS。详细证据见第 52 节。文档记录不替代本地设备验收。
 5. **LOCAL / UNKNOWN — 本地设备事项**：Find N2 上的 E4B GPU/CPU 多轮、图片/语音和进程恢复只保留为本地验证项；没有设备证据就标 UNKNOWN，不阻断已完成的云端代码收尾。
 
@@ -2350,15 +2353,15 @@ Flutter tests 与 Quality Gate 是两条独立 workflow，现均已在同一 mas
 ### 52.4 Native 提示与 TRACE 口径收敛
 
 - Android Native 全局问诊提示与产品定位统一：允许分析用户自身体验、经典/医案和假设病例；实际辨病辨证仍由 App 原有确定性代码执行。AI 可解释 App 已返回且通过校验的病机、治法、方剂组成/配伍、剂量字段、针灸思路和经典依据；不得自行选方、计算剂量、伪造或覆盖业务结果。
-- 清除旧版“仅模拟学习”框架及泛化的个体治疗内容禁令；保留简明急重症求助提醒。不新增临床 detector 或把 detector 作为普通问诊入口的准入门槛。
-- 正常 `requireAssessment=false` 问诊发送和结果解释路径将 `PREFLIGHT` / `RED_FLAG` 记录为 `NOT_APPLICABLE`，错误码分别为 `PREFLIGHT_NOT_REQUIRED`、`REDFLAG_ASSESSMENT_NOT_REQUIRED`。这不表示 detector 已评估、风险已清除或安全 PASS；只有明确要求实际评估的路径才使用真实评估结果，应评估但未配置时标 UNKNOWN。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 清除旧版“仅模拟学习”框架及泛化的个体治疗内容禁令；保留简明急重症求助提醒。不新增临床 detector 或把 detector 作为普通问诊入口的准入门槛。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 正常 `requireAssessment=false` 问诊发送和结果解释路径将 `PREFLIGHT` / `RED_FLAG` 记录为 `NOT_APPLICABLE`，错误码分别为 `PREFLIGHT_NOT_REQUIRED`、`REDFLAG_ASSESSMENT_NOT_REQUIRED`。这不表示 detector 已评估、风险已清除或安全 PASS；只有明确要求实际评估的路径才使用真实评估结果，应评估但未配置时标 UNKNOWN。
 - 结果解释入口已补充对应 TRACE 回归，确保真实事件与合约、Find N2 验收文档一致。
 
 ### 52.5 范围与不变项
 
 - 本轮没有修改 `DiagnosticEngine`、`DiagnosticRules`、问诊题目/选项、方剂规则、剂量计算或排盘/历法计算逻辑。
 - 沿用单一 SQLite、既有 AI 数据清除逻辑；不拆分数据库，不新增 SQLCipher、复杂密钥管理、复杂备份规则或 Android 全局备份变更。
-- 不新增 Agent/DAG、第二套执行器/路由器/知识检索器、临床 detector 或临床分诊系统。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 不新增 Agent/DAG、第二套执行器/路由器/知识检索器、临床 detector 或临床分诊系统。
 - README 与「关于」页统一使用本仓库产品名称和当前安装包版本信息；保留 GitHub Fork 与上游来源，明确上游变更需人工评估、审查和同步，不使用上游版本号、Release 或 APK。
 
 ### 52.6 唯一剩余验收：OPPO Find N2 本地设备
@@ -3812,7 +3815,7 @@ PR HEAD 门禁证据：
 | work/ai-data-clear-audit | 旧 Kotlin 清理器与递归附件处理已由 LocalAiRuntimeCacheClearPolicy、LocalAiAttachmentStore、LocalAiDataClearCoordinator 和设置页入口替代；主线测试覆盖 Native 释放顺序、模型保留、附件归属、SQLite 事务/回滚及失败域报告。 | 不回灌旧清理器。 |
 | work/ai-p0-transcript-rehydration-v2 | 旧 LocalAiConversationHistoryPolicy.kt 和测试与 master 同一 blob；主线另有 LocalAiTranscriptRestorePolicy，覆盖截断、代理字符边界、最近消息和省略标记。 | 已吸收并继续演进，不合并。 |
 | work/ai-managed-attachments-2026-11-11 | 主线 LocalAiAttachmentStore 与测试已覆盖唯一文件名、路径校验、仅删除受控目录和 allowlisted 旧录音、保留共享临时文件及源文件；旧分支测试更早。 | 不回灌旧附件存储版本。 |
-| work/ai-redflag-policy、work/ai-redflag-gate | 旧审计报告以 11 月中旬代码为基线，仍声称门禁/TRACE 缺失。当前有效规范已更新产品边界；未经医学审核的临床分诊 detector 不属于当前准入条件。 | 不将旧 MISSING / RELEASE BLOCKED 报告作为当前规范。 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | work/ai-redflag-policy、work/ai-redflag-gate | 旧审计报告以 11 月中旬代码为基线，仍声称门禁/TRACE 缺失。当前有效规范已更新产品边界；未经医学审核的临床分诊 detector 不属于当前准入条件。 | 不将旧 MISSING / RELEASE BLOCKED 报告作为当前规范。 |
 | fix/tcm-learning-simulation-boundary-2026-11-15 | 旧分支把问诊固定限定为模拟学习；当前 docs/ai-capability-audit.md §16/§18 已明确问诊输入可来自本人体验、书籍、经典医案或假设病例，由 App 原有确定性规则执行，AI 解释经校验结果。 | 不合并，与当前用户确认的产品边界冲突。 |
 | work/assistant-result-action-regressions、codex/assistant-diagnosis-actions | 旧分支只扩展助手历史恢复测试；当前 master 同名测试已覆盖恢复完成态结构化辨证记录及收藏、分享、复制处方操作，测试范围更完整。 | 不重复合并旧测试。 |
 | work/ai-retrieval-golden、work/ai-retrieval-golden-snapshot | 旧基线文档仍称实测快照未知；当前 master 已有固定 JSON metadata fixture、重复运行一致性、query provenance、source manifest、回链状态及上下文测试，Flutter workflow 已包含快照步骤。 | 不合并过时文档、测试和旧 workflow。 |
@@ -3925,7 +3928,7 @@ PR HEAD 门禁证据：
 
 - 审计基线：`master` @ `63af6e20238767f0704bddea1f7867dcfb9bd40b`（PR #423 合并后）。
 - 统计口径：远端 481 个 branch refs、425 条 PR 记录；按 `branch.name` 是否曾作为 `pull.head.ref` 统计，58 个 branch refs 没有 PR head 关联。按 HEAD SHA 匹配会把 PR 合并后继续前进的分支误计为未关联，因此不采用 SHA 口径。
-- 审计方式：对 58 个 refs 分别执行 `master...branch` compare，逐项核对 ahead/behind、changed files 和候选代码/测试；对可能存在独立覆盖的 Native transcript、RedFlag、AI 数据清除、附件所有权、古籍入口、小六壬、历史恢复、折叠屏测试进一步读取主线和分支文件。没有把 ahead commit 数直接当成功能缺口。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 审计方式：对 58 个 refs 分别执行 `master...branch` compare，逐项核对 ahead/behind、changed files 和候选代码/测试；对可能存在独立覆盖的 Native transcript、RedFlag、AI 数据清除、附件所有权、古籍入口、小六壬、历史恢复、折叠屏测试进一步读取主线和分支文件。没有把 ahead commit 数直接当成功能缺口。
 - 处置结果：58 个历史 refs 均已形成明确处置；没有发现可整支合并的未吸收实现。本节不删除历史 refs、不改写历史分支，也不将旧分支覆盖主线。
 
 | 历史分支 | 审计结论 / 处置 |
@@ -3966,8 +3969,8 @@ PR HEAD 门禁证据：
 | `work/ai-managed-attachments-2026-11-11` | 主线 LocalAiAttachmentStore 测试更完整，明确保留非 AI 临时文件、嵌套旧录音及原始来源文件。 |
 | `work/ai-p0-multiturn` | 旧多轮静态审计快照已被主线 docs/local-ai-multiturn-audit 更新；设备 GPU/CPU 和生命周期仍为 UNKNOWN。 |
 | `work/ai-p0-transcript-rehydration-v2` | Native completed-turn transcript replay、LocalAiConversationHistoryPolicy 和 Kotlin 回归已存在于主线；失败中的请求仍不自动重放。 |
-| `work/ai-redflag-gate` | 2026-11-10 旧 TRACE/红旗审计快照已过时；当前 red-flag entrypoint audit 仍明确标记生产 detector/全入口拦截 MISSING。 |
-| `work/ai-redflag-policy` | 历史临床红旗策略分支；2026-11-15 产品范围已排除临床 detector、医学审核和全入口拦截，状态 SUPERSEDED / NOT IN SCOPE。 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | `work/ai-redflag-gate` | 2026-11-10 旧 TRACE/红旗审计快照已过时；当前 red-flag entrypoint audit 仍明确标记生产 detector/全入口拦截 MISSING。 |
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] | `work/ai-redflag-policy` | 历史临床红旗策略分支；2026-11-15 产品范围已排除临床 detector、医学审核和全入口拦截，状态 SUPERSEDED / NOT IN SCOPE。 |
 | `work/ai-retrieval-golden` | 黄金检索实测数据仍 UNKNOWN；旧规范不含已锁定的真实命中快照，不回灌旧基线。 |
 | `work/ai-retrieval-golden-snapshot` | 测试只比较同一运行内两次结果并输出临时 CI artifact，没有跨提交固定 golden fixture，不能作为回归基线。 |
 | `work/ai-saved-charts-headless-2026-11-14` | 旧 AssistantToolRouter 和助手页面实现已被主线结果快照与统一执行链取代。 |
@@ -3998,7 +4001,7 @@ PR HEAD 门禁证据：
 ### 78.2 仍未关闭的真实验收门槛
 
 - **A Native 多轮：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 completed-turn transcript replay、成功轮次策略及自动化测试；Find N2 GPU/CPU 至少 20 轮、图片/语音、Activity recreation、进程重启、`state:7` 根因仍需设备证据。
-- **B 临床红旗 detector：`SUPERSEDED / NOT IN SCOPE`。** 研纪是中医学习辅助工具，不建设临床分诊 detector、医学审核门禁或 Flutter/Native 全入口拦截；不再将这些材料列为发布阻塞。一般性急重症求助提示保留，通用输入/参数校验仍须执行。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - **B 临床红旗 detector：`SUPERSEDED / NOT IN SCOPE`。** 研纪是中医学习辅助工具，不建设临床分诊 detector、医学审核门禁或 Flutter/Native 全入口拦截；不再将这些材料列为发布阻塞。一般性急重症求助提示保留，通用输入/参数校验仍须执行。
 - **E AI 数据清除：`PARTIAL / DEVICE UNKNOWN`。** 主线已有 SQLite AI 表事务、AI 专属附件目录、Native runtime cache/TRACE coordinator 和 UI；混合 SQLite 备份边界、旧共享图片归属、Find N2 强停/重启后不可恢复仍未证明。
 - **F TRACE：`PARTIAL / DEVICE UNKNOWN`。** 主线已有多阶段 TRACE 和脱敏/默认关闭约束；失败/恢复/持久化完整关联及 Find N2 全场景真实 TRACE 仍需验收。
 - **Find N2 设备验收：`MISSING`。** #423 只补齐场景，不把 CI/Widget 测试升级为真机 PASS。
@@ -4110,9 +4113,9 @@ PR HEAD 门禁证据：
 ## 86. 2026-11-23 产品范围纠偏与 Find N2 最终本地交接
 
 - 当前产品定位以 `docs/product-positioning-and-boundaries.md` 为准：研纪是中医学习辅助工具，不是临床诊断、分诊或医疗决策系统。
-- §78.2 中临床 RedFlag detector、医学审核、全入口拦截的旧阻塞项已标记 `SUPERSEDED / NOT IN SCOPE`。旧历史审计数据保留为历史记录，不再转成当前待办。
-- 按产品定位 §4.3，可保留固定、简明的急重症求助提示；它只是一般求助提醒，不是临床 detector、风险分级或阻断条件。现有免责声明、输入类型检查、参数校验和确定性业务执行校验不得与临床 detector 混称。
-- 现有 `RedFlagGate` / `RedFlagPreflight` 仅保留为未启用的接口与策略骨架；当前 `requiresMedicalSafetyPreflight()` 固定返回 false，业务入口记录 `NOT_APPLICABLE`，不执行临床 detector。不得把该骨架宣称为临床安全能力已通过；若未来要启用，须另立范围并经过独立审核。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - §78.2 中临床 RedFlag detector、医学审核、全入口拦截的旧阻塞项已标记 `SUPERSEDED / NOT IN SCOPE`。旧历史审计数据保留为历史记录，不再转成当前待办。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 按产品定位 §4.3，可保留固定、简明的急重症求助提示；它只是一般求助提醒，不是临床 detector、风险分级或阻断条件。现有免责声明、输入类型检查、参数校验和确定性业务执行校验不得与临床 detector 混称。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 现有 `RedFlagGate` / `RedFlagPreflight` 仅保留为未启用的接口与策略骨架；当前 `requiresMedicalSafetyPreflight()` 固定返回 false，业务入口记录 `NOT_APPLICABLE`，不执行临床 detector。不得把该骨架宣称为临床安全能力已通过；若未来要启用，须另立范围并经过独立审核。
 - Find N2 / E4B 真机验收统一后置到云端代码、文档、许可和 CI 收尾之后。设备未执行项保持 `LOCAL ONLY / MISSING`，不阻塞无关云端 PR。
 - 本地授权验收至少覆盖：无 Token 启动不创建设备密钥；显式激活才创建 P-256 Key；普通读取为 get-only；StrongBox 不可用时记录 TEE fallback；本地挑战签名与公钥指纹一致；AtomicFile Token 写入后重读验签；损坏/失效 Token 不授予权益；同签名原位升级保留数据库与用户数据。
 - 禁止将 JVM 单测、Flutter Mock Channel、Android arm64 CI APK 描述为 Find N2 真机 KeyStore / StrongBox / AtomicFile 已通过。设备证据由本地执行者最后补齐。
