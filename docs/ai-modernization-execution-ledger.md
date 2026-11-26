@@ -4613,24 +4613,16 @@ PR HEAD 门禁证据：
 
 ## 112. 2026-11-26 P1 情境 AI 输入框 Android IME 避让
 
-- **任务独立性：** P1 键盘布局与 §108 P0 解读/上下文传递分开实现、分开验收。P1 只调整情境 AI 弹层 presentation boundary，不改学习请求、模型 prompt 或普通全屏聊天布局。
-- **基线与依赖：** 直接以 P0 分支最新 HEAD `68282b3be896b570097f85ec18f2830847e763c2` 为父提交；独立分支 `work/ai-contextual-keyboard-20261126-v4`。PR #547 是基于上一版 P0 HEAD 的过期草稿，不作为最终交付；以新的独立 PR/HEAD 验收。
-- **布局根因：** 情境助手窄屏走 `showModalBottomSheet + DraggableScrollableSheet`，宽屏/Find N2 内屏走 `showFoldAwareDialog + Dialog`；AI 页面内部 Scaffold 已显式保持 `resizeToAvoidBottomInset=false` 以避开 ColorOS 双重偏移。旧窄屏路由未消费实时 `viewInsets`，且 `showFoldAwareDialog` 将 route-open 时的 MediaQuery 快照整体固定，键盘出现后的 inset 更新无法传到弹层。
-- **窄屏修复：** bottom-sheet presentation 外层读取实时 `MediaQuery.viewInsets.bottom`，通过 180ms `AnimatedPadding` 将整个 sheet 内容区抬升/缩短；键盘出现时 DraggableScrollableSheet 初始扩展到可用高度上限。内部 AI Scaffold 继续不自行 resize，避免二次扣减 IME。
-- **宽屏修复：** 使用 Dialog 自带的 viewInsets padding 只执行一次避让；不再外包第二层 AnimatedPadding。Dialog 内将 route 外层实时 IME insets 重新提供给助手内容，同时保留宽度/折叠屏布局约束。
-- **折叠路由修复：** `showFoldAwareDialog` 继续使用打开弹窗时的 displayFeatures/窗口几何做铰链定位，但只从当前 route MediaQuery 动态读取并回填 `viewInsets`，不再冻结键盘状态。
-- **测试：** `test/contextual_ai_panel_layout_test.dart` 增加 402dp outer bottom-sheet 与 775dp inner side-panel 的键盘出现/收起测试，断言 composer 和发送按钮均在键盘上方、用户已输入文字保留且无布局异常；`test/fold_aware_routes_test.dart` 增加 fold-aware dialog 实时 viewInsets 更新测试。
-- **最终验收状态：IN_PROGRESS。** 代码与测试已提交；最终 P1 HEAD 的 static analysis、changed tests、完整 Flutter/Android CI 尚未确认。Find N2 实机需分别验证外屏 bottom-sheet、内屏 side-panel、系统输入法、发送后键盘状态、键盘收起恢复及折叠/展开切换；尚无设备 TRACE，均标记 UNKNOWN。自动化测试通过也不能替代实机。
-- **风险与回滚：** Dialog 自身 IME padding 与外层 MediaQuery 需要避免双重扣减；窄屏 sheet 的 availableHeight 需由 widget tests 验证。P1 可独立 revert，不修改全局键盘策略。
-- **依赖说明：** PR #542 P0 必须先通过最终 HEAD CI 与相应代码验收；P1 不得单独合并到 master 以绕过 P0。P0 若新增提交，P1 必须重新确认 ancestry、merge-base、changed tests 和完整 CI。
-
-
-
-
-
-
-
----
+- **依赖状态：** P0 知识条目解读 PR #548 已合并，merge commit `35e0cd8d65bb9f1c8d13a3f9489c7c1ffa74b088`。P1 PR #551 已从依赖分支重定向至 `master`；当前 master 基线为上述 merge commit。
+- **分支/HEAD：** `work/ai-contextual-keyboard-current-master-v3-20261126`，当前代码 HEAD `a326cc01df124b29c098116f8451474039a229ad`。该分支最初以 P0 分支为父级；P0 已通过 merge commit 集成，P1 仍独立提交与独立 PR。
+- **布局根因：** 情境助手窄屏走 `showModalBottomSheet + DraggableScrollableSheet`，Find N2 内屏走 `showFoldAwareDialog + Dialog`；内部助手 Scaffold 显式 `resizeToAvoidBottomInset=false`，避免 ColorOS 双重扣减。窄屏 sheet 未消费实时 `viewInsets`；fold-aware route 原先冻结 route-open 时的 MediaQuery 快照，导致弹窗打开后系统键盘变化无法传入。
+- **窄屏修复：** `ContextualAiPanel` 的 bottom-sheet 外层读取实时 `MediaQuery.viewInsets.bottom`，通过 180ms `AnimatedPadding` 抬升/缩短整个 sheet；键盘可见时 DraggableScrollableSheet 初始扩展到允许上限。内部 Scaffold 不额外 resize。
+- **宽屏修复：** Dialog 使用自身 IME inset padding，只执行一次避让；对助手子树回填外层实时 viewInsets，保留助手隐藏非必要头部内容的能力，不再叠加第二层 AnimatedPadding。
+- **折叠路由修复：** `showFoldAwareDialog` 保留打开弹窗时的 displayFeatures/窗口几何作为铰链定位依据，只从当前 route MediaQuery 动态更新 `viewInsets`。
+- **自动化测试：** `test/contextual_ai_panel_layout_test.dart` 覆盖 402dp outer bottom-sheet、775dp inner side-panel；断言键盘出现时 composer/send 均在 IME 上方，输入内容保留，收起后恢复。 `test/fold_aware_routes_test.dart` 验证 fold-aware dialog 从 0 实时更新到 280dp viewInsets。
+- **CI 状态：** 基于旧 base 的历史运行不能继承；PR #551 重定向至新 master 后，必须对最终 HEAD 重新完成 Branch validation、全量 Flutter regression、Android arm64/JVM 与 Fork license。SKIPPED 不计 PASS。当前等待新 base 对应的精确 HEAD CI。
+- **设备验收：** Find N2 外屏 bottom-sheet、内屏 side-panel、ColorOS 输入法出现/收起、发送后键盘状态、折叠/展开切换尚未执行，均为 UNKNOWN；留到全部云端工作完成后本地验收。
+- **风险与回滚：** Dialog 自带 inset 与子树回填需避免重复 resize；P1 可独立 revert，不改变全局键盘策略或 AI 请求协议。
 
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
