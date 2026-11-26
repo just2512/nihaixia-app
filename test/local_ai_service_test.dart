@@ -1093,7 +1093,7 @@ void main() {
   "aggravating_factors": ["吃得过饱"],
   "relieving_factors": ["散步后稍缓解"],
   "associated_symptoms": ["嗳气"],
-  "red_flags": [],
+  "user_reported_urgent_signs": [],
   "unknowns": ["是否与某种食物有关"],
   "diagnosis": "不应接受"
 }
@@ -1112,7 +1112,7 @@ void main() {
 
     test('reads legacy red_flags only as user-reported symptom data', () {
       final draft = LocalAiSymptomDraft.fromModelText(
-        '{"red_flags":["用户自述曾有胸部不适"]}',
+        '{"user_reported_urgent_signs":["用户自述曾有胸部不适"]}',
       );
 
       expect(draft.userReportedUrgentSigns, ['用户自述曾有胸部不适']);
