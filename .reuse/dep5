@@ -1277,3 +1277,10 @@ Files:
 Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
 License: LicenseRef-Nihaixia-Fork-Commercial
 Comment: Fork-authored Core-4 one-shot invocation ledger, sanitized terminal readback, and lifecycle/SQLite migration tests. It persists claim and terminal events as hidden tool-role transcript rows with a per-conversation partial unique invocation-key index; invalid or interrupted results resolve to UNKNOWN and never replay; tool-role metadata is excluded from session memory; ownership evidence required.
+
+Files:
+ lib/services/assistant_tool_execution_coordinator.dart
+ test/assistant_tool_execution_coordinator_test.dart
+Copyright: 2026 just2512 (subject to documented ownership or sufficient sublicensing rights)
+License: LicenseRef-Nihaixia-Fork-Commercial
+Comment: Fork-authored Core-4 App execution coordinator and contract tests. It revalidates consent and request scope, writes a durable one-shot claim before Headless dispatch, persists terminal state, and returns only validated ledger read-back; duplicate/interrupted/unknown invocations never replay; ownership evidence required.
