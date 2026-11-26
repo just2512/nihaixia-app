@@ -161,9 +161,9 @@ class AssistantConversationOrchestrator {
         ].any(text.contains);
   }
 
-  // These are routing cues only: a match requires a reviewed safety
-  // assessment; it does not label urgency or provide a medical conclusion.
-  // The red-flag examples below mirror the normative audit boundary.
+  // These are ordinary intent-routing cues. They keep personal health narratives
+  // out of metaphysics/tool-selection classification; they do not assess urgency
+  // or create a clinical safety gate.
   static const _symptomCues = [
     '头痛',
     '头晕',
