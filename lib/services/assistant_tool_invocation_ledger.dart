@@ -81,6 +81,7 @@ class AssistantToolInvocationLedger {
     final payload = <String, Object?>{
       'schema': _schema,
       'kind': _claimKind,
+      'conversationId': conversationId,
       'invocationId': invocationId,
       'requestId': requestId,
       'toolId': toolId,
