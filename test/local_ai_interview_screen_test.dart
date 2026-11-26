@@ -5091,6 +5091,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('切换助手角色'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('切换助手角色'));
