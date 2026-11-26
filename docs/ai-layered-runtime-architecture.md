@@ -386,7 +386,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 
 ### 5.2 五层当前调用映射、测试与未闭环项（master 基线核验）
 
-本节映射基线为 master `e2cdc1c1541eea369a5135d91c1bf9eb0891669a`（已包含 PR #519 Core-1 snapshot、#520 Response 契约、#522 Evidence handoff、#524 Request 契约及 #540 learning-only Native 双阶段接线）。文件/函数定位优先于固定行号。
+本节映射基线为 master `20ef6ae27cad6732f1cf9d16d8e52f97f0f682d0`（已包含 PR #519 Core-1 snapshot、#520 Response 契约、#522 Evidence handoff、#524 Request 契约、#540 learning-only Native 双阶段接线及 Core-4 execution result projection）。本分支另有 ACTION_PROPOSAL Gate 契约切片，尚未接入生产调用方。文件/函数定位优先于固定行号。
 
 | 层 | 当前生产代码/真实调用路径 | 已有测试证据 | 仍缺少的边界 |
 |---|---|---|---|
@@ -394,7 +394,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 | 证据排序 | `SourceAwareLegacyEvidenceRanker.rank` 输出来源感知 KEEP/DROP；#522 将完整呈现的 KEEP evidence IDs 和全部已知候选 IDs 分别回传调用方。 | `test/legacy_order_evidence_ranker_test.dart`、`test/source_aware_legacy_evidence_ranker_test.dart`、`test/multi_source_evidence_pipeline_test.dart`、`test/assistant_knowledge_context_test.dart`、`test/ai_retrieval_golden_snapshot_test.dart`。 | PARTIAL：不打相关性分数、不提升来源真实性；6,500 字符是现有呈现上限而非 token 预算；#522 不改旧排序，也未接入 Native ReasoningRequest。 |
 | 会话记忆 | `LocalAiConversationHistory` / `LocalAiConversationSessionPolicy` 管理 Native transcript/session ID；`SessionStateSnapshotBuilder.build` 投影结构事实/来源 ID；PR #519 已将 formatter + 独立 MethodChannel 字段接入普通 Native text turn，并校验 active conversation owner。 | `LocalAiConversationHistoryPolicyTest`、`LocalAiConversationSessionPolicyTest`、`test/session_state_snapshot_builder_test.dart`、`test/session_state_snapshot_prompt_formatter_test.dart`、`LocalAiSessionStateInputPolicyTest` 与 transcript isolation 测试。 | PARTIAL：snapshot 不进入 recovery transcript；跨进程恢复 UNKNOWN；16,000 UTF-16 字符不是 token/input budget；无自动压缩。 |
 | 语言推理 | Native MainActivity.sendLocalReasoningMessage / sendWithFirstTurnGpuFallback 的两阶段入口；Dart LocalAiService.sendReasoningMessage、ReasoningKnowledgeAnswerAdapter.decodeAndResolve 与终态确认；普通文本/问诊/工具模式保留原调用链。 | test/reasoning_response_codec_test.dart、test/reasoning_request_prompt_formatter_test.dart、test/reasoning_knowledge_answer_adapter_test.dart、test/local_ai_service_test.dart、test/local_ai_interview_screen_test.dart、LocalAiConversationHistoryPolicyTest。 | PARTIAL：PR #540 已将学习路径接入严格 Request/Response；UNKNOWN finalize/reject acknowledgement 不重放模型推理；只允许校验后的自然语言答案进入 Native 成功历史。其他模式尚未迁移，ACTION_PROPOSAL 仅作未可信提案，学习路径不授权工具；Find N2 真机 TRACE 留待云端收尾后本地验收。 |
-| 业务执行 | `ToolExecutionPlan/ToolExecutionStep` 与 `HeadlessToolDispatcher.executePlan` 对已登记计划预校验并顺序执行；PR #515 已合并 UNKNOWN 语义修复。 | `test/headless_tool_dispatcher_test.dart`、`test/headless_tool_result_handler_test.dart`、`test/headless_tool_plan_result_handler_test.dart`、`test/assistant_tool_execution_plan_builder_test.dart`、`test/context_resolution_gateway_test.dart`。 | PARTIAL：UNKNOWN 执行结果已保留且停止重放；当前分支新增 AssistantToolResult → ReasoningExecutionResult 投影，仍未接入真实 tool-explanation 请求；ACTION_PROPOSAL、request-scoped capability allowlist、typed args、显式授权与跨层结果回填未闭环。 |
+| 业务执行 | `ToolExecutionPlan/ToolExecutionStep` 与 `HeadlessToolDispatcher.executePlan` 对已登记计划预校验并顺序执行；PR #515 已合并 UNKNOWN 语义修复。 | `test/headless_tool_dispatcher_test.dart`、`test/headless_tool_result_handler_test.dart`、`test/headless_tool_plan_result_handler_test.dart`、`test/assistant_tool_execution_plan_builder_test.dart`、`test/context_resolution_gateway_test.dart`。 | PARTIAL：UNKNOWN 执行结果已保留且停止重放；master 已有 AssistantToolResult → ReasoningExecutionResult 投影。本分支新增 ReasoningActionProposalGate：按 requestId、App 请求级 capability allowlist、四个既有 plan-eligible Headless 能力及能力专属参数规则校验；确认前仅返回不可变预览，只有显式用户确认且请求/allowlist 未变化才生成单步 ToolExecutionPlan。该 Gate 仍未接入生产调用方/确认 UI/Dispatcher，也未实现一次性 invocation 消费与结果回流；Core-4 仍为 PARTIAL。 |
 
 **边界澄清**
 
@@ -411,7 +411,7 @@ Native 恢复 transcript 与 SessionStateSnapshot 是两个不同对象：前者
 | Core-1 Memory | `MainActivity.kt`、`LocalAiConversationHistoryPolicy.kt`、`LocalAiSessionStateInputPolicy.kt`、`SessionStateSnapshot`/`SessionStateSnapshotBuilder` 及 Kotlin/Flutter 测试 | #519 已将只读 snapshot 接入普通文本 Native 输入并做 session owner fail-closed；跨进程恢复和真实模型输入 token budget 仍 UNKNOWN |
 | Core-2 Retrieval/Ranking | `assistant_knowledge_context.dart`、`classic_search_service.dart`、多源 Evidence Pipeline、黄金测试/fixture | #518 多源候选生产接线与 #522 请求级 evidence ID/sourceId 映射已合并；不改变当前 golden 输出 |
 | Core-3 Reasoning | reasoning_request.dart、reasoning_request_prompt_formatter.dart、reasoning_response.dart、reasoning_response_codec.dart、reasoning_knowledge_answer_adapter.dart、LocalAiService、MainActivity | #520/#524/#540 已合并；learning-only 生产链完成，其他模式及动作提案仍未接线；不得直接让模型触发工具 |
-| Core-4 Execution | AssistantToolResult → ReasoningExecutionResult 投影适配器、能力级 schema/授权策略、现有 Dispatcher 与结果回流 | 本分支新增执行结果投影和测试（CI 待验）；动作提案显式确认与 typed-args policy 仍 MISSING；不改变 ai_access/AiModelAccessGate |
+| Core-4 Execution | AssistantToolResult → ReasoningExecutionResult 投影适配器、ReasoningActionProposalGate、能力级 schema/授权策略、现有 Dispatcher 与结果回流 | master 已有结果投影；本分支 Gate 契约与定向测试已完成，确认 UI/生产接线/一次性调用保护/结果回流仍 MISSING；不改变 ai_access/AiModelAccessGate |
 | Core-5 E2E | 跨层测试与 TRACE 规范接线 | 依赖前四层可独立观测；设备 TRACE 由本地最后完成 |
 
 ## 6. 当前最高优先级执行顺序
