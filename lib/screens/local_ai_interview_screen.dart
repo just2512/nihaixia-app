@@ -9897,42 +9897,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     var persistenceStarted = false;
     var persistenceRecorded = false;
     try {
-      final turnResponse = audioPath != null
-          ? _AssistantTurnResponse(
-              text: traceId == null
-                  ? await _service.sendAudio(
-                      audioPath,
-                      conversationId: conversationId,
-                      prompt: text,
-                    )
-                  : await _service.sendAudioWithTrace(
-                      audioPath,
-                      conversationId: conversationId,
-                      prompt: text,
-                      traceId: traceId,
-                    ),
-            )
-          : imagePath != null
-              ? _AssistantTurnResponse(
-                  text: traceId == null
-                      ? await _service.sendImage(
-                          imagePath,
-                          conversationId: conversationId,
-                          prompt: text,
-                        )
-                      : await _service.sendImageWithTrace(
-                          imagePath,
-                          conversationId: conversationId,
-                          prompt: text,
-                          traceId: traceId,
-                        ),
-                )
-              : await _sendTextWithKnowledgeContext(
-                  text,
-                  conversationId: conversationId,
-                  mode: effectiveMode,
-                  traceContext: traceContext,
-                );
+      final turnResponse = await _sendTextWithKnowledgeContext(
+        text,
+        conversationId: conversationId,
+        mode: effectiveMode,
+        traceContext: traceContext,
+        attachmentPath: audioPath ?? imagePath,
+        attachmentType: audioPath != null
+            ? ReasoningAttachmentType.audio
+            : imagePath != null
+                ? ReasoningAttachmentType.image
+                : null,
+      );
       final reply = turnResponse.text;
       nativeInferenceCompleted =
           turnResponse.nativeInferenceStatus == AiTraceStatus.succeeded;
