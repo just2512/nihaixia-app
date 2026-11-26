@@ -484,38 +484,6 @@ class MainActivity : FlutterActivity() {
      * Flutter seam blocks first; this native boundary prevents MethodChannel
      * bypasses and remains closed until a reviewed detector is injected.
      */
-    private fun runAiTaskAfterNativeRedFlag(
-        result: MethodChannel.Result,
-        input: NativeRedFlagInput,
-        required: Boolean = false,
-        task: () -> Any?
-    ) {
-        if (!required) {
-            if (nativeRedFlagDetector == null) {
-                android.util.Log.d(
-                    "NativeRedFlagGate",
-                    "REDFLAG_GATE_NOT_APPLICABLE: non-clinical request"
-                )
-            }
-            runAiTask(result, requiresAiAccess = true, task = task)
-            return
-        }
-
-        // Required clinical paths never fall through when the detector is
-        // absent, unreviewed, incomplete, or unable to assess the source.
-        val execution = NativeRedFlagExecutionBoundary(nativeRedFlagDetector)
-            .runBefore(input) {
-                runAiTask(result, requiresAiAccess = true, task = task)
-            }
-        if (!execution.executed) {
-            result.error(
-                "REDFLAG_${execution.verdict.status.name}",
-                "普通模型调用未通过安全评估：${execution.verdict.reason}",
-                null
-            )
-        }
-    }
-
     private fun runAiTask(
         result: MethodChannel.Result,
         requiresAiAccess: Boolean = false,
