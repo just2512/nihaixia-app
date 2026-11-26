@@ -4652,3 +4652,18 @@ PR HEAD 门禁证据：
 - Core-5：仍缺少从结构化推理输入、实际工具执行、真实 ExecutionResult 回流、来源核验到最终展示/持久化的完整 E2E。合同单测/投影适配器不等同端到端完成。
 - 工作流 I：用户 Markdown 书架继续 DEFERRED / NOT AUTHORIZED，不启动。
 - 设备策略：Find N2 安装升级、GPU/CPU 多轮、多媒体、Activity/进程恢复、会话隔离和 TRACE 仍统一留到云端工作结束后本地验收，不阻塞 Core-4 云端实施。
+
+
+---
+
+## 113. 2026-11-26 Core-4 ACTION_PROPOSAL App-owned Gate 契约切片（重基线）
+
+- **基线与分支：** 从当前 master `2c5b29b55a6034dd8fd2b03db14f42d4684103fa` 派生/重基线 `work/core4-action-proposal-gate-contract-20261126`；原切片基于旧 master `20ef6ae27cad6732f1cf9d16d8e52f97f0f682d0`。当前提交只保留 Gate 源码/测试，并将 architecture、执行台账、REUSE 与 license inventory 重新叠加到 P0/P1 已合并的主线内容上。
+- **新增实现：** `ReasoningActionProposalGate` 只处理 Core-3 输出的未可信 `ACTION_PROPOSAL`，不执行工具。准备阶段校验 responseKind/status、32 位十六进制 requestId 与当前请求绑定、App 本轮 capability allowlist、四个既有 plan-eligible Headless capability、Router/Dispatcher capability 对应关系和具体参数约束；成功只返回不可变确认预览，不返回 ToolExecutionPlan。
+- **参数边界：** dosage 复用 `DosageToolService.validateArguments`；solar_terms 只接受 App 节气白名单字段和值；yuxiaji_omen、sanshan_lingqian 不允许模型提供本地时间/抽签序号等 App 自主生成参数。Page-only、未登记能力、额外参数、缺参/非法值均 fail-closed。
+- **确认边界：** 用户确认后再次校验 requestId 与完整 capability allowlist 未变化；只有显式 `confirmedByUser == true` 才构造单步 `ToolExecutionPlan`。拒绝、请求变化或参数不合规则不产生可执行计划。Gate 不调用 `HeadlessToolDispatcher`，不改变唯一 `ai_access` / `AiModelAccessGate`。
+- **测试：** `test/reasoning_action_proposal_gate_test.dart` 覆盖四能力登记、确认前无执行计划、用户拒绝、requestId 绑定、非法 proposalId、响应类型/状态、请求 allowlist、Page-only 能力、dosage 参数、solar term 值、App 自主生成参数及确认期间 allowlist 变化。
+- **旧 HEAD 历史验收：** 原代码 HEAD `48cc44d0bd0710363334b64a4a01e91e7ce80c8e` 的 Branch validation 与 Fork license SUCCESS；后续文档 HEAD `b4113c9f00acb5b1aee8691f83aa7f435c64d97c` 的 PR Flutter regression、Android arm64/JVM 和 Fork license 均 SUCCESS。上述是旧基线历史证据，重基线 HEAD 必须重新通过所有适用 CI。
+- **当前状态：PARTIAL / CONTRACT TESTED。** 本切片只覆盖 App-owned proposal policy 和用户确认前置条件；尚未接入生产 ReasoningResponse 调用方、确认 UI、一次性 invocation 消费及 Dispatcher 执行后的真实 ExecutionResult 回流。
+- **下一切片：** 在当前 requestId/capability 作用域下接入 App 确认 UI 与持久化 one-shot invocation ledger，再调用既有 Dispatcher；实际 AssistantToolResult 经 ReasoningExecutionResultAdapter 回流到下一轮 ReasoningRequest。UNKNOWN 不重放；learning-only 空 allowlist 继续禁止动作。Core-5 仍需完整 E2E。
+- **设备策略：** Find N2 的 E4B 真机运行、进程恢复、GPU/CPU 与多轮 TRACE 留到云端工作结束后本地验收，不阻塞本切片。
