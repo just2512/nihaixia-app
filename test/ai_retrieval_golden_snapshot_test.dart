@@ -62,6 +62,12 @@ void main() {
       request,
       includeMedicalCases: false,
     );
+    final rankingDecisionReasonCounts = <String, int>{};
+    for (final decision in context.rankedEvidenceSet?.decisions ??
+        const <dynamic>[]) {
+      rankingDecisionReasonCounts[decision.reasonCode] =
+          (rankingDecisionReasonCounts[decision.reasonCode] ?? 0) + 1;
+    }
 
     return {
       'request': request,
@@ -89,6 +95,10 @@ void main() {
         'status': context.statusLabel,
         'text': context.text,
         'sourceIds': context.sourceIds,
+        'rankingStrategyId': context.rankedEvidenceSet?.strategyId,
+        'rankedEvidenceSourceIds':
+            context.rankedEvidence.map((item) => item.sourceId).toList(),
+        'rankingDecisionReasonCounts': rankingDecisionReasonCounts,
         'sources': context.sources.map((source) => {
           'sourceId': source.sourceId,
           'sourceKind': source.sourceKind,
@@ -138,6 +148,10 @@ void main() {
       'context': {
         'status': rawContext['status'],
         'sourceIds': rawContext['sourceIds'],
+        'rankingStrategyId': rawContext['rankingStrategyId'],
+        'rankedEvidenceSourceIds': rawContext['rankedEvidenceSourceIds'],
+        'rankingDecisionReasonCounts':
+            rawContext['rankingDecisionReasonCounts'],
         'textLength': (rawContext['text']! as String).length,
         'localBacklinkStatusCounts':
             countBy(sources, 'localBacklinkStatus'),
