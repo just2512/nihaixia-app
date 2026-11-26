@@ -1448,45 +1448,20 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
           sourceIds: decoded.sourceIds,
           knowledgeStatus: knowledge.statusLabel,
         );
-      } catch (error) {
+      } catch (error, stackTrace) {
         if (nativeRequestMayBePending) {
           try {
             await _service.rejectReasoningTurn(
               conversationId: conversationId,
               requestId: requestId,
             );
-            nativeTurnRejected = true;
+            nativeRequestMayBePending = false;
           } catch (_) {
-            // Finalize may have reached Native before its MethodChannel
-            // acknowledgement was lost. Do not guess or replay that turn.
+            // A failed or ambiguous completion acknowledgement is UNKNOWN.
+            // Never replay inference or turn this into a successful answer.
           }
         }
-        final nativeStatus =
-            nativeFinalizeConfirmed || nativeTurnRejected
-                ? AiTraceStatus.succeeded
-                : nativeInvocationStarted
-                    ? AiTraceStatus.unknown
-                    : AiTraceStatus.notStarted;
-        final failureReason =
-            error is PlatformException && (error.message?.trim().isNotEmpty ?? false)
-                ? '（' + error.message!.trim() + '）'
-                : '';
-        final failureText = nativeTurnRejected
-            ? '本轮$modeLabel结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。$failureReason'
-            : nativeFinalizeStarted
-                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。$failureReason'
-                : nativeReplyReceived
-                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。$failureReason'
-                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。$failureReason';
-        return _AssistantTurnResponse(
-          text: failureText,
-          knowledgeStatus: 'PROTOCOL_REJECTED',
-          nativeInferenceStatus: nativeStatus,
-          protocolValidated: false,
-          protocolFailureCode: error is PlatformException
-              ? error.code
-              : error.runtimeType.toString(),
-        );
+        Error.throwWithStackTrace(error, stackTrace);
       }
     }
 
