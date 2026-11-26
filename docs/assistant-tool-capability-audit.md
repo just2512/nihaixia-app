@@ -349,3 +349,60 @@ PR [#196](https://github.com/just2512/nihaixia-app/pull/196) 已合入，merge c
 - `test/headless_tool_plan_result_handler_test.dart` 覆盖逐步骤来源隔离、前序非成功步骤后后续未执行、UNKNOWN 不触发聚合解读、错误结果被抑制。
 - 以上是已存在的代码和自动化测试覆盖，不等于本轮重新执行所有测试，也不等于 Find N2 真机执行。真实设备取消、进程恢复、TRACE 和跨轮结果回流继续 UNKNOWN / LOCAL FINAL ACCEPTANCE。
 - **结论：** Core-4 已具备受限的确定性执行底座，但提案协议、能力级 schema、App 授权确认及 `ExecutionResult` 真实回流未闭环，状态 PARTIAL。继续复用当前 Router / Builder / Dispatcher，不为追求架构完整度重建通用执行平台。
+
+
+---
+
+## 13. 2026-11-26 Core-4 生产接线状态复核（master `a7f2672be1f40ba2c4408ac3381046126b9c4167`）
+
+> 本节覆盖 §12 的历史“尚未接线”结论。§12 保留为当时审计快照；当前生产状态以本节为准。只统计已合并到 master 的代码，不把开放 PR 的实现计入主线。
+
+### 13.1 目前有两条不可混淆的执行路径
+
+**路径 A：原有意图路由与确定性执行**
+
+- `AssistantConversationOrchestrator` 仍负责规则优先的意图识别、候选缩小、原始用户文本参数提取和歧义澄清。
+- `AssistantToolExecutionPlanBuilder` 仍执行候选 ID、能力、计划形状、重复步骤、必填参数与类型校验；`HeadlessToolDispatcher.executePlan` 先校验整份计划，再按顺序执行，前序步骤非 SUCCEEDED 即停止。
+- 这条路径不等于新的结构化 ACTION_PROPOSAL。旧意图分类的提示约束和原始用户显式意图不能被解释成“模型提案已获得单独授权”；对有副作用或敏感能力不得扩大旧路径授权。
+- 18 个 Headless executor 表示 App 有确定性执行入口，不代表模型可任意选择全部 18 项。Page-only 5 项与 inline `structured_diagnosis` 仍保持各自业务边界。
+
+**路径 B：Tools mode 结构化提案和单次执行**
+
+PR #561 与 #566 已合并，PR #573 随后完成普通文本多模式协议接入：
+
+1. Tools mode 生成独立 `ReasoningRequest`，只给出 Gate 当前允许的 capability 范围；普通文本回答与 ACTION_PROPOSAL 使用不同协议。
+2. `ReasoningActionProposalAdapter.decodeAndPrepare` 对 response/request identity、capability、typed arguments、候选来源和 Gate 结果执行确定性校验。模型参数不直接进入 executor。
+3. App 展示确认 UI；只有用户明确点击“确认执行”才进入 `AssistantToolExecutionCoordinator.executeConfirmedProposal`。
+4. Coordinator 校验 conversation/session scope、提案授权、单步计划形状；`AssistantToolInvocationLedger.tryClaim` 先写入唯一 claim，再调用既有 `HeadlessToolDispatcher`。
+5. 执行结果必须写入 Ledger 并重新读回；只有完整 SUCCEEDED、实际参数匹配、结构化 values 和真实 sourceIds 通过验证，才生成成功 `ReasoningExecutionResult`。持久化/读回不确定时返回 UNKNOWN，不自动重放。
+6. 首次 ACTION_PROPOSAL turn 被标记为 superseded/rejected，不作为成功模型答案写入 transcript；下一轮创建独立 Request，带只读 `executionResults`，且 `allowedCapabilityIds=[]`，模型只能解释结果，不能再提第二个动作。
+
+### 13.2 当前提案权限边界
+
+- 当前 Gate 对模型 ACTION_PROPOSAL 仅开放四个 capability：`dosage`、`solar_terms`、`yuxiaji_omen`、`sanshan_lingqian`。
+- 每次提案最多一个 capability / 一个执行步骤；这不是对旧 `AssistantToolExecutionPlanBuilder` 计划长度策略的替代，也不代表多步骤 ACTION_PROPOSAL 已获授权。
+- `dosage` 只用于既有单位换算能力，不允许推断药物临床剂量；其余三项按 App 本机数据/时间和本地规则执行，模型不得生成实际业务结果。
+- 其他 14 个 Headless executor、5 个 Page-only 和 inline diagnosis 没有因此获得 AI 提案白名单；不得因已注册、可 Headless 或历史上由用户点击页面就推定可由模型自动执行。
+- Core-3 的普通文本模式与 Tools mode 仍共享同一 Native 模型资源通道，但工具提案、业务执行与普通自然语言答案必须保持协议和状态隔离。
+
+### 13.3 主线提交与自动化覆盖
+
+- PR #561，merge `9ec0f2886b6bcecd3d447e859c3adf3e4aac09cf`：单次执行协调与持久化 invocation Ledger。
+- PR #566，merge `7ccb6f0ab6931df503524cdcc2b0a9620b4d7601`：Tools mode 生产调用、App 确认 UI、Dispatcher 与结果回流。
+- PR #573，merge `a7f2672be1f40ba2c4408ac3381046126b9c4167`：Automatic / Consultation / Learning / Metaphysics 普通文本统一 Request/Response，保持工具协议独立。
+- 现有测试覆盖 Gate/Adapter、Coordinator、Ledger 幂等 claim/终态、Headless dispatcher 失败后停止及 UNKNOWN 不重放、结果来源/参数验证。这里记录的是仓库中已存在的测试覆盖，不宣称本节重新运行了所有历史测试；本轮新改动的 CI 结果以对应 PR 的精确 HEAD 为准。
+
+### 13.4 尚未闭合的 Core-4 工作
+
+| 项目 | 当前判定 | 后续处理边界 |
+|---|---|---|
+| 四项 capability 的 schema | PARTIAL | 保留各 executor 既有严格业务校验；逐项补齐版本化字段约束、单位/范围/互斥条件，不创建重复通用执行框架 |
+| 副作用和权限元数据 | PARTIAL | 明确哪些操作只读、会变更状态或不可逆；用户确认策略由 App 持有 |
+| 取消、超时、进程恢复 | PARTIAL / UNKNOWN | 任何可能已 dispatch 而无终态的调用保持 UNKNOWN；不因超时或恢复自动重放 |
+| 其余 14 个 Headless 工具的模型提案权限 | NOT GRANTED | 逐项有明确场景和端到端证据后才能单独审议；本轮不批量开放 |
+| Page-only 和 inline diagnosis | 保持现有边界 | 不为提高 Headless 数量而移植；需要用户观察/页面交互的能力继续留在相应页面 |
+| Find N2 真实设备行为 | UNKNOWN / LOCAL FINAL ACCEPTANCE | CI 不代替 GPU/CPU、取消、进程恢复和真实 TRACE 验收 |
+
+**当前结论：** Core-4 的四项受限 ACTION_PROPOSAL→确认→one-shot→Dispatcher→Ledger→只读结果解释链已进入 master；Core-4 整体仍为 PARTIAL，因为 capability schema、权限/副作用/取消边界尚未覆盖全部注册能力。不得继续引用 §12 的“生产 tools mode 尚未接线”作为当前状态，也不得反向把四项能力的完成扩大成全部工具完成。
+
+**与临床红旗范围的关系：** 本项目产品范围文件和 `docs/ai-capability-audit.md` §17 已明确临床红旗 detector、临床分诊和全入口医学门禁为 NOT IN SCOPE / SUPERSEDED。Core-4 的工具参数、授权、执行终态校验不是临床红旗检测，不得把两者混同或重新建设临床门禁。
