@@ -62,9 +62,92 @@ void main() {
       request,
       includeMedicalCases: false,
     );
+    final ranking = context.rankedEvidenceSet;
+    if (ranking == null) {
+      throw StateError('Core-2 production retrieval did not return RankedEvidenceSet');
+    }
+    if (context.candidateSnapshot.length != ranking.decisions.length ||
+        context.candidateSnapshot.length != context.knownEvidenceIds.length) {
+      throw StateError(
+        'Core-2 candidate/decision/known-evidence counts do not match',
+      );
+    }
+    final candidateDecisionRows = <Map<String, Object?>>[];
+    final candidateOrdinalByEvidenceId = <String, int>{};
+    for (var index = 0; index < context.candidateSnapshot.length; index++) {
+      final candidate = context.candidateSnapshot[index];
+      final decision = ranking.decisions[index];
+      candidateOrdinalByEvidenceId[decision.evidenceId] = index;
+      candidateDecisionRows.add({
+        'ordinal': index,
+        'sourceId': candidate.sourceId,
+        'origin': candidate.origin.name,
+        'materialKind': candidate.materialKind,
+        'title': candidate.title,
+        'query': candidate.query,
+        'queryReasons': candidate.queryReasons,
+        'retrievalMethod': candidate.retrievalMethod,
+        'matchBasis': candidate.matchBasis,
+        'completeness': candidate.completeness.name,
+        'sourceKey': candidate.sourceKey,
+        'sourceLabel': candidate.sourceLabel,
+        'hasLocalBacklink': candidate.hasLocalBacklink,
+        'assetId': candidate.assetId,
+        'bookId': candidate.bookId,
+        'chapterIndex': candidate.chapterIndex,
+        'chunkId': candidate.chunkId,
+        'chapterPath': candidate.chapterPath,
+        'disposition': decision.disposition.name,
+        'reasonCode': decision.reasonCode,
+        'orderIndex': decision.orderIndex,
+      });
+    }
+    List<int> candidateOrdinalsFor(List<String> evidenceIds) {
+      final ordinals = <int>[];
+      for (final evidenceId in evidenceIds) {
+        final ordinal = candidateOrdinalByEvidenceId[evidenceId];
+        if (ordinal == null) {
+          throw StateError('Core-2 audit references an unknown candidate identity');
+        }
+        ordinals.add(ordinal);
+      }
+      ordinals.sort();
+      return ordinals;
+    }
+    final orderedDecisions = ranking.decisions.asMap().entries
+        .where((entry) => entry.value.disposition.name == 'keep')
+        .toList()
+      ..sort((left, right) =>
+          left.value.orderIndex!.compareTo(right.value.orderIndex!));
+    final core2Snapshot = {
+      'knownCandidateCount': context.knownEvidenceIds.length,
+      'candidateDecisionRows': candidateDecisionRows,
+      'strategyId': ranking.strategyId,
+      'strategyVersion': ranking.strategyVersion,
+      'status': ranking.status.name,
+      'orderedCandidateOrdinals':
+          orderedDecisions.map((entry) => entry.key).toList(growable: false),
+      'presentedCandidateOrdinals': context.rankedEvidence
+          .map((item) => candidateOrdinalByEvidenceId[item.evidenceId]!)
+          .toList(growable: false),
+      'modelVisibleSourceIds':
+          context.rankedEvidence.map((item) => item.sourceId).toList(growable: false),
+      'budget': {
+        'unit': ranking.budget.unit.name,
+        'limit': ranking.budget.limit,
+        'used': ranking.budget.used,
+        'applied': ranking.budget.applied,
+        'omittedCandidateOrdinals':
+            candidateOrdinalsFor(ranking.budget.omittedEvidenceIds),
+        'truncatedCandidateOrdinals':
+            candidateOrdinalsFor(ranking.budget.truncatedEvidenceIds),
+      },
+      'diagnostics': ranking.diagnostics,
+    };
 
     return {
       'request': request,
+      'core2': core2Snapshot,
       'formula': formula == null
           ? null
           : {
@@ -169,6 +252,33 @@ void main() {
     final second = await capture();
     expect(jsonEncode(second), jsonEncode(first),
         reason: '同一 commit 的检索命中、排序、来源和上下文必须可重复');
+
+    final core2 = first['core2']! as Map<String, Object?>;
+    final candidateRows =
+        (core2['candidateDecisionRows']! as List).cast<Map>();
+    final orderedOrdinals =
+        (core2['orderedCandidateOrdinals']! as List).cast<int>();
+    final presentedOrdinals =
+        (core2['presentedCandidateOrdinals']! as List).cast<int>();
+    expect(candidateRows, isNotEmpty);
+    expect(core2['knownCandidateCount'], candidateRows.length);
+    expect(candidateRows.every((row) =>
+        (row['sourceId'] as String).isNotEmpty &&
+        (row['query'] as String).isNotEmpty &&
+        (row['reasonCode'] as String).isNotEmpty), isTrue);
+    expect(
+      presentedOrdinals.every(orderedOrdinals.contains),
+      isTrue,
+      reason: '只有 KEEP 且完整进入本轮上下文的候选才可作为模型引用',
+    );
+    expect(
+      candidateRows.every((row) => !row.containsKey('excerpt')),
+      isTrue,
+      reason: '候选审计快照不得复制知识正文或进入模型上下文',
+    );
+    expect(core2['strategyId'], isNotEmpty);
+    expect(core2['strategyVersion'], isNotEmpty);
+    expect((core2['budget']! as Map)['applied'], isTrue);
 
     final expectedFile = File('test/fixtures/ai_retrieval_golden_metadata.json');
     expect(expectedFile.existsSync(), isTrue,
