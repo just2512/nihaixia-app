@@ -13,7 +13,6 @@ import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/models/tool_execution_plan.dart';
 import 'package:nihaisha_app/data/saved_chart_repository.dart';
 import 'package:nihaisha_app/models/bookmark.dart';
-import 'support/test_only_red_flag_gate.dart';
 
 const _readyStatus = LocalAiModelStatus(
   installed: true,
@@ -49,9 +48,6 @@ class _HistoryResumeService extends LocalAiService {
     required int conversationId,
     required String transcript,
     required List<String> userMessages,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
   }) async {
     restoredConversationId = conversationId;
     restoredTranscript = transcript;
@@ -62,9 +58,6 @@ class _HistoryResumeService extends LocalAiService {
   Future<String> sendMessage(
     String text, {
     required int conversationId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async => '续聊成功：$text';
@@ -74,9 +67,6 @@ class _HistoryResumeService extends LocalAiService {
     String text, {
     required int conversationId,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async => '续聊成功：$text';
@@ -86,9 +76,6 @@ class _HistoryResumeService extends LocalAiService {
     String text, {
     required int conversationId,
     required String context,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async => '续聊成功：$text';
@@ -99,9 +86,6 @@ class _HistoryResumeService extends LocalAiService {
     required int conversationId,
     required String context,
     required String traceId,
-    bool requireMedicalSafety = false,
-    String? redFlagContext,
-    bool redFlagContextTruncated = false,
     String? sessionStateContext,
     int? sessionStateConversationId,
   }) async => '续聊成功：$text';
@@ -300,7 +284,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -354,7 +337,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -431,7 +413,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -488,7 +469,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -524,7 +504,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -569,7 +548,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -642,7 +620,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: service,
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -703,7 +680,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: _HistoryResumeService(),
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
@@ -805,7 +781,6 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: LocalAiInterviewScreen(
-          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
           service: _HistoryResumeService(),
           imagePicker: _NoLostImagePicker(),
           conversationStore: store,
