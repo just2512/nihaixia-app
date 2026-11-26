@@ -6697,7 +6697,76 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
   }
 
   Future<void> _showAssistantToolInvocation(String invocationId) async {
-    if (!RegExp(r'^[a-fA-F0-9]{32}
+    const hexCharacters = '0123456789abcdefABCDEF';
+    if (invocationId.length != 32 ||
+        invocationId.split('').any((character) => !hexCharacters.contains(character))) {
+      throw ArgumentError('TOOL_INVOCATION_ID_INVALID');
+    }
+    final conversationId = await _requireConversationId();
+    final result = await AssistantToolInvocationLedger(_conversationStore)
+        .loadTerminalResult(
+      conversationId: conversationId,
+      invocationId: invocationId,
+    );
+    if (!mounted) return;
+    if (result == null) {
+      setState(() => _error = '当前会话中找不到这条 App 工具执行记录。');
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('工具执行记录：${result.title}'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('执行状态：${result.statusLabel}'),
+                const SizedBox(height: 10),
+                const Text('实际执行参数'),
+                const SizedBox(height: 4),
+                Text(
+                  result.arguments.isEmpty
+                      ? 'MISSING'
+                      : result.arguments.entries
+                          .map((entry) => '${entry.key}：${entry.value}')
+                          .join('\n'),
+                ),
+                const SizedBox(height: 10),
+                const Text('App 回读结果'),
+                const SizedBox(height: 4),
+                if (result.values.isEmpty)
+                  const Text('没有可核验的结果字段；不展示未验证结果。')
+                else
+                  ...result.values.entries.map(
+                    (entry) => Text('${entry.key}：${entry.value}'),
+                  ),
+                if (result.disclaimer?.trim().isNotEmpty == true) ...[
+                  const SizedBox(height: 10),
+                  Text(result.disclaimer!.trim()),
+                ],
+                if (result.status != AssistantToolExecutionStatus.succeeded) ...[
+                  const SizedBox(height: 10),
+                  const Text('此记录不是已验证的成功结果。系统不会自动重放本次动作。'),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openKnowledgeSource(String sourceId) async {
     final parts = sourceId.split(':');
     if (parts.isEmpty || !mounted) return;
     Widget? destination;
