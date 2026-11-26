@@ -1467,13 +1467,17 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
                 : nativeInvocationStarted
                     ? AiTraceStatus.unknown
                     : AiTraceStatus.notStarted;
+        final failureReason =
+            error is PlatformException && (error.message?.trim().isNotEmpty ?? false)
+                ? '（' + error.message!.trim() + '）'
+                : '';
         final failureText = nativeTurnRejected
-            ? '本轮$modeLabel结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。'
+            ? '本轮$modeLabel结构化回复未通过校验，Native 已确认拒绝；未写入成功历史。$failureReason'
             : nativeFinalizeStarted
-                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。'
+                ? '本轮回复已通过校验，但 Native 提交确认状态未知；未自动重放，请先确认会话状态。$failureReason'
                 : nativeReplyReceived
-                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。'
-                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。';
+                    ? 'Native 已返回推理结果，但待处理事务状态未能确认；未自动重放，请先确认会话状态。$failureReason'
+                    : '本轮结构化推理未能确认完成；未自动重放，请确认会话状态后重新发送。$failureReason';
         return _AssistantTurnResponse(
           text: failureText,
           knowledgeStatus: 'PROTOCOL_REJECTED',
