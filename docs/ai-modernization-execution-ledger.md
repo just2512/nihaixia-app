@@ -4798,8 +4798,8 @@ PR HEAD 门禁证据：
 ### 80.3 当前执行动作
 
 1. 清理当前有效清单和发布门槛中的临床红旗任务，不再把历史审计报告复制为当前要求。
-2. 复核运行时代码，确保历史 RedFlagGate 不会阻断任何正常学习或既有业务入口；必要时移除运行时接线和误导性提示文案。
-3. 清理完成后保留历史文件作为归档，但文件开头必须明确 `SUPERSEDED / NOT APPLICABLE`，避免被误读为当前规范。
+2. 已在本分支将 Flutter `LocalAiInterviewScreen` 与 Android `MainActivity` 的历史红旗 preflight 调用改为 `NOT_APPLICABLE` 记录并继续正常执行；不再调用 detector 或因其缺失阻断模型/业务流程。当前仍待 CI 与测试复核，未验收前不标记 PASS。
+3. 已将 `docs/ai-redflag-preflight-policy.md` 与 `docs/ai-redflag-entrypoint-audit.md` 改为明确的 `SUPERSEDED / NOT APPLICABLE` 归档说明；历史细节不再作为当前要求。
 4. 不新增临床 detector、医学词表、阈值、处置文案或医学审批流程。
 
 ### 80.4 状态定义
