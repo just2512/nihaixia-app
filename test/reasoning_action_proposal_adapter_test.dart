@@ -19,15 +19,36 @@ SessionStateSnapshot _session() => SessionStateSnapshot(
 AssistantKnowledgeContextResult _knowledge() =>
     const AssistantKnowledgeContextResult(text: '');
 
+AssistantKnowledgeContextResult _knowledgeWithEvidence() =>
+    const AssistantKnowledgeContextResult(
+      text: '',
+      sources: [
+        AssistantKnowledgeSourceReference(
+          sourceId: 'source-1',
+          sourceLabel: '测试来源',
+          title: '测试知识条目',
+          localBacklink: 'app://test/source-1',
+        ),
+      ],
+      knownEvidenceIds: ['evidence-1'],
+      rankedEvidence: [
+        AssistantKnowledgeEvidenceReference(
+          evidenceId: 'evidence-1',
+          sourceId: 'source-1',
+        ),
+      ],
+    );
+
 ReasoningRequest _request({
   Set<String> capabilities = const {'dosage'},
+  AssistantKnowledgeContextResult? knowledge,
 }) =>
     ReasoningActionProposalAdapter.createRequest(
       requestId: '0123456789abcdef0123456789abcdef',
       sessionId: 7,
       userText: '请换算这项方剂剂量',
       sessionState: _session(),
-      knowledge: _knowledge(),
+      knowledge: knowledge ?? _knowledge(),
       requestCapabilityAllowlist: capabilities,
     );
 
@@ -138,7 +159,7 @@ void main() {
     });
 
     test('rejects action proposals that carry evidence references the preview would hide', () {
-      final request = _request();
+      final request = _request(knowledge: _knowledgeWithEvidence());
       final payload = jsonDecode(_proposalPayload()) as Map<String, dynamic>;
       payload['referencedEvidenceIds'] = ['evidence-1'];
       final result = ReasoningActionProposalAdapter.decodeAndPrepare(
