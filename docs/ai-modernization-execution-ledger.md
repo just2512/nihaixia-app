@@ -793,19 +793,23 @@ PR #107 修复失败轮次阶段误归因：
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 本次未增加医学词表、阈值、detector 或急救文案；未接入任何 Flutter/Native 生产入口；未改变现有用户流程。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 该 PR 只证明可复用的调用顺序契约，不证明真实入口已受保护，不证明自然语言红旗识别准确性。
 
-### 18.3 B 工作流当前状态
+### 18.3 历史记录：旧 B 工作流状态（已废止）
 
-- Gate sequencing contract：CODE + TEST + PR CI 已通过。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 以下状态曾描述临床 detector 的实现进度；当前 B = NOT_APPLICABLE，不再建立 detector 或临床门禁。
+
+> [SUPERSEDED / NOT IN SCOPE] - Gate sequencing contract：CODE + TEST + PR CI 已通过。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - 自然语言 detector 与医学审核：MISSING。
-- Flutter 生产入口（普通发送、结构化问诊、工具分发、附件、症状整理）：未接入，MISSING。
-- Native MethodChannel 纵深入口：未接入，MISSING。
-- Find N2 真机入口 TRACE：UNKNOWN。
+> [SUPERSEDED / NOT IN SCOPE] - Flutter 生产入口（普通发送、结构化问诊、工具分发、附件、症状整理）：未接入，MISSING。
+> [SUPERSEDED / NOT IN SCOPE] - Native MethodChannel 纵深入口：未接入，MISSING。
+> [SUPERSEDED / NOT IN SCOPE] - Find N2 真机入口 TRACE：UNKNOWN。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] - B 继续 PARTIAL / RELEASE BLOCKED。
 
-### 18.4 下一步与明确阻塞
+### 18.4 历史记录：旧 B 工作流下一步与阻塞（已废止）
 
-1. B2 继续核对并设计统一可注入 seam，覆盖 `_send`、结构化问诊选项、工具分发、文本/图片/语音、症状整理和 Native MethodChannel；测试必须断言门禁严格早于 route/tool/model side effect。
-2. 不允许把可选 Gate 缺省为空后继续执行作为“已接入”；这会形成安全旁路。
+> [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 以下临床门禁设计、接入计划和发布阻断已整体撤销。
+
+> [SUPERSEDED / NOT IN SCOPE] 1. B2 继续核对并设计统一可注入 seam，覆盖 `_send`、结构化问诊选项、工具分发、文本/图片/语音、症状整理和 Native MethodChannel；测试必须断言门禁严格早于 route/tool/model side effect。
+> [SUPERSEDED / NOT IN SCOPE] 2. 不允许把可选 Gate 缺省为空后继续执行作为“已接入”；这会形成安全旁路。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 3. 当前 Gate 在 detector 缺失时返回 REVIEW_REQUIRED。若直接接入所有生产入口，将阻断现有 AI 流程；在没有医学审核 detector 和明确产品影响决策前，不得擅自全局启用，也不得默认 CLEAR。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 4. 因此 B2 的生产行为接入暂 BLOCKED；可继续做不改变产品行为的调用链审计、测试 seam 设计和独立工作，但发布状态维持 RELEASE BLOCKED。当前该 B2 临床门禁方案已经撤销，不再产生待办或发布阻断。
 > [SUPERSEDED / NOT IN SCOPE — 历史记录，不是当前要求] 5. A/E 真机验收仍依赖 Find N2；C 的普通学习来源回链已有证据，只有指定原文/诊断规则来源需要继续核验；D/G 不扩展。旧的红旗入口审计分支和策略测试分支分别落后当前 master 56 commits，禁止直接合并；如复用内容，必须在最新 master 上重新审查和移植。
