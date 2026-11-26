@@ -179,7 +179,7 @@ class ReasoningResponseCodec {
       if (attachmentResult == null || attachmentResult.attachmentType != expectedAttachmentType) {
         return _failure(ReasoningResponseStatus.parseFailed, 'REASONING_RESPONSE_ATTACHMENT_RESULT_INVALID_OR_MISMATCHED');
       }
-    } else if (rawAttachmentResult != null) {
+    } else if (payload.containsKey('attachmentResult')) {
       return _failure(ReasoningResponseStatus.parseFailed, 'REASONING_RESPONSE_UNEXPECTED_ATTACHMENT_RESULT');
     }
 
