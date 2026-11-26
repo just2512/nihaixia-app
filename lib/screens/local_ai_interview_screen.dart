@@ -1228,7 +1228,18 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       const evidencePresentationBoundary =
           '资料边界：以下内容仅代表 App 本轮检索到的候选资料，不代表证据充分或结论正确。'
           '只能依据实际提供的资料内容回答；资料未覆盖的信息应明确说明未知。';
-      final guardedContext = '$evidencePresentationBoundary\n$roleContext';
+      final attachmentInstructions = switch (attachmentType) {
+        ReasoningAttachmentType.image =>
+          '本轮提供的是照片。attachmentResult.observations 只写图像中直接可观察到的舌体形态、舌色、舌苔分布和图像质量；不得由照片作现代医学诊断、中医证型辨证或推荐方剂、药物、剂量。',
+        ReasoningAttachmentType.audio =>
+          '本轮提供的是语音。必须先将语音逐句转写到 attachmentResult.transcriptDraft，保留原始措辞，听不清处标记为“听不清”；该草稿未经用户核对，不是用户确认事实。segments 只放转写之外的解释；不作现代医学诊断、六经辨证结论或方药剂量建议。',
+        null => '',
+      };
+      final guardedContext = [
+        evidencePresentationBoundary,
+        if (attachmentInstructions.isNotEmpty) attachmentInstructions,
+        roleContext,
+      ].join('\n');
       final modeLabel = switch (answerMode) {
         AssistantMode.automatic => '通用助手',
         AssistantMode.consultation => '问诊助手',
