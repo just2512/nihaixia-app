@@ -4611,6 +4611,19 @@ PR HEAD 门禁证据：
 - **回滚：** 七类入口与 P0 adapter/prompt 属同一个 PR #548；P1 键盘布局仍单独 PR #550。
 ---
 
+## 112. 2026-11-26 P1 情境 AI 输入框 Android IME 避让
+
+- **依赖状态：** P0 知识条目解读 PR #548 已合并，merge commit `35e0cd8d65bb9f1c8d13a3f9489c7c1ffa74b088`。P1 PR #551 已从依赖分支重定向至 `master`；当前 master 基线为上述 merge commit。
+- **分支/HEAD：** `work/ai-contextual-keyboard-current-master-v3-20261126`，当前代码 HEAD `a326cc01df124b29c098116f8451474039a229ad`。该分支最初以 P0 分支为父级；P0 已通过 merge commit 集成，P1 仍独立提交与独立 PR。
+- **布局根因：** 情境助手窄屏走 `showModalBottomSheet + DraggableScrollableSheet`，Find N2 内屏走 `showFoldAwareDialog + Dialog`；内部助手 Scaffold 显式 `resizeToAvoidBottomInset=false`，避免 ColorOS 双重扣减。窄屏 sheet 未消费实时 `viewInsets`；fold-aware route 原先冻结 route-open 时的 MediaQuery 快照，导致弹窗打开后系统键盘变化无法传入。
+- **窄屏修复：** `ContextualAiPanel` 的 bottom-sheet 外层读取实时 `MediaQuery.viewInsets.bottom`，通过 180ms `AnimatedPadding` 抬升/缩短整个 sheet；键盘可见时 DraggableScrollableSheet 初始扩展到允许上限。内部 Scaffold 不额外 resize。
+- **宽屏修复：** Dialog 使用自身 IME inset padding，只执行一次避让；对助手子树回填外层实时 viewInsets，保留助手隐藏非必要头部内容的能力，不再叠加第二层 AnimatedPadding。
+- **折叠路由修复：** `showFoldAwareDialog` 保留打开弹窗时的 displayFeatures/窗口几何作为铰链定位依据，只从当前 route MediaQuery 动态更新 `viewInsets`。
+- **自动化测试：** `test/contextual_ai_panel_layout_test.dart` 覆盖 402dp outer bottom-sheet、775dp inner side-panel；断言键盘出现时 composer/send 均在 IME 上方，输入内容保留，收起后恢复。 `test/fold_aware_routes_test.dart` 验证 fold-aware dialog 从 0 实时更新到 280dp viewInsets。
+- **CI 状态：** 基于旧 base 的历史运行不能继承；PR #551 重定向至新 master 后，必须对最终 HEAD 重新完成 Branch validation、全量 Flutter regression、Android arm64/JVM 与 Fork license。SKIPPED 不计 PASS。当前等待新 base 对应的精确 HEAD CI。
+- **设备验收：** Find N2 外屏 bottom-sheet、内屏 side-panel、ColorOS 输入法出现/收起、发送后键盘状态、折叠/展开切换尚未执行，均为 UNKNOWN；留到全部云端工作完成后本地验收。
+- **风险与回滚：** Dialog 自带 inset 与子树回填需避免重复 resize；P1 可独立 revert，不改变全局键盘策略或 AI 请求协议。
+
 ## 107. 2026-11-25 Core-2 合并事实与 Core-4 执行底座复核补充
 
 - **Core-2 基线修正：** PR #522 已合并，commit `a43989636101d267cd2ab96fe6a4eee1a89ba522`；精确 HEAD `4967767d2e4673fabe48f9e5b6c00e87922c06d5` 的 Flutter regression、Android arm64/JVM、Fork License 均 SUCCESS。§105 的 #522 OPEN/IN_PROGRESS 是合并前历史快照，由本节更正，不回写历史。
