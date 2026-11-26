@@ -258,7 +258,7 @@ class AssistantReasoningTurnLedger {
         terminal ??= event;
       }
     }
-    if (pending == null) return terminal;
+    if (pending == null) return null;
     if (terminal == null) return pending;
     if (pending.mode != terminal.mode || pending.userText != terminal.userText) {
       return AssistantReasoningTurnRecord(
@@ -282,10 +282,132 @@ class AssistantReasoningTurnLedger {
       if (value is! Map<String, dynamic> ||
           value['schema'] != _schema ||
           value['conversationId'] is! int ||
+          (value['conversationId'] as int) <= 0 ||
           value['requestId'] is! String ||
+          !RegExp(r'^[a-fA-F0-9]{32}
+      final rawStatus = value['kind'] == 'PENDING'
+          ? 'pending'
+          : value['status'] is String
+              ? (value['status'] as String).toLowerCase()
+              : '';
+      AssistantReasoningTurnStatus? status;
+      for (final candidate in AssistantReasoningTurnStatus.values) {
+        if (candidate.name == rawStatus) {
+          status = candidate;
+          break;
+        }
+      }
+      if (status == null) return null;
+      final sourcesRaw = value['sourceIds'];
+      if (sourcesRaw != null &&
+          (sourcesRaw is! List ||
+              !sourcesRaw.every(
+                (item) => item is String && item.trim().isNotEmpty && item == item.trim(),
+              ))) {
+        return null;
+      }
+      final sourceIds = sourcesRaw is List
+          ? List<String>.unmodifiable(sourcesRaw.cast<String>())
+          : const <String>[];
+      final answer = value['answerText'];
+      final failure = value['failureCode'];
+      final interrupted = value['interrupted'];
+      if (answer != null && answer is! String) return null;
+      if (failure != null && failure is! String) return null;
+      if (status != AssistantReasoningTurnStatus.pending) {
+        if (interrupted is! bool) return null;
+        if (status == AssistantReasoningTurnStatus.finalized) {
+          if (answer is! String || answer.trim().isEmpty || failure != null) {
+            return null;
+          }
+        } else if (answer != null ||
+            sourceIds.isNotEmpty ||
+            failure is! String ||
+            failure.trim().isEmpty) {
+          return null;
+        }
+      }
+      return AssistantReasoningTurnRecord(
+        conversationId: value['conversationId'] as int,
+        requestId: value['requestId'] as String,
+        mode: value['mode'] as String,
+        userText: value['userText'] as String,
+        createdAt: value['createdAt'] as String,
+        status: status,
+        answerText: answer as String?,
+        sourceIds: sourceIds,
+        failureCode: failure as String?,
+        interrupted: interrupted == true,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _sameTerminal(
+    AssistantReasoningTurnRecord current, {
+    required AssistantReasoningTurnStatus status,
+    String? answerText,
+    required List<String> sourceIds,
+    String? failureCode,
+    required bool interrupted,
+  }) =>
+      current.status == status &&
+      current.answerText == answerText &&
+      _sameList(current.sourceIds, sourceIds) &&
+      current.failureCode == failureCode &&
+      current.interrupted == interrupted;
+
+  void _validateTerminalPayload({
+    required AssistantReasoningTurnStatus status,
+    String? answerText,
+    required List<String> sourceIds,
+    String? failureCode,
+  }) {
+    if (status == AssistantReasoningTurnStatus.finalized) {
+      if (answerText == null ||
+          answerText.trim().isEmpty ||
+          answerText.length > _maxAnswerCharacters ||
+          failureCode != null ||
+          sourceIds.any((id) => id.trim().isEmpty || id != id.trim())) {
+        throw ArgumentError('REASONING_TURN_FINALIZED_PAYLOAD_INVALID');
+      }
+      return;
+    }
+    if (answerText != null ||
+        sourceIds.isNotEmpty ||
+        failureCode == null ||
+        failureCode.trim().isEmpty ||
+        failureCode != failureCode.trim()) {
+      throw ArgumentError('REASONING_TURN_NON_SUCCESS_PAYLOAD_INVALID');
+    }
+  }
+
+  void _validateIdentity(int conversationId, String requestId) {
+    if (conversationId <= 0 ||
+        !RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(requestId)) {
+      throw ArgumentError('REASONING_TURN_IDENTITY_INVALID');
+    }
+  }
+
+  String _pendingKey(String requestId) => 'reasoning:$requestId:pending';
+  String _terminalKey(String requestId) => 'reasoning:$requestId:terminal';
+
+  bool _sameList(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
+  }
+}
+).hasMatch(value['requestId'] as String) ||
           value['mode'] is! String ||
+          (value['mode'] as String).trim().isEmpty ||
           value['userText'] is! String ||
-          value['createdAt'] is! String) {
+          (value['userText'] as String).trim().isEmpty ||
+          value['createdAt'] is! String ||
+          (value['createdAt'] as String).trim().isEmpty) {
         return null;
       }
       final rawStatus = value['kind'] == 'PENDING'
