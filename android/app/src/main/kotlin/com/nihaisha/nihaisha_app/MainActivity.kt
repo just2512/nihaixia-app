@@ -304,42 +304,17 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                     }
-                    "sendImage" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
-                            return@handler
-                        }
-                        val path = call.argument<String>("path")?.trim().orEmpty()
-                        val prompt = call.argument<String>("prompt")?.trim().orEmpty()
-                        if (path.isEmpty()) {
-                            result.error("EMPTY_IMAGE_PATH", "没有选择照片", null)
-                        } else {
-                            runAiTask(result, requiresAiAccess = true) {
-                                LocalAiTraceIdPolicy.attach(sendLocalImage(conversationId, path, prompt), traceId)
-                            }
-                        }
-                    }
-                    "sendAudio" -> {
-                        val conversationId = requiredConversationId(call, result) ?: return@handler
-                        val traceId = try {
-                            LocalAiTraceIdPolicy.normalize(call.argument<String>("trace_id"))
-                        } catch (error: IllegalArgumentException) {
-                            result.error("INVALID_TRACE_ID", "TRACE ID 格式无效", null)
-                            return@handler
-                        }
-                        val path = call.argument<String>("path")?.trim().orEmpty()
-                        val prompt = call.argument<String>("prompt")?.trim().orEmpty()
-                        if (path.isEmpty()) {
-                            result.error("EMPTY_AUDIO_PATH", "没有录音文件", null)
-                        } else {
-                            runAiTask(result, requiresAiAccess = true) {
-                                LocalAiTraceIdPolicy.attach(sendLocalAudio(conversationId, path, prompt), traceId)
-                            }
-                        }
-                    }
+                    // Legacy unstructured media entry points are closed.
+                    "sendImage" -> result.error(
+                        "STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED",
+                        "图片必须通过结构化附件推理协议发送",
+                        null
+                    )
+                    "sendAudio" -> result.error(
+                        "STRUCTURED_ATTACHMENT_PROTOCOL_REQUIRED",
+                        "音频必须通过结构化附件推理协议发送",
+                        null
+                    )
                     "sendMessage" -> {
                         val conversationId = requiredConversationId(call, result) ?: return@handler
                         val traceId = try {
