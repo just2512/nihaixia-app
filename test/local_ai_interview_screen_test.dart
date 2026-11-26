@@ -6020,6 +6020,13 @@ void main() {
     );
     expect(find.textContaining('PRIVATE_MODEL_PROPOSAL_NARRATIVE_MUST_NOT_RENDER'), findsNothing);
     expect(find.textContaining('基于 App 已验证换算结果的结构化解释。'), findsOneWidget);
+    expect(find.text('App 工具执行结果'), findsOneWidget);
+    await tester.tap(find.text('App 工具执行结果'));
+    await tester.pumpAndSettle();
+    expect(find.text('工具执行记录：剂量换算'), findsOneWidget);
+    expect(find.textContaining('46.875'), findsOneWidget);
+    await tester.tap(find.text('关闭'));
+    await tester.pumpAndSettle();
 
     final ledgerRows = store._messages.values.single
         .where((row) => row['invocation_key'] != null)
