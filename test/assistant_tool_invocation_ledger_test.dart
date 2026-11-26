@@ -67,7 +67,7 @@ void main() {
       await ledger.tryClaim(
         conversationId: conversationId,
         invocationId: invocationId,
-        requestId: 'different-request',
+        requestId: 'fedcba9876543210fedcba9876543210',
         toolId: 'dosage',
         capabilityId: 'dosage',
         arguments: arguments,
