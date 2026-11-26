@@ -23,7 +23,7 @@ void main() {
     // Audit every production Dart caller, not only the main assistant screen.
     // LocalAiService keeps old compatibility methods for source compatibility,
     // but no production route may invoke their unstructured Native endpoints.
-    final legacyMediaCall = RegExp(r'\\.\\s*send(?:Image|Audio)\\s*\\(');
+    final legacyMediaCall = RegExp(r'\.\s*send(?:Image|Audio)\s*\(');
     for (final entity in Directory('lib').listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart') ||
           entity.path == 'lib/services/local_ai_service.dart') {
