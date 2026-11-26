@@ -6214,10 +6214,11 @@ void main() {
       reason: '第 20 轮应能读取此前知识追问形成的会话记忆',
     );
 
-    // The composer keeps focus after the 20th send. The mode selector is
-    // intentionally omitted while the keyboard is visible, so close the test
-    // text input before locating and switching the role.
+    // The screen hides the mode selector while MediaQuery.viewInsets reports
+    // a visible keyboard. Hide the fake IME and reset the test view inset so
+    // the widget tree matches the post-keyboard state before switching modes.
     tester.testTextInput.hide();
+    tester.view.viewInsets = const FakeViewPadding();
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('切换助手角色'));
     await tester.pumpAndSettle();
