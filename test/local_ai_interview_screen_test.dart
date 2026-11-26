@@ -472,6 +472,7 @@ class _TextSendService extends LocalAiService {
   final finalizedReasoningAnswers = <String>[];
   final rejectedReasoningRequestIds = <String>[];
   final Map<String, String> _pendingReasoningReplies = {};
+  String? responseTextOverride;
   bool failReasoningFinalize = false;
   bool failReasoningReject = false;
 
@@ -512,7 +513,7 @@ class _TextSendService extends LocalAiService {
       'status': isAnswer ? 'COMPLETED' : 'INSUFFICIENT_EVIDENCE',
       'segments': [
         isAnswer
-            ? '已收到你的描述：$text；基于本轮可用输入生成结构化回复。'
+            ? responseTextOverride ?? '已收到你的描述：$text'
             : '本轮没有足够资料支持确定回答。',
       ],
       'referencedEvidenceIds': references,
@@ -607,6 +608,12 @@ class _TextSendService extends LocalAiService {
       throw PlatformException(
         code: 'REASONING_REJECT_ACK_UNKNOWN',
         message: 'simulated unknown Native reject acknowledgement',
+      );
+    }
+    if (!_pendingReasoningReplies.containsKey(requestId)) {
+      throw PlatformException(
+        code: 'REASONING_PENDING_TURN_MISSING',
+        message: 'no matching fake pending turn to reject',
       );
     }
     rejectedReasoningRequestIds.add(requestId);
@@ -1176,6 +1183,7 @@ class _PostSendNotReadyStatusService extends _TextSendService {
           message: '模拟模型卸载前推理失败',
         );
       }
+      responseTextOverride = '模型卸载前生成的回复';
       final pending = await super._sendReasoningReply(
         text,
         conversationId: conversationId,
@@ -1348,16 +1356,16 @@ class _FailOnceTextSendService extends _TextSendService {
         message: '首次本地推理失败',
       );
     }
+    responseTextOverride = '重试成功：$text';
     final pending = await super._sendReasoningReply(
-      '重试成功：$text',
+      text,
       conversationId: conversationId,
       requestId: requestId,
       context: context,
       reasoningContext: reasoningContext,
       traceId: traceId,
     );
-    // Keep the recorded input faithful to the user's original turn.
-    sentTexts[sentTexts.length - 1] = text;
+    responseTextOverride = null;
     return pending;
   }
 }
