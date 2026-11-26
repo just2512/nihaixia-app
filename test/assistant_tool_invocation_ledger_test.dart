@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nihaisha_app/models/assistant_tool_result.dart';
 import 'package:nihaisha_app/services/assistant_tool_invocation_ledger.dart';
-import 'package:nihaisha_app/test/support/in_memory_assistant_conversation_store.dart';
+import 'support/in_memory_assistant_conversation_store.dart';
 
 void main() {
   late InMemoryAssistantConversationStore store;
