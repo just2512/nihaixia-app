@@ -3061,7 +3061,7 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
       try {
         await _restoreVisibleConversationToModel(
           conversationId: conversationId,
-          requireMedicalSafety: true,
+
         );
         modelContextRestored = true;
       } catch (error) {
