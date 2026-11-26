@@ -3370,6 +3370,47 @@ void main() {
     );
   });
 
+  testWidgets('contextual assistant keeps composer and send control above the keyboard', (tester) async {
+    const size = Size(402, 844);
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() async {
+      tester.view.resetViewInsets();
+      await tester.binding.setSurfaceSize(null);
+    });
+    final sheetController = ScrollController();
+    addTearDown(sheetController.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocalAiInterviewScreen(
+          redFlagGate: testOnlyReviewedNoMatchRedFlagGate,
+          conversationStore: _store,
+          service: _TextSendService(),
+          imagePicker: _EmptyLocalAiImagePicker(),
+          sheetScrollController: sheetController,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+
+    final keyboardTop = size.height - 300;
+    expect(tester.getRect(find.byType(TextField)).bottom, lessThanOrEqualTo(keyboardTop));
+    expect(tester.getRect(find.byTooltip('发送')).bottom, lessThanOrEqualTo(keyboardTop));
+
+    const draft = '键盘弹出时仍然可以看到正在输入的内容';
+    await tester.enterText(find.byType(TextField), draft);
+    await tester.pump();
+    expect(tester.widget<TextField>(find.byType(TextField)).controller?.text, draft);
+    expect(tester.getRect(find.byType(TextField)).bottom, lessThanOrEqualTo(keyboardTop));
+
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byTooltip('发送')).bottom, lessThan(size.height));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('unified assistant starts in automatic dispatch mode', (tester) async {
     await tester.pumpWidget(
       MaterialApp(home: LocalAiInterviewScreen(redFlagGate: testOnlyReviewedNoMatchRedFlagGate, conversationStore: _store, service: _TextSendService())),

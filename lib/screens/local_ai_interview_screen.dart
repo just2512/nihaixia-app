@@ -10298,10 +10298,9 @@ class _LocalAiInterviewScreenState extends State<LocalAiInterviewScreen> {
     return AdaptiveSinglePane(
       preferredAnchorPoint: widget.preferredAnchorPoint,
       child: Scaffold(
-      // 交由外层 AdaptiveHomeNavigation 的 Scaffold 统一处理键盘 inset；
-      // 这里再 resize 会与外层叠加（ColorOS 下双重应用把 body 压到 ~0，
-      // 输入框被挤到顶部、对话区变空白）。
-      resizeToAvoidBottomInset: false,
+      // Full-screen assistant is resized by AdaptiveHomeNavigation. A contextual
+      // bottom sheet has no such parent Scaffold, so it must resize itself for IME.
+      resizeToAvoidBottomInset: widget.sheetScrollController != null,
       appBar: AppBar(
         title: Text(widget.contextualTitle == null
             ? '研纪 AI 助手'
