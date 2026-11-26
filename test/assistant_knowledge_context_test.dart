@@ -186,6 +186,74 @@ void main() {
   });
 
 
+  test('方剂与本草命中进入统一 CandidateEvidence 和 KEEP 决策', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '查桂枝汤组成，并说明桂枝的本草资料',
+    );
+
+    expect(
+      result.rankedEvidence.map((item) => item.sourceId),
+      containsAll(['formula:guizhi_tang', 'herb:桂枝']),
+    );
+    expect(
+      result.rankedEvidenceSet?.decisions.map((item) => item.reasonCode),
+      containsAll([
+        'LEGACY_FORMULA_ORDER_WITHIN_LIMIT',
+        'LEGACY_HERB_ORDER_WITHIN_LIMIT',
+      ]),
+    );
+    expect(result.knownEvidenceIds, isNotEmpty);
+  });
+
+  test('不依赖通用检索 cue 的内经条目也进入统一证据链', () async {
+    final result = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '十二官相使',
+    );
+
+    expect(result.text, contains('App内经结构化条目'));
+    expect(
+      result.rankedEvidence.any((item) => item.sourceId.startsWith('neijing:')),
+      isTrue,
+    );
+    expect(
+      result.rankedEvidenceSet?.decisions
+          .map((item) => item.reasonCode)
+          .where((code) => code == 'LEGACY_NEIJING_ORDER_WITHIN_LIMIT'),
+      isNotEmpty,
+    );
+  });
+
+  test('针灸处方与穴位资料以独立来源类型进入统一证据链', () async {
+    final acupuncture = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '失眠的针灸治疗',
+    );
+    final acupoint = await AssistantKnowledgeContextBuilder.buildWithSourcesAsync(
+      '三阴交穴位定位',
+    );
+
+    expect(
+      acupuncture.rankedEvidence
+          .any((item) => item.sourceId.startsWith('acupuncture:')),
+      isTrue,
+    );
+    expect(
+      acupuncture.rankedEvidenceSet?.decisions
+          .map((item) => item.reasonCode)
+          .where((code) => code == 'LEGACY_ACUPUNCTURE_ORDER_WITHIN_LIMIT'),
+      isNotEmpty,
+    );
+    expect(
+      acupoint.rankedEvidence.any((item) => item.sourceId == 'acupoint:三阴交穴'),
+      isTrue,
+    );
+    expect(
+      acupoint.rankedEvidenceSet?.decisions
+          .map((item) => item.reasonCode)
+          .where((code) => code == 'LEGACY_ACUPOINT_ORDER_WITHIN_LIMIT'),
+      isNotEmpty,
+    );
+  });
+
   test('异步检索可访问古籍原文库并保留书目来源', () async {
     final context = await AssistantKnowledgeContextBuilder.buildAsync('灵枢');
     expect(context, contains('App古籍库'));
